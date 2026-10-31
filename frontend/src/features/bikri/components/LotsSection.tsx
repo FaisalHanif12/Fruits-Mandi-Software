@@ -3,7 +3,8 @@
 // freight, labour, munshiana, نقد. The rest of the lot is behind "مزید" (LotMore).
 //
 // - Enter on the last cell goes on to the sale lines of that lot (PRD FR-12.1); ↓ on the last lot
-//   adds a lot; "لاٹ شامل کریں" does the same with the mouse. Ctrl+Delete removes a lot.
+//   adds a lot; "لاٹ شامل کریں" does the same with the mouse. Ctrl+Delete, or the button at the end
+//   of its row, removes a lot, after asking when it has sale lines (plan 43).
 // - The lot that has focus is the selected lot: its sale lines are below.
 // - The seller of a new lot, and the item, packing and مارکہ of a seller, are filled by the app
 //   and are Enter stops like the rest (useDraftFills).
@@ -11,7 +12,12 @@
 import { Localized } from '@fluent/react';
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
+import {
+  EntryGrid,
+  type EntryRow,
+  type GridInterceptors,
+  type RemoveQuestion,
+} from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
@@ -69,6 +75,30 @@ export function LotsSection({
       stores.view.getState().select(rows[0]?.rowId ?? null);
     }
   }, [rows, selected, stores]);
+
+  // A lot with sale lines takes them with it: the user is asked first, in one sentence (plan 43 R3). A
+  // blank line (no buyer and no rate) is not counted: it is only an empty row (PRD FR-7.52).
+  const removeQuestion = useMemo(
+    () =>
+      (row: EntryRow): RemoveQuestion | null => {
+        const count = stores
+          .salesFor(row.rowId)
+          .getState()
+          .rows.filter(
+            (line) =>
+              line.picked?.[SALE.buyer] !== undefined ||
+              (line.typed[SALE.rate] ?? '').trim() !== '',
+          ).length;
+        return count === 0
+          ? null
+          : {
+              messageId: 'bikri-lot-remove-question',
+              titleId: 'bikri-lot-remove-title',
+              vars: { count },
+            };
+      },
+    [stores],
+  );
 
   const interceptors = useMemo<GridInterceptors>(
     () => ({
@@ -138,6 +168,7 @@ export function LotsSection({
         cellWarnings={view.warnings}
         {...(cellChanged === undefined ? {} : { cellChanged })}
         {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+        removeQuestion={removeQuestion}
         interceptors={interceptors}
         onCardAccount={onCardAccount}
         fit

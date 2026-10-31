@@ -504,6 +504,25 @@ describe.each(LANGUAGES)('the lines grid with the keyboard (%s)', (language) => 
     });
   });
 
+  it('a line is taken away with its remove button, with the mouse alone (plan 43)', async () => {
+    const { store, user } = render(language);
+    await user.click(
+      screen.getByRole('button', {
+        name: (name) => visible(name) === message(language, 'goods-lines-add'),
+      }),
+    );
+    expect(store.getState().rows).toHaveLength(2);
+    const buttons = Array.from(document.querySelectorAll<HTMLElement>('.row-remove-button'));
+    expect(buttons).toHaveLength(2);
+    const second = buttons[1];
+    if (second === undefined) throw new Error('no remove button on the second line');
+    expect(second).toHaveAccessibleName(message(language, 'common-remove-line'));
+    await user.click(second);
+    await waitFor(() => {
+      expect(store.getState().rows).toHaveLength(1);
+    });
+  });
+
   it('what the backend refused is on the cell it names, and only on that cell', async () => {
     const { store, cell } = render(language, {
       errors: [{ code: 'ERR_QTY_EXCEEDS_LOT', field: 'lines[0].other_qty', values: {} }],

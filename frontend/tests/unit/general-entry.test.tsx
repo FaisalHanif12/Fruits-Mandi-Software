@@ -147,6 +147,21 @@ describe.each(LANGUAGES)('the جنرل screen (%s)', (language) => {
     });
   });
 
+  it('a line is taken away with its remove button, with the mouse alone (plan 43)', async () => {
+    const { user } = await open();
+    const buttons = () => Array.from(grid().querySelectorAll<HTMLElement>('.row-remove-button'));
+    expect(buttons()).toHaveLength(2);
+    const second = buttons()[1];
+    if (second === undefined) throw new Error('no remove button on the second line');
+    expect(second).toHaveAccessibleName(message(language, 'common-remove-line'));
+    await user.click(second);
+    await waitFor(() => {
+      expect(grid().querySelectorAll('.ag-row[row-index]')).toHaveLength(1);
+    });
+    // The line had nothing under it: it went without a question.
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
   it('an entry that does not balance cannot be saved: Save stays off and the difference shows', async () => {
     const { user } = await open();
     await account(user, 0, ELECTRICITY);

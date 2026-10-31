@@ -186,3 +186,15 @@ common-month-count = { $count } اندراجات
 # The button at the end of a row of tabs that opens the tabs that did not fit.
 # review: pending
 common-tabs-more = مزید
+
+# The remove button at the end of a row of an entry grid (plan 43, PRD FR-7.3): its name, its tooltip and
+# the heading of its column. The key Ctrl+Delete is added after it in the tooltip.
+# review: pending
+common-remove-line = یہ لائن ہٹائیں
+
+# The question before a line goes that has more under it than itself (a lot with sale lines).
+# review: pending
+common-remove-line-title = لائن ہٹائیں؟
+
+# review: pending
+common-remove-line-confirm = ہٹائیں

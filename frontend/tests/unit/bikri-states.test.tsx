@@ -385,6 +385,108 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
     });
   });
 
+  // Plan 43: every row of the grids has a visible button to take it away, so the mouse is enough.
+  describe('the remove button of a lot and of a sale line', () => {
+    const buttonsOf = (grid: HTMLElement) =>
+      Array.from(grid.querySelectorAll<HTMLElement>('.row-remove-button'));
+    const buttonAt = (grid: HTMLElement, index: number): HTMLElement => {
+      const button = buttonsOf(grid)[index];
+      if (button === undefined) throw new Error(`no remove button at ${String(index)}`);
+      return button;
+    };
+
+    it('takes a sale line away with the mouse, and the lot stays', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await typeTwoLines(user, language);
+      const sales = salesGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(sales).length).toBeGreaterThanOrEqual(2);
+      });
+      expect(buttonsOf(sales)[0]).toHaveAccessibleName(message(language, 'common-remove-line'));
+      await user.click(buttonAt(sales, 0));
+      // No question for a line: it goes at once, and the second line is now the first.
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      // The second line (580) is the first now. Its quantity is the one the screen fills in from
+      // what is left of the lot, so it is the rate that says which line it is.
+      await waitFor(() => {
+        expect(textOf(salesGrid(language), 0, 'rate')).toBe('580');
+      });
+      expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
+    });
+
+    it('asks before a lot with sale lines goes, in one sentence, and goes only when told to', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await typeTwoLines(user, language);
+      await user.click(
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+      );
+      const lots = lotsGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(lots)).toHaveLength(2);
+      });
+      await user.click(buttonAt(lots, 0));
+      const dialog = await screen.findByRole('alertdialog', undefined, { timeout: 8_000 });
+      expect(visible(dialog.textContent)).toContain(
+        message(language, 'bikri-lot-remove-question', { count: 2 }),
+      );
+      expect(visible(dialog.textContent)).toContain(message(language, 'bikri-lot-remove-title'));
+      // Going back keeps the lot and its lines.
+      await user.click(
+        within(dialog).getByRole('button', {
+          name: (name) => visible(name).startsWith(message(language, 'common-back')),
+        }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+      });
+      expect(buttonsOf(lotsGrid(language))).toHaveLength(2);
+      // The key asks the same question; the answer "remove" takes the lot with its lines. The page is
+      // clickable again once the dialog has finished closing.
+      await waitFor(() => {
+        expect(document.body.style.pointerEvents).not.toBe('none');
+      });
+      // Selecting another lot draws the grid of its lines again, which takes the focus back to the cell
+      // that had it (FR-7.33); the second click then keeps the focus on the lot.
+      await user.click(cellOf(lotsGrid(language), 0, 'qty'));
+      await waitFor(() => {
+        expect(textOf(salesGrid(language), 0, 'rate')).toBe('600');
+      });
+      await user.click(cellOf(lotsGrid(language), 0, 'qty'));
+      await waitFor(() => {
+        expect(focusedIn(lotsGrid(language))).toBe('0:qty');
+      });
+      await user.keyboard('{Control>}{Delete}{/Control}');
+      const again = await screen.findByRole('alertdialog', undefined, { timeout: 8_000 });
+      await user.click(
+        within(again).getByRole('button', {
+          name: message(language, 'common-remove-line-confirm'),
+        }),
+      );
+      await waitFor(() => {
+        expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
+      });
+    });
+
+    it('takes a lot with no lines away without asking', async () => {
+      const { user } = await openBook(language);
+      await typeHeaderAndLot(user, language);
+      await user.click(
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+      );
+      const lots = lotsGrid(language);
+      await waitFor(() => {
+        expect(buttonsOf(lots)).toHaveLength(2);
+      });
+      await user.click(buttonAt(lots, 1));
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      await waitFor(() => {
+        expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
+      });
+    });
+  });
+
   it('the one-time buyer account sends Enter to the name fields of the line', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);

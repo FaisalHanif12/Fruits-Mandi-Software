@@ -1,6 +1,7 @@
 // The shared entry grid (entry-grid skill, Code Standards F17, F18, F27). Screens declare
 // columns and a row store; they never write key handlers.
 export { EntryGrid } from './EntryGrid';
+export { REMOVE_COLUMN_ID, type RemoveQuestion } from './removeRow';
 export {
   ListGrid,
   type ListColumn,

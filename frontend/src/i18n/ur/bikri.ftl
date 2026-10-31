@@ -971,3 +971,12 @@ bikri-list-search-placeholder = بکری نمبر یا ٹرک نمبر لکھی�
 # The hint inside the search box of the unsold goods list (the seller, the item or the sale number).
 # review: pending
 bikri-stock-search-placeholder = بیوپاری، قسم مال یا بکری نمبر لکھیں
+
+# The question before a lot that has sale lines is removed (plan 43 R3): one sentence that says what will go.
+# $count: the sale lines of the lot that have a buyer or a rate.
+# review: pending
+bikri-lot-remove-question = اس { -lot } کے ساتھ اس کی { $count } لائنیں بھی ہٹ جائیں گی۔
+
+# The title of that question.
+# review: pending
+bikri-lot-remove-title = لاٹ ہٹائیں؟

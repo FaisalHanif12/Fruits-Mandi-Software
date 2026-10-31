@@ -10,7 +10,7 @@
 //               cursor, and at the edge of the text finish and move (PRD FR-7.14)
 //   F2          never starts editing (F2 is "New", PRD 7.3)
 //   Esc         while typing, left to the Esc order (escape.ts); the grid does not cancel itself
-//   Ctrl+Delete remove the current row
+//   Ctrl+Delete remove the current row (the same way as the remove button, removeRow.tsx)
 //   Ctrl+D      copy the cell from the line above (opt in)
 //   Ctrl+I      explain a calculated cell (opt in)
 //   + and -     in a date cell: next and previous day (PRD FR-7.19)
@@ -31,6 +31,7 @@ import {
 import { isNumberLike } from './columnTypes';
 import { isEditable, nextEnterStop } from './enterOrder';
 import type { EntryStore } from './entryStore';
+import { REMOVE_COLUMN_ID } from './removeRow';
 import type { CellRef, EntryColumn, EntryRow, GridInterceptors } from './types';
 
 export interface GridKeyEnv {
@@ -49,6 +50,11 @@ export interface GridKeyEnv {
   fixedRows?: boolean;
   /** Can Ctrl+Delete remove this row? A row that cannot be removed swallows the key. */
   canRemoveRow?: (row: EntryRow) => boolean;
+  /**
+   * Removes the row the way the remove button does (plan 43): it may ask first what will go, and it puts
+   * the focus on the row that takes its place. Without it the key removes the row at once.
+   */
+  requestRemove?: (rowId: string, field?: string) => void;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
   /** Space or a click on a choice cell: move to the next word. */
@@ -120,6 +126,18 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     if (event.type !== 'keydown') return false;
     const rowIndex = params.node.rowIndex;
     const field = params.column.getColId();
+    // The cell of the remove button (plan 43): Enter or Space on it is a press of the button, and Tab
+    // reaches it like any cell. It is not one of the grid's columns, so the Enter order never stops there.
+    if (field === REMOVE_COLUMN_ID && rowIndex !== null) {
+      const removable = store.getState().rows[rowIndex];
+      const pressed = (event.key === 'Enter' || event.key === ' ') && NO_MODIFIER(event);
+      if (removable === undefined || !(pressed || matchesShortcut(event, SHORTCUTS.removeRow))) {
+        return false;
+      }
+      event.preventDefault();
+      env.requestRemove?.(removable.rowId);
+      return true;
+    }
     const column = columns.find((candidate) => candidate.field === field);
     if (rowIndex === null || column === undefined) return false;
     const { rows } = store.getState();
@@ -136,6 +154,10 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       event.preventDefault();
       if (env.fixedRows === true) return true;
       if (env.canRemoveRow !== undefined && !env.canRemoveRow(row)) return true;
+      if (env.requestRemove !== undefined) {
+        env.requestRemove(row.rowId, field);
+        return true;
+      }
       params.api.stopEditing(true);
       const remaining = rows.length - 1;
       store.getState().removeRow(row.rowId);

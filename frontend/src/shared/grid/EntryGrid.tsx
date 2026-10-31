@@ -41,6 +41,7 @@ import { isEditable } from './enterOrder';
 import type { EntryStore } from './entryStore';
 import { createGridKeyHandler } from './gridKeys';
 import { PickerCellEditor } from './PickerCellEditor';
+import { REMOVE_COLUMN_ID, removeColumnDef, useRemoveRow, type RemoveQuestion } from './removeRow';
 import {
   isReadOnlyType,
   type CellRef,
@@ -79,8 +80,17 @@ interface EntryGridProps {
    * signal; the screen lists the changes in words too (NFR-USE-12).
    */
   cellChanged?: PerRow<string>;
-  /** Can Ctrl+Delete remove this row? Default: yes. A saved lot of an edit cannot be removed. */
+  /**
+   * Can the row be removed, by Ctrl+Delete or by its remove button? Default: yes. A saved lot of an edit
+   * cannot be removed, and has no button.
+   */
   canRemoveRow?: (row: EntryRow) => boolean;
+  /**
+   * What is under a row that is about to be removed, as one sentence, or null when it is only itself.
+   * A lot with sale lines says so, and the user is asked before it goes (plan 43 R3). Both the key and
+   * the button ask.
+   */
+  removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
   /**
    * 'fill': the parent gives the grid its height and only visible rows are drawn. 'auto': the
    * grid is as tall as its rows and draws them all (short grids, the development page, tests).
@@ -370,6 +380,7 @@ function GridInner({
   cellWarnings,
   cellChanged,
   canRemoveRow,
+  removeQuestion,
   heightMode = 'fill',
   minRows,
   fit = false,
@@ -434,6 +445,17 @@ function GridInner({
     [onExplain, root, live],
   );
 
+  // One way to remove a row, for the key and for the button (plan 43).
+  const removing = useRemoveRow({
+    store,
+    columns,
+    apiRef,
+    fixedRows: fixedRows ?? false,
+    canRemoveRow,
+    removeQuestion,
+  });
+  const { request: requestRemove, canRemove } = removing;
+
   const keyHandler = useMemo(
     () =>
       createGridKeyHandler({
@@ -443,18 +465,30 @@ function GridInner({
         copyAbove: copyAbove ?? false,
         fixedRows: fixedRows ?? false,
         ...(canRemoveRow === undefined ? {} : { canRemoveRow }),
+        requestRemove,
         onExplain: explain,
         cycleChoice: cycle,
         ...(interceptors === undefined ? {} : { interceptors }),
       }),
-    [store, columns, direction, copyAbove, explain, fixedRows, canRemoveRow, cycle, interceptors],
+    [
+      store,
+      columns,
+      direction,
+      copyAbove,
+      explain,
+      fixedRows,
+      canRemoveRow,
+      requestRemove,
+      cycle,
+      interceptors,
+    ],
   );
   const getKeyHandler = useLatest(keyHandler);
 
   const mouseFocusTracker = useMouseFocus();
   const columnDefs = useMemo(
-    () =>
-      columns.map((column) =>
+    () => [
+      ...columns.map((column) =>
         toColDef(column, {
           mouseFocus: mouseFocusTracker,
           grouping,
@@ -468,6 +502,9 @@ function GridInner({
           cycle,
         }),
       ),
+      // The remove button of each row, last, at the end edge (plan 43). A grid with fixed rows has none.
+      ...(fixedRows === true ? [] : [removeColumnDef({ canRemove, onRemove: requestRemove })]),
+    ],
     [
       columns,
       l10n,
@@ -480,6 +517,9 @@ function GridInner({
       live,
       getKeyHandler,
       mouseFocusTracker,
+      fixedRows,
+      canRemove,
+      requestRemove,
     ],
   );
 
@@ -520,6 +560,8 @@ function GridInner({
   const onCellFocused = (event: CellFocusedEvent<EntryRow>) => {
     if (event.rowIndex === null || event.column === null || typeof event.column === 'string')
       return;
+    // The remove button is not a cell the user types in: the store keeps the cell he was on.
+    if (event.column.getColId() === REMOVE_COLUMN_ID) return;
     // The grid says `cellFocused` for a press on the focused cell too; the tracker tells a move
     // of the focus by a mouse press from a press that stayed where it was.
     const source = event.sourceEvent?.type;
@@ -572,6 +614,7 @@ function GridInner({
         onGridReady={onGridReady}
         onCellFocused={onCellFocused}
       />
+      {removing.dialog}
       {explaining !== null && explainedWorking !== undefined ? (
         <CalcInfoAt
           working={explainedWorking}

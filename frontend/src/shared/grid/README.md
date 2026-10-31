@@ -73,3 +73,19 @@ rowsIn, totalOf }`. `data.pages` holds the one page on screen, and `pager` says 
 A mouse click on an editable picker cell starts its editor with the full list open (plan 32, R7),
 like a click on the field of a form. A key never does: arriving on the cell by Enter or an arrow
 opens nothing, and `Alt+↓` is the key for the list (PRD 7.2, FR-7.16).
+
+## The remove button of a row (plan 43, PRD FR-7.3, FR-7.4, NFR-USE-8)
+
+Every `EntryGrid` has a last column with a small trash button for each row (`removeRow.tsx`), so a line
+can be taken away with the mouse; `Ctrl+Delete` stays as its shortcut and is shown in the tooltip. A
+screen writes no code for it.
+
+- One path for the key and the button (`useRemoveRow`): a grid with `fixedRows` has no column; a row
+  that `canRemoveRow` refuses has no button and the key does nothing; after the removal the focus goes
+  to the same column of the row that took its place (or the one above when it was the last).
+- A screen can say what is under a row about to go with `removeQuestion(row)`, which returns the
+  Fluent sentence (`{ messageId, titleId?, vars? }`) or null. The sale book's lots say "This lot and its
+  2 sale lines will be removed." The key asks too.
+- The column is not one of the grid's own columns (`REMOVE_COLUMN_ID`), so Enter never stops on it and
+  the store never keeps it as the focused cell. Tab reaches its cell; Enter, Space and `Ctrl+Delete` on
+  that cell press the button (`gridKeys.ts`).

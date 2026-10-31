@@ -8,7 +8,9 @@ import {
   EntryGrid,
   createEntryStore,
   type EntryColumn,
+  type EntryRow,
   type EntryStore,
+  type RemoveQuestion,
 } from '../../src/shared/grid';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { useEscapeDispatcher } from '../../src/shared/keyboard';
@@ -48,8 +50,12 @@ function Harness({
   fixedRows,
   cellErrors,
   withLabel,
+  canRemoveRow,
+  removeQuestion,
 }: {
   withLabel?: boolean;
+  canRemoveRow?: (row: EntryRow) => boolean;
+  removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
   store: EntryStore;
   copyAbove?: boolean;
   onExplain?: (cell: { rowId: string; field: string }) => void;
@@ -78,6 +84,8 @@ function Harness({
       {...(onExplain === undefined ? {} : { onExplain })}
       {...(fixedRows === undefined ? {} : { fixedRows })}
       {...(cellErrors === undefined ? {} : { cellErrors })}
+      {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+      {...(removeQuestion === undefined ? {} : { removeQuestion })}
       heightMode="auto"
     />
   );
@@ -106,6 +114,10 @@ export async function renderGrid(
     withLabel?: boolean;
     /** Built from the rows that exist: row index, then field, then the words. */
     cellErrors?: (rowIds: readonly string[]) => Record<string, Record<string, string>>;
+    /** Which rows the remove key and the remove button may take away (plan 43). */
+    canRemoveRow?: (row: EntryRow) => boolean;
+    /** What is under a row about to go: the sentence the user is asked before it goes (plan 43). */
+    removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
   } = {},
 ): Promise<GridRig> {
   act(() => {
@@ -120,6 +132,8 @@ export async function renderGrid(
       {...(options.fixedRows === undefined ? {} : { fixedRows: options.fixedRows })}
       {...(options.withLabel === undefined ? {} : { withLabel: options.withLabel })}
       {...(cellErrors === undefined ? {} : { cellErrors })}
+      {...(options.canRemoveRow === undefined ? {} : { canRemoveRow: options.canRemoveRow })}
+      {...(options.removeQuestion === undefined ? {} : { removeQuestion: options.removeQuestion })}
       {...(options.copyAbove === undefined ? {} : { copyAbove: options.copyAbove })}
       {...(options.onExplain === undefined ? {} : { onExplain: options.onExplain })}
     />,

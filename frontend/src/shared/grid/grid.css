@@ -375,3 +375,26 @@
 body[data-index-form] .ag-popup {
   visibility: hidden;
 }
+
+/* The remove button of a row (plan 43): a small trash button in the full ink (older eyes must find it,
+   Umar's lead 31-10-2026), a click target of 32 px (NFR-USE-23), red when it is pointed at. Its focus ring
+   is the one of the whole app (globals.css, NFR-USE-22). */
+.entry-grid .cell-remove {
+  padding-inline: 0;
+}
+
+.entry-grid .row-remove-button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--radius-2);
+  color: var(--color-ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.entry-grid .row-remove-button:hover {
+  color: var(--color-due);
+  background: var(--color-surface-sunken);
+}

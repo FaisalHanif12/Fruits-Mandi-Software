@@ -972,3 +972,15 @@ bikri-list-search-placeholder = Sale number or truck number
 # The hint inside the search box of the unsold goods list (the seller, the item or the sale number).
 # review: pending
 bikri-stock-search-placeholder = Seller, item or sale number
+
+# The question before a lot that has sale lines is removed (plan 43 R3): one sentence that says what will go.
+# $count: the sale lines of the lot that have a buyer or a rate.
+# review: pending
+bikri-lot-remove-question = { $count ->
+    [one] This lot and its sale line will be removed.
+   *[other] This lot and its { $count } sale lines will be removed.
+}
+
+# The title of that question.
+# review: pending
+bikri-lot-remove-title = Remove the lot?
