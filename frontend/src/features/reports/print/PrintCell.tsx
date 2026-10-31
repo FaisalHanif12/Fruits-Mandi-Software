@@ -22,10 +22,11 @@ const FIGURE_KINDS: ReadonlySet<ReportColumnKind> = new Set([
   'money',
   'balance',
   'percent',
+  'weight',
 ]);
 
 /** The message of a zero balance's side: a nil balance has no side word. */
-const ZERO_SIDE_ID = 'report-side-zero';
+export const ZERO_SIDE_ID = 'report-side-zero';
 
 function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSale: boolean }) {
   const { l10n } = useLocalization();
@@ -140,6 +141,7 @@ export function Cell({ cell, shortSale = false, nameOnly = false }: CellProps) {
     case 'number':
     case 'money':
     case 'percent':
+    case 'weight':
     case 'date':
       return <Num>{cell.text}</Num>;
     case 'month':

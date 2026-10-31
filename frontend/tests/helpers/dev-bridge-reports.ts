@@ -24,6 +24,20 @@ import { listRow } from './bikri-saved';
 import { createGardenBooks } from './gardens-data';
 import { PRINT_R37_EN, R10_FRUIT, R34_FRUIT, R37_FRUIT, R37_GUESTS } from './reports-fruit-real';
 import {
+  DAY_SHEET,
+  PRINT_DAY_SHEET_EN,
+  PRINT_DAY_SHEET_UR,
+  PRINT_SLIP_BUYER_EN,
+  PRINT_SLIP_BUYER_UR,
+  PRINT_SLIP_SELLER_EN,
+  PRINT_SLIP_SELLER_UR,
+  PRINT_SLIP_WEIGHED_EN,
+  PRINT_SLIP_WEIGHED_UR,
+  SLIP_BUYER_AKRAM,
+  SLIP_BUYER_WEIGHED,
+  SLIP_SELLER_RAHIM,
+} from './day-slips-real';
+import {
   BUYER_BILLS_EN,
   BUYER_BILLS_UR,
   PRINT_R5_EN,
@@ -37,19 +51,9 @@ import {
   R36_GARDEN,
   R36_PARTNER,
 } from './reports-gardens-real';
-import {
-  PRINT_R35_SLIP_AKRAM_EN,
-  PRINT_R35_SLIP_AKRAM_UR,
-  PRINT_R35_SLIP_RAHIM_EN,
-  PRINT_R35_TABLE_EN,
-  PRINT_R35_TABLE_UR,
-  R35_SLIP_AKRAM,
-  R35_SLIP_RAHIM,
-  R35_TABLE,
-} from './reports-party-real';
+import { PRINT_R35_TABLE_EN, PRINT_R35_TABLE_UR, R35_TABLE } from './reports-party-real';
 import {
   PRINT_R33_PARTNER_EN,
-  PRINT_R34_EN,
   R10_STOCK,
   R15_ALL,
   R15_PAYMENTS,
@@ -59,7 +63,6 @@ import {
   R33_MONTH,
   R33_PARTNER,
   R33_TRIP,
-  R34_DAY,
 } from './reports-stock-real';
 import {
   PRINT_R31_BAY_EN,
@@ -145,7 +148,9 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R23: R23_DAY,
   R25: R25_DAY,
   R33: R33_TRIP,
-  R34: R34_DAY,
+  // The day total sheet and the day slips are the plan 42 answers (PRD v1.12): the buyers' and the
+  // sellers' table under the lines of the day, and a slip with its labelled lines.
+  R34: DAY_SHEET,
   R35: R35_TABLE,
   R36: R36_GARDEN,
   R1: R1_BIKRI_1,
@@ -161,11 +166,25 @@ const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R28: PRINT_R28_MONTH_EN,
   R31: PRINT_R31_BAY_EN,
   R33: PRINT_R33_PARTNER_EN,
-  R34: PRINT_R34_EN,
+  R34: PRINT_DAY_SHEET_EN,
   R36: PRINT_R36_PARTNER_EN,
   R5: PRINT_R5_EN,
   R37: PRINT_R37_EN,
 };
+
+/**
+ * With the `blank` flag a slip has nothing paid yet: the backend sends the paid-today line EMPTY, and
+ * the page leaves a line for the collector to write on (PRD FR-19.12).
+ */
+function blankPaid<T extends { summary: { label_id: string; cell: unknown }[] }>(slip: T): T {
+  if (!devFlag('blank')) return slip;
+  return {
+    ...slip,
+    summary: slip.summary.map((line) =>
+      line.label_id === 'report-r35-paid-today' ? { ...line, cell: { type: 'empty' } } : line,
+    ),
+  };
+}
 
 /** R35 prints in the language asked for: the table for no party, a slip for one (a seller's for رحیم). */
 function partyDaySheetPrint(input: Input): ReportPrintData {
@@ -173,8 +192,12 @@ function partyDaySheetPrint(input: Input): ReportPrintData {
   const party = filters['party'] as { account_id?: number } | null;
   const urdu = input['language'] === 'ur';
   if (party?.account_id === undefined) return urdu ? PRINT_R35_TABLE_UR : PRINT_R35_TABLE_EN;
-  if (party.account_id === 18) return PRINT_R35_SLIP_RAHIM_EN;
-  return urdu ? PRINT_R35_SLIP_AKRAM_UR : PRINT_R35_SLIP_AKRAM_EN;
+  if (party.account_id === 18) {
+    return blankPaid(urdu ? PRINT_SLIP_SELLER_UR : PRINT_SLIP_SELLER_EN);
+  }
+  // With the `weighed` flag the buyer's slip has a line of an item sold by weight (PRD A73).
+  if (devFlag('weighed')) return urdu ? PRINT_SLIP_WEIGHED_UR : PRINT_SLIP_WEIGHED_EN;
+  return blankPaid(urdu ? PRINT_SLIP_BUYER_UR : PRINT_SLIP_BUYER_EN);
 }
 
 function catalog(): ReportCatalogEntry[] {
@@ -221,8 +244,14 @@ function page(input: Input): ReportPage {
   // R35 for one party answers with his slip: the seller's for a seller (رحیم is 18), the buyer's
   // for any other account.
   if (id === 'R35' && party?.account_id !== undefined) {
-    base = party.account_id === 18 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
+    base =
+      devFlag('weighed') && party.account_id !== 18
+        ? SLIP_BUYER_WEIGHED
+        : blankPaid(party.account_id === 18 ? SLIP_SELLER_RAHIM : SLIP_BUYER_AKRAM);
   }
+  // The real fixtures written before plan 42 have no `tables`; the backend now always sends the field
+  // (empty for every report but the day total sheet). Until the backend writes them again, say so here.
+  base = { ...base, tables: (base as Partial<ReportPage>).tables ?? [] };
   const firstRow = base.rows[0];
   if (devFlag('many') && firstRow !== undefined) {
     base = { ...base, rows: Array.from({ length: 230 }, () => firstRow), total_count: 230 };
@@ -238,7 +267,15 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_catalog: () => catalog(),
   reports_run: (input) => page(input),
   reports_print_data: (input) => {
-    if (input['id'] === 'R35') return partyDaySheetPrint(input);
+    // The backend echoes the paper it was asked for, so the preview is drawn on that paper.
+    const onPaper = (data: ReportPrintData): ReportPrintData => ({
+      ...data,
+      paper: (input['paper'] as ReportPrintData['paper'] | undefined) ?? data.paper,
+    });
+    if (input['id'] === 'R35') return onPaper(partyDaySheetPrint(input));
+    if (input['id'] === 'R34' && !devFlag('garden') && !devFlag('fruit')) {
+      return onPaper(input['language'] === 'ur' ? PRINT_DAY_SHEET_UR : PRINT_DAY_SHEET_EN);
+    }
     return PRINTS[input['id'] as ReportId] ?? PRINT_R18_EN;
   },
   // The shared header and footer of every report print: the firm's own, the title and facts asked for.

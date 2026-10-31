@@ -99,3 +99,10 @@ serials and counts, but never a phone, a code or a short code. Inside the page t
 Inter first (`--font-digits`, the `Mandi Digits` face of `fonts.css`), so a digit that is not in `<Num>`
 or `<Code>` never takes an Urdu digit shape. `tests/unit/print-digits.test.tsx` walks every template and
 the backend's real answers; it is the ONE place that turns the setting on.
+
+## The people of the header (plan 42, PRD Section 21, FR-19.13, v1.12)
+
+`PrintHeader` draws up to six people from `header.contacts`: the backend sends them already in print
+order (the owners first, then the munshi), each with `role` (`owner` or `munshi`) and a `phone` that
+may be empty. The role word is ours (`print-role-owner`, `print-role-munshi`); a person with no phone is
+his role and name only. Settings → Firm (`features/settings/components/FirmTab.tsx`) edits the list.

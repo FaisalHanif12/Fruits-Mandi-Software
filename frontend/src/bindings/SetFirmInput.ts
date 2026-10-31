@@ -30,7 +30,8 @@ export type SetFirmInput = {
    */
   phone: string;
   /**
-   * The contact persons, 0 to 3. Each has both names, each in its own script, and a phone.
+   * The people of the header, 0 to 6. Each has both names, each in its own script, a role
+   * (owner or munshi) and an optional phone (empty means none).
    * Missing means none.
    */
   firm_contacts: Array<FirmContact>;

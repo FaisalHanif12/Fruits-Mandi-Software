@@ -199,6 +199,7 @@ pub(crate) fn run(
     let money = |paisa| Cell::Money { paisa };
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R30,
         title_id: ids::title_id("R30"),
         filters: typed.resolved.clone(),

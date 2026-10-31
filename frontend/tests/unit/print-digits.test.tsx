@@ -207,7 +207,8 @@ describe('the real collection lists of the backend', () => {
       expect(text).toContain('0300-1234567');
       expect(footerOf()).toContain('persian');
       const codes = [...root.querySelectorAll('.print-col-code .type-number')];
-      expect(codes.map((item) => item.textContent)).toEqual(['1', '2']);
+      // The short codes of the backend's test world (the buyers 0 and 1), as the real answer has them.
+      expect(codes.map((item) => item.textContent)).toEqual(['0', '1']);
     },
   );
 });

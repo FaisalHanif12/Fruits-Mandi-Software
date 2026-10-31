@@ -233,9 +233,14 @@ describe.each(LANGUAGES)("the account form with the backend's real answers (%s)"
   });
 });
 
+/**
+ * The people the backend's own test saved (plan 42): the munshi first, then two owners, the last one
+ * with no phone. [Urdu name, English name, phone, role].
+ */
 const CONTACT_NAMES = [
-  ['منشی آصف بھٹی', 'Munshi Asif Bhatti', '0300-4058860'],
-  ['اکرم', 'Akram', '03211234567'],
+  ['آصف بھٹی', 'Asif Bhatti', '0300-4058860', 'munshi'],
+  ['اکرم', 'Akram', '03211234567', 'owner'],
+  ['علی', 'Ali', '', 'owner'],
 ] as const;
 
 describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)", (language) => {
@@ -270,10 +275,21 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     expect(contactField('settings-firm-contact-phone').map((input) => input.value)).toEqual([
       '03004058860',
       '03211234567',
+      '',
     ]);
     expect(contactField('settings-firm-contact-name-en').map((input) => input.value)).toEqual([
-      'Munshi Asif Bhatti',
+      'Asif Bhatti',
       'Akram',
+      'Ali',
+    ]);
+    // Each person shows the role the backend stored.
+    const roles = within(contactsBlock()).getAllByRole('combobox', {
+      name: named(message(language, 'settings-firm-contact-role')),
+    });
+    expect(roles.map((role) => visible(role.textContent))).toEqual([
+      message(language, 'settings-firm-role-munshi'),
+      message(language, 'settings-firm-role-owner'),
+      message(language, 'settings-firm-role-owner'),
     ]);
   });
 
@@ -293,20 +309,35 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     );
     await tabTo(user, (element) => element === mark);
     await user.keyboard('RH');
-    for (const [urdu, english, phone] of CONTACT_NAMES) {
+    for (const [urdu, english, phone, role] of CONTACT_NAMES) {
       await tabTo(user, (element) => element === add);
       await user.keyboard('{Enter}');
       const place = contactField('settings-firm-contact-name-en').length - 1;
       const urduBox = must(contactField('settings-firm-contact-name-ur')[place]);
       const englishBox = must(contactField('settings-firm-contact-name-en')[place]);
       const phoneBox = must(contactField('settings-firm-contact-phone')[place]);
+      const roleBox = must(
+        within(contactsBlock()).getAllByRole('combobox', {
+          name: named(message(language, 'settings-firm-contact-role')),
+        })[place],
+      );
       for (const [box, text] of [
         [urduBox, urdu],
         [englishBox, english],
-        [phoneBox, phone],
       ] as const) {
         await tabTo(user, (element) => element === box);
         await user.keyboard(text);
+      }
+      // A new person starts as an owner; the munshi is picked from the list with the keys.
+      if (role === 'munshi') {
+        await tabTo(user, (element) => element === roleBox);
+        await user.keyboard('{Enter}');
+        await user.keyboard('{ArrowDown}{Enter}');
+      }
+      // A phone is optional: the last person has none.
+      if (phone !== '') {
+        await tabTo(user, (element) => element === phoneBox);
+        await user.keyboard(phone);
       }
     }
     press('F10');
@@ -322,7 +353,7 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
   });
 
-  it('the real refusal of a fourth contact shows in the contacts block, with the least and the most', async () => {
+  it('the real refusal of a seventh person shows in the contacts block, with the least and the most', async () => {
     vi.mocked(settingsApi.settingsGet).mockResolvedValue(real.SETTINGS_GET_CONTACTS);
     vi.mocked(settingsApi.settingsSetFirm).mockRejectedValue(
       new CommandError(real.SETTINGS_SET_FIRM_CONTACTS_REFUSED),
@@ -335,7 +366,7 @@ describe.each(LANGUAGES)("the firm settings with the backend's real answers (%s)
     press('F10');
     const alert = await within(contactsBlock()).findByRole('alert');
     expect(visible(alert.textContent)).toBe(
-      message(language, 'err-out-of-range', { min: 0, max: 3 }),
+      message(language, 'err-out-of-range', { min: 0, max: 6 }),
     );
     expect(visible(document.body.textContent)).not.toContain('ERR_OUT_OF_RANGE');
   });

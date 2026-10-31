@@ -1,0 +1,172 @@
+{
+  "report": "R35",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r35-title",
+  "filters": [
+    {
+      "label_id": "report-filter-day",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 اکرم ٹول ٹیکس"
+    }
+  ],
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    },
+    {
+      "key": "weight",
+      "title_id": "report-col-weight",
+      "kind": "weight"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-goods",
+      "cell": {
+        "type": "money",
+        "text": "1,235"
+      }
+    },
+    {
+      "label_id": "report-r35-commission",
+      "cell": {
+        "type": "money",
+        "text": "74"
+      }
+    },
+    {
+      "label_id": "report-r35-laga",
+      "cell": {
+        "type": "money",
+        "text": "16"
+      }
+    },
+    {
+      "label_id": "report-r35-today-total",
+      "cell": {
+        "type": "money",
+        "text": "1,325"
+      }
+    },
+    {
+      "label_id": "report-r35-paid-today",
+      "cell": {
+        "type": "empty"
+      }
+    },
+    {
+      "label_id": "report-r35-today-left",
+      "cell": {
+        "type": "balance",
+        "text": "1,325",
+        "side_id": "report-side-dr"
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "text": "0",
+        "side_id": "report-side-zero"
+      }
+    },
+    {
+      "label_id": "report-r35-new-balance",
+      "cell": {
+        "type": "balance",
+        "text": "1,325",
+        "side_id": "report-side-dr"
+      }
+    },
+    {
+      "label_id": "report-r35-total-qty",
+      "cell": {
+        "type": "number",
+        "text": "2"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "انگور"
+        },
+        {
+          "type": "names",
+          "text": "پیٹی"
+        },
+        {
+          "type": "number",
+          "text": "2"
+        },
+        {
+          "type": "money",
+          "text": "100"
+        },
+        {
+          "type": "money",
+          "text": "1,235"
+        },
+        {
+          "type": "weight",
+          "text": "12.345"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "tables": [],
+  "row_count": "1",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

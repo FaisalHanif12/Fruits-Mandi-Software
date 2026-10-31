@@ -329,45 +329,107 @@ fn write_sheet(
     }
 
     if !data.totals.is_empty() {
-        let row_at = row_number(at)?;
-        // The label goes in the first column the totals leave empty. A totals row that fills
-        // every column has no place for it, and the label must never cover a total.
-        let label_at = data
-            .totals
-            .iter()
-            .position(|cell| matches!(cell, XCell::Empty))
-            .ok_or_else(|| {
-                ReportsError::Data("the totals row has no cell for its label".to_owned())
-            })?;
-        for (col, cell) in data.totals.iter().enumerate() {
-            if col == label_at {
-                sheet
-                    .write_string_with_format(
-                        row_at,
-                        col_number(col)?,
-                        &data.totals_label,
-                        &styles.total_text,
-                    )
-                    .map_err(xlsx)?;
+        write_totals(
+            sheet,
+            &styles,
+            row_number(at)?,
+            &data.totals,
+            &data.totals_label,
+        )?;
+        at += 1;
+    }
+
+    // The tables under the main one: a blank row, the heading, the column headings, the rows and
+    // the totals row of each. They count in the progress like any other row.
+    let mut widths = column_widths(&data.columns, &data.rows, &data.totals);
+    for table in &data.tables {
+        at += 2;
+        sheet
+            .write_string_with_format(row_number(at)?, 0, &table.title, &styles.label)
+            .map_err(xlsx)?;
+        at += 1;
+        for (col, column) in table.columns.iter().enumerate() {
+            sheet
+                .write_string_with_format(
+                    row_number(at)?,
+                    col_number(col)?,
+                    &column.title,
+                    &styles.header,
+                )
+                .map_err(xlsx)?;
+        }
+        at += 1;
+        for row in &table.rows {
+            let weight = if row.bold {
+                Weight::Bold
             } else {
+                Weight::Normal
+            };
+            for (col, cell) in row.cells.iter().enumerate() {
                 write_cell(
                     sheet,
-                    row_at,
+                    row_number(at)?,
                     col_number(col)?,
                     cell,
-                    styles.pick(cell, Weight::Total),
+                    styles.pick(cell, weight),
                 )?;
+            }
+            at += 1;
+            *done += 1;
+        }
+        write_totals(
+            sheet,
+            &styles,
+            row_number(at)?,
+            &table.totals,
+            &table.totals_label,
+        )?;
+        at += 1;
+        for (col, width) in column_widths(&table.columns, &table.rows, &table.totals)
+            .into_iter()
+            .enumerate()
+        {
+            match widths.get_mut(col) {
+                Some(existing) => *existing = (*existing).max(width),
+                None => widths.push(width),
             }
         }
     }
-
-    for (col, width) in column_widths(&data.columns, &data.rows, &data.totals)
-        .into_iter()
-        .enumerate()
-    {
+    for (col, width) in widths.into_iter().enumerate() {
         sheet
             .set_column_width(col_number(col)?, width)
             .map_err(xlsx)?;
+    }
+    Ok(())
+}
+
+/// The totals row: the label goes in the first column the totals leave empty. A totals row that
+/// fills every column has no place for it, and the label must never cover a total.
+fn write_totals(
+    sheet: &mut Worksheet,
+    styles: &Styles,
+    row_at: u32,
+    totals: &[XCell],
+    label: &str,
+) -> Result<(), ReportsError> {
+    let label_at = totals
+        .iter()
+        .position(|cell| matches!(cell, XCell::Empty))
+        .ok_or_else(|| ReportsError::Data("the totals row has no cell for its label".to_owned()))?;
+    for (col, cell) in totals.iter().enumerate() {
+        if col == label_at {
+            sheet
+                .write_string_with_format(row_at, col_number(col)?, label, &styles.total_text)
+                .map_err(xlsx)?;
+        } else {
+            write_cell(
+                sheet,
+                row_at,
+                col_number(col)?,
+                cell,
+                styles.pick(cell, Weight::Total),
+            )?;
+        }
     }
     Ok(())
 }

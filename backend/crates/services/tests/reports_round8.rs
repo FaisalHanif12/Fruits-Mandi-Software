@@ -22,6 +22,7 @@ use mandi_reports::reports::{
     catalog,
 };
 use mandi_reports::reports::{ReportPrintInput, print_data};
+use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::auth::Language;
 use mandi_services::core::bikri::{BikriSaveInput, StockListInput};
 use mandi_services::core::error::ErrorCode;
@@ -667,6 +668,288 @@ fn r34_e2e_36_the_worked_day() {
         .collect();
     assert_eq!(shares, vec![996, 746, 746]);
     assert_eq!(page.filters.from.as_deref(), Some("2026-10-10"));
+}
+
+/// A balance cell as a signed number: a debit is positive (بنام), a credit negative (جمع).
+fn sgn(cell: &Cell) -> i64 {
+    match cell {
+        Cell::Balance { paisa, side } => match side {
+            BalanceSide::Cr => -paisa.rupees(),
+            _ => paisa.rupees(),
+        },
+        Cell::Money { paisa } => paisa.rupees(),
+        Cell::Empty => 0,
+        other => panic!("not an amount: {other:?}"),
+    }
+}
+
+/// The table of a kind (`buyers` or `sellers`) of a day.
+fn table_of<'a>(
+    page: &'a ReportPage,
+    key: &str,
+    day: &str,
+) -> &'a mandi_reports::reports::ReportTable {
+    page.tables
+        .iter()
+        .find(|t| t.key == key && t.day == day)
+        .unwrap_or_else(|| panic!("no {key} table for {day}"))
+}
+
+/// One figure of a table row by the key of its column.
+fn cell_of<'a>(
+    table: &'a mandi_reports::reports::ReportTable,
+    row: &'a [Cell],
+    key: &str,
+) -> Option<&'a Cell> {
+    table
+        .columns
+        .iter()
+        .position(|c| c.key == key)
+        .and_then(|at| row.get(at))
+}
+
+/// previous, today, paid, new of a party row, signed, by the English name of the party.
+fn table_row(table: &mandi_reports::reports::ReportTable, name: &str) -> (i64, i64, i64, i64) {
+    let row = table
+        .rows
+        .iter()
+        .find(|r| matches!(&r.cells[1], Cell::Party { party } if party.name_en == name))
+        .unwrap_or_else(|| panic!("no row for {name}"));
+    let today_key = if table.key == "buyers" {
+        "today_total"
+    } else {
+        "net_sale"
+    };
+    let get = |key: &str| sgn(cell_of(table, &row.cells, key).unwrap());
+    (
+        get("previous"),
+        get(today_key),
+        get("paid"),
+        get("new_balance"),
+    )
+}
+
+/// The totals row of a table: previous, today, paid, new, signed.
+fn table_totals(table: &mandi_reports::reports::ReportTable) -> (i64, i64, i64, i64) {
+    let today_key = if table.key == "buyers" {
+        "today_total"
+    } else {
+        "net_sale"
+    };
+    let get = |key: &str| sgn(cell_of(table, &table.totals, key).unwrap());
+    (
+        get("previous"),
+        get(today_key),
+        get("paid"),
+        get("new_balance"),
+    )
+}
+
+#[test]
+fn r34_e2e_36_the_day_total_sheet_lines_and_the_two_tables() {
+    let w = full_day();
+    let page = report(&w, ReportId::R34, dates("10-10-2026", "10-10-2026"), 0, 0);
+    // The نگ and the commission in its own lines: 2,484 + 2,484 + 480 = 5,448.
+    assert_eq!(count(&page, "report-r34-qty"), 60);
+    assert_eq!(amount(&page, "report-r34-commission-seller"), 2_484);
+    assert_eq!(amount(&page, "report-r34-commission-buyer"), 2_484);
+    assert_eq!(amount(&page, "report-r34-commission-laga"), 480);
+    assert_eq!(amount(&page, "report-r34-commission"), 5_448);
+    // Buyers: billed 44,364, cash received 22,800, left 21,564 بنام. Sellers: net sale 34,476
+    // جمع, paid out 9,316.
+    assert_eq!(amount(&page, "report-r34-buyers-billed"), 44_364);
+    assert_eq!(amount(&page, "report-r34-buyers-received"), 22_800);
+    assert_eq!(
+        balance(&find(&page, "report-r34-buyers-left").cells[3]),
+        (BalanceSide::Dr, 21_564)
+    );
+    assert_eq!(
+        balance(&find(&page, "report-r34-sellers-net").cells[3]),
+        (BalanceSide::Cr, 34_476)
+    );
+    assert_eq!(amount(&page, "report-r34-sellers-paid"), 9_316);
+    // No other entries on the worked day: no such lines.
+    for id in ["report-r34-buyers-other", "report-r34-sellers-other"] {
+        assert!(
+            !page
+                .rows
+                .iter()
+                .any(|r| matches!(&r.cells[1], Cell::Label { id: x } if x == id)),
+            "{id}"
+        );
+    }
+    // Two tables for the day, each with its total row.
+    assert_eq!(page.tables.len(), 2);
+    let buyers = table_of(&page, "buyers", "2026-10-10");
+    assert_eq!(buyers.title_id, "report-r34-table-buyers");
+    assert_eq!(
+        buyers
+            .columns
+            .iter()
+            .map(|c| c.key.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "code",
+            "buyer",
+            "previous",
+            "today_total",
+            "paid",
+            "new_balance"
+        ]
+    );
+    assert_eq!(
+        table_row(buyers, "Akram Toll Tax"),
+        (0, 12_880, 10_000, 2_880)
+    );
+    assert_eq!(table_row(buyers, "Arshad Multani"), (0, 18_684, 0, 18_684));
+    assert_eq!(table_row(buyers, "Shahid"), (0, 12_800, 12_800, 0));
+    assert_eq!(table_totals(buyers), (0, 44_364, 22_800, 21_564));
+    // Sorted by the Urdu name: ارشد، اکرم، شاہد.
+    let order: Vec<String> = buyers
+        .rows
+        .iter()
+        .map(|r| match &r.cells[1] {
+            Cell::Party { party } => party.name_en.clone(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(order, vec!["Arshad Multani", "Akram Toll Tax", "Shahid"]);
+    let sellers = table_of(&page, "sellers", "2026-10-10");
+    assert_eq!(sellers.title_id, "report-r34-table-sellers");
+    // رحیم: 15,000 بنام, net sale 24,316 جمع, paid 9,316, new 0. کریم: 0, 10,160 جمع, 0, 10,160 جمع.
+    assert_eq!(table_row(sellers, "Rahim"), (15_000, -24_316, 9_316, 0));
+    assert_eq!(table_row(sellers, "Karim"), (0, -10_160, 0, -10_160));
+    // Total row: previous 15,000 بنام, net sale 34,476 جمع, paid 9,316, new 10,160 جمع.
+    assert_eq!(table_totals(sellers), (15_000, -34_476, 9_316, -10_160));
+    // Every row holds previous + today + payment effect = new (a payment lowers a buyer and
+    // raises a seller, which is a debit).
+    for (table, effect) in [(buyers, -1), (sellers, 1)] {
+        for row in &table.rows {
+            let get = |key: &str| sgn(cell_of(table, &row.cells, key).unwrap());
+            let today = get(if table.key == "buyers" {
+                "today_total"
+            } else {
+                "net_sale"
+            });
+            assert_eq!(
+                get("previous") + today + effect * get("paid"),
+                get("new_balance")
+            );
+        }
+    }
+    // The buyers' total is the buyers' dues of the same sheet (every buyer started at 0).
+    assert_eq!(
+        table_totals(buyers).3,
+        amount(&page, "report-r34-buyers-dues")
+    );
+}
+
+#[test]
+fn r34_other_entries_show_in_the_lines_and_in_a_column_of_the_table() {
+    // E2E-32: 3,000 cash lent to اکرم is another debit of his day. billed + other − received =
+    // left on the lines; the buyers' table has the extra column.
+    let w = full_day();
+    let mut lent = payment(w.akram, "3,000");
+    lent.reason = "نقد ادھار".into();
+    vouchers::save_payment(&w.env.ctx, &w.owner, &lent).unwrap();
+    let page = report(&w, ReportId::R34, dates("10-10-2026", "10-10-2026"), 0, 0);
+    assert_eq!(amount(&page, "report-r34-buyers-billed"), 44_364);
+    assert_eq!(
+        balance(&find(&page, "report-r34-buyers-other").cells[3]),
+        (BalanceSide::Dr, 3_000)
+    );
+    assert_eq!(amount(&page, "report-r34-buyers-received"), 22_800);
+    assert_eq!(
+        balance(&find(&page, "report-r34-buyers-left").cells[3]),
+        (BalanceSide::Dr, 24_564)
+    );
+    let buyers = table_of(&page, "buyers", "2026-10-10");
+    assert_eq!(
+        buyers
+            .columns
+            .iter()
+            .map(|c| c.key.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "code",
+            "buyer",
+            "previous",
+            "today_total",
+            "other",
+            "paid",
+            "new_balance"
+        ]
+    );
+    let akram = buyers
+        .rows
+        .iter()
+        .find(|r| matches!(&r.cells[1], Cell::Party { party } if party.name_en == "Akram Toll Tax"))
+        .unwrap();
+    assert_eq!(sgn(cell_of(buyers, &akram.cells, "other").unwrap()), 3_000);
+    assert_eq!(
+        sgn(cell_of(buyers, &akram.cells, "new_balance").unwrap()),
+        5_880
+    );
+    // The sellers' table has no such column on this day.
+    let sellers = table_of(&page, "sellers", "2026-10-10");
+    assert!(sellers.columns.iter().all(|c| c.key != "other"));
+}
+
+#[test]
+fn r34_a_page_has_the_tables_of_the_days_it_shows_and_a_print_has_every_day() {
+    // 10-10-26 has the worked day; 11-10-26 has one receipt of 1,000 from ارشد.
+    let w = full_day();
+    set_today(&w.env, 2026, 10, 11);
+    let mut later = receipt(w.arshad, "1,000");
+    later.date = "11-10-2026".into();
+    vouchers::save_receipt(&w.env.ctx, &w.owner, &later).unwrap();
+    let both = report(&w, ReportId::R34, dates("10-10-2026", "11-10-2026"), 0, 0);
+    let days: Vec<&str> = both.tables.iter().map(|t| t.day.as_str()).collect();
+    assert_eq!(
+        days,
+        vec!["2026-10-10", "2026-10-10", "2026-10-11"],
+        "two tables on the first day, the buyers' table only on the second"
+    );
+    // 11-10-26: ارشد had 18,684, paid 1,000: new 17,684; a buyer with no sale has no today total.
+    let day2 = table_of(&both, "buyers", "2026-10-11");
+    assert_eq!(
+        table_row(day2, "Arshad Multani"),
+        (18_684, 0, 1_000, 17_684)
+    );
+    // A page that shows only rows of the second day keeps only its table.
+    let first_of_day2 = both
+        .rows
+        .iter()
+        .position(|r| matches!(&r.cells[0], Cell::Date { iso } if iso == "2026-10-11"))
+        .unwrap();
+    let page2 = report(
+        &w,
+        ReportId::R34,
+        dates("10-10-2026", "11-10-2026"),
+        i64::try_from(first_of_day2).unwrap(),
+        200,
+    );
+    assert_eq!(page2.tables.len(), 1);
+    assert_eq!(page2.tables[0].day, "2026-10-11");
+    // The print has every day, in both languages, already formatted.
+    for language in [Language::Ur, Language::En] {
+        let data = print_data(
+            w.env.ctx.db(),
+            &ReportPrintInput {
+                group_by_month: false,
+                sort: None,
+                id: ReportId::R34,
+                filters: dates("10-10-2026", "11-10-2026"),
+                language,
+                paper: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(data.tables.len(), 3);
+        assert_eq!(data.tables[0].day, "10-10-2026");
+        assert_eq!(data.tables[2].day_iso, "2026-10-11");
+        assert_eq!(data.tables[0].totals.len(), data.tables[0].columns.len());
+    }
 }
 
 #[test]

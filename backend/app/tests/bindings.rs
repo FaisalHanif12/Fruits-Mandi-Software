@@ -557,6 +557,7 @@ const EXPECTED_FILES: &[&str] = &[
     "CollectionPrintData.ts",
     "PrintCollectionInput.ts",
     "FirmContact.ts",
+    "FirmRole.ts",
     "PrintParty.ts",
     "PrintLine.ts",
     "AmountRole.ts",
@@ -627,6 +628,9 @@ const EXPECTED_FILES: &[&str] = &[
     "PrintReportRow.ts",
     "ReportPrintSummaryLine.ts",
     "ReportPrintData.ts",
+    // Plan 42: the tables under R34 and the people of the print header.
+    "ReportTable.ts",
+    "PrintReportTable.ts",
     // Run B, plan 20, step B3 (append-only block).
     "ReportGroupBy.ts",
     "ReportPaidFilter.ts",

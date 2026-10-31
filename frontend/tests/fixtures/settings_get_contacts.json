@@ -4,14 +4,22 @@
     "address": "Kot Radha Kishan",
     "firm_contacts": [
       {
-        "name_en": "Munshi Asif Bhatti",
-        "name_ur": "منشی آصف بھٹی",
-        "phone": "03004058860"
+        "name_en": "Asif Bhatti",
+        "name_ur": "آصف بھٹی",
+        "phone": "03004058860",
+        "role": "munshi"
       },
       {
         "name_en": "Akram",
         "name_ur": "اکرم",
-        "phone": "03211234567"
+        "phone": "03211234567",
+        "role": "owner"
+      },
+      {
+        "name_en": "Ali",
+        "name_ur": "علی",
+        "phone": "",
+        "role": "owner"
       }
     ],
     "mandi_en": "New Sabzi Mandi Kot Radha Kishan",

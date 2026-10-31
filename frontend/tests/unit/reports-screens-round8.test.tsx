@@ -703,25 +703,41 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('0', 'item')).toBe(m('report-r34-bikri'));
       expect(cell('0', 'count')).toBe('2');
       expect(cell('0', 'amount')).toBe('41,400');
-      expect(cell('1', 'item')).toBe(m('report-r34-commission'));
-      expect(cell('1', 'amount')).toBe('5,448');
-      expect(cell('2', 'item')).toBe(m('report-r34-cash-opening'));
-      expect(cell('2', 'amount')).toBe('50,000');
-      expect(cell('5', 'item')).toBe(m('report-r34-cash-closing'));
-      expect(cell('5', 'amount')).toBe('58,484');
-      expect(drawnColumns()).toEqual(['date', 'item', 'count', 'amount']);
-      // The page says how many lines the backend has: 30 for the day (with the three dues rows of plan 40), 25 on the first page.
+      // Plan 42 (PRD v1.12): the total نگ, then the commission on its own lines (seller, buyer, لاگا) and
+      // the total commission, then the buyers' and the sellers' lines of the day, then the cash lines.
+      expect(cell('1', 'item')).toBe(m('report-r34-qty'));
+      expect(cell('1', 'count')).toBe('60');
+      expect(cell('2', 'item')).toBe(m('report-r34-commission-seller'));
+      expect(cell('2', 'amount')).toBe('2,484');
+      expect(cell('3', 'amount')).toBe('2,484');
+      expect(cell('4', 'item')).toBe(m('report-r34-commission-laga'));
+      expect(cell('4', 'amount')).toBe('480');
+      expect(cell('5', 'item')).toBe(m('report-r34-commission'));
+      expect(cell('5', 'amount')).toBe('5,448');
+      expect(cell('6', 'amount')).toBe('44,364');
+      expect(cell('7', 'amount')).toBe('22,800');
+      expect(cell('8', 'item')).toBe(m('report-r34-buyers-left'));
+      expect(cell('8', 'amount')).toContain('21,564');
+      expect(cell('10', 'item')).toBe(m('report-r34-sellers-paid'));
+      expect(cell('10', 'amount')).toBe('9,316');
+      expect(drawnColumns().slice(0, 4)).toEqual(['date', 'item', 'count', 'amount']);
+      // The page says how many lines the backend has: 39 for the day, 25 on the first page.
       expect(
-        await screen.findByText(paragraph(m('common-pager-range', { from: 1, to: 25, total: 30 }))),
+        await screen.findByText(paragraph(m('common-pager-range', { from: 1, to: 25, total: 39 }))),
       ).toBeInTheDocument();
     });
 
     it('has a fruit row after the gardens: the count is نگ and the amount the value', async () => {
-      // The block that holds the fruit row, drawn whole.
+      // The block that holds the fruit row, drawn whole: two rows before it and one after.
+      const at = R34_FRUIT.rows.findIndex((row) =>
+        row.cells.some((one) => one.type === 'label' && one.id === 'report-r34-fruit-taken'),
+      );
+      expect(at).toBeGreaterThan(1);
       const block: ReportPage = {
         ...R34_FRUIT,
-        rows: R34_FRUIT.rows.slice(17, 21),
+        rows: R34_FRUIT.rows.slice(at - 2, at + 2),
         total_count: 4,
+        tables: [],
       };
       await openReport('R34', { pages: { R34: block } });
       await waitFor(() => {
@@ -736,8 +752,9 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       // The block of the partners and what follows it, as a short list that is drawn whole.
       const block: ReportPage = {
         ...R34_DAY,
-        rows: R34_DAY.rows.slice(19, 25),
+        rows: R34_DAY.rows.slice(28, 34),
         total_count: 6,
+        tables: [],
       };
       await openReport('R34', { pages: { R34: block } });
       await waitFor(() => {
@@ -754,12 +771,14 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(cell('5', 'amount')).toBe('21,564');
     });
 
-    it('has no totals row, because lines of different kinds do not add up', async () => {
+    it('has no totals row of its own, because lines of different kinds do not add up', async () => {
       await openReport('R34');
       await waitFor(() => {
         expect(drawnRows().length).toBeGreaterThan(5);
       }, SLOW_MS);
-      expect(document.querySelector('.ag-row-pinned')).toBeNull();
+      // The two short tables of the day have their own totals rows (plan 42); the main list has none.
+      const main = screen.getByRole('group', { name: m('report-grid-label') });
+      expect(main.querySelector('.ag-row-pinned')).toBeNull();
     });
 
     it('asks for the day typed and only the days', async () => {
@@ -782,11 +801,16 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await screen.findByText(printFirmName(language), undefined, SLOW_MS);
-      expect(document.querySelectorAll('.print-report tbody tr')).toHaveLength(30);
-      expect(document.querySelector('.print-report tfoot')).toBeNull();
-      expect(visible(document.querySelector('.print-report tbody')?.textContent)).toContain(
-        '58,484',
-      );
+      // Every line of the day (39) is in the main pieces of the print, in two columns on A4 (plan 42);
+      // the short tables are drawn apart.
+      const pieces = ['.print-sheet > table.print-table', '.print-two-columns > table.print-table'];
+      expect(
+        document.querySelectorAll(pieces.map((piece) => `${piece} tbody tr`).join(', ')),
+      ).toHaveLength(39);
+      expect(document.querySelector(pieces.map((piece) => `${piece} tfoot`).join(', '))).toBeNull();
+      expect(document.querySelectorAll('.print-day-table')).toHaveLength(2);
+      // The cash lines come after the short tables of the day, in the same print.
+      expect(visible(document.querySelector('.print-report')?.textContent)).toContain('58,484');
     });
   });
 

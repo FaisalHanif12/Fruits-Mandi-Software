@@ -46,8 +46,8 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::En)"
       "serial": "1",
       "party": {
         "role_id": "print-party-seller",
-        "code": "030110001",
-        "short_code": "1",
+        "code": "0010",
+        "short_code": "0",
         "name": "Rahim",
         "phone": null
       },

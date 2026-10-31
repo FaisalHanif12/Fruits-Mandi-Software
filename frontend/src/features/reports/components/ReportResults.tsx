@@ -15,9 +15,11 @@ import { useLayoutStep } from '../../../shared/hooks/useLayoutStep';
 import { Button, EmptyState, ErrorState, LoadingState, Notice } from '../../../shared/ui';
 import { reportColumns, signedColumnsOf, totalsFor, type ReportRowView } from '../columns';
 import type { useReportPages } from '../hooks';
+import { DayTables } from './DayTables';
 import { DeadHeading } from './DeadHeading';
 import { ReportRange } from './ReportRange';
 import { ReportSummary } from './ReportSummary';
+import { SlipSummary, isSlipPage } from './SlipSummary';
 
 /** The reports with a running balance: it shows in date order only (plan 38 R4). */
 const BALANCE_REPORTS: ReadonlySet<string> = new Set(['R12', 'R13', 'R14']);
@@ -95,10 +97,12 @@ export function ReportResults({
     query.sort !== null &&
     dateKey !== undefined &&
     query.sort.column !== dateKey;
-  // The party day sheet (R35) is laid out like the client's own slip: its lines first, and what the
-  // day comes to underneath, right under them (PRD FR-19.12). Every other report has its figures
-  // above the table.
+  // The party day sheet (R35) is laid out as a slip: its lines first, and what the day comes to
+  // underneath, right under them (PRD FR-19.12). Every other report has its figures above the table.
+  // One party's slip (a buyer's or a seller's, plan 42) has its labelled lines as a card; the table of
+  // every party has its totals as a strip of facts.
   const sheet = last.id === 'R35';
+  const slip = isSlipPage(last);
   let body;
   if (rows.length === 0) {
     body = balanceOnly ? (
@@ -120,34 +124,55 @@ export function ReportResults({
       />
     );
   } else {
+    // A slip (one party's day) and the day total sheet (R34) have more under their rows than a table:
+    // the labelled lines of the slip, the short buyers' and sellers' tables of each day. They are one
+    // page of their own, so the rows are drawn in full and the page scrolls as a whole (plan 42).
+    const extras = slip || last.tables.length > 0;
+    const grid = (
+      // The rows of a page with extras do not fill the height: the extras come under (or beside) them.
+      <ListRegion rowCount={extras ? 0 : rows.length}>
+        <ListGrid<ReportRowView>
+          columns={columns}
+          rows={rows}
+          getRowId={(view) => view.key}
+          labelId="report-grid-label"
+          onOpen={onOpen}
+          onFocusRow={onFocusRow}
+          focusRowId={focusRowId}
+          heightMode={extras ? 'auto' : listHeightMode(rows.length)}
+          paging={paging}
+          sort={{ value: query.sort, onChange: query.setSort }}
+          // A group heading and a month heading read stronger and open nothing.
+          isGroup={(view) => view.row.kind !== 'normal'}
+          totals={(context) =>
+            totalsFor(
+              last.columns,
+              { labelId: last.totals_label_id, cells: last.totals },
+              context,
+              signedColumnsOf(last.id),
+            )
+          }
+        />
+      </ListRegion>
+    );
     body = (
       <>
-        <ListRegion rowCount={rows.length}>
-          <ListGrid<ReportRowView>
-            columns={columns}
-            rows={rows}
-            getRowId={(view) => view.key}
-            labelId="report-grid-label"
-            onOpen={onOpen}
-            onFocusRow={onFocusRow}
-            focusRowId={focusRowId}
-            heightMode={listHeightMode(rows.length)}
-            paging={paging}
-            sort={{ value: query.sort, onChange: query.setSort }}
-            // A group heading and a month heading read stronger and open nothing.
-            isGroup={(view) => view.row.kind !== 'normal'}
-            totals={(context) =>
-              totalsFor(
-                last.columns,
-                { labelId: last.totals_label_id, cells: last.totals },
-                context,
-                signedColumnsOf(last.id),
-              )
-            }
-          />
-        </ListRegion>
-        {/* The slip's footer sits right under its lines, like the client's own (PRD FR-19.12). */}
-        {sheet ? <ReportSummary lines={last.summary} card /> : null}
+        {extras ? (
+          <div
+            className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${slip ? 'normal:flex-row normal:items-start' : ''}`}
+          >
+            <div className="min-w-0 normal:flex-1">{grid}</div>
+            {/* The short buyers' and sellers' tables of each day of the day total sheet (R34). */}
+            {last.tables.length > 0 ? <DayTables tables={last.tables} /> : null}
+            {/* The slip's lines sit with its goods, like the paper slip (PRD FR-19.12). */}
+            {slip ? <SlipSummary lines={last.summary} /> : null}
+          </div>
+        ) : (
+          <>
+            {grid}
+            {sheet ? <ReportSummary lines={last.summary} card /> : null}
+          </>
+        )}
         <div className="shrink-0">
           <Pager pager={query.pager} />
         </div>

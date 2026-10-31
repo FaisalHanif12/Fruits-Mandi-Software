@@ -3,8 +3,8 @@
 // with the backend's own fixtures. The table of every party (the buyers, then the sellers, a group
 // row for each with its own figures, a blank column for the collector's note that waits for the wide
 // step) and the lines under it (the shop's total اگراہی and the sellers' totals); the slip of one
-// party, opened with Enter on his row (a one-time person with his key), with its footer lines in the
-// order the backend sends, under the lines like the client's own slip; the way back to all parties;
+// party, opened with Enter on his row (a one-time person with his key), with its labelled lines in the
+// order the backend sends, as a card beside the goods (plan 42, PRD v1.12); the way back to all parties;
 // the print with the same order; the four states; a language switch in the middle of a slip and the
 // keyboard-only path. The screen adds up nothing: every figure is one the backend sent. The layout
 // step in a test with no layout is the middle one, so the collector's column of the wide step is
@@ -128,6 +128,21 @@ function runCount() {
 function boxText(name: string): string {
   const box = screen.getByRole('combobox', { name });
   return box instanceof HTMLInputElement ? box.value : visible(box.textContent);
+}
+
+/**
+ * The labelled lines of a party's day slip, as "label value" text in the order they are drawn: the card
+ * beside the goods (plan 42). A balance has its side word after the figure.
+ */
+function slipLines(): string[] {
+  const dl = document.querySelector('section dl.flex-col');
+  return Array.from(dl?.children ?? []).map((line) => {
+    const value = line.querySelector('dd');
+    const full = visible(value?.textContent);
+    const word = visible(value?.querySelector('.slip-side')?.textContent);
+    const figure = word === '' ? full : `${full.slice(0, -word.length)} ${word}`;
+    return `${visible(line.querySelector('dt')?.textContent)} ${figure}`.trim();
+  });
 }
 
 /** The lines of the footer, as "label value" text in the order they are drawn. */
@@ -282,40 +297,38 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
   });
 
   describe('the slip of one party', () => {
-    it('Enter on a buyer opens his slip: the lines of his day and, under them, what the day comes to', async () => {
+    it('Enter on a buyer opens his slip: the goods of his day and, beside them, the lines of what the day comes to', async () => {
       const { user } = await openSheet();
       await openSlip(user, '2');
       await waitFor(() => {
-        expect(drawnColumns()).toEqual(['qty', 'item', 'rate', 'amount']);
+        expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);
       }, SLOW_MS);
       expect(lastRun()?.filters.party).toEqual({ account_id: 20, person_key: null });
       await waitFor(() => {
-        expect(cell('0', 'item')).toBe(names('پیٹی کیلا', 'Box Banana'));
+        expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       }, SLOW_MS);
       expect(drawnRows()).toEqual(['0']);
+      expect(cell('0', 'packing')).toBe(names('پیٹی', 'Box'));
       expect(cell('0', 'qty')).toBe('20');
       expect(cell('0', 'rate')).toBe('600');
-      expect(cell('0', 'amount')).toBe('12,880');
-      // The slip has no totals row: its total نگ is the first footer line, as on the client's own slip.
+      // The goods value: the quantity times the rate, not the amount with commission and لاگا.
+      expect(cell('0', 'amount')).toBe('12,000');
+      // The slip has no totals row: its lines are the card beside the goods.
       expect(totalsCell('qty')).toBe('');
       expect(totalsCell('amount')).toBe('');
-      // The footer is in the order of the client's own slip, as the backend sent it.
-      const lines = footerLines();
-      expect(lines).toHaveLength(5);
-      expect(lines[0]).toContain(m('report-r35-total-qty'));
-      expect(lines[0]).toContain('20');
-      expect(lines[1]).toContain(m('report-r35-bought'));
-      expect(lines[1]).toContain('12,880');
-      expect(lines[2]).toContain(m('report-r35-previous'));
-      // A buyer's slip says what was received (the client's وصولی), not what was paid.
-      expect(lines[3]).toContain(m('report-r35-received'));
-      expect(lines[3]).toContain('10,000');
-      expect(lines[4]).toContain(m('report-r35-remaining'));
-      expect(lines[4]).toContain('2,880');
-      expect(lines[4]).toContain(m('report-side-dr'));
-      // No line the backend did not send: nothing on the spot, no other debits.
-      expect(visible(document.body.textContent)).not.toContain(m('report-r35-on-spot'));
-      expect(visible(document.body.textContent)).not.toContain(m('report-r35-other-debits'));
+      // Each line on its own row, in the order the backend sent them, with the worked figures.
+      const lines = slipLines();
+      expect(lines).toEqual([
+        `${m('report-r35-goods')} 12,000`,
+        `${m('report-r35-commission')} 720`,
+        `${m('report-r35-laga')} 160`,
+        `${m('report-r35-today-total')} 12,880`,
+        `${m('report-r35-paid-today')} 10,000`,
+        `${m('report-r35-today-left')} 2,880 ${m('report-side-dr')}`,
+        `${m('report-r35-previous')} 0`,
+        `${m('report-r35-new-balance')} 2,880 ${m('report-side-dr')}`,
+        `${m('report-r35-total-qty')} 20`,
+      ]);
     });
 
     it('shows the party in the party box with his name in the app language', async () => {
@@ -328,34 +341,39 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       }, SLOW_MS);
     });
 
-    it('Enter on a seller opens his slip with the cash given and what was paid', async () => {
+    it('Enter on a seller opens his slip: his lots, the item total, each deduction and his net sale of the day', async () => {
       const { user } = await openSheet();
       await openSlip(user, '5');
       await waitFor(() => {
         expect(lastRun()?.filters.party).toEqual({ account_id: 18, person_key: null });
       }, SLOW_MS);
       await waitFor(() => {
-        expect(footerLines().some((line) => line.includes(m('report-r35-cash-given')))).toBe(true);
+        expect(slipLines()).toHaveLength(11);
       }, SLOW_MS);
-      const lines = footerLines();
-      expect(lines).toHaveLength(6);
-      expect(lines[1]).toContain(m('report-r35-previous'));
-      expect(lines[1]).toContain('15,000');
-      expect(lines[2]).toContain(m('report-r35-sold'));
-      expect(lines[2]).toContain('24,316');
-      expect(lines[3]).toContain(m('report-r35-cash-given'));
-      expect(lines[3]).toContain('5,000');
-      expect(lines[4]).toContain(m('report-r35-paid'));
-      expect(lines[4]).toContain('4,316');
-      // A seller's slip ends with his balance, not with "remaining".
-      expect(lines[5]).toContain(m('report-r35-balance'));
-      expect(lines[5]).toContain('0');
-      // A seller's rate is the lot's, so the backend sends none and the cell is blank.
-      expect(cell('0', 'rate')).toBe('');
-      // The cells of a list whose rows grow are drawn by the grid a moment after the row (plan 39 R7).
+      expect(slipLines()).toEqual([
+        `${m('report-r35-gross')} 29,400`,
+        `${m('report-r35-commission')} 1,764`,
+        `${m('report-r35-freight')} 3,000`,
+        `${m('report-r35-labour')} 250`,
+        `${m('report-r35-munshiana')} 50`,
+        `${m('report-r35-phone')} 20`,
+        `${m('report-r35-net-sale')} 24,316 ${m('report-side-cr')}`,
+        `${m('report-r35-paid-today')} 9,316`,
+        `${m('report-r35-today-left')} 15,000 ${m('report-side-cr')}`,
+        `${m('report-r35-previous')} 15,000 ${m('report-side-dr')}`,
+        `${m('report-r35-new-balance')} 0`,
+      ]);
+      // His two lots, each with the seller's rate, and the total row of the item set apart.
       await waitFor(() => {
-        expect(cell('0', 'amount')).toBe('24,316');
+        expect(cell('2', 'amount')).toBe('29,400');
       }, SLOW_MS);
+      expect(cell('0', 'rate')).toBe('600');
+      expect(cell('1', 'rate')).toBe('580');
+      expect(cell('0', 'amount')).toBe('12,000');
+      expect(cell('1', 'amount')).toBe('17,400');
+      expect(cell('2', 'item')).toBe(names('کیلا کل', 'Banana total'));
+      expect(cell('2', 'qty')).toBe('50');
+      expect(document.querySelector('.ag-row[row-id="2"]')?.className).toContain('row-group');
     });
 
     it('a one-time buyer is asked for with his own key, so his slip is his and not the whole account’s', async () => {
@@ -379,7 +397,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       const { router, user } = await openSheet();
       await openSlip(user, '2');
       await waitFor(() => {
-        expect(cell('0', 'item')).toBe(names('پیٹی کیلا', 'Box Banana'));
+        expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
       }, SLOW_MS);
       await user.click(pick('.ag-row[row-id="0"] [col-id="item"]'));
       await user.keyboard('{Enter}');
@@ -388,12 +406,24 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       }, SLOW_MS);
     });
 
+    it('Enter on the item total row opens nothing: it is a total, not a line of a بکری', async () => {
+      const { router, user } = await openSheet();
+      await openSlip(user, '5');
+      await waitFor(() => {
+        expect(cell('2', 'item')).toBe(names('کیلا کل', 'Banana total'));
+      }, SLOW_MS);
+      const before = router.state.location.pathname;
+      await user.click(pick('.ag-row[row-id="2"] [col-id="item"]'));
+      await user.keyboard('{Enter}');
+      expect(router.state.location.pathname).toBe(before);
+    });
+
     it('“All parties” goes back to the table, with the day still typed', async () => {
       const { user } = await openSheet();
       await user.type(screen.getByLabelText(m('report-filter-day')), '10-10-2026');
       await openSlip(user, '2');
       await waitFor(() => {
-        expect(drawnColumns()).toEqual(['qty', 'item', 'rate', 'amount']);
+        expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-r35-all-parties')) }));
       await waitFor(() => {
@@ -414,11 +444,11 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
   });
 
   describe('the print', () => {
-    it('is the client’s slip: the lines first and what the day comes to under them, with the day named "Day"', async () => {
+    it('is the day slip: the goods first and the labelled lines under them, with the day named "Day"', async () => {
       const { user } = await openSheet({ print: PRINT_R35_SLIP_AKRAM_EN });
       await openSlip(user, '2');
       await waitFor(() => {
-        expect(drawnColumns()).toEqual(['qty', 'item', 'rate', 'amount']);
+        expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
       await screen.findByText(printFirmName(language), undefined, SLOW_MS);
@@ -427,12 +457,13 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         language,
         paper: 'a4',
       });
+      // The lines are a card under the goods, in the order the backend sent them.
       const table = pick('.print-report .print-table');
-      const summary = pick('.print-report .print-summary-lines');
+      const summary = pick('.print-report .print-slip-lines');
       expect(
         table.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-      const labels = Array.from(summary.querySelectorAll('dt')).map((term) =>
+      const labels = Array.from(summary.querySelectorAll('th')).map((term) =>
         visible(term.textContent),
       );
       expect(labels).toEqual(
@@ -511,20 +542,20 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       await user.type(screen.getByLabelText(m('report-filter-day')), '10-10-2026');
       await openSlip(user, '2');
       await waitFor(() => {
-        expect(footerLines()).toHaveLength(5);
+        expect(slipLines()).toHaveLength(9);
       }, SLOW_MS);
       const before = runCount();
       act(() => {
         useLanguageStore.getState().setLanguage(other);
       });
       await waitFor(() => {
-        expect(footerLines()[1]).toContain(message(other, 'report-r35-bought'));
+        expect(slipLines()[1]).toContain(message(other, 'report-r35-commission'));
       }, SLOW_MS);
       expect(screen.getByLabelText(message(other, 'report-filter-day'))).toHaveValue('10-10-2026');
       expect(boxText(message(other, 'report-filter-party'))).toContain(
         other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax',
       );
-      expect(footerLines()[4]).toContain('2,880');
+      expect(slipLines()[7]).toContain('2,880');
       expect(runCount()).toBe(before);
     });
   });
@@ -546,7 +577,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         expect(lastRun()?.filters.party).toEqual({ account_id: 20, person_key: null });
       }, SLOW_MS);
       await waitFor(() => {
-        expect(drawnColumns()).toEqual(['qty', 'item', 'rate', 'amount']);
+        expect(drawnColumns()).toEqual(['item', 'packing', 'qty', 'rate', 'amount']);
       }, SLOW_MS);
       const back = screen.getByRole('button', { name: named(m('report-r35-all-parties')) });
       await act(async () => {
@@ -872,11 +903,13 @@ describe.each(LANGUAGES)(
 
     describe('R34', () => {
       it('has two rows for the gardens: what was paid into them and what came in, as information', async () => {
-        // The part of the day with the trips and the gardens, as a short list that is drawn whole.
+        // The part of the day with the trips and the gardens, as a short list that is drawn whole (the
+        // short buyers' and sellers' tables of the day are left out: they have their own tests).
         const block: ReportPage = {
           ...R34_GARDEN_DAY,
-          rows: R34_GARDEN_DAY.rows.slice(15, 22),
+          rows: R34_GARDEN_DAY.rows.slice(24, 31),
           total_count: 7,
+          tables: [],
         };
         fakeReports({ pages: { R34: block } });
         await renderApp('/reports/R34');

@@ -149,6 +149,7 @@ pub(crate) fn run_r18(
     }
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R18,
         title_id: ids::title_id("R18"),
         filters: typed.resolved.clone(),
@@ -222,6 +223,7 @@ pub(crate) fn run_r16(
     }
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R16,
         title_id: ids::title_id("R16"),
         filters: typed.resolved.clone(),
@@ -403,6 +405,7 @@ pub(crate) fn run_r17(
 
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R17,
         title_id: ids::title_id("R17"),
         filters: typed.resolved.clone(),
@@ -527,6 +530,7 @@ pub(crate) fn run_r19(
     };
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R19,
         title_id: ids::title_id("R19"),
         filters: typed.resolved.clone(),

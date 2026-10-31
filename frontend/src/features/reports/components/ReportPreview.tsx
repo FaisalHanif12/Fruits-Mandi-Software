@@ -105,6 +105,8 @@ export function ReportPreview({
       excel={<ExcelExportButton exporter={exporter} language={language} />}
       job={job}
       canPrint={isPrintable}
+      // One party's day slip also goes on the 80 mm roll (PRD FR-19.12).
+      roll={id === 'R35' && filters.party !== null}
     >
       {body}
     </PrintPreviewFrame>

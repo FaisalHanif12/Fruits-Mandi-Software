@@ -1,9 +1,8 @@
 // The party day sheet printed (R35, PRD FR-19.12, FR-19.13, E2E-43, Umar 20-10-2026 and 26-10-2026):
-// the client's two layouts drawn from the backend's real print data, in Urdu and in English, on A4
-// and on A5. One party's slip has its lines first and what the day comes to under them; the
-// all-parties table has the buyers, then the sellers, with a blank collector column and the footer
-// lines under it. Every number is English 0-9 in its own left-to-right isolate, and the page adds
-// nothing up.
+// the all-parties table drawn from the backend's real print data, in Urdu and in English, on A4 and on
+// A5: the buyers, then the sellers, with a blank collector column and the footer lines under it. Every
+// number is English 0-9 in its own left-to-right isolate, and the page adds nothing up. One party's day
+// slip (plan 42, PRD v1.12) is tested in day-slips-print.test.tsx.
 
 import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -16,8 +15,6 @@ import { printFrameFor } from '../helpers/print-frame';
 import { message, visible } from '../helpers/render';
 import {
   PRINT_R35_SLIP_AKRAM_EN,
-  PRINT_R35_SLIP_AKRAM_UR,
-  PRINT_R35_SLIP_RAHIM_EN,
   PRINT_R35_TABLE_EN,
   PRINT_R35_TABLE_UR,
 } from '../helpers/reports-party-real';
@@ -52,69 +49,6 @@ const textOf = (element: Element | null | undefined) => visible(element?.textCon
 
 const labelsOf = (root: HTMLElement) =>
   Array.from(root.querySelectorAll('.print-summary-lines dt')).map(textOf);
-
-describe.each([
-  ['English', PRINT_R35_SLIP_AKRAM_EN, 'en', 'ltr'],
-  ['Urdu', PRINT_R35_SLIP_AKRAM_UR, 'ur', 'rtl'],
-] as const)('the buyer slip of اکرم in %s', (_name, data, language, dir) => {
-  it('is a page in the print language and direction, with English digits', () => {
-    const { root } = show(data);
-    expect(root.getAttribute('lang')).toBe(language);
-    expect(root.getAttribute('dir')).toBe(dir);
-    expect(root.getAttribute('data-paper')).toBe('a4');
-    expect(root.getAttribute('data-digits')).toBe('latin');
-  });
-
-  it('has the firm and the title in the one header, and names the party with his short code', () => {
-    const { root } = show(data);
-    expect(root.querySelectorAll('.print-header')).toHaveLength(1);
-    const header = textOf(root.querySelector('.print-header'));
-    expect(header).toContain(frameOf(data).header.firm.name);
-    expect(header).toContain(message(language, 'report-r35-title'));
-    // The day and the party are the facts of the header, as the backend wrote them.
-    const facts = textOf(root.querySelector('.print-facts'));
-    expect(facts).toContain(message(language, 'report-filter-day'));
-    expect(facts).toContain('10-10-2026');
-    expect(facts).toContain(language === 'ur' ? '0 اکرم ٹول ٹیکس' : '0 Akram Toll Tax');
-  });
-
-  it('has the lines first, then what the day comes to under them, in the client’s order', () => {
-    const { root } = show(data);
-    const table = must(root.querySelector('.print-table'));
-    const summary = must(root.querySelector('.print-summary-lines'));
-    expect(table.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(labelsOf(root)).toEqual(data.summary.map((line) => message(language, line.label_id)));
-    // The slip has its total نگ in the footer and no totals row of its own.
-    expect(root.querySelector('tfoot')).toBeNull();
-    const last = textOf(root.querySelectorAll('.print-summary-lines .print-fact')[4]);
-    expect(last).toContain('2,880');
-  });
-
-  it('writes the line as the quantity, the item, the rate and the amount with commission and لاگا', () => {
-    const { root } = show(data);
-    const cells = Array.from(root.querySelectorAll('tbody tr td')).map(textOf);
-    expect(cells).toEqual(['20', language === 'ur' ? 'پیٹی کیلا' : 'Box Banana', '600', '12,880']);
-  });
-
-  it('draws every number in its own left-to-right isolate, none bare in the words', () => {
-    const { root } = show(data);
-    expect(bareDigits(root)).toEqual([]);
-  });
-});
-
-describe('the seller slip of رحیم in English', () => {
-  const data = PRINT_R35_SLIP_RAHIM_EN;
-
-  it('ends with his balance, and has a blank rate cell for the lot', () => {
-    const { root } = show(data);
-    const labels = labelsOf(root);
-    expect(labels.at(-1)).toBe(message('en', 'report-r35-balance'));
-    expect(labels).not.toContain(message('en', 'report-r35-remaining'));
-    const cells = Array.from(root.querySelectorAll('tbody tr td')).map(textOf);
-    expect(cells).toEqual(['50', 'Box Banana', '', '24,316']);
-    expect(bareDigits(root)).toEqual([]);
-  });
-});
 
 describe.each([
   ['English', PRINT_R35_TABLE_EN, 'en'],

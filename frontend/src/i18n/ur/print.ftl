@@ -418,3 +418,19 @@ print-collection-buyers = اس فہرست میں { -gahak }
 # The total of THIS list only: the buyers planned for this day, not every buyer who owes.
 # review: pending
 print-collection-total = اس فہرست کا میزان
+
+# The role word before a person's name in the print header (PRD Section 21, FR-19.13, v1.12): the
+# owners print first, then the munshi.
+# review: pending
+print-role-owner = مالک
+
+# review: pending
+print-role-munshi = منشی
+
+# A line of an item sold by weight on a party's day slip on the 80 mm roll (PRD A73): the kilos and the
+# rate per kilo, then the kilos of an item total.
+# review: pending
+print-slip-weight-line = { $weight } کلو @ { $rate }
+
+# review: pending
+print-slip-weight-kg = { $weight } کلو

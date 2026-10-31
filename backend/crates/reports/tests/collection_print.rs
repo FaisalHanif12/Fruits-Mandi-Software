@@ -10,7 +10,7 @@
 use chrono::{TimeZone, Utc};
 use mandi_core::accounts::RecordRef;
 use mandi_core::auth::Language;
-use mandi_core::firm::FirmContact;
+use mandi_core::firm::{FirmContact, FirmRole};
 use mandi_core::money::{Grouping, Paisa};
 use mandi_core::printing::{CollectionFilterNames, Paper, PrintDoc, PrintSetup};
 use mandi_core::vouchers::{CollectionBuyer, CollectionGroup, CollectionList};
@@ -189,13 +189,15 @@ fn snapshot_grouped_with_contacts_trade_mark_and_filters_urdu() {
     let mut set = options(Language::Ur);
     set.firm.contacts = vec![
         FirmContact {
-            name_ur: "منشی آصف بھٹی".into(),
-            name_en: "Munshi Asif Bhatti".into(),
+            name_ur: "آصف بھٹی".into(),
+            name_en: "Asif Bhatti".into(),
+            role: FirmRole::Munshi,
             phone: "03004058860".into(),
         },
         FirmContact {
             name_ur: "اکرم".into(),
             name_en: "Akram".into(),
+            role: FirmRole::Owner,
             phone: "03211234567".into(),
         },
     ];

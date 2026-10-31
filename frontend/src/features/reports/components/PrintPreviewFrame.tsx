@@ -29,10 +29,16 @@ const LANGUAGE_OPTIONS: readonly SegmentedOption<Language>[] = [
   { value: 'en', lang: 'en', label: <Localized id="common-language-en" /> },
 ];
 
-/** Reports print on A4 or A5; the 80 mm roll is for slips (PRD 21). */
+/** Reports print on A4 or A5. */
 const PAPER_OPTIONS: readonly SegmentedOption<Paper>[] = [
   { value: 'a4', label: <Localized id="print-paper-a4" /> },
   { value: 'a5', label: <Localized id="print-paper-a5" /> },
+];
+
+/** A party's day slip is a slip: it also goes on the 80 mm roll (PRD 21, FR-19.12). */
+const SLIP_PAPER_OPTIONS: readonly SegmentedOption<Paper>[] = [
+  ...PAPER_OPTIONS,
+  { value: 'mm80', label: <Localized id="print-paper-mm80" /> },
 ];
 
 interface PrintPreviewFrameProps {
@@ -50,6 +56,8 @@ interface PrintPreviewFrameProps {
   job: PrintJob;
   /** False while the page is loading or empty: there is nothing to send yet. */
   canPrint: boolean;
+  /** The page is a slip (a party's day slip): the 80 mm roll is offered with A4 and A5. */
+  roll?: boolean;
   /** The page, or its loading, error or empty state. */
   children: ReactNode;
 }
@@ -63,6 +71,7 @@ export function PrintPreviewFrame({
   excel,
   job,
   canPrint,
+  roll = false,
   children,
 }: PrintPreviewFrameProps) {
   const { l10n } = useLocalization();
@@ -92,7 +101,7 @@ export function PrintPreviewFrame({
             {() => (
               <div>
                 <SegmentedControl
-                  options={PAPER_OPTIONS}
+                  options={roll ? SLIP_PAPER_OPTIONS : PAPER_OPTIONS}
                   value={paper}
                   groupLabel={l10n.getString('report-print-paper')}
                   onChange={(next) => {

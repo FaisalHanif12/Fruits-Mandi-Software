@@ -455,3 +455,46 @@ fn a_later_sale_of_a_one_time_sellers_lot_pays_no_cash() {
             .any(|(code, _, _, key)| code == "0031" && key.is_some())
     );
 }
+
+#[test]
+fn a_one_time_seller_of_a_lot_with_a_later_sale_keeps_his_name_and_phone_in_an_edit() {
+    // Plan 42, money agent H1: the later posting credits him under his person key, so the lot
+    // cannot get another person in an edit of the first posting (rule `lot_seller_locked`). The
+    // same person, and any other change of the posting, is still allowed.
+    let w = world();
+    let mut first = lot(&w, "lot-1", w.pukhta_seller, w.banana, "10");
+    first.pukhta = person("ناصر", "Nasir", "0301-1111111");
+    first.cash_paid = Some("1,000".into());
+    first.sales = vec![sale("s-1", w.akram, "5", "600")];
+    let saved = save_ok(&w, &draft(vec![first]));
+    let lot_id = bikri::get(&w.env.ctx, saved.bikri_id).unwrap().lots[0].id;
+    bikri::later_sale_save(
+        &w.env.ctx,
+        &w.owner,
+        &LaterSaleSaveInput {
+            lot_id,
+            date: "10-10-2026".into(),
+            sales: vec![sale("l", w.arshad, "5", "600")],
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let opened = tools::open(&w, saved.bikri_id, saved.entry_id);
+    let mut other = opened.draft.clone();
+    other.lots[0].pukhta = person("اسلم", "Aslam", "0302-2222222");
+    let p = tools::preview(&w, &opened, &other);
+    assert!(tools::flagged(
+        &p.errors,
+        ErrorCode::ErrEditNotAllowed,
+        "lots[0].pukhta"
+    ));
+    let e = tools::try_edit(&w, &opened, &other, true).unwrap_err();
+    assert_eq!(
+        tools::rule_at(&e, "lots[0].pukhta").as_deref(),
+        Some("lot_seller_locked")
+    );
+    // The same person with another rate is fine.
+    let mut same = opened.draft.clone();
+    same.lots[0].sales[0].seller_rate = "610".into();
+    tools::edit(&w, &opened, &same);
+}

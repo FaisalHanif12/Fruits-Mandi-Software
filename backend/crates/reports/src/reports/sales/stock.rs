@@ -376,6 +376,7 @@ pub(crate) fn run(
     ] = totals;
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R10,
         title_id: ids::title_id("R10"),
         filters: typed.resolved.clone(),

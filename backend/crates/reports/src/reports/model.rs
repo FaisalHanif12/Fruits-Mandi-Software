@@ -530,6 +530,8 @@ pub enum ColumnKind {
     Month,
     /// A share in hundredths of a percent (analytics, PRD 18.2): 7210 is 72.10%.
     Percent,
+    /// A weight in kilos (a weighed line of a day slip, plan 42, PRD A73).
+    Weight,
     /// An account.
     Party,
     /// A name in both scripts.
@@ -674,6 +676,13 @@ pub enum Cell {
         #[ts(type = "number")]
         hundredths: i64,
     },
+    /// A weight, stored in grams and shown in kilos with up to 3 decimals: 12,345 is `12.345`,
+    /// 12,000 is `12` (a weighed line of a day slip, plan 42, PRD A73). The screen never converts.
+    Weight {
+        /// The weight in grams, more than 0.
+        #[ts(type = "number")]
+        grams: i64,
+    },
     /// An account.
     Party {
         /// The account.
@@ -808,6 +817,10 @@ pub enum RowKind {
     /// A heading line above the first row of a month, with the sums of the whole month (plan 38
     /// R4). Only when the screen asks for `group_by_month`.
     Month,
+    /// The total line of one item in a day slip (R35, plan 42): the item's quantity and amount,
+    /// drawn in bold under the item's lines. It comes only after an item that has more than one
+    /// line. Its first cell is a `message` cell (`report-r35-item-total`, argument `item`).
+    ItemTotal,
 }
 
 /// One row.
@@ -830,6 +843,31 @@ pub struct SummaryLine {
     pub label_id: String,
     /// The value.
     pub cell: Cell,
+}
+
+/// A table under the main table of a report, with its own columns and its totals row (plan 42).
+/// R34 has two for each day: the buyers' and the sellers' (PRD R34, v1.12). The rows are
+/// complete: the screen and the print add nothing and sum nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct ReportTable {
+    /// A stable key: `buyers` or `sellers`.
+    pub key: String,
+    /// The day the table belongs to, `YYYY-MM-DD`: the same day as the `date` cell of the main
+    /// rows it goes with.
+    pub day: String,
+    /// Fluent message ID of the heading of the table.
+    pub title_id: String,
+    /// The columns. A column that no row of the day uses is left out (R34 has the
+    /// `report-col-other-entries` column only on a day that has other entries).
+    pub columns: Vec<Column>,
+    /// The rows: one for each party, sorted by his Urdu name. After them, when a person in the
+    /// dead amount (FR-10.10) is in the table, a `group` row with the totals with him.
+    pub rows: Vec<Row>,
+    /// Fluent message ID of the totals row label.
+    pub totals_label_id: String,
+    /// The totals row, one cell for each column, over the parties of the table. A person in the
+    /// dead amount is not in it.
+    pub totals: Vec<Cell>,
 }
 
 /// A page of a report, with the totals over the whole filter (PRD FR-19.11, Code Standards B31).
@@ -861,6 +899,10 @@ pub struct ReportPage {
     pub totals: Vec<Cell>,
     /// Lines above the table (opening balance, closing balance, the difference of a trial).
     pub summary: Vec<SummaryLine>,
+    /// More tables under the main one, each with its own columns and totals row (R34: the
+    /// buyers' and the sellers' table of each day, plan 42). Empty for every other report. Only
+    /// the days that have a row on this page are given; a print has every day.
+    pub tables: Vec<ReportTable>,
     /// For a report with group rows (a head, a city, a collector, a trip), when this page starts
     /// in the middle of a group: the heading row of that group, with the totals of the WHOLE
     /// group, so the screen can draw the heading above the first row of the page. Null when the

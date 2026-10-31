@@ -1032,7 +1032,7 @@ report-filter-trip-by-partner = By partner
 report-r34-bikri = { -kham-bikri }
 
 # review: pending
-report-r34-commission = { -commission } and { -laga }
+report-r34-commission = Total { -commission }
 
 # review: pending
 report-r34-cash-opening = Cash Opening
@@ -1109,10 +1109,6 @@ report-col-previous = { -sabiqa-raqam }
 # review: pending
 report-col-party = Party
 
-# The seller's balance at the end of his day slip (R35).
-# review: pending
-report-r35-balance = { -baqaya }
-
 # review: pending
 report-r35-buyers = { -gahak }
 
@@ -1124,33 +1120,6 @@ report-r35-total-qty = Total { -nag }
 
 # review: pending
 report-r35-previous = { -sabiqa-raqam }
-
-# review: pending
-report-r35-bought = { -taza-banam }
-
-# review: pending
-report-r35-sold = Sold That Day
-
-# review: pending
-report-r35-other-debits = Other { -banaam }
-
-# review: pending
-report-r35-other-credits = Other { -jama }
-
-# review: pending
-report-r35-on-spot = Paid on the Spot
-
-# review: pending
-report-r35-cash-given = { -naqd }
-
-# review: pending
-report-r35-received = { -wasooli }
-
-# review: pending
-report-r35-paid = { -adaigi }
-
-# review: pending
-report-r35-remaining = { -total-raqam }
 
 # review: pending
 report-r35-collection = Total { -agrahi }
@@ -1346,3 +1315,120 @@ report-r34-total-dues = { -kul-agrahi }
 # The second total row of the party day sheet: the total with the people in the dead amount.
 # review: pending
 report-r35-total-with-dead = Total with { -doobi-raqam }
+
+## Plan 42 (PRD v1.12, FR-19.12, R34): the buyer's and the seller's day slip of R35, and the day total sheet R34.
+## The slip lines are the labelled lines under the goods table; the words are the PRD's own.
+
+# The row after an item that has more than one line on the slip: "Banana total". $item: the item name.
+# review: pending
+report-r35-item-total = { $item } total
+
+# review: pending
+report-r35-goods = Value of Goods
+
+# review: pending
+report-r35-commission = { -commission }
+
+# review: pending
+report-r35-laga = { -laga }
+
+# What the buyer owes for the day: the goods, the commission and the laga.
+# review: pending
+report-r35-today-total = Today's Total
+
+# Other entries of the day on the party's account, for example cash lent or a journal line.
+# review: pending
+report-r35-other = Other Entries
+
+# The line the collector fills in by hand when nothing was paid yet.
+# review: pending
+report-r35-paid-today = Paid Today
+
+# review: pending
+report-r35-today-left = Left Today
+
+# review: pending
+report-r35-new-balance = New Balance
+
+# The seller's slip.
+# review: pending
+report-r35-gross = { -kham-bikri }
+
+# review: pending
+report-r35-freight = { -kiraya }
+
+# review: pending
+report-r35-labour = { -mazdoori }
+
+# review: pending
+report-r35-munshiana = { -munshiana }
+
+# review: pending
+report-r35-phone = { -phone }
+
+# review: pending
+report-r35-store-rent = { -kiraya-store }
+
+# review: pending
+report-r35-net-sale = Today's { -safi-bikri }
+
+# The new lines of the day total sheet (R34).
+# review: pending
+report-r34-qty = Total { -nag }
+
+# review: pending
+report-r34-commission-seller = Seller { -commission }
+
+# review: pending
+report-r34-commission-buyer = Buyer { -commission }
+
+# review: pending
+report-r34-commission-laga = { -laga }
+
+# review: pending
+report-r34-buyers-billed = Buyers' Total Today
+
+# review: pending
+report-r34-buyers-other = Buyers' Other Entries
+
+# review: pending
+report-r34-buyers-received = Paid Today by Buyers
+
+# review: pending
+report-r34-buyers-left = Buyers' Left Today
+
+# review: pending
+report-r34-sellers-net = Sellers' { -safi-bikri } Today
+
+# review: pending
+report-r34-sellers-other = Sellers' Other Entries
+
+# review: pending
+report-r34-sellers-paid = Paid Today to Sellers
+
+# The two short tables under the lines of a day.
+# review: pending
+report-r34-table-buyers = Buyers' List
+
+# review: pending
+report-r34-table-sellers = Sellers' List
+
+# review: pending
+report-col-today-total = Today's Total
+
+# review: pending
+report-col-net-sale = { -safi-bikri } Today
+
+# review: pending
+report-col-other-entries = Other Entries
+
+# review: pending
+report-col-paid-today = Paid Today
+
+# review: pending
+report-col-new-balance = New Balance
+
+# The kilos of a line of an item sold by weight on a party's day slip (PRD A73): the column is there only
+# when some line is weighed.
+# review: pending
+report-col-weight = Weight (kg)

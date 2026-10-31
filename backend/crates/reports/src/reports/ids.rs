@@ -151,18 +151,6 @@ pub(crate) const R35_BUYERS: &str = "report-r35-buyers";
 pub(crate) const R35_SELLERS: &str = "report-r35-sellers";
 pub(crate) const R35_TOTAL_QTY: &str = "report-r35-total-qty";
 pub(crate) const R35_PREVIOUS: &str = "report-r35-previous";
-pub(crate) const R35_BOUGHT: &str = "report-r35-bought";
-pub(crate) const R35_SOLD: &str = "report-r35-sold";
-pub(crate) const R35_OTHER_DEBITS: &str = "report-r35-other-debits";
-pub(crate) const R35_OTHER_CREDITS: &str = "report-r35-other-credits";
-pub(crate) const R35_ON_SPOT: &str = "report-r35-on-spot";
-pub(crate) const R35_CASH_GIVEN: &str = "report-r35-cash-given";
-pub(crate) const R35_PAID: &str = "report-r35-paid";
-pub(crate) const R35_RECEIVED: &str = "report-r35-received";
-pub(crate) const R35_REMAINING: &str = "report-r35-remaining";
-/// The last line of a seller's slip: what is left, "balance" (the word ٹوٹل رقم suits a buyer's bill
-/// only: for a seller it would read as money he owes).
-pub(crate) const R35_BALANCE: &str = "report-r35-balance";
 /// The party column of the all-parties table (PRD FR-19.12 says پارٹی).
 pub(crate) const COL_PARTY: &str = "report-col-party";
 pub(crate) const R35_COLLECTION: &str = "report-r35-collection";
@@ -170,8 +158,66 @@ pub(crate) const R35_SELLERS_CREDIT: &str = "report-r35-sellers-credit";
 pub(crate) const R35_SELLERS_DEBIT: &str = "report-r35-sellers-debit";
 pub(crate) const R35_SELLERS_REMAINING: &str = "report-r35-sellers-remaining";
 
+// R35, the day slip of one party (plan 42, PRD FR-19.12 v1.12). The buyer's and the seller's slip
+// share the lines they have in common. The goods table has the columns item, packing, qty, rate
+// and amount (`COL_ITEM`, `COL_PACKING`, `COL_QTY`, `COL_RATE`, `COL_AMOUNT`).
+/// The message of an item-total row: "<item> کل" (argument `item`).
+/// The weight column of a goods table (kilos); only on a slip that has a weighed line.
+pub(crate) const COL_WEIGHT: &str = "report-col-weight";
+pub(crate) const R35_ITEM_TOTAL: &str = "report-r35-item-total";
+/// مال کی رقم: the goods value of the buyer's lines.
+pub(crate) const R35_GOODS: &str = "report-r35-goods";
+/// کمیشن: the buyer's commission, or the seller's.
+pub(crate) const R35_COMMISSION: &str = "report-r35-commission";
+/// لاگا.
+pub(crate) const R35_LAGA: &str = "report-r35-laga";
+/// آج کا کل: goods value + commission + لاگا.
+pub(crate) const R35_TODAY_TOTAL: &str = "report-r35-today-total";
+/// دیگر اندراج: the other entries of the day, with a side.
+pub(crate) const R35_OTHER: &str = "report-r35-other";
+/// آج ادا: paid today.
+pub(crate) const R35_PAID_TODAY: &str = "report-r35-paid-today";
+/// آج کا باقی: today's total + other entries − paid, with a side.
+pub(crate) const R35_TODAY_LEFT: &str = "report-r35-today-left";
+/// نیا بقایا: the balance at the end of the day, with a side.
+pub(crate) const R35_NEW_BALANCE: &str = "report-r35-new-balance";
+/// خام بکری: the seller's gross.
+pub(crate) const R35_GROSS: &str = "report-r35-gross";
+/// کرایہ.
+pub(crate) const R35_FREIGHT: &str = "report-r35-freight";
+/// مزدوری.
+pub(crate) const R35_LABOUR: &str = "report-r35-labour";
+/// منشیانہ.
+pub(crate) const R35_MUNSHIANA: &str = "report-r35-munshiana";
+/// فون.
+pub(crate) const R35_PHONE: &str = "report-r35-phone";
+/// کرایہ سٹور.
+pub(crate) const R35_STORE_RENT: &str = "report-r35-store-rent";
+/// آج کی صافی بکری: the seller's credit of the day (C8).
+pub(crate) const R35_NET_SALE: &str = "report-r35-net-sale";
+
 // The rows of R34, the day summary.
 pub(crate) const R34_BIKRI: &str = "report-r34-bikri";
+// R34 as the day total sheet (plan 42, PRD R34 v1.12): نگ, the commission lines, the buyers' and
+// the sellers' lines, and the headings of the two tables. `R34_COMMISSION` is the total.
+pub(crate) const R34_QTY: &str = "report-r34-qty";
+pub(crate) const R34_COMMISSION_SELLER: &str = "report-r34-commission-seller";
+pub(crate) const R34_COMMISSION_BUYER: &str = "report-r34-commission-buyer";
+pub(crate) const R34_COMMISSION_LAGA: &str = "report-r34-commission-laga";
+pub(crate) const R34_BUYERS_BILLED: &str = "report-r34-buyers-billed";
+pub(crate) const R34_BUYERS_OTHER: &str = "report-r34-buyers-other";
+pub(crate) const R34_BUYERS_RECEIVED: &str = "report-r34-buyers-received";
+pub(crate) const R34_BUYERS_LEFT: &str = "report-r34-buyers-left";
+pub(crate) const R34_SELLERS_NET: &str = "report-r34-sellers-net";
+pub(crate) const R34_SELLERS_OTHER: &str = "report-r34-sellers-other";
+pub(crate) const R34_SELLERS_PAID: &str = "report-r34-sellers-paid";
+pub(crate) const R34_TABLE_BUYERS: &str = "report-r34-table-buyers";
+pub(crate) const R34_TABLE_SELLERS: &str = "report-r34-table-sellers";
+pub(crate) const COL_TODAY_TOTAL: &str = "report-col-today-total";
+pub(crate) const COL_NET_SALE: &str = "report-col-net-sale";
+pub(crate) const COL_OTHER_ENTRIES: &str = "report-col-other-entries";
+pub(crate) const COL_PAID_TODAY: &str = "report-col-paid-today";
+pub(crate) const COL_NEW_BALANCE: &str = "report-col-new-balance";
 pub(crate) const R34_COMMISSION: &str = "report-r34-commission";
 pub(crate) const R34_CASH_OPENING: &str = "report-r34-cash-opening";
 pub(crate) const R34_CASH_IN: &str = "report-r34-cash-in";

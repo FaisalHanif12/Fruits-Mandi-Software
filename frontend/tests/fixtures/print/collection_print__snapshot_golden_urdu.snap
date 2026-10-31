@@ -38,7 +38,7 @@ expression: "print(&golden_list(), Language::Ur)"
       "rows": [
         {
           "serial": "1",
-          "code": "1",
+          "code": "0",
           "name": "اکرم ٹول ٹیکس",
           "phone": "0300-1234567",
           "dues": "2,880",
@@ -47,7 +47,7 @@ expression: "print(&golden_list(), Language::Ur)"
         },
         {
           "serial": "2",
-          "code": "2",
+          "code": "1",
           "name": "ارشد ملتانی",
           "phone": "",
           "dues": "18,684",

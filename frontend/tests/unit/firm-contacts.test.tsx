@@ -1,11 +1,14 @@
-// The firm settings of plan 17e (PRD Section 21, FR-19.13): up to three contact persons and the
-// trade mark, printed under the firm name on every print. In Urdu and in English, by keyboard,
-// against a fake backend: adding, removing and the limit of three, an empty row is not a contact,
-// what is sent on F10 (text as typed), and a refused field shows at its own field.
+// The firm settings of plan 17e and plan 42 (PRD Section 21, FR-19.13, v1.12): up to six people, each
+// with a role (owner or munshi) and an optional phone, and the trade mark, printed under the firm name
+// on every print. In Urdu and in English, against a fake backend: adding, removing and the limit of
+// six, a new person starts as an owner and the role can be changed, a phone can be left empty, an
+// empty row is not a person, what is sent on F10 (text as typed), and a refused field shows at its
+// own field.
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FirmContact } from '../../src/bindings/FirmContact';
 import * as settingsApi from '../../src/features/settings/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -36,13 +39,16 @@ function must<T>(found: T | null | undefined): T {
 const named = (language: Language, id: string) => (name: string) =>
   visible(name) === message(language, id);
 
-const CONTACTS = [
-  { name_ur: 'منشی آصف بھٹی', name_en: 'Munshi Asif Bhatti', phone: '0300-4058860' },
-  { name_ur: 'ماہر عدنان', name_en: 'Maher Adnan', phone: '0300-1112233' },
-  { name_ur: 'محمد اکرم', name_en: 'Muhammad Akram', phone: '0321-5556677' },
+const CONTACTS: FirmContact[] = [
+  { name_ur: 'ماہر عدنان', name_en: 'Maher Adnan', role: 'owner', phone: '0300-1112233' },
+  { name_ur: 'محمد اکرم', name_en: 'Muhammad Akram', role: 'owner', phone: '0321-5556677' },
+  { name_ur: 'ابراہیم', name_en: 'Ibrahim', role: 'owner', phone: '0322-1110000' },
+  { name_ur: 'عمران', name_en: 'Imran', role: 'owner', phone: '' },
+  { name_ur: 'سلمان', name_en: 'Salman', role: 'owner', phone: '0333-4445555' },
+  { name_ur: 'آصف بھٹی', name_en: 'Asif Bhatti', role: 'munshi', phone: '0300-4058860' },
 ];
 
-function withFirm(extra: { firm_contacts?: typeof CONTACTS; trade_mark?: string }) {
+function withFirm(extra: { firm_contacts?: FirmContact[]; trade_mark?: string }) {
   const base = settings();
   vi.mocked(settingsApi.settingsGet).mockResolvedValue({
     ...base,
@@ -88,6 +94,10 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
     within(contacts()).queryAllByLabelText<HTMLInputElement>(
       named(language, 'settings-firm-contact-phone'),
     );
+  const roles = () =>
+    within(contacts()).queryAllByRole('combobox', {
+      name: named(language, 'settings-firm-contact-role'),
+    });
   const saveButton = () =>
     screen.getByRole('button', { name: new RegExp(message(language, 'layout-save-save')) });
   const addButton = () =>
@@ -104,18 +114,26 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
   });
 
   it('shows the saved contacts and the trade mark', async () => {
-    withFirm({ firm_contacts: CONTACTS.slice(0, 2), trade_mark: 'RH' });
+    withFirm({
+      firm_contacts: [CONTACTS[0], CONTACTS[5]].filter(Boolean) as FirmContact[],
+      trade_mark: 'RH',
+    });
     await open();
     expect(
       screen.getByLabelText<HTMLInputElement>(named(language, 'settings-firm-trade-mark')).value,
     ).toBe('RH');
-    expect(phones().map((input) => input.value)).toEqual(['0300-4058860', '0300-1112233']);
+    expect(phones().map((input) => input.value)).toEqual(['0300-1112233', '0300-4058860']);
+    // Each person shows his role: the owner first, then the munshi.
+    expect(roles().map((role) => visible(role.textContent))).toEqual([
+      message(language, 'settings-firm-role-owner'),
+      message(language, 'settings-firm-role-munshi'),
+    ]);
     expect(
       screen.queryByText(message(language, 'settings-firm-contacts-empty')),
     ).not.toBeInTheDocument();
   });
 
-  it('adds a contact and the trade mark, and F10 sends them as typed', async () => {
+  it('adds a person (an owner at first) and the trade mark, and F10 sends them as typed', async () => {
     withFirm({});
     const { user } = await open();
     await user.click(addButton());
@@ -132,11 +150,33 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
     });
     expect(vi.mocked(settingsApi.settingsSetFirm).mock.calls[0]?.[0]).toMatchObject({
       trade_mark: 'RH',
-      firm_contacts: [{ name_en: 'Asif Bhatti', phone: '0300-4058860' }],
+      firm_contacts: [{ name_en: 'Asif Bhatti', role: 'owner', phone: '0300-4058860' }],
     });
   });
 
-  it('three contacts are the most: the add button is off and the words say why', async () => {
+  it('the role can be changed to munshi, and a person can have no phone', async () => {
+    withFirm({});
+    const { user } = await open();
+    await user.click(addButton());
+    await user.type(
+      await within(contacts()).findByLabelText(named(language, 'settings-firm-contact-name-en')),
+      'Asif Bhatti',
+    );
+    const [role] = roles();
+    await user.click(must(role));
+    await user.click(
+      await screen.findByRole('option', { name: named(language, 'settings-firm-role-munshi') }),
+    );
+    press('F10');
+    await waitFor(() => {
+      expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(settingsApi.settingsSetFirm).mock.calls[0]?.[0].firm_contacts).toEqual([
+      expect.objectContaining({ name_en: 'Asif Bhatti', role: 'munshi', phone: '' }),
+    ]);
+  });
+
+  it('six people are the most: the add button is off and the words say why', async () => {
     withFirm({ firm_contacts: CONTACTS });
     await open();
     expect(addButton()).toBeDisabled();
@@ -159,9 +199,12 @@ describe.each(LANGUAGES)('the contacts and the trade mark of the firm (%s)', (la
       expect(settingsApi.settingsSetFirm).toHaveBeenCalledTimes(1);
     });
     const sent = vi.mocked(settingsApi.settingsSetFirm).mock.calls[0]?.[0];
-    expect(sent?.firm_contacts.map((contact) => contact.phone)).toEqual([
-      '0300-4058860',
-      '0321-5556677',
+    expect(sent?.firm_contacts.map((contact) => contact.name_en)).toEqual([
+      'Maher Adnan',
+      'Ibrahim',
+      'Imran',
+      'Salman',
+      'Asif Bhatti',
     ]);
   });
 

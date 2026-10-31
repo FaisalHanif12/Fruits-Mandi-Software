@@ -131,21 +131,30 @@ pub(super) fn parties_of(
     conn: &Connection,
     items: &[Activity],
 ) -> Result<HashMap<(i64, Option<String>), PartyRef>, ReportsError> {
-    let ids: Vec<i64> = items.iter().map(|a| a.account_id).collect();
-    let accounts = load_parties(conn, &ids)?;
-    let pukhta_ids: Vec<i64> = items
+    let keys: Vec<(i64, Option<String>)> = items
         .iter()
-        .filter(|a| a.person_key.is_some())
-        .map(|a| a.account_id)
+        .map(|a| (a.account_id, a.person_key.clone()))
         .collect();
+    parties_for(conn, &keys)
+}
+
+/// The parties of some (account, person) keys as the report names them: the account's names with
+/// its tag, and a one-time person with his own names, phone and key.
+pub(super) fn parties_for(
+    conn: &Connection,
+    keys: &[(i64, Option<String>)],
+) -> Result<HashMap<(i64, Option<String>), PartyRef>, ReportsError> {
+    let ids: Vec<i64> = keys.iter().map(|k| k.0).collect();
+    let accounts = load_parties(conn, &ids)?;
+    let pukhta_ids: Vec<i64> = keys.iter().filter(|k| k.1.is_some()).map(|k| k.0).collect();
     let people = pukhta_names(conn, &pukhta_ids)?;
     let mut out = HashMap::new();
-    for item in items {
+    for (account_id, person_key) in keys {
         let base = accounts
-            .get(&item.account_id)
+            .get(account_id)
             .cloned()
-            .ok_or_else(|| ReportsError::Data(format!("account {} is missing", item.account_id)))?;
-        let party = match &item.person_key {
+            .ok_or_else(|| ReportsError::Data(format!("account {account_id} is missing")))?;
+        let party = match person_key {
             Some(key) => {
                 let person = people.get(key);
                 pukhta_party(
@@ -157,7 +166,7 @@ pub(super) fn parties_of(
             }
             None => base,
         };
-        out.insert((item.account_id, item.person_key.clone()), party);
+        out.insert((*account_id, person_key.clone()), party);
     }
     Ok(out)
 }
@@ -165,4 +174,44 @@ pub(super) fn parties_of(
 /// The signed total of a side as a balance cell.
 pub(super) fn net_cell(net: Paisa) -> Result<Cell, ReportsError> {
     Ok(balance_cell(Balance::from_net(net)?))
+}
+
+/// An item with the keys it is sorted by: the Urdu name, the tag and the (account, person) key.
+type Sortable<T> = (Vec<u8>, Option<String>, (i64, Option<String>), T);
+
+/// The items in the order of their party's Urdu name (the alphabetical order of Urdu); two people
+/// with the same name are told apart by the tag, then by the account and the person (the order of
+/// the all-parties table of R35 and of the tables of R34).
+pub(super) fn sort_by_party<T>(
+    items: Vec<T>,
+    parties: &HashMap<(i64, Option<String>), PartyRef>,
+    key_of: impl Fn(&T) -> (i64, Option<String>),
+) -> Vec<T> {
+    let collator = UrduCollator::new().ok();
+    let sort_key = |name: &str| -> Vec<u8> {
+        collator
+            .as_ref()
+            .map_or_else(|| name.as_bytes().to_vec(), |c| c.sort_key(name))
+    };
+    let mut keyed: Vec<Sortable<T>> = items
+        .into_iter()
+        .map(|item| {
+            let key = key_of(&item);
+            let party = parties.get(&key);
+            let name = party.map(|p| p.name_ur.clone()).unwrap_or_default();
+            (
+                sort_key(&name),
+                party.and_then(|p| p.tag.clone()),
+                key,
+                item,
+            )
+        })
+        .collect();
+    keyed.sort_by(|a, b| {
+        a.0.cmp(&b.0)
+            .then(a.1.cmp(&b.1))
+            .then(a.2.0.cmp(&b.2.0))
+            .then(a.2.1.cmp(&b.2.1))
+    });
+    keyed.into_iter().map(|k| k.3).collect()
 }

@@ -62,6 +62,13 @@ export type ReportPrintCell =
       text: string;
     }
   | {
+      type: 'weight';
+      /**
+       * The weight as printed.
+       */
+      text: string;
+    }
+  | {
       type: 'month';
       /**
        * The year as printed.

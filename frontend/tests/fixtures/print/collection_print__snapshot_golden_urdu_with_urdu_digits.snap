@@ -38,7 +38,7 @@ expression: "build_collection(&golden_list(), &set).unwrap()"
       "rows": [
         {
           "serial": "۱",
-          "code": "1",
+          "code": "0",
           "name": "اکرم ٹول ٹیکس",
           "phone": "0300-1234567",
           "dues": "۲,۸۸۰",
@@ -47,7 +47,7 @@ expression: "build_collection(&golden_list(), &set).unwrap()"
         },
         {
           "serial": "۲",
-          "code": "2",
+          "code": "1",
           "name": "ارشد ملتانی",
           "phone": "",
           "dues": "۱۸,۶۸۴",

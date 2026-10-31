@@ -270,3 +270,24 @@ reason, corrections, last recovery) come with the wide layout step. Enter on a r
 `components/DeadMoveButton` ("ڈوبی رقم میں ڈالیں" for the row that has focus, found by `dead-row.ts`), and a
 ledger of a person in the dead amount has `components/DeadHeading`. Print and Excel of R38 come with the
 report engine once the backend adds `R38` to `ReportId`.
+
+## The day slips and the day total sheet, R35 and R34 (plan 42, PRD v1.12, FR-19.12, R34)
+
+- **A party's day slip is R35 with one party** (`filters.party`), the same `ReportPage` and
+  `ReportPrintData` as every report. Its goods columns are item, packing, quantity, rate, amount; the
+  row after an item that has more than one line has the kind `item_total` (bold, "Banana total"). Its
+  labelled lines (goods value, commission, لاگا, today's total, paid today, left today, previous and new
+  balance; for a seller the gross sale, each deduction and the net sale of the day) are the page's
+  `summary`, in the backend's order. `isSlip` / `isSlipPage` tell a slip from the table of every party
+  (its first column is `item`, not `code`).
+- **On screen** `components/SlipSummary.tsx` draws the lines as a card beside the goods (below them at
+  the compact step). **In print** `print/SlipLines.tsx` draws them under the goods, the figures in one
+  column on the physical right edge with the side word (بنام, جمع) in a slot after a balance. A
+  summary line the backend sent EMPTY (nothing paid yet) is a blank to write on (`print-write-line`,
+  `slip-write-line`), never a zero. On the 80 mm roll the goods are two rows of text for each line
+  (`print/SlipGoods.tsx`). The preview offers the roll only for a slip (`PrintPreviewFrame roll`).
+- **R34 has `tables`**: the buyers' and the sellers' short table of each day. On screen
+  `components/DayTables.tsx` draws them under the lines (the whole page scrolls, `ReportResults`). In
+  print `print/daySheet.ts` cuts the lines after the sellers' lines of each day and puts the two tables
+  there, before the cash lines; the two tables of a day get one zoom so they have one size on A5.
+- Nothing here adds up or works out a side: every figure, balance and side comes from the backend.

@@ -353,6 +353,9 @@ function plainListColumnOf<V extends RowLike>(
       return { ...base, type: 'figure' };
     case 'number':
       return { ...base, type: 'count' };
+    case 'weight':
+      // The kilos of a weighed line: a figure, centred under its heading (plan 39 R1).
+      return { ...base, type: 'figure' };
     case 'balance':
       return {
         ...base,

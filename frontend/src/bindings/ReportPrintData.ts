@@ -4,6 +4,7 @@ import type { Paper } from './Paper';
 import type { PrintFact } from './PrintFact';
 import type { PrintReportColumn } from './PrintReportColumn';
 import type { PrintReportRow } from './PrintReportRow';
+import type { PrintReportTable } from './PrintReportTable';
 import type { PrintWords } from './PrintWords';
 import type { ReportId } from './ReportId';
 import type { ReportPrintCell } from './ReportPrintCell';
@@ -55,6 +56,11 @@ export type ReportPrintData = {
    * Every row of the filter.
    */
   rows: Array<PrintReportRow>;
+  /**
+   * More tables under the main one, with every day of the filter (R34, plan 42). Empty for
+   * every other report.
+   */
+  tables: Array<PrintReportTable>;
   /**
    * How many rows there are, as printed.
    */

@@ -1,0 +1,1174 @@
+{
+  "report": "R34",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r34-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "10-10-2026"
+    }
+  ],
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "item",
+      "title_id": "report-col-line",
+      "kind": "label"
+    },
+    {
+      "key": "count",
+      "title_id": "report-col-count",
+      "kind": "number"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "summary": [],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-bikri"
+        },
+        {
+          "type": "number",
+          "text": "2"
+        },
+        {
+          "type": "money",
+          "text": "41,400"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-qty"
+        },
+        {
+          "type": "number",
+          "text": "60"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-seller"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-buyer"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-laga"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "480"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "5,448"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-billed"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "44,364"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-received"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-left"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "21,564",
+          "side_id": "report-side-dr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-net"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "34,476",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-paid"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "9,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-opening"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "50,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-out"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "14,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-cash-closing"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "58,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-receipts"
+        },
+        {
+          "type": "number",
+          "text": "1"
+        },
+        {
+          "type": "money",
+          "text": "10,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-payments"
+        },
+        {
+          "type": "number",
+          "text": "1"
+        },
+        {
+          "type": "money",
+          "text": "4,316"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-advances"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-expenses"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "3,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-taken"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-returned"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-capital"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-money-lent-back"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-bought"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-trips-sold"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-gardens-paid"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-gardens-in"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-fruit-taken"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-partner-shares"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "الف"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "996"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "ب"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "746"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "names",
+          "text": "ج"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "746"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "21,564"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-dead-amount"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-total-dues"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "21,564"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-lots"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-open-qty"
+        },
+        {
+          "type": "number",
+          "text": "0"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    }
+  ],
+  "tables": [
+    {
+      "key": "buyers",
+      "day": "10-10-2026",
+      "day_iso": "2026-10-10",
+      "title_id": "report-r34-table-buyers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "buyer",
+          "title_id": "report-col-buyer",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "today_total",
+          "title_id": "report-col-today-total",
+          "kind": "money"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "1"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "1",
+                "code": "0021",
+                "name": "ارشد ملتانی",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "18,684"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "balance",
+              "text": "18,684",
+              "side_id": "report-side-dr"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "0",
+                "code": "0020",
+                "name": "اکرم ٹول ٹیکس",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "12,880"
+            },
+            {
+              "type": "money",
+              "text": "10,000"
+            },
+            {
+              "type": "balance",
+              "text": "2,880",
+              "side_id": "report-side-dr"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0030"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": null,
+                "code": "0030",
+                "name": "شاہد",
+                "tag": null,
+                "person_key": "شاہد|03000000000",
+                "phone": "0300-0000000"
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "money",
+          "text": "44,364"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        },
+        {
+          "type": "balance",
+          "text": "21,564",
+          "side_id": "report-side-dr"
+        }
+      ]
+    },
+    {
+      "key": "sellers",
+      "day": "10-10-2026",
+      "day_iso": "2026-10-10",
+      "title_id": "report-r34-table-sellers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "seller",
+          "title_id": "report-col-seller",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "net_sale",
+          "title_id": "report-col-net-sale",
+          "kind": "balance"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "0",
+                "code": "0010",
+                "name": "رحیم",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "15,000",
+              "side_id": "report-side-dr"
+            },
+            {
+              "type": "balance",
+              "text": "24,316",
+              "side_id": "report-side-cr"
+            },
+            {
+              "type": "money",
+              "text": "9,316"
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "1"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "1",
+                "code": "0011",
+                "name": "کریم",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "balance",
+              "text": "10,160",
+              "side_id": "report-side-cr"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "balance",
+              "text": "10,160",
+              "side_id": "report-side-cr"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "15,000",
+          "side_id": "report-side-dr"
+        },
+        {
+          "type": "balance",
+          "text": "34,476",
+          "side_id": "report-side-cr"
+        },
+        {
+          "type": "money",
+          "text": "9,316"
+        },
+        {
+          "type": "balance",
+          "text": "10,160",
+          "side_id": "report-side-cr"
+        }
+      ]
+    }
+  ],
+  "row_count": "39",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

@@ -10,7 +10,7 @@
 use chrono::{TimeZone, Utc};
 use mandi_core::auth::Language;
 use mandi_core::bikri::BikriDetail;
-use mandi_core::firm::FirmContact;
+use mandi_core::firm::{FirmContact, FirmRole};
 use mandi_core::money::Grouping;
 use mandi_core::printing::{Paper, PrintDoc, PrintSetup};
 use mandi_reports::print::{
@@ -633,8 +633,9 @@ fn the_print_data_json_has_the_snake_case_shape_the_template_reads() {
 #[test]
 fn contacts_and_the_trade_mark_print_in_the_header_and_none_means_no_empty_box() {
     let contact = FirmContact {
-        name_ur: "منشی آصف بھٹی".into(),
-        name_en: "Munshi Asif Bhatti".into(),
+        name_ur: "آصف بھٹی".into(),
+        name_en: "Asif Bhatti".into(),
+        role: FirmRole::Munshi,
         phone: "0300-4058860".into(),
     };
     for doc in [PrintDoc::SellerBill, PrintDoc::BuyerSlips] {
@@ -643,12 +644,12 @@ fn contacts_and_the_trade_mark_print_in_the_header_and_none_means_no_empty_box()
         set.firm.trade_mark = "RH".into();
         let with = build(&detail(EVENT1), &set).unwrap();
         assert_eq!(with.header.contacts.len(), 1, "{doc:?}");
-        assert_eq!(with.header.contacts[0].name, "منشی آصف بھٹی");
+        assert_eq!(with.header.contacts[0].name, "آصف بھٹی");
         assert_eq!(with.header.contacts[0].phone, "0300-4058860");
         assert_eq!(with.header.trade_mark.as_deref(), Some("RH"));
         set.language = Language::En;
         let en = build(&detail(EVENT1), &set).unwrap();
-        assert_eq!(en.header.contacts[0].name, "Munshi Asif Bhatti");
+        assert_eq!(en.header.contacts[0].name, "Asif Bhatti");
 
         let none = print(EVENT1, doc, Language::Ur);
         assert!(none.header.contacts.is_empty(), "{doc:?}");

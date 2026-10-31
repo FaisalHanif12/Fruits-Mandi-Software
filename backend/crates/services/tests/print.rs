@@ -113,7 +113,7 @@ fn cr(w: &World, id: i64, code: &str) -> i64 {
 
 /// Sets the firm's contacts and trade mark through the Settings action.
 fn set_contacts(w: &World) {
-    use mandi_services::core::firm::FirmContact;
+    use mandi_services::core::firm::{FirmContact, FirmRole};
     use mandi_services::settings::{self, FirmPrintInfo};
     let firm = settings::get(&w.env.ctx).unwrap().firm;
     let info = FirmPrintInfo {
@@ -121,11 +121,13 @@ fn set_contacts(w: &World) {
             FirmContact {
                 name_ur: "علی".into(),
                 name_en: "Ali".into(),
+                role: FirmRole::Owner,
                 phone: "0300-4058860".into(),
             },
             FirmContact {
                 name_ur: "اکرم".into(),
                 name_en: "Akram".into(),
+                role: FirmRole::Munshi,
                 phone: "03211234567".into(),
             },
         ],

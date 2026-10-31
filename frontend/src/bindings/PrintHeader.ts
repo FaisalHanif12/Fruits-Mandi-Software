@@ -13,7 +13,8 @@ export type PrintHeader = {
    */
   firm: PrintFirm;
   /**
-   * The contact persons, at most 3, in the order of the Settings. Empty if none are set.
+   * The people, at most 6: the owners first, then the munshi; inside a role, in the order of
+   * the Settings (v1.12). Empty if none are set.
    */
   contacts: Array<PrintContact>;
   /**

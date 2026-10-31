@@ -377,7 +377,7 @@ fn confirming_saves_the_firm_and_learns_a_name_pair_and_a_place_pair() {
 #[test]
 fn a_contact_name_with_a_rules_only_word_is_refused_until_confirmed() {
     // Plan 17e: the contact persons of the print header are names too (PRD FR-7.66).
-    use mandi_services::core::firm::FirmContact;
+    use mandi_services::core::firm::{FirmContact, FirmRole};
     use mandi_services::settings::FirmPrintInfo;
     let (dir, env, owner) = ready();
     let firm = settings::get(&env.ctx).unwrap().firm;
@@ -385,6 +385,7 @@ fn a_contact_name_with_a_rules_only_word_is_refused_until_confirmed() {
         firm_contacts: vec![FirmContact {
             name_ur: "علی قزکس".into(),
             name_en: "Ali Qzxwv".into(),
+            role: FirmRole::Munshi,
             phone: "0300-1234567".into(),
         }],
         trade_mark: "RH".into(),

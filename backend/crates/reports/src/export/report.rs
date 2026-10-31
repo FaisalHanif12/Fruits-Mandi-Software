@@ -9,7 +9,7 @@ use crate::reports::print_data::filter_facts;
 use crate::reports::{ReportPage, RowKind};
 
 use super::cells::{CellContext, shape_of};
-use super::model::{ExportColumn, ExportRow, ExportSheet};
+use super::model::{ExportColumn, ExportRow, ExportSheet, ExportTable};
 
 /// What a sheet header needs besides the page.
 pub(crate) struct Header {
@@ -50,6 +50,35 @@ pub(crate) fn sheet(
         });
     }
     let title = l10n.text(&page.title_id);
+    // The tables under the main one (R34, plan 42): each with its heading, its day and its totals.
+    let mut tables = Vec::with_capacity(page.tables.len());
+    for table in &page.tables {
+        let mut table_rows = Vec::with_capacity(table.rows.len());
+        for row in &table.rows {
+            table_rows.push(ExportRow {
+                cells: ctx.cells(&row.cells)?,
+                bold: row.kind != RowKind::Normal,
+            });
+        }
+        tables.push(ExportTable {
+            title: format!(
+                "{} {}",
+                l10n.text(&table.title_id),
+                ctx.fmt.style.date(&table.day)?
+            ),
+            columns: table
+                .columns
+                .iter()
+                .map(|c| ExportColumn {
+                    title: l10n.text(&c.title_id),
+                    shape: shape_of(c.kind),
+                })
+                .collect(),
+            rows: table_rows,
+            totals_label: l10n.text(&table.totals_label_id),
+            totals: ctx.cells(&table.totals)?,
+        });
+    }
     Ok(ExportSheet {
         name: title.clone(),
         right_to_left: header.right_to_left,
@@ -68,6 +97,7 @@ pub(crate) fn sheet(
         rows,
         totals_label: l10n.text(&page.totals_label_id),
         totals: ctx.cells(&page.totals)?,
+        tables,
         debit_word: l10n.text("report-side-dr"),
         credit_word: l10n.text("report-side-cr"),
     })

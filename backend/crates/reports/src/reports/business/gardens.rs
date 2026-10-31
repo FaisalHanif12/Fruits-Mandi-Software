@@ -198,6 +198,7 @@ fn by_partner(
 fn page(columns: Vec<Column>, rows: Vec<Row>, totals: Vec<Cell>, spec: PageSpec) -> ReportPage {
     ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R36,
         title_id: ids::title_id("R36"),
         filters: Default::default(),

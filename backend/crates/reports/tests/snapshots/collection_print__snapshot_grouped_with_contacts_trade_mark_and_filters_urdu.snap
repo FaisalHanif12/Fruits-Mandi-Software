@@ -17,12 +17,14 @@ expression: "build_collection(&grouped_list(), &set).unwrap()"
     },
     "contacts": [
       {
-        "name": "منشی آصف بھٹی",
-        "phone": "0300-4058860"
+        "name": "اکرم",
+        "role": "owner",
+        "phone": "0321-1234567"
       },
       {
-        "name": "اکرم",
-        "phone": "0321-1234567"
+        "name": "آصف بھٹی",
+        "role": "munshi",
+        "phone": "0300-4058860"
       }
     ],
     "trade_mark": "RH",

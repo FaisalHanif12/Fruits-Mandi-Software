@@ -32,7 +32,7 @@ use mandi_services::core::accounts::{
     AccountInput, AccountsSimilarInput, GlobalHit, SearchAccountsInput, SearchGlobalInput,
 };
 use mandi_services::core::auth::Language;
-use mandi_services::core::firm::FirmContact;
+use mandi_services::core::firm::{FirmContact, FirmRole};
 use mandi_services::core::printing::PrintDoc;
 use mandi_services::core::vouchers::ReceiptInput;
 use mandi_services::settings::{self, FirmPrintInfo};
@@ -182,13 +182,15 @@ fn the_real_answers_of_the_plan_17e_commands_are_the_fixtures() {
     let info = FirmPrintInfo {
         firm_contacts: vec![
             FirmContact {
-                name_ur: "منشی آصف بھٹی".into(),
-                name_en: "Munshi Asif Bhatti".into(),
+                name_ur: "آصف بھٹی".into(),
+                name_en: "Asif Bhatti".into(),
+                role: FirmRole::Munshi,
                 phone: "0300-4058860".into(),
             },
             FirmContact {
                 name_ur: "اکرم".into(),
                 name_en: "Akram".into(),
+                role: FirmRole::Owner,
                 phone: "03211234567".into(),
             },
         ],

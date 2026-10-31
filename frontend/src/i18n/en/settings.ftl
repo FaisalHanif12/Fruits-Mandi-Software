@@ -41,17 +41,17 @@ settings-firm-address = Address
 
 # Plan 17e, PRD Section 21 (Firm), FR-19.13.
 # review: pending
-settings-firm-contacts-title = Contact persons for prints
+settings-firm-contacts-title = People in the print header
 
 # review: pending
-settings-firm-contacts-help = Up to 3 people. Each name and phone prints under the firm name on every print, for example "Munshi Asif Bhatti 0300-4058860".
+settings-firm-contacts-help = Up to 6 people. On every print the owners are printed under the firm name first, then the munshi. A phone can be left empty. For example "Munshi Asif Bhatti 0300-4058860".
 
 # review: pending
-settings-firm-contacts-empty = No contact person yet. The print header shows no contact line.
+settings-firm-contacts-empty = No person yet. The print header shows no line for the owners and the munshi.
 
-# $number: 1 to 3.
+# $number: 1 to 6.
 # review: pending
-settings-firm-contact-title = Contact person { $number }
+settings-firm-contact-title = Person { $number }
 
 # review: pending
 settings-firm-contact-name-ur = Name (Urdu)
@@ -60,20 +60,30 @@ settings-firm-contact-name-ur = Name (Urdu)
 settings-firm-contact-name-en = Name (English)
 
 # review: pending
-settings-firm-contact-phone = Phone
+settings-firm-contact-phone = Phone (optional)
 
 # review: pending
-settings-firm-contact-add = Add a contact person
+settings-firm-contact-add = Add a person
 
 # review: pending
 settings-firm-contact-remove = Remove
 
-# Read by a screen reader. $number: 1 to 3.
+# Read by a screen reader. $number: 1 to 6.
 # review: pending
-settings-firm-contact-remove-label = Remove contact person { $number }
+settings-firm-contact-remove-label = Remove person { $number }
 
 # review: pending
-settings-firm-contacts-full = Three contact persons are the most. Remove one to add another.
+settings-firm-contacts-full = Six people are the most. Remove one to add another.
+
+# The role of a person in the print header: the owners print first, then the munshi (PRD Section 21).
+# review: pending
+settings-firm-contact-role = Role
+
+# review: pending
+settings-firm-role-owner = Owner
+
+# review: pending
+settings-firm-role-munshi = Munshi
 
 # Plan 17e, PRD Section 21 (Firm).
 # review: pending

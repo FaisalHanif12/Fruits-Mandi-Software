@@ -2834,25 +2834,27 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
     assert_eq!(settings["firm"]["firm_contacts"], json!([]));
     assert_eq!(settings["firm"]["trade_mark"], "");
     let mut firm = settings["firm"].clone();
+    // Plan 42: each person has a role; the phone is optional. The header prints the owners first.
     firm["firm_contacts"] = json!([
-        { "name_ur": "منشی آصف بھٹی", "name_en": "Munshi Asif Bhatti", "phone": "0300-4058860" },
-        { "name_ur": "اکرم", "name_en": "Akram", "phone": "03211234567" }
+        { "name_ur": "آصف بھٹی", "name_en": "Asif Bhatti", "role": "munshi",
+          "phone": "0300-4058860" },
+        { "name_ur": "اکرم", "name_en": "Akram", "role": "owner", "phone": "03211234567" },
+        { "name_ur": "علی", "name_en": "Ali", "role": "owner", "phone": "" }
     ]);
     firm["trade_mark"] = json!("RH");
     let set = h.ok("settings_set_firm", json!({ "input": firm }));
     assert_eq!(set["trade_mark"], "RH");
     assert_eq!(set["firm_contacts"][0]["phone"], "03004058860");
+    assert_eq!(set["firm_contacts"][0]["role"], "munshi");
+    assert_eq!(set["firm_contacts"][2]["phone"], "");
     fixture_pair("settings_set_firm_contacts", &firm, &set);
     let after = h.ok("settings_get", json!({}));
     assert_eq!(after["firm"], set);
     fixture_pair("settings_get_contacts", &json!({}), &after);
     let mut too_many = set.clone();
-    too_many["firm_contacts"] = json!([
-        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
-        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
-        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" },
-        { "name_ur": "علی", "name_en": "Ali", "phone": "03001234567" }
-    ]);
+    let ali =
+        json!({ "name_ur": "علی", "name_en": "Ali", "role": "owner", "phone": "03001234567" });
+    too_many["firm_contacts"] = json!([ali, ali, ali, ali, ali, ali, ali]);
     let error = h
         .call("settings_set_firm", json!({ "input": too_many }))
         .unwrap_err();
@@ -2870,7 +2872,7 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
             "facts": [{ "label_id": "print-fact-date", "value": "10-10-2026" }] });
         let frame = h.ok("reports_print_header", json!({ "input": request }));
         assert_eq!(frame["header"]["trade_mark"], "RH");
-        assert_eq!(frame["header"]["contacts"].as_array().unwrap().len(), 2);
+        assert_eq!(frame["header"]["contacts"].as_array().unwrap().len(), 3);
         assert_eq!(frame["footer"]["printed_at"], "10-10-2026 14:00");
         fixture_pair(file, &request, &frame);
     }
@@ -2878,7 +2880,16 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
         "reports_print_header",
         json!({ "input": { "language": "en", "title_id": "t", "facts": [] } }),
     );
-    assert_eq!(en["header"]["contacts"][0]["name"], "Munshi Asif Bhatti");
+    // The owners first (in the order of the Settings), then the munshi.
+    let names: Vec<&str> = en["header"]["contacts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, vec!["Akram", "Ali", "Asif Bhatti"]);
+    assert_eq!(en["header"]["contacts"][0]["role"], "owner");
+    assert_eq!(en["header"]["contacts"][1]["phone"], "");
     assert_eq!(
         h.code(
             "reports_print_header",

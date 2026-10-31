@@ -132,6 +132,7 @@ fn listing_sheet(
             XCell::Empty,
             XCell::Money(listing.total),
         ],
+        tables: Vec::new(),
         debit_word: l10n.text("report-side-dr"),
         credit_word: l10n.text("report-side-cr"),
     })

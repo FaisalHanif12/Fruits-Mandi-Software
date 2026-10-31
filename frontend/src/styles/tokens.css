@@ -186,6 +186,9 @@
 
   /* The slot after a printed figure that holds the side word of a balance (plan 20). */
   --print-unit-slot: 12mm;
+
+  /* The same slot in a short table that shares a narrow sheet (the buyers' and sellers' list of a day). */
+  --print-unit-slot-narrow: 9mm;
 }
 
 @theme {
@@ -269,6 +272,10 @@
   --spacing-picker-list: var(--picker-list-h);
   --spacing-picker-cell: var(--picker-cell-w);
   --spacing-pager-size: var(--pager-size-w);
+
+  /* The card of labelled lines beside the goods of a party's day slip (plan 42): a label and a figure with
+     its side word, in 360 px. */
+  --spacing-slip-card: 360px;
   --spacing-strip: var(--strip-clearance);
   --spacing-list-region: var(--list-region-h);
   --spacing-col-code: var(--col-code-w);

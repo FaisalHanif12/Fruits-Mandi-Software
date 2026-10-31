@@ -433,6 +433,7 @@ pub(crate) fn run(
     totals.extend(total.r33_cells());
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R33,
         title_id: ids::title_id("R33"),
         filters: typed.resolved.clone(),
@@ -566,6 +567,7 @@ fn partners(
 
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R33,
         title_id: ids::title_id("R33"),
         filters: typed.resolved.clone(),

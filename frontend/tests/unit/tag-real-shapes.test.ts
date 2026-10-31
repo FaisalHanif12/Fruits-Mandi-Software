@@ -50,7 +50,7 @@ describe('the canned data has the real shape: accounts', () => {
       firm: { ...settings().firm, ...real.SETTINGS_GET_CONTACTS.firm },
     });
     expect(same(real.SETTINGS_GET_CONTACTS, canned)).toBeNull();
-    expect(real.SETTINGS_GET_CONTACTS.firm.firm_contacts).toHaveLength(2);
+    expect(real.SETTINGS_GET_CONTACTS.firm.firm_contacts).toHaveLength(3);
     expect(real.SETTINGS_GET_CONTACTS.firm.trade_mark).toBe('RH');
   });
 });

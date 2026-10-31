@@ -38,6 +38,14 @@ impl NumberStyle {
         Ok(self.digits(format_paisa(amount, self.grouping)?))
     }
 
+    /// A weight in grams as kilos with up to 3 decimals and no trailing zeros (`12.345`), in the
+    /// digits of the print.
+    pub(crate) fn weight(self, grams: i64) -> Result<String, ReportsError> {
+        let text = mandi_core::masters::format_kg(grams)
+            .ok_or_else(|| ReportsError::Data("a weight is not more than 0".to_owned()))?;
+        Ok(self.digits(text))
+    }
+
     /// A whole count, grouped like money.
     pub(crate) fn count(self, value: i64) -> String {
         self.digits(format_count(value, self.grouping))

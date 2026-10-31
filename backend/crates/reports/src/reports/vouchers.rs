@@ -284,6 +284,7 @@ pub(crate) fn run(
     let id = layout.id();
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id,
         title_id: ids::title_id(id.code()),
         filters: typed.resolved.clone(),

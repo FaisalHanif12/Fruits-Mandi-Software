@@ -308,6 +308,7 @@ pub(crate) fn run(
     let entries = read(conn, &c, spec)?;
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R37,
         title_id: ids::title_id("R37"),
         filters: typed.resolved.clone(),

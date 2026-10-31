@@ -33,22 +33,34 @@ function must<T>(found: T | null | undefined): T {
 }
 
 describe.each(LANGUAGES)('the shared print header (%s)', (language: Language) => {
-  const contacts =
+  // The people of the header (plan 42, PRD Section 21, v1.12): the owners first, then the munshi, each
+  // with the word of his role before his name.
+  const people: [role: string, name: string][] =
     language === 'ur'
-      ? ['منشی آصف بھٹی', 'ماہر عدنان', 'محمد اکرم']
-      : ['Munshi Asif Bhatti', 'Maher Adnan', 'Muhammad Akram'];
+      ? [
+          ['print-role-owner', 'ماہر عدنان'],
+          ['print-role-owner', 'محمد اکرم'],
+          ['print-role-munshi', 'آصف بھٹی'],
+        ]
+      : [
+          ['print-role-owner', 'Maher Adnan'],
+          ['print-role-owner', 'Muhammad Akram'],
+          ['print-role-munshi', 'Asif Bhatti'],
+        ];
 
-  it('shows the firm, the three contacts with their phones, and the trade mark in a box', () => {
+  it('shows the firm, the owners then the munshi with their roles and phones, and the trade mark in a box', () => {
     const { root } = show(
       printDataFor('seller_bill', { language, contacts: true, tradeMark: 'RH' }),
     );
     const header = must(root.querySelector<HTMLElement>('.print-header'));
     const items = [...header.querySelectorAll('.print-contacts > li')];
     expect(items).toHaveLength(3);
-    contacts.forEach((name, index) => {
-      expect(textOf(must(items[index] as HTMLElement))).toContain(name);
+    people.forEach(([role, name], index) => {
+      const item = textOf(must(items[index] as HTMLElement));
+      expect(item).toContain(name);
+      expect(item.startsWith(message(language, role))).toBe(true);
     });
-    expect(textOf(must(items[0] as HTMLElement))).toContain('0300-4058860');
+    expect(textOf(must(items[2] as HTMLElement))).toContain('0300-4058860');
     // A phone never flips inside the text: it sits in an isolated element.
     expect(
       within(header)
@@ -63,6 +75,23 @@ describe.each(LANGUAGES)('the shared print header (%s)', (language: Language) =>
     expect(textOf(header)).toContain(
       language === 'ur' ? 'ماہر عدنان اینڈ برادرز' : 'Maher Adnan and Brothers',
     );
+  });
+
+  it('a person with no phone is his role and name only, with no gap or dash after them', () => {
+    const base = printDataFor('seller_bill', { language, contacts: true });
+    const data: PrintData = {
+      ...base,
+      header: {
+        ...base.header,
+        contacts: base.header.contacts.map((person, index) =>
+          index === 0 ? { ...person, phone: '' } : person,
+        ),
+      },
+    };
+    const { root } = show(data);
+    const first = must(root.querySelector<HTMLElement>('.print-contacts > li'));
+    expect(first.querySelector('.type-number')).toBeNull();
+    expect(textOf(first)).toBe(`${message(language, 'print-role-owner')} ${must(people[0])[1]}`);
   });
 
   it('draws no empty box and no empty line when no contact and no trade mark is set', () => {

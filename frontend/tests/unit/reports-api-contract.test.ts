@@ -306,6 +306,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'offset',
         'rows',
         'summary',
+        'tables',
         'title_id',
         'total_count',
         'totals',
@@ -391,6 +392,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'row_count',
         'rows',
         'summary',
+        'tables',
         'title_id',
         'totals',
         'totals_label_id',
@@ -683,7 +685,7 @@ describe('round 11: the party day sheet (R35)', () => {
   it('no table has a totals row of its own: the totals are in the group rows and the footer lines', () => {
     // The buyers' total is the heading row of their section and the line "collection" (equal to R20),
     // the sellers' are three footer lines, so a pinned row under both would be read as the total of all.
-    // A slip's total quantity is its first footer line (the client's layout), so its totals row is empty too.
+    // A slip's lines are the labelled lines under its goods (plan 42), so its totals row is empty too.
     for (const page of [R35_TABLE, R35_SLIP_AKRAM, R35_SLIP_RAHIM]) {
       expect(page.totals).toHaveLength(page.columns.length);
       for (const total of page.totals) expect(total).toEqual({ type: 'empty' });
@@ -697,35 +699,56 @@ describe('round 11: the party day sheet (R35)', () => {
       'report-r35-sellers-debit',
       'report-r35-sellers-remaining',
     ]);
-    // A buyer's slip follows the client's own order (17e): total نگ, تازہ بنام, سابقہ رقم, then the
-    // paid and total lines. On-spot, other debits and other credits show only when not 0, and the
-    // received line is there for the collector to fill when nothing is paid yet.
+    // A buyer's slip (plan 42, PRD FR-19.12): the goods value, the commission and لاگا on their own
+    // lines, today's total, what was paid today (an EMPTY cell when nothing was paid), what is left
+    // today, the balance at the start, the new balance and the total نگ. Other entries show only when
+    // the day has some.
     expect(lines(R35_SLIP_AKRAM)).toEqual([
-      'report-r35-total-qty',
-      'report-r35-bought',
+      'report-r35-goods',
+      'report-r35-commission',
+      'report-r35-laga',
+      'report-r35-today-total',
+      'report-r35-paid-today',
+      'report-r35-today-left',
       'report-r35-previous',
-      'report-r35-received',
-      'report-r35-remaining',
+      'report-r35-new-balance',
+      'report-r35-total-qty',
     ]);
-    // A seller's slip ends with his balance, with no "remaining" line.
+    // A seller's slip: the gross sale, each deduction that is not 0, the net sale of the day, and the
+    // same balance lines after it. It has no total نگ line.
     expect(lines(R35_SLIP_RAHIM)).toEqual([
-      'report-r35-total-qty',
+      'report-r35-gross',
+      'report-r35-commission',
+      'report-r35-freight',
+      'report-r35-labour',
+      'report-r35-munshiana',
+      'report-r35-phone',
+      'report-r35-net-sale',
+      'report-r35-paid-today',
+      'report-r35-today-left',
       'report-r35-previous',
-      'report-r35-sold',
-      'report-r35-cash-given',
-      'report-r35-paid',
-      'report-r35-balance',
+      'report-r35-new-balance',
     ]);
     expect(PRINT_R35_SLIP_AKRAM_EN.summary.map((line) => line.label_id)).toEqual(
       lines(R35_SLIP_AKRAM),
     );
   });
 
-  it('a slip has the quantity, the item, the rate and the amount of each line, and each opens its بکری', () => {
+  it('a slip has the item, the packing, the quantity, the rate and the amount of each line, and each opens its بکری', () => {
     for (const slip of [R35_SLIP_AKRAM, R35_SLIP_RAHIM]) {
-      expect(slip.columns.map((column) => column.key)).toEqual(['qty', 'item', 'rate', 'amount']);
+      expect(slip.columns.map((column) => column.key)).toEqual([
+        'item',
+        'packing',
+        'qty',
+        'rate',
+        'amount',
+      ]);
       expect(slip.rows[0]?.source).toMatchObject({ kind: 'bikri' });
     }
+    // The row after an item with more than one line is its total, and it opens nothing.
+    const total = R35_SLIP_RAHIM.rows.find((row) => row.kind === 'item_total');
+    expect(total?.source).toBeNull();
+    expect(R35_SLIP_AKRAM.rows.some((row) => row.kind === 'item_total')).toBe(false);
   });
 });
 

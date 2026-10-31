@@ -190,7 +190,9 @@ html:has(.print-doc[data-paper='mm80']) {
   font-weight: var(--weight-strong);
 }
 
-/* The contact persons of the firm with their phones, up to three, side by side. */
+/* The people of the firm, up to six: the owners first, then the munshi, side by side. Each has the
+   word of his role in front of his name (PRD Section 21, FR-19.13, v1.12). The name is the strong
+   part of the line, the role word the quiet one. */
 .print-contacts {
   display: flex;
   flex-wrap: wrap;
@@ -198,6 +200,14 @@ html:has(.print-doc[data-paper='mm80']) {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.print-contacts .print-firm-line {
+  color: var(--color-ink);
+}
+
+.print-contact-role {
+  color: var(--color-ink-muted);
 }
 
 .print-doc[data-paper='mm80'] .print-firm-top,

@@ -32,13 +32,13 @@
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    add, balance_cell, col, count_of, load_parties, names_cell, paisa, pukhta_party, text_cell,
+    add, balance_cell, col, count_of, load_parties, paisa, pukhta_party, text_cell,
 };
 use crate::reports::filters::Typed;
 use crate::reports::grouped_sums::pukhta_names;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, ColumnKind, Names, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
     SummaryLine,
 };
 use mandi_core::accounts::Balance;
@@ -49,7 +49,9 @@ use mandi_db::rusqlite::{Connection, params};
 use std::collections::HashMap;
 
 mod activity;
-mod lines;
+mod day_tables;
+mod figures;
+mod figures_load;
 mod slip;
 mod table;
 
@@ -96,3 +98,5 @@ pub(crate) fn run(
         None => table::table(conn, typed, spec, &day),
     }
 }
+
+pub(super) use day_tables::{DaySheet, load_days};

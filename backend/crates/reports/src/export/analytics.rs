@@ -69,6 +69,7 @@ pub(crate) fn sheet(
         rows,
         totals_label: l10n.text(&page.totals_label_id),
         totals: ctx.cells(&page.totals)?,
+        tables: Vec::new(),
         debit_word: l10n.text("report-side-dr"),
         credit_word: l10n.text("report-side-cr"),
     })

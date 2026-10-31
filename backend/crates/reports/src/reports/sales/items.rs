@@ -154,6 +154,7 @@ pub(crate) fn run(
 
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R7,
         title_id: ids::title_id("R7"),
         filters: typed.resolved.clone(),

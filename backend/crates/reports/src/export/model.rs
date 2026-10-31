@@ -64,6 +64,22 @@ pub struct ExportRow {
     pub bold: bool,
 }
 
+/// A table under the main table of a sheet, with its own columns and totals row (R34: the
+/// buyers' and the sellers' table of a day, plan 42).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExportTable {
+    /// The heading line: the title of the table and its day.
+    pub title: String,
+    /// The table columns.
+    pub columns: Vec<ExportColumn>,
+    /// Every row.
+    pub rows: Vec<ExportRow>,
+    /// The label of the totals row.
+    pub totals_label: String,
+    /// The totals row, one cell for each column.
+    pub totals: Vec<XCell>,
+}
+
 /// One sheet.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExportSheet {
@@ -87,6 +103,9 @@ pub struct ExportSheet {
     pub totals_label: String,
     /// The totals row, one cell for each column. Empty when the report has none.
     pub totals: Vec<XCell>,
+    /// More tables under the main one, each with its heading (R34, plan 42). Empty for every
+    /// other sheet.
+    pub tables: Vec<ExportTable>,
     /// The word for a debit side, for the number format of a balance.
     pub debit_word: String,
     /// The word for a credit side.

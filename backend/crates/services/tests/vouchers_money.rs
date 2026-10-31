@@ -2004,7 +2004,7 @@ fn the_global_search_finds_vouchers_by_number() {
 #[test]
 fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() {
     use mandi_services::core::auth::Language;
-    use mandi_services::core::firm::FirmContact;
+    use mandi_services::core::firm::{FirmContact, FirmRole};
     use mandi_services::settings::{self, FirmPrintInfo};
     let w = support::world();
     event1_saved(&w);
@@ -2043,6 +2043,7 @@ fn plan_17e_the_receipt_slip_has_the_shared_header_the_tag_and_the_short_code() 
         firm_contacts: vec![FirmContact {
             name_ur: "علی".into(),
             name_en: "Ali".into(),
+            role: FirmRole::Munshi,
             phone: "0300-4058860".into(),
         }],
         trade_mark: "RH".into(),

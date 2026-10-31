@@ -5,6 +5,7 @@ import type { ReportId } from './ReportId';
 import type { ReportResolvedFilters } from './ReportResolvedFilters';
 import type { ReportRow } from './ReportRow';
 import type { ReportSummaryLine } from './ReportSummaryLine';
+import type { ReportTable } from './ReportTable';
 
 /**
  * A page of a report, with the totals over the whole filter (PRD FR-19.11, Code Standards B31).
@@ -55,6 +56,12 @@ export type ReportPage = {
    * Lines above the table (opening balance, closing balance, the difference of a trial).
    */
   summary: Array<ReportSummaryLine>;
+  /**
+   * More tables under the main one, each with its own columns and totals row (R34: the
+   * buyers' and the sellers' table of each day, plan 42). Empty for every other report. Only
+   * the days that have a row on this page are given; a print has every day.
+   */
+  tables: Array<ReportTable>;
   /**
    * For a report with group rows (a head, a city, a collector, a trip), when this page starts
    * in the middle of a group: the heading row of that group, with the totals of the WHOLE

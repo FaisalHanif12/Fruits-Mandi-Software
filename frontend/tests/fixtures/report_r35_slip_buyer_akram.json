@@ -1,0 +1,181 @@
+{
+  "id": "R35",
+  "title_id": "report-r35-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": "2026-10-10",
+    "party": {
+      "account_id": 20,
+      "code": "0020",
+      "short_code": "0",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": null,
+      "person_key": null
+    },
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی",
+            "en": "Box"
+          }
+        },
+        {
+          "type": "number",
+          "value": 20
+        },
+        {
+          "type": "money",
+          "paisa": 60000
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 1,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-goods",
+      "cell": {
+        "type": "money",
+        "paisa": 1200000
+      }
+    },
+    {
+      "label_id": "report-r35-commission",
+      "cell": {
+        "type": "money",
+        "paisa": 72000
+      }
+    },
+    {
+      "label_id": "report-r35-laga",
+      "cell": {
+        "type": "money",
+        "paisa": 16000
+      }
+    },
+    {
+      "label_id": "report-r35-today-total",
+      "cell": {
+        "type": "money",
+        "paisa": 1288000
+      }
+    },
+    {
+      "label_id": "report-r35-paid-today",
+      "cell": {
+        "type": "money",
+        "paisa": 1000000
+      }
+    },
+    {
+      "label_id": "report-r35-today-left",
+      "cell": {
+        "type": "balance",
+        "paisa": 288000,
+        "side": "dr"
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    },
+    {
+      "label_id": "report-r35-new-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 288000,
+        "side": "dr"
+      }
+    },
+    {
+      "label_id": "report-r35-total-qty",
+      "cell": {
+        "type": "number",
+        "value": 20
+      }
+    }
+  ],
+  "tables": [],
+  "group_above": null
+}

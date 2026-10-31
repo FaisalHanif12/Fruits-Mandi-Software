@@ -3,4 +3,4 @@
 /**
  * How a row is drawn.
  */
-export type ReportRowKind = 'normal' | 'group' | 'month';
+export type ReportRowKind = 'normal' | 'group' | 'month' | 'item_total';

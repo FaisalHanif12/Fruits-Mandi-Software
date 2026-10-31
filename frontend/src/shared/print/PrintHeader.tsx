@@ -1,6 +1,7 @@
 // The top of every printed sheet (PRD FR-19.13, Section 21 Firm): the firm name and the mandi, the
-// firm's address and phone, up to three contact persons with their phones, the trade mark in a box,
-// then the title of the document and the facts under it (number, day, filters). It is ONE header for
+// firm's address and phone, the trade mark in a box, the people of the firm (up to six: the owners
+// first, then the munshi, each with his role word and, when he has one, his phone), then the title of
+// the document and the facts under it (number, day, filters). It is ONE header for
 // every print of the app, the built ones and the reports of D5: it is given the header the backend
 // built (`PrintHeader` of the bindings, from `reports_print_*` or `reports_print_header`) and draws it.
 // A contact or a trade mark that is not set is not there: no empty line, no empty box. Every value
@@ -10,7 +11,13 @@ import { useLocalization } from '@fluent/react';
 import { Fragment, type ReactNode } from 'react';
 import { Code } from '../ui/Code';
 import { PrintText } from './PrintText';
-import { LAYOUT_IDS, type PrintHeaderData } from './types';
+import { LAYOUT_IDS, type FirmRole, type PrintHeaderData } from './types';
+
+/** The Fluent message of the word before a person's name in the header. */
+const ROLE_ID: Record<FirmRole, string> = {
+  owner: 'print-role-owner',
+  munshi: 'print-role-munshi',
+};
 
 export function PrintHeader({ header }: { header: PrintHeaderData }) {
   const { l10n } = useLocalization();
@@ -52,8 +59,16 @@ export function PrintHeader({ header }: { header: PrintHeaderData }) {
             <ul className="print-contacts">
               {header.contacts.map((person, index) => (
                 <li key={index} className="print-firm-line">
-                  <PrintText text={person.name} />{' '}
-                  {person.phone === '' ? null : <Code>{person.phone}</Code>}
+                  {/* The backend sends the owners first, then the munshi; the word of the role is ours. */}
+                  <span className="print-contact-role">{l10n.getString(ROLE_ID[person.role])}</span>{' '}
+                  <PrintText text={person.name} />
+                  {/* A person with no phone is the name only: no empty gap, no dash. */}
+                  {person.phone === '' ? null : (
+                    <>
+                      {' '}
+                      <Code>{person.phone}</Code>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

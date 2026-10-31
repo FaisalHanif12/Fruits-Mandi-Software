@@ -13,6 +13,7 @@ export type ReportColumnKind =
   | 'date'
   | 'month'
   | 'percent'
+  | 'weight'
   | 'party'
   | 'names'
   | 'detail'

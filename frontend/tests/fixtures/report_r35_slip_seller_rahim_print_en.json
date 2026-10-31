@@ -1,0 +1,233 @@
+{
+  "report": "R35",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "urdu_digits": false,
+  "title_id": "report-r35-title",
+  "filters": [
+    {
+      "label_id": "report-filter-day",
+      "value": "10-10-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 Rahim"
+    }
+  ],
+  "columns": [
+    {
+      "key": "item",
+      "title_id": "report-col-item",
+      "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
+    },
+    {
+      "key": "rate",
+      "title_id": "report-col-rate",
+      "kind": "money"
+    },
+    {
+      "key": "amount",
+      "title_id": "report-col-amount",
+      "kind": "money"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-r35-gross",
+      "cell": {
+        "type": "money",
+        "text": "29,400"
+      }
+    },
+    {
+      "label_id": "report-r35-commission",
+      "cell": {
+        "type": "money",
+        "text": "1,764"
+      }
+    },
+    {
+      "label_id": "report-r35-freight",
+      "cell": {
+        "type": "money",
+        "text": "3,000"
+      }
+    },
+    {
+      "label_id": "report-r35-labour",
+      "cell": {
+        "type": "money",
+        "text": "250"
+      }
+    },
+    {
+      "label_id": "report-r35-munshiana",
+      "cell": {
+        "type": "money",
+        "text": "50"
+      }
+    },
+    {
+      "label_id": "report-r35-phone",
+      "cell": {
+        "type": "money",
+        "text": "20"
+      }
+    },
+    {
+      "label_id": "report-r35-net-sale",
+      "cell": {
+        "type": "balance",
+        "text": "24,316",
+        "side_id": "report-side-cr"
+      }
+    },
+    {
+      "label_id": "report-r35-paid-today",
+      "cell": {
+        "type": "money",
+        "text": "9,316"
+      }
+    },
+    {
+      "label_id": "report-r35-today-left",
+      "cell": {
+        "type": "balance",
+        "text": "15,000",
+        "side_id": "report-side-cr"
+      }
+    },
+    {
+      "label_id": "report-r35-previous",
+      "cell": {
+        "type": "balance",
+        "text": "15,000",
+        "side_id": "report-side-dr"
+      }
+    },
+    {
+      "label_id": "report-r35-new-balance",
+      "cell": {
+        "type": "balance",
+        "text": "0",
+        "side_id": "report-side-zero"
+      }
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "names",
+          "text": "Box"
+        },
+        {
+          "type": "number",
+          "text": "20"
+        },
+        {
+          "type": "money",
+          "text": "600"
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "text": "Banana"
+        },
+        {
+          "type": "names",
+          "text": "Box"
+        },
+        {
+          "type": "number",
+          "text": "30"
+        },
+        {
+          "type": "money",
+          "text": "580"
+        },
+        {
+          "type": "money",
+          "text": "17,400"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "message",
+          "id": "report-r35-item-total",
+          "args": [
+            {
+              "name": "item",
+              "value": {
+                "type": "text",
+                "text": "Banana"
+              }
+            }
+          ]
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "text": "50"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "29,400"
+        }
+      ],
+      "kind": "item_total"
+    }
+  ],
+  "tables": [],
+  "row_count": "3",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

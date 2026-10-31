@@ -76,6 +76,13 @@ export type ReportCell =
       hundredths: number;
     }
   | {
+      type: 'weight';
+      /**
+       * The weight in grams, more than 0.
+       */
+      grams: number;
+    }
+  | {
       type: 'party';
       /**
        * The account.

@@ -25,14 +25,19 @@
   },
   "columns": [
     {
-      "key": "qty",
-      "title_id": "report-col-qty",
-      "kind": "number"
-    },
-    {
       "key": "item",
       "title_id": "report-col-item",
       "kind": "names"
+    },
+    {
+      "key": "packing",
+      "title_id": "report-col-packing",
+      "kind": "names"
+    },
+    {
+      "key": "qty",
+      "title_id": "report-col-qty",
+      "kind": "number"
     },
     {
       "key": "rate",
@@ -49,22 +54,30 @@
     {
       "cells": [
         {
-          "type": "number",
-          "value": 50
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
         },
         {
           "type": "names",
           "names": {
-            "ur": "پیٹی کیلا",
-            "en": "Box Banana"
+            "ur": "پیٹی",
+            "en": "Box"
           }
         },
         {
-          "type": "empty"
+          "type": "number",
+          "value": 20
         },
         {
           "type": "money",
-          "paisa": 2431600
+          "paisa": 60000
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
         }
       ],
       "source": {
@@ -72,13 +85,87 @@
         "id": 1
       },
       "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا",
+            "en": "Banana"
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "پیٹی",
+            "en": "Box"
+          }
+        },
+        {
+          "type": "number",
+          "value": 30
+        },
+        {
+          "type": "money",
+          "paisa": 58000
+        },
+        {
+          "type": "money",
+          "paisa": 1740000
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "message",
+          "id": "report-r35-item-total",
+          "args": [
+            {
+              "name": "item",
+              "value": {
+                "type": "names",
+                "names": {
+                  "ur": "کیلا",
+                  "en": "Banana"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "number",
+          "value": 50
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 2940000
+        }
+      ],
+      "source": null,
+      "kind": "item_total"
     }
   ],
   "offset": 0,
   "limit": 100,
-  "total_count": 1,
+  "total_count": 3,
   "totals_label_id": "report-total",
   "totals": [
+    {
+      "type": "empty"
+    },
     {
       "type": "empty"
     },
@@ -94,10 +181,68 @@
   ],
   "summary": [
     {
-      "label_id": "report-r35-total-qty",
+      "label_id": "report-r35-gross",
       "cell": {
-        "type": "number",
-        "value": 50
+        "type": "money",
+        "paisa": 2940000
+      }
+    },
+    {
+      "label_id": "report-r35-commission",
+      "cell": {
+        "type": "money",
+        "paisa": 176400
+      }
+    },
+    {
+      "label_id": "report-r35-freight",
+      "cell": {
+        "type": "money",
+        "paisa": 300000
+      }
+    },
+    {
+      "label_id": "report-r35-labour",
+      "cell": {
+        "type": "money",
+        "paisa": 25000
+      }
+    },
+    {
+      "label_id": "report-r35-munshiana",
+      "cell": {
+        "type": "money",
+        "paisa": 5000
+      }
+    },
+    {
+      "label_id": "report-r35-phone",
+      "cell": {
+        "type": "money",
+        "paisa": 2000
+      }
+    },
+    {
+      "label_id": "report-r35-net-sale",
+      "cell": {
+        "type": "balance",
+        "paisa": 2431600,
+        "side": "cr"
+      }
+    },
+    {
+      "label_id": "report-r35-paid-today",
+      "cell": {
+        "type": "money",
+        "paisa": 931600
+      }
+    },
+    {
+      "label_id": "report-r35-today-left",
+      "cell": {
+        "type": "balance",
+        "paisa": 1500000,
+        "side": "cr"
       }
     },
     {
@@ -109,28 +254,7 @@
       }
     },
     {
-      "label_id": "report-r35-sold",
-      "cell": {
-        "type": "money",
-        "paisa": 2431600
-      }
-    },
-    {
-      "label_id": "report-r35-cash-given",
-      "cell": {
-        "type": "money",
-        "paisa": 500000
-      }
-    },
-    {
-      "label_id": "report-r35-paid",
-      "cell": {
-        "type": "money",
-        "paisa": 431600
-      }
-    },
-    {
-      "label_id": "report-r35-balance",
+      "label_id": "report-r35-new-balance",
       "cell": {
         "type": "balance",
         "paisa": 0,
@@ -138,5 +262,6 @@
       }
     }
   ],
+  "tables": [],
   "group_above": null
 }

@@ -297,7 +297,7 @@ pub fn set_firm_confirmed(
 /// the firm details.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FirmPrintInfo {
-    /// The contact persons, 0 to 3 (`firm_contacts`).
+    /// The people of the print header, 0 to 6, each with a role (`firm_contacts`).
     pub firm_contacts: Vec<FirmContact>,
     /// The trade mark text as typed, or empty (`trade_mark`).
     pub trade_mark: String,
@@ -338,13 +338,14 @@ pub fn get_print_info(ctx: &Context) -> Result<FirmPrintInfo, ServiceError> {
 
 impl FirmPrintInfo {
     /// Checks the contacts and the trade mark and returns them cleaned, or every problem found
-    /// (PRD Section 21 "Firm", Code Standards 4.2): at most [`MAX_CONTACTS`] contacts, each with an
-    /// Urdu name in Urdu letters, an English name in English letters and a phone; the trade mark
-    /// as free text.
+    /// (PRD Section 21 "Firm", Code Standards 4.2): at most [`MAX_CONTACTS`] people, each with an
+    /// Urdu name in Urdu letters, an English name in English letters, a role and an optional
+    /// phone (empty means none); the trade mark as free text.
     ///
     /// # Errors
-    /// `ERR_OUT_OF_RANGE` (values `min` 0, `max` 3) on `firm_contacts`; the name codes on
-    /// `firm_contacts[i].name_ur` and `.name_en`; the phone codes on `firm_contacts[i].phone`;
+    /// `ERR_OUT_OF_RANGE` (values `min` 0, `max` 6) on `firm_contacts`; the name codes on
+    /// `firm_contacts[i].name_ur` and `.name_en`; `ERR_PHONE_INVALID` on `firm_contacts[i].phone`
+    /// for a phone that is typed but wrong;
     /// `ERR_TEXT_TOO_LONG` or `ERR_CONTROL_CHARS` on `trade_mark`.
     pub fn validated(&self) -> Result<FirmPrintInfo, Vec<FieldError>> {
         let mut errors = FieldErrors::default();
@@ -373,7 +374,8 @@ impl FirmPrintInfo {
                     &format!("firm_contacts[{index}].name_en"),
                     &contact.name_en,
                 ));
-                let phone = errors.take(validate::phone(
+                // The phone is optional (v1.12): empty text is no phone, stored as "".
+                let phone = errors.take(validate::phone_optional(
                     &format!("firm_contacts[{index}].phone"),
                     &contact.phone,
                 ));
@@ -381,7 +383,8 @@ impl FirmPrintInfo {
                     contacts.push(FirmContact {
                         name_ur,
                         name_en,
-                        phone,
+                        role: contact.role,
+                        phone: phone.unwrap_or_default(),
                     });
                 }
             }

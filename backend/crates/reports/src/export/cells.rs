@@ -42,6 +42,7 @@ pub(crate) fn shape_of(kind: ColumnKind) -> ColumnShape {
         | ColumnKind::Doc
         | ColumnKind::Month
         | ColumnKind::Percent
+        | ColumnKind::Weight
         | ColumnKind::Party
         | ColumnKind::Names
         | ColumnKind::Detail
@@ -122,6 +123,9 @@ impl CellContext<'_> {
             Cell::Percent { hundredths } => {
                 XCell::Text(format!("{}%", self.fmt.style.hundredths(*hundredths)))
             }
+            // A weight is written as text: Excel keeps numbers as floating point, and the only
+            // approved conversions are the money and the count ones (Code Standards M13).
+            Cell::Weight { grams } => XCell::Text(self.fmt.style.weight(*grams)?),
             Cell::Month { year, month } => XCell::Text(self.month_text(*year, *month)),
             Cell::Party { party } => XCell::Text(self.fmt.party_text(party)),
             Cell::Names { names } => XCell::Text(self.fmt.names(names)),

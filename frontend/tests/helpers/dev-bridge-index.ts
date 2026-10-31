@@ -68,7 +68,7 @@ export const indexHandlers: Record<string, Handler> = {
   settings_set_firm: (input) => input,
 };
 
-/** The firm of the settings screen: with three contact persons and a trade mark, or with none. */
+/** The firm of the settings screen: with three people (two owners, the munshi) and a trade mark, or none. */
 export function devFirm(withContacts: boolean) {
   return {
     name_ur: 'ماہر عدنان اینڈ برادرز',
@@ -79,9 +79,24 @@ export function devFirm(withContacts: boolean) {
     phone: '0300-1112233',
     firm_contacts: withContacts
       ? [
-          { name_ur: 'منشی آصف بھٹی', name_en: 'Munshi Asif Bhatti', phone: '0300-4058860' },
-          { name_ur: 'ماہر عدنان', name_en: 'Maher Adnan', phone: '0300-1112233' },
-          { name_ur: 'محمد اکرم', name_en: 'Muhammad Akram', phone: '0321-5556677' },
+          {
+            name_ur: 'ماہر عدنان',
+            name_en: 'Maher Adnan',
+            role: 'owner' as const,
+            phone: '0300-1112233',
+          },
+          {
+            name_ur: 'محمد اکرم',
+            name_en: 'Muhammad Akram',
+            role: 'owner' as const,
+            phone: '0321-5556677',
+          },
+          {
+            name_ur: 'آصف بھٹی',
+            name_en: 'Asif Bhatti',
+            role: 'munshi' as const,
+            phone: '0300-4058860',
+          },
         ]
       : [],
     trade_mark: withContacts ? 'RH' : '',

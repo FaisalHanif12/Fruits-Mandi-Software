@@ -11,7 +11,7 @@ import type { ReportMessageArg } from '../../bindings/ReportMessageArg';
 import type { ReportParty } from '../../bindings/ReportParty';
 import type { ReportRowKind } from '../../bindings/ReportRowKind';
 import type { Language } from '../../i18n';
-import { formatBps, isoToDisplayDate } from '../../shared/format';
+import { formatBps, formatGrams, isoToDisplayDate } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 
@@ -173,6 +173,9 @@ export function cellText(cell: ReportCell, context: ListContext, shortSale = fal
       return monthText(context.text, cell.year, cell.month);
     case 'percent':
       return percentText(cell.hundredths);
+    case 'weight':
+      // The kilos of a line of an item sold by weight on a day slip (PRD A73), written from the grams.
+      return formatGrams(cell.grams);
     case 'party':
       return partyText(
         cell.party,

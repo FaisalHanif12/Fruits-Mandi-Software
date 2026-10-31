@@ -1033,7 +1033,7 @@ report-filter-trip-by-partner = شراکت دار وار
 report-r34-bikri = { -kham-bikri }
 
 # review: pending
-report-r34-commission = { -commission } اور { -laga }
+report-r34-commission = کل { -commission }
 
 # review: pending
 report-r34-cash-opening = ابتدائی روکڑ
@@ -1110,10 +1110,6 @@ report-col-previous = { -sabiqa-raqam }
 # review: pending
 report-col-party = پارٹی
 
-# The seller's balance at the end of his day slip (R35).
-# review: pending
-report-r35-balance = { -baqaya }
-
 # review: pending
 report-r35-buyers = { -gahak }
 
@@ -1125,33 +1121,6 @@ report-r35-total-qty = کل { -nag }
 
 # review: pending
 report-r35-previous = { -sabiqa-raqam }
-
-# review: pending
-report-r35-bought = { -taza-banam }
-
-# review: pending
-report-r35-sold = اس دن کی { -bikri }
-
-# review: pending
-report-r35-other-debits = دیگر { -banaam }
-
-# review: pending
-report-r35-other-credits = دیگر { -jama }
-
-# review: pending
-report-r35-on-spot = موقع پر ادا
-
-# review: pending
-report-r35-cash-given = { -naqd }
-
-# review: pending
-report-r35-received = { -wasooli }
-
-# review: pending
-report-r35-paid = { -adaigi }
-
-# review: pending
-report-r35-remaining = { -total-raqam }
 
 # review: pending
 report-r35-collection = کل { -agrahi }
@@ -1347,3 +1316,120 @@ report-r34-total-dues = { -kul-agrahi }
 # The second total row of the party day sheet: the total with the people in the dead amount.
 # review: pending
 report-r35-total-with-dead = { -doobi-raqam } سمیت میزان
+
+## Plan 42 (PRD v1.12, FR-19.12, R34): the buyer's and the seller's day slip of R35, and the day total sheet R34.
+## The slip lines are the labelled lines under the goods table; the words are the PRD's own.
+
+# The row after an item that has more than one line on the slip: "کیلا کل". $item: the item name.
+# review: pending
+report-r35-item-total = { $item } کل
+
+# review: pending
+report-r35-goods = مال کی رقم
+
+# review: pending
+report-r35-commission = { -commission }
+
+# review: pending
+report-r35-laga = { -laga }
+
+# What the buyer owes for the day: the goods, the commission and the laga.
+# review: pending
+report-r35-today-total = آج کا کل
+
+# Other entries of the day on the party's account, for example cash lent or a journal line.
+# review: pending
+report-r35-other = دیگر اندراج
+
+# The line the collector fills in by hand when nothing was paid yet.
+# review: pending
+report-r35-paid-today = آج ادا
+
+# review: pending
+report-r35-today-left = آج کا باقی
+
+# review: pending
+report-r35-new-balance = نیا بقایا
+
+# The seller's slip.
+# review: pending
+report-r35-gross = { -kham-bikri }
+
+# review: pending
+report-r35-freight = { -kiraya }
+
+# review: pending
+report-r35-labour = { -mazdoori }
+
+# review: pending
+report-r35-munshiana = { -munshiana }
+
+# review: pending
+report-r35-phone = { -phone }
+
+# review: pending
+report-r35-store-rent = { -kiraya-store }
+
+# review: pending
+report-r35-net-sale = آج کی { -safi-bikri }
+
+# The new lines of the day total sheet (R34).
+# review: pending
+report-r34-qty = کل { -nag }
+
+# review: pending
+report-r34-commission-seller = { -commission } بیوپاری
+
+# review: pending
+report-r34-commission-buyer = { -commission } گاہک
+
+# review: pending
+report-r34-commission-laga = { -laga }
+
+# review: pending
+report-r34-buyers-billed = گاہکوں کا آج کا کل
+
+# review: pending
+report-r34-buyers-other = گاہکوں کے دیگر اندراج
+
+# review: pending
+report-r34-buyers-received = گاہکوں کی طرف سے آج ادا
+
+# review: pending
+report-r34-buyers-left = گاہکوں کا آج کا باقی
+
+# review: pending
+report-r34-sellers-net = بیوپاریوں کی آج کی { -safi-bikri }
+
+# review: pending
+report-r34-sellers-other = بیوپاریوں کے دیگر اندراج
+
+# review: pending
+report-r34-sellers-paid = بیوپاریوں کو آج ادا
+
+# The two short tables under the lines of a day.
+# review: pending
+report-r34-table-buyers = گاہکوں کی فہرست
+
+# review: pending
+report-r34-table-sellers = بیوپاریوں کی فہرست
+
+# review: pending
+report-col-today-total = آج کا کل
+
+# review: pending
+report-col-net-sale = آج کی { -safi-bikri }
+
+# review: pending
+report-col-other-entries = دیگر اندراج
+
+# review: pending
+report-col-paid-today = آج ادا
+
+# review: pending
+report-col-new-balance = نیا بقایا
+
+# The kilos of a line of an item sold by weight on a party's day slip (PRD A73): the column is there only
+# when some line is weighed.
+# review: pending
+report-col-weight = وزن (کلو)

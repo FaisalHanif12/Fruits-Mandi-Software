@@ -27,8 +27,9 @@ pub struct FirmSettings {
     pub address: String,
     /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
     pub phone: String,
-    /// The contact persons printed in the header of every print, 0 to 3, in print order (PRD
-    /// Section 21, FR-19.13). Stored under the settings key `firm_contacts`.
+    /// The people printed in the header of every print, 0 to 6, each with a role (owner or
+    /// munshi) and an optional phone; the header prints the owners first (PRD Section 21,
+    /// FR-19.13, v1.12). Stored under the settings key `firm_contacts`.
     pub firm_contacts: Vec<FirmContact>,
     /// The trade mark printed in a box in the header, as typed. Empty if not set. Stored under the
     /// settings key `trade_mark`.
@@ -50,7 +51,8 @@ pub struct SetFirmInput {
     pub address: String,
     /// Phone, `03XXXXXXXXX` or `03XX-XXXXXXX`.
     pub phone: String,
-    /// The contact persons, 0 to 3. Each has both names, each in its own script, and a phone.
+    /// The people of the header, 0 to 6. Each has both names, each in its own script, a role
+    /// (owner or munshi) and an optional phone (empty means none).
     /// Missing means none.
     #[serde(default)]
     pub firm_contacts: Vec<FirmContact>,
@@ -162,7 +164,7 @@ pub async fn settings_get<R: tauri::Runtime>(
 /// spelling rules made that is not in `confirmed_rules_words` (PRD FR-7.66). Confirmed words are
 /// learned (FR-7.26). Until plan 17e T2 a request with a contact or a trade mark answers
 /// `ERR_NOT_IMPLEMENTED` on `firm_contacts` or `trade_mark`; from T2 the contact codes are on
-/// `firm_contacts[i].name_ur`, `.name_en` and `.phone`, `ERR_OUT_OF_RANGE` (values `min` 0, `max` 3) on `firm_contacts`, and
+/// `firm_contacts[i].name_ur`, `.name_en` and `.phone`, `ERR_OUT_OF_RANGE` (values `min` 0, `max` 6) on `firm_contacts`, and
 /// `ERR_TEXT_TOO_LONG` on `trade_mark`.
 #[tauri::command]
 pub async fn settings_set_firm<R: tauri::Runtime>(

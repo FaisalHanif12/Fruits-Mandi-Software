@@ -47,6 +47,7 @@ use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use super::super::PageSpec;
 use crate::error::ReportsError;
+use crate::reports::business::sheet::{DaySheet, load_days};
 use crate::reports::common::{LIVE, add, col, count_of, names_cell, paisa};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -135,6 +136,10 @@ pub(crate) struct Sales {
     pub(crate) count: i64,
     pub(crate) gross: i64,
     pub(crate) commission_parts: [i64; 3],
+    /// The buyers' value of the lines and the نگ sold (plan 42: the day total sheet ties the
+    /// buyers' sums to these).
+    pub(crate) buyer_value: i64,
+    pub(crate) qty: i64,
 }
 
 pub(crate) fn sales_by_day(
@@ -146,7 +151,8 @@ pub(crate) fn sales_by_day(
     let mut statement = conn.prepare(
         "SELECT entry_date, COALESCE(SUM(sign * seller_amount_paisa), 0),
                 COALESCE(SUM(sign * seller_comm_paisa), 0), COALESCE(SUM(sign * buyer_comm_paisa), 0),
-                COALESCE(SUM(sign * laga_paisa), 0)
+                COALESCE(SUM(sign * laga_paisa), 0), COALESCE(SUM(sign * buyer_value_paisa), 0),
+                COALESCE(SUM(sign * qty), 0)
          FROM analytics_facts WHERE entry_date >= ?1 AND entry_date <= ?2 GROUP BY entry_date",
     )?;
     let rows = statement.query_map([from, to], |r| {
@@ -158,13 +164,17 @@ pub(crate) fn sales_by_day(
                 r.get::<_, i64>(3)?,
                 r.get::<_, i64>(4)?,
             ],
+            r.get::<_, i64>(5)?,
+            r.get::<_, i64>(6)?,
         ))
     })?;
     for row in rows {
-        let (day, gross, parts) = row?;
+        let (day, gross, parts, buyer_value, qty) = row?;
         let sales = out.entry(day).or_default();
         sales.gross = gross;
         sales.commission_parts = parts;
+        sales.buyer_value = buyer_value;
+        sales.qty = qty;
     }
     // A بکری counts on a day when its sales of that day add up to more than 0 (a cancelled one
     // adds up to 0).
@@ -479,6 +489,11 @@ impl Stock {
 
 /// One row of the list.
 fn row(day: &str, label: Cell, count: Option<i64>, amount: Option<Paisa>) -> Row {
+    row_cell(day, label, count, amount.map(|paisa| Cell::Money { paisa }))
+}
+
+/// One row of the list whose amount is any cell (a balance with its side, for example).
+fn row_cell(day: &str, label: Cell, count: Option<i64>, amount: Option<Cell>) -> Row {
     Row {
         cells: vec![
             Cell::Date {
@@ -486,7 +501,7 @@ fn row(day: &str, label: Cell, count: Option<i64>, amount: Option<Paisa>) -> Row
             },
             label,
             count.map_or(Cell::Empty, |value| Cell::Number { value }),
-            amount.map_or(Cell::Empty, |paisa| Cell::Money { paisa }),
+            amount.unwrap_or(Cell::Empty),
         ],
         source: None,
         kind: RowKind::Normal,
@@ -527,6 +542,9 @@ pub(crate) fn run(
     }
 
     let sales = sales_by_day(conn, &from, &to)?;
+    // The buyers' and the sellers' figures of every day, tied to the sales facts (plan 42).
+    let day_list: Vec<String> = days.iter().cloned().collect();
+    let sheet = load_days(conn, &day_list, &sales)?;
     let cash = by_day(
         conn,
         "SELECT e.entry_date, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
@@ -739,12 +757,19 @@ pub(crate) fn run(
             Some(s.count),
             amount(paisa(s.gross)?),
         ));
+        for (id, count, cell) in DaySheet::commission_lines(&s)? {
+            all_rows.push(row_cell(day, label(id), count, cell));
+        }
+        // The total of the three lines above (the existing line).
         all_rows.push(row(
             day,
             label(ids::R34_COMMISSION),
             None,
             amount(commission),
         ));
+        for (id, count, cell) in sheet.party_lines(day)? {
+            all_rows.push(row_cell(day, label(id), count, cell));
+        }
         all_rows.push(row(
             day,
             label(ids::R34_CASH_OPENING),
@@ -867,8 +892,20 @@ pub(crate) fn run(
     let mut filters = typed.resolved.clone();
     filters.from = Some(from);
     filters.to = Some(to);
+    let page_rows = spec.slice(&all_rows);
+    // The two tables of each day that has a row on this page; a print has every day.
+    let mut page_days: Vec<String> = Vec::new();
+    for r in &page_rows {
+        if let Some(Cell::Date { iso }) = r.cells.first()
+            && !page_days.contains(iso)
+        {
+            page_days.push(iso.clone());
+        }
+    }
+    let tables = sheet.tables(conn, &page_days)?;
     Ok(ReportPage {
         group_above: None,
+        tables,
         id: ReportId::R34,
         title_id: ids::title_id("R34"),
         filters,
@@ -879,7 +916,7 @@ pub(crate) fn run(
             col("amount", ids::COL_AMOUNT, ColumnKind::Money),
         ],
         total_count: count_of(all_rows.len()),
-        rows: spec.slice(&all_rows),
+        rows: page_rows,
         offset: spec.offset,
         limit: spec.reported_limit(),
         totals_label_id: ids::TOTAL.to_owned(),

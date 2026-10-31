@@ -95,12 +95,13 @@ pub use ids::posting_types;
 pub use model::{
     ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
     GardenView, GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters,
-    ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ResolvedFilters, Row,
-    RowKind, RowSource, SourceKind, SummaryLine, TripView,
+    ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ReportTable,
+    ResolvedFilters, Row, RowKind, RowSource, SourceKind, SummaryLine, TripView,
 };
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
-    PrintReportParty, PrintReportRow, PrintSummaryLine, ReportPrintData, build_print,
+    PrintReportParty, PrintReportRow, PrintReportTable, PrintSummaryLine, ReportPrintData,
+    build_print,
 };
 pub use statement::{StatementRequest, statement_page, statement_paging, statement_request};
 
@@ -610,6 +611,7 @@ pub fn run(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> 
                 let mut page = build_in(conn, db, input.id, &input.filters, all)?;
                 view::shape(&mut page, input.id, input.sort.as_ref(), wants_months)?;
                 view::cut(&mut page, spec);
+                keep_tables_of_the_page(&mut page);
                 return Ok(page);
             }
             // Month headings in the order of the report: the page is built alone, and each month
@@ -645,6 +647,23 @@ pub fn run(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> 
     })
 }
 
+/// R34 gives the tables of every day when it is built whole; a page keeps the tables of the days
+/// it has a row of (plan 42).
+fn keep_tables_of_the_page(page: &mut ReportPage) {
+    if page.tables.is_empty() {
+        return;
+    }
+    let days: Vec<&str> = page
+        .rows
+        .iter()
+        .filter_map(|r| match r.cells.first() {
+            Some(Cell::Date { iso }) => Some(iso.as_str()),
+            _ => None,
+        })
+        .collect();
+    page.tables.retain(|t| days.contains(&t.day.as_str()));
+}
+
 /// The reports that put group rows (a heading with the totals of its group) among their rows.
 fn emits_group_rows(id: ReportId) -> bool {
     matches!(
@@ -660,11 +679,34 @@ fn emits_group_rows(id: ReportId) -> bool {
     )
 }
 
+/// The 80 mm roll is for the day slip of one party (R35 with a party picked, PRD FR-19.12, plan 42):
+/// the all-parties table of R35 and the day total sheet R34 have tables that do not fit on it, so
+/// they are refused with `ERR_OUT_OF_RANGE` on `paper`, with the papers they take in `allowed`.
+/// Every other report keeps the papers it had.
+fn check_paper(
+    id: ReportId,
+    filters: &ReportFilters,
+    paper: Option<Paper>,
+) -> Result<(), ReportsError> {
+    let one_party_slip = id == ReportId::R35 && filters.party.is_some();
+    if paper == Some(Paper::Mm80) && matches!(id, ReportId::R34 | ReportId::R35) && !one_party_slip
+    {
+        return Err(ReportsError::Rejected(vec![
+            FieldError::new(ErrorCode::ErrOutOfRange, "paper").with(
+                "allowed",
+                mandi_core::error::ErrorValue::Text("a4,a5".to_owned()),
+            ),
+        ]));
+    }
+    Ok(())
+}
+
 /// The print data of a report: every row of the filter, formatted for the print language.
 ///
 /// # Errors
 /// As [`run`]; a stored amount that cannot be written in words.
 pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, ReportsError> {
+    check_paper(input.id, &input.filters, input.paper)?;
     let all = PageSpec {
         offset: 0,
         limit: None,

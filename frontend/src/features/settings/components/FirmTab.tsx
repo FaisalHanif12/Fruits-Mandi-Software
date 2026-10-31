@@ -1,15 +1,17 @@
-// The firm's names, mandi, address and phone (PRD Section 21 "Firm", plan 04), up to three contact
-// persons and the trade mark that every print shows in its header (plan 17e, FR-19.13). Both names of
-// the firm, the mandi and each contact person are kept, one per script (PRD FR-7.24). A word of the
-// firm's, the mandi's and each contact person's names made only by the spelling rules is checked
-// before the save (PRD FR-7.66, as the backend checks it too). A contact row left empty is not sent. The trade mark is text as typed, in one script,
-// never turned into Urdu (FR-7.25). Leaving with unsaved changes asks "Save changes?" (PRD FR-7.9).
+// The firm's names, mandi, address and phone (PRD Section 21 "Firm", plan 04), up to six people and
+// the trade mark that every print shows in its header (plan 17e, plan 42, FR-19.13). Each person has
+// a role (owner or munshi; the owners print first, then the munshi), both names, one per script
+// (PRD FR-7.24), and an optional phone. A word of the firm's, the mandi's and each person's names made
+// only by the spelling rules is checked before the save (PRD FR-7.66, as the backend checks it too). A
+// person row left empty is not sent. The trade mark is text as typed, in one script, never turned
+// into Urdu (FR-7.25). Leaving with unsaved changes asks "Save changes?" (PRD FR-7.9).
 
 import { Localized } from '@fluent/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalization } from '@fluent/react';
 import { Plus, X } from 'lucide-react';
 import type { FirmContact } from '../../../bindings/FirmContact';
+import type { FirmRole } from '../../../bindings/FirmRole';
 import type { FirmSettings } from '../../../bindings/FirmSettings';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
@@ -22,6 +24,7 @@ import {
   fieldError,
   FreeTextInput,
   NamePair,
+  Select,
   showToast,
   TextInput,
   type NamePairValue,
@@ -29,8 +32,11 @@ import {
 import type { SpellingMarks } from '../../../shared/urdu/spelling';
 import { useSetFirm } from '../hooks';
 
-/** The most contact persons a print header holds (PRD Section 21). */
-const MAX_CONTACTS = 3;
+/** The most people a print header holds (PRD Section 21, v1.12). */
+const MAX_CONTACTS = 6;
+
+/** The roles of a person in the header, in the order the header prints them. */
+const ROLES: readonly FirmRole[] = ['owner', 'munshi'];
 
 /** The fields of the firm that are one text each; the contacts are a list of their own. */
 type FirmFields = Pick<
@@ -48,14 +54,17 @@ const FIELDS = [
   'trade_mark',
 ] as const satisfies readonly (keyof FirmFields)[];
 
-/** The field paths a contact row shows next to its inputs (the backend names them like this). */
+/** The field paths a person row shows next to its inputs (the backend names them like this). */
 const CONTACT_PATHS = Array.from({ length: MAX_CONTACTS }, (_, index) =>
-  (['name_ur', 'name_en', 'phone'] as const).map(
+  (['name_ur', 'name_en', 'role', 'phone'] as const).map(
     (part) => `firm_contacts[${String(index)}].${part}`,
   ),
 ).flat();
 
-/** A contact row with nothing in it is not a contact: it is left out of the save. */
+/**
+ * A person row with no name and no phone is not a person: it is left out of the save. The role is
+ * always set (a new row starts as an owner), so it does not count.
+ */
 function filled(contact: FirmContact): boolean {
   return [contact.name_ur, contact.name_en, contact.phone].some((text) => text.trim() !== '');
 }
@@ -72,7 +81,7 @@ function fieldsOf(firm: FirmSettings): FirmFields {
   };
 }
 
-const NEW_CONTACT: FirmContact = { name_ur: '', name_en: '', phone: '' };
+const NEW_CONTACT: FirmContact = { name_ur: '', name_en: '', role: 'owner', phone: '' };
 
 interface FirmTabProps {
   firm: FirmSettings;
@@ -309,21 +318,41 @@ export function FirmTab({ firm }: FirmTabProps) {
                   urduError={fieldError(error, `firm_contacts[${String(index)}].name_ur`)}
                   englishError={fieldError(error, `firm_contacts[${String(index)}].name_en`)}
                 />
-                <Field
-                  label={<Localized id="settings-firm-contact-phone" />}
-                  error={fieldError(error, `firm_contacts[${String(index)}].phone`)}
-                >
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      value={contact.phone}
-                      onChange={(phone) => {
-                        changeContact(index, { phone });
-                      }}
-                      lang="en"
-                    />
-                  )}
-                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label={<Localized id="settings-firm-contact-role" />}
+                    error={fieldError(error, `firm_contacts[${String(index)}].role`)}
+                  >
+                    {(control) => (
+                      <Select<FirmRole>
+                        {...control}
+                        value={contact.role}
+                        onChange={(role) => {
+                          changeContact(index, { role });
+                        }}
+                        options={ROLES.map((role) => ({
+                          value: role,
+                          label: <Localized id={`settings-firm-role-${role}`} />,
+                        }))}
+                      />
+                    )}
+                  </Field>
+                  <Field
+                    label={<Localized id="settings-firm-contact-phone" />}
+                    error={fieldError(error, `firm_contacts[${String(index)}].phone`)}
+                  >
+                    {(control) => (
+                      <TextInput
+                        {...control}
+                        value={contact.phone}
+                        onChange={(phone) => {
+                          changeContact(index, { phone });
+                        }}
+                        lang="en"
+                      />
+                    )}
+                  </Field>
+                </div>
               </div>
             </div>
           ))}

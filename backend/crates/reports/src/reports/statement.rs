@@ -378,6 +378,7 @@ pub fn statement_page(
     let money = |paisa: Paisa| Cell::Money { paisa };
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R31,
         title_id: ids::title_id("R31"),
         filters,

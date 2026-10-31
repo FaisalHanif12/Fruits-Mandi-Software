@@ -26,7 +26,7 @@ use ts_rs::TS;
 use super::ids;
 use super::model::{
     ArgValue, Cell, ColumnKind, DetailPart, GardenView, GroupBy, MessageArg, Names, PaidFilter,
-    PartyRef, ReportId, ReportPage, ResolvedFilters, RowKind, TripView,
+    PartyRef, ReportId, ReportPage, ReportTable, ResolvedFilters, RowKind, TripView,
 };
 use crate::error::ReportsError;
 use crate::print::format::NumberStyle;
@@ -149,6 +149,11 @@ pub enum PrintCell {
         /// The share as printed.
         text: String,
     },
+    /// A weight in kilos, as printed (`12.345`). The template adds the unit word.
+    Weight {
+        /// The weight as printed.
+        text: String,
+    },
     /// A month of a year. The template names the month from Fluent in the print language.
     Month {
         /// The year as printed.
@@ -239,6 +244,28 @@ pub struct PrintReportRow {
     pub kind: RowKind,
 }
 
+/// One printed table under the main table (plan 42: the buyers' and the sellers' table of a day
+/// of R34). Everything is already text; the template sums nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PrintReportTable {
+    /// A stable key: `buyers` or `sellers`.
+    pub key: String,
+    /// The day the table belongs to, as printed (`DD-MM-YYYY`).
+    pub day: String,
+    /// The day, `YYYY-MM-DD`, to match the `date` cells of the main rows.
+    pub day_iso: String,
+    /// Fluent message ID of the heading of the table.
+    pub title_id: String,
+    /// The columns.
+    pub columns: Vec<PrintReportColumn>,
+    /// The rows.
+    pub rows: Vec<PrintReportRow>,
+    /// Fluent message ID of the totals row label.
+    pub totals_label_id: String,
+    /// The totals row, one cell for each column.
+    pub totals: Vec<PrintCell>,
+}
+
 /// A line above the table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[ts(rename = "ReportPrintSummaryLine")]
@@ -273,6 +300,9 @@ pub struct ReportPrintData {
     pub summary: Vec<PrintSummaryLine>,
     /// Every row of the filter.
     pub rows: Vec<PrintReportRow>,
+    /// More tables under the main one, with every day of the filter (R34, plan 42). Empty for
+    /// every other report.
+    pub tables: Vec<PrintReportTable>,
     /// How many rows there are, as printed.
     pub row_count: String,
     /// Fluent message ID of the totals row label.
@@ -441,6 +471,9 @@ impl Fmt {
             Cell::Percent { hundredths } => PrintCell::Percent {
                 text: self.style.hundredths(*hundredths),
             },
+            Cell::Weight { grams } => PrintCell::Weight {
+                text: self.style.weight(*grams)?,
+            },
             Cell::Month { year, month } => PrintCell::Month {
                 year: self.style.plain(*year),
                 month: *month,
@@ -500,6 +533,35 @@ impl Fmt {
 
     pub(crate) fn cells(&self, cells: &[Cell]) -> Result<Vec<PrintCell>, ReportsError> {
         cells.iter().map(|c| self.cell(c)).collect()
+    }
+
+    /// One table under the main table, formatted for the print.
+    fn table(&self, table: &ReportTable) -> Result<PrintReportTable, ReportsError> {
+        let mut rows = Vec::with_capacity(table.rows.len());
+        for row in &table.rows {
+            rows.push(PrintReportRow {
+                cells: self.cells(&row.cells)?,
+                kind: row.kind,
+            });
+        }
+        Ok(PrintReportTable {
+            key: table.key.clone(),
+            day: self.style.date(&table.day)?,
+            day_iso: table.day.clone(),
+            title_id: table.title_id.clone(),
+            columns: table
+                .columns
+                .iter()
+                .map(|c| PrintReportColumn {
+                    key: c.key.clone(),
+                    title_id: c.title_id.clone(),
+                    kind: c.kind,
+                })
+                .collect(),
+            rows,
+            totals_label_id: table.totals_label_id.clone(),
+            totals: self.cells(&table.totals)?,
+        })
     }
 
     fn words(&self, amount: Paisa) -> Result<PrintWords, ReportsError> {
@@ -688,6 +750,11 @@ pub fn build_print(
             .collect(),
         summary,
         rows,
+        tables: page
+            .tables
+            .iter()
+            .map(|t| fmt.table(t))
+            .collect::<Result<Vec<_>, _>>()?,
         row_count: fmt.style.count(page.total_count),
         totals_label_id: page.totals_label_id.clone(),
         totals: fmt.cells(&page.totals)?,

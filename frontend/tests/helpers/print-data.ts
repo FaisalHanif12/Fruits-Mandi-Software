@@ -75,18 +75,21 @@ const NAMES: Record<Language, Words> = {
   },
 };
 
-/** The firm's three contact persons of the PRD (Section 21), in the print language. */
+/**
+ * The firm's people of the PRD (Section 21, v1.12), in the print language, in the order the backend
+ * sends them: the owners first, then the munshi.
+ */
 function contactsOf(language: Language): PrintContact[] {
   return language === 'ur'
     ? [
-        { name: 'منشی آصف بھٹی', phone: '0300-4058860' },
-        { name: 'ماہر عدنان', phone: '0300-1112233' },
-        { name: 'محمد اکرم', phone: '0321-5556677' },
+        { name: 'ماہر عدنان', role: 'owner', phone: '0300-1112233' },
+        { name: 'محمد اکرم', role: 'owner', phone: '0321-5556677' },
+        { name: 'آصف بھٹی', role: 'munshi', phone: '0300-4058860' },
       ]
     : [
-        { name: 'Munshi Asif Bhatti', phone: '0300-4058860' },
-        { name: 'Maher Adnan', phone: '0300-1112233' },
-        { name: 'Muhammad Akram', phone: '0321-5556677' },
+        { name: 'Maher Adnan', role: 'owner', phone: '0300-1112233' },
+        { name: 'Muhammad Akram', role: 'owner', phone: '0321-5556677' },
+        { name: 'Asif Bhatti', role: 'munshi', phone: '0300-4058860' },
       ];
 }
 

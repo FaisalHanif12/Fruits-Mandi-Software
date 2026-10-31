@@ -205,6 +205,42 @@ const PENDING_IDS: &[&str] = &[
     "report-col-our-left",
     "report-col-other-left",
     "report-col-shop-name",
+    // Plan 42: the day total sheet (R34), its two tables and the day slips (R35). Frontend writes
+    // them; the entries leave this list by themselves once the Fluent files have them.
+    "report-r34-qty",
+    "report-r34-commission-seller",
+    "report-r34-commission-buyer",
+    "report-r34-commission-laga",
+    "report-r34-buyers-billed",
+    "report-r34-buyers-other",
+    "report-r34-buyers-received",
+    "report-r34-buyers-left",
+    "report-r34-sellers-net",
+    "report-r34-sellers-other",
+    "report-r34-sellers-paid",
+    "report-r34-table-buyers",
+    "report-r34-table-sellers",
+    "report-col-today-total",
+    "report-col-net-sale",
+    "report-col-other-entries",
+    "report-col-paid-today",
+    "report-col-new-balance",
+    "report-r35-goods",
+    "report-r35-commission",
+    "report-r35-laga",
+    "report-r35-today-total",
+    "report-r35-other",
+    "report-r35-paid-today",
+    "report-r35-today-left",
+    "report-r35-new-balance",
+    "report-r35-gross",
+    "report-r35-freight",
+    "report-r35-labour",
+    "report-r35-munshiana",
+    "report-r35-phone",
+    "report-r35-store-rent",
+    "report-r35-net-sale",
+    "report-r35-item-total",
 ];
 
 /// The row of the heading: the one whose texts are exactly the column titles.
@@ -293,6 +329,64 @@ fn every_report_exports_in_urdu_and_reads_right_to_left() {
     let dir = tempfile::tempdir().unwrap();
     for id in all_reports() {
         check_report(&w, id, Language::Ur, dir.path());
+    }
+}
+
+#[test]
+fn the_day_total_sheet_exports_its_two_tables_with_the_worked_numbers() {
+    // R34 for 10-10-26 (E2E-36): under the main table, the buyers' table and the sellers' table,
+    // each with its heading, its column headings, its rows and its total row; no formulas.
+    let w = full_day();
+    let dir = tempfile::tempdir().unwrap();
+    let page = page_of(&w, ReportId::R34);
+    assert_eq!(page.tables.len(), 2);
+    for language in [Language::En, Language::Ur] {
+        let (_, sheet) = export_to(&w, ReportId::R34, language, dir.path());
+        let l10n = L10n::new(language).unwrap();
+        for table in &page.tables {
+            let titles: Vec<String> = table
+                .columns
+                .iter()
+                .map(|c| l10n.text(&c.title_id))
+                .collect();
+            let head = header_row(&sheet, &titles);
+            // The heading line above the column headings: the title and the day.
+            let heading = sheet.row_texts(head - 1);
+            assert!(
+                heading.first().is_some_and(
+                    |t| t.starts_with(&l10n.text(&table.title_id)) && t.ends_with("10-10-2026")
+                ),
+                "{heading:?}"
+            );
+            for (i, row) in table.rows.iter().enumerate() {
+                let at = head + 1 + u32::try_from(i).unwrap();
+                for (col, cell) in row.cells.iter().enumerate() {
+                    expect_cell(
+                        &sheet,
+                        at,
+                        u32::try_from(col).unwrap(),
+                        cell,
+                        &l10n,
+                        "R34 table",
+                    );
+                }
+            }
+            let totals_at = head + 1 + u32::try_from(table.rows.len()).unwrap();
+            for (col, cell) in table.totals.iter().enumerate() {
+                if matches!(cell, Cell::Empty) {
+                    continue;
+                }
+                expect_cell(
+                    &sheet,
+                    totals_at,
+                    u32::try_from(col).unwrap(),
+                    cell,
+                    &l10n,
+                    "R34 totals",
+                );
+            }
+        }
+        assert_eq!(sheet.formulas, 0);
     }
 }
 
@@ -594,6 +688,7 @@ fn big_sheet(rows: usize) -> ExportSheet {
             .collect(),
         totals_label: "Total".into(),
         totals: Vec::new(),
+        tables: Vec::new(),
         debit_word: "Dr".into(),
         credit_word: "Cr".into(),
     }

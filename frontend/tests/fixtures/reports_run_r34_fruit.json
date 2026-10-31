@@ -68,6 +68,90 @@
         },
         {
           "type": "label",
+          "id": "report-r34-qty"
+        },
+        {
+          "type": "number",
+          "value": 45
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-seller"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 159000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-buyer"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 159000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-laga"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 36000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
           "id": "report-r34-commission"
         },
         {
@@ -76,6 +160,135 @@
         {
           "type": "money",
           "paisa": 354000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-billed"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 2845000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-received"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-left"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 2845000,
+          "side": "dr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-net"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 2159000,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-other"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 416000,
+          "side": "cr"
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-paid"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 500000
         }
       ],
       "source": null,
@@ -687,7 +900,7 @@
   ],
   "offset": 0,
   "limit": 100,
-  "total_count": 30,
+  "total_count": 40,
   "totals_label_id": "report-total",
   "totals": [
     {
@@ -704,5 +917,334 @@
     }
   ],
   "summary": [],
+  "tables": [
+    {
+      "key": "buyers",
+      "day": "2026-10-10",
+      "title_id": "report-r34-table-buyers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "buyer",
+          "title_id": "report-col-buyer",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "today_total",
+          "title_id": "report-col-today-total",
+          "kind": "money"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "1"
+            },
+            {
+              "type": "party",
+              "party": {
+                "account_id": 21,
+                "code": "0021",
+                "short_code": "1",
+                "name_ur": "ارشد ملتانی",
+                "name_en": "Arshad Multani",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "paisa": 0,
+              "side": "zero"
+            },
+            {
+              "type": "money",
+              "paisa": 1557000
+            },
+            {
+              "type": "money",
+              "paisa": 0
+            },
+            {
+              "type": "balance",
+              "paisa": 1557000,
+              "side": "dr"
+            }
+          ],
+          "source": {
+            "kind": "account",
+            "id": 21
+          },
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "account_id": 20,
+                "code": "0020",
+                "short_code": "0",
+                "name_ur": "اکرم ٹول ٹیکس",
+                "name_en": "Akram Toll Tax",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "paisa": 0,
+              "side": "zero"
+            },
+            {
+              "type": "money",
+              "paisa": 1288000
+            },
+            {
+              "type": "money",
+              "paisa": 0
+            },
+            {
+              "type": "balance",
+              "paisa": 1288000,
+              "side": "dr"
+            }
+          ],
+          "source": {
+            "kind": "account",
+            "id": 20
+          },
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 0,
+          "side": "zero"
+        },
+        {
+          "type": "money",
+          "paisa": 2845000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "balance",
+          "paisa": 2845000,
+          "side": "dr"
+        }
+      ]
+    },
+    {
+      "key": "sellers",
+      "day": "2026-10-10",
+      "title_id": "report-r34-table-sellers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "seller",
+          "title_id": "report-col-seller",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "net_sale",
+          "title_id": "report-col-net-sale",
+          "kind": "balance"
+        },
+        {
+          "key": "other",
+          "title_id": "report-col-other-entries",
+          "kind": "balance"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "2"
+            },
+            {
+              "type": "party",
+              "party": {
+                "account_id": 31,
+                "code": "0012",
+                "short_code": "2",
+                "name_ur": "حاجی نذیر",
+                "name_en": "Haji Nazeer",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "paisa": 0,
+              "side": "zero"
+            },
+            {
+              "type": "balance",
+              "paisa": 0,
+              "side": "zero"
+            },
+            {
+              "type": "balance",
+              "paisa": 300000,
+              "side": "cr"
+            },
+            {
+              "type": "money",
+              "paisa": 0
+            },
+            {
+              "type": "balance",
+              "paisa": 300000,
+              "side": "cr"
+            }
+          ],
+          "source": {
+            "kind": "account",
+            "id": 31
+          },
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "account_id": 18,
+                "code": "0010",
+                "short_code": "0",
+                "name_ur": "رحیم",
+                "name_en": "Rahim",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "paisa": 1500000,
+              "side": "dr"
+            },
+            {
+              "type": "balance",
+              "paisa": 2159000,
+              "side": "cr"
+            },
+            {
+              "type": "balance",
+              "paisa": 116000,
+              "side": "cr"
+            },
+            {
+              "type": "money",
+              "paisa": 500000
+            },
+            {
+              "type": "balance",
+              "paisa": 275000,
+              "side": "cr"
+            }
+          ],
+          "source": {
+            "kind": "account",
+            "id": 18
+          },
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 1500000,
+          "side": "dr"
+        },
+        {
+          "type": "balance",
+          "paisa": 2159000,
+          "side": "cr"
+        },
+        {
+          "type": "balance",
+          "paisa": 416000,
+          "side": "cr"
+        },
+        {
+          "type": "money",
+          "paisa": 500000
+        },
+        {
+          "type": "balance",
+          "paisa": 575000,
+          "side": "cr"
+        }
+      ]
+    }
+  ],
   "group_above": null
 }

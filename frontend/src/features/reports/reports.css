@@ -36,6 +36,12 @@
   min-inline-size: 18mm;
 }
 
+/* The short tables of a day share a narrow sheet (A5): a name or a phone breaks only between words,
+   never in the middle of one. */
+.print-report .print-day-table td:not(.print-num) {
+  overflow-wrap: break-word;
+}
+
 .print-report .print-table tr[data-row='group'] td {
   background-color: var(--color-surface-sunken);
   font-weight: var(--weight-strong);
@@ -61,6 +67,11 @@
   text-align: start;
 }
 
+/* In the short tables of a day the side word of a balance has a narrower slot. */
+.print-report .print-day-table .print-balance {
+  grid-template-columns: var(--print-unit-slot-narrow) auto var(--print-unit-slot-narrow);
+}
+
 .print-report .print-lines {
   display: flex;
   flex-direction: column;
@@ -76,4 +87,104 @@
 /* A date and the kind of an entry ("Receipt 1") are short and are never broken across two lines. */
 .print-report .print-table td.print-nowrap {
   white-space: nowrap;
+}
+
+/* The row after an item that has more than one line on a party's day slip (plan 42): "Banana total",
+   with the quantity and the amount of that item, set apart by a rule above it and the strong weight. */
+.print-report .print-table tr[data-row='item_total'] td {
+  border-block-start: var(--print-rule) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+}
+
+/* The labelled lines of a slip: a card whose figures stand in ONE column on the physical right edge.
+   A figure is followed by a slot for the side word of a balance (بنام, جمع); a plain amount keeps the
+   empty slot, so the figures of all the lines are under one another (NFR-USE-19, plan 39 R8). */
+.print-report .print-slip-lines .print-num {
+  inline-size: 38mm;
+}
+
+.print-report .print-slip-value {
+  display: inline-grid;
+  grid-template-columns: auto var(--print-unit-slot);
+  align-items: baseline;
+  column-gap: var(--print-gap-2);
+}
+
+.print-report .print-slip-value > :first-child {
+  text-align: end;
+}
+
+.print-report .print-slip-value .print-balance-side {
+  grid-column: 2;
+  text-align: start;
+}
+
+/* Paid today with nothing paid yet: a line to write the amount on, not a zero. */
+.print-report .print-write-line {
+  display: inline-block;
+  inline-size: 28mm;
+  block-size: var(--print-gap-5);
+  vertical-align: bottom;
+  border-block-end: var(--print-rule) dotted var(--color-ink);
+}
+
+/* The two short tables of a day of the day total sheet (R34): the buyers' and the sellers', one under
+   the other, each in one piece with its title. */
+.print-report .print-day-tables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-4);
+  margin-block: var(--print-gap-3);
+}
+
+.print-report .print-day-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--print-gap-2);
+  break-inside: avoid;
+}
+
+.print-report .print-day-table-title {
+  --print-num-size: var(--print-latin-3);
+
+  margin: 0;
+  font-size: var(--print-text-3);
+  font-weight: var(--weight-strong);
+  break-after: avoid;
+}
+
+/* The labelled lines of a party's day slip on screen (plan 42): a balance has its side word in a slot
+   after the figure, and a plain amount keeps the empty slot, so every figure of the card stands under
+   the one above it, at the physical right edge (NFR-USE-19, plan 39 R8). */
+.slip-side {
+  display: inline-block;
+  min-inline-size: var(--unit-slot);
+  text-align: start;
+}
+
+/* Paid today with nothing paid yet: a line to write the amount on. */
+.slip-write-line {
+  display: inline-block;
+  inline-size: var(--value-col-w);
+  block-size: var(--space-5);
+  border-block-end: var(--border-w) dotted var(--color-ink);
+}
+
+/* The lines of a day of the day total sheet on A4 stand in two columns side by side (plan 42): the first
+   half of the lines in the first column, the rest in the second. A line never splits across pages. */
+.print-report .print-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: var(--print-gap-5);
+}
+
+.print-report .print-two-columns .print-table {
+  inline-size: 100%;
+}
+
+/* In a column of half the sheet the date needs no more than its own figures, so the words of a line have
+   the room left (a long label wraps between words, never inside one). */
+.print-report .print-two-columns .print-table .print-col-date {
+  inline-size: 21mm;
 }

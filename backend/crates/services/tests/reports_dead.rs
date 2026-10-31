@@ -506,6 +506,81 @@ fn r35_leaves_a_dead_row_out_of_the_total_and_adds_a_second_total_row() {
 }
 
 #[test]
+fn r34_tables_mark_a_dead_person_and_add_a_second_total_row() {
+    // E2E-44: ارشد dies on 11-10-26 owing 18,684; his son pays 4,000 on 12-10-26. That day the
+    // buyers' table holds only him (nobody else has an entry): marked, out of the total, and a
+    // second total row adds him. The lines of the day count everyone, so they tie to the cash.
+    let w = full_day();
+    set_today(&w.env, 2026, 10, 11);
+    mark(&w, w.arshad, "11-10-2026", DeadReason::Died);
+    set_today(&w.env, 2026, 10, 12);
+    recover(&w, w.arshad, "12-10-2026", "4,000");
+    let page = report(
+        &w,
+        ReportId::R34,
+        ReportFilters {
+            from: "12-10-2026".into(),
+            to: "12-10-2026".into(),
+            ..ReportFilters::default()
+        },
+        0,
+        200,
+    );
+    let line = |label: &str| {
+        page.rows
+            .iter()
+            .find(|r| matches!(&r.cells[1], Cell::Label { id } if id == label))
+            .map(|r| r.cells[3].clone())
+            .unwrap_or_else(|| panic!("no row {label}"))
+    };
+    // Received 4,000, nothing billed; left 4,000 جمع.
+    assert!(
+        matches!(line("report-r34-buyers-received"), Cell::Money { paisa } if paisa.rupees() == 4_000)
+    );
+    assert_eq!(
+        balance(&line("report-r34-buyers-left")),
+        (BalanceSide::Cr, 4_000)
+    );
+    let buyers = page
+        .tables
+        .iter()
+        .find(|t| t.key == "buyers")
+        .expect("a buyers' table");
+    // His row: previous 18,684 بنام, today 0, paid 4,000, new 14,684 بنام, marked ڈوبی.
+    let row = &buyers.rows[0];
+    match &row.cells[1] {
+        Cell::Party { party } => {
+            assert_eq!(party.account_id, w.arshad);
+            assert!(party.dead.is_some());
+        }
+        other => panic!("not a party: {other:?}"),
+    }
+    let at = |key: &str| buyers.columns.iter().position(|c| c.key == key).unwrap();
+    assert_eq!(
+        balance(&row.cells[at("previous")]),
+        (BalanceSide::Dr, 18_684)
+    );
+    assert_eq!(
+        balance(&row.cells[at("new_balance")]),
+        (BalanceSide::Dr, 14_684)
+    );
+    // The total row leaves him out; the second total row adds him back.
+    assert_eq!(
+        balance(&buyers.totals[at("new_balance")]),
+        (BalanceSide::Zero, 0)
+    );
+    let with_dead = buyers.rows.last().unwrap();
+    assert_eq!(with_dead.kind, RowKind::Group);
+    assert!(
+        matches!(&with_dead.cells[0], Cell::Label { id } if id == "report-r35-total-with-dead")
+    );
+    assert_eq!(
+        balance(&with_dead.cells[at("new_balance")]),
+        (BalanceSide::Dr, 14_684)
+    );
+}
+
+#[test]
 fn the_party_card_the_ledger_heading_and_the_pickers_say_dead() {
     let w = full_day();
     set_today(&w.env, 2026, 10, 11);

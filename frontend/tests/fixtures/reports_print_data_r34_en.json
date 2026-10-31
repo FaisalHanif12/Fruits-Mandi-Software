@@ -68,6 +68,86 @@
         },
         {
           "type": "label",
+          "id": "report-r34-qty"
+        },
+        {
+          "type": "number",
+          "text": "60"
+        },
+        {
+          "type": "empty"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-seller"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-buyer"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "2,484"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-commission-laga"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "480"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
           "id": "report-r34-commission"
         },
         {
@@ -76,6 +156,108 @@
         {
           "type": "money",
           "text": "5,448"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-billed"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "44,364"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-received"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-buyers-left"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "21,564",
+          "side_id": "report-side-dr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-net"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "34,476",
+          "side_id": "report-side-cr"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "text": "10-10-2026"
+        },
+        {
+          "type": "label",
+          "id": "report-r34-sellers-paid"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "9,316"
         }
       ],
       "kind": "normal"
@@ -647,7 +829,332 @@
       "kind": "normal"
     }
   ],
-  "row_count": "30",
+  "tables": [
+    {
+      "key": "buyers",
+      "day": "10-10-2026",
+      "day_iso": "2026-10-10",
+      "title_id": "report-r34-table-buyers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "buyer",
+          "title_id": "report-col-buyer",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "today_total",
+          "title_id": "report-col-today-total",
+          "kind": "money"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "1"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "1",
+                "code": "0021",
+                "name": "Arshad Multani",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "18,684"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "balance",
+              "text": "18,684",
+              "side_id": "report-side-dr"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "0",
+                "code": "0020",
+                "name": "Akram Toll Tax",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "12,880"
+            },
+            {
+              "type": "money",
+              "text": "10,000"
+            },
+            {
+              "type": "balance",
+              "text": "2,880",
+              "side_id": "report-side-dr"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0030"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": null,
+                "code": "0030",
+                "name": "Shahid",
+                "tag": null,
+                "person_key": "شاہد|03000000000",
+                "phone": "0300-0000000"
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "0",
+          "side_id": "report-side-zero"
+        },
+        {
+          "type": "money",
+          "text": "44,364"
+        },
+        {
+          "type": "money",
+          "text": "22,800"
+        },
+        {
+          "type": "balance",
+          "text": "21,564",
+          "side_id": "report-side-dr"
+        }
+      ]
+    },
+    {
+      "key": "sellers",
+      "day": "10-10-2026",
+      "day_iso": "2026-10-10",
+      "title_id": "report-r34-table-sellers",
+      "columns": [
+        {
+          "key": "code",
+          "title_id": "report-col-code",
+          "kind": "text"
+        },
+        {
+          "key": "seller",
+          "title_id": "report-col-seller",
+          "kind": "party"
+        },
+        {
+          "key": "previous",
+          "title_id": "report-col-previous",
+          "kind": "balance"
+        },
+        {
+          "key": "net_sale",
+          "title_id": "report-col-net-sale",
+          "kind": "balance"
+        },
+        {
+          "key": "paid",
+          "title_id": "report-col-paid-today",
+          "kind": "money"
+        },
+        {
+          "key": "new_balance",
+          "title_id": "report-col-new-balance",
+          "kind": "balance"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "0"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "0",
+                "code": "0010",
+                "name": "Rahim",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "15,000",
+              "side_id": "report-side-dr"
+            },
+            {
+              "type": "balance",
+              "text": "24,316",
+              "side_id": "report-side-cr"
+            },
+            {
+              "type": "money",
+              "text": "9,316"
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            }
+          ],
+          "kind": "normal"
+        },
+        {
+          "cells": [
+            {
+              "type": "text",
+              "text": "1"
+            },
+            {
+              "type": "party",
+              "party": {
+                "short_code": "1",
+                "code": "0011",
+                "name": "Karim",
+                "tag": null,
+                "person_key": null
+              }
+            },
+            {
+              "type": "balance",
+              "text": "0",
+              "side_id": "report-side-zero"
+            },
+            {
+              "type": "balance",
+              "text": "10,160",
+              "side_id": "report-side-cr"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "balance",
+              "text": "10,160",
+              "side_id": "report-side-cr"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "totals_label_id": "report-total",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "text": "15,000",
+          "side_id": "report-side-dr"
+        },
+        {
+          "type": "balance",
+          "text": "34,476",
+          "side_id": "report-side-cr"
+        },
+        {
+          "type": "money",
+          "text": "9,316"
+        },
+        {
+          "type": "balance",
+          "text": "10,160",
+          "side_id": "report-side-cr"
+        }
+      ]
+    }
+  ],
+  "row_count": "39",
   "totals_label_id": "report-total",
   "totals": [
     {

@@ -8,7 +8,7 @@ mod common;
 use common::*;
 use mandi_services::core::auth::{Language, PrefKey};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
-use mandi_services::core::firm::FirmContact;
+use mandi_services::core::firm::{FirmContact, FirmRole};
 use mandi_services::settings::{self, Firm, FirmPrintInfo};
 use mandi_services::testing::TestEnv;
 use mandi_services::{Secret, ServiceError, auth, day};
@@ -73,6 +73,7 @@ fn contact(ur: &str, en: &str, phone: &str) -> FirmContact {
     FirmContact {
         name_ur: ur.into(),
         name_en: en.into(),
+        role: FirmRole::Munshi,
         phone: phone.into(),
     }
 }
@@ -95,7 +96,7 @@ fn settings_audit(dir: &TempDir) -> Vec<(String, String)> {
 
 #[test]
 fn plan_17e_contacts_and_trade_mark_save_with_an_audit_row_and_read_back() {
-    // PRD Section 21 "Firm": up to 3 contact persons and the trade mark, D4R-A11.
+    // PRD Section 21 "Firm": up to 6 people with a role and the trade mark, D4R-A11, plan 42.
     let (dir, env, owner) = owner_ready();
     let firm = settings::get(&env.ctx).unwrap().firm;
     assert_eq!(
@@ -104,7 +105,7 @@ fn plan_17e_contacts_and_trade_mark_save_with_an_audit_row_and_read_back() {
     );
     let info = FirmPrintInfo {
         firm_contacts: vec![
-            contact("منشی آصف بھٹی", "Munshi Asif Bhatti", "0300-4058860"),
+            contact("آصف بھٹی", "Asif Bhatti", "0300-4058860"),
             contact("اکرم", "Akram", "03211234567"),
         ],
         trade_mark: "  RH  ".into(),
@@ -124,7 +125,7 @@ fn plan_17e_contacts_and_trade_mark_save_with_an_audit_row_and_read_back() {
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .unwrap();
-    assert!(stored.0.contains("Munshi Asif Bhatti") && stored.0.contains("03004058860"));
+    assert!(stored.0.contains("Asif Bhatti") && stored.0.contains("03004058860"));
     assert_eq!(stored.1, "\"RH\"");
     // The firm row and one more audit row for the contacts and the trade mark, with old and new.
     let audits = settings_audit(&dir);
@@ -181,7 +182,7 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
         firm_contacts: vec![
             contact("Asif", "Asif", "0300-4058860"), // Urdu name in Latin letters
             contact("اکرم", "اکرم", "0123"),         // English name in Urdu, bad phone
-            contact("علی", "Ali", ""),               // phone missing
+            contact("علی", "Ali", ""),               // no phone: allowed (plan 42)
         ],
         trade_mark: "x".repeat(501),
     };
@@ -192,7 +193,6 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
         ("firm_contacts[0].name_ur", ErrorCode::ErrNameUrScript),
         ("firm_contacts[1].name_en", ErrorCode::ErrNameEnScript),
         ("firm_contacts[1].phone", ErrorCode::ErrPhoneInvalid),
-        ("firm_contacts[2].phone", ErrorCode::ErrRequired),
         ("trade_mark", ErrorCode::ErrTextTooLong),
     ] {
         assert!(
@@ -200,13 +200,13 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
             "missing {want:?} in {got:?}"
         );
     }
-    // More than 3 contacts: out of range at the list, with the limits.
-    let four = FirmPrintInfo {
-        firm_contacts: vec![contact("علی", "Ali", "03001234567"); 4],
+    // More than 6 people: out of range at the list, with the limits.
+    let seven = FirmPrintInfo {
+        firm_contacts: vec![contact("علی", "Ali", "03001234567"); 7],
         trade_mark: String::new(),
     };
     let error =
-        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &four, &[]).unwrap_err();
+        settings::set_firm_with_print_info(&env.ctx, &owner, &firm, &seven, &[]).unwrap_err();
     let ServiceError::Rejected(items) = error else {
         panic!("not a rejection")
     };
@@ -214,7 +214,7 @@ fn plan_17e_contact_and_trade_mark_mistakes_come_back_together_and_nothing_is_sa
         (items[0].field.as_deref(), items[0].code),
         (Some("firm_contacts"), ErrorCode::ErrOutOfRange)
     );
-    assert_eq!(items[0].values.get("max"), Some(&ErrorValue::Number(3)));
+    assert_eq!(items[0].values.get("max"), Some(&ErrorValue::Number(6)));
     // The firm's own mistake and a contact's mistake are returned in one answer.
     let mut bad_firm = firm.clone();
     bad_firm.phone = "0123".into();

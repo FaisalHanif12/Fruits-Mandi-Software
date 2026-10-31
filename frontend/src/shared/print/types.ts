@@ -3,6 +3,7 @@
 // the receipt slip of plan 15 and the reports of D5 reuse this layout.
 
 import type { AmountRole } from '../../bindings/AmountRole';
+import type { FirmRole } from '../../bindings/FirmRole';
 import type { Paper } from '../../bindings/Paper';
 import type { PrintAmount } from '../../bindings/PrintAmount';
 import type { PrintContact } from '../../bindings/PrintContact';
@@ -17,7 +18,16 @@ import type { PrintPage } from '../../bindings/PrintPage';
 import type { PrintParty } from '../../bindings/PrintParty';
 import type { PrintWords } from '../../bindings/PrintWords';
 
-export type { AmountRole, Paper, PrintAmount, PrintContact, PrintData, PrintFact, PrintFirm };
+export type {
+  AmountRole,
+  FirmRole,
+  Paper,
+  PrintAmount,
+  PrintContact,
+  PrintData,
+  PrintFact,
+  PrintFirm,
+};
 export type { PrintFooter, PrintFrame, PrintHeaderData, PrintLine, PrintPage };
 export type { PrintParty, PrintWords };
 

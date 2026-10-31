@@ -11,6 +11,7 @@
 //! reports look the same.
 
 use mandi_core::auth::Language;
+use mandi_core::firm::FirmRole;
 use mandi_core::text;
 use serde::Serialize;
 use ts_rs::TS;
@@ -19,12 +20,16 @@ use super::ids::{FOOTER_PAGE, FOOTER_PAGE_OF, FOOTER_PRINTED};
 use super::load::FirmNames;
 use super::{PrintFact, PrintFirm};
 
-/// One contact person in the header, in the print language (PRD Section 21 "Firm").
+/// One person in the header, in the print language (PRD Section 21 "Firm", v1.12).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintContact {
     /// His name in the print language.
     pub name: String,
-    /// His phone, printed `03XX-XXXXXXX` with plain digits (stored as 11 digits).
+    /// His role: the header prints the owners first, then the munshi. The template writes the
+    /// role word from Fluent.
+    pub role: FirmRole,
+    /// His phone, printed `03XX-XXXXXXX` with plain digits (stored as 11 digits). Empty when he
+    /// has none: the template then prints the name only.
     pub phone: String,
 }
 
@@ -34,7 +39,8 @@ pub struct PrintContact {
 pub struct PrintHeader {
     /// The firm name and mandi in the print language.
     pub firm: PrintFirm,
-    /// The contact persons, at most 3, in the order of the Settings. Empty if none are set.
+    /// The people, at most 6: the owners first, then the munshi; inside a role, in the order of
+    /// the Settings (v1.12). Empty if none are set.
     pub contacts: Vec<PrintContact>,
     /// The trade mark, printed in a box. Null if not set: the template draws no empty box.
     pub trade_mark: Option<String>,
@@ -74,25 +80,29 @@ pub(super) fn pick(language: Language, name_ur: &str, name_en: &str) -> String {
 
 /// The header of one print (PRD FR-19.13).
 ///
-/// Example: a firm with two contacts and the trade mark "RH" gives a header with two
-/// [`PrintContact`] rows and `trade_mark == Some("RH")`; a firm with none set gives an empty
-/// `contacts` and `trade_mark == None`.
+/// Example: a firm with an owner, the munshi and the trade mark "RH" gives a header with the
+/// owner first, then the munshi, and `trade_mark == Some("RH")`; a firm with none set gives an
+/// empty `contacts` and `trade_mark == None`.
 pub(super) fn header(
     language: Language,
     firm: &FirmNames,
     title_id: &str,
     facts: Vec<PrintFact>,
 ) -> PrintHeader {
-    let contacts = firm
+    let mut contacts: Vec<PrintContact> = firm
         .contacts
         .iter()
         .map(|contact| PrintContact {
             name: pick(language, &contact.name_ur, &contact.name_en),
+            role: contact.role,
             // The phone is stored as 11 digits and printed as 03XX-XXXXXXX.
             phone: text::phone_display(&contact.phone),
         })
         .filter(|contact| !contact.name.trim().is_empty() || !contact.phone.is_empty())
         .collect();
+    // Owners first, then the munshi. The sort is stable, so inside a role the order of the
+    // Settings holds.
+    contacts.sort_by_key(|contact| contact.role.header_rank());
     let trade_mark = Some(firm.trade_mark.trim())
         .filter(|text| !text.is_empty())
         .map(str::to_owned);
@@ -123,7 +133,7 @@ pub(super) fn footer(printed_at: String) -> PrintFooter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mandi_core::firm::FirmContact;
+    use mandi_core::firm::{FirmContact, FirmRole};
 
     fn firm() -> FirmNames {
         FirmNames {
@@ -147,18 +157,51 @@ mod tests {
     fn contacts_follow_the_print_language_and_a_blank_trade_mark_is_left_out() {
         let mut names = firm();
         names.contacts = vec![FirmContact {
-            name_ur: "منشی آصف بھٹی".to_owned(),
-            name_en: "Munshi Asif Bhatti".to_owned(),
+            name_ur: "آصف بھٹی".to_owned(),
+            name_en: "Asif Bhatti".to_owned(),
+            role: FirmRole::Munshi,
             phone: " 0300-4058860 ".to_owned(),
         }];
         names.trade_mark = "   ".to_owned();
         let ur = header(Language::Ur, &names, "t", Vec::new());
-        assert_eq!(ur.contacts[0].name, "منشی آصف بھٹی");
+        assert_eq!(ur.contacts[0].name, "آصف بھٹی");
         assert_eq!(ur.contacts[0].phone, "0300-4058860");
         assert_eq!(ur.trade_mark, None);
         names.trade_mark = "RH".to_owned();
         let en = header(Language::En, &names, "t", Vec::new());
-        assert_eq!(en.contacts[0].name, "Munshi Asif Bhatti");
+        assert_eq!(en.contacts[0].name, "Asif Bhatti");
         assert_eq!(en.trade_mark.as_deref(), Some("RH"));
+    }
+
+    #[test]
+    fn owners_print_before_the_munshi_and_a_missing_phone_is_left_out() {
+        let person = |ur: &str, en: &str, role: FirmRole, phone: &str| FirmContact {
+            name_ur: ur.to_owned(),
+            name_en: en.to_owned(),
+            role,
+            phone: phone.to_owned(),
+        };
+        let mut names = firm();
+        // The munshi is first in the Settings; the header still puts the owners first, and keeps
+        // the Settings order inside a role.
+        names.contacts = vec![
+            person("آصف بھٹی", "Asif Bhatti", FirmRole::Munshi, "03004058860"),
+            person("حاجی عدنان", "Haji Adnan", FirmRole::Owner, ""),
+            person("ماہر علی", "Maher Ali", FirmRole::Owner, "03001234567"),
+        ];
+        let out = header(Language::En, &names, "t", Vec::new());
+        let order: Vec<(&str, FirmRole, &str)> = out
+            .contacts
+            .iter()
+            .map(|c| (c.name.as_str(), c.role, c.phone.as_str()))
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                ("Haji Adnan", FirmRole::Owner, ""),
+                ("Maher Ali", FirmRole::Owner, "0300-1234567"),
+                ("Asif Bhatti", FirmRole::Munshi, "0300-4058860"),
+            ]
+        );
     }
 }

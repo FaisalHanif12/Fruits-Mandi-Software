@@ -163,6 +163,7 @@ pub(crate) fn run(
     let net = Balance::from_totals(paisa(dr)?, paisa(cr)?)?;
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R28,
         title_id: ids::title_id("R28"),
         filters: typed.resolved.clone(),

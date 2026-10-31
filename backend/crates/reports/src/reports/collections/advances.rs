@@ -88,6 +88,7 @@ pub(crate) fn run(
     let [given, returned, adjusted, left] = sums;
     Ok(ReportPage {
         group_above: None,
+        tables: Vec::new(),
         id: ReportId::R26,
         title_id: ids::title_id("R26"),
         filters: typed.resolved.clone(),
