@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.6 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026 and 30-10-2026) |
-| Date | 30 October 2026 |
+| Version | 1.7 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026) |
+| Date | 31 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.11, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.13, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -199,6 +199,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-11 | Signed updates | Updates are digitally signed. The app refuses an update that is not signed by us. |
 | NFR-SEC-12 | Recovery | Owner recovery code printed at setup. No "master password" exists anywhere. |
 | NFR-SEC-13 | Exports | Excel and PDF exports need the signed-in Owner, like every other command (NFR-SEC-4) |
+| NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. Wrong codes wait as NFR-SEC-2 and are written to the audit log. |
 
 ---
 
@@ -381,3 +382,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.4 | 19-10-2026 | Approved by Umar (PRD v1.6): large lists load page by page, with a speed target (NFR-SPD-24); the spelling example in NFR-URD-21 no longer names a cheque. |
 | 1.5 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type have no upper limit (NFR-SCL-1). |
 | 1.6 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers in a table column are centred under their heading, with the total centred under them (NFR-USE-19). |
+| 1.7 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code (NFR-SEC-14). |

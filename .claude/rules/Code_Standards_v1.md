@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.11 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026 and 30-10-2026) |
-| Date | 30 October 2026 |
+| Version | 1.12 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026) |
+| Date | 31 October 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.11 (the master), NFR v1.6, Tech Stack v1.7 |
+| Depends on | PRD v1.13 (the master), NFR v1.7, Tech Stack v1.7 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -327,6 +327,8 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | S5 | Content Security Policy: no remote scripts, no inline scripts, no remote fonts |
 | S6 | `cargo deny` and `pnpm audit` run in CI; known vulnerabilities block release |
 | S7 | Every change to money, rules, shares, the password or settings writes an audit entry in the same transaction |
+| S8 | Partner commands and partner reports check the partner unlock in the backend, after the sign-in check, and return `ERR_PARTNER_LOCKED` when it is missing (PRD FR-17.11, NFR-SEC-14) |
+| S9 | An edit is one service function and one transaction: reverse, post the corrected entry on the same date, re-match, write the audit entry with old and new values. Worked-out amounts are never taken from the screen in an edit, and a changed date is refused (PRD FR-7.70, FR-7.71) |
 
 ---
 
@@ -353,6 +355,8 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | E2E-1 to E2E-16b, E2E-13b, E2E-19 to E2E-21, E2E-28 to E2E-32, E2E-30b, E2E-34, E2E-34b, E2E-35, E2E-37, E2E-38, the preview numbers of E2E-39, E2E-40, E2E-40b, E2E-41, E2E-42 and E2E-44 (tiles, refusals, trial balance) | `backend/crates/services/tests/golden_day.rs` | Every commit |
 | E2E-33 (ledger with items, R20 total), E2E-36 (day summary R34, filtered print data), E2E-43 (party day sheet R35) | `backend/crates/reports/tests/ledger_items.rs` | Every commit |
 | E2E-44 (R20, R21, R22 and R38 rows) | `backend/crates/services/tests/reports_dead.rs` | Every commit |
+| E2E-45 (edit of a closed day through reopen and fix, and its stamp) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
@@ -438,3 +442,4 @@ A change is done only when every box is ticked:
 | 1.9 | 27-10-2026 | Approved by Umar (PRD v1.8): account and master codes by type, short code = running number (4.2). |
 | 1.10 | 30-10-2026 | Approved by Umar (PRD v1.9): number cells, their headings and totals centred in table columns; values in cards stay on the right edge (F17, F24). |
 | 1.11 | 30-10-2026 | Approved by Umar (PRD v1.10): golden test E2E-44, the dead amount (9.2); a وصولی or ادھار رقم واپسی may post on an account in the dead amount (4.2). |
+| 1.12 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code check (S8) and one edit model (S9); golden tests E2E-45 and E2E-46 (9.2). |

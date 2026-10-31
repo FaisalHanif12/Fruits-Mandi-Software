@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.9 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, and his answers of 15-10-2026) |
-| Date | 30 October 2026 |
+| Version | 1.11 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
+| Date | 31 October 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.11 (the master), NFR v1.6, Tech Stack v1.7, Code Standards v1.11 |
+| Derived from | PRD v1.13 (the master), NFR v1.7, Tech Stack v1.7, Code Standards v1.12 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -691,8 +691,9 @@ erDiagram
 | Table | Columns (besides system columns) |
 |---|---|
 | `users` | One row only, the Owner (PRD Section 2). `username` (unique), `password_hash`, `display_name`, `role` (kept from migration 0001, always owner; no check reads it), `partner_id` (always null, not used), `is_active`, `failed_attempts`, `locked_until_at`, `last_login_at` |
-| `settings` | `key` (unique), `value_json`. Includes `firm_contacts` (up to 3: name_ur, name_en, phone) and `trade_mark` (text), printed in every print header (PRD 21, FR-19.13, v1.7), `default_language` (the backup pack language, PRD 21) and the computer-level `login_language` (last language used on this computer, PRD FR-7.30). |
+| `settings` | `key` (unique), `value_json`. Includes `firm_contacts` (up to 6: name_ur, name_en, role (owner, munshi), phone (optional); v1.10) and `trade_mark` (text), printed in every print header (PRD 21, FR-19.13, v1.7), `default_language` (the backup pack language, PRD 21) and the computer-level `login_language` (last language used on this computer, PRD FR-7.30). |
 | `audit_log` | `at`, `user_id`, `action`, `entity`, `entity_id`, `old_json`, `new_json`, `reason`, `chain_hash` |
+| (settings keys, v1.11) | `partner_code` (Argon2id hash of the 4-digit partner code, PRD FR-17.11) and `partner_code_tries` (wrong tries and the wait until). The unlock lives in the app state only, like the sign-in, and is lost on leaving the section, idle lock, logout or exit. The edit stamp and history (PRD FR-7.71) are read from `audit_log` by entity and entity id; no new table. |
 | `day_state` | single row: `closed_up_to_date` |
 | `day_closes` | `entry_date`, `action` (close, reopen), `by_user_id`, `at`, `reason`, `summary_json` |
 | `month_closes` | `month` (YYYY-MM), `journal_entry_id`, `is_active`, `reversed_entry_id` (null) |
@@ -951,3 +952,5 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.7 | 22-10-2026 | PRD v1.7, approved by Umar: `accounts.tag` (15.4), added by the same unreleased migration 0006; the settings keys `firm_contacts` and `trade_mark` (15.3). No posting type changed. |
 | 1.8 | 27-10-2026 | PRD v1.8, approved by Umar: codes by type (`accounts.code` for sellers, buyers and پختہ کھاتہ, and the codes of items, packings and staff, are the type number + `serial` from 0 with no padding; a new numbered migration renumbers existing rows); diagrams 5 and 20. |
 | 1.9 | 30-10-2026 | PRD v1.10, approved by Umar: table `dead_marks` for the dead amount (15.4, 15.8, diagram 6), in a new numbered migration. No posting type changed. |
+| 1.10 | 31-10-2026 | PRD v1.12, approved by Umar: the settings key `firm_contacts` holds up to 6 people with a role (15.3). No table or posting type changed. |
+| 1.11 | 31-10-2026 | PRD v1.13, approved by Umar: the settings keys `partner_code` and `partner_code_tries` (15.3); the edit stamp is read from `audit_log`. No table or posting type changed. |
