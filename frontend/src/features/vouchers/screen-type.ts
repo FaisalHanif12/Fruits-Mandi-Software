@@ -3,6 +3,8 @@
 // (Code Standards F36).
 
 import type { VoucherType } from '../../bindings/VoucherType';
+import { partyOfAddress } from '../../shared/accounts/address-party';
+import type { PickerValue } from '../../shared/ui';
 
 /** The types in the type list of the voucher screen, in the order of the list. */
 export type ScreenType = 'receipt' | 'payment' | 'advance';
@@ -26,13 +28,20 @@ export function screenTypeOf(type: VoucherType): ScreenType | null {
 export interface VoucherSearch {
   type?: ScreenType;
   id?: number;
+  /**
+   * The account a new voucher starts with, as a whole picker value (plan 49, PRD FR-7.79). Every amount
+   * stays empty and nothing is saved by it.
+   */
+  party?: PickerValue;
 }
 
 export function parseVoucherSearch(search: Record<string, unknown>): VoucherSearch {
   const type = asScreenType(search['type']);
   const id = Number(search['id']);
+  const party = partyOfAddress(search['party']);
   return {
     ...(type === null ? {} : { type }),
     ...(Number.isSafeInteger(id) && id > 0 ? { id } : {}),
+    ...(party === undefined ? {} : { party }),
   };
 }

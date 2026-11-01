@@ -68,14 +68,19 @@ interface FruitEditorProps {
   today: string;
   /** The entry the address opens in its saved view (`?entry=7`), a bad id, or nothing. */
   entry: FruitSearch['entry'];
+  /** The partner a new entry is for, from the address (plan 49, PRD FR-7.79). */
+  party?: FruitSearch['party'];
 }
 
-function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
+function FruitEditor({ today, entry: openEntry, party }: FruitEditorProps) {
   const navigate = useNavigate();
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [draft, setDraft] = useState<FruitDraft>(() => newFruitDraft(today));
+  const [draft, setDraft] = useState<FruitDraft>(() => ({
+    ...newFruitDraft(today),
+    ...(party === undefined ? {} : { forWhom: String(party.id) }),
+  }));
   const [editing, setEditing] = useState<EditingFruit | null>(null);
   // What earlier edits changed on the entry open for edit: "Before ..." on its fields (PRD FR-7.71).
   const marks = useEntryMarks('fruit_take', editing?.id ?? null, editing?.edited != null);
@@ -327,5 +332,12 @@ export function FruitPage() {
       />
     );
   }
-  return <FruitEditor key="new" today={day.data.today} entry={search.entry} />;
+  return (
+    <FruitEditor
+      key={search.party === undefined ? 'new' : `new-${String(search.party.id)}`}
+      today={day.data.today}
+      entry={search.entry}
+      party={search.party}
+    />
+  );
 }

@@ -21,6 +21,7 @@ import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { uiErrorOf } from '../../../shared/api';
 import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
+import { pickedOf } from '../../../shared/accounts';
 import { createEntryStore } from '../../../shared/grid';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { isoToDisplayDate } from '../../../shared/format';
@@ -36,6 +37,7 @@ import {
   useErrorText,
   FormCard,
   fieldMark,
+  type PickerValue,
 } from '../../../shared/ui';
 import { useVoucherEditable, vouchersPreview } from '../../vouchers';
 import { GeneralLinesSection } from '../components/GeneralLinesSection';
@@ -81,8 +83,19 @@ const HELD_BACK: ReadonlySet<string> = new Set([
   'ERR_GENERAL_NOT_BALANCED',
 ]);
 
-function newStore() {
-  return createEntryStore(Array.from({ length: GENERAL_START_LINES }, () => ({})));
+/**
+ * The grid's store for a new entry. With a party (plan 49, PRD FR-7.79) his account is chosen on the
+ * first line, with no amount on either side; nothing else is filled.
+ */
+function newStore(party: PickerValue | null) {
+  const store = createEntryStore(Array.from({ length: GENERAL_START_LINES }, () => ({})));
+  const first = store.getState().rows[0];
+  if (party !== null && first !== undefined) {
+    store
+      .getState()
+      .updatePicked(first.rowId, GENERAL_ACCOUNT, pickedOf({ ...party, code: party.code ?? '' }));
+  }
+  return store;
 }
 
 /** The grid's store filled with the lines of a saved entry, each with its account (plan 44). */
@@ -112,6 +125,8 @@ interface EditorProps {
   editable?: VoucherEditable | null;
   /** The lines of the saved entry, to fill the grid. */
   seed?: GeneralSeed | null;
+  /** The account a new entry starts with, on its first line (plan 49, PRD FR-7.79). */
+  party?: PickerValue | null;
 }
 
 function GeneralEditor({
@@ -120,13 +135,14 @@ function GeneralEditor({
   onFinished,
   editable = null,
   seed = null,
+  party = null,
 }: EditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const language = useLanguage();
   const errorText = useErrorText();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [store] = useState(() => (seed === null ? newStore() : seededStore(seed)));
+  const [store] = useState(() => (seed === null ? newStore(party) : seededStore(seed)));
   const rows = store((state) => state.rows);
   const focus = store((state) => state.focus);
   const [date, setDate] = useState(initialDate);
@@ -451,7 +467,8 @@ export function GeneralPage() {
   if (search.id !== undefined) return <GeneralEdit id={search.id} today={day.data.today} />;
   return (
     <GeneralEditor
-      key={entry.n}
+      key={search.party === undefined ? entry.n : `${String(entry.n)}-${String(search.party.id)}`}
+      party={search.party ?? null}
       today={day.data.today}
       initialDate={entry.date ?? isoToDisplayDate(day.data.today)}
       onFinished={(date) => {

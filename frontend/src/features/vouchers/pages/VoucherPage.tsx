@@ -17,12 +17,19 @@ import { useGrouping } from '../../../shared/format';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
 import { OpenOnItsScreen, useFixDayFlow } from '../../../shared/edit';
-import { Button, EntryActions, ErrorState, LoadingState } from '../../../shared/ui';
+import { useAccount } from '../../../shared/accounts';
+import {
+  Button,
+  EntryActions,
+  ErrorState,
+  LoadingState,
+  type PickerValue,
+} from '../../../shared/ui';
 import { CancelVoucherDialog } from '../components/CancelVoucherDialog';
 import { SavedVoucherView } from '../components/SavedVoucherView';
-import { draftOfRow, newDraft } from '../draft';
+import { draftOfRow, fromSideOf, newDraft } from '../draft';
 import { VOUCHERS_KEY, useVoucher } from '../hooks';
-import { parseVoucherSearch, screenTypeOf } from '../screen-type';
+import { parseVoucherSearch, screenTypeOf, type ScreenType } from '../screen-type';
 import { useEditSeed } from '../useEditSeed';
 import type { VoucherRow } from '../types';
 import { VoucherEditor } from './VoucherEditor';
@@ -140,6 +147,44 @@ function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
   );
 }
 
+/**
+ * A new voucher that starts with the account an address names (plan 49, PRD FR-7.79): the account is in
+ * the picker with its card, and every amount stays empty. Nothing is saved. When the account cannot be
+ * read the voucher starts empty, as it does with no party.
+ */
+function NewVoucherForParty({
+  party,
+  type,
+  today,
+}: {
+  party: PickerValue;
+  type: ScreenType;
+  today: string;
+}) {
+  const account = useAccount(party.id);
+  if (account.isPending) return <LoadingState />;
+  const blank = newDraft(type, today);
+  const accountType = account.data?.account_type ?? null;
+  const initial =
+    accountType === null
+      ? blank
+      : {
+          ...blank,
+          account: party,
+          accountType,
+          from: type === 'receipt' ? fromSideOf(accountType) : blank.from,
+        };
+  return (
+    <VoucherEditor
+      key={`new-${String(party.id)}`}
+      today={today}
+      initial={initial}
+      editing={null}
+      urlType={type}
+    />
+  );
+}
+
 export function VoucherPage() {
   const day = useDayStatus();
   // The address is read with the same function the router checks it with (screen-type.ts).
@@ -174,6 +219,9 @@ export function VoucherPage() {
     if (saved.data !== undefined) return <SavedVoucher row={saved.data} today={day.data.today} />;
   }
   const type = search.type ?? 'receipt';
+  if (search.party !== undefined) {
+    return <NewVoucherForParty party={search.party} type={type} today={day.data.today} />;
+  }
   return (
     <VoucherEditor
       key="new"

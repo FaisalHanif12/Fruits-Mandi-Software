@@ -24,6 +24,14 @@ function picked(record: AnswerRecord) {
   };
 }
 
+/**
+ * The party an entry screen opens with (PRD FR-7.79): the whole record, so the field shows who he is at
+ * once. The screens read it with `partyOfAddress` and leave every amount empty.
+ */
+export function entryPartyOf(record: AnswerRecord) {
+  return picked(record);
+}
+
 /** The party of a report: an account, or one person inside a one-time account (PRD FR-13.5). */
 function partyOf(party: SourceParty | null): Pick<ReportSearch, 'party' | 'person'> {
   if (party === null) return {};

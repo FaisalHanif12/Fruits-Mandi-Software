@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { AnswerSource } from '../../bindings/AnswerSource';
 import type { EntryRoute } from '../../bindings/EntryRoute';
 import { useOpenReport } from '../reports';
-import { analyticsSearchFromFilters, reportSearchFromFilters } from './addresses';
+import { analyticsSearchFromFilters, entryPartyOf, reportSearchFromFilters } from './addresses';
 
 export interface AssistantNavigation {
   /** Opens the report or view a source was read from, with its filters. */
@@ -47,36 +47,43 @@ export function useAssistantNavigation(): AssistantNavigation | null {
         }
       },
       openEntry: (route) => {
+        // The party goes into the screen's own address as a whole record; with none the screen
+        // opens as it always did. Every amount stays empty and nothing is saved (FR-7.79).
+        const party = route.party === null ? {} : { party: entryPartyOf(route.party) };
         switch (route.screen) {
           case 'bikri':
             void router.navigate({ to: '/bikri/book' });
             return;
           case 'wasooli':
-            void router.navigate({ to: '/bikri/voucher', search: { type: 'receipt' } });
+            void router.navigate({ to: '/bikri/voucher', search: { type: 'receipt', ...party } });
             return;
           case 'adaigi':
-            void router.navigate({ to: '/bikri/voucher', search: { type: 'payment' } });
+            void router.navigate({ to: '/bikri/voucher', search: { type: 'payment', ...party } });
             return;
           case 'peshgi':
-            void router.navigate({ to: '/bikri/voucher', search: { type: 'advance' } });
+            void router.navigate({ to: '/bikri/voucher', search: { type: 'advance', ...party } });
             return;
           case 'kharcha':
-            void router.navigate({ to: '/rokar/expense' });
+            void router.navigate({ to: '/rokar/expense', search: party });
             return;
           case 'udhar_raqam':
-            void router.navigate({ to: '/rokar/lent' });
+            void router.navigate({ to: '/rokar/lent', search: party });
             return;
           case 'alag_khata':
-            void router.navigate({ to: '/rokar/khata' });
+            void router.navigate({ to: '/rokar/khata', search: party });
             return;
           case 'sarmaya':
-            void router.navigate({ to: '/partners/capital' });
+            // The capital screen knows a partner by his id; it reads a whole `party` the same way.
+            void router.navigate({
+              to: '/partners/capital',
+              search: route.party === null ? {} : { partner: route.party.id },
+            });
             return;
           case 'phal':
-            void router.navigate({ to: '/rokar/fruit' });
+            void router.navigate({ to: '/rokar/fruit', search: party });
             return;
           case 'general':
-            void router.navigate({ to: '/rokar/general' });
+            void router.navigate({ to: '/rokar/general', search: party });
             return;
           case 'account':
             if (route.party === null) void router.navigate({ to: '/index/accounts' });

@@ -4,6 +4,7 @@ export * from './api';
 export { accountInputOf } from './account-input';
 export * from './hooks';
 export { pickedOf, type PickedAccount } from './picked';
+export { partyOfAddress } from './address-party';
 export { OWN_GOODS_CODE, isGardenAccount, isOwnGoods } from './own-goods';
 export {
   NEW_ACCOUNT_KINDS,

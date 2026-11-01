@@ -356,5 +356,19 @@ export function ExpensePage() {
     );
   }
   if (search.id !== undefined) return <ExpenseEdit id={search.id} today={day.data.today} />;
-  return <ExpenseEditor key="new" today={day.data.today} urlType={search.type ?? 'shop_expense'} />;
+  // A partner in the address (plan 49, PRD FR-7.79) starts a partner's own spending with him chosen,
+  // unless the address names the shop expense, which has no partner. Every amount stays empty.
+  const type = search.type ?? (search.party === undefined ? 'shop_expense' : 'personal_expense');
+  const initial =
+    search.party === undefined || type === 'shop_expense'
+      ? null
+      : { ...newExpenseDraft(type, day.data.today), partnerId: String(search.party.id) };
+  return (
+    <ExpenseEditor
+      key={search.party === undefined ? 'new' : `new-${String(search.party.id)}`}
+      today={day.data.today}
+      urlType={type}
+      initial={initial}
+    />
+  );
 }

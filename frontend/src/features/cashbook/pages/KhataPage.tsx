@@ -252,5 +252,19 @@ export function KhataPage() {
     );
   }
   if (search.id !== undefined) return <KhataEdit id={search.id} today={day.data.today} />;
-  return <KhataEditor key="new" today={day.data.today} urlType={search.type ?? 'khata_out'} />;
+  // A khata in the address (plan 49, PRD FR-7.79) starts the entry with it chosen; every amount stays
+  // empty.
+  const type = search.type ?? 'khata_out';
+  return (
+    <KhataEditor
+      key={search.party === undefined ? 'new' : `new-${String(search.party.id)}`}
+      today={day.data.today}
+      urlType={type}
+      initial={
+        search.party === undefined
+          ? null
+          : { ...newKhataDraft(type, day.data.today), khata: search.party }
+      }
+    />
+  );
 }

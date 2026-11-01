@@ -28,4 +28,9 @@ FR-7.72 to FR-7.88, FR-5.5, the `F1` key of 7.3).
 - The buttons under an answer open a report or a view with the filters the model read it with
   (`addresses.ts`): the report address (`features/reports/search.ts`) and the analytics address
   (`features/analytics/search.ts`) learned those filters, and with none of them they read as before.
+- The button of a refused change request opens the entry screen of the answer with the party chosen
+  (`navigation.ts`, FR-7.79). The voucher, expense, lent, khata, capital, fruit and general screens
+  read an optional `party` in their address (a whole picker value, `shared/accounts/address-party.ts`).
+  It goes into the picker, every amount stays empty, nothing is saved, and with no `party` each screen
+  opens as before.
 - Development page: `#/dev/assistant` (see `tests/helpers/dev-bridge-assistant.ts` for its flags).

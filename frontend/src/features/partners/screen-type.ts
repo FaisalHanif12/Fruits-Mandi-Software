@@ -4,6 +4,10 @@
 // - `/partners/capital?type=capital_out&partner=2`: the type of the entry and the partner whose
 //   capital is shown. A value that is not valid is left out, and the screen starts without it.
 // - `/partners/statement?partner=2&from=01-10-2026&to=31-10-2026`: the partner and the days.
+// - `/partners/capital?party={...}`: the partner as a whole picker value (plan 49, PRD FR-7.79); it is
+//   the same as `partner=<its id>`, and `partner` wins when both are given.
+
+import { partyOfAddress } from '../../shared/accounts/address-party';
 
 /** The types in the type list of the سرمایہ screen: invested and taken back (PRD 17.4). */
 export type CapitalType = 'capital_in' | 'capital_out';
@@ -23,7 +27,8 @@ function idOf(value: unknown): number | null {
 
 export function parseCapitalSearch(search: Record<string, unknown>): CapitalSearch {
   const type = CAPITAL_TYPES.find((one) => one === search['type']);
-  const partner = idOf(search['partner']);
+  const party = partyOfAddress(search['party']);
+  const partner = idOf(search['partner']) ?? party?.id ?? null;
   const id = idOf(search['id']);
   return {
     ...(type === undefined ? {} : { type }),

@@ -253,5 +253,19 @@ export function LentPage() {
     );
   }
   if (search.id !== undefined) return <LentEdit id={search.id} today={day.data.today} />;
-  return <LentEditor key="new" today={day.data.today} urlType={search.type ?? 'money_lent'} />;
+  // A person in the address (plan 49, PRD FR-7.79) starts the entry with him chosen; every amount
+  // stays empty.
+  const type = search.type ?? 'money_lent';
+  return (
+    <LentEditor
+      key={search.party === undefined ? 'new' : `new-${String(search.party.id)}`}
+      today={day.data.today}
+      urlType={type}
+      initial={
+        search.party === undefined
+          ? null
+          : { ...newLentDraft(type, day.data.today), person: search.party }
+      }
+    />
+  );
 }

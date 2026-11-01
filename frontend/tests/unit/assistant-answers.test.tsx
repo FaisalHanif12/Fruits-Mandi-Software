@@ -346,8 +346,18 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
       }),
     );
     expect(routeNow().path).toBe('/bikri/voucher');
-    // The screen is opened on the type, and nothing in the address is an amount.
-    expect(routeNow().search).toEqual({ type: 'receipt' });
+    // The screen is opened on the type with the party chosen, whole, and nothing in the address is an
+    // amount (FR-7.79).
+    expect(routeNow().search).toEqual({
+      type: 'receipt',
+      party: {
+        id: 20,
+        code: '0020',
+        name_ur: 'اکرم ٹول ٹیکس',
+        name_en: 'Akram Toll Tax',
+        tag: null,
+      },
+    });
   });
 
   it('checks failed: the words, the plain tables of the records, and no figure of the model', async () => {
