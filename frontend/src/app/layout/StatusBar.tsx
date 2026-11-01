@@ -24,6 +24,12 @@ interface StatusBarProps {
    * (a screen with no backend, the component gallery) the bar says the backup is not set up.
    */
   backup?: ReactNode;
+  /**
+   * The button "سوال پوچھیں F1" that opens the question panel, with the day's count (PRD FR-5.5,
+   * FR-7.73), drawn by the assistant module. Without it (a screen with no shell, the gallery) the bar
+   * simply has no such button.
+   */
+  assistant?: ReactNode;
 }
 
 export function StatusBar({
@@ -33,6 +39,7 @@ export function StatusBar({
   closedUpTo = null,
   onOpenDay,
   backup,
+  assistant,
 }: StatusBarProps) {
   return (
     <footer className="type-body flex min-h-statusbar shrink-0 items-center gap-5 border-t border-border bg-surface-sunken px-4 text-ink">
@@ -55,6 +62,7 @@ export function StatusBar({
         </Localized>
       )}
       <span className="flex-1" />
+      {assistant}
       {backup ?? (
         <span className="flex items-center gap-2">
           <span aria-hidden="true" className="size-2 rounded-full bg-border-control" />

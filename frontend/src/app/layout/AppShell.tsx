@@ -3,6 +3,7 @@
 // the menu and the screen for the arrow keys (PRD FR-7.17), and mounts the text size keys once.
 
 import type { ReactNode } from 'react';
+import { AssistantButton, AssistantDock } from '../../features/assistant';
 import { PartyReportLinks } from '../../features/reports';
 import type { VoucherSearchHit } from '../../shared/accounts';
 import { useFocusRegion } from '../../shared/keyboard';
@@ -94,6 +95,12 @@ export function AppShell({
           </div>
         </div>
       </div>
+      {/* Plan 49 (ask the app): the question panel. This wrapper is as tall as nothing and sits on the
+          top edge of the status bar; the panel inside it grows upward over the lower part of the
+          screen, and is mounted once so it stays across screens (PRD FR-7.73). */}
+      <div className="relative z-20 h-0 shrink-0">
+        <AssistantDock />
+      </div>
       <StatusBar
         userName={userName}
         date={date}
@@ -101,6 +108,7 @@ export function AppShell({
         closedUpTo={closedUpTo}
         {...(onOpenDay === undefined ? {} : { onOpenDay })}
         backup={backup}
+        assistant={<AssistantButton />}
       />
     </div>
   );

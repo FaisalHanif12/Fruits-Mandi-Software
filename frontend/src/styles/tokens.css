@@ -98,6 +98,12 @@
   --tree-min-h: 360px;
   --tree-view-h: 60vh;
 
+  /* The question panel rises from the bottom in two heights: about a third and about two thirds of
+     the window (PRD FR-7.73, plan 49). The short one never goes under 300 px, or at 1024 x 600 the
+     header, the quick questions and the box would leave no room for an answer. */
+  --dock-h-short: max(34vh, 300px);
+  --dock-h-tall: 66vh;
+
   /* Focus outline, always visible (design system 5, NFR-USE-22). */
   --focus-width: 3px;
   --focus-offset: 2px;
@@ -288,6 +294,8 @@
   --spacing-value-col: var(--value-col-w);
   --spacing-tree: var(--tree-min-h);
   --spacing-tree-view: var(--tree-view-h);
+  --spacing-dock-short: var(--dock-h-short);
+  --spacing-dock-tall: var(--dock-h-tall);
 
   /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
      toasts, 26 inside the round badge of the empty and error states, badge 56. */

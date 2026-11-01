@@ -659,3 +659,23 @@ err-partner-code-invalid = کوڈ چار ہندسوں کا ہونا چاہیے۔
 
 # review: pending
 err-partner-codes-differ = دونوں کوڈ ایک جیسے نہیں ہیں۔ دونوں بار وہی کوڈ لکھیں۔
+
+## Ask the app (plan 49, PRD FR-7.81, FR-7.85)
+
+# review: pending
+err-assistant-off = سوال پوچھنا بند ہے۔ ترتیبات میں اسے چالو کریں۔
+
+# review: pending
+err-assistant-key-missing = OpenRouter کی کلید ابھی محفوظ نہیں۔ ترتیبات میں کلید لگائیں۔
+
+# review: pending
+err-assistant-busy = ایک سوال ابھی چل رہا ہے۔ اس کا جواب آنے دیں۔
+
+# review: pending
+err-assistant-not-waiting = یہ سوال اب کسی انتخاب کا منتظر نہیں۔ نیا سوال پوچھیں۔
+
+# review: pending
+err-no-base = فیصد نکالنے کے لیے بنیادی رقم صفر نہیں ہو سکتی۔
+
+# review: pending
+err-too-little-history = اندازے کے لیے پورے مہینوں کا ریکارڈ کافی نہیں۔

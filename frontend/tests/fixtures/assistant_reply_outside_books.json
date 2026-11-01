@@ -1,0 +1,52 @@
+{
+  "question_id": 10,
+  "conversation_id": "c-1",
+  "outcome": "outside_books",
+  "answer": {
+    "parts": [],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "report",
+        "result_id": "r1",
+        "label_id": "report-r20-title",
+        "id": "R20",
+        "filters": {
+          "shortcut": null,
+          "from": "",
+          "to": "",
+          "as_of": "",
+          "party": null,
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

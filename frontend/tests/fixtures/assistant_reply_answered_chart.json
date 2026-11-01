@@ -1,0 +1,165 @@
+{
+  "question_id": 3,
+  "conversation_id": "c-1",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 9
+      },
+      {
+        "type": "text",
+        "text": " کا کمیشن "
+      },
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 8
+      },
+      {
+        "type": "text",
+        "text": " سے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 300000
+        },
+        "dir": "up",
+        "checked": false,
+        "working": {
+          "title_id": "assistant-working-difference",
+          "steps": [
+            {
+              "op": "difference",
+              "inputs": [
+                {
+                  "type": "money",
+                  "paisa": 5100000
+                },
+                {
+                  "type": "money",
+                  "paisa": 4800000
+                }
+              ],
+              "result": {
+                "type": "money",
+                "paisa": 300000
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "text",
+        "text": " رہا۔"
+      }
+    ],
+    "tables": [],
+    "charts": [
+      {
+        "result_id": "r4",
+        "measure_id": "assistant-measure-commission-all",
+        "months": [
+          {
+            "year": 2026,
+            "month": 4
+          },
+          {
+            "year": 2026,
+            "month": 5
+          },
+          {
+            "year": 2026,
+            "month": 6
+          },
+          {
+            "year": 2026,
+            "month": 7
+          },
+          {
+            "year": 2026,
+            "month": 8
+          },
+          {
+            "year": 2026,
+            "month": 9
+          }
+        ],
+        "series": [
+          {
+            "kind": "actual",
+            "values": [
+              {
+                "type": "money",
+                "paisa": 3600000
+              },
+              {
+                "type": "money",
+                "paisa": 3900000
+              },
+              {
+                "type": "money",
+                "paisa": 4200000
+              },
+              {
+                "type": "money",
+                "paisa": 4500000
+              },
+              {
+                "type": "money",
+                "paisa": 4800000
+              },
+              {
+                "type": "money",
+                "paisa": 5100000
+              }
+            ]
+          }
+        ],
+        "is_estimate": false
+      }
+    ],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "analytics",
+        "result_id": "r4",
+        "label_id": "analytics-view-a-title",
+        "view": "A",
+        "filters": {
+          "period": null,
+          "from": "2026-04-01",
+          "to": "2026-09-30",
+          "group_by": "month",
+          "item": null,
+          "seller": null,
+          "buyer": null,
+          "city": null,
+          "adda": null,
+          "side": "both",
+          "compare": "off",
+          "partner": null,
+          "trip": null,
+          "garden": null,
+          "goods": "all",
+          "trip_view": null
+        }
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

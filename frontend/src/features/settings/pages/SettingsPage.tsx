@@ -8,6 +8,7 @@ import { useSearch } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { uiErrorOf } from '../../../shared/api';
 import { ErrorState, LoadingState, Tabs } from '../../../shared/ui';
+import { AssistantSettings } from '../../assistant';
 import { AuditLog } from '../../audit';
 import { AppTab } from '../components/AppTab';
 import { ChargesTab } from '../components/ChargesTab';
@@ -30,6 +31,7 @@ const TAB_IDS = [
   'lock',
   'day',
   'audit',
+  'assistant',
   'app',
 ];
 
@@ -119,6 +121,12 @@ export function SettingsPage() {
             id: 'audit',
             label: <Localized id="settings-tab-audit" />,
             content: <AuditLog />,
+          },
+          {
+            // Plan 49 (ask the app, PRD FR-7.85): the group "سوال پوچھیں".
+            id: 'assistant',
+            label: <Localized id="assistant-settings-title" />,
+            content: scrolls(<AssistantSettings />),
           },
           {
             id: 'app',

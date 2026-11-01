@@ -1,0 +1,16 @@
+{
+  "question_id": 15,
+  "conversation_id": "c-1",
+  "outcome": "error",
+  "answer": null,
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": {
+    "kind": "no_endpoint",
+    "http_status": 404
+  },
+  "count_today": 3,
+  "limit": 20
+}

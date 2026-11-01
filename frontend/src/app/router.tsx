@@ -11,6 +11,7 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { parseAnalyticsSearch } from '../features/analytics/search';
 import { parseReportSearch } from '../features/reports/search';
 import { parseMonthSearch } from '../features/month';
 import {
@@ -522,6 +523,8 @@ const reportRoute = createRoute({
 const analyticsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/analytics',
+  // Plan 49: a button under an answer of the question panel opens a view with its filters in the address.
+  validateSearch: parseAnalyticsSearch,
   component: lazyRouteComponent(
     () => import('../features/analytics/pages/AnalyticsPage'),
     'AnalyticsPage',
@@ -531,6 +534,7 @@ const analyticsRoute = createRoute({
 const analyticsViewRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/analytics/$view',
+  validateSearch: parseAnalyticsSearch,
   component: lazyRouteComponent(
     () => import('../features/analytics/pages/AnalyticsPage'),
     'AnalyticsPage',
@@ -726,6 +730,12 @@ const dashboardDevRoutes = import.meta.env.DEV
         getParentRoute: () => rootRoute,
         path: '/dev/dead-amount',
         component: lazyRouteComponent(() => import('./dev/DeadAmountDevPage'), 'DeadAmountDevPage'),
+      }),
+      // Plan 49: the question panel and its Settings group with the backend's own fixtures.
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/assistant',
+        component: lazyRouteComponent(() => import('./dev/AssistantDevPage'), 'AssistantDevPage'),
       }),
       createRoute({
         getParentRoute: () => rootRoute,

@@ -14,7 +14,7 @@
 // (with a way out), and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { FileX, Printer, Rows3 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { AnalyticsCatalogEntry } from '../../../bindings/AnalyticsCatalogEntry';
@@ -48,6 +48,7 @@ import {
 import { analyticsExportExcel } from '../api';
 import { useAnalyticsCatalog, useAnalyticsPages, type LinesRequest } from '../hooks';
 import { ANALYTICS_SCREEN, analyticsFromRemembered, rememberedAnalytics } from '../remember';
+import { filtersFromSearch, hasAnalyticsSearch, parseAnalyticsSearch } from '../search';
 import { useAnalyticsStore } from '../store';
 import type { AnalyticsKey, AnalyticsSavedView, AnalyticsView } from '../types';
 
@@ -321,9 +322,24 @@ function RememberedFilters({ children }: { children: ReactNode }) {
   const hydrated = useAnalyticsStore((now) => now.hydrated);
   const filters = useAnalyticsStore((now) => now.filters);
   const { ready, saved, remember } = memory;
+  // Plan 49: an address with filters in it (a button under an answer of the question panel) wins
+  // over the remembered ones, once per address. With no filter in the address nothing changes.
+  const search = useSearch({ strict: false });
+  const appliedAddress = useRef<string | null>(null);
   useEffect(() => {
-    if (ready) useAnalyticsStore.getState().hydrate(analyticsFromRemembered(saved));
-  }, [ready, saved]);
+    if (!ready) return;
+    const store = useAnalyticsStore.getState();
+    store.hydrate(analyticsFromRemembered(saved));
+    const address = parseAnalyticsSearch(search);
+    const key = JSON.stringify(address);
+    if (!hasAnalyticsSearch(address)) {
+      appliedAddress.current = null;
+    } else if (appliedAddress.current !== key) {
+      // The same address is applied once: the Owner's own changes to the boxes after it stay.
+      appliedAddress.current = key;
+      store.replace(filtersFromSearch(address));
+    }
+  }, [ready, saved, search]);
   useEffect(() => {
     if (hydrated) remember(rememberedAnalytics(filters));
   }, [hydrated, filters, remember]);

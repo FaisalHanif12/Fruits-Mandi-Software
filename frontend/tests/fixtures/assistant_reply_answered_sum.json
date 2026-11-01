@@ -1,0 +1,146 @@
+{
+  "question_id": 2,
+  "conversation_id": "c-1",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "دونوں کے ذمے مل کر "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "balance",
+          "paisa": 2156400,
+          "side": "dr"
+        },
+        "dir": null,
+        "checked": true,
+        "working": {
+          "title_id": "assistant-working-sum",
+          "steps": [
+            {
+              "op": "sum",
+              "inputs": [
+                {
+                  "type": "balance",
+                  "paisa": 288000,
+                  "side": "dr"
+                },
+                {
+                  "type": "balance",
+                  "paisa": 1868400,
+                  "side": "dr"
+                }
+              ],
+              "result": {
+                "type": "balance",
+                "paisa": 2156400,
+                "side": "dr"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "text",
+        "text": " باقی ہیں۔ ان میں "
+      },
+      {
+        "type": "name",
+        "name": {
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null,
+          "code": "0020"
+        }
+      },
+      {
+        "type": "text",
+        "text": " کے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "balance",
+          "paisa": 288000,
+          "side": "dr"
+        },
+        "dir": null,
+        "checked": true,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " اور "
+      },
+      {
+        "type": "name",
+        "name": {
+          "name_ur": "ارشد ملتانی",
+          "name_en": "Arshad Multani",
+          "tag": null,
+          "code": "0021"
+        }
+      },
+      {
+        "type": "text",
+        "text": " کے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "balance",
+          "paisa": 1868400,
+          "side": "dr"
+        },
+        "dir": null,
+        "checked": true,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " ہیں۔"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "party_card",
+        "result_id": "r1",
+        "party": {
+          "id": 20,
+          "code": "0020",
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null
+        }
+      },
+      {
+        "kind": "party_card",
+        "result_id": "r2",
+        "party": {
+          "id": 21,
+          "code": "0021",
+          "name_ur": "ارشد ملتانی",
+          "name_en": "Arshad Multani",
+          "tag": null
+        }
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

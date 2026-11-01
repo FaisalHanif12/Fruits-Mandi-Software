@@ -48,4 +48,9 @@ D6-A10 (screen part), D6-A13, D6-A14, D6-A15, D6-A18 (frontend part).
 
 ## 8. As built
 
-(The lead fills this in.)
+### F1 (02-11-2026), accepted
+
+- The panel works end to end against the 60 backend fixtures in both languages: `F1` and the status bar button with the counter, two heights, focus trap, `Esc`, the conversation kept across screens and a language switch, step lines, `AnswerBlock` in every state, the chips with a party picker, the Settings group, the report and analytics addresses. It calls the real commands through `features/assistant/api.ts`; until 48 T3 the stubs answer `ERR_NOT_IMPLEMENTED`, shown as words with a way to Settings, never as fake data.
+- Existing files touched (all additions): `AppShell.tsx`, `StatusBar.tsx`, `shared/keyboard/shortcuts.ts` and `index.ts`, `features/reports/search.ts` and `index.ts`, `features/analytics/index.ts`, `AnalyticsPage.tsx` (reads the address once), `app/router.tsx` (validateSearch on the two analytics routes, the dev route), `styles/tokens.css`, `styles/globals.css`, `i18n/ur|en/errors.ftl` (4 `ERR_ASSISTANT_*`, `ERR_NO_BASE`, `ERR_TOO_LITTLE_HISTORY`). Existing tests changed, accepted: `keyboard-registry.test.tsx` (+3 rows: `F1`, `Ctrl+↑`, `Ctrl+↓`), `settings.test.tsx` (nine tabs become ten, the new group).
+- Checks (frontend): typecheck clean; eslint, prettier, stylelint clean on changed files; i18n:check passed; vitest 14 files, 682 tests passed. Screenshots ur and en at 1366 x 768 for 20 states and Settings, plus 1024 x 600 and 1920 x 1080 for six states, no sideways overflow: `frontend/tests/e2e/output/screenshots/plan49/` (68). Urdu shaping and printing on Windows: LOCAL-ONLY.
+- Lead decisions: (1) change refused opens the entry screen with the party chosen (FR-7.79): an optional `party` address parameter, additive only, on the voucher, expense, lent, khata, capital, fruit and general screens; with no parameter each screen is as before; amounts stay empty. (2) An average's working carries n as its last input, written (a + b + c) ÷ n. (3) Answer buttons use the sources' filters; Print goes to A4 in the app language. (4) The shut panel's body leaves the page after its slide.

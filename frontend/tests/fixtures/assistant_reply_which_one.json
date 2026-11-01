@@ -1,0 +1,51 @@
+{
+  "question_id": 7,
+  "conversation_id": "c-1",
+  "outcome": "which_one",
+  "answer": null,
+  "options": [
+    {
+      "key": "a20",
+      "name": {
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": null,
+        "code": "0020"
+      },
+      "city": {
+        "ur": "کوٹ رادھا کشن",
+        "en": "Kot Radha Kishan"
+      },
+      "balance": {
+        "type": "balance",
+        "paisa": 288000,
+        "side": "dr"
+      },
+      "checked": true,
+      "dead": false
+    },
+    {
+      "key": "a22",
+      "name": {
+        "name_ur": "اکرم",
+        "name_en": "Akram",
+        "tag": "K",
+        "code": "0022"
+      },
+      "city": null,
+      "balance": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      },
+      "checked": true,
+      "dead": false
+    }
+  ],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

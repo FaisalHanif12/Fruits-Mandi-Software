@@ -1,0 +1,100 @@
+{
+  "question_id": 12,
+  "conversation_id": "c-1",
+  "outcome": "records_differ",
+  "answer": {
+    "parts": [],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "party_card",
+        "result_id": "r2",
+        "party": {
+          "id": 20,
+          "code": "0020",
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null
+        }
+      },
+      {
+        "kind": "report",
+        "result_id": "r3",
+        "label_id": "report-r13-title",
+        "id": "R13",
+        "filters": {
+          "shortcut": null,
+          "from": "",
+          "to": "",
+          "as_of": "",
+          "party": {
+            "record": {
+              "id": 20,
+              "code": "0020",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null
+            },
+            "person_key": null
+          },
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      }
+    ],
+    "differences": [
+      {
+        "figure_id": "assistant-figure-party-balance",
+        "name": {
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null,
+          "code": "0020"
+        },
+        "places": [
+          {
+            "place_id": "assistant-place-party-card",
+            "cell": {
+              "type": "balance",
+              "paisa": 288000,
+              "side": "dr"
+            }
+          },
+          {
+            "place_id": "assistant-place-r13-closing",
+            "cell": {
+              "type": "balance",
+              "paisa": 290000,
+              "side": "dr"
+            }
+          }
+        ]
+      }
+    ],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

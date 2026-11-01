@@ -1,0 +1,13 @@
+{
+  "question_id": 20,
+  "conversation_id": "c-1",
+  "outcome": "limit_reached",
+  "answer": null,
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 20,
+  "limit": 20
+}

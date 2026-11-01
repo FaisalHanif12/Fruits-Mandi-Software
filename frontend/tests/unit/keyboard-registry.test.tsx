@@ -30,6 +30,10 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['typingMode', 'Alt+U'],
   ['languageToggle', 'Alt+L'],
   ['globalSearch', 'Ctrl+K'],
+  // PRD 7.3 `F1` (v1.16), and the two heights of the question panel (FR-7.73).
+  ['askApp', 'F1'],
+  ['dockTaller', 'Ctrl+↑'],
+  ['dockShorter', 'Ctrl+↓'],
   ['explain', 'Ctrl+I'],
   ['copyAbove', 'Ctrl+D'],
   ['undoSave', 'Alt+Z'],

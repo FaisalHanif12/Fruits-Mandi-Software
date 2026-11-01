@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "key_saved": true,
+  "key_last4": "ab12",
+  "model": "openai/gpt-6-luna",
+  "default_model": "openai/gpt-6-luna",
+  "count_today": 9,
+  "limit": 20
+}

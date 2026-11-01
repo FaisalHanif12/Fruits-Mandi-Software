@@ -283,3 +283,10 @@ body {
   transition-property: color, background-color, border-color, opacity;
   transition-duration: var(--motion-fast);
 }
+
+/* The question panel slides up from the bottom edge, at most 150 ms (PRD FR-7.73, NFR-USE-24). It is
+   hidden, not only moved, once it has slid away, so nothing in it can take the focus. */
+@utility transition-slide {
+  transition-property: transform, visibility;
+  transition-duration: var(--motion-fast);
+}

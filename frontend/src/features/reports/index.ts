@@ -40,6 +40,11 @@ export { personFromHit, type ReportPerson } from './filters';
 
 // ---- Plan 21: what the analytics module borrows (cells of a report are cells of a view). ----
 export { cellText, monthText, nameWithTag, partyText, sideText } from './cells';
+// ---- Plan 49 (ask the app): the answer's tables are drawn with the report screens' own cell
+// renderer, so a cell reads the same in the panel as on its report. ----
+export { emptyNameMessageId, messageText, percentText } from './cells';
+// The print of a report with the filters an answer read it with (plan 49).
+export { reportsPrintReport } from './api';
 export { ReportPersonPicker } from './components/ReportPersonPicker';
 export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';

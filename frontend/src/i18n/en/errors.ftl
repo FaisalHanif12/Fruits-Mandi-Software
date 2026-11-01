@@ -661,3 +661,23 @@ err-partner-code-invalid = The code must be 4 digits.
 
 # review: pending
 err-partner-codes-differ = The two codes are not the same. Write the same code both times.
+
+## Ask the app (plan 49, PRD FR-7.81, FR-7.85)
+
+# review: pending
+err-assistant-off = Asking questions is off. Turn it on in Settings.
+
+# review: pending
+err-assistant-key-missing = The OpenRouter key is not saved yet. Add the key in Settings.
+
+# review: pending
+err-assistant-busy = A question is already running. Let it finish.
+
+# review: pending
+err-assistant-not-waiting = This question is no longer waiting for a choice. Ask a new question.
+
+# review: pending
+err-no-base = The base amount cannot be zero when a percent is worked out.
+
+# review: pending
+err-too-little-history = There are not enough full months of records for an estimate.
