@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.14 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
-| Date | 31 October 2026 |
+| Version | 1.15 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026 and 01-11-2026, and his answers of 15-10-2026) |
+| Date | 1 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.15 (the master), NFR v1.7, Tech Stack v1.7, Code Standards v1.12 |
+| Derived from | PRD v1.16 (the master), NFR v1.8, Tech Stack v1.8, Code Standards v1.13 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -37,6 +37,7 @@ Every diagram comes from a section of the PRD. The heading of each diagram names
 | 18 | Language switch | 7.5 |
 | 19 | English-to-Urdu typing and learning | 7.4 |
 | 20 | Code to party card, short codes and smart search | 7.6 |
+| 21 | Ask the app: the model thinks, the app reads and checks | 7.7 |
 
 ---
 
@@ -50,15 +51,17 @@ flowchart LR
     usb["USB drive"]
     cloud["Cloud storage - Cloudflare R2"]
     update["Update server - signed releases"]
+    ai["OpenRouter, Azure endpoint - GPT-6 Luna, zero retention"]
 
     owner --> app
     app --> printer
     app -- "encrypted daily copy" --> usb
     app -- "encrypted daily copy + readable pack" --> cloud
     app -- "check for updates, Owner approves" --> update
+    app -- "the question and the records its tools read, never the fields PRD FR-7.83 keeps back" --> ai
 ```
 
-The app works fully offline. Internet is only used for cloud backup and update checks.
+The app works fully offline. Internet is only used for cloud backup, update checks and the questions of the question panel (PRD 7.7, NFR-SEC-9). Without internet, every screen works and the quick questions still answer. For a question, the model reads the records it needs through the app's read-only tools; the app leaves out every field PRD FR-7.83 says never goes, such as phones, addresses, notes and keys.
 
 ---
 
@@ -120,6 +123,9 @@ flowchart TB
     journal builder, partner split, matching"]
     DBC["mandi-db
     SQLite, migrations, repositories"]
+    AST["mandi-assistant
+    ask the app: read-only tools, checks,
+    answers, OpenRouter client - no money maths"]
     CORE["mandi-core
     money: Paisa, Bps, round_to_rupee, parsing
     dates, ids, Urdu and English search keys, translit,
@@ -128,6 +134,9 @@ flowchart TB
     APPC --> SVC
     APPC --> REP
     APPC --> BAK
+    APPC --> AST
+    AST --> SVC
+    AST --> REP
     SVC --> DOM
     SVC --> DBC
     REP --> DBC
@@ -138,7 +147,7 @@ flowchart TB
     DBC --> CORE
 ```
 
-Arrows only point down. `mandi-domain` never depends on `mandi-db`. All money maths sits in `mandi-core::money` and `mandi-domain`.
+Arrows only point down. `mandi-domain` never depends on `mandi-db`. `mandi-assistant` only reads through `mandi-services` and `mandi-reports` and holds no money maths; its calculator and estimator are `domain::figures` and `domain::forecast`, reached through `mandi-services` (Code Standards Q5, M14). All money maths sits in `mandi-core::money` and `mandi-domain`.
 
 ### 3.1 Inside a module (example: bikri)
 
@@ -702,6 +711,7 @@ erDiagram
 | `edit_windows` | `entity` (purchase, venture_entry, garden_arrival, venture), `entity_id`. Migration 0012 (plan 44). Empty at all times outside an edit save. The edit service inserts one row inside its transaction, the BEFORE UPDATE and DELETE triggers of `purchases`, `venture_entries`, `venture_entry_parts`, `garden_arrivals` and `ventures.rent_paisa` allow a change of that one entry only while its row exists, and the service deletes the row before COMMIT. The journal is still reversed and posted again (PRD FR-7.70, FR-6.3); the audit log keeps old and new. A test checks the table is empty after every save. |
 | `user_prefs` | `user_id`, `key`, `value_json`. Unique (`user_id`, `key`). Keys: `language` (ur, en; ur at first run, PRD FR-7.30), `text_size`, `last_screen`, `filters.<screen>`, `print_after_save`, `recent.<screen>` (last 10 record IDs). PRD FR-7.30, FR-7.41, FR-7.45, FR-7.57. |
 | `translit_pairs` | `roman` (lower case), `urdu`, `kind` (name, place, item, word), `use_count`, `last_used_at`. Unique (`roman`, `urdu`). Learned pairs only; the starting word list is a file inside the app (Tech Stack 4.4). PRD FR-7.26. |
+| `assistant_questions` | The question log of PRD FR-7.84 (v1.16, the next free migration number, 0015 today). `asked_at` (UTC), `asked_day` (the Pakistan date, for the daily count of FR-7.81), `asked_by`, `question` (as typed), `language`, `conversation_id`, `parent_id` (null, or the question a continuation belongs to), `source` (chip, model, continue, rerun, test), `counted` (1 when it counts in the daily 20: a model question or a connection test), `sources_json` (each source read, with its filters), `outcome` (answered, estimate, advice, which_one, need_dates, need_party, not_found, outside_books, change_refused, not_understood, checks_failed, records_differ, locked, limit_reached, offline, error), `tool_calls_json` (each tool called with its inputs, in order; for a chip, its fixed tool calls), `answer_json` (the answer as the model wrote it, with its references, not the figures; null for a chip), `model` (null for a chip), `model_calls`, `tokens_in`, `tokens_cached`, `tokens_out`, `tokens_reasoning` (all null for a chip), `finish_reason` (null for a chip). Append-only: triggers block `UPDATE` and `DELETE` (B17). No amount is stored. Index (`asked_day`, `counted`) for the count, (`asked_at`) for the list, (`parent_id`) for continuations. The settings keys `assistant_enabled` and `assistant_model` hold the on or off state and the model name; the key itself is only in Credential Manager (NFR-SEC-15). |
 
 ### 15.4 Chart of accounts and masters
 
@@ -940,7 +950,68 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 
 ---
 
-## 21. Change log
+## 21. Ask the app: the model thinks, the app reads and checks (PRD 7.7)
+
+```mermaid
+sequenceDiagram
+    actor O as Owner
+    participant P as Question panel (frontend)
+    participant A as mandi-assistant
+    participant M as OpenRouter, Azure endpoint (GPT-6 Luna, zero retention)
+    participant T as Read-only tools: find, party card, reports, views, tiles, period, calculate, estimate
+    participant DB as SQLite
+
+    O->>P: "ikram ke total bakaya kitne hai" + Enter
+    P->>A: assistant_ask(text, conversation id)
+    A->>DB: sign-in, setting on, key saved, today's count < 20, open one read snapshot
+    A->>M: call 1: instructions, conversation, today, language, question, the tools
+    M-->>A: tool call: find("ikram", buyer)
+    A->>T: find - inputs checked first
+    T-->>A: r1: one match, اکرم ٹول ٹیکس (0020)
+    A-->>P: step line "اکرم ٹول ٹیکس کا کھاتہ دیکھ رہا ہوں"
+    A->>M: call 2: r1
+    M-->>A: tool calls: party_card(0020), report R13(0020)
+    A->>T: both, in the same snapshot
+    T-->>A: r2: balance 2,880 بنام, checked (card = R13 closing), r3: rows
+    A->>M: call 3: r2, r3 (never the fields of FR-7.83)
+    M-->>A: answer: "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں ..."
+    A->>A: check.rs: references resolve, no digits typed, checked figures, script, glossary, length
+    A->>A: fill references: 2,880 بنام ✓, names through displayName
+    A-->>P: answer text, table of r3, source line, buttons, next questions
+    A->>DB: close the snapshot, write the question log row (own save)
+    P-->>O: the answer, and "پوری رپورٹ کھولیں" opens R13 with his filters
+```
+
+```mermaid
+flowchart LR
+    Q(["Question"]) --> K{"Quick question chip?"}
+    K -- yes --> FIX["Fixed tool calls, fixed words, no model"]
+    K -- no --> LIM{"On, key, online, count < 20?"}
+    LIM -- no --> MSG["Message; chips still work"]
+    LIM -- yes --> MOD["Model call"]
+    MOD --> TC{"Tool calls or answer?"}
+    TC -- "tool calls" --> IN{"Inputs valid?"}
+    IN -- no --> ERR["Error result to the model"]
+    IN -- yes --> LK{"Partner source while locked?"}
+    LK -- yes --> PAUSE(["Pause: the code box, no model call; after the code the paused calls run and the model goes on"])
+    LK -- no --> RUN["Run the tool on the read snapshot;
+    tool_result_json leaves out the fields of FR-7.83"]
+    ERR & RUN --> CAP{"Within 4 calls, 8 tools, size limits?"}
+    CAP -- yes --> MOD
+    CAP -- no --> NU["Not understood; logged"]
+    TC -- answer --> CHK{"check.rs passes?"}
+    CHK -- yes --> SHOW(["Fill references, show answer, sources, buttons"])
+    CHK -- "no, first time" --> RW["One rewrite with the reasons"] --> CHK2{"Passes?"}
+    CHK2 -- yes --> SHOW
+    CHK2 -- no --> PLAIN(["Plain tables of the tool results; no model figure"])
+    CHK -- "figure's two places differ" --> DIFF(["No answer; difference message; attention item"])
+```
+
+The model never touches the database and no tool writes (Code Standards Q2). Every figure on the screen is a reference the app filled from a tool result, the calculator or the estimator, and checked (PRD FR-7.75, FR-7.76). An estimate comes only from `domain::forecast` and is never stored (PRD FR-7.86). Advice is written only from figures read for the question and is never stored (PRD FR-7.88). The instructions, tools and answer schema the model reads are the fixed files of `docs/deliverables/D6-system-prompt.md`.
+
+---
+
+## 22. Change log
 
 | Version | Date | Change |
 |---|---|---|
@@ -959,3 +1030,4 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.12 | 31-10-2026 | Lead decision for PRD v1.13 FR-7.70 (plan 44): the `edit_windows` table and migration 0012 let the edit service change one trip or garden entry inside its own save; outside it those tables stay read-only (15.3). No PRD change. |
 | 1.13 | 01-11-2026 | PRD v1.15, approved by Umar: `accounts.is_pukhta_party` and migration 0013 for a پختہ party's own account (15.4). No posting type changed. |
 | 1.14 | 01-11-2026 | Lead decision (CLAUDE.md rule 4, plan 47 Section 11): `venture_entry_parts` and `purchase_cost_parts` are soft state from migration 0014 (`is_active`, `replaced_by`); an edit retires parts instead of deleting them (15.5). Schema version 14. No PRD change. |
+| 1.15 | 01-11-2026 | PRD v1.16, approved by Umar: ask the app (diagrams 1 and 3; new diagram 21; table `assistant_questions` and the settings keys `assistant_enabled` and `assistant_model` in 15.3, in the next free migration, 0015 today). The change log is now Section 22. No posting type changed. Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint, with no fallback; the model is the brain and reads through read-only tools, the app checks every figure (diagrams 1, 3 and 21; `tool_calls_json`, `answer_json`, `model_calls` and the token columns in 15.3). Further amended 02-11-2026 (Umar): the outcome advice (15.3); a locked partner question pauses with no model call (Section 21). |

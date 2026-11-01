@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.12 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026) |
-| Date | 31 October 2026 |
+| Version | 1.13 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026 and 01-11-2026) |
+| Date | 1 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.15 (the master), NFR v1.7, Tech Stack v1.7 |
+| Depends on | PRD v1.16 (the master), NFR v1.8, Tech Stack v1.8 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -71,6 +71,7 @@ This is the most important section. The business is commission on sales, split b
 | M11 | Every money function has unit tests with the PRD worked numbers and property tests (Section 9) | |
 | M12 | The frontend MUST NOT calculate money. It formats paisa received from the backend, nothing else. | `formatPaisa(1200000)` → `"12,000"` |
 | M13 | **Excel export exception (Umar, 23-10-2026, D5-Q1).** Excel stores every number as floating point, so money is written to a spreadsheet through ONE function, `rupees_as_f64`, in one file, `numbers.rs`, of the export code of `mandi-reports`. It divides whole paisa by 100 with integer division first, refuses a value of 2^53 or more (so the conversion is exact; the export code uses the stricter limit of 10^15 rupees, because Excel shows only 15 digits, and no real amount comes near it), and only then converts. A whole-number quantity (a نگ count) goes through its twin `count_as_f64` in the same file, with the same limit (Umar, 23-10-2026, second answer). A unit test covers the largest allowed amount (10,00,00,00,000 rupees) and the refusal. An Excel value is never read back into the app and never added up by our code, and no other code may use `f64` for money or quantities. A percent is written as text from the integer formatter, never as a float. | 12,000 rupees = `Paisa(1200000)` → cell `12000` |
+| M14 | **The assistant's calculator and estimator (Umar, 02-11-2026, PRD FR-7.75, FR-7.86).** `domain::figures` works out a sum and a difference of `Paisa` with checked operations, an average through `avg_rate`, a percent of with the "% of all" formula of the money agent (Section 9), and a change in percent the same way. `domain::figures` also reads the numbers of a question ("3 lakh" = 3,00,000; "10%" = `Bps(1000)`). `domain::forecast` works out the three methods of PRD FR-7.86 and the month a target is reached, on whole months, at most 12 ahead: a per-month figure is rounded once through `avg_rate`, a total is that figure times the months (so the shown figures always agree), and no projected month is below 0. Both are display only, like `avg_rate`: never posted, saved or added to a report. Both are pure, have unit tests with the PRD E2E-59 and E2E-61 numbers and property tests (9.3), and are reviewed by the money-calculations agent (its Section 9.1). | Same pace: (45,000 + 48,000 + 51,000) ÷ 3 = 48,000 a month; × 6 = 288,000 |
 
 ---
 
@@ -203,6 +204,24 @@ pub async fn bikri_save(state: State<'_, AppState>, input: BikriInput) -> Result
 ```
 
 Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED_IN` / `ERR_SESSION_LOCKED`. There are no roles (PRD Section 2).
+
+### 5.7 Ask the app (PRD Section 7.7)
+
+The model is the brain, but a stranger to our rules. It may call our tools and write the answer; it may never put a figure on the screen. Treat every reply like input from the screens (V0).
+
+| # | Rule |
+|---|---|
+| Q1 | The model's reply is untrusted input. Each tool call is parsed with that tool's strict input type and every field is checked like a command input (Section 4). A call to an unknown tool, a filter its source does not have, or a bad date returns an error result to the model and runs nothing (PRD FR-7.79). Nothing in a reply is run as code, followed as a link or shown without the checks of Q4. |
+| Q2 | Every tool is read-only, and no tool that writes exists. The tools are only those of PRD FR-7.87. Adding a tool is a requirement change. |
+| Q3 | A tool calls the same function its screen uses (`reports::run`, the analytics view functions, the dashboard tiles, `assist_party_card`, the search index), with the same filter types. It never has its own query for a figure. This is B5 for answers: one calculation path. |
+| Q4 | Every figure, count, date, month and name in the answer text is a reference to a value of this question (a tool result, `calculate`, `estimate`, or a number the app read from the typed question, `{{q.n1}}`). Rows are referred to by their record's stable key, never by their place. `check.rs` refuses, in the text and in the next questions: any Unicode digit (class Nd) outside a reference, a number word or month name outside a reference, a name of a party, partner, item, garden, trip, city, اڈا or staff member returned by this question's tools outside a reference (not a glossary word or a seeded system account), a typed ✓, an unknown reference, a reference to a result of an earlier question, a reference to a figure whose two places differ, the other side's words next to a balance (up to the nearest punctuation mark, new line, point mark or other money figure on each side (a name or date never ends it)), the wrong script, a never-use word, or more than 130 words (`MAX_ANSWER_WORDS`). It sends the reasons back for one rewrite; a second failure shows the tool results as plain tables. A figure whose two places differ is final: no rewrite, the difference message. The app fills the references: money through the shared formatter with its side, a difference with its direction word, names through `displayName`. |
+| Q5 | Sums, differences, averages, percents and estimates are worked out only by `domain::figures` and `domain::forecast` (M14), through `services`. `mandi-assistant` does no arithmetic on `Paisa` or quantities (clippy `arithmetic_side_effects` is denied in the crate). The check of PRD FR-7.76 only compares values for equality. |
+| Q6 | All reads of one question happen in one read snapshot. The only write is the question log row, in its own save after the answer (NFR-AI-6). Partner tools check the partner unlock after the sign-in check, as S8. |
+| Q7 | The request body is built by one function, `request_body()`, and every tool result by one function, `tool_result_json()`. They leave out every field PRD FR-7.83 says never goes (phones, addresses, father or firm names, notes, reasons, narrations typed by hand, driver names, supplier and shop names typed on entries, the market and the person sent typed on a trip, مارکہ text, the audit log, keys, and partner figures while locked), in new results and in the conversation they resend. Every figure with a second place carries both places and its checked status wherever it appears. The provider block (`only: ["azure"]`, `allow_fallbacks: false`, `zdr: true`, `data_collection: "deny"`, `require_parameters: true`) is a constant inside `request_body()`, not a setting. The golden tests check every body, including that block (PRD E2E-54). |
+| Q8 | The key is read from `keyring` at call time. It is never stored in app state, a log, an error or a reply to the screens (NFR-SEC-15). The client allows one host and one path, HTTPS only, with a 15 second timeout a call and 45 seconds a question. |
+| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 4 model calls plus one rewrite, 8 tool calls, 60,000 input tokens (cached included) and 3,000 output tokens a question, shared with its continuations; 8,000 tokens for the fixed part, that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
+| Q10 | Text sent to the model from the books is data, never instructions: tool results are JSON values, and the instructions say so. Because no tool writes and Q4 checks every figure, a record that reads like an instruction can change nothing (PRD E92). |
+| Q11 | The four prompt files (`prompt/system.md`, `tools.json`, `answer.schema.json`, `words.tsv`) are copied word for word from `docs/deliverables/D6-system-prompt.md`, and its test P7 keeps them equal. `check.rs` reads its word lists (number words, months, never-use words, side words) from `words.tsv` only, never from a second list in code. A change to any of the four is a requirement change: the file first, approved by Umar, then the tests P1 to P7 and NFR-AI-2 again. |
 
 ---
 
@@ -345,6 +364,8 @@ Sign-in check: `require_login()` returns the signed-in Owner, or `ERR_NOT_LOGGED
 | Any user-facing text | Both languages, `pnpm i18n:check`, reviewer noted for each language |
 | Change to `translit` or the word list | The 1,000-name accuracy test (NFR-URD-24, NFR-URD-25) must not drop |
 | Bug fix | A test that fails before the fix and passes after |
+| Change to the assistant's tools, instructions, checks or model | The golden questions (9.2) and, before the next release, the NFR-AI-2 list against the real model with the Urdu review |
+| Change to `domain::figures` or `domain::forecast` | Unit tests with the PRD numbers, property tests, review by the money-calculations agent |
 
 ### 9.2 Golden tests
 
@@ -357,6 +378,10 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | E2E-44 (R20, R21, R22 and R38 rows) | `backend/crates/services/tests/reports_dead.rs` | Every commit |
 | E2E-45 (edit of a closed day through reopen and fix, and its stamp) | `backend/crates/services/tests/golden_day.rs` | Every commit |
 | E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
+| E2E-47 to E2E-63 (ask the app: figures, the check from two places, which one, change refused, privacy, limit, offline, wrong tool calls, follow-up, estimates, references, the calculator, the same question in other words, advice), with recorded model transcripts and no network | `backend/crates/assistant/tests/golden_questions.rs` | Every commit |
+| The prompt files: size, catalogue, glossary, words, the 15 examples, schemas, word for word (`D6-system-prompt.md` P1 to P7) | `backend/crates/assistant/tests/prompt.rs` | Every commit |
+| E2E-59 and E2E-61 numbers (the estimator and the calculator) | `backend/crates/domain/tests/figures_forecast.rs` | Every commit |
+| NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
 | E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
@@ -379,6 +404,7 @@ With `proptest`, for thousands of random inputs:
 - Commission is never negative and never more than the line value for percent rules up to 100%.
 - Reversal of an entry plus the entry gives zero on every account.
 - Amount in words (Urdu and English) returns text for every amount from 0 to the maximum and never panics.
+- `domain::figures`: a sum equals the sum of its parts, a difference plus its second figure gives the first, and nothing overflows silently. `domain::forecast`: a series of equal months gives that same figure by every method; no projected month is below 0.
 - `translit` and the search key builders never panic on any Unicode input, and always return at most 3 suggestions.
 
 ### 9.4 Coverage gates
@@ -422,6 +448,7 @@ A change is done only when every box is ticked:
 - [ ] All text from Fluent in both languages; Urdu and English reviewed; `i18n:check` passes
 - [ ] Tests added as in Section 9; golden tests still pass
 - [ ] Speed targets still met (for screens and commands on the NFR list)
+- [ ] Assistant code: read-only tools only, no arithmetic in `mandi-assistant`, every shown figure a checked reference, nothing left out by Q7 in a request, the prompt files equal to `D6-system-prompt.md` (Q1 to Q11)
 - [ ] Module README and doc comments updated
 
 ---
@@ -443,3 +470,4 @@ A change is done only when every box is ticked:
 | 1.10 | 30-10-2026 | Approved by Umar (PRD v1.9): number cells, their headings and totals centred in table columns; values in cards stay on the right edge (F17, F24). |
 | 1.11 | 30-10-2026 | Approved by Umar (PRD v1.10): golden test E2E-44, the dead amount (9.2); a وصولی or ادھار رقم واپسی may post on an account in the dead amount (4.2). |
 | 1.12 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code check (S8) and one edit model (S9); golden tests E2E-45 and E2E-46 (9.2). |
+| 1.13 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (5.7); golden questions and the NFR-AI-2 list (9.2); review checklist (11). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint, with no fallback; the model is the brain with read-only tools, and every figure it shows is a checked reference (5.7, Q1 to Q10); the calculator and estimator (M14, 9.1, 9.2, 9.3). Further amended 02-11-2026 (Umar): the prompt files and their tests (Q11, 9.2), the fixed part measured (Q9), the ✓, earlier-question and side-word checks (Q4), advice in the golden questions (9.2). |

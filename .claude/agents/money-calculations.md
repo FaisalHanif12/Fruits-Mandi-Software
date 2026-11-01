@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.7, 23 October 2026 (Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.8, 2 November 2026 (the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -16,8 +16,8 @@ Work slowly and carefully. Prove every number. When in doubt, stop and ask rathe
 
 Source documents (read the relevant parts before you start; the PRD is the master and wins any conflict):
 
-- `docs/PRD_Mandi_Software_v1.md` (v1.7): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 13 (پختہ کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
-- `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M12), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
+- `docs/PRD_Mandi_Software_v1.md` (v1.16): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 7.7 (the question panel's calculator and estimates: FR-7.75, FR-7.86), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 13 (پختہ کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
+- `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M14), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
 - `docs/Architecture_v1.md`: Diagrams 7 to 12 and the data dictionary in Section 15
 
 ---
@@ -451,6 +451,25 @@ On edit or cancel of anything that took part in matching: set its allocation row
 - A report total MUST equal the matching ledger balance. Add tests, for example: analytics total seller commission for a day = net جمع of کمیشن آمدن (بیوپاری) in the journal for that day.
 - "% of all commission" in analytics is display only: `(part × 10,000 + total ÷ 2) ÷ total` in hundredths of a percent, shown with 2 decimals. Example: 3,928 of 5,448 → (39,280,000 + 2,724) ÷ 5,448 = 7,210 → 72.10%. Never posted.
 
+### 9.1 The question panel's calculator and estimator (PRD FR-7.75, FR-7.86; Code Standards M14)
+
+The model in the question panel never does arithmetic. It asks `calculate` and `estimate`, which call `domain::figures` and `domain::forecast`. Both are display only, like `avg_rate`: their results are never posted, saved, or added to a report or a tile. Review both, with the same care as posting code.
+
+- **Signed balances.** A balance is passed as signed paisa: بنام positive, جمع negative. The result's side comes from its sign. Example: اکرم 2,880 بنام and کریم 10,160 جمع: 288,000 + (−1,016,000) = −728,000 paisa = 7,280 جمع.
+- **Sum and difference:** `checked_add`, `checked_sub`; overflow is an error. Example (E2E-61): 2,880 + 18,684 = 21,564.
+- **Average:** `avg_rate(total, count)`. A negative total is averaged as positive, then negated (as splits, Section 5).
+- **Percent of:** the "% of all" formula above. A base of 0 gives no percent (`ERR_NO_BASE`), never a division by zero.
+- **Change in percent:** `((new − old) × 10,000 + |old| ÷ 2) ÷ |old|` on absolute values, with the sign of `new − old`. Example: 48,000 to 51,000: (3,000 × 10,000 + 24,000) ÷ 48,000 = 625 → 6.25%.
+- **Estimates** (`domain::forecast`), on whole calendar months, the current month left out:
+  - Same pace: per month = `avg_rate(sum of the last 3 months, 3)`; total = per month × months ahead, with `checked_mul`. The per-month figure is rounded once and the total is built from it, so the shown figures always agree. Example: 43,000, 47,000, 49,000 → 139,000 ÷ 3 = 46,333.33 → 46,333 a month; 6 months: 277,998 (not 278,000).
+  - Same growth: change per month = `avg_rate(|last − first|, months − 1)` with the sign of `last − first`, over the last 6 months; month k ahead = last + k × change, never below 0; total = the sum of the months. Example (E2E-59): 36,000 to 51,000 over 6 months: 15,000 ÷ 5 = 3,000; 54,000 + 57,000 + 60,000 + 63,000 + 66,000 + 69,000 = 369,000.
+  - Same season: the same months of last year, as stored. No arithmetic.
+  - Too few months (fewer than 3, or 6 for same growth): no estimate, `ERR_TOO_LITTLE_HISTORY` with the months there are.
+  - At most 12 months ahead.
+  - Target month: the months ahead start with the current month (k = 1). The target month is the first month ahead whose running total of a method's months is at least the target (`>=`, so reaching it exactly counts); none within 12 months says so. Examples (E2E-59, target 3,00,000): same pace 48,000 × 6 = 288,000 is short, 48,000 × 7 = 336,000 reaches it, so the 7th month (April 2027); same growth 54,000 + 57,000 + 60,000 + 63,000 + 66,000 = 300,000 reaches it exactly, so the 5th month (February 2027).
+- **Numbers read from the question** (`question_numbers`): digits as typed, and lakh, hazar (ہزار) and crore after a number multiply it with `checked_mul`. Example: "3 lakh" = 3 × 1,00,000 = 3,00,000. A percent ("10%") becomes `Bps(1000)`. Each number also gets a unit: months, days or years when one of those words follows it ("agle 6 mahine" is 6 months), percent, amount (with lakh, hazar or crore), or plain. Nothing else is read as a number.
+- **Tests:** E2E-59 and E2E-61 numbers; property tests: equal months give that same figure by every method; no projected month below 0; a sum equals its parts; nothing overflows silently.
+
 ---
 
 ## 10. Frontend rules
@@ -534,6 +553,7 @@ rg -n "unwrap\(\)|expect\(" backend/crates/core/src backend/crates/domain/src
 - [ ] Forbidden-pattern search clean
 - [ ] Hints and filled amounts are parsed and checked again on save; working results equal stored amounts
 - [ ] Amounts in words tested in Urdu and English at every boundary
+- [ ] The panel's calculator and estimator are display only, use `avg_rate` for every average, and never post or save (9.1)
 
 ---
 

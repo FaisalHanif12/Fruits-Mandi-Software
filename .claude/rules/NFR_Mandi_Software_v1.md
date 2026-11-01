@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.7 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026) |
-| Date | 31 October 2026 |
+| Version | 1.8 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026 and 01-11-2026) |
+| Date | 1 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.15, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.16, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -30,6 +30,7 @@ Each requirement has an ID like `NFR-SPD-3` (area SPD = speed, item 3). The area
 | MNT | Maintainability |
 | INS | Installation and updates |
 | OBS | Logs and diagnostics |
+| AI | Ask the app: the question panel (PRD 7.7) |
 
 ### 0.1 Notes where the direction needed adjusting
 
@@ -194,12 +195,13 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-6 | Tamper evidence | Each journal entry and each audit entry carries a keyed hash of its own content plus the previous entry's hash (a chain). The key is kept in Windows Credential Manager, not in the data file. If anyone changes journal or audit records outside the app without the key, the chain no longer matches and the app warns the Owner at the next check. Other tables are protected by the journal: every money table can be rebuilt and compared from the journal. |
 | NFR-SEC-7 | Secrets | Cloud keys and the backup encryption key are stored in Windows Credential Manager, never in plain files or the database |
 | NFR-SEC-8 | Data file protection | Recommended: Windows BitLocker on the laptop disk, so a stolen laptop does not expose the data. The app shows this as a setup tip. |
-| NFR-SEC-9 | No network exposure | The app opens no network ports. The only outgoing connections are cloud backup and update checks. |
+| NFR-SEC-9 | No network exposure | The app opens no network ports. The only outgoing connections are cloud backup, update checks and, from v1.8, HTTPS calls to `https://openrouter.ai/api/v1/chat/completions` when the Owner sends a question in the question panel (PRD 7.7; at most 5 for one question, NFR-AI-5), made by the backend only. The screens make no network call (the Content Security Policy is unchanged). |
 | NFR-SEC-10 | App lockdown | The screens can only call the backend commands they are allowed to. No access to files or the system outside what the app needs. |
 | NFR-SEC-11 | Signed updates | Updates are digitally signed. The app refuses an update that is not signed by us. |
 | NFR-SEC-12 | Recovery | Owner recovery code printed at setup. No "master password" exists anywhere. |
 | NFR-SEC-13 | Exports | Excel and PDF exports need the signed-in Owner, like every other command (NFR-SEC-4) |
 | NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. Wrong codes wait as NFR-SEC-2 and are written to the audit log. |
+| NFR-SEC-15 | The assistant's key | The OpenRouter key is kept only in Windows Credential Manager (NFR-SEC-7). It is never in the database, a backup, a log, the support file (NFR-OBS-4) or any answer to the screens, which see only that a key is saved and its last 4 characters. Saving, replacing and removing it need the Owner's password and write an audit entry without the key (PRD FR-7.85). |
 
 ---
 
@@ -350,10 +352,26 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | ID | Requirement |
 |---|---|
 | NFR-OBS-1 | The app keeps a log file of errors and important events, kept 30 days, maximum 50 MB |
-| NFR-OBS-2 | Logs never contain passwords, keys or full account balances |
+| NFR-OBS-2 | Logs never contain passwords, keys or full account balances. The log files never contain the text of a question asked in the question panel either; that is kept only in the question log table (PRD FR-7.84) |
 | NFR-OBS-3 | Each error shown to the user has a reference number that matches a log line |
 | NFR-OBS-4 | A "مدد کے لیے معلومات" (support info) button collects the log, app version and system info into one file the client can send us |
 | NFR-OBS-5 | Daily health check result (books balance, last backup, data check) visible to the Owner |
+
+## 10a. Ask the app (AI)
+
+Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel of PRD 7.7. It understands any wording, reads every section through the app's tools, adds up, compares, estimates and writes the answer itself. A wrong number would defeat the purpose. These targets make "correct, understanding, fast, safe and cheap" measurable.
+
+| ID | Requirement | Target |
+|---|---|---|
+| NFR-AI-1 | Correct figures | Every figure shown in an answer is a reference that the app filled from a tool result, the calculator, the estimator or the user's own question (PRD FR-7.75). Zero figures typed by the model are ever shown. Every checked figure equals its source cell read with the same filters, and its second place (PRD FR-7.76). A test reads every source again for every golden question (PRD E2E-47 to E2E-63) and compares cell by cell, and works every calculator result out again. |
+| NFR-AI-2 | Understanding and Urdu | A fixed list of at least 100 questions, typical of the shop, in Urdu letters, Roman Urdu and English, with spelling mistakes, follow-ups, sums, comparisons, at least 10 estimates and at least 8 requests for advice (PRD FR-7.88). It holds groups of the same question in different words (for example "akram ka hisab kya hai", "akram ka khata dikhao", "akram se kitna lena hai", "how much does akram owe"), and every question in a group must reach the same answer. Each question has its expected tools, filters and figures. Run against the real model: at least 97 of 100 give the expected figures; each of the others must end in "کون سا؟", a request for dates, "سوال سمجھ نہیں آیا" or the plain tables of PRD FR-7.76, never a wrong figure, party, period or source. The Urdu reviewer reads the answer text of all 100: at least 95 are correct, natural mandi Urdu with the glossary words (NFR-URD-2, NFR-URD-5), and every advice answer stays inside PRD FR-7.88 (no rate or figure of its own, no change to an entry, no judgment of a person); one advice answer outside it fails the run. Run before every release and before a new model name is used at the shop. The list is kept in the repository and grows with every question the Owner reports as misunderstood. |
+| NFR-AI-3 | Speed | A quick question (PRD FR-7.80) answers under 300 ms, like opening a screen (NFR-SPD-3). A model question shows "سوال سمجھ رہا ہوں…" within 100 ms of being sent, and then a step line for each tool as it runs (PRD FR-7.73). A question that needs one round of tools shows its answer within 8 seconds; one that needs more rounds, or an estimate, within 20 seconds (p95, on a normal mobile connection). The app's own part in each round (running the tools and the checks) is under 300 ms. Each model call is stopped after 15 seconds with no reply, and the whole question after 45 seconds (PRD FR-7.81). |
+| NFR-AI-4 | Privacy | Only what PRD FR-7.83 lists leaves the computer: the tool results and the conversation never hold the fields it says never go (phones, addresses, father or firm names, notes, reasons, other free text, the audit log, keys, locked partner figures), and one function builds each (Code Standards Q7). Every request is pinned to the model's Azure endpoint with zero data retention and no fallback (`provider: {only: ["azure"], allow_fallbacks: false, zdr: true, data_collection: "deny"}`, Umar 02-11-2026), so it can never reach an endpoint that keeps or trains on data. If that endpoint is down, the call fails with the normal message (PRD FR-7.81). A test checks every request body of the golden questions (PRD E2E-54). |
+| NFR-AI-5 | Cost and size | At most 20 counted questions a day (PRD FR-7.81). One question, with its continuations after "کون سا؟" or the partner code, uses at most 4 model calls (plus one to rewrite an answer that failed the checks, PRD FR-7.76) and 8 tool calls, at most 60,000 input tokens in all its calls together (cached tokens included) and at most 3,000 output tokens (reasoning included); a question that reaches a limit stops (PRD E96). The fixed part sent first in every call (the tool definitions, the instructions and the answer schema of `docs/deliverables/D6-system-prompt.md`) is at most 8,000 tokens: checked by a test with the `o200k_base` tokenizer (7,584 on 02-11-2026), and read from the cached tokens of the live run. At the price of 01-11-2026 ($0.10 input and $0.50 output per million tokens) the worst month costs about $4.91: 60,000 × 0.10 ÷ 1,000,000 = $0.0060, plus 3,000 × 0.50 ÷ 1,000,000 = $0.0015, so $0.0075 a question, × 20 × 31 = $4.65, plus OpenRouter's 5.5% fee = $4.91. A normal question with the instructions cached (3 calls: 24,000 cached tokens × $0.01 ÷ 1,000,000 = $0.00024, 9,000 fresh × $0.10 ÷ 1,000,000 = $0.0009, 1,200 output × $0.50 ÷ 1,000,000 = $0.0006) costs $0.00174, about $1.14 a month. A credit limit is set on the key in OpenRouter (for example $8), so a fault can never spend more. |
+| NFR-AI-6 | Read-only | Every tool is read-only, and no tool that writes exists. The assistant writes nothing except its question log (PRD FR-7.84). All reads of one question happen in one read snapshot, so all figures of one answer come from the same moment. A test compares the row count of every table before and after each golden question. |
+| NFR-AI-7 | The app never depends on it | With the assistant off, no key, no internet or OpenRouter down, every other screen works exactly as before, and no save waits for the assistant. |
+| NFR-AI-8 | Words | The panel's own words (buttons, labels, messages, the estimate band, the advice band, the quick questions) come from the Fluent files, reviewed in both languages (NFR-URD-4, NFR-URD-29). The answer text is written by the model, the one place in the app where text is not reviewed before release; it is held to the checks of PRD FR-7.76 (references, script, glossary, never-use list, length) and measured by the Urdu review of NFR-AI-2. |
+| NFR-AI-9 | Estimates | An estimate is worked out only by the app's estimator, by the methods of PRD FR-7.86, in whole rupees. It always carries the band "اندازہ، یقینی نہیں", its method and its months. It is never saved in the books and never appears in a report, tile or print. A test checks the PRD E2E-59 numbers and the "too little history" case. |
 
 ---
 
@@ -368,6 +386,7 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | USE | 3 people who never saw the app try the PRD worked example; time them, count errors; test every supported size and scaling combination (NFR-USE-17) in both languages (NFR-USE-28) |
 | URD | Urdu reviewer and munshi read every screen and print; English reviewer and Owner read every English screen and print; automatic tests for amounts in words (both languages), letter-variant search, missing text keys, and the 1,000-name English-to-Urdu list (NFR-URD-24, NFR-URD-25) |
 | MNT | Code checks and coverage report in the build pipeline |
+| AI | Golden questions with recorded model replies on every commit (figures, references, privacy, read-only, limit, offline, estimates); the 100-question list against the real model and the Urdu review of its answers before every release (NFR-AI-2) |
 
 ---
 
@@ -383,3 +402,4 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | 1.5 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type have no upper limit (NFR-SCL-1). |
 | 1.6 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers in a table column are centred under their heading, with the total centred under them (NFR-USE-19). |
 | 1.7 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code (NFR-SEC-14). |
+| 1.8 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (new area AI); one more outgoing connection, to OpenRouter, only for a question (NFR-SEC-9); the assistant's key (NFR-SEC-15); no question text in the log files (NFR-OBS-2). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint of the model, with no fallback (NFR-AI-4); the model is the brain and writes the answer, every figure filled and checked by the app (NFR-AI-1 to NFR-AI-9). Further amended 02-11-2026 (Umar): advice questions in the 100-question list and its Urdu review (NFR-AI-2); the 8,000 tokens cover the whole fixed part, measured (NFR-AI-5); the advice band (NFR-AI-8). |
