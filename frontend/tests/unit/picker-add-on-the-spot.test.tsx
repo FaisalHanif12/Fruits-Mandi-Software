@@ -289,7 +289,7 @@ describe.each(LANGUAGES)('the add row of a picker (%s)', (language) => {
     await waitFor(() => {
       expect(options()).toHaveLength(3);
     });
-    // A click on the field highlights none; ↓ walks down the matches to the last one.
+    // The list of an empty field highlights none; ↓ walks down the matches to the last one.
     await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}');
     expect(options()[2]).toHaveAttribute('aria-selected', 'true');
     await user.keyboard('{ArrowDown}');

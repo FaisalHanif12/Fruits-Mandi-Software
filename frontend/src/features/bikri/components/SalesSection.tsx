@@ -18,6 +18,7 @@ import type { UiError } from '../../../bindings/UiError';
 import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
+import { useOverrideSettings } from '../../settings';
 import { allLinesColumns, saleColumns } from '../columns';
 import { useBikriDraft } from '../draft-store';
 import { focusPukhtaFieldsSoon } from './PukhtaFields';
@@ -176,6 +177,11 @@ interface ActiveLineProps {
 /** The details of the sale line that has focus, under the summary (PRD 12.4, FR-11.10). */
 export function ActiveLine({ lotKey, lotIndex, preview, error, usesWeight }: ActiveLineProps) {
   const stores = useBikriDraft();
+  // The switch is the Owner's setting, read the same way as in Settings. The preview only knows it
+  // once a line has been previewed, so it cannot say "off" for an empty line (plan 46, F2). While
+  // the setting is not known yet, nothing is said to be off.
+  const overrides = useOverrideSettings();
+  const allowOverride = overrides.data?.allow_line_override ?? preview?.allow_line_override ?? null;
   const store = stores.salesFor(lotKey);
   const rows = store((state) => state.rows);
   const focus = store((state) => state.focus);
@@ -196,7 +202,7 @@ export function ActiveLine({ lotKey, lotIndex, preview, error, usesWeight }: Act
       lotIndex={lotIndex}
       lineIndex={activeIndex}
       line={lotPreview?.lines.find((line) => line.key === active.rowId)}
-      allowOverride={preview?.allow_line_override ?? false}
+      allowOverride={allowOverride}
       usesWeight={usesWeight}
       error={error}
       onDone={() => {

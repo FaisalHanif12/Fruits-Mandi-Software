@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Version | 1.13 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, and 31-10-2026, and his answers of 15-10-2026 and 30-10-2026) |
-| Date | 31 October 2026 |
+| Version | 1.14 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
 | Platform | Windows desktop app, one computer, works offline |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.13 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.14 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.7 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.7 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.12 |
@@ -606,7 +606,7 @@ Example for a sale line: buyer code `Enter`, qty `Enter`, rate `Enter` and the c
 
 FR-7.15 [C] **Forms.** In normal fields, `↑` and `↓` move to the field above or below. When the user enters a field its whole value is selected; while it is fully selected, `←` and `→` move to the neighbouring field. Once the user types or moves the cursor, `←` and `→` move the cursor inside the text, and when the cursor is already at the visual edge of the text in the arrow's direction, the next press moves to the neighbouring field.
 
-FR-7.16 [C] **Pickers.** Typing in a picker opens its list of matches. While the list is open, `↑` `↓` move through matches and `Enter` picks. While the list is closed, `↑` `↓` move between fields like any other field. `Alt+↓` opens the full list without typing. Arriving in a picker by keyboard (`Enter`, `Tab`, arrows) never opens the list; only a mouse click, typing or `Alt+↓` does (v1.8).
+FR-7.16 [C] **Pickers.** Typing in a picker opens its list of matches. While the list is open, `↑` `↓` move through matches and `Enter` picks. While the list is closed, `↑` `↓` move between fields like any other field. `Alt+↓` opens the full list without typing. [C] (Umar, 01-11-2026, v1.14) The list opens as soon as the picker gets the focus, by click or by keyboard, with recent first (FR-7.41). It replaces the v1.8 rule that arriving by keyboard never opens it. While it is open, `↑` `↓` choose in the list, `Enter` picks and moves to the next field, `←` `→` and `Tab` leave the field, and `Esc` closes the list; with the list closed, `↑` `↓` move between fields and rows again. Example: in a بکری line, `Enter` from the qty lands on the buyer box and its list is already open.
 
 FR-7.17 [C] **Menus, lists and reports.** In the main bar and the بکری side menu, `↑` `↓` move between items and `Enter` opens. `←` moves from the menu into the screen, `→` moves back to the menu. In lists and reports, `↑` `↓` move between rows, `Enter` opens the selected row, `Page Up` / `Page Down` move a page.
 
@@ -1111,7 +1111,7 @@ Fields seen [S]: بزگر code, بزگر name, فون, منشیانہ, نقد, �
 | Field | Urdu | Type | Req | Default / rule | Source |
 |---|---|---|---|---|---|
 | Lot no | لاٹ | Auto (1, 2, 3 ...) | Yes | | [A] system |
-| Seller code | بزگر کوڈ | Seller picker (includes پختہ کھاتہ بیوپاری, اپنا مال, الگ کھاتے and open gardens) | Yes | Previous lot's seller, else header زمیندار (FR-7.51) | [S] |
+| Seller code | بزگر کوڈ | Seller picker: the sellers and پختہ کھاتہ بیوپاری; اپنا مال only while a trip has goods left, a garden only while it is open, and the الگ کھاتے that exist [C] (Umar, 01-11-2026, v1.14) | Yes | Previous lot's seller, else header زمیندار (FR-7.51) | [S] |
 | Seller name | بزگر | Read-only, or typed if پختہ کھاتہ | | | [S] |
 | One-time seller name | نام | Text, Urdu and English (FR-7.29) | If پختہ کھاتہ | Suggests known one-time people | [C] |
 | One-time seller phone | فون نمبر | Text | If پختہ کھاتہ | Needed to pay him later | [A] |
@@ -1333,7 +1333,7 @@ FR-12.25 [C] **Trip stock.** Each purchase is stock of its trip until it is sold
 FR-12.26 [C] **Selling trip goods in بکری.** In بکری, a lot whose seller is اپنا مال takes its goods from one purchase with stock left.
 - Its received qty is taken from the purchase at save and must equal the qty sold in that lot (`ERR_OWN_LOT_NOT_FULLY_SOLD`). An own lot never has a balance in باقی مال and never has a later sale; goods not sold stay in the purchase and are sold in another بکری, sold in another shop or written off. Selling more than the purchase's stock left is refused (`ERR_QTY_EXCEEDS_LOT`).
 - On an own lot, نقد and the پیشگی سے کاٹیں tick are hidden and stay 0, and freight starts at 0 with a warning if typed (the purchase's costs are already in its cost).
-- اپنا مال is offered only in the lot seller field; every other picker leaves it out, so its account never holds a balance.
+- اپنا مال is offered only in the lot seller field, and only while a trip has a purchase with goods left (v1.14); every other picker leaves it out, so its account never holds a balance.
 - Sale lines, the buyer side, لاگا and the live summary work like any lot. Seller-side commission and lot charges are charged as for any seller, by the rules on the اپنا مال account (default 6%) [C]. This commission is firm income, split by the firm's shares (FR-6.5).
 - The seller credit (C8) goes, in the same entry, to the trip's partners: each one's 0604 account جمع his % of it (C25). It adds to his کل رقم that day.
 - The cost of the goods sold (C21) is stored on the line and shown with the profit or loss. It is not posted.
@@ -2370,4 +2370,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.11 | 31-10-2026 | Umar's change of 31-10-2026, made while testing the app himself, approved by Umar: any missing record (expense head, item, packing, city, اڈا, مارکہ, store, narration, staff, account) is added on the spot from the picker with a short form and chosen at once (FR-7.69, new; FR-7.10, FR-7.42, FR-7.64, FR-10.8 updated; E74, E75). It replaces the v1.8 button that opened the انڈکس form. No money rule, posting or test number changed. |
 | 1.12 | 31-10-2026 | Umar's second change of 31-10-2026, approved by Umar. The buyer's and the seller's day slips of R35 show each item with its total, then commission, لاگا and every deduction on their own lines, what was paid today, and the previous and new balance (FR-19.12; it replaces the v1.7 slip layout; the all-parties table stays). R34 is the day total sheet with commission lines and a short buyers' and sellers' table. Every print header carries the trade mark, the owners and the munshi, up to 6 people with a role (Section 21, FR-19.13). E2E-36 and E2E-43 gain these figures; A69 to A74. No money rule, posting or earlier number changed. |
 | 1.13 | 31-10-2026 | Umar's answers of 31-10-2026, approved by Umar. One edit model on every entry: only typed fields change, every worked-out amount is locked and worked out again, the date never changes, the effect shows before save (FR-7.70). Every edit is stamped with its time and user where it happened, with an edit history (FR-7.71). An entry of a closed day is fixed by reopen, fix and close again in one step (FR-21.4, FR-12.18, FR-15.3). Accounts and lists can be added on any day; only an opening balance needs an open date (FR-10.11). A 4-digit partner code opens the partner section and the partner figures (FR-17.11, Section 21). New E76 to E80, E2E-45, E2E-46, A75 to A78. No money rule, posting or earlier test number changed. |
+| 1.14 | 01-11-2026 | Umar's change of 01-11-2026, made while testing the app himself, approved by Umar. A picker's list opens as soon as the picker gets the focus, by keyboard too, and `↑` `↓` choose in it while it is open (FR-7.16; replaces the v1.8 keyboard rule). The lot seller list shows the sellers and پختہ کھاتہ; اپنا مال only while a trip has goods left, a garden only while it is open (12.3, FR-12.26). No money rule, posting or test number changed. |
 

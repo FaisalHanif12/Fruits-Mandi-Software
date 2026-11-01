@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import * as bikriApi from '../../src/features/bikri/api';
+import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { money } from '../helpers/accounts';
@@ -29,6 +30,7 @@ import {
 } from '../helpers/bikri-screen';
 import {
   DAY,
+  OVERRIDES_ON,
   fail,
   healthyBackend,
   leaveAppWindow,
@@ -258,10 +260,12 @@ describe.each(LANGUAGES)('a commission typed on the line (%s)', (language) => {
   });
 
   it('is read-only with a note when the Owner switched the setting off', async () => {
-    const { user } = await openBook(language, (draft) => ({
-      ...previewFor(draft),
+    // The switch is the Owner's setting (plan 46), not a field of the preview.
+    vi.mocked(settingsApi.settingsGetOverrides).mockResolvedValue({
+      ...OVERRIDES_ON,
       allow_line_override: false,
-    }));
+    });
+    const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitForNumbers();

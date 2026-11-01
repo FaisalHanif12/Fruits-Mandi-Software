@@ -89,8 +89,11 @@ interface LineDetailsProps {
   lotIndex: number;
   lineIndex: number;
   line: LinePreview | undefined;
-  /** May a commission or لاگا be typed on a line? (the setting, PRD FR-11.10) */
-  allowOverride: boolean;
+  /**
+   * May a commission or لاگا be typed on a line? (the setting, PRD FR-11.10). Null while the
+   * setting is not known yet: the fields look as they do when it is on, and the note is hidden.
+   */
+  allowOverride: boolean | null;
   /** Show the weight field: the item is sold by weight. */
   usesWeight: boolean;
   error: UiError | null;
@@ -124,6 +127,8 @@ export function LineDetails({
   const calc = line?.calc ?? null;
   const buyer = row.picked?.[SALE.buyer];
   const differs = typed(SALE.differs) === ON;
+  // Only a setting that is really off switches the fields off (PRD FR-11.10).
+  const off = allowOverride === false;
 
   return (
     <section
@@ -157,7 +162,7 @@ export function LineDetails({
                 <div className="flex flex-col gap-2">
                   <Input
                     {...control}
-                    readOnly={!allowOverride}
+                    readOnly={off}
                     value={typed(spec.value)}
                     placeholder={charge === null ? '' : chargeNumber(charge, grouping)}
                     onChange={(text) => {
@@ -165,7 +170,7 @@ export function LineDetails({
                     }}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    {allowOverride ? (
+                    {off ? null : (
                       <SegmentedControl
                         groupLabel={l10n.getString(spec.titleId)}
                         value={method}
@@ -180,7 +185,7 @@ export function LineDetails({
                           },
                         ]}
                       />
-                    ) : null}
+                    )}
                     {charge === null ? null : (
                       <span className="inline-flex items-center gap-1">
                         <Num paisa={charge.amount} />
@@ -194,11 +199,11 @@ export function LineDetails({
           );
         })}
       </div>
-      {allowOverride ? null : (
+      {off ? (
         <Localized id="bikri-line-override-off">
           <p className="type-body text-ink-muted" />
         </Localized>
-      )}
+      ) : null}
       <div className="grid grid-cols-3 gap-x-3 gap-y-2">
         <div className="flex flex-col gap-2">
           <Checkbox

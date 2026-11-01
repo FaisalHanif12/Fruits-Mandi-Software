@@ -554,7 +554,8 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
         khata.account.code
     );
 
-    // The seller field of a lot finds it by either name, and still finds sellers and اپنا مال.
+    // The seller field of a lot finds it by either name, and still finds sellers. اپنا مال is not
+    // offered while no open trip has a purchase with goods left (PRD 12.3, FR-12.26, plan 46).
     assert_eq!(
         find(AccountScope::LotSeller, "family"),
         vec!["Family Khata"]
@@ -565,8 +566,8 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
     );
     assert_eq!(find(AccountScope::LotSeller, "rahim"), vec!["Rahim"]);
     assert!(
-        !find(AccountScope::LotSeller, "own").is_empty(),
-        "اپنا مال is offered in a lot"
+        find(AccountScope::LotSeller, "own").is_empty(),
+        "اپنا مال is offered in a lot only while a trip has goods to sell (see lot_seller_list.rs)"
     );
     // A seller field, a buyer field and the account lists of other screens do not offer it as a
     // seller or a buyer; a field that takes any account does.

@@ -1,7 +1,8 @@
-// Plan 32, R7 in a grid: a mouse click on a picker cell of the sale lines opens the picker with the
-// full list of that kind, like a click on the field of a form. Arriving on the cell by keyboard
-// opens nothing (PRD 7.2): Enter moved the cursor there in typeHeaderAndLot, and no list was open.
-// Both languages, against the fake backend of Event 1.
+// Plan 32, R7 in a grid, changed by plan 46 (PRD FR-7.16 of v1.14): a picker cell of the sale lines
+// opens the picker with the full list of that kind as soon as it gets the focus, by a click and by
+// a key (Enter moved the cursor there in typeHeaderAndLot). Before plan 46 a key opened nothing and
+// a click had to be on the cell that already had the focus. The keyboard paths are in
+// picker-opens-on-focus-grid.test.tsx. Both languages, against the fake backend of Event 1.
 
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -57,29 +58,27 @@ describe.each(LANGUAGES)('a click on a picker cell of the sale lines (%s)', (lan
       .mocked(accountApi.searchAccounts)
       .mock.calls.filter(([input]) => input.scope === 'buyer' && input.text === '');
 
-  it('Enter and the arrow keys never open the list; a click that only selects the cell opens nothing; a click on the selected cell lists every buyer', async () => {
+  it('Enter and the arrow keys put the cursor on a picker cell and its list opens; a click on another cell closes it; a click on the picker cell lists every buyer again', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     const sales = salesGrid(language);
-    // The cursor is on the buyer cell of the first line, put there by Enter: nothing is open.
-    expect(screen.queryAllByRole('option')).toHaveLength(0);
-    expect(buyerListsCalls()).toHaveLength(0);
-
-    // Moving between cells by keys, in every direction, opens nothing (PRD 7.2).
-    await user.keyboard('{ArrowRight}{ArrowDown}{ArrowLeft}{ArrowUp}');
+    // The cursor is on the buyer cell of the first line, put there by Enter: its list is open.
     await waitFor(() => {
-      expect(focusedIn(sales)).not.toBeNull();
+      expect(screen.getAllByRole('option').length).toBeGreaterThan(1);
     });
-    expect(screen.queryAllByRole('option')).toHaveLength(0);
-    expect(buyerListsCalls()).toHaveLength(0);
+    expect(buyerListsCalls().length).toBeGreaterThan(0);
 
-    // A first click on another cell only selects it.
+    // A click on another cell takes the cursor, and the list goes with the cell it belonged to.
     await user.click(cellOf(sales, 0, 'qty'));
-    await user.click(cellOf(sales, 0, 'buyer'));
-    expect(screen.queryAllByRole('option')).toHaveLength(0);
-    expect(buyerListsCalls()).toHaveLength(0);
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:qty');
+    });
+    await waitFor(() => {
+      expect(screen.queryAllByRole('option')).toHaveLength(0);
+    });
+    vi.mocked(accountApi.searchAccounts).mockClear();
 
-    // The click on the cell that already has the focus opens the picker with the full list.
+    // One click on the picker cell, which had no focus, opens the picker with the full list.
     await user.click(cellOf(sales, 0, 'buyer'));
     await waitFor(() => {
       expect(screen.getAllByRole('option').length).toBeGreaterThan(1);

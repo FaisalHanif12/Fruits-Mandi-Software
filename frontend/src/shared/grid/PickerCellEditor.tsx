@@ -2,14 +2,17 @@
 // inside the cell, so every grid gets the same search, short codes, recent-first list and F4 as
 // the pickers of the forms (PRD FR-7.10, FR-7.38 to FR-7.42, Code Standards F40).
 //
-// - It opens as a popup under the cell. A letter, digit or code typed on the cell starts it with
-//   that key already typed (PRD FR-7.14); Alt+↓ opens it with the full list (FR-7.16).
+// - It opens as a popup under the cell as soon as the cell gets the focus, by a click or by a key
+//   (EntryGrid, PRD FR-7.16, plan 46). A letter, digit or code typed on the cell starts it with
+//   that key already typed (PRD FR-7.14); Alt+↓ opens the full list again (FR-7.16).
 // - What is chosen goes straight to the row store (never only inside the grid, F39). The editor
 //   then closes the cell without a second save (`stopEditing(true)`, which cancels the grid's own
 //   value step).
 // - Enter in the open list picks and goes on to the next Enter stop, the same step as Enter on a
-//   cell (FR-7.14). With the list closed, Enter, the arrows and the other grid keys are answered
-//   by the grid's own key handler, so the keys are the same in every cell (F27).
+//   cell (FR-7.14). While the list is open ↑ ↓ choose in it, ← → and Tab leave the cell, and
+//   Ctrl shortcuts (copy from above, remove the row) reach the grid. With the list closed, Enter,
+//   the arrows and the other grid keys are answered by the grid's own key handler, so the keys are
+//   the same in every cell (F27).
 // - The party card is not drawn here: the screen draws it beside the grid, from `onCardAccount`.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -110,7 +113,19 @@ export function PickerCellEditor(props: EditorProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target;
     // An open list owns ↑ ↓ and Enter (PRD FR-7.16); Esc is answered by the Esc order (FR-7.18).
-    if (target instanceof HTMLElement && target.getAttribute('aria-expanded') === 'true') return;
+    // The list is open whenever the cell is, so ← → and Tab still leave the cell and the Ctrl
+    // shortcuts of the grid still work (plan 46).
+    const listOpen =
+      target instanceof HTMLElement && target.getAttribute('aria-expanded') === 'true';
+    if (
+      listOpen &&
+      !event.ctrlKey &&
+      event.key !== 'ArrowLeft' &&
+      event.key !== 'ArrowRight' &&
+      event.key !== 'Tab'
+    ) {
+      return;
+    }
     if (event.key === 'Escape' || isTypingKey(event)) return;
     if (event.key === 'Tab') {
       event.preventDefault();

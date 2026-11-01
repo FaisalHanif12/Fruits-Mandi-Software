@@ -7,7 +7,7 @@
 | Date | 31 October 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.13, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.14, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---

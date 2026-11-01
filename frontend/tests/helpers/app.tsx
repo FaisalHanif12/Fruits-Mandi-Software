@@ -9,6 +9,7 @@ import { vi } from 'vitest';
 import type { AuthStatus } from '../../src/bindings/AuthStatus';
 import type { DayStatus } from '../../src/bindings/DayStatus';
 import type { FirmDisplay } from '../../src/bindings/FirmDisplay';
+import type { OverridesSettings } from '../../src/bindings/OverridesSettings';
 import type { SessionUser } from '../../src/bindings/SessionUser';
 import type { Settings } from '../../src/bindings/Settings';
 import * as appApi from '../../src/app/api';
@@ -29,6 +30,14 @@ export const FIRM: FirmDisplay = {
   name_en: 'Maher Adnan and Brothers',
   mandi_ur: 'نئی سبزی منڈی، کوٹ رادھا کشن',
   mandi_en: 'New Sabzi Mandi, Kot Radha Kishan',
+};
+
+/** The Overrides and Checks settings as they start (PRD FR-11.10, FR-12.4, FR-7.55). */
+export const OVERRIDES_ON: OverridesSettings = {
+  allow_line_override: true,
+  credit_limit_mode: 'warn',
+  rate_check_enabled: true,
+  rate_check_percent: 30,
 };
 
 export function sessionUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -92,6 +101,8 @@ export function healthyBackend() {
   vi.mocked(authApi.authLock).mockResolvedValue(null);
   vi.mocked(authApi.authLogout).mockResolvedValue(null);
   vi.mocked(settingsApi.settingsGet).mockResolvedValue(settings());
+  // The Owner's switches start as in PRD Section 21: a line may change its commission and لاگا.
+  vi.mocked(settingsApi.settingsGetOverrides).mockResolvedValue(OVERRIDES_ON);
   vi.mocked(settingsApi.prefsSet).mockResolvedValue(null);
 }
 

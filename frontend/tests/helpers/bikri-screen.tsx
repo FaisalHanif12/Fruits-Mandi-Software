@@ -40,10 +40,17 @@ export function cellOf(grid: HTMLElement, rowIndex: number, field: string): HTML
 export const textOf = (grid: HTMLElement, rowIndex: number, field: string) =>
   visible(cellOf(grid, rowIndex, field).textContent).trim();
 
-/** Where focus is in a grid now, as "row:column". */
+/**
+ * Where focus is in a grid now, as "row:column". A picker cell opens its picker as soon as the
+ * cell has the focus (plan 46, PRD FR-7.16): the field with the cursor is then in a popup outside
+ * the grid, and its cell is the one the grid shows as focused.
+ */
 export function focusedIn(grid: HTMLElement): string | null {
   const active = document.activeElement;
-  const cell = active?.closest<HTMLElement>('.ag-cell');
+  const inEditor = active?.closest('.ag-custom-component-popup') != null;
+  const cell = inEditor
+    ? grid.querySelector<HTMLElement>('.ag-cell-focus')
+    : active?.closest<HTMLElement>('.ag-cell');
   if (cell == null || !grid.contains(cell)) return null;
   const row = cell.closest<HTMLElement>('.ag-row');
   return `${row?.getAttribute('row-index') ?? '?'}:${cell.getAttribute('col-id') ?? '?'}`;

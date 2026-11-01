@@ -1,6 +1,6 @@
 // Plan 32, R7 on the shared master picker: a mouse click opens the list of every record of the kind
-// (recent first, then by code), a long list is read page by page, and arriving by keyboard does not
-// open it (PRD 7.2 stays). Adding a missing record from the list (plan 41) is in
+// (recent first, then by code), a long list is read page by page, and (plan 46, PRD FR-7.16, v1.14)
+// arriving by keyboard opens it too. Adding a missing record from the list (plan 41) is in
 // picker-add-on-the-spot.test.tsx. Both languages, against a fake of the search.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -163,17 +163,19 @@ describe.each(LANGUAGES)('Picker opened by a click (%s)', (language) => {
     });
   });
 
-  it('arriving by keyboard does not open the list; typing does (PRD 7.2)', async () => {
+  it('arriving by keyboard opens the list at once, recent first; typing narrows it (PRD FR-7.16)', async () => {
     const { input, user } = setup(language);
     screen.getByTestId('before').focus();
     await user.tab();
     expect(input).toHaveFocus();
-    expect(input).toHaveAttribute('aria-expanded', 'false');
-    expect(options()).toHaveLength(0);
-    expect(searchApi.searchMasters).not.toHaveBeenCalled();
-    await user.keyboard('0');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
     await waitFor(() => {
-      expect(input).toHaveAttribute('aria-expanded', 'true');
+      expect(options().length).toBeGreaterThan(1);
+    });
+    expect(searchApi.searchMasters).toHaveBeenCalledWith(expect.objectContaining({ text: '' }));
+    await user.keyboard('0002');
+    await waitFor(() => {
+      expect(options()).toHaveLength(1);
     });
   });
 

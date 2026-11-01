@@ -4,7 +4,8 @@
 // ↑ ↓ ← → move to the field the user sees in that direction. ← and → leave a text field only
 // when its whole value is selected or the cursor is already at the edge (shouldLeaveField).
 // Enter in a text field moves to the next field in reading order. While a list is open
-// (aria-expanded="true", as pickers set it) the list owns ↑ ↓ and Enter. Entering a field
+// (aria-expanded="true", as pickers set it) the list owns ↑ ↓ and Enter; a picker's ← and →
+// still leave the field like in any text field (data-picker-field). Entering a field
 // selects its whole value. Screens never write their own arrow handlers (Code Standards F27).
 
 import { useMemo, type FocusEvent, type KeyboardEvent } from 'react';
@@ -49,6 +50,16 @@ function focusField(field: HTMLElement): void {
   if (isTextField(field)) field.select();
 }
 
+// Enter keys that a picker has already used (it picked, or kept the record it has) and that found
+// no field after it. The form treats them as an Enter on the last field, so it can finish (plan
+// 46): a picker's list is open whenever the field has the focus, and an open list keeps Enter.
+const passedOn = new WeakSet<Event>();
+
+/** Tells the form that this Enter was used by a picker that has no field after it to go to. */
+export function passEnterToForm(event: KeyboardEvent<HTMLElement>): void {
+  passedOn.add(event.nativeEvent);
+}
+
 function makeKeyDown(onSubmit: (() => void) | undefined) {
   return (event: KeyboardEvent<HTMLElement>): void => {
     handleKeyDown(event, onSubmit);
@@ -59,14 +70,25 @@ function handleKeyDown(
   event: KeyboardEvent<HTMLElement>,
   onSubmit: (() => void) | undefined,
 ): void {
-  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+  const passed = event.key === 'Enter' && passedOn.has(event.nativeEvent);
+  if (
+    (event.defaultPrevented && !passed) ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey
+  ) {
     return;
   }
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
-  // A list that is open (a picker, a select) owns ↑ ↓ Enter and Esc (FR-7.16).
-  if (target.getAttribute('aria-expanded') === 'true' || target.closest('[data-nav-owns-keys]')) {
-    return;
+  // A list that is open (a picker, a select) owns ↑ ↓ Enter and Esc (FR-7.16). A picker's list is
+  // open whenever the field has the focus, so ← and → still leave a picker like any text field
+  // (FR-7.15, plan 46); the open list of anything else keeps every key.
+  if (target.closest('[data-nav-owns-keys]')) return;
+  if (target.getAttribute('aria-expanded') === 'true' && !passed) {
+    const sideways = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+    if (!(sideways && target.hasAttribute('data-picker-field'))) return;
   }
   const container = event.currentTarget;
   const fields = fieldsOf(container);

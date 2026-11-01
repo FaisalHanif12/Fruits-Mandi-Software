@@ -267,11 +267,10 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       cellEditor: PickerCellEditor,
       cellEditorPopup: true,
       cellEditorPopupPosition: 'under',
-      // A click on a picker cell that already has the focus opens the picker with the full list,
-      // like a click on the field of a form (plan 32, R7). The click that only selects the cell
-      // (a press on a cell that had no focus) opens nothing, so moving about the grid with the
-      // mouse stays quiet. A key never opens the list either: arriving on the cell by Enter, Tab or
-      // an arrow opens nothing, and Alt+↓ is the key for the list (PRD FR-7.16, gridKeys.ts).
+      // A picker cell opens its picker with the full list as soon as it gets the focus, by a click
+      // or by a key (GridInner.onCellFocused, PRD FR-7.16, plan 46). A click on the cell that
+      // already has the focus, with its list closed (Esc), opens it again, like a click on the
+      // field of a form (plan 32, R7). Alt+↓ is the key for that (gridKeys.ts).
       onCellClicked: (event) => {
         if (event.data === undefined || !isEditable(column, event.data)) return;
         const { rowIndex } = event;
@@ -508,6 +507,12 @@ function GridInner({
   const getKeyHandler = useLatest(keyHandler);
 
   const mouseFocusTracker = useMouseFocus();
+  // The cell that had the focus before, so a picker cell opens its list when the focus MOVES onto
+  // it, not each time the grid says the same cell is focused again (after Esc, for example).
+  const lastFocus = useRef<{ rowIndex: number; colId: string } | null>(null);
+  // True while a new grid puts the focus back on the cell it had (a language switch): the list is
+  // not opened by that.
+  const restoring = useRef(false);
   const columnDefs = useMemo(
     () => [
       ...columns.map((column) =>
@@ -582,7 +587,27 @@ function GridInner({
     const focus = store.getState().focus;
     const rowIndex =
       focus === null ? -1 : store.getState().rows.findIndex((row) => row.rowId === focus.rowId);
-    if (focus !== null && rowIndex >= 0) event.api.setFocusedCell(rowIndex, focus.field);
+    if (focus !== null && rowIndex >= 0) {
+      restoring.current = true;
+      event.api.setFocusedCell(rowIndex, focus.field);
+      restoring.current = false;
+      lastFocus.current = { rowIndex, colId: focus.field };
+    }
+  };
+
+  // A picker cell that gets the focus opens its picker with the full list (PRD FR-7.16, plan 46).
+  // It waits one turn, so the press of the mouse that focused the cell is over, and checks again
+  // that the focus is still on the cell and that nothing is being typed in yet.
+  const openPickerCell = (rowIndex: number, field: string) => {
+    window.setTimeout(() => {
+      const api = apiRef.current;
+      if (api === null || api.isDestroyed()) return;
+      const focused = api.getFocusedCell();
+      if (focused?.rowIndex !== rowIndex || focused.column.getColId() !== field) return;
+      if (api.getEditingCells().length > 0) return;
+      store.getState().setEditHint('open-list');
+      api.startEditingCell({ rowIndex, colKey: field });
+    }, 0);
   };
 
   const onCellFocused = (event: CellFocusedEvent<EntryRow>) => {
@@ -598,8 +623,21 @@ function GridInner({
       source === 'pointerdown' || source === 'mousedown' || source === 'touchstart',
     );
     const row = store.getState().rows[event.rowIndex];
-    if (row !== undefined)
-      store.getState().setFocus({ rowId: row.rowId, field: event.column.getColId() });
+    const colId = event.column.getColId();
+    if (row !== undefined) store.getState().setFocus({ rowId: row.rowId, field: colId });
+    const previous = lastFocus.current;
+    lastFocus.current = { rowIndex: event.rowIndex, colId };
+    const moved = previous?.rowIndex !== event.rowIndex || previous.colId !== colId;
+    const column = columns.find((candidate) => candidate.field === colId);
+    if (
+      moved &&
+      !restoring.current &&
+      row !== undefined &&
+      column?.type === 'picker' &&
+      isEditable(column, row)
+    ) {
+      openPickerCell(event.rowIndex, colId);
+    }
   };
 
   const explainedWorking =
@@ -620,6 +658,7 @@ function GridInner({
         if (!(next instanceof Element) || event.currentTarget.contains(next)) return;
         if (next.closest('.ag-popup') !== null) return;
         if ((apiRef.current?.getEditingCells().length ?? 0) > 0) return;
+        lastFocus.current = null;
         apiRef.current?.clearFocusedCell();
       }}
     >

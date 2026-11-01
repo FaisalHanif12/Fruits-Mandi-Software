@@ -9,6 +9,7 @@
 
 mod index;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use mandi_db::masters as repo;
@@ -307,6 +308,21 @@ fn account_usage_key(scope: AccountScope, control_id: Option<i64>) -> String {
     }
 }
 
+/// The accounts the lot seller list leaves out right now (PRD 12.3 "Seller code", FR-12.26,
+/// FR-12.36, plan 46 B1): اپنا مال while no open trip has a purchase with goods left, and the
+/// account of a garden that is not open. Read from the database for each call, because it changes
+/// with every sale (the index is a speed aid only, Code Standards B27). Other scopes leave nothing
+/// out, so they pay no extra read.
+fn hidden_for(ctx: &Context, scope: AccountScope) -> Result<Option<HashSet<i64>>, ServiceError> {
+    if scope != AccountScope::LotSeller {
+        return Ok(None);
+    }
+    let ids = ctx
+        .db
+        .read(|conn| mandi_db::accounts::lot_seller_unusable(conn).map_err(ServiceError::from))?;
+    Ok(Some(ids.into_iter().collect()))
+}
+
 fn usage_by_key(ctx: &Context, actor: &Actor, key: &str) -> Result<Usage, ServiceError> {
     let value = ctx.db.read(|conn| store::pref(conn, actor.user_id, key))?;
     Ok(value.as_ref().map(parse_usage).unwrap_or_default())
@@ -329,11 +345,13 @@ pub fn recent_accounts(
         actor,
         &account_usage_key(input.scope, input.control_id),
     )?;
+    let hidden = hidden_for(ctx, input.scope)?;
     Ok(index.recent_accounts(
         input.scope,
         input.control_id,
         &usage,
         input.include_dead.unwrap_or(false),
+        hidden.as_ref(),
     ))
 }
 
@@ -375,6 +393,12 @@ pub fn touch_account(
 /// here: the list previews the top match while the user types, and the code is only taken by
 /// [`resolve_code`] (PRD FR-7.38).
 ///
+/// The lot seller scope lists only what a lot can use now (PRD 12.3, FR-12.26, plan 46 B1): the
+/// sellers and the پختہ کھاتہ بیوپاری always, the separate khatas that exist, اپنا مال only while an
+/// open trip has a purchase with goods left, and a garden only while it is open. That is read from
+/// the database for each call. A full code typed in the field is still taken by [`resolve_code`]
+/// as before; the preview and the save then refuse an account that cannot be used.
+///
 /// # Errors
 /// `ERR_REQUIRED` on `control_id` for scope `control`; `ERR_TEXT_TOO_LONG` on `text`;
 /// `ServiceError::Db`.
@@ -393,6 +417,7 @@ pub fn search_accounts(
     )?;
     let limit = usize::try_from(input.limit).unwrap_or(MAX_HITS);
     let offset = usize::try_from(input.offset).unwrap_or(0);
+    let hidden = hidden_for(ctx, input.scope)?;
     Ok(index.search_accounts_page(
         input.scope,
         input.control_id,
@@ -401,6 +426,7 @@ pub fn search_accounts(
             offset,
             limit,
             include_dead: input.include_dead.unwrap_or(false),
+            hidden: hidden.as_ref(),
         },
         &usage,
     ))

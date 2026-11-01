@@ -381,9 +381,12 @@ fn empty_text_gives_every_active_record_recent_first_then_by_code() {
         account_page(&env, &owner, AccountScope::Seller, "", 0, 50),
         [rahim.code.as_str(), "0031"]
     );
-    // اپنا مال is only in the seller field of a lot.
+    // The seller field of a lot has the sellers and the پختہ کھاتہ seller. اپنا مال is only ever in
+    // that field, and only while an open trip has goods left to sell (PRD 12.3, FR-12.26); this
+    // world has no trip, so it is not in the list (the cases with a trip are in lot_seller_list.rs).
     let lot = account_page(&env, &owner, AccountScope::LotSeller, "", 0, 50);
-    assert!(lot.contains(&"030119998".to_owned()));
+    assert_eq!(lot, [rahim.code.as_str(), "0031"]);
+    assert!(!lot.contains(&"030119998".to_owned()));
     assert!(
         !account_page(&env, &owner, AccountScope::Seller, "", 0, 50)
             .contains(&"030119998".to_owned())

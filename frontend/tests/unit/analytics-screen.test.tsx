@@ -16,6 +16,8 @@ import { EMPTY_ANALYTICS_FILTERS } from '../../src/features/analytics/filters';
 import { useAnalyticsStore } from '../../src/features/analytics/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLayoutStep, type LayoutStep } from '../../src/shared/hooks/useLayoutStep';
+import * as accountApi from '../../src/shared/accounts/api';
+import * as searchApi from '../../src/shared/search/api';
 import { useLanguageStore } from '../../src/shared/i18n';
 import {
   healthyBackend,
@@ -59,6 +61,11 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(useLayoutStep).mockReturnValue('normal');
   healthyBackend();
+  // A filter picker opens its list as soon as it has the focus (plan 46): its search answers a list.
+  vi.mocked(accountApi.searchAccounts).mockResolvedValue([]);
+  vi.mocked(accountApi.searchAccountsRecent).mockResolvedValue([]);
+  vi.mocked(searchApi.searchMasters).mockResolvedValue([]);
+  vi.mocked(searchApi.searchRecent).mockResolvedValue([]);
   act(() => {
     useAnalyticsStore.getState().reset();
   });

@@ -6,7 +6,7 @@
 //! Urdu letters, diacritics and zero-width characters never matter (NFR-URD-18).
 
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::{Arc, OnceLock};
 
 use mandi_db::masters::SearchSource;
@@ -169,10 +169,12 @@ impl Entry {
 #[derive(Debug, Default, Clone)]
 pub struct Index {
     scopes: BTreeMap<SearchScope, Vec<Arc<Entry>>>,
-    /// The accounts the seller field of a lot offers besides the sellers themselves: the separate
-    /// khatas (control 0305, PRD 12.3, FR-16.7). Held with the sellers in id order, so the lot
-    /// field searches one list. اپنا مال is a seller account and stays in the seller list (it is
-    /// left out of every field but this one by `account_list`).
+    /// The accounts the seller field of a lot may offer: the sellers, the separate khatas (control
+    /// 0305, PRD 12.3, FR-16.7) and the gardens (PRD FR-12.36), in id order, so the lot field
+    /// searches one list. اپنا مال is a seller account and stays in the seller list (it is left out
+    /// of every field but this one by `account_list`). Which of them are usable right now (اپنا مال
+    /// with goods left, an open garden) is read from the database for each search and passed in as
+    /// `hidden` (plan 46 B1); the index never decides it.
     lot_sellers: Vec<Arc<Entry>>,
 }
 
@@ -612,13 +614,16 @@ fn full_list<'a>(
 /// Which page of an account search, and whether a person in the dead amount is listed too (PRD
 /// FR-10.10: only the receipt picker and the ادھار رقم واپسی picker ask for him).
 #[derive(Debug, Clone, Copy)]
-pub struct AccountPage {
+pub struct AccountPage<'a> {
     /// How many hits to skip.
     pub offset: usize,
     /// The most hits in this page.
     pub limit: usize,
     /// True to list the people in the dead amount (marked `is_dead`).
     pub include_dead: bool,
+    /// Accounts the field leaves out for now, read from the database by the caller at query time
+    /// (plan 46 B1: the lot seller list). `None` leaves nothing out.
+    pub hidden: Option<&'a HashSet<i64>>,
 }
 
 impl Index {
@@ -672,16 +677,17 @@ impl Index {
         scope: AccountScope,
         control_id: Option<i64>,
         typed: &str,
-        page: AccountPage,
+        page: AccountPage<'_>,
         usage: &Usage,
     ) -> Vec<AccountHit> {
         let AccountPage {
             offset,
             limit,
             include_dead,
+            hidden,
         } = page;
         let limit = limit.clamp(1, MAX_HITS);
-        let (list, in_control) = self.account_list(scope, control_id, include_dead);
+        let (list, in_control) = self.account_list(scope, control_id, include_dead, hidden);
         if typed.trim().is_empty() {
             return full_list(list, in_control, usage, offset, limit)
                 .into_iter()
@@ -708,6 +714,7 @@ impl Index {
             offset: 0,
             limit,
             include_dead: false,
+            hidden: None,
         };
         self.search_accounts_page(scope, control_id, typed, page, usage)
     }
@@ -721,8 +728,9 @@ impl Index {
         control_id: Option<i64>,
         usage: &Usage,
         include_dead: bool,
+        hidden: Option<&HashSet<i64>>,
     ) -> Vec<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id, include_dead);
+        let (list, in_control) = self.account_list(scope, control_id, include_dead, hidden);
         full_list(list, in_control, usage, 0, MAX_FULL_LIST)
             .into_iter()
             .filter_map(|e| account_hit(e))
@@ -736,7 +744,7 @@ impl Index {
         control_id: Option<i64>,
         id: i64,
     ) -> bool {
-        let (list, in_control) = self.account_list(scope, control_id, false);
+        let (list, in_control) = self.account_list(scope, control_id, false, None);
         list.binary_search_by_key(&id, |e| e.id)
             .ok()
             .and_then(|at| list.get(at))
@@ -750,7 +758,7 @@ impl Index {
         if scope == AccountScope::Control {
             return Vec::new();
         }
-        let (list, _) = self.account_list(scope, None, true);
+        let (list, _) = self.account_list(scope, None, true, None);
         list.iter()
             .filter(|e| e.running == Some(running))
             .filter_map(|e| account_hit(e))
@@ -764,7 +772,7 @@ impl Index {
         control_id: Option<i64>,
         code: &str,
     ) -> Option<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id, true);
+        let (list, in_control) = self.account_list(scope, control_id, true, None);
         list.iter()
             .filter(|e| in_control(e))
             .find(|e| e.code == code.to_lowercase())
@@ -777,15 +785,21 @@ impl Index {
     /// An account in the dead amount (PRD FR-10.10) is in the test only when `include_dead` is
     /// true: the receipt picker and the ادھار رقم واپسی picker ask for it, every other field leaves
     /// it out like any inactive account.
-    fn account_list(
-        &self,
+    ///
+    /// `hidden` holds accounts the caller read from the database as not usable right now (plan 46
+    /// B1, the lot seller list). The test leaves them out, so a page, a rank and a count all see
+    /// the same list.
+    fn account_list<'a>(
+        &'a self,
         scope: AccountScope,
         control_id: Option<i64>,
         include_dead: bool,
-    ) -> (&[Arc<Entry>], impl Fn(&Entry) -> bool) {
+        hidden: Option<&'a HashSet<i64>>,
+    ) -> (&'a [Arc<Entry>], impl Fn(&Entry) -> bool + 'a) {
         let list = match scope {
             AccountScope::Seller => self.entries(SearchScope::Seller),
-            // Sellers, اپنا مال and the separate khatas (PRD 12.3, FR-12.26, FR-16.7).
+            // Sellers, اپنا مال, the separate khatas and the gardens (PRD 12.3, FR-12.26, FR-16.7);
+            // the caller leaves out the unusable ones with `hidden`.
             AccountScope::LotSeller => self.lot_sellers.as_slice(),
             AccountScope::Buyer => self.entries(SearchScope::Buyer),
             AccountScope::Any | AccountScope::Control => self.entries(SearchScope::AnyAccount),
@@ -797,6 +811,7 @@ impl Index {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
                 && (include_dead || !e.dead)
+                && !hidden.is_some_and(|ids| ids.contains(&e.id))
         })
     }
 

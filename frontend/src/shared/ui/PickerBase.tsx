@@ -2,9 +2,12 @@
 // (AccountPicker) are thin wrappers that give it a source of records (PRD FR-7.10, FR-7.16,
 // FR-7.35, FR-7.40, FR-7.41, Code Standards F7, F40). Built on Downshift `useCombobox`.
 //
-// - A mouse click on the field opens the list of every record of the kind, recent first, then by
-//   code (plan 32, R7). Arriving by keyboard (Enter, Tab, arrows) does not open it: the arrows
-//   keep moving between fields, and typing or Alt+↓ opens the list (PRD 7.2).
+// - The list of every record of the kind, recent first, then by code, opens as soon as the field
+//   gets the focus, by a click or by the keyboard (Enter, Tab, arrows), and on a click, typing or
+//   Alt+↓ (PRD FR-7.16, FR-7.41, plan 46). It replaces the v1.8 rule that arriving by keyboard
+//   opens nothing. A record already chosen is highlighted, so Enter keeps it and moves on; an
+//   empty field highlights nothing, so Enter leaves it empty and moves on until ↓ or typing points
+//   at a row.
 // - Typing searches (shared/search). Both scripts are searched and a small spelling mistake is
 //   forgiven, by the backend. The picker never converts English letters to Urdu (F41): the text
 //   goes to the search exactly as typed.
@@ -16,10 +19,11 @@
 //   field at once. An empty list says so in words ("No expense heads yet"), above the row. A
 //   filter box has no such row.
 // - Keys (PRD FR-7.16): with the list open ↑ ↓ move through the matches, Enter picks the
-//   highlighted one (the best match is highlighted at once) and moves on, Esc closes the list.
+//   highlighted one (the best match is highlighted at once) and moves on, ← → and Tab leave the
+//   field (form navigation and the grid do that), Esc closes the list.
 //   ↓ on the last match moves to the add row, and Enter there adds. Enter on text that matches
 //   nothing (and is not a code) adds it too. With the list closed ↑ ↓ move between fields like in
-//   any other field. Alt+↓ opens the full list without typing, the recent records first.
+//   any other field. Alt+↓ opens the full list again, the recent records first.
 // - Esc order (FR-7.18): close the list, else bring back the chosen name, else leave the screen.
 // - The chosen record belongs to the screen (`value`). The field shows its name for the current
 //   language, so a language switch keeps the value and changes only the words (FR-7.33).
@@ -44,7 +48,14 @@ import {
 import { uiErrorOf } from '../api';
 import { tokenPx } from '../hooks/tokenPx';
 import { displayName, otherScriptLang, otherScriptName, useLanguage, type Named } from '../i18n';
-import { SHORTCUTS, focusNextField, keepKeyForApp, matchesShortcut, useEscape } from '../keyboard';
+import {
+  SHORTCUTS,
+  focusNextField,
+  keepKeyForApp,
+  matchesShortcut,
+  passEnterToForm,
+  useEscape,
+} from '../keyboard';
 import {
   PICKER_LOAD_AHEAD_ROWS,
   useFetchHits,
@@ -207,6 +218,11 @@ export function PickerBase<H extends PickerHit>({
   // True while the Index form of the "add" button is open above the screen. The field loses focus
   // to it, and that must not drop what was typed or send it as a code (plan 32, R8).
   const adding = usePickerFlag();
+  // True from a pick until the field is left. A focus that comes back by itself right after a pick
+  // (the form of the add row closing) must not open the list again (plan 46).
+  const justPicked = usePickerFlag();
+  // The list has been given its first highlight since it opened (see the effect below).
+  const highlightSet = usePickerFlag();
   // The add row is the last stop of the list: ↓ on the last match moves to it (plan 41, R1). It is
   // not one of the matches, so Downshift does not know it and the matches keep their old meaning.
   const [addActive, setAddActive] = useState(false);
@@ -223,6 +239,7 @@ export function PickerBase<H extends PickerHit>({
 
   const closeList = () => {
     setOpen(false);
+    highlightSet.set(false);
     setAddActive(false);
     // A closed list forgets how far it was scrolled; the next one opens at the top.
     setScrollTop(0);
@@ -232,6 +249,7 @@ export function PickerBase<H extends PickerHit>({
     onChange(hit);
     touch.mutate(hit.id);
     setTypedNow(null);
+    justPicked.set(true);
     closeList();
   };
 
@@ -291,6 +309,19 @@ export function PickerBase<H extends PickerHit>({
     highlightRef.current?.(highlighted);
   }, [highlighted]);
 
+  // The first highlight of a list that opened with nothing typed (focus, click, Alt+↓, plan 46). A
+  // field that already has a record highlights that record, so the list shows where it is; an empty
+  // field highlights nothing. Either way Enter moves on and picks nothing the user has not pointed
+  // at: an optional field (the اڈا of a بکری) stays empty, and a record is never swapped for the
+  // first row by a stray Enter. ↓ starts the walk down the rows. Typing sets its own highlight (the
+  // best match, at once), so this runs only while nothing is typed.
+  const valueId = value?.id ?? null;
+  useEffect(() => {
+    if (!open || isPending || typed !== null || highlightSet.get()) return;
+    highlightSet.set(true);
+    setHighlightedIndex(valueId === null ? -1 : hits.findIndex((hit) => hit.id === valueId));
+  }, [open, isPending, typed, valueId, hits, setHighlightedIndex, highlightSet]);
+
   // Esc closes the list first, then brings back the chosen name (FR-7.18). Downshift answers the
   // key in the field itself; this entry lets a dialog around the field know a list is open, so
   // the dialog stays until the next Esc.
@@ -325,10 +356,12 @@ export function PickerBase<H extends PickerHit>({
   const first = Math.max(Math.floor(scrollTop / rowPx) - OVERSCAN_ROWS, 0);
   const last = Math.min(first + visibleRows + 2 * OVERSCAN_ROWS, hits.length);
 
-  // After Enter has picked: the next field of the form, or what the screen says (a grid cell).
-  const advance = (field: HTMLElement) => {
+  // After Enter has picked: the next field of the form, or what the screen says (a grid cell). On
+  // the last field of a form, the form gets the Enter and finishes if it has something to finish
+  // (the sign-in screen, the header of a بکری that goes on to the lots).
+  const advance = (field: HTMLElement, event?: KeyboardEvent<HTMLInputElement>) => {
     if (onEnterPicked !== undefined) onEnterPicked();
-    else focusNextField(field);
+    else if (!focusNextField(field) && event !== undefined) passEnterToForm(event);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -337,6 +370,7 @@ export function PickerBase<H extends PickerHit>({
       // Alt+↓: the full list without typing, recent records first (FR-7.16, FR-7.41).
       event.preventDefault();
       keepKeyForApp(event);
+      justPicked.set(false);
       setOpen(true);
       return;
     }
@@ -389,6 +423,13 @@ export function PickerBase<H extends PickerHit>({
         // whole text goes on from here, or its own answer is asked for and picked when it comes
         // (PRD FR-7.14, FR-7.39). If he types more, or leaves, in the meantime, nothing is picked.
         const text = (readTyped() ?? '').trim();
+        if (text === '') {
+          // Nothing is typed and the list has not answered yet: nothing is highlighted, so Enter
+          // keeps what the field has and moves on. It never picks a record the user has not seen.
+          closeList();
+          advance(event.currentTarget, event);
+          return;
+        }
         if (resolveOnEnter?.(text) === true) {
           closeList();
           return;
@@ -412,12 +453,27 @@ export function PickerBase<H extends PickerHit>({
       const hit = hits[highlightedIndex];
       if (hit === undefined) {
         closeList();
+        if ((typed ?? '').trim() === '') {
+          // Nothing typed and nothing highlighted: the record that is there stays, and Enter
+          // moves on like in any other field (FR-7.14, plan 46).
+          advance(event.currentTarget, event);
+          return;
+        }
         enterNoMatch(typed ?? '', event.currentTarget);
+        return;
+      }
+      if (value !== null && hit.id === value.id) {
+        // The highlighted row is the record the field has: nothing changes, so the screen is not
+        // told (a seller picked again would ask for his memory again). Enter only moves on.
+        setTypedNow(null);
+        justPicked.set(true);
+        closeList();
+        advance(event.currentTarget, event);
         return;
       }
       pick(hit);
       // Enter picks and goes on to the next field, as it does in every field (FR-7.14).
-      advance(event.currentTarget);
+      advance(event.currentTarget, event);
     }
   };
 
@@ -459,8 +515,16 @@ export function PickerBase<H extends PickerHit>({
     else onEnterNoMatch?.(text);
   }
 
+  // The list opens as soon as the field has the focus, by a click or by a key (PRD FR-7.16). A
+  // focus that comes back by itself right after a pick does not open it again.
+  const onFocus = () => {
+    setFocused(true);
+    if (readOnly !== true && !justPicked.get()) setOpen(true);
+  };
+
   const onBlur = () => {
     setFocused(false);
+    justPicked.set(false);
     if (adding.get()) {
       closeList();
       return;
@@ -505,9 +569,7 @@ export function PickerBase<H extends PickerHit>({
       // replaces it, as it does when the field is entered by keyboard (PRD FR-7.15).
       if (readOnly !== true && typed === null) event.currentTarget.select();
     },
-    onFocus: () => {
-      setFocused(true);
-    },
+    onFocus,
     onBlur,
     onChange: (event: { currentTarget: HTMLInputElement }) => {
       if (readOnly !== true) {
@@ -523,6 +585,8 @@ export function PickerBase<H extends PickerHit>({
       {/* A name wider than the box is cut with an ellipsis and read in full on hover (plan 38). */}
       <input
         {...inputProps}
+        // Form navigation lets ← and → leave this field while its list is open (plan 46).
+        data-picker-field=""
         {...(addActive ? { 'aria-activedescendant': addRowId } : {})}
         title={typeof inputProps.value === 'string' ? inputProps.value : undefined}
         className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis`}

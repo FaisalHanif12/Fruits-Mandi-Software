@@ -911,6 +911,37 @@ pub fn search_sources(
     rows.collect()
 }
 
+/// The accounts the seller field of a lot must leave out right now (PRD 12.3 "Seller code",
+/// FR-12.26, FR-12.36, plan 46 B1). The search index only holds the accounts; whether اپنا مال has
+/// goods to sell and whether a garden is open changes with every sale, so it is read here, at query
+/// time, and the index is a speed aid only (Code Standards B27).
+///
+/// - اپنا مال (030119998) is left out unless a saved purchase of an open trip has نگ left for our
+///   shop. The test is the one a lot takes from (`our_left`, PRD FR-12.41) and the one the ready
+///   goods use (`purchases::ready_by`): `qty - other_qty - (qty_sold - qty_sold_other) -
+///   qty_written_off > 0`.
+/// - The account of a garden that is not open (closed) is left out.
+///
+/// The sellers, the پختہ کھاتہ بیوپاری and the separate khatas are never in the answer.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn lot_seller_unusable(conn: &Connection) -> rusqlite::Result<Vec<i64>> {
+    let mut statement = conn.prepare(
+        "SELECT a.id FROM accounts a
+         WHERE a.code = ?1
+           AND NOT EXISTS (SELECT 1 FROM ventures v JOIN purchases p ON p.venture_id = v.id
+                           WHERE v.kind = 'trip' AND v.status = 'open' AND p.status = 'saved'
+                             AND p.qty - p.other_qty - (p.qty_sold - p.qty_sold_other)
+                                 - p.qty_written_off > 0)
+         UNION ALL
+         SELECT g.account_id FROM ventures g
+         WHERE g.kind = 'garden' AND g.status <> 'open' AND g.account_id IS NOT NULL",
+    )?;
+    let rows = statement.query_map(params![OWN_GOODS_CODE], |r| r.get(0))?;
+    rows.collect()
+}
+
 /// Gives an account its note (the note of a separate khata).
 ///
 /// # Errors

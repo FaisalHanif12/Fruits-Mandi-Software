@@ -220,6 +220,9 @@ function partyMatches(party: Party, scope: string, text: string): boolean {
   // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
   if (scope === 'lot_seller') {
     if (party.type !== 'seller') return false;
+    // Only usable entries (plan 46, PRD FR-12.26): اپنا مال only while a trip has goods left, which
+    // the stand-in has for the `?own` page only.
+    if (party.code === OWN_CODE && !devFlag('own')) return false;
   } else if (scope === 'seller' && party.code === OWN_CODE) {
     return false;
   } else if (scope !== 'any' && party.type !== scope) {
@@ -618,6 +621,13 @@ const handlers: Record<string, Handler> = {
   // Plan 14: the print box, the preview and the Printing settings. `#/dev/bikri?id=41&windows`
   // pretends the computer is Windows (the print goes through); without it the answer is the one a
   // Mac gives, ERR_PRINT_WINDOWS_ONLY, so the preview offer can be photographed.
+  // The Owner's switches start on (PRD FR-11.10): a line may change its commission and لاگا.
+  settings_get_overrides: () => ({
+    allow_line_override: true,
+    credit_limit_mode: 'warn',
+    rate_check_enabled: true,
+    rate_check_percent: 30,
+  }),
   settings_get_printing: () => printingSettings(),
   settings_set_printing: (input) => ({
     ...printingSettings(),

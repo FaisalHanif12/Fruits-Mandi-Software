@@ -27,7 +27,12 @@ export {
 export { arrowSide, elementDirection, intoScreenSide, menuSide, type Side } from './direction';
 export { focusRegion, registerFocusRegion, useFocusRegion, type FocusRegion } from './focusRegions';
 export { pickNeighbour, shouldLeaveField, type Box, type Move } from './fieldNavigation';
-export { focusNextField, formNavigationProps, useFormNavigation } from './formNavigation';
+export {
+  focusNextField,
+  formNavigationProps,
+  passEnterToForm,
+  useFormNavigation,
+} from './formNavigation';
 export { treeKeyHandler, type TreeKeyOptions } from './treeKeys';
 export {
   DEFAULT_PAGE_SIZE,

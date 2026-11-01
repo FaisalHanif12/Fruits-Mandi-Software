@@ -340,9 +340,22 @@ describe.each(LANGUAGES)('keys of the grids (%s)', (language) => {
   it('↑ on the first line goes back up to the lot, and Alt+↓ opens the list of a picker cell', async () => {
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
+    // The buyer cell's list is open (plan 46, PRD FR-7.16), and an open list keeps ↑ ↓ for choosing.
+    // Esc closes it, and then ↑ goes back up to the lot, whose seller list opens in its turn.
+    expect(await screen.findAllByRole('option')).not.toHaveLength(0);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    });
     await user.keyboard('{ArrowUp}');
     await waitFor(() => {
       expect(focusedIn(lotsGrid(language))).not.toBeNull();
+    });
+    expect(await screen.findAllByRole('option')).not.toHaveLength(0);
+    // Esc closes it; Alt+↓ opens the full list again without typing; Esc closes it once more.
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('option')).not.toBeInTheDocument();
     });
     await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
     expect(await screen.findAllByRole('option')).not.toHaveLength(0);
