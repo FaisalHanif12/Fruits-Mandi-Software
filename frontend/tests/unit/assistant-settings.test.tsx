@@ -267,11 +267,6 @@ describe.each(LANGUAGES)('the Settings group (%s)', (language) => {
         name: message(language, 'assistant-settings-test'),
       });
       expect(test).toBeEnabled();
-      vi.mocked(assistantApi.assistantStatus).mockResolvedValue({
-        ...real.STATUS_OFF,
-        key_saved: false,
-        key_last4: null,
-      });
     });
 
     it('is off, with the reason, when no key is saved', async () => {
