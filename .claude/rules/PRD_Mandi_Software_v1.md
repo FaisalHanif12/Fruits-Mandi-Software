@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.14 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.15 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (two), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.14 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.15 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality | v1.7 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.7 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.12 |
@@ -125,7 +125,7 @@ Developers must use these exact Urdu words on Urdu screens and these exact Engli
 | انڈکس | Index | Master list of all accounts | "Add a new buyer to the index" |
 | بیوپاری / زمیندار / بزگر | Seller / Zamindar / Grower | Seller side: trader, landowner, grower | رحیم sends 50 پیٹی of کیلا |
 | گاہک / خریدار | Buyer | Buyer | اکرم ٹول ٹیکس buys 20 پیٹی |
-| پختہ کھاتہ | Pukhta Khata | Shared account for one-time or rare parties who do not have their own account. The client's word is پختہ کھاتہ (not پکا کھاتہ). Charged like any other buyer or seller. | A walk-in buyer شاہد buys 10 پیٹی once |
+| پختہ کھاتہ | Pukhta Khata | Shared account for one-time or rare parties who do not have their own account; a rare party can also get his own پختہ account (FR-13.11, v1.15). The client's word is پختہ کھاتہ (not پکا کھاتہ). Charged like any other buyer or seller. | A walk-in buyer شاہد buys 10 پیٹی once |
 | نگ | Nag | One unit or package (پیٹی، کریٹ، بوری، دانہ) | 10 نگ = 10 پیٹی |
 | بکری | Sale | Sale | |
 | بکری بک | Sale Book | Sale book; one بکری = one truck's goods sold | بکری نمبر 1 |
@@ -886,7 +886,7 @@ FR-10.2 [C] **Codes by type** (Umar, 27-10-2026). Each kind of record has a type
 |---|---|---|---|
 | Seller (بیوپاری / زمیندار / بزگر) | **001** | 0010, 0011 ... 0019, 00110, 00111 | [C] |
 | Buyer (گاہک) | **002** | 0020, 0021 ... 00210 | [C] |
-| پختہ کھاتہ | **003** | 0030 (buyer side), 0031 (seller side); system accounts, 13 | [C] |
+| پختہ کھاتہ | **003** | 0030 (buyer side), 0031 (seller side): the shared system accounts, 13; from 0032 a پختہ party's own account, buyer or seller in one series (FR-13.11, v1.15) | [C] |
 | Item (قسم مال) | **004** | 0040, 0041 ... | [C] |
 | Packing (پیکنگ) | **005** | 0050, 0051 ... | [C] |
 | Staff (عملہ) | **006** | 0060, 0061 ... | [C] |
@@ -931,7 +931,7 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 
 | Field | Urdu label | Type | Req | Rules | Source |
 |---|---|---|---|---|---|
-| Account type | قسم کھاتہ | Select: بیوپاری، گاہک (v1.8: a person for ادھار رقم and a الگ کھاتہ are added on their own screens with `F4`) | Yes | Sets the control and code | [C] |
+| Account type | قسم کھاتہ | Select: بیوپاری، گاہک، پختہ کھاتہ گاہک، پختہ کھاتہ بیوپاری (the last two v1.15, FR-13.11) (v1.8: a person for ادھار رقم and a الگ کھاتہ are added on their own screens with `F4`) | Yes | Sets the control and code | [C] |
 | Head (display) | مد | Read-only | | Shown for the chosen control | [S] |
 | Control | کنٹرول | Select | Yes | From type, can change for دیگر | [S] |
 | Account code | کوڈ | Text | Yes | Auto (FR-10.3), unique | [S][C] |
@@ -959,7 +959,7 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 | Note | نوٹ | Text | No | | [A] |
 | System fields | | Auto | | Created by and at, updated by and at | [A] |
 
-FR-10.5 [S] List screen columns: code, Urdu name, English name, city, opening date, opening debit, opening credit, credit allowed, current balance. Footer: total debit, total credit. [C] The list shows only sellers, buyers and the two پختہ کھاتہ accounts, with a type filter: all, بیوپاری, گاہک, پختہ کھاتہ (Umar, 27-10-2026). روکڑ, the payables, income, capital and every other account are seen in the chart of accounts (FR-10.1).
+FR-10.5 [S] List screen columns: code, Urdu name, English name, city, opening date, opening debit, opening credit, credit allowed, current balance. Footer: total debit, total credit. [C] The list shows only sellers, buyers and the two پختہ کھاتہ accounts, with a type filter: all, بیوپاری, گاہک, پختہ کھاتہ (Umar, 27-10-2026). From v1.15 it also shows the پختہ parties' own accounts (FR-13.11), under the پختہ کھاتہ filter, each with its side. روکڑ, the payables, income, capital and every other account are seen in the chart of accounts (FR-10.1).
 FR-10.6 [A] An account with postings cannot be deleted, only made inactive.
 FR-10.7 [A] Duplicate warning when name, tag and phone match an existing account. اسلم BA and اسلم are two different people. Similar names show while typing (FR-7.63).
 FR-10.8 [C] Quick add from any picker (FR-7.69) opens a short form without leaving the current screen. The full انڈکس form is still used to edit a record later.
@@ -1403,6 +1403,13 @@ FR-13.7 [A] Receiving from a one-time buyer: وصولی on پختہ کھاتہ (
 FR-13.8 [A] **Make regular.** If a one-time person starts coming often, a button creates a proper account and moves his open balance to it with a جنرل entry. Not offered for a person in the dead amount (FR-10.10).
 FR-13.9 [A] Analytics and reports can group پختہ کھاتہ by person, so "how much did شاہد buy" still works.
 FR-13.10 [S] **One-time sellers are paid on the spot.** On a پختہ کھاتہ (بیوپاری) lot, نقد starts as the lot's صافی بکری, so his balance is 0 after the save. The munshi can change it if part is paid later.
+FR-13.11 [C] **A پختہ party's own account.** (Umar, 01-11-2026, v1.15) A rare party the shop wants to keep track of is made a پختہ account on the account form, with the type پختہ کھاتہ گاہک or پختہ کھاتہ بیوپاری.
+- Code: the next running number of the پختہ series 003, from 0032 (0030 and 0031 are the shared accounts). Buyers and sellers share the series, and the list, the picker row and the party card show his side. In a buyer or seller box his running number finds him only when he is of that side (FR-7.39).
+- He is a full account of his side, with his own ledger, balance, bill or advance matching and party card, and the same commission and لاگا rules as anyone (FR-13.3). No name is typed on his lines and he has no person key.
+- Cash first: as a buyer, credit allowed starts off, so his lines start as نقدی; the Owner can tick credit on. As a seller, نقد on his lot starts as its صافی بکری, as in FR-13.10.
+- He shows in the buyer or seller pickers of his side, in the پختہ کھاتہ filter of the accounts list (FR-10.5), in the پختہ کھاتہ register R9 next to the typed people, and in R20, R24, R35 and analytics like any party.
+- The shared accounts 0030 and 0031, with the name typed on the line, stay for a walk-in (FR-13.1 to FR-13.10). Make regular (FR-13.8) is unchanged.
+Example: نذیر buys now and then. On the account form: type پختہ کھاتہ گاہک, name نذیر, phone 0300-1111111. He gets code 0032. His first line starts as نقدی, and his ledger shows every purchase and payment.
 
 Example (Section 4.5): شاہد buys 10 پیٹی سیب at 1,200. Commission 12,000 × 6 ÷ 100 = 720. لاگا 10 × 8 = 80. He pays 12,800 cash. The register shows one line, paid.
 
@@ -2044,6 +2051,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | E78 | A trip purchase is wrong but some of its goods are sold | Edit refused with the reason; the sale is edited or cancelled first (FR-7.70) |
 | E79 | A new buyer is needed after the day is closed | Saved at once; only an opening balance needs an open date (FR-10.11) |
 | E80 | Wrong partner code typed many times, or the code is forgotten | Waits as FR-8.2; reset with the Owner's password or the recovery code (FR-17.11) |
+| E81 | A rare party has his own پختہ account and is also typed by name under the shared پختہ کھاتہ | Two separate records: his account does not hold the typed lines; make regular (FR-13.8) or a جنرل moves an open amount (FR-13.11) |
 
 ---
 
@@ -2128,6 +2136,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | A76 | The partner code guards every partner total and history (strip, R30, R31, partner parts of R29, R33, R34, R36, R37, analytics F and partner columns, day and month close partner lines, partner totals in previews); partner names in pickers and one entry's split stay open | As stated | Should the split on the بکری screen also need the code? |
 | A77 | The partner code stays open while the user stays on screens behind the code | Until he leaves them | Should it ask on every screen? |
 | A78 | A reason is optional when today's entry is edited | Optional | Should every edit need a reason? |
+| A79 | A پختہ buyer's own account starts with credit off; a پختہ seller's own lot starts with نقد = صافی بکری (FR-13.11) | Cash first | Should a پختہ buyer ever start on credit? |
 | A42 | Some old lines (mostly کیلا) have no rate and an amount that is not qty × a whole rate (4 نگ = 2,950) | Weight items (rate per kg) | Is کیلا sold by weight, or is a lump amount typed? |
 
 ---
@@ -2371,4 +2380,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.12 | 31-10-2026 | Umar's second change of 31-10-2026, approved by Umar. The buyer's and the seller's day slips of R35 show each item with its total, then commission, لاگا and every deduction on their own lines, what was paid today, and the previous and new balance (FR-19.12; it replaces the v1.7 slip layout; the all-parties table stays). R34 is the day total sheet with commission lines and a short buyers' and sellers' table. Every print header carries the trade mark, the owners and the munshi, up to 6 people with a role (Section 21, FR-19.13). E2E-36 and E2E-43 gain these figures; A69 to A74. No money rule, posting or earlier number changed. |
 | 1.13 | 31-10-2026 | Umar's answers of 31-10-2026, approved by Umar. One edit model on every entry: only typed fields change, every worked-out amount is locked and worked out again, the date never changes, the effect shows before save (FR-7.70). Every edit is stamped with its time and user where it happened, with an edit history (FR-7.71). An entry of a closed day is fixed by reopen, fix and close again in one step (FR-21.4, FR-12.18, FR-15.3). Accounts and lists can be added on any day; only an opening balance needs an open date (FR-10.11). A 4-digit partner code opens the partner section and the partner figures (FR-17.11, Section 21). New E76 to E80, E2E-45, E2E-46, A75 to A78. No money rule, posting or earlier test number changed. |
 | 1.14 | 01-11-2026 | Umar's change of 01-11-2026, made while testing the app himself, approved by Umar. A picker's list opens as soon as the picker gets the focus, by keyboard too, and `↑` `↓` choose in it while it is open (FR-7.16; replaces the v1.8 keyboard rule). The lot seller list shows the sellers and پختہ کھاتہ; اپنا مال only while a trip has goods left, a garden only while it is open (12.3, FR-12.26). No money rule, posting or test number changed. |
+| 1.15 | 01-11-2026 | Umar's second change of 01-11-2026, approved by Umar. A rare party can be made his own پختہ account (پختہ کھاتہ گاہک or پختہ کھاتہ بیوپاری) on the account form, with the next code of the پختہ series from 0032, his own ledger, and cash first (FR-13.11, new; glossary, FR-10.2, 10.2, FR-10.5; E81, A79). The shared پختہ کھاتہ with the name typed on the line stays. No money rule, posting or test number changed. |
 
