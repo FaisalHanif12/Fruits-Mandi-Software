@@ -750,6 +750,78 @@ pub(crate) fn advance_available(
         .unwrap_or(Paisa::ZERO))
 }
 
+/// How much of the advance a LATER credit of the seller would lose if a new credit of `credit`
+/// were posted on `date_iso` (PRD FR-13.11, A79). Advances go to the oldest credit first (PRD
+/// FR-15.8), so a credit that comes before another can take the advance that other one holds.
+/// What each other credit holds NOW is its active advance rows (the cash paid on its lot was worked
+/// out on that); the canonical working is run once with the new credit in it (the posting being
+/// edited, `replaces`, taken out), and every credit whose share is smaller than it holds now has
+/// lost the difference. A credit never gains from a credit placed before it. 0 when nothing is
+/// taken from anybody. Only reads.
+///
+/// ```text
+/// advance 5,000. Posting of 12-10: credit 10,160 holds 5,000 (cash 5,160).
+/// A new posting of 11-10 with credit 10,160 takes the 5,000: the answer is 5,000.
+/// The 12-10 posting edited with the same credit: it holds the same 5,000 again: the answer is 0.
+/// ```
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` if the lines and the rows do not line up.
+pub(crate) fn advance_displaced(
+    conn: &Connection,
+    account_id: i64,
+    date_iso: &str,
+    replaces: Option<i64>,
+    credit: Paisa,
+) -> Result<Paisa, ServiceError> {
+    let inputs = load_adv(conn, account_id)?;
+    if inputs.advances.is_empty() || credit <= Paisa::ZERO {
+        return Ok(Paisa::ZERO);
+    }
+    let order_key = match replaces {
+        Some(entry_id) => mandi_db::ledger::order_key_of(conn, entry_id)?,
+        None => None,
+    };
+    let with = plan_adv(
+        &inputs,
+        &AdvChange {
+            remove_entry: replaces,
+            add_receipt: Some((date_iso, credit)),
+            add_payment: None,
+            add_order_key: order_key,
+        },
+    )?;
+    // The credits of the entry being edited are not "other" credits: they are being replaced.
+    let replaced_lines: std::collections::HashSet<i64> = inputs
+        .lines
+        .iter()
+        .filter(|l| replaces == Some(l.entry_id))
+        .map(|l| l.line_id)
+        .collect();
+    let mut held_now: HashMap<i64, Paisa> = HashMap::new();
+    for row in &inputs.active {
+        if with.known.contains(&row.credit_line_id)
+            && row.credit_line_id != WHAT_IF_LINE
+            && !replaced_lines.contains(&row.credit_line_id)
+        {
+            let slot = held_now.entry(row.credit_line_id).or_insert(Paisa::ZERO);
+            *slot = slot
+                .checked_add(paisa(row.amount_paisa)?)
+                .map_err(money_error)?;
+        }
+    }
+    let mut lost = Paisa::ZERO;
+    for (line_id, before) in held_now {
+        let after = with.matched.get(&line_id).copied().unwrap_or(Paisa::ZERO);
+        if before > after {
+            lost = lost
+                .checked_add(before.checked_sub(after).map_err(money_error)?)
+                .map_err(money_error)?;
+        }
+    }
+    Ok(lost)
+}
+
 /// Everything the canonical advance working of a seller reads.
 #[derive(Debug, Clone)]
 pub(crate) struct AdvInputs {

@@ -436,11 +436,17 @@ pub enum ErrorCode {
     /// The token of `day_fix_close` is not the one `day_fix_open` gave, or the days were closed or
     /// opened some other way since (PRD FR-21.4; plan 44). Field `token`.
     ErrFixTokenInvalid,
+    /// Warning only: the credit of a پختہ بیوپاری's lot takes part of his advance away from a LATER
+    /// posting of his, because advances go to the oldest credit first (PRD FR-13.11, FR-15.8, A79).
+    /// The lot's نقد default is not changed, but his balance will not be 0 afterwards. Values:
+    /// `taken_paisa` (what the later postings lose). Field `lots[i].cash_paid` (the first lot of
+    /// that seller).
+    ErrAdvanceTakenFromLater,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 154] = [
+    pub const ALL: [ErrorCode; 155] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -595,6 +601,7 @@ impl ErrorCode {
         ErrorCode::ErrPartnerCodeInvalid,
         ErrorCode::ErrPartnerCodesDiffer,
         ErrorCode::ErrFixTokenInvalid,
+        ErrorCode::ErrAdvanceTakenFromLater,
     ];
 }
 

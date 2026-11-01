@@ -385,4 +385,40 @@ fn the_real_answers_of_the_plan_47_commands_are_the_fixtures() {
         &request,
         &shown,
     );
+
+    // The warning (Umar, option 2): a بکری of 12-10 is saved (cash 5,160, balance 0); a back-dated
+    // بکری of 11-10 of the same seller comes before it and takes its 5,000, so the preview warns
+    // with `taken_paisa` 500000 on the نقد of the first lot. The default is still 5,160.
+    common::set_today(&w.env, 2026, 10, 12);
+    let dated = |day: &str, seller: i64, buyer: i64| -> Value {
+        let mut value = lot_json(seller, buyer);
+        value["draft"]["header"]["entry_date"] = json!(day);
+        value
+    };
+    let later: mandi_services::core::bikri::BikriPreviewInput =
+        typed(&dated("12-10-2026", kamal.id, w.akram));
+    helpers::save_ok(&w, &later.draft);
+    let request = dated("11-10-2026", kamal.id, w.arshad);
+    let input: mandi_services::core::bikri::BikriPreviewInput = typed(&request);
+    let shown = bikri::preview(ctx, &input.draft).unwrap();
+    assert!(shown.errors.is_empty(), "{:?}", shown.errors);
+    assert_eq!(shown.summary.cash_paid.rupees(), 5_160);
+    assert_eq!(shown.warnings.len(), 1, "{:?}", shown.warnings);
+    assert_eq!(
+        (
+            shown.warnings[0].code,
+            shown.warnings[0].field.as_str(),
+            shown.warnings[0].values.get("taken_paisa")
+        ),
+        (
+            ErrorCode::ErrAdvanceTakenFromLater,
+            "lots[0].cash_paid",
+            Some(&ErrorValue::Number(500_000))
+        )
+    );
+    pair(
+        "bikri_preview_pukhta_party_seller_advance_taken",
+        &request,
+        &shown,
+    );
 }

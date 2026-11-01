@@ -706,6 +706,61 @@ impl Basis {
     }
 }
 
+/// Warns when the credit of a پختہ بیوپاری's lot would take part of his advance away from a LATER
+/// posting of his (PRD FR-13.11, FR-15.8, A79, Umar 01-11-2026). The cash default of the lot is
+/// the same; only his balance will not be 0 afterwards, and the Owner is told how much (`taken_paisa`)
+/// on the نقد of the first lot of that seller. It is part of the one calculation preview and save
+/// share, so both show it (Code Standards B5). Only reads.
+fn advance_warnings(
+    conn: &Connection,
+    prepared: &PreparedDraft,
+    lookups: &Lookups,
+    calc: &mut mandi_domain::bikri::PostingCalc,
+    replaces: Option<i64>,
+) -> Result<(), ServiceError> {
+    let Some(date) = prepared.header.entry_date.map(BusinessDate::to_iso) else {
+        return Ok(());
+    };
+    // Per seller: the first lot and the credit of all his lots that adjust his advance. His lots
+    // sit side by side in the entry, so one credit of their sum takes the same advance.
+    let mut sellers: Vec<(i64, usize, Paisa)> = Vec::new();
+    for (index, lot) in prepared.lots.iter().enumerate() {
+        let Some(seller_id) = lot.seller_account_id else {
+            continue;
+        };
+        let is_party = lookups
+            .accounts
+            .get(&seller_id)
+            .is_some_and(|facts| facts.is_pukhta_party);
+        let credit = calc
+            .lots
+            .get(index)
+            .and_then(|l| l.totals.as_ref())
+            .map(|t| t.seller_credit);
+        let Some(credit) = credit.filter(|c| is_party && lot.adjust_advance && *c > Paisa::ZERO)
+        else {
+            continue;
+        };
+        match sellers.iter_mut().find(|s| s.0 == seller_id) {
+            Some(known) => known.2 = known.2.checked_add(credit).map_err(money_error)?,
+            None => sellers.push((seller_id, index, credit)),
+        }
+    }
+    for (seller_id, index, credit) in sellers {
+        let taken = crate::matching::advance_displaced(conn, seller_id, &date, replaces, credit)?;
+        if taken > Paisa::ZERO {
+            calc.warnings.push(
+                FieldError::new(
+                    ErrorCode::ErrAdvanceTakenFromLater,
+                    &format!("lots[{index}].cash_paid"),
+                )
+                .with("taken_paisa", ErrorValue::Number(taken.as_paisa())),
+            );
+        }
+    }
+    Ok(())
+}
+
 /// Works out a typed draft against the database: reads what it names, calls `calc_posting`,
 /// builds the journal entry, splits the income and asks what the entry does to cash. Used by
 /// the preview (inside a read) and by the save (inside its write transaction), so there is one
@@ -739,7 +794,7 @@ pub(crate) fn work_out(
     )?;
     lookups.purchases = purchases;
     lookups.arrivals = arrivals;
-    let calc = calc_posting(
+    let mut calc = calc_posting(
         basis.target,
         &prepared,
         &lookups,
@@ -748,6 +803,15 @@ pub(crate) fn work_out(
         &basis.stored,
     )
     .map_err(calc_error)?;
+    if basis.stored.kind == mandi_domain::bikri::PostingKind::First {
+        advance_warnings(
+            conn,
+            &prepared,
+            &lookups,
+            &mut calc,
+            basis.replaces.map(|r| r.entry_id),
+        )?;
+    }
     let mut errors = calc.errors.clone();
     let accounts = system_accounts(conn)?;
     let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;

@@ -721,6 +721,213 @@ fn undo_gives_the_advance_back_and_the_new_draft_follows_the_default_again() {
     assert_eq!(balance(&w, k.id), (BalanceSide::Zero, 0));
 }
 
+// ---- The advance taken from a LATER posting: a warning (Umar, option 2) -------------------------
+
+/// The same lot as `event2` on another day.
+fn event2_on(w: &World, day: &str, seller: i64, buyer: i64) -> BikriDraft {
+    let mut d = event2(w, seller, buyer, None);
+    d.header.entry_date = day.into();
+    d
+}
+
+/// The `taken_paisa` of the advance warning of a preview, in rupees, with the field it sits on.
+fn taken_warning(warnings: &[mandi_services::core::error::FieldError]) -> Option<(String, i64)> {
+    warnings
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrAdvanceTakenFromLater)
+        .map(|e| {
+            let taken = match e.values.get("taken_paisa") {
+                Some(ErrorValue::Number(n)) => *n / 100,
+                other => panic!("taken_paisa is missing: {other:?}"),
+            };
+            (e.field.clone(), taken)
+        })
+}
+
+#[test]
+fn a_back_dated_posting_that_takes_the_advance_of_a_later_one_warns_with_the_amount() {
+    // Advance 5,000 (10-10). The بکری of 12-10 is paid 5,160 and ends at 0. A back-dated بکری of
+    // 11-10 comes before it, so it gets the advance and the 12-10 posting loses its 5,000: the
+    // Owner is told X = 5,000 on the نقد, the default stays 5,160, and his balance is not 0 after.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "5,000");
+    let first = save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.akram));
+    assert_eq!(balance(&w, k.id), (BalanceSide::Zero, 0));
+    // The newest posting takes nothing from anybody: no warning.
+    assert_eq!(
+        taken_warning(&preview(&w, &event2_on(&w, "12-10-2026", k.id, w.arshad)).warnings),
+        None
+    );
+    // The back-dated one warns.
+    let back = event2_on(&w, "11-10-2026", k.id, w.arshad);
+    let shown = preview(&w, &back);
+    assert!(shown.errors.is_empty(), "{:?}", shown.errors);
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        Some(("lots[0].cash_paid".to_owned(), 5_000))
+    );
+    assert_eq!(r(shown.summary.cash_paid), 5_160, "the default is the same");
+    // The save is the preview, warning included, and nothing blocks it.
+    let saved = save_ok(&w, &back);
+    assert_eq!(saved.preview, shown);
+    // What the warning promised: the 11-10 credit holds the advance, the 12-10 one lost it, so the
+    // firm owes him 5,000 (paid 15,320 against two credits of 20,320). Books balance.
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Cr, 5_000));
+    let _ = first;
+}
+
+#[test]
+fn editing_an_earlier_posting_warns_when_it_takes_more_advance_from_a_later_one() {
+    // Advance 12,000. B1 (credit 10,160) takes 10,160 and is paid 0; B2 takes the 1,840 left and is
+    // paid 8,320. B1 is edited to rate 1,400: credit 12,040, it now takes all 12,000, so B2 loses
+    // 1,840: X = 1,840. Both on 12-10, B1 saved first so its place is earlier.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "12,000");
+    let b1 = save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.akram));
+    let _b2 = save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.arshad));
+    assert_eq!(balance(&w, k.id), (BalanceSide::Zero, 0));
+    let opened = tools::open(&w, b1.bikri_id, b1.entry_id);
+    // Opened as it was saved: the same credit, nothing is taken from B2.
+    let same = tools::preview(&w, &opened, &opened.draft);
+    assert_eq!(taken_warning(&same.warnings), None);
+    let mut d = opened.draft.clone();
+    d.lots[0].sales[0].seller_rate = "1400".into();
+    let shown = tools::preview(&w, &opened, &d);
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        Some(("lots[0].cash_paid".to_owned(), 1_840))
+    );
+    // A smaller credit takes less: the later posting gains, nothing is taken, no warning.
+    let mut smaller = opened.draft.clone();
+    smaller.lots[0].sales[0].seller_rate = "1100".into();
+    assert_eq!(
+        taken_warning(&tools::preview(&w, &opened, &smaller).warnings),
+        None
+    );
+    // The edit goes through with the same preview.
+    let edited = tools::edit(&w, &opened, &d);
+    assert_eq!(edited.preview, shown);
+    // What the warning promised, read from the books: B1 now holds all 12,000, B2 holds nothing but
+    // keeps the 8,320 it was paid, so the firm owes him X = 1,840. B1's cash was 0 and stays 0 (a 0
+    // reopens as typed, so an edit never turns "pay nothing now" into a payment): the 40 of its new
+    // credit above the advance is not paid either, which makes 1,840 + 40 = 1,880 in all.
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Cr, 1_880));
+}
+
+#[test]
+fn a_chain_of_later_postings_all_lose_to_the_new_one_and_x_is_the_sum() {
+    // Advance 5,000. P1 (12-10, credit 3,170) holds 3,170 and P2 (14-10, credit 11,160) the 1,830
+    // left. A back-dated posting of 11-10 with credit 4,580 comes first and takes 4,580: P1 keeps
+    // 420 (loses 2,750) and P2 keeps 0 (loses 1,830). X = 2,750 + 1,830 = 4,580. Afterwards the firm
+    // owes him X: advance 5,000 + cash 0 + 9,330 + 0 - credits 18,910.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 14);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "5,000");
+    let priced = |day: &str, rate: &str, buyer: i64| {
+        let mut d = event2_on(&w, day, k.id, buyer);
+        d.lots[0].freight = None;
+        d.lots[0].sales[0].seller_rate = rate.into();
+        d
+    };
+    save_ok(&w, &priced("12-10-2026", "350", w.akram));
+    save_ok(&w, &priced("14-10-2026", "1200", w.arshad));
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Zero, 0));
+    let back = priced("11-10-2026", "500", w.akram);
+    let shown = preview(&w, &back);
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        Some(("lots[0].cash_paid".to_owned(), 4_580))
+    );
+    assert_eq!(r(shown.summary.seller_credit), 4_580);
+    assert_eq!(
+        r(shown.summary.cash_paid),
+        0,
+        "the new credit takes the advance first"
+    );
+    let saved = save_ok(&w, &back);
+    assert_eq!(saved.preview, shown);
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Cr, 4_580));
+}
+
+#[test]
+fn an_advance_given_after_the_new_posting_is_not_its_to_take() {
+    // The advance is given on 13-10 and held by the posting of 14-10. A posting of 11-10 comes
+    // before the advance, so it can take none of it: no cash is saved by it, and no warning.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 14);
+    let k = kamal(&w);
+    helpers::give_advance_on(&w, k.id, "5,000", "13-10-2026");
+    save_ok(&w, &event2_on(&w, "14-10-2026", k.id, w.akram));
+    assert_eq!(balance(&w, k.id), (BalanceSide::Zero, 0));
+    let shown = preview(&w, &event2_on(&w, "11-10-2026", k.id, w.arshad));
+    assert_eq!(taken_warning(&shown.warnings), None);
+    assert_eq!(
+        r(shown.summary.cash_paid),
+        10_160,
+        "no advance is free before 13-10"
+    );
+}
+
+#[test]
+fn no_advance_warning_for_the_common_cases() {
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    // No advance at all.
+    assert_eq!(
+        taken_warning(&preview(&w, &event2_on(&w, "11-10-2026", k.id, w.akram)).warnings),
+        None
+    );
+    give_advance(&w, k.id, "5,000");
+    save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.akram));
+    // Tick off: the back-dated lot takes no advance.
+    let mut off = event2_on(&w, "11-10-2026", k.id, w.arshad);
+    off.lots[0].adjust_advance = false;
+    assert_eq!(taken_warning(&preview(&w, &off).warnings), None);
+    // An ordinary seller with an advance has no cash default and no warning.
+    give_advance(&w, w.karim, "5,000");
+    save_ok(&w, &event2_on(&w, "12-10-2026", w.karim, w.akram));
+    assert_eq!(
+        taken_warning(&preview(&w, &event2_on(&w, "11-10-2026", w.karim, w.arshad)).warnings),
+        None
+    );
+}
+
+#[test]
+fn two_lots_of_one_seller_warn_once_with_the_total_on_the_first_lot() {
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "5,000");
+    save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.akram));
+    let mut d = event2_on(&w, "11-10-2026", k.id, w.arshad);
+    let mut second = lot(&w, "lot-2", k.id, w.apple, "10");
+    second.freight = Some("1,000".into());
+    second.cash_paid = None;
+    second.sales = vec![sale("s-2", w.akram, "10", "1200")];
+    d.lots.push(second);
+    let shown = preview(&w, &d);
+    let warnings: Vec<_> = shown
+        .warnings
+        .iter()
+        .filter(|e| e.code == ErrorCode::ErrAdvanceTakenFromLater)
+        .collect();
+    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        Some(("lots[0].cash_paid".to_owned(), 5_000))
+    );
+}
+
 // ---- The register R9 and the screen of the same lines -------------------------------------------
 
 #[test]

@@ -74,3 +74,16 @@ Changing a typed person into a پختہ account (make regular stays as it is); m
 - Lead rerun before commit: typecheck, i18n:check, cargo fmt clean; golden_day 94, lot_seller_list 10, pukhta_party 18 passed.
 - Left: the amber warning when a back-dated lot takes advance a later بکری used (Umar, option 2), with its ur and en text.
 - Gate finding raised by backend: `services/tests/masters.rs` (no DELETE of master records) fails on DELETEs in plan 44 code (purchase_cost_parts, venture_entry_parts, edit_windows). The allow-list is not widened until backend explains how rule 4 is kept.
+
+## 10. The advance warning as built (01-11-2026), accepted
+
+- ERR_ADVANCE_TAKEN_FROM_LATER, warning only, on `lots[i].cash_paid` of the seller's first lot, value `taken_paisa`. Same calculation for preview, save and edit preview. Default نقد unchanged (5,160 in the example); never blocks.
+- Money agent third run: APPROVE. Its tests 1, 2, 4, 5 added; 3 (a seller receipt as the later credit) and 7 (a back-dated later sale) asked for now; 6 (a proptest of X against the database) is a gate follow-up.
+- Open for Umar: the same shift with no warning from a back-dated later sale of the lot, a back-dated receipt from the seller, or cancelling or lowering an advance. Books balance; the ledger shows the truth.
+- Checks: fmt clean; pukhta_party 24 passed; bikri-advance-taken 3 passed; typecheck and i18n:check clean (lead rerun). Backend: clippy clean, 155 targets ok, golden_day 94 unchanged; masters.rs guard red (plan 44, below).
+
+## 11. Lead decision on the plan 44 DELETEs (01-11-2026)
+
+CLAUDE.md rule 4 (business records are never deleted) is not negotiable.
+- `edit_windows`: a scratch gate row with no amount, date or party, inserted and removed in the same transaction. It is not a business record. The masters.rs allow-list may name it, with that comment.
+- `venture_entry_parts` and `purchase_cost_parts`: they describe a business entry, so they become soft state (backend option b): a new migration 0014 adds `is_active` and `replaced_by`; an edit marks the old rows inactive and inserts new ones; every reader filters `is_active = 1`; the delete triggers stay refusing. Task P44-F1 for backend, with the money agent before and after, and the plan 44 edit tests, golden_day and the venture tests passing.

@@ -268,6 +268,11 @@ err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } �
 # A warning (PRD FR-12.7): the save is allowed. $net is in rupees.
 # review: pending
 err-lot-net-negative = اس { -lot } کی { -safi-bikri } صفر سے کم ({ $net }) ہے۔ یہ رقم { -beopari } کے ذمے ہے۔
+# A warning (PRD FR-13.11, plan 47): the save is allowed. This { -bikri } comes before a later one of
+# the same { -pukhta-khata } seller that holds part of his { -peshgi }, and takes $taken of it. $taken is
+# in rupees.
+# review: pending
+err-advance-taken-from-later = یہ { -bikri } اس کی { -peshgi } میں سے { $taken } بعد کی { -bikri } سے لے لیتی ہے۔ { -naqd } دیکھ لیں: اس کا { -baqaya } صفر نہیں رہے گا۔
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $average }) سے { $percent } فیصد سے زیادہ مختلف ہے۔ اسے دیکھ لیں۔
