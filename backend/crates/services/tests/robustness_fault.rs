@@ -71,6 +71,7 @@ fn buyer_input(n: u64) -> AccountInput {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
+        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: "اکرم".into(),
@@ -102,6 +103,7 @@ fn buyer_input(n: u64) -> AccountInput {
 fn seller_input(ur: &str, en: &str) -> AccountInput {
     AccountInput {
         account_type: AccountType::Seller,
+        is_pukhta_party: false,
         name_ur: ur.into(),
         name_en: en.into(),
         opening_date: String::new(),

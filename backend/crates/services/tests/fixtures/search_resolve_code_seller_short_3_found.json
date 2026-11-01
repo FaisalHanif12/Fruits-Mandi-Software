@@ -1,0 +1,18 @@
+{
+  "status": "found",
+  "account": {
+    "id": 33,
+    "code": "0033",
+    "name_ur": "کمال",
+    "name_en": "Kamal",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "seller",
+    "is_pukhta_party": true,
+    "control_id": 5,
+    "is_active": true,
+    "is_dead": false
+  },
+  "candidates": [],
+  "suggested_code": null
+}

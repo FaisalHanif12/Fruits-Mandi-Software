@@ -431,6 +431,38 @@ fn one_time_seller_cash_is_not_defaulted_in_a_later_posting() {
 }
 
 #[test]
+fn a_party_sellers_cash_is_not_defaulted_in_a_later_posting() {
+    // PRD FR-13.11 pays a پختہ بیوپاری with his own account like the one-time seller: his whole net on
+    // the spot at the FIRST posting only (FR-12.17).
+    let mut l = bare_lot(PARTY_SELLER, BANANA, "10");
+    l.lot_id = Some(1);
+    l.sales = vec![sale(AKRAM, "5", "600")];
+    let prepared = prepare_draft(&draft(vec![l]), today(), None);
+    let stored = StoredPosting {
+        kind: PostingKind::Later,
+        lots: HashMap::from([(
+            1,
+            StoredLot {
+                elsewhere_qty: 5,
+                ..StoredLot::default()
+            },
+        )]),
+        sales: HashMap::new(),
+    };
+    let calc = calc_posting(
+        PostingTarget::LaterSale { lot_id: 1 },
+        &prepared,
+        &lookups(),
+        &RuleSet::build(default_rules()),
+        switches(),
+        &stored,
+    )
+    .unwrap();
+    assert_no_errors(&calc);
+    assert_eq!(r(single_lot_totals(&calc).cash_paid), 0);
+}
+
+#[test]
 fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
     // Money agent review of plan 16. The lines were saved with a seller commission of 5% (rule 7);
     // the default now says 6%. With the same seller the lines keep 5%; with another seller or

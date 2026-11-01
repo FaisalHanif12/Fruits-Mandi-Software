@@ -98,15 +98,19 @@ export function useCoaControls() {
   return useQuery({ queryKey: [...COA_KEY, 'controls'], queryFn: coaControlsList });
 }
 
-/** The code the next new account of a type gets. Asked again each time the form for a new one opens. */
+/**
+ * The code the next new account of a type gets. Asked again each time the form for a new one opens.
+ * A پختہ party's account (plan 47) gets the next code of the پختہ series instead.
+ */
 export function useAccountNextCode(
   accountType: AccountType,
   controlId: number | null,
   enabled: boolean,
+  isPukhtaParty = false,
 ) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'next-code', accountType, controlId],
-    queryFn: () => accountsNextCode(accountType, controlId),
+    queryKey: [...ACCOUNTS_KEY, 'next-code', accountType, controlId, isPukhtaParty],
+    queryFn: () => accountsNextCode(accountType, controlId, isPukhtaParty),
     enabled,
     staleTime: 0,
     gcTime: 0,

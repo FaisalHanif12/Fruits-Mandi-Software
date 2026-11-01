@@ -82,9 +82,15 @@ export function accountsList(
 export function accountsNextCode(
   accountType: AccountType,
   controlId: number | null,
+  isPukhtaParty = false,
 ): Promise<string> {
+  // A پختہ party's code is the next of the پختہ series, from 0032 (plan 47, PRD FR-13.11).
   return callCommand<string>('accounts_next_code', {
-    input: { account_type: accountType, control_id: controlId },
+    input: {
+      account_type: accountType,
+      control_id: controlId,
+      ...(isPukhtaParty ? { is_pukhta_party: true } : {}),
+    },
   });
 }
 

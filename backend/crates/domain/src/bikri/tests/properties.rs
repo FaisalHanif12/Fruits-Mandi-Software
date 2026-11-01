@@ -17,7 +17,9 @@ fn arb_sale() -> impl Strategy<Value = SaleInput> {
             Just(ARSHAD),
             Just(NAQDI),
             Just(PUKHTA_BUYER),
-            Just(CASH_ONLY_BUYER)
+            Just(CASH_ONLY_BUYER),
+            Just(PARTY_BUYER),
+            Just(PARTY_BUYER_CREDIT)
         ],
         1u32..=100,
         1u32..=5_000,
@@ -59,7 +61,12 @@ fn arb_sale() -> impl Strategy<Value = SaleInput> {
 
 fn arb_lot() -> impl Strategy<Value = LotInput> {
     (
-        prop_oneof![Just(RAHIM), Just(KARIM), Just(PUKHTA_SELLER)],
+        prop_oneof![
+            Just(RAHIM),
+            Just(KARIM),
+            Just(PUKHTA_SELLER),
+            Just(PARTY_SELLER)
+        ],
         prop_oneof![Just(BANANA), Just(APPLE), Just(MOOLI)],
         1u32..=300,
         prop::option::of(0u32..=5_000),
@@ -143,7 +150,15 @@ proptest! {
             // The entry always balances (build_bikri_entry refuses otherwise).
             let entry = entry_of(&calc);
             let sys = system_accounts();
-            let buyers = [AKRAM, ARSHAD, NAQDI, PUKHTA_BUYER, CASH_ONLY_BUYER];
+            let buyers = [
+                AKRAM,
+                ARSHAD,
+                NAQDI,
+                PUKHTA_BUYER,
+                CASH_ONLY_BUYER,
+                PARTY_BUYER,
+                PARTY_BUYER_CREDIT,
+            ];
             // Σ buyer totals = Σ debits on buyer accounts (the cash part only credits them).
             prop_assert_eq!(side_total(&entry, &buyers, Side::Dr), calc.summary.buyer_total);
             // Σ line seller commission = the credit on 04010001.
@@ -156,6 +171,65 @@ proptest! {
             // The cash change of the entry equals the cash lines minus نقد.
             let change = crate::cash::net_change(&entry, sys.cash).unwrap();
             prop_assert_eq!(change, calc.summary.buyer_cash.checked_sub(calc.summary.cash_paid).unwrap());
+        }
+    }
+
+    // Plan 47 (PRD FR-13.10, FR-13.11): a one-time seller and a پختہ بیوپاری with his own account are
+    // both paid the seller credit on the spot when نقد is left empty. The one with his own account
+    // can have an open advance that his credit adjusts, and then the cash is the credit LESS that
+    // advance (A79), so credit = cash + advance used, and the money he is owed after the save is 0
+    // whenever the credit is above 0. A typed نقد is kept as typed.
+    #[test]
+    fn a_pukhta_seller_with_no_cash_typed_is_paid_his_credit_less_the_advance_it_adjusts(
+        own_account in any::<bool>(),
+        qty in 1u32..=100,
+        rate in 1u32..=5_000,
+        freight in prop::option::of(0u32..=5_000),
+        typed in prop::option::of(0u32..=20_000),
+        advance in 0u32..=30_000,
+        ticked in any::<bool>(),
+    ) {
+        let seller = if own_account { PARTY_SELLER } else { PUKHTA_SELLER };
+        let mut l = lot(seller, APPLE, &qty.to_string());
+        l.freight = freight.map(|f| f.to_string());
+        l.cash_paid = typed.map(|c| c.to_string());
+        l.adjust_advance = ticked;
+        if !own_account {
+            l.pukhta = Some(PukhtaInput {
+                name_ur: "ناصر".into(),
+                name_en: "Nasir".into(),
+                phone: "0300-0000000".into(),
+            });
+        }
+        l.sales = vec![sale(AKRAM, &qty.to_string(), &rate.to_string())];
+        let calc = run_with(
+            &draft(vec![l]),
+            &{
+                let mut facts = lookups();
+                if let Some(a) = facts.accounts.get_mut(&PARTY_SELLER) {
+                    a.advance_available = p(i64::from(advance));
+                }
+                facts
+            },
+            default_rules(),
+            switches(),
+        );
+        if let Some(t) = calc.lots.first().and_then(|lot| lot.totals.as_ref()) {
+            // What his credit adjusts: only a party seller with the tick on and a credit above 0.
+            let used = if own_account && ticked && t.seller_credit > Paisa::ZERO {
+                t.seller_credit.min(p(i64::from(advance)))
+            } else {
+                Paisa::ZERO
+            };
+            match typed {
+                Some(cash) => prop_assert_eq!(t.cash_paid.as_paisa(), i64::from(cash) * 100),
+                None if t.seller_credit > Paisa::ZERO => {
+                    prop_assert_eq!(t.cash_paid.checked_add(used).unwrap(), t.seller_credit);
+                    prop_assert_eq!(t.net, used);
+                }
+                None => prop_assert_eq!(t.cash_paid, Paisa::ZERO),
+            }
+            prop_assert_eq!(t.net, t.seller_credit.checked_sub(t.cash_paid).unwrap());
         }
     }
 }

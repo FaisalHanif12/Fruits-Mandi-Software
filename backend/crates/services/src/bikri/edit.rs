@@ -135,7 +135,7 @@ pub fn open_for_edit(ctx: &Context, input: &EditOpenInput) -> Result<EditableBik
         let kind = kind_of(&posting);
         let date = BusinessDate::parse_iso(&posting.entry_date)
             .ok_or_else(|| data("the date of a posting is not a date"))?;
-        let draft = draft_of(&detail, posting.entry_id, date, kind, true)?;
+        let draft = draft_of(conn, &detail, posting.entry_id, date, kind, true)?;
         let stored = posting_lots(&detail, posting.entry_id, kind);
         let mut shown = detail.clone();
         super::read::mark_editable(&mut shown, closed_up_to);

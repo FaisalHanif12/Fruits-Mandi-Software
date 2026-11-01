@@ -84,6 +84,7 @@ pub fn person_create(
         id: None,
         version: None,
         account_type: AccountType::MoneyLent,
+        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: input.name_ur.clone(),

@@ -121,6 +121,12 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   onAddNew?: ((text: string) => void) | undefined;
   /** Something at the end of each row, for example a balance. */
   renderEnd?: ((hit: H) => ReactNode) | undefined;
+  /**
+   * A small mark in the first line of a row, next to the code, for example "پختہ کھاتہ" (plan 47).
+   * It sits there, not at the end of the second line, so it never pushes the balance out of a
+   * narrow list.
+   */
+  renderMark?: ((hit: H) => ReactNode) | undefined;
   /** The record the list highlights now, or null: a screen can preview it (the party card). */
   onHighlight?: ((hit: H | null) => void) | undefined;
   /** The user left the field with this text typed and nothing picked (a short code, FR-7.39). */
@@ -181,6 +187,7 @@ export function PickerBase<H extends PickerHit>({
   onAddRecord,
   onAddNew,
   renderEnd,
+  renderMark,
   onHighlight,
   onLeave,
   onEnterNoMatch,
@@ -652,6 +659,7 @@ export function PickerBase<H extends PickerHit>({
                             <span className="type-chip rounded-1 bg-warn-soft px-2 text-warn" />
                           </Localized>
                         ) : null}
+                        {renderMark === undefined ? null : renderMark(hit)}
                         <Code>{hit.code}</Code>
                       </span>
                     </span>

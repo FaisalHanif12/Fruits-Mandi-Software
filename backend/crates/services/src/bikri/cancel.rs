@@ -358,7 +358,7 @@ pub fn undo(ctx: &Context, actor: &Actor, input: &UndoInput) -> Result<UndoResul
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrBikriCancelled, "id"))?;
         let date = BusinessDate::parse_iso(&first.entry_date)
             .ok_or_else(|| data("the date of a posting is not a date"))?;
-        let draft = draft_of(&detail, first.entry_id, date, PostingKind::First, false)?;
+        let draft = draft_of(tx, &detail, first.entry_id, date, PostingKind::First, false)?;
         let reversals = cancel_in(
             ctx,
             tx,

@@ -35,9 +35,15 @@ export type AccountHit = {
    */
   extra_en: string;
   /**
-   * The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک".
+   * The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک". For a پختہ party
+   * this is his side.
    */
   account_type: AccountType;
+  /**
+   * True for a پختہ party's own account (plan 47, PRD FR-13.11): the picker row marks it "پختہ" next
+   * to his side. Left out of the JSON when false; the TypeScript field is optional.
+   */
+  is_pukhta_party?: boolean;
   /**
    * The control it is under.
    */

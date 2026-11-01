@@ -13,13 +13,16 @@ use crate::money::Paisa;
 #[serde(rename_all = "snake_case")]
 pub enum AccountScope {
     /// A seller field (control 03011). A short code is the running number of a seller's code
-    /// (`0` finds `0010`). The اپنا مال account is not offered here (PRD FR-12.26).
+    /// (`0` finds `0010`), and of a پختہ بیوپاری's code (`2` finds `0032`, plan 47). The اپنا مال
+    /// account is not offered here (PRD FR-12.26).
     Seller,
     /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
     /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
     LotSeller,
     /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is the running
-    /// number of a buyer's code (`1` finds `0021`).
+    /// number of a buyer's code (`1` finds `0021`), and of a پختہ گاہک's code (`2` finds `0032`, plan
+    /// 47). When a buyer and a پختہ گاہک have the same running number, `resolve_code` answers
+    /// `several` with both.
     Buyer,
     /// A field that takes any account. A short code lists the seller and the buyer with that
     /// running number, each with its type (PRD 1.8 R5): `1` lists `0011` and `0021`.
@@ -107,8 +110,14 @@ pub struct AccountHit {
     pub extra_ur: String,
     /// Second line in English.
     pub extra_en: String,
-    /// The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک".
+    /// The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک". For a پختہ party
+    /// this is his side.
     pub account_type: AccountType,
+    /// True for a پختہ party's own account (plan 47, PRD FR-13.11): the picker row marks it "پختہ" next
+    /// to his side. Left out of the JSON when false; the TypeScript field is optional.
+    #[serde(default, skip_serializing_if = "super::is_false")]
+    #[ts(optional = nullable)]
+    pub is_pukhta_party: bool,
     /// The control it is under.
     #[ts(type = "number")]
     pub control_id: i64,
@@ -142,8 +151,10 @@ pub struct ResolveCodeInput {
 pub enum ResolveStatus {
     /// Exactly one active account. It is in `account`.
     Found,
-    /// A field that takes any account, and both a seller and a buyer have this running number.
-    /// They are in `candidates`.
+    /// More than one active account has this running number: in a field that takes any account, a
+    /// seller and a buyer (and a پختہ party); in a buyer or seller field (plan 47), the buyer and the
+    /// پختہ گاہک (or the seller and the پختہ بیوپاری) with it. They are in `candidates`, the ordinary
+    /// account first, then the پختہ party, so the user picks.
     Several,
     /// No account has this code. `suggested_code` is the full code an `F4` add would use, if
     /// the field has one series.
@@ -229,8 +240,13 @@ pub struct PartyCard {
     pub id: i64,
     /// The full code.
     pub code: String,
-    /// The kind of account.
+    /// The kind of account. For a پختہ party this is his side.
     pub account_type: AccountType,
+    /// True for a پختہ party's own account (plan 47): the card shows "پختہ" next to his side. Left out
+    /// when false; the TypeScript field is optional.
+    #[serde(default, skip_serializing_if = "super::is_false")]
+    #[ts(optional = nullable)]
+    pub is_pukhta_party: bool,
     /// Urdu name.
     pub name_ur: String,
     /// English name.

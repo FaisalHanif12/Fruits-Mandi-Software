@@ -99,6 +99,13 @@ accounts-type-buyer = { -gahak }
 # review: pending
 accounts-type-pukhta = { -pukhta-khata }
 
+# PRD FR-13.11, plan 47: a پختہ party's own account, by his side.
+# review: pending
+accounts-type-pukhta_buyer = { -pukhta-khata } { -gahak }
+
+# review: pending
+accounts-type-pukhta_seller = { -pukhta-khata } { -beopari }
+
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
 
@@ -187,9 +194,9 @@ accounts-section-more = More
 # review: pending
 accounts-field-type = Account type
 
-# PRD 13, FR-13.5, FR-7.29. Shown on the new account form only (plan 45).
+# PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
 # review: pending
-accounts-field-type-hint = A one-time buyer or seller does not get an account. On the sale line, choose { -pukhta-khata } and type his name and phone.
+accounts-field-type-hint = A one-time buyer or seller is typed on the sale line under { -pukhta-khata }, with name and phone. Make an account here for one who comes again.
 
 # review: pending
 accounts-field-control = Control

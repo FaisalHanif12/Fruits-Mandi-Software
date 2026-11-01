@@ -21,8 +21,11 @@ pub struct PreviewAccount {
     pub id: i64,
     /// The control code, for example `03011` (seller) or `0304` (buyer).
     pub control_code: String,
-    /// True for the two پختہ کھاتہ accounts.
+    /// True for the two shared پختہ کھاتہ accounts (person typed on the line).
     pub is_pukhta_khata: bool,
+    /// True for a پختہ party's own account (plan 47, PRD FR-13.11): a full account of his side, with
+    /// no person typed on the line. A seller of this kind is paid on the spot (PRD FR-13.10).
+    pub is_pukhta_party: bool,
     /// True for a system account such as نقدی منڈی.
     pub is_system: bool,
     /// The account code, for example `03040000`.
@@ -88,7 +91,7 @@ pub fn accounts(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<PreviewA
     }
     let mut statement = conn.prepare(&format!(
         "SELECT a.id, c.code, a.is_pukhta_khata, a.is_system, a.code, a.is_active,
-                a.credit_allowed, a.credit_limit_paisa
+                a.credit_allowed, a.credit_limit_paisa, a.is_pukhta_party
          FROM accounts a JOIN account_controls c ON c.id = a.control_id
          WHERE a.id IN ({})",
         marks(ids.len())
@@ -103,6 +106,7 @@ pub fn accounts(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<PreviewA
             is_active: r.get(5)?,
             credit_allowed: r.get(6)?,
             credit_limit_paisa: r.get(7)?,
+            is_pukhta_party: r.get(8)?,
         })
     })?;
     rows.collect()

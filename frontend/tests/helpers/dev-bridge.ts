@@ -69,6 +69,8 @@ interface Party {
   /** Balance in paisa and its side, as the backend sends it. */
   paisa: number;
   side: 'dr' | 'cr' | 'zero';
+  /** A پختہ party's own account (plan 47): his code is in the series 003, from 0032. */
+  pukhtaParty?: true;
 }
 
 const OWN_ID = 17;
@@ -164,8 +166,44 @@ const VOUCHER_PARTIES: readonly Party[] = BOOK_PARTIES.filter(
 /** The parties the pickers offer: the worked day's books on the voucher pages, else the sale book's. */
 function parties(): readonly Party[] {
   const base = window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
-  return [...base, ...ADDED_PARTIES];
+  return [...base, ...(devFlag('pukhtaown') ? PUKHTA_PARTIES : []), ...ADDED_PARTIES];
 }
+
+/**
+ * `?pukhtaown` (plan 47): an ordinary buyer and a پختہ buyer who share the running number 2, and a
+ * پختہ seller, so the picker rows, the question "which one?" and the party card can be photographed.
+ */
+const PUKHTA_PARTIES: readonly Party[] = [
+  {
+    id: 41,
+    code: '0022',
+    type: 'buyer',
+    ur: 'طارق محمود',
+    en: 'Tariq Mehmood',
+    paisa: 0,
+    side: 'zero',
+  },
+  {
+    id: 42,
+    code: '0032',
+    type: 'buyer',
+    ur: 'نذیر',
+    en: 'Nazir',
+    paisa: 50000,
+    side: 'dr',
+    pukhtaParty: true,
+  },
+  {
+    id: 43,
+    code: '0033',
+    type: 'seller',
+    ur: 'کمال',
+    en: 'Kamal',
+    paisa: 0,
+    side: 'zero',
+    pukhtaParty: true,
+  },
+];
 
 /** Accounts made in the Index form that a picker's "add" button opens (plan 32, R8). */
 const ADDED_PARTIES: Party[] = [];
@@ -204,6 +242,7 @@ function accountHit(party: Party) {
     extra_ur: '',
     extra_en: '',
     account_type: party.type,
+    ...(party.pukhtaParty === true ? { is_pukhta_party: true } : {}),
     control_id: party.type === 'seller' ? 11 : 4,
     is_active: true,
   };
@@ -211,7 +250,7 @@ function accountHit(party: Party) {
 
 /** The running number of a seller or a buyer: his code without the 3-digit type number. */
 function runningOfParty(party: Party): number | null {
-  const prefix = party.type === 'seller' ? '001' : '002';
+  const prefix = party.pukhtaParty === true ? '003' : party.type === 'seller' ? '001' : '002';
   const rest = party.code.startsWith(prefix) ? party.code.slice(prefix.length) : '';
   return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
 }
@@ -456,7 +495,16 @@ const handlers: Record<string, Handler> = {
         /^\d+$/.test(asText(input['text']).trim()),
     );
     const only = found[0];
-    return only !== undefined && found.length === 1
+    // A running number two buyers share (an ordinary one and a پختہ one) is "several" (plan 47).
+    if (found.length > 1) {
+      return {
+        status: 'several',
+        account: null,
+        candidates: found.map(accountHit),
+        suggested_code: null,
+      };
+    }
+    return only !== undefined
       ? { status: 'found', account: accountHit(only), candidates: [], suggested_code: null }
       : { status: 'unknown', account: null, candidates: [], suggested_code: null };
   },
@@ -497,6 +545,7 @@ const handlers: Record<string, Handler> = {
       id: party.id,
       code: party.code,
       account_type: party.type,
+      ...(party.pukhtaParty === true ? { is_pukhta_party: true } : {}),
       name_ur: party.ur,
       name_en: party.en,
       father_or_firm_ur: '',

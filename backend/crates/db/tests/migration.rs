@@ -12,8 +12,9 @@ use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
     DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
-    MigrationOutcome, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL,
-    SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    MigrationOutcome, PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL,
+    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
+    TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -21,7 +22,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 12;
+const LATEST: usize = 13;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -201,6 +202,28 @@ fn released_version_11() -> Migrations<'static> {
         M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
         M::up(SHOP_SPLIT_SQL),
         M::up(DEAD_MARKS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 12: migrations 0001 to 0012.
+fn released_version_12() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
     ])
 }
 
@@ -478,10 +501,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 13).unwrap();
+    conn.pragma_update(None, "user_version", 14).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 13);
+    assert_eq!(user_version(&conn), 14);
     assert!(!backups.exists());
 }
 
@@ -2815,7 +2838,8 @@ fn migration_12_adds_the_edit_windows_table_and_changes_nothing_else() {
     assert_eq!(user_version(&conn), 11);
     let before = all_rows_without(&conn, &[]);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_12(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (11, 12));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 12);
@@ -2848,4 +2872,140 @@ fn migration_12_adds_the_edit_windows_table_and_changes_nothing_else() {
             "{name}"
         );
     }
+}
+
+/// Adds an account straight into the table with the given `is_pukhta_party` value.
+fn insert_account(
+    conn: &Connection,
+    control: &str,
+    code: &str,
+    party_type: &str,
+    mark: i64,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                               search_en, search_phonetic, is_pukhta_party)
+         VALUES ((SELECT id FROM account_controls WHERE code = ?1), ?2, 99, ?3, 'نذیر', 'Nazir',
+                 'نذیر', 'nazir', 'nzr', ?4)",
+        (control, code, party_type, mark),
+    )
+}
+
+#[test]
+fn migration_13_adds_the_pukhta_party_mark_and_changes_nothing_else() {
+    // Plan 47 (PRD FR-13.11): a file at version 12 with the worked day's accounts is upgraded. Every
+    // account gets the mark 0, the two shared accounts keep is_pukhta_khata = 1, no other value moves,
+    // a copy is taken first, and a party's own account can then be made (and only a seller or a buyer).
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_12(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 12);
+    common::fixture(&conn);
+    let before = all_rows_without(&conn, &[]);
+    let accounts_before = count(&conn, "SELECT COUNT(*) FROM accounts");
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (12, 13));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 13);
+    let after = all_rows_without(&conn, &[("accounts", "is_pukhta_party")]);
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM accounts"),
+        accounts_before
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_party <> 0"
+        ),
+        0,
+        "every old account is not a party"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_khata = 1 AND code IN ('0030', '0031')"
+        ),
+        2,
+        "the shared accounts keep their own mark"
+    );
+    assert_eq!(PUKHTA_PARTY_ACCOUNTS_SQL.matches("ALTER TABLE").count(), 1);
+
+    // A buyer's own account in the پختہ series, and a seller's.
+    insert_account(&conn, "0304", "0032", "buyer", 1).unwrap();
+    insert_account(&conn, "03011", "0033", "seller", 1).unwrap();
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM accounts WHERE is_pukhta_party = 1"
+        ),
+        2
+    );
+    // The mark is an 0/1 flag.
+    assert!(insert_account(&conn, "0304", "0034", "buyer", 2).is_err());
+    // A party is never the shared account, never a system account and never a kind other than a
+    // seller or a buyer.
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party, is_pukhta_khata)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0304'), '0035', 5, 'buyer', 'ن',
+                     'N', 'ن', 'n', 'n', 1, 1)",
+            [],
+        )
+        .is_err(),
+        "a party is not the shared account"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party, is_system)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0304'), '0036', 6, 'buyer', 'ن',
+                     'N', 'ن', 'n', 'n', 1, 1)",
+            [],
+        )
+        .is_err(),
+        "a party is not a system account"
+    );
+    assert!(
+        conn.execute(
+            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur,
+                                   search_en, search_phonetic, is_pukhta_party)
+             VALUES ((SELECT id FROM account_controls WHERE code = '0103'), '0037', 7, 'other', 'ن',
+                     'N', 'ن', 'n', 'n', 1)",
+            [],
+        )
+        .is_err(),
+        "only a seller or a buyer can be a party"
+    );
+    // The mark cannot change after the account is made, in either direction.
+    assert!(
+        conn.execute(
+            "UPDATE accounts SET is_pukhta_party = 0 WHERE code = '0032'",
+            []
+        )
+        .is_err()
+    );
+    assert!(
+        conn.execute(
+            "UPDATE accounts SET is_pukhta_party = 1 WHERE code = '0020'",
+            []
+        )
+        .is_err()
+    );
+    // Saving the same value is not a change.
+    conn.execute(
+        "UPDATE accounts SET is_pukhta_party = 1, note = 'x' WHERE code = '0032'",
+        [],
+    )
+    .unwrap();
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('accounts_pukhta_party_fixed', 'idx_accounts_pukhta_party')"
+        ),
+        2
+    );
 }

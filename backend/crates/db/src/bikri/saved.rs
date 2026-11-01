@@ -1095,10 +1095,13 @@ pub struct RegisterLine {
     pub seller_net_paisa: i64,
     /// The posting of this line.
     pub journal_entry_id: i64,
-    /// The account of this line (the پختہ کھاتہ account).
+    /// The account of this line: the shared پختہ کھاتہ account, or a پختہ party's own account.
     pub account_id: i64,
     /// True if the بکری was cancelled.
     pub cancelled: bool,
+    /// True when the line is on a پختہ party's own account (plan 47, PRD FR-13.11). He has no person
+    /// key (`person_key` is empty) and his names and phone are the account's.
+    pub is_party: bool,
 }
 
 /// The lines of a one-time buyer, oldest first. A line replaced by an edit does not show.
@@ -1111,14 +1114,20 @@ pub fn register_buyer_lines(
     to: Option<&str>,
 ) -> rusqlite::Result<Vec<RegisterLine>> {
     let mut statement = conn.prepare(
-        "SELECT s.id, s.entry_date, e.id, e.number, s.pukhta_name_ur, s.pukhta_name_en, s.pukhta_phone,
-                s.pukhta_person_key, it.id, it.code, it.name_ur, it.name_en, s.qty, s.buyer_total_paisa,
-                s.buyer_comm_paisa, s.journal_entry_id, s.buyer_account_id, e.status
+        "SELECT s.id, s.entry_date, e.id, e.number,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_ur ELSE s.pukhta_name_ur END,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_en ELSE s.pukhta_name_en END,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.phone1 ELSE s.pukhta_phone END,
+                COALESCE(s.pukhta_person_key, ''), it.id, it.code, it.name_ur, it.name_en, s.qty,
+                s.buyer_total_paisa, s.buyer_comm_paisa, s.journal_entry_id, s.buyer_account_id, e.status,
+                acc.is_pukhta_party
          FROM bikri_sales s
          JOIN bikri_entries e ON e.id = s.bikri_id
          JOIN bikri_lots l ON l.id = s.lot_id
          JOIN items it ON it.id = l.item_id
-         WHERE s.pukhta_person_key IS NOT NULL AND s.replaced_by_sale_id IS NULL
+         JOIN accounts acc ON acc.id = s.buyer_account_id
+         WHERE (s.pukhta_person_key IS NOT NULL OR acc.is_pukhta_party = 1)
+           AND s.replaced_by_sale_id IS NULL
            AND (?1 IS NULL OR s.entry_date >= ?1) AND (?2 IS NULL OR s.entry_date <= ?2)
          ORDER BY s.entry_date, s.id",
     )?;
@@ -1139,6 +1148,7 @@ pub fn register_buyer_lines(
         let journal_entry_id: i64 = c.get()?;
         let account_id: i64 = c.get()?;
         let status = c.status()?;
+        let is_party: bool = c.get()?;
         Ok(RegisterLine {
             row_id,
             entry_date,
@@ -1157,6 +1167,7 @@ pub fn register_buyer_lines(
             journal_entry_id,
             account_id,
             cancelled: status == BikriStatus::Cancelled,
+            is_party,
         })
     })?;
     rows.collect()
@@ -1172,13 +1183,18 @@ pub fn register_seller_lines(
     to: Option<&str>,
 ) -> rusqlite::Result<Vec<RegisterLine>> {
     let mut statement = conn.prepare(
-        "SELECT l.id, e.entry_date, e.id, e.number, l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone,
-                l.pukhta_person_key, it.id, it.code, it.name_ur, it.name_en, l.qty_received, l.gross_paisa,
-                l.seller_comm_paisa, l.net_paisa, l.first_entry_id, l.seller_account_id, e.status
+        "SELECT l.id, e.entry_date, e.id, e.number,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_ur ELSE l.pukhta_name_ur END,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_en ELSE l.pukhta_name_en END,
+                CASE WHEN acc.is_pukhta_party = 1 THEN acc.phone1 ELSE l.pukhta_phone END,
+                COALESCE(l.pukhta_person_key, ''), it.id, it.code, it.name_ur, it.name_en, l.qty_received,
+                l.gross_paisa, l.seller_comm_paisa, l.net_paisa, l.first_entry_id, l.seller_account_id,
+                e.status, acc.is_pukhta_party
          FROM bikri_lots l
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN items it ON it.id = l.item_id
-         WHERE l.pukhta_person_key IS NOT NULL
+         JOIN accounts acc ON acc.id = l.seller_account_id
+         WHERE (l.pukhta_person_key IS NOT NULL OR acc.is_pukhta_party = 1)
            AND (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
          ORDER BY e.entry_date, l.id",
     )?;
@@ -1200,6 +1216,7 @@ pub fn register_seller_lines(
         let first_entry_id: Option<i64> = c.get()?;
         let account_id: i64 = c.get()?;
         let status = c.status()?;
+        let is_party: bool = c.get()?;
         Ok(RegisterLine {
             row_id,
             entry_date,
@@ -1218,6 +1235,7 @@ pub fn register_seller_lines(
             journal_entry_id: first_entry_id.unwrap_or_default(),
             account_id,
             cancelled: status == BikriStatus::Cancelled,
+            is_party,
         })
     })?;
     rows.collect()
@@ -1240,19 +1258,21 @@ pub struct BillLine {
     pub matched_paisa: i64,
 }
 
-/// Every debit line of the one-time buyer account with a person key, in entry and line order,
-/// with the part of each that the active bill matching rows settle (PRD FR-13.6).
+/// Every debit line of the one-time buyer account with a person key, and of a پختہ گاہک's own
+/// account (no person key, so `person_key` is empty, plan 47), in entry and line order, with the
+/// part of each that the active bill matching rows settle (PRD FR-13.6).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn pukhta_bill_lines(conn: &Connection) -> rusqlite::Result<Vec<BillLine>> {
     let mut statement = conn.prepare(
-        "SELECT l.id, l.entry_id, l.account_id, l.pukhta_person_key, l.dr_paisa,
+        "SELECT l.id, l.entry_id, l.account_id, COALESCE(l.pukhta_person_key, ''), l.dr_paisa,
                 COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
                           WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)
          FROM journal_lines l JOIN accounts acc ON acc.id = l.account_id
-         WHERE acc.is_pukhta_khata = 1 AND acc.party_type = 'buyer' AND l.dr_paisa > 0
-           AND l.pukhta_person_key IS NOT NULL
+         WHERE acc.party_type = 'buyer' AND l.dr_paisa > 0
+           AND ((acc.is_pukhta_khata = 1 AND l.pukhta_person_key IS NOT NULL)
+                OR acc.is_pukhta_party = 1)
          ORDER BY l.entry_id, l.line_no",
     )?;
     let rows = statement.query_map([], |row| {

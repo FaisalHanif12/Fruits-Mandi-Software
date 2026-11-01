@@ -1190,6 +1190,7 @@ pub fn search_sources(
             control_id: None,
             control_code: None,
             tag: None,
+            is_pukhta_party: false,
             sold_by_weight: false,
             is_dead: false,
         })

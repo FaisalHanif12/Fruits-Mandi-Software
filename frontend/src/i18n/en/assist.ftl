@@ -136,6 +136,11 @@ working-none-line = No rule applies to this line, so the amount is <num>{ $resul
 # review: pending
 working-cash-pukhta = A { -pukhta-khata } seller is paid his whole { -safi-bikri } on the spot: <num>{ $result }</num>.
 
+# A { -pukhta-khata } seller with an open { -peshgi } gets his { -safi-bikri } less the advance the lot
+# adjusts, at once (PRD FR-13.11, plan 47). The backend gives the three amounts.
+# review: pending
+working-cash-pukhta-advance = A { -pukhta-khata } seller is paid his { -safi-bikri } less his { -peshgi } on the spot: <num>{ $credit }</num> − <num>{ $advance }</num> = <num>{ $result }</num>.
+
 ## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
 ## The backend names the message and gives its values.
 

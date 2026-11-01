@@ -99,6 +99,13 @@ accounts-type-buyer = { -gahak }
 # review: pending
 accounts-type-pukhta = { -pukhta-khata }
 
+# PRD FR-13.11, plan 47: a پختہ party's own account, by his side.
+# review: pending
+accounts-type-pukhta_buyer = { -pukhta-khata } { -gahak }
+
+# review: pending
+accounts-type-pukhta_seller = { -pukhta-khata } { -beopari }
+
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
 
@@ -187,9 +194,9 @@ accounts-section-more = مزید
 # review: pending
 accounts-field-type = کھاتے کی قسم
 
-# PRD 13, FR-13.5, FR-7.29. Shown on the new account form only (plan 45).
+# PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
 # review: pending
-accounts-field-type-hint = ایک بار آنے والے { -gahak } یا { -beopari } کا کھاتہ نہیں بنتا۔ { -bikri } کی لائن پر { -pukhta-khata } چن کر اس کا نام اور فون لکھیں۔
+accounts-field-type-hint = ایک بار آنے والا { -gahak } یا { -beopari } { -bikri } کی لائن پر { -pukhta-khata } چن کر نام اور فون سے لکھا جاتا ہے۔ جو بار بار آئے اس کا یہاں { -pukhta-khata } بنائیں۔
 
 # review: pending
 accounts-field-control = کنٹرول

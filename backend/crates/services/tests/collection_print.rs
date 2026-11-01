@@ -34,6 +34,7 @@ fn form(ur: &str, en: &str, owes: &str, weekday: Option<i64>, tag: &str) -> Acco
         id: None,
         version: None,
         account_type: AccountType::Buyer,
+        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),

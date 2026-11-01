@@ -43,6 +43,7 @@ fn buyer_form(code: &str, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
+        is_pukhta_party: false,
         control_id: None,
         code: code.into(),
         name_ur: ur.into(),
@@ -136,6 +137,7 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
 fn form(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
     AccountInput {
         account_type: kind,
+        is_pukhta_party: false,
         ..buyer_form(code, ur, en)
     }
 }

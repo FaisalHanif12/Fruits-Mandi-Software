@@ -45,6 +45,10 @@ pub(super) struct Run {
     /// worked out yet, the real result for the lots already done (PRD FR-12.40, plan 37). A later
     /// lot of the same entry takes a charge only if no other lot carries it.
     pub carried: Vec<ArrivalCarried>,
+    /// What is left, for each پختہ بیوپاری with his own account, of the advance a new credit of his
+    /// could adjust (PRD FR-13.11, FR-15.8): the first lot of the draft takes from
+    /// `AccountFacts::advance_available`, the next lot of the same seller from what is left.
+    pub advance_left: HashMap<i64, Paisa>,
 }
 
 impl Run {
@@ -730,7 +734,12 @@ fn own_money(
 }
 
 /// The lot charges, then (if a row was worked out) the totals C6 to C9 and the journal lot.
-fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<Money, CalcError> {
+fn lot_money(
+    ctx: &LotCtx<'_>,
+    rows: &mut Rows,
+    issues: &mut Issues,
+    advance_left: &mut HashMap<i64, Paisa>,
+) -> Result<Money, CalcError> {
     let mut money = Money {
         labour: None,
         munshiana: None,
@@ -849,11 +858,16 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         acc.munshiana = munshiana.amount;
         acc.phone = phone.amount;
         acc.store_rent = if first { lot.store_rent } else { Paisa::ZERO };
-        // نقد: as typed; a one-time seller is paid his whole net on the spot (PRD FR-13.10). That
-        // is the first posting only: a later sale gives no نقد (it is paid later by an ادائیگی, PRD
-        // FR-13.7), so a typed نقد is refused there (money agent review of plan 16).
-        let pays_on_the_spot =
-            first && lot.cash_paid.is_none() && ctx.facts.seller.is_some_and(|s| s.is_pukhta);
+        // نقد: as typed; a one-time seller is paid his whole net on the spot (PRD FR-13.10), and so
+        // is a پختہ بیوپاری with his own account (PRD FR-13.11, cash first, A79). That is the first
+        // posting only: a later sale gives no نقد (it is paid later by an ادائیگی, PRD FR-13.7), so
+        // a typed نقد is refused there (money agent review of plan 16).
+        let pays_on_the_spot = first
+            && lot.cash_paid.is_none()
+            && ctx
+                .facts
+                .seller
+                .is_some_and(|s| s.is_pukhta || s.is_pukhta_party);
         let credit = acc.seller_credit()?;
         // A later sale, an own lot and a garden's lot give no نقد (PRD FR-12.26, FR-12.36).
         let garden = ctx
@@ -861,6 +875,29 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
             .seller
             .is_some_and(|s| s.kind == super::lookups::PartyKind::Garden);
         let no_cash = !first || own || garden;
+        // A پختہ بیوپاری with his own account can have an open advance. With the tick "پیشگی سے
+        // کاٹیں" on, his credit adjusts it (PRD FR-12.23, FR-15.8), so the cash first default is
+        // the credit LESS that advance, and his balance is 0 after the save (PRD FR-13.11, A79,
+        // Umar 01-11-2026). With the tick off the advance stays open and the default is the whole
+        // credit. The advance is counted for every ticked lot of the seller, typed نقد or not, so a
+        // second lot of the same seller sees what the first one took.
+        let advance_taken = match (ctx.facts.seller, ctx.lot.seller_account_id) {
+            (Some(seller), Some(seller_id))
+                if first
+                    && !no_cash
+                    && seller.is_pukhta_party
+                    && lot.adjust_advance
+                    && credit > Paisa::ZERO =>
+            {
+                let left = advance_left
+                    .entry(seller_id)
+                    .or_insert(seller.advance_available);
+                let taken = credit.min(*left);
+                *left = left.checked_sub(taken)?;
+                taken
+            }
+            _ => Paisa::ZERO,
+        };
         if no_cash && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
             issues.error(
                 ErrorCode::ErrFormatInvalid,
@@ -872,7 +909,9 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
         } else {
             match lot.cash_paid {
                 Some(cash) => cash,
-                None if pays_on_the_spot && credit > Paisa::ZERO => credit,
+                None if pays_on_the_spot && credit > Paisa::ZERO => {
+                    credit.checked_sub(advance_taken)?
+                }
                 None => Paisa::ZERO,
             }
         };
@@ -881,6 +920,7 @@ fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<M
             munshiana: &munshiana.working,
             phone: &phone.working,
             cash_is_default: pays_on_the_spot,
+            cash_advance: advance_taken,
         })?;
         let too_big = [totals.gross, totals.buyer_total, totals.seller_credit]
             .iter()
@@ -1049,7 +1089,7 @@ pub(super) fn process_lot(
             );
         }
     }
-    let money = lot_money(&ctx, &mut rows, issues)?;
+    let money = lot_money(&ctx, &mut rows, issues, &mut run.advance_left)?;
     // What this lot really carries of its entry's per-lot rule charges now (plan 37).
     if let Some(slot) = run.carried.get_mut(index) {
         // A per-lot rule amount or an amount typed on the lot (not a per-نگ charge) is a charge

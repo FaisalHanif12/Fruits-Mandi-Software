@@ -1,7 +1,8 @@
 // The پختہ کھاتہ hint on the new account form (plan 45, PRD 13, FR-13.5, FR-7.29, FR-7.1): a short
 // grey note under the type field of the NEW form, telling the user that a one-time buyer or seller
-// has no account and is typed on the sale line under پختہ کھاتہ. The edit form does not show it. The
-// type list still offers only seller and buyer (plan 32, R6). Urdu and English.
+// is typed on the sale line under پختہ کھاتہ, and that one who comes again gets an account here
+// (plan 47). The edit form does not show it. The type list offers the seller, the buyer and the two
+// پختہ kinds (plan 47). Urdu and English.
 
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -72,7 +73,7 @@ describe.each(LANGUAGES)('the پختہ کھاتہ hint on the account form (%s)'
     ).not.toBeInTheDocument();
   });
 
-  it('the type list on the new form still offers only seller and buyer', async () => {
+  it('the type list on the new form offers the four kinds, the پختہ ones last (plan 47)', async () => {
     fakeAccounts([]);
     await renderApp('/index/accounts/new');
     const user = userEvent.setup();
@@ -87,6 +88,8 @@ describe.each(LANGUAGES)('the پختہ کھاتہ hint on the account form (%s)'
     expect(shown).toEqual([
       message(language, 'accounts-type-seller'),
       message(language, 'accounts-type-buyer'),
+      message(language, 'accounts-type-pukhta_buyer'),
+      message(language, 'accounts-type-pukhta_seller'),
     ]);
   });
 });

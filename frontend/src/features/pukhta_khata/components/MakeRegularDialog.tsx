@@ -40,6 +40,9 @@ export function MakeRegularDialog({
       open={open}
       onOpenChange={onOpenChange}
       scope={side}
+      // He becomes an ordinary account of his side; a پختہ account is made on the account form
+      // (plan 47, out of scope: a typed person is not changed into one).
+      offerPukhta={false}
       typed=""
       title={<Localized id="pukhta-make-regular-title" />}
       help={<Localized id="pukhta-make-regular-help" />}

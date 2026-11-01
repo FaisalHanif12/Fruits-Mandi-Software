@@ -299,6 +299,7 @@ fn calc_pass(
             .collect(),
         lot_arrivals: draft.lots.iter().map(|lot| lot.arrival_id).collect(),
         carried: guess.to_vec(),
+        advance_left: HashMap::new(),
     };
     // The lines of an edit that keep their stored cost are taken out of the purchases first.
     if let Some(env) = &env {

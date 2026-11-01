@@ -36,6 +36,7 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
+        is_pukhta_party: false,
         control_id: None,
         code: code.into(),
         name_ur: ur.into(),

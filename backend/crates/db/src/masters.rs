@@ -47,6 +47,9 @@ pub struct SearchSource {
     pub control_code: Option<String>,
     /// For an account: its tag (نشان, PRD 10.2). `None` for masters and for an account with none.
     pub tag: Option<String>,
+    /// True for a پختہ party's own account (plan 47, PRD FR-13.11). False for every other record,
+    /// including the two shared پختہ کھاتہ accounts.
+    pub is_pukhta_party: bool,
     /// True only for an item that is sold by weight (`items.sold_by = 'weight'`, plan 35 D3).
     /// False for every other record.
     pub sold_by_weight: bool,
@@ -763,6 +766,7 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
         control_id: None,
         control_code: None,
         tag: None,
+        is_pukhta_party: false,
         sold_by_weight: r.get(11)?,
         is_dead: false,
     })

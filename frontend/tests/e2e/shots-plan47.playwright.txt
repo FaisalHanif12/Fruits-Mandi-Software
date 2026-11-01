@@ -1,0 +1,65 @@
+// Screenshots of plan 47 (PRD FR-13.11, FR-10.2, FR-10.5, FR-7.39): the account form with a پختہ party's
+// kind chosen, the type list, the account list with the پختہ filter, in both languages at 1366 x 900
+// and 1024 x 600. A developer tool: run it with the Vite dev server up (`pnpm --filter frontend dev`),
+// as a snippet for `playwright-core` (a snippet, not a module, so it is kept as .txt and the linter does
+// not read it). The pages are the development pages /dev/index?screen=account (the form) and
+// /dev/lists/accounts (the list), answered by the stand-in for the backend (tests/helpers/dev-bridge*).
+// It also measures sideways overflow (NFR-USE-15).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan47';
+  const context = page.context();
+  const report = [];
+  const TYPE = { ur: 'کھاتے کی قسم', en: 'Account type' };
+  const PUKHTA_BUYER = { ur: 'پختہ کھاتہ گاہک', en: 'Pukhta Khata Buyer' };
+  const FILTER = { ur: 'قسم', en: 'Type' };
+  const PUKHTA = { ur: 'پختہ کھاتہ', en: 'Pukhta Khata' };
+  async function scenario(hash, l, w, h, fn) {
+    const p = await context.newPage();
+    p.on('dialog', (d) => d.accept().catch(() => undefined));
+    await p.setViewportSize({ width: w, height: h });
+    await p.goto('http://localhost:5173/#/dev/' + hash);
+    await p.waitForTimeout(1500);
+    if (l === 'en') {
+      await p.getByRole('button', { name: 'English', exact: true }).first().click();
+      await p.waitForTimeout(800);
+    }
+    try {
+      await fn(p);
+    } finally {
+      await p.close({ runBeforeUnload: false }).catch(() => undefined);
+    }
+  }
+  const overflow = (p) =>
+    p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  for (const [w, h] of [[1366, 900], [1024, 600]]) {
+    for (const l of ['ur', 'en']) {
+      await scenario('index?screen=account', l, w, h, async (p) => {
+        const type = p.getByRole('combobox', { name: TYPE[l] });
+        await type.click();
+        await p.waitForTimeout(400);
+        let name = `account-types-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p)]);
+        await p.getByRole('option', { name: PUKHTA_BUYER[l] }).click();
+        await p.waitForTimeout(800);
+        name = `account-pukhta-buyer-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p)]);
+      });
+      await scenario('lists/accounts', l, w, h, async (p) => {
+        await p.waitForSelector('.ag-row', { timeout: 20000 });
+        let name = `list-all-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p)]);
+        await p.getByRole('combobox', { name: FILTER[l] }).click();
+        await p.getByRole('option', { name: PUKHTA[l], exact: true }).click();
+        await p.waitForTimeout(800);
+        name = `list-pukhta-${l}-${w}x${h}`;
+        await p.screenshot({ path: `${OUT}/${name}.png` });
+        report.push([name, await overflow(p)]);
+      });
+    }
+  }
+  return report;
+};

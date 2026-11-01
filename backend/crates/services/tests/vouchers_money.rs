@@ -1617,6 +1617,7 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         id: Some(id),
         version: Some(row.version),
         account_type: AccountType::Buyer,
+        is_pukhta_party: false,
         control_id: None,
         code: row.code.clone(),
         name_ur: row.name_ur.clone(),

@@ -8,7 +8,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import { usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
+import { typeMessageId, usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
 import { uiErrorOf } from '../api';
 import { isoToDisplayDate } from '../format';
 import { displayName, useLanguage } from '../i18n';
@@ -134,7 +134,7 @@ function CardBody({ card }: { card: PartyCardData }) {
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="type-section text-ink">{displayName(card, language)}</span>
         <Code>{card.code}</Code>
-        <Localized id={`accounts-type-${card.account_type}`}>
+        <Localized id={typeMessageId(card.account_type, card.is_pukhta_party)}>
           <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
         </Localized>
       </div>

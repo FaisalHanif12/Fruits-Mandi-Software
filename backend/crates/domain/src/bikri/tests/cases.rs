@@ -1102,6 +1102,273 @@ fn a_one_time_seller_is_paid_his_whole_net_on_the_spot() {
     ));
 }
 
+fn party_seller_lot(cash: Option<&str>) -> mandi_core::bikri::LotInput {
+    // No name, no phone, no person: he is an account of his own.
+    let mut l = lot(PARTY_SELLER, APPLE, "10");
+    l.freight = Some("1,000".into());
+    l.cash_paid = cash.map(str::to_owned);
+    l
+}
+
+#[test]
+fn a_party_seller_with_his_own_account_is_paid_his_whole_net_on_the_spot_with_no_person() {
+    // PRD FR-13.11 and FR-13.10: the same numbers as the one-time seller, gross 12,000, deductions
+    // before نقد 1,840, نقد 10,160, net 0 (money agent R2), and no name or phone asked.
+    let calc = run(&draft(vec![with(
+        party_seller_lot(None),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    assert_no_errors(&calc);
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (10_160, 0));
+    assert_eq!(t.workings.cash_paid.message_id, "working-cash-pukhta");
+    assert!(calc.warnings.is_empty());
+    // A typed نقد is kept as typed: 4,000 paid, 6,160 left to pay him.
+    let calc = run(&draft(vec![with(
+        party_seller_lot(Some("4,000")),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (4_000, 6_160));
+    // A typed 0 is typed, not empty: nothing is paid on the spot.
+    let calc = run(&draft(vec![with(
+        party_seller_lot(Some("0")),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (0, 10_160));
+    // The journal posts like a seller's: credit 10,160, then the cash part that pays it out. No key.
+    let calc = run(&draft(vec![with(
+        party_seller_lot(None),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    let entry = entry_of(&calc);
+    let own: Vec<_> = entry
+        .lines()
+        .iter()
+        .filter(|l| l.account_id == AccountId::new(PARTY_SELLER))
+        .collect();
+    assert_eq!(own.len(), 2);
+    assert!(own.iter().all(|l| l.person_key.is_none()));
+    use crate::ledger::Side::{Cr, Dr};
+    let mut amounts: Vec<(bool, i64)> = own.iter().map(|l| (l.side == Dr, r(l.amount))).collect();
+    amounts.sort_unstable();
+    // His credit of the sale part (false = credit) and the debit of the cash part that pays it.
+    assert_eq!(amounts, [(false, 10_160), (true, 10_160)]);
+    assert!(own.iter().any(|l| l.side == Cr));
+}
+
+/// The lookups with an open advance that a new credit of the party seller PARTY_SELLER could adjust.
+fn lookups_with_advance(rupees: i64) -> Lookups {
+    let mut l = lookups();
+    l.accounts
+        .get_mut(&PARTY_SELLER)
+        .expect("the party seller")
+        .advance_available = p(rupees);
+    l
+}
+
+fn run_with_advance(draft: &BikriDraft, rupees: i64) -> PostingCalc {
+    run_with(
+        draft,
+        &lookups_with_advance(rupees),
+        default_rules(),
+        switches(),
+    )
+}
+
+#[test]
+fn a_party_sellers_cash_default_leaves_out_the_advance_his_credit_adjusts() {
+    // PRD FR-13.11, A79 (Umar, 01-11-2026): PRD 4.5 lot, credit 10,160, open advance 5,000, the tick
+    // "پیشگی سے کاٹیں" on. The default نقد is 10,160 - 5,000 = 5,160, so his ledger is 0 after the
+    // save: the credit 10,160 = the advance 5,000 + the cash 5,160.
+    let d = draft(vec![with(
+        party_seller_lot(None),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]);
+    let calc = run_with_advance(&d, 5_000);
+    assert_no_errors(&calc);
+    let t = single_lot_totals(&calc);
+    assert_eq!(
+        (r(t.seller_credit), r(t.cash_paid), r(t.net)),
+        (10_160, 5_160, 5_000)
+    );
+    // The working says how the default was worked out.
+    assert_eq!(
+        t.workings.cash_paid.message_id,
+        "working-cash-pukhta-advance"
+    );
+    // Tick off: the advance stays open and the default is the whole credit.
+    let mut off = party_seller_lot(None);
+    off.adjust_advance = false;
+    let calc = run_with_advance(
+        &draft(vec![with(off, vec![sale(AKRAM, "10", "1,200")])]),
+        5_000,
+    );
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (10_160, 0));
+    assert_eq!(t.workings.cash_paid.message_id, "working-cash-pukhta");
+    // No advance: as before.
+    let calc = run_with_advance(&d, 0);
+    assert_eq!(r(single_lot_totals(&calc).cash_paid), 10_160);
+}
+
+#[test]
+fn an_advance_bigger_than_the_credit_leaves_no_cash_and_a_typed_cash_wins() {
+    let d = draft(vec![with(
+        party_seller_lot(None),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]);
+    // Advance 20,000: the credit 10,160 is used up by it, so nothing is paid in cash.
+    let calc = run_with_advance(&d, 20_000);
+    assert_no_errors(&calc);
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (0, 10_160));
+    // A typed نقد is kept as typed, whatever the advance.
+    let typed = draft(vec![with(
+        party_seller_lot(Some("4,000")),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]);
+    let calc = run_with_advance(&typed, 5_000);
+    let t = single_lot_totals(&calc);
+    assert_eq!((r(t.cash_paid), r(t.net)), (4_000, 6_160));
+    // An ordinary seller and the shared seller do not read the advance at all.
+    let mut ordinary = lookups_with_advance(5_000);
+    ordinary
+        .accounts
+        .get_mut(&PUKHTA_SELLER)
+        .expect("the shared seller")
+        .advance_available = p(5_000);
+    let calc = run_with(
+        &draft(vec![with(
+            pukhta_seller_lot(None, "0300-0000000"),
+            vec![sale(AKRAM, "10", "1,200")],
+        )]),
+        &ordinary,
+        default_rules(),
+        switches(),
+    );
+    assert_eq!(r(single_lot_totals(&calc).cash_paid), 10_160);
+}
+
+#[test]
+fn two_lots_of_one_party_seller_share_the_advance_in_lot_order() {
+    // Advance 12,000, two lots with credit 10,160 each: the first lot's credit uses 10,160 of it
+    // (no cash), the second uses the 1,840 left and is paid 8,320. 0 + 8,320 + 12,000 = 20,320.
+    let calc = run_with_advance(
+        &draft(vec![
+            with(party_seller_lot(None), vec![sale(AKRAM, "10", "1,200")]),
+            with(party_seller_lot(None), vec![sale(ARSHAD, "10", "1,200")]),
+        ]),
+        12_000,
+    );
+    assert_no_errors(&calc);
+    let cash: Vec<i64> = calc
+        .lots
+        .iter()
+        .map(|lot| r(lot.totals.as_ref().expect("totals").cash_paid))
+        .collect();
+    assert_eq!(cash, [0, 8_320]);
+    // A lot with the tick off does not use the advance, so the next lot gets all of it.
+    let mut off = party_seller_lot(None);
+    off.adjust_advance = false;
+    let calc = run_with_advance(
+        &draft(vec![
+            with(off, vec![sale(AKRAM, "10", "1,200")]),
+            with(party_seller_lot(None), vec![sale(ARSHAD, "10", "1,200")]),
+        ]),
+        12_000,
+    );
+    let cash: Vec<i64> = calc
+        .lots
+        .iter()
+        .map(|lot| r(lot.totals.as_ref().expect("totals").cash_paid))
+        .collect();
+    assert_eq!(cash, [10_160, 0]);
+}
+
+#[test]
+fn a_lot_with_no_credit_takes_none_of_the_advance_from_the_next_lot() {
+    // Lot 1 sells 10 at 100: gross 1,000 is less than its charges, so its credit is below 0 and it
+    // has no credit line to adjust anything. Lot 2 then gets the whole advance of 5,000.
+    let calc = run_with_advance(
+        &draft(vec![
+            with(party_seller_lot(None), vec![sale(AKRAM, "10", "100")]),
+            with(party_seller_lot(None), vec![sale(ARSHAD, "10", "1,200")]),
+        ]),
+        5_000,
+    );
+    let totals: Vec<_> = calc
+        .lots
+        .iter()
+        .map(|lot| {
+            let t = lot.totals.as_ref().expect("totals");
+            (r(t.seller_credit), r(t.cash_paid))
+        })
+        .collect();
+    assert!(totals[0].0 < 0, "{totals:?}");
+    assert_eq!(totals[0].1, 0, "no cash for a lot with no credit");
+    assert_eq!(totals[1], (10_160, 5_160));
+}
+
+#[test]
+fn an_ordinary_seller_and_the_shared_seller_keep_their_own_cash_rules() {
+    // An ordinary seller with نقد empty is paid nothing on the spot; the shared one is paid his net.
+    let ordinary = run(&draft(vec![with(
+        {
+            let mut l = lot(KARIM, APPLE, "10");
+            l.freight = Some("1,000".into());
+            l.cash_paid = None;
+            l
+        },
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    assert_eq!(r(single_lot_totals(&ordinary).cash_paid), 0);
+    let shared = run(&draft(vec![with(
+        pukhta_seller_lot(None, "0300-0000000"),
+        vec![sale(AKRAM, "10", "1,200")],
+    )]));
+    assert_eq!(r(single_lot_totals(&shared).cash_paid), 10_160);
+}
+
+#[test]
+fn a_party_buyer_starts_cash_and_follows_his_credit_box_with_no_person() {
+    // PRD FR-13.11, A79. Credit off: the line starts as cash, a typed credit is refused. Credit on:
+    // it starts as credit. He is not the shared account: no name, no phone, no person key.
+    let calc = run(&draft(vec![with(
+        lot(KARIM, APPLE, "10"),
+        vec![sale(PARTY_BUYER, "10", "1,200")],
+    )]));
+    assert_no_errors(&calc);
+    let line = single_lot_totals(&calc);
+    assert_eq!(r(line.buyer_cash), 12_800);
+    assert_eq!(r(line.buyer_credit), 0);
+    let mut credit = sale(PARTY_BUYER, "10", "1,200");
+    credit.payment_type = Some(PaymentType::Credit);
+    let calc = run(&draft(vec![with(lot(KARIM, APPLE, "10"), vec![credit])]));
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrCreditNotAllowed,
+        "lots[0].sales[0].payment_type"
+    ));
+    let calc = run(&draft(vec![with(
+        lot(KARIM, APPLE, "10"),
+        vec![sale(PARTY_BUYER_CREDIT, "10", "1,200")],
+    )]));
+    assert_no_errors(&calc);
+    let totals = single_lot_totals(&calc);
+    assert_eq!((r(totals.buyer_credit), r(totals.buyer_cash)), (12_800, 0));
+    // The journal lines of the credit party carry no key.
+    let entry = entry_of(&calc);
+    assert!(
+        entry
+            .lines()
+            .iter()
+            .filter(|l| l.account_id == AccountId::new(PARTY_BUYER_CREDIT))
+            .all(|l| l.person_key.is_none())
+    );
+}
+
 #[test]
 fn the_person_key_is_on_every_journal_line_of_a_one_time_person() {
     // PRD FR-13.5, money agent point 1: the journal of the preview and of the save carries the

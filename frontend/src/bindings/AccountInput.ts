@@ -15,17 +15,26 @@ export type AccountInput = {
    */
   version: number | null;
   /**
-   * The kind of account.
+   * The kind of account. For a پختہ party this is his side, `seller` or `buyer`.
    */
   account_type: AccountType;
+  /**
+   * True for a پختہ کھاتہ گاہک (`account_type` `buyer`) or بیوپاری (`account_type` `seller`): the
+   * party's own account in the پختہ series (plan 47, PRD FR-13.11). Missing means false. Only a
+   * seller or a buyer can be one (`ERR_FORMAT_INVALID` on `is_pukhta_party` otherwise), and it
+   * cannot be changed on an edit (the same error). The credit box of a پختہ buyer starts unticked
+   * on the form (cash first, PRD A79); the backend saves what is sent.
+   */
+  is_pukhta_party?: boolean;
   /**
    * The control, for type `other`. Ignored for the other types.
    */
   control_id: number | null;
   /**
    * The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
-   * running number; any other account: the control code plus 4 digits. Empty gives the next free
-   * code. A code of the wrong type is `ERR_CODE_INVALID` on `code`; a used one `ERR_CODE_TAKEN`.
+   * running number; a پختہ party: `003` plus a running number from 2 (`0032`); any other account:
+   * the control code plus 4 digits. Empty gives the next free code. A code of the wrong type is
+   * `ERR_CODE_INVALID` on `code`; a used one (`0030` and `0031` too) `ERR_CODE_TAKEN`.
    */
   code: string;
   /**

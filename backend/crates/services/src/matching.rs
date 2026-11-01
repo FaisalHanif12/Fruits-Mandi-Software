@@ -703,6 +703,53 @@ fn posting_credit(lot: &repo::PostingLot) -> Result<Paisa, ServiceError> {
         .map_err(money_error)
 }
 
+/// The open advances of a seller that a NEW seller credit of his, posted on `date`, could adjust
+/// (PRD FR-15.8, FR-12.23): his advances before the credit, less what the credits before it
+/// already take. It is the answer of the canonical working to a what-if credit too big to be
+/// used up, so the save, an edit and a back-dated بکری all agree with the preview.
+///
+/// `replaces` is the posting being edited: it is taken out first, and the new credit takes the
+/// place of its own (migration 0005), so the credits after it do not count. Only reads.
+///
+/// ```text
+/// advance 5,000 given on 01-09-26, nothing adjusted yet, a بکری dated 10-10-26: 5,000
+/// ```
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` if the lines and the rows do not line up.
+pub(crate) fn advance_available(
+    conn: &Connection,
+    account_id: i64,
+    date_iso: &str,
+    replaces: Option<i64>,
+) -> Result<Paisa, ServiceError> {
+    let inputs = load_adv(conn, account_id)?;
+    if inputs.advances.is_empty() {
+        return Ok(Paisa::ZERO);
+    }
+    // The new credit takes the place of the entry it replaces: the same key the save gives it, read
+    // from the entry itself (the replaced entry may have no line on this account).
+    let order_key = match replaces {
+        Some(entry_id) => mandi_db::ledger::order_key_of(conn, entry_id)?,
+        None => None,
+    };
+    // A credit as big as any line can be: it takes every advance that is free for it.
+    let unlimited =
+        Paisa::try_from_paisa(mandi_domain::ledger::MAX_LINE_PAISA).map_err(money_error)?;
+    let change = AdvChange {
+        remove_entry: replaces,
+        add_receipt: Some((date_iso, unlimited)),
+        add_payment: None,
+        add_order_key: order_key,
+    };
+    let plan = plan_adv(&inputs, &change)?;
+    Ok(plan
+        .matched
+        .get(&WHAT_IF_LINE)
+        .copied()
+        .unwrap_or(Paisa::ZERO))
+}
+
 /// Everything the canonical advance working of a seller reads.
 #[derive(Debug, Clone)]
 pub(crate) struct AdvInputs {

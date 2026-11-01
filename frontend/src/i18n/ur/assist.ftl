@@ -136,6 +136,11 @@ working-none-line = اس لائن پر کوئی اصول نہیں لگا، اس 
 # review: pending
 working-cash-pukhta = { -pukhta-khata } کے بیوپاری کو اس کی پوری { -safi-bikri } اسی وقت دی جاتی ہے: <num>{ $result }</num>
 
+# A { -pukhta-khata } seller with an open { -peshgi } gets his { -safi-bikri } less the advance the lot
+# adjusts, at once (PRD FR-13.11, plan 47). The backend gives the three amounts.
+# review: pending
+working-cash-pukhta-advance = { -pukhta-khata } کے بیوپاری کو اس کی { -safi-bikri } میں سے { -peshgi } کاٹ کر رقم اسی وقت دی جاتی ہے: <num>{ $credit }</num> − <num>{ $advance }</num> = <num>{ $result }</num>
+
 ## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
 ## The backend names the message and gives its values.
 

@@ -132,6 +132,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             id: row.id,
             code: row.code.clone(),
             account_type: row.account_type,
+            is_pukhta_party: row.is_pukhta_party,
             name_ur: row.name_ur.clone(),
             name_en: row.name_en.clone(),
             tag: row.tag.clone(),

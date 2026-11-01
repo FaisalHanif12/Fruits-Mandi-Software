@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.12 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
+| Version | 1.13 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
 | Date | 31 October 2026 |
 | Status | Final for build |
 | Derived from | PRD v1.15 (the master), NFR v1.7, Tech Stack v1.7, Code Standards v1.12 |
@@ -709,7 +709,7 @@ erDiagram
 |---|---|
 | `account_heads` | `code` (unique), `name_ur`, `name_en`, `nature` (asset, payable, party, income, expense, capital) |
 | `account_controls` | `head_id`, `code` (unique), `name_ur`, `name_en`, `party_type` (seller, buyer, separate, garden, other; separate = a الگ کھاتہ under control 0305, PRD 16.6; garden = a garden's account under control 0306, PRD 12.11) |
-| `accounts` | `control_id`, `code` (unique; for sellers, buyers and the two پختہ کھاتہ accounts the type number + `serial` with no padding, for example 0010, PRD 10.2, v1.8), `serial` (for those, the running number from 0; else the 4-digit serial), `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday`, `is_system`, `is_pukhta_khata`, `is_active`, `note` |
+| `accounts` | `control_id`, `code` (unique; for sellers, buyers and the two پختہ کھاتہ accounts the type number + `serial` with no padding, for example 0010, PRD 10.2, v1.8), `serial` (for those, the running number from 0; else the 4-digit serial), `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday`, `is_system`, `is_pukhta_khata` (the shared 0030 and 0031, person typed on the line), `is_pukhta_party` (migration 0013: a پختہ party's own account, seller or buyer, PRD FR-13.11; never with `is_pukhta_khata` or `is_system`; fixed after insert), `is_active`, `note` |
 | `cities` | `code`, `name_ur`, `name_en`, + search columns, `is_active` |
 | `items` | `code`, `name_ur`, `name_en`, + search columns, `item_group` (fruit, vegetable), `default_packing_id`, `sold_by` (unit, weight), `is_active` |
 | `packings` | `code`, `name_ur`, `name_en`, + search columns, `approx_grams`, `is_active` |
@@ -956,3 +956,4 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.10 | 31-10-2026 | PRD v1.12, approved by Umar: the settings key `firm_contacts` holds up to 6 people with a role (15.3). No table or posting type changed. |
 | 1.11 | 31-10-2026 | PRD v1.13, approved by Umar: the settings keys `partner_code` and `partner_code_tries` (15.3); the edit stamp is read from `audit_log`. No table or posting type changed. |
 | 1.12 | 31-10-2026 | Lead decision for PRD v1.13 FR-7.70 (plan 44): the `edit_windows` table and migration 0012 let the edit service change one trip or garden entry inside its own save; outside it those tables stay read-only (15.3). No PRD change. |
+| 1.13 | 01-11-2026 | PRD v1.15, approved by Umar: `accounts.is_pukhta_party` and migration 0013 for a پختہ party's own account (15.4). No posting type changed. |

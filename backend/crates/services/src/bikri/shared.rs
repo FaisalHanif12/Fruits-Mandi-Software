@@ -400,6 +400,22 @@ fn load_lookups(
         }
         _ => HashMap::new(),
     };
+    // A پختہ بیوپاری with his own account: the advance a new credit of his could adjust (plan 47,
+    // PRD FR-13.11), read with the working the save uses, with the posting being replaced taken out.
+    // Nobody else needs it, so nobody else is read.
+    let post_date = prepared.header.entry_date.map(BusinessDate::to_iso);
+    let mut advances: HashMap<i64, Paisa> = HashMap::new();
+    for a in found
+        .iter()
+        .filter(|a| a.is_pukhta_party && a.control_code == SELLER_CONTROL)
+    {
+        if let Some(date) = post_date.as_deref() {
+            advances.insert(
+                a.id,
+                crate::matching::advance_available(conn, a.id, date, replaces)?,
+            );
+        }
+    }
     let mut accounts = HashMap::with_capacity(found.len());
     for a in found {
         let balance = match totals.get(&a.id) {
@@ -431,6 +447,8 @@ fn load_lookups(
             AccountFacts {
                 kind,
                 is_pukhta: a.is_pukhta_khata,
+                is_pukhta_party: a.is_pukhta_party,
+                advance_available: advances.get(&a.id).copied().unwrap_or(Paisa::ZERO),
                 is_naqdi_mandi: a.code == NAQDI_MANDI_CODE,
                 is_own_goods: a.code == OWN_GOODS_CODE,
                 garden_closed,

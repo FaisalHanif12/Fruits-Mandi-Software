@@ -1,5 +1,6 @@
 //! R9 پختہ کھاتہ رپورٹ (the register of one-time parties, per person) (PRD 19.2, FR-13.5,
-//! FR-13.6, FR-13.9, FR-19.10).
+//! FR-13.6, FR-13.9, FR-13.11, FR-19.10). The lines of a پختہ party's own account (plan 47) are
+//! listed next to the typed people; they have no person key and show the account's code and names.
 //!
 //! One row for each line of a one-time buyer and each lot of a one-time seller, with its date,
 //! بکری number, side, person, phone, item, نگ, amount, commission and whether it is paid or
@@ -93,9 +94,16 @@ fn seller_open(
                 });
             }
         }
+        // A پختہ party's own account has no person key (plan 47): all his lots and payments belong to
+        // one person, whose key is empty.
+        let party_account = lines
+            .iter()
+            .any(|l| l.account_id == account_id && l.is_party);
         for line in &live {
-            let Some(key) = line.person_key.as_deref() else {
-                continue;
+            let key = match line.person_key.as_deref() {
+                Some(key) => key,
+                None if party_account => "",
+                None => continue,
             };
             let paid_later = line.dr_paisa > 0
                 && !line.is_advance
@@ -242,8 +250,9 @@ pub(crate) fn run(
     spec: PageSpec,
 ) -> Result<ReportPage, ReportsError> {
     if let Some(account_id) = typed.party_id {
+        // The shared account of typed people, or a پختہ party's own account (plan 47).
         let pukhta: i64 = conn.query_row(
-            "SELECT is_pukhta_khata FROM accounts WHERE id = ?1",
+            "SELECT is_pukhta_khata OR is_pukhta_party FROM accounts WHERE id = ?1",
             [account_id],
             |r| r.get(0),
         )?;
@@ -288,9 +297,11 @@ pub(crate) fn run(
     let mut rows = Vec::with_capacity(page.len());
     for entry in page {
         let line = &entry.line;
+        // A typed person shows with his own names and person key. A پختہ party's own account has
+        // neither: the cell is his account, with its code and names (plan 47, PRD FR-13.11).
         let party = pukhta_party(
             party_of_line(&parties, line.account_id, None)?,
-            Some(line.person_key.clone()),
+            (!line.is_party).then(|| line.person_key.clone()),
             Some(&line.name_ur),
             Some(&line.name_en),
         );

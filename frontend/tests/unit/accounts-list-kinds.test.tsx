@@ -1,7 +1,7 @@
 // Plan 32, R6: Index → Accounts shows only sellers, buyers and the پختہ کھاتہ accounts. The type
 // filter is exactly All, Seller, Buyer, Pukhta; cash, payables, capital and the other system
 // accounts never show here (the chart of accounts still has them). The new-account form offers
-// only Seller and Buyer. Both languages, against a fake backend.
+// Seller, Buyer and the two پختہ kinds (plan 47). Both languages, against a fake backend.
 
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -154,7 +154,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     expect(accountChoicesFrom({ type: 'pukhta' }).type).toBe('pukhta');
   });
 
-  it('the new-account form offers only Seller and Buyer', async () => {
+  it('the new-account form offers Seller, Buyer and the two پختہ kinds (plan 47)', async () => {
     fakeAccounts([RAHIM, AKRAM]);
     fakeMasters();
     await renderApp('/index/accounts/new');
@@ -170,6 +170,8 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     expect(shown).toEqual([
       message(language, 'accounts-type-seller'),
       message(language, 'accounts-type-buyer'),
+      message(language, 'accounts-type-pukhta_buyer'),
+      message(language, 'accounts-type-pukhta_seller'),
     ]);
   });
 

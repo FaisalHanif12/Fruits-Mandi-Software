@@ -127,6 +127,69 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
     });
   });
 
+  describe("a پختہ seller's own account with an open advance (PRD FR-13.11, plan 47)", () => {
+    /**
+     * The credit is 10,160 and 5,000 of his advance is taken off it: the backend fills نقد with
+     * 5,160 and says so with its own working. The screen only shows it (the numbers are the
+     * backend's), and نقد stays empty in what the screen sends.
+     */
+    const paidLessAdvance = (draft: BikriDraft): BikriPreview => {
+      const preview = previewFor(draft);
+      const totals = preview.lots[0]?.totals;
+      if (totals !== null && totals !== undefined && draft.lots[0]?.cash_paid === null) {
+        totals.cash_paid = money(5160);
+        totals.net = money(5000);
+        totals.workings.cash_paid = {
+          message_id: 'working-cash-pukhta-advance',
+          args: [
+            { name: 'credit', value: { kind: 'money', paisa: money(10160) } },
+            { name: 'advance', value: { kind: 'money', paisa: money(5000) } },
+            { name: 'result', value: { kind: 'money', paisa: money(5160) } },
+          ],
+          rule_id: null,
+        };
+      }
+      return preview;
+    };
+
+    it('shows his net less the advance in the نقد cell, with its working', async () => {
+      const { backend, user } = await openBook(language, paidLessAdvance);
+      await user.keyboard('LES-1234{Enter}');
+      await screen.findByRole('combobox', { name: named(message(language, 'glossary-zamindar')) });
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).not.toBe('');
+      });
+      await user.keyboard('{Enter}{Enter}');
+      await waitFor(() => {
+        expect(focusedIn(lotsGrid(language))).toBe('0:seller');
+      });
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'packing')).not.toBe('');
+      });
+      await user.keyboard('{Enter}{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}{Enter}');
+      const lots = lotsGrid(language);
+      await waitFor(() => {
+        expect(textOf(lots, 0, 'cash')).toBe('5,160');
+      });
+      // He typed nothing in نقد, and the screen sent nothing for it.
+      expect(backend.lastDraft().lots[0]?.cash_paid).toBeNull();
+      await user.click(
+        within(cellOf(lots, 0, 'cash')).getByRole('button', {
+          name: named(message(language, 'calc-info-label')),
+        }),
+      );
+      await waitFor(() => {
+        expect(pageText()).toContain(
+          message(language, 'working-cash-pukhta-advance', {
+            credit: '10,160',
+            advance: '5,000',
+            result: '5,160',
+          }),
+        );
+      });
+    });
+  });
+
   describe('the partners’ shares do not total 100% (PRD FR-17.1)', () => {
     const sharesBad = (draft: BikriDraft): BikriPreview => ({
       ...previewFor(draft),

@@ -49,8 +49,11 @@ pub struct AccountFacts {
     pub head_code: String,
     /// A system account.
     pub is_system: bool,
-    /// The پختہ کھاتہ account.
+    /// One of the two shared پختہ کھاتہ accounts (person typed on the line).
     pub is_pukhta_khata: bool,
+    /// A پختہ party's own account (plan 47, PRD FR-13.11): a full buyer or seller account, not the
+    /// shared one.
+    pub is_pukhta_party: bool,
     /// Active.
     pub is_active: bool,
     /// The opening entry now in force.
@@ -124,6 +127,23 @@ pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i6
     rows.collect()
 }
 
+/// Which of these accounts are a پختہ party's own account (plan 47, PRD FR-13.11), in id order. One
+/// query for the whole list.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn pukhta_parties_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i64>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let marks = vec!["?"; ids.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT id FROM accounts WHERE is_pukhta_party = 1 AND id IN ({marks}) ORDER BY id"
+    ))?;
+    let rows = statement.query_map(rusqlite::params_from_iter(ids), |r| r.get(0))?;
+    rows.collect()
+}
+
 /// The facts a rule needs about one account.
 ///
 /// # Errors
@@ -131,7 +151,8 @@ pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i6
 pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts>> {
     conn.query_row(
         "SELECT a.id, a.version, a.code, c.code, h.code, a.is_system, a.is_pukhta_khata, a.is_active,
-                a.opening_entry_id, a.opening_date, a.opening_dr_paisa, a.opening_cr_paisa, a.opening_is_advance
+                a.opening_entry_id, a.opening_date, a.opening_dr_paisa, a.opening_cr_paisa, a.opening_is_advance,
+                a.is_pukhta_party
          FROM accounts a JOIN account_controls c ON c.id = a.control_id JOIN account_heads h ON h.id = c.head_id
          WHERE a.id = ?1",
         [id],
@@ -150,6 +171,7 @@ pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts
                 opening_dr_paisa: r.get(10)?,
                 opening_cr_paisa: r.get(11)?,
                 opening_is_advance: r.get(12)?,
+                is_pukhta_party: r.get(13)?,
             })
         },
     )
@@ -215,7 +237,8 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag
+        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag,
+        a.is_pukhta_party
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id
@@ -316,6 +339,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             r.get(41)?,
         ),
         is_pukhta_khata: r.get(41)?,
+        is_pukhta_party: r.get(47)?,
         is_active: r.get(42)?,
         note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),
         balance: Balance::ZERO,
@@ -357,11 +381,16 @@ fn kind_condition(kind: AccountListKind) -> Option<String> {
         AccountListKind::All => Some(format!(
             "((c.code IN ('{SELLER_CONTROL}', '{BUYER_CONTROL}') AND a.is_system = 0) OR a.is_pukhta_khata = 1)"
         )),
-        AccountListKind::Seller => {
-            Some(format!("(c.code = '{SELLER_CONTROL}' AND a.is_system = 0)"))
+        // A پختہ party (plan 47) is listed under پختہ کھاتہ, not under his side.
+        AccountListKind::Seller => Some(format!(
+            "(c.code = '{SELLER_CONTROL}' AND a.is_system = 0 AND a.is_pukhta_party = 0)"
+        )),
+        AccountListKind::Buyer => Some(format!(
+            "(c.code = '{BUYER_CONTROL}' AND a.is_system = 0 AND a.is_pukhta_party = 0)"
+        )),
+        AccountListKind::Pukhta => {
+            Some("(a.is_pukhta_khata = 1 OR a.is_pukhta_party = 1)".to_owned())
         }
-        AccountListKind::Buyer => Some(format!("(c.code = '{BUYER_CONTROL}' AND a.is_system = 0)")),
-        AccountListKind::Pukhta => Some("a.is_pukhta_khata = 1".to_owned()),
     }
 }
 
@@ -508,6 +537,7 @@ pub fn insert(
     code: &str,
     serial: u32,
     party_type: &str,
+    is_pukhta_party: bool,
     fields: &[(&'static str, ColValue)],
     user_id: i64,
     now: &str,
@@ -521,6 +551,7 @@ pub fn insert(
         "code",
         "serial",
         "party_type",
+        "is_pukhta_party",
     ];
     let mut values: Vec<Value> = vec![
         Value::Text(now.to_owned()),
@@ -531,6 +562,7 @@ pub fn insert(
         Value::Text(code.to_owned()),
         Value::Integer(i64::from(serial)),
         Value::Text(party_type.to_owned()),
+        Value::Integer(i64::from(is_pukhta_party)),
     ];
     for (name, v) in fields {
         columns.push(name);
@@ -687,6 +719,7 @@ pub fn similar_by_ids(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<Si
                     .unwrap_or_default(),
                 phone1: row.phone1,
                 account_type: row.account_type,
+                is_pukhta_party: row.is_pukhta_party,
                 tag: row.tag,
                 is_duplicate: false,
             });
@@ -870,7 +903,8 @@ pub fn search_sources(
                 -- A person moved to the dead amount (PRD FR-10.10); a one-time person's account stays
                 -- active, so only a plain account can be dead here.
                 EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1
-                        AND d.pukhta_person_key IS NULL)
+                        AND d.pukhta_person_key IS NULL),
+                a.is_pukhta_party
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
@@ -903,6 +937,7 @@ pub fn search_sources(
                 control_id: Some(r.get(12)?),
                 tag: r.get(13)?,
                 control_code: Some(r.get(14)?),
+                is_pukhta_party: r.get(16)?,
                 sold_by_weight: false,
                 is_dead: r.get(15)?,
             })

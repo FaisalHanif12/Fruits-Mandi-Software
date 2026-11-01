@@ -24,8 +24,15 @@ export interface RowView {
 
 const NOTHING: RowView = { calc: {}, workings: {} };
 
-/** The message of the working of نقد when the backend filled it for a one-time seller. */
-const CASH_PUKHTA = 'working-cash-pukhta';
+/**
+ * The messages of the working of نقد when the backend filled it for a one-time seller (PRD
+ * FR-13.10) or for a پختہ seller's own account (PRD FR-13.11). The second is for a lot that takes
+ * an advance off: the number is his net less the advance (plan 47).
+ */
+const CASH_PUKHTA: ReadonlySet<string> = new Set([
+  'working-cash-pukhta',
+  'working-cash-pukhta-advance',
+]);
 
 /**
  * The calculated cells of a lot row. The charges (مزدوری, منشیانہ) show the value the rules
@@ -44,7 +51,7 @@ export function lotView(lot: LotPreview | undefined, grouping: Grouping): RowVie
     // A one-time seller is paid his whole net on the spot while نقد is empty (PRD FR-13.10): the
     // backend says so by the message of the working. The number is shown in the نقد cell like a
     // typed one, and a value typed there is kept as typed.
-    if (lot.totals.workings.cash_paid.message_id === CASH_PUKHTA) {
+    if (CASH_PUKHTA.has(lot.totals.workings.cash_paid.message_id)) {
       calc[LOT.cash] = money(lot.totals.cash_paid);
       workings[LOT.cash] = lot.totals.workings.cash_paid;
     }

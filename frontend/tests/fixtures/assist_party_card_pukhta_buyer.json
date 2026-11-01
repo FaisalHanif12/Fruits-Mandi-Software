@@ -1,0 +1,24 @@
+{
+  "id": 32,
+  "code": "0032",
+  "account_type": "buyer",
+  "is_pukhta_party": true,
+  "name_ur": "نذیر",
+  "name_en": "Nazir",
+  "father_or_firm_ur": "",
+  "father_or_firm_en": "",
+  "city_ur": "",
+  "city_en": "",
+  "phone": "03001111111",
+  "is_active": true,
+  "dead": null,
+  "balance": {
+    "amount_paisa": 0,
+    "side": "zero"
+  },
+  "last_entry_date": null,
+  "credit_limit": null,
+  "credit_used": 0,
+  "advance_open": null,
+  "warnings": []
+}

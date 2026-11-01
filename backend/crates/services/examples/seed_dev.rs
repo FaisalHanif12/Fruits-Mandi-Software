@@ -249,6 +249,7 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     id: None,
                     version: None,
                     account_type: kind,
+                    is_pukhta_party: false,
                     control_id: None,
                     code: String::new(),
                     name_ur: ur.into(),

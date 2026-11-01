@@ -67,6 +67,8 @@ pub struct Entry {
 struct AccountFacts {
     account_type: AccountType,
     control_id: i64,
+    /// A پختہ party's own account (plan 47): a seller or a buyer of the پختہ series.
+    is_pukhta_party: bool,
 }
 
 /// True for the account of a separate khata: under control 0305, of type "other" (PRD 16.6).
@@ -128,11 +130,18 @@ impl Entry {
             (Some(account_type), Some(control_id)) => Some(AccountFacts {
                 account_type,
                 control_id,
+                is_pukhta_party: source.is_pukhta_party,
             }),
             _ => None,
         };
-        let running = code_type_of(kind, source.account_type)
-            .and_then(|code_type| codes::running_of(&source.code, code_type));
+        // A پختہ party's short code is his running number in the پختہ series (`2` for `0032`, plan 47);
+        // he is found in the buyer or the seller field of his side only, because he is listed there.
+        let running = if source.is_pukhta_party {
+            codes::pukhta_party_running(&source.code)
+        } else {
+            code_type_of(kind, source.account_type)
+                .and_then(|code_type| codes::running_of(&source.code, code_type))
+        };
         let scheme = codes::parse_code(&source.code).is_some();
         let order = codes::code_sort_key(&source.code);
         Entry {
@@ -569,6 +578,7 @@ fn account_hit(entry: &Entry) -> Option<AccountHit> {
         extra_ur: entry.hit.extra_ur.clone(),
         extra_en: entry.hit.extra_en.clone(),
         account_type: facts.account_type,
+        is_pukhta_party: facts.is_pukhta_party,
         control_id: facts.control_id,
         is_active: entry.hit.is_active && !entry.dead,
         is_dead: entry.dead,
@@ -753,16 +763,21 @@ impl Index {
 
     /// The accounts of a field with this running number, active or not (PRD 1.8 R5). Used when a
     /// code is taken on `Enter`. In a field that takes any account this is the seller and the buyer
-    /// with that number.
+    /// with that number. A پختہ party's running number is his own in the پختہ series (plan 47), so
+    /// in a buyer field `2` finds the buyer `0022` and the پختہ گاہک `0032`: the ordinary account
+    /// comes first, then the پختہ party, each group in the order of the list.
     pub fn accounts_with_running(&self, scope: AccountScope, running: u64) -> Vec<AccountHit> {
         if scope == AccountScope::Control {
             return Vec::new();
         }
         let (list, _) = self.account_list(scope, None, true, None);
-        list.iter()
+        let mut found: Vec<AccountHit> = list
+            .iter()
             .filter(|e| e.running == Some(running))
             .filter_map(|e| account_hit(e))
-            .collect()
+            .collect();
+        found.sort_by_key(|hit| hit.is_pukhta_party);
+        found
     }
 
     /// The account of a field with exactly this full code, active or not.

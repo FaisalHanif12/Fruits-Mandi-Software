@@ -285,6 +285,9 @@ pub(super) enum Scope<'a> {
         munshiana: &'a Working,
         phone: &'a Working,
         cash_is_default: bool,
+        /// The advance the lot's credit adjusts and the default نقد leaves out (PRD FR-13.11).
+        /// 0 for every other lot.
+        cash_advance: Paisa,
     },
     /// The whole بکری: every row is a sum of lots.
     Whole,
@@ -424,6 +427,13 @@ impl Acc {
             ),
         };
         let cash = match scope {
+            Scope::Lot {
+                cash_is_default: true,
+                cash_advance,
+                ..
+            } if *cash_advance > Paisa::ZERO => {
+                working::pukhta_cash_after_advance(credit, *cash_advance, self.cash_paid)
+            }
             Scope::Lot {
                 cash_is_default: true,
                 ..

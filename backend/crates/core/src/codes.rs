@@ -7,7 +7,7 @@
 //! |---|---|---|
 //! | Seller (بیوپاری) | `001` | `0010`, `0011` ... `0019`, `00110`, `00111` ... |
 //! | Buyer (گاہک) | `002` | `0020`, `0021` ... |
-//! | Pukhta (پختہ کھاتہ) | `003` | `0030` (buyer account), `0031` (seller account) |
+//! | Pukhta (پختہ کھاتہ) | `003` | `0030` (buyer account), `0031` (seller account): the shared system accounts. From `0032`: a پختہ party's own account, a buyer or a seller in one series (plan 47, PRD FR-13.11) |
 //! | Item (قسم مال) | `004` | `0040`, `0041` ... |
 //! | Packing (پیکنگ) | `005` | `0050`, `0051` ... |
 //! | Staff (عملہ) | `006` | `0060`, `0061` ... |
@@ -36,6 +36,10 @@ pub const PUKHTA_BUYER_CODE: &str = "0030";
 /// پختہ کھاتہ (بیوپاری): the one-time sellers' account. Its running number is 1.
 pub const PUKHTA_SELLER_CODE: &str = "0031";
 
+/// The running number of the first پختہ party's own account (plan 47, PRD FR-13.11): `0032`. Running
+/// numbers 0 and 1 are the two shared system accounts.
+pub const FIRST_PUKHTA_PARTY_RUNNING: u64 = 2;
+
 /// The kinds of record that have a code of this scheme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum CodeType {
@@ -43,7 +47,8 @@ pub enum CodeType {
     Seller,
     /// گاہک, type number `002`.
     Buyer,
-    /// پختہ کھاتہ, type number `003`. Only the two system accounts have this type.
+    /// پختہ کھاتہ, type number `003`. The two shared system accounts (`0030`, `0031`) and, from `0032`,
+    /// the own accounts of پختہ parties, buyers and sellers in one series (plan 47).
     Pukhta,
     /// قسم مال, type number `004`.
     Item,
@@ -237,7 +242,10 @@ pub fn check_typed_code(field: &str, typed: &str, code_type: CodeType) -> Result
 }
 
 /// The short code of a seller or a buyer code: its running number. `None` for every other code,
-/// and for پختہ کھاتہ (`0030`, `0031`), which has none (PRD 1.8 R5).
+/// and for every پختہ کھاتہ code (`0030`, `0031`, and a پختہ party's `0032` on), which a printed list
+/// shows with its full code so it is never mistaken for the seller or buyer with the same running
+/// number (PRD 1.8 R5, plan 47). A پختہ party's short code is still TYPED: see
+/// [`pukhta_party_running`].
 ///
 /// ```
 /// use mandi_core::codes::short_code_of_party;
@@ -251,6 +259,25 @@ pub fn short_code_of_party(code: &str) -> Option<String> {
     parse_code(code)
         .filter(|p| matches!(p.code_type, CodeType::Seller | CodeType::Buyer))
         .map(|p| p.running.to_string())
+}
+
+/// The running number of a پختہ party's own account (plan 47, PRD FR-13.11): `Some(2)` for `0032`. `None`
+/// for everything else, including the two shared accounts `0030` and `0031`. This is the number a user
+/// types as the short code of such a party (in a buyer box it finds a پختہ buyer, in a seller box a
+/// پختہ seller).
+///
+/// ```
+/// use mandi_core::codes::pukhta_party_running;
+/// assert_eq!(pukhta_party_running("0032"), Some(2));
+/// assert_eq!(pukhta_party_running("00310"), Some(10));
+/// assert_eq!(pukhta_party_running("0030"), None); // the shared buyer account
+/// assert_eq!(pukhta_party_running("0031"), None); // the shared seller account
+/// assert_eq!(pukhta_party_running("0022"), None); // a buyer
+/// ```
+pub fn pukhta_party_running(code: &str) -> Option<u64> {
+    parse_code(code)
+        .filter(|p| p.code_type == CodeType::Pukhta && p.running >= FIRST_PUKHTA_PARTY_RUNNING)
+        .map(|p| p.running)
 }
 
 /// Orders codes for lists ("by code"): a code of this scheme by type number, then running number
@@ -399,6 +426,21 @@ mod tests {
             codes,
             vec!["0010", "0011", "0019", "00110", "00111", "0020", "01010001"]
         );
+    }
+
+    #[test]
+    fn a_pukhta_party_has_a_typed_short_code_but_no_printed_one() {
+        // Plan 47: 0032 is the first own account of a پختہ party; 0030 and 0031 are the shared ones.
+        assert_eq!(build_code(CodeType::Pukhta, 2).as_deref(), Some("0032"));
+        assert_eq!(pukhta_party_running("0032"), Some(2));
+        assert_eq!(pukhta_party_running("0033"), Some(3));
+        assert_eq!(pukhta_party_running("00310"), Some(10));
+        for code in ["0030", "0031", "0022", "0012", "0040", "", "003", "00302"] {
+            assert_eq!(pukhta_party_running(code), None, "{code}");
+        }
+        // A printed list shows the full code, so 0032 is never mistaken for the buyer 0022.
+        assert_eq!(short_code_of_party("0032"), None);
+        assert_eq!(short_code_of_party("0033"), None);
     }
 
     #[test]

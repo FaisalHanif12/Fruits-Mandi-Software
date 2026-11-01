@@ -83,6 +83,13 @@ pub const DEAD_MARKS_SQL: &str = include_str!("../migrations/0011_dead_marks.sql
 /// existing row, amount, id or chain hash changes.
 pub const EDIT_WINDOWS_SQL: &str = include_str!("../migrations/0012_edit_windows.sql");
 
+/// The thirteenth migration (plan 47, PRD FR-13.11, Architecture 15.4): `accounts.is_pukhta_party`, the
+/// mark of a پختہ party's own account (پختہ کھاتہ گاہک or بیوپاری, code 0032 on), kept apart from the
+/// `is_pukhta_khata` mark of the two shared accounts. One column with its checks, a trigger and a
+/// partial index; every existing row gets 0 and no amount, id or chain hash changes.
+pub const PUKHTA_PARTY_ACCOUNTS_SQL: &str =
+    include_str!("../migrations/0013_pukhta_party_accounts.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -107,6 +114,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(SHOP_SPLIT_SQL),
         M::up(DEAD_MARKS_SQL),
         M::up(EDIT_WINDOWS_SQL),
+        M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
     ])
 }
 

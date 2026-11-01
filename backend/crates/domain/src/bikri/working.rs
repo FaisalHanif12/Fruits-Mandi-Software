@@ -118,6 +118,19 @@ pub(super) fn pukhta_cash(result: Paisa) -> Working {
     working("working-cash-pukhta", vec![money("result", result)])
 }
 
+/// A پختہ بیوپاری with his own account and an open advance is paid, on the spot, his seller credit
+/// less the advance that credit adjusts (PRD FR-13.11, FR-15.8), so his balance is 0 after the save.
+pub(super) fn pukhta_cash_after_advance(credit: Paisa, advance: Paisa, result: Paisa) -> Working {
+    working(
+        "working-cash-pukhta-advance",
+        vec![
+            money("credit", credit),
+            money("advance", advance),
+            money("result", result),
+        ],
+    )
+}
+
 /// C6.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn deductions(

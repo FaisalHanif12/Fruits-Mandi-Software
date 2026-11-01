@@ -12,6 +12,7 @@
 // this context its dialogs (app/AddRecordHost.tsx), and a picker only asks for them.
 
 import { createContext, useContext } from 'react';
+import type { AccountKind } from '../accounts';
 import type { SearchScope } from '../search';
 import type { PickerValue } from './PickerBase';
 
@@ -53,6 +54,12 @@ export interface AddRecordRequest {
    * not ask (opening balance, credit limit and others).
    */
   form?: 'quick' | 'full' | undefined;
+  /**
+   * The kind of account the short form was set to when the user went on to the full form (plan 47):
+   * a seller, a buyer, or a پختہ کھاتہ گاہک or بیوپاری. The full form starts as that kind. Without
+   * it, the form starts from `kind` as before.
+   */
+  accountKind?: AccountKind | undefined;
   /** A مارکہ added from a lot: the lot's seller is its owner. */
   owner?: PickerValue | null | undefined;
   /** The form closed: with the record that was saved, or null if the user left without saving. */

@@ -17,6 +17,8 @@ export function accountInputOf(
     id: draft.id,
     version: draft.version,
     account_type: draft.account_type,
+    // Left out when false, as the backend leaves it out of what it sends (plan 47).
+    ...(draft.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     control_id: draft.control_id,
     code: draft.code,
     name_ur: draft.names.urdu,

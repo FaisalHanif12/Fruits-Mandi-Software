@@ -178,6 +178,30 @@ describe.each(LANGUAGES)('CalcInfo (%s)', (language) => {
     );
   });
 
+  it("a پختہ seller's lot takes his advance off before he is paid on the spot (PRD FR-13.11, plan 47)", async () => {
+    await open({
+      message_id: 'working-cash-pukhta-advance',
+      args: [
+        { name: 'credit', value: { kind: 'money', paisa: money(10160) } },
+        { name: 'advance', value: { kind: 'money', paisa: money(5000) } },
+        { name: 'result', value: { kind: 'money', paisa: money(5160) } },
+      ],
+      rule_id: null,
+    });
+    const text = visible(document.body.textContent);
+    expect(text).toContain(
+      message(language, 'working-cash-pukhta-advance', {
+        credit: '10,160',
+        advance: '5,000',
+        result: '5,160',
+      }),
+    );
+    // The sum is written in the working, with its three whole-rupee numbers.
+    expect(text).toContain('10,160');
+    expect(text).toContain('5,000');
+    expect(text).toContain('5,160');
+  });
+
   it('the working picks its own direction, so a sum reads left to right in Urdu too (NFR-URD-13)', async () => {
     await open(PERCENT);
     // The numbers are <bdi> children (Num), so the paragraph is found by its whole text.

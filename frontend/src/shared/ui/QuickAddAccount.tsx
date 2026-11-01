@@ -1,7 +1,9 @@
 // Quick add of an account without leaving the screen (PRD FR-7.69, FR-10.8, FR-7.42): the add row
 // of an account picker, `F4`, or the "add" button of the unknown-code message opens this small form
 // over the screen, with the typed text filled in. The fields are the ones that tell one party from
-// another: type (when the field takes any account), code, name in two scripts, tag, phone and city.
+// another: type, code, name in two scripts, tag, phone and city. The type list offers the field's
+// side and the same side as a پختہ کھاتہ account (plan 47, PRD FR-13.11); a field that takes any
+// account offers all four.
 // Everything else is the account form's, later, reached by the link "Full form". A saved account
 // comes back to the field.
 //
@@ -19,11 +21,16 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useState, type ReactNode } from 'react';
 import {
+  creditStartsAllowed,
+  isPukhtaKind,
+  kindMessageId,
   pickedOf,
+  sideOfKind,
   useAccountNextCode,
   useSaveAccount,
   useSimilarAccounts,
   type AccountDraft,
+  type AccountKind,
   type AccountMatch,
   type AccountRow,
   type AccountScope,
@@ -60,10 +67,16 @@ interface QuickAddAccountProps {
   /** The saved account, to put in the field. */
   onSaved: (account: AccountRow) => void;
   /**
-   * Opens the full Index form instead, with the name typed so far. Leave out where there is none
-   * (the one-time person made regular, a field with its own form). The link shows only with it.
+   * Opens the full Index form instead, with the name typed so far and the kind chosen here. Leave
+   * out where there is none (the one-time person made regular, a field with its own form). The link
+   * shows only with it.
    */
-  onFullForm?: ((text: string) => void) | undefined;
+  onFullForm?: ((text: string, kind: AccountKind) => void) | undefined;
+  /**
+   * False where a پختہ account must not be offered: the one-time person made regular keeps his
+   * side and gets an ordinary account (plan 47 leaves that unchanged). Default: true.
+   */
+  offerPukhta?: boolean | undefined;
   /** Takes a look-alike that is already there, instead of making a new account. */
   onPickExisting?: ((match: AccountMatch) => void) | undefined;
   /** Names and phone to start with, for example those of a one-time person. */
@@ -79,9 +92,8 @@ interface QuickAddAccountProps {
   help?: ReactNode;
 }
 
-// A new account is a seller or a buyer. The people who can borrow and the khatas are added from
-// their own screens (plan 32, R6).
-const TYPES: readonly AccountType[] = ['seller', 'buyer'];
+// A new account is a seller or a buyer, or a پختہ party of either side (plan 47). The people who
+// can borrow and the khatas are added from their own screens (plan 32, R6).
 const FIELD_PATHS = [
   'account_type',
   'control_id',
@@ -97,7 +109,21 @@ const FIELD_PATHS = [
 const URDU_LETTER = /[؀-ۿ]/;
 
 function startingType(scope: AccountScope): AccountType {
-  return scope === 'seller' ? 'seller' : 'buyer';
+  return scope === 'seller' || scope === 'lot_seller' ? 'seller' : 'buyer';
+}
+
+/**
+ * The kinds a field offers: a seller field its side and the پختہ بیوپاری, a buyer field the same for
+ * buyers, a field that takes any account all four. Without پختہ, only the sides, and one side alone
+ * needs no list.
+ */
+function kindsOfScope(scope: AccountScope, offerPukhta: boolean): readonly AccountKind[] {
+  if (scope === 'any') {
+    return offerPukhta ? ['seller', 'buyer', 'pukhta_buyer', 'pukhta_seller'] : ['seller', 'buyer'];
+  }
+  const side = startingType(scope);
+  if (!offerPukhta) return [side];
+  return [side, side === 'seller' ? 'pukhta_seller' : 'pukhta_buyer'];
 }
 
 /** Can this look-alike be taken in this field? A seller field takes sellers, a buyer field buyers. */
@@ -116,6 +142,7 @@ function QuickAddForm({
   onPickExisting,
   initial,
   saveWith,
+  offerPukhta = true,
   onClose,
 }: Omit<QuickAddAccountProps, 'open' | 'onOpenChange' | 'title' | 'help'> & {
   onClose: () => void;
@@ -123,7 +150,9 @@ function QuickAddForm({
   const { l10n } = useLocalization();
   const text = typed.trim();
   const digits = /^\d+$/.test(text);
-  const [type, setType] = useState<AccountType>(startingType(scope));
+  const kinds = kindsOfScope(scope, offerPukhta);
+  const [kind, setKind] = useState<AccountKind>(startingType(scope));
+  const type = sideOfKind(kind);
   // A typed number is a code that did not resolve, and its length says nothing (plan 32, R2): the
   // code to offer is the one the backend suggested, else the next free one of the type.
   const [code, setCode] = useState<string | null>(null);
@@ -144,7 +173,7 @@ function QuickAddForm({
   const [phone, setPhone] = useState(initial?.phone ?? '');
   const [city, setCity] = useState<AccountDraft['city']>(null);
   const save = useSaveAccount();
-  const nextCode = useAccountNextCode(type, null, code === null);
+  const nextCode = useAccountNextCode(type, null, code === null, isPukhtaKind(kind));
   const similar = useSimilarAccounts(names.urdu, names.english, phone, tag, null);
   const spelling = useSpellingFlow();
   // What the backend refused in the last try, to show at the fields. The next try clears it.
@@ -153,12 +182,13 @@ function QuickAddForm({
   // The code shows what the backend suggested, or the next free one, until the user types his own.
   const codeShown =
     code ??
-    (type === startingType(scope) && suggestedCode != null ? suggestedCode : (nextCode.data ?? ''));
+    (kind === startingType(scope) && suggestedCode != null ? suggestedCode : (nextCode.data ?? ''));
 
   const draft: AccountDraft = {
     id: null,
     version: null,
     account_type: type,
+    is_pukhta_party: isPukhtaKind(kind),
     control_id: null,
     code: codeShown,
     names,
@@ -175,7 +205,8 @@ function QuickAddForm({
     opening_dr: '',
     opening_cr: '',
     opening_is_advance: false,
-    credit_allowed: true,
+    // Cash first for a پختہ buyer (PRD FR-13.11, A79); every other kind starts with credit allowed.
+    credit_allowed: creditStartsAllowed(kind),
     credit_limit: '',
     default_marka: null,
     collector: null,
@@ -224,7 +255,7 @@ function QuickAddForm({
     >
       {error === null ? null : <ErrorNotice error={error} fieldsShown={FIELD_PATHS} />}
       <div className="grid grid-cols-1 gap-4 normal:grid-cols-2">
-        {scope === 'any' ? (
+        {kinds.length > 1 ? (
           <Field
             label={<Localized id="accounts-field-type" />}
             error={fieldError(error, 'account_type')}
@@ -232,14 +263,14 @@ function QuickAddForm({
             {(props) => (
               <Select
                 {...props}
-                value={type}
-                onChange={(next) => {
-                  setType(next);
+                value={kind}
+                onChange={(next: AccountKind) => {
+                  setKind(next);
                   setCode(null);
                 }}
-                options={TYPES.map((option) => ({
+                options={kinds.map((option) => ({
                   value: option,
-                  label: <Localized id={`accounts-type-${option}`} />,
+                  label: <Localized id={kindMessageId(option)} />,
                 }))}
               />
             )}
@@ -308,7 +339,7 @@ function QuickAddForm({
         ) : (
           <LinkButton
             onClick={() => {
-              onFullForm(names.urdu.trim() !== '' ? names.urdu.trim() : names.english.trim());
+              onFullForm(names.urdu.trim() !== '' ? names.urdu.trim() : names.english.trim(), kind);
             }}
           >
             <Localized id="search-quick-full-form" />

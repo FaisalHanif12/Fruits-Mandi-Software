@@ -50,9 +50,11 @@ const CONTROL_OF: Record<AccountType, AccountRef> = {
  * padding (plan 32, R2), so `0010` is 0 and `00110` is 10. Null for every other account, and for
  * the two پختہ کھاتہ accounts (`0030`, `0031`), which have no short code (R5).
  */
-export function runningOf(type: AccountType, code: string): number | null {
+export function runningOf(type: AccountType, code: string, isPukhtaParty = false): number | null {
   if (type !== 'seller' && type !== 'buyer') return null;
-  const prefix = type === 'seller' ? '001' : '002';
+  // A پختہ party's own account is of his side but in the series 003, buyers and sellers together
+  // (plan 47): `0032` is 2, `0033` is 3. The shared 0030 and 0031 have no short code.
+  const prefix = isPukhtaParty ? '003' : type === 'seller' ? '001' : '002';
   if (!code.startsWith(prefix) || code.length > 10) return null;
   const rest = code.slice(prefix.length);
   return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
@@ -71,7 +73,7 @@ export function account(
     id,
     version: 1,
     code,
-    serial: runningOf(type, code) ?? Number(code.slice(-4)),
+    serial: runningOf(type, code, extra.is_pukhta_party === true) ?? Number(code.slice(-4)),
     account_type: type,
     control,
     name_ur: ur,
@@ -111,9 +113,11 @@ export function account(
 export function inListKind(row: AccountRow, kind: string): boolean {
   if (kind === 'every') return true;
   const party = (row.account_type === 'seller' || row.account_type === 'buyer') && !row.is_system;
-  if (kind === 'pukhta') return row.is_pukhta_khata;
-  if (kind === 'seller') return party && row.account_type === 'seller';
-  if (kind === 'buyer') return party && row.account_type === 'buyer';
+  // The پختہ filter has the two shared accounts and every party's own account (plan 47).
+  const own = row.is_pukhta_party === true;
+  if (kind === 'pukhta') return row.is_pukhta_khata || own;
+  if (kind === 'seller') return party && !own && row.account_type === 'seller';
+  if (kind === 'buyer') return party && !own && row.account_type === 'buyer';
   return party || row.is_pukhta_khata;
 }
 
@@ -293,11 +297,18 @@ export function fakeAccounts(
     const found = store.rows.find((row) => row.id === id);
     return found === undefined ? Promise.reject(new Error('not found')) : Promise.resolve(found);
   });
-  vi.mocked(accountApi.accountsNextCode).mockImplementation((type) => {
+  vi.mocked(accountApi.accountsNextCode).mockImplementation((type, _controlId, isPukhtaParty) => {
+    // One counter for both sides of the پختہ series, from 0032 (plan 47).
+    if (isPukhtaParty === true) {
+      const used = store.rows
+        .filter((row) => row.is_pukhta_party === true)
+        .map((row) => runningOf(row.account_type, row.code, true) ?? -1);
+      return Promise.resolve(`003${String(Math.max(1, ...used) + 1)}`);
+    }
     if (type === 'seller' || type === 'buyer') {
       const prefix = type === 'seller' ? '001' : '002';
       const used = store.rows
-        .filter((row) => row.account_type === type)
+        .filter((row) => row.account_type === type && row.is_pukhta_party !== true)
         .map((row) => runningOf(type, row.code) ?? -1);
       return Promise.resolve(`${prefix}${String(Math.max(-1, ...used) + 1)}`);
     }
@@ -322,6 +333,8 @@ export function fakeAccounts(
         version: (draft.version ?? 0) + 1,
         city: draft.city,
         phone1: draft.phone1,
+        credit_allowed: draft.credit_allowed,
+        ...(draft.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
         // The backend makes the tag capital and keeps none when it is empty (PRD 10.2).
         ...(draft.tag.trim() === '' ? {} : { tag: draft.tag.trim().toUpperCase() }),
       },
@@ -347,6 +360,7 @@ function hitOf(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
@@ -412,7 +426,8 @@ export function fakeAccountSearch(
       if (SHORT_CODE.test(wanted)) {
         // A khata, a garden and a پختہ کھاتہ account have no short code: their full code works.
         const byRunning = scoped.filter(
-          (row) => runningOf(row.account_type, row.code) === Number(wanted),
+          (row) =>
+            runningOf(row.account_type, row.code, row.is_pukhta_party === true) === Number(wanted),
         );
         if (byRunning.length > 0) return byRunning;
       }
@@ -447,7 +462,7 @@ export function fakeAccountSearch(
     const first = found[0];
     const type = scope === 'buyer' ? 'buyer' : 'seller';
     const used = rows
-      .filter((row) => row.account_type === type)
+      .filter((row) => row.account_type === type && row.is_pukhta_party !== true)
       .map((row) => runningOf(type, row.code) ?? -1);
     const next = `${type === 'buyer' ? '002' : '001'}${String(Math.max(-1, ...used) + 1)}`;
     const result: ResolvedCode =
@@ -484,6 +499,7 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     is_active: row.is_active,
     name_ur: row.name_ur,
     name_en: row.name_en,

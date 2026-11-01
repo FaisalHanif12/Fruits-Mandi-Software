@@ -13,10 +13,10 @@ use mandi_db::codes::CodeTable;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
-    ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
+    ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening, code_type_for,
     prepare_account,
 };
-use mandi_domain::core::codes::{build_code, check_typed_code};
+use mandi_domain::core::codes::{FIRST_PUKHTA_PARTY_RUNNING, build_code, check_typed_code};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::text;
@@ -162,9 +162,29 @@ fn resolve_control(
     }
 }
 
-/// The next free code for a kind of account. A seller gets `001` plus the next running number and a
+/// The next free running number of a code type for an account. The پختہ series starts at
+/// `FIRST_PUKHTA_PARTY_RUNNING` (`0032`), because `0030` and `0031` are the two shared accounts
+/// (plan 47, PRD FR-13.11): a database that somehow lost them would still never hand out their codes.
+fn next_running_for(
+    conn: &Connection,
+    code_type: mandi_domain::core::codes::CodeType,
+) -> Result<(u64, String), ServiceError> {
+    let (running, code) = mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
+        .ok_or_else(|| series_full(code_type.number()))?;
+    if code_type == mandi_domain::core::codes::CodeType::Pukhta
+        && running < FIRST_PUKHTA_PARTY_RUNNING
+    {
+        let code = build_code(code_type, FIRST_PUKHTA_PARTY_RUNNING)
+            .ok_or_else(|| series_full(code_type.number()))?;
+        return Ok((FIRST_PUKHTA_PARTY_RUNNING, code));
+    }
+    Ok((running, code))
+}
+
+/// The next free code for a kind of account. A seller gets `001` plus the next running number, a
 /// buyer `002` plus the next running number (`0010`, `0011` ...; plan 32 R2, never a code used
-/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3).
+/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3). For a
+/// پختہ party use [`next_code_for`].
 ///
 /// # Errors
 /// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when the numbers are used up.
@@ -173,10 +193,31 @@ pub fn next_code(
     account_type: AccountType,
     control_id: Option<i64>,
 ) -> Result<String, ServiceError> {
+    next_code_for(ctx, account_type, false, control_id)
+}
+
+/// The next free code, as [`next_code`], and for a پختہ party (a seller or a buyer with
+/// `is_pukhta_party`, plan 47, PRD FR-13.11) `003` plus the next running number from 2 (`0032`,
+/// `0033` ...), whatever his side. Never `0030` or `0031`, never a code used before.
+///
+/// # Errors
+/// As [`next_code`]; `ERR_FORMAT_INVALID` on `is_pukhta_party` for a kind that is not a seller or a
+/// buyer.
+pub fn next_code_for(
+    ctx: &Context,
+    account_type: AccountType,
+    is_pukhta_party: bool,
+    control_id: Option<i64>,
+) -> Result<String, ServiceError> {
+    if is_pukhta_party && code_type_for(account_type, true).is_none() {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrFormatInvalid,
+            "is_pukhta_party",
+        ));
+    }
     ctx.db.read(|conn| {
-        if let Some(code_type) = account_type.code_type() {
-            let (_, code) = mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
-                .ok_or_else(|| series_full(code_type.number()))?;
+        if let Some(code_type) = code_type_for(account_type, is_pukhta_party) {
+            let (_, code) = next_running_for(conn, code_type)?;
             return Ok(code);
         }
         let control = resolve_control(conn, account_type, control_id)?;
@@ -394,22 +435,18 @@ pub(crate) fn create_in(
     write(ctx, actor, tx, &prepared, &checks)
 }
 
-/// The code and the serial of a new account. A seller or a buyer: the typed code, which must be a
-/// full code of its type, or the next running number; the serial is the running number (plan 32
-/// R2). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
+/// The code and the serial of a new account. A seller, a buyer or a پختہ party: the typed code, which
+/// must be a full code of its type, or the next running number; the serial is the running number (plan
+/// 32 R2, plan 47). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
 fn new_code(
     tx: &Connection,
     prepared: &mandi_domain::core::accounts::PreparedAccount,
     control: &repo::ControlRow,
 ) -> Result<(String, u32), ServiceError> {
-    if let Some(code_type) = prepared.account_type.code_type() {
+    if let Some(code_type) = code_type_for(prepared.account_type, prepared.is_pukhta_party) {
         let running = match &prepared.typed_code {
             Some(typed) => check_typed_code("code", typed, code_type)?,
-            None => {
-                mandi_db::codes::next_code(tx, CodeTable::Accounts, code_type)?
-                    .ok_or_else(|| series_full(code_type.number()))?
-                    .0
-            }
+            None => next_running_for(tx, code_type)?.0,
         };
         let code = build_code(code_type, running)
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrSeriesFull, "code"))?;
@@ -453,6 +490,14 @@ fn write(
                     "account_type",
                 ));
             }
+            // A party stays a party and an ordinary account stays ordinary (plan 47): his code is in
+            // the پختہ series and his lines never carry a person key.
+            if prepared.is_pukhta_party != row.is_pukhta_party {
+                return Err(ServiceError::reject_field(
+                    ErrorCode::ErrFormatInvalid,
+                    "is_pukhta_party",
+                ));
+            }
             Some(row)
         }
         None => None,
@@ -471,6 +516,7 @@ fn write(
                 &code,
                 serial,
                 &control.party_type,
+                prepared.is_pukhta_party,
                 &prepared.fields,
                 actor.user_id,
                 &now,

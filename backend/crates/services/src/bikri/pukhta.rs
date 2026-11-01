@@ -160,9 +160,16 @@ fn seller_open(
                 });
             }
         }
+        // A پختہ party's own account has no person key (plan 47): all his lots and payments belong to
+        // one person, whose key is empty.
+        let party_account = lines
+            .iter()
+            .any(|l| l.account_id == account_id && l.is_party);
         for line in &live {
-            let Some(key) = line.person_key.as_deref() else {
-                continue;
+            let key = match line.person_key.as_deref() {
+                Some(key) => key,
+                None if party_account => "",
+                None => continue,
             };
             let paid_later = line.dr_paisa > 0
                 && !line.is_advance

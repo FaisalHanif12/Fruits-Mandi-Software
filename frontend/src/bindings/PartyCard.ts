@@ -19,9 +19,14 @@ export type PartyCard = {
    */
   code: string;
   /**
-   * The kind of account.
+   * The kind of account. For a پختہ party this is his side.
    */
   account_type: AccountType;
+  /**
+   * True for a پختہ party's own account (plan 47): the card shows "پختہ" next to his side. Left out
+   * when false; the TypeScript field is optional.
+   */
+  is_pukhta_party?: boolean;
   /**
    * Urdu name.
    */

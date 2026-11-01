@@ -289,12 +289,36 @@ fn credit_of(lot: &SavedLot, entry_id: i64) -> Result<Paisa, ServiceError> {
         .map_err(money_error)
 }
 
-fn lot_input(lot: &SavedLot, entry_id: i64, keep_ids: bool) -> Result<LotInput, ServiceError> {
+fn lot_input(
+    lot: &SavedLot,
+    entry_id: i64,
+    keep_ids: bool,
+    first: bool,
+    party_left: &mut HashMap<i64, Paisa>,
+) -> Result<LotInput, ServiceError> {
     // A one-time seller paid his whole net on the spot (PRD FR-13.10) stays so after an edit: the
     // field comes back empty and the default applies to the new net. A partial payment is kept.
-    let pays_on_the_spot = lot.pukhta.is_some()
-        && lot.cash_paid > Paisa::ZERO
-        && lot.cash_paid == credit_of(lot, entry_id)?;
+    let credit = credit_of(lot, entry_id)?;
+    let mut pays_on_the_spot =
+        lot.pukhta.is_some() && lot.cash_paid > Paisa::ZERO && lot.cash_paid == credit;
+    // So does a پختہ بیوپاری with his own account (PRD FR-13.11), told by the mark `is_pukhta_party`
+    // that the caller read from the database. His default is the credit less the advance it
+    // adjusts (A79, Umar 01-11-2026), worked out here the way the domain works it out on the
+    // save: the advance free for the posting, and what the earlier lots of the same seller took.
+    if first && let Some(left) = party_left.get_mut(&lot.seller.id) {
+        let taken = if lot.adjust_advance && credit > Paisa::ZERO {
+            let taken = credit.min(*left);
+            *left = left.checked_sub(taken).map_err(money_error)?;
+            taken
+        } else {
+            Paisa::ZERO
+        };
+        let default = credit.checked_sub(taken).map_err(money_error)?;
+        // A cash of 0 is kept as typed, as for the one-time seller: an edit must never turn the
+        // Owner's "pay nothing now" into a payment.
+        pays_on_the_spot =
+            credit > Paisa::ZERO && lot.cash_paid > Paisa::ZERO && lot.cash_paid == default;
+    }
     Ok(LotInput {
         key: format!("lot:{}", lot.id),
         lot_id: keep_ids.then_some(lot.id),
@@ -352,15 +376,28 @@ fn header_input(detail: &BikriDetail, date: BusinessDate, first: bool) -> Header
 /// # Errors
 /// `ServiceError::Data` for a sum that does not fit.
 pub(super) fn draft_of(
+    conn: &Connection,
     detail: &BikriDetail,
     entry_id: i64,
     date: BusinessDate,
     kind: PostingKind,
     keep_ids: bool,
 ) -> Result<BikriDraft, ServiceError> {
-    let lots = posting_lots(detail, entry_id, kind)
+    let posting = posting_lots(detail, entry_id, kind);
+    let first = kind == PostingKind::First;
+    // The sellers who are a پختہ party's own account, each with the advance free for the posting.
+    let seller_ids: Vec<i64> = posting.iter().map(|lot| lot.seller.id).collect();
+    let mut party_left: HashMap<i64, Paisa> = HashMap::new();
+    if first {
+        for id in mandi_db::accounts::pukhta_parties_among(conn, &seller_ids)? {
+            let free =
+                crate::matching::advance_available(conn, id, &date.to_iso(), Some(entry_id))?;
+            party_left.insert(id, free);
+        }
+    }
+    let lots = posting
         .iter()
-        .map(|lot| lot_input(lot, entry_id, keep_ids))
+        .map(|lot| lot_input(lot, entry_id, keep_ids, first, &mut party_left))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(BikriDraft {
         header: header_input(detail, date, kind == PostingKind::First),

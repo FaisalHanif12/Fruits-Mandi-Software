@@ -1,0 +1,18 @@
+{
+  "status": "found",
+  "account": {
+    "id": 32,
+    "code": "0032",
+    "name_ur": "نذیر",
+    "name_en": "Nazir",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "buyer",
+    "is_pukhta_party": true,
+    "control_id": 6,
+    "is_active": true,
+    "is_dead": false
+  },
+  "candidates": [],
+  "suggested_code": null
+}

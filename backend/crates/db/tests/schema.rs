@@ -155,6 +155,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "note",
                 // Migration 0006 (PRD v1.7): the tag after a name (null for none).
                 "tag",
+                // Migration 0013 (plan 47, PRD v1.15): a پختہ party's own account.
+                "is_pukhta_party",
             ]);
             v
         }),

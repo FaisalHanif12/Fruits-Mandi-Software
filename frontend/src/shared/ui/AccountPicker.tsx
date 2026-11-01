@@ -19,7 +19,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   accountSource,
   accountsResolveCode,
+  typeMessageId,
   type AccountHit,
+  type AccountKind,
   type AccountRow,
   type AccountScope,
   type ResolvedCode,
@@ -76,6 +78,7 @@ function hitOfRow(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
+    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
@@ -193,7 +196,7 @@ export function AccountPicker({
   // and the picker waits for the Index form instead.
   const fullForm =
     addRecord !== null && add.kind !== null
-      ? (text: string) => {
+      ? (text: string, accountKind: AccountKind) => {
           const done = waiting.current;
           waiting.current = null;
           setAdding(null);
@@ -203,6 +206,7 @@ export function AccountPicker({
             kind,
             text,
             form: 'full',
+            accountKind,
             onClosed: (added) => {
               if (added === null) {
                 done?.(null);
@@ -271,6 +275,16 @@ export function AccountPicker({
         onAddRecord={(text, done) => {
           openQuickAdd(text, done);
         }}
+        // A پختہ party is marked next to his code in every field, so he is told apart from an ordinary
+        // one of his side; his side is the field's, or the chip below where the field takes any
+        // account (plan 47).
+        renderMark={(hit) =>
+          hit.is_pukhta_party === true ? (
+            <Localized id="accounts-type-pukhta">
+              <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+            </Localized>
+          ) : null
+        }
         renderEnd={(hit) => (
           <span className="flex items-baseline gap-3">
             {scope === 'any' ? (
@@ -298,7 +312,9 @@ export function AccountPicker({
                         onChange(candidate);
                       }}
                     >
-                      <Localized id={`accounts-type-${candidate.account_type}`} />
+                      <Localized
+                        id={typeMessageId(candidate.account_type, candidate.is_pukhta_party)}
+                      />
                       <bdi dir="ltr">{candidate.code}</bdi>
                       {displayName(candidate, language)}
                     </Button>

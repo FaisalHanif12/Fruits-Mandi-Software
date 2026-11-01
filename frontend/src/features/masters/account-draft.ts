@@ -4,7 +4,13 @@
 
 import { formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
 import type { NamePairValue } from '../../shared/ui';
-import type { AccountDraft, AccountRow, AccountType } from '../../shared/accounts';
+import {
+  creditStartsAllowed,
+  kindOfAccount,
+  type AccountDraft,
+  type AccountRow,
+  type AccountType,
+} from '../../shared/accounts';
 
 /** The form with the spelling marks of its two name pairs next to the names. */
 export interface AccountFormValues extends Omit<AccountDraft, 'names' | 'father'> {
@@ -12,17 +18,22 @@ export interface AccountFormValues extends Omit<AccountDraft, 'names' | 'father'
   father: NamePairValue;
 }
 
-/** A new account: the suggested code, ticked "credit allowed" (PRD 10.2), today as opening date. */
+/**
+ * A new account: the suggested code, today as opening date, and "credit allowed" ticked (PRD 10.2)
+ * except for a پختہ buyer, who starts without it so his lines start as نقدی (PRD FR-13.11, A79).
+ */
 export function newAccountValues(
   accountType: AccountType,
   controlId: number | null,
   code: string,
   today: string,
+  isPukhtaParty = false,
 ): AccountFormValues {
   return {
     id: null,
     version: null,
     account_type: accountType,
+    is_pukhta_party: isPukhtaParty,
     control_id: controlId,
     code,
     names: { urdu: '', english: '' },
@@ -38,7 +49,7 @@ export function newAccountValues(
     opening_dr: '',
     opening_cr: '',
     opening_is_advance: false,
-    credit_allowed: true,
+    credit_allowed: creditStartsAllowed(kindOfAccount(accountType, isPukhtaParty)),
     credit_limit: '',
     default_marka: null,
     collector: null,
@@ -61,6 +72,7 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     id: row.id,
     version: row.version,
     account_type: row.account_type,
+    is_pukhta_party: row.is_pukhta_party === true,
     control_id: row.control.id,
     code: row.code,
     names: { urdu: row.name_ur, english: row.name_en },
@@ -106,6 +118,7 @@ const REF_FIELDS = ['city', 'adda', 'linked_account', 'default_marka', 'collecto
 export function sameAccountValues(a: AccountFormValues, b: AccountFormValues): boolean {
   return (
     a.account_type === b.account_type &&
+    (a.is_pukhta_party ?? false) === (b.is_pukhta_party ?? false) &&
     a.control_id === b.control_id &&
     a.names.urdu === b.names.urdu &&
     a.names.english === b.names.english &&

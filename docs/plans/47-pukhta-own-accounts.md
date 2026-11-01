@@ -53,3 +53,24 @@ Targeted checks only (Umar's rule).
 ## 7. Out of scope
 
 Changing a typed person into a پختہ account (make regular stays as it is); moving old typed lines.
+
+## 8. T1 contract as agreed (01-11-2026)
+
+- Mark: new column `accounts.is_pukhta_party` (migration 0013_pukhta_party_accounts.sql), 1 for a party's own account. A CHECK keeps it apart from `is_pukhta_khata` and `is_system` and requires party_type seller or buyer; a trigger makes it unchangeable after insert; a partial index serves the list filter. Existing rows get 0.
+- Lead decision: `AccountType` stays the side (seller, buyer, ...). No `pukhta_buyer` / `pukhta_seller` values: 20+ places compare the side, and a new value would silently stop him being a buyer there. An optional bool `is_pukhta_party` rides on AccountInput, AccountsNextCodeInput, AccountRow, AccountHit, PartyCard and SimilarAccount (left out of the JSON when false).
+- Form: بیوپاری (seller, false), گاہک (buyer, false), پختہ کھاتہ گاہک (buyer, true), پختہ کھاتہ بیوپاری (seller, true). One 003 counter from 0032 for both sides; never 0030 or 0031. Credit starts unticked for پختہ گاہک. The type is fixed on edit (ERR_FORMAT_INVALID on is_pukhta_party). No new error codes.
+- List: kind pukhta = 0030, 0031, then the own accounts by code; seller and buyer kinds leave a party out; all has everybody.
+- Short codes: his running number in 003, in a box of his side only. Lead decision: when an ordinary party has the same running number (buyer 0022 and پختہ گاہک 0032, "2"), the resolve returns "several", ordinary first, both listed with their codes; the user picks. The frontend AccountPicker handles "several" in Buyer and Seller scope as in Any scope.
+- Lines: no name, no person key. A پختہ seller's lot نقد defaults to صافی بکری on the first posting when left empty (as FR-13.10); a typed نقد wins.
+- Lead decision: robustness is not active, so backend adds the one mechanical line `is_pukhta_party: false` to the 8 robustness test files that build AccountInput, and nothing else in them.
+
+- Umar, 01-11-2026: a پختہ seller with an open advance and the tick on: نقد starts as the seller credit less the advance the lot adjusts (10,160 − 5,000 = 5,160). Written into FR-13.11 and A79 (same v1.15, same day).
+- Umar, 01-11-2026: when a پختہ seller's lot takes advance a later بکری already used, the default stays and an amber warning on نقد names the amount (backend option 2). Written into FR-13.11.
+
+## 9. T2, F1 and F2 as built (01-11-2026), accepted; one item left
+
+- Backend HANDOFF: migration 0013 (v12 to v13, run clean on a copy of Umar's data), the flag on the account types, codes 0032 on, short codes by side with "several", R9 and the register, cash first, and Umar's option (i) for the advance in preview, save, edit and undo. Money agent two runs; R1 answered by Umar, R2 and R3 fixed. fmt and clippy clean; about 2,400 tests in 155 targets passed; golden_day 94 unchanged.
+- Frontend HANDOFF: form with four kinds, list kind in the name cell, short mark in picker rows, card names the kind, quick add per side, the lot_seller quick add now starts as a seller, contract tests on backend's 34 fixtures, 454 tests in 20 files. Screens ur and en at 1366 x 900 and 1024 x 600 on dev data.
+- Lead rerun before commit: typecheck, i18n:check, cargo fmt clean; golden_day 94, lot_seller_list 10, pukhta_party 18 passed.
+- Left: the amber warning when a back-dated lot takes advance a later بکری used (Umar, option 2), with its ur and en text.
+- Gate finding raised by backend: `services/tests/masters.rs` (no DELETE of master records) fails on DELETEs in plan 44 code (purchase_cost_parts, venture_entry_parts, edit_windows). The allow-list is not widened until backend explains how rule 4 is kept.

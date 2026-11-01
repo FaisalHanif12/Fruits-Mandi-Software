@@ -77,8 +77,10 @@ pub async fn accounts_set_active<R: tauri::Runtime>(
 
 /// The next free code for a kind of account: `0010`, `0011` ... for sellers and `0020` ... for buyers
 /// (the type number and the next running number, never a code used before, plan 32 R2); the other
-/// types keep the control code plus a 4-digit serial. Errors: `ERR_SERIES_FULL`, `ERR_NOT_FOUND`
-/// (`control_id`), `ERR_REQUIRED` (`control_id` for type `other`).
+/// types keep the control code plus a 4-digit serial. With `is_pukhta_party` (a seller or a buyer of the
+/// پختہ series, plan 47) it is the next running number of the series `003` from `0032`. Errors:
+/// `ERR_SERIES_FULL`, `ERR_NOT_FOUND` (`control_id`), `ERR_REQUIRED` (`control_id` for type `other`),
+/// `ERR_FORMAT_INVALID` (`is_pukhta_party` on a kind that is not a seller or a buyer).
 #[tauri::command]
 pub async fn accounts_next_code<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -86,7 +88,12 @@ pub async fn accounts_next_code<R: tauri::Runtime>(
 ) -> Result<String, UiError> {
     run(app, "accounts_next_code", move |ctx| {
         auth::require(ctx)?;
-        accounts::next_code(ctx, input.account_type, input.control_id)
+        accounts::next_code_for(
+            ctx,
+            input.account_type,
+            input.is_pukhta_party,
+            input.control_id,
+        )
     })
     .await
 }

@@ -422,6 +422,7 @@ mod tests {
             head_code: "03".to_owned(),
             is_system: system,
             is_pukhta_khata: pukhta,
+            is_pukhta_party: false,
             is_active: true,
             opening_entry_id: None,
             opening_date: None,

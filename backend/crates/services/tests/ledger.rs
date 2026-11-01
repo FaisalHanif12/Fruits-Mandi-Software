@@ -49,6 +49,7 @@ fn buyer_akram(env: &TestEnv, owner: &auth::Actor) -> i64 {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
+        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: "اکرم ٹول ٹیکس".into(),
