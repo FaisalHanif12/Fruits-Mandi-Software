@@ -11,6 +11,7 @@ use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::fruit::{
     FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitInput, FruitSaved,
 };
+use mandi_domain::core::validate;
 use mandi_domain::ledger::{PostingType, SourceType};
 use serde_json::{Value, json};
 
@@ -246,11 +247,34 @@ pub(super) fn edit(
     actor: &Actor,
     input: &FruitEditInput,
 ) -> Result<FruitEdited, ServiceError> {
-    let reason = required_reason(&input.reason)?;
     let window = day::window(ctx)?;
+    ctx.db.write(|tx| edit_in(ctx, actor, tx, window, input))
+}
+
+/// The edit inside the transaction of the caller: the save and the rehearsal of the preview
+/// (`crate::edit`) are this one function (Code Standards B5). The date never changes
+/// (`ERR_EDIT_DATE_FIXED` on `entry.date`); the reason is needed when the entry is not of today.
+pub(crate) fn edit_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &FruitEditInput,
+) -> Result<FruitEdited, ServiceError> {
     let now = ctx.now_text();
-    ctx.db.write(|tx| {
+    {
         let old = load_open(ctx, tx, input.id, input.version)?;
+        let old_date = BusinessDate::parse_iso(&old.entry_date)
+            .ok_or_else(|| data("the date of a fruit entry is not a date"))?;
+        // The date never changes (PRD FR-7.70): a changed date is named before a missing reason.
+        // (A saved entry on a closed day is refused by `load_open` above.)
+        if validate::date("entry.date", &input.entry.date, window.1)
+            .is_ok_and(|typed| typed != old_date)
+        {
+            return Err(crate::edit::date_fixed("entry.date", old_date));
+        }
+        let reason =
+            crate::edit::reason_for(window.1, old_date, &input.reason)?.unwrap_or_default();
         let planned = plan(tx, window, &input.entry, Some(&old))?;
         let preview = planned.preview();
         if !planned.errors.is_empty() {
@@ -282,15 +306,14 @@ pub(super) fn edit(
         take_from_lot(tx, &ready, &date_iso, entry_id, user, &now)?;
         let saved = frepo::get(tx, old.id)?
             .ok_or_else(|| data("a fruit entry is missing after its edit"))?;
-        ctx.db.auditor().write(
-            tx,
-            &Event::new(Some(user), "edit", "fruit_take")
-                .entity_id(old.id)
-                .old(audit_values(&old))
-                .new_value(audit_values(&saved))
-                .reason(&reason)
-                .into_entry(),
-        )?;
+        let mut event = Event::new(Some(user), "edit", "fruit_take")
+            .entity_id(old.id)
+            .old(audit_values(&old))
+            .new_value(audit_values(&saved));
+        if !reason.is_empty() {
+            event = event.reason(&reason);
+        }
+        ctx.db.auditor().write(tx, &event.into_entry())?;
         Ok(FruitEdited {
             id: old.id,
             number: old.number,
@@ -299,7 +322,7 @@ pub(super) fn edit(
             reversal_entry_id: reversal.entry_id,
             preview,
         })
-    })
+    }
 }
 
 /// Cancels an entry by reversal while its day is open (PRD FR-16.12).

@@ -283,7 +283,7 @@ fn e2e_34_the_purchase_is_split_and_the_shop_parts_post() {
     assert_eq!(row.paid_now_paisa.rupees(), 10_400);
     assert_eq!(row.trip_cost_paisa.rupees(), 0);
     assert_eq!(amounts(&row.parts), vec![4_160, 3_120, 3_120]);
-    assert!(row.can_cancel);
+    assert!(row.flags.can_cancel);
     assert_eq!(row.result_paisa.rupees(), 0);
 }
 
@@ -342,7 +342,7 @@ fn e2e_41_a_pocket_part_posts_nothing_and_the_truck_is_spread_over_the_purchase(
     assert_eq!(row.trip_cost_paisa.rupees(), 4_000);
     assert_eq!(row.cost_left_paisa.rupees(), 100_000);
     assert_eq!(row.avg_cost_paisa.rupees(), 1_250);
-    assert!(!row.can_cancel, "it carries a part of a trip cost");
+    assert!(!row.flags.can_cancel, "it carries a part of a trip cost");
     assert_eq!(credit_balance(&w, venture_account(&w, a)), -50_000);
     balanced(&w);
     // The trip's money in: الف 50,000 from the shop, ب 50,000 from his pocket.
@@ -412,7 +412,7 @@ fn a_purchase_from_pockets_only_has_no_journal_entry() {
     assert_eq!(entry_count(&w), before);
     let row = purchases::get(&w.env.ctx, &PurchaseGetInput { id: saved.id }).unwrap();
     assert_eq!(row.qty_left, 0);
-    assert!(!row.can_cancel);
+    assert!(!row.flags.can_cancel);
 }
 
 #[test]
@@ -502,7 +502,7 @@ fn c24_a_trip_cost_is_spread_by_the_nag_bought() {
     for id in [first.id, second.id] {
         let row = purchases::get(&w.env.ctx, &PurchaseGetInput { id }).unwrap();
         assert_eq!(row.trip_cost_paisa.rupees(), 0);
-        assert!(row.can_cancel);
+        assert!(row.flags.can_cancel);
     }
     balanced(&w);
     let err = trips::cost_cancel(

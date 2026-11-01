@@ -330,6 +330,7 @@ pub fn preview_expense(
                 .partner
                 .as_ref()
                 .map(|p| record_of(p.id, &p.name_ur, &p.name_en)),
+            partners_locked: false,
             others_not_affected: partner_effect.is_some(),
             shares,
             partner_effect,

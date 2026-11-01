@@ -13,6 +13,8 @@ import { useDebouncedValue } from '../../../shared/hooks';
 import { formNavigationProps } from '../../../shared/keyboard';
 import { Card, Checkbox, EmptyState, FilterBar, ShowClosedTick } from '../../../shared/ui';
 import { useVouchersList } from '../../vouchers';
+import { useOpenVoucher } from '../../../shared/edit';
+import { VoucherRowActions } from './VoucherRowActions';
 import { EXPENSE_DAY_COLUMNS, TAKE_COLUMNS } from '../list-columns';
 import { usePartnerTakes } from '../hooks';
 import type { ExpenseType } from '../screen-type';
@@ -29,6 +31,8 @@ interface ExpenseListSectionProps {
 }
 
 function ShopDay({ day }: { day: string }) {
+  const open = useOpenVoucher();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   // The cancelled expenses of the day step aside until the tick is on (plan 38 G6); the search box
   // finds a number, a head or the words of the narration.
   const [search, setSearch] = useState('');
@@ -46,6 +50,7 @@ function ShopDay({ day }: { day: string }) {
   });
   const first = list.data?.pages[0];
   const rows = list.isError ? undefined : list.data?.pages.flatMap((page) => page.rows);
+  const selected = rows?.find((row) => row.id === selectedId) ?? null;
   return (
     <>
       <div {...formNavigationProps}>
@@ -55,6 +60,7 @@ function ShopDay({ day }: { day: string }) {
           extra={<ShowClosedTick checked={showFinished} onChange={setShowFinished} />}
         />
       </div>
+      <VoucherRowActions row={selected} />
       <PagedList
         columns={EXPENSE_DAY_COLUMNS}
         rows={rows}
@@ -74,6 +80,14 @@ function ShopDay({ day }: { day: string }) {
             help={<Localized id="cashbook-day-empty-help" />}
           />
         }
+        onOpen={(row) => {
+          if (row.can_edit && !row.needs_reopen) open(row);
+          else setSelectedId(row.id);
+        }}
+        onFocusRow={(rowId) => {
+          setSelectedId(rows?.find((row) => String(row.id) === rowId)?.id ?? null);
+        }}
+        focusRowId={selectedId === null ? null : String(selectedId)}
         isInactive={(row) => row.status === 'cancelled'}
         totals={
           first === undefined
@@ -94,6 +108,7 @@ function ShopDay({ day }: { day: string }) {
 }
 
 function PartnerTakesList({ partnerId }: { partnerId: number }) {
+  const open = useOpenVoucher();
   // A take that is fully returned is left out until the tick is on (plan 38 G6).
   const [showReturned, setShowReturned] = useState(false);
   const takes = usePartnerTakes(partnerId, true, showReturned);
@@ -110,6 +125,12 @@ function PartnerTakesList({ partnerId }: { partnerId: number }) {
         columns={TAKE_COLUMNS}
         rows={rows}
         getRowId={(row) => `${row.source}-${String(row.voucher_id ?? row.entry_date)}`}
+        // A row made by a voucher opens that voucher; an opening balance has no voucher.
+        onOpen={(row) => {
+          if (row.source === 'voucher' && row.voucher_id !== null) {
+            open({ id: row.voucher_id, voucher_type: 'personal_expense' });
+          }
+        }}
         labelId="cashbook-takes-label"
         failedId="cashbook-takes-failed"
         error={takes.isError ? uiErrorOf(takes.error) : null}

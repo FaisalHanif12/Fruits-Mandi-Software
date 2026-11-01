@@ -197,6 +197,7 @@ const EXPECTED_FILES: &[&str] = &[
     "VoucherPreview.ts",
     "VoucherGetInput.ts",
     "VoucherEditInput.ts",
+    "VoucherEditable.ts",
     "VoucherCancelInput.ts",
     "VoucherCancelled.ts",
     "OpenBillsInput.ts",
@@ -726,6 +727,45 @@ const EXPECTED_FILES: &[&str] = &[
     // Run B, D5 round 14 (append-only block).
     "PrintReportInput.ts",
     "PrintAnalyticsViewInput.ts",
+    // Plan 44 (append-only block).
+    "PartnersList.ts",
+    "EntryFlags.ts",
+    "LockedReason.ts",
+    "EditStamp.ts",
+    "EditPreview.ts",
+    "EntryEdited.ts",
+    "EditReview.ts",
+    "EditChange.ts",
+    "EditPlace.ts",
+    "EditPlaceKind.ts",
+    "ChangeValue.ts",
+    "EditEffect.ts",
+    "EffectParty.ts",
+    "EffectCash.ts",
+    "EffectPartner.ts",
+    "EditEntity.ts",
+    "PurchaseEditInput.ts",
+    "TripCostEditInput.ts",
+    "TripOtherSaleEditInput.ts",
+    "GardenEntryEditInput.ts",
+    "GardenArrivalEditInput.ts",
+    "TripHeaderEditInput.ts",
+    "GardenHeaderEditInput.ts",
+    "DayFixOpenInput.ts",
+    "DayFixOpened.ts",
+    "DayFixCloseInput.ts",
+    "DayFixClosed.ts",
+    "DayFixStayedOpen.ts",
+    "PartnerCodeStatus.ts",
+    "PartnerCodeSetInput.ts",
+    "PartnerCodeChangeInput.ts",
+    "PartnerCodeUnlockInput.ts",
+    "PartnerCodeResetInput.ts",
+    "EditStampInput.ts",
+    "EditStampRow.ts",
+    "EditHistoryInput.ts",
+    "EditHistory.ts",
+    "EditVersion.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -844,6 +884,7 @@ fn export_bindings() {
     vouchers::VoucherPreview::export_all(&cfg).unwrap();
     vouchers::VoucherGetInput::export_all(&cfg).unwrap();
     vouchers::VoucherEditInput::export_all(&cfg).unwrap();
+    vouchers::VoucherEditable::export_all(&cfg).unwrap();
     vouchers::VoucherCancelInput::export_all(&cfg).unwrap();
     vouchers::VoucherCancelled::export_all(&cfg).unwrap();
     vouchers::OpenBillsInput::export_all(&cfg).unwrap();
@@ -1255,6 +1296,33 @@ fn export_bindings() {
     // Run B, D5 round 14 (append-only block).
     mandi_app_lib::print_report::PrintReportInput::export_all(&cfg).unwrap();
     mandi_app_lib::print_report::PrintAnalyticsViewInput::export_all(&cfg).unwrap();
+    // Plan 44 (append-only block).
+    partners::PartnersList::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EntryFlags::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditPreview::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EntryEdited::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditReview::export_all(&cfg).unwrap();
+    mandi_services::core::edit::EditEntity::export_all(&cfg).unwrap();
+    mandi_services::core::edit::PurchaseEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripCostEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripOtherSaleEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenEntryEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenArrivalEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::TripHeaderEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::GardenHeaderEditInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixOpenInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixOpened::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixCloseInput::export_all(&cfg).unwrap();
+    mandi_services::core::edit::DayFixClosed::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeStatus::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeSetInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeChangeInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeUnlockInput::export_all(&cfg).unwrap();
+    mandi_services::core::partner_code::PartnerCodeResetInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditStampInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditStampRow::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditHistoryInput::export_all(&cfg).unwrap();
+    mandi_reports::audit::EditHistory::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(
@@ -1488,4 +1556,88 @@ fn plan_04_contract_shapes() {
         grouping.contains("international") && grouping.contains("lakh"),
         "{grouping}"
     );
+}
+
+#[test]
+fn plan_44_edit_and_partner_code_types_have_the_contract_shape() {
+    use mandi_services::core::edit;
+    use mandi_services::core::partner_code;
+    let cfg = Config::new();
+    let has = |decl: String, parts: &[&str]| {
+        for part in parts {
+            assert!(decl.contains(part), "{part} missing in {decl}");
+        }
+    };
+    has(
+        edit::EditStamp::decl(&cfg),
+        &[
+            "at: string",
+            "local_date: string",
+            "local_time: string",
+            "by: string",
+            "count: number",
+            "reason: string | null",
+        ],
+    );
+    has(
+        edit::EntryFlags::decl(&cfg),
+        &[
+            "can_edit: boolean",
+            "can_cancel: boolean",
+            "locked_reason: LockedReason | null",
+            "needs_reopen: boolean",
+            "edited: EditStamp | null",
+        ],
+    );
+    has(
+        edit::EditReview::decl(&cfg),
+        &[
+            "entry_date: string",
+            "changes: Array<EditChange>",
+            "effect: EditEffect",
+            "reason_required: boolean",
+            "needs_reopen: boolean",
+        ],
+    );
+    has(
+        edit::EditEffect::decl(&cfg),
+        &[
+            "parties: Array<EffectParty>",
+            "cash: EffectCash | null",
+            "partners: Array<EffectPartner>",
+            "partners_locked: boolean",
+        ],
+    );
+    has(
+        edit::PurchaseEditInput::decl(&cfg),
+        &[
+            "id: number",
+            "version: number",
+            "purchase: PurchaseInput",
+            "reason: string",
+        ],
+    );
+    has(
+        partner_code::PartnerCodeStatus::decl(&cfg),
+        &[
+            "is_set: boolean",
+            "unlocked: boolean",
+            "wait_seconds: number",
+        ],
+    );
+    has(
+        partners::PartnersList::decl(&cfg),
+        &["partners: Array<PartnerRow>", "partners_locked: boolean"],
+    );
+    let reasons = edit::LockedReason::decl(&cfg);
+    for word in [
+        "goods_moved",
+        "lot_seller_locked",
+        "garden_closed",
+        "month_closed",
+        "cancelled",
+        "returns_stand",
+    ] {
+        assert!(reasons.contains(word), "{reasons}");
+    }
 }

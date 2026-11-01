@@ -440,3 +440,88 @@ partners-ventures-col-balance = بقایا یا نتیجہ
 # The name of the table of partners on the overview, read by a screen reader (plan 38).
 # review: pending
 partners-overview-label = شراکت دار اور ان کے اعداد
+
+## The partner code (plan 44, PRD FR-17.11): the section opens only with a 4-digit code.
+
+# review: pending
+partners-code-title = شراکت دار کوڈ
+
+# review: pending
+partners-code-failed = شراکت دار کوڈ کی حالت نہیں پڑھی جا سکی
+
+# review: pending
+partners-code-locked-title = شراکت دار کا حصہ کوڈ سے کھلتا ہے
+
+# review: pending
+partners-code-locked-help = چار ہندسوں کا کوڈ لکھیں۔ اس حصے سے باہر جاتے ہی یہ دوبارہ بند ہو جاتا ہے۔
+
+# review: pending
+partners-code-field = کوڈ
+
+# review: pending
+partners-code-open = کھولیں
+
+# review: pending
+partners-code-forgot = کوڈ بھول گئے
+
+# $seconds: seconds left to wait.
+# review: pending
+partners-code-wait = غلط کوڈ بہت بار لکھا گیا۔ { $seconds } سیکنڈ بعد دوبارہ کوشش کریں۔
+
+# review: pending
+partners-code-set-title = شراکت دار کوڈ بنائیں
+
+# review: pending
+partners-code-set-help = شراکت داروں کی رقمیں بہت خاص ہیں، اس لیے یہ حصہ چار ہندسوں کے کوڈ سے کھلے گا۔ کوڈ بنانے کے لیے مالک کا پاس ورڈ چاہیے۔ کوڈ بنائے بغیر آگے نہیں جا سکتے۔
+
+# review: pending
+partners-code-password = مالک کا پاس ورڈ
+
+# review: pending
+partners-code-new = نیا کوڈ (چار ہندسے)
+
+# review: pending
+partners-code-again = کوڈ دوبارہ لکھیں
+
+# review: pending
+partners-code-set-button = کوڈ بنائیں
+
+# review: pending
+partners-code-set-done = شراکت دار کوڈ بن گیا
+
+# review: pending
+partners-code-reset-title = کوڈ بھول گئے؟
+
+# review: pending
+partners-code-reset-help = مالک کا پاس ورڈ یا چھپا ہوا بازیابی کوڈ لکھ کر نیا کوڈ بنائیں۔
+
+# review: pending
+partners-code-reset-secret = پاس ورڈ یا بازیابی کوڈ
+
+# review: pending
+partners-code-reset-button = نیا کوڈ بنائیں
+
+# review: pending
+partners-code-reset-done = نیا شراکت دار کوڈ بن گیا
+
+# review: pending
+partners-code-change-title = شراکت دار کوڈ بدلیں
+
+# review: pending
+partners-code-change-old = پرانا کوڈ یا مالک کا پاس ورڈ
+
+# review: pending
+partners-code-change-button = کوڈ بدلیں
+
+# review: pending
+partners-code-change-done = شراکت دار کوڈ بدل گیا
+
+# The box that stands where partner figures would be.
+# review: pending
+partners-code-box-text = شراکت داروں کی رقمیں کوڈ کے بغیر نہیں دکھائی جاتیں۔
+
+# review: pending
+partners-code-enter = کوڈ درج کریں
+
+# review: pending
+partners-code-lock-now = ابھی بند کریں

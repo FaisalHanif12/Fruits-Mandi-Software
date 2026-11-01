@@ -127,6 +127,7 @@ const OVERVIEW = (() => {
 
 /** PRD 4.9: the day summary of the worked day. */
 const DAY_SUMMARY: DayCloseSummary = {
+  partners_locked: false,
   bikri_count: 2,
   gross_paisa: money(41400),
   commission_paisa: money(5448),
@@ -269,10 +270,12 @@ export const rokarHandlers: Record<string, Handler> = {
       input as unknown as { name_ur: string; name_en: string; note: string | null },
     ),
   khata_statement: (input) => books.khataStatement(input as unknown as KhataStatementInput),
-  partners_list: () =>
-    PARTNERS.map((partner) =>
+  partners_list: () => ({
+    partners: PARTNERS.map((partner) =>
       partnerRow(partner.id, partner.name_ur, partner.name_en, partner.bps),
     ),
+    partners_locked: false,
+  }),
   coa_controls_list: () => [
     {
       id: 103,

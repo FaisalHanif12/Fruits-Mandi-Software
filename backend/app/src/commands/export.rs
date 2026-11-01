@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use ts_rs::TS;
 
+use super::partner_gate;
 use super::reports_engine::{engine_error, statement_all};
 use super::run;
 use crate::error::UiError;
@@ -109,6 +110,8 @@ pub async fn reports_export_excel<R: tauri::Runtime>(
     let handle = app.clone();
     run(app, "reports_export_excel", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::report(ctx, input.export.id, &mut input.export.filters)?;
         check_job_id(&input.job_id)?;
         let job = input.job_id.clone();
         // R31, the partner statement, is put together by the services (see `reports_engine`).
@@ -134,6 +137,8 @@ pub async fn analytics_export_excel<R: tauri::Runtime>(
     let handle = app.clone();
     run(app, "analytics_export_excel", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::analytics(ctx, input.export.view, &mut input.export.filters)?;
         check_job_id(&input.job_id)?;
         let job = input.job_id.clone();
         export_analytics(ctx.db(), &input.export, &mut |p| emit(&handle, &job, p))

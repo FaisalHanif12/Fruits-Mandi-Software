@@ -20,7 +20,9 @@ import {
   Picker,
   Select,
   fieldError,
+  fieldMark,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import { usePartnerList } from '../../partners';
 import type { ExpenseDraft } from '../expense-draft';
 
@@ -29,9 +31,11 @@ interface ExpenseFormProps {
   onChange: (patch: Partial<ExpenseDraft>) => void;
   /** What the backend refused, to show next to the field it points at. */
   error: UiError | null;
+  /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
-export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
+export function ExpenseForm({ draft, onChange, error, marks }: ExpenseFormProps) {
   const language = useLanguage();
   const partners = usePartnerList();
   const shop = draft.type === 'shop_expense';
@@ -42,6 +46,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
   const headField = shop ? (
     <Field
       label={<Localized id="cashbook-field-head" />}
+      mark={fieldMark(marks, 'expense_head_id')}
       error={fieldError(error, 'expense_head_id')}
     >
       {(props) => (
@@ -66,6 +71,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
   ) : (
     <Field
       label={<Localized id="cashbook-field-partner" />}
+      mark={fieldMark(marks, 'partner_id')}
       error={fieldError(error, 'partner_id')}
     >
       {(props) => (
@@ -101,7 +107,11 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
         )}
       </Field>
       {headField}
-      <Field label={<Localized id="cashbook-field-amount" />} error={fieldError(error, 'amount')}>
+      <Field
+        label={<Localized id="cashbook-field-amount" />}
+        mark={fieldMark(marks, 'amount_paisa')}
+        error={fieldError(error, 'amount')}
+      >
         {(props) => (
           <MoneyInput
             {...props}
@@ -132,6 +142,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
         <>
           <Field
             label={<Localized id="cashbook-field-reason" />}
+            mark={fieldMark(marks, 'reason')}
             error={fieldError(error, 'reason')}
           >
             {(props) => (
@@ -146,6 +157,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
           </Field>
           <Field
             label={<Localized id="cashbook-field-return-by" />}
+            mark={fieldMark(marks, 'return_by_date')}
             error={fieldError(error, 'return_by')}
           >
             {(props) => (
@@ -160,6 +172,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
           </Field>
           <Field
             label={<Localized id="cashbook-field-taken-by" />}
+            mark={fieldMark(marks, 'taken_by')}
             error={fieldError(error, 'taken_by')}
           >
             {(props) => (
@@ -177,6 +190,7 @@ export function ExpenseForm({ draft, onChange, error }: ExpenseFormProps) {
       <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
+          mark={fieldMark(marks, 'narration')}
           error={fieldError(error, 'narration')}
         >
           {(props) => (

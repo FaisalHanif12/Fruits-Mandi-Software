@@ -2,6 +2,8 @@
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 
 import { callCommand } from '../../shared/api';
+import type { VoucherEditable } from '../../bindings/VoucherEditable';
+import type { EditPreview } from '../../bindings/EditPreview';
 import type { AdvancesInfo } from '../../bindings/AdvancesInfo';
 import type { CollectionList } from '../../bindings/CollectionList';
 import type { CollectionListInput } from '../../bindings/CollectionListInput';
@@ -69,6 +71,32 @@ export function vouchersEdit(input: {
       confirm_cash_below_zero: input.confirm,
     },
   });
+}
+
+/** The changes of an edit and their effect on balances, cash and partners (plan 44, FR-7.70). */
+export function vouchersEditPreview(input: {
+  id: number;
+  version: number;
+  entry: VoucherEntry;
+  reason: string;
+}): Promise<EditPreview> {
+  return callCommand<EditPreview>('vouchers_edit_preview', {
+    input: {
+      id: input.id,
+      version: input.version,
+      entry: input.entry,
+      reason: input.reason,
+      confirm_cash_below_zero: false,
+    },
+  });
+}
+
+/**
+ * A saved voucher as the typed entry that an edit sends back (plan 44, PRD FR-7.70): for every kind
+ * of voucher, with its row, its version and its flags. A cancelled voucher is refused.
+ */
+export function vouchersOpenForEdit(id: number): Promise<VoucherEditable> {
+  return callCommand<VoucherEditable>('vouchers_open_for_edit', { input: { id } });
 }
 
 /** Cancels a saved voucher with a reason, by reversal (PRD FR-15.3). */

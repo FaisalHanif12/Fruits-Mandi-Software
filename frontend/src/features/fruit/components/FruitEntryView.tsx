@@ -9,7 +9,7 @@
 // figure is the backend's (CLAUDE.md rule 1); names go through `displayName` (F38).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, Pencil, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { formatGrams, isoToDisplayDate } from '../../../shared/format';
@@ -23,6 +23,8 @@ import {
   LoadingState,
   Notice,
   Num,
+  EditStampLine,
+  EntryActions,
 } from '../../../shared/ui';
 import { useFruitEntry } from '../hooks';
 import { fruitNumberText } from '../list-columns';
@@ -95,6 +97,9 @@ function Saved({
           <Localized id="fruit-entry-cancelled" vars={{ reason: row.cancel_reason ?? '' }} />
         </Notice>
       ) : null}
+      {row.edited === null ? null : (
+        <EditStampLine stamp={row.edited} history={{ entity: 'fruit_take', id: row.id }} />
+      )}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 normal:grid-cols-4">
         <Fact label={<Localized id="fruit-field-for" />}>
           {row.partner === null
@@ -158,25 +163,15 @@ function Saved({
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          disabled={!row.can_change}
-          onClick={() => {
+        <EntryActions
+          flags={row}
+          onEdit={() => {
             onEdit(row);
           }}
-        >
-          <Pencil aria-hidden="true" className="size-icon-md" />
-          <Localized id="fruit-edit" />
-        </Button>
-        <Button
-          variant="danger"
-          disabled={!row.can_change}
-          onClick={() => {
+          onCancel={() => {
             onCancel(row);
           }}
-        >
-          <Ban aria-hidden="true" className="size-icon-md" />
-          <Localized id="fruit-cancel" />
-        </Button>
+        />
         <CloseButton onClose={onClose} />
       </div>
     </Card>

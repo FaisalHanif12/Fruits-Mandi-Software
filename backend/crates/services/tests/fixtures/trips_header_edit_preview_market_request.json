@@ -1,0 +1,28 @@
+{
+  "id": 1,
+  "reason": "منڈی کا نام بدلا",
+  "trip": {
+    "date": "10-10-2026",
+    "market": "Multan",
+    "note": "نوٹ",
+    "partners": [
+      {
+        "partner_id": 1,
+        "share": "40",
+        "source": "shop"
+      },
+      {
+        "partner_id": 2,
+        "share": "30",
+        "source": "shop"
+      },
+      {
+        "partner_id": 3,
+        "share": "30",
+        "source": "shop"
+      }
+    ],
+    "sent_person": null
+  },
+  "version": 1
+}

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-code-lock"
+description = "Enables the partners_code_lock command without any pre-configured scope."
+commands.allow = ["partners_code_lock"]
+
+[[permission]]
+identifier = "deny-partners-code-lock"
+description = "Denies the partners_code_lock command without any pre-configured scope."
+commands.deny = ["partners_code_lock"]

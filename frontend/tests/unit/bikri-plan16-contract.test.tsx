@@ -6,6 +6,7 @@
 // Money in the files is paisa; the screen shows whole rupees. The shapes do not depend on the
 // language, so these tests run in Urdu, the default.
 
+import { noChangeReview } from '../helpers/edit-real';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -298,6 +299,7 @@ describe('an edit against the backend files (E2E-13)', () => {
     vi.mocked(bikriApi.bikriGet).mockResolvedValue(GET_EVENT1);
     vi.mocked(bikriApi.bikriOpenForEdit).mockResolvedValue(OPEN_FOR_EDIT);
     vi.mocked(bikriApi.bikriEditPreview).mockResolvedValue(EDIT_PREVIEW);
+    vi.mocked(bikriApi.bikriEditReview).mockResolvedValue(noChangeReview());
     vi.mocked(bikriApi.bikriEditSave).mockResolvedValue(EDIT_SAVE);
     const view = await renderApp(
       `/bikri/book?id=${String(OPEN_FOR_EDIT.bikri_id)}&edit=${String(OPEN_FOR_EDIT.entry_id)}`,
@@ -321,7 +323,7 @@ describe('an edit against the backend files (E2E-13)', () => {
     expect(first?.[0]).toBe(OPEN_FOR_EDIT.entry_id);
     expect(first?.[1]).toEqual(OPEN_FOR_EDIT.draft);
     // Nothing is changed yet.
-    expect(pageText()).toContain(message(language, 'bikri-edit-no-changes'));
+    expect(pageText()).toContain(message(language, 'edit-review-none'));
   });
 
   it('a changed rate gives exactly the request file, shows the answer, and F10 saves what the file saves', async () => {
@@ -384,14 +386,12 @@ describe('the edit rules against the backend files', () => {
   it('a changed day is told under the day field, next to the shares problem of that day', async () => {
     await openWith(EDIT_PREVIEW_DAY_CHANGED);
     expect(
-      await screen.findByText(
-        said(message(language, 'err-edit-not-allowed', { rule: 'day_changed' })),
-      ),
+      await screen.findByText(said(message(language, 'err-edit-date-fixed'))),
     ).toBeInTheDocument();
     expect(
       screen.getByText(said(message(language, 'err-shares-not-100', { total: '0' }))),
     ).toBeInTheDocument();
-    expect(pageText()).not.toContain('ERR_EDIT_NOT_ALLOWED');
+    expect(pageText()).not.toContain('ERR_EDIT_DATE_FIXED');
   });
 });
 
@@ -404,7 +404,7 @@ describe('a cancel against the backend files (E2E-15)', () => {
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', {
-        name: said(message(language, 'bikri-cancel-bikri')),
+        name: said(message(language, 'edit-action-cancel')),
       }),
     );
     const dialog = await screen.findByRole('alertdialog');

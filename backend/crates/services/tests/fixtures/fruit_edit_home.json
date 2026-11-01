@@ -84,6 +84,7 @@
       "rate_paisa": 58000,
       "source": "today",
       "date": "2026-10-10"
-    }
+    },
+    "partners_locked": false
   }
 }

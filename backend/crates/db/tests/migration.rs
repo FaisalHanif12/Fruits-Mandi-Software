@@ -11,8 +11,8 @@ use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
-    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, INIT_SQL, MigrationOutcome,
-    SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL,
+    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
+    MigrationOutcome, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL,
     SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
@@ -21,7 +21,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 11;
+const LATEST: usize = 12;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -180,6 +180,27 @@ fn released_version_10() -> Migrations<'static> {
         M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
         M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
         M::up(SHOP_SPLIT_SQL),
+    ])
+}
+
+/// The schema as it was released at version 11: migrations 0001 to 0011.
+fn released_version_11() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
     ])
 }
 
@@ -457,10 +478,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 12).unwrap();
+    conn.pragma_update(None, "user_version", 13).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 12);
+    assert_eq!(user_version(&conn), 13);
     assert!(!backups.exists());
 }
 
@@ -2768,7 +2789,8 @@ fn migration_11_adds_the_dead_marks_table_and_changes_nothing_else() {
     assert_eq!(user_version(&conn), 10);
     let before = all_rows_without(&conn, &[]);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_11(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (10, 11));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 11);
@@ -2779,4 +2801,51 @@ fn migration_11_adds_the_dead_marks_table_and_changes_nothing_else() {
         .collect();
     assert_eq!(after, before, "nothing else moved");
     assert_eq!(DEAD_MARKS_SQL.matches("CREATE TABLE").count(), 1);
+}
+
+#[test]
+fn migration_12_adds_the_edit_windows_table_and_changes_nothing_else() {
+    // Plan 44: a file at version 11 is upgraded. The new table is empty, no other row moves, the
+    // triggers of the trip and garden entries are replaced (and still refuse a change outside a
+    // window), and a copy is taken before the upgrade.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_11(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 11);
+    let before = all_rows_without(&conn, &[]);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (11, 12));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 12);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM edit_windows"), 0);
+    let after: Vec<(String, String)> = all_rows_without(&conn, &[])
+        .into_iter()
+        .filter(|(table, _)| table != "edit_windows")
+        .collect();
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(EDIT_WINDOWS_SQL.matches("CREATE TABLE").count(), 1);
+    // The seven triggers named in the file were replaced, none was lost.
+    for name in [
+        "purchases_record_is_final",
+        "venture_entries_record_is_final",
+        "venture_entry_parts_no_update",
+        "venture_entry_parts_no_delete",
+        "purchase_cost_parts_no_update",
+        "purchase_cost_parts_no_delete",
+        "garden_arrivals_record_is_final",
+        "ventures_identity_is_final",
+    ] {
+        assert_eq!(
+            count(
+                &conn,
+                &format!(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name = '{name}'"
+                )
+            ),
+            1,
+            "{name}"
+        );
+    }
 }

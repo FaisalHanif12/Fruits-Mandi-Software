@@ -726,6 +726,10 @@ bikri-edit-reason-label = وجہ
 # review: pending
 bikri-edit-reason-confirm = تبدیلیاں محفوظ کریں
 
+# The lot's figures before and after an edit (plan 44).
+# review: pending
+bikri-edit-figures-title = اس لاٹ کے اعداد
+
 # review: pending
 bikri-edit-changes-title = آپ نے کیا بدلا
 

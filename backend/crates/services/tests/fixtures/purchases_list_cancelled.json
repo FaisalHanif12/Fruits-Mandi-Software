@@ -136,7 +136,11 @@
         "rule_id": null
       },
       "days_waiting": 0,
+      "can_edit": false,
       "can_cancel": false,
+      "locked_reason": "cancelled",
+      "needs_reopen": false,
+      "edited": null,
       "can_change_sell_date": false,
       "lots": [],
       "write_offs": []

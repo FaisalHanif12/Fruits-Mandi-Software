@@ -42,7 +42,7 @@ describe('E2E-15: cancel a whole بکری with a reason (Urdu)', () => {
   it('2. the box names what it reverses, and an empty reason is told at the field', async () => {
     await openLastSaved();
     await waitForText(t('ur', 'bikri-saved-readonly'));
-    await (await buttonNamed('bikri-cancel-bikri')).click();
+    await (await buttonNamed('edit-action-cancel')).click();
     const dialog = await $('[role="alertdialog"]');
     await dialog.waitForDisplayed({ timeout: DIALOG_WAIT_MS });
     await waitForText(t('ur', 'bikri-cancel-reverses'));

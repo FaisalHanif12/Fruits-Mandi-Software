@@ -3,6 +3,9 @@
 // Every command takes one `{ input }` object.
 
 import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EntryEdited } from '../../bindings/EntryEdited';
+import type { PurchaseEditInput } from '../../bindings/PurchaseEditInput';
 import type { PurchaseGetInput } from '../../bindings/PurchaseGetInput';
 import type { PurchaseWriteOffInput } from '../../bindings/PurchaseWriteOffInput';
 import type { SellDateInput } from '../../bindings/SellDateInput';
@@ -101,4 +104,14 @@ export function purchasesWriteOffUndo(
 ): Promise<PurchaseWriteOffUndone> {
   const input: PurchaseWriteOffUndoInput = { move_id: moveId, reason };
   return callCommand<PurchaseWriteOffUndone>('purchases_write_off_undo', { input });
+}
+
+/** The review of an edit of a trip purchase: what changes and what it does (PRD FR-7.70). Read only. */
+export function purchasesEditPreview(input: PurchaseEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('purchases_edit_preview', { input });
+}
+
+/** Saves the edit of a trip purchase: the old posting is reversed and the new one posted, same day. */
+export function purchasesEditSave(input: PurchaseEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('purchases_edit_save', { input });
 }

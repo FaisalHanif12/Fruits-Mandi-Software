@@ -7,12 +7,19 @@
 export { CancelPurchaseDialog } from './components/CancelPurchaseDialog';
 export { OwnWriteOffDialog, UndoOwnWriteOffDialog } from './components/OwnWriteOffDialogs';
 export { PurchaseDetail } from './components/PurchaseDetail';
+export { PurchaseEditFields } from './components/PurchaseEditFields';
 export { PurchaseEntryFieldsForm } from './components/PurchaseEntryFieldsForm';
 export { PurchaseNumbersCard } from './components/PurchaseNumbersCard';
 export {
   PurchaseEntryNumbersCard,
   type EntryLineNumbers,
 } from './components/PurchaseEntryNumbersCard';
+export {
+  PURCHASE_EDIT_FIELD_PATHS,
+  buildPurchaseEdit,
+  purchaseEditDraftOf,
+  type PurchaseEditDraft,
+} from './edit-draft';
 export {
   PURCHASE_FIELD_PATHS,
   buildPurchaseEntry,
@@ -26,6 +33,7 @@ export {
   readAgainAfterPurchase,
   useChangePurchaseSplit,
   usePurchase,
+  useSavePurchaseEdit,
   usePurchaseEntryPreview,
   usePurchasesList,
   useSavePurchaseEntry,
@@ -44,7 +52,7 @@ export type {
   SplitSet,
   TripRef,
 } from './types';
-export { purchasesEntryPreview } from './api';
+export { purchasesEditPreview, purchasesEntryPreview, purchasesGet } from './api';
 export { GoodsLinesGrid, addGoodsLine } from './components/GoodsLinesGrid';
 export {
   LINE,

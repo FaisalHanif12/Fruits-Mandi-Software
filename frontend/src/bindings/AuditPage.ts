@@ -33,4 +33,9 @@ export type AuditPage = {
    * only the count.
    */
   months: Array<MonthSubtotal>;
+  /**
+   * True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+   * are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+   */
+  partners_locked: boolean;
 };

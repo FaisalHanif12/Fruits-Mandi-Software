@@ -4,6 +4,7 @@
 
 use crate::listing::{MonthSums, like_contains, like_prefix, month_sums};
 use mandi_core::accounts::RecordRef;
+use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
 use mandi_core::vouchers::{LastAdvance, VoucherMode, VoucherRow, VoucherType};
 use rusqlite::types::Value;
@@ -235,7 +236,7 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
         cancel_reason: r.get::<_, Option<String>>(20)?.unwrap_or_default(),
         entry_id: r.get(21)?,
         // The service decides this from the day state (the repository does not know it).
-        editable: false,
+        flags: EntryFlags::unmarked(),
     };
     Ok((row, person_key))
 }

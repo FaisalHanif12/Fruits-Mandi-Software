@@ -6,6 +6,7 @@
 // the narrowest compact window. A cancelled entry says so in words (colour is never the only
 // signal, NFR-USE-12).
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, type Paisa } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
@@ -120,7 +121,13 @@ export const EXPENSE_DAY_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     sortKey: 'status',
     type: 'status',
     headerId: 'cashbook-col-state',
-    value: (row, { text }) => (row.status === 'cancelled' ? text('cashbook-state-cancelled') : ''),
+    value: (row, context) =>
+      statusWithEdited(
+        row.status === 'cancelled' ? context.text('cashbook-state-cancelled') : '',
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
   {
     field: 'narration',
@@ -309,5 +316,53 @@ export const KHATA_COLUMNS: readonly ListColumn<KhataEntryRow>[] = [
     type: 'money',
     headerId: 'cashbook-col-balance',
     value: (row, { money }) => runningText(row.running_paisa, money),
+  },
+];
+
+/** The saved جنرل entries under the form (plan 44, PRD FR-7.70): number, day, note, total, state. */
+export const GENERAL_LIST_COLUMNS: readonly ListColumn<VoucherRow>[] = [
+  {
+    field: 'number',
+    sortKey: 'number',
+    type: 'code',
+    headerId: 'cashbook-col-number',
+    value: (row, { text }) => voucherNumberText(row, text),
+  },
+  {
+    field: 'date',
+    sortKey: 'entry_date',
+    type: 'date',
+    headerId: 'cashbook-col-date',
+    value: (row) => isoToDisplayDate(row.entry_date),
+  },
+  {
+    field: 'narration',
+    type: 'name',
+    headerId: 'cashbook-col-narration',
+    grow: true,
+    // A note is free text, shown as typed (PRD FR-7.25).
+    value: (row) => row.narration,
+  },
+  {
+    field: 'amount',
+    sortKey: 'amount_paisa',
+    type: 'money',
+    headerId: 'cashbook-col-amount',
+    value: (row, { money }) => money(row.amount_paisa),
+  },
+  {
+    field: 'state',
+    sortKey: 'status',
+    type: 'status',
+    headerId: 'cashbook-col-state',
+    value: (row, context) =>
+      statusWithEdited(
+        context.text(
+          row.status === 'cancelled' ? 'cashbook-state-cancelled' : 'vouchers-state-saved',
+        ),
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
 ];

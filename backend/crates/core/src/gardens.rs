@@ -370,6 +370,15 @@ pub struct GardenHistoryRow {
     /// and the closing. `gardens_entry_cancel` takes it. Null for a sale or fruit row.
     #[ts(type = "number | null")]
     pub entry_id: Option<i64>,
+    /// The entry's own number in the series of its kind (`venture_entries.number`), for the edit
+    /// band. Null for a sale or fruit row, which have the بکری number or their own screen.
+    #[ts(type = "number | null")]
+    pub number: Option<i64>,
+    /// The garden arrival a sale in another shop takes its goods from (PRD FR-12.41), so the edit
+    /// form can pick it again. Null for the other kinds and for a sale typed by hand in a garden
+    /// with no arrival.
+    #[ts(type = "number | null")]
+    pub arrival_id: Option<i64>,
     /// Its version, for a cancel.
     #[ts(type = "number | null")]
     pub version: Option<i64>,
@@ -390,8 +399,12 @@ pub struct GardenHistoryRow {
     /// The running balance after this row (FR-12.37).
     #[ts(type = "Paisa")]
     pub running_balance_paisa: Paisa,
-    /// Why (an installment or a cost).
+    /// Why (an installment or a cost). For a sale in another shop it holds its note, the same text
+    /// as `note`.
     pub reason: Option<String>,
+    /// The note of a sale in another shop, as typed, so the edit form can show it. Null for the
+    /// other kinds and when no note was typed.
+    pub note: Option<String>,
     /// The shop, as typed (a sale in another shop).
     pub shop_name: Option<String>,
     /// نگ sold (a sale in another shop).
@@ -409,9 +422,12 @@ pub struct GardenHistoryRow {
     pub parts: Vec<EntryPart>,
     /// The parts of the closing (C26), signed. Empty for the other kinds.
     pub credits: Vec<ShareAmount>,
-    /// True if `gardens_entry_cancel` would accept it now, apart from a closed day. False while the
-    /// garden is closed and for sale and fruit rows.
-    pub can_cancel: bool,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// One partner's money in a garden and what he got back (PRD FR-12.38, FR-17.10, E2E-40).
@@ -450,6 +466,18 @@ pub struct GardenDetail {
     pub history_count: i64,
     /// Each partner's money in and money back.
     pub partner_results: Vec<GardenPartnerResult>,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl GardenDetail {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's money in, money
+    /// back and result of the whole garden.
+    pub fn hide_partners(&mut self) {
+        self.partner_results.clear();
+        self.partners_locked = true;
+    }
 }
 
 /// One open garden on the dashboard tile باغات (PRD 9.1, FR-12.37).
@@ -710,6 +738,17 @@ pub struct GardenCloseNumbers {
     pub partner_results: Vec<GardenPartnerResult>,
     /// False when `balance_paisa` is 0: nothing is posted, the garden still closes (E64).
     pub posts_entry: bool,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl GardenCloseNumbers {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's result.
+    pub fn hide_partners(&mut self) {
+        self.partner_results.clear();
+        self.partners_locked = true;
+    }
 }
 
 /// The answer of `gardens_close_preview`: the numbers of the closing, nothing saved.
@@ -724,6 +763,15 @@ pub struct GardenClosePreview {
     pub errors: Vec<FieldError>,
     /// Notes that do not stop the save.
     pub warnings: Vec<FieldError>,
+}
+
+impl GardenClosePreview {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's result.
+    pub fn hide_partners(&mut self) {
+        if let Some(numbers) = &mut self.numbers {
+            numbers.hide_partners();
+        }
+    }
 }
 
 /// A garden closed.

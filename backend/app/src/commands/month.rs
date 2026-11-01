@@ -12,6 +12,7 @@ use mandi_services::auth;
 use mandi_services::month::{
     self, MonthClosed, MonthInput, MonthList, MonthPreview, MonthReverseInput, MonthReversed,
 };
+use mandi_services::partner_code;
 
 use super::run;
 use crate::error::UiError;
@@ -34,7 +35,11 @@ pub async fn month_close_preview<R: tauri::Runtime>(
 ) -> Result<MonthPreview, UiError> {
     run(app, "month_close_preview", move |ctx| {
         auth::require(ctx)?;
-        month::preview(ctx, &input)
+        let mut shown = month::preview(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }

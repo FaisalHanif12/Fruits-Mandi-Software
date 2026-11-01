@@ -12,6 +12,7 @@
 // - Four states: loading, an error with a retry, nothing in the range (a helpful message), the
 //   lines. Without a partner it says to choose one.
 
+import { PartnerGate } from '../components/PartnerGate';
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ScrollText } from 'lucide-react';
@@ -51,7 +52,7 @@ function textOrNull(text: string): string | null {
 }
 
 /** The statement starts as the Owner left it: the partner and the days (PRD FR-7.45). */
-export function StatementPage() {
+function StatementPageScreen() {
   return (
     <Remembered screen={STATEMENT_SCREEN}>{(memory) => <StatementBody {...memory} />}</Remembered>
   );
@@ -227,5 +228,14 @@ function StatementBody({ saved, remember }: MemoryProps) {
         />
       )}
     </ListPage>
+  );
+}
+
+/** The screen behind the partner code (plan 44, PRD FR-17.11). */
+export function StatementPage() {
+  return (
+    <PartnerGate>
+      <StatementPageScreen />
+    </PartnerGate>
   );
 }

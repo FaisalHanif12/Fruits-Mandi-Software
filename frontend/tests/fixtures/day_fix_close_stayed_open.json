@@ -1,0 +1,22 @@
+{
+  "closed": [
+    "2026-10-10"
+  ],
+  "stayed_open": [
+    {
+      "date": "2026-10-11",
+      "errors": [
+        {
+          "code": "ERR_TRIAL_NOT_BALANCED",
+          "field": "date",
+          "values": {}
+        }
+      ]
+    },
+    {
+      "date": "2026-10-12",
+      "errors": []
+    }
+  ],
+  "closed_up_to": "2026-10-10"
+}

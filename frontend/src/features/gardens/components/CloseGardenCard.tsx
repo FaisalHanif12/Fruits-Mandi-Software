@@ -38,6 +38,7 @@ import {
   ShareAmounts,
   fieldError,
   showToast,
+  PartnerLockedBox,
 } from '../../../shared/ui';
 import { useCloseGarden, useGardenClosePreview } from '../hooks';
 import type { GardenCloseInput, GardenRow } from '../types';
@@ -191,7 +192,11 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
               <Localized id="gardens-close-nothing-posted" />
             </Notice>
           )}
-          <GardenPartnersCard results={numbers.partner_results} closed />
+          {numbers.partners_locked ? (
+            <PartnerLockedBox />
+          ) : (
+            <GardenPartnersCard results={numbers.partner_results} closed />
+          )}
         </>
       )}
       {failed ? (

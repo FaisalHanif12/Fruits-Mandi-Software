@@ -24,6 +24,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::vouchers::{self as repo, EditedVoucher, VoucherExtra};
 use mandi_domain::cash;
 use mandi_domain::core::accounts::Balance;
+use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -122,6 +123,73 @@ fn old_general_lines(old: &Old) -> Vec<(i64, Option<String>)> {
         .collect()
 }
 
+/// The names of a record by table and id, as the change list shows a record. The table is one of
+/// ours, never user text.
+fn names_of(conn: &Connection, table: &str, id: i64) -> Result<Value, ServiceError> {
+    let sql = format!("SELECT name_ur, name_en FROM {table} WHERE id = ?1");
+    let names: Option<(String, String)> = conn
+        .query_row(&sql, [id], |r| Ok((r.get(0)?, r.get(1)?)))
+        .map(Some)
+        .or_else(|e| match e {
+            mandi_db::rusqlite::Error::QueryReturnedNoRows => Ok(None),
+            other => Err(other),
+        })?;
+    Ok(names.map_or(
+        Value::Null,
+        |(ur, en)| json!({ "name_ur": ur, "name_en": en }),
+    ))
+}
+
+/// A voucher as the change list of an edit compares it (PRD FR-7.70): the stored row, and the
+/// fields only some types use (the partner, the head, the return-by day, who took the cash, a
+/// salary deduction), and the lines of a جنرل. Nothing here says what the buttons may do.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `id`; `ServiceError::Db`.
+pub(crate) fn row_value(conn: &Connection, id: i64) -> Result<Value, ServiceError> {
+    let row = repo::get(conn, id)?
+        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
+    let extra = repo::extras(conn, id)?;
+    let entry_id = row.entry_id;
+    let is_general = row.voucher_type == VoucherType::General;
+    let mut value = serde_json::to_value(&row).map_err(|e| ServiceError::Data(e.to_string()))?;
+    if let Some(map) = value.as_object_mut() {
+        if let Some(partner) = extra.partner_id {
+            map.insert("partner".to_owned(), names_of(conn, "partners", partner)?);
+        }
+        if let Some(head) = extra.expense_head_id {
+            map.insert(
+                "expense_head".to_owned(),
+                names_of(conn, "expense_heads", head)?,
+            );
+        }
+        if let Some(day) = &extra.return_by_date {
+            map.insert("return_by".to_owned(), json!(day));
+        }
+        if let Some(text) = &extra.taken_by {
+            map.insert("taken_by".to_owned(), json!(text));
+        }
+        if extra.salary {
+            map.insert("salary".to_owned(), json!(true));
+        }
+        if let (true, Some(entry_id)) = (is_general, entry_id) {
+            let stored = ledger_repo::get_entry(conn, entry_id)?;
+            let mut lines = Vec::new();
+            for line in stored.iter().flat_map(|e| e.lines.iter()) {
+                lines.push(json!({
+                    "account": names_of(conn, "accounts", line.account_id)?,
+                    "person_key": line.person_key,
+                    "dr_paisa": line.dr_paisa,
+                    "cr_paisa": line.cr_paisa,
+                    "narration": line.narration,
+                }));
+            }
+            map.insert("lines".to_owned(), Value::Array(lines));
+        }
+    }
+    Ok(value)
+}
+
 /// A voucher as the audit log keeps it, from its stored row.
 fn row_json(row: &VoucherRow, extra: &VoucherExtra) -> Value {
     let mut value = json!({
@@ -175,12 +243,26 @@ pub fn edit(
     input: &VoucherEditInput,
 ) -> Result<VoucherSaved, ServiceError> {
     let window = day::window(ctx)?;
+    ctx.db.write(|tx| edit_in(ctx, actor, tx, window, input))
+}
+
+/// The edit inside the transaction of the caller: the save of the edit, and the rehearsal of the
+/// preview (`crate::edit`), are this one function (Code Standards B5). The date of a voucher never
+/// changes (`ERR_EDIT_DATE_FIXED` on `entry.date`, PRD FR-7.70) and the reason is needed when the
+/// voucher is not of today (`ERR_REASON_REQUIRED` on `reason`).
+pub(crate) fn edit_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &VoucherEditInput,
+) -> Result<VoucherSaved, ServiceError> {
     let mut errors = FieldErrors::default();
-    let note = errors
+    let typed_note = errors
         .take(validate::free_text("reason", &input.reason))
-        .filter(|t| !t.is_empty());
+        .unwrap_or_default();
     errors.finish()?;
-    ctx.db.write(|tx| {
+    {
         let old = load(tx, input.id, input.version)?;
         if input.entry.voucher_type() != old.row.voucher_type {
             return Err(ServiceError::reject_field(
@@ -188,6 +270,17 @@ pub fn edit(
                 "entry.type",
             ));
         }
+        let old_date = BusinessDate::parse_iso(&old.row.entry_date)
+            .ok_or_else(|| ServiceError::Data("the date of a voucher is not a date".to_owned()))?;
+        // The date never changes (PRD FR-7.70): cancel the voucher and enter it again. It is checked
+        // first, so a date on a closed day is still named as a date that cannot change, and a
+        // changed date is named before a missing reason.
+        if validate::date("entry.date", input.entry.date_text(), window.1)
+            .is_ok_and(|typed| typed != old_date)
+        {
+            return Err(crate::edit::date_fixed("entry.date", old_date));
+        }
+        let note = crate::edit::reason_for(window.1, old_date, &typed_note)?;
         let now = ctx.now_text();
         let old_cash = stored_cash_change(tx, &old.entry)?;
         let old_key = ledger::order_key_of(tx, old.entry.id)?;
@@ -338,7 +431,7 @@ pub fn edit(
             entry_id: posted.entry_id,
             new_balance,
         })
-    })
+    }
 }
 
 /// Cancels a voucher (PRD FR-15.3): see the module text.
@@ -416,11 +509,10 @@ pub fn cancel(
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`.
 pub fn get(ctx: &Context, id: i64) -> Result<VoucherRow, ServiceError> {
-    let (closed, _) = day::window(ctx)?;
     let mut rows = vec![ctx.db.read(|conn| {
         repo::get(conn, id)?.ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
     })?];
-    super::mark_editable(&mut rows, closed);
+    super::mark_flags(ctx, &mut rows)?;
     rows.pop()
         .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))
 }

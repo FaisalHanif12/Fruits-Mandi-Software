@@ -48,6 +48,7 @@
   },
   "number": "1",
   "cancelled": false,
+  "revised_on": null,
   "pages": [
     {
       "serial": "1",

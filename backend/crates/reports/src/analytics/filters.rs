@@ -50,6 +50,8 @@ pub(crate) struct Typed {
     pub(crate) goods: AnalyticsGoods,
     /// How view J lays out its rows.
     pub(crate) trip_view: AnalyticsTripView,
+    /// The partner section is locked: leave out the partner columns (PRD FR-17.11).
+    pub(crate) hide_partners: bool,
     /// The compared period, if a comparison was asked for.
     pub(crate) compare: Option<(String, String)>,
     /// The sort asked for, for the view that cuts its page early (view C).
@@ -165,6 +167,7 @@ pub(crate) fn resolve(
         garden_account_id: None,
         goods: input.goods,
         trip_view: AnalyticsTripView::Trip,
+        hide_partners: input.hide_partners,
         compare: None,
         resolved: AnalyticsResolvedFilters {
             side: input.side,

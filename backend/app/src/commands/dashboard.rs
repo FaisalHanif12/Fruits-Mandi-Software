@@ -7,6 +7,7 @@
 
 use mandi_reports::dashboard::{self, AttentionList, BackupFacts, Dashboard};
 use mandi_services::auth;
+use mandi_services::partner_code;
 
 use super::reports_engine::engine_error;
 use super::run;
@@ -41,7 +42,11 @@ pub async fn dashboard_get<R: tauri::Runtime>(
     let backup = backup_facts(&app);
     run(app, "dashboard_get", move |ctx| {
         auth::require(ctx)?;
-        dashboard::get(ctx.db(), backup).map_err(engine_error)
+        let mut shown = dashboard::get(ctx.db(), backup).map_err(engine_error)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -55,7 +60,11 @@ pub async fn assist_attention<R: tauri::Runtime>(
     let backup = backup_facts(&app);
     run(app, "assist_attention", move |ctx| {
         auth::require(ctx)?;
-        dashboard::attention(ctx.db(), backup).map_err(engine_error)
+        let mut shown = dashboard::attention(ctx.db(), backup).map_err(engine_error)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }

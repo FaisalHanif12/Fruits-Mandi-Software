@@ -1,0 +1,43 @@
+{
+  "row": {
+    "id": 3,
+    "voucher_type": "payment",
+    "number": 1,
+    "entry_date": "2026-10-10",
+    "account": {
+      "id": 18,
+      "code": "0010",
+      "name_ur": "رحیم",
+      "name_en": "Rahim"
+    },
+    "amount_paisa": 431600,
+    "mode": "cash",
+    "bank_account_id": null,
+    "cheque_no": "",
+    "cheque_date": null,
+    "expected_goods": "",
+    "narration": "",
+    "status": "saved",
+    "version": 2,
+    "person": null,
+    "collector_staff_id": null,
+    "reason": "",
+    "cancel_reason": "",
+    "entry_id": 7,
+    "can_edit": true,
+    "can_cancel": true,
+    "locked_reason": null,
+    "needs_reopen": false,
+    "edited": null
+  },
+  "entry": {
+    "type": "payment",
+    "date": "10-10-2026",
+    "account_id": 18,
+    "person_key": null,
+    "amount": "4316",
+    "reason": "",
+    "narration": "",
+    "confirm_cash_below_zero": false
+  }
+}

@@ -1680,10 +1680,10 @@
       }
     },
     {
-      "code": "ERR_EDIT_NOT_ALLOWED",
+      "code": "ERR_EDIT_DATE_FIXED",
       "field": "header.entry_date",
       "values": {
-        "rule": "day_changed"
+        "entry_date": "2026-10-10"
       }
     }
   ],

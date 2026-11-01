@@ -18,6 +18,7 @@
 //! 40 / 30 / 30: each partner's 0604 account بنام 4,160 / 3,120 / 3,120, روکڑ جمع 10,400. Selling 15
 //! releases cost 7,800; the 5 left cost 2,600; writing them off posts nothing.
 
+pub(crate) mod edit;
 mod entry;
 mod plan;
 mod reads;

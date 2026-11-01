@@ -89,7 +89,7 @@ describe.each(LANGUAGES)('the fruit screen opened by an address (%s)', (language
     expect(text).toContain('1,160');
     // The row is selected in the list below: its Edit and Cancel are on.
     await waitFor(() => {
-      const edits = screen.getAllByRole('button', { name: startsWith('fruit-edit') });
+      const edits = screen.getAllByRole('button', { name: startsWith('edit-action-edit') });
       expect(edits).toHaveLength(2);
       for (const button of edits) expect(button).toBeEnabled();
     });
@@ -101,8 +101,16 @@ describe.each(LANGUAGES)('the fruit screen opened by an address (%s)', (language
     const { user } = await open('?entry=1');
     const card = (await screen.findByText(titleOfEntry(1))).closest('section');
     if (card === null) throw new Error('no entry card');
-    await user.click(within(card).getByRole('button', { name: startsWith('fruit-edit') }));
-    await screen.findByText(said(message(language, 'fruit-editing', { number: fruitNumber(1) })));
+    await user.click(within(card).getByRole('button', { name: startsWith('edit-action-edit') }));
+    await screen.findByText(
+      said(
+        message(language, 'edit-band', {
+          what: message(language, 'glossary-phal'),
+          number: fruitNumber(1),
+          date: '10-10-2026',
+        }),
+      ),
+    );
     expect(fruitApi.fruitGet).toHaveBeenCalledTimes(2);
   });
 
@@ -115,8 +123,13 @@ describe.each(LANGUAGES)('the fruit screen opened by an address (%s)', (language
     expect(visible(card.textContent)).toContain(
       message(language, 'fruit-entry-cancelled', { reason: 'not taken' }),
     );
-    expect(within(card).getByRole('button', { name: startsWith('fruit-edit') })).toBeDisabled();
-    expect(within(card).getByRole('button', { name: startsWith('fruit-cancel') })).toBeDisabled();
+    // The entry carries its edit stamp, with an "Edit history" button: the Edit button is the exact word.
+    expect(
+      within(card).getByRole('button', { name: said(message(language, 'edit-action-edit')) }),
+    ).toBeDisabled();
+    expect(
+      within(card).getByRole('button', { name: startsWith('edit-action-cancel') }),
+    ).toBeDisabled();
   });
 
   it('an id the backend does not know says not found in the normal words, and the form still works', async () => {

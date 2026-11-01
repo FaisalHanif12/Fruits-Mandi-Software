@@ -6,7 +6,16 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { CalcInfo, Card, Fact, Notice, Num, Table, type TableColumn } from '../../../shared/ui';
+import {
+  CalcInfo,
+  Card,
+  Fact,
+  Notice,
+  Num,
+  PartnerLockedBox,
+  Table,
+  type TableColumn,
+} from '../../../shared/ui';
 import { SignedNum } from '../../cashbook';
 import type { FruitPreview } from '../types';
 
@@ -43,7 +52,8 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
   }
   const credited = numbers.credit.pukhta ?? numbers.credit.account;
   // Each partner's part with his total now and after (plan 39: the shared table, figures centred).
-  const partColumns: TableColumn<Part>[] = [
+  const locked = preview.partners_locked;
+  const allColumns: TableColumn<Part>[] = [
     {
       id: 'partner',
       header: <Localized id="fruit-parts-col-partner" />,
@@ -71,6 +81,10 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
       cell: (part) => <SignedNum paisa={part.total_after_paisa} />,
     },
   ];
+  // The totals of the partners are behind the code: the columns are left out, never shown as 0.
+  const partColumns = locked
+    ? allColumns.filter((column) => column.id !== 'now' && column.id !== 'after')
+    : allColumns;
   return (
     <Card compact title={<Localized id="fruit-numbers-title" />}>
       <dl className="grid grid-cols-2 gap-3">
@@ -126,6 +140,7 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
           rows={numbers.parts}
           rowKey={(part) => String(part.partner.id)}
         />
+        {locked ? <PartnerLockedBox /> : null}
         {guests ? (
           <Notice tone="info">
             <Localized id="fruit-parts-note" />

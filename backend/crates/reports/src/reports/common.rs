@@ -12,7 +12,7 @@ use mandi_core::text::phone_display;
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
-use super::model::{Cell, Column, ColumnKind, Names, PartyRef, RowSource, SourceKind};
+use super::model::{Cell, Column, ColumnKind, Names, PartyRef, RowSource};
 use crate::error::ReportsError;
 
 /// Pakistan time is UTC+5 all year (Code Standards G9).
@@ -202,19 +202,15 @@ impl MasterTable {
 }
 
 /// The record a journal entry opens (PRD FR-19.4). An entry whose source has no screen opens
-/// itself.
-pub(crate) fn source_of(source_type: &str, source_id: i64, entry_id: i64) -> RowSource {
-    let (kind, id) = match source_type {
-        "bikri" => (SourceKind::Bikri, source_id),
-        "voucher" => (SourceKind::Voucher, source_id),
-        "account" => (SourceKind::Account, source_id),
-        "month_close" => (SourceKind::MonthClose, entry_id),
-        "purchase" => (SourceKind::Purchase, source_id),
-        "venture" => (SourceKind::Venture, source_id),
-        "fruit" => (SourceKind::Fruit, source_id),
-        _ => (SourceKind::Entry, entry_id),
-    };
-    RowSource { kind, id }
+/// itself. An entry of a trip or a garden opens the trip or the garden: the query reads its kind
+/// and id with `mandi_db::row_source_sql`.
+pub(crate) fn source_of(
+    source_type: &str,
+    source_id: i64,
+    entry_id: i64,
+    venture: (Option<&str>, Option<i64>),
+) -> RowSource {
+    RowSource::of_stored(source_type, source_id, entry_id, venture.0, venture.1)
 }
 
 /// The live-entry condition on `journal_entries e` (a posted entry that is not a reversal and is

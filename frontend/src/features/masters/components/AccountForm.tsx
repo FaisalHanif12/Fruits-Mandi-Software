@@ -11,10 +11,11 @@
 //   arrows move between fields (shared/keyboard). An account is never deleted (FR-10.6).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { uiErrorOf } from '../../../shared/api';
+import { finishFixSession, useEntryStamp, useFixDayFlow } from '../../../shared/edit';
 import { useGrouping } from '../../../shared/format';
 import {
   focusFirstEmptyField,
@@ -54,6 +55,7 @@ import {
   FoldSection,
   FormGrid,
   useDeadAmountActions,
+  EditStampLine,
 } from '../../../shared/ui';
 import {
   accountValuesOf,
@@ -71,6 +73,7 @@ import {
   useSimilarAccounts,
 } from '../../../shared/accounts';
 import type { AccountRef, AccountRow, AccountType } from '../../../shared/accounts';
+import { OpeningDateOffer, closedOpeningDate } from './OpeningDateOffer';
 
 /**
  * The form opened above another screen by the "add" button of a picker (plan 32, R8): a new seller
@@ -205,6 +208,10 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       : setActive.error !== null
         ? uiErrorOf(setActive.error)
         : null;
+  // A closed opening date is not a dead end: the form offers a way out (PRD FR-10.11).
+  const openingOffer = closedOpeningDate(error);
+  const router = useRouter();
+  const fixFlow = useFixDayFlow();
   const dirty = !leaving && !sameAccountValues(values, baseline);
   const focusNames = () => {
     formRef.current?.querySelector<HTMLElement>('[role="combobox"], input')?.focus();
@@ -255,6 +262,8 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       savedRef.current = { id: saved.id, code: saved.code };
       setBaseline(accountValuesOf(saved, grouping));
       showToast('success', l10n.getString('accounts-saved'));
+      // Days reopened for the opening are closed again (plan 44, PRD FR-21.4).
+      void finishFixSession(l10n);
       return true;
     } catch {
       return false;
@@ -316,6 +325,8 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       setValues((current) => ({ ...current, [field]: hit === null ? null : toRef(hit) }));
     };
 
+  // When and by whom the account was last changed (plan 44, PRD FR-7.71).
+  const stamp = useEntryStamp('account', account?.id ?? null);
   const hasOpeningDebit = values.opening_dr.trim() !== '';
   const forSeller = type === 'seller';
   const forBuyer = type === 'buyer';
@@ -328,9 +339,14 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
       <h1 className="type-title" />
     </Localized>
   ) : (
-    <Localized id="accounts-edit-title" vars={{ name: displayName(account, language) }}>
-      <h1 className="type-title" />
-    </Localized>
+    <>
+      <Localized id="accounts-edit-title" vars={{ name: displayName(account, language) }}>
+        <h1 className="type-title" />
+      </Localized>
+      {stamp === null ? null : (
+        <EditStampLine stamp={stamp} history={{ entity: 'account', id: account.id }} />
+      )}
+    </>
   );
 
   const pair = (
@@ -595,6 +611,33 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                 )}
               </Field>
             </FormGrid>
+            {openingOffer === null ? null : (
+              <OpeningDateOffer
+                offer={openingOffer}
+                onUseToday={(today) => {
+                  setValues((current) => ({ ...current, opening_date: today }));
+                  save.reset();
+                }}
+                onSaveWithout={() => {
+                  setValues((current) => ({
+                    ...current,
+                    opening_dr: '',
+                    opening_cr: '',
+                    opening_is_advance: false,
+                  }));
+                  save.reset();
+                }}
+                onReopen={() => {
+                  fixFlow.start({
+                    date: values.opening_date,
+                    ownerHref: router.state.location.href,
+                    then: () => {
+                      save.reset();
+                    },
+                  });
+                }}
+              />
+            )}
             {forSeller && hasOpeningDebit ? (
               <Checkbox
                 checked={values.opening_is_advance}
@@ -724,6 +767,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
             </Field>
           </FoldSection>
         </form>
+        {fixFlow.dialog}
       </div>
       <ActionBar>
         <div className="me-auto flex flex-col gap-1">

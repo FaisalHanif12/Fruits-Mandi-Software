@@ -537,7 +537,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     });
     await user.click(row);
     await user.click(
-      screen.getByRole('button', { name: message(language, 'gardens-history-cancel') }),
+      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
     );
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     fake.refuse.cancel = [
@@ -591,11 +591,11 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     };
     await click('i3');
     expect(
-      screen.getByRole('button', { name: message(language, 'gardens-history-cancel') }),
+      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
     ).toBeDisabled();
     await click('e12');
     expect(
-      screen.getByRole('button', { name: message(language, 'gardens-history-cancel') }),
+      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
     ).toBeDisabled();
     expect(
       screen.getByText(

@@ -10,6 +10,7 @@
 import { useLocalization } from '@fluent/react';
 import type {
   CellClassParams,
+  ITooltipParams,
   CellKeyDownEvent,
   ColDef,
   GridApi,
@@ -103,6 +104,12 @@ export interface ListColumn<T> {
    * says "Loss". The total row asks for the tone under the key `<field>:tone`.
    */
   readonly tone?: ((row: T, context: ListContext) => 'due' | undefined) | undefined;
+  /**
+   * A sentence shown when the pointer rests on the cell. The status column of an edited entry uses
+   * it for "Edited: 31-10-2026 4:35 pm, Owner" (plan 44, PRD FR-7.71). The word is also in the cell,
+   * so the tip is never the only place the fact is told.
+   */
+  readonly tip?: ((row: T, context: ListContext) => string | undefined) | undefined;
   /**
    * The name the backend sorts this column by (a field of its rows, plan 38 R4). A column with one
    * has a clickable title: the first click sorts ascending, the second descending, the third goes
@@ -232,6 +239,9 @@ interface ListGridProps<T> {
     ((context: ListContext) => { labelField: string; values: Record<string, string> }) | undefined;
 }
 
+/** How long the pointer rests on a cell before its tip shows (plan 44: the edit stamp of a row). */
+const TOOLTIP_DELAY_MS = 300;
+
 function toColDef<T>(
   column: ListColumn<T>,
   headerName: string,
@@ -278,6 +288,12 @@ function toColDef<T>(
       ...(column.type === 'name' ? ['cell-name'] : []),
       ...(column.wrap === true ? ['cell-wrap'] : []),
     ],
+    ...(column.tip === undefined
+      ? {}
+      : {
+          tooltipValueGetter: (params: ITooltipParams<T>) =>
+            params.data === undefined ? undefined : column.tip?.(params.data, context),
+        }),
     ...(column.tone === undefined
       ? {}
       : {
@@ -639,6 +655,7 @@ function GridInner<T>({
       <AgGridReact<T>
         theme="legacy"
         enableRtl={direction === 'rtl'}
+        tooltipShowDelay={TOOLTIP_DELAY_MS}
         // A heading row is not a record: it is drawn across the whole row by the renderer below.
         rowData={displayRows as T[]}
         {...(months === undefined

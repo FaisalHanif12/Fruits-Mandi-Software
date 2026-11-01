@@ -54,5 +54,16 @@
     }
   ],
   "journal_entry_id": null,
-  "can_change": false
+  "can_edit": false,
+  "can_cancel": false,
+  "locked_reason": "cancelled",
+  "needs_reopen": false,
+  "edited": {
+    "at": "2026-10-10T09:00:00.000Z",
+    "local_date": "2026-10-10",
+    "local_time": "14:00",
+    "by": "Maher Adnan",
+    "count": 1,
+    "reason": "wrong quantity"
+  }
 }

@@ -7,6 +7,7 @@ use mandi_services::core::fruit::{
     FruitCancelInput, FruitCancelled, FruitEditInput, FruitEdited, FruitGetInput, FruitInput,
     FruitList, FruitListInput, FruitLots, FruitLotsInput, FruitPreview, FruitRow, FruitSaved,
 };
+use mandi_services::partner_code;
 use mandi_services::{auth, fruit};
 
 use super::run;
@@ -21,7 +22,11 @@ pub async fn fruit_preview<R: tauri::Runtime>(
 ) -> Result<FruitPreview, UiError> {
     run(app, "fruit_preview", move |ctx| {
         auth::require(ctx)?;
-        fruit::preview(ctx, &input)
+        let mut shown = fruit::preview(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -38,7 +43,11 @@ pub async fn fruit_save<R: tauri::Runtime>(
 ) -> Result<FruitSaved, UiError> {
     run(app, "fruit_save", move |ctx| {
         let actor = auth::require(ctx)?;
-        fruit::save(ctx, &actor, &input)
+        let mut shown = fruit::save(ctx, &actor, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.preview.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -54,7 +63,11 @@ pub async fn fruit_edit<R: tauri::Runtime>(
 ) -> Result<FruitEdited, UiError> {
     run(app, "fruit_edit", move |ctx| {
         let actor = auth::require(ctx)?;
-        fruit::edit(ctx, &actor, &input)
+        let mut shown = fruit::edit(ctx, &actor, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.preview.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }

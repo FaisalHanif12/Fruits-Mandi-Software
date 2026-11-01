@@ -9,10 +9,12 @@
 // Four states: loading, an error with a retry, nothing yet (a helpful message), and the rows.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useRouter } from '@tanstack/react-router';
 import { ArrowLeftRight, Ban, CalendarClock, RotateCcw, Sprout } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { useFixDayFlow } from '../../../shared/edit';
 import { isoToDisplayDate } from '../../../shared/format';
 import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
 import { displayName, useLanguage } from '../../../shared/i18n';
@@ -22,6 +24,7 @@ import {
   Card,
   Code,
   EmptyState,
+  EntryActions,
   ErrorState,
   Fact,
   LoadingState,
@@ -47,10 +50,14 @@ const SHORT_LIST_ROWS = 30;
 
 interface GardenArrivalsSectionProps {
   garden: GardenRow;
+  /** Edit was pressed on an arrival whose day is open (or was reopened for it): the page edits it. */
+  onEdit: (arrival: ArrivalRow) => void;
 }
 
-export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
+export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionProps) {
   const { l10n } = useLocalization();
+  const router = useRouter();
+  const fix = useFixDayFlow();
   const language = useLanguage();
   const list = useArrivalsList(garden.id);
   const paging = useListPaging(list.pager);
@@ -241,6 +248,28 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
               />
             )}
             {selected.status === 'cancelled' ? null : (
+              <EntryActions
+                flags={selected}
+                noCancel
+                busy={fix.busy}
+                onEdit={() => {
+                  if (!selected.needs_reopen) {
+                    onEdit(selected);
+                    return;
+                  }
+                  // A closed day: the days are reopened first, then the arrival is edited (FR-21.4).
+                  fix.start({
+                    date: selected.entry_date,
+                    ownerHref: router.state.location.href,
+                    then: () => {
+                      onEdit(selected);
+                    },
+                  });
+                }}
+                onCancel={() => undefined}
+              />
+            )}
+            {selected.status === 'cancelled' ? null : (
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   disabled={!selected.can_change_sell_date}
@@ -396,6 +425,7 @@ export function GardenArrivalsSection({ garden }: GardenArrivalsSectionProps) {
           setUndo(null);
         }}
       />
+      {fix.dialog}
       <CancelArrivalDialog
         row={cancel}
         onClose={() => {

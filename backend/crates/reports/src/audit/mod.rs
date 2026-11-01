@@ -15,6 +15,7 @@
 
 mod flatten;
 mod model;
+mod stamp;
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use mandi_core::dates::BusinessDate;
@@ -32,6 +33,10 @@ use crate::reports::page_spec;
 pub use model::{
     AuditChange, AuditFilters, AuditListInput, AuditOptions, AuditPage, AuditResolvedFilters,
     AuditRow, AuditUser, AuditValue,
+};
+pub use stamp::{
+    EditHistory, EditHistoryInput, EditStampInput, EditStampRow, EditVersion, MAX_STAMP_IDS,
+    edit_history, edit_stamps,
 };
 
 /// Pakistan time is UTC+5 all year (Code Standards G9).
@@ -181,7 +186,7 @@ fn resolve(
 }
 
 /// The day and time in Pakistan time of a stored UTC time.
-fn local_parts(at: &str) -> Result<(String, String), ReportsError> {
+pub(super) fn local_parts(at: &str) -> Result<(String, String), ReportsError> {
     let parsed: DateTime<Utc> = DateTime::parse_from_rfc3339(at)
         .map_err(|_| ReportsError::Data(format!("an audit time is not a time: {at}")))?
         .with_timezone(&Utc);
@@ -192,7 +197,7 @@ fn local_parts(at: &str) -> Result<(String, String), ReportsError> {
     ))
 }
 
-fn parse_json(text: Option<String>) -> Result<Option<Value>, ReportsError> {
+pub(super) fn parse_json(text: Option<String>) -> Result<Option<Value>, ReportsError> {
     text.map(|t| {
         serde_json::from_str(&t)
             .map_err(|e| ReportsError::Data(format!("an audit value is not JSON: {e}")))
@@ -344,6 +349,7 @@ pub fn list(db: &Db, input: &AuditListInput) -> Result<AuditPage, ReportsError> 
             limit: spec.reported_limit(),
             total_count,
             months,
+            partners_locked: false,
         })
     })
 }

@@ -28,10 +28,12 @@ import {
   SegmentedControl,
   Select,
   fieldError,
+  fieldMark,
   FormCard,
   FormSpan,
   InfoHint,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import { usePartnerList } from '../../partners';
 import { changeSource, chosenLotOf, valueOfRef } from '../draft';
 import { LOT_SOURCE, type LotHit } from '../lot-source';
@@ -50,9 +52,11 @@ interface FruitFormProps {
   preview: FruitPreview | undefined;
   /** An entry is being edited: the reason is asked too (PRD FR-16.12). */
   editing: boolean;
+  /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
-export function FruitForm({ draft, onChange, error, preview, editing }: FruitFormProps) {
+export function FruitForm({ draft, onChange, error, preview, editing, marks }: FruitFormProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
@@ -90,6 +94,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
   ) : (
     <Field
       label={<Localized id="fruit-field-for" />}
+      mark={fieldMark(marks, 'partner_id')}
       info={
         <Localized id="fruit-for-hint">
           <p />
@@ -149,6 +154,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
   const lotField = (
     <Field
       label={<Localized id="fruit-field-lot" />}
+      mark={fieldMark(marks, 'lot_id')}
       info={
         <Localized id="fruit-lot-hint">
           <p />
@@ -182,6 +188,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
     <>
       <Field
         label={<Localized id="fruit-field-agent" />}
+        mark={fieldMark(marks, 'credit_account_id')}
         info={
           <Localized id="fruit-agent-hint">
             <p />
@@ -200,7 +207,11 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
           />
         )}
       </Field>
-      <Field label={<Localized id="glossary-qism-maal" />} error={fieldError(error, 'item_id')}>
+      <Field
+        label={<Localized id="glossary-qism-maal" />}
+        mark={fieldMark(marks, 'item_id')}
+        error={fieldError(error, 'item_id')}
+      >
         {(props) => (
           <Picker
             {...props}
@@ -212,7 +223,11 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
           />
         )}
       </Field>
-      <Field label={<Localized id="glossary-packing" />} error={fieldError(error, 'packing_id')}>
+      <Field
+        label={<Localized id="glossary-packing" />}
+        mark={fieldMark(marks, 'packing_id')}
+        error={fieldError(error, 'packing_id')}
+      >
         {(props) => (
           <Picker
             {...props}
@@ -259,6 +274,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
       ) : null}
       <Field
         label={<Localized id="fruit-field-qty" />}
+        mark={fieldMark(marks, 'qty')}
         hint={
           remaining === null ? undefined : (
             <Localized id="fruit-qty-left" vars={{ remaining: String(remaining) }} />
@@ -277,7 +293,11 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
         )}
       </Field>
       {showWeight ? (
-        <Field label={<Localized id="fruit-field-weight" />} error={fieldError(error, 'weight')}>
+        <Field
+          label={<Localized id="fruit-field-weight" />}
+          mark={fieldMark(marks, 'weight_grams')}
+          error={fieldError(error, 'weight')}
+        >
           {(props) => (
             <QtyInput
               {...props}
@@ -291,6 +311,7 @@ export function FruitForm({ draft, onChange, error, preview, editing }: FruitFor
       ) : null}
       <Field
         label={<Localized id="fruit-field-rate" />}
+        mark={fieldMark(marks, 'rate_paisa')}
         hint={hintWords === undefined ? undefined : <span>{hintWords}</span>}
         error={fieldError(error, 'rate')}
       >

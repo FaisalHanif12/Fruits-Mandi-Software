@@ -4,16 +4,19 @@
 // marked, the list "What you changed", and the reason asked for when the day is not today.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { BikriEdited } from '../../../bindings/BikriEdited';
 import type { BikriPreview } from '../../../bindings/BikriPreview';
 import type { EditableBikri } from '../../../bindings/EditableBikri';
 import { isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Card, Code, Fact, Num } from '../../../shared/ui';
+import { useEditReview, useFixStore } from '../../../shared/edit';
+import { Card, Code, EditBand, EditReviewCard, Fact, Num } from '../../../shared/ui';
+import { bikriEditReview } from '../api';
 import { useBikriDraft } from '../draft-store';
 import type { Baseline } from '../edit-changes';
 import { useEditDiff } from '../hooks/useEditDiff';
+import { draftOf } from '../hooks/useBikriPreview';
 import type { EditReason } from '../hooks/useEditReason';
 import { changedCellWords } from '../edit-view';
 import { editSource } from '../preview-source';
@@ -64,6 +67,12 @@ export function LaterPostingEdit({
     [diff, say, language],
   );
   const source = useMemo(() => editSource(editable.entry_id), [editable.entry_id]);
+  // The changes and their effect, worked out by the backend (plan 44, PRD FR-7.70).
+  const draft = useSyncExternalStore(stores.version.subscribe, () => draftOf(stores));
+  const review = useEditReview(`bikri:${String(editable.entry_id)}`, draft, (typed) =>
+    bikriEditReview(editable.entry_id, typed),
+  );
+  const reopened = useFixStore((state) => state.session);
   const seller = lotRow?.picked?.[LOT.seller];
   const item = lotRow?.picked?.[LOT.item];
   const packing = lotRow?.picked?.[LOT.packing];
@@ -88,7 +97,18 @@ export function LaterPostingEdit({
           <span />
         </Localized>
       }
-      notice={editable.editable ? null : <ClosedDayNotice date={editable.entry_date} />}
+      notice={
+        editable.editable ? (
+          <EditBand
+            kind="bikri"
+            number={String(editable.number)}
+            date={editable.entry_date}
+            reopenedDays={reopened?.days ?? []}
+          />
+        ) : (
+          <ClosedDayNotice date={editable.entry_date} />
+        )
+      }
       dayField={
         <dl>
           <Fact label={<Localized id="bikri-later-date" />}>
@@ -103,11 +123,10 @@ export function LaterPostingEdit({
       reason={{ store: reason, needed: needsReason, day: editable.entry_date }}
       onBack={onBack}
       below={(after) => (
-        <EditChangesCard
-          items={diff.items}
-          before={before?.lots[0]?.totals ?? null}
-          after={after}
-        />
+        <>
+          <EditReviewCard review={review.review} pending={review.pending} error={review.error} />
+          <EditChangesCard before={before?.lots[0]?.totals ?? null} after={after} />
+        </>
       )}
     >
       <Card compact title={<Localized id="bikri-later-lot-title" />}>

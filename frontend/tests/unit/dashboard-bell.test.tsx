@@ -152,7 +152,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
   });
 
   it('says nothing needs attention when the list is empty, and the bell wears no number', async () => {
-    fakeDashboard({ attention: { items: [], total_count: 0 } });
+    fakeDashboard({ attention: { items: [], total_count: 0, partners_locked: false } });
     await openApp(language);
     const button = await bell(language, 0);
     expect(button).toHaveAttribute('data-attention-count', '0');
@@ -211,6 +211,7 @@ describe.each(LANGUAGES)('the bell (%s)', (language) => {
 
   // Every kind of the list, each with the screen it opens (PRD FR-7.44) and the record it names.
   const ALL_KINDS: AttentionList = {
+    partners_locked: false,
     items: [
       { kind: 'drafts', count: 2, amount_paisa: null, qty: null, days: null, first: null },
       { kind: 'open_days', count: 8, amount_paisa: null, qty: null, days: 8, first: null },
@@ -347,7 +348,7 @@ describe('the bell and the dashboard are read again after every save', () => {
       name: named('en', 'attention-bell-label', { count: ATTENTION_18_10.total_count }),
     });
     const asked = vi.mocked(dashboardApi.assistAttention).mock.calls.length;
-    fakeDashboard({ attention: { items: [], total_count: 0 } });
+    fakeDashboard({ attention: { items: [], total_count: 0, partners_locked: false } });
     // Any command that writes goes through a mutation; one stands for them all.
     await client
       .getMutationCache()

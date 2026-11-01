@@ -10,10 +10,12 @@ use mandi_services::core::bikri::{
     BikriEdited, CancelInput, EditOpenInput, EditPreviewInput, EditSaveInput, EditableBikri,
     LotInput, StockListInput,
 };
+use mandi_services::core::cashbook::CashbookInput;
 use mandi_services::core::purchases::{
     PurchaseCancelInput, PurchaseGetInput, PurchaseInput, PurchaseRow, PurchaseWriteOffDone,
     PurchaseWriteOffInput, PurchaseWriteOffUndoInput,
 };
+use mandi_services::core::row_source::{RowSource, SourceKind};
 use mandi_services::core::trips::{TripCostInput, TripGetInput, TripInput};
 use mandi_services::core::ventures::{
     EntryPartInput, MoneySource, VenturePartnerInput, VentureStatus,
@@ -21,6 +23,31 @@ use mandi_services::core::ventures::{
 use mandi_services::{partners, purchases, trips};
 
 use super::*;
+
+/// Every row of the cash book as (posting type, what the row opens), oldest first (PRD FR-19.4).
+pub(super) fn cash_sources(w: &support::World) -> Vec<(String, RowSource)> {
+    let book = mandi_services::cashbook::get(
+        &w.env.ctx,
+        &CashbookInput {
+            group_by_month: false,
+            sort: None,
+            from: None,
+            to: None,
+            offset: 0,
+            limit: 1_000,
+        },
+    )
+    .unwrap();
+    book.rows
+        .into_iter()
+        .map(|row| {
+            (
+                row.posting_type,
+                row.source.expect("every cash row opens something"),
+            )
+        })
+        .collect()
+}
 
 pub(super) fn shop(partner_id: i64, share: &str) -> VenturePartnerInput {
     VenturePartnerInput {
@@ -613,6 +640,30 @@ fn e2e_41_a_pocket_source_a_truck_and_one_own_lot_that_sells_everything() {
     assert_eq!(
         shares_by_kind(&w, saved.entry_id, "income"),
         vec![5_632, 4_224, 4_224]
+    );
+    // The cash book rows open their record: the purchase opens the purchase, the truck cost opens
+    // the trip (not the id of the cost entry).
+    let sources = cash_sources(&w);
+    let of = |posting: &str| -> Vec<RowSource> {
+        sources
+            .iter()
+            .filter(|(p, _)| p == posting)
+            .map(|(_, s)| *s)
+            .collect()
+    };
+    assert_eq!(
+        of("purchase"),
+        vec![RowSource {
+            kind: SourceKind::Purchase,
+            id: purchase
+        }]
+    );
+    assert_eq!(
+        of("trip_cost"),
+        vec![RowSource {
+            kind: SourceKind::Trip,
+            id: trip
+        }]
     );
     // Everything is sold: the trip closes by itself.
     assert_eq!(trip_status(&w, trip), VentureStatus::Closed);

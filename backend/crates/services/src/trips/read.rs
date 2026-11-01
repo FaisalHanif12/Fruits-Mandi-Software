@@ -10,6 +10,7 @@ use mandi_db::purchases as purchase_repo;
 use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as repo, EntryRec, PartRec, PurchaseFigures, VentureRec};
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::rules::{Working, WorkingArg, WorkingValue};
@@ -26,6 +27,7 @@ use mandi_domain::ventures::{credit_working, payment_working, spread_working};
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::flags::Marker;
 use crate::purchases;
 use crate::ventures::{self, Venture, commission_view, not_found, partner_rows, record_of};
 
@@ -465,17 +467,40 @@ fn entry_rows(
             })
             .collect::<Result<Vec<_>, ServiceError>>()?;
         let cancelled = rec.status == "cancelled";
-        let can_cancel = !cancelled
-            && match kind {
-                TripEntryKind::Purchase => purchase_rows
+        // What the entry itself allows. A purchase has the flags of its purchase row (day rules and
+        // stamp included). A cost can be edited or cancelled while nothing of the purchases it was
+        // spread over moved (`goods_moved`). A sale in another shop can always be cancelled, and
+        // edited while it is the only thing that moved goods of its purchase.
+        let flags = match kind {
+            TripEntryKind::Purchase => purchase_rows
+                .iter()
+                .find(|p| Some(p.id) == rec.purchase_id)
+                .map_or_else(EntryFlags::unmarked, |p| p.flags.clone()),
+            TripEntryKind::Cost
+                if details
+                    .iter()
+                    .any(|d| d.qty_sold != 0 || d.qty_written_off != 0) =>
+            {
+                EntryFlags::locked(LockedReason::GoodsMoved)
+            }
+            TripEntryKind::Cost => EntryFlags::plain(true, true),
+            TripEntryKind::OtherSale => {
+                let only_mover = purchase_rows
                     .iter()
                     .find(|p| Some(p.id) == rec.purchase_id)
-                    .is_some_and(|p| p.can_cancel),
-                TripEntryKind::Cost => details
-                    .iter()
-                    .all(|d| d.qty_sold == 0 && d.qty_written_off == 0),
-                TripEntryKind::OtherSale => true,
-            };
+                    .is_none_or(|p| {
+                        p.qty_sold.checked_add(p.qty_written_off) == Some(rec.qty.unwrap_or(0))
+                    });
+                if only_mover {
+                    EntryFlags::plain(true, true)
+                } else {
+                    EntryFlags {
+                        locked_reason: Some(LockedReason::GoodsMoved),
+                        ..EntryFlags::plain(false, true)
+                    }
+                }
+            }
+        };
         out.push(TripEntryRow {
             id: rec.id,
             version: rec.version,
@@ -495,8 +520,23 @@ fn entry_rows(
             parts: payment_parts,
             credits,
             spread,
-            can_cancel,
+            flags,
         });
+    }
+    // The day rules and the stamp of costs and sales in another shop (a purchase brought its own).
+    for (kind, entity) in [
+        (TripEntryKind::Cost, EditEntity::TripCost),
+        (TripEntryKind::OtherSale, EditEntity::TripOtherSale),
+    ] {
+        let kind_ids: Vec<i64> = out
+            .iter()
+            .filter(|r| r.kind == kind)
+            .map(|r| r.id)
+            .collect();
+        let marker = Marker::load(conn, entity, &kind_ids)?;
+        for row in out.iter_mut().filter(|r| r.kind == kind) {
+            marker.mark(row.id, &row.entry_date, !row.cancelled, &mut row.flags);
+        }
     }
     Ok(out)
 }
@@ -575,6 +615,7 @@ pub(super) fn get(ctx: &Context, input: &TripGetInput) -> Result<TripDetail, Ser
             entries,
             entries_count,
             partner_results,
+            partners_locked: false,
         })
     })
 }

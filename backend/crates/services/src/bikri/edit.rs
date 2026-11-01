@@ -30,10 +30,11 @@ use mandi_db::bikri::edit::{self as edit_repo, Ended, PostingRef};
 use mandi_db::bikri::write::{self as repo};
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
-use mandi_domain::bikri::{PostingKind, PostingTarget};
+use mandi_domain::bikri::{PostingKind, PostingTarget, Switches};
 use mandi_domain::core::bikri::{
     BikriDetail, BikriDraft, BikriEdited, BikriPreview, BikriStatus, EditOpenInput,
-    EditPreviewInput, EditSaveInput, EditableBikri, PreparedDraft, SavedLot, prepare_draft,
+    EditPreviewInput, EditSaveInput, EditableBikri, PreparedDraft, SavedCharge, SavedLot,
+    SavedLotCharge, prepare_draft,
 };
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
@@ -46,7 +47,7 @@ use super::load::{
     detail_of, draft_of, later_header, later_lot_input, posting_lots, stored_posting,
 };
 use super::rows::{
-    LotCharges, LotShape, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_person,
+    LotCharges, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_person,
     lot_running_totals, pin_cash_sales, posting_sums, shape, stored_line_ids,
 };
 use super::shared::{Basis, Replaced, Worked, data, switches, work_out};
@@ -77,7 +78,7 @@ fn not_found(field: &str) -> ServiceError {
 }
 
 /// An edit the rules do not allow (NFR-USE-13). `rule` is a short fixed name the screen turns
-/// into words: `day_changed`, `lot_removed`, `lot_not_in_posting`, `lot_order_changed`,
+/// into words: `lot_removed`, `lot_not_in_posting`, `lot_order_changed`,
 /// `lot_seller_locked`, `lot_item_locked`, `lot_purchase_locked`, `line_not_in_posting`, `posting_lots_locked`.
 fn not_allowed(field: &str, rule: &str) -> FieldError {
     FieldError::new(ErrorCode::ErrEditNotAllowed, field)
@@ -168,7 +169,7 @@ fn check_first(
     let mut errors = Vec::new();
     if prepared.header.entry_date.is_some_and(|d| d != date) {
         // An edit keeps the day of the posting (PRD FR-12.19).
-        errors.push(not_allowed("header.entry_date", "day_changed"));
+        errors.push(crate::edit::date_fixed_error("header.entry_date", date));
     }
     let stored: Vec<&SavedLot> = detail.lots.iter().collect();
     let mut seen_lots: HashSet<i64> = HashSet::new();
@@ -333,7 +334,7 @@ fn plan_edit(
             if validate::date("header.entry_date", &draft.header.entry_date, today)
                 .is_ok_and(|d| d != date)
             {
-                extra.push(not_allowed("header.entry_date", "day_changed"));
+                extra.push(crate::edit::date_fixed_error("header.entry_date", date));
             }
             header.entry_date = mandi_domain::core::dates::format_ddmmyyyy(date);
             BikriDraft {
@@ -387,51 +388,92 @@ pub fn edit_preview(ctx: &Context, input: &EditPreviewInput) -> Result<BikriPrev
     })
 }
 
-/// The lines of a posting for the audit log: what the user can compare before and after.
-fn lines_json(lots: &[SavedLot]) -> Value {
-    Value::Array(
-        lots.iter()
-            .flat_map(|lot| {
-                lot.sales.iter().map(move |s| {
-                    json!({
-                        "lot_id": lot.id,
-                        "sale_id": s.id,
-                        "buyer_account_id": s.buyer.id,
-                        "qty": s.qty,
-                        "seller_rate_paisa": s.seller_rate.as_paisa(),
-                        "buyer_rate_paisa": s.buyer_rate.as_paisa(),
-                        "seller_comm_paisa": s.seller_comm.amount.as_paisa(),
-                        "buyer_comm_paisa": s.buyer_comm.amount.as_paisa(),
-                        "laga_paisa": s.laga.amount.as_paisa(),
-                        "buyer_total_paisa": s.buyer_total.as_paisa(),
-                        "payment_type": s.payment_type.as_str(),
-                    })
-                })
-            })
-            .collect(),
-    )
+/// A stored charge for the audit log.
+fn charge_json(charge: &SavedCharge) -> Value {
+    json!({
+        "method": serde_json::to_value(charge.method).unwrap_or(Value::Null),
+        "value_bps": charge.value_bps,
+        "value_paisa": charge.value_paisa.map(Paisa::as_paisa),
+        "amount_paisa": charge.amount.as_paisa(),
+    })
 }
 
-fn shaped_lines_json(lots: &[LotShape<'_>]) -> Value {
-    Value::Array(
-        lots.iter()
-            .flat_map(|lot| {
-                lot.rows.iter().map(|r| {
+/// A lot charge (labour, munshiana, phone) for the audit log.
+fn lot_charge_json(charge: &SavedLotCharge) -> Value {
+    json!({
+        "method": serde_json::to_value(charge.method).unwrap_or(Value::Null),
+        "value_paisa": charge.value_paisa.as_paisa(),
+        "amount_paisa": charge.amount.as_paisa(),
+    })
+}
+
+/// A posting of a بکری for the audit log (plan 44 Section 9.11): the header, then each lot with all
+/// its typed fields and charges, and under it the lines of this posting in order. The same function
+/// writes the old and the new side, so a line nobody changed shows no difference. Row ids are left
+/// out of the lines, because an edit writes its lines as new rows.
+fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value {
+    let lots: Vec<Value> = posting_lots(detail, entry_id, kind)
+        .iter()
+        .map(|lot| {
+            let sales: Vec<Value> = lot
+                .sales
+                .iter()
+                .enumerate()
+                .map(|(index, s)| {
                     json!({
-                        "buyer_account_id": r.journal.buyer_account_id.get(),
-                        "qty": r.calc.qty,
-                        "seller_rate_paisa": r.calc.seller_rate.as_paisa(),
-                        "buyer_rate_paisa": r.calc.buyer_rate.as_paisa(),
-                        "seller_comm_paisa": r.calc.seller_comm.amount.as_paisa(),
-                        "buyer_comm_paisa": r.calc.buyer_comm.amount.as_paisa(),
-                        "laga_paisa": r.calc.laga.amount.as_paisa(),
-                        "buyer_total_paisa": r.calc.buyer_total.as_paisa(),
-                        "payment_type": r.calc.payment_type.as_str(),
+                        "line": index + 1,
+                        "buyer_account_id": s.buyer.id,
+                        "pukhta_name_ur": s.pukhta.as_ref().map(|p| p.name_ur.clone()),
+                        "pukhta_name_en": s.pukhta.as_ref().map(|p| p.name_en.clone()),
+                        "qty": s.qty,
+                        "weight_grams": s.weight_grams,
+                        "seller_rate_paisa": s.seller_rate.as_paisa(),
+                        "seller_amount_paisa": s.seller_amount.as_paisa(),
+                        "seller_comm": charge_json(&s.seller_comm),
+                        "buyer_rate_paisa": s.buyer_rate.as_paisa(),
+                        "buyer_value_paisa": s.buyer_value.as_paisa(),
+                        "buyer_comm": charge_json(&s.buyer_comm),
+                        "laga": charge_json(&s.laga),
+                        "buyer_total_paisa": s.buyer_total.as_paisa(),
+                        "rate_diff_paisa": s.rate_diff.as_paisa(),
+                        "payment_type": s.payment_type.as_str(),
+                        "note": s.note,
                     })
                 })
+                .collect();
+            json!({
+                "lot_no": lot.lot_no,
+                "seller_account_id": lot.seller.id,
+                "item_id": lot.item.id,
+                "packing_id": lot.packing.id,
+                "marka_text": lot.marka_text,
+                "qty_received": lot.qty_received,
+                "weight_received_grams": lot.weight_received_grams,
+                "freight_paisa": lot.freight.as_paisa(),
+                "freight_paid_by": serde_json::to_value(lot.freight_paid_by).unwrap_or(Value::Null),
+                "labour": lot_charge_json(&lot.labour),
+                "munshiana": lot_charge_json(&lot.munshiana),
+                "phone": lot_charge_json(&lot.phone),
+                "cash_paid_paisa": lot.cash_paid.as_paisa(),
+                "store_rent_paisa": lot.store_rent.as_paisa(),
+                "adjust_advance": lot.adjust_advance,
+                "sales": sales,
             })
-            .collect(),
-    )
+        })
+        .collect();
+    json!({
+        "book": detail.book,
+        "bill_date": detail.bill_date,
+        "truck_no": detail.truck_no,
+        "zamindar_account_id": detail.zamindar.as_ref().map(|z| z.id),
+        "adda_id": detail.adda_id,
+        "driver_name": detail.driver_name,
+        "driver_phone": detail.driver_phone,
+        "total_freight_paisa": detail.total_freight.map(Paisa::as_paisa),
+        "store_id": detail.store_id,
+        "note": detail.note,
+        "lots": lots,
+    })
 }
 
 /// The buyer keys and sellers that two postings touch: each is matched again from the start.
@@ -460,19 +502,27 @@ pub fn edit_save(
     input: &EditSaveInput,
 ) -> Result<BikriEdited, ServiceError> {
     let window = day::window(ctx)?;
-    let reason = match input
-        .reason
-        .as_deref()
-        .map(str::trim)
-        .filter(|r| !r.is_empty())
-    {
-        Some(text) => Some(validate::free_text("reason", text)?),
-        None => None,
-    };
     let rule_set = rules::rule_set(ctx)?;
     let settings = rules::overrides(ctx)?;
     let switches = switches(&settings);
-    ctx.db.write(|tx| {
+    ctx.db
+        .write(|tx| edit_in(ctx, actor, tx, window, &rule_set, switches, input))
+}
+
+/// The edit inside the transaction of the caller: the save and the rehearsal of the preview
+/// (`crate::edit`) are this one function (Code Standards B5). The reason is needed when the posting
+/// is not of today (`ERR_REASON_REQUIRED` on `reason`, PRD FR-7.70).
+#[allow(clippy::too_many_lines)]
+pub(crate) fn edit_in(
+    ctx: &Context,
+    actor: &Actor,
+    tx: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    rule_set: &mandi_domain::rules::RuleSet,
+    switches: Switches,
+    input: &EditSaveInput,
+) -> Result<BikriEdited, ServiceError> {
+    {
         let plan = plan_edit(tx, input.entry_id, &input.draft, window)?;
         if plan.detail.version != input.version {
             return Err(ServiceError::reject_field(
@@ -480,6 +530,10 @@ pub fn edit_save(
                 "version",
             ));
         }
+        // The reason is judged after the other mistakes, so a changed date is named before a missing
+        // reason (PRD FR-7.70).
+        let reason =
+            crate::edit::reason_for(window.1, plan.date, input.reason.as_deref().unwrap_or(""));
         let EditPlan {
             detail,
             posting,
@@ -489,12 +543,13 @@ pub fn edit_save(
             basis,
             extra,
         } = plan;
-        let worked = work_out(tx, prepared, &rule_set, switches, &basis)?;
+        let worked = work_out(tx, prepared, rule_set, switches, &basis)?;
         let mut errors = worked.errors.clone();
         errors.extend(extra);
         if !errors.is_empty() {
             return Err(ServiceError::from(errors));
         }
+        let reason = reason?;
         cash::require_confirmed(&worked.cash, input.confirm_cash_below_zero)?;
         write_edit(
             ctx,
@@ -509,7 +564,13 @@ pub fn edit_save(
                 reason: reason.as_deref(),
             },
         )
-    })
+    }
+}
+
+/// The switches of the settings, for the edit and its rehearsal.
+pub(crate) fn switches_of(ctx: &Context) -> Result<Switches, ServiceError> {
+    let settings = rules::overrides(ctx)?;
+    Ok(switches(&settings))
 }
 
 /// What `write_edit` is told.
@@ -734,29 +795,56 @@ fn write_edit(
         crate::purchases::refresh_trips_of_entry(tx, entry, &old_posting.entry_date, user, &now)?;
     }
 
-    // 8. Audit: the old and the new lines, and why.
+    // 8. Audit: the whole posting before and after (header, lots with their charges, lines), and why.
+    let (new_detail, _) = load_posting(tx, new_entry_id)?;
+    let mut old_value = posting_json(detail, old_entry_id, kind);
+    let mut new_value = posting_json(&new_detail, new_entry_id, kind);
+    let date = json!(old_posting.entry_date);
+    if let Some(object) = old_value.as_object_mut() {
+        object.insert("number".to_owned(), json!(detail.number));
+        object.insert("entry_id".to_owned(), json!(old_entry_id));
+        object.insert("entry_date".to_owned(), date.clone());
+    }
+    if let Some(object) = new_value.as_object_mut() {
+        object.insert("number".to_owned(), json!(detail.number));
+        object.insert("entry_id".to_owned(), json!(new_entry_id));
+        object.insert("entry_date".to_owned(), date);
+    }
+    if let Some(object) = new_value.as_object_mut() {
+        object.insert("reversal_entry_id".to_owned(), json!(reversal.entry_id));
+        object.insert(
+            "gross_paisa".to_owned(),
+            json!(worked.calc.summary.gross.as_paisa()),
+        );
+        object.insert(
+            "deductions_paisa".to_owned(),
+            json!(worked.calc.summary.deductions.as_paisa()),
+        );
+        object.insert(
+            "net_paisa".to_owned(),
+            json!(worked.calc.summary.net.as_paisa()),
+        );
+        object.insert(
+            "buyer_total_paisa".to_owned(),
+            json!(worked.calc.summary.buyer_total.as_paisa()),
+        );
+        object.insert(
+            "shared_income_paisa".to_owned(),
+            json!(worked.calc.summary.shared_income.as_paisa()),
+        );
+        object.insert(
+            "cash_after_paisa".to_owned(),
+            json!(worked.cash.cash_after_paisa.as_paisa()),
+        );
+        object.insert(
+            "cash_below_zero_confirmed".to_owned(),
+            json!(worked.cash.needs_confirm),
+        );
+    }
     let mut event = Event::new(Some(user), "edit", "bikri")
         .entity_id(detail.id)
-        .old(json!({
-            "number": detail.number,
-            "entry_id": old_entry_id,
-            "entry_date": old_posting.entry_date,
-            "lines": lines_json(&posting_lots(detail, old_entry_id, kind)),
-        }))
-        .new_value(json!({
-            "number": detail.number,
-            "entry_id": new_entry_id,
-            "reversal_entry_id": reversal.entry_id,
-            "entry_date": old_posting.entry_date,
-            "lines": shaped_lines_json(&lots),
-            "gross_paisa": worked.calc.summary.gross.as_paisa(),
-            "deductions_paisa": worked.calc.summary.deductions.as_paisa(),
-            "net_paisa": worked.calc.summary.net.as_paisa(),
-            "buyer_total_paisa": worked.calc.summary.buyer_total.as_paisa(),
-            "shared_income_paisa": worked.calc.summary.shared_income.as_paisa(),
-            "cash_after_paisa": worked.cash.cash_after_paisa.as_paisa(),
-            "cash_below_zero_confirmed": worked.cash.needs_confirm,
-        }));
+        .old(old_value)
+        .new_value(new_value);
     if let Some(reason) = reason {
         event = event.reason(reason);
     }

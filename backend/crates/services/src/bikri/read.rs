@@ -3,11 +3,13 @@
 //! Standards B29). Every number is a stored value: nothing is worked out again (B20).
 
 use mandi_db::bikri::saved::{self as repo, ListFilter};
+use mandi_db::rusqlite::Connection;
 use mandi_domain::core::bikri::{
     BikriDetail, BikriFindInput, BikriList, BikriListInput, BikriListRow, BikriListTotals,
-    BikriNavigateInput, BikriStatus,
+    BikriNavigateInput, BikriStatus, SavedPosting,
 };
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::MonthSubtotal;
@@ -16,6 +18,7 @@ use mandi_domain::core::validate::{self, FieldErrors};
 use crate::context::Context;
 use crate::day;
 use crate::error::ServiceError;
+use crate::flags::Marker;
 
 /// The most rows of a find.
 const FIND_LIMIT: i64 = 50;
@@ -39,26 +42,63 @@ pub(super) fn optional_date(
 /// `ERR_NOT_FOUND` on `id`.
 pub fn get(ctx: &Context, id: i64) -> Result<BikriDetail, ServiceError> {
     let (closed_up_to, _) = day::window(ctx)?;
-    let mut detail = ctx
-        .db
-        .read(|conn| repo::get(conn, id).map_err(ServiceError::from))?
-        .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
-    mark_editable(&mut detail, closed_up_to);
-    Ok(detail)
+    ctx.db.read(|conn| {
+        let mut detail = repo::get(conn, id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "id"))?;
+        mark_flags(conn, &mut detail, closed_up_to)?;
+        Ok(detail)
+    })
+}
+
+/// Sets `editable` on the postings and the flags of the whole بکری (PRD FR-7.70, FR-7.71,
+/// FR-21.4). The day of its first posting decides the reopen and the month lock; the stamp is of
+/// the بکری.
+pub(crate) fn mark_flags(
+    conn: &Connection,
+    detail: &mut BikriDetail,
+    closed_up_to: Option<BusinessDate>,
+) -> Result<(), ServiceError> {
+    mark_editable(detail, closed_up_to);
+    let saved = detail.status == BikriStatus::Saved;
+    let has_live = detail.postings.iter().any(is_live);
+    let mut flags = if saved && has_live {
+        EntryFlags::open()
+    } else {
+        EntryFlags::plain(false, false)
+    };
+    Marker::load(conn, EditEntity::Bikri, &[detail.id])?.mark(
+        detail.id,
+        &detail.entry_date,
+        saved,
+        &mut flags,
+    );
+    detail.flags = flags;
+    Ok(())
+}
+
+/// A first or later posting that no edit or cancel has reversed.
+fn is_live(posting: &SavedPosting) -> bool {
+    !posting.reversed && matches!(posting.posting_type.as_str(), "bikri_first" | "bikri_later")
 }
 
 /// Sets `editable` on the postings of a بکری: a first or later posting that is not reversed, of a
-/// بکری that is saved, on a day after the "closed up to" day (PRD FR-12.18).
+/// بکری that is saved, on a day after the "closed up to" day (PRD FR-12.18). It means "can be
+/// edited right now"; the flags of [`mark_flags`] also count a closed day that a reopen would open.
 pub(crate) fn mark_editable(detail: &mut BikriDetail, closed_up_to: Option<BusinessDate>) {
     let saved = detail.status == BikriStatus::Saved;
+    let mut any_editable = false;
+    let mut all_open = true;
     for posting in &mut detail.postings {
         let open = BusinessDate::parse_iso(&posting.entry_date)
             .is_some_and(|date| closed_up_to.is_none_or(|closed| date > closed));
-        posting.editable = saved
-            && !posting.reversed
-            && matches!(posting.posting_type.as_str(), "bikri_first" | "bikri_later")
-            && open;
+        let live = is_live(posting);
+        posting.editable = saved && live && open;
+        any_editable |= posting.editable;
+        all_open &= !live || open;
     }
+    // A cancel reverses every live posting, so every one of their days must be open (PRD
+    // FR-12.22). The flags a screen shows come from `mark_flags`.
+    detail.flags = EntryFlags::plain(any_editable, saved && all_open);
 }
 
 /// The list of بکری (PRD FR-12.7), newest first. `date` is one day and wins over `from` and
@@ -125,7 +165,8 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
     // One page and the totals over the whole filter, each from indexed queries (PRD FR-19.11, B31).
     ctx.db.read(|conn| {
         let totals = repo::list_totals(conn, &filter)?;
-        let rows = repo::list(conn, &filter)?;
+        let mut rows = repo::list(conn, &filter)?;
+        mark_rows(conn, &mut rows)?;
         let paisa = |value: i64| Paisa::try_from_paisa(value).map_err(crate::error::money_error);
         // Month headings with their subtotals, over the whole filter (plan 38 R4).
         let mut months = Vec::new();
@@ -191,8 +232,30 @@ pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, 
         limit: FIND_LIMIT,
         offset: 0,
     };
-    ctx.db
-        .read(|conn| repo::list(conn, &filter).map_err(ServiceError::from))
+    ctx.db.read(|conn| {
+        let mut rows = repo::list(conn, &filter)?;
+        mark_rows(conn, &mut rows)?;
+        Ok(rows)
+    })
+}
+
+/// Sets the flags of the rows of a list (PRD FR-7.70, FR-7.71, FR-21.4): both buttons work on a
+/// saved بکری; on a closed day the row asks for a reopen; a month-closed month and a cancelled
+/// بکری are locked; the stamp of the last edit is added.
+fn mark_rows(conn: &Connection, rows: &mut [BikriListRow]) -> Result<(), ServiceError> {
+    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+    let marker = Marker::load(conn, EditEntity::Bikri, &ids)?;
+    for row in rows {
+        let mut flags = EntryFlags::open();
+        marker.mark(
+            row.id,
+            &row.entry_date,
+            row.status == BikriStatus::Saved,
+            &mut flags,
+        );
+        row.flags = flags;
+    }
+    Ok(())
 }
 
 /// The id of the first, previous, next or last بکری by number (PRD FR-12.13). `None` when there

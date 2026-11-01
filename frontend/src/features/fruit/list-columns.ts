@@ -6,6 +6,7 @@
 // step, so a list never scrolls sideways (NFR-USE-15, Code Standards F22). A cancelled entry says so
 // in words in the first column, at every size (NFR-USE-12). Names go through `displayName` (F38).
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import { formatGrams, isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
@@ -42,11 +43,17 @@ export const FRUIT_COLUMNS: readonly ListColumn<FruitRow>[] = [
     type: 'name',
     headerId: 'fruit-col-for',
     grow: true,
-    value: (row, { language, text }) => {
+    value: (row, context) => {
+      const { language, text } = context;
       const name =
         row.partner === null ? text('fruit-for-guests') : displayName(row.partner, language);
-      return row.status === 'cancelled' ? text('fruit-for-cancelled', { name }) : name;
+      return statusWithEdited(
+        row.status === 'cancelled' ? text('fruit-for-cancelled', { name }) : name,
+        row.edited,
+        context,
+      );
     },
+    tip: (row, context) => editedTip(row.edited, context),
   },
   {
     field: 'item',

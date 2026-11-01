@@ -10,3 +10,15 @@ export type { ShareInput, SharesCheck } from './types';
 // The list of partners, for the pickers of the entry screens (plan 17: the خرچہ screen).
 export { PARTNERS_KEY, usePartnerList } from './hooks';
 export type { PartnerRow } from './types';
+// The partner code (plan 44, PRD FR-17.11): the door of the section, the box the shell shows, the
+// change and the status, for Settings and the shell.
+export { PartnerCodeFlow } from './components/PartnerCodeFlow';
+export { PartnerCodeHost } from './components/PartnerCodeHost';
+export { PartnerGate } from './components/PartnerGate';
+export {
+  PARTNER_CODE_KEY,
+  useChangePartnerCode,
+  useLockPartners,
+  usePartnerCodeStatus,
+} from './code-hooks';
+export { ChangeCodeCard } from './components/ChangeCodeCard';

@@ -36,7 +36,9 @@ import {
   SuggestInput,
   TextInput,
   fieldError,
+  fieldMark,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import { assistTruckMemory } from '../api';
 import { useBikriDraft, type HeaderState } from '../draft-store';
 import { HeaderSummary } from './HeaderSummary';
@@ -55,6 +57,8 @@ interface HeaderCardProps {
    * same-truck notice is left out, because the sale it would point at is this one.
    */
   editing?: boolean;
+  /** The marks of the edits this posting went through ("Before ...", plan 44). */
+  marks?: EntryMarks | undefined;
   /**
    * The user is typing in the lots or the sale lines: in a short window the header folds to one
    * summary line (`HeaderSummary`). It stays open while it holds a problem or the same-truck notice.
@@ -74,6 +78,7 @@ export function HeaderCard({
   onOpenBikri,
   onDone,
   editing = false,
+  marks,
   folded = false,
 }: HeaderCardProps) {
   const { l10n } = useLocalization();
@@ -200,6 +205,7 @@ export function HeaderCard({
               <div className="w-date shrink-0">
                 <Field
                   label={<Localized id="bikri-header-truck" />}
+                  mark={fieldMark(marks, 'truck_no')}
                   error={fieldError(error, 'header.truck_no')}
                   // The last sale of this truck, with its date (PRD FR-7.49), is behind the ⓘ so the header
                   // stays one row; once the truck is taken, the "filled from" line below says it too.
@@ -237,7 +243,10 @@ export function HeaderCard({
                 </Field>
               </div>
               <div className="min-w-0 flex-1 basis-mid">
-                <Field label={<Localized id="glossary-zamindar" />}>
+                <Field
+                  label={<Localized id="glossary-zamindar" />}
+                  mark={fieldMark(marks, 'zamindar_account_id')}
+                >
                   {(control) => (
                     <AccountPicker
                       {...control}
@@ -254,7 +263,7 @@ export function HeaderCard({
                 </Field>
               </div>
               <div className="min-w-0 flex-1 basis-mid">
-                <Field label={<Localized id="glossary-adda" />}>
+                <Field label={<Localized id="glossary-adda" />} mark={fieldMark(marks, 'adda_id')}>
                   {(control) => (
                     <Picker
                       {...control}
@@ -290,6 +299,7 @@ export function HeaderCard({
               <FormGrid columns={4} alignEnd>
                 <Field
                   label={<Localized id="bikri-header-bill-date" />}
+                  mark={fieldMark(marks, 'bill_date')}
                   error={fieldError(error, 'header.bill_date')}
                 >
                   {(control) => (
@@ -306,6 +316,7 @@ export function HeaderCard({
                 <FormSpan span="two">
                   <Field
                     label={<Localized id="bikri-header-total-freight" />}
+                    mark={fieldMark(marks, 'total_freight_paisa')}
                     error={fieldError(error, 'header.total_freight')}
                   >
                     {(control) => (
@@ -328,7 +339,10 @@ export function HeaderCard({
                     )}
                   </Field>
                 </FormSpan>
-                <Field label={<Localized id="bikri-header-store" />}>
+                <Field
+                  label={<Localized id="bikri-header-store" />}
+                  mark={fieldMark(marks, 'store_id')}
+                >
                   {(control) => (
                     <Picker
                       {...control}
@@ -340,7 +354,7 @@ export function HeaderCard({
                     />
                   )}
                 </Field>
-                <Field label={<Localized id="bikri-header-book" />}>
+                <Field label={<Localized id="bikri-header-book" />} mark={fieldMark(marks, 'book')}>
                   {(control) => (
                     <TextInput
                       {...control}
@@ -351,7 +365,10 @@ export function HeaderCard({
                     />
                   )}
                 </Field>
-                <Field label={<Localized id="bikri-header-driver" />}>
+                <Field
+                  label={<Localized id="bikri-header-driver" />}
+                  mark={fieldMark(marks, 'driver_name')}
+                >
                   {(control) => (
                     <FreeTextInput
                       {...control}
@@ -364,6 +381,7 @@ export function HeaderCard({
                 </Field>
                 <Field
                   label={<Localized id="bikri-header-driver-phone" />}
+                  mark={fieldMark(marks, 'driver_phone')}
                   error={fieldError(error, 'header.driver_phone')}
                 >
                   {(control) => (
@@ -377,7 +395,10 @@ export function HeaderCard({
                   )}
                 </Field>
                 <FormSpan span="two">
-                  <Field label={<Localized id="bikri-header-note" />}>
+                  <Field
+                    label={<Localized id="bikri-header-note" />}
+                    mark={fieldMark(marks, 'note')}
+                  >
                     {(control) => (
                       <FreeTextInput
                         {...control}

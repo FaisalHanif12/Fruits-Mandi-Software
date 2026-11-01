@@ -29,6 +29,11 @@ interface FieldProps {
   info?: ReactNode;
   /** What is wrong and what to do (PRD FR-7.6). Shown instead of the hint. */
   error?: ReactNode;
+  /**
+   * The mark of an edit on this field ("Before 600", plan 44, PRD FR-7.71), beside the label. Always
+   * words, so colour is never the only signal.
+   */
+  mark?: ReactNode;
   /** A value the app works out: shown on the page ground, cannot be typed into. */
   readOnly?: boolean;
   /**
@@ -44,6 +49,7 @@ export function Field({
   hint,
   info,
   error,
+  mark,
   readOnly = false,
   hideLabel = false,
   children,
@@ -53,18 +59,20 @@ export function Field({
   const hasError = error !== undefined && error !== null && error !== false;
   const hasHint = hint !== undefined && hint !== null && hint !== false;
   const note = hasError || hasHint;
+  const hasMark = mark !== undefined && mark !== null && mark !== false;
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      {info === undefined ? (
+      {info === undefined && !hasMark ? (
         <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
           {label}
         </label>
       ) : (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
             {label}
           </label>
-          <InfoHint>{info}</InfoHint>
+          {info === undefined ? null : <InfoHint>{info}</InfoHint>}
+          {mark}
         </div>
       )}
       {children({

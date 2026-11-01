@@ -126,6 +126,8 @@
       "entry_date": "2026-10-10",
       "kind": "installment",
       "entry_id": 1,
+      "number": 1,
+      "arrival_id": null,
       "version": 2,
       "bikri_id": null,
       "bikri_number": null,
@@ -133,6 +135,7 @@
       "effect_paisa": -3000000,
       "running_balance_paisa": -3000000,
       "reason": "first installment",
+      "note": null,
       "shop_name": null,
       "qty": null,
       "journal_entry_id": 3,
@@ -217,12 +220,18 @@
         }
       ],
       "credits": [],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "garden_closed",
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "entry_date": "2026-10-11",
       "kind": "installment",
       "entry_id": 2,
+      "number": 2,
+      "arrival_id": null,
       "version": 2,
       "bikri_id": null,
       "bikri_number": null,
@@ -230,6 +239,7 @@
       "effect_paisa": -2000000,
       "running_balance_paisa": -5000000,
       "reason": "second installment",
+      "note": null,
       "shop_name": null,
       "qty": null,
       "journal_entry_id": 4,
@@ -314,12 +324,18 @@
         }
       ],
       "credits": [],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "garden_closed",
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "entry_date": "2026-10-11",
       "kind": "cost",
       "entry_id": 3,
+      "number": 1,
+      "arrival_id": null,
       "version": 2,
       "bikri_id": null,
       "bikri_number": null,
@@ -327,6 +343,7 @@
       "effect_paisa": -500000,
       "running_balance_paisa": -5500000,
       "reason": "labour",
+      "note": null,
       "shop_name": null,
       "qty": null,
       "journal_entry_id": 5,
@@ -411,12 +428,18 @@
         }
       ],
       "credits": [],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "garden_closed",
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "entry_date": "2026-10-12",
       "kind": "sale",
       "entry_id": null,
+      "number": null,
+      "arrival_id": null,
       "version": null,
       "bikri_id": 1,
       "bikri_number": 1,
@@ -424,6 +447,7 @@
       "effect_paisa": 5640000,
       "running_balance_paisa": 140000,
       "reason": null,
+      "note": null,
       "shop_name": null,
       "qty": null,
       "journal_entry_id": 6,
@@ -431,12 +455,18 @@
       "cancel_reason": null,
       "parts": [],
       "credits": [],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "entry_date": "2026-10-12",
       "kind": "other_sale",
       "entry_id": 4,
+      "number": 1,
+      "arrival_id": null,
       "version": 2,
       "bikri_id": null,
       "bikri_number": null,
@@ -444,6 +474,7 @@
       "effect_paisa": 1000000,
       "running_balance_paisa": 1140000,
       "reason": null,
+      "note": null,
       "shop_name": "Haji Traders",
       "qty": 20,
       "journal_entry_id": 7,
@@ -451,12 +482,18 @@
       "cancel_reason": null,
       "parts": [],
       "credits": [],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "garden_closed",
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "entry_date": "2026-10-13",
       "kind": "close",
       "entry_id": 5,
+      "number": 1,
+      "arrival_id": null,
       "version": 2,
       "bikri_id": null,
       "bikri_number": null,
@@ -464,6 +501,7 @@
       "effect_paisa": 0,
       "running_balance_paisa": 1140000,
       "reason": null,
+      "note": null,
       "shop_name": null,
       "qty": null,
       "journal_entry_id": 8,
@@ -546,7 +584,11 @@
           }
         }
       ],
-      "can_cancel": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     }
   ],
   "history_count": 6,
@@ -645,5 +687,6 @@
         "rule_id": null
       }
     }
-  ]
+  ],
+  "partners_locked": false
 }

@@ -85,6 +85,17 @@ pub struct PartnerRow {
     pub version: i64,
 }
 
+/// The answer of `partners_list`: the partners by name, for the pickers (plan 44, PRD FR-17.11).
+/// While the partner section is locked it still names them, but every `share_bps` is 0 and
+/// `partners_locked` is true.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartnersList {
+    /// The partners, in the order they were created.
+    pub partners: Vec<PartnerRow>,
+    /// True while the partner section is locked: the shares are left out.
+    pub partners_locked: bool,
+}
+
 /// One entry of a partner's share history (PRD FR-17.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct ShareHistoryRow {

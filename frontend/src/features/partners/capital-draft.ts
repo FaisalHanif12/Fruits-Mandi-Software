@@ -3,6 +3,7 @@
 // here works out money (CLAUDE.md rule 1).
 
 import { isoToDisplayDate } from '../../shared/format';
+import type { VoucherEditable } from '../vouchers';
 import type { CapitalType } from './screen-type';
 import type { CapitalEntry } from './types';
 
@@ -48,6 +49,24 @@ export function nextCapitalDraft(draft: CapitalDraft): CapitalDraft {
  */
 export function capitalIsFilled(draft: CapitalDraft): boolean {
   return [draft.amount, draft.narration].some((text) => text.trim() !== '');
+}
+
+/**
+ * A saved capital entry as the form holds it (plan 44, PRD FR-7.70): the typed entry the backend
+ * sends back becomes the draft, as text, like one typed by hand.
+ */
+export function capitalDraftOf(editable: VoucherEditable): CapitalDraft {
+  const entry = editable.entry;
+  if (entry.type === 'capital_in' || entry.type === 'capital_out') {
+    return {
+      type: entry.type,
+      date: entry.date,
+      partnerId: entry.partner_id === null ? '' : String(entry.partner_id),
+      amount: entry.amount,
+      narration: entry.narration ?? '',
+    };
+  }
+  throw new Error('not a capital entry');
 }
 
 function idOrNull(text: string): number | null {

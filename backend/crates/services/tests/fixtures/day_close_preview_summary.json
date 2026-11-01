@@ -54,6 +54,7 @@
       }
     ],
     "open_lots": 0,
-    "open_qty": 0
+    "open_qty": 0,
+    "partners_locked": false
   }
 }

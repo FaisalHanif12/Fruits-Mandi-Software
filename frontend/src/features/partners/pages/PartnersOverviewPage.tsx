@@ -4,6 +4,7 @@
 // states: loading, error with a retry, empty with a button, and the table. A row opens the
 // partner's statement and capital.
 
+import { PartnerGate } from '../components/PartnerGate';
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CalendarCheck, Landmark, Settings2, Users } from 'lucide-react';
@@ -21,7 +22,7 @@ import {
 import { OverviewTable } from '../components/OverviewTable';
 import { usePartnerOverview } from '../hooks';
 
-export function PartnersOverviewPage() {
+function PartnersOverviewPageScreen() {
   const navigate = useNavigate();
   const overview = usePartnerOverview();
   const [more, setMore] = useRememberedFlag('partners.overview_more', false);
@@ -102,5 +103,14 @@ export function PartnersOverviewPage() {
     >
       <div className="min-h-0 flex-1 overflow-auto">{body}</div>
     </ListPage>
+  );
+}
+
+/** The screen behind the partner code (plan 44, PRD FR-17.11). */
+export function PartnersOverviewPage() {
+  return (
+    <PartnerGate>
+      <PartnersOverviewPageScreen />
+    </PartnerGate>
   );
 }

@@ -68,6 +68,8 @@ interface GeneralLinesSectionProps {
   /** What the grid's `label` cells show: the person's name per row. */
   calc: Readonly<Record<string, Readonly<Record<string, string>>>>;
   cellErrors: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** The cells an earlier edit changed, with the words of that edit as their tip (plan 44). */
+  cellMarks?: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined;
   /** The id of the account the party card shows now (the focused line, or a list being browsed). */
   cardAccount: number | null;
   onCardAccount: (accountId: number | null) => void;
@@ -80,6 +82,7 @@ export function GeneralLinesSection({
   people,
   calc,
   cellErrors,
+  cellMarks,
   cardAccount,
   onCardAccount,
   side,
@@ -128,6 +131,7 @@ export function GeneralLinesSection({
           labelId="cashbook-general-grid-label"
           calc={calc}
           cellErrors={cellErrors}
+          {...(cellMarks === undefined ? {} : { cellMarks })}
           interceptors={interceptors}
           onCardAccount={onCardAccount}
           fit

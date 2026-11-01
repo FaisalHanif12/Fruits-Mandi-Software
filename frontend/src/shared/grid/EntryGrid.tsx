@@ -81,6 +81,12 @@ interface EntryGridProps {
    */
   cellChanged?: PerRow<string>;
   /**
+   * The cells an EARLIER edit changed (plan 44, PRD FR-7.71), by row and field: the whole sentence
+   * "Before: 600 → now: 610, 31-10-2026 4:35 pm, Owner" as the tooltip. The cell gets a corner mark
+   * on the end side, so colour is never the only signal; the entry's edit history lists them too.
+   */
+  cellMarks?: PerRow<string>;
+  /**
    * Can the row be removed, by Ctrl+Delete or by its remove button? Default: yes. A saved lot of an edit
    * cannot be removed, and has no button.
    */
@@ -121,6 +127,7 @@ interface Live {
   cellErrors: PerRow<string> | undefined;
   cellWarnings: PerRow<string> | undefined;
   cellChanged: PerRow<string> | undefined;
+  cellMarks: PerRow<string> | undefined;
 }
 
 /** The word of a choice column for a value, or undefined when it has no word. */
@@ -192,6 +199,8 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     row === undefined ? undefined : live().cellWarnings?.[row.rowId]?.[column.field];
   const changedOf = (row: EntryRow | undefined): string | undefined =>
     row === undefined ? undefined : live().cellChanged?.[row.rowId]?.[column.field];
+  const markOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellMarks?.[row.rowId]?.[column.field];
   // The grey hint of an empty cell: written in the column, or sent by the backend (the last rate).
   const hintOf = (row: EntryRow): string | undefined =>
     column.hintFromCalc === true ? calcOf(row) || undefined : column.placeholder?.(row);
@@ -221,7 +230,7 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     tooltipValueGetter: (params) => {
       const row = params.data;
       if (row === undefined) return undefined;
-      const error = errorOf(row) ?? warningOf(row) ?? changedOf(row);
+      const error = errorOf(row) ?? warningOf(row) ?? changedOf(row) ?? markOf(row);
       if (error !== undefined) return error;
       if ((row.typed[column.field] ?? '') === '' && column.hintTooltipField !== undefined) {
         return live().calc?.[row.rowId]?.[column.hintTooltipField];
@@ -235,6 +244,7 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       'cell-warn': (params) =>
         errorOf(params.data) === undefined && warningOf(params.data) !== undefined,
       'cell-changed': (params) => changedOf(params.data) !== undefined,
+      'cell-marked': (params) => markOf(params.data) !== undefined,
       'cell-calc': () => readOnly,
       'cell-hint': (params) =>
         params.data !== undefined &&
@@ -285,7 +295,11 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
               onCardAccount: env.onCardAccount,
             },
       tooltipValueGetter: (params) => {
-        const error = errorOf(params.data) ?? warningOf(params.data) ?? changedOf(params.data);
+        const error =
+          errorOf(params.data) ??
+          warningOf(params.data) ??
+          changedOf(params.data) ??
+          markOf(params.data);
         if (error !== undefined) return error;
         const record = params.data?.picked?.[column.field];
         return record === undefined ? undefined : `${record.code} ${displayName(record, language)}`;
@@ -379,6 +393,7 @@ function GridInner({
   cellErrors,
   cellWarnings,
   cellChanged,
+  cellMarks,
   canRemoveRow,
   removeQuestion,
   heightMode = 'fill',
@@ -400,7 +415,14 @@ function GridInner({
   // The cell whose working is open (Ctrl+I), and the element the box opens next to.
   const [explaining, setExplaining] = useState<{ cell: CellRef; anchor: HTMLElement } | null>(null);
 
-  const live = useLatest<Live>({ calc, workings, cellErrors, cellWarnings, cellChanged });
+  const live = useLatest<Live>({
+    calc,
+    workings,
+    cellErrors,
+    cellWarnings,
+    cellChanged,
+    cellMarks,
+  });
 
   // Esc while typing in a cell cancels the typing and keeps the old value (PRD FR-7.18).
   useEscape(
@@ -531,7 +553,13 @@ function GridInner({
   // A new answer from the backend: the cells read it again. Editing is not interrupted.
   useLayoutEffect(() => {
     apiRef.current?.refreshCells({ force: true });
-  }, [calc, workings, cellErrors, cellWarnings, cellChanged]);
+  }, [calc, workings, cellErrors, cellWarnings, cellChanged, cellMarks]);
+
+  // The marks of earlier edits come from the history, which can answer before the grid is ready:
+  // the cells then read them once, when the grid has become ready.
+  useLayoutEffect(() => {
+    if (ready && live().cellMarks !== undefined) apiRef.current?.refreshCells({ force: true });
+  }, [ready, live]);
 
   // After a key or the screen asked for a cell, focus it once the rows are drawn.
   const pendingFocus = store((state) => state.pendingFocus);

@@ -42,22 +42,22 @@ fn data(message: &str) -> ServiceError {
 }
 
 /// A trip cost that passed every check, with what the save writes.
-struct Ready {
-    venture: Venture,
-    date: BusinessDate,
-    amount: Paisa,
-    reason: String,
-    payment: PaymentPlan,
-    spread: Vec<SpreadPart>,
+pub(super) struct Ready {
+    pub(super) venture: Venture,
+    pub(super) date: BusinessDate,
+    pub(super) amount: Paisa,
+    pub(super) reason: String,
+    pub(super) payment: PaymentPlan,
+    pub(super) spread: Vec<SpreadPart>,
     numbers: TripCostNumbers,
 }
 
 /// Every mistake of a typed cost, and the numbers if it can be worked out.
-struct Plan {
-    errors: Vec<FieldError>,
+pub(super) struct Plan {
+    pub(super) errors: Vec<FieldError>,
     warnings: Vec<FieldError>,
-    ready: Option<Ready>,
-    cash: CashCheck,
+    pub(super) ready: Option<Ready>,
+    pub(super) cash: CashCheck,
 }
 
 impl Plan {
@@ -80,6 +80,18 @@ fn plan(
     conn: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     input: &TripCostInput,
+) -> Result<Plan, ServiceError> {
+    plan_with(conn, window, input, None)
+}
+
+/// [`plan`], spreading over the purchases in `only` (the ones an edited cost was spread over before)
+/// instead of every purchase that has goods left now (PRD FR-12.31: a cost is spread when it is saved,
+/// over the purchases of that day, so an edit keeps the same purchases).
+pub(super) fn plan_with(
+    conn: &Connection,
+    window: (Option<BusinessDate>, BusinessDate),
+    input: &TripCostInput,
+    only: Option<&[i64]>,
 ) -> Result<Plan, ServiceError> {
     let (closed_up_to, today) = window;
     let mut errors = FieldErrors::default();
@@ -134,7 +146,10 @@ fn plan(
         });
     let carriers = match (&venture, input.trip_id) {
         (Some(v), Some(id)) if v.is_open() => {
-            let carriers = purchase_repo::with_stock_of_trip(conn, id)?;
+            let mut carriers = purchase_repo::with_stock_of_trip(conn, id)?;
+            if let Some(only) = only {
+                carriers.retain(|p| only.contains(&p.id));
+            }
             if carriers.is_empty() {
                 errors.push(FieldError::new(ErrorCode::ErrTripNoStock, "trip_id"));
             }

@@ -1,0 +1,71 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "name",
+        "before": {
+          "type": "names",
+          "ur": "شاہ پور باغ",
+          "en": "Shahpur Garden"
+        },
+        "after": {
+          "type": "names",
+          "ur": "شاہ پور باغ",
+          "en": "Shahpur Bagh"
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "note",
+        "before": {
+          "type": "empty"
+        },
+        "after": {
+          "type": "text",
+          "text": "نیا نوٹ"
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "rent",
+        "before": {
+          "type": "money",
+          "paisa": 5000000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 6000000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": null,
+      "partners": [],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

@@ -322,8 +322,16 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
       return found;
     });
     await user.click(row);
-    await user.click(screen.getByRole('button', { name: startsWith('fruit-edit') }));
-    await screen.findByText(said(message(language, 'fruit-editing', { number: fruitNumber(1) })));
+    await user.click(screen.getByRole('button', { name: startsWith('edit-action-edit') }));
+    await screen.findByText(
+      said(
+        message(language, 'edit-band', {
+          what: message(language, 'glossary-phal'),
+          number: fruitNumber(1),
+          date: '10-10-2026',
+        }),
+      ),
+    );
     expect(field('fruit-field-qty')).toHaveValue('2');
     expect(field('fruit-field-rate')).toHaveValue('580');
     // Save without a reason is refused at the reason field.
@@ -365,7 +373,7 @@ describe.each(LANGUAGES)('the fruit screen (%s)', (language) => {
       return found;
     });
     await user.click(row);
-    await user.click(screen.getByRole('button', { name: startsWith('fruit-cancel') }));
+    await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     const dialog = await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'mistake');
     await user.click(

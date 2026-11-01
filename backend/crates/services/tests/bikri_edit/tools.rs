@@ -43,7 +43,7 @@ pub fn try_edit(
             entry_id: opened.entry_id,
             version: opened.version,
             draft: draft.clone(),
-            reason: None,
+            reason: Some("edit".to_owned()),
             confirm_cash_below_zero: confirm,
         },
     )

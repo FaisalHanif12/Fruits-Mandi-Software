@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-code-reset"
+description = "Enables the partners_code_reset command without any pre-configured scope."
+commands.allow = ["partners_code_reset"]
+
+[[permission]]
+identifier = "deny-partners-code-reset"
+description = "Denies the partners_code_reset command without any pre-configured scope."
+commands.deny = ["partners_code_reset"]

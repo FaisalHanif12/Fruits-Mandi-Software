@@ -41,6 +41,7 @@ expression: "print(EVENT2, PrintDoc::SellerBill, Language::En)"
   },
   "number": "2",
   "cancelled": false,
+  "revised_on": null,
   "pages": [
     {
       "serial": "1",

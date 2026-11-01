@@ -180,6 +180,7 @@ fn plan(
         credits,
         partner_results: partner_results_view,
         posts_entry: entry.is_some(),
+        partners_locked: false,
     };
     Ok(Plan {
         errors: found,

@@ -10,6 +10,7 @@ use mandi_db::gardens::{self as repo, AccountEvent, Figures, GardenRec};
 use mandi_db::rusqlite::Connection;
 use mandi_db::ventures::{self as vrepo, EntryRec, PartRec};
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::gardens::{
     GardenDetail, GardenGetInput, GardenHistoryKind, GardenHistoryRow, GardenPartnerResult,
     GardenRow, GardenSummaryRow, GardensList, GardensListInput, GardensSummary, GardensTotals,
@@ -28,6 +29,7 @@ use super::{DEFAULT_PAGE, data};
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::flags::Marker;
 use crate::ventures::{self, Venture, commission_view, not_found, partner_rows, record_of};
 
 pub(super) fn paisa(value: i64) -> Result<Paisa, ServiceError> {
@@ -514,9 +516,22 @@ pub(super) fn history(
     let (entries, _) = vrepo::entries_page(conn, garden.rec.id, 0, i64::MAX)?;
     let ids: Vec<i64> = entries.iter().map(|e| e.id).collect();
     let parts = vrepo::parts_of(conn, &ids)?;
+    // نگ sold or written off of each arrival a sale in another shop took goods from: such a sale can
+    // be edited only while it is the only thing that moved them (PRD FR-7.70).
+    let arrival_ids: Vec<i64> = entries.iter().filter_map(|e| e.arrival_id).collect();
+    let mut arrival_moved: HashMap<i64, i64> = HashMap::new();
+    for arrival in mandi_db::arrivals::get_many(conn, &arrival_ids)? {
+        arrival_moved.insert(
+            arrival.id,
+            arrival
+                .qty_sold
+                .checked_add(arrival.qty_written_off)
+                .ok_or_else(|| data("the quantity of an arrival does not fit"))?,
+        );
+    }
     let mut items: Vec<Item> = Vec::with_capacity(entries.len());
     for entry in &entries {
-        items.push(entry_item(entry, &parts, open)?);
+        items.push(entry_item(entry, &parts, open, &arrival_moved)?);
     }
     for event in repo::account_events(conn, garden.rec.account.id)? {
         if let Some(item) = event_item(&event)? {
@@ -529,9 +544,25 @@ pub(super) fn history(
             .then(a.group.cmp(&b.group))
             .then(a.order.cmp(&b.order))
     });
+    // The day rules and the stamp of the entries that can be changed (not the sales and fruit
+    // that other screens own).
+    let entry_ids: Vec<i64> = items
+        .iter()
+        .filter(|i| i.row.entry_id.is_some() && i.row.kind != GardenHistoryKind::Close)
+        .filter_map(|i| i.row.entry_id)
+        .collect();
+    let marker = Marker::load(conn, EditEntity::GardenEntry, &entry_ids)?;
     let mut running = Paisa::ZERO;
     let mut out = Vec::with_capacity(items.len());
     for mut item in items {
+        if let (Some(id), true) = (item.row.entry_id, item.row.kind != GardenHistoryKind::Close) {
+            marker.mark(
+                id,
+                &item.row.entry_date,
+                !item.row.cancelled,
+                &mut item.row.flags,
+            );
+        }
         running = running
             .checked_add(item.row.effect_paisa)
             .map_err(money_error)?;
@@ -546,6 +577,7 @@ fn entry_item(
     entry: &EntryRec,
     parts: &[PartRec],
     garden_open: bool,
+    arrival_moved: &HashMap<i64, i64>,
 ) -> Result<Item, ServiceError> {
     let kind = history_kind_of(&entry.kind)?;
     let cancelled = entry.status == "cancelled";
@@ -594,12 +626,30 @@ fn entry_item(
         1 => entry.journal_entry_id.unwrap_or(entry.id),
         _ => entry.id,
     };
-    let can_cancel = !cancelled
-        && garden_open
-        && matches!(
-            kind,
-            GardenHistoryKind::Installment | GardenHistoryKind::Cost | GardenHistoryKind::OtherSale
-        );
+    // What the entry itself allows. An installment or a cost can be edited and cancelled while the
+    // garden is open. A sale in another shop can always be cancelled, and edited while it is the only
+    // thing that moved goods of its arrival (`goods_moved`). The day rules and the stamp come in
+    // `history`.
+    let flags = if !matches!(
+        kind,
+        GardenHistoryKind::Installment | GardenHistoryKind::Cost | GardenHistoryKind::OtherSale
+    ) {
+        EntryFlags::plain(false, false)
+    } else if !garden_open {
+        EntryFlags::locked(LockedReason::GardenClosed)
+    } else if kind == GardenHistoryKind::OtherSale
+        && entry
+            .arrival_id
+            .and_then(|id| arrival_moved.get(&id))
+            .is_some_and(|moved| Some(*moved) != entry.qty)
+    {
+        EntryFlags {
+            locked_reason: Some(LockedReason::GoodsMoved),
+            ..EntryFlags::plain(false, true)
+        }
+    } else {
+        EntryFlags::plain(true, true)
+    };
     Ok(Item {
         date: entry.entry_date.clone(),
         group,
@@ -608,6 +658,12 @@ fn entry_item(
             entry_date: entry.entry_date.clone(),
             kind,
             entry_id: Some(entry.id),
+            number: Some(entry.number),
+            arrival_id: if kind == GardenHistoryKind::OtherSale {
+                entry.arrival_id
+            } else {
+                None
+            },
             version: Some(entry.version),
             bikri_id: None,
             bikri_number: None,
@@ -615,6 +671,12 @@ fn entry_item(
             effect_paisa: effect,
             running_balance_paisa: Paisa::ZERO,
             reason: entry.reason.clone(),
+            // The note of a sale in another shop is stored in `reason` (see `entry::save`).
+            note: if kind == GardenHistoryKind::OtherSale {
+                entry.reason.clone()
+            } else {
+                None
+            },
             shop_name: entry.shop_name.clone(),
             qty: entry.qty,
             journal_entry_id: entry.journal_entry_id,
@@ -622,7 +684,7 @@ fn entry_item(
             cancel_reason: entry.cancel_reason.clone(),
             parts: payment_parts,
             credits,
-            can_cancel,
+            flags,
         },
     })
 }
@@ -652,6 +714,8 @@ fn event_item(event: &AccountEvent) -> Result<Option<Item>, ServiceError> {
             entry_date: event.entry_date.clone(),
             kind,
             entry_id: None,
+            number: None,
+            arrival_id: None,
             version: None,
             bikri_id: (kind == GardenHistoryKind::Sale).then_some(event.source_id),
             bikri_number: None,
@@ -659,6 +723,7 @@ fn event_item(event: &AccountEvent) -> Result<Option<Item>, ServiceError> {
             effect_paisa: net,
             running_balance_paisa: Paisa::ZERO,
             reason: None,
+            note: None,
             shop_name: None,
             qty: None,
             journal_entry_id: Some(event.entry_id),
@@ -666,7 +731,7 @@ fn event_item(event: &AccountEvent) -> Result<Option<Item>, ServiceError> {
             cancel_reason: None,
             parts: Vec::new(),
             credits: Vec::new(),
-            can_cancel: false,
+            flags: EntryFlags::plain(false, false),
         },
     }))
 }
@@ -796,6 +861,7 @@ pub(super) fn get(ctx: &Context, input: &GardenGetInput) -> Result<GardenDetail,
             history: page,
             history_count,
             partner_results,
+            partners_locked: false,
         })
     })
 }

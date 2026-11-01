@@ -28,7 +28,12 @@
       "gross": 1200000,
       "net": 1016000,
       "buyer_total": 1280000,
-      "status": "saved"
+      "status": "saved",
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "id": 1,
@@ -58,7 +63,12 @@
       "gross": 2940000,
       "net": 1931600,
       "buyer_total": 3156400,
-      "status": "saved"
+      "status": "saved",
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     }
   ],
   "total_count": 2,

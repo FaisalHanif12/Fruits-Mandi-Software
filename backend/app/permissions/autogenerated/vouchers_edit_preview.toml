@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-vouchers-edit-preview"
+description = "Enables the vouchers_edit_preview command without any pre-configured scope."
+commands.allow = ["vouchers_edit_preview"]
+
+[[permission]]
+identifier = "deny-vouchers-edit-preview"
+description = "Denies the vouchers_edit_preview command without any pre-configured scope."
+commands.deny = ["vouchers_edit_preview"]

@@ -6,7 +6,7 @@
 // The amounts are the stored sums and the total under them is the backend's figure.
 
 import { Localized } from '@fluent/react';
-import { FileText, Pencil, Printer, SearchX, Ban } from 'lucide-react';
+import { FileText, Printer, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { VouchersListInput } from '../../../bindings/VouchersListInput';
 import { pickedOf } from '../../../shared/accounts';
@@ -25,7 +25,9 @@ import {
   PeriodBox,
   ShowClosedTick,
   type PickerValue,
+  EntryActions,
 } from '../../../shared/ui';
+import { NO_ENTRY_FLAGS } from '../../../shared/edit';
 import { VOUCHER_COLUMNS } from '../list-columns';
 import { useVouchersList } from '../hooks';
 import type { ScreenType } from '../screen-type';
@@ -129,7 +131,7 @@ export function VoucherListSection({
       }
       empty={empty}
       onOpen={(row) => {
-        if (row.editable) onEdit(row);
+        if (row.can_edit) onEdit(row);
         else onSelect(row);
       }}
       onFocusRow={(rowId) => {
@@ -184,25 +186,15 @@ export function VoucherListSection({
         </FilterBar>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          disabled={!selected?.editable}
-          onClick={() => {
+        <EntryActions
+          flags={selected ?? NO_ENTRY_FLAGS}
+          onEdit={() => {
             if (selected !== null) onEdit(selected);
           }}
-        >
-          <Pencil aria-hidden="true" className="size-icon-md" />
-          <Localized id="vouchers-edit" />
-        </Button>
-        <Button
-          variant="danger"
-          disabled={!selected?.editable}
-          onClick={() => {
+          onCancel={() => {
             if (selected !== null) onCancel(selected);
           }}
-        >
-          <Ban aria-hidden="true" className="size-icon-md" />
-          <Localized id="vouchers-cancel" />
-        </Button>
+        />
         <Button
           shortcut={SHORTCUTS.print}
           disabled={selected === null}

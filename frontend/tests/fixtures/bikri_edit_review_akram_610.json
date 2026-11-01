@@ -1,0 +1,262 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "lot",
+          "lot_no": 1,
+          "line_no": null,
+          "label_ur": "رحیم",
+          "label_en": "Rahim"
+        },
+        "field": "seller_comm",
+        "before": {
+          "type": "money",
+          "paisa": 176400
+        },
+        "after": {
+          "type": "money",
+          "paisa": 177600
+        }
+      },
+      {
+        "place": {
+          "kind": "lot",
+          "lot_no": 1,
+          "line_no": null,
+          "label_ur": "رحیم",
+          "label_en": "Rahim"
+        },
+        "field": "gross",
+        "before": {
+          "type": "money",
+          "paisa": 2940000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 2960000
+        }
+      },
+      {
+        "place": {
+          "kind": "lot",
+          "lot_no": 1,
+          "line_no": null,
+          "label_ur": "رحیم",
+          "label_en": "Rahim"
+        },
+        "field": "net",
+        "before": {
+          "type": "money",
+          "paisa": 1931600
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1950400
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "seller_rate",
+        "before": {
+          "type": "money",
+          "paisa": 60000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 61000
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "seller_amount",
+        "before": {
+          "type": "money",
+          "paisa": 1200000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1220000
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "seller_comm",
+        "before": {
+          "type": "money",
+          "paisa": 72000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 73200
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "buyer_rate",
+        "before": {
+          "type": "money",
+          "paisa": 60000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 61000
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "buyer_value",
+        "before": {
+          "type": "money",
+          "paisa": 1200000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1220000
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "buyer_comm",
+        "before": {
+          "type": "money",
+          "paisa": 72000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 73200
+        }
+      },
+      {
+        "place": {
+          "kind": "line",
+          "lot_no": 1,
+          "line_no": 1,
+          "label_ur": "اکرم ٹول ٹیکس",
+          "label_en": "Akram Toll Tax"
+        },
+        "field": "buyer_total",
+        "before": {
+          "type": "money",
+          "paisa": 1288000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1309200
+        }
+      }
+    ],
+    "effect": {
+      "parties": [
+        {
+          "account": {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          },
+          "person_key": null,
+          "before": {
+            "amount_paisa": 431600,
+            "side": "cr"
+          },
+          "after": {
+            "amount_paisa": 450400,
+            "side": "cr"
+          }
+        },
+        {
+          "account": {
+            "id": 20,
+            "code": "0020",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax"
+          },
+          "person_key": null,
+          "before": {
+            "amount_paisa": 1288000,
+            "side": "dr"
+          },
+          "after": {
+            "amount_paisa": 1309200,
+            "side": "dr"
+          }
+        }
+      ],
+      "cash": null,
+      "partners": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "before_paisa": 158000,
+          "after_paisa": 159000
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "before_paisa": 118400,
+          "after_paisa": 119100
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "before_paisa": 118400,
+          "after_paisa": 119100
+        }
+      ],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

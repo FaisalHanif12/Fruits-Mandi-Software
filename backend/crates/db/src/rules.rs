@@ -18,7 +18,13 @@ pub const DEFAULT_RULES_FROM: &str = "1000-01-01";
 const ROW_SELECT: &str = "SELECT r.id, r.version, r.side, r.charge_type,
         r.account_id, a.code, a.name_ur, a.name_en,
         r.item_id, i.code, i.name_ur, i.name_en,
-        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note, a.tag
+        r.item_group, r.method, r.value_bps, r.value_paisa, r.from_date, r.to_date, r.is_active, r.note, a.tag,
+        (EXISTS (SELECT 1 FROM bikri_sales s WHERE s.seller_comm_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_sales s WHERE s.buyer_comm_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_sales s WHERE s.laga_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.labour_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.munshiana_rule_id = r.id)
+         OR EXISTS (SELECT 1 FROM bikri_lots l WHERE l.phone_rule_id = r.id)) AS used
     FROM charge_rules r
     LEFT JOIN accounts a ON a.id = r.account_id
     LEFT JOIN items i ON i.id = r.item_id";
@@ -93,8 +99,28 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<RuleRow> {
         from_date: r.get(16)?,
         to_date: r.get(17)?,
         is_active: r.get(18)?,
+        used: r.get(21)?,
         note: r.get::<_, Option<String>>(19)?.unwrap_or_default(),
     })
+}
+
+/// How many lines in force and lots took their rate from this rule (PRD FR-11.6): the sale lines
+/// whose seller commission, buyer commission or لاگا and the lots whose labour, munshiana or phone
+/// charge came from it. Lines an edit replaced are history and are not counted here (the row is
+/// still "used" because of them).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn saved_lines_using(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT (SELECT COUNT(*) FROM bikri_sales
+                 WHERE is_active = 1
+                   AND (seller_comm_rule_id = ?1 OR buyer_comm_rule_id = ?1 OR laga_rule_id = ?1))
+              + (SELECT COUNT(*) FROM bikri_lots
+                 WHERE labour_rule_id = ?1 OR munshiana_rule_id = ?1 OR phone_rule_id = ?1)",
+        [id],
+        |r| r.get(0),
+    )
 }
 
 /// One rule. `is_default` is left false: the services know which rows are the defaults.

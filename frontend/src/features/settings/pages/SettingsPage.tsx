@@ -14,6 +14,7 @@ import { ChargesTab } from '../components/ChargesTab';
 import { DayTab } from '../components/DayTab';
 import { FirmTab } from '../components/FirmTab';
 import { LanguageTab } from '../components/LanguageTab';
+import { ChangeCodeCard } from '../../partners';
 import { LockTab } from '../components/LockTab';
 import { OverridesTab } from '../components/OverridesTab';
 import { PrintingTab } from '../components/PrintingTab';
@@ -102,7 +103,12 @@ export function SettingsPage() {
           {
             id: 'lock',
             label: <Localized id="settings-tab-lock" />,
-            content: scrolls(<LockTab minutes={data.idle_lock_minutes} />),
+            content: scrolls(
+              <>
+                <LockTab minutes={data.idle_lock_minutes} />
+                <ChangeCodeCard />
+              </>,
+            ),
           },
           {
             id: 'day',

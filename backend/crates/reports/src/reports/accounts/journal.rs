@@ -88,7 +88,12 @@ pub(crate) fn run_r11(
                 amount_or_empty(paisa(line.dr)?),
                 amount_or_empty(paisa(line.cr)?),
             ],
-            source: Some(source_of(&line.source_type, line.source_id, line.entry_id)),
+            source: Some(source_of(
+                &line.source_type,
+                line.source_id,
+                line.entry_id,
+                (line.venture_kind.as_deref(), line.venture_id),
+            )),
             kind: RowKind::Normal,
         });
     }

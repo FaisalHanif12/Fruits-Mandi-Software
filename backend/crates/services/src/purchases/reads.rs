@@ -9,6 +9,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_db::ventures as venture_repo;
 use mandi_domain::core::bikri::{OwnStockRow, WriteOffRow};
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::money::{Paisa, Qty, avg_rate};
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::purchases::{
@@ -25,6 +26,7 @@ use super::{data, not_found};
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::flags::Marker;
 
 /// The default page of a list (PRD FR-19.11).
 const DEFAULT_PAGE: u32 = 100;
@@ -182,7 +184,16 @@ fn row_of(
         commission_paisa,
         commission_working,
         days_waiting,
-        can_cancel: !cancelled && rec.qty_sold == 0 && rec.qty_written_off == 0 && !carries_cost,
+        // Goods sold or written off lock the purchase (rule `goods_moved`). A purchase that carries
+        // a part of a trip cost can be edited (its quantity stays) but not cancelled. The day rules
+        // and the stamp come in `rows_of`.
+        flags: if cancelled {
+            EntryFlags::plain(false, false)
+        } else if rec.qty_sold > 0 || rec.qty_written_off > 0 {
+            EntryFlags::locked(LockedReason::GoodsMoved)
+        } else {
+            EntryFlags::plain(true, !carries_cost)
+        },
         lots: Vec::new(),
         write_offs: Vec::new(),
     })
@@ -213,7 +224,8 @@ pub(super) fn rows_of(
     let ids: Vec<i64> = recs.iter().map(|r| r.id).collect();
     let figures = repo::sold_figures(conn, &ids)?;
     let commissions = mandi_db::commission::by_purchases(conn, &ids)?;
-    recs.iter()
+    let mut rows = recs
+        .iter()
         .map(|rec| {
             row_of(
                 rec,
@@ -222,7 +234,17 @@ pub(super) fn rows_of(
                 today,
             )
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()?;
+    let marker = Marker::load(conn, EditEntity::Purchase, &ids)?;
+    for row in &mut rows {
+        marker.mark(
+            row.id,
+            &row.entry_date,
+            row.status == PurchaseStatus::Saved,
+            &mut row.flags,
+        );
+    }
+    Ok(rows)
 }
 
 /// The partners' parts of the payments of these purchases, by purchase id (PRD FR-12.30).

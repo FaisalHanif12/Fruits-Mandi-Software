@@ -431,3 +431,11 @@ settings-overrides-rate-check-percent-hint = 1 سے 1,000 کے درمیان پو
 # The hint inside the search box of the rule list (the party, the item or the note).
 # review: pending
 rules-search-placeholder = کھاتہ، قسم مال یا نوٹ لکھیں
+
+## A rule that saved lines were charged by (plan 44, PRD FR-7.70, FR-11.6).
+
+# review: pending
+rules-used-note = اس قاعدے سے محفوظ لائنیں لگ چکی ہیں، اس لیے اس کی صرف آخری تاریخ اور فعال بدلا جا سکتا ہے۔ نئی شرح چاہیے تو نئی تاریخ سے نیا قاعدہ لکھیں۔
+
+# review: pending
+rules-used-new = نیا قاعدہ لکھیں

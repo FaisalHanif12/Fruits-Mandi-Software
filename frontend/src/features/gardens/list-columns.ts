@@ -5,6 +5,7 @@
 // and a list never scrolls sideways (NFR-USE-15, Code Standards F22). A cancelled entry says so in
 // words. Names go through `displayName` (F38).
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
@@ -167,6 +168,12 @@ export const HISTORY_COLUMNS: readonly ListColumn<GardenHistoryRow>[] = [
     type: 'text',
     headerId: 'gardens-col-state',
     from: 'normal',
-    value: (row, { text }) => (row.cancelled ? text('gardens-entry-cancelled') : ''),
+    value: (row, context) =>
+      statusWithEdited(
+        row.cancelled ? context.text('gardens-entry-cancelled') : '',
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
 ];

@@ -5,6 +5,7 @@
 // layout steps, so the list never scrolls sideways (NFR-USE-15, Code Standards F22). The room is
 // the content area minus the 200 px side menu: 692 px at the narrowest compact window.
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import type { VoucherRow } from '../../bindings/VoucherRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
@@ -64,7 +65,14 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     type: 'status',
     headerId: 'vouchers-col-state',
     sortKey: 'status',
-    value: (row, { text }) =>
-      text(row.status === 'cancelled' ? 'vouchers-state-cancelled' : 'vouchers-state-saved'),
+    value: (row, context) =>
+      statusWithEdited(
+        context.text(
+          row.status === 'cancelled' ? 'vouchers-state-cancelled' : 'vouchers-state-saved',
+        ),
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
 ];

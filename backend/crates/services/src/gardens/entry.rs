@@ -54,7 +54,7 @@ fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&str>) -> O
 }
 
 /// What the entry is, with what it needs beyond the common fields.
-enum Body {
+pub(super) enum Body {
     /// An installment or a running cost, with its payment worked out.
     Payment { payment: PaymentPlan },
     /// Money from a sale in another shop, with its journal entry. `arrival_id` is the arrival the
@@ -69,24 +69,24 @@ enum Body {
 }
 
 /// An entry after the checks.
-struct Ready {
-    garden: Garden,
-    kind: GardenHistoryKind,
-    date: BusinessDate,
-    amount: Paisa,
+pub(super) struct Ready {
+    pub(super) garden: Garden,
+    pub(super) kind: GardenHistoryKind,
+    pub(super) date: BusinessDate,
+    pub(super) amount: Paisa,
     /// Why (a payment), or the note (a sale in another shop).
-    reason: Option<String>,
-    shop: Option<String>,
-    body: Body,
+    pub(super) reason: Option<String>,
+    pub(super) shop: Option<String>,
+    pub(super) body: Body,
     numbers: GardenEntryNumbers,
 }
 
 /// What [`plan`] found.
-struct Plan {
+pub(super) struct Plan {
     kind: GardenHistoryKind,
-    errors: Vec<FieldError>,
-    ready: Option<Ready>,
-    cash: CashCheck,
+    pub(super) errors: Vec<FieldError>,
+    pub(super) ready: Option<Ready>,
+    pub(super) cash: CashCheck,
 }
 
 impl Plan {
@@ -160,7 +160,7 @@ fn positive_money(errors: &mut FieldErrors, field: &str, text: &str) -> Option<P
 /// # Errors
 /// `ServiceError::Db`, `ServiceError::Data` or `ERR_OVERFLOW` for a failure the user cannot fix. The
 /// user's mistakes come back in [`Plan::errors`].
-fn plan(
+pub(super) fn plan(
     conn: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     input: &GardenEntryInput,

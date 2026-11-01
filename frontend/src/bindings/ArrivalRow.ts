@@ -2,7 +2,9 @@
 import type { Paisa } from '../shared/format/money';
 import type { ArrivalLotRef } from './ArrivalLotRef';
 import type { ArrivalStatus } from './ArrivalStatus';
+import type { EditStamp } from './EditStamp';
 import type { GardenRef } from './GardenRef';
+import type { LockedReason } from './LockedReason';
 import type { RecordRef } from './RecordRef';
 import type { Working } from './Working';
 import type { WriteOffRow } from './WriteOffRow';
@@ -110,10 +112,6 @@ export type ArrivalRow = {
    */
   days_waiting: number;
   /**
-   * True while it is saved and nothing of it is sold or written off, on an open day.
-   */
-  can_cancel: boolean;
-  /**
    * True while it is saved and has goods left: `gardens_arrival_set_sell_date` is allowed.
    */
   can_change_sell_date: boolean;
@@ -136,4 +134,24 @@ export type ArrivalRow = {
    * How the commission was worked out: the three parts and their sum (CalcInfo).
    */
   commission_working: Working;
+  /**
+   * The Edit button works (alone, or after a reopen).
+   */
+  can_edit: boolean;
+  /**
+   * The Cancel button works (alone, or after a reopen).
+   */
+  can_cancel: boolean;
+  /**
+   * Why not, when not. Null when both work.
+   */
+  locked_reason: LockedReason | null;
+  /**
+   * The entry's day is closed: Edit and Cancel go through "reopen and fix" (PRD FR-21.4).
+   */
+  needs_reopen: boolean;
+  /**
+   * The last edit. Null when the entry was never edited.
+   */
+  edited: EditStamp | null;
 };

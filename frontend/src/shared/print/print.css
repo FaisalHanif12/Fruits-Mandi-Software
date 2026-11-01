@@ -226,6 +226,12 @@ html:has(.print-doc[data-paper='mm80']) {
 }
 
 /* The facts under the header: number, date, bill date, truck. */
+.print-revised {
+  margin: 0;
+  font-weight: var(--weight-strong);
+  text-align: end;
+}
+
 .print-facts {
   display: flex;
   flex-wrap: wrap;

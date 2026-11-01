@@ -155,6 +155,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'last_day',
       'lines',
       'month',
+      'partners_locked',
       'profit_paisa',
       'total_paisa',
     ]);

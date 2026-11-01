@@ -27,7 +27,9 @@
     "not_item_ids": [],
     "partner_id": null,
     "person_key": null,
-    "purchase_ids": [1],
+    "purchase_ids": [
+      1
+    ],
     "seller_id": null,
     "to": null
   },

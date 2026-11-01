@@ -13,6 +13,7 @@ import { useDebouncedValue } from '../../shared/hooks';
 import {
   purchasesCancel,
   purchasesChangeSplit,
+  purchasesEditSave,
   purchasesEntryPreview,
   purchasesEntrySave,
   purchasesGet,
@@ -23,6 +24,7 @@ import {
   purchasesSetSellDate,
   purchasesWriteOffUndo,
 } from './api';
+import type { PurchaseEditInput } from '../../bindings/PurchaseEditInput';
 import type { SellDateInput } from '../../bindings/SellDateInput';
 import type {
   PurchaseCancelInput,
@@ -49,6 +51,15 @@ const READ_AGAIN: readonly (readonly string[])[] = [
   ['search'],
   ['day_status'],
 ];
+
+/** Saves the edit of a trip purchase and reads again what it changed (plan 44). */
+export function useSavePurchaseEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PurchaseEditInput) => purchasesEditSave(input),
+    onSuccess: () => readAgainAfterPurchase(queryClient),
+  });
+}
 
 /** Reads again what a purchase, a cancel or a write-off changed. */
 export function readAgainAfterPurchase(queryClient: QueryClient): Promise<unknown> {

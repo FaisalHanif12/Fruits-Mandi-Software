@@ -303,8 +303,6 @@ gardens-history-empty-help = The { -qist }, costs and sales of this garden show 
 # review: pending
 gardens-history-count = Showing { $shown } of { $total }
 # review: pending
-gardens-history-cancel = Cancel the entry
-# review: pending
 gardens-entry-cancelled-reason = This entry was cancelled. Reason: { $reason }
 
 ## Cancelling an entry (PRD FR-7.8).
@@ -529,3 +527,7 @@ gardens-arrival-write-off-undone = The write-off was undone
 
 # review: pending
 gardens-numbers-left-after = Left in the entry after this
+
+# The button on the facts of a garden that opens its names, main fruit, rent, season end and note for change (plan 44).
+# review: pending
+gardens-header-edit = Change the garden details

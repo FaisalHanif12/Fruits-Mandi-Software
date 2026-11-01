@@ -1,0 +1,51 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "note",
+        "before": {
+          "type": "empty"
+        },
+        "after": {
+          "type": "text",
+          "text": "بارش میں آئے"
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "qty",
+        "before": {
+          "type": "number",
+          "value": 100
+        },
+        "after": {
+          "type": "number",
+          "value": 120
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": null,
+      "partners": [],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

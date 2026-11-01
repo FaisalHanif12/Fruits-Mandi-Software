@@ -11,5 +11,7 @@ export type ReportSourceKind =
   | 'purchase'
   | 'arrival'
   | 'venture'
+  | 'trip'
+  | 'garden'
   | 'fruit'
   | 'entry';

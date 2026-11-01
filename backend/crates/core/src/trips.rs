@@ -366,9 +366,12 @@ pub struct TripEntryRow {
     pub credits: Vec<ShareAmount>,
     /// How a trip cost was spread over the purchases (C24). Empty for the other kinds.
     pub spread: Vec<CostSpreadPart>,
-    /// True if `trips_cost_cancel` or `trips_other_sale_cancel` (or `purchases_cancel` for a
-    /// purchase) would accept it now, apart from a closed day.
-    pub can_cancel: bool,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// One partner's money in a trip and what he got back (PRD FR-12.27, E2E-34b).
@@ -410,6 +413,18 @@ pub struct TripDetail {
     pub entries_count: i64,
     /// Each partner's money in and money back.
     pub partner_results: Vec<TripPartnerResult>,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl TripDetail {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's money in, money
+    /// back and result of the whole trip.
+    pub fn hide_partners(&mut self) {
+        self.partner_results.clear();
+        self.partners_locked = true;
+    }
 }
 
 /// The data of the dashboard tile مارکیٹ سفر (PRD 9.1, FR-12.25): the open trips, the نگ of their

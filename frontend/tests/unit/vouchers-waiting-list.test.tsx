@@ -423,7 +423,11 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
       reason: '',
       cancel_reason: '',
       entry_id: 1501,
-      editable: true,
+      can_edit: true,
+      can_cancel: true,
+      locked_reason: null,
+      needs_reopen: false,
+      edited: null,
     });
     await renderApp('/bikri/voucher?type=receipt&id=501');
     await screen.findByRole('heading', { level: 1 });

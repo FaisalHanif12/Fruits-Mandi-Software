@@ -2,6 +2,7 @@
 // bindings (Code Standards F2). What the user types is text (CLAUDE.md rule 1): the forms hold
 // the drafts below, and the amounts the backend sends are `Paisa`, shown and never worked out.
 
+import type { EntryEdited } from '../../bindings/EntryEdited';
 import type { EntryPartInput } from '../../bindings/EntryPartInput';
 import type { MoneySource } from '../../bindings/MoneySource';
 import type { OtherSaleInput } from '../../bindings/OtherSaleInput';
@@ -30,6 +31,7 @@ import type { VentureStatus } from '../../bindings/VentureStatus';
 import type { PurchaseEntryFields } from '../purchases';
 
 export type {
+  EntryEdited,
   EntryPartInput,
   MoneySource,
   OtherSaleInput,

@@ -20,6 +20,7 @@ use mandi_services::core::lent::{
 };
 use mandi_services::core::masters::{ExpenseHeadInput, MasterInput, StaffInput};
 use mandi_services::core::money::Paisa;
+use mandi_services::core::row_source::SourceKind;
 use mandi_services::core::vouchers::{
     VoucherCancelInput, VoucherEditInput, VoucherEntry, VoucherType,
 };
@@ -612,7 +613,8 @@ fn edit_voucher(
             id,
             version: row.version,
             entry,
-            reason: String::new(),
+            // A reason is needed for an entry that is not of today (PRD FR-7.70).
+            reason: "edit".into(),
             confirm_cash_below_zero: false,
         },
     )
@@ -842,7 +844,7 @@ fn a_return_dated_before_its_take_cannot_be_saved() {
 }
 
 #[test]
-fn a_take_cannot_be_moved_to_a_day_after_its_return() {
+fn a_take_keeps_its_day_so_it_cannot_be_moved_to_after_its_return() {
     let w = support::world();
     let a = w.partners[0];
     let take =
@@ -851,14 +853,15 @@ fn a_take_cannot_be_moved_to_a_day_after_its_return() {
     vouchers::save_personal_return(&w.env.ctx, &w.owner, &return_of(a, "1,000", "10-10-2026"))
         .unwrap();
     set_today(&w.env, 2026, 10, 11);
-    // On 10-10-26 الف would have returned 1,000 before he took anything.
+    // Moving the take to 11-10-26 would leave a return of 1,000 before it. Since plan 44 the day of
+    // a saved entry never changes, so the move is refused as such (PRD FR-7.70).
     let refused = edit_voucher(
         &w,
         take.voucher_id,
         VoucherEntry::PersonalExpense(personal(a, "2,000", "11-10-2026")),
     )
     .unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrReturnExceedsOpen);
+    assert_eq!(refused.code(), ErrorCode::ErrEditDateFixed);
     // The same day stays allowed.
     edit_voucher(
         &w,
@@ -2008,4 +2011,433 @@ fn a_deep_hole_on_an_earlier_day_does_not_hide_a_new_one_on_a_later_day() {
         VoucherEntry::PersonalExpense(personal(a, "3,500", "11-10-2026")),
     )
     .unwrap();
+}
+
+#[test]
+fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
+    // Plan 44 T2: `vouchers_open_for_edit` gives the typed entry of any of the 13 types; sending it
+    // back is an edit that changes nothing (empty change list, no errors).
+    use mandi_services::core::capital::CapitalInput;
+    use mandi_services::core::general::{GeneralInput, GeneralLineInput};
+    use mandi_services::core::khata::{KhataCreateInput, KhataInInput, KhataOutInput};
+    use mandi_services::core::vouchers::{
+        AdvanceInput, PaymentInput, ReceiptInput, RemovedPaymentFields, VoucherGetInput,
+    };
+    use mandi_services::{edit, khata};
+    let w = support::world();
+    let ctx = &w.env.ctx;
+    let owner = &w.owner;
+    let date = "10-10-2026";
+    let electricity = head(&w, "بجلی", "Electricity");
+    let aslam = person(&w, "اسلم", "Aslam", None);
+    let family = confirming(|words| {
+        khata::create(
+            ctx,
+            owner,
+            &KhataCreateInput {
+                name_ur: "خاندانی کھاتہ".into(),
+                name_en: "Family Khata".into(),
+                note: None,
+                confirmed_rules_words: words.to_vec(),
+            },
+        )
+    })
+    .account
+    .id;
+    let partner = w.partners[0];
+    let mut ids: Vec<(VoucherType, i64)> = Vec::new();
+    let mut keep =
+        |kind: VoucherType,
+         saved: Result<mandi_services::core::vouchers::VoucherSaved, ServiceError>| {
+            ids.push((kind, saved.unwrap().voucher_id));
+        };
+    keep(
+        VoucherType::Receipt,
+        vouchers::save_receipt(
+            ctx,
+            owner,
+            &ReceiptInput {
+                date: date.into(),
+                account_id: w.akram,
+                person_key: None,
+                amount: "1,000".into(),
+                removed: RemovedPaymentFields::default(),
+                collector_staff_id: None,
+                narration: "پہلی قسط".into(),
+            },
+        ),
+    );
+    keep(
+        VoucherType::Payment,
+        vouchers::save_payment(
+            ctx,
+            owner,
+            &PaymentInput {
+                date: date.into(),
+                account_id: w.rahim,
+                person_key: None,
+                amount: "500".into(),
+                removed: RemovedPaymentFields::default(),
+                reason: String::new(),
+                narration: String::new(),
+                confirm_cash_below_zero: false,
+            },
+        ),
+    );
+    keep(
+        VoucherType::Advance,
+        vouchers::save_advance(
+            ctx,
+            owner,
+            &AdvanceInput {
+                date: date.into(),
+                seller_account_id: w.karim,
+                amount: "2,000".into(),
+                removed: RemovedPaymentFields::default(),
+                expected_goods: "سیب".into(),
+                narration: String::new(),
+                confirm_cash_below_zero: false,
+            },
+        ),
+    );
+    let mut shop_in = shop(electricity, "3,000", date);
+    shop_in.paid_to = Some("واپڈا".into());
+    shop_in.narration = Some("اکتوبر".into());
+    keep(
+        VoucherType::ShopExpense,
+        vouchers::save_shop_expense(ctx, owner, &shop_in),
+    );
+    let mut take = personal(partner, "1,000", date);
+    take.return_by = Some("15-10-2026".into());
+    take.taken_by = Some("بیٹا".into());
+    keep(
+        VoucherType::PersonalExpense,
+        vouchers::save_personal_expense(ctx, owner, &take),
+    );
+    keep(
+        VoucherType::PersonalReturn,
+        vouchers::save_personal_return(ctx, owner, &return_of(partner, "200", date)),
+    );
+    let mut loan = lent_in(aslam, "5,000", date);
+    loan.return_by = Some("20-10-2026".into());
+    keep(
+        VoucherType::MoneyLent,
+        vouchers::save_money_lent(ctx, owner, &loan),
+    );
+    keep(
+        VoucherType::MoneyLentReturn,
+        vouchers::save_money_lent_return(
+            ctx,
+            owner,
+            &lent_back(aslam, "500", date, LentReturnMode::Cash),
+        ),
+    );
+    let mut salary = lent_back(aslam, "700", date, LentReturnMode::Salary);
+    salary.salary_head_id = Some(electricity);
+    keep(
+        VoucherType::MoneyLentReturn,
+        vouchers::save_money_lent_return(ctx, owner, &salary),
+    );
+    let capital = CapitalInput {
+        date: date.into(),
+        partner_id: Some(partner),
+        amount: "10,000".into(),
+        narration: Some("شروع".into()),
+        confirm_cash_below_zero: false,
+    };
+    keep(
+        VoucherType::CapitalIn,
+        vouchers::save_capital_in(ctx, owner, &capital),
+    );
+    keep(
+        VoucherType::CapitalOut,
+        vouchers::save_capital_out(
+            ctx,
+            owner,
+            &CapitalInput {
+                amount: "1,000".into(),
+                ..capital
+            },
+        ),
+    );
+    keep(
+        VoucherType::KhataOut,
+        vouchers::save_khata_out(
+            ctx,
+            owner,
+            &KhataOutInput {
+                date: date.into(),
+                khata_account_id: Some(family),
+                amount: "4,000".into(),
+                reason: "خاندان کا خرچ".into(),
+                narration: None,
+                confirm_cash_below_zero: false,
+            },
+        ),
+    );
+    keep(
+        VoucherType::KhataIn,
+        vouchers::save_khata_in(
+            ctx,
+            owner,
+            &KhataInInput {
+                date: date.into(),
+                khata_account_id: Some(family),
+                amount: "1,500".into(),
+                reason: "واپس".into(),
+                narration: Some("نوٹ".into()),
+                confirm_cash_below_zero: false,
+            },
+        ),
+    );
+    let line = |account: i64, dr: &str, cr: &str, note: Option<&str>| GeneralLineInput {
+        account_id: Some(account),
+        person_key: None,
+        dr: dr.into(),
+        cr: cr.into(),
+        narration: note.map(str::to_owned),
+    };
+    keep(
+        VoucherType::General,
+        vouchers::general_save(
+            ctx,
+            owner,
+            &GeneralInput {
+                date: date.into(),
+                narration: Some("درستی".into()),
+                lines: vec![
+                    line(support::id_of(&w.env, "01010001"), "300", "", Some("نقد")),
+                    line(w.akram, "", "300", None),
+                ],
+                confirm_cash_below_zero: false,
+            },
+        ),
+    );
+    assert_eq!(ids.len(), 14, "all 13 types, the lent return twice");
+
+    // Every row of the cash book and of R15 opens its voucher, whatever the type (PRD FR-19.4).
+    // The salary return moves no cash, so it has a row in R15 only.
+    let voucher_row = |id: i64| {
+        Some(mandi_services::core::row_source::RowSource {
+            kind: mandi_services::core::row_source::SourceKind::Voucher,
+            id,
+        })
+    };
+    let book = mandi_services::cashbook::get(
+        ctx,
+        &mandi_services::core::cashbook::CashbookInput {
+            group_by_month: false,
+            sort: None,
+            from: None,
+            to: None,
+            offset: 0,
+            limit: 1_000,
+        },
+    )
+    .unwrap();
+    let on_book: Vec<i64> = book
+        .rows
+        .iter()
+        .filter(|row| row.source.is_some_and(|s| s.kind == SourceKind::Voucher))
+        .map(|row| row.source.map_or(0, |s| s.id))
+        .collect();
+    for (kind, id) in &ids {
+        let has_cash = on_book.contains(id);
+        assert_eq!(
+            has_cash,
+            !(*kind == VoucherType::MoneyLentReturn && *id == ids[8].1),
+            "{kind:?} {id}: a cash row opens its voucher"
+        );
+    }
+    assert!(
+        book.rows.iter().all(|row| row.source.is_some()),
+        "no cash row is left without a source"
+    );
+    let r15 = mandi_reports::reports::run(
+        ctx.db(),
+        &mandi_reports::reports::ReportRunInput {
+            group_by_month: false,
+            sort: None,
+            id: mandi_reports::reports::ReportId::R15,
+            filters: mandi_reports::reports::ReportFilters::default(),
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let in_r15: Vec<Option<mandi_services::core::row_source::RowSource>> =
+        r15.rows.iter().map(|row| row.source).collect();
+    assert_eq!(in_r15.len(), ids.len(), "one R15 row for each voucher");
+    for (kind, id) in &ids {
+        assert!(
+            in_r15.contains(&voucher_row(*id)),
+            "R15 has a row that opens {kind:?} {id}"
+        );
+    }
+
+    // `vouchers_list` pages every type, جنرل too, so no separate جنرل list command is needed: the
+    // screen asks with the type and gets its saved entries.
+    for (kind, id) in &ids {
+        let listed = vouchers::list(
+            ctx,
+            &mandi_services::core::vouchers::VouchersListInput {
+                voucher_type: Some(*kind),
+                from: String::new(),
+                to: String::new(),
+                account_id: None,
+                person_key: None,
+                offset: 0,
+                limit: 0,
+                show_finished: false,
+                search: None,
+                sort: None,
+                group_by_month: false,
+            },
+        )
+        .unwrap();
+        assert!(
+            listed.rows.iter().any(|row| row.id == *id),
+            "vouchers_list for {kind:?} lists voucher {id}"
+        );
+        assert!(listed.rows.iter().all(|row| row.voucher_type == *kind));
+    }
+
+    for (kind, id) in ids {
+        let opened = vouchers::open_for_edit(ctx, &VoucherGetInput { id }).unwrap();
+        assert_eq!(opened.row.voucher_type, kind);
+        assert_eq!(opened.entry.voucher_type(), kind);
+        let input = VoucherEditInput {
+            id,
+            version: opened.row.version,
+            entry: opened.entry.clone(),
+            reason: String::new(),
+            confirm_cash_below_zero: false,
+        };
+        let preview = edit::voucher_review(ctx, &input).unwrap();
+        assert!(preview.errors.is_empty(), "{kind:?}: {:?}", preview.errors);
+        assert!(
+            preview.review.changes.is_empty(),
+            "{kind:?} changed by opening: {:?}",
+            preview.review.changes
+        );
+        // The real edit with nothing changed keeps the type and the number.
+        let edited = vouchers::edit(ctx, owner, &input).unwrap();
+        assert_eq!(
+            (edited.voucher_type, edited.number),
+            (kind, opened.row.number)
+        );
+    }
+    // The change list names the fields only some types have (PRD FR-7.70): the return-by day and
+    // who took the cash of a take, the lines of a جنرل.
+    let take_id = ids_by_type(ctx, VoucherType::PersonalExpense);
+    let opened = vouchers::open_for_edit(ctx, &VoucherGetInput { id: take_id }).unwrap();
+    let VoucherEntry::PersonalExpense(mut changed) = opened.entry.clone() else {
+        panic!("a take opens as a take");
+    };
+    changed.return_by = Some("18-10-2026".into());
+    changed.taken_by = Some("بھائی".into());
+    let preview = edit::voucher_review(
+        ctx,
+        &VoucherEditInput {
+            id: take_id,
+            version: opened.row.version,
+            entry: VoucherEntry::PersonalExpense(changed),
+            reason: String::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+    let fields: Vec<&str> = preview
+        .review
+        .changes
+        .iter()
+        .map(|c| c.field.as_str())
+        .collect();
+    assert!(
+        fields.contains(&"return_by") && fields.contains(&"taken_by"),
+        "{fields:?}"
+    );
+    let general_id = ids_by_type(ctx, VoucherType::General);
+    let opened = vouchers::open_for_edit(ctx, &VoucherGetInput { id: general_id }).unwrap();
+    let VoucherEntry::General(mut lines) = opened.entry.clone() else {
+        panic!("a جنرل opens as a جنرل");
+    };
+    lines.lines[0].dr = "350".into();
+    lines.lines[1].cr = "350".into();
+    let preview = edit::voucher_review(
+        ctx,
+        &VoucherEditInput {
+            id: general_id,
+            version: opened.row.version,
+            entry: VoucherEntry::General(lines),
+            reason: String::new(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+    let money_changes: Vec<_> = preview
+        .review
+        .changes
+        .iter()
+        .filter(|c| c.place.kind == mandi_services::core::edit::EditPlaceKind::Part)
+        .map(|c| (c.place.line_no, c.field.as_str()))
+        .collect();
+    assert_eq!(money_changes, [(Some(1), "dr"), (Some(2), "cr")]);
+
+    // A cancelled voucher does not open.
+    let cancelled = vouchers::list(
+        ctx,
+        &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
+            account_id: None,
+            person_key: None,
+            voucher_type: Some(VoucherType::Receipt),
+            from: String::new(),
+            to: String::new(),
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    let row = &cancelled.rows[0];
+    vouchers::cancel(
+        ctx,
+        owner,
+        &VoucherCancelInput {
+            id: row.id,
+            version: vouchers::get(ctx, row.id).unwrap().version,
+            reason: "x".into(),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    let refused = vouchers::open_for_edit(ctx, &VoucherGetInput { id: row.id }).unwrap_err();
+    assert_eq!(refused.code(), ErrorCode::ErrVoucherCancelled);
+}
+
+/// The id of the one saved voucher of a type.
+fn ids_by_type(ctx: &mandi_services::context::Context, kind: VoucherType) -> i64 {
+    let page = vouchers::list(
+        ctx,
+        &mandi_services::core::vouchers::VouchersListInput {
+            sort: None,
+            group_by_month: false,
+            search: None,
+            show_finished: true,
+            account_id: None,
+            person_key: None,
+            voucher_type: Some(kind),
+            from: String::new(),
+            to: String::new(),
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    page.rows[0].id
 }

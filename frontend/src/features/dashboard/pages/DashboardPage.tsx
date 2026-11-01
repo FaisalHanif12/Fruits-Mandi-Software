@@ -95,7 +95,7 @@ export function DashboardPage() {
           <DashboardTiles tiles={data.tiles}>{statusTiles}</DashboardTiles>
         </Section>
         <Section id="dashboard-partners-title" title={<Localized id="dashboard-partners-title" />}>
-          <PartnerStrip partners={data.partners} />
+          <PartnerStrip partners={data.partners} locked={data.partners_locked} />
         </Section>
         {data.gardens.length === 0 ? null : (
           <Section id="dashboard-gardens-title" title={<Localized id="dashboard-gardens-title" />}>

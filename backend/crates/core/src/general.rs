@@ -27,7 +27,7 @@ use crate::money::Paisa;
 ///
 /// Field paths in errors: `lines[i].account_id`, `lines[i].person_key`, `lines[i].dr`,
 /// `lines[i].cr`, `lines[i].narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct GeneralLineInput {
     /// The account. Null gives `ERR_REQUIRED`.
     #[serde(default)]
@@ -53,7 +53,7 @@ pub struct GeneralLineInput {
 /// Field paths in errors: `date`, `narration`, `lines`, and the paths of the lines above.
 /// `ERR_GENERAL_TOO_FEW_LINES` on `lines` (fewer than two); `ERR_GENERAL_NOT_BALANCED` on `lines`
 /// (values `dr_paisa`, `cr_paisa`); nothing is written.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct GeneralInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,

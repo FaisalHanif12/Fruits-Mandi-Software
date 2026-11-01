@@ -10,9 +10,11 @@ import { uiErrorOf } from '../../../shared/api';
 import { PagedList } from '../../../shared/grid';
 import { Balance, Card, Checkbox, EmptyState } from '../../../shared/ui';
 import { useLentList } from '../hooks';
+import { useOpenVoucher } from '../../../shared/edit';
 import { LENT_COLUMNS } from '../list-columns';
 
 export function LentListSection({ personId }: { personId: number | null }) {
+  const open = useOpenVoucher();
   // A loan that is fully returned is left out until the tick is on (plan 38 G6).
   const [showReturned, setShowReturned] = useState(false);
   const lent = useLentList(personId, true, showReturned);
@@ -43,6 +45,10 @@ export function LentListSection({ personId }: { personId: number | null }) {
             columns={LENT_COLUMNS}
             rows={rows}
             getRowId={(row) => String(row.voucher_id)}
+            // A loan made by a voucher opens that voucher; an opening balance (id 0) has none.
+            onOpen={(row) => {
+              if (row.voucher_id > 0) open({ id: row.voucher_id, voucher_type: 'money_lent' });
+            }}
             labelId="cashbook-lent-label"
             failedId="cashbook-lent-failed"
             error={lent.isError ? uiErrorOf(lent.error) : null}

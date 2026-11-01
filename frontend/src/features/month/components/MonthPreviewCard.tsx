@@ -26,6 +26,7 @@ import {
   Table,
   showToast,
   type TableColumn,
+  PartnerLockedBox,
 } from '../../../shared/ui';
 import { useCloseMonth, useMonthPreview } from '../hooks';
 import { kindMessageId, monthName } from '../text';
@@ -156,9 +157,16 @@ export function MonthPreviewCard({ row, onClosed }: MonthPreviewCardProps) {
           <Table
             label={l10n.getString('month-lines-label')}
             columns={columns}
-            rows={data.lines}
+            // The partners' lines hold amounts that are behind the code: they are left out, never
+            // shown as 0 (plan 44, PRD FR-17.11).
+            rows={
+              data.partners_locked
+                ? data.lines.filter((line) => line.partner_id === null)
+                : data.lines
+            }
             rowKey={(line) => `${line.kind}-${String(line.account.id)}`}
           />
+          {data.partners_locked ? <PartnerLockedBox /> : null}
           <ConfirmDialog
             open={confirming}
             onOpenChange={setConfirming}

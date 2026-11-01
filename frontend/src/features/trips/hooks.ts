@@ -11,17 +11,23 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import type { SortInput } from '../../bindings/SortInput';
+import type { TripCostEditInput } from '../../bindings/TripCostEditInput';
+import type { TripHeaderEditInput } from '../../bindings/TripHeaderEditInput';
+import type { TripOtherSaleEditInput } from '../../bindings/TripOtherSaleEditInput';
 import { useAllPagesQuery, useDebouncedValue, usePagedQuery } from '../../shared/hooks';
 import { readAgainAfterPurchase } from '../purchases';
 import {
   tripsCostCancel,
+  tripsCostEditSave,
   tripsCostPreview,
   tripsCostSave,
   tripsCreate,
   tripsDefaults,
   tripsGet,
+  tripsHeaderEditSave,
   tripsList,
   tripsOtherSaleCancel,
+  tripsOtherSaleEditSave,
   tripsOtherSalePreview,
   tripsOtherSaleSave,
   tripsSummary,
@@ -183,6 +189,30 @@ export function useSaveOtherSale() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: OtherSaleInput) => tripsOtherSaleSave(input),
+    onSuccess: () => readAgainAfterTrip(queryClient),
+  });
+}
+
+export function useSaveCostEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TripCostEditInput) => tripsCostEditSave(input),
+    onSuccess: () => readAgainAfterTrip(queryClient),
+  });
+}
+
+export function useSaveOtherSaleEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TripOtherSaleEditInput) => tripsOtherSaleEditSave(input),
+    onSuccess: () => readAgainAfterTrip(queryClient),
+  });
+}
+
+export function useSaveTripHeaderEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TripHeaderEditInput) => tripsHeaderEditSave(input),
     onSuccess: () => readAgainAfterTrip(queryClient),
   });
 }

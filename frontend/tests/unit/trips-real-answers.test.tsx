@@ -491,7 +491,7 @@ describe.each(LANGUAGES)('the trip screens with the backend’s real answers (%s
     });
     await user.click(row);
     await user.click(
-      screen.getByRole('button', { name: message(language, 'trips-entries-cancel') }),
+      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
     );
     await user.type(field('trips-cancel-reason'), 'wrong amount');
     await user.click(

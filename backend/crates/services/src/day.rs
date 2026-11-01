@@ -8,6 +8,9 @@ use mandi_db::rusqlite::{Connection, OptionalExtension};
 use mandi_db::vouchers as repo;
 use mandi_domain::core::accounts::{Balance, BalanceSide, RecordRef};
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{
+    DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened, DayFixStayedOpen,
+};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
@@ -265,6 +268,7 @@ fn day_summary(
         partners,
         open_lots,
         open_qty,
+        partners_locked: false,
     })
 }
 
@@ -585,4 +589,199 @@ pub fn reopen(
         Ok(())
     })?;
     status(ctx)
+}
+
+/// The setting that remembers a fix in progress: `{ "token", "first", "last" }` (PRD FR-21.4).
+const KEY_FIX_PENDING: &str = "day_fix_pending";
+
+/// The fix in progress, if any: the token and the first and last day it reopened.
+struct Pending {
+    token: String,
+    first: BusinessDate,
+    last: BusinessDate,
+}
+
+fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
+    let Some(value) = crate::store::setting(conn, KEY_FIX_PENDING)? else {
+        return Ok(None);
+    };
+    let day = |key: &str| {
+        value
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .and_then(BusinessDate::parse_iso)
+    };
+    let token = value
+        .get("token")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+    Ok(match (token, day("first"), day("last")) {
+        (Some(token), Some(first), Some(last)) => Some(Pending { token, first, last }),
+        _ => None,
+    })
+}
+
+fn clear_pending(tx: &Connection, user_id: i64) -> Result<(), ServiceError> {
+    crate::store::set_setting(tx, KEY_FIX_PENDING, &json!({}), Some(user_id))
+}
+
+/// A token nobody can guess: 16 random bytes in hex.
+fn new_token(ctx: &Context) -> Result<String, ServiceError> {
+    let mut bytes = [0_u8; 16];
+    ctx.random.fill(&mut bytes)?;
+    Ok(format!(
+        "fix-{}",
+        bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    ))
+}
+
+/// The days from `first` to `last`, both included.
+fn days_between(first: BusinessDate, last: BusinessDate) -> Vec<BusinessDate> {
+    let mut days = Vec::new();
+    let mut day = first;
+    while day <= last {
+        days.push(day);
+        match day.next_day() {
+            Some(next) => day = next,
+            None => break,
+        }
+    }
+    days
+}
+
+/// Reopens the date of an entry to fix and every later closed date, and gives a token to close
+/// the same days again (PRD FR-21.4, plan 44). It is the reopen of PRD FR-21.2 (a reason, the
+/// month-close check, the audit row) and it remembers the days, so [`fix_close`] can close exactly
+/// them. A fix already in progress is widened: its days stay in the token.
+///
+/// # Errors
+/// `ERR_REASON_REQUIRED` on `reason`; the date codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`;
+/// `ERR_MONTH_CLOSED` on `date`.
+pub fn fix_open(
+    ctx: &Context,
+    actor: &Actor,
+    input: &DayFixOpenInput,
+) -> Result<DayFixOpened, ServiceError> {
+    let (closed_before, _) = window(ctx)?;
+    // A record of a fix that no longer fits the closed-up-to day is stale (a day was closed or
+    // reopened some other way since): it is ignored, so its old last day is not closed again.
+    let pending = ctx
+        .db
+        .read(pending_of)?
+        .filter(|p| closed_before == p.first.previous_day());
+    let status = reopen(
+        ctx,
+        actor,
+        &DayReopenInput {
+            date: input.date.clone(),
+            reason: input.reason.clone(),
+        },
+    )?;
+    let (_, today) = window(ctx)?;
+    let first = validate::date("date", &input.date, today).map_err(ServiceError::from)?;
+    let before =
+        closed_before.ok_or_else(|| ServiceError::Data("a reopen of no day".to_owned()))?;
+    // A fix in progress keeps its last day: the days between stay open and are closed with it.
+    let last = pending.as_ref().map_or(before, |p| p.last.max(before));
+    let token = new_token(ctx)?;
+    let days: Vec<String> = days_between(first, last)
+        .into_iter()
+        .map(BusinessDate::to_iso)
+        .collect();
+    ctx.db.write(|tx| {
+        crate::store::set_setting(
+            tx,
+            KEY_FIX_PENDING,
+            &json!({ "token": token, "first": first.to_iso(), "last": last.to_iso() }),
+            Some(actor.user_id),
+        )?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "day_fix_open", "day")
+                .new_value(json!({ "days": days }))
+                .reason(input.reason.trim())
+                .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    })?;
+    Ok(DayFixOpened {
+        token,
+        days,
+        closed_up_to: status.closed_up_to,
+    })
+}
+
+/// Closes the days that `fix_open` reopened, oldest first, each with the checks of PRD FR-21.1. A
+/// day whose checks fail stays open and is listed with the reason; the days after it stay open
+/// because days are closed in order. A day that was closed or opened some other way since the
+/// token was given makes the token invalid.
+///
+/// # Errors
+/// `ERR_FIX_TOKEN_INVALID` on `token`.
+pub fn fix_close(
+    ctx: &Context,
+    actor: &Actor,
+    input: &DayFixCloseInput,
+) -> Result<DayFixClosed, ServiceError> {
+    let invalid = || ServiceError::reject_field(ErrorCode::ErrFixTokenInvalid, "token");
+    let (closed_now, _) = window(ctx)?;
+    let pending = ctx.db.read(pending_of)?.ok_or_else(invalid)?;
+    // The days must still be exactly as the reopen left them: the day before the first is the last
+    // closed one.
+    if pending.token != input.token || closed_now != pending.first.previous_day() {
+        return Err(invalid());
+    }
+    let mut closed = Vec::new();
+    let mut stayed_open: Vec<DayFixStayedOpen> = Vec::new();
+    for day in days_between(pending.first, pending.last) {
+        if !stayed_open.is_empty() {
+            stayed_open.push(DayFixStayedOpen {
+                date: day.to_iso(),
+                errors: Vec::new(),
+            });
+            continue;
+        }
+        let result = close(
+            ctx,
+            actor,
+            &DayCloseInput {
+                up_to: mandi_domain::core::dates::format_ddmmyyyy(day),
+            },
+        );
+        match result {
+            Ok(_) => closed.push(day.to_iso()),
+            Err(ServiceError::Rejected(items)) if !items.is_empty() => {
+                stayed_open.push(DayFixStayedOpen {
+                    date: day.to_iso(),
+                    errors: items
+                        .into_iter()
+                        .map(|r| mandi_domain::core::error::FieldError {
+                            code: r.code,
+                            field: r.field.unwrap_or_default(),
+                            values: r.values,
+                        })
+                        .collect(),
+                });
+            }
+            Err(other) => return Err(other),
+        }
+    }
+    ctx.db.write(|tx| {
+        clear_pending(tx, actor.user_id)?;
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "day_fix_close", "day")
+                .new_value(json!({
+                    "closed": closed,
+                    "stayed_open": stayed_open.iter().map(|d| d.date.clone()).collect::<Vec<_>>(),
+                }))
+                .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    })?;
+    Ok(DayFixClosed {
+        closed,
+        stayed_open,
+        closed_up_to: status(ctx)?.closed_up_to,
+    })
 }

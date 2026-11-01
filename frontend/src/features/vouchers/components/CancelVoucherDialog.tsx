@@ -46,17 +46,18 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
       : { ...error, errors: error.errors.filter((item) => item.code !== CASH_CODE) };
 
   const confirm = (reason: string) => {
-    if (row === null || type === null) return;
+    if (row === null) return;
     setError(null);
     cancel
       .mutateAsync({ id: row.id, version: row.version, reason, confirm: cashConfirmed })
       .then((cancelled) => {
+        const number = voucherNumberText(row, (id, vars) => l10n.getString(id, vars));
+        // An expense, a loan, a khata, capital or a journal has its own number and one plain sentence.
         showToast(
           'success',
-          l10n.getString('vouchers-cancelled', {
-            kind: type,
-            number: voucherNumberText(row, (id, vars) => l10n.getString(id, vars)),
-          }),
+          type === null
+            ? l10n.getString('vouchers-cancelled-other', { number })
+            : l10n.getString('vouchers-cancelled', { kind: type, number }),
         );
         setCashConfirmed(false);
         onCancelled(cancelled);
@@ -79,9 +80,9 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
       }}
       title={<Localized id="vouchers-cancel-title" />}
       description={
-        row === null || type === null ? null : (
+        row === null ? null : (
           <Localized
-            id={`vouchers-cancel-text-${type}`}
+            id={`vouchers-cancel-text-${type ?? 'other'}`}
             vars={{
               number: voucherNumberText(row, (id, vars) => l10n.getString(id, vars)),
               amount: formatPaisa(row.amount_paisa, { grouping }),

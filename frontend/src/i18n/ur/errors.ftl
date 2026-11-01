@@ -348,6 +348,11 @@ err-edit-not-allowed = { $rule ->
     [lot_item_locked] اس { -lot } پر بعد کا اندراج یا فروخت قائم ہو چکی ہے، اس لیے { -qism-maal } نہیں بدلی جا سکتی۔ پرانی { -qism-maal } واپس چنیں۔
     [line_not_in_posting] یہ لائن اس اندراج کا حصہ نہیں جس کی ترمیم ہو رہی ہے۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
     [posting_lots_locked] بعد کی فروخت میں صرف اس کی اپنی لائنیں بدلی جا سکتی ہیں، { -lot } نہیں۔ { -lot } کی تبدیلی پہلے اندراج میں کریں۔
+    [goods_moved] اس کا مال آگے بک چکا ہے یا ضائع ہو چکا ہے، اس لیے یہ اندراج بدلا نہیں جا سکتا۔
+    [month_closed] اس اندراج کا مہینہ بند ہو چکا ہے۔ پہلے مہینے کی بندش ختم کریں۔
+    [garden_closed] { -bagh } بند ہو چکا ہے، اس لیے اس کا اندراج بدلا نہیں جا سکتا۔
+    [returns_stand] اس کی واپسیاں درج ہیں، اس لیے یہ اندراج بدلا نہیں جا سکتا۔
+    [cancelled] یہ اندراج منسوخ ہو چکا ہے، اسے بدلا نہیں جا سکتا۔
    *[other] اس اندراج میں یہ تبدیلی نہیں ہو سکتی۔ ترمیم بند کر کے اندراج دوبارہ کھولیں۔
 }
 
@@ -618,3 +623,34 @@ err-person-in-dead-amount = یہ شخص { -doobi-raqam } میں ہے۔ اس کے
 # PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
 # review: pending
 err-date-before-last-posting = تاریخ اس کے آخری اندراج ({ $last_posting_date }) سے پہلے کی نہیں ہو سکتی۔
+
+## Edit everywhere and the partner code (plan 44, PRD FR-7.70, FR-21.4, FR-17.11).
+
+# review: pending
+err-edit-date-fixed = اندراج کا دن نہیں بدل سکتا۔ دن بدلنا ہو تو اسے منسوخ کر کے صحیح دن پر دوبارہ لکھیں۔
+
+# $saved_lines: how many saved lines were charged by this rule.
+# review: pending
+err-rule-used = اس قاعدے سے { $saved_lines } محفوظ لائنیں لگ چکی ہیں، اس لیے صرف آخری تاریخ اور فعال بدلا جا سکتا ہے۔ نئی شرح چاہیے تو نئی تاریخ سے نیا قاعدہ لکھیں۔
+
+# review: pending
+err-fix-token-invalid = یہ درستی اب جاری نہیں۔ دن بند کرنے کے لیے دن کی اسکرین کھولیں۔
+
+# review: pending
+err-partner-locked = شراکت داروں کی رقمیں کوڈ کے بغیر نہیں کھلتیں۔ پہلے کوڈ درج کریں۔
+
+# review: pending
+err-partner-code-not-set = ابھی شراکت دار کوڈ نہیں بنا۔ پہلے کوڈ بنائیں۔
+
+# review: pending
+err-partner-code-already-set = شراکت دار کوڈ پہلے سے بنا ہوا ہے۔ بدلنا ہو تو ترتیبات میں کوڈ بدلیں۔
+
+# $tries_left: tries left before the wait.
+# review: pending
+err-partner-code-wrong = کوڈ غلط ہے۔ { $tries_left } کوششیں باقی ہیں۔
+
+# review: pending
+err-partner-code-invalid = کوڈ چار ہندسوں کا ہونا چاہیے۔
+
+# review: pending
+err-partner-codes-differ = دونوں کوڈ ایک جیسے نہیں ہیں۔ دونوں بار وہی کوڈ لکھیں۔

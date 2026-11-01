@@ -17,6 +17,7 @@ use mandi_services::core::gardens::{
     GardensSummary,
 };
 use mandi_services::core::split::{SplitInput, SplitSet};
+use mandi_services::partner_code;
 use mandi_services::{auth, gardens};
 
 use super::run;
@@ -105,7 +106,11 @@ pub async fn gardens_get<R: tauri::Runtime>(
 ) -> Result<GardenDetail, UiError> {
     run(app, "gardens_get", move |ctx| {
         auth::require(ctx)?;
-        gardens::get(ctx, &input)
+        let mut shown = gardens::get(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -179,7 +184,11 @@ pub async fn gardens_close_preview<R: tauri::Runtime>(
 ) -> Result<GardenClosePreview, UiError> {
     run(app, "gardens_close_preview", move |ctx| {
         auth::require(ctx)?;
-        gardens::close_preview(ctx, &input)
+        let mut shown = gardens::close_preview(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -194,7 +203,11 @@ pub async fn gardens_close<R: tauri::Runtime>(
 ) -> Result<GardenClosed, UiError> {
     run(app, "gardens_close", move |ctx| {
         let actor = auth::require(ctx)?;
-        gardens::close(ctx, &actor, &input)
+        let mut shown = gardens::close(ctx, &actor, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.preview.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }

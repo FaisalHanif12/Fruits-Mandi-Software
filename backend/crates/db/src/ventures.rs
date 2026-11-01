@@ -304,6 +304,88 @@ pub fn set_status(
     Ok(())
 }
 
+/// What the edit of a garden's header can change (PRD FR-7.70): the names with their search keys, the
+/// main item, the rent, the end of the season and the note. The identity, the account and the
+/// partners stay.
+#[derive(Debug, Clone)]
+pub struct GardenHeaderEdit<'a> {
+    /// Urdu name.
+    pub name_ur: &'a str,
+    /// English name.
+    pub name_en: &'a str,
+    /// `search_ur`.
+    pub search_ur: &'a str,
+    /// `search_en`.
+    pub search_en: &'a str,
+    /// `search_phonetic`.
+    pub search_phonetic: &'a str,
+    /// The main item.
+    pub item_id: Option<i64>,
+    /// The rent, paisa. Changing it needs the garden's edit window (`edit_windows`).
+    pub rent_paisa: i64,
+    /// The end of the season, `YYYY-MM-DD`.
+    pub season_end_date: Option<&'a str>,
+    /// A note.
+    pub note: Option<&'a str>,
+}
+
+/// Rewrites the header of a garden (the edit of PRD FR-7.70).
+///
+/// # Errors
+/// Any SQLite error (the trigger `ventures_identity_is_final` for a rent changed without a window).
+pub fn update_garden_header(
+    conn: &Connection,
+    id: i64,
+    header: &GardenHeaderEdit<'_>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE ventures SET name_ur = ?2, name_en = ?3, search_ur = ?4, search_en = ?5,
+             search_phonetic = ?6, item_id = ?7, rent_paisa = ?8, season_end_date = ?9, note = ?10,
+             updated_at = ?11, updated_by = ?12, version = version + 1
+         WHERE id = ?1",
+        params![
+            id,
+            header.name_ur,
+            header.name_en,
+            header.search_ur,
+            header.search_en,
+            header.search_phonetic,
+            header.item_id,
+            header.rent_paisa,
+            header.season_end_date,
+            header.note,
+            now,
+            user_id
+        ],
+    )?;
+    Ok(())
+}
+
+/// Rewrites the market, the person sent and the note of a trip (the edit of PRD FR-7.70). A trip's
+/// name is made from its number and day and never changes.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn update_trip_header(
+    conn: &Connection,
+    id: i64,
+    market: Option<&str>,
+    sent_person: Option<&str>,
+    note: Option<&str>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE ventures SET market = ?2, sent_person = ?3, note = ?4, updated_at = ?5,
+             updated_by = ?6, version = version + 1
+         WHERE id = ?1",
+        params![id, market, sent_person, note, now, user_id],
+    )?;
+    Ok(())
+}
+
 /// Moves the version of a venture on (its partners changed).
 ///
 /// # Errors
@@ -567,6 +649,62 @@ pub fn set_entry_journal(
         "UPDATE venture_entries SET journal_entry_id = ?2, current_entry_id = ?2, updated_at = ?3,
              updated_by = ?4, version = version + 1 WHERE id = ?1",
         params![id, journal_entry_id, now, user_id],
+    )?;
+    Ok(())
+}
+
+/// Rewrites the money of a venture entry (the edit of PRD FR-7.70): the amount, the reason or note,
+/// the quantity and shop of a sale in another shop, its cost and the نگ it moved, and the journal
+/// entry (null when nothing posts). It needs the entry's edit window (`edit_windows`). The venture,
+/// kind, number, day and purchase stay.
+///
+/// # Errors
+/// Any SQLite error (the trigger `venture_entries_record_is_final` without a window).
+#[allow(clippy::too_many_arguments)]
+// Nine plain values of one UPDATE; a struct would only repeat the same fields.
+pub fn update_entry_edited(
+    conn: &Connection,
+    id: i64,
+    amount_paisa: i64,
+    reason: Option<&str>,
+    qty: Option<i64>,
+    shop_name: Option<&str>,
+    cost_paisa: i64,
+    moved_qty: i64,
+    journal_entry_id: Option<i64>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE venture_entries SET amount_paisa = ?2, reason = ?3, qty = ?4, shop_name = ?5,
+             cost_paisa = ?6, moved_qty = ?7, journal_entry_id = ?8, current_entry_id = ?8,
+             updated_at = ?9, updated_by = ?10, version = version + 1
+         WHERE id = ?1",
+        params![
+            id,
+            amount_paisa,
+            reason,
+            qty,
+            shop_name,
+            cost_paisa,
+            moved_qty,
+            journal_entry_id,
+            now,
+            user_id
+        ],
+    )?;
+    Ok(())
+}
+
+/// Takes the parts of an entry away so the new ones can be written (the edit, PRD FR-7.70). It needs
+/// the entry's edit window (`edit_windows`).
+///
+/// # Errors
+/// Any SQLite error (the trigger `venture_entry_parts_no_delete` without a window).
+pub fn delete_parts(conn: &Connection, entry_id: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "DELETE FROM venture_entry_parts WHERE entry_id = ?1",
+        [entry_id],
     )?;
     Ok(())
 }

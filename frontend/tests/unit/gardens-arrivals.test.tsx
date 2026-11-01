@@ -127,7 +127,17 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
     const headers = Array.from(section?.querySelectorAll('.ag-header-cell') ?? []).map((cell) =>
       cell.getAttribute('col-id'),
     );
-    expect(headers).toEqual(['item', 'packing', 'qty', 'weight', 'otherQty', 'shop', 'ourQty']);
+    // The last cell is the remove button of each row (plan 43).
+    expect(headers).toEqual([
+      'item',
+      'packing',
+      'qty',
+      'weight',
+      'otherQty',
+      'shop',
+      'ourQty',
+      '__remove',
+    ]);
     // The day to sell starts as the day of the arrival, visible like a typed value (NFR-USE-27).
     const sell = field('glossary-sell-date');
     const day = field('gardens-field-date');

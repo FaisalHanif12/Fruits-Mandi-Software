@@ -22,3 +22,13 @@ The partners and their shares (PRD 17.1 to 17.3): the overview at `/partners` an
   (`tests/helpers/partners.ts` is the fake backend).
 - The overview has a "Month Close" button that opens the month close screen (`features/month`, route
   `/month`; PRD FR-17.6). A close and a reversal ask the partner queries again (`PARTNERS_KEY`).
+
+## The partner code (plan 44, PRD FR-17.11)
+
+The screens of شراکت دار open only with a 4-digit code.
+
+- `PartnerGate` wraps the four screens (overview, setup, capital, statement). No code yet: it asks to make one (the Owner's password, the code twice), with no way round. A code that is set: it asks for it every time.
+- `PartnerCodeHost` (mounted once, in `AuthGate`) shows the code box when a locked card or a refused report asks for it (`openPartnerCode`), and closes the section again when the user moves to a screen of another group (`partner-areas.ts`).
+- Wherever the backend sends `partners_locked: true`, or answers `ERR_PARTNER_LOCKED`, a `PartnerLockedBox` stands in the place of the figures ("کوڈ درج کریں"). A hidden figure is never shown as 0.
+- `ChangeCodeCard` is in Settings, on the lock tab.
+- The partner list used by pickers (`partners_list`) is open: names only.

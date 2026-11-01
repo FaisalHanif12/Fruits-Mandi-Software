@@ -19,6 +19,7 @@ import type { CancelPreview } from '../../bindings/CancelPreview';
 import type { CancelPreviewInput } from '../../bindings/CancelPreviewInput';
 import type { EditableBikri } from '../../bindings/EditableBikri';
 import type { EditOpenInput } from '../../bindings/EditOpenInput';
+import type { EditPreview } from '../../bindings/EditPreview';
 import type { EditPreviewInput } from '../../bindings/EditPreviewInput';
 import type { EditSaveInput } from '../../bindings/EditSaveInput';
 import type { LaterSaleInput } from '../../bindings/LaterSaleInput';
@@ -163,6 +164,12 @@ export function bikriOpenForEdit(bikriId: number, entryId: number): Promise<Edit
 export function bikriEditPreview(entryId: number, draft: BikriDraft): Promise<BikriPreview> {
   const input: EditPreviewInput = { entry_id: entryId, draft };
   return callCommand<BikriPreview>('bikri_edit_preview', { input });
+}
+
+/** The changes of an edit and their effect on balances, cash and partners (plan 44, FR-7.70). */
+export function bikriEditReview(entryId: number, draft: BikriDraft): Promise<EditPreview> {
+  const input: EditPreviewInput = { entry_id: entryId, draft };
+  return callCommand<EditPreview>('bikri_edit_review', { input });
 }
 
 /** Saves an edit: a reversal of the posting plus a new posting on the same day (PRD FR-12.19). */

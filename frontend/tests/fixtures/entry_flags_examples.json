@@ -1,0 +1,37 @@
+{
+  "closed_day": {
+    "can_cancel": true,
+    "can_edit": true,
+    "edited": null,
+    "locked_reason": null,
+    "needs_reopen": true
+  },
+  "edited": {
+    "can_cancel": true,
+    "can_edit": true,
+    "edited": {
+      "at": "2026-10-11T11:35:00.000Z",
+      "by": "Maher Adnan",
+      "count": 2,
+      "local_date": "2026-10-11",
+      "local_time": "16:35",
+      "reason": "ریٹ غلط تھا"
+    },
+    "locked_reason": null,
+    "needs_reopen": false
+  },
+  "goods_moved": {
+    "can_cancel": false,
+    "can_edit": false,
+    "edited": null,
+    "locked_reason": "goods_moved",
+    "needs_reopen": false
+  },
+  "open": {
+    "can_cancel": true,
+    "can_edit": true,
+    "edited": null,
+    "locked_reason": null,
+    "needs_reopen": false
+  }
+}

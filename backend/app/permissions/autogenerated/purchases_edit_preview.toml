@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-purchases-edit-preview"
+description = "Enables the purchases_edit_preview command without any pre-configured scope."
+commands.allow = ["purchases_edit_preview"]
+
+[[permission]]
+identifier = "deny-purchases-edit-preview"
+description = "Denies the purchases_edit_preview command without any pre-configured scope."
+commands.deny = ["purchases_edit_preview"]

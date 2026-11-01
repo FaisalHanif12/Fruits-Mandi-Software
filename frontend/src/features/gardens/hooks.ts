@@ -4,6 +4,9 @@
 // so every screen shows the new numbers.
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
+import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
+import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
 import type { SortInput } from '../../bindings/SortInput';
 import {
   useAllPagesQuery,
@@ -15,6 +18,7 @@ import {
   gardensArrivalCancel,
   gardensArrivalChangeSplit,
   gardensArrivalEntryPreview,
+  gardensArrivalEditSave,
   gardensArrivalEntrySave,
   gardensArrivalSave,
   gardensArrivalSetSellDate,
@@ -27,9 +31,11 @@ import {
   gardensCreatePreview,
   gardensDefaults,
   gardensEntryCancel,
+  gardensEntryEditSave,
   gardensEntryPreview,
   gardensEntrySave,
   gardensGet,
+  gardensHeaderEditSave,
   gardensList,
   gardensReopen,
   gardensSummary,
@@ -302,6 +308,33 @@ export function useWriteOffArrivalUndo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ArrivalWriteOffUndoInput) => gardensArrivalWriteOffUndo(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+/** Saves the edit of a garden entry and reads again what it changed (plan 44). */
+export function useSaveGardenEntryEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: GardenEntryEditInput) => gardensEntryEditSave(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+/** Saves the edit of a garden's goods arrived. */
+export function useSaveArrivalEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: GardenArrivalEditInput) => gardensArrivalEditSave(input),
+    onSuccess: () => readAgainAfterGarden(queryClient),
+  });
+}
+
+/** Saves the edit of the header of a garden. */
+export function useSaveGardenHeaderEdit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: GardenHeaderEditInput) => gardensHeaderEditSave(input),
     onSuccess: () => readAgainAfterGarden(queryClient),
   });
 }

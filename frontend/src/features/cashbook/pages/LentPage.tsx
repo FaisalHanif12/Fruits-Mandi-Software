@@ -18,9 +18,18 @@ import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
+import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { ErrorState, LoadingState, showToast, FormAside } from '../../../shared/ui';
-import { vouchersPreview } from '../../vouchers';
+import { useVoucherEditable, vouchersPreview } from '../../vouchers';
 import { previewRefusal, useFollowType } from '../entry-support';
+import {
+  ClosedCashEntry,
+  VoucherEditBoxes,
+  VoucherEditTop,
+  isReadyToEdit,
+  useVoucherEdit,
+} from '../edit-voucher';
+import { lentDraftOf, useEditDraft } from '../edit-seed';
 import { EntryBalances } from '../components/EntryBalances';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
@@ -38,15 +47,24 @@ import {
 } from '../lent-draft';
 import { kindId } from '../list-columns';
 import { LENT_TYPES, parseLentSearch, type LentType } from '../screen-type';
+import type { VoucherEditable } from '../types';
 
 /** The address of this screen. */
 const LENT_PATH = '/rokar/lent';
 
-function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
+interface LentEditorProps {
+  today: string;
+  urlType: LentType;
+  /** The saved voucher open for edit (plan 44); null for a new entry. */
+  editable?: VoucherEditable | null;
+  initial?: LentDraft | null;
+}
+
+function LentEditor({ today, urlType, editable = null, initial = null }: LentEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [draft, setDraft] = useState<LentDraft>(() => newLentDraft(urlType, today));
+  const [draft, setDraft] = useState<LentDraft>(() => initial ?? newLentDraft(urlType, today));
   const [tried, setTried] = useState(false);
   useFollowType(urlType, (type) => {
     // The type list changed the draft already when it moved the address; only an address that
@@ -65,7 +83,8 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
     () => (draft.amount.trim() === '' ? null : buildLent(draft, false)),
     [draft],
   );
-  const { query, current } = useEntryPreview(entry);
+  const edit = useVoucherEdit(editable, entry);
+  const { query, current } = useEntryPreview(entry, edit?.editing.row.id ?? null);
   // An answer about another type (kept on screen while the next one is on its way) is never shown.
   const preview =
     entry === null || query.data?.type !== draft.type ? undefined : query.data.preview;
@@ -76,20 +95,23 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
   const flow = useEntrySaveFlow({
     draftText,
     build: (confirm) => buildLent(draft, confirm),
-    save: (input) => saveLent.mutateAsync(input),
-    freshCash: (input) => vouchersPreview(input, null).then((answer) => answer.cash),
+    save: (input) => (edit === null ? saveLent.mutateAsync(input) : edit.send(input)),
+    freshCash: (input) =>
+      vouchersPreview(input, edit?.editing.row.id ?? null).then((answer) => answer.cash),
     cash: preview?.cash,
     current,
     onSaved: (saved) => {
-      showToast(
-        'success',
-        l10n.getString('cashbook-saved', {
-          kind: draft.type,
-          number: l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
-            number: String(saved.number),
-          }),
-        }),
-      );
+      const number = l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
+        number: String(saved.number),
+      });
+      if (edit !== null) {
+        // An edit is done: the days reopened for it close again and a new entry starts (plan 44).
+        showToast('success', l10n.getString('cashbook-edited', { number }));
+        void finishFixSession(l10n);
+        void navigate({ to: LENT_PATH, search: { type: draft.type } });
+        return;
+      }
+      showToast('success', l10n.getString('cashbook-saved', { kind: draft.type, number }));
       setDraft((previous) => nextLentDraft(previous));
       setTried(false);
       window.requestAnimationFrame(() => {
@@ -101,6 +123,11 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
 
   const save = async (): Promise<boolean> => {
     setTried(true);
+    // An entry of an earlier day asks why it is changed, once (PRD FR-7.70).
+    if (edit?.needsReason() === true) {
+      edit.setAskReason(true);
+      return false;
+    }
     return flow.save();
   };
   const startNew = () => {
@@ -125,6 +152,8 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
       types={LENT_TYPES.map((value) => ({ value, labelId: `cashbook-type-${kindId(value)}` }))}
       type={draft.type}
       onType={onType}
+      top={edit === null ? undefined : <VoucherEditTop edit={edit} />}
+      lockTypes={edit !== null}
       path={LENT_PATH}
       filled={filled}
       busy={flow.busy}
@@ -137,9 +166,22 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
       below={<LentListSection personId={draft.person?.id ?? null} />}
     >
       <FormAside
-        form={<LentForm draft={draft} onChange={change} error={error} />}
+        form={<LentForm draft={draft} onChange={change} error={error} marks={edit?.marks} />}
         aside={
           <>
+            {edit === null ? null : (
+              <VoucherEditBoxes
+                edit={edit}
+                busy={flow.busy}
+                onReason={() => {
+                  void flow.save();
+                }}
+                onCancelled={() => {
+                  void finishFixSession(l10n);
+                  void navigate({ to: LENT_PATH, search: { type: draft.type } });
+                }}
+              />
+            )}
             <EntryBalances preview={preview} />
             <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
             {query.isError && entry !== null ? (
@@ -155,6 +197,41 @@ function LentEditor({ today, urlType }: { today: string; urlType: LentType }) {
         }
       />
     </EntryFrame>
+  );
+}
+
+/** A saved voucher open for edit (`?id=`): it waits for the voucher and its form, then edits it. */
+function LentEdit({ id, today }: { id: number; today: string }) {
+  const editable = useVoucherEditable(id);
+  const kind = editable.data?.entry.type;
+  const isLoan = kind === undefined || LENT_TYPES.some((type) => type === kind);
+  const ready = editable.data !== undefined && isReadyToEdit(editable.data.row);
+  const draft = useEditDraft(isLoan && ready ? editable.data : undefined, lentDraftOf);
+  // An entry of another screen opens on its own screen.
+  if (editable.data !== undefined && !isLoan) return <OpenOnItsScreen row={editable.data.row} />;
+  if (editable.data !== undefined && !ready) {
+    return <ClosedCashEntry titleId="cashbook-lent-screen-title" row={editable.data.row} />;
+  }
+  if (editable.isError || draft.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="cashbook-load-failed" />}
+        error={uiErrorOf(editable.isError ? editable.error : draft.error)}
+        onRetry={() => {
+          void editable.refetch();
+        }}
+      />
+    );
+  }
+  if (editable.data === undefined || draft.data === undefined) return <LoadingState />;
+  return (
+    <LentEditor
+      key={`${String(id)}-${String(editable.data.row.version)}`}
+      today={today}
+      urlType={draft.data.type}
+      editable={editable.data}
+      initial={draft.data}
+    />
   );
 }
 
@@ -175,5 +252,6 @@ export function LentPage() {
       />
     );
   }
+  if (search.id !== undefined) return <LentEdit id={search.id} today={day.data.today} />;
   return <LentEditor key="new" today={day.data.today} urlType={search.type ?? 'money_lent'} />;
 }

@@ -74,7 +74,7 @@ export const SCREENS = [
   ['dashboard-many', '/dev/dashboard?many'],
   ['bikri-book', '/dev/bikri'],
   ['bikri-saved', '/dev/bikri?id=41'],
-  ['bikri-edit', '/dev/bikri?id=41&edit=7'],
+  ['edit-action-edit', '/dev/bikri?id=41&edit=7'],
   ['bikri-today', '/dev/bikri?today'],
   ['bikri-pukhta', '/dev/bikri?pukhta'],
   ['bikri-stock', '/dev/bikri?stock'],

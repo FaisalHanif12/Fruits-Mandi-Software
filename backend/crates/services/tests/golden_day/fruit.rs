@@ -246,7 +246,7 @@ fn e2e_42_home_fruit_and_guest_fruit() {
     assert_eq!(row.source, FruitSource::OtherShop);
     let row_parts: Vec<i64> = row.parts.iter().map(|p| p.amount_paisa.rupees()).collect();
     assert_eq!(row_parts, [1_000, 1_000, 1_000]);
-    assert!(row.can_change);
+    assert!(row.flags.can_edit);
     // The filters: الف's entries, the guests' entries, one item.
     let only_alif = fruit::list(
         ctx,
@@ -468,6 +468,84 @@ fn an_item_sold_by_weight_needs_a_weight_and_is_rounded_once() {
 }
 
 #[test]
+fn a_fruit_review_shows_the_partner_and_the_seller_it_moves_e2e_42() {
+    // E2E-42: الف takes 2 پیٹی at 580 from رحیم's lot (1,160). The review of 3 at 580 (1,740) shows
+    // رحیم's credit 1,590 + 1,160 = 2,750 → 3,330 and الف's account −1,160 → −1,740. It is a
+    // rehearsal: nothing stays.
+    use mandi_services::core::edit::EditPlaceKind;
+    let w = after_e2e_16();
+    let ctx = &w.env.ctx;
+    let saved = fruit::save(ctx, &w.owner, &home(&w, "2", "580")).unwrap();
+    let counts = |w: &support::World| {
+        let c = raw(&w.dir);
+        let n = |sql: &str| c.query_row(sql, [], |r| r.get::<_, i64>(0)).unwrap();
+        (
+            n("SELECT COUNT(*) FROM journal_entries"),
+            n("SELECT COUNT(*) FROM journal_lines"),
+            n("SELECT COUNT(*) FROM audit_log"),
+            n("SELECT COUNT(*) FROM stock_moves"),
+        )
+    };
+    let before = counts(&w);
+    let mut edited = home(&w, "3", "580");
+    edited.editing_id = Some(saved.id);
+    let preview = mandi_services::edit::fruit_review(
+        ctx,
+        &FruitEditInput {
+            id: saved.id,
+            version: saved.version,
+            entry: edited,
+            reason: String::new(),
+        },
+    )
+    .unwrap();
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+    assert_eq!(preview.review.entry_date, "2026-10-10");
+    let qty = preview
+        .review
+        .changes
+        .iter()
+        .find(|c| c.field == "qty" && c.place.kind == EditPlaceKind::Entry)
+        .expect("the qty is in the change list");
+    assert_eq!(
+        (&qty.before, &qty.after),
+        (
+            &mandi_services::core::edit::ChangeValue::Number { value: 2 },
+            &mandi_services::core::edit::ChangeValue::Number { value: 3 }
+        )
+    );
+    let rahim = preview
+        .review
+        .effect
+        .parties
+        .iter()
+        .find(|p| p.account.id == w.rahim)
+        .expect("رحیم is in the effect");
+    assert_eq!(
+        (rahim.before.side, rahim.before.amount_paisa.rupees()),
+        (BalanceSide::Cr, 1_590 + 1_160)
+    );
+    assert_eq!(
+        (rahim.after.side, rahim.after.amount_paisa.rupees()),
+        (BalanceSide::Cr, 1_590 + 1_740)
+    );
+    let alif = preview
+        .review
+        .effect
+        .partners
+        .iter()
+        .find(|p| p.partner.id == w.partners[0])
+        .expect("الف is in the effect");
+    assert_eq!(
+        (alif.before_paisa.rupees(), alif.after_paisa.rupees()),
+        (-1_160, -1_740)
+    );
+    // Cash does not move on the fruit screen.
+    assert!(preview.review.effect.cash.is_none());
+    assert_eq!(counts(&w), before, "a review leaves nothing behind");
+}
+
+#[test]
 fn a_fruit_entry_is_edited_by_reversal_and_cancelled_by_reversal() {
     let w = after_e2e_16();
     let ctx = &w.env.ctx;
@@ -490,7 +568,8 @@ fn a_fruit_entry_is_edited_by_reversal_and_cancelled_by_reversal() {
         "his old part is given back"
     );
     assert_eq!(n.parts[0].total_after_paisa.rupees(), 1_424 - 1_740);
-    // The edit asks for a reason.
+    // An entry of an earlier day asks for a reason (PRD FR-7.70); one of today does not.
+    set_today(&w.env, 2026, 10, 11);
     let no_reason = fruit::edit(
         ctx,
         &w.owner,
@@ -568,7 +647,7 @@ fn a_fruit_entry_is_edited_by_reversal_and_cancelled_by_reversal() {
     let row = fruit::get(ctx, &FruitGetInput { id: saved.id }).unwrap();
     assert_eq!(row.status, FruitStatus::Cancelled);
     assert_eq!(row.cancel_reason.as_deref(), Some("not taken"));
-    assert!(!row.can_change);
+    assert!(!row.flags.can_edit);
     assert_eq!(row.journal_entry_id, None);
     // A cancelled entry counts for nothing in the totals and cannot be cancelled again.
     let list = fruit::list(

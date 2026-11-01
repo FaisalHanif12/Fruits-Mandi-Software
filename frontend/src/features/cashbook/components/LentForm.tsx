@@ -18,9 +18,11 @@ import {
   Picker,
   Select,
   fieldError,
+  fieldMark,
   FormCard,
   FormSpan,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import type { LentDraft } from '../lent-draft';
 import type { LentReturnMode } from '../types';
 import { AddAccountDialog } from './AddAccountDialog';
@@ -33,9 +35,11 @@ interface LentFormProps {
   draft: LentDraft;
   onChange: (patch: Partial<LentDraft>) => void;
   error: UiError | null;
+  /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
-export function LentForm({ draft, onChange, error }: LentFormProps) {
+export function LentForm({ draft, onChange, error, marks }: LentFormProps) {
   const { l10n } = useLocalization();
   const [adding, setAdding] = useState<string | null>(null);
   const lent = draft.type === 'money_lent';
@@ -55,6 +59,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
       </Field>
       <Field
         label={<Localized id="cashbook-field-person" />}
+        mark={fieldMark(marks, 'account_id')}
         error={fieldError(error, 'person_account_id')}
       >
         {(props) => (
@@ -73,7 +78,11 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
           />
         )}
       </Field>
-      <Field label={<Localized id="cashbook-field-amount" />} error={fieldError(error, 'amount')}>
+      <Field
+        label={<Localized id="cashbook-field-amount" />}
+        mark={fieldMark(marks, 'amount_paisa')}
+        error={fieldError(error, 'amount')}
+      >
         {(props) => (
           <MoneyInput
             {...props}
@@ -88,6 +97,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
         <>
           <Field
             label={<Localized id="cashbook-field-reason" />}
+            mark={fieldMark(marks, 'reason')}
             error={fieldError(error, 'reason')}
           >
             {(props) => (
@@ -102,6 +112,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
           </Field>
           <Field
             label={<Localized id="cashbook-field-return-by" />}
+            mark={fieldMark(marks, 'return_by_date')}
             error={fieldError(error, 'return_by')}
           >
             {(props) => (
@@ -117,7 +128,11 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
         </>
       ) : (
         <>
-          <Field label={<Localized id="cashbook-field-mode" />} error={fieldError(error, 'mode')}>
+          <Field
+            label={<Localized id="cashbook-field-mode" />}
+            mark={fieldMark(marks, 'mode')}
+            error={fieldError(error, 'mode')}
+          >
             {(props) => (
               <Select
                 {...props}
@@ -163,6 +178,7 @@ export function LentForm({ draft, onChange, error }: LentFormProps) {
       <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
+          mark={fieldMark(marks, 'narration')}
           error={fieldError(error, 'narration')}
         >
           {(props) => (

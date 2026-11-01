@@ -11,9 +11,11 @@ import { PagedList } from '../../../shared/grid';
 import { Card, EmptyState, Fact } from '../../../shared/ui';
 import { useKhataStatement } from '../hooks';
 import { KHATA_COLUMNS } from '../list-columns';
+import { useOpenVoucher } from '../../../shared/edit';
 import { SignedNum } from './SignedNum';
 
 export function KhataListSection({ khataId }: { khataId: number | null }) {
+  const open = useOpenVoucher();
   const statement = useKhataStatement(khataId, true);
   const first = statement.data?.pages[0];
   const rows = statement.data?.pages.flatMap((page) => page.rows);
@@ -44,6 +46,14 @@ export function KhataListSection({ khataId }: { khataId: number | null }) {
             columns={KHATA_COLUMNS}
             rows={rows}
             getRowId={(row) => `${String(row.entry_id)}-${String(row.voucher_id ?? 0)}`}
+            // A payment or a receipt opens its voucher; a sale of the khata's goods has none.
+            onOpen={(row) => {
+              if (row.voucher_id === null) return;
+              if (row.kind === 'paid_out') open({ id: row.voucher_id, voucher_type: 'khata_out' });
+              else if (row.kind === 'received') {
+                open({ id: row.voucher_id, voucher_type: 'khata_in' });
+              }
+            }}
             labelId="cashbook-khata-label"
             failedId="cashbook-khata-failed"
             error={statement.isError ? uiErrorOf(statement.error) : null}

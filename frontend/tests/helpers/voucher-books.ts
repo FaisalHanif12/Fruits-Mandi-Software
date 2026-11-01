@@ -34,6 +34,7 @@ import type {
 import { paisaForTest } from './paisa';
 import { refusal } from './ui-error';
 import { sliceOf } from './paged';
+import { OPEN_ENTRY } from './entry-flags';
 
 export const TODAY_ISO = '2026-10-10';
 
@@ -291,7 +292,7 @@ export function createBooks(options: BooksOptions = {}) {
       reason: built.type === 'payment' ? built.input.reason : '',
       cancel_reason: '',
       entry_id: 1000 + voucherId,
-      editable: true,
+      ...OPEN_ENTRY,
     });
     const isBuyer = partyOf(id)?.type === 'buyer';
     return {
@@ -326,7 +327,9 @@ export function createBooks(options: BooksOptions = {}) {
     const row = store.rows.find((one) => one.id === input.id);
     if (row === undefined) throw refused('ERR_NOT_FOUND', null);
     row.status = 'cancelled';
-    row.editable = false;
+    row.can_edit = false;
+    row.can_cancel = false;
+    row.locked_reason = 'cancelled';
     row.cancel_reason = input.reason;
     return {
       voucher_id: row.id,
@@ -529,7 +532,7 @@ export function voucherRow(overrides: Partial<VoucherRow> = {}): VoucherRow {
     reason: '',
     cancel_reason: '',
     entry_id: 1501,
-    editable: true,
+    ...OPEN_ENTRY,
     ...overrides,
   };
 }

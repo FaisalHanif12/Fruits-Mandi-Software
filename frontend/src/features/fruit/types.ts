@@ -2,6 +2,7 @@
 // generated bindings (Code Standards F2). What the user types is text (CLAUDE.md rule 1): the form
 // holds the draft below, and the amounts the backend sends are `Paisa`, shown and never worked out.
 
+import type { EditStamp } from '../../bindings/EditStamp';
 import type { FruitCancelInput } from '../../bindings/FruitCancelInput';
 import type { FruitCancelled } from '../../bindings/FruitCancelled';
 import type { FruitCredit } from '../../bindings/FruitCredit';
@@ -90,6 +91,10 @@ export interface EditingFruit {
   id: number;
   version: number;
   number: number;
+  /** The day of the entry, `YYYY-MM-DD`: it does not change in an edit (plan 44). */
+  date: string;
+  /** The last edit of this entry, or null when it was never edited. */
+  edited: EditStamp | null;
 }
 
 /** What a save sends: the entry, and the id, version and reason when it is an edit. */

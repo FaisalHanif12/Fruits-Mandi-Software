@@ -142,7 +142,7 @@ describe('the screen builds the request the backend’s own test sent', () => {
 
   it('an entry that is being edited sends its id with the preview, and the edit takes the version and the reason', () => {
     const draft = { ...home('580', '3'), reason: 'wrong quantity' };
-    const editing = { id: 1, version: 2, number: 1 };
+    const editing = { id: 1, version: 2, number: 1, date: '2026-10-10', edited: null };
     expect(sendsTheSame(buildFruit(draft, 1), real.FRUIT_PREVIEW_EDIT_HOME_REQUEST)).toBeNull();
     const request = buildSaveRequest(draft, editing);
     expect(request.edit).toEqual({ id: 1, version: 2, reason: 'wrong quantity' });

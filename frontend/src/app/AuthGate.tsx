@@ -3,6 +3,8 @@
 // app stays on screen under the lock, so nothing typed is lost (PRD FR-8.4). Language and text
 // size of the signed-in user are applied at sign-in and saved when he changes them.
 
+import { PartnerCodeHost } from '../features/partners';
+import { FixDayHost } from './FixDayHost';
 import { Localized } from '@fluent/react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef } from 'react';
@@ -110,6 +112,10 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
   const main = mainNavOf(pathname);
   return (
     <>
+      {/* Plan 44: closes the days reopened for a fix (FR-21.4) when the user leaves the screen of
+          the fix, and asks for the partner code (FR-17.11) and locks it when the user moves away. */}
+      <FixDayHost />
+      <PartnerCodeHost />
       <AppShell
         nav={
           <MainNav

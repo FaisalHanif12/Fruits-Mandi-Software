@@ -4,7 +4,15 @@
 // the backend's (the same function as the save); the screen shows them and works nothing out.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Card, CalcInfo, Fact, Notice, Num, ShareAmounts } from '../../../shared/ui';
+import {
+  Card,
+  CalcInfo,
+  Fact,
+  Notice,
+  Num,
+  PartnerLockedBox,
+  ShareAmounts,
+} from '../../../shared/ui';
 import type { ExpensePreview } from '../types';
 import type { ExpenseType } from '../screen-type';
 import { SignedNum } from './SignedNum';
@@ -43,7 +51,9 @@ export function ExpensePreviewCard({ type, preview }: ExpensePreviewCardProps) {
   const effect = preview.partner_effect;
   return (
     <Card compact title={<Localized id="cashbook-effect-title" />}>
-      {effect === null ? (
+      {preview.partners_locked ? (
+        <PartnerLockedBox />
+      ) : effect === null ? (
         <Localized id="cashbook-effect-none">
           <p className="type-body text-ink-muted" />
         </Localized>

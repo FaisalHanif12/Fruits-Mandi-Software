@@ -16,6 +16,7 @@ use mandi_services::ServiceError;
 use mandi_services::auth;
 use mandi_services::core::error::ErrorCode;
 
+use super::partner_gate;
 use super::run;
 use crate::error::UiError;
 
@@ -62,6 +63,8 @@ pub async fn analytics_run<R: tauri::Runtime>(
 ) -> Result<AnalyticsPage, UiError> {
     run(app, "analytics_run", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::analytics(ctx, input.view, &mut input.filters)?;
         run_view(ctx.db(), &input).map_err(analytics_error)
     })
     .await
@@ -79,6 +82,8 @@ pub async fn analytics_lines<R: tauri::Runtime>(
 ) -> Result<AnalyticsLinesPage, UiError> {
     run(app, "analytics_lines", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::analytics(ctx, input.view, &mut input.filters)?;
         lines(ctx.db(), &input).map_err(analytics_error)
     })
     .await
@@ -94,6 +99,8 @@ pub async fn analytics_print_data<R: tauri::Runtime>(
 ) -> Result<AnalyticsPrintData, UiError> {
     run(app, "analytics_print_data", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::analytics(ctx, input.view, &mut input.filters)?;
         print_data(ctx.db(), &input).map_err(analytics_error)
     })
     .await

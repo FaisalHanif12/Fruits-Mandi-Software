@@ -24,7 +24,7 @@ use mandi_db::vouchers as voucher_repo;
 use super::format::NumberStyle;
 use super::header::{footer, header, pick};
 use super::ids::*;
-use super::load::{FirmNames, load_firm, load_grouping, load_setup};
+use super::load::{FirmNames, last_edit_day, load_firm, load_grouping, load_setup};
 use super::{
     AmountRole, PrintAmount, PrintData, PrintFact, PrintPage, PrintParty, PrintWords, TextDir,
     VoucherPrintDataInput,
@@ -39,9 +39,10 @@ pub fn voucher_print_data(
     db: &Db,
     input: &VoucherPrintDataInput,
 ) -> Result<PrintData, ReportsError> {
-    let loaded = db.read(|conn| {
+    let (loaded, revised) = db.read(|conn| {
         let row = voucher_repo::get(conn, input.voucher_id)?.ok_or(ReportsError::NotFound)?;
-        Ok::<_, ReportsError>(Loaded {
+        let revised = last_edit_day(conn, "voucher", input.voucher_id)?;
+        let loaded = Loaded {
             party_kind: party_kind(conn, &row)?,
             collector: match row.collector_staff_id {
                 Some(id) => voucher_repo::staff_names(conn, id)?,
@@ -51,9 +52,13 @@ pub fn voucher_print_data(
             firm: load_firm(conn)?,
             grouping: load_grouping(conn)?,
             setup: load_setup(conn)?,
-        })
+        };
+        Ok::<_, ReportsError>((loaded, revised))
     })?;
-    build_slip(&loaded, input.language, db.clock().now_utc())
+    let style = NumberStyle::new(input.language, loaded.grouping, loaded.setup.urdu_digits);
+    let mut data = build_slip(&loaded, input.language, db.clock().now_utc())?;
+    data.revised_on = revised.map(|day| style.date(&day)).transpose()?;
+    Ok(data)
 }
 
 /// What the slip is about, besides the voucher itself.
@@ -206,6 +211,8 @@ fn build_slip(
         footer: footer(style.printed_at(now_utc)),
         number: style.count(row.number),
         cancelled: row.status == "cancelled",
+        // Filled by `voucher_print_data`, which reads the edit history.
+        revised_on: None,
         pages: vec![page],
     })
 }

@@ -28,6 +28,8 @@ import {
   costEntry,
 } from './trips-data';
 import { printingSettings } from './print-settings';
+import { editHandlers } from './dev-bridge-edit';
+import { AUDIT_EDIT_STAMP_BIKRI } from './edit-real';
 import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
 import { indexHandlers, isIndexPage } from './dev-bridge-index';
 import { isListsPage, listsHandlers } from './dev-bridge-lists';
@@ -264,10 +266,11 @@ if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty'))
       id: 503,
       number: 3,
       status: 'cancelled',
-      editable: false,
+      can_edit: false,
+      can_cancel: false,
       cancel_reason: 'wrong buyer',
     }),
-    voucherRow({ id: 504, number: 4, editable: false }),
+    voucherRow({ id: 504, number: 4, can_edit: false, can_cancel: false }),
     voucherRow({
       id: 502,
       number: 2,
@@ -579,6 +582,10 @@ const handlers: Record<string, Handler> = {
       : savedEvent1({
           status: devFlag('cancelled') ? 'cancelled' : 'saved',
           cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
+          // Plan 44: the story of the edit kit. A closed day asks to be reopened first; an edited
+          // entry shows its stamp.
+          ...(devFlag('closedday') ? { needs_reopen: true } : {}),
+          ...(devFlag('edited') ? { edited: AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null } : {}),
         }),
   bikri_list: () =>
     bikriListOf(
@@ -705,7 +712,10 @@ const handlers: Record<string, Handler> = {
   vouchers_save_advance: (input) => books.save({ type: 'advance', input: input as AdvanceInput }),
   vouchers_edit: (input) => books.edit(input as never),
   vouchers_cancel: (input) => books.cancel(input as never),
-  vouchers_get: (input) => books.get(asNumber(input['id'])),
+  vouchers_get: (input) => {
+    const row = books.get(asNumber(input['id']));
+    return devFlag('closedday') ? { ...row, needs_reopen: true } : row;
+  },
   vouchers_list: (input) => books.list(input as never),
   assist_open_bills: (input) => books.openBills({ account_id: asNumber(input['account_id']) }),
   assist_open_payables: (input) => books.openPayables({ seller_id: asNumber(input['seller_id']) }),
@@ -930,7 +940,7 @@ export function installDevBridge(): void {
               : isListsPage()
                 ? listsHandlers[command]
                 : undefined;
-        const handler = own ?? handlers[command];
+        const handler = own ?? editHandlers[command] ?? handlers[command];
         // The delay is the answer time of a real command, so the screen's waiting looks real.
         return new Promise((resolve, reject) => {
           window.setTimeout(() => {

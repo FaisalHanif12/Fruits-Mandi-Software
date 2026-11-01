@@ -191,6 +191,41 @@ pub fn set_sell_date(
     Ok(())
 }
 
+/// Rewrites what arrived (the edit of PRD FR-7.70): the item, packing, quantity, weight, note, the
+/// day to sell and the split for another shop. It needs the arrival's edit window (`edit_windows`).
+/// The number, garden and day stay.
+///
+/// # Errors
+/// Any SQLite error (the trigger `garden_arrivals_record_is_final` without a window, the CHECKs).
+pub fn update_edited(
+    conn: &Connection,
+    id: i64,
+    arrival: &NewArrival<'_>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE garden_arrivals SET sell_date = ?2, item_id = ?3, packing_id = ?4, qty = ?5,
+             weight_grams = ?6, note = ?7, other_qty = ?8, shop_name = ?9, updated_at = ?10,
+             updated_by = ?11, version = version + 1
+         WHERE id = ?1",
+        params![
+            id,
+            arrival.sell_date,
+            arrival.item_id,
+            arrival.packing_id,
+            arrival.qty,
+            arrival.weight_grams,
+            arrival.note,
+            arrival.other_qty,
+            arrival.shop_name,
+            now,
+            user_id,
+        ],
+    )?;
+    Ok(())
+}
+
 /// Marks an arrival cancelled, with the reason.
 ///
 /// # Errors

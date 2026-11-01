@@ -621,3 +621,25 @@ cashbook-show-returned = واپس شدہ بھی دکھائیں
 # Shown above the list when it is sorted by anything but the day: the cash after a line needs the order of days.
 # review: pending
 cashbook-running-date-only = ہر اندراج کے بعد کی روکڑ صرف تاریخ کی ترتیب میں نظر آتی ہے۔
+
+## An entry of the روکڑ area changed (plan 44, PRD FR-7.70).
+
+# $number: the number of the entry, for example "E-3".
+# review: pending
+cashbook-edited = { $number } میں تبدیلی ہو گئی
+
+# The list of saved journal entries under the جنرل form (plan 44, PRD FR-7.70).
+# review: pending
+cashbook-general-list-title = محفوظ شدہ { -general } اندراج
+
+# review: pending
+cashbook-general-list-label = محفوظ شدہ { -general } اندراج
+
+# review: pending
+cashbook-general-list-failed = محفوظ شدہ { -general } اندراج کھل نہیں سکے
+
+# review: pending
+cashbook-general-list-empty = ان تاریخوں میں کوئی { -general } اندراج نہیں
+
+# review: pending
+cashbook-general-list-empty-help = اوپر سطریں بھر کر محفوظ کریں تو یہاں آ جائے گا۔ پرانا اندراج دیکھنے کے لیے تاریخیں بدلیں۔

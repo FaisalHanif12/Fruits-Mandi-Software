@@ -387,9 +387,6 @@ trips-entries-empty-help = اس سفر کی خریداریاں، خرچ اور �
 # review: pending
 trips-entries-count = { $total } میں سے { $shown } نظر آ رہے ہیں
 
-# review: pending
-trips-entries-cancel = اندراج منسوخ کریں
-
 # $kind: the type of entry; $number: its number in its own series.
 # review: pending
 trips-entry-label = { $kind } { $number }
@@ -438,3 +435,7 @@ trips-cancelled = { $entry } کو منسوخ کر دیا گیا۔
 # $entry: the entry and its number.
 # review: pending
 trips-cancelled-reopened = { $entry } کو منسوخ کر دیا گیا۔ سفر دوبارہ کھل گیا ہے۔
+
+# The button on the facts of a trip that opens the market, who was sent and the note for change (plan 44).
+# review: pending
+trips-header-edit = سفر کی تفصیل تبدیل کریں

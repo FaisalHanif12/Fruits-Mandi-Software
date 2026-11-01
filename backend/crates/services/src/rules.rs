@@ -219,6 +219,40 @@ fn new_rule(prepared: &mandi_domain::core::rules::PreparedRule) -> NewRule {
     }
 }
 
+/// The first field (in the order of the form) that differs between a stored rule and the typed one,
+/// leaving out the end date and the active flag, which a used rule may change. The note counts: the
+/// rest of a used rule is locked.
+fn first_changed_field(old: &NewRule, new: &NewRule) -> Option<&'static str> {
+    if old.side != new.side {
+        return Some("side");
+    }
+    if old.charge != new.charge {
+        return Some("charge_type");
+    }
+    if old.account_id != new.account_id {
+        return Some("account_id");
+    }
+    if old.item_id != new.item_id {
+        return Some("item_id");
+    }
+    if old.item_group != new.item_group {
+        return Some("item_group");
+    }
+    if old.method != new.method {
+        return Some("method");
+    }
+    if old.value_bps != new.value_bps || old.value_paisa != new.value_paisa {
+        return Some("value");
+    }
+    if old.from_date != new.from_date {
+        return Some("from_date");
+    }
+    if old.note != new.note {
+        return Some("note");
+    }
+    None
+}
+
 fn audit_json(rule: &NewRule) -> Value {
     json!({
         "side": rule.side.as_str(),
@@ -338,6 +372,20 @@ pub fn save(ctx: &Context, actor: &Actor, input: &RuleInput) -> Result<RuleSaved
                 // The version of the row read must still be the stored one.
                 if prepared.version != Some(old.version) {
                     return Err(ServiceError::reject(ErrorCode::ErrVersionChanged));
+                }
+                // A rule that saved lines were worked out with keeps what it was: only its end date
+                // and its active flag may change; a newer rule from a date replaces the rest (PRD
+                // FR-7.70, FR-11.6, plan 44).
+                if old.used
+                    && let Some(field) = first_changed_field(&new_rule_from_row(&old), &rule)
+                {
+                    let lines = repo::saved_lines_using(tx, id)?;
+                    return Err(ServiceError::reject_with(
+                        ErrorCode::ErrRuleUsed,
+                        Some(field),
+                        "saved_lines",
+                        lines,
+                    ));
                 }
                 refuse_second_default(
                     prepared.side,

@@ -166,7 +166,7 @@ fn edit_of_a_buyer_receipt_reverses_it_and_works_the_matching_out_again() {
         before.version, 2,
         "insert 1, then the live posting is named"
     );
-    assert!(before.editable);
+    assert!(before.flags.can_edit);
 
     // PRD FR-15.3: edit 10,000 to 4,000. Same voucher, same number, a new posting.
     let (id, number, entry_id) =
@@ -294,7 +294,7 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
         (
             cancelled.status.as_str(),
             cancelled.cancel_reason.as_str(),
-            cancelled.editable
+            cancelled.flags.can_edit
         ),
         ("cancelled", "غلط اندراج", false)
     );
@@ -437,7 +437,9 @@ fn a_closed_day_refuses_edit_and_cancel_and_nothing_changes() {
     assert_eq!(cancel.code(), ErrorCode::ErrDateClosed);
     assert_eq!(scalar(&w, "SELECT COUNT(*) FROM journal_entries"), entries);
     assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 2_880));
-    assert!(!vouchers::get(&w.env.ctx, row.id).unwrap().editable);
+    // The Edit button still works on a closed day, through a reopen (PRD FR-21.4).
+    let flags = vouchers::get(&w.env.ctx, row.id).unwrap().flags;
+    assert!(flags.can_edit && flags.can_cancel && flags.needs_reopen);
 }
 
 #[test]
@@ -553,7 +555,8 @@ fn edit_of_an_advance_moves_the_adjustment() {
                 confirm_cash_below_zero: true,
                 ..early("30,000")
             }),
-            reason: String::new(),
+            // The advance is dated 01-09-26, not today, so the edit needs a reason (PRD FR-7.70).
+            reason: "غلط رقم".into(),
             confirm_cash_below_zero: true,
         },
     )

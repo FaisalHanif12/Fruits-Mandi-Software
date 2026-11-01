@@ -28,6 +28,7 @@ export function rule(id: number, extra: Partial<RuleRow> & { value?: string } = 
   const text = value ?? rest.value_text ?? '6';
   return {
     id,
+    used: false,
     version: 1,
     side: 'seller',
     charge_type: 'commission',

@@ -4,6 +4,7 @@
 // /dev/vouchers uses). The sums there are a test double's: the screen only shows what comes back and
 // never works out an amount (CLAUDE.md rule 1).
 
+import { noChangeReview } from './edit-real';
 import { vi } from 'vitest';
 import type { DayCloseSummary } from '../../src/bindings/DayCloseSummary';
 import type { DayStatus } from '../../src/bindings/DayStatus';
@@ -62,6 +63,9 @@ export function fakeVouchers(options: BooksOptions = {}): FakeVouchers {
   vi.mocked(vouchersApi.vouchersSave).mockImplementation((built) =>
     answer(() => books.save(built)),
   );
+  vi.mocked(vouchersApi.vouchersEditPreview).mockImplementation(() =>
+    Promise.resolve(noChangeReview()),
+  );
   vi.mocked(vouchersApi.vouchersEdit).mockImplementation((input) =>
     answer(() => books.edit(input)),
   );
@@ -105,6 +109,7 @@ const PARTNER_REFS = [
 
 /** PRD 4.9: 2 بکری, خام 41,400, commission 5,448, shared income 5,488, shares 996 / 746 / 746. */
 export const WORKED_DAY_SUMMARY: DayCloseSummary = {
+  partners_locked: false,
   bikri_count: 2,
   gross_paisa: money(41400),
   commission_paisa: money(5448),

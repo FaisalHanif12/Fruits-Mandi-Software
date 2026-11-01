@@ -5,8 +5,8 @@
 //! confirmed are checked by `services::accounts` with these results.
 
 use super::{AccountInput, AccountType, FIRST_SERIAL, LAST_SERIAL};
-use crate::dates::BusinessDate;
-use crate::error::{ErrorCode, FieldError};
+use crate::dates::{self, BusinessDate};
+use crate::error::{ErrorCode, ErrorValue, FieldError};
 use crate::masters::{ColValue, NameTexts, Reference};
 use crate::money::Paisa;
 use crate::text;
@@ -197,12 +197,13 @@ pub fn opening_request_in_force(
                 if unchanged {
                     Some(date)
                 } else {
-                    errors.take(validate::posting_date(
-                        &field,
-                        opening_date,
-                        closed_up_to,
-                        today,
-                    ))
+                    match validate::posting_date(&field, opening_date, closed_up_to, today) {
+                        Ok(date) => Some(date),
+                        Err(error) => {
+                            errors.push(closed_opening_hint(error, closed_up_to, today));
+                            None
+                        }
+                    }
                 }
             })
         }
@@ -216,6 +217,23 @@ pub fn opening_request_in_force(
         cr,
         is_advance,
     })
+}
+
+/// Adds what the form needs to the "closed day" error of an opening date (PRD FR-10.11): `today`
+/// (`DD-MM-YYYY`) and `today_open` (1 when today is an open day, else 0), so it can offer "use
+/// today", or "save without the opening", or "reopen the day". Any other error is returned as it is.
+fn closed_opening_hint(
+    error: FieldError,
+    closed_up_to: Option<BusinessDate>,
+    today: BusinessDate,
+) -> FieldError {
+    if error.code != ErrorCode::ErrDateClosed {
+        return error;
+    }
+    let today_open = closed_up_to.is_none_or(|closed| today > closed);
+    error
+        .with("today", ErrorValue::Text(dates::format_ddmmyyyy(today)))
+        .with("today_open", ErrorValue::Number(i64::from(today_open)))
 }
 
 /// The serial inside a full account code of the old scheme (control code plus 4 digits), used for

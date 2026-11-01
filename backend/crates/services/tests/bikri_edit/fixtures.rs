@@ -128,15 +128,15 @@ fn the_real_answers_of_the_plan_16_commands_are_the_fixtures() {
     assert!(opened.editable);
     pair("bikri_open_for_edit_event1", &request, &opened);
     let mut draft = serde_json::to_value(&opened.draft).unwrap();
-    // Two refused edits: ERR_EDIT_NOT_ALLOWED with a fixed `rule` name at the field concerned.
-    // The day of a posting cannot change (rule `day_changed`).
+    // Two refused edits. The day of a posting cannot change (ERR_EDIT_DATE_FIXED, plan 44). The
+    // other is ERR_EDIT_NOT_ALLOWED with a fixed `rule` name at the field concerned.
     let mut moved = draft.clone();
     moved["header"]["entry_date"] = json!("09-10-2026");
     let request = json!({ "entry_id": opened.entry_id, "draft": moved });
     let refused = bikri::edit_preview(&w.env.ctx, &typed::<EditPreviewInput>(&request)).unwrap();
     assert!(crate::tools::flagged(
         &refused.errors,
-        ErrorCode::ErrEditNotAllowed,
+        ErrorCode::ErrEditDateFixed,
         "header.entry_date"
     ));
     pair("bikri_edit_preview_day_changed", &request, &refused);

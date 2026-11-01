@@ -298,8 +298,12 @@ pub struct ArrivalRow {
     /// Goods meant for a later day are not waiting before it.
     #[ts(type = "number")]
     pub days_waiting: i64,
-    /// True while it is saved and nothing of it is sold or written off, on an open day.
-    pub can_cancel: bool,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
     /// True while it is saved and has goods left: `gardens_arrival_set_sell_date` is allowed.
     pub can_change_sell_date: bool,
     /// The garden lots that sold from it, oldest first.

@@ -1,8 +1,10 @@
 //! Partner capital (PRD 17.4, plan 17): invested and taken back on one screen, with the partner's
-//! capital history. Every command needs the signed-in Owner.
+//! capital history. Every command needs the signed-in Owner and, once a partner code is set, the
+//! open partner section (`ERR_PARTNER_LOCKED`, PRD FR-17.11).
 
 use mandi_services::core::capital::{CapitalHistory, CapitalHistoryInput, CapitalInput};
 use mandi_services::core::vouchers::VoucherSaved;
+use mandi_services::partner_code;
 use mandi_services::{auth, partners, vouchers};
 
 use super::run;
@@ -18,6 +20,7 @@ pub async fn vouchers_save_capital_in<R: tauri::Runtime>(
 ) -> Result<VoucherSaved, UiError> {
     run(app, "vouchers_save_capital_in", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         vouchers::save_capital_in(ctx, &actor, &input)
     })
     .await
@@ -34,6 +37,7 @@ pub async fn vouchers_save_capital_out<R: tauri::Runtime>(
 ) -> Result<VoucherSaved, UiError> {
     run(app, "vouchers_save_capital_out", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         vouchers::save_capital_out(ctx, &actor, &input)
     })
     .await
@@ -48,6 +52,7 @@ pub async fn capital_history<R: tauri::Runtime>(
 ) -> Result<CapitalHistory, UiError> {
     run(app, "capital_history", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::capital_history(ctx, &input)
     })
     .await

@@ -6,6 +6,7 @@
 // steps and the list never scrolls sideways (NFR-USE-15, Code Standards F22). A cancelled
 // purchase says so in the item cell, in words.
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import type { PurchaseRow } from '../../bindings/PurchaseRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
@@ -39,13 +40,19 @@ export const TRIP_PURCHASE_COLUMNS: readonly ListColumn<PurchaseRow>[] = [
     type: 'text',
     headerId: 'purchases-col-item',
     grow: true,
-    value: (row, { language, text }) => {
+    value: (row, context) => {
+      const { language, text } = context;
       const words = text('purchases-item-packing', {
         item: displayName(row.item, language),
         packing: displayName(row.packing, language),
       });
-      return row.status === 'cancelled' ? text('purchases-item-cancelled', { item: words }) : words;
+      return statusWithEdited(
+        row.status === 'cancelled' ? text('purchases-item-cancelled', { item: words }) : words,
+        row.edited,
+        context,
+      );
     },
+    tip: (row, context) => editedTip(row.edited, context),
   },
   // The goods left, by part (PRD FR-12.41): what is for our shop and what is for another shop.
   {

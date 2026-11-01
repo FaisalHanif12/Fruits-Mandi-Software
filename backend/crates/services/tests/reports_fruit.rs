@@ -25,7 +25,7 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::fruit::{
     FruitCancelInput, FruitEditInput, FruitInput, FruitSaved, FruitSource,
 };
-use mandi_services::fruit;
+use mandi_services::{ServiceError, fruit};
 use reports_world::*;
 use support::World;
 
@@ -573,10 +573,12 @@ fn e2e_42_the_partner_statement_report_writes_the_fruit_lines() {
 // ---- Edit and cancel ---------------------------------------------------------------------------
 
 #[test]
-fn an_edit_that_moves_a_take_to_another_day_moves_it_in_every_report() {
+fn a_take_cancelled_and_entered_again_on_another_day_moves_in_every_report() {
+    // The date of an entry cannot change in an edit (PRD FR-7.70, ERR_EDIT_DATE_FIXED). A take
+    // put on the wrong day is cancelled and entered again on the right day.
     let (w, one, _) = e2e_42();
     set_today(&w.env, 2026, 10, 11);
-    fruit::edit(
+    let refused = fruit::edit(
         &w.env.ctx,
         &w.owner,
         &FruitEditInput {
@@ -585,8 +587,23 @@ fn an_edit_that_moves_a_take_to_another_day_moves_it_in_every_report() {
             entry: home(&w, 1, 0, "11-10-2026", "1", "600"),
             reason: "غلط اندراج".into(),
         },
+    );
+    assert!(
+        matches!(&refused, Err(ServiceError::Rejected(items))
+            if items.iter().any(|i| i.code == ErrorCode::ErrEditDateFixed)),
+        "{refused:?}"
+    );
+    fruit::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &FruitCancelInput {
+            id: one.id,
+            version: one.version,
+            reason: "غلط اندراج".into(),
+        },
     )
     .unwrap();
+    take(&w, &home(&w, 1, 0, "11-10-2026", "1", "600"));
     // R37: 10-10 only the guests; 11-10 الف 1 at 600; both days 4 نگ, 3,600.
     let d10 = r37(&w, day("10-10-2026", "10-10-2026"));
     assert_eq!(entries(&d10).len(), 1);
@@ -1178,6 +1195,8 @@ struct Live {
     id: i64,
     version: i64,
     from_lot: bool,
+    /// The day it was entered: an edit keeps it (PRD FR-7.70).
+    date: &'static str,
 }
 
 #[test]
@@ -1204,6 +1223,7 @@ fn for_random_takes_edits_and_cancels_the_fruit_column_is_minus_view_k_and_the_r
                         id: saved.id,
                         version: saved.version,
                         from_lot: false,
+                        date: day_pick,
                     });
                 }
                 // A new home take from the lot, one at a time (5 are left).
@@ -1217,6 +1237,7 @@ fn for_random_takes_edits_and_cancels_the_fruit_column_is_minus_view_k_and_the_r
                         id: saved.id,
                         version: saved.version,
                         from_lot: true,
+                        date: day_pick,
                     });
                 }
                 // Edit or cancel a live entry.
@@ -1239,9 +1260,9 @@ fn for_random_takes_edits_and_cancels_the_fruit_column_is_minus_view_k_and_the_r
                         let qty = (rng.next(4) + 1).to_string();
                         let rate = format!("{}", (rng.next(15) + 1) * 100);
                         let input = if entry.from_lot {
-                            home(&w, 1, rng.next(3) as usize, day_pick, &qty, &rate)
+                            home(&w, 1, rng.next(3) as usize, entry.date, &qty, &rate)
                         } else {
-                            guests(&w, agent, day_pick, &qty, &rate)
+                            guests(&w, agent, entry.date, &qty, &rate)
                         };
                         let edited = fruit::edit(
                             &w.env.ctx,

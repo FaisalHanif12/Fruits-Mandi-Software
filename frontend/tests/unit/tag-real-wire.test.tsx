@@ -159,7 +159,9 @@ describe("the report print wrappers send the backend's requests and read its ans
       backend({ reports_print_header: answer });
       const frame = await reportsPrintHeader(request);
       expect(call).toHaveBeenLastCalledWith('reports_print_header', { input: request });
-      expect(frame.header.contacts).toHaveLength(2);
+      // The people of the header as the backend sent them (the owners and the munshi, plan 42).
+      expect(frame.header.contacts).toHaveLength(answer.header.contacts.length);
+      expect(frame.header.contacts.length).toBeGreaterThan(1);
       expect(frame.header.trade_mark).toBe('RH');
       expect(frame.urdu_digits).toBe(false);
       expect(frame.language).toBe(request.language);

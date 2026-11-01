@@ -423,6 +423,25 @@ fn r29_for_the_day_has_the_shop_expense_and_what_alif_took() {
         vec![0, 0, 3_000, 2_000, 0]
     );
     assert_eq!(page.title_id, "report-r29-title");
+    // The Electricity row opens the ledger of its head account. The headings and Alif's row open
+    // nothing: his money is behind the partner code (PRD FR-17.11).
+    let head_id: i64 = raw(&w.dir)
+        .query_row(
+            "SELECT id FROM accounts WHERE name_en = 'Electricity'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        page.rows[1].source,
+        Some(mandi_services::core::row_source::RowSource {
+            kind: mandi_services::core::row_source::SourceKind::Account,
+            id: head_id
+        })
+    );
+    assert_eq!(page.rows[0].source, None);
+    assert_eq!(page.rows[2].source, None);
+    assert_eq!(page.rows[3].source, None);
 }
 
 #[test]

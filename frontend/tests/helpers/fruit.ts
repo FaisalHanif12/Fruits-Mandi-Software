@@ -3,6 +3,7 @@
 // vi.mock. The books throw the backend's refusal as a `CommandError`; here it becomes a rejected
 // promise, the way `invoke` fails.
 
+import { noChangeReview } from './edit-real';
 import { vi } from 'vitest';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { SearchHit } from '../../src/bindings/SearchHit';
@@ -34,6 +35,7 @@ export function fakeFruit(options: FruitOptions = {}): FakeFruit {
     answer(() => books.preview(input)),
   );
   vi.mocked(fruitApi.fruitSave).mockImplementation((input) => answer(() => books.save(input)));
+  vi.mocked(fruitApi.fruitEditPreview).mockImplementation(() => Promise.resolve(noChangeReview()));
   vi.mocked(fruitApi.fruitEdit).mockImplementation((input) => answer(() => books.edit(input)));
   vi.mocked(fruitApi.fruitCancel).mockImplementation((input) => answer(() => books.cancel(input)));
   vi.mocked(fruitApi.fruitGet).mockImplementation((input) => answer(() => books.get(input)));

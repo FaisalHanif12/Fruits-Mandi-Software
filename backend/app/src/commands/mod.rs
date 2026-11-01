@@ -49,6 +49,10 @@ pub mod dashboard;
 pub mod screen_prefs;
 // Run B, D5 round 14 (append-only block).
 pub mod report_print;
+// Plan 44 (append-only block).
+pub mod edit;
+pub mod partner_code;
+pub(crate) mod partner_gate;
 
 use std::fmt;
 

@@ -300,7 +300,8 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     const cells = within(table)
       .getAllByRole('row')
       .slice(1)
-      .map((row) => visible(within(row).getAllByRole('cell')[0]?.textContent));
+      // The first cell is the partner; the second is his part.
+      .map((row) => visible(within(row).getAllByRole('cell')[1]?.textContent));
     expect(cells).toEqual(['413', '411', '411']);
     await user.click(info(message(language, 'fruit-numbers-value')));
     const working = await screen.findByRole('dialog');
@@ -406,8 +407,16 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
       return found;
     });
     await user.click(row);
-    await user.click(screen.getByRole('button', { name: startsWith('fruit-edit') }));
-    await screen.findByText(said(message(language, 'fruit-editing', { number: fruitNumber(1) })));
+    await user.click(screen.getByRole('button', { name: startsWith('edit-action-edit') }));
+    await screen.findByText(
+      said(
+        message(language, 'edit-band', {
+          what: message(language, 'glossary-phal'),
+          number: fruitNumber(1),
+          date: '10-10-2026',
+        }),
+      ),
+    );
     expect(fruitApi.fruitGet).toHaveBeenCalledWith({ id: 1 });
     expect(field('fruit-field-qty')).toHaveValue('2');
     expect(field('fruit-field-rate')).toHaveValue('580');
@@ -454,7 +463,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
       return found;
     });
     await user.click(row);
-    await user.click(screen.getByRole('button', { name: startsWith('fruit-cancel') }));
+    await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'not taken');
     await user.click(
@@ -473,7 +482,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     );
     // Again: the backend refuses, and the words show inside the box with what was typed kept.
     vi.mocked(fruitApi.fruitCancel).mockRejectedValue(new CommandError(real.FRUIT_CANCEL_AGAIN));
-    await user.click(screen.getByRole('button', { name: startsWith('fruit-cancel') }));
+    await user.click(screen.getByRole('button', { name: startsWith('edit-action-cancel') }));
     const dialog = await screen.findByRole('alertdialog');
     await user.type(field('fruit-cancel-reason'), 'again');
     await user.click(

@@ -77,6 +77,12 @@ pub const SHOP_SPLIT_SQL: &str = include_str!("../migrations/0010_shop_split.sql
 /// existing row, amount, id or chain hash changes.
 pub const DEAD_MARKS_SQL: &str = include_str!("../migrations/0011_dead_marks.sql");
 
+/// The twelfth migration (plan 44, PRD FR-7.70, Architecture 15.3): `edit_windows`, the one row the
+/// edit of a trip or garden entry opens inside its own transaction so the entry, its parts and its
+/// spread can be changed. Outside that window the triggers refuse every change as before. No
+/// existing row, amount, id or chain hash changes.
+pub const EDIT_WINDOWS_SQL: &str = include_str!("../migrations/0012_edit_windows.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -100,6 +106,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
         M::up(SHOP_SPLIT_SQL),
         M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
     ])
 }
 

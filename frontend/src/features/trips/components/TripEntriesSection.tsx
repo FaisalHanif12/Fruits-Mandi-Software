@@ -9,15 +9,17 @@
 // cancelled entry stays in the list, marked in words.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, History } from 'lucide-react';
+import { History } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from '@tanstack/react-router';
+import { NO_ENTRY_FLAGS, useFixDayFlow } from '../../../shared/edit';
 import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import type { PagerState } from '../../../shared/hooks';
 import { SHORTCUTS } from '../../../shared/keyboard';
 import {
-  Button,
   Card,
   EmptyState,
+  EntryActions,
   EntryPartsList,
   Fact,
   Num,
@@ -36,10 +38,20 @@ interface TripEntriesSectionProps {
   pager: PagerState;
   /** The trip's purchases, to cancel a purchase from its row in the history. */
   purchases: readonly PurchaseRow[];
+  /** Edit was pressed on an entry whose day is open (or was reopened for it): the page edits it. */
+  onEdit: (entry: TripEntryRow) => void;
 }
 
-export function TripEntriesSection({ entries, count, pager, purchases }: TripEntriesSectionProps) {
+export function TripEntriesSection({
+  entries,
+  count,
+  pager,
+  purchases,
+  onEdit,
+}: TripEntriesSectionProps) {
   const { l10n } = useLocalization();
+  const router = useRouter();
+  const fix = useFixDayFlow();
   const paging = useListPaging(pager);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cancelEntry, setCancelEntry] = useState<TripEntryRow | null>(null);
@@ -74,18 +86,30 @@ export function TripEntriesSection({ entries, count, pager, purchases }: TripEnt
             >
               <p className="type-body text-ink-muted" />
             </Localized>
-            <Button
-              variant="danger"
-              disabled={!canCancel}
-              onClick={() => {
+            <EntryActions
+              flags={selected === null ? NO_ENTRY_FLAGS : { ...selected, can_cancel: canCancel }}
+              busy={fix.busy}
+              onEdit={() => {
+                if (selected === null) return;
+                if (!selected.needs_reopen) {
+                  onEdit(selected);
+                  return;
+                }
+                // A closed day: the days are reopened first, then the entry is edited (FR-21.4).
+                fix.start({
+                  date: selected.entry_date,
+                  ownerHref: router.state.location.href,
+                  then: () => {
+                    onEdit(selected);
+                  },
+                });
+              }}
+              onCancel={() => {
                 if (selected === null) return;
                 if (selected.kind === 'purchase') setCancelPurchase(purchaseOfSelected);
                 else setCancelEntry(selected);
               }}
-            >
-              <Ban aria-hidden="true" className="size-icon-md" />
-              <Localized id="trips-entries-cancel" />
-            </Button>
+            />
           </div>
           <ListGrid<TripEntryRow>
             columns={ENTRY_COLUMNS}
@@ -159,6 +183,7 @@ export function TripEntriesSection({ entries, count, pager, purchases }: TripEnt
           )}
         </div>
       )}
+      {fix.dialog}
       <CancelEntryDialog
         row={cancelEntry}
         onClose={() => {

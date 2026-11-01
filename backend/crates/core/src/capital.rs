@@ -28,7 +28,7 @@ use crate::paging::{MonthSubtotal, SortInput};
 /// back: the opposite.
 ///
 /// Field paths in errors: `date`, `partner_id`, `amount`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct CapitalInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,

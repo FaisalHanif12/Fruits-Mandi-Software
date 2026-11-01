@@ -16,6 +16,7 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::statement::{PartnerStatement, PartnersStatementInput};
 use mandi_services::{Context, ServiceError, auth, partners};
 
+use super::partner_gate;
 use super::run;
 use crate::error::UiError;
 
@@ -189,6 +190,8 @@ pub async fn reports_run<R: tauri::Runtime>(
 ) -> Result<ReportPage, UiError> {
     run(app, "reports_run", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::report(ctx, input.id, &mut input.filters)?;
         if input.id == ReportId::R31 {
             return statement_run(ctx, &input.filters, input.offset, input.limit);
         }
@@ -208,6 +211,8 @@ pub async fn reports_print_data<R: tauri::Runtime>(
 ) -> Result<ReportPrintData, UiError> {
     run(app, "reports_print_data", move |ctx| {
         auth::require(ctx)?;
+        let mut input = input;
+        partner_gate::report(ctx, input.id, &mut input.filters)?;
         if input.id == ReportId::R31 {
             let page = statement_all(ctx, &input.filters)?;
             return print_data_for_page(ctx.db(), &page, &input).map_err(engine_error);

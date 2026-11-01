@@ -24,6 +24,7 @@ use rusqlite::{Connection, params_from_iter};
 
 use crate::listing::MonthSums;
 use crate::memo::{self, Sums};
+use crate::row_source_sql;
 
 /// One entry that moves cash.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,6 +50,15 @@ pub struct CashRow {
     pub narration: String,
     /// The reason or the "paid to" of its voucher. Empty if none.
     pub reason: String,
+    /// What the entry came from: `bikri`, `voucher`, `purchase`, `venture`, `fruit`, `account` or
+    /// `month_close`.
+    pub source_type: String,
+    /// The id of that source. For `venture` it is the id of one entry of a trip or garden.
+    pub source_id: i64,
+    /// The trip or garden a `venture` entry belongs to. `None` for any other source.
+    pub venture_id: Option<i64>,
+    /// `trip` or `garden`, with `venture_id`.
+    pub venture_kind: Option<String>,
 }
 
 /// The sums over a whole range.
@@ -190,6 +200,10 @@ struct Part {
     number: Option<i64>,
     narration: String,
     reason: String,
+    source_type: String,
+    source_id: i64,
+    venture_id: Option<i64>,
+    venture_kind: Option<String>,
 }
 
 /// The sums on cash and the own columns of these entries, one query.
@@ -199,6 +213,7 @@ fn parts_of(conn: &Connection, cash_id: i64, ids: &[i64]) -> rusqlite::Result<Ha
         return Ok(out);
     }
     let marks = vec!["?"; ids.len()].join(", ");
+    let (venture_id, venture_kind) = (row_source_sql::VENTURE_ID, row_source_sql::VENTURE_KIND);
     let mut statement = conn.prepare(&format!(
         "SELECT e.id, e.entry_date, e.posting_type, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0),
                 CASE e.source_type
@@ -209,7 +224,8 @@ fn parts_of(conn: &Connection, cash_id: i64, ids: &[i64]) -> rusqlite::Result<Ha
                 CASE e.source_type
                     WHEN 'voucher' THEN COALESCE((SELECT v.reason FROM vouchers v WHERE v.id = e.source_id), '')
                     ELSE ''
-                END
+                END,
+                e.source_type, e.source_id, {venture_id}, {venture_kind}
          FROM journal_entries e JOIN journal_lines l ON l.entry_id = e.id AND l.account_id = ?
          WHERE e.id IN ({marks}) GROUP BY e.id"
     ))?;
@@ -226,6 +242,10 @@ fn parts_of(conn: &Connection, cash_id: i64, ids: &[i64]) -> rusqlite::Result<Ha
             number: r.get(5)?,
             narration: r.get(6)?,
             reason: r.get(7)?,
+            source_type: r.get(8)?,
+            source_id: r.get(9)?,
+            venture_id: r.get(10)?,
+            venture_kind: r.get(11)?,
         })
     })?;
     for part in rows {
@@ -258,6 +278,10 @@ fn rows_in_order(
             number: part.number,
             narration: part.narration,
             reason: part.reason,
+            source_type: part.source_type,
+            source_id: part.source_id,
+            venture_id: part.venture_id,
+            venture_kind: part.venture_kind,
         });
     }
     Ok(rows)

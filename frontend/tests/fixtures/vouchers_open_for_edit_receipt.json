@@ -1,0 +1,42 @@
+{
+  "row": {
+    "id": 2,
+    "voucher_type": "receipt",
+    "number": 1,
+    "entry_date": "2026-10-10",
+    "account": {
+      "id": 20,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax"
+    },
+    "amount_paisa": 1000000,
+    "mode": "cash",
+    "bank_account_id": null,
+    "cheque_no": "",
+    "cheque_date": null,
+    "expected_goods": "",
+    "narration": "",
+    "status": "saved",
+    "version": 2,
+    "person": null,
+    "collector_staff_id": null,
+    "reason": "",
+    "cancel_reason": "",
+    "entry_id": 6,
+    "can_edit": true,
+    "can_cancel": true,
+    "locked_reason": null,
+    "needs_reopen": false,
+    "edited": null
+  },
+  "entry": {
+    "type": "receipt",
+    "date": "10-10-2026",
+    "account_id": 20,
+    "person_key": null,
+    "amount": "10000",
+    "collector_staff_id": null,
+    "narration": ""
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 1000000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 400000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [
+        {
+          "account": {
+            "id": 20,
+            "code": "0020",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax"
+          },
+          "person_key": null,
+          "before": {
+            "amount_paisa": 288000,
+            "side": "dr"
+          },
+          "after": {
+            "amount_paisa": 888000,
+            "side": "dr"
+          }
+        }
+      ],
+      "cash": {
+        "before_paisa": 5848400,
+        "after_paisa": 5248400,
+        "needs_confirm": false
+      },
+      "partners": [],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

@@ -8,7 +8,7 @@
 //! and the edit work an entry out with the same function, `plan` (B5). A saved entry is edited and
 //! cancelled by reversal while its day is open (FR-16.12).
 
-mod act;
+pub(crate) mod act;
 mod plan;
 mod read;
 
@@ -50,6 +50,22 @@ pub fn edit(
     input: &FruitEditInput,
 ) -> Result<FruitEdited, ServiceError> {
     act::edit(ctx, actor, input)
+}
+
+/// The stored row of a fruit entry as JSON, for the change list of an edit (`crate::edit`). What the
+/// buttons may do is not in it.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `id`; `ServiceError::Db`.
+pub(crate) fn row_value(
+    conn: &mandi_db::rusqlite::Connection,
+    id: i64,
+) -> Result<serde_json::Value, ServiceError> {
+    let rec = mandi_db::fruit::get(conn, id)?.ok_or_else(|| {
+        ServiceError::reject_field(mandi_domain::core::error::ErrorCode::ErrNotFound, "id")
+    })?;
+    let row = read::row_of(conn, &rec)?;
+    serde_json::to_value(row).map_err(|e| ServiceError::Data(e.to_string()))
 }
 
 /// Cancels a fruit entry by reversal while its day is open (PRD FR-16.12).

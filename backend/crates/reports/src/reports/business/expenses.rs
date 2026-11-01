@@ -13,6 +13,9 @@
 //! The entries of a month close are left out: they only move amounts between accounts
 //! (PRD FR-17.6).
 //!
+//! A shop expense row opens the ledger of its head. A partner's row has no source: his money is
+//! behind the partner code (PRD FR-17.11), so it does not open his drawings account.
+//!
 //! With a partner picked, the report shows only that partner's money taken and returned: the
 //! shop expenses belong to the shop, not to him.
 //!
@@ -28,7 +31,9 @@ use crate::error::ReportsError;
 use crate::reports::common::{Conds, LIVE, add, col, count_of, names_cell, paisa};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
-use crate::reports::model::{Cell, ColumnKind, ReportId, ReportPage, Row, RowKind};
+use crate::reports::model::{
+    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+};
 
 /// The shop expense heads with a movement in the filter. A head is an account of head 05.
 fn heads_query(typed: &Typed) -> (String, Vec<Value>) {
@@ -40,7 +45,7 @@ fn heads_query(typed: &Typed) -> (String, Vec<Value>) {
         .text("e.entry_date <= ?", typed.to.as_deref());
     let sql = format!(
         "SELECT a.code, a.name_ur, a.name_en,
-                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0), a.id
          FROM journal_lines l
          JOIN journal_entries e ON e.id = l.entry_id
          JOIN accounts a ON a.id = l.account_id
@@ -119,11 +124,12 @@ pub(crate) fn run(
                     r.get::<_, String>(2)?,
                     r.get::<_, i64>(3)?,
                     r.get::<_, i64>(4)?,
+                    r.get::<_, i64>(5)?,
                 ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
         let mut rows = Vec::with_capacity(heads.len());
-        for (name_ur, name_en, dr, cr) in heads {
+        for (name_ur, name_en, dr, cr, account_id) in heads {
             // A shop expense is a debit; a credit on its head takes some back.
             let amount = paisa(dr)?.checked_sub(paisa(cr)?)?;
             add(&mut expense_total, amount)?;
@@ -135,7 +141,11 @@ pub(crate) fn run(
                     Cell::Empty,
                     Cell::Empty,
                 ],
-                source: None,
+                // The head is a shop account: its ledger lists each expense behind the total.
+                source: Some(RowSource {
+                    kind: SourceKind::Account,
+                    id: account_id,
+                }),
                 kind: RowKind::Normal,
             });
         }
@@ -150,8 +160,8 @@ pub(crate) fn run(
         }
     }
 
-    // The money partners took and gave back.
-    {
+    // The money partners took and gave back. It is behind the partner code (PRD FR-17.11).
+    if !typed.hide_partners {
         let (sql, args) = partners_query(typed);
         let mut statement = conn.prepare(&sql)?;
         let partners = statement
@@ -219,9 +229,18 @@ pub(crate) fn run(
             Cell::Money {
                 paisa: expense_total,
             },
-            Cell::Money { paisa: taken_total },
-            Cell::Money {
-                paisa: returned_total,
+            // The money partners took is behind the partner code (PRD FR-17.11): no 0 in its place.
+            if typed.hide_partners {
+                Cell::Empty
+            } else {
+                Cell::Money { paisa: taken_total }
+            },
+            if typed.hide_partners {
+                Cell::Empty
+            } else {
+                Cell::Money {
+                    paisa: returned_total,
+                }
             },
         ],
         summary: Vec::new(),

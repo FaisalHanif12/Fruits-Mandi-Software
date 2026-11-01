@@ -1,0 +1,177 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "paid_now",
+        "before": {
+          "type": "money",
+          "paisa": 1040000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1080000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 1,
+          "label_ur": "الف",
+          "label_en": "Partner A"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 416000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 432000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 2,
+          "label_ur": "ب",
+          "label_en": "Partner B"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 312000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 324000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 3,
+          "label_ur": "ج",
+          "label_en": "Partner C"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 312000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 324000
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "rate",
+        "before": {
+          "type": "money",
+          "paisa": 50000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 52000
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "total_cost",
+        "before": {
+          "type": "money",
+          "paisa": 1040000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1080000
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "value",
+        "before": {
+          "type": "money",
+          "paisa": 1000000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 1040000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": {
+        "before_paisa": 3960000,
+        "after_paisa": 3920000,
+        "needs_confirm": false
+      },
+      "partners": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "before_paisa": -416000,
+          "after_paisa": -432000
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "before_paisa": -312000,
+          "after_paisa": -324000
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "before_paisa": -312000,
+          "after_paisa": -324000
+        }
+      ],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

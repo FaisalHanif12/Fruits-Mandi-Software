@@ -19,8 +19,8 @@
 //   button before anything is typed, and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Ban, FileText, Pencil } from 'lucide-react';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
+import { FileText } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -51,11 +51,15 @@ import {
   Notice,
   Num,
   PartyCard,
-  ReasonDialog,
+  EditBand,
+  EditReasonDialog,
+  EditReviewCard,
+  EntryActions,
   showToast,
   useErrorText,
 } from '../../../shared/ui';
-import { bikriFind } from '../api';
+import { useEditReview, useEntryMarks, useFixDayFlow, useFixStore } from '../../../shared/edit';
+import { bikriEditReview, bikriFind } from '../api';
 import { BikriToolbar } from '../components/BikriToolbar';
 import { SavedBikriView } from '../components/saved/SavedBikriView';
 import { PrintAction } from '../print/PrintAction';
@@ -76,6 +80,7 @@ import { ClosedDayNotice } from '../components/ClosedDayNotice';
 import { EditChangesCard } from '../components/EditChangesCard';
 import { LaterPostingEdit } from '../components/LaterPostingEdit';
 import type { Baseline } from '../edit-changes';
+import { lotMarkCells, saleMarkCells } from '../edit-marks';
 import { changedCellWords } from '../edit-view';
 import { editSource } from '../preview-source';
 import { HeaderCard } from '../components/HeaderCard';
@@ -211,6 +216,13 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   );
   const { query, stale, draft } = useBikriPreview(stores, source);
   const preview = query.data;
+  // The changes of an edit and their effect, worked out by the backend (plan 44, FR-7.70).
+  const editReview = useEditReview(
+    `bikri:${String(entryId ?? 0)}`,
+    entryId === undefined ? null : draft,
+    (typed) => bikriEditReview(entryId ?? 0, typed),
+  );
+  const reopened = useFixStore((state) => state.session);
   useDraftFills(stores, preview, stale);
 
   // Safety and saving (plan 13). The draft goes to the backend every 5 seconds; a save stops that.
@@ -255,7 +267,9 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const trySave = (andNext: boolean) => {
     if (edit !== null) {
       if (!edit.editable.editable) return;
-      if (edit.needsReason && edit.reason.get().trim() === '') {
+      // The backend says whether the entry needs a reason; until it has said, the day decides.
+      const reasonNeeded = editReview.review?.reason_required ?? edit.needsReason;
+      if (reasonNeeded && edit.reason.get().trim() === '') {
         setAskReason(true);
         return;
       }
@@ -381,6 +395,19 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   const saleChanged = useMemo(
     () => (diff === null ? undefined : changedCellWords(diff.saleCells, 'line', say, language)),
     [diff, say, language],
+  );
+
+  // What earlier edits changed in this posting: a small mark on each cell, with the words of the edit
+  // as its tip (PRD FR-7.71). The lots and the lines of the page are in the order of the posting.
+  const entryMarks = useEntryMarks('bikri', edit?.editable.bikri_id ?? null, true);
+  const lotMarks = lotMarkCells(
+    entryMarks,
+    lotRows.map((row) => row.rowId),
+  );
+  // Read again whenever any line of any lot changes (`allRows` changed).
+  const saleMarks = saleMarkCells(
+    entryMarks,
+    allRows.length === 0 ? [] : lotRows.map((row) => linesOf(stores, row.rowId)),
   );
 
   // A problem on a field of the "more" panel keeps the panel open; the weight field shows for a
@@ -577,17 +604,17 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           />
         )}
         {edit === null ? null : (
-          <div className="flex flex-wrap items-baseline gap-x-4">
+          <>
             <Localized id="bikri-edit-title" vars={{ number: String(edit.editable.number) }}>
               <h1 className="type-title" />
             </Localized>
-            <Localized
-              id="bikri-edit-help"
-              vars={{ date: isoToDisplayDate(edit.editable.entry_date) }}
-            >
-              <p className="type-body text-ink-muted" />
-            </Localized>
-          </div>
+            <EditBand
+              kind="bikri"
+              number={String(edit.editable.number)}
+              date={edit.editable.entry_date}
+              reopenedDays={reopened?.days ?? []}
+            />
+          </>
         )}
         <div
           onFocusCapture={() => {
@@ -599,6 +626,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             error={formError}
             onOpenBikri={openByNumber}
             editing={edit !== null}
+            marks={entryMarks}
             onDone={() => {
               // The ready lots are there: the next thing to type is the buyer of the first one.
               const first = stores.lots.getState().rows[0];
@@ -644,6 +672,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                 onCardAccount={setEditorCard}
                 moreForced={lotMoreForced}
                 cellChanged={lotChanged}
+                cellMarks={lotMarks}
                 canRemoveRow={edit === null ? undefined : isNewLot}
               />
               {lotRow === undefined || !isOwnLot(lotRow) ? null : (
@@ -680,6 +709,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                 onCardAccount={setEditorCard}
                 card={wide ? null : card}
                 cellChanged={saleChanged}
+                cellMarks={saleMarks}
               />
             </div>
             {wide ? null : numbers}
@@ -691,11 +721,14 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
               usesWeight={usesWeight}
             />
             {diff === null ? null : (
-              <EditChangesCard
-                items={diff.items}
-                before={beforeTotals}
-                after={lotPreview?.totals ?? null}
-              />
+              <>
+                <EditReviewCard
+                  review={editReview.review}
+                  pending={editReview.pending}
+                  error={editReview.error}
+                />
+                <EditChangesCard before={beforeTotals} after={lotPreview?.totals ?? null} />
+              </>
             )}
           </div>
           {wide ? (
@@ -733,21 +766,11 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
         />
       )}
       {edit === null ? null : (
-        <ReasonDialog
+        <EditReasonDialog
           open={askReason}
           onOpenChange={setAskReason}
-          title={<Localized id="bikri-edit-reason-title" />}
-          description={
-            <Localized
-              id="bikri-edit-reason-text"
-              vars={{ date: isoToDisplayDate(edit.editable.entry_date) }}
-            >
-              <span />
-            </Localized>
-          }
-          reasonLabel={<Localized id="bikri-edit-reason-label" />}
-          confirmLabel={<Localized id="bikri-edit-reason-confirm" />}
-          confirmVariant="primary"
+          date={edit.editable.entry_date}
+          initialReason={reopened?.reason ?? ''}
           error={null}
           busy={flow.busy}
           onConfirm={(reason) => {
@@ -881,8 +904,33 @@ function SavedBikri({ id }: { id: number }) {
   };
 
   const saved = detail.data?.status === 'saved';
-  // The first posting that can still be edited; the list of entries offers the others.
-  const firstEditable = detail.data?.postings.find((posting) => posting.editable);
+  const needsReopen = detail.data?.needs_reopen === true;
+  // The posting the Edit button opens: the first that can be edited, else (a closed day) the first
+  // that is still standing. The list of entries offers the others.
+  const firstEditable =
+    detail.data?.postings.find((posting) => posting.editable) ??
+    detail.data?.postings.find(
+      (posting) => !posting.reversed && posting.posting_type !== 'reversal',
+    );
+
+  // Edit on a closed day: the box asks for the reason, the days reopen, and the entry opens for
+  // editing. The days close again after the save or when the user leaves (plan 44, PRD FR-21.4).
+  const router = useRouter();
+  const fixFlow = useFixDayFlow();
+  const startEdit = (entryId: number) => {
+    if (!needsReopen || detail.data === undefined) {
+      openEdit(entryId);
+      return;
+    }
+    const posting = detail.data.postings.find((candidate) => candidate.entry_id === entryId);
+    fixFlow.start({
+      date: posting?.entry_date ?? detail.data.entry_date,
+      ownerHref: router.buildLocation({ to: '/bikri/book', search: { id, edit: entryId } }).href,
+      then: () => {
+        openEdit(entryId);
+      },
+    });
+  };
 
   let body;
   if (detail.isPending) {
@@ -898,7 +946,13 @@ function SavedBikri({ id }: { id: number }) {
       />
     );
   } else {
-    body = <SavedBikriView detail={detail.data} onEdit={saved ? openEdit : undefined} />;
+    body = (
+      <SavedBikriView
+        detail={detail.data}
+        onEdit={saved ? startEdit : undefined}
+        needsReopen={needsReopen}
+      />
+    );
   }
   return (
     <div className="flex flex-col gap-3">
@@ -912,33 +966,27 @@ function SavedBikri({ id }: { id: number }) {
           target={detail.data === undefined ? null : { id, number: detail.data.number }}
           enabled={!dialogOpen}
         />
-        {saved ? (
-          <>
-            <Button
-              disabled={firstEditable === undefined}
-              onClick={() => {
-                if (firstEditable !== undefined) openEdit(firstEditable.entry_id);
-              }}
-            >
-              <Pencil aria-hidden="true" className="size-icon-md" />
-              <Localized id="bikri-edit" />
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                setCancelling(true);
-              }}
-            >
-              <Ban aria-hidden="true" className="size-icon-md" />
-              <Localized id="bikri-cancel-bikri" />
-            </Button>
-          </>
+        {saved && detail.data !== undefined ? (
+          <EntryActions
+            flags={{
+              ...detail.data,
+              can_edit: detail.data.can_edit && firstEditable !== undefined,
+            }}
+            busy={fixFlow.busy}
+            onEdit={() => {
+              if (firstEditable !== undefined) startEdit(firstEditable.entry_id);
+            }}
+            onCancel={() => {
+              setCancelling(true);
+            }}
+          />
         ) : null}
         <Button variant="primary" shortcut={SHORTCUTS.newBikri} onClick={openNew}>
           <Localized id="bikri-new" />
         </Button>
       </BikriToolbar>
       {body}
+      {fixFlow.dialog}
       <CancelBikriFlow
         target={cancelling && detail.data !== undefined ? { id, number: detail.data.number } : null}
         onClose={() => {

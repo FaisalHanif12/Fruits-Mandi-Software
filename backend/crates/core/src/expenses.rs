@@ -37,7 +37,7 @@ use crate::vouchers::VoucherType;
 /// A دکان خرچہ as typed (PRD 16.2): head بنام, روکڑ جمع, split by the shares of the date (E2E-20).
 ///
 /// Field paths in errors: `date`, `expense_head_id`, `amount`, `paid_to`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ShopExpenseInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today (PRD FR-6.6).
     pub date: String,
@@ -65,7 +65,7 @@ pub struct ShopExpenseInput {
 ///
 /// Field paths in errors: `date`, `partner_id`, `amount`, `reason`, `return_by`, `taken_by`,
 /// `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct PersonalExpenseInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,
@@ -95,7 +95,7 @@ pub struct PersonalExpenseInput {
 /// A ذاتی خرچہ واپسی as typed (PRD 16.3): a partner gives money back. روکڑ بنام, drawings جمع.
 ///
 /// Field paths in errors: `date`, `partner_id`, `amount`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct PersonalReturnInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,
@@ -212,6 +212,18 @@ pub struct ExpensePreview {
     pub errors: Vec<FieldError>,
     /// What only warns.
     pub warnings: Vec<FieldError>,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl ExpensePreview {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the partner's کل رقم now and
+    /// after. The split of the one entry (`shares`) stays, because the munshi checks it.
+    pub fn hide_partners(&mut self) {
+        self.partner_effect = None;
+        self.partners_locked = true;
+    }
 }
 
 // ---- Money taken by a partner (PRD FR-16.2) ----

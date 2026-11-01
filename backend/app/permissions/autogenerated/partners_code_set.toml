@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-partners-code-set"
+description = "Enables the partners_code_set command without any pre-configured scope."
+commands.allow = ["partners_code_set"]
+
+[[permission]]
+identifier = "deny-partners-code-set"
+description = "Denies the partners_code_set command without any pre-configured scope."
+commands.deny = ["partners_code_set"]

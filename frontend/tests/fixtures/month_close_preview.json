@@ -104,5 +104,6 @@
   "income_paisa": 548800,
   "expense_paisa": 300000,
   "profit_paisa": 248800,
-  "total_paisa": 548800
+  "total_paisa": 548800,
+  "partners_locked": false
 }

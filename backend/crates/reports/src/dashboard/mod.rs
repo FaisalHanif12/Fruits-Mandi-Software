@@ -85,6 +85,7 @@ pub fn get(db: &Db, backup: BackupFacts) -> Result<Dashboard, ReportsError> {
             let (bikri_today, bikri_today_count) = lists::bikri_today(conn, &facts.today_iso)?;
             Ok(Dashboard {
                 today: facts.today_iso.clone(),
+                partners_locked: false,
                 tiles,
                 partners: strip::build(conn, today)?,
                 gardens: gardens

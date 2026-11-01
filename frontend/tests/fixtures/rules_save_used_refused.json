@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_RULE_USED",
+      "field": "value",
+      "values": {
+        "saved_lines": 2
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

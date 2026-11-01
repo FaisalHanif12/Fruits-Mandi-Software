@@ -808,19 +808,22 @@ pub(crate) fn run(
             None,
             amount(exp_dr.checked_sub(exp_cr)?),
         ));
-        all_rows.push(row(day, label(ids::R34_PARTNER_TAKEN), None, amount(taken)));
-        all_rows.push(row(
-            day,
-            label(ids::R34_PARTNER_RETURNED),
-            None,
-            amount(returned),
-        ));
-        all_rows.push(row(
-            day,
-            label(ids::R34_CAPITAL),
-            None,
-            amount(cap_cr.checked_sub(cap_dr)?),
-        ));
+        // What partners took, gave back and invested is behind the partner code (PRD FR-17.11).
+        if !typed.hide_partners {
+            all_rows.push(row(day, label(ids::R34_PARTNER_TAKEN), None, amount(taken)));
+            all_rows.push(row(
+                day,
+                label(ids::R34_PARTNER_RETURNED),
+                None,
+                amount(returned),
+            ));
+            all_rows.push(row(
+                day,
+                label(ids::R34_CAPITAL),
+                None,
+                amount(cap_cr.checked_sub(cap_dr)?),
+            ));
+        }
         all_rows.push(row(day, label(ids::R34_MONEY_LENT), None, amount(lent_out)));
         all_rows.push(row(
             day,
@@ -858,7 +861,7 @@ pub(crate) fn run(
             Some(fruit_qty),
             amount(paisa(fruit_value)?),
         ));
-        if let Some(day_shares) = shares.get(day) {
+        if let Some(day_shares) = shares.get(day).filter(|_| !typed.hide_partners) {
             // A heading row, so a partner's name below it reads as his share of the day.
             all_rows.push(row(day, label(ids::R34_PARTNER_SHARES), None, None));
             for (partner, profit) in day_shares {

@@ -5,8 +5,8 @@
 use mandi_services::core::vouchers::{
     AdvanceInput, AdvancesInput, AdvancesPreview, AdvancesReport, AdvancesReportInput,
     AdvancesSaved, PaymentInput, ReceiptInput, ReceiptsInput, ReceiptsSaved, VoucherCancelInput,
-    VoucherCancelled, VoucherEditInput, VoucherGetInput, VoucherPreview, VoucherPreviewInput,
-    VoucherRow, VoucherSaved, VouchersList, VouchersListInput,
+    VoucherCancelled, VoucherEditInput, VoucherEditable, VoucherGetInput, VoucherPreview,
+    VoucherPreviewInput, VoucherRow, VoucherSaved, VouchersList, VouchersListInput,
 };
 use mandi_services::{auth, vouchers};
 
@@ -176,6 +176,21 @@ pub async fn vouchers_get<R: tauri::Runtime>(
     run(app, "vouchers_get", move |ctx| {
         auth::require(ctx)?;
         vouchers::get(ctx, input.id)
+    })
+    .await
+}
+
+/// A saved voucher as the typed entry of its own type (all 13 types), for the edit screen to start
+/// from (plan 44 T2, PRD FR-7.70). Sending `entry` back to `vouchers_edit_preview` changes
+/// nothing. Read only. Errors: `ERR_NOT_FOUND` and `ERR_VOUCHER_CANCELLED` on `id`.
+#[tauri::command]
+pub async fn vouchers_open_for_edit<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: VoucherGetInput,
+) -> Result<VoucherEditable, UiError> {
+    run(app, "vouchers_open_for_edit", move |ctx| {
+        auth::require(ctx)?;
+        vouchers::open_for_edit(ctx, &input)
     })
     .await
 }

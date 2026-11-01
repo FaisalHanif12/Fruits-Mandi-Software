@@ -22,6 +22,7 @@
       "from_date": "2026-10-01",
       "to_date": null,
       "is_active": false,
+      "used": false,
       "note": ""
     },
     {
@@ -46,6 +47,7 @@
       "from_date": "2026-10-01",
       "to_date": null,
       "is_active": true,
+      "used": false,
       "note": ""
     },
     {
@@ -70,6 +72,7 @@
       "from_date": "2026-10-01",
       "to_date": null,
       "is_active": true,
+      "used": false,
       "note": ""
     }
   ],

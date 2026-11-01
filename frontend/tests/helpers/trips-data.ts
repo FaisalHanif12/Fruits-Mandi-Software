@@ -55,6 +55,7 @@ import { refusal, type RefusalItem } from './ui-error';
 import type { WorkingArg } from '../../src/bindings/WorkingArg';
 import type { PurchaseRow } from '../../src/features/purchases';
 import { paisaForTest } from './paisa';
+import { OPEN_ENTRY } from './entry-flags';
 
 const money = (rupees: number): ReturnType<typeof paisaForTest> => paisaForTest(rupees * 100);
 
@@ -248,6 +249,7 @@ const COST_RUPEES = [1_600, 1_200, 1_200] as const;
 /** The purchase of E2E-34 as the list and the card show it after 15 of 20 were sold. */
 export function e34Purchase(over: Partial<PurchaseRow> = {}): PurchaseRow {
   return {
+    ...OPEN_ENTRY,
     id: 7,
     version: 1,
     number: 1,
@@ -327,6 +329,7 @@ export function e34Results(): TripPartnerResult[] {
 /** The history entry of the purchase of E2E-34. */
 export function purchaseEntry(over: Partial<TripEntryRow> = {}): TripEntryRow {
   return {
+    ...OPEN_ENTRY,
     id: 11,
     version: 1,
     kind: 'purchase',
@@ -680,6 +683,7 @@ export function createTripBooks(options: TripsOptions = {}) {
       if (row === undefined) return refuse([{ code: 'ERR_NOT_FOUND', field: 'id' }]);
       const limit = input.entries_limit === 0 ? 100 : input.entries_limit;
       return {
+        partners_locked: false,
         row,
         purchases: store.purchases.filter((purchase) => purchase.trip.id === row.id),
         entries: store.entries.slice(input.entries_offset, input.entries_offset + limit),

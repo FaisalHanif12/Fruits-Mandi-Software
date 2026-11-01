@@ -29,6 +29,8 @@ pub(super) enum Via {
     Unlock,
     Recover,
     ChangePassword,
+    /// The Owner's password asked for a step on the partner code (set, change, reset).
+    PartnerCode,
 }
 
 impl Via {
@@ -38,19 +40,22 @@ impl Via {
             Via::Unlock => "unlock",
             Via::Recover => "recover",
             Via::ChangePassword => "change_password",
+            Via::PartnerCode => "partner_code",
         }
     }
 
     fn wrong_code(self) -> ErrorCode {
         match self {
-            Via::Login | Via::Unlock | Via::ChangePassword => ErrorCode::ErrWrongPassword,
+            Via::Login | Via::Unlock | Via::ChangePassword | Via::PartnerCode => {
+                ErrorCode::ErrWrongPassword
+            }
             Via::Recover => ErrorCode::ErrRecoveryCodeWrong,
         }
     }
 
     fn field(self) -> &'static str {
         match self {
-            Via::Login | Via::Unlock => "password",
+            Via::Login | Via::Unlock | Via::PartnerCode => "password",
             Via::ChangePassword => "current",
             Via::Recover => "recovery_code",
         }

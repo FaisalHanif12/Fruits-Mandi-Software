@@ -1,0 +1,95 @@
+{
+  "entity": "bikri",
+  "id": 1,
+  "versions": [
+    {
+      "audit_id": 39,
+      "at": "2026-10-11T09:00:00.000Z",
+      "local_date": "2026-10-11",
+      "local_time": "14:00",
+      "by": "Maher Adnan",
+      "action": "edit",
+      "reason": "اکرم کا ریٹ غلط تھا",
+      "changes": [
+        {
+          "path": "lots[0].sales[0].buyer_comm.amount_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 72000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 73200
+          }
+        },
+        {
+          "path": "lots[0].sales[0].buyer_rate_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 60000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 61000
+          }
+        },
+        {
+          "path": "lots[0].sales[0].buyer_total_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 1288000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 1309200
+          }
+        },
+        {
+          "path": "lots[0].sales[0].buyer_value_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 1200000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 1220000
+          }
+        },
+        {
+          "path": "lots[0].sales[0].seller_amount_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 1200000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 1220000
+          }
+        },
+        {
+          "path": "lots[0].sales[0].seller_comm.amount_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 72000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 73200
+          }
+        },
+        {
+          "path": "lots[0].sales[0].seller_rate_paisa",
+          "old": {
+            "kind": "money",
+            "paisa": 60000
+          },
+          "new": {
+            "kind": "money",
+            "paisa": 61000
+          }
+        }
+      ],
+      "changes_truncated": false
+    }
+  ]
+}

@@ -388,15 +388,6 @@ vouchers-view-cancelled = یہ واؤچر منسوخ ہو چکا ہے۔ وجہ:
 # review: pending
 vouchers-view-closed = اس واؤچر کا دن بند ہو چکا ہے، اس لیے اسے تبدیل نہیں کیا جا سکتا۔ مالک دن دوبارہ کھولے تو تبدیلی ہو سکتی ہے۔
 
-# review: pending
-vouchers-other-screen = یہ واؤچر کسی اور اسکرین کا ہے
-
-# review: pending
-vouchers-other-screen-help = اسے { -rokar } میں کھولیں۔
-
-# review: pending
-vouchers-other-screen-open = { -rokar } کھولیں
-
 ## Cancelling a voucher (PRD FR-7.8, FR-15.3). $number is its number, $amount its amount, $name the party.
 
 # review: pending
@@ -591,3 +582,10 @@ vouchers-collection-print-help = { $date } کی { -agrahi } فہرست، جیس�
 # The hint inside the search box of the collection list (the code, the name or the phone of a buyer).
 # review: pending
 vouchers-collection-search = گاہک کا کوڈ، نام یا فون لکھیں
+
+# A voucher of the other kinds (an expense, a loan, a khata, capital, a journal). $number, $amount, $name.
+# review: pending
+vouchers-cancel-text-other = { $number } (<num>{ $amount }</num>، { $name }) منسوخ ہو جائے گا۔ { -rokar } اور اس کے کھاتے پہلے جیسے ہو جائیں گے۔ یہ فہرست میں منسوخ کے طور پر رہے گا۔
+
+# review: pending
+vouchers-cancelled-other = { $number } منسوخ ہو گیا

@@ -13,9 +13,12 @@
 //! - `sale`: a sale in another shop (C21, C25): preview, save, cancel.
 
 mod cost;
+pub(crate) mod cost_edit;
+pub(crate) mod header_edit;
 mod make;
 mod read;
 mod sale;
+pub(crate) mod sale_edit;
 
 pub(crate) use read::cards_of_partner;
 

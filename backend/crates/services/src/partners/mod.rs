@@ -21,7 +21,7 @@ use mandi_domain::core::masters::AccountToMake;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::partners::{
     CAPITAL_CONTROL, DRAWINGS_CONTROL, MAX_PARTNERS, PartnerCreateInput, PartnerDetail,
-    PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput,
+    PartnerOverviewRow, PartnerRow, PartnerUpdateInput, PartnersCheckSharesInput, PartnersList,
     PartnersSetSharesInput, ShareHistoryRow, SharesCheck, check_listed, check_shares, not_100,
     read_shares, venture_account,
 };
@@ -120,6 +120,27 @@ fn too_many() -> ServiceError {
 pub fn list(ctx: &Context) -> Result<Vec<PartnerRow>, ServiceError> {
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| rows_in(conn, &today.to_iso()))
+}
+
+/// The list for the pickers, as `partners_list` answers it (PRD FR-17.11, plan 44): the partners
+/// by name, and `partners_locked` true while the partner section is locked, when the shares are
+/// left out (set to 0).
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn list_view(ctx: &Context) -> Result<PartnersList, ServiceError> {
+    let mut partners = list(ctx)?;
+    let partners_locked = crate::partner_code::is_locked(ctx)?;
+    if partners_locked {
+        // Names only: the shares are behind the code (PRD FR-17.11).
+        for partner in &mut partners {
+            partner.share_bps = 0;
+        }
+    }
+    Ok(PartnersList {
+        partners,
+        partners_locked,
+    })
 }
 
 /// One partner with his share history, oldest first.

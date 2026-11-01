@@ -411,3 +411,18 @@ openings-none-with-help = Choose "No opening balance yet" to write the first one
 
 # review: pending
 openings-show-all-button = Show all accounts
+
+## An opening balance needs an open day (plan 44, PRD FR-10.11): an account itself saves on any day.
+
+# review: pending
+accounts-opening-closed-today-open = This date is closed, so an opening balance cannot go on it. The account saves on any day, but an opening balance goes on the date of an open day.
+
+# review: pending
+accounts-opening-closed-today-closed = Today is closed too, so an opening balance cannot go on now. The account can be saved without an opening balance, or the day can be reopened to put the balance on.
+
+# $today: today's date, DD-MM-YYYY.
+# review: pending
+accounts-opening-closed-use-today = Use today's date ({ $today })
+
+# review: pending
+accounts-opening-closed-without = Save without the opening balance

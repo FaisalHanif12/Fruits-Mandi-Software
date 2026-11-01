@@ -11,11 +11,12 @@ mod advance;
 mod capital_kinds;
 mod cash_kinds;
 mod common;
-mod edit;
+pub(crate) mod edit;
 mod expense_reads;
 mod general_kind;
 mod khata_kinds;
 mod kinds;
+mod open_edit;
 mod payment;
 mod posting_type;
 mod preview;
@@ -25,6 +26,7 @@ mod regular;
 
 use mandi_db::vouchers as repo;
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::EntryFlags;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
 use mandi_domain::core::validate;
@@ -41,6 +43,7 @@ pub use edit::{cancel, edit, get};
 pub use expense_reads::{preview_expense, repeat_last_month_preview};
 pub use general_kind::{general_preview, general_save};
 pub use khata_kinds::{save_khata_in, save_khata_out};
+pub use open_edit::open_for_edit;
 pub use payment::save_payment;
 pub use preview::preview;
 pub use reads::{advances_report, collection_list, open_bills, open_payables};
@@ -60,7 +63,7 @@ pub const MAX_LIST_LINES: usize = 500;
 /// # Errors
 /// The date codes on `from` and `to`; `ServiceError::Db`.
 pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, ServiceError> {
-    let (closed, today) = day::window(ctx)?;
+    let (_, today) = day::window(ctx)?;
     let mut errors = validate::FieldErrors::default();
     let bound = |errors: &mut validate::FieldErrors, field: &str, text: &str| {
         if text.trim().is_empty() {
@@ -113,7 +116,7 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         };
         Ok::<_, ServiceError>((rows, totals, months))
     })?;
-    mark_editable(&mut rows, closed);
+    mark_flags(ctx, &mut rows)?;
     // The total is of what is saved: a cancelled voucher no longer moves money. It is given only
     // for one type (PRD FR-15.1).
     let saved = Paisa::try_from_paisa(totals.saved_paisa).map_err(money_error)?;
@@ -135,14 +138,18 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
     })
 }
 
-/// Sets `editable` on rows read from the repository: saved, and dated after the "closed up to"
-/// day (PRD FR-6.6). Dates are `YYYY-MM-DD`, so text order is date order.
-pub(crate) fn mark_editable(rows: &mut [VoucherRow], closed: Option<BusinessDate>) {
-    let closed = closed.map(BusinessDate::to_iso);
+/// Sets the flags of rows read from the repository (PRD FR-7.70, FR-7.71, FR-21.4): both buttons
+/// work on a saved voucher; on a closed day the row asks for a reopen; a month-closed month and a
+/// cancelled voucher are locked; the stamp of the last edit is added.
+pub(crate) fn mark_flags(ctx: &Context, rows: &mut [VoucherRow]) -> Result<(), ServiceError> {
+    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+    let marker = ctx.db.read(|conn| {
+        crate::flags::Marker::load(conn, mandi_domain::core::edit::EditEntity::Voucher, &ids)
+    })?;
     for row in rows {
-        row.editable = row.status == "saved"
-            && closed
-                .as_deref()
-                .is_none_or(|c| row.entry_date.as_str() > c);
+        let mut flags = EntryFlags::open();
+        marker.mark(row.id, &row.entry_date, row.status == "saved", &mut flags);
+        row.flags = flags;
     }
+    Ok(())
 }

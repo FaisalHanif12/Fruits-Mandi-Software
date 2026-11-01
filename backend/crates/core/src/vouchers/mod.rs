@@ -13,7 +13,8 @@ pub use entry::{
     LineSource, MAX_OPEN_ROWS, MadeRegular, MakeRegularInput, OpenBill, OpenBills, OpenBillsInput,
     OpenPayables, OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult,
     ReceiptsInput, ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput,
-    VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
+    VoucherEditable, VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview,
+    VoucherPreviewInput,
 };
 
 use serde::{Deserialize, Serialize};
@@ -142,19 +143,19 @@ impl VoucherMode {
 ///     serde_json::from_str(r#"{"mode":"cash","cheque_no":"","bank_account_id":null}"#).unwrap();
 /// assert_eq!(sent.names_sent(), vec!["mode"]);
 /// ```
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RemovedPaymentFields {
     /// The old mode (`cash`, `bank` or `cheque`). Any value is refused.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<serde_json::Value>,
     /// The old bank account. Any value but null is refused.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bank_account_id: Option<serde_json::Value>,
     /// The old cheque number. Refused unless it is null or empty text.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cheque_no: Option<serde_json::Value>,
     /// The old cheque date. Refused unless it is null or empty text.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cheque_date: Option<serde_json::Value>,
 }
 
@@ -187,7 +188,7 @@ impl RemovedPaymentFields {
 
 /// A پیشگی voucher as typed (PRD 15.1, 15.4): money given to a seller before his goods are sold.
 /// All values are text; the backend checks every one.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct AdvanceInput {
     /// The day, `DD-MM-YYYY` or a shortcut. Must be an open day, not after today (PRD FR-6.6).
     pub date: String,
@@ -402,9 +403,12 @@ pub struct VoucherRow {
     /// The journal entry of the live posting. For a cancelled voucher, its last posting.
     #[ts(type = "number | null")]
     pub entry_id: Option<i64>,
-    /// True if the voucher is saved and its day is still open, so it can be edited or cancelled
-    /// (PRD FR-15.3, FR-6.6).
-    pub editable: bool,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// Ask for a seller's advances (PRD FR-7.60).
@@ -537,6 +541,17 @@ pub struct DayCloseSummary {
     /// Their نگ.
     #[ts(type = "number")]
     pub open_qty: i64,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl DayCloseSummary {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's share of the days.
+    pub fn hide_partners(&mut self) {
+        self.partners.clear();
+        self.partners_locked = true;
+    }
 }
 
 impl DayCloseSummary {
@@ -550,6 +565,7 @@ impl DayCloseSummary {
             partners: Vec::new(),
             open_lots: 0,
             open_qty: 0,
+            partners_locked: false,
         }
     }
 }

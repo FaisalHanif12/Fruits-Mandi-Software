@@ -1,24 +1,31 @@
 //! Partners and their shares (PRD 17.1 to 17.3, plan 11). Every command needs the signed-in
 //! Owner. Partners do not log in (PRD FR-2.4), so no user is made for a partner.
+//!
+//! Once a partner code is set (PRD FR-17.11), every command here except `partners_list` also needs
+//! the partner section to be open and answers `ERR_PARTNER_LOCKED` when it is not. `partners_list`
+//! gives the names only while it is locked (`partners_locked`, every `share_bps` 0).
 
 use mandi_services::core::partners::{
     PartnerCreateInput, PartnerDetail, PartnerOverviewRow, PartnerRow, PartnerUpdateInput,
-    PartnersCheckSharesInput, PartnersGetInput, PartnersSetSharesInput, SharesCheck,
+    PartnersCheckSharesInput, PartnersGetInput, PartnersList, PartnersSetSharesInput, SharesCheck,
 };
 use mandi_services::core::statement::{PartnerStatement, PartnersStatementInput};
+use mandi_services::partner_code;
 use mandi_services::{auth, partners};
 
 use super::run;
 use crate::error::UiError;
 
-/// Every partner, active ones first, then by id. `share_bps` is the share on today's date.
+/// Every partner, active ones first, then by id. `share_bps` is the share on today's date. While
+/// the partner section is locked (PRD FR-17.11) it names them only: every `share_bps` is 0 and
+/// `partners_locked` is true.
 #[tauri::command]
 pub async fn partners_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-) -> Result<Vec<PartnerRow>, UiError> {
+) -> Result<PartnersList, UiError> {
     run(app, "partners_list", move |ctx| {
         auth::require(ctx)?;
-        partners::list(ctx)
+        partners::list_view(ctx)
     })
     .await
 }
@@ -31,6 +38,7 @@ pub async fn partners_get<R: tauri::Runtime>(
 ) -> Result<PartnerDetail, UiError> {
     run(app, "partners_get", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::get(ctx, input.id)
     })
     .await
@@ -47,6 +55,7 @@ pub async fn partners_create<R: tauri::Runtime>(
 ) -> Result<PartnerRow, UiError> {
     run(app, "partners_create", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::create(ctx, &actor, &input)
     })
     .await
@@ -61,6 +70,7 @@ pub async fn partners_update<R: tauri::Runtime>(
 ) -> Result<PartnerRow, UiError> {
     run(app, "partners_update", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::update(ctx, &actor, &input)
     })
     .await
@@ -76,6 +86,7 @@ pub async fn partners_set_shares<R: tauri::Runtime>(
 ) -> Result<Vec<PartnerRow>, UiError> {
     run(app, "partners_set_shares", move |ctx| {
         let actor = auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::set_shares(ctx, &actor, &input)
     })
     .await
@@ -89,6 +100,7 @@ pub async fn partners_check_shares<R: tauri::Runtime>(
 ) -> Result<SharesCheck, UiError> {
     run(app, "partners_check_shares", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::check(ctx, &input)
     })
     .await
@@ -102,6 +114,7 @@ pub async fn partners_overview<R: tauri::Runtime>(
 ) -> Result<Vec<PartnerOverviewRow>, UiError> {
     run(app, "partners_overview", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::overview(ctx)
     })
     .await
@@ -117,6 +130,7 @@ pub async fn partners_statement<R: tauri::Runtime>(
 ) -> Result<PartnerStatement, UiError> {
     run(app, "partners_statement", move |ctx| {
         auth::require(ctx)?;
+        partner_code::require_unlocked(ctx)?;
         partners::statement(ctx, &input)
     })
     .await

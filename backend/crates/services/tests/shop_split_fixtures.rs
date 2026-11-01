@@ -19,7 +19,7 @@ use common::set_today;
 use mandi_services::core::arrivals::ArrivalEntryInput;
 use mandi_services::core::bikri::{ReadyGoodsInput, StockListInput};
 use mandi_services::core::error::ErrorCode;
-use mandi_services::core::gardens::{GardenEntryInput, GardenInput};
+use mandi_services::core::gardens::{GardenEntryInput, GardenGetInput, GardenInput};
 use mandi_services::core::purchases::PurchaseEntryInput;
 use mandi_services::core::split::SplitInput;
 use mandi_services::core::trips::{OtherSaleInput, TripInput};
@@ -335,5 +335,18 @@ fn shop_split_fixtures_of_the_entries_the_split_and_the_sales_in_another_shop() 
         "gardens_entry_preview_other_sale_with_arrival",
         &sale_json,
         &gardens::entry_preview(ctx, &typed::<GardenEntryInput>(&sale_json)).unwrap(),
+    );
+    // The garden after a sale in another shop from that arrival, with a note: its history row carries
+    // the entry's number, the arrival and the note, so the edit form can open it again (plan 44).
+    let noted = json!({
+        "type": "other_sale", "garden_id": garden.id, "date": "10-10-2026", "shop": "حاجی شاپ",
+        "arrival_id": arrival, "qty": "60", "amount": "20,000", "note": "نوٹ"
+    });
+    gardens::entry_save(ctx, owner, &typed::<GardenEntryInput>(&noted)).unwrap();
+    let get = json!({ "id": garden.id, "history_offset": 0, "history_limit": 0 });
+    pair(
+        "gardens_get_with_arrival_sale",
+        &get,
+        &gardens::get(ctx, &typed::<GardenGetInput>(&get)).unwrap(),
     );
 }

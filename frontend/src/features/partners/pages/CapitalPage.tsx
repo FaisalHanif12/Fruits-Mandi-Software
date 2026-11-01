@@ -13,25 +13,34 @@
 //   nothing: the form is text in this screen's state (F39).
 // - Four states: the day, the form, the preview (loading, error with a retry) and the list.
 
+import { PartnerGate } from '../components/PartnerGate';
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
+import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { ErrorState, LoadingState, showToast, FormAside } from '../../../shared/ui';
 import {
+  ClosedCashEntry,
   EntryBalances,
   EntryFrame,
   EntryNotes,
+  VoucherEditBoxes,
+  VoucherEditTop,
+  isReadyToEdit,
   kindId,
   previewRefusal,
+  useEditDraft,
   useEntryPreview,
   useFollowType,
+  useVoucherEdit,
 } from '../../cashbook';
-import { vouchersPreview } from '../../vouchers';
+import { useVoucherEditable, vouchersPreview, type VoucherEditable } from '../../vouchers';
 import {
   CAPITAL_FIELD_PATHS,
+  capitalDraftOf,
   buildCapital,
   capitalIsFilled,
   changeCapitalType,
@@ -51,14 +60,25 @@ interface EditorProps {
   today: string;
   urlType: CapitalType;
   urlPartner: number | undefined;
+  /** The saved voucher open for edit (plan 44); null for a new entry. */
+  editable?: VoucherEditable | null;
+  initial?: CapitalDraft | null;
 }
 
-function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
+function CapitalEditor({
+  today,
+  urlType,
+  urlPartner,
+  editable = null,
+  initial = null,
+}: EditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [draft, setDraft] = useState<CapitalDraft>(() =>
-    newCapitalDraft(urlType, today, urlPartner === undefined ? '' : String(urlPartner)),
+  const [draft, setDraft] = useState<CapitalDraft>(
+    () =>
+      initial ??
+      newCapitalDraft(urlType, today, urlPartner === undefined ? '' : String(urlPartner)),
   );
   const [tried, setTried] = useState(false);
   useFollowType(urlType, (type) => {
@@ -78,7 +98,8 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
     () => (draft.amount.trim() === '' ? null : buildCapital(draft, false)),
     [draft],
   );
-  const { query, current } = useEntryPreview(entry);
+  const edit = useVoucherEdit(editable, entry);
+  const { query, current } = useEntryPreview(entry, edit?.editing.row.id ?? null);
   // An answer about another type (kept on screen while the next one is on its way) is never shown.
   const preview =
     entry === null || query.data?.type !== draft.type ? undefined : query.data.preview;
@@ -89,20 +110,29 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
   const flow = useEntrySaveFlow({
     draftText,
     build: (confirm) => buildCapital(draft, confirm),
-    save: (input) => saveCapital.mutateAsync(input),
-    freshCash: (input) => vouchersPreview(input, null).then((answer) => answer.cash),
+    save: (input) => (edit === null ? saveCapital.mutateAsync(input) : edit.send(input)),
+    freshCash: (input) =>
+      vouchersPreview(input, edit?.editing.row.id ?? null).then((answer) => answer.cash),
     cash: preview?.cash,
     current,
     onSaved: (saved) => {
-      showToast(
-        'success',
-        l10n.getString('cashbook-saved', {
-          kind: draft.type,
-          number: l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
-            number: String(saved.number),
-          }),
-        }),
-      );
+      const number = l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
+        number: String(saved.number),
+      });
+      if (edit !== null) {
+        // An edit is done: the days reopened for it close again and a new entry starts (plan 44).
+        showToast('success', l10n.getString('cashbook-edited', { number }));
+        void finishFixSession(l10n);
+        void navigate({
+          to: CAPITAL_PATH,
+          search: {
+            type: draft.type,
+            ...(draft.partnerId === '' ? {} : { partner: Number(draft.partnerId) }),
+          },
+        });
+        return;
+      }
+      showToast('success', l10n.getString('cashbook-saved', { kind: draft.type, number }));
       setDraft((previous) => nextCapitalDraft(previous));
       setTried(false);
       window.requestAnimationFrame(() => {
@@ -114,6 +144,11 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
 
   const save = async (): Promise<boolean> => {
     setTried(true);
+    // An entry of an earlier day asks why it is changed, once (PRD FR-7.70).
+    if (edit?.needsReason() === true) {
+      edit.setAskReason(true);
+      return false;
+    }
     return flow.save();
   };
   const startNew = () => {
@@ -144,6 +179,8 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
       types={CAPITAL_TYPES.map((value) => ({ value, labelId: `cashbook-type-${kindId(value)}` }))}
       type={draft.type}
       onType={onType}
+      top={edit === null ? undefined : <VoucherEditTop edit={edit} />}
+      lockTypes={edit !== null}
       path={CAPITAL_PATH}
       leaveTo="/partners"
       filled={filled}
@@ -157,9 +194,22 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
       below={<CapitalHistorySection partnerId={partnerId} />}
     >
       <FormAside
-        form={<CapitalForm draft={draft} onChange={change} error={error} />}
+        form={<CapitalForm draft={draft} onChange={change} error={error} marks={edit?.marks} />}
         aside={
           <>
+            {edit === null ? null : (
+              <VoucherEditBoxes
+                edit={edit}
+                busy={flow.busy}
+                onReason={() => {
+                  void flow.save();
+                }}
+                onCancelled={() => {
+                  void finishFixSession(l10n);
+                  void navigate({ to: CAPITAL_PATH, search: { type: draft.type } });
+                }}
+              />
+            )}
             <EntryBalances preview={preview} />
             <EntryNotes warnings={preview?.warnings ?? []} cash={preview?.cash} />
             {query.isError && entry !== null ? (
@@ -178,8 +228,44 @@ function CapitalEditor({ today, urlType, urlPartner }: EditorProps) {
   );
 }
 
+/** A saved voucher open for edit (`?id=`): it waits for the voucher and its form, then edits it. */
+function CapitalEdit({ id, today }: { id: number; today: string }) {
+  const editable = useVoucherEditable(id);
+  const kind = editable.data?.entry.type;
+  const isCapital = kind === undefined || CAPITAL_TYPES.some((type) => type === kind);
+  const ready = editable.data !== undefined && isReadyToEdit(editable.data.row);
+  const draft = useEditDraft(isCapital && ready ? editable.data : undefined, capitalDraftOf);
+  // An entry of another screen opens on its own screen.
+  if (editable.data !== undefined && !isCapital) return <OpenOnItsScreen row={editable.data.row} />;
+  if (editable.data !== undefined && !ready) {
+    return <ClosedCashEntry titleId="partners-capital-screen-title" row={editable.data.row} />;
+  }
+  if (editable.isError || draft.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="cashbook-load-failed" />}
+        error={uiErrorOf(editable.isError ? editable.error : draft.error)}
+        onRetry={() => {
+          void editable.refetch();
+        }}
+      />
+    );
+  }
+  if (editable.data === undefined || draft.data === undefined) return <LoadingState />;
+  return (
+    <CapitalEditor
+      key={`${String(id)}-${String(editable.data.row.version)}`}
+      today={today}
+      urlType={draft.data.type}
+      urlPartner={undefined}
+      editable={editable.data}
+      initial={draft.data}
+    />
+  );
+}
+
 /** The route's page: it waits for today, then opens the form for the type in the address. */
-export function CapitalPage() {
+function CapitalPageScreen() {
   const day = useDayStatus();
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
   const search = parseCapitalSearch(rawSearch);
@@ -195,6 +281,7 @@ export function CapitalPage() {
       />
     );
   }
+  if (search.id !== undefined) return <CapitalEdit id={search.id} today={day.data.today} />;
   return (
     <CapitalEditor
       key="new"
@@ -202,5 +289,14 @@ export function CapitalPage() {
       urlType={search.type ?? 'capital_in'}
       urlPartner={search.partner}
     />
+  );
+}
+
+/** The screen behind the partner code (plan 44, PRD FR-17.11). */
+export function CapitalPage() {
+  return (
+    <PartnerGate>
+      <CapitalPageScreen />
+    </PartnerGate>
   );
 }

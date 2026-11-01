@@ -12,7 +12,7 @@ import type { Paisa } from '../../../shared/format';
 import { isNegativePaisa } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { formNavigationProps } from '../../../shared/keyboard';
-import { Button, EmptyState, Num, ScriptText } from '../../../shared/ui';
+import { Button, EmptyState, Num, PartnerLockedBox, ScriptText } from '../../../shared/ui';
 import { useOpenDestination } from '../destinations';
 
 function Figure({ label, paisa }: { label: string; paisa: Paisa }) {
@@ -57,8 +57,16 @@ function PartnerCard({ partner }: { partner: DashboardPartner }) {
   );
 }
 
-export function PartnerStrip({ partners }: { partners: readonly DashboardPartner[] }) {
+export function PartnerStrip({
+  partners,
+  locked,
+}: {
+  partners: readonly DashboardPartner[];
+  /** The partner code is not entered: the cards are a box that asks for it (PRD FR-17.11). */
+  locked: boolean;
+}) {
   const navigate = useNavigate();
+  if (locked) return <PartnerLockedBox />;
   if (partners.length === 0) {
     return (
       <EmptyState

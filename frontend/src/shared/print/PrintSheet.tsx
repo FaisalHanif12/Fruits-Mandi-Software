@@ -31,6 +31,12 @@ export function PrintSheet({ data, page, columns, layout = 'goods' }: PrintSheet
         </div>
       ) : null}
       <PrintHeader header={data.header} />
+      {/* A reprint after a correction cannot be taken for the first print (PRD FR-7.71). */}
+      {data.revised_on === null ? null : (
+        <p className="print-revised">
+          {l10n.getString('edit-print-revised', { date: data.revised_on })}
+        </p>
+      )}
       {layout === 'r5' ? (
         <PrintR5 page={page} paper={data.paper} />
       ) : (

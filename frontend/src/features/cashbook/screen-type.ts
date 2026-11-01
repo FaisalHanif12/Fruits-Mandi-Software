@@ -28,15 +28,30 @@ function pick<T extends string>(types: readonly T[], value: unknown): T | null {
  */
 export interface TypeSearch<T extends string> {
   type?: T;
+  /** A saved entry open for edit (`?id=12`, plan 44, PRD FR-7.70). */
+  id?: number;
+}
+
+/** A whole positive number of the address, or null. */
+function idOf(value: unknown): number | null {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function parser<T extends string>(types: readonly T[]) {
   return (search: Record<string, unknown>): TypeSearch<T> => {
     const type = pick(types, search['type']);
-    return type === null ? {} : { type };
+    const id = idOf(search['id']);
+    return { ...(type === null ? {} : { type }), ...(id === null ? {} : { id }) };
   };
 }
 
 export const parseExpenseSearch = parser(EXPENSE_TYPES);
 export const parseLentSearch = parser(LENT_TYPES);
 export const parseKhataSearch = parser(KHATA_TYPES);
+
+/** The address of the جنرل screen: `/rokar/general?id=12` opens a saved journal for edit (plan 44). */
+export function parseGeneralSearch(search: Record<string, unknown>): { id?: number } {
+  const id = idOf(search['id']);
+  return id === null ? {} : { id };
+}

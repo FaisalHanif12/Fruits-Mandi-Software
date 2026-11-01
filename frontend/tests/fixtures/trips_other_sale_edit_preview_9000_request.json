@@ -1,0 +1,15 @@
+{
+  "confirm_cash_below_zero": false,
+  "id": 2,
+  "reason": "",
+  "sale": {
+    "amount": "9,000",
+    "date": "10-10-2026",
+    "note": null,
+    "purchase_id": 1,
+    "qty": "15",
+    "shop": "حاجی کی دکان",
+    "trip_id": 1
+  },
+  "version": 2
+}

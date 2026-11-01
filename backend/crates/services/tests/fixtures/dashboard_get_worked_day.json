@@ -283,6 +283,8 @@
   ],
   "attention": {
     "items": [],
-    "total_count": 0
-  }
+    "total_count": 0,
+    "partners_locked": false
+  },
+  "partners_locked": false
 }

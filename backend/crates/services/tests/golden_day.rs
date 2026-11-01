@@ -1483,3 +1483,7 @@ mod fruit_taken;
 // Plan 40: the dead amount (E2E-44): the tiles, the refusals and the trial balance.
 #[path = "golden_day/dead_amount.rs"]
 mod dead_amount;
+
+// Plan 44: reopen, fix and close again (E2E-45).
+#[path = "golden_day/fix.rs"]
+mod fix;

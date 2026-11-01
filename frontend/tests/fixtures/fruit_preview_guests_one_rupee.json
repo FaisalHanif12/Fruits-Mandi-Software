@@ -96,5 +96,6 @@
   },
   "errors": [],
   "warnings": [],
-  "rate_hint": null
+  "rate_hint": null,
+  "partners_locked": false
 }

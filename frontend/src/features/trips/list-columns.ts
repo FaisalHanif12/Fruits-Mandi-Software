@@ -4,6 +4,7 @@
 // area minus the 64 px rail; less used columns come with the wider layout steps and a list never
 // scrolls sideways (NFR-USE-15, Code Standards F22). A cancelled entry says so in words.
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { purchaseNumberText } from '../purchases';
@@ -132,7 +133,13 @@ export const ENTRY_COLUMNS: readonly ListColumn<TripEntryRow>[] = [
     field: 'state',
     type: 'text',
     headerId: 'trips-col-state',
-    value: (row, { text }) => (row.cancelled ? text('trips-entry-cancelled') : ''),
+    value: (row, context) =>
+      statusWithEdited(
+        row.cancelled ? context.text('trips-entry-cancelled') : '',
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
   {
     field: 'detail',

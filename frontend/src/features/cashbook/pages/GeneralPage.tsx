@@ -14,11 +14,13 @@
 //   the totals (waiting, failed with a retry, the answer) and the screen itself.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { UiError } from '../../../bindings/UiError';
 import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { uiErrorOf } from '../../../shared/api';
+import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { createEntryStore } from '../../../shared/grid';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { isoToDisplayDate } from '../../../shared/format';
@@ -33,13 +35,25 @@ import {
   showToast,
   useErrorText,
   FormCard,
+  fieldMark,
 } from '../../../shared/ui';
+import { useVoucherEditable, vouchersPreview } from '../../vouchers';
 import { GeneralLinesSection } from '../components/GeneralLinesSection';
+import { GeneralListSection } from '../components/GeneralListSection';
 import { GeneralPeople } from '../components/GeneralPeople';
 import { GeneralSummary } from '../components/GeneralSummary';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
+import {
+  ClosedCashEntry,
+  VoucherEditBoxes,
+  VoucherEditTop,
+  isReadyToEdit,
+  useVoucherEdit,
+} from '../edit-voucher';
+import { generalSeedOf, useEditDraft, type GeneralSeed } from '../edit-seed';
 import { previewRefusal } from '../entry-support';
+import { journalMarkCells } from '../edit-marks';
 import {
   GENERAL_ACCOUNT,
   GENERAL_FIELD_PATHS,
@@ -56,6 +70,8 @@ import {
 } from '../general-draft';
 import { generalPreview } from '../api';
 import { useGeneralPreview, useSaveGeneral } from '../hooks';
+import { parseGeneralSearch } from '../screen-type';
+import type { VoucherEditable, VoucherEntry } from '../types';
 
 /** The address of this screen. */
 const GENERAL_PATH = '/rokar/general';
@@ -69,6 +85,18 @@ function newStore() {
   return createEntryStore(Array.from({ length: GENERAL_START_LINES }, () => ({})));
 }
 
+/** The grid's store filled with the lines of a saved entry, each with its account (plan 44). */
+function seededStore(seed: GeneralSeed) {
+  const store = createEntryStore(seed.lines.map((line) => line.typed));
+  const { rows, updatePicked } = store.getState();
+  seed.lines.forEach((line, index) => {
+    const row = rows[index];
+    if (row !== undefined && line.account !== null)
+      updatePicked(row.rowId, GENERAL_ACCOUNT, line.account);
+  });
+  return store;
+}
+
 /** A refusal made of the problems at one line's field, for the field under the grid. */
 function refusalOf(items: readonly UiErrorItem[]): UiError | null {
   return items.length === 0 ? null : { ok: false, errors: [...items], ref: '' };
@@ -76,21 +104,44 @@ function refusalOf(items: readonly UiErrorItem[]): UiError | null {
 
 interface EditorProps {
   initialDate: string;
+  /** Today, `YYYY-MM-DD`, for the list of saved entries. */
+  today: string;
   /** The entry was saved or abandoned: a new, empty one starts, on the same day. */
   onFinished: (date: string) => void;
+  /** The saved voucher open for edit (plan 44); null for a new entry. */
+  editable?: VoucherEditable | null;
+  /** The lines of the saved entry, to fill the grid. */
+  seed?: GeneralSeed | null;
 }
 
-function GeneralEditor({ initialDate, onFinished }: EditorProps) {
+function GeneralEditor({
+  initialDate,
+  today,
+  onFinished,
+  editable = null,
+  seed = null,
+}: EditorProps) {
   const { l10n } = useLocalization();
+  const navigate = useNavigate();
   const language = useLanguage();
   const errorText = useErrorText();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [store] = useState(newStore);
+  const [store] = useState(() => (seed === null ? newStore() : seededStore(seed)));
   const rows = store((state) => state.rows);
   const focus = store((state) => state.focus);
   const [date, setDate] = useState(initialDate);
-  const [narration, setNarration] = useState('');
-  const [people, setPeople] = useState<PeopleMap>({});
+  const [narration, setNarration] = useState(seed?.narration ?? '');
+  const [people, setPeople] = useState<PeopleMap>(() => {
+    // The one-time person of each saved line is chosen again, as when it was typed.
+    const chosen: Record<string, PersonChoice> = {};
+    seed?.lines.forEach((line, index) => {
+      const row = store.getState().rows[index];
+      if (row !== undefined && line.person !== null) {
+        chosen[row.rowId] = { text: displayName(line.person, language), person: line.person };
+      }
+    });
+    return chosen;
+  });
   const [tried, setTried] = useState(false);
   const [editorCard, setEditorCard] = useState<number | null>(null);
 
@@ -103,6 +154,15 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
         : { input: buildGeneralPreview(date, sent.lines), rowIds: sent.rowIds },
     [sent, date],
   );
+  // The entry as the backend's review reads it (plan 44), once there are lines.
+  const reviewEntry = useMemo<VoucherEntry | null>(
+    () =>
+      sent.lines.length === 0
+        ? null
+        : { type: 'general', ...buildGeneral(date, narration, sent.lines, false) },
+    [sent, date, narration],
+  );
+  const edit = useVoucherEdit(editable, reviewEntry);
   const { query, current } = useGeneralPreview(ask);
   const answer = ask === null ? undefined : query.data;
   const preview = answer?.preview;
@@ -121,21 +181,29 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
   const flow = useEntrySaveFlow({
     draftText,
     build: (confirm) => buildGeneral(date, narration, sent.lines, confirm),
-    save: (input) => saveGeneral.mutateAsync(input),
+    save: (input) =>
+      edit === null ? saveGeneral.mutateAsync(input) : edit.send({ type: 'general', ...input }),
+    // An edit asks the same function as the save, with the entry it replaces taken out first.
     freshCash: (input) =>
-      generalPreview(buildGeneralPreview(input.date, input.lines)).then((fresh) => fresh.cash),
+      edit === null
+        ? generalPreview(buildGeneralPreview(input.date, input.lines)).then((fresh) => fresh.cash)
+        : vouchersPreview({ type: 'general', ...input }, edit.editing.row.id).then(
+            (fresh) => fresh.cash,
+          ),
     cash: preview?.cash,
     current,
     onSaved: (saved) => {
-      showToast(
-        'success',
-        l10n.getString('cashbook-saved', {
-          kind: GENERAL_KIND,
-          number: l10n.getString(`vouchers-number-${GENERAL_KIND}`, {
-            number: String(saved.number),
-          }),
-        }),
-      );
+      const number = l10n.getString(`vouchers-number-${GENERAL_KIND}`, {
+        number: String(saved.number),
+      });
+      if (edit !== null) {
+        // An edit is done: the days reopened for it close again and a new entry starts (plan 44).
+        showToast('success', l10n.getString('cashbook-edited', { number }));
+        void finishFixSession(l10n);
+        void navigate({ to: GENERAL_PATH });
+        return;
+      }
+      showToast('success', l10n.getString('cashbook-saved', { kind: GENERAL_KIND, number }));
       onFinished(date);
     },
   });
@@ -182,6 +250,10 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
     return byRow;
   }, [rows, people, language]);
 
+  // The cells of the lines that an earlier edit changed (PRD FR-7.71). The lines of the entry are the
+  // lines sent, in order: line i of the history is the i-th row that was not blank.
+  const cellMarks = journalMarkCells(edit?.marks, sent.rowIds, rows);
+
   const cardAccount =
     editorCard ??
     (focus === null
@@ -191,9 +263,20 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
   const canSave = current && preview?.can_save === true;
   const save = async (): Promise<boolean> => {
     setTried(true);
-    return canSave ? flow.save() : false;
+    if (!canSave) return false;
+    // An entry of an earlier day asks why it is changed, once (PRD FR-7.70).
+    if (edit?.needsReason() === true) {
+      edit.setAskReason(true);
+      return false;
+    }
+    return flow.save();
   };
   const startNew = () => {
+    if (edit !== null) {
+      void finishFixSession(l10n);
+      void navigate({ to: GENERAL_PATH });
+      return;
+    }
     onFinished(date);
   };
   const setPerson = (rowId: string, choice: PersonChoice) => {
@@ -225,6 +308,7 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
     <EntryFrame<string>
       titleId="cashbook-general-screen-title"
       helpId="cashbook-general-screen-help"
+      top={edit === null ? undefined : <VoucherEditTop edit={edit} />}
       path={GENERAL_PATH}
       filled={filled}
       saveBlocked={!canSave}
@@ -235,17 +319,31 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
       error={error}
       fieldsShown={shownPaths}
       formRef={formRef}
-      below={null}
+      below={edit === null ? <GeneralListSection today={today} /> : null}
       between={
         <GeneralLinesSection
           store={store}
           people={people}
           calc={calc}
           cellErrors={cellErrors}
+          cellMarks={cellMarks}
           cardAccount={cardAccount}
           onCardAccount={setEditorCard}
           side={
             <>
+              {edit === null ? null : (
+                <VoucherEditBoxes
+                  edit={edit}
+                  busy={flow.busy}
+                  onReason={() => {
+                    void flow.save();
+                  }}
+                  onCancelled={() => {
+                    void finishFixSession(l10n);
+                    void navigate({ to: GENERAL_PATH });
+                  }}
+                />
+              )}
               {summary}
               <EntryNotes warnings={preview?.warnings ?? []} cash={undefined} />
               <GeneralPeople
@@ -278,6 +376,7 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
         </Field>
         <Field
           label={<Localized id="cashbook-field-narration" />}
+          mark={fieldMark(edit?.marks, 'narration')}
           error={fieldError(error, 'narration')}
         >
           {(props) => (
@@ -296,9 +395,46 @@ function GeneralEditor({ initialDate, onFinished }: EditorProps) {
   );
 }
 
+/** A saved journal entry open for edit (`?id=`): it waits for the entry and its lines, then edits it. */
+function GeneralEdit({ id, today }: { id: number; today: string }) {
+  const editable = useVoucherEditable(id);
+  const isJournal = editable.data === undefined || editable.data.entry.type === 'general';
+  const ready = editable.data !== undefined && isReadyToEdit(editable.data.row);
+  const seed = useEditDraft(isJournal && ready ? editable.data : undefined, generalSeedOf);
+  // An entry of another screen opens on its own screen.
+  if (editable.data !== undefined && !isJournal) return <OpenOnItsScreen row={editable.data.row} />;
+  if (editable.data !== undefined && !ready) {
+    return <ClosedCashEntry titleId="cashbook-general-screen-title" row={editable.data.row} />;
+  }
+  if (editable.isError || seed.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="cashbook-load-failed" />}
+        error={uiErrorOf(editable.isError ? editable.error : seed.error)}
+        onRetry={() => {
+          void editable.refetch();
+        }}
+      />
+    );
+  }
+  if (editable.data === undefined || seed.data === undefined) return <LoadingState />;
+  return (
+    <GeneralEditor
+      key={`${String(id)}-${String(editable.data.row.version)}`}
+      initialDate={seed.data.date}
+      today={today}
+      onFinished={() => undefined}
+      editable={editable.data}
+      seed={seed.data}
+    />
+  );
+}
+
 /** The route's page: it waits for today, then opens an empty entry on that day. */
 export function GeneralPage() {
   const day = useDayStatus();
+  const rawSearch: Record<string, unknown> = useSearch({ strict: false });
+  const search = parseGeneralSearch(rawSearch);
   const [entry, setEntry] = useState<{ n: number; date: string | null }>({ n: 0, date: null });
   if (day.isPending) return <LoadingState />;
   if (day.isError) {
@@ -312,9 +448,11 @@ export function GeneralPage() {
       />
     );
   }
+  if (search.id !== undefined) return <GeneralEdit id={search.id} today={day.data.today} />;
   return (
     <GeneralEditor
       key={entry.n}
+      today={day.data.today}
       initialDate={entry.date ?? isoToDisplayDate(day.data.today)}
       onFinished={(date) => {
         setEntry((previous) => ({ n: previous.n + 1, date }));

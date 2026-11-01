@@ -9,7 +9,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import type { DayCloseSummary } from '../../../bindings/DayCloseSummary';
 import type { DayClosePartner } from '../../../bindings/DayClosePartner';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { Fact, Notice, Num, Table, type TableColumn } from '../../../shared/ui';
+import { Fact, Notice, Num, Table, type TableColumn, PartnerLockedBox } from '../../../shared/ui';
 
 export function DaySummary({ summary }: { summary: DayCloseSummary }) {
   const { l10n } = useLocalization();
@@ -80,7 +80,9 @@ export function DaySummary({ summary }: { summary: DayCloseSummary }) {
           </Localized>
         </Notice>
       ) : null}
-      {summary.partners.length === 0 ? (
+      {summary.partners_locked ? (
+        <PartnerLockedBox />
+      ) : summary.partners.length === 0 ? (
         <Localized id="day-summary-no-partners">
           <p className="type-body text-ink-muted" />
         </Localized>

@@ -2,7 +2,12 @@
 // Components never call invoke() (Code Standards F4). The only file that knows the wire shape.
 // Every command except the two lists takes one object named `input`.
 
+import type { PartnerCodeChangeInput } from '../../bindings/PartnerCodeChangeInput';
+import type { PartnerCodeResetInput } from '../../bindings/PartnerCodeResetInput';
+import type { PartnerCodeSetInput } from '../../bindings/PartnerCodeSetInput';
+import type { PartnerCodeStatus } from '../../bindings/PartnerCodeStatus';
 import { callCommand } from '../../shared/api';
+import type { PartnersList } from '../../bindings/PartnersList';
 import type {
   CapitalHistory,
   CapitalHistoryInput,
@@ -20,9 +25,14 @@ import type {
 } from './types';
 import type { VoucherSaved } from '../vouchers';
 
-/** Every partner, active ones first. `share_bps` is the share on today's date. */
-export function partnersList(): Promise<PartnerRow[]> {
-  return callCommand<PartnerRow[]>('partners_list');
+/**
+ * Every partner, active ones first. `share_bps` is the share on today's date. The list is open
+ * without the partner code; while the section is locked it holds the names only (plan 44, PRD
+ * FR-17.11), so the pickers of the expense, fruit and capital screens keep working.
+ */
+export async function partnersList(): Promise<PartnerRow[]> {
+  const list = await callCommand<PartnersList>('partners_list');
+  return list.partners;
 }
 
 /** One partner with his share history, oldest first. */
@@ -79,4 +89,34 @@ export function capitalHistory(input: CapitalHistoryInput): Promise<CapitalHisto
  */
 export function partnersStatement(input: PartnersStatementInput): Promise<PartnerStatement> {
   return callCommand<PartnerStatement>('partners_statement', { input });
+}
+
+/** Whether a partner code is set, whether the section is open now, and the wait after wrong tries. */
+export function partnersCodeStatus(): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_status');
+}
+
+/** Makes the partner code the first time. It needs the Owner's password (PRD FR-17.11). */
+export function partnersCodeSet(input: PartnerCodeSetInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_set', { input });
+}
+
+/** Changes the code. It asks for the old code or the Owner's password. */
+export function partnersCodeChange(input: PartnerCodeChangeInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_change', { input });
+}
+
+/** Opens the section with the code. Wrong tries are counted and waited out by the backend. */
+export function partnersCodeUnlock(code: string): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_unlock', { input: { code } });
+}
+
+/** Closes the section again. */
+export function partnersCodeLock(): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_lock');
+}
+
+/** A forgotten code: the Owner's password or the recovery code makes a new one. */
+export function partnersCodeReset(input: PartnerCodeResetInput): Promise<PartnerCodeStatus> {
+  return callCommand<PartnerCodeStatus>('partners_code_reset', { input });
 }

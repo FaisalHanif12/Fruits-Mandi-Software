@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.11 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
+| Version | 1.12 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
 | Date | 31 October 2026 |
 | Status | Final for build |
 | Derived from | PRD v1.13 (the master), NFR v1.7, Tech Stack v1.7, Code Standards v1.12 |
@@ -699,6 +699,7 @@ erDiagram
 | `month_closes` | `month` (YYYY-MM), `journal_entry_id`, `is_active`, `reversed_entry_id` (null) |
 | `drafts` | `screen`, `user_id`, `payload_json`, `saved_at` |
 | `backup_log` | `at`, `kind` (local, usb, cloud), `path_or_key`, `size_bytes`, `checksum`, `integrity_ok`, `row_counts_json`, `error` |
+| `edit_windows` | `entity` (purchase, venture_entry, garden_arrival, venture), `entity_id`. Migration 0012 (plan 44). Empty at all times outside an edit save. The edit service inserts one row inside its transaction, the BEFORE UPDATE and DELETE triggers of `purchases`, `venture_entries`, `venture_entry_parts`, `garden_arrivals` and `ventures.rent_paisa` allow a change of that one entry only while its row exists, and the service deletes the row before COMMIT. The journal is still reversed and posted again (PRD FR-7.70, FR-6.3); the audit log keeps old and new. A test checks the table is empty after every save. |
 | `user_prefs` | `user_id`, `key`, `value_json`. Unique (`user_id`, `key`). Keys: `language` (ur, en; ur at first run, PRD FR-7.30), `text_size`, `last_screen`, `filters.<screen>`, `print_after_save`, `recent.<screen>` (last 10 record IDs). PRD FR-7.30, FR-7.41, FR-7.45, FR-7.57. |
 | `translit_pairs` | `roman` (lower case), `urdu`, `kind` (name, place, item, word), `use_count`, `last_used_at`. Unique (`roman`, `urdu`). Learned pairs only; the starting word list is a file inside the app (Tech Stack 4.4). PRD FR-7.26. |
 
@@ -954,3 +955,4 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.9 | 30-10-2026 | PRD v1.10, approved by Umar: table `dead_marks` for the dead amount (15.4, 15.8, diagram 6), in a new numbered migration. No posting type changed. |
 | 1.10 | 31-10-2026 | PRD v1.12, approved by Umar: the settings key `firm_contacts` holds up to 6 people with a role (15.3). No table or posting type changed. |
 | 1.11 | 31-10-2026 | PRD v1.13, approved by Umar: the settings keys `partner_code` and `partner_code_tries` (15.3); the edit stamp is read from `audit_log`. No table or posting type changed. |
+| 1.12 | 31-10-2026 | Lead decision for PRD v1.13 FR-7.70 (plan 44): the `edit_windows` table and migration 0012 let the edit service change one trip or garden entry inside its own save; outside it those tables stay read-only (15.3). No PRD change. |

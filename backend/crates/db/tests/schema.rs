@@ -544,6 +544,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "sign",
             ],
         ),
+        // 15.3 (v1.12, migration 0012): the edit window of one trip or garden entry (plan 44).
+        ("edit_windows", vec!["entity", "entity_id"]),
         // 15.4 (v1.9, migration 0011): the people moved to the dead amount (PRD FR-10.10).
         (
             "dead_marks",
@@ -676,8 +678,8 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    // 46 tables of migrations 1 to 10, and `dead_marks` of migration 11.
-    assert_eq!(want.len(), 47);
+    // 46 tables of migrations 1 to 10, `dead_marks` of migration 11 and `edit_windows` of 12.
+    assert_eq!(want.len(), 48);
     assert_eq!(tables(&conn), want);
 }
 
@@ -710,7 +712,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 47);
+    assert_eq!(rows.len(), 48);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn

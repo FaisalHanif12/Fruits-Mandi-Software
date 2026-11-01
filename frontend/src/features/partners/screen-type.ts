@@ -12,6 +12,8 @@ export const CAPITAL_TYPES: readonly CapitalType[] = ['capital_in', 'capital_out
 export interface CapitalSearch {
   type?: CapitalType;
   partner?: number;
+  /** A saved entry open for edit (plan 44, PRD FR-7.70). */
+  id?: number;
 }
 
 function idOf(value: unknown): number | null {
@@ -22,9 +24,11 @@ function idOf(value: unknown): number | null {
 export function parseCapitalSearch(search: Record<string, unknown>): CapitalSearch {
   const type = CAPITAL_TYPES.find((one) => one === search['type']);
   const partner = idOf(search['partner']);
+  const id = idOf(search['id']);
   return {
     ...(type === undefined ? {} : { type }),
     ...(partner === null ? {} : { partner }),
+    ...(id === null ? {} : { id }),
   };
 }
 

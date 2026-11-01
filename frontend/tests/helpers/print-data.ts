@@ -22,6 +22,8 @@ export interface CannedOptions {
   paper?: Paper;
   /** Urdu digits on an Urdu print: every digit of every value is the Urdu one. */
   urduDigits?: boolean;
+  /** The day of the last edit of the entry, DD-MM-YYYY (plan 44): the header says it was revised. */
+  revisedOn?: string;
   cancelled?: boolean;
   /** The firm's contact persons (up to three) and the trade mark are set in Settings (PRD 21). */
   contacts?: boolean;
@@ -345,6 +347,7 @@ export function printDataFor(doc: PrintDoc, options: CannedOptions = {}): PrintD
         ? slipPages(language)
         : pukhtaPages(language);
   const data: PrintData = {
+    revised_on: options.revisedOn ?? null,
     doc,
     language,
     dir: language === 'ur' ? 'rtl' : 'ltr',
@@ -524,6 +527,7 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
     words: { label_id: 'print-in-words', text: words },
   };
   const data: PrintData = {
+    revised_on: options.revisedOn ?? null,
     doc: 'receipt_slip',
     language,
     dir: language === 'ur' ? 'rtl' : 'ltr',

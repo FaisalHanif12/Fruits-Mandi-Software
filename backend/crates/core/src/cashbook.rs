@@ -12,6 +12,7 @@ use ts_rs::TS;
 use crate::accounts::RecordRef;
 use crate::money::Paisa;
 use crate::paging::{MonthSubtotal, SortInput};
+use crate::row_source::RowSource;
 
 /// Input of `cashbook_get`. Dates are `DD-MM-YYYY` or a shortcut; null or empty means no limit
 /// (from the first entry, to today).
@@ -72,6 +73,11 @@ pub struct CashbookRow {
     /// 38 B2). The screen then says "balance shows in date order only".
     #[ts(type = "Paisa | null")]
     pub running_paisa: Option<Paisa>,
+    /// The record the row opens, so a row opens its entry (PRD FR-19.4): a بکری, a voucher, a
+    /// trip purchase, a trip or a garden (for its cost, installment, sale in another shop or
+    /// closing), fruit taken, a month close or an account (an opening). Null only if the entry has
+    /// no source. An entry that belongs to no screen of its own (`kind` `entry`) opens itself.
+    pub source: Option<RowSource>,
 }
 
 /// What the range adds up to, over the whole range (B31).

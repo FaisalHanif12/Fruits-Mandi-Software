@@ -44,6 +44,8 @@ interface LotsSectionProps {
   moreForced: boolean;
   /** Cells the user changed in a posting open for edit (plan 16), marked in the grid. */
   cellChanged?: Record<string, Record<string, string>> | undefined;
+  /** The cells an earlier edit changed, with the words of that edit as their tip (plan 44). */
+  cellMarks?: Record<string, Record<string, string>> | undefined;
   /** Can Ctrl+Delete remove this lot? A saved lot of an edit cannot be removed. */
   canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
   /** A note between the title and the grid, for example where some of the lots came from. */
@@ -55,6 +57,7 @@ export function LotsSection({
   onCardAccount,
   moreForced,
   cellChanged,
+  cellMarks,
   canRemoveRow,
   note,
 }: LotsSectionProps) {
@@ -167,6 +170,7 @@ export function LotsSection({
         cellErrors={view.errors}
         cellWarnings={view.warnings}
         {...(cellChanged === undefined ? {} : { cellChanged })}
+        {...(cellMarks === undefined ? {} : { cellMarks })}
         {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
         removeQuestion={removeQuestion}
         interceptors={interceptors}

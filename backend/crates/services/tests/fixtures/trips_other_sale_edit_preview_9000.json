@@ -1,0 +1,123 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 846000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 900000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 1,
+          "label_ur": "الف",
+          "label_en": "Partner A"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 338400
+        },
+        "after": {
+          "type": "money",
+          "paisa": 360000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 2,
+          "label_ur": "ب",
+          "label_en": "Partner B"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 253800
+        },
+        "after": {
+          "type": "money",
+          "paisa": 270000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 3,
+          "label_ur": "ج",
+          "label_en": "Partner C"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 253800
+        },
+        "after": {
+          "type": "money",
+          "paisa": 270000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": {
+        "before_paisa": 4806000,
+        "after_paisa": 4860000,
+        "needs_confirm": false
+      },
+      "partners": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "before_paisa": 338400,
+          "after_paisa": 360000
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "before_paisa": 253800,
+          "after_paisa": 270000
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "before_paisa": 253800,
+          "after_paisa": 270000
+        }
+      ],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  }
+}

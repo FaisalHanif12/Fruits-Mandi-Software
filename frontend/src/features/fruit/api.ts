@@ -3,6 +3,7 @@
 // takes one `{ input }` object. No cash moves on this screen, so there is no cash flag.
 
 import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
 import type {
   FruitCancelInput,
   FruitCancelled,
@@ -32,6 +33,11 @@ export function fruitSave(input: FruitInput): Promise<FruitSaved> {
 /** Changes an entry while its day is open: the old posting is reversed, the new one posted. */
 export function fruitEdit(input: FruitEditInput): Promise<FruitEdited> {
   return callCommand<FruitEdited>('fruit_edit', { input });
+}
+
+/** The changes of an edit and their effect on balances, cash and partners (plan 44, FR-7.70). */
+export function fruitEditPreview(input: FruitEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('fruit_edit_preview', { input });
 }
 
 /** Cancels an entry with a reason, by a reversal, while its day is open (PRD FR-16.12). */

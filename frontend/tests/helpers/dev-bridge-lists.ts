@@ -326,7 +326,7 @@ export const listsHandlers: Record<string, Handler> = {
   },
   partners_list: () => {
     if (flag('down')) throw down();
-    return PARTNERS;
+    return { partners: PARTNERS, partners_locked: false };
   },
   partners_check_shares: () => ({ total_bps: 10000, is_100: true, errors: [] }),
   prefs_screen_get: (input) => ({ screen: input['screen'], value: null }),

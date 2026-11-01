@@ -7,6 +7,7 @@
 // does not fit beside the others at any step, so it comes with the "More columns" tick
 // (`BIKRI_LIST_MORE`), and a few columns step aside where the room is short.
 
+import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, utcToLocalTime } from '../../shared/format';
 import { columnsWithMore, type ListColumn, type MoreColumnsPlan } from '../../shared/grid';
 import type { LayoutStep } from '../../shared/hooks';
@@ -94,8 +95,13 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     type: 'status',
     headerId: 'bikri-list-col-status',
     sortKey: 'status',
-    value: (row, { text }) =>
-      text(row.status === 'cancelled' ? 'bikri-status-cancelled' : 'bikri-status-saved'),
+    value: (row, context) =>
+      statusWithEdited(
+        context.text(row.status === 'cancelled' ? 'bikri-status-cancelled' : 'bikri-status-saved'),
+        row.edited,
+        context,
+      ),
+    tip: (row, context) => editedTip(row.edited, context),
   },
 ];
 

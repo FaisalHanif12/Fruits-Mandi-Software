@@ -60,7 +60,7 @@ pub struct KhataAccount {
 /// رقم دی as typed (PRD 16.6): the khata بنام (minus), روکڑ جمع.
 ///
 /// Field paths in errors: `date`, `khata_account_id`, `amount`, `reason`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct KhataOutInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,
@@ -84,7 +84,7 @@ pub struct KhataOutInput {
 /// رقم آئی as typed (PRD 16.6): روکڑ بنام, the khata جمع (plus).
 ///
 /// Field paths in errors: `date`, `khata_account_id`, `amount`, `reason`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct KhataInInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,

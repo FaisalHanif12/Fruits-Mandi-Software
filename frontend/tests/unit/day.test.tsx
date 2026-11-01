@@ -162,6 +162,7 @@ describe.each(LANGUAGES)('the day screen (%s)', (language) => {
   it('a summary with no partners says so instead of an empty table', async () => {
     await open({
       summary: {
+        partners_locked: false,
         bikri_count: 0,
         gross_paisa: money(0),
         commission_paisa: money(0),

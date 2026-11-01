@@ -251,5 +251,10 @@
     "buyer_cash": 0,
     "buyer_total": 3156400,
     "shared_income": 394800
-  }
+  },
+  "can_edit": true,
+  "can_cancel": true,
+  "locked_reason": null,
+  "needs_reopen": false,
+  "edited": null
 }

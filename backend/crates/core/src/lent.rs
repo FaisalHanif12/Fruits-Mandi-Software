@@ -30,7 +30,7 @@ use crate::vouchers::MAX_OPEN_ROWS;
 /// ادھار رقم given, as typed (PRD 16.5): the person's account بنام, روکڑ جمع.
 ///
 /// Field paths in errors: `date`, `person_account_id`, `amount`, `reason`, `return_by`, `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct MoneyLentInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,
@@ -70,7 +70,7 @@ pub enum LentReturnMode {
 ///
 /// Field paths in errors: `date`, `person_account_id`, `amount`, `mode`, `salary_head_id`,
 /// `narration`.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct MoneyLentReturnInput {
     /// The day, `DD-MM-YYYY` or a shortcut. An open day, not after today.
     pub date: String,

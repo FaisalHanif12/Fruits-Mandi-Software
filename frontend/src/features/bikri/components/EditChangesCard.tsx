@@ -1,16 +1,13 @@
-// "What you changed" in a posting open for edit (PRD FR-12.18, plan 16): the audit comparison the
-// user sees before he saves. Each change is one sentence in words, the old text next to the new
-// text; a line added or removed is told as well. Under it, the numbers of the selected lot before
-// and after, both the backend's: the stored ones and the preview's (never worked out here).
-// Nothing changed yet says so. The same changes are marked in the grids (corner mark and tooltip)
-// so colour is never the only signal (NFR-USE-12).
+// The numbers of the selected lot of a posting open for edit, before and after (PRD FR-12.18, plan
+// 16): gross sale, deductions, net sale and the buyers' total. All of them are the backend's: the
+// stored ones and the preview's, never worked out here. The list of what was changed and its
+// effect on balances, cash and partners is the shared review card (plan 44, PRD FR-7.70); this card
+// is only the lot's figures. The same changes are marked in the grids (corner mark and tooltip) so
+// colour is never the only signal (NFR-USE-12).
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { Paisa } from '../../../shared/format';
-import { displayName, useLanguage } from '../../../shared/i18n';
 import { Card, Num, Table, type TableColumn } from '../../../shared/ui';
-import type { ChangeItem } from '../edit-changes';
-import { HEADER_FIELD_LABEL, LOT_FIELD_LABEL, SALE_FIELD_LABEL, fixedWord } from '../edit-fields';
 
 /** The four numbers compared. Both the backend's: the loaded entry and the changed one. */
 export interface Figures {
@@ -41,46 +38,13 @@ function numberRows(before: Figures | null, after: Figures | null): NumberRow[] 
 }
 
 interface EditChangesCardProps {
-  items: readonly ChangeItem[];
   /** The numbers of the selected lot as loaded (before) and as changed (after). */
   before: Figures | null;
   after: Figures | null;
 }
 
-export function EditChangesCard({ items, before, after }: EditChangesCardProps) {
+export function EditChangesCard({ before, after }: EditChangesCardProps) {
   const { l10n } = useLocalization();
-  const language = useLanguage();
-
-  const where = (item: ChangeItem): string =>
-    item.scope === 'header'
-      ? l10n.getString('bikri-edit-where-header')
-      : item.scope === 'lot'
-        ? l10n.getString('bikri-edit-where-lot', { lot: String(item.lotNo) })
-        : l10n.getString('bikri-edit-where-line', {
-            lot: String(item.lotNo),
-            line: String(item.lineNo ?? 0),
-          });
-
-  const labelOf = (item: ChangeItem): string => {
-    const id =
-      item.field === null
-        ? undefined
-        : item.scope === 'header'
-          ? HEADER_FIELD_LABEL[item.field]
-          : item.scope === 'lot'
-            ? LOT_FIELD_LABEL[item.field]
-            : SALE_FIELD_LABEL[item.field];
-    return id === undefined ? (item.field ?? '') : l10n.getString(id);
-  };
-
-  const valueOf = (item: ChangeItem, value: string, record: ChangeItem['beforeRecord']): string => {
-    if (record !== null) return displayName(record, language);
-    if (value.trim() === '') return l10n.getString('bikri-edit-empty');
-    const word = item.field === null ? null : fixedWord(item.scope, item.field, value);
-    return word === null ? value : l10n.getString(word);
-  };
-
-  const numbers = numberRows(before, after);
   const columns: readonly TableColumn<NumberRow>[] = [
     {
       id: 'what',
@@ -104,61 +68,11 @@ export function EditChangesCard({ items, before, after }: EditChangesCardProps) 
   ];
 
   return (
-    <Card compact title={<Localized id="bikri-edit-changes-title" />}>
-      {items.length === 0 ? (
-        <Localized id="bikri-edit-no-changes">
-          <p className="type-body text-ink-muted" />
-        </Localized>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {items.map((item, index) => (
-            <li
-              key={`${item.rowId}-${item.field ?? 'row'}-${String(index)}`}
-              className="type-body text-ink"
-            >
-              {item.field === null ? (
-                <Localized
-                  id="bikri-edit-removed-line"
-                  vars={{
-                    where: where(item),
-                    buyer:
-                      item.beforeRecord === null ? '' : displayName(item.beforeRecord, language),
-                  }}
-                >
-                  <span />
-                </Localized>
-              ) : item.kind === 'added' ? (
-                <Localized
-                  id="bikri-edit-added"
-                  vars={{
-                    where: where(item),
-                    field: labelOf(item),
-                    after: valueOf(item, item.after, item.afterRecord),
-                  }}
-                >
-                  <span />
-                </Localized>
-              ) : (
-                <Localized
-                  id="bikri-edit-change"
-                  vars={{
-                    where: where(item),
-                    field: labelOf(item),
-                    before: valueOf(item, item.before, item.beforeRecord),
-                    after: valueOf(item, item.after, item.afterRecord),
-                  }}
-                >
-                  <span />
-                </Localized>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+    <Card compact title={<Localized id="bikri-edit-figures-title" />}>
       <Table
-        label={l10n.getString('bikri-edit-changes-title')}
+        label={l10n.getString('bikri-edit-figures-title')}
         columns={columns}
-        rows={numbers}
+        rows={numberRows(before, after)}
         rowKey={(row) => row.labelId}
       />
     </Card>

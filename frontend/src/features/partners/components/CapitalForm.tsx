@@ -15,8 +15,10 @@ import {
   MoneyInput,
   Select,
   fieldError,
+  fieldMark,
   FormCard,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import type { CapitalDraft } from '../capital-draft';
 import { usePartnerList } from '../hooks';
 
@@ -24,9 +26,11 @@ interface CapitalFormProps {
   draft: CapitalDraft;
   onChange: (patch: Partial<CapitalDraft>) => void;
   error: UiError | null;
+  /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
-export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
+export function CapitalForm({ draft, onChange, error, marks }: CapitalFormProps) {
   const language = useLanguage();
   const partners = usePartnerList();
   return (
@@ -53,6 +57,7 @@ export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
       ) : (
         <Field
           label={<Localized id="cashbook-field-partner" />}
+          mark={fieldMark(marks, 'partner_id')}
           error={fieldError(error, 'partner_id')}
         >
           {(props) => (
@@ -73,7 +78,11 @@ export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
           )}
         </Field>
       )}
-      <Field label={<Localized id="cashbook-field-amount" />} error={fieldError(error, 'amount')}>
+      <Field
+        label={<Localized id="cashbook-field-amount" />}
+        mark={fieldMark(marks, 'amount_paisa')}
+        error={fieldError(error, 'amount')}
+      >
         {(props) => (
           <MoneyInput
             {...props}
@@ -86,6 +95,7 @@ export function CapitalForm({ draft, onChange, error }: CapitalFormProps) {
       </Field>
       <Field
         label={<Localized id="cashbook-field-narration" />}
+        mark={fieldMark(marks, 'narration')}
         error={fieldError(error, 'narration')}
       >
         {(props) => (

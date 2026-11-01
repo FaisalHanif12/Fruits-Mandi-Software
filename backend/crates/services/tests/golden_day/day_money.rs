@@ -14,6 +14,7 @@ use mandi_services::core::lent::{
     MoneyLentReturnInput,
 };
 use mandi_services::core::masters::{ExpenseHeadInput, MasterInput};
+use mandi_services::core::row_source::SourceKind;
 use mandi_services::{ServiceError, lent, masters, partners};
 
 /// Events 1 to 4 of the PRD (بکری 1, بکری 2, the وصولی of 10,000 and the ادائیگی of 4,316).
@@ -242,6 +243,32 @@ fn the_cash_book_after_the_whole_day_has_no_cash_count_and_pages_add_up() {
     );
     assert_eq!(all.closing_paisa, rupees(58_484));
     assert_eq!(all.opening_paisa, Paisa::ZERO);
+
+    // Every row opens its entry (PRD FR-19.4): a بکری opens the بکری, every kind of voucher opens
+    // the voucher, an opening opens the account. No row is left without a source.
+    for row in &all.rows {
+        let kind = row.source.expect("every cash row has a source").kind;
+        let expected = match row.posting_type.as_str() {
+            "bikri_first" | "bikri_later" => SourceKind::Bikri,
+            "opening" => SourceKind::Account,
+            "receipt" | "payment" | "advance" | "shop_expense" | "personal_expense"
+            | "personal_return" => SourceKind::Voucher,
+            other => panic!("the worked day has no cash row of type {other}"),
+        };
+        assert_eq!(kind, expected, "{}", row.posting_type);
+    }
+    let types: std::collections::BTreeSet<&str> =
+        all.rows.iter().map(|r| r.posting_type.as_str()).collect();
+    for needed in [
+        "bikri_first",
+        "receipt",
+        "payment",
+        "advance",
+        "shop_expense",
+        "personal_expense",
+    ] {
+        assert!(types.contains(needed), "{needed} is in the cash book");
+    }
 
     // Pages of 3: the rows of every page add up to the totals of the whole range, and the running
     // cash of the last row of the last page is the closing cash.

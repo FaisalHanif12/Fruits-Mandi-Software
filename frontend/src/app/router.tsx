@@ -19,6 +19,7 @@ import {
   parseLentSearch,
 } from '../features/cashbook/screen-type';
 import { parseFruitSearch } from '../features/fruit/screen-search';
+import { parseGeneralSearch } from '../features/cashbook/screen-type';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
 import { AddRecordHost } from './AddRecordHost';
@@ -457,6 +458,7 @@ const lentRoute = createRoute({
 const generalRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/rokar/general',
+  validateSearch: parseGeneralSearch,
   component: lazyRouteComponent(
     () => import('../features/cashbook/pages/GeneralPage'),
     'GeneralPage',

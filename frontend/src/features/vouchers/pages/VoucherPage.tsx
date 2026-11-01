@@ -8,22 +8,70 @@
 // Four states: loading while today or the voucher arrives, an error with a retry, and the screen.
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import { FileQuestion } from 'lucide-react';
-import { useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
 import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
-import { Button, EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
+import { OpenOnItsScreen, useFixDayFlow } from '../../../shared/edit';
+import { Button, EntryActions, ErrorState, LoadingState } from '../../../shared/ui';
+import { CancelVoucherDialog } from '../components/CancelVoucherDialog';
 import { SavedVoucherView } from '../components/SavedVoucherView';
 import { draftOfRow, newDraft } from '../draft';
-import { useVoucher } from '../hooks';
+import { VOUCHERS_KEY, useVoucher } from '../hooks';
 import { parseVoucherSearch, screenTypeOf } from '../screen-type';
 import { useEditSeed } from '../useEditSeed';
 import type { VoucherRow } from '../types';
 import { VoucherEditor } from './VoucherEditor';
+
+/**
+ * The two buttons under a voucher that cannot be edited yet: of a closed day (Edit reopens the days
+ * first, PRD FR-21.4) or locked for another reason, which the buttons tell in words (PRD FR-7.70).
+ */
+function ClosedEntryActions({ row }: { row: VoucherRow }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const fixFlow = useFixDayFlow();
+  const [cancelRow, setCancelRow] = useState<VoucherRow | null>(null);
+  const type = screenTypeOf(row.voucher_type);
+  return (
+    <>
+      <EntryActions
+        flags={row}
+        busy={fixFlow.busy}
+        onEdit={() => {
+          fixFlow.start({
+            date: row.entry_date,
+            ownerHref: router.buildLocation({
+              to: '/bikri/voucher',
+              search: type === null ? {} : { type, id: row.id },
+            }).href,
+            // The row is read again; with its day open it comes back ready to edit.
+            then: () => {
+              void queryClient.invalidateQueries({ queryKey: VOUCHERS_KEY });
+            },
+          });
+        }}
+        onCancel={() => {
+          setCancelRow(row);
+        }}
+      />
+      {fixFlow.dialog}
+      <CancelVoucherDialog
+        row={cancelRow}
+        onClose={() => {
+          setCancelRow(null);
+        }}
+        onCancelled={() => {
+          setCancelRow(null);
+        }}
+      />
+    </>
+  );
+}
 
 /** A saved voucher: the form for an edit, or the read-only view. */
 function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
@@ -31,7 +79,7 @@ function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
   const language = useLanguage();
   const grouping = useGrouping();
   const type = screenTypeOf(row.voucher_type);
-  const seed = useEditSeed(row.editable ? row : null);
+  const seed = useEditSeed(row.can_edit && !row.needs_reopen ? row : null);
   const initial = useMemo(
     () =>
       type === null || seed.data === undefined
@@ -43,26 +91,10 @@ function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
     void navigate({ to: '/bikri/voucher', search: type === null ? {} : { type } });
   });
 
-  if (type === null) {
-    return (
-      <EmptyState
-        icon={FileQuestion}
-        title={<Localized id="vouchers-other-screen" />}
-        help={<Localized id="vouchers-other-screen-help" />}
-        action={
-          <Button
-            variant="primary"
-            onClick={() => {
-              void navigate({ to: '/rokar' });
-            }}
-          >
-            <Localized id="vouchers-other-screen-open" />
-          </Button>
-        }
-      />
-    );
-  }
-  if (!row.editable) {
+  // A voucher of another kind (an expense, a loan, a khata entry, capital, a journal) opens on its
+  // own screen (plan 44).
+  if (type === null) return <OpenOnItsScreen row={row} />;
+  if (!row.can_edit || row.needs_reopen) {
     return (
       <div className="flex max-w-page flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -80,6 +112,7 @@ function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
           </Button>
         </div>
         <SavedVoucherView row={row} />
+        <ClosedEntryActions row={row} />
       </div>
     );
   }

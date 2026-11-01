@@ -252,6 +252,10 @@ pub struct PrintData {
     pub number: String,
     /// True for a cancelled بکری; the template stamps the pages.
     pub cancelled: bool,
+    /// The day of the last edit of this document's entry, `DD-MM-YYYY` in Pakistan time (PRD
+    /// FR-7.71). Null if the entry was never edited. The template prints "نظر ثانی شدہ" with it in
+    /// the header, so a reprint after a correction cannot be mistaken for the first print.
+    pub revised_on: Option<String>,
     /// The pages. Empty when there is nothing to print (no one-time buyer for the پختہ slip).
     pub pages: Vec<PrintPage>,
 }

@@ -724,6 +724,10 @@ bikri-edit-reason-label = Reason
 # review: pending
 bikri-edit-reason-confirm = Save changes
 
+# The lot's figures before and after an edit (plan 44).
+# review: pending
+bikri-edit-figures-title = The figures of this lot
+
 # review: pending
 bikri-edit-changes-title = What you changed
 

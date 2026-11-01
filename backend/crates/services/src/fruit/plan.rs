@@ -73,6 +73,7 @@ impl Planned {
             errors: self.errors.clone(),
             warnings: Vec::new(),
             rate_hint: self.rate_hint.clone(),
+            partners_locked: false,
         }
     }
 }

@@ -12,7 +12,16 @@ import type { BikriDetail } from '../../../../bindings/BikriDetail';
 import { isoToDisplayDate, utcToLocalDisplay } from '../../../../shared/format';
 import { displayName, useLanguage } from '../../../../shared/i18n';
 import { findMaster } from '../../../../shared/search';
-import { Button, Card, Code, Fact, Num, Table, type TableColumn } from '../../../../shared/ui';
+import {
+  Button,
+  Card,
+  Code,
+  EditStampLine,
+  Fact,
+  Num,
+  Table,
+  type TableColumn,
+} from '../../../../shared/ui';
 import { useLocalization } from '@fluent/react';
 import type { SavedPosting } from '../../../../bindings/SavedPosting';
 import type { SavedSplit } from '../../../../bindings/SavedSplit';
@@ -42,9 +51,11 @@ interface SavedBikriViewProps {
   detail: BikriDetail;
   /** Opens one posting for edit (plan 16). Without it the entries are only listed. */
   onEdit?: ((entryId: number) => void) | undefined;
+  /** The day is closed: Edit first reopens it (plan 44, PRD FR-21.4). The button says so. */
+  needsReopen?: boolean | undefined;
 }
 
-export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
+export function SavedBikriView({ detail, onEdit, needsReopen = false }: SavedBikriViewProps) {
   const language = useLanguage();
   const { l10n } = useLocalization();
   const adda = useMasterName('adda', detail.adda_id);
@@ -106,14 +117,14 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
             header: l10n.getString('bikri-posting-edit'),
             kind: 'action',
             cell: (row) =>
-              row.editable ? (
+              !row.reversed && row.posting_type !== 'reversal' && (row.editable || needsReopen) ? (
                 <Button
                   onClick={() => {
                     onEdit(row.entry_id);
                   }}
                 >
                   <Pencil aria-hidden="true" className="size-icon-md" />
-                  <Localized id="bikri-posting-edit" />
+                  <Localized id={needsReopen ? 'edit-action-fix-day' : 'bikri-posting-edit'} />
                 </Button>
               ) : null,
           },
@@ -131,6 +142,9 @@ export function SavedBikriView({ detail, onEdit }: SavedBikriViewProps) {
           <p className="type-body text-ink-muted" />
         </Localized>
       </div>
+      {detail.edited === null ? null : (
+        <EditStampLine stamp={detail.edited} history={{ entity: 'bikri', id: detail.id }} />
+      )}
       {cancelled ? (
         <div
           role="status"

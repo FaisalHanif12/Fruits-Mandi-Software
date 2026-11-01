@@ -20,7 +20,7 @@
 //   and the list below it.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { Ban, FileText, Plus, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
@@ -31,6 +31,9 @@ import { useFocusFirstField } from '../../../shared/hooks';
 import {
   Button,
   CashConfirmDialog,
+  EditBand,
+  EditReviewCard,
+  EditStampLine,
   ErrorNotice,
   Field,
   Notice,
@@ -40,6 +43,8 @@ import {
   type SegmentedOption,
   InfoHint,
 } from '../../../shared/ui';
+import { useEditReview, useEntryMarks, useFixDayFlow, useFixStore } from '../../../shared/edit';
+import { vouchersEditPreview } from '../api';
 import { CancelVoucherDialog } from '../components/CancelVoucherDialog';
 import { AdvanceHistory } from '../components/AdvanceHistory';
 import { BillsPanel } from '../components/BillsPanel';
@@ -106,6 +111,8 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
   const navigate = useNavigate();
   const [draft, setDraft] = useState<VoucherDraft>(initial);
   const [editReason, setEditReason] = useState('');
+  // What earlier edits changed on this voucher, marked "Before ..." on its fields (PRD FR-7.71).
+  const marks = useEntryMarks('voucher', editing?.id ?? null, editing?.edited != null);
   const [finished, setFinished] = useState(false);
   const [selected, setSelected] = useState<VoucherRow | null>(null);
   // The voucher F9 prints: the one that was last chosen in the list or last saved.
@@ -141,6 +148,17 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
     [built, draft.amount],
   );
   const { query, current } = useVoucherPreview(entry, editing?.id ?? null);
+  // The changes of an edit and their effect, worked out by the backend (plan 44, FR-7.70).
+  const editReview = useEditReview(
+    `voucher:${String(editing?.id ?? 0)}`,
+    editing === null || entry === null
+      ? null
+      : { id: editing.id, version: editing.version, entry, reason: editReason },
+    vouchersEditPreview,
+  );
+  const router = useRouter();
+  const fixFlow = useFixDayFlow();
+  const reopened = useFixStore((state) => state.session);
   // The last answer stays on screen while the next one is on its way, so the notes do not flicker;
   // but an answer about another type of voucher is never shown (a receipt's bills under a payment).
   const preview =
@@ -440,9 +458,17 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
         </div>
       </div>
       {editing === null ? null : (
-        <Notice
-          tone="info"
-          action={
+        <>
+          <EditBand
+            kind={draft.type}
+            number={String(editing.number)}
+            date={editing.entry_date}
+            reopenedDays={reopened?.days ?? []}
+          />
+          {editing.edited === null ? null : (
+            <EditStampLine stamp={editing.edited} history={{ entity: 'voucher', id: editing.id }} />
+          )}
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="danger"
               onClick={() => {
@@ -450,15 +476,10 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
               }}
             >
               <Ban aria-hidden="true" className="size-icon-md" />
-              <Localized id="vouchers-cancel" />
+              <Localized id="edit-action-cancel" />
             </Button>
-          }
-        >
-          <Localized
-            id="vouchers-editing-note"
-            vars={{ kind: draft.type, number: numberText(draft.type, editing.number) }}
-          />
-        </Notice>
+          </div>
+        </>
       )}
       <form
         ref={formRef}
@@ -475,6 +496,7 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
             onChange={change}
             error={error}
             editing={editing !== null}
+            marks={marks}
             editReason={editReason}
             onEditReason={setEditReason}
             onMadeRegular={(made) => {
@@ -497,6 +519,14 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           ) : null}
         </div>
       </form>
+      {editing === null ? null : (
+        <EditReviewCard
+          review={editReview.review}
+          pending={editReview.pending}
+          error={editReview.error}
+        />
+      )}
+      {fixFlow.dialog}
       <WaitingList
         vouchers={list}
         previews={rowPreviews}
@@ -533,7 +563,22 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
           }
         }}
         onEdit={(row) => {
-          void navigate({ to: '/bikri/voucher', search: { type: draft.type, id: row.id } });
+          const open = () => {
+            void navigate({ to: '/bikri/voucher', search: { type: draft.type, id: row.id } });
+          };
+          // An entry of a closed day: the days reopen first, and close again after the save.
+          if (row.needs_reopen) {
+            fixFlow.start({
+              date: row.entry_date,
+              ownerHref: router.buildLocation({
+                to: '/bikri/voucher',
+                search: { type: draft.type, id: row.id },
+              }).href,
+              then: open,
+            });
+          } else {
+            open();
+          }
         }}
         onCancel={setCancelRow}
         onPrint={(row) => {

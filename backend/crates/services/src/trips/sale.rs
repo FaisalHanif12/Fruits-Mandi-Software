@@ -54,27 +54,27 @@ fn money_arg(name: &str, value: Paisa) -> WorkingArg {
 }
 
 /// A sale that passed every check, with what the save writes.
-struct Ready {
-    venture: Venture,
-    purchase: PurchaseRec,
-    date: BusinessDate,
-    shop: Option<String>,
-    note: Option<String>,
-    amount: Paisa,
-    qty: Qty,
+pub(super) struct Ready {
+    pub(super) venture: Venture,
+    pub(super) purchase: PurchaseRec,
+    pub(super) date: BusinessDate,
+    pub(super) shop: Option<String>,
+    pub(super) note: Option<String>,
+    pub(super) amount: Paisa,
+    pub(super) qty: Qty,
     /// نگ moved from our shop's part to the part for another shop by this sale (plan 35 D1).
-    moved: i64,
-    cost: Paisa,
-    credits: Vec<CreditPart>,
-    entry: BalancedEntry,
+    pub(super) moved: i64,
+    pub(super) cost: Paisa,
+    pub(super) credits: Vec<CreditPart>,
+    pub(super) entry: BalancedEntry,
     numbers: OtherSaleNumbers,
 }
 
 /// Every mistake of a typed sale, and the numbers if it can be worked out.
-struct Plan {
-    errors: Vec<FieldError>,
+pub(super) struct Plan {
+    pub(super) errors: Vec<FieldError>,
     warnings: Vec<FieldError>,
-    ready: Option<Ready>,
+    pub(super) ready: Option<Ready>,
 }
 
 impl Plan {
@@ -100,7 +100,7 @@ fn optional_text(errors: &mut FieldErrors, field: &str, text: Option<&String>) -
 /// `ServiceError::Db`, `ServiceError::Data` or `ERR_OVERFLOW` for a failure the user cannot fix.
 /// The user's mistakes come back in [`Plan::errors`].
 #[allow(clippy::too_many_lines)]
-fn plan(
+pub(super) fn plan(
     conn: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     input: &OtherSaleInput,

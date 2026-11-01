@@ -14,6 +14,7 @@ import { useState } from 'react';
 import type { PukhtaPerson } from '../../../bindings/PukhtaPerson';
 import type { UiError } from '../../../bindings/UiError';
 import { pickedOf } from '../../../shared/accounts';
+import type { EntryMarks } from '../../../shared/edit';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import {
@@ -29,6 +30,7 @@ import {
   Picker,
   SegmentedControl,
   fieldError,
+  fieldMark,
   type SegmentedOption,
   FormGrid,
   FormSpan,
@@ -58,6 +60,8 @@ interface VoucherFormProps {
   onEditReason: (reason: string) => void;
   /** The one-time person got a regular account: the account comes back into the form. */
   onMadeRegular: (made: MadeRegular) => void;
+  /** The marks of the edits this voucher went through ("Before 600", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
 const FROM_OPTIONS: readonly SegmentedOption<FromSide>[] = [
@@ -81,6 +85,7 @@ export function VoucherForm({
   editReason,
   onEditReason,
   onMadeRegular,
+  marks,
 }: VoucherFormProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -161,6 +166,7 @@ export function VoucherForm({
       <div className="min-w-0">
         <Field
           label={<Localized id={accountLabelId(draft)} />}
+          mark={fieldMark(marks, 'account_id')}
           error={fieldError(error, accountPath(draft))}
         >
           {(props) => (
@@ -242,7 +248,11 @@ export function VoucherForm({
         </FormSpan>
       ) : null}
       <div className="flex flex-col gap-1">
-        <Field label={<Localized id="vouchers-field-amount" />} error={fieldError(error, 'amount')}>
+        <Field
+          label={<Localized id="vouchers-field-amount" />}
+          mark={fieldMark(marks, 'amount_paisa')}
+          error={fieldError(error, 'amount')}
+        >
           {(props) => (
             <MoneyInput
               {...props}
@@ -281,6 +291,7 @@ export function VoucherForm({
       {draft.type === 'receipt' ? (
         <Field
           label={<Localized id="vouchers-field-collector" />}
+          mark={fieldMark(marks, 'collector_staff_id')}
           error={fieldError(error, 'collector_staff_id')}
         >
           {(props) => (
@@ -300,6 +311,7 @@ export function VoucherForm({
       {isCashLent(draft) ? (
         <Field
           label={<Localized id="vouchers-field-reason-lent" />}
+          mark={fieldMark(marks, 'reason')}
           info={
             <Localized id="vouchers-reason-lent-hint">
               <p />
@@ -321,6 +333,7 @@ export function VoucherForm({
       {draft.type === 'advance' ? (
         <Field
           label={<Localized id="vouchers-field-expected" />}
+          mark={fieldMark(marks, 'expected_goods')}
           info={
             <Localized id="vouchers-field-expected-hint">
               <p />
@@ -341,6 +354,7 @@ export function VoucherForm({
       ) : null}
       <Field
         label={<Localized id="vouchers-field-narration" />}
+        mark={fieldMark(marks, 'narration')}
         error={fieldError(error, 'narration')}
       >
         {(props) => (

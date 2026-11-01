@@ -14,6 +14,7 @@ import type { SavedSale } from '../../src/bindings/SavedSale';
 import type { SavedTotals } from '../../src/bindings/SavedTotals';
 import { IDS } from './bikri-data';
 import { paisaForTest } from './paisa';
+import { OPEN_ENTRY } from './entry-flags';
 
 // Written here and not imported from ./accounts, so the development page can use this file
 // without pulling Vitest into the browser.
@@ -123,6 +124,7 @@ export const EVENT1_TOTALS: SavedTotals = {
 /** Event 1 as saved (E2E-1 to E2E-4): gross 29,400, deductions 10,084, net 19,316. */
 export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
   return {
+    ...OPEN_ENTRY,
     id: 41,
     version: 1,
     number: 1,
@@ -215,6 +217,7 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
 /** The row of Event 1 in the list (PRD FR-12.7). */
 export function listRow(overrides: Partial<BikriListRow> = {}): BikriListRow {
   return {
+    ...OPEN_ENTRY,
     id: 41,
     number: 1,
     entry_date: '2026-10-10',

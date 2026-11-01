@@ -259,6 +259,11 @@ pub struct AnalyticsFilters {
     pub goods: AnalyticsGoods,
     /// How view J lays out its rows. Trip when left out; refused for the other views.
     pub trip_view: Option<AnalyticsTripView>,
+    /// Set by the app, never by the screen: the partner section is locked, so the partner columns
+    /// of this view are left out (PRD FR-17.11). It is not read from JSON and not sent.
+    #[serde(skip)]
+    #[ts(skip)]
+    pub hide_partners: bool,
 }
 
 impl Default for AnalyticsFilters {
@@ -280,6 +285,7 @@ impl Default for AnalyticsFilters {
             garden_id: None,
             goods: AnalyticsGoods::All,
             trip_view: None,
+            hide_partners: false,
         }
     }
 }

@@ -46,6 +46,7 @@ import { CommandError } from '../../src/shared/api';
 import { paisaForTest } from './paisa';
 import { commissionWorking } from './trips-data';
 import { refusal, type RefusalItem } from './ui-error';
+import { OPEN_ENTRY } from './entry-flags';
 
 const money = (rupees: number): ReturnType<typeof paisaForTest> => paisaForTest(rupees * 100);
 
@@ -278,9 +279,12 @@ export function e40Results(closed: boolean): GardenPartnerResult[] {
 
 function historyRow(over: Partial<GardenHistoryRow>): GardenHistoryRow {
   return {
+    ...OPEN_ENTRY,
     entry_date: '2026-10-10',
     kind: 'installment',
     entry_id: null,
+    number: null,
+    arrival_id: null,
     version: null,
     bikri_id: null,
     bikri_number: null,
@@ -288,6 +292,7 @@ function historyRow(over: Partial<GardenHistoryRow>): GardenHistoryRow {
     effect_paisa: money(0),
     running_balance_paisa: money(0),
     reason: null,
+    note: null,
     shop_name: null,
     qty: null,
     journal_entry_id: null,
@@ -307,6 +312,7 @@ export function e40History(closed = false): GardenHistoryRow[] {
       entry_date: '2026-10-10',
       kind: 'installment',
       entry_id: 11,
+      number: 1,
       version: 1,
       amount_paisa: money(30_000),
       effect_paisa: money(-30_000),
@@ -320,6 +326,7 @@ export function e40History(closed = false): GardenHistoryRow[] {
       entry_date: '2026-10-11',
       kind: 'installment',
       entry_id: 12,
+      number: 2,
       version: 1,
       amount_paisa: money(20_000),
       effect_paisa: money(-20_000),
@@ -333,6 +340,7 @@ export function e40History(closed = false): GardenHistoryRow[] {
       entry_date: '2026-10-11',
       kind: 'cost',
       entry_id: 13,
+      number: 1,
       version: 1,
       amount_paisa: money(5_000),
       effect_paisa: money(-5_000),
@@ -356,6 +364,7 @@ export function e40History(closed = false): GardenHistoryRow[] {
       entry_date: '2026-10-12',
       kind: 'other_sale',
       entry_id: 14,
+      number: 1,
       version: 1,
       amount_paisa: money(10_000),
       effect_paisa: money(10_000),
@@ -569,6 +578,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
       if (row === undefined) return refuse([{ code: 'ERR_NOT_FOUND', field: 'id' }]);
       const limit = input.history_limit === 0 ? 100 : input.history_limit;
       return {
+        partners_locked: false,
         row,
         history: store.history.slice(input.history_offset, input.history_offset + limit),
         history_count: store.history.length,
@@ -704,6 +714,7 @@ export function createGardenBooks(options: GardensOptions = {}) {
       }
       return {
         numbers: {
+          partners_locked: false,
           balance_paisa: money(66_400),
           total_cost_paisa: money(55_000),
           money_in_paisa: money(66_400),

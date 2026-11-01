@@ -301,7 +301,8 @@
           }
         }
       ],
-      "posts_entry": true
+      "posts_entry": true,
+      "partners_locked": false
     },
     "earliest_date": "2026-10-12",
     "errors": [],

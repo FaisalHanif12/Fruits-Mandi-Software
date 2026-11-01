@@ -12,4 +12,4 @@ export { PukhtaPersonRow } from './components/PukhtaPersonRow';
 export { PukhtaRegisterPage } from './pages/PukhtaRegisterPage';
 export { usePukhtaPeople } from './hooks';
 export { PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE, isPukhtaCode } from './codes';
-export { pukhtaMakeRegular } from './api';
+export { pukhtaMakeRegular, searchPukhtaPeople } from './api';

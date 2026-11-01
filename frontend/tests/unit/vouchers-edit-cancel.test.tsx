@@ -201,9 +201,10 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       }),
     ).toHaveValue(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
     expect(pageText()).toContain(
-      message(language, 'vouchers-editing-note', {
-        kind: 'receipt',
-        number: message(language, 'vouchers-number-receipt', { number: 1 }),
+      message(language, 'edit-band', {
+        what: message(language, 'glossary-wasooli'),
+        number: '1',
+        date: '10-10-2026',
       }),
     );
     // The type cannot change while a saved voucher is changed.
@@ -252,7 +253,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     const { user } = await open();
     await focusRow(user, 501);
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'vouchers-cancel')) }),
+      screen.getByRole('button', { name: named(message(language, 'edit-action-cancel')) }),
     );
     const dialog = await screen.findByRole('alertdialog');
     const words = visible(dialog.textContent);
@@ -273,7 +274,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     const { user } = await open();
     await focusRow(user, 501);
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'vouchers-cancel')) }),
+      screen.getByRole('button', { name: named(message(language, 'edit-action-cancel')) }),
     );
     const dialog = await screen.findByRole('alertdialog');
     await user.keyboard('wrong buyer');
@@ -295,7 +296,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     });
     // A cancelled voucher can neither be changed nor cancelled again.
     expect(
-      screen.getByRole('button', { name: named(message(language, 'vouchers-edit')) }),
+      screen.getByRole('button', { name: named(message(language, 'edit-action-edit')) }),
     ).toBeDisabled();
   });
 
@@ -306,7 +307,7 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     );
     await focusRow(user, 501);
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'vouchers-cancel')) }),
+      screen.getByRole('button', { name: named(message(language, 'edit-action-cancel')) }),
     );
     const dialog = await screen.findByRole('alertdialog');
     await user.keyboard('x');
@@ -334,7 +335,9 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
         id: 503,
         number: 3,
         status: 'cancelled',
-        editable: false,
+        can_edit: false,
+        can_cancel: false,
+        locked_reason: 'cancelled',
         cancel_reason: 'wrong buyer',
       }),
     );
@@ -349,10 +352,14 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
   });
 
   it('a voucher of a closed day cannot be changed and says what to do', async () => {
-    store.rows.push(voucherRow({ id: 504, number: 4, editable: false }));
+    store.rows.push(voucherRow({ id: 504, number: 4, needs_reopen: true }));
     await open('/bikri/voucher?type=receipt&id=504');
     expect(await screen.findByText(message(language, 'vouchers-view-closed'))).toBeInTheDocument();
     expect(within(screen.getByRole('main')).queryByRole('textbox')).toBeNull();
+    // Edit first reopens the day (PRD FR-21.4); the button says so.
+    expect(
+      screen.getByRole('button', { name: named(message(language, 'edit-action-fix-day')) }),
+    ).toBeEnabled();
   });
 
   it('Ctrl+K finds a voucher by its number and opens it on the voucher screen with its type and id', async () => {

@@ -3,6 +3,11 @@
 // Every command takes one `{ input }` object, except the two that take nothing.
 
 import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EntryEdited } from '../../bindings/EntryEdited';
+import type { GardenArrivalEditInput } from '../../bindings/GardenArrivalEditInput';
+import type { GardenEntryEditInput } from '../../bindings/GardenEntryEditInput';
+import type { GardenHeaderEditInput } from '../../bindings/GardenHeaderEditInput';
 import type {
   ArrivalCancelInput,
   ArrivalCancelled,
@@ -162,4 +167,34 @@ export function gardensArrivalWriteOffUndo(
   input: ArrivalWriteOffUndoInput,
 ): Promise<ArrivalWriteOffUndone> {
   return callCommand<ArrivalWriteOffUndone>('gardens_arrival_write_off_undo', { input });
+}
+
+/** The review of an edit of a garden entry (installment, cost or sale in another shop). Read only. */
+export function gardensEntryEditPreview(input: GardenEntryEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_entry_edit_preview', { input });
+}
+
+/** Saves the edit of a garden entry: the old posting is reversed and the new one posted, same day. */
+export function gardensEntryEditSave(input: GardenEntryEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_entry_edit_save', { input });
+}
+
+/** The review of an edit of a garden's goods arrived. Read only. */
+export function gardensArrivalEditPreview(input: GardenArrivalEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_arrival_edit_preview', { input });
+}
+
+/** Saves the edit of a garden's goods arrived. */
+export function gardensArrivalEditSave(input: GardenArrivalEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_arrival_edit_save', { input });
+}
+
+/** The review of an edit of the header of a garden: the names, the item, the rent, the season end. */
+export function gardensHeaderEditPreview(input: GardenHeaderEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('gardens_header_edit_preview', { input });
+}
+
+/** Saves the edit of the header of a garden. */
+export function gardensHeaderEditSave(input: GardenHeaderEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('gardens_header_edit_save', { input });
 }

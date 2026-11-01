@@ -303,8 +303,6 @@ gardens-history-empty-help = اس باغ کی { -qist }، خرچ اور فروخ
 # review: pending
 gardens-history-count = { $total } میں سے { $shown } نظر آ رہے ہیں
 # review: pending
-gardens-history-cancel = اندراج منسوخ کریں
-# review: pending
 gardens-entry-cancelled-reason = یہ اندراج منسوخ ہو چکا ہے۔ وجہ: { $reason }
 
 ## Cancelling an entry (PRD FR-7.8).
@@ -529,3 +527,7 @@ gardens-arrival-write-off-undone = ضائع واپس لے لیا گیا
 
 # review: pending
 gardens-numbers-left-after = اس کے بعد اندراج میں باقی
+
+# The button on the facts of a garden that opens its names, main fruit, rent, season end and note for change (plan 44).
+# review: pending
+gardens-header-edit = باغ کی تفصیل تبدیل کریں

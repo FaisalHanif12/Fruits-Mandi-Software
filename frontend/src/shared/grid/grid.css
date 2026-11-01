@@ -149,6 +149,26 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%);
 }
 
+/* A cell that an earlier edit changed (plan 44, PRD FR-7.71): a corner mark on the end side, a
+   different shape from the corner of a cell changed now, so the two never look alike. The words
+   ("Before 600, 31-10-2026 4:35 pm, Owner") are in the tooltip and in the entry's edit history
+   (NFR-USE-12). */
+.entry-grid .cell-marked::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  inline-size: var(--spacing-3);
+  block-size: var(--spacing-3);
+  background-color: var(--color-ink-muted);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+
+/* The corner follows the direction of the cell itself, as the corner of a changed cell does. */
+.entry-grid .cell-marked:dir(rtl)::before {
+  clip-path: polygon(0 0, 0 100%, 100% 0);
+}
+
 /* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
    number in them, so it reads in the direction of the language, not like a number cell. */
 .entry-grid .cell-num.cell-hint {

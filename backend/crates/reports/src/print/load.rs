@@ -1,6 +1,7 @@
 //! Reads a saved بکری and the settings that decide how it is printed, then builds the print data
 //! (plan 14). The only part of the print data that touches the database.
 
+use mandi_core::edit::EditStamp;
 use mandi_core::firm::{FirmContact, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK};
 use mandi_core::money::Grouping;
 use mandi_core::printing::PrintSetup;
@@ -10,6 +11,7 @@ use mandi_db::rusqlite::{Connection, OptionalExtension};
 use serde_json::Value;
 
 use super::build::{BuildOptions, build};
+use super::format::NumberStyle;
 use super::{BikriPrintDataInput, PrintData};
 use crate::error::ReportsError;
 
@@ -45,15 +47,17 @@ pub struct FirmNames {
 /// # Errors
 /// `ReportsError::NotFound` if the بکری does not exist; a database or data error otherwise.
 pub fn bikri_print_data(db: &Db, input: &BikriPrintDataInput) -> Result<PrintData, ReportsError> {
-    let (detail, firm, grouping, setup) = db.read(|conn| {
+    let (detail, firm, grouping, setup, revised) = db.read(|conn| {
         let detail = saved::get(conn, input.bikri_id)?.ok_or(ReportsError::NotFound)?;
         Ok::<_, ReportsError>((
             detail,
             load_firm(conn)?,
             load_grouping(conn)?,
             load_setup(conn)?,
+            last_edit_day(conn, "bikri", input.bikri_id)?,
         ))
     })?;
+    let style = NumberStyle::new(input.language, grouping, setup.urdu_digits);
     let options = BuildOptions {
         doc: input.doc,
         language: input.language,
@@ -63,7 +67,28 @@ pub fn bikri_print_data(db: &Db, input: &BikriPrintDataInput) -> Result<PrintDat
         now_utc: db.clock().now_utc(),
         only_buyer_id: input.only_buyer_id,
     };
-    build(&detail, &options)
+    let mut data = build(&detail, &options)?;
+    data.revised_on = revised.map(|day| style.date(&day)).transpose()?;
+    Ok(data)
+}
+
+/// The Pakistan day (`YYYY-MM-DD`) of the last edit of an entry, from the audit log. `None` if the
+/// entry was never edited (PRD FR-7.71).
+pub(super) fn last_edit_day(
+    conn: &Connection,
+    entity: &str,
+    id: i64,
+) -> Result<Option<String>, ReportsError> {
+    let last = mandi_db::edit_stamps::last_edits(conn, entity, &[id])?;
+    last.get(&id)
+        .map(|last| {
+            EditStamp::from_utc(&last.at, String::new(), last.count, None)
+                .map(|stamp| stamp.local_date)
+                .ok_or_else(|| {
+                    ReportsError::Data(format!("an audit time is not a time: {}", last.at))
+                })
+        })
+        .transpose()
 }
 
 /// A setting as JSON, if it was ever saved.

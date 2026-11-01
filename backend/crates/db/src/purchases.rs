@@ -114,6 +114,63 @@ pub fn insert(
     Ok(conn.last_insert_rowid())
 }
 
+/// Rewrites what was bought and paid in a purchase (the edit of PRD FR-7.70). It needs the
+/// purchase's edit window (`edit_windows`). The identity (number, trip, day) stays. The total cost is
+/// the new paid-now amount plus the trip cost the purchase carries now; `journal_entry_id` is the new
+/// posting, or null when every part is from a pocket.
+///
+/// # Errors
+/// Any SQLite error (the trigger `purchases_record_is_final` without a window, the CHECKs).
+pub fn update_edited(
+    conn: &Connection,
+    id: i64,
+    purchase: &NewPurchase<'_>,
+    journal_entry_id: Option<i64>,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    let trip_cost: i64 = conn.query_row(
+        "SELECT trip_cost_paisa FROM purchases WHERE id = ?1",
+        [id],
+        |r| r.get(0),
+    )?;
+    let total = purchase
+        .paid_now_paisa
+        .checked_add(trip_cost)
+        .ok_or(rusqlite::Error::IntegralValueOutOfRange(0, trip_cost))?;
+    conn.execute(
+        "UPDATE purchases SET supplier_text = ?2, item_id = ?3, packing_id = ?4, qty = ?5,
+             weight_grams = ?6, rate_paisa = ?7, value_paisa = ?8, freight_paisa = ?9, labour_paisa = ?10,
+             other_cost_paisa = ?11, paid_now_paisa = ?12, total_cost_paisa = ?13, note = ?14,
+             sell_date = ?15, other_qty = ?16, shop_name = ?17, journal_entry_id = ?18,
+             updated_at = ?19, updated_by = ?20, version = version + 1
+         WHERE id = ?1",
+        params![
+            id,
+            purchase.supplier_text,
+            purchase.item_id,
+            purchase.packing_id,
+            purchase.qty,
+            purchase.weight_grams,
+            purchase.rate_paisa,
+            purchase.value_paisa,
+            purchase.freight_paisa,
+            purchase.labour_paisa,
+            purchase.other_cost_paisa,
+            purchase.paid_now_paisa,
+            total,
+            purchase.note,
+            purchase.sell_date,
+            purchase.other_qty,
+            purchase.shop_name,
+            journal_entry_id,
+            now,
+            user_id,
+        ],
+    )?;
+    Ok(())
+}
+
 /// Changes the day to sell of a purchase (PRD FR-12.39). The table refuses a day before the
 /// purchase day.
 ///
@@ -1003,6 +1060,38 @@ pub fn carries_trip_cost(conn: &Connection, purchase_id: i64) -> rusqlite::Resul
     )
 }
 
+/// True if a saved trip cost spread any part at all over the purchase, even one of 0 (a stale spread
+/// is a spread). The quantity of such a purchase stays (the edit of PRD FR-7.70, C24).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn has_cost_part(conn: &Connection, purchase_id: i64) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM purchase_cost_parts c JOIN venture_entries x ON x.id = c.entry_id
+                        WHERE c.purchase_id = ?1 AND x.status = 'saved')",
+        [purchase_id],
+        |r| r.get(0),
+    )
+}
+
+/// True if a saved trip cost made after the entry `entry_id` spread a part over the purchase. The
+/// cost of goods sold (C21) of an older sale then no longer rests on the cost the purchase had then.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn has_cost_part_after(
+    conn: &Connection,
+    purchase_id: i64,
+    entry_id: i64,
+) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM purchase_cost_parts c JOIN venture_entries x ON x.id = c.entry_id
+                        WHERE c.purchase_id = ?1 AND x.id > ?2 AND x.status = 'saved')",
+        params![purchase_id, entry_id],
+        |r| r.get(0),
+    )
+}
+
 /// The "received" move of a purchase, which a cancel reverses: its id and day.
 ///
 /// # Errors
@@ -1019,6 +1108,19 @@ pub fn received_move(
         |r| Ok((r.get(0)?, r.get(1)?)),
     )
     .optional()
+}
+
+/// Takes the parts of a trip cost back out of the spread table (the edit of the cost, PRD FR-7.70). It
+/// needs the cost entry's edit window (`edit_windows`).
+///
+/// # Errors
+/// Any SQLite error (the trigger `purchase_cost_parts_no_delete` without a window).
+pub fn delete_cost_parts(conn: &Connection, entry_id: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "DELETE FROM purchase_cost_parts WHERE entry_id = ?1",
+        [entry_id],
+    )?;
+    Ok(())
 }
 
 /// One part of a trip cost with the purchase it went to, for the history of a trip.

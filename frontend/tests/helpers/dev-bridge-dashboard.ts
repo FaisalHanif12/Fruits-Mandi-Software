@@ -125,11 +125,16 @@ function manyTasks(): AttentionList {
     },
     { kind: 'names_missing', count: 4, amount_paisa: null, qty: null, days: null, first: null },
   ];
-  return { items, total_count: items.reduce((sum, item) => sum + item.count, 0) };
+  return {
+    items,
+    total_count: items.reduce((sum, item) => sum + item.count, 0),
+    partners_locked: false,
+  };
 }
 
 function attention(): AttentionList {
-  if (devFlag('empty') || devFlag('quiet')) return { items: [], total_count: 0 };
+  if (devFlag('empty') || devFlag('quiet'))
+    return { items: [], total_count: 0, partners_locked: false };
   return devFlag('many') ? manyTasks() : ATTENTION_18_10;
 }
 

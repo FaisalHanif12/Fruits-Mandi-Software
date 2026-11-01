@@ -81,9 +81,9 @@ export function useCashbook(
  * The preview of the entry on the خرچہ form (PRD FR-16.8): each partner's share, or the partner's
  * total now and after. Asked 50 ms after the last key, only once there is an amount.
  */
-export function useExpensePreview(entry: ExpenseEntry | null) {
-  return usePreviewQuery([...CASHBOOK_KEY, 'expense-preview'], entry, (asked) =>
-    expensePreview(asked, null),
+export function useExpensePreview(entry: ExpenseEntry | null, replacing: number | null = null) {
+  return usePreviewQuery([...CASHBOOK_KEY, 'expense-preview', replacing], entry, (asked) =>
+    expensePreview(asked, replacing),
   );
 }
 
@@ -91,15 +91,16 @@ export function useExpensePreview(entry: ExpenseEntry | null) {
  * The preview of an entry of the ادھار رقم or الگ کھاتہ screen: the generic voucher preview, the
  * same function as the save (Code Standards B5). The answer carries the type it was asked for, so
  * an older answer kept on screen while a new one is on its way is never taken for the answer of
- * another type.
+ * another type. `replacing` is the saved entry being edited: the preview is then the effect of the
+ * change, with that entry taken out first (plan 44).
  */
-export function useEntryPreview(entry: VoucherEntry | null) {
+export function useEntryPreview(entry: VoucherEntry | null, replacing: number | null = null) {
   return usePreviewQuery(
-    [...CASHBOOK_KEY, 'entry-preview'],
+    [...CASHBOOK_KEY, 'entry-preview', replacing],
     entry,
     async (asked): Promise<TaggedPreview> => ({
       type: asked.type,
-      preview: await vouchersPreview(asked, null),
+      preview: await vouchersPreview(asked, replacing),
     }),
   );
 }

@@ -411,3 +411,18 @@ openings-none-with-help = پہلے بقایا لکھنے کے لیے «ابھی 
 
 # review: pending
 openings-show-all-button = تمام کھاتے دکھائیں
+
+## An opening balance needs an open day (plan 44, PRD FR-10.11): an account itself saves on any day.
+
+# review: pending
+accounts-opening-closed-today-open = یہ تاریخ بند ہو چکی ہے، اس لیے ابتدائی رقم اس پر نہیں لگ سکتی۔ کھاتہ کسی بھی دن محفوظ ہو جاتا ہے، لیکن ابتدائی رقم کھلے دن کی تاریخ پر لگتی ہے۔
+
+# review: pending
+accounts-opening-closed-today-closed = آج کا دن بھی بند ہے، اس لیے ابتدائی رقم ابھی نہیں لگ سکتی۔ کھاتہ بغیر ابتدائی رقم کے محفوظ ہو سکتا ہے، یا دن کھول کر رقم لگائی جا سکتی ہے۔
+
+# $today: today's date, DD-MM-YYYY.
+# review: pending
+accounts-opening-closed-use-today = آج کی تاریخ ({ $today }) لگائیں
+
+# review: pending
+accounts-opening-closed-without = ابتدائی رقم کے بغیر محفوظ کریں

@@ -20,7 +20,7 @@ use super::model::{AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage, Analyt
 use super::partner::{FRUIT_POSTINGS, GARDEN_POSTINGS, TRIP_POSTINGS};
 use crate::error::ReportsError;
 use crate::reports::common::{LIVE, paisa};
-use crate::reports::{Cell, Column, ColumnKind, PageSpec, Row, RowKind, RowSource, SourceKind};
+use crate::reports::{Cell, Column, ColumnKind, PageSpec, Row, RowKind, RowSource};
 
 fn column(key: &str, title: &str, kind: ColumnKind) -> Column {
     Column {
@@ -39,24 +39,6 @@ fn columns() -> Vec<Column> {
         column("share", ids::COL_SHARE_PERCENT, ColumnKind::Percent),
         column("amount", ids::COL_SHARE_AMOUNT, ColumnKind::Money),
     ]
-}
-
-/// Where a row opens, by the kind of the journal entry's source.
-fn source_of(source_type: &str, source_id: i64) -> RowSource {
-    let kind = match source_type {
-        "bikri" => SourceKind::Bikri,
-        "voucher" => SourceKind::Voucher,
-        "account" => SourceKind::Account,
-        "month_close" => SourceKind::MonthClose,
-        "purchase" => SourceKind::Purchase,
-        "venture" => SourceKind::Venture,
-        "fruit" => SourceKind::Fruit,
-        _ => SourceKind::Entry,
-    };
-    RowSource {
-        kind,
-        id: source_id,
-    }
 }
 
 /// The share rows of the partner in the key (or the filter), inside the period of the run and of
@@ -107,9 +89,14 @@ pub(crate) fn run(
     let mut page_args = args;
     page_args.push(Value::Integer(spec.sql_limit()));
     page_args.push(Value::Integer(spec.offset));
+    let (venture_kind, venture_id) = (
+        mandi_db::row_source_sql::VENTURE_KIND,
+        mandi_db::row_source_sql::VENTURE_ID,
+    );
     let mut statement = conn.prepare(&format!(
         "SELECT s.entry_date, e.posting_type, e.source_type, e.source_id,
-                COALESCE(b.number, v.number), s.kind, s.base_paisa, s.share_bps, s.amount_paisa
+                COALESCE(b.number, v.number), s.kind, s.base_paisa, s.share_bps, s.amount_paisa,
+                {venture_kind}, {venture_id}, s.journal_entry_id
          FROM partner_share_rows s
          JOIN journal_entries e ON e.id = s.journal_entry_id
          LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
@@ -128,11 +115,28 @@ pub(crate) fn run(
                 r.get::<_, i64>(6)?,
                 r.get::<_, i64>(7)?,
                 r.get::<_, i64>(8)?,
+                r.get::<_, Option<String>>(9)?,
+                r.get::<_, Option<i64>>(10)?,
+                r.get::<_, i64>(11)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut rows = Vec::with_capacity(raws.len());
-    for (date, posting_type, source_type, source_id, number, kind, base, bps, amount) in raws {
+    for (
+        date,
+        posting_type,
+        source_type,
+        source_id,
+        number,
+        kind,
+        base,
+        bps,
+        amount,
+        v_kind,
+        v_id,
+        entry_id,
+    ) in raws
+    {
         rows.push(Row {
             cells: vec![
                 Cell::Date { iso: date },
@@ -155,7 +159,13 @@ pub(crate) fn run(
                     paisa: paisa(amount)?,
                 },
             ],
-            source: Some(source_of(&source_type, source_id)),
+            source: Some(RowSource::of_stored(
+                &source_type,
+                source_id,
+                entry_id,
+                v_kind.as_deref(),
+                v_id,
+            )),
             kind: RowKind::Normal,
         });
     }
@@ -250,11 +260,15 @@ fn venture_run(
     let mut page_args = args;
     page_args.push(Value::Integer(spec.sql_limit()));
     page_args.push(Value::Integer(spec.offset));
+    let (venture_kind, venture_id) = (
+        mandi_db::row_source_sql::VENTURE_KIND,
+        mandi_db::row_source_sql::VENTURE_ID,
+    );
     let raws = conn
         .prepare(&format!(
             "SELECT e.entry_date, e.posting_type, e.source_type, e.source_id,
                     COALESCE(b.number, pu.number, ve.number, fr.number), p.name_ur, p.name_en,
-                    l.dr_paisa, l.cr_paisa
+                    l.dr_paisa, l.cr_paisa, {venture_kind}, {venture_id}, e.id
              {from_clause}
              LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
              LEFT JOIN purchases pu ON e.source_type = 'purchase' AND pu.id = e.source_id
@@ -275,11 +289,27 @@ fn venture_run(
                 },
                 r.get::<_, i64>(7)?,
                 r.get::<_, i64>(8)?,
+                r.get::<_, Option<String>>(9)?,
+                r.get::<_, Option<i64>>(10)?,
+                r.get::<_, i64>(11)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut rows = Vec::with_capacity(raws.len());
-    for (date, posting_type, source_type, source_id, number, names, debit, credit) in raws {
+    for (
+        date,
+        posting_type,
+        source_type,
+        source_id,
+        number,
+        names,
+        debit,
+        credit,
+        v_kind,
+        v_id,
+        entry_id,
+    ) in raws
+    {
         rows.push(Row {
             cells: vec![
                 Cell::Date { iso: date },
@@ -292,7 +322,13 @@ fn venture_run(
                     paisa: paisa(credit)?.checked_sub(paisa(debit)?)?,
                 },
             ],
-            source: Some(source_of(&source_type, source_id)),
+            source: Some(RowSource::of_stored(
+                &source_type,
+                source_id,
+                entry_id,
+                v_kind.as_deref(),
+                v_id,
+            )),
             kind: RowKind::Normal,
         });
     }

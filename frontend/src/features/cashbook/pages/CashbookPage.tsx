@@ -29,6 +29,7 @@ import {
   LoadingState,
   PeriodBox,
 } from '../../../shared/ui';
+import { useOpenRowSource } from '../../reports';
 import { SignedNum } from '../components/SignedNum';
 import { useCashbook } from '../hooks';
 import { CASHBOOK_COLUMNS } from '../list-columns';
@@ -46,6 +47,7 @@ const CASH_MONTH_COLUMNS = { in_paisa: 'in', out_paisa: 'out', running_paisa: 'r
 
 function CashbookScreen({ today }: { today: string }) {
   const navigate = useNavigate();
+  const openSource = useOpenRowSource();
   // The book opens on today and the Owner may widen it (the period is remembered, plan 38 R4).
   const period = usePeriod('cashbook.book', 'today', today);
   const range = useMemo(
@@ -122,6 +124,11 @@ function CashbookScreen({ today }: { today: string }) {
         columns={CASHBOOK_COLUMNS}
         rows={rows}
         getRowId={(row) => `${String(row.entry_id)}-${row.posting_type}`}
+        // A row opens the entry behind it (PRD FR-19.4): a sale, a voucher, a trip purchase, a trip
+        // or a garden, fruit taken or an account; an entry with no screen of its own opens nothing.
+        onOpen={(row) => {
+          openSource(row.source);
+        }}
         labelId="cashbook-list-label"
         failedId="cashbook-load-failed"
         error={book.isError ? uiErrorOf(book.error) : null}

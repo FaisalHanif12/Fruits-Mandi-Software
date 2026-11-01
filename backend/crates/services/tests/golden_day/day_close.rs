@@ -183,7 +183,7 @@ fn a_part_sold_bikri_leaves_lots_in_stock_until_the_later_sale() {
 
 /// Writes a fixture file (when `MANDI_WRITE_FIXTURES` is set) or checks that it holds exactly
 /// this text, like `day_money_fixtures.rs`: a fixture can never go stale.
-fn write_or_check(file: &str, text: &str) {
+pub(super) fn write_or_check(file: &str, text: &str) {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures")

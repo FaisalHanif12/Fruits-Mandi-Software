@@ -10,6 +10,7 @@ use mandi_core::accounts::BalanceSide;
 use mandi_core::auth::Language;
 use mandi_core::money::Paisa;
 use mandi_core::printing::Paper;
+pub use mandi_core::row_source::{RowSource, SourceKind};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -401,6 +402,11 @@ pub struct ReportFilters {
     /// true the partner filter must be empty.
     #[ts(optional)]
     pub guests_only: Option<bool>,
+    /// Set by the app, never by the screen: the partner section is locked, so the partner parts of
+    /// this report are left out (PRD FR-17.11). It is not read from JSON and not sent.
+    #[serde(skip)]
+    #[ts(skip)]
+    pub hide_partners: bool,
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
@@ -767,42 +773,6 @@ pub enum ArgValue {
         /// Its arguments.
         args: Vec<MessageArg>,
     },
-}
-
-/// What a row opens (PRD FR-19.4).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[serde(rename_all = "snake_case")]
-#[ts(rename = "ReportSourceKind")]
-pub enum SourceKind {
-    /// A saved بکری.
-    Bikri,
-    /// A saved voucher.
-    Voucher,
-    /// An account.
-    Account,
-    /// A month close entry.
-    MonthClose,
-    /// A trip purchase.
-    Purchase,
-    /// A garden arrival (مال آیا, PRD FR-12.40): the id is the arrival's.
-    Arrival,
-    /// A trip or a garden.
-    Venture,
-    /// Fruit taken.
-    Fruit,
-    /// A journal entry that belongs to no screen of its own.
-    Entry,
-}
-
-/// The record a row opens.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
-#[ts(rename = "ReportRowSource")]
-pub struct RowSource {
-    /// What kind of record.
-    pub kind: SourceKind,
-    /// Its id.
-    #[ts(type = "number")]
-    pub id: i64,
 }
 
 /// How a row is drawn.

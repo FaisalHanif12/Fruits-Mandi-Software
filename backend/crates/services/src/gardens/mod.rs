@@ -15,9 +15,12 @@
 //! - `entry`: an installment, a running cost or a sale in another shop: preview, save, cancel.
 //! - `close`: the closing and its undo.
 
+pub(crate) mod arrival_edit;
 pub mod arrivals;
 mod close;
 mod entry;
+pub(crate) mod entry_edit;
+pub(crate) mod header_edit;
 mod make;
 mod read;
 

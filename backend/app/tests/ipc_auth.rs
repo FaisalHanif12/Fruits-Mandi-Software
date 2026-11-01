@@ -812,6 +812,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         ("vouchers_get", json!({ "input": { "id": 1 } }), true),
         (
+            "vouchers_open_for_edit",
+            json!({ "input": { "id": 1 } }),
+            true,
+        ),
+        (
             "vouchers_save_receipts_batch",
             json!({ "input": { "rows": [] } }),
             true,
@@ -1375,6 +1380,132 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "analytics_print_view",
             json!({ "input": { "view": { "view": "A", "filters": {}, "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        // Plan 44 (append-only block).
+        (
+            "bikri_edit_review",
+            json!({ "input": { "entry_id": 1,
+                "draft": { "header": { "entry_date": "10-10-2026" }, "lots": [] } } }),
+            true,
+        ),
+        (
+            "vouchers_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
+                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+            true,
+        ),
+        (
+            "fruit_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "reason": "x", "entry": { "for_guests": false, "partner_id": 1, "date": "10-10-2026", "source": "other_shop", "lot_id": null, "agent_account_id": 1, "item_id": 1, "packing_id": 1, "qty": "2", "weight": null, "rate": "580", "note": null } } }),
+            true,
+        ),
+        (
+            "purchases_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "purchase": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1, "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null, "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "purchases_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "purchase": { "trip_id": 1, "date": "10-10-2026", "supplier": null, "item_id": 1, "packing_id": 1, "qty": "20", "weight": null, "rate": "500", "freight": "400", "labour": null, "other_cost": null, "note": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_cost_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "cost": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_cost_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "cost": { "trip_id": 1, "date": "10-10-2026", "amount": "4,000", "reason": "x", "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_other_sale_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "sale": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1, "qty": "5", "amount": "3,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_other_sale_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "sale": { "trip_id": 1, "date": "10-10-2026", "shop": null, "purchase_id": 1, "qty": "5", "amount": "3,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_entry_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "entry": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_entry_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "entry": { "type": "other_sale", "garden_id": 1, "date": "10-10-2026", "shop": null, "qty": "20", "amount": "10,000", "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "arrival": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1, "packing_id": 1, "qty": "100", "weight": null, "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_arrival_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "arrival": { "garden_id": 1, "date": "10-10-2026", "sell_date": null, "item_id": 1, "packing_id": 1, "qty": "100", "weight": null, "note": null }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_header_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "trip": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] }, "reason": "" } }),
+            true,
+        ),
+        (
+            "trips_header_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "trip": { "date": "10-10-2026", "market": null, "sent_person": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }] }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_header_edit_preview",
+            json!({ "input": { "id": 1, "version": 1, "garden": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "gardens_header_edit_save",
+            json!({ "input": { "id": 1, "version": 1, "garden": { "name_ur": "شاہ پور باغ", "name_en": "Shahpur Garden", "confirmed_rules_words": [], "date": "10-10-2026", "item_id": null, "rent": "50,000", "season_end": null, "note": null, "partners": [{ "partner_id": 1, "share": "100", "source": "shop" }], "paid_now": null, "parts": [], "confirm_cash_below_zero": false }, "reason": "" } }),
+            true,
+        ),
+        (
+            "day_fix_open",
+            json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
+            true,
+        ),
+        ("day_fix_close", json!({ "input": { "token": "x" } }), true),
+        (
+            "audit_edit_stamp",
+            json!({ "input": { "entity": "bikri", "ids": [1] } }),
+            true,
+        ),
+        (
+            "audit_edit_history",
+            json!({ "input": { "entity": "bikri", "id": 1 } }),
+            true,
+        ),
+        ("partners_code_status", json!({}), true),
+        (
+            "partners_code_set",
+            json!({ "input": { "password": "x", "code": "4826", "code_again": "4826" } }),
+            true,
+        ),
+        (
+            "partners_code_change",
+            json!({ "input": { "old_code_or_password": "x", "code": "4826", "code_again": "4826" } }),
+            true,
+        ),
+        (
+            "partners_code_unlock",
+            json!({ "input": { "code": "4826" } }),
+            true,
+        ),
+        ("partners_code_lock", json!({}), true),
+        (
+            "partners_code_reset",
+            json!({ "input": { "password_or_recovery": "x", "code": "4826", "code_again": "4826" } }),
             true,
         ),
     ]
@@ -2059,7 +2190,10 @@ fn the_partners_commands_work_through_the_ipc() {
         .map(|p| p["share_bps"].as_i64().unwrap())
         .collect();
     assert_eq!(bps, [4_000, 3_000, 3_000]);
-    assert_eq!(h.ok("partners_list", json!({})), saved);
+    // Plan 44: the list is wrapped with the lock flag (false until the partner code exists).
+    let listed = h.ok("partners_list", json!({}));
+    assert_eq!(listed["partners"], saved);
+    assert_eq!(listed["partners_locked"], json!(false));
 
     let detail = h.ok("partners_get", json!({ "input": { "id": 1 } }));
     assert_eq!(detail["row"]["share_bps"], 4_000);
@@ -2186,7 +2320,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     // Read, edit (the version comes from the read), and the stale version is refused.
     let row = h.ok("vouchers_get", json!({ "input": { "id": id } }));
     assert_eq!(
-        (row["editable"].clone(), row["status"].clone()),
+        (row["can_edit"].clone(), row["status"].clone()),
         (json!(true), json!("saved"))
     );
     let version = row["version"].as_i64().unwrap();

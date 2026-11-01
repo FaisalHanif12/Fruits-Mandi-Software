@@ -7,6 +7,8 @@ import { vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { CancelPreview } from '../../src/bindings/CancelPreview';
+import type { EditChange } from '../../src/bindings/EditChange';
+import type { EditPreview } from '../../src/bindings/EditPreview';
 import type { EditableBikri } from '../../src/bindings/EditableBikri';
 import type { StockRow } from '../../src/bindings/StockRow';
 import { CommandError } from '../../src/shared/api';
@@ -25,6 +27,58 @@ import { sliceOf } from './paged';
 import { refusal } from './ui-error';
 
 export * from './bikri-plan16-data';
+
+/** The paisa of a rate as typed ("610" or "1,200"), the way the backend reads a whole rupee. */
+function paisaOf(text: string): number {
+  return Number(text.replaceAll(',', '')) * 100;
+}
+
+/**
+ * What the backend's review of an edit says (plan 44, PRD FR-7.70), for the one thing these tests
+ * change: the rate of a line, or a line taken away. Like the real review it compares the draft with
+ * the entry as loaded and lists each difference with its place; a changed day is not asked about.
+ * The reason is required when the entry is not of today (2026-10-10 in these tests).
+ */
+export function fakeEditReview(baseline: EditableBikri, draft: BikriDraft): EditPreview {
+  const changes: EditChange[] = [];
+  baseline.draft.lots.forEach((lot, lotIndex) => {
+    lot.sales.forEach((line, lineIndex) => {
+      const now = draft.lots[lotIndex]?.sales[lineIndex];
+      const place = {
+        kind: 'line' as const,
+        lot_no: lotIndex + 1,
+        line_no: lineIndex + 1,
+        label_ur: null,
+        label_en: null,
+      };
+      if (now === undefined) {
+        changes.push({
+          place,
+          field: 'qty',
+          before: { type: 'number', value: Number(line.qty) },
+          after: { type: 'empty' },
+        });
+      } else if (now.seller_rate !== line.seller_rate) {
+        changes.push({
+          place,
+          field: 'seller_rate',
+          before: { type: 'money', paisa: paisaOf(line.seller_rate) as never },
+          after: { type: 'money', paisa: paisaOf(now.seller_rate) as never },
+        });
+      }
+    });
+  });
+  return {
+    errors: [],
+    review: {
+      entry_date: baseline.entry_date,
+      changes,
+      effect: { parties: [], cash: null, partners: [], partners_locked: false },
+      reason_required: baseline.entry_date !== '2026-10-10',
+      needs_reopen: false,
+    },
+  };
+}
 
 export interface FakePlan16 {
   /**
@@ -117,6 +171,11 @@ export function fakePlan16(
     store.editPreviews.push({ entryId, draft });
     return Promise.resolve(previewFor(draft));
   });
+  vi.mocked(bikriApi.bikriEditReview).mockImplementation((entryId, draft) =>
+    Promise.resolve(
+      fakeEditReview(entryId === 9 ? (options.editableLater ?? editableLater()) : open, draft),
+    ),
+  );
   vi.mocked(bikriApi.bikriEditSave).mockImplementation(
     (entryId, version, draft, reason, confirm) => {
       unconfirmed(confirm);

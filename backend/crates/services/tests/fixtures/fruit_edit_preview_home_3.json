@@ -1,0 +1,81 @@
+{
+  "errors": [],
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "qty",
+        "before": {
+          "type": "number",
+          "value": 2
+        },
+        "after": {
+          "type": "number",
+          "value": 3
+        }
+      },
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "value",
+        "before": {
+          "type": "money",
+          "paisa": 116000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 174000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [
+        {
+          "account": {
+            "id": 2,
+            "code": "030110001",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          },
+          "person_key": null,
+          "before": {
+            "amount_paisa": 275000,
+            "side": "cr"
+          },
+          "after": {
+            "amount_paisa": 333000,
+            "side": "cr"
+          }
+        }
+      ],
+      "cash": null,
+      "partners": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "before_paisa": -116000,
+          "after_paisa": -174000
+        }
+      ],
+      "partners_locked": false
+    },
+    "reason_required": true,
+    "needs_reopen": false
+  }
+}

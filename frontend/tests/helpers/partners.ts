@@ -142,6 +142,14 @@ export function fakePartners(
   };
   const activeIds = () => store.rows.filter((row) => row.is_active).map((row) => row.id);
 
+  // The partner code is made and the section is open: the screens show (plan 44, PRD FR-17.11).
+  // A test about the code sets its own answers.
+  vi.mocked(partnersApi.partnersCodeStatus).mockResolvedValue({
+    is_set: true,
+    unlocked: true,
+    wait_seconds: 0,
+  });
+
   vi.mocked(partnersApi.partnersList).mockImplementation(() =>
     Promise.resolve(store.rows.map((row) => ({ ...row }))),
   );

@@ -83,7 +83,7 @@ fn input_at(date: &str, mut input: ReceiptInput) -> ReceiptInput {
 }
 
 /// Events 1 to 5 of the PRD (the world of E2E-44).
-fn events_1_to_5() -> support::World {
+pub(super) fn events_1_to_5() -> support::World {
     let w = worked_day();
     day_money::events_1_to_4(&w);
     event5_direct(&w);

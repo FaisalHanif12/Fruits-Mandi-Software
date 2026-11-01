@@ -60,4 +60,10 @@ export type {
   RepeatedExpense,
   TakeRow,
 };
-export type { VoucherEntry, VoucherPreview, VoucherRow, VoucherSaved } from '../vouchers';
+export type {
+  VoucherEditable,
+  VoucherEntry,
+  VoucherPreview,
+  VoucherRow,
+  VoucherSaved,
+} from '../vouchers';

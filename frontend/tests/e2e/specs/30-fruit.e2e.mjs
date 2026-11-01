@@ -114,7 +114,9 @@ describe('E2E-42: fruit taken (Urdu, then English)', () => {
 
   it('4. an entry is edited with a reason and then cancelled with a reason; it stays in the list as cancelled', async () => {
     await (await listRow(2)).click();
-    await (await $(`//button[contains(normalize-space(.), "${t('en', 'fruit-edit')}")]`)).click();
+    await (
+      await $(`//button[contains(normalize-space(.), "${t('en', 'edit-action-edit')}")]`)
+    ).click();
     await waitForText(t('en', 'fruit-editing', { number: t('en', 'fruit-number', { number: 2 }) }));
     await focusField('en', 'fruit-field-qty');
     await type('1');
@@ -122,7 +124,9 @@ describe('E2E-42: fruit taken (Urdu, then English)', () => {
     await type(Key.F10);
     await waitForText(t('en', 'fruit-saved', { number: t('en', 'fruit-number', { number: 2 }) }));
     await (await listRow(2)).click();
-    await (await $(`//button[contains(normalize-space(.), "${t('en', 'fruit-cancel')}")]`)).click();
+    await (
+      await $(`//button[contains(normalize-space(.), "${t('en', 'edit-action-cancel')}")]`)
+    ).click();
     const dialog = await $('[role="alertdialog"]');
     await dialog.waitForDisplayed({ timeout: WAIT_MS });
     await type('mistake');

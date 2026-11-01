@@ -388,15 +388,6 @@ vouchers-view-cancelled = This voucher is cancelled. Reason:
 # review: pending
 vouchers-view-closed = The day of this voucher is closed, so it cannot be changed. If the Owner reopens the day, it can be.
 
-# review: pending
-vouchers-other-screen = This voucher belongs to another screen
-
-# review: pending
-vouchers-other-screen-help = Open it in the { -rokar } area.
-
-# review: pending
-vouchers-other-screen-open = Open { -rokar }
-
 ## Cancelling a voucher (PRD FR-7.8, FR-15.3). $number is its number, $amount its amount, $name the party.
 
 # review: pending
@@ -591,3 +582,10 @@ vouchers-collection-print-help = Prints the { -agrahi } list of { $date }, as it
 # The hint inside the search box of the collection list (the code, the name or the phone of a buyer).
 # review: pending
 vouchers-collection-search = Buyer code, name or phone
+
+# A voucher of the other kinds (an expense, a loan, a khata, capital, a journal). $number, $amount, $name.
+# review: pending
+vouchers-cancel-text-other = { $number } (<num>{ $amount }</num>, { $name }) will be cancelled. { -rokar } and its accounts go back as they were. It stays in the list, marked cancelled.
+
+# review: pending
+vouchers-cancelled-other = { $number } cancelled

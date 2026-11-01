@@ -8,6 +8,7 @@ use mandi_services::core::trips::{
     TripGetInput, TripInput, TripRow, TripSetPartnersInput, TripsList, TripsListInput,
     TripsSummary,
 };
+use mandi_services::partner_code;
 use mandi_services::{auth, trips};
 
 use super::run;
@@ -78,7 +79,11 @@ pub async fn trips_get<R: tauri::Runtime>(
 ) -> Result<TripDetail, UiError> {
     run(app, "trips_get", move |ctx| {
         auth::require(ctx)?;
-        trips::get(ctx, &input)
+        let mut shown = trips::get(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }

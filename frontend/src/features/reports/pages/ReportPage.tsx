@@ -49,6 +49,7 @@ import {
   type ReportFilterState,
 } from '../filters';
 import { reportsExportExcel } from '../api';
+import { useOpenRowSource } from '../open-source';
 import { MOVABLE_REPORTS, partyOfFocusedRow } from '../dead-row';
 import { useReportCatalog, useReportPages } from '../hooks';
 import { filtersFromRemembered, reportScreen, rememberedFilters } from '../remember';
@@ -89,6 +90,7 @@ function isFilterRefusal(error: UiError): boolean {
 function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportCatalogEntry['id']) {
   const navigate = useNavigate();
   const openArrival = useOpenArrival();
+  const openRowSource = useOpenRowSource();
   return (view: ReportRowView) => {
     const source = view.row.source;
     if (source === null) return;
@@ -124,6 +126,8 @@ function useOpenSource(catalog: readonly ReportCatalogEntry[], reportId: ReportC
         }
         return;
       default:
+        // A بکری, a trip, a garden or a trip purchase opens as it does in the cash book.
+        openRowSource(source);
         return;
     }
   };

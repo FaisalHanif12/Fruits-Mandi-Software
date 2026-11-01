@@ -1,0 +1,38 @@
+{
+  "garden": {
+    "confirm_cash_below_zero": false,
+    "confirmed_rules_words": [
+      "شاہ",
+      "پور",
+      "باغ",
+      "Shahpur",
+      "Garden",
+      "Bagh"
+    ],
+    "date": "10-10-2026",
+    "item_id": 1,
+    "name_en": "Shahpur Bagh",
+    "name_ur": "شاہ پور باغ",
+    "note": "نیا نوٹ",
+    "paid_now": null,
+    "paid_now_reason": null,
+    "partners": [
+      {
+        "partner_id": 1,
+        "share": "60",
+        "source": "shop"
+      },
+      {
+        "partner_id": 2,
+        "share": "40",
+        "source": "pocket"
+      }
+    ],
+    "parts": [],
+    "rent": "60,000",
+    "season_end": null
+  },
+  "id": 1,
+  "reason": "",
+  "version": 1
+}

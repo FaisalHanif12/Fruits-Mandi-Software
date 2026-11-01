@@ -54,7 +54,7 @@ describe('E2E-13 and E2E-14: edit a saved بکری and edit it back (Urdu)', () 
   it('2. the saved بکری has Edit; it opens the entry with the loaded rate', async () => {
     await openLastSaved();
     await waitForText(t('ur', 'bikri-saved-readonly'));
-    await (await buttonNamed('bikri-edit')).click();
+    await (await buttonNamed('edit-action-edit')).click();
     await waitForHeading('ur', 'bikri-edit-title');
     await waitForText(t('ur', 'bikri-edit-no-changes'));
     const rate = await cell(t('ur', 'bikri-sales-label'), 0, 'rate');
@@ -84,7 +84,7 @@ describe('E2E-13 and E2E-14: edit a saved بکری and edit it back (Urdu)', () 
   });
 
   it('4. E2E-14: editing the rate back to 600 returns every number to 12,880', async () => {
-    await (await buttonNamed('bikri-edit')).click();
+    await (await buttonNamed('edit-action-edit')).click();
     await waitForHeading('ur', 'bikri-edit-title');
     await typeRate('600');
     await type(Key.F10);

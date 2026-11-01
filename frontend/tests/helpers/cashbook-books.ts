@@ -377,6 +377,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
             ),
           };
     return {
+      partners_locked: false,
       voucher_type: entry.type,
       amount_paisa: money(amount),
       head:
@@ -686,6 +687,7 @@ export function createCashbookBooks(options: CashbookBooksOptions = {}) {
       in_paisa: money(row.inRupees),
       out_paisa: money(row.outRupees),
       running_paisa: money(row.running),
+      source: null,
     }));
     return {
       opening_paisa: money(opening),

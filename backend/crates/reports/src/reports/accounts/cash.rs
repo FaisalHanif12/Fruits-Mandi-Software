@@ -25,8 +25,7 @@ use mandi_db::rusqlite::Connection;
 use super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    IN_CHUNK, amount_or_empty, balance_cell, col, load_parties, paisa, party_of_line, placeholders,
-    source_of, text_cell,
+    amount_or_empty, balance_cell, col, load_parties, paisa, party_of_line, source_of, text_cell,
 };
 use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
@@ -116,7 +115,6 @@ pub(crate) fn run(
         .filter_map(|r| counterpart_of(&others, r))
         .collect();
     let parties = load_parties(conn, &account_ids)?;
-    let sources = sources_of(conn, &entry_ids)?;
 
     let mut rows = Vec::with_capacity(stored.len());
     for row in &stored {
@@ -136,10 +134,6 @@ pub(crate) fn run(
         } else {
             &row.narration
         };
-        let (source_type, source_id) = sources
-            .get(&row.entry_id)
-            .cloned()
-            .unwrap_or_else(|| (String::new(), row.entry_id));
         rows.push(Row {
             cells: vec![
                 Cell::Date {
@@ -155,7 +149,12 @@ pub(crate) fn run(
                 amount_or_empty(paisa(row.out_paisa)?),
                 balance_cell(balance),
             ],
-            source: Some(source_of(&source_type, source_id, row.entry_id)),
+            source: Some(source_of(
+                &row.source_type,
+                row.source_id,
+                row.entry_id,
+                (row.venture_kind.as_deref(), row.venture_id),
+            )),
             kind: RowKind::Normal,
         });
     }
@@ -200,33 +199,6 @@ pub(crate) fn run(
             },
         ],
     })
-}
-
-/// The source type and id of each entry of the page, so a row can open its record.
-fn sources_of(
-    conn: &Connection,
-    entry_ids: &[i64],
-) -> Result<HashMap<i64, (String, i64)>, ReportsError> {
-    use mandi_db::rusqlite::params_from_iter;
-    let mut found = HashMap::new();
-    for chunk in entry_ids.chunks(IN_CHUNK) {
-        let sql = format!(
-            "SELECT id, source_type, source_id FROM journal_entries WHERE id IN ({})",
-            placeholders(chunk.len())
-        );
-        let mut statement = conn.prepare(&sql)?;
-        let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                (r.get::<_, String>(1)?, r.get::<_, i64>(2)?),
-            ))
-        })?;
-        for row in rows {
-            let (id, source) = row?;
-            found.insert(id, source);
-        }
-    }
-    Ok(found)
 }
 
 /// The page of R12 is in day order, so every row has its running sums; a row without them is a

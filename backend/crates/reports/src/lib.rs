@@ -20,6 +20,7 @@ pub mod error;
 pub mod export;
 mod gardens;
 pub mod pack;
+pub mod partner_guard;
 pub mod people;
 pub mod print;
 pub mod reports;

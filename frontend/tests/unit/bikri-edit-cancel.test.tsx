@@ -12,7 +12,9 @@ import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
 import { CommandError } from '../../src/shared/api';
 import * as urduApi from '../../src/shared/urdu/api';
+import * as editApi from '../../src/shared/edit/api';
 import { fakeBikri } from '../helpers/bikri';
+import { AUDIT_EDIT_STAMP_BIKRI, DAY_FIX_OPEN_E2E_45 } from '../helpers/edit-real';
 import { cancelPreview, cash, editable, editableLater, fakePlan16 } from '../helpers/bikri-plan16';
 import { BIKRI_CANCEL_HAS_FRUIT } from '../helpers/fruit-real';
 import {
@@ -44,6 +46,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
+vi.mock('../../src/shared/edit/api');
 vi.mock('../../src/features/partners/api');
 vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
@@ -115,10 +118,10 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       fakePlan16();
       await openSaved();
       expect(
-        screen.getByRole('button', { name: said(message(language, 'bikri-edit')) }),
+        screen.getByRole('button', { name: said(message(language, 'edit-action-edit')) }),
       ).toBeEnabled();
       expect(
-        screen.getByRole('button', { name: starts(message(language, 'bikri-cancel-bikri')) }),
+        screen.getByRole('button', { name: starts(message(language, 'edit-action-cancel')) }),
       ).toBeInTheDocument();
       expect(pageText()).toContain(message(language, 'bikri-posting-open'));
       expect(
@@ -146,16 +149,19 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
     it('Edit opens the first entry that can be edited', async () => {
       fakePlan16();
       const { router, user } = await openSaved();
-      await user.click(screen.getByRole('button', { name: said(message(language, 'bikri-edit')) }));
+      await user.click(
+        screen.getByRole('button', { name: said(message(language, 'edit-action-edit')) }),
+      );
       await waitFor(() => {
         expect(router.state.location.search).toMatchObject({ id: 41, edit: 7 });
       });
     });
 
-    it('an entry on a closed day cannot be edited, and the list says so in words', async () => {
+    it('an entry on a closed day: Edit reads "reopen the day and fix", asks why, reopens the days and opens the entry (PRD FR-21.4)', async () => {
       fakePlan16();
       vi.mocked(bikriApi.bikriGet).mockResolvedValue({
         ...(await import('../helpers/bikri-saved')).savedEvent1(),
+        needs_reopen: true,
         postings: [
           {
             entry_id: 7,
@@ -167,11 +173,74 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
           },
         ],
       });
-      await openSaved();
+      vi.mocked(editApi.dayFixOpen).mockResolvedValue(DAY_FIX_OPEN_E2E_45);
+      const { router, user } = await openSaved();
       expect(pageText()).toContain(message(language, 'bikri-posting-not-editable'));
+      // Two buttons say it: the toolbar's and the posting's own. The toolbar's is the first.
+      const fixButtons = screen.getAllByRole('button', {
+        name: said(message(language, 'edit-action-fix-day')),
+      });
+      expect(fixButtons).toHaveLength(2);
+      const toolbarEdit = fixButtons[0];
+      if (toolbarEdit === undefined) throw new Error('no fix button');
+      await user.click(toolbarEdit);
+      const dialog = await screen.findByRole('alertdialog');
+      await user.type(
+        within(dialog).getByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
+        'wrong rate{Enter}',
+      );
+      await waitFor(() => {
+        expect(editApi.dayFixOpen).toHaveBeenCalledWith('2026-10-10', 'wrong rate');
+      });
+      await waitFor(() => {
+        expect(router.state.location.search).toMatchObject({ id: 41, edit: 7 });
+      });
+    });
+
+    it('an entry that is locked says why in words and keeps both buttons off', async () => {
+      fakePlan16();
+      vi.mocked(bikriApi.bikriGet).mockResolvedValue({
+        ...(await import('../helpers/bikri-saved')).savedEvent1(),
+        can_edit: false,
+        can_cancel: false,
+        locked_reason: 'month_closed',
+      });
+      await openSaved();
+      expect(pageText()).toContain(message(language, 'edit-locked-month-closed'));
       expect(
-        screen.getByRole('button', { name: said(message(language, 'bikri-edit')) }),
+        screen.getByRole('button', { name: said(message(language, 'edit-action-edit')) }),
       ).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: starts(message(language, 'edit-action-cancel')) }),
+      ).toBeDisabled();
+    });
+
+    it('an edited entry shows when and by whom, with the reason (PRD FR-7.71)', async () => {
+      fakePlan16();
+      vi.mocked(bikriApi.bikriGet).mockResolvedValue({
+        ...(await import('../helpers/bikri-saved')).savedEvent1(),
+        edited: AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null,
+      });
+      await openSaved();
+      await waitFor(() => {
+        expect(pageText()).toContain(
+          message(language, 'edit-stamp', {
+            date: '11-10-2026',
+            time: message(language, 'edit-time', {
+              hour: '2',
+              minute: '00',
+              part: 'noon',
+              meridian: 'pm',
+            }),
+            by: 'Maher Adnan',
+          }),
+        );
+      });
+      expect(pageText()).toContain(
+        message(language, 'edit-stamp-reason', {
+          reason: AUDIT_EDIT_STAMP_BIKRI[0]?.stamp?.reason ?? '',
+        }),
+      );
     });
   });
 
@@ -210,21 +279,18 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
     it('a changed cell is marked and the change is told in words, old text next to the new', async () => {
       fakePlan16();
       const { user } = await openEdit();
-      expect(
-        screen.getByText(said(message(language, 'bikri-edit-no-changes'))),
-      ).toBeInTheDocument();
+      expect(screen.getByText(said(message(language, 'edit-review-none')))).toBeInTheDocument();
       await typeRate(user, '610');
       await waitFor(() => {
         expect(cellOf(salesGrid(language), 0, 'rate')).toHaveClass('cell-changed');
       });
       // The cell next to it is not marked.
       expect(cellOf(salesGrid(language), 0, 'qty')).not.toHaveClass('cell-changed');
-      const rateLabel = message(language, 'bikri-col-rate');
       await waitFor(() => {
         expect(pageText()).toContain(
-          message(language, 'bikri-edit-change', {
-            where: message(language, 'bikri-edit-where-line', { lot: 1, line: 1 }),
-            field: rateLabel,
+          message(language, 'edit-review-change', {
+            where: `${message(language, 'edit-review-where-line', { lot: 1, line: 1, label: '' })} `,
+            field: message(language, 'edit-field-seller-rate'),
             before: '600',
             after: '610',
           }),
@@ -232,7 +298,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       });
       // The numbers of the lot before (stored) and after (preview) are the backend's, side by side.
       const card = screen
-        .getByRole('heading', { name: named(message(language, 'bikri-edit-changes-title')) })
+        .getByRole('heading', { name: named(message(language, 'bikri-edit-figures-title')) })
         .closest('section');
       const cardText = visible(card?.textContent);
       expect(cardText).toContain(message(language, 'bikri-edit-before'));
@@ -322,13 +388,13 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       expect(plan.editSaves).toEqual([]);
       await user.type(
         within(dialog).getByRole('combobox', {
-          name: named(message(language, 'bikri-edit-reason-label')),
+          name: named(message(language, 'edit-reason-label')),
         }),
         'wrong rate',
       );
       await user.click(
         within(dialog).getByRole('button', {
-          name: starts(message(language, 'bikri-edit-reason-confirm')),
+          name: starts(message(language, 'edit-reason-confirm')),
         }),
       );
       await waitFor(() => {
@@ -399,20 +465,22 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       press('KeyL', { altKey: true });
       const other = language === 'ur' ? 'en' : 'ur';
       await waitFor(() => {
-        expect(pageText()).toContain(message(other, 'bikri-edit-changes-title'));
+        expect(pageText()).toContain(message(other, 'edit-review-title'));
       });
       await waitFor(() => {
         expect(textOf(salesGrid(other), 0, 'rate')).toBe('610');
         expect(cellOf(salesGrid(other), 0, 'rate')).toHaveClass('cell-changed');
       });
-      expect(pageText()).toContain(
-        message(other, 'bikri-edit-change', {
-          where: message(other, 'bikri-edit-where-line', { lot: 1, line: 1 }),
-          field: message(other, 'bikri-col-rate'),
-          before: '600',
-          after: '610',
-        }),
-      );
+      await waitFor(() => {
+        expect(pageText()).toContain(
+          message(other, 'edit-review-change', {
+            where: `${message(other, 'edit-review-where-line', { lot: 1, line: 1, label: '' })} `,
+            field: message(other, 'edit-field-seller-rate'),
+            before: '600',
+            after: '610',
+          }),
+        );
+      });
     });
 
     it('a saved lot cannot be removed with Ctrl+Delete, a line can', async () => {
@@ -425,9 +493,11 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       press('Delete', { ctrlKey: true });
       await waitFor(() => {
         expect(pageText()).toContain(
-          message(language, 'bikri-edit-removed-line', {
-            where: message(language, 'bikri-edit-where-line', { lot: 1, line: 2 }),
-            buyer: language === 'ur' ? 'ارشد ملتانی' : 'Arshad Multani',
+          message(language, 'edit-review-change', {
+            where: `${message(language, 'edit-review-where-line', { lot: 1, line: 2, label: '' })} `,
+            field: message(language, 'edit-field-qty'),
+            before: '30',
+            after: message(language, 'edit-empty'),
           }),
         );
       });
@@ -454,9 +524,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       const { user } = await openLater();
       // The line of help is behind the ⓘ of the title (plan 38 G5).
       await openInfo(user, language, message(language, 'bikri-edit-title', { number: 1 }));
-      expect(pageText()).toContain(
-        message(language, 'bikri-edit-help-later', { date: '10-10-2026' }),
-      );
+      expect(pageText()).toContain(message(language, 'edit-band-date-fixed'));
       expect(pageText()).toContain(names.rahim);
       // One line, loaded as stored; the header and the lots of the sale book are not here.
       expect(textOf(salesGrid(language), 0, 'qty')).toBe('5');
@@ -473,14 +541,16 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       await waitFor(() => {
         expect(cellOf(salesGrid(language), 0, 'rate')).toHaveClass('cell-changed');
       });
-      expect(pageText()).toContain(
-        message(language, 'bikri-edit-change', {
-          where: message(language, 'bikri-edit-where-line', { lot: 1, line: 1 }),
-          field: message(language, 'bikri-col-rate'),
-          before: '560',
-          after: '570',
-        }),
-      );
+      await waitFor(() => {
+        expect(pageText()).toContain(
+          message(language, 'edit-review-change', {
+            where: `${message(language, 'edit-review-where-line', { lot: 1, line: 1, label: '' })} `,
+            field: message(language, 'edit-field-seller-rate'),
+            before: '560',
+            after: '570',
+          }),
+        );
+      });
       press('F10');
       await waitFor(() => {
         expect(plan.editSaves).toHaveLength(1);
@@ -509,13 +579,13 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
       expect(plan.editSaves).toEqual([]);
       await user.type(
         within(dialog).getByRole('combobox', {
-          name: named(message(language, 'bikri-edit-reason-label')),
+          name: named(message(language, 'edit-reason-label')),
         }),
         'wrong rate',
       );
       await user.click(
         within(dialog).getByRole('button', {
-          name: starts(message(language, 'bikri-edit-reason-confirm')),
+          name: starts(message(language, 'edit-reason-confirm')),
         }),
       );
       await waitFor(() => {
@@ -528,7 +598,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
     const openCancel = async () => {
       const view = await openSaved();
       await view.user.click(
-        screen.getByRole('button', { name: starts(message(language, 'bikri-cancel-bikri')) }),
+        screen.getByRole('button', { name: starts(message(language, 'edit-action-cancel')) }),
       );
       const dialog = await screen.findByRole('alertdialog');
       return { ...view, dialog };

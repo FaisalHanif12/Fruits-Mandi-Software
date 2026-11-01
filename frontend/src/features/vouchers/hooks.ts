@@ -26,6 +26,7 @@ import {
   vouchersCancel,
   vouchersEdit,
   vouchersGet,
+  vouchersOpenForEdit,
   vouchersList,
   vouchersPreview,
   vouchersSave,
@@ -266,5 +267,16 @@ export function useMakeRegular() {
   return useMutation({
     mutationFn: (input: MakeRegularInput) => pukhtaMakeRegular(input),
     onSuccess: readAgain,
+  });
+}
+
+/** A saved voucher as the typed entry an edit sends back (plan 44). Read again each time. */
+export function useVoucherEditable(id: number | null) {
+  return useQuery({
+    queryKey: [...VOUCHERS_KEY, 'editable', id],
+    queryFn: () => vouchersOpenForEdit(id ?? 0),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
   });
 }

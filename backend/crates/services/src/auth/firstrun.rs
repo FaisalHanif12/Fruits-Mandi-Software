@@ -50,7 +50,7 @@ fn new_code(ctx: &Context) -> Result<(Secret, String), ServiceError> {
 }
 
 /// The stored recovery record: the Owner it belongs to and the hash of his code.
-fn stored_recovery(
+pub(super) fn stored_recovery(
     conn: &mandi_db::rusqlite::Connection,
 ) -> Result<Option<(i64, String)>, ServiceError> {
     Ok(store::setting(conn, KEY_RECOVERY)?.and_then(|value| {

@@ -21,7 +21,7 @@ use crate::money::Paisa;
 
 /// A وصولی as typed (PRD 15.2, FR-15.12): money from a buyer, or a seller returning advance
 /// money.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct ReceiptInput {
     /// The day, `DD-MM-YYYY` or a shortcut. Must be an open day, not after today (PRD FR-6.6).
     pub date: String,
@@ -49,7 +49,7 @@ pub struct ReceiptInput {
 
 /// An ادائیگی as typed (PRD 15.3): money to a seller, to a buyer (cash lent, PRD FR-15.11) or to
 /// a payable account such as the transporters (PRD FR-14.2).
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct PaymentInput {
     /// The day, `DD-MM-YYYY` or a shortcut. Must be an open day, not after today (PRD FR-6.6).
     pub date: String,
@@ -80,7 +80,7 @@ pub struct PaymentInput {
 
 /// Any one voucher type, for the preview and the edit (PRD FR-7.67). Plan 17 adds the nine other
 /// kinds; each is also saved by its own command.
-#[derive(Debug, Clone, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum VoucherEntry {
     /// وصولی.
@@ -112,6 +112,25 @@ pub enum VoucherEntry {
 }
 
 impl VoucherEntry {
+    /// The date as typed (`DD-MM-YYYY` or a shortcut). An edit compares it with the voucher's own
+    /// date before anything else is checked (PRD FR-7.70: the date never changes).
+    pub fn date_text(&self) -> &str {
+        match self {
+            VoucherEntry::Receipt(p) => &p.date,
+            VoucherEntry::Payment(p) => &p.date,
+            VoucherEntry::Advance(p) => &p.date,
+            VoucherEntry::ShopExpense(p) => &p.date,
+            VoucherEntry::PersonalExpense(p) => &p.date,
+            VoucherEntry::PersonalReturn(p) => &p.date,
+            VoucherEntry::MoneyLent(p) => &p.date,
+            VoucherEntry::MoneyLentReturn(p) => &p.date,
+            VoucherEntry::CapitalIn(p) | VoucherEntry::CapitalOut(p) => &p.date,
+            VoucherEntry::KhataOut(p) => &p.date,
+            VoucherEntry::KhataIn(p) => &p.date,
+            VoucherEntry::General(p) => &p.date,
+        }
+    }
+
     /// The kind of voucher this entry is.
     pub const fn voucher_type(&self) -> VoucherType {
         match self {
@@ -271,6 +290,21 @@ pub struct VoucherGetInput {
     /// The voucher.
     #[ts(type = "number")]
     pub id: i64,
+}
+
+/// What `vouchers_open_for_edit` gives back (plan 44 T2): a saved voucher as the typed entry that
+/// `vouchers_edit` and `vouchers_edit_preview` take back, for all 13 types, like
+/// `bikri_open_for_edit` does for a بکری. Sending `entry` back unchanged is an edit that changes
+/// nothing: its preview has an empty change list.
+///
+/// Example (E2E-45 day): the receipt of 10,000 from اکرم is
+/// `{ type: "receipt", date: "10-10-2026", account_id: 3, amount: "10000", ... }`.
+#[derive(Debug, Clone, Serialize, TS)]
+pub struct VoucherEditable {
+    /// The stored voucher, with its flags and its version (send `row.version` back).
+    pub row: super::VoucherRow,
+    /// The voucher as the typed entry of its own type.
+    pub entry: VoucherEntry,
 }
 
 /// Input of `vouchers_edit` (PRD FR-15.3): the voucher is taken back by a reversal and the new

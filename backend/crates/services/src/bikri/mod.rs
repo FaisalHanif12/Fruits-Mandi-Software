@@ -14,7 +14,7 @@
 //! read of the call (see the services README).
 
 mod cancel;
-mod edit;
+pub(crate) mod edit;
 mod later;
 mod load;
 mod pukhta;

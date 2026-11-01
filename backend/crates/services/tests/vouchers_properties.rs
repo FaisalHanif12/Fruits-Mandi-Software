@@ -38,6 +38,19 @@ fn day(offset: u8) -> String {
     format!("{:02}-10-2026", 6 + offset % 5)
 }
 
+/// The day of a saved voucher (`YYYY-MM-DD`) as typed (`DD-MM-YYYY`). An edit keeps the day of its
+/// entry (PRD FR-7.70, `ERR_EDIT_DATE_FIXED`) and gives a reason (PRD A78).
+fn typed_day(iso: &str) -> String {
+    let mut parts = iso.split('-');
+    let (year, month, day) = (parts.next(), parts.next(), parts.next());
+    format!(
+        "{}-{}-{}",
+        day.unwrap_or_default(),
+        month.unwrap_or_default(),
+        year.unwrap_or_default()
+    )
+}
+
 fn receipt(account: i64, date: &str, amount: i64) -> ReceiptInput {
     ReceiptInput {
         date: date.into(),
@@ -333,9 +346,10 @@ proptest! {
                             id, version: row.version, reason: "x".into(), confirm_cash_below_zero: true,
                         }).unwrap();
                     } else {
+                        let kept = typed_day(&row.entry_date);
                         let entry = match kind {
-                            VoucherType::Receipt => VoucherEntry::Receipt(receipt(w.akram, &date, amount)),
-                            _ => VoucherEntry::Payment(payment(w.akram, &date, amount, "y")),
+                            VoucherType::Receipt => VoucherEntry::Receipt(receipt(w.akram, &kept, amount)),
+                            _ => VoucherEntry::Payment(payment(w.akram, &kept, amount, "y")),
                         };
                         // The preview of the edit says the same as the edit.
                         let preview = vouchers::preview(&w.env.ctx, &VoucherPreviewInput {
@@ -344,7 +358,7 @@ proptest! {
                         }).unwrap();
                         prop_assert!(preview.errors.is_empty());
                         let saved = vouchers::edit(&w.env.ctx, &w.owner, &VoucherEditInput {
-                            id, version: row.version, entry, reason: String::new(), confirm_cash_below_zero: true,
+                            id, version: row.version, entry, reason: "x".into(), confirm_cash_below_zero: true,
                         }).unwrap();
                         prop_assert_eq!(signed(preview.new_balance), signed(saved.new_balance));
                     }
@@ -442,17 +456,18 @@ proptest! {
                             id, version: row.version, reason: "x".into(), confirm_cash_below_zero: true,
                         }).unwrap();
                     } else {
+                        let kept = typed_day(&row.entry_date);
                         let entry = match kind {
-                            VoucherType::Receipt => VoucherEntry::Receipt(receipt(w.rahim, &date, amount)),
-                            VoucherType::Payment => VoucherEntry::Payment(payment(w.rahim, &date, amount, "")),
-                            _ => VoucherEntry::Advance(advance(w.rahim, &date, amount)),
+                            VoucherType::Receipt => VoucherEntry::Receipt(receipt(w.rahim, &kept, amount)),
+                            VoucherType::Payment => VoucherEntry::Payment(payment(w.rahim, &kept, amount, "")),
+                            _ => VoucherEntry::Advance(advance(w.rahim, &kept, amount)),
                         };
                         let preview = vouchers::preview(&w.env.ctx, &VoucherPreviewInput {
                             entry: entry.clone(),
                             replacing_voucher_id: Some(id),
                         }).unwrap();
                         let edited = vouchers::edit(&w.env.ctx, &w.owner, &VoucherEditInput {
-                            id, version: row.version, entry, reason: String::new(), confirm_cash_below_zero: true,
+                            id, version: row.version, entry, reason: "x".into(), confirm_cash_below_zero: true,
                         });
                         match edited {
                             Ok(saved) => {

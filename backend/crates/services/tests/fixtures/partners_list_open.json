@@ -1,0 +1,47 @@
+{
+  "partners": [
+    {
+      "id": 1,
+      "name_ur": "الف",
+      "name_en": "Partner A",
+      "capital_account_id": 11,
+      "capital_account_code": "06020001",
+      "drawings_account_id": 21,
+      "drawings_account_code": "06030001",
+      "venture_account_id": 31,
+      "venture_account_code": "06040001",
+      "share_bps": 4000,
+      "is_active": true,
+      "version": 1
+    },
+    {
+      "id": 2,
+      "name_ur": "ب",
+      "name_en": "Partner B",
+      "capital_account_id": 12,
+      "capital_account_code": "06020002",
+      "drawings_account_id": 22,
+      "drawings_account_code": "06030002",
+      "venture_account_id": 32,
+      "venture_account_code": "06040002",
+      "share_bps": 3000,
+      "is_active": true,
+      "version": 1
+    },
+    {
+      "id": 3,
+      "name_ur": "ج",
+      "name_en": "Partner C",
+      "capital_account_id": 13,
+      "capital_account_code": "06020003",
+      "drawings_account_id": 23,
+      "drawings_account_code": "06030003",
+      "venture_account_id": 33,
+      "venture_account_code": "06040003",
+      "share_bps": 3000,
+      "is_active": true,
+      "version": 1
+    }
+  ],
+  "partners_locked": false
+}

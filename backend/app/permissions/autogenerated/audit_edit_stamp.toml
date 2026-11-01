@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-audit-edit-stamp"
+description = "Enables the audit_edit_stamp command without any pre-configured scope."
+commands.allow = ["audit_edit_stamp"]
+
+[[permission]]
+identifier = "deny-audit-edit-stamp"
+description = "Denies the audit_edit_stamp command without any pre-configured scope."
+commands.deny = ["audit_edit_stamp"]

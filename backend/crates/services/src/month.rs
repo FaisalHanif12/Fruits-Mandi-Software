@@ -125,6 +125,23 @@ pub struct MonthPreview {
     /// The debit total of the entry, equal to its credit total.
     #[ts(type = "Paisa")]
     pub total_paisa: Paisa,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl MonthPreview {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the amount of each partner's
+    /// capital line. The firm's income, expenses and profit stay.
+    pub fn hide_partners(&mut self) {
+        for line in &mut self.lines {
+            if line.partner_id.is_some() {
+                line.dr_paisa = Paisa::ZERO;
+                line.cr_paisa = Paisa::ZERO;
+            }
+        }
+        self.partners_locked = true;
+    }
 }
 
 /// A month closed.
@@ -424,6 +441,7 @@ fn preview_of(plan: &Plan, span: &Span, today: BusinessDate) -> Result<MonthPrev
         expense_paisa: plan.expense,
         profit_paisa: plan.income.checked_sub(plan.expense).map_err(money_error)?,
         total_paisa: plan.entry.total(),
+        partners_locked: false,
     })
 }
 

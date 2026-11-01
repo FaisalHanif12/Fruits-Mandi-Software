@@ -265,6 +265,23 @@ pub struct FruitPreview {
     /// The last rate of this item and packing, as a grey hint only (PRD FR-7.53). It is never filled
     /// into `rate`. Null if there is none.
     pub rate_hint: Option<RateHint>,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl FruitPreview {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): each partner's کل رقم now and
+    /// after. His part of the value (the split of the one entry) stays.
+    pub fn hide_partners(&mut self) {
+        if let Some(numbers) = &mut self.numbers {
+            for part in &mut numbers.parts {
+                part.total_before_paisa = Paisa::ZERO;
+                part.total_after_paisa = Paisa::ZERO;
+            }
+        }
+        self.partners_locked = true;
+    }
 }
 
 /// What `fruit_save` gives back.
@@ -435,8 +452,12 @@ pub struct FruitRow {
     /// The posting in force. Null once cancelled.
     #[ts(type = "number | null")]
     pub journal_entry_id: Option<i64>,
-    /// True while it is saved and its day is open, so it can be edited or cancelled.
-    pub can_change: bool,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// Input of `fruit_get`.

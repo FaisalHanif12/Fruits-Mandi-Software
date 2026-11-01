@@ -350,6 +350,11 @@ err-edit-not-allowed = { $rule ->
     [lot_item_locked] A later entry or sale already rests on this lot, so its item cannot be changed. Choose the old item again.
     [line_not_in_posting] This line is not part of the entry being edited. Close the edit and open the entry again.
     [posting_lots_locked] In a later sale only its own lines can be changed, not the lot. Change the lot in the first entry.
+    [goods_moved] The goods of this entry have been sold or written off, so it cannot be changed.
+    [month_closed] The month of this entry is closed. Reverse the month close first.
+    [garden_closed] The { -bagh } is closed, so its entries cannot be changed.
+    [returns_stand] Returns are recorded against this entry, so it cannot be changed.
+    [cancelled] This entry is cancelled and cannot be changed.
    *[other] This change is not allowed in this entry. Close the edit and open the entry again.
 }
 
@@ -620,3 +625,34 @@ err-person-in-dead-amount = This person is in { -doobi-raqam }. Only a { -wasool
 # PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
 # review: pending
 err-date-before-last-posting = The date cannot be before his last entry ({ $last_posting_date }).
+
+## Edit everywhere and the partner code (plan 44, PRD FR-7.70, FR-21.4, FR-17.11).
+
+# review: pending
+err-edit-date-fixed = The day of an entry cannot be changed. To move it to another day, cancel it and enter it again on the right day.
+
+# $saved_lines: how many saved lines were charged by this rule.
+# review: pending
+err-rule-used = { $saved_lines } saved lines were charged by this rule, so only its last date and its active switch can be changed. For a new rate, write a new rule from a new date.
+
+# review: pending
+err-fix-token-invalid = This fix is no longer running. Open the day screen to close the days.
+
+# review: pending
+err-partner-locked = The partner figures are not shown without the partner code. Enter the code first.
+
+# review: pending
+err-partner-code-not-set = The partner code has not been made yet. Make it first.
+
+# review: pending
+err-partner-code-already-set = The partner code is already made. To change it, use Change code in Settings.
+
+# $tries_left: tries left before the wait.
+# review: pending
+err-partner-code-wrong = The code is wrong. { $tries_left } tries left.
+
+# review: pending
+err-partner-code-invalid = The code must be 4 digits.
+
+# review: pending
+err-partner-codes-differ = The two codes are not the same. Write the same code both times.

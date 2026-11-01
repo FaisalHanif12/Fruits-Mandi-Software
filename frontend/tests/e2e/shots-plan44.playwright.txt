@@ -1,0 +1,60 @@
+// Screenshots of plan 44 (PRD FR-7.70, FR-7.71, FR-21.4, FR-10.11, FR-17.11): the edit kit (the two
+// buttons, the amber band, what was changed and its effect, the edit stamp), the reopen-and-fix
+// box, the partner code (make it, enter it, the locked box), in both languages at 1366 x 900 and
+// 1024 x 640. It is a developer tool: run it with the Vite dev server up (`pnpm --filter frontend
+// dev`), as a snippet for `playwright-core` (kept as .txt so the linter does not read it). The pages
+// are the development pages /dev/bikri, /dev/vouchers and /dev/rokar with the flags of
+// tests/helpers/dev-bridge-edit.ts. The sale book asks "leave the page?" with a draft, so every
+// picture is taken in a page of its own that is closed afterwards. It also measures sideways overflow.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan44';
+  const context = page.context();
+  const report = [];
+  async function scenario(name, hash, l, w, h, ready, fn) {
+    const p = await context.newPage();
+    p.on('dialog', (d) => d.accept().catch(() => undefined));
+    await p.setViewportSize({ width: w, height: h });
+    await p.goto('http://localhost:5173/#/dev/' + hash);
+    await p.waitForSelector(ready, { timeout: 20000 });
+    await p.waitForTimeout(600);
+    if (l === 'en') {
+      await p.getByRole('button', { name: 'English', exact: true }).first().click();
+      await p.waitForTimeout(600);
+    }
+    try {
+      await fn(p, `${name}-${l}-${w}x${h}`);
+    } finally {
+      await p.close({ runBeforeUnload: false }).catch(() => undefined);
+    }
+  }
+  const overflow = (p) =>
+    p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  const shot = async (p, name) => {
+    await p.screenshot({ path: `${OUT}/${name}.png` });
+    report.push([name, await overflow(p)]);
+  };
+  for (const [w, h] of [[1366, 900], [1024, 640]]) {
+    for (const l of ['ur', 'en']) {
+      await scenario('saved-open', 'bikri?id=41', l, w, h, '[data-edit-actions]', (p, n) => shot(p, n));
+      await scenario('saved-edited', 'bikri?id=41&edited', l, w, h, '[data-edit-stamp]', (p, n) => shot(p, n));
+      await scenario('saved-closedday', 'bikri?id=41&closedday', l, w, h, '[data-edit-actions]', async (p, n) => {
+        await shot(p, n);
+        await p.locator('[data-edit-actions] button').first().click();
+        await p.waitForSelector('[role="alertdialog"]');
+        await p.waitForTimeout(400);
+        await shot(p, n.replace('saved-closedday', 'fix-day-box'));
+      });
+      await scenario('partner-set', 'rokar?screen=overview&notset', l, w, h, 'form', (p, n) => shot(p, n));
+      await scenario('partner-locked', 'rokar?screen=overview&locked', l, w, h, 'form', async (p, n) => {
+        await shot(p, n);
+        await p.locator('input[type="password"]').first().fill('1111');
+        await p.keyboard.press('Enter');
+        await p.waitForTimeout(600);
+        await shot(p, n.replace('partner-locked', 'partner-wrong-code'));
+      });
+      await scenario('partner-open', 'rokar?screen=overview', l, w, h, 'table', (p, n) => shot(p, n));
+    }
+  }
+  return report;
+};

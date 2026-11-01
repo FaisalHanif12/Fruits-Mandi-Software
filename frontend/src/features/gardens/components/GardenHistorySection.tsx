@@ -10,12 +10,21 @@
 // cancelled entry stays in the list, marked in words.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, History } from 'lucide-react';
+import { History } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from '@tanstack/react-router';
+import { NO_ENTRY_FLAGS, useFixDayFlow } from '../../../shared/edit';
 import { ListGrid, Pager, useListPaging } from '../../../shared/grid';
 import type { PagerState } from '../../../shared/hooks';
 import { SHORTCUTS } from '../../../shared/keyboard';
-import { Button, Card, EmptyState, EntryPartsList, Notice, ShareAmounts } from '../../../shared/ui';
+import {
+  Card,
+  EmptyState,
+  EntryActions,
+  EntryPartsList,
+  Notice,
+  ShareAmounts,
+} from '../../../shared/ui';
 import { HISTORY_COLUMNS } from '../list-columns';
 import type { GardenHistoryRow } from '../types';
 import { CancelGardenEntryDialog } from './CancelGardenEntryDialog';
@@ -26,6 +35,8 @@ interface GardenHistorySectionProps {
   count: number;
   /** Where the history is: the page on screen and the page buttons. */
   pager: PagerState;
+  /** Edit was pressed on an entry whose day is open (or was reopened for it): the page edits it. */
+  onEdit: (row: GardenHistoryRow) => void;
 }
 
 /** A stable ID of a row: the entry's id where it has one, else its place in the list. */
@@ -33,8 +44,19 @@ function rowKey(row: GardenHistoryRow, index: number): string {
   return row.entry_id === null ? `i${String(index)}` : `e${String(row.entry_id)}`;
 }
 
-export function GardenHistorySection({ history, count, pager }: GardenHistorySectionProps) {
+/** The rows that are an entry of the garden itself; a sale, fruit taken and the closing are not. */
+function isGardenEntry(row: GardenHistoryRow): boolean {
+  return (
+    (row.kind === 'installment' || row.kind === 'cost' || row.kind === 'other_sale') &&
+    row.entry_id !== null &&
+    row.version !== null
+  );
+}
+
+export function GardenHistorySection({ history, count, pager, onEdit }: GardenHistorySectionProps) {
   const { l10n } = useLocalization();
+  const router = useRouter();
+  const fix = useFixDayFlow();
   const paging = useListPaging(pager);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cancelRow, setCancelRow] = useState<GardenHistoryRow | null>(null);
@@ -65,16 +87,36 @@ export function GardenHistorySection({ history, count, pager }: GardenHistorySec
             >
               <p className="type-body text-ink-muted" />
             </Localized>
-            <Button
-              variant="danger"
-              disabled={!canCancel}
-              onClick={() => {
+            <EntryActions
+              flags={
+                selected === null
+                  ? NO_ENTRY_FLAGS
+                  : {
+                      ...selected,
+                      can_edit: selected.can_edit && isGardenEntry(selected),
+                      can_cancel: canCancel,
+                    }
+              }
+              busy={fix.busy}
+              onEdit={() => {
+                if (selected === null) return;
+                if (!selected.needs_reopen) {
+                  onEdit(selected);
+                  return;
+                }
+                // A closed day: the days are reopened first, then the entry is edited (FR-21.4).
+                fix.start({
+                  date: selected.entry_date,
+                  ownerHref: router.state.location.href,
+                  then: () => {
+                    onEdit(selected);
+                  },
+                });
+              }}
+              onCancel={() => {
                 setCancelRow(selected);
               }}
-            >
-              <Ban aria-hidden="true" className="size-icon-md" />
-              <Localized id="gardens-history-cancel" />
-            </Button>
+            />
           </div>
           <ListGrid<GardenHistoryRow>
             columns={HISTORY_COLUMNS}
@@ -132,6 +174,7 @@ export function GardenHistorySection({ history, count, pager }: GardenHistorySec
           )}
         </div>
       )}
+      {fix.dialog}
       <CancelGardenEntryDialog
         row={cancelRow}
         onClose={() => {

@@ -183,6 +183,25 @@ pub struct AuditPage {
     /// the list, when asked with `group_by_month` and the list is in date order. No figures:
     /// only the count.
     pub months: Vec<MonthSubtotal>,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl AuditPage {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the old and the new values of the
+    /// events of a partner and his shares. Who, when and what was done stay.
+    pub fn hide_partners(&mut self) {
+        for row in &mut self.rows {
+            if row.entity == "partner" {
+                row.old_json = None;
+                row.new_json = None;
+                row.changes.clear();
+                row.changes_truncated = false;
+            }
+        }
+        self.partners_locked = true;
+    }
 }
 
 /// The values the filter boxes offer.

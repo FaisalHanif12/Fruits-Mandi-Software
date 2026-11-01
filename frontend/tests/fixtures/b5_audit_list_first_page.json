@@ -11,6 +11,7 @@
   "limit": 2,
   "months": [],
   "offset": 0,
+  "partners_locked": false,
   "rows": [
     {
       "action": "edit",

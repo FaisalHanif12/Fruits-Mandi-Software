@@ -29,6 +29,7 @@ use mandi_domain::core::arrivals::{
 use mandi_domain::core::bikri::WriteOffRow;
 use mandi_domain::core::codes::{CodeType, number_code};
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::Grams;
 use mandi_domain::core::paging::SortDirection;
@@ -42,6 +43,7 @@ use crate::auth::Actor;
 use crate::context::Context;
 use crate::day;
 use crate::error::{Rejection, ServiceError};
+use crate::flags::Marker;
 use crate::ventures::{self, not_found, require_open_day, required_reason, sell_date_of};
 
 fn data(message: &str) -> ServiceError {
@@ -97,7 +99,6 @@ fn row_of(
     lots: Vec<ArrivalLotRef>,
     write_offs: Vec<WriteOffRow>,
     commission: &mandi_db::commission::Commission,
-    closed_up_to: Option<BusinessDate>,
     today: BusinessDate,
 ) -> Result<ArrivalRow, ServiceError> {
     let (commission_paisa, commission_working) = ventures::commission_view(commission)?;
@@ -108,13 +109,13 @@ fn row_of(
     } else {
         left_of(rec)?
     };
-    let entry = BusinessDate::parse_iso(&rec.entry_date)
-        .ok_or_else(|| data("the day of an arrival is not a date"))?;
+    if BusinessDate::parse_iso(&rec.entry_date).is_none() {
+        return Err(data("the day of an arrival is not a date"));
+    }
     let sell = BusinessDate::parse_iso(&rec.sell_date)
         .ok_or_else(|| data("the day to sell of an arrival is not a date"))?;
     let parts = parts_of(rec)?;
     let saved = status == ArrivalStatus::Saved;
-    let day_open = closed_up_to.is_none_or(|closed| entry > closed);
     Ok(ArrivalRow {
         id: rec.id,
         version: rec.version,
@@ -152,7 +153,17 @@ fn row_of(
         } else {
             0
         },
-        can_cancel: saved && rec.qty_sold == 0 && rec.qty_written_off == 0 && day_open,
+        // Goods sold or written off lock it (rule `goods_moved`); a closed garden locks it too. The
+        // day rules and the stamp come in `rows_of`.
+        flags: if !saved {
+            EntryFlags::plain(false, false)
+        } else if rec.qty_sold != 0 || rec.qty_written_off != 0 {
+            EntryFlags::locked(LockedReason::GoodsMoved)
+        } else if rec.garden_status != "open" {
+            EntryFlags::locked(LockedReason::GardenClosed)
+        } else {
+            EntryFlags::plain(true, true)
+        },
         can_change_sell_date: saved && qty_left > 0,
         lots,
         write_offs,
@@ -165,13 +176,13 @@ fn row_of(
 fn rows_of(
     conn: &Connection,
     recs: &[ArrivalRec],
-    closed_up_to: Option<BusinessDate>,
     today: BusinessDate,
 ) -> Result<Vec<ArrivalRow>, ServiceError> {
     let ids: Vec<i64> = recs.iter().map(|r| r.id).collect();
     let mut offs = repo::write_offs_of(conn, &ids)?;
     let commissions = mandi_db::commission::by_arrivals(conn, &ids)?;
-    recs.iter()
+    let mut rows = recs
+        .iter()
         .map(|rec| {
             let lots = repo::lots_of(conn, rec.id)?
                 .into_iter()
@@ -190,34 +201,43 @@ fn rows_of(
                 lots,
                 off,
                 &commissions.get(&rec.id).copied().unwrap_or_default(),
-                closed_up_to,
                 today,
             )
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()?;
+    let marker = Marker::load(conn, EditEntity::GardenArrival, &ids)?;
+    for row in &mut rows {
+        marker.mark(
+            row.id,
+            &row.entry_date,
+            row.status == ArrivalStatus::Saved,
+            &mut row.flags,
+        );
+    }
+    Ok(rows)
 }
 
 /// What the entry (or the single arrival) decides for every line: the garden and the two days.
-struct Shared {
-    garden: ventures::Venture,
-    date: BusinessDate,
-    sell_date: BusinessDate,
+pub(super) struct Shared {
+    pub(super) garden: ventures::Venture,
+    pub(super) date: BusinessDate,
+    pub(super) sell_date: BusinessDate,
 }
 
 /// A line checked: ready to be written.
-struct Line {
-    item_id: i64,
-    packing_id: i64,
-    qty: i64,
-    weight: Option<Grams>,
-    note: Option<String>,
-    other_qty: i64,
-    shop_name: Option<String>,
+pub(super) struct Line {
+    pub(super) item_id: i64,
+    pub(super) packing_id: i64,
+    pub(super) qty: i64,
+    pub(super) weight: Option<Grams>,
+    pub(super) note: Option<String>,
+    pub(super) other_qty: i64,
+    pub(super) shop_name: Option<String>,
 }
 
 /// The fields every line shares: the garden (open, a garden), the day (open, not before the
 /// garden) and the day to sell. Mistakes go to `errors` at the entry's own paths.
-fn check_shared(
+pub(super) fn check_shared(
     tx: &Connection,
     window: (Option<BusinessDate>, BusinessDate),
     errors: &mut FieldErrors,
@@ -272,7 +292,7 @@ fn check_shared(
 /// One line: item, packing, qty, weight, note and the split. `prefix` is `""` for a single arrival
 /// and `"lines[i]."` for a line of an entry.
 #[allow(clippy::too_many_arguments)]
-fn check_line(
+pub(super) fn check_line(
     tx: &Connection,
     errors: &mut FieldErrors,
     prefix: &str,
@@ -440,7 +460,7 @@ pub fn save(
     input: &ArrivalInput,
 ) -> Result<ArrivalSaved, ServiceError> {
     let window = day::window(ctx)?;
-    let (closed_up_to, today) = window;
+    let (_, today) = window;
     let now = ctx.now_text();
     ctx.db.write(|tx| {
         let mut errors = FieldErrors::default();
@@ -477,7 +497,6 @@ pub fn save(
             Vec::new(),
             // A new arrival has no sale yet, so no commission.
             &mandi_db::commission::Commission::default(),
-            closed_up_to,
             today,
         )?;
         Ok(ArrivalSaved {
@@ -585,7 +604,7 @@ pub fn entry_save(
     input: &ArrivalEntryInput,
 ) -> Result<ArrivalEntrySaved, ServiceError> {
     let window = day::window(ctx)?;
-    let (closed_up_to, today) = window;
+    let (_, today) = window;
     let now = ctx.now_text();
     ctx.db.write(|tx| {
         let mut errors = FieldErrors::default();
@@ -605,7 +624,6 @@ pub fn entry_save(
                 Vec::new(),
                 // A new arrival has no sale yet, so no commission.
                 &mandi_db::commission::Commission::default(),
-                closed_up_to,
                 today,
             )?);
         }
@@ -762,7 +780,7 @@ pub fn set_sell_date(
 /// # Errors
 /// The date codes on `from` and `to`.
 pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, ServiceError> {
-    let (closed_up_to, today) = day::window(ctx)?;
+    let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let mut day_of = |field: &str, text: Option<&String>| {
         let text = text.map(|t| t.trim()).filter(|t| !t.is_empty())?;
@@ -811,7 +829,7 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
             i64::from(input.offset),
             crate::page::limit_of(input.limit),
         )?;
-        let rows = rows_of(conn, &recs, closed_up_to, today)?;
+        let rows = rows_of(conn, &recs, today)?;
         let sums = repo::totals(conn, &filter)?;
         let qty_left = sums
             .qty
@@ -853,10 +871,10 @@ pub fn list(ctx: &Context, input: &ArrivalsListInput) -> Result<ArrivalsList, Se
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`.
 pub fn get(ctx: &Context, input: &ArrivalGetInput) -> Result<ArrivalRow, ServiceError> {
-    let (closed_up_to, today) = day::window(ctx)?;
+    let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| {
         let rec = repo::get(conn, input.id)?.ok_or_else(|| not_found("id"))?;
-        let mut rows = rows_of(conn, std::slice::from_ref(&rec), closed_up_to, today)?;
+        let mut rows = rows_of(conn, std::slice::from_ref(&rec), today)?;
         rows.pop().ok_or_else(|| data("an arrival has no row"))
     })
 }

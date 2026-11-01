@@ -85,6 +85,8 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
         footer: footer(ctx.style.printed_at(options.now_utc)),
         number: ctx.style.count(detail.number),
         cancelled: detail.status == BikriStatus::Cancelled,
+        // The read that builds the options knows the edit history; this builder does not.
+        revised_on: None,
         pages,
     })
 }

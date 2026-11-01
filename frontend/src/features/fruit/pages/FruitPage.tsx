@@ -15,14 +15,30 @@
 //   the list below.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import type { FieldError } from '../../../bindings/FieldError';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
-import { ErrorState, LoadingState, Notice, showToast, FormAside } from '../../../shared/ui';
+import {
+  finishFixSession,
+  useEditReview,
+  useEntryMarks,
+  useFixDayFlow,
+  useFixStore,
+} from '../../../shared/edit';
+import {
+  EditBand,
+  EditReviewCard,
+  EditStampLine,
+  ErrorState,
+  LoadingState,
+  showToast,
+  FormAside,
+} from '../../../shared/ui';
+import { fruitEditPreview } from '../api';
 import { EntryFrame, EntryNotes, ExpenseTabs, previewRefusal } from '../../cashbook';
 import { CancelFruitDialog } from '../components/CancelFruitDialog';
 import { FruitEntryView } from '../components/FruitEntryView';
@@ -61,6 +77,8 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
   const formRef = useFocusFirstField<HTMLFormElement>();
   const [draft, setDraft] = useState<FruitDraft>(() => newFruitDraft(today));
   const [editing, setEditing] = useState<EditingFruit | null>(null);
+  // What earlier edits changed on the entry open for edit: "Before ..." on its fields (PRD FR-7.71).
+  const marks = useEntryMarks('fruit_take', editing?.id ?? null, editing?.edited != null);
   const [tried, setTried] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(
     typeof openEntry === 'number' ? openEntry : null,
@@ -90,6 +108,17 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
     [draft, editing],
   );
   const { query, current } = useFruitPreview(entry);
+  // The changes of an edit and their effect, worked out by the backend (plan 44, FR-7.70).
+  const editReview = useEditReview(
+    `fruit:${String(editing?.id ?? 0)}`,
+    editing === null || entry === null
+      ? null
+      : { id: editing.id, version: editing.version, entry, reason: draft.reason.trim() },
+    fruitEditPreview,
+  );
+  const router = useRouter();
+  const fixFlow = useFixDayFlow();
+  const reopened = useFixStore((state) => state.session);
   const preview = entry === null ? undefined : query.data;
   const warnings: readonly FieldError[] = preview?.warnings ?? [];
   const previewError = useMemo(() => previewRefusal(preview?.errors, tried), [preview, tried]);
@@ -112,6 +141,8 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
       setDraft((previous) => nextFruitDraft(previous));
       setEditing(null);
       setTried(false);
+      // The days reopened for this fix close again (plan 44, PRD FR-21.4).
+      void finishFixSession(l10n);
       window.requestAnimationFrame(() => {
         formRef.current?.querySelector<HTMLElement>('input, button')?.focus();
       });
@@ -126,6 +157,7 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
   const startNew = () => {
     setDraft((previous) => ({ ...newFruitDraft(''), date: previous.date, forWhom: '' }));
     setEditing(null);
+    void finishFixSession(l10n);
     setTried(false);
     window.requestAnimationFrame(() => {
       formRef.current?.querySelector<HTMLElement>('input, button')?.focus();
@@ -133,10 +165,31 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
   };
   // PRD FR-16.12: the form opens with the entry as the database has it now, and asks why.
   const startEdit = (row: FruitRow) => {
+    // An entry of a closed day: the days reopen first, and close again after the save or when the
+    // user leaves the page (plan 44, PRD FR-21.4).
+    if (row.needs_reopen) {
+      fixFlow.start({
+        date: row.entry_date,
+        ownerHref: router.state.location.href,
+        then: () => {
+          openForEdit(row);
+        },
+      });
+      return;
+    }
+    openForEdit(row);
+  };
+  const openForEdit = (row: FruitRow) => {
     read.mutate(row.id, {
       onSuccess: (fresh) => {
         setDraft(draftFromRow(fresh, grouping));
-        setEditing({ id: fresh.id, version: fresh.version, number: fresh.number });
+        setEditing({
+          id: fresh.id,
+          version: fresh.version,
+          number: fresh.number,
+          date: fresh.entry_date,
+          edited: fresh.edited,
+        });
         setTried(false);
         window.requestAnimationFrame(() => {
           formRef.current?.querySelector<HTMLElement>('input, button')?.focus();
@@ -193,9 +246,20 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
         }
       >
         {editing === null ? null : (
-          <Notice tone="info">
-            <Localized id="fruit-editing" vars={{ number: fruitNumberText(editing.number, say) }} />
-          </Notice>
+          <>
+            <EditBand
+              kind="fruit"
+              number={fruitNumberText(editing.number, say)}
+              date={editing.date}
+              reopenedDays={reopened?.days ?? []}
+            />
+            {editing.edited === null ? null : (
+              <EditStampLine
+                stamp={editing.edited}
+                history={{ entity: 'fruit_take', id: editing.id }}
+              />
+            )}
+          </>
         )}
         {read.isError ? (
           <ErrorState
@@ -214,11 +278,19 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
               error={error}
               preview={preview}
               editing={editing !== null}
+              marks={marks}
             />
           }
           aside={
             <>
               <FruitPreviewCard preview={preview} guests={draft.forWhom === FOR_GUESTS} />
+              {editing === null ? null : (
+                <EditReviewCard
+                  review={editReview.review}
+                  pending={editReview.pending}
+                  error={editReview.error}
+                />
+              )}
               <EntryNotes warnings={warnings} cash={undefined} />
               {query.isError && entry !== null ? (
                 <ErrorState
@@ -233,6 +305,7 @@ function FruitEditor({ today, entry: openEntry }: FruitEditorProps) {
           }
         />
       </EntryFrame>
+      {fixFlow.dialog}
     </div>
   );
 }

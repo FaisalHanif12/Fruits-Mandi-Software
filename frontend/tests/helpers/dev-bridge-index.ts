@@ -51,6 +51,32 @@ const flag = (name: string): boolean =>
 
 export const indexHandlers: Record<string, Handler> = {
   accounts_next_code: () => '00262',
+  // Plan 44 (PRD FR-10.11): `&closedopen` is a closed day with today open, `&closednight` a closed day
+  // with today closed too. An opening amount on it is refused; an account without one is saved.
+  accounts_save: (input) => {
+    const wantsOpening = [input['opening_dr'], input['opening_cr']].some(
+      (amount) => typeof amount === 'string' && amount.trim() !== '',
+    );
+    const open = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    if (wantsOpening && (open.has('closedopen') || open.has('closednight'))) {
+      throw Object.assign(new Error('ERR_DATE_CLOSED'), {
+        ok: false,
+        errors: [
+          {
+            code: 'ERR_DATE_CLOSED',
+            field: 'opening_date',
+            values: {
+              closed_up_to: '30-10-2026',
+              today: '31-10-2026',
+              today_open: open.has('closednight') ? 0 : 1,
+            },
+          },
+        ],
+        ref: 'E-DEV',
+      });
+    }
+    throw Object.assign(new Error('ERR_NOT_IMPLEMENTED'), { ok: false, errors: [], ref: '' });
+  },
   // `&duplicate`: the first one has the name, the tag and the phone typed (the backend's mark).
   accounts_similar: () =>
     flag('duplicate')

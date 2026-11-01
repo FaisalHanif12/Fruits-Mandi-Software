@@ -54,5 +54,9 @@
     }
   ],
   "journal_entry_id": 4,
-  "can_change": true
+  "can_edit": true,
+  "can_cancel": true,
+  "locked_reason": null,
+  "needs_reopen": false,
+  "edited": null
 }

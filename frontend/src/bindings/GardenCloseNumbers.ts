@@ -37,4 +37,9 @@ export type GardenCloseNumbers = {
    * False when `balance_paisa` is 0: nothing is posted, the garden still closes (E64).
    */
   posts_entry: boolean;
+  /**
+   * True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+   * are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+   */
+  partners_locked: boolean;
 };

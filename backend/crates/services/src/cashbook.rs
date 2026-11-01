@@ -15,6 +15,7 @@ use mandi_domain::core::cashbook::{Cashbook, CashbookInput, CashbookRow, Cashboo
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::SortDirection;
+use mandi_domain::core::row_source::RowSource;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use crate::cash::CASH_ACCOUNT_CODE;
@@ -139,6 +140,7 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
                 in_paisa: paisa(row.in_paisa)?,
                 out_paisa: paisa(row.out_paisa)?,
                 running_paisa: running,
+                source: Some(source_of(row)),
             });
         }
         // Month headings with their subtotals, for the months this page touches (plan 38 B2).
@@ -174,6 +176,18 @@ pub fn get(ctx: &Context, input: &CashbookInput) -> Result<Cashbook, ServiceErro
             months,
         })
     })
+}
+
+/// The record a row opens (PRD FR-19.4). An entry of a trip or a garden opens the trip or the
+/// garden itself: its stored source id is the id of one of its entries.
+fn source_of(row: &repo::CashRow) -> RowSource {
+    RowSource::of_stored(
+        &row.source_type,
+        row.source_id,
+        row.entry_id,
+        row.venture_kind.as_deref(),
+        row.venture_id,
+    )
 }
 
 /// The one account on the other side of an entry that only takes cash in, or only gives it out.

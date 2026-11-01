@@ -512,6 +512,10 @@ pub struct RuleRow {
     pub to_date: Option<String>,
     /// False when hidden from resolution.
     pub is_active: bool,
+    /// True once any saved line or lot took its rate from this rule (PRD FR-11.6). A used rule may
+    /// change only its end date and its active flag; any other change is `ERR_RULE_USED` and the
+    /// screen offers "add a newer rule from a date" (plan 44).
+    pub used: bool,
     /// The note. Empty if none.
     pub note: String,
 }

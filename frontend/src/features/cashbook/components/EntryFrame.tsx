@@ -53,6 +53,13 @@ interface EntryFrameProps<T extends string> {
   typeLabelId?: string | undefined;
   /** The tab strip of the area (خرچہ and پھل), drawn under the title (plan 38 G7), not above it. */
   tabs?: ReactNode;
+  /**
+   * What stands over the form of an entry that is open for edit (plan 44, PRD FR-7.70): the amber
+   * band, the edit stamp and the cancel button.
+   */
+  top?: ReactNode;
+  /** The type of a saved entry cannot change in an edit (PRD FR-7.67): the type list is shut. */
+  lockTypes?: boolean | undefined;
   /** The type list. A screen with only one kind of entry (the جنرل screen) has none. */
   types?: readonly TypeChoice<T>[] | undefined;
   type?: T | undefined;
@@ -97,6 +104,8 @@ export function EntryFrame<T extends string>({
   titleId,
   helpId,
   tabs,
+  top,
+  lockTypes = false,
   typeLabelId,
   types,
   type,
@@ -178,6 +187,7 @@ export function EntryFrame<T extends string>({
         </div>
       </div>
       {tabs}
+      {top}
       {types === undefined ||
       type === undefined ||
       onType === undefined ||
@@ -192,6 +202,7 @@ export function EntryFrame<T extends string>({
                 }))}
                 value={type}
                 groupLabel={l10n.getString(typeLabelId)}
+                disabled={lockTypes}
                 onChange={onType}
               />
             </div>

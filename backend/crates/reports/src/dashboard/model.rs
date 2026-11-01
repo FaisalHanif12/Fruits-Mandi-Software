@@ -327,6 +327,22 @@ pub struct AttentionList {
     /// The number on the bell: Σ of the counts.
     #[ts(type = "number")]
     pub total_count: i64,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl AttentionList {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the amount of the money partners
+    /// took past its return-by day. The count stays.
+    pub fn hide_partners(&mut self) {
+        for item in &mut self.items {
+            if item.kind == AttentionKind::TakesOverdue {
+                item.amount_paisa = None;
+            }
+        }
+        self.partners_locked = true;
+    }
 }
 
 /// One open garden of the garden tile (PRD 9.1): its running balance and the rent still to pay.
@@ -376,4 +392,17 @@ pub struct Dashboard {
     pub chart_items: Vec<DashboardChartItem>,
     /// The attention list (آج کے کام).
     pub attention: AttentionList,
+    /// True while the partner section is locked (PRD FR-17.11): the partner figures of this answer
+    /// are left out (empty lists, zero amounts) and the screen shows "کوڈ درج کریں" in their place.
+    pub partners_locked: bool,
+}
+
+impl Dashboard {
+    /// Leaves out what is behind the partner code (PRD FR-17.11): the partner strip. The amount of
+    /// the money partners took past its day goes with it (see [`AttentionList::hide_partners`]).
+    pub fn hide_partners(&mut self) {
+        self.partners.clear();
+        self.partners_locked = true;
+        self.attention.hide_partners();
+    }
 }

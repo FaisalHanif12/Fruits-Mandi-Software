@@ -116,15 +116,16 @@ fn the_per_lot_commission_sits_on_line_one_and_moves_when_that_line_is_removed()
 #[test]
 fn a_rule_changed_later_does_not_change_the_charge_that_moves() {
     let w = world();
-    let rule = per_lot_rule(&w, "500");
+    per_lot_rule(&w, "500");
     let saved = two_lines(&w);
-    // The rule is now 600 for new lines.
+    // The rule that lines used keeps its value (PRD FR-7.71), so a new rate is a newer rule: 600
+    // from a later start date wins for new lines (FR-11.5).
     rules::save(
         &w.env.ctx,
         &w.owner,
         &RuleInput {
-            id: Some(rule.row.id),
-            version: Some(rule.row.version),
+            id: None,
+            version: None,
             side: ChargeSide::Seller,
             charge_type: ChargeType::Commission,
             account_id: None,
@@ -132,7 +133,7 @@ fn a_rule_changed_later_does_not_change_the_charge_that_moves() {
             item_group: None,
             method: ChargeMethod::PerLot,
             value: "600".into(),
-            from_date: "01-01-2026".into(),
+            from_date: "02-01-2026".into(),
             to_date: String::new(),
             is_active: true,
             note: String::new(),

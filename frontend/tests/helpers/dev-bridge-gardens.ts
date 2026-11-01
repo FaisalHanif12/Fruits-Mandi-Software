@@ -121,5 +121,5 @@ export const gardensHandlers: Record<string, Handler> = {
   gardens_arrival_write_off: () => arrivalsReal.ARRIVAL_WRITE_OFF,
   gardens_arrival_write_off_undo: () => arrivalsReal.ARRIVAL_WRITE_OFF_UNDO,
   partners_overview: () => overview(),
-  partners_list: () => THREE_PARTNERS,
+  partners_list: () => ({ partners: THREE_PARTNERS, partners_locked: false }),
 };

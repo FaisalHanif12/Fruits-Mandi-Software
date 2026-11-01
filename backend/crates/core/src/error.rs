@@ -83,6 +83,9 @@ pub enum ErrorCode {
     /// Not a real date, or not in a form the date field takes (PRD FR-7.19).
     ErrDateInvalid,
     /// The date is on or before the "closed up to" date (PRD FR-6.6). Values: `closed_up_to`.
+    /// On `opening_date` of an account (PRD FR-10.11, plan 44) the dates are `DD-MM-YYYY` and it
+    /// also carries `today` and `today_open` (1 when today is an open day, else 0), so the form can
+    /// offer "use today", or "save without the opening", or "reopen the day".
     ErrDateClosed,
     /// The date is after today (PRD FR-6.6). Values: `today`.
     ErrDateInFuture,
@@ -261,14 +264,15 @@ pub enum ErrorCode {
     ErrQtyBelowSold,
     /// An edit of a بکری posting that the rules do not allow (PRD FR-12.18, FR-12.19, FR-12.20,
     /// NFR-USE-13). The field is the path of the lot or line concerned. Values: `rule`, a short
-    /// fixed name, one of `day_changed` (`header.entry_date`: the day of a posting cannot change),
-    /// `lot_removed` (`lots`: a lot cannot be taken out), `lot_not_in_posting` (`lots[i].lot_id`:
+    /// fixed name, one of `lot_removed` (`lots`: a lot cannot be taken out), `lot_not_in_posting` (`lots[i].lot_id`:
     /// not a lot of this بکری, or sent twice), `lot_order_changed` (`lots[i].lot_id`: saved lots
     /// keep their order and new lots come last), `lot_seller_locked` and `lot_item_locked`
     /// (`lots[i].seller_account_id`, `lots[i].item_id`: other postings or write-offs rest on the
     /// lot), `line_not_in_posting` (`lots[i].sales[j].sale_id`: not a line of this posting, or sent
     /// twice), `posting_lots_locked` (`lots`: a later posting has only its own lot) and
-    /// `lot_purchase_locked` (`lots[i].purchase_id`: the purchase of an own lot cannot change).
+    /// `lot_purchase_locked` (`lots[i].purchase_id`: the purchase of an own lot cannot change) and
+    /// `goods_moved` (field `id`: a trip purchase, trip cost, sale in another shop or garden entry
+    /// or arrival whose goods were sold or written off cannot be edited, PRD FR-7.70; plan 44).
     ErrEditNotAllowed,
     /// A lot of the firm's own goods (seller اپنا مال) was not sold in full in its بکری (PRD
     /// FR-12.26). The goods that are not sold stay in the purchase, so the lot takes from the
@@ -404,11 +408,39 @@ pub enum ErrorCode {
     /// The move to the dead amount is dated before the person's last posting (PRD FR-10.10, plan 40
     /// D6). Field `entry_date`. Value `last_posting_date` (`YYYY-MM-DD`).
     ErrDateBeforeLastPosting,
+    /// An edit tried to change the date of a saved entry; the date is fixed, so the entry is
+    /// cancelled and entered again on the right day (PRD FR-7.70, E76; plan 44). Field: the date
+    /// field of the edit (`date`, or `header.entry_date` in a بکری). Value `entry_date`
+    /// (`YYYY-MM-DD`): the date the entry keeps.
+    ErrEditDateFixed,
+    /// A commission rule that saved lines were worked out with can change only its end date and its
+    /// active flag; anything else is refused and a newer rule from a date is added instead (PRD
+    /// FR-7.70, FR-11.6; plan 44 D5). Field: the first field that was changed. Value `saved_lines`
+    /// (how many saved lines used the rule).
+    ErrRuleUsed,
+    /// The partner section is locked: the 4-digit partner code was not given since the user
+    /// entered it (PRD FR-17.11, NFR-SEC-14; plan 44). No field.
+    ErrPartnerLocked,
+    /// The partner code was asked for but none is set yet (PRD FR-17.11). No field.
+    ErrPartnerCodeNotSet,
+    /// A partner code is set already, so it is changed or reset, not set again (PRD FR-17.11).
+    ErrPartnerCodeAlreadySet,
+    /// Wrong partner code (PRD FR-17.11). Field `code` (`old_code_or_password` in a change).
+    /// Values: `tries_left`. After 5 wrong tries
+    /// `ERR_LOCKED_WAIT` is returned instead, with the seconds to wait (as FR-8.2).
+    ErrPartnerCodeWrong,
+    /// The partner code is not exactly 4 digits (PRD FR-17.11). Field `code` or `code_again`.
+    ErrPartnerCodeInvalid,
+    /// The partner code typed twice differs (PRD FR-17.11). Field `code_again`.
+    ErrPartnerCodesDiffer,
+    /// The token of `day_fix_close` is not the one `day_fix_open` gave, or the days were closed or
+    /// opened some other way since (PRD FR-21.4; plan 44). Field `token`.
+    ErrFixTokenInvalid,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 145] = [
+    pub const ALL: [ErrorCode; 154] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -554,6 +586,15 @@ impl ErrorCode {
         ErrorCode::ErrNoteRequired,
         ErrorCode::ErrPersonInDeadAmount,
         ErrorCode::ErrDateBeforeLastPosting,
+        ErrorCode::ErrEditDateFixed,
+        ErrorCode::ErrRuleUsed,
+        ErrorCode::ErrPartnerLocked,
+        ErrorCode::ErrPartnerCodeNotSet,
+        ErrorCode::ErrPartnerCodeAlreadySet,
+        ErrorCode::ErrPartnerCodeWrong,
+        ErrorCode::ErrPartnerCodeInvalid,
+        ErrorCode::ErrPartnerCodesDiffer,
+        ErrorCode::ErrFixTokenInvalid,
     ];
 }
 

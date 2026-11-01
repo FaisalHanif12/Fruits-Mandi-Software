@@ -373,5 +373,9 @@ pub(crate) fn list(
             .checked_add(it.count)
             .ok_or_else(|| ReportsError::Data("the attention count does not fit".to_owned()))?;
     }
-    Ok(AttentionList { items, total_count })
+    Ok(AttentionList {
+        items,
+        total_count,
+        partners_locked: false,
+    })
 }

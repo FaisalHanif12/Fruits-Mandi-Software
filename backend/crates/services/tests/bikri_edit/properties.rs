@@ -490,13 +490,15 @@ fn check_seller_balances(w: &World, at: &str) {
     }
 }
 
-/// Saves the per-lot rule for کیلا (or changes it, or switches it off), so the random run meets
-/// lots that carry a per-lot commission and rules that change between edits (PRD FR-11.9).
+/// Saves the per-lot rule for کیلا from `from` (or switches it off or on, with the same value: a
+/// rule that saved lines used keeps its value, PRD FR-7.71), so the random run meets lots that
+/// carry a per-lot commission and rules that change between edits (PRD FR-11.9).
 fn banana_per_lot_rule(
     w: &World,
     rule: Option<&RuleSaved>,
     value: &str,
     active: bool,
+    from: &str,
 ) -> RuleSaved {
     rules::save(
         &w.env.ctx,
@@ -511,7 +513,7 @@ fn banana_per_lot_rule(
             item_group: None,
             method: ChargeMethod::PerLot,
             value: value.into(),
-            from_date: "01-01-2026".into(),
+            from_date: from.into(),
             to_date: String::new(),
             is_active: active,
             note: String::new(),
@@ -548,7 +550,8 @@ fn after_any_sequence_of_actions_the_books_hold() {
     give_advance_on(&w, w.rahim, "30,000", "10-10-2026");
     give_advance_on(&w, w.karim, "10,000", "10-10-2026");
     let mut done = [0_u32; 6];
-    let mut rule = banana_per_lot_rule(&w, None, "300", true);
+    let mut rule = banana_per_lot_rule(&w, None, "300", true, "01-01-2026");
+    let mut newer: Option<RuleSaved> = None;
     for seed in [
         0x9E37_79B9_7F4A_7C15_u64,
         0xD1B5_4A32_D192_ED03,
@@ -559,11 +562,16 @@ fn after_any_sequence_of_actions_the_books_hold() {
     ] {
         let mut rng = Rng(seed);
         for step in 0..30 {
-            // The rule changes between edits: off, then on again with another value.
+            // The rule changes between edits: off, then on again; and a newer rule with another
+            // value (the value of a rule that lines used cannot change, PRD FR-7.71). Seeds after
+            // the first find the newer rule already made.
             if step == 10 {
-                rule = banana_per_lot_rule(&w, Some(&rule), "300", false);
+                rule = banana_per_lot_rule(&w, Some(&rule), "300", false, "01-01-2026");
             } else if step == 20 {
-                rule = banana_per_lot_rule(&w, Some(&rule), "450", true);
+                rule = banana_per_lot_rule(&w, Some(&rule), "300", true, "01-01-2026");
+                if newer.is_none() {
+                    newer = Some(banana_per_lot_rule(&w, None, "450", true, "02-01-2026"));
+                }
             }
             let kind = rng.below(10);
             let (slot, ok) = match kind {

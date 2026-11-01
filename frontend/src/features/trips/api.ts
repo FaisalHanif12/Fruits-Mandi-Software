@@ -3,7 +3,12 @@
 // Every command takes one `{ input }` object, except the two that take nothing.
 
 import { callCommand } from '../../shared/api';
+import type { EditPreview } from '../../bindings/EditPreview';
+import type { EntryEdited } from '../../bindings/EntryEdited';
+import type { TripCostEditInput } from '../../bindings/TripCostEditInput';
 import type { TripGetInput } from '../../bindings/TripGetInput';
+import type { TripHeaderEditInput } from '../../bindings/TripHeaderEditInput';
+import type { TripOtherSaleEditInput } from '../../bindings/TripOtherSaleEditInput';
 import type { TripSetPartnersInput } from '../../bindings/TripSetPartnersInput';
 import type {
   OtherSaleInput,
@@ -77,4 +82,34 @@ export function tripsOtherSaleSave(input: OtherSaleInput): Promise<OtherSaleSave
 
 export function tripsOtherSaleCancel(input: TripEntryCancelInput): Promise<TripEntryCancelled> {
   return callCommand<TripEntryCancelled>('trips_other_sale_cancel', { input });
+}
+
+/** The review of an edit of a trip cost: what changes and what it does (PRD FR-7.70). Read only. */
+export function tripsCostEditPreview(input: TripCostEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('trips_cost_edit_preview', { input });
+}
+
+/** Saves the edit of a trip cost: the old posting is reversed and the new one posted, same day. */
+export function tripsCostEditSave(input: TripCostEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('trips_cost_edit_save', { input });
+}
+
+/** The review of an edit of a sale in another shop (PRD FR-7.70). Read only. */
+export function tripsOtherSaleEditPreview(input: TripOtherSaleEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('trips_other_sale_edit_preview', { input });
+}
+
+/** Saves the edit of a sale in another shop. */
+export function tripsOtherSaleEditSave(input: TripOtherSaleEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('trips_other_sale_edit_save', { input });
+}
+
+/** The review of an edit of the header of a trip: the market, the person sent and the note. */
+export function tripsHeaderEditPreview(input: TripHeaderEditInput): Promise<EditPreview> {
+  return callCommand<EditPreview>('trips_header_edit_preview', { input });
+}
+
+/** Saves the edit of the header of a trip. */
+export function tripsHeaderEditSave(input: TripHeaderEditInput): Promise<EntryEdited> {
+  return callCommand<EntryEdited>('trips_header_edit_save', { input });
 }

@@ -621,3 +621,25 @@ cashbook-show-returned = Show returned too
 # Shown above the list when it is sorted by anything but the day: the cash after a line needs the order of days.
 # review: pending
 cashbook-running-date-only = The cash after each line shows in date order only.
+
+## An entry of the روکڑ area changed (plan 44, PRD FR-7.70).
+
+# $number: the number of the entry, for example "E-3".
+# review: pending
+cashbook-edited = { $number } changed
+
+# The list of saved journal entries under the جنرل form (plan 44, PRD FR-7.70).
+# review: pending
+cashbook-general-list-title = Saved { -general } entries
+
+# review: pending
+cashbook-general-list-label = Saved { -general } entries
+
+# review: pending
+cashbook-general-list-failed = The saved { -general } entries could not be opened
+
+# review: pending
+cashbook-general-list-empty = No { -general } entry in these dates
+
+# review: pending
+cashbook-general-list-empty-help = Fill the lines above and save to add one. Change the dates to see an older entry.

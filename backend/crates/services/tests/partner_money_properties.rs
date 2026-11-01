@@ -765,6 +765,11 @@ fn run(case: &Case) {
                 }
                 let id = saved[pick % saved.len()];
                 let row = vouchers::get(&w.env.ctx, id).unwrap();
+                // An edit keeps the day of the entry (PRD FR-7.70).
+                let date = mandi_services::core::dates::format_ddmmyyyy(
+                    mandi_services::core::dates::BusinessDate::parse_iso(&row.entry_date).unwrap(),
+                );
+                let date = date.as_str();
                 let entry = match row.voucher_type {
                     VoucherType::PersonalExpense => {
                         VoucherEntry::PersonalExpense(PersonalExpenseInput {
@@ -796,7 +801,7 @@ fn run(case: &Case) {
                         id,
                         version: row.version,
                         entry,
-                        reason: String::new(),
+                        reason: "edit".into(),
                         confirm_cash_below_zero: true,
                     },
                 ) {

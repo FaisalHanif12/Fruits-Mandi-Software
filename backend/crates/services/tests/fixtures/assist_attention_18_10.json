@@ -31,5 +31,6 @@
       "first": null
     }
   ],
-  "total_count": 10
+  "total_count": 10,
+  "partners_locked": false
 }

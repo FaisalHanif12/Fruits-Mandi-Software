@@ -31,7 +31,6 @@ import {
 } from '../accounts';
 import type { UiError } from '../../bindings/UiError';
 import { uiErrorOf } from '../api';
-import { todayText } from '../format';
 import { useSingleFlight, useSpellingFlow } from '../hooks';
 import { SHORTCUTS, useFormNavigation, useShortcut } from '../keyboard';
 import { Button } from './Button';
@@ -171,7 +170,8 @@ function QuickAddForm({
     phone2: '',
     address: '',
     linked_account: null,
-    opening_date: todayText(new Date()),
+    // The quick add makes the account only: it has no opening, so it saves on any day (PRD FR-10.11).
+    opening_date: '',
     opening_dr: '',
     opening_cr: '',
     opening_is_advance: false,

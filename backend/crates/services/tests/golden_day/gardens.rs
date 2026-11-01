@@ -7,12 +7,14 @@
 //! 5,000 (11-10): the parts are 18,000 / 12,000, 12,000 / 8,000 and 3,000 / 2,000, so الف paid
 //! 33,000 from the shop and ب 22,000 himself.
 
+use mandi_reports::reports::{PartyFilter, ReportFilters, ReportId, ReportRunInput};
 use mandi_services::core::gardens::{
     GardenCloseInput, GardenDetail, GardenEntryCancelInput, GardenEntryInput, GardenGetInput,
     GardenHistoryKind, GardenInput, GardenOtherSaleInput, GardenPaymentInput, GardenReopenInput,
     GardenRow, GardenSetPartnersInput,
 };
 use mandi_services::core::partners::PartnerVentureCard;
+use mandi_services::core::row_source::{RowSource, SourceKind};
 use mandi_services::core::statement::{PartnerStatement, PartnersStatementInput, StatementDetail};
 use mandi_services::core::ventures::{EntryPartInput, MoneySource, VentureKind, VentureStatus};
 use mandi_services::{ServiceError, gardens, partners};
@@ -333,6 +335,39 @@ fn e2e_40_the_whole_check_sale_other_shop_closing_and_the_partner_totals() {
     )
     .unwrap();
     assert_eq!(cash_balance(&w), 27_000);
+    // Every cash book row of the garden (two installments, the labour, the sale in another shop)
+    // opens the garden, not the id of its entry; the others open their own record.
+    let garden_row = RowSource {
+        kind: SourceKind::Garden,
+        id: garden.id,
+    };
+    let sources = super::own_goods::cash_sources(&w);
+    for posting in ["garden_payment", "venture_receipt"] {
+        let found: Vec<RowSource> = sources
+            .iter()
+            .filter(|(p, _)| p == posting)
+            .map(|(_, s)| *s)
+            .collect();
+        assert!(!found.is_empty(), "{posting} moves cash");
+        assert!(
+            found.iter().all(|s| *s == garden_row),
+            "{posting}: {found:?}"
+        );
+    }
+    assert_eq!(
+        sources
+            .iter()
+            .filter(|(p, _)| p == "garden_payment")
+            .count(),
+        3,
+        "two installments and the labour"
+    );
+    assert!(
+        sources
+            .iter()
+            .filter(|(p, _)| p == "opening" || p == "advance")
+            .all(|(_, s)| matches!(s.kind, SourceKind::Account | SourceKind::Voucher))
+    );
     let d = detail(&w, garden.id);
     assert_eq!(d.row.money_in_paisa.rupees(), 66_400);
     assert_eq!(d.row.paid_paisa.rupees(), 55_000);
@@ -379,6 +414,60 @@ fn e2e_40_the_whole_check_sale_other_shop_closing_and_the_partner_totals() {
         closed.row.balance_paisa.rupees(),
         11_400,
         "the result stays"
+    );
+    // The journal (R11), the cash book (R12) and the garden's ledger (R13) rows of its entries open
+    // the garden itself, not the id of an entry inside it (PRD FR-19.4).
+    let garden_source = Some(garden_row);
+    let run = |id: ReportId, party: Option<i64>| {
+        mandi_reports::reports::run(
+            w.env.ctx.db(),
+            &ReportRunInput {
+                group_by_month: false,
+                sort: None,
+                id,
+                filters: ReportFilters {
+                    party: party.map(|account_id| PartyFilter {
+                        account_id,
+                        person_key: None,
+                    }),
+                    ..ReportFilters::default()
+                },
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    for (id, party) in [
+        (ReportId::R11, None),
+        (ReportId::R12, None),
+        (ReportId::R13, Some(garden.account.id)),
+    ] {
+        let page = run(id, party);
+        let sources: Vec<Option<RowSource>> = page.rows.iter().map(|r| r.source).collect();
+        assert!(
+            sources.contains(&garden_source),
+            "{id:?} has a row that opens the garden"
+        );
+        assert!(
+            !sources
+                .iter()
+                .flatten()
+                .any(|s| s.kind == SourceKind::Venture),
+            "{id:?}: no row opens a venture by the id of one of its entries"
+        );
+    }
+    // R13 of the garden's account: the sale in our shop opens the بکری, the sale in another shop
+    // and the closing open the garden.
+    let ledger = run(ReportId::R13, Some(garden.account.id));
+    let kinds: Vec<SourceKind> = ledger
+        .rows
+        .iter()
+        .filter_map(|r| r.source.map(|s| s.kind))
+        .collect();
+    assert_eq!(
+        kinds,
+        [SourceKind::Bikri, SourceKind::Garden, SourceKind::Garden]
     );
     // الف: -33,000 + 3,200 + 39,840 = 10,040; ب: 2,400 + 26,560 = 28,960; ج: 2,400.
     assert_eq!(totals_of_three(&w), [10_040, 28_960, 2_400]);
@@ -1265,7 +1354,7 @@ fn fruit_taken_from_a_garden_lot_goes_to_the_garden_and_a_closed_garden_refuses_
         &mandi_services::core::fruit::FruitGetInput { id: taken.id },
     )
     .unwrap();
-    assert!(!row.can_change);
+    assert!(!row.flags.can_edit);
     let cancel = FruitCancelInput {
         id: taken.id,
         version: row.version,

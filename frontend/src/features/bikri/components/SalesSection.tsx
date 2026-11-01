@@ -45,6 +45,8 @@ interface SalesSectionProps {
   single?: { title: ReactNode } | undefined;
   /** Cells the user changed in a posting open for edit (plan 16). */
   cellChanged?: Record<string, Record<string, string>> | undefined;
+  /** The cells an earlier edit changed, with the words of that edit as their tip (plan 44). */
+  cellMarks?: Record<string, Record<string, string>> | undefined;
   /** Can Ctrl+Delete remove this line? Default: yes. */
   canRemoveRow?: ((row: EntryRow) => boolean) | undefined;
 }
@@ -58,6 +60,7 @@ export function SalesSection({
   card,
   single,
   cellChanged,
+  cellMarks,
   canRemoveRow,
 }: SalesSectionProps) {
   const { l10n } = useLocalization();
@@ -148,6 +151,7 @@ export function SalesSection({
           cellErrors={view.errors}
           cellWarnings={view.warnings}
           {...(cellChanged === undefined ? {} : { cellChanged })}
+          {...(cellMarks === undefined ? {} : { cellMarks })}
           {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
           interceptors={interceptors}
           onCardAccount={onCardAccount}

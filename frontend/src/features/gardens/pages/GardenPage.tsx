@@ -16,16 +16,20 @@ import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate } from '../../../shared/format';
-import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
+import { Button, ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
 import type { PagerState } from '../../../shared/hooks';
 import { CloseGardenCard } from '../components/CloseGardenCard';
+import { GardenArrivalEdit } from '../components/GardenArrivalEdit';
 import { GardenArrivalsSection } from '../components/GardenArrivalsSection';
+import { GardenEntryEdit } from '../components/GardenEntryEdit';
 import { GardenEntryEditor } from '../components/GardenEntryEditor';
 import { GardenFiguresCard, GardenHeaderCard } from '../components/GardenHeaderCard';
+import { GardenHeaderEdit } from '../components/GardenHeaderEdit';
 import { GardenHistorySection } from '../components/GardenHistorySection';
 import { GardenPartnersCard } from '../components/GardenPartnersCard';
 import { ReopenGardenDialog } from '../components/ReopenGardenDialog';
 import { useGarden, type GardenView } from '../hooks';
+import type { ArrivalRow, GardenHistoryRow } from '../types';
 
 /** A positive whole number from the address, or nothing. */
 function positiveId(value: unknown): number | null {
@@ -44,6 +48,11 @@ function GardenBody({
 }) {
   const navigate = useNavigate();
   const [reopening, setReopening] = useState(false);
+  // The entry open for edit (plan 44): the form of a new entry gives way to its edit form.
+  const [editing, setEditing] = useState<GardenHistoryRow | null>(null);
+  const [editingArrival, setEditingArrival] = useState<ArrivalRow | null>(null);
+  // The facts of the garden open for edit (names, main fruit, rent, season end, note).
+  const [editingHeader, setEditingHeader] = useState(false);
   const { detail } = view;
   const garden = detail.row;
   const open = garden.status === 'open';
@@ -62,8 +71,41 @@ function GardenBody({
           <Localized id="gardens-back" />
         </Button>
       </div>
-      <GardenHeaderCard garden={garden} />
-      {open ? (
+      <GardenHeaderCard
+        garden={garden}
+        onEdit={() => {
+          setEditing(null);
+          setEditingArrival(null);
+          setEditingHeader(true);
+        }}
+      />
+      {editingHeader ? (
+        <GardenHeaderEdit
+          key={String(garden.version)}
+          garden={garden}
+          onDone={() => {
+            setEditingHeader(false);
+          }}
+        />
+      ) : editingArrival !== null ? (
+        <GardenArrivalEdit
+          key={`${String(editingArrival.id)}-${String(editingArrival.version)}`}
+          garden={garden}
+          arrival={editingArrival}
+          onDone={() => {
+            setEditingArrival(null);
+          }}
+        />
+      ) : editing !== null ? (
+        <GardenEntryEdit
+          key={`${String(editing.entry_id)}-${String(editing.version)}`}
+          garden={garden}
+          row={editing}
+          onDone={() => {
+            setEditing(null);
+          }}
+        />
+      ) : open ? (
         <GardenEntryEditor garden={garden} today={today} />
       ) : (
         <Notice
@@ -89,10 +131,30 @@ function GardenBody({
           </Localized>
         </Notice>
       )}
-      <GardenArrivalsSection garden={garden} />
+      <GardenArrivalsSection
+        garden={garden}
+        onEdit={(arrival) => {
+          setEditing(null);
+          setEditingHeader(false);
+          setEditingArrival(arrival);
+        }}
+      />
       <GardenFiguresCard garden={garden} />
-      <GardenPartnersCard results={detail.partner_results} closed={!open} />
-      <GardenHistorySection history={view.history} count={view.historyCount} pager={pager} />
+      {detail.partners_locked ? (
+        <PartnerLockedBox />
+      ) : (
+        <GardenPartnersCard results={detail.partner_results} closed={!open} />
+      )}
+      <GardenHistorySection
+        history={view.history}
+        count={view.historyCount}
+        pager={pager}
+        onEdit={(row) => {
+          setEditingArrival(null);
+          setEditingHeader(false);
+          setEditing(row);
+        }}
+      />
       {open ? <CloseGardenCard garden={garden} today={today} /> : null}
       <ReopenGardenDialog garden={garden} open={reopening} onOpenChange={setReopening} />
     </div>

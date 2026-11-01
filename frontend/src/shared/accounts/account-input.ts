@@ -31,7 +31,10 @@ export function accountInputOf(
     phone2: draft.phone2,
     address: draft.address,
     linked_account_id: draft.linked_account?.id ?? null,
-    opening_date: draft.opening_date,
+    // An opening date only goes with opening money: without an amount the account saves on any
+    // day, a closed one too, and the date is not looked at (plan 44, PRD FR-10.11).
+    opening_date:
+      draft.opening_dr.trim() === '' && draft.opening_cr.trim() === '' ? '' : draft.opening_date,
     opening_dr: draft.opening_dr,
     opening_cr: draft.opening_cr,
     opening_is_advance: draft.opening_is_advance,

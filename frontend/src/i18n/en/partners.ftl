@@ -440,3 +440,88 @@ partners-ventures-col-balance = Balance or result
 # The name of the table of partners on the overview, read by a screen reader (plan 38).
 # review: pending
 partners-overview-label = The partners and their figures
+
+## The partner code (plan 44, PRD FR-17.11): the section opens only with a 4-digit code.
+
+# review: pending
+partners-code-title = Partner code
+
+# review: pending
+partners-code-failed = The partner code status could not be read
+
+# review: pending
+partners-code-locked-title = The partner section opens with a code
+
+# review: pending
+partners-code-locked-help = Enter the 4-digit code. It closes again when you leave this section.
+
+# review: pending
+partners-code-field = Code
+
+# review: pending
+partners-code-open = Open
+
+# review: pending
+partners-code-forgot = Forgot the code
+
+# $seconds: seconds left to wait.
+# review: pending
+partners-code-wait = Too many wrong codes. Try again in { $seconds } seconds.
+
+# review: pending
+partners-code-set-title = Make the partner code
+
+# review: pending
+partners-code-set-help = The partners' figures are very private, so this section opens with a 4-digit code. The Owner's password is needed to make it. You cannot go on without a code.
+
+# review: pending
+partners-code-password = Owner's password
+
+# review: pending
+partners-code-new = New code (4 digits)
+
+# review: pending
+partners-code-again = Write the code again
+
+# review: pending
+partners-code-set-button = Make the code
+
+# review: pending
+partners-code-set-done = The partner code is made
+
+# review: pending
+partners-code-reset-title = Forgot the code?
+
+# review: pending
+partners-code-reset-help = Write the Owner's password or the printed recovery code, then make a new code.
+
+# review: pending
+partners-code-reset-secret = Password or recovery code
+
+# review: pending
+partners-code-reset-button = Make a new code
+
+# review: pending
+partners-code-reset-done = The new partner code is made
+
+# review: pending
+partners-code-change-title = Change the partner code
+
+# review: pending
+partners-code-change-old = Old code or the Owner's password
+
+# review: pending
+partners-code-change-button = Change the code
+
+# review: pending
+partners-code-change-done = The partner code is changed
+
+# The box that stands where partner figures would be.
+# review: pending
+partners-code-box-text = Partner figures are not shown without the code.
+
+# review: pending
+partners-code-enter = Enter the code
+
+# review: pending
+partners-code-lock-now = Close it now

@@ -7,7 +7,7 @@
 // with a retry, nothing to list, and the rows. The print and Excel of this list come with R37 (D5).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Ban, Apple, Pencil, Printer, SearchX } from 'lucide-react';
+import { Apple, Printer, SearchX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { pickedOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
@@ -28,6 +28,7 @@ import {
   Select,
   ShowClosedTick,
   type PickerValue,
+  EntryActions,
 } from '../../../shared/ui';
 import { usePartnerList } from '../../partners';
 import { useOpenReport } from '../../reports';
@@ -39,6 +40,14 @@ import { FOR_GUESTS, type FruitListInput, type FruitRow } from '../types';
 const EVERYONE = 'everyone';
 /** A pause so a burst of key presses in the search box asks once. */
 const SEARCH_DELAY_MS = 150;
+
+/** What the two buttons show before a row is chosen: both off, nothing to say. */
+const NO_ENTRY = {
+  can_edit: false,
+  can_cancel: false,
+  locked_reason: null,
+  needs_reopen: false,
+} as const;
 
 interface FruitListSectionProps {
   /** Today, `YYYY-MM-DD`: the list starts with today's entries. */
@@ -193,25 +202,15 @@ export function FruitListSection({
         </FilterBar>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          disabled={selected?.can_change !== true}
-          onClick={() => {
+        <EntryActions
+          flags={selected ?? NO_ENTRY}
+          onEdit={() => {
             if (selected !== null) onEdit(selected);
           }}
-        >
-          <Pencil aria-hidden="true" className="size-icon-md" />
-          <Localized id="fruit-edit" />
-        </Button>
-        <Button
-          variant="danger"
-          disabled={selected?.can_change !== true}
-          onClick={() => {
+          onCancel={() => {
             if (selected !== null) onCancel(selected);
           }}
-        >
-          <Ban aria-hidden="true" className="size-icon-md" />
-          <Localized id="fruit-cancel" />
-        </Button>
+        />
         {/* The fruit register (R37, PRD FR-16.12) with the same days, partner or guests and item. */}
         {openReport === null ? null : (
           <Button
@@ -252,7 +251,7 @@ export function FruitListSection({
         }
         empty={empty}
         onOpen={(row) => {
-          if (row.can_change) onEdit(row);
+          if (row.can_edit) onEdit(row);
           else onSelect(row);
         }}
         onFocusRow={(rowId) => {

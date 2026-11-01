@@ -32,7 +32,17 @@ import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/form
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Button, ErrorState, FormAside, LoadingState, Notice, showToast } from '../../../shared/ui';
+import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { expensePreview } from '../api';
+import {
+  ClosedCashEntry,
+  VoucherEditBoxes,
+  VoucherEditTop,
+  isReadyToEdit,
+  useVoucherEdit,
+} from '../edit-voucher';
+import { expenseDraftOf, useEditDraft } from '../edit-seed';
+import { useVoucherEditable } from '../../vouchers';
 import { previewRefusal, useFollowType } from '../entry-support';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
@@ -54,7 +64,7 @@ import {
 import { useExpensePreview, useSaveExpense } from '../hooks';
 import { kindId } from '../list-columns';
 import { EXPENSE_TYPES, parseExpenseSearch, type ExpenseType } from '../screen-type';
-import type { RepeatedExpense } from '../types';
+import type { RepeatedExpense, VoucherEditable } from '../types';
 
 /** The address of this screen. */
 const EXPENSE_PATH = '/rokar/expense';
@@ -66,15 +76,20 @@ interface ExpenseEditorProps {
   today: string;
   /** The type the address asks for. */
   urlType: ExpenseType;
+  /** The saved voucher open for edit (plan 44), with the form as it was saved; null for a new entry. */
+  editable?: VoucherEditable | null;
+  initial?: ExpenseDraft | null;
 }
 
-function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
+function ExpenseEditor({ today, urlType, editable = null, initial = null }: ExpenseEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const language = useLanguage();
   const grouping = useGrouping();
   const formRef = useFocusFirstField<HTMLFormElement>();
-  const [draft, setDraft] = useState<ExpenseDraft>(() => newExpenseDraft(urlType, today));
+  const [draft, setDraft] = useState<ExpenseDraft>(
+    () => initial ?? newExpenseDraft(urlType, today),
+  );
   const [tried, setTried] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
 
@@ -96,7 +111,8 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
     () => (draft.amount.trim() === '' ? null : buildExpense(draft, false)),
     [draft],
   );
-  const { query, current } = useExpensePreview(entry);
+  const edit = useVoucherEdit(editable, entry);
+  const { query, current } = useExpensePreview(entry, edit?.editing.row.id ?? null);
   // An answer about another type (kept on screen while the next one is on its way) is never shown.
   const preview =
     entry === null || query.data?.voucher_type !== draft.type ? undefined : query.data;
@@ -109,20 +125,23 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
   const flow = useEntrySaveFlow({
     draftText,
     build: (confirm) => buildExpense(draft, confirm),
-    save: (input) => saveExpense.mutateAsync(input),
-    freshCash: (input) => expensePreview(input, null).then((answer) => answer.cash),
+    save: (input) => (edit === null ? saveExpense.mutateAsync(input) : edit.send(input)),
+    freshCash: (input) =>
+      expensePreview(input, edit?.editing.row.id ?? null).then((answer) => answer.cash),
     cash: preview?.cash,
     current,
     onSaved: (saved) => {
-      showToast(
-        'success',
-        l10n.getString('cashbook-saved', {
-          kind: draft.type,
-          number: l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
-            number: String(saved.number),
-          }),
-        }),
-      );
+      const number = l10n.getString(`vouchers-number-${kindId(draft.type)}`, {
+        number: String(saved.number),
+      });
+      if (edit !== null) {
+        // An edit is done: the days reopened for it close again and a new entry starts (plan 44).
+        showToast('success', l10n.getString('cashbook-edited', { number }));
+        void finishFixSession(l10n);
+        void navigate({ to: EXPENSE_PATH, search: { type: draft.type } });
+        return;
+      }
+      showToast('success', l10n.getString('cashbook-saved', { kind: draft.type, number }));
       setDraft((previous) => nextExpenseDraft(previous));
       setTried(false);
       window.requestAnimationFrame(() => {
@@ -134,6 +153,11 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
 
   const save = async (): Promise<boolean> => {
     setTried(true);
+    // An entry of an earlier day asks why it is changed, once (PRD FR-7.70).
+    if (edit?.needsReason() === true) {
+      edit.setAskReason(true);
+      return false;
+    }
     return flow.save();
   };
   const startNew = () => {
@@ -186,6 +210,8 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
       types={EXPENSE_TYPES.map((value) => ({ value, labelId: `cashbook-type-${kindId(value)}` }))}
       type={draft.type}
       onType={onType}
+      top={edit === null ? undefined : <VoucherEditTop edit={edit} />}
+      lockTypes={edit !== null}
       path={EXPENSE_PATH}
       filled={filled}
       busy={flow.busy}
@@ -223,9 +249,22 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
       }
     >
       <FormAside
-        form={<ExpenseForm draft={draft} onChange={change} error={error} />}
+        form={<ExpenseForm draft={draft} onChange={change} error={error} marks={edit?.marks} />}
         aside={
           <>
+            {edit === null ? null : (
+              <VoucherEditBoxes
+                edit={edit}
+                busy={flow.busy}
+                onReason={() => {
+                  void flow.save();
+                }}
+                onCancelled={() => {
+                  void finishFixSession(l10n);
+                  void navigate({ to: EXPENSE_PATH, search: { type: draft.type } });
+                }}
+              />
+            )}
             <ExpensePreviewCard type={draft.type} preview={preview} />
             <EntryNotes warnings={warnings} cash={preview?.cash}>
               {partner !== null && draft.type === 'shop_expense' ? (
@@ -264,6 +303,41 @@ function ExpenseEditor({ today, urlType }: ExpenseEditorProps) {
   );
 }
 
+/** A saved voucher open for edit (`?id=`): it waits for the voucher and its form, then edits it. */
+function ExpenseEdit({ id, today }: { id: number; today: string }) {
+  const editable = useVoucherEditable(id);
+  const kind = editable.data?.entry.type;
+  const isExpense = kind === undefined || EXPENSE_TYPES.some((type) => type === kind);
+  // The form is read only for an expense; an entry of another screen opens on its own.
+  const ready = editable.data !== undefined && isReadyToEdit(editable.data.row);
+  const draft = useEditDraft(isExpense && ready ? editable.data : undefined, expenseDraftOf);
+  if (editable.data !== undefined && !isExpense) return <OpenOnItsScreen row={editable.data.row} />;
+  if (editable.data !== undefined && !ready) {
+    return <ClosedCashEntry titleId="cashbook-expense-title" row={editable.data.row} />;
+  }
+  if (editable.isError || draft.isError) {
+    return (
+      <ErrorState
+        title={<Localized id="cashbook-load-failed" />}
+        error={uiErrorOf(editable.isError ? editable.error : draft.error)}
+        onRetry={() => {
+          void editable.refetch();
+        }}
+      />
+    );
+  }
+  if (editable.data === undefined || draft.data === undefined) return <LoadingState />;
+  return (
+    <ExpenseEditor
+      key={`${String(id)}-${String(editable.data.row.version)}`}
+      today={today}
+      urlType={draft.data.type}
+      editable={editable.data}
+      initial={draft.data}
+    />
+  );
+}
+
 /** The route's page: it waits for today, then opens the form for the type in the address. */
 export function ExpensePage() {
   const day = useDayStatus();
@@ -281,5 +355,6 @@ export function ExpensePage() {
       />
     );
   }
+  if (search.id !== undefined) return <ExpenseEdit id={search.id} today={day.data.today} />;
   return <ExpenseEditor key="new" today={day.data.today} urlType={search.type ?? 'shop_expense'} />;
 }

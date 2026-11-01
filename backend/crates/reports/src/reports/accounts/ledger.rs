@@ -322,7 +322,12 @@ fn page_rows(
                     balance_cell(balance)
                 },
             ],
-            source: Some(source_of(&raw.source_type, raw.source_id, raw.entry_id)),
+            source: Some(source_of(
+                &raw.source_type,
+                raw.source_id,
+                raw.entry_id,
+                (raw.venture_kind.as_deref(), raw.venture_id),
+            )),
             kind: RowKind::Normal,
         });
     }

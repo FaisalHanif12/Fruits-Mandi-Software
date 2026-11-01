@@ -364,7 +364,7 @@ fn an_arrival_is_a_stock_record_with_its_own_number_and_posts_no_money() {
     assert_eq!(first.sell_date, "2026-10-11");
     assert_eq!(second.sell_date, "2026-10-12");
     assert_eq!((first.qty, first.qty_left, first.qty_sold), (100, 100, 0));
-    assert!(first.can_cancel && first.can_change_sell_date);
+    assert!(first.flags.can_cancel && first.can_change_sell_date);
     // No journal entry: the books are exactly as they were.
     let cash_after = w
         .env
@@ -473,7 +473,7 @@ fn an_arrival_is_cancelled_with_a_reason_only_while_untouched_and_a_write_off_ca
     assert_eq!((done.qty_written_off, done.qty_left), (30, 70));
     let touched = arrival(&w, a.id);
     assert_eq!(touched.write_offs.len(), 1);
-    assert!(!touched.can_cancel, "a write-off stands on it");
+    assert!(!touched.flags.can_cancel, "a write-off stands on it");
     let e = gardens::arrivals::cancel(
         &w.env.ctx,
         &w.owner,
@@ -498,7 +498,7 @@ fn an_arrival_is_cancelled_with_a_reason_only_while_untouched_and_a_write_off_ca
     .unwrap();
     assert_eq!((undone.qty_written_off, undone.qty_left), (0, 100));
     let again = arrival(&w, a.id);
-    assert!(again.can_cancel);
+    assert!(again.flags.can_cancel);
     assert!(again.write_offs.is_empty());
     let cancelled = gardens::arrivals::cancel(
         &w.env.ctx,
@@ -693,7 +693,7 @@ fn goods_not_sold_stay_in_the_arrival_and_come_again_into_the_next_new_sale() {
     assert_eq!(after.lots.len(), 1);
     assert_eq!(after.lots[0].qty_sold, 60);
     assert_eq!(after.lots[0].bikri_number, saved.number);
-    assert!(!after.can_cancel, "a sale stands on it");
+    assert!(!after.flags.can_cancel, "a sale stands on it");
 
     // The next day's new sale gets the 40 that are left.
     day(&w, 12);
@@ -1092,7 +1092,7 @@ fn cancelling_or_editing_a_sale_gives_the_arrival_its_goods_back() {
     let after_cancel = arrival(&w, a.id);
     assert_eq!((after_cancel.qty_sold, after_cancel.qty_left), (0, 100));
     assert!(after_cancel.lots.is_empty());
-    assert!(after_cancel.can_cancel);
+    assert!(after_cancel.flags.can_cancel);
 }
 
 #[test]

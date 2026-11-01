@@ -3,13 +3,14 @@
 // first-run wizard's partners step. Esc goes back to the overview (asking first when there are
 // unsaved shares).
 
+import { PartnerGate } from '../components/PartnerGate';
 import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
 import { Button, InfoHint } from '../../../shared/ui';
 import { PartnerSetupForm } from '../components/PartnerSetupForm';
 
-export function PartnerSetupPage() {
+function PartnerSetupPageScreen() {
   const navigate = useNavigate();
   const goBack = () => {
     void navigate({ to: '/partners' });
@@ -34,5 +35,14 @@ export function PartnerSetupPage() {
       </div>
       <PartnerSetupForm labelId="partners-save" leaveGuard onSaved={() => undefined} />
     </div>
+  );
+}
+
+/** The screen behind the partner code (plan 44, PRD FR-17.11). */
+export function PartnerSetupPage() {
+  return (
+    <PartnerGate>
+      <PartnerSetupPageScreen />
+    </PartnerGate>
   );
 }

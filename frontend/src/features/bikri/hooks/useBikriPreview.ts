@@ -20,7 +20,7 @@ export const PREVIEW_DELAY_MS = 50;
 /** The draft of each screen, built once for each version of what is typed. */
 const built = new WeakMap<BikriDraftStores, { version: number; draft: BikriDraft }>();
 
-function draftOf(stores: BikriDraftStores): BikriDraft {
+export function draftOf(stores: BikriDraftStores): BikriDraft {
   const version = stores.version.getState().value;
   const known = built.get(stores);
   if (known?.version === version) return known.draft;

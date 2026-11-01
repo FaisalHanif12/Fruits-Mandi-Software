@@ -222,6 +222,9 @@ pub(crate) struct RawLine {
     pub(crate) posting_type: String,
     pub(crate) source_type: String,
     pub(crate) source_id: i64,
+    /// The kind (`trip` or `garden`) and the id of the trip or garden of a `venture` entry.
+    pub(crate) venture_kind: Option<String>,
+    pub(crate) venture_id: Option<i64>,
     pub(crate) reverses: Option<i64>,
     pub(crate) account_id: i64,
     pub(crate) narration: Option<String>,
@@ -261,11 +264,15 @@ pub(crate) fn page_query(
     let (conditions, mut binds) = f.conditions();
     binds.push(Value::Integer(limit));
     binds.push(Value::Integer(offset));
+    let (venture_kind, venture_id) = (
+        mandi_db::row_source_sql::VENTURE_KIND,
+        mandi_db::row_source_sql::VENTURE_ID,
+    );
     let sql = format!(
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, e.source_type, e.source_id,
                 e.reverses_entry_id, l.account_id, COALESCE(l.narration, e.narration),
                 l.pukhta_person_key, l.dr_paisa, l.cr_paisa,
-                COALESCE(b.number, v.number), v.type, v.reason
+                COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id}
          FROM {by} LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
          LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id
          WHERE e.status = 'posted'{conditions}
@@ -317,6 +324,8 @@ pub(crate) fn page_by(
                 doc_number: r.get(12)?,
                 voucher_type: r.get(13)?,
                 voucher_reason: r.get(14)?,
+                venture_kind: r.get(15)?,
+                venture_id: r.get(16)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;

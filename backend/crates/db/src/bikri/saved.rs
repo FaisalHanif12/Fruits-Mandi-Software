@@ -14,6 +14,7 @@ use mandi_core::bikri::{
     SavedLot, SavedLotCharge, SavedOwnLot, SavedPosting, SavedPukhta, SavedPurchaseRef, SavedSale,
     SavedSplit, SavedTotals, StoredMethod,
 };
+use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
 use rusqlite::types::{FromSql, Value};
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -405,6 +406,8 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
                     postings: Vec::new(),
                     split: Vec::new(),
                     totals: SavedTotals::default(),
+                    // Set by the service, which knows the closed-up-to day and the audit stamp.
+                    flags: EntryFlags::unmarked(),
                 })
             },
         )
@@ -682,6 +685,8 @@ pub fn list(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<Bikr
             sellers: Vec::new(),
             pukhta_sellers: Vec::new(),
             items: Vec::new(),
+            // Set by the service, which knows the closed-up-to day and the audit stamp.
+            flags: EntryFlags::unmarked(),
         })
     })?;
     let mut out = rows.collect::<rusqlite::Result<Vec<_>>>()?;

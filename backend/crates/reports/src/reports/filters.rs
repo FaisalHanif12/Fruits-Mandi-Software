@@ -80,6 +80,8 @@ pub(crate) struct Typed {
     /// The sort of a ledger or day book page that the SQL can do (debit or credit), set by the run
     /// when the screen sorted by it (plan 38 B2). Missing: the order of the days.
     pub(crate) line_sort: Option<LineSort>,
+    /// The partner section is locked: leave out the partner parts of the report (PRD FR-17.11).
+    pub(crate) hide_partners: bool,
     /// What goes back to the screen.
     pub(crate) resolved: ResolvedFilters,
 }
@@ -143,6 +145,7 @@ pub(crate) fn resolve(
     let mut problems: Vec<FieldError> = Vec::new();
     let mut typed = Typed {
         today: Some(today),
+        hide_partners: input.hide_partners,
         ..Typed::default()
     };
 

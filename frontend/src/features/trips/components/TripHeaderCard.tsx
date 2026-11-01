@@ -6,10 +6,10 @@
 // Everything is the backend's; nothing is added up here (CLAUDE.md rule 1).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { CircleCheck, CircleDot, TriangleAlert } from 'lucide-react';
+import { CircleCheck, CircleDot, Pencil, TriangleAlert } from 'lucide-react';
 import { formatBps, isNegativePaisa, isoToDisplayDate } from '../../../shared/format';
 import { displayName, useLanguage } from '../../../shared/i18n';
-import { CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
+import { Button, CalcInfo, Card, Code, Fact, Num } from '../../../shared/ui';
 import type { TripRow } from '../types';
 
 interface TripCardProps {
@@ -46,7 +46,12 @@ function LossNote({ trip }: TripCardProps) {
   );
 }
 
-export function TripHeaderCard({ trip }: TripCardProps) {
+interface TripHeaderCardProps extends TripCardProps {
+  /** Edit was pressed: the page opens the header for edit (plan 44). Without it there is no button. */
+  onEdit?: (() => void) | undefined;
+}
+
+export function TripHeaderCard({ trip, onEdit }: TripHeaderCardProps) {
   const open = trip.status === 'open';
   const StatusIcon = open ? CircleDot : CircleCheck;
   return (
@@ -87,6 +92,14 @@ export function TripHeaderCard({ trip }: TripCardProps) {
           )}
         </dl>
       </div>
+      {onEdit === undefined ? null : (
+        <div>
+          <Button onClick={onEdit}>
+            <Pencil aria-hidden="true" className="size-icon-md" />
+            <Localized id="trips-header-edit" />
+          </Button>
+        </div>
+      )}
       <ResultLine trip={trip} />
       <LossNote trip={trip} />
     </Card>

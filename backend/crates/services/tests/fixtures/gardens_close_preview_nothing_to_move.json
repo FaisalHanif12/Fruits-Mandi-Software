@@ -176,7 +176,8 @@
         }
       }
     ],
-    "posts_entry": false
+    "posts_entry": false,
+    "partners_locked": false
   },
   "earliest_date": "2026-10-10",
   "errors": [],

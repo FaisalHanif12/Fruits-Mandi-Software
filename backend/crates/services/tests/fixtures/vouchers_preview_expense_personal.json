@@ -59,5 +59,6 @@
     "needs_confirm": false
   },
   "errors": [],
-  "warnings": []
+  "warnings": [],
+  "partners_locked": false
 }

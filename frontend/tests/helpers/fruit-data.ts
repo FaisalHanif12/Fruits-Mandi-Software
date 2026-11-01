@@ -32,6 +32,7 @@ import type { WorkingArg } from '../../src/bindings/WorkingArg';
 import { CommandError } from '../../src/shared/api';
 import { paisaForTest } from './paisa';
 import { refusal, type RefusalItem } from './ui-error';
+import { OPEN_ENTRY } from './entry-flags';
 
 const money = (rupees: number): ReturnType<typeof paisaForTest> => paisaForTest(rupees * 100);
 
@@ -170,7 +171,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
     if (errors.length > 0 || lot === null) {
       // Fruit from another shop has no lot; the numbers need the item picked as typed.
       if (errors.length > 0 || input.source === 'shop') {
-        return { numbers: null, errors, warnings: [], rate_hint };
+        return { numbers: null, errors, warnings: [], rate_hint, partners_locked: false };
       }
     }
     const value = qty * rate;
@@ -225,7 +226,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
           ? null
           : { lot_id: lot.lot_id, balance_before: available, balance_after: available - qty },
     };
-    return { numbers, errors: [], warnings: [], rate_hint };
+    return { numbers, errors: [], warnings: [], rate_hint, partners_locked: false };
   };
 
   const rowFrom = (id: number, version: number, input: FruitInput): FruitRow => {
@@ -268,7 +269,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
         amount_paisa: part.amount_paisa,
       })),
       journal_entry_id: 100 + id,
-      can_change: true,
+      ...OPEN_ENTRY,
     };
   };
 
@@ -329,7 +330,9 @@ export function createFruitBooks(options: FruitOptions = {}) {
       takeFromLot(row.lot?.lot_id ?? null, -row.qty);
       row.status = 'cancelled';
       row.cancel_reason = input.reason;
-      row.can_change = false;
+      row.can_edit = false;
+      row.can_cancel = false;
+      row.locked_reason = 'cancelled';
       row.journal_entry_id = null;
       store.saved.cancels.push(input);
       return { id: row.id, number: row.number, reversal_entry_id: 300 + row.id };

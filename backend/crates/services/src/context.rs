@@ -75,6 +75,9 @@ pub struct Context {
     pub(crate) random: Arc<dyn RandomSource>,
     pub(crate) session: Mutex<Option<Session>>,
     pub(crate) lockouts: Mutex<Lockouts>,
+    /// True while the partner section is open (PRD FR-17.11). Memory only, like the sign-in: it is
+    /// closed by leaving the section, the idle lock, a logout, a restore and the end of the app.
+    pub(crate) partner_unlocked: Mutex<bool>,
     /// The learned word pairs, kept in memory (Tech Stack 4.4). `None` until first needed.
     pub(crate) learned: Mutex<Option<Arc<Vec<LearnedPair>>>>,
     /// The search index (Tech Stack 4.7), kept in memory. `None` until first needed.
@@ -106,6 +109,7 @@ impl Context {
             random: parts.random,
             session: Mutex::new(None),
             lockouts: Mutex::new(Lockouts::default()),
+            partner_unlocked: Mutex::new(false),
             learned: Mutex::new(None),
             search: Mutex::new(None),
             rules: Mutex::new(None),
@@ -148,6 +152,8 @@ impl Context {
         *self.rules_lock() = None;
         *self.search_lock() = None;
         *self.learned_lock() = None;
+        // The restored data may hold another partner code: the section asks for it again.
+        self.set_partner_open(false);
         // The kept ledger and cash sums belong to the data that was replaced.
         mandi_db::memo::clear();
     }
@@ -158,6 +164,22 @@ impl Context {
 
     pub(crate) fn learned_lock(&self) -> MutexGuard<'_, Option<Arc<Vec<LearnedPair>>>> {
         self.learned.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// True while the partner section is open.
+    pub(crate) fn partner_open(&self) -> bool {
+        *self
+            .partner_unlocked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Opens or closes the partner section (PRD FR-17.11).
+    pub(crate) fn set_partner_open(&self, open: bool) {
+        *self
+            .partner_unlocked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = open;
     }
 
     pub(crate) fn lockouts_lock(&self) -> MutexGuard<'_, Lockouts> {

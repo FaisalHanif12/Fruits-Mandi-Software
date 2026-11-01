@@ -3,9 +3,11 @@
 use serde::Serialize;
 use ts_rs::TS;
 
+use mandi_services::core::edit::{DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened};
 use mandi_services::core::vouchers::{
     DayCloseInput, DayClosePreview, DayClosePreviewInput, DayReopenInput,
 };
+use mandi_services::partner_code;
 use mandi_services::{auth, day};
 
 use super::run;
@@ -55,7 +57,11 @@ pub async fn day_close_preview<R: tauri::Runtime>(
 ) -> Result<DayClosePreview, UiError> {
     run(app, "day_close_preview", move |ctx| {
         auth::require(ctx)?;
-        day::close_preview(ctx, &input)
+        let mut shown = day::close_preview(ctx, &input)?;
+        if partner_code::is_locked(ctx)? {
+            shown.summary.hide_partners();
+        }
+        Ok(shown)
     })
     .await
 }
@@ -84,6 +90,37 @@ pub async fn day_reopen<R: tauri::Runtime>(
     run(app, "day_reopen", move |ctx| {
         let actor = auth::require(ctx)?;
         Ok(status_of(day::reopen(ctx, &actor, &input)?))
+    })
+    .await
+}
+
+/// Reopens the date of an entry to fix, and every later closed date, and gives a token to close
+/// the same days again (PRD FR-21.4, plan 44). The reason goes to the audit log. Errors:
+/// `ERR_REASON_REQUIRED` on `reason`; the date codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`;
+/// `ERR_MONTH_CLOSED` on `date`. Until plan 44 T2c: `ERR_NOT_IMPLEMENTED`.
+#[tauri::command]
+pub async fn day_fix_open<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DayFixOpenInput,
+) -> Result<DayFixOpened, UiError> {
+    run(app, "day_fix_open", move |ctx| {
+        let actor = auth::require(ctx)?;
+        day::fix_open(ctx, &actor, &input)
+    })
+    .await
+}
+
+/// Closes the days `day_fix_open` reopened, oldest first, each with the checks of PRD FR-21.1. A
+/// day whose checks fail stays open and is listed with the reason. Errors:
+/// `ERR_FIX_TOKEN_INVALID` on `token`. Until plan 44 T2c: `ERR_NOT_IMPLEMENTED`.
+#[tauri::command]
+pub async fn day_fix_close<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: DayFixCloseInput,
+) -> Result<DayFixClosed, UiError> {
+    run(app, "day_fix_close", move |ctx| {
+        let actor = auth::require(ctx)?;
+        day::fix_close(ctx, &actor, &input)
     })
     .await
 }

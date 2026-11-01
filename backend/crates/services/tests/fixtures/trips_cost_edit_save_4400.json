@@ -1,0 +1,153 @@
+{
+  "id": 2,
+  "number": 1,
+  "version": 4,
+  "entry_id": 7,
+  "reversal_entry_id": 6,
+  "review": {
+    "entry_date": "2026-10-10",
+    "changes": [
+      {
+        "place": {
+          "kind": "entry",
+          "lot_no": null,
+          "line_no": null,
+          "label_ur": null,
+          "label_en": null
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 400000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 440000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 1,
+          "label_ur": "الف",
+          "label_en": "Partner A"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 160000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 176000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 2,
+          "label_ur": "ب",
+          "label_en": "Partner B"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 120000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 132000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 3,
+          "label_ur": "ج",
+          "label_en": "Partner C"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 120000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 132000
+        }
+      },
+      {
+        "place": {
+          "kind": "part",
+          "lot_no": null,
+          "line_no": 1,
+          "label_ur": "کیلا",
+          "label_en": "Banana"
+        },
+        "field": "amount",
+        "before": {
+          "type": "money",
+          "paisa": 400000
+        },
+        "after": {
+          "type": "money",
+          "paisa": 440000
+        }
+      }
+    ],
+    "effect": {
+      "parties": [],
+      "cash": {
+        "before_paisa": 3160000,
+        "after_paisa": 3120000,
+        "needs_confirm": false
+      },
+      "partners": [
+        {
+          "partner": {
+            "id": 1,
+            "code": "",
+            "name_ur": "الف",
+            "name_en": "Partner A"
+          },
+          "before_paisa": -160000,
+          "after_paisa": -176000
+        },
+        {
+          "partner": {
+            "id": 2,
+            "code": "",
+            "name_ur": "ب",
+            "name_en": "Partner B"
+          },
+          "before_paisa": -120000,
+          "after_paisa": -132000
+        },
+        {
+          "partner": {
+            "id": 3,
+            "code": "",
+            "name_ur": "ج",
+            "name_en": "Partner C"
+          },
+          "before_paisa": -120000,
+          "after_paisa": -132000
+        }
+      ],
+      "partners_locked": false
+    },
+    "reason_required": false,
+    "needs_reopen": false
+  },
+  "edited": {
+    "at": "2026-10-10T09:00:00.000Z",
+    "local_date": "2026-10-10",
+    "local_time": "14:00",
+    "by": "Maher Adnan",
+    "count": 1,
+    "reason": null
+  }
+}

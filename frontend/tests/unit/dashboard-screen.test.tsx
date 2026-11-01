@@ -394,7 +394,7 @@ describe.each(LANGUAGES)('the states of the dashboard (%s)', (language) => {
         commission_paisa: money(0),
       })),
       chart_items: [],
-      attention: { items: [], total_count: 0 },
+      attention: { items: [], total_count: 0, partners_locked: false },
     };
     fakeDashboard({ dashboard: empty });
     const { router } = await openDashboard(language);

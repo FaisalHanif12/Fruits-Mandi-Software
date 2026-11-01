@@ -1,0 +1,308 @@
+{
+  "row": {
+    "id": 2,
+    "version": 1,
+    "number": 1,
+    "code": "0080",
+    "name_ur": "شاہ پور باغ",
+    "name_en": "Shahpur Garden",
+    "account": {
+      "id": 31,
+      "code": "0080",
+      "name_ur": "شاہ پور باغ",
+      "name_en": "Shahpur Garden"
+    },
+    "entry_date": "2026-10-10",
+    "item": {
+      "id": 1,
+      "code": "0040",
+      "name_ur": "کیلا",
+      "name_en": "Banana"
+    },
+    "rent_paisa": 5000000,
+    "season_end_date": null,
+    "note": null,
+    "status": "open",
+    "closed_date": null,
+    "shares_locked": true,
+    "partners": [
+      {
+        "partner": {
+          "id": 1,
+          "code": "",
+          "name_ur": "الف",
+          "name_en": "Partner A"
+        },
+        "share_bps": 4000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 2,
+          "code": "",
+          "name_ur": "ب",
+          "name_en": "Partner B"
+        },
+        "share_bps": 3000,
+        "source": "shop"
+      },
+      {
+        "partner": {
+          "id": 3,
+          "code": "",
+          "name_ur": "ج",
+          "name_en": "Partner C"
+        },
+        "share_bps": 3000,
+        "source": "shop"
+      }
+    ],
+    "installments_paisa": 0,
+    "costs_paisa": 0,
+    "paid_paisa": 0,
+    "paid_shop_paisa": 0,
+    "paid_pocket_paisa": 0,
+    "rent_due_paisa": 5000000,
+    "money_in_paisa": 2000000,
+    "other_shop_paisa": 2000000,
+    "balance_paisa": 2000000,
+    "balance_working": {
+      "message_id": "working-garden-balance",
+      "args": [
+        {
+          "name": "money_in",
+          "value": {
+            "kind": "money",
+            "paisa": 2000000
+          }
+        },
+        {
+          "name": "paid",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "result",
+          "value": {
+            "kind": "money",
+            "paisa": 2000000
+          }
+        }
+      ],
+      "rule_id": null
+    },
+    "account_balance_paisa": 2000000,
+    "last_date": "2026-10-10",
+    "commission_paisa": 0,
+    "commission_working": {
+      "message_id": "working-goods-commission",
+      "args": [
+        {
+          "name": "seller",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "buyer",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "laga",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        },
+        {
+          "name": "total",
+          "value": {
+            "kind": "money",
+            "paisa": 0
+          }
+        }
+      ],
+      "rule_id": null
+    }
+  },
+  "history": [
+    {
+      "entry_date": "2026-10-10",
+      "kind": "other_sale",
+      "entry_id": 4,
+      "number": 2,
+      "arrival_id": 1,
+      "version": 2,
+      "bikri_id": null,
+      "bikri_number": null,
+      "amount_paisa": 2000000,
+      "effect_paisa": 2000000,
+      "running_balance_paisa": 2000000,
+      "reason": "نوٹ",
+      "note": "نوٹ",
+      "shop_name": "حاجی شاپ",
+      "qty": 60,
+      "journal_entry_id": 6,
+      "cancelled": false,
+      "cancel_reason": null,
+      "parts": [],
+      "credits": [],
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
+    }
+  ],
+  "history_count": 1,
+  "partner_results": [
+    {
+      "partner": {
+        "id": 1,
+        "code": "",
+        "name_ur": "الف",
+        "name_en": "Partner A"
+      },
+      "share_bps": 4000,
+      "paid_shop_paisa": 0,
+      "paid_pocket_paisa": 0,
+      "money_back_paisa": 0,
+      "net_paisa": 0,
+      "working": {
+        "message_id": "working-trip-partner-net",
+        "args": [
+          {
+            "name": "in_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "in_pocket",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "back",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 2,
+        "code": "",
+        "name_ur": "ب",
+        "name_en": "Partner B"
+      },
+      "share_bps": 3000,
+      "paid_shop_paisa": 0,
+      "paid_pocket_paisa": 0,
+      "money_back_paisa": 0,
+      "net_paisa": 0,
+      "working": {
+        "message_id": "working-trip-partner-net",
+        "args": [
+          {
+            "name": "in_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "in_pocket",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "back",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner": {
+        "id": 3,
+        "code": "",
+        "name_ur": "ج",
+        "name_en": "Partner C"
+      },
+      "share_bps": 3000,
+      "paid_shop_paisa": 0,
+      "paid_pocket_paisa": 0,
+      "money_back_paisa": 0,
+      "net_paisa": 0,
+      "working": {
+        "message_id": "working-trip-partner-net",
+        "args": [
+          {
+            "name": "in_shop",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "in_pocket",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "back",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "partners_locked": false
+}

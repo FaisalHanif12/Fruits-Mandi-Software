@@ -15,14 +15,18 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
-import { Button, ErrorState, LoadingState, Notice } from '../../../shared/ui';
+import { Button, ErrorState, LoadingState, Notice, PartnerLockedBox } from '../../../shared/ui';
 import type { PagerState } from '../../../shared/hooks';
 import { TripEntriesSection } from '../components/TripEntriesSection';
+import { TripEntryEdit } from '../components/TripEntryEdit';
+import { TripHeaderEdit } from '../components/TripHeaderEdit';
+import { TripPurchaseEdit } from '../components/TripPurchaseEdit';
 import { TripEntryEditor } from '../components/TripEntryEditor';
 import { TripFiguresCard, TripHeaderCard } from '../components/TripHeaderCard';
 import { TripPartnersCard } from '../components/TripPartnersCard';
 import { TripPurchasesSection } from '../components/TripPurchasesSection';
 import { useTrip, type TripView } from '../hooks';
+import type { TripEntryRow } from '../types';
 
 /** A positive whole number from the address, or nothing. */
 function positiveId(value: unknown): number | null {
@@ -45,6 +49,15 @@ function TripBody({
   const { detail } = view;
   const trip = detail.row;
   const [selectedPurchase, setSelectedPurchase] = useState<number | null>(initialPurchase);
+  // The entry open for edit (plan 44): the form of a new entry gives way to its edit form.
+  const [editing, setEditing] = useState<TripEntryRow | null>(null);
+  // The facts of the trip open for edit (market, who was sent, note).
+  const [editingHeader, setEditingHeader] = useState(false);
+  // A purchase is edited with its own row; one that is not in the trip's list cannot be.
+  const editingPurchase =
+    editing?.kind === 'purchase'
+      ? (detail.purchases.find((one) => one.id === editing.purchase_id) ?? null)
+      : null;
   return (
     <div className="flex max-w-page flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -60,8 +73,44 @@ function TripBody({
           <Localized id="trips-back" />
         </Button>
       </div>
-      <TripHeaderCard trip={trip} />
-      {trip.status === 'open' ? (
+      <TripHeaderCard
+        trip={trip}
+        onEdit={() => {
+          setEditing(null);
+          setEditingHeader(true);
+        }}
+      />
+      {editingHeader ? (
+        <TripHeaderEdit
+          key={String(trip.version)}
+          trip={trip}
+          onDone={() => {
+            setEditingHeader(false);
+          }}
+        />
+      ) : editing !== null && (editing.kind !== 'purchase' || editingPurchase !== null) ? (
+        editingPurchase !== null ? (
+          <TripPurchaseEdit
+            key={`purchase-${String(editingPurchase.id)}-${String(editingPurchase.version)}`}
+            trip={trip}
+            purchase={editingPurchase}
+            entry={editing}
+            onDone={() => {
+              setEditing(null);
+            }}
+          />
+        ) : (
+          <TripEntryEdit
+            key={`${editing.kind}-${String(editing.id)}-${String(editing.version)}`}
+            trip={trip}
+            entry={editing}
+            purchases={detail.purchases}
+            onDone={() => {
+              setEditing(null);
+            }}
+          />
+        )
+      ) : trip.status === 'open' ? (
         <TripEntryEditor
           trip={trip}
           purchases={detail.purchases}
@@ -79,12 +128,20 @@ function TripBody({
         selectedId={selectedPurchase}
         onSelect={setSelectedPurchase}
       />
-      <TripPartnersCard results={detail.partner_results} />
+      {detail.partners_locked ? (
+        <PartnerLockedBox />
+      ) : (
+        <TripPartnersCard results={detail.partner_results} />
+      )}
       <TripEntriesSection
         entries={view.entries}
         count={view.entriesCount}
         pager={pager}
         purchases={detail.purchases}
+        onEdit={(entry) => {
+          setEditingHeader(false);
+          setEditing(entry);
+        }}
       />
     </div>
   );

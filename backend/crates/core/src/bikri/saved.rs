@@ -645,6 +645,12 @@ pub struct BikriDetail {
     /// The lines of PRD 12.5 for the whole بکری: the totals of its lots together. Stored values
     /// only; a line replaced or cancelled is not in them.
     pub totals: SavedTotals,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// Input of `bikri_list` (PRD FR-12.7). Dates are `DD-MM-YYYY` or a shortcut; null or empty
@@ -771,6 +777,12 @@ pub struct BikriListRow {
     pub buyer_total: Paisa,
     /// Saved or cancelled.
     pub status: BikriStatus,
+    /// What the Edit and Cancel buttons may do, why not, whether a reopen is needed and the edit
+    /// stamp (PRD FR-7.70, FR-7.71). Flattened: the row has `can_edit`, `can_cancel`,
+    /// `locked_reason`, `needs_reopen` and `edited` as its own fields.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub flags: crate::edit::EntryFlags,
 }
 
 /// Input of `bikri_find` (PRD FR-12.13, FR-7.50): every filter given must match. Newest first,

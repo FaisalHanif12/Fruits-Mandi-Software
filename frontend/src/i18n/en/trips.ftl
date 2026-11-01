@@ -387,9 +387,6 @@ trips-entries-empty-help = The purchases, costs and sales of this trip are liste
 # review: pending
 trips-entries-count = Showing { $shown } of { $total }
 
-# review: pending
-trips-entries-cancel = Cancel entry
-
 # $kind: the type of entry; $number: its number in its own series.
 # review: pending
 trips-entry-label = { $kind } { $number }
@@ -438,3 +435,7 @@ trips-cancelled = { $entry } cancelled
 # $entry: the entry and its number.
 # review: pending
 trips-cancelled-reopened = { $entry } cancelled. The trip is open again.
+
+# The button on the facts of a trip that opens the market, who was sent and the note for change (plan 44).
+# review: pending
+trips-header-edit = Change the trip details

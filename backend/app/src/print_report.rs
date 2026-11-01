@@ -245,6 +245,10 @@ fn prepare_report(
         return Err(UiError::single(ErrorCode::ErrOutOfRange, Some("slips")));
     }
     let (printer, copies) = printer_and_copies(&ctx, &actor, input.copies.as_deref())?;
+    // The partner code comes before anything is built (PRD FR-17.11). The print window asks the
+    // data again through `reports_print_data`, which checks it too and leaves out the partner parts.
+    let mut filters = input.report.filters.clone();
+    crate::commands::partner_gate::report(&ctx, input.report.id, &mut filters)?;
     check_report(&ctx, input)?;
     let paper = input.report.paper.unwrap_or(Paper::A4);
     let today = today_iso(ctx.db()).map_err(engine_error)?;
@@ -282,6 +286,8 @@ fn prepare_analytics(
     let ctx = state.context()?;
     let actor = auth::require(&ctx)?;
     let (printer, copies) = printer_and_copies(&ctx, &actor, input.copies.as_deref())?;
+    let mut filters = input.view.filters.clone();
+    crate::commands::partner_gate::analytics(&ctx, input.view.view, &mut filters)?;
     analytics_print_data(ctx.db(), &input.view)
         .map(drop)
         .map_err(engine_error)?;

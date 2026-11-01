@@ -184,7 +184,51 @@ fn build_in(
         AnalyticsView::J => trips::run(conn, &typed, spec)?,
         AnalyticsView::K => fruit::run(conn, &typed, spec)?,
     };
+    let mut table = table;
+    if typed.hide_partners {
+        drop_partner_columns(&mut table);
+    }
     Ok((typed, table))
+}
+
+/// True for the key of a column that belongs to one partner: `share_3`, `result_3`, `part_3`
+/// (views I and J).
+fn is_partner_column(key: &str) -> bool {
+    ["share_", "result_", "part_"].iter().any(|prefix| {
+        key.strip_prefix(prefix)
+            .is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+    })
+}
+
+/// Takes the columns of each partner out of a table, with their cells in every row and in the
+/// totals row (PRD FR-17.11: the partner columns are behind the partner code).
+fn drop_partner_columns(table: &mut Table) {
+    let keep: Vec<bool> = table
+        .columns
+        .iter()
+        .map(|column| !is_partner_column(&column.key))
+        .collect();
+    if keep.iter().all(|&k| k) {
+        return;
+    }
+    let filter = |cells: &mut Vec<crate::reports::Cell>| {
+        let mut index = 0;
+        cells.retain(|_| {
+            let kept = keep.get(index).copied().unwrap_or(true);
+            index += 1;
+            kept
+        });
+    };
+    let mut index = 0;
+    table.columns.retain(|_| {
+        let kept = keep.get(index).copied().unwrap_or(true);
+        index += 1;
+        kept
+    });
+    for row in &mut table.rows {
+        filter(&mut row.cells);
+    }
+    filter(&mut table.totals);
 }
 
 fn page_of(view: AnalyticsView, typed: &Typed, table: Table, spec: PageSpec) -> AnalyticsPage {
@@ -384,5 +428,55 @@ pub mod plans {
             facts::groups_sql(&c, &["f.seller_account_id", "f.bikri_id"]),
             c.args().to_vec(),
         )
+    }
+}
+
+#[cfg(test)]
+mod partner_column_tests {
+    use super::*;
+    use crate::reports::{Cell, ColumnKind};
+
+    #[test]
+    fn only_the_columns_of_a_partner_are_dropped_with_their_cells() {
+        let keys = [
+            "garden", "share_1", "result_1", "result", "share_22", "part_3", "shares",
+        ];
+        let mut table = Table {
+            columns: keys
+                .iter()
+                .map(|key| table::col(key, "title", ColumnKind::Label))
+                .collect(),
+            rows: vec![model::AnalyticsRow {
+                cells: (0..keys.len())
+                    .map(|i| Cell::Number {
+                        value: i64::try_from(i).unwrap_or(0),
+                    })
+                    .collect(),
+                key: None,
+                kind: crate::reports::RowKind::Normal,
+            }],
+            total_count: 1,
+            totals: (0..keys.len())
+                .map(|i| Cell::Number {
+                    value: i64::try_from(i).unwrap_or(0),
+                })
+                .collect(),
+            charts: Vec::new(),
+        };
+        drop_partner_columns(&mut table);
+        let left: Vec<&str> = table.columns.iter().map(|c| c.key.as_str()).collect();
+        assert_eq!(left, ["garden", "result", "shares"]);
+        let cells = |cells: &[Cell]| -> Vec<i64> {
+            cells
+                .iter()
+                .map(|c| match c {
+                    Cell::Number { value } => *value,
+                    _ => -1,
+                })
+                .collect()
+        };
+        // The cells of columns 0, 3 and 6 stay, in both the row and the totals.
+        assert_eq!(cells(&table.rows[0].cells), [0, 3, 6]);
+        assert_eq!(cells(&table.totals), [0, 3, 6]);
     }
 }

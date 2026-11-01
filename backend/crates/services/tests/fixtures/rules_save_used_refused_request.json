@@ -1,0 +1,15 @@
+{
+  "account_id": 18,
+  "charge_type": "commission",
+  "from_date": "01-10-2026",
+  "id": 4,
+  "is_active": true,
+  "item_group": null,
+  "item_id": 1,
+  "method": "percent",
+  "note": "",
+  "side": "seller",
+  "to_date": "",
+  "value": "6",
+  "version": 2
+}

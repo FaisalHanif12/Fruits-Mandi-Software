@@ -5,6 +5,7 @@ use mandi_db::fruit::{self as frepo, FruitRec, ListFilter};
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::bikri::SavedPukhta;
 use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::fruit::{
     FruitGetInput, FruitList, FruitListInput, FruitLotRef, FruitLotRow, FruitLots, FruitLotsInput,
@@ -18,6 +19,7 @@ use super::act::lot_of_closed_garden;
 use crate::context::Context;
 use crate::day;
 use crate::error::{ServiceError, money_error};
+use crate::flags::Marker;
 use crate::page::limit_of;
 use crate::ventures::not_found;
 
@@ -38,11 +40,9 @@ fn saved_pukhta(tuple: Option<&(String, String, String, String)>) -> Option<Save
     })
 }
 
-fn row_of(
-    conn: &Connection,
-    rec: &FruitRec,
-    closed_up_to: Option<BusinessDate>,
-) -> Result<FruitRow, ServiceError> {
+/// One row as stored. The flags say what the entry itself allows; the day rules and the edit stamp
+/// are added by [`mark_rows`].
+pub(super) fn row_of(conn: &Connection, rec: &FruitRec) -> Result<FruitRow, ServiceError> {
     // The parts of the posting in force (a cancelled entry shows the posting it had).
     let parts = match rec.current_entry_id {
         Some(entry) => frepo::parts_of_entry(conn, entry)?,
@@ -55,15 +55,19 @@ fn row_of(
             amount_paisa: paisa(part.amount_paisa)?,
         });
     }
-    let date = BusinessDate::parse_iso(&rec.entry_date)
-        .ok_or_else(|| data("the date of a fruit entry is not a date"))?;
+    if BusinessDate::parse_iso(&rec.entry_date).is_none() {
+        return Err(data("the date of a fruit entry is not a date"));
+    }
     let status = FruitStatus::parse(&rec.status)
         .ok_or_else(|| data("a fruit entry has a status that is not saved or cancelled"))?;
     let source = FruitSource::parse(&rec.source)
         .ok_or_else(|| data("a fruit entry has a source that is not shop or other_shop"))?;
-    let day_is_open = closed_up_to.is_none_or(|closed| date > closed);
-    let can_change =
-        status == FruitStatus::Saved && day_is_open && !lot_of_closed_garden(conn, rec)?;
+    // A lot of a closed garden takes no change (PRD FR-12.38); the day rules come in `mark_rows`.
+    let flags = if status == FruitStatus::Saved && lot_of_closed_garden(conn, rec)? {
+        EntryFlags::locked(LockedReason::GardenClosed)
+    } else {
+        EntryFlags::open()
+    };
     Ok(FruitRow {
         id: rec.id,
         version: rec.version,
@@ -96,16 +100,33 @@ fn row_of(
         } else {
             None
         },
-        can_change,
+        flags,
     })
+}
+
+/// Adds the day rules and the edit stamp to the flags of rows (PRD FR-7.70, FR-7.71, FR-21.4).
+fn mark_rows(conn: &Connection, rows: &mut [FruitRow]) -> Result<(), ServiceError> {
+    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
+    let marker = Marker::load(conn, EditEntity::FruitTake, &ids)?;
+    for row in rows {
+        marker.mark(
+            row.id,
+            &row.entry_date,
+            row.status == FruitStatus::Saved,
+            &mut row.flags,
+        );
+    }
+    Ok(())
 }
 
 /// One entry. Read only.
 pub(super) fn get(ctx: &Context, input: &FruitGetInput) -> Result<FruitRow, ServiceError> {
-    let (closed_up_to, _) = day::window(ctx)?;
     ctx.db.read(|conn| {
         let rec = frepo::get(conn, input.id)?.ok_or_else(|| not_found("id"))?;
-        row_of(conn, &rec, closed_up_to)
+        let mut rows = [row_of(conn, &rec)?];
+        mark_rows(conn, &mut rows)?;
+        let [row] = rows;
+        Ok(row)
     })
 }
 
@@ -123,7 +144,7 @@ fn optional_date(
 
 /// One page of entries with the totals over the whole filter (B31). Read only.
 pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, ServiceError> {
-    let (closed_up_to, today) = day::window(ctx)?;
+    let (_, today) = day::window(ctx)?;
     let mut errors = FieldErrors::default();
     let from = optional_date(&mut errors, "from", input.from.as_ref(), today);
     let to = optional_date(&mut errors, "to", input.to.as_ref(), today);
@@ -173,8 +194,9 @@ pub(super) fn list(ctx: &Context, input: &FruitListInput) -> Result<FruitList, S
         )?;
         let mut rows = Vec::with_capacity(recs.len());
         for rec in &recs {
-            rows.push(row_of(conn, rec, closed_up_to)?);
+            rows.push(row_of(conn, rec)?);
         }
+        mark_rows(conn, &mut rows)?;
         // Month headings with their subtotals, over the whole filter (plan 38 R4).
         let months = if input.group_by_month && in_date_order {
             crate::page::month_subtotals(

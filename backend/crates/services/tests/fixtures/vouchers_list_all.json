@@ -25,7 +25,11 @@
       "reason": "",
       "cancel_reason": "",
       "entry_id": 3,
-      "editable": true
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "id": 2,
@@ -52,7 +56,18 @@
       "reason": "",
       "cancel_reason": "",
       "entry_id": 11,
-      "editable": true
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": {
+        "at": "2026-10-10T09:00:00.000Z",
+        "local_date": "2026-10-10",
+        "local_time": "14:00",
+        "by": "Maher Adnan",
+        "count": 1,
+        "reason": "رقم درست کی"
+      }
     },
     {
       "id": 3,
@@ -79,7 +94,11 @@
       "reason": "",
       "cancel_reason": "",
       "entry_id": 6,
-      "editable": true
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "id": 4,
@@ -106,7 +125,11 @@
       "reason": "نقد ادھار",
       "cancel_reason": "غلط اندراج",
       "entry_id": 7,
-      "editable": false
+      "can_edit": false,
+      "can_cancel": false,
+      "locked_reason": "cancelled",
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "id": 5,
@@ -133,7 +156,11 @@
       "reason": "",
       "cancel_reason": "",
       "entry_id": 8,
-      "editable": true
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     },
     {
       "id": 6,
@@ -160,7 +187,11 @@
       "reason": "",
       "cancel_reason": "",
       "entry_id": 9,
-      "editable": true
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
     }
   ],
   "total_count": 6,

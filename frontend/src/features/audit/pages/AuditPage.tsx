@@ -14,7 +14,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useDebouncedValue } from '../../../shared/hooks';
 import { useEscape } from '../../../shared/keyboard';
 import { useScreenMemory } from '../../../shared/screen-state';
-import { InfoHint, LoadingState } from '../../../shared/ui';
+import { InfoHint, LoadingState, PartnerLockedBox } from '../../../shared/ui';
 import { AuditDetail } from '../components/AuditDetail';
 import { AuditFilterBar } from '../components/AuditFilterBar';
 import { AuditResults } from '../components/AuditResults';
@@ -113,6 +113,9 @@ function AuditLogBody() {
             optionsFailed={options.isError}
             error={filterRefusal}
           />
+          {query.data?.pages.some((page) => page.partners_locked) === true ? (
+            <PartnerLockedBox />
+          ) : null}
           <AuditResults
             query={query}
             kept={filterRefusal === null ? null : kept}

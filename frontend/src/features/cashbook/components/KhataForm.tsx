@@ -14,9 +14,11 @@ import {
   FreeTextInput,
   MoneyInput,
   fieldError,
+  fieldMark,
   FormCard,
   FormSpan,
 } from '../../../shared/ui';
+import type { EntryMarks } from '../../../shared/edit';
 import type { KhataDraft } from '../khata-draft';
 import { AddAccountDialog } from './AddAccountDialog';
 
@@ -27,9 +29,11 @@ interface KhataFormProps {
   draft: KhataDraft;
   onChange: (patch: Partial<KhataDraft>) => void;
   error: UiError | null;
+  /** The marks of the edits this entry went through ("Before ...", plan 44); none when new. */
+  marks?: EntryMarks | undefined;
 }
 
-export function KhataForm({ draft, onChange, error }: KhataFormProps) {
+export function KhataForm({ draft, onChange, error, marks }: KhataFormProps) {
   const [adding, setAdding] = useState<string | null>(null);
   return (
     <FormCard>
@@ -46,6 +50,7 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
       </Field>
       <Field
         label={<Localized id="cashbook-field-khata" />}
+        mark={fieldMark(marks, 'account_id')}
         error={fieldError(error, 'khata_account_id')}
       >
         {(props) => (
@@ -63,7 +68,11 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
           />
         )}
       </Field>
-      <Field label={<Localized id="cashbook-field-amount" />} error={fieldError(error, 'amount')}>
+      <Field
+        label={<Localized id="cashbook-field-amount" />}
+        mark={fieldMark(marks, 'amount_paisa')}
+        error={fieldError(error, 'amount')}
+      >
         {(props) => (
           <MoneyInput
             {...props}
@@ -74,7 +83,11 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
           />
         )}
       </Field>
-      <Field label={<Localized id="cashbook-field-reason" />} error={fieldError(error, 'reason')}>
+      <Field
+        label={<Localized id="cashbook-field-reason" />}
+        mark={fieldMark(marks, 'reason')}
+        error={fieldError(error, 'reason')}
+      >
         {(props) => (
           <FreeTextInput
             {...props}
@@ -88,6 +101,7 @@ export function KhataForm({ draft, onChange, error }: KhataFormProps) {
       <FormSpan>
         <Field
           label={<Localized id="cashbook-field-narration" />}
+          mark={fieldMark(marks, 'narration')}
           error={fieldError(error, 'narration')}
         >
           {(props) => (

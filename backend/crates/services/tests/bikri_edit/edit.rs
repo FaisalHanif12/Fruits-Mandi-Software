@@ -231,13 +231,9 @@ fn lots_and_lines_that_are_not_the_postings_are_refused_with_their_field() {
     let e = try_with(&|d| d.header.entry_date = "09-10-2026".into());
     assert!(refused(
         &e,
-        ErrorCode::ErrEditNotAllowed,
+        ErrorCode::ErrEditDateFixed,
         "header.entry_date"
     ));
-    assert_eq!(
-        tools::rule_at(&e, "header.entry_date").as_deref(),
-        Some("day_changed")
-    );
     assert_eq!(
         scalar(
             &w,
@@ -512,10 +508,11 @@ fn the_seller_and_item_of_a_lot_with_a_later_sale_are_locked_and_a_later_posting
     let mut other_day = later_open.draft.clone();
     other_day.header.entry_date = "09-10-2026".into();
     let e = tools::try_edit(&w, &later_open, &other_day, true).unwrap_err();
-    assert_eq!(
-        tools::rule_at(&e, "header.entry_date").as_deref(),
-        Some("day_changed")
-    );
+    assert!(tools::refused(
+        &e,
+        ErrorCode::ErrEditDateFixed,
+        "header.entry_date"
+    ));
     // The unchanged drafts still save.
     tools::edit(&w, &later_open, &later_open.draft);
 }

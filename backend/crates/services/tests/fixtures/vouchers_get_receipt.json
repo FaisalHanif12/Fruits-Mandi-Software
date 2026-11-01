@@ -23,5 +23,9 @@
   "reason": "",
   "cancel_reason": "",
   "entry_id": 5,
-  "editable": true
+  "can_edit": true,
+  "can_cancel": true,
+  "locked_reason": null,
+  "needs_reopen": false,
+  "edited": null
 }

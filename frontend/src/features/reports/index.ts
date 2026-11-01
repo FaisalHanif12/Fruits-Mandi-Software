@@ -21,6 +21,8 @@ export {
   useVoucherPrintData,
 } from './hooks';
 
+export { useOpenRowSource } from './open-source';
+
 // ---- Plan 20: the report engine. ----
 export { reportsCatalog, reportsPrintData, reportsRun } from './api';
 export {
