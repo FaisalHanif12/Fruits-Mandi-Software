@@ -928,6 +928,116 @@ fn two_lots_of_one_seller_warn_once_with_the_total_on_the_first_lot() {
     );
 }
 
+/// What the active advance rows give to the credit lines of one entry, in rupees.
+fn held_by_entry(w: &World, entry_id: i64) -> i64 {
+    raw_conn(w)
+        .query_row(
+            "SELECT COALESCE(SUM(a.amount_paisa), 0) / 100 FROM advance_allocations a
+             JOIN journal_lines l ON l.id = a.credit_line_id
+             WHERE a.is_active = 1 AND l.entry_id = ?1",
+            [entry_id],
+            |r| r.get(0),
+        )
+        .unwrap()
+}
+
+fn raw_conn(w: &World) -> mandi_services::db::rusqlite::Connection {
+    common::raw(&w.dir)
+}
+
+#[test]
+fn a_seller_receipt_among_the_later_credits_loses_advance_too_and_x_counts_it() {
+    // PRD FR-15.12: کمال returns 3,000 of his 5,000 advance in cash on 12-10; the receipt is a credit
+    // that holds 3,000 of it. A back-dated بکری of 11-10 (credit 4,580) comes before the receipt and
+    // takes 4,580 first: the receipt keeps 420 and loses 2,580 = X. The ledger afterwards: advance
+    // 5,000 - receipt 3,000 - credit 4,580 (no cash) = 2,580 جمع, as the warning says.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "5,000");
+    let receipt = json!({ "date": "12-10-2026", "account_id": k.id, "person_key": null,
+        "amount": "3,000", "collector_staff_id": null, "narration": "" });
+    vouchers::save_receipt(
+        &w.env.ctx,
+        &w.owner,
+        &serde_json::from_value::<ReceiptInput>(receipt).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(advance_open(&w, k.id), 2_000);
+    let mut back = event2_on(&w, "11-10-2026", k.id, w.akram);
+    back.lots[0].freight = None;
+    back.lots[0].sales[0].seller_rate = "500".into();
+    let shown = preview(&w, &back);
+    assert_eq!(r(shown.summary.seller_credit), 4_580);
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        Some(("lots[0].cash_paid".to_owned(), 2_580))
+    );
+    assert_eq!(
+        r(shown.summary.cash_paid),
+        0,
+        "5,000 is free for it, more than its credit"
+    );
+    let saved = save_ok(&w, &back);
+    assert_eq!(saved.preview, shown);
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Cr, 2_580));
+    assert_eq!(held_by_entry(&w, saved.entry_id), 4_580);
+}
+
+#[test]
+fn a_back_dated_later_sale_shifts_the_advance_with_no_warning_today() {
+    // PINS TODAY'S BEHAVIOUR until Umar decides (money agent review 3, (c)1; the question is open):
+    // a later sale of a lot also adjusts the advance (FR-12.23), so one dated before another posting
+    // of the same seller takes that posting's advance, and no warning is shown (the warning is for
+    // first postings only). Books balance; nothing else moves.
+    let w = world();
+    common::set_today(&w.env, 2026, 10, 12);
+    let k = kamal(&w);
+    give_advance(&w, k.id, "5,000");
+    // P1 (10-10): 20 received, 2 sold, credit 1,086, holds 1,086.
+    let mut first = event2_on(&w, "10-10-2026", k.id, w.akram);
+    first.lots[0].qty_received = "20".into();
+    first.lots[0].sales[0].qty = "2".into();
+    let p1 = save_ok(&w, &first);
+    assert_eq!(held_by_entry(&w, p1.entry_id), 1_086);
+    // P2 (12-10): credit 10,160, holds the 3,914 left.
+    let p2 = save_ok(&w, &event2_on(&w, "12-10-2026", k.id, w.arshad));
+    assert_eq!(held_by_entry(&w, p2.entry_id), 3_914);
+    // The later sale of P1's lot, dated 11-10 (before P2): 10 more at 1,200, credit 11,280.
+    let lot_id = bikri::get(&w.env.ctx, p1.bikri_id).unwrap().lots[0].id;
+    let mut line = sale("s-3", w.akram, "10", "1200");
+    line.payment_type = None;
+    let input = mandi_services::core::bikri::LaterSaleInput {
+        lot_id,
+        date: "11-10-2026".into(),
+        sales: vec![line.clone()],
+    };
+    let shown = bikri::later_sale_preview(&w.env.ctx, &input).unwrap();
+    assert!(shown.errors.is_empty(), "{:?}", shown.errors);
+    assert_eq!(
+        taken_warning(&shown.warnings),
+        None,
+        "no warning for a later sale today"
+    );
+    let done = bikri::later_sale_save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::LaterSaleSaveInput {
+            lot_id,
+            date: "11-10-2026".into(),
+            sales: vec![line],
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    // The later sale's credit took P2's 3,914; P2 holds nothing now and was paid 6,246 in cash.
+    assert_eq!(held_by_entry(&w, done.entry_id), 3_914);
+    assert_eq!(held_by_entry(&w, p2.entry_id), 0);
+    assert_eq!(advance_open(&w, k.id), 0);
+    assert_eq!(balance(&w, k.id), (BalanceSide::Cr, 11_280));
+}
+
 // ---- The register R9 and the screen of the same lines -------------------------------------------
 
 #[test]

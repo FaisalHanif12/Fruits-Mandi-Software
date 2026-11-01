@@ -201,7 +201,7 @@ pub(crate) fn edit_in(
 
     // 3. Rewrite the entry, its credits, its posting and its stock move inside the entry's window.
     edit_windows::open(tx, Window::VentureEntry, entry.id, user, &now)?;
-    repo::delete_parts(tx, entry.id)?;
+    let retired = repo::retire_parts(tx, entry.id, user, &now)?;
     repo::update_entry_edited(
         tx,
         entry.id,
@@ -263,6 +263,7 @@ pub(crate) fn edit_in(
         &now,
     )?;
     ventures::refresh_trip_status(tx, entry.venture_id, &entry.entry_date, user, &now)?;
+    ventures::finish_edit_parts(tx, user, &now, entry.id, &retired, true)?;
     edit_windows::close(tx, Window::VentureEntry, entry.id)?;
 
     // 4. The audit log keeps the old and the new values.

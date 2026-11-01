@@ -177,7 +177,7 @@ pub(crate) fn edit_in(
         .ok_or_else(|| data("a purchase has no payment entry"))?;
     edit_windows::open(tx, Window::Purchase, old.id, user, &now)?;
     edit_windows::open(tx, Window::VentureEntry, entry.id, user, &now)?;
-    venture_repo::delete_parts(tx, entry.id)?;
+    let retired = venture_repo::retire_parts(tx, entry.id, user, &now)?;
     venture_repo::update_entry_edited(
         tx,
         entry.id,
@@ -275,6 +275,7 @@ pub(crate) fn edit_in(
         user,
         &now,
     )?;
+    ventures::finish_edit_parts(tx, user, &now, entry.id, &retired, true)?;
     edit_windows::close(tx, Window::VentureEntry, entry.id)?;
     edit_windows::close(tx, Window::Purchase, old.id)?;
     // The consistency rule of PRD C21 holds for the new figures as for any change of a purchase.

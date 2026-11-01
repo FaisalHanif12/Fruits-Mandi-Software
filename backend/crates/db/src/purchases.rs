@@ -1029,13 +1029,15 @@ pub struct CostPart {
     pub amount_paisa: i64,
 }
 
-/// The parts a trip cost was spread into, by purchase.
+/// The parts a trip cost was spread into, by purchase. Only the active rows: an edit retires the old
+/// ones (migration 14).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn cost_parts_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Vec<CostPart>> {
     let mut statement = conn.prepare(
-        "SELECT purchase_id, amount_paisa FROM purchase_cost_parts WHERE entry_id = ?1 ORDER BY purchase_id",
+        "SELECT purchase_id, amount_paisa FROM purchase_cost_parts
+         WHERE entry_id = ?1 AND is_active = 1 ORDER BY purchase_id",
     )?;
     let rows = statement.query_map([entry_id], |r| {
         Ok(CostPart {
@@ -1054,7 +1056,8 @@ pub fn cost_parts_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result
 pub fn carries_trip_cost(conn: &Connection, purchase_id: i64) -> rusqlite::Result<bool> {
     conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM purchase_cost_parts c JOIN venture_entries x ON x.id = c.entry_id
-                        WHERE c.purchase_id = ?1 AND x.status = 'saved' AND c.amount_paisa > 0)",
+                        WHERE c.purchase_id = ?1 AND x.status = 'saved' AND c.amount_paisa > 0
+                          AND c.is_active = 1)",
         [purchase_id],
         |r| r.get(0),
     )
@@ -1068,7 +1071,7 @@ pub fn carries_trip_cost(conn: &Connection, purchase_id: i64) -> rusqlite::Resul
 pub fn has_cost_part(conn: &Connection, purchase_id: i64) -> rusqlite::Result<bool> {
     conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM purchase_cost_parts c JOIN venture_entries x ON x.id = c.entry_id
-                        WHERE c.purchase_id = ?1 AND x.status = 'saved')",
+                        WHERE c.purchase_id = ?1 AND x.status = 'saved' AND c.is_active = 1)",
         [purchase_id],
         |r| r.get(0),
     )
@@ -1086,7 +1089,8 @@ pub fn has_cost_part_after(
 ) -> rusqlite::Result<bool> {
     conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM purchase_cost_parts c JOIN venture_entries x ON x.id = c.entry_id
-                        WHERE c.purchase_id = ?1 AND x.id > ?2 AND x.status = 'saved')",
+                        WHERE c.purchase_id = ?1 AND x.id > ?2 AND x.status = 'saved'
+                          AND c.is_active = 1)",
         params![purchase_id, entry_id],
         |r| r.get(0),
     )
@@ -1110,17 +1114,92 @@ pub fn received_move(
     .optional()
 }
 
-/// Takes the parts of a trip cost back out of the spread table (the edit of the cost, PRD FR-7.70). It
-/// needs the cost entry's edit window (`edit_windows`).
+/// A part of a trip cost that an edit retired: its id and the purchase it was on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetiredCostPart {
+    /// The retired row.
+    pub id: i64,
+    /// The purchase it was on.
+    pub purchase_id: i64,
+}
+
+/// Retires the active parts of a trip cost so the new spread can be written (the edit of the cost,
+/// PRD FR-7.70). The rows are not deleted (CLAUDE.md rule 4, migration 14): they become
+/// `is_active = 0` and stay as history. Only the rows that are active now are touched, so a second
+/// edit does not touch what the first one retired. It needs the cost entry's edit window
+/// (`edit_windows`). Returns the rows it retired, for [`link_retired_cost_parts`].
 ///
 /// # Errors
-/// Any SQLite error (the trigger `purchase_cost_parts_no_delete` without a window).
-pub fn delete_cost_parts(conn: &Connection, entry_id: i64) -> rusqlite::Result<()> {
-    conn.execute(
-        "DELETE FROM purchase_cost_parts WHERE entry_id = ?1",
-        [entry_id],
+/// Any SQLite error (the trigger `purchase_cost_parts_no_update` without a window).
+pub fn retire_cost_parts(
+    conn: &Connection,
+    entry_id: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<Vec<RetiredCostPart>> {
+    let mut statement = conn.prepare(
+        "SELECT id, purchase_id FROM purchase_cost_parts WHERE entry_id = ?1 AND is_active = 1
+         ORDER BY id",
     )?;
+    let active = statement
+        .query_map([entry_id], |r| {
+            Ok(RetiredCostPart {
+                id: r.get(0)?,
+                purchase_id: r.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for part in &active {
+        conn.execute(
+            "UPDATE purchase_cost_parts SET is_active = 0, updated_at = ?2, updated_by = ?3,
+                 version = version + 1 WHERE id = ?1 AND is_active = 1",
+            params![part.id, now, user_id],
+        )?;
+    }
+    Ok(active)
+}
+
+/// Links each part an edit retired to the active part of the same purchase that replaced it. A
+/// retired part whose purchase has no new part (the spread no longer reaches it) stays unlinked.
+/// Call it after the new spread is written, inside the same window.
+///
+/// # Errors
+/// Any SQLite error (the trigger without a window, or a link to a row of another purchase).
+pub fn link_retired_cost_parts(
+    conn: &Connection,
+    entry_id: i64,
+    retired: &[RetiredCostPart],
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    for part in retired {
+        conn.execute(
+            "UPDATE purchase_cost_parts SET
+                 replaced_by = (SELECT n.id FROM purchase_cost_parts n
+                                WHERE n.entry_id = ?2 AND n.purchase_id = ?3 AND n.is_active = 1),
+                 updated_at = ?4, updated_by = ?5, version = version + 1
+             WHERE id = ?1 AND is_active = 0 AND replaced_by IS NULL
+               AND EXISTS (SELECT 1 FROM purchase_cost_parts n
+                           WHERE n.entry_id = ?2 AND n.purchase_id = ?3 AND n.is_active = 1)",
+            params![part.id, entry_id, part.purchase_id, now, user_id],
+        )?;
+    }
     Ok(())
+}
+
+/// Checks that the active spread of a trip cost adds up to the cost (PRD C24), so an edit can never
+/// leave an entry without its parts. Called before the edit window closes.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn cost_parts_add_up(conn: &Connection, entry_id: i64) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT COALESCE((SELECT SUM(amount_paisa) FROM purchase_cost_parts
+                          WHERE entry_id = ?1 AND is_active = 1), 0)
+              = (SELECT amount_paisa FROM venture_entries WHERE id = ?1)",
+        [entry_id],
+        |r| r.get(0),
+    )
 }
 
 /// One part of a trip cost with the purchase it went to, for the history of a trip.
@@ -1161,7 +1240,7 @@ pub fn cost_parts_detail(
                 pu.qty_sold, pu.qty_written_off, c.amount_paisa
          FROM purchase_cost_parts c JOIN purchases pu ON pu.id = c.purchase_id
          JOIN items it ON it.id = pu.item_id
-         WHERE c.entry_id IN ({marks}) ORDER BY c.entry_id, c.purchase_id"
+         WHERE c.entry_id IN ({marks}) AND c.is_active = 1 ORDER BY c.entry_id, c.purchase_id"
     ))?;
     let rows = statement.query_map(rusqlite::params_from_iter(entry_ids), |r| {
         Ok(CostPartDetail {

@@ -2,6 +2,8 @@
 //!
 //! The triggers of `purchases`, `venture_entries`, `venture_entry_parts`, `purchase_cost_parts`,
 //! `garden_arrivals` and `ventures` (the rent) refuse a change of what was bought, paid or received.
+//! The two parts tables are soft state (migration 14): an edit retires the old rows
+//! (`is_active = 0`) and writes new ones, and no row is ever deleted.
 //! The edit of ONE entry opens a window for it here, changes the entry, and closes the window again,
 //! all inside the one transaction of the edit. Only the edit services call these functions (a test
 //! checks that the table is empty after every save and after a failed save).

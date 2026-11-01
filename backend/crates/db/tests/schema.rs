@@ -478,11 +478,20 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "share_bps",
                 "source",
                 "amount_paisa",
+                // Migration 14: soft state, an edit retires the old rows.
+                "is_active",
+                "replaced_by",
             ],
         ),
         (
             "purchase_cost_parts",
-            vec!["entry_id", "purchase_id", "amount_paisa"],
+            vec![
+                "entry_id",
+                "purchase_id",
+                "amount_paisa",
+                "is_active",
+                "replaced_by",
+            ],
         ),
         (
             "lot_credit_parts",

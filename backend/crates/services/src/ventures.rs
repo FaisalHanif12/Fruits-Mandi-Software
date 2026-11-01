@@ -657,6 +657,32 @@ pub(crate) fn write_parts(
     Ok(())
 }
 
+/// Finishes the parts of an edited entry, before its edit window closes (migration 14): links each
+/// part the edit retired to the part that replaced it, and checks that the active parts add up to the
+/// entry's amount (PRD C23, C25), so an edit can never leave an entry without its parts.
+/// `expect_parts` is false only for the one kind of entry that has none, a garden's sale in another
+/// shop, whose money goes to the garden's account.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` if the new parts do not add up (a bug signal: the whole
+/// edit is rolled back).
+pub(crate) fn finish_edit_parts(
+    tx: &Connection,
+    user_id: i64,
+    now: &str,
+    venture_entry_id: i64,
+    retired: &[repo::RetiredPart],
+    expect_parts: bool,
+) -> Result<(), ServiceError> {
+    repo::link_retired_parts(tx, venture_entry_id, retired, user_id, now)?;
+    if expect_parts && !repo::parts_add_up(tx, venture_entry_id)? {
+        return Err(ServiceError::Data(format!(
+            "the parts of entry {venture_entry_id} do not add up to its amount after an edit"
+        )));
+    }
+    Ok(())
+}
+
 /// Writes the credits of money that comes in (C25) next to its venture entry. The source of such a
 /// part is `shop`: the money comes into روکڑ (PRD A57).
 ///

@@ -90,6 +90,14 @@ pub const EDIT_WINDOWS_SQL: &str = include_str!("../migrations/0012_edit_windows
 pub const PUKHTA_PARTY_ACCOUNTS_SQL: &str =
     include_str!("../migrations/0013_pukhta_party_accounts.sql");
 
+/// The fourteenth migration (CLAUDE.md rule 4, PRD FR-7.70): `venture_entry_parts` and
+/// `purchase_cost_parts` become soft state. Both tables are rebuilt with `is_active` and
+/// `replaced_by` (ids and values kept, every old row active), their inline UNIQUE becomes a unique
+/// index over the active rows, an update may only retire a row inside the edit window of its entry,
+/// and a delete is never allowed. No amount, id or chain hash changes.
+pub const PARTS_ARE_SOFT_STATE_SQL: &str =
+    include_str!("../migrations/0014_parts_are_soft_state.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -115,6 +123,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(DEAD_MARKS_SQL),
         M::up(EDIT_WINDOWS_SQL),
         M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
+        M::up(PARTS_ARE_SOFT_STATE_SQL),
     ])
 }
 

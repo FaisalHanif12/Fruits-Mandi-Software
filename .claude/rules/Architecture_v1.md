@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.13 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
+| Version | 1.14 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 31-10-2026, and his answers of 15-10-2026) |
 | Date | 31 October 2026 |
 | Status | Final for build |
 | Derived from | PRD v1.15 (the master), NFR v1.7, Tech Stack v1.7, Code Standards v1.12 |
@@ -733,7 +733,8 @@ erDiagram
 | `ventures` | Gardens and trips (PRD 12.10, 12.11). `kind` (garden, trip), `number` (unique per kind, given at save), `entry_date`, `name_ur`, `name_en` + search columns (garden; a trip's are made from its number and date), `item_id` (null), `rent_paisa` (garden; 0 for a trip), `season_end_date` (null), `market`, `sent_person` (trip, as typed), `account_id` (garden: its account under 0306; null for a trip), `status` (open, closed), `closed_date` (null), `close_entry_id` (null), `note` |
 | `venture_partners` | `venture_id`, `partner_id`, `share_bps`, `source` (shop, pocket). Unique (`venture_id`, `partner_id`). The rows of one venture total 10,000 bps. No change after its first entry (PRD FR-12.29). |
 | `venture_entries` | `venture_id`, `kind` (installment, cost, purchase, other_sale, close), `number` (unique per kind), `entry_date`, `amount_paisa` (the payment, or the money received), `reason`, `purchase_id` (null; a trip purchase, or the purchase sold in another shop), `qty` (null; other_sale), `shop_name` (null; as typed), `journal_entry_id` (null when nothing posts, PRD FR-12.30), `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
-| `venture_entry_parts` | `entry_id`, `partner_id`, `share_bps`, `source` (shop, pocket), `amount_paisa`. One row per partner in the venture; the parts add up to the entry's amount (C23, C25, C26). A pocket part has no journal line. |
+| `venture_entry_parts` | `entry_id`, `partner_id`, `share_bps`, `source` (shop, pocket), `amount_paisa`. One row per partner in the venture; the parts add up to the entry's amount (C23, C25, C26). A pocket part has no journal line. Migration 0014: `is_active` and `replaced_by`; an edit retires the old parts and writes new ones, never deletes (CLAUDE.md rule 4); one active row per (`entry_id`, `partner_id`); readers use active rows only. |
+| `purchase_cost_parts` | How one trip cost is spread over its purchases (C24). Migration 0014: `is_active` and `replaced_by`, one active row per (entry, purchase), retired on an edit, never deleted; readers use active rows only. |
 
 ### 15.6 Sales and stock
 
@@ -957,3 +958,4 @@ Search order (Tech Stack 4.7): exact code, exact running number (taken on Enter;
 | 1.11 | 31-10-2026 | PRD v1.13, approved by Umar: the settings keys `partner_code` and `partner_code_tries` (15.3); the edit stamp is read from `audit_log`. No table or posting type changed. |
 | 1.12 | 31-10-2026 | Lead decision for PRD v1.13 FR-7.70 (plan 44): the `edit_windows` table and migration 0012 let the edit service change one trip or garden entry inside its own save; outside it those tables stay read-only (15.3). No PRD change. |
 | 1.13 | 01-11-2026 | PRD v1.15, approved by Umar: `accounts.is_pukhta_party` and migration 0013 for a پختہ party's own account (15.4). No posting type changed. |
+| 1.14 | 01-11-2026 | Lead decision (CLAUDE.md rule 4, plan 47 Section 11): `venture_entry_parts` and `purchase_cost_parts` are soft state from migration 0014 (`is_active`, `replaced_by`); an edit retires parts instead of deleting them (15.5). Schema version 14. No PRD change. |

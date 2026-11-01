@@ -87,3 +87,10 @@ Changing a typed person into a پختہ account (make regular stays as it is); m
 CLAUDE.md rule 4 (business records are never deleted) is not negotiable.
 - `edit_windows`: a scratch gate row with no amount, date or party, inserted and removed in the same transaction. It is not a business record. The masters.rs allow-list may name it, with that comment.
 - `venture_entry_parts` and `purchase_cost_parts`: they describe a business entry, so they become soft state (backend option b): a new migration 0014 adds `is_active` and `replaced_by`; an edit marks the old rows inactive and inserts new ones; every reader filters `is_active = 1`; the delete triggers stay refusing. Task P44-F1 for backend, with the money agent before and after, and the plan 44 edit tests, golden_day and the venture tests passing.
+
+## 12. Follow-up A and C as built (01-11-2026), accepted
+
+- A: money agent tests 3 (a seller receipt among the later credits, X = 2,580) and 7 (a back-dated later sale: no warning, advance shifts, books balance) added; pukhta_party 26 passed. Test 6 (proptest) stays a gate follow-up. B (warning on later sales) waits for Umar.
+- C: migration 0014 makes `venture_entry_parts` and `purchase_cost_parts` soft state; edits retire and link, never delete; every reader (17 places) filters `is_active = 1`; the delete triggers refuse every delete (stricter than before, accepted). New guards parts_are_soft (source scan) and parts_soft_edits (edit twice vs fresh, edit twice then cancel). masters.rs green, allow-list holds only `edit_windows`. Money agent before and after: approved. 0014 run clean on a copy of Umar's data (v13 to v14).
+- Checks (backend): fmt and clippy clean; 158 targets, 0 failed; golden_day 94 unchanged.
+- Gate follow-up: `db::ventures::delete_partners` deletes `venture_partners` rows of a venture before its first entry (setup data, allowed by name in masters.rs); look at it against rule 4 at the gate.

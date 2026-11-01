@@ -224,12 +224,15 @@ pub(crate) fn edit_in(
     crate::cash::require_confirmed(&cash_check, confirmed)?;
 
     // 3. Rewrite the entry, its parts, its posting and its stock move inside the entry's window.
+    // Only a payment (an installment or a cost) has partner parts; a sale in another shop credits the
+    // garden's account instead.
+    let expect_parts = matches!(&ready.body, Body::Payment { .. });
     let (qty, moved) = match &ready.body {
         Body::OtherSale { qty, moved, .. } => (Some(*qty), *moved),
         Body::Payment { .. } => (None, 0),
     };
     edit_windows::open(tx, Window::VentureEntry, entry.id, user, &now)?;
-    repo::delete_parts(tx, entry.id)?;
+    let retired = repo::retire_parts(tx, entry.id, user, &now)?;
     repo::update_entry_edited(
         tx,
         entry.id,
@@ -287,6 +290,7 @@ pub(crate) fn edit_in(
         )?;
         arrival_repo::add_sold_in_other_shop(tx, arrival_id, qty, moved, user, &now)?;
     }
+    ventures::finish_edit_parts(tx, user, &now, entry.id, &retired, expect_parts)?;
     edit_windows::close(tx, Window::VentureEntry, entry.id)?;
 
     // 4. The audit log keeps the old and the new values.

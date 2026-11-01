@@ -271,7 +271,7 @@ fn an_entry_and_its_parts_change_only_inside_the_entry_window() {
     assert!(change().is_err(), "another entry's window");
     assert!(
         conn.execute(
-            "DELETE FROM venture_entry_parts WHERE entry_id = ?1",
+            "UPDATE venture_entry_parts SET is_active = 0 WHERE entry_id = ?1",
             [r.entry]
         )
         .is_err(),
@@ -281,17 +281,18 @@ fn an_entry_and_its_parts_change_only_inside_the_entry_window() {
 
     open_window(&conn, "venture_entry", r.entry);
     change().unwrap();
-    // The parts are replaced as a set: delete, then insert. They are never updated in place.
-    assert!(
-        conn.execute(
-            "UPDATE venture_entry_parts SET amount_paisa = 100 WHERE entry_id = ?1",
-            [r.entry]
-        )
-        .is_err(),
-        "no update of a part, even inside the window"
-    );
-    conn.execute(
+    // The parts are retired as a set and new ones written (migration 14). They are never updated in
+    // place and never deleted, window or not.
+    for sql in [
+        "UPDATE venture_entry_parts SET amount_paisa = 100 WHERE entry_id = ?1",
+        "UPDATE venture_entry_parts SET source = 'pocket' WHERE entry_id = ?1",
+        "UPDATE venture_entry_parts SET share_bps = 5000 WHERE entry_id = ?1",
         "DELETE FROM venture_entry_parts WHERE entry_id = ?1",
+    ] {
+        assert!(conn.execute(sql, [r.entry]).is_err(), "{sql}");
+    }
+    conn.execute(
+        "UPDATE venture_entry_parts SET is_active = 0 WHERE entry_id = ?1 AND is_active = 1",
         [r.entry],
     )
     .unwrap();
@@ -299,11 +300,22 @@ fn an_entry_and_its_parts_change_only_inside_the_entry_window() {
         count(
             &conn,
             &format!(
-                "SELECT COUNT(*) FROM venture_entry_parts WHERE entry_id = {}",
+                "SELECT COUNT(*) FROM venture_entry_parts WHERE entry_id = {} AND is_active = 1",
                 r.entry
             )
         ),
         0
+    );
+    // The retired rows are still there, as history.
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM venture_entry_parts WHERE entry_id = {} AND is_active = 0",
+                r.entry
+            )
+        ),
+        2
     );
     // The identity of the entry never changes, nor the purchase it rests on.
     for sql in [
@@ -321,31 +333,218 @@ fn an_entry_and_its_parts_change_only_inside_the_entry_window() {
 }
 
 #[test]
-fn the_spread_of_a_trip_cost_is_replaced_only_inside_the_cost_window() {
+fn the_spread_of_a_trip_cost_is_retired_only_inside_the_cost_window() {
     let dir = tempdir().unwrap();
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let r = rows(&conn);
-    let delete = || {
+    let retire = || {
         conn.execute(
-            "DELETE FROM purchase_cost_parts WHERE entry_id = ?1",
+            "UPDATE purchase_cost_parts SET is_active = 0 WHERE entry_id = ?1 AND is_active = 1",
             [r.cost_entry],
         )
     };
-    assert!(delete().is_err(), "no window");
+    assert!(retire().is_err(), "no window");
     open_window(&conn, "venture_entry", r.entry);
-    assert!(delete().is_err(), "another entry's window");
+    assert!(retire().is_err(), "another entry's window");
     close_window(&conn, "venture_entry", r.entry);
     open_window(&conn, "venture_entry", r.cost_entry);
+    for sql in [
+        "UPDATE purchase_cost_parts SET amount_paisa = 100 WHERE entry_id = ?1",
+        "UPDATE purchase_cost_parts SET purchase_id = purchase_id + 1 WHERE entry_id = ?1",
+        "DELETE FROM purchase_cost_parts WHERE entry_id = ?1",
+    ] {
+        assert!(conn.execute(sql, [r.cost_entry]).is_err(), "{sql}");
+    }
+    retire().unwrap();
+}
+
+#[test]
+fn the_parts_are_soft_state_and_the_triggers_let_only_a_retire_and_one_link_through() {
+    // Migration 14: a part is retired (1 to 0) inside its entry's window, a new part is inserted, the
+    // retired one is linked once to the active part of the same partner. Nothing else, ever.
+    let dir = tempdir().unwrap();
+    drop(common::open(dir.path()));
+    let conn = common::raw(dir.path());
+    let r = rows(&conn);
+    let partner: i64 = conn
+        .query_row(
+            "SELECT partner_id FROM venture_entry_parts WHERE entry_id = ?1 ORDER BY id LIMIT 1",
+            [r.entry],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let old_id: i64 = conn
+        .query_row(
+            "SELECT id FROM venture_entry_parts WHERE entry_id = ?1 AND partner_id = ?2",
+            (r.entry, partner),
+            |row| row.get(0),
+        )
+        .unwrap();
+    // A second ACTIVE row for the same partner of the entry is refused.
+    let add_part = |amount: i64| {
+        conn.execute(
+            "INSERT INTO venture_entry_parts (entry_id, partner_id, share_bps, source, amount_paisa)
+             VALUES (?1, ?2, 6000, 'shop', ?3)",
+            (r.entry, partner, amount),
+        )
+    };
+    assert!(add_part(600_000).is_err(), "one active part for a partner");
+    // Outside the window nothing changes.
     assert!(
         conn.execute(
-            "UPDATE purchase_cost_parts SET amount_paisa = 100 WHERE entry_id = ?1",
-            [r.cost_entry]
+            "UPDATE venture_entry_parts SET is_active = 0 WHERE id = ?1",
+            [old_id]
+        )
+        .is_err()
+    );
+    open_window(&conn, "venture_entry", r.entry);
+    // Retire, write the new part (now the unique index allows it), link.
+    conn.execute(
+        "UPDATE venture_entry_parts SET is_active = 0 WHERE id = ?1",
+        [old_id],
+    )
+    .unwrap();
+    add_part(700_000).unwrap();
+    let new_id = conn.last_insert_rowid();
+    // A retired part that is not linked yet cannot be touched in any other way either (the NULL link
+    // must not slip through the trigger).
+    assert!(
+        conn.execute(
+            "UPDATE venture_entry_parts SET version = version + 5 WHERE id = ?1",
+            [old_id]
         )
         .is_err(),
-        "no update in place, even inside the window"
+        "only the one link is allowed on a retired part"
     );
-    delete().unwrap();
+    // Linking to another partner's part, another entry's part or a retired part is refused.
+    let other_partner: i64 = conn
+        .query_row(
+            "SELECT id FROM venture_entry_parts WHERE entry_id = ?1 AND partner_id <> ?2 AND is_active = 1",
+            (r.entry, partner),
+            |row| row.get(0),
+        )
+        .unwrap();
+    for target in [other_partner, old_id, 9_999] {
+        assert!(
+            conn.execute(
+                "UPDATE venture_entry_parts SET replaced_by = ?2 WHERE id = ?1",
+                (old_id, target)
+            )
+            .is_err(),
+            "link to {target}"
+        );
+    }
+    conn.execute(
+        "UPDATE venture_entry_parts SET replaced_by = ?2 WHERE id = ?1",
+        (old_id, new_id),
+    )
+    .unwrap();
+    // Once linked, never re-linked; never brought back to life; the new part cannot be edited in place.
+    for sql in [
+        format!("UPDATE venture_entry_parts SET replaced_by = {other_partner} WHERE id = {old_id}"),
+        format!("UPDATE venture_entry_parts SET replaced_by = NULL WHERE id = {old_id}"),
+        format!("UPDATE venture_entry_parts SET is_active = 1 WHERE id = {old_id}"),
+        format!("UPDATE venture_entry_parts SET amount_paisa = 100 WHERE id = {new_id}"),
+        format!("DELETE FROM venture_entry_parts WHERE id = {old_id}"),
+    ] {
+        assert!(conn.execute(&sql, []).is_err(), "{sql}");
+    }
+    // The CHECK: an active part cannot carry a link.
+    assert!(
+        conn.execute(
+            "UPDATE venture_entry_parts SET replaced_by = ?2 WHERE id = ?1",
+            (new_id, old_id)
+        )
+        .is_err()
+    );
+    close_window(&conn, "venture_entry", r.entry);
+    // After the window: still nothing, and the history is all there: one retired, one active, plus
+    // the other partner's untouched part.
+    assert!(
+        conn.execute(
+            "UPDATE venture_entry_parts SET is_active = 0 WHERE id = ?1",
+            [new_id]
+        )
+        .is_err()
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM venture_entry_parts WHERE entry_id = {}",
+                r.entry
+            )
+        ),
+        3
+    );
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT COUNT(*) FROM venture_entry_parts WHERE entry_id = {} AND is_active = 1",
+                r.entry
+            )
+        ),
+        2
+    );
+
+    // The same for the spread of a trip cost.
+    let old_spread: i64 = conn
+        .query_row(
+            "SELECT id FROM purchase_cost_parts WHERE entry_id = ?1",
+            [r.cost_entry],
+            |row| row.get(0),
+        )
+        .unwrap();
+    open_window(&conn, "venture_entry", r.cost_entry);
+    conn.execute(
+        "UPDATE purchase_cost_parts SET is_active = 0 WHERE id = ?1",
+        [old_spread],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO purchase_cost_parts (entry_id, purchase_id, amount_paisa) VALUES (?1, ?2, 50_000)",
+        (r.cost_entry, r.purchase),
+    )
+    .unwrap();
+    let new_spread = conn.last_insert_rowid();
+    assert!(
+        conn.execute(
+            "UPDATE purchase_cost_parts SET version = version + 5 WHERE id = ?1",
+            [old_spread]
+        )
+        .is_err(),
+        "only the one link is allowed on a retired part"
+    );
+    // A link to a part of another purchase is refused; to the part of the same purchase it works.
+    conn.execute(
+        "INSERT INTO purchase_cost_parts (entry_id, purchase_id, amount_paisa) VALUES (?1, ?2, 0)",
+        (r.cost_entry, r.other_purchase),
+    )
+    .unwrap();
+    let other_spread = conn.last_insert_rowid();
+    assert!(
+        conn.execute(
+            "UPDATE purchase_cost_parts SET replaced_by = ?2 WHERE id = ?1",
+            (old_spread, other_spread)
+        )
+        .is_err()
+    );
+    conn.execute(
+        "UPDATE purchase_cost_parts SET replaced_by = ?2 WHERE id = ?1",
+        (old_spread, new_spread),
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "DELETE FROM purchase_cost_parts WHERE id = ?1",
+            [old_spread]
+        )
+        .is_err(),
+        "never deleted, window or not"
+    );
+    close_window(&conn, "venture_entry", r.cost_entry);
 }
 
 #[test]

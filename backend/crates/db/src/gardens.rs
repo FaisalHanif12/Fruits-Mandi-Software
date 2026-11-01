@@ -324,7 +324,8 @@ pub fn figures(conn: &Connection, garden: &GardenRec) -> rusqlite::Result<Figure
         "SELECT COALESCE(SUM(CASE WHEN p.source = 'shop' THEN p.amount_paisa END), 0),
                 COALESCE(SUM(CASE WHEN p.source = 'pocket' THEN p.amount_paisa END), 0)
          FROM venture_entry_parts p JOIN venture_entries x ON x.id = p.entry_id
-         WHERE x.venture_id = ?1 AND x.status = 'saved' AND x.kind IN ('installment', 'cost')",
+         WHERE x.venture_id = ?1 AND x.status = 'saved' AND x.kind IN ('installment', 'cost')
+           AND p.is_active = 1",
         [garden.id],
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
@@ -460,6 +461,7 @@ pub fn paid_by_partner(
                 COALESCE(SUM(CASE WHEN p.source = 'pocket' THEN p.amount_paisa END), 0)
          FROM venture_entry_parts p JOIN venture_entries x ON x.id = p.entry_id
          WHERE x.venture_id = ?1 AND x.status = 'saved' AND x.kind IN ('installment', 'cost')
+           AND p.is_active = 1
          GROUP BY p.partner_id",
     )?;
     let rows = statement.query_map([garden_id], |r| Ok((r.get(0)?, (r.get(1)?, r.get(2)?))))?;

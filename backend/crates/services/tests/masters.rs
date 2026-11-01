@@ -699,7 +699,15 @@ fn there_is_no_way_to_delete_a_master_record() {
             assert!(
                 // `venture_partners`: a trip's partners are replaced as one set before its first
                 // entry (PRD FR-12.29); a trigger refuses it after that. It is not a master list.
-                table == "translit_pairs" || table == "drafts" || table == "venture_partners",
+                // `edit_windows`: the one scratch row an edit opens for the entry it changes and
+                // closes in the same transaction (plan 44, PRD FR-7.70). It holds no amount, date or
+                // party. The parts of an edited entry are NOT here: they are soft state since
+                // migration 14 (CLAUDE.md rule 4) and `parts_are_soft.rs` fails if anything
+                // deletes them.
+                table == "translit_pairs"
+                    || table == "drafts"
+                    || table == "venture_partners"
+                    || table == "edit_windows",
                 "{file} deletes from {table}: master records are made inactive, never deleted"
             );
         }

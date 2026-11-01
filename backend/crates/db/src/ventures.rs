@@ -696,17 +696,91 @@ pub fn update_entry_edited(
     Ok(())
 }
 
-/// Takes the parts of an entry away so the new ones can be written (the edit, PRD FR-7.70). It needs
-/// the entry's edit window (`edit_windows`).
+/// A part of an entry that an edit retired: its id and the partner it was for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetiredPart {
+    /// The retired row.
+    pub id: i64,
+    /// The partner it was for.
+    pub partner_id: i64,
+}
+
+/// Retires the active parts of an entry so the new ones can be written (the edit, PRD FR-7.70). The
+/// rows are not deleted (CLAUDE.md rule 4, migration 14): they become `is_active = 0` and stay as
+/// history. Only the rows that are active now are touched, so a second edit leaves what the first one
+/// retired alone. It needs the entry's edit window (`edit_windows`). Returns the rows it retired, for
+/// [`link_retired_parts`].
 ///
 /// # Errors
-/// Any SQLite error (the trigger `venture_entry_parts_no_delete` without a window).
-pub fn delete_parts(conn: &Connection, entry_id: i64) -> rusqlite::Result<()> {
-    conn.execute(
-        "DELETE FROM venture_entry_parts WHERE entry_id = ?1",
-        [entry_id],
+/// Any SQLite error (the trigger `venture_entry_parts_no_update` without a window).
+pub fn retire_parts(
+    conn: &Connection,
+    entry_id: i64,
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<Vec<RetiredPart>> {
+    let mut statement = conn.prepare(
+        "SELECT id, partner_id FROM venture_entry_parts WHERE entry_id = ?1 AND is_active = 1
+         ORDER BY id",
     )?;
+    let active = statement
+        .query_map([entry_id], |r| {
+            Ok(RetiredPart {
+                id: r.get(0)?,
+                partner_id: r.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for part in &active {
+        conn.execute(
+            "UPDATE venture_entry_parts SET is_active = 0, updated_at = ?2, updated_by = ?3,
+                 version = version + 1 WHERE id = ?1 AND is_active = 1",
+            params![part.id, now, user_id],
+        )?;
+    }
+    Ok(active)
+}
+
+/// Links each part an edit retired to the active part of the same partner that replaced it. Call it
+/// after the new parts are written, inside the same window.
+///
+/// # Errors
+/// Any SQLite error (the trigger without a window, or a link to a row of another partner).
+pub fn link_retired_parts(
+    conn: &Connection,
+    entry_id: i64,
+    retired: &[RetiredPart],
+    user_id: i64,
+    now: &str,
+) -> rusqlite::Result<()> {
+    for part in retired {
+        conn.execute(
+            "UPDATE venture_entry_parts SET
+                 replaced_by = (SELECT n.id FROM venture_entry_parts n
+                                WHERE n.entry_id = ?2 AND n.partner_id = ?3 AND n.is_active = 1),
+                 updated_at = ?4, updated_by = ?5, version = version + 1
+             WHERE id = ?1 AND is_active = 0 AND replaced_by IS NULL
+               AND EXISTS (SELECT 1 FROM venture_entry_parts n
+                           WHERE n.entry_id = ?2 AND n.partner_id = ?3 AND n.is_active = 1)",
+            params![part.id, entry_id, part.partner_id, now, user_id],
+        )?;
+    }
     Ok(())
+}
+
+/// Checks that the active parts of an entry add up to its amount (PRD C23, C25, C26), so an edit can
+/// never leave an entry without its parts. Called before the edit window closes.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn parts_add_up(conn: &Connection, entry_id: i64) -> rusqlite::Result<bool> {
+    conn.query_row(
+        "SELECT COALESCE((SELECT SUM(amount_paisa) FROM venture_entry_parts
+                          WHERE entry_id = ?1 AND is_active = 1), 0)
+              = (SELECT amount_paisa FROM venture_entries WHERE id = ?1)",
+        [entry_id],
+        |r| r.get(0),
+    )
 }
 
 /// Marks an entry cancelled, with the reason.
@@ -904,7 +978,8 @@ pub struct PartRec {
     pub amount_paisa: i64,
 }
 
-/// The parts of several entries, each entry's parts in the order the partners were created.
+/// The parts of several entries, each entry's parts in the order the partners were created. Only the
+/// active parts: an edit retires the old ones (migration 14).
 ///
 /// # Errors
 /// Any SQLite error.
@@ -916,7 +991,7 @@ pub fn parts_of(conn: &Connection, entry_ids: &[i64]) -> rusqlite::Result<Vec<Pa
     let mut statement = conn.prepare(&format!(
         "SELECT e.entry_id, p.id, p.name_ur, p.name_en, e.share_bps, e.source, e.amount_paisa
          FROM venture_entry_parts e JOIN partners p ON p.id = e.partner_id
-         WHERE e.entry_id IN ({marks}) ORDER BY e.entry_id, p.id"
+         WHERE e.entry_id IN ({marks}) AND e.is_active = 1 ORDER BY e.entry_id, p.id"
     ))?;
     let rows = statement.query_map(rusqlite::params_from_iter(entry_ids), |r| {
         Ok(PartRec {
@@ -966,7 +1041,7 @@ pub fn partner_money(
                                   THEN e.amount_paisa END), 0),
                 COALESCE(SUM(CASE WHEN x.kind = 'other_sale' THEN e.amount_paisa END), 0)
          FROM venture_entry_parts e JOIN venture_entries x ON x.id = e.entry_id
-         WHERE x.venture_id = ?1 AND x.status = 'saved'
+         WHERE x.venture_id = ?1 AND x.status = 'saved' AND e.is_active = 1
          GROUP BY e.partner_id",
     )?;
     let rows = statement.query_map([venture_id], |r| {

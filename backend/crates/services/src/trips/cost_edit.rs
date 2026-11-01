@@ -168,8 +168,8 @@ pub(crate) fn edit_in(
 
     // 3. Rewrite the entry, its parts, its spread and its posting inside the cost's window.
     edit_windows::open(tx, Window::VentureEntry, entry.id, user, &now)?;
-    repo::delete_parts(tx, entry.id)?;
-    purchase_repo::delete_cost_parts(tx, entry.id)?;
+    let retired = repo::retire_parts(tx, entry.id, user, &now)?;
+    let retired_spread = purchase_repo::retire_cost_parts(tx, entry.id, user, &now)?;
     repo::update_entry_edited(
         tx,
         entry.id,
@@ -211,6 +211,13 @@ pub(crate) fn edit_in(
         purchase_repo::add_trip_cost(tx, part.purchase_id, part.amount.as_paisa(), user, &now)?;
         purchases::ensure_consistent(tx, part.purchase_id)?;
     }
+    purchase_repo::link_retired_cost_parts(tx, entry.id, &retired_spread, user, &now)?;
+    if !purchase_repo::cost_parts_add_up(tx, entry.id)? {
+        return Err(data(
+            "the spread of a trip cost does not add up after an edit",
+        ));
+    }
+    ventures::finish_edit_parts(tx, user, &now, entry.id, &retired, true)?;
     edit_windows::close(tx, Window::VentureEntry, entry.id)?;
 
     // 4. The audit log keeps the old and the new values.

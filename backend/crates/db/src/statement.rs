@@ -234,7 +234,7 @@ pub fn unposted_garden_close_notes(
     let mut statement = conn.prepare(
         "SELECT x.id, x.entry_date, x.venture_id
          FROM venture_entries x
-         JOIN venture_entry_parts p ON p.entry_id = x.id AND p.partner_id = ?1
+         JOIN venture_entry_parts p ON p.entry_id = x.id AND p.partner_id = ?1 AND p.is_active = 1
          JOIN partners pa ON pa.id = ?1
          WHERE x.kind = 'close' AND x.status = 'saved'
            AND NOT EXISTS (SELECT 1 FROM journal_lines l
@@ -594,7 +594,7 @@ pub fn entry_part_shares(
     }
     let mut statement = conn.prepare(&format!(
         "SELECT entry_id, share_bps FROM venture_entry_parts
-         WHERE partner_id = ? AND entry_id IN ({})",
+         WHERE partner_id = ? AND is_active = 1 AND entry_id IN ({})",
         marks(entry_ids.len())
     ))?;
     let mut values = vec![partner_id];
@@ -640,7 +640,7 @@ pub fn garden_close_figures(
             .query_row(
                 "SELECT x.venture_id, p.share_bps, p.amount_paisa
                  FROM venture_entries x JOIN venture_entry_parts p ON p.entry_id = x.id
-                 WHERE x.id = ?1 AND x.kind = 'close' AND p.partner_id = ?2",
+                 WHERE x.id = ?1 AND x.kind = 'close' AND p.partner_id = ?2 AND p.is_active = 1",
                 params![id, partner_id],
                 |r| {
                     Ok((
@@ -661,7 +661,8 @@ pub fn garden_close_figures(
             |r| r.get(0),
         )?;
         let sales: i64 = conn.query_row(
-            "SELECT COALESCE(SUM(amount_paisa), 0) FROM venture_entry_parts WHERE entry_id = ?1",
+            "SELECT COALESCE(SUM(amount_paisa), 0) FROM venture_entry_parts
+             WHERE entry_id = ?1 AND is_active = 1",
             [id],
             |r| r.get(0),
         )?;
@@ -670,7 +671,7 @@ pub fn garden_close_figures(
             "SELECT COALESCE(SUM(p.amount_paisa), 0)
              FROM venture_entry_parts p JOIN venture_entries x ON x.id = p.entry_id
              WHERE x.venture_id = ?1 AND x.status = 'saved' AND x.kind IN ('installment', 'cost')
-               AND p.partner_id = ?2",
+               AND p.partner_id = ?2 AND p.is_active = 1",
             params![garden_id, partner_id],
             |r| r.get(0),
         )?;

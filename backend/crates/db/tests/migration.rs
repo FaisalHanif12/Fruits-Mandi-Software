@@ -12,9 +12,9 @@ use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
     DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
-    MigrationOutcome, PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL,
-    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
-    TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL, PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL,
+    SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
+    TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -22,7 +22,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 13;
+const LATEST: usize = 14;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -224,6 +224,29 @@ fn released_version_12() -> Migrations<'static> {
         M::up(SHOP_SPLIT_SQL),
         M::up(DEAD_MARKS_SQL),
         M::up(EDIT_WINDOWS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 13: migrations 0001 to 0013.
+fn released_version_13() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
     ])
 }
 
@@ -501,10 +524,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 14).unwrap();
+    conn.pragma_update(None, "user_version", 15).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 14);
+    assert_eq!(user_version(&conn), 15);
     assert!(!backups.exists());
 }
 
@@ -2905,7 +2928,8 @@ fn migration_13_adds_the_pukhta_party_mark_and_changes_nothing_else() {
     let before = all_rows_without(&conn, &[]);
     let accounts_before = count(&conn, "SELECT COUNT(*) FROM accounts");
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_13(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (12, 13));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 13);
@@ -3007,5 +3031,191 @@ fn migration_13_adds_the_pukhta_party_mark_and_changes_nothing_else() {
             "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('accounts_pukhta_party_fixed', 'idx_accounts_pukhta_party')"
         ),
         2
+    );
+}
+
+/// A v13 file with a trip, a purchase with two partners' parts, and a trip cost with its spread.
+fn trip_with_parts(conn: &Connection) {
+    let accounts: Vec<i64> = conn
+        .prepare("SELECT id FROM accounts ORDER BY id LIMIT 2")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let mut partners = Vec::new();
+    for (ur, en) in [("الف", "A"), ("ب", "B")] {
+        conn.execute(
+            "INSERT INTO partners (name_ur, name_en, capital_account_id, drawings_account_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            (ur, en, accounts[0], accounts[1]),
+        )
+        .unwrap();
+        partners.push(conn.last_insert_rowid());
+    }
+    conn.execute(
+        "INSERT INTO packings (code, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('1', 'پیٹی', 'Box', 'p', 'box', 'bx')",
+        [],
+    )
+    .unwrap();
+    let packing = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('1', 'مالٹا', 'Orange', 'm', 'orange', 'rng', 'fruit')",
+        [],
+    )
+    .unwrap();
+    let item = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ('trip', 1, '2026-10-10', 't', 't', 't', 't', 't')",
+        [],
+    )
+    .unwrap();
+    let trip = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO purchases (number, venture_id, entry_date, item_id, packing_id, qty, rate_paisa,
+             value_paisa, freight_paisa, paid_now_paisa, total_cost_paisa)
+         VALUES (1, ?1, '2026-10-10', ?2, ?3, 20, 50_000, 1_000_000, 0, 1_000_000, 1_000_000)",
+        (trip, item, packing),
+    )
+    .unwrap();
+    let purchase = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, purchase_id)
+         VALUES (?1, 'purchase', 1, '2026-10-10', 1_000_000, ?2)",
+        (trip, purchase),
+    )
+    .unwrap();
+    let entry = conn.last_insert_rowid();
+    for (partner, share, amount) in [(partners[0], 6_000, 600_000), (partners[1], 4_000, 400_000)] {
+        conn.execute(
+            "INSERT INTO venture_entry_parts (entry_id, partner_id, share_bps, source, amount_paisa)
+             VALUES (?1, ?2, ?3, 'shop', ?4)",
+            (entry, partner, share, amount),
+        )
+        .unwrap();
+    }
+    conn.execute(
+        "INSERT INTO venture_entries (venture_id, kind, number, entry_date, amount_paisa, reason)
+         VALUES (?1, 'cost', 1, '2026-10-11', 40_000, 'truck')",
+        [trip],
+    )
+    .unwrap();
+    let cost_entry = conn.last_insert_rowid();
+    conn.execute(
+        "INSERT INTO purchase_cost_parts (entry_id, purchase_id, amount_paisa) VALUES (?1, ?2, 40_000)",
+        (cost_entry, purchase),
+    )
+    .unwrap();
+}
+
+#[test]
+fn migration_14_makes_the_parts_soft_state_and_changes_nothing_else() {
+    // CLAUDE.md rule 4: a file at version 13 with the parts of a purchase and the spread of a trip cost
+    // is upgraded. Every row keeps its id and values and is active, nothing is linked, the inline
+    // UNIQUE is now a unique index over the active rows, a copy is taken first, and nothing is left
+    // of the old tables.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_13(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 13);
+    trip_with_parts(&conn);
+    let before = all_rows_without(&conn, &[]);
+    let part_ids: Vec<i64> = conn
+        .prepare("SELECT id FROM venture_entry_parts ORDER BY id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(part_ids.len(), 2);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (13, 14));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 14);
+    let after = all_rows_without(
+        &conn,
+        &[
+            ("venture_entry_parts", "is_active"),
+            ("venture_entry_parts", "replaced_by"),
+            ("purchase_cost_parts", "is_active"),
+            ("purchase_cost_parts", "replaced_by"),
+        ],
+    );
+    assert_eq!(after, before, "every row, id and value is as it was");
+    for table in ["venture_entry_parts", "purchase_cost_parts"] {
+        assert_eq!(
+            count(&conn, &format!("SELECT COUNT(*) FROM {table}")),
+            count(
+                &conn,
+                &format!(
+                    "SELECT COUNT(*) FROM {table} WHERE is_active = 1 AND replaced_by IS NULL"
+                )
+            ),
+            "{table}: every old row is active and unlinked"
+        );
+    }
+    // The unique rule now lives in an index over the active rows only, as a partial index.
+    for name in [
+        "uq_venture_entry_parts_active",
+        "uq_purchase_cost_parts_active",
+    ] {
+        let sql: String = conn
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?1",
+                [name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            sql.contains("UNIQUE") && sql.contains("WHERE is_active = 1"),
+            "{sql}"
+        );
+    }
+    // Nothing of the rebuild is left, and the foreign keys and the file check out.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE sql LIKE '%_parts_old%' OR name LIKE '%_parts_old%'"
+        ),
+        0
+    );
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM pragma_foreign_key_check"),
+        0
+    );
+    let fks: Vec<String> = conn
+        .prepare("SELECT \"table\" FROM pragma_foreign_key_list('venture_entry_parts')")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert!(
+        fks.iter().any(|t| t == "venture_entry_parts"),
+        "the link to the replacing row points at its own table: {fks:?}"
+    );
+    // The inline UNIQUE is gone: a retired and an active row for one partner can live together
+    // (inside the window, which the services open), the other way round is still refused.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND tbl_name = 'venture_entry_parts' AND name LIKE 'sqlite_autoindex%'"
+        ),
+        0
+    );
+    assert_eq!(
+        PARTS_ARE_SOFT_STATE_SQL.matches("DROP TABLE").count(),
+        2,
+        "the two old tables are dropped, nothing else"
+    );
+    assert_eq!(
+        PARTS_ARE_SOFT_STATE_SQL.matches("DELETE FROM").count(),
+        0,
+        "the file deletes no row (its triggers only refuse a delete)"
     );
 }

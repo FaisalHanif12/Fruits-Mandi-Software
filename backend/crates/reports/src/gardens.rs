@@ -337,7 +337,7 @@ fn paid_by_partner_many(conn: &Connection, garden_ids: &[i64]) -> Result<PaidPar
                     COALESCE(SUM(CASE WHEN p.source = 'pocket' THEN p.amount_paisa END), 0)
              FROM venture_entry_parts p JOIN venture_entries x ON x.id = p.entry_id
              WHERE x.venture_id IN ({marks}) AND x.status = 'saved'
-               AND x.kind IN ('installment', 'cost')
+               AND x.kind IN ('installment', 'cost') AND p.is_active = 1
              GROUP BY x.venture_id, p.partner_id"
         ))?;
         let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
