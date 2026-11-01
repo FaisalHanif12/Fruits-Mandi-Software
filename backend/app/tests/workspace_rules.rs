@@ -61,10 +61,20 @@ fn dependency_direction_is_exact() {
             .cloned()
             .collect()
     };
-    assert_eq!(deps.len(), 7, "{:?}", deps.keys());
+    assert_eq!(deps.len(), 8, "{:?}", deps.keys());
     assert_eq!(
         ours("mandi-app"),
-        set(&["mandi-services", "mandi-reports", "mandi-backup"])
+        set(&[
+            "mandi-services",
+            "mandi-reports",
+            "mandi-backup",
+            "mandi-assistant"
+        ])
+    );
+    // Plan 48 (ask the app): app -> assistant -> services + reports.
+    assert_eq!(
+        ours("mandi-assistant"),
+        set(&["mandi-services", "mandi-reports"])
     );
     assert_eq!(ours("mandi-services"), set(&["mandi-domain", "mandi-db"]));
     assert_eq!(ours("mandi-reports"), set(&["mandi-db", "mandi-core"]));

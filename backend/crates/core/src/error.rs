@@ -442,11 +442,25 @@ pub enum ErrorCode {
     /// `taken_paisa` (what the later postings lose). Field `lots[i].cash_paid` (the first lot of
     /// that seller).
     ErrAdvanceTakenFromLater,
+    /// Ask the app (PRD FR-7.81, plan 48): the assistant is switched off, so a question to the
+    /// model, a continuation and the connection test are refused. The quick questions still work.
+    /// No field.
+    ErrAssistantOff,
+    /// Ask the app (PRD FR-7.81, FR-7.85, plan 48): no OpenRouter key is saved. Refuses a question,
+    /// a continuation and the connection test (no field), and switching the assistant on (field
+    /// `enabled`).
+    ErrAssistantKeyMissing,
+    /// Ask the app (plan 48): a question is running already, so a second one is refused and only
+    /// one is sent when `Enter` is pressed twice. No field.
+    ErrAssistantBusy,
+    /// Ask the app (plan 48): the question is not waiting for this choice (it was answered, or it
+    /// never asked "کون سا؟" or for the partner code). Field `question_id`.
+    ErrAssistantNotWaiting,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 155] = [
+    pub const ALL: [ErrorCode; 159] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -602,6 +616,10 @@ impl ErrorCode {
         ErrorCode::ErrPartnerCodesDiffer,
         ErrorCode::ErrFixTokenInvalid,
         ErrorCode::ErrAdvanceTakenFromLater,
+        ErrorCode::ErrAssistantOff,
+        ErrorCode::ErrAssistantKeyMissing,
+        ErrorCode::ErrAssistantBusy,
+        ErrorCode::ErrAssistantNotWaiting,
     ];
 }
 

@@ -364,6 +364,18 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::partner_code::partners_code_unlock,
         commands::partner_code::partners_code_lock,
         commands::partner_code::partners_code_reset,
+        // Plan 48, ask the app (append-only block).
+        commands::assistant::assistant_status,
+        commands::assistant::assistant_ask,
+        commands::assistant::assistant_quick,
+        commands::assistant::assistant_pick,
+        commands::assistant::assistant_rerun,
+        commands::assistant::assistant_new_conversation,
+        commands::assistant::assistant_settings_set,
+        commands::assistant::assistant_key_save,
+        commands::assistant::assistant_key_remove,
+        commands::assistant::assistant_test,
+        commands::assistant::assistant_log_list,
     ]
 }
 

@@ -1,0 +1,23 @@
+[package]
+name = "mandi-assistant"
+description = "Ask the app: the model's tools, the checks of its answer and the question log (PRD 7.7)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# Dependency direction: app -> assistant -> services + reports (plan 48, Code Standards B1).
+# The test app/tests/workspace_rules.rs checks this list. T3 adds the HTTP client (reqwest with
+# rustls, no default features) and the key store; T1 is the contract only.
+[dependencies]
+mandi-services.workspace = true
+mandi-reports.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

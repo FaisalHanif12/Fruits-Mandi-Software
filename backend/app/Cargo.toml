@@ -25,6 +25,7 @@ tauri-build.workspace = true
 mandi-services.workspace = true
 mandi-reports.workspace = true
 mandi-backup.workspace = true
+mandi-assistant.workspace = true
 tauri.workspace = true
 tauri-plugin-single-instance.workspace = true
 tauri-plugin-updater.workspace = true

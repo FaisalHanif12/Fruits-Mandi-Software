@@ -1,0 +1,11 @@
+{
+  "worked": false,
+  "millis": 410,
+  "model": "openai/gpt-6-luna",
+  "failure": {
+    "kind": "no_endpoint",
+    "http_status": 404
+  },
+  "count_today": 10,
+  "limit": 20
+}

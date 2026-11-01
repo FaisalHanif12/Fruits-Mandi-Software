@@ -1361,6 +1361,50 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "password_or_recovery": "x", "code": "4826", "code_again": "4826" } }),
             true,
         ),
+        // Plan 48, ask the app (append-only block).
+        ("assistant_status", json!({}), true),
+        (
+            "assistant_ask",
+            json!({ "input": { "text": "ikram ke total bakaya kitne hai", "conversation_id": null } }),
+            true,
+        ),
+        (
+            "assistant_quick",
+            json!({ "input": { "chip": "cash_in_hand", "party_id": null, "conversation_id": null } }),
+            true,
+        ),
+        (
+            "assistant_pick",
+            json!({ "input": { "question_id": 1, "choice": { "type": "match", "key": "a20" } } }),
+            true,
+        ),
+        (
+            "assistant_rerun",
+            json!({ "input": { "question_id": 1 } }),
+            true,
+        ),
+        ("assistant_new_conversation", json!({}), true),
+        (
+            "assistant_settings_set",
+            json!({ "input": { "enabled": false, "model": "openai/gpt-6-luna" } }),
+            true,
+        ),
+        (
+            "assistant_key_save",
+            json!({ "input": { "key": "test-key", "password": "x" } }),
+            true,
+        ),
+        (
+            "assistant_key_remove",
+            json!({ "input": { "password": "x" } }),
+            true,
+        ),
+        ("assistant_test", json!({}), true),
+        (
+            "assistant_log_list",
+            json!({ "input": { "offset": 0, "limit": 100 } }),
+            true,
+        ),
     ]
 }
 

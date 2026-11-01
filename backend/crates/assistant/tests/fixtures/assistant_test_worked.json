@@ -1,0 +1,8 @@
+{
+  "worked": true,
+  "millis": 2340,
+  "model": "openai/gpt-6-luna",
+  "failure": null,
+  "count_today": 10,
+  "limit": 20
+}

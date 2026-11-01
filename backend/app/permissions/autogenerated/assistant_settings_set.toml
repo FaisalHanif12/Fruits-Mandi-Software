@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assistant-settings-set"
+description = "Enables the assistant_settings_set command without any pre-configured scope."
+commands.allow = ["assistant_settings_set"]
+
+[[permission]]
+identifier = "deny-assistant-settings-set"
+description = "Denies the assistant_settings_set command without any pre-configured scope."
+commands.deny = ["assistant_settings_set"]

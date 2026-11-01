@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assistant-pick"
+description = "Enables the assistant_pick command without any pre-configured scope."
+commands.allow = ["assistant_pick"]
+
+[[permission]]
+identifier = "deny-assistant-pick"
+description = "Denies the assistant_pick command without any pre-configured scope."
+commands.deny = ["assistant_pick"]

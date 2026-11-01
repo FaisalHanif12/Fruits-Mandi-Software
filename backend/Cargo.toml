@@ -4,6 +4,7 @@
 #   services -> domain, db
 #   reports -> db, core
 #   backup -> db, core
+#   assistant -> services, reports (plan 48, D6)
 #   domain -> core
 #   db -> core
 # The test app/tests/workspace_rules.rs checks this list.
@@ -18,6 +19,7 @@ members = [
     "crates/services",
     "crates/reports",
     "crates/backup",
+    "crates/assistant",
 ]
 
 [workspace.package]
@@ -34,6 +36,7 @@ mandi-db = { path = "crates/db" }
 mandi-services = { path = "crates/services" }
 mandi-reports = { path = "crates/reports" }
 mandi-backup = { path = "crates/backup" }
+mandi-assistant = { path = "crates/assistant" }
 
 # Tauri 2 and the five plugins of Tech Stack 2. No other plugin.
 tauri = { version = "2.12.2", features = [] }

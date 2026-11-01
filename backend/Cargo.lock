@@ -3199,6 +3199,7 @@ name = "mandi-app"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "mandi-assistant",
  "mandi-backup",
  "mandi-reports",
  "mandi-services",
@@ -3219,6 +3220,18 @@ dependencies = [
  "webview2-com",
  "windows",
  "windows-core",
+]
+
+[[package]]
+name = "mandi-assistant"
+version = "0.1.0"
+dependencies = [
+ "mandi-reports",
+ "mandi-services",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "ts-rs",
 ]
 
 [[package]]

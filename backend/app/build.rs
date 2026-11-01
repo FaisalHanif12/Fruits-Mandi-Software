@@ -283,6 +283,18 @@ const APP_COMMANDS: &[&str] = &[
     "partners_code_unlock",
     "partners_code_lock",
     "partners_code_reset",
+    // Plan 48, ask the app (append-only block).
+    "assistant_status",
+    "assistant_ask",
+    "assistant_quick",
+    "assistant_pick",
+    "assistant_rerun",
+    "assistant_new_conversation",
+    "assistant_settings_set",
+    "assistant_key_save",
+    "assistant_key_remove",
+    "assistant_test",
+    "assistant_log_list",
 ];
 
 fn main() {

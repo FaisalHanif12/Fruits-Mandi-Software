@@ -1,0 +1,16 @@
+{
+  "question_id": 14,
+  "conversation_id": "c-1",
+  "outcome": "offline",
+  "answer": null,
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": {
+    "kind": "offline",
+    "http_status": null
+  },
+  "count_today": 3,
+  "limit": 20
+}

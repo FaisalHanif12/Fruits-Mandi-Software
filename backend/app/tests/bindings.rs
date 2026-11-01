@@ -766,6 +766,51 @@ const EXPECTED_FILES: &[&str] = &[
     "EditHistoryInput.ts",
     "EditHistory.ts",
     "EditVersion.ts",
+    // Plan 48, ask the app (append-only block).
+    "AskReply.ts",
+    "AskOutcome.ts",
+    "AssistantFailure.ts",
+    "FailureKind.ts",
+    "AssistantAskInput.ts",
+    "AssistantQuickInput.ts",
+    "QuickChip.ts",
+    "AssistantPickInput.ts",
+    "PickChoice.ts",
+    "AssistantRerunInput.ts",
+    "ConversationStarted.ts",
+    "Answer.ts",
+    "AnswerPart.ts",
+    "AnswerName.ts",
+    "AnswerSource.ts",
+    "AnswerRow.ts",
+    "AnswerTable.ts",
+    "AnswerMonth.ts",
+    "AnswerChart.ts",
+    "ChartSeries.ts",
+    "ChartSeriesKind.ts",
+    "AnswerEstimate.ts",
+    "EstimateMethod.ts",
+    "EstimateMethodKind.ts",
+    "AnswerWorking.ts",
+    "WorkingStep.ts",
+    "WorkingOp.ts",
+    "PlaceValue.ts",
+    "FigureDifference.ts",
+    "FigureDirection.ts",
+    "EntryRoute.ts",
+    "EntryScreen.ts",
+    "AnswerOption.ts",
+    "AssistantStatus.ts",
+    "AssistantSettingsSetInput.ts",
+    "AssistantKeySaveInput.ts",
+    "AssistantKeyRemoveInput.ts",
+    "AssistantTestResult.ts",
+    "AssistantLogListInput.ts",
+    "AssistantLogPage.ts",
+    "AssistantLogRow.ts",
+    "LogSource.ts",
+    "LogTool.ts",
+    "AssistantStep.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1323,6 +1368,21 @@ fn export_bindings() {
     mandi_reports::audit::EditStampRow::export_all(&cfg).unwrap();
     mandi_reports::audit::EditHistoryInput::export_all(&cfg).unwrap();
     mandi_reports::audit::EditHistory::export_all(&cfg).unwrap();
+    // Plan 48, ask the app (append-only block).
+    mandi_assistant::ask::AskReply::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantAskInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantQuickInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantPickInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantRerunInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::ConversationStarted::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantStatus::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantSettingsSetInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantKeySaveInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantKeyRemoveInput::export_all(&cfg).unwrap();
+    mandi_assistant::settings::AssistantTestResult::export_all(&cfg).unwrap();
+    mandi_assistant::log::AssistantLogListInput::export_all(&cfg).unwrap();
+    mandi_assistant::log::AssistantLogPage::export_all(&cfg).unwrap();
+    mandi_assistant::step::AssistantStep::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

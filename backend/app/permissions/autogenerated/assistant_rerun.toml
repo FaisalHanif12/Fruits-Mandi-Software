@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-assistant-rerun"
+description = "Enables the assistant_rerun command without any pre-configured scope."
+commands.allow = ["assistant_rerun"]
+
+[[permission]]
+identifier = "deny-assistant-rerun"
+description = "Denies the assistant_rerun command without any pre-configured scope."
+commands.deny = ["assistant_rerun"]

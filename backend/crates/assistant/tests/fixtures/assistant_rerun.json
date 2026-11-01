@@ -1,0 +1,236 @@
+{
+  "question_id": 11,
+  "conversation_id": "c-1",
+  "outcome": "checks_failed",
+  "answer": {
+    "parts": [],
+    "tables": [
+      {
+        "result_id": "r3",
+        "title_id": "report-r13-title",
+        "columns": [
+          {
+            "key": "date",
+            "title_id": "report-col-date",
+            "kind": "date"
+          },
+          {
+            "key": "doc",
+            "title_id": "report-col-doc",
+            "kind": "doc"
+          },
+          {
+            "key": "detail",
+            "title_id": "report-col-detail",
+            "kind": "detail"
+          },
+          {
+            "key": "narration",
+            "title_id": "report-col-narration",
+            "kind": "text"
+          },
+          {
+            "key": "debit",
+            "title_id": "report-col-debit",
+            "kind": "money"
+          },
+          {
+            "key": "credit",
+            "title_id": "report-col-credit",
+            "kind": "money"
+          },
+          {
+            "key": "balance",
+            "title_id": "report-col-balance",
+            "kind": "balance"
+          }
+        ],
+        "rows": [
+          {
+            "row": {
+              "cells": [
+                {
+                  "type": "date",
+                  "iso": "2026-10-10"
+                },
+                {
+                  "type": "doc",
+                  "type_id": "report-doc-receipt",
+                  "number": 1
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "money",
+                  "paisa": 1000000
+                },
+                {
+                  "type": "balance",
+                  "paisa": 288000,
+                  "side": "dr"
+                }
+              ],
+              "source": {
+                "kind": "voucher",
+                "id": 2
+              },
+              "kind": "normal"
+            },
+            "analytics_key": null
+          },
+          {
+            "row": {
+              "cells": [
+                {
+                  "type": "date",
+                  "iso": "2026-10-10"
+                },
+                {
+                  "type": "doc",
+                  "type_id": "report-doc-bikri-first",
+                  "number": 1
+                },
+                {
+                  "type": "detail",
+                  "parts": [
+                    {
+                      "kind": "sale",
+                      "bikri_number": 1,
+                      "item": {
+                        "ur": "کیلا",
+                        "en": "Banana"
+                      },
+                      "packing": {
+                        "ur": "پیٹی",
+                        "en": "Box"
+                      },
+                      "qty": 20,
+                      "rate_paisa": 60000,
+                      "value_paisa": 1200000,
+                      "commission_paisa": 72000,
+                      "laga_paisa": 16000
+                    }
+                  ]
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "money",
+                  "paisa": 1288000
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "balance",
+                  "paisa": 1288000,
+                  "side": "dr"
+                }
+              ],
+              "source": {
+                "kind": "bikri",
+                "id": 1
+              },
+              "kind": "normal"
+            },
+            "analytics_key": null
+          }
+        ],
+        "count": 2,
+        "totals_label_id": "report-total",
+        "totals": [
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "money",
+            "paisa": 1288000
+          },
+          {
+            "type": "money",
+            "paisa": 1000000
+          },
+          {
+            "type": "balance",
+            "paisa": 288000,
+            "side": "dr"
+          }
+        ]
+      }
+    ],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "party_card",
+        "result_id": "r2",
+        "account_id": 20,
+        "name": {
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null,
+          "code": "0020"
+        }
+      },
+      {
+        "kind": "report",
+        "result_id": "r3",
+        "label_id": "report-r13-title",
+        "id": "R13",
+        "filters": {
+          "shortcut": null,
+          "from": "",
+          "to": "",
+          "as_of": "",
+          "party": {
+            "account_id": 20,
+            "person_key": null
+          },
+          "seller_id": null,
+          "zamindar_id": null,
+          "item_id": null,
+          "city_id": null,
+          "adda_id": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner_id": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden_id": null,
+          "garden_view": null,
+          "bikri_id": null,
+          "guests_only": null
+        }
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "count_today": 3,
+  "limit": 20
+}

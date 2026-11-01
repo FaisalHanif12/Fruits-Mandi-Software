@@ -1,0 +1,80 @@
+{
+  "rows": [
+    {
+      "id": 3,
+      "asked_at": "2026-10-10T13:12:00Z",
+      "asked_day": "2026-10-10",
+      "question": "akram ka hisab",
+      "source": "continue",
+      "outcome": "answered",
+      "counted": false,
+      "parent_id": 1,
+      "tools": [
+        {
+          "tool": "party_card",
+          "source": null
+        },
+        {
+          "tool": "report",
+          "source": "R13"
+        }
+      ],
+      "model": "openai/gpt-6-luna",
+      "model_calls": 2,
+      "tokens_in": 17000,
+      "tokens_cached": 15200,
+      "tokens_out": 900,
+      "tokens_reasoning": 300,
+      "can_rerun": true
+    },
+    {
+      "id": 2,
+      "asked_at": "2026-10-10T13:12:00Z",
+      "asked_day": "2026-10-10",
+      "question": "cash_in_hand",
+      "source": "chip",
+      "outcome": "answered",
+      "counted": false,
+      "parent_id": null,
+      "tools": [
+        {
+          "tool": "tiles",
+          "source": null
+        }
+      ],
+      "model": null,
+      "model_calls": null,
+      "tokens_in": null,
+      "tokens_cached": null,
+      "tokens_out": null,
+      "tokens_reasoning": null,
+      "can_rerun": true
+    },
+    {
+      "id": 1,
+      "asked_at": "2026-10-10T13:12:00Z",
+      "asked_day": "2026-10-10",
+      "question": "akram ka hisab",
+      "source": "model",
+      "outcome": "which_one",
+      "counted": true,
+      "parent_id": null,
+      "tools": [
+        {
+          "tool": "find",
+          "source": null
+        }
+      ],
+      "model": "openai/gpt-6-luna",
+      "model_calls": 1,
+      "tokens_in": 9200,
+      "tokens_cached": 7600,
+      "tokens_out": 180,
+      "tokens_reasoning": 60,
+      "can_rerun": true
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 3
+}
