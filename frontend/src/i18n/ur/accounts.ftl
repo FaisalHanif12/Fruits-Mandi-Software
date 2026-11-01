@@ -187,6 +187,10 @@ accounts-section-more = مزید
 # review: pending
 accounts-field-type = کھاتے کی قسم
 
+# PRD 13, FR-13.5, FR-7.29. Shown on the new account form only (plan 45).
+# review: pending
+accounts-field-type-hint = ایک بار آنے والے { -gahak } یا { -beopari } کا کھاتہ نہیں بنتا۔ { -bikri } کی لائن پر { -pukhta-khata } چن کر اس کا نام اور فون لکھیں۔
+
 # review: pending
 accounts-field-control = کنٹرول
 

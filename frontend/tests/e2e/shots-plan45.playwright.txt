@@ -1,0 +1,39 @@
+// Screenshots of plan 45 (PRD 13, FR-13.5, FR-7.29, FR-7.1): the grey note under the type field of
+// the new account form, in both languages at 1366 x 900, and a sideways-overflow check of the form
+// at 1024 x 600 (NFR-USE-15). It is a developer tool: run it with the Vite dev server up
+// (`pnpm --filter frontend dev`), as a snippet for the Playwright tool (a snippet for that tool, not
+// a module, so it is kept as .txt and the linter does not read it). The page is the development page
+// /dev/index?screen=account (the new account form, answered by a stand-in for the backend).
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/frontend/tests/e2e/output/screenshots/plan45';
+  const context = page.context();
+  const report = [];
+  const overflow = (p) =>
+    p.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  for (const [w, h] of [[1366, 900], [1024, 600]]) {
+    for (const l of ['ur', 'en']) {
+      const p = await context.newPage();
+      p.on('dialog', (d) => d.accept().catch(() => undefined));
+      await p.setViewportSize({ width: w, height: h });
+      await p.goto('http://localhost:5173/#/dev/index?screen=account');
+      await p.waitForSelector('form', { timeout: 20000 });
+      await p.waitForTimeout(800);
+      if (l === 'en') {
+        await p.getByRole('button', { name: 'English', exact: true }).first().click();
+        await p.waitForTimeout(800);
+      }
+      const name = `account-new-${l}-${w}x${h}`;
+      await p.screenshot({ path: `${OUT}/${name}.png` });
+      const note = await p.evaluate(() => {
+        const type = document.querySelector('form [role="combobox"]');
+        const id = type && type.getAttribute('aria-describedby');
+        const el = id ? document.getElementById(id) : null;
+        return el ? { text: el.textContent, dir: getComputedStyle(el).direction } : null;
+      });
+      report.push([name, 'overflow', await overflow(p), note]);
+      await p.close({ runBeforeUnload: false }).catch(() => undefined);
+    }
+  }
+  return report;
+};

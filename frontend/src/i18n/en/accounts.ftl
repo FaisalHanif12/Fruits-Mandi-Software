@@ -187,6 +187,10 @@ accounts-section-more = More
 # review: pending
 accounts-field-type = Account type
 
+# PRD 13, FR-13.5, FR-7.29. Shown on the new account form only (plan 45).
+# review: pending
+accounts-field-type-hint = A one-time buyer or seller does not get an account. On the sale line, choose { -pukhta-khata } and type his name and phone.
+
 # review: pending
 accounts-field-control = Control
 

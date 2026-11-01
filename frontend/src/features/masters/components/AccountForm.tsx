@@ -409,6 +409,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
             <FormGrid columns={3}>
               <Field
                 label={<Localized id="accounts-field-type" />}
+                hint={isNew ? <Localized id="accounts-field-type-hint" /> : undefined}
                 error={fieldError(error, 'account_type')}
                 readOnly={!isNew}
               >
