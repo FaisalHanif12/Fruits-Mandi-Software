@@ -5,4 +5,4 @@
  * the result after `=`; it works nothing out (PRD FR-7.43).
  */
 export type WorkingOp =
-  'sum' | 'difference' | 'average' | 'percent_of' | 'change_percent' | 'times';
+  'sum' | 'difference' | 'average' | 'percent_of' | 'change_percent' | 'times' | 'divided_by';

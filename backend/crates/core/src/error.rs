@@ -443,12 +443,12 @@ pub enum ErrorCode {
     /// that seller).
     ErrAdvanceTakenFromLater,
     /// Ask the app (PRD FR-7.81, plan 48): the assistant is switched off, so a question to the
-    /// model, a continuation and the connection test are refused. The quick questions still work.
-    /// No field.
+    /// model and a continuation are refused. The quick questions, reading an answer again and the
+    /// connection test still work. No field.
     ErrAssistantOff,
     /// Ask the app (PRD FR-7.81, FR-7.85, plan 48): no OpenRouter key is saved. Refuses a question,
     /// a continuation and the connection test (no field), and switching the assistant on (field
-    /// `enabled`).
+    /// `enabled`). The quick questions and reading an answer again work with no key.
     ErrAssistantKeyMissing,
     /// Ask the app (plan 48): a question is running already, so a second one is refused and only
     /// one is sent when `Enter` is pressed twice. No field.
@@ -456,11 +456,18 @@ pub enum ErrorCode {
     /// Ask the app (plan 48): the question is not waiting for this choice (it was answered, or it
     /// never asked "کون سا؟" or for the partner code). Field `question_id`.
     ErrAssistantNotWaiting,
+    /// Ask the app (PRD FR-7.75, money agent 9.1): a percent of 0 or a change from 0 has no base.
+    /// Returned to the model by the tool `calculate`; never shown to the Owner. No field.
+    ErrNoBase,
+    /// Ask the app (PRD FR-7.86): an estimate needs at least 3 full months in the books. Returned
+    /// to the model by the tool `estimate` as a "too short" result; never shown to the Owner as an
+    /// error. Value `months`.
+    ErrTooLittleHistory,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 159] = [
+    pub const ALL: [ErrorCode; 161] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -620,6 +627,8 @@ impl ErrorCode {
         ErrorCode::ErrAssistantKeyMissing,
         ErrorCode::ErrAssistantBusy,
         ErrorCode::ErrAssistantNotWaiting,
+        ErrorCode::ErrNoBase,
+        ErrorCode::ErrTooLittleHistory,
     ];
 }
 

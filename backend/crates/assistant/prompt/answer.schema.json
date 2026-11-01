@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "text", "show", "next", "choose", "entry", "nearest"],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["answer", "estimate", "advice", "which_one", "not_found", "need_dates", "need_party", "outside_books", "change_request", "not_understood"]
+    },
+    "text": {"type": "string"},
+    "show": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["result", "as", "rows"],
+        "properties": {
+          "result": {"type": "string"},
+          "as": {"type": "string", "enum": ["table", "chart"]},
+          "rows": {"type": ["integer", "null"]}
+        }
+      }
+    },
+    "next": {"type": "array", "items": {"type": "string"}},
+    "choose": {"type": ["string", "null"]},
+    "entry": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["screen", "party"],
+          "properties": {
+            "screen": {
+              "type": "string",
+              "enum": ["bikri", "wasooli", "adaigi", "peshgi", "kharcha", "udhar_raqam", "alag_khata", "sarmaya", "phal", "general", "account"]
+            },
+            "party": {"type": ["string", "null"]}
+          }
+        },
+        {"type": "null"}
+      ]
+    },
+    "nearest": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "party"],
+          "properties": {"source": {"type": "string"}, "party": {"type": ["string", "null"]}}
+        },
+        {"type": "null"}
+      ]
+    }
+  }
+}

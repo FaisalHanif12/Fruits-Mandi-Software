@@ -1,0 +1,223 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "find",
+      "description": "Find people and things by code, short code, Urdu or English name, tag or city, forgiving small mistakes: up to 5 matches (key, code, name, tag, city, type, ڈوبی رقم mark, a party's checked balance), or the closest names.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "role"],
+        "properties": {
+          "text": {"type": "string", "description": "The word as the Owner wrote it"},
+          "role": {
+            "type": "string",
+            "enum": ["buyer", "seller", "any_party", "pukhta", "money_lent", "separate_khata", "partner", "garden", "trip", "item", "city", "adda", "collector"]
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "party_card",
+      "description": "One party's card now: balance with its side, checked against the closing of his ledger (R13); credit limit and use; oldest open bill and its days; open advance; payable; last entry date; warnings.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["party"],
+        "properties": {"party": {"type": "string", "description": "A find match (r1.matches.0) or a key from a result (a20)"}}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "report",
+      "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today).",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "from", "to", "as_of", "party", "item", "city", "adda", "collector", "partner", "trip", "garden", "bikri", "group_by", "where", "sort", "rows"],
+        "properties": {
+          "id": {"type": "string", "description": "R1 to R38"},
+          "from": {"type": ["string", "null"], "description": "A period result (r2.from) or YYYY-MM-DD"},
+          "to": {"type": ["string", "null"]},
+          "as_of": {"type": ["string", "null"]},
+          "party": {"type": ["string", "null"], "description": "A find match or a key"},
+          "item": {"type": ["string", "null"]},
+          "city": {"type": ["string", "null"]},
+          "adda": {"type": ["string", "null"]},
+          "collector": {"type": ["string", "null"]},
+          "partner": {"type": ["string", "null"]},
+          "trip": {"type": ["string", "null"]},
+          "garden": {"type": ["string", "null"]},
+          "bikri": {"type": ["integer", "null"], "description": "A بکری number, for R1"},
+          "group_by": {"type": ["string", "null"], "enum": ["day", "month", "year", null]},
+          "where": {"anyOf": [{"$ref": "#/$defs/where"}, {"type": "null"}]},
+          "sort": {"anyOf": [{"$ref": "#/$defs/sort"}, {"type": "null"}]},
+          "rows": {"type": ["integer", "null"]}
+        },
+        "$defs": {
+          "where": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "op", "value"],
+            "description": "Keep the rows whose column compares with value; adds matched (count, totals)",
+            "properties": {
+              "column": {"type": "string"},
+              "op": {"type": "string", "enum": ["gt", "gte", "lt", "lte", "eq"]},
+              "value": {
+                "type": "string",
+                "description": "A number from the question (q.n1) or a figure already read (r3.totals.balance)"
+              }
+            }
+          },
+          "sort": {
+            "type": "array",
+            "description": "Up to 2 keys, the first wins; a difference sorts by its signed value (down is below zero)",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["column", "order"],
+              "properties": {"column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "analytics",
+      "description": "An analytics view A to K over a period with its filters; compare adds the earlier period and the difference with its dir to each row and the totals; group_by month gives a monthly series.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["view", "from", "to", "group_by", "item", "seller", "buyer", "city", "adda", "garden", "trip", "goods", "partner", "side", "compare", "sort", "rows"],
+        "properties": {
+          "view": {"type": "string", "enum": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]},
+          "from": {"type": ["string", "null"]},
+          "to": {"type": ["string", "null"]},
+          "group_by": {"type": ["string", "null"], "enum": ["day", "month", "year", null]},
+          "item": {"type": ["string", "null"]},
+          "seller": {"type": ["string", "null"]},
+          "buyer": {"type": ["string", "null"]},
+          "city": {"type": ["string", "null"]},
+          "adda": {"type": ["string", "null"]},
+          "garden": {"type": ["string", "null"]},
+          "trip": {"type": ["string", "null"]},
+          "goods": {"type": ["string", "null"], "enum": ["all", "consigned", "trip", "garden", null]},
+          "partner": {"type": ["string", "null"]},
+          "side": {"type": ["string", "null"], "enum": ["both", "seller", "buyer", null]},
+          "compare": {"type": ["string", "null"], "enum": ["previous", "last_year", null]},
+          "sort": {"anyOf": [{"$ref": "#/$defs/sort"}, {"type": "null"}]},
+          "rows": {"type": ["integer", "null"]}
+        },
+        "$defs": {
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["column", "order"],
+              "properties": {"column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "tiles",
+      "description": "Every dashboard tile now, each checked against its second place where it has one.",
+      "strict": true,
+      "parameters": {"type": "object", "additionalProperties": false, "required": [], "properties": {}}
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "period",
+      "description": "From and to dates and a label for a period word, from today's date.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "month", "day", "from", "to", "n"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_year", "last_year", "up_to_now", "month", "day", "range", "last_n_days", "last_n_months", "last_n_years", "next_n_months"]
+          },
+          "month": {"type": ["integer", "null"], "description": "1 to 12, for kind month"},
+          "day": {"type": ["string", "null"], "description": "DD-MM, for kind day"},
+          "from": {"type": ["string", "null"], "description": "YYYY-MM-DD, for kind range"},
+          "to": {"type": ["string", "null"]},
+          "n": {
+            "type": ["integer", "null"],
+            "description": "For the last_n and next_n kinds: a question number with that unit"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "calculate",
+      "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second) or change_percent (from first to second) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["op", "inputs"],
+        "properties": {
+          "op": {"type": "string", "enum": ["sum", "difference", "average", "percent_of", "change_percent"]},
+          "inputs": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "estimate",
+      "description": "An estimate of the months ahead from the full months in the books, by same pace, same growth and, with 12 months, same season; and the month a target is passed. Says when the history is too short.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["measure", "item", "seller", "buyer", "garden", "trip", "ahead", "target"],
+        "properties": {
+          "measure": {
+            "type": "string",
+            "enum": ["sales", "commission_all", "commission_seller", "commission_buyer", "laga", "shop_expenses", "profit", "receipts", "garden_sales", "trip_sales"]
+          },
+          "item": {"type": ["string", "null"]},
+          "seller": {"type": ["string", "null"]},
+          "buyer": {"type": ["string", "null"]},
+          "garden": {"type": ["string", "null"]},
+          "trip": {"type": ["string", "null"]},
+          "ahead": {
+            "type": "integer",
+            "description": "Months ahead, 1 to 12: a question number with unit months; with none, 6, or 12 for a target"
+          },
+          "target": {"type": ["string", "null"], "description": "A number from the question (q.n1)"}
+        }
+      }
+    }
+  }
+]

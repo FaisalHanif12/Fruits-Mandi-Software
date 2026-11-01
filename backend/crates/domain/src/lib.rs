@@ -13,6 +13,8 @@ pub mod bikri;
 pub mod capital;
 pub mod cash;
 pub mod expenses;
+pub mod figures;
+pub mod forecast;
 pub mod fruit;
 pub mod general;
 pub mod khata;

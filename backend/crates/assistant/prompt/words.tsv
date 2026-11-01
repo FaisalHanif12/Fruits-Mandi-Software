@@ -1,0 +1,164 @@
+# kind	lang	word
+number	ur	ایک
+number	ur	دو
+number	ur	تین
+number	ur	چار
+number	ur	پانچ
+number	ur	چھ
+number	ur	چھے
+number	ur	سات
+number	ur	آٹھ
+number	ur	نو
+number	ur	دس
+number	ur	گیارہ
+number	ur	بارہ
+number	ur	تیرہ
+number	ur	چودہ
+number	ur	پندرہ
+number	ur	سولہ
+number	ur	سترہ
+number	ur	اٹھارہ
+number	ur	انیس
+number	ur	بیس
+number	ur	اکیس
+number	ur	بائیس
+number	ur	تئیس
+number	ur	چوبیس
+number	ur	پچیس
+number	ur	تیس
+number	ur	چالیس
+number	ur	پچاس
+number	ur	ساٹھ
+number	ur	ستر
+number	ur	نوے
+number	ur	سو
+number	ur	سینکڑہ
+number	ur	ہزار
+number	ur	لاکھ
+number	ur	لاکھوں
+number	ur	کروڑ
+number	ur	ارب
+number	ur	کھرب
+number	ur	آدھا
+number	ur	آدھی
+number	ur	آدھے
+number	ur	ڈیڑھ
+number	ur	ڈھائی
+number	ur	پونے
+number	ur	پونا
+number	ur	دگنا
+number	ur	دوگنا
+number	ur	تگنا
+number	ur	تہائی
+number	ur	چوتھائی
+number	ur	درجن
+number	ur	تینوں
+number	ur	چاروں
+number	ur	پانچوں
+number	en	one
+number	en	two
+number	en	three
+number	en	four
+number	en	five
+number	en	six
+number	en	seven
+number	en	eight
+number	en	nine
+number	en	ten
+number	en	eleven
+number	en	twelve
+number	en	thirteen
+number	en	fourteen
+number	en	fifteen
+number	en	sixteen
+number	en	seventeen
+number	en	eighteen
+number	en	nineteen
+number	en	twenty
+number	en	thirty
+number	en	forty
+number	en	fifty
+number	en	sixty
+number	en	seventy
+number	en	eighty
+number	en	ninety
+number	en	hundred
+number	en	hundreds
+number	en	thousand
+number	en	thousands
+number	en	lakh
+number	en	lakhs
+number	en	lac
+number	en	crore
+number	en	crores
+number	en	million
+number	en	millions
+number	en	billion
+number	en	half
+number	en	quarter
+number	en	double
+number	en	twice
+number	en	triple
+number	en	dozen
+month	ur	جنوری
+month	ur	فروری
+month	ur	مارچ
+month	ur	اپریل
+month	ur	مئی
+month	ur	جون
+month	ur	جولائی
+month	ur	اگست
+month	ur	ستمبر
+month	ur	اکتوبر
+month	ur	نومبر
+month	ur	دسمبر
+month	en	January
+month	en	February
+month	en	March
+month	en	April
+month	en	May
+month	en	June
+month	en	July
+month	en	August
+month	en	September
+month	en	October
+month	en	November
+month	en	December
+month	en	Jan
+month	en	Feb
+month	en	Mar
+month	en	Apr
+month	en	Jun
+month	en	Jul
+month	en	Aug
+month	en	Sep
+month	en	Sept
+month	en	Oct
+month	en	Nov
+month	en	Dec
+never	ur	پکا کھاتہ
+never	ur	ووچر
+never	ur	ڈیٹا
+never	ur	سسٹم
+never	ur	ٹول
+never	ur	ماڈل
+never	en	Pakka Khata
+never	en	data
+never	en	system
+never	en	tool
+never	en	model
+never	en	transaction
+never	en	JSON
+owes_shop	ur	کے ذمے
+owes_shop	ur	کے ذمہ
+owes_shop	ur	سے لینے
+owes_shop	ur	سے لینا
+owes_shop	en	owes the shop
+owes_shop	en	owes us
+owes_shop	en	due from
+shop_owes	ur	کو دینے
+shop_owes	ur	کو دینا
+shop_owes	ur	کی ادائیگی باقی
+shop_owes	en	the shop owes
+shop_owes	en	we owe
+shop_owes	en	payable to

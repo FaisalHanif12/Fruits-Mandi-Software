@@ -3228,6 +3228,7 @@ version = "0.1.0"
 dependencies = [
  "mandi-reports",
  "mandi-services",
+ "proptest",
  "serde",
  "serde_json",
  "tempfile",

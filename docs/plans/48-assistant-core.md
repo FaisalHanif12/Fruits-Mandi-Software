@@ -86,4 +86,21 @@ D6-A1 to D6-A12, D6-A18 and D6-A19 (backend parts), D6-A5 clippy evidence, D6-A4
 - Fixtures: `backend/crates/assistant/tests/fixtures/` (60 files from `tests/contract_fixtures.rs`, compare mode), copied by `frontend`.
 - Existing files touched, with the lead's acceptance: appends in `backend/Cargo.toml`, `Cargo.lock`, `app/Cargo.toml`, `app/build.rs`, the capabilities, `commands/mod.rs`, `app/src/lib.rs`, `app/tests/{bindings,ipc_auth,robustness_security}.rs` (table rows). Not pure appends, accepted: `app/tests/workspace_rules.rs` (crate count 7 to 8 and the new crate's deps), `app/tests/ipc_auth.rs` (the no-delete check lets `assistant_key_remove` through, with a comment: it removes a key from Credential Manager, never a record), `crates/core/src/error.rs` (4 variants).
 - Checks (backend): fmt clean; clippy -p mandi-assistant -p mandi-app -p mandi-core clean; mandi-assistant 3 passed; app ipc_auth 19, workspace_rules 6, bindings 6; robustness_security 3 named tests; core error 6; gen:types and typecheck clean.
+- After T1: every source filter that names a record carries the whole record; `WorkingOp::divided_by` added; fixtures and bindings regenerated.
+
+## 9. T2 as built (02-11-2026), accepted
+
+- `domain::figures` (calculator and `question_numbers`) and `domain::forecast` (same pace, same growth, same season, targets), pure with checked maths; `services::figures` and `services::forecast`; `core::money::hundredths` appended (the "% of" formula, proved equal to `reports::analytics::share_hundredths` over 10,000 cases); `ERR_NO_BASE`, `ERR_TOO_LITTLE_HISTORY` (model-facing only). 53 domain tests (17 property tests), 26 doc tests.
+- Money agent: before the build, then FAIL (2 must-fix in `question_numbers`, 3 should-fix), fixed with tests, re-verified **PASS**.
+- Worked numbers as tests: E2E-59 288,000 and 369,000; target 3,00,000 April 2027 (pace) and February 2027 (growth, exactly 300,000); E2E-61 21,564 بنام; 3,928 of 5,448 = 72.10%; 48,000 to 51,000 = 6.25% up.
+- Value kinds for `calculate` (T3 must keep this rule): a value with a `side` is a Balance (بنام positive, جمع negative); a question number with unit amount is Money; months, days, years are Count; plain takes the kind of the other inputs; percent is never an input. A sum or average of balances is signed (net); a difference, percent-of or change of balances works on sizes and needs the same side. A difference is shown as its size with the direction word (48,000 to 51,000 shows "3,000 زیادہ"; the reverse "3,000 کم").
+- Deviation accepted: `services` cannot depend on `reports` (workspace rule), so the `estimate` tool reads the monthly series through `mandi_reports::analytics` (the screen's own functions, Q3) and passes it to `services::forecast::estimate`. Too little history is a result (`TooShort { full_months }`), not an error.
+- Lead decisions on backend's questions:
+  - (a), (b) Floors: the PRD is the master. Built as FR-7.86 says: only same growth is floored at 0; same pace and same season follow the books. Code Standards M14 and money agent 9.1 say "no projected month below 0" for all, and the floor can hide a projected loss on the profit measure. Both go to Umar (open questions); no doc is changed in this run.
+  - (c) "thousand" and "million" are not read (FR-7.86 and D6 5.3 name lakh, hazar, crore). Open question for Umar.
+  - (d) "3 lakh 50 hazar" reads as one amount, 3,50,000. Accepted [A]; shown to Umar.
+  - (e) Months: the first month with a posting counts as a full month (E2E-59: August and September give "only 2 full months"); empty months inside the span are 0; the current month is never used.
+  - (f) The unit words (mahine, din, saal ...) stay constants in `figures.rs`, because `words.tsv` is a verbatim prompt file with no unit kind and may not be edited. "10,000" alone is plain (D6 5.3). `percent`, `fisad`, `فیصد` after a number read as percent [A]. All three go to Umar's list.
+  - (g) `share_hundredths` is NOT changed (only add); the equality test keeps the two equal.
+
 - Frontend (plan 49 part a), accepted additive touches outside the D6 list: `styles/tokens.css` (dock heights), `styles/globals.css` (slide), `AnalyticsPage.tsx` (reads the address), `tests/unit/keyboard-registry.test.tsx` (rows for `F1`, `Ctrl+↑`, `Ctrl+↓`, now PRD 7.3 keys).

@@ -326,9 +326,57 @@ pub fn avg_rate(total: Paisa, qty: Qty) -> Result<Paisa, MoneyError> {
     round_to_rupee(i128::from(total.0), i128::from(qty.0))
 }
 
+/// A part as a percent of a base, in hundredths of a percent, half up on the magnitudes (display
+/// only, never posted): `(|top| × 10,000 + |bottom| ÷ 2) ÷ |bottom|`. 12.50% is 1,250; 100% is
+/// 10,000; the result can be over 100%. It is the "% of all" formula of the analytics views
+/// (PRD 18.2, money agent Section 9) and the percent of the question panel's calculator (PRD
+/// FR-7.75, Code Standards M14), in one place (Code Standards G6). The two numbers are in the same
+/// unit (paisa and paisa, or a count and a count), so the unit cancels. A base of 0 is
+/// `DivisionByZero`.
+///
+/// Example (PRD 18.4): 3,928 of 5,448 rupees, in paisa, is `hundredths(392_800, 544_800)`, which
+/// is 7,210 (72.10%).
+pub fn hundredths(top: i128, bottom: i128) -> Result<i64, MoneyError> {
+    let top = top.checked_abs().ok_or(MoneyError::Overflow)?;
+    let bottom = bottom.checked_abs().ok_or(MoneyError::Overflow)?;
+    if bottom == 0 {
+        return Err(MoneyError::DivisionByZero);
+    }
+    let half = bottom.checked_div(2).ok_or(MoneyError::Overflow)?;
+    let scaled = top
+        .checked_mul(10_000)
+        .and_then(|scaled| scaled.checked_add(half))
+        .and_then(|scaled| scaled.checked_div(bottom))
+        .ok_or(MoneyError::Overflow)?;
+    i64::try_from(scaled).map_err(|_| MoneyError::Overflow)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hundredths_is_the_percent_of_all_formula() {
+        // PRD 18.4: 3,928 of 5,448 = 72.10%; 1 of 16 = 6.25%; 1 of 3 = 33.33%; half up.
+        assert_eq!(hundredths(392_800, 544_800), Ok(7_210));
+        assert_eq!(hundredths(1, 16), Ok(625));
+        assert_eq!(hundredths(1, 3), Ok(3_333));
+        assert_eq!(hundredths(5, 8), Ok(6_250));
+        assert_eq!(hundredths(1, 8), Ok(1_250));
+        assert_eq!(hundredths(0, 5), Ok(0));
+        assert_eq!(hundredths(7, 7), Ok(10_000));
+        // Signs are ignored: the caller decides what a sign means.
+        assert_eq!(hundredths(-1, 16), Ok(625));
+        assert_eq!(hundredths(1, -16), Ok(625));
+        assert_eq!(hundredths(3, 0), Err(MoneyError::DivisionByZero));
+        assert_eq!(hundredths(i128::MAX, 1), Err(MoneyError::Overflow));
+        assert_eq!(hundredths(i128::MIN, 1), Err(MoneyError::Overflow));
+        // A tiny base can give a result that does not fit an i64.
+        assert_eq!(
+            hundredths(i128::from(i64::MAX), 1),
+            Err(MoneyError::Overflow)
+        );
+    }
 
     #[test]
     fn round_to_rupee_rejects_bad_inputs() {
