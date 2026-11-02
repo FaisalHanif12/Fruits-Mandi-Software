@@ -40,7 +40,8 @@ pub enum AskOutcome {
     OutsideBooks,
     /// The Owner asked for a change; the assistant only tells (`entry_route`).
     ChangeRefused,
-    /// The model's reply could not be used.
+    /// The model's reply could not be used, or it said it could not tell what was asked, or a limit
+    /// stopped the question (then `stop_reason` says which).
     NotUnderstood,
     /// The answer failed its checks twice: the panel shows the tool results as plain tables.
     ChecksFailed,
@@ -92,6 +93,30 @@ pub struct AssistantFailure {
     pub http_status: Option<i64>,
 }
 
+/// Why a question was stopped before it was answered (plan 51 B2). Only with outcome
+/// `not_understood`. The panel then says the books could not be read in the time allowed and asks
+/// the Owner to ask in smaller parts, instead of "I did not understand".
+///
+/// Example: the model used its 4 calls on tool refusals: `stop_reason` is `calls`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum StopReason {
+    /// The question used its model calls (4, and the one rewrite).
+    Calls,
+    /// The question used its token limit (input or output).
+    Tokens,
+}
+
+impl StopReason {
+    /// The word the question log keeps in `finish_reason`.
+    pub fn word(self) -> &'static str {
+        match self {
+            StopReason::Calls => "call_limit",
+            StopReason::Tokens => "token_limit",
+        }
+    }
+}
+
 /// What every ask command gives back (plan 48 Section 4).
 ///
 /// Which fields are set for each outcome:
@@ -101,6 +126,7 @@ pub struct AssistantFailure {
 /// | answered, estimate, advice | set | empty | null, or set when a change was also asked | null |
 /// | which_one, not_found | null | the matches | null | null |
 /// | need_dates, need_party, not_understood | null | empty | null | null |
+/// | not_understood with `stop_reason` | null, or the plain tables of the results that were read | empty | null | null |
 /// | outside_books | set (the nearest source) or null | empty | null | null |
 /// | change_refused | set or null | empty | set | null |
 /// | checks_failed, records_differ | set (tables, sources, differences) | empty | null | null |
@@ -129,6 +155,9 @@ pub struct AskReply {
     pub locked: bool,
     /// For `error` and `offline`: why.
     pub failure: Option<AssistantFailure>,
+    /// For `not_understood` after a limit: which one (plan 51 B2). Null for every other reply,
+    /// including a `not_understood` where the model could not tell what was asked.
+    pub stop_reason: Option<StopReason>,
     /// Today's counted questions, after this one (PRD FR-7.81). The panel shows "آج 5 / 20".
     #[ts(type = "number")]
     pub count_today: i64,

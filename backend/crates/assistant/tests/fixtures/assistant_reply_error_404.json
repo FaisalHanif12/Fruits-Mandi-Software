@@ -11,6 +11,7 @@
     "kind": "no_endpoint",
     "http_status": 404
   },
+  "stop_reason": null,
   "count_today": 3,
   "limit": 20
 }

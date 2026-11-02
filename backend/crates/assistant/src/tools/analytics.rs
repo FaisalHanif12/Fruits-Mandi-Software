@@ -14,7 +14,7 @@
 //! Example (worked day): view A for October, rows `i40` (کیلا) and `i41` (سیب), `totals.total_comm`
 //! 5,448.
 
-use chrono::{Datelike, Duration, Months, NaiveDate};
+use chrono::{Datelike, NaiveDate};
 use mandi_reports::analytics::{
     AnalyticsChartKind, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,
     AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey, AnalyticsPage, AnalyticsRunInput,
@@ -28,6 +28,7 @@ use serde_json::Value as Json;
 use super::cells::{cell_node, compare_cells, is_left_out};
 use super::records::named;
 use super::report::{DEFAULT_ROWS, MAX_ROWS, OrderWord, SortKey, reports_stop};
+use super::teach::{column_words, views_with};
 use super::{Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, view_rule};
 use crate::answer::{
     AnswerChart, AnswerMonth, AnswerRow, AnswerSource, AnswerTable, ChartSeries, ChartSeriesKind,
@@ -97,8 +98,9 @@ fn takes_or(
         Err(bad(
             "ERR_OUT_OF_RANGE",
             field,
-            "this view does not have that filter",
-        ))
+            "this view does not have that filter; the views that do are listed",
+        )
+        .allowed(views_with(kind)))
     }
 }
 
@@ -118,9 +120,12 @@ fn build_filters(
     let mut filters = AnalyticsFilters::default();
     let mut source = SourceAnalyticsFilters::default();
     let date = |field: &str, text: &Option<String>| -> Result<Option<String>, ToolError> {
-        text.as_deref()
+        // A period field with no date (the `from` of `up_to_now`) leaves the date open.
+        Ok(text
+            .as_deref()
             .map(|t| date_arg(env, state, t, field))
-            .transpose()
+            .transpose()?
+            .flatten())
     };
     if let Some(from) = date("from", &parsed.from)? {
         takes_or(takes, K::Period, "from")?;
@@ -239,6 +244,21 @@ fn build_filters(
             _ => return Err(bad("ERR_OUT_OF_RANGE", "compare", "previous or last_year")),
         };
         takes_or(takes, K::Compare, "compare")?;
+        // A comparison needs a closed period (PRD 18.1): the earlier period is as long as this one.
+        if filters.from.is_empty() || filters.to.is_empty() {
+            let missing = if filters.from.is_empty() {
+                "from"
+            } else {
+                "to"
+            };
+            return Err(bad(
+                "ERR_REQUIRED",
+                missing,
+                "compare needs a period with both dates, such as this_year, last_month or \
+                 last_n_months; up_to_now has no start date. Use a closed period, or leave \
+                 compare out",
+            ));
+        }
         filters.compare = compare;
         source.compare = compare;
     }
@@ -307,7 +327,14 @@ fn engine_key(
         .enumerate()
         .find(|(i, c)| shown_key(*i, c) == shown && !is_left_out(c))
         .map(|(_, c)| c.key.clone())
-        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", field, "no such column in this view"))
+        .ok_or_else(|| {
+            bad(
+                "ERR_OUT_OF_RANGE",
+                field,
+                "no such column in this view; use one of the listed words",
+            )
+            .allowed(column_words(columns, true, Some(compared_figure(view))))
+        })
 }
 
 /// The key of a row: its record, else its month or day, else its place.
@@ -346,42 +373,21 @@ fn key_of(key: &Option<AnalyticsKey>, row: &Row, place: usize, used: &mut Vec<St
     candidate
 }
 
-/// The range of the compared period, from the dates of the run (PRD 18.1 "compare").
-fn compared_range(
-    from: &str,
-    to: &str,
-    compare: AnalyticsCompare,
-) -> Option<(NaiveDate, NaiveDate)> {
-    let from = NaiveDate::parse_from_str(from, "%Y-%m-%d").ok()?;
-    let to = NaiveDate::parse_from_str(to, "%Y-%m-%d").ok()?;
-    match compare {
-        AnalyticsCompare::Off => None,
-        AnalyticsCompare::LastYear => Some((
-            from.checked_sub_months(Months::new(12))?,
-            to.checked_sub_months(Months::new(12))?,
-        )),
-        AnalyticsCompare::Previous => {
-            let days = to.signed_duration_since(from).num_days();
-            let prev_to = from.pred_opt()?;
-            let prev_from = prev_to.checked_sub_signed(Duration::days(days))?;
-            Some((prev_from, prev_to))
-        }
-    }
-}
-
 /// The compared period as the model reads it: its dates and, when it is exactly one month, the
 /// month.
 fn compare_node(
     page: &AnalyticsPage,
-    compare: AnalyticsCompare,
     totals_earlier: Option<Node>,
     totals_diff: Option<Node>,
     figure: &str,
 ) -> Node {
-    let (Some(from), Some(to)) = (&page.filters.from, &page.filters.to) else {
+    // The compared dates are the engine's own, the ones its `earlier` figures were worked out
+    // for: never a second calculation of the same window (money review, plan 51 B2).
+    let (Some(from), Some(to)) = (&page.filters.compare_from, &page.filters.compare_to) else {
         return Node::Null;
     };
-    let Some((cf, ct)) = compared_range(from, to, compare) else {
+    let parse = |text: &str| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok();
+    let (Some(cf), Some(ct)) = (parse(from), parse(to)) else {
         return Node::Null;
     };
     let mut fields = vec![
@@ -708,7 +714,6 @@ fn assemble(
     let compare = compare_at.map_or(Node::Null, |(earlier, change)| {
         compare_node(
             page,
-            built.compare,
             page.totals.get(earlier).map(|c| cell_node(env, c, false)),
             page.totals.get(change).map(|c| cell_node(env, c, true)),
             figure,

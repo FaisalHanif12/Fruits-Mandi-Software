@@ -83,8 +83,18 @@ pub struct QuestionSpec {
     pub tokens_out: Option<i64>,
     /// Of those, reasoning.
     pub tokens_reasoning: Option<i64>,
-    /// The last `finish_reason`.
+    /// The last `finish_reason`, or the limit that stopped the question (`call_limit`,
+    /// `token_limit`).
     pub finish_reason: Option<String>,
+    /// Milliseconds this run took, from the start to the reply (plan 51 B2).
+    pub total_millis: Option<i64>,
+    /// Of those, the time spent waiting for the model.
+    pub model_millis: Option<i64>,
+    /// Of those, the time of the app's own work in its tools.
+    pub tool_millis: Option<i64>,
+    /// Each model call of this run as JSON: its time, its tokens and its tools (names and times
+    /// only). Null for a chip.
+    pub calls_json: Option<String>,
 }
 
 /// On or off and the model. Off, with no model, before the Owner sets them.
@@ -298,6 +308,10 @@ pub fn record_question(
         tokens_out: spec.tokens_out,
         tokens_reasoning: spec.tokens_reasoning,
         finish_reason: spec.finish_reason.as_deref(),
+        total_millis: spec.total_millis,
+        model_millis: spec.model_millis,
+        tool_millis: spec.tool_millis,
+        calls_json: spec.calls_json.as_deref(),
     };
     ctx.db.write(|tx| Ok(log::insert(tx, &row)?))
 }

@@ -1395,7 +1395,7 @@ fn migration_16_and_the_reads_on_a_copy_of_the_owners_data() {
     let db = env.ctx.db();
     db.read(|conn| -> mandi_db::rusqlite::Result<()> {
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        assert_eq!(version, 16);
+        assert_eq!(version, 17);
         let integrity: String = conn.query_row("PRAGMA integrity_check", [], |r| r.get(0))?;
         assert_eq!(integrity, "ok");
         // Migration 15 (not 16) added the empty table of the question log.

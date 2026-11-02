@@ -41,11 +41,11 @@ use serde_json::{Value, json};
 use crate::answer::{Answer, AnswerOption, AnswerSource, EntryRoute, EntryScreen};
 use crate::ask::{
     AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantPickInput,
-    AssistantRerunInput, FailureKind, PickChoice,
+    AssistantRerunInput, FailureKind, PickChoice, StopReason,
 };
 use crate::check::{Check, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
-use crate::conversation::{Conversation, Turn, Wait, Waiting};
+use crate::conversation::{CallTiming, Conversation, Timing, ToolTiming, Turn, Wait, Waiting};
 use crate::fill;
 use crate::limits::{
     CALL_TIMEOUT_SECS, DAILY_LIMIT, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
@@ -85,6 +85,8 @@ pub(crate) struct Finished {
     pub entry_route: Option<EntryRoute>,
     pub locked: bool,
     pub failure: Option<AssistantFailure>,
+    /// For `not_understood` after a limit: which one.
+    pub stop_reason: Option<StopReason>,
     /// The answer as the model wrote it, for the log.
     pub model_text: Option<String>,
     pub wait: Option<Wait>,
@@ -101,9 +103,21 @@ impl Finished {
             entry_route: None,
             locked: false,
             failure: None,
+            stop_reason: None,
             model_text: None,
             wait: None,
             finish_reason: None,
+        }
+    }
+
+    /// A limit stopped the question. The reason goes to the log (`finish_reason`) and to the panel
+    /// (`stop_reason`); the plain tables of the results that were read, if any, are shown.
+    pub(crate) fn stopped(reason: StopReason, tables: Option<Answer>) -> Self {
+        Self {
+            stop_reason: Some(reason),
+            answer: tables,
+            finish_reason: Some(reason.word().to_owned()),
+            ..Self::plain(AskOutcome::NotUnderstood)
         }
     }
 
@@ -339,8 +353,19 @@ impl<'a> Run<'a> {
             let env = self.env(&numbers);
             // The step line goes out as the tool starts, so a slow report shows what it is doing.
             (self.d.emit)(step_of(&call, &env, &state));
-            match tools::call(&env, &state, &call.name, &call.arguments) {
+            let began = Instant::now();
+            let outcome = tools::call(&env, &state, &call.name, &call.arguments);
+            let millis = millis_since(began);
+            let timed = |ok: bool| ToolTiming {
+                name: call.name.clone(),
+                millis,
+                ok,
+            };
+            match outcome {
                 Ok(draft) => {
+                    if let Some(last) = turn.timing.calls.last_mut() {
+                        last.tools.push(timed(true));
+                    }
                     turn.counters.tool_calls = turn.counters.tool_calls.saturating_add(1);
                     let id = state.next_id(prefix_of(draft.tool));
                     let mut result = ToolResult {
@@ -367,6 +392,9 @@ impl<'a> Run<'a> {
                         .push(tool_message(&call.id, content, Some(&id)));
                 }
                 Err(Stop::Error(error)) => {
+                    if let Some(last) = turn.timing.calls.last_mut() {
+                        last.tools.push(timed(false));
+                    }
                     turn.counters.tool_calls = turn.counters.tool_calls.saturating_add(1);
                     // A refused call is in the log too, with its code (it has no result id).
                     turn.tool_log.push(json!({
@@ -387,6 +415,16 @@ impl<'a> Run<'a> {
         }
         conv.results = state.results;
         paused
+    }
+
+    /// The results this question read as plain tables, or none when it read no table.
+    fn tables_read(&self, conv: &Conversation) -> Option<Answer> {
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        let answer = fill::plain_tables(&state, &self.read_at());
+        (!answer.tables.is_empty()).then_some(answer)
     }
 
     /// One model call, within the limits of the question.
@@ -413,7 +451,14 @@ impl<'a> Run<'a> {
             || out_used >= MAX_OUTPUT_TOKENS
             || in_used >= MAX_INPUT_TOKENS
         {
-            return Err(Box::new(Finished::plain(AskOutcome::NotUnderstood)));
+            // Not "I did not understand": the books could not be read within the limits. What was
+            // read before the stop is shown as plain tables (plan 51 B2).
+            let reason = if over_calls || over_rewrite {
+                StopReason::Calls
+            } else {
+                StopReason::Tokens
+            };
+            return Err(Box::new(Finished::stopped(reason, self.tables_read(conv))));
         }
         let Ok(Some(key)) = self.d.runtime.keys().get() else {
             return Err(Box::new(Finished::failed(CallError::new(
@@ -432,11 +477,36 @@ impl<'a> Run<'a> {
             max_completion_tokens,
         });
         let timeout = Duration::from_secs(CALL_TIMEOUT_SECS).min(total.saturating_sub(elapsed));
-        let reply = self
-            .d
-            .client
-            .call(&key, &body, timeout)
-            .map_err(|e| Box::new(Finished::failed(e)))?;
+        let sent = Instant::now();
+        let result = self.d.client.call(&key, &body, timeout);
+        let model_millis = millis_since(sent);
+        let reply = match result {
+            Ok(reply) => reply,
+            Err(e) => {
+                // The time of a call that failed is the most useful one: a timeout shows here.
+                turn.timing.calls.push(CallTiming {
+                    model_millis,
+                    tokens_in: 0,
+                    tokens_cached: 0,
+                    tokens_out: 0,
+                    tokens_reasoning: 0,
+                    rewrite,
+                    failed: true,
+                    tools: Vec::new(),
+                });
+                return Err(Box::new(Finished::failed(e)));
+            }
+        };
+        turn.timing.calls.push(CallTiming {
+            model_millis,
+            tokens_in: reply.usage.prompt_tokens,
+            tokens_cached: reply.usage.cached_tokens,
+            tokens_out: reply.usage.completion_tokens,
+            tokens_reasoning: reply.usage.reasoning_tokens,
+            rewrite,
+            failed: false,
+            tools: Vec::new(),
+        });
         if rewrite {
             turn.counters.rewrites = turn.counters.rewrites.saturating_add(1);
         } else {
@@ -728,6 +798,15 @@ impl<'a> Run<'a> {
             tokens_reasoning: (source != Source::Chip && source != Source::Rerun)
                 .then_some(turn.counters.tokens_reasoning),
             finish_reason: f.finish_reason.clone(),
+            // The time of this run: a question that waited for the partner code and went on is
+            // two runs and two rows, each with its own time (plan 51 B2).
+            total_millis: Some(millis_since(self.started)),
+            model_millis: (source != Source::Chip && source != Source::Rerun)
+                .then(|| turn.timing.model_millis()),
+            tool_millis: (source != Source::Chip && source != Source::Rerun)
+                .then(|| turn.timing.tool_millis()),
+            calls_json: (source != Source::Chip && source != Source::Rerun)
+                .then(|| turn.timing.to_json().to_string()),
         };
         let question_id = assistant::record_question(self.d.ctx, self.d.actor, &spec)?;
         conv.waiting = f.wait.clone().map(|wait| Waiting { question_id, wait });
@@ -744,10 +823,16 @@ impl<'a> Run<'a> {
             entry_route: f.entry_route,
             locked: f.locked,
             failure: f.failure,
+            stop_reason: f.stop_reason,
             count_today: assistant::count_today(self.d.ctx)?,
             limit: DAILY_LIMIT,
         })
     }
+}
+
+/// Whole milliseconds since a moment, for the log (plan 51 B2).
+fn millis_since(moment: Instant) -> i64 {
+    i64::try_from(moment.elapsed().as_millis()).unwrap_or(i64::MAX)
 }
 
 /// The model's text as JSON for the log: the log column holds valid JSON only, so a reply that is
@@ -1005,6 +1090,8 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
         }
     };
     conv.waiting = None;
+    // This run has its own time; the counters of the question go on from the first run.
+    turn.timing = Timing::default();
     // A new moment: what this question read before is read again on it, so all of it is one.
     run.refresh(&mut conv, &turn);
     let finished = run.drive(&mut conv, &mut turn, pending);

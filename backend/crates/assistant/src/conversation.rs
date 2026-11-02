@@ -32,6 +32,89 @@ pub struct Counters {
     pub tokens_reasoning: i64,
 }
 
+/// One tool call of a model call, with the time it took (plan 51 B2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ToolTiming {
+    /// The tool's name (a fixed word, never a figure or a name).
+    pub name: String,
+    /// Milliseconds the app's own work took.
+    pub millis: i64,
+    /// False when the tool refused its input.
+    pub ok: bool,
+}
+
+/// One model call with the time it took and the tools it asked for (plan 51 B2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallTiming {
+    /// Milliseconds spent waiting for the model: the call, from sending to the whole reply.
+    pub model_millis: i64,
+    /// Input tokens, cached ones included.
+    pub tokens_in: i64,
+    /// Of those, cached.
+    pub tokens_cached: i64,
+    /// Output tokens, reasoning included.
+    pub tokens_out: i64,
+    /// Of those, reasoning.
+    pub tokens_reasoning: i64,
+    /// True for the one rewrite after a failed check.
+    pub rewrite: bool,
+    /// True when the call itself failed (no internet, a timeout, a bad key ...): its time is how
+    /// long the app waited before it gave up.
+    pub failed: bool,
+    /// The tools this call asked for, in order.
+    pub tools: Vec<ToolTiming>,
+}
+
+/// Where the time of one run of a question went. A question that waits for the partner code and
+/// goes on is two runs, each with its own timing and its own row of the log.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Timing {
+    /// One entry for each model call of this run, in order.
+    pub calls: Vec<CallTiming>,
+}
+
+impl Timing {
+    /// Milliseconds waiting for the model.
+    pub fn model_millis(&self) -> i64 {
+        self.calls
+            .iter()
+            .fold(0_i64, |sum, c| sum.saturating_add(c.model_millis))
+    }
+
+    /// Milliseconds of the app's own work in its tools.
+    pub fn tool_millis(&self) -> i64 {
+        self.calls
+            .iter()
+            .flat_map(|c| c.tools.iter())
+            .fold(0_i64, |sum, t| sum.saturating_add(t.millis))
+    }
+
+    /// The calls as the JSON the log keeps: counts and times only, no name, no figure.
+    pub fn to_json(&self) -> serde_json::Value {
+        let calls: Vec<serde_json::Value> = self
+            .calls
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                serde_json::json!({
+                    "n": i.saturating_add(1),
+                    "model_ms": c.model_millis,
+                    "tokens_in": c.tokens_in,
+                    "tokens_cached": c.tokens_cached,
+                    "tokens_out": c.tokens_out,
+                    "tokens_reasoning": c.tokens_reasoning,
+                    "rewrite": c.rewrite,
+                    "failed": c.failed,
+                    "tools": c.tools.iter()
+                        .map(|t| serde_json::json!({"name": t.name, "ms": t.millis, "ok": t.ok}))
+                        .collect::<Vec<_>>(),
+                })
+            })
+            .collect();
+        serde_json::Value::Array(calls)
+    }
+}
+
 /// One question of the conversation.
 #[derive(Debug, Clone, Default)]
 pub struct Turn {
@@ -47,6 +130,8 @@ pub struct Turn {
     pub tool_log: Vec<Value>,
     /// What it used so far.
     pub counters: Counters,
+    /// Where the time of this run went (plan 51 B2).
+    pub timing: Timing,
 }
 
 /// What a waiting question waits for.

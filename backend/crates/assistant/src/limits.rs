@@ -17,8 +17,10 @@ pub const MAX_OUTPUT_TOKENS: u32 = 3_000;
 pub const MAX_CALL_OUTPUT_TOKENS: u32 = 1_500;
 /// Input tokens of one question, cached tokens included.
 pub const MAX_INPUT_TOKENS: u32 = 60_000;
-/// The fixed part of a request (tools, instructions, answer schema), in tokens.
-pub const MAX_PREFIX_TOKENS: u32 = 8_000;
+/// The fixed part of a request (tools, instructions, answer schema), in tokens. 9,000 since
+/// D6-system-prompt v1.1 (Umar, 02-11-2026): the tools list the sort and where words of every
+/// report and view.
+pub const MAX_PREFIX_TOKENS: u32 = 9_000;
 /// Seconds one model call may take.
 pub const CALL_TIMEOUT_SECS: u64 = 15;
 /// Seconds one whole question may take.

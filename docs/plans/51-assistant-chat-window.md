@@ -112,3 +112,10 @@ As built so far:
   - Tests: teach 11 and loop_teach 2. Umar's question now ends as advice in the recorded loop.
   - R20 single-key sort by name now works.
   - The assistant suite: 0 failed. fmt and clippy are clean.
+- P51-B2 as built (02-11-2026), accepted:
+  - Fixes 1 to 4 and 6 are in, and step c: tools.json equals the D6-system-prompt v1.1 block (P7); MAX_PREFIX_TOKENS is 9,000; P1 measures 8,811; the new P8 passes and fails on broken drafts.
+  - New tests: teach 12, playbook 16, loop_teach 3, loop_stop 4, loop_timing 3, prompt_columns 1. golden_questions 24 is unchanged, and golden_day 94 passes.
+  - Migration 0017 adds timing; it ran on a copy of Umar's data (16 to 17, rows unchanged, integrity ok).
+  - Bugs fixed on the way: `where` on an empty report column, and a single-key sort by a shown word.
+  - Not changed: chained calls, an alerts tool, low reasoning (Umar).
+  - Gate follow-up: services/tests/robustness_balance.rs (robustness's) has 3 tests that failed before this work. They pin LATEST_VERSION 10, while the schema is now at 17, and need rewriting for migrations 11 to 17.

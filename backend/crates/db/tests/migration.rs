@@ -10,11 +10,12 @@ use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
-    self, ASSISTANT_QUESTIONS_SQL, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
-    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
-    MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL, PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL,
-    SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL, STABLE_POSTING_ORDER_SQL,
-    SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIMING_SQL, BALANCE_INDEXES_SQL,
+    BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL,
+    EDIT_WINDOWS_SQL, INIT_SQL, MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL,
+    PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL,
+    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
+    TRIPS_GARDENS_FRUIT_KHATA_SQL,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -22,7 +23,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 16;
+const LATEST: usize = 17;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -274,8 +275,8 @@ fn released_version_14() -> Migrations<'static> {
     ])
 }
 
-fn released_version_15() -> Migrations<'static> {
-    Migrations::new(vec![
+fn version_15_list() -> Vec<M<'static>> {
+    vec![
         M::up_with_hook(INIT_SQL, |tx| {
             seed::system_accounts(tx)
                 .map(|_| ())
@@ -295,7 +296,18 @@ fn released_version_15() -> Migrations<'static> {
         M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
         M::up(PARTS_ARE_SOFT_STATE_SQL),
         M::up(ASSISTANT_QUESTIONS_SQL),
-    ])
+    ]
+}
+
+fn released_version_15() -> Migrations<'static> {
+    Migrations::new(version_15_list())
+}
+
+/// The file as released with migration 16 (the two speed indexes).
+fn released_version_16() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    Migrations::new(all)
 }
 
 /// The name and SQL of every object of one kind (`table`, `index`, `trigger`), by name.
@@ -572,10 +584,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 17).unwrap();
+    conn.pragma_update(None, "user_version", 18).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 17);
+    assert_eq!(user_version(&conn), 18);
     assert!(!backups.exists());
 }
 
@@ -3313,7 +3325,8 @@ fn migration_16_adds_two_partial_indexes_and_changes_nothing_else() {
     let triggers_before = schema(&conn, "trigger");
     let indexes_before = schema(&conn, "index");
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_16(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (15, 16));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 16);
@@ -3357,5 +3370,112 @@ fn migration_16_adds_two_partial_indexes_and_changes_nothing_else() {
         "UPDATE",
     ] {
         assert_eq!(SPEED_INDEXES_SQL.matches(word).count(), 0, "{word}");
+    }
+}
+
+#[test]
+fn migration_17_adds_four_nullable_columns_and_keeps_every_question_as_it_was() {
+    // Plan 51 P51-B2 (NFR-SPD-17): a file at version 16 with questions in the log is upgraded. The
+    // log keeps every row and value, the new columns are NULL for them, the append-only triggers
+    // are the same and still hold, and a copy is taken first.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_16(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 16);
+    for (source, outcome, text) in [
+        ("model", "answered", "ikram ke total bakaya kitne hai"),
+        (
+            "model",
+            "not_understood",
+            "apni sale ko ziyada kaise karain ?",
+        ),
+        ("chip", "answered", "cash_in_hand"),
+    ] {
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome, tool_calls_json, model_calls) \
+             VALUES ('2026-11-02T14:46:44.402Z', '2026-11-02', ?1, 'ur', 'c-1', ?2, 0, ?3, \
+             '[{\"tool\":\"period\"}]', 4)",
+            (text, source, outcome),
+        )
+        .unwrap();
+    }
+    let before = all_rows_without(&conn, &[]);
+    let triggers_before = schema(&conn, "trigger");
+    let indexes_before = schema(&conn, "index");
+    let tables_before: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (16, 17));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 17);
+    // Every row and every old value is as it was; the new columns are NULL.
+    let skip = [
+        ("assistant_questions", "total_millis"),
+        ("assistant_questions", "model_millis"),
+        ("assistant_questions", "tool_millis"),
+        ("assistant_questions", "calls_json"),
+    ];
+    assert_eq!(
+        all_rows_without(&conn, &skip),
+        before,
+        "every row is as it was"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM assistant_questions WHERE total_millis IS NULL \
+             AND model_millis IS NULL AND tool_millis IS NULL AND calls_json IS NULL"
+        ),
+        3
+    );
+    // Only that one table changed, and only by those four columns.
+    let tables_after: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+    assert_eq!(tables_after, tables_before, "no other table changed");
+    let sql: String = conn
+        .query_row(
+            "SELECT sql FROM sqlite_master WHERE name = 'assistant_questions'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    for column in ["total_millis", "model_millis", "tool_millis", "calls_json"] {
+        assert!(sql.contains(column), "{column}");
+    }
+    assert_eq!(
+        schema(&conn, "trigger"),
+        triggers_before,
+        "no trigger changed"
+    );
+    assert_eq!(schema(&conn, "index"), indexes_before, "no index changed");
+    // The log is still append-only, for the old columns and the new ones.
+    for sql in [
+        "UPDATE assistant_questions SET outcome = 'answered'",
+        "UPDATE assistant_questions SET total_millis = 5",
+        "DELETE FROM assistant_questions",
+    ] {
+        let error = conn.execute(sql, []).unwrap_err();
+        assert!(
+            error.to_string().contains("ERR_APPEND_ONLY"),
+            "{sql}: {error}"
+        );
+    }
+    assert_eq!(ASSISTANT_TIMING_SQL.matches("ADD COLUMN").count(), 4);
+    for word in [
+        "CREATE",
+        "DROP",
+        "DELETE FROM",
+        "INSERT",
+        "UPDATE",
+        "NOT NULL",
+    ] {
+        assert_eq!(ASSISTANT_TIMING_SQL.matches(word).count(), 0, "{word}");
     }
 }

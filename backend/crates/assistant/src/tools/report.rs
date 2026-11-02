@@ -33,6 +33,7 @@ use super::cells::{
     signed_paisa,
 };
 use super::records::named;
+use super::teach::{column_words, report_fields};
 use super::{
     Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, lookup, report_rule,
     service_stop,
@@ -165,12 +166,19 @@ fn takes_or(takes: &[FilterKind], kind: FilterKind, field: &str) -> Result<(), T
     if takes.contains(&kind) {
         Ok(())
     } else {
-        Err(bad(
-            "ERR_OUT_OF_RANGE",
-            field,
-            "this report does not have that filter",
-        ))
+        Err(not_taken(takes, field))
     }
+}
+
+/// A filter the report does not have: what it does take is listed (a balance list takes `as_of`
+/// where the others take `from` and `to`).
+fn not_taken(takes: &[FilterKind], field: &str) -> ToolError {
+    bad(
+        "ERR_OUT_OF_RANGE",
+        field,
+        "this report does not have that filter; the filters it takes are listed",
+    )
+    .allowed(report_fields(takes))
 }
 
 fn build_filters(
@@ -183,9 +191,12 @@ fn build_filters(
     let mut source = SourceReportFilters::default();
     let mut party_record = None;
     let date = |field: &str, text: &Option<String>| -> Result<Option<String>, ToolError> {
-        text.as_deref()
+        // A period field with no date (the `from` of `up_to_now`) leaves the date open.
+        Ok(text
+            .as_deref()
             .map(|t| date_arg(env, state, t, field))
-            .transpose()
+            .transpose()?
+            .flatten())
     };
     if let Some(from) = date("from", &input.from)? {
         takes_or(takes, FilterKind::DateRange, "from")?;
@@ -217,11 +228,7 @@ fn build_filters(
             filters.seller_id = Some(account_id);
             source.seller = Some(record.clone());
         } else {
-            return Err(bad(
-                "ERR_OUT_OF_RANGE",
-                "party",
-                "this report does not have that filter",
-            ));
+            return Err(not_taken(takes, "party"));
         }
         party_record = Some(record);
     }
@@ -455,6 +462,16 @@ fn column_unit(rows: &[&Row], index: usize) -> Option<ColumnUnit> {
     }
 }
 
+/// The words of the columns that hold numbers, for the refusal of a `where` on a text column.
+fn number_words(columns: &[Column], rows: &[&Row]) -> Vec<String> {
+    columns
+        .iter()
+        .enumerate()
+        .filter(|(i, c)| !is_left_out(c) && column_unit(rows, *i).is_some())
+        .map(|(i, c)| shown_key(i, c, false))
+        .collect()
+}
+
 /// True when a balance column holds both sides (see [`mixed_sides`](super::cells::mixed_sides)).
 fn column_mixes_sides(rows: &[&Row], index: usize) -> bool {
     mixed_sides(rows.iter().filter_map(|r| r.cells.get(index)))
@@ -554,7 +571,17 @@ fn column_index(columns: &[Column], key: &str, field: &str) -> Result<usize, Too
         .iter()
         .enumerate()
         .position(|(i, c)| (c.key == key || shown_key(i, c, false) == key) && !is_left_out(c))
-        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", field, "no such column in this report"))
+        .ok_or_else(|| no_such_column(columns, field))
+}
+
+/// A column the report does not have: the words it does have are listed.
+fn no_such_column(columns: &[Column], field: &str) -> ToolError {
+    bad(
+        "ERR_OUT_OF_RANGE",
+        field,
+        "no such column in this report; use one of the listed words",
+    )
+    .allowed(column_words(columns, false, None))
 }
 
 /// Sums a column of the matching rows with the calculator. `None` when a cell is not of one
@@ -674,9 +701,34 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         (page, rows, matched)
     } else {
         let sort = report_sort(id, &keys, env);
-        let page = read_page(env, id, &built.filters, 0, rows_wanted, sort)?;
-        let rows = page.rows.clone();
-        (page, rows, None)
+        match read_page(env, id, &built.filters, 0, rows_wanted, sort) {
+            Ok(page) => {
+                let rows = page.rows.clone();
+                (page, rows, None)
+            }
+            // The report engine knows its own column keys; the model uses the words it was shown
+            // (`name`, `entry`). A shown word the engine did not know is sorted in memory, like a
+            // second key; a word the report has no column for is refused with the list.
+            Err(Stop::Error(e)) if e.field.as_deref() == Some("sort.column") => {
+                let probe = read_page(env, id, &built.filters, 0, 1, None)?;
+                let known = keys
+                    .iter()
+                    .all(|k| column_index(&probe.columns, &k.column, "sort.column").is_ok());
+                if !known {
+                    return Err(Stop::Error(no_such_column(&probe.columns, "sort.column")));
+                }
+                if id == ReportId::R31 {
+                    return Err(
+                        bad("ERR_OUT_OF_RANGE", "sort", "a statement is read as it is").into(),
+                    );
+                }
+                let page = read_all(env, id, &built.filters)?;
+                let (rows, matched) =
+                    filter_and_sort(env, state, &page, &parsed, &keys, rows_wanted)?;
+                (page, rows, matched)
+            }
+            Err(other) => return Err(other),
+        }
     };
     let closing = closing_check(env, id, &built, &page)?;
     let mut draft = assemble(
@@ -713,25 +765,39 @@ fn filter_and_sort(
     let mut matched = None;
     if let Some(clause) = &parsed.where_ {
         let index = column_index(&page.columns, &clause.column, "where.column")?;
-        let unit = column_unit(&kept, index).ok_or_else(|| {
-            bad(
-                "ERR_FORMAT_INVALID",
-                "where.column",
-                "this column is not a number",
-            )
-        })?;
-        if unit == ColumnUnit::Balance && column_mixes_sides(&kept, index) {
-            return Err(mixed_sides_error("where.column"));
+        // A column with no filled cell (an empty report, or an aging column nobody is in) has
+        // nothing that can pass: the count is 0, not a refusal (plan 51 B2, "kaun sa maal 2 din se
+        // para hai" when no goods are waiting).
+        let filled = kept
+            .iter()
+            .filter_map(|r| r.cells.get(index))
+            .any(|c| !matches!(c, Cell::Empty));
+        if filled {
+            let unit = column_unit(&kept, index).ok_or_else(|| {
+                bad(
+                    "ERR_FORMAT_INVALID",
+                    "where.column",
+                    "this column is not a number; use one of the listed number columns",
+                )
+                .allowed(number_words(&page.columns, &kept))
+            })?;
+            if unit == ColumnUnit::Balance && column_mixes_sides(&kept, index) {
+                return Err(mixed_sides_error("where.column"));
+            }
+            let right = where_value(env, state, &clause.value, unit)?;
+            kept.retain(|row| {
+                row.cells
+                    .get(index)
+                    .is_some_and(|cell| match order_of(cell, true) {
+                        Order::Num(left) => passes(clause.op, left, right),
+                        _ => false,
+                    })
+            });
+        } else {
+            // The value is still checked: it must be a number of the question or a figure read.
+            lookup(env, state, &clause.value, "where.value")?;
+            kept.clear();
         }
-        let right = where_value(env, state, &clause.value, unit)?;
-        kept.retain(|row| {
-            row.cells
-                .get(index)
-                .is_some_and(|cell| match order_of(cell, true) {
-                    Order::Num(left) => passes(clause.op, left, right),
-                    _ => false,
-                })
-        });
         let mut totals = Vec::new();
         for (i, column) in page.columns.iter().enumerate() {
             if is_left_out(column) {

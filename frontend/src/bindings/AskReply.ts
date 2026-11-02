@@ -4,6 +4,7 @@ import type { AnswerOption } from './AnswerOption';
 import type { AskOutcome } from './AskOutcome';
 import type { AssistantFailure } from './AssistantFailure';
 import type { EntryRoute } from './EntryRoute';
+import type { StopReason } from './StopReason';
 
 /**
  * What every ask command gives back (plan 48 Section 4).
@@ -15,6 +16,7 @@ import type { EntryRoute } from './EntryRoute';
  * | answered, estimate, advice | set | empty | null, or set when a change was also asked | null |
  * | which_one, not_found | null | the matches | null | null |
  * | need_dates, need_party, not_understood | null | empty | null | null |
+ * | not_understood with `stop_reason` | null, or the plain tables of the results that were read | empty | null | null |
  * | outside_books | set (the nearest source) or null | empty | null | null |
  * | change_refused | set or null | empty | set | null |
  * | checks_failed, records_differ | set (tables, sources, differences) | empty | null | null |
@@ -60,6 +62,11 @@ export type AskReply = {
    * For `error` and `offline`: why.
    */
   failure: AssistantFailure | null;
+  /**
+   * For `not_understood` after a limit: which one (plan 51 B2). Null for every other reply,
+   * including a `not_understood` where the model could not tell what was asked.
+   */
+  stop_reason: StopReason | null;
   /**
    * Today's counted questions, after this one (PRD FR-7.81). The panel shows "آج 5 / 20".
    */

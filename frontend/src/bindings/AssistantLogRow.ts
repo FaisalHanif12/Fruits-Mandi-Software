@@ -68,6 +68,19 @@ export type AssistantLogRow = {
    */
   tokens_reasoning: number | null;
   /**
+   * How long this run took in milliseconds, from the start to the reply (plan 51 B2). Null for
+   * a row written before the times were kept.
+   */
+  total_millis: number | null;
+  /**
+   * Of those, the time spent waiting for the model. Null for a chip and for an old row.
+   */
+  model_millis: number | null;
+  /**
+   * Of those, the app's own work in the tools. Null for a chip and for an old row.
+   */
+  tool_millis: number | null;
+  /**
    * True when the row can be read again with `assistant_rerun`: it has tool calls.
    */
   can_rerun: boolean;

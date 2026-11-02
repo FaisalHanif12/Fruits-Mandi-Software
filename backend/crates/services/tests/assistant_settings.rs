@@ -43,6 +43,10 @@ fn spec(source: &'static str, counted: bool) -> QuestionSpec {
         tokens_out: Some(20),
         tokens_reasoning: Some(5),
         finish_reason: Some("stop".to_owned()),
+        total_millis: None,
+        model_millis: None,
+        tool_millis: None,
+        calls_json: None,
     }
 }
 

@@ -26,6 +26,7 @@ use mandi_assistant::answer::{
 use mandi_assistant::ask::{
     AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantNewConversationInput,
     AssistantPickInput, AssistantQuickInput, AssistantRerunInput, ConversationStarted, FailureKind,
+    StopReason,
 };
 use mandi_assistant::limits::DAILY_LIMIT;
 use mandi_assistant::log::{
@@ -198,6 +199,7 @@ fn reply(question_id: i64, outcome: AskOutcome) -> AskReply {
         entry_route: None,
         locked: false,
         failure: None,
+        stop_reason: None,
         count_today: 3,
         limit: DAILY_LIMIT,
     }
@@ -863,6 +865,25 @@ fn checks_failed() -> AskReply {
     r
 }
 
+/// A limit stopped the question before it read anything to show (plan 51 B2): the panel says the
+/// books could not be read in the time allowed, not "I did not understand".
+fn stopped_calls() -> AskReply {
+    let mut r = reply(19, AskOutcome::NotUnderstood);
+    r.stop_reason = Some(StopReason::Calls);
+    r
+}
+
+/// A limit stopped the question after it read a table: the table is shown as it is (plan 51 B2).
+fn stopped_tokens_with_table() -> AskReply {
+    let mut a = answer(Vec::new());
+    a.tables = vec![r13_table()];
+    a.sources = vec![card_source("r2", 20, akram()), r13_source()];
+    let mut r = reply(20, AskOutcome::NotUnderstood);
+    r.stop_reason = Some(StopReason::Tokens);
+    r.answer = Some(a);
+    r
+}
+
 /// A figure's two places differ (FR-7.76): the party card says 2,880, R13 says 2,900.
 fn records_differ() -> AskReply {
     let mut a = answer(Vec::new());
@@ -951,6 +972,9 @@ fn log_page() -> AssistantLogPage {
         tokens_cached: None,
         tokens_out: None,
         tokens_reasoning: None,
+        total_millis: None,
+        model_millis: None,
+        tool_millis: None,
         can_rerun: false,
     };
     let mut model_row = base(1, LogSource::Model, AskOutcome::WhichOne, true);
@@ -962,10 +986,14 @@ fn log_page() -> AssistantLogPage {
     model_row.tokens_cached = Some(7_600);
     model_row.tokens_out = Some(180);
     model_row.tokens_reasoning = Some(60);
+    model_row.total_millis = Some(6_400);
+    model_row.model_millis = Some(6_350);
+    model_row.tool_millis = Some(4);
     model_row.can_rerun = true;
     let mut chip_row = base(2, LogSource::Chip, AskOutcome::Answered, false);
     chip_row.question = "cash_in_hand".to_owned();
     chip_row.tools = vec![tool("tiles", None)];
+    chip_row.total_millis = Some(12);
     chip_row.can_rerun = true;
     let mut pick_row = base(3, LogSource::Continue, AskOutcome::Answered, false);
     pick_row.question = "akram ka hisab".to_owned();
@@ -1072,6 +1100,16 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_not_understood",
             ask("xyz abc"),
             reply(18, AskOutcome::NotUnderstood),
+        ),
+        (
+            "assistant_reply_not_understood_calls",
+            ask("apni sale ko ziyada kaise karain ?"),
+            stopped_calls(),
+        ),
+        (
+            "assistant_reply_not_understood_tokens_table",
+            ask("ikram ke total bakaya kitne hai"),
+            stopped_tokens_with_table(),
         ),
         (
             "assistant_reply_checks_failed",
@@ -1217,7 +1255,12 @@ fn the_replies_keep_the_contract_rules() {
         assert!(r.count_today <= r.limit);
     }
     // At most 7 rows in a table, at most 5 options, at most 3 next questions.
-    for r in [answered(), advice(), checks_failed()] {
+    for r in [
+        answered(),
+        advice(),
+        checks_failed(),
+        stopped_tokens_with_table(),
+    ] {
         let a = r.answer.unwrap();
         for table in &a.tables {
             assert!(table.rows.len() <= mandi_assistant::limits::MAX_TABLE_ROWS);

@@ -212,6 +212,10 @@ fn spec() -> QuestionSpec {
         tokens_out: Some(1_200),
         tokens_reasoning: Some(400),
         finish_reason: Some("stop".to_owned()),
+        total_millis: None,
+        model_millis: None,
+        tool_millis: None,
+        calls_json: None,
     }
 }
 

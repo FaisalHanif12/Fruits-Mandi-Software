@@ -54,8 +54,16 @@ pub struct NewQuestion<'a> {
     pub tokens_out: Option<i64>,
     /// Of those, reasoning.
     pub tokens_reasoning: Option<i64>,
-    /// The last `finish_reason` of the model.
+    /// The last `finish_reason` of the model, or the limit that stopped the question.
     pub finish_reason: Option<&'a str>,
+    /// Milliseconds this run took (plan 51 B2).
+    pub total_millis: Option<i64>,
+    /// Of those, waiting for the model.
+    pub model_millis: Option<i64>,
+    /// Of those, the app's own work in the tools.
+    pub tool_millis: Option<i64>,
+    /// Each model call of this run as JSON: times, tokens, tool names. Null for a chip.
+    pub calls_json: Option<&'a str>,
 }
 
 /// One row of the log, as stored.
@@ -101,13 +109,22 @@ pub struct QuestionRow {
     pub tokens_out: Option<i64>,
     /// Of those, reasoning.
     pub tokens_reasoning: Option<i64>,
-    /// The last `finish_reason` of the model.
+    /// The last `finish_reason` of the model, or the limit that stopped the question.
     pub finish_reason: Option<String>,
+    /// Milliseconds this run took. Null for a row written before migration 17.
+    pub total_millis: Option<i64>,
+    /// Of those, waiting for the model.
+    pub model_millis: Option<i64>,
+    /// Of those, the app's own work in the tools.
+    pub tool_millis: Option<i64>,
+    /// Each model call of this run as JSON.
+    pub calls_json: Option<String>,
 }
 
 const COLUMNS: &str = "id, asked_at, asked_day, asked_by, question, language, conversation_id, \
     parent_id, source, counted, sources_json, outcome, tool_calls_json, answer_json, model, \
-    model_calls, tokens_in, tokens_cached, tokens_out, tokens_reasoning, finish_reason";
+    model_calls, tokens_in, tokens_cached, tokens_out, tokens_reasoning, finish_reason, \
+    total_millis, model_millis, tool_millis, calls_json";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<QuestionRow> {
     Ok(QuestionRow {
@@ -132,6 +149,10 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<QuestionRow> {
         tokens_out: row.get(18)?,
         tokens_reasoning: row.get(19)?,
         finish_reason: row.get(20)?,
+        total_millis: row.get(21)?,
+        model_millis: row.get(22)?,
+        tool_millis: row.get(23)?,
+        calls_json: row.get(24)?,
     })
 }
 
@@ -144,9 +165,10 @@ pub fn insert(conn: &Connection, q: &NewQuestion<'_>) -> rusqlite::Result<i64> {
         "INSERT INTO assistant_questions (asked_at, asked_day, asked_by, question, language, \
          conversation_id, parent_id, source, counted, sources_json, outcome, tool_calls_json, \
          answer_json, model, model_calls, tokens_in, tokens_cached, tokens_out, \
-         tokens_reasoning, finish_reason, created_by, updated_by) \
+         tokens_reasoning, finish_reason, total_millis, model_millis, tool_millis, calls_json, \
+         created_by, updated_by) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-         ?19, ?20, ?3, ?3)",
+         ?19, ?20, ?21, ?22, ?23, ?24, ?3, ?3)",
         params![
             q.asked_at,
             q.asked_day,
@@ -168,6 +190,10 @@ pub fn insert(conn: &Connection, q: &NewQuestion<'_>) -> rusqlite::Result<i64> {
             q.tokens_out,
             q.tokens_reasoning,
             q.finish_reason,
+            q.total_millis,
+            q.model_millis,
+            q.tool_millis,
+            q.calls_json,
         ],
     )?;
     Ok(conn.last_insert_rowid())

@@ -726,7 +726,9 @@ fn there_is_no_way_to_delete_a_master_record() {
         .map(|(_, name)| name)
         .filter(|name| name.contains("delete") || name.contains("remove"))
         .collect();
-    assert_eq!(deleting, ["translit_pairs_remove"]);
+    // `assistant_key_remove` takes the OpenRouter key out of Credential Manager (plan 48): it
+    // deletes no record of the books.
+    assert_eq!(deleting, ["translit_pairs_remove", "assistant_key_remove"]);
 }
 
 #[test]

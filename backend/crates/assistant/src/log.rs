@@ -79,6 +79,16 @@ pub struct AssistantLogRow {
     /// Of those, the reasoning ones. Null for a chip.
     #[ts(type = "number | null")]
     pub tokens_reasoning: Option<i64>,
+    /// How long this run took in milliseconds, from the start to the reply (plan 51 B2). Null for
+    /// a row written before the times were kept.
+    #[ts(type = "number | null")]
+    pub total_millis: Option<i64>,
+    /// Of those, the time spent waiting for the model. Null for a chip and for an old row.
+    #[ts(type = "number | null")]
+    pub model_millis: Option<i64>,
+    /// Of those, the app's own work in the tools. Null for a chip and for an old row.
+    #[ts(type = "number | null")]
+    pub tool_millis: Option<i64>,
     /// True when the row can be read again with `assistant_rerun`: it has tool calls.
     pub can_rerun: bool,
 }

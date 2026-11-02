@@ -34,6 +34,7 @@ pub mod party;
 pub mod period;
 pub mod records;
 pub mod report;
+pub mod teach;
 pub mod tiles;
 
 /// Everything a tool reads from outside its input.
@@ -100,15 +101,19 @@ fn node_has_key(node: &Node, key: &str) -> bool {
 }
 
 /// A tool refused its input or could not run. Sent to the model as an error result, never shown
-/// to the Owner; the model may correct its input once.
+/// to the Owner; the model may correct its input once. So the refusal says what to fix: the field
+/// as the tool's own input spells it, a reason in words and, where the input has a short list of
+/// right words (columns, views, filters), that list (plan 51 B2, `teach.rs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolError {
     /// An `ERR_` code.
     pub code: String,
     /// The input field it belongs to.
     pub field: Option<String>,
-    /// A short reason for the model.
+    /// A short reason for the model. Never empty in the JSON the model reads.
     pub detail: String,
+    /// The words that are allowed in the field, when there is a short list of them.
+    pub allowed: Vec<String>,
 }
 
 impl ToolError {
@@ -118,25 +123,47 @@ impl ToolError {
             code: code.to_owned(),
             field: Some(field.to_owned()),
             detail: detail.to_owned(),
+            allowed: Vec::new(),
         }
     }
 
-    /// A refusal from a service error code.
+    /// The same refusal with the words that are allowed.
+    #[must_use]
+    pub fn allowed(mut self, words: Vec<String>) -> Self {
+        self.allowed = words;
+        self
+    }
+
+    /// A refusal from a service error code. The field is renamed as the tool's input spells it
+    /// (`filters.from` is `from`) and the reason is in words.
     pub fn from_code(code: ErrorCode, field: Option<&str>) -> Self {
         let text = serde_json::to_value(code)
             .ok()
             .and_then(|v| v.as_str().map(str::to_owned))
             .unwrap_or_else(|| "ERR_INTERNAL".to_owned());
+        let field = field.map(teach::tool_field);
+        let detail = teach::detail_for(&text, field.as_deref());
         Self {
             code: text,
-            field: field.map(str::to_owned),
-            detail: String::new(),
+            field,
+            detail,
+            allowed: Vec::new(),
         }
     }
 
     /// The error result the model reads.
     pub fn to_json(&self) -> Value {
-        json!({"error": {"code": self.code, "field": self.field, "detail": self.detail}})
+        let detail = if self.detail.is_empty() {
+            teach::detail_for(&self.code, self.field.as_deref())
+        } else {
+            self.detail.clone()
+        };
+        if self.allowed.is_empty() {
+            json!({"error": {"code": self.code, "field": self.field, "detail": detail}})
+        } else {
+            json!({"error": {"code": self.code, "field": self.field, "detail": detail,
+                             "allowed": self.allowed}})
+        }
     }
 }
 
@@ -236,7 +263,27 @@ pub fn lookup<'s>(
     path: &str,
     field: &str,
 ) -> Result<Found<'s>, ToolError> {
-    let unknown = || ToolError::new("ERR_UNKNOWN_REFERENCE", field, path);
+    let unknown = || {
+        // The numbers of the question and the results of this question are what a path may start
+        // with, so the model can see what it was allowed to name (plan 51 B2).
+        let mut allowed: Vec<String> = (1..=env.numbers.len()).map(|n| format!("q.n{n}")).collect();
+        allowed.extend(
+            state
+                .results
+                .iter()
+                .filter(|r| r.turn == state.turn)
+                .map(|r| r.id.clone()),
+        );
+        ToolError::new(
+            "ERR_UNKNOWN_REFERENCE",
+            field,
+            &format!(
+                "{path}: no such path. A number comes from the question (q.n1); a figure from a \
+                 result of this question, such as r2.balance"
+            ),
+        )
+        .allowed(allowed)
+    };
     let parts: Vec<&str> = path.split('.').collect();
     let (first, rest) = parts.split_first().ok_or_else(unknown)?;
     if *first == "q" {
@@ -310,7 +357,19 @@ pub fn record(env: &Env<'_>, state: &State, text: &str, field: &str) -> Result<R
     parse_key(text).ok_or_else(bad)
 }
 
+/// True when the path is the `from` of a result of the `period` tool, for example `r1.from`.
+fn is_period_from(state: &State, path: &str) -> bool {
+    let mut parts = path.split('.');
+    let (Some(id), Some("from"), None) = (parts.next(), parts.next(), parts.next()) else {
+        return false;
+    };
+    state.find(id).is_some_and(|r| r.tool == "period")
+}
+
 /// A date the model passes: a period result field (`r2.from`) or `YYYY-MM-DD`.
+///
+/// `None` is "no date": a period field that is empty, such as the `from` of `up_to_now` (from the
+/// first day of the books), stays open, as an empty `from` does in the report screen (plan 51 B2).
 ///
 /// # Errors
 /// `ERR_DATE_INVALID` for a date that does not exist; `ERR_UNKNOWN_REFERENCE`.
@@ -319,17 +378,37 @@ pub fn date_arg(
     state: &State,
     text: &str,
     field: &str,
-) -> Result<String, ToolError> {
+) -> Result<Option<String>, ToolError> {
     if text.starts_with(|c: char| c.is_ascii_alphabetic()) {
         let found = lookup(env, state, text, field)?;
         return match found.node() {
-            Node::Val(Val::Date(d)) => Ok(d.clone()),
-            _ => Err(ToolError::new("ERR_UNKNOWN_REFERENCE", field, text)),
+            Node::Val(Val::Date(d)) => Ok(Some(d.clone())),
+            // Only the `from` of a period result may be empty (`up_to_now`: from the first day of
+            // the books). Any other empty field is not a date: `as_of: "r1.from"` would otherwise
+            // quietly become today (money review, plan 51 B2).
+            Node::Null if field == "from" && is_period_from(state, text) => Ok(None),
+            Node::Null => Err(ToolError::new(
+                "ERR_UNKNOWN_REFERENCE",
+                field,
+                "this path has no date; a period such as up_to_now has no start date, so only \
+                 from may use it, and to and as_of need a real date",
+            )),
+            _ => Err(ToolError::new(
+                "ERR_UNKNOWN_REFERENCE",
+                field,
+                "this path is not a date; use the from or to of a period result, or YYYY-MM-DD",
+            )),
         };
     }
     BusinessDate::parse_iso(text)
-        .map(BusinessDate::to_iso)
-        .ok_or_else(|| ToolError::new("ERR_DATE_INVALID", field, text))
+        .map(|d| Some(d.to_iso()))
+        .ok_or_else(|| {
+            ToolError::new(
+                "ERR_DATE_INVALID",
+                field,
+                "not a date; write YYYY-MM-DD or use a period result",
+            )
+        })
 }
 
 /// Reads a tool's input strictly: an unknown field or a wrong type is a refusal.

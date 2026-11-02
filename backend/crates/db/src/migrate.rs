@@ -109,6 +109,11 @@ pub const ASSISTANT_QUESTIONS_SQL: &str =
 /// column, stored total, row, amount, id or chain hash changes.
 pub const SPEED_INDEXES_SQL: &str = include_str!("../migrations/0016_speed_indexes.sql");
 
+/// The seventeenth migration (plan 51 P51-B2, NFR-SPD-17): four nullable columns of
+/// `assistant_questions` for the time of a question (total, model, tools and each call). Additions
+/// only: every existing row gets NULL, and the append-only triggers of migration 15 are not touched.
+pub const ASSISTANT_TIMING_SQL: &str = include_str!("../migrations/0017_assistant_timing.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -137,6 +142,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(PARTS_ARE_SOFT_STATE_SQL),
         M::up(ASSISTANT_QUESTIONS_SQL),
         M::up(SPEED_INDEXES_SQL),
+        M::up(ASSISTANT_TIMING_SQL),
     ])
 }
 

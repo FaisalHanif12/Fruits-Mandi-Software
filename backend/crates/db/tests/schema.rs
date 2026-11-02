@@ -581,6 +581,12 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "tokens_out",
                 "tokens_reasoning",
                 "finish_reason",
+                // Migration 0017 (plan 51 P51-B2): the time of a run. Architecture 15.3 gets these
+                // four columns with the next document version.
+                "total_millis",
+                "model_millis",
+                "tool_millis",
+                "calls_json",
             ],
         ),
         // 15.4 (v1.9, migration 0011): the people moved to the dead amount (PRD FR-10.10).
