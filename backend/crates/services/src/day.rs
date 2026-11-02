@@ -105,7 +105,7 @@ pub fn status(ctx: &Context) -> Result<DayStatusInfo, ServiceError> {
 pub fn first_book_day(ctx: &Context) -> Result<Option<BusinessDate>, ServiceError> {
     let text: Option<String> = ctx
         .db
-        .read(|conn| repo::first_posting_date(conn).map_err(ServiceError::from))?;
+        .read(|conn| repo::first_book_date(conn).map_err(ServiceError::from))?;
     text.map(|t| {
         BusinessDate::parse_iso(&t).ok_or_else(|| ServiceError::Data(format!("a date is {t}")))
     })

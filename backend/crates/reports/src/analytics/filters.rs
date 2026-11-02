@@ -554,6 +554,33 @@ mod tests {
     }
 
     #[test]
+    fn the_compared_window_as_iso_dates() {
+        // The same number of days ending the day before, as the engine works it out.
+        let window = |c, a: &str, b: &str| compare_window(c, a, b);
+        assert_eq!(
+            window(AnalyticsCompare::Previous, "2026-10-10", "2026-10-10"),
+            Some(("2026-10-09".into(), "2026-10-09".into()))
+        );
+        assert_eq!(
+            window(AnalyticsCompare::Previous, "2026-10-11", "2026-10-20"),
+            Some(("2026-10-01".into(), "2026-10-10".into()))
+        );
+        assert_eq!(
+            window(AnalyticsCompare::LastYear, "2026-10-01", "2026-10-14"),
+            Some(("2025-10-01".into(), "2025-10-14".into()))
+        );
+        assert_eq!(
+            window(AnalyticsCompare::Off, "2026-10-01", "2026-10-14"),
+            None
+        );
+        // A date that does not exist gives no window.
+        assert_eq!(
+            window(AnalyticsCompare::Previous, "2026-02-30", "2026-03-01"),
+            None
+        );
+    }
+
+    #[test]
     fn the_compared_periods() {
         // 10 days ending 20-10: the previous period is 10 days ending 09-10.
         let (a, b) = compared(

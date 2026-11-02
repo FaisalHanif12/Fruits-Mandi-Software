@@ -784,3 +784,26 @@ fn ten_years_closed_in_one_step_write_a_row_for_each_day_and_stay_fast() {
     eprintln!("3,653 days closed in {took:?} (debug build)");
     assert!(took.as_millis() < 5_000, "{took:?}");
 }
+
+/// The first day of the books (plan 52 item 2): the oldest posted entry, or an older trip that
+/// posted nothing yet. `up_to_now` of the assistant starts here, so it must not start too late.
+#[test]
+fn the_first_book_day_counts_a_trip_that_posted_nothing() {
+    let (dir, env, owner) = ready();
+    assert_eq!(day::first_book_day(&env.ctx).unwrap(), None);
+
+    open_books(&env, &owner, "31-08-2026", (2026, 8, 31));
+    let posted = day::first_book_day(&env.ctx).unwrap().unwrap();
+    assert_eq!(posted.to_iso(), "2026-08-31");
+
+    // A trip made on 15-08-26 whose payment was wholly from a pocket posts no entry (PRD FR-12.30).
+    raw(&dir)
+        .execute(
+            "INSERT INTO ventures (kind, number, entry_date, name_ur, name_en, search_ur, search_en, search_phonetic)
+             VALUES ('trip', 1, '2026-08-15', 'سفر', 'Trip', 'سفر', 'trip', 'trp')",
+            [],
+        )
+        .unwrap();
+    let first = day::first_book_day(&env.ctx).unwrap().unwrap();
+    assert_eq!(first.to_iso(), "2026-08-15");
+}
