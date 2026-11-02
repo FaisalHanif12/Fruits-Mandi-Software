@@ -1,7 +1,7 @@
 //! The limits of one question, as named constants (Code Standards Q9, G8, NFR-AI-5).
 //!
 //! Example: a question may use 4 model calls and 1 rewrite, 8 tool calls, 3,000 output tokens
-//! (1,500 a call) and 60,000 input tokens, within 15 seconds a call and 45 seconds in all.
+//! (1,500 a call) and 60,000 input tokens, within 30 seconds a call and 60 seconds in all.
 
 /// Counted questions a day, a hard stop (PRD FR-7.81). The day starts at midnight, Pakistan time.
 pub const DAILY_LIMIT: i64 = 20;
@@ -21,10 +21,11 @@ pub const MAX_INPUT_TOKENS: u32 = 60_000;
 /// D6-system-prompt v1.1 (Umar, 02-11-2026): the tools list the sort and where words of every
 /// report and view.
 pub const MAX_PREFIX_TOKENS: u32 = 9_000;
-/// Seconds one model call may take.
-pub const CALL_TIMEOUT_SECS: u64 = 15;
-/// Seconds one whole question may take.
-pub const QUESTION_TIMEOUT_SECS: u64 = 45;
+/// Seconds one model call may take. 30 since Umar's answer of 02-11-2026 (plan 51 B3): the model
+/// takes 7 to 9 seconds a call on his questions, and 15 cut off a slow one while it was answering.
+pub const CALL_TIMEOUT_SECS: u64 = 30;
+/// Seconds one whole question may take (NFR-AI-3: 60 since 02-11-2026).
+pub const QUESTION_TIMEOUT_SECS: u64 = 60;
 /// Bytes of JSON of one tool result; rows are dropped from the end to fit.
 pub const MAX_RESULT_BYTES: usize = 16_000;
 /// Words of an answer, counted after the references are filled, each reference as one word.

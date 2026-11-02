@@ -1812,9 +1812,9 @@ impl ModelClient for TimeoutSpy {
 }
 
 #[test]
-fn attack_06_a_call_is_given_15_seconds_and_a_question_45() {
-    assert_eq!(limits::CALL_TIMEOUT_SECS, 15);
-    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 45);
+fn attack_06_a_call_is_given_30_seconds_and_a_question_60() {
+    assert_eq!(limits::CALL_TIMEOUT_SECS, 30);
+    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 60);
     let h = Harness::day();
     let spy = TimeoutSpy {
         asked: Mutex::new(Vec::new()),
@@ -1824,8 +1824,8 @@ fn attack_06_a_call_is_given_15_seconds_and_a_question_45() {
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     let asked = spy.asked.lock().unwrap().clone();
     assert_eq!(asked.len(), 1);
-    assert!(asked[0] <= Duration::from_secs(15), "{:?}", asked[0]);
-    assert!(asked[0] > Duration::from_secs(14), "{:?}", asked[0]);
+    assert!(asked[0] <= Duration::from_secs(30), "{:?}", asked[0]);
+    assert!(asked[0] > Duration::from_secs(29), "{:?}", asked[0]);
     assert_app_still_free(&h);
 }
 
@@ -1844,11 +1844,11 @@ impl ModelClient for SlowClient {
 }
 
 #[test]
-#[ignore = "slow: it waits 45 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_45_seconds"]
-fn attack_06_a_question_past_45_seconds_is_stopped_before_the_next_call() {
+#[ignore = "slow: it waits 60 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_60_seconds"]
+fn attack_06_a_question_past_60_seconds_is_stopped_before_the_next_call() {
     let h = Harness::day();
     let slow = SlowClient {
-        wait: Duration::from_secs(15),
+        wait: Duration::from_secs(30),
         calls: AtomicUsize::new(0),
     };
     let started = Instant::now();
@@ -1858,10 +1858,10 @@ fn attack_06_a_question_past_45_seconds_is_stopped_before_the_next_call() {
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     assert_eq!(
         slow.calls.load(Ordering::SeqCst),
-        3,
-        "the fourth call is never made"
+        2,
+        "the third call is never made"
     );
-    assert!(took < Duration::from_secs(50), "{took:?}");
+    assert!(took < Duration::from_secs(70), "{took:?}");
     assert_app_still_free(&h);
 }
 

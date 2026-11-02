@@ -495,7 +495,7 @@ fn rounds(c: &mut Criterion) {
             // MISSING and fails. (A question that ends in an error after a minute has no speed
             // to report.) It is measured again when the question ends as it should.
             support::note(&format!(
-                "OVER: {name} ended as {got:?}, not {want:?}, after {:?} on the volume (the limit of the question is 45 s); not measured",
+                "OVER: {name} ended as {got:?}, not {want:?}, after {:?} on the volume (the limit of the question is 60 s); not measured",
                 started.elapsed()
             ));
             continue;

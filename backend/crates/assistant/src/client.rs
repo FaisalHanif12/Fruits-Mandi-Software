@@ -4,7 +4,9 @@
 //! [`OpenRouterClient`] sends the request as plain JSON to the one URL [`API_URL`] over HTTPS, with
 //! the key in the `Authorization` header, read from the key store just before the call by the
 //! caller and dropped after it. A redirect is never followed. Each call is stopped after the time
-//! it is given (15 seconds, or what is left of the 45 of the question).
+//! it is given (30 seconds, or what is left of the 60 of the question). A call that runs out of
+//! time at any stage, waiting for the first byte or reading the body, is a timeout and never an
+//! unreadable reply.
 //!
 //! [`RecordedClient`] replays recorded replies for the tests and keeps the requests it was given, so
 //! a test can scan every request body (E2E-54). No commit test calls the network.
@@ -189,16 +191,34 @@ fn status_kind(status: u16) -> FailureKind {
     }
 }
 
-impl ModelClient for OpenRouterClient {
-    fn call(&self, key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError> {
+/// The failure of a read of the reply body: a call that ran out of time is a timeout, anything else
+/// is a reply that could not be read.
+fn body_failure(is_timeout: bool) -> CallError {
+    CallError::new(if is_timeout {
+        FailureKind::Timeout
+    } else {
+        FailureKind::BadReply
+    })
+}
+
+impl OpenRouterClient {
+    /// One call to `url`. The app only ever calls [`API_URL`] over HTTPS (`call`); the tests call a
+    /// local address over plain HTTP, so the timeouts of every stage can be tried for real.
+    fn call_to(
+        url: &str,
+        https_only: bool,
+        key: &str,
+        body: &Value,
+        timeout: Duration,
+    ) -> Result<Reply, CallError> {
         let client = reqwest::blocking::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
-            .https_only(true)
+            .https_only(https_only)
             .timeout(timeout)
             .build()
             .map_err(|_| CallError::new(FailureKind::Other))?;
         let response = client
-            .post(API_URL)
+            .post(url)
             .bearer_auth(key)
             .header("Content-Type", "application/json")
             .body(body.to_string())
@@ -217,15 +237,20 @@ impl ModelClient for OpenRouterClient {
                 http_status: Some(i64::from(status)),
             });
         }
-        let bytes = response
-            .bytes()
-            .map_err(|_| CallError::new(FailureKind::BadReply))?;
+        // The timeout covers the body too: a reply that stalls half way is a timeout (plan 51 B3).
+        let bytes = response.bytes().map_err(|e| body_failure(e.is_timeout()))?;
         if bytes.len() > MAX_REPLY_BYTES {
             return Err(CallError::new(FailureKind::BadReply));
         }
         let value: Value =
             serde_json::from_slice(&bytes).map_err(|_| CallError::new(FailureKind::BadReply))?;
         Reply::from_json(&value)
+    }
+}
+
+impl ModelClient for OpenRouterClient {
+    fn call(&self, key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError> {
+        Self::call_to(API_URL, true, key, body, timeout)
     }
 }
 
@@ -345,5 +370,102 @@ mod tests {
                 .is_err()
         );
         assert_eq!(client.requests(), vec![json!({"n": 1}), json!({"n": 2})]);
+    }
+
+    // ---- the timeout of every stage, against a real local server (plan 51 B3) ----------------
+
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::time::Instant;
+
+    /// What a local server does with one request.
+    #[derive(Clone, Copy)]
+    enum Server {
+        /// Takes the request and never answers.
+        Silent,
+        /// Sends the headers and a part of the body, then stalls.
+        StallsInTheBody,
+        /// Sends a whole reply.
+        Replies(&'static str),
+    }
+
+    fn serve(how: Server, hold: Duration) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            // Read the request head, then the body the client sent with it.
+            let mut seen = Vec::new();
+            let mut chunk = [0_u8; 4096];
+            while !seen.windows(4).any(|w| w == b"\r\n\r\n") {
+                match stream.read(&mut chunk) {
+                    Ok(0) | Err(_) => return,
+                    Ok(n) => seen.extend_from_slice(&chunk[..n]),
+                }
+            }
+            match how {
+                Server::Silent => std::thread::sleep(hold),
+                Server::StallsInTheBody => {
+                    let _ = stream.write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 5000\r\n\r\n{\"choices\":[",
+                    );
+                    let _ = stream.flush();
+                    std::thread::sleep(hold);
+                }
+                Server::Replies(body) => {
+                    let head = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    let _ = stream.write_all(head.as_bytes());
+                    let _ = stream.write_all(body.as_bytes());
+                    let _ = stream.flush();
+                }
+            }
+        });
+        url
+    }
+
+    fn call_local(url: &str, timeout: Duration) -> (Result<Reply, CallError>, Duration) {
+        let started = Instant::now();
+        let result = OpenRouterClient::call_to(url, false, "sk-test", &json!({}), timeout);
+        (result, started.elapsed())
+    }
+
+    #[test]
+    fn a_server_that_never_answers_is_a_timeout() {
+        let url = serve(Server::Silent, Duration::from_secs(5));
+        let (result, took) = call_local(&url, Duration::from_millis(400));
+        assert_eq!(result.unwrap_err().kind, FailureKind::Timeout);
+        assert!(took < Duration::from_secs(3), "{took:?}");
+    }
+
+    #[test]
+    fn a_reply_that_stalls_in_the_body_is_a_timeout_and_not_an_unreadable_reply() {
+        // Umar's row 12: the headers came, the body did not, and the call was reported as
+        // "the model's answer could not be read".
+        let url = serve(Server::StallsInTheBody, Duration::from_secs(5));
+        let (result, took) = call_local(&url, Duration::from_millis(400));
+        assert_eq!(result.unwrap_err().kind, FailureKind::Timeout);
+        assert!(took < Duration::from_secs(3), "{took:?}");
+    }
+
+    #[test]
+    fn a_whole_reply_inside_the_time_is_read_and_a_broken_one_is_not_a_timeout() {
+        let good = r#"{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"{}"}}],"usage":{"prompt_tokens":10,"completion_tokens":2}}"#;
+        let url = serve(Server::Replies(good), Duration::ZERO);
+        let (result, _) = call_local(&url, Duration::from_secs(5));
+        assert_eq!(result.unwrap().usage.prompt_tokens, 10);
+        let url = serve(Server::Replies("not json at all"), Duration::ZERO);
+        let (result, _) = call_local(&url, Duration::from_secs(5));
+        assert_eq!(result.unwrap_err().kind, FailureKind::BadReply);
+    }
+
+    #[test]
+    fn only_a_timeout_of_the_body_read_is_a_timeout() {
+        assert_eq!(body_failure(true).kind, FailureKind::Timeout);
+        assert_eq!(body_failure(false).kind, FailureKind::BadReply);
     }
 }
