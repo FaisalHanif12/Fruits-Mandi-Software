@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.16 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.17 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.16 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.17 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.8 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.13 |
@@ -824,7 +824,16 @@ FR-7.72 [C] **What it does.** The Owner types a question in Urdu letters, in Rom
 - advise from the books ("kis se pehle wasooli karun", "kis ko pehle paise dun"), always marked as advice (FR-7.88).
 It is read-only: it never saves, edits, cancels or posts anything. It has no tool that writes. The only thing written is its own question log (FR-7.84).
 
-FR-7.73 [C] **Where it lives.** A button "سوال پوچھیں F1" (Ask F1) sits in the status bar at the bottom of every screen (FR-5.5). `F1` or a click opens the panel. The panel rises from the bottom, above the status bar, over the lower part of the screen. It has two heights: short (about a third of the window) and tall (about two thirds), switched by a button or `Ctrl+↑` and `Ctrl+↓` inside the panel. It has the question box at the bottom, the conversation above it, newest at the bottom, and the quick questions (FR-7.80) above the box.
+FR-7.73 [C] **Where it lives.** (Changed in v1.17.) A round button with the assistant's icon floats at the bottom of every screen, at the end side (bottom right in English, bottom left in Urdu), just above the status bar. The status bar keeps "سوال پوچھیں F1" (Ask F1) and today's count (FR-5.5). `F1`, or a click on either button, opens the chat window above the floating button, and the same button then closes it. The chat window is a card in the app's own colours:
+- at the top: a header with the assistant's name, its state (ready, working, offline), "نیا سوال" (New question), the size button and close;
+- in the middle: the conversation, newest at the bottom;
+- at the bottom: the quick questions (FR-7.80), then the question box with its send button.
+
+It has two sizes, because answers carry tables and charts:
+- normal: about half the window wide and most of its height, never narrower than a report table needs;
+- large: nearly the whole window, for long tables.
+
+The size button, or `Ctrl+↑` and `Ctrl+↓` inside the window, switches the size. At the smallest window (1024 × 600) both sizes fill the space above the status bar. Example: the munshi presses `F1` on the بکری screen, asks "akram ka bakaya", reads the answer in the normal window, and presses `Ctrl+↑` to see R13 in full.
 - The panel stays open while the user moves between screens, so he can follow a link and come back to the answer.
 - The screen under the panel keeps everything typed in it. Opening, using or closing the panel never changes an entry. A link that leaves a screen with unsaved work asks first (FR-7.9).
 - `Esc` closes an open list in the panel first, then the panel (FR-7.18). The focus goes back to the field it came from.
@@ -2584,4 +2593,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.14 | 01-11-2026 | Umar's change of 01-11-2026, made while testing the app himself, approved by Umar. A picker's list opens as soon as the picker gets the focus, by keyboard too, and `↑` `↓` choose in it while it is open (FR-7.16; replaces the v1.8 keyboard rule). The lot seller list shows the sellers and پختہ کھاتہ; اپنا مال only while a trip has goods left, a garden only while it is open (12.3, FR-12.26). No money rule, posting or test number changed. |
 | 1.15 | 01-11-2026 | Umar's second change of 01-11-2026, approved by Umar. A rare party can be made his own پختہ account (پختہ کھاتہ گاہک or پختہ کھاتہ بیوپاری) on the account form, with the next code of the پختہ series from 0032, his own ledger, and cash first (FR-13.11, new; glossary, FR-10.2, 10.2, FR-10.5; E81, A79). The shared پختہ کھاتہ with the name typed on the line stays. No money rule, posting or test number changed. |
 | 1.16 | 01-11-2026 | Umar's third change of 01-11-2026, approved by Umar: ask the app (Section 7.7, FR-7.72 to FR-7.88, new). Amended 02-11-2026 before release, approved by Umar: every request goes only to the zero-retention Azure endpoint of the model, with no fallback; and the model is the brain. GPT-6 Luna through OpenRouter understands the question in any wording, reads every section through read-only tools (FR-7.87), adds up and compares through the app's calculator, estimates the months ahead through the app's estimator (FR-7.86), and writes the answer itself in the app language. Every figure in the answer is a reference that the app fills from the books and checks before it is shown, with a check from two places (FR-7.75, FR-7.76). The records the model reads are sent to OpenRouter (the client agreed, 02-11-2026), but never the fields FR-7.83 lists (phones, addresses, father or firm names, notes, reasons, other free text, keys, locked partner figures). Quick questions work with no internet; 20 questions a day; partner figures behind the partner code; a question log. Also G11, FR-5.5, 6.2, 7.3 (`F1`), Section 21, E82 to E98, A80 to A90, the Must list (26), demo step 10a, E2E-47 to E2E-63. Further amended 02-11-2026, approved by Umar ("the expert for the recommendation and future request"): advice from the books (FR-7.88, A90, E98, E2E-63); the exact instructions, tools and answer schema in `docs/deliverables/D6-system-prompt.md` (FR-7.87); a difference filled with its direction word (FR-7.75); a typed ✓, the other side's words and a figure of an earlier question refused (FR-7.76, E2E-60); a locked partner question pauses with no model call (FR-7.82); the FR-7.79 advice example moved to FR-7.88, reading R20, which has the days, not R21; after an independent review: the name check covers record names only, a difference between two places is final with no rewrite, side words are judged around each balance, the partner list of FR-7.82 follows FR-17.11, the market and person sent of a trip are never sent (FR-7.83), last N months and years (FR-7.77), and a target counts from the current month and is reached at the target (FR-7.86, E2E-59). No money rule, posting or earlier test number changed. |
+| 1.17 | 02-11-2026 | Umar's change of 02-11-2026, approved by Umar: ask the app opens as a chat window above a floating round button at the end of the screen, in the app's colours, with a normal size and a large size for long tables (FR-7.73). The status bar keeps "سوال پوچھیں F1" and today's count. No money rule, posting or test number changed. |
 
