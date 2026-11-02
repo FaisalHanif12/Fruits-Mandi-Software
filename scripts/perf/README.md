@@ -396,6 +396,11 @@ File: `backend/crates/assistant/benches/assistant.rs`, one `[[bench]]` named `as
 | `assistant/quick_total_dues` | The chip for the total dues, checked through R20, R24 and R38 | 300 ms |
 | `assistant/quick_sellers_payable` | The chip for what the shop owes sellers | 300 ms |
 | `assistant/quick_party_busiest_buyer` | The party chip for the buyer with about 55,000 lines | 300 ms |
+| `assistant/quick_today_commission` | The chip for today's commission | 300 ms |
+| `assistant/quick_buyers_dues` | The chip for what buyers owe | 300 ms |
+| `assistant/quick_dead_amount` | The chip for the dead amount | 300 ms |
+| `assistant/quick_advances_open` | The chip for the advances still open | 300 ms |
+| `assistant/quick_stock_left` | The chip for the goods not sold | 300 ms |
 | `assistant/round_ledger_busiest_buyer` | The D6 worked question over recorded replies: find by code, party card and R13 together, the checked answer, the log | 300 ms |
 | `assistant/round_advice_dues_r20` | The advice question over recorded replies: R20 over every buyer, the checked answer, the log | 300 ms |
 | `dashboard/get_full_volume` | The dashboard tiles (NFR-SPD-2) | 1,000 ms |
@@ -403,7 +408,7 @@ File: `backend/crates/assistant/benches/assistant.rs`, one `[[bench]]` named `as
 
 The last two rows are not assistant code. The quick questions and two tools read the same tiles and R34, and the assistant benchmarks found them slow (about 6 s and 9 s) on this volume, so they are held here at their own NFR targets and fail until fixed.
 
-`assistant/round_advice_dues_r20` has no result yet, on purpose. On 02-11-2026 the recorded advice question (the prompt's own example, R20 sorted on two keys) ended as an error after 64 s instead of as advice, so the bench prints `OVER` and `pnpm perf` reports it as MISSING. The cause is in the `report` tool: a `where` or two sort keys make it read every row of the report (`read_all`, pages of 1,000), and each page works the whole report out again. R20 has 8,998 rows on this volume; the first page took 4.1 s and the second 8.1 s. The probe prints this (`MANDI_AI_PROBE=1`, lines "R20 page at ..."). The bench measures again, with no change to its target, once the question ends as advice.
+`assistant/round_advice_dues_r20` was found on 02-11-2026 to end as an error after 64 s instead of as advice (the prompt's own example, R20 sorted on two keys). The cause was in the `report` tool: a `where` or two sort keys made it read every row of the report in pages of 1,000, and each page worked the whole report out again (R20 has 8,998 rows on this volume; the first page took 4.1 s and the second 8.1 s; the probe, `MANDI_AI_PROBE=1`, prints lines "R20 page at ..."). Plan 48 step P48-S2 made it read the report once, so the question now ends as advice and the bench has a result: mean 3,498 ms, p95 3,643 ms on 02-11-2026. That is one build of R20 with ages. It is still over its 300 ms target and fails until the dues report is faster (the speed plan); the target is not loosened.
 
 The volume used is the plain NFR-SCL-1 volume plus the matching rows of every buyer and seller (`matched_volume` in the bench file, written once into `target/perf/nfr_scl1_matched`). The generator makes the plain volume with SQL, so its old lines have no matching rows, and the dues report, the day summary and the dashboard then work every match out again at each read. A real file keeps the matching, so the benchmarks use it. To see where one quick question spends its time: `cd backend && MANDI_AI_PROBE=1 cargo bench -p mandi-assistant --bench assistant` (it prints the time of the snapshot, the tiles and each report behind them, and stops).
 

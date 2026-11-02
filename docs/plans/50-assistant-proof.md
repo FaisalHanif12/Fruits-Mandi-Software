@@ -47,3 +47,22 @@ D6-A6, D6-A7, D6-A8 and D6-A9 evidence (attacks), D6-A16 (live run, or WAITING F
   - (2) The four chips over 300 ms, dashboard::get (8.1 s) and R34 (11.1 s) go to Umar's speed plan.
   - (3) D6 attack 15 versus E98, on Umar's list.
   - (4) "Delete", "back-date" and "dishonest" advice cannot be caught by check.rs; it is left to the Urdu review of the live run.
+- Final bench numbers (02-11-2026, after P48-S1 and P48-S2; release build, NFR-SCL-1 data; p95):
+
+  | Bench | p95 | Against 300 ms |
+  |---|---|---|
+  | cash_in_hand | 51 ms | OK |
+  | today_sales | 5.4 ms | OK |
+  | today_commission | 7 ms | OK |
+  | dead_amount | 9.9 ms | OK |
+  | stock_left | 6.1 ms | OK |
+  | party chip, busiest buyer | 187 ms | OK |
+  | ledger round | 237 ms | OK |
+  | sellers_payable | 342 ms | OVER |
+  | advances_open | 380 ms | OVER |
+  | buyers_dues | 662 ms | OVER |
+  | total_dues | 1.41 s | OVER |
+  | advice round on R20 | 3.64 s | OVER; ends as Advice, before it timed out at 64 s |
+
+  dashboard::get takes 8.1 s and R34 11.1 s, against 1 s each. These go to Umar's speed plan. No threshold was loosened.
+- Five new 300 ms entries are in thresholds.json (72 in all). run.mjs is formatted; `node --check` and `prettier --check` both pass.

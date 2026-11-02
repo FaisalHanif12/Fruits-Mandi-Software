@@ -435,8 +435,9 @@ fn quick_questions(c: &mut Criterion) {
         std::process::exit(0);
     }
     let mut group = flat(c, 30, 8);
-    // The chips that read the dashboard tiles take seconds on this volume (see the probe), so they
-    // take 10 samples; the others take 30.
+    // The chips that read a tile or a report over every buyer can take a second on this volume
+    // (see the probe and the numbers in scripts/perf/README.md Section 9), so they take 10
+    // samples; the party chip and the payables chip take 30. Every chip has its own bench.
     for (name, chip, party, samples) in [
         ("quick_cash_in_hand", QuickChip::CashInHand, None, 10),
         ("quick_today_sales", QuickChip::TodaySales, None, 10),
@@ -448,6 +449,16 @@ fn quick_questions(c: &mut Criterion) {
             Some(bed.buyer),
             30,
         ),
+        (
+            "quick_today_commission",
+            QuickChip::TodayCommission,
+            None,
+            10,
+        ),
+        ("quick_buyers_dues", QuickChip::BuyersDues, None, 10),
+        ("quick_dead_amount", QuickChip::DeadAmount, None, 10),
+        ("quick_advances_open", QuickChip::AdvancesOpen, None, 30),
+        ("quick_stock_left", QuickChip::StockLeft, None, 30),
     ] {
         // Once before the clock starts, so a wrong answer is a stop, not a fast number.
         if bed.quick(chip, party) != AskOutcome::Answered {

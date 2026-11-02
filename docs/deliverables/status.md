@@ -4,6 +4,23 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Current
 
+- **D6 (ask the app) is BUILT and WAITS FOR THE GATE (02-11-2026).** Branch `feature/assistant`, from `feature/d5-early` at `ad3d813`. Plans 48, 49 and 50 are committed and pushed. The reviewer and robustness gate runs only after Umar says "continue". No pull request, merge or release: Mac phase.
+  - What was built: the assistant crate (8 read-only tools, every FR-7.76 check, the loop, one snapshot per question); the question panel; the proof (100 questions, attacks 1 to 15, the key scan, benches). The four prompt files are verbatim. The money agent passed domain::figures and domain::forecast, and every money file of T3, P48-S1 and P48-S2.
+  - D6-A16 is WAITING FOR KEY. Umar saves his OpenRouter key in Settings; the lead then runs `node scripts/ai-eval/run.mjs`. If the Azure endpoint returns HTTP 404: D6 BLOCKED.
+  - D6-A17 is partly OVER on NFR-SCL-1 data. Six chips and the ledger round are under 300 ms. Sellers payable (342 ms), advances open (380 ms), buyers' dues (662 ms), total dues (1.4 s) and the advice round on R20 (3.6 s) are over. dashboard::get takes 8.1 s against 1 s, and R34 11.1 s against 1 s. The causes are existing report SQL, so a speed plan needs Umar's OK (plan 48 Section 12: a1, a2, a3, (c)).
+  - Items for Umar (plan 48 Sections 9 to 12):
+    - the floors in M14 and money agent 9.1 against the PRD;
+    - "thousand" and "million" in questions;
+    - the unit words as constants;
+    - 7 glossary terms and «پیشگی باقی» missing from the prompt;
+    - the number-word list to add to words.tsv (and the exceptions اسی, بہتر, do, teen, char; ordinals);
+    - D6 attack 15 against PRD E98;
+    - the records-difference attention item, not built;
+    - 5 estimate measures refused;
+    - 16 cargo deny advisories (tokio, zstd, zstd-safe, crypto-bigint, ctutils);
+    - 4 older frontend test files (trips and gardens) that fail Prettier at the D6 base.
+  - Gate follow-ups: the money agent's untested cases (plan 48 Section 11). The existing test files changed by additions only: count and list rows in bindings, ipc_auth, robustness_security, workspace_rules, migration, schema, read_moment, keyboard-registry and settings.
+
 - **GATE NEEDS UMAR'S APPROVAL (Umar, 25-10-2026).** Do NOT launch `reviewer` or `robustness` until Umar says "continue". Until then, finish ALL remaining build work (plan 17 follow-ups, D4R 17d and 17e, D5 garden, fruit and print parts, round 12 Mac go-live parts). When every build item is done and committed on both runs: stop all agents (ask each to finish its current edit, let a running `pnpm gen:types` end, and report exact state), write the resume note here, in `progress.json` and in `../Fruit Mandi Parallel/coordination.md`, commit the status docs, and WAIT for Umar. After his "continue": merge `feature/refresh-v16` into `feature/d5-early` (or the reverse as agreed), run the single gate (reviewer and robustness once over D3, D4, D4R and D5), then the fix loop, final checks and the DONE REPORTS.
 
 - **PAUSED by Umar on 24-10-2026 at about 00:40 PKT (third pause). When he says continue, start exactly here. All four teammates are idle and alive with their context: continue them with a message (`backend`, `frontend`, `backend-d5`, `frontend-d5`).**

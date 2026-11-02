@@ -569,6 +569,51 @@
       "$comment": "As quick_cash_in_hand, for the party chip: his checked balance and the last rows of his ledger. The stress case for a party."
     },
     {
+      "id": "assistant/quick_today_commission",
+      "action": "Quick question: today's commission",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the commission of the day (the dashboard tile and its second place)."
+    },
+    {
+      "id": "assistant/quick_buyers_dues",
+      "action": "Quick question: buyers' dues",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for what buyers owe (the dashboard tile, checked through R20)."
+    },
+    {
+      "id": "assistant/quick_dead_amount",
+      "action": "Quick question: dead amount (ڈوبی رقم)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the dead amount (the dashboard tile, checked through R38)."
+    },
+    {
+      "id": "assistant/quick_advances_open",
+      "action": "Quick question: open advances",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the advances not yet adjusted (the dashboard tile, checked through R26)."
+    },
+    {
+      "id": "assistant/quick_stock_left",
+      "action": "Quick question: goods not sold",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the stock left (the dashboard tile, checked through R10)."
+    },
+    {
       "id": "assistant/round_ledger_busiest_buyer",
       "action": "App's part of a question: find, card and ledger of the busiest buyer, checks, fill, log",
       "kind": "nfr",
