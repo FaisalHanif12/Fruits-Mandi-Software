@@ -34,7 +34,7 @@ use mandi_services::core::text;
 use crate::limits::{MAX_ANSWER_WORDS, MAX_NEXT, MAX_SHOW, MAX_TABLE_ROWS};
 use crate::model_answer::{AnswerKind, ModelAnswer, Piece, ShowAs, pieces};
 use crate::prompt::{SYSTEM, WordKind, words};
-use crate::results::{Node, Shown, Side, Val};
+use crate::results::{NameVal, Node, Shown, Side, Val};
 use crate::tools::{Env, Found, State, ToolError, lookup};
 
 /// One thing that failed, in the words the model reads for its one rewrite.
@@ -200,6 +200,165 @@ impl NameSet {
             .filter(|p| haystack.to_lowercase().contains(&p.to_lowercase()))
             .map(|p| p.trim().to_owned())
             .collect()
+    }
+}
+
+/// A name in the results of this question, with the path a reference to it takes.
+struct NamePath {
+    path: String,
+    name: NameVal,
+}
+
+fn walk_names(path: &str, node: &Node, out: &mut Vec<NamePath>) {
+    match node {
+        Node::Val(Val::Name(n)) => out.push(NamePath {
+            path: path.to_owned(),
+            name: n.clone(),
+        }),
+        Node::Obj(fields) | Node::Keyed(fields) => fields
+            .iter()
+            .for_each(|(k, v)| walk_names(&format!("{path}.{k}"), v, out)),
+        Node::List(items) => items
+            .iter()
+            .enumerate()
+            .for_each(|(i, v)| walk_names(&format!("{path}.{i}"), v, out)),
+        _ => {}
+    }
+}
+
+/// The words of a text with their place: a run of word characters, as `padded` sees them.
+fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
+    let mut out = Vec::new();
+    let mut begin: Option<usize> = None;
+    for (i, c) in text.char_indices() {
+        match (is_word_char(c), begin) {
+            (true, None) => begin = Some(i),
+            (false, Some(b)) => {
+                out.push((b, i, text.get(b..i).unwrap_or("")));
+                begin = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(b) = begin {
+        out.push((b, text.len(), text.get(b..).unwrap_or("")));
+    }
+    out.into_iter()
+        .map(|(a, b, w)| (a, b, padded(w).trim().to_lowercase()))
+        .collect()
+}
+
+/// The account codes that stand for many people (the two پختہ کھاتہ accounts, PRD FR-13.1).
+const PUKHTA_CODES: [&str; 2] = ["03049999", "030119999"];
+
+/// True when a gap between the words of a name holds nothing but spaces and the punctuation that
+/// can stand in a name. A digit, a brace, a ✓ or a sign between the words is not part of the name:
+/// putting the name back would swallow it, so that text is left to the rewrite.
+fn only_separators(gap: &str) -> bool {
+    gap.chars().all(|c| {
+        c.is_whitespace() || is_boundary(c) || matches!(c, '-' | '\'' | '/' | '&' | '(' | ')')
+    })
+}
+
+impl NameSet {
+    /// A text with each typed name that the results of this question hold exactly put back as a
+    /// reference to it (plan 52 P52-S1): the same whole-word match as the check, and only a name
+    /// the results hold as ONE record. A name of two different records (same text, other codes)
+    /// is left alone, and so is every name that is not in the results: the check still refuses
+    /// them. `None` when nothing was put back.
+    ///
+    /// Example: "اکرم ٹول ٹیکس کے ذمے {{r2.balance}}" with that name at `r1.matches.0.name` becomes
+    /// "{{r1.matches.0.name}} کے ذمے {{r2.balance}}".
+    pub fn put_back(&self, state: &State, text: &str) -> Option<String> {
+        let mut entries = Vec::new();
+        for result in state.results.iter().filter(|r| r.turn == state.turn) {
+            walk_names(&result.id, &result.node, &mut entries);
+        }
+        // For each phrase of the check, the one path that holds it, or none when two records do.
+        let mut wanted: Vec<(Vec<String>, String)> = Vec::new();
+        for phrase in &self.phrases {
+            let mut holders = entries.iter().filter(|e| {
+                padded(&e.name.name_ur) == *phrase || padded(&e.name.name_en) == *phrase
+            });
+            let Some(first) = holders.next() else {
+                continue;
+            };
+            // A name with no code (an item, a city) or with the code of a پختہ کھاتہ account (one
+            // account for many people, told apart by phone) does not say which record it is.
+            let known = |e: &NamePath| {
+                e.name
+                    .code
+                    .as_deref()
+                    .is_some_and(|c| !PUKHTA_CODES.contains(&c))
+            };
+            if !known(first) || holders.clone().any(|e| !known(e)) {
+                continue;
+            }
+            if holders.any(|e| {
+                (&e.name.code, &e.name.name_ur, &e.name.name_en)
+                    != (&first.name.code, &first.name.name_ur, &first.name.name_en)
+            }) {
+                continue;
+            }
+            let words: Vec<String> = phrase
+                .trim()
+                .to_lowercase()
+                .split(' ')
+                .map(str::to_owned)
+                .collect();
+            wanted.push((words, first.path.clone()));
+        }
+        // The longest name first: "Arshad Multani" before "Arshad".
+        wanted.sort_by_key(|(words, _)| std::cmp::Reverse(words.len()));
+        if wanted.is_empty() {
+            return None;
+        }
+        let mut changed = false;
+        let mut out = String::new();
+        for piece in pieces(text) {
+            match piece {
+                Piece::Ref(r) => out.push_str(text.get(r.start..r.end).unwrap_or("")),
+                Piece::Words(w) => {
+                    let spans = word_spans(&w);
+                    let mut at = 0usize;
+                    let mut i = 0usize;
+                    while i < spans.len() {
+                        let hit = wanted.iter().find(|(words, _)| {
+                            spans
+                                .get(i..i.saturating_add(words.len()))
+                                .is_some_and(|run| {
+                                    run.len() == words.len()
+                                        && run.iter().zip(words).all(|((_, _, t), want)| t == want)
+                                        && run.windows(2).all(|pair| match pair {
+                                            [(_, end, _), (start, _, _)] => {
+                                                only_separators(w.get(*end..*start).unwrap_or("-"))
+                                            }
+                                            _ => true,
+                                        })
+                                })
+                        });
+                        match hit {
+                            Some((words, path)) => {
+                                let last = i.saturating_add(words.len()).saturating_sub(1);
+                                let (Some(first_span), Some(last_span)) =
+                                    (spans.get(i), spans.get(last))
+                                else {
+                                    break;
+                                };
+                                out.push_str(w.get(at..first_span.0).unwrap_or(""));
+                                out.push_str(&format!("{{{{{path}}}}}"));
+                                at = last_span.1;
+                                i = last.saturating_add(1);
+                                changed = true;
+                            }
+                            None => i = i.saturating_add(1),
+                        }
+                    }
+                    out.push_str(w.get(at..).unwrap_or(""));
+                }
+            }
+        }
+        changed.then_some(out)
     }
 }
 

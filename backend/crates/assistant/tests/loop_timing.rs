@@ -95,15 +95,20 @@ fn a_question_keeps_its_total_its_model_time_its_tool_time_and_each_call() {
         assert_eq!(call["rewrite"], false);
         assert!(call["tokens_in"].as_i64().unwrap() > 0);
     }
+    // The tools the model asked for; the ones the app read ahead are marked `prefetch` (P52-S1).
     let names = |call: &Value| -> Vec<String> {
         call["tools"]
             .as_array()
             .unwrap()
             .iter()
+            .filter(|t| t.get("prefetch").is_none())
             .map(|t| t["name"].as_str().unwrap().to_owned())
             .collect()
     };
     assert_eq!(names(&calls[0]), ["find"]);
+    // The find matched one buyer: the app read his card ahead, in the same call's tools.
+    assert_eq!(calls[0]["tools"][1]["name"], "party_card");
+    assert_eq!(calls[0]["tools"][1]["prefetch"], true);
     assert_eq!(names(&calls[1]), ["party_card", "report"]);
     assert!(names(&calls[2]).is_empty(), "the last call is the answer");
     // The sum of the calls is the model time of the row; the tools' sum is the tool time.

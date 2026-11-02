@@ -57,6 +57,7 @@ use crate::limits::{
     RETRY_MIN_LEFT_SECS,
 };
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
+use crate::prefetch;
 use crate::request::{Parts, RESULT_MARK, request_body, user_message};
 use crate::results::{Node, ToolResult, Words, fit, tool_result_json};
 use crate::runtime::Runtime;
@@ -347,8 +348,11 @@ impl<'a> Run<'a> {
         let mut paused = None;
         // The finds made in this reply: the ones a later call of it may read the match of.
         let mut batch_finds: Vec<String> = Vec::new();
+        // True while every call of the reply is a `find`: only then does the app read ahead.
+        let mut only_finds = true;
         let mut iter = calls.into_iter();
         while let Some(call) = iter.next() {
+            only_finds &= call.name == "find";
             if turn.counters.tool_calls >= MAX_TOOL_CALLS {
                 turn.messages.push(tool_message(
                     &call.id,
@@ -416,6 +420,7 @@ impl<'a> Run<'a> {
                 name: call.name.clone(),
                 millis,
                 ok,
+                prefetch: false,
             };
             match outcome {
                 Ok(mut draft) => {
@@ -464,8 +469,81 @@ impl<'a> Run<'a> {
                 }
             }
         }
+        // The model sent only finds and they matched one party each: read his card (and his
+        // ledger when the question names one) now, so the next call can answer (P52-S1).
+        if paused.is_none() && only_finds && turn.ask_which.is_none() && !batch_finds.is_empty() {
+            self.prefetch(turn, &mut state, index, &numbers, &question, &batch_finds);
+        }
         conv.results = state.results;
         paused
+    }
+
+    /// Reads what a find with exactly one party match leads to, as the model would have
+    /// (`party_card`, and R13, R2 or a commission view when the question names one, see
+    /// `prefetch`). The results get their own ids
+    /// (`p1` ...), the question log marks them, and they count as no tool call of the model. They
+    /// are added to the conversation as a call of the assistant and its tool messages, after the
+    /// ones of the find.
+    fn prefetch(
+        &self,
+        turn: &mut Turn,
+        state: &mut State,
+        index: u32,
+        numbers: &[QuestionNumber],
+        question: &str,
+        batch_finds: &[String],
+    ) {
+        let mut calls: Vec<Value> = Vec::new();
+        let mut answers: Vec<Value> = Vec::new();
+        for find_id in batch_finds.iter().take(prefetch::MAX_FINDS) {
+            let Some(party) = prefetch::single_party_match(state, find_id) else {
+                continue;
+            };
+            for (name, arguments) in prefetch::reads(question, &party) {
+                let call = ToolCall {
+                    id: String::new(),
+                    name: name.to_owned(),
+                    arguments,
+                };
+                let env = self.env(numbers, question);
+                (self.d.emit)(step_of(&call, &env, state));
+                let began = Instant::now();
+                let outcome = tools::call(&env, state, &call.name, &call.arguments);
+                let millis = millis_since(began);
+                let Ok(draft) = outcome else {
+                    // A read the app could not do is the model's to ask for; nothing is said.
+                    continue;
+                };
+                if let Some(last) = turn.timing.calls.last_mut() {
+                    last.tools.push(ToolTiming {
+                        name: call.name.clone(),
+                        millis,
+                        ok: true,
+                        prefetch: true,
+                    });
+                }
+                let id = state.next_id('p');
+                let mut result = tools::stored(draft, id.clone(), index);
+                fit(&mut result, &self.words);
+                let content = tool_result_json(&result, &self.words).to_string();
+                turn.tool_log.push(json!({
+                    "id": id,
+                    "tool": result.tool,
+                    "input": result.input,
+                    "prefetch": true,
+                }));
+                state.results.push(result);
+                let call_id = format!("pre_{id}");
+                calls.push(json!({"id": call_id, "type": "function",
+                                  "function": {"name": call.name, "arguments": call.arguments}}));
+                answers.push(tool_message(&call_id, content, Some(&id)));
+            }
+        }
+        if !calls.is_empty() {
+            turn.messages
+                .push(json!({"role": "assistant", "content": null, "tool_calls": calls}));
+            turn.messages.extend(answers);
+        }
     }
 
     /// The results this question read as plain tables, or none when it read no table.
@@ -549,6 +627,8 @@ impl<'a> Run<'a> {
                         tools: Vec::new(),
                         error: None,
                         check_failed: Vec::new(),
+                        repaired: Vec::new(),
+                        check_paths: Vec::new(),
                     });
                     break reply;
                 }
@@ -565,6 +645,8 @@ impl<'a> Run<'a> {
                         tools: Vec::new(),
                         error: failure_word(e.kind),
                         check_failed: Vec::new(),
+                        repaired: Vec::new(),
+                        check_paths: Vec::new(),
                     });
                     let left = total.saturating_sub(self.started.elapsed());
                     if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
@@ -680,6 +762,10 @@ impl<'a> Run<'a> {
         let mut content = reply.content.clone().unwrap_or_default();
         let finish_reason = reply.finish_reason.clone();
         let mut rewrote = false;
+        let mut repaired = false;
+        // What the model wrote before the app put a name back: the log keeps the model's own words
+        // (the call marks `repaired`), so the next live run shows what it typed.
+        let mut written_by_model: Option<String> = None;
         loop {
             let Ok(written) = ModelAnswer::parse(&content) else {
                 let mut f = Finished::plain(AskOutcome::NotUnderstood);
@@ -726,6 +812,21 @@ impl<'a> Run<'a> {
                     f
                 }
                 Verdict::Retry(failures) => {
+                    // A name typed in the words that the results hold exactly is put back as a
+                    // reference by the app, with every rule checked again, instead of a rewrite
+                    // call of 3 to 6 seconds (plan 52 P52-S1).
+                    if !repaired
+                        && failures.iter().any(|x| x.rule == "name")
+                        && let Some(fixed) = repaired_content(&content, &state, &names)
+                    {
+                        repaired = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired = vec!["name".to_owned()];
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
                     if rewrote {
                         let mut f = Finished::plain(AskOutcome::ChecksFailed);
                         f.answer = Some(fill::plain_tables(&state, &read_at));
@@ -744,6 +845,11 @@ impl<'a> Run<'a> {
                         if let Some(last) = turn.timing.calls.last_mut() {
                             last.check_failed =
                                 failures.iter().map(|x| x.rule.to_owned()).collect();
+                            last.check_paths = failures
+                                .iter()
+                                .filter(|x| matches!(x.rule, "reference" | "earlier_question"))
+                                .map(|x| x.at.clone())
+                                .collect();
                         }
                         match rewritten {
                             Ok(next) if next.tool_calls.is_empty() => {
@@ -761,7 +867,7 @@ impl<'a> Run<'a> {
                     }
                 }
             };
-            f.model_text = Some(json_text(&content));
+            f.model_text = Some(json_text(written_by_model.as_deref().unwrap_or(&content)));
             f.finish_reason = Some(finish_reason);
             return f;
         }
@@ -1109,6 +1215,31 @@ fn unclear_find_read(state: &State, batch_finds: &[String], arguments: &str) -> 
             let more = matches!(result.node.get(&["more"]), Some(Node::Bool(true)));
             count != 1 || more
         })
+}
+
+/// The model's answer with the names it typed in `text` and in `next` put back as references
+/// (`NameSet::put_back`), as the JSON text it was. `None` when nothing was put back or it is not
+/// JSON.
+fn repaired_content(content: &str, state: &State, names: &NameSet) -> Option<String> {
+    let mut value: Value = serde_json::from_str(content).ok()?;
+    let mut changed = false;
+    if let Some(Value::String(text)) = value.get_mut("text")
+        && let Some(fixed) = names.put_back(state, text)
+    {
+        *text = fixed;
+        changed = true;
+    }
+    if let Some(Value::Array(next)) = value.get_mut("next") {
+        for item in next {
+            if let Value::String(text) = item
+                && let Some(fixed) = names.put_back(state, text)
+            {
+                *text = fixed;
+                changed = true;
+            }
+        }
+    }
+    changed.then(|| value.to_string())
 }
 
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the

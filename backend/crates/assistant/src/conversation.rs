@@ -41,6 +41,9 @@ pub struct ToolTiming {
     pub millis: i64,
     /// False when the tool refused its input.
     pub ok: bool,
+    /// True when the app ran the tool itself, after a `find` with exactly one match (the
+    /// model did not ask for it, plan 52 P52-S1).
+    pub prefetch: bool,
 }
 
 /// One model call with the time it took and the tools it asked for (plan 51 B2).
@@ -69,6 +72,12 @@ pub struct CallTiming {
     /// For the rewrite: the rules of the checks that the first answer failed (the words of
     /// `check.rs`, no text and no figure), so the log shows why a rewrite was needed.
     pub check_failed: Vec<String>,
+    /// For an answer whose typed names the app put back as references instead of asking for a
+    /// rewrite (plan 52 P52-S1): the rules it repaired (the word `name`), so the log shows it.
+    pub repaired: Vec<String>,
+    /// For the rewrite: the paths of the references that failed (`reference`, `earlier_question`).
+    /// A path holds no name and no figure; it shows why the first answer was refused.
+    pub check_paths: Vec<String>,
 }
 
 /// Where the time of one run of a question went. A question that waits for the partner code and
@@ -112,7 +121,13 @@ impl Timing {
                     "rewrite": c.rewrite,
                     "failed": c.failed,
                     "tools": c.tools.iter()
-                        .map(|t| serde_json::json!({"name": t.name, "ms": t.millis, "ok": t.ok}))
+                        .map(|t| {
+                            let mut tool = serde_json::json!({"name": t.name, "ms": t.millis, "ok": t.ok});
+                            if let (true, Some(map)) = (t.prefetch, tool.as_object_mut()) {
+                                map.insert("prefetch".to_owned(), serde_json::json!(true));
+                            }
+                            tool
+                        })
                         .collect::<Vec<_>>(),
                 });
                 // Only when there is something to say, so a normal call's entry stays as it was.
@@ -123,6 +138,16 @@ impl Timing {
                     && let Some(map) = entry.as_object_mut()
                 {
                     map.insert("check_failed".to_owned(), serde_json::json!(c.check_failed));
+                }
+                if !c.check_paths.is_empty()
+                    && let Some(map) = entry.as_object_mut()
+                {
+                    map.insert("check_paths".to_owned(), serde_json::json!(c.check_paths));
+                }
+                if !c.repaired.is_empty()
+                    && let Some(map) = entry.as_object_mut()
+                {
+                    map.insert("repaired".to_owned(), serde_json::json!(c.repaired));
                 }
                 entry
             })

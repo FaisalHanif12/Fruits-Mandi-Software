@@ -200,6 +200,12 @@ fn tool_errors(body: &Value) -> Vec<Option<String>> {
     messages(body)
         .iter()
         .filter(|m| m["role"] == "tool")
+        // What the app read ahead itself (`pre_p1` ...) is not a result of a call of the model.
+        .filter(|m| {
+            !m["tool_call_id"]
+                .as_str()
+                .is_some_and(|id| id.starts_with("pre_p"))
+        })
         .map(|m| {
             let v: Value =
                 serde_json::from_str(m["content"].as_str().unwrap_or("{}")).unwrap_or(Value::Null);
@@ -594,14 +600,12 @@ fn bad_answers_in_urdu() -> Vec<BadAnswer> {
             &format!("{who} کروڑ سے کم ہیں۔"),
             &["number_word"],
         ),
+        // A name typed outside a reference that the results hold is put back by the app instead
+        // of a rewrite (plan 52 P52-S1); see `prefetch_repair.rs`. Latin letters in an Urdu
+        // answer are still refused, with a word that is not a name.
         bad(
-            "a name typed, not referenced",
-            "اکرم ٹول ٹیکس کے ذمے {{r2.balance}} باقی ہیں۔",
-            &["name"],
-        ),
-        bad(
-            "an English name in an Urdu answer",
-            "Akram Toll Tax کے ذمے {{r2.balance}} باقی ہیں۔",
+            "a Latin word in an Urdu answer",
+            "Owed کے ذمے {{r2.balance}} باقی ہیں۔",
             &["script"],
         ),
         bad(
@@ -660,11 +664,6 @@ fn bad_answers_in_urdu() -> Vec<BadAnswer> {
             "a figure referenced in a next question",
             &["{{r2.balance}} کا حساب؟"],
             &["next"],
-        ),
-        bad_next(
-            "a name typed in a next question",
-            &["اکرم ٹول ٹیکس کی بکریاں؟"],
-            &["name"],
         ),
         bad_next(
             "number words in a next question",
@@ -843,11 +842,6 @@ fn attack_03_in_english_every_way_to_type_a_figure_is_refused_too() {
             "script",
         ),
         (
-            "a name typed",
-            "Akram Toll Tax owes the shop {{r2.balance}}.".to_owned(),
-            "name",
-        ),
-        (
             "a never-use word",
             "The model says {{r2.balance}}.".to_owned(),
             "never_word",
@@ -877,6 +871,150 @@ fn attack_03_in_english_every_way_to_type_a_figure_is_refused_too() {
             failed_rules(&requests[3])
         );
     }
+    h.scan_requests();
+}
+
+// ---- typed names after the repair (plan 52 P52-S1) --------------------------------------------
+//
+// A name typed instead of referenced is put back by the app when the results hold it as ONE
+// record (see `prefetch_repair.rs`). The attacks that used such a name now have these vehicles,
+// which still prove that the rule stands where the app cannot know which record is meant, and that
+// every other rule is checked again after a repair.
+
+/// The worked day with a second buyer of the same names (the tag B tells him from the first): the
+/// results of a `find akram` hold two records with the same name.
+fn two_akrams() -> Harness {
+    let h = Harness::day();
+    world::add_account_tagged(
+        &h.world.env,
+        &h.world.owner,
+        AccountType::Buyer,
+        ("اکرم ٹول ٹیکس", "Akram Toll Tax"),
+        (true, ""),
+        "B",
+    );
+    h
+}
+
+/// One question over the books with two Akrams: a `find`, then the same bad answer twice (the
+/// answer and its one rewrite). Gives the reply and the rules the app named.
+fn typed_name_over_two_akrams(
+    h: &Harness,
+    question: &str,
+    content: &str,
+) -> (AskReply, BTreeSet<String>) {
+    let (reply, requests) = ask(
+        h,
+        question,
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer")]),
+            final_reply(content),
+            final_reply(content),
+        ],
+    );
+    assert_eq!(requests.len(), 3, "a find, the answer, one rewrite");
+    let named = failed_rules(&requests[2]);
+    (reply, named)
+}
+
+#[test]
+fn attack_03_a_name_two_records_share_is_still_refused_in_text_and_in_next() {
+    let h = two_akrams();
+    // In the text of the answer (Urdu).
+    let typed = answer(
+        "answer",
+        "اکرم ٹول ٹیکس کے ذمے {{r1.matches.0.balance}} باقی ہیں۔",
+    );
+    let (reply, named) = typed_name_over_two_akrams(&h, "akram ka bakaya kitna hai", &typed);
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert!(named.contains("name"), "the app named {named:?}");
+    assert!(
+        answer_of(&reply).parts.is_empty(),
+        "nothing of the model is shown"
+    );
+    // In a next question.
+    let in_next = answer_full(
+        "answer",
+        "{{r1.matches.0.name}} کے ذمے {{r1.matches.0.balance}} باقی ہیں۔",
+        json!([]),
+        json!(["اکرم ٹول ٹیکس کی بکریاں؟"]),
+        Value::Null,
+        Value::Null,
+    );
+    let (reply, named) = typed_name_over_two_akrams(&h, "akram ka bakaya kitna hai", &in_next);
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert!(named.contains("name"), "next: the app named {named:?}");
+    assert!(
+        answer_of(&reply).next.is_empty(),
+        "no next question is shown"
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn attack_03_in_english_a_name_two_records_share_is_still_refused() {
+    let h = two_akrams();
+    settings::set_pref(&h.world.env.ctx, &h.world.owner, PrefKey::Language, "en").unwrap();
+    let typed = answer(
+        "answer",
+        "Akram Toll Tax owes the shop {{r1.matches.0.balance}}.",
+    );
+    let (reply, named) = typed_name_over_two_akrams(&h, "how much does akram owe", &typed);
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert!(named.contains("name"), "the app named {named:?}");
+    h.scan_requests();
+}
+
+#[test]
+fn attack_03_a_repaired_name_is_the_one_record_the_results_hold_and_nothing_else_changes() {
+    // The same typed name over ONE Akram is put back as his reference, and the answer shows the
+    // record's own name and his checked balance: the model's typing never reaches the screen.
+    let h = Harness::day();
+    let typed = answer(
+        "answer",
+        "اکرم ٹول ٹیکس کے ذمے {{r1.matches.0.balance}} باقی ہیں۔",
+    );
+    let (reply, requests) = ask(
+        &h,
+        "akram ka bakaya kitna hai",
+        None,
+        vec![tool_reply(&[find("akram", "buyer")]), final_reply(&typed)],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 2, "no rewrite call");
+    let shown = answer_of(&reply);
+    assert!(
+        shown
+            .parts
+            .iter()
+            .any(|p| matches!(p, AnswerPart::Name { name } if name.name_en == "Akram Toll Tax")),
+        "the name is the record's: {shown:#?}"
+    );
+    let figs = figures(shown);
+    assert_eq!(balance(figs[0].0), (2_880, BalanceSide::Dr));
+    // A fault elsewhere in the same text is still found: the repair checks every rule again.
+    let two_faults = answer(
+        "answer",
+        "اکرم ٹول ٹیکس کے ذمے 2880 باقی ہیں {{r1.matches.0.balance}}۔",
+    );
+    let (reply, requests) = ask(
+        &h,
+        "akram ka bakaya kitna hai",
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer")]),
+            final_reply(&two_faults),
+            final_reply(&two_faults),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    let named = failed_rules(&requests[requests.len() - 1]);
+    assert!(named.contains("digit"), "the app named {named:?}");
+    assert!(
+        !named.contains("name"),
+        "the repaired name is not named again: {named:?}"
+    );
     h.scan_requests();
 }
 

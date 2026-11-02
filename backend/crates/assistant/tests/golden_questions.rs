@@ -82,7 +82,8 @@ fn e2e_47_two_balances_are_cited_checked_and_two_questions_are_counted() {
             if id.code() == "R13" && filters.party.as_ref().is_some_and(|p| p.record.id == h.world.akram))));
     // Three model calls: the third has every result.
     assert_eq!(requests.len(), 3);
-    // The step lines, in the panel's own words: finding, the card, the ledger, then the check.
+    // The step lines, in the panel's own words: finding, the card the app read ahead (a find with
+    // one match, plan 52 P52-S1), then the card and the ledger the model asked for, and the check.
     let steps: Vec<String> = h
         .steps
         .lock()
@@ -94,6 +95,7 @@ fn e2e_47_two_balances_are_cited_checked_and_two_questions_are_counted() {
         steps,
         [
             "assistant-step-finding",
+            "assistant-step-reading-card",
             "assistant-step-reading-card",
             "assistant-step-reading-ledger",
             "assistant-step-checking",
@@ -695,13 +697,13 @@ fn e2e_60_two_bad_answers_show_the_records_as_plain_tables_and_no_typed_figure()
 
 #[test]
 fn e2e_60_each_kind_of_bad_answer_is_refused() {
-    // Words, Arabic-Indic digits, a name typed outside a reference, a figure in a next question,
-    // a typed ✓, the other side's words, a month name, a never-use word, the wrong script, and a
-    // reference that does not exist: each fails twice and the records are shown instead.
+    // Words, Arabic-Indic digits, a figure in a next question, a typed ✓, the other side's words,
+    // a month name, a never-use word, the wrong script, and a reference that does not exist: each
+    // fails twice and the records are shown instead. (A name typed outside a reference is put
+    // back by the app when the results hold it: the next test.)
     for (variant, rule) in [
         ("words", "number_word"),
         ("indic", "digit"),
-        ("name", "name"),
         ("next", "next"),
         ("check", "check_mark"),
         ("side", "side_words"),
@@ -714,7 +716,6 @@ fn e2e_60_each_kind_of_bad_answer_is_refused() {
         let replies = match variant {
             "words" => fixture!("e2e-60-words"),
             "indic" => fixture!("e2e-60-indic"),
-            "name" => fixture!("e2e-60-name"),
             "next" => fixture!("e2e-60-next"),
             "check" => fixture!("e2e-60-check"),
             "side" => fixture!("e2e-60-side"),
@@ -738,6 +739,28 @@ fn e2e_60_each_kind_of_bad_answer_is_refused() {
         );
         h.scan_requests();
     }
+}
+
+#[test]
+fn e2e_60_a_name_typed_outside_a_reference_is_put_back_by_the_app_without_a_rewrite() {
+    // Plan 52 P52-S1: the model typed "اکرم ٹول ٹیکس" (which also holds the never-use word "ٹول").
+    // The results hold that exact name once, so the app writes `{{r1.matches.0.name}}` for it and
+    // checks the answer again: shown, 2,880 ✓, three model calls (find, party_card, the answer)
+    // and no rewrite. The fixture's fourth reply (the rewrite) is never asked for.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "ikram ke total bakaya kitne hai",
+        None,
+        fixture!("e2e-60-name"),
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 3);
+    let answer = answer_of(&reply);
+    assert!(matches!(&answer.parts[0], AnswerPart::Name { .. }));
+    let figs = figures(answer);
+    assert_eq!(balance(figs[0].0), (2_880, BalanceSide::Dr));
+    assert!(figs[0].1);
+    h.scan_requests();
 }
 
 // ---- E2E-61 ---------------------------------------------------------------------------------

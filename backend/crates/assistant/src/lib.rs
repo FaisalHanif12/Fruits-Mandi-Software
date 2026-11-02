@@ -39,6 +39,7 @@ pub mod limits;
 pub mod log;
 pub mod model_answer;
 pub mod number_words;
+pub mod prefetch;
 pub mod prompt;
 pub mod quick;
 pub mod request;
