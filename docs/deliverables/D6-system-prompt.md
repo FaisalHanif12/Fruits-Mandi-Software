@@ -1186,7 +1186,8 @@ Copied exactly. Every function is `strict`, every property is listed in `require
    }
   }
  }
-]```
+]
+```
 
 Rules for the inputs, enforced by the tools, not by the schema:
 
@@ -1363,7 +1364,8 @@ Copied exactly. The schema fixes the shape; `check.rs` checks the content (PRD F
       ]
     }
   }
-}```
+}
+```
 
 | Field | Rules `check.rs` adds |
 |---|---|
