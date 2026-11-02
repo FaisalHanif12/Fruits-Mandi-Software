@@ -248,3 +248,4 @@ Task F-P (frontend): `prettier --write` on the 4 files only, then run those 4 te
   - The perf volume has statistics that the app never writes; three plans were fixed in the SQL text instead.
   - The perf volume has no sale lines, facts, stock moves or share rows, so those queries are not timed at scale. A (entry_date, partner_id) index on partner_share_rows is suggested.
   - The test hooks `reports::day_query_forms` and the db `*_SQL` constants are public but doc(hidden).
+- Umar, 02-11-2026: "Accept as is". PRD FR-6.1 stays. The total_dues chip (532 ms) and the advice round on R20 (423 ms) are accepted as known over target on worst-case data: every buyer owes, with 324k open bills. A real shop is far smaller. D6-A17 is ticked with this note, to be revisited only if they feel slow on the client's real data.
