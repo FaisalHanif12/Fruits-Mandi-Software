@@ -194,3 +194,25 @@ Backend reported T3 built: 108 assistant tests (E2E-47 to E2E-63, P1 to P7, one 
   - Money agent: PASS.
   - Checks: fmt and clippy clean. The assistant suite passed; golden_day 94, assist 23, narrow_tiles 14 and dashboard_round9 30 passed. No existing test changed.
   - round_advice_dues_r20 on NFR-SCL-1 data: about 3.75 s, and it now ends as Advice. Before, it timed out after 64 s. It is still OVER 300 ms, because one R20 build with ages takes about 4 s (open_bills). This goes to Umar's speed plan (a3).
+
+## 13. Umar's decision and P48-S3 (02-11-2026)
+
+Umar lifted "only add to existing files" for two items:
+- (1) the slow report SQL, so that D6-A17 is met;
+- (2) Prettier formatting of the 4 older test files, so that the root `pnpm lint` is clean.
+
+Task P48-S3 (backend):
+- Make these meet their targets on robustness's NFR-SCL-1 matched volume, in a release build:
+  - every quick chip and the advice round on R20: 300 ms (NFR-AI-3);
+  - dashboard::get: 1 s (NFR-SPD-2);
+  - R34: 1 s (NFR-SPD-10).
+- Start with a1, a2 and a3 of Section 12, then the `owing` and R24 `candidates` queries.
+- A new index goes in a new migration 0016 (released migrations are never edited).
+- Stored running balances (c) only with the lead's OK, after a1 to a3 and the queries are measured.
+- Rules:
+  - the money agent before and after;
+  - every rewritten query gets an old-against-new equality test on the worked day, the E2E data and a generated volume;
+  - no golden or expected number changes;
+  - load_buyers calls balances_owing (the copied lines go away).
+
+Task F-P (frontend): `prettier --write` on the 4 files only, then run those 4 test files.
