@@ -690,6 +690,46 @@ pub fn run_dues_without_ages(db: &Db, input: &ReportRunInput) -> Result<ReportPa
     })
 }
 
+/// The most rows [`run_first_rows`] gives back.
+pub const MAX_FIRST_ROWS: i64 = 100_000;
+
+/// A report from its first row, with at most `max_rows` rows, built ONCE (plan 48 P48-S2): the
+/// page, the columns and the totals over the whole filter are exactly those of [`run`] at offset 0.
+/// `run` cuts a page of at most 1,000 rows and works a report whole for every page (R20 takes
+/// about 4 seconds on the NFR-SCL-1 volume), so nine pages take 64 seconds. A caller that needs
+/// every row of a small report (the assistant's `where` and its two sort keys) reads it here in
+/// one build. The rows are all of the filter when `total_count <= max_rows`; ask for one row more
+/// than the most you accept, and `total_count` says whether the report is too big. It has no sort
+/// and no month headings.
+///
+/// Example (worked day): R20 with `max_rows` 1,001 has its 2 buyers and `total_count` 2.
+///
+/// # Errors
+/// `ReportsError::Rejected` for a filter problem or a `max_rows` outside 1 to [`MAX_FIRST_ROWS`];
+/// `ReportsError::Data` for a sort or month headings; a database or money error.
+pub fn run_first_rows(
+    db: &Db,
+    input: &ReportRunInput,
+    max_rows: i64,
+) -> Result<ReportPage, ReportsError> {
+    if !(1..=MAX_FIRST_ROWS).contains(&max_rows) {
+        return Err(ReportsError::Rejected(vec![FieldError::new(
+            ErrorCode::ErrOutOfRange,
+            "limit",
+        )]));
+    }
+    if input.sort.is_some() || input.group_by_month {
+        return Err(ReportsError::Data(
+            "the first rows have no sort and no month headings".to_owned(),
+        ));
+    }
+    let spec = PageSpec {
+        offset: 0,
+        limit: Some(max_rows),
+    };
+    db.read(|conn| build(conn, db, input.id, &input.filters, spec))
+}
+
 /// R34 gives the tables of every day when it is built whole; a page keeps the tables of the days
 /// it has a row of (plan 42).
 fn keep_tables_of_the_page(page: &mut ReportPage) {

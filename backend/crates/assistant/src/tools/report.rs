@@ -14,7 +14,8 @@
 use mandi_reports::ReportsError;
 use mandi_reports::reports::{
     Cell, Column, FilterKind, GroupBy, PartyFilter, ReportFilters, ReportId, ReportPage,
-    ReportRunInput, Row, RowKind, catalog, run as engine_run, statement_page, statement_request,
+    ReportRunInput, Row, RowKind, catalog, run as engine_run, run_first_rows, statement_page,
+    statement_request,
 };
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::error::ErrorCode;
@@ -47,9 +48,6 @@ pub const MAX_ROWS: i64 = 100;
 /// Most rows read to filter or sort in memory (NFR-SCL-1: 20,000 accounts; a list longer than
 /// this is refused rather than cut, so `matched` is always over every row).
 pub const MAX_FETCH_ROWS: i64 = 10_000;
-/// The page size of a read of every row (the report's own largest page).
-const PAGE: i64 = 1_000;
-
 /// A comparison of `where`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -387,10 +385,35 @@ fn read_statement(
     statement_page(&request, &statement, offset, limit).map_err(reports_stop)
 }
 
-/// Reads every row of the filter, up to [`MAX_FETCH_ROWS`].
+/// Reads every row of the filter, up to [`MAX_FETCH_ROWS`], in ONE build of the report (plan 48
+/// P48-S2). A page call works the whole report out again, so reading R20 in pages of 1,000 took
+/// nine builds, 64 seconds on the NFR-SCL-1 volume, and the question timed out. One row more than
+/// the most is asked for, so `total_count` says the report is too big and the rows are all of the
+/// filter otherwise.
 fn read_all(env: &Env<'_>, id: ReportId, filters: &ReportFilters) -> Result<ReportPage, Stop> {
-    let mut first = read_page(env, id, filters, 0, PAGE, None)?;
-    if first.total_count > MAX_FETCH_ROWS {
+    read_all_with(|max_rows| {
+        run_first_rows(
+            env.ctx.db(),
+            &ReportRunInput {
+                id,
+                filters: filters.clone(),
+                offset: 0,
+                limit: 0,
+                sort: None,
+                group_by_month: false,
+            },
+            max_rows,
+        )
+    })
+}
+
+/// [`read_all`] with its reader given. The reader is a `FnOnce`, so the report can only be built
+/// once, and it is asked for `MAX_FETCH_ROWS + 1` rows.
+fn read_all_with(
+    read: impl FnOnce(i64) -> Result<ReportPage, ReportsError>,
+) -> Result<ReportPage, Stop> {
+    let mut page = read(MAX_FETCH_ROWS.saturating_add(1)).map_err(reports_stop)?;
+    if page.total_count > MAX_FETCH_ROWS {
         return Err(bad(
             "ERR_OUT_OF_RANGE",
             "where",
@@ -398,16 +421,8 @@ fn read_all(env: &Env<'_>, id: ReportId, filters: &ReportFilters) -> Result<Repo
         )
         .into());
     }
-    while i64::try_from(first.rows.len()).unwrap_or(i64::MAX) < first.total_count {
-        let offset = i64::try_from(first.rows.len()).unwrap_or(i64::MAX);
-        let next = read_page(env, id, filters, offset, PAGE, None)?;
-        if next.rows.is_empty() {
-            break;
-        }
-        first.rows.extend(next.rows);
-    }
-    first.limit = 0;
-    Ok(first)
+    page.limit = 0;
+    Ok(page)
 }
 
 /// What a column that `where` reads holds. A question number must have the unit that fits it
@@ -1152,6 +1167,58 @@ mod tests {
             checked: None,
             places: Vec::new(),
         })
+    }
+
+    /// A page of R20 with no rows that says its filter has `total_count` rows.
+    fn page_of_count(total_count: i64) -> ReportPage {
+        ReportPage {
+            id: ReportId::R20,
+            title_id: String::new(),
+            filters: Default::default(),
+            columns: Vec::new(),
+            rows: Vec::new(),
+            offset: 0,
+            limit: PAGE_OF_THE_SCREEN,
+            total_count,
+            totals_label_id: String::new(),
+            totals: Vec::new(),
+            summary: Vec::new(),
+            tables: Vec::new(),
+            group_above: None,
+        }
+    }
+
+    /// The limit a page of the screen would report (not 0, which is the sign of every row).
+    const PAGE_OF_THE_SCREEN: i64 = 1_000;
+
+    #[test]
+    fn every_row_is_read_in_one_build_asking_for_one_row_more_than_the_most() {
+        // Plan 48 P48-S2: nine page reads of R20 took 64 seconds on the NFR-SCL-1 volume. The
+        // reader is called once, with the most plus one, and its page is given back with the
+        // sign of "every row" (limit 0).
+        let mut asked = Vec::new();
+        let page = read_all_with(|max_rows| {
+            asked.push(max_rows);
+            Ok(page_of_count(8_998))
+        });
+        assert_eq!(asked, vec![MAX_FETCH_ROWS + 1]);
+        match page {
+            Ok(page) => assert_eq!((page.total_count, page.limit), (8_998, 0)),
+            Err(_) => panic!("8,998 rows are under the most and must be read"),
+        }
+    }
+
+    #[test]
+    fn a_report_over_the_most_is_refused_after_that_one_build() {
+        let mut calls = 0;
+        let page = read_all_with(|_| {
+            calls += 1;
+            Ok(page_of_count(MAX_FETCH_ROWS + 1))
+        });
+        assert_eq!(calls, 1);
+        assert!(page.is_err(), "10,001 rows are over the most");
+        // Exactly the most is read.
+        assert!(read_all_with(|_| Ok(page_of_count(MAX_FETCH_ROWS))).is_ok());
     }
 
     #[test]

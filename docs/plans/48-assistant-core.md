@@ -188,3 +188,9 @@ Backend reported T3 built: 108 assistant tests (E2E-47 to E2E-63, P1 to P7, one 
   | total_dues | 1.3 s | OVER |
 
   The four OVER chips need faster `owing` (248 ms) and R24 `candidates` (about 340 ms) queries. That means changing existing SQL, which goes to Umar's speed plan. In that plan, load_buyers should call balances_owing (15 lines are copied today, because of the additions-only rule).
+- P48-S2 as built (02-11-2026), accepted:
+  - The report tool's `read_all` builds the report ONCE, through a new `reports::run_first_rows` (additions only), and then filters and sorts in memory as before.
+  - Tests: two unit tests that it builds once and refuses after that build; services/tests/report_first_rows.rs (5) shows the new read equals the old paged read on the worked day and E2E-43 data, for R20, R21, R22, R24, R26, R34, R35, R12 and R13, with the PRD closings (R12 58,484, R13 2,880, R20 21,564).
+  - Money agent: PASS.
+  - Checks: fmt and clippy clean. The assistant suite passed; golden_day 94, assist 23, narrow_tiles 14 and dashboard_round9 30 passed. No existing test changed.
+  - round_advice_dues_r20 on NFR-SCL-1 data: about 3.75 s, and it now ends as Advice. Before, it timed out after 64 s. It is still OVER 300 ms, because one R20 build with ages takes about 4 s (open_bills). This goes to Umar's speed plan (a3).
