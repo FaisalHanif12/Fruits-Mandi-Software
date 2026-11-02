@@ -119,3 +119,29 @@ As built so far:
   - Bugs fixed on the way: `where` on an empty report column, and a single-key sort by a shown word.
   - Not changed: chained calls, an alerts tool, low reasoning (Umar).
   - Gate follow-up: services/tests/robustness_balance.rs (robustness's) has 3 tests that failed before this work. They pin LATEST_VERSION 10, while the schema is now at 17, and need rewriting for migrations 11 to 17.
+
+## 8. P51-B3: the timeout, app help and answer length (02-11-2026)
+
+Umar asked "is main market safar kiya hai iski mujhay samaj nahi aa rahi ?" and saw "the model's answer could not be read".
+
+The log, with timing from 0017:
+- Row 12: one call, failed after 18,309 ms, no tokens.
+- The cause: CALL_TIMEOUT_SECS is 15. The timeout fired while the body was being read, and `client.rs` maps every body-read error to BadReply, not Timeout.
+- Real calls take 7 to 9 s each: row 8 took 8.85 s and 7.02 s (2 calls, advice); row 11 took 9.0 s (1 call). The app's own part is 0 to 2 ms.
+- Row 11, "mujhay bikri add krne ka tareeka batao?", got advice with an entry route. The panel added "میں صرف بتا سکتا ہوں کچھ لکھ نہیں سکتا", which reads wrongly for a how-to question.
+
+Umar's decisions (02-11-2026):
+1. Longer limits: 30 s a model call and 60 s a question (NFR-AI-3, NFR v1.10). A timeout is reported as a timeout, never as an unreadable reply.
+2. An app help tool: the assistant answers how-to and "what is this" questions from a written guide of every screen and module. The guide is taken from the PRD, in plain steps. This is a new FR in PRD v1.18 and D6-system-prompt v1.2.
+3. Answer length follows the question. A data question ("faisal ka khata") gets a short, direct answer. A recommendation or a guide may explain, inside the 130-word cap. This is a system.md rule, in v1.2.
+4. Not approved: low reasoning, and a fixed verbosity setting.
+
+Tasks:
+- B3 (backend):
+  - (a) the limits and the timeout mapping, with tests;
+  - (b) `app_help`: a tool whose topic enum covers every screen and module, returning that topic's guide text. Draft the guide text from the PRD, each topic with what it is for, the steps, the keys and a worked example. Draft the tool definition and the system.md lines (when to call app_help; the length rule);
+  - (c) send the drafts to the lead, who puts them into D6-system-prompt v1.2; then copy verbatim;
+  - (d) recorded tests for "market safar kya hai", "bikri kaise add karun", "wasooli kaise likhun", "partner ka hisaab kaise dekhun", in Roman Urdu, Urdu and English;
+  - (e) set the stale PREFIX_TOKENS 8000 in scripts/ai-eval/run.mjs to 9000, and add help questions to questions.tsv (robustness has stopped; this is mechanical).
+- F3 (frontend): on an answer or advice with an entry route, show only the neutral line and the button ("اندراج کی اسکرین کھولیں"; the amounts stay empty). The full refusal line stays for the change_refused outcome. The timeout text reads "the answer took too long, please ask again".
+- L3 (lead): the docs, then the 100-question live run with Umar's key.
