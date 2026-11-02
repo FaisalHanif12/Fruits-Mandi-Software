@@ -16,7 +16,7 @@ use crate::error::UiError;
 
 /// What the backup service says about the cloud copy. If the service is not running, the cloud
 /// copy counts as off: no old-backup item is made up for a copy that cannot run.
-fn backup_facts<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> BackupFacts {
+pub(super) fn backup_facts<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> BackupFacts {
     let status = BackupRuntime::of(app)
         .ok()
         .and_then(|runtime| runtime.service().status().ok());

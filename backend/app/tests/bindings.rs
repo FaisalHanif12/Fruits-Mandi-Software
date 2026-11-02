@@ -777,6 +777,7 @@ const EXPECTED_FILES: &[&str] = &[
     "AssistantPickInput.ts",
     "PickChoice.ts",
     "AssistantRerunInput.ts",
+    "AssistantNewConversationInput.ts",
     "ConversationStarted.ts",
     "Answer.ts",
     "AnswerPart.ts",
@@ -811,6 +812,11 @@ const EXPECTED_FILES: &[&str] = &[
     "LogSource.ts",
     "LogTool.ts",
     "AssistantStep.ts",
+    "AnswerRecord.ts",
+    "SourceParty.ts",
+    "SourceBikri.ts",
+    "SourceReportFilters.ts",
+    "SourceAnalyticsFilters.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1374,6 +1380,7 @@ fn export_bindings() {
     mandi_assistant::ask::AssistantQuickInput::export_all(&cfg).unwrap();
     mandi_assistant::ask::AssistantPickInput::export_all(&cfg).unwrap();
     mandi_assistant::ask::AssistantRerunInput::export_all(&cfg).unwrap();
+    mandi_assistant::ask::AssistantNewConversationInput::export_all(&cfg).unwrap();
     mandi_assistant::ask::ConversationStarted::export_all(&cfg).unwrap();
     mandi_assistant::settings::AssistantStatus::export_all(&cfg).unwrap();
     mandi_assistant::settings::AssistantSettingsSetInput::export_all(&cfg).unwrap();

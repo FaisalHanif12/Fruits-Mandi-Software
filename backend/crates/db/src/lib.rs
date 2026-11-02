@@ -10,6 +10,7 @@
 
 pub mod accounts;
 pub mod arrivals;
+pub mod assistant;
 pub mod audit;
 pub mod bikri;
 pub mod cashbook;

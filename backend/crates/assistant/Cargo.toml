@@ -15,10 +15,21 @@ mandi-reports.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true
+# The OpenRouter key lives only in Credential Manager, under its own entry (Code Standards Q8).
+keyring.workspace = true
+chrono.workspace = true
+reqwest.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
 proptest.workspace = true
+tiktoken-rs.workspace = true
+# The benches of plan 50 (owned by robustness).
+criterion.workspace = true
+
+[[bench]]
+name = "assistant"
+harness = false
 
 [lints]
 workspace = true

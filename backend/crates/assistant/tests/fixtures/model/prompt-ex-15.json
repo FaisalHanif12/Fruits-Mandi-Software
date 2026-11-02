@@ -1,0 +1,69 @@
+{
+  "aliases": {
+    "lt88": "lt1"
+  },
+  "steps": [
+    {
+      "expected": "باقی مال کے لاٹ: 1۔ سب سے پرانا کیلا ہے، 3 دن سے پڑا ہے۔\n• پرانا مال پہلے بیچیں، مال خراب ہوتا ہے۔",
+      "outcome": "advice",
+      "question": "kaun sa maal kab se para hai",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R10\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": null, \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": [{\"column\": \"days\", \"order\": \"desc\"}], \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"advice\", \"text\": \"باقی مال کے لاٹ: {{r1.count}}۔ سب سے پرانا {{r1.rows.lt88.item}} ہے، {{r1.rows.lt88.days}} دن سے پڑا ہے۔\\n• پرانا مال پہلے بیچیں، مال خراب ہوتا ہے۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "stock_1013"
+}

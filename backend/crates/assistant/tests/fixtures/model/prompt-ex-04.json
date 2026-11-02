@@ -1,0 +1,106 @@
+{
+  "steps": [
+    {
+      "expected": "دونوں کے ذمے مل کر 21,564 بنام ✓ باقی ہیں۔\n• اکرم ٹول ٹیکس: 2,880 بنام ✓\n• ارشد ملتانی: 18,684 بنام ✓",
+      "outcome": "answered",
+      "question": "akram aur arshad dono ka mila kar",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"akram\", \"role\": \"buyer\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  },
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"arshad\", \"role\": \"buyer\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"op\": \"sum\", \"inputs\": [\"r1.matches.0.balance\", \"r2.matches.0.balance\"]}",
+                      "name": "calculate"
+                    },
+                    "id": "call_1_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 4800
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"دونوں کے ذمے مل کر {{c1.result}} باقی ہیں۔\\n• {{r1.matches.0.name}}: {{r1.matches.0.balance}}\\n• {{r2.matches.0.name}}: {{r2.matches.0.balance}}\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 6200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

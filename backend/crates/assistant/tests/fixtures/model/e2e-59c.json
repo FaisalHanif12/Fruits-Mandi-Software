@@ -1,0 +1,56 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "estimate",
+        "arguments": "{\"measure\": \"commission_all\", \"item\": null, \"seller\": null, \"buyer\": null, \"garden\": null, \"trip\": null, \"ahead\": 6, \"target\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"answer\", \"text\": \"کتابوں میں صرف {{e1.full_months}} مکمل مہینے ہیں، اس لیے اندازہ نہیں لگایا جا سکتا۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5900,
+   "completion_tokens": 180,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 60
+   }
+  }
+ }
+]

@@ -1,0 +1,34 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "report",
+        "arguments": "{\"id\": \"R31\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": null, \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ }
+]

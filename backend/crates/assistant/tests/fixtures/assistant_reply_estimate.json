@@ -393,7 +393,7 @@
                 }
               },
               {
-                "op": "average",
+                "op": "divided_by",
                 "inputs": [
                   {
                     "type": "money",

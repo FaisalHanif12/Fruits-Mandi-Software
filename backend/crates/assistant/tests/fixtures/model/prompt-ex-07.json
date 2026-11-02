@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "expected": "اگر کمیشن پچھلے 3 مہینوں کی رفتار سے چلتا رہا تو اکتوبر 2026 سے مارچ 2027 تک تقریباً 288,000 بنے گا، ہر مہینے 48,000۔\n• اگر ہر مہینہ پچھلے سے 3,000 زیادہ رہا تو 369,000۔",
+      "outcome": "estimate",
+      "question": "agar commission isi raftar se chalta raha to agle 6 mahine mein kitna hoga",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"measure\": \"commission_all\", \"item\": null, \"seller\": null, \"buyer\": null, \"garden\": null, \"trip\": null, \"ahead\": 6, \"target\": null}",
+                      "name": "estimate"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"estimate\", \"text\": \"اگر کمیشن پچھلے {{e1.same_pace.months_used}} مہینوں کی رفتار سے چلتا رہا تو {{e1.first}} سے {{e1.last}} تک تقریباً {{e1.same_pace.total}} بنے گا، ہر مہینے {{e1.same_pace.per_month}}۔\\n• اگر ہر مہینہ پچھلے سے {{e1.same_growth.step}} رہا تو {{e1.same_growth.total}}۔\", \"show\": [{\"result\": \"e1\", \"as\": \"chart\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "history"
+}

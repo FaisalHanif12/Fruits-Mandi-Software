@@ -17,7 +17,11 @@
 //!   reply every one of them gives (`AskReply`).
 //! - [`answer`]: the answer itself: parts, tables, charts, estimate, sources.
 //! - [`settings`]: status, on or off and the model, the key, the connection test.
+//! - [`source`]: the filters of a source with whole records, for the buttons under an answer.
 //! - [`log`]: the question log, page by page.
+//! - [`keys`]: where the OpenRouter key lives (Credential Manager), and what is ever shown of it.
+//! - [`runtime`]: what the assistant keeps while the app runs.
+//! - [`service`]: the commands that need no model (status, setting, key, log).
 //! - [`step`]: the event that shows what the app is doing while a question runs.
 //! - [`limits`]: the named limits of Code Standards Q9.
 #![deny(clippy::arithmetic_side_effects)]
@@ -25,10 +29,26 @@
 
 pub mod answer;
 pub mod ask;
+pub mod check;
+pub mod client;
+pub mod conversation;
+pub mod fill;
+pub mod keys;
 pub mod limits;
 pub mod log;
+pub mod model_answer;
+pub mod number_words;
+pub mod prompt;
+pub mod quick;
+pub mod request;
+pub mod results;
+pub mod run;
+pub mod runtime;
+pub mod service;
 pub mod settings;
+pub mod source;
 pub mod step;
+pub mod tools;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

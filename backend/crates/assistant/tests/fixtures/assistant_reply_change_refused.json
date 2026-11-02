@@ -7,12 +7,12 @@
   "more_options": false,
   "entry_route": {
     "screen": "wasooli",
-    "party_id": 20,
-    "party_name": {
+    "party": {
+      "id": 20,
+      "code": "0020",
       "name_ur": "اکرم ٹول ٹیکس",
       "name_en": "Akram Toll Tax",
-      "tag": null,
-      "code": "0020"
+      "tag": null
     }
   },
   "locked": false,

@@ -1,0 +1,101 @@
+{
+  "aliases": {
+    "i41": "i1"
+  },
+  "steps": [
+    {
+      "expected": "ستمبر 2026 میں کمیشن 20,080 رہا، اس سے پہلے کے مہینے سے 5,120 کم۔\n• سب سے بڑا فرق کیلا میں: 5,120 کم",
+      "outcome": "answered",
+      "question": "pichle mahine commission kyun kam hua",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"kind\": \"last_month\", \"month\": null, \"day\": null, \"from\": null, \"to\": null, \"n\": null}",
+                      "name": "period"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"view\": \"A\", \"from\": \"r1.from\", \"to\": \"r1.to\", \"group_by\": null, \"item\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": \"previous\", \"sort\": [{\"column\": \"difference.total_comm\", \"order\": \"asc\"}], \"rows\": null}",
+                      "name": "analytics"
+                    },
+                    "id": "call_1_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 4800
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r1.label}} میں کمیشن {{r2.totals.total_comm}} رہا، اس سے پہلے کے مہینے سے {{r2.compare.difference.total_comm}}۔\\n• سب سے بڑا فرق {{r2.rows.i41.name}} میں: {{r2.rows.i41.difference.total_comm}}\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 6200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "months_ab"
+}

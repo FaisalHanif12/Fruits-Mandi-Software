@@ -41,3 +41,5 @@ pub const MAX_MONTHS_AHEAD: u32 = 12;
 pub const CONVERSATION_QUESTIONS: usize = 3;
 /// Rows of one page of the question log (Code Standards B31).
 pub const LOG_PAGE_ROWS: i64 = 100;
+/// Longest question, in characters after trimming (command input, Code Standards 4.2).
+pub const MAX_QUESTION_CHARS: usize = 500;

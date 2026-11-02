@@ -12,7 +12,7 @@ export type AssistantLogRow = {
    */
   id: number;
   /**
-   * When it was asked, UTC, `YYYY-MM-DDTHH:MM:SSZ`.
+   * When it was asked, UTC, as `YYYY-MM-DDTHH:MM:SS.mmmZ`.
    */
   asked_at: string;
   /**

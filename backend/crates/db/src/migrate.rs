@@ -98,6 +98,12 @@ pub const PUKHTA_PARTY_ACCOUNTS_SQL: &str =
 pub const PARTS_ARE_SOFT_STATE_SQL: &str =
     include_str!("../migrations/0014_parts_are_soft_state.sql");
 
+/// The fifteenth migration (plan 48, D6 ask the app, PRD FR-7.84, Architecture 15.3):
+/// `assistant_questions`, the append-only question log of the assistant. A table that holds no
+/// amount and posts nothing: no existing row, amount, id or chain hash changes.
+pub const ASSISTANT_QUESTIONS_SQL: &str =
+    include_str!("../migrations/0015_assistant_questions.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -124,6 +130,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(EDIT_WINDOWS_SQL),
         M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
         M::up(PARTS_ARE_SOFT_STATE_SQL),
+        M::up(ASSISTANT_QUESTIONS_SQL),
     ])
 }
 

@@ -1,0 +1,96 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "find",
+        "arguments": "{\"text\": \"کیلا\", \"role\": \"item\"}"
+       }
+      },
+      {
+       "id": "call_0_1",
+       "type": "function",
+       "function": {
+        "name": "period",
+        "arguments": "{\"kind\": \"this_month\", \"month\": null, \"day\": null, \"from\": null, \"to\": null, \"n\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_1_0",
+       "type": "function",
+       "function": {
+        "name": "analytics",
+        "arguments": "{\"view\": \"A\", \"from\": \"r2.from\", \"to\": \"r2.to\", \"group_by\": null, \"item\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": null, \"sort\": null, \"rows\": null}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5600,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 4800
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} سے {{r2.label}} میں کل کمیشن {{r3.rows.i1.total_comm}} آیا۔\\n• یہ {{r3.rows.i1.share}} ہے۔\", \"show\": [{\"result\": \"r3\", \"as\": \"table\", \"rows\": 7}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 6200,
+   "completion_tokens": 180,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 60
+   }
+  }
+ }
+]

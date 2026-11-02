@@ -1,0 +1,24 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"answer\", \"text\": \"شراکت داروں کی کل رقم:\\n• {{r1.rows.s1.name}}: {{r1.rows.s1.total}}\\n• {{r1.rows.s2.name}}: {{r1.rows.s2.total}}\\n• {{r1.rows.s3.name}}: {{r1.rows.s3.total}}\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5900,
+   "completion_tokens": 180,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 60
+   }
+  }
+ }
+]

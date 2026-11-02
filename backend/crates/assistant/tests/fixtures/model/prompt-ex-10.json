@@ -1,0 +1,203 @@
+{
+  "aliases": {
+    "je4518": "je1",
+    "je4521": "je2"
+  },
+  "steps": [
+    {
+      "expected": "اکرم ٹول ٹیکس کے ذمے 2,880 بنام ✓ باقی ہیں۔\n• آج بکری 1 میں ان کا بل 12,880 بنا۔\n• ان سے 10,000 وصول ہوئے۔",
+      "outcome": "answered",
+      "question": "ikram ke total bakaya kitne hai",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"text\": \"ikram\", \"role\": \"buyer\"}",
+                      "name": "find"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"party\": \"r1.matches.0\"}",
+                      "name": "party_card"
+                    },
+                    "id": "call_1_0",
+                    "type": "function"
+                  },
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R13\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": \"r1.matches.0\", \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_1_1",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 4800
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں۔\\n• آج {{r3.rows.je4518.entry}} میں ان کا بل {{r3.rows.je4518.debit}} بنا۔\\n• ان سے {{r3.rows.je4521.credit}} وصول ہوئے۔\", \"show\": [{\"result\": \"r3\", \"as\": \"table\", \"rows\": null}], \"next\": [\"پچھلے مہینے کا حساب؟\", \"{{r1.matches.0.name}} کی پرانی بکریاں\"], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 6200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "expected": "ستمبر 2026 میں اکرم ٹول ٹیکس کا کوئی اندراج نہیں، بقایا 0 تھا۔",
+      "outcome": "answered",
+      "question": "aur pichle mahine?",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"kind\": \"last_month\", \"month\": null, \"day\": null, \"from\": null, \"to\": null, \"n\": null}",
+                      "name": "period"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R13\", \"from\": \"r4.from\", \"to\": \"r4.to\", \"as_of\": null, \"party\": \"a20\", \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": null, \"rows\": null}",
+                      "name": "report"
+                    },
+                    "id": "call_1_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5600,
+            "prompt_tokens_details": {
+              "cached_tokens": 4800
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"answer\", \"text\": \"{{r4.label}} میں {{r5.party.name}} کا کوئی اندراج نہیں، بقایا {{r5.summary.closing}} تھا۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 6200,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day"
+}

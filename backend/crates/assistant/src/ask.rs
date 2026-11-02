@@ -223,6 +223,14 @@ pub struct AssistantRerunInput {
     pub question_id: i64,
 }
 
+/// Starting a new conversation (PRD FR-7.78).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
+pub struct AssistantNewConversationInput {
+    /// The conversation the panel leaves. Its memory is dropped at once. Null, or an id the app
+    /// does not know, drops nothing; the new id is given either way.
+    pub conversation_id: Option<String>,
+}
+
 /// What `assistant_new_conversation` gives: the panel forgets the old conversation (PRD FR-7.78).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct ConversationStarted {

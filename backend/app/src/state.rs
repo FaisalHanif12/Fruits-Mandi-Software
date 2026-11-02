@@ -9,6 +9,8 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError};
 
+use mandi_assistant::keys::MemoryKeyStore;
+use mandi_assistant::runtime::Runtime;
 use mandi_services::Context;
 use mandi_services::db::{DataState, Db, DbError, DbOptions};
 use serde::Serialize;
@@ -45,6 +47,10 @@ pub enum StatusName {
 pub struct AppState {
     ctx: Result<Arc<Context>, UiError>,
     check_failure: Arc<Mutex<Option<String>>>,
+    /// What the assistant keeps while the app runs: the place of the OpenRouter key and the
+    /// conversations (plan 48). The real app uses Credential Manager; `with_context`, which the
+    /// tests use, keeps the key in memory so no test touches the real store.
+    assistant: Arc<Runtime>,
 }
 
 impl AppState {
@@ -59,17 +65,35 @@ impl AppState {
             Err(error) => Self {
                 ctx: Err(UiError::from(error)),
                 check_failure: Arc::default(),
+                assistant: Arc::new(Runtime::real()),
             },
         }
     }
 
     /// State for an already open database, with the real parts, and starts its check.
     pub fn with_db(db: Arc<Db>) -> Self {
-        Self::with_context(Arc::new(Context::new(db)))
+        Self::build(Arc::new(Context::new(db)), Arc::new(Runtime::real()))
     }
 
     /// State for a ready context (tests give one with fake parts), and starts its check.
     pub fn with_context(ctx: Arc<Context>) -> Self {
+        let keys = Arc::new(MemoryKeyStore::default());
+        Self::build(ctx, Arc::new(Runtime::new(keys)))
+    }
+
+    /// The same state with another assistant runtime (a test that chooses its key store).
+    #[must_use]
+    pub fn with_assistant(mut self, assistant: Arc<Runtime>) -> Self {
+        self.assistant = assistant;
+        self
+    }
+
+    /// What the assistant keeps while the app runs.
+    pub fn assistant(&self) -> Arc<Runtime> {
+        Arc::clone(&self.assistant)
+    }
+
+    fn build(ctx: Arc<Context>, assistant: Arc<Runtime>) -> Self {
         let check_failure: Arc<Mutex<Option<String>>> = Arc::default();
         let worker = {
             let db = Arc::clone(ctx.db());
@@ -100,6 +124,7 @@ impl AppState {
         Self {
             ctx: Ok(ctx),
             check_failure,
+            assistant,
         }
     }
 

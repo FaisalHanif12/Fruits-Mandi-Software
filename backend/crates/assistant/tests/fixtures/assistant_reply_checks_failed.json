@@ -182,12 +182,12 @@
       {
         "kind": "party_card",
         "result_id": "r2",
-        "account_id": 20,
-        "name": {
+        "party": {
+          "id": 20,
+          "code": "0020",
           "name_ur": "اکرم ٹول ٹیکس",
           "name_en": "Akram Toll Tax",
-          "tag": null,
-          "code": "0020"
+          "tag": null
         }
       },
       {
@@ -201,24 +201,30 @@
           "to": "",
           "as_of": "",
           "party": {
-            "account_id": 20,
+            "record": {
+              "id": 20,
+              "code": "0020",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null
+            },
             "person_key": null
           },
-          "seller_id": null,
-          "zamindar_id": null,
-          "item_id": null,
-          "city_id": null,
-          "adda_id": null,
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
           "detail": false,
           "group_by": null,
           "status": null,
-          "partner_id": null,
+          "partner": null,
           "voucher_type": null,
           "trip_view": null,
-          "garden_id": null,
+          "garden": null,
           "garden_view": null,
-          "bikri_id": null,
-          "guests_only": null
+          "bikri": null,
+          "guests_only": false
         }
       }
     ],

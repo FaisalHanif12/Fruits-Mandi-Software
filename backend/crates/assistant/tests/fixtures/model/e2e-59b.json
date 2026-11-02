@@ -1,0 +1,56 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "estimate",
+        "arguments": "{\"measure\": \"commission_all\", \"item\": null, \"seller\": null, \"buyer\": null, \"garden\": null, \"trip\": null, \"ahead\": 12, \"target\": \"q.n1\"}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"estimate\", \"text\": \"اسی رفتار سے {{q.n1}} کا ہدف {{e1.same_pace.target_month}} میں پورا ہوگا، اسی اضافے سے {{e1.same_growth.target_month}} میں۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5900,
+   "completion_tokens": 180,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 60
+   }
+  }
+ }
+]

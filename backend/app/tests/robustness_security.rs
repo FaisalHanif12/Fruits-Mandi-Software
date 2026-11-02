@@ -1383,7 +1383,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             json!({ "input": { "question_id": 1 } }),
             true,
         ),
-        ("assistant_new_conversation", json!({}), true),
+        (
+            "assistant_new_conversation",
+            json!({ "input": { "conversation_id": null } }),
+            true,
+        ),
         (
             "assistant_settings_set",
             json!({ "input": { "enabled": false, "model": "openai/gpt-6-luna" } }),

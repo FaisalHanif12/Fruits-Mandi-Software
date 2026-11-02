@@ -106,6 +106,15 @@ unic-langid = "0.9.6"
 # as the library under rust_xlsxwriter). No xlsx reader is part of the app.
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
+# Ask the app (plan 48, D6): the one HTTPS call to OpenRouter. rustls only, no default features, the
+# blocking client (the call runs on a worker thread, never on the screen's thread). It is already
+# in the tree through object_store, so no new crate family comes in.
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "blocking"] }
+
+# Test only (plan 48, P1): counts the tokens of the fixed prompt with the `o200k_base` tokenizer.
+# MIT licence; the tokenizer file is inside the crate, so the test needs no network.
+tiktoken-rs = "0.12.1"
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 

@@ -14,7 +14,7 @@ use ts_rs::TS;
 use crate::ask::AskOutcome;
 
 /// What made the row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum LogSource {
     /// A quick question (a chip). No model; not counted.
@@ -45,7 +45,7 @@ pub struct AssistantLogRow {
     /// The row's id. `assistant_rerun` takes it.
     #[ts(type = "number")]
     pub id: i64,
-    /// When it was asked, UTC, `YYYY-MM-DDTHH:MM:SSZ`.
+    /// When it was asked, UTC, as `YYYY-MM-DDTHH:MM:SS.mmmZ`.
     pub asked_at: String,
     /// The Pakistan date it counts for, `YYYY-MM-DD`.
     pub asked_day: String,

@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "expected": "پہلے ارشد ملتانی سے وصولی کریں: 18,684 بنام ✓، ان کا بل 36 دن پرانا ہے۔\n• پھر اکرم ٹول ٹیکس سے: 2,880 بنام ✓، بل 36 دن پرانا۔",
+      "outcome": "advice",
+      "question": "kis se pehle wasooli karun",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"id\": \"R20\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": null, \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": [{\"column\": \"days\", \"order\": \"desc\"}, {\"column\": \"balance\", \"order\": \"desc\"}], \"rows\": 10}",
+                      "name": "report"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"advice\", \"text\": \"پہلے {{r1.rows.a21.name}} سے وصولی کریں: {{r1.rows.a21.balance}}، ان کا بل {{r1.rows.a21.days}} دن پرانا ہے۔\\n• پھر {{r1.rows.a20.name}} سے: {{r1.rows.a20.balance}}، بل {{r1.rows.a20.days}} دن پرانا۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": null}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "day_1115"
+}

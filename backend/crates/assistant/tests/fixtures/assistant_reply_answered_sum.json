@@ -112,23 +112,23 @@
       {
         "kind": "party_card",
         "result_id": "r1",
-        "account_id": 20,
-        "name": {
+        "party": {
+          "id": 20,
+          "code": "0020",
           "name_ur": "اکرم ٹول ٹیکس",
           "name_en": "Akram Toll Tax",
-          "tag": null,
-          "code": "0020"
+          "tag": null
         }
       },
       {
         "kind": "party_card",
         "result_id": "r2",
-        "account_id": 21,
-        "name": {
+        "party": {
+          "id": 21,
+          "code": "0021",
           "name_ur": "ارشد ملتانی",
           "name_en": "Arshad Multani",
-          "tag": null,
-          "code": "0021"
+          "tag": null
         }
       }
     ],

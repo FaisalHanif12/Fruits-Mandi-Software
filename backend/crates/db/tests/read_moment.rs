@@ -99,3 +99,30 @@ fn a_connection_without_a_file_keeps_nothing() {
         "two in-memory databases cannot be told apart"
     );
 }
+
+#[test]
+fn a_snapshot_of_the_books_is_one_moment_for_every_read_and_blocks_no_save() {
+    // `Db::open_snapshot` (the assistant, NFR-AI-6): every read through it, however many calls and
+    // however much later, sees the books as they were when it was made; saves go on meanwhile.
+    let dir = tempdir().unwrap();
+    let db = common::open(dir.path());
+    add_city(&db, "1").unwrap();
+    let snapshot = db.open_snapshot().unwrap();
+    // A save commits after the snapshot: the writer is not blocked.
+    add_city(&db, "2").unwrap();
+    assert_eq!(snapshot.read(cities).unwrap(), 1, "the first read");
+    add_city(&db, "3").unwrap();
+    assert_eq!(snapshot.read(cities).unwrap(), 1, "a later read");
+    assert_eq!(
+        snapshot.read_snapshot(cities).unwrap(),
+        1,
+        "a read_snapshot inside it"
+    );
+    // The books themselves went on.
+    assert_eq!(db.read(cities).unwrap(), 3);
+    // A snapshot made now is a newer moment.
+    assert_eq!(db.open_snapshot().unwrap().read(cities).unwrap(), 3);
+    // Nothing can be saved through a snapshot.
+    assert!(add_city(&snapshot, "9").is_err());
+    assert_eq!(db.read(cities).unwrap(), 3);
+}

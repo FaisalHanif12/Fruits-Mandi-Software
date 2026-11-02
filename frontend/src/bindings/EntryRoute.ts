@@ -11,7 +11,18 @@ export type EntryRoute = {
    */
   screen: EntryScreen;
   /**
-   * The party to choose on it, as a whole record (a picker value). Null for none.
+   * The party to choose on it, as a whole record (a picker value: id, code, both names, tag).
+   * Null for none.
+   *
+   * Which record it is depends on the screen:
+   * - `kharcha`, `sarmaya` and `phal`: a PARTNER record. `id` is `partners.id` and the names are
+   *   the partner's own; it is never his capital, drawings or 0604 account. A partner has no
+   *   code or tag, so those two are null.
+   * - Every other screen (`bikri`, `wasooli`, `adaigi`, `peshgi`, `udhar_raqam`, `alag_khata`,
+   *   `general`, `account`): the ACCOUNT record, with `id` = `accounts.id`.
+   *
+   * A record of the other kind is never sent: the party is then null and the screen opens with
+   * nothing chosen.
    */
   party: AnswerRecord | null;
 };

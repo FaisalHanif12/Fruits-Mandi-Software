@@ -73,6 +73,18 @@ struct Health {
     changed: Condvar,
 }
 
+/// The key store of a snapshot ([`Db::open_snapshot`]): a snapshot writes nothing, so it has no
+/// audit key and asking for one is an error.
+struct NoKeyStore;
+
+impl crate::audit::KeyStore for NoKeyStore {
+    fn audit_key(&self) -> Result<crate::audit::AuditKey, DbError> {
+        Err(DbError::KeyStore(
+            "a snapshot of the books is read only".to_owned(),
+        ))
+    }
+}
+
 /// The open data file.
 pub struct Db {
     path: PathBuf,
@@ -225,6 +237,58 @@ impl Db {
             },
             busy_timeout: options.busy_timeout,
             check_wait: options.check_wait,
+        })
+    }
+
+    /// A view of this data file at ONE moment, for a reader that must see the books as they are
+    /// now from its first statement to its last, whatever is saved meanwhile (the assistant, NFR-AI-6).
+    ///
+    /// It opens a connection of its own, begins a read transaction and reads once so the moment is
+    /// fixed. SQLite is in WAL mode: this reader sees nothing that commits after this call, blocks no
+    /// writer and no other reader, and every `read` and `read_snapshot` on the returned `Db` runs
+    /// inside that one transaction. The transaction ends when the returned `Db` is dropped. Both
+    /// connections are read-only (`query_only`), so a write on it fails and nothing is ever saved
+    /// through it. The kept sums of [`crate::memo`] are not emptied: they are kept with the journal
+    /// version they were made at, which is read inside this moment, so they stay correct.
+    ///
+    /// Keep it short: an open read transaction holds back the clean-up of the WAL file.
+    ///
+    /// # Errors
+    /// A database error when the file cannot be opened or read.
+    pub fn open_snapshot(&self) -> Result<Db, DbError> {
+        let open = || -> Result<Connection, DbError> {
+            let conn = Connection::open_with_flags(
+                &self.path,
+                OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(self.busy_timeout)?;
+            register_collations(&conn)?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            conn.pragma_update(None, "recursive_triggers", "ON")?;
+            conn.pragma_update(None, "query_only", "ON")?;
+            Ok(conn)
+        };
+        let reader = open()?;
+        reader.execute_batch("BEGIN")?;
+        // The moment is fixed by the first read, not by BEGIN.
+        reader.query_row("SELECT COUNT(*) FROM sqlite_master", [], |row| {
+            row.get::<_, i64>(0)
+        })?;
+        let writer = open()?;
+        Ok(Db {
+            path: self.path.clone(),
+            writer: Mutex::new(writer),
+            reader: Mutex::new(reader),
+            health: Health {
+                state: Mutex::new((DataState::Ok, None)),
+                changed: Condvar::new(),
+            },
+            disk_probe: Arc::clone(&self.disk_probe),
+            auditor: Auditor::new(Arc::new(NoKeyStore), Arc::clone(&self.clock)),
+            clock: Arc::clone(&self.clock),
+            migration: self.migration.clone(),
+            busy_timeout: self.busy_timeout,
+            check_wait: self.check_wait,
         })
     }
 

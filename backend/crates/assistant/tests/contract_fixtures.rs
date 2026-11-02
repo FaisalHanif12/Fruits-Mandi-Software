@@ -24,8 +24,8 @@ use mandi_assistant::answer::{
     WorkingOp, WorkingStep,
 };
 use mandi_assistant::ask::{
-    AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantPickInput,
-    AssistantQuickInput, AssistantRerunInput, ConversationStarted, FailureKind,
+    AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantNewConversationInput,
+    AssistantPickInput, AssistantQuickInput, AssistantRerunInput, ConversationStarted, FailureKind,
 };
 use mandi_assistant::limits::DAILY_LIMIT;
 use mandi_assistant::log::{
@@ -35,10 +35,13 @@ use mandi_assistant::settings::{
     AssistantKeyRemoveInput, AssistantKeySaveInput, AssistantSettingsSetInput, AssistantStatus,
     AssistantTestResult, DEFAULT_MODEL,
 };
+use mandi_assistant::source::{
+    AnswerRecord, SourceAnalyticsFilters, SourceParty, SourceReportFilters,
+};
 use mandi_assistant::step::AssistantStep;
 use mandi_reports::reports::{
-    ArgValue, Cell, Column, ColumnKind, DetailPart, MessageArg, Names, PartyFilter, PartyRef,
-    ReportFilters, ReportId, Row, RowKind, RowSource, SourceKind,
+    ArgValue, Cell, Column, ColumnKind, DetailPart, MessageArg, Names, PartyRef, ReportId, Row,
+    RowKind, RowSource, SourceKind,
 };
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::money::Paisa;
@@ -214,21 +217,30 @@ fn answer(parts: Vec<AnswerPart>) -> Answer {
     }
 }
 
-fn r13_filters() -> ReportFilters {
-    ReportFilters {
-        party: Some(PartyFilter {
-            account_id: 20,
+fn record(name: &AnswerName, id: i64) -> AnswerRecord {
+    AnswerRecord {
+        id,
+        code: name.code.clone(),
+        name_ur: name.name_ur.clone(),
+        name_en: name.name_en.clone(),
+        tag: name.tag.clone(),
+    }
+}
+
+fn r13_filters() -> SourceReportFilters {
+    SourceReportFilters {
+        party: Some(SourceParty {
+            record: record(&akram(), 20),
             person_key: None,
         }),
-        ..ReportFilters::default()
+        ..SourceReportFilters::default()
     }
 }
 
 fn card_source(result_id: &str, account_id: i64, name: AnswerName) -> AnswerSource {
     AnswerSource::PartyCard {
         result_id: result_id.to_owned(),
-        account_id,
-        name,
+        party: record(&name, account_id),
     }
 }
 
@@ -505,11 +517,11 @@ fn answered_chart() -> AskReply {
         result_id: "r4".to_owned(),
         label_id: "analytics-view-a-title".to_owned(),
         view: mandi_reports::analytics::AnalyticsView::A,
-        filters: mandi_reports::analytics::AnalyticsFilters {
+        filters: SourceAnalyticsFilters {
             from: "2026-04-01".to_owned(),
             to: "2026-09-30".to_owned(),
             group_by: Some(mandi_reports::analytics::AnalyticsGroupBy::Month),
-            ..mandi_reports::analytics::AnalyticsFilters::default()
+            ..SourceAnalyticsFilters::default()
         },
     }];
     let mut r = reply(3, AskOutcome::Answered);
@@ -581,7 +593,7 @@ fn estimate_reply(with_target: bool) -> AskReply {
                     result: money(15_000),
                 },
                 WorkingStep {
-                    op: WorkingOp::Average,
+                    op: WorkingOp::DividedBy,
                     inputs: vec![money(15_000), Cell::Number { value: 5 }],
                     result: money(3_000),
                 },
@@ -730,9 +742,9 @@ fn advice() -> AskReply {
         result_id: "r2".to_owned(),
         label_id: "report-r20-title".to_owned(),
         id: ReportId::R20,
-        filters: ReportFilters {
+        filters: SourceReportFilters {
             as_of: "2026-11-15".to_owned(),
-            ..ReportFilters::default()
+            ..SourceReportFilters::default()
         },
     }];
     a.next = vec!["اکرم ٹول ٹیکس کا کھاتہ".to_owned()];
@@ -801,8 +813,7 @@ fn change_refused() -> AskReply {
     let mut r = reply(9, AskOutcome::ChangeRefused);
     r.entry_route = Some(EntryRoute {
         screen: EntryScreen::Wasooli,
-        party_id: Some(20),
-        party_name: Some(akram()),
+        party: Some(record(&akram(), 20)),
     });
     r
 }
@@ -814,7 +825,7 @@ fn outside_books() -> AskReply {
         result_id: "r1".to_owned(),
         label_id: "report-r20-title".to_owned(),
         id: ReportId::R20,
-        filters: ReportFilters::default(),
+        filters: SourceReportFilters::default(),
     }];
     let mut r = reply(10, AskOutcome::OutsideBooks);
     r.answer = Some(a);
@@ -1130,8 +1141,13 @@ fn contract_fixtures_are_the_contract() {
     let list = json!({ "offset": 0, "limit": 100 });
     let _: AssistantLogListInput = serde_json::from_value(list.clone()).unwrap();
     pair("assistant_log_list_first_page", &list, &log_page());
-    reply_only(
+    let started = json!({ "conversation_id": "c-1" });
+    let _: AssistantNewConversationInput = serde_json::from_value(started.clone()).unwrap();
+    let _: AssistantNewConversationInput =
+        serde_json::from_value(json!({ "conversation_id": null })).unwrap();
+    pair(
         "assistant_new_conversation",
+        &started,
         &ConversationStarted {
             conversation_id: "c-2".to_owned(),
         },
@@ -1209,4 +1225,64 @@ fn the_replies_keep_the_contract_rules() {
     };
     let shown = format!("{input:?}");
     assert!(!shown.contains("placeholder"), "{shown}");
+}
+
+/// The filters of a source carry whole records and turn back into the engine's own filters
+/// (lead decision, plan 48 T1).
+#[test]
+fn a_source_carries_whole_records_and_turns_back_into_ids() {
+    let filters = SourceReportFilters {
+        party: Some(SourceParty {
+            record: record(&akram(), 20),
+            person_key: Some("shahid|0300".to_owned()),
+        }),
+        seller: Some(record(&arshad(), 21)),
+        item: Some(AnswerRecord {
+            id: 5,
+            code: Some("0005".to_owned()),
+            name_ur: "کیلا".to_owned(),
+            name_en: "Banana".to_owned(),
+            tag: None,
+        }),
+        bikri: Some(mandi_assistant::source::SourceBikri { id: 77, number: 1 }),
+        guests_only: true,
+        ..SourceReportFilters::default()
+    };
+    let engine = filters.to_filters();
+    let party = engine.party.unwrap();
+    assert_eq!(party.account_id, 20);
+    assert_eq!(party.person_key.as_deref(), Some("shahid|0300"));
+    assert_eq!(engine.seller_id, Some(21));
+    assert_eq!(engine.item_id, Some(5));
+    assert_eq!(engine.city_id, None);
+    assert_eq!(engine.bikri_id, Some(77));
+    assert_eq!(engine.guests_only, Some(true));
+    // The JSON of a source holds the whole record, with both names and the tag.
+    let json = serde_json::to_value(&filters).unwrap();
+    assert_eq!(json["party"]["record"]["name_en"], "Akram Toll Tax");
+    assert_eq!(json["party"]["record"]["code"], "0020");
+    assert_eq!(json["seller"]["id"], 21);
+    assert_eq!(json["item"]["name_ur"], "کیلا");
+    assert!(json["party"]["record"]["tag"].is_null());
+
+    let view = SourceAnalyticsFilters {
+        buyer: Some(SourceParty {
+            record: record(&akram_k(), 22),
+            person_key: None,
+        }),
+        trip: Some(AnswerRecord {
+            id: 3,
+            code: None,
+            name_ur: "سفر".to_owned(),
+            name_en: "Trip".to_owned(),
+            tag: None,
+        }),
+        ..SourceAnalyticsFilters::default()
+    };
+    let engine = view.to_filters();
+    assert_eq!(engine.buyer.unwrap().account_id, 22);
+    assert_eq!(engine.trip_id, Some(3));
+    assert_eq!(engine.item_id, None);
+    let json = serde_json::to_value(&view).unwrap();
+    assert_eq!(json["buyer"]["record"]["tag"], "K");
 }

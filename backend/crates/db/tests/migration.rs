@@ -10,7 +10,7 @@ use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
-    self, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
+    self, ASSISTANT_QUESTIONS_SQL, BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL,
     DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
     MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL, PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL,
     SIMPLE_PARTY_CODES_SQL, STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL,
@@ -22,7 +22,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 14;
+const LATEST: usize = 15;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -247,6 +247,30 @@ fn released_version_13() -> Migrations<'static> {
         M::up(DEAD_MARKS_SQL),
         M::up(EDIT_WINDOWS_SQL),
         M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
+    ])
+}
+
+/// The schema as it was released at version 14: migrations 0001 to 0014.
+fn released_version_14() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up_with_hook(INIT_SQL, |tx| {
+            seed::system_accounts(tx)
+                .map(|_| ())
+                .map_err(HookError::from)
+        }),
+        M::up(BALANCE_INDEXES_SQL),
+        M::up(SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL),
+        M::up(BIKRI_RECORDS_ARE_NEVER_DELETED_SQL),
+        M::up(STABLE_POSTING_ORDER_SQL),
+        M::up_with_hook(TRIPS_GARDENS_FRUIT_KHATA_SQL, migrate::trips_hook),
+        M::up_with_hook(SIMPLE_PARTY_CODES_SQL, migrate::codes_hook),
+        M::up_with_hook(TRIP_AND_GARDEN_CODES_SQL, migrate::trip_names_hook),
+        M::up(DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL),
+        M::up(SHOP_SPLIT_SQL),
+        M::up(DEAD_MARKS_SQL),
+        M::up(EDIT_WINDOWS_SQL),
+        M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
+        M::up(PARTS_ARE_SOFT_STATE_SQL),
     ])
 }
 
@@ -524,10 +548,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 15).unwrap();
+    conn.pragma_update(None, "user_version", 16).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 15);
+    assert_eq!(user_version(&conn), 16);
     assert!(!backups.exists());
 }
 
@@ -3133,7 +3157,8 @@ fn migration_14_makes_the_parts_soft_state_and_changes_nothing_else() {
         .collect();
     assert_eq!(part_ids.len(), 2);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_14(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (13, 14));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 14);
@@ -3217,5 +3242,34 @@ fn migration_14_makes_the_parts_soft_state_and_changes_nothing_else() {
         PARTS_ARE_SOFT_STATE_SQL.matches("DELETE FROM").count(),
         0,
         "the file deletes no row (its triggers only refuse a delete)"
+    );
+}
+
+#[test]
+fn migration_15_adds_the_assistant_questions_table_and_changes_nothing_else() {
+    // Plan 48 (PRD FR-7.84): a file at version 14 is upgraded. The new table is empty, no other row
+    // moves, and a copy is taken before the upgrade.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_14(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 14);
+    let before = all_rows_without(&conn, &[]);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (14, 15));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 15);
+    assert_eq!(count(&conn, "SELECT COUNT(*) FROM assistant_questions"), 0);
+    let after: Vec<(String, String)> = all_rows_without(&conn, &[])
+        .into_iter()
+        .filter(|(table, _)| table != "assistant_questions")
+        .collect();
+    assert_eq!(after, before, "nothing else moved");
+    assert_eq!(ASSISTANT_QUESTIONS_SQL.matches("CREATE TABLE").count(), 1);
+    assert_eq!(
+        ASSISTANT_QUESTIONS_SQL.matches("DELETE FROM").count(),
+        0,
+        "the file deletes no row (its trigger only refuses a delete)"
     );
 }

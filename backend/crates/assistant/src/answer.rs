@@ -12,10 +12,12 @@
 //! `name اکرم ٹول ٹیکس (0020)`, `text " کے ذمے "`, `figure balance 288000 paisa, side dr,
 //! checked`, `text " باقی ہیں۔"`, and one table of R13 with its last rows.
 
-use mandi_reports::analytics::{AnalyticsFilters, AnalyticsKey, AnalyticsView};
-use mandi_reports::reports::{Cell, Column, Names, ReportFilters, ReportId, Row};
+use mandi_reports::analytics::{AnalyticsKey, AnalyticsView};
+use mandi_reports::reports::{Cell, Column, Names, ReportId, Row};
 use serde::Serialize;
 use ts_rs::TS;
+
+use crate::source::{AnswerRecord, SourceAnalyticsFilters, SourceReportFilters};
 
 /// The direction word the app puts next to a difference or a change: زیادہ (more), کم (less) or
 /// برابر (the same). The model never chooses it (PRD FR-7.75).
@@ -60,6 +62,8 @@ pub enum WorkingOp {
     ChangePercent,
     /// `per month × months` (the total of an estimate).
     Times,
+    /// `first ÷ second` (the change for each month of the same growth: 15,000 ÷ 5 = 3,000).
+    DividedBy,
 }
 
 /// One step of a working: its inputs in order and its result.
@@ -147,11 +151,8 @@ pub enum AnswerSource {
     PartyCard {
         /// The result of this question it came from, for example `r2`.
         result_id: String,
-        /// The account.
-        #[ts(type = "number")]
-        account_id: i64,
-        /// His name, for the source line.
-        name: AnswerName,
+        /// The account, as a whole record (a picker value).
+        party: AnswerRecord,
     },
     /// A report R1 to R38.
     Report {
@@ -161,8 +162,9 @@ pub enum AnswerSource {
         label_id: String,
         /// The report.
         id: ReportId,
-        /// The filters it was read with. The screen opens the report with these.
-        filters: ReportFilters,
+        /// The filters it was read with; each record is a whole record (id, code, names, tag), so
+        /// the screen opens the report with the pickers already filled.
+        filters: SourceReportFilters,
     },
     /// An analytics view A to K.
     Analytics {
@@ -172,8 +174,8 @@ pub enum AnswerSource {
         label_id: String,
         /// The view.
         view: AnalyticsView,
-        /// The filters it was read with.
-        filters: AnalyticsFilters,
+        /// The filters it was read with; each record is a whole record.
+        filters: SourceAnalyticsFilters,
     },
     /// The dashboard tiles (PRD 9.1).
     Tiles {
@@ -382,11 +384,19 @@ pub enum EntryScreen {
 pub struct EntryRoute {
     /// The entry screen.
     pub screen: EntryScreen,
-    /// The party to choose on it. Null for none.
-    #[ts(type = "number | null")]
-    pub party_id: Option<i64>,
-    /// His name, for the button's label.
-    pub party_name: Option<AnswerName>,
+    /// The party to choose on it, as a whole record (a picker value: id, code, both names, tag).
+    /// Null for none.
+    ///
+    /// Which record it is depends on the screen:
+    /// - `kharcha`, `sarmaya` and `phal`: a PARTNER record. `id` is `partners.id` and the names are
+    ///   the partner's own; it is never his capital, drawings or 0604 account. A partner has no
+    ///   code or tag, so those two are null.
+    /// - Every other screen (`bikri`, `wasooli`, `adaigi`, `peshgi`, `udhar_raqam`, `alag_khata`,
+    ///   `general`, `account`): the ACCOUNT record, with `id` = `accounts.id`.
+    ///
+    /// A record of the other kind is never sent: the party is then null and the screen opens with
+    /// nothing chosen.
+    pub party: Option<AnswerRecord>,
 }
 
 /// An answer (PRD FR-7.74). The order on the screen is: the parts, the tables and charts, the

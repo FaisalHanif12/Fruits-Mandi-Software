@@ -1,0 +1,56 @@
+[
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "tool_calls",
+    "message": {
+     "role": "assistant",
+     "content": null,
+     "tool_calls": [
+      {
+       "id": "call_0_0",
+       "type": "function",
+       "function": {
+        "name": "report",
+        "arguments": "{\"id\": \"R20\", \"from\": null, \"to\": null, \"as_of\": null, \"party\": null, \"item\": null, \"city\": null, \"adda\": null, \"collector\": null, \"partner\": null, \"trip\": null, \"garden\": null, \"bikri\": null, \"group_by\": null, \"where\": null, \"sort\": [{\"column\": \"days\", \"order\": \"desc\"}, {\"column\": \"balance\", \"order\": \"desc\"}], \"rows\": 10}"
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5200,
+   "completion_tokens": 60,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 20
+   }
+  }
+ },
+ {
+  "model": "openai/gpt-6-luna",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"advice\", \"text\": \"پہلے {{r1.rows.a21.name}} سے وصولی کریں: {{r1.rows.a21.balance}}، ان کا بل {{r1.rows.a21.days}} دن پرانا ہے۔\\n• پھر {{r1.rows.a20.name}} سے: {{r1.rows.a20.balance}}، بل {{r1.rows.a20.days}} دن پرانا۔\", \"show\": [{\"result\": \"r1\", \"as\": \"table\", \"rows\": 7}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 5900,
+   "completion_tokens": 180,
+   "prompt_tokens_details": {
+    "cached_tokens": 5000
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 60
+   }
+  }
+ }
+]

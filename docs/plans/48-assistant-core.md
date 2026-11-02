@@ -104,3 +104,47 @@ D6-A1 to D6-A12, D6-A18 and D6-A19 (backend parts), D6-A5 clippy evidence, D6-A4
   - (g) `share_hundredths` is NOT changed (only add); the equality test keeps the two equal.
 
 - Frontend (plan 49 part a), accepted additive touches outside the D6 list: `styles/tokens.css` (dock heights), `styles/globals.css` (slide), `AnalyticsPage.tsx` (reads the address), `tests/unit/keyboard-registry.test.tsx` (rows for `F1`, `Ctrl+↑`, `Ctrl+↓`, now PRD 7.3 keys).
+
+## 10. T3 lead decisions (02-11-2026)
+
+Backend reported T3 built: 108 assistant tests (E2E-47 to E2E-63, P1 to P7, one test per FR-7.76 rule, the 8 tools, loop limits); golden_day 94, assist 23 and the touched services and app suites passing; fmt and clippy clean. The HANDOFF waits for the money agent's after-review.
+
+- (a) P3 glossary: 7 glossary terms in the Fluent files and «پیشگی باقی» are missing from the prompt's glossary line. They are kept as known gaps in the test. The prompt files are verbatim and do not change. This goes to Umar.
+- (b) P5 keys: `je4518`, `i41` and `lt88` cannot be produced exactly, because ids are `max+1`, and dummy rows would shift the real بکری numbers. Accepted: each fixture maps the example key to the world's real key, and lists the mapping. No dummy rows. The prompt is not edited.
+- (c) E2E-49: the 72.10% is read from view A unfiltered, citing the banana row. With the item filter on, the share is 100%. No expected number changes.
+- (d) `cargo deny`: licenses, bans and sources pass. Advisories fail on 6 new RUSTSEC-2026-03xx entries in crates already in the tree (tokio, crypto-bigint, ctutils, zstd). None come from `reqwest` or `tiktoken-rs`. There is no upgrade in this run. This is a gate follow-up for Umar.
+- (e) Not done, listed for Umar:
+  - The attention-list item for a records difference (FR-7.76 point 2) is not in the T3 task list.
+  - The estimate measures `laga`, `commission_buyer`, `receipts`, `garden_sales` and `trip_sales` are refused, because the books have no monthly series for them yet.
+- (f) Frontend F2 starts against the real commands. robustness starts plan 50 in its own files.
+- (g) Contract change (02-11-2026), agreed by backend and frontend through the lead: `assistant_new_conversation` takes `AssistantNewConversationInput { conversation_id: Option<String> }`. With an id, the runtime drops that conversation's memory at once. With null or an unknown id, nothing is dropped. It always returns the new id. "New question" in the panel calls it with the old id.
+- (h) Step lines carry a party's name as `ArgValue::Names` (ur, en, tag), so a language switch during a question shows the right script (rule 8, F38).
+- (i) robustness findings during plan 50, fixed in T3:
+  - (1) MAJOR: Urdu number words outside words.tsv (27, 28, 31, 99 ...) passed the check. Lead decision: words.tsv stays verbatim; check.rs refuses a word from words.tsv or from its own constant list (Urdu 1 to 99 with spelling variants, سو, ہزار, لاکھ, کروڑ, ارب, and Roman Urdu 1 to 99). Adding the list to words.tsv goes to Umar.
+  - (2) MINOR: negative token counts are clamped at 0, so the question is not lost.
+  - (3) MINOR: only a change request carries entry_route.
+- (j) The bench lines (`criterion` dev-dependency, `[[bench]] assistant`) are added to the assistant Cargo.toml by backend, for robustness.
+
+## 11. T3 as built (02-11-2026), accepted when robustness findings (1) and (3) are in
+
+- Backend HANDOFF:
+  - The 8 read-only tools, every FR-7.76 check, fill, the loop with limits as named constants, the plain-table fallback, chips, rerun, the connection test, the question log, the real commands and the `assistant://step` event.
+  - NFR-AI-6 the literal way: `Db::open_snapshot` and `Context::snapshot`, one WAL snapshot per question; a pick opens a new one.
+  - Late items in: (a) the average's n as its last input; (b) EntryRoute.party is a whole record, a partner record on kharcha, sarmaya and phal; (c) step-line names as `ArgValue::Names`, with a fix for an always-empty name; (d) `assistant_new_conversation` with the old id (`Runtime::forget`); (e) the bench lines; (f) token counts clamped at 0.
+- Money agent: three passes.
+  - Pass 1 FAILED calc.rs and report.rs (8 items, among them heading lines summed into R21 as 43,128, a ✓ on a typed number, and a false "records differ").
+  - Pass 2 FAILED analytics.rs (2 items).
+  - Pass 3 PASS on analytics, calc, report and cells. No money arithmetic outside services::figures and services::forecast; no float, no unwrap.
+  - Added by the review: a typed number beside balances on both sides, or all exactly 0, is refused (ERR_OUT_OF_RANGE). Untested cases named by the agent are gate follow-ups.
+- Checks (backend):
+  - fmt clean; clippy clean on assistant, app, services and db.
+  - Assistant: lib 33, check_rules 14, contract_fixtures 3, golden_prompt 1, golden_questions 23, loop_limits 14, prompt 7, tools 24, settings_service 6, shared_formulas 2, all passed.
+  - golden_day 94, assist 23, all passed.
+  - Reports suites passed, with no expected number changed.
+  - db: read_moment 2, assistant_questions 21, schema 4, migration 8, all passed.
+  - app: bindings 6, ipc_auth 19, workspace_rules 6, robustness_security 11, all passed.
+- `cargo deny`: advisories fail, with 16 ids over 5 crates already in the tree: crypto-bigint 0387, ctutils 0385, tokio 0386 (needs 1.53.3 or later), zstd 0391, zstd-safe 0395 to 0406. bans, licenses and sources pass. The deny.toml zip@4.6.1 yanked entry matches nothing now. These are gate follow-ups for Umar.
+- Robustness findings (1) to (3) fixed (02-11-2026):
+  - (1) `number_words.rs`: Urdu 1 to 99 with spelling variants, the big steps and Roman Urdu. words.tsv is untouched. Bare «اسی» and «بہتر» are refused only before a unit word, and Roman `do`, `teen` and `char` are left out, because they are everyday words. These go to Umar.
+  - (2) Token counts are clamped at 0.
+  - (3) Lead correction: PRD E98 and the answer schema (D6-system-prompt.md line 535) allow `entry` on an answer or advice when the question also asks for a change; the panel then shows the change refused line and button. So answer and advice keep the route the model sends, and an estimate carries none. D6 attack 15's "never shows a change button for advice" conflicts with E98. The PRD wins, and the conflict goes to Umar. Frontend draws the change refused line on an answer or advice with a route.

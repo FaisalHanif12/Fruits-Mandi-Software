@@ -1,0 +1,24 @@
+[
+ {
+  "model": "x",
+  "choices": [
+   {
+    "finish_reason": "stop",
+    "message": {
+     "role": "assistant",
+     "content": "{\"kind\": \"answer\", \"text\": \"x\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null, \"why\": \"because\"}"
+    }
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 100,
+   "completion_tokens": 10,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0
+   }
+  }
+ }
+]

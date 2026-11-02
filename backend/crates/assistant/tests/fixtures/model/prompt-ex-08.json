@@ -1,0 +1,66 @@
+{
+  "steps": [
+    {
+      "expected": "اسی رفتار سے 300,000 کا ہدف اپریل 2027 میں پورا ہوگا، اسی اضافے سے فروری 2027 میں۔",
+      "outcome": "estimate",
+      "question": "commission ka 3 lakh ka target kab pura hoga",
+      "replies": [
+        {
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "message": {
+                "content": null,
+                "role": "assistant",
+                "tool_calls": [
+                  {
+                    "function": {
+                      "arguments": "{\"measure\": \"commission_all\", \"item\": null, \"seller\": null, \"buyer\": null, \"garden\": null, \"trip\": null, \"ahead\": 12, \"target\": \"q.n1\"}",
+                      "name": "estimate"
+                    },
+                    "id": "call_0_0",
+                    "type": "function"
+                  }
+                ]
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 60,
+            "completion_tokens_details": {
+              "reasoning_tokens": 20
+            },
+            "prompt_tokens": 5200,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "message": {
+                "content": "{\"kind\": \"estimate\", \"text\": \"اسی رفتار سے {{q.n1}} کا ہدف {{e1.same_pace.target_month}} میں پورا ہوگا، اسی اضافے سے {{e1.same_growth.target_month}} میں۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}",
+                "role": "assistant"
+              }
+            }
+          ],
+          "model": "openai/gpt-6-luna",
+          "usage": {
+            "completion_tokens": 180,
+            "completion_tokens_details": {
+              "reasoning_tokens": 60
+            },
+            "prompt_tokens": 5900,
+            "prompt_tokens_details": {
+              "cached_tokens": 5000
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "world": "history"
+}
