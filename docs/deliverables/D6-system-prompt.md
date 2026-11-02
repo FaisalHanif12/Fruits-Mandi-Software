@@ -1,6 +1,6 @@
 # D6 system prompt: the assistant's instructions, tools and answer
 
-Version 1.0, 02-11-2026, after an independent review (22 points, all settled here or in the PRD). Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
+Version 1.1, 02-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
 Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a, Tech Stack v1.8 Section 4.8, Code Standards v1.13 Q1 to Q11, money agent v1.8 Section 9.1. Read `D6-ai-assistant.md` first.
 Used by: plan 48 (`backend`), which copies Sections 2, 3, 4 and 6 into files **exactly as written here**; plan 50 (`robustness`), which measures them live.
 
@@ -36,18 +36,18 @@ The words the model reads before every question. They decide how well it underst
 
 ### 1.1 Size, measured
 
-The fixed part of a request is the tool definitions, the instructions and the answer schema. NFR-AI-5 allows 8,000 tokens (`MAX_PREFIX_TOKENS`). Measured on 02-11-2026 with the `o200k_base` tokenizer (the nearest public tokenizer; GPT-6 Luna's own is not published), the JSON files sent minified:
+The fixed part of a request is the tool definitions, the instructions and the answer schema. NFR-AI-5 allows 9,000 tokens (`MAX_PREFIX_TOKENS`; 8,000 until v1.1). Measured on 02-11-2026 with the `o200k_base` tokenizer (the nearest public tokenizer; GPT-6 Luna's own is not published), the JSON files sent minified:
 
 | Part | Tokens |
 |---|---|
 | Instructions (Section 2) | 5,375 |
-| Tools (Section 3) | 1,919 |
+| Tools (Section 3) | 3,153 (1,919 before the column lists of v1.1) |
 | Answer schema (Section 4) | 290 |
-| **Fixed part** | **7,584** (416 under the limit) |
+| **Fixed part** | **8,816**, measured by P1 after v1.1 (184 under the limit; 7,584 in v1.0) |
 
 OpenRouter and Azure render the tool definitions in their own compact form, which is usually shorter than the JSON measured here, so the real figure should be lower. GPT-6 Luna's own tokenizer may still count Urdu differently. That is why the live run reads the real number.
 
-So the cost figures of D6 Section 0 stand: they assume at most 8,000 cached tokens a call. The live run (plan 50) also reads the real `cached_tokens` of each second call; if it is ever above 8,000, the lead tells Umar before the prompt is used at the shop.
+So the cost figures of D6 Section 0 stand: they assume at most 9,000 cached tokens a call; the cached part costs $0.01 per million tokens, so the 1,241 tokens added in v1.1 cost under a tenth of a cent a day at 20 questions. The live run (plan 50) also reads the real `cached_tokens` of each second call; if it is ever above 9,000, the lead tells Umar before the prompt is used at the shop.
 
 ## 2. The instructions (`prompt/system.md`)
 
@@ -264,7 +264,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
     "type": "function",
     "function": {
       "name": "report",
-      "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today).",
+      "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today). Sort and where words are the columns of the report: R1 R6 date entry seller item qty gross freight commission labour munshiana cash_paid store_rent deductions net | R2 R3 R4 date entry buyer city item qty rate value buyer_total | R5 serial buyer detail value buyer_total | R7 name qty gross avg_rate seller_comm buyer_comm laga total_comm | R8 name trucks lots qty gross | R9 date entry side person item qty amount commission status open | R10 date entry seller item packing received sold written_off fruit_taken balance our_left other_left shop_name days | R11 date entry account debit credit | R12 date entry account cash_in cash_out balance | R13 R14 date entry detail debit credit balance | R15 R25 date entry account amount status | R16 name city debit credit | R17 code head debit credit | R18 name debit credit | R19 name opening_date debit credit | R20 name city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R21 name buyer balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R22 name buyer city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R23 date entry account amount collector status | R24 section seller payable advance_open owes_firm balance last_date | R26 name given returned adjusted open last_date | R27 entry date bill_date seller gross deductions net | R28 period account amount | R29 section name expense taken returned | R30 name income_share expense_share profit_share taken returned net | R31 name total date heading detail amount running | R32 name staff lent returned_cash returned_salary open oldest_open return_by days_past | R33 name purchase date item bought_qty bought_cost sold_qty sales_money commission total_commission cost_sold written_off_qty written_off_cost left_qty left_cost result | R34 date item count amount | R35 code party previous debit credit remaining collector | R36 name date status rent installments costs paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission money_in balance rent_due | R37 date entry for seller item packing weight qty rate value source | R38 name type date owed_then recovered corrections still_owed last_recovery status.",
       "strict": true,
       "parameters": {
         "type": "object",
@@ -290,13 +290,14 @@ Copied exactly. Every function is `strict`, every property is listed in `require
           "rows": {"type": ["integer", "null"]}
         },
         "$defs": {
+          "column": {"type": "string", "enum": ["date", "entry", "seller", "item", "qty", "gross", "freight", "commission", "labour", "munshiana", "cash_paid", "store_rent", "deductions", "net", "buyer", "city", "rate", "value", "buyer_total", "serial", "detail", "name", "avg_rate", "seller_comm", "buyer_comm", "laga", "total_comm", "trucks", "lots", "side", "person", "amount", "status", "open", "packing", "received", "sold", "written_off", "fruit_taken", "balance", "our_left", "other_left", "shop_name", "days", "account", "debit", "credit", "cash_in", "cash_out", "code", "head", "opening_date", "oldest_date", "age_0_7", "age_8_30", "age_31_90", "age_91", "collector", "section", "payable", "advance_open", "owes_firm", "last_date", "given", "returned", "adjusted", "bill_date", "period", "expense", "taken", "income_share", "expense_share", "profit_share", "total", "heading", "running", "staff", "lent", "returned_cash", "returned_salary", "oldest_open", "return_by", "days_past", "purchase", "bought_qty", "bought_cost", "sold_qty", "sales_money", "total_commission", "cost_sold", "written_off_qty", "written_off_cost", "left_qty", "left_cost", "result", "count", "party", "previous", "remaining", "rent", "installments", "costs", "paid_shop", "paid_pocket", "sales_our_shop", "sales_other_shops", "other_in", "money_in", "rent_due", "for", "weight", "source", "type", "owed_then", "recovered", "corrections", "still_owed", "last_recovery"]},
           "where": {
             "type": "object",
             "additionalProperties": false,
             "required": ["column", "op", "value"],
             "description": "Keep the rows whose column compares with value; adds matched (count, totals)",
             "properties": {
-              "column": {"type": "string"},
+              "column": {"$ref": "#/$defs/column"},
               "op": {"type": "string", "enum": ["gt", "gte", "lt", "lte", "eq"]},
               "value": {
                 "type": "string",
@@ -311,7 +312,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
               "type": "object",
               "additionalProperties": false,
               "required": ["column", "order"],
-              "properties": {"column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
+              "properties": {"column": {"$ref": "#/$defs/column"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
             }
           }
         }
@@ -322,7 +323,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
     "type": "function",
     "function": {
       "name": "analytics",
-      "description": "An analytics view A to K over a period with its filters; compare adds the earlier period and the difference with its dir to each row and the totals; group_by month gives a monthly series.",
+      "description": "An analytics view A to K over a period with its filters; compare adds the earlier period and the difference with its dir to each row and the totals; group_by month gives a monthly series. Compare is for views A B C D E H; group_by is for D and G. Sort words are the columns of the view: A name nag gross avg_rate seller_comm buyer_comm laga total_comm share | B name bikri_count nag gross seller_comm buyer_comm total_comm net | C name nag purchase_value buyer_comm laga dues_now avg_days | D name p_<year>_<month> total_comm | E name i_<item_id> total_comm | F name income_share expense_share profit_share gardens trips fruit other net_change | G period gross commission shared_income shop_expenses profit trips_result gardens_result | H rank name nag total_comm share | I name status paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission result | J name bought_qty bought_cost sold_qty sales_money commission cost_sold written_off_qty written_off_cost left_qty left_cost result | K name item nag value own_shop other_shops. With compare also difference.X and earlier.X, X being total_comm (purchase_value in C). D month columns p_<year>_<month> and E item columns i_<item_id> are read but not sorted.",
       "strict": true,
       "parameters": {
         "type": "object",
@@ -354,7 +355,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
               "type": "object",
               "additionalProperties": false,
               "required": ["column", "order"],
-              "properties": {"column": {"type": "string"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
+              "properties": {"column": {"type": "string", "enum": ["name", "nag", "gross", "avg_rate", "seller_comm", "buyer_comm", "laga", "total_comm", "share", "bikri_count", "net", "purchase_value", "dues_now", "avg_days", "income_share", "expense_share", "profit_share", "gardens", "trips", "fruit", "other", "net_change", "period", "commission", "shared_income", "shop_expenses", "profit", "trips_result", "gardens_result", "rank", "status", "paid_shop", "paid_pocket", "sales_our_shop", "sales_other_shops", "other_in", "result", "bought_qty", "bought_cost", "sold_qty", "sales_money", "cost_sold", "written_off_qty", "written_off_cost", "left_qty", "left_cost", "item", "value", "own_shop", "other_shops", "difference.total_comm", "earlier.total_comm", "difference.purchase_value", "earlier.purchase_value"]}, "order": {"type": "string", "enum": ["asc", "desc"]}}
             }
           }
         }
@@ -828,13 +829,14 @@ The Owner can report a misread question; such a question goes into the 100-quest
 
 | ID | Test |
 |---|---|
-| P1 | **Size.** The `o200k_base` token count of `system.md`, minified `tools.json` and minified `answer.schema.json` together is at most `MAX_PREFIX_TOKENS` (8,000). The test prints the count. Tokenizer: the `tiktoken-rs` crate as a dev-dependency (MIT licence, checked by `cargo deny`), which carries the tokenizer file, so the test needs no network |
+| P1 | **Size.** The `o200k_base` token count of `system.md`, minified `tools.json` and minified `answer.schema.json` together is at most `MAX_PREFIX_TOKENS` (9,000). The test prints the count. Tokenizer: the `tiktoken-rs` crate as a dev-dependency (MIT licence, checked by `cargo deny`), which carries the tokenizer file, so the test needs no network |
 | P2 | **Catalogue, both ways.** Every report id, view letter and tile key named in `system.md` exists in `reports::catalog`, the analytics views and the tiles tool, and every one of those is named in `system.md`. The `entry.screen` values of the schema each map to a route |
 | P3 | **Glossary.** Every term of `ur/glossary.ftl` appears in the glossary line of `system.md` with its `en/glossary.ftl` word; the tile names there match `dashboard.ftl` |
 | P4 | **Words.** The words of the prompt's "Never use" line (split at commas; for "X (say Y)" the word is X) equal the `never` rows of `words.tsv`, both ways |
 | P5 | **Examples.** Each of the 15 examples is also a recorded golden question (`tests/fixtures/model/prompt-ex-01.json` to `-15.json`). Data: the worked day after Events 1 to 5 for most; for 6, a small fixture plan 48 writes (two items sold in August and September 2026, today 10-10-26); for 7 and 8, the E2E-59 data (8 reaches 3 lakh in April 2027 by the same pace and February 2027 by the same growth); for 9, the E2E-63 date; for 11, the partner code given; for 15, E2E-16 (5 کیلا of رحیم's lot left) on 13-10-26. Each one's tool calls run, every reference resolves, `check.rs` passes it, and the filled text equals the expected text in the fixture |
 | P6 | **Schemas.** `tools.json` and `answer.schema.json` parse; every function is `strict`; every object has `additionalProperties: false` and lists every property in `required`. A sample input for each tool round-trips through its Rust input type, and a sample answer through `answer.rs` |
 | P7 | **Verbatim.** `system.md`, `tools.json`, `answer.schema.json` and `words.tsv` are byte for byte equal to the blocks of Sections 2, 3, 4 and 6 of this file (the test reads `docs/deliverables/D6-system-prompt.md`), so the document and the code never drift |
+| P8 | **Columns, both ways** (v1.1). The sort and where words listed for each report and view in `tools.json`, and the `column` enums, equal the columns the engine returns for that report or view on the worked day, and the other way round; the compare and group_by letters equal the catalogue's (`backend/crates/assistant/tests/prompt_columns.rs`) |
 
 Live, in plan 50: the 100 questions of NFR-AI-2 run with this exact prompt; `run.mjs` also prints the real `cached_tokens` of each second call (the fixed part as GPT-6 Luna counts it).
 

@@ -87,3 +87,28 @@ The block of the goal ("D6 BLOCKED" on a 404) does not apply: the endpoint exist
 - In robustness_assistant.rs, three key names changed, mechanically (gate note).
 - Checks: assistant tests 0 failed; fmt and clippy -p clean.
 - D6-ai-assistant.md Section 5 still shows the old keys (lines 85, 86, 93, 109 and 112). It is updated after Umar's connection test passes.
+
+## 7. P51-B2: a failed advice question and slow answers (02-11-2026)
+
+Umar asked "apni sale ko ziyada kaise karain ?" and got "not understood". He also said answers are too slow.
+
+Diagnosis from the question log, row 7:
+- The model passed the null `from` of `period up_to_now` together with `compare` (ERR_REQUIRED), then sorted by an invented column `sales` (ERR_OUT_OF_RANGE).
+- The error texts named engine fields with an empty detail and no list of allowed words, so the model could not correct itself.
+- The limits (4 calls, 8 tools) then ended the loop as not_understood.
+- Time: the app's own work is about 40 ms a question. Each model round trip is the rest, and a question takes 2 to 4 of them. Error rounds add more.
+
+Lead decisions:
+1. Errors teach. Each refusal gives the tool's own field name, a reason, and `allowed` (the columns, the views and the filters).
+2. A null period `from` is "no date". compare without dates gets a clear message.
+3. Contract change: the reply carries `stop_reason` when a limit stops the loop, and `finish_reason` logs it. The panel then says it could not finish reading, suggests smaller questions, and shows any plain tables already read.
+4. A new migration adds timing columns to `assistant_questions` (additions only).
+5. Umar approved ONE prompt change: the tool descriptions list the exact column words of each view and report. That makes D6-system-prompt.md v1.1, and the prompt files are re-copied verbatim. He did not approve chained calls, an alerts tool, or low reasoning.
+6. The robust set: one golden transcript per playbook line, plus the failure list.
+
+As built so far:
+- Fixes 1 and 2 are in.
+  - Money agent reviewed fix 2: no figure changes. Its Medium finding (only a period's `from` may be empty) and its Low finding are fixed.
+  - Tests: teach 11 and loop_teach 2. Umar's question now ends as advice in the recorded loop.
+  - R20 single-key sort by name now works.
+  - The assistant suite: 0 failed. fmt and clippy are clean.

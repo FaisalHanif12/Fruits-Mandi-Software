@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.15 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026 and 01-11-2026, and his answers of 15-10-2026) |
+| Version | 1.16 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026 and 02-11-2026, and his answers of 15-10-2026) |
 | Date | 1 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.16 (the master), NFR v1.8, Tech Stack v1.8, Code Standards v1.13 |
+| Derived from | PRD v1.17 (the master), NFR v1.9, Tech Stack v1.8, Code Standards v1.14 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -711,7 +711,7 @@ erDiagram
 | `edit_windows` | `entity` (purchase, venture_entry, garden_arrival, venture), `entity_id`. Migration 0012 (plan 44). Empty at all times outside an edit save. The edit service inserts one row inside its transaction, the BEFORE UPDATE and DELETE triggers of `purchases`, `venture_entries`, `venture_entry_parts`, `garden_arrivals` and `ventures.rent_paisa` allow a change of that one entry only while its row exists, and the service deletes the row before COMMIT. The journal is still reversed and posted again (PRD FR-7.70, FR-6.3); the audit log keeps old and new. A test checks the table is empty after every save. |
 | `user_prefs` | `user_id`, `key`, `value_json`. Unique (`user_id`, `key`). Keys: `language` (ur, en; ur at first run, PRD FR-7.30), `text_size`, `last_screen`, `filters.<screen>`, `print_after_save`, `recent.<screen>` (last 10 record IDs). PRD FR-7.30, FR-7.41, FR-7.45, FR-7.57. |
 | `translit_pairs` | `roman` (lower case), `urdu`, `kind` (name, place, item, word), `use_count`, `last_used_at`. Unique (`roman`, `urdu`). Learned pairs only; the starting word list is a file inside the app (Tech Stack 4.4). PRD FR-7.26. |
-| `assistant_questions` | The question log of PRD FR-7.84 (v1.16, the next free migration number, 0015 today). `asked_at` (UTC), `asked_day` (the Pakistan date, for the daily count of FR-7.81), `asked_by`, `question` (as typed), `language`, `conversation_id`, `parent_id` (null, or the question a continuation belongs to), `source` (chip, model, continue, rerun, test), `counted` (1 when it counts in the daily 20: a model question or a connection test), `sources_json` (each source read, with its filters), `outcome` (answered, estimate, advice, which_one, need_dates, need_party, not_found, outside_books, change_refused, not_understood, checks_failed, records_differ, locked, limit_reached, offline, error), `tool_calls_json` (each tool called with its inputs, in order; for a chip, its fixed tool calls), `answer_json` (the answer as the model wrote it, with its references, not the figures; null for a chip), `model` (null for a chip), `model_calls`, `tokens_in`, `tokens_cached`, `tokens_out`, `tokens_reasoning` (all null for a chip), `finish_reason` (null for a chip). Append-only: triggers block `UPDATE` and `DELETE` (B17). No amount is stored. Index (`asked_day`, `counted`) for the count, (`asked_at`) for the list, (`parent_id`) for continuations. The settings keys `assistant_enabled` and `assistant_model` hold the on or off state and the model name; the key itself is only in Credential Manager (NFR-SEC-15). |
+| `assistant_questions` | The question log of PRD FR-7.84 (v1.16, the next free migration number, 0015 today). `asked_at` (UTC), `asked_day` (the Pakistan date, for the daily count of FR-7.81), `asked_by`, `question` (as typed), `language`, `conversation_id`, `parent_id` (null, or the question a continuation belongs to), `source` (chip, model, continue, rerun, test), `counted` (1 when it counts in the daily 20: a model question or a connection test), `sources_json` (each source read, with its filters), `outcome` (answered, estimate, advice, which_one, need_dates, need_party, not_found, outside_books, change_refused, not_understood, checks_failed, records_differ, locked, limit_reached, offline, error), `tool_calls_json` (each tool called with its inputs, in order; for a chip, its fixed tool calls), `answer_json` (the answer as the model wrote it, with its references, not the figures; null for a chip), `model` (null for a chip), `model_calls`, `tokens_in`, `tokens_cached`, `tokens_out`, `tokens_reasoning` (all null for a chip), `finish_reason` (null for a chip; when a limit stops the loop, the reason: call_limit, tool_limit, token_limit or time_limit), and from migration 0017 (v1.16) `total_millis`, `model_millis`, `tool_millis` (null for older rows) and `calls_json` (per model call: its time, tokens and tools). Append-only: triggers block `UPDATE` and `DELETE` (B17). No amount is stored. Index (`asked_day`, `counted`) for the count, (`asked_at`) for the list, (`parent_id`) for continuations. The settings keys `assistant_enabled` and `assistant_model` hold the on or off state and the model name; the key itself is only in Credential Manager (NFR-SEC-15). |
 
 ### 15.4 Chart of accounts and masters
 
@@ -777,7 +777,7 @@ erDiagram
 | Table | Index on |
 |---|---|
 | `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `pukhta_person_key`); migration 0002: `idx_journal_lines_account_amounts` (`account_id`, `entry_id`, `dr_paisa`, `cr_paisa`) for balances, and `idx_journal_lines_advance` (`account_id`, `entry_id`) where `is_advance = 1` |
-| `journal_entries` | (`entry_date`), (`source_type`, `source_id`); migration 0002: `idx_journal_entries_unposted` (`id`) where `status <> 'posted'` |
+| `journal_entries` | (`entry_date`), (`source_type`, `source_id`); migration 0002: `idx_journal_entries_unposted` (`id`) where `status <> 'posted'`; migration 0016: `idx_journal_entries_opening` (`id`) where `posting_type = 'opening'` |
 | `bikri_sales` | (`lot_id`), (`buyer_account_id`, `entry_date`), (`journal_entry_id`) |
 | `bikri_lots` | (`bikri_id`), (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
 | `purchases` | (`entry_date`), (`venture_id`), (`item_id`), (`qty`, `qty_sold`, `qty_written_off`) for stock left |
@@ -787,7 +787,7 @@ erDiagram
 | `fruit_takes` | (`entry_date`), (`partner_id`, `entry_date`), (`lot_id`) |
 | `analytics_facts` | (`entry_date`), (`item_id`, `entry_date`), (`seller_account_id`, `entry_date`), (`buyer_account_id`, `entry_date`) |
 | `partner_share_rows` | (`partner_id`, `entry_date`) |
-| `bill_allocations`, `advance_allocations` | (`account_id`, `pukhta_person_key`, `is_active`) |
+| `bill_allocations`, `advance_allocations` | (`account_id`, `pukhta_person_key`, `is_active`); migration 0016: `idx_bill_allocations_open_sum` (`bill_line_id`, `amount_paisa`) where `is_active = 1` |
 | `bikri_entries` | (`truck_no`, `entry_date`) for truck memory and the same-truck check |
 | Every table with search columns | (`search_ur`), (`search_en`), (`search_phonetic`), (`code`) where it has one |
 | `accounts` | (`party_type`, `serial`) for short codes. Lists sorted by code use type number, then length, then code, so 0019 comes before 00110 (v1.8) |
@@ -1031,3 +1031,4 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.13 | 01-11-2026 | PRD v1.15, approved by Umar: `accounts.is_pukhta_party` and migration 0013 for a پختہ party's own account (15.4). No posting type changed. |
 | 1.14 | 01-11-2026 | Lead decision (CLAUDE.md rule 4, plan 47 Section 11): `venture_entry_parts` and `purchase_cost_parts` are soft state from migration 0014 (`is_active`, `replaced_by`); an edit retires parts instead of deleting them (15.5). Schema version 14. No PRD change. |
 | 1.15 | 01-11-2026 | PRD v1.16, approved by Umar: ask the app (diagrams 1 and 3; new diagram 21; table `assistant_questions` and the settings keys `assistant_enabled` and `assistant_model` in 15.3, in the next free migration, 0015 today). The change log is now Section 22. No posting type changed. Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint, with no fallback; the model is the brain and reads through read-only tools, the app checks every figure (diagrams 1, 3 and 21; `tool_calls_json`, `answer_json`, `model_calls` and the token columns in 15.3). Further amended 02-11-2026 (Umar): the outcome advice (15.3); a locked partner question pauses with no model call (Section 21). |
+| 1.16 | 02-11-2026 | Approved by Umar: the speed fix of plan 48 adds two indexes in migration 0016 (15.8); the question log gets its timing columns and the stop reasons in migration 0017 (15.3). No table, posting type or amount changed. |
