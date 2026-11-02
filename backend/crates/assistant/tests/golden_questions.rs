@@ -479,7 +479,11 @@ fn e2e_55_the_twenty_first_question_is_refused_and_offline_counts_nothing() {
     assert_eq!(money(figures(answer_of(&chip))[0].0), 58_484);
     // Offline, on a fresh day: the offline outcome, nothing counted, the chip still works.
     let fresh = Harness::day();
-    let client = RecordedClient::with_results(vec![Err(CallError::new(FailureKind::Offline))]);
+    // Both tries fail: the call is tried once more (plan 52 item 6) and then it is offline.
+    let client = RecordedClient::with_results(vec![
+        Err(CallError::new(FailureKind::Offline)),
+        Err(CallError::new(FailureKind::Offline)),
+    ]);
     let offline = fresh.ask_with("aaj ka commission", None, &client);
     assert_eq!(offline.outcome, AskOutcome::Offline);
     assert_eq!(offline.failure.map(|f| f.kind), Some(FailureKind::Offline));

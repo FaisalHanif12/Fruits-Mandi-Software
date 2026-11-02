@@ -25,6 +25,7 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::ask::{AssistantFailure, FailureKind};
+use crate::limits::RETRY_WAIT_MILLIS;
 
 /// The only URL the app calls for a question (NFR-SEC-9).
 pub const API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
@@ -90,6 +91,18 @@ impl CallError {
         }
     }
 
+    /// True for a failure that one more try can cure (plan 52 item 6): the network (no internet, or
+    /// a connection that dropped, which is `other` with no status), HTTP 429 and HTTP 5xx. A
+    /// timeout is not tried again (the next try would wait as long), and neither is a wrong key,
+    /// no credit, no Azure endpoint, a reply that cannot be read, or any other status.
+    pub fn retryable(self) -> bool {
+        match self.kind {
+            FailureKind::Offline | FailureKind::Busy | FailureKind::Server => true,
+            FailureKind::Other => self.http_status.is_none(),
+            _ => false,
+        }
+    }
+
     /// The failure the panel is told.
     pub fn failure(self) -> AssistantFailure {
         AssistantFailure {
@@ -106,6 +119,12 @@ pub trait ModelClient: Send + Sync {
     /// # Errors
     /// [`CallError`].
     fn call(&self, key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError>;
+
+    /// How long to wait before the one retry of a failed call (plan 52 item 6). The tests' client
+    /// says none.
+    fn retry_wait(&self) -> Duration {
+        Duration::from_millis(RETRY_WAIT_MILLIS)
+    }
 }
 
 /// A token count: never below 0, whatever the reply says (the log refuses a negative count).
@@ -191,6 +210,21 @@ fn status_kind(status: u16) -> FailureKind {
     }
 }
 
+/// The failure of a request that could not be sent or got no reply. No time left is a timeout. A
+/// connection that could not be made (no network, no route, DNS) is `offline`, the one case where
+/// "no internet" is true. A connection that was made and then dropped, or any other fault in
+/// sending, is `other` with no status: the internet may be fine, so the panel does not say it is
+/// not (plan 52 item 6).
+fn send_failure(is_timeout: bool, is_connect: bool) -> CallError {
+    CallError::new(if is_timeout {
+        FailureKind::Timeout
+    } else if is_connect {
+        FailureKind::Offline
+    } else {
+        FailureKind::Other
+    })
+}
+
 /// The failure of a read of the reply body: a call that ran out of time is a timeout, anything else
 /// is a reply that could not be read.
 fn body_failure(is_timeout: bool) -> CallError {
@@ -223,13 +257,7 @@ impl OpenRouterClient {
             .header("Content-Type", "application/json")
             .body(body.to_string())
             .send()
-            .map_err(|e| {
-                CallError::new(if e.is_timeout() {
-                    FailureKind::Timeout
-                } else {
-                    FailureKind::Offline
-                })
-            })?;
+            .map_err(|e| send_failure(e.is_timeout(), e.is_connect()))?;
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return Err(CallError {
@@ -285,6 +313,10 @@ impl RecordedClient {
 }
 
 impl ModelClient for RecordedClient {
+    fn retry_wait(&self) -> Duration {
+        Duration::ZERO
+    }
+
     fn call(&self, _key: &str, body: &Value, _timeout: Duration) -> Result<Reply, CallError> {
         self.seen
             .lock()
@@ -387,6 +419,8 @@ mod tests {
         StallsInTheBody,
         /// Sends a whole reply.
         Replies(&'static str),
+        /// Takes the request and closes the connection with no reply.
+        HangsUp,
     }
 
     fn serve(how: Server, hold: Duration) -> String {
@@ -406,6 +440,7 @@ mod tests {
                 }
             }
             match how {
+                Server::HangsUp => {}
                 Server::Silent => std::thread::sleep(hold),
                 Server::StallsInTheBody => {
                     let _ = stream.write_all(
@@ -461,6 +496,57 @@ mod tests {
         let url = serve(Server::Replies("not json at all"), Duration::ZERO);
         let (result, _) = call_local(&url, Duration::from_secs(5));
         assert_eq!(result.unwrap_err().kind, FailureKind::BadReply);
+    }
+
+    #[test]
+    fn a_connection_that_cannot_be_made_is_offline_and_one_that_drops_is_not() {
+        // Nothing listens on this port any more: the connection is refused, which is "no internet".
+        let closed = {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}/", listener.local_addr().unwrap())
+        };
+        let (result, _) = call_local(&closed, Duration::from_secs(5));
+        let error = result.unwrap_err();
+        assert_eq!(error.kind, FailureKind::Offline);
+        assert!(error.retryable());
+        // A server that takes the request and hangs up with no reply: the internet is fine, so
+        // the panel must not say it is down. The kind is `other`, with no status, and is tried again.
+        let url = serve(Server::HangsUp, Duration::ZERO);
+        let (result, _) = call_local(&url, Duration::from_secs(5));
+        let error = result.unwrap_err();
+        assert_eq!(error.kind, FailureKind::Other);
+        assert_eq!(error.http_status, None);
+        assert!(error.retryable());
+    }
+
+    #[test]
+    fn which_failures_are_tried_again() {
+        let status = |kind, code| CallError {
+            kind,
+            http_status: Some(code),
+        };
+        for kind in [FailureKind::Offline, FailureKind::Busy, FailureKind::Server] {
+            assert!(CallError::new(kind).retryable(), "{kind:?}");
+        }
+        assert!(status(FailureKind::Busy, 429).retryable());
+        assert!(status(FailureKind::Server, 503).retryable());
+        // Never: a timeout, a wrong key, no credit, no Azure endpoint, a reply that cannot be
+        // read, and an unknown status such as 400.
+        for kind in [
+            FailureKind::Timeout,
+            FailureKind::BadKey,
+            FailureKind::NoCredit,
+            FailureKind::NoEndpoint,
+            FailureKind::BadReply,
+        ] {
+            assert!(!CallError::new(kind).retryable(), "{kind:?}");
+        }
+        assert!(!status(FailureKind::Other, 400).retryable());
+        assert_eq!(
+            send_failure(true, true).kind,
+            FailureKind::Timeout,
+            "a timeout wins"
+        );
     }
 
     #[test]

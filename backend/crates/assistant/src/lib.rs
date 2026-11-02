@@ -33,6 +33,7 @@ pub mod check;
 pub mod client;
 pub mod conversation;
 pub mod fill;
+pub mod help_guard;
 pub mod keys;
 pub mod limits;
 pub mod log;

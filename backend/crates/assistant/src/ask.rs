@@ -61,9 +61,10 @@ pub enum AskOutcome {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum FailureKind {
-    /// No internet (the request could not be sent).
+    /// No internet: the connection to the service could not be made, even after one retry (plan 52
+    /// item 6). A connection that was made and then dropped is `other`, not this.
     Offline,
-    /// No reply within 30 seconds, or the question went past 60. A timeout at any stage, the wait
+    /// No reply within 30 seconds, or the question went past 90. A timeout at any stage, the wait
     /// for the first byte or the read of the body, is this and never `bad_reply`.
     Timeout,
     /// HTTP 401: the key is wrong.

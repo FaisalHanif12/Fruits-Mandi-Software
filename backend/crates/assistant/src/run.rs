@@ -7,7 +7,8 @@
 //! The loop, for one question: build the request (the fixed instructions, the last 3 questions,
 //! this question), call the model, run the tools it asks for (a partner source while the section
 //! is locked pauses the question with no model call), call again with the results, and repeat until
-//! it gives its answer: at most 4 model calls and 8 tool calls. The answer is checked
+//! it gives its answer: at most 6 model calls and 12 tool calls, the last call with the tools
+//! switched off. The answer is checked
 //! (`check.rs`); if a check fails the model writes it once more; if that fails too the tool
 //! results are shown as plain tables. A figure whose two places differ ends the question at once.
 //! Every figure on the screen comes from a tool result (`fill.rs`). The question is written to the
@@ -45,15 +46,19 @@ use crate::ask::{
 };
 use crate::check::{Check, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
-use crate::conversation::{CallTiming, Conversation, Timing, ToolTiming, Turn, Wait, Waiting};
+use crate::conversation::{
+    CallTiming, Conversation, Counters, Timing, ToolTiming, Turn, Wait, Waiting,
+};
 use crate::fill;
+use crate::help_guard;
 use crate::limits::{
     CALL_TIMEOUT_SECS, DAILY_LIMIT, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
     MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_REWRITES, MAX_TOOL_CALLS, QUESTION_TIMEOUT_SECS,
+    RETRY_MIN_LEFT_SECS,
 };
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
 use crate::request::{Parts, RESULT_MARK, request_body, user_message};
-use crate::results::{ToolResult, Words, fit, tool_result_json};
+use crate::results::{Node, ToolResult, Words, fit, tool_result_json};
 use crate::runtime::Runtime;
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
@@ -343,9 +348,13 @@ impl<'a> Run<'a> {
             if turn.counters.tool_calls >= MAX_TOOL_CALLS {
                 turn.messages.push(tool_message(
                     &call.id,
-                    ToolError::new("ERR_TOO_MANY_CALLS", "tool", "8 tool calls are the most")
-                        .to_json()
-                        .to_string(),
+                    ToolError::new(
+                        "ERR_TOO_MANY_CALLS",
+                        "tool",
+                        &format!("{MAX_TOOL_CALLS} tool calls are the most"),
+                    )
+                    .to_json()
+                    .to_string(),
                     None,
                 ));
                 continue;
@@ -427,21 +436,22 @@ impl<'a> Run<'a> {
         (!answer.tables.is_empty()).then_some(answer)
     }
 
-    /// One model call, within the limits of the question.
+    /// One model call, within the limits of the question. A call that failed on the network, on
+    /// 429 or on a 5xx is tried once more after a short wait, when enough of the question is left
+    /// (plan 52 item 6); the failed try is in the timing, and only the reply that came is counted.
     fn call_model(
         &self,
         conv: &Conversation,
         turn: &mut Turn,
         rewrite: bool,
     ) -> Result<Reply, Box<Finished>> {
-        let elapsed = self.started.elapsed();
         let total = Duration::from_secs(QUESTION_TIMEOUT_SECS);
-        let c = &turn.counters;
-        if elapsed >= total {
+        if self.started.elapsed() >= total {
             return Err(Box::new(Finished::failed(CallError::new(
                 FailureKind::Timeout,
             ))));
         }
+        let c = &turn.counters;
         let over_calls = !rewrite && c.model_calls >= MAX_MODEL_CALLS;
         let over_rewrite = rewrite && c.rewrites >= MAX_REWRITES;
         let out_used = u32::try_from(c.tokens_out).unwrap_or(u32::MAX);
@@ -475,38 +485,56 @@ impl<'a> Run<'a> {
             words: &self.words,
             partner_locked: self.partner_locked,
             max_completion_tokens,
+            tools_off: tools_off(&turn.counters, rewrite),
         });
-        let timeout = Duration::from_secs(CALL_TIMEOUT_SECS).min(total.saturating_sub(elapsed));
-        let sent = Instant::now();
-        let result = self.d.client.call(&key, &body, timeout);
-        let model_millis = millis_since(sent);
-        let reply = match result {
-            Ok(reply) => reply,
-            Err(e) => {
-                // The time of a call that failed is the most useful one: a timeout shows here.
-                turn.timing.calls.push(CallTiming {
-                    model_millis,
-                    tokens_in: 0,
-                    tokens_cached: 0,
-                    tokens_out: 0,
-                    tokens_reasoning: 0,
-                    rewrite,
-                    failed: true,
-                    tools: Vec::new(),
-                });
-                return Err(Box::new(Finished::failed(e)));
+        let mut retried = false;
+        let reply = loop {
+            let left = total.saturating_sub(self.started.elapsed());
+            let timeout = Duration::from_secs(CALL_TIMEOUT_SECS).min(left);
+            let sent = Instant::now();
+            let result = self.d.client.call(&key, &body, timeout);
+            let model_millis = millis_since(sent);
+            match result {
+                Ok(reply) => {
+                    turn.timing.calls.push(CallTiming {
+                        model_millis,
+                        tokens_in: reply.usage.prompt_tokens,
+                        tokens_cached: reply.usage.cached_tokens,
+                        tokens_out: reply.usage.completion_tokens,
+                        tokens_reasoning: reply.usage.reasoning_tokens,
+                        rewrite,
+                        failed: false,
+                        tools: Vec::new(),
+                        error: None,
+                        check_failed: Vec::new(),
+                    });
+                    break reply;
+                }
+                Err(e) => {
+                    // The time of a call that failed is the most useful one: a timeout shows here.
+                    turn.timing.calls.push(CallTiming {
+                        model_millis,
+                        tokens_in: 0,
+                        tokens_cached: 0,
+                        tokens_out: 0,
+                        tokens_reasoning: 0,
+                        rewrite,
+                        failed: true,
+                        tools: Vec::new(),
+                        error: failure_word(e.kind),
+                        check_failed: Vec::new(),
+                    });
+                    let left = total.saturating_sub(self.started.elapsed());
+                    if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
+                    {
+                        retried = true;
+                        std::thread::sleep(self.d.client.retry_wait());
+                        continue;
+                    }
+                    return Err(Box::new(Finished::failed(e)));
+                }
             }
         };
-        turn.timing.calls.push(CallTiming {
-            model_millis,
-            tokens_in: reply.usage.prompt_tokens,
-            tokens_cached: reply.usage.cached_tokens,
-            tokens_out: reply.usage.completion_tokens,
-            tokens_reasoning: reply.usage.reasoning_tokens,
-            rewrite,
-            failed: false,
-            tools: Vec::new(),
-        });
         if rewrite {
             turn.counters.rewrites = turn.counters.rewrites.saturating_add(1);
         } else {
@@ -535,19 +563,35 @@ impl<'a> Run<'a> {
             return paused(rest);
         }
         loop {
+            let off = tools_off(&turn.counters, false);
             let reply = match self.call_model(conv, turn, false) {
                 Ok(r) => r,
                 Err(f) => return *f,
             };
             if !matches!(reply.finish_reason.as_str(), "stop" | "tool_calls") {
-                // `length` and anything else: the reply cannot be used.
-                let mut f = Finished::plain(AskOutcome::NotUnderstood);
-                f.finish_reason = Some(reply.finish_reason);
-                return f;
+                // `length` and anything else: the reply cannot be used. What was read before is
+                // shown as plain tables (PRD E96); with nothing read it is "not understood".
+                return match self.tables_read(conv) {
+                    Some(tables) if !conv.results.is_empty() => {
+                        let mut f = Finished::stopped(StopReason::Tokens, Some(tables));
+                        f.finish_reason = Some(reply.finish_reason);
+                        f
+                    }
+                    _ => {
+                        let mut f = Finished::plain(AskOutcome::NotUnderstood);
+                        f.finish_reason = Some(reply.finish_reason);
+                        f
+                    }
+                };
             }
             if reply.tool_calls.is_empty() {
                 (self.d.emit)(step("assistant-step-checking"));
                 return self.finish(conv, turn, reply);
+            }
+            if off {
+                // The tools were switched off for this call and the model asked for one anyway:
+                // nothing more may be read, so the question stops with what it has (PRD E96).
+                return Finished::stopped(StopReason::Calls, self.tables_read(conv));
             }
             turn.messages.push(reply.message.clone());
             if let Some(rest) = self.run_calls(conv, turn, reply.tool_calls) {
@@ -600,12 +644,17 @@ impl<'a> Run<'a> {
         let finish_reason = reply.finish_reason.clone();
         let mut rewrote = false;
         loop {
-            let Ok(parsed) = ModelAnswer::parse(&content) else {
+            let Ok(written) = ModelAnswer::parse(&content) else {
                 let mut f = Finished::plain(AskOutcome::NotUnderstood);
                 f.model_text = Some(json_text(&content));
                 f.finish_reason = Some(finish_reason);
                 return f;
             };
+            // Help is never a change request (plan 52 item 4): a "how do I" question that the
+            // model ended as a change request is answered with the guide of its topic.
+            let helped = self.help_instead(conv, turn, &written);
+            let swapped = helped.is_some();
+            let parsed = helped.unwrap_or_else(|| written.clone());
             let numbers = figures::question_numbers(&turn.question);
             let state = State {
                 results: conv.results.clone(),
@@ -622,6 +671,11 @@ impl<'a> Run<'a> {
             .run(&parsed);
             let read_at = self.read_at();
             let mut f = match verdict {
+                // The guide text is the app's own; if it somehow fails a check, the change
+                // refused answer stands, as before.
+                Verdict::Retry(_) | Verdict::Differ(_) if swapped => {
+                    self.conclude_answer(&env, &state, &written, &read_at)
+                }
                 Verdict::Ok => {
                     turn.messages
                         .push(json!({"role": "assistant", "content": content}));
@@ -648,7 +702,12 @@ impl<'a> Run<'a> {
                             "role": "user",
                             "content": json!({"check_failed": list}).to_string(),
                         }));
-                        match self.call_model(conv, turn, true) {
+                        let rewritten = self.call_model(conv, turn, true);
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.check_failed =
+                                failures.iter().map(|x| x.rule.to_owned()).collect();
+                        }
+                        match rewritten {
                             Ok(next) if next.tool_calls.is_empty() => {
                                 content = next.content.unwrap_or_default();
                                 continue;
@@ -668,6 +727,95 @@ impl<'a> Run<'a> {
             f.finish_reason = Some(finish_reason);
             return f;
         }
+    }
+
+    /// The guide topic of a help question that the model ended as a change request, as an answer
+    /// of the app's own words (plan 52 item 4). `None` when the question is not help: it has a
+    /// number to write, or does not ask how, where or what, or the answer is not a change request.
+    /// The guide is the one the model read; when it read none, the app reads the topic of the
+    /// screen the model named.
+    fn help_instead(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        written: &ModelAnswer,
+    ) -> Option<ModelAnswer> {
+        if written.kind != AnswerKind::ChangeRequest {
+            return None;
+        }
+        let numbers = figures::question_numbers(&turn.question);
+        if !help_guard::is_how_to(&turn.question, &numbers) {
+            return None;
+        }
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let read = conv
+            .results
+            .iter()
+            .rev()
+            .find(|r| r.tool == "app_help" && r.turn == index)
+            .map(|r| r.id.clone());
+        let id = match read {
+            Some(id) => id,
+            None => {
+                let screen = written.entry.as_ref()?.screen;
+                self.read_help(conv, turn, help_guard::topic_of(screen))?
+            }
+        };
+        let result = conv.results.iter().find(|r| r.id == id)?;
+        let steps = match result.node.get(&["steps"]) {
+            Some(Node::List(items)) => items.len(),
+            _ => 0,
+        };
+        let mut text = format!("{{{{{id}.summary}}}}");
+        for step in 0..steps {
+            text.push_str(&format!("\n• {{{{{id}.steps.{step}}}}}"));
+        }
+        Some(ModelAnswer {
+            kind: AnswerKind::Answer,
+            text,
+            show: Vec::new(),
+            next: Vec::new(),
+            choose: None,
+            entry: written.entry.clone(),
+            nearest: None,
+        })
+    }
+
+    /// Reads one topic of the guide for the app itself (the model asked for none). The read is in
+    /// the question's log. It counts as no tool call of the model.
+    fn read_help(&self, conv: &mut Conversation, turn: &mut Turn, topic: &str) -> Option<String> {
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let numbers = figures::question_numbers(&turn.question);
+        let env = self.env(&numbers);
+        let mut state = State {
+            results: std::mem::take(&mut conv.results),
+            turn: index,
+        };
+        let arguments = json!({"topic": topic}).to_string();
+        let found = tools::call(&env, &state, "app_help", &arguments)
+            .ok()
+            .map(|draft| {
+                let id = state.next_id(prefix_of(draft.tool));
+                let mut result = ToolResult {
+                    id: id.clone(),
+                    tool: draft.tool,
+                    input: draft.input,
+                    node: draft.node,
+                    shown: draft.shown,
+                    source: draft.source,
+                    partner_parts_locked: draft.partner_parts_locked,
+                    partner_data: draft.partner_data,
+                    turn: index,
+                    working: draft.working,
+                };
+                fit(&mut result, &self.words);
+                turn.tool_log
+                    .push(json!({"id": id, "tool": result.tool, "input": result.input}));
+                state.results.push(result);
+                id
+            });
+        conv.results = state.results;
+        found
     }
 
     fn conclude_answer(
@@ -830,6 +978,22 @@ impl<'a> Run<'a> {
             limit: DAILY_LIMIT,
         })
     }
+}
+
+/// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the
+/// last model call the question may make, or the tool calls are used up, or it is the rewrite
+/// (which may not read anything new, D6-system-prompt 5.3).
+fn tools_off(counters: &Counters, rewrite: bool) -> bool {
+    rewrite
+        || counters.model_calls.saturating_add(1) >= MAX_MODEL_CALLS
+        || counters.tool_calls >= MAX_TOOL_CALLS
+}
+
+/// The word of a failure kind for the log (`offline`, `timeout`, `busy` ...).
+fn failure_word(kind: FailureKind) -> Option<String> {
+    serde_json::to_value(kind)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
 }
 
 /// Whole milliseconds since a moment, for the log (plan 51 B2).

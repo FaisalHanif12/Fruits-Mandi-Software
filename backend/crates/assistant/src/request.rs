@@ -30,6 +30,10 @@ pub const ANSWER_SCHEMA_NAME: &str = "answer";
 pub const REASONING_EFFORT: &str = "medium";
 /// The fixed seed of every call.
 pub const SEED: i64 = 20_261_102;
+/// `tool_choice` while the model may call tools.
+pub const TOOL_CHOICE_AUTO: &str = "auto";
+/// `tool_choice` of the last call of a question and of the rewrite: no tool may be called.
+pub const TOOL_CHOICE_NONE: &str = "none";
 /// The marker of a tool message that holds the id of its result. Taken out before sending.
 pub const RESULT_MARK: &str = "_result";
 
@@ -220,6 +224,10 @@ pub struct Parts<'a> {
     /// Output tokens this call may use. Sent as `max_completion_tokens`, the name the Azure
     /// endpoints take (`max_tokens` is not on their list).
     pub max_completion_tokens: u32,
+    /// True for the last call a question may make and for the rewrite: `tool_choice` is `none`,
+    /// so the model must answer from what it has read (plan 52 item 1, PRD E96). The `tools`
+    /// list is still sent, so the fixed part stays the same and stays cached.
+    pub tools_off: bool,
 }
 
 /// The body of one call.
@@ -248,7 +256,7 @@ pub fn request_body(parts: &Parts<'_>) -> Value {
         "model": parts.model,
         "messages": messages,
         "tools": tools(),
-        "tool_choice": "auto",
+        "tool_choice": if parts.tools_off { TOOL_CHOICE_NONE } else { TOOL_CHOICE_AUTO },
         "response_format": {
             "type": "json_schema",
             "json_schema": {"name": ANSWER_SCHEMA_NAME, "strict": true, "schema": answer_schema()},
@@ -265,6 +273,10 @@ mod tests {
     use super::*;
 
     fn body(max_completion_tokens: u32) -> Value {
+        body_with(max_completion_tokens, false)
+    }
+
+    fn body_with(max_completion_tokens: u32, tools_off: bool) -> Value {
         let turn = Turn {
             question: "ikram ka bakaya".to_owned(),
             messages: vec![user_message(
@@ -284,6 +296,7 @@ mod tests {
             words: &words,
             partner_locked: true,
             max_completion_tokens,
+            tools_off,
         })
     }
 
@@ -331,6 +344,19 @@ mod tests {
         assert_eq!(body["tool_choice"], "auto");
         assert_eq!(body["seed"], SEED);
         assert_eq!(body["reasoning"], json!({"effort": REASONING_EFFORT}));
+    }
+
+    /// Plan 52 item 1: the last call has the tools switched off; the tool list stays in the body,
+    /// so the fixed part is the same and stays cached.
+    #[test]
+    fn the_last_call_goes_out_with_tool_choice_none() {
+        let on = body_with(1_500, false);
+        let off = body_with(1_500, true);
+        assert_eq!(on["tool_choice"], "auto");
+        assert_eq!(off["tool_choice"], "none");
+        assert_eq!(on["tools"], off["tools"]);
+        assert_eq!(on["messages"][0], off["messages"][0]);
+        assert_eq!(on["response_format"], off["response_format"]);
     }
 
     #[test]

@@ -69,16 +69,18 @@ fn last_log_row(h: &Harness) -> mandi_services::db::assistant::QuestionRow {
 }
 
 #[test]
-fn four_calls_of_refusals_end_with_the_call_limit_and_nothing_to_show() {
+fn six_calls_of_refusals_end_with_the_call_limit_and_nothing_to_show() {
     let h = Harness::day();
     let replies = vec![
         tool_reply(&[bad_period()], (7_000, 60)),
         tool_reply(&[bad_period()], (7_100, 60)),
         tool_reply(&[bad_period()], (7_200, 60)),
         tool_reply(&[bad_period()], (7_300, 60)),
+        tool_reply(&[bad_period()], (7_400, 60)),
+        tool_reply(&[bad_period()], (7_500, 60)),
     ];
     let (reply, requests) = h.ask("pichle 7 din ki sale", None, replies);
-    assert_eq!(requests.len(), 4);
+    assert_eq!(requests.len(), 6);
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");
     assert_eq!(reply.stop_reason, Some(StopReason::Calls));
     assert!(
@@ -88,18 +90,20 @@ fn four_calls_of_refusals_end_with_the_call_limit_and_nothing_to_show() {
     let row = last_log_row(&h);
     assert_eq!(row.outcome, "not_understood");
     assert_eq!(row.finish_reason.as_deref(), Some("call_limit"));
-    assert_eq!(row.model_calls, Some(4));
+    assert_eq!(row.model_calls, Some(6));
 }
 
 #[test]
 fn a_table_read_before_the_limit_is_shown_as_it_is() {
     let h = Harness::day();
     let replies = vec![
-        // Call 1 reads R20 (a real table), then three calls of refusals use up the rest.
+        // Call 1 reads R20 (a real table), then five calls of refusals use up the rest.
         tool_reply(&[r20()], (7_000, 60)),
         tool_reply(&[bad_period()], (7_100, 60)),
         tool_reply(&[bad_period()], (7_200, 60)),
         tool_reply(&[bad_period()], (7_300, 60)),
+        tool_reply(&[bad_period()], (7_400, 60)),
+        tool_reply(&[bad_period()], (7_500, 60)),
     ];
     let (reply, _) = h.ask("kis kis ke zimme kitna hai, pichle 7 din", None, replies);
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");
@@ -120,8 +124,8 @@ fn a_table_read_before_the_limit_is_shown_as_it_is() {
 #[test]
 fn the_token_limit_ends_with_its_own_reason() {
     let h = Harness::day();
-    // The first call already used the question's whole input budget (60,000).
-    let replies = vec![tool_reply(&[r20()], (60_000, 60))];
+    // The first call already used the question's whole input budget (90,000).
+    let replies = vec![tool_reply(&[r20()], (90_000, 60))];
     let (reply, requests) = h.ask("kis kis ke zimme kitna hai", None, replies);
     assert_eq!(requests.len(), 1);
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");

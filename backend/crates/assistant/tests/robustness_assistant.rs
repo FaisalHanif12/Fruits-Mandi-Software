@@ -1323,28 +1323,31 @@ fn attack_04_twenty_tool_calls_in_one_reply_run_the_first_eight_and_refuse_the_r
             .iter()
             .all(|e| e.as_deref() == Some("ERR_TOO_MANY_CALLS"))
     );
-    // Across replies too: 4 + 4 + 4 calls make 12, and only 8 run.
-    let four: Vec<(&str, Value)> = (0..4).map(|_| ("tiles", json!({}))).collect();
+    // Across replies too: 5 + 5 + 5 calls make 15, and only 12 run.
+    let five: Vec<(&str, Value)> = (0..5).map(|_| ("tiles", json!({}))).collect();
     let (reply, requests) = ask(
         &h,
         "ikram ka hisab",
         None,
         vec![
-            tool_reply(&four),
-            tool_reply(&four),
-            tool_reply(&four),
+            tool_reply(&five),
+            tool_reply(&five),
+            tool_reply(&five),
             final_reply(&answer("not_understood", "")),
         ],
     );
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood);
     let last = tool_errors(&requests[3]);
-    assert_eq!(last.len(), 12);
-    assert_eq!(last.iter().filter(|e| e.is_none()).count(), 8);
-    assert_eq!(last.iter().filter(|e| e.is_some()).count(), 4);
+    assert_eq!(last.len(), 15);
+    assert_eq!(
+        last.iter().filter(|e| e.is_none()).count(),
+        limits::MAX_TOOL_CALLS as usize
+    );
+    assert_eq!(last.iter().filter(|e| e.is_some()).count(), 3);
 }
 
 #[test]
-fn attack_04_a_model_that_never_answers_stops_at_four_calls_and_eight_tools() {
+fn attack_04_a_model_that_never_answers_stops_at_six_calls_and_twelve_tools() {
     let h = Harness::day();
     // Every reply asks for two more tools. The loop ends by itself.
     let two: Vec<(&str, Value)> = vec![("tiles", json!({})), ("tiles", json!({}))];
@@ -1643,9 +1646,9 @@ fn attack_05_a_tool_call_with_missing_parts_is_dropped_and_the_question_ends_as_
 #[test]
 fn attack_05_token_counts_at_the_edges_end_the_question_and_never_panic() {
     let h = Harness::day();
-    // A reply that says it used 61,000 input tokens: the question may not call again.
+    // A reply that says it used 91,000 input tokens: the question may not call again.
     let mut big_in = tool_reply(&[find("ikram", "buyer")]);
-    big_in["usage"]["prompt_tokens"] = json!(61_000);
+    big_in["usage"]["prompt_tokens"] = json!(91_000);
     let (reply, requests) = ask(&h, "ikram", None, vec![big_in, final_reply(&good_akram())]);
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");
     assert_eq!(
@@ -1654,9 +1657,9 @@ fn attack_05_token_counts_at_the_edges_end_the_question_and_never_panic() {
         "the input limit of {} tokens",
         limits::MAX_INPUT_TOKENS
     );
-    // 3,000 output tokens: the same.
+    // 4,000 output tokens: the same.
     let mut big_out = tool_reply(&[find("ikram", "buyer")]);
-    big_out["usage"]["completion_tokens"] = json!(3_000);
+    big_out["usage"]["completion_tokens"] = json!(4_000);
     let (reply, requests) = ask(&h, "ikram", None, vec![big_out, final_reply(&good_akram())]);
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood);
     assert_eq!(
@@ -1667,13 +1670,13 @@ fn attack_05_token_counts_at_the_edges_end_the_question_and_never_panic() {
     );
     // Just under both limits still works for one more call, with the tokens that are left.
     let mut near = tool_reply(&[find("ikram", "buyer")]);
-    near["usage"]["prompt_tokens"] = json!(59_999);
-    near["usage"]["completion_tokens"] = json!(2_999);
+    near["usage"]["prompt_tokens"] = json!(89_999);
+    near["usage"]["completion_tokens"] = json!(3_999);
     let short = answer("answer", "{{r1.matches.0.name}} کا کھاتہ ملا۔");
     let (reply, requests) = ask(&h, "ikram", None, vec![near, final_reply(&short)]);
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     assert_eq!(requests.len(), 2);
-    assert_eq!(requests[1]["max_completion_tokens"], 1, "3,000 less 2,999");
+    assert_eq!(requests[1]["max_completion_tokens"], 1, "4,000 less 3,999");
     assert_eq!(
         requests[0]["max_completion_tokens"],
         limits::MAX_CALL_OUTPUT_TOKENS
@@ -1727,9 +1730,10 @@ fn attack_05_a_negative_token_count_does_not_lose_the_question() {
 
 // ---- attack 6: the network ------------------------------------------------------------------
 
-const FAILURES: [(FailureKind, Option<i64>); 11] = [
+const FAILURES: [(FailureKind, Option<i64>); 12] = [
     (FailureKind::Offline, None),
     (FailureKind::Timeout, None),
+    (FailureKind::Other, None),
     (FailureKind::BadKey, Some(401)),
     (FailureKind::NoCredit, Some(402)),
     (FailureKind::NoEndpoint, Some(404)),
@@ -1745,11 +1749,15 @@ const FAILURES: [(FailureKind, Option<i64>); 11] = [
 fn attack_06_every_network_failure_gives_its_message_and_nothing_else_waits() {
     let h = Harness::day();
     for (kind, status) in FAILURES {
-        let client = RecordedClient::with_results(vec![Err(CallError {
+        let error = CallError {
             kind,
             http_status: status,
-        })]);
+        };
+        // A network failure, 429 and a 5xx are tried once more (plan 52 item 6): both fail here.
+        let tries = if error.retryable() { 2 } else { 1 };
+        let client = RecordedClient::with_results(vec![Err(error); tries]);
         let reply = ask_client(&h, "ikram ke total bakaya kitne hai", &client);
+        assert_eq!(client.requests().len(), tries, "{kind:?}");
         let want = if kind == FailureKind::Offline {
             AskOutcome::Offline
         } else {
@@ -1782,17 +1790,21 @@ fn attack_06_a_failure_in_the_middle_of_a_question_ends_it_once_and_counts_it_on
         (FailureKind::Busy, Some(429)),
         (FailureKind::Server, Some(500)),
     ] {
+        let failure = CallError {
+            kind,
+            http_status: status,
+        };
+        // The call that failed is tried once more (plan 52 item 6), and fails again.
         let client = RecordedClient::with_results(vec![
             Ok(tool_reply(&[find("ikram", "buyer")])),
-            Err(CallError {
-                kind,
-                http_status: status,
-            }),
+            Err(failure),
+            Err(failure),
         ]);
         let before = reply_count(&h);
         let reply = ask_client(&h, "ikram ke total bakaya kitne hai", &client);
         assert_eq!(reply.outcome, AskOutcome::Error, "{kind:?}");
-        assert_eq!(client.requests().len(), 2, "no retry by itself");
+        assert_eq!(client.requests().len(), 3, "one retry, no more");
+        assert_eq!(reply.failure.map(|f| f.kind), Some(kind));
         // The model answered once, so the question was used: counted once, not twice.
         assert_eq!(reply.count_today, before + 1, "{kind:?}");
         assert_app_still_free(&h);
@@ -1812,9 +1824,9 @@ impl ModelClient for TimeoutSpy {
 }
 
 #[test]
-fn attack_06_a_call_is_given_30_seconds_and_a_question_60() {
+fn attack_06_a_call_is_given_30_seconds_and_a_question_90() {
     assert_eq!(limits::CALL_TIMEOUT_SECS, 30);
-    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 60);
+    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 90);
     let h = Harness::day();
     let spy = TimeoutSpy {
         asked: Mutex::new(Vec::new()),
@@ -1844,8 +1856,8 @@ impl ModelClient for SlowClient {
 }
 
 #[test]
-#[ignore = "slow: it waits 60 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_60_seconds"]
-fn attack_06_a_question_past_60_seconds_is_stopped_before_the_next_call() {
+#[ignore = "slow: it waits 90 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_90_seconds"]
+fn attack_06_a_question_past_90_seconds_is_stopped_before_the_next_call() {
     let h = Harness::day();
     let slow = SlowClient {
         wait: Duration::from_secs(30),
@@ -1858,10 +1870,10 @@ fn attack_06_a_question_past_60_seconds_is_stopped_before_the_next_call() {
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     assert_eq!(
         slow.calls.load(Ordering::SeqCst),
-        2,
-        "the third call is never made"
+        3,
+        "the fourth call is never made"
     );
-    assert!(took < Duration::from_secs(70), "{took:?}");
+    assert!(took < Duration::from_secs(100), "{took:?}");
     assert_app_still_free(&h);
 }
 

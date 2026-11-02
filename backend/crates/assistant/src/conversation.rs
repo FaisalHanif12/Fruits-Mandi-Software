@@ -63,6 +63,12 @@ pub struct CallTiming {
     pub failed: bool,
     /// The tools this call asked for, in order.
     pub tools: Vec<ToolTiming>,
+    /// For a call that failed: what kind of failure (`offline`, `timeout`, `server` ...), so a
+    /// run of the real model shows which stage failed (plan 52 item 6).
+    pub error: Option<String>,
+    /// For the rewrite: the rules of the checks that the first answer failed (the words of
+    /// `check.rs`, no text and no figure), so the log shows why a rewrite was needed.
+    pub check_failed: Vec<String>,
 }
 
 /// Where the time of one run of a question went. A question that waits for the partner code and
@@ -96,7 +102,7 @@ impl Timing {
             .iter()
             .enumerate()
             .map(|(i, c)| {
-                serde_json::json!({
+                let mut entry = serde_json::json!({
                     "n": i.saturating_add(1),
                     "model_ms": c.model_millis,
                     "tokens_in": c.tokens_in,
@@ -108,7 +114,17 @@ impl Timing {
                     "tools": c.tools.iter()
                         .map(|t| serde_json::json!({"name": t.name, "ms": t.millis, "ok": t.ok}))
                         .collect::<Vec<_>>(),
-                })
+                });
+                // Only when there is something to say, so a normal call's entry stays as it was.
+                if let (Some(error), Some(map)) = (&c.error, entry.as_object_mut()) {
+                    map.insert("error".to_owned(), serde_json::json!(error));
+                }
+                if !c.check_failed.is_empty()
+                    && let Some(map) = entry.as_object_mut()
+                {
+                    map.insert("check_failed".to_owned(), serde_json::json!(c.check_failed));
+                }
+                entry
             })
             .collect();
         serde_json::Value::Array(calls)

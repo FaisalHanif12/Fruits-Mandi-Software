@@ -18,7 +18,8 @@ use std::time::Duration;
 
 use harness::{Harness, answer_of, balance, figures, money, transcript};
 use mandi_assistant::ask::{
-    AskOutcome, AssistantAskInput, AssistantQuickInput, AssistantRerunInput, FailureKind, QuickChip,
+    AskOutcome, AssistantAskInput, AssistantQuickInput, AssistantRerunInput, FailureKind,
+    QuickChip, StopReason,
 };
 use mandi_assistant::client::{CallError, ModelClient, RecordedClient, Reply};
 use mandi_assistant::run::{self, Deps};
@@ -103,21 +104,38 @@ fn a_question_is_refused_before_any_call_when_it_cannot_be_asked() {
 // ---- limits -----------------------------------------------------------------------------------
 
 #[test]
-fn at_most_four_model_calls_and_eight_tool_calls_a_question() {
+fn at_most_six_model_calls_and_twelve_tool_calls_a_question() {
     let h = Harness::day();
-    // A model that asks for a tool on every call never answers: it stops at 4 calls.
+    // A model that asks for a tool on every call never answers: it stops at 6 calls. The first 5
+    // may call tools; the 6th goes out with the tools switched off (plan 52 item 1).
     let (reply, requests) = h.ask("ikram", None, fixture!("loop-forever"));
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");
-    assert_eq!(requests.len(), 4);
+    assert_eq!(reply.stop_reason, Some(StopReason::Calls));
+    assert_eq!(requests.len(), 6);
+    for (n, request) in requests.iter().enumerate() {
+        let want = if n == 5 { "none" } else { "auto" };
+        assert_eq!(request["tool_choice"], want, "call {}", n + 1);
+    }
     assert_eq!(
         reply.count_today, 1,
         "the question was answered by the model once, so it counts"
     );
-    // Ten tools in one reply: the first 8 run, the other two get an error result.
+    // Ten tools in one reply: all ten run (12 are allowed).
     let (reply, requests) = h.ask("ikram", None, fixture!("eight-tools"));
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(
+        requests[1]
+            .to_string()
+            .matches("ERR_TOO_MANY_CALLS")
+            .count(),
+        0
+    );
+    // Fourteen tools in one reply: the first 12 run, the other two get an error result.
+    let (reply, requests) = h.ask("ikram", None, fixture!("fourteen-tools"));
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     let second = requests[1].to_string();
     assert_eq!(second.matches("ERR_TOO_MANY_CALLS").count(), 2);
+    assert!(second.contains("12 tool calls are the most"));
     // The tool messages answer every tool call (the API needs it).
     assert_eq!(
         requests[1]["messages"]
@@ -126,8 +144,10 @@ fn at_most_four_model_calls_and_eight_tool_calls_a_question() {
             .iter()
             .filter(|m| m["role"] == "tool")
             .count(),
-        10
+        14
     );
+    // With the tool calls used up, the next call goes out with the tools switched off.
+    assert_eq!(requests[1]["tool_choice"], "none");
     h.scan_requests();
 }
 
@@ -157,11 +177,15 @@ fn a_reply_that_cannot_be_used_ends_as_not_understood_and_a_bad_call_as_an_error
         (FailureKind::Server, Some(500)),
         (FailureKind::Timeout, None),
     ] {
-        let client = RecordedClient::with_results(vec![Err(CallError {
+        let error = CallError {
             kind,
             http_status: status,
-        })]);
+        };
+        // A busy or failed service is tried once more (plan 52 item 6), so it fails twice here.
+        let tries = if error.retryable() { 2 } else { 1 };
+        let client = RecordedClient::with_results(vec![Err(error); tries]);
         let reply = h.ask_with("ikram", None, &client);
+        assert_eq!(client.requests().len(), tries, "{kind:?}");
         assert_eq!(reply.outcome, AskOutcome::Error, "{kind:?}");
         let failure = reply.failure.expect("a failure");
         assert_eq!((failure.kind, failure.http_status), (kind, status));
