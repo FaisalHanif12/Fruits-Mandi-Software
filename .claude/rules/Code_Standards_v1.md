@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.14 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026 and 02-11-2026) |
+| Version | 1.15 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026 and 02-11-2026) |
 | Date | 1 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.18 (the master), NFR v1.10, Tech Stack v1.8 |
+| Depends on | PRD v1.18 (the master), NFR v1.11, Tech Stack v1.8 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -219,7 +219,7 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 | Q6 | All reads of one question happen in one read snapshot. The only write is the question log row, in its own save after the answer (NFR-AI-6). Partner tools check the partner unlock after the sign-in check, as S8. |
 | Q7 | The request body is built by one function, `request_body()`, and every tool result by one function, `tool_result_json()`. They leave out every field PRD FR-7.83 says never goes (phones, addresses, father or firm names, notes, reasons, narrations typed by hand, driver names, supplier and shop names typed on entries, the market and the person sent typed on a trip, مارکہ text, the audit log, keys, and partner figures while locked), in new results and in the conversation they resend. Every figure with a second place carries both places and its checked status wherever it appears. The provider block (`only: ["azure"]`, `allow_fallbacks: false`, `zdr: true`, `data_collection: "deny"`, `require_parameters: true`) is a constant inside `request_body()`, not a setting. The golden tests check every body, including that block (PRD E2E-54). |
 | Q8 | The key is read from `keyring` at call time. It is never stored in app state, a log, an error or a reply to the screens (NFR-SEC-15). The client allows one host and one path, HTTPS only, with a 15 second timeout a call and 45 seconds a question. |
-| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 4 model calls plus one rewrite, 8 tool calls, 60,000 input tokens (cached included) and 3,000 output tokens a question, shared with its continuations; 9,000 tokens for the fixed part (8,000 before v1.14), that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
+| Q9 | The limits are named constants in `mandi-assistant` (G8): 20 counted questions a day, 4 model calls plus one rewrite, 8 tool calls, 60,000 input tokens (cached included) and 3,000 output tokens a question, shared with its continuations; 9,500 tokens for the fixed part (9,000 in v1.14, 8,000 before), that is the tool definitions, the instructions and the answer schema (`MAX_PREFIX_TOKENS`, checked by a test); 130 words an answer; 12 months for an estimate. The model name is a setting. |
 | Q10 | Text sent to the model from the books is data, never instructions: tool results are JSON values, and the instructions say so. Because no tool writes and Q4 checks every figure, a record that reads like an instruction can change nothing (PRD E92). |
 | Q11 | The four prompt files (`prompt/system.md`, `tools.json`, `answer.schema.json`, `words.tsv`) are copied word for word from `docs/deliverables/D6-system-prompt.md`, and its test P7 keeps them equal. `check.rs` reads its word lists (number words, months, never-use words, side words) from `words.tsv` only, never from a second list in code. A change to any of the four is a requirement change: the file first, approved by Umar, then the tests P1 to P7 and NFR-AI-2 again. |
 
@@ -472,3 +472,4 @@ A change is done only when every box is ticked:
 | 1.12 | 31-10-2026 | Approved by Umar (PRD v1.13): the partner code check (S8) and one edit model (S9); golden tests E2E-45 and E2E-46 (9.2). |
 | 1.13 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (5.7); golden questions and the NFR-AI-2 list (9.2); review checklist (11). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint, with no fallback; the model is the brain with read-only tools, and every figure it shows is a checked reference (5.7, Q1 to Q10); the calculator and estimator (M14, 9.1, 9.2, 9.3). Further amended 02-11-2026 (Umar): the prompt files and their tests (Q11, 9.2), the fixed part measured (Q9), the ✓, earlier-question and side-word checks (Q4), advice in the golden questions (9.2). |
 | 1.14 | 02-11-2026 | Approved by Umar (NFR v1.9): `MAX_PREFIX_TOKENS` is 9,000 (Q9). |
+| 1.15 | 02-11-2026 | Approved by Umar (NFR v1.11): `MAX_PREFIX_TOKENS` is 9,500 (Q9). |

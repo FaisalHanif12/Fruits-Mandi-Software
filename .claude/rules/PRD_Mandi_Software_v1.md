@@ -21,9 +21,9 @@ This is the **functional** document: what the software must do, screen by screen
 | # | Document | Covers | Status |
 |---|---|---|---|
 | 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.18 |
-| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.10 |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.11 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
-| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.14 |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.15 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.16 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.8 |
 
