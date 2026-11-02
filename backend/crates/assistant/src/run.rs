@@ -44,7 +44,7 @@ use crate::ask::{
     AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantPickInput,
     AssistantRerunInput, FailureKind, PickChoice, StopReason,
 };
-use crate::check::{Check, NameSet, Verdict};
+use crate::check::{Check, NameBook, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
 use crate::conversation::{
     CallTiming, Conversation, Counters, Timing, ToolTiming, Turn, Wait, Waiting,
@@ -285,6 +285,8 @@ pub(crate) struct Run<'a> {
     /// The books at the moment the question began; every tool reads this, never `d.ctx`.
     pub snap: Context,
     started: Instant,
+    /// Every account and partner name, built the first time an answer is checked (P52-S1).
+    book: std::cell::OnceCell<std::sync::Arc<NameBook>>,
 }
 
 impl<'a> Run<'a> {
@@ -306,7 +308,21 @@ impl<'a> Run<'a> {
             partner_locked: assistant::partner_locked(d.ctx)?,
             snap,
             started: Instant::now(),
+            book: std::cell::OnceCell::new(),
         })
+    }
+
+    /// Every account and partner name of the books, for the name check of an answer. Built from
+    /// the search index in memory the first time (the index is warm: NFR-SPD-6) and kept for the
+    /// rest of the question. When the names cannot be read the book is empty, so the check of the
+    /// results' own names stands alone, as before.
+    fn name_book(&self, exempt: &[String]) -> std::sync::Arc<NameBook> {
+        self.book
+            .get_or_init(|| {
+                let names = assistant::name_book(self.d.ctx).unwrap_or_default();
+                std::sync::Arc::new(NameBook::new(&names, exempt))
+            })
+            .clone()
     }
 
     pub(crate) fn env<'e>(&'e self, numbers: &'e [QuestionNumber], question: &'e str) -> Env<'e> {
@@ -786,7 +802,7 @@ impl<'a> Run<'a> {
             let question = turn.question.clone();
             let env = self.env(&numbers, &question);
             let exempt = assistant::exempt_names(&self.snap).unwrap_or_default();
-            let names = NameSet::new(&state, &exempt);
+            let names = NameSet::with_book(&state, &exempt, self.name_book(&exempt));
             let verdict = Check {
                 env: &env,
                 state: &state,

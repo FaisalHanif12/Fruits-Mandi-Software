@@ -9,7 +9,7 @@
 //! | `digit` | a digit of any script outside a reference |
 //! | `number_word` | a number word of the list or of `number_words.rs` (`دو ہزار`, `اٹھائیس`, `ڈھائی لاکھ`, `lakh`) |
 //! | `month` | a month name |
-//! | `name` | a name from this question's results typed outside a reference |
+//! | `name` | a name from this question's results, or any account or partner name of the books (`NameBook`), typed outside a reference |
 //! | `check_mark` | a typed ✓ |
 //! | `reference` | a path that does not exist, or one that does not end on a value |
 //! | `earlier_question` | a path into a result of an earlier question |
@@ -82,6 +82,97 @@ pub enum Verdict {
 #[derive(Debug, Default)]
 pub struct NameSet {
     phrases: Vec<String>,
+    /// Every account and partner name of the books, when the check should refuse a name that is
+    /// not in this question's results too (see [`NameBook`]).
+    book: Option<std::sync::Arc<NameBook>>,
+}
+
+/// The most words of a name the book looks for.
+const BOOK_MAX_WORDS: usize = 8;
+
+/// Every account and partner name of the books as phrases, Urdu and English, built from the
+/// search index in memory. An answer may not type one outside a reference, whether or not this
+/// question's results hold it: the model could write another party's name in an answer about
+/// Akram (plan 52 P52-S1, robustness finding). Whole words, the same normalisation as the check
+/// of the results' names, never a part of a word.
+///
+/// Left out, because they are ordinary words: the seeded system accounts and the expense heads
+/// (`exempt`), the glossary words, a one-word name of fewer than 3 letters, and a word of the lists
+/// of `words.tsv` (they have their own rules).
+#[derive(Debug, Default)]
+pub struct NameBook {
+    phrases: std::collections::HashSet<String>,
+    longest: usize,
+}
+
+impl NameBook {
+    /// The book of these names (Urdu name, English name, tag).
+    pub fn new(names: &[(String, String, Option<String>)], exempt: &[String]) -> Self {
+        let lists = words();
+        let skip: std::collections::HashSet<String> = glossary_phrases()
+            .iter()
+            .chain(exempt.iter())
+            .map(|p| padded(p).trim().to_lowercase())
+            .chain(
+                [
+                    WordKind::Number,
+                    WordKind::Month,
+                    WordKind::Never,
+                    WordKind::ShopOwes,
+                    WordKind::OwesShop,
+                ]
+                .into_iter()
+                .flat_map(|kind| lists.both(kind).map(|w| padded(w).trim().to_lowercase())),
+            )
+            .collect();
+        let mut phrases = std::collections::HashSet::new();
+        let mut longest = 1usize;
+        for (ur, en, _tag) in names {
+            for name in [ur, en] {
+                let p = padded(name).trim().to_lowercase();
+                let words = p.split(' ').filter(|w| !w.is_empty()).count();
+                // A one-letter or two-letter single word is not a name worth matching.
+                if words == 0 || (words == 1 && p.chars().count() < 3) || skip.contains(&p) {
+                    continue;
+                }
+                if words <= BOOK_MAX_WORDS {
+                    longest = longest.max(words);
+                    phrases.insert(p);
+                }
+            }
+        }
+        Self { phrases, longest }
+    }
+
+    /// The first name of the book in a text (already `padded`): a run of whole words.
+    fn find_in(&self, hay: &str) -> Option<String> {
+        let words: Vec<String> = hay.split_whitespace().map(str::to_lowercase).collect();
+        for start in 0..words.len() {
+            for len in (1..=self.longest.min(words.len().saturating_sub(start))).rev() {
+                let phrase = words.get(start..start.saturating_add(len))?.join(" ");
+                if self.phrases.contains(&phrase) {
+                    return Some(phrase);
+                }
+            }
+        }
+        None
+    }
+
+    /// The first name of the book that a text holds as whole words, or `None`. For a test and for
+    /// a tool that wants to know; the check of an answer uses the same search.
+    pub fn first_in(&self, text: &str) -> Option<String> {
+        self.find_in(&padded(text))
+    }
+
+    /// How many phrases the book has.
+    pub fn len(&self) -> usize {
+        self.phrases.len()
+    }
+
+    /// True when the book has none.
+    pub fn is_empty(&self) -> bool {
+        self.phrases.is_empty()
+    }
 }
 
 fn is_word_char(c: char) -> bool {
@@ -191,7 +282,18 @@ impl NameSet {
                 phrases.push(p);
             }
         }
-        Self { phrases }
+        Self {
+            phrases,
+            book: None,
+        }
+    }
+
+    /// [`NameSet::new`], and with the book of every account and partner name: a name that is not
+    /// in this question's results is refused too.
+    pub fn with_book(state: &State, exempt: &[String], book: std::sync::Arc<NameBook>) -> Self {
+        let mut set = Self::new(state, exempt);
+        set.book = Some(book);
+        set
     }
 
     fn find_in(&self, haystack: &str) -> Vec<String> {
@@ -584,6 +686,10 @@ fn word_failures(env: &Env<'_>, names: &NameSet, items: &[Item], out: &mut Vec<F
         out.push(Failure::new("never_word", w));
     }
     if let Some(name) = names.find_in(&hay).into_iter().next() {
+        out.push(Failure::new("name", &name));
+    } else if let Some(name) = names.book.as_ref().and_then(|b| b.find_in(&hay)) {
+        // A name of the books that this question's results do not hold: the app cannot put it
+        // back (the results do not say which record it is), so it is for the rewrite.
         out.push(Failure::new("name", &name));
     }
 }

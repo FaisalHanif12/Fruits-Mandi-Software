@@ -86,6 +86,15 @@ pub fn rebuild(ctx: &Context) -> Result<(), ServiceError> {
     Ok(())
 }
 
+/// The names of every account (Urdu, English, tag) from the index in memory, for the name check of
+/// the assistant's answers. Read only (Code Standards B29).
+///
+/// # Errors
+/// `ServiceError::Db` when the index has to be built and the database cannot be read.
+pub fn account_names(ctx: &Context) -> Result<Vec<(String, String, Option<String>)>, ServiceError> {
+    Ok(current(ctx)?.account_names())
+}
+
 /// Gets the index built, so the first key press is not the slow one (NFR-SPD-6). Failures are
 /// ignored: the first real use tries again.
 pub fn warm_up(ctx: &Context) {

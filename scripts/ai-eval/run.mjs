@@ -67,7 +67,11 @@ const RESULTS = join(OUT_DIR, 'results.json');
 const DETAIL = option('--detail-out') ? resolve(option('--detail-out')) : join(OUT_DIR, 'misses.txt');
 const SUMMARY = join(OUT_DIR, 'summary.json');
 
-const PREFIX_TOKENS = 9500; // D6-A19: the fixed part, at most 9,500 tokens.
+// D6-A19, NFR v1.13: the fixed part is at most 11,000 tokens counted with o200k. The model counts
+// about 3.4% more, so as the model counts it the limit is about 11,400.
+const PREFIX_O200K = 11000;
+const MODEL_COUNTS_MORE = 1.034;
+const PREFIX_MODEL = 11400;
 const WORLDS = new Set(['day', 'late', 'e59', 'e42', 'e34', 'year', 'thin']);
 const OUTCOMES = new Set([
   'answered',
@@ -744,7 +748,10 @@ function report(list, data) {
     .filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number')
     .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
   const fixedMax = fixed.length ? Math.max(...fixed) : 0;
-  say(`  fixed part, first call of ${fixed.length} fresh questions: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_TOKENS ? 'OK' : 'OVER'} (D6-A19: at most ${PREFIX_TOKENS}; the prompt tokens of the first call less the question)`);
+  const fixedO200k = Math.round(fixedMax / MODEL_COUNTS_MORE);
+  say(
+    `  fixed part, first call of ${fixed.length} fresh questions, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K}; the prompt tokens of the first call less the question)`,
+  );
   say(`PARALLEL tool calls that arrived with a bad input: ${badParallel} (in ${parallel.length} questions that asked for tools together)`);
   const limited = all.filter((r) => r.reply?.outcome === 'not_understood' && r.reply?.stop_reason);
   say(`LIMITS  ${limited.length} questions stopped at a limit (calls or tokens)`);

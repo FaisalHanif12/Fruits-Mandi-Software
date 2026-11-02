@@ -1018,6 +1018,178 @@ fn attack_03_a_repaired_name_is_the_one_record_the_results_hold_and_nothing_else
     h.scan_requests();
 }
 
+/// The ids of the tool messages of a request, in order (`call_0`, `pre_p1` ...).
+fn tool_message_ids(body: &Value) -> Vec<String> {
+    messages(body)
+        .iter()
+        .filter(|m| m["role"] == "tool")
+        .map(|m| m["tool_call_id"].as_str().unwrap_or("").to_owned())
+        .collect()
+}
+
+#[test]
+fn attack_04_a_reference_to_a_card_the_app_did_not_read_ahead_is_refused() {
+    // Two Akrams: the find holds two buyers, so the app reads no card (it never guesses which one).
+    // A model that cites `p1` or `p9` anyway cites a result that does not exist: refused, twice,
+    // and nothing is shown.
+    let h = two_akrams();
+    for cited in ["p1", "p9"] {
+        let text = format!("{{{{r1.matches.0.name}}}} کے ذمے {{{{{cited}.balance}}}} باقی ہیں۔");
+        let content = answer("answer", &text);
+        let (reply, requests) = ask(
+            &h,
+            "akram ka bakaya kitna hai",
+            None,
+            vec![
+                tool_reply(&[find("akram", "buyer")]),
+                final_reply(&content),
+                final_reply(&content),
+            ],
+        );
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::ChecksFailed,
+            "{cited}: {reply:#?}"
+        );
+        assert!(
+            answer_of(&reply).parts.is_empty(),
+            "{cited}: nothing is shown"
+        );
+        assert_eq!(
+            tool_message_ids(&requests[1]),
+            ["call_0"],
+            "{cited}: no card was read ahead"
+        );
+        assert!(
+            !failed_rules(&requests[2]).is_empty(),
+            "{cited}: the app named a rule"
+        );
+    }
+    h.scan_requests();
+}
+
+#[test]
+fn attack_04_one_party_that_is_sure_and_one_that_is_not_get_a_card_only_for_the_sure_one() {
+    // `find akram` holds two buyers (no card); `find arshad` holds one (a card, the first the app
+    // reads, so `p1`). Citing `p1` shows Arshad's checked balance and never Akram's.
+    let h = two_akrams();
+    let content = answer(
+        "answer",
+        "{{r2.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔",
+    );
+    let (reply, requests) = ask(
+        &h,
+        "akram aur arshad ka bakaya",
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer"), find("arshad", "buyer")]),
+            final_reply(&content),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(
+        tool_message_ids(&requests[1]),
+        ["call_0", "call_1", "pre_p1"]
+    );
+    let figs = figures(answer_of(&reply));
+    assert_eq!(balance(figs[0].0), (18_684, BalanceSide::Dr));
+    assert!(figs[0].1, "checked");
+    h.scan_requests();
+}
+
+#[test]
+fn attack_04_many_finds_in_one_reply_cost_the_app_a_bounded_number_of_reads() {
+    // Ten finds of the same buyer in one reply: the first eight run (attack 4: the rest are
+    // refused), the app adds cards only for finds that ran, every tool call has its tool message,
+    // and the question ends in an answer.
+    let h = Harness::day();
+    let finds: Vec<(&str, Value)> = (0..10).map(|_| find("akram", "buyer")).collect();
+    let (reply, requests) = ask(
+        &h,
+        "akram ka bakaya",
+        None,
+        vec![
+            tool_reply(&finds),
+            final_reply(&answer(
+                "answer",
+                "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔",
+            )),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let ids = tool_message_ids(&requests[1]);
+    let calls: usize = messages(&requests[1])
+        .iter()
+        .filter_map(|m| m["tool_calls"].as_array())
+        .map(Vec::len)
+        .sum();
+    assert_eq!(calls, ids.len(), "every tool call has its tool message");
+    let read_ahead = ids.iter().filter(|id| id.starts_with("pre_p")).count();
+    assert!(
+        read_ahead <= 8,
+        "{read_ahead} reads ahead for 8 finds that ran"
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn attack_03_a_record_name_can_not_hold_braces_or_markup() {
+    // The repair puts a typed name back as a reference; a name that held `{{r2.balance}}` could
+    // look like one. A record name cannot hold braces: the Owner's own form refuses it first, so
+    // the books never hold such a name. Digits in a name are allowed, and a typed name with a digit
+    // is never put back (it still fails the digit rule), see `prefetch_repair.rs`.
+    let h = Harness::day();
+    for hostile in ["اکرم {{}}", "اکرم }}{{", "اکرم <ب>"] {
+        let input = AccountInput {
+            id: None,
+            version: None,
+            account_type: AccountType::Buyer,
+            is_pukhta_party: false,
+            control_id: None,
+            code: String::new(),
+            name_ur: hostile.into(),
+            name_en: "Akram".into(),
+            confirmed_rules_words: Vec::new(),
+            father_or_firm_ur: String::new(),
+            father_or_firm_en: String::new(),
+            city_id: None,
+            adda_id: None,
+            phone1: String::new(),
+            phone2: String::new(),
+            address: String::new(),
+            linked_account_id: None,
+            opening_date: String::new(),
+            opening_dr: String::new(),
+            opening_cr: String::new(),
+            opening_is_advance: false,
+            credit_allowed: true,
+            credit_limit: String::new(),
+            default_marka_id: None,
+            collector_staff_id: None,
+            collection_weekday: None,
+            is_active: true,
+            note: String::new(),
+            tag: String::new(),
+        };
+        let before: i64 = common::raw(&h.world.dir)
+            .query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))
+            .unwrap();
+        // Refused on the Urdu name itself, and not only because a spelling was left to confirm.
+        match accounts::save(&h.world.env.ctx, &h.world.owner, &input) {
+            Err(ServiceError::Rejected(items)) => assert!(
+                items.iter().any(|i| i.field.as_deref() == Some("name_ur")
+                    && i.code != ErrorCode::ErrSpellingUnconfirmed),
+                "{hostile}: {items:?}"
+            ),
+            other => panic!("{hostile}: the account was not refused: {other:?}"),
+        }
+        let after: i64 = common::raw(&h.world.dir)
+            .query_row("SELECT COUNT(*) FROM accounts", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(before, after, "{hostile}: nothing was written");
+    }
+}
+
 /// Numbers written in words that `words.tsv` does not list (it has 1 to 25 and the tens only):
 /// `number_words.rs` of the crate adds every Urdu number word 1 to 99, so none of these gets through.
 #[test]

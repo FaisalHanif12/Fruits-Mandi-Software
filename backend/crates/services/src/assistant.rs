@@ -371,3 +371,17 @@ pub fn partner_locked(ctx: &Context) -> Result<bool, ServiceError> {
 pub fn exempt_names(ctx: &Context) -> Result<Vec<String>, ServiceError> {
     ctx.db.read(|conn| Ok(log::exempt_names(conn)?))
 }
+
+/// Every name of the books that an answer may not type outside a reference: the accounts (from the
+/// search index in memory) and the partners, as (Urdu name, English name, tag). Read only.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn name_book(ctx: &Context) -> Result<Vec<(String, String, Option<String>)>, ServiceError> {
+    let mut names = crate::search::account_names(ctx)?;
+    let partners = ctx
+        .db
+        .read(|conn| log::partner_names(conn).map_err(ServiceError::from))?;
+    names.extend(partners.into_iter().map(|(ur, en)| (ur, en, None)));
+    Ok(names)
+}

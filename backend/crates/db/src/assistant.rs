@@ -279,3 +279,14 @@ pub fn exempt_names(conn: &Connection) -> rusqlite::Result<Vec<String>> {
     }
     Ok(out)
 }
+
+/// The names (Urdu and English) of the partners, for the name check of an answer: a typed full name
+/// of a partner is refused like the name of an account. Names only, no figure; read only.
+///
+/// # Errors
+/// A database error.
+pub fn partner_names(conn: &Connection) -> rusqlite::Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare("SELECT name_ur, name_en FROM partners")?;
+    let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?;
+    rows.collect()
+}

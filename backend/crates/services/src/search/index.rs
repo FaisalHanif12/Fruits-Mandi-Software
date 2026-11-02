@@ -306,6 +306,15 @@ impl Index {
         }
     }
 
+    /// The names of every account, active or not, in both scripts, with its tag: what the name
+    /// check of the assistant compares an answer with (PRD FR-7.76 point 1). Only reads.
+    pub fn account_names(&self) -> Vec<(String, String, Option<String>)> {
+        self.entries(SearchScope::AnyAccount)
+            .iter()
+            .map(|e| (e.hit.name_ur.clone(), e.hit.name_en.clone(), e.tag.clone()))
+            .collect()
+    }
+
     /// How many records a list has (active and inactive).
     pub fn len(&self, scope: SearchScope) -> usize {
         self.scopes.get(&scope).map_or(0, Vec::len)

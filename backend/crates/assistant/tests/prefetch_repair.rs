@@ -628,3 +628,144 @@ mod put_back {
         );
     }
 }
+
+// ---- a name of the books that the results do not hold ------------------------------------------
+
+#[test]
+fn the_full_name_of_another_party_or_a_partner_is_refused_even_when_the_results_do_not_hold_it() {
+    // An answer about Akram that writes Arshad Multani's name (an account of the books, not in
+    // this question's results): refused, told as the rule `name`, and it cannot be repaired
+    // because the results do not say which record it is.
+    let h = Harness::day();
+    let bad = final_reply("ارشد ملتانی کے ذمے {{p1.balance}} باقی ہیں۔");
+    let (reply, requests) = h.ask(
+        "how much does akram owe",
+        None,
+        vec![tool_reply(&[find("akram", "buyer")]), bad.clone(), bad],
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert_eq!(requests.len(), 3, "find, the answer, the one rewrite");
+    assert!(failed_rules(&requests[2]).contains(&"name".to_owned()));
+    let (calls, _) = log_row(&h);
+    assert!(
+        calls.iter().all(|c| c.get("repaired").is_none()),
+        "nothing was put back: {calls:?}"
+    );
+
+    // The same in English, and a partner's name (Partner A, الف).
+    for typed in [
+        "Arshad Multani owes {{p1.balance}}.",
+        "الف کے ذمے {{p1.balance}} باقی ہیں۔",
+        "Partner A has {{p1.balance}} to pay.",
+    ] {
+        let h = Harness::day();
+        let bad = final_reply(typed);
+        let (reply, requests) = h.ask(
+            "how much does akram owe",
+            None,
+            vec![tool_reply(&[find("akram", "buyer")]), bad.clone(), bad],
+        );
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::ChecksFailed,
+            "{typed}: {reply:#?}"
+        );
+        assert!(
+            failed_rules(&requests[2]).contains(&"name".to_owned()),
+            "{typed}"
+        );
+    }
+}
+
+#[test]
+fn only_a_full_name_in_whole_words_is_refused_never_a_part_of_one() {
+    // "ارشد" is the first word of "ارشد ملتانی", not his full name; "ملتانی" the last: allowed.
+    // A system account's name (روکڑ) is an ordinary word and is allowed.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "how much does akram owe",
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer")]),
+            final_reply(
+                "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں، ارشد سے الگ، ملتانی روکڑ۔",
+            ),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 2);
+}
+
+mod book {
+    use mandi_assistant::check::NameBook;
+    use std::time::Instant;
+
+    /// A number written in letters, because digits are not part of a name (the check sees them as
+    /// spaces): 77 is "ccc" in base 26 for the English name and the Urdu letters for the other.
+    fn letters(mut i: usize, alphabet: &[char]) -> String {
+        let mut out = String::new();
+        loop {
+            out.push(alphabet[i % alphabet.len()]);
+            i /= alphabet.len();
+            if i == 0 {
+                return out;
+            }
+        }
+    }
+
+    fn names(n: usize) -> Vec<(String, String, Option<String>)> {
+        // 20,000 made-up accounts: the old software had 1,572, the plan allows 20,000.
+        let latin: Vec<char> = ('a'..='z').collect();
+        let urdu: Vec<char> = "ابپتٹجچحخدڈرزسشصضطظعغفقکگلمنوہیے".chars().collect();
+        (0..n)
+            .map(|i| {
+                (
+                    format!("خریدار {} ٹول", letters(i, &urdu)),
+                    format!("Buyer {} Toll", letters(i, &latin)),
+                    (i % 7 == 0).then(|| "K".to_owned()),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_book_of_twenty_thousand_accounts_is_built_and_searched_in_milliseconds() {
+        let all = names(20_000);
+        let began = Instant::now();
+        let book = NameBook::new(&all, &["Cash".to_owned()]);
+        let built = began.elapsed();
+        assert_eq!(book.len(), 40_000);
+        let target = format!(
+            "خریدار {} ٹول",
+            letters(
+                77,
+                &"ابپتٹجچحخدڈرزسشصضطظعغفقکگلمنوہیے"
+                    .chars()
+                    .collect::<Vec<_>>()
+            )
+        );
+        let text = format!(
+            "{} اور یہاں {target} آ گیا۔ {}",
+            "اس جواب میں بہت سے الفاظ ہیں مگر کوئی پورا نام نہیں ہے۔ ".repeat(6),
+            "اس کے بعد بھی کچھ الفاظ ہیں۔ ".repeat(6)
+        );
+        let began = Instant::now();
+        for _ in 0..50 {
+            assert_eq!(book.first_in(&text).as_deref(), Some(target.as_str()));
+        }
+        let searched = began.elapsed() / 50;
+        eprintln!(
+            "book of 20,000 accounts: built in {built:?}, one search of a long text {searched:?}"
+        );
+        // Generous limits: the real numbers are far below, a model call takes seconds.
+        assert!(built.as_millis() < 2_000, "{built:?}");
+        assert!(searched.as_millis() < 100, "{searched:?}");
+        // Part of a name is not a name.
+        assert_eq!(book.first_in("خریدار ٹول"), None);
+        assert_eq!(
+            book.first_in("Cash"),
+            None,
+            "a system name is an ordinary word"
+        );
+    }
+}
