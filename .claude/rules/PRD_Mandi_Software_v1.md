@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.17 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.18 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,8 +20,8 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.17 |
-| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.9 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.18 |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.10 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.14 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.16 |
@@ -963,6 +963,12 @@ FR-7.88 [C] **Advice from the books (مشورہ).** (Added 02-11-2026.) Umar: th
 - **Which sources for which question** (the playbook) is part of the fixed instructions (`D6-system-prompt.md` Section 2).
 
 Example (E2E-63): today 15-11-26, nothing entered after Events 1 to 5. "kis se pehle wasooli karun". The model reads R20 sorted by the days of the oldest open bill, then by balance: ارشد ملتانی 18,684 بنام ✓ and اکرم ٹول ٹیکس 2,880 بنام ✓, both bills 36 days old (10-10-26 to 15-11-26: 21 days to the end of October, then 15). Both bills are equally old, so the larger comes first. Under the band: "پہلے ارشد ملتانی سے وصولی کریں: 18,684 بنام ✓، ان کا بل 36 دن پرانا ہے۔ • پھر اکرم ٹول ٹیکس سے: 2,880 بنام ✓، بل 36 دن پرانا۔", with the R20 rows and "پوری رپورٹ کھولیں" for R20.
+
+FR-7.89 [C] **Help with the app itself (رہنمائی).** (Added in v1.18, Umar 02-11-2026: "anything can be asked in any way ... learning ways how to use that desktop app".) The Owner can ask how to use the app, or what a screen or a word means, in any wording. Examples: "bikri kaise add karun", "market safar kya hai", "wasooli kaise likhun", "partner ka hisaab kahan dekhun".
+- The model reads the app's own guide through the tool `app_help`. There is one topic for every screen and module, and each topic gives what it is for, when to use it, the steps on screen, the keys and one worked example in the PRD's words (`D6-system-prompt.md`). The answer explains in plain steps from that guide, never from guesswork.
+- A help answer can carry a button to open that screen. The screen opens empty; the assistant never fills or saves an entry (FR-7.79).
+- **Answer length follows the question.** A question about figures ("faisal ka khata") gets a short, direct answer. Advice (FR-7.88) and help may explain in a few short points. Both stay inside the 130-word cap.
+Example: "is main market safar kya hai?" gets three short points: a trip is goods bought by some partners in another market; the shop sells them like any lot and keeps its commission; the profit or loss goes only to the trip's partners. Then a button opens مارکیٹ سفر.
 
 ---
 
@@ -2594,4 +2600,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.15 | 01-11-2026 | Umar's second change of 01-11-2026, approved by Umar. A rare party can be made his own پختہ account (پختہ کھاتہ گاہک or پختہ کھاتہ بیوپاری) on the account form, with the next code of the پختہ series from 0032, his own ledger, and cash first (FR-13.11, new; glossary, FR-10.2, 10.2, FR-10.5; E81, A79). The shared پختہ کھاتہ with the name typed on the line stays. No money rule, posting or test number changed. |
 | 1.16 | 01-11-2026 | Umar's third change of 01-11-2026, approved by Umar: ask the app (Section 7.7, FR-7.72 to FR-7.88, new). Amended 02-11-2026 before release, approved by Umar: every request goes only to the zero-retention Azure endpoint of the model, with no fallback; and the model is the brain. GPT-6 Luna through OpenRouter understands the question in any wording, reads every section through read-only tools (FR-7.87), adds up and compares through the app's calculator, estimates the months ahead through the app's estimator (FR-7.86), and writes the answer itself in the app language. Every figure in the answer is a reference that the app fills from the books and checks before it is shown, with a check from two places (FR-7.75, FR-7.76). The records the model reads are sent to OpenRouter (the client agreed, 02-11-2026), but never the fields FR-7.83 lists (phones, addresses, father or firm names, notes, reasons, other free text, keys, locked partner figures). Quick questions work with no internet; 20 questions a day; partner figures behind the partner code; a question log. Also G11, FR-5.5, 6.2, 7.3 (`F1`), Section 21, E82 to E98, A80 to A90, the Must list (26), demo step 10a, E2E-47 to E2E-63. Further amended 02-11-2026, approved by Umar ("the expert for the recommendation and future request"): advice from the books (FR-7.88, A90, E98, E2E-63); the exact instructions, tools and answer schema in `docs/deliverables/D6-system-prompt.md` (FR-7.87); a difference filled with its direction word (FR-7.75); a typed ✓, the other side's words and a figure of an earlier question refused (FR-7.76, E2E-60); a locked partner question pauses with no model call (FR-7.82); the FR-7.79 advice example moved to FR-7.88, reading R20, which has the days, not R21; after an independent review: the name check covers record names only, a difference between two places is final with no rewrite, side words are judged around each balance, the partner list of FR-7.82 follows FR-17.11, the market and person sent of a trip are never sent (FR-7.83), last N months and years (FR-7.77), and a target counts from the current month and is reached at the target (FR-7.86, E2E-59). No money rule, posting or earlier test number changed. |
 | 1.17 | 02-11-2026 | Umar's change of 02-11-2026, approved by Umar: ask the app opens as a chat window above a floating round button at the end of the screen, in the app's colours, with a normal size and a large size for long tables (FR-7.73). The status bar keeps "سوال پوچھیں F1" and today's count. No money rule, posting or test number changed. |
+| 1.18 | 02-11-2026 | Umar's change of 02-11-2026, approved by Umar: the assistant also helps with the app itself, from a guide of every screen through the tool `app_help` (FR-7.89); the answer's length follows the question (FR-7.89). With NFR v1.10, a model call may take 30 seconds and a question 60. No money rule, posting or test number changed. |
 

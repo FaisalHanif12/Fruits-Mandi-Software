@@ -6,7 +6,7 @@
 | Version | 1.14 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026 and 02-11-2026) |
 | Date | 1 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.17 (the master), NFR v1.9, Tech Stack v1.8 |
+| Depends on | PRD v1.18 (the master), NFR v1.10, Tech Stack v1.8 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
