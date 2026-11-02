@@ -21,9 +21,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use mandi_core::accounts::{Balance, BalanceSide};
+use mandi_core::accounts::{Balance, BalanceSide, SELLER_CONTROL};
 use mandi_core::money::Paisa;
-use mandi_db::ledger::{Totals, account_totals, totals_of};
+use mandi_db::ledger::{Totals, account_totals_in_controls, totals_of};
 use mandi_db::rusqlite::{Connection, params};
 use mandi_db::vouchers::advance_totals;
 
@@ -120,10 +120,13 @@ pub(crate) fn candidates(
         .map(|(id, _)| *id)
         .collect();
     let names = pukhta_names(conn, &pukhta_ids)?;
+    // The sellers only (plan 48 P48-S3): a third of the journal, not all of it.
     let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
-        account_totals(conn, as_of)?.into_iter().collect()
+        account_totals_in_controls(conn, &[SELLER_CONTROL], as_of)?
+            .into_iter()
+            .collect()
     };
     let with_advance: HashSet<i64> = if current {
         advance_totals(conn, as_of.unwrap_or(today_iso), typed.party_id)?

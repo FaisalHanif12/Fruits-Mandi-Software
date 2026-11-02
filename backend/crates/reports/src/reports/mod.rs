@@ -90,6 +90,14 @@ pub mod grouped_sums {
     pub use super::collections::{KeySums, SellerSums, payable_sums, pukhta_names};
 }
 
+/// Both forms of the day queries of R34, for the equality test of plan 48 P48-S3 only.
+#[doc(hidden)]
+pub mod day_query_forms {
+    pub use super::business::forms::{
+        FormRows, buyer_moves, ledger_rows, lot_charges, seller_lines,
+    };
+}
+
 pub use bill_slips::{BuyerBillSlip, BuyerBillsPrintData};
 pub use ids::posting_types;
 pub use model::{

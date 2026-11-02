@@ -24,18 +24,18 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use mandi_core::accounts::BUYER_CONTROL;
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
 use mandi_core::text::phone_display;
-use mandi_db::ledger::{Totals, account_totals, totals_of};
-use mandi_db::rusqlite::{Connection, params, params_from_iter};
+use mandi_db::ledger::{Totals, account_totals_in_controls, totals_of};
+use mandi_db::rusqlite::{Connection, params};
 
 use super::super::PageSpec;
 use super::grouped::pukhta_names;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    IN_CHUNK, LIVE, add, amount_or_empty, col, count_of, date_cell, load_parties, paisa,
-    placeholders, pukhta_party, text_cell,
+    add, amount_or_empty, col, count_of, date_cell, load_parties, paisa, pukhta_party, text_cell,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -130,10 +130,13 @@ fn owing(
     // People in the dead amount are not in the dues: they are in R38 and the tile ڈوبی رقم (PRD
     // FR-10.10). For a past day, only those moved by that day are left out.
     let dead = mandi_db::dead::dead_set(conn, as_of)?;
+    // The buyers only (plan 48 P48-S3): a third of the journal, not all of it.
     let all: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
     } else {
-        account_totals(conn, as_of)?.into_iter().collect()
+        account_totals_in_controls(conn, &[BUYER_CONTROL], as_of)?
+            .into_iter()
+            .collect()
     };
     // The names of the one-time people, from one query and not one for each person (B22).
     let pukhta_ids: Vec<i64> = accounts.iter().filter(|a| a.pukhta).map(|a| a.id).collect();
@@ -212,53 +215,6 @@ fn owing(
     Ok(found)
 }
 
-/// One open bill: a debit line less what the matching rows settle.
-struct OpenBill {
-    account_id: i64,
-    person_key: Option<String>,
-    date: String,
-    open: Paisa,
-}
-
-/// The open bills of these accounts, oldest first. One query for each chunk of accounts (Code
-/// Standards B22); the open amount is worked out here with checked maths.
-fn open_bills(conn: &Connection, account_ids: &[i64]) -> Result<Vec<OpenBill>, ReportsError> {
-    let mut found = Vec::new();
-    for chunk in account_ids.chunks(IN_CHUNK) {
-        let matched = "COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
-                                WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)";
-        let sql = format!(
-            "SELECT l.account_id, l.pukhta_person_key, e.entry_date, l.dr_paisa, {matched}
-             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE l.account_id IN ({marks}) AND l.dr_paisa > 0 AND {LIVE}
-               AND l.dr_paisa > {matched}
-             ORDER BY e.entry_date, e.id, l.line_no",
-            marks = placeholders(chunk.len())
-        );
-        let mut statement = conn.prepare(&sql)?;
-        let rows = statement
-            .query_map(params_from_iter(chunk.iter()), |r| {
-                Ok((
-                    r.get::<_, i64>(0)?,
-                    r.get::<_, Option<String>>(1)?,
-                    r.get::<_, String>(2)?,
-                    r.get::<_, i64>(3)?,
-                    r.get::<_, i64>(4)?,
-                ))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        for (account_id, person_key, date, dr, matched) in rows {
-            found.push(OpenBill {
-                account_id,
-                person_key,
-                date,
-                open: paisa(dr)?.checked_sub(paisa(matched)?)?,
-            });
-        }
-    }
-    Ok(found)
-}
-
 /// The band of a bill that is `days` old: 0 for 0 to 7 days up to 3 for 91 and more.
 fn band_of(days: i64) -> usize {
     BAND_ENDS
@@ -268,6 +224,11 @@ fn band_of(days: i64) -> usize {
 }
 
 /// Puts the ages of the open bills on the buyers.
+///
+/// The open bills come from `mandi_db::party_reads::open_buyer_bills` (plan 48 P48-S3). The report
+/// uses two things of a buyer's bills: the open amount in each age band, and the day of the oldest
+/// one. Both are worked out here in one pass, whatever the order of the bills: the bands are sums
+/// and the oldest bill is the one with the smallest day.
 fn put_ages(
     conn: &Connection,
     today: BusinessDate,
@@ -277,30 +238,36 @@ fn put_ages(
     let mut unique = ids.clone();
     unique.sort_unstable();
     unique.dedup();
-    let bills = open_bills(conn, &unique)?;
-    let mut by_key: HashMap<(i64, Option<String>), Vec<&OpenBill>> = HashMap::new();
+    let bills = mandi_db::party_reads::open_buyer_bills(conn, &unique)?;
+    let mut by_key: HashMap<(i64, Option<String>), Ages> = HashMap::new();
     for bill in &bills {
-        by_key
+        let day = BusinessDate::parse_iso(&bill.entry_date)
+            .ok_or_else(|| ReportsError::Data(format!("entry date {}", bill.entry_date)))?;
+        let days = today.days_after(day).max(0);
+        let open = paisa(bill.open_paisa)?;
+        let ages = by_key
             .entry((bill.account_id, bill.person_key.clone()))
-            .or_default()
-            .push(bill);
+            .or_insert_with(|| Ages {
+                oldest: None,
+                bands: [Paisa::ZERO; 4],
+            });
+        if let Some(slot) = ages.bands.get_mut(band_of(days)) {
+            add(slot, open)?;
+        }
+        if ages
+            .oldest
+            .as_ref()
+            .is_none_or(|(oldest, _)| bill.entry_date < *oldest)
+        {
+            ages.oldest = Some((bill.entry_date.clone(), days));
+        }
     }
     for buyer in buyers.iter_mut() {
         let key = (buyer.party.account_id, buyer.party.person_key.clone());
-        let mut bands = [Paisa::ZERO; 4];
-        let mut oldest: Option<(String, i64)> = None;
-        for bill in by_key.get(&key).map_or(&[][..], Vec::as_slice) {
-            let day = BusinessDate::parse_iso(&bill.date)
-                .ok_or_else(|| ReportsError::Data(format!("entry date {}", bill.date)))?;
-            let days = today.days_after(day).max(0);
-            if let Some(slot) = bands.get_mut(band_of(days)) {
-                add(slot, bill.open)?;
-            }
-            if oldest.is_none() {
-                oldest = Some((bill.date.clone(), days));
-            }
-        }
-        buyer.ages = Some(Ages { oldest, bands });
+        buyer.ages = Some(by_key.remove(&key).unwrap_or(Ages {
+            oldest: None,
+            bands: [Paisa::ZERO; 4],
+        }));
     }
     Ok(())
 }
@@ -481,23 +448,7 @@ pub(crate) fn run_without_ages(
 /// The buyers who owe under these filters, with their ages when the day is today or later, and
 /// whether the ages were worked out.
 fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {
-    let accounts = {
-        let mut statement = conn.prepare(&buyers_sql())?;
-        statement
-            .query_map(params![typed.city_id, typed.party_id], |r| {
-                Ok(Account {
-                    id: r.get(0)?,
-                    pukhta: r.get::<_, i64>(1)? == 1,
-                    city_id: r.get(2)?,
-                    collector_id: r.get(3)?,
-                    phone: r.get(4)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?
-    };
-    let account_ids: Vec<i64> = accounts.iter().map(|a| a.id).collect();
-    let parties = load_parties(conn, &account_ids)?;
-    let mut buyers = owing(conn, typed, &parties, &accounts)?;
+    let mut buyers = balances_owing(conn, typed)?;
 
     // The ages are known only for today or later: the matching rows are not dated.
     let today = typed

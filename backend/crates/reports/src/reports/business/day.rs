@@ -235,7 +235,8 @@ fn trips_sold_by_day(conn: &Connection, from: &str, to: &str) -> Result<ByDay, R
 }
 
 /// One balance movement of an account (and person) on a day.
-struct Move {
+#[derive(Debug)]
+pub(crate) struct Move {
     day: String,
     account_id: i64,
     person: String,
@@ -245,20 +246,62 @@ struct Move {
 
 /// The balances of the buyer accounts (control 0304) before `from`, and their movements from
 /// `from` to `to`, each by account and person (a پختہ کھاتہ account person by person, like R20).
+/// The balances before `from` are read by `mandi_db::party_reads::totals_before` (plan 48 P48-S3).
 fn buyer_moves(
     conn: &Connection,
     from: &str,
     to: &str,
 ) -> Result<(Vec<Move>, Vec<Move>), ReportsError> {
-    let base = "SELECT e.entry_date, l.account_id, COALESCE(l.pukhta_person_key, ''),
-                       COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-                FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-                JOIN accounts a ON a.id = l.account_id
-                JOIN account_controls k ON k.id = a.control_id
-                WHERE e.status = 'posted' AND k.code = '0304'";
-    let read = |sql: String, args: Vec<Value>| -> Result<Vec<Move>, ReportsError> {
-        let mut statement = conn.prepare(&sql)?;
-        let rows = statement.query_map(params_from_iter(args.iter()), |r| {
+    // Before the first day, all together (the day text is the first day, never used).
+    let before = mandi_db::party_reads::totals_before(
+        conn,
+        &[mandi_core::accounts::BUYER_CONTROL],
+        from,
+        mandi_db::party_reads::PartyScope::default(),
+    )?
+    .into_iter()
+    .map(|t| Move {
+        day: from.to_owned(),
+        account_id: t.account_id,
+        person: t.person_key,
+        dr: t.dr_paisa,
+        cr: t.cr_paisa,
+    })
+    .collect();
+    let during = moves_during(conn, from, to, true)?;
+    Ok((before, during))
+}
+
+/// The movements of the buyer accounts from `from` to `to`, by day, account and person. With
+/// `entries_first` the entries of the days are read first (plan 48 P48-S3: without table
+/// statistics SQLite would read every line of every buyer and look up its entry); without it the
+/// lines of the buyers come first. The same rows either way; a test reads both.
+pub(crate) fn moves_during(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+    entries_first: bool,
+) -> Result<Vec<Move>, ReportsError> {
+    let tables = if entries_first {
+        "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN journal_lines l ON l.entry_id = e.id
+         CROSS JOIN accounts a ON a.id = l.account_id
+         CROSS JOIN account_controls k ON k.id = a.control_id"
+    } else {
+        "FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+         JOIN account_controls k ON k.id = a.control_id"
+    };
+    let mut statement = conn.prepare(&format!(
+        "SELECT e.entry_date, l.account_id, COALESCE(l.pukhta_person_key, ''),
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         {tables}
+         WHERE e.status = 'posted' AND k.code = '0304'
+           AND e.entry_date >= ?1 AND e.entry_date <= ?2
+         GROUP BY e.entry_date, l.account_id, l.pukhta_person_key ORDER BY e.entry_date"
+    ))?;
+    let moves = statement
+        .query_map(params_from_iter(values(from, to).iter()), |r| {
             Ok(Move {
                 day: r.get(0)?,
                 account_id: r.get(1)?,
@@ -266,25 +309,9 @@ fn buyer_moves(
                 dr: r.get(3)?,
                 cr: r.get(4)?,
             })
-        })?;
-        Ok(rows.collect::<Result<_, _>>()?)
-    };
-    // Before the first day, all together (the day text is the first day, never used).
-    let before = read(
-        format!(
-            "{base} AND e.entry_date < ?1 GROUP BY l.account_id, l.pukhta_person_key",
-            base = base.replacen("e.entry_date,", "?1,", 1)
-        ),
-        vec![Value::Text(from.to_owned())],
-    )?;
-    let during = read(
-        format!(
-            "{base} AND e.entry_date >= ?1 AND e.entry_date <= ?2
-             GROUP BY e.entry_date, l.account_id, l.pukhta_person_key ORDER BY e.entry_date"
-        ),
-        values(from, to),
-    )?;
-    Ok((before, during))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(moves)
 }
 
 /// The stock moves of lots, as (day, lot id, Σ نگ).

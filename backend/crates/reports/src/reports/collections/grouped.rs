@@ -39,11 +39,16 @@ const SELLER_ACCOUNTS: &str = "SELECT a.id FROM accounts a JOIN account_controls
 /// Entries that are not live: drafts, reversal entries and the entries a posted reversal
 /// reverses. The same set as `NOT_LIVE_ENTRIES` in `mandi_db::vouchers`, the exact complement of
 /// the live condition.
+///
+/// The two indexes are named in the text (plan 48 P48-S3): the app's file has no table statistics,
+/// and without them SQLite reads every entry to find the few reversals (50 ms for a million).
 const NOT_LIVE_ENTRIES: &str = "nonlive(id) AS (
-    SELECT id FROM journal_entries WHERE reverses_entry_id IS NOT NULL
-    UNION SELECT reverses_entry_id FROM journal_entries
+    SELECT id FROM journal_entries INDEXED BY idx_journal_entries_reverses
+          WHERE reverses_entry_id IS NOT NULL
+    UNION SELECT reverses_entry_id FROM journal_entries INDEXED BY idx_journal_entries_reverses
           WHERE reverses_entry_id IS NOT NULL AND status = 'posted'
-    UNION SELECT id FROM journal_entries WHERE status <> 'posted')";
+    UNION SELECT id FROM journal_entries INDEXED BY idx_journal_entries_unposted
+          WHERE status <> 'posted')";
 
 /// The five sums of one seller key, in paisa. Zero for a key with no lines.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

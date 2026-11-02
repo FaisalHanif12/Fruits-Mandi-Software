@@ -37,6 +37,7 @@ pub mod migrate;
 pub mod month;
 pub mod open_lines;
 pub mod partners;
+pub mod party_reads;
 pub mod purchases;
 pub mod row_source_sql;
 pub mod rules;

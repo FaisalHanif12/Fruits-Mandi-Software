@@ -20,6 +20,11 @@ pub(super) struct Filter<'a> {
 }
 
 impl Filter<'_> {
+    /// True when no party is asked for: the whole book.
+    pub(super) fn whole_book(&self) -> bool {
+        self.account.is_none() && self.person.is_none()
+    }
+
     /// The ` AND ...` fragment for the party, and its values pushed after `args` (which already
     /// holds the dates). The placeholders are numbered after the ones already used.
     fn sql(&self, column_account: &str, column_person: &str, args: &mut Vec<Value>) -> String {
@@ -67,6 +72,25 @@ pub(super) struct BaseRow {
     pub(super) cr: Paisa,
 }
 
+/// The tables of a query for the lines of the buyers and the sellers on some days. For the whole
+/// book the entries of the days are read first and their lines after (plan 48 P48-S3): the app's
+/// file has no table statistics, and without them SQLite starts from the buyer and seller accounts
+/// and reads every line they ever had (2 seconds for one day on 3.5 million lines). For one party
+/// his own lines come first, as before. The rows are the same either way.
+fn lines_of_days(entries_first: bool) -> &'static str {
+    if !entries_first {
+        "FROM journal_lines l
+           JOIN journal_entries e ON e.id = l.entry_id
+           JOIN accounts a ON a.id = l.account_id
+           JOIN account_controls k ON k.id = a.control_id"
+    } else {
+        "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+           CROSS JOIN journal_lines l ON l.entry_id = e.id
+           CROSS JOIN accounts a ON a.id = l.account_id
+           CROSS JOIN account_controls k ON k.id = a.control_id"
+    }
+}
+
 /// The ledger by party and day for the days from `from` to `to`.
 pub(super) fn ledger_rows(
     conn: &Connection,
@@ -74,8 +98,21 @@ pub(super) fn ledger_rows(
     to: &str,
     who: Filter<'_>,
 ) -> Result<Vec<LedgerRow>, ReportsError> {
+    ledger_rows_in(conn, from, to, who, who.whole_book())
+}
+
+/// [`ledger_rows`] in a chosen form: the entries of the days first, or the lines of the accounts
+/// first. The same rows either way; a test reads both.
+pub(super) fn ledger_rows_in(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+    who: Filter<'_>,
+    entries_first: bool,
+) -> Result<Vec<LedgerRow>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
     let filter = who.sql("l.account_id", "l.pukhta_person_key", &mut args);
+    let from_lines = lines_of_days(entries_first);
     // The pair test is worked out once for each line, in the inner query.
     let sql = format!(
         "SELECT account_id, person, code, entry_date, SUM(dr), SUM(cr),
@@ -90,10 +127,7 @@ pub(super) fn ledger_rows(
                   ({SAME_DAY_PAIR}) AS paired, e.posting_type AS posting_type,
                   (e.source_type = 'bikri' AND e.posting_type IN ('bikri_first', 'bikri_later'))
                       AS is_bikri
-           FROM journal_lines l
-           JOIN journal_entries e ON e.id = l.entry_id
-           JOIN accounts a ON a.id = l.account_id
-           JOIN account_controls k ON k.id = a.control_id
+           {from_lines}
            WHERE k.code IN ('{BUYER_CONTROL}', '{SELLER_CONTROL}') AND e.status = 'posted'
              AND e.entry_date >= ?1 AND e.entry_date <= ?2{filter})
          GROUP BY account_id, person, code, entry_date
@@ -150,45 +184,29 @@ pub(super) fn ledger_rows(
     Ok(out)
 }
 
-/// What each party had before `from`: every posted line dated earlier.
+/// What each party had before `from`: every posted line dated earlier. Read by
+/// `mandi_db::party_reads::totals_before` (plan 48 P48-S3): the whole book is found from the
+/// covering index less the few lines of the entries on or after `from`, a slip for one party line by
+/// line. The rows and the sums are the ones the line-by-line SQL gave (a test compares them).
 pub(super) fn base_rows(
     conn: &Connection,
     from: &str,
     who: Filter<'_>,
 ) -> Result<Vec<BaseRow>, ReportsError> {
-    let mut args = vec![Value::Text(from.to_owned())];
-    let filter = who.sql("l.account_id", "l.pukhta_person_key", &mut args);
-    let sql = format!(
-        "SELECT l.account_id, COALESCE(l.pukhta_person_key, ''), k.code,
-                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
-         FROM journal_lines l
-         JOIN journal_entries e ON e.id = l.entry_id
-         JOIN accounts a ON a.id = l.account_id
-         JOIN account_controls k ON k.id = a.control_id
-         WHERE k.code IN ('{BUYER_CONTROL}', '{SELLER_CONTROL}') AND e.status = 'posted'
-           AND e.entry_date < ?1{filter}
-         GROUP BY l.account_id, l.pukhta_person_key, k.code"
-    );
-    let mut statement = conn.prepare(&sql)?;
-    let rows = statement
-        .query_map(params_from_iter(args.iter()), |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, String>(1)?,
-                r.get::<_, String>(2)?,
-                r.get::<_, i64>(3)?,
-                r.get::<_, i64>(4)?,
-            ))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+    let scope = mandi_db::party_reads::PartyScope {
+        account_id: who.account,
+        person_key: who.person,
+    };
+    let rows =
+        mandi_db::party_reads::totals_before(conn, &[BUYER_CONTROL, SELLER_CONTROL], from, scope)?;
     let mut out = Vec::with_capacity(rows.len());
-    for (account_id, person, code, dr, cr) in rows {
+    for row in rows {
         out.push(BaseRow {
-            account_id,
-            person,
-            buyer: code == BUYER_CONTROL,
-            dr: paisa(dr)?,
-            cr: paisa(cr)?,
+            account_id: row.account_id,
+            person: row.person_key,
+            buyer: row.control_code == BUYER_CONTROL,
+            dr: paisa(row.dr_paisa)?,
+            cr: paisa(row.cr_paisa)?,
         });
     }
     Ok(out)
@@ -332,6 +350,21 @@ pub(super) fn buyer_lines(
     Ok(out)
 }
 
+/// The sale lines and their lots on some days. For the whole book the entries of the days come
+/// first (see [`lines_of_days`]): without table statistics SQLite would read every lot with no
+/// purchase and every sale line of it. For one party his lots come first, as before.
+fn sales_of_days(entries_first: bool) -> &'static str {
+    if !entries_first {
+        "FROM bikri_sales s
+         JOIN bikri_lots l ON l.id = s.lot_id
+         JOIN journal_entries e ON e.id = s.journal_entry_id"
+    } else {
+        "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN bikri_sales s ON s.journal_entry_id = e.id
+         CROSS JOIN bikri_lots l ON l.id = s.lot_id"
+    }
+}
+
 /// The active sale lines dated from `from` to `to`, by the seller of the lot. Lots of the trips'
 /// own goods (`purchase_id` set) are left out: their credit goes to the partners, not to a seller
 /// (PRD FR-12.26). Gardens and الگ کھاتے are left out by the control of the seller account.
@@ -341,23 +374,33 @@ pub(super) fn seller_lines(
     to: &str,
     who: Filter<'_>,
 ) -> Result<Vec<SellerLine>, ReportsError> {
+    seller_lines_in(conn, from, to, who, who.whole_book())
+}
+
+/// [`seller_lines`] in a chosen form (see [`ledger_rows_in`]).
+pub(super) fn seller_lines_in(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+    who: Filter<'_>,
+    entries_first: bool,
+) -> Result<Vec<SellerLine>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
     let filter = who.sql("l.seller_account_id", "l.pukhta_person_key", &mut args);
+    let from_sales = sales_of_days(entries_first);
     let sql = format!(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.pukhta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.seller_rate_paisa, s.seller_amount_paisa, s.seller_comm_paisa,
                 s.weight_grams
-         FROM bikri_sales s
-         JOIN bikri_lots l ON l.id = s.lot_id
+         {from_sales}
          JOIN items i ON i.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
          JOIN accounts a ON a.id = l.seller_account_id
          JOIN account_controls k ON k.id = a.control_id
-         JOIN journal_entries e ON e.id = s.journal_entry_id
          WHERE s.is_active = 1 AND k.code = '{SELLER_CONTROL}' AND l.purchase_id IS NULL
            AND e.entry_date >= ?1 AND e.entry_date <= ?2{filter}
-         ORDER BY e.entry_date, s.bikri_id, s.line_no"
+         ORDER BY e.entry_date, s.bikri_id, s.lot_id, s.line_no, s.id"
     );
     let mut statement = conn.prepare(&sql)?;
     let rows = statement
@@ -443,14 +486,32 @@ pub(super) fn lot_charges(
     to: &str,
     who: Filter<'_>,
 ) -> Result<Vec<LotCharges>, ReportsError> {
+    lot_charges_in(conn, from, to, who, who.whole_book())
+}
+
+/// [`lot_charges`] in a chosen form (see [`ledger_rows_in`]).
+pub(super) fn lot_charges_in(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+    who: Filter<'_>,
+    entries_first: bool,
+) -> Result<Vec<LotCharges>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
     let filter = who.sql("l.seller_account_id", "l.pukhta_person_key", &mut args);
+    let from_lots = if !entries_first {
+        "FROM bikri_lots l
+         JOIN journal_entries e ON e.id = l.first_entry_id"
+    } else {
+        // The entries of the days first (see [`lines_of_days`]).
+        "FROM journal_entries e INDEXED BY idx_journal_entries_entry_date
+         CROSS JOIN bikri_lots l ON l.first_entry_id = e.id"
+    };
     let sql = format!(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.pukhta_person_key, ''),
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
                 l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa
-         FROM bikri_lots l
-         JOIN journal_entries e ON e.id = l.first_entry_id
+         {from_lots}
          JOIN accounts a ON a.id = l.seller_account_id
          JOIN account_controls k ON k.id = a.control_id
          WHERE k.code = '{SELLER_CONTROL}' AND l.purchase_id IS NULL AND e.status = 'posted'

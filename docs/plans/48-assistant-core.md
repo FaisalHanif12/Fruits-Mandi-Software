@@ -216,3 +216,35 @@ Task P48-S3 (backend):
   - load_buyers calls balances_owing (the copied lines go away).
 
 Task F-P (frontend): `prettier --write` on the 4 files only, then run those 4 test files.
+- P48-S3 as built (02-11-2026), accepted:
+  - Changes:
+    - a1 (balance before the day) and a2 (held credits);
+    - a3 (R20 ages through bulk reads);
+    - owing and candidates limited to their control;
+    - load_buyers calls balances_owing.
+  - New `db/src/party_reads.rs`, `reports/business/forms.rs` and migration 0016_speed_indexes.sql (two indexes, no table or column).
+  - Money agent: before (PASS with 14 conditions); after 1 FAIL (four rewritten queries had no old-against-new test), fixed; after 2 PASS. After that pass, two plan-only edits (is_large counts the person's lines; a doc comment move) were re-run through every suite; the money agent did not see them. This is a gate follow-up.
+  - Proof:
+    - services/tests/speed_rewrites_equal.rs (15, plus 2 ignored and run) and db/tests/party_reads_plans.rs (8): old SQL against new on 17 books, 7 day ranges and the 3.5M-line volume;
+    - deliberate mutations of the new code make the tests fail;
+    - 0016 ran on a copy of Umar's data (version 14 to 16): integrity ok, no row lost.
+  - Checks: fmt clean; clippy clean on db, reports, services and assistant; all 44 services test files passed (golden_day 94, assist 23); mandi-db, mandi-reports and mandi-assistant passed. No expected number changed.
+- Timings, release build, NFR-SCL-1 data, median, without statistics (Umar's file has none):
+
+  | Item | Time | Target |
+  |---|---|---|
+  | dashboard::get | 599 ms | 1 s, met |
+  | R34 | 626 ms | 1 s, met |
+  | all other chips | 4 to 210 ms | 300 ms, met |
+  | ledger round | 222 ms | 300 ms, met |
+  | total_dues chip | 532 ms | 300 ms, OVER |
+  | advice round on R20 | 423 ms | 300 ms, OVER |
+
+- For Umar, option (c), which touches PRD FR-6.1:
+  - stored account totals would take total_dues to about 50 ms;
+  - a stored list of open bills would take the advice round to about 50 ms.
+  - Neither is built.
+- Other findings:
+  - The perf volume has statistics that the app never writes; three plans were fixed in the SQL text instead.
+  - The perf volume has no sale lines, facts, stock moves or share rows, so those queries are not timed at scale. A (entry_date, partner_id) index on partner_share_rows is suggested.
+  - The test hooks `reports::day_query_forms` and the db `*_SQL` constants are public but doc(hidden).

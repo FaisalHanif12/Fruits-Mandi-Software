@@ -580,6 +580,75 @@ pub fn account_totals(
     rows.collect()
 }
 
+/// The SQL of [`account_totals_in_controls`]: `marks` are the marks of the control codes. Public so
+/// a test can check its query plan (Code Standards B18).
+#[doc(hidden)]
+pub fn account_totals_in_controls_text(
+    marks: &[String],
+    all_posted: bool,
+    as_of_mark: Option<&str>,
+) -> String {
+    let accounts = format!(
+        "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
+         WHERE k.code IN ({})",
+        marks.join(", ")
+    );
+    let check = if all_posted {
+        String::new()
+    } else {
+        format!(" AND entry_id NOT IN ({})", left_out(as_of_mark))
+    };
+    format!(
+        "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+         FROM journal_lines WHERE account_id IN ({accounts}){check}
+         GROUP BY account_id ORDER BY account_id"
+    )
+}
+
+/// [`account_totals`] for the accounts of these controls only (`03011` sellers, `0304` buyers):
+/// the same rows, the same sums, in the same order, but only the accounts of the controls are
+/// read. The buyers' dues and the sellers' payables read the buyers or the sellers, a third of the
+/// journal each, not all 3.5 million lines (plan 48 P48-S3: 0.2 s down to 0.06 s). Both branches
+/// of [`account_totals`] are kept: for all time with no draft anywhere the lines need no check,
+/// else the lines of the entries not posted (and, for a day, dated after it) are left out.
+///
+/// # Errors
+/// Any SQLite error (a `SUM` that overflows is an error, never a float).
+pub fn account_totals_in_controls(
+    conn: &Connection,
+    controls: &[&str],
+    as_of: Option<&str>,
+) -> rusqlite::Result<Vec<(i64, Totals)>> {
+    if controls.is_empty() {
+        return Ok(Vec::new());
+    }
+    let all_posted = as_of.is_none() && !unposted_entries_exist(conn)?;
+    let mut args: Vec<String> = Vec::new();
+    let as_of_mark = as_of.map(|day| {
+        args.push(day.to_owned());
+        format!("?{}", args.len())
+    });
+    let marks: Vec<String> = controls
+        .iter()
+        .map(|code| {
+            args.push((*code).to_owned());
+            format!("?{}", args.len())
+        })
+        .collect();
+    let sql = account_totals_in_controls_text(&marks, all_posted, as_of_mark.as_deref());
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
+        Ok((
+            r.get(0)?,
+            Totals {
+                dr_paisa: r.get(1)?,
+                cr_paisa: r.get(2)?,
+            },
+        ))
+    })?;
+    rows.collect()
+}
+
 /// The SQL of [`totals_for_accounts`] for this many accounts.
 #[doc(hidden)]
 pub fn totals_for_accounts_sql(count: usize) -> String {

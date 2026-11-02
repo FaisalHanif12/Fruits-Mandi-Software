@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::Paisa;
 use mandi_db::ledger::totals_for_accounts;
-use mandi_db::rusqlite::{Connection, params};
+use mandi_db::rusqlite::Connection;
 
 use super::Facts;
 use super::charts::days_before;
@@ -36,7 +36,7 @@ use super::model::{
 };
 use super::signals::{self, counted};
 use crate::error::ReportsError;
-use crate::reports::common::{IN_CHUNK, LIVE, add, paisa};
+use crate::reports::common::{IN_CHUNK, add, paisa};
 
 /// An item with an amount and an oldest age.
 fn item(
@@ -184,33 +184,19 @@ type HeldByKey = HashMap<(i64, Option<String>), (Held, Option<String>)>;
 /// openings, each with the advance adjusted on it (active rows only). The line set is the one of
 /// the payable sums (live entries), grouped by account and person key.
 fn held_by_key(conn: &Connection, cutoff: &str) -> Result<HeldByKey, ReportsError> {
-    let sql = format!(
-        "SELECT l.account_id, l.pukhta_person_key, e.posting_type = 'opening', e.entry_date,
-                l.cr_paisa,
-                COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a
-                          WHERE a.credit_line_id = l.id AND a.is_active = 1), 0)
-         FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         JOIN accounts ac ON ac.id = l.account_id
-         JOIN account_controls k ON k.id = ac.control_id
-         WHERE k.code = '03011' AND l.cr_paisa > 0 AND {LIVE}
-           AND (e.posting_type = 'opening' OR e.entry_date >= ?1)"
-    );
-    let mut statement = conn.prepare(&sql)?;
-    let rows = statement
-        .query_map(params![cutoff], |r| {
-            Ok((
-                r.get::<_, i64>(0)?,
-                r.get::<_, Option<String>>(1)?,
-                r.get::<_, bool>(2)?,
-                r.get::<_, String>(3)?,
-                r.get::<_, i64>(4)?,
-                r.get::<_, i64>(5)?,
-            ))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+    // Found from the entries of the last days and the opening entries (plan 48 P48-S3), not from
+    // every line of every seller: 9 seconds down to 3 milliseconds on 3.5 million lines.
+    let rows =
+        mandi_db::party_reads::held_credits(conn, mandi_core::accounts::SELLER_CONTROL, cutoff)?;
     let mut out: HeldByKey = HashMap::new();
-    for (account, key, is_opening, day, credit, adjusted) in rows {
-        let left = paisa(credit)?.checked_sub(paisa(adjusted)?)?;
+    for held in rows {
+        let (account, key, is_opening, day) = (
+            held.account_id,
+            held.person_key,
+            held.is_opening,
+            held.entry_date,
+        );
+        let left = paisa(held.cr_paisa)?.checked_sub(paisa(held.adjusted_paisa)?)?;
         if left < Paisa::ZERO {
             return Err(ReportsError::Data(
                 "more is adjusted on a credit than the credit holds".to_owned(),

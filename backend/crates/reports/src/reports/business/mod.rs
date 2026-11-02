@@ -8,6 +8,7 @@
 pub(crate) mod day;
 mod dead;
 mod expenses;
+pub(crate) mod forms;
 pub(crate) mod fruit;
 mod gardens;
 mod income;

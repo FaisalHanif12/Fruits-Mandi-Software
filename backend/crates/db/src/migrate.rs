@@ -104,6 +104,11 @@ pub const PARTS_ARE_SOFT_STATE_SQL: &str =
 pub const ASSISTANT_QUESTIONS_SQL: &str =
     include_str!("../migrations/0015_assistant_questions.sql");
 
+/// The sixteenth migration (plan 48 P48-S3, NFR-SPD-2, NFR-SPD-10, NFR-AI-3): two partial indexes,
+/// the opening entries and the active matching rows with their amount. Indexes only: no table,
+/// column, stored total, row, amount, id or chain hash changes.
+pub const SPEED_INDEXES_SQL: &str = include_str!("../migrations/0016_speed_indexes.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -131,6 +136,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
         M::up(PARTS_ARE_SOFT_STATE_SQL),
         M::up(ASSISTANT_QUESTIONS_SQL),
+        M::up(SPEED_INDEXES_SQL),
     ])
 }
 

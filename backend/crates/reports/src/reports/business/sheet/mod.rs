@@ -100,3 +100,41 @@ pub(crate) fn run(
 }
 
 pub(super) use day_tables::{DaySheet, load_days};
+
+/// The rows of one of the day queries read in both forms, as text, entries first and lines first.
+/// Only for the test that holds the two forms to the same rows (plan 48 P48-S3).
+pub(super) struct Forms {
+    pub(super) entries_first: Vec<String>,
+    pub(super) lines_first: Vec<String>,
+}
+
+fn debug_rows<T: std::fmt::Debug>(rows: Vec<T>) -> Vec<String> {
+    rows.iter().map(|r| format!("{r:?}")).collect()
+}
+
+/// `figures_load::ledger_rows` in both forms.
+pub(super) fn ledger_forms(conn: &Connection, from: &str, to: &str) -> Result<Forms, ReportsError> {
+    let who = figures_load::Filter::default();
+    Ok(Forms {
+        entries_first: debug_rows(figures_load::ledger_rows_in(conn, from, to, who, true)?),
+        lines_first: debug_rows(figures_load::ledger_rows_in(conn, from, to, who, false)?),
+    })
+}
+
+/// `figures_load::seller_lines` in both forms.
+pub(super) fn seller_forms(conn: &Connection, from: &str, to: &str) -> Result<Forms, ReportsError> {
+    let who = figures_load::Filter::default();
+    Ok(Forms {
+        entries_first: debug_rows(figures_load::seller_lines_in(conn, from, to, who, true)?),
+        lines_first: debug_rows(figures_load::seller_lines_in(conn, from, to, who, false)?),
+    })
+}
+
+/// `figures_load::lot_charges` in both forms.
+pub(super) fn lot_forms(conn: &Connection, from: &str, to: &str) -> Result<Forms, ReportsError> {
+    let who = figures_load::Filter::default();
+    Ok(Forms {
+        entries_first: debug_rows(figures_load::lot_charges_in(conn, from, to, who, true)?),
+        lines_first: debug_rows(figures_load::lot_charges_in(conn, from, to, who, false)?),
+    })
+}

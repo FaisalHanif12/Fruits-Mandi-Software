@@ -19,7 +19,7 @@
 
 use mandi_db::memo::{self, Sums};
 use mandi_db::rusqlite::types::Value;
-use mandi_db::rusqlite::{Connection, params_from_iter};
+use mandi_db::rusqlite::{Connection, params, params_from_iter};
 
 use crate::error::ReportsError;
 use crate::reports::filters::LineSort;
@@ -93,17 +93,27 @@ impl LineFilter {
     }
 }
 
-/// True if the account is big enough to be walked by the day index. All the journal (no account)
-/// is big.
-fn is_large(conn: &Connection, account: Option<i64>) -> Result<bool, ReportsError> {
-    let Some(account) = account else {
+/// True if the lines asked for are many enough to be walked by the day index: the lines of the
+/// account, or, when one person of a shared account is asked for, the lines of that person (the
+/// shared account is big, but a person may have a few lines, and then his own lines first beat a
+/// walk through the journal, plan 48 P48-S3). All the journal (no account) is big.
+fn is_large(conn: &Connection, f: &LineFilter) -> Result<bool, ReportsError> {
+    let Some(account) = f.account else {
         return Ok(true);
     };
-    let counted: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines WHERE account_id = ?1 LIMIT ?2)",
-        [account, LARGE_ACCOUNT.saturating_add(1)],
-        |r| r.get(0),
-    )?;
+    let counted: i64 = match f.person.as_deref() {
+        Some(person) => conn.query_row(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines
+               WHERE account_id = ?1 AND pukhta_person_key = ?2 LIMIT ?3)",
+            params![account, person, LARGE_ACCOUNT.saturating_add(1)],
+            |r| r.get(0),
+        )?,
+        None => conn.query_row(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines WHERE account_id = ?1 LIMIT ?2)",
+            [account, LARGE_ACCOUNT.saturating_add(1)],
+            |r| r.get(0),
+        )?,
+    };
     Ok(counted > LARGE_ACCOUNT)
 }
 
@@ -135,8 +145,11 @@ fn sum_tables(large: bool, f: &LineFilter) -> &'static str {
 /// otherwise the lines of the account first.
 fn tables(large: bool) -> &'static str {
     if large {
+        // `CROSS JOIN` fixes the order: the entries first (plan 48 P48-S3). The app's file has no
+        // table statistics, and without them SQLite takes the lines of the account first even
+        // here, and reads all 55,000 lines of the busiest buyer to find the few before a day.
         "journal_entries e INDEXED BY idx_journal_entries_entry_date
-         JOIN journal_lines l ON l.entry_id = e.id"
+         CROSS JOIN journal_lines l ON l.entry_id = e.id"
     } else {
         "journal_lines l JOIN journal_entries e ON e.id = l.entry_id"
     }
@@ -156,7 +169,7 @@ fn no_drafts(conn: &Connection) -> mandi_db::rusqlite::Result<bool> {
 /// # Errors
 /// A database error.
 pub(crate) fn totals(conn: &Connection, f: &LineFilter) -> Result<Sums, ReportsError> {
-    let large = is_large(conn, f.account)?;
+    let large = is_large(conn, f)?;
     let sums = memo::sums(conn, &f.key("lines"), || {
         if let (Some(account), None, None, None) = (f.account, &f.person, &f.from, &f.to)
             && no_drafts(conn)?
@@ -243,7 +256,7 @@ pub(crate) fn page_query(
     sort: Option<LineSort>,
     (offset, limit): (i64, i64),
 ) -> Result<(String, Vec<Value>), ReportsError> {
-    let large = is_large(conn, f.account)?;
+    let large = is_large(conn, f)?;
     // By an amount there is no early stop on the day index: the lines of the account are read and
     // the best `offset + limit` are kept (SQLite keeps only that many while it sorts).
     let by_amount = matches!(sort, Some(LineSort::Amount { .. }));
@@ -340,7 +353,7 @@ fn sums_beside(
     key: (&str, i64, i64),
     (later, walk): (bool, bool),
 ) -> Result<(i64, i64), ReportsError> {
-    let large = is_large(conn, f.account)?;
+    let large = is_large(conn, f)?;
     let (conditions, mut binds) = f.conditions();
     let op = if later { ">" } else { "<" };
     binds.push(Value::Text(key.0.to_owned()));

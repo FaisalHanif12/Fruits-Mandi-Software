@@ -33,6 +33,8 @@ SQLite: the connection, numbered migrations, the transaction wrapper, the seed a
 - A journal entry is inserted as `draft`, its lines are inserted, then one `UPDATE ... SET status = 'posted', total_paisa = ...` posts it. The trigger checks the lines, the balance and the total. `chain_hash` must be set in that same update, because a posted row never changes.
 - A saved `bikri_sales` row is frozen. An edit marks it `is_active = 0` and sets `replaced_by_sale_id`.
 - Tests open files, never `:memory:`, because the read and write connections must see one database.
+- **Fast reads of the buyers' and sellers' books** (`party_reads.rs`, plan 48 P48-S3, migration 0016): the balance before a day (`totals_before`), the credits behind the age of a payable (`held_credits`), the open bills behind the ages of R20 (`open_buyer_bills`) and the totals of one control (`ledger::account_totals_in_controls`). Each has a line-by-line method that is the SQL it replaced and a fast method; both give the same rows (the test `services/tests/speed_rewrites_equal.rs` compares them, whole rows). The fast method is used only when its conditions hold (the whole book, enough lines, and no person key on an ordinary account, which `person_keys_only_on_shared` checks).
+- **The app's file has no table statistics** (nothing runs `ANALYZE`; only the benchmark's file has them). A query must be fast without them. Where SQLite would start from the wrong table, the text fixes the order (`CROSS JOIN`, `INDEXED BY`) and `tests/party_reads_plans.rs` reads the plan.
 
 ## Dev database
 
