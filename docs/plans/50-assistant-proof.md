@@ -66,3 +66,26 @@ D6-A6, D6-A7, D6-A8 and D6-A9 evidence (attacks), D6-A16 (live run, or WAITING F
 
   dashboard::get takes 8.1 s and R34 11.1 s, against 1 s each. These go to Umar's speed plan. No threshold was loosened.
 - Five new 300 ms entries are in thresholds.json (72 in all). run.mjs is formatted; `node --check` and `prettier --check` both pass.
+- Re-measure after P48-S3 (02-11-2026, robustness, release build, NFR-SCL-1 matched volume; p95 without statistics, which is the real-app case; with statistics in brackets):
+
+  | Bench | p95 | Target |
+  |---|---|---|
+  | dashboard | 593 ms (596 ms) | 1 s, met |
+  | R34 | 625 ms (504 ms) | 1 s, met |
+  | cash_in_hand | 46 ms | 300 ms, met |
+  | today_sales, today_commission, stock_left, dead_amount | 4.6 to 8.5 ms | 300 ms, met |
+  | advances_open | 160 ms | 300 ms, met |
+  | sellers_payable | 160 ms | 300 ms, met |
+  | party chip | 134 ms | 300 ms, met |
+  | buyers_dues | 203 ms | 300 ms, met |
+  | ledger round | 220 ms | 300 ms, met |
+  | total_dues | 532 ms | 300 ms, OVER, accepted by Umar |
+  | advice round | 417 ms | 300 ms, OVER, accepted by Umar |
+
+- Findings for Umar's next speed plan (not in D6):
+  - (1) MAJOR, modelled: the volume has no stock_moves or bikri_lots. With 1.6M stock moves, stock_waiting takes about 1.2 s and open_stock about 0.55 s. That would put dashboard::get at about 2.3 s and the stock_left chip at about 0.55 s. The current passes on these rows are unproven at sale-line volume.
+  - (2) partner_share_rows has no entry_date-led index. One day takes 64 ms, against under 1 ms with (entry_date, partner_id, amount_paisa).
+  - (3) MAJOR, modelled: R35's all-parties sheet takes about 6 s. It has no bench.
+  - (4) Analytics and the sales registers are untimed at scale.
+  - (5) Benches with 10 samples have weak p95s.
+  - The next step needs a generator that writes sale lines, lots, stock moves, facts and share rows.
