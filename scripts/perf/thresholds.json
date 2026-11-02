@@ -522,6 +522,87 @@
       "stat": "p95",
       "target_ms": 100,
       "$comment": "D4 plan 15. assist_open_payables for a party just picked: the totals from sums and a walk back from the newest credit. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines) after the matching of the two busiest parties' history is written once, as every save of a real file keeps it."
+    },
+    {
+      "id": "assistant/quick_cash_in_hand",
+      "action": "Quick question: cash in hand",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "A quick question (PRD FR-7.80) answers under 300 ms, like opening a screen (NFR-SPD-3). D6 plan 50 R4. The figure is read from the cash book and checked against its second place, then the log row is written. No model. Measured on the NFR-SCL-1 volume (20,000 accounts, 3.5 million journal lines)."
+    },
+    {
+      "id": "assistant/quick_today_sales",
+      "action": "Quick question: today's sales",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the day's sales and the count of بکری from the dashboard tiles and their second place."
+    },
+    {
+      "id": "assistant/quick_total_dues",
+      "action": "Quick question: total dues (اگراہی)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the total dues of all buyers, checked through its three parts (R20, R24, R38). The heaviest chip: it reads the dues of every buyer."
+    },
+    {
+      "id": "assistant/quick_sellers_payable",
+      "action": "Quick question: sellers payable",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for what the shop owes its sellers (R24)."
+    },
+    {
+      "id": "assistant/quick_party_busiest_buyer",
+      "action": "Quick question: ledger of the busiest buyer (about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "As quick_cash_in_hand, for the party chip: his checked balance and the last rows of his ledger. The stress case for a party."
+    },
+    {
+      "id": "assistant/round_ledger_busiest_buyer",
+      "action": "App's part of a question: find, card and ledger of the busiest buyer, checks, fill, log",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "NFR-AI-3: the app's own part in each round (running the tools and the checks) is under 300 ms. The whole D6 worked question over recorded model replies (find by code, then party_card and R13 together, then the checked answer with its table), so both rounds and the checks are inside the 300 ms. Measured on the NFR-SCL-1 volume; the volume has no sale lines, so analytics and estimate tools are not measured (README Section 7)."
+    },
+    {
+      "id": "assistant/round_advice_dues_r20",
+      "action": "App's part of a question: dues report R20 over all buyers, checks, fill, log",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 300,
+      "$comment": "NFR-AI-3 as above, for the advice question 'whom to collect from first': R20 sorted oldest first, ten rows, over every buyer of the volume, then the checked advice answer."
+    },
+    {
+      "id": "dashboard/get_full_volume",
+      "action": "Dashboard tiles on the NFR-SCL-1 volume",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-2",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "The dashboard loads fully under 1 s after login. Found at 5.7 to 6.1 s by the assistant benchmarks (D6 plan 50 R4): the quick questions and the tiles tool read the same tiles. Measured on the NFR-SCL-1 volume with the matching of every buyer and seller written once, as a real file has it (benches/assistant.rs, matched_volume). Held at the NFR target; it fails until it is fixed."
+    },
+    {
+      "id": "reports/r34_one_day_full_volume",
+      "action": "R34 day summary for one day on the NFR-SCL-1 volume",
+      "kind": "nfr",
+      "nfr": "NFR-SPD-10",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "Any report for one day under 1 s. Found at 8.7 s (all dates) by the assistant benchmarks (D6 plan 50 R4). Same volume as dashboard/get_full_volume. Held at the NFR target; it fails until it is fixed."
     }
   ],
   "install": {

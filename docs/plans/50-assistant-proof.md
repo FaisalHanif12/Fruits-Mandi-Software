@@ -32,3 +32,18 @@ D6-A6, D6-A7, D6-A8 and D6-A9 evidence (attacks), D6-A16 (live run, or WAITING F
 ## 6. As built
 
 (The lead fills this in.)
+- Robustness HANDOFF (02-11-2026), accepted:
+  - R1: questions.tsv has 100 rows: Roman Urdu 40, Urdu 35, English 25; 17 misspelled; 8 groups of 4.
+  - R2: run.mjs passes `node --check`. It is not run: WAITING FOR KEY.
+  - R3:
+    - robustness_assistant: 48 passed, 1 ignored. The ignored one is the 45 s test; run it with `-- --ignored attack_06_a_question_past_45_seconds`.
+    - robustness_live: 1 passed, 1 ignored. The ignored one is the live run.
+    - New app/tests/robustness_assistant_key.rs: 2 passed. It covers attack 9 and D6-A7 through the real commands, including backups and the support file.
+    - Attack 13 vitest: 2 passed.
+  - R4: benches/assistant.rs. scripts/perf/thresholds.json has 67 entries, with dashboard::get and R34 at 1 s.
+  - Checks: rustfmt and clippy clean on its files.
+- Findings:
+  - (1) MAJOR: report.rs read_all ran R20 once per page of 1,000, which took about 64 s on NFR-SCL-1 data, so the advice question timed out. Sent to backend as P48-S2.
+  - (2) The four chips over 300 ms, dashboard::get (8.1 s) and R34 (11.1 s) go to Umar's speed plan.
+  - (3) D6 attack 15 versus E98, on Umar's list.
+  - (4) "Delete", "back-date" and "dishonest" advice cannot be caught by check.rs; it is left to the Urdu review of the live run.
