@@ -1673,8 +1673,11 @@ fn attack_05_token_counts_at_the_edges_end_the_question_and_never_panic() {
     let (reply, requests) = ask(&h, "ikram", None, vec![near, final_reply(&short)]);
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     assert_eq!(requests.len(), 2);
-    assert_eq!(requests[1]["max_tokens"], 1, "3,000 less 2,999");
-    assert_eq!(requests[0]["max_tokens"], limits::MAX_CALL_OUTPUT_TOKENS);
+    assert_eq!(requests[1]["max_completion_tokens"], 1, "3,000 less 2,999");
+    assert_eq!(
+        requests[0]["max_completion_tokens"],
+        limits::MAX_CALL_OUTPUT_TOKENS
+    );
     // Numbers as big as a number can be: the question ends, nothing panics, the log is written.
     for (input, output) in [(i64::MAX, i64::MAX), (i64::MAX, 0), (0, i64::MAX)] {
         let mut odd = tool_reply(&[find("ikram", "buyer")]);

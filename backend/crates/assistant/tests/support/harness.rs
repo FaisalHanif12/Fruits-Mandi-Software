@@ -10,7 +10,7 @@ use mandi_assistant::ask::{
 };
 use mandi_assistant::client::{ModelClient, RecordedClient};
 use mandi_assistant::keys::MemoryKeyStore;
-use mandi_assistant::request::provider;
+use mandi_assistant::request::{BODY_KEYS_ALLOWED, provider};
 use mandi_assistant::run::{Deps, ask, pick};
 use mandi_assistant::runtime::Runtime;
 use mandi_assistant::step::AssistantStep;
@@ -157,7 +157,18 @@ impl Harness {
     pub fn scan_requests(&self) {
         for body in self.seen.lock().unwrap().iter() {
             assert_eq!(body["provider"], provider(), "the provider block");
-            assert_eq!(body["stream"], false);
+            // Never streamed: the key is absent, and its default is false (D6 Section 5).
+            assert!(
+                body.get("stream").is_none(),
+                "a request must not set stream"
+            );
+            // Plan 51 Section 3: only keys the Azure endpoints take, or the call answers 404.
+            for key in body.as_object().expect("a body is an object").keys() {
+                assert!(
+                    BODY_KEYS_ALLOWED.contains(&key.as_str()),
+                    "a request holds the key {key:?}, which Azure does not take"
+                );
+            }
             let text = body.to_string();
             for forbidden in [
                 worked::PRIVATE_PHONE,

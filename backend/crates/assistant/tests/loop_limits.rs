@@ -647,7 +647,7 @@ fn the_user_message_carries_today_the_language_the_question_and_its_numbers() {
         requests[0]["response_format"]["json_schema"]["strict"],
         true
     );
-    assert_eq!(requests[0]["max_tokens"], 1_500);
+    assert_eq!(requests[0]["max_completion_tokens"], 1_500);
     h.scan_requests();
 }
 

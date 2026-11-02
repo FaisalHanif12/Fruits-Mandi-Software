@@ -7,7 +7,9 @@
 //! conversation, with their earlier tool results cut down, and the question being answered.
 //!
 //! The provider block is a constant: only the Azure endpoint of the model, no fallback, zero data
-//! retention, no data collection (Umar, 02-11-2026).
+//! retention, no data collection (Umar, 02-11-2026). Because it asks `require_parameters`, every
+//! top-level key of the body must be one the Azure endpoints take (`BODY_KEYS_ALLOWED`). A key
+//! they do not list makes OpenRouter drop every Azure endpoint and answer 404 (plan 51 Section 3).
 //!
 //! Example: a first question gives `messages` = the system message and one user message
 //! `{"today":"2026-10-10","language":"ur","question":"ikram ke total bakaya kitne hai",
@@ -30,6 +32,32 @@ pub const REASONING_EFFORT: &str = "medium";
 pub const SEED: i64 = 20_261_102;
 /// The marker of a tool message that holds the id of its result. Taken out before sending.
 pub const RESULT_MARK: &str = "_result";
+
+/// The top-level keys the body may hold (plan 51 Section 3, read from OpenRouter's endpoint list of
+/// `openai/gpt-6-luna` on 02-11-2026). First the parameters its Azure endpoints list, then the keys
+/// OpenRouter always takes: `model`, `messages` and `provider` (the routing block).
+///
+/// `stream` is not on the list and is never sent. Its default is false, which is what D6 Section 5
+/// wants (an answer is shown only when whole and checked, FR-7.76), so leaving it out changes
+/// nothing and cannot cost an Azure endpoint.
+///
+/// With `require_parameters: true`, a key outside this list drops every Azure endpoint, and the
+/// call fails with HTTP 404. A new key is added here only after the Azure endpoints are checked.
+pub const BODY_KEYS_ALLOWED: [&str; 13] = [
+    "include_reasoning",
+    "max_completion_tokens",
+    "reasoning",
+    "reasoning_effort",
+    "response_format",
+    "seed",
+    "structured_outputs",
+    "tool_choice",
+    "tools",
+    "verbosity",
+    "model",
+    "messages",
+    "provider",
+];
 
 /// The provider rules of every call.
 pub fn provider() -> Value {
@@ -189,8 +217,9 @@ pub struct Parts<'a> {
     pub words: &'a Words,
     /// True while the partner section is locked.
     pub partner_locked: bool,
-    /// Output tokens this call may use.
-    pub max_tokens: u32,
+    /// Output tokens this call may use. Sent as `max_completion_tokens`, the name the Azure
+    /// endpoints take (`max_tokens` is not on their list).
+    pub max_completion_tokens: u32,
 }
 
 /// The body of one call.
@@ -220,15 +249,95 @@ pub fn request_body(parts: &Parts<'_>) -> Value {
         "messages": messages,
         "tools": tools(),
         "tool_choice": "auto",
-        "parallel_tool_calls": true,
         "response_format": {
             "type": "json_schema",
             "json_schema": {"name": ANSWER_SCHEMA_NAME, "strict": true, "schema": answer_schema()},
         },
         "reasoning": {"effort": REASONING_EFFORT},
-        "max_tokens": parts.max_tokens,
+        "max_completion_tokens": parts.max_completion_tokens,
         "seed": SEED,
-        "stream": false,
         "provider": provider(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn body(max_completion_tokens: u32) -> Value {
+        let turn = Turn {
+            question: "ikram ka bakaya".to_owned(),
+            messages: vec![user_message(
+                "2026-10-10",
+                Language::Ur,
+                "ikram ka bakaya",
+                &[],
+            )],
+            ..Turn::default()
+        };
+        let conversation = Conversation::new("c1");
+        let words = Words::new().expect("the Fluent files");
+        request_body(&Parts {
+            model: "openai/gpt-6-luna",
+            conversation: &conversation,
+            current: &turn,
+            words: &words,
+            partner_locked: true,
+            max_completion_tokens,
+        })
+    }
+
+    /// Plan 51 Section 3: with `require_parameters: true`, a top-level key that the Azure endpoints
+    /// do not list drops every Azure endpoint and the call answers 404.
+    #[test]
+    fn every_top_level_key_is_one_the_azure_endpoints_take() {
+        let body = body(1_500);
+        let Value::Object(fields) = &body else {
+            panic!("the body is an object");
+        };
+        for key in fields.keys() {
+            assert!(
+                BODY_KEYS_ALLOWED.contains(&key.as_str()),
+                "the key {key:?} is not on the Azure list"
+            );
+        }
+        // The two keys that caused the 404 are gone.
+        assert!(!fields.contains_key("max_tokens"));
+        assert!(!fields.contains_key("parallel_tool_calls"));
+        // `stream` is not sent either: the default is false, and Azure does not list it.
+        assert!(!fields.contains_key("stream"));
+    }
+
+    #[test]
+    fn the_output_budget_is_sent_as_max_completion_tokens() {
+        assert_eq!(body(1_500)["max_completion_tokens"], 1_500);
+        assert_eq!(body(1)["max_completion_tokens"], 1);
+    }
+
+    #[test]
+    fn the_provider_block_is_azure_only_with_zero_retention() {
+        let body = body(1_500);
+        assert_eq!(body["provider"], provider());
+        assert_eq!(
+            body["provider"],
+            json!({
+                "only": ["azure"],
+                "allow_fallbacks": false,
+                "zdr": true,
+                "data_collection": "deny",
+                "require_parameters": true,
+            })
+        );
+        assert_eq!(body["tool_choice"], "auto");
+        assert_eq!(body["seed"], SEED);
+        assert_eq!(body["reasoning"], json!({"effort": REASONING_EFFORT}));
+    }
+
+    #[test]
+    fn the_allowed_list_has_no_repeat() {
+        let mut keys = BODY_KEYS_ALLOWED.to_vec();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), BODY_KEYS_ALLOWED.len());
+    }
 }

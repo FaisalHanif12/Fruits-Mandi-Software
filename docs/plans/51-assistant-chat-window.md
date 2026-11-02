@@ -77,3 +77,13 @@ The block of the goal ("D6 BLOCKED" on a 404) does not apply: the endpoint exist
 - Umar's "Test the connection" answers OK on Azure.
 - The chat window looks and works as Section 4 says, in both languages and at all three sizes.
 - Every assistant test still passes, and golden numbers are unchanged.
+
+## 6. B1 as built (02-11-2026), accepted
+
+- The request body now has 9 keys: model, messages, tools, tool_choice, response_format, reasoning, max_completion_tokens, seed and provider.
+- `max_tokens`, `parallel_tool_calls` and `stream` are gone. Their defaults keep the same behaviour: answers are shown whole, and parallel tool calls stay the model's default.
+- The provider block is unchanged.
+- `BODY_KEYS_ALLOWED` and the harness scan fail every test on any other key.
+- In robustness_assistant.rs, three key names changed, mechanically (gate note).
+- Checks: assistant tests 0 failed; fmt and clippy -p clean.
+- D6-ai-assistant.md Section 5 still shows the old keys (lines 85, 86, 93, 109 and 112). It is updated after Umar's connection test passes.

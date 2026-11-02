@@ -420,7 +420,7 @@ impl<'a> Run<'a> {
                 FailureKind::BadKey,
             ))));
         };
-        let max_tokens = MAX_OUTPUT_TOKENS
+        let max_completion_tokens = MAX_OUTPUT_TOKENS
             .saturating_sub(out_used)
             .min(MAX_CALL_OUTPUT_TOKENS);
         let body = request_body(&Parts {
@@ -429,7 +429,7 @@ impl<'a> Run<'a> {
             current: turn,
             words: &self.words,
             partner_locked: self.partner_locked,
-            max_tokens,
+            max_completion_tokens,
         });
         let timeout = Duration::from_secs(CALL_TIMEOUT_SECS).min(total.saturating_sub(elapsed));
         let reply = self
