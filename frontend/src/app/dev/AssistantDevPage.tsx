@@ -15,7 +15,7 @@ import { AssistantSettings } from '../../features/assistant';
 import { useAssistantRunner } from '../../features/assistant/hooks';
 import { useAssistantStore } from '../../features/assistant/store';
 import type { QuickChip } from '../../bindings/QuickChip';
-import { formNavigationProps } from '../../shared/keyboard';
+import { formNavigationProps, useEscapeDispatcher } from '../../shared/keyboard';
 import { Card, DateInput, Field, MoneyInput, QtyInput, TextInput } from '../../shared/ui';
 import { AppShell } from '../layout/AppShell';
 import { MainNav } from '../layout/MainNav';
@@ -91,6 +91,9 @@ function SampleEntry() {
 }
 
 export function AssistantDevPage() {
+  // The real app mounts the Esc dispatcher in its frame; this page has no frame, and Esc closes the
+  // window (FR-7.18).
+  useEscapeDispatcher();
   // The stand-in is installed before the screen asks its first question.
   useState(() => {
     installAssistantDevBridge();

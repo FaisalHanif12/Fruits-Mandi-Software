@@ -42,6 +42,11 @@ interface TableProps<Row> {
   columns: readonly TableColumn<Row>[];
   rows: readonly Row[];
   rowKey: (row: Row) => string;
+  /**
+   * Every column of words keeps room for its words, and a table that is wider than its box scrolls
+   * sideways inside the box instead of squeezing its columns (the answers in the chat window, plan 51).
+   */
+  scrolls?: boolean;
 }
 
 const CELL = 'px-3 py-2 align-middle';
@@ -67,6 +72,16 @@ const SIZE_CLASS: Record<TableColumnSize, string> = {
   status: 'w-col-status',
 };
 
+/** The same widths as least widths, for a table that scrolls instead of squeezing (`scrolls`). */
+const MIN_SIZE_CLASS: Record<TableColumnSize, string> = {
+  code: 'min-w-col-code',
+  money: 'min-w-col-money',
+  qty: 'min-w-col-qty',
+  date: 'min-w-col-date',
+  datetime: 'min-w-col-datetime',
+  status: 'min-w-col-status',
+};
+
 /** What the alignment check reads: which edge the column's words and figures stand on. */
 const ALIGN_OF: Record<TableColumnKind, 'text' | 'num' | 'centre'> = {
   text: 'text',
@@ -83,15 +98,20 @@ function directionOf(kind: TableColumnKind): 'ltr' | undefined {
 function classOf(
   column: { kind?: TableColumnKind; size?: TableColumnSize },
   nameColumn: boolean,
+  holdSize: boolean,
 ): string {
   const kind = column.kind ?? 'text';
-  return `${CELL} ${KIND_CLASS[kind]}${column.size === undefined ? '' : ` ${SIZE_CLASS[column.size]}`}${nameColumn ? ' min-w-col-name' : ''}`;
+  const hold = holdSize && column.size !== undefined ? ` ${MIN_SIZE_CLASS[column.size]}` : '';
+  return `${CELL} ${KIND_CLASS[kind]}${column.size === undefined ? '' : ` ${SIZE_CLASS[column.size]}`}${hold}${nameColumn ? ' min-w-col-name' : ''}`;
 }
 
-export function Table<Row>({ label, columns, rows, rowKey }: TableProps<Row>) {
+export function Table<Row>({ label, columns, rows, rowKey, scrolls = false }: TableProps<Row>) {
   const hasTotal = columns.some((column) => column.total !== undefined);
   // The first column of words keeps room for a name; the figure columns give way (plan 39 R5).
   const nameAt = columns.findIndex((column) => (column.kind ?? 'text') === 'text');
+  /** Which columns keep room for words: the first one, or every column of words when the table scrolls. */
+  const keepsRoom = (column: TableColumn<Row>, position: number) =>
+    position === nameAt || (scrolls && (column.kind ?? 'text') === 'text');
   return (
     <div className="min-w-0 overflow-x-auto">
       <table aria-label={label} className="w-full border-collapse type-body">
@@ -105,7 +125,7 @@ export function Table<Row>({ label, columns, rows, rowKey }: TableProps<Row>) {
                   scope="col"
                   dir={directionOf(kind)}
                   data-align={ALIGN_OF[kind]}
-                  className={`${classOf(column, position === nameAt)} font-normal`}
+                  className={`${classOf(column, keepsRoom(column, position), scrolls)} font-normal`}
                 >
                   {kind === 'action' ? (
                     <span className="sr-only">{column.header}</span>
@@ -127,7 +147,7 @@ export function Table<Row>({ label, columns, rows, rowKey }: TableProps<Row>) {
                     key={column.id}
                     dir={directionOf(kind)}
                     data-align={ALIGN_OF[kind]}
-                    className={classOf(column, position === nameAt)}
+                    className={classOf(column, keepsRoom(column, position), scrolls)}
                   >
                     {column.cell(row)}
                   </td>
@@ -146,7 +166,7 @@ export function Table<Row>({ label, columns, rows, rowKey }: TableProps<Row>) {
                     key={column.id}
                     dir={directionOf(kind)}
                     data-align={ALIGN_OF[kind]}
-                    className={classOf(column, position === nameAt)}
+                    className={classOf(column, keepsRoom(column, position), scrolls)}
                   >
                     {column.total}
                   </td>

@@ -152,6 +152,11 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   /** The field opens with its full list open, nothing typed (Alt+↓ on a grid cell, FR-7.16). */
   startOpen?: boolean | undefined;
   /**
+   * The list opens above the field instead of under it, for a field at the bottom of a window (the
+   * question box area of the chat window, plan 51), where the list would be cut off below.
+   */
+  listAbove?: boolean | undefined;
+  /**
    * Enter picked a record. Called instead of moving on to the next field of the form. A picker
    * inside a grid cell uses it to finish the cell and go on to the next Enter stop (FR-7.14).
    */
@@ -196,6 +201,7 @@ export function PickerBase<H extends PickerHit>({
   footer,
   initialText,
   startOpen,
+  listAbove,
   onEnterPicked,
 }: PickerBaseProps<H>) {
   const { l10n } = useLocalization();
@@ -614,7 +620,9 @@ export function PickerBase<H extends PickerHit>({
       <div
         className={
           open
-            ? 'absolute inset-x-0 top-full z-20 mt-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
+            ? listAbove === true
+              ? 'absolute inset-x-0 bottom-full z-20 mb-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
+              : 'absolute inset-x-0 top-full z-20 mt-1 rounded-2 border border-border bg-surface p-1 shadow-overlay'
             : 'hidden'
         }
       >

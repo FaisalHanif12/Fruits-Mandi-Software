@@ -284,9 +284,47 @@ body {
   transition-duration: var(--motion-fast);
 }
 
-/* The question panel slides up from the bottom edge, at most 150 ms (PRD FR-7.73, NFR-USE-24). It is
-   hidden, not only moved, once it has slid away, so nothing in it can take the focus. */
-@utility transition-slide {
-  transition-property: transform, visibility;
-  transition-duration: var(--motion-fast);
+/*
+ * The chat window of Ask the app (plan 51, PRD FR-7.73). It stands above the round launcher at the end
+ * side of the window (bottom right in English, bottom left in Urdu, through the logical offsets) and
+ * grows upward. Its wrapper in the app shell is as tall as nothing and sits on the top edge of the
+ * status bar, so the offsets count from there. Two sizes, set by data-size:
+ * - normal: half the window wide (never under --chat-min-w) and most of the room above the launcher,
+ *   but it stops under the top bar, so the search, the bell, the language switch and the user menu stay
+ *   in reach while it is open (at 1024 x 600 it fills all the room under the top bar);
+ * - large: nearly the whole window, over the top bar too.
+ * It opens in at most 150 ms (NFR-USE-24) with a small rise and fade, from the corner the launcher
+ * stands in. Shut, it is hidden (after the fade), so nothing in it can take the focus; opening shows it
+ * at once, so the focus can go into it in the same moment.
+ */
+@utility chat-window {
+  --chat-room: calc(
+    100vh - var(--statusbar-h) - var(--chat-launcher) - var(--chat-gap) - 2 * var(--chat-edge)
+  );
+
+  position: absolute;
+  inset-block-end: calc(var(--chat-edge) + var(--chat-launcher) + var(--chat-gap));
+  inset-inline-end: var(--chat-edge);
+  inline-size: min(max(var(--chat-min-w), 50%), 100% - 2 * var(--chat-edge));
+  block-size: min(var(--chat-room) - var(--topbar-h), var(--chat-normal-share));
+  transform-origin: 100% 100%;
+  transition-property: transform, opacity, inline-size, block-size, visibility;
+  transition-duration:
+    var(--motion-fast), var(--motion-fast), var(--motion-fast), var(--motion-fast), 0s;
+
+  &:dir(rtl) {
+    transform-origin: 0 100%;
+  }
+
+  &[data-size='large'] {
+    inline-size: calc(100% - 2 * var(--chat-edge));
+    block-size: var(--chat-room);
+  }
+
+  &[data-open='false'] {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(var(--space-3)) scale(0.96);
+    transition-delay: 0s, 0s, 0s, 0s, var(--motion-fast);
+  }
 }

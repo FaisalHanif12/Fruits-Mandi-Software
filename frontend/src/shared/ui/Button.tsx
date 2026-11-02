@@ -7,7 +7,7 @@ import type { ReactNode, Ref } from 'react';
 import type { Shortcut } from '../keyboard';
 import { KeyChip } from './KeyChip';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 interface ButtonProps {
   children: ReactNode;
@@ -28,6 +28,8 @@ interface ButtonProps {
    * of them is narrow. Its name is a visually hidden text inside it (plan 38).
    */
   iconOnly?: boolean;
+  /** Fully rounded (a pill, or a circle with `iconOnly`), the look of the chat window (plan 51). */
+  round?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -35,6 +37,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'border-primary bg-primary text-on-primary',
   secondary: 'border-border-control bg-surface text-ink',
   danger: 'border-due bg-surface text-due',
+  // No box until it is pointed at: the close and size buttons of a window header.
+  ghost: 'border-transparent bg-transparent text-ink hover:bg-primary-soft',
 };
 
 export function Button({
@@ -46,6 +50,7 @@ export function Button({
   busy = false,
   accessibleName,
   iconOnly = false,
+  round = false,
   ref,
 }: ButtonProps) {
   return (
@@ -56,7 +61,7 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy}
       aria-label={accessibleName}
-      className={`inline-flex h-control shrink-0 items-center gap-2 rounded-2 border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? 'w-control justify-center px-0' : 'px-4'} ${VARIANT_CLASSES[variant]}`}
+      className={`inline-flex h-control shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? 'w-control justify-center px-0' : 'px-4'} ${VARIANT_CLASSES[variant]}`}
     >
       {children}
       {shortcut === undefined ? null : (

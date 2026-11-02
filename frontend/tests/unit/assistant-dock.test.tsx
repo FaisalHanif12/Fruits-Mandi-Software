@@ -1,7 +1,8 @@
-// The question panel's shell (plan 49, PRD FR-7.73, FR-5.5, the F1 row of 7.3), in Urdu and English:
-// F1 and the status bar button open and close it, the focus goes into the box and back, Esc closes
-// it, two heights, a focus trap, the question box (Enter sends, ↑ recalls), and a conversation that
-// outlives the screens under it, a language switch, a lock and a route change.
+// The chat window's shell (plans 49 and 51, PRD FR-7.73, FR-5.5, the F1 row of 7.3), in Urdu and
+// English: F1, the status bar button and the round launcher open and close it, the focus goes into the
+// box and back, Esc closes it, two sizes, a focus trap, the header's state, the greeting with its round
+// chips, the question box (Enter sends, ↑ recalls), and a conversation that outlives the screens under
+// it, a language switch, a lock and a route change.
 
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,9 +13,10 @@ import { useAssistantStore } from '../../src/features/assistant/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { tabbableIn } from '../../src/shared/keyboard';
 import { authState, press } from '../helpers/app';
-import { REPLY_ANSWERED } from '../helpers/assistant-real';
+import { REPLY_ANSWERED, REPLY_OFFLINE, STATUS_OFF } from '../helpers/assistant-real';
 import {
   boxOf,
+  launcherOf,
   newClient,
   panelOf,
   resetAssistantFakes,
@@ -34,7 +36,7 @@ afterEach(() => {
   useAssistantStore.getState().reset();
 });
 
-describe.each(LANGUAGES)('the question panel (%s)', (language) => {
+describe.each(LANGUAGES)('the chat window (%s)', (language) => {
   beforeEach(() => {
     setLanguage(language);
   });
@@ -104,40 +106,40 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
     expect(panelOf(language)).not.toHaveAttribute('inert');
   });
 
-  it('has two heights, Ctrl+↑ for the tall one and Ctrl+↓ for the short one, from inside the panel', async () => {
+  it('has two sizes, Ctrl+↑ for the large one and Ctrl+↓ for the normal one, from inside the window', async () => {
     renderIn(language, shell());
     const user = userEvent.setup();
     press('F1');
-    expect(panelOf(language)).toHaveClass('h-dock-short');
+    expect(panelOf(language)).toHaveAttribute('data-size', 'normal');
     await user.keyboard('{Control>}{ArrowUp}{/Control}');
-    expect(panelOf(language)).toHaveClass('h-dock-tall');
+    expect(panelOf(language)).toHaveAttribute('data-size', 'large');
     await user.keyboard('{Control>}{ArrowDown}{/Control}');
-    expect(panelOf(language)).toHaveClass('h-dock-short');
+    expect(panelOf(language)).toHaveAttribute('data-size', 'normal');
   });
 
-  it('the height button switches the height, and its name says which key does it', async () => {
+  it('the size button switches the size, and its name says which key does it', async () => {
     renderIn(language, shell());
     const user = userEvent.setup();
     press('F1');
     await user.click(
       within(panelOf(language)).getByRole('button', {
-        name: `${message(language, 'assistant-taller')} (Ctrl+↑)`,
+        name: `${message(language, 'assistant-larger')} (Ctrl+↑)`,
       }),
     );
-    expect(panelOf(language)).toHaveClass('h-dock-tall');
+    expect(panelOf(language)).toHaveAttribute('data-size', 'large');
     expect(
       within(panelOf(language)).getByRole('button', {
-        name: `${message(language, 'assistant-shorter')} (Ctrl+↓)`,
+        name: `${message(language, 'assistant-smaller')} (Ctrl+↓)`,
       }),
     ).toBeInTheDocument();
   });
 
-  it('Ctrl+↑ outside the panel is not taken by it', () => {
+  it('Ctrl+↑ outside the window is not taken by it', () => {
     renderIn(language, shell());
     press('F1');
     screen.getByRole('textbox', { name: 'entry' }).focus();
     press('ArrowUp', { ctrlKey: true });
-    expect(panelOf(language)).toHaveClass('h-dock-short');
+    expect(panelOf(language)).toHaveAttribute('data-size', 'normal');
   });
 
   it('keeps Tab inside while the focus is in it', async () => {
@@ -236,7 +238,7 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
       expect(box).toHaveValue('');
     });
 
-    it('the send button shows its key and sends too', async () => {
+    it('the send button names its key and sends too', async () => {
       renderIn(language, shell());
       const user = userEvent.setup();
       press('F1');
@@ -244,9 +246,154 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
       const send = within(panelOf(language)).getByRole('button', {
         name: new RegExp(message(language, 'assistant-send')),
       });
-      expect(send).toHaveTextContent('Enter');
+      // A round button has no room for a key chip: its name carries the key (PRD FR-7.4).
+      expect(send).toHaveAccessibleName(`${message(language, 'assistant-send')} (Enter)`);
       await user.click(send);
       expect(useAssistantStore.getState().entries).toHaveLength(1);
+    });
+  });
+
+  describe('the round launcher', () => {
+    it('stands outside the status bar, named like the status bar button, with the assistant on', async () => {
+      renderIn(language, shell());
+      const launcher = launcherOf();
+      expect(launcher).toHaveAccessibleName(message(language, 'assistant-button'));
+      expect(launcher).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('contentinfo')).not.toContainElement(launcher);
+      // The dot says "on and has a key"; the header says it in words (NFR-USE-12).
+      await vi.waitFor(() => {
+        expect(launcher.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+      });
+    });
+
+    it('opens the window with the focus in the box, then shows a close name and closes it', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      const launcher = launcherOf();
+      await user.click(launcher);
+      expect(panelOf(language)).not.toHaveAttribute('inert');
+      expect(boxOf(language)).toHaveFocus();
+      expect(launcher).toHaveAttribute('aria-expanded', 'true');
+      expect(launcher).toHaveAccessibleName(message(language, 'assistant-close'));
+      await user.click(launcher);
+      expect(panelOf(language)).toHaveAttribute('inert');
+      expect(launcher).toHaveAttribute('aria-expanded', 'false');
+      expect(launcher).toHaveAccessibleName(message(language, 'assistant-button'));
+    });
+
+    it('is not in the window, so the focus trap leaves it alone and a shut window keeps it', () => {
+      renderIn(language, shell());
+      const launcher = launcherOf();
+      expect(panelOf(language)).not.toContainElement(launcher);
+      press('F1');
+      expect(launcher).toBeVisible();
+      press('F1');
+      expect(launcher).toBeVisible();
+    });
+
+    it('the close button of the header closes the window', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: message(language, 'assistant-close'),
+        }),
+      );
+      expect(panelOf(language)).toHaveAttribute('inert');
+    });
+  });
+
+  describe('the header and the empty window', () => {
+    it("says ready, with today's count, once the status is known", async () => {
+      renderIn(language, shell());
+      press('F1');
+      const header = within(panelOf(language)).getByRole('banner');
+      expect(header).toHaveTextContent(message(language, 'assistant-dock-title'));
+      expect(header).toHaveTextContent(message(language, 'assistant-state-ready'));
+      await vi.waitFor(() => {
+        expect(visible(header.textContent)).toContain(
+          message(language, 'assistant-button-count', { used: '9', limit: '20' }),
+        );
+      });
+    });
+
+    it('says preparing an answer while a question is being worked on', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.type(boxOf(language), 'one{Enter}');
+      expect(within(panelOf(language)).getByRole('banner')).toHaveTextContent(
+        message(language, 'assistant-state-working'),
+      );
+    });
+
+    it('says switched off when questions are off, and shows the notice instead of the box', async () => {
+      vi.mocked(assistantApi.assistantStatus).mockResolvedValue(STATUS_OFF);
+      renderIn(language, shell());
+      press('F1');
+      await vi.waitFor(() => {
+        expect(within(panelOf(language)).getByRole('banner')).toHaveTextContent(
+          message(language, 'assistant-state-off'),
+        );
+      });
+      // The box is gone; the notice with the reason takes its place.
+      expect(within(panelOf(language)).queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('says no internet after an offline reply', () => {
+      renderIn(language, shell());
+      press('F1');
+      act(() => {
+        const store = useAssistantStore.getState();
+        store.setReply(store.startEntry({ type: 'text', text: 'x' }), REPLY_OFFLINE);
+      });
+      expect(within(panelOf(language)).getByRole('banner')).toHaveTextContent(
+        message(language, 'assistant-state-offline'),
+      );
+    });
+
+    it('greets, labels the day, and shows the quick questions as chips in the body', () => {
+      renderIn(language, shell());
+      press('F1');
+      const panel = panelOf(language);
+      expect(within(panel).getByText(message(language, 'common-period-today'))).toBeInTheDocument();
+      expect(
+        within(panel).getByText(message(language, 'assistant-empty-title')),
+      ).toBeInTheDocument();
+      const chips = within(panel).getByRole('list', {
+        name: message(language, 'assistant-chips-label'),
+      });
+      // In the empty window the chips are in the body, above the footer with the box.
+      expect(chips.compareDocumentPosition(boxOf(language))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(within(chips).getAllByRole('button')).toHaveLength(10);
+    });
+
+    it('once a question is asked the chips fold behind a round button beside the box', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.type(boxOf(language), 'one{Enter}');
+      const panel = panelOf(language);
+      const name = message(language, 'assistant-chips-label');
+      expect(within(panel).queryByRole('list', { name })).not.toBeInTheDocument();
+      const fold = within(panel).getByRole('button', { name });
+      expect(fold).toHaveAttribute('aria-expanded', 'false');
+      await user.click(fold);
+      expect(fold).toHaveAttribute('aria-expanded', 'true');
+      expect(within(panel).getByRole('list', { name })).toBeInTheDocument();
+    });
+
+    it('draws the question as a bubble and its answer as a card under it', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.type(boxOf(language), 'akram ka hisab{Enter}');
+      const question = within(panelOf(language)).getByLabelText(
+        message(language, 'assistant-you-asked'),
+      );
+      expect(question).toHaveTextContent('akram ka hisab');
+      expect(question).toHaveClass('self-end');
     });
   });
 
@@ -288,7 +435,14 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
       expect(panelOf(other)).not.toHaveAttribute('inert');
       expect(within(panelOf(other)).getByText('sent')).toBeInTheDocument();
       expect(boxOf(other)).toHaveValue('half typed');
-      expect(visible(panelOf(other).textContent)).toContain(message(other, 'assistant-send'));
+      expect(
+        within(panelOf(other)).getByRole('button', {
+          name: new RegExp(message(other, 'assistant-send')),
+        }),
+      ).toBeInTheDocument();
+      expect(visible(panelOf(other).textContent)).toContain(
+        message(other, 'assistant-state-working'),
+      );
     });
 
     it('New question forgets the conversation and keeps the questions for ↑', async () => {
@@ -385,13 +539,19 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
     });
   });
 
-  it('writes no word of its own: every word of the shell comes from the Fluent file', () => {
+  it('writes no word of its own: every word of the window comes from the Fluent file', () => {
     renderIn(language, shell());
     press('F1');
     const text = visible(panelOf(language).textContent);
     // The empty conversation, the buttons and the box hint are the file's words in this language.
     expect(text).toContain(message(language, 'assistant-empty-title'));
     expect(text).toContain(message(language, 'assistant-new-conversation'));
-    expect(text).toContain(message(language, 'assistant-send'));
+    expect(text).toContain(message(language, 'assistant-state-ready'));
+    expect(text).toContain(message(language, 'common-period-today'));
+    expect(
+      within(panelOf(language)).getByRole('button', {
+        name: new RegExp(message(language, 'assistant-send')),
+      }),
+    ).toBeInTheDocument();
   });
 });

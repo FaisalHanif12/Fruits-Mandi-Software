@@ -134,12 +134,16 @@ export function AnswerTableView({ table }: { table: AnswerTable }) {
   return (
     <div className="flex flex-col gap-1">
       <p className="type-label text-ink">{title}</p>
-      <Table
-        label={l10n.getString('assistant-table-label', { source: title })}
-        columns={columns}
-        rows={rows}
-        rowKey={(view) => view.key}
-      />
+      {/* The table has its own rounded card and scrolls sideways inside it, so the window never does. */}
+      <div className="overflow-hidden rounded-3 border border-border">
+        <Table
+          label={l10n.getString('assistant-table-label', { source: title })}
+          columns={columns}
+          rows={rows}
+          rowKey={(view) => view.key}
+          scrolls
+        />
+      </div>
       {table.count > rows.length ? (
         <p className="type-body text-ink-muted">
           {l10n.getString('assistant-table-more', {

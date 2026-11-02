@@ -1,9 +1,9 @@
-### Ask the app: the question panel at the bottom of every screen (plan 49, PRD 7.7, FR-7.72 to FR-7.88).
+### Ask the app: the chat window above a round button at the end of every screen (plans 49 and 51, PRD 7.7, FR-7.72 to FR-7.88).
 ### Every Urdu line says what its English line says (NFR-URD-29). The words of an ANSWER are written by the
 ### model under the checks of FR-7.76; only the panel's own fixed words are here. Business words come from
 ### glossary.ftl.
 
-## The panel and the status bar button (FR-5.5, FR-7.73).
+## The chat window, its launcher and the status bar button (FR-5.5, FR-7.73).
 
 # review: pending
 assistant-button = سوال پوچھیں
@@ -14,11 +14,19 @@ assistant-dock-label = سوال پوچھیں
 # review: pending
 assistant-dock-title = سوال پوچھیں
 # review: pending
-assistant-close = پینل بند کریں
+assistant-close = چیٹ کھڑکی بند کریں
 # review: pending
-assistant-taller = پینل اونچا کریں
+assistant-larger = کھڑکی بڑی کریں
 # review: pending
-assistant-shorter = پینل چھوٹا کریں
+assistant-smaller = کھڑکی چھوٹی کریں
+# review: pending
+assistant-state-ready = تیار
+# review: pending
+assistant-state-working = جواب تیار ہو رہا ہے
+# review: pending
+assistant-state-offline = انٹرنیٹ نہیں ہے
+# review: pending
+assistant-state-off = بند ہے
 # review: pending
 assistant-new-conversation = نیا سوال
 # review: pending
@@ -30,7 +38,7 @@ assistant-box-placeholder = اپنا سوال لکھیں اور { $key } دبا�
 # review: pending
 assistant-send = بھیجیں
 # review: pending
-assistant-empty-title = اپنے حساب کے بارے میں کچھ بھی پوچھیں
+assistant-empty-title = السلام علیکم! اپنے حساب کے بارے میں مجھ سے کچھ بھی پوچھیں۔
 # review: pending
 assistant-empty-help = مثلاً: اکرم کا کتنا بقایا ہے؟ آج کا { -commission } کتنا ہوا؟ نیچے کے فوری سوالوں سے بھی شروع کر سکتے ہیں۔
 # review: pending
@@ -482,7 +490,7 @@ assistant-failure-bad-key = OpenRouter نے کلید قبول نہیں کی۔ ت
 # review: pending
 assistant-failure-no-credit = OpenRouter کھاتے میں رقم ختم ہے۔
 # review: pending
-assistant-failure-no-endpoint = اس ماڈل کے لیے ڈیٹا نہ رکھنے والا Azure سرور نہیں ملا۔ ترتیبات میں ماڈل دیکھیں۔
+assistant-failure-no-endpoint = ڈیٹا نہ رکھنے والے کسی Azure سرور نے یہ درخواست قبول نہیں کی۔ دیکھیں کہ اس ماڈل کے OpenRouter پر Azure سرور موجود ہیں، اور یہ کہ ایپ کوئی ایسی سیٹنگ نہیں بھیج رہی جو Azure قبول نہیں کرتا۔ ماڈل ترتیبات میں ہے۔
 # review: pending
 assistant-failure-busy = OpenRouter ابھی مصروف ہے۔ تھوڑی دیر بعد کوشش کریں۔
 # review: pending

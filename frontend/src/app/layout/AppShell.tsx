@@ -95,9 +95,10 @@ export function AppShell({
           </div>
         </div>
       </div>
-      {/* Plan 49 (ask the app): the question panel. This wrapper is as tall as nothing and sits on the
-          top edge of the status bar; the panel inside it grows upward over the lower part of the
-          screen, and is mounted once so it stays across screens (PRD FR-7.73). */}
+      {/* Plans 49 and 51 (ask the app): the round launcher and its chat window. This wrapper is as tall as
+          nothing and sits on the top edge of the status bar; the launcher and the window are placed
+          from that edge at the end side and grow upward over the screen. They are mounted once so they
+          stay across screens (PRD FR-7.73). */}
       <div className="relative z-20 h-0 shrink-0">
         <AssistantDock />
       </div>

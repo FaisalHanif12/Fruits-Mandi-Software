@@ -306,8 +306,10 @@ describe.each(LANGUAGES)('the Settings group (%s)', (language) => {
       await user.click(
         await screen.findByRole('button', { name: message(language, 'assistant-settings-test') }),
       );
+      // The first words only: the status is written after them. In Urdu the Settings hint above the
+      // button also begins "ڈیٹا نہ رکھنے", so the prefix is long enough to tell the two apart.
       const failed = await screen.findByText(
-        new RegExp(message(language, 'assistant-failure-no-endpoint').slice(0, 12)),
+        new RegExp(message(language, 'assistant-failure-no-endpoint').slice(0, 22)),
       );
       expect(failed).toHaveTextContent('(404)');
     });

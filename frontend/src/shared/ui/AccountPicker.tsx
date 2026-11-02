@@ -58,6 +58,8 @@ interface AccountPickerProps extends FieldControlProps {
   /** For a picker in a grid cell (see PickerBase). */
   initialText?: string | undefined;
   startOpen?: boolean | undefined;
+  /** The list opens above the field instead of under it (see PickerBase). */
+  listAbove?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
   /**
    * A person in the dead amount may be offered and picked (PRD FR-10.10): only the receipt field and

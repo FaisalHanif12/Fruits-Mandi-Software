@@ -1,9 +1,9 @@
-### Ask the app: the question panel at the bottom of every screen (plan 49, PRD 7.7, FR-7.72 to FR-7.88).
+### Ask the app: the chat window above a round button at the end of every screen (plans 49 and 51, PRD 7.7, FR-7.72 to FR-7.88).
 ### Every Urdu line says what its English line says (NFR-URD-29). The words of an ANSWER are written by the
 ### model under the checks of FR-7.76; only the panel's own fixed words are here. Business words come from
 ### glossary.ftl.
 
-## The panel and the status bar button (FR-5.5, FR-7.73).
+## The chat window, its launcher and the status bar button (FR-5.5, FR-7.73).
 
 # review: pending
 assistant-button = Ask the app
@@ -14,11 +14,19 @@ assistant-dock-label = Ask the app
 # review: pending
 assistant-dock-title = Ask the app
 # review: pending
-assistant-close = Close the panel
+assistant-close = Close the chat window
 # review: pending
-assistant-taller = Make the panel taller
+assistant-larger = Make the window larger
 # review: pending
-assistant-shorter = Make the panel shorter
+assistant-smaller = Make the window smaller
+# review: pending
+assistant-state-ready = Ready
+# review: pending
+assistant-state-working = Preparing an answer
+# review: pending
+assistant-state-offline = No internet
+# review: pending
+assistant-state-off = Switched off
 # review: pending
 assistant-new-conversation = New question
 # review: pending
@@ -30,7 +38,7 @@ assistant-box-placeholder = Type your question and press { $key }
 # review: pending
 assistant-send = Send
 # review: pending
-assistant-empty-title = Ask anything about your books
+assistant-empty-title = Hello! Ask me anything about your books.
 # review: pending
 assistant-empty-help = For example: how much does Akram owe? How much { -commission } today? You can also start from the quick questions below.
 # review: pending
@@ -482,7 +490,7 @@ assistant-failure-bad-key = OpenRouter did not accept the key. Check the key in 
 # review: pending
 assistant-failure-no-credit = The OpenRouter account has no credit left.
 # review: pending
-assistant-failure-no-endpoint = No Azure server that keeps no data was found for this model. Check the model in Settings.
+assistant-failure-no-endpoint = No Azure server that keeps no data accepted this request. Check that the model has Azure servers on OpenRouter, and that the app sends no setting Azure does not take. The model is in Settings.
 # review: pending
 assistant-failure-busy = OpenRouter is busy. Try again in a little while.
 # review: pending

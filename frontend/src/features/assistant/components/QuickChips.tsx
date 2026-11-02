@@ -1,4 +1,4 @@
-// The quick questions (PRD FR-7.80): a row of chips that answer the common questions at once from the
+// The quick questions (PRD FR-7.80): a row of round chips (plan 51) that answer the common questions at once from the
 // app alone, with no internet and no model. They are not counted. The last one, "کسی پارٹی کا کھاتہ",
 // opens a party picker inside the panel (the shared `AccountPicker`, which searches the raw text),
 // and the party chosen is sent with the chip.
@@ -8,6 +8,7 @@ import { useState } from 'react';
 import type { QuickChip } from '../../../bindings/QuickChip';
 import { AccountPicker, Button, Field } from '../../../shared/ui';
 import type { AnswerName } from '../../../bindings/AnswerName';
+import { RoundChip } from './RoundChip';
 
 /** The chips in the order of PRD FR-7.80, each with the Fluent message of its words. */
 export const QUICK_CHIPS: readonly { chip: QuickChip; messageId: string }[] = [
@@ -28,9 +29,11 @@ interface QuickChipsProps {
   onQuick: (chip: QuickChip, party: { id: number; name: AnswerName } | null) => void;
   /** A question is being worked on: the chips wait. */
   busy: boolean;
+  /** The party list opens above its field: the chips are in the footer of the window (plan 51). */
+  pickerAbove?: boolean;
 }
 
-export function QuickChips({ onQuick, busy }: QuickChipsProps) {
+export function QuickChips({ onQuick, busy, pickerAbove = false }: QuickChipsProps) {
   const { l10n } = useLocalization();
   const [choosing, setChoosing] = useState(false);
   if (choosing) {
@@ -48,6 +51,7 @@ export function QuickChips({ onQuick, busy }: QuickChipsProps) {
                 value={null}
                 showCard={false}
                 canAdd={false}
+                listAbove={pickerAbove}
                 onChange={(hit) => {
                   if (hit === null) return;
                   setChoosing(false);
@@ -66,6 +70,7 @@ export function QuickChips({ onQuick, busy }: QuickChipsProps) {
           </Field>
         </div>
         <Button
+          round
           onClick={() => {
             setChoosing(false);
           }}
@@ -82,17 +87,15 @@ export function QuickChips({ onQuick, busy }: QuickChipsProps) {
     >
       {QUICK_CHIPS.map(({ chip, messageId }) => (
         <li key={chip}>
-          <button
-            type="button"
+          <RoundChip
             disabled={busy}
             onClick={() => {
               if (chip === 'party_ledger') setChoosing(true);
               else onQuick(chip, null);
             }}
-            className="type-chip min-h-control-compact rounded-2 border border-border-control bg-surface px-3 text-ink transition-calm disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Localized id={messageId} />
-          </button>
+          </RoundChip>
         </li>
       ))}
     </ul>

@@ -29,6 +29,8 @@ interface PickerProps extends FieldControlProps {
   /** For a picker in a grid cell (see PickerBase). */
   initialText?: string | undefined;
   startOpen?: boolean | undefined;
+  /** The list opens above the field instead of under it (see PickerBase). */
+  listAbove?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
 }
 

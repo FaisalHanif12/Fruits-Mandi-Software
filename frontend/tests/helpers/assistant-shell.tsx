@@ -170,6 +170,15 @@ export function panelOf(language: Language): HTMLElement {
   return screen.getByRole('region', { name: message(language, 'assistant-dock-label') });
 }
 
+/** The round launcher that floats above the status bar (plan 51): it opens and closes the window. */
+export function launcherOf(): HTMLButtonElement {
+  const found = document.querySelector<HTMLButtonElement>(
+    'button[aria-controls="assistant-chat-window"]',
+  );
+  if (found === null) throw new Error('the launcher is not on the page');
+  return found;
+}
+
 export function boxOf(language: Language): HTMLInputElement {
   return within(panelOf(language)).getByRole('textbox', {
     name: message(language, 'assistant-box-label'),

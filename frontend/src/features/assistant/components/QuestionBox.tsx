@@ -1,9 +1,10 @@
-// The box the Owner types his question in (PRD FR-7.73). It takes the letters as typed, in Urdu, Roman
+// The box the Owner types his question in (PRD FR-7.73), a rounded box with a round send button (plan 51). It takes the letters as typed, in Urdu, Roman
 // Urdu or English, with no Roman-to-Urdu conversion, like global search (FR-7.22): the model reads any
 // of them. `Enter` sends; `↑` brings back the last question, `↑` again an older one, `↓` a newer one.
 // It is the shared text input; the keys of the box are the only keys written here.
 
 import { Localized, useLocalization } from '@fluent/react';
+import { SendHorizontal } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { matchesShortcut, SHORTCUTS } from '../../../shared/keyboard';
 import { Button, Field, TextInput } from '../../../shared/ui';
@@ -39,13 +40,14 @@ export function QuestionBox({ value, onChange, onSend, onRecall, busy }: Questio
     }
   };
   return (
-    <div className="flex items-end gap-3" data-slot="assistant-question">
+    <div className="flex items-center gap-3" data-slot="assistant-question">
       {/* The box has no key handler of the screen's own: Enter and the arrows are answered here, once. */}
       <div className="min-w-0 flex-1" onKeyDown={onKeyDown}>
         <Field label={<Localized id="assistant-box-label" />} hideLabel>
           {(control) => (
             <TextInput
               {...control}
+              pill
               value={value}
               onChange={onChange}
               placeholder={l10n.getString('assistant-box-placeholder', {
@@ -55,8 +57,16 @@ export function QuestionBox({ value, onChange, onSend, onRecall, busy }: Questio
           )}
         </Field>
       </div>
-      <Button variant="primary" onClick={onSend} busy={busy} shortcut={SHORTCUTS.confirm}>
-        <Localized id="assistant-send" />
+      {/* The key is in the name, not on the button: a round button has no room for its chip (FR-7.4). */}
+      <Button
+        round
+        iconOnly
+        variant="primary"
+        onClick={onSend}
+        busy={busy}
+        accessibleName={`${l10n.getString('assistant-send')} (${SHORTCUTS.confirm.label})`}
+      >
+        <SendHorizontal aria-hidden="true" className="size-icon-md rtl:-scale-x-100" />
       </Button>
     </div>
   );

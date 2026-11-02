@@ -3,7 +3,7 @@
 // picker never converts English letters to Urdu (Code Standards F41).
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -61,9 +61,11 @@ function fakeSearch(rows: SearchHit[] = ALL) {
 interface HarnessProps {
   initial?: PickerValue | null;
   onValue?: (value: PickerValue | null) => void;
+  /** The list opens above the field (plan 51, the chat window's party box). */
+  above?: boolean;
 }
 
-function Harness({ initial = null, onValue }: HarnessProps) {
+function Harness({ initial = null, onValue, above = false }: HarnessProps) {
   const [value, setValue] = useState<PickerValue | null>(initial);
   useEscapeDispatcher();
   return (
@@ -74,6 +76,7 @@ function Harness({ initial = null, onValue }: HarnessProps) {
           <Picker
             {...control}
             scope="city"
+            listAbove={above}
             value={value}
             onChange={(next) => {
               const chosen =
@@ -132,6 +135,21 @@ describe.each(LANGUAGES)('Picker (%s)', (language) => {
     // Never converted to Urdu: pickers search raw text (F41).
     expect(urduApi.translitSuggest).not.toHaveBeenCalled();
     expect(input).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('opens its list above the field when asked, and under it otherwise (plan 51)', async () => {
+    for (const above of [false, true]) {
+      const { input, user } = setup(language, { above });
+      await user.click(input);
+      await user.keyboard('ar');
+      await waitFor(() => {
+        expect(options()).toHaveLength(1);
+      });
+      const popup = screen.getByRole('listbox').parentElement;
+      expect(popup).toHaveClass(above ? 'bottom-full' : 'top-full');
+      expect(popup).not.toHaveClass(above ? 'top-full' : 'bottom-full');
+      cleanup();
+    }
   });
 
   it('finds by the name in either script, by code, and forgives a small mistake', async () => {

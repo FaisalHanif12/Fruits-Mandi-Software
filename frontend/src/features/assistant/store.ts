@@ -1,5 +1,5 @@
-// What the question panel keeps above its screens (plan 49, PRD FR-7.73, FR-7.78, Code Standards
-// F39): whether it is open and how tall, what is typed in the box, the questions asked and their
+// What the chat window keeps above its screens (plans 49 and 51, PRD FR-7.73, FR-7.78, Code Standards
+// F39): whether it is open and its size, what is typed in the box, the questions asked and their
 // answers. It lives here and not in the panel's components, so moving between screens, switching the
 // language (which draws the screens again) or closing the panel loses nothing. It is cleared when
 // the Owner starts a new question, the app locks or he signs out (FR-7.73).
@@ -38,7 +38,7 @@ export interface DockEntry {
 
 interface AssistantStore {
   open: boolean;
-  /** The tall height (about two thirds of the window); false is the short one (a third). */
+  /** The large size of the chat window (nearly the whole window); false is the normal size (PRD FR-7.73). */
   tall: boolean;
   /** What is typed in the question box. */
   draft: string;

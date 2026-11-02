@@ -11,6 +11,7 @@ import { AnswerChartView } from './AnswerChartView';
 import { AnswerTableView } from './AnswerTableView';
 import { AnswerText } from './AnswerText';
 import { AdviceBand, EstimateBand } from './Bands';
+import { RoundChip } from './RoundChip';
 import { SourceButtons, SourceLine } from './SourceFooter';
 
 interface AnswerBlockProps {
@@ -53,16 +54,14 @@ export function AnswerBlock({ answer, outcome, onAsk, busy, afterText }: AnswerB
           <ul className="flex list-none flex-wrap gap-2">
             {answer.next.map((question) => (
               <li key={question}>
-                <button
-                  type="button"
+                <RoundChip
                   disabled={busy}
                   onClick={() => {
                     onAsk(question);
                   }}
-                  className="type-chip min-h-control-compact rounded-2 border border-border-control bg-surface px-3 text-ink transition-calm disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {question}
-                </button>
+                </RoundChip>
               </li>
             ))}
           </ul>

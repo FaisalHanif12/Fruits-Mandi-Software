@@ -11,6 +11,8 @@ interface TextInputProps extends FieldControlProps {
   placeholder?: string;
   /** Set when the text is in the other language, for example an English name on an Urdu screen. */
   lang?: string | undefined;
+  /** The fully rounded look of the chat window's question box. */
+  pill?: boolean | undefined;
 }
 
 export function TextInput({
@@ -22,6 +24,7 @@ export function TextInput({
   onChange,
   placeholder,
   lang,
+  pill,
 }: TextInputProps) {
   return (
     <input
@@ -38,7 +41,7 @@ export function TextInput({
       onChange={(event) => {
         onChange(event.target.value);
       }}
-      className={`${controlClasses({ invalid, readOnly })} type-field`}
+      className={`${controlClasses({ invalid, readOnly, pill })} type-field`}
     />
   );
 }

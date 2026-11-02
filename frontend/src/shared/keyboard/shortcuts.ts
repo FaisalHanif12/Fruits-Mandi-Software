@@ -47,11 +47,11 @@ export const SHORTCUTS = {
   languageToggle: { code: 'KeyL', alt: true, label: 'Alt+L', scope: 'anywhere' },
   /** Global search. */
   globalSearch: { code: 'KeyK', ctrl: true, label: 'Ctrl+K', scope: 'anywhere' },
-  /** Open or close the question panel at the bottom of every screen (PRD FR-7.73). */
+  /** Open or close the chat window of Ask the app, above the round launcher (PRD FR-7.73). */
   askApp: { code: 'F1', label: 'F1', scope: 'anywhere' },
-  /** Inside the question panel: make it taller (PRD FR-7.73). */
+  /** Inside the chat window: make it larger, the large size (PRD FR-7.73). */
   dockTaller: { code: 'ArrowUp', ctrl: true, label: 'Ctrl+↑', scope: 'panel' },
-  /** Inside the question panel: make it shorter (PRD FR-7.73). */
+  /** Inside the chat window: make it smaller, the normal size (PRD FR-7.73). */
   dockShorter: { code: 'ArrowDown', ctrl: true, label: 'Ctrl+↓', scope: 'panel' },
   /** On a calculated amount: how was this worked out? (FR-7.43). */
   explain: { code: 'KeyI', ctrl: true, label: 'Ctrl+I', scope: 'field' },
