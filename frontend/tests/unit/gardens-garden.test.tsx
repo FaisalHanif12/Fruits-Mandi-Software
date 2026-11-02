@@ -536,9 +536,7 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
       return found;
     });
     await user.click(row);
-    await user.click(
-      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
-    );
+    await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     fake.refuse.cancel = [
       { code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED', field: 'confirm_cash_below_zero' },

@@ -904,9 +904,7 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
       }),
     );
     await user.click(row);
-    await user.click(
-      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
-    );
+    await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     await user.type(combo('trips-cancel-reason'), 'Wrong amount');
     await user.click(
       screen.getByRole('button', { name: message(language, 'trips-cancel-confirm') }),

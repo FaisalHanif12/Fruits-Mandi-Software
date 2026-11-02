@@ -308,9 +308,7 @@ describe.each(LANGUAGES)('the garden screens with the backend’s real answers (
       return found;
     });
     await user.click(row);
-    await user.click(
-      screen.getByRole('button', { name: message(language, 'edit-action-cancel') }),
-    );
+    await user.click(screen.getByRole('button', { name: message(language, 'edit-action-cancel') }));
     await user.type(field('gardens-cancel-reason'), 'wrong garden');
     await user.click(
       screen.getByRole('button', { name: message(language, 'gardens-cancel-confirm') }),
