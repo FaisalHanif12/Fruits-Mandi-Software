@@ -115,3 +115,4 @@ Also:
 - Item 9, the fastest Azure endpoint: NOT approved. The provider block stays as it is.
 - Added by Umar: "increase the tool call or timeout so we won't see the error". The new limits are 6 model calls plus one rewrite, 12 tool calls, 90,000 input and 4,000 output tokens, 30 s a call and 90 s a question (NFR v1.12, Code Standards v1.16, PRD v1.19 E96 and A87). Item 1 still holds: the last call always answers.
 - The prompt changes these need (system.md: the limits line, chaining, general advice; the answer schema: the general advice kind or flag) are drafted by backend and go into D6-system-prompt v1.3 through the lead, as before.
+- Umar, 02-11-2026: "9,500 limit we can go up to align or achieve the goal". The lead sets the fixed-part limit to 11,000 tokens (o200k_base, as P1 measures). The live run also reports the fixed part as the model counts it, about 3.4% more. The documents change with the v1.3 prompt: NFR-AI-5, Code Standards Q9 and D6-system-prompt.
