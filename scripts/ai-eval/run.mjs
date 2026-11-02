@@ -53,7 +53,7 @@ const OUT_DIR = join(BACKEND, 'target', 'ai-eval');
 const RESULTS = join(OUT_DIR, 'results.json');
 
 const PASS_AT = 97; // D6-A16: at least 97 of 100.
-const PREFIX_TOKENS = 8000; // D6-A19: the fixed part, at most 8,000 tokens.
+const PREFIX_TOKENS = 9500; // D6-A19: the fixed part, at most 9,500 tokens (D6-system-prompt v1.2).
 const ONE_ROUND_MS = 8000; // NFR-AI-3.
 const MORE_ROUNDS_MS = 20000;
 const SAFE_ENDS = new Set([
@@ -95,6 +95,7 @@ const KINDS = {
   advice: 8,
   followup: 5,
   trap: 5,
+  help: 10, // plan 51 B3, PRD FR-7.89: how to use the app, from the guide of `app_help`
 };
 
 /** Checks the list against the mix of D6 Section 3 and NFR-AI-2. Returns problems and a summary. */
@@ -110,16 +111,17 @@ function checkList(list) {
   const groups = new Map();
   for (const q of list) if (q.group) groups.set(q.group, (groups.get(q.group) ?? 0) + 1);
   const fours = [...groups.values()].filter((n) => n === 4).length;
-  if (list.length < 100) problems.push(`only ${list.length} questions (at least 100)`);
+  if (list.length < 110) problems.push(`only ${list.length} questions (at least 110)`);
   for (const [kind, want] of Object.entries(KINDS)) {
     if (count('kind', kind) !== want)
       problems.push(`kind ${kind}: ${count('kind', kind)}, want ${want}`);
   }
-  if (languages.roman < 38 || languages.roman > 42)
-    problems.push(`Roman Urdu ${languages.roman} (about 40)`);
-  if (languages.urdu < 33 || languages.urdu > 37)
-    problems.push(`Urdu letters ${languages.urdu} (about 35)`);
-  if (languages.en < 23 || languages.en > 27) problems.push(`English ${languages.en} (about 25)`);
+  // About 40, 35 and 25 of every 100: the 10 help questions of plan 51 B3 keep that mix (4, 3, 3).
+  if (languages.roman < 42 || languages.roman > 46)
+    problems.push(`Roman Urdu ${languages.roman} (about 44)`);
+  if (languages.urdu < 36 || languages.urdu > 40)
+    problems.push(`Urdu letters ${languages.urdu} (about 38)`);
+  if (languages.en < 26 || languages.en > 30) problems.push(`English ${languages.en} (about 28)`);
   if (misspelled < 15) problems.push(`only ${misspelled} misspelled (at least 15)`);
   if (fours < 8) problems.push(`only ${fours} groups of 4 (at least 8)`);
   const ids = new Set(list.map((q) => q.id));
@@ -302,6 +304,13 @@ function score(question, result) {
     if (a < 0 || (b >= 0 && a > b))
       reasons.push(`order: ${first[1]} should come before ${second[1]}`);
   }
+  // A help question must ask the guide for its topic (plan 51 B3).
+  const topicWant = question.filters.match(/topic=([a-z_]+)/);
+  if (
+    topicWant &&
+    !(result.tool_calls ?? []).some((c) => c.tool === 'app_help' && c.input?.topic === topicWant[1])
+  )
+    reasons.push(`app_help topic ${topicWant[1]} not asked`);
   if (question.outcome === 'change_refused' && question.id === 'Q096') {
     const route = reply?.entry_route;
     if (route?.screen !== 'wasooli') reasons.push('entry route is not wasooli');
@@ -338,6 +347,13 @@ function groupAgreement(list, results) {
     if (members.some((q) => !results.has(q.id))) continue;
     const signs = members.map((q) => {
       const r = results.get(q.id);
+      if (q.kind === 'help') {
+        // A help group agrees on the topic it asked for.
+        const topics = (r?.tool_calls ?? [])
+          .filter((c) => c.tool === 'app_help')
+          .map((c) => c.input?.topic);
+        return [...new Set(topics)].sort().join(',');
+      }
       const numbers = collect(r?.reply).parts.map((v) => `${v.kind}:${v.n}:${v.side ?? ''}`);
       return [...new Set(numbers)].sort().join(',');
     });

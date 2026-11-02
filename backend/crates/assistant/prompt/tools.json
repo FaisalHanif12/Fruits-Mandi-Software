@@ -220,5 +220,21 @@
         }
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "app_help",
+      "description": "The written guide of the app, for a question about how to use it or what a screen or word is. Gives the topic's summary, steps, keys and an example in the app language; cite them by reference. It reads no books.",
+      "strict": true,
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["topic"],
+        "properties": {
+          "topic": {"type": "string", "enum": ["bikri_book", "today_sales", "unsold_stock", "later_sale", "receipt", "collection_list", "payment", "advance", "pukhta_khata", "edit_and_cancel", "cash_book", "shop_expense", "personal_expense", "money_lent", "separate_khata", "general_journal", "fruit_taken", "gardens", "market_trips", "partners", "partner_capital", "analytics", "reports", "dashboard", "day_close", "month_close", "backup", "settings", "masters", "accounts", "search", "commission_rules", "dead_amount", "language_switch", "keys", "printing", "ask_the_app", "sign_in"]}
+        }
+      }
+    }
   }
 ]

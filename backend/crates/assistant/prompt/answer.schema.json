@@ -32,7 +32,7 @@
           "properties": {
             "screen": {
               "type": "string",
-              "enum": ["bikri", "wasooli", "adaigi", "peshgi", "kharcha", "udhar_raqam", "alag_khata", "sarmaya", "phal", "general", "account"]
+              "enum": ["bikri", "wasooli", "adaigi", "peshgi", "kharcha", "udhar_raqam", "alag_khata", "sarmaya", "phal", "general", "account", "dashboard", "settings", "masters", "accounts", "commission_rules", "today_sales", "unsold_stock", "pukhta_khata", "collection_list", "cash_book", "gardens", "market_trips", "partners", "month_close", "day_close", "reports", "dead_amount", "analytics", "backup"]
             },
             "party": {"type": ["string", "null"]}
           }

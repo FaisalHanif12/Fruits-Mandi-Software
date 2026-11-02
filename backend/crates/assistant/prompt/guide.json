@@ -1,0 +1,990 @@
+{
+  "topics": {
+    "accounts": {
+      "en": {
+        "title": "Accounts and Codes",
+        "summary": "Every seller, buyer and other party has an account with a code. Typing the code anywhere shows his card: name, city, phone, balance and warnings.",
+        "steps": [
+          "Open Index, then Accounts, and press New account. Choose the type: seller, buyer, Pukhta Khata or other.",
+          "Type the Urdu or the English name, the city, phone and, if needed, a short tag in capital letters to tell two people with the same name apart.",
+          "The code is made from the type number and a running number. A short code is the running number alone: in a buyer field, type just that.",
+          "Opening balances are entered on the account form or in the Opening balances list."
+        ],
+        "keys": "Type a code, a short code or part of a name in any account field. Enter takes the match.",
+        "example": "In a buyer field, type 0 and Enter: the first buyer's card shows his name and balance."
+      },
+      "ur": {
+        "title": "کھاتے اور کوڈ",
+        "summary": "ہر بیوپاری، گاہک اور دوسری پارٹی کا ایک کھاتہ اور ایک کوڈ ہے۔ کہیں بھی کوڈ لکھیں تو اس کا کارڈ آ جاتا ہے: نام، شہر، فون، بقایا اور تنبیہات۔",
+        "steps": [
+          "انڈکس میں کھاتے کھولیں اور نیا کھاتہ دبائیں۔ قسم چنیں: بیوپاری، گاہک، پختہ کھاتہ یا دیگر۔",
+          "اردو یا انگریزی نام، شہر، فون اور ضرورت ہو تو ایک ہی نام والے دو لوگوں میں فرق کے لیے بڑے حروف میں چھوٹا نشان لکھیں۔",
+          "کوڈ قسم کے نمبر اور ایک چلتے نمبر سے بنتا ہے۔ مختصر کوڈ صرف وہ چلتا نمبر ہے: گاہک کے خانے میں بس وہی لکھیں۔",
+          "ابتدائی بقایا کھاتے کے فارم میں یا ابتدائی بقایا کی فہرست میں لکھے جاتے ہیں۔"
+        ],
+        "keys": "کسی بھی کھاتے کے خانے میں کوڈ، مختصر کوڈ یا نام کا کچھ حصہ لکھیں۔ Enter ملا ہوا چن لیتا ہے۔",
+        "example": "گاہک کے خانے میں 0 لکھ کر Enter دبائیں: پہلے گاہک کا کارڈ اس کا نام اور بقایا دکھاتا ہے۔"
+      }
+    },
+    "advance": {
+      "en": {
+        "title": "Advance",
+        "summary": "An Advance is money you give a seller before his goods are sold. His later sales take it back, oldest first, unless you untick Deduct from advance on the lot.",
+        "steps": [
+          "Press Alt+P, or open Sale, then Advance.",
+          "Pick the seller. His open advances and the date of the last one show.",
+          "Type the amount and, if you like, the goods or season expected.",
+          "Save. On his next sale the lot shows his open advance, ticked to be deducted."
+        ],
+        "keys": "Alt+P opens it. F10 saves.",
+        "example": "Rahim takes 15,000 on 01-09-26. His sale on 10-10-26 adjusts all of it."
+      },
+      "ur": {
+        "title": "پیشگی کھاتہ",
+        "summary": "پیشگی وہ رقم ہے جو بیوپاری کا مال بکنے سے پہلے اسے دی جاتی ہے۔ اس کی بعد کی بکری یہ رقم سب سے پرانی سے واپس لیتی ہے، جب تک آپ لاٹ پر پیشگی سے کاٹیں کا نشان نہ ہٹائیں۔",
+        "steps": [
+          "Alt+P دبائیں، یا بکری میں پیشگی کھاتہ کھولیں۔",
+          "بیوپاری چنیں۔ اس کی کھلی پیشگیاں اور آخری پیشگی کی تاریخ دکھتی ہے۔",
+          "رقم لکھیں، اور چاہیں تو متوقع مال یا سیزن لکھیں۔",
+          "محفوظ کریں۔ اس کی اگلی بکری میں لاٹ پر اس کی کھلی پیشگی دکھتی ہے، کاٹنے کے نشان کے ساتھ۔"
+        ],
+        "keys": "Alt+P اسے کھولتا ہے۔ F10 محفوظ کرتا ہے۔",
+        "example": "رحیم 01-09-26 کو 15,000 لیتا ہے۔ اس کی 10-10-26 کی بکری سب کاٹ لیتی ہے۔"
+      }
+    },
+    "analytics": {
+      "en": {
+        "title": "Analytics",
+        "summary": "Analytics answers questions such as how much commission came from one item, one seller or one buyer in a month or a year. It only reads; it changes nothing.",
+        "steps": [
+          "Open Analytics and choose a view: By Item, By Seller, By Buyer, Item by Period, Seller × Item, By Partner, Trend, Top 10, Gardens, Market Trips or Fruit Taken.",
+          "Set the period (today, this month, this year or your own dates) and any filter: item, seller, buyer, city, adda, side. Compare adds the earlier period.",
+          "Read the table and the chart. Click a number, or press Enter on it, to see the lines behind it.",
+          "Print it or save it as an Excel file for any period."
+        ],
+        "keys": "F9 prints. Enter on a number opens the lines behind it.",
+        "example": "By Item for October: banana 29,400 gross, commission 3,928, which is 72.10 percent of all commission."
+      },
+      "ur": {
+        "title": "تجزیات",
+        "summary": "تجزیات ان سوالوں کا جواب دیتا ہے کہ ایک مہینے یا سال میں کسی ایک قسم مال، بیوپاری یا گاہک سے کتنا کمیشن آیا۔ یہ صرف پڑھتا ہے، کچھ بدلتا نہیں۔",
+        "steps": [
+          "تجزیات کھولیں اور منظر چنیں: قسم مال وار، بیوپاری وار، گاہک وار، قسم مال × مدت، بیوپاری × قسم مال، شراکت دار وار، رجحان، سرفہرست 10، باغات، مارکیٹ سفر یا پھل۔",
+          "مدت چنیں (آج، یہ مہینہ، یہ سال یا اپنی تاریخیں) اور کوئی چھانٹی: قسم مال، بیوپاری، گاہک، شہر، اڈا، جانب۔ موازنہ پچھلی مدت ساتھ دکھاتا ہے۔",
+          "جدول اور چارٹ دیکھیں۔ کسی عدد پر کلک کریں، یا Enter دبائیں، تو اس کے پیچھے کی لائنیں کھلتی ہیں۔",
+          "کسی بھی مدت کے لیے اسے چھاپیں یا ایکسل فائل میں محفوظ کریں۔"
+        ],
+        "keys": "F9 چھاپتا ہے۔ عدد پر Enter اس کے پیچھے کی لائنیں کھولتا ہے۔",
+        "example": "اکتوبر کے لیے قسم مال وار: کیلا خام بکری 29,400، کمیشن 3,928، یعنی کل کمیشن کا 72.10 فیصد۔"
+      }
+    },
+    "ask_the_app": {
+      "en": {
+        "title": "Ask the App",
+        "summary": "Ask the app answers questions about your books and about using the app, in Urdu, Roman Urdu or English, from the books and from this guide. It only reads and tells; it never writes an entry.",
+        "steps": [
+          "Press F1, or the round button above the status bar, to open the chat window. Press F1 again to close it.",
+          "Type your question and press Enter. The quick questions above the box answer the common ones with no internet.",
+          "Every figure comes from the books and shows a check mark when it agrees in two places. The sources shown can be opened.",
+          "To use it: the Owner saves the OpenRouter key and turns it on in Settings, on the Ask the app tab. 20 questions are allowed a day."
+        ],
+        "keys": "F1 opens and closes it. Ctrl+↑ and Ctrl+↓ change the size of the window. Enter sends.",
+        "example": "Ask akram ka bakaya and the answer shows what Akram owes, with the ledger behind it."
+      },
+      "ur": {
+        "title": "سوال پوچھیں",
+        "summary": "سوال پوچھیں آپ کے کھاتوں اور ایپ کے استعمال کے بارے میں اردو، رومن اردو یا انگریزی میں سوالوں کا جواب کھاتوں اور اس رہنمائی سے دیتا ہے۔ یہ صرف پڑھتا اور بتاتا ہے؛ کبھی کوئی اندراج نہیں لکھتا۔",
+        "steps": [
+          "گفتگو کی کھڑکی کھولنے کے لیے F1 دبائیں، یا نیچے کی پٹی کے اوپر گول بٹن۔ بند کرنے کے لیے دوبارہ F1۔",
+          "اپنا سوال لکھیں اور Enter دبائیں۔ خانے کے اوپر فوری سوال عام سوالوں کا جواب انٹرنیٹ کے بغیر دیتے ہیں۔",
+          "ہر عدد کھاتوں سے آتا ہے اور دو جگہ ملنے پر صحیح کا نشان دکھاتا ہے۔ دکھائے گئے ذرائع کھولے جا سکتے ہیں۔",
+          "استعمال کے لیے مالک ترتیبات میں سوال پوچھیں کے ٹیب پر او پن روٹر کی کلید محفوظ کرتا اور اسے چالو کرتا ہے۔ ایک دن میں 20 سوال کی اجازت ہے۔"
+        ],
+        "keys": "F1 کھولتا اور بند کرتا ہے۔ Ctrl+↑ اور Ctrl+↓ کھڑکی کا سائز بدلتے ہیں۔ Enter بھیجتا ہے۔",
+        "example": "akram ka bakaya پوچھیں تو جواب اکرم کے ذمے رقم دکھاتا ہے، اس کے پیچھے کے کھاتے کے ساتھ۔"
+      }
+    },
+    "backup": {
+      "en": {
+        "title": "Backup",
+        "summary": "Backups keep the shop's books safe. They happen by themselves: a local copy every 15 minutes, and an encrypted cloud copy at closing time and when the app closes.",
+        "steps": [
+          "Open Backup to see the state of the backups, the list of copies and the last good cloud backup. The status bar shows it too, in red if it is more than a day old.",
+          "Press Back up now to make a copy at once.",
+          "To restore, pick a copy, type the key from the printed sheet if it is a cloud or USB copy, read what will be lost and confirm. Your current books are copied first.",
+          "Test restore checks a backup in a separate copy and compares the totals."
+        ],
+        "keys": "The backup key is shown once at setup and printed. Keep that sheet safe: without it a cloud backup cannot be opened.",
+        "example": "The computer is lost: install the app on a new one, enter the key, restore the last cloud copy and carry on."
+      },
+      "ur": {
+        "title": "بیک اپ",
+        "summary": "بیک اپ دکان کے کھاتوں کو محفوظ رکھتے ہیں۔ یہ خود ہوتے ہیں: ہر 15 منٹ میں مقامی کاپی، اور بند کرنے کے وقت اور ایپ بند کرتے وقت خفیہ کلاؤڈ کاپی۔",
+        "steps": [
+          "بیک اپ کھولیں تاکہ بیک اپ کی حالت، کاپیوں کی فہرست اور آخری اچھا کلاؤڈ بیک اپ دیکھیں۔ نیچے کی پٹی بھی دکھاتی ہے، ایک دن سے پرانا ہو تو سرخ۔",
+          "فوراً کاپی بنانے کے لیے ابھی بیک اپ لیں دبائیں۔",
+          "بحال کرنے کے لیے کاپی چنیں، کلاؤڈ یا یو ایس بی کاپی ہو تو چھپی ہوئی پرچی کی کلید لکھیں، دیکھیں کیا ضائع ہوگا اور تصدیق کریں۔ آپ کے موجودہ کھاتے پہلے کاپی ہو جاتے ہیں۔",
+          "بحالی کی جانچ بیک اپ کو الگ کاپی میں کھول کر میزان ملاتی ہے۔"
+        ],
+        "keys": "بیک اپ کی کلید سیٹ اپ پر ایک بار دکھتی اور چھپتی ہے۔ وہ پرچی سنبھال کر رکھیں: اس کے بغیر کلاؤڈ بیک اپ کھل نہیں سکتا۔",
+        "example": "کمپیوٹر کھو گیا: نئے پر ایپ لگائیں، کلید لکھیں، آخری کلاؤڈ کاپی بحال کریں اور کام جاری رکھیں۔"
+      }
+    },
+    "bikri_book": {
+      "en": {
+        "title": "Sale Book",
+        "summary": "The Sale Book is where one truck's goods are sold. You enter the truck, each seller's lot and each buyer's sale line, and every amount is worked out as you type.",
+        "steps": [
+          "Open Sale, then Sale Book, or press Alt+B. Type the truck number: the Adda, seller and driver fill from its last sale.",
+          "Add a lot for each seller and item: seller, item, packing and quantity received. Freight, labour and the like are under More.",
+          "On each sale line type the buyer code, the quantity and the rate, pressing Enter after each. Commission and Laga fill by the rules.",
+          "Check the summary and the partners' share on the screen, then save."
+        ],
+        "keys": "F10 or Ctrl+S saves. Ctrl+Enter saves, prints the ticked slips and opens a new sale. Ctrl+Delete removes a row.",
+        "example": "Truck LES-1234: Rahim's 50 boxes of banana. Akram takes 20 at 600 and Arshad 30 at 580. Rahim's net sale is 19,316."
+      },
+      "ur": {
+        "title": "بکری بک",
+        "summary": "بکری بک میں ایک ٹرک کا مال بیچا جاتا ہے۔ آپ ٹرک، ہر بیوپاری کا لاٹ اور ہر گاہک کی لائن لکھتے ہیں، اور ہر رقم لکھتے ہی خود نکل آتی ہے۔",
+        "steps": [
+          "بکری میں بکری بک کھولیں، یا Alt+B دبائیں۔ ٹرک نمبر لکھیں: اڈا، زمیندار اور ڈرائیور اس کی پچھلی بکری سے بھر جاتے ہیں۔",
+          "ہر بیوپاری اور قسم مال کا لاٹ بنائیں: بیوپاری، قسم مال، پیکنگ اور آنے والی تعداد۔ کرایہ، مزدوری وغیرہ مزید کے نیچے ہیں۔",
+          "ہر بکری لائن میں گاہک کا کوڈ، تعداد اور ریٹ لکھیں، ہر ایک کے بعد Enter دبائیں۔ کمیشن اور لاگا اصولوں سے خود بھر جاتے ہیں۔",
+          "خلاصہ اور شراکت داروں کا حصہ دیکھیں، پھر محفوظ کریں۔"
+        ],
+        "keys": "F10 یا Ctrl+S محفوظ کرتا ہے۔ Ctrl+Enter محفوظ کر کے نشان زدہ پرچیاں چھاپتا ہے اور نئی بکری کھولتا ہے۔ Ctrl+Delete لائن ہٹاتا ہے۔",
+        "example": "ٹرک LES-1234: رحیم کی کیلے کی 50 پیٹیاں۔ اکرم 20 پیٹی 600 پر اور ارشد 30 پیٹی 580 پر لیتے ہیں۔ رحیم کی صافی بکری 19,316 بنتی ہے۔"
+      }
+    },
+    "cash_book": {
+      "en": {
+        "title": "Cash Book",
+        "summary": "The Cash Book shows all the shop's cash for any dates: the opening cash, every receipt and payment from every screen, and the closing cash.",
+        "steps": [
+          "Open Cash Book (روکڑ) in the main menu, then Cash Book in its side menu.",
+          "Pick the dates: one day, or from and to.",
+          "Read the opening cash, each entry with its running balance, and the closing cash.",
+          "Press Enter on a row to open the entry behind it."
+        ],
+        "keys": "F9 prints it. The cash balance is also on the dashboard.",
+        "example": "On the worked day cash starts at 50,000 and ends at 58,484."
+      },
+      "ur": {
+        "title": "روکڑ بک",
+        "summary": "روکڑ بک میں دکان کی ساری نقدی کسی بھی تاریخ کے لیے دکھتی ہے: ابتدائی روکڑ، ہر اسکرین کی ہر وصولی اور ادائیگی، اور آخری روکڑ۔",
+        "steps": [
+          "مرکزی مینو میں روکڑ کھولیں، پھر اس کے مینو میں روکڑ بک۔",
+          "تاریخیں چنیں: ایک دن، یا سے اور تک۔",
+          "ابتدائی روکڑ، ہر اندراج اس کے چلتے بقایا کے ساتھ، اور آخری روکڑ دیکھیں۔",
+          "کسی قطار پر Enter دبائیں تو اس کے پیچھے کا اندراج کھل جاتا ہے۔"
+        ],
+        "keys": "F9 اسے چھاپتا ہے۔ روکڑ کا بقایا ڈیش بورڈ پر بھی ہے۔",
+        "example": "مثال کے دن روکڑ 50,000 سے شروع ہو کر 58,484 پر ختم ہوتی ہے۔"
+      }
+    },
+    "collection_list": {
+      "en": {
+        "title": "Collection List",
+        "summary": "The Collection list is for a collection round: it lists the buyers to collect from, so you type only what each one paid and save them all together.",
+        "steps": [
+          "Open the Receipt screen and press the Collection list button.",
+          "The rows are grouped by collector and city, each with the buyer's dues.",
+          "Type the amount received in the Received column. A row left empty is skipped.",
+          "Press Save all. Each amount is saved as its own receipt."
+        ],
+        "keys": "Enter moves to the next row. Print the list from the same screen with F9.",
+        "example": "The collector brings back 5,000 from one buyer and nothing from the others: type 5,000 on that row and save all."
+      },
+      "ur": {
+        "title": "اگراہی فہرست",
+        "summary": "اگراہی فہرست اگراہی کے دورے کے لیے ہے: اس میں وہ گاہک ہوتے ہیں جن سے رقم لینی ہے، آپ صرف ہر ایک کی دی ہوئی رقم لکھتے ہیں اور سب ایک ساتھ محفوظ ہو جاتے ہیں۔",
+        "steps": [
+          "وصولی کی اسکرین کھولیں اور اگراہی فہرست کا بٹن دبائیں۔",
+          "قطاریں اگراہی والے اور شہر کے حساب سے ہیں، ہر ایک کے ساتھ گاہک کا بقایا ہے۔",
+          "موصول کے خانے میں ملی ہوئی رقم لکھیں۔ خالی قطار چھوڑ دی جاتی ہے۔",
+          "سب محفوظ کریں دبائیں۔ ہر رقم اپنی الگ وصولی بن کر محفوظ ہوتی ہے۔"
+        ],
+        "keys": "Enter اگلی قطار پر لے جاتا ہے۔ اسی اسکرین سے F9 سے فہرست چھاپیں۔",
+        "example": "اگراہی والا ایک گاہک سے 5,000 لایا اور باقی سے کچھ نہیں: اس قطار میں 5,000 لکھیں اور سب محفوظ کریں۔"
+      }
+    },
+    "commission_rules": {
+      "en": {
+        "title": "Commission Rules",
+        "summary": "Commission rules set the rate of a charge by seller, buyer, item or group of items, when the usual rate is not right. The default is 6 percent for both seller and buyer commission.",
+        "steps": [
+          "Open Index, then Commission rules, and press New rule.",
+          "Choose the side (seller or buyer), the charge, and who it is for: a party, an item, an item group or everything. Choose the method (percent, per nag or per lot), the value and the From date.",
+          "Press Test a rule to see which rule wins for a seller, buyer, item, quantity and rate, before you save it.",
+          "The most specific rule wins: party and item, then party, then item, then item group, then the default. A rate typed on a sale line wins over all."
+        ],
+        "keys": "The default rates are in Settings, then Charges. Saved sales keep the rate they were saved with.",
+        "example": "Rahim's banana at 5 percent: 12,000 of banana from him gives 600 commission."
+      },
+      "ur": {
+        "title": "کمیشن کے اصول",
+        "summary": "کمیشن کے اصول کسی خرچ کی شرح بیوپاری، گاہک، قسم مال یا قسم مال کے گروپ کے حساب سے مقرر کرتے ہیں، جب عام شرح ٹھیک نہ ہو۔ عام شرح بیوپاری اور گاہک دونوں کے کمیشن کی 6 فیصد ہے۔",
+        "steps": [
+          "انڈکس میں کمیشن کے اصول کھولیں اور نیا اصول دبائیں۔",
+          "جانب (بیوپاری یا گاہک)، خرچ، اور کس کے لیے چنیں: پارٹی، قسم مال، قسم مال کا گروپ یا سب۔ طریقہ (فیصد، فی نگ یا فی لاٹ)، قیمت اور تاریخ سے چنیں۔",
+          "محفوظ کرنے سے پہلے اصول کی جانچ دبائیں تاکہ بیوپاری، گاہک، قسم مال، تعداد اور ریٹ کے لیے دیکھیں کون سا اصول لگتا ہے۔",
+          "سب سے خاص اصول جیتتا ہے: پارٹی اور قسم مال، پھر پارٹی، پھر قسم مال، پھر گروپ، پھر عام شرح۔ بکری کی لائن میں لکھی ہوئی شرح سب پر غالب ہے۔"
+        ],
+        "keys": "عام شرحیں ترتیبات میں چارجز کے ٹیب میں ہیں۔ محفوظ بکریاں اپنی محفوظ شرح رکھتی ہیں۔",
+        "example": "رحیم کا کیلا 5 فیصد پر: اس سے 12,000 کے کیلے پر 600 کمیشن بنتا ہے۔"
+      }
+    },
+    "dashboard": {
+      "en": {
+        "title": "Dashboard and Bell",
+        "summary": "The Dashboard is the first screen after sign-in. It shows today's figures live, each partner's share, today's sales and the oldest dues. The bell in the top bar lists what needs your attention.",
+        "steps": [
+          "Read the tiles: today's sale and commission, cash in hand, the dues, advances, goods unsold, trips, gardens, money lent and the last backup. Each tile opens the screen behind it.",
+          "The Quick actions open a new sale, receipt, payment, advance or expense.",
+          "Press the bell for the things to do: unsaved drafts, earlier days not closed, old dues, old unsold goods, money past its return date and an old backup. Each item opens its screen.",
+          "The partner cards show each partner's share and Partner Total once the partner code is entered."
+        ],
+        "keys": "Enter or a click opens a tile. The same list as the bell shows on the dashboard as Today's tasks.",
+        "example": "On the worked day the cash tile shows 58,484 and the buyers' dues tile 21,564."
+      },
+      "ur": {
+        "title": "ڈیش بورڈ اور گھنٹی",
+        "summary": "ڈیش بورڈ لاگ ان کے بعد پہلی اسکرین ہے۔ اس میں آج کے عدد خود تازہ رہتے ہیں، ہر شراکت دار کا حصہ، آج کی بکریاں اور سب سے پرانے بقایا۔ اوپر کی پٹی کی گھنٹی بتاتی ہے کہ کن چیزوں پر توجہ چاہیے۔",
+        "steps": [
+          "ٹائلیں دیکھیں: آج کی بکری، کمیشن، موجود روکڑ، گاہکوں کے ذمے، بیوپاریوں کے ذمے، کل اگراہی، ڈوبی رقم، پیشگی، باقی مال، سفر، باغات، ادھار رقم اور آخری بیک اپ۔ ہر ٹائل اپنی اسکرین کھولتی ہے۔",
+          "فوری کام کے بٹن نئی بکری، وصولی، ادائیگی، پیشگی یا خرچہ کھولتے ہیں۔",
+          "کرنے کے کاموں کی فہرست کے لیے اوپر کی پٹی کی گھنٹی دبائیں: غیر محفوظ مسودے، بند نہ ہوئے پرانے دن، پرانے بقایا، پرانا باقی مال، واپسی کی تاریخ گزری رقم اور پرانا بیک اپ۔ ہر چیز اپنی اسکرین کھولتی ہے۔",
+          "شراکت دار کوڈ لکھنے کے بعد شراکت داروں کے کارڈ ہر ایک کا حصہ اور کل رقم دکھاتے ہیں۔"
+        ],
+        "keys": "Enter یا کلک ٹائل کھولتا ہے۔ گھنٹی والی فہرست ڈیش بورڈ پر آج کے کام کے طور پر بھی دکھتی ہے۔",
+        "example": "مثال کے دن روکڑ کی ٹائل 58,484 اور گاہکوں کے ذمے کی ٹائل 21,564 دکھاتی ہے۔"
+      }
+    },
+    "day_close": {
+      "en": {
+        "title": "Close the Day",
+        "summary": "Closing the day locks that day's entries so they cannot be changed by accident, and starts the cloud backup. Days are closed in order, oldest first.",
+        "steps": [
+          "Open Close the day from the task that says earlier days are not closed (on the dashboard or in the bell), or from the notice shown when you try to enter on a closed day.",
+          "Read the summary: sales, commission, partner shares, cash in hand, the trial balance difference, which must be nothing, and goods left unsold.",
+          "Confirm. The Closed up to date moves forward and shows in the status bar.",
+          "To fix a closed day, reopen it with a reason; every later day reopens too. Then fix it and close again."
+        ],
+        "keys": "Settings, then Day and check, can close the day by itself at closing time.",
+        "example": "Close up to 09-10-26: entries dated on or before it stay locked until the Owner reopens them."
+      },
+      "ur": {
+        "title": "دن بند کریں",
+        "summary": "دن بند کرنے سے اس دن کے اندراج بند ہو جاتے ہیں تاکہ غلطی سے نہ بدلیں، اور کلاؤڈ بیک اپ شروع ہوتا ہے۔ دن ترتیب سے بند ہوتے ہیں، سب سے پرانا پہلے۔",
+        "steps": [
+          "دن بند کریں اس کام سے کھولیں جو کہتا ہے کہ پرانے دن بند نہیں ہوئے (ڈیش بورڈ پر یا گھنٹی میں)، یا اس نوٹس سے جو بند دن میں لکھنے پر آتا ہے۔",
+          "خلاصہ دیکھیں: بکری، کمیشن، شراکت داروں کے حصے، موجود روکڑ، ٹرائل بیلنس کا فرق جو صفر ہونا چاہیے، اور باقی مال۔",
+          "تصدیق کریں۔ بند ہونے کی تاریخ آگے بڑھتی ہے اور نیچے کی پٹی میں دکھتی ہے۔",
+          "بند دن ٹھیک کرنے کے لیے وجہ کے ساتھ اسے دوبارہ کھولیں؛ اس کے بعد کے سب دن بھی کھل جاتے ہیں۔ پھر ٹھیک کریں اور دوبارہ بند کریں۔"
+        ],
+        "keys": "ترتیبات میں دن اور جانچ بند کرنے کے وقت پر دن خود بھی بند کر سکتی ہے۔",
+        "example": "09-10-26 تک بند کریں: اس تاریخ اور اس سے پہلے کے اندراج مالک کے دوبارہ کھولنے تک بند رہتے ہیں۔"
+      }
+    },
+    "dead_amount": {
+      "en": {
+        "title": "Dead Amount",
+        "summary": "Dead Amount is for a person who owes the shop and has died or left the business, so the money may never come back. Nothing posts: he is moved out of the normal dues and shown on his own.",
+        "steps": [
+          "On the account form, the party card, or a row of Buyer Dues or Seller Payables, press Move to dead amount.",
+          "Check the balance, pick the date and the reason (died, left the business or other) and save. His account becomes inactive.",
+          "He leaves the collection and dues lists. His balance stays in the Total Dues and shows apart as Dead Amount. No partner's total changes.",
+          "A Receipt on him is still allowed when money comes back. Make active again undoes the move."
+        ],
+        "keys": "The dashboard has a Dead Amount tile that opens the Dead Amount report.",
+        "example": "A buyer owing 8,000 dies: the buyers' dues fall by 8,000, the Dead Amount tile shows 8,000 and the total dues stay the same."
+      },
+      "ur": {
+        "title": "ڈوبی رقم",
+        "summary": "ڈوبی رقم اس شخص کے لیے ہے جس کے ذمے دکان کی رقم ہے اور وہ فوت ہو گیا یا کاروبار چھوڑ گیا، یعنی رقم شاید کبھی واپس نہ آئے۔ کچھ نہیں لکھا جاتا: اسے عام بقایا سے نکال کر الگ دکھایا جاتا ہے۔",
+        "steps": [
+          "کھاتے کے فارم، پارٹی کارڈ، یا گاہکوں کے ذمے یا بیوپاریوں کو ادائیگی باقی کی قطار پر ڈوبی رقم میں ڈالیں دبائیں۔",
+          "بقایا دیکھیں، تاریخ اور وجہ (فوت ہو گئے، کاروبار چھوڑ دیا یا دیگر) چنیں اور محفوظ کریں۔ اس کا کھاتہ غیر فعال ہو جاتا ہے۔",
+          "وہ اگراہی اور بقایا کی فہرستوں سے نکل جاتا ہے۔ اس کا بقایا کل اگراہی میں رہتا ہے اور ڈوبی رقم کے طور پر الگ دکھتا ہے۔ کسی شراکت دار کی کل رقم نہیں بدلتی۔",
+          "رقم واپس آئے تو اس پر وصولی اب بھی لکھی جا سکتی ہے۔ دوبارہ فعال کریں منتقلی ختم کر دیتا ہے۔"
+        ],
+        "keys": "ڈیش بورڈ پر ڈوبی رقم کی ٹائل ہے جو ڈوبی رقم کی رپورٹ کھولتی ہے۔",
+        "example": "8,000 کا ذمے دار گاہک فوت ہو گیا: گاہکوں کے ذمے 8,000 گھٹتے ہیں، ڈوبی رقم کی ٹائل 8,000 دکھاتی ہے اور کل اگراہی وہی رہتی ہے۔"
+      }
+    },
+    "edit_and_cancel": {
+      "en": {
+        "title": "Edit and Cancel",
+        "summary": "A mistake in a saved entry is fixed on the entry itself. Every saved entry has the same two buttons, Edit and Cancel, in the same place.",
+        "steps": [
+          "Open the entry from its screen, from a list row or from a report row, and press Edit.",
+          "Change only what was typed: a party, item, quantity, rate, amount or a note. Amounts the app works out cannot be typed, they are worked out again.",
+          "Read what the change does to balances, cash and partner shares, then save. A reason is asked for an entry of an earlier day.",
+          "Cancel needs a reason and reverses the whole entry. The date of an entry never changes; to move it, cancel it and enter it again."
+        ],
+        "keys": "Alt+Z undoes a save for 10 seconds while its message shows. Ctrl+I shows how an amount was worked out.",
+        "example": "Akram's rate was typed 600 instead of 610: Edit the sale, change the rate, and his bill and the commissions follow."
+      },
+      "ur": {
+        "title": "تبدیلی اور منسوخی",
+        "summary": "محفوظ اندراج کی غلطی اسی اندراج پر ٹھیک ہوتی ہے۔ ہر محفوظ اندراج میں ایک ہی جگہ وہی دو بٹن ہیں: تبدیل کریں اور منسوخ کریں۔",
+        "steps": [
+          "اندراج اس کی اسکرین سے، فہرست کی قطار سے یا رپورٹ کی قطار سے کھولیں اور تبدیل کریں دبائیں۔",
+          "صرف وہ بدلیں جو لکھا گیا تھا: پارٹی، قسم مال، تعداد، ریٹ، رقم یا نوٹ۔ ایپ کی نکالی ہوئی رقمیں نہیں لکھی جا سکتیں، وہ دوبارہ نکلتی ہیں۔",
+          "دیکھیں کہ تبدیلی سے بقایا، روکڑ اور شراکت داروں کے حصے پر کیا اثر پڑتا ہے، پھر محفوظ کریں۔ پرانے دن کے اندراج پر وجہ پوچھی جاتی ہے۔",
+          "منسوخی میں وجہ ضروری ہے اور پورا اندراج الٹ جاتا ہے۔ اندراج کی تاریخ کبھی نہیں بدلتی؛ بدلنی ہو تو منسوخ کر کے دوبارہ لکھیں۔"
+        ],
+        "keys": "Alt+Z محفوظ کے پیغام کے دوران 10 سیکنڈ تک محفوظ کرنا واپس لیتا ہے۔ Ctrl+I دکھاتا ہے کہ رقم کیسے نکلی۔",
+        "example": "اکرم کا ریٹ 610 کی جگہ 600 لکھ دیا گیا: بکری تبدیل کریں، ریٹ بدلیں، اور اس کا بل اور کمیشن خود ٹھیک ہو جاتے ہیں۔"
+      }
+    },
+    "fruit_taken": {
+      "en": {
+        "title": "Fruit Taken",
+        "summary": "Fruit Taken records fruit a partner takes home, or fruit served to the shop's guests, by item and quantity. No cash moves.",
+        "steps": [
+          "Open Cash Book, then Expense, and choose the Fruit Taken tab.",
+          "Choose for whom: one partner, or Guests. Choose the source: Our Shop (a lot with goods left) or Another Shop.",
+          "Type the item, quantity and rate. The rate is typed, never filled in for you.",
+          "Save. The value comes off that partner's total; for guests it is split equally between the partners."
+        ],
+        "keys": "F10 saves. The list below can be filtered by partner, item and date.",
+        "example": "Partner A takes 2 boxes of orange at 1,400: value 2,800 off his total."
+      },
+      "ur": {
+        "title": "پھل",
+        "summary": "پھل میں وہ پھل لکھا جاتا ہے جو شراکت دار گھر لے جاتا ہے یا دکان کے مہمانوں کو دیا جاتا ہے، قسم مال اور تعداد کے ساتھ۔ کوئی نقد نہیں ہلتا۔",
+        "steps": [
+          "روکڑ میں خرچہ کھولیں اور پھل کا ٹیب چنیں۔",
+          "کس کے لیے چنیں: ایک شراکت دار، یا مہمان۔ ذریعہ چنیں: اپنی دکان (باقی مال والا لاٹ) یا دوسری دکان۔",
+          "قسم مال، تعداد اور ریٹ لکھیں۔ ریٹ آپ خود لکھتے ہیں، وہ خود نہیں بھرتا۔",
+          "محفوظ کریں۔ قیمت اس شراکت دار کی کل رقم سے کٹتی ہے؛ مہمانوں کی قیمت شراکت داروں میں برابر بٹتی ہے۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔ نیچے کی فہرست شراکت دار، قسم مال اور تاریخ سے چھانٹی جا سکتی ہے۔",
+        "example": "الف 1,400 کے حساب سے 2 پیٹی مالٹا لیتا ہے: 2,800 قیمت اس کی کل رقم سے کٹتی ہے۔"
+      }
+    },
+    "gardens": {
+      "en": {
+        "title": "Gardens",
+        "summary": "A garden is rented by some partners for a season. Its fruit is sold by the shop, and its profit or loss goes only to the partners in it, by their percentages.",
+        "steps": [
+          "Open Gardens and make a new garden: name, rent, the partners in it with their percentages (they must total 100), and for each whether the money comes from the shop or from his own pocket.",
+          "On the garden's screen add installments and running costs. Each payment splits by the percentages.",
+          "Sell its fruit in the Sale Book with the garden as the lot's seller, or record a sale in another shop on the garden.",
+          "When the goods stop coming, close the garden: its money goes to the partners by their percentages."
+        ],
+        "keys": "F10 saves an entry. The garden's screen shows its running balance and the rent still due.",
+        "example": "Rent 50,000 with 30,000 paid shows minus 30,000. Money in 66,400 against 55,000 paid leaves a profit of 11,400."
+      },
+      "ur": {
+        "title": "باغات",
+        "summary": "باغ کچھ شراکت دار ایک سیزن کے لیے ٹھیکے پر لیتے ہیں۔ اس کا پھل دکان بیچتی ہے، اور اس کا منافع یا نقصان صرف اس میں شامل شراکت داروں کو ان کی فیصد سے ملتا ہے۔",
+        "steps": [
+          "باغات کھولیں اور نیا باغ بنائیں: نام، ٹھیکہ، اس کے شراکت دار اور ان کی فیصد (کل 100 ہونی چاہیے)، اور ہر ایک کے لیے رقم دکان سے ہے یا اپنی جیب سے۔",
+          "باغ کی اسکرین پر قسطیں اور چلتے خرچ لکھیں۔ ہر ادائیگی فیصد کے حساب سے بٹتی ہے۔",
+          "اس کا پھل بکری بک میں باغ کو لاٹ کا بیوپاری بنا کر بیچیں، یا باغ پر دوسری دکان میں فروخت لکھیں۔",
+          "مال آنا بند ہو تو باغ بند کریں: اس کی رقم شراکت داروں کو ان کی فیصد سے مل جاتی ہے۔"
+        ],
+        "keys": "F10 اندراج محفوظ کرتا ہے۔ باغ کی اسکرین چلتا بقایا اور باقی ٹھیکہ دکھاتی ہے۔",
+        "example": "ٹھیکہ 50,000 اور ادا 30,000 ہوں تو منفی 30,000 دکھتا ہے۔ رقم آئی 66,400 اور ادا 55,000 ہو تو منافع 11,400۔"
+      }
+    },
+    "general_journal": {
+      "en": {
+        "title": "Journal",
+        "summary": "The Journal is for corrections and transfers that no other screen covers. You write lines with an account and a debit or a credit, and it saves only when both totals are equal.",
+        "steps": [
+          "Open Cash Book, then Journal.",
+          "On each line pick the account and type an amount in Debit or in Credit, with a narration.",
+          "Watch the totals under the lines: Debit and Credit must be equal.",
+          "Save. A line on a buyer account joins his bills; a line on a seller never changes his advances."
+        ],
+        "keys": "F10 saves. Ctrl+Delete removes the current line.",
+        "example": "To move 1,000 from one buyer to another, debit the second buyer 1,000 and credit the first 1,000."
+      },
+      "ur": {
+        "title": "جنرل",
+        "summary": "جنرل ان درستیوں اور منتقلیوں کے لیے ہے جو کسی اور اسکرین میں نہیں آتیں۔ آپ کھاتے اور بنام یا جمع کے ساتھ لائنیں لکھتے ہیں، اور دونوں میزان برابر ہوں تبھی یہ محفوظ ہوتا ہے۔",
+        "steps": [
+          "روکڑ میں جنرل کھولیں۔",
+          "ہر لائن میں کھاتہ چنیں اور بنام یا جمع میں رقم لکھیں، تفصیل کے ساتھ۔",
+          "لائنوں کے نیچے میزان دیکھیں: بنام اور جمع برابر ہونے چاہییں۔",
+          "محفوظ کریں۔ گاہک کے کھاتے کی لائن اس کے بلوں میں شامل ہوتی ہے؛ بیوپاری کی لائن اس کی پیشگیوں کو نہیں بدلتی۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔ Ctrl+Delete موجودہ لائن ہٹاتا ہے۔",
+        "example": "ایک گاہک سے دوسرے کو 1,000 منتقل کرنے کے لیے دوسرے گاہک کو 1,000 بنام اور پہلے کو 1,000 جمع کریں۔"
+      }
+    },
+    "keys": {
+      "en": {
+        "title": "Keyboard Keys",
+        "summary": "Everything in the app can be done with the keyboard, and every key has a button too. The key is shown next to the button.",
+        "steps": [
+          "Arrow keys move between fields and cells the way you see them. Enter goes to the next editable cell; Esc closes a list, then cancels typing, then leaves the screen.",
+          "New entry from anywhere: Alt+B sale, Alt+V receipt, Alt+A payment, Alt+P advance, Alt+K expense.",
+          "In an entry: F2 new, F3 find, F4 add a missing record in a picker, F10 or Ctrl+S save, Ctrl+Enter save, print and new, F9 print.",
+          "Anywhere: Ctrl+K search, Alt+L language, F1 ask the app, Alt+Z undo a save, Ctrl+I how an amount was worked out, Ctrl plus or minus text size."
+        ],
+        "keys": "In a date field, plus is the next day and minus the previous one. Ctrl+D copies the cell above in a sale line.",
+        "example": "Press Alt+B, type the truck number, Enter, and carry on without the mouse."
+      },
+      "ur": {
+        "title": "کی بورڈ کی چابیاں",
+        "summary": "ایپ کا ہر کام کی بورڈ سے ہو سکتا ہے، اور ہر چابی کا بٹن بھی ہے۔ چابی بٹن کے ساتھ لکھی ہوتی ہے۔",
+        "steps": [
+          "تیر والی چابیاں خانوں اور خلیوں میں ویسے ہی چلتی ہیں جیسے آپ دیکھتے ہیں۔ Enter اگلے لکھنے والے خلیے پر جاتا ہے؛ Esc پہلے فہرست بند کرتا ہے، پھر لکھنا منسوخ کرتا ہے، پھر اسکرین چھوڑتا ہے۔",
+          "کہیں سے بھی نیا اندراج: Alt+B بکری، Alt+V وصولی، Alt+A ادائیگی، Alt+P پیشگی، Alt+K خرچہ۔",
+          "اندراج میں: F2 نیا، F3 تلاش، F4 چننے والے میں نیا اندراج شامل کریں، F10 یا Ctrl+S محفوظ، Ctrl+Enter محفوظ، چھاپیں اور نیا، F9 چھاپیں۔",
+          "کہیں بھی: Ctrl+K تلاش، Alt+L زبان، F1 سوال پوچھیں، Alt+Z محفوظ کرنا واپس، Ctrl+I رقم کیسے نکلی، Ctrl کے ساتھ جمع یا منفی متن کا سائز۔"
+        ],
+        "keys": "تاریخ کے خانے میں جمع اگلا دن اور منفی پچھلا دن ہے۔ بکری لائن میں Ctrl+D اوپر کے خلیے کی قدر نقل کرتا ہے۔",
+        "example": "Alt+B دبائیں، ٹرک نمبر لکھیں، Enter دبائیں، اور ماؤس کے بغیر آگے چلیں۔"
+      }
+    },
+    "language_switch": {
+      "en": {
+        "title": "Language and Typing Names",
+        "summary": "One switch turns the whole app between Urdu and English, with names, menus, prints and layout. What you typed and the figures stay the same.",
+        "steps": [
+          "Click the language switch in the top bar, or press Alt+L, at any time, even in the middle of an entry.",
+          "Names show in the language of the app. Every name has an Urdu and an English spelling, and you type only one.",
+          "In an Urdu name field, type English letters and the Urdu spelling appears for you to accept with Space or Enter. Alt+U changes the typing mode.",
+          "In the English app you type the English name and the Urdu is suggested."
+        ],
+        "keys": "Alt+L switches the language. Alt+U changes the typing mode in a text field.",
+        "example": "Typing arshad multani in an Urdu name field offers the Urdu spelling, and the English name fills as Arshad Multani."
+      },
+      "ur": {
+        "title": "زبان اور نام لکھنا",
+        "summary": "ایک سوئچ پوری ایپ کو اردو اور انگریزی کے درمیان بدلتا ہے، نام، مینو، چھپائی اور ترتیب سمیت۔ جو آپ نے لکھا اور عدد وہی رہتے ہیں۔",
+        "steps": [
+          "اوپر کی پٹی کا زبان کا سوئچ دبائیں، یا Alt+L، کسی بھی وقت، اندراج کے بیچ میں بھی۔",
+          "نام ایپ کی زبان میں دکھتے ہیں۔ ہر نام کے اردو اور انگریزی ہجے ہوتے ہیں، اور آپ صرف ایک لکھتے ہیں۔",
+          "اردو نام کے خانے میں انگریزی حروف لکھیں تو اردو ہجے آ جاتے ہیں، جنہیں Space یا Enter سے قبول کریں۔ Alt+U لکھنے کا انداز بدلتا ہے۔",
+          "انگریزی ایپ میں آپ انگریزی نام لکھتے ہیں اور اردو تجویز ہو جاتا ہے۔"
+        ],
+        "keys": "Alt+L زبان بدلتا ہے۔ Alt+U متن کے خانے میں لکھنے کا انداز بدلتا ہے۔",
+        "example": "اردو نام کے خانے میں arshad multani لکھیں تو اردو ہجے آتے ہیں، اور انگریزی نام Arshad Multani بھر جاتا ہے۔"
+      }
+    },
+    "later_sale": {
+      "en": {
+        "title": "Later Sale",
+        "summary": "A later sale sells the goods left in a lot on a later day, without entering the truck again.",
+        "steps": [
+          "Open Unsold Stock and press Sell what is left on the lot.",
+          "On each new line type the buyer, quantity and rate. The quantity starts at what is left.",
+          "Save. Only the new lines post, on today's date. Freight and the lot's other charges are not charged again."
+        ],
+        "keys": "F10 saves. Alt+Z undoes the save while its message shows, for 10 seconds.",
+        "example": "On 11-10-26 the last 5 boxes go to Arshad at 560: value 2,800, and 168 commission from the seller."
+      },
+      "ur": {
+        "title": "بعد کی بکری",
+        "summary": "بعد کی بکری میں لاٹ کا بچا ہوا مال کسی اگلے دن بیچا جاتا ہے، ٹرک دوبارہ لکھے بغیر۔",
+        "steps": [
+          "باقی مال کھولیں اور لاٹ پر باقی مال بیچیں دبائیں۔",
+          "ہر نئی لائن میں گاہک، تعداد اور ریٹ لکھیں۔ تعداد وہی آتی ہے جو باقی ہے۔",
+          "محفوظ کریں۔ صرف نئی لائنیں آج کی تاریخ میں لکھی جاتی ہیں۔ کرایہ اور لاٹ کے باقی خرچ دوبارہ نہیں لگتے۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔ Alt+Z محفوظ کے پیغام کے دوران، 10 سیکنڈ تک، محفوظ کرنا واپس لیتا ہے۔",
+        "example": "11-10-26 کو آخری 5 پیٹیاں ارشد کو 560 پر جاتی ہیں: قیمت 2,800 اور بیوپاری کی طرف سے 168 کمیشن۔"
+      }
+    },
+    "market_trips": {
+      "en": {
+        "title": "Market Trips",
+        "summary": "A market trip is a day trip: a person is sent to a bigger market to buy goods for some partners. The shop sells them like any lot and keeps its commission. The profit or loss goes only to the partners in the trip.",
+        "steps": [
+          "Open Market Trips and make a new trip: the market, who went, the partners with their percentages (total 100), and whether each pays from the shop or his own pocket.",
+          "Add each purchase (item, quantity, rate, costs) and any trip cost, such as the truck.",
+          "Sell the goods in the Sale Book with Own Goods as the lot's seller, or record a sale in another shop. Write off spoiled goods on the purchase.",
+          "The trip shows its result and closes by itself when nothing is left."
+        ],
+        "keys": "F10 saves an entry. Purchases show in Unsold Stock as Own Goods.",
+        "example": "20 boxes of orange cost 10,400. 15 sell for 9,000: the partners get 8,460 after commission against 7,800 cost, a profit of 660."
+      },
+      "ur": {
+        "title": "مارکیٹ سفر",
+        "summary": "مارکیٹ سفر ایک دن کا سفر ہے: کسی کو بڑی منڈی بھیجا جاتا ہے تاکہ کچھ شراکت داروں کے لیے مال خریدے۔ دکان وہ مال کسی بھی لاٹ کی طرح بیچتی ہے اور اپنا عام کمیشن رکھتی ہے۔ سفر کا منافع یا نقصان صرف سفر کے شراکت داروں کو ملتا ہے۔",
+        "steps": [
+          "مارکیٹ سفر کھولیں اور نیا سفر بنائیں: منڈی، کون گیا، اس کے شراکت دار اور ان کی فیصد (کل 100) اور ہر ایک دکان سے دیتا ہے یا اپنی جیب سے۔",
+          "سفر پر ہر خریداری (قسم مال، تعداد، ریٹ، خرچ) اور سفر کا کوئی خرچ جیسے ٹرک لکھیں۔",
+          "مال بکری بک میں اپنا مال کو لاٹ کا بیوپاری بنا کر اور خریداری چن کر بیچیں، یا سفر پر دوسری دکان میں فروخت لکھیں۔ خراب مال خریداری پر ضائع کریں۔",
+          "سفر اپنا نتیجہ دکھاتا ہے اور کچھ باقی نہ رہے تو خود بند ہو جاتا ہے۔"
+        ],
+        "keys": "F10 اندراج محفوظ کرتا ہے۔ خریداریاں باقی مال میں بھی اپنا مال کے نشان کے ساتھ دکھتی ہیں۔",
+        "example": "20 پیٹی مالٹا کی لاگت 10,400 ہے۔ 15 بکیں 9,000 میں: کمیشن کے بعد شراکت داروں کو 8,460 ملے اور لاگت 7,800، یعنی منافع 660۔"
+      }
+    },
+    "masters": {
+      "en": {
+        "title": "Index Lists",
+        "summary": "The Index holds the lists that names are picked from: items, packings, cities, Adda, marks, stores, standard narrations, expense heads and staff. Accounts and commission rules are in the Index too.",
+        "steps": [
+          "Open Index and choose a list, for example Item list.",
+          "Add a new record: type either the Urdu or the English name and the other fills in; check it, then save.",
+          "Change a record, or make it inactive. A record already used is never deleted; inactive ones disappear from the pickers but stay in reports.",
+          "A missing record can also be added without leaving your entry: the open picker ends with an Add row, or press F4."
+        ],
+        "keys": "F4 in a picker adds a missing record on the spot and chooses it at once.",
+        "example": "Banana is not in the list while entering a sale: press F4 in the item picker, type the name, save, and it is chosen."
+      },
+      "ur": {
+        "title": "انڈکس کی فہرستیں",
+        "summary": "انڈکس میں وہ فہرستیں ہیں جن سے نام چنے جاتے ہیں: قسم مال، پیکنگ، شہر، اڈا، مارکہ، سٹور، معیاری تفصیل، خرچہ مدیں اور عملہ۔ کھاتے اور کمیشن کے اصول بھی انڈکس میں ہیں۔",
+        "steps": [
+          "انڈکس کھولیں اور فہرست چنیں، مثلاً قسم مال کی فہرست۔",
+          "نیا اندراج لکھیں: اردو یا انگریزی نام لکھیں تو دوسرا خود بھر جاتا ہے؛ دیکھ لیں، پھر محفوظ کریں۔",
+          "اندراج بدلیں، یا اسے غیر فعال کریں۔ استعمال شدہ اندراج کبھی مٹتا نہیں؛ غیر فعال چنوں کی فہرست سے ہٹ جاتا ہے مگر رپورٹوں میں رہتا ہے۔",
+          "کوئی اندراج نہ ہو تو اپنا اندراج چھوڑے بغیر بھی شامل ہو سکتا ہے: کھلی فہرست کے آخر میں شامل کریں کی قطار ہے، یا F4 دبائیں۔"
+        ],
+        "keys": "فہرست میں F4 نہ ملنے والا اندراج وہیں شامل کر کے فوراً چن لیتا ہے۔",
+        "example": "بکری لکھتے وقت کیلا فہرست میں نہیں: قسم مال کی فہرست میں F4 دبائیں، نام لکھیں، محفوظ کریں، اور وہ چن لیا جاتا ہے۔"
+      }
+    },
+    "money_lent": {
+      "en": {
+        "title": "Money Lent",
+        "summary": "Money Lent is for money the shop lends to staff or anyone else, to be given back. You record the loan and each return.",
+        "steps": [
+          "Open Cash Book, then Money Lent.",
+          "Choose Money lent or Return. Pick the person; a new person can be added on the spot.",
+          "Type the amount. A loan needs a reason; a return-by date is optional. A return is in cash, or deducted from salary.",
+          "Save. The list below shows each loan, what is returned and what is still open."
+        ],
+        "keys": "F10 saves. F4 in the person box adds a new person.",
+        "example": "Aslam is lent 5,000 and returns 3,000 in cash: 2,000 is still open."
+      },
+      "ur": {
+        "title": "ادھار رقم",
+        "summary": "ادھار رقم اس رقم کے لیے ہے جو دکان عملے یا کسی اور کو واپسی کے لیے دیتی ہے۔ آپ قرض اور ہر واپسی لکھتے ہیں۔",
+        "steps": [
+          "روکڑ میں ادھار رقم کھولیں۔",
+          "رقم دی یا واپسی چنیں۔ شخص چنیں؛ نیا شخص وہیں شامل ہو سکتا ہے۔",
+          "رقم لکھیں۔ قرض پر وجہ ضروری ہے؛ واپسی کی تاریخ لکھنا ضروری نہیں۔ واپسی نقد ہوتی ہے یا تنخواہ سے کٹوتی۔",
+          "محفوظ کریں۔ نیچے کی فہرست ہر قرض، واپس ہوئی رقم اور باقی رقم دکھاتی ہے۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔ شخص کے خانے میں F4 نیا شخص شامل کرتا ہے۔",
+        "example": "اسلم کو 5,000 دیے گئے اور اس نے 3,000 نقد واپس کیے: 2,000 باقی ہیں۔"
+      }
+    },
+    "month_close": {
+      "en": {
+        "title": "Month Close",
+        "summary": "Month Close is for a finished month. It moves the month's income and shop expenses into the partners' capital accounts, each partner by his share. Nobody's Partner Total changes.",
+        "steps": [
+          "Open Partners, then Month Close.",
+          "Pick the finished month. Its days must all be closed first.",
+          "Read the preview, then confirm.",
+          "A closed month can be reversed by the Owner, which is needed before reopening any of its days."
+        ],
+        "keys": "The months list shows each month's state and when it was closed.",
+        "example": "October's income and expenses move into Partner A, B and C capital by 40, 30 and 30 percent."
+      },
+      "ur": {
+        "title": "مہینہ بند",
+        "summary": "مہینہ بند ختم ہوئے مہینے کے لیے ہے۔ یہ مہینے کی آمدن اور دکان خرچے شراکت داروں کے سرمایہ کھاتوں میں ڈال دیتا ہے، ہر ایک اپنے حصے سے۔ کسی کی کل رقم نہیں بدلتی۔",
+        "steps": [
+          "شراکت دار میں مہینہ بند کھولیں۔",
+          "ختم ہوا مہینہ چنیں۔ اس کے سب دن پہلے بند ہونے چاہییں۔",
+          "پیش نظارہ دیکھیں، پھر تصدیق کریں۔",
+          "بند مہینہ مالک الٹ سکتا ہے، اور اس کے کسی دن کو دوبارہ کھولنے سے پہلے یہ ضروری ہے۔"
+        ],
+        "keys": "مہینوں کی فہرست ہر مہینے کی حالت اور بند ہونے کا وقت دکھاتی ہے۔",
+        "example": "اکتوبر کی آمدن اور خرچے الف، ب اور ج کے سرمایہ میں 40، 30 اور 30 فیصد سے چلے جاتے ہیں۔"
+      }
+    },
+    "partner_capital": {
+      "en": {
+        "title": "Partner Capital",
+        "summary": "Capital is the money a partner puts into the shop to start it and run it. Putting it in, and taking it back, are recorded here. It is not income or expense and is never split.",
+        "steps": [
+          "Open Partners, then Capital.",
+          "Choose whether the capital is put in or taken back, pick the partner and type the amount.",
+          "Save. Cash goes up or down, and the partner's capital balance with it.",
+          "The partner's capital history and balance show below the form."
+        ],
+        "keys": "F10 saves.",
+        "example": "Partner B puts in 50,000 on 11-10-26: cash goes from 58,484 to 108,484 and his profit share does not change."
+      },
+      "ur": {
+        "title": "سرمایہ",
+        "summary": "سرمایہ وہ رقم ہے جو شراکت دار دکان شروع کرنے اور چلانے کے لیے لگاتا ہے۔ اس کا لگانا اور واپس لینا یہاں لکھا جاتا ہے۔ یہ نہ آمدن ہے نہ خرچہ، اور کبھی بٹتا نہیں۔",
+        "steps": [
+          "شراکت دار میں سرمایہ کھولیں۔",
+          "چنیں کہ سرمایہ لگایا جا رہا ہے یا واپس لیا جا رہا ہے، شراکت دار چنیں اور رقم لکھیں۔",
+          "محفوظ کریں۔ روکڑ اور اس کے ساتھ شراکت دار کا سرمایہ بقایا بڑھتا یا گھٹتا ہے۔",
+          "فارم کے نیچے شراکت دار کی سرمایہ کی تاریخ اور بقایا دکھتا ہے۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔",
+        "example": "ب 11-10-26 کو 50,000 لگاتا ہے: روکڑ 58,484 سے 108,484 ہو جاتی ہے اور اس کے منافع کا حصہ نہیں بدلتا۔"
+      }
+    },
+    "partners": {
+      "en": {
+        "title": "Partners",
+        "summary": "Partners shows each partner's share of the commission and expenses, what he took, his capital and his total. The section opens with a partner code.",
+        "steps": [
+          "Open Partners. It asks for the 4-digit partner code; type it.",
+          "The overview shows, for each partner, today, this month and this year, the profit share, what he took and returned, his capital and his Partner Total.",
+          "Open a partner's Statement to see every movement in date order with its running total.",
+          "Partner Setup holds the names and share percentages, which must total 100. A change takes effect from today or later."
+        ],
+        "keys": "Enter opens the selected partner. The section locks again when you go to a screen outside it.",
+        "example": "On the worked day Partner A's profit share is 996 and he took 2,000, so his net is minus 1,004."
+      },
+      "ur": {
+        "title": "شراکت دار",
+        "summary": "شراکت دار میں ہر شراکت دار کا کمیشن اور خرچوں میں حصہ، اس کی لی ہوئی رقم، سرمایہ اور کل رقم دکھتی ہے۔ یہ حصہ شراکت دار کوڈ سے کھلتا ہے۔",
+        "steps": [
+          "شراکت دار کھولیں۔ یہ 4 ہندسوں کا شراکت دار کوڈ مانگتا ہے؛ لکھیں۔",
+          "جائزے میں ہر شراکت دار کے لیے آج، اس مہینے اور اس سال کا حصہ، منافع حصہ، لی اور لوٹائی ہوئی رقم، سرمایہ اور کل رقم دکھتی ہے۔",
+          "کسی شراکت دار کی شراکت دار کھاتہ کھول کر ہر حرکت تاریخ کی ترتیب اور چلتی کل رقم کے ساتھ دیکھیں۔",
+          "شراکت داروں کی ترتیب میں نام اور حصے کی فیصد ہے، جو کل 100 ہونی چاہیے۔ تبدیلی آج سے یا بعد سے لاگو ہوتی ہے۔"
+        ],
+        "keys": "Enter چنا ہوا شراکت دار کھولتا ہے۔ اس حصے سے باہر کسی اسکرین پر جائیں تو یہ دوبارہ مقفل ہو جاتا ہے۔",
+        "example": "مثال کے دن الف کا منافع حصہ 996 ہے اور اس نے 2,000 لیے، تو اس کا خالص منفی 1,004 ہے۔"
+      }
+    },
+    "payment": {
+      "en": {
+        "title": "Payment",
+        "summary": "A Payment records money you pay out, mainly to a seller for his sale. To a buyer it is cash lent to him.",
+        "steps": [
+          "Press Alt+A, or open Sale, then Payment.",
+          "Pick the seller. What is payable to him shows, with the open advance.",
+          "Type the amount, or press Full balance.",
+          "Save. If the amount is more than what is payable, a warning shows and the extra becomes what he owes you."
+        ],
+        "keys": "Alt+A opens it. F10 saves.",
+        "example": "Rahim is owed 4,316 after his sale: pay 4,316 and his balance becomes nothing."
+      },
+      "ur": {
+        "title": "ادائیگی",
+        "summary": "ادائیگی میں وہ رقم لکھی جاتی ہے جو آپ دیتے ہیں، زیادہ تر بیوپاری کو اس کی بکری کے بدلے۔ گاہک کو دی جائے تو وہ اس کو نقد ادھار ہے۔",
+        "steps": [
+          "Alt+A دبائیں، یا بکری میں ادائیگی کھولیں۔",
+          "بیوپاری چنیں۔ اس کو دینے والی رقم اور کھلی پیشگی دکھتی ہے۔",
+          "رقم لکھیں، یا پورا بقایا دبائیں۔",
+          "محفوظ کریں۔ اگر رقم دینے والی رقم سے زیادہ ہو تو تنبیہ آتی ہے اور بچی رقم اس کے ذمے ہو جاتی ہے۔"
+        ],
+        "keys": "Alt+A اسے کھولتا ہے۔ F10 محفوظ کرتا ہے۔",
+        "example": "رحیم کی بکری کے بعد اسے 4,316 دینے ہیں: 4,316 ادا کریں تو اس کا بقایا صفر ہو جاتا ہے۔"
+      }
+    },
+    "personal_expense": {
+      "en": {
+        "title": "Personal Drawing",
+        "summary": "Personal Drawing is money a partner takes for himself, such as his home or a wedding. It is charged to that partner only and never split. When he gives it back, use Personal Drawing Return.",
+        "steps": [
+          "Press Alt+K, then change the type to Personal Drawing.",
+          "Pick the partner and type the amount and the reason. A return-by date and who took the cash are optional.",
+          "The screen shows his total now and after this entry. The other partners show as not affected.",
+          "To record money given back, choose Personal Drawing Return, pick the partner and type the amount."
+        ],
+        "keys": "Alt+K opens the screen. F10 saves.",
+        "example": "Partner A takes 2,000 for home. His profit share is 996, so his net becomes minus 1,004."
+      },
+      "ur": {
+        "title": "ذاتی خرچہ",
+        "summary": "ذاتی خرچہ وہ رقم ہے جو شراکت دار اپنے لیے لیتا ہے، جیسے گھر یا شادی کے لیے۔ یہ صرف اسی شراکت دار پر لگتی ہے، کبھی بٹتی نہیں۔ وہ واپس دے تو ذاتی خرچہ واپسی استعمال کریں۔",
+        "steps": [
+          "Alt+K دبائیں، پھر قسم ذاتی خرچہ کر دیں۔",
+          "شراکت دار چنیں اور رقم اور وجہ لکھیں۔ واپسی کی تاریخ اور رقم لینے والا لکھنا ضروری نہیں۔",
+          "اسکرین اس کی کل رقم ابھی اور اس اندراج کے بعد دکھاتی ہے۔ باقی شراکت دار متاثر نہیں ہوتے۔",
+          "واپس دی ہوئی رقم لکھنے کے لیے ذاتی خرچہ واپسی چنیں، شراکت دار چنیں اور رقم لکھیں۔"
+        ],
+        "keys": "Alt+K اسکرین کھولتا ہے۔ F10 محفوظ کرتا ہے۔",
+        "example": "الف گھر کے لیے 2,000 لیتا ہے۔ اس کے دن کے 996 منافع حصے سے خالص منفی 1,004 ہو جاتا ہے۔"
+      }
+    },
+    "printing": {
+      "en": {
+        "title": "Printing",
+        "summary": "Every report, slip and list can be printed for any day and any party, saved as a PDF, or taken to Excel. A print follows the app language unless you choose the other one.",
+        "steps": [
+          "Press F9 on the screen you want to print, or use its Print button.",
+          "In the print box choose Urdu or English for the print, the dates and the party if it applies.",
+          "After saving a sale, Ctrl+Enter prints the slips you ticked in the Print after saving list and opens a new sale. The ticks are remembered.",
+          "Paper size, printer and copies are in Settings, then Printing."
+        ],
+        "keys": "F9 prints. Ctrl+Enter saves, prints the ticked slips and starts a new entry.",
+        "example": "A buyer's day slip printed in Urdu while the app is in English."
+      },
+      "ur": {
+        "title": "چھپائی",
+        "summary": "ہر رپورٹ، پرچی اور فہرست کسی بھی دن اور کسی بھی پارٹی کے لیے چھپ سکتی ہے، پی ڈی ایف میں محفوظ ہو سکتی ہے یا ایکسل میں لی جا سکتی ہے۔ چھپائی ایپ کی زبان میں ہوتی ہے جب تک آپ دوسری نہ چنیں۔",
+        "steps": [
+          "جس اسکرین کو چھاپنا ہو اس پر F9 دبائیں، یا اس کا چھاپیں کا بٹن استعمال کریں۔",
+          "چھپائی کے خانے میں چھپائی کے لیے اردو یا انگریزی چنیں، تاریخیں اور اگر لاگو ہو تو پارٹی۔",
+          "بکری محفوظ کرنے کے بعد Ctrl+Enter محفوظ کرنے کے بعد چھاپیں کی فہرست میں نشان زدہ پرچیاں چھاپتا ہے اور نئی بکری کھولتا ہے۔ نشان یاد رکھے جاتے ہیں۔",
+          "کاغذ کا سائز، پرنٹر اور کاپیاں ترتیبات میں چھپائی کے نیچے ہیں۔"
+        ],
+        "keys": "F9 چھاپتا ہے۔ Ctrl+Enter محفوظ کرتا ہے، نشان زدہ پرچیاں چھاپتا ہے اور نیا اندراج شروع کرتا ہے۔",
+        "example": "ایپ انگریزی میں ہو اور گاہک کی دن کی پرچی اردو میں چھپے۔"
+      }
+    },
+    "pukhta_khata": {
+      "en": {
+        "title": "Pukhta Khata",
+        "summary": "Pukhta Khata is for a buyer or seller who comes once or rarely and has no account. He is charged like anyone else, and his lines are kept under his own name and phone.",
+        "steps": [
+          "On a sale line pick Pukhta Khata as the buyer, or as the seller of a lot.",
+          "Type his name and phone. A credit buyer and every seller need the phone. Names already used are offered first.",
+          "Save the sale as usual. A one-time seller is paid on the spot by default.",
+          "Open Sale, then Pukhta Khata, to see every such line by name and phone, paid or due. A person who keeps coming can be made a regular account."
+        ],
+        "keys": "Type in the name box: the list shows people already recorded, then Urdu spellings of what you typed.",
+        "example": "Shahid buys 10 boxes of apple at 1,200 and pays 12,800 cash with his charges. The register shows one line, paid."
+      },
+      "ur": {
+        "title": "پختہ کھاتہ",
+        "summary": "پختہ کھاتہ اس گاہک یا بیوپاری کے لیے ہے جو ایک بار یا کبھی کبھار آتا ہے اور جس کا اپنا کھاتہ نہیں۔ اس پر باقی سب جیسے ہی خرچ لگتے ہیں اور اس کی لائنیں اس کے نام اور فون سے رکھی جاتی ہیں۔",
+        "steps": [
+          "بکری لائن میں گاہک کے طور پر، یا لاٹ کے بیوپاری کے طور پر، پختہ کھاتہ چنیں۔",
+          "اس کا نام اور فون لکھیں۔ ادھاری گاہک اور ہر بیوپاری کا فون ضروری ہے۔ پہلے سے لکھے نام پہلے دکھتے ہیں۔",
+          "بکری عام طرح محفوظ کریں۔ ایک بار والے بیوپاری کو عام طور پر موقع پر ہی ادائیگی ہو جاتی ہے۔",
+          "بکری میں پختہ کھاتہ کھول کر ایسی ہر لائن نام اور فون سے دیکھیں، ادا یا باقی۔ جو شخص بار بار آنے لگے اسے مستقل کھاتہ بنایا جا سکتا ہے۔"
+        ],
+        "keys": "نام کے خانے میں لکھیں: فہرست پہلے لکھے ہوئے لوگ دکھاتی ہے، پھر آپ کے لکھے کے اردو ہجے۔",
+        "example": "شاہد 10 پیٹی سیب 1,200 پر لیتا ہے اور اپنے خرچوں سمیت 12,800 نقد دیتا ہے۔ رجسٹر میں ایک لائن آتی ہے، ادا شدہ۔"
+      }
+    },
+    "receipt": {
+      "en": {
+        "title": "Receipt",
+        "summary": "A Receipt records money a buyer pays you. It settles his oldest bills first. The same screen holds the Collection list for a collection round.",
+        "steps": [
+          "Press Alt+V, or open Sale, then Receipt / Collection. The type list at the top starts on Receipt.",
+          "Pick the buyer. His open bills show, oldest first.",
+          "Type the amount, or press Full balance or Oldest bill. The list marks the bills it will settle.",
+          "Save. If he pays more than he owes, the extra stays as his credit and settles his next bills."
+        ],
+        "keys": "Alt+V opens it. F10 saves. F4 in a picker adds a missing account.",
+        "example": "Akram owes 12,880 and pays 10,000. He still owes 2,880."
+      },
+      "ur": {
+        "title": "وصولی",
+        "summary": "وصولی میں وہ رقم لکھی جاتی ہے جو گاہک آپ کو دیتا ہے۔ یہ اس کے سب سے پرانے بل پہلے بھرتی ہے۔ اسی اسکرین پر اگراہی فہرست بھی ہے۔",
+        "steps": [
+          "Alt+V دبائیں، یا بکری میں وصولی / اگراہی کھولیں۔ اوپر کی قسم کی فہرست وصولی پر ہوتی ہے۔",
+          "گاہک چنیں۔ اس کے کھلے بل سب سے پرانے پہلے دکھتے ہیں۔",
+          "رقم لکھیں، یا پورا بقایا یا پرانا بل دبائیں۔ فہرست دکھاتی ہے کہ کون سے بل بھریں گے۔",
+          "محفوظ کریں۔ اگر وہ بقایا سے زیادہ دے تو بچی رقم اس کی جمع رہتی ہے اور اگلے بل بھرتی ہے۔"
+        ],
+        "keys": "Alt+V اسے کھولتا ہے۔ F10 محفوظ کرتا ہے۔ فہرست میں F4 نیا کھاتہ شامل کرتا ہے۔",
+        "example": "اکرم کے ذمے 12,880 ہیں اور وہ 10,000 دیتا ہے۔ اس کے ذمے 2,880 باقی رہتے ہیں۔"
+      }
+    },
+    "reports": {
+      "en": {
+        "title": "Reports",
+        "summary": "Reports are the printed and on-screen records of the shop: sales, accounts, collections and payments, expenses, profit, partners, gardens and trips. Every one can be printed, saved as a PDF or as an Excel file.",
+        "steps": [
+          "Open Reports and pick a report from the list.",
+          "Set the dates (From and To, with shortcuts such as Today and This month) and the party if it has one. Balance lists take an As of date instead.",
+          "Read the rows and the totals. Press Enter on a row to open the sale or voucher behind it.",
+          "For one party's history use Ledger; for what he bought or sold and what is left use Statement."
+        ],
+        "keys": "F9 prints. Long lists load a page at a time; the totals cover every row.",
+        "example": "Buyer Dues lists each buyer's balance; its total is the shop's total collection due, the same as on the dashboard."
+      },
+      "ur": {
+        "title": "رپورٹ",
+        "summary": "رپورٹ دکان کے چھپے اور اسکرین پر دکھنے والے ریکارڈ ہیں: بکری، کھاتے، وصولیاں اور ادائیگیاں، خرچے، منافع، شراکت دار، باغات اور سفر۔ ہر رپورٹ چھاپی جا سکتی ہے، پی ڈی ایف یا ایکسل فائل میں محفوظ ہو سکتی ہے۔",
+        "steps": [
+          "رپورٹ کھولیں اور فہرست سے رپورٹ چنیں۔",
+          "تاریخیں چنیں (سے اور تک، آج اور یہ مہینہ جیسے مختصر راستوں کے ساتھ) اور اگر رپورٹ پارٹی مانگے تو پارٹی۔ بقایا کی فہرستیں کی جگہ تک کی تاریخ لیتی ہیں۔",
+          "قطاریں اور میزان دیکھیں۔ کسی قطار پر Enter دبائیں تو اس کے پیچھے کی بکری یا واؤچر کھلتا ہے۔",
+          "کسی ایک پارٹی کی پوری تاریخ کے لیے کھاتہ؛ اس نے کیا لیا یا بیچا اور کتنا باقی ہے اس کے لیے فرد حساب۔"
+        ],
+        "keys": "F9 چھاپتا ہے۔ لمبی فہرستیں ایک وقت میں ایک صفحہ کھلتی ہیں؛ میزان ہر قطار کا ہوتا ہے۔",
+        "example": "گاہکوں کے ذمے ہر گاہک کا بقایا دکھاتی ہے؛ اس کا میزان دکان کی کل اگراہی ہے، جو ڈیش بورڈ پر بھی وہی ہے۔"
+      }
+    },
+    "search": {
+      "en": {
+        "title": "Search and Party Card",
+        "summary": "Search finds any account, sale number, truck number or voucher from any screen. Typing a party's code in any account field brings his card.",
+        "steps": [
+          "Press Ctrl+K, or use the search box in the top bar. Type a code, a name in Urdu or English letters, a sale number or a truck.",
+          "Pick a result: it opens the account or the entry.",
+          "In an account field, type a code or a few letters. The list opens with recent ones first and forgives small spelling mistakes.",
+          "The party card beside the field shows his balance, credit limit, oldest bill and warnings. It has buttons for his Ledger and Statement."
+        ],
+        "keys": "Ctrl+K opens search from anywhere. Alt+↓ opens the full list of a picker.",
+        "example": "Typing arshd finds Arshad Multani."
+      },
+      "ur": {
+        "title": "تلاش اور پارٹی کارڈ",
+        "summary": "تلاش کسی بھی اسکرین سے کوئی بھی کھاتہ، بکری نمبر، ٹرک نمبر یا واؤچر ڈھونڈتی ہے۔ کھاتے کے کسی خانے میں پارٹی کا کوڈ لکھیں تو اس کا کارڈ آ جاتا ہے۔",
+        "steps": [
+          "Ctrl+K دبائیں، یا اوپر کی پٹی کا تلاش کا خانہ استعمال کریں۔ کوڈ، اردو یا انگریزی حروف میں نام، بکری نمبر یا ٹرک لکھیں۔",
+          "نتیجہ چنیں: وہ کھاتہ یا اندراج کھول دیتا ہے۔",
+          "کھاتے کے خانے میں کوڈ یا چند حروف لکھیں۔ فہرست حالیہ پہلے کے ساتھ کھلتی ہے اور چھوٹی ہجے کی غلطیاں معاف کرتی ہے۔",
+          "خانے کے ساتھ پارٹی کارڈ اس کا بقایا، ادھار کی حد، سب سے پرانا بل اور تنبیہات دکھاتا ہے۔ اس میں اس کے کھاتہ اور فرد حساب کے بٹن ہیں۔"
+        ],
+        "keys": "Ctrl+K کہیں سے بھی تلاش کھولتا ہے۔ Alt+↓ چننے والے کی پوری فہرست کھولتا ہے۔",
+        "example": "arshd لکھنے سے ارشد ملتانی مل جاتا ہے۔"
+      }
+    },
+    "separate_khata": {
+      "en": {
+        "title": "Separate Khata",
+        "summary": "A Separate Khata keeps money apart from the partners, the commission and the profit, such as a family khata. It is never income or expense and never part of a partner's total.",
+        "steps": [
+          "Open Cash Book, then Separate Khata.",
+          "Choose Paid out or Received. Pick the khata; a new one can be added on the spot.",
+          "Type the amount and the reason, which is required. Save.",
+          "The khata's entries show in date order with a running balance: minus after paying out, plus when money comes in."
+        ],
+        "keys": "F10 saves. Print the khata for any dates with F9.",
+        "example": "Family Khata pays out 10,000 and gets 4,000 back: it shows minus 6,000."
+      },
+      "ur": {
+        "title": "الگ کھاتہ",
+        "summary": "الگ کھاتہ پیسے کو شراکت داروں، کمیشن اور منافع سے الگ رکھتا ہے، جیسے خاندانی کھاتہ۔ یہ کبھی آمدن یا خرچہ نہیں بنتا اور کسی شراکت دار کی کل رقم میں نہیں آتا۔",
+        "steps": [
+          "روکڑ میں الگ کھاتہ کھولیں۔",
+          "رقم دی یا رقم آئی چنیں۔ کھاتہ چنیں؛ نیا کھاتہ وہیں شامل ہو سکتا ہے۔",
+          "رقم اور وجہ لکھیں، وجہ ضروری ہے۔ محفوظ کریں۔",
+          "کھاتے کے اندراج تاریخ کی ترتیب سے چلتے بقایا کے ساتھ دکھتے ہیں: رقم دینے پر منفی، رقم آنے پر مثبت۔"
+        ],
+        "keys": "F10 محفوظ کرتا ہے۔ کسی بھی تاریخ کے لیے F9 سے کھاتہ چھاپیں۔",
+        "example": "خاندانی کھاتہ 10,000 دیتا ہے اور 4,000 واپس آتے ہیں: وہ منفی 6,000 دکھاتا ہے۔"
+      }
+    },
+    "settings": {
+      "en": {
+        "title": "Settings",
+        "summary": "Settings holds the choices of the shop and the app. Open it from the main menu.",
+        "steps": [
+          "Firm: the shop's name, the mandi, up to three contact persons and the trade mark that print on every document.",
+          "Language and text: the number grouping and the text size. Printing: paper, printer and copies. Auto lock: when the app locks.",
+          "Charges and Overrides and checks: the default commission and Laga rates, whether a line's rate can be changed, the credit limit and the rate check. Day and check: the closing time and automatic day close.",
+          "Audit log lists every change with who, when and why. App and updates shows the version and updates. The Ask the app tab holds the OpenRouter key and the on or off switch."
+        ],
+        "keys": "Changing the password and locking the app are in the user menu at the top.",
+        "example": "To print a different paper size, open Settings, then Printing, and choose the paper for the document."
+      },
+      "ur": {
+        "title": "ترتیبات",
+        "summary": "ترتیبات میں دکان اور ایپ کے انتخاب ہیں۔ اسے مرکزی مینو سے کھولیں۔",
+        "steps": [
+          "فرم: دکان کا نام، منڈی، تین تک رابطہ والے افراد اور ٹریڈ مارک جو ہر چھپی ہوئی چیز پر آتے ہیں۔",
+          "زبان اور متن: ہندسوں کی گروپنگ اور متن کا سائز۔ چھپائی: کاغذ، پرنٹر اور کاپیاں۔ خود لاک: ایپ کب لاک ہو۔",
+          "چارجز اور اوور رائیڈ اور جانچ: کمیشن اور لاگا کی عام شرحیں، لائن کی شرح بدل سکتی ہے یا نہیں، ادھار کی حد اور ریٹ کی جانچ۔ دن اور جانچ: بند کرنے کا وقت اور خود بخود دن بند۔",
+          "آڈٹ لاگ ہر تبدیلی کس نے، کب اور کیوں کی دکھاتا ہے۔ ایپ اور اپ ڈیٹ ورژن اور اپ ڈیٹ دکھاتا ہے۔ سوال پوچھیں کا ٹیب او پن روٹر کی کلید اور چالو یا بند کا سوئچ رکھتا ہے۔"
+        ],
+        "keys": "پاس ورڈ بدلنا اور ایپ لاک کرنا اوپر کے صارف مینو میں ہیں۔",
+        "example": "دوسرے سائز کے کاغذ پر چھاپنے کے لیے ترتیبات میں چھپائی کھولیں اور اس چیز کے لیے کاغذ چنیں۔"
+      }
+    },
+    "shop_expense": {
+      "en": {
+        "title": "Expense (Shop Expense)",
+        "summary": "A shop expense is money the shop spends, such as electricity, rent or tea. It is split between all partners by their shares.",
+        "steps": [
+          "Press Alt+K, or open Cash Book, then Expense. The type starts on Shop Expense.",
+          "Pick the expense head. A missing head can be added on the spot.",
+          "Type the amount, whom it was paid to and a note if you like. The screen shows each partner's share before you save.",
+          "Save. For a regular expense, Repeat last month fills last month's heads for you to check."
+        ],
+        "keys": "Alt+K opens it. F10 saves.",
+        "example": "Electricity 3,000 splits 1,200, 900 and 900 between partners at 40, 30 and 30 percent."
+      },
+      "ur": {
+        "title": "خرچہ (دکان خرچہ)",
+        "summary": "دکان خرچہ وہ رقم ہے جو دکان خرچ کرتی ہے، جیسے بجلی، کرایہ یا چائے۔ یہ سب شراکت داروں میں ان کے حصوں کے مطابق بٹ جاتی ہے۔",
+        "steps": [
+          "Alt+K دبائیں، یا روکڑ میں خرچہ کھولیں۔ قسم دکان خرچہ پر ہوتی ہے۔",
+          "خرچہ مد چنیں۔ کوئی مد نہ ہو تو وہیں شامل کی جا سکتی ہے۔",
+          "رقم، کسے ادا کیا اور چاہیں تو نوٹ لکھیں۔ محفوظ کرنے سے پہلے ہر شراکت دار کا حصہ اسکرین پر دکھتا ہے۔",
+          "محفوظ کریں۔ باقاعدہ خرچوں کے لیے پچھلا مہینہ دہرائیں پچھلے مہینے کی مدیں بھر دیتا ہے تاکہ آپ دیکھ لیں۔"
+        ],
+        "keys": "Alt+K اسے کھولتا ہے۔ F10 محفوظ کرتا ہے۔",
+        "example": "بجلی 3,000 ہے، حصے 40، 30 اور 30 فیصد ہوں تو 1,200، 900 اور 900 بٹتے ہیں۔"
+      }
+    },
+    "sign_in": {
+      "en": {
+        "title": "Sign In and Lock",
+        "summary": "The app has one user, the Owner. You sign in with the user name and password. The app locks by itself after a time without use, and your unsaved work stays.",
+        "steps": [
+          "Type the user name and password and press Enter. The language switch is on the sign-in screen too.",
+          "After 5 wrong tries wait 1 minute, then longer. If you forget the password, use the recovery code printed at setup.",
+          "The app locks after 15 minutes idle; type the password to unlock. Lock it yourself from the user menu.",
+          "Change the password in the user menu at the top."
+        ],
+        "keys": "Enter signs in. The user menu is at the top, with Change password, Lock the app and Sign out.",
+        "example": "Walk away mid-entry: the app locks, and after the password the entry is as you left it."
+      },
+      "ur": {
+        "title": "لاگ ان اور لاک",
+        "summary": "ایپ کا ایک ہی صارف ہے، مالک۔ آپ صارف کے نام اور پاس ورڈ سے لاگ ان ہوتے ہیں۔ استعمال کے بغیر کچھ دیر بعد ایپ خود لاک ہو جاتی ہے اور آپ کا غیر محفوظ کام رہتا ہے۔",
+        "steps": [
+          "صارف کا نام اور پاس ورڈ لکھیں اور Enter دبائیں۔ زبان کا سوئچ لاگ ان کی اسکرین پر بھی ہے۔",
+          "5 غلط کوششوں کے بعد 1 منٹ رکیں، پھر زیادہ۔ پاس ورڈ بھول جائیں تو سیٹ اپ پر چھپا ہوا ریکوری کوڈ استعمال کریں۔",
+          "15 منٹ بے کار رہنے پر ایپ لاک ہو جاتی ہے؛ کھولنے کے لیے پاس ورڈ لکھیں۔ صارف مینو سے خود بھی لاک کر سکتے ہیں۔",
+          "پاس ورڈ اوپر کے صارف مینو میں بدلیں۔"
+        ],
+        "keys": "Enter لاگ ان کرتا ہے۔ صارف مینو اوپر ہے، اس میں پاس ورڈ بدلیں، ایپ لاک کریں اور لاگ آؤٹ ہیں۔",
+        "example": "اندراج کے بیچ میں اٹھ جائیں: ایپ لاک ہو جاتی ہے، اور پاس ورڈ کے بعد اندراج ویسا ہی ملتا ہے۔"
+      }
+    },
+    "today_sales": {
+      "en": {
+        "title": "Today's Sale",
+        "summary": "Today's Sale lists the sales of a day, so you can find one, check it or open it to edit or cancel.",
+        "steps": [
+          "Open Sale, then Today's Sale.",
+          "Filter by day, seller or item. The row shows the sale number, truck, sellers, gross sale, net sale and status.",
+          "Press Enter on a row, or click it, to open that sale.",
+          "To find an older sale by number, truck, seller or date, use Find in the Sale Book."
+        ],
+        "keys": "Alt+B starts a new sale. F3 finds a sale. Enter opens the selected row.",
+        "example": "On the worked day the list shows two sales, with a gross sale of 29,400 and 12,000."
+      },
+      "ur": {
+        "title": "آج کی بکری",
+        "summary": "آج کی بکری میں ایک دن کی بکریاں ہیں، تاکہ آپ کوئی بکری ڈھونڈ سکیں، دیکھ سکیں یا کھول کر تبدیل یا منسوخ کر سکیں۔",
+        "steps": [
+          "بکری میں آج کی بکری کھولیں۔",
+          "دن، بیوپاری یا قسم مال سے چھانٹیں۔ قطار میں بکری نمبر، ٹرک، بیوپاری، خام بکری، صافی بکری اور حالت ہے۔",
+          "کسی قطار پر Enter دبائیں، یا اس پر کلک کریں، وہ بکری کھل جاتی ہے۔",
+          "پرانی بکری نمبر، ٹرک، بیوپاری یا تاریخ سے ڈھونڈنے کے لیے بکری بک میں تلاش استعمال کریں۔"
+        ],
+        "keys": "Alt+B نئی بکری شروع کرتا ہے۔ F3 بکری ڈھونڈتا ہے۔ Enter چنی ہوئی قطار کھولتا ہے۔",
+        "example": "مثال کے دن فہرست میں دو بکریاں ہیں، خام بکری 29,400 اور 12,000۔"
+      }
+    },
+    "unsold_stock": {
+      "en": {
+        "title": "Unsold Stock",
+        "summary": "Unsold Stock lists the lots that still have goods left after the sale was saved, with the days they have been waiting.",
+        "steps": [
+          "Open Sale, then Unsold Stock.",
+          "Each row shows the seller, item, received, sold, written off, taken as fruit, what is left and the days waiting.",
+          "Press Sell what is left on a row to make a later sale of it.",
+          "Press Write off for spoiled or returned goods and give a reason. It records stock only, no money, and it can be undone."
+        ],
+        "keys": "Enter opens the selected row. Page Up and Page Down move a page.",
+        "example": "Rahim sent 50 boxes and 45 were sold on 10-10-26. The 5 left stay here until they are sold or written off."
+      },
+      "ur": {
+        "title": "باقی مال",
+        "summary": "باقی مال میں وہ لاٹ دکھتے ہیں جن کا مال بکری محفوظ ہونے کے بعد بھی بچا ہے، اور یہ بھی کہ وہ کتنے دن سے پڑا ہے۔",
+        "steps": [
+          "بکری میں باقی مال کھولیں۔",
+          "ہر قطار میں بیوپاری، قسم مال، آیا، بکا، ضائع، پھل میں گیا، باقی اور پڑے ہوئے دن دکھتے ہیں۔",
+          "بچے ہوئے مال کی بعد کی بکری کے لیے قطار پر باقی مال بیچیں دبائیں۔",
+          "خراب یا واپس آیا مال ہٹانے کے لیے ضائع کریں دبائیں اور وجہ لکھیں۔ اس سے صرف سٹاک لکھا جاتا ہے، رقم نہیں، اور اسے واپس بھی لیا جا سکتا ہے۔"
+        ],
+        "keys": "Enter چنی ہوئی قطار کھولتا ہے۔ Page Up اور Page Down ایک صفحہ آگے پیچھے لے جاتے ہیں۔",
+        "example": "رحیم نے 50 پیٹی بھیجیں اور 10-10-26 کو 45 بک گئیں۔ باقی 5 یہاں رہتی ہیں جب تک بک نہ جائیں یا ضائع نہ ہوں۔"
+      }
+    }
+  }
+}

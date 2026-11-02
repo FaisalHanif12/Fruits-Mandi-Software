@@ -74,7 +74,8 @@ pub struct Show {
     pub rows: Option<i64>,
 }
 
-/// The entry screens a change request may point to.
+/// The screens an answer may point to: the entry screens of a change request, and, for a help
+/// answer, every main screen (plan 51 B3, PRD FR-7.89).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EntryScreenName {
@@ -100,6 +101,100 @@ pub enum EntryScreenName {
     General,
     /// The account form.
     Account,
+    /// ڈیش بورڈ.
+    Dashboard,
+    /// ترتیبات.
+    Settings,
+    /// انڈکس.
+    Masters,
+    /// The accounts list.
+    Accounts,
+    /// کمیشن اصول.
+    CommissionRules,
+    /// آج کی بکری.
+    TodaySales,
+    /// باقی مال.
+    UnsoldStock,
+    /// پختہ کھاتہ.
+    PukhtaKhata,
+    /// اگراہی فہرست.
+    CollectionList,
+    /// روکڑ بک.
+    CashBook,
+    /// باغات.
+    Gardens,
+    /// مارکیٹ سفر.
+    MarketTrips,
+    /// شراکت دار.
+    Partners,
+    /// مہینہ بند.
+    MonthClose,
+    /// دن بند کریں.
+    DayClose,
+    /// رپورٹ.
+    Reports,
+    /// ڈوبی رقم.
+    DeadAmount,
+    /// تجزیات.
+    Analytics,
+    /// بیک اپ.
+    Backup,
+}
+
+impl EntryScreenName {
+    /// Every name the answer schema offers, in the order of the schema. A test keeps this list equal
+    /// to the `entry.screen` enum of `answer.schema.json`, both ways.
+    pub const ALL: [&'static str; 30] = [
+        "bikri",
+        "wasooli",
+        "adaigi",
+        "peshgi",
+        "kharcha",
+        "udhar_raqam",
+        "alag_khata",
+        "sarmaya",
+        "phal",
+        "general",
+        "account",
+        "dashboard",
+        "settings",
+        "masters",
+        "accounts",
+        "commission_rules",
+        "today_sales",
+        "unsold_stock",
+        "pukhta_khata",
+        "collection_list",
+        "cash_book",
+        "gardens",
+        "market_trips",
+        "partners",
+        "month_close",
+        "day_close",
+        "reports",
+        "dead_amount",
+        "analytics",
+        "backup",
+    ];
+
+    /// True for the entry screens, which open empty with a party chosen when there is one. The
+    /// others are main screens, which open as they are and take no party (plan 51 B3, PRD FR-7.89).
+    pub fn is_entry_screen(self) -> bool {
+        matches!(
+            self,
+            Self::Bikri
+                | Self::Wasooli
+                | Self::Adaigi
+                | Self::Peshgi
+                | Self::Kharcha
+                | Self::UdharRaqam
+                | Self::AlagKhata
+                | Self::Sarmaya
+                | Self::Phal
+                | Self::General
+                | Self::Account
+        )
+    }
 }
 
 /// The screen a change request opens, and the party to choose on it.

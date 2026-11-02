@@ -1,5 +1,6 @@
 //! The tests of the fixed prompt (D6-system-prompt.md Section 7, P1 to P4, P6 and P7; P5 is in
-//! `golden_prompt.rs`). The four files of `prompt/` are the same in every request, so they are
+//! `golden_prompt.rs`, P8 in `prompt_columns.rs` and P9 in `guide.rs`). The files of `prompt/` are
+//! the same in every request (the guide is given back by the tool, not sent with it), so they are
 //! kept equal to the document, small enough for four calls to fit the input limit, and equal to
 //! the catalogue of the app in both directions.
 #![cfg(test)]
@@ -8,9 +9,10 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use mandi_assistant::limits::MAX_PREFIX_TOKENS;
+use mandi_assistant::model_answer::EntryScreenName;
 use mandi_assistant::prompt::{
-    ANSWER_SCHEMA_JSON, SYSTEM, TOOL_NAMES, TOOLS_JSON, WORDS_TSV, WordKind, answer_schema, tools,
-    words,
+    ANSWER_SCHEMA_JSON, GUIDE_JSON, SYSTEM, TOOL_NAMES, TOOLS_JSON, WORDS_TSV, WordKind,
+    answer_schema, tools, words,
 };
 use mandi_reports::analytics::catalog as analytics_catalog;
 use mandi_reports::reports::catalog as report_catalog;
@@ -29,7 +31,7 @@ fn read_repo(relative: &str) -> String {
 // ---- P1 ---------------------------------------------------------------------------------------
 
 #[test]
-fn p1_the_fixed_part_is_at_most_9000_tokens() {
+fn p1_the_fixed_part_is_at_most_9500_tokens() {
     let bpe = tiktoken_rs::o200k_base().unwrap();
     let tools_min =
         serde_json::to_string(&serde_json::from_str::<Value>(TOOLS_JSON).unwrap()).unwrap();
@@ -113,16 +115,24 @@ fn p2_the_catalogue_is_named_both_ways() {
         .map(|v| v.as_str().unwrap().to_owned())
         .collect();
     assert_eq!(from_schema, views);
-    // The entry screens of the answer schema are the screens the app can open.
-    let screens =
+    // The screens of the answer schema are the screens the answer can carry, both ways: the entry
+    // screens and the main screens of the help button (plan 51 B3, PRD FR-7.89).
+    let screens: Vec<String> =
         answer_schema()["properties"]["entry"]["anyOf"][0]["properties"]["screen"]["enum"]
             .as_array()
             .unwrap()
-            .clone();
-    for screen in screens {
-        serde_json::from_value::<mandi_assistant::model_answer::EntryScreenName>(screen.clone())
+            .iter()
+            .map(|s| s.as_str().unwrap().to_owned())
+            .collect();
+    for screen in &screens {
+        serde_json::from_value::<EntryScreenName>(json!(screen))
             .unwrap_or_else(|_| panic!("no route for the screen {screen}"));
     }
+    assert_eq!(
+        screens.iter().map(String::as_str).collect::<Vec<_>>(),
+        EntryScreenName::ALL,
+        "the entry.screen enum of the schema and EntryScreenName::ALL, in the same order"
+    );
     // The report ids of the `report` tool description are R1 to R38 as well.
     assert_eq!(known.len(), 38);
 }
@@ -276,7 +286,7 @@ fn check_strict(node: &Value, path: &str) {
 #[test]
 fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
     let defs = tools();
-    assert_eq!(defs.len(), 8);
+    assert_eq!(defs.len(), 9);
     for (def, name) in defs.iter().zip(TOOL_NAMES) {
         assert_eq!(def["type"], "function");
         assert_eq!(def["function"]["name"], name);
@@ -291,7 +301,7 @@ fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
             serde_json::from_value::<$ty>(value).expect(stringify!($ty));
         }};
     }
-    use mandi_assistant::tools::{analytics, calc, find, party, period, report, tiles};
+    use mandi_assistant::tools::{analytics, calc, find, help, party, period, report, tiles};
     reads!(find::Input, json!({"text": "ikram", "role": "buyer"}));
     reads!(party::Input, json!({"party": "r1.matches.0"}));
     reads!(
@@ -323,6 +333,13 @@ fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
         json!({"measure": "commission_all", "item": null, "seller": null, "buyer": null,
                "garden": null, "trip": null, "ahead": 6, "target": null})
     );
+    reads!(help::Input, json!({"topic": "bikri_book"}));
+    // Every topic of the enum of `app_help` is a topic of the guide, and a topic the guide has is
+    // read (the other way round is P9).
+    let topic = &defs[8]["function"]["parameters"]["properties"]["topic"]["enum"];
+    for t in topic.as_array().unwrap() {
+        reads!(help::Input, json!({"topic": t}));
+    }
     // A sample answer reads through the answer type.
     let answer = json!({"kind": "answer", "text": "{{r1.matches.0.name}}", "show": [], "next": [],
                         "choose": null, "entry": null, "nearest": null});
@@ -357,7 +374,7 @@ fn block_of(document: &str, heading: &str) -> String {
 }
 
 #[test]
-fn p7_the_four_files_are_the_blocks_of_the_document() {
+fn p7_the_five_files_are_the_blocks_of_the_document() {
     let document = read_repo("docs/deliverables/D6-system-prompt.md");
     assert_eq!(SYSTEM, block_of(&document, "## 2."), "system.md");
     assert_eq!(TOOLS_JSON, block_of(&document, "## 3."), "tools.json");
@@ -367,12 +384,14 @@ fn p7_the_four_files_are_the_blocks_of_the_document() {
         "answer.schema.json"
     );
     assert_eq!(WORDS_TSV, block_of(&document, "## 6."), "words.tsv");
+    assert_eq!(GUIDE_JSON, block_of(&document, "## 9."), "guide.json");
     // The document's own files on disk are the ones embedded (the crate has no other copy).
     for (file, text) in [
         ("system.md", SYSTEM),
         ("tools.json", TOOLS_JSON),
         ("answer.schema.json", ANSWER_SCHEMA_JSON),
         ("words.tsv", WORDS_TSV),
+        ("guide.json", GUIDE_JSON),
     ] {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("prompt")

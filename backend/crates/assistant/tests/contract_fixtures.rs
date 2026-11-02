@@ -831,6 +831,25 @@ fn answered_route() -> AskReply {
     r
 }
 
+/// A help answer (PRD FR-7.89, plan 51 B3): the guide's own words as text parts, and a button for
+/// the screen it is about. A main screen opens as it is, so the party is null.
+fn help_route() -> AskReply {
+    let mut r = reply(21, AskOutcome::Answered);
+    r.answer = Some(answer(vec![
+        AnswerPart::Text {
+            text: "A market trip is a day trip: a person is sent to a bigger market to buy goods for some partners.".to_owned(),
+        },
+        AnswerPart::Text {
+            text: "\n• Open Market Trips and make a new trip.".to_owned(),
+        },
+    ]));
+    r.entry_route = Some(EntryRoute {
+        screen: EntryScreen::MarketTrips,
+        party: None,
+    });
+    r
+}
+
 /// Advice to a question that also asks for a change (PRD E98): the same route.
 fn advice_route() -> AskReply {
     let mut r = advice();
@@ -1090,6 +1109,11 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_answered_route",
             ask("akram ka bakaya batao aur 5000 ki wasooli likh do"),
             answered_route(),
+        ),
+        (
+            "assistant_reply_help_route",
+            ask("market safar kya hai"),
+            help_route(),
         ),
         (
             "assistant_reply_advice_route",

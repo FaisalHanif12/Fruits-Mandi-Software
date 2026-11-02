@@ -1,5 +1,5 @@
-//! P5 of D6-system-prompt.md Section 7: each of the 15 worked examples of `system.md` is also a
-//! recorded golden question (`fixtures/model/prompt-ex-01.json` to `-15.json`). Each one's tool
+//! P5 of D6-system-prompt.md Section 7: each of the 16 worked examples of `system.md` is also a
+//! recorded golden question (`fixtures/model/prompt-ex-01.json` to `-16.json`). Each one's tool
 //! calls run, every reference resolves, `check.rs` passes it, and the filled text equals the
 //! expected text in the fixture.
 //!
@@ -210,14 +210,14 @@ fn plain_text(answer: &Answer, language: Language, words: &Words) -> String {
 }
 
 #[test]
-fn p5_the_fifteen_examples_run_as_golden_questions() {
+fn p5_the_sixteen_examples_run_as_golden_questions() {
     let words = Words::new().unwrap();
     // `MANDI_WRITE_FIXTURES=1` writes the filled texts into the fixtures (to be read against the
     // PRD numbers before they are committed); a normal run compares with them.
     let write = std::env::var("MANDI_WRITE_FIXTURES").is_ok_and(|v| v == "1");
     let mut actual_report = Vec::new();
     let mut failures = Vec::new();
-    for n in 1..=15 {
+    for n in 1..=16 {
         let path = format!(
             "{}/tests/fixtures/model/prompt-ex-{n:02}.json",
             env!("CARGO_MANIFEST_DIR")

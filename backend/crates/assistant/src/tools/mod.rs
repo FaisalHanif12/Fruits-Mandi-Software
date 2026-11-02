@@ -30,6 +30,7 @@ pub mod analytics;
 pub mod calc;
 pub mod cells;
 pub mod find;
+pub mod help;
 pub mod party;
 pub mod period;
 pub mod records;
@@ -477,6 +478,7 @@ pub fn call(env: &Env<'_>, state: &State, name: &str, arguments: &str) -> Result
         "period" => period::run(env, state, &args),
         "calculate" => calc::run_calculate(env, state, &args),
         "estimate" => calc::run_estimate(env, state, &args),
+        "app_help" => help::run(env, state, &args),
         _ => Err(Stop::Error(ToolError::new(
             "ERR_UNKNOWN_TOOL",
             "name",

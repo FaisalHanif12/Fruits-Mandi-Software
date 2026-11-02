@@ -1,0 +1,36 @@
+{
+  "question_id": 21,
+  "conversation_id": "c-1",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "A market trip is a day trip: a person is sent to a bigger market to buy goods for some partners."
+      },
+      {
+        "type": "text",
+        "text": "\n• Open Market Trips and make a new trip."
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": {
+    "screen": "market_trips",
+    "party": null
+  },
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 3,
+  "limit": 20
+}

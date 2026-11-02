@@ -5,8 +5,8 @@
  */
 export type LogTool = {
   /**
-   * The tool: `find`, `party_card`, `report`, `analytics`, `tiles`, `period`, `calculate` or
-   * `estimate`.
+   * The tool: `find`, `party_card`, `report`, `analytics`, `tiles`, `period`, `calculate`,
+   * `estimate` or `app_help`.
    */
   tool: string;
   /**

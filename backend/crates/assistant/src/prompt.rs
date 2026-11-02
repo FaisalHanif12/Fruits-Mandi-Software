@@ -12,20 +12,24 @@
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+use serde::Deserialize;
 use serde_json::Value;
 
 /// The instructions: who the assistant is, the rules, the Owner's words, the sources, the
-/// references, the answer, advice, estimates and 15 worked examples.
+/// references, the answer, advice, estimates and 16 worked examples.
 pub const SYSTEM: &str = include_str!("../prompt/system.md");
-/// The 8 tools of PRD FR-7.87 as strict function definitions.
+/// The 9 tools of PRD FR-7.87 and FR-7.89 as strict function definitions.
 pub const TOOLS_JSON: &str = include_str!("../prompt/tools.json");
 /// The strict schema of the final answer.
 pub const ANSWER_SCHEMA_JSON: &str = include_str!("../prompt/answer.schema.json");
 /// The word lists that `check.rs` and the prompt tests share.
 pub const WORDS_TSV: &str = include_str!("../prompt/words.tsv");
+/// The written guide of the app that the tool `app_help` returns, one entry for each topic in both
+/// languages. It is not sent with every request: only the topic the model asks for is given back.
+pub const GUIDE_JSON: &str = include_str!("../prompt/guide.json");
 
-/// The names of the 8 tools, in the order of `tools.json`.
-pub const TOOL_NAMES: [&str; 8] = [
+/// The names of the 9 tools, in the order of `tools.json`.
+pub const TOOL_NAMES: [&str; 9] = [
     "find",
     "party_card",
     "report",
@@ -34,6 +38,7 @@ pub const TOOL_NAMES: [&str; 8] = [
     "period",
     "calculate",
     "estimate",
+    "app_help",
 ];
 
 /// One kind of word list in `words.tsv`.
@@ -112,6 +117,50 @@ impl WordLists {
 pub fn words() -> &'static WordLists {
     static LISTS: OnceLock<WordLists> = OnceLock::new();
     LISTS.get_or_init(|| WordLists::parse(WORDS_TSV))
+}
+
+/// One language of one topic of the guide.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GuideText {
+    /// The screen or module, as its name on screen.
+    pub title: String,
+    /// What it is for and when to use it.
+    pub summary: String,
+    /// The steps on the screen, in order.
+    pub steps: Vec<String>,
+    /// The keys that matter there, in one line.
+    pub keys: String,
+    /// One worked example with the words of the PRD.
+    pub example: String,
+}
+
+/// One topic of the guide.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GuideTopic {
+    /// In Urdu.
+    pub ur: GuideText,
+    /// In English.
+    pub en: GuideText,
+}
+
+/// The guide: its topics by name.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Guide {
+    /// Each topic.
+    pub topics: BTreeMap<String, GuideTopic>,
+}
+
+/// The guide of [`GUIDE_JSON`].
+pub fn guide() -> &'static Guide {
+    static GUIDE: OnceLock<Guide> = OnceLock::new();
+    GUIDE.get_or_init(|| {
+        serde_json::from_str(GUIDE_JSON).unwrap_or(Guide {
+            topics: BTreeMap::new(),
+        })
+    })
 }
 
 /// The tool definitions of [`TOOLS_JSON`], as sent in the request.

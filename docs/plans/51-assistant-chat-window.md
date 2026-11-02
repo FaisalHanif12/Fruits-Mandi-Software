@@ -145,3 +145,11 @@ Tasks:
   - (e) set the stale PREFIX_TOKENS 8000 in scripts/ai-eval/run.mjs to 9000, and add help questions to questions.tsv (robustness has stopped; this is mechanical).
 - F3 (frontend): on an answer or advice with an entry route, show only the neutral line and the button ("اندراج کی اسکرین کھولیں"; the amounts stay empty). The full refusal line stays for the change_refused outcome. The timeout text reads "the answer took too long, please ask again".
 - L3 (lead): the docs, then the 100-question live run with Umar's key.
+- P51-B3 as built (02-11-2026), accepted:
+  - 30 s a call and 60 s a question; a timeout at any stage, the body read included, is reported as Timeout.
+  - `app_help` with 38 topics. The guide is cited by reference and shown word for word (Val::Guide).
+  - The help button opens any of 30 screens; a main screen never keeps a party.
+  - The prompt files equal D6-system-prompt v1.2. P1 measures 9,402 of 9,500. P7, P8 and P9 pass.
+  - Tests: the assistant crate, 248 passed, 0 failed, 2 ignored (the slow and the live ones); golden_questions unchanged; 12 recorded help questions; prompt-ex-16.
+  - scripts/ai-eval: 110 questions, PREFIX_TOKENS 9500.
+  - Open for Umar: the Urdu review of the guide, and 3 unverified labels (how Close the day is reached, the capital kind labels, the name of the print list).

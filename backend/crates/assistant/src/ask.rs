@@ -63,7 +63,8 @@ pub enum AskOutcome {
 pub enum FailureKind {
     /// No internet (the request could not be sent).
     Offline,
-    /// No reply within 15 seconds, or the question went past 45.
+    /// No reply within 30 seconds, or the question went past 60. A timeout at any stage, the wait
+    /// for the first byte or the read of the body, is this and never `bad_reply`.
     Timeout,
     /// HTTP 401: the key is wrong.
     BadKey,

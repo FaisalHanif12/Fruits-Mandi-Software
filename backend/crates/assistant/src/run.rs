@@ -682,9 +682,11 @@ impl<'a> Run<'a> {
             let wanted = party_prefix(screen);
             EntryRoute {
                 screen,
+                // A main screen (a help answer, PRD FR-7.89) opens as it is: it takes no party.
                 party: e
                     .party
                     .as_deref()
+                    .filter(|_| e.screen.is_entry_screen())
                     .and_then(|p| tools::record(env, state, p, "party").ok())
                     .filter(|r| r.prefix == wanted)
                     .and_then(|r| {
@@ -882,6 +884,25 @@ fn entry_screen(screen: EntryScreenName) -> EntryScreen {
         EntryScreenName::Phal => EntryScreen::Phal,
         EntryScreenName::General => EntryScreen::General,
         EntryScreenName::Account => EntryScreen::Account,
+        EntryScreenName::Dashboard => EntryScreen::Dashboard,
+        EntryScreenName::Settings => EntryScreen::Settings,
+        EntryScreenName::Masters => EntryScreen::Masters,
+        EntryScreenName::Accounts => EntryScreen::Accounts,
+        EntryScreenName::CommissionRules => EntryScreen::CommissionRules,
+        EntryScreenName::TodaySales => EntryScreen::TodaySales,
+        EntryScreenName::UnsoldStock => EntryScreen::UnsoldStock,
+        EntryScreenName::PukhtaKhata => EntryScreen::PukhtaKhata,
+        EntryScreenName::CollectionList => EntryScreen::CollectionList,
+        EntryScreenName::CashBook => EntryScreen::CashBook,
+        EntryScreenName::Gardens => EntryScreen::Gardens,
+        EntryScreenName::MarketTrips => EntryScreen::MarketTrips,
+        EntryScreenName::Partners => EntryScreen::Partners,
+        EntryScreenName::MonthClose => EntryScreen::MonthClose,
+        EntryScreenName::DayClose => EntryScreen::DayClose,
+        EntryScreenName::Reports => EntryScreen::Reports,
+        EntryScreenName::DeadAmount => EntryScreen::DeadAmount,
+        EntryScreenName::Analytics => EntryScreen::Analytics,
+        EntryScreenName::Backup => EntryScreen::Backup,
     }
 }
 

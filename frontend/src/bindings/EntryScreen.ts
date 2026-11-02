@@ -2,7 +2,14 @@
 
 /**
  * A suggestion or a refusal route: the entry screen that opens with the party chosen and every
- * amount empty (PRD Section 7.7, FR-7.79). The assistant never writes.
+ * amount empty (PRD Section 7.7, FR-7.79). The assistant never writes. A help answer (PRD FR-7.89)
+ * may point to any main screen instead: the screen opens as it is, and `party` is null. The routes
+ * of the main screens: `dashboard` `/`, `settings` `/settings`, `masters` `/index`, `accounts`
+ * `/index/accounts`, `commission_rules` `/index/rules`, `today_sales` `/bikri/today`,
+ * `unsold_stock` `/bikri/stock`, `pukhta_khata` `/bikri/pukhta`, `collection_list`
+ * `/bikri/collection`, `cash_book` `/rokar`, `gardens` `/gardens`, `market_trips` `/trips`,
+ * `partners` `/partners`, `month_close` `/month`, `day_close` `/day`, `reports` `/reports`,
+ * `dead_amount` `/reports/dead-amount`, `analytics` `/analytics`, `backup` `/backup`.
  */
 export type EntryScreen =
   | 'bikri'
@@ -15,4 +22,23 @@ export type EntryScreen =
   | 'sarmaya'
   | 'phal'
   | 'general'
-  | 'account';
+  | 'account'
+  | 'dashboard'
+  | 'settings'
+  | 'masters'
+  | 'accounts'
+  | 'commission_rules'
+  | 'today_sales'
+  | 'unsold_stock'
+  | 'pukhta_khata'
+  | 'collection_list'
+  | 'cash_book'
+  | 'gardens'
+  | 'market_trips'
+  | 'partners'
+  | 'month_close'
+  | 'day_close'
+  | 'reports'
+  | 'dead_amount'
+  | 'analytics'
+  | 'backup';

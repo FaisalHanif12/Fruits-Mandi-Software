@@ -642,7 +642,7 @@ fn the_user_message_carries_today_the_language_the_question_and_its_numbers() {
     assert_eq!(body["question_numbers"]["n2"]["unit"], "amount");
     // The fixed part is first; the tools and the answer schema are strict; one seed; no stream.
     assert_eq!(requests[0]["messages"][0]["role"], "system");
-    assert_eq!(requests[0]["tools"].as_array().unwrap().len(), 8);
+    assert_eq!(requests[0]["tools"].as_array().unwrap().len(), 9);
     assert_eq!(
         requests[0]["response_format"]["json_schema"]["strict"],
         true

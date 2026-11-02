@@ -151,6 +151,8 @@ pub fn part_of_val(val: &Val, working: Option<crate::answer::AnswerWorking>) -> 
             type_id: type_id.clone(),
             number: *number,
         },
+        // The guide's own words, in the answer as text (plan 51 B3).
+        Val::Guide(text) => AnswerPart::Text { text: text.clone() },
     }
 }
 

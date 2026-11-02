@@ -2773,7 +2773,7 @@ fn attack_10_every_recorded_transcript_of_the_golden_questions_writes_only_the_l
 }
 
 #[test]
-fn attack_10_the_tools_are_exactly_eight_and_none_is_called_like_a_write() {
+fn attack_10_the_tools_are_exactly_nine_and_none_is_called_like_a_write() {
     let (h, _) = private_day();
     let (_, requests) = ask(&h, "ikram", None, gives_up());
     let names: Vec<String> = requests[0]["tools"]
@@ -2792,7 +2792,8 @@ fn attack_10_the_tools_are_exactly_eight_and_none_is_called_like_a_write() {
             "tiles",
             "period",
             "calculate",
-            "estimate"
+            "estimate",
+            "app_help"
         ]
     );
     // The tools take no id of a row to change, no amount to post and no free text for the books.

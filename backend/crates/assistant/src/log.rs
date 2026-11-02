@@ -32,8 +32,8 @@ pub enum LogSource {
 /// One tool the model called (or a chip's fixed call).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct LogTool {
-    /// The tool: `find`, `party_card`, `report`, `analytics`, `tiles`, `period`, `calculate` or
-    /// `estimate`.
+    /// The tool: `find`, `party_card`, `report`, `analytics`, `tiles`, `period`, `calculate`,
+    /// `estimate` or `app_help`.
     pub tool: String,
     /// The report id or view letter it read, for example `R13` or `A`. Null for the others.
     pub source: Option<String>,

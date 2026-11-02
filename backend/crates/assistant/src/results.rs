@@ -149,6 +149,10 @@ pub enum Val {
         /// The value (rupees for an amount, the count for months).
         number: i64,
     },
+    /// A text of the written guide of the app (`app_help`): the model reads it and cites it by
+    /// reference, and the app puts the same words into the answer. It is the app's own text, so
+    /// the checks that refuse a typed digit or a typed name do not apply to it (plan 51 B3).
+    Guide(String),
 }
 
 /// A node of a result tree.
@@ -308,6 +312,7 @@ impl Val {
                 json!({"label": {"ur": label.ur, "en": label.en}})
             }
             Val::Question { number } => json!({"n": number}),
+            Val::Guide(text) => json!(text),
         }
     }
 }
