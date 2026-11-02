@@ -37,6 +37,7 @@ pub mod records;
 pub mod report;
 pub mod teach;
 pub mod tiles;
+pub mod typed;
 
 /// Everything a tool reads from outside its input.
 pub struct Env<'a> {
@@ -232,6 +233,22 @@ impl Draft {
             partner_data: false,
             working: None,
         }
+    }
+}
+
+/// A draft with its id, as the result the conversation keeps (`turn` is its question).
+pub fn stored(draft: Draft, id: String, turn: u32) -> ToolResult {
+    ToolResult {
+        id,
+        tool: draft.tool,
+        input: draft.input,
+        node: draft.node,
+        shown: draft.shown,
+        source: draft.source,
+        partner_parts_locked: draft.partner_parts_locked,
+        partner_data: draft.partner_data,
+        turn,
+        working: draft.working,
     }
 }
 

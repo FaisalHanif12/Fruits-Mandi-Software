@@ -92,15 +92,14 @@ impl CallError {
     }
 
     /// True for a failure that one more try can cure (plan 52 item 6): the network (no internet, or
-    /// a connection that dropped, which is `other` with no status), HTTP 429 and HTTP 5xx. A
+    /// a connection that dropped), HTTP 429 and HTTP 5xx. A
     /// timeout is not tried again (the next try would wait as long), and neither is a wrong key,
     /// no credit, no Azure endpoint, a reply that cannot be read, or any other status.
     pub fn retryable(self) -> bool {
-        match self.kind {
-            FailureKind::Offline | FailureKind::Busy | FailureKind::Server => true,
-            FailureKind::Other => self.http_status.is_none(),
-            _ => false,
-        }
+        matches!(
+            self.kind,
+            FailureKind::Offline | FailureKind::Dropped | FailureKind::Busy | FailureKind::Server
+        )
     }
 
     /// The failure the panel is told.
@@ -213,15 +212,15 @@ fn status_kind(status: u16) -> FailureKind {
 /// The failure of a request that could not be sent or got no reply. No time left is a timeout. A
 /// connection that could not be made (no network, no route, DNS) is `offline`, the one case where
 /// "no internet" is true. A connection that was made and then dropped, or any other fault in
-/// sending, is `other` with no status: the internet may be fine, so the panel does not say it is
-/// not (plan 52 item 6).
+/// sending, is `dropped`: the internet may be fine, so the panel does not say it is not (plan 52
+/// item 6).
 fn send_failure(is_timeout: bool, is_connect: bool) -> CallError {
     CallError::new(if is_timeout {
         FailureKind::Timeout
     } else if is_connect {
         FailureKind::Offline
     } else {
-        FailureKind::Other
+        FailureKind::Dropped
     })
 }
 
@@ -510,11 +509,12 @@ mod tests {
         assert_eq!(error.kind, FailureKind::Offline);
         assert!(error.retryable());
         // A server that takes the request and hangs up with no reply: the internet is fine, so
-        // the panel must not say it is down. The kind is `other`, with no status, and is tried again.
+        // the panel must not say it is down. The kind is `dropped`, with no status, and is tried
+        // again.
         let url = serve(Server::HangsUp, Duration::ZERO);
         let (result, _) = call_local(&url, Duration::from_secs(5));
         let error = result.unwrap_err();
-        assert_eq!(error.kind, FailureKind::Other);
+        assert_eq!(error.kind, FailureKind::Dropped);
         assert_eq!(error.http_status, None);
         assert!(error.retryable());
     }
@@ -525,7 +525,12 @@ mod tests {
             kind,
             http_status: Some(code),
         };
-        for kind in [FailureKind::Offline, FailureKind::Busy, FailureKind::Server] {
+        for kind in [
+            FailureKind::Offline,
+            FailureKind::Dropped,
+            FailureKind::Busy,
+            FailureKind::Server,
+        ] {
             assert!(CallError::new(kind).retryable(), "{kind:?}");
         }
         assert!(status(FailureKind::Busy, 429).retryable());
@@ -542,6 +547,7 @@ mod tests {
             assert!(!CallError::new(kind).retryable(), "{kind:?}");
         }
         assert!(!status(FailureKind::Other, 400).retryable());
+        assert!(!CallError::new(FailureKind::Other).retryable());
         assert_eq!(
             send_failure(true, true).kind,
             FailureKind::Timeout,

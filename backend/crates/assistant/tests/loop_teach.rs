@@ -101,98 +101,71 @@ fn advice() -> Value {
 }
 
 #[test]
-fn a_wrong_sort_word_is_corrected_in_one_try_and_the_question_is_answered() {
+fn a_wrong_sort_word_is_left_out_with_a_note_and_the_question_is_answered() {
+    // Umar's question 13 sorted three views on `sales`, which is no column. In plan 51 that was
+    // three refusals and a second round; in plan 52 the words are left out, every row is given,
+    // and the note lists the words that work, so the first round is enough.
     let h = Harness::day();
     let replies = vec![
         // Call 1: the period.
-        tool_reply(&[period("this_year")]),
+        tool_reply(&[period("this_month")]),
         // Call 2: three views sorted on `sales`, which is no column.
         tool_reply(&[
             compared("A", "sales"),
             compared("B", "sales"),
             compared("H", "sales"),
         ]),
-        // Call 3: the same views with words from the refusals.
-        tool_reply(&[
-            compared("A", "total_comm"),
-            compared("B", "gross"),
-            compared("H", "total_comm"),
-        ]),
-        // Call 4: the answer.
+        // Call 3: the answer.
         final_reply(&advice()),
     ];
     let (reply, requests) = h.ask("apni sale ko ziyada kaise karain ?", None, replies);
     assert_eq!(reply.outcome, AskOutcome::Advice, "{reply:#?}");
-    assert_eq!(requests.len(), 4);
-    // What the model read after its first try: three refusals, each with the field, a reason and
-    // the columns of its own view.
-    let refusals: Vec<Value> = tool_messages(&requests[2])
-        .iter()
-        .filter(|m| m.contains("ERR_OUT_OF_RANGE"))
-        .map(|m| serde_json::from_str(m).unwrap())
-        .collect();
-    assert_eq!(refusals.len(), 3);
-    for (refusal, view_word) in refusals.iter().zip(["gross", "net", "rank"]) {
-        let e = &refusal["error"];
-        assert_eq!(e["field"], "sort.column");
-        assert!(!e["detail"].as_str().unwrap().is_empty());
-        let allowed: Vec<&str> = e["allowed"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|w| w.as_str().unwrap())
-            .collect();
-        assert!(allowed.contains(&"total_comm"), "{allowed:?}");
-        assert!(allowed.contains(&"difference.total_comm"), "{allowed:?}");
-        assert!(allowed.contains(&view_word), "{view_word} in {allowed:?}");
-        assert!(!allowed.contains(&"sales"));
+    assert_eq!(requests.len(), 3);
+    let messages = tool_messages(&requests[2]);
+    assert!(
+        messages.iter().all(|m| !m.contains("ERR_OUT_OF_RANGE")),
+        "no refusal: {messages:?}"
+    );
+    let notes: Vec<&String> = messages.iter().filter(|m| m.contains("left out")).collect();
+    assert_eq!(notes.len(), 3, "{messages:?}");
+    for note in notes {
+        assert!(
+            note.contains("\"note\"") && note.contains("sales"),
+            "{note}"
+        );
+        assert!(note.contains("difference.total_comm"), "{note}");
     }
     h.scan_requests();
 }
 
 #[test]
-fn an_up_to_now_comparison_is_refused_with_the_reason_and_corrected_with_a_closed_period() {
+fn an_up_to_now_comparison_is_left_out_with_a_note_and_the_question_is_answered() {
     let h = Harness::day();
     let replies = vec![
-        // Call 1: up to now, whose from is empty.
+        // Call 1: up to now, which starts at the first day of the books.
         tool_reply(&[period("up_to_now")]),
-        // Call 2: a comparison over it, as the playbook line "commission kaise barhe" suggests.
+        // Call 2: a comparison over it, as the playbook line "commission kaise barhe" suggests. The
+        // books start on that day, so there is nothing earlier: it is left out and the note says so.
         tool_reply(&[analytics(
             "A",
-            json!({"from": "r1.from", "to": "r1.to", "compare": "previous", "rows": 10}),
+            json!({"from": "r1.from", "to": "r1.to", "compare": "previous", "rows": 10,
+                   "sort": [{"column": "total_comm", "order": "desc"}]}),
         )]),
-        // Call 3: the reason named both dates and a closed period, so it asks for one and uses it
-        // in the same batch (the second tool names the id the first will get, r2).
-        tool_reply(&[
-            period("this_year"),
-            analytics(
-                "A",
-                json!({"from": "r2.from", "to": "r2.to", "compare": "previous", "rows": 10,
-                       "sort": [{"column": "total_comm", "order": "desc"}]}),
-            ),
-        ]),
         final_reply(&json!({
             "kind": "advice",
-            "text": "سب سے زیادہ کمیشن {{r3.rows.i1.name}} سے آیا: {{r3.rows.i1.total_comm}}۔",
+            "text": "سب سے زیادہ کمیشن {{r2.rows.i1.name}} سے آیا: {{r2.rows.i1.total_comm}}۔",
             "show": [], "next": [], "choose": null, "entry": null, "nearest": null
         })),
     ];
     let (reply, requests) = h.ask("abhi tak ki sale kaise barhaun", None, replies);
     assert_eq!(reply.outcome, AskOutcome::Advice, "{reply:#?}");
-    assert_eq!(requests.len(), 4);
-    let refusals: Vec<String> = tool_messages(&requests[2])
-        .into_iter()
-        .filter(|m| m.contains("ERR_REQUIRED"))
-        .collect();
-    assert_eq!(refusals.len(), 1, "{:?}", tool_messages(&requests[2]));
-    let first: Value = serde_json::from_str(&refusals[0]).unwrap();
-    assert_eq!(first["error"]["field"], "from");
-    let detail = first["error"]["detail"].as_str().unwrap();
+    assert_eq!(requests.len(), 3);
+    let messages = tool_messages(&requests[2]);
+    assert!(messages.iter().all(|m| !m.contains("ERR_")), "{messages:?}");
     assert!(
-        detail.contains("both dates") && detail.contains("this_year"),
-        "{detail}"
+        messages.iter().any(|m| m.contains("no earlier period")),
+        "{messages:?}"
     );
-    assert!(!detail.contains("filters."));
     h.scan_requests();
 }
 

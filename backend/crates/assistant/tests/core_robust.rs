@@ -69,7 +69,7 @@ fn last_row(h: &Harness) -> mandi_services::db::assistant::QuestionRow {
 fn a_call_that_failed_on_the_network_is_tried_once_more_and_the_question_goes_on() {
     for error in [
         CallError::new(FailureKind::Offline),
-        CallError::new(FailureKind::Other),
+        CallError::new(FailureKind::Dropped),
         CallError {
             kind: FailureKind::Busy,
             http_status: Some(429),
@@ -118,12 +118,13 @@ fn only_one_retry_and_an_offline_ending_when_the_internet_is_really_gone() {
     assert_eq!(reply.count_today, 0, "no reply came, nothing counted");
     // A connection that was made and dropped is not called "no internet".
     let client = RecordedClient::with_results(vec![
-        Err(CallError::new(FailureKind::Other)),
-        Err(CallError::new(FailureKind::Other)),
+        Err(CallError::new(FailureKind::Dropped)),
+        Err(CallError::new(FailureKind::Dropped)),
     ]);
     let reply = h.ask_with("aaj ka commission", None, &client);
     assert_eq!(reply.outcome, AskOutcome::Error);
-    assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Other));
+    assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Dropped));
+    assert_eq!(client.requests().len(), 2);
 }
 
 #[test]

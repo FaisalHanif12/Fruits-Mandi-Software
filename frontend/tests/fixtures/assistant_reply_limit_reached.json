@@ -8,6 +8,7 @@
   "entry_route": null,
   "locked": false,
   "failure": null,
+  "stop_reason": null,
   "count_today": 20,
   "limit": 20
 }

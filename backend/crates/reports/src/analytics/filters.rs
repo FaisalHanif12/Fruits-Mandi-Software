@@ -129,6 +129,17 @@ fn compared(
     }
 }
 
+/// The compared period of a period given as ISO dates (PRD 18.1), the way the engine works it out:
+/// the same number of days ending the day before `from`, or the same dates one year earlier. For
+/// the assistant, which must say what a comparison covers before it reads it (plan 52 item 2).
+/// `None` for no comparison or a date that does not exist.
+///
+/// Example: `10-10-26` to `10-10-26` compared with the previous period is `09-10-26` to `09-10-26`.
+pub fn compare_window(compare: AnalyticsCompare, from: &str, to: &str) -> Option<(String, String)> {
+    let (from, to) = (BusinessDate::parse_iso(from)?, BusinessDate::parse_iso(to)?);
+    compared(compare, from, to).map(|(a, b)| (a.to_iso(), b.to_iso()))
+}
+
 /// True if the account is one of the two پختہ کھاتہ accounts (PRD FR-13.1).
 fn is_pukhta(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
     Ok(conn.query_row(

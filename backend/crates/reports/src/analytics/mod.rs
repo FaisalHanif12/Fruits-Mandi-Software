@@ -52,6 +52,7 @@ use crate::reports::print_data::PrintOptions;
 use crate::reports::{PageSpec, page_spec};
 
 pub use calc::{average_days, share_hundredths};
+pub use filters::compare_window;
 pub use model::{
     AnalyticsCatalogEntry, AnalyticsChart, AnalyticsChartKind, AnalyticsChartPoint,
     AnalyticsChartSeries, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,

@@ -18,7 +18,7 @@ use chrono::{Datelike, NaiveDate};
 use mandi_reports::analytics::{
     AnalyticsChartKind, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,
     AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey, AnalyticsPage, AnalyticsRunInput,
-    AnalyticsSide, AnalyticsView, catalog, run as engine_run,
+    AnalyticsSide, AnalyticsView, catalog, compare_window, run as engine_run,
 };
 use mandi_reports::reports::{Cell, Column, PartyFilter, Row};
 use mandi_services::core::paging::{SortDirection, SortInput};
@@ -108,6 +108,9 @@ struct Built {
     filters: AnalyticsFilters,
     source: SourceAnalyticsFilters,
     compare: AnalyticsCompare,
+    /// What the tool did that the model did not ask for, in words (plan 52 item 2). It is given
+    /// back as `note` so the model can say so.
+    notes: Vec<String>,
 }
 
 fn build_filters(
@@ -237,6 +240,7 @@ fn build_filters(
         source.side = side;
     }
     let mut compare = AnalyticsCompare::Off;
+    let mut notes: Vec<String> = Vec::new();
     if let Some(word) = &parsed.compare {
         compare = match word.as_str() {
             "previous" => AnalyticsCompare::Previous,
@@ -244,6 +248,36 @@ fn build_filters(
             _ => return Err(bad("ERR_OUT_OF_RANGE", "compare", "previous or last_year")),
         };
         takes_or(takes, K::Compare, "compare")?;
+        // A comparison with no dates at all means this month so far against the same number of
+        // days before it, or this year so far against the same dates a year earlier when the
+        // question is about years (plan 52 item 2). The dates used are in the note.
+        if parsed.from.is_none() && parsed.to.is_none() {
+            takes_or(takes, K::Period, "from")?;
+            let by_year =
+                compare == AnalyticsCompare::LastYear || parsed.group_by.as_deref() == Some("year");
+            if let Some((from, to)) = default_window(env, by_year) {
+                notes.push(if by_year {
+                    format!(
+                        "no dates were given, so this year so far ({from} to {to}) is compared \
+                         with the same dates one year earlier"
+                    )
+                } else {
+                    format!(
+                        "no dates were given, so this month so far ({from} to {to}) is compared \
+                         with the same number of days before it"
+                    )
+                });
+                compare = if by_year {
+                    AnalyticsCompare::LastYear
+                } else {
+                    AnalyticsCompare::Previous
+                };
+                filters.from = from.clone();
+                filters.to = to.clone();
+                source.from = from;
+                source.to = to;
+            }
+        }
         // A comparison needs a closed period (PRD 18.1): the earlier period is as long as this one.
         if filters.from.is_empty() || filters.to.is_empty() {
             let missing = if filters.from.is_empty() {
@@ -255,18 +289,57 @@ fn build_filters(
                 "ERR_REQUIRED",
                 missing,
                 "compare needs a period with both dates, such as this_year, last_month or \
-                 last_n_months; up_to_now has no start date. Use a closed period, or leave \
-                 compare out",
+                 last_n_months. Use a closed period, or leave compare out",
             ));
         }
-        filters.compare = compare;
-        source.compare = compare;
+        // An earlier period that lies wholly before the books has nothing in it: the comparison
+        // is left out and the note says so, rather than showing every figure as new. One that
+        // starts before the books is only partly covered, so the note says that too (money review,
+        // plan 52 item 2).
+        let first_day = super::period::books_start(env).map(|d| d.format("%Y-%m-%d").to_string());
+        let window = compare_window(compare, &filters.from, &filters.to);
+        match (window, first_day) {
+            (Some((_, earlier_to)), Some(first)) if earlier_to < first => {
+                notes.push(format!(
+                    "the books start on {first}, so there is no earlier period to compare with; \
+                     the comparison was left out"
+                ));
+                compare = AnalyticsCompare::Off;
+            }
+            (Some((earlier_from, earlier_to)), Some(first)) if earlier_from < first => {
+                notes.push(format!(
+                    "the books start on {first}, so the earlier period ({earlier_from} to \
+                     {earlier_to}) is only partly covered and is not like for like"
+                ));
+                filters.compare = compare;
+                source.compare = compare;
+            }
+            _ => {
+                filters.compare = compare;
+                source.compare = compare;
+            }
+        }
     }
     Ok(Built {
         filters,
         source,
         compare,
+        notes,
     })
+}
+
+/// This month so far, or this year so far (the first day to today), as ISO dates.
+fn default_window(env: &Env<'_>, by_year: bool) -> Option<(String, String)> {
+    let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d").ok()?;
+    let from = if by_year {
+        NaiveDate::from_ymd_opt(today.year(), 1, 1)?
+    } else {
+        today.with_day(1)?
+    };
+    Some((
+        from.format("%Y-%m-%d").to_string(),
+        today.format("%Y-%m-%d").to_string(),
+    ))
 }
 
 /// The columns of a view as the plain columns of a table (the heading and the drill are not
@@ -598,27 +671,64 @@ pub fn run(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     } else {
         // The columns are known from a first read of up to one page of rows.
         let first = read(env, view, &built.filters, SORT_PAGE, None)?;
-        let flat = first
-            .rows
+        // A sort word the view has no column for is left out, and the note says so (plan 52 item
+        // 2). The rows then come in the view's own order, so the tool gives every row (up to 100)
+        // and never a cut that looks like a top list; a longer table still needs a real column.
+        let columns = plain_columns(&first.columns);
+        let (known, dropped): (Vec<SortKey>, Vec<SortKey>) = keys
             .iter()
-            .all(|r| r.kind == mandi_reports::reports::RowKind::Normal);
-        if first.total_count <= SORT_PAGE && flat {
-            let sorted = sort_in_memory(env, view, &first, &keys)?;
-            let take = usize::try_from(rows_wanted).unwrap_or(0);
-            let rows = sorted.into_iter().take(take).collect();
+            .cloned()
+            .partition(|k| engine_key(view, &columns, &k.column, "sort.column").is_ok());
+        if let Some(first_dropped) = dropped.first() {
+            if known.is_empty() && first.total_count > MAX_ROWS {
+                return Err(
+                    engine_key(view, &columns, &first_dropped.column, "sort.column")
+                        .err()
+                        .unwrap_or_else(|| bad("ERR_OUT_OF_RANGE", "sort.column", "no such column"))
+                        .into(),
+                );
+            }
+            let words: Vec<&str> = dropped.iter().map(|k| k.column.as_str()).collect();
+            built.notes.push(format!(
+                "the sort word {} is not a column of this view, so it was left out{}; the sort \
+                 words of this view are {}",
+                words.join(", "),
+                if known.is_empty() {
+                    ", every row is given in the view's own order"
+                } else {
+                    ""
+                },
+                column_words(&columns, true, Some(compared_figure(view))).join(", ")
+            ));
+        }
+        if known.is_empty() && !dropped.is_empty() {
+            let take = usize::try_from(MAX_ROWS).unwrap_or(0);
+            let rows = first.rows.iter().take(take).cloned().collect();
             (first, rows)
-        } else if let [key] = keys.as_slice() {
-            let sort = engine_sort(env, view, &plain_columns(&first.columns), key)?;
-            let page = read(env, view, &built.filters, rows_wanted, Some(sort))?;
-            let rows = page.rows.clone();
-            (page, rows)
         } else {
-            return Err(bad(
-                "ERR_OUT_OF_RANGE",
-                "sort",
-                "two sort keys need a table of at most 1,000 rows",
-            )
-            .into());
+            let keys = known;
+            let flat = first
+                .rows
+                .iter()
+                .all(|r| r.kind == mandi_reports::reports::RowKind::Normal);
+            if first.total_count <= SORT_PAGE && flat {
+                let sorted = sort_in_memory(env, view, &first, &keys)?;
+                let take = usize::try_from(rows_wanted).unwrap_or(0);
+                let rows = sorted.into_iter().take(take).collect();
+                (first, rows)
+            } else if let [key] = keys.as_slice() {
+                let sort = engine_sort(env, view, &plain_columns(&first.columns), key)?;
+                let page = read(env, view, &built.filters, rows_wanted, Some(sort))?;
+                let rows = page.rows.clone();
+                (page, rows)
+            } else {
+                return Err(bad(
+                    "ERR_OUT_OF_RANGE",
+                    "sort",
+                    "two sort keys need a table of at most 1,000 rows",
+                )
+                .into());
+            }
         }
     };
     let mut draft = assemble(env, args, view, &built, &page, &rows, hidden_parts);
@@ -732,7 +842,7 @@ fn assemble(
     let series = chart
         .as_ref()
         .map_or(Node::Null, |(_, c)| series_node(page, c));
-    let node = Node::obj(vec![
+    let mut fields = vec![
         ("source", Node::Str(view.code().to_owned())),
         (
             "title",
@@ -746,7 +856,12 @@ fn assemble(
         ("totals", Node::Obj(totals)),
         ("compare", compare),
         ("series", series),
-    ]);
+    ];
+    // What the tool did that was not asked for (plan 52 item 2).
+    if !built.notes.is_empty() {
+        fields.push(("note", Node::Str(built.notes.join("; "))));
+    }
+    let node = Node::obj(fields);
     let mut draft = Draft::new("analytics", args.clone(), node);
     let table = AnswerTable {
         result_id: String::new(),

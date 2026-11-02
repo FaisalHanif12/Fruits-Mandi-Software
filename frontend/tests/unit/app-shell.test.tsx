@@ -111,6 +111,18 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     expect(screen.getByText('58,484')).toBeInTheDocument();
   });
 
+  it('keeps a band under the screen for the round launcher, outside the scroll area (plan 52)', async () => {
+    await renderApp();
+    const main = await screen.findByRole('main');
+    // The band is the next element after the screen, not padding in it: a screen taller than its box
+    // overflows with no padding after it, and its last row would end under the launcher.
+    const band = main.nextElementSibling;
+    expect(band).not.toBeNull();
+    expect(band).toHaveAttribute('aria-hidden', 'true');
+    expect(band).toHaveClass('h-corner');
+    expect(main.className).not.toMatch(/(^|\s)pb-/);
+  });
+
   it('a closed day is said in words', async () => {
     vi.mocked(appApi.dayStatus).mockResolvedValue({ ...DAY, today_open: false });
     await renderApp();

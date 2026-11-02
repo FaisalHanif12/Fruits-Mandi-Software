@@ -251,7 +251,8 @@ fn playbook_5_commission_kaise_barhe() {
         "2026-10-10",
         "commission kaise barhe, kaun sa maal faida deta",
     );
-    s.period("this_year");
+    // This month so far: the 10 days before it are inside the books, which start on 31-08-26.
+    s.period("this_month");
     for view in ["A", "B", "H", "D"] {
         s.ok(
             "analytics",
@@ -397,7 +398,9 @@ fn an_alert_about_old_bills_and_old_stock_has_a_path_with_the_number_of_the_ques
 // ---- the failure list: the first try is refused with the way out -------------------------------
 
 #[test]
-fn every_view_refuses_an_invented_sort_word_with_its_columns_and_each_one_works() {
+fn every_view_and_report_leaves_out_an_invented_sort_word_and_says_so() {
+    // Plan 52 item 2: the first try is not refused. The word is dropped, every row is given, and the
+    // note names the word and lists the sort words that work.
     let w = unlocked_day();
     let mut s = Session::new(&w, "2026-10-10", "sab se zyada kya bikta hai");
     s.period("this_year");
@@ -410,36 +413,30 @@ fn every_view_refuses_an_invented_sort_word_with_its_columns_and_each_one_works(
     };
     for view in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"] {
         for invented in ["sales", "amount", "qty", "commission", "balance", "total"] {
-            let first = s.try_run(
-                "analytics",
-                analytics(view, dated(json!({"sort": sort(invented, "desc")}))),
-            );
-            match first {
-                // The word happens to be a column of this view: fine.
-                Ok(_) => {}
-                Err(e) => {
-                    assert_eq!(
-                        e.field.as_deref(),
-                        Some("sort.column"),
-                        "{view} {invented}: {}",
-                        e.to_json()
-                    );
-                    assert!(!e.allowed.is_empty(), "{view} {invented}: no list");
-                    assert!(!e.detail.is_empty());
-                    // One word from the list is a sort that works: the model corrects in one try.
-                    let word = e.allowed.first().unwrap().clone();
-                    s.ok(
-                        "analytics",
-                        analytics(view, dated(json!({"sort": sort(&word, "desc")}))),
-                    );
-                }
+            let first = s
+                .try_run(
+                    "analytics",
+                    analytics(view, dated(json!({"sort": sort(invented, "desc")}))),
+                )
+                .unwrap_or_else(|e| panic!("{view} {invented}: {}", e.to_json()));
+            // The word may happen to be a column of this view: then there is no note.
+            if let Some(note) = s.json(&first).get("note") {
+                let note = note.as_str().unwrap();
+                assert!(
+                    note.contains(invented) && note.contains("left out"),
+                    "{view}: {note}"
+                );
+                assert!(
+                    note.contains("sort words of this view are"),
+                    "{view}: {note}"
+                );
             }
         }
     }
 }
 
 #[test]
-fn a_report_refuses_an_invented_sort_word_with_its_columns() {
+fn a_report_leaves_out_an_invented_sort_word_and_says_so() {
     let w = unlocked_day();
     let mut s = Session::new(&w, "2026-10-10", "kharcha kahan zyada");
     s.period("this_year");
@@ -454,57 +451,53 @@ fn a_report_refuses_an_invented_sort_word_with_its_columns() {
                 json!({"sort": sort_value})
             }
         };
-        let e = s
+        let done = s
             .try_run("report", report(id, extra(sort("amount_xyz", "desc"))))
-            .unwrap_err();
-        assert_eq!(
-            e.field.as_deref(),
-            Some("sort.column"),
-            "{id}: {}",
-            e.to_json()
+            .unwrap_or_else(|e| panic!("{id}: {}", e.to_json()));
+        let note = s.json(&done)["note"].as_str().unwrap().to_owned();
+        assert!(
+            note.contains("amount_xyz") && note.contains("left out"),
+            "{id}: {note}"
         );
-        assert!(!e.allowed.is_empty(), "{id}: no list");
-        let word = e.allowed.first().unwrap().clone();
-        let again = s.try_run("report", report(id, extra(sort(&word, "desc"))));
-        if let Err(e) = again {
-            // A column that holds both sides has its own reason.
-            assert!(
-                e.detail.contains("both sides"),
-                "{id} {word}: {}",
-                e.to_json()
-            );
-        }
+        assert!(
+            note.contains("sort words of this report are"),
+            "{id}: {note}"
+        );
     }
 }
 
 #[test]
-fn up_to_now_works_for_every_view_and_report_that_takes_a_period_and_never_for_a_comparison() {
+fn up_to_now_works_for_every_view_and_report_that_takes_a_period_and_a_comparison_over_it_is_left_out()
+ {
     let w = unlocked_day();
     let mut s = Session::new(&w, "2026-10-10", "ab tak ki sale aur commission");
-    s.period("up_to_now"); // r1
+    s.period("up_to_now"); // r1: from is the first day of the books
     for view in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"] {
-        // A period with no from: the reference is "no date".
         s.ok(
             "analytics",
             analytics(view, json!({"from": "r1.from", "to": "r1.to"})),
         );
-        // A comparison over it says why not, for the views that take a comparison; the others say
-        // they have no comparison and list the views that do.
-        let e = s
-            .try_run(
-                "analytics",
-                analytics(
-                    view,
-                    json!({"from": "r1.from", "to": "r1.to", "compare": "previous"}),
-                ),
-            )
-            .unwrap_err();
+        // A comparison over it: the books start on that day, so there is nothing earlier. For the
+        // views that take a comparison it is left out with a note; the others say they have no
+        // comparison and list the views that do.
+        let result = s.try_run(
+            "analytics",
+            analytics(
+                view,
+                json!({"from": "r1.from", "to": "r1.to", "compare": "previous"}),
+            ),
+        );
         let compares = ["A", "B", "C", "D", "E", "H"].contains(&view);
         if compares {
-            assert_eq!(e.code, "ERR_REQUIRED", "{view}");
-            assert_eq!(e.field.as_deref(), Some("from"));
-            assert!(e.detail.contains("both dates"), "{view}: {}", e.detail);
+            let id = result.unwrap_or_else(|e| panic!("{view}: {}", e.to_json()));
+            let v = s.json(&id);
+            assert!(
+                v["note"].as_str().unwrap().contains("no earlier period"),
+                "{view}: {v}"
+            );
+            assert!(v["compare"].is_null(), "{view}");
         } else {
+            let e = result.unwrap_err();
             assert_eq!(e.code, "ERR_OUT_OF_RANGE", "{view}");
             assert_eq!(e.field.as_deref(), Some("compare"));
             assert!(

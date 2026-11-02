@@ -42,6 +42,7 @@ import {
   useTestAssistant,
 } from '../hooks';
 import { useAssistantStore } from '../store';
+import { shownDuration, type DurationUnit } from '../timing';
 import { QUICK_CHIPS } from './QuickChips';
 import { failureMessageId } from './ReplyBody';
 
@@ -303,6 +304,48 @@ function TestSection({ keySaved }: { keySaved: boolean }) {
   );
 }
 
+/**
+ * How long a row took: the whole run with the model's share and the app's own (plan 51 B2). A chip
+ * has only the whole run; a row from before the times were kept has none.
+ */
+function TookCell({ row }: { row: AssistantLogRow }) {
+  const { l10n } = useLocalization();
+  if (row.total_millis === null) {
+    return <Localized id="assistant-log-took-none" />;
+  }
+  const total = shownDuration(row.total_millis);
+  const unitText = (unit: DurationUnit) => l10n.getString(`assistant-unit-${unit}`);
+  if (row.model_millis === null || row.tool_millis === null) {
+    return (
+      <Localized
+        id="assistant-log-took-total"
+        vars={{ total: total.value, total_unit: unitText(total.unit) }}
+        elems={RUNNING_NUMBER}
+      >
+        <span />
+      </Localized>
+    );
+  }
+  const model = shownDuration(row.model_millis);
+  const tools = shownDuration(row.tool_millis);
+  return (
+    <Localized
+      id="assistant-log-took"
+      vars={{
+        total: total.value,
+        total_unit: unitText(total.unit),
+        model: model.value,
+        model_unit: unitText(model.unit),
+        tools: tools.value,
+        tools_unit: unitText(tools.unit),
+      }}
+      elems={RUNNING_NUMBER}
+    >
+      <span />
+    </Localized>
+  );
+}
+
 /** The question log, page by page, newest first; each row can be read again on today's books. */
 function LogSection() {
   const { l10n } = useLocalization();
@@ -367,6 +410,11 @@ function LogSection() {
               .join(', ')}
           </bdi>
         ),
+    },
+    {
+      id: 'took',
+      header: l10n.getString('assistant-log-col-took'),
+      cell: (row) => <TookCell row={row} />,
     },
     {
       id: 'counted',

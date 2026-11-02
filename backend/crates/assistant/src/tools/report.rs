@@ -160,6 +160,8 @@ struct Built {
     filters: ReportFilters,
     source: SourceReportFilters,
     party: Option<AnswerRecord>,
+    /// What the tool did that the model did not ask for, given back as `note` (plan 52 item 2).
+    notes: Vec<String>,
 }
 
 fn takes_or(takes: &[FilterKind], kind: FilterKind, field: &str) -> Result<(), ToolError> {
@@ -310,6 +312,7 @@ fn build_filters(
         filters,
         source,
         party: party_record,
+        notes: Vec::new(),
     })
 }
 
@@ -663,11 +666,11 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         .into_iter()
         .find(|e| e.id == id)
         .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "id", "R1 to R38"))?;
-    let rows_wanted = parsed.rows.unwrap_or(DEFAULT_ROWS);
+    let mut rows_wanted = parsed.rows.unwrap_or(DEFAULT_ROWS);
     if !(1..=MAX_ROWS).contains(&rows_wanted) {
         return Err(bad("ERR_OUT_OF_RANGE", "rows", "1 to 100").into());
     }
-    let keys = parsed.sort.clone().unwrap_or_default();
+    let mut keys = parsed.sort.clone().unwrap_or_default();
     if keys.len() > 2 {
         return Err(bad("ERR_OUT_OF_RANGE", "sort", "up to 2 keys").into());
     }
@@ -690,6 +693,36 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         let mut draft = partner_overview(env, args, &entry.title_id, &built.source)?;
         draft.partner_data = partner_data;
         return Ok(draft);
+    }
+    // A sort word the report has no column for is left out, and the note says so (plan 52 item
+    // 2). The rows then come in the report's own order, so every row is given (up to 100) and
+    // never a cut that looks like a top list; a longer report still needs a real column.
+    if !keys.is_empty() && id != ReportId::R31 {
+        let probe = read_page(env, id, &built.filters, 0, 1, None)?;
+        let (known, dropped): (Vec<SortKey>, Vec<SortKey>) = keys
+            .into_iter()
+            .partition(|k| column_index(&probe.columns, &k.column, "sort.column").is_ok());
+        if !dropped.is_empty() {
+            if known.is_empty() && probe.total_count > MAX_ROWS {
+                return Err(no_such_column(&probe.columns, "sort.column").into());
+            }
+            let words: Vec<&str> = dropped.iter().map(|k| k.column.as_str()).collect();
+            built.notes.push(format!(
+                "the sort word {} is not a column of this report, so it was left out{}; the sort \
+                 words of this report are {}",
+                words.join(", "),
+                if known.is_empty() {
+                    ", every row is given in the report's own order"
+                } else {
+                    ""
+                },
+                column_words(&probe.columns, false, None).join(", ")
+            ));
+            if known.is_empty() {
+                rows_wanted = MAX_ROWS;
+            }
+        }
+        keys = known;
     }
     let in_memory = parsed.where_.is_some() || keys.len() > 1;
     let (page, rows, matched) = if in_memory {
@@ -988,6 +1021,9 @@ fn assemble(
                 ),
             ]),
         ));
+    }
+    if !built.notes.is_empty() {
+        fields.push(("note", Node::Str(built.notes.join("; "))));
     }
     fields.extend([
         ("columns", Node::List(keys_of_columns)),

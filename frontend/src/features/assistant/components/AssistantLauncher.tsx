@@ -5,8 +5,10 @@
 // says it in words too, so the dot is never the only signal (NFR-USE-12).
 //
 // It is drawn by the dock inside the shell's zero-height wrapper that sits on the status bar's top edge,
-// so `bottom-4` counts from there. It is not inside the chat window, so the window's focus trap and
-// its closed, inert state never touch it.
+// so its edge offset counts from there (`--chat-edge`, smaller in a short window). It is not inside the
+// chat window, so the window's focus trap and its closed, inert state never touch it. The shell keeps a
+// band under every screen as tall as the launcher and its gaps (`--chat-corner`, plan 52), so the
+// shut launcher never covers a control.
 
 import { useLocalization } from '@fluent/react';
 import { MessageCircleQuestion, X } from 'lucide-react';
@@ -34,7 +36,7 @@ export function AssistantLauncher() {
         if (open) closeDock();
         else openDock();
       }}
-      className="absolute bottom-4 end-4 flex size-launcher items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay ring-4 ring-primary-soft transition-calm hover:bg-primary-chip"
+      className="absolute bottom-chat-edge end-chat-edge flex size-launcher items-center justify-center rounded-full bg-primary text-on-primary shadow-overlay ring-4 ring-primary-soft transition-calm hover:bg-primary-chip"
     >
       {open ? (
         <X aria-hidden="true" className="size-icon-lg" />

@@ -1566,6 +1566,27 @@ pub fn first_posting_date(conn: &Connection) -> rusqlite::Result<Option<String>>
     )
 }
 
+/// The first day of the books for the assistant's `up_to_now`: the oldest date of a posted journal
+/// entry, a trip or garden and its saved entries, a saved purchase, or a stock move. Some of these
+/// post nothing (a payment made wholly from a partner's pocket, a write-off of trip goods, PRD
+/// FR-12.28 and FR-12.30), so the oldest posted entry alone could start too late (plan 52 item 2).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn first_book_date(conn: &Connection) -> rusqlite::Result<Option<String>> {
+    conn.query_row(
+        "SELECT MIN(d) FROM (
+             SELECT MIN(entry_date) AS d FROM journal_entries WHERE status = 'posted'
+             UNION ALL SELECT MIN(entry_date) FROM ventures
+             UNION ALL SELECT MIN(entry_date) FROM venture_entries WHERE status = 'saved'
+             UNION ALL SELECT MIN(entry_date) FROM purchases WHERE status = 'saved'
+             UNION ALL SELECT MIN(move_date) FROM stock_moves
+         )",
+        [],
+        |r| r.get(0),
+    )
+}
+
 /// How many journal entries are not posted. A draft never stays after a save, so any is a bug.
 ///
 /// # Errors

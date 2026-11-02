@@ -6,12 +6,14 @@
 // questions; the step lines; and a keyboard-only run. The panel shows what the backend sent and
 // nothing else: no `text` part is ever drawn as a number, and every `figure` part is.
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AskReply } from '../../src/bindings/AskReply';
 import type { AssistantStep } from '../../src/bindings/AssistantStep';
 import * as assistantApi from '../../src/features/assistant/api';
+import { AnswerBlock } from '../../src/features/assistant/components/AnswerBlock';
 import { AnswerText } from '../../src/features/assistant/components/AnswerText';
 import { useAssistantStore } from '../../src/features/assistant/store';
 import { PARTNER_CODE_KEY } from '../../src/features/partners';
@@ -274,6 +276,41 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
   });
 });
 
+describe.each(LANGUAGES)('general advice (%s)', (language) => {
+  beforeEach(() => {
+    setLanguage(language);
+  });
+
+  it('has its own calm band instead of the advice band; advice alone keeps the advice band', () => {
+    const answer = real.REPLY_ADVICE.answer;
+    if (answer === null) throw new Error('the advice fixture has an answer');
+    const general = renderIn(
+      language,
+      <QueryClientProvider client={newClient()}>
+        <AnswerBlock answer={answer} outcome="advice" general onAsk={vi.fn()} busy={false} />
+      </QueryClientProvider>,
+    );
+    expect(general.container.querySelector('[data-band="general-advice"]')).not.toBeNull();
+    expect(visible(general.container.textContent)).toContain(
+      message(language, 'assistant-band-general'),
+    );
+    expect(visible(general.container.textContent)).not.toContain(
+      message(language, 'assistant-band-advice'),
+    );
+    general.unmount();
+    const advice = renderIn(
+      language,
+      <QueryClientProvider client={newClient()}>
+        <AnswerBlock answer={answer} outcome="advice" onAsk={vi.fn()} busy={false} />
+      </QueryClientProvider>,
+    );
+    expect(advice.container.querySelector('[data-band="general-advice"]')).toBeNull();
+    expect(visible(advice.container.textContent)).toContain(
+      message(language, 'assistant-band-advice'),
+    );
+  });
+});
+
 describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) => {
   beforeEach(() => {
     setLanguage(language);
@@ -360,7 +397,7 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     });
   });
 
-  describe('an answer or advice whose question also asked for a change (PRD E98)', () => {
+  describe('an answer or advice that points to an entry screen (PRD E98, plan 51 F3)', () => {
     // The route the backend sends with an answer; an estimate with it is made up here, because the
     // backend never sends one (it is the rule the screen must keep anyway).
     const route = real.REPLY_ANSWERED_ROUTE.entry_route;
@@ -369,16 +406,19 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
         name: new RegExp(language === 'ur' ? 'اندراج' : 'entry screen'),
       });
 
-    it('an answer shows the change refused line and the button to the entry screen under it', async () => {
+    it('an answer shows only the neutral line and the button under it, not the refusal title', async () => {
       await renderShellRouted();
       const user = await ask(language, real.REPLY_ANSWERED_ROUTE);
       const shown = text(language);
-      // The answer is all there, with its checked figure, and the refusal comes under it.
+      // The answer is all there, with its checked figure, and the neutral line comes under it.
       expect(panelOf(language).querySelectorAll('[data-checked]').length).toBeGreaterThan(0);
-      expect(shown).toContain(message(language, 'assistant-change-refused'));
-      expect(shown.indexOf(message(language, 'assistant-change-refused'))).toBeGreaterThan(
+      expect(shown).toContain(message(language, 'assistant-entry-neutral'));
+      expect(shown.indexOf(message(language, 'assistant-entry-neutral'))).toBeGreaterThan(
         shown.indexOf('10,000'),
       );
+      // "I can only tell, I cannot write" and its help line are for a refused change only.
+      expect(shown).not.toContain(message(language, 'assistant-change-refused'));
+      expect(shown).not.toContain(message(language, 'assistant-change-refused-help'));
       const button = entryButton();
       expect(button).not.toBeNull();
       if (button !== null) await user.click(button);
@@ -391,8 +431,9 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
       const user = await ask(language, real.REPLY_ADVICE_ROUTE);
       const shown = text(language);
       expect(shown).toContain(message(language, 'assistant-band-advice'));
-      expect(shown).toContain(message(language, 'assistant-change-refused'));
-      expect(shown.indexOf(message(language, 'assistant-change-refused'))).toBeGreaterThan(
+      expect(shown).toContain(message(language, 'assistant-entry-neutral'));
+      expect(shown).not.toContain(message(language, 'assistant-change-refused'));
+      expect(shown.indexOf(message(language, 'assistant-entry-neutral'))).toBeGreaterThan(
         shown.indexOf(message(language, 'assistant-band-advice')),
       );
       const button = entryButton();
@@ -404,6 +445,7 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     it('an estimate never shows it, even when a route came with it', async () => {
       await renderShellRouted();
       await ask(language, { ...real.REPLY_ESTIMATE, entry_route: route });
+      expect(text(language)).not.toContain(message(language, 'assistant-entry-neutral'));
       expect(text(language)).not.toContain(message(language, 'assistant-change-refused'));
       expect(entryButton()).toBeNull();
     });
@@ -411,8 +453,82 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     it('an answer or advice with no route has no refusal and no button', async () => {
       await renderShellRouted();
       await ask(language, real.REPLY_ADVICE);
+      expect(text(language)).not.toContain(message(language, 'assistant-entry-neutral'));
       expect(text(language)).not.toContain(message(language, 'assistant-change-refused'));
       expect(entryButton()).toBeNull();
+    });
+
+    it('a refused change still has its title, its help line and the button', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_CHANGE_REFUSED, 'akram ki 5000 wasooli likh do');
+      expect(text(language)).toContain(message(language, 'assistant-change-refused'));
+      expect(text(language)).toContain(message(language, 'assistant-change-refused-help'));
+      expect(entryButton()).not.toBeNull();
+    });
+  });
+
+  describe('a help answer that points to a main screen (PRD FR-7.89, plan 52)', () => {
+    const screenButton = () =>
+      within(panelOf(language)).queryByRole('button', {
+        name: message(language, 'assistant-open-screen'),
+      });
+
+    it('shows its words and one button that opens the screen as it is: no amount line, no party', async () => {
+      await renderShellRouted();
+      const user = await ask(language, real.REPLY_HELP_ROUTE, 'market safar kya hai');
+      const shown = text(language);
+      expect(shown).not.toContain(message(language, 'assistant-entry-neutral'));
+      expect(shown).not.toContain(message(language, 'assistant-change-refused'));
+      const button = screenButton();
+      expect(button).not.toBeNull();
+      if (button !== null) await user.click(button);
+      expect(routeNow().path).toBe('/trips');
+      expect(routeNow().search).toEqual({});
+    });
+
+    it('never opens a main screen with a party, even if one came with the route', async () => {
+      await renderShellRouted();
+      const party = real.REPLY_ANSWERED_ROUTE.entry_route?.party ?? null;
+      const user = await ask(language, {
+        ...real.REPLY_HELP_ROUTE,
+        entry_route: { screen: 'partners', party },
+      });
+      const button = screenButton();
+      expect(button).not.toBeNull();
+      if (button !== null) await user.click(button);
+      expect(routeNow().path).toBe('/partners');
+      expect(routeNow().search).toEqual({});
+    });
+  });
+
+  describe('a question that a limit stopped (plan 51 B2, PRD E96)', () => {
+    it('after the calls: says it could not finish reading and to ask in smaller parts', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_NOT_UNDERSTOOD_CALLS, 'apni sale ko ziyada kaise karain ?');
+      expect(text(language)).toContain(message(language, 'assistant-stopped-calls'));
+      expect(text(language)).not.toContain(message(language, 'assistant-not-understood'));
+      expect(within(panelOf(language)).queryAllByRole('table')).toHaveLength(0);
+      await waitFor(() => {
+        expect(boxOf(language)).toHaveFocus();
+      });
+    });
+
+    it('after the tokens: the other words, and the plain table that was read, with no model figure', async () => {
+      await renderShellRouted();
+      await ask(
+        language,
+        real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE,
+        'ikram ke total bakaya kitne hai',
+      );
+      expect(text(language)).toContain(message(language, 'assistant-stopped-tokens'));
+      expect(text(language)).toContain(message(language, 'assistant-stopped-tables'));
+      expect(text(language)).not.toContain(message(language, 'assistant-not-understood'));
+      expect(within(panelOf(language)).getAllByRole('table')).toHaveLength(1);
+      expect(
+        panelOf(language).querySelector(
+          '[aria-label="' + message(language, 'assistant-answer-label') + '"]',
+        ),
+      ).toBeNull();
     });
   });
 
@@ -473,6 +589,43 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     expect(assistantApi.assistantAsk).toHaveBeenCalledWith(
       expect.objectContaining({ text: QUESTION }),
     );
+  });
+
+  it('a timeout says the answer took too long and to ask again, with the ask again button', async () => {
+    await renderShellRouted();
+    const user = await ask(language, {
+      ...real.REPLY_ERROR_404,
+      failure: { kind: 'timeout', http_status: null },
+    });
+    expect(text(language)).toContain(message(language, 'assistant-failure-timeout'));
+    // One line says it: the general "no answer came" line would repeat it.
+    expect(text(language)).not.toContain(message(language, 'assistant-error'));
+    vi.mocked(assistantApi.assistantAsk).mockClear();
+    vi.mocked(assistantApi.assistantAsk).mockResolvedValue(real.REPLY_ANSWERED);
+    await user.click(
+      within(panelOf(language)).getByRole('button', {
+        name: message(language, 'assistant-error-retry'),
+      }),
+    );
+    expect(assistantApi.assistantAsk).toHaveBeenCalledWith(
+      expect.objectContaining({ text: QUESTION }),
+    );
+  });
+
+  it('a dropped connection is not told as "no internet": its own words and the ask again button', async () => {
+    await renderShellRouted();
+    await ask(language, {
+      ...real.REPLY_ERROR_404,
+      failure: { kind: 'dropped', http_status: null },
+    });
+    expect(text(language)).toContain(message(language, 'assistant-failure-dropped'));
+    expect(text(language)).not.toContain(message(language, 'assistant-offline'));
+    expect(text(language)).not.toContain(message(language, 'assistant-failure-offline'));
+    expect(
+      within(panelOf(language)).getByRole('button', {
+        name: message(language, 'assistant-error-retry'),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('a refusal of the command itself (off) is told in words, with a way to Settings', async () => {

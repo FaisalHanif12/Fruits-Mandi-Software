@@ -576,8 +576,10 @@ impl Check<'_> {
                     None => failures.push(Failure::new("choose", "a find result of this question")),
                     Some(r) => {
                         let n = matches_len(&r.node);
+                        // One match is a question only for a typed name that a close spelling
+                        // found (`f1`, tools/typed.rs): "did you mean this one?" (plan 52).
                         let fits = if answer.kind == AnswerKind::WhichOne {
-                            n >= 2
+                            n >= 2 || (n == 1 && r.id.starts_with('f'))
                         } else {
                             n == 0
                         };

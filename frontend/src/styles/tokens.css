@@ -106,6 +106,11 @@
   --chat-launcher: 60px;
   --chat-edge: var(--space-4);
   --chat-gap: var(--space-3);
+
+  /* The corner the shut launcher keeps clear (plan 52 item 7): its edge, its own size and the gap above
+     it, as a band kept under every screen in the app shell, so the last row of a screen, a pager or a
+     save button is never under the round button. */
+  --chat-corner: calc(var(--chat-edge) + var(--chat-launcher) + var(--chat-gap));
   --chat-min-w: 560px;
   --chat-normal-share: 80vh;
 
@@ -200,6 +205,17 @@
 
   /* The same slot in a short table that shares a narrow sheet (the buyers' and sellers' list of a day). */
   --print-unit-slot-narrow: 9mm;
+}
+
+/* A window that is short (the `short:` variant of globals.css, 800 px high, so 1366 x 768 and 1024 x 600):
+   the round launcher is smaller and nearer the corner, so the band kept under every screen takes 64 px
+   and not 88 px (plan 52). Still well over the 32 px of a click target (NFR-USE-23). */
+@media (height <= 800px) {
+  :root {
+    --chat-launcher: 48px;
+    --chat-edge: var(--space-2);
+    --chat-gap: var(--space-2);
+  }
 }
 
 @theme {
@@ -300,6 +316,8 @@
   --spacing-tree: var(--tree-min-h);
   --spacing-tree-view: var(--tree-view-h);
   --spacing-launcher: var(--chat-launcher);
+  --spacing-corner: var(--chat-corner);
+  --spacing-chat-edge: var(--chat-edge);
 
   /* Icon sizes (Code Standards F13): 16 in grids and field messages, 20 in buttons and
      toasts, 26 inside the round badge of the empty and error states, badge 56. */

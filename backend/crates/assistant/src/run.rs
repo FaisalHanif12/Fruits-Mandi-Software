@@ -63,7 +63,7 @@ use crate::runtime::Runtime;
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
 use crate::step::AssistantStep;
-use crate::tools::{self, Env, State, Stop, ToolError};
+use crate::tools::{self, Env, State, Stop, ToolError, typed};
 
 /// What the loop needs from outside.
 pub struct Deps<'a> {
@@ -363,7 +363,25 @@ impl<'a> Run<'a> {
             // The step line goes out as the tool starts, so a slow report shows what it is doing.
             (self.d.emit)(step_of(&call, &env, &state));
             let began = Instant::now();
-            let outcome = tools::call(&env, &state, &call.name, &call.arguments);
+            // A typed name in a filter is looked up for the model (plan 52 item 6).
+            let mut looked_up = Vec::new();
+            let mut notes = Vec::new();
+            let resolved = typed::resolve(
+                &env,
+                &mut state,
+                index,
+                &call.name,
+                &call.arguments,
+                &mut looked_up,
+            );
+            turn.tool_log.extend(looked_up);
+            let outcome = match resolved {
+                Ok(r) => {
+                    notes = r.notes;
+                    tools::call(&env, &state, &call.name, &r.arguments)
+                }
+                Err(stop) => Err(stop),
+            };
             let millis = millis_since(began);
             let timed = |ok: bool| ToolTiming {
                 name: call.name.clone(),
@@ -371,24 +389,16 @@ impl<'a> Run<'a> {
                 ok,
             };
             match outcome {
-                Ok(draft) => {
+                Ok(mut draft) => {
                     if let Some(last) = turn.timing.calls.last_mut() {
                         last.tools.push(timed(true));
                     }
                     turn.counters.tool_calls = turn.counters.tool_calls.saturating_add(1);
+                    if !notes.is_empty() {
+                        typed::add_note(&mut draft.node, &notes.join("; "));
+                    }
                     let id = state.next_id(prefix_of(draft.tool));
-                    let mut result = ToolResult {
-                        id: id.clone(),
-                        tool: draft.tool,
-                        input: draft.input,
-                        node: draft.node,
-                        shown: draft.shown,
-                        source: draft.source,
-                        partner_parts_locked: draft.partner_parts_locked,
-                        partner_data: draft.partner_data,
-                        turn: index,
-                        working: draft.working,
-                    };
+                    let mut result = tools::stored(draft, id.clone(), index);
                     fit(&mut result, &self.words);
                     let content = tool_result_json(&result, &self.words).to_string();
                     turn.tool_log.push(json!({
@@ -619,18 +629,7 @@ impl<'a> Run<'a> {
             };
             let env = self.env(&numbers);
             if let Ok(draft) = tools::call(&env, &state, tool, &input.to_string()) {
-                let mut result = ToolResult {
-                    id: id.to_owned(),
-                    tool: draft.tool,
-                    input: draft.input,
-                    node: draft.node,
-                    shown: draft.shown,
-                    source: draft.source,
-                    partner_parts_locked: draft.partner_parts_locked,
-                    partner_data: draft.partner_data,
-                    turn: index,
-                    working: draft.working,
-                };
+                let mut result = tools::stored(draft, id.to_owned(), index);
                 fit(&mut result, &self.words);
                 state.results.push(result);
             }
@@ -796,18 +795,7 @@ impl<'a> Run<'a> {
             .ok()
             .map(|draft| {
                 let id = state.next_id(prefix_of(draft.tool));
-                let mut result = ToolResult {
-                    id: id.clone(),
-                    tool: draft.tool,
-                    input: draft.input,
-                    node: draft.node,
-                    shown: draft.shown,
-                    source: draft.source,
-                    partner_parts_locked: draft.partner_parts_locked,
-                    partner_data: draft.partner_data,
-                    turn: index,
-                    working: draft.working,
-                };
+                let mut result = tools::stored(draft, id.clone(), index);
                 fit(&mut result, &self.words);
                 turn.tool_log
                     .push(json!({"id": id, "tool": result.tool, "input": result.input}));

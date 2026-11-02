@@ -349,6 +349,39 @@ describe.each(LANGUAGES)('the Settings group (%s)', (language) => {
       }
     });
 
+    it('shows how long each row took: the whole run, the model and the tools, or what is kept', async () => {
+      show(language);
+      const table = await screen.findByRole('table', {
+        name: message(language, 'assistant-log-title'),
+      });
+      const headings = within(table)
+        .getAllByRole('columnheader')
+        .map((heading) => visible(heading.textContent));
+      const at = headings.indexOf(message(language, 'assistant-log-col-took'));
+      expect(at).toBeGreaterThanOrEqual(0);
+      const took = within(table)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => visible(within(row).getAllByRole('cell')[at]?.textContent ?? ''));
+      const s = message(language, 'assistant-unit-s');
+      const ms = message(language, 'assistant-unit-ms');
+      expect(took).toEqual([
+        // A row from before the times were kept.
+        message(language, 'assistant-log-took-none'),
+        // A chip has only the whole run.
+        message(language, 'assistant-log-took-total', { total: '12', total_unit: ms }),
+        // 6,400 ms with the model 6,350 ms and the tools 4 ms.
+        message(language, 'assistant-log-took', {
+          total: '6.4',
+          total_unit: s,
+          model: '6.4',
+          model_unit: s,
+          tools: '4',
+          tools_unit: ms,
+        }),
+      ]);
+    });
+
     it('has the four states: loading, an error with a retry, nothing yet, and the rows', async () => {
       vi.mocked(assistantApi.assistantLogList).mockRejectedValueOnce({
         ok: false,

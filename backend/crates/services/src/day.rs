@@ -96,6 +96,22 @@ pub fn status(ctx: &Context) -> Result<DayStatusInfo, ServiceError> {
     })
 }
 
+/// The first day of the books: the oldest date of a posted entry, a trip or garden, a saved
+/// purchase or a stock move, or `None` when there is none yet. The assistant's period `up_to_now`
+/// starts here (plan 52 item 2). Reads only.
+///
+/// # Errors
+/// `ServiceError::Db`; `ServiceError::Data` for a date that is not `YYYY-MM-DD`.
+pub fn first_book_day(ctx: &Context) -> Result<Option<BusinessDate>, ServiceError> {
+    let text: Option<String> = ctx
+        .db
+        .read(|conn| repo::first_posting_date(conn).map_err(ServiceError::from))?;
+    text.map(|t| {
+        BusinessDate::parse_iso(&t).ok_or_else(|| ServiceError::Data(format!("a date is {t}")))
+    })
+    .transpose()
+}
+
 /// The "closed up to" date as stored, read through the given connection.
 fn closed_in(conn: &Connection) -> Result<Option<BusinessDate>, ServiceError> {
     let text: Option<Option<String>> = conn

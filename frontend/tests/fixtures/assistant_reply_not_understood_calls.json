@@ -1,0 +1,14 @@
+{
+  "question_id": 19,
+  "conversation_id": "c-1",
+  "outcome": "not_understood",
+  "answer": null,
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": "calls",
+  "count_today": 3,
+  "limit": 20
+}

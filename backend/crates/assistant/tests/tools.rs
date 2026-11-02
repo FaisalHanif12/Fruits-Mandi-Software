@@ -1111,20 +1111,21 @@ fn a_difference_or_earlier_sort_key_names_the_figure_the_view_compares() {
                    "sort": [{"column": column, "order": "desc"}]}),
         )
     };
-    assert_eq!(
-        s.error("analytics", sorted("A", "difference.purchase_value"))
-            .code,
-        "ERR_OUT_OF_RANGE"
-    );
-    assert_eq!(
-        s.error("analytics", sorted("C", "difference.total_comm"))
-            .code,
-        "ERR_OUT_OF_RANGE"
-    );
-    assert_eq!(
-        s.error("analytics", sorted("A", "difference.gross")).code,
-        "ERR_OUT_OF_RANGE"
-    );
+    // The figure a view compares is the only one with a difference word. A word for another
+    // figure is left out (plan 52 item 2), never read as the commission change: the note says so
+    // and lists the words that work.
+    for (view, column, valid) in [
+        ("A", "difference.purchase_value", "difference.total_comm"),
+        ("C", "difference.total_comm", "difference.purchase_value"),
+        ("A", "difference.gross", "difference.total_comm"),
+    ] {
+        let id = s
+            .run("analytics", sorted(view, column))
+            .unwrap_or_else(|_| panic!("{view} {column}"));
+        let note = s.json(&id)["note"].as_str().unwrap().to_owned();
+        assert!(note.contains(column) && note.contains("left out"), "{note}");
+        assert!(note.contains(valid), "{note}");
+    }
     assert!(
         s.run("analytics", sorted("A", "difference.total_comm"))
             .is_ok()
@@ -1133,6 +1134,49 @@ fn a_difference_or_earlier_sort_key_names_the_figure_the_view_compares() {
         s.run("analytics", sorted("C", "difference.purchase_value"))
             .is_ok()
     );
+}
+
+#[test]
+fn what_percent_of_the_total_dues_a_buyer_owes_is_worked_out_from_his_debit_balance() {
+    // Q071 of the live run of 02-11-2026: Arshad's balance is a debit balance (18,684) and the
+    // tile's total dues is a plain amount (21,564). The percent is 86.64%, and a sum of the same
+    // two inputs is still refused, because there the side matters.
+    let w = day();
+    let mut s = Session::new(&w);
+    let find = s
+        .run("find", json!({"text": "arshad", "role": "buyer"}))
+        .unwrap();
+    let tiles = s.run("tiles", json!({})).unwrap();
+    let inputs = json!([
+        format!("{find}.matches.0.balance"),
+        format!("{tiles}.total_dues.amount")
+    ]);
+    let percent = s
+        .run("calculate", json!({"op": "percent_of", "inputs": inputs}))
+        .unwrap();
+    assert_eq!(
+        s.json(&percent)["result"]["pct"],
+        "86.64",
+        "{}",
+        s.json(&percent)
+    );
+    let sum = s.error("calculate", json!({"op": "sum", "inputs": inputs}));
+    assert_eq!(sum.code, "ERR_OUT_OF_RANGE");
+    // A seller's balance is never taken as a size beside a plain amount: a credit has no sign to
+    // use, and a seller's debit is an advance, not dues (money review, plan 52 item 2).
+    for seller in ["karim", "rahim"] {
+        let found = s
+            .run("find", json!({"text": seller, "role": "seller"}))
+            .unwrap();
+        let refused = s.error(
+            "calculate",
+            json!({"op": "percent_of", "inputs": [
+                format!("{found}.matches.0.balance"),
+                format!("{tiles}.total_dues.amount")
+            ]}),
+        );
+        assert_eq!(refused.code, "ERR_OUT_OF_RANGE", "{seller}");
+    }
 }
 
 #[test]

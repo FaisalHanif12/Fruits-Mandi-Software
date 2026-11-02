@@ -5,7 +5,7 @@
 // place, so it never carries ✓ (FR-7.86).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { Lightbulb, TriangleAlert } from 'lucide-react';
+import { Compass, Lightbulb, TriangleAlert } from 'lucide-react';
 import type { AnswerEstimate } from '../../../bindings/AnswerEstimate';
 import type { AnswerMonth } from '../../../bindings/AnswerMonth';
 import type { EstimateMethod } from '../../../bindings/EstimateMethod';
@@ -24,6 +24,26 @@ export function AdviceBand() {
     >
       <Lightbulb aria-hidden="true" className="size-icon-md shrink-0" />
       <Localized id="assistant-band-advice">
+        <span className="type-label" />
+      </Localized>
+    </div>
+  );
+}
+
+/**
+ * The band of general advice (PRD FR-7.88, v1.19): the books had too little for the question, so the
+ * assistant gives short, practical mandi advice that rests on no figure of the books. It is calm like the
+ * advice band, with its own words and icon, so the Owner never takes it for advice from his own books.
+ */
+export function GeneralAdviceBand() {
+  return (
+    <div
+      role="note"
+      data-band="general-advice"
+      className="flex items-center gap-2 rounded-2 border border-border bg-primary-soft px-3 py-2 text-primary"
+    >
+      <Compass aria-hidden="true" className="size-icon-md shrink-0" />
+      <Localized id="assistant-band-general">
         <span className="type-label" />
       </Localized>
     </div>

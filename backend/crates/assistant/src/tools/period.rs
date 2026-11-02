@@ -303,8 +303,22 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
     let parsed: Input = input(args)?;
     let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
         .map_err(|_| ToolError::new("ERR_INTERNAL", "today", "no date"))?;
-    let range = compute(today, &parsed, env.numbers)?;
+    let mut range = compute(today, &parsed, env.numbers)?;
     let iso = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    let mut note = None;
+    // "Up to now" starts at the first day of the books (plan 52 item 2), so every tool, and a
+    // comparison, gets a real start date. With nothing posted yet it stays open.
+    if parsed.kind == Kind::UpToNow
+        && range.from.is_none()
+        && let Some(first) = books_start(env)
+        && first <= range.to
+    {
+        range.from = Some(first);
+        note = Some(format!(
+            "up_to_now starts at the first day of the books, {}",
+            iso(first)
+        ));
+    }
     let mut fields = vec![
         ("kind", Node::Str(format!("{:?}", parsed.kind))),
         (
@@ -318,7 +332,18 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
     if let Some((year, month)) = range.month {
         fields.push(("label", Node::Val(Val::Month { year, month })));
     }
+    if let Some(note) = note {
+        fields.push(("note", Node::Str(note)));
+    }
     Ok(Draft::new("period", args.clone(), Node::obj(fields)))
+}
+
+/// The first day of the books (the oldest dated record of any kind), or `None` with nothing yet.
+pub(super) fn books_start(env: &Env<'_>) -> Option<NaiveDate> {
+    mandi_services::day::first_book_day(env.ctx)
+        .ok()
+        .flatten()
+        .and_then(|d| NaiveDate::parse_from_str(&d.to_iso(), "%Y-%m-%d").ok())
 }
 
 #[cfg(test)]

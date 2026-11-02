@@ -20,6 +20,7 @@ import { vi } from 'vitest';
 import { AppShell } from '../../src/app/layout/AppShell';
 import { AppProviders } from '../../src/app/providers';
 import * as assistantApi from '../../src/features/assistant/api';
+import { MAIN_SCREEN_PATHS } from '../../src/features/assistant/navigation';
 import { useAssistantStore } from '../../src/features/assistant/store';
 import * as authApi from '../../src/features/auth/api';
 import type { Language } from '../../src/i18n';
@@ -99,15 +100,19 @@ export function shell(label = 'entry', client: QueryClient = newClient()) {
 }
 
 /** The screens a button of an answer can open, each showing where it is and what its address holds. */
-const ROUTES = [
-  '/',
-  '/reports/$id',
-  '/analytics/$view',
-  '/bikri/book',
-  '/bikri/voucher',
-  '/rokar/expense',
-  '/settings',
-] as const;
+const ROUTES: readonly string[] = [
+  ...new Set([
+    '/',
+    '/reports/$id',
+    '/analytics/$view',
+    '/bikri/book',
+    '/bikri/voucher',
+    '/rokar/expense',
+    '/settings',
+    // The main screens a help answer opens (PRD FR-7.89), each with its own route.
+    ...Object.values(MAIN_SCREEN_PATHS),
+  ]),
+];
 
 function Stub({ path }: { path: string }) {
   const params = useParams({ strict: false });

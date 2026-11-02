@@ -220,16 +220,58 @@ fn estimate_of(result: &ToolResult) -> Option<AnswerEstimate> {
     }
 }
 
+/// The word of a direction, as the panel prints it after a difference or a change.
+fn direction_word(dir: FigureDirection, language: Language) -> &'static str {
+    match (dir, language) {
+        (FigureDirection::Up, Language::Ur) => "زیادہ",
+        (FigureDirection::Down, Language::Ur) => "کم",
+        (FigureDirection::Same, Language::Ur) => "برابر",
+        (FigureDirection::Up, Language::En) => "more",
+        (FigureDirection::Down, Language::En) => "less",
+        (FigureDirection::Same, Language::En) => "the same",
+    }
+}
+
+/// The panel prints a direction word after a difference ("3,000 زیادہ"). If the model wrote the
+/// same word right after it ("3,000 زیادہ زیادہ"), that one is dropped (Q081 of the live run of
+/// 02-11-2026). Only the exact word of the direction the app just printed, at the start of the
+/// words that follow, is dropped; anything else stays.
+///
+/// Example: `without_repeated_direction(" زیادہ ہے۔", Up, Ur)` is `" ہے۔"`.
+pub fn without_repeated_direction(text: &str, dir: FigureDirection, language: Language) -> String {
+    let word = direction_word(dir, language);
+    let Some(rest) = text.trim_start().strip_prefix(word) else {
+        return text.to_owned();
+    };
+    // The word must end there: a longer word that starts with it is another word.
+    if rest.chars().next().is_some_and(char::is_alphanumeric) {
+        return text.to_owned();
+    }
+    rest.to_owned()
+}
+
 /// Fills a checked answer.
 pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -> Answer {
     let mut parts = Vec::new();
     let mut estimate: Option<AnswerEstimate> = None;
     if answer.kind.has_text() {
+        // The direction a difference or a change just printed, for the word after it.
+        let mut printed: Option<FigureDirection> = None;
         for piece in pieces(&answer.text) {
             match piece {
-                Piece::Words(text) => parts.push(AnswerPart::Text { text }),
+                Piece::Words(text) => {
+                    let text = match printed.take() {
+                        Some(dir) => without_repeated_direction(&text, dir, env.language),
+                        None => text,
+                    };
+                    parts.push(AnswerPart::Text { text });
+                }
                 Piece::Ref(r) => {
+                    printed = None;
                     if let Some(part) = part_of(env, state, &r.path) {
+                        if let AnswerPart::Figure { dir, .. } = &part {
+                            printed = *dir;
+                        }
                         parts.push(part);
                     }
                     // A reference into an estimate shows its band.
@@ -454,4 +496,50 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_direction_word_the_panel_already_prints_is_dropped_once() {
+        use FigureDirection::{Down, Same, Up};
+        assert_eq!(
+            without_repeated_direction(" زیادہ ہے۔", Up, Language::Ur),
+            " ہے۔"
+        );
+        assert_eq!(without_repeated_direction("زیادہ۔", Up, Language::Ur), "۔");
+        assert_eq!(
+            without_repeated_direction(" کم رہا", Down, Language::Ur),
+            " رہا"
+        );
+        assert_eq!(
+            without_repeated_direction(" برابر ہے", Same, Language::Ur),
+            " ہے"
+        );
+        assert_eq!(
+            without_repeated_direction(" more than last month", Up, Language::En),
+            " than last month"
+        );
+        assert_eq!(
+            without_repeated_direction(" the same", Same, Language::En),
+            ""
+        );
+        // Another direction, another word, or a longer word: left as it is.
+        assert_eq!(
+            without_repeated_direction(" کم ہے", Up, Language::Ur),
+            " کم ہے"
+        );
+        assert_eq!(
+            without_repeated_direction(" moreover", Up, Language::En),
+            " moreover"
+        );
+        assert_eq!(without_repeated_direction(" ہے۔", Up, Language::Ur), " ہے۔");
+        // The English word does not count in an Urdu answer.
+        assert_eq!(
+            without_repeated_direction(" more", Up, Language::Ur),
+            " more"
+        );
+    }
 }

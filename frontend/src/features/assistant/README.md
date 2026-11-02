@@ -45,4 +45,15 @@ Ask the app: a chat window above a round launcher at the end of every screen, an
   read an optional `party` in their address (a whole picker value, `shared/accounts/address-party.ts`).
   It goes into the picker, every amount stays empty, nothing is saved, and with no `party` each screen
   opens as before.
+- A route may also point to one of the 19 main screens (`MAIN_SCREEN_PATHS` in `navigation.ts`, PRD
+  FR-7.89, plan 52): a help answer. The button says "Open the screen" and opens the screen as it is,
+  with no search and never a party. An answer or advice that points to an entry screen shows only the
+  neutral line "the amount stays empty" and the button; the "I can only tell, not write" title is for
+  the refused change (`change_refused`) alone.
+- A question a limit stopped (`not_understood` with `stop_reason`) says so ("I could not finish reading
+  the books, ask in smaller parts") and shows the plain tables that were read. A timeout is one line and
+  an ask-again button. The Settings log shows how long each question took (`timing.ts`).
+- The shut launcher never covers a control: the shell keeps a band under every screen as tall as the
+  launcher and its gaps (`--chat-corner`; the launcher is 48 px and nearer the edge in a window under
+  800 px high). Do not move screen controls to avoid it.
 - Development page: `#/dev/assistant` (see `tests/helpers/dev-bridge-assistant.ts` for its flags).

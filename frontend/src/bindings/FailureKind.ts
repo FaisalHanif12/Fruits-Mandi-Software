@@ -5,6 +5,7 @@
  */
 export type FailureKind =
   | 'offline'
+  | 'dropped'
   | 'timeout'
   | 'bad_key'
   | 'no_credit'

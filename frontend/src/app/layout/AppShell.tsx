@@ -91,6 +91,12 @@ export function AppShell({
               {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
               <PartyReportLinks>{children}</PartyReportLinks>
             </main>
+            {/* The corner of the round launcher (plan 52): it floats over the end corner above the
+                status bar, so a band as tall as the launcher and its gaps is kept under the screen.
+                It is outside the scroll area, not padding in it: a screen whose content is taller than
+                its box overflows with no padding after it, and its last row or page buttons would end
+                under the launcher. Here the last row of any screen ends above it. */}
+            <div aria-hidden="true" className="h-corner shrink-0" />
             <div ref={setSlot} className="pointer-events-none absolute inset-0 z-40" />
           </div>
         </div>

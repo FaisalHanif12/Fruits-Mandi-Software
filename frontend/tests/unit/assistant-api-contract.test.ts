@@ -77,6 +77,9 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.assistantAsk(real.REPLY_ANSWERED_REQUEST);
     await api.assistantAsk(real.REPLY_ANSWERED_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_ADVICE_ROUTE_REQUEST);
+    await api.assistantAsk(real.REPLY_HELP_ROUTE_REQUEST);
+    await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST);
+    await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST);
     await api.assistantQuick(real.QUICK_CASH_IN_HAND_REQUEST);
     await api.assistantPick(real.PICK_MATCH_REQUEST);
     await api.assistantPick(real.PICK_PARTNER_CODE_REQUEST);
@@ -90,6 +93,9 @@ describe('each wrapper sends the command and `{ input }`', () => {
       ['assistant_ask', { input: real.REPLY_ANSWERED_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ANSWERED_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ADVICE_ROUTE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_HELP_ROUTE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST }],
       ['assistant_quick', { input: real.QUICK_CASH_IN_HAND_REQUEST }],
       ['assistant_pick', { input: real.PICK_MATCH_REQUEST }],
       ['assistant_pick', { input: real.PICK_PARTNER_CODE_REQUEST }],
@@ -127,11 +133,14 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['advice', real.REPLY_ADVICE],
   ['answered with a route', real.REPLY_ANSWERED_ROUTE],
   ['advice with a route', real.REPLY_ADVICE_ROUTE],
+  ['help with a main screen', real.REPLY_HELP_ROUTE],
   ['which one', real.REPLY_WHICH_ONE],
   ['not found', real.REPLY_NOT_FOUND],
   ['need dates', real.REPLY_NEED_DATES],
   ['need party', real.REPLY_NEED_PARTY],
   ['not understood', real.REPLY_NOT_UNDERSTOOD],
+  ['not understood after the calls', real.REPLY_NOT_UNDERSTOOD_CALLS],
+  ['not understood after the tokens, with a table', real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE],
   ['outside books', real.REPLY_OUTSIDE_BOOKS],
   ['change refused', real.REPLY_CHANGE_REFUSED],
   ['checks failed', real.REPLY_CHECKS_FAILED],
@@ -160,6 +169,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'options',
       'outcome',
       'question_id',
+      'stop_reason',
     ]);
   });
 
@@ -213,6 +223,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'id',
         'model',
         'model_calls',
+        'model_millis',
         'outcome',
         'parent_id',
         'question',
@@ -221,9 +232,21 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'tokens_in',
         'tokens_out',
         'tokens_reasoning',
+        'tool_millis',
         'tools',
+        'total_millis',
       ]);
     }
+  });
+
+  it('stop_reason is null in every reply but a stopped one, and a stopped one is not_understood', () => {
+    for (const [name, reply] of REPLIES) {
+      const stopped = name.startsWith('not understood after');
+      expect(reply.stop_reason !== null, name).toBe(stopped);
+      if (stopped) expect(reply.outcome).toBe('not_understood');
+    }
+    expect(real.REPLY_NOT_UNDERSTOOD_CALLS.stop_reason).toBe('calls');
+    expect(real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE.stop_reason).toBe('tokens');
   });
 
   it('the stored key never appears: the status holds only its last four characters', () => {

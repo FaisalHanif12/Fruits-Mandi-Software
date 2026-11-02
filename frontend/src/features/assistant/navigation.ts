@@ -8,8 +8,43 @@ import { useRouter } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import type { AnswerSource } from '../../bindings/AnswerSource';
 import type { EntryRoute } from '../../bindings/EntryRoute';
+import type { EntryScreen } from '../../bindings/EntryScreen';
 import { useOpenReport } from '../reports';
 import { analyticsSearchFromFilters, entryPartyOf, reportSearchFromFilters } from './addresses';
+
+/**
+ * The main screens a help answer points to (PRD FR-7.89) and the route each one opens. The screen opens
+ * as it is, with no search and no party: a main screen never carries a party (plan 52). The
+ * routes are the ones the backend names in `EntryScreen`.
+ */
+export const MAIN_SCREEN_PATHS = {
+  dashboard: '/',
+  settings: '/settings',
+  masters: '/index',
+  accounts: '/index/accounts',
+  commission_rules: '/index/rules',
+  today_sales: '/bikri/today',
+  unsold_stock: '/bikri/stock',
+  pukhta_khata: '/bikri/pukhta',
+  collection_list: '/bikri/collection',
+  cash_book: '/rokar',
+  gardens: '/gardens',
+  market_trips: '/trips',
+  partners: '/partners',
+  month_close: '/month',
+  day_close: '/day',
+  reports: '/reports',
+  dead_amount: '/reports/dead-amount',
+  analytics: '/analytics',
+  backup: '/backup',
+} as const;
+
+/** A main screen: a screen of the app that is not an entry screen (no amount to write). */
+export type MainScreen = keyof typeof MAIN_SCREEN_PATHS;
+
+export function isMainScreen(screen: EntryScreen): screen is MainScreen {
+  return screen in MAIN_SCREEN_PATHS;
+}
 
 export interface AssistantNavigation {
   /** Opens the report or view a source was read from, with its filters. */
@@ -49,8 +84,14 @@ export function useAssistantNavigation(): AssistantNavigation | null {
       openEntry: (route) => {
         // The party goes into the screen's own address as a whole record; with none the screen
         // opens as it always did. Every amount stays empty and nothing is saved (FR-7.79).
+        const screen = route.screen;
+        if (isMainScreen(screen)) {
+          // A help answer's screen opens as it is (FR-7.89); it never carries a party.
+          void router.navigate({ to: MAIN_SCREEN_PATHS[screen] });
+          return;
+        }
         const party = route.party === null ? {} : { party: entryPartyOf(route.party) };
-        switch (route.screen) {
+        switch (screen) {
           case 'bikri':
             void router.navigate({ to: '/bikri/book' });
             return;

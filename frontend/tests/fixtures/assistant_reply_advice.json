@@ -368,6 +368,7 @@
   "entry_route": null,
   "locked": false,
   "failure": null,
+  "stop_reason": null,
   "count_today": 3,
   "limit": 20
 }

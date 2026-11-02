@@ -162,6 +162,8 @@ assistant-band-estimate = Estimate, not certain
 # review: pending
 assistant-band-advice = Advice: the decision is yours
 # review: pending
+assistant-band-general = General advice
+# review: pending
 assistant-estimate-same-pace = Same pace
 # review: pending
 assistant-estimate-same-growth = Same growth
@@ -201,7 +203,17 @@ assistant-change-refused-help = The button below opens the entry screen. The amo
 # review: pending
 assistant-open-entry = Open the entry screen
 # review: pending
+assistant-open-screen = Open the screen
+# review: pending
+assistant-entry-neutral = The amount stays empty; you write it yourself
+# review: pending
 assistant-not-understood = I did not understand; please ask in other words
+# review: pending
+assistant-stopped-calls = I could not finish reading the books. Please ask in smaller parts, for example one party or one month.
+# review: pending
+assistant-stopped-tokens = The books I read were too large for one answer. Please ask in smaller parts, for example a shorter period.
+# review: pending
+assistant-stopped-tables = The records I did read are below.
 # review: pending
 assistant-checks-failed = I could not write a checked answer; the records are below
 # review: pending
@@ -324,6 +336,18 @@ assistant-log-open = Read again
 assistant-log-open-row = Read again: { $question }
 # review: pending
 assistant-log-no-tools = No tools
+# review: pending
+assistant-log-col-took = How long
+# review: pending
+assistant-log-took = <num>{ $total }</num> { $total_unit } (model <num>{ $model }</num> { $model_unit }, tools <num>{ $tools }</num> { $tools_unit })
+# review: pending
+assistant-log-took-total = <num>{ $total }</num> { $total_unit }
+# review: pending
+assistant-log-took-none = Not recorded
+# review: pending
+assistant-unit-s = s
+# review: pending
+assistant-unit-ms = ms
 
 ## The outcome of a question, in the log (FR-7.84).
 
@@ -484,7 +508,9 @@ assistant-place-r31-closing = Closing total of R31
 # review: pending
 assistant-failure-offline = No internet connection was found.
 # review: pending
-assistant-failure-timeout = The answer took too long.
+assistant-failure-dropped = The connection dropped. Please ask again.
+# review: pending
+assistant-failure-timeout = The answer took too long. Please ask again.
 # review: pending
 assistant-failure-bad-key = OpenRouter did not accept the key. Check the key in Settings.
 # review: pending

@@ -162,6 +162,8 @@ assistant-band-estimate = اندازہ، یقینی نہیں
 # review: pending
 assistant-band-advice = مشورہ، فیصلہ آپ کا
 # review: pending
+assistant-band-general = عام مشورہ
+# review: pending
 assistant-estimate-same-pace = اسی رفتار سے
 # review: pending
 assistant-estimate-same-growth = اسی اضافے سے
@@ -201,7 +203,17 @@ assistant-change-refused-help = نیچے کے بٹن سے اندراج کی اس
 # review: pending
 assistant-open-entry = اندراج کی اسکرین کھولیں
 # review: pending
+assistant-open-screen = اسکرین کھولیں
+# review: pending
+assistant-entry-neutral = رقم خالی رہتی ہے، آپ خود لکھتے ہیں
+# review: pending
 assistant-not-understood = سوال سمجھ نہیں آیا، دوسرے الفاظ میں پوچھیں
+# review: pending
+assistant-stopped-calls = میں کھاتے پورے نہیں پڑھ سکا۔ سوال چھوٹے حصوں میں پوچھیں، مثلاً ایک پارٹی یا ایک مہینہ۔
+# review: pending
+assistant-stopped-tokens = پڑھے ہوئے کھاتے ایک جواب کے لیے بہت بڑے تھے۔ سوال چھوٹے حصوں میں پوچھیں، مثلاً کم مدت۔
+# review: pending
+assistant-stopped-tables = جو ریکارڈ میں پڑھ سکا وہ نیچے ہیں۔
 # review: pending
 assistant-checks-failed = میں جانچا ہوا جواب نہیں لکھ سکا، نیچے اصل ریکارڈ ہے
 # review: pending
@@ -324,6 +336,18 @@ assistant-log-open = دوبارہ دیکھیں
 assistant-log-open-row = دوبارہ دیکھیں: { $question }
 # review: pending
 assistant-log-no-tools = کوئی اوزار نہیں
+# review: pending
+assistant-log-col-took = کتنی دیر
+# review: pending
+assistant-log-took = <num>{ $total }</num> { $total_unit } (ماڈل <num>{ $model }</num> { $model_unit }، اوزار <num>{ $tools }</num> { $tools_unit })
+# review: pending
+assistant-log-took-total = <num>{ $total }</num> { $total_unit }
+# review: pending
+assistant-log-took-none = درج نہیں
+# review: pending
+assistant-unit-s = سیکنڈ
+# review: pending
+assistant-unit-ms = ملی سیکنڈ
 
 ## The outcome of a question, in the log (FR-7.84).
 
@@ -484,7 +508,9 @@ assistant-place-r31-closing = R31 کا آخری میزان
 # review: pending
 assistant-failure-offline = انٹرنیٹ نہیں ملا۔
 # review: pending
-assistant-failure-timeout = جواب میں بہت دیر ہو گئی۔
+assistant-failure-dropped = رابطہ ٹوٹ گیا۔ براہ کرم دوبارہ پوچھیں۔
+# review: pending
+assistant-failure-timeout = جواب میں بہت دیر ہو گئی۔ دوبارہ پوچھیں۔
 # review: pending
 assistant-failure-bad-key = OpenRouter نے کلید قبول نہیں کی۔ ترتیبات میں کلید دیکھیں۔
 # review: pending

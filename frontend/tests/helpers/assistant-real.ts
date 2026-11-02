@@ -54,6 +54,8 @@ import assistantReplyEstimate from '../fixtures/assistant_reply_estimate.json';
 import assistantReplyEstimateRequest from '../fixtures/assistant_reply_estimate_request.json';
 import assistantReplyEstimateTarget from '../fixtures/assistant_reply_estimate_target.json';
 import assistantReplyEstimateTargetRequest from '../fixtures/assistant_reply_estimate_target_request.json';
+import assistantReplyHelpRoute from '../fixtures/assistant_reply_help_route.json';
+import assistantReplyHelpRouteRequest from '../fixtures/assistant_reply_help_route_request.json';
 import assistantReplyLimitReached from '../fixtures/assistant_reply_limit_reached.json';
 import assistantReplyLimitReachedRequest from '../fixtures/assistant_reply_limit_reached_request.json';
 import assistantReplyLocked from '../fixtures/assistant_reply_locked.json';
@@ -64,6 +66,10 @@ import assistantReplyNeedParty from '../fixtures/assistant_reply_need_party.json
 import assistantReplyNeedPartyRequest from '../fixtures/assistant_reply_need_party_request.json';
 import assistantReplyNotFound from '../fixtures/assistant_reply_not_found.json';
 import assistantReplyNotFoundRequest from '../fixtures/assistant_reply_not_found_request.json';
+import assistantReplyNotUnderstoodCalls from '../fixtures/assistant_reply_not_understood_calls.json';
+import assistantReplyNotUnderstoodCallsRequest from '../fixtures/assistant_reply_not_understood_calls_request.json';
+import assistantReplyNotUnderstoodTokensTable from '../fixtures/assistant_reply_not_understood_tokens_table.json';
+import assistantReplyNotUnderstoodTokensTableRequest from '../fixtures/assistant_reply_not_understood_tokens_table_request.json';
 import assistantReplyNotUnderstood from '../fixtures/assistant_reply_not_understood.json';
 import assistantReplyNotUnderstoodRequest from '../fixtures/assistant_reply_not_understood_request.json';
 import assistantReplyOffline from '../fixtures/assistant_reply_offline.json';
@@ -178,6 +184,8 @@ export const REPLY_ESTIMATE_TARGET = readAskReply(assistantReplyEstimateTarget);
 export const REPLY_ESTIMATE_TARGET_REQUEST = readAssistantAskInput(
   assistantReplyEstimateTargetRequest,
 );
+export const REPLY_HELP_ROUTE = readAskReply(assistantReplyHelpRoute);
+export const REPLY_HELP_ROUTE_REQUEST = readAssistantAskInput(assistantReplyHelpRouteRequest);
 export const REPLY_LIMIT_REACHED = readAskReply(assistantReplyLimitReached);
 export const REPLY_LIMIT_REACHED_REQUEST = readAssistantAskInput(assistantReplyLimitReachedRequest);
 export const REPLY_LOCKED = readAskReply(assistantReplyLocked);
@@ -191,6 +199,16 @@ export const REPLY_NOT_FOUND_REQUEST = readAssistantAskInput(assistantReplyNotFo
 export const REPLY_NOT_UNDERSTOOD = readAskReply(assistantReplyNotUnderstood);
 export const REPLY_NOT_UNDERSTOOD_REQUEST = readAssistantAskInput(
   assistantReplyNotUnderstoodRequest,
+);
+export const REPLY_NOT_UNDERSTOOD_CALLS = readAskReply(assistantReplyNotUnderstoodCalls);
+export const REPLY_NOT_UNDERSTOOD_CALLS_REQUEST = readAssistantAskInput(
+  assistantReplyNotUnderstoodCallsRequest,
+);
+export const REPLY_NOT_UNDERSTOOD_TOKENS_TABLE = readAskReply(
+  assistantReplyNotUnderstoodTokensTable,
+);
+export const REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST = readAssistantAskInput(
+  assistantReplyNotUnderstoodTokensTableRequest,
 );
 export const REPLY_OFFLINE = readAskReply(assistantReplyOffline);
 export const REPLY_OFFLINE_REQUEST = readAssistantAskInput(assistantReplyOfflineRequest);

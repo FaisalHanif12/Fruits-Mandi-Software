@@ -62,8 +62,11 @@ pub enum AskOutcome {
 #[serde(rename_all = "snake_case")]
 pub enum FailureKind {
     /// No internet: the connection to the service could not be made, even after one retry (plan 52
-    /// item 6). A connection that was made and then dropped is `other`, not this.
+    /// item 6). A connection that was made and then dropped is `dropped`, not this.
     Offline,
+    /// The connection was made and then dropped before the answer came, even after one retry
+    /// (plan 52 item 6). The internet may be fine, so the panel does not say it is down.
+    Dropped,
     /// No reply within 30 seconds, or the question went past 90. A timeout at any stage, the wait
     /// for the first byte or the read of the body, is this and never `bad_reply`.
     Timeout,

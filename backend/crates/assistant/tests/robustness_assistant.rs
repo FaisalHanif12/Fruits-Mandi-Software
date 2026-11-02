@@ -1733,7 +1733,7 @@ fn attack_05_a_negative_token_count_does_not_lose_the_question() {
 const FAILURES: [(FailureKind, Option<i64>); 12] = [
     (FailureKind::Offline, None),
     (FailureKind::Timeout, None),
-    (FailureKind::Other, None),
+    (FailureKind::Dropped, None),
     (FailureKind::BadKey, Some(401)),
     (FailureKind::NoCredit, Some(402)),
     (FailureKind::NoEndpoint, Some(404)),

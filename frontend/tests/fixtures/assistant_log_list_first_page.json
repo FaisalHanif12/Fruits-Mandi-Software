@@ -25,6 +25,9 @@
       "tokens_cached": 15200,
       "tokens_out": 900,
       "tokens_reasoning": 300,
+      "total_millis": null,
+      "model_millis": null,
+      "tool_millis": null,
       "can_rerun": true
     },
     {
@@ -48,6 +51,9 @@
       "tokens_cached": null,
       "tokens_out": null,
       "tokens_reasoning": null,
+      "total_millis": 12,
+      "model_millis": null,
+      "tool_millis": null,
       "can_rerun": true
     },
     {
@@ -71,6 +77,9 @@
       "tokens_cached": 7600,
       "tokens_out": 180,
       "tokens_reasoning": 60,
+      "total_millis": 6400,
+      "model_millis": 6350,
+      "tool_millis": 4,
       "can_rerun": true
     }
   ],

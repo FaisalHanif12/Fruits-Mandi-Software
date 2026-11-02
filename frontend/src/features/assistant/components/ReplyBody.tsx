@@ -10,11 +10,12 @@ import type { AskReply } from '../../../bindings/AskReply';
 import type { EntryRoute } from '../../../bindings/EntryRoute';
 import type { FailureKind } from '../../../bindings/FailureKind';
 import type { PickChoice } from '../../../bindings/PickChoice';
+import type { StopReason } from '../../../bindings/StopReason';
 import { uiErrorOf } from '../../../shared/api';
 import { displayName, useLanguage } from '../../../shared/i18n';
 import { Button, ErrorNotice, Notice, PartnerLockedBox, RUNNING_NUMBER } from '../../../shared/ui';
 import { usePartnerCodeStatus } from '../../partners';
-import { useAssistantNavigation } from '../navigation';
+import { isMainScreen, useAssistantNavigation } from '../navigation';
 import type { DockEntry } from '../store';
 import { AnswerBlock } from './AnswerBlock';
 import { AnswerTableView } from './AnswerTableView';
@@ -67,6 +68,21 @@ function Failure({ reply, retry }: { reply: AskReply; retry: (() => void) | null
   const { l10n } = useLocalization();
   const kind = reply.failure?.kind;
   const status = reply.failure?.http_status ?? null;
+  // A timeout says so in one line ("took too long, ask again"); the general line would repeat it.
+  if (kind === 'timeout') {
+    return (
+      <div className="flex flex-col gap-2">
+        <Notice tone="error">{l10n.getString(failureMessageId(kind))}</Notice>
+        {retry === null ? null : (
+          <div>
+            <Button onClick={retry}>
+              <Localized id="assistant-error-retry" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
       <Notice tone={reply.outcome === 'offline' ? 'info' : 'error'}>
@@ -128,14 +144,57 @@ function Differences({ reply }: { reply: AskReply }) {
 }
 
 /**
+ * The button of an entry route (PRD FR-7.79, FR-7.89). It opens the entry screen with the party chosen
+ * and every amount empty, or, for a help answer, a main screen as it is. A main screen never carries
+ * a party, so its button names the screen and not a person.
+ */
+function EntryButton({ route }: { route: EntryRoute }) {
+  const language = useLanguage();
+  const context = useListContext();
+  const navigation = useAssistantNavigation();
+  if (navigation === null) return null;
+  const party = route.party;
+  const label = isMainScreen(route.screen)
+    ? context.text('assistant-open-screen')
+    : party === null
+      ? context.text('assistant-open-entry')
+      : context.text('assistant-open-entry-party', { name: displayName(party, language) });
+  return (
+    <div>
+      <Button
+        onClick={() => {
+          navigation.openEntry(route);
+        }}
+      >
+        {label}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * The line and the button under an answer or advice that points to a screen (PRD FR-7.79, FR-7.89,
+ * plan 51 F3). It does not say "I can only tell"; that title is for a refused change. An entry screen
+ * says the amount stays empty. A main screen has no amount, so it has only the button.
+ */
+function EntryRouteView({ route }: { route: EntryRoute }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {isMainScreen(route.screen) ? null : (
+        <Localized id="assistant-entry-neutral">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      )}
+      <EntryButton route={route} />
+    </div>
+  );
+}
+
+/**
  * The change refused line and its button (PRD FR-7.79, E98): the app never writes, so it says so, and
  * the button opens the entry screen with the party chosen and every amount empty.
  */
 function ChangeRefusedView({ route }: { route: EntryRoute | null }) {
-  const language = useLanguage();
-  const context = useListContext();
-  const navigation = useAssistantNavigation();
-  const party = route?.party ?? null;
   return (
     <div className="flex flex-col gap-2">
       <Notice tone="info">
@@ -146,21 +205,36 @@ function ChangeRefusedView({ route }: { route: EntryRoute | null }) {
       <Localized id="assistant-change-refused-help">
         <p className="type-body text-ink-muted" />
       </Localized>
-      {route === null || navigation === null ? null : (
-        <div>
-          <Button
-            onClick={() => {
-              navigation.openEntry(route);
-            }}
-          >
-            {party === null
-              ? context.text('assistant-open-entry')
-              : context.text('assistant-open-entry-party', {
-                  name: displayName(party, language),
-                })}
-          </Button>
-        </div>
+      {route === null ? null : <EntryButton route={route} />}
+    </div>
+  );
+}
+
+/**
+ * A question that a limit stopped after it read (plan 51 B2, PRD E96): not "I did not understand" but
+ * what happened, and to ask in smaller parts, with any plain tables that were read (no figure of the
+ * model's, FR-7.76).
+ */
+function StoppedView({ reply, reason }: { reply: AskReply; reason: StopReason }) {
+  const tables = reply.answer?.tables ?? [];
+  return (
+    <div className="flex flex-col gap-3">
+      <Notice tone="warn">
+        <Localized id={`assistant-stopped-${reason}`}>
+          <span />
+        </Localized>
+      </Notice>
+      {tables.length === 0 ? null : (
+        <>
+          <Localized id="assistant-stopped-tables">
+            <p className="type-body text-ink-muted" />
+          </Localized>
+          {tables.map((table) => (
+            <AnswerTableView key={table.result_id} table={table} />
+          ))}
+        </>
       )}
+      {reply.answer === null ? null : <SourceButtons sources={reply.answer.sources} />}
     </div>
   );
 }
@@ -197,9 +271,9 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
     case 'estimate':
     case 'advice':
       return reply.answer === null ? null : (
-        // An answer or advice whose question also asked for a change carries the route of the entry
-        // screen (PRD E98): the change refused line and its button come right under the answer's
-        // words. An estimate never has it.
+        // An answer or advice that points to a screen carries its route: a help answer to a main
+        // screen (FR-7.89), or a question that also asked for a change (E98). The neutral line and the
+        // button come right under the answer's words. An estimate never has it.
         <AnswerBlock
           answer={reply.answer}
           outcome={reply.outcome}
@@ -207,7 +281,7 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
           busy={busy}
           afterText={
             reply.outcome === 'estimate' || reply.entry_route === null ? null : (
-              <ChangeRefusedView route={reply.entry_route} />
+              <EntryRouteView route={reply.entry_route} />
             )
           }
         />
@@ -291,12 +365,14 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
     case 'change_refused':
       return <ChangeRefusedView route={reply.entry_route} />;
     case 'not_understood':
-      return (
+      return reply.stop_reason === null ? (
         <Notice tone="info">
           <Localized id="assistant-not-understood">
             <span />
           </Localized>
         </Notice>
+      ) : (
+        <StoppedView reply={reply} reason={reply.stop_reason} />
       );
     case 'checks_failed':
       // The records the model read, as plain tables with their sources and no figure of the model's.

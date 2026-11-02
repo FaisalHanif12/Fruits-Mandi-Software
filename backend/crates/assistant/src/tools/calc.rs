@@ -440,6 +440,80 @@ fn settle(pending: Vec<Pending>) -> Result<(Vec<Value>, Option<bool>), ToolError
     Ok((values, checked))
 }
 
+/// "What percent of the total dues does Arshad owe" (Q071 of the live run of 02-11-2026): a buyer's
+/// balance is a debit balance and the total dues is a plain amount, and the calculator refuses to
+/// mix the two kinds. For `percent_of` only, and only for two figures READ from results (never a
+/// number the Owner typed), a buyer's debit balance (or 0) beside a plain amount is read as its
+/// size, so the percent is what he owes over the amount. It is refused, never guessed, when the
+/// balance is a credit (its sign would have to be guessed), when the account is not a buyer's (a
+/// seller's debit is an advance, a different thing from dues), or when the balance's two places
+/// differ (a percent has no check mark to warn with). A sum or a difference of a balance and an
+/// amount is still refused: there the side matters.
+fn buyer_balance_over_an_amount(
+    env: &Env<'_>,
+    state: &State,
+    paths: &[String],
+    pending: Vec<Pending>,
+) -> Result<Vec<Pending>, ToolError> {
+    let [first, second] = pending.as_slice() else {
+        return Ok(pending);
+    };
+    let read_balance = |p: &Pending| matches!(p, Pending::Known(Value::Balance(_), _));
+    let read_amount = |p: &Pending| matches!(p, Pending::Known(Value::Money(_), _));
+    let at = if read_balance(first) && read_amount(second) {
+        0
+    } else if read_amount(first) && read_balance(second) {
+        1
+    } else {
+        return Ok(pending);
+    };
+    let Some(Pending::Known(Value::Balance(size), checked)) = pending.get(at) else {
+        return Ok(pending);
+    };
+    let (size, checked) = (*size, *checked);
+    let refuse = |detail: &str| bad("ERR_OUT_OF_RANGE", "inputs", detail);
+    if size.as_paisa() < 0 {
+        return Err(refuse(
+            "a credit balance beside a plain amount has no sign to use; compare balances with \
+             balances, or read the amount of the credit",
+        ));
+    }
+    if checked == Some(false) {
+        return Err(refuse(
+            "the two places of this balance differ, so no percent is given from it; open the \
+             report",
+        ));
+    }
+    let path = paths.get(at).map_or("", String::as_str);
+    if owner_type(env, state, path).as_deref() != Some("buyer") {
+        return Err(refuse(
+            "only a buyer's debit balance may be taken as a size beside a plain amount; this \
+             balance is not known to be a buyer's",
+        ));
+    }
+    Ok(pending
+        .into_iter()
+        .enumerate()
+        .map(|(i, p)| match (i == at, p) {
+            (true, Pending::Known(Value::Balance(size), _)) => {
+                Pending::Known(Value::Money(size), None)
+            }
+            (_, other) => other,
+        })
+        .collect())
+}
+
+/// The kind of account a balance path belongs to (`buyer`, `seller` ...): the `type` of the find
+/// match or the party card that holds it (`r1.matches.0.balance`, `r2.balance`).
+fn owner_type(env: &Env<'_>, state: &State, path: &str) -> Option<String> {
+    let head = path.rsplit_once('.')?.0;
+    let found = lookup(env, state, head, "inputs").ok()?;
+    match found.node().get(&["type"])? {
+        Node::Str(word) => Some(word.clone()),
+        _ => None,
+    }
+}
+
 fn result_node(calc: &Calc, checked: Option<bool>) -> Node {
     let dir = calc.dir;
     Node::Val(match (calc.result, dir) {
@@ -473,6 +547,9 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
     let mut pending = Vec::new();
     for path in &parsed.inputs {
         pending.extend(expand(env, state, path, "inputs")?);
+    }
+    if parsed.op == OpWord::PercentOf {
+        pending = buyer_balance_over_an_amount(env, state, &parsed.inputs, pending)?;
     }
     let (values, checked) = settle(pending)?;
     let calc = figures::calculate(parsed.op.calc(), &values).map_err(service_stop)?;
