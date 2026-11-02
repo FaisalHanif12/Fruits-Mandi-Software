@@ -1018,6 +1018,75 @@ fn attack_03_a_repaired_name_is_the_one_record_the_results_hold_and_nothing_else
     h.scan_requests();
 }
 
+#[test]
+fn attack_03_a_typed_name_of_any_account_or_partner_is_refused_even_when_the_results_do_not_hold_it()
+ {
+    // The name check knows the whole book, not only this question's results (the `NameBook`): a
+    // model that types Arshad's name, or a partner's, while the results hold only Akram has made a
+    // name up from memory. The repair does not touch it (the results do not hold it), so it ends in
+    // a rewrite and then in plain tables.
+    let h = Harness::day();
+    let cases: Vec<(&str, &str, String)> = vec![
+        (
+            "ur",
+            "another buyer, in Urdu",
+            "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں اور ارشد ملتانی کے بھی۔"
+                .to_owned(),
+        ),
+        (
+            "ur",
+            "a seller, in Urdu",
+            "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں، رحیم سے پوچھیں۔".to_owned(),
+        ),
+        (
+            "en",
+            "another buyer, in English",
+            "{{r1.matches.0.name}} owes {{p1.balance}}, and Arshad Multani too.".to_owned(),
+        ),
+        (
+            "en",
+            "a partner, in English",
+            "{{r1.matches.0.name}} owes {{p1.balance}}; ask Partner A.".to_owned(),
+        ),
+    ];
+    for (language, name, text) in cases {
+        settings::set_pref(
+            &h.world.env.ctx,
+            &h.world.owner,
+            PrefKey::Language,
+            language,
+        )
+        .unwrap();
+        let content = answer("answer", &text);
+        let (reply, requests) = ask(
+            &h,
+            "akram ka bakaya kitna hai",
+            None,
+            vec![
+                tool_reply(&[find("akram", "buyer")]),
+                final_reply(&content),
+                final_reply(&content),
+            ],
+        );
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::ChecksFailed,
+            "{name}: {reply:#?}"
+        );
+        assert_eq!(requests.len(), 3, "{name}: a find, the answer, one rewrite");
+        assert!(
+            failed_rules(&requests[2]).contains("name"),
+            "{name}: the app named {:?}",
+            failed_rules(&requests[2])
+        );
+        assert!(
+            answer_of(&reply).parts.is_empty(),
+            "{name}: nothing is shown"
+        );
+    }
+    h.scan_requests();
+}
+
 /// The ids of the tool messages of a request, in order (`call_0`, `pre_p1` ...).
 fn tool_message_ids(body: &Value) -> Vec<String> {
     messages(body)
