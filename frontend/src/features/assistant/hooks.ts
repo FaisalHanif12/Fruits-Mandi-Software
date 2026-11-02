@@ -20,6 +20,7 @@ import {
   assistantKeyRemove,
   assistantKeySave,
   assistantLogList,
+  assistantNewConversation,
   assistantPick,
   assistantQuick,
   assistantRerun,
@@ -138,6 +139,27 @@ export function useAssistantRunner(): AssistantRunner {
       },
     };
   }, [syncCount]);
+}
+
+/**
+ * "New question" (PRD FR-7.78): the backend is told first, with the id of the conversation the panel
+ * leaves, so it drops that conversation's memory at once. Then the panel forgets it, so the next
+ * question is sent with no conversation (`conversation_id` null). If the backend cannot be told the
+ * panel forgets the conversation all the same: the next question starts a new one, and there is
+ * nothing the Owner could do about it.
+ */
+export function useStartNewConversation(): () => void {
+  return useCallback(() => {
+    const leaving = useAssistantStore.getState().conversationId;
+    void (async () => {
+      try {
+        await assistantNewConversation({ conversation_id: leaving });
+      } catch {
+        // Not shown: see above.
+      }
+    })();
+    useAssistantStore.getState().newConversation();
+  }, []);
 }
 
 // ---- Settings (PRD FR-7.85) ----

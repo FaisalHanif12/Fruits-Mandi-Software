@@ -7,6 +7,7 @@
 import { Localized, useLocalization } from '@fluent/react';
 import { useEffect, useRef } from 'react';
 import type { AskReply } from '../../../bindings/AskReply';
+import type { EntryRoute } from '../../../bindings/EntryRoute';
 import type { FailureKind } from '../../../bindings/FailureKind';
 import type { PickChoice } from '../../../bindings/PickChoice';
 import { uiErrorOf } from '../../../shared/api';
@@ -126,9 +127,45 @@ function Differences({ reply }: { reply: AskReply }) {
   );
 }
 
-export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
+/**
+ * The change refused line and its button (PRD FR-7.79, E98): the app never writes, so it says so, and
+ * the button opens the entry screen with the party chosen and every amount empty.
+ */
+function ChangeRefusedView({ route }: { route: EntryRoute | null }) {
   const language = useLanguage();
   const context = useListContext();
+  const navigation = useAssistantNavigation();
+  const party = route?.party ?? null;
+  return (
+    <div className="flex flex-col gap-2">
+      <Notice tone="info">
+        <Localized id="assistant-change-refused">
+          <span />
+        </Localized>
+      </Notice>
+      <Localized id="assistant-change-refused-help">
+        <p className="type-body text-ink-muted" />
+      </Localized>
+      {route === null || navigation === null ? null : (
+        <div>
+          <Button
+            onClick={() => {
+              navigation.openEntry(route);
+            }}
+          >
+            {party === null
+              ? context.text('assistant-open-entry')
+              : context.text('assistant-open-entry-party', {
+                  name: displayName(party, language),
+                })}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
   const navigation = useAssistantNavigation();
   const reply = entry.reply;
 
@@ -160,7 +197,20 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
     case 'estimate':
     case 'advice':
       return reply.answer === null ? null : (
-        <AnswerBlock answer={reply.answer} outcome={reply.outcome} onAsk={onAsk} busy={busy} />
+        // An answer or advice whose question also asked for a change carries the route of the entry
+        // screen (PRD E98): the change refused line and its button come right under the answer's
+        // words. An estimate never has it.
+        <AnswerBlock
+          answer={reply.answer}
+          outcome={reply.outcome}
+          onAsk={onAsk}
+          busy={busy}
+          afterText={
+            reply.outcome === 'estimate' || reply.entry_route === null ? null : (
+              <ChangeRefusedView route={reply.entry_route} />
+            )
+          }
+        />
       );
     case 'which_one':
       return (
@@ -238,37 +288,8 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
           )}
         </div>
       );
-    case 'change_refused': {
-      const route = reply.entry_route;
-      const party = route?.party ?? null;
-      return (
-        <div className="flex flex-col gap-2">
-          <Notice tone="info">
-            <Localized id="assistant-change-refused">
-              <span />
-            </Localized>
-          </Notice>
-          <Localized id="assistant-change-refused-help">
-            <p className="type-body text-ink-muted" />
-          </Localized>
-          {route === null || navigation === null ? null : (
-            <div>
-              <Button
-                onClick={() => {
-                  navigation.openEntry(route);
-                }}
-              >
-                {party === null
-                  ? context.text('assistant-open-entry')
-                  : context.text('assistant-open-entry-party', {
-                      name: displayName(party, language),
-                    })}
-              </Button>
-            </div>
-          )}
-        </div>
-      );
-    }
+    case 'change_refused':
+      return <ChangeRefusedView route={reply.entry_route} />;
     case 'not_understood':
       return (
         <Notice tone="info">

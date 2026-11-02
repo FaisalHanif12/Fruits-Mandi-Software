@@ -1,0 +1,320 @@
+{
+  "question_id": 1,
+  "conversation_id": "c-1",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "name",
+        "name": {
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null,
+          "code": "0020"
+        }
+      },
+      {
+        "type": "text",
+        "text": " کے ذمے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "balance",
+          "paisa": 288000,
+          "side": "dr"
+        },
+        "dir": null,
+        "checked": true,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " باقی ہیں۔ آج "
+      },
+      {
+        "type": "doc",
+        "type_id": "report-doc-bikri-first",
+        "number": 1
+      },
+      {
+        "type": "text",
+        "text": " میں ان کا بل "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 1288000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " بنا اور ان سے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 1000000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " وصول ہوئے۔"
+      }
+    ],
+    "tables": [
+      {
+        "result_id": "r3",
+        "title_id": "report-r13-title",
+        "columns": [
+          {
+            "key": "date",
+            "title_id": "report-col-date",
+            "kind": "date"
+          },
+          {
+            "key": "doc",
+            "title_id": "report-col-doc",
+            "kind": "doc"
+          },
+          {
+            "key": "detail",
+            "title_id": "report-col-detail",
+            "kind": "detail"
+          },
+          {
+            "key": "narration",
+            "title_id": "report-col-narration",
+            "kind": "text"
+          },
+          {
+            "key": "debit",
+            "title_id": "report-col-debit",
+            "kind": "money"
+          },
+          {
+            "key": "credit",
+            "title_id": "report-col-credit",
+            "kind": "money"
+          },
+          {
+            "key": "balance",
+            "title_id": "report-col-balance",
+            "kind": "balance"
+          }
+        ],
+        "rows": [
+          {
+            "row": {
+              "cells": [
+                {
+                  "type": "date",
+                  "iso": "2026-10-10"
+                },
+                {
+                  "type": "doc",
+                  "type_id": "report-doc-receipt",
+                  "number": 1
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "money",
+                  "paisa": 1000000
+                },
+                {
+                  "type": "balance",
+                  "paisa": 288000,
+                  "side": "dr"
+                }
+              ],
+              "source": {
+                "kind": "voucher",
+                "id": 2
+              },
+              "kind": "normal"
+            },
+            "analytics_key": null
+          },
+          {
+            "row": {
+              "cells": [
+                {
+                  "type": "date",
+                  "iso": "2026-10-10"
+                },
+                {
+                  "type": "doc",
+                  "type_id": "report-doc-bikri-first",
+                  "number": 1
+                },
+                {
+                  "type": "detail",
+                  "parts": [
+                    {
+                      "kind": "sale",
+                      "bikri_number": 1,
+                      "item": {
+                        "ur": "کیلا",
+                        "en": "Banana"
+                      },
+                      "packing": {
+                        "ur": "پیٹی",
+                        "en": "Box"
+                      },
+                      "qty": 20,
+                      "rate_paisa": 60000,
+                      "value_paisa": 1200000,
+                      "commission_paisa": 72000,
+                      "laga_paisa": 16000
+                    }
+                  ]
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "money",
+                  "paisa": 1288000
+                },
+                {
+                  "type": "empty"
+                },
+                {
+                  "type": "balance",
+                  "paisa": 1288000,
+                  "side": "dr"
+                }
+              ],
+              "source": {
+                "kind": "bikri",
+                "id": 1
+              },
+              "kind": "normal"
+            },
+            "analytics_key": null
+          }
+        ],
+        "count": 2,
+        "totals_label_id": "report-total",
+        "totals": [
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "empty"
+          },
+          {
+            "type": "money",
+            "paisa": 1288000
+          },
+          {
+            "type": "money",
+            "paisa": 1000000
+          },
+          {
+            "type": "balance",
+            "paisa": 288000,
+            "side": "dr"
+          }
+        ]
+      }
+    ],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "sources": [
+      {
+        "kind": "party_card",
+        "result_id": "r2",
+        "party": {
+          "id": 20,
+          "code": "0020",
+          "name_ur": "اکرم ٹول ٹیکس",
+          "name_en": "Akram Toll Tax",
+          "tag": null
+        }
+      },
+      {
+        "kind": "report",
+        "result_id": "r3",
+        "label_id": "report-r13-title",
+        "id": "R13",
+        "filters": {
+          "shortcut": null,
+          "from": "",
+          "to": "",
+          "as_of": "",
+          "party": {
+            "record": {
+              "id": 20,
+              "code": "0020",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null
+            },
+            "person_key": null
+          },
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      }
+    ],
+    "differences": [],
+    "next": [
+      "پچھلے مہینے کا حساب؟",
+      "اکرم ٹول ٹیکس کی پرانی بکریاں"
+    ],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": {
+    "screen": "wasooli",
+    "party": {
+      "id": 20,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": null
+    }
+  },
+  "locked": false,
+  "failure": null,
+  "count_today": 1,
+  "limit": 20
+}

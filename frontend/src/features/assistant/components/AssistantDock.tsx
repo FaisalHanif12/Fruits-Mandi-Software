@@ -33,7 +33,12 @@ import {
 } from '../../../shared/keyboard';
 import { Button, Notice } from '../../../shared/ui';
 import { useAuthStatus } from '../../auth/hooks';
-import { useAssistantRunner, useAssistantStatus, useStepLines } from '../hooks';
+import {
+  useAssistantRunner,
+  useAssistantStatus,
+  useStartNewConversation,
+  useStepLines,
+} from '../hooks';
 import { useAssistantNavigation } from '../navigation';
 import { useAssistantStore } from '../store';
 import { Conversation } from './Conversation';
@@ -57,8 +62,8 @@ export function AssistantDock() {
   const tall = useAssistantStore((state) => state.tall);
   const draft = useAssistantStore((state) => state.draft);
   const entries = useAssistantStore((state) => state.entries);
-  const { openDock, closeDock, setTall, setDraft, recallQuestion, newConversation } =
-    useAssistantStore.getState();
+  const { openDock, closeDock, setTall, setDraft, recallQuestion } = useAssistantStore.getState();
+  const newConversation = useStartNewConversation();
   const section = useRef<HTMLElement>(null);
   /** Where the focus was when the panel opened: it goes back there when the panel closes. */
   const origin = useRef<HTMLElement | null>(null);
@@ -162,12 +167,11 @@ export function AssistantDock() {
   const known = status.data;
   const keySaved = known?.key_saved ?? false;
   const asking = known === undefined || (known.enabled && known.key_saved);
-  // In the short height, the quick questions fold behind a button once a conversation has begun, so
-  // the answer has the room (NFR-USE-15 at 1024 x 600). In the tall height and in an empty
-  // conversation they always show.
-  // After a limit or a lost connection they are what still works, so they are open.
+  // In both heights the quick questions fold behind a button once a conversation has begun, so the
+  // answer and its buttons have the room (NFR-USE-15 at 1024 x 600). In an empty conversation they
+  // always show. After a limit or a lost connection they are what still works, so they are open.
   const chipsNeeded = lastOutcome === 'limit_reached' || lastOutcome === 'offline';
-  const foldable = !tall && entries.length > 0 && !chipsNeeded;
+  const foldable = entries.length > 0 && !chipsNeeded;
   const showChips = !foldable || chipsOpen;
   const HeightIcon = tall ? ChevronsDown : ChevronsUp;
   const heightLabel = l10n.getString(heightMessageId(tall));
@@ -220,8 +224,8 @@ export function AssistantDock() {
             {showChips ? <QuickChips onQuick={runner.quick} busy={working} /> : null}
             <div className="flex items-end gap-3">
               {foldable ? (
-                // In the short height the quick questions fold behind this button, on the row of the
-                // box, so the answer keeps the room (NFR-USE-15 at 1024 x 600).
+                // Once a conversation has begun the quick questions fold behind this button, on the row
+                // of the box, so the answer keeps the room (NFR-USE-15 at 1024 x 600).
                 <button
                   type="button"
                   aria-expanded={chipsOpen}

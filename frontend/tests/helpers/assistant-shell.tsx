@@ -26,7 +26,7 @@ import type { Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { useEscapeDispatcher } from '../../src/shared/keyboard';
 import { authState } from './app';
-import { STATUS_ON } from './assistant-real';
+import { NEW_CONVERSATION, STATUS_ON } from './assistant-real';
 import { message, visible } from './render';
 import { USER_NAME } from './sample';
 
@@ -38,6 +38,7 @@ export function resetAssistantFakes(): void {
   // A question stays being worked on until the test says its answer has come.
   vi.mocked(assistantApi.assistantAsk).mockReturnValue(new Promise(() => undefined));
   vi.mocked(assistantApi.listenSteps).mockResolvedValue(() => undefined);
+  vi.mocked(assistantApi.assistantNewConversation).mockResolvedValue(NEW_CONVERSATION);
   useAssistantStore.getState().reset();
 }
 

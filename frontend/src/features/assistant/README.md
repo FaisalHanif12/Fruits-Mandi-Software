@@ -12,6 +12,9 @@ FR-7.72 to FR-7.88, FR-5.5, the `F1` key of 7.3).
 - Everything the panel shows is in `store.ts`, above the screens: the open state, the height, the box,
   the conversation. A language switch, a screen change or closing the panel loses nothing. The app
   locking or signing out clears it (FR-7.73).
+- "New question" tells the backend first (`assistant_new_conversation`), then the panel forgets the
+  conversation, so the next question goes out with `conversation_id: null`. Once a conversation has
+  begun, the quick questions fold behind a button in both heights, so the answer has the room.
 - The panel shows what the backend sends and nothing else (CLAUDE.md rule 1). `AnswerBlock` writes the
   parts: a `text` part as it is (never a number), a `figure` large through `<Num>` with ✓ when its two
   places agree and ⓘ for its working, a `name` through `displayName`. Tables use the report screens'

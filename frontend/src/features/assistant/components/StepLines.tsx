@@ -22,14 +22,28 @@ function withAliases(args: readonly ReportMessageArg[]): ReportMessageArg[] {
   ];
 }
 
+/**
+ * What each step line needs to be told: the argument its words are built on. A step that arrives
+ * without it (a party that could not be found) is told in the plain line, never with a hole in it.
+ */
+const STEP_NEEDS: Readonly<Record<string, string>> = {
+  'assistant-step-finding': 'text',
+  'assistant-step-reading-card': 'name',
+  'assistant-step-reading-ledger': 'name',
+  'assistant-step-reading-report': 'report',
+};
+
 /** The words of one step line. */
 export function stepText(
   step: AssistantStep,
   context: ListContext,
   known: (id: string) => boolean,
 ): string {
-  return known(step.id)
-    ? messageText(step.id, withAliases(step.args), context)
+  const args = withAliases(step.args);
+  const needs = STEP_NEEDS[step.id];
+  const complete = needs === undefined || args.some((arg) => arg.name === needs);
+  return known(step.id) && complete
+    ? messageText(step.id, args, context)
     : context.text('assistant-step-generic');
 }
 

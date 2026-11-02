@@ -25,6 +25,9 @@ export const REPLIES: Readonly<Record<string, AskReply>> = {
   estimate: real.REPLY_ESTIMATE,
   target: real.REPLY_ESTIMATE_TARGET,
   advice: real.REPLY_ADVICE,
+  // An answer or advice whose question also asked for a change carries the route of the entry screen.
+  advice_route: real.REPLY_ADVICE_ROUTE,
+  answered_route: real.REPLY_ANSWERED_ROUTE,
   which_one: real.REPLY_WHICH_ONE,
   not_found: real.REPLY_NOT_FOUND,
   need_dates: real.REPLY_NEED_DATES,

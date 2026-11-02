@@ -9,6 +9,7 @@ import type { AssistantKeyRemoveInput } from '../../src/bindings/AssistantKeyRem
 import type { AssistantKeySaveInput } from '../../src/bindings/AssistantKeySaveInput';
 import type { AssistantLogListInput } from '../../src/bindings/AssistantLogListInput';
 import type { AssistantLogPage } from '../../src/bindings/AssistantLogPage';
+import type { AssistantNewConversationInput } from '../../src/bindings/AssistantNewConversationInput';
 import type { AssistantPickInput } from '../../src/bindings/AssistantPickInput';
 import type { AssistantQuickInput } from '../../src/bindings/AssistantQuickInput';
 import type { AssistantRerunInput } from '../../src/bindings/AssistantRerunInput';
@@ -24,6 +25,7 @@ import assistantKeySaveRequest from '../fixtures/assistant_key_save_request.json
 import assistantLogListFirstPage from '../fixtures/assistant_log_list_first_page.json';
 import assistantLogListFirstPageRequest from '../fixtures/assistant_log_list_first_page_request.json';
 import assistantNewConversation from '../fixtures/assistant_new_conversation.json';
+import assistantNewConversationRequest from '../fixtures/assistant_new_conversation_request.json';
 import assistantPickMatch from '../fixtures/assistant_pick_match.json';
 import assistantPickMatchRequest from '../fixtures/assistant_pick_match_request.json';
 import assistantPickPartnerCode from '../fixtures/assistant_pick_partner_code.json';
@@ -31,8 +33,12 @@ import assistantPickPartnerCodeRequest from '../fixtures/assistant_pick_partner_
 import assistantQuickCashInHand from '../fixtures/assistant_quick_cash_in_hand.json';
 import assistantQuickCashInHandRequest from '../fixtures/assistant_quick_cash_in_hand_request.json';
 import assistantReplyAdvice from '../fixtures/assistant_reply_advice.json';
+import assistantReplyAdviceRoute from '../fixtures/assistant_reply_advice_route.json';
+import assistantReplyAdviceRouteRequest from '../fixtures/assistant_reply_advice_route_request.json';
 import assistantReplyAdviceRequest from '../fixtures/assistant_reply_advice_request.json';
 import assistantReplyAnswered from '../fixtures/assistant_reply_answered.json';
+import assistantReplyAnsweredRoute from '../fixtures/assistant_reply_answered_route.json';
+import assistantReplyAnsweredRouteRequest from '../fixtures/assistant_reply_answered_route_request.json';
 import assistantReplyAnsweredChart from '../fixtures/assistant_reply_answered_chart.json';
 import assistantReplyAnsweredChartRequest from '../fixtures/assistant_reply_answered_chart_request.json';
 import assistantReplyAnsweredRequest from '../fixtures/assistant_reply_answered_request.json';
@@ -96,6 +102,9 @@ function readAssistantLogListInput(value: unknown): AssistantLogListInput {
 function readAssistantLogPage(value: unknown): AssistantLogPage {
   return value as AssistantLogPage;
 }
+function readAssistantNewConversationInput(value: unknown): AssistantNewConversationInput {
+  return value as AssistantNewConversationInput;
+}
 function readAssistantPickInput(value: unknown): AssistantPickInput {
   return value as AssistantPickInput;
 }
@@ -130,6 +139,9 @@ export const LOG_LIST_FIRST_PAGE_REQUEST = readAssistantLogListInput(
   assistantLogListFirstPageRequest,
 );
 export const NEW_CONVERSATION = readConversationStarted(assistantNewConversation);
+export const NEW_CONVERSATION_REQUEST = readAssistantNewConversationInput(
+  assistantNewConversationRequest,
+);
 export const PICK_MATCH = readAskReply(assistantPickMatch);
 export const PICK_MATCH_REQUEST = readAssistantPickInput(assistantPickMatchRequest);
 export const PICK_PARTNER_CODE = readAskReply(assistantPickPartnerCode);
@@ -138,6 +150,12 @@ export const QUICK_CASH_IN_HAND = readAskReply(assistantQuickCashInHand);
 export const QUICK_CASH_IN_HAND_REQUEST = readAssistantQuickInput(assistantQuickCashInHandRequest);
 export const REPLY_ADVICE = readAskReply(assistantReplyAdvice);
 export const REPLY_ADVICE_REQUEST = readAssistantAskInput(assistantReplyAdviceRequest);
+export const REPLY_ADVICE_ROUTE = readAskReply(assistantReplyAdviceRoute);
+export const REPLY_ADVICE_ROUTE_REQUEST = readAssistantAskInput(assistantReplyAdviceRouteRequest);
+export const REPLY_ANSWERED_ROUTE = readAskReply(assistantReplyAnsweredRoute);
+export const REPLY_ANSWERED_ROUTE_REQUEST = readAssistantAskInput(
+  assistantReplyAnsweredRouteRequest,
+);
 export const REPLY_ANSWERED = readAskReply(assistantReplyAnswered);
 export const REPLY_ANSWERED_CHART = readAskReply(assistantReplyAnsweredChart);
 export const REPLY_ANSWERED_CHART_REQUEST = readAssistantAskInput(

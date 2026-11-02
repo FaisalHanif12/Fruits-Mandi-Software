@@ -4,6 +4,7 @@
 // figure, and never fills a gap in the model's words (CLAUDE.md rule 1, Code Standards F2, M12).
 
 import { useLocalization } from '@fluent/react';
+import type { ReactNode } from 'react';
 import type { Answer } from '../../../bindings/Answer';
 import type { AskOutcome } from '../../../bindings/AskOutcome';
 import { AnswerChartView } from './AnswerChartView';
@@ -19,14 +20,20 @@ interface AnswerBlockProps {
   onAsk: (text: string) => void;
   /** A question is being worked on: the suggestions wait. */
   busy: boolean;
+  /**
+   * What goes right under the answer's words, before its tables: the change refused line of an answer
+   * or advice whose question also asked for a change (PRD E98), so it is seen without scrolling.
+   */
+  afterText?: ReactNode;
 }
 
-export function AnswerBlock({ answer, outcome, onAsk, busy }: AnswerBlockProps) {
+export function AnswerBlock({ answer, outcome, onAsk, busy, afterText }: AnswerBlockProps) {
   const { l10n } = useLocalization();
   return (
     <div className="flex flex-col gap-3" data-outcome={outcome}>
       {answer.advice || outcome === 'advice' ? <AdviceBand /> : null}
       <AnswerText parts={answer.parts} />
+      {afterText}
       {answer.tables.map((table) => (
         <AnswerTableView key={table.result_id} table={table} />
       ))}

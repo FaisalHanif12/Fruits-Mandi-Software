@@ -360,6 +360,62 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     });
   });
 
+  describe('an answer or advice whose question also asked for a change (PRD E98)', () => {
+    // The route the backend sends with an answer; an estimate with it is made up here, because the
+    // backend never sends one (it is the rule the screen must keep anyway).
+    const route = real.REPLY_ANSWERED_ROUTE.entry_route;
+    const entryButton = () =>
+      within(panelOf(language)).queryByRole('button', {
+        name: new RegExp(language === 'ur' ? 'اندراج' : 'entry screen'),
+      });
+
+    it('an answer shows the change refused line and the button to the entry screen under it', async () => {
+      await renderShellRouted();
+      const user = await ask(language, real.REPLY_ANSWERED_ROUTE);
+      const shown = text(language);
+      // The answer is all there, with its checked figure, and the refusal comes under it.
+      expect(panelOf(language).querySelectorAll('[data-checked]').length).toBeGreaterThan(0);
+      expect(shown).toContain(message(language, 'assistant-change-refused'));
+      expect(shown.indexOf(message(language, 'assistant-change-refused'))).toBeGreaterThan(
+        shown.indexOf('10,000'),
+      );
+      const button = entryButton();
+      expect(button).not.toBeNull();
+      if (button !== null) await user.click(button);
+      expect(routeNow().path).toBe('/bikri/voucher');
+      expect(routeNow().search).toMatchObject({ type: 'receipt', party: { id: 20 } });
+    });
+
+    it('advice shows it under the calm band and the answer', async () => {
+      await renderShellRouted();
+      const user = await ask(language, real.REPLY_ADVICE_ROUTE);
+      const shown = text(language);
+      expect(shown).toContain(message(language, 'assistant-band-advice'));
+      expect(shown).toContain(message(language, 'assistant-change-refused'));
+      expect(shown.indexOf(message(language, 'assistant-change-refused'))).toBeGreaterThan(
+        shown.indexOf(message(language, 'assistant-band-advice')),
+      );
+      const button = entryButton();
+      expect(button).not.toBeNull();
+      if (button !== null) await user.click(button);
+      expect(routeNow().path).toBe('/bikri/voucher');
+    });
+
+    it('an estimate never shows it, even when a route came with it', async () => {
+      await renderShellRouted();
+      await ask(language, { ...real.REPLY_ESTIMATE, entry_route: route });
+      expect(text(language)).not.toContain(message(language, 'assistant-change-refused'));
+      expect(entryButton()).toBeNull();
+    });
+
+    it('an answer or advice with no route has no refusal and no button', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_ADVICE);
+      expect(text(language)).not.toContain(message(language, 'assistant-change-refused'));
+      expect(entryButton()).toBeNull();
+    });
+  });
+
   it('checks failed: the words, the plain tables of the records, and no figure of the model', async () => {
     await renderShellRouted();
     await ask(language, real.REPLY_CHECKS_FAILED);
@@ -532,6 +588,39 @@ describe.each(LANGUAGES)('the quick questions (%s)', (language) => {
     ).toEqual(ids.map((id) => message(language, id)));
   });
 
+  it.each([
+    ['short', false],
+    ['tall', true],
+  ])(
+    'in the %s height the chips show in an empty conversation, fold behind their button once a conversation has begun, and the button opens them',
+    async (_name, tall) => {
+      await renderShellRouted();
+      const user = userEvent.setup();
+      press('F1');
+      act(() => {
+        useAssistantStore.getState().setTall(tall);
+      });
+      const chips = () =>
+        within(panelOf(language)).queryByRole('list', {
+          name: message(language, 'assistant-chips-label'),
+        });
+      expect(chips()).not.toBeNull();
+      vi.mocked(assistantApi.assistantAsk).mockResolvedValue(real.REPLY_ANSWERED);
+      await user.type(boxOf(language), `${QUESTION}{Enter}`);
+      await waitFor(() => {
+        expect(useAssistantStore.getState().entries.at(-1)?.working).toBe(false);
+      });
+      expect(chips()).toBeNull();
+      const toggle = within(panelOf(language)).getByRole('button', {
+        name: message(language, 'assistant-chips-label'),
+      });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await user.click(toggle);
+      expect(chips()).not.toBeNull();
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    },
+  );
+
   it('the party chip opens a picker inside the panel, and Never mind brings the chips back', async () => {
     await renderShellRouted();
     const user = userEvent.setup();
@@ -624,6 +713,86 @@ describe.each(LANGUAGES)('the steps and the count (%s)', (language) => {
     );
     expect(text(language)).toContain(message(language, 'assistant-step-generic'));
     expect(text(language)).not.toContain('from-the-future');
+  });
+
+  it('every step line the backend sends is in the app’s words, with the arguments it really sends', async () => {
+    let step: (value: AssistantStep) => void = () => undefined;
+    vi.mocked(assistantApi.listenSteps).mockImplementation((handler) => {
+      step = handler;
+      return Promise.resolve(() => undefined);
+    });
+    await renderShellRouted();
+    const user = userEvent.setup();
+    press('F1');
+    await user.type(boxOf(language), `${QUESTION}{Enter}`);
+    // run.rs `step_of`: a text, or the party's name in both scripts (`names`, with the tag), or a report
+    // id, or nothing.
+    const named = (name: string, value: string) => ({
+      name,
+      value: { type: 'text' as const, text: value },
+    });
+    const bothNames = (name: string, ur: string, en: string) => ({
+      name,
+      value: { type: 'names' as const, names: { ur, en } },
+    });
+    const AKRAM_UR = 'اکرم ٹول ٹیکس';
+    const AKRAM_EN = 'Akram Toll Tax';
+    const AKRAM = language === 'ur' ? AKRAM_UR : AKRAM_EN;
+    const steps: [AssistantStep, string][] = [
+      [
+        { id: 'assistant-step-finding', args: [named('text', 'ikram')] },
+        message(language, 'assistant-step-finding', { text: 'ikram' }),
+      ],
+      [
+        {
+          id: 'assistant-step-reading-card',
+          args: [bothNames('name', AKRAM_UR, AKRAM_EN)],
+        },
+        message(language, 'assistant-step-reading-card', { name: AKRAM }),
+      ],
+      [
+        {
+          id: 'assistant-step-reading-ledger',
+          args: [bothNames('name', AKRAM_UR, AKRAM_EN)],
+        },
+        message(language, 'assistant-step-reading-ledger', { name: AKRAM }),
+      ],
+      [
+        { id: 'assistant-step-reading-report', args: [named('report', 'R20')] },
+        message(language, 'assistant-step-reading-report', { report: 'R20' }),
+      ],
+      ...[
+        'assistant-step-reading-analytics',
+        'assistant-step-reading-tiles',
+        'assistant-step-period',
+        'assistant-step-calculating',
+        'assistant-step-estimating',
+        'assistant-step-checking',
+        'assistant-step-rewriting',
+        'assistant-step-generic',
+      ].map((id): [AssistantStep, string] => [{ id, args: [] }, message(language, id)]),
+    ];
+    act(() => {
+      for (const [one] of steps) step(one);
+    });
+    // A party that could not be found has no name to write: the plain line stands in, with no hole.
+    const before = text(language).split(message(language, 'assistant-step-generic')).length;
+    act(() => {
+      step({ id: 'assistant-step-reading-card', args: [] });
+    });
+    expect(text(language).split(message(language, 'assistant-step-generic')).length).toBe(
+      before + 1,
+    );
+    const shown = text(language);
+    for (const [one, words] of steps) {
+      expect(shown, one.id).toContain(words);
+    }
+    // No raw id and no unfilled placeholder reaches the screen.
+    expect(shown).not.toContain('assistant-step');
+    expect(shown).not.toContain('$');
+    // The line reads in the app's language: the English one has no Urdu name in it.
+    if (language === 'en') expect(shown).not.toContain(AKRAM_UR);
+    else expect(shown).not.toContain(AKRAM_EN);
   });
 
   it('the status bar counts the day: the backend’s number, before and after a question', async () => {

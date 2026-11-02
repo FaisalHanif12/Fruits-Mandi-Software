@@ -7,6 +7,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProviders } from '../../src/app/providers';
+import * as assistantApi from '../../src/features/assistant/api';
 import { useAssistantStore } from '../../src/features/assistant/store';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { tabbableIn } from '../../src/shared/keyboard';
@@ -310,6 +311,59 @@ describe.each(LANGUAGES)('the question panel (%s)', (language) => {
       expect(boxOf(language)).toHaveFocus();
       await user.keyboard('{ArrowUp}');
       expect(boxOf(language)).toHaveValue('old one');
+    });
+
+    it('New question tells the backend first, and the next question is sent with no conversation', async () => {
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.type(boxOf(language), 'old one{Enter}');
+      act(() => {
+        useAssistantStore.getState().setReply(1, REPLY_ANSWERED);
+      });
+      // The conversation the backend gave the first question is the one the panel holds.
+      expect(useAssistantStore.getState().conversationId).toBe(REPLY_ANSWERED.conversation_id);
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: new RegExp(message(language, 'assistant-new-conversation')),
+        }),
+      );
+      expect(assistantApi.assistantNewConversation).toHaveBeenCalledTimes(1);
+      // It is told which conversation the panel leaves, so the backend drops that one's memory.
+      expect(assistantApi.assistantNewConversation).toHaveBeenCalledWith({
+        conversation_id: REPLY_ANSWERED.conversation_id,
+      });
+      expect(useAssistantStore.getState().conversationId).toBeNull();
+      await user.type(boxOf(language), 'next one{Enter}');
+      expect(assistantApi.assistantAsk).toHaveBeenLastCalledWith({
+        text: 'next one',
+        conversation_id: null,
+      });
+      // The backend heard of the new conversation before the new question went out.
+      const told = vi.mocked(assistantApi.assistantNewConversation).mock.invocationCallOrder[0];
+      const asked = vi.mocked(assistantApi.assistantAsk).mock.invocationCallOrder.at(-1);
+      expect(told).toBeLessThan(asked ?? 0);
+    });
+
+    it('New question forgets the conversation even when the backend cannot be told', async () => {
+      vi.mocked(assistantApi.assistantNewConversation).mockRejectedValue(new Error('gone'));
+      renderIn(language, shell());
+      const user = userEvent.setup();
+      press('F1');
+      await user.type(boxOf(language), 'old one{Enter}');
+      act(() => {
+        useAssistantStore.getState().setReply(1, REPLY_ANSWERED);
+      });
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: new RegExp(message(language, 'assistant-new-conversation')),
+        }),
+      );
+      expect(useAssistantStore.getState().entries).toHaveLength(0);
+      expect(useAssistantStore.getState().conversationId).toBeNull();
+      expect(
+        within(panelOf(language)).getByText(message(language, 'assistant-empty-title')),
+      ).toBeInTheDocument();
     });
 
     it('is forgotten, and closed, when the app locks', async () => {

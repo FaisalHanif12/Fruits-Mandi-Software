@@ -54,3 +54,25 @@ D6-A10 (screen part), D6-A13, D6-A14, D6-A15, D6-A18 (frontend part).
 - Existing files touched (all additions): `AppShell.tsx`, `StatusBar.tsx`, `shared/keyboard/shortcuts.ts` and `index.ts`, `features/reports/search.ts` and `index.ts`, `features/analytics/index.ts`, `AnalyticsPage.tsx` (reads the address once), `app/router.tsx` (validateSearch on the two analytics routes, the dev route), `styles/tokens.css`, `styles/globals.css`, `i18n/ur|en/errors.ftl` (4 `ERR_ASSISTANT_*`, `ERR_NO_BASE`, `ERR_TOO_LITTLE_HISTORY`). Existing tests changed, accepted: `keyboard-registry.test.tsx` (+3 rows: `F1`, `Ctrl+↑`, `Ctrl+↓`), `settings.test.tsx` (nine tabs become ten, the new group).
 - Checks (frontend): typecheck clean; eslint, prettier, stylelint clean on changed files; i18n:check passed; vitest 14 files, 682 tests passed. Screenshots ur and en at 1366 x 768 for 20 states and Settings, plus 1024 x 600 and 1920 x 1080 for six states, no sideways overflow: `frontend/tests/e2e/output/screenshots/plan49/` (68). Urdu shaping and printing on Windows: LOCAL-ONLY.
 - Lead decisions: (1) change refused opens the entry screen with the party chosen (FR-7.79): an optional `party` address parameter, additive only, on the voucher, expense, lent, khata, capital, fruit and general screens; with no parameter each screen is as before; amounts stay empty. (2) An average's working carries n as its last input, written (a + b + c) ÷ n. (3) Answer buttons use the sources' filters; Print goes to A4 in the app language. (4) The shut panel's body leaves the page after its slide.
+
+### F2 (02-11-2026), accepted with follow-ups
+
+- The panel is wired to the real commands and the step event `assistant://step`, with one api.ts wrapper per command. All 61 backend fixtures are byte-identical to the frontend copies. The 13 that changed in T3 carry whole party records in sources and filters; no frontend change was needed for them. All 64 `assistant-*` ids the backend sends are in ur and en. `assistant-step-writing` was removed, because it is never sent. All 9 failure kinds and all 16 outcomes are designed.
+- Checks (frontend):
+  - typecheck clean; eslint, prettier and stylelint clean on changed files; i18n:check passed.
+  - Assistant and settings files: 9 files, 375 tests passed.
+  - Report and analytics files: 9 files, 495 tests passed.
+  - Screenshots ur and en, 24 states at 1024 x 600, 1366 x 768 and 1920 x 1080 (144 files), in `tests/e2e/output/screenshots/plan49/`. No sideways overflow.
+  - The replies come from the backend's contract fixtures, not a live run.
+  - Urdu shaping and printing on Windows: LOCAL-ONLY.
+- Lead decisions:
+  - (1) A party's name in a step line goes out as `ArgValue::Names` (ur, en, tag), not as Urdu text (rule 8, F38). This is a backend fix; the frontend test then uses the real argument.
+  - (2) "New question" calls `assistant_new_conversation` first, so the runtime drops the old memory at once.
+  - (3) At 1024 x 600 the chips fold in the tall height too, once a conversation has begun.
+- F2 follow-ups as built, accepted:
+  - "New question" calls `assistant_new_conversation` with the old id, and the next ask sends null.
+  - Step lines read `ArgValue::Names`, in the app's script. A card or ledger step with no name shows the plain "preparing" line.
+  - At 1024 x 600 the chips fold in both heights once a conversation has begun. Change refused, which one and sum then fit with no scrolling.
+  - All 62 fixtures are byte-identical to the backend's.
+  - Checks: typecheck, eslint, prettier and i18n:check clean; 9 assistant files, 383 tests passed.
+- E98 (02-11-2026), accepted: an answer or advice that carries an entry route shows the change refused line and the entry-screen button right under its words, using the shared `ChangeRefusedView`; an estimate never shows it. No new Fluent text. 391 tests passed. At 1024 x 600 the button is one scroll below the refusal line. The tests move to backend's real fixtures `assistant_reply_answered_route` and `assistant_reply_advice_route`.

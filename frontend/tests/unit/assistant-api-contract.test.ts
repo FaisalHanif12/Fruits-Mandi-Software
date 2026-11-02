@@ -75,20 +75,26 @@ describe('each wrapper sends the command and `{ input }`', () => {
 
   it('the others send the exact request the backend wrote', async () => {
     await api.assistantAsk(real.REPLY_ANSWERED_REQUEST);
+    await api.assistantAsk(real.REPLY_ANSWERED_ROUTE_REQUEST);
+    await api.assistantAsk(real.REPLY_ADVICE_ROUTE_REQUEST);
     await api.assistantQuick(real.QUICK_CASH_IN_HAND_REQUEST);
     await api.assistantPick(real.PICK_MATCH_REQUEST);
     await api.assistantPick(real.PICK_PARTNER_CODE_REQUEST);
     await api.assistantRerun(real.RERUN_REQUEST);
+    await api.assistantNewConversation(real.NEW_CONVERSATION_REQUEST);
     await api.assistantSettingsSet(real.SETTINGS_SET_REQUEST);
     await api.assistantKeySave(real.KEY_SAVE_REQUEST);
     await api.assistantKeyRemove(real.KEY_REMOVE_REQUEST);
     await api.assistantLogList(real.LOG_LIST_FIRST_PAGE_REQUEST);
     expect(call.mock.calls).toEqual([
       ['assistant_ask', { input: real.REPLY_ANSWERED_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_ANSWERED_ROUTE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_ADVICE_ROUTE_REQUEST }],
       ['assistant_quick', { input: real.QUICK_CASH_IN_HAND_REQUEST }],
       ['assistant_pick', { input: real.PICK_MATCH_REQUEST }],
       ['assistant_pick', { input: real.PICK_PARTNER_CODE_REQUEST }],
       ['assistant_rerun', { input: real.RERUN_REQUEST }],
+      ['assistant_new_conversation', { input: real.NEW_CONVERSATION_REQUEST }],
       ['assistant_settings_set', { input: real.SETTINGS_SET_REQUEST }],
       ['assistant_key_save', { input: real.KEY_SAVE_REQUEST }],
       ['assistant_key_remove', { input: real.KEY_REMOVE_REQUEST }],
@@ -119,6 +125,8 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['estimate', real.REPLY_ESTIMATE],
   ['estimate target', real.REPLY_ESTIMATE_TARGET],
   ['advice', real.REPLY_ADVICE],
+  ['answered with a route', real.REPLY_ANSWERED_ROUTE],
+  ['advice with a route', real.REPLY_ADVICE_ROUTE],
   ['which one', real.REPLY_WHICH_ONE],
   ['not found', real.REPLY_NOT_FOUND],
   ['need dates', real.REPLY_NEED_DATES],

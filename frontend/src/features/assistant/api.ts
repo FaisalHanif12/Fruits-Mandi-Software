@@ -3,11 +3,13 @@
 // F4). The key is only ever an argument of `assistantKeySave`; it is not kept anywhere here.
 
 import type { AskReply } from '../../bindings/AskReply';
+import type { ConversationStarted } from '../../bindings/ConversationStarted';
 import type { AssistantAskInput } from '../../bindings/AssistantAskInput';
 import type { AssistantKeyRemoveInput } from '../../bindings/AssistantKeyRemoveInput';
 import type { AssistantKeySaveInput } from '../../bindings/AssistantKeySaveInput';
 import type { AssistantLogListInput } from '../../bindings/AssistantLogListInput';
 import type { AssistantLogPage } from '../../bindings/AssistantLogPage';
+import type { AssistantNewConversationInput } from '../../bindings/AssistantNewConversationInput';
 import type { AssistantPickInput } from '../../bindings/AssistantPickInput';
 import type { AssistantQuickInput } from '../../bindings/AssistantQuickInput';
 import type { AssistantRerunInput } from '../../bindings/AssistantRerunInput';
@@ -44,6 +46,17 @@ export function assistantPick(input: AssistantPickInput): Promise<AskReply> {
 /** Reads an old answer again on today's books: plain tables, no model, not counted. */
 export function assistantRerun(input: AssistantRerunInput): Promise<AskReply> {
   return callCommand<AskReply>('assistant_rerun', { input });
+}
+
+/**
+ * "New question": the backend drops the memory of the conversation the panel leaves, at once (PRD
+ * FR-7.78). Writes nothing. The next question is sent with no conversation, and the backend starts a
+ * new one.
+ */
+export function assistantNewConversation(
+  input: AssistantNewConversationInput,
+): Promise<ConversationStarted> {
+  return callCommand<ConversationStarted>('assistant_new_conversation', { input });
 }
 
 /** Turns the assistant on or off and sets the model name. */
