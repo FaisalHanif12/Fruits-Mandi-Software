@@ -420,6 +420,64 @@ pub(crate) fn buyers_owing_now(
     Ok(load_buyers(conn, &typed)?.0)
 }
 
+/// The buyers who owe the firm today WITHOUT the ages of their open bills (plan 48 P48-S1): the
+/// first half of [`load_buyers`], so the set and every balance are exactly the ones of R20 (the
+/// ages never change a balance or drop a buyer). Reading the ages takes 3.6 seconds on the
+/// NFR-SCL-1 volume and the balances 0.3 seconds. The dashboard's narrow tiles and the second
+/// place of the assistant's buyers' dues read these rows. The `ages` of every buyer are `None`,
+/// so these rows must never be given to what draws ages (the old-dues list, the bell).
+///
+/// # Errors
+/// A database error; `ReportsError::Money` if a stored amount is not whole rupees.
+pub(crate) fn buyers_balances_now(
+    conn: &Connection,
+    today: BusinessDate,
+) -> Result<Vec<Buyer>, ReportsError> {
+    let typed = Typed {
+        today: Some(today),
+        ..Typed::default()
+    };
+    balances_owing(conn, &typed)
+}
+
+/// The buyers who owe under these filters, with their balances only: the accounts of the buyer
+/// control, their parties, and the debit balances (`owing`).
+fn balances_owing(conn: &Connection, typed: &Typed) -> Result<Vec<Buyer>, ReportsError> {
+    let accounts = {
+        let mut statement = conn.prepare(&buyers_sql())?;
+        statement
+            .query_map(params![typed.city_id, typed.party_id], |r| {
+                Ok(Account {
+                    id: r.get(0)?,
+                    pukhta: r.get::<_, i64>(1)? == 1,
+                    city_id: r.get(2)?,
+                    collector_id: r.get(3)?,
+                    phone: r.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let account_ids: Vec<i64> = accounts.iter().map(|a| a.id).collect();
+    let parties = load_parties(conn, &account_ids)?;
+    owing(conn, typed, &parties, &accounts)
+}
+
+/// R20, R21 or R22 with the ages left out (plan 48 P48-S1): the same buyers, the same balances and
+/// the same total row, the age cells empty. The page is built by the very `page_of` of the full
+/// report, so its balance total is the report's own.
+///
+/// # Errors
+/// As [`run`].
+pub(crate) fn run_without_ages(
+    conn: &Connection,
+    typed: &Typed,
+    spec: PageSpec,
+    layout: Layout,
+) -> Result<ReportPage, ReportsError> {
+    let buyers = balances_owing(conn, typed)?;
+    page_of(conn, typed, spec, layout, buyers, false)
+}
+
 /// The buyers who owe under these filters, with their ages when the day is today or later, and
 /// whether the ages were worked out.
 fn load_buyers(conn: &Connection, typed: &Typed) -> Result<(Vec<Buyer>, bool), ReportsError> {

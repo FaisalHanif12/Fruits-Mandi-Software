@@ -16,6 +16,7 @@ mod charts;
 mod lent;
 mod lists;
 mod model;
+mod narrow;
 mod signals;
 mod strip;
 mod tiles;
@@ -36,6 +37,10 @@ pub use model::{
     BackupFacts, CHART_DAYS, DUES_OLD_DAYS, Dashboard, DashboardBikri, DashboardChartDay,
     DashboardChartItem, DashboardDue, DashboardGarden, DashboardPartner, DashboardTiles,
     MAX_TODAY_ROWS, OLDEST_DUES, PAYABLES_OLD_DAYS, STOCK_WAIT_DAYS, TOP_ITEMS,
+};
+pub use narrow::{
+    DuesParts, SalesToday, SellersNow, TilesNow, buyers_dues, cash_in_hand, dead, sales_today,
+    sellers, stock, tiles_now, total_dues,
 };
 
 /// What the tiles and the attention list both read, loaded once.

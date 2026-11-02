@@ -18,20 +18,62 @@ use crate::conversation::{Conversation, Turn};
 use crate::fill::part_of_val;
 use crate::results::{NameVal, Node, ToolResult, Val};
 use crate::run::{Deps, Finished, Run, Source};
+use crate::tools::tiles::Tile;
 use crate::tools::{self, State};
 
-/// The Fluent word of a chip and where its figure is in the tiles: (`word`, `tile`, `field`).
-fn chip_spec(chip: QuickChip) -> Option<(&'static str, &'static str, &'static str)> {
+/// The Fluent word of a chip, the tile it reads and where its figure is in that tile:
+/// (`word`, `tile`, `field`, the tile to read).
+fn chip_spec(chip: QuickChip) -> Option<(&'static str, &'static str, &'static str, Tile)> {
     Some(match chip {
-        QuickChip::TodaySales => ("assistant-chip-sales", "today_sales", "amount"),
-        QuickChip::TodayCommission => ("assistant-chip-commission", "today_commission", "amount"),
-        QuickChip::CashInHand => ("assistant-chip-cash", "cash_in_hand", "amount"),
-        QuickChip::BuyersDues => ("assistant-chip-dues", "buyers_dues", "amount"),
-        QuickChip::TotalDues => ("assistant-chip-total-dues", "total_dues", "amount"),
-        QuickChip::DeadAmount => ("assistant-chip-dead", "dead_amount", "amount"),
-        QuickChip::SellersPayable => ("assistant-chip-payable", "sellers_payable", "amount"),
-        QuickChip::AdvancesOpen => ("assistant-chip-advances", "advances_open", "amount"),
-        QuickChip::StockLeft => ("assistant-chip-stock", "stock", "qty"),
+        QuickChip::TodaySales => (
+            "assistant-chip-sales",
+            "today_sales",
+            "amount",
+            Tile::TodaySales,
+        ),
+        QuickChip::TodayCommission => (
+            "assistant-chip-commission",
+            "today_commission",
+            "amount",
+            Tile::TodayCommission,
+        ),
+        QuickChip::CashInHand => (
+            "assistant-chip-cash",
+            "cash_in_hand",
+            "amount",
+            Tile::CashInHand,
+        ),
+        QuickChip::BuyersDues => (
+            "assistant-chip-dues",
+            "buyers_dues",
+            "amount",
+            Tile::BuyersDues,
+        ),
+        QuickChip::TotalDues => (
+            "assistant-chip-total-dues",
+            "total_dues",
+            "amount",
+            Tile::TotalDues,
+        ),
+        QuickChip::DeadAmount => (
+            "assistant-chip-dead",
+            "dead_amount",
+            "amount",
+            Tile::DeadAmount,
+        ),
+        QuickChip::SellersPayable => (
+            "assistant-chip-payable",
+            "sellers_payable",
+            "amount",
+            Tile::SellersPayable,
+        ),
+        QuickChip::AdvancesOpen => (
+            "assistant-chip-advances",
+            "advances_open",
+            "amount",
+            Tile::AdvancesOpen,
+        ),
+        QuickChip::StockLeft => ("assistant-chip-stock", "stock", "qty", Tile::Stock),
         QuickChip::PartyLedger => return None,
     })
 }
@@ -103,8 +145,9 @@ pub fn quick(d: &Deps<'_>, input: &AssistantQuickInput) -> Result<AskReply, Serv
     let env = run.env(&numbers);
     let mut parts = Vec::new();
     let finished = match chip_spec(input.chip) {
-        Some((word, tile, field)) => {
-            let draft = tools::call(&env, &state, "tiles", "{}")
+        Some((word, tile, field, which)) => {
+            // Only the tile of the chip and its second place are read (plan 48 P48-S1).
+            let draft = tools::tiles::run_one(&env, which)
                 .map_err(|_| ServiceError::reject(ErrorCode::ErrInternal))?;
             let result = result_of(&mut state, draft, &run);
             parts.push(AnswerPart::Text {

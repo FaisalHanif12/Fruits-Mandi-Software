@@ -148,3 +148,43 @@ Backend reported T3 built: 108 assistant tests (E2E-47 to E2E-63, P1 to P7, one 
   - (1) `number_words.rs`: Urdu 1 to 99 with spelling variants, the big steps and Roman Urdu. words.tsv is untouched. Bare «اسی» and «بہتر» are refused only before a unit word, and Roman `do`, `teen` and `char` are left out, because they are everyday words. These go to Umar.
   - (2) Token counts are clamped at 0.
   - (3) Lead correction: PRD E98 and the answer schema (D6-system-prompt.md line 535) allow `entry` on an answer or advice when the question also asks for a change; the panel then shows the change refused line and button. So answer and advice keep the route the model sends, and an estimate carries none. D6 attack 15's "never shows a change button for advice" conflicts with E98. The PRD wins, and the conflict goes to Umar. Frontend draws the change refused line on an answer or advice with a route.
+
+## 12. Speed finding and P48-S1 (02-11-2026)
+
+- robustness, on NFR-SCL-1 data (20,017 accounts, 3.5M journal lines, 597,486 bill allocations; release build, this Mac):
+  - dashboard::get takes 5.7 to 7.1 s (NFR-SPD-2: 1 s).
+  - R34 takes 8.7 to 10.9 s (NFR-SPD-10: 1 s).
+  - R20 takes 3.2 to 3.8 s.
+  - So the quick chips take about 10 to 11 s (NFR-AI-3 and D6-A17: 300 ms). The assistant's own part is about 2.5 ms.
+  - These were never benchmarked before. The generator's data is a worst case: every buyer owes, with 36 open bills each.
+- Backend diagnosis: three query plans that probe journal_entries once per line ("balance before the day" in R34's sheet base_rows and buyer_moves; the attention item held_by_key), plus R20's open_bills. There is no per-party loop and no missing index.
+- Lead decision: the goal allows additions only, so this run does option (b). New narrow per-tile read functions in mandi_reports, plus an R20 totals-only entry, used by the tiles tool and the chips. They read the same sources, and an equality test proves the same figures. The money agent reviews before and after.
+- The fixes to existing SQL go to Umar as a separate speed plan, with backend's measured gains:
+  - a1, the base of R34: 7 s to 0.5 s;
+  - a2, held_by_key: 2.85 s to 0.11 s;
+  - a3, open_bills: 3.6 s to about 2.4 s, or about 1.2 s with a Rust-side change;
+  - (c) stored running balances, long term.
+- robustness adds dashboard::get and R34 to scripts/perf/thresholds.json at their NFR targets. They show OVER until fixed.
+- P48-S1 as built (02-11-2026), accepted:
+  - New `reports/src/dashboard/narrow.rs` (one read per tile, plus `tiles_now`) and an R20/R21/R22 totals-only entry without the ages.
+  - The tiles tool and every quick chip use them. The second places stay as FR-7.76 says.
+  - Additions only: the reports and services diff removes no line.
+  - `services/tests/narrow_tiles.rs` has 14 tests. Each narrow read equals the dashboard tile, and R20 without ages equals R20 row by row, on the worked day and E2E-15, 21, 28, 32, 34, 36, 40 and 43.
+  - Money agent: two passes, PASS.
+  - Checks: fmt and clippy clean on assistant, reports and services. The assistant suite passed; golden_day 94, assist 23 and every reports and dashboard suite passed, with no number changed.
+- Chip timings, medians, on NFR-SCL-1 data in a release build on this Mac (before: about 10 to 11 s each):
+
+  | Chip | Median | Against 300 ms |
+  |---|---|---|
+  | today_sales | 7 ms | under |
+  | today_commission | 6 ms | under |
+  | cash_in_hand | 66 ms | under |
+  | dead_amount | 9.5 ms | under |
+  | stock_left | 5.3 ms | under |
+  | party_ledger | 147 ms | under |
+  | buyers_dues | 583 ms | OVER |
+  | sellers_payable | 337 ms | OVER |
+  | advances_open | 337 ms | OVER |
+  | total_dues | 1.3 s | OVER |
+
+  The four OVER chips need faster `owing` (248 ms) and R24 `candidates` (about 340 ms) queries. That means changing existing SQL, which goes to Umar's speed plan. In that plan, load_buyers should call balances_owing (15 lines are copied today, because of the additions-only rule).

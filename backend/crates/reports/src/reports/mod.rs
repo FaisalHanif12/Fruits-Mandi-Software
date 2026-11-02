@@ -647,6 +647,49 @@ pub fn run(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> 
     })
 }
 
+/// R20, R21 or R22 with the ages of the open bills left out (plan 48 P48-S1): the same buyers, the
+/// same balances and the same total row as [`run`], with the age cells empty. It reads the balances
+/// only (0.3 seconds on the NFR-SCL-1 volume against 3.8 for the whole report). It takes the
+/// filters of the report and a page; it has no sort.
+///
+/// # Errors
+/// `ReportsError::Rejected` for a filter or page problem; `ReportsError::Data` for a sort, month
+/// headings, or a report that is not R20, R21 or R22; a database or money error.
+pub fn run_dues_without_ages(db: &Db, input: &ReportRunInput) -> Result<ReportPage, ReportsError> {
+    let layout = match input.id {
+        ReportId::R20 => collections::DuesLayout::Flat,
+        ReportId::R21 => collections::DuesLayout::ByCity,
+        ReportId::R22 => collections::DuesLayout::ByCollector,
+        _ => {
+            return Err(ReportsError::Data(
+                "only R20, R21 and R22 can be read without ages".to_owned(),
+            ));
+        }
+    };
+    if input.sort.is_some() || input.group_by_month {
+        return Err(ReportsError::Data(
+            "the dues without ages have no sort and no month headings".to_owned(),
+        ));
+    }
+    let spec = page_spec(input.offset, input.limit)?;
+    let entry = spec_of(input.id)?;
+    db.read(|conn| {
+        common::in_snapshot(conn, |conn| {
+            let today = common::today(db.clock().now_utc())?;
+            let typed: Typed = resolve(
+                conn,
+                today,
+                Takes {
+                    kinds: entry.filters,
+                    party_required: entry.party_required,
+                },
+                &input.filters,
+            )?;
+            collections::run_dues_without_ages(conn, &typed, spec, layout)
+        })
+    })
+}
+
 /// R34 gives the tables of every day when it is built whole; a page keeps the tables of the days
 /// it has a row of (plan 42).
 fn keep_tables_of_the_page(page: &mut ReportPage) {

@@ -818,6 +818,27 @@ fn change_refused() -> AskReply {
     r
 }
 
+/// An answer to a question that also asks for a change (PRD E98): the figure is answered and the
+/// panel adds the change refused line and its button, with Akram's record.
+fn answered_route() -> AskReply {
+    let mut r = answered();
+    r.entry_route = Some(EntryRoute {
+        screen: EntryScreen::Wasooli,
+        party: Some(record(&akram(), 20)),
+    });
+    r
+}
+
+/// Advice to a question that also asks for a change (PRD E98): the same route.
+fn advice_route() -> AskReply {
+    let mut r = advice();
+    r.entry_route = Some(EntryRoute {
+        screen: EntryScreen::Wasooli,
+        party: Some(record(&akram(), 20)),
+    });
+    r
+}
+
 /// The question is outside the books; the nearest source is a button.
 fn outside_books() -> AskReply {
     let mut a = answer(Vec::new());
@@ -1036,6 +1057,16 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_change_refused",
             ask("akram ki 5000 wasooli likh do"),
             change_refused(),
+        ),
+        (
+            "assistant_reply_answered_route",
+            ask("akram ka bakaya batao aur 5000 ki wasooli likh do"),
+            answered_route(),
+        ),
+        (
+            "assistant_reply_advice_route",
+            ask("kis se pehle wasooli karun aur akram ki wasooli likh do"),
+            advice_route(),
         ),
         (
             "assistant_reply_not_understood",

@@ -1,15 +1,18 @@
 //! The tool `tiles`: the dashboard tiles of PRD 9.1, read now (PRD FR-7.87, Code Standards Q3).
 //!
-//! It calls `mandi_reports::dashboard::get`, the dashboard's own function, and reads the tiles of
-//! it. Where a tile has a second place (PRD FR-7.76) the figure is read there too, in the same
-//! moment, and the two travel together:
+//! It calls `mandi_reports::dashboard::tiles_now`, the dashboard's tiles without the ages of the
+//! buyers' bills, the attention list, the partner strip, the lists and the charts (plan 48
+//! P48-S1: the full `get` takes 7 seconds on the NFR-SCL-1 volume and each tile is the very tile
+//! `get` gives). A quick chip reads only its own tile with [`run_one`]. Where a tile has a second
+//! place (PRD FR-7.76) the figure is read there too, in the same moment, and the two travel
+//! together:
 //!
 //! | Tile | Second place |
 //! |---|---|
 //! | `today_sales` | analytics view A, today, the gross |
 //! | `today_commission` | analytics view A, today, the total commission |
 //! | `cash_in_hand` | R12, today, the closing balance |
-//! | `buyers_dues` | R20 as of today, its total |
+//! | `buyers_dues` | R20 as of today (without the ages of the bills), its total |
 //! | `sellers_dues` | R24, the "بیوپاری کے ذمے" total |
 //! | `dead_amount` | R38, the amount still owed |
 //! | `total_dues` | each of its three parts checked as above |
@@ -20,8 +23,10 @@
 //! Example (worked day): `today_sales.amount` is 41,400 in the tile and in view A: checked.
 
 use mandi_reports::analytics::{AnalyticsFilters, AnalyticsRunInput, AnalyticsView};
-use mandi_reports::dashboard::{BackupFacts, DashboardTiles, get};
-use mandi_reports::reports::{Cell, ReportFilters, ReportId, ReportRunInput, run as engine_run};
+use mandi_reports::dashboard::{self as narrow, BackupFacts, DashboardTiles, DuesParts, tiles_now};
+use mandi_reports::reports::{
+    Cell, ReportFilters, ReportId, ReportRunInput, run as engine_run, run_dues_without_ages,
+};
 use mandi_services::core::money::Paisa;
 use mandi_services::domain::figures::{CalcOp, Value};
 use mandi_services::figures;
@@ -153,28 +158,59 @@ struct Dues {
     dead: Option<Paisa>,
 }
 
-fn dues_places(env: &Env<'_>, today: &str) -> Result<Dues, Stop> {
-    let as_of = ReportFilters {
-        as_of: today.to_owned(),
-        ..ReportFilters::default()
-    };
-    let r20 = run_balance_report(env, ReportId::R20, as_of.clone())?;
-    let r24 = run_balance_report(env, ReportId::R24, as_of)?;
+/// The R20 total as of today, read without the ages of the bills (they do not change a balance,
+/// and cost 3.6 seconds on the NFR-SCL-1 volume).
+fn place_buyers(env: &Env<'_>, today: &str) -> Result<Option<Paisa>, Stop> {
+    let page = run_dues_without_ages(
+        env.ctx.db(),
+        &ReportRunInput {
+            id: ReportId::R20,
+            filters: ReportFilters {
+                as_of: today.to_owned(),
+                ..ReportFilters::default()
+            },
+            offset: 0,
+            limit: 1,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .map_err(reports_stop)?;
+    Ok(column_total(&page, "balance"))
+}
+
+fn place_sellers(env: &Env<'_>, today: &str) -> Result<Option<Paisa>, Stop> {
+    let r24 = run_balance_report(
+        env,
+        ReportId::R24,
+        ReportFilters {
+            as_of: today.to_owned(),
+            ..ReportFilters::default()
+        },
+    )?;
+    Ok(column_total(&r24, "owes_firm"))
+}
+
+fn place_dead(env: &Env<'_>) -> Result<Option<Paisa>, Stop> {
     let r38 = run_balance_report(env, ReportId::R38, ReportFilters::default())?;
+    Ok(column_total(&r38, "still_owed"))
+}
+
+fn dues_places(env: &Env<'_>, today: &str) -> Result<Dues, Stop> {
     Ok(Dues {
-        buyers: column_total(&r20, "balance"),
-        sellers: column_total(&r24, "owes_firm"),
-        dead: column_total(&r38, "still_owed"),
+        buyers: place_buyers(env, today)?,
+        sellers: place_sellers(env, today)?,
+        dead: place_dead(env)?,
     })
 }
 
 /// The tile of the total dues: checked when each of its three parts is, with the sum of their
 /// second places as its own.
-fn total_dues_node(t: &DashboardTiles, d: &Dues) -> Node {
+fn total_dues_node(t: &DuesParts, d: &Dues) -> Node {
     let parts = [
-        (t.buyers_dues_paisa, d.buyers),
-        (t.sellers_dues_paisa, d.sellers),
-        (t.dead_amount_paisa, d.dead),
+        (t.buyers_paisa, d.buyers),
+        (t.sellers_paisa, d.sellers),
+        (t.dead_paisa, d.dead),
     ];
     let all_agree = parts.iter().all(|(tile, other)| *other == Some(*tile));
     let sum = parts
@@ -188,12 +224,22 @@ fn total_dues_node(t: &DashboardTiles, d: &Dues) -> Node {
         });
     match sum {
         Some(sum) => Node::Val(Val::Money(Money {
-            paisa: t.total_dues_paisa,
+            paisa: t.total_paisa,
             side: None,
-            checked: Some(all_agree && sum == t.total_dues_paisa),
-            places: vec![("tile", t.total_dues_paisa), ("parts", sum)],
+            checked: Some(all_agree && sum == t.total_paisa),
+            places: vec![("tile", t.total_paisa), ("parts", sum)],
         })),
-        None => plain(t.total_dues_paisa),
+        None => plain(t.total_paisa),
+    }
+}
+
+/// The three parts of the total dues as the tiles hold them.
+fn dues_parts(t: &DashboardTiles) -> DuesParts {
+    DuesParts {
+        buyers_paisa: t.buyers_dues_paisa,
+        sellers_paisa: t.sellers_dues_paisa,
+        dead_paisa: t.dead_amount_paisa,
+        total_paisa: t.total_dues_paisa,
     }
 }
 
@@ -238,7 +284,7 @@ fn tiles_node(
         ),
         (
             "total_dues",
-            Node::obj(vec![("amount", total_dues_node(t, dues))]),
+            Node::obj(vec![("amount", total_dues_node(&dues_parts(t), dues))]),
         ),
         (
             "dead_amount",
@@ -309,16 +355,137 @@ fn last_backup_node(backup: BackupFacts) -> Node {
 pub fn run(env: &Env<'_>, _state: &State, args: &Json) -> Result<Draft, Stop> {
     let _: Input = input(args)?;
     // The backup state is not read here (see the module doc): the facts say "no cloud copy".
-    let dashboard = get(env.ctx.db(), env.backup).map_err(reports_stop)?;
-    let today = dashboard.today.clone();
+    let now = tiles_now(env.ctx.db()).map_err(reports_stop)?;
+    let today = now.today.clone();
     let sales = view_a_today(env, &today).map_err(|_| internal("view A"))?;
     let cash = cash_closing(env, &today).map_err(|_| internal("R12"))?;
     let dues = dues_places(env, &today).map_err(|_| internal("R20, R24 or R38"))?;
-    let mut node = tiles_node(&dashboard.tiles, sales, cash, &dues);
+    let mut node = tiles_node(&now.tiles, sales, cash, &dues);
     if let Node::Obj(fields) = &mut node {
         fields.push(("last_backup".to_owned(), last_backup_node(env.backup)));
     }
     let mut draft = Draft::new("tiles", args.clone(), node);
+    draft.source = Some(AnswerSource::Tiles {
+        result_id: String::new(),
+    });
+    Ok(draft)
+}
+
+/// The tiles a quick chip reads, one at a time (plan 48 P48-S1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tile {
+    /// آج کی بکری.
+    TodaySales,
+    /// آج کا کمیشن.
+    TodayCommission,
+    /// روکڑ بقایا.
+    CashInHand,
+    /// گاہکوں کے ذمے.
+    BuyersDues,
+    /// کل اگراہی.
+    TotalDues,
+    /// ڈوبی رقم.
+    DeadAmount,
+    /// ادائیگی باقی.
+    SellersPayable,
+    /// پیشگی باقی.
+    AdvancesOpen,
+    /// باقی مال.
+    Stock,
+}
+
+/// One tile of the tool `tiles`, read with its own narrow function and its second place only, so a
+/// chip does not pay for the other tiles. The day of the run is the day of the tile and of its
+/// second place. The result has the shape of the tool's result with this
+/// tile alone (`r1.cash_in_hand.amount`), the same figure with the same ✓.
+///
+/// # Errors
+/// As the tool.
+pub fn run_one(env: &Env<'_>, tile: Tile) -> Result<Draft, Stop> {
+    let db = env.ctx.db();
+    let today = env.today.to_iso();
+    let fail = |detail: &'static str| move |_: Stop| internal(detail);
+    let node = match tile {
+        Tile::TodaySales => {
+            let sales = narrow::sales_today(db, env.today).map_err(reports_stop)?;
+            let place = view_a_today(env, &today).map_err(fail("view A"))?;
+            Node::obj(vec![(
+                "today_sales",
+                Node::obj(vec![
+                    ("amount", checked(sales.gross_paisa, "view_A", place.0)),
+                    ("count", count(sales.count)),
+                ]),
+            )])
+        }
+        Tile::TodayCommission => {
+            let sales = narrow::sales_today(db, env.today).map_err(reports_stop)?;
+            let place = view_a_today(env, &today).map_err(fail("view A"))?;
+            Node::obj(vec![(
+                "today_commission",
+                Node::obj(vec![(
+                    "amount",
+                    checked(sales.commission_paisa, "view_A", place.1),
+                )]),
+            )])
+        }
+        Tile::CashInHand => {
+            let cash = narrow::cash_in_hand(db).map_err(reports_stop)?;
+            let place = cash_closing(env, &today).map_err(fail("R12"))?;
+            Node::obj(vec![(
+                "cash_in_hand",
+                Node::obj(vec![("amount", checked(cash, "R12", place))]),
+            )])
+        }
+        Tile::BuyersDues => {
+            let dues = narrow::buyers_dues(db, env.today).map_err(reports_stop)?;
+            let place = place_buyers(env, &today).map_err(fail("R20"))?;
+            Node::obj(vec![(
+                "buyers_dues",
+                Node::obj(vec![("amount", checked(dues, "R20", place))]),
+            )])
+        }
+        Tile::TotalDues => {
+            let parts = narrow::total_dues(db, env.today).map_err(reports_stop)?;
+            let places = dues_places(env, &today).map_err(fail("R20, R24 or R38"))?;
+            Node::obj(vec![(
+                "total_dues",
+                Node::obj(vec![("amount", total_dues_node(&parts, &places))]),
+            )])
+        }
+        Tile::DeadAmount => {
+            let (amount, dead_count) = narrow::dead(db).map_err(reports_stop)?;
+            let place = place_dead(env).map_err(fail("R38"))?;
+            Node::obj(vec![(
+                "dead_amount",
+                Node::obj(vec![
+                    ("amount", checked(amount, "R38", place)),
+                    ("count", count(dead_count)),
+                ]),
+            )])
+        }
+        Tile::SellersPayable => {
+            let sellers = narrow::sellers(db, env.today).map_err(reports_stop)?;
+            Node::obj(vec![(
+                "sellers_payable",
+                Node::obj(vec![("amount", plain(sellers.payable_paisa))]),
+            )])
+        }
+        Tile::AdvancesOpen => {
+            let sellers = narrow::sellers(db, env.today).map_err(reports_stop)?;
+            Node::obj(vec![(
+                "advances_open",
+                Node::obj(vec![("amount", plain(sellers.advances_open_paisa))]),
+            )])
+        }
+        Tile::Stock => {
+            let (lots, qty) = narrow::stock(db, env.today).map_err(reports_stop)?;
+            Node::obj(vec![(
+                "stock",
+                Node::obj(vec![("lots", count(lots)), ("qty", count(qty))]),
+            )])
+        }
+    };
+    let mut draft = Draft::new("tiles", Json::Object(serde_json::Map::new()), node);
     draft.source = Some(AnswerSource::Tiles {
         result_id: String::new(),
     });
