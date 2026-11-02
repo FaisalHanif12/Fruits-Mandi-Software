@@ -20,8 +20,8 @@ use std::path::{Path, PathBuf};
 use mandi_assistant::answer::{
     Answer, AnswerChart, AnswerEstimate, AnswerMonth, AnswerName, AnswerOption, AnswerPart,
     AnswerRow, AnswerSource, AnswerTable, AnswerWorking, ChartSeries, ChartSeriesKind, EntryRoute,
-    EntryScreen, EstimateMethod, EstimateMethodKind, FigureDifference, FigureDirection, PlaceValue,
-    WorkingOp, WorkingStep,
+    EntryScreen, EstimateMethod, EstimateMethodKind, EstimateYear, FigureDifference,
+    FigureDirection, PlaceValue, WorkingOp, WorkingStep,
 };
 use mandi_assistant::ask::{
     AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantNewConversationInput,
@@ -562,6 +562,7 @@ fn estimate_reply(with_target: bool) -> AskReply {
         total: money(pace_total),
         target_month: with_target.then(|| month(2027, 4)),
         factor: None,
+        year_total: None,
         working: AnswerWorking {
             title_id: "assistant-working-same-pace".to_owned(),
             steps: vec![
@@ -589,6 +590,7 @@ fn estimate_reply(with_target: bool) -> AskReply {
         total: money(growth_total),
         target_month: with_target.then(|| month(2027, 2)),
         factor: None,
+        year_total: None,
         working: AnswerWorking {
             title_id: "assistant-working-same-growth".to_owned(),
             steps: vec![
@@ -704,8 +706,189 @@ fn estimate_reply(with_target: bool) -> AskReply {
         last,
         target: with_target.then(|| money(300_000)),
         methods: vec![pace, growth],
+        year: None,
     });
     let mut r = reply(if with_target { 5 } else { 4 }, AskOutcome::Estimate);
+    r.answer = Some(a);
+    r
+}
+
+/// The working step that adds up the books' months of E2E-59: April to September, 261,000.
+fn books_sum_step() -> WorkingStep {
+    WorkingStep {
+        op: WorkingOp::Sum,
+        inputs: [36_000, 39_000, 42_000, 45_000, 48_000, 51_000]
+            .iter()
+            .map(|rupees| money(*rupees))
+            .collect(),
+        result: money(261_000),
+    }
+}
+
+/// The books' months of 2026 before October in E2E-59: April to September, 261,000.
+fn books_so_far() -> EstimateYear {
+    EstimateYear {
+        so_far: money(261_000),
+        months: 6,
+        from: Some(month(2026, 4)),
+        to: Some(month(2026, 9)),
+    }
+}
+
+/// To the end of the year (plan 52 item 5, Umar 02-11-2026, today 10-10-26): "saal ke aakhir tak
+/// commission kitna". The whole year is the books' 261,000 plus the months left (October to
+/// December): same pace 48,000 × 3 = 144,000, whole year 405,000; same growth 54,000 + 57,000 +
+/// 60,000 = 171,000, whole year 432,000. October is counted as a whole estimated month.
+fn year_end_reply() -> AskReply {
+    let step = |op: WorkingOp, inputs: Vec<Cell>, result: Cell| WorkingStep { op, inputs, result };
+    let pace = EstimateMethod {
+        kind: EstimateMethodKind::SamePace,
+        months_used: 3,
+        used_from: month(2026, 7),
+        used_to: month(2026, 9),
+        per_month: Some(money(48_000)),
+        step: None,
+        step_dir: None,
+        total: money(144_000),
+        target_month: None,
+        factor: None,
+        year_total: Some(money(405_000)),
+        working: AnswerWorking {
+            title_id: "assistant-working-same-pace".to_owned(),
+            steps: vec![
+                step(
+                    WorkingOp::Average,
+                    vec![money(45_000), money(48_000), money(51_000)],
+                    money(48_000),
+                ),
+                step(
+                    WorkingOp::Times,
+                    vec![money(48_000), Cell::Number { value: 3 }],
+                    money(144_000),
+                ),
+                books_sum_step(),
+                step(
+                    WorkingOp::Sum,
+                    vec![money(261_000), money(144_000)],
+                    money(405_000),
+                ),
+            ],
+        },
+    };
+    let growth = EstimateMethod {
+        kind: EstimateMethodKind::SameGrowth,
+        months_used: 6,
+        used_from: month(2026, 4),
+        used_to: month(2026, 9),
+        per_month: None,
+        step: Some(money(3_000)),
+        step_dir: Some(FigureDirection::Up),
+        total: money(171_000),
+        target_month: None,
+        factor: None,
+        year_total: Some(money(432_000)),
+        working: AnswerWorking {
+            title_id: "assistant-working-same-growth".to_owned(),
+            steps: vec![
+                step(
+                    WorkingOp::Difference,
+                    vec![money(51_000), money(36_000)],
+                    money(15_000),
+                ),
+                step(
+                    WorkingOp::DividedBy,
+                    vec![money(15_000), Cell::Number { value: 5 }],
+                    money(3_000),
+                ),
+                step(
+                    WorkingOp::Sum,
+                    vec![money(54_000), money(57_000), money(60_000)],
+                    money(171_000),
+                ),
+                books_sum_step(),
+                step(
+                    WorkingOp::Sum,
+                    vec![money(261_000), money(171_000)],
+                    money(432_000),
+                ),
+            ],
+        },
+    };
+    let months: Vec<AnswerMonth> = (4..=12).map(|m| month(2026, m)).collect();
+    let past: Vec<Cell> = [36_000, 39_000, 42_000, 45_000, 48_000, 51_000]
+        .iter()
+        .map(|rupees| money(*rupees))
+        .collect();
+    let gap = |line: &[i64]| -> Vec<Cell> {
+        std::iter::repeat_n(Cell::Empty, 6)
+            .chain(line.iter().map(|rupees| money(*rupees)))
+            .collect()
+    };
+    let actual: Vec<Cell> = past
+        .into_iter()
+        .chain(std::iter::repeat_n(Cell::Empty, 3))
+        .collect();
+    let mut a = answer(vec![
+        AnswerPart::Month {
+            year: 2026,
+            month: 4,
+        },
+        text(" سے "),
+        AnswerPart::Month {
+            year: 2026,
+            month: 9,
+        },
+        text(" تک کتابوں میں "),
+        figure(money(261_000), false),
+        text(" ہے۔ "),
+        AnswerPart::Month {
+            year: 2026,
+            month: 10,
+        },
+        text(" سے "),
+        AnswerPart::Month {
+            year: 2026,
+            month: 12,
+        },
+        text(" تک اسی رفتار سے "),
+        figure(money(144_000), false),
+        text(" اور پورے سال کا کل تقریباً "),
+        figure(money(405_000), false),
+        text(" بنے گا، اور اسی اضافے سے "),
+        figure(money(432_000), false),
+        text("۔"),
+    ]);
+    a.charts = vec![AnswerChart {
+        result_id: "e1".to_owned(),
+        measure_id: "assistant-measure-commission-all".to_owned(),
+        months,
+        series: vec![
+            ChartSeries {
+                kind: ChartSeriesKind::Actual,
+                values: actual,
+            },
+            ChartSeries {
+                kind: ChartSeriesKind::SamePace,
+                values: gap(&[48_000, 48_000, 48_000]),
+            },
+            ChartSeries {
+                kind: ChartSeriesKind::SameGrowth,
+                values: gap(&[54_000, 57_000, 60_000]),
+            },
+        ],
+        is_estimate: true,
+    }];
+    a.estimate = Some(AnswerEstimate {
+        result_id: "e1".to_owned(),
+        measure_id: "assistant-measure-commission-all".to_owned(),
+        full_months: 6,
+        first: month(2026, 10),
+        last: month(2026, 12),
+        target: None,
+        methods: vec![pace, growth],
+        year: Some(books_so_far()),
+    });
+    let mut r = reply(5, AskOutcome::Estimate);
     r.answer = Some(a);
     r
 }
@@ -713,7 +896,9 @@ fn estimate_reply(with_target: bool) -> AskReply {
 /// A what-if (plan 52 item 5, today 10-10-26): "is raftar se saal ke aakhir tak commission kitna,
 /// aur agar raftar double ho jaye to". Until the end of the year is 3 months (October to December):
 /// same pace 48,000 a month, 144,000; the pace doubled 96,000 a month, 288,000. The Owner's word
-/// "double" is never in the model's text: the app shows the factor, 200.00%.
+/// "double" is never in the model's text: the app shows the factor, 200.00%. To the end of the year
+/// the answer is the whole year: the books' 261,000 (April to September) plus the months left, so
+/// 405,000 by the same pace and 549,000 by the doubled one.
 fn what_if_reply() -> AskReply {
     let ahead: i64 = 3;
     let pace_total: i64 = 48_000 * ahead;
@@ -735,6 +920,7 @@ fn what_if_reply() -> AskReply {
         total: money(pace_total),
         target_month: None,
         factor: None,
+        year_total: Some(money(405_000)),
         working: AnswerWorking {
             title_id: "assistant-working-same-pace".to_owned(),
             steps: vec![
@@ -743,6 +929,12 @@ fn what_if_reply() -> AskReply {
                     WorkingOp::Times,
                     vec![money(48_000), Cell::Number { value: ahead }],
                     money(pace_total),
+                ),
+                books_sum_step(),
+                step(
+                    WorkingOp::Sum,
+                    vec![money(261_000), money(pace_total)],
+                    money(405_000),
                 ),
             ],
         },
@@ -758,6 +950,7 @@ fn what_if_reply() -> AskReply {
         total: money(doubled_total),
         target_month: None,
         factor: Some(Cell::Percent { hundredths: 20_000 }),
+        year_total: Some(money(549_000)),
         working: AnswerWorking {
             title_id: "assistant-working-what-if-pace".to_owned(),
             steps: vec![
@@ -771,6 +964,12 @@ fn what_if_reply() -> AskReply {
                     WorkingOp::Times,
                     vec![money(96_000), Cell::Number { value: ahead }],
                     money(doubled_total),
+                ),
+                books_sum_step(),
+                step(
+                    WorkingOp::Sum,
+                    vec![money(261_000), money(doubled_total)],
+                    money(549_000),
                 ),
             ],
         },
@@ -790,9 +989,9 @@ fn what_if_reply() -> AskReply {
         .chain(std::iter::repeat_n(Cell::Empty, 3))
         .collect();
     let mut a = answer(vec![
-        text("اکتوبر سے دسمبر تک اسی رفتار سے تقریباً "),
-        figure(money(pace_total), false),
-        text(" بنے گا۔ اگر رفتار "),
+        text("پورے سال کا کل اسی رفتار سے تقریباً "),
+        figure(money(405_000), false),
+        text(" بنے گا۔ اگر آنے والے مہینوں کی رفتار "),
         AnswerPart::Figure {
             cell: Cell::Percent { hundredths: 20_000 },
             dir: None,
@@ -800,7 +999,7 @@ fn what_if_reply() -> AskReply {
             working: None,
         },
         text(" ہو تو "),
-        figure(money(doubled_total), false),
+        figure(money(549_000), false),
         text("۔"),
     ]);
     a.charts = vec![AnswerChart {
@@ -831,6 +1030,7 @@ fn what_if_reply() -> AskReply {
         last: month(2026, 12),
         target: None,
         methods: vec![pace, what_if],
+        year: Some(books_so_far()),
     });
     let mut r = reply(6, AskOutcome::Estimate);
     r.answer = Some(a);
@@ -1213,6 +1413,11 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_estimate_target",
             ask("3 lakh ka target kab tak pura hoga"),
             estimate_reply(true),
+        ),
+        (
+            "assistant_reply_estimate_year_end",
+            ask("saal ke aakhir tak commission kitna hoga"),
+            year_end_reply(),
         ),
         (
             "assistant_reply_estimate_what_if",

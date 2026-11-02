@@ -15,7 +15,10 @@
 //! pace figure scaled by a factor the Owner named in his question ("if the pace doubles"): the
 //! scaled pace is `round_to_rupee(pace × factor)`, once, through `apply_bps`, and its total is
 //! that times the months, so the shown figures always agree. "Until the end of this year" is the
-//! months from the current month to December (`months_to_year_end`).
+//! months from the current month to December (`months_to_year_end`), and its answer is the whole
+//! year: the months of this year so far, read from the books and never estimated, plus the months
+//! left (`estimate_to_year_end`, plan 52, Umar 02-11-2026). The current month is counted as a
+//! whole estimated month; its days so far are not added.
 //!
 //! The total of same pace is the per-month figure times the months, so the shown figures always
 //! agree. The total of the other two is the sum of their months. With a target, the target month
@@ -211,6 +214,26 @@ pub struct MethodEstimate {
     pub steps: Vec<Step>,
     /// A what-if: the factor the pace was scaled by.
     pub factor: Option<PaceFactor>,
+    /// To the end of the year: the months of the year so far from the books plus `total`. `None`
+    /// for any other estimate.
+    pub year_total: Option<Paisa>,
+}
+
+/// The months of the year before the current month, read from the books (never estimated): the
+/// "so far" of a whole-year total.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct YearSoFar {
+    /// Their sum.
+    pub so_far: Paisa,
+    /// How many months of the books are in it: January to the month before the current one, or
+    /// from the first month of the books. In an estimate to the end of the year it is 0 only in
+    /// January, because the history always ends the month before the current one.
+    pub months: u32,
+    /// The first and the last of those months; `None` when there are none.
+    pub span: Option<(YearMonth, YearMonth)>,
+    /// How the sum was made: one `Sum` step over the months, so the Owner can check it (PRD
+    /// FR-7.43). `None` with fewer than 2 months, where the sum is the month itself.
+    pub step: Option<Step>,
 }
 
 /// An estimate: every method that could be worked out.
@@ -226,6 +249,9 @@ pub struct Estimate {
     pub full_months: u32,
     /// Same pace, then same growth, then same season, the ones with enough history.
     pub methods: Vec<MethodEstimate>,
+    /// To the end of the year: the months of the year so far from the books. `None` for any other
+    /// estimate.
+    pub year: Option<YearSoFar>,
 }
 
 /// Why an estimate was refused. None is shown to the Owner as an error: a history that is too
@@ -352,7 +378,87 @@ pub fn estimate_with(
         ahead,
         full_months,
         methods,
+        year: None,
     })
+}
+
+/// The months of the year of `current` before it, summed from `history` (the full months before
+/// the current month): the books' part of a whole-year total. A month is counted by its place, not
+/// by its value: a month with 0 is still a month of the books.
+///
+/// # Errors
+/// `Overflow` for a sum that does not fit.
+pub fn year_so_far(history: &[MonthValue], current: YearMonth) -> Result<YearSoFar, ForecastError> {
+    let mut values: Vec<Value> = Vec::new();
+    let mut span: Option<(YearMonth, YearMonth)> = None;
+    for item in history
+        .iter()
+        .filter(|h| h.month.year == current.year && h.month < current)
+    {
+        values.push(Value::Money(item.value));
+        span = Some(match span {
+            Some((first, _)) => (first, item.month),
+            None => (item.month, item.month),
+        });
+    }
+    let months = u32::try_from(values.len()).map_err(|_| FigureError::Overflow)?;
+    // One month is itself; two or more are one `Sum` step, kept as the working of the sum.
+    let (so_far, step) = match values.as_slice() {
+        [] => (Paisa::ZERO, None),
+        [only] => (result_money(*only)?, None),
+        many => {
+            let sum = calculate(CalcOp::Sum, many)?;
+            (result_money(sum.result)?, sum.steps.into_iter().next())
+        }
+    };
+    Ok(YearSoFar {
+        so_far,
+        months,
+        span,
+        step,
+    })
+}
+
+/// [`estimate_with`] to the end of the year of `current` (October gives 3 months ahead), and the
+/// whole year on every method: the months of this year so far from the books plus its months ahead,
+/// as the last step of its working (`so_far + total`, after the `Sum` step of the books' months). With no month so far (January) the whole
+/// year is the total and no step is added. The books' months end the month before `current` and the
+/// months ahead start at `current`, so none is counted twice. There is no target: a year target
+/// could count the books' months or not, and that is the Owner's to say.
+///
+/// Example (E2E-59, today 10-10-26): 261,000 so far; same pace 48,000 × 3 = 144,000; the whole
+/// year 405,000.
+///
+/// # Errors
+/// See [`ForecastError`].
+pub fn estimate_to_year_end(
+    history: &[MonthValue],
+    current: YearMonth,
+    what_if: Option<PaceFactor>,
+) -> Result<Estimate, ForecastError> {
+    let ahead = months_to_year_end(current)?;
+    let mut found = estimate_with(history, current, ahead, None, what_if)?;
+    let year = year_so_far(history, current)?;
+    // The year steps are added only now: a what-if copies the working of same pace, and must not
+    // take its year step with it.
+    for method in &mut found.methods {
+        if year.months == 0 {
+            method.year_total = Some(method.total);
+            continue;
+        }
+        // The books' sum first (when it has two or more months), then the whole year.
+        if let Some(step) = &year.step {
+            method.steps.push(step.clone());
+        }
+        let whole = calculate(
+            CalcOp::Sum,
+            &[Value::Money(year.so_far), Value::Money(method.total)],
+        )?;
+        method.year_total = Some(result_money(whole.result)?);
+        method.steps.extend(whole.steps);
+    }
+    found.year = Some(year);
+    Ok(found)
 }
 
 /// The months from `current` to `last`, both counted: October to December is 3 (the current month
@@ -500,6 +606,7 @@ fn finish(ctx: &Context<'_>, parts: Parts<'_>) -> Result<MethodEstimate, Forecas
         total,
         steps,
         factor: None,
+        year_total: None,
     })
 }
 

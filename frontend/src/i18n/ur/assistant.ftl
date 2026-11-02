@@ -178,6 +178,16 @@ assistant-estimate-what-if-any = اگر رفتار بدل جائے
 # review: pending
 assistant-chart-what-if = اگر رفتار { $factor } ہو
 # review: pending
+assistant-estimate-year-so-far = اس سال اب تک (آپ کے کھاتوں سے)
+# review: pending
+assistant-estimate-year-months = کھاتوں کے <num>{ $count }</num> مہینے، { $from } سے { $to } تک
+# review: pending
+assistant-estimate-year-left = باقی مہینوں کا اندازہ
+# review: pending
+assistant-estimate-year-total = پورا سال
+# review: pending
+assistant-estimate-year-note = موجودہ مہینہ پورے اندازے والے مہینے کے طور پر گنا گیا ہے؛ اس کے اب تک کے دن الگ سے شامل نہیں کیے گئے۔
+# review: pending
 assistant-estimate-months = بنیاد: <num>{ $count }</num> مہینے، { $from } سے { $to } تک
 # review: pending
 assistant-estimate-ahead = اندازے کے مہینے: { $from } سے { $to } تک
@@ -433,6 +443,8 @@ assistant-working-percent-of = فیصد
 assistant-working-change-percent = تبدیلی کا فیصد
 # review: pending
 assistant-working-same-pace = اسی رفتار سے: پچھلے مہینوں کا اوسط، مہینوں سے ضرب
+# review: pending
+assistant-working-year-parts = آخری سطر: اب تک کے کھاتوں کے مہینے + باقی مہینوں کا اندازہ
 # review: pending
 assistant-working-what-if-pace = اسی رفتار، تبدیلی کے ساتھ
 # review: pending

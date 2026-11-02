@@ -264,6 +264,9 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
     // The totals are the backend's: 144,000 (same pace) and 288,000 (the scenario), never worked out here.
     expect(shown).toContain('144,000');
     expect(shown).toContain('288,000');
+    // This what-if is to the end of the year too: each method's whole year (261,000 from the books).
+    expect(shown).toContain('405,000');
+    expect(shown).toContain('549,000');
     expect(band.querySelector('[data-checked]')).toBeNull();
     // The scenario is a percent figure in the answer's words too, drawn as a number.
     expect([...panel.querySelectorAll('bdi.number-run')].map((node) => node.textContent)).toContain(
@@ -300,6 +303,51 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
     expect(dashed).toHaveLength(1);
     expect(visible(dashed[0]?.parentElement?.textContent ?? '')).toBe(
       message(language, 'assistant-chart-what-if', { factor: '200.00%' }),
+    );
+  });
+
+  it('to the end of the year: the books so far, the estimate for the months left, and the whole year with its working', async () => {
+    await renderShellRouted();
+    const user = await ask(language, real.REPLY_ESTIMATE_YEAR_END, 'saal ke aakhir tak commission');
+    const band = within(panelOf(language)).getByRole('region', {
+      name: message(language, 'assistant-band-estimate'),
+    });
+    const shown = visible(band.textContent);
+    // The books part, from the books, with the months it covers (never estimated).
+    expect(shown).toContain(message(language, 'assistant-estimate-year-so-far'));
+    expect(shown).toContain('261,000');
+    expect(shown).toContain(
+      message(language, 'assistant-estimate-year-months', {
+        count: 6,
+        from: `${message(language, 'report-month-4')} 2026`,
+        to: `${message(language, 'report-month-9')} 2026`,
+      }),
+    );
+    // The current month is counted whole: said once.
+    expect(shown).toContain(message(language, 'assistant-estimate-year-note'));
+    // Each method leads with its whole year (it is what was asked), then the months left, with the
+    // backend's figures.
+    expect(shown).toContain(message(language, 'assistant-estimate-year-left'));
+    expect(shown).toContain(message(language, 'assistant-estimate-year-total'));
+    expect(shown.indexOf(message(language, 'assistant-estimate-year-total'))).toBeLessThan(
+      shown.indexOf(message(language, 'assistant-estimate-year-left')),
+    );
+    for (const figure of ['144,000', '405,000', '171,000', '432,000']) {
+      expect(shown).toContain(figure);
+    }
+    expect(band.querySelector('[data-checked]')).toBeNull();
+    // The whole year has the working that ends with the books' months plus the months left.
+    const infos = within(band).getAllByRole('button', {
+      name: message(language, 'calc-info-label'),
+    });
+    expect(infos).toHaveLength(2);
+    const first = infos[0];
+    if (first === undefined) throw new Error('the whole year has an ⓘ');
+    await user.click(first);
+    expect(visible(document.body.textContent)).toContain('261,000 + 144,000 = 405,000');
+    // The last step's two parts are named under the steps.
+    expect(visible(document.body.textContent)).toContain(
+      message(language, 'assistant-working-year-parts'),
     );
   });
 

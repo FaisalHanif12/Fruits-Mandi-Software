@@ -78,6 +78,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.assistantAsk(real.REPLY_ANSWERED_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_ADVICE_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_ESTIMATE_WHAT_IF_REQUEST);
+    await api.assistantAsk(real.REPLY_ESTIMATE_YEAR_END_REQUEST);
     await api.assistantAsk(real.REPLY_GENERAL_ADVICE_REQUEST);
     await api.assistantAsk(real.REPLY_HELP_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST);
@@ -96,6 +97,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
       ['assistant_ask', { input: real.REPLY_ANSWERED_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ADVICE_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ESTIMATE_WHAT_IF_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_ESTIMATE_YEAR_END_REQUEST }],
       ['assistant_ask', { input: real.REPLY_GENERAL_ADVICE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_HELP_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST }],
@@ -135,6 +137,7 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['estimate', real.REPLY_ESTIMATE],
   ['estimate target', real.REPLY_ESTIMATE_TARGET],
   ['estimate what if', real.REPLY_ESTIMATE_WHAT_IF],
+  ['estimate year end', real.REPLY_ESTIMATE_YEAR_END],
   ['advice', real.REPLY_ADVICE],
   ['answered with a route', real.REPLY_ANSWERED_ROUTE],
   ['advice with a route', real.REPLY_ADVICE_ROUTE],
@@ -215,6 +218,29 @@ describe('the answers carry exactly the fields of the generated types', () => {
         expect(method.factor).toBeNull();
       }
     }
+  });
+
+  it('a whole-year estimate carries the books so far and each method its year total; no other estimate does', () => {
+    const estimates = [
+      real.REPLY_ESTIMATE,
+      real.REPLY_ESTIMATE_TARGET,
+      real.REPLY_ESTIMATE_WHAT_IF,
+      real.REPLY_ESTIMATE_YEAR_END,
+    ].map((reply) => reply.answer?.estimate ?? null);
+    for (const estimate of estimates) {
+      if (estimate === null) throw new Error('every estimate fixture has an estimate');
+      expect(Object.keys(estimate)).toContain('year');
+      const yearEnd = estimate.year !== null;
+      for (const method of estimate.methods) {
+        expect(Object.keys(method)).toContain('year_total');
+        expect(method.year_total !== null).toBe(yearEnd);
+      }
+    }
+    const year = real.REPLY_ESTIMATE_YEAR_END.answer?.estimate?.year;
+    expect(year?.months).toBe(6);
+    expect(year?.so_far).toEqual({ type: 'money', paisa: 26_100_000 });
+    expect(year?.from).toEqual({ year: 2026, month: 4 });
+    expect(year?.to).toEqual({ year: 2026, month: 9 });
   });
 
   it('the status, the test result, the log and the step', () => {

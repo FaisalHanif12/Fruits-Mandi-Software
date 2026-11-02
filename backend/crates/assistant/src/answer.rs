@@ -310,8 +310,27 @@ pub struct EstimateMethod {
     /// A what-if: the factor the pace was scaled by, as a percent cell (200.00% for double). Null
     /// for the other methods.
     pub factor: Option<Cell>,
+    /// To the end of the year: the whole year of this method, the books' months so far plus
+    /// `total`. Null for any other estimate.
+    pub year_total: Option<Cell>,
     /// The working, with ⓘ.
     pub working: AnswerWorking,
+}
+
+/// The books' part of a whole-year total: the months of this year before the current one, read
+/// from the books and never estimated (PRD FR-7.86, v1.20).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct EstimateYear {
+    /// Their sum.
+    pub so_far: Cell,
+    /// How many months of the books are in it. In an estimate to the end of the year it is 0 only
+    /// in January.
+    #[ts(type = "number")]
+    pub months: i64,
+    /// The first of those months. Null when there are none.
+    pub from: Option<AnswerMonth>,
+    /// The last of those months. Null when there are none.
+    pub to: Option<AnswerMonth>,
 }
 
 /// What an estimate was and how it was worked out (PRD FR-7.86). Present only when an estimate
@@ -333,6 +352,8 @@ pub struct AnswerEstimate {
     pub target: Option<Cell>,
     /// The methods that could be worked out, in the order same pace, same growth, same season.
     pub methods: Vec<EstimateMethod>,
+    /// To the end of the year: the books' part of the whole year. Null for any other estimate.
+    pub year: Option<EstimateYear>,
 }
 
 /// One value of a figure in one of its two places.

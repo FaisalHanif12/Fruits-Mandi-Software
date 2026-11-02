@@ -52,6 +52,8 @@ import assistantReplyError404 from '../fixtures/assistant_reply_error_404.json';
 import assistantReplyError404Request from '../fixtures/assistant_reply_error_404_request.json';
 import assistantReplyEstimate from '../fixtures/assistant_reply_estimate.json';
 import assistantReplyEstimateRequest from '../fixtures/assistant_reply_estimate_request.json';
+import assistantReplyEstimateYearEnd from '../fixtures/assistant_reply_estimate_year_end.json';
+import assistantReplyEstimateYearEndRequest from '../fixtures/assistant_reply_estimate_year_end_request.json';
 import assistantReplyEstimateWhatIf from '../fixtures/assistant_reply_estimate_what_if.json';
 import assistantReplyEstimateWhatIfRequest from '../fixtures/assistant_reply_estimate_what_if_request.json';
 import assistantReplyEstimateTarget from '../fixtures/assistant_reply_estimate_target.json';
@@ -194,6 +196,10 @@ export const REPLY_GENERAL_ADVICE_REQUEST = readAssistantAskInput(
 );
 export const REPLY_HELP_ROUTE = readAskReply(assistantReplyHelpRoute);
 export const REPLY_HELP_ROUTE_REQUEST = readAssistantAskInput(assistantReplyHelpRouteRequest);
+export const REPLY_ESTIMATE_YEAR_END = readAskReply(assistantReplyEstimateYearEnd);
+export const REPLY_ESTIMATE_YEAR_END_REQUEST = readAssistantAskInput(
+  assistantReplyEstimateYearEndRequest,
+);
 export const REPLY_ESTIMATE_WHAT_IF = readAskReply(assistantReplyEstimateWhatIf);
 export const REPLY_ESTIMATE_WHAT_IF_REQUEST = readAssistantAskInput(
   assistantReplyEstimateWhatIfRequest,

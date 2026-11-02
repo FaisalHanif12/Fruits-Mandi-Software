@@ -251,7 +251,7 @@ fn is_estimate_figure(r: &Resolved) -> bool {
     let second = r.path.split('.').nth(1).unwrap_or("");
     matches!(
         second,
-        "same_pace" | "same_growth" | "same_season" | "what_if_pace" | "ahead"
+        "same_pace" | "same_growth" | "same_season" | "what_if_pace" | "ahead" | "year"
     )
 }
 

@@ -154,3 +154,41 @@ fn a_roman_word_is_tried_as_urdu_for_an_account_too_and_raw_hits_still_win() {
     // A seller by his Urdu name typed as is.
     assert_eq!(names(&s.find("seller", "رحیم")), ["Rahim"]);
 }
+
+#[test]
+fn an_item_alias_finds_mosambi_without_the_typing_word_list() {
+    use mandi_services::core::masters::{ItemInput, MasterInput};
+    let w = day();
+    // The shop's item is "Sweet Lime" in English, موسمی in Urdu: the raw search has nothing close to
+    // "mausami" or "mosambi" in its English name.
+    mandi_services::masters::save(
+        &w.env.ctx,
+        &w.owner,
+        &MasterInput::Item(ItemInput {
+            id: None,
+            version: None,
+            code: String::new(),
+            name_ur: "موسمی".into(),
+            name_en: "Sweet Lime".into(),
+            item_group: "fruit".into(),
+            default_packing_id: None,
+            sold_by: "unit".into(),
+            confirmed_rules_words: vec!["Sweet".into()],
+        }),
+    )
+    .unwrap();
+    let mut s = Session::new(&w);
+    // All four spellings reach the item. The typing word list already covers most; the assistant's
+    // own alias list (usual spelling "mosambi") is the safety net for the rest.
+    for typed in ["mausami", "Mosami", "musambi", "mosambi", "موسمی"] {
+        let found = s.find("item", typed);
+        assert_eq!(names(&found), ["Sweet Lime"], "{typed}: {found}");
+        let via = found.get("via").and_then(Value::as_str);
+        assert!(
+            matches!(via, None | Some("word_list" | "alias")),
+            "{typed}: {via:?}"
+        );
+    }
+    // The alias is for items only: a seller named so finds nothing.
+    assert!(names(&s.find("seller", "mausami")).is_empty());
+}

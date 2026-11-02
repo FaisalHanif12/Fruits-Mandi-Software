@@ -6,13 +6,13 @@
     "parts": [
       {
         "type": "text",
-        "text": "اکتوبر سے دسمبر تک اسی رفتار سے تقریباً "
+        "text": "پورے سال کا کل اسی رفتار سے تقریباً "
       },
       {
         "type": "figure",
         "cell": {
           "type": "money",
-          "paisa": 14400000
+          "paisa": 40500000
         },
         "dir": null,
         "checked": false,
@@ -20,7 +20,7 @@
       },
       {
         "type": "text",
-        "text": " بنے گا۔ اگر رفتار "
+        "text": " بنے گا۔ اگر آنے والے مہینوں کی رفتار "
       },
       {
         "type": "figure",
@@ -40,7 +40,7 @@
         "type": "figure",
         "cell": {
           "type": "money",
-          "paisa": 28800000
+          "paisa": 54900000
         },
         "dir": null,
         "checked": false,
@@ -244,6 +244,10 @@
           },
           "target_month": null,
           "factor": null,
+          "year_total": {
+            "type": "money",
+            "paisa": 40500000
+          },
           "working": {
             "title_id": "assistant-working-same-pace",
             "steps": [
@@ -284,6 +288,56 @@
                   "type": "money",
                   "paisa": 14400000
                 }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 3600000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 3900000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4200000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4500000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 26100000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 26100000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 14400000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 40500000
+                }
               }
             ]
           }
@@ -313,6 +367,10 @@
           "factor": {
             "type": "percent",
             "hundredths": 20000
+          },
+          "year_total": {
+            "type": "money",
+            "paisa": 54900000
           },
           "working": {
             "title_id": "assistant-working-what-if-pace",
@@ -371,11 +429,76 @@
                   "type": "money",
                   "paisa": 28800000
                 }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 3600000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 3900000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4200000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4500000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 26100000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 26100000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 28800000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 54900000
+                }
               }
             ]
           }
         }
-      ]
+      ],
+      "year": {
+        "so_far": {
+          "type": "money",
+          "paisa": 26100000
+        },
+        "months": 6,
+        "from": {
+          "year": 2026,
+          "month": 4
+        },
+        "to": {
+          "year": 2026,
+          "month": 9
+        }
+      }
     },
     "advice": false,
     "general_advice": false,

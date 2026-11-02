@@ -42,7 +42,8 @@ use super::report::reports_stop;
 use super::{Draft, Env, State, Stop, ToolError, input, lookup, service_stop};
 use crate::answer::{
     AnswerChart, AnswerEstimate, AnswerMonth, AnswerSource, AnswerWorking, ChartSeries,
-    ChartSeriesKind, EstimateMethod, EstimateMethodKind, FigureDirection, WorkingOp, WorkingStep,
+    ChartSeriesKind, EstimateMethod, EstimateMethodKind, EstimateYear, FigureDirection, WorkingOp,
+    WorkingStep,
 };
 use crate::results::{Money, Node, Shown, Side, Val};
 use crate::source::SourceAnalyticsFilters;
@@ -711,6 +712,16 @@ fn months_ahead(
                  which one he means",
             ));
         }
+        // A year target could count the books' months so far or only the months ahead: the two
+        // readings give opposite answers, so the Owner is asked (money review).
+        if parsed.target.is_some() {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "target",
+                "a target with the end of the year can mean two things (counting the months already \
+                 in the books, or only the months ahead); ask the Owner which one he means",
+            ));
+        }
         return mandi_services::domain::forecast::months_to_year_end(current)
             .map_err(|e| ToolError::from_code(e.code(), Some("until")));
     }
@@ -1086,6 +1097,10 @@ fn method_node(m: &MethodEstimate) -> Node {
             m.target_month.map_or(Node::Null, month_node),
         ),
     ];
+    // The whole year (to the end of the year): the books so far plus the total.
+    if let Some(whole) = m.year_total {
+        fields.insert(2, ("year_total", plain_money(whole)));
+    }
     if let Some(p) = m.per_month {
         fields.insert(1, ("per_month", plain_money(p)));
     }
@@ -1113,6 +1128,7 @@ fn method_estimate(m: &MethodEstimate, title_id: &str) -> EstimateMethod {
         factor: m.factor.map(|f| Cell::Percent {
             hundredths: i64::from(f.bps()),
         }),
+        year_total: m.year_total.map(money_cell),
         working: working_of(title_id, &m.steps),
     }
 }
@@ -1158,7 +1174,13 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             ])
         })
         .collect();
-    let found = forecast::estimate_with(&history, current, ahead, target, what_if).map_err(|e| {
+    let to_year_end = parsed.until.is_some();
+    let worked = if to_year_end {
+        forecast::estimate_to_year_end(&history, current, what_if)
+    } else {
+        forecast::estimate_with(&history, current, ahead, target, what_if)
+    };
+    let found = worked.map_err(|e| {
         match service_stop(e) {
             // A what-if on a pace below 0 (a loss) or a factor out of range: say so, so the model
             // asks again without it instead of losing the whole estimate.
@@ -1187,6 +1209,9 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             fields.push(("same_pace", Node::Null));
             fields.push(("same_growth", Node::Null));
             fields.push(("same_season", Node::Null));
+            if to_year_end {
+                fields.push(("year", Node::Null));
+            }
             fields.push(("ahead", Node::List(Vec::new())));
             draft = Draft::new("estimate", args.clone(), Node::obj(fields));
         }
@@ -1204,6 +1229,21 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             fields.push(("ahead_count", Node::Val(Val::Count(i64::from(e.ahead)))));
             if let Some(t) = target {
                 fields.push(("target", plain_money(t)));
+            }
+            // To the end of the year: the books' part of the whole year, read, not estimated.
+            if let Some(year) = &e.year {
+                fields.push((
+                    "year",
+                    Node::obj(vec![
+                        ("so_far", plain_money(year.so_far)),
+                        ("months", Node::Val(Val::Count(i64::from(year.months)))),
+                        (
+                            "from",
+                            year.span.map_or(Node::Null, |(from, _)| month_node(from)),
+                        ),
+                        ("to", year.span.map_or(Node::Null, |(_, to)| month_node(to))),
+                    ]),
+                ));
             }
             for method in METHODS {
                 // The what-if is only there when it was asked for.
@@ -1287,6 +1327,12 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
                     .iter()
                     .map(|m| method_estimate(m, working_title(m.method)))
                     .collect(),
+                year: e.year.as_ref().map(|year| EstimateYear {
+                    so_far: money_cell(year.so_far),
+                    months: i64::from(year.months),
+                    from: year.span.map(|(from, _)| answer_month(from)),
+                    to: year.span.map(|(_, to)| answer_month(to)),
+                }),
             };
             draft.shown = Some(Shown::Chart(Box::new(chart), Some(Box::new(estimate))));
         }

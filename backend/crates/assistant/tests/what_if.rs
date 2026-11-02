@@ -308,3 +308,176 @@ fn the_answer_cites_the_factor_and_shows_the_what_if_under_the_estimate_band() {
     // A typed "double" in the model's text is refused (FR-7.76).
     h.scan_requests();
 }
+
+// ---- the whole year (Umar 02-11-2026, money agent 9.1 v1.9) ---------------------------------------
+
+#[test]
+fn to_the_end_of_the_year_the_answer_is_the_whole_year_books_so_far_plus_the_months_left() {
+    let w = worked::history_world(&HISTORY);
+    let mut s = Session::new(&w, "saal ke aakhir tak commission kitna hoga");
+    let v = s.estimate(json!({"until": "year_end"})).unwrap();
+    // The books of 2026 before October: April to September, read and never estimated.
+    assert_eq!(rs(&v["year"]["so_far"]), 261_000, "{v}");
+    assert_eq!(v["year"]["months"]["n"], 6);
+    assert_eq!(v["year"]["from"]["month"], "2026-04");
+    assert_eq!(v["year"]["to"]["month"], "2026-09");
+    // Each method: so far + its months ahead.
+    assert_eq!(rs(&v["same_pace"]["total"]), 144_000);
+    assert_eq!(rs(&v["same_pace"]["year_total"]), 405_000);
+    assert_eq!(rs(&v["same_growth"]["total"]), 171_000);
+    assert_eq!(rs(&v["same_growth"]["year_total"]), 432_000);
+    // A what-if scales only the months left: the books stay as they are.
+    let mut d = Session::new(&w, "agar raftar double ho to saal ke aakhir tak kitna");
+    let v = d
+        .estimate(json!({"until": "year_end", "what_if": "double"}))
+        .unwrap();
+    assert_eq!(rs(&v["what_if_pace"]["total"]), 288_000);
+    assert_eq!(rs(&v["what_if_pace"]["year_total"]), 549_000);
+    assert_eq!(rs(&v["same_pace"]["year_total"]), 405_000);
+    // Months ahead without the end of the year have no year at all.
+    let mut p = Session::new(&w, "agle 3 mahine commission kitna hoga");
+    let v = p.estimate(json!({"ahead": 3})).unwrap();
+    assert!(
+        v.get("year").is_none() && v["same_pace"].get("year_total").is_none(),
+        "{v}"
+    );
+}
+
+#[test]
+fn the_end_of_the_year_with_a_target_is_refused_and_the_owner_is_asked() {
+    // A year target could count the books' months or only the months ahead: opposite answers.
+    let w = worked::history_world(&HISTORY);
+    let mut s = Session::new(&w, "saal ke aakhir tak 4 lakh ka target pura hoga");
+    let e = s
+        .estimate(json!({"until": "year_end", "target": "q.n1"}))
+        .unwrap_err();
+    assert_eq!(e.code, "ERR_OUT_OF_RANGE");
+    assert!(e.detail.contains("two things"), "{}", e.detail);
+}
+
+#[test]
+fn the_answer_cites_the_whole_year_and_the_books_part_and_shows_the_year() {
+    let w = worked::history_world(&HISTORY);
+    let h = Harness::over(w);
+    let usage = json!({
+        "prompt_tokens": 7_800, "completion_tokens": 90,
+        "prompt_tokens_details": {"cached_tokens": 7_600},
+        "completion_tokens_details": {"reasoning_tokens": 20}
+    });
+    let tool = json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": null,
+            "tool_calls": [{"id": "call_0", "type": "function", "function": {
+                "name": "estimate",
+                "arguments": json!({
+                    "measure": "commission_all", "item": null, "seller": null, "buyer": null,
+                    "garden": null, "trip": null, "ahead": null, "until": "year_end",
+                    "what_if": null, "percent": null, "target": null
+                }).to_string()}}]}}],
+        "usage": usage,
+    });
+    let text = "{{e1.year.from}} سے {{e1.year.to}} تک کتابوں میں {{e1.year.so_far}} ہے۔ {{e1.first}} سے {{e1.last}} تک اسی رفتار سے {{e1.same_pace.total}} اور پورے سال کا کل تقریباً {{e1.same_pace.year_total}} بنے گا، اور اسی اضافے سے {{e1.same_growth.year_total}}۔";
+    let answer = json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": "estimate", "text": text, "show": [{"result": "e1", "as": "chart", "rows": null}],
+            "next": [], "choose": null, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": usage,
+    });
+    let (reply, _) = h.ask(
+        "saal ke aakhir tak commission kitna hoga",
+        None,
+        vec![tool, answer],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Estimate, "{reply:#?}");
+    let a = answer_of(&reply);
+    let estimate = a.estimate.as_ref().expect("the estimate band");
+    let year = estimate.year.as_ref().expect("the books' part of the year");
+    assert_eq!((money(&year.so_far), year.months), (261_000, 6));
+    assert_eq!(
+        (
+            year.from.as_ref().map(|m| m.month),
+            year.to.as_ref().map(|m| m.month)
+        ),
+        (Some(4), Some(9))
+    );
+    let whole: Vec<i64> = estimate
+        .methods
+        .iter()
+        .filter_map(|m| m.year_total.as_ref().map(money))
+        .collect();
+    assert_eq!(whole, vec![405_000, 432_000]);
+    let figs = figures(a);
+    assert_eq!(money(figs[0].0), 261_000);
+    assert_eq!(money(figs[1].0), 144_000);
+    assert_eq!(money(figs[2].0), 405_000);
+    assert_eq!(money(figs[3].0), 432_000);
+    // The working of each method ends with the books' sum (April to September) and then the
+    // whole year: books so far + months ahead.
+    for m in &estimate.methods {
+        let [.., books, last] = m.working.steps.as_slice() else {
+            panic!("too few steps");
+        };
+        assert_eq!(books.inputs.len(), 6);
+        assert_eq!(money(&books.result), 261_000);
+        assert_eq!(money(&last.inputs[0]), 261_000);
+        assert_eq!(money(&last.result), money(m.year_total.as_ref().unwrap()));
+    }
+    h.scan_requests();
+}
+
+#[test]
+fn the_books_part_of_the_year_alone_is_not_a_plain_fact_it_needs_the_estimate_kind() {
+    // "This year so far" from `e1.year.so_far` would leave out the days of the current month: the
+    // answer must be an estimate (money review, finding 2). The first answer is refused, the
+    // rewrite as an estimate is taken.
+    let w = worked::history_world(&HISTORY);
+    let h = Harness::over(w);
+    let usage = json!({
+        "prompt_tokens": 7_800, "completion_tokens": 90,
+        "prompt_tokens_details": {"cached_tokens": 7_600},
+        "completion_tokens_details": {"reasoning_tokens": 20}
+    });
+    let tool = json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": null,
+            "tool_calls": [{"id": "call_0", "type": "function", "function": {
+                "name": "estimate",
+                "arguments": json!({
+                    "measure": "commission_all", "item": null, "seller": null, "buyer": null,
+                    "garden": null, "trip": null, "ahead": null, "until": "year_end",
+                    "what_if": null, "percent": null, "target": null
+                }).to_string()}}]}}],
+        "usage": usage,
+    });
+    let reply_of = |kind: &str, text: &str| {
+        json!({
+            "model": "openai/gpt-6-luna",
+            "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+                "kind": kind, "text": text, "show": [{"result": "e1", "as": "chart", "rows": null}],
+                "next": [], "choose": null, "entry": null, "nearest": null
+            }).to_string()}}],
+            "usage": usage,
+        })
+    };
+    let (reply, requests) = h.ask(
+        "saal ke aakhir tak commission kitna hoga",
+        None,
+        vec![
+            tool,
+            reply_of("answer", "اس سال اب تک {{e1.year.so_far}}۔"),
+            reply_of(
+                "estimate",
+                "اب تک {{e1.year.so_far}} اور پورے سال کا کل {{e1.same_pace.year_total}}۔",
+            ),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Estimate, "{reply:#?}");
+    assert!(
+        requests[2].to_string().contains("estimate_kind"),
+        "the rewrite was asked for because of the kind"
+    );
+}

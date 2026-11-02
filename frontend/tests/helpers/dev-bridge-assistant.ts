@@ -26,6 +26,8 @@ export const REPLIES: Readonly<Record<string, AskReply>> = {
   target: real.REPLY_ESTIMATE_TARGET,
   // A what-if: the same-pace figure scaled by a factor the Owner asked for (plan 52 item 5).
   whatif: real.REPLY_ESTIMATE_WHAT_IF,
+  // To the end of the year: the books so far, the months left and the whole year (PRD FR-7.86, v1.20).
+  yearend: real.REPLY_ESTIMATE_YEAR_END,
   advice: real.REPLY_ADVICE,
   // The books had too little: short general advice with its own band (PRD FR-7.88, v1.19).
   general: real.REPLY_GENERAL_ADVICE,
@@ -53,6 +55,7 @@ function replyFor(text: string): AskReply {
   const found = named === null ? undefined : REPLIES[named];
   if (found !== undefined) return found;
   const lower = text.toLowerCase();
+  if (lower.includes('aakhir')) return real.REPLY_ESTIMATE_YEAR_END;
   if (lower.includes('double')) return real.REPLY_ESTIMATE_WHAT_IF;
   if (lower.includes('barhayen')) return real.REPLY_GENERAL_ADVICE;
   if (lower.includes('agar') || lower.includes('estimate')) return real.REPLY_ESTIMATE;

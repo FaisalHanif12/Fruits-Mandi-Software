@@ -52,6 +52,11 @@ export type EstimateMethod = {
    */
   factor: ReportCell | null;
   /**
+   * To the end of the year: the whole year of this method, the books' months so far plus
+   * `total`. Null for any other estimate.
+   */
+  year_total: ReportCell | null;
+  /**
    * The working, with ⓘ.
    */
   working: AnswerWorking;

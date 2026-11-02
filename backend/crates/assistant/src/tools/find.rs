@@ -315,6 +315,48 @@ fn is_roman(query: &str) -> bool {
             .any(mandi_services::domain::core::text::is_urdu_letter)
 }
 
+/// The source word of a match found through the assistant's own item aliases.
+const ALIAS_SOURCE: &str = "alias";
+
+/// Roman spellings of an item that the typing word list does not carry, each with its usual
+/// spelling (plan 52 item 3, the lead's ruling of 03-11-2026: kept here and not in
+/// `translit_seed.tsv`, whose measured accuracy must not drop).
+const ITEM_ALIASES: [(&str, &str); 3] = [
+    ("mausami", "mosambi"),
+    ("mosami", "mosambi"),
+    ("musambi", "mosambi"),
+];
+
+/// The usual spelling of an item typed in a spelling of the alias list, if it is one.
+fn item_alias(query: &str) -> Option<&'static str> {
+    let typed = query.trim().to_ascii_lowercase();
+    ITEM_ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == typed)
+        .map(|(_, usual)| *usual)
+}
+
+/// The matches of an Urdu spelling: only a record whose Urdu name has the spelling as a word or a
+/// start, because the search also returns near spellings ("کریم" finds اکرم), which are not what
+/// was typed. `None` when there is none.
+fn urdu_matches(
+    env: &Env<'_>,
+    role: Role,
+    spelling: &str,
+) -> Result<Option<(Vec<Node>, bool)>, Stop> {
+    let (found, more) = matches_for(env, role, spelling)?;
+    let wanted = text::search_ur(spelling);
+    let found: Vec<Node> = found
+        .into_iter()
+        .filter(|m| names_start_with(m, &wanted))
+        .collect();
+    Ok(if found.is_empty() {
+        None
+    } else {
+        Some((found, more))
+    })
+}
+
 /// The tool.
 pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
     let parsed: Input = input(args)?;
@@ -336,19 +378,39 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
         )
         .unwrap_or_default();
         for suggestion in suggestions {
-            let (found, found_more) = matches_for(env, role, &suggestion.text)?;
-            // Only a record whose Urdu name has the spelling as a word or a start: the search
-            // also returns near spellings ("کریم" finds اکرم), which are not what was typed.
-            let wanted = text::search_ur(&suggestion.text);
-            let found: Vec<Node> = found
-                .into_iter()
-                .filter(|m| names_start_with(m, &wanted))
-                .collect();
-            if !found.is_empty() {
+            if let Some((found, found_more)) = urdu_matches(env, role, &suggestion.text)? {
                 matches = found;
                 more = found_more;
                 via = Some((suggestion.source.as_str(), suggestion.text));
                 break;
+            }
+        }
+        // An item the word list does not carry under that spelling: its usual spelling, by the
+        // assistant's own short list (not the typing word list, whose accuracy is measured).
+        if matches.is_empty()
+            && role == Role::Item
+            && let Some(usual) = item_alias(query)
+        {
+            let (found, found_more) = matches_for(env, role, usual)?;
+            if found.is_empty() {
+                let suggestions = mandi_services::translit::suggest(
+                    env.ctx,
+                    usual,
+                    mandi_services::core::translit::Direction::ToUrdu,
+                )
+                .unwrap_or_default();
+                for suggestion in suggestions {
+                    if let Some((found, found_more)) = urdu_matches(env, role, &suggestion.text)? {
+                        matches = found;
+                        more = found_more;
+                        via = Some((ALIAS_SOURCE, suggestion.text));
+                        break;
+                    }
+                }
+            } else {
+                matches = found;
+                more = found_more;
+                via = Some((ALIAS_SOURCE, usual.to_owned()));
             }
         }
     }
@@ -369,6 +431,14 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
                         .to_owned(),
                 ),
             ));
+        } else if *source == ALIAS_SOURCE {
+            fields.push((
+                "note",
+                Node::Str(
+                    "the word was not found as typed; it was found as its usual spelling"
+                        .to_owned(),
+                ),
+            ));
         } else {
             fields.push((
                 "note",
@@ -379,4 +449,20 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
         }
     }
     Ok(Draft::new("find", args.clone(), Node::obj(fields)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_item_aliases_give_the_usual_spelling_in_any_case() {
+        for typed in ["mausami", "Mausami", " MOSAMI ", "musambi"] {
+            assert_eq!(item_alias(typed), Some("mosambi"), "{typed}");
+        }
+        // The usual spelling and other words are not aliases.
+        for typed in ["mosambi", "kela", "", "mausam"] {
+            assert_eq!(item_alias(typed), None, "{typed}");
+        }
+    }
 }

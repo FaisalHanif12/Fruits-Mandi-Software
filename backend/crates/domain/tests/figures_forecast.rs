@@ -13,7 +13,8 @@ use mandi_domain::figures::{
 };
 use mandi_domain::forecast::{
     Estimate, ForecastError, MAX_FACTOR_BPS, Method, MethodEstimate, MonthValue, PaceFactor,
-    YearMonth, estimate, estimate_with, months_through, months_to_year_end,
+    YearMonth, estimate, estimate_to_year_end, estimate_with, months_through, months_to_year_end,
+    year_so_far,
 };
 use proptest::prelude::*;
 
@@ -1436,5 +1437,402 @@ proptest! {
         let x = method(&what_if(&h, now, 1, first), Method::WhatIfPace).per_month.unwrap();
         let y = method(&what_if(&h, now, 1, second), Method::WhatIfPace).per_month.unwrap();
         prop_assert!(y >= x);
+    }
+}
+
+// ---- the whole year (plan 52, Umar 02-11-2026, money agent 9.1 v1.9) ------------------------------
+//
+// "saal ke aakhir tak": the months of this year so far from the books (never estimated) plus the
+// months left, the current month counted as a whole estimated month. Every number below was worked
+// by hand by the money agent before the code.
+
+fn year_total(e: &Estimate, which: Method) -> Option<i64> {
+    method(e, which).year_total.map(|p| p.rupees())
+}
+
+fn to_year_end(history: &[MonthValue], now: YearMonth, factor: Option<PaceFactor>) -> Estimate {
+    estimate_to_year_end(history, now, factor).unwrap()
+}
+
+#[test]
+fn the_whole_year_on_the_e2e_59_data() {
+    // April to September 2026 from the books: 36,000 + 39,000 + 42,000 + 45,000 + 48,000 + 51,000.
+    let e = to_year_end(&e2e_59(), ym(2026, 10), None);
+    assert_eq!((e.first, e.last, e.ahead), (ym(2026, 10), ym(2026, 12), 3));
+    let year = e.year.clone().unwrap();
+    assert_eq!(year.so_far, rs(261_000));
+    assert_eq!(year.months, 6);
+    assert_eq!(year.span, Some((ym(2026, 4), ym(2026, 9))));
+    // Same season needs 12 months: only two methods, each with its whole year.
+    assert_eq!(e.methods.len(), 2);
+    let pace = method(&e, Method::SamePace);
+    assert_eq!(
+        (pace.total, pace.year_total),
+        (rs(144_000), Some(rs(405_000)))
+    );
+    let growth = method(&e, Method::SameGrowth);
+    assert_eq!(
+        (growth.total, growth.year_total),
+        (rs(171_000), Some(rs(432_000)))
+    );
+    // The working ends with two steps the Owner can check: the books' months added up, then the
+    // whole year (books so far + the months ahead).
+    let six: Vec<Value> = [36_000, 39_000, 42_000, 45_000, 48_000, 51_000]
+        .iter()
+        .map(|r| m(*r))
+        .collect();
+    for found in [pace, growth] {
+        let [.., books, last] = found.steps.as_slice() else {
+            panic!("too few steps");
+        };
+        assert_eq!((books.op, &books.inputs), (Op::Sum, &six));
+        assert_eq!(books.result, m(261_000));
+        assert_eq!(last.op, Op::Sum);
+        assert_eq!(last.inputs, vec![m(261_000), Value::Money(found.total)]);
+        assert_eq!(last.result, Value::Money(found.year_total.unwrap()));
+    }
+}
+
+#[test]
+fn the_what_if_whole_year_keeps_the_books_and_scales_only_the_months_left() {
+    let h = e2e_59(); // the pace is 48,000
+    let now = ym(2026, 10);
+    for (factor, monthly, whole) in [
+        (PaceFactor::DOUBLE, 96_000, 549_000),
+        (PaceFactor::HALF, 24_000, 333_000),
+        (PaceFactor::up(1_000).unwrap(), 52_800, 419_400),
+    ] {
+        let e = to_year_end(&h, now, Some(factor));
+        let w = method(&e, Method::WhatIfPace);
+        assert_eq!(w.per_month, Some(rs(monthly)), "{factor:?}");
+        assert_eq!(w.year_total.map(|p| p.rupees()), Some(whole), "{factor:?}");
+        // Same pace is the baseline, 405,000, unchanged by the scenario.
+        assert_eq!(year_total(&e, Method::SamePace), Some(405_000));
+        // The what-if's working is the average, the scaling, the months, then the books' sum and
+        // the year: it did not take the year steps of same pace with it.
+        let ops: Vec<Op> = w.steps.iter().map(|s| s.op).collect();
+        assert_eq!(
+            ops,
+            vec![Op::Average, Op::Times, Op::Times, Op::Sum, Op::Sum],
+            "{factor:?}"
+        );
+        let pace_ops: Vec<Op> = method(&e, Method::SamePace)
+            .steps
+            .iter()
+            .map(|s| s.op)
+            .collect();
+        assert_eq!(pace_ops, vec![Op::Average, Op::Times, Op::Sum, Op::Sum]);
+    }
+}
+
+/// July 2025 to September 2026, 15 months.
+fn fifteen_months() -> Vec<MonthValue> {
+    history(
+        2025,
+        7,
+        &[
+            30_000, 32_000, 34_000, 40_000, 44_000, 50_000, // Jul to Dec 2025
+            20_000, 22_000, 25_000, 36_000, 39_000, 42_000, 45_000, 48_000, 51_000, // 2026
+        ],
+    )
+}
+
+#[test]
+fn the_whole_year_with_the_same_season_worked_out() {
+    let e = to_year_end(&fifteen_months(), ym(2026, 10), None);
+    let year = e.year.clone().unwrap();
+    // January to September 2026: 67,000 + 261,000.
+    assert_eq!(year.so_far, rs(328_000));
+    assert_eq!(year.months, 9);
+    assert_eq!(year.span, Some((ym(2026, 1), ym(2026, 9))));
+    assert_eq!(year_total(&e, Method::SamePace), Some(472_000));
+    assert_eq!(year_total(&e, Method::SameGrowth), Some(499_000));
+    // The same months of last year: October, November, December 2025 = 40,000 + 44,000 + 50,000.
+    assert_eq!(method(&e, Method::SameSeason).total, rs(134_000));
+    assert_eq!(year_total(&e, Method::SameSeason), Some(462_000));
+    for (factor, whole) in [
+        (PaceFactor::DOUBLE, 616_000),
+        (PaceFactor::HALF, 400_000),
+        (PaceFactor::up(1_000).unwrap(), 486_400),
+    ] {
+        let w = to_year_end(&fifteen_months(), ym(2026, 10), Some(factor));
+        assert_eq!(
+            year_total(&w, Method::WhatIfPace),
+            Some(whole),
+            "{factor:?}"
+        );
+    }
+}
+
+/// April to December 2026: the E2E-59 months and 54,000; 57,000; 60,000.
+fn to_december() -> Vec<MonthValue> {
+    history(
+        2026,
+        4,
+        &[
+            36_000, 39_000, 42_000, 45_000, 48_000, 51_000, 54_000, 57_000, 60_000,
+        ],
+    )
+}
+
+#[test]
+fn in_january_nothing_is_so_far_and_the_whole_year_is_the_total() {
+    let e = to_year_end(&to_december(), ym(2027, 1), None);
+    assert_eq!((e.first, e.last, e.ahead), (ym(2027, 1), ym(2027, 12), 12));
+    let year = e.year.clone().unwrap();
+    assert_eq!(
+        (year.so_far, year.months, year.span),
+        (Paisa::ZERO, 0, None)
+    );
+    // 57,000 × 12; growth 63,000 up to 96,000 in 12 steps of 3,000.
+    assert_eq!(method(&e, Method::SamePace).total, rs(684_000));
+    assert_eq!(year_total(&e, Method::SamePace), Some(684_000));
+    assert_eq!(year_total(&e, Method::SameGrowth), Some(954_000));
+    assert_eq!(e.methods.len(), 2, "9 months: no same season");
+    // No year step is added: the working is the plain estimate's.
+    let plain = estimate(&to_december(), ym(2027, 1), 12, None).unwrap();
+    for m in &e.methods {
+        let steps = plain
+            .methods
+            .iter()
+            .find(|p| p.method == m.method)
+            .map(|p| p.steps.len());
+        assert_eq!(Some(m.steps.len()), steps, "{:?}", m.method);
+    }
+    let double = to_year_end(&to_december(), ym(2027, 1), Some(PaceFactor::DOUBLE));
+    assert_eq!(year_total(&double, Method::WhatIfPace), Some(1_368_000));
+}
+
+#[test]
+fn in_december_one_month_is_left() {
+    let h = history(
+        2026,
+        4,
+        &[
+            36_000, 39_000, 42_000, 45_000, 48_000, 51_000, 54_000, 57_000,
+        ],
+    );
+    let now = ym(2026, 12);
+    let e = to_year_end(&h, now, None);
+    assert_eq!((e.first, e.last, e.ahead), (ym(2026, 12), ym(2026, 12), 1));
+    let year = e.year.clone().unwrap();
+    assert_eq!((year.so_far, year.months), (rs(372_000), 8));
+    assert_eq!(year_total(&e, Method::SamePace), Some(426_000)); // 54,000
+    assert_eq!(year_total(&e, Method::SameGrowth), Some(432_000)); // 60,000
+    for (factor, whole) in [
+        (PaceFactor::DOUBLE, 480_000),
+        (PaceFactor::HALF, 399_000),
+        (PaceFactor::up(1_000).unwrap(), 431_400),
+    ] {
+        let w = to_year_end(&h, now, Some(factor));
+        assert_eq!(
+            year_total(&w, Method::WhatIfPace),
+            Some(whole),
+            "{factor:?}"
+        );
+    }
+    // A rising straight line has the same whole year by growth in October and in December.
+    let october = to_year_end(&e2e_59(), ym(2026, 10), None);
+    assert_eq!(year_total(&october, Method::SameGrowth), Some(432_000));
+}
+
+#[test]
+fn a_month_with_nothing_is_still_a_month_of_the_books() {
+    // January to March have 0 in the books, April to September as in E2E-59.
+    let h = history(
+        2026,
+        1,
+        &[0, 0, 0, 36_000, 39_000, 42_000, 45_000, 48_000, 51_000],
+    );
+    let year = year_so_far(&h, ym(2026, 10)).unwrap();
+    assert_eq!((year.so_far, year.months), (rs(261_000), 9));
+    assert_eq!(year.span, Some((ym(2026, 1), ym(2026, 9))));
+    // Only the months of this year count: an earlier year is not in it.
+    let h2 = history(
+        2025,
+        7,
+        &[
+            999_000, 999_000, 999_000, 999_000, 999_000, 999_000, 1_000, 2_000,
+        ],
+    );
+    let year = year_so_far(&h2, ym(2026, 3)).unwrap();
+    assert_eq!((year.so_far, year.months), (rs(3_000), 2));
+}
+
+#[test]
+fn a_loss_keeps_its_sign_in_the_whole_year() {
+    // Six months of a 30,000 loss: same pace -30,000 × 3 = -90,000, so -180,000 + -90,000.
+    let h = history(2026, 4, &[-30_000; 6]);
+    let e = to_year_end(&h, ym(2026, 10), None);
+    assert_eq!(e.year.clone().unwrap().so_far, rs(-180_000));
+    assert_eq!(method(&e, Method::SamePace).total, rs(-90_000));
+    assert_eq!(year_total(&e, Method::SamePace), Some(-270_000));
+    // Same growth is never below 0 a month (FR-7.86): the months ahead are 0.
+    assert_eq!(method(&e, Method::SameGrowth).total, Paisa::ZERO);
+    assert_eq!(year_total(&e, Method::SameGrowth), Some(-180_000));
+    // A what-if on a loss is refused, as before.
+    assert_eq!(
+        estimate_to_year_end(&h, ym(2026, 10), Some(PaceFactor::DOUBLE)).unwrap_err(),
+        ForecastError::NegativePace
+    );
+}
+
+#[test]
+fn the_whole_year_needs_three_months_and_a_plain_estimate_has_no_year() {
+    let short = history(2026, 8, &[10_000, 20_000]);
+    assert_eq!(
+        estimate_to_year_end(&short, ym(2026, 10), None).unwrap_err(),
+        ForecastError::TooLittleHistory { months: 2 }
+    );
+    let plain = estimate(&e2e_59(), ym(2026, 10), 3, None).unwrap();
+    assert_eq!(plain.year, None);
+    assert!(plain.methods.iter().all(|m| m.year_total.is_none()));
+    // A history that is not the months before the current one is refused.
+    assert_eq!(
+        estimate_to_year_end(&e2e_59(), ym(2026, 12), None).unwrap_err(),
+        ForecastError::HistoryNotConsecutive
+    );
+}
+
+#[test]
+fn one_month_so_far_is_itself_with_no_sum_step() {
+    // November 2025 to January 2026; asked in February, so only January is of this year.
+    let h = history(2025, 11, &[10_000, 20_000, 30_000]);
+    let e = to_year_end(&h, ym(2026, 2), None);
+    let year = e.year.clone().unwrap();
+    assert_eq!(
+        (year.so_far, year.months, year.step.is_none()),
+        (rs(30_000), 1, true)
+    );
+    assert_eq!(year.span, Some((ym(2026, 1), ym(2026, 1))));
+    // The pace is 20,000; 11 months left (February to December) = 220,000; the year 250,000.
+    let pace = method(&e, Method::SamePace);
+    assert_eq!(
+        (pace.total, pace.year_total),
+        (rs(220_000), Some(rs(250_000)))
+    );
+    let ops: Vec<Op> = pace.steps.iter().map(|s| s.op).collect();
+    assert_eq!(ops, vec![Op::Average, Op::Times, Op::Sum]);
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+    /// The year is the books plus the months ahead, for every method, whatever the history, and the
+    /// rest is exactly the plain estimate to December (nothing changed, nothing counted twice).
+    #[test]
+    fn the_whole_year_is_the_books_so_far_plus_the_months_ahead(
+        current_month in 1u32..=12,
+        values in proptest::collection::vec(-1_000_000_000i64..=1_000_000_000, 3..=30),
+        bps in proptest::option::of(1i32..=50_000),
+    ) {
+        let now = ym(2026, current_month);
+        // The history ends the month before `now`.
+        let n = u32::try_from(values.len()).unwrap();
+        let start = (0..n).fold(now, |at, _| {
+            if at.month() == 1 {
+                ym(at.year() - 1, 12)
+            } else {
+                ym(at.year(), at.month() - 1)
+            }
+        });
+        let h = history(start.year(), start.month(), &values);
+        let ahead = months_to_year_end(now).unwrap();
+        let factor = bps.map(|b| {
+            if b >= 10_000 {
+                PaceFactor::up(b - 10_000).unwrap_or(PaceFactor::DOUBLE)
+            } else {
+                PaceFactor::down(10_000 - b).unwrap_or(PaceFactor::HALF)
+            }
+        });
+        // A what-if may be refused: a pace below 0, or a scaled month above the largest amount.
+        // Then the plain whole year must still be right.
+        let (e, factor) = match estimate_to_year_end(&h, now, factor) {
+            Ok(e) => (e, factor),
+            Err(error) => {
+                prop_assert!(factor.is_some(), "{error:?}");
+                let plain = estimate(&h, now, ahead, None).unwrap();
+                let pace = method(&plain, Method::SamePace).per_month.unwrap();
+                if pace < Paisa::ZERO {
+                    prop_assert_eq!(error, ForecastError::NegativePace);
+                } else {
+                    prop_assert_eq!(error, ForecastError::Figure(FigureError::Overflow));
+                }
+                (to_year_end(&h, now, None), None)
+            }
+        };
+        let year = e.year.clone().unwrap();
+        // So far is the sum of the history months of this year, counted by place.
+        let expected: i64 = h.iter().filter(|x| x.month.year() == 2026).map(|x| x.value.rupees()).sum();
+        let in_year = h.iter().filter(|x| x.month.year() == 2026).count();
+        prop_assert_eq!(year.so_far.rupees(), expected);
+        prop_assert_eq!(usize::try_from(year.months).unwrap(), in_year);
+        prop_assert_eq!(in_year, std::cmp::min(values.len(), usize::try_from(current_month - 1).unwrap()));
+        // The books' months and the months ahead never overlap and fill at most the year.
+        prop_assert!(year.months + e.ahead <= 12);
+        if values.len() >= usize::try_from(current_month - 1).unwrap() {
+            prop_assert_eq!(year.months + e.ahead, 12);
+        }
+        prop_assert_eq!((e.first, e.last, e.ahead), (now, ym(2026, 12), ahead));
+        let plain = estimate_with(&h, now, ahead, None, factor).unwrap();
+        for m in &e.methods {
+            let whole = m.year_total.unwrap();
+            // Nothing but the year steps is different from the plain estimate to December.
+            let base = plain.methods.iter().find(|p| p.method == m.method).unwrap();
+            prop_assert_eq!(&m.months, &base.months);
+            prop_assert_eq!(m.total, base.total);
+            prop_assert_eq!(&m.steps[..base.steps.len()], &base.steps[..]);
+            if year.months == 0 {
+                prop_assert_eq!(whole, m.total);
+                prop_assert_eq!(m.steps.len(), base.steps.len());
+            } else {
+                prop_assert_eq!(whole.rupees() - m.total.rupees(), year.so_far.rupees());
+                let books_steps = usize::from(year.months >= 2);
+                prop_assert_eq!(m.steps.len(), base.steps.len() + books_steps + 1);
+                let last = m.steps.last().unwrap();
+                prop_assert_eq!(last.op, Op::Sum);
+                prop_assert_eq!(&last.inputs, &vec![Value::Money(year.so_far), Value::Money(m.total)]);
+                prop_assert_eq!(last.result, Value::Money(whole));
+            }
+        }
+        // A what-if: the books so far, then the scaled month times the months ahead.
+        if let Some(w) = e.methods.iter().find(|m| m.method == Method::WhatIfPace) {
+            let scaled = w.per_month.unwrap().rupees();
+            prop_assert_eq!(
+                w.year_total.unwrap().rupees(),
+                year.so_far.rupees() + scaled * i64::from(e.ahead)
+            );
+        }
+    }
+
+    /// A flat series gives 12 times the month, whatever the month of the year.
+    #[test]
+    fn a_flat_series_gives_twelve_months_of_it(
+        current_month in 4u32..=12,
+        v in 0i64..=1_000_000_000,
+    ) {
+        let n = usize::try_from(current_month - 1).unwrap();
+        let h = history(2026, 1, &vec![v; n]);
+        let e = to_year_end(&h, ym(2026, current_month), None);
+        prop_assert_eq!(year_total(&e, Method::SamePace), Some(12 * v));
+        // Same growth needs 6 months of the books.
+        if n >= 6 {
+            prop_assert_eq!(year_total(&e, Method::SameGrowth), Some(12 * v));
+        }
+    }
+
+    /// A rising straight line (a + b per month from January) has one same-growth whole year,
+    /// 12a + 66b, whatever the month it is asked in.
+    #[test]
+    fn a_rising_line_has_one_whole_year_by_growth_in_every_month(
+        current_month in 7u32..=12,
+        a in 0i64..=1_000_000,
+        b in 0i64..=100_000,
+    ) {
+        let n = usize::try_from(current_month - 1).unwrap();
+        let values: Vec<i64> = (0..n).map(|i| a + b * i64::try_from(i).unwrap()).collect();
+        let h = history(2026, 1, &values);
+        let e = to_year_end(&h, ym(2026, current_month), None);
+        prop_assert_eq!(year_total(&e, Method::SameGrowth), Some(12 * a + 66 * b));
     }
 }

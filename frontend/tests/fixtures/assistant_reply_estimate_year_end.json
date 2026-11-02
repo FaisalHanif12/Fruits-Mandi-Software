@@ -1,0 +1,561 @@
+{
+  "question_id": 5,
+  "conversation_id": "c-1",
+  "outcome": "estimate",
+  "answer": {
+    "parts": [
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 4
+      },
+      {
+        "type": "text",
+        "text": " سے "
+      },
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 9
+      },
+      {
+        "type": "text",
+        "text": " تک کتابوں میں "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 26100000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " ہے۔ "
+      },
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 10
+      },
+      {
+        "type": "text",
+        "text": " سے "
+      },
+      {
+        "type": "month",
+        "year": 2026,
+        "month": 12
+      },
+      {
+        "type": "text",
+        "text": " تک اسی رفتار سے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 14400000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " اور پورے سال کا کل تقریباً "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 40500000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " بنے گا، اور اسی اضافے سے "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 43200000
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": "۔"
+      }
+    ],
+    "tables": [],
+    "charts": [
+      {
+        "result_id": "e1",
+        "measure_id": "assistant-measure-commission-all",
+        "months": [
+          {
+            "year": 2026,
+            "month": 4
+          },
+          {
+            "year": 2026,
+            "month": 5
+          },
+          {
+            "year": 2026,
+            "month": 6
+          },
+          {
+            "year": 2026,
+            "month": 7
+          },
+          {
+            "year": 2026,
+            "month": 8
+          },
+          {
+            "year": 2026,
+            "month": 9
+          },
+          {
+            "year": 2026,
+            "month": 10
+          },
+          {
+            "year": 2026,
+            "month": 11
+          },
+          {
+            "year": 2026,
+            "month": 12
+          }
+        ],
+        "series": [
+          {
+            "kind": "actual",
+            "values": [
+              {
+                "type": "money",
+                "paisa": 3600000
+              },
+              {
+                "type": "money",
+                "paisa": 3900000
+              },
+              {
+                "type": "money",
+                "paisa": 4200000
+              },
+              {
+                "type": "money",
+                "paisa": 4500000
+              },
+              {
+                "type": "money",
+                "paisa": 4800000
+              },
+              {
+                "type": "money",
+                "paisa": 5100000
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              }
+            ]
+          },
+          {
+            "kind": "same_pace",
+            "values": [
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "money",
+                "paisa": 4800000
+              },
+              {
+                "type": "money",
+                "paisa": 4800000
+              },
+              {
+                "type": "money",
+                "paisa": 4800000
+              }
+            ]
+          },
+          {
+            "kind": "same_growth",
+            "values": [
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "empty"
+              },
+              {
+                "type": "money",
+                "paisa": 5400000
+              },
+              {
+                "type": "money",
+                "paisa": 5700000
+              },
+              {
+                "type": "money",
+                "paisa": 6000000
+              }
+            ]
+          }
+        ],
+        "is_estimate": true
+      }
+    ],
+    "estimate": {
+      "result_id": "e1",
+      "measure_id": "assistant-measure-commission-all",
+      "full_months": 6,
+      "first": {
+        "year": 2026,
+        "month": 10
+      },
+      "last": {
+        "year": 2026,
+        "month": 12
+      },
+      "target": null,
+      "methods": [
+        {
+          "kind": "same_pace",
+          "months_used": 3,
+          "used_from": {
+            "year": 2026,
+            "month": 7
+          },
+          "used_to": {
+            "year": 2026,
+            "month": 9
+          },
+          "per_month": {
+            "type": "money",
+            "paisa": 4800000
+          },
+          "step": null,
+          "step_dir": null,
+          "total": {
+            "type": "money",
+            "paisa": 14400000
+          },
+          "target_month": null,
+          "factor": null,
+          "year_total": {
+            "type": "money",
+            "paisa": 40500000
+          },
+          "working": {
+            "title_id": "assistant-working-same-pace",
+            "steps": [
+              {
+                "op": "average",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 4500000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 4800000
+                }
+              },
+              {
+                "op": "times",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "number",
+                    "value": 3
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 14400000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 3600000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 3900000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4200000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4500000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 26100000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 26100000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 14400000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 40500000
+                }
+              }
+            ]
+          }
+        },
+        {
+          "kind": "same_growth",
+          "months_used": 6,
+          "used_from": {
+            "year": 2026,
+            "month": 4
+          },
+          "used_to": {
+            "year": 2026,
+            "month": 9
+          },
+          "per_month": null,
+          "step": {
+            "type": "money",
+            "paisa": 300000
+          },
+          "step_dir": "up",
+          "total": {
+            "type": "money",
+            "paisa": 17100000
+          },
+          "target_month": null,
+          "factor": null,
+          "year_total": {
+            "type": "money",
+            "paisa": 43200000
+          },
+          "working": {
+            "title_id": "assistant-working-same-growth",
+            "steps": [
+              {
+                "op": "difference",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 3600000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 1500000
+                }
+              },
+              {
+                "op": "divided_by",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 1500000
+                  },
+                  {
+                    "type": "number",
+                    "value": 5
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 300000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 5400000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5700000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 6000000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 17100000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 3600000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 3900000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4200000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4500000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 4800000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 5100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 26100000
+                }
+              },
+              {
+                "op": "sum",
+                "inputs": [
+                  {
+                    "type": "money",
+                    "paisa": 26100000
+                  },
+                  {
+                    "type": "money",
+                    "paisa": 17100000
+                  }
+                ],
+                "result": {
+                  "type": "money",
+                  "paisa": 43200000
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "year": {
+        "so_far": {
+          "type": "money",
+          "paisa": 26100000
+        },
+        "months": 6,
+        "from": {
+          "year": 2026,
+          "month": 4
+        },
+        "to": {
+          "year": 2026,
+          "month": 9
+        }
+      }
+    },
+    "advice": false,
+    "general_advice": false,
+    "sources": [],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 3,
+  "limit": 20
+}

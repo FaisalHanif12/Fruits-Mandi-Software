@@ -158,7 +158,14 @@ const WORKING_CLASSES =
   'z-30 flex max-w-reading flex-col gap-1 rounded-2 border border-border bg-surface p-3 text-ink shadow-overlay';
 
 /** The ⓘ of a figure the calculator or the estimator made: its working, with the real numbers. */
-export function WorkingInfo({ working }: { working: AnswerWorking }) {
+export function WorkingInfo({
+  working,
+  note,
+}: {
+  working: AnswerWorking;
+  /** A line after the steps that says what the last step's inputs are (a whole year: the books + the estimate). */
+  note?: string | undefined;
+}) {
   const { l10n } = useLocalization();
   const { language, direction } = useUiLanguage();
   const context = useListContext();
@@ -190,6 +197,7 @@ export function WorkingInfo({ working }: { working: AnswerWorking }) {
           {working.steps.map((step, index) => (
             <StepLine key={`${step.op}-${String(index)}`} step={step} context={context} />
           ))}
+          {note === undefined ? null : <p className="type-body text-ink-muted">{note}</p>}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -203,9 +211,11 @@ interface FigureProps {
   /** True when the figure's two places agree (✓). */
   checked: boolean;
   working: AnswerWorking | null;
+  /** A line under the working's last step, for a figure whose last step adds two named parts. */
+  workingNote?: string | undefined;
 }
 
-export function Figure({ cell, dir, checked, working }: FigureProps) {
+export function Figure({ cell, dir, checked, working, workingNote }: FigureProps) {
   const { l10n } = useLocalization();
   const context = useListContext();
   const { value, side } = figureParts(cell, context);
@@ -224,7 +234,7 @@ export function Figure({ cell, dir, checked, working }: FigureProps) {
           <span className="sr-only">{l10n.getString('assistant-checked')}</span>
         </span>
       ) : null}
-      {working === null ? null : <WorkingInfo working={working} />}
+      {working === null ? null : <WorkingInfo working={working} note={workingNote} />}
     </span>
   );
 }

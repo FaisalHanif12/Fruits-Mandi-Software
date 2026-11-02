@@ -307,6 +307,7 @@
           },
           "target_month": null,
           "factor": null,
+          "year_total": null,
           "working": {
             "title_id": "assistant-working-same-pace",
             "steps": [
@@ -374,6 +375,7 @@
           },
           "target_month": null,
           "factor": null,
+          "year_total": null,
           "working": {
             "title_id": "assistant-working-same-growth",
             "steps": [
@@ -447,7 +449,8 @@
             ]
           }
         }
-      ]
+      ],
+      "year": null
     },
     "advice": false,
     "general_advice": false,

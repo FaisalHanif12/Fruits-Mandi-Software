@@ -61,3 +61,26 @@ pub fn estimate_with(
         Err(error) => Err(ServiceError::reject(error.code())),
     }
 }
+
+/// [`estimate_with`] to the end of the year, with the whole year on every method: the books' months
+/// of this year so far plus the months left (see [`mandi_domain::forecast::estimate_to_year_end`]).
+/// There is no target.
+///
+/// Example (E2E-59, today 10-10-26): 261,000 so far, same pace 144,000 ahead, the whole year
+/// 405,000.
+///
+/// # Errors
+/// As [`estimate`].
+pub fn estimate_to_year_end(
+    history: &[MonthValue],
+    current: YearMonth,
+    what_if: Option<PaceFactor>,
+) -> Result<Forecast, ServiceError> {
+    match forecast::estimate_to_year_end(history, current, what_if) {
+        Ok(found) => Ok(Forecast::Estimate(found)),
+        Err(ForecastError::TooLittleHistory { months }) => Ok(Forecast::TooShort {
+            full_months: months,
+        }),
+        Err(error) => Err(ServiceError::reject(error.code())),
+    }
+}

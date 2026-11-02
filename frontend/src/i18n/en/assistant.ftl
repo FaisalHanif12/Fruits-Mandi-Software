@@ -178,6 +178,16 @@ assistant-estimate-what-if-any = If the pace changes
 # review: pending
 assistant-chart-what-if = If the pace is { $factor }
 # review: pending
+assistant-estimate-year-so-far = So far this year (from your books)
+# review: pending
+assistant-estimate-year-months = <num>{ $count }</num> months of the books, { $from } to { $to }
+# review: pending
+assistant-estimate-year-left = Estimate for the months left
+# review: pending
+assistant-estimate-year-total = Whole year
+# review: pending
+assistant-estimate-year-note = The current month is counted as a whole estimated month; its days so far are not added.
+# review: pending
 assistant-estimate-months = Based on <num>{ $count }</num> months, { $from } to { $to }
 # review: pending
 assistant-estimate-ahead = Months estimated: { $from } to { $to }
@@ -433,6 +443,8 @@ assistant-working-percent-of = Percent
 assistant-working-change-percent = Change in percent
 # review: pending
 assistant-working-same-pace = Same pace: the average of the past months, times the months ahead
+# review: pending
+assistant-working-year-parts = The last line: the months of the books so far + the estimate for the months left
 # review: pending
 assistant-working-what-if-pace = Same pace, changed by the factor
 # review: pending
