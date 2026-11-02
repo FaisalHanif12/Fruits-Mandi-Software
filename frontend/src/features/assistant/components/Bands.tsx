@@ -78,8 +78,9 @@ function MethodView({
   /** A target was asked for: each method says the month it is reached, or that it is not. */
   hasTarget: boolean;
   /**
-   * The estimate runs to the end of the year (PRD FR-7.86, v1.20): the total of the months left is
-   * named so, and the whole year of this method comes after it, with the working of both.
+   * The estimate runs to the end of the year (PRD FR-7.86, v1.20) and the books have months of this year
+   * (asked after January): the whole year leads, with its working, and the total of the months left is
+   * named so. In January there are no months of the books: the year total is the plain total.
    */
   toYearEnd: boolean;
 }) {
@@ -198,7 +199,11 @@ function BooksSoFar({ year }: { year: EstimateYear }) {
         {context.text('assistant-estimate-year-so-far')}
         <Figure cell={year.so_far} dir={null} checked={false} working={null} />
       </p>
-      {year.from === null || year.to === null ? null : (
+      {year.from === null || year.to === null ? null : year.months === 1 ? (
+        <Localized id="assistant-estimate-year-month" vars={{ from: text(year.from) }}>
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      ) : (
         <Localized
           id="assistant-estimate-year-months"
           vars={{ count: String(year.months), from: text(year.from), to: text(year.to) }}
@@ -226,7 +231,9 @@ function EstimateDetails({
   return (
     <>
       {caption === null ? null : <p className="type-body text-ink">{caption}</p>}
-      {estimate.year === null ? null : <BooksSoFar year={estimate.year} />}
+      {estimate.year === null || estimate.year.months === 0 ? null : (
+        <BooksSoFar year={estimate.year} />
+      )}
       {estimate.target === null ? null : (
         <p className="inline-flex items-center gap-2 type-body text-ink">
           {context.text('assistant-estimate-target')}
@@ -255,7 +262,7 @@ function EstimateDetails({
                 key={method.kind}
                 method={method}
                 hasTarget={estimate.target !== null}
-                toYearEnd={estimate.year !== null}
+                toYearEnd={estimate.year !== null && estimate.year.months > 0}
               />
             ))}
           </ul>

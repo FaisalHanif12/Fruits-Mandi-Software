@@ -182,6 +182,8 @@ assistant-estimate-year-so-far = اس سال اب تک (آپ کے کھاتوں �
 # review: pending
 assistant-estimate-year-months = کھاتوں کے <num>{ $count }</num> مہینے، { $from } سے { $to } تک
 # review: pending
+assistant-estimate-year-month = کھاتوں کا ایک مہینہ: { $from }
+# review: pending
 assistant-estimate-year-left = باقی مہینوں کا اندازہ
 # review: pending
 assistant-estimate-year-total = پورا سال

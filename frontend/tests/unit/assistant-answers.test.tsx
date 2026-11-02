@@ -10,7 +10,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnswerEstimate } from '../../src/bindings/AnswerEstimate';
 import type { AskReply } from '../../src/bindings/AskReply';
+import type { EstimateMethod } from '../../src/bindings/EstimateMethod';
 import type { AssistantStep } from '../../src/bindings/AssistantStep';
 import * as assistantApi from '../../src/features/assistant/api';
 import { AnswerBlock } from '../../src/features/assistant/components/AnswerBlock';
@@ -20,6 +22,7 @@ import { PARTNER_CODE_KEY } from '../../src/features/partners';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { press } from '../helpers/app';
+import { paisaForTest } from '../helpers/paisa';
 import * as real from '../helpers/assistant-real';
 import {
   boxOf,
@@ -50,6 +53,9 @@ afterEach(() => {
 });
 
 const QUESTION = 'ikram ke total bakaya kitne hai';
+
+/** A money cell, as the backend sends one. */
+const money = (paisa: number) => ({ type: 'money' as const, paisa: paisaForTest(paisa) });
 
 /** Opens the panel and asks, the way the Owner does, and waits until the answer is on screen. */
 async function ask(language: Language, reply: AskReply, text = QUESTION) {
@@ -345,10 +351,82 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
     if (first === undefined) throw new Error('the whole year has an ⓘ');
     await user.click(first);
     expect(visible(document.body.textContent)).toContain('261,000 + 144,000 = 405,000');
+    // Two closing steps: the books' months added up, then the books plus the months left.
+    expect(visible(document.body.textContent)).toContain(
+      '36,000 + 39,000 + 42,000 + 45,000 + 48,000 + 51,000 = 261,000',
+    );
     // The last step's two parts are named under the steps.
     expect(visible(document.body.textContent)).toContain(
       message(language, 'assistant-working-year-parts'),
     );
+  });
+
+  /** The year-end fixture with another `year` (and each method's year total), as asked in another month. */
+  function yearEndAs(
+    year: AnswerEstimate['year'],
+    yearTotal: (method: EstimateMethod) => EstimateMethod['year_total'],
+  ): AskReply {
+    const base = real.REPLY_ESTIMATE_YEAR_END;
+    const answer = base.answer;
+    const estimate = answer?.estimate ?? null;
+    if (answer === null || estimate === null) throw new Error('the fixture has an estimate');
+    return {
+      ...base,
+      answer: {
+        ...answer,
+        estimate: {
+          ...estimate,
+          year,
+          methods: estimate.methods.map((method) => ({
+            ...method,
+            year_total: yearTotal(method),
+          })),
+        },
+      },
+    };
+  }
+
+  it('asked in January there is no month of the books: the year total is the plain total, with no year lines', async () => {
+    await renderShellRouted();
+    await ask(
+      language,
+      yearEndAs({ so_far: money(0), months: 0, from: null, to: null }, () => null),
+      'saal ke aakhir tak commission',
+    );
+    const band = within(panelOf(language)).getByRole('region', {
+      name: message(language, 'assistant-band-estimate'),
+    });
+    const shown = visible(band.textContent);
+    expect(shown).not.toContain(message(language, 'assistant-estimate-year-so-far'));
+    expect(shown).not.toContain(message(language, 'assistant-estimate-year-total'));
+    expect(shown).not.toContain(message(language, 'assistant-estimate-year-left'));
+    expect(shown).toContain(message(language, 'assistant-estimate-total'));
+    expect(shown).toContain('144,000');
+  });
+
+  it('with one month of the books it says that one month, not "1 months"', async () => {
+    await renderShellRouted();
+    const january = { year: 2026, month: 1 };
+    await ask(
+      language,
+      yearEndAs(
+        { so_far: money(3_600_000), months: 1, from: january, to: january },
+        (method) => method.year_total,
+      ),
+      'saal ke aakhir tak commission',
+    );
+    const shown = visible(
+      within(panelOf(language)).getByRole('region', {
+        name: message(language, 'assistant-band-estimate'),
+      }).textContent,
+    );
+    expect(shown).toContain(
+      message(language, 'assistant-estimate-year-month', {
+        from: `${message(language, 'report-month-1')} 2026`,
+      }),
+    );
+    // The plural line ("6 months of the books, from to") is not used for one month.
+    expect(shown).not.toMatch(/\b1 months\b/);
   });
 
   it('a target says the month each method reaches it', async () => {

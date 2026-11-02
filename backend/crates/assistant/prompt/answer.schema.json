@@ -1,43 +1,133 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "text", "show", "next", "choose", "entry", "nearest"],
+  "required": [
+    "kind",
+    "text",
+    "show",
+    "next",
+    "choose",
+    "entry",
+    "nearest"
+  ],
   "properties": {
     "kind": {
       "type": "string",
-      "enum": ["answer", "estimate", "advice", "which_one", "not_found", "need_dates", "need_party", "outside_books", "change_request", "not_understood"]
+      "enum": [
+        "answer",
+        "estimate",
+        "advice",
+        "general_advice",
+        "which_one",
+        "not_found",
+        "need_dates",
+        "need_party",
+        "outside_books",
+        "change_request",
+        "not_understood"
+      ]
     },
-    "text": {"type": "string"},
+    "text": {
+      "type": "string"
+    },
     "show": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["result", "as", "rows"],
+        "required": [
+          "result",
+          "as",
+          "rows"
+        ],
         "properties": {
-          "result": {"type": "string"},
-          "as": {"type": "string", "enum": ["table", "chart"]},
-          "rows": {"type": ["integer", "null"]}
+          "result": {
+            "type": "string"
+          },
+          "as": {
+            "type": "string",
+            "enum": [
+              "table",
+              "chart"
+            ]
+          },
+          "rows": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
         }
       }
     },
-    "next": {"type": "array", "items": {"type": "string"}},
-    "choose": {"type": ["string", "null"]},
+    "next": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "choose": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "entry": {
       "anyOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["screen", "party"],
+          "required": [
+            "screen",
+            "party"
+          ],
           "properties": {
             "screen": {
               "type": "string",
-              "enum": ["bikri", "wasooli", "adaigi", "peshgi", "kharcha", "udhar_raqam", "alag_khata", "sarmaya", "phal", "general", "account", "dashboard", "settings", "masters", "accounts", "commission_rules", "today_sales", "unsold_stock", "pukhta_khata", "collection_list", "cash_book", "gardens", "market_trips", "partners", "month_close", "day_close", "reports", "dead_amount", "analytics", "backup"]
+              "enum": [
+                "bikri",
+                "wasooli",
+                "adaigi",
+                "peshgi",
+                "kharcha",
+                "udhar_raqam",
+                "alag_khata",
+                "sarmaya",
+                "phal",
+                "general",
+                "account",
+                "dashboard",
+                "settings",
+                "masters",
+                "accounts",
+                "commission_rules",
+                "today_sales",
+                "unsold_stock",
+                "pukhta_khata",
+                "collection_list",
+                "cash_book",
+                "gardens",
+                "market_trips",
+                "partners",
+                "month_close",
+                "day_close",
+                "reports",
+                "dead_amount",
+                "analytics",
+                "backup"
+              ]
             },
-            "party": {"type": ["string", "null"]}
+            "party": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         },
-        {"type": "null"}
+        {
+          "type": "null"
+        }
       ]
     },
     "nearest": {
@@ -45,10 +135,25 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source", "party"],
-          "properties": {"source": {"type": "string"}, "party": {"type": ["string", "null"]}}
+          "required": [
+            "source",
+            "party"
+          ],
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "party": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         },
-        {"type": "null"}
+        {
+          "type": "null"
+        }
       ]
     }
   }

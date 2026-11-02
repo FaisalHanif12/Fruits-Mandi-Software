@@ -182,6 +182,8 @@ assistant-estimate-year-so-far = So far this year (from your books)
 # review: pending
 assistant-estimate-year-months = <num>{ $count }</num> months of the books, { $from } to { $to }
 # review: pending
+assistant-estimate-year-month = One month of the books: { $from }
+# review: pending
 assistant-estimate-year-left = Estimate for the months left
 # review: pending
 assistant-estimate-year-total = Whole year
