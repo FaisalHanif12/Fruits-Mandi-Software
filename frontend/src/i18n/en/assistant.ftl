@@ -164,11 +164,19 @@ assistant-band-advice = Advice: the decision is yours
 # review: pending
 assistant-band-general = General advice
 # review: pending
+assistant-band-general-note = Practical advice for the shop, not from your books
+# review: pending
 assistant-estimate-same-pace = Same pace
 # review: pending
 assistant-estimate-same-growth = Same growth
 # review: pending
 assistant-estimate-same-season = Same season as last year
+# review: pending
+assistant-estimate-what-if = If the pace is <num>{ $factor }</num>
+# review: pending
+assistant-estimate-what-if-any = If the pace changes
+# review: pending
+assistant-chart-what-if = If the pace is { $factor }
 # review: pending
 assistant-estimate-months = Based on <num>{ $count }</num> months, { $from } to { $to }
 # review: pending
@@ -425,6 +433,8 @@ assistant-working-percent-of = Percent
 assistant-working-change-percent = Change in percent
 # review: pending
 assistant-working-same-pace = Same pace: the average of the past months, times the months ahead
+# review: pending
+assistant-working-what-if-pace = Same pace, changed by the factor
 # review: pending
 assistant-working-same-growth = Same growth: the average change each month, added for each month ahead
 # review: pending

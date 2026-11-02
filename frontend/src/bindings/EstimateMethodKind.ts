@@ -3,4 +3,4 @@
 /**
  * How one method of PRD FR-7.86 worked out the months ahead.
  */
-export type EstimateMethodKind = 'same_pace' | 'same_growth' | 'same_season';
+export type EstimateMethodKind = 'same_pace' | 'same_growth' | 'same_season' | 'what_if_pace';

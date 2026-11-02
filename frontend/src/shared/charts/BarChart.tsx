@@ -43,6 +43,16 @@ export function readChartStyle(direction: 'rtl' | 'ltr'): ChartStyle {
   };
 }
 
+/** The swatch of a scenario in the legend: a dashed box in the colour of its bars. */
+const SCENARIO_SWATCH_CLASSES = [
+  'border-chart-1',
+  'border-chart-2',
+  'border-chart-3',
+  'border-chart-4',
+  'border-chart-5',
+  'border-chart-6',
+] as const;
+
 /** The swatch of each series in the legend: the same six colours as the bars, from the tokens. */
 const SWATCH_CLASSES = [
   'bg-chart-1',
@@ -78,7 +88,12 @@ export function BarChart({ data, label }: BarChartProps) {
     const watcher =
       typeof ResizeObserver === 'function'
         ? new ResizeObserver(() => {
-            if (element.clientWidth > 0) chart.resize();
+            // The size is passed on purpose: a chart made with an explicit size keeps it on a plain
+            // `resize()`, so a window made larger (the chat window's large size, a resized window)
+            // would leave the chart at its first width.
+            if (element.clientWidth > 0) {
+              chart.resize({ width: element.clientWidth, height: element.clientHeight });
+            }
           })
         : null;
     watcher?.observe(element);
@@ -101,7 +116,11 @@ export function BarChart({ data, label }: BarChartProps) {
             >
               <span
                 aria-hidden="true"
-                className={`size-icon-sm shrink-0 rounded-1 ${SWATCH_CLASSES[index % SWATCH_CLASSES.length] ?? 'bg-chart-1'}`}
+                className={
+                  series.scenario === true
+                    ? `size-icon-sm shrink-0 rounded-1 border-2 border-dashed ${SCENARIO_SWATCH_CLASSES[index % SCENARIO_SWATCH_CLASSES.length] ?? 'border-chart-1'}`
+                    : `size-icon-sm shrink-0 rounded-1 ${SWATCH_CLASSES[index % SWATCH_CLASSES.length] ?? 'bg-chart-1'}`
+                }
               />
               <bdi dir="auto">{series.name}</bdi>
             </li>

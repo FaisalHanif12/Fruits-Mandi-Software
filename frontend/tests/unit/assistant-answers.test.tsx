@@ -246,6 +246,63 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
     expect(within(panel).getByRole('figure').querySelector('svg')).not.toBeNull();
   });
 
+  it('a what-if has its own title from the factor, beside same pace, and its working shows the percent', async () => {
+    await renderShellRouted();
+    const user = await ask(language, real.REPLY_ESTIMATE_WHAT_IF, 'agar raftar double ho to');
+    const panel = panelOf(language);
+    const band = within(panel).getByRole('region', {
+      name: message(language, 'assistant-band-estimate'),
+    });
+    // Same pace is the baseline and the scenario comes right after it, both under the estimate band.
+    const shown = visible(band.textContent);
+    expect(shown).toContain(message(language, 'assistant-estimate-same-pace'));
+    const title = message(language, 'assistant-estimate-what-if', { factor: '200.00%' });
+    expect(shown).toContain(title);
+    expect(shown.indexOf(title)).toBeGreaterThan(
+      shown.indexOf(message(language, 'assistant-estimate-same-pace')),
+    );
+    // The totals are the backend's: 144,000 (same pace) and 288,000 (the scenario), never worked out here.
+    expect(shown).toContain('144,000');
+    expect(shown).toContain('288,000');
+    expect(band.querySelector('[data-checked]')).toBeNull();
+    // The scenario is a percent figure in the answer's words too, drawn as a number.
+    expect([...panel.querySelectorAll('bdi.number-run')].map((node) => node.textContent)).toContain(
+      '200.00%',
+    );
+    // Its working: the factor is written as a percent with its sign.
+    const infos = within(band).getAllByRole('button', {
+      name: message(language, 'calc-info-label'),
+    });
+    const last = infos.at(-1);
+    if (last === undefined) throw new Error('the scenario total has an ⓘ');
+    await user.click(last);
+    const working = visible(document.body.textContent);
+    expect(working).toContain(message(language, 'assistant-working-what-if-pace'));
+    expect(working).toContain('48,000 × 200.00% = 96,000');
+  });
+
+  it('a what-if is a dashed bar in the chart, named by its factor, beside the other methods', async () => {
+    await renderShellRouted();
+    await ask(language, real.REPLY_ESTIMATE_WHAT_IF, 'agar raftar double ho to');
+    const chart = within(panelOf(language)).getByRole('figure');
+    const legend = chart.querySelector('[data-chart-legend]');
+    expect(legend).not.toBeNull();
+    const names = [...(legend?.querySelectorAll('li') ?? [])].map((item) =>
+      visible(item.textContent),
+    );
+    expect(names).toEqual([
+      message(language, 'assistant-chart-past'),
+      message(language, 'assistant-estimate-same-pace'),
+      message(language, 'assistant-chart-what-if', { factor: '200.00%' }),
+    ]);
+    // Only the scenario has the dashed box in its legend.
+    const dashed = legend?.querySelectorAll('li > span.border-dashed') ?? [];
+    expect(dashed).toHaveLength(1);
+    expect(visible(dashed[0]?.parentElement?.textContent ?? '')).toBe(
+      message(language, 'assistant-chart-what-if', { factor: '200.00%' }),
+    );
+  });
+
   it('a target says the month each method reaches it', async () => {
     await renderShellRouted();
     await ask(language, real.REPLY_ESTIMATE_TARGET, '3 lakh ka target');
@@ -279,6 +336,29 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
 describe.each(LANGUAGES)('general advice (%s)', (language) => {
   beforeEach(() => {
     setLanguage(language);
+  });
+
+  it('a general advice answer shows its own band with the note, never the advice band, and no figure', async () => {
+    await renderShellRouted();
+    await ask(language, real.REPLY_GENERAL_ADVICE, 'sale kaise barhayen');
+    const panel = panelOf(language);
+    const band = panel.querySelector('[data-band="general-advice"]');
+    expect(band).not.toBeNull();
+    expect(visible(band?.textContent ?? '')).toContain(message(language, 'assistant-band-general'));
+    expect(visible(band?.textContent ?? '')).toContain(
+      message(language, 'assistant-band-general-note'),
+    );
+    const shown = text(language);
+    expect(shown).not.toContain(message(language, 'assistant-band-advice'));
+    // The band stands above the words, and the words come as they are: no figure, table, chart or source.
+    expect(shown.indexOf(message(language, 'assistant-band-general'))).toBeLessThan(
+      shown.indexOf('•'),
+    );
+    // The words of the answer carry no number (the count of the day, in the header, is not the answer's).
+    const answer = within(panel).getByLabelText(message(language, 'assistant-answer-label'));
+    expect(answer.querySelectorAll('bdi.number-run')).toHaveLength(0);
+    expect(within(panel).queryAllByRole('table')).toHaveLength(0);
+    expect(panel.querySelector('[data-checked]')).toBeNull();
   });
 
   it('has its own calm band instead of the advice band; advice alone keeps the advice band', () => {

@@ -876,6 +876,7 @@ fn estimates(o: &mut Oracle, y: &Year) {
             Method::SamePace => "same_pace",
             Method::SameGrowth => "same_growth",
             Method::SameSeason => "same_season",
+            Method::WhatIfPace => "what_if_pace",
         };
         for ahead in [1u32, 2, 3, 6, 12] {
             let Ok(Forecast::Estimate(e)) = forecast::estimate(&history, current, ahead, None)
@@ -900,6 +901,12 @@ fn estimates(o: &mut Oracle, y: &Year) {
                         o.put(
                             format!("est.{measure}.a{ahead}.double_pace"),
                             doubled.to_string(),
+                        );
+                        // Tripled: exact in whole rupees, like doubled (half and a percent are not).
+                        let tripled = per.rupees() * 3 * i64::from(ahead);
+                        o.put(
+                            format!("est.{measure}.a{ahead}.triple_pace"),
+                            tripled.to_string(),
                         );
                     }
                 }
@@ -1003,6 +1010,7 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
                         Method::SamePace => "same_pace",
                         Method::SameGrowth => "same_growth",
                         Method::SameSeason => "same_season",
+                        Method::WhatIfPace => "what_if_pace",
                     };
                     o.put(
                         format!("est_item.{name}.commission.a{ahead}.{word}"),

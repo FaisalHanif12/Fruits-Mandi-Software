@@ -195,7 +195,24 @@ fn list_matches(
     Ok((matches, more))
 }
 
-/// Partners are few (at most 10): the typed word is matched against both names.
+/// The words of a name as normalised keys, in both scripts: each word, and the whole name.
+fn name_words(name_ur: &str, name_en: &str) -> Vec<String> {
+    let (ur, en) = (text::search_ur(name_ur), text::search_en(name_en));
+    let mut out: Vec<String> = ur
+        .split(' ')
+        .chain(en.split(' '))
+        .map(str::to_owned)
+        .collect();
+    out.push(ur);
+    out.push(en);
+    out.retain(|w| !w.is_empty());
+    out
+}
+
+/// Partners are few (at most 10). The typed word is matched against both names in two tiers: a
+/// partner whose name, or one word of it, IS the typed word comes first and alone ("A" is Partner
+/// A, "alif" is الف); only when none is, a partner whose name merely contains it (plan 52 item 3).
+/// Without the tiers "a" would match every "Partner".
 fn partner_matches(env: &Env<'_>, query: &str) -> Result<(Vec<Node>, bool), Stop> {
     if env.partner_locked {
         return Err(Stop::Locked);
@@ -203,11 +220,20 @@ fn partner_matches(env: &Env<'_>, query: &str) -> Result<(Vec<Node>, bool), Stop
     let rows = partners::list(env.ctx).map_err(service_stop)?;
     let ur = text::search_ur(query);
     let en = text::search_en(query);
-    let hit = |row: &mandi_services::core::partners::PartnerRow| {
+    let typed = [ur.as_str(), en.as_str()];
+    let is_word = |row: &mandi_services::core::partners::PartnerRow| {
+        name_words(&row.name_ur, &row.name_en)
+            .iter()
+            .any(|w| typed.iter().any(|t| !t.is_empty() && w == t))
+    };
+    let contains = |row: &mandi_services::core::partners::PartnerRow| {
         (!ur.is_empty() && text::search_ur(&row.name_ur).contains(&ur))
             || (!en.is_empty() && text::search_en(&row.name_en).contains(&en))
     };
-    let found: Vec<_> = rows.iter().filter(|row| hit(row)).collect();
+    let mut found: Vec<_> = rows.iter().filter(|row| is_word(row)).collect();
+    if found.is_empty() {
+        found = rows.iter().filter(|row| contains(row)).collect();
+    }
     let more = found.len() > MAX_OPTIONS;
     let matches = found
         .into_iter()
@@ -231,18 +257,24 @@ fn partner_matches(env: &Env<'_>, query: &str) -> Result<(Vec<Node>, bool), Stop
     Ok((matches, more))
 }
 
-/// The tool.
-pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
-    let parsed: Input = input(args)?;
-    let query = parsed.text.trim();
-    if query.is_empty() {
-        return Err(ToolError::new("ERR_REQUIRED", "text", "nothing to find").into());
-    }
-    let role = parsed.role;
-    let (matches, more) = match role {
+/// The matches of one word in one role.
+fn matches_for(env: &Env<'_>, role: Role, query: &str) -> Result<(Vec<Node>, bool), Stop> {
+    Ok(match role {
         Role::Buyer => account_matches(env, role, AccountScope::Buyer, None, query)?,
         Role::Seller => account_matches(env, role, AccountScope::Seller, None, query)?,
-        Role::AnyParty | Role::Pukhta | Role::MoneyLent => {
+        // A buyer or a seller: both lists are asked for, so income, expense and other accounts
+        // cannot fill the 50 hits of one search before the type is filtered (money review F6b).
+        Role::AnyParty => {
+            let (mut buyers, buyers_more) =
+                account_matches(env, role, AccountScope::Buyer, None, query)?;
+            let (sellers, sellers_more) =
+                account_matches(env, role, AccountScope::Seller, None, query)?;
+            buyers.extend(sellers);
+            let more = buyers_more || sellers_more || buyers.len() > MAX_OPTIONS;
+            buyers.truncate(MAX_OPTIONS);
+            (buyers, more)
+        }
+        Role::Pukhta | Role::MoneyLent => {
             account_matches(env, role, AccountScope::Any, None, query)?
         }
         Role::SeparateKhata => {
@@ -262,12 +294,89 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
             };
             list_matches(env, scope, prefix, query)?
         }
+    })
+}
+
+/// True when the Urdu name of a match has `wanted` (a normalised Urdu spelling) as a word or as its
+/// start.
+fn names_start_with(found: &Node, wanted: &str) -> bool {
+    let Some(Node::Val(Val::Name(name))) = found.get(&["name"]) else {
+        return false;
     };
-    let node = Node::obj(vec![
+    let ur = text::search_ur(&name.name_ur);
+    !wanted.is_empty() && (ur.starts_with(wanted) || ur.split(' ').any(|w| w.starts_with(wanted)))
+}
+
+/// True when the word is typed in English letters, with at least one letter.
+fn is_roman(query: &str) -> bool {
+    query.chars().any(|c| c.is_ascii_alphabetic())
+        && !query
+            .chars()
+            .any(mandi_services::domain::core::text::is_urdu_letter)
+}
+
+/// The tool.
+pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
+    let parsed: Input = input(args)?;
+    let query = parsed.text.trim();
+    if query.is_empty() {
+        return Err(ToolError::new("ERR_REQUIRED", "text", "nothing to find").into());
+    }
+    let role = parsed.role;
+    let (mut matches, mut more) = matches_for(env, role, query)?;
+    // Nothing found for a word in English letters: a Roman Urdu spelling of an Urdu name ("kela",
+    // "saib", "alif") is tried in Urdu letters, by the same word list and learned pairs as the
+    // typing help (plan 52 item 3). Raw hits always win; this is only for an empty answer.
+    let mut via: Option<(&'static str, String)> = None;
+    if matches.is_empty() && is_roman(query) {
+        let suggestions = mandi_services::translit::suggest(
+            env.ctx,
+            query,
+            mandi_services::core::translit::Direction::ToUrdu,
+        )
+        .unwrap_or_default();
+        for suggestion in suggestions {
+            let (found, found_more) = matches_for(env, role, &suggestion.text)?;
+            // Only a record whose Urdu name has the spelling as a word or a start: the search
+            // also returns near spellings ("کریم" finds اکرم), which are not what was typed.
+            let wanted = text::search_ur(&suggestion.text);
+            let found: Vec<Node> = found
+                .into_iter()
+                .filter(|m| names_start_with(m, &wanted))
+                .collect();
+            if !found.is_empty() {
+                matches = found;
+                more = found_more;
+                via = Some((suggestion.source.as_str(), suggestion.text));
+                break;
+            }
+        }
+    }
+    let mut fields = vec![
         ("text", Node::Str(query.to_owned())),
         ("role", Node::Str(role.word().to_owned())),
         ("matches", Node::List(matches)),
         ("more", Node::Bool(more)),
-    ]);
-    Ok(Draft::new("find", args.clone(), node))
+    ];
+    if let Some((source, _)) = &via {
+        fields.push(("via", Node::Str((*source).to_owned())));
+        if *source == "rules" {
+            fields.push((
+                "note",
+                Node::Str(
+                    "found through the spelling rules only, not the word list: check that this \
+                     is the one asked for"
+                        .to_owned(),
+                ),
+            ));
+        } else {
+            fields.push((
+                "note",
+                Node::Str(
+                    "the word was not found as typed; it was found as its Urdu spelling".to_owned(),
+                ),
+            ));
+        }
+    }
+    Ok(Draft::new("find", args.clone(), Node::obj(fields)))
 }

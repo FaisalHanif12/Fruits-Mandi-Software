@@ -28,6 +28,9 @@ pub enum AnswerKind {
     Estimate,
     /// A recommendation.
     Advice,
+    /// General advice for the shop, marked "عام مشورہ": practical, names no figure, and takes one
+    /// model call. For a question the books cannot answer, or a general one (PRD FR-7.88, v1.19).
+    GeneralAdvice,
     /// Several names fit: the Owner picks (`choose`).
     WhichOne,
     /// No name fits (`choose`).
@@ -47,7 +50,10 @@ pub enum AnswerKind {
 impl AnswerKind {
     /// True for the kinds whose `text` is written by the model (the others have the app's words).
     pub fn has_text(self) -> bool {
-        matches!(self, Self::Answer | Self::Estimate | Self::Advice)
+        matches!(
+            self,
+            Self::Answer | Self::Estimate | Self::Advice | Self::GeneralAdvice
+        )
     }
 }
 

@@ -649,6 +649,15 @@ const C = [
     ],
   },
   {
+    g: 'F15', section: 'forecast', kind: 'whatif', world: 'year', outcome: 'estimate', tools: 'estimate', filters: 'measure=commission_all;pace x3;until=year end',
+    figures: 'triple=@est.commission.a2.triple_pace',
+    source: 'plan 52 item 5: tripled pace; exact in whole rupees',
+    q: [
+      r('agar raftar teen guna ho jaye to saal ke aakhir tak commission kitna hoga'),
+      e('if the pace triples how much commission by the end of the year'),
+    ],
+  },
+  {
     g: 'F04', section: 'forecast', kind: 'estimates', world: 'year', outcome: 'estimate', tools: 'estimate', filters: 'measure=commission_all;ahead=3',
     figures: 'pace=@est.commission.a3.same_pace;growth=@est.commission.a3.same_growth',
     q: [

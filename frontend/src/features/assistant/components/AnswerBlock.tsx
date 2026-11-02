@@ -56,7 +56,14 @@ export function AnswerBlock({
         <AnswerTableView key={table.result_id} table={table} />
       ))}
       {answer.charts.map((chart) => (
-        <AnswerChartView key={chart.result_id} chart={chart} />
+        <AnswerChartView
+          key={chart.result_id}
+          chart={chart}
+          whatIfFactor={
+            answer.estimate?.methods.find((method) => method.kind === 'what_if_pace')?.factor ??
+            null
+          }
+        />
       ))}
       {answer.estimate !== null ||
       outcome === 'estimate' ||

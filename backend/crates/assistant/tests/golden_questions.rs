@@ -988,6 +988,7 @@ fn p2_the_tile_keys_of_the_prompt_are_the_tiles_of_the_tool_both_ways() {
         today: mandi_services::core::dates::BusinessDate::parse_iso("2026-10-10").unwrap(),
         partner_locked: false,
         numbers: &[],
+        question: "",
         backup: BackupFacts {
             cloud_on: false,
             cloud_age_hours: None,

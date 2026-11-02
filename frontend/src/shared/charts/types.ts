@@ -6,10 +6,20 @@
 export interface BarSeries {
   /** The words of the legend, already in the app language. */
   name: string;
-  /** The height of the bar of each category, for the drawing only. */
-  values: readonly number[];
+  /** The height of the bar of each category, for the drawing only. `null` is no bar at all. */
+  values: readonly (number | null)[];
   /** The figure written above (or in the tooltip of) each bar, from `formatPaisa` or the backend. */
   labels: readonly string[];
+  /**
+   * The stack this series belongs to when the chart is stacked. Series with the same name are one stack;
+   * series with different names stand side by side. Default: one stack for all (`stacked`).
+   */
+  stack?: string | undefined;
+  /**
+   * A scenario, not a result: drawn as an empty bar with a dashed outline, and in the legend as a
+   * dashed box, so it is never taken for a figure of the books. Default: false.
+   */
+  scenario?: boolean | undefined;
 }
 
 export interface BarChartData {

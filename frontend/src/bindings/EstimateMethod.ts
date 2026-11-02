@@ -47,6 +47,11 @@ export type EstimateMethod = {
    */
   target_month: AnswerMonth | null;
   /**
+   * A what-if: the factor the pace was scaled by, as a percent cell (200.00% for double). Null
+   * for the other methods.
+   */
+  factor: ReportCell | null;
+  /**
    * The working, with ⓘ.
    */
   working: AnswerWorking;

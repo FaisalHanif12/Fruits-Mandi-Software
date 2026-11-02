@@ -18,8 +18,20 @@ import { cellText, monthText } from '../../reports';
 /** More months than this and the figures are not written on the bars (the tooltip still has them). */
 const DENSE_FROM_MONTHS = 8;
 
-/** The name of a line in the legend. */
-function seriesMessageId(kind: ChartSeriesKind): string {
+/**
+ * The name of a line in the legend. A what-if says its factor ("if the pace is 200.00%"), which the
+ * estimate band carries; the chart's own series has only the kind.
+ */
+function seriesName(kind: ChartSeriesKind, whatIfFactor: ReportCell | null, context: ListContext) {
+  if (kind === 'what_if_pace') {
+    return whatIfFactor === null
+      ? context.text('assistant-estimate-what-if-any')
+      : context.text('assistant-chart-what-if', { factor: cellText(whatIfFactor, context) });
+  }
+  return context.text(seriesMessageId(kind));
+}
+
+function seriesMessageId(kind: Exclude<ChartSeriesKind, 'what_if_pace'>): string {
   switch (kind) {
     case 'actual':
       return 'assistant-chart-past';
@@ -32,8 +44,8 @@ function seriesMessageId(kind: ChartSeriesKind): string {
   }
 }
 
-/** The height of a bar, for the drawing only; a month with no value has no bar. */
-function heightOf(cell: ReportCell): number {
+/** The height of a bar, for the drawing only; a month with no value has no bar (null, not a flat bar). */
+function heightOf(cell: ReportCell): number | null {
   switch (cell.type) {
     case 'money':
     case 'balance':
@@ -41,24 +53,38 @@ function heightOf(cell: ReportCell): number {
     case 'number':
       return cell.value;
     default:
-      return 0;
+      return null;
   }
 }
 
-function dataOf(chart: AnswerChart, context: ListContext): BarChartData {
+function dataOf(
+  chart: AnswerChart,
+  context: ListContext,
+  whatIfFactor: ReportCell | null,
+): BarChartData {
   return {
     categories: chart.months.map((month) => monthText(context.text, month.year, month.month)),
     series: chart.series.map((series) => ({
-      name: context.text(seriesMessageId(series.kind)),
+      name: seriesName(series.kind, whatIfFactor, context),
       values: series.values.map(heightOf),
       labels: series.values.map((cell) => cellText(cell, context)),
+      // The methods of an estimate are alternatives for the same months, so each stands in its own stack
+      // beside the others, never on top of them (their heights would add up to a figure nobody asked for).
+      stack: series.kind === 'actual' ? 'past' : series.kind,
+      scenario: series.kind === 'what_if_pace',
     })),
     stacked: chart.is_estimate,
     dense: chart.months.length > DENSE_FROM_MONTHS,
   };
 }
 
-export function AnswerChartView({ chart }: { chart: AnswerChart }) {
+interface AnswerChartViewProps {
+  chart: AnswerChart;
+  /** The factor of the what-if method of the answer's estimate, for the legend. Null when there is none. */
+  whatIfFactor?: ReportCell | null;
+}
+
+export function AnswerChartView({ chart, whatIfFactor = null }: AnswerChartViewProps) {
   const { l10n } = useLocalization();
   const context = useListContext();
   // A measure this build has no words for shows the plain caption, never the raw id.
@@ -69,7 +95,7 @@ export function AnswerChartView({ chart }: { chart: AnswerChart }) {
   return (
     <figure className="flex flex-col gap-2 rounded-3 border border-border bg-surface p-3">
       <figcaption className="type-label text-ink">{caption}</figcaption>
-      <BarChart data={dataOf(chart, context)} label={caption} />
+      <BarChart data={dataOf(chart, context, whatIfFactor)} label={caption} />
     </figure>
   );
 }

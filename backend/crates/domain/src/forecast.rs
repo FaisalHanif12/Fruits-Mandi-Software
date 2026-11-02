@@ -11,6 +11,12 @@
 //! | Same growth | 6 full months | `max(0, last + k × change)`, change = `|last − first| ÷ 5` over the last 6, with the sign of `last − first` |
 //! | Same season | 12 full months | the same month of last year, as stored |
 //!
+//! A what-if (plan 52, Umar 02-11-2026) is a fourth line, worked only when same pace is: the same
+//! pace figure scaled by a factor the Owner named in his question ("if the pace doubles"): the
+//! scaled pace is `round_to_rupee(pace × factor)`, once, through `apply_bps`, and its total is
+//! that times the months, so the shown figures always agree. "Until the end of this year" is the
+//! months from the current month to December (`months_to_year_end`).
+//!
 //! The total of same pace is the per-month figure times the months, so the shown figures always
 //! agree. The total of the other two is the sum of their months. With a target, the target month
 //! is the first month ahead whose running total reaches the target (at least the target).
@@ -43,10 +49,10 @@
 //! ```
 
 use mandi_core::error::ErrorCode;
-use mandi_core::money::{MoneyError, Paisa};
+use mandi_core::money::{Bps, MAX_RUPEES, MoneyError, Paisa, apply_bps};
 use thiserror::Error;
 
-use crate::figures::{CalcOp, Dir, FigureError, Step, Value, calculate, divided_by, times};
+use crate::figures::{CalcOp, Dir, FigureError, Op, Step, Value, calculate, divided_by, times};
 
 /// Most months ahead an estimate looks (PRD FR-7.86).
 pub const MAX_MONTHS_AHEAD: u32 = 12;
@@ -60,6 +66,63 @@ pub const SEASON_MONTHS: usize = 12;
 const MAX_HISTORY: usize = 1_200;
 /// The steps between the first and the last of the growth months.
 const GROWTH_STEPS: i64 = 5;
+/// 100% in bps.
+const ONE: i32 = 10_000;
+/// The biggest what-if factor, in bps of 100%: 10 times the pace.
+pub const MAX_FACTOR_BPS: i32 = 100_000;
+
+/// The factor of a what-if on the pace, in bps of 100% (20,000 is 200%, "the pace doubles").
+/// From 1 to [`MAX_FACTOR_BPS`], never 10,000 (the same pace again).
+///
+/// ```
+/// use mandi_domain::forecast::PaceFactor;
+/// assert_eq!(PaceFactor::DOUBLE.bps(), 20_000);
+/// assert_eq!(PaceFactor::up(1_000).unwrap().bps(), 11_000); // up 10%
+/// assert_eq!(PaceFactor::down(2_500).unwrap().bps(), 7_500); // down 25%
+/// assert!(PaceFactor::down(10_000).is_err()); // down 100% is nothing
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PaceFactor(i32);
+
+impl PaceFactor {
+    /// The pace doubles.
+    pub const DOUBLE: PaceFactor = PaceFactor(20_000);
+    /// The pace halves.
+    pub const HALF: PaceFactor = PaceFactor(5_000);
+    /// The pace triples.
+    pub const TRIPLE: PaceFactor = PaceFactor(30_000);
+
+    /// The pace goes up by `bps` of itself (1,000 is up 10%): 1 to 90,000.
+    ///
+    /// # Errors
+    /// `FactorOutOfRange`.
+    pub fn up(bps: i32) -> Result<PaceFactor, ForecastError> {
+        if !(1..=MAX_FACTOR_BPS.saturating_sub(ONE)).contains(&bps) {
+            return Err(ForecastError::FactorOutOfRange);
+        }
+        ONE.checked_add(bps)
+            .map(PaceFactor)
+            .ok_or(ForecastError::FactorOutOfRange)
+    }
+
+    /// The pace goes down by `bps` of itself (2,500 is down 25%): 1 to 9,999.
+    ///
+    /// # Errors
+    /// `FactorOutOfRange`.
+    pub fn down(bps: i32) -> Result<PaceFactor, ForecastError> {
+        if !(1..ONE).contains(&bps) {
+            return Err(ForecastError::FactorOutOfRange);
+        }
+        ONE.checked_sub(bps)
+            .map(PaceFactor)
+            .ok_or(ForecastError::FactorOutOfRange)
+    }
+
+    /// The factor in bps of 100%, for example 20,000 for double.
+    pub fn bps(self) -> i32 {
+        self.0
+    }
+}
 
 /// A calendar month.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -118,6 +181,8 @@ pub enum Method {
     SameGrowth,
     /// پچھلے سال جیسا.
     SameSeason,
+    /// A what-if: the same pace scaled by the factor of the question ("if the pace doubles").
+    WhatIfPace,
 }
 
 /// The months ahead by one method, with its working.
@@ -144,6 +209,8 @@ pub struct MethodEstimate {
     pub target_month: Option<YearMonth>,
     /// The working, built by the same code that worked the figures out.
     pub steps: Vec<Step>,
+    /// A what-if: the factor the pace was scaled by.
+    pub factor: Option<PaceFactor>,
 }
 
 /// An estimate: every method that could be worked out.
@@ -180,6 +247,12 @@ pub enum ForecastError {
     /// The history is not consecutive months ending the month before the current one.
     #[error("the history is not the full months before the current month")]
     HistoryNotConsecutive,
+    /// A what-if factor outside 1 to 100,000 bps, or 10,000 (the same pace again).
+    #[error("the factor must be from 0.01% to 1,000%, and not 100%")]
+    FactorOutOfRange,
+    /// A what-if on a pace below 0 (a loss): up or down of a loss would be a guess.
+    #[error("a what-if needs a pace of 0 or more")]
+    NegativePace,
     /// A calculation failed.
     #[error(transparent)]
     Figure(#[from] FigureError),
@@ -192,7 +265,9 @@ impl ForecastError {
             ForecastError::TooLittleHistory { .. } => ErrorCode::ErrTooLittleHistory,
             ForecastError::AheadOutOfRange
             | ForecastError::TargetNotPositive
-            | ForecastError::HistoryNotConsecutive => ErrorCode::ErrOutOfRange,
+            | ForecastError::HistoryNotConsecutive
+            | ForecastError::FactorOutOfRange
+            | ForecastError::NegativePace => ErrorCode::ErrOutOfRange,
             ForecastError::Figure(error) => error.code(),
         }
     }
@@ -218,6 +293,22 @@ pub fn estimate(
     ahead: u32,
     target: Option<Paisa>,
 ) -> Result<Estimate, ForecastError> {
+    estimate_with(history, current, ahead, target, None)
+}
+
+/// [`estimate`], and with `what_if` a fourth line right after same pace: the same pace scaled by
+/// the factor, worked from the same-pace figure and never from the history a second time. A
+/// what-if on a pace below 0 is refused.
+///
+/// # Errors
+/// See [`ForecastError`].
+pub fn estimate_with(
+    history: &[MonthValue],
+    current: YearMonth,
+    ahead: u32,
+    target: Option<Paisa>,
+    what_if: Option<PaceFactor>,
+) -> Result<Estimate, ForecastError> {
     if ahead == 0 || ahead > MAX_MONTHS_AHEAD {
         return Err(ForecastError::AheadOutOfRange);
     }
@@ -241,7 +332,14 @@ pub fn estimate(
         ahead,
         target,
     };
-    let mut methods = vec![same_pace(&ctx)?];
+    let pace = same_pace(&ctx)?;
+    let mut methods = vec![];
+    if let Some(factor) = what_if {
+        methods.push(pace.clone());
+        methods.push(what_if_pace(&ctx, &pace, factor)?);
+    } else {
+        methods.push(pace);
+    }
     if n >= GROWTH_MONTHS {
         methods.push(same_growth(&ctx)?);
     }
@@ -255,6 +353,38 @@ pub fn estimate(
         full_months,
         methods,
     })
+}
+
+/// The months from `current` to `last`, both counted: October to December is 3 (the current month
+/// is the first month ahead, as in E2E-59).
+///
+/// # Errors
+/// `AheadOutOfRange` when `last` is before `current` or more than 12 months are counted.
+pub fn months_through(current: YearMonth, last: YearMonth) -> Result<u32, ForecastError> {
+    let index = |m: YearMonth| {
+        i64::from(m.year)
+            .checked_mul(12)
+            .and_then(|y| y.checked_add(i64::from(m.month)))
+    };
+    let count = index(last)
+        .zip(index(current))
+        .and_then(|(l, c)| l.checked_sub(c))
+        .and_then(|d| d.checked_add(1))
+        .ok_or(ForecastError::AheadOutOfRange)?;
+    u32::try_from(count)
+        .ok()
+        .filter(|c| (1..=MAX_MONTHS_AHEAD).contains(c))
+        .ok_or(ForecastError::AheadOutOfRange)
+}
+
+/// The months left in the year of `current`, the current month counted: October gives 3, December
+/// gives 1, January gives 12.
+///
+/// # Errors
+/// `AheadOutOfRange` for a year that has no December.
+pub fn months_to_year_end(current: YearMonth) -> Result<u32, ForecastError> {
+    let december = YearMonth::new(current.year, 12).ok_or(ForecastError::AheadOutOfRange)?;
+    months_through(current, december)
 }
 
 struct Context<'a> {
@@ -369,6 +499,7 @@ fn finish(ctx: &Context<'_>, parts: Parts<'_>) -> Result<MethodEstimate, Forecas
         months,
         total,
         steps,
+        factor: None,
     })
 }
 
@@ -415,6 +546,80 @@ fn same_pace(ctx: &Context<'_>) -> Result<MethodEstimate, ForecastError> {
             step: None,
         },
     )
+}
+
+/// The pace scaled by a factor: `round_half_up(pace × factor ÷ 10,000)`, rounded once.
+///
+/// `Bps` holds only 0 to 10,000, so the factor is split: `factor = whole × 10,000 + rest`, and
+/// the result is `pace × whole` (exact) plus `apply_bps(pace, rest)` (the one rounding, half up,
+/// by the shared function). Whole rupees added to a half-up rounded figure give the same result as
+/// rounding the whole product, so double and triple are exact and 48,333 down 50% is 24,167.
+/// The step is `pace × factor%` with the rounded result, so the Owner can check it.
+fn scale_pace(per_month: Paisa, factor: PaceFactor) -> Result<Step, ForecastError> {
+    if per_month < Paisa::ZERO {
+        return Err(ForecastError::NegativePace);
+    }
+    let f = i64::from(factor.0);
+    let whole = f.checked_div(i64::from(ONE)).ok_or(FigureError::Overflow)?;
+    let rest = f.checked_rem(i64::from(ONE)).ok_or(FigureError::Overflow)?;
+    let rest = i32::try_from(rest).map_err(|_| FigureError::Overflow)?;
+    let exact = per_month
+        .as_paisa()
+        .checked_mul(whole)
+        .ok_or(FigureError::Overflow)?;
+    let fraction = apply_bps(per_month, Bps::new(rest)?)?;
+    let scaled = exact
+        .checked_add(fraction.as_paisa())
+        .ok_or(FigureError::Overflow)?;
+    let scaled = Paisa::try_from_paisa(scaled)?;
+    // A scaled month above the largest allowed amount is refused. A total (the month times at most
+    // 12 months) still fits a 64-bit figure and a safe JavaScript integer, as same pace always did.
+    let largest = Paisa::from_rupees(MAX_RUPEES)?;
+    if scaled > largest {
+        return Err(FigureError::Overflow.into());
+    }
+    Ok(Step {
+        op: Op::Times,
+        inputs: vec![Value::Money(per_month), Value::Percent(f)],
+        result: Value::Money(scaled),
+    })
+}
+
+/// The what-if line: the same-pace figure scaled by `factor`, for each month ahead.
+fn what_if_pace(
+    ctx: &Context<'_>,
+    pace: &MethodEstimate,
+    factor: PaceFactor,
+) -> Result<MethodEstimate, ForecastError> {
+    let per_month = pace.per_month.ok_or(ForecastError::HistoryNotConsecutive)?;
+    let used = tail(ctx, PACE_MONTHS)?;
+    let scale = scale_pace(per_month, factor)?;
+    let scaled = result_money(scale.result)?;
+    let multiplied = times(scaled, i64::from(ctx.ahead))?;
+    let total = result_money(multiplied.result)?;
+    // The average step of same pace, then the scaling, then the months.
+    let mut steps: Vec<Step> = pace
+        .steps
+        .iter()
+        .take(pace.steps.len().saturating_sub(1))
+        .cloned()
+        .collect();
+    steps.push(scale);
+    steps.push(multiplied);
+    let mut found = finish(
+        ctx,
+        Parts {
+            method: Method::WhatIfPace,
+            used,
+            months: vec![scaled; ahead_count(ctx)],
+            steps,
+            total: Some(total),
+            per_month: Some(scaled),
+            step: None,
+        },
+    )?;
+    found.factor = Some(factor);
+    Ok(found)
 }
 
 fn same_growth(ctx: &Context<'_>) -> Result<MethodEstimate, ForecastError> {

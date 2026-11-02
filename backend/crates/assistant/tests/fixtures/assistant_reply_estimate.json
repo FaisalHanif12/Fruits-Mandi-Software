@@ -306,6 +306,7 @@
             "paisa": 28800000
           },
           "target_month": null,
+          "factor": null,
           "working": {
             "title_id": "assistant-working-same-pace",
             "steps": [
@@ -372,6 +373,7 @@
             "paisa": 36900000
           },
           "target_month": null,
+          "factor": null,
           "working": {
             "title_id": "assistant-working-same-growth",
             "steps": [
@@ -448,6 +450,7 @@
       ]
     },
     "advice": false,
+    "general_advice": false,
     "sources": [],
     "differences": [],
     "next": [],

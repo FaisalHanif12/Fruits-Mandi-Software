@@ -89,6 +89,7 @@ fn working_of(result: &ToolResult, path: &str) -> Option<crate::answer::AnswerWo
             "same_pace" => crate::answer::EstimateMethodKind::SamePace,
             "same_growth" => crate::answer::EstimateMethodKind::SameGrowth,
             "same_season" => crate::answer::EstimateMethodKind::SameSeason,
+            "what_if_pace" => crate::answer::EstimateMethodKind::WhatIfPace,
             _ => return None,
         };
         return estimate
@@ -310,7 +311,12 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
         tables,
         charts,
         estimate,
-        advice: answer.kind == crate::model_answer::AnswerKind::Advice,
+        advice: matches!(
+            answer.kind,
+            crate::model_answer::AnswerKind::Advice
+                | crate::model_answer::AnswerKind::GeneralAdvice
+        ),
+        general_advice: answer.kind == crate::model_answer::AnswerKind::GeneralAdvice,
         sources: sources_of(state),
         differences: Vec::new(),
         next: answer
@@ -342,6 +348,7 @@ pub fn plain_tables(state: &State, read_at: &str) -> Answer {
         charts: Vec::new(),
         estimate: None,
         advice: false,
+        general_advice: false,
         sources: sources_of(state),
         differences: Vec::new(),
         next: Vec::new(),
@@ -444,6 +451,7 @@ pub fn differ_answer(env: &Env<'_>, state: &State, paths: &[String], read_at: &s
         charts: Vec::new(),
         estimate: None,
         advice: false,
+        general_advice: false,
         sources: sources_of(state),
         differences: differences(env, state, paths),
         next: Vec::new(),

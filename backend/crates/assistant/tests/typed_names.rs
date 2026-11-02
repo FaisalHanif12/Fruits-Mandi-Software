@@ -116,14 +116,11 @@ fn a_typed_name_with_no_match_is_refused_and_the_question_ends_as_not_found() {
             final_reply("not_found", "", &json!("f1")),
         ],
     );
+    // The app ends the question itself (plan 52 item 8): no second model call.
     assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
-    assert_eq!(requests.len(), 2);
-    let message = &tool_messages(&requests[1])[0];
-    assert!(message.contains("ERR_UNKNOWN_REFERENCE"), "{message}");
-    assert!(
-        message.contains("matches no record") && message.contains("f1"),
-        "{message}"
-    );
+    assert_eq!(requests.len(), 1);
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    assert!(rows[0].tool_calls_json.contains("ERR_UNKNOWN_REFERENCE"));
 }
 
 #[test]
@@ -145,8 +142,7 @@ fn a_typed_name_with_several_matches_is_refused_and_the_owner_is_asked_which() {
     );
     assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
     assert!(reply.options.len() >= 2, "{:?}", reply.options);
-    let message = &tool_messages(&requests[1])[0];
-    assert!(message.contains("matches several records"), "{message}");
+    assert_eq!(requests.len(), 1, "no model call is spent on the choice");
 }
 
 #[test]
@@ -236,8 +232,7 @@ fn a_name_that_only_a_close_spelling_found_is_not_taken_without_the_owner() {
     );
     assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
     assert_eq!(reply.options.len(), 1);
-    let message = &tool_messages(&requests[1])[0];
-    assert!(message.contains("only close to one record"), "{message}");
+    assert_eq!(requests.len(), 1);
     // The word that names him ("akram", a word of his name) is taken.
     let h = Harness::day();
     let (reply, requests) = h.ask(
@@ -253,5 +248,28 @@ fn a_name_that_only_a_close_spelling_found_is_not_taken_without_the_owner() {
         ],
     );
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert!(tool_messages(&requests[1])[0].contains("taken as the only match"));
+}
+
+#[test]
+fn a_typed_roman_urdu_item_is_taken_through_the_word_list() {
+    // "kela" is not in the item's names (کیلا, Banana); the word list gives its Urdu spelling, and
+    // the one item with that name is taken: Banana, 3,928 of commission (PRD 18.4).
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "kela se kitna comission mila",
+        None,
+        vec![
+            tool_reply("analytics", &analytics(json!({"item": "kela"}))),
+            final_reply(
+                "answer",
+                "اس مال سے کمیشن {{r1.totals.total_comm}} ملا۔",
+                &Value::Null,
+            ),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 2, "no round lost");
+    assert_eq!(money(figures(answer_of(&reply))[0].0), 3_928);
     assert!(tool_messages(&requests[1])[0].contains("taken as the only match"));
 }

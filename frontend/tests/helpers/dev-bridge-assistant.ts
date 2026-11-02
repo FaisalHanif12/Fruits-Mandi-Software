@@ -24,7 +24,11 @@ export const REPLIES: Readonly<Record<string, AskReply>> = {
   chart: real.REPLY_ANSWERED_CHART,
   estimate: real.REPLY_ESTIMATE,
   target: real.REPLY_ESTIMATE_TARGET,
+  // A what-if: the same-pace figure scaled by a factor the Owner asked for (plan 52 item 5).
+  whatif: real.REPLY_ESTIMATE_WHAT_IF,
   advice: real.REPLY_ADVICE,
+  // The books had too little: short general advice with its own band (PRD FR-7.88, v1.19).
+  general: real.REPLY_GENERAL_ADVICE,
   // An answer or advice whose question also asked for a change carries the route of the entry screen.
   advice_route: real.REPLY_ADVICE_ROUTE,
   answered_route: real.REPLY_ANSWERED_ROUTE,
@@ -49,6 +53,8 @@ function replyFor(text: string): AskReply {
   const found = named === null ? undefined : REPLIES[named];
   if (found !== undefined) return found;
   const lower = text.toLowerCase();
+  if (lower.includes('double')) return real.REPLY_ESTIMATE_WHAT_IF;
+  if (lower.includes('barhayen')) return real.REPLY_GENERAL_ADVICE;
   if (lower.includes('agar') || lower.includes('estimate')) return real.REPLY_ESTIMATE;
   if (lower.includes('kis se') || lower.includes('pehle')) return real.REPLY_ADVICE;
   if (lower.includes('mila kar') || lower.includes('dono')) return real.REPLY_ANSWERED_SUM;

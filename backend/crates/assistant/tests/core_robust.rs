@@ -365,3 +365,46 @@ fn a_how_to_question_with_a_number_is_a_change_request() {
     );
     assert_eq!(reply.outcome, AskOutcome::ChangeRefused, "{reply:#?}");
 }
+
+// ---- item 7: help in one call -------------------------------------------------------------------
+
+#[test]
+fn a_how_to_question_about_one_screen_gets_the_guide_before_the_first_call_and_one_call_answers() {
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "bikri kaise add karun",
+        None,
+        vec![final_reply(
+            "answer",
+            "{{h1.summary}}\n• {{h1.steps.0}}\n• {{h1.steps.1}}",
+            &json!({"screen": "bikri", "party": null}),
+        )],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 1, "help takes one model call");
+    // The guide is in that one request, as a tool result with its own id `h1`.
+    let messages = requests[0]["messages"].as_array().unwrap();
+    let tool = messages
+        .iter()
+        .find(|m| m["role"] == "tool")
+        .expect("the guide as a tool result");
+    let content = tool["content"].as_str().unwrap();
+    assert!(
+        content.contains("\"id\":\"h1\"") && content.contains("bikri_book"),
+        "{content}"
+    );
+    // The answer is the guide's own words and carries the button of the screen.
+    assert!(answer_of(&reply).parts.len() >= 3);
+    assert_eq!(reply.entry_route.expect("route").screen, EntryScreen::Bikri);
+    // The model's own tool calls were not used up, and its ids did not move: the guide is `h1`.
+    let (rows, _, _) = assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    assert_eq!(rows[0].model_calls, Some(1));
+    // A question that names no topic, or two, is not guessed: the model asks for the topic.
+    let (_, requests) = h.ask(
+        "ye kaise karun",
+        None,
+        vec![final_reply("not_understood", "", &Value::Null)],
+    );
+    assert!(!requests[0].to_string().contains("pre_help"));
+    h.scan_requests();
+}

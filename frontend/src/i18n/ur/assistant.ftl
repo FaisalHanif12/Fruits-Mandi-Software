@@ -164,11 +164,19 @@ assistant-band-advice = مشورہ، فیصلہ آپ کا
 # review: pending
 assistant-band-general = عام مشورہ
 # review: pending
+assistant-band-general-note = دکان کے لیے عام مشورہ، آپ کے کھاتوں سے نہیں
+# review: pending
 assistant-estimate-same-pace = اسی رفتار سے
 # review: pending
 assistant-estimate-same-growth = اسی اضافے سے
 # review: pending
 assistant-estimate-same-season = پچھلے سال جیسا
+# review: pending
+assistant-estimate-what-if = اگر رفتار <num>{ $factor }</num> ہو
+# review: pending
+assistant-estimate-what-if-any = اگر رفتار بدل جائے
+# review: pending
+assistant-chart-what-if = اگر رفتار { $factor } ہو
 # review: pending
 assistant-estimate-months = بنیاد: <num>{ $count }</num> مہینے، { $from } سے { $to } تک
 # review: pending
@@ -425,6 +433,8 @@ assistant-working-percent-of = فیصد
 assistant-working-change-percent = تبدیلی کا فیصد
 # review: pending
 assistant-working-same-pace = اسی رفتار سے: پچھلے مہینوں کا اوسط، مہینوں سے ضرب
+# review: pending
+assistant-working-what-if-pace = اسی رفتار، تبدیلی کے ساتھ
 # review: pending
 assistant-working-same-growth = اسی اضافے سے: ہر مہینے کی اوسط تبدیلی، ہر مہینے میں جمع
 # review: pending

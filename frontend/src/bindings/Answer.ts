@@ -38,6 +38,11 @@ export type Answer = {
    */
   advice: boolean;
   /**
+   * True when the advice is general advice (PRD FR-7.88, v1.19): the band "عام مشورہ" shows
+   * INSTEAD of the advice band, and the answer holds no figure of its own. `advice` is true too.
+   */
+  general_advice: boolean;
+  /**
    * Every source read, for the source line and the buttons.
    */
   sources: Array<AnswerSource>;

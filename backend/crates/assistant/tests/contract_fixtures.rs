@@ -212,6 +212,7 @@ fn answer(parts: Vec<AnswerPart>) -> Answer {
         charts: Vec::new(),
         estimate: None,
         advice: false,
+        general_advice: false,
         sources: Vec::new(),
         differences: Vec::new(),
         next: Vec::new(),
@@ -560,6 +561,7 @@ fn estimate_reply(with_target: bool) -> AskReply {
         step_dir: None,
         total: money(pace_total),
         target_month: with_target.then(|| month(2027, 4)),
+        factor: None,
         working: AnswerWorking {
             title_id: "assistant-working-same-pace".to_owned(),
             steps: vec![
@@ -586,6 +588,7 @@ fn estimate_reply(with_target: bool) -> AskReply {
         step_dir: Some(FigureDirection::Up),
         total: money(growth_total),
         target_month: with_target.then(|| month(2027, 2)),
+        factor: None,
         working: AnswerWorking {
             title_id: "assistant-working-same-growth".to_owned(),
             steps: vec![
@@ -707,6 +710,133 @@ fn estimate_reply(with_target: bool) -> AskReply {
     r
 }
 
+/// A what-if (plan 52 item 5, today 10-10-26): "is raftar se saal ke aakhir tak commission kitna,
+/// aur agar raftar double ho jaye to". Until the end of the year is 3 months (October to December):
+/// same pace 48,000 a month, 144,000; the pace doubled 96,000 a month, 288,000. The Owner's word
+/// "double" is never in the model's text: the app shows the factor, 200.00%.
+fn what_if_reply() -> AskReply {
+    let ahead: i64 = 3;
+    let pace_total: i64 = 48_000 * ahead;
+    let doubled_total: i64 = 96_000 * ahead;
+    let step = |op: WorkingOp, inputs: Vec<Cell>, result: Cell| WorkingStep { op, inputs, result };
+    let average = step(
+        WorkingOp::Average,
+        vec![money(45_000), money(48_000), money(51_000)],
+        money(48_000),
+    );
+    let pace = EstimateMethod {
+        kind: EstimateMethodKind::SamePace,
+        months_used: 3,
+        used_from: month(2026, 7),
+        used_to: month(2026, 9),
+        per_month: Some(money(48_000)),
+        step: None,
+        step_dir: None,
+        total: money(pace_total),
+        target_month: None,
+        factor: None,
+        working: AnswerWorking {
+            title_id: "assistant-working-same-pace".to_owned(),
+            steps: vec![
+                average.clone(),
+                step(
+                    WorkingOp::Times,
+                    vec![money(48_000), Cell::Number { value: ahead }],
+                    money(pace_total),
+                ),
+            ],
+        },
+    };
+    let what_if = EstimateMethod {
+        kind: EstimateMethodKind::WhatIfPace,
+        months_used: 3,
+        used_from: month(2026, 7),
+        used_to: month(2026, 9),
+        per_month: Some(money(96_000)),
+        step: None,
+        step_dir: None,
+        total: money(doubled_total),
+        target_month: None,
+        factor: Some(Cell::Percent { hundredths: 20_000 }),
+        working: AnswerWorking {
+            title_id: "assistant-working-what-if-pace".to_owned(),
+            steps: vec![
+                average,
+                step(
+                    WorkingOp::Times,
+                    vec![money(48_000), Cell::Percent { hundredths: 20_000 }],
+                    money(96_000),
+                ),
+                step(
+                    WorkingOp::Times,
+                    vec![money(96_000), Cell::Number { value: ahead }],
+                    money(doubled_total),
+                ),
+            ],
+        },
+    };
+    let months: Vec<AnswerMonth> = (4..=12).map(|m| month(2026, m)).collect();
+    let past: Vec<Cell> = [36_000, 39_000, 42_000, 45_000, 48_000, 51_000]
+        .iter()
+        .map(|rupees| money(*rupees))
+        .collect();
+    let gap = |line: &[i64]| -> Vec<Cell> {
+        std::iter::repeat_n(Cell::Empty, 6)
+            .chain(line.iter().map(|rupees| money(*rupees)))
+            .collect()
+    };
+    let actual: Vec<Cell> = past
+        .into_iter()
+        .chain(std::iter::repeat_n(Cell::Empty, 3))
+        .collect();
+    let mut a = answer(vec![
+        text("اکتوبر سے دسمبر تک اسی رفتار سے تقریباً "),
+        figure(money(pace_total), false),
+        text(" بنے گا۔ اگر رفتار "),
+        AnswerPart::Figure {
+            cell: Cell::Percent { hundredths: 20_000 },
+            dir: None,
+            checked: false,
+            working: None,
+        },
+        text(" ہو تو "),
+        figure(money(doubled_total), false),
+        text("۔"),
+    ]);
+    a.charts = vec![AnswerChart {
+        result_id: "e1".to_owned(),
+        measure_id: "assistant-measure-commission-all".to_owned(),
+        months,
+        series: vec![
+            ChartSeries {
+                kind: ChartSeriesKind::Actual,
+                values: actual,
+            },
+            ChartSeries {
+                kind: ChartSeriesKind::SamePace,
+                values: gap(&[48_000, 48_000, 48_000]),
+            },
+            ChartSeries {
+                kind: ChartSeriesKind::WhatIfPace,
+                values: gap(&[96_000, 96_000, 96_000]),
+            },
+        ],
+        is_estimate: true,
+    }];
+    a.estimate = Some(AnswerEstimate {
+        result_id: "e1".to_owned(),
+        measure_id: "assistant-measure-commission-all".to_owned(),
+        full_months: 6,
+        first: month(2026, 10),
+        last: month(2026, 12),
+        target: None,
+        methods: vec![pace, what_if],
+    });
+    let mut r = reply(6, AskOutcome::Estimate);
+    r.answer = Some(a);
+    r
+}
+
 /// E2E-63 (today 15-11-26): advice from R20, under the advice band.
 fn advice() -> AskReply {
     let mut working = AnswerWorking {
@@ -752,6 +882,20 @@ fn advice() -> AskReply {
     a.next = vec!["اکرم ٹول ٹیکس کا کھاتہ".to_owned()];
     a.read_at = "2026-11-15T09:30:00Z".to_owned();
     let mut r = reply(6, AskOutcome::Advice);
+    r.answer = Some(a);
+    r
+}
+
+/// General advice (plan 52 item 11, PRD FR-7.88 v1.19): "sale kaise barhayen" when the books have
+/// too little to answer. The band "عام مشورہ" shows instead of the advice band; the answer has no
+/// figure of its own; `advice` is true too.
+fn general_advice() -> AskReply {
+    let mut a = answer(vec![text(
+        "ریٹ مناسب اور مستقل رکھیں۔\n• پرانے بقایا کی وصولی ہر ہفتے کریں۔\n• جن گاہکوں کا بل پرانا ہو انہیں فون کریں۔\n• بیوپاریوں کی ادائیگی وقت پر کریں۔\n• ہر بکری اسی دن درج کریں۔",
+    )]);
+    a.advice = true;
+    a.general_advice = true;
+    let mut r = reply(8, AskOutcome::Advice);
     r.answer = Some(a);
     r
 }
@@ -1069,6 +1213,16 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_estimate_target",
             ask("3 lakh ka target kab tak pura hoga"),
             estimate_reply(true),
+        ),
+        (
+            "assistant_reply_estimate_what_if",
+            ask("is raftar se saal ke aakhir tak commission kitna, aur agar raftar double ho to"),
+            what_if_reply(),
+        ),
+        (
+            "assistant_reply_general_advice",
+            ask("sale kaise barhayen"),
+            general_advice(),
         ),
         (
             "assistant_reply_advice",

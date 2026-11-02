@@ -29,6 +29,7 @@ use crate::results::{Node, Shown, ToolResult, Val, Words};
 pub mod analytics;
 pub mod calc;
 pub mod cells;
+pub mod cues;
 pub mod find;
 pub mod help;
 pub mod party;
@@ -55,6 +56,10 @@ pub struct Env<'a> {
     pub partner_locked: bool,
     /// The numbers the Owner typed in this question.
     pub numbers: &'a [QuestionNumber],
+    /// The question as typed. A tool reads it only to see what the Owner SAID where a figure needs
+    /// his word for it (the end of the year, "double"), never to look up a name or a figure
+    /// (plan 52 item 5).
+    pub question: &'a str,
     /// What the backup service says about the cloud copy (for the tile `last_backup`).
     pub backup: BackupFacts,
 }

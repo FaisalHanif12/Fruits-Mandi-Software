@@ -72,7 +72,8 @@ pub enum Value {
     /// A whole number: a count of بکری, نگ or days.
     Count(i64),
     /// A percent in hundredths of a percent, 0 or more (12.50% is 1,250). Only a result, never an
-    /// input.
+    /// input of `calculate`; the working of an estimate's what-if has it as an input of its
+    /// scaling step (`48,000 × 200.00%`).
     Percent(i64),
 }
 

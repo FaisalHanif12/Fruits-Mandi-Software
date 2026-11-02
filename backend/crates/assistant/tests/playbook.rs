@@ -30,6 +30,7 @@ struct Session<'a> {
     world: &'a world::World,
     words: Words,
     numbers: Vec<QuestionNumber>,
+    question: String,
     state: State,
     today: &'static str,
 }
@@ -40,6 +41,7 @@ impl<'a> Session<'a> {
             world,
             words: Words::new().unwrap(),
             numbers: question_numbers(question),
+            question: question.to_owned(),
             state: State::default(),
             today,
         }
@@ -54,6 +56,7 @@ impl<'a> Session<'a> {
             today: BusinessDate::parse_iso(self.today).unwrap(),
             partner_locked: false,
             numbers: &self.numbers,
+            question: &self.question,
             backup: BackupFacts {
                 cloud_on: false,
                 cloud_age_hours: None,

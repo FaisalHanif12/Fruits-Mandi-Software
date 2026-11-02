@@ -279,6 +279,7 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
           outcome={reply.outcome}
           onAsk={onAsk}
           busy={busy}
+          general={reply.answer.general_advice}
           afterText={
             reply.outcome === 'estimate' || reply.entry_route === null ? null : (
               <EntryRouteView route={reply.entry_route} />

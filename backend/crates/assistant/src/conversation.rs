@@ -148,6 +148,10 @@ pub struct Turn {
     pub counters: Counters,
     /// Where the time of this run went (plan 51 B2).
     pub timing: Timing,
+    /// A find whose matches the Owner must choose from (none, several or only a close spelling),
+    /// set while a reply's tools run so that the question ends at once with "کون سا؟" or "not
+    /// found" and no model call is spent on it (plan 52 item 8, PRD FR-7.87).
+    pub ask_which: Option<String>,
 }
 
 /// What a waiting question waits for.

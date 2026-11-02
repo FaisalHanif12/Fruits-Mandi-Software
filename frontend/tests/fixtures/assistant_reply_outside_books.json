@@ -8,6 +8,7 @@
     "charts": [],
     "estimate": null,
     "advice": false,
+    "general_advice": false,
     "sources": [
       {
         "kind": "report",

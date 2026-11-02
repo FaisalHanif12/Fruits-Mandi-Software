@@ -1,0 +1,30 @@
+{
+  "question_id": 8,
+  "conversation_id": "c-1",
+  "outcome": "advice",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "ریٹ مناسب اور مستقل رکھیں۔\n• پرانے بقایا کی وصولی ہر ہفتے کریں۔\n• جن گاہکوں کا بل پرانا ہو انہیں فون کریں۔\n• بیوپاریوں کی ادائیگی وقت پر کریں۔\n• ہر بکری اسی دن درج کریں۔"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": true,
+    "general_advice": true,
+    "sources": [],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 3,
+  "limit": 20
+}

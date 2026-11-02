@@ -7,13 +7,15 @@
 // (NFR-USE-24: nothing longer than 200 ms).
 
 import type { EChartsCoreOption } from 'echarts/core';
-import type { BarChartData, ChartStyle } from './types';
+import type { BarChartData, BarSeries, ChartStyle } from './types';
 
 /** The room kept above the bars for their written figures, in CSS pixels. */
 const GRID_TOP = 40;
 const GRID_SIDE = 8;
 const GRID_BOTTOM = 8;
 const BAR_MAX_WIDTH = 48;
+/** The dashed outline of a scenario bar, in CSS pixels. */
+const SCENARIO_OUTLINE = 2;
 const LABEL_SIZE = 14;
 const AXIS_LABEL_SIZE = 14;
 /** Names longer than this are cut with an ellipsis on the axis (the tooltip has the whole name). */
@@ -85,7 +87,7 @@ export function buildBarOption(data: BarChartData, style: ChartStyle): EChartsCo
     series: data.series.map((series, index) => ({
       type: 'bar',
       name: series.name,
-      stack: data.stacked ? 'total' : undefined,
+      stack: data.stacked ? (series.stack ?? 'total') : undefined,
       barMaxWidth: BAR_MAX_WIDTH,
       emphasis: { focus: 'series' },
       data: series.values.map((value, position) => ({
@@ -106,8 +108,22 @@ export function buildBarOption(data: BarChartData, style: ChartStyle): EChartsCo
               fontSize: LABEL_SIZE,
               formatter: (params: { data?: { label?: string } }) => params.data?.label ?? '',
             },
-      itemStyle: { color: style.colors[index % Math.max(style.colors.length, 1)] ?? style.ink },
+      itemStyle: itemStyleOf(
+        series,
+        style.colors[index % Math.max(style.colors.length, 1)] ?? style.ink,
+      ),
     })),
+  };
+}
+
+/** A bar in its colour; a scenario is an empty bar with a dashed outline in that colour. */
+function itemStyleOf(series: BarSeries, color: string) {
+  if (series.scenario !== true) return { color };
+  return {
+    color: 'transparent',
+    borderColor: color,
+    borderWidth: SCENARIO_OUTLINE,
+    borderType: 'dashed' as const,
   };
 }
 

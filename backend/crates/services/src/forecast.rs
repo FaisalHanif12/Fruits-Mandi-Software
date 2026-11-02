@@ -10,7 +10,7 @@
 //! 288,000 and same growth 369,000 over 6 months.
 
 use mandi_domain::core::money::Paisa;
-use mandi_domain::forecast::{self, Estimate, ForecastError, MonthValue, YearMonth};
+use mandi_domain::forecast::{self, Estimate, ForecastError, MonthValue, PaceFactor, YearMonth};
 
 use crate::error::ServiceError;
 
@@ -38,7 +38,22 @@ pub fn estimate(
     ahead: u32,
     target: Option<Paisa>,
 ) -> Result<Forecast, ServiceError> {
-    match forecast::estimate(history, current, ahead, target) {
+    estimate_with(history, current, ahead, target, None)
+}
+
+/// [`estimate`] and, with `what_if`, the same pace scaled by the factor as a fourth line (plan 52
+/// item 5). A pace below 0 or a factor out of range is `ERR_OUT_OF_RANGE`.
+///
+/// # Errors
+/// As [`estimate`].
+pub fn estimate_with(
+    history: &[MonthValue],
+    current: YearMonth,
+    ahead: u32,
+    target: Option<Paisa>,
+    what_if: Option<PaceFactor>,
+) -> Result<Forecast, ServiceError> {
+    match forecast::estimate_with(history, current, ahead, target, what_if) {
         Ok(found) => Ok(Forecast::Estimate(found)),
         Err(ForecastError::TooLittleHistory { months }) => Ok(Forecast::TooShort {
             full_months: months,

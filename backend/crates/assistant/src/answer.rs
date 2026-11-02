@@ -241,6 +241,8 @@ pub enum ChartSeriesKind {
     SameGrowth,
     /// An estimate by the same season.
     SameSeason,
+    /// A what-if: the same pace scaled by the factor the Owner named.
+    WhatIfPace,
 }
 
 /// One line of a chart. `values` has one cell for each month of the chart: money or number, or
@@ -278,6 +280,8 @@ pub enum EstimateMethodKind {
     SameGrowth,
     /// پچھلے سال جیسا: the same months of last year (needs 12 full months).
     SameSeason,
+    /// A what-if the Owner asked for: the same pace scaled by a factor ("if the pace doubles").
+    WhatIfPace,
 }
 
 /// One method of an estimate.
@@ -303,6 +307,9 @@ pub struct EstimateMethod {
     /// With a target: the month the running total reaches it. Null when it does not within the
     /// months ahead (and no target was asked: see [`AnswerEstimate::target`]).
     pub target_month: Option<AnswerMonth>,
+    /// A what-if: the factor the pace was scaled by, as a percent cell (200.00% for double). Null
+    /// for the other methods.
+    pub factor: Option<Cell>,
     /// The working, with ⓘ.
     pub working: AnswerWorking,
 }
@@ -464,6 +471,9 @@ pub struct Answer {
     pub estimate: Option<AnswerEstimate>,
     /// True when the advice band "مشورہ، فیصلہ آپ کا" shows (PRD FR-7.88).
     pub advice: bool,
+    /// True when the advice is general advice (PRD FR-7.88, v1.19): the band "عام مشورہ" shows
+    /// INSTEAD of the advice band, and the answer holds no figure of its own. `advice` is true too.
+    pub general_advice: bool,
     /// Every source read, for the source line and the buttons.
     pub sources: Vec<AnswerSource>,
     /// Figures whose two places differ (only with outcome `records_differ`).

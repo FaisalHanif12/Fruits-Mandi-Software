@@ -3,4 +3,5 @@
 /**
  * What a line of a chart is.
  */
-export type ChartSeriesKind = 'actual' | 'same_pace' | 'same_growth' | 'same_season';
+export type ChartSeriesKind =
+  'actual' | 'same_pace' | 'same_growth' | 'same_season' | 'what_if_pace';

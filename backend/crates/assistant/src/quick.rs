@@ -142,7 +142,7 @@ pub fn quick(d: &Deps<'_>, input: &AssistantQuickInput) -> Result<AskReply, Serv
         results: Vec::new(),
         turn: 0,
     };
-    let env = run.env(&numbers);
+    let env = run.env(&numbers, "");
     let mut parts = Vec::new();
     let finished = match chip_spec(input.chip) {
         Some((word, tile, field, which)) => {

@@ -208,8 +208,9 @@ fn the_guide_of_a_topic_reaches_the_model_in_the_app_language() {
 #[test]
 fn a_topic_the_guide_does_not_have_is_refused_with_the_list_and_the_retry_works() {
     let h = Harness::day();
+    // The question names no topic, so the app does not read the guide first (plan 52 item 7).
     let (reply, requests) = h.ask(
-        "bikri kaise add karun",
+        "ye kaise karun",
         None,
         vec![
             help_call("sale_entry"),

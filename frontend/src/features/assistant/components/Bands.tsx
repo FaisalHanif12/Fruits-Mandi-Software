@@ -12,7 +12,7 @@ import type { EstimateMethod } from '../../../bindings/EstimateMethod';
 import type { EstimateMethodKind } from '../../../bindings/EstimateMethodKind';
 import { RUNNING_NUMBER } from '../../../shared/ui';
 import { useListContext } from '../../analytics';
-import { monthText } from '../../reports';
+import { cellText, monthText } from '../../reports';
 import { Figure } from './Figure';
 
 /** The band that stands above the answer when it is advice (PRD FR-7.88). */
@@ -43,15 +43,22 @@ export function GeneralAdviceBand() {
       className="flex items-center gap-2 rounded-2 border border-border bg-primary-soft px-3 py-2 text-primary"
     >
       <Compass aria-hidden="true" className="size-icon-md shrink-0" />
-      <Localized id="assistant-band-general">
-        <span className="type-label" />
-      </Localized>
+      <div className="flex flex-col">
+        <Localized id="assistant-band-general">
+          <span className="type-label" />
+        </Localized>
+        <Localized id="assistant-band-general-note">
+          <span className="type-body text-ink-muted" />
+        </Localized>
+      </div>
     </div>
   );
 }
 
 function methodMessageId(kind: EstimateMethodKind): string {
   switch (kind) {
+    case 'what_if_pace':
+      return 'assistant-estimate-what-if-any';
     case 'same_pace':
       return 'assistant-estimate-same-pace';
     case 'same_growth':
@@ -73,7 +80,18 @@ function MethodView({
   const text = (month: AnswerMonth) => monthText(context.text, month.year, month.month);
   return (
     <li className="flex flex-col gap-1">
-      <p className="type-label text-ink">{context.text(methodMessageId(method.kind))}</p>
+      {method.kind === 'what_if_pace' && method.factor !== null ? (
+        // The scenario's words come from the factor the backend sent, never from the model (FR-7.76).
+        <Localized
+          id="assistant-estimate-what-if"
+          vars={{ factor: cellText(method.factor, context) }}
+          elems={RUNNING_NUMBER}
+        >
+          <p className="type-label text-ink" />
+        </Localized>
+      ) : (
+        <p className="type-label text-ink">{context.text(methodMessageId(method.kind))}</p>
+      )}
       <Localized
         id="assistant-estimate-months"
         vars={{

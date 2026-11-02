@@ -251,7 +251,7 @@ fn is_estimate_figure(r: &Resolved) -> bool {
     let second = r.path.split('.').nth(1).unwrap_or("");
     matches!(
         second,
-        "same_pace" | "same_growth" | "same_season" | "ahead"
+        "same_pace" | "same_growth" | "same_season" | "what_if_pace" | "ahead"
     )
 }
 
@@ -472,6 +472,16 @@ impl Check<'_> {
             let (items, mut refs) = items_of(self.env, self.state, &answer.text);
             failures.append(&mut refs);
             word_failures(self.env, self.names, &items, &mut failures);
+            // General advice names no figure and no name of its own (PRD FR-7.88, v1.19): no
+            // reference at all, and nothing shown.
+            if answer.kind == AnswerKind::GeneralAdvice {
+                if items.iter().any(|i| matches!(i, Item::Ref { .. })) {
+                    failures.push(Failure::new("general_advice_reference", "text"));
+                }
+                if !answer.show.is_empty() {
+                    failures.push(Failure::new("general_advice_show", "show"));
+                }
+            }
             if count_words(&items) > MAX_ANSWER_WORDS {
                 failures.push(Failure::new(
                     "too_long",

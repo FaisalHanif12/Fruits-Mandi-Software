@@ -77,6 +77,8 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.assistantAsk(real.REPLY_ANSWERED_REQUEST);
     await api.assistantAsk(real.REPLY_ANSWERED_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_ADVICE_ROUTE_REQUEST);
+    await api.assistantAsk(real.REPLY_ESTIMATE_WHAT_IF_REQUEST);
+    await api.assistantAsk(real.REPLY_GENERAL_ADVICE_REQUEST);
     await api.assistantAsk(real.REPLY_HELP_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST);
@@ -93,6 +95,8 @@ describe('each wrapper sends the command and `{ input }`', () => {
       ['assistant_ask', { input: real.REPLY_ANSWERED_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ANSWERED_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ADVICE_ROUTE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_ESTIMATE_WHAT_IF_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_GENERAL_ADVICE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_HELP_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST }],
@@ -130,9 +134,11 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['answered chart', real.REPLY_ANSWERED_CHART],
   ['estimate', real.REPLY_ESTIMATE],
   ['estimate target', real.REPLY_ESTIMATE_TARGET],
+  ['estimate what if', real.REPLY_ESTIMATE_WHAT_IF],
   ['advice', real.REPLY_ADVICE],
   ['answered with a route', real.REPLY_ANSWERED_ROUTE],
   ['advice with a route', real.REPLY_ADVICE_ROUTE],
+  ['general advice', real.REPLY_GENERAL_ADVICE],
   ['help with a main screen', real.REPLY_HELP_ROUTE],
   ['which one', real.REPLY_WHICH_ONE],
   ['not found', real.REPLY_NOT_FOUND],
@@ -184,12 +190,30 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'charts',
         'differences',
         'estimate',
+        'general_advice',
         'next',
         'parts',
         'read_at',
         'sources',
         'tables',
       ]);
+    }
+  });
+
+  it('an estimate method carries the factor: a percent for a what-if, null for the others', () => {
+    const methods = [
+      real.REPLY_ESTIMATE,
+      real.REPLY_ESTIMATE_TARGET,
+      real.REPLY_ESTIMATE_WHAT_IF,
+    ].flatMap((reply) => reply.answer?.estimate?.methods ?? []);
+    expect(methods.length).toBeGreaterThan(4);
+    for (const method of methods) {
+      expect(Object.keys(method)).toContain('factor');
+      if (method.kind === 'what_if_pace') {
+        expect(method.factor).toEqual({ type: 'percent', hundredths: 20000 });
+      } else {
+        expect(method.factor).toBeNull();
+      }
     }
   });
 
@@ -237,6 +261,23 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'total_millis',
       ]);
     }
+  });
+
+  it('general advice is only text, is advice too, and no other reply is general advice', () => {
+    for (const [name, reply] of REPLIES) {
+      const answer = reply.answer;
+      if (answer === null) continue;
+      expect(answer.general_advice, name).toBe(reply === real.REPLY_GENERAL_ADVICE);
+    }
+    const answer = real.REPLY_GENERAL_ADVICE.answer;
+    expect(real.REPLY_GENERAL_ADVICE.outcome).toBe('advice');
+    expect(answer?.advice).toBe(true);
+    expect(answer?.parts.length).toBeGreaterThan(0);
+    expect(answer?.parts.every((part) => part.type === 'text')).toBe(true);
+    expect(answer?.tables).toEqual([]);
+    expect(answer?.charts).toEqual([]);
+    expect(answer?.estimate).toBeNull();
+    expect(answer?.sources).toEqual([]);
   });
 
   it('stop_reason is null in every reply but a stopped one, and a stopped one is not_understood', () => {

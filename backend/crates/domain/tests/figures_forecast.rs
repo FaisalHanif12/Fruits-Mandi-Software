@@ -12,7 +12,8 @@ use mandi_domain::figures::{
     question_numbers,
 };
 use mandi_domain::forecast::{
-    Estimate, ForecastError, Method, MethodEstimate, MonthValue, YearMonth, estimate,
+    Estimate, ForecastError, MAX_FACTOR_BPS, Method, MethodEstimate, MonthValue, PaceFactor,
+    YearMonth, estimate, estimate_with, months_through, months_to_year_end,
 };
 use proptest::prelude::*;
 
@@ -1177,5 +1178,263 @@ proptest! {
         let found = question_numbers(&format!("{n} lakh"));
         prop_assert_eq!(found[0].number, n * 100_000);
         prop_assert_eq!(found[0].unit, NumberUnit::Amount);
+    }
+}
+
+// ---- what-ifs and the end of the year (plan 52 item 5, money agent design review) ---------------
+
+fn what_if(history: &[MonthValue], now: YearMonth, ahead: u32, factor: PaceFactor) -> Estimate {
+    estimate_with(history, now, ahead, None, Some(factor)).unwrap()
+}
+
+#[test]
+fn the_months_to_the_end_of_the_year_count_the_current_month() {
+    assert_eq!(months_to_year_end(ym(2026, 10)).unwrap(), 3);
+    assert_eq!(months_to_year_end(ym(2026, 12)).unwrap(), 1);
+    assert_eq!(months_to_year_end(ym(2027, 1)).unwrap(), 12);
+    assert_eq!(months_through(ym(2026, 10), ym(2027, 3)).unwrap(), 6);
+    // Before the current month, or more than 12 months: refused.
+    assert_eq!(
+        months_through(ym(2026, 10), ym(2026, 9)).unwrap_err(),
+        ForecastError::AheadOutOfRange
+    );
+    assert_eq!(
+        months_through(ym(2026, 10), ym(2027, 10)).unwrap_err(),
+        ForecastError::AheadOutOfRange
+    );
+}
+
+#[test]
+fn the_end_of_the_year_on_the_e2e_59_data() {
+    // Today 10-10-26: October, November and December are 3 months ahead.
+    let h = e2e_59();
+    let e = estimate(&h, ym(2026, 10), 3, None).unwrap();
+    assert_eq!(method(&e, Method::SamePace).total, rs(144_000));
+    assert_eq!(method(&e, Method::SameGrowth).total, rs(171_000));
+}
+
+#[test]
+fn the_pace_doubles_halves_triples_and_moves_by_a_percent() {
+    let h = e2e_59(); // the pace is 48,000
+    let now = ym(2026, 10);
+    for (factor, monthly, three, six) in [
+        (PaceFactor::DOUBLE, 96_000, 288_000, 576_000),
+        (PaceFactor::HALF, 24_000, 72_000, 144_000),
+        (PaceFactor::TRIPLE, 144_000, 432_000, 864_000),
+        (PaceFactor::up(1_000).unwrap(), 52_800, 158_400, 316_800),
+        (PaceFactor::down(2_500).unwrap(), 36_000, 108_000, 216_000),
+    ] {
+        let e3 = what_if(&h, now, 3, factor);
+        let w = method(&e3, Method::WhatIfPace);
+        assert_eq!(w.per_month, Some(rs(monthly)), "{factor:?}");
+        assert_eq!(w.total, rs(three), "{factor:?}");
+        assert_eq!(w.factor, Some(factor));
+        // Same pace is still there, as the baseline, and the what-if comes right after it.
+        assert_eq!(e3.methods[0].method, Method::SamePace);
+        assert_eq!(e3.methods[1].method, Method::WhatIfPace);
+        assert_eq!(method(&e3, Method::SamePace).total, rs(144_000));
+        let e6 = what_if(&h, now, 6, factor);
+        assert_eq!(method(&e6, Method::WhatIfPace).total, rs(six), "{factor:?}");
+    }
+}
+
+#[test]
+fn a_what_if_is_rounded_once_on_the_monthly_pace_and_the_total_is_month_times_months() {
+    // The last 3 months 45,000; 48,000; 52,000: the pace 48,333.33 rounds to 48,333.
+    let h = history(2026, 4, &[36_000, 39_000, 42_000, 45_000, 48_000, 52_000]);
+    let now = ym(2026, 10);
+    assert_eq!(
+        method(&estimate(&h, now, 3, None).unwrap(), Method::SamePace).per_month,
+        Some(rs(48_333))
+    );
+    for (factor, monthly) in [
+        (PaceFactor::up(1_000).unwrap(), 53_166), // 53,166.3
+        (PaceFactor::DOUBLE, 96_666),
+        (PaceFactor::HALF, 24_167),                 // 24,166.5 half up
+        (PaceFactor::up(5_000).unwrap(), 72_500),   // 48,333 + 24,166.5 half up
+        (PaceFactor::down(5_000).unwrap(), 24_167), // one rounding, not 24,166
+        (PaceFactor::up(250).unwrap(), 49_541),     // 48,333 + round(1,208.325)
+        (PaceFactor::down(7_500).unwrap(), 12_083), // round(12,083.25)
+    ] {
+        let e = what_if(&h, now, 3, factor);
+        let w = method(&e, Method::WhatIfPace);
+        assert_eq!(w.per_month, Some(rs(monthly)), "{factor:?}");
+        assert_eq!(w.total, rs(monthly * 3), "{factor:?}");
+    }
+    // The totals the money agent worked out: up 10% 159,498; doubled 289,998; half 72,501.
+    let total = |f| method(&what_if(&h, now, 3, f), Method::WhatIfPace).total;
+    assert_eq!(total(PaceFactor::up(1_000).unwrap()), rs(159_498));
+    assert_eq!(total(PaceFactor::DOUBLE), rs(289_998));
+    assert_eq!(total(PaceFactor::HALF), rs(72_501));
+    // The working shows the rounded step: "48,333 × 110.00% = 53,166".
+    let e = what_if(&h, now, 3, PaceFactor::up(1_000).unwrap());
+    let w = method(&e, Method::WhatIfPace);
+    assert!(w.steps.iter().any(|s| s.op == Op::Times
+        && s.inputs == vec![m(48_333), Value::Percent(11_000)]
+        && s.result == m(53_166)));
+}
+
+#[test]
+fn the_agent_example_doubled() {
+    // Money agent 9.1: a pace of 46,333 doubled is 92,666, and 555,996 over 6 months.
+    let h = history(2026, 4, &[40_000, 41_000, 42_000, 45_000, 46_000, 48_000]);
+    let e = what_if(&h, ym(2026, 10), 6, PaceFactor::DOUBLE);
+    let w = method(&e, Method::WhatIfPace);
+    assert_eq!(w.per_month, Some(rs(92_666)));
+    assert_eq!(w.total, rs(555_996));
+}
+
+#[test]
+fn a_target_with_a_what_if_is_the_first_month_whose_running_total_reaches_it() {
+    let h = e2e_59();
+    let now = ym(2026, 10);
+    // 5,00,000 with the doubled pace: 96,000 a month reaches it in the 6th month, March 2027.
+    let e = estimate_with(&h, now, 12, Some(rs(500_000)), Some(PaceFactor::DOUBLE)).unwrap();
+    assert_eq!(
+        method(&e, Method::WhatIfPace).target_month,
+        Some(ym(2027, 3))
+    );
+    // Other methods with the same target and 12 months (money agent): August, May.
+    assert_eq!(method(&e, Method::SamePace).target_month, Some(ym(2027, 8)));
+    assert_eq!(
+        method(&e, Method::SameGrowth).target_month,
+        Some(ym(2027, 5))
+    );
+    let up = estimate_with(
+        &h,
+        now,
+        12,
+        Some(rs(500_000)),
+        Some(PaceFactor::up(1_000).unwrap()),
+    )
+    .unwrap();
+    assert_eq!(
+        method(&up, Method::WhatIfPace).target_month,
+        Some(ym(2027, 7))
+    );
+    let half = estimate_with(&h, now, 12, Some(rs(500_000)), Some(PaceFactor::HALF)).unwrap();
+    assert_eq!(method(&half, Method::WhatIfPace).target_month, None);
+    // Only to the end of the year (3 months): not reached.
+    let short = estimate_with(&h, now, 3, Some(rs(500_000)), Some(PaceFactor::DOUBLE)).unwrap();
+    assert_eq!(method(&short, Method::WhatIfPace).target_month, None);
+}
+
+#[test]
+fn a_what_if_edge_cases_are_refused_or_zero_never_guessed() {
+    let now = ym(2026, 10);
+    // Exactly 3 months: same pace and the what-if, not same growth.
+    let three = history(2026, 7, &[45_000, 48_000, 51_000]);
+    let e = what_if(&three, now, 3, PaceFactor::DOUBLE);
+    assert_eq!(e.methods.len(), 2);
+    // Fewer than 3 months: the usual too-little-history, no what-if.
+    let two = history(2026, 8, &[48_000, 51_000]);
+    assert_eq!(
+        estimate_with(&two, now, 3, None, Some(PaceFactor::DOUBLE)).unwrap_err(),
+        ForecastError::TooLittleHistory { months: 2 }
+    );
+    // A pace of 0 gives 0 and a target is never reached.
+    let zero = history(2026, 7, &[0, 0, 0]);
+    let e = estimate_with(&zero, now, 3, Some(rs(1)), Some(PaceFactor::DOUBLE)).unwrap();
+    let w = method(&e, Method::WhatIfPace);
+    assert_eq!(
+        (w.per_month, w.total, w.target_month),
+        (Some(rs(0)), rs(0), None)
+    );
+    // A loss (profit below 0): up or down of it is a guess, so it is refused.
+    let loss = history(2026, 7, &[-5_000, -4_000, -3_000]);
+    assert_eq!(
+        estimate_with(&loss, now, 3, None, Some(PaceFactor::DOUBLE)).unwrap_err(),
+        ForecastError::NegativePace
+    );
+    // Factors outside the range, or 100%.
+    assert_eq!(
+        PaceFactor::up(0).unwrap_err(),
+        ForecastError::FactorOutOfRange
+    );
+    assert_eq!(
+        PaceFactor::up(90_001).unwrap_err(),
+        ForecastError::FactorOutOfRange
+    );
+    assert_eq!(
+        PaceFactor::down(0).unwrap_err(),
+        ForecastError::FactorOutOfRange
+    );
+    assert_eq!(
+        PaceFactor::down(10_000).unwrap_err(),
+        ForecastError::FactorOutOfRange
+    );
+    assert_eq!(PaceFactor::up(90_000).unwrap().bps(), MAX_FACTOR_BPS);
+}
+
+#[test]
+fn a_scaled_month_above_the_largest_amount_is_refused_and_at_it_is_accepted() {
+    let now = ym(2026, 10);
+    // 1,000,000,000 rupees a month, times 10: exactly the largest amount a screen shows.
+    let big = history(2026, 7, &[1_000_000_000; 3]);
+    let ten = PaceFactor::up(90_000).unwrap();
+    let e = what_if(&big, now, 1, ten);
+    assert_eq!(
+        method(&e, Method::WhatIfPace).per_month,
+        Some(rs(10_000_000_000))
+    );
+    // 1,000,000,001 rupees times 10 is above it.
+    let over = history(2026, 7, &[1_000_000_001; 3]);
+    assert_eq!(
+        estimate_with(&over, now, 1, None, Some(ten)).unwrap_err(),
+        ForecastError::Figure(FigureError::Overflow)
+    );
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10_000))]
+
+    /// The scaled pace is the i128 oracle `(P × F + 500,000) ÷ 1,000,000` rupees, and the total is
+    /// the month times the months.
+    #[test]
+    fn the_scaled_pace_is_one_half_up_rounding_of_pace_times_factor(
+        a in 0_i64..2_000_000, b in 0_i64..2_000_000, c in 0_i64..2_000_000,
+        up in prop::bool::ANY, bps in 1_i32..=90_000, ahead in 1_u32..=12,
+    ) {
+        let h = history(2026, 7, &[a, b, c]);
+        let now = ym(2026, 10);
+        // Up is 1 to 90,000 bps (factors with a whole part of 2 or more and a rest, such as up
+        // 150% = 25,000); down is 1 to 9,999.
+        let factor = if up {
+            PaceFactor::up(bps)
+        } else {
+            PaceFactor::down(bps.min(9_999))
+        }
+        .unwrap();
+        let e = estimate_with(&h, now, ahead, None, Some(factor)).unwrap();
+        let pace = method(&e, Method::SamePace).per_month.unwrap().as_paisa() / 100;
+        let w = method(&e, Method::WhatIfPace);
+        // P rupees × F bps ÷ 10,000, half up, in whole rupees (an i128 oracle).
+        let oracle = (i128::from(pace) * i128::from(factor.bps()) + 5_000) / 10_000;
+        prop_assert_eq!(i128::from(w.per_month.unwrap().as_paisa() / 100), oracle);
+        prop_assert_eq!(w.total.as_paisa(), w.per_month.unwrap().as_paisa() * i64::from(ahead));
+        // Down never goes above the pace, up never below it, and the pace itself is the baseline.
+        if up {
+            prop_assert!(w.per_month.unwrap() >= method(&e, Method::SamePace).per_month.unwrap());
+        } else {
+            prop_assert!(w.per_month.unwrap() <= method(&e, Method::SamePace).per_month.unwrap());
+        }
+    }
+
+    /// Double is exactly twice the pace, and a bigger factor never gives a smaller figure.
+    #[test]
+    fn double_is_twice_the_pace_and_the_scaled_pace_never_falls_as_the_factor_grows(
+        a in 0_i64..2_000_000, b in 0_i64..2_000_000, c in 0_i64..2_000_000,
+        low in 1_i32..9_999, step in 1_i32..9_999,
+    ) {
+        let h = history(2026, 7, &[a, b, c]);
+        let now = ym(2026, 10);
+        let double = what_if(&h, now, 1, PaceFactor::DOUBLE);
+        let pace = method(&double, Method::SamePace).per_month.unwrap().as_paisa();
+        prop_assert_eq!(method(&double, Method::WhatIfPace).per_month.unwrap().as_paisa(), pace * 2);
+        let first = PaceFactor::up(low).unwrap();
+        let second = PaceFactor::up(low.saturating_add(step).min(90_000)).unwrap();
+        let x = method(&what_if(&h, now, 1, first), Method::WhatIfPace).per_month.unwrap();
+        let y = method(&what_if(&h, now, 1, second), Method::WhatIfPace).per_month.unwrap();
+        prop_assert!(y >= x);
     }
 }

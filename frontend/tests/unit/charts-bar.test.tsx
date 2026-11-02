@@ -102,6 +102,77 @@ describe.each(LANGUAGES)('the bar chart (%s)', (language: Language) => {
     expect(items[1]?.querySelector('span')?.className).toContain('bg-chart-2');
   });
 
+  it('stacks by name: series with the same stack name are one stack, the others stand side by side', () => {
+    show(language, {
+      categories: ['Oct', 'Nov'],
+      series: [
+        { name: 'Past', values: [5, null], labels: ['5', ''], stack: 'past' },
+        { name: 'Pace', values: [null, 6], labels: ['', '6'], stack: 'pace' },
+        { name: 'Pace again', values: [null, 1], labels: ['', '1'], stack: 'pace' },
+      ],
+      stacked: true,
+    });
+    const option = chart.setOption.mock.calls[0]?.[0] as {
+      series: { stack: string; data: { value: number | null }[] }[];
+    };
+    expect(option.series.map((series) => series.stack)).toEqual(['past', 'pace', 'pace']);
+    // A month with no value has no bar at all, not a bar of height 0.
+    expect(option.series[0]?.data.map((point) => point.value)).toEqual([5, null]);
+  });
+
+  it('draws a scenario as an empty bar with a dashed outline, and as a dashed box in the legend', () => {
+    const view = show(language, {
+      categories: ['Oct'],
+      series: [
+        { name: 'Pace', values: [4], labels: ['4'], stack: 'pace' },
+        { name: 'If the pace is 200.00%', values: [8], labels: ['8'], stack: 'if', scenario: true },
+      ],
+      stacked: true,
+    });
+    const option = chart.setOption.mock.calls[0]?.[0] as {
+      series: { itemStyle: { color: string; borderType?: string } }[];
+    };
+    expect(option.series[0]?.itemStyle.borderType).toBeUndefined();
+    expect(option.series[1]?.itemStyle).toMatchObject({
+      color: 'transparent',
+      borderType: 'dashed',
+    });
+    const swatches = Array.from(view.container.querySelectorAll('[data-chart-legend] li > span'));
+    expect(swatches[0]?.className).toContain('bg-chart-1');
+    expect(swatches[1]?.className).toContain('border-dashed');
+    expect(swatches[1]?.className).toContain('border-chart-2');
+  });
+
+  it('makes the drawing follow its box when the box changes, passing the size on purpose', () => {
+    const resize = vi.fn<() => void>();
+    const observe = vi.fn();
+    class FakeObserver {
+      constructor(callback: () => void) {
+        resize.mockImplementation(callback);
+      }
+      observe = observe;
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal('ResizeObserver', FakeObserver);
+    try {
+      show(language);
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+        configurable: true,
+        value: 900,
+      });
+      Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+        configurable: true,
+        value: 300,
+      });
+      resize();
+      expect(chart.resize).toHaveBeenCalledWith({ width: 900, height: 300 });
+    } finally {
+      vi.unstubAllGlobals();
+      Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
+      Reflect.deleteProperty(HTMLElement.prototype, 'clientHeight');
+    }
+  });
+
   it('gives the drawing back when the screen goes away', () => {
     const view = show(language);
     view.unmount();

@@ -95,6 +95,14 @@ fn state() -> State {
                 ("per_month", plain(48_000)),
             ]),
         ),
+        (
+            "what_if_pace",
+            Node::obj(vec![
+                ("total", plain(576_000)),
+                ("per_month", plain(96_000)),
+                ("factor", Node::Val(Val::Pct(20_000))),
+            ]),
+        ),
     ]);
     let mut table = result(
         "r6",
@@ -156,6 +164,7 @@ fn verdict_with(
         today: BusinessDate::parse_iso("2026-10-10").unwrap(),
         partner_locked: false,
         numbers: &numbers,
+        question: "",
         backup: BackupFacts {
             cloud_on: false,
             cloud_age_hours: None,
@@ -596,6 +605,11 @@ fn an_estimate_figure_needs_the_estimate_or_advice_kind() {
     assert!(rules(verdict(text(t))).contains(&"estimate_kind"));
     assert_eq!(verdict(json!({"kind": "estimate", "text": t})), Verdict::Ok);
     assert_eq!(verdict(json!({"kind": "advice", "text": t})), Verdict::Ok);
+    // A what-if is an estimate figure too: never shown as a plain figure from the books
+    // (money review, plan 52 item 5).
+    let w = "اگر رفتار {{e1.what_if_pace.factor}} ہو تو {{e1.what_if_pace.total}} بنے گا۔";
+    assert!(rules(verdict(text(w))).contains(&"estimate_kind"));
+    assert_eq!(verdict(json!({"kind": "estimate", "text": w})), Verdict::Ok);
     // The number of full months is not an estimate figure.
     assert_eq!(
         verdict(text("کتابوں میں {{e1.full_months}} مکمل مہینے ہیں۔")),

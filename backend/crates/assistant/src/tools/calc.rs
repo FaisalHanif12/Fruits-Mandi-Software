@@ -30,12 +30,13 @@ use mandi_services::core::money::Paisa;
 use mandi_services::domain::figures::{
     Calc, CalcOp, Dir, NumberUnit, Op, QuestionNumber, Step, Value,
 };
-use mandi_services::domain::forecast::{Method, MethodEstimate, MonthValue, YearMonth};
+use mandi_services::domain::forecast::{Method, MethodEstimate, MonthValue, PaceFactor, YearMonth};
 use mandi_services::{figures, forecast};
 use serde::Deserialize;
 use serde_json::Value as Json;
 
 use super::cells::{is_total_line, magnitude};
+use super::cues;
 use super::records::named;
 use super::report::reports_stop;
 use super::{Draft, Env, State, Stop, ToolError, input, lookup, service_stop};
@@ -657,20 +658,73 @@ pub struct EstimateInput {
     pub garden: Option<String>,
     /// A trip.
     pub trip: Option<String>,
-    /// Months ahead, 1 to 12.
-    pub ahead: i64,
+    /// Months ahead, 1 to 12. Null with `until`.
+    pub ahead: Option<i64>,
+    /// `year_end`: from the current month to December. Only when the question says so.
+    pub until: Option<String>,
+    /// A what-if on the pace: `double`, `half`, `triple`, `up` or `down`. Only when the question
+    /// says so (plan 52 item 5).
+    pub what_if: Option<String>,
+    /// For `up` and `down`: the percent, a number of the question (`q.n1`).
+    pub percent: Option<String>,
     /// A number from the question (`q.n1`) or a figure already read.
     pub target: Option<String>,
 }
 
-/// Months ahead must be a question number with months, or 6 (12 with a target) when the question
-/// has none.
-fn check_ahead(env: &Env<'_>, ahead: i64, has_target: bool) -> Result<u32, ToolError> {
+/// Months ahead: a number of the question with months, or 6 (12 with a target) when the question
+/// has none; or, with `until: "year_end"`, the months left in the year when the question says "to
+/// the end of the year" (plan 52 item 5). A year end together with a months number is refused:
+/// which one is meant is the Owner's to say.
+fn months_ahead(
+    env: &Env<'_>,
+    parsed: &EstimateInput,
+    current: YearMonth,
+) -> Result<u32, ToolError> {
     let months: Vec<&QuestionNumber> = env
         .numbers
         .iter()
         .filter(|n| n.unit == NumberUnit::Months)
         .collect();
+    if let Some(until) = &parsed.until {
+        if until != "year_end" {
+            return Err(bad("ERR_OUT_OF_RANGE", "until", "only year_end"));
+        }
+        if parsed.ahead.is_some() {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "ahead",
+                "with until year_end, leave ahead out",
+            ));
+        }
+        if !cues::year_end(env.question) {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "until",
+                "the question does not say to the end of the year; ask the Owner how far ahead",
+            ));
+        }
+        if !months.is_empty() {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "until",
+                "the question has both a number of months and the end of the year; ask the Owner \
+                 which one he means",
+            ));
+        }
+        return mandi_services::domain::forecast::months_to_year_end(current)
+            .map_err(|e| ToolError::from_code(e.code(), Some("until")));
+    }
+    let ahead = parsed
+        .ahead
+        .ok_or_else(|| bad("ERR_REQUIRED", "ahead", "months ahead, or until year_end"))?;
+    if months.is_empty() && cues::year_end(env.question) {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "ahead",
+            "the question says to the end of the year: use until year_end, not a number of months",
+        ));
+    }
+    let has_target = parsed.target.is_some();
     let allowed = if months.is_empty() {
         ahead == if has_target { 12 } else { 6 }
     } else {
@@ -687,6 +741,129 @@ fn check_ahead(env: &Env<'_>, ahead: i64, has_target: bool) -> Result<u32, ToolE
         .ok()
         .filter(|a| (1..=crate::limits::MAX_MONTHS_AHEAD).contains(a))
         .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "ahead", "1 to 12"))
+}
+
+/// The factor of a what-if, from the word the question holds (double, half, triple) or from its
+/// percent with the word for more or less. The model never sends a factor: it names the kind, and
+/// the app checks that the Owner said it (plan 52 item 5, money review).
+fn pace_factor(env: &Env<'_>, parsed: &EstimateInput) -> Result<Option<PaceFactor>, ToolError> {
+    let Some(kind) = parsed.what_if.as_deref() else {
+        if parsed.percent.is_some() {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "percent",
+                "percent goes with what_if up or down",
+            ));
+        }
+        return Ok(None);
+    };
+    // A scenario is a "what if": the question must say so, or a past fact ("commission doubled
+    // last year") could pass for a scenario the Owner did not ask for.
+    if !cues::conditional(env.question) {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "what_if",
+            "the question does not ask a what if (agar, if); leave what_if out",
+        ));
+    }
+    let said = |word: &str, wanted: cues::Scenario| -> Result<(), ToolError> {
+        if cues::scenarios_clash(env.question) {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "what_if",
+                "the question has more than one of double, half and triple; ask the Owner which",
+            ));
+        }
+        if cues::scenario(env.question) != Some(wanted) {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "what_if",
+                &format!("the question does not say {word}; leave what_if out or ask the Owner"),
+            ));
+        }
+        Ok(())
+    };
+    let no_percent = || -> Result<(), ToolError> {
+        if parsed.percent.is_some() {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "percent",
+                "percent goes with up or down only",
+            ));
+        }
+        Ok(())
+    };
+    let factor = match kind {
+        "double" => {
+            said("double", cues::Scenario::Double)?;
+            no_percent()?;
+            PaceFactor::DOUBLE
+        }
+        "half" => {
+            said("half", cues::Scenario::Half)?;
+            no_percent()?;
+            PaceFactor::HALF
+        }
+        "triple" => {
+            said("triple", cues::Scenario::Triple)?;
+            no_percent()?;
+            PaceFactor::TRIPLE
+        }
+        "up" | "down" => {
+            let path = parsed.percent.as_deref().ok_or_else(|| {
+                bad(
+                    "ERR_REQUIRED",
+                    "percent",
+                    "up and down need the percent of the question",
+                )
+            })?;
+            let number = question_number(env, path)
+                .filter(|n| n.unit == NumberUnit::Percent)
+                .ok_or_else(|| {
+                    bad(
+                        "ERR_OUT_OF_RANGE",
+                        "percent",
+                        "a number of the question with a % sign",
+                    )
+                })?;
+            let bps = number.bps.ok_or_else(|| {
+                bad(
+                    "ERR_OUT_OF_RANGE",
+                    "percent",
+                    "a number of the question with a % sign",
+                )
+            })?;
+            let (more, less) = (cues::says_more(env.question), cues::says_less(env.question));
+            if kind == "up" {
+                if !more || less {
+                    return Err(bad(
+                        "ERR_OUT_OF_RANGE",
+                        "what_if",
+                        "the question must say more (and not less); ask the Owner up or down",
+                    ));
+                }
+                PaceFactor::up(bps)
+            } else {
+                if !less || more {
+                    return Err(bad(
+                        "ERR_OUT_OF_RANGE",
+                        "what_if",
+                        "the question must say less (and not more); ask the Owner up or down",
+                    ));
+                }
+                PaceFactor::down(bps)
+            }
+            .map_err(|e| ToolError::from_code(e.code(), Some("percent")))?
+        }
+        _ => {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "what_if",
+                "double, half, triple, up or down",
+            ));
+        }
+    };
+    Ok(Some(factor))
 }
 
 /// The target: a number of the question (rupees) or a figure already read.
@@ -854,11 +1031,20 @@ fn previous_month(m: YearMonth) -> Option<YearMonth> {
     YearMonth::new(m.year().checked_sub(1)?, m.month())?.plus_months(11)
 }
 
+/// The methods in the order the result gives them.
+const METHODS: [Method; 4] = [
+    Method::SamePace,
+    Method::WhatIfPace,
+    Method::SameGrowth,
+    Method::SameSeason,
+];
+
 fn method_key(method: Method) -> &'static str {
     match method {
         Method::SamePace => "same_pace",
         Method::SameGrowth => "same_growth",
         Method::SameSeason => "same_season",
+        Method::WhatIfPace => "what_if_pace",
     }
 }
 
@@ -867,6 +1053,7 @@ fn method_kind(method: Method) -> EstimateMethodKind {
         Method::SamePace => EstimateMethodKind::SamePace,
         Method::SameGrowth => EstimateMethodKind::SameGrowth,
         Method::SameSeason => EstimateMethodKind::SameSeason,
+        Method::WhatIfPace => EstimateMethodKind::WhatIfPace,
     }
 }
 
@@ -875,6 +1062,7 @@ fn chart_kind(method: Method) -> ChartSeriesKind {
         Method::SamePace => ChartSeriesKind::SamePace,
         Method::SameGrowth => ChartSeriesKind::SameGrowth,
         Method::SameSeason => ChartSeriesKind::SameSeason,
+        Method::WhatIfPace => ChartSeriesKind::WhatIfPace,
     }
 }
 
@@ -904,6 +1092,10 @@ fn method_node(m: &MethodEstimate) -> Node {
     if let Some((size, dir)) = m.step {
         fields.insert(1, ("step", Node::Val(Val::Diff { size, dir })));
     }
+    // A what-if: the factor as a percent the model may cite, since it may not write "double".
+    if let Some(factor) = m.factor {
+        fields.insert(1, ("factor", Node::Val(Val::Pct(i64::from(factor.bps())))));
+    }
     Node::obj(fields)
 }
 
@@ -918,6 +1110,9 @@ fn method_estimate(m: &MethodEstimate, title_id: &str) -> EstimateMethod {
         step_dir: m.step.map(|(_, dir)| figure_dir(dir)),
         total: money_cell(m.total),
         target_month: m.target_month.map(answer_month),
+        factor: m.factor.map(|f| Cell::Percent {
+            hundredths: i64::from(f.bps()),
+        }),
         working: working_of(title_id, &m.steps),
     }
 }
@@ -927,6 +1122,7 @@ fn working_title(method: Method) -> &'static str {
         Method::SamePace => "assistant-working-same-pace",
         Method::SameGrowth => "assistant-working-same-growth",
         Method::SameSeason => "assistant-working-same-season",
+        Method::WhatIfPace => "assistant-working-what-if-pace",
     }
 }
 
@@ -940,16 +1136,17 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             "the books give no monthly series of this measure yet",
         )
     })?;
-    let ahead = check_ahead(env, parsed.ahead, parsed.target.is_some())?;
+    let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
+        .map_err(|_| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
+    let current = YearMonth::new(today.year(), today.month())
+        .ok_or_else(|| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
+    let ahead = months_ahead(env, &parsed, current)?;
+    let what_if = pace_factor(env, &parsed)?;
     let target = parsed
         .target
         .as_deref()
         .map(|t| read_target(env, state, t))
         .transpose()?;
-    let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
-        .map_err(|_| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
-    let current = YearMonth::new(today.year(), today.month())
-        .ok_or_else(|| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
     let (history, filters, source) = read_history(env, state, &parsed, current, column, side)?;
     let history_nodes: Vec<Node> = history
         .iter()
@@ -961,7 +1158,19 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             ])
         })
         .collect();
-    let found = forecast::estimate(&history, current, ahead, target).map_err(service_stop)?;
+    let found = forecast::estimate_with(&history, current, ahead, target, what_if).map_err(|e| {
+        match service_stop(e) {
+            // A what-if on a pace below 0 (a loss) or a factor out of range: say so, so the model
+            // asks again without it instead of losing the whole estimate.
+            Stop::Error(mut error) if what_if.is_some() && error.code == "ERR_OUT_OF_RANGE" => {
+                error.detail = "the what-if cannot be worked out: the pace is below 0 (a loss), or \
+                                the factor is out of range; leave what_if out for the plain estimate"
+                    .to_owned();
+                Stop::Error(error)
+            }
+            other => other,
+        }
+    })?;
     let _ = filters;
     let mut fields = vec![
         ("measure", Node::Str(parsed.measure.word().to_owned())),
@@ -996,7 +1205,11 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             if let Some(t) = target {
                 fields.push(("target", plain_money(t)));
             }
-            for method in [Method::SamePace, Method::SameGrowth, Method::SameSeason] {
+            for method in METHODS {
+                // The what-if is only there when it was asked for.
+                if method == Method::WhatIfPace && what_if.is_none() {
+                    continue;
+                }
                 let node = e
                     .methods
                     .iter()
@@ -1012,7 +1225,10 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
                 };
                 let at = usize::try_from(k).unwrap_or(0);
                 let mut row = vec![("month", month_node(month))];
-                for method in [Method::SamePace, Method::SameGrowth, Method::SameSeason] {
+                for method in METHODS {
+                    if method == Method::WhatIfPace && what_if.is_none() {
+                        continue;
+                    }
                     let node = e
                         .methods
                         .iter()

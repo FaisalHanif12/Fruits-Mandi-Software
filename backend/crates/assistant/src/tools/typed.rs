@@ -57,8 +57,14 @@ const FIELDS: [&str; 10] = [
 /// True when the text is a reference or a record key the conversation knows, not a typed name.
 fn is_reference(state: &State, text: &str) -> bool {
     match text.split_once('.') {
-        Some((root, _)) => state.find(root).is_some() || root == "q",
-        None => state.knows_key(text),
+        // A path such as `r1.matches.0` is a reference even when no such result exists: the tool
+        // refuses it. A name with a dot ("Dr. Ali") has no key before the dot.
+        Some((root, _)) => {
+            state.find(root).is_some() || root == "q" || super::parse_key(root).is_some()
+        }
+        // A record key such as `a20` or `i41` is a key, known or not: an unknown one is the
+        // tool's own refusal, never a name to look up.
+        None => state.knows_key(text) || super::parse_key(text).is_some(),
     }
 }
 
@@ -71,7 +77,8 @@ pub struct Resolved {
     pub notes: Vec<String>,
 }
 
-/// Looks up the typed names of a call. `logged` gets one entry for each find made.
+/// Looks up the typed names of a call. `logged` gets one entry for each find made; `asked` gets the
+/// id of the find the Owner must choose from, when a name matches none, several, or only close.
 ///
 /// # Errors
 /// `ERR_UNKNOWN_REFERENCE` when a name matches none or several records (the find is kept for
@@ -83,6 +90,7 @@ pub fn resolve(
     tool: &str,
     arguments: &str,
     logged: &mut Vec<Value>,
+    asked: &mut Option<String>,
 ) -> Result<Resolved, Stop> {
     let untouched = || Resolved {
         arguments: arguments.to_owned(),
@@ -101,7 +109,12 @@ pub fn resolve(
             continue;
         };
         let text = text.trim().to_owned();
-        if text.is_empty() || is_reference(state, &text) {
+        // A code is never looked up from a typed filter: a made-up code that happens to exist
+        // would pick a party the Owner never named. The model finds a code with `find`.
+        let only_digits = text
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '-' || c == ' ');
+        if text.is_empty() || only_digits || is_reference(state, &text) {
             continue;
         }
         let input = json!({"text": text, "role": role});
@@ -134,6 +147,7 @@ pub fn resolve(
             ));
             changed = true;
         } else {
+            *asked = Some(id.clone());
             let detail = if count == 0 {
                 format!(
                     "{field} \"{text}\" matches no record; the search is kept as {id}, so \
@@ -163,11 +177,17 @@ pub fn resolve(
 }
 
 /// True when the typed word names the one match: it is the code, or a word of the name (or the
-/// start of the name) in either script, or the tag. A match found only by a near spelling is not.
+/// start of the name) in either script, or the tag, or its Urdu spelling from the word list. A
+/// match found only by a near spelling, or by the spelling rules alone, is not.
 fn names_it(node: &Node, typed: &str) -> bool {
     let Some(first) = node.get(&["matches", "0"]) else {
         return false;
     };
+    // Found as its Urdu spelling ("kela" for کیلا): named, when the word list or a learned pair
+    // made the spelling; a spelling made by the rules alone is only a guess.
+    if let Some(Node::Str(via)) = node.get(&["via"]) {
+        return via == "word_list" || via == "learned";
+    }
     let (en, ur) = (text::search_en(typed), text::search_ur(typed));
     if en.is_empty() {
         return false;
@@ -204,4 +224,46 @@ pub fn add_note(node: &mut Node, text: &str) {
         }
     }
     fields.push(("note".to_owned(), Node::Str(text.to_owned())));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn found(via: Option<&str>) -> Node {
+        let mut fields = vec![
+            ("text", Node::Str("kela".to_owned())),
+            (
+                "matches",
+                Node::List(vec![Node::obj(vec![
+                    ("key", Node::Str("i1".to_owned())),
+                    (
+                        "name",
+                        Node::Val(Val::Name(crate::results::NameVal {
+                            name_ur: "کیلا".to_owned(),
+                            name_en: "Banana".to_owned(),
+                            tag: None,
+                            code: None,
+                        })),
+                    ),
+                ])]),
+            ),
+        ];
+        if let Some(via) = via {
+            fields.push(("via", Node::Str(via.to_owned())));
+        }
+        Node::obj(fields)
+    }
+
+    #[test]
+    fn a_match_found_by_its_urdu_spelling_is_named_only_when_the_word_list_made_it() {
+        assert!(names_it(&found(Some("word_list")), "kela"));
+        assert!(names_it(&found(Some("learned")), "kela"));
+        assert!(!names_it(&found(Some("rules")), "kela"));
+        // Without a spelling step: a word of the English name, the Urdu name, or a near word.
+        assert!(names_it(&found(None), "banan"));
+        assert!(names_it(&found(None), "کیلا"));
+        assert!(!names_it(&found(None), "bananna"));
+        assert!(!names_it(&found(None), ""));
+    }
 }

@@ -54,6 +54,7 @@ impl Session<'_> {
             today: BusinessDate::parse_iso("2026-10-10").unwrap(),
             partner_locked: false,
             numbers: &[],
+            question: "",
             backup: BackupFacts {
                 cloud_on: false,
                 cloud_age_hours: None,

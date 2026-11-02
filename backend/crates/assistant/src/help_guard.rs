@@ -122,6 +122,126 @@ pub fn is_how_to(question: &str, numbers: &[QuestionNumber]) -> bool {
     })
 }
 
+/// The words that point to one topic of the guide: whole words or word pairs of the normalised
+/// question, in Roman Urdu, Urdu letters and English. Used only to read the guide for the model
+/// before its first call (plan 52 item 7); the model may still ask for another topic.
+const TOPIC_CUES: &[(&str, &[&str])] = &[
+    (
+        "bikri_book",
+        &[
+            "bikri",
+            "بکری",
+            "sale",
+            "sales",
+            "bakri",
+            "sale entry",
+            "sale book",
+        ],
+    ),
+    (
+        "receipt",
+        &[
+            "wasooli",
+            "wasuli",
+            "وصولی",
+            "receipt",
+            "receipts",
+            "ugrahi",
+        ],
+    ),
+    ("payment", &["adaigi", "ادائیگی", "payment", "payments"]),
+    ("advance", &["peshgi", "پیشگی", "advance"]),
+    (
+        "shop_expense",
+        &["kharcha", "kharch", "خرچہ", "expense", "expenses"],
+    ),
+    (
+        "personal_expense",
+        &["zati", "ذاتی", "personal", "drawing", "drawings"],
+    ),
+    (
+        "money_lent",
+        &["udhar raqam", "ادھار رقم", "money lent", "loan"],
+    ),
+    ("partner_capital", &["sarmaya", "سرمایہ", "capital"]),
+    (
+        "partners",
+        &[
+            "partner",
+            "partners",
+            "shirakat",
+            "شراکت دار",
+            "hissa",
+            "حصہ",
+        ],
+    ),
+    ("market_trips", &["safar", "سفر", "trip", "trips"]),
+    ("gardens", &["bagh", "باغ", "garden", "gardens"]),
+    ("fruit_taken", &["phal", "پھل", "fruit taken"]),
+    ("general_journal", &["journal", "جنرل", "general entry"]),
+    (
+        "commission_rules",
+        &[
+            "commission rule",
+            "commission rules",
+            "commission usool",
+            "کمیشن اصول",
+        ],
+    ),
+    ("reports", &["report", "reports", "رپورٹ", "رپورٹس"]),
+    ("analytics", &["analytics", "tajziyat", "تجزیات"]),
+    ("backup", &["backup", "بیک اپ"]),
+    ("day_close", &["day close", "din band", "دن بند"]),
+    ("month_close", &["month close", "mahina band", "مہینہ بند"]),
+    ("dashboard", &["dashboard", "ڈیش بورڈ"]),
+    ("settings", &["settings", "tarteebat", "ترتیبات"]),
+    ("pukhta_khata", &["pukhta", "pakka khata", "پختہ"]),
+    ("cash_book", &["rokar", "روکڑ", "cash book"]),
+    ("dead_amount", &["doobi", "dobi", "ڈوبی", "dead amount"]),
+    (
+        "later_sale",
+        &["later sale", "baad mein bikri", "بعد میں بکری"],
+    ),
+    ("edit_and_cancel", &["edit", "cancel", "mansookh", "منسوخ"]),
+    ("unsold_stock", &["baqi maal", "باقی مال", "unsold stock"]),
+    ("keys", &["shortcut", "shortcuts", "keyboard", "keys"]),
+    ("language_switch", &["language", "zaban", "زبان"]),
+    ("search", &["search", "talash", "تلاش"]),
+    ("sign_in", &["login", "sign in", "password", "پاس ورڈ"]),
+    ("printing", &["print", "printing", "پرنٹ"]),
+    ("separate_khata", &["alag khata", "الگ کھاتہ"]),
+    (
+        "collection_list",
+        &["collection list", "ugrahi list", "اگراہی فہرست"],
+    ),
+];
+
+/// The one topic of the guide a how-to question is about, or `None` when it is not a how-to
+/// question or names no topic or more than one. The answer to "bikri kaise add karun" is
+/// `bikri_book`. A wrong guess only costs the guide's words in the request: the model reads the
+/// topic it was given and may ask for another.
+pub fn topic_of_question(question: &str, numbers: &[QuestionNumber]) -> Option<&'static str> {
+    if !is_how_to(question, numbers) {
+        return None;
+    }
+    let words = words_of(question);
+    let joined = format!(" {} ", words.join(" "));
+    let mut found: Vec<&'static str> = Vec::new();
+    for (topic, cues) in TOPIC_CUES {
+        let hit = cues.iter().any(|cue| {
+            let key = text::search_ur(&text::search_en(cue));
+            joined.contains(&format!(" {key} "))
+        });
+        if hit {
+            found.push(topic);
+        }
+    }
+    match found.as_slice() {
+        [one] => Some(one),
+        _ => None,
+    }
+}
+
 /// The topic of the guide for a screen of the answer schema (`prompt/guide.json`). A test keeps
 /// every name here equal to a real topic.
 pub fn topic_of(screen: EntryScreenName) -> &'static str {
@@ -204,6 +324,35 @@ mod tests {
             "ikram ke total bakaya kitne hai",
         ] {
             assert!(!help(q), "{q}");
+        }
+    }
+
+    #[test]
+    fn a_how_to_question_names_its_topic_when_exactly_one_fits() {
+        let topic = |q: &str| topic_of_question(q, &question_numbers(q));
+        assert_eq!(topic("bikri kaise add karun"), Some("bikri_book"));
+        assert_eq!(topic("how do I add a sale?"), Some("bikri_book"));
+        assert_eq!(topic("wasooli kaise likhun"), Some("receipt"));
+        assert_eq!(topic("وصولی کیسے لکھوں؟"), Some("receipt"));
+        assert_eq!(topic("market safar kya hai"), Some("market_trips"));
+        assert_eq!(topic("backup kaise lun"), Some("backup"));
+        assert_eq!(
+            topic("where do I see a partner's account?"),
+            Some("partners")
+        );
+        // More than one topic, no topic, or not a how-to question: none.
+        assert_eq!(topic("bikri aur wasooli kaise karun"), None);
+        assert_eq!(topic("ye kaise karun"), None);
+        assert_eq!(topic("akram ki wasooli kitni hai"), None);
+        assert_eq!(topic("wasooli 5000 kaise likhun"), None);
+    }
+
+    #[test]
+    fn every_topic_cue_names_a_real_topic_of_the_guide() {
+        let topics = &guide().topics;
+        for (topic, cues) in TOPIC_CUES {
+            assert!(topics.contains_key(*topic), "{topic}");
+            assert!(!cues.is_empty());
         }
     }
 

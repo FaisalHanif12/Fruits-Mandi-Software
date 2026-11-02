@@ -308,7 +308,7 @@ impl<'a> Run<'a> {
         })
     }
 
-    pub(crate) fn env<'e>(&'e self, numbers: &'e [QuestionNumber]) -> Env<'e> {
+    pub(crate) fn env<'e>(&'e self, numbers: &'e [QuestionNumber], question: &'e str) -> Env<'e> {
         Env {
             ctx: &self.snap,
             actor: self.d.actor,
@@ -317,6 +317,7 @@ impl<'a> Run<'a> {
             today: self.today,
             partner_locked: self.partner_locked,
             numbers,
+            question,
             backup: self.d.backup,
         }
     }
@@ -338,11 +339,14 @@ impl<'a> Run<'a> {
     ) -> Option<Vec<ToolCall>> {
         let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
         let numbers = figures::question_numbers(&turn.question);
+        let question = turn.question.clone();
         let mut state = State {
             results: std::mem::take(&mut conv.results),
             turn: index,
         };
         let mut paused = None;
+        // The finds made in this reply: the ones a later call of it may read the match of.
+        let mut batch_finds: Vec<String> = Vec::new();
         let mut iter = calls.into_iter();
         while let Some(call) = iter.next() {
             if turn.counters.tool_calls >= MAX_TOOL_CALLS {
@@ -359,13 +363,34 @@ impl<'a> Run<'a> {
                 ));
                 continue;
             }
-            let env = self.env(&numbers);
+            // A call that reads a match of a find made in this same reply is run only when that
+            // find had exactly one match; otherwise the Owner is asked at once (plan 52 item 8).
+            if let Some(find_id) = unclear_find_read(&state, &batch_finds, &call.arguments) {
+                turn.messages.push(tool_message(
+                    &call.id,
+                    ToolError::new(
+                        "ERR_NOT_ONE_MATCH",
+                        "party",
+                        &format!(
+                            "{find_id} did not match exactly one record, so this was not read; the \
+                             Owner is asked which one"
+                        ),
+                    )
+                    .to_json()
+                    .to_string(),
+                    None,
+                ));
+                turn.ask_which.get_or_insert(find_id);
+                continue;
+            }
+            let env = self.env(&numbers, &question);
             // The step line goes out as the tool starts, so a slow report shows what it is doing.
             (self.d.emit)(step_of(&call, &env, &state));
             let began = Instant::now();
             // A typed name in a filter is looked up for the model (plan 52 item 6).
             let mut looked_up = Vec::new();
             let mut notes = Vec::new();
+            let mut asked = None;
             let resolved = typed::resolve(
                 &env,
                 &mut state,
@@ -373,8 +398,12 @@ impl<'a> Run<'a> {
                 &call.name,
                 &call.arguments,
                 &mut looked_up,
+                &mut asked,
             );
             turn.tool_log.extend(looked_up);
+            if let Some(find_id) = asked {
+                turn.ask_which.get_or_insert(find_id);
+            }
             let outcome = match resolved {
                 Ok(r) => {
                     notes = r.notes;
@@ -400,6 +429,9 @@ impl<'a> Run<'a> {
                     let id = state.next_id(prefix_of(draft.tool));
                     let mut result = tools::stored(draft, id.clone(), index);
                     fit(&mut result, &self.words);
+                    if result.tool == "find" {
+                        batch_finds.push(id.clone());
+                    }
                     let content = tool_result_json(&result, &self.words).to_string();
                     turn.tool_log.push(json!({
                         "id": id,
@@ -567,10 +599,13 @@ impl<'a> Run<'a> {
         turn: &mut Turn,
         pending: Vec<ToolCall>,
     ) -> Finished {
-        if !pending.is_empty()
-            && let Some(rest) = self.run_calls(conv, turn, pending)
-        {
-            return paused(rest);
+        if !pending.is_empty() {
+            if let Some(rest) = self.run_calls(conv, turn, pending) {
+                return paused(rest);
+            }
+            if let Some(find_id) = turn.ask_which.take() {
+                return self.ask_which_one(conv, &find_id);
+            }
         }
         loop {
             let off = tools_off(&turn.counters, false);
@@ -607,6 +642,9 @@ impl<'a> Run<'a> {
             if let Some(rest) = self.run_calls(conv, turn, reply.tool_calls) {
                 return paused(rest);
             }
+            if let Some(find_id) = turn.ask_which.take() {
+                return self.ask_which_one(conv, &find_id);
+            }
         }
     }
 
@@ -627,7 +665,7 @@ impl<'a> Run<'a> {
             ) else {
                 continue;
             };
-            let env = self.env(&numbers);
+            let env = self.env(&numbers, &turn.question);
             if let Ok(draft) = tools::call(&env, &state, tool, &input.to_string()) {
                 let mut result = tools::stored(draft, id.to_owned(), index);
                 fit(&mut result, &self.words);
@@ -659,7 +697,8 @@ impl<'a> Run<'a> {
                 results: conv.results.clone(),
                 turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
             };
-            let env = self.env(&numbers);
+            let question = turn.question.clone();
+            let env = self.env(&numbers, &question);
             let exempt = assistant::exempt_names(&self.snap).unwrap_or_default();
             let names = NameSet::new(&state, &exempt);
             let verdict = Check {
@@ -728,6 +767,36 @@ impl<'a> Run<'a> {
         }
     }
 
+    /// Ends the question with "کون سا؟" (several or a close spelling) or "not found" (none) for
+    /// this find, with no model call (plan 52 item 8). The Owner's choice goes on as after the
+    /// model's own `which_one`.
+    fn ask_which_one(&self, conv: &Conversation, find_id: &str) -> Finished {
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        let found = state.find(find_id);
+        let count = match found.and_then(|r| r.node.get(&["matches"])) {
+            Some(Node::List(items)) => items.len(),
+            _ => 0,
+        };
+        let mut f = Finished::plain(if count == 0 {
+            AskOutcome::NotFound
+        } else {
+            AskOutcome::WhichOne
+        });
+        f.options = fill::options_of(&state, find_id);
+        f.more_options = found
+            .and_then(|r| r.node.get(&["more"]))
+            .is_some_and(|n| matches!(n, Node::Bool(true)));
+        if count > 0 {
+            f.wait = Some(Wait::Which {
+                find_id: find_id.to_owned(),
+            });
+        }
+        f
+    }
+
     /// The guide topic of a help question that the model ended as a change request, as an answer
     /// of the app's own words (plan 52 item 4). `None` when the question is not help: it has a
     /// number to write, or does not ask how, where or what, or the answer is not a change request.
@@ -780,12 +849,45 @@ impl<'a> Run<'a> {
         })
     }
 
+    /// Puts the guide of a topic into the conversation as if the model had asked for it, with the
+    /// id `h1` (its own letter, so the ids `r1`, `r2` ... of the model's own calls never move).
+    /// Nothing counts against the model's tool calls (plan 52 item 7).
+    fn preread_help(&self, conv: &mut Conversation, turn: &mut Turn, topic: &str) {
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let numbers = figures::question_numbers(&turn.question);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
+        let mut state = State {
+            results: std::mem::take(&mut conv.results),
+            turn: index,
+        };
+        let arguments = json!({"topic": topic}).to_string();
+        if let Ok(draft) = tools::call(&env, &state, "app_help", &arguments) {
+            let id = state.next_id('h');
+            let mut result = tools::stored(draft, id.clone(), index);
+            fit(&mut result, &self.words);
+            let content = tool_result_json(&result, &self.words).to_string();
+            turn.tool_log
+                .push(json!({"id": id, "tool": result.tool, "input": result.input}));
+            state.results.push(result);
+            turn.messages.push(json!({
+                "role": "assistant", "content": null,
+                "tool_calls": [{"id": "pre_help", "type": "function",
+                                "function": {"name": "app_help", "arguments": arguments}}]
+            }));
+            turn.messages
+                .push(tool_message("pre_help", content, Some(&id)));
+        }
+        conv.results = state.results;
+    }
+
     /// Reads one topic of the guide for the app itself (the model asked for none). The read is in
     /// the question's log. It counts as no tool call of the model.
     fn read_help(&self, conv: &mut Conversation, turn: &mut Turn, topic: &str) -> Option<String> {
         let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
         let numbers = figures::question_numbers(&turn.question);
-        let env = self.env(&numbers);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
         let mut state = State {
             results: std::mem::take(&mut conv.results),
             turn: index,
@@ -831,10 +933,13 @@ impl<'a> Run<'a> {
             }
         });
         match parsed.kind {
-            AnswerKind::Answer | AnswerKind::Estimate | AnswerKind::Advice => {
+            AnswerKind::Answer
+            | AnswerKind::Estimate
+            | AnswerKind::Advice
+            | AnswerKind::GeneralAdvice => {
                 let mut f = Finished::plain(match parsed.kind {
                     AnswerKind::Estimate => AskOutcome::Estimate,
-                    AnswerKind::Advice => AskOutcome::Advice,
+                    AnswerKind::Advice | AnswerKind::GeneralAdvice => AskOutcome::Advice,
                     _ => AskOutcome::Answered,
                 });
                 f.answer = Some(fill::fill(env, state, parsed, read_at));
@@ -879,6 +984,7 @@ impl<'a> Run<'a> {
                         charts: Vec::new(),
                         estimate: None,
                         advice: false,
+                        general_advice: false,
                         sources: vec![source],
                         differences: Vec::new(),
                         next: Vec::new(),
@@ -966,6 +1072,43 @@ impl<'a> Run<'a> {
             limit: DAILY_LIMIT,
         })
     }
+}
+
+/// The id of a find made in this same reply whose match a call reads (`r1.matches.0`), when that
+/// find did not match exactly one record (or has more than it showed). `None` when the call reads
+/// no such match or the find had one.
+fn unclear_find_read(state: &State, batch_finds: &[String], arguments: &str) -> Option<String> {
+    fn walk(value: &Value, found: &mut Vec<String>) {
+        match value {
+            Value::String(text) => {
+                if let Some((root, rest)) = text.split_once('.')
+                    && rest.starts_with("matches")
+                {
+                    found.push(root.to_owned());
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|v| walk(v, found)),
+            Value::Object(map) => map.values().for_each(|v| walk(v, found)),
+            _ => {}
+        }
+    }
+    let args: Value = serde_json::from_str(arguments).ok()?;
+    let mut roots = Vec::new();
+    walk(&args, &mut roots);
+    roots
+        .into_iter()
+        .filter(|root| batch_finds.contains(root))
+        .find(|root| {
+            let Some(result) = state.find(root) else {
+                return false;
+            };
+            let count = match result.node.get(&["matches"]) {
+                Some(Node::List(items)) => items.len(),
+                _ => 0,
+            };
+            let more = matches!(result.node.get(&["more"]), Some(Node::Bool(true)));
+            count != 1 || more
+        })
 }
 
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the
@@ -1189,6 +1332,11 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     let numbers = figures::question_numbers(text);
     turn.messages
         .push(user_message(&run.today_iso, run.language, text, &numbers));
+    // A how-to question about one screen: the guide of that topic is read for the model before
+    // its first call, so help takes one call (plan 52 item 7).
+    if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
+        run.preread_help(&mut conv, &mut turn, topic);
+    }
     let finished = run.drive(&mut conv, &mut turn, Vec::new());
     run.conclude(conv, turn, finished, Source::Model, None)
 }
@@ -1296,7 +1444,7 @@ pub fn rerun(d: &Deps<'_>, input: &AssistantRerunInput) -> Result<AskReply, Serv
         else {
             continue;
         };
-        let env = run.env(&numbers);
+        let env = run.env(&numbers, &row.question);
         if let Ok(draft) = tools::call(&env, &state, tool, &input.to_string()) {
             let id = call
                 .get("id")
