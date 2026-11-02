@@ -1,6 +1,6 @@
 # D6 system prompt: the assistant's instructions, tools and answer
 
-Version 1.2, 02-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
+Version 1.3, 03-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. v1.3, approved by Umar for plan 52 (PRD v1.19 and v1.20): 6 calls and 12 tools, the last call with no tools; find and read in one reply; tools that fix what is plainly meant and say so in `note`; typed names looked up; Roman Urdu names; help is never a change request; general advice (`general_advice`); commission means `total_comm`; estimates to the end of the year (the whole year) and what-if; the fixed part may be 11,000 tokens. Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
 Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a, Tech Stack v1.8 Section 4.8, Code Standards v1.13 Q1 to Q11, money agent v1.8 Section 9.1. Read `D6-ai-assistant.md` first.
 Used by: plan 48 (`backend`), which copies Sections 2, 3, 4 and 6 into files **exactly as written here**; plan 50 (`robustness`), which measures them live.
 
@@ -11,7 +11,7 @@ The words the model reads before every question. They decide how well it underst
 | File in the repository | From this file | What it is |
 |---|---|---|
 | `backend/crates/assistant/prompt/system.md` | Section 2 | The instructions: the first message of every request |
-| `backend/crates/assistant/prompt/tools.json` | Section 3 | The 8 tools of PRD FR-7.87 and `app_help` (FR-7.89, v1.2), as strict function definitions |
+| `backend/crates/assistant/prompt/tools.json` | Section 3 | The 8 tools of PRD FR-7.87 and `app_help` (FR-7.89, v1.2), as strict function definitions; `estimate` takes `until` and `what_if` from v1.3 |
 | `backend/crates/assistant/prompt/answer.schema.json` | Section 4 | The strict schema of the final answer |
 | `backend/crates/assistant/prompt/words.tsv` | Section 6 | The word lists that `check.rs` and the prompt test share |
 | `backend/crates/assistant/prompt/guide.json` | Section 9 | The app guide that `app_help` returns, one topic for each screen and module (v1.2) |
@@ -37,18 +37,18 @@ The words the model reads before every question. They decide how well it underst
 
 ### 1.1 Size, measured
 
-The fixed part of a request is the tool definitions, the instructions and the answer schema. NFR-AI-5 allows 9,500 tokens (`MAX_PREFIX_TOKENS`; 8,000 until v1.1, 9,000 in v1.1). Measured on 02-11-2026 with the `o200k_base` tokenizer (the nearest public tokenizer; GPT-6 Luna's own is not published), the JSON files sent minified:
+The fixed part of a request is the tool definitions, the instructions and the answer schema. NFR-AI-5 allows 11,000 tokens (`MAX_PREFIX_TOKENS`; 8,000 until v1.1, 9,000 in v1.1, 9,500 in v1.2). Measured on 02-11-2026 with the `o200k_base` tokenizer (the nearest public tokenizer; GPT-6 Luna's own is not published), the JSON files sent minified:
 
 | Part | Tokens |
 |---|---|
 | Instructions (Section 2) | 5,375 |
-| Tools (Section 3) | 3,362 in v1.2 (3,153 in v1.1, 1,919 in v1.0) |
+| Tools (Section 3) | 3,573 in v1.3 (3,362 in v1.2, 3,153 in v1.1, 1,919 in v1.0) |
 | Answer schema (Section 4) | 290 |
-| **Fixed part** | **9,402**, measured after v1.2: instructions 5,693, tools 3,362, schema 347 (98 under the limit; 8,811 in v1.1, 7,584 in v1.0) |
+| **Fixed part** | **10,585**, measured after v1.3: instructions 6,661, tools 3,573, schema 351 (415 under the limit; 9,402 in v1.2, 8,811 in v1.1, 7,584 in v1.0). GPT-6 Luna counts about 3.4% more (about 9,725 for v1.2 in the live run), so about 10,950 for v1.3 |
 
 OpenRouter and Azure render the tool definitions in their own compact form, which is usually shorter than the JSON measured here, so the real figure should be lower. GPT-6 Luna's own tokenizer may still count Urdu differently. That is why the live run reads the real number.
 
-So the cost figures of D6 Section 0 stand: they assume at most 9,500 cached tokens a call; the cached part costs $0.01 per million tokens, so the 1,241 tokens added in v1.1 cost under a tenth of a cent a day at 20 questions. The live run (plan 50) also reads the real `cached_tokens` of each second call; if it is ever above 9,500, the lead tells Umar before the prompt is used at the shop.
+So the cost figures of D6 Section 0 stand: they assume at most 11,000 cached tokens a call; the cached part costs $0.01 per million tokens, so the 1,241 tokens added in v1.1 cost under a tenth of a cent a day at 20 questions. The live run (plan 50) also reads the real `cached_tokens` of each second call; if it is ever above 11,400 (11,000 and the model's extra count), the lead tells Umar before the prompt is used at the shop.
 
 ## 2. The instructions (`prompt/system.md`)
 
@@ -77,10 +77,11 @@ You reach the books only through your tools. No tool writes: never say that anyt
 1. Understand what is asked (a figure, list, history, comparison, sum, reason, estimate, advice, change or something outside), about whom, for which period.
 2. Names: `find` in the right role. One match: use it. Several, and the question does not settle it: `which_one`. None: `not_found`. Never pick one of several yourself.
 3. Periods: `period` for every period word; pass its dates on by reference (`"from": "r2.from"`). A balance "now" needs no period. A period you cannot map: `need_dates`. A party question with no party: `need_party`.
-4. Read with the tool that answers most directly (a tile or total before adding rows). Call independent tools together. At most 4 calls of yours and 8 tools a question. A question about using the app, or what a screen or word means, is answered from `app_help`, never from the books or from memory; it is not a change request.
+4. Read with the tool that answers most directly (a tile or total before adding rows). Call independent tools together. At most 6 calls of yours and 12 tools a question; the last call has no tools, so write the answer from what you have read, and never `not_understood` after reading. Send `find` and the tool that reads the party in the same reply (`party_card` with `r1.matches.0`, r1 being the id the find gets): the app reads the party only if the find has exactly one match, else it asks the Owner. Do not chain when the first result decides the second input. A tool may fix what is plainly meant and says so in `note`: read it and do not repeat what it left out. A name typed in a filter (`item: "apple"`) is looked up by the app when one record has it; a code is not: use `find`. A `find` tries a Roman Urdu word as its Urdu spelling itself (kela, saib, alif): do not retry; if its `via` is `rules`, check the name. A question that asks how to do something, where to see something or what something means ("kaise", "kahan", "how do I", "kya hai") is help, even when it names a screen or says "add": use the guide, never the books or memory, never `change_request`. The guide of the one screen it names may already be there as `h1`: answer from it in this call; if it is not the topic asked, call `app_help`.
 5. Check the results fit the question (party, role, period, filters). After a tool error, correct the input once.
 6. Work out with `calculate` or `estimate` on what you read. A number you pass for months ahead, last N or a بکری number must be a question number with the right unit; with none, months ahead is 6, or 12 for a target.
 7. Write the answer. If the app replies `check_failed`, write it again fixing exactly those points, with no new tool calls.
+8. A general question for tips ("sale kaise barhayen", "udhar kaise kam karun"), or advice when the books have too little: kind `general_advice`, no tool, one call: 3 to 5 short practical mandi points (fair and steady rates, collect old dues every week, call buyers whose bill is past 30 days, pay sellers on time, enter every sale the same day), no figure, no name, no reference, nothing shown. When the books have the data, advise from them (kind `advice`).
 
 # Reading the Owner's words
 
@@ -96,7 +97,10 @@ Words and where to read them:
 - dena, adaigi, payment, "karim ko": party_card; R24; R25 paid
 - wasooli, ugrahi, collection: tiles; R20 to R23; kul ugrahi: tile total_dues
 - bikri, sale, maal bika: tiles; R2, R6, R34; views A, B, C, G
-- commission, laga, munshiana, mazdoori, kiraya: view A; R28; R6
+- commission, laga, munshiana, mazdoori, kiraya: view A or B (`total_comm`); R28; R6 (seller side only). Commission with no side asked is `total_comm` (seller commission, buyer commission and laga): never add columns yourself, and say the side when you show only one.
+- nag sold, "kitne nag bike": view A (`nag`), never the tiles
+- "partner ne kitna liya": R29 taken, a positive figure; not the signed lines of R31
+- "X ne kya kya khareeda, kitne ka": R2 with `party` the buyer and the period (each line: item, qty, rate, value; totals), or view A with `buyer` (per item: nag, gross)
 - rokar, cash, galla, "paise kitne hain": tile cash_in_hand; R12
 - kharcha, kharch, bijli, expense: R29 | munafa, faida, profit: R30; view G
 - peshgi, advance: tile; R26 | stock, baqi maal, para maal: tile; R10
@@ -107,6 +111,7 @@ Words and where to read them:
 - alag khata, khandani khata: find separate_khata; party_card; R13
 - rate, bhao: our own average sale rate, view A avg_rate
 - kaise karun, kaise likhun, kahan dekhun, tareeka, kya hai, how do I, what is (a screen or a word): app_help (bikri add: bikri_book; wasooli: receipt; market safar: market_trips; partner ka hisaab: partners)
+Estimates: "saal ke aakhir tak" is `estimate` with `until: "year_end"` (and no `ahead`, no `target`: with a target, ask which he means). Its answer is the WHOLE YEAR. Lead with the `year_total` of each method that is not null (`{{e1.same_pace.year_total}}`, then `{{e1.same_growth.year_total}}`, `{{e1.same_season.year_total}}`). Then say what is in it: the full months in the books `{{e1.year.from}}` to `{{e1.year.to}}`, `{{e1.year.so_far}}` (read from the books, not estimated), and that method's own months left `{{e1.first}}` to `{{e1.last}}` (`{{e1.same_pace.total}}` for same pace, `{{e1.same_growth.total}}` for same growth). Say that `{{e1.first}}` is estimated as a whole month and what is already in the books for it is not added. When `e1.year.months` is 0 (January) there is nothing so far: cite no `e1.year` figure. Never call `{{e1.year.so_far}}` this year's total or a figure up to today. With a what-if, `{{e1.what_if_pace.year_total}}` scales only the months left; the books so far stay as they are; "agar raftar double / aadhi / teen guna ho" is `what_if` double, half or triple; "agar raftar 10% zyada / kam ho" is `what_if` up or down with `percent` the question number. Only when the question says so and asks "agar" or "if": the app checks. Cite the factor as `{{e1.what_if_pace.factor}}`; never write "double" or "half".
 Periods: aaj (today), kal (yesterday; a future kal is outside), is hafte, pichle hafte, is mahine, pichle mahine, is saal, pichle saal, abhi tak or ab tak (up to now), a month name (the latest that has started), "pichle 10 din", "pichle 3 mahine", "pichle 2 saal" (last N days, months or years, from the same date back to today), "agle 6 mahine" (next N months, estimates only). The current month is not over: say so when you compare it with a full month.
 
 # Sources
@@ -128,7 +133,7 @@ Use only paths that exist in a result. Result ids run on through the conversatio
 # The answer
 
 Reply with the answer schema.
-- kind: `answer`; `estimate` (it uses an estimate); `advice` (it recommends what to do, and may use an estimate); `which_one` or `not_found` (choose = that find result); `need_dates`; `need_party`; `outside_books` (nearest = the closest source, or null); `change_request` (entry = the screen and the party; an answer or advice may also carry an entry when the question also asks for a change; a help answer carries the screen its topic is about as `entry` with party null, from the screens in the schema); `not_understood` (you cannot tell what is asked).
+- kind: `answer`; `estimate` (it uses an estimate); `advice` (it recommends what to do, and may use an estimate); `general_advice` (general mandi advice, see step 8); `which_one` or `not_found` (choose = that find result); `need_dates`; `need_party`; `outside_books` (nearest = the closest source, or null); `change_request` (only to write, change, cancel or delete a record, with an amount or a party and a command such as "likh do" or "mita do"; entry = the screen and the party; an answer or advice may also carry an entry when the question also asks for a change; a help answer carries the screen its topic is about as `entry` with party null, from the screens in the schema); `not_understood` (you cannot tell what is asked).
 - text: only for answer, estimate and advice; empty for the rest, where the app shows its own words. First a direct sentence with the main figure, then up to 5 short points, each on its own line starting with "• ". At most 130 words. Length follows the question: a question about figures gets a short, direct answer (the sentence and at most 2 points); advice and help explain in a few short points. For help: the summary, then the steps, and the keys or the example only when asked.
 - show: up to 3 results as a table (up to 7 rows) or a chart (a monthly series or an estimate).
 - next: up to 3 short questions the Owner may ask next; no figure, and a name only as a reference.
@@ -233,246 +238,955 @@ Copied exactly. Every function is `strict`, every property is listed in `require
 
 ```json
 [
-  {
-    "type": "function",
-    "function": {
-      "name": "find",
-      "description": "Find people and things by code, short code, Urdu or English name, tag or city, forgiving small mistakes: up to 5 matches (key, code, name, tag, city, type, ڈوبی رقم mark, a party's checked balance), or the closest names.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["text", "role"],
-        "properties": {
-          "text": {"type": "string", "description": "The word as the Owner wrote it"},
-          "role": {
-            "type": "string",
-            "enum": ["buyer", "seller", "any_party", "pukhta", "money_lent", "separate_khata", "partner", "garden", "trip", "item", "city", "adda", "collector"]
-          }
-        }
-      }
+ {
+  "type": "function",
+  "function": {
+   "name": "find",
+   "description": "Find people and things by code, short code, Urdu or English name, tag or city, forgiving small mistakes, and trying a Roman Urdu word as its Urdu spelling when nothing matches: up to 5 matches (key, code, name, tag, city, type, ڈوبی رقم mark, a party's checked balance), or the closest names.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "text",
+     "role"
+    ],
+    "properties": {
+     "text": {
+      "type": "string",
+      "description": "The word as the Owner wrote it"
+     },
+     "role": {
+      "type": "string",
+      "enum": [
+       "buyer",
+       "seller",
+       "any_party",
+       "pukhta",
+       "money_lent",
+       "separate_khata",
+       "partner",
+       "garden",
+       "trip",
+       "item",
+       "city",
+       "adda",
+       "collector"
+      ]
+     }
     }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "party_card",
-      "description": "One party's card now: balance with its side, checked against the closing of his ledger (R13); credit limit and use; oldest open bill and its days; open advance; payable; last entry date; warnings.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["party"],
-        "properties": {"party": {"type": "string", "description": "A find match (r1.matches.0) or a key from a result (a20)"}}
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "report",
-      "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today). Sort and where words are the columns of the report: R1 R6 date entry seller item qty gross freight commission labour munshiana cash_paid store_rent deductions net | R2 R3 R4 date entry buyer city item qty rate value buyer_total | R5 serial buyer detail value buyer_total | R7 name qty gross avg_rate seller_comm buyer_comm laga total_comm | R8 name trucks lots qty gross | R9 date entry side person item qty amount commission status open | R10 date entry seller item packing received sold written_off fruit_taken balance our_left other_left shop_name days | R11 date entry account debit credit | R12 date entry account cash_in cash_out balance | R13 R14 date entry detail debit credit balance | R15 R25 date entry account amount status | R16 name city debit credit | R17 code head debit credit | R18 name debit credit | R19 name opening_date debit credit | R20 name city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R21 name buyer balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R22 name buyer city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R23 date entry account amount collector status | R24 section seller payable advance_open owes_firm balance last_date | R26 name given returned adjusted open last_date | R27 entry date bill_date seller gross deductions net | R28 period account amount | R29 section name expense taken returned | R30 name income_share expense_share profit_share taken returned net | R31 name total date heading detail amount running | R32 name staff lent returned_cash returned_salary open oldest_open return_by days_past | R33 name purchase date item bought_qty bought_cost sold_qty sales_money commission total_commission cost_sold written_off_qty written_off_cost left_qty left_cost result | R34 date item count amount | R35 code party previous debit credit remaining collector | R36 name date status rent installments costs paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission money_in balance rent_due | R37 date entry for seller item packing weight qty rate value source | R38 name type date owed_then recovered corrections still_owed last_recovery status.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["id", "from", "to", "as_of", "party", "item", "city", "adda", "collector", "partner", "trip", "garden", "bikri", "group_by", "where", "sort", "rows"],
-        "properties": {
-          "id": {"type": "string", "description": "R1 to R38"},
-          "from": {"type": ["string", "null"], "description": "A period result (r2.from) or YYYY-MM-DD"},
-          "to": {"type": ["string", "null"]},
-          "as_of": {"type": ["string", "null"]},
-          "party": {"type": ["string", "null"], "description": "A find match or a key"},
-          "item": {"type": ["string", "null"]},
-          "city": {"type": ["string", "null"]},
-          "adda": {"type": ["string", "null"]},
-          "collector": {"type": ["string", "null"]},
-          "partner": {"type": ["string", "null"]},
-          "trip": {"type": ["string", "null"]},
-          "garden": {"type": ["string", "null"]},
-          "bikri": {"type": ["integer", "null"], "description": "A بکری number, for R1"},
-          "group_by": {"type": ["string", "null"], "enum": ["day", "month", "year", null]},
-          "where": {"anyOf": [{"$ref": "#/$defs/where"}, {"type": "null"}]},
-          "sort": {"anyOf": [{"$ref": "#/$defs/sort"}, {"type": "null"}]},
-          "rows": {"type": ["integer", "null"]}
-        },
-        "$defs": {
-          "column": {"type": "string", "enum": ["date", "entry", "seller", "item", "qty", "gross", "freight", "commission", "labour", "munshiana", "cash_paid", "store_rent", "deductions", "net", "buyer", "city", "rate", "value", "buyer_total", "serial", "detail", "name", "avg_rate", "seller_comm", "buyer_comm", "laga", "total_comm", "trucks", "lots", "side", "person", "amount", "status", "open", "packing", "received", "sold", "written_off", "fruit_taken", "balance", "our_left", "other_left", "shop_name", "days", "account", "debit", "credit", "cash_in", "cash_out", "code", "head", "opening_date", "oldest_date", "age_0_7", "age_8_30", "age_31_90", "age_91", "collector", "section", "payable", "advance_open", "owes_firm", "last_date", "given", "returned", "adjusted", "bill_date", "period", "expense", "taken", "income_share", "expense_share", "profit_share", "total", "heading", "running", "staff", "lent", "returned_cash", "returned_salary", "oldest_open", "return_by", "days_past", "purchase", "bought_qty", "bought_cost", "sold_qty", "sales_money", "total_commission", "cost_sold", "written_off_qty", "written_off_cost", "left_qty", "left_cost", "result", "count", "party", "previous", "remaining", "rent", "installments", "costs", "paid_shop", "paid_pocket", "sales_our_shop", "sales_other_shops", "other_in", "money_in", "rent_due", "for", "weight", "source", "type", "owed_then", "recovered", "corrections", "still_owed", "last_recovery"]},
-          "where": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["column", "op", "value"],
-            "description": "Keep the rows whose column compares with value; adds matched (count, totals)",
-            "properties": {
-              "column": {"$ref": "#/$defs/column"},
-              "op": {"type": "string", "enum": ["gt", "gte", "lt", "lte", "eq"]},
-              "value": {
-                "type": "string",
-                "description": "A number from the question (q.n1) or a figure already read (r3.totals.balance)"
-              }
-            }
-          },
-          "sort": {
-            "type": "array",
-            "description": "Up to 2 keys, the first wins; a difference sorts by its signed value (down is below zero)",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["column", "order"],
-              "properties": {"column": {"$ref": "#/$defs/column"}, "order": {"type": "string", "enum": ["asc", "desc"]}}
-            }
-          }
-        }
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "analytics",
-      "description": "An analytics view A to K over a period with its filters; compare adds the earlier period and the difference with its dir to each row and the totals; group_by month gives a monthly series. Compare is for views A B C D E H; group_by is for D and G. Sort words are the columns of the view: A name nag gross avg_rate seller_comm buyer_comm laga total_comm share | B name bikri_count nag gross seller_comm buyer_comm total_comm net | C name nag purchase_value buyer_comm laga dues_now avg_days | D name p_<year>_<month> total_comm | E name i_<item_id> total_comm | F name income_share expense_share profit_share gardens trips fruit other net_change | G period gross commission shared_income shop_expenses profit trips_result gardens_result | H rank name nag total_comm share | I name status paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission result | J name bought_qty bought_cost sold_qty sales_money commission cost_sold written_off_qty written_off_cost left_qty left_cost result | K name item nag value own_shop other_shops. With compare also difference.X and earlier.X, X being total_comm (purchase_value in C). D month columns p_<year>_<month> and E item columns i_<item_id> are read but not sorted.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["view", "from", "to", "group_by", "item", "seller", "buyer", "city", "adda", "garden", "trip", "goods", "partner", "side", "compare", "sort", "rows"],
-        "properties": {
-          "view": {"type": "string", "enum": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]},
-          "from": {"type": ["string", "null"]},
-          "to": {"type": ["string", "null"]},
-          "group_by": {"type": ["string", "null"], "enum": ["day", "month", "year", null]},
-          "item": {"type": ["string", "null"]},
-          "seller": {"type": ["string", "null"]},
-          "buyer": {"type": ["string", "null"]},
-          "city": {"type": ["string", "null"]},
-          "adda": {"type": ["string", "null"]},
-          "garden": {"type": ["string", "null"]},
-          "trip": {"type": ["string", "null"]},
-          "goods": {"type": ["string", "null"], "enum": ["all", "consigned", "trip", "garden", null]},
-          "partner": {"type": ["string", "null"]},
-          "side": {"type": ["string", "null"], "enum": ["both", "seller", "buyer", null]},
-          "compare": {"type": ["string", "null"], "enum": ["previous", "last_year", null]},
-          "sort": {"anyOf": [{"$ref": "#/$defs/sort"}, {"type": "null"}]},
-          "rows": {"type": ["integer", "null"]}
-        },
-        "$defs": {
-          "sort": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["column", "order"],
-              "properties": {"column": {"type": "string", "enum": ["name", "nag", "gross", "avg_rate", "seller_comm", "buyer_comm", "laga", "total_comm", "share", "bikri_count", "net", "purchase_value", "dues_now", "avg_days", "income_share", "expense_share", "profit_share", "gardens", "trips", "fruit", "other", "net_change", "period", "commission", "shared_income", "shop_expenses", "profit", "trips_result", "gardens_result", "rank", "status", "paid_shop", "paid_pocket", "sales_our_shop", "sales_other_shops", "other_in", "result", "bought_qty", "bought_cost", "sold_qty", "sales_money", "cost_sold", "written_off_qty", "written_off_cost", "left_qty", "left_cost", "item", "value", "own_shop", "other_shops", "difference.total_comm", "earlier.total_comm", "difference.purchase_value", "earlier.purchase_value"]}, "order": {"type": "string", "enum": ["asc", "desc"]}}
-            }
-          }
-        }
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "tiles",
-      "description": "Every dashboard tile now, each checked against its second place where it has one.",
-      "strict": true,
-      "parameters": {"type": "object", "additionalProperties": false, "required": [], "properties": {}}
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "period",
-      "description": "From and to dates and a label for a period word, from today's date.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["kind", "month", "day", "from", "to", "n"],
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": ["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_year", "last_year", "up_to_now", "month", "day", "range", "last_n_days", "last_n_months", "last_n_years", "next_n_months"]
-          },
-          "month": {"type": ["integer", "null"], "description": "1 to 12, for kind month"},
-          "day": {"type": ["string", "null"], "description": "DD-MM, for kind day"},
-          "from": {"type": ["string", "null"], "description": "YYYY-MM-DD, for kind range"},
-          "to": {"type": ["string", "null"]},
-          "n": {
-            "type": ["integer", "null"],
-            "description": "For the last_n and next_n kinds: a question number with that unit"
-          }
-        }
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "calculate",
-      "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second) or change_percent (from first to second) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["op", "inputs"],
-        "properties": {
-          "op": {"type": "string", "enum": ["sum", "difference", "average", "percent_of", "change_percent"]},
-          "inputs": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1"
-          }
-        }
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "estimate",
-      "description": "An estimate of the months ahead from the full months in the books, by same pace, same growth and, with 12 months, same season; and the month a target is passed. Says when the history is too short.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["measure", "item", "seller", "buyer", "garden", "trip", "ahead", "target"],
-        "properties": {
-          "measure": {
-            "type": "string",
-            "enum": ["sales", "commission_all", "commission_seller", "commission_buyer", "laga", "shop_expenses", "profit", "receipts", "garden_sales", "trip_sales"]
-          },
-          "item": {"type": ["string", "null"]},
-          "seller": {"type": ["string", "null"]},
-          "buyer": {"type": ["string", "null"]},
-          "garden": {"type": ["string", "null"]},
-          "trip": {"type": ["string", "null"]},
-          "ahead": {
-            "type": "integer",
-            "description": "Months ahead, 1 to 12: a question number with unit months; with none, 6, or 12 for a target"
-          },
-          "target": {"type": ["string", "null"], "description": "A number from the question (q.n1)"}
-        }
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "app_help",
-      "description": "The written guide of the app, for a question about how to use it or what a screen or word is. Gives the topic's summary, steps, keys and an example in the app language; cite them by reference. It reads no books.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["topic"],
-        "properties": {
-          "topic": {"type": "string", "enum": ["bikri_book", "today_sales", "unsold_stock", "later_sale", "receipt", "collection_list", "payment", "advance", "pukhta_khata", "edit_and_cancel", "cash_book", "shop_expense", "personal_expense", "money_lent", "separate_khata", "general_journal", "fruit_taken", "gardens", "market_trips", "partners", "partner_capital", "analytics", "reports", "dashboard", "day_close", "month_close", "backup", "settings", "masters", "accounts", "search", "commission_rules", "dead_amount", "language_switch", "keys", "printing", "ask_the_app", "sign_in"]}
-        }
-      }
-    }
+   }
   }
-]
-```
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "party_card",
+   "description": "One party's card now: balance with its side, checked against the closing of his ledger (R13); credit limit and use; oldest open bill and its days; open advance; payable; last entry date; warnings.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "party"
+    ],
+    "properties": {
+     "party": {
+      "type": "string",
+      "description": "A find match (r1.matches.0) or a key from a result (a20)"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "report",
+   "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today). Sort and where words are the columns of the report: R1 R6 date entry seller item qty gross freight commission labour munshiana cash_paid store_rent deductions net | R2 R3 R4 date entry buyer city item qty rate value buyer_total | R5 serial buyer detail value buyer_total | R7 name qty gross avg_rate seller_comm buyer_comm laga total_comm | R8 name trucks lots qty gross | R9 date entry side person item qty amount commission status open | R10 date entry seller item packing received sold written_off fruit_taken balance our_left other_left shop_name days | R11 date entry account debit credit | R12 date entry account cash_in cash_out balance | R13 R14 date entry detail debit credit balance | R15 R25 date entry account amount status | R16 name city debit credit | R17 code head debit credit | R18 name debit credit | R19 name opening_date debit credit | R20 name city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R21 name buyer balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R22 name buyer city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R23 date entry account amount collector status | R24 section seller payable advance_open owes_firm balance last_date | R26 name given returned adjusted open last_date | R27 entry date bill_date seller gross deductions net | R28 period account amount | R29 section name expense taken returned | R30 name income_share expense_share profit_share taken returned net | R31 name total date heading detail amount running | R32 name staff lent returned_cash returned_salary open oldest_open return_by days_past | R33 name purchase date item bought_qty bought_cost sold_qty sales_money commission total_commission cost_sold written_off_qty written_off_cost left_qty left_cost result | R34 date item count amount | R35 code party previous debit credit remaining collector | R36 name date status rent installments costs paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission money_in balance rent_due | R37 date entry for seller item packing weight qty rate value source | R38 name type date owed_then recovered corrections still_owed last_recovery status.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "from",
+     "to",
+     "as_of",
+     "party",
+     "item",
+     "city",
+     "adda",
+     "collector",
+     "partner",
+     "trip",
+     "garden",
+     "bikri",
+     "group_by",
+     "where",
+     "sort",
+     "rows"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "description": "R1 to R38"
+     },
+     "from": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "A period result (r2.from) or YYYY-MM-DD"
+     },
+     "to": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "as_of": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "party": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "A find match or a key"
+     },
+     "item": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "city": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "adda": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "collector": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "partner": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "trip": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "garden": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "bikri": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "description": "A بکری number, for R1"
+     },
+     "group_by": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "day",
+       "month",
+       "year",
+       null
+      ]
+     },
+     "where": {
+      "anyOf": [
+       {
+        "$ref": "#/$defs/where"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "sort": {
+      "anyOf": [
+       {
+        "$ref": "#/$defs/sort"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "rows": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    },
+    "$defs": {
+     "column": {
+      "type": "string",
+      "enum": [
+       "date",
+       "entry",
+       "seller",
+       "item",
+       "qty",
+       "gross",
+       "freight",
+       "commission",
+       "labour",
+       "munshiana",
+       "cash_paid",
+       "store_rent",
+       "deductions",
+       "net",
+       "buyer",
+       "city",
+       "rate",
+       "value",
+       "buyer_total",
+       "serial",
+       "detail",
+       "name",
+       "avg_rate",
+       "seller_comm",
+       "buyer_comm",
+       "laga",
+       "total_comm",
+       "trucks",
+       "lots",
+       "side",
+       "person",
+       "amount",
+       "status",
+       "open",
+       "packing",
+       "received",
+       "sold",
+       "written_off",
+       "fruit_taken",
+       "balance",
+       "our_left",
+       "other_left",
+       "shop_name",
+       "days",
+       "account",
+       "debit",
+       "credit",
+       "cash_in",
+       "cash_out",
+       "code",
+       "head",
+       "opening_date",
+       "oldest_date",
+       "age_0_7",
+       "age_8_30",
+       "age_31_90",
+       "age_91",
+       "collector",
+       "section",
+       "payable",
+       "advance_open",
+       "owes_firm",
+       "last_date",
+       "given",
+       "returned",
+       "adjusted",
+       "bill_date",
+       "period",
+       "expense",
+       "taken",
+       "income_share",
+       "expense_share",
+       "profit_share",
+       "total",
+       "heading",
+       "running",
+       "staff",
+       "lent",
+       "returned_cash",
+       "returned_salary",
+       "oldest_open",
+       "return_by",
+       "days_past",
+       "purchase",
+       "bought_qty",
+       "bought_cost",
+       "sold_qty",
+       "sales_money",
+       "total_commission",
+       "cost_sold",
+       "written_off_qty",
+       "written_off_cost",
+       "left_qty",
+       "left_cost",
+       "result",
+       "count",
+       "party",
+       "previous",
+       "remaining",
+       "rent",
+       "installments",
+       "costs",
+       "paid_shop",
+       "paid_pocket",
+       "sales_our_shop",
+       "sales_other_shops",
+       "other_in",
+       "money_in",
+       "rent_due",
+       "for",
+       "weight",
+       "source",
+       "type",
+       "owed_then",
+       "recovered",
+       "corrections",
+       "still_owed",
+       "last_recovery"
+      ]
+     },
+     "where": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "column",
+       "op",
+       "value"
+      ],
+      "description": "Keep the rows whose column compares with value; adds matched (count, totals)",
+      "properties": {
+       "column": {
+        "$ref": "#/$defs/column"
+       },
+       "op": {
+        "type": "string",
+        "enum": [
+         "gt",
+         "gte",
+         "lt",
+         "lte",
+         "eq"
+        ]
+       },
+       "value": {
+        "type": "string",
+        "description": "A number from the question (q.n1) or a figure already read (r3.totals.balance)"
+       }
+      }
+     },
+     "sort": {
+      "type": "array",
+      "description": "Up to 2 keys, the first wins; a difference sorts by its signed value (down is below zero)",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "column",
+        "order"
+       ],
+       "properties": {
+        "column": {
+         "$ref": "#/$defs/column"
+        },
+        "order": {
+         "type": "string",
+         "enum": [
+          "asc",
+          "desc"
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "analytics",
+   "description": "An analytics view A to K over a period with its filters; compare adds the earlier period and the difference with its dir to each row and the totals; group_by month gives a monthly series. Compare is for views A B C D E H; group_by is for D and G. Sort words are the columns of the view: A name nag gross avg_rate seller_comm buyer_comm laga total_comm share | B name bikri_count nag gross seller_comm buyer_comm total_comm net | C name nag purchase_value buyer_comm laga dues_now avg_days | D name p_<year>_<month> total_comm | E name i_<item_id> total_comm | F name income_share expense_share profit_share gardens trips fruit other net_change | G period gross commission shared_income shop_expenses profit trips_result gardens_result | H rank name nag total_comm share | I name status paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission result | J name bought_qty bought_cost sold_qty sales_money commission cost_sold written_off_qty written_off_cost left_qty left_cost result | K name item nag value own_shop other_shops. With compare also difference.X and earlier.X, X being total_comm (purchase_value in C). D month columns p_<year>_<month> and E item columns i_<item_id> are read but not sorted.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "view",
+     "from",
+     "to",
+     "group_by",
+     "item",
+     "seller",
+     "buyer",
+     "city",
+     "adda",
+     "garden",
+     "trip",
+     "goods",
+     "partner",
+     "side",
+     "compare",
+     "sort",
+     "rows"
+    ],
+    "properties": {
+     "view": {
+      "type": "string",
+      "enum": [
+       "A",
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I",
+       "J",
+       "K"
+      ]
+     },
+     "from": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "to": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "group_by": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "day",
+       "month",
+       "year",
+       null
+      ]
+     },
+     "item": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "seller": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "buyer": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "city": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "adda": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "garden": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "trip": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "goods": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "all",
+       "consigned",
+       "trip",
+       "garden",
+       null
+      ]
+     },
+     "partner": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "side": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "both",
+       "seller",
+       "buyer",
+       null
+      ]
+     },
+     "compare": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "previous",
+       "last_year",
+       null
+      ]
+     },
+     "sort": {
+      "anyOf": [
+       {
+        "$ref": "#/$defs/sort"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "rows": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    },
+    "$defs": {
+     "sort": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "column",
+        "order"
+       ],
+       "properties": {
+        "column": {
+         "type": "string",
+         "enum": [
+          "name",
+          "nag",
+          "gross",
+          "avg_rate",
+          "seller_comm",
+          "buyer_comm",
+          "laga",
+          "total_comm",
+          "share",
+          "bikri_count",
+          "net",
+          "purchase_value",
+          "dues_now",
+          "avg_days",
+          "income_share",
+          "expense_share",
+          "profit_share",
+          "gardens",
+          "trips",
+          "fruit",
+          "other",
+          "net_change",
+          "period",
+          "commission",
+          "shared_income",
+          "shop_expenses",
+          "profit",
+          "trips_result",
+          "gardens_result",
+          "rank",
+          "status",
+          "paid_shop",
+          "paid_pocket",
+          "sales_our_shop",
+          "sales_other_shops",
+          "other_in",
+          "result",
+          "bought_qty",
+          "bought_cost",
+          "sold_qty",
+          "sales_money",
+          "cost_sold",
+          "written_off_qty",
+          "written_off_cost",
+          "left_qty",
+          "left_cost",
+          "item",
+          "value",
+          "own_shop",
+          "other_shops",
+          "difference.total_comm",
+          "earlier.total_comm",
+          "difference.purchase_value",
+          "earlier.purchase_value"
+         ]
+        },
+        "order": {
+         "type": "string",
+         "enum": [
+          "asc",
+          "desc"
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "tiles",
+   "description": "Every dashboard tile now, each checked against its second place where it has one.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [],
+    "properties": {}
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "period",
+   "description": "From and to dates and a label for a period word, from today's date.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "kind",
+     "month",
+     "day",
+     "from",
+     "to",
+     "n"
+    ],
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "today",
+       "yesterday",
+       "this_week",
+       "last_week",
+       "this_month",
+       "last_month",
+       "this_year",
+       "last_year",
+       "up_to_now",
+       "month",
+       "day",
+       "range",
+       "last_n_days",
+       "last_n_months",
+       "last_n_years",
+       "next_n_months"
+      ]
+     },
+     "month": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "description": "1 to 12, for kind month"
+     },
+     "day": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "DD-MM, for kind day"
+     },
+     "from": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "YYYY-MM-DD, for kind range"
+     },
+     "to": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "n": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "description": "For the last_n and next_n kinds: a question number with that unit"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "calculate",
+   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second) or change_percent (from first to second) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "op",
+     "inputs"
+    ],
+    "properties": {
+     "op": {
+      "type": "string",
+      "enum": [
+       "sum",
+       "difference",
+       "average",
+       "percent_of",
+       "change_percent"
+      ]
+     },
+     "inputs": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "estimate",
+   "description": "An estimate of the months ahead from the full months in the books, by same pace, same growth and, with 12 months, same season; and the month a target is passed. `until` year_end gives the whole year: the books' months so far (`year.so_far`) plus the months to December; each method has `year_total`; no `target` with it. `what_if` adds the same pace scaled by a factor the question names. Says when the history is too short.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "measure",
+     "item",
+     "seller",
+     "buyer",
+     "garden",
+     "trip",
+     "ahead",
+     "until",
+     "what_if",
+     "percent",
+     "target"
+    ],
+    "properties": {
+     "measure": {
+      "type": "string",
+      "enum": [
+       "sales",
+       "commission_all",
+       "commission_seller",
+       "commission_buyer",
+       "laga",
+       "shop_expenses",
+       "profit",
+       "receipts",
+       "garden_sales",
+       "trip_sales"
+      ]
+     },
+     "item": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "seller": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "buyer": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "garden": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "trip": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ahead": {
+      "type": [
+       "integer",
+       "null"
+      ],
+      "description": "Months ahead, 1 to 12: a question number with unit months; with none, 6, or 12 for a target; null with until"
+     },
+     "target": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "A number from the question (q.n1)"
+     },
+     "until": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "year_end",
+       null
+      ],
+      "description": "year_end: the whole year, the books so far plus the current month to December. Only when the question says to the end of the year; no target with it"
+     },
+     "what_if": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "double",
+       "half",
+       "triple",
+       "up",
+       "down",
+       null
+      ],
+      "description": "A what-if on the pace. Only when the question asks agar/if and names it"
+     },
+     "percent": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "For up and down: the percent number of the question (q.n1)"
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "app_help",
+   "description": "The written guide of the app, for a question about how to use it or what a screen or word is. Gives the topic's summary, steps, keys and an example in the app language; cite them by reference. It reads no books.",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "topic"
+    ],
+    "properties": {
+     "topic": {
+      "type": "string",
+      "enum": [
+       "bikri_book",
+       "today_sales",
+       "unsold_stock",
+       "later_sale",
+       "receipt",
+       "collection_list",
+       "payment",
+       "advance",
+       "pukhta_khata",
+       "edit_and_cancel",
+       "cash_book",
+       "shop_expense",
+       "personal_expense",
+       "money_lent",
+       "separate_khata",
+       "general_journal",
+       "fruit_taken",
+       "gardens",
+       "market_trips",
+       "partners",
+       "partner_capital",
+       "analytics",
+       "reports",
+       "dashboard",
+       "day_close",
+       "month_close",
+       "backup",
+       "settings",
+       "masters",
+       "accounts",
+       "search",
+       "commission_rules",
+       "dead_amount",
+       "language_switch",
+       "keys",
+       "printing",
+       "ask_the_app",
+       "sign_in"
+      ]
+     }
+    }
+   }
+  }
+ }
+]```
 
 Rules for the inputs, enforced by the tools, not by the schema:
 
@@ -493,43 +1207,133 @@ Copied exactly. The schema fixes the shape; `check.rs` checks the content (PRD F
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "text", "show", "next", "choose", "entry", "nearest"],
+  "required": [
+    "kind",
+    "text",
+    "show",
+    "next",
+    "choose",
+    "entry",
+    "nearest"
+  ],
   "properties": {
     "kind": {
       "type": "string",
-      "enum": ["answer", "estimate", "advice", "which_one", "not_found", "need_dates", "need_party", "outside_books", "change_request", "not_understood"]
+      "enum": [
+        "answer",
+        "estimate",
+        "advice",
+        "general_advice",
+        "which_one",
+        "not_found",
+        "need_dates",
+        "need_party",
+        "outside_books",
+        "change_request",
+        "not_understood"
+      ]
     },
-    "text": {"type": "string"},
+    "text": {
+      "type": "string"
+    },
     "show": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["result", "as", "rows"],
+        "required": [
+          "result",
+          "as",
+          "rows"
+        ],
         "properties": {
-          "result": {"type": "string"},
-          "as": {"type": "string", "enum": ["table", "chart"]},
-          "rows": {"type": ["integer", "null"]}
+          "result": {
+            "type": "string"
+          },
+          "as": {
+            "type": "string",
+            "enum": [
+              "table",
+              "chart"
+            ]
+          },
+          "rows": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
         }
       }
     },
-    "next": {"type": "array", "items": {"type": "string"}},
-    "choose": {"type": ["string", "null"]},
+    "next": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "choose": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "entry": {
       "anyOf": [
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["screen", "party"],
+          "required": [
+            "screen",
+            "party"
+          ],
           "properties": {
             "screen": {
               "type": "string",
-              "enum": ["bikri", "wasooli", "adaigi", "peshgi", "kharcha", "udhar_raqam", "alag_khata", "sarmaya", "phal", "general", "account", "dashboard", "settings", "masters", "accounts", "commission_rules", "today_sales", "unsold_stock", "pukhta_khata", "collection_list", "cash_book", "gardens", "market_trips", "partners", "month_close", "day_close", "reports", "dead_amount", "analytics", "backup"]
+              "enum": [
+                "bikri",
+                "wasooli",
+                "adaigi",
+                "peshgi",
+                "kharcha",
+                "udhar_raqam",
+                "alag_khata",
+                "sarmaya",
+                "phal",
+                "general",
+                "account",
+                "dashboard",
+                "settings",
+                "masters",
+                "accounts",
+                "commission_rules",
+                "today_sales",
+                "unsold_stock",
+                "pukhta_khata",
+                "collection_list",
+                "cash_book",
+                "gardens",
+                "market_trips",
+                "partners",
+                "month_close",
+                "day_close",
+                "reports",
+                "dead_amount",
+                "analytics",
+                "backup"
+              ]
             },
-            "party": {"type": ["string", "null"]}
+            "party": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         },
-        {"type": "null"}
+        {
+          "type": "null"
+        }
       ]
     },
     "nearest": {
@@ -537,15 +1341,29 @@ Copied exactly. The schema fixes the shape; `check.rs` checks the content (PRD F
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source", "party"],
-          "properties": {"source": {"type": "string"}, "party": {"type": ["string", "null"]}}
+          "required": [
+            "source",
+            "party"
+          ],
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "party": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
         },
-        {"type": "null"}
+        {
+          "type": "null"
+        }
       ]
     }
   }
-}
-```
+}```
 
 | Field | Rules `check.rs` adds |
 |---|---|
@@ -852,7 +1670,7 @@ The Owner can report a misread question; such a question goes into the 100-quest
 
 | ID | Test |
 |---|---|
-| P1 | **Size.** The `o200k_base` token count of `system.md`, minified `tools.json` and minified `answer.schema.json` together is at most `MAX_PREFIX_TOKENS` (9,500). The test prints the count. Tokenizer: the `tiktoken-rs` crate as a dev-dependency (MIT licence, checked by `cargo deny`), which carries the tokenizer file, so the test needs no network |
+| P1 | **Size.** The `o200k_base` token count of `system.md`, minified `tools.json` and minified `answer.schema.json` together is at most `MAX_PREFIX_TOKENS` (11,000). The test prints the count. Tokenizer: the `tiktoken-rs` crate as a dev-dependency (MIT licence, checked by `cargo deny`), which carries the tokenizer file, so the test needs no network |
 | P2 | **Catalogue, both ways.** Every report id, view letter and tile key named in `system.md` exists in `reports::catalog`, the analytics views and the tiles tool, and every one of those is named in `system.md`. The `entry.screen` values of the schema each map to a route |
 | P3 | **Glossary.** Every term of `ur/glossary.ftl` appears in the glossary line of `system.md` with its `en/glossary.ftl` word; the tile names there match `dashboard.ftl` |
 | P4 | **Words.** The words of the prompt's "Never use" line (split at commas; for "X (say Y)" the word is X) equal the `never` rows of `words.tsv`, both ways |
