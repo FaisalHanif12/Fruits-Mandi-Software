@@ -112,3 +112,4 @@ Umar went to sleep and asked for every agent to be stopped. All work below is on
 | lead | Docs up to date (PRD v1.24, NFR v1.14, Architecture v1.18, plans 52 to 56). | When every HANDOFF is in: commit all, rebuild the app, re-run the speed asserts on a quiet machine. Then the live bank (567, --threads), fixes, a second run, the hidden bank (--bank), Umar's log replay, R5 (MANDI_PROFILE=r5 against Umar's bucket), and the lead's own 30-question test. Then the hand-over report and stop the agents. |
 
 Reminders for Umar: after the build, press Back up now once (older copies carry no chain key), and make sure his printed backup key sheet exists.
+- **Note at the pause:** the generated `frontend/src/bindings/` folder in the working tree was empty, because a `pnpm gen:types` run was stopped part way. On resume, backend runs `pnpm gen:types` first, once the workspace compiles, before any frontend check. The committed bindings are in git.
