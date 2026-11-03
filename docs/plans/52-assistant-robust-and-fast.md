@@ -146,3 +146,10 @@ Umar: "ask these kind of the question as well which would be the mix english or 
 - **Findings 2 and 3, MAJOR, a wrong figure on screen.** The two-item guard covers only sum. It misses an average of two items (2,724), and an item's figure added to an unfiltered total (9,376). Both were shown for "kela ka commission". Must be fixed before the next live run.
 - **Finding 1, MAJOR.** The new `asked` rule takes the advice word "sale" as a figure request, so a right answer can end ChecksFailed.
 - **Finding 4, MINOR.** Prefind reads the seller Kela Traders for the item word "kela". Prefind is parked and off. Fixing this is a condition before it is ever turned on.
+
+### 8.4 Backend run 2 fixes accepted (03-11-2026)
+- **All 9 run 2 defects are fixed, each with a test.** Results: wrong_figures 42/42, assistant 459 passed with 3 ignored, golden_day 94 passed. The money agent reviewed the design and then the code, and found 3 bugs, all fixed.
+- **Lead decisions:**
+  - A partner per row in R37 while the section is locked must be hidden. Fix now.
+  - The sum guard also covers two rows of one unfiltered result. کل / kal and جمع are not "together" words on their own.
+  - The new fields and the `asked` rule wait for D6 v1.5, after the next live run.
