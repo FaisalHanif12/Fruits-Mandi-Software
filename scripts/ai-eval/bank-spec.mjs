@@ -882,6 +882,174 @@ const E = [
   },
 ];
 
+
+// ---- Facet M: mixed English and Urdu (plan 52 section 8.1, Umar 03-11-2026) -----------------------
+// Roman Urdu with English words, Urdu letters with English words, and English with Urdu mandi words.
+// Every section of category A is asked at least once. The facts are the ones of the plain entries.
+
+const mix = (g, section, filters, figures, q, extra = {}) => ({
+  g, section, kind: 'mixed', tools: extra.tools ?? '', filters: `facet=M;${filters}`, figures,
+  source: 'Umar 03-11-2026: mixed English and Urdu', q, ...extra,
+});
+
+const M = [
+  mix('M01', 'item', 'item=Banana;period=this month', 'comm=@a.month.banana.total_comm', [
+    r('kele ka commission this month kitna hai'),
+    u('کیلے کا commission اس month کتنا ہے'),
+    e('how much commission did kela give this month'),
+  ], { tools: 'analytics:A' }),
+  mix('M02', 'seller', 'seller=Rahim;period=this month', 'gross=@b.month.rahim.gross', [
+    r('Rahim ne this month kitna sell kiya'),
+    u('رحیم کی sale this month کتنی رہی'),
+    e('how much of Rahim ka maal was sold this month'),
+  ], { tools: 'analytics:B' }),
+  mix('M03', 'buyer', 'buyer=Faisal', 'balance=@buyer.faisal.balance', [
+    r('Faisal ka total bakaya kitna hai'),
+    u('فیصل کا balance کتنا ہے'),
+    e('how much bakaya does Faisal have'),
+  ], { tools: 'find,party_card' }),
+  mix('M04', 'partner', 'partner=Partner A', 'total=@partner.partner_a.total', [
+    r('Partner A ki kul raqam abhi kitni hai'),
+    u('پارٹنر A کی total رقم کتنی ہے'),
+  ]),
+  mix('M05', 'period', 'period=this year', 'gross=@a.year.total.gross;comm=@a.year.total.total_comm', [
+    r('this year ki total sale aur commission kitni hui'),
+    u('اس year کی total sale اور commission کتنی ہوئی'),
+    e('what were the total bikri and commission this year'),
+  ], { tools: 'analytics:A' }),
+  mix('M06', 'cash', '', 'cash=@tiles.cash', [
+    r('abhi cash in hand kitna hai'),
+    u('ابھی cash in hand کتنا ہے'),
+  ], { tools: 'tiles' }),
+  mix('M07', 'dues', 'view=R20', 'total=@tiles.buyers_dues|@tiles.total_dues', [
+    r('buyers ke total dues kitne hain'),
+    e('how much ugrahi is due from all the buyers'),
+  ]),
+  mix('M08', 'stock', 'item=Banana', 'qty=@stock.banana.qty', [
+    r('kele ka stock kitna bacha hai'),
+    u('کیلے کا stock کتنا بچا ہے'),
+    e('how many peti of kela are left in stock'),
+  ]),
+  mix('M09', 'garden', 'garden=Shahpur Garden', 'balance=@tiles.gardens_balance', [
+    r('Shahpur garden ka running balance kitna hai'),
+    u('شاہ پور garden کا running balance کتنا ہے'),
+  ]),
+  mix('M10', 'trip', 'view=R33', 'total=@j.all.total.result;trip1?=@trip1.result;trip2?=@trip2.result', [
+    r('dono trips ka total profit ya loss kitna raha'),
+    u('دونوں trips کا total profit یا loss کتنا رہا'),
+  ]),
+  mix('M11', 'fruit', 'partner=Partner A;period=this year', 'amount=@k.year.partner_a.value|@k.year.partner_a.qty', [
+    r('Partner A ne is saal ghar ke liye kitna fruit liya'),
+    u('پارٹنر A نے اس سال ghar کے لیے کتنا fruit لیا'),
+  ]),
+  mix('M12', 'expense', 'period=last month', 'electricity=@r29.last_month.electricity.expense', [
+    r('last month ka bijli ka bill kitna tha'),
+    u('پچھلے month کا bijli bill کتنا تھا'),
+    e('how much was the bijli bill last month'),
+  ]),
+  mix('M13', 'capital', 'partner=Partner B', 'capital=@partner.partner_b.capital', [
+    r('Partner B ka capital kitna laga hua hai'),
+    u('پارٹنر B کا capital کتنا لگا ہوا ہے'),
+  ]),
+  mix('M14', 'day', 'period=yesterday', 'gross=@a.yesterday.total.gross;comm=@a.yesterday.total.total_comm', [
+    r('yesterday ki sale aur commission kitni thi'),
+    u('yesterday کی sale اور commission کتنی تھی'),
+  ], { tools: 'analytics:A' }),
+  mix('M15', 'month', 'period=2026-09', 'comm=@a.m2026_09.total.total_comm', [
+    r('September ka total commission kitna tha'),
+    u('ستمبر کا total commission کتنا تھا'),
+  ], { tools: 'analytics:A' }),
+];
+
+// ---- A party's day (plan 52 section 8.1): each item with its qty and amount, and the day's total --
+// A buyer's amount may be the value (qty x rate) or the value with the commission and laga added
+// (the party day sheet R35 shows it that way); both are true figures of the app. A seller's amount
+// is the value sold.
+
+const day = (g, section, filters, figures, q) => ({
+  g, section, kind: 'partyday', tools: 'analytics:A/report', filters: `facet=day;${filters}`, figures,
+  source: 'Umar 03-11-2026: a party\'s day', q,
+});
+const bd = (who, d, item) =>
+  `${item}_qty=@buyer_day.${who}.${d}.${item}.qty;${item}_amount=@buyer_day.${who}.${d}.${item}.gross|@buyer_day.${who}.${d}.${item}.with_charges`;
+const sd = (who, d, item) =>
+  `${item}_qty=@seller_day.${who}.${d}.${item}.qty;${item}_amount=@seller_day.${who}.${d}.${item}.gross`;
+
+const PD = [
+  day('P01', 'buyer', 'buyer=Faisal;period=today',
+    `${bd('faisal', 'today', 'banana')};total=@buyer_day.faisal.today.total.gross|@buyer_day.faisal.today.total.with_charges`, [
+      r('Faisal ne aaj kya kya khareeda aur kitne ka'),
+      u('فیصل نے آج کیا کیا خریدا اور کتنے کا'),
+      e('what did Faisal buy today, and for how much'),
+    ]),
+  day('P02', 'buyer', 'buyer=Kashif Ali;period=yesterday',
+    `${bd('kashif', 'yesterday', 'apple')};total=@buyer_day.kashif.yesterday.total.gross|@buyer_day.kashif.yesterday.total.with_charges`, [
+      r('Kashif ne kal kya khareeda aur kitna'),
+      u('کاشف نے کل کیا خریدا اور کتنا'),
+      e('what did Kashif buy yesterday, and how much'),
+    ]),
+  day('P03', 'buyer', 'buyer=Imran Fruit;period=2026-09-18',
+    `${bd('imran', 'd2026_09_18', 'apple')};${bd('imran', 'd2026_09_18', 'potato')};total=@buyer_day.imran.d2026_09_18.total.gross|@buyer_day.imran.d2026_09_18.total.with_charges`, [
+      r('Imran Fruit ne 18 September ko kya aur kitna khareeda'),
+      u('عمران فروٹ نے 18 ستمبر کو کیا اور کتنا خریدا'),
+      e('what and how much did Imran Fruit buy on 18 September'),
+    ]),
+  day('P04', 'seller', 'seller=Karim;period=yesterday',
+    `${sd('karim', 'yesterday', 'apple')};total=@seller_day.karim.yesterday.total.gross`, [
+      r('Karim ne kal kya aur kitna becha'),
+      u('کریم نے کل کیا اور کتنا بیچا'),
+      e('what and how much did Karim sell yesterday'),
+    ]),
+  day('P05', 'seller', 'seller=Rahim;period=2026-04-25',
+    `${sd('rahim', 'd2026_04_25', 'apple')};${sd('rahim', 'd2026_04_25', 'banana')};total=@seller_day.rahim.d2026_04_25.total.gross`, [
+      r('Rahim ne 25 April ko kya kya becha aur kitna'),
+      u('رحیم نے 25 اپریل کو کیا کیا بیچا اور کتنا'),
+      e('what did Rahim sell on 25 April, item by item, and how much'),
+    ]),
+];
+
+// ---- No such party (plan 52 section 8.1) ---------------------------------------------------------
+// A made-up name ends in not_found and says which role was asked (`asked_role`). A real name asked
+// in the wrong role is not found in that role and says what he is (`found_as`). A misspelled real
+// name is still found. The two fields are scored once the reply carries them (until then PENDING).
+
+const none = (g, section, filters, q) => ({
+  g, section, kind: 'nosuch', outcome: 'not_found', tools: 'find', filters: `facet=nosuch;${filters}`,
+  figures: '', source: 'Umar 03-11-2026: no such party', q,
+});
+
+const N = [
+  none('N01', 'unknown', 'asked_role=seller', [
+    r('Zulfiqar ne kal kya aur kitna becha'),
+    u('ذوالفقار نے کل کیا اور کتنا بیچا'),
+    e('what did seller Zulfiqar sell yesterday'),
+  ]),
+  none('N02', 'unknown', 'asked_role=buyer', [
+    r('Mushtaq ne aaj kya khareeda aur kitna'),
+    u('مشتاق نے آج کیا خریدا اور کتنا'),
+    e('what did buyer Mushtaq buy today'),
+  ]),
+  none('N03', 'wrong_role', 'asked_role=seller;found_as=buyer', [
+    r('Faisal ne kal kya aur kitna becha'),
+    u('فیصل نے کل کیا اور کتنا بیچا'),
+    e('what did seller Faisal sell yesterday'),
+  ]),
+  none('N04', 'wrong_role', 'asked_role=buyer;found_as=seller', [
+    r('Rahim ne kal kya khareeda aur kitna'),
+    e('what did buyer Rahim buy yesterday'),
+  ]),
+  // A misspelled real seller is still found (category A: the figures must be right).
+  {
+    g: 'N05', section: 'seller', kind: 'nosuch', tools: 'find,analytics:B', filters: 'facet=nosuch;seller=Rahim;period=this year',
+    figures: 'gross=@b.year.rahim.gross;comm=@b.year.rahim.total_comm', source: 'Umar 03-11-2026: a misspelled name is still found',
+    q: [
+      rm('Raheem ke maal ka is saal kitna commission bana aur kitni bikri hui'),
+      um('رہیم کے مال کا اس سال کتنا کمیشن بنا اور کتنی بکری ہوئی'),
+      em('how much commission and sales did Raheem make this year'),
+    ],
+  },
+];
+
 const KEEP_E = { X14: [0, 1], X17: [0, 1] };
 for (const x of E) if (KEEP_E[x.g]) x.use = KEEP_E[x.g];
 
@@ -891,6 +1059,10 @@ const ENTRIES = [
   ...C.map((x) => ({ cat: 'C', ...x })),
   ...D.map((x) => ({ cat: 'D', ...x })),
   ...E.map((x) => ({ cat: 'E', ...x })),
+  ...M.map((x) => ({ cat: 'A', ...x })),
+  ...PD.map((x) => ({ cat: 'A', ...x })),
+  ...N.filter((x) => x.g !== 'N05').map((x) => ({ cat: 'E', ...x })),
+  ...N.filter((x) => x.g === 'N05').map((x) => ({ cat: 'A', ...x })),
 ];
 
 export default ENTRIES;

@@ -1044,11 +1044,11 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
     assert!(row["clicked"].is_null());
     assert_eq!(row["reply"]["outcome"], "which_one");
 
-    // A question on the thin books.
+    // A question on the thin books that asks for a figure (it reads the tiles).
     let thin = all
         .iter()
-        .find(|q| q.world == "thin")
-        .expect("a thin question");
+        .find(|q| q.world == "thin" && q.text.contains("bikri kitni"))
+        .expect("a thin question that asks a figure");
     let row = run_one(
         thin,
         &all,
@@ -1060,6 +1060,37 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
     );
     assert_eq!(row["reply"]["outcome"], "answered", "{row}");
     assert_eq!(row["followup"], false);
+    // A general how-to question on the thin books goes out with the tools off: one call, an answer
+    // of kind general_advice, which the app labels as general advice and which reads nothing.
+    let general_reply = json!({"model": "openai/gpt-6-luna", "usage": usage,
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": "general_advice",
+            "text": "ریٹ مناسب اور مستقل رکھیں۔\n• پرانے بقایا کی وصولی ہر ہفتے کریں۔\n• ہر بکری اسی دن درج کریں۔",
+            "show": [], "next": [], "choose": null, "entry": null, "nearest": null
+        }).to_string()}}]});
+    let general_script =
+        || -> Box<dyn ModelClient> { Box::new(RecordedClient::new(vec![general_reply.clone()])) };
+    let general = all
+        .iter()
+        .find(|q| q.world == "thin" && q.filters.contains("general=1"))
+        .expect("a general advice question");
+    let row = run_one(
+        general,
+        &all,
+        &by_id,
+        Some(&masters),
+        "openai/gpt-6-luna",
+        &runtime,
+        &general_script,
+    );
+    assert_eq!(row["reply"]["outcome"], "advice", "{row}");
+    assert_eq!(row["reply"]["answer"]["general_advice"], true, "{row}");
+    assert_eq!(row["model_calls"], 1, "one call");
+    assert_eq!(
+        row["tool_calls"].as_array().map(Vec::len),
+        Some(0),
+        "it read nothing"
+    );
 }
 
 #[test]

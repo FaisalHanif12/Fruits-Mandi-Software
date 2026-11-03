@@ -246,6 +246,25 @@ function checkList(list) {
   for (const t of HELP_TOPICS) if (!topics.has(t)) problems.push(`no help question for the topic ${t}`);
   // General advice is tested where the books are thin.
   if (count((q) => q.filters.includes('general=1')) < 8) problems.push('fewer than 8 general advice questions');
+  // The three facets of plan 52 section 8.1: M (mixed language), a party's day, no such party.
+  const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
+  const facets = { M: list.filter((q) => facetOf(q) === 'M'), day: list.filter((q) => facetOf(q) === 'day'), nosuch: list.filter((q) => facetOf(q) === 'nosuch') };
+  const A_SECTIONS = ['item', 'seller', 'buyer', 'partner', 'period', 'cash', 'dues', 'stock', 'garden', 'trip', 'fruit', 'expense', 'capital', 'day', 'month'];
+  const mixedSections = new Set(facets.M.map((q) => q.section));
+  for (const s of A_SECTIONS) if (!mixedSections.has(s)) problems.push(`facet M: no mixed-language question for the section ${s}`);
+  for (const lang of ['roman', 'urdu', 'en'])
+    for (const [name, qs] of Object.entries(facets))
+      if (!qs.some((q) => q.lang === lang)) problems.push(`facet ${name}: no ${lang} wording`);
+  for (const [name, qs] of Object.entries(facets))
+    for (const q of qs) if (!q.group) problems.push(`${q.id} (facet ${name}) is in no group of the same meaning`);
+  const dayText = facets.day.map((q) => q.filters).join(' ');
+  for (const need of ['buyer=', 'seller=', 'period=today', 'period=yesterday', 'period=2026-'])
+    if (!dayText.includes(need)) problems.push(`facet day: no question with ${need}`);
+  if (!facets.day.some((q) => (q.figures.match(/_qty=/g) ?? []).length >= 2)) problems.push('facet day: no day with two items');
+  const nsText = facets.nosuch.map((q) => q.filters).join(' ');
+  for (const need of ['asked_role=seller', 'asked_role=buyer', 'found_as=buyer', 'found_as=seller'])
+    if (!nsText.includes(need)) problems.push(`facet nosuch: no question with ${need}`);
+  if (!facets.nosuch.some((q) => q.misspelled && q.outcome === 'answered')) problems.push('facet nosuch: no misspelled real name that must be found');
   // Every `@key` is a fact the oracle gives.
   const keys = manifestKeys();
   if (!keys) problems.push('scripts/ai-eval/oracle-keys.txt is missing');
@@ -262,7 +281,7 @@ function checkList(list) {
   }
   return {
     problems,
-    summary: { total: n, byCat, languages, misspelled, groups: groups.size, bigGroups },
+    summary: { total: n, byCat, languages, misspelled, groups: groups.size, bigGroups, facets: Object.fromEntries(Object.entries(facets).map(([k, v]) => [k, v.length])) },
   };
 }
 
@@ -441,6 +460,13 @@ function altMet(alt, label, found, reply) {
   return hasNumber(found, alt);
 }
 
+/** The role a `found_as` holds: a word, or a record with its role (`role`, `type`, `party_type`, `kind`). */
+function roleOf(found) {
+  if (!found) return null;
+  if (typeof found === 'string') return found;
+  return found.role ?? found.type ?? found.party_type ?? found.kind ?? found.party?.type ?? null;
+}
+
 /**
  * The verdict of one question: pass or a miss with its reasons, and notes that are not misses.
  * A wrong figure is always a miss: an expected figure that is not shown fails the question.
@@ -522,6 +548,19 @@ function score(question, result, oracle) {
   // A change request ends in a refusal that points to the right entry screen.
   const route = question.filters.match(/route=([a-z_]+)/);
   if (route && reply?.entry_route?.screen !== route[1]) reasons.push(`entry route is not ${route[1]}`);
+  // "No such party" (plan 52 section 8): a not_found says which role was asked (`asked_role`) and,
+  // when the name is a party of another role, which (`found_as`). Until the app puts the field in
+  // the reply the question is PENDING, not a pass and not a miss.
+  const wantsRole = (question.filters.match(/(?:^|;)asked_role=([a-z_]+)/) ?? [])[1];
+  const wantsFound = (question.filters.match(/(?:^|;)found_as=([a-z_]+)/) ?? [])[1];
+  const fieldThere = !!reply && ('asked_role' in reply || 'found_as' in reply);
+  const pending = !!(wantsRole || wantsFound) && !!reply && !fieldThere;
+  if (fieldThere) {
+    if (wantsRole && reply.asked_role !== wantsRole) reasons.push(`asked_role is ${reply.asked_role ?? 'empty'}, wanted ${wantsRole}`);
+    const foundRole = roleOf(reply.found_as);
+    if (wantsFound && foundRole !== wantsFound) reasons.push(`found_as is ${foundRole ?? 'empty'}, wanted ${wantsFound}`);
+    if (wantsRole && !wantsFound && foundRole) reasons.push(`found_as is ${foundRole} for a name nobody has`);
+  }
   if (question.outcome === 'change_refused' && question.id === 'Q096' && reply?.entry_route?.screen !== 'wasooli')
     reasons.push('entry route is not wasooli');
   if (question.outcome === 'outside_books' && question.filters.includes('nearest=party_card')) {
@@ -561,13 +600,14 @@ function score(question, result, oracle) {
   const shows = found.parts.length + found.all.length > 0;
   let kind;
   if (lost) kind = 'LOST (network)';
+  else if (pending) kind = 'PENDING (asked_role is not in the reply yet)';
   else if (reasons.length === 0) kind = 'PASS';
   else if (!reply) kind = 'MISS (harness)';
   else if (network) kind = 'MISS (network)';
   else if (SAFE_ENDS.has(outcome)) kind = 'MISS (safe end)';
   else if (shows || outcome === 'answered') kind = 'MISS (REVIEW: figure, party, period or source)';
   else kind = 'MISS';
-  return { id: question.id, cat: question.cat, pass: reasons.length === 0 && !lost, kind, reasons, notes, outcome, figureMisses, afterReading, network, lost, failure };
+  return { id: question.id, cat: question.cat, pass: reasons.length === 0 && !lost && !pending, kind, reasons, notes, outcome, figureMisses, afterReading, network, lost, pending, failure };
 }
 
 /**
@@ -588,7 +628,7 @@ function groupAgreement(list, verdicts, results) {
         const topics = (results.get(q.id)?.tool_calls ?? []).filter((c) => c.tool === 'app_help').map((c) => c.input?.topic);
         return [...new Set(topics)].sort().join(',');
       }
-      if (v.network || v.lost) return 'network'; // a lost connection says nothing about the figures
+      if (v.network || v.lost || v.pending) return 'network'; // a lost connection, or a field not built yet, says nothing about the figures
       return `${v.pass ? 'ok' : 'miss'}:${[...new Set(v.figureMisses)].sort().join(',')}`;
     });
     const real = signs.filter((s) => s !== 'network');
@@ -669,7 +709,7 @@ const ms = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)} s` : `${Math.round(n)} 
 
 /** The numbers of one category: counts, rates and times (model time apart from network time). */
 function categoryStats(cat, list, verdicts, results) {
-  const qs = list.filter((q) => q.cat === cat && verdicts.has(q.id) && !verdicts.get(q.id).lost);
+  const qs = list.filter((q) => q.cat === cat && verdicts.has(q.id) && !verdicts.get(q.id).lost && !verdicts.get(q.id).pending);
   const vs = qs.map((q) => verdicts.get(q.id));
   const n = qs.length;
   const passed = vs.filter((v) => v.pass).length;
@@ -736,7 +776,8 @@ function report(list, data) {
   const verdicts = new Map(ran.map((q) => [q.id, score(q, results.get(q.id), oracle)]));
   const vlist = ran.map((q) => verdicts.get(q.id));
   const lostV = vlist.filter((v) => v.lost);
-  const scoredV = vlist.filter((v) => !v.lost);
+  const pendingV = vlist.filter((v) => v.pending);
+  const scoredV = vlist.filter((v) => !v.lost && !v.pending);
   const passed = scoredV.filter((v) => v.pass).length;
   const lines = [];
   const say = (s = '') => lines.push(s);
@@ -745,7 +786,7 @@ function report(list, data) {
   say(`date ${new Date().toISOString().slice(0, 10)}   questions run ${ran.length} of ${list.length}   threads ${data.meta.threads ?? 1}`);
   say(`oracle facts ${Object.keys(oracle).length}   prefind ${data.meta.prefind === undefined ? 'not recorded' : data.meta.prefind ? 'ON' : 'off (as the app)'}`);
   say();
-  say(`SCORE ${passed} of ${scoredV.length} scored${lostV.length ? `   (${lostV.length} lost to the network are NOT scored: they are listed below and must be asked again)` : ''}`);
+  say(`SCORE ${passed} of ${scoredV.length} scored${lostV.length ? `   (${lostV.length} lost to the network are NOT scored: they are listed below and must be asked again)` : ''}${pendingV.length ? `   (${pendingV.length} PENDING, not scored: the reply has no asked_role / found_as yet)` : ''}`);
   say();
   say('CATEGORY                 pass      wrong  answered  model time p50 / p95 (target)           network  rule');
   const cats = Object.keys(CATS).filter((c) => ran.some((q) => q.cat === c));
@@ -773,6 +814,10 @@ function report(list, data) {
     say();
     say(`LOST TO THE NETWORK: ${lostV.length} questions, none of them scored: ${lostV.map((v) => v.id).join(' ')}`);
     say('  ask them again with: node scripts/ai-eval/run.mjs --misses');
+  }
+  if (pendingV.length) {
+    say();
+    say(`PENDING (the field asked_role / found_as is not in the reply yet; neither a pass nor a miss): ${pendingV.length} questions: ${pendingV.map((v) => v.id).join(' ')}`);
   }
   const noted = vlist.filter((v) => v.notes.length > 0);
   say();
@@ -838,12 +883,12 @@ function report(list, data) {
   say(`URDU REVIEW SHEET ${REVIEW} (${ran.length} answers; the reviewer marks good or not, and for advice answers inside FR-7.88 or not; at least 95 of 100 advice answers must be good)`);
   const advice = list.filter((q) => q.cat === 'B' && results.has(q.id));
   say(`  advice answers to read for FR-7.88: ${advice.map((q) => q.id).join(' ')}`);
-  const meets = stats.length > 0 && stats.every((s) => s.rulePassed && s.timeOk) && bad.length === 0 && afterReading.length === 0 && failures.length === 0 && lostV.length === 0;
+  const meets = stats.length > 0 && stats.every((s) => s.rulePassed && s.timeOk) && bad.length === 0 && afterReading.length === 0 && failures.length === 0 && lostV.length === 0 && pendingV.length === 0;
   say();
   say(
     meets
       ? 'RESULT: every category that ran meets plan 52 Section 2 (the Urdu review is still to do)'
-      : `RESULT: does NOT yet meet plan 52 Section 2 (${stats.filter((s) => !s.rulePassed).map((s) => `${s.cat} score`).concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`)).join(', ') || 'groups, reads or network'}${lostV.length ? '; and questions lost to the network' : ''})`,
+      : `RESULT: does NOT yet meet plan 52 Section 2 (${stats.filter((s) => !s.rulePassed).map((s) => `${s.cat} score`).concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`)).join(', ') || 'groups, reads or network'}${lostV.length ? '; and questions lost to the network' : ''}${pendingV.length ? '; and questions pending the asked_role field' : ''})`,
   );
   return { text: lines.join('\n'), meets, results, verdicts, stats, bad };
 }
@@ -916,7 +961,7 @@ function idsToAskAgain(list) {
       const r = results.get(q.id);
       if (!r) return true;
       const v = score(q, r, oracle);
-      return v.lost || !v.pass;
+      return v.lost || v.pending || !v.pass;
     })
     .map((q) => q.id);
 }
@@ -1088,6 +1133,24 @@ function selfTest() {
   const lv = new Map([['L1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false }], ['L2', { pass: false, kind: 'LOST (network)', outcome: 'offline', network: false, lost: true }]]);
   const lstats = categoryStats('A', [{ id: 'L1', cat: 'A' }, { id: 'L2', cat: 'A' }], lv, new Map([['L1', { millis: 1000 }], ['L2', { millis: 999999 }]]));
   expect(lstats.n === 1 && lstats.passed === 1, 'a lost question counted in the category');
+  // "No such party": the role fields are scored once the reply carries them, and are PENDING before.
+  const nf = mk({ outcome: 'not_found', filters: 'facet=nosuch;asked_role=seller;found_as=buyer' });
+  const noField = score(nf, { reply: { outcome: 'not_found', answer: null }, tool_calls: [] }, {});
+  expect(noField.pending && !noField.pass && noField.kind.startsWith('PENDING'), 'a missing asked_role was not pending');
+  const rolesOk = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: { role: 'buyer', name: 'Faisal' } }, tool_calls: [] }, {});
+  expect(rolesOk.pass && !rolesOk.pending, 'the right roles missed');
+  expect(score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: 'buyer' }, tool_calls: [] }, {}).pass, 'found_as as a word missed');
+  const wrongAsked = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'buyer' }, tool_calls: [] }, {});
+  expect(!wrongAsked.pass && !wrongAsked.pending && wrongAsked.reasons.some((x) => x.includes('asked_role')), 'a wrong asked_role passed');
+  const noFound = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: null }, tool_calls: [] }, {});
+  expect(!noFound.pass && noFound.reasons.some((x) => x.includes('found_as')), 'a missing found_as passed');
+  const made = mk({ outcome: 'not_found', filters: 'facet=nosuch;asked_role=buyer' });
+  expect(score(made, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: null }, tool_calls: [] }, {}).pass, 'a made-up name missed');
+  expect(!score(made, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'seller' }, tool_calls: [] }, {}).pass, 'a found_as for a made-up name passed');
+  expect(score(made, { reply: { outcome: 'not_found', answer: null }, tool_calls: [] }, {}).pending, 'a made-up name without the field was not pending');
+  const pv = new Map([['P1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false, pending: false }], ['P2', { pass: false, kind: 'PENDING', outcome: 'not_found', network: false, lost: false, pending: true }]]);
+  const pstats = categoryStats('E', [{ id: 'P1', cat: 'E' }, { id: 'P2', cat: 'E' }], pv, new Map([['P1', { millis: 1000 }], ['P2', { millis: 1000 }]]));
+  expect(pstats.n === 1 && pstats.passed === 1, 'a pending question counted in the category');
   // Results of a partial run go into the whole file, a new row for an old one.
   const dir = mkdtempSync(join(tmpdir(), 'ai-eval-'));
   const whole = join(dir, 'results.json');
@@ -1117,6 +1180,8 @@ function main() {
   console.log(
     `  ${summary.total} questions: A ${c.A}, B ${c.B}, C ${c.C}, D ${c.D}, E ${c.E}; Roman Urdu ${summary.languages.roman}, Urdu letters ${summary.languages.urdu}, English ${summary.languages.en}; ${summary.misspelled} misspelled; ${summary.groups} groups (${summary.bigGroups} of 3 or more)`,
   );
+  const fc = summary.facets;
+  console.log(`  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}`);
   if (problems.length) {
     console.error(`the bank breaks its rules:\n  ${problems.join('\n  ')}`);
     process.exit(2);
@@ -1173,7 +1238,8 @@ function main() {
         date: new Date().toISOString(),
         model: data.meta.model,
         categories: stats.map(({ networkTimes, ...s }) => ({ ...s, networkQuestions: networkTimes.length })),
-        misses: [...verdicts.values()].filter((v) => !v.pass && !v.lost).map((v) => v.id),
+        misses: [...verdicts.values()].filter((v) => !v.pass && !v.lost && !v.pending).map((v) => v.id),
+        pending: [...verdicts.values()].filter((v) => v.pending).map((v) => v.id),
         lost: [...verdicts.values()].filter((v) => v.lost).map((v) => v.id),
         meets,
       },

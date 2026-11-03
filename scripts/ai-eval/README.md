@@ -8,7 +8,7 @@ or writes the key.
 | File | What it is |
 |---|---|
 | `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (369 questions). Built, never edited by hand. |
+| `questions.tsv` | The bank (434 questions). Built, never edited by hand. |
 | `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
 | `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
 | `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
@@ -30,6 +30,16 @@ the same meaning:
 | C | forecasts and what-ifs | year end, pace doubled, next months, targets, +10% |
 | D | help | every one of the 38 topics of the guide |
 | E | mixed and hard | follow-ups, misspellings, two parts, nonsense, injection, change requests, unknown names |
+
+Three facets of Umar's request of 03-11-2026 (plan 52 Section 8.1) run through the categories. A question
+carries its facet in `filters` (`facet=M`, `facet=day`, `facet=nosuch`), and each one has its Roman Urdu,
+Urdu and English twins in a group:
+
+| Facet | Questions | What |
+|---|---|---|
+| M, mixed language | 36 | Roman Urdu with English words ("Rahim ne this month kitna sell kiya"), Urdu letters with English words ("رحیم کی sale this month کتنی رہی"), English with Urdu mandi words ("how much bakaya does Faisal have"). Every section of category A at least once: item, seller, buyer, partner, period, cash, dues, stock, garden, trip, fruit, expense, capital, day, month. |
+| day, a party's day | 15 | "X ne aaj / kal / 18 September ko kya aur kitna khareeda (becha)": a buyer today, a buyer yesterday, a buyer on a date with two items, a seller yesterday, a seller on a date with two items. Each item's qty and amount and the day's total, all from the oracle (`buyer_day.*`, `seller_day.*`). A buyer's amount is the value or the value with commission and laga (`with_charges`); both are true figures of the app. |
+| nosuch, no such party | 14 | A made-up seller and a made-up buyer end in `not_found` with `asked_role`. A buyer asked as a seller ends in `not_found` with `asked_role=seller` and `found_as=buyer`; a seller asked as a buyer the reverse. A misspelled real seller (Raheem for Rahim) is still found, with his figures (category A). |
 
 Worlds: `day`, `late`, `e59`, `e42`, `e34` (the PRD's), `year` (12 months, 369 بکری, today 05-11-2026) and
 `thin` (set up, no sale: the Owner's data today).
@@ -91,6 +101,15 @@ Loosened (each one asked for, or an honest second reading):
 4. Groups agree on the required figures only. The old rule compared every figure shown, so one wording
    adding a figure was a disagreement (lead).
 5. Q087 expects `first=Karim 10160` without a side; Q034 says "آج" (lead).
+
+Pending (plan 52 Section 8.2, lead, 03-11-2026):
+
+11. A question whose `filters` hold `asked_role=` or `found_as=` is **PENDING** while the reply has neither field
+    (`asked_role`, `found_as` at the top of the reply). It is neither a pass nor a miss: it is not in the
+    score, it is listed on its own, `--misses` asks it again, and the run cannot say "meets" while any is
+    pending. Once a field is there, `asked_role` must be the asked role, and `found_as` (a word, or a record
+    with `role`, `type`, `party_type` or `kind`) must be the role the name has; a made-up name must have no
+    `found_as`.
 
 Tightened:
 

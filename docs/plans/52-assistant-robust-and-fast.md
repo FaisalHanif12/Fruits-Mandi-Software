@@ -123,3 +123,26 @@ Also:
 - **The harness survives a dropped connection.** A question that ends offline is asked again after the connection is back (waiting up to 10 minutes, at most 5 tries). A question still lost is reported apart and is never scored. While any question is lost, the run cannot say "meets". A timeout is still a real miss.
 - **The fixed part is 10,997 tokens as the model counts it (about 10,652 by o200k), within 11,000.** The higher first-call numbers came from what the app reads ahead for that question (+86 to +1,204). That is reported apart and is not part of the NFR limit.
 - **Scorer change S01 (shown to Umar):** "whom should I collect from first" asks for one party. The second party's figure becomes optional (`second?=`). The order check still applies when both parties are shown. Reason: Q223 and Q224 named the right first party and figure and showed the ordered list, so the answers were right. Refused: a no-side exception for list amounts. A Dr or Cr figure must still show its side.
+
+## 8. Umar's request of 03-11-2026: mixed language, a party's day, and "no such party"
+
+Umar: "ask these kind of the question as well which would be the mix english or urdu ... Faisal ne is din kiya or kitne beecha ... if not found then its just write that jo seller ap poch rahay hain aisa koi seller hai hi nahi ... keep the complete diversity in the existing facet or real time data check in any form."
+
+### 8.1 Bank (robustness)
+- **New facet M, mixed language:** Roman Urdu with English words ("Faisal ne yesterday kitna sell kiya", "kele ka commission this month kitna"), Urdu letters with English words ("رحیم کی sale آج کتنی"), and English with Urdu mandi words ("how much bakaya does Akram have").
+- **Coverage:** every section of category A in mixed form at least once (item, seller, buyer, partner, period, cash, dues, stock, gardens, trips, fruit, expenses, capital, day, month).
+- **A party's day:** "X ne is din / aaj / kal / 12 October ko kya aur kitna becha (or khareeda)". The answer gives each item with its qty and amount, plus the day's total.
+- **No such party:** a made-up name gives not_found, saying plainly that no seller (or buyer) has that name, with the nearest names if any. A real name asked in the wrong role (a buyer asked as a seller) says that this name is a buyer, not a seller, and offers his purchases. A misspelled real name still finds him.
+- **Expected figures come from the app's own reports (the oracle), never typed.** Each new question joins a same-meaning group with its Roman Urdu, Urdu and English twins.
+
+### 8.2 Contract change (backend, then frontend)
+- The not_found outcome carries the role that was asked: `asked_role`, one of seller, buyer, item, partner, garden, trip or any. When the name exists in another role, it also carries `found_as`, with that party.
+- **Text, ur and en, frontend:** `assistant-not-found-role` selects on the asked role. Example: "آپ جس بیوپاری کا پوچھ رہے ہیں، اس نام کا کوئی بیوپاری نہیں۔" / "There is no seller by the name you asked about." `assistant-found-as-other` example: "یہ نام بیوپاری نہیں، گاہک ہے۔ ان کی خریداری دکھاؤں؟" / "This name is a buyer, not a seller. Show his purchases?"
+- **Lead decision (easy to change):** the wrong-role case names the role it was found in instead of only saying "not found", because that is the true answer.
+- The new Urdu text joins the pending Urdu review.
+
+### 8.3 Cue attack tests (robustness_cues.rs, 03-11-2026)
+- 24 offline tests: 18 pass, 6 fail. The failures are 4 findings, all owned by backend.
+- **Findings 2 and 3, MAJOR, a wrong figure on screen.** The two-item guard covers only sum. It misses an average of two items (2,724), and an item's figure added to an unfiltered total (9,376). Both were shown for "kela ka commission". Must be fixed before the next live run.
+- **Finding 1, MAJOR.** The new `asked` rule takes the advice word "sale" as a figure request, so a right answer can end ChecksFailed.
+- **Finding 4, MINOR.** Prefind reads the seller Kela Traders for the item word "kela". Prefind is parked and off. Fixing this is a condition before it is ever turned on.

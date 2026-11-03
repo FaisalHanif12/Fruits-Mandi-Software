@@ -13,6 +13,7 @@
 //! - `b.<period>.<seller|total>.<column>`, `c.<period>.<buyer|total>.<column>`: views B and C.
 //! - `f.<period>.<partner>.<column>`: view F. `g.<yyyy_mm>.<column>`: view G, a row per month.
 //! - `buyer_items.<buyer>.<period>.<item|total>.<column>`: view A filtered to one buyer.
+//! - `buyer_day.<buyer>.<day>.<item|total>.<column>` and `seller_day.<seller>.<day>...`: a party's day.
 //! - `r20.<buyer|total>.<column>` and the same for `r24`, `r26`, `r32`, `r38`: balance lists.
 //! - `r12.<period>.<line>`, `r30.<period>.<partner|total>.<column>`, `r29.<period>.<head|total>...`
 //! - `tiles.<name>`, `partner.<a|b|c>.<column>`, `top.<what>`: leaders worked out from the rows.
@@ -33,6 +34,48 @@ use mandi_services::core::accounts::BalanceSide;
 use mandi_services::{ledger, partners};
 
 use super::seed::{TODAY, Year, date, ddmmyyyy};
+
+/// The days on which a party's purchases or sales are asked (today, yesterday and three dates, on
+/// which the party has two items).
+pub const PARTY_DAYS: [&str; 5] = [
+    "today",
+    "yesterday",
+    "d2026_10_14",
+    "d2026_09_18",
+    "d2026_04_25",
+];
+
+/// The whole rupees a money cell holds.
+fn rupees_of(cell: &Cell) -> Option<i64> {
+    match cell {
+        Cell::Money { paisa } => Some(paisa.rupees()),
+        _ => None,
+    }
+}
+
+/// For each item row of a buyer's view A and for its total: the value, the buyer commission and
+/// the laga added (`with_charges`, C5).
+fn with_charges(o: &mut Oracle, prefix: &str, page: &AnalyticsPage) {
+    let at = |name: &str| page.columns.iter().position(|c| c.key == name);
+    let (Some(gross), Some(comm), Some(laga)) = (at("gross"), at("buyer_comm"), at("laga")) else {
+        return;
+    };
+    let sum_of = |cells: &[Cell]| -> Option<i64> {
+        Some(
+            rupees_of(cells.get(gross)?)?
+                + rupees_of(cells.get(comm)?)?
+                + rupees_of(cells.get(laga)?)?,
+        )
+    };
+    for row in &page.rows {
+        if let (Some((slug, _)), Some(v)) = (row_slug(&row.cells), sum_of(&row.cells)) {
+            o.put(format!("{prefix}.{slug}.with_charges"), v.to_string());
+        }
+    }
+    if let Some(v) = sum_of(&page.totals) {
+        o.put(format!("{prefix}.total.with_charges"), v.to_string());
+    }
+}
 
 /// The periods the bank asks about, with the dates the oracle uses (`from`, `to`).
 pub const PERIODS: [&str; 9] = [
@@ -402,6 +445,35 @@ pub fn compute(y: &Year) -> Oracle {
             &format!("seller_items.{}.year", seller.key),
             &run_a(y, AnalyticsView::A, f),
         );
+    }
+    // A party's day (plan 52 section 8.1): what one buyer bought or one seller sold on one day,
+    // each item with its qty and amount, and the day's total. Only a day on which the party has
+    // lines is written. A buyer's amount is also given with the commission and laga added (the
+    // party day sheet R35 reads the amount that way), as `with_charges`.
+    for p in PARTY_DAYS {
+        for buyer in &y.buyers {
+            let mut f = afilters(p);
+            f.buyer = Some(PartyFilter {
+                account_id: buyer.id,
+                person_key: None,
+            });
+            let page = run_a(y, AnalyticsView::A, f);
+            if page.rows.is_empty() {
+                continue;
+            }
+            let prefix = format!("buyer_day.{}.{p}", buyer.key);
+            dump_analytics(&mut o, &prefix, &page);
+            with_charges(&mut o, &prefix, &page);
+        }
+        for seller in &y.sellers {
+            let mut f = afilters(p);
+            f.seller_id = Some(seller.id);
+            let page = run_a(y, AnalyticsView::A, f);
+            if page.rows.is_empty() {
+                continue;
+            }
+            dump_analytics(&mut o, &format!("seller_day.{}.{p}", seller.key), &page);
+        }
     }
     // Item with a period and one seller are in the views above; gardens, trips, fruit:
     dump_analytics(
