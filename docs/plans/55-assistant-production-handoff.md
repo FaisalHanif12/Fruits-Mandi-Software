@@ -33,6 +33,7 @@ Plan 54's S2 and S3 become steps 1 and 2. S1, S4, S5 and S6 stay as written.
 | How-to, print, navigation, no such party, not in the app | under 1 s / 2 s | 3 s |
 | Figures and lists (category A) | 5 s / 10 s | 25 s |
 | Advice, forecasts, what-ifs (B, C) | 10 s / 20 s | 25 s |
+| Mixed and hard (E) | 6 s / 12 s (plan 52) | 25 s |
 
 - **The hard limit is real.** At 20 s the last call goes out with the tools off and answers from what has been read. At 25 s the panel shows what is read (the checked tables) with a plain line: "جواب میں دیر ہو رہی ہے، یہ پڑھا ہوا ریکارڈ ہے". No answer is ever lost.
 - A slow line is shown as a slow line, never as an error.
