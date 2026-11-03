@@ -51,8 +51,9 @@ Plan 54's S2 and S3 become steps 1 and 2. S1, S4, S5 and S6 stay as written.
 
 | Work | Owner |
 |---|---|
-| Plan 53 (opening on any day, collection list, munshi header, today_open) | backend2 (new), so backend stays on the assistant |
-| Understand, read, write (Section 2); plan 54 S1 to S5; the hard limits | backend |
+| Plan 53 (opening on any day, collection list, munshi header, today_open), already started | backend |
+| Step 1, understand: a new module `assistant/src/understand/` (intent, parties in their roles, items, period words, report or screen, confidence), in new files only, with its own tests | backend2 (new) |
+| Wiring steps 1 to 3 into the question path; read first; plan 54 S1 to S5; the hard limits | backend, after plan 53 |
 | The panel: buttons, steps, progress line, the slow-line message | frontend2 |
 | The bank, button checks, slow-line harness, attack tests | robustness |
 | The hidden bank and its scoring | an independent tester the lead spawns; it reports only to the lead |
