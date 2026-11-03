@@ -46,7 +46,9 @@ mod year;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use mandi_assistant::ask::{AskReply, AssistantAskInput};
+use mandi_assistant::ask::{
+    AskOutcome, AskReply, AssistantAskInput, AssistantPickInput, PickChoice,
+};
 use mandi_assistant::client::{CallError, ModelClient, OpenRouterClient, Reply};
 use mandi_assistant::run::{self, Deps};
 use mandi_assistant::runtime::Runtime;
@@ -74,6 +76,23 @@ struct Question {
     world: String,
     after: String,
     text: String,
+    /// The `filters` column: where the party of the question is named (`seller=Rahim`).
+    filters: String,
+    /// True when the name is spelled badly on purpose.
+    misspelled: bool,
+}
+
+/// The one party a question is about, from its `filters` (`seller=Rahim`, `buyer=Faisal`). None when
+/// it names none or several.
+fn party_of(filters: &str) -> Option<String> {
+    filters.split(';').find_map(|piece| {
+        let (key, value) = piece.split_once('=')?;
+        let party = [
+            "buyer", "seller", "partner", "item", "garden", "trip", "person",
+        ]
+        .contains(&key);
+        (party && !value.contains(',') && !value.is_empty()).then(|| value.trim().to_owned())
+    })
 }
 
 fn questions(path: &str, only: &[String]) -> Vec<Question> {
@@ -82,6 +101,7 @@ fn questions(path: &str, only: &[String]) -> Vec<Question> {
     let head: Vec<&str> = rows.next().expect("a header").split('\t').collect();
     let at = |name: &str| head.iter().position(|h| *h == name).expect(name);
     let (id, world, after, question) = (at("id"), at("world"), at("after"), at("question"));
+    let (filters, misspelled) = (at("filters"), at("misspelled"));
     rows.filter(|l| !l.trim().is_empty())
         .map(|l| {
             let cells: Vec<&str> = l.split('\t').collect();
@@ -90,6 +110,8 @@ fn questions(path: &str, only: &[String]) -> Vec<Question> {
                 world: cells[world].to_owned(),
                 after: cells[after].to_owned(),
                 text: cells[question].to_owned(),
+                filters: cells.get(filters).copied().unwrap_or("").to_owned(),
+                misspelled: cells.get(misspelled).copied() == Some("1"),
             }
         })
         .filter(|q| only.is_empty() || only.contains(&q.id))
@@ -426,10 +448,65 @@ fn run_one(
         Ok(r) => r,
         Err(e) => return failed(e),
     };
-    let millis = started.elapsed().as_millis();
-    let Ok(Some(row)) = assistant::get_question(&w.env.ctx, reply.question_id) else {
+    let mut millis = started.elapsed().as_millis();
+    let Ok(Some(first_row)) = assistant::get_question(&w.env.ctx, reply.question_id) else {
         return failed("the question log has no row".to_owned());
     };
+    // A misspelled name is asked "which one" by design. On the panel one click answers it, so the
+    // harness clicks the option that is the party of the question, and scores the answer after
+    // the click; both times are counted and the row says it clicked.
+    let mut rows = vec![first_row];
+    let mut reply = reply;
+    let mut clicked: Value = Value::Null;
+    if q.misspelled
+        && reply.outcome == AskOutcome::WhichOne
+        && let Some(want) = party_of(&q.filters)
+        && let Some(option) = reply
+            .options
+            .iter()
+            .find(|o| o.name.name_en.eq_ignore_ascii_case(&want))
+    {
+        let key = option.key.clone();
+        let click_started = Instant::now();
+        let done = match run::pick(
+            &deps,
+            &AssistantPickInput {
+                question_id: reply.question_id,
+                choice: PickChoice::Match { key: key.clone() },
+            },
+        ) {
+            Ok(done) => done,
+            Err(e) => return failed(format!("the click: {e:?}")),
+        };
+        let click_millis = click_started.elapsed().as_millis();
+        let Ok(Some(second)) = assistant::get_question(&w.env.ctx, done.question_id) else {
+            return failed("the log has no row for the click".to_owned());
+        };
+        clicked = json!({"key": key, "name": want, "first_outcome": "which_one",
+                         "first_millis": millis, "click_millis": click_millis});
+        millis += click_millis;
+        rows.push(second);
+        reply = done;
+    }
+    // What the question cost, over its rows (one, or the question and its click).
+    let sum =
+        |f: &dyn Fn(&mandi_services::db::assistant::QuestionRow) -> Option<i64>| -> Option<i64> {
+            rows.iter().map(f).try_fold(0i64, |a, v| v.map(|x| a + x))
+        };
+    let row = rows.last().cloned().expect("a row of the question");
+    let calls_json = {
+        let mut all: Vec<Value> = Vec::new();
+        for r in &rows {
+            if let Some(Ok(Value::Array(items))) =
+                r.calls_json.as_deref().map(serde_json::from_str::<Value>)
+            {
+                all.extend(items);
+            }
+        }
+        Value::Array(all).to_string()
+    };
+    let tool_calls_last: Value =
+        serde_json::from_str(&row.tool_calls_json).unwrap_or(Value::Array(Vec::new()));
     let calls: Vec<Value> = client
         .calls
         .lock()
@@ -441,27 +518,36 @@ fn run_one(
                    "tool_calls": c.tool_calls, "finish": c.finish, "model": c.model})
         })
         .collect();
-    let tool_calls: Value =
-        serde_json::from_str(&row.tool_calls_json).unwrap_or(Value::Array(Vec::new()));
-    eprintln!("{} {} {:?} ({} ms)", q.id, q.world, reply.outcome, millis);
+    eprintln!(
+        "{} {} {:?} ({} ms){}",
+        q.id,
+        q.world,
+        reply.outcome,
+        millis,
+        if clicked.is_null() { "" } else { " [clicked]" }
+    );
     json!({
         "id": q.id,
         "question": q.text,
         "world": q.world,
         "reply": serde_json::to_value(&reply).expect("the reply as JSON"),
-        "tool_calls": tool_calls,
+        // The row of a click carries the totals and the tool list of the whole question (it goes
+        // on from the first one); only its times and its calls are its own.
+        "tool_calls": tool_calls_last,
         "model_calls": row.model_calls,
         "tokens": {"in": row.tokens_in, "cached": row.tokens_cached,
                    "out": row.tokens_out, "reasoning": row.tokens_reasoning},
         "calls": calls,
         "millis": millis,
         // The log row of this very question (lead's item 0b): what the app itself wrote down.
-        "calls_json": row.calls_json,
+        "calls_json": calls_json,
         "answer_json": row.answer_json,
         "finish_reason": row.finish_reason,
-        "total_millis": row.total_millis,
-        "model_millis": row.model_millis,
-        "tool_millis": row.tool_millis,
+        "total_millis": sum(&|r| r.total_millis),
+        "model_millis": sum(&|r| r.model_millis),
+        "tool_millis": sum(&|r| r.tool_millis),
+        // Set when the question was asked "which one" and the harness clicked the right option.
+        "clicked": clicked,
         // The question as the model counts tokens, to take it off the first call's prompt tokens
         // when the fixed part is measured (lead's item 0c).
         "user_tokens": user_tokens(&q.text),
@@ -810,6 +896,75 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
         assert!(!row[field].is_null(), "the row has no {field}: {row}");
     }
     assert!(row["user_tokens"].as_u64().unwrap_or(0) > 0);
+    // A misspelled name is asked "which one"; the harness clicks the option that is the party of
+    // the question, counts both times and says it clicked.
+    let which_one = json!({"model": "openai/gpt-6-luna", "usage": usage,
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": "which_one", "text": "", "show": [], "next": [],
+            "choose": "r1", "entry": null, "nearest": null
+        }).to_string()}}]});
+    let find_a = json!({"model": "openai/gpt-6-luna", "usage": usage,
+        "choices": [{"finish_reason": "tool_calls", "message": {"role": "assistant",
+            "content": null, "tool_calls": [{"id": "call_0", "type": "function",
+                "function": {"name": "find", "arguments": json!({"text": "a", "role": "buyer"}).to_string()}}]}}]});
+    let click_script = || -> Box<dyn ModelClient> {
+        Box::new(RecordedClient::new(vec![
+            find_a.clone(),
+            which_one.clone(),
+            answer.clone(),
+        ]))
+    };
+    let misspelled = Question {
+        id: "T1".into(),
+        world: "day".into(),
+        after: String::new(),
+        text: "a ka khata dikhao".into(),
+        filters: "buyer=Akram Toll Tax".into(),
+        misspelled: true,
+    };
+    let row = run_one(
+        &misspelled,
+        &all,
+        &by_id,
+        Some(&masters),
+        "openai/gpt-6-luna",
+        &runtime,
+        &click_script,
+    );
+    assert_eq!(row["clicked"]["name"], "Akram Toll Tax", "{row}");
+    assert_eq!(row["clicked"]["first_outcome"], "which_one");
+    assert_eq!(
+        row["reply"]["outcome"], "answered",
+        "the answer after the click: {row}"
+    );
+    assert_eq!(
+        row["model_calls"], 3,
+        "the question's two calls and the click's one"
+    );
+    let both = row["clicked"]["first_millis"].as_u64().unwrap_or(0)
+        + row["clicked"]["click_millis"].as_u64().unwrap_or(0);
+    assert_eq!(row["millis"].as_u64(), Some(both), "both times are counted");
+    // The same question with a correct spelling is not clicked for.
+    let plain = Question {
+        misspelled: false,
+        id: "T2".into(),
+        world: "day".into(),
+        after: String::new(),
+        text: "a ka khata dikhao".into(),
+        filters: "buyer=Akram Toll Tax".into(),
+    };
+    let row = run_one(
+        &plain,
+        &all,
+        &by_id,
+        Some(&masters),
+        "openai/gpt-6-luna",
+        &runtime,
+        &click_script,
+    );
+    assert!(row["clicked"].is_null());
+    assert_eq!(row["reply"]["outcome"], "which_one");
+
     // A question on the thin books.
     let thin = all
         .iter()

@@ -2489,6 +2489,7 @@ est.commission.target3000000.same_season
 est.commission.year_end.same_growth
 est.commission.year_end.same_pace
 est.commission.year_end.same_season
+est.commission.year_full_months_so_far
 est.commission.year_total.same_growth
 est.commission.year_total.same_pace
 est.commission.year_total.same_season
@@ -2530,6 +2531,10 @@ est.profit.a6.triple_pace
 est.profit.year_end.same_growth
 est.profit.year_end.same_pace
 est.profit.year_end.same_season
+est.profit.year_full_months_so_far
+est.profit.year_total.same_growth
+est.profit.year_total.same_pace
+est.profit.year_total.same_season
 est.sales.a1.double_pace
 est.sales.a1.first_month
 est.sales.a1.same_growth
@@ -2568,6 +2573,7 @@ est.sales.a6.triple_pace
 est.sales.year_end.same_growth
 est.sales.year_end.same_pace
 est.sales.year_end.same_season
+est.sales.year_full_months_so_far
 est.sales.year_total.same_growth
 est.sales.year_total.same_pace
 est.sales.year_total.same_season
@@ -2609,6 +2615,10 @@ est.shop_expenses.a6.triple_pace
 est.shop_expenses.year_end.same_growth
 est.shop_expenses.year_end.same_pace
 est.shop_expenses.year_end.same_season
+est.shop_expenses.year_full_months_so_far
+est.shop_expenses.year_total.same_growth
+est.shop_expenses.year_total.same_pace
+est.shop_expenses.year_total.same_season
 est_item.banana.commission.a3.same_growth
 est_item.banana.commission.a3.same_pace
 est_item.banana.commission.a3.same_season

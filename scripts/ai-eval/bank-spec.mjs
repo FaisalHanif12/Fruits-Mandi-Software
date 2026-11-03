@@ -440,7 +440,7 @@ const A = [
   {
     g: 'Y58', use: [0], section: 'partner', kind: 'partner', tools: 'analytics:F/report:R30', filters: 'partner=Partner B;period=this year',
     figures: 'profit=@f.year.partner_b.profit_share',
-    q: [r('ba ka is saal ka munafa hissa kitna hai'), e('what is partner B\'s profit share this year')],
+    q: [r('be ka is saal ka munafa hissa kitna hai'), e('what is partner B\'s profit share this year')],
   },
   {
     g: 'Y59', use: [0,2], section: 'partner', kind: 'partner', tools: 'report:R30/report:R29', filters: 'partner=Partner A;period=this year',
@@ -454,12 +454,12 @@ const A = [
   {
     g: 'Y60', use: [0], section: 'capital', kind: 'capital', tools: 'partners/report:R31', filters: 'partner=Partner B',
     figures: 'capital=@partner.partner_b.capital',
-    q: [r('ba ka sarmaya kitna laga hua hai'), e('how much capital does partner B have in the shop')],
+    q: [r('be ka sarmaya kitna laga hua hai'), e('how much capital does partner B have in the shop')],
   },
   {
     g: 'Y61', use: [0], section: 'capital', kind: 'capital', tools: 'partners/report:R31', filters: 'partner=Partner C',
     figures: 'capital=@partner.partner_c.capital',
-    q: [r('ja ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya'), e('partner C took some capital back, how much capital is left')],
+    q: [r('jeem ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya'), e('partner C took some capital back, how much capital is left')],
   },
   // Stock
   {
@@ -485,7 +485,7 @@ const A = [
   },
   {
     g: 'Y66', use: [0], section: 'garden', kind: 'garden', tools: 'report:R36', filters: 'garden=Shahpur Garden',
-    figures: 'paid=@d.garden_paid_total|@i.all.shahpur_garden.paid_shop',
+    figures: 'paid=@d.garden_paid_total|@i.all.shahpur_garden.paid_shop|@r36.shahpur_garden.costs',
     q: [r('shahpur bagh par ab tak kitna kharcha hua'), e('how much has been paid out on shahpur garden so far')],
   },
   {
@@ -495,7 +495,7 @@ const A = [
   },
   {
     g: 'Y68', use: [0,2], section: 'trip', kind: 'trip', tools: 'report:R33', filters: 'view=R33',
-    figures: 'trip1=@trip1.result;trip2=@trip2.result',
+    figures: 'total=@j.all.total.result;trip1?=@trip1.result;trip2?=@trip2.result',
     q: [rm('dono market safr ka nafa ya nuqsan kitna raha'), e('what was the profit or loss of each market trip'),
       u('دونوں مارکیٹ سفر کا نفع یا نقصان کتنا رہا'),
     ],
@@ -507,7 +507,7 @@ const A = [
   },
   {
     g: 'Y70', use: [0,1,2], section: 'fruit', kind: 'fruit', tools: 'report:R37', filters: 'partner=Partner A;period=this year',
-    figures: 'value=@k.year.partner_a.value;qty=@k.year.partner_a.qty',
+    figures: 'amount=@k.year.partner_a.value|@k.year.partner_a.qty',
     q: [rm('alif ne is sal ghar ke liye kitna fal liya'), u('الف نے اس سال گھر کے لیے کتنا پھل لیا'), e('how much fruit did partner A take home this year')],
   },
   {
@@ -588,7 +588,7 @@ const B = [
   },
   {
     g: 'S09', section: 'advice', kind: 'advice', world: 'year', outcome: 'advice', tools: 'analytics:A', filters: 'item=Apple;general=0',
-    figures: 'share=@a.year.apple.share',
+    figures: 'share?=@a.year.apple.share',
     q: [r('kya mujhe saib ka commission barhana chahiye'), e('is it worth raising the commission on apples')],
   },
   {

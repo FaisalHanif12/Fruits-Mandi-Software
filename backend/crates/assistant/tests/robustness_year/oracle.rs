@@ -920,17 +920,21 @@ fn estimates(o: &mut Oracle, y: &Year) {
         let months_left = 13 - today.month();
         if let Ok(Forecast::Estimate(e)) = forecast::estimate(&history, current, months_left, None)
         {
-            let so_far = o
-                .facts
-                .get(&format!(
-                    "a.year.total.{}",
-                    if column == "commission" {
-                        "total_comm"
-                    } else {
-                        column
-                    }
-                ))
-                .and_then(|v| amount_of(v));
+            // The books of the year so far, as the estimate itself counts them: the FULL months
+            // (the current month is one of the months ahead, so its few days are not added twice).
+            let so_far: Option<i64> = Some(
+                history
+                    .iter()
+                    .filter(|h| h.month.year() == current.year())
+                    .map(|h| h.value.rupees())
+                    .sum(),
+            );
+            if let Some(full) = so_far {
+                o.put(
+                    format!("est.{measure}.year_full_months_so_far"),
+                    full.to_string(),
+                );
+            }
             for m in &e.methods {
                 o.put(
                     format!("est.{measure}.year_end.{}", name(m.method)),
@@ -972,7 +976,7 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
     // The year's commission so far plus the doubled pace to the end of the year.
     if let (Some(so_far), Some(doubled)) = (
         o.facts
-            .get("a.year.total.total_comm")
+            .get("est.commission.year_full_months_so_far")
             .and_then(|v| amount_of(v)),
         o.facts
             .get("est.commission.a2.double_pace")

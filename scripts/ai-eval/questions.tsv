@@ -26,12 +26,12 @@ Q024		sales	urdu	0	day		آج کتنے نگ بکے	answered	analytics:A/report:R3
 Q025		analytics	roman	1	day		kela se kitna comission mila	answered	analytics:A	item=Banana	total_comm=3928	E2E-49	A	item
 Q026		analytics	urdu	0	day		سیب کا کمیشن کتنا ہے	answered	analytics:A	item=Apple	total_comm=1520	PRD 18.4	A	item
 Q027		analytics	urdu	0	day		مال کے حساب سے کمیشن دکھائیں	answered	analytics:A	view=A	total_comm=5448;banana=3928;apple=1520	PRD 18.4	A	item
-Q028		analytics	roman	0	day		kis item ka commission sab se zyada hai	answered	analytics:A	view=A	banana=3928;share=72.10%	PRD 18.4	A	item
+Q028		analytics	roman	0	day		kis item ka commission sab se zyada hai	answered	analytics:A	view=A	banana=3928;share?=72.10%	PRD 18.4	A	item
 Q029		analytics	en	0	day		what share of all commission is banana	answered	analytics:A	view=A	share=72.10%	PRD 18.4	A	item
 Q030		analytics	roman	1	day		rahim ka kul commision kitna bana	answered	analytics:B	seller=Rahim	total_comm=3928	PRD 18.4	A	seller
-Q031		analytics	urdu	0	day		کریم کے مال پر کمیشن کتنا بنا	answered	analytics:B	seller=Karim	total_comm=1520	PRD 18.4	A	seller
-Q032		analytics	urdu	0	day		کس بیوپاری سے سب سے زیادہ کمیشن ملا	answered	analytics:B	view=B	seller=Rahim;total_comm=3928	PRD 18.4	A	seller
-Q033		analytics	roman	0	day		kis gahak ne sab se zyada khareeda	answered	analytics:C	view=C	buyer=Arshad Multani;purchase=17400;qty=30	PRD 18.4	A	buyer
+Q031		analytics	urdu	0	day		کریم کے مال پر کمیشن کتنا بنا	answered	analytics:B	seller=Karim	total_comm=1520|720#seller	PRD 18.4	A	seller
+Q032		analytics	urdu	0	day		کس بیوپاری سے سب سے زیادہ کمیشن ملا	answered	analytics:B	view=B	seller=Rahim;total_comm=3928|1764#seller	PRD 18.4	A	seller
+Q033		analytics	roman	0	day		kis gahak ne sab se zyada khareeda	answered	analytics:C	view=C	buyer=Arshad Multani;purchase=17400;qty?=30	PRD 18.4	A	buyer
 Q034		analytics	urdu	0	day		ارشد نے آج کتنا مال خریدا	answered	analytics:C	buyer=Arshad Multani	purchase=17400	PRD 18.4	A	buyer
 Q035		analytics	urdu	0	day		اکرم نے کتنا مال خریدا	answered	analytics:C	buyer=Akram Toll Tax	purchase=12000;qty=20	PRD 18.4	A	buyer
 Q036	G04	dues	roman	0	day		kul ugrahi kitni hai	answered	tiles/report:R20	view=R20	total=21564	E2E-51	A	dues
@@ -88,7 +88,7 @@ Q086	G08	advice	roman	1	late		kis se pahle wasuli karon	advice	report:R20	view=R
 Q087		advice	roman	0	day		kis ko pehle payment karun	advice	report:R24	view=R24	first=Karim 10160	PRD 4.9	B	advice
 Q088		advice	en	0	day		which buyer should I give less credit to	advice	report:R20/analytics:C	view=R20	first=Arshad Multani 18684 Dr	PRD 4.9	B	advice
 Q089		advice	urdu	0	day		کون سا خرچہ کم کر سکتا ہوں	advice	report:R29	view=R29	first=Electricity 3000	PRD 4.8	B	advice
-Q090		advice	en	0	day		is it worth raising the commission on apples	advice	analytics:A	item=Apple	total_comm=1520;share=27.90%	PRD 18.4	B	advice
+Q090		advice	en	0	day		is it worth raising the commission on apples	advice	analytics:A	item=Apple	total_comm=1520;share?=27.90%	PRD 18.4	B	advice
 Q091		followup	roman	0	day	Q001	aur pichle mahine ka?	answered	report:R13	party=Akram Toll Tax;to=2026-09-30	balance=0	PRD 4.3	E	followup
 Q092		followup	en	0	day	Q005	and what was his last bill	answered	report:R13	party=Arshad Multani	debit=18684	PRD 4.4	E	followup
 Q093		followup	urdu	0	day	Q016	اور کمیشن؟	answered	tiles/report:R34	period=today	commission=5448	E2E-48	E	followup
@@ -198,24 +198,24 @@ Q196	Y56	partner	urdu	0	year		تینوں شراکت داروں کی کل رقم 
 Q197	Y56	partner	en	0	year		what is each partner's total now	answered	report:R31/analytics:F	view=partner totals	a=@partner.partner_a.total;b=@partner.partner_b.total;c=@partner.partner_c.total	oracle	A	partner
 Q198	Y57	partner	roman	0	year		alif ki kul raqam kitni hai	answered	find,report:R31	partner=Partner A	total=@partner.partner_a.total	oracle	A	partner
 Q199	Y57	partner	urdu	0	year		الف کی کل رقم کتنی ہے	answered	find,report:R31	partner=Partner A	total=@partner.partner_a.total	oracle	A	partner
-Q200		partner	roman	0	year		ba ka is saal ka munafa hissa kitna hai	answered	analytics:F/report:R30	partner=Partner B;period=this year	profit=@f.year.partner_b.profit_share	oracle	A	partner
+Q200		partner	roman	0	year		be ka is saal ka munafa hissa kitna hai	answered	analytics:F/report:R30	partner=Partner B;period=this year	profit=@f.year.partner_b.profit_share	oracle	A	partner
 Q201	Y59	partner	roman	0	year		alif ne is saal zaati kharch ke liye kitna liya aur kitna wapas kiya	answered	report:R30/report:R29	partner=Partner A;period=this year	taken=@r30.year.partner_a.taken;returned=@r30.year.partner_a.returned	oracle	A	partner
 Q202	Y59	partner	urdu	0	year		الف نے اس سال ذاتی خرچ کے لیے کتنا لیا اور کتنا واپس کیا	answered	report:R30/report:R29	partner=Partner A;period=this year	taken=@r30.year.partner_a.taken;returned=@r30.year.partner_a.returned	oracle	A	partner
-Q203		capital	roman	0	year		ba ka sarmaya kitna laga hua hai	answered	partners/report:R31	partner=Partner B	capital=@partner.partner_b.capital	oracle	A	capital
-Q204		capital	roman	0	year		ja ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya	answered	partners/report:R31	partner=Partner C	capital=@partner.partner_c.capital	oracle	A	capital
+Q203		capital	roman	0	year		be ka sarmaya kitna laga hua hai	answered	partners/report:R31	partner=Partner B	capital=@partner.partner_b.capital	oracle	A	capital
+Q204		capital	roman	0	year		jeem ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya	answered	partners/report:R31	partner=Partner C	capital=@partner.partner_c.capital	oracle	A	capital
 Q205	Y62	stock	roman	1	year		baki mal kitna he	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
 Q206	Y62	stock	urdu	0	year		باقی مال کتنا ہے	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
 Q207	Y62	stock	en	0	year		how much unsold stock is left	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
 Q208		stock	roman	0	year		kele ka kitna maal baqi para hai	answered	report:R10	item=Banana	qty=@stock.banana.qty	oracle	A	stock
 Q209	Y65	garden	roman	1	year		shahpur bag ka abhi kitna balance he	answered	tiles/report:R36	garden=Shahpur Garden	balance=@tiles.gardens_balance	oracle	A	garden
 Q210	Y65	garden	urdu	0	year		شاہ پور باغ کا اب کتنا حساب بنتا ہے	answered	tiles/report:R36	garden=Shahpur Garden	balance=@tiles.gardens_balance	oracle	A	garden
-Q211		garden	roman	0	year		shahpur bagh par ab tak kitna kharcha hua	answered	report:R36	garden=Shahpur Garden	paid=@d.garden_paid_total|@i.all.shahpur_garden.paid_shop	oracle	A	garden
-Q212	Y68	trip	roman	1	year		dono market safr ka nafa ya nuqsan kitna raha	answered	report:R33	view=R33	trip1=@trip1.result;trip2=@trip2.result	oracle	A	trip
-Q213	Y68	trip	urdu	0	year		دونوں مارکیٹ سفر کا نفع یا نقصان کتنا رہا	answered	report:R33	view=R33	trip1=@trip1.result;trip2=@trip2.result	oracle	A	trip
+Q211		garden	roman	0	year		shahpur bagh par ab tak kitna kharcha hua	answered	report:R36	garden=Shahpur Garden	paid=@d.garden_paid_total|@i.all.shahpur_garden.paid_shop|@r36.shahpur_garden.costs	oracle	A	garden
+Q212	Y68	trip	roman	1	year		dono market safr ka nafa ya nuqsan kitna raha	answered	report:R33	view=R33	total=@j.all.total.result;trip1?=@trip1.result;trip2?=@trip2.result	oracle	A	trip
+Q213	Y68	trip	urdu	0	year		دونوں مارکیٹ سفر کا نفع یا نقصان کتنا رہا	answered	report:R33	view=R33	total=@j.all.total.result;trip1?=@trip1.result;trip2?=@trip2.result	oracle	A	trip
 Q214		trip	roman	0	year		safar ka kitna maal baqi hai aur uski lagat kitni hai	answered	tiles/report:R33	view=R33	qty=@tiles.trips_qty_left;cost=@tiles.trips_cost_left	oracle	A	trip
-Q215	Y70	fruit	roman	1	year		alif ne is sal ghar ke liye kitna fal liya	answered	report:R37	partner=Partner A;period=this year	value=@k.year.partner_a.value;qty=@k.year.partner_a.qty	oracle	A	fruit
-Q216	Y70	fruit	urdu	0	year		الف نے اس سال گھر کے لیے کتنا پھل لیا	answered	report:R37	partner=Partner A;period=this year	value=@k.year.partner_a.value;qty=@k.year.partner_a.qty	oracle	A	fruit
-Q217	Y70	fruit	en	0	year		how much fruit did partner A take home this year	answered	report:R37	partner=Partner A;period=this year	value=@k.year.partner_a.value;qty=@k.year.partner_a.qty	oracle	A	fruit
+Q215	Y70	fruit	roman	1	year		alif ne is sal ghar ke liye kitna fal liya	answered	report:R37	partner=Partner A;period=this year	amount=@k.year.partner_a.value|@k.year.partner_a.qty	oracle	A	fruit
+Q216	Y70	fruit	urdu	0	year		الف نے اس سال گھر کے لیے کتنا پھل لیا	answered	report:R37	partner=Partner A;period=this year	amount=@k.year.partner_a.value|@k.year.partner_a.qty	oracle	A	fruit
+Q217	Y70	fruit	en	0	year		how much fruit did partner A take home this year	answered	report:R37	partner=Partner A;period=this year	amount=@k.year.partner_a.value|@k.year.partner_a.qty	oracle	A	fruit
 Q218		fruit	roman	0	year		mehmanon ke liye is saal kitne ka phal aaya	answered	report:R37	guests;period=this year	guests=@d.fruit_guests_year	oracle	A	fruit
 Q219		lent	roman	0	year		udhar rakam kitni baqi hai aur kitni wapsi ki tareekh guzar chuki	answered	tiles/report:R32	view=R32	open=@tiles.lent_open;overdue=@tiles.lent_overdue	oracle	A	dues
 Q220	Y75	item	roman	0	year		mujhe batao is saal kela saib aur aam teeno ka kitna kitna commission hua	answered	analytics:A	item=Banana,Apple,Mango;period=this year	banana=@a.year.banana.total_comm;apple=@a.year.apple.total_comm;mango=@a.year.mango.total_comm	oracle	A	item
@@ -239,8 +239,8 @@ Q237	S07	advice	roman	1	year		kis biyopari se zyada mal mangwana chahiye	advice	
 Q238	S07	advice	en	0	year		which seller should I ask to send more goods	advice	analytics:B	general=0	top!=@top.seller_gross_year.name	oracle	B	advice
 Q239	S08	advice	roman	0	year		kaun se gahak paise dene mein sab se der karte hain	advice	report:R20/analytics:C	general=0	slow!=Zahid Mehmood|Tariq Mehmood|Arshad Multani	oracle	B	advice
 Q240	S08	advice	en	0	year		which buyers are the slowest to pay	advice	report:R20/analytics:C	general=0	slow!=Zahid Mehmood|Tariq Mehmood|Arshad Multani	oracle	B	advice
-Q241	S09	advice	roman	0	year		kya mujhe saib ka commission barhana chahiye	advice	analytics:A	item=Apple;general=0	share=@a.year.apple.share	oracle	B	advice
-Q242	S09	advice	en	0	year		is it worth raising the commission on apples	advice	analytics:A	item=Apple;general=0	share=@a.year.apple.share	oracle	B	advice
+Q241	S09	advice	roman	0	year		kya mujhe saib ka commission barhana chahiye	advice	analytics:A	item=Apple;general=0	share?=@a.year.apple.share	oracle	B	advice
+Q242	S09	advice	en	0	year		is it worth raising the commission on apples	advice	analytics:A	item=Apple;general=0	share?=@a.year.apple.share	oracle	B	advice
 Q243	S10	advice	roman	0	year		sales bherane ke tareeky batao?	advice	analytics:A,report:R20	ok=either		Umar 02-11-2026: his real failed question. With data the answer may stand on the books or be marked general advice; if it is marked, it has no figure	B	advice
 Q244	S10	advice	urdu	0	year		بکری بڑھانے کے طریقے بتائیں	advice	analytics:A,report:R20	ok=either		Umar 02-11-2026: his real failed question. With data the answer may stand on the books or be marked general advice; if it is marked, it has no figure	B	advice
 Q245	S10	advice	en	0	year		tell me ways to increase sales	advice	analytics:A,report:R20	ok=either		Umar 02-11-2026: his real failed question. With data the answer may stand on the books or be marked general advice; if it is marked, it has no figure	B	advice

@@ -337,8 +337,17 @@ function collect(reply) {
   return out;
 }
 
-/** One value of a figures text: a number (with a side), a percent, a month, a date or a name. */
+/** The words that name a side of the commission in the model's own text (`#seller` after a value). */
+const SIDE_WORDS = { seller: ['بیوپاری', 'seller', 'byopari', 'biyopari'] };
+
+/**
+ * One value of a figures text: a number (with a side), a percent, a month, a date or a name. A
+ * value ending in `#seller` counts only when the answer's text names the side (a bare
+ * "commission" is the total, as the prompt says).
+ */
 function parseValue(label, value, strict) {
+  const tag = (value.match(/#(seller)$/) ?? [])[1];
+  if (tag) return { ...parseValue(label, value.slice(0, -tag.length - 1), strict), needs: tag };
   let m;
   if (strict) return { kind: 'name', name: value.toLowerCase(), strict: true };
   if ((m = value.match(/^(-?\d+(?:\.\d+)?)%$/))) return { kind: 'percent', n: Math.round(Number(m[1]) * 100) };
@@ -408,6 +417,10 @@ function routeMatched(question, result) {
 
 /** Does the answer meet one alternative of an expected figure? */
 function altMet(alt, label, found, reply) {
+  if (alt.needs) {
+    const text = found.text.toLowerCase();
+    if (!SIDE_WORDS[alt.needs].some((w) => text.includes(w))) return false;
+  }
   if (alt.kind === 'name') {
     if (found.names.has(alt.name)) return true;
     // A name that need not be in the answer text counts when the record was read (a note only).
@@ -524,6 +537,7 @@ function score(question, result, oracle) {
     for (const group of question.tools.split(',').filter(Boolean))
       if (!group.split('/').some((t) => toolSeen(result.tool_calls, t))) notes.push(`tool ${group} not used`);
   }
+  if (result.clicked) notes.push(`which_one clicked: ${result.clicked.name}`);
   const afterReading = outcome === 'not_understood' && (result.tool_calls ?? []).some((c) => !c.error);
   const failure = reply?.failure?.kind ?? null;
   const network = !!reply && (outcome === 'offline' || outcome === 'error' || NETWORK_KINDS.has(failure ?? ''));
@@ -722,6 +736,10 @@ function report(list, data) {
   const afterReading = vlist.filter((v) => v.afterReading);
   say();
   say(`NOT UNDERSTOOD AFTER READING: ${afterReading.length} ${afterReading.length ? afterReading.map((v) => v.id).join(' ') : '(none, as plan 52 wants)'}`);
+  const clicked = ran.map((q) => results.get(q.id)).filter((r) => r.clicked);
+  if (clicked.length) {
+    say(`CLICKED  ${clicked.length} misspelled names were asked "which one" and the matching option was clicked, as on the panel (both times counted): ${clicked.map((r) => `${r.id} ${r.clicked.name}`).join(', ')}`);
+  }
   const failures = vlist.filter((v) => v.network);
   const byKind = {};
   for (const v of failures) byKind[v.failure ?? v.outcome] = (byKind[v.failure ?? v.outcome] ?? 0) + 1;
@@ -745,7 +763,8 @@ function report(list, data) {
   // The fixed part as the model counts it (plan 52 item 0c): the prompt tokens of the FIRST call of a
   // fresh question, less the question itself.
   const fixed = all
-    .filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number')
+    // A call the provider filtered answers with 0 prompt tokens (content_filter): nothing to measure.
+    .filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number' && r.calls[0].prompt > 0)
     .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
   const fixedMax = fixed.length ? Math.max(...fixed) : 0;
   const fixedO200k = Math.round(fixedMax / MODEL_COUNTS_MORE);
@@ -921,6 +940,14 @@ function selfTest() {
   const books = mk({ outcome: 'advice', filters: 'general=0' });
   expect(score(books, { reply: adviceReply(false, [text('قیمت')], [{ kind: 'report' }]), tool_calls: [] }, {}).pass, 'advice from the books missed');
   expect(!score(books, { reply: adviceReply(true, [text('قیمت')]), tool_calls: [] }, {}).pass, 'general advice passed where the books have data');
+  // One side of the commission passes only when the answer names the side (lead 03-11-2026).
+  const side = mk({ figures: 'c=@a.x|@a.y#seller' });
+  expect(score(side, { reply: answered([text('بیوپاری کا کمیشن '), money(700)]), tool_calls: [] }, oracle).pass, 'the seller side named was not accepted');
+  expect(!score(side, { reply: answered([text('کمیشن '), money(700)]), tool_calls: [] }, oracle).pass, 'a bare commission passed for the seller side');
+  expect(score(side, { reply: answered([text('کمیشن '), money(500)]), tool_calls: [] }, oracle).pass, 'the total was refused');
+  // A which_one that the harness clicked is noted, and its answer is scored like any other.
+  const clickedRow = score(mk({ figures: 'g=@a.x' }), { reply: answered([money(500)]), tool_calls: [], clicked: { name: 'Rahim' } }, oracle);
+  expect(clickedRow.pass && clickedRow.notes.some((n) => n.includes('clicked')), 'a clicked question was not noted');
   // A network failure is its own kind of miss, and is kept out of the model's time.
   const down = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] }, oracle);
   expect(!down.pass && down.kind.includes('network') && down.network, 'a network failure was not its own kind');

@@ -26,12 +26,12 @@ Q024		sales	urdu	0	day		آج کتنے نگ بکے	answered	analytics:A/report:R3
 Q025		analytics	roman	1	day		kela se kitna comission mila	answered	analytics:A	item=Banana	total_comm=3928	E2E-49	A	item
 Q026		analytics	urdu	0	day		سیب کا کمیشن کتنا ہے	answered	analytics:A	item=Apple	total_comm=1520	PRD 18.4	A	item
 Q027		analytics	urdu	0	day		مال کے حساب سے کمیشن دکھائیں	answered	analytics:A	view=A	total_comm=5448;banana=3928;apple=1520	PRD 18.4	A	item
-Q028		analytics	roman	0	day		kis item ka commission sab se zyada hai	answered	analytics:A	view=A	banana=3928;share=72.10%	PRD 18.4	A	item
+Q028		analytics	roman	0	day		kis item ka commission sab se zyada hai	answered	analytics:A	view=A	banana=3928;share?=72.10%	PRD 18.4	A	item
 Q029		analytics	en	0	day		what share of all commission is banana	answered	analytics:A	view=A	share=72.10%	PRD 18.4	A	item
 Q030		analytics	roman	1	day		rahim ka kul commision kitna bana	answered	analytics:B	seller=Rahim	total_comm=3928	PRD 18.4	A	seller
-Q031		analytics	urdu	0	day		کریم کے مال پر کمیشن کتنا بنا	answered	analytics:B	seller=Karim	total_comm=1520	PRD 18.4	A	seller
-Q032		analytics	urdu	0	day		کس بیوپاری سے سب سے زیادہ کمیشن ملا	answered	analytics:B	view=B	seller=Rahim;total_comm=3928	PRD 18.4	A	seller
-Q033		analytics	roman	0	day		kis gahak ne sab se zyada khareeda	answered	analytics:C	view=C	buyer=Arshad Multani;purchase=17400;qty=30	PRD 18.4	A	buyer
+Q031		analytics	urdu	0	day		کریم کے مال پر کمیشن کتنا بنا	answered	analytics:B	seller=Karim	total_comm=1520|720#seller	PRD 18.4	A	seller
+Q032		analytics	urdu	0	day		کس بیوپاری سے سب سے زیادہ کمیشن ملا	answered	analytics:B	view=B	seller=Rahim;total_comm=3928|1764#seller	PRD 18.4	A	seller
+Q033		analytics	roman	0	day		kis gahak ne sab se zyada khareeda	answered	analytics:C	view=C	buyer=Arshad Multani;purchase=17400;qty?=30	PRD 18.4	A	buyer
 Q034		analytics	urdu	0	day		ارشد نے آج کتنا مال خریدا	answered	analytics:C	buyer=Arshad Multani	purchase=17400	PRD 18.4	A	buyer
 Q035		analytics	urdu	0	day		اکرم نے کتنا مال خریدا	answered	analytics:C	buyer=Akram Toll Tax	purchase=12000;qty=20	PRD 18.4	A	buyer
 Q036	G04	dues	roman	0	day		kul ugrahi kitni hai	answered	tiles/report:R20	view=R20	total=21564	E2E-51	A	dues
@@ -88,7 +88,7 @@ Q086	G08	advice	roman	1	late		kis se pahle wasuli karon	advice	report:R20	view=R
 Q087		advice	roman	0	day		kis ko pehle payment karun	advice	report:R24	view=R24	first=Karim 10160	PRD 4.9	B	advice
 Q088		advice	en	0	day		which buyer should I give less credit to	advice	report:R20/analytics:C	view=R20	first=Arshad Multani 18684 Dr	PRD 4.9	B	advice
 Q089		advice	urdu	0	day		کون سا خرچہ کم کر سکتا ہوں	advice	report:R29	view=R29	first=Electricity 3000	PRD 4.8	B	advice
-Q090		advice	en	0	day		is it worth raising the commission on apples	advice	analytics:A	item=Apple	total_comm=1520;share=27.90%	PRD 18.4	B	advice
+Q090		advice	en	0	day		is it worth raising the commission on apples	advice	analytics:A	item=Apple	total_comm=1520;share?=27.90%	PRD 18.4	B	advice
 Q091		followup	roman	0	day	Q001	aur pichle mahine ka?	answered	report:R13	party=Akram Toll Tax;to=2026-09-30	balance=0	PRD 4.3	E	followup
 Q092		followup	en	0	day	Q005	and what was his last bill	answered	report:R13	party=Arshad Multani	debit=18684	PRD 4.4	E	followup
 Q093		followup	urdu	0	day	Q016	اور کمیشن؟	answered	tiles/report:R34	period=today	commission=5448	E2E-48	E	followup
