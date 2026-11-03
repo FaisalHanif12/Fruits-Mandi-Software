@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.23 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three) and 03-11-2026 (two), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.24 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two) and 04-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,8 +20,8 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.23 |
-| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.13 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.24 |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.14 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.17 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.17 |
@@ -2076,6 +2076,14 @@ FR-20.7 [A] Each backup is checked after it is made. A failed check shows an ale
 FR-20.8 [A] Backup screen: list of backups (date, size, place, status), بیک اپ ابھی لیں (backup now), بحال کریں (restore), test restore.
 FR-20.9 [A] Restore: pick a backup, see its date and totals, confirm. The current data is backed up first, then replaced. A warning says entries made after that backup will be lost.
 FR-20.10 [A] USB and cloud backups are locked with a key that is shown once at setup and printed for the Owner.
+FR-20.11 [C] **Restore on a new computer, from the first screen.** (Added in v1.24.) Umar (04-11-2026): if the laptop is lost, a new laptop with the app must bring back all the books and carry on where the shop left off.
+- The very first screen of a new install offers two choices before any setup: نئی دکان شروع کریں (start a new shop, the wizard of NFR-INS-2) and پچھلا ڈیٹا واپس لائیں (bring back my data).
+- "Bring back my data" asks where the copy is: the cloud or a USB drive or file. For the cloud it asks the cloud address, the bucket and the two cloud keys (the same fields as Settings), then lists the copies, newest first, with date and size.
+- The Owner picks a copy (the newest is chosen) and types the backup key from the printed sheet (FR-20.10). The app checks the copy, then shows its date and its totals (accounts, entries, the newest entry date, total debit and credit) before anything is restored.
+- Restore puts the books in place exactly as they were in that copy: every section, every setting, partners, rules, learned words, the open and closed days, the question log. The tamper checks (NFR-SEC-6) pass on the new computer. The cloud settings and the backup key are kept on the new computer, so the daily copy goes on to the same place.
+- The Owner then signs in with his old user name and password. If he has forgotten the password, his printed recovery code works (FR-8.5). Keys that never travel in a copy (the OpenRouter key) are asked for again in Settings.
+- Nothing on the new computer is lost if the restore fails half way: it starts again from the first screen.
+Example: the laptop is stolen on 15-03-2028. On a new laptop the Owner installs the app, presses پچھلا ڈیٹا واپس لائیں, types the Cloudflare details and the printed key, picks the copy of 14-03-2028 21:00, sees 2,413 accounts and the totals, restores, signs in, and the dashboard shows the same balances as on 14-03-2028 at closing (NFR-REL-4: under 30 minutes).
 
 ---
 
@@ -2609,3 +2617,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.21 | 03-11-2026 | Lead's [A] item for Umar (A91), found by the live test of plan 52: "compare with the previous period" for whole calendar months means the whole months before (FR-18.1). No money rule or test number changed. |
 | 1.22 | 03-11-2026 | Umar's changes of 03-11-2026, made while testing the app himself, approved by Umar. A new account can be added with its opening balance at any time: the opening posts on its date even when that day is closed, against ابتدائی فرق, the one exception to FR-6.6 (FR-10.11, 10.2, E79). There is no collection day: the اگراہی فہرست lists every buyer who owes, by collector and city (10.2, FR-15.6). No money rule or test number changed. |
 | 1.23 | 03-11-2026 | Umar's second change of 03-11-2026, made while testing the app himself, approved by Umar. Munshis on prints are managed in the staff list: every active staff member whose job is منشی prints in every header after the people typed in Settings (at most 3 munshis, at most 6 people), and an inactive one does not. Each staff row has an active switch (10.3, Section 21, FR-19.13). No money rule, table or test number changed. |
+| 1.24 | 04-11-2026 | Umar's change of 04-11-2026, approved by Umar: restore on a new computer from the first screen, with a choice between a new shop and bringing back the data from the cloud or a USB drive or file (FR-20.11, NFR-INS-2, NFR-INS-6). No money rule, table or test number changed. |

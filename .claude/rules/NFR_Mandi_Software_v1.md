@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.13 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026 and 02-11-2026) |
+| Version | 1.14 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026 and 04-11-2026) |
 | Date | 1 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -339,11 +339,11 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | ID | Requirement |
 |---|---|
 | NFR-INS-1 | One installer file. Installs in under 2 minutes with no internet needed. |
-| NFR-INS-2 | First-run setup wizard in Urdu: firm details, Owner password, recovery code, partners, cloud backup key |
+| NFR-INS-2 | First-run setup wizard in Urdu: firm details, Owner password, recovery code, partners, cloud backup key. Its first screen offers a new shop or bringing back the data from a copy (PRD FR-20.11, v1.14) |
 | NFR-INS-3 | Updates: the app checks for updates (when online), shows what is new in Urdu, and installs only when the Owner agrees. Never during work. |
 | NFR-INS-4 | Updates keep all data and settings. A backup is taken first (NFR-REL-13). |
 | NFR-INS-5 | Uninstall never deletes the data folder or backups |
-| NFR-INS-6 | Move to a new computer: install, restore, done (NFR-REL-4) |
+| NFR-INS-6 | Move to a new computer: install, restore from the first screen, done (NFR-REL-4, PRD FR-20.11). The restored books pass every check of NFR-BAK-5 and NFR-SEC-6 on the new computer. |
 
 ---
 
@@ -408,3 +408,4 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.11 | 02-11-2026 | Approved by Umar: the fixed part of an assistant request may be 9,500 tokens (NFR-AI-5), for the app help tool of PRD FR-7.89 (D6-system-prompt.md v1.2). |
 | 1.12 | 02-11-2026 | Approved by Umar (plan 52): 6 model calls, 12 tool calls, 90,000 input and 4,000 output tokens a question, and 90 seconds a question (NFR-AI-3, NFR-AI-5), so that hard questions finish instead of stopping. |
 | 1.13 | 03-11-2026 | Approved by Umar ("we can go up to align or achieve the goal"): the fixed part of an assistant request may be 11,000 tokens (NFR-AI-5), for the instructions of plan 52 (D6-system-prompt v1.3). |
+| 1.14 | 04-11-2026 | PRD v1.24, approved by Umar: the first-run screen offers to bring back the data from a copy (NFR-INS-2); a move to a new computer restores from that screen and passes the backup and tamper checks (NFR-INS-6). |
