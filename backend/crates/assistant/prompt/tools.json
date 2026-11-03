@@ -737,7 +737,7 @@
   "type": "function",
   "function": {
    "name": "calculate",
-   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second) or change_percent (from first to second) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
+   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second), change_percent (from first to second), percent_more or percent_less (the amount first, then the percent of the question q.n1: the amount with that percent added or taken off) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -754,7 +754,9 @@
        "difference",
        "average",
        "percent_of",
-       "change_percent"
+       "change_percent",
+       "percent_more",
+       "percent_less"
       ]
      },
      "inputs": {
@@ -762,7 +764,7 @@
       "items": {
        "type": "string"
       },
-      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1"
+      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1. For percent_more and percent_less: the amount, then q.n1, only for a what-if question (agar, if) that has one percent number and says more or less right after it"
      }
     }
    }
