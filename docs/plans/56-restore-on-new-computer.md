@@ -79,7 +79,13 @@ The commands run **before** sign-in, because no Owner exists yet on the new comp
 - **Q1:** backend3 may change `db/src/audit.rs` (key to and from hex, install, set) and the KeyStore impls. backend is told.
 - **Q2:** the command names are `backup_first_run_list`, `backup_first_run_preview` and `backup_first_run_restore` (Tech Stack 5.2), in a new file `commands/backup_first_run.rs`.
 - **Q3:** a copy with no chain key, and no matching key on this computer, is refused with ERR_BACKUP_CHAIN_KEY_MISSING. No copy is in the field yet.
-- **Q4:** the key error field is `backup_key` in these commands.
+- **Q4:** withdrawn by backend3. The key's input property and its error field are `key`, the same as the signed-in restore. Error fields follow the input path: `source.cloud.endpoint`, `copy`, `key` and so on.
+- **R1 delta, approved.**
+  - Progress `{stage, percent}` with the stages downloading, decrypting, checking, upgrading, keys, putting_in_place, search_index and done.
+  - A new enum `FirstRunCheckName` that includes `chains`. The old test-restore enum is unchanged.
+  - The result has `assistant_was_on`, read with one SELECT of the settings row.
+  - An unreachable cloud is an error, and no copies is an empty list.
+  - The capability `dialog:allow-open`, for the file and folder picker only (the Tauri dialog plugin is in Tech Stack 2).
 - **Q5:** a false check (chains, balance, integrity) refuses, and the Owner picks an older copy. There is no override.
 - **First-run state:** no Owner exists (`users` count is 0), as for `setup_first_run`. NFR-SEC-4 now lists restore on a new computer as allowed before sign-in, only in that state.
 - **Settings from the old computer:** a `local_dir` that does not exist goes back to the default. `usb_folder` and `cloud_enabled` are kept.
