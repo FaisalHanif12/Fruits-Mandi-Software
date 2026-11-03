@@ -612,6 +612,9 @@ fn live_100_questions() {
         "endpoint": "azure (only: azure, allow_fallbacks: false, zdr: true, data_collection: deny)",
         "questions": list.len(),
         "threads": threads,
+        // The find before the first call is the app's own setting (off by default): the run uses
+        // the real runtime, so it asks as the app asks.
+        "prefind": Runtime::real().prefind(),
     });
     let mut facts = std::collections::BTreeMap::new();
     for m in [masters.year.as_ref(), masters.thin.as_ref()]

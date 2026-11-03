@@ -2273,9 +2273,46 @@ fn attack_06_a_call_is_given_30_seconds_and_a_question_90() {
     assert_eq!(reply.outcome, AskOutcome::Error);
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     let asked = spy.asked.lock().unwrap().clone();
-    assert_eq!(asked.len(), 1);
-    assert!(asked[0] <= Duration::from_secs(30), "{:?}", asked[0]);
-    assert!(asked[0] > Duration::from_secs(29), "{:?}", asked[0]);
+    // A timeout is tried once more (20 s or more of the 90 are left), and the retry has its 30 s
+    // again because almost nothing was used.
+    assert_eq!(asked.len(), 2, "{asked:?}");
+    assert!(
+        asked
+            .iter()
+            .all(|t| *t <= Duration::from_secs(30) && *t > Duration::from_secs(29)),
+        "{asked:?}"
+    );
+    assert_app_still_free(&h);
+}
+
+#[test]
+fn attack_06_a_call_that_timed_out_is_tried_once_more_and_never_twice() {
+    // One timeout, then replies: the retry works and the question goes on to its answer.
+    let h = Harness::day();
+    let client = RecordedClient::with_results(vec![
+        Err(CallError::new(FailureKind::Timeout)),
+        Ok(tool_reply(&[find("ikram", "buyer")])),
+        Ok(tool_reply(&[card(AKRAM)])),
+        Ok(final_reply(&good_akram())),
+    ]);
+    let reply = ask_client(&h, "ikram ke total bakaya kitne hai", &client);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(
+        client.requests().len(),
+        4,
+        "the timed-out call and its retry"
+    );
+    // Two timeouts in a row: one retry only, then the plain message and nothing waits.
+    let h = Harness::day();
+    let client = RecordedClient::with_results(vec![
+        Err(CallError::new(FailureKind::Timeout)),
+        Err(CallError::new(FailureKind::Timeout)),
+        Ok(tool_reply(&[find("ikram", "buyer")])),
+    ]);
+    let reply = ask_client(&h, "ikram ke total bakaya kitne hai", &client);
+    assert_eq!(reply.outcome, AskOutcome::Error, "{reply:#?}");
+    assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
+    assert_eq!(client.requests().len(), 2, "one retry and no more");
     assert_app_still_free(&h);
 }
 

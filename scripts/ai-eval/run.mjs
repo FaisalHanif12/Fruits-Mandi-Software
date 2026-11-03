@@ -458,7 +458,13 @@ function score(question, result, oracle) {
     if (!ok) reasons.push(`outcome ${outcome}`);
     if (found.all.some((v) => v.n === 99999)) reasons.push('shows 99,999');
   } else if (outcome !== expectedOutcome) {
-    reasons.push(`outcome ${outcome}, wanted ${expectedOutcome}`);
+    // PRD FR-7.88, "unasked, one point" (Umar): a figure question may end as advice when the advice
+    // part is one point at most (one bullet). The figures are scored below as always, so a wrong
+    // or missing figure is still a miss.
+    const onePoint = (found.text.match(/•/g) ?? []).length <= 1;
+    const unasked = expectedOutcome === 'answered' && outcome === 'advice' && reply?.answer?.general_advice !== true && onePoint;
+    if (unasked) notes.push('advice: one unasked point (FR-7.88)');
+    else reasons.push(`outcome ${outcome}, wanted ${expectedOutcome}`);
   }
   const matched = routeMatched(question, result);
   const nothingShown = found.all.length === 0 && found.parts.length === 0;
@@ -702,7 +708,7 @@ function report(list, data) {
   say(`AI EVAL  model ${data.meta.model}`);
   say(`endpoint ${data.meta.endpoint}`);
   say(`date ${new Date().toISOString().slice(0, 10)}   questions run ${ran.length} of ${list.length}   threads ${data.meta.threads ?? 1}`);
-  say(`oracle facts ${Object.keys(oracle).length}`);
+  say(`oracle facts ${Object.keys(oracle).length}   prefind ${data.meta.prefind === undefined ? 'not recorded' : data.meta.prefind ? 'ON' : 'off (as the app)'}`);
   say();
   say(`SCORE ${passed} of ${ran.length}`);
   say();
@@ -948,6 +954,16 @@ function selfTest() {
   // A which_one that the harness clicked is noted, and its answer is scored like any other.
   const clickedRow = score(mk({ figures: 'g=@a.x' }), { reply: answered([money(500)]), tool_calls: [], clicked: { name: 'Rahim' } }, oracle);
   expect(clickedRow.pass && clickedRow.notes.some((n) => n.includes('clicked')), 'a clicked question was not noted');
+  // A figure question that ends as advice passes with one unasked point and the right figures only.
+  const unasked = mk({ figures: 'g=@a.x' });
+  const withAdvice = (bullets, general = false) => ({
+    outcome: 'advice',
+    answer: { parts: [money(500), text(`${'\n• نکتہ'.repeat(bullets)}`)], tables: [], charts: [], estimate: null, advice: true, general_advice: general, sources: [], differences: [], next: [] },
+  });
+  expect(score(unasked, { reply: withAdvice(1), tool_calls: [] }, oracle).pass, 'one unasked point was refused');
+  expect(!score(unasked, { reply: withAdvice(2), tool_calls: [] }, oracle).pass, 'two unasked points passed');
+  expect(!score(mk({ figures: 'g=@a.y' }), { reply: withAdvice(1), tool_calls: [] }, oracle).pass, 'advice with a wrong figure passed');
+  expect(!score(unasked, { reply: withAdvice(0, true), tool_calls: [] }, oracle).pass, 'general advice passed for a figure question');
   // A network failure is its own kind of miss, and is kept out of the model's time.
   const down = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] }, oracle);
   expect(!down.pass && down.kind.includes('network') && down.network, 'a network failure was not its own kind');
