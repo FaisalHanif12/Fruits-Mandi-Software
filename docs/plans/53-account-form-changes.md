@@ -101,3 +101,9 @@ Umar: "in the staff section build the active or deactive button so once the pers
   - The later opening is explained by its audit row ("opening on a closed day") and by its own journal entry.
   - The trial balance still balances, and both hash chains verify.
   - Robustness's test checks the audit row and the balance instead of an equal close row.
+
+## 10. Follow-up from Umar's cloud setup (04-11-2026)
+- Umar first typed the bucket name at the end of the Cloud address (`.../mandidemo`). The copy still uploaded, but into an extra folder.
+- The settings save must warn when the address has a path. Example: "Cloud address should end at .r2.cloudflarestorage.com; the bucket name goes in its own box".
+- It should offer to remove the path. Owner: backend, with the Fluent text by frontend2.
+- Small and not urgent. It goes after plan 55.
