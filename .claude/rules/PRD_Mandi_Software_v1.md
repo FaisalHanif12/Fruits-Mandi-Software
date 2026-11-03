@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.21 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.22 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three) and 03-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,11 +20,11 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.21 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.22 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.13 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.17 |
-| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.16 |
+| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.17 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.9 |
 
 **Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. Version 1.6 (19-10-2026) applies Umar's changes of 18-10-2026 and 19-10-2026: gardens and market trips owned by the partners in them, one cash account with no bank, fruit taken by partners, complete analytics, the party day sheet, page-by-page lists, and dated lines in each partner's statement. Version 1.7 (22-10-2026) applies what Umar settled from the client's own prints of 18-10-2026: the buyer pays commission and لاگا and the seller commission only, three prints in the client's own layout (the buyer's day slip, ادھاری تفصیل and the all-buyers balance sheet), a clear layout for every other print, a short tag (نشان) after a name, and the firm's contact persons and trade mark on every print. Version 1.8 (27-10-2026) applies Umar's change of 27-10-2026, made while he tested the app himself: short codes by type (the first seller is 0010), an accounts list of sellers, buyers and پختہ کھاتہ only, and pickers that open on a click with a button to add what is missing. Version 1.9 (30-10-2026) applies Umar's change of 30-10-2026: in every table and print, a column of numbers and its total are centred under the column heading. Version 1.10 (30-10-2026) applies Umar's second change of that day: the dashboard shows buyers' dues, sellers' dues, the total اگراہی and the dead amount (ڈوبی رقم); a person who owes and has died or left the business is moved to the dead amount; and every Urdu word says exactly what its English says. Version 1.11 (31-10-2026) applies Umar's change of 31-10-2026: any missing list entry (an expense head, an item, a packing, a city, a seller ...) is added on the spot, from the list where it is needed, and is chosen at once. Version 1.12 (31-10-2026) applies Umar's second change of that day: the buyer's and the seller's day slips show each item with its total and the commission and لاگا on their own lines, the day summary lists every buyer and seller, and every print header carries the trade mark, the owners and the munshi. Version 1.16 (01-11-2026) applies Umar's third change of 01-11-2026: the Owner asks questions about his books in plain words, in Urdu, Roman Urdu or English, and the app answers from the live data with checked figures and a button to the full report (Section 7.7). It was amended on 02-11-2026, before release: the model is the brain, reads every section through read-only tools, adds up, compares and estimates the future, and writes the answer itself, while the app checks every figure. It also advises from the books, like an experienced munshi (FR-7.88). From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
@@ -486,7 +486,7 @@ FR-6.2 [C] A journal entry whose بنام total does not equal its جمع total 
 FR-6.3 [C] A posted entry is never changed or deleted. Corrections are made with a reversing entry, so the history is always complete.
 FR-6.4 [C] All money is whole rupees (Section 22). The same rounded number is used on every side: on the bill, in the journal, in the partner split and in analytics.
 FR-6.5 [C] Every posting that touches an income account or a shop expense account writes partner share rows in the same save, whatever module it comes from (including جنرل). So, for any period, the sum of all partner shares equals income minus shop expenses exactly.
-FR-6.6 [A] **Dates and open days.** Days are closed in order. The system keeps one "closed up to" date. A posting can only be dated after that date and no later than today. Reopening is described in FR-21.2.
+FR-6.6 [A] **Dates and open days.** Days are closed in order. The system keeps one "closed up to" date. A posting can only be dated after that date and no later than today. The one exception is the opening balance of a new account, which may fall on a closed day (FR-10.11, v1.22). Reopening is described in FR-21.2.
 FR-6.7 [C] **Cash below zero asks, never blocks.** Umar (15-10-2026): cash in hand can really go below zero, for example when the partners' investment has gone out as advances, buyers have not paid yet, and expenses and partner drawings still go out. So it is allowed, but the user must confirm it, because it is often a typing mistake. It applies to every save that would take روکڑ (cash in hand, 01010001) below 0: پیشگی, ادائیگی, خرچہ, ادھار رقم, سرمایہ واپسی, الگ کھاتہ رقم دی, the shop's part of a trip purchase or cost and of a garden installment or cost (FR-12.30), نقد on a بکری lot, a جنرل with a cash credit, and an edit, cancel or undo that takes cash back.
 - While the entry is typed, an amber note shows: "روکڑ صفر سے کم ہو جائے گی" (Cash in hand will go below zero), with the cash in hand after the entry.
 - On save, a confirm box asks: "اس اندراج کے بعد روکڑ −5,000 ہو جائے گی۔ کیا یہ اندراج درست ہے؟" (After this entry cash in hand will be −5,000. Is this entry correct?) with two buttons: "ہاں، محفوظ کریں" (Yes, save) and "نہیں، واپس جائیں" (No, go back). The focus starts on "نہیں، واپس جائیں", so pressing `Enter` out of habit never saves a mistake. Yes saves; No returns to the entry with nothing saved and the amount field selected.
@@ -1118,7 +1118,7 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 | Phone 2 | فون 2 | Text | No | | [A] |
 | Address | پتہ | Text | No | | [A] |
 | Linked account | منسلک کھاتہ | Account picker | No | Same person as both seller and buyer: links his two accounts so a combined balance can be shown | [A] hidden |
-| Opening date | ابتدائی تاریخ | Date | Yes | Default today; must be an open date | [S] |
+| Opening date | ابتدائی تاریخ | Date | Yes | Default today; not after today. A new account's opening may be on a closed day; a changed opening needs an open date (FR-10.11, v1.22) | [S] |
 | Opening debit | ابتدائی بنام | Money | No | Only one of debit or credit | [S] |
 | Opening credit | ابتدائی جمع | Money | No | | [S] |
 | Opening is an advance | ابتدائی پیشگی | Checkbox | No | Sellers only, with an opening debit: the opening debit counts as an advance (FR-15.8) | [A] hidden |
@@ -1127,7 +1127,6 @@ Seller and buyer commission go to two income accounts, so analytics and the prof
 | Commission rules | کمیشن اصول | Link | No | Opens this party's rules (Section 11) | [C] |
 | Default مارکہ | مارکہ | Select | No | Sellers | [A] |
 | Collector | اگراہی والا | Select (staff) | No | Who collects from this buyer | [A] hidden |
-| Collection day | اگراہی کا دن | Select (weekday) | No | For the اگراہی plan | [A] hidden |
 | Active | فعال | Checkbox | Yes | Inactive = hidden from pickers, kept in reports. A person in the dead amount still shows, marked ڈوبی, in the وصولی and ادھار رقم واپسی pickers (FR-10.10) | [A] |
 | Note | نوٹ | Text | No | | [A] |
 | System fields | | Auto | | Created by and at, updated by and at | [A] |
@@ -1151,7 +1150,7 @@ FR-10.10 [C] **Dead amount (ڈوبی رقم).** (Added in v1.10.) Umar (30-10-20
 
 Example (E2E-44): after Events 1 to 5, ارشد owes 18,684 and dies on 11-10-26. Buyers' dues 2,880; dead amount 18,684 (1 person); total اگراہی 2,880 + 0 + 18,684 = 21,564, the same as before. His son pays 4,000 on 12-10-26: dead amount 14,684, total اگراہی 17,564, cash 58,484 + 4,000 = 62,484, trial balance still 85,048 = 85,048 (روکڑ 62,484, ارشد 14,684).
 
-FR-10.11 [C] **Add or change an account on any day.** (Added in v1.13.) Umar (31-10-2026): a new seller or buyer must be addable even when the day is closed. Saving an account, a list record or its details posts nothing, so it never needs an open day. An unchanged opening is never checked again, so changing a phone or a name works on any day. Only a new or changed opening balance posts (FR-10.9): its opening date must be an open date. When it is not, the form says so and offers to save the account now without the opening, to be added on the next open day, or to reopen the day (FR-21.4) [A]. Example: the days up to 31-10-26 are closed at night; at 9 pm a new buyer طارق is added with no opening balance and saves at once.
+FR-10.11 [C] **Add or change an account on any day.** (Added in v1.13.) Umar (31-10-2026): a new seller or buyer must be addable even when the day is closed. Saving an account, a list record or its details posts nothing, so it never needs an open day. An unchanged opening is never checked again, so changing a phone or a name works on any day. Only a new or changed opening balance posts (FR-10.9). [C] Umar (03-11-2026): a **new** account can be added with its opening balance at any time. Its opening posts on the opening date the user types (today by default, never after today), even when that day is closed. This is the one posting allowed on a closed day (FR-6.6). It is safe for the books, because its other side is ابتدائی فرق (06019999), so every closed day still balances. The audit log records it. Changing or removing the opening of an account that already exists still needs an open date. When the date is closed, the form offers to reopen the day (FR-21.4) [A]. Example: the days up to 03-11-26 are closed. At 9 pm a new buyer طارق is added with an opening of 5,000 بنام. He saves at once, and his 5,000 posts on 03-11-26 against ابتدائی فرق.
 
 ### 10.3 Other masters
 
@@ -1629,7 +1628,7 @@ Extra field: collector (اگراہی والا) [A].
 - Effect: روکڑ بنام, buyer جمع.
 - FR-15.4 [A] **Bill matching (oldest first).** A buyer's "bills" are every debit posted to his account (or to his person key in پختہ کھاتہ): sale line totals, opening debits, cash lent (FR-15.11) and جنرل debits. A receipt settles the oldest open bills first. This keeps aging correct.
 - FR-15.5 [A] If a buyer pays more than he owes, the extra stays as his credit and settles his next bills automatically. A person in the dead amount cannot pay more than he still owes (FR-10.10).
-- FR-15.6 [A] "اگراہی فہرست" button: today's planned collections by collector and city, printable. People in the dead amount are left out (FR-10.10).
+- FR-15.6 [A] "اگراہی فہرست" button: every buyer who owes the shop, by collector and city, printable. [C] Umar (03-11-2026): a buyer can be collected from on any day, so there is no collection day on the account and no weekday plan. Example: on any day the list shows اکرم 2,880 and ارشد 18,684 under their collector. People in the dead amount are left out (FR-10.10).
 - Example: اکرم owes 12,880, pays 10,000, still owes 2,880.
 
 ### 15.3 ادائیگی (payment) [C]
@@ -2223,7 +2222,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | E76 | Someone tries to change the date of a saved entry | Not possible; cancel and enter it again on the right day (FR-7.70) |
 | E77 | An entry of a closed day has a mistake | "دن کھولیں اور درست کریں": reopen, fix, close again (FR-21.4) |
 | E78 | A trip purchase is wrong but some of its goods are sold | Edit refused with the reason; the sale is edited or cancelled first (FR-7.70) |
-| E79 | A new buyer is needed after the day is closed | Saved at once; only an opening balance needs an open date (FR-10.11) |
+| E79 | A new buyer is needed after the day is closed | Saved at once, with his opening balance if he has one, posted on its date (FR-10.11, v1.22). Only a changed opening of an existing account needs an open date. |
 | E80 | Wrong partner code typed many times, or the code is forgotten | Waits as FR-8.2; reset with the Owner's password or the recovery code (FR-17.11) |
 | E81 | A rare party has his own پختہ account and is also typed by name under the shared پختہ کھاتہ | Two separate records: his account does not hold the typed lines; make regular (FR-13.8) or a جنرل moves an open amount (FR-13.11) |
 | E82 | A question names a party that two to five accounts match ("akram": اکرم ٹول ٹیکس and اکرم K) | The answer asks "کون سا؟" with a button for each; a click answers with no new question counted (FR-7.77) |
@@ -2608,4 +2607,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.19 | 02-11-2026 | Umar's decisions of 02-11-2026 (plan 52), approved by Umar: up to 6 model calls and 12 tool calls a question, with the last call always answering (FR-7.87, E96, A87); find and read in one call when the find has one match; general advice marked "عام مشورہ" when the books cannot answer (FR-7.88). With NFR v1.12. No money rule, posting or test number changed. |
 | 1.20 | 03-11-2026 | Umar's decisions for plan 52, approved by Umar: an estimate to the end of the year gives the whole year (the books so far plus the months left), and what-if estimates scale the same pace (FR-7.86). The fixed part of a request may be 11,000 tokens (NFR v1.13). No money rule, posting or test number changed. |
 | 1.21 | 03-11-2026 | Lead's [A] item for Umar (A91), found by the live test of plan 52: "compare with the previous period" for whole calendar months means the whole months before (FR-18.1). No money rule or test number changed. |
-
+| 1.22 | 03-11-2026 | Umar's changes of 03-11-2026, made while testing the app himself, approved by Umar. A new account can be added with its opening balance at any time: the opening posts on its date even when that day is closed, against ابتدائی فرق, the one exception to FR-6.6 (FR-10.11, 10.2, E79). There is no collection day: the اگراہی فہرست lists every buyer who owes, by collector and city (10.2, FR-15.6). No money rule or test number changed. |
