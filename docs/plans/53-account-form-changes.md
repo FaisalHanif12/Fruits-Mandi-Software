@@ -57,3 +57,34 @@ Umar tested the account form on a closed day and asked for two changes:
 ## 7. Out of scope
 
 Changing an existing account's opening on a closed day. Dropping the database column.
+
+## 8. Second change of 03-11-2026: munshis on prints come from the staff list (PRD v1.23)
+
+Umar: "in the staff section build the active or deactive button so once the person deactive then he won't be shown in the print list ... when the new one came I will add through the staff section and make it active." Umar chose "Settings names + active munshis".
+
+### 8.1 Worked example
+- Settings has Maher Adnan, owner, 0300-1111111.
+- Staff has آصف (منشی, active, 0300-4058860) and اسلم (اگراہی والا, active).
+- Every print header shows Maher Adnan, then آصف 0300-4058860. اسلم does not print, because he is not a munshi.
+- آصف is made inactive, and بلال (منشی, active, 0301-2222222) is added. The next print shows Maher Adnan, then بلال. آصف is gone.
+- Limits: at most 3 munshis and at most 6 people in all. A name in both lists (same Urdu name and phone) prints once.
+
+### 8.2 Contract
+- **backend: the print header data.** It is the people typed in Settings, in their order, then the active staff whose job is منشی, ordered by staff id. Each has his name in both scripts and his phone, which is optional.
+  - Every print takes this through the one header builder, so all prints change together.
+  - Saving a staff member's active switch is an ordinary master save. It posts nothing and works on any day.
+- **frontend2:**
+  - The staff list shows a clear فعال / غیر فعال switch on each row, and the form has one too, using the shared components.
+  - The Settings people section shows a short note that munshis are managed in عملہ, with a link to it.
+  - Text in both languages.
+
+### 8.3 Tasks
+| # | Task | Owner | Blocked by |
+|---|---|---|---|
+| T4 | The header builder adds active munshis, with tests on the worked example (deactivate, then add) | backend | plan 53 T1, T2 |
+| T5 | The staff active switch, the Settings note, and screenshot tests in both languages | frontend2 | none for the switch (the save exists); T4 for a print check |
+
+### 8.4 Acceptance
+- The worked example holds on R35 and on the seller bill print data.
+- Deactivating a munshi removes him from the next print. Adding an active munshi adds him.
+- The print tests and fixtures are updated only for the header people. No money figure changes.

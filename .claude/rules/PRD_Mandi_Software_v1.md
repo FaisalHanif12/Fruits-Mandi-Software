@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.22 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three) and 03-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.23 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three) and 03-11-2026 (two), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.22 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.23 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.13 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.17 |
@@ -1166,7 +1166,7 @@ All have add, edit and inactive, and cannot be deleted once used. Every name is 
 | Store | سٹور | Code, Urdu name, English name | [S] |
 | Standard narration | تفصیل | Urdu text, English text, used in (voucher types) | [S] |
 | Expense head | خرچہ مد | Code, Urdu name, English name (always a دکان خرچہ account under 0501) | [A] |
-| Staff | عملہ | Urdu name, English name, job (منشی، اگراہی والا، مزدور), phone, linked ادھار رقم account (made by itself the first time he is lent money, FR-16.4) | [A] |
+| Staff | عملہ | Urdu name, English name, job (منشی، اگراہی والا، مزدور), phone, active (فعال / غیر فعال, a switch on each row and in the form), linked ادھار رقم account (made by itself the first time he is lent money, FR-16.4). An active munshi prints in every header; an inactive one does not (Section 21, v1.23). Example: آصف leaves, so he is made inactive and drops off every print; the new munshi بلال is added as active and prints from the next print. | [A] |
 
 ---
 
@@ -1995,7 +1995,7 @@ FR-19.12 [C] **Party day sheet (R35), a compulsory print.** Umar (18-10-2026): t
 Example (E2E-43): اکرم on 10-10-26: previous 0 + bought 12,880 − paid on the spot 0 − paid that day 10,000 = 2,880 remaining. His slip (v1.12) shows one row "کیلا, پیٹی, 20, 600, 12,000", then مال کی رقم 12,000, کمیشن 720, لاگا 160, آج کا کل 12,880, آج ادا 10,000, آج کا باقی 2,880, سابقہ رقم 0, نیا بقایا 2,880, total نگ 20 (the buyer's slip ends with the total نگ). رحیم's slip shows کیلا, پیٹی, 20, 600, 12,000 and 30, 580, 17,400, the row کیلا کل 50, 29,400; خام بکری 29,400, کمیشن 1,764, کرایہ 3,000, مزدوری 250, منشیانہ 50, فون 20, آج کی صافی بکری 24,316, آج ادا 9,316 (نقد 5,000 + ادائیگی 4,316), آج کا باقی 15,000 جمع, سابقہ رقم 15,000 بنام, نیا بقایا 0. In the buyers' table: اکرم 0, 12,880, 10,000, 2,880; ارشد 0, 18,684, 0, 18,684; شاہد 0, 12,800, 12,800, 0; total 0 + 44,364 − 22,800 = 21,564 = R20. The client's own slip of 18-10-26 reads the same way: سابقہ رقم 33,287 + تازہ بنام 25,574 = ٹوٹل رقم 58,861, with وصولی blank.
 
 FR-19.13 [C] **Clear prints everywhere.** (Added in v1.7.) Umar (20-10-2026): R5 and the all-parties table of R35 follow the client's own layouts (FR-19.12, R5). Every other print (reports, ledgers, statements, expenses, partners, gardens, trips, fruit, analytics) uses our own clearest layout, the same on every print:
-- Header: the firm name, the mandi name, the trade mark in a box, the owners' names and the munshi's name with their phones (Section 21, v1.12), then the print's title, its filters (dates and party, FR-19.10) and the print date and time.
+- Header: the firm name, the mandi name, the trade mark in a box, the owners' names and the munshis' names with their phones (Section 21, v1.12; active munshis from the staff list, v1.23), then the print's title, its filters (dates and party, FR-19.10) and the print date and time.
 - Body: every column labelled; a party shown with its short code and its name with tag; numbers with equal-width digits, each column of numbers and its total centred under its heading (NFR-USE-19, v1.9); a running balance where the print has one.
 - Footer: a totals row under its columns (FR-19.5), amounts in words where FR-19.7 asks for them, and "Page x of y".
 Example: R29 for October prints "Maher Adnan and Brothers", the three contacts and the trade mark, then "خرچہ رپورٹ، 01-10-26 تا 31-10-26", the heads with their totals, and the میزان.
@@ -2083,7 +2083,7 @@ FR-20.10 [A] USB and cloud backups are locked with a key that is shown once at s
 
 | Group | Settings |
 |---|---|
-| Firm | Firm name (Urdu, English), mandi name, address, phones, logo; the people printed in every header, up to 6, each a name (Urdu and English), a role (مالک owner or منشی munshi) and a phone (optional), for example "منشی آصف بھٹی 0300-4058860"; the owners come first, then the munshi (v1.12, Umar 31-10-2026); trade mark text (for example "RH"), printed in a box (FR-19.13, v1.7) |
+| Firm | Firm name (Urdu, English), mandi name, address, phones, logo; the people printed in every header, up to 6, each a name (Urdu and English), a role (مالک owner or منشی munshi) and a phone (optional), for example "منشی آصف بھٹی 0300-4058860"; the owners come first, then the munshi (v1.12, Umar 31-10-2026). [C] From v1.23 (Umar, 03-11-2026), every **active** staff member whose job is منشی also prints, after the people typed here, with his phone, at most 3 of them and at most 6 people in all. A munshi made inactive in the staff list leaves every print at once, and a new munshi added as active appears at once. A person who is both typed here and an active munshi prints once; trade mark text (for example "RH"), printed in a box (FR-19.13, v1.7) |
 | Codes | Type numbers: seller 001, buyer 002, پختہ کھاتہ 003, item 004, packing 005, staff 006, market trip 007, garden 008 (fixed, FR-10.2) |
 | Charges | Global defaults: seller commission 6%, buyer commission 6%, لاگا 8 per نگ on fruit (as an item-group rule). مزدوری, منشیانہ, فون have no default. The commission agent changes any of them (Section 11). |
 | Overrides | Allow line-level commission and لاگا override (on / off, default on, FR-11.10) |
@@ -2608,3 +2608,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.20 | 03-11-2026 | Umar's decisions for plan 52, approved by Umar: an estimate to the end of the year gives the whole year (the books so far plus the months left), and what-if estimates scale the same pace (FR-7.86). The fixed part of a request may be 11,000 tokens (NFR v1.13). No money rule, posting or test number changed. |
 | 1.21 | 03-11-2026 | Lead's [A] item for Umar (A91), found by the live test of plan 52: "compare with the previous period" for whole calendar months means the whole months before (FR-18.1). No money rule or test number changed. |
 | 1.22 | 03-11-2026 | Umar's changes of 03-11-2026, made while testing the app himself, approved by Umar. A new account can be added with its opening balance at any time: the opening posts on its date even when that day is closed, against ابتدائی فرق, the one exception to FR-6.6 (FR-10.11, 10.2, E79). There is no collection day: the اگراہی فہرست lists every buyer who owes, by collector and city (10.2, FR-15.6). No money rule or test number changed. |
+| 1.23 | 03-11-2026 | Umar's second change of 03-11-2026, made while testing the app himself, approved by Umar. Munshis on prints are managed in the staff list: every active staff member whose job is منشی prints in every header after the people typed in Settings (at most 3 munshis, at most 6 people), and an inactive one does not. Each staff row has an active switch (10.3, Section 21, FR-19.13). No money rule, table or test number changed. |
