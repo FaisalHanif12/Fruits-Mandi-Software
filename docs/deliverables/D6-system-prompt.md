@@ -1,6 +1,6 @@
 # D6 system prompt: the assistant's instructions, tools and answer
 
-Version 1.3, 03-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. v1.3, approved by Umar for plan 52 (PRD v1.19 and v1.20): 6 calls and 12 tools, the last call with no tools; find and read in one reply; tools that fix what is plainly meant and say so in `note`; typed names looked up; Roman Urdu names; help is never a change request; general advice (`general_advice`); commission means `total_comm`; estimates to the end of the year (the whole year) and what-if; the fixed part may be 11,000 tokens. Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
+Version 1.4, 03-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. v1.3, approved by Umar for plan 52 (PRD v1.19 and v1.20): 6 calls and 12 tools, the last call with no tools; find and read in one reply; tools that fix what is plainly meant and say so in `note`; typed names looked up; Roman Urdu names; help is never a change request; general advice (`general_advice`); commission means `total_comm`; estimates to the end of the year (the whole year) and what-if; the fixed part may be 11,000 tokens. v1.4 (lead, plan 52 live findings): the calculator's `percent_more` and `percent_less` (FR-7.75), for "agar 10% zyada ho to". Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
 Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a, Tech Stack v1.8 Section 4.8, Code Standards v1.13 Q1 to Q11, money agent v1.8 Section 9.1. Read `D6-ai-assistant.md` first.
 Used by: plan 48 (`backend`), which copies Sections 2, 3, 4 and 6 into files **exactly as written here**; plan 50 (`robustness`), which measures them live.
 
@@ -976,7 +976,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
   "type": "function",
   "function": {
    "name": "calculate",
-   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second) or change_percent (from first to second) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
+   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second), change_percent (from first to second), percent_more or percent_less (the amount first, then the percent of the question q.n1: the amount with that percent added or taken off) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -993,7 +993,9 @@ Copied exactly. Every function is `strict`, every property is listed in `require
        "difference",
        "average",
        "percent_of",
-       "change_percent"
+       "change_percent",
+       "percent_more",
+       "percent_less"
       ]
      },
      "inputs": {
@@ -1001,7 +1003,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
       "items": {
        "type": "string"
       },
-      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1"
+      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1. For percent_more and percent_less: the amount, then q.n1, only for a what-if question (agar, if) that has one percent number and says more or less right after it"
      }
     }
    }
