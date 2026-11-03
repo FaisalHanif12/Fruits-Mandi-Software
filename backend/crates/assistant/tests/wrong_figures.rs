@@ -975,3 +975,820 @@ fn a_sum_over_the_rows_of_a_sorted_report_is_not_refused_for_the_headings_kept_a
         "{refused:?}"
     );
 }
+
+// ==== Plan 52 item 14: the defects of live run 2 (03-11-2026, 369 questions) =====================
+
+/// E2E-59: banana sales April to September 2026, their commission 36,000 ... 51,000.
+fn e2e_59() -> Harness {
+    Harness::over(worked::history_world(&[
+        (4, 180, 1_600),
+        (5, 150, 2_100),
+        (6, 120, 2_850),
+        (7, 225, 1_600),
+        (8, 150, 2_600),
+        (9, 173, 2_390),
+    ]))
+}
+
+// ---- 4. Q143, Q144: the month with the most commission ------------------------------------------
+
+#[test]
+fn q143_q144_the_top_month_is_named_with_its_amount() {
+    // The live model wrote a path on a month key (`series.m202606.month`) and it was refused: the
+    // answer ended as checks failed, or as "see the chart". The series is keyed by month now, and
+    // `peak` and `lowest` name the month with the most and the least.
+    for text in [
+        "{{r2.peak.month}} میں سب سے زیادہ کمیشن رہا: {{r2.peak.value}}۔",
+        "{{r2.series.m202609.month}} میں سب سے زیادہ کمیشن رہا: {{r2.series.m202609.value}}۔",
+        // The old guess: a path that goes on below the month.
+        "{{r2.series.m202609.month.month}} میں {{r2.series.m202609.value}}۔",
+    ] {
+        let h = e2e_59();
+        let (reply, requests) = h.ask(
+            "kis mahine mein sab se zyada commission aaya",
+            None,
+            vec![
+                tool_reply(&[
+                    ("period", this_year()),
+                    analytics(
+                        "D",
+                        json!({"group_by": "month", "from": "r1.from", "to": "r1.to"}),
+                    ),
+                ]),
+                final_reply(text),
+            ],
+        );
+        let result = result_of(&requests[1], "r2");
+        assert_eq!(result["peak"]["key"], "m202609", "{result}");
+        assert_eq!(result["lowest"]["key"], "m202604", "{result}");
+        assert_eq!(result["peak"]["value"]["rs"], 51_000, "{result}");
+        assert_eq!(result["lowest"]["value"]["rs"], 36_000, "{result}");
+        assert_eq!(reply.outcome, AskOutcome::Answered, "{text}: {reply:#?}");
+        let parts = &answer_of(&reply).parts;
+        assert!(
+            parts.iter().any(|p| matches!(
+                p,
+                mandi_assistant::answer::AnswerPart::Month {
+                    year: 2026,
+                    month: 9
+                }
+            )),
+            "{parts:?}"
+        );
+        assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 51_000);
+    }
+}
+
+// ---- 8. Q115, Q090, Q242: an item with one clear match does not ask "which one" ------------------
+
+#[test]
+fn q115_q090_q242_an_item_typed_as_an_alias_or_a_plural_is_taken_as_the_one_item() {
+    let h = Harness::day();
+    world::add_item(
+        &h.world.env,
+        &h.world.owner,
+        "موسمی",
+        "Mosambi",
+        "fruit",
+        "unit",
+    );
+    for (typed, sold) in [
+        ("mausami", None),
+        ("apples", Some("Apple")),
+        ("Apples", Some("Apple")),
+        ("bananas", Some("Banana")),
+    ] {
+        let (reply, requests) = h.ask(
+            "is it worth raising the commission on this item",
+            None,
+            vec![
+                tool_reply(&[analytics("A", json!({"item": typed}))]),
+                final_reply("ٹھیک ہے۔"),
+            ],
+        );
+        // Not asked which one: the model got the result and answered.
+        assert_eq!(requests.len(), 2, "{typed}: {reply:#?}");
+        assert_ne!(reply.outcome, AskOutcome::WhichOne, "{typed}");
+        let result = result_of(&requests[1], "r1");
+        assert!(
+            note_of(&result).contains("taken as the only match"),
+            "{typed}: {result}"
+        );
+        if let Some(name) = sold {
+            assert_eq!(result["rows"][0]["name"]["en"], name, "{typed}: {result}");
+        }
+    }
+    // A word that only looks like a plural names nothing: the Owner is asked or told.
+    let (reply, _) = h.ask(
+        "commission on this item",
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({"item": "applesauces"}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_ne!(reply.outcome, AskOutcome::Answered);
+}
+
+// ---- 7. Q158: "which one" written with braces ----------------------------------------------------
+
+fn answer_with_choose(kind: &str, choose: &str) -> Value {
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": kind, "text": "", "show": [], "next": [],
+            "choose": choose, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": usage(),
+    })
+}
+
+#[test]
+fn q158_a_which_one_with_the_find_id_in_braces_still_asks_the_owner() {
+    // Two sellers fit "rahim": the model asked which one but wrote `"choose":"{{r1}}"`. That failed
+    // the check and the question ended as plain tables. The braces are taken off now.
+    let h = Harness::day();
+    world::add_account(
+        &h.world.env,
+        &h.world.owner,
+        mandi_services::core::accounts::AccountType::Seller,
+        "رحیم خان",
+        "Rahim Khan",
+        true,
+        "",
+    );
+    let (reply, requests) = h.ask(
+        "rahim ko kitne paise dene hen",
+        None,
+        vec![
+            tool_reply(&[find("rahim", "seller")]),
+            answer_with_choose("which_one", "{{r1}}"),
+        ],
+    );
+    assert_eq!(requests.len(), 2);
+    assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    assert_eq!(reply.options.len(), 2, "{reply:#?}");
+}
+
+// ---- 5. Q111, Q112: two items in one question ---------------------------------------------------
+
+#[test]
+fn q111_a_name_that_matches_nothing_does_not_end_a_question_that_also_read_the_books() {
+    // The live model asked for two items in one reply and typed one of them wrongly: the app ended
+    // the question as "not found" at once, though the other item was read. Now the model sees both
+    // results and answers.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "kela aur saib ka is saal ka commission",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "khira"})),
+                analytics("A", json!({"item": "apple"})),
+            ]),
+            final_reply("{{r2.rows.i2.name}} کا کمیشن {{r2.rows.i2.total_comm}} رہا۔"),
+        ],
+    );
+    assert_eq!(requests.len(), 2, "the model was called again: {reply:#?}");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 1_520);
+
+    // With nothing read in that reply, the question still ends at once.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "khira ka commission",
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({"item": "khira"}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(requests.len(), 1);
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+}
+
+#[test]
+fn q112_two_items_asked_for_each_are_not_summed_into_one_figure() {
+    // Banana 3,928 and apple 1,520 (E2E-11). "kele or saib ka commission" asks for each; the sum
+    // 5,448 is refused unless the question asks for the two together.
+    let calls = |question: &str, answer: &str| {
+        let h = Harness::day();
+        h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[
+                    analytics("A", json!({"item": "banana"})),
+                    analytics("A", json!({"item": "apple"})),
+                ]),
+                tool_reply(&[(
+                    "calculate",
+                    json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+                )]),
+                final_reply(answer),
+            ],
+        )
+    };
+    let (reply, requests) = calls(
+        "kele or saib ka comision aur bikri btao",
+        "{{r1.rows.i1.name}} {{r1.rows.i1.gross}} {{r1.rows.i1.total_comm}} {{r2.rows.i2.name}} {{r2.rows.i2.gross}} {{r2.rows.i2.total_comm}}",
+    );
+    assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    // Banana: sales 29,400, commission 3,928; apple: sales 12,000, commission 1,520.
+    assert_eq!(
+        [0, 1, 2, 3].map(|i| harness::money(figs[i].0)),
+        [29_400, 3_928, 12_000, 1_520]
+    );
+    // Asked together, the sum is worked out.
+    let (reply, requests) = calls(
+        "kele or saib ka mila kar commission kitna hai",
+        "{{c1.result}}",
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty());
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 5_448);
+}
+
+// ---- 6. Q154, Q155: both figures asked, both given -----------------------------------------------
+
+#[test]
+fn q154_a_question_for_commission_and_sales_gets_both_figures() {
+    // E2E-11: رحیم's goods: sales 29,400, commission 3,928 (view B, his row). The first answer
+    // gave the commission only: sent back once; the rewrite gives both.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "rahim ke mal ka commission aur sale kitna he",
+        None,
+        vec![
+            tool_reply(&[
+                find("rahim", "seller"),
+                analytics("B", json!({"seller": "r1.matches.0"})),
+            ]),
+            final_reply("{{r1.matches.0.name}} کے مال پر کمیشن {{r2.totals.total_comm}} رہا۔"),
+            final_reply(
+                "{{r1.matches.0.name}} کے مال کی بکری {{r2.totals.gross}} اور کمیشن {{r2.totals.total_comm}} رہا۔",
+            ),
+        ],
+    );
+    assert_eq!(requests.len(), 3, "one rewrite: {reply:#?}");
+    let failed = &requests[2]["messages"].as_array().unwrap().last().unwrap()["content"];
+    assert!(failed.as_str().unwrap().contains("asked"), "{failed}");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    assert_eq!(
+        (harness::money(figs[0].0), harness::money(figs[1].0)),
+        (29_400, 3_928)
+    );
+    // A question for the commission only is not sent back for lacking the sales.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "rahim ke mal ka commission kitna he",
+        None,
+        vec![
+            tool_reply(&[
+                find("rahim", "seller"),
+                analytics("B", json!({"seller": "r1.matches.0"})),
+            ]),
+            final_reply("{{r1.matches.0.name}} کے مال پر کمیشن {{r2.totals.total_comm}} رہا۔"),
+        ],
+    );
+    assert_eq!(requests.len(), 2);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    // A question for the number of بکری and commission does not ask for the sales.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "rahim ki kitni bikriyan hui aur commission",
+        None,
+        vec![
+            tool_reply(&[
+                find("rahim", "seller"),
+                analytics("B", json!({"seller": "r1.matches.0"})),
+            ]),
+            final_reply(
+                "{{r1.matches.0.name}} کی بکریاں {{r2.totals.bikri_count}} اور کمیشن {{r2.totals.total_comm}} رہا۔",
+            ),
+        ],
+    );
+    assert_eq!(requests.len(), 2);
+}
+
+// ---- 9. Q250, Q251: how to collect dues faster is general advice ----------------------------------
+
+#[test]
+fn q250_q251_a_how_to_do_better_question_is_general_advice_with_no_tool() {
+    for question in ["wasooli jaldi kaise karen", "وصولی جلدی کیسے کریں"] {
+        let h = Harness::day();
+        // The live model read the dues list and answered with ordinary advice. Now the call goes
+        // out with the tools off, and advice that reads nothing is general advice.
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            vec![answer_with_kind(
+                "advice",
+                "• ہر ہفتے پرانے بقایا کی فہرست دیکھیں۔\n• ادھار پر ادائیگی کی تاریخ طے کریں۔",
+            )],
+        );
+        assert_eq!(requests.len(), 1, "{question}");
+        assert_eq!(requests[0]["tool_choice"], "none", "{question}");
+        assert_eq!(reply.outcome, AskOutcome::Advice, "{question}: {reply:#?}");
+        let answer = answer_of(&reply);
+        assert!(answer.general_advice, "{question}: {answer:#?}");
+        assert!(answer.sources.is_empty());
+    }
+    // A question that names a party, asks a figure or holds a number is not general advice.
+    for question in [
+        "akram se wasooli kaise karen",
+        "wasooli kitni hui",
+        "5 din mein wasooli kaise karen",
+        "ikram ke total bakaya kitne hai",
+    ] {
+        assert!(
+            !mandi_assistant::help_guard::general_advice_asked(
+                question,
+                &mandi_services::figures::question_numbers(question)
+            ),
+            "{question}"
+        );
+    }
+}
+
+fn answer_with_kind(kind: &str, text: &str) -> Value {
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": kind, "text": text, "show": [], "next": [],
+            "choose": null, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": usage(),
+    })
+}
+
+// ---- 3. Q129, Q130: one item, this year against last year ---------------------------------------
+
+#[test]
+fn q129_q130_a_comparison_left_out_says_how_to_answer_anyway_and_the_difference_is_worked_out() {
+    // The books of the history world start in April 2026, so last year has nothing: the comparison
+    // is left out. The note says to read the other period and use calculate; September (51,000)
+    // against August (48,000) is the same two-reads-and-a-difference path: 3,000 more.
+    let h = e2e_59();
+    let (_, requests) = h.ask(
+        "kele ka commission pichle saal se kitna zyada hai",
+        None,
+        vec![
+            tool_reply(&[
+                ("period", this_year()),
+                analytics(
+                    "A",
+                    json!({"from": "r2.from", "to": "r2.to", "compare": "last_year"}),
+                ),
+            ]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    // "pichle saal" is read as a period first (r1, last year); this year is r2, the view r3.
+    let left_out = result_of(&requests[1], "r3");
+    assert!(left_out["compare"].is_null(), "{left_out}");
+    let note = note_of(&left_out);
+    assert!(note.contains("the comparison was left out"), "{note}");
+    assert!(
+        note.contains("calculate") && note.contains("last_year"),
+        "{note}"
+    );
+
+    // The difference of two totals read separately: September against August.
+    let h = e2e_59();
+    let (reply, requests) = h.ask(
+        "ستمبر اور اگست کے کمیشن میں کتنا فرق ہے",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"from": "2026-09-01", "to": "2026-09-30"})),
+                analytics("A", json!({"from": "2026-08-01", "to": "2026-08-31"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "difference", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            final_reply("فرق {{c1.result}} رہا۔"),
+        ],
+    );
+    let calc = result_of(&requests[2], "c1");
+    assert_eq!(calc["result"]["rs"], 3_000, "{calc}");
+    assert_eq!(calc["result"]["dir"], "up", "{calc}");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 3_000);
+}
+
+// ---- 1. Q203, Q204: a partner's capital ---------------------------------------------------------
+
+/// The worked day after Events 1 to 5, then ب puts in 500,000 and ج puts in 300,000 and takes back
+/// 100,000 (PRD 17.4, FR-17.7). Cash stays above 0, so no confirm is needed.
+fn capital_world() -> Harness {
+    use mandi_services::core::capital::CapitalInput;
+    let h = Harness::day();
+    let [_, b, c] = h.world.partners;
+    let input = |partner: i64, amount: &str| CapitalInput {
+        date: "10-10-2026".into(),
+        partner_id: Some(partner),
+        amount: amount.into(),
+        narration: None,
+        confirm_cash_below_zero: false,
+    };
+    let (ctx, owner) = (&h.world.env.ctx, &h.world.owner);
+    mandi_services::vouchers::save_capital_in(ctx, owner, &input(b, "500,000")).unwrap();
+    mandi_services::vouchers::save_capital_in(ctx, owner, &input(c, "300,000")).unwrap();
+    mandi_services::vouchers::save_capital_out(ctx, owner, &input(c, "100,000")).unwrap();
+    h
+}
+
+#[test]
+fn q203_a_partners_capital_is_read_from_his_statement_report() {
+    let h = capital_world();
+    let (reply, requests) = h.ask(
+        "be ka sarmaya kitna laga hua hai",
+        None,
+        vec![
+            tool_reply(&[find("ب", "partner")]),
+            tool_reply(&[report(
+                "R31",
+                json!({"partner": "r1.matches.0", "rows": 20}),
+            )]),
+            final_reply("{{r1.matches.0.name}} کا سرمایہ {{r2.capital.balance}} ہے۔"),
+        ],
+    );
+    let result = result_of(&requests[2], "r2");
+    let capital = &result["capital"];
+    assert_eq!(capital["balance"]["rs"], 500_000, "{result}");
+    assert_eq!(capital["invested"]["rs"], 500_000, "{result}");
+    assert_eq!(capital["taken_back"]["rs"], 0, "{result}");
+    assert_eq!(capital["month_close"]["rs"], 0, "{result}");
+    // Read in two places that agree, and the parts make the balance.
+    assert_eq!(capital["balance"]["checked"], true, "{result}");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    assert_eq!(harness::money(figs[0].0), 500_000);
+    assert!(figs[0].1, "checked");
+
+    // The statement of a month that ended before today carries no capital: it is today's balance.
+    let h = capital_world();
+    let (_, requests) = h.ask(
+        "be ka sarmaya pichle mahine",
+        None,
+        vec![
+            tool_reply(&[find("ب", "partner")]),
+            tool_reply(&[report(
+                "R31",
+                json!({"partner": "r2.matches.0", "from": "2026-08-01", "to": "2026-08-31"}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    let result = requests[2]["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["role"] == "tool")
+        .filter_map(|m| serde_json::from_str::<Value>(m["content"].as_str()?).ok())
+        .find(|v| v["source"] == "R31")
+        .expect("the statement");
+    assert!(result.get("capital").is_none(), "{result}");
+}
+
+#[test]
+fn q204_after_a_partner_took_capital_back_what_is_left_is_read_for_everyone() {
+    let h = capital_world();
+    let (reply, requests) = h.ask(
+        "jeem ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya",
+        None,
+        vec![
+            tool_reply(&[report("R31", json!({"rows": 100}))]),
+            final_reply("ج کا سرمایہ {{r1.rows.s3.capital.balance}} رہ گیا۔"),
+        ],
+    );
+    let result = result_of(&requests[1], "r1");
+    let rows = result["rows"].as_array().unwrap();
+    let of = |key: &str| rows.iter().find(|r| r["key"] == key).expect(key)["capital"].clone();
+    assert_eq!(of("s2")["balance"]["rs"], 500_000);
+    let c = of("s3");
+    assert_eq!(c["balance"]["rs"], 200_000, "{result}");
+    assert_eq!(c["invested"]["rs"], 300_000);
+    assert_eq!(c["taken_back"]["rs"], 100_000);
+    assert_eq!(c["balance"]["checked"], true);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 200_000);
+}
+
+// ---- 2. Q215: the fruit a partner took home -----------------------------------------------------
+
+#[test]
+fn q215_the_fruit_taken_home_is_totalled_for_each_partner_and_the_guests() {
+    use mandi_services::core::fruit::{FruitInput, FruitSource};
+    let h = Harness::over(worked::part_sold_world());
+    let [a, b, _] = h.world.partners;
+    let nazeer = world::add_account(
+        &h.world.env,
+        &h.world.owner,
+        mandi_services::core::accounts::AccountType::Seller,
+        "حاجی نذیر",
+        "Haji Nazeer",
+        true,
+        "",
+    );
+    let take = |partner: Option<i64>, qty: &str, rate: &str| FruitInput {
+        for_guests: partner.is_none(),
+        partner_id: partner,
+        date: "10-10-2026".into(),
+        source: FruitSource::OtherShop,
+        lot_id: None,
+        agent_account_id: Some(nazeer),
+        item_id: Some(h.world.apple),
+        packing_id: Some(h.world.box_),
+        qty: qty.into(),
+        weight: None,
+        rate: rate.into(),
+        note: None,
+        editing_id: None,
+    };
+    let (ctx, owner) = (&h.world.env.ctx, &h.world.owner);
+    // الف takes 20 box at 1,800 (36,000), ب 4 at 500 (2,000), the guests 3 at 1,000 (3,000).
+    mandi_services::fruit::save(ctx, owner, &take(Some(a), "20", "1,800")).unwrap();
+    mandi_services::fruit::save(ctx, owner, &take(Some(b), "4", "500")).unwrap();
+    mandi_services::fruit::save(ctx, owner, &take(None, "3", "1,000")).unwrap();
+    let key = format!("s{a}");
+    let (reply, requests) = h.ask(
+        "alif ne is sal ghar ke liye kitna fal liya",
+        None,
+        vec![
+            tool_reply(&[report("R37", json!({"rows": 100}))]),
+            final_reply(&format!(
+                "{{{{r2.by_for.{key}.name}}}} نے {{{{r2.by_for.{key}.home_qty}}}} نگ لیے، {{{{r2.by_for.{key}.home_value}}}}۔"
+            )),
+        ],
+    );
+    // "is saal" is read as a period first (r1); the register is r2.
+    let result = result_of(&requests[1], "r2");
+    let by_for = result["by_for"].as_array().expect("by_for");
+    let row = |k: &str| by_for.iter().find(|r| r["key"] == k).expect(k).clone();
+    assert_eq!(row(&key)["home_qty"]["n"], 20, "{result}");
+    assert_eq!(row(&key)["home_value"]["rs"], 36_000, "{result}");
+    assert_eq!(row(&format!("s{b}"))["home_value"]["rs"], 2_000);
+    assert_eq!(row("guests")["value"]["rs"], 3_000);
+    assert_eq!(row("guests")["qty"]["n"], 3);
+    // The parts add up to the register's own total (27 box, 41,000).
+    assert_eq!(result["totals"]["qty"]["n"], 27);
+    assert_eq!(result["totals"]["value"]["rs"], 41_000);
+    assert!(note_of(&result).contains("shared equally"), "{result}");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    assert_eq!(harness::count(figs[0].0), 20);
+    assert_eq!(harness::money(figs[1].0), 36_000);
+
+    // One partner asked for: the register is filtered, and there is no by_for beside its totals.
+    let (_, requests) = h.ask(
+        "alif ke fal ka total",
+        None,
+        vec![
+            tool_reply(&[
+                find("الف", "partner"),
+                report("R37", json!({"partner": "r1.matches.0"})),
+            ]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    let filtered = result_of(&requests[1], "r2");
+    assert!(filtered.get("by_for").is_none(), "{filtered}");
+    assert_eq!(filtered["totals"]["value"]["rs"], 36_000);
+}
+
+#[test]
+fn q143_the_peak_month_of_the_commission_is_not_the_peak_month_of_the_sales() {
+    // View G has several series; its first is the gross. April: 10 box at 10,000 (gross 100,000,
+    // commission 12,080). May: 100 box at 990 (gross 99,000, commission 12,680). The month with
+    // the most commission is May; the month with the most sales is April. A bare `value` would
+    // have been the gross.
+    let h = Harness::over(worked::months_world(&[
+        (4, true, 10, 10_000),
+        (5, true, 100, 990),
+    ]));
+    let (reply, requests) = h.ask(
+        "kis mahine mein sab se zyada commission aaya",
+        None,
+        vec![
+            tool_reply(&[
+                ("period", this_year()),
+                analytics(
+                    "G",
+                    json!({"group_by": "month", "from": "r1.from", "to": "r1.to"}),
+                ),
+            ]),
+            final_reply(
+                "{{r2.peak.commission.month}} میں سب سے زیادہ کمیشن: {{r2.peak.commission.value}}۔",
+            ),
+        ],
+    );
+    let result = result_of(&requests[1], "r2");
+    assert_eq!(result["peak"]["commission"]["key"], "m202605", "{result}");
+    assert_eq!(
+        result["peak"]["commission"]["value"]["rs"], 12_680,
+        "{result}"
+    );
+    assert_eq!(result["peak"]["gross"]["key"], "m202604", "{result}");
+    assert_eq!(result["lowest"]["commission"]["key"], "m202604", "{result}");
+    // No bare `value` on a month of a chart with several series.
+    let entry = &result["series"][0];
+    assert!(entry.get("value").is_none(), "{entry}");
+    assert!(
+        entry.get("commission").is_some() && entry.get("gross").is_some(),
+        "{entry}"
+    );
+    assert!(
+        note_of(&result).contains("months that have activity"),
+        "{result}"
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 12_680);
+}
+
+#[test]
+fn a_month_close_moves_profit_into_capital_and_a_reversed_close_leaves_no_trace() {
+    // October's profit 2,488 is split 996 / 746 / 746 (E2E-9). ب's capital after the close is
+    // 500,000 + 746; the close is shown as month_close, not as invested. Reversed, it is gone.
+    let h = capital_world();
+    let b = h.world.partners[1];
+    common::set_today(&h.world.env, 2026, 11, 2);
+    let ctx = &h.world.env.ctx;
+    let owner = &h.world.owner;
+    mandi_services::day::close(
+        ctx,
+        owner,
+        &mandi_services::core::vouchers::DayCloseInput {
+            up_to: "31-10-2026".into(),
+        },
+    )
+    .unwrap();
+    mandi_services::month::close(
+        ctx,
+        owner,
+        &mandi_services::month::MonthInput {
+            month: "2026-10".into(),
+        },
+    )
+    .unwrap();
+    let read = |h: &Harness| {
+        let (_, requests) = h.ask(
+            "be ka sarmaya kitna hai",
+            None,
+            vec![
+                tool_reply(&[
+                    find("ب", "partner"),
+                    report("R31", json!({"partner": "r1.matches.0", "rows": 20})),
+                ]),
+                final_reply("ٹھیک ہے۔"),
+            ],
+        );
+        result_of(&requests[1], "r2")["capital"].clone()
+    };
+    let capital = read(&h);
+    assert_eq!(capital["balance"]["rs"], 500_746, "{capital}");
+    assert_eq!(capital["invested"]["rs"], 500_000, "{capital}");
+    assert_eq!(capital["taken_back"]["rs"], 0, "{capital}");
+    assert_eq!(capital["month_close"]["rs"], 746, "{capital}");
+    assert_eq!(capital["balance"]["checked"], true, "{capital}");
+    // The close is reversed: the profit leaves capital again, and the two places still agree.
+    mandi_services::month::reverse(
+        ctx,
+        owner,
+        &mandi_services::month::MonthReverseInput {
+            month: "2026-10".into(),
+            reason: "غلطی".into(),
+        },
+    )
+    .unwrap();
+    let capital = read(&h);
+    assert_eq!(capital["balance"]["rs"], 500_000, "{capital}");
+    assert_eq!(capital["month_close"]["rs"], 0, "{capital}");
+    assert_eq!(capital["balance"]["checked"], true, "{capital}");
+    let _ = b;
+}
+
+#[test]
+fn a_typed_name_kept_for_the_owner_is_never_read_in_a_later_reply() {
+    // Two apples fit "apple": the typed name is kept as f1 for the Owner's choice. A model that
+    // goes on and reads `f1.matches.0` in its next reply is refused, not given an apple of its
+    // own choosing.
+    let h = Harness::day();
+    world::add_item(
+        &h.world.env,
+        &h.world.owner,
+        "سیب کالا",
+        "Apple Black",
+        "fruit",
+        "unit",
+    );
+    let (reply, requests) = h.ask(
+        "kela aur apple ka commission",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "apple"})),
+                analytics("A", json!({"item": "banana"})),
+            ]),
+            tool_reply(&[analytics("A", json!({"item": "f1.matches.0"}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    // The second reply was refused and the Owner is asked at once: no third model call.
+    assert_eq!(requests.len(), 2);
+    // The Owner is asked which apple, with both options.
+    assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    assert_eq!(reply.options.len(), 2);
+}
+
+#[test]
+fn every_combining_operation_refuses_figures_of_different_items_unless_the_question_asks_for_it() {
+    // Banana 3,928, apple 1,520, all items 5,448 (E2E-11). The ops and the words that allow them.
+    let run = |question: &str, op: &str, inputs: [&str; 2]| {
+        let h = Harness::day();
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[
+                    analytics("A", json!({"item": "banana"})),
+                    analytics("A", json!({"item": "apple"})),
+                    analytics("A", json!({})),
+                ]),
+                tool_reply(&[("calculate", json!({"op": op, "inputs": inputs}))]),
+                final_reply("{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}}"),
+            ],
+        );
+        (tool_error_codes(&requests[2]), reply)
+    };
+    // sum and average: a together word; an item plus the unfiltered total is another scope.
+    for op in ["sum", "average"] {
+        for pair in [
+            ["r1.totals.total_comm", "r2.totals.total_comm"],
+            ["r1.totals.total_comm", "r3.totals.total_comm"],
+        ] {
+            let (codes, _) = run("kela aur saib ka commission", op, pair);
+            assert_eq!(codes, ["ERR_OUT_OF_RANGE"], "{op} {pair:?}");
+        }
+    }
+    let (codes, _) = run(
+        "kele aur saib ka total commission",
+        "sum",
+        ["r1.totals.total_comm", "r2.totals.total_comm"],
+    );
+    assert!(codes.is_empty());
+    // difference: a comparing word.
+    let (codes, _) = run(
+        "kela aur saib ka commission",
+        "difference",
+        ["r1.totals.total_comm", "r2.totals.total_comm"],
+    );
+    assert_eq!(codes, ["ERR_OUT_OF_RANGE"]);
+    let (codes, reply) = run(
+        "kele aur saib ke commission mein farq",
+        "difference",
+        ["r1.totals.total_comm", "r2.totals.total_comm"],
+    );
+    assert!(codes.is_empty());
+    let _ = reply;
+    // percent_of and change_percent: a share or change word.
+    for op in ["percent_of", "change_percent"] {
+        let (codes, _) = run(
+            "kela ka commission",
+            op,
+            ["r1.totals.total_comm", "r3.totals.total_comm"],
+        );
+        assert_eq!(codes, ["ERR_OUT_OF_RANGE"], "{op}");
+    }
+    let (codes, _) = run(
+        "kele ka hissa kitna hai",
+        "percent_of",
+        ["r1.totals.total_comm", "r3.totals.total_comm"],
+    );
+    assert!(codes.is_empty());
+    // The same item in two periods is one scope: no word is needed.
+    let h = Harness::over(worked::months_world(&[
+        (8, true, 10, 1_000),
+        (9, true, 20, 1_000),
+    ]));
+    let (_, requests) = h.ask(
+        "ستمبر اگست کمیشن",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"from": "2026-09-01", "to": "2026-09-30"})),
+                analytics("A", json!({"from": "2026-08-01", "to": "2026-08-31"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "difference", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty());
+}

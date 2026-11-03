@@ -18,6 +18,7 @@
 //! | `never_word` | a word of the never-use list |
 //! | `too_long` | more than 130 words, each filled reference counted as one |
 //! | `estimate_kind` | an estimate figure in an answer that is not of kind estimate or advice |
+//! | `asked` | the question asks for the commission and the sales, and the answer gives only one of them |
 //! | `choose`, `entry`, `show`, `next` | the parts of the answer schema that point at results |
 //!
 //! A figure whose two places differ is not a failure to rewrite: it is final (`Verdict::Differ`).
@@ -35,7 +36,12 @@ use crate::limits::{MAX_ANSWER_WORDS, MAX_NEXT, MAX_SHOW, MAX_TABLE_ROWS};
 use crate::model_answer::{AnswerKind, ModelAnswer, Piece, ShowAs, pieces};
 use crate::prompt::{SYSTEM, WordKind, words};
 use crate::results::{NameVal, Node, Shown, Side, Val};
-use crate::tools::{Env, Found, State, ToolError, lookup};
+use crate::tools::{Env, Found, State, ToolError, cues, lookup};
+
+/// The columns that are a commission figure, and those that are a sales figure (analytics A to C,
+/// reports R2 and R6).
+const COMMISSION_COLUMNS: &[&str] = &["total_comm", "seller_comm", "buyer_comm", "commission"];
+const SALES_COLUMNS: &[&str] = &["gross", "sales_money", "purchase_value", "seller_amount"];
 
 /// One thing that failed, in the words the model reads for its one rewrite.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -788,6 +794,9 @@ impl Check<'_> {
                     &answer.text.chars().take(24).collect::<String>(),
                 ));
             }
+            if answer.kind == AnswerKind::Answer {
+                self.check_asked(&items, answer, &mut failures);
+            }
             for (at, item) in items.iter().enumerate() {
                 let Item::Ref {
                     path,
@@ -842,6 +851,61 @@ impl Check<'_> {
             Verdict::Ok
         } else {
             Verdict::Retry(failures)
+        }
+    }
+
+    /// When the question asks for the commission AND the sales, an answer that gives only one of
+    /// them is sent back (Q154: commission with no sale, Q155 the reverse in the live run 2). Only
+    /// when the books read for this question hold the missing figure, so the model can add it
+    /// without a new tool call; an answer that cites a calculation or shows a table is left alone.
+    fn check_asked(&self, items: &[Item], answer: &ModelAnswer, failures: &mut Vec<Failure>) {
+        let question = self.env.question;
+        if !cues::commission_and_sales_asked(question) {
+            return;
+        }
+        let cited: Vec<&str> = items
+            .iter()
+            .filter_map(|i| match i {
+                Item::Ref { path, .. } => Some(path.as_str()),
+                Item::Words(_) => None,
+            })
+            .collect();
+        let names_family = |family: &[&str]| {
+            cited
+                .iter()
+                .any(|path| path.split('.').any(|seg| family.contains(&seg)))
+        };
+        let (commission, sales) = (
+            names_family(COMMISSION_COLUMNS),
+            names_family(SALES_COLUMNS),
+        );
+        let cites_a_calculation = cited
+            .iter()
+            .any(|path| path.starts_with('c') || path.starts_with('e'));
+        if commission == sales || cites_a_calculation || !answer.show.is_empty() {
+            return;
+        }
+        let (missing, family) = if commission {
+            ("the sales figure (gross) is asked too", SALES_COLUMNS)
+        } else {
+            (
+                "the commission figure (total_comm) is asked too",
+                COMMISSION_COLUMNS,
+            )
+        };
+        let held = self
+            .state
+            .results
+            .iter()
+            .filter(|r| r.turn == self.state.turn)
+            .any(|r| match r.node.get(&["columns"]) {
+                Some(Node::List(columns)) => columns
+                    .iter()
+                    .any(|c| matches!(c, Node::Str(name) if family.contains(&name.as_str()))),
+                _ => false,
+            });
+        if held {
+            failures.push(Failure::new("asked", missing));
         }
     }
 

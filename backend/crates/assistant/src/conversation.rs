@@ -193,6 +193,13 @@ pub struct Turn {
     /// The party the app found itself before the first call (plan 52 P52-S1, item 10). The answer
     /// always shows his name when it is about him.
     pub prefound: Option<crate::answer::AnswerName>,
+    /// True when the question is general mandi advice (`help_guard::general_advice_asked`): its
+    /// calls go out with the tools off and an answer of kind `advice` that reads nothing is
+    /// general advice.
+    pub general_advice: bool,
+    /// The typed-name finds (`f1` ...) that matched none, several, or only a close spelling: they
+    /// are kept for the Owner's choice and are never read, in this reply or a later one.
+    pub unclear: Vec<String>,
 }
 
 /// What a waiting question waits for.

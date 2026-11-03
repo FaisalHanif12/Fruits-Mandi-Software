@@ -70,6 +70,190 @@ pub fn year_end(question: &str) -> bool {
     )
 }
 
+/// The question asks for the commission.
+///
+/// Example: "raheem ke mal ka commision is sal kitna he" is true.
+pub fn commission_asked(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "commission",
+            "commision",
+            "comision",
+            "comm",
+            "kamishan",
+            "کمیشن",
+            "کمشن",
+        ],
+    )
+}
+
+/// The question asks for the sales (the amount), not how many بکری there were.
+///
+/// Example: "commission and sales on rahim's goods" is true; "pichle mahine kitni bikriyan hui" is
+/// false (a count).
+pub fn sales_asked(question: &str) -> bool {
+    has(
+        question,
+        &["sale", "sales", "bikri", "bikree", "بکری", "فروخت"],
+    ) && !crate::route::bikri_count_asked(question)
+}
+
+/// The question asks for the commission AND the sales in one breath: a word for each, joined by
+/// "aur", "and" or "or" ("commission aur sale", "sales and commission", "comision aur bikri").
+/// Two words of a question about two other things ("sale kaise barhayen, aur kele ka commission
+/// kitna hai") are not that: the sales word is a topic there, not a figure asked for.
+///
+/// Example: "commission and sales on rahim's goods this year" is true; "sale kaise barhayen, aur
+/// kele ka commission kitna hai" is false.
+pub fn commission_and_sales_asked(question: &str) -> bool {
+    const AND: &[&str] = &["aur", "or", "and", "ya", "plus", "اور", "و"];
+    const COMMISSION: &[&str] = &[
+        "commission",
+        "commision",
+        "comision",
+        "comm",
+        "kamishan",
+        "کمیشن",
+        "کمشن",
+    ];
+    const SALES: &[&str] = &["sale", "sales", "bikri", "bikree", "بکری", "فروخت"];
+    if crate::route::bikri_count_asked(question) {
+        return false;
+    }
+    let spaced = spaced(question);
+    let words: Vec<&str> = spaced.split_whitespace().collect();
+    let key = |w: &str| text::search_ur(&text::search_en(w));
+    let is_one_of = |word: &str, list: &[&str]| list.iter().any(|w| key(w) == word);
+    words.iter().enumerate().any(|(at, word)| {
+        let other: &[&str] = if is_one_of(word, COMMISSION) {
+            SALES
+        } else if is_one_of(word, SALES) {
+            COMMISSION
+        } else {
+            return false;
+        };
+        // The other word comes next, or after one link word.
+        let next = words.get(at.saturating_add(1)).copied();
+        let after = words.get(at.saturating_add(2)).copied();
+        next.is_some_and(|n| is_one_of(n, other))
+            || (next.is_some_and(|n| is_one_of(n, AND))
+                && after.is_some_and(|n| is_one_of(n, other)))
+    })
+}
+
+/// The question compares things: farq, difference, compare, "zyada" or "kam" than, versus.
+///
+/// Example: "kele aur saib ke commission mein farq" is true; "kele aur saib ka commission" is false.
+pub fn comparing(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "farq",
+            "fark",
+            "difference",
+            "differ",
+            "compare",
+            "compared",
+            "comparison",
+            "mawazna",
+            "muqabla",
+            "muqable",
+            "muqabale",
+            "zyada",
+            "ziyada",
+            "kam",
+            "more",
+            "less",
+            "higher",
+            "lower",
+            "than",
+            "versus",
+            "vs",
+            "فرق",
+            "موازنہ",
+            "مقابلے",
+            "مقابلہ",
+            "زیادہ",
+            "کم",
+        ],
+    )
+}
+
+/// The question asks for a share or a change in percent: percent, fisad, share, hissa, ratio,
+/// change, increase, decrease, or it compares.
+///
+/// Example: "kele ka hissa kitna hai" is true; "kela ka commission" is false.
+pub fn share_or_change(question: &str) -> bool {
+    comparing(question)
+        || has(
+            question,
+            &[
+                "percent",
+                "percentage",
+                "fisad",
+                "feesad",
+                "share",
+                "hissa",
+                "hissah",
+                "ratio",
+                "change",
+                "barh",
+                "barhe",
+                "ghat",
+                "ghate",
+                "increase",
+                "decrease",
+                "فیصد",
+                "حصہ",
+                "اضافہ",
+                "کمی",
+                "تبدیلی",
+            ],
+        )
+}
+
+/// The question asks for ONE figure for several things together: "mila kar", "total", "kul",
+/// "together", "combined". Without such a word, "kele or saib ka commission" asks for each item's
+/// own figure, and a sum of the two is a figure nobody asked for (Q112 of the live run 2).
+///
+/// Example: "akram aur arshad dono ka mila kar kitna hai" is true; "kele or saib ka comision aur
+/// bikri btao" is false.
+pub fn together(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "mila kar",
+            "mila ke",
+            "milakar",
+            "milake",
+            "milakar",
+            "total",
+            "kul",
+            "kul mila kar",
+            "sum",
+            "average",
+            "avg",
+            "ausat",
+            "اوسط",
+            "combined",
+            "together",
+            "altogether",
+            "in all",
+            "in total",
+            "overall",
+            "sab ka",
+            "sab ko mila kar",
+            "ملا کر",
+            "ملا کے",
+            "ٹوٹل",
+            "کل",
+            "جمع",
+            "میزان",
+        ],
+    )
+}
+
 /// The question asks for one year ahead in words, not digits: "agle ek saal", "next one year". It is
 /// 12 months. (A number with months, "agle 12 mahine", is read as a number.)
 ///
@@ -606,6 +790,52 @@ mod percent_change_tests {
             percent_change("agar 10 percent zyada aur 5 percent kam hota", 1),
             None
         );
+    }
+}
+
+#[cfg(test)]
+mod together_tests {
+    use super::*;
+
+    #[test]
+    fn commission_and_sales_are_asked_when_the_two_words_are_joined() {
+        for q in [
+            "rahim ke mal ka commission aur sale kitna he",
+            "commission and sales on rahim's goods this year",
+            "bikri aur commission btao",
+            "sales commission this month",
+            "کمیشن اور بکری بتائیں",
+        ] {
+            assert!(commission_and_sales_asked(q), "{q}");
+        }
+        for q in [
+            "sale kaise barhayen, aur kele ka commission kitna hai",
+            "rahim ke mal ka commission kitna he",
+            "is saal ki bikri kitni hui",
+            "rahim ki kitni bikriyan hui aur commission",
+            "commission pichle mahine kitna tha, bikri ki baat nahi",
+        ] {
+            assert!(!commission_and_sales_asked(q), "{q}");
+        }
+    }
+
+    #[test]
+    fn only_a_word_for_one_figure_makes_a_sum_wanted() {
+        for q in [
+            "akram aur arshad dono ka mila kar kitna hai",
+            "kele or saib ka total commission",
+            "what is the combined commission of banana and apple",
+            "کیلے اور سیب کا کل کمیشن",
+        ] {
+            assert!(together(q), "{q}");
+        }
+        for q in [
+            "kele or saib ka is sal ka comision aur bikri btao",
+            "commission of banana and apple this year",
+            "کیلے اور سیب کا کمیشن بتائیں",
+        ] {
+            assert!(!together(q), "{q}");
+        }
     }
 }
 

@@ -268,7 +268,27 @@ impl ModelAnswer {
         if !exact {
             return Err(ParseError::WrongFields);
         }
-        serde_json::from_value(value).map_err(|_| ParseError::WrongShape)
+        let mut answer: ModelAnswer =
+            serde_json::from_value(value).map_err(|_| ParseError::WrongShape)?;
+        answer.choose = answer.choose.map(|id| clean_result_id(&id));
+        Ok(answer)
+    }
+}
+
+/// The result id of a `choose` the model wrote with braces or a path: `{{r1}}` and `r1.matches`
+/// are `r1` (Q158 of the live run 2: `"choose":"{{r1}}"` failed the check and the question ended
+/// as plain tables). Anything else is left as it is, so the check refuses it.
+///
+/// Example: `clean_result_id(" {{ f1 }} ")` is `f1`.
+pub fn clean_result_id(text: &str) -> String {
+    let inner = text
+        .trim()
+        .trim_start_matches("{{")
+        .trim_end_matches("}}")
+        .trim();
+    match inner.split_once('.') {
+        Some((id, _)) => id.trim().to_owned(),
+        None => inner.to_owned(),
     }
 }
 
@@ -356,6 +376,25 @@ mod tests {
         assert_eq!(ModelAnswer::parse(&ty), Err(ParseError::WrongShape));
         let inner = GOOD.replace(r#""rows":7"#, r#""rows":7,"x":1"#);
         assert_eq!(ModelAnswer::parse(&inner), Err(ParseError::WrongShape));
+    }
+
+    #[test]
+    fn a_choose_written_with_braces_or_a_path_is_the_result_id() {
+        for (written, id) in [
+            ("{{r1}}", "r1"),
+            (" {{ f1 }} ", "f1"),
+            ("r2.matches", "r2"),
+            ("{{r3.matches.0}}", "r3"),
+            ("r4", "r4"),
+            ("", ""),
+        ] {
+            assert_eq!(clean_result_id(written), id, "{written:?}");
+        }
+        let reply = r#"{"kind":"which_one","text":"","show":[],"next":[],"choose":"{{r1}}","entry":null,"nearest":null}"#;
+        assert_eq!(
+            ModelAnswer::parse(reply).unwrap().choose.as_deref(),
+            Some("r1")
+        );
     }
 
     #[test]

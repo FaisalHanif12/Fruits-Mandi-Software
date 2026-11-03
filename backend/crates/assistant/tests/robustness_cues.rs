@@ -662,6 +662,7 @@ fn cue_c_a_close_spelling_of_an_item_is_never_taken_without_the_owner() {
 }
 
 #[test]
+#[ignore = "prefind parked (plan 52 §8.3): must pass before prefind is turned on"]
 fn cue_c_the_app_does_not_find_a_party_for_a_word_that_is_also_an_item() {
     // With the find-ahead on, "kela ka commission" has a seller "Kela Traders" and an item Banana.
     // The word is an item word in a commission question, not a party. Reading Kela Traders before

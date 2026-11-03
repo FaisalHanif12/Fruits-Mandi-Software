@@ -46,9 +46,7 @@ use crate::ask::{
 };
 use crate::check::{Check, Failure, NameBook, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
-use crate::conversation::{
-    CallTiming, Conversation, Counters, Timing, ToolTiming, Turn, Wait, Waiting,
-};
+use crate::conversation::{CallTiming, Conversation, Timing, ToolTiming, Turn, Wait, Waiting};
 use crate::echo;
 use crate::fill;
 use crate::help_guard;
@@ -388,7 +386,9 @@ impl<'a> Run<'a> {
             }
             // A call that reads a match of a find made in this same reply is run only when that
             // find had exactly one match; otherwise the Owner is asked at once (plan 52 item 8).
-            if let Some(find_id) = unclear_find_read(&state, &batch_finds, &call.arguments) {
+            if let Some(find_id) =
+                unclear_find_read(&state, &batch_finds, &turn.unclear, &call.arguments)
+            {
                 turn.messages.push(tool_message(
                     &call.id,
                     ToolError::new(
@@ -445,6 +445,7 @@ impl<'a> Run<'a> {
             );
             turn.tool_log.extend(looked_up);
             if let Some(find_id) = asked {
+                turn.unclear.push(find_id.clone());
                 turn.ask_which.get_or_insert(find_id);
             }
             let outcome = match resolved {
@@ -653,7 +654,7 @@ impl<'a> Run<'a> {
             words: &self.words,
             partner_locked: self.partner_locked,
             max_completion_tokens,
-            tools_off: tools_off(&turn.counters, rewrite),
+            tools_off: tools_off(turn, rewrite),
         });
         let mut retried = false;
         let reply = loop {
@@ -732,15 +733,18 @@ impl<'a> Run<'a> {
         pending: Vec<ToolCall>,
     ) -> Finished {
         if !pending.is_empty() {
+            let log_start = turn.tool_log.len();
             if let Some(rest) = self.run_calls(conv, turn, pending) {
                 return paused(rest);
             }
-            if let Some(find_id) = turn.ask_which.take() {
+            if let Some(find_id) = turn.ask_which.take()
+                && !read_data_since(turn, log_start)
+            {
                 return self.ask_which_one(conv, &find_id);
             }
         }
         loop {
-            let off = tools_off(&turn.counters, false);
+            let off = tools_off(turn, false);
             let reply = match self.call_model(conv, turn, false) {
                 Ok(r) => r,
                 Err(f) => return *f,
@@ -771,10 +775,17 @@ impl<'a> Run<'a> {
                 return Finished::stopped(StopReason::Calls, self.tables_read(conv));
             }
             turn.messages.push(reply.message.clone());
+            let log_start = turn.tool_log.len();
             if let Some(rest) = self.run_calls(conv, turn, reply.tool_calls) {
                 return paused(rest);
             }
-            if let Some(find_id) = turn.ask_which.take() {
+            // A name that matched none or several ends the question with "which one" at once, with
+            // no model call. Not when the same reply also read the books for another name: the
+            // model asked for two things (two items in one question), and it must see both
+            // results to answer them (Q111 of the live run 2).
+            if let Some(find_id) = turn.ask_which.take()
+                && !read_data_since(turn, log_start)
+            {
                 return self.ask_which_one(conv, &find_id);
             }
         }
@@ -829,7 +840,15 @@ impl<'a> Run<'a> {
             // model ended as a change request is answered with the guide of its topic.
             let helped = self.help_instead(conv, turn, &written);
             let swapped = helped.is_some();
-            let parsed = helped.unwrap_or_else(|| written.clone());
+            let mut parsed = helped.unwrap_or_else(|| written.clone());
+            // A general advice question answered as advice that reads nothing is general advice.
+            if turn.general_advice
+                && parsed.kind == AnswerKind::Advice
+                && parsed.show.is_empty()
+                && !parsed.text.contains("{{")
+            {
+                parsed.kind = AnswerKind::GeneralAdvice;
+            }
             let numbers = figures::question_numbers(&turn.question);
             let state = State {
                 results: conv.results.clone(),
@@ -1402,9 +1421,15 @@ impl<'a> Run<'a> {
 }
 
 /// The id of a find made in this same reply whose match a call reads (`r1.matches.0`), when that
-/// find did not match exactly one record (or has more than it showed). `None` when the call reads
+/// find did not match exactly one record (or has more than it showed), or of a typed-name find kept
+/// for the Owner's choice (`kept`, this question's earlier replies too). `None` when the call reads
 /// no such match or the find had one.
-fn unclear_find_read(state: &State, batch_finds: &[String], arguments: &str) -> Option<String> {
+fn unclear_find_read(
+    state: &State,
+    batch_finds: &[String],
+    kept: &[String],
+    arguments: &str,
+) -> Option<String> {
     fn walk(value: &Value, found: &mut Vec<String>) {
         match value {
             Value::String(text) => {
@@ -1424,8 +1449,13 @@ fn unclear_find_read(state: &State, batch_finds: &[String], arguments: &str) -> 
     walk(&args, &mut roots);
     roots
         .into_iter()
-        .filter(|root| batch_finds.contains(root))
+        .filter(|root| batch_finds.contains(root) || kept.contains(root))
         .find(|root| {
+            // A typed-name find that was kept for the Owner's choice is never read (Q111: a model
+            // that went on after a failed name could read `f1.matches.0` of an unclear find).
+            if kept.contains(root) {
+                return true;
+            }
             let Some(result) = state.find(root) else {
                 return false;
             };
@@ -1544,8 +1574,11 @@ fn help_repaired_content(
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the
 /// last model call the question may make, or the tool calls are used up, or it is the rewrite
 /// (which may not read anything new, D6-system-prompt 5.3).
-fn tools_off(counters: &Counters, rewrite: bool) -> bool {
+fn tools_off(turn: &Turn, rewrite: bool) -> bool {
+    let counters = &turn.counters;
     rewrite
+        // General advice reads nothing: the one call answers with no tool.
+        || turn.general_advice
         || counters.model_calls.saturating_add(1) >= MAX_MODEL_CALLS
         || counters.tool_calls >= MAX_TOOL_CALLS
 }
@@ -1589,6 +1622,18 @@ fn paused(rest: Vec<ToolCall>) -> Finished {
 
 /// The key prefix of the record a screen takes as its party: a partner (`s`) on the screens of
 /// partner money, an account (`a`) on every other (see [`EntryRoute::party`]).
+/// True when a tool that reads the books (a report, a view, a card, the tiles, an estimate or a
+/// calculation) ran without an error since this point of the question's log.
+fn read_data_since(turn: &Turn, start: usize) -> bool {
+    turn.tool_log.iter().skip(start).any(|entry| {
+        entry.get("error").is_none()
+            && matches!(
+                entry.get("tool").and_then(Value::as_str),
+                Some("analytics" | "report" | "party_card" | "tiles" | "estimate" | "calculate")
+            )
+    })
+}
+
 fn party_prefix(screen: EntryScreen) -> &'static str {
     match screen {
         EntryScreen::Kharcha | EntryScreen::Sarmaya | EntryScreen::Phal => "s",
@@ -1764,7 +1809,10 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
         .push(user_message(&run.today_iso, run.language, text, &numbers));
     // A how-to question about one screen: the guide of that topic is read for the model before
     // its first call, so help takes one call (plan 52 item 7).
-    if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
+    if help_guard::general_advice_asked(text, &numbers) && conv.turns.is_empty() {
+        // How to do better at something the shop does: no tool, one call (PRD FR-7.88).
+        turn.general_advice = true;
+    } else if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
         run.preread_help(&mut conv, &mut turn, topic);
     } else if let Some(kind) = cues::period_kind(text) {
         // One clear period in the question: read it before the first call, so that call can

@@ -563,6 +563,54 @@ fn result_node(calc: &Calc, checked: Option<bool>) -> Node {
     })
 }
 
+/// Whose figure each input path is: the single item, seller, buyer or party its result was read
+/// for. Inputs of a result with no such filter (or a question number) have none and are left out.
+fn scopes_of(state: &State, paths: &[String]) -> Vec<String> {
+    use crate::answer::AnswerSource;
+    paths
+        .iter()
+        .filter_map(|path| {
+            let root = path.split('.').next()?;
+            let result = state.find(root)?;
+            let key = |kind: &str, id: Option<i64>| id.map(|id| format!("{kind}{id}"));
+            match result.source.as_ref()? {
+                AnswerSource::Analytics { filters, .. } => {
+                    let parts: Vec<String> = [
+                        key("i", filters.item.as_ref().map(|r| r.id)),
+                        key("s", filters.seller.as_ref().map(|r| r.id)),
+                        key("b", filters.buyer.as_ref().map(|p| p.record.id)),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                    Some(if parts.is_empty() {
+                        "*".to_owned()
+                    } else {
+                        parts.join("|")
+                    })
+                }
+                AnswerSource::Report { filters, .. } => {
+                    let parts: Vec<String> = [
+                        key("p", filters.party.as_ref().map(|p| p.record.id)),
+                        key("s", filters.seller.as_ref().map(|r| r.id)),
+                        key("i", filters.item.as_ref().map(|r| r.id)),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                    Some(if parts.is_empty() {
+                        "*".to_owned()
+                    } else {
+                        parts.join("|")
+                    })
+                }
+                AnswerSource::PartyCard { party, .. } => Some(format!("p{}", party.id)),
+                AnswerSource::Tiles { .. } => None,
+            }
+        })
+        .collect()
+}
+
 /// The tool `calculate`.
 pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: CalcInput = input(args)?;
@@ -577,6 +625,49 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
         pending = buyer_balance_over_an_amount(env, state, &parsed.inputs, pending)?;
     }
     let (values, checked) = settle(pending)?;
+    // Figures that belong to different items or parties (or one item and the unfiltered total) are
+    // combined only when the question asks for that kind of figure: a sum or an average when it
+    // says together (mila kar, total), a difference when it compares, a percent when it asks for a
+    // share or a change. Otherwise each is asked for on its own, and a result of the combination
+    // would show as if it were one item's figure (Q112; robustness_cues: 9,376 and 2,724 for
+    // "kela ka commission").
+    let wanted: Option<(bool, &str)> = match parsed.op {
+        OpWord::Sum | OpWord::Average => Some((
+            cues::together(env.question),
+            "the question does not ask for them together (mila kar, total)",
+        )),
+        OpWord::Difference => Some((
+            cues::comparing(env.question),
+            "the question does not compare them (farq, difference, zyada, kam)",
+        )),
+        OpWord::PercentOf | OpWord::ChangePercent => Some((
+            cues::share_or_change(env.question),
+            "the question does not ask for a share or a change in percent",
+        )),
+        OpWord::PercentMore | OpWord::PercentLess => None,
+    };
+    if let Some((asked, why)) = wanted
+        && !asked
+    {
+        let scopes = scopes_of(state, &parsed.inputs);
+        let mut distinct: Vec<&String> = Vec::new();
+        for scope in &scopes {
+            if !distinct.contains(&scope) {
+                distinct.push(scope);
+            }
+        }
+        if distinct.len() >= 2 {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "inputs",
+                &format!(
+                    "these figures belong to different items or parties, and {why}; give each \
+                     one's own figure, read for that item or party"
+                ),
+            )
+            .into());
+        }
+    }
     // "10 percent more" is the Owner's own what-if: the question must be a what-if (agar, if),
     // hold one percent number and say more (or less) right after it. A rate ("7% hota to") or a
     // past fact ("pichle saal se 10% zyada hai") is not a figure to scale.

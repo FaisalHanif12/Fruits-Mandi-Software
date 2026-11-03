@@ -18,6 +18,7 @@ use mandi_reports::reports::{
     statement_request,
 };
 use mandi_services::core::accounts::{AccountType, BalanceSide};
+use mandi_services::core::capital::{CapitalHistoryInput, CapitalRowKind};
 use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
@@ -790,6 +791,48 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         closing,
     );
     draft.partner_data = partner_data;
+    // A partner's capital, next to his statement, when the statement runs up to now (his capital
+    // balance is today's): Q203 and Q204 of the live run 2 found only his کل رقم.
+    if id == ReportId::R31
+        && let Some(partner_id) = built.filters.partner_id
+        && page
+            .filters
+            .to
+            .as_deref()
+            .is_none_or(|to| to >= env.today.to_iso().as_str())
+    {
+        let overview = partners::overview(env.ctx).map_err(service_stop)?;
+        let second_place = overview
+            .iter()
+            .find(|row| row.partner_id == partner_id)
+            .map_or(Paisa::ZERO, |row| row.capital_balance_paisa);
+        let capital = capital_node(env, partner_id, second_place)?;
+        if let Node::Obj(fields) = &mut draft.node {
+            fields.push(("capital".to_owned(), capital));
+        }
+    }
+    // The fruit taken by each partner, when the register is read for everyone.
+    if id == ReportId::R37 && !env.partner_locked && parsed.where_.is_none() {
+        match fruit_by_for(env, &built, &page)? {
+            Some(by_for) => {
+                if let Node::Obj(fields) = &mut draft.node {
+                    fields.push(("by_for".to_owned(), by_for));
+                }
+                super::typed::add_note(
+                    &mut draft.node,
+                    "by_for gives each partner's own fruit taken for his home (home_qty, \
+                     home_value) and the fruit for the shop's guests (guests): guest fruit is \
+                     shared equally by the partners and is not in a partner's figure",
+                );
+                draft.partner_data = true;
+            }
+            None => super::typed::add_note(
+                &mut draft.node,
+                "the totals of each partner did not add up to the total of the register, so they \
+                 are not given; read R37 with `partner` set for one partner's total",
+            ),
+        }
+    }
     Ok(draft)
 }
 
@@ -1133,6 +1176,172 @@ fn closing_check(
     Ok(Some(super::party::checked_balance(env, &card)?))
 }
 
+/// The most capital lines read for one partner (the page limit of the history).
+const CAPITAL_LINES: u32 = 1_000;
+
+/// A partner's capital (his account 0602) as the model reads it: the balance now (credit is plus,
+/// a minus is a debit balance), what he put in (the opening included) and took back, and the profit
+/// that month close moved into capital. The balance is read in two places, the capital history and
+/// the partner overview (`overview`), and it is checked only when they agree AND the history adds up
+/// (`balance = invested − taken back + month close`).
+///
+/// An opening debit and a جنرل line on the account count as invested or taken back by their side.
+///
+/// Example (PRD E2E-35): ب invests 50,000: balance 50,000, invested 50,000, taken back 0.
+fn capital_node(env: &Env<'_>, partner_id: i64, overview: Paisa) -> Result<Node, Stop> {
+    let history = partners::capital_history(
+        env.ctx,
+        &CapitalHistoryInput {
+            partner_id,
+            offset: 0,
+            limit: CAPITAL_LINES,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .map_err(service_stop)?;
+    let balance = history.balance_paisa;
+    let (invested, taken) = (
+        history.totals.invested_paisa,
+        history.totals.taken_back_paisa,
+    );
+    let overflow = |_| bad("ERR_OVERFLOW", "capital", "the figure does not fit");
+    let mut month_close = Paisa::ZERO;
+    for row in history
+        .rows
+        .iter()
+        .filter(|r| r.kind == CapitalRowKind::MonthClose)
+    {
+        month_close = month_close
+            .checked_add(row.amount_paisa)
+            .map_err(overflow)?;
+    }
+    // Every line was read, and the three parts make the balance.
+    let complete = i64::try_from(history.rows.len()).ok() == Some(history.total_count);
+    let adds_up = complete
+        && invested
+            .checked_sub(taken)
+            .and_then(|net| net.checked_add(month_close))
+            .is_ok_and(|expected| expected == balance);
+    let agree = overview == balance;
+    // With more lines than were read, the parts cannot be checked, but the two places still can:
+    // the balance is then unchecked only if they differ, and the month close is not given.
+    let money = Money {
+        paisa: balance,
+        side: None,
+        checked: Some(if complete { agree && adds_up } else { agree }),
+        places: vec![("capital_history", balance), ("partner_overview", overview)],
+    };
+    let month_close_node = if complete {
+        Node::Val(Val::Money(Money::plain(month_close)))
+    } else {
+        Node::Null
+    };
+    Ok(Node::obj(vec![
+        ("as_of", Node::Str(env.today.to_iso())),
+        ("balance", Node::Val(Val::Money(money))),
+        ("invested", Node::Val(Val::Money(Money::plain(invested)))),
+        ("taken_back", Node::Val(Val::Money(Money::plain(taken)))),
+        ("month_close", month_close_node),
+        (
+            "note",
+            Node::Str(
+                "balance is his capital now: invested, less taken back, plus the profit month \
+                 close moved in (month_close); a minus balance is a debit balance"
+                    .to_owned(),
+            ),
+        ),
+    ]))
+}
+
+/// The fruit taken for each partner's home and for the shop's guests, from R37 itself: the same
+/// register read once for each partner and once for the guests, so every figure is the engine's
+/// SUM over the whole filter (never a page). Every partner counts, active or not. `None` when the
+/// parts do not add up to the register's own total (a save landed between the reads, or an entry
+/// is in no group): the node is then left out, never given unchecked.
+fn fruit_by_for(env: &Env<'_>, built: &Built, page: &ReportPage) -> Result<Option<Node>, Stop> {
+    if built.filters.partner_id.is_some() || built.filters.guests_only == Some(true) {
+        return Ok(None);
+    }
+    let at = |key: &str| page.columns.iter().position(|c| c.key == key);
+    let (Some(qty_at), Some(value_at)) = (at("qty"), at("value")) else {
+        return Ok(None);
+    };
+    let totals_of = |read: &ReportPage| -> Option<(i64, Paisa)> {
+        match (read.totals.get(qty_at)?, read.totals.get(value_at)?) {
+            (Cell::Number { value }, Cell::Money { paisa }) => Some((*value, *paisa)),
+            _ => None,
+        }
+    };
+    let Some((grand_qty, grand_value)) = totals_of(page) else {
+        return Ok(None);
+    };
+    let mut parts: Vec<(
+        Option<mandi_services::core::partners::PartnerRow>,
+        i64,
+        Paisa,
+    )> = Vec::new();
+    for partner in partners::list(env.ctx).map_err(service_stop)? {
+        let mut filters = built.filters.clone();
+        filters.partner_id = Some(partner.id);
+        let read = read_page(env, ReportId::R37, &filters, 0, 1, None)?;
+        let Some((qty, value)) = totals_of(&read) else {
+            return Ok(None);
+        };
+        parts.push((Some(partner), qty, value));
+    }
+    let mut guests = built.filters.clone();
+    guests.partner_id = None;
+    guests.guests_only = Some(true);
+    let read = read_page(env, ReportId::R37, &guests, 0, 1, None)?;
+    let Some((guest_qty, guest_value)) = totals_of(&read) else {
+        return Ok(None);
+    };
+    parts.push((None, guest_qty, guest_value));
+    let mut qty_sum: i64 = 0;
+    let mut value_sum = Paisa::ZERO;
+    for (_, qty, value) in &parts {
+        let (Some(q), Ok(v)) = (qty_sum.checked_add(*qty), value_sum.checked_add(*value)) else {
+            return Ok(None);
+        };
+        (qty_sum, value_sum) = (q, v);
+    }
+    if qty_sum != grand_qty || value_sum != grand_value {
+        return Ok(None);
+    }
+    let money = |p: Paisa| Node::Val(Val::Money(Money::plain(p)));
+    let rows: Vec<(String, Node)> = parts
+        .into_iter()
+        .filter(|(who, qty, value)| who.is_none() || *qty != 0 || *value != Paisa::ZERO)
+        .map(|(who, qty, value)| match who {
+            Some(p) => (
+                format!("s{}", p.id),
+                Node::obj(vec![
+                    (
+                        "name",
+                        Node::Val(Val::Name(NameVal {
+                            name_ur: p.name_ur,
+                            name_en: p.name_en,
+                            tag: None,
+                            code: None,
+                        })),
+                    ),
+                    ("home_qty", Node::Val(Val::Count(qty))),
+                    ("home_value", money(value)),
+                ]),
+            ),
+            None => (
+                "guests".to_owned(),
+                Node::obj(vec![
+                    ("qty", Node::Val(Val::Count(qty))),
+                    ("value", money(value)),
+                ]),
+            ),
+        })
+        .collect();
+    Ok(Some(Node::Keyed(rows)))
+}
+
 /// R31 with no partner: one row for each partner with his کل رقم, read in two places (the partner
 /// overview and the closing total of his statement, PRD FR-7.76).
 fn partner_overview(
@@ -1179,6 +1388,10 @@ fn partner_overview(
                     })),
                 ),
                 ("total", Node::Val(Val::Money(money))),
+                (
+                    "capital",
+                    capital_node(env, row.partner_id, row.capital_balance_paisa)?,
+                ),
             ]),
         ));
         table_rows.push(AnswerRow {

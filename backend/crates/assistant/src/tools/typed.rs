@@ -191,7 +191,8 @@ fn names_it(node: &Node, typed: &str) -> bool {
     // Found as its Urdu spelling ("kela" for کیلا): named, when the word list or a learned pair
     // made the spelling; a spelling made by the rules alone is only a guess.
     if let Some(Node::Str(via)) = node.get(&["via"]) {
-        return via == "word_list" || via == "learned";
+        // The assistant's own alias list ("mausami" for Mosambi) is as sure as the word list.
+        return via == "word_list" || via == "learned" || via == "alias";
     }
     let (en, ur) = (text::search_en(typed), text::search_ur(typed));
     if en.is_empty() {
@@ -214,7 +215,30 @@ fn names_it(node: &Node, typed: &str) -> bool {
     // The oblique plural of an Urdu noun ends in ے where the name ends in ا: "کیلے کا کمیشن" names
     // the item کیلا (Q130 of the live run of 03-11-2026).
     let oblique = ur.strip_suffix('ے').map(|stem| format!("{stem}ا"));
-    starts(&text::search_en(&name.name_en), &en)
+    // The English plural of an item typed with its s ("apples" names Apple): the typed word
+    // without its final s or es (Q090 and Q242 of the live run 2).
+    let singular = en
+        .strip_suffix("es")
+        .filter(|stem| stem.len() > 3)
+        .map(str::to_owned)
+        .into_iter()
+        .chain(
+            en.strip_suffix('s')
+                .filter(|stem| stem.len() > 3)
+                .map(str::to_owned),
+        )
+        .collect::<Vec<String>>();
+    let en_name = text::search_en(&name.name_en);
+    // A spelling of the assistant's own item alias list ("mausami" for Mosambi): a close spelling
+    // of the item that the list names is the item (Q115 of the live run 2).
+    let alias = find::item_alias(typed).map(text::search_en);
+    starts(&en_name, &en)
+        || alias
+            .as_deref()
+            .is_some_and(|usual| starts(&en_name, usual))
+        || singular
+            .iter()
+            .any(|stem| en_name.split(' ').any(|word| word == stem))
         || starts(&ur_name, &ur)
         || oblique
             .as_deref()

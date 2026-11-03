@@ -328,7 +328,7 @@ const ITEM_ALIASES: [(&str, &str); 3] = [
 ];
 
 /// The usual spelling of an item typed in a spelling of the alias list, if it is one.
-fn item_alias(query: &str) -> Option<&'static str> {
+pub(super) fn item_alias(query: &str) -> Option<&'static str> {
     let typed = query.trim().to_ascii_lowercase();
     ITEM_ALIASES
         .iter()

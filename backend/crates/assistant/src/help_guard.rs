@@ -131,6 +131,161 @@ const ADVICE_WORDS: &[&str] = &[
     "reduce",
 ];
 
+/// Words a general mandi advice question is made of ("wasooli jaldi kaise karen", "udhar kaise kam
+/// karun"): what is improved, the way, and the small words around them.
+const GENERAL_ADVICE_VOCABULARY: &[&str] = &[
+    // what is improved
+    "wasooli",
+    "wasuli",
+    "ugrahi",
+    "recovery",
+    "collect",
+    "collection",
+    "udhar",
+    "udhaar",
+    "credit",
+    "dues",
+    "bikri",
+    "sale",
+    "sales",
+    "munafa",
+    "nafa",
+    "profit",
+    "commission",
+    "kharcha",
+    "kharche",
+    "expenses",
+    "cost",
+    "business",
+    "karobar",
+    "dukan",
+    "shop",
+    "وصولی",
+    "ادھار",
+    "بکری",
+    "منافع",
+    "کمیشن",
+    "خرچہ",
+    "کاروبار",
+    "دکان",
+    // how
+    "kaise",
+    "kese",
+    "kaisay",
+    "kis",
+    "tarah",
+    "tarike",
+    "tareeqa",
+    "tarika",
+    "how",
+    "can",
+    "to",
+    "tips",
+    "tip",
+    "mashwara",
+    "advice",
+    "کیسے",
+    "طریقہ",
+    "مشورہ",
+    "کس",
+    "طرح",
+    // the small words
+    "jaldi",
+    "tez",
+    "fast",
+    "faster",
+    "quickly",
+    "behtar",
+    "better",
+    "zyada",
+    "kam",
+    "more",
+    "less",
+    "karen",
+    "karun",
+    "kare",
+    "karein",
+    "karna",
+    "kar",
+    "sakte",
+    "sakta",
+    "sakti",
+    "hain",
+    "hai",
+    "ho",
+    "mein",
+    "main",
+    "me",
+    "ko",
+    "ka",
+    "ki",
+    "ke",
+    "apni",
+    "apna",
+    "apne",
+    "hum",
+    "ham",
+    "meri",
+    "mera",
+    "hamari",
+    "hamara",
+    "aur",
+    "se",
+    "i",
+    "we",
+    "do",
+    "my",
+    "our",
+    "the",
+    "of",
+    "in",
+    "get",
+    "اپنی",
+    "اپنا",
+    "ہم",
+    "میں",
+    "کو",
+    "کا",
+    "کی",
+    "کے",
+    "اور",
+    "سے",
+    "کریں",
+    "کروں",
+    "جلدی",
+    "بہتر",
+    "زیادہ",
+    "کم",
+];
+
+/// True when the question is a general mandi advice question: how to do better at something the
+/// shop does (collect dues faster, sell more, lower credit), in the vocabulary above, with no name
+/// of a party or an item and no number. The books have nothing to say to it: the model answers it
+/// with no tool, in one call, as general advice (PRD FR-7.88; Q250 and Q251 of the live run 2 read
+/// the dues list and answered with ordinary advice instead).
+///
+/// Example: "wasooli jaldi kaise karen" and "وصولی جلدی کیسے کریں" are general advice;
+/// "akram se wasooli kaise karen" names a party and "wasooli kitni hui" asks for a figure.
+pub fn general_advice_asked(question: &str, numbers: &[QuestionNumber]) -> bool {
+    if !numbers.is_empty() || !is_how_to(question, numbers) {
+        return false;
+    }
+    let normal = |w: &str| text::search_ur(&text::search_en(w));
+    let vocabulary: Vec<String> = GENERAL_ADVICE_VOCABULARY
+        .iter()
+        .chain(ADVICE_WORDS.iter())
+        .map(|w| normal(w))
+        .collect();
+    let words = words_of(question);
+    if words.is_empty() || words.len() > 8 || words.iter().any(|w| w.chars().any(char::is_numeric))
+    {
+        return false;
+    }
+    // Every word is of the vocabulary: a name, an item or any other word is a question about the
+    // books.
+    words.iter().all(|w| vocabulary.contains(w))
+}
+
 /// Phrases that make a cue mean something else ("the capital of Peru" is not the partners'
 /// capital).
 const NOT_THE_TOPIC: &[&str] = &["capital of", "capital city"];

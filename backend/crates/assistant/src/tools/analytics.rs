@@ -16,9 +16,10 @@
 
 use chrono::{Datelike, NaiveDate};
 use mandi_reports::analytics::{
-    AnalyticsChartKind, AnalyticsColumn, AnalyticsCompare, AnalyticsFilterKind, AnalyticsFilters,
-    AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey, AnalyticsPage, AnalyticsRunInput,
-    AnalyticsSide, AnalyticsView, catalog, compare_window, run as engine_run,
+    AnalyticsChartKind, AnalyticsChartPoint, AnalyticsColumn, AnalyticsCompare,
+    AnalyticsFilterKind, AnalyticsFilters, AnalyticsGoods, AnalyticsGroupBy, AnalyticsKey,
+    AnalyticsPage, AnalyticsRunInput, AnalyticsSide, AnalyticsView, catalog, compare_window,
+    run as engine_run,
 };
 use mandi_reports::reports::{Cell, Column, PartyFilter, Row};
 use mandi_services::core::accounts::AccountType;
@@ -305,14 +306,15 @@ fn build_filters(
             (Some((_, earlier_to)), Some(first)) if earlier_to < first => {
                 notes.push(format!(
                     "the books start on {first}, so there is no earlier period to compare with; \
-                     the comparison was left out"
+                     the comparison was left out. {HOW_TO_COMPARE_ANYWAY}"
                 ));
                 compare = AnalyticsCompare::Off;
             }
             (Some((earlier_from, earlier_to)), Some(first)) if earlier_from < first => {
                 notes.push(format!(
                     "the books start on {first}, so the earlier period ({earlier_from} to \
-                     {earlier_to}) is only partly covered and is not like for like"
+                     {earlier_to}) is only partly covered and is not like for like. \
+                     {HOW_TO_COMPARE_ANYWAY}"
                 ));
                 filters.compare = compare;
                 source.compare = compare;
@@ -775,6 +777,14 @@ fn row_fields(
     fields
 }
 
+/// What the model does when a comparison is left out or only partly covered: it still answers how
+/// much more or less one period is than another by reading the other period on its own and giving
+/// the difference, with the books' start said (Q129 and Q130 of the live run 2 answered "not
+/// available" and showed two separate totals).
+const HOW_TO_COMPARE_ANYWAY: &str = "The Owner can still be answered: read the other period on its \
+    own dates (for the whole of last year, period last_year), give the difference with calculate \
+    (difference, or change_percent) of the two totals, and say that the books start later";
+
 /// True when the filters narrow the books to some items, parties, places or goods (the period,
 /// the side and the grouping do not narrow).
 fn is_narrowed(filters: &AnalyticsFilters) -> bool {
@@ -904,6 +914,16 @@ fn assemble(
         ("compare", compare),
         ("series", series),
     ];
+    // The month with the most and the month with the least, for "kis mahine mein sab se zyada".
+    if let Some((peak, lowest)) = series_extremes(page) {
+        fields.push(("peak", peak));
+        fields.push(("lowest", lowest));
+        notes.push(
+            "peak and lowest are among the months that have activity: a month with none is not \
+             in the series"
+                .to_owned(),
+        );
+    }
     // What the tool did that was not asked for (plan 52 item 2).
     if !notes.is_empty() {
         fields.push(("note", Node::Str(notes.join("; "))));
@@ -943,7 +963,62 @@ fn assemble(
     draft
 }
 
-/// The series node: one value for each month, from the same trend chart the table draws.
+/// One month of the trend: its key, the month, and for each series of the chart its value and the
+/// number to compare months by.
+struct TrendMonth {
+    key: String,
+    month: Node,
+    values: Vec<Node>,
+    sizes: Vec<i64>,
+}
+
+fn trend_month(point: &AnalyticsChartPoint, series: usize) -> Option<TrendMonth> {
+    let Cell::Month { year, month } = &point.label else {
+        return None;
+    };
+    let mut values = Vec::new();
+    let mut sizes = Vec::new();
+    for at in 0..series {
+        let (value, size) = match point.values.get(at)? {
+            Cell::Money { paisa } => (
+                Node::Val(Val::Money(crate::results::Money::plain(*paisa))),
+                paisa.as_paisa(),
+            ),
+            Cell::Number { value } => (Node::Val(Val::Count(*value)), *value),
+            _ => (Node::Null, i64::MIN),
+        };
+        values.push(value);
+        sizes.push(size);
+    }
+    Some(TrendMonth {
+        key: format!("m{year}{month:02}"),
+        month: Node::Val(Val::Month {
+            year: i32::try_from(*year).ok()?,
+            month: u32::try_from(*month).ok()?,
+        }),
+        values,
+        sizes,
+    })
+}
+
+/// The months of the trend with their series named by the column they come from (`gross`,
+/// `commission`, `profit` ...). Only months with activity are in it.
+fn trend_months(
+    trend: &mandi_reports::analytics::AnalyticsChart,
+) -> (Vec<String>, Vec<TrendMonth>) {
+    let names: Vec<String> = trend.series.iter().map(|s| s.key.clone()).collect();
+    let months = trend
+        .points
+        .iter()
+        .filter_map(|point| trend_month(point, names.len()))
+        .collect();
+    (names, months)
+}
+
+/// The series node: one entry for each month, from the same trend chart the table draws, keyed by
+/// month (`series.m202606.commission`, `series.m202606.month`). A chart with ONE series (view D)
+/// also names its value `value`; with several (view G) there is no bare `value`, so a figure is
+/// never taken for the wrong one (view G's first series is the gross, not the commission).
 fn series_node(page: &AnalyticsPage, chart: &AnswerChart) -> Node {
     let Some(trend) = page
         .charts
@@ -953,33 +1028,61 @@ fn series_node(page: &AnalyticsPage, chart: &AnswerChart) -> Node {
         return Node::Null;
     };
     let _ = chart;
-    let items = trend
-        .points
-        .iter()
-        .filter_map(|point| {
-            let Cell::Month { year, month } = &point.label else {
-                return None;
-            };
-            let value = point.values.first()?;
-            let money = match value {
-                Cell::Money { paisa } => {
-                    Node::Val(Val::Money(crate::results::Money::plain(*paisa)))
+    let (names, months) = trend_months(trend);
+    Node::Keyed(
+        months
+            .into_iter()
+            .map(|m| {
+                let mut fields = vec![("month".to_owned(), m.month)];
+                for (name, value) in names.iter().zip(m.values) {
+                    if names.len() == 1 {
+                        fields.push(("value".to_owned(), value.clone()));
+                    }
+                    fields.push((name.clone(), value));
                 }
-                Cell::Number { value } => Node::Val(Val::Count(*value)),
-                _ => Node::Null,
-            };
-            Some(Node::obj(vec![
-                ("key", Node::Str(format!("m{year}{month:02}"))),
-                (
-                    "month",
-                    Node::Val(Val::Month {
-                        year: i32::try_from(*year).ok()?,
-                        month: u32::try_from(*month).ok()?,
-                    }),
-                ),
-                ("value", money),
-            ]))
-        })
-        .collect();
-    Node::List(items)
+                (m.key, Node::Obj(fields))
+            })
+            .collect(),
+    )
+}
+
+/// The month with the most and the month with the least in each series of the trend, as `peak` and
+/// `lowest` (the first of equal months), among the months that have activity. One series (view D):
+/// `peak.month`, `peak.value`. Several (view G): `peak.commission.month`, `peak.commission.value` ...
+/// one object for each series. The month and its value are the series' own; the app only picks.
+/// `None` for fewer than two months, where "most" and "least" mean nothing.
+fn series_extremes(page: &AnalyticsPage) -> Option<(Node, Node)> {
+    let trend = page
+        .charts
+        .iter()
+        .find(|c| c.kind == AnalyticsChartKind::Trend)?;
+    let (names, months) = trend_months(trend);
+    if months.len() < 2 || names.is_empty() {
+        return None;
+    }
+    let pick = |at: usize, most: bool| -> Option<Node> {
+        let mut best = months.first()?;
+        for m in &months {
+            let (now, was) = (m.sizes.get(at)?, best.sizes.get(at)?);
+            if (most && now > was) || (!most && now < was) {
+                best = m;
+            }
+        }
+        Some(Node::obj(vec![
+            ("key", Node::Str(best.key.clone())),
+            ("month", best.month.clone()),
+            ("value", best.values.get(at)?.clone()),
+        ]))
+    };
+    let side = |most: bool| -> Option<Node> {
+        if names.len() == 1 {
+            return pick(0, most);
+        }
+        let mut per_series = Vec::new();
+        for (at, name) in names.iter().enumerate() {
+            per_series.push((name.clone(), pick(at, most)?));
+        }
+        Some(Node::Obj(per_series))
+    };
+    Some((side(true)?, side(false)?))
 }
