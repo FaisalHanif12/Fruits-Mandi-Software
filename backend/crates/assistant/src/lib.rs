@@ -32,6 +32,7 @@ pub mod ask;
 pub mod check;
 pub mod client;
 pub mod conversation;
+pub mod echo;
 pub mod fill;
 pub mod help_guard;
 pub mod keys;

@@ -346,3 +346,124 @@ fn the_rewrite_row_says_which_number_word_letter_or_path_was_refused() {
         "{at:?}"
     );
 }
+
+// ---- 3. a help answer that broke the words rules is written from the guide itself ----------------
+
+#[test]
+fn a_help_answer_that_retyped_the_guide_is_written_from_the_guide_without_a_rewrite() {
+    // "bikri kaise add karun": the app reads the guide (h1) before the first call. The model retypes
+    // it in its own words with a key name (Latin letters) and a number word: the words rules fail,
+    // and the app writes the answer from the guide's summary, steps and keys: one model call.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "bikri kaise add karun",
+        None,
+        vec![answer_with(
+            "answer",
+            "بکری بک کھولیں، Alt+B دبائیں اور دو لائنیں لکھیں۔",
+            &[],
+            json!([]),
+        )],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 1, "no rewrite call");
+    let answer = answer_of(&reply);
+    // Only the guide's own words: text parts of the app, no figure, no table.
+    assert!(!answer.parts.is_empty());
+    assert!(
+        answer
+            .parts
+            .iter()
+            .all(|p| matches!(p, AnswerPart::Text { .. })),
+        "{:?}",
+        answer.parts
+    );
+    let calls = log_calls(&h);
+    assert_eq!(calls[0]["repaired"], json!(["help"]), "{calls:?}");
+    // The log keeps what the model wrote.
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    assert!(rows[0].answer_json.as_deref().unwrap().contains("Alt+B"));
+    h.scan_requests();
+}
+
+#[test]
+fn the_guide_is_not_written_over_a_wrong_reference_a_data_question_or_a_name() {
+    // A reference that does not exist is not a words rule: the one rewrite is asked.
+    let h = Harness::day();
+    let bad = final_reply("{{h9.summary}}");
+    let (reply, requests) = h.ask("bikri kaise add karun", None, vec![bad.clone(), bad]);
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert_eq!(requests.len(), 2);
+
+    // A question that also read the books (a report) is not a help answer: its figures are not
+    // the guide's.
+    let h = Harness::day();
+    let typed = final_reply("بکری Alt+B دو بار۔");
+    let (reply, requests) = h.ask(
+        "what is each partner's total now",
+        None,
+        vec![tool_reply(&[("tiles", json!({}))]), typed.clone(), typed],
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert_eq!(
+        requests.len(),
+        3,
+        "the rewrite was asked for, not the guide"
+    );
+}
+
+// ---- 8. the Owner's own number written in words is his number -----------------------------------
+
+#[test]
+fn a_number_word_that_echoes_the_owners_number_is_put_back_without_a_rewrite() {
+    // "agle 6 mahine": the model writes "چھ مہینوں". The number-word rule would refuse it; the app
+    // writes `{{q.n1}}` (his 6) and checks again: one model call fewer.
+    let h = Harness::over(worked::history_world(&HISTORY));
+    let (reply, requests) = h.ask(
+        "agle 6 mahine ka commission kitna hoga",
+        None,
+        vec![
+            tool_reply(&[("estimate", estimate_args(json!({"ahead": 6})))]),
+            answer_with(
+                "estimate",
+                "اگلے چھ مہینوں میں اسی رفتار سے تقریباً {{e1.same_pace.total}} بنے گا۔",
+                &[],
+                json!([{"result": "e1", "as": "chart", "rows": null}]),
+            ),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Estimate, "{reply:#?}");
+    assert_eq!(requests.len(), 2, "no rewrite call");
+    let calls = log_calls(&h);
+    assert_eq!(calls[1]["repaired"], json!(["number"]), "{calls:?}");
+    // His number is shown as a number (6), the estimate as an estimate.
+    let answer = answer_of(&reply);
+    let figs = figures(answer);
+    assert!(
+        figs.iter()
+            .any(|(cell, _)| matches!(cell, mandi_reports::reports::Cell::Number { value: 6 })),
+        "{:?}",
+        answer.parts
+    );
+    h.scan_requests();
+
+    // A number word that is not his number is still refused (3 months asked, "six" written).
+    let h = Harness::over(worked::history_world(&HISTORY));
+    let bad = answer_with(
+        "estimate",
+        "اگلے چھ مہینوں میں {{e1.same_pace.total}}",
+        &[],
+        json!([{"result": "e1", "as": "chart", "rows": null}]),
+    );
+    let (reply, requests) = h.ask(
+        "agle 3 mahine ka commission kitna hoga",
+        None,
+        vec![
+            tool_reply(&[("estimate", estimate_args(json!({"ahead": 3})))]),
+            bad.clone(),
+            bad,
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    assert_eq!(requests.len(), 3);
+}

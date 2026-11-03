@@ -271,8 +271,9 @@ fn a_help_answer_follows_the_word_limit_and_is_short_when_it_is_short() {
         vec![help_call("bikri_book"), answer_of(text)],
     );
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
-    // The model's own words are limited to 130 words in all: more than that is refused, and the
-    // one rewrite is asked for.
+    // The model's own words are limited to 130 words in all: more than that is refused. For a help
+    // answer the app does not ask for a rewrite; it writes the answer from the guide's own
+    // references (plan 52 P52-S1), so the question takes two calls, not three.
     let long = format!("{} {{{{r1.summary}}}}", "بکری ".repeat(140));
     let h = Harness::day();
     let (reply, requests) = h.ask(
@@ -286,13 +287,8 @@ fn a_help_answer_follows_the_word_limit_and_is_short_when_it_is_short() {
     );
     assert_eq!(
         requests.len(),
-        3,
-        "the long answer was sent back once: {reply:#?}"
+        2,
+        "the long answer was written from the guide at once: {reply:#?}"
     );
-    let check = requests[2]["messages"].as_array().unwrap().last().unwrap()["content"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    assert!(check.contains("too_long"), "{check}");
     assert_eq!(reply.outcome, AskOutcome::Answered);
 }

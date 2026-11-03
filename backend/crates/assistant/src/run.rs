@@ -44,11 +44,12 @@ use crate::ask::{
     AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantPickInput,
     AssistantRerunInput, FailureKind, PickChoice, StopReason,
 };
-use crate::check::{Check, NameBook, NameSet, Verdict};
+use crate::check::{Check, Failure, NameBook, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
 use crate::conversation::{
     CallTiming, Conversation, Counters, Timing, ToolTiming, Turn, Wait, Waiting,
 };
+use crate::echo;
 use crate::fill;
 use crate::help_guard;
 use crate::limits::{
@@ -806,6 +807,8 @@ impl<'a> Run<'a> {
         let finish_reason = reply.finish_reason.clone();
         let mut rewrote = false;
         let mut repaired = false;
+        let mut help_repaired = false;
+        let mut echoed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -864,7 +867,36 @@ impl<'a> Run<'a> {
                     {
                         repaired = true;
                         if let Some(last) = turn.timing.calls.last_mut() {
-                            last.repaired = vec!["name".to_owned()];
+                            last.repaired.push("name".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    // The Owner's own number written in words ("چھ مہینوں" for his "6 mahine") is his
+                    // number: put back as `{{q.nK}}`, then everything is checked again.
+                    if !echoed
+                        && failures.iter().any(|x| x.rule == "number_word")
+                        && let Some(fixed) = echoed_content(&content, &numbers)
+                    {
+                        echoed = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("number".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    // A help answer that retyped the guide in its own words and broke the words rules
+                    // (Latin key names, number words, a digit, too long) is written from the guide's
+                    // own references instead of a rewrite call (plan 52 P52-S1).
+                    if !help_repaired
+                        && let Some(fixed) =
+                            help_repaired_content(&content, &state, &parsed, &failures)
+                    {
+                        help_repaired = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("help".to_owned());
                         }
                         written_by_model.get_or_insert_with(|| content.clone());
                         content = fixed;
@@ -1278,14 +1310,13 @@ fn unclear_find_read(state: &State, batch_finds: &[String], arguments: &str) -> 
         })
 }
 
-/// The model's answer with the names it typed in `text` and in `next` put back as references
-/// (`NameSet::put_back`), as the JSON text it was. `None` when nothing was put back or it is not
-/// JSON.
-fn repaired_content(content: &str, state: &State, names: &NameSet) -> Option<String> {
+/// The model's answer with each text of it (`text` and every `next` question) changed by `fix`, as
+/// the JSON text it was. `None` when `fix` changed nothing or the content is not JSON.
+fn map_texts(content: &str, fix: &dyn Fn(&str) -> Option<String>) -> Option<String> {
     let mut value: Value = serde_json::from_str(content).ok()?;
     let mut changed = false;
     if let Some(Value::String(text)) = value.get_mut("text")
-        && let Some(fixed) = names.put_back(state, text)
+        && let Some(fixed) = fix(text)
     {
         *text = fixed;
         changed = true;
@@ -1293,7 +1324,7 @@ fn repaired_content(content: &str, state: &State, names: &NameSet) -> Option<Str
     if let Some(Value::Array(next)) = value.get_mut("next") {
         for item in next {
             if let Value::String(text) = item
-                && let Some(fixed) = names.put_back(state, text)
+                && let Some(fixed) = fix(text)
             {
                 *text = fixed;
                 changed = true;
@@ -1301,6 +1332,85 @@ fn repaired_content(content: &str, state: &State, names: &NameSet) -> Option<Str
         }
     }
     changed.then(|| value.to_string())
+}
+
+/// The model's answer with the names it typed put back as references (`NameSet::put_back`).
+fn repaired_content(content: &str, state: &State, names: &NameSet) -> Option<String> {
+    map_texts(content, &|text| names.put_back(state, text))
+}
+
+/// The model's answer with the Owner's own numbers, written in words, put back as `{{q.nK}}`
+/// (`echo::put_numbers_back`).
+fn echoed_content(content: &str, numbers: &[QuestionNumber]) -> Option<String> {
+    map_texts(content, &|text| echo::put_numbers_back(text, numbers))
+}
+
+/// The answer of a help question written from the guide the model read: its summary, its steps and
+/// its keys, each as a reference to the guide's own text and nothing else (plan 52 P52-S1). Used
+/// when the model retyped the guide in its own words and only the words rules failed. `None` when
+/// the question read anything but guides, or the model's answer is not a plain answer, or a rule
+/// other than the words rules failed (a wrong reference, a name, a figure ...).
+fn help_repaired_content(
+    content: &str,
+    state: &State,
+    parsed: &ModelAnswer,
+    failures: &[Failure],
+) -> Option<String> {
+    const WORD_RULES: [&str; 6] = [
+        "script",
+        "digit",
+        "number_word",
+        "too_long",
+        "never_word",
+        "check_mark",
+    ];
+    if parsed.kind != AnswerKind::Answer
+        || failures.is_empty()
+        || !failures.iter().all(|f| WORD_RULES.contains(&f.rule))
+    {
+        return None;
+    }
+    let guides: Vec<&ToolResult> = state
+        .results
+        .iter()
+        .filter(|r| r.turn == state.turn)
+        .collect();
+    if guides.is_empty() || guides.iter().any(|r| r.tool != "app_help") {
+        return None;
+    }
+    // The guide of the screen the model named, else the last one it read.
+    let wanted = parsed
+        .entry
+        .as_ref()
+        .map(|e| help_guard::topic_of(e.screen));
+    let guide = guides
+        .iter()
+        .rev()
+        .find(|r| r.input.get("topic").and_then(Value::as_str) == wanted)
+        .or(guides.last())?;
+    let steps = match guide.node.get(&["steps"]) {
+        Some(Node::List(items)) => items.len(),
+        _ => 0,
+    };
+    let id = &guide.id;
+    let mut text = format!("{{{{{id}.summary}}}}");
+    for step in 0..steps {
+        text.push_str(&format!("\n• {{{{{id}.steps.{step}}}}}"));
+    }
+    if guide.node.get(&["keys"]).is_some() {
+        text.push_str(&format!("\n• {{{{{id}.keys}}}}"));
+    }
+    let entry = serde_json::from_str::<Value>(content)
+        .ok()
+        .and_then(|v| v.get("entry").cloned())
+        .unwrap_or(Value::Null);
+    Some(
+        json!({
+            "kind": "answer", "text": text, "show": [], "next": [],
+            "choose": null, "entry": entry, "nearest": null
+        })
+        .to_string(),
+    )
 }
 
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the

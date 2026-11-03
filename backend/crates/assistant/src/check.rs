@@ -181,7 +181,7 @@ fn is_word_char(c: char) -> bool {
 
 /// Words only, one space between: punctuation, digits and signs become spaces. Urdu letter
 /// variants are made one (ي to ی). Padded with a space at both ends.
-fn padded(s: &str) -> String {
+pub(crate) fn padded(s: &str) -> String {
     let mut out = String::from(" ");
     let mut last_space = true;
     for c in text::normalize_urdu(s).chars() {
@@ -309,27 +309,42 @@ impl NameSet {
 struct NamePath {
     path: String,
     name: NameVal,
+    /// The `key` of the record (`a20`, `i2`, `s1`) of the object the name stands in, when it has one.
+    row_key: Option<String>,
 }
 
-fn walk_names(path: &str, node: &Node, out: &mut Vec<NamePath>) {
+fn walk_names(path: &str, node: &Node, row_key: Option<&str>, out: &mut Vec<NamePath>) {
     match node {
         Node::Val(Val::Name(n)) => out.push(NamePath {
             path: path.to_owned(),
             name: n.clone(),
+            row_key: row_key.map(str::to_owned),
         }),
-        Node::Obj(fields) | Node::Keyed(fields) => fields
-            .iter()
-            .for_each(|(k, v)| walk_names(&format!("{path}.{k}"), v, out)),
-        Node::List(items) => items
-            .iter()
-            .enumerate()
-            .for_each(|(i, v)| walk_names(&format!("{path}.{i}"), v, out)),
+        Node::Obj(fields) => {
+            let own = fields.iter().find_map(|(k, v)| match (k.as_str(), v) {
+                ("key", Node::Str(s)) => Some(s.as_str()),
+                _ => None,
+            });
+            for (k, v) in fields {
+                walk_names(&format!("{path}.{k}"), v, own.or(row_key), out);
+            }
+        }
+        Node::Keyed(fields) => {
+            for (k, v) in fields {
+                walk_names(&format!("{path}.{k}"), v, Some(k.as_str()), out);
+            }
+        }
+        Node::List(items) => {
+            for (i, v) in items.iter().enumerate() {
+                walk_names(&format!("{path}.{i}"), v, None, out);
+            }
+        }
         _ => {}
     }
 }
 
 /// The words of a text with their place: a run of word characters, as `padded` sees them.
-fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
+pub(crate) fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
     let mut out = Vec::new();
     let mut begin: Option<usize> = None;
     for (i, c) in text.char_indices() {
@@ -353,6 +368,31 @@ fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
 /// The account codes that stand for many people (the two پختہ کھاتہ accounts, PRD FR-13.1).
 const PUKHTA_CODES: [&str; 2] = ["03049999", "030119999"];
 
+/// Which record a name in the results is, or `None` when it does not say (see [`NameSet::put_back`]).
+///
+/// - An account: its code (`code:0020`). The two پختہ کھاتہ codes are many people: `None`.
+/// - An item or a partner in a list of rows keyed `i2` or `s1`, or an item or packing column of a
+///   row: the record's own names (`item:سیب|Apple`, `partner:الف|Partner A`), because an item and a
+///   partner have one name each in the books.
+fn identity_of(entry: &NamePath) -> Option<String> {
+    if let Some(code) = entry.name.code.as_deref() {
+        return (!PUKHTA_CODES.contains(&code)).then(|| format!("code:{code}"));
+    }
+    let names = format!("{}|{}", entry.name.name_ur, entry.name.name_en);
+    let is_key = |prefix: char| {
+        entry.row_key.as_deref().is_some_and(|key| {
+            key.strip_prefix(prefix)
+                .is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))
+        })
+    };
+    match entry.path.rsplit('.').next() {
+        Some("name") if is_key('i') => Some(format!("item:{names}")),
+        Some("name") if is_key('s') => Some(format!("partner:{names}")),
+        Some("item" | "packing") => Some(format!("item:{names}")),
+        _ => None,
+    }
+}
+
 /// True when a gap between the words of a name holds nothing but spaces and the punctuation that
 /// can stand in a name. A digit, a brace, a ✓ or a sign between the words is not part of the name:
 /// putting the name back would swallow it, so that text is left to the rewrite.
@@ -374,7 +414,7 @@ impl NameSet {
     pub fn put_back(&self, state: &State, text: &str) -> Option<String> {
         let mut entries = Vec::new();
         for result in state.results.iter().filter(|r| r.turn == state.turn) {
-            walk_names(&result.id, &result.node, &mut entries);
+            walk_names(&result.id, &result.node, None, &mut entries);
         }
         // For each phrase of the check, the one path that holds it, or none when two records do.
         let mut wanted: Vec<(Vec<String>, String)> = Vec::new();
@@ -385,21 +425,14 @@ impl NameSet {
             let Some(first) = holders.next() else {
                 continue;
             };
-            // A name with no code (an item, a city) or with the code of a پختہ کھاتہ account (one
-            // account for many people, told apart by phone) does not say which record it is.
-            let known = |e: &NamePath| {
-                e.name
-                    .code
-                    .as_deref()
-                    .is_some_and(|c| !PUKHTA_CODES.contains(&c))
-            };
-            if !known(first) || holders.clone().any(|e| !known(e)) {
+            // Which record a name is: an account by its code, an item or a partner by its row key
+            // (`rows.i2.name`, `rows.s1.name`) or by the item column it stands in. A name that
+            // says none (a person built from a report cell, the code of a پختہ کھاتہ account,
+            // which stands for many people told apart by phone) is left to the rewrite.
+            let Some(who) = identity_of(first) else {
                 continue;
-            }
-            if holders.any(|e| {
-                (&e.name.code, &e.name.name_ur, &e.name.name_en)
-                    != (&first.name.code, &first.name.name_ur, &first.name.name_en)
-            }) {
+            };
+            if holders.any(|e| identity_of(e).as_deref() != Some(who.as_str())) {
                 continue;
             }
             let words: Vec<String> = phrase

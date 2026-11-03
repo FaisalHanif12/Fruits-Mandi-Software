@@ -613,6 +613,78 @@ mod put_back {
     }
 
     #[test]
+    fn an_item_or_a_partner_is_put_back_by_its_row_key_or_its_item_column_and_a_person_is_not() {
+        let no_code = |ur: &str, en: &str| {
+            Node::Val(Val::Name(NameVal {
+                name_ur: ur.to_owned(),
+                name_en: en.to_owned(),
+                tag: None,
+                code: None,
+            }))
+        };
+        let result_of = |id: &str, node: Node| ToolResult {
+            id: id.to_owned(),
+            tool: "analytics",
+            input: serde_json::json!({}),
+            node,
+            shown: None,
+            source: None,
+            partner_parts_locked: false,
+            partner_data: false,
+            turn: 0,
+            working: None,
+        };
+        // View A: rows keyed i2 (an item), and an R2 row whose item column holds the same item.
+        let view_a = result_of(
+            "r1",
+            Node::obj(vec![(
+                "rows",
+                Node::Keyed(vec![(
+                    "i2".to_owned(),
+                    Node::obj(vec![("name", no_code("سیب", "Apple"))]),
+                )]),
+            )]),
+        );
+        let s = state(vec![view_a]);
+        let names = NameSet::new(&s, &[]);
+        assert_eq!(
+            names.put_back(&s, "سیب کی بکری ہوئی۔").as_deref(),
+            Some("{{r1.rows.i2.name}} کی بکری ہوئی۔")
+        );
+        // A partner found by his key.
+        let partner = result_of(
+            "r1",
+            Node::obj(vec![(
+                "matches",
+                Node::List(vec![Node::obj(vec![
+                    ("key", Node::Str("s1".to_owned())),
+                    ("name", no_code("الف", "Partner A")),
+                ])]),
+            )]),
+        );
+        let s = state(vec![partner]);
+        let names = NameSet::new(&s, &[]);
+        assert_eq!(
+            names.put_back(&s, "Partner A کی کل رقم").as_deref(),
+            Some("{{r1.matches.0.name}} کی کل رقم")
+        );
+        // A person in a report cell (the buyer column): no code, no row key of his own: left alone.
+        let person = result_of(
+            "r1",
+            Node::obj(vec![(
+                "rows",
+                Node::Keyed(vec![(
+                    "je1".to_owned(),
+                    Node::obj(vec![("buyer", no_code("شاہد", "Shahid"))]),
+                )]),
+            )]),
+        );
+        let s = state(vec![person]);
+        let names = NameSet::new(&s, &[]);
+        assert_eq!(names.put_back(&s, "شاہد کے ذمے"), None);
+    }
+
+    #[test]
     fn the_longer_name_wins_over_the_shorter_one_inside_it() {
         let s = state(vec![result(
             "r1",
