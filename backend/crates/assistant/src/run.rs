@@ -65,7 +65,7 @@ use crate::runtime::Runtime;
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
 use crate::step::AssistantStep;
-use crate::tools::{self, Env, State, Stop, ToolError, typed};
+use crate::tools::{self, Env, State, Stop, ToolError, cues, typed};
 
 /// What the loop needs from outside.
 pub struct Deps<'a> {
@@ -1080,6 +1080,50 @@ impl<'a> Run<'a> {
         conv.results = state.results;
     }
 
+    /// Reads a tool for the model before its first call, as if it had asked for it: the period a
+    /// question names, or the tiles a question is about. The result has the normal number (`r1`),
+    /// is in the log with `prefetch: true`, and a later identical call of the model gets it back
+    /// (plan 52 P52-S1: 62 questions began with a call that only asked for a period, 43 with the
+    /// tiles). Nothing is said when the tool cannot be read.
+    fn preread_tool(&self, conv: &mut Conversation, turn: &mut Turn, tool: &str, arguments: &str) {
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let numbers = figures::question_numbers(&turn.question);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
+        let mut state = State {
+            results: std::mem::take(&mut conv.results),
+            turn: index,
+        };
+        let call = ToolCall {
+            id: String::new(),
+            name: tool.to_owned(),
+            arguments: arguments.to_owned(),
+        };
+        (self.d.emit)(step_of(&call, &env, &state));
+        if let Ok(draft) = tools::call(&env, &state, tool, arguments) {
+            let id = state.next_id(prefix_of(draft.tool));
+            let mut result = tools::stored(draft, id.clone(), index);
+            fit(&mut result, &self.words);
+            let content = tool_result_json(&result, &self.words).to_string();
+            turn.tool_log.push(json!({
+                "id": id, "tool": result.tool, "input": result.input, "prefetch": true,
+            }));
+            state.results.push(result);
+            if let Some(input) = prefetch::canonical(tool, arguments) {
+                turn.prefetched.push((tool.to_owned(), input, id.clone()));
+            }
+            let call_id = format!("pre_{tool}");
+            turn.messages.push(json!({
+                "role": "assistant", "content": null,
+                "tool_calls": [{"id": call_id, "type": "function",
+                                "function": {"name": tool, "arguments": arguments}}]
+            }));
+            turn.messages
+                .push(tool_message(&call_id, content, Some(&id)));
+        }
+        conv.results = state.results;
+    }
+
     /// Reads one topic of the guide for the app itself (the model asked for none). The read is in
     /// the question's log. It counts as no tool call of the model.
     fn read_help(&self, conv: &mut Conversation, turn: &mut Turn, topic: &str) -> Option<String> {
@@ -1638,6 +1682,14 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     // its first call, so help takes one call (plan 52 item 7).
     if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
         run.preread_help(&mut conv, &mut turn, topic);
+    } else if let Some(kind) = cues::period_kind(text) {
+        // One clear period in the question: read it before the first call, so that call can
+        // already ask for the report (plan 52 P52-S1).
+        let input = json!({"kind": kind, "month": null, "day": null, "from": null,
+                           "to": null, "n": null});
+        run.preread_tool(&mut conv, &mut turn, "period", &input.to_string());
+    } else if cues::tile_question(text) {
+        run.preread_tool(&mut conv, &mut turn, "tiles", "{}");
     }
     let finished = run.drive(&mut conv, &mut turn, Vec::new());
     run.conclude(conv, turn, finished, Source::Model, None)

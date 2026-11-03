@@ -467,3 +467,141 @@ fn a_number_word_that_echoes_the_owners_number_is_put_back_without_a_rewrite() {
     assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
     assert_eq!(requests.len(), 3);
 }
+
+// ---- 4 and 5. the period a question names and the tiles it is about are read before the first call ----
+
+fn view_a_args(extra: Value) -> Value {
+    let mut input = json!({
+        "view": "A", "from": null, "to": null, "group_by": null, "item": null, "seller": null,
+        "buyer": null, "city": null, "adda": null, "garden": null, "trip": null, "goods": null,
+        "partner": null, "side": null, "compare": null, "sort": null, "rows": null
+    });
+    for (k, v) in extra.as_object().unwrap() {
+        input[k] = v.clone();
+    }
+    input
+}
+
+#[test]
+fn one_clear_period_is_read_first_so_the_first_call_asks_for_the_report() {
+    // "is mahine ki bikri": the period (this month) is r1 before the model is called; its first
+    // call is the analytics view with `from: r1.from`; two calls, not three. A recorded model that
+    // asks for the period itself (E2E-49 does) is given r1 back.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "is mahine ki bikri",
+        None,
+        vec![
+            tool_reply(&[(
+                "analytics",
+                view_a_args(json!({"from": "r1.from", "to": "r1.to"})),
+            )]),
+            answer_with(
+                "answer",
+                "{{r1.label}} میں خام بکری {{r2.totals.gross}} ہوئی۔",
+                &[],
+                json!([]),
+            ),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 2);
+    // The first request already holds the period, with its own tool call and tool message.
+    assert_eq!(result_ids(&requests[0]), ["r1"]);
+    let first = tool_messages(&requests[0]);
+    assert_eq!(first[0].0, "pre_period");
+    assert_eq!(first[0].1["from"]["date"], "2026-10-01");
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 41_400);
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    let logged: Vec<Value> = serde_json::from_str(&rows[0].tool_calls_json).unwrap();
+    assert_eq!(logged[0]["prefetch"], true);
+    h.scan_requests();
+
+    // The model asking for the very same period gets r1 back, and its own next read is r2.
+    let h = Harness::day();
+    let period = json!({"kind": "this_month", "month": null, "day": null, "from": null, "to": null, "n": null});
+    let (_, requests) = h.ask(
+        "is mahine ki bikri",
+        None,
+        vec![
+            tool_reply(&[("period", period)]),
+            tool_reply(&[(
+                "analytics",
+                view_a_args(json!({"from": "r1.from", "to": "r1.to"})),
+            )]),
+            final_reply("{{r2.totals.gross}}"),
+        ],
+    );
+    assert_eq!(
+        result_ids(&requests[2]),
+        ["r1", "r1", "r2"],
+        "no second period"
+    );
+}
+
+#[test]
+fn two_periods_a_number_the_end_of_the_year_or_another_period_are_left_to_the_model() {
+    for question in [
+        "is mahine ka commission pichle mahine se zyada hai",
+        "pichle 3 mahine ka commission",
+        "is saal ke aakhir tak commission kitna hoga",
+        "september ka commission kitna tha",
+        "ikram ke total bakaya kitne hai",
+    ] {
+        let h = Harness::day();
+        let (_, requests) = h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[("tiles", json!({}))]),
+                final_reply("غلط"),
+                final_reply("غلط"),
+            ],
+        );
+        // Nothing before the first call: the user message only.
+        assert!(tool_messages(&requests[0]).is_empty(), "{question}");
+    }
+}
+
+#[test]
+fn a_tile_question_has_its_tiles_before_the_first_call_and_takes_one_model_call() {
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "aaj ki bikri kitni hui",
+        None,
+        vec![answer_with(
+            "answer",
+            "آج کی خام بکری {{r1.today_sales.amount}} ہوئی۔",
+            &[],
+            json!([]),
+        )],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(requests.len(), 1, "one model call");
+    assert_eq!(result_ids(&requests[0]), ["r1"]);
+    assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 41_400);
+    h.scan_requests();
+
+    // A party's question that holds the same words is not a tile question ("ikram ke total
+    // bakaya"), nor a help question about the screen.
+    for question in [
+        "ikram ke total bakaya kitne hai",
+        "aaj ki bikri wali screen kahan hai",
+    ] {
+        let h = Harness::day();
+        let (_, requests) = h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[find("akram", "buyer")]),
+                final_reply("غلط"),
+                final_reply("غلط"),
+            ],
+        );
+        let ids = result_ids(&requests[0]);
+        assert!(
+            !ids.contains(&"r1".to_owned()) || question.contains("screen"),
+            "{question}: {ids:?}"
+        );
+    }
+}

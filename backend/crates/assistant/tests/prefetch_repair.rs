@@ -357,11 +357,14 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
             final_reply("{{r1.matches.0.name}} {{r2.balance}}"),
         ],
     );
+    // The period the question names is read first (r1, plan 52 P52-S1), then the find (r2); the
+    // card is the only read ahead: not the ledger, because a period is named.
     let ids: Vec<String> = tool_messages(&requests[1])
         .iter()
         .map(|(_, v)| v["id"].as_str().unwrap_or("").to_owned())
         .collect();
-    assert_eq!(ids, ["r1", "r2"]);
+    assert_eq!(ids, ["r1", "r2", "r3"]);
+    assert_eq!(tool_messages(&requests[1])[2].1["tool"], "party_card");
 }
 
 // ---- repair -----------------------------------------------------------------------------------

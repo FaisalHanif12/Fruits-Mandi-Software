@@ -33,7 +33,7 @@ fn spaced(question: &str) -> String {
     format!(" {} ", words.join(" "))
 }
 
-fn has(question: &str, phrases: &[&str]) -> bool {
+pub(crate) fn has(question: &str, phrases: &[&str]) -> bool {
     let spaced = spaced(question);
     phrases.iter().any(|p| {
         let key = text::search_ur(&text::search_en(p));
@@ -285,5 +285,189 @@ mod tests {
         assert!(says_less("if the pace goes down by 20%"));
         assert!(!says_more("agar raftar 20% kam ho jaye"));
         assert!(!says_less("agar raftar 10% zyada ho jaye"));
+    }
+}
+
+/// The period words the app can read before the first call: the five kinds the live run of
+/// 03-11-2026 asked for in 55 of 62 period-first questions (plan 52 P52-S1).
+const PERIOD_CUES: &[(&str, &[&str])] = &[
+    (
+        "this_year",
+        &[
+            "is saal",
+            "is sal",
+            "ye saal",
+            "yeh saal",
+            "this year",
+            "اس سال",
+        ],
+    ),
+    (
+        "this_month",
+        &[
+            "is mahine",
+            "is mahina",
+            "ye mahina",
+            "yeh mahina",
+            "this month",
+            "اس مہینے",
+            "اس مہینہ",
+        ],
+    ),
+    (
+        "last_month",
+        &[
+            "pichle mahine",
+            "pichla mahina",
+            "pichle mahina",
+            "last month",
+            "previous month",
+            "پچھلے مہینے",
+            "پچھلا مہینہ",
+        ],
+    ),
+    (
+        "last_year",
+        &[
+            "pichle saal",
+            "pichla saal",
+            "last year",
+            "پچھلے سال",
+            "پچھلا سال",
+        ],
+    ),
+    (
+        "yesterday",
+        &[
+            "kal ki",
+            "kal ka",
+            "kal ke",
+            "yesterday",
+            "کل کی",
+            "کل کا",
+            "کل کے",
+        ],
+    ),
+];
+
+/// The one period the question names, when it names exactly one of the kinds above, holds no
+/// number and does not say "to the end of the year". `None` for none, for two (a comparison), and
+/// for any other period (a month name, a day, "last 3 months", "agle 6 mahine"): the model asks.
+pub fn period_kind(question: &str) -> Option<&'static str> {
+    if question.chars().any(char::is_numeric) || year_end(question) {
+        return None;
+    }
+    let mut found = PERIOD_CUES
+        .iter()
+        .filter(|(_, cues)| has(question, cues))
+        .map(|(kind, _)| *kind);
+    let kind = found.next()?;
+    found.next().is_none().then_some(kind)
+}
+
+/// The phrases of the questions a tile answers: today's sales, the shop's total dues, what is owed
+/// to sellers, the open advances, the dead amount, the cash in hand, today's expenses and the
+/// unsold stock (D6-system-prompt, the tiles). Whole phrases, so a party's own question
+/// ("ikram ke total bakaya") is never one.
+const TILE_PHRASES: &[&str] = &[
+    "aaj ki bikri",
+    "aj ki bikri",
+    "aaj ki khaam bikri",
+    "آج کی بکری",
+    "آج کی خام بکری",
+    "today s sales",
+    "todays sales",
+    "today s total sales",
+    "what were today s",
+    "aaj ka kharcha",
+    "آج کا خرچہ",
+    "kul ugrahi",
+    "kul ugrai",
+    "kul wasooli",
+    "کل وصولی",
+    "کل اگراہی",
+    "total dues",
+    "sab gaahkon ka bakaya",
+    "sab gahakon ka bakaya",
+    "byopariyon ko kitna",
+    "بیوپاریوں کو کتنا",
+    "peshgi kitni",
+    "پیشگی کتنی",
+    "advance kitni",
+    "dubi hui raqam",
+    "dubi hoi rakam",
+    "dobi raqam",
+    "ڈوبی رقم",
+    "dead amount",
+    "cash mein kitna",
+    "cash kitna",
+    "cash in hand",
+    "cash do we have",
+    "روکڑ کتنی",
+    "موجود روکڑ",
+    "gale mein",
+    "gale me",
+    "baki mal kitna",
+    "baqi maal kitna",
+    "باقی مال کتنا",
+    "unsold stock",
+];
+
+/// True when the question is one a tile answers (see [`TILE_PHRASES`]) and holds no number.
+pub fn tile_question(question: &str) -> bool {
+    !question.chars().any(char::is_numeric) && has(question, TILE_PHRASES)
+}
+
+#[cfg(test)]
+mod prefetch_tests {
+    use super::*;
+
+    #[test]
+    fn exactly_one_period_of_the_five_kinds_is_named() {
+        assert_eq!(period_kind("is mahine ki bikri"), Some("this_month"));
+        assert_eq!(period_kind("اس سال کتنا کمیشن ہوا"), Some("this_year"));
+        assert_eq!(
+            period_kind("pichle mahine kitni bikriyan hui"),
+            Some("last_month")
+        );
+        assert_eq!(
+            period_kind("how much commission last year"),
+            Some("last_year")
+        );
+        assert_eq!(period_kind("کل کی بکری کتنی تھی"), Some("yesterday"));
+        // Two periods (a comparison), a number, the end of the year, another period: none.
+        assert_eq!(
+            period_kind("is mahine ka commission pichle mahine se zyada hai"),
+            None
+        );
+        assert_eq!(period_kind("pichle 3 mahine ka commission"), None);
+        assert_eq!(period_kind("is saal ke aakhir tak commission kitna"), None);
+        assert_eq!(period_kind("september ka commission"), None);
+        assert_eq!(period_kind("agle mahine commission kitna aayega"), None);
+        assert_eq!(period_kind("ikram ka bakaya"), None);
+    }
+
+    #[test]
+    fn a_tile_question_is_a_whole_phrase_and_a_partys_question_is_not() {
+        for q in [
+            "aaj ki bikri kitni hui",
+            "what were today's total sales",
+            "kul ugrahi kitni hai",
+            "total dues from all buyers",
+            "پیشگی کتنی کھلی ہوئی ہے",
+            "how much cash do we have in hand",
+            "gale me is waqt kitna paisa he",
+            "baki mal kitna he",
+        ] {
+            assert!(tile_question(q), "{q}");
+        }
+        for q in [
+            "ikram ke total bakaya kitne hai",
+            "akram ka cash",
+            "pichle mahine ki bikri",
+            "cash of 5000",
+        ] {
+            assert!(!tile_question(q), "{q}");
+        }
     }
 }

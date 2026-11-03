@@ -53,7 +53,7 @@
        "type": "function",
        "function": {
         "name": "analytics",
-        "arguments": "{\"view\": \"A\", \"from\": \"r2.from\", \"to\": \"r2.to\", \"group_by\": null, \"item\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": null, \"sort\": null, \"rows\": null}"
+        "arguments": "{\"view\": \"A\", \"from\": \"r1.from\", \"to\": \"r1.to\", \"group_by\": null, \"item\": null, \"seller\": null, \"buyer\": null, \"city\": null, \"adda\": null, \"garden\": null, \"trip\": null, \"goods\": null, \"partner\": null, \"side\": null, \"compare\": null, \"sort\": null, \"rows\": null}"
        }
       }
      ]
@@ -78,7 +78,7 @@
     "finish_reason": "stop",
     "message": {
      "role": "assistant",
-     "content": "{\"kind\": \"answer\", \"text\": \"{{r1.matches.0.name}} سے {{r2.label}} میں کل کمیشن {{r3.rows.i1.total_comm}} آیا۔\\n• یہ {{r3.rows.i1.share}} ہے۔\", \"show\": [{\"result\": \"r3\", \"as\": \"table\", \"rows\": 7}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+     "content": "{\"kind\": \"answer\", \"text\": \"{{r2.matches.0.name}} سے {{r1.label}} میں کل کمیشن {{r3.rows.i1.total_comm}} آیا۔\\n• یہ {{r3.rows.i1.share}} ہے۔\", \"show\": [{\"result\": \"r3\", \"as\": \"table\", \"rows\": 7}], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
     }
    }
   ],
