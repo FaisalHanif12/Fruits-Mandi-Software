@@ -93,3 +93,12 @@ Umar: "main ne faisal ki sale ya bikri ki aik month ya kal ki ya aaj ki bikri ka
 - **backend.** The print intent and the period words, the report and filter mapping above, and the steps built from guide.json with the values filled in. This is part of S2, so no model call is needed when the intent and party are sure.
 - **frontend2.** The button opens the report with its filters set (party, from, to). Check that every report in 6.2 accepts filters from a link, and add that where one does not. Tests in both languages.
 - **robustness.** Print questions for each row of 6.2, in three languages and mixed, for today, yesterday, a month, a named month and a range. Expect the report, the party, the dates and the steps.
+
+### 6.4 Link filters, checked by frontend2 (04-11-2026)
+Every report in 6.2 already opens with its filters from the address. tests/unit/reports-link-filters.test.tsx has 24 tests, all passing. The fields per report:
+- R35: `party` and `as_of` (one day).
+- R5, R13, R14: `party`, `from` and `to`.
+- R6: `seller`, `from` and `to`.
+- R34: `from` and `to`.
+- R2: `from` and `to`, with `party` optional.
+Backend sends the existing source filters. There is no new link type.
