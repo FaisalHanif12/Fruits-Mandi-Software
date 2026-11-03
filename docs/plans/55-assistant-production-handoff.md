@@ -95,3 +95,20 @@ Plan 54's S2 and S3 become steps 1 and 2. S1, S4, S5 and S6 stay as written.
    - Lead decision, to show Umar at the hand-over: the slow line keeps what was read.
 6. **Counting.** A question with no model call does not count toward the 20 a day; this is already FR-7.81, which counts at the model's first reply. It is logged with 0 model calls and a `local` mark.
 7. **The cued read (S3)** runs before call 1, and its results are the sources. Every figure is still checked.
+
+## 9. Paused by Umar, 04-11-2026 about 04:20 (resume on his "continue")
+
+Umar went to sleep and asked for every agent to be stopped. All work below is on disk in the d5 worktree, uncommitted unless a commit is named. Resume each item exactly from here.
+
+| Who | State when paused | Next step on resume |
+|---|---|---|
+| backend | Wired understand, then compose (local answers), then plan_reads (read first, one call, low reasoning), the hard limits and warm-up into run.rs. Its full workspace test run was going. Plan 53 is done but not yet handed off. | Re-run the workspace tests (fmt, clippy, assistant, golden_day, services, reports, app). Send the plan 53 and plan 54/55 wiring HANDOFFs. |
+| backend2 | Done: understand, compose_* (help, print, navigate, missing, outside, change), plan_reads (129 cases). On standby. | Re-run tests/understand.rs speed asserts on a quiet machine. Fix questions from the live runs. |
+| backend3 | Done: plan 56 R2 (first-run restore, chain key in the copy), the MANDI_PROFILE dev switch, and the endpoint `reason`. Was starting robustness's 5 R4 findings. | Fix, in order: shop set up during a restore; a copy with no owner; a huge scrypt factor; the two nearly-full-disk checks. Then HANDOFF. |
+| frontend2 | Built: the corner-band fix (content runs to the status bar; the round button floats), plan 54 screens (how steps, progress, time_limit, link buttons, find-row, outside texts). The wide run was clean (3,220 tests). A run on the layout-touched screens was going. | Finish that run and the endpoint-reason tests. Fix assistant-addresses.test.tsx (trip removed). Send the corner-fix and plan 54 HANDOFFs, with screenshots. |
+| frontend3 | Built: plan 56 R3 (first screen, 4 restore steps, reminder card), 235 tests passing. Its full run was going. | Add the eye on the backup key, and the endpoint reason message. Send the HANDOFF. |
+| robustness | Partly built: run.mjs --threads, --bank and --oracle-dump. The oracle dump is NOT written yet. Wrote robustness_restore_new_computer.rs (5 findings for backend3). It has 3 clippy errors there, plus robustness_security.rs:2078 and robustness_live.rs:952. | Finish --threads (default 3), --bank and --oracle-dump into the scratchpad. Fix its clippy errors. Add backend3's 3 command-table rows. Then R4 (2-year restore under 5 min). |
+| hiddentester | The hidden bank is 124 questions in the lead's scratchpad (hidden-bank.tsv). Waiting for oracle-dump.json to fix its guessed names, the a2 key and the trip keys. | When the dump exists, fix those and re-check. Never show the questions to the build team. |
+| lead | Docs up to date (PRD v1.24, NFR v1.14, Architecture v1.18, plans 52 to 56). | When every HANDOFF is in: commit all, rebuild the app, re-run the speed asserts on a quiet machine. Then the live bank (567, --threads), fixes, a second run, the hidden bank (--bank), Umar's log replay, R5 (MANDI_PROFILE=r5 against Umar's bucket), and the lead's own 30-question test. Then the hand-over report and stop the agents. |
+
+Reminders for Umar: after the build, press Back up now once (older copies carry no chain key), and make sure his printed backup key sheet exists.
