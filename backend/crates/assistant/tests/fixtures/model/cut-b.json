@@ -38,7 +38,7 @@
     "finish_reason": "stop",
     "message": {
      "role": "assistant",
-     "content": "{\"kind\": \"answer\", \"text\": \"آج کا کمیشن {{r3.today_commission.amount}} بنا۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
+     "content": "{\"kind\": \"answer\", \"text\": \"آج کا کمیشن {{r4.today_commission.amount}} بنا۔\", \"show\": [], \"next\": [], \"choose\": null, \"entry\": null, \"nearest\": null}"
     }
    }
   ],

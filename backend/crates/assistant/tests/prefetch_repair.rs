@@ -2,7 +2,7 @@
 //!
 //! 1. Prefetch: the model never sends `find` and `party_card` in one reply. When its reply holds
 //!    only finds and a find matched exactly one buyer or seller, the app reads the card itself
-//!    (and R13 when the question names a ledger) under its own ids `p1`, `p2`, so the next call can
+//!    (and R13 when the question names a ledger) under the next normal numbers (find r1, card r2, ledger r3), so the next call can
 //!    answer. The model's `r` numbers never move.
 //! 2. Repair: a name typed in the words that the results hold exactly is put back as a reference
 //!    by the app, instead of a rewrite call; every rule is checked again, and a name two records
@@ -135,7 +135,7 @@ fn a_lone_find_leads_to_the_card_at_once_so_the_question_takes_two_model_calls()
         None,
         vec![
             tool_reply(&[find("akram", "buyer")]),
-            final_reply("{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔"),
+            final_reply("{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں۔"),
         ],
     );
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
@@ -143,13 +143,13 @@ fn a_lone_find_leads_to_the_card_at_once_so_the_question_takes_two_model_calls()
     let figs = figures(answer_of(&reply));
     assert_eq!(balance(figs[0].0), (2_880, BalanceSide::Dr));
     assert!(figs[0].1, "checked: card against his ledger");
-    // The second call has the find (r1) and the card the app read (p1), as a call of its own with
+    // The second call has the find (r1) and the card the app read (r2), as a call of its own with
     // a tool message: every tool call has its tool message.
     let tools = tool_messages(&requests[1]);
     let ids: Vec<&str> = tools.iter().map(|(id, _)| id.as_str()).collect();
     assert_eq!(ids, ["call_0", "pre_p1"]);
     assert_eq!(tools[0].1["id"], "r1");
-    assert_eq!(tools[1].1["id"], "p1");
+    assert_eq!(tools[1].1["id"], "r2");
     let calls: usize = requests[1]["messages"]
         .as_array()
         .unwrap()
@@ -169,7 +169,7 @@ fn a_lone_find_leads_to_the_card_at_once_so_the_question_takes_two_model_calls()
     );
     // The log: the card is marked as the app's own read, in the tool list and the call's tools.
     let (calls, tools) = log_row(&h);
-    assert_eq!(tools[1]["id"], "p1");
+    assert_eq!(tools[1]["id"], "r2");
     assert_eq!(tools[1]["prefetch"], true);
     assert_eq!(calls[0]["tools"][1]["name"], "party_card");
     assert_eq!(calls[0]["tools"][1]["prefetch"], true);
@@ -178,7 +178,7 @@ fn a_lone_find_leads_to_the_card_at_once_so_the_question_takes_two_model_calls()
 }
 
 #[test]
-fn a_question_that_names_a_ledger_reads_it_too_and_the_models_own_numbers_do_not_move() {
+fn a_question_that_names_a_ledger_reads_it_too_and_the_models_own_read_takes_the_next_number() {
     let h = Harness::day();
     let (reply, requests) = h.ask(
         "akram ka khata dikhao",
@@ -189,9 +189,9 @@ fn a_question_that_names_a_ledger_reads_it_too_and_the_models_own_numbers_do_not
             tool_reply(&[("tiles", json!({}))]),
             answer_with(
                 "answer",
-                "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔\n• ان سے {{p2.rows.je2.credit}} وصول ہوئے۔",
+                "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں۔\n• ان سے {{r3.rows.je2.credit}} وصول ہوئے۔",
                 &[],
-                json!([{"result": "p2", "as": "table", "rows": 7}]),
+                json!([{"result": "r3", "as": "table", "rows": 7}]),
             ),
         ],
     );
@@ -202,13 +202,13 @@ fn a_question_that_names_a_ledger_reads_it_too_and_the_models_own_numbers_do_not
         .iter()
         .map(|(_, v)| v["id"].as_str().unwrap_or("").to_owned())
         .collect();
-    assert_eq!(ids, ["r1", "p1", "p2"], "the card, then his ledger R13");
+    assert_eq!(ids, ["r1", "r2", "r3"], "the card, then his ledger R13");
     assert_eq!(tools[2].1["source"], "R13", "his ledger");
     let tools = tool_messages(&requests[2]);
     let last = tools.last().unwrap();
     assert_eq!(
-        last.1["id"], "r2",
-        "the model's own read is the next r number"
+        last.1["id"], "r4",
+        "the model's own read is the next r number after the app's"
     );
     let answer = answer_of(&reply);
     assert_eq!(answer.tables.len(), 1);
@@ -283,7 +283,7 @@ fn two_parties_in_one_reply_get_a_card_each() {
         vec![
             tool_reply(&[find("akram", "buyer"), find("arshad", "buyer")]),
             final_reply(
-                "{{r1.matches.0.name}} {{p1.balance}} اور {{r2.matches.0.name}} {{p2.balance}}۔",
+                "{{r1.matches.0.name}} {{r3.balance}} اور {{r2.matches.0.name}} {{r4.balance}}۔",
             ),
         ],
     );
@@ -306,7 +306,7 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
             tool_reply(&[find("akram", "buyer")]),
             answer_with(
                 "answer",
-                "{{r1.matches.0.name}} نے {{p2.rows.je1.item}} کے {{p2.rows.je1.qty}} نگ لیے، قیمت {{p2.totals.value}}۔",
+                "{{r1.matches.0.name}} نے {{r3.rows.je1.item}} کے {{r3.rows.je1.qty}} نگ لیے، قیمت {{r3.totals.value}}۔",
                 &[],
                 json!([]),
             ),
@@ -319,7 +319,7 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
         .iter()
         .map(|(_, v)| v["id"].as_str().unwrap_or("").to_owned())
         .collect();
-    assert_eq!(ids, ["r1", "p1", "p2"]);
+    assert_eq!(ids, ["r1", "r2", "r3"]);
     assert_eq!(tools[2].1["source"], "R2");
     assert!(tools[2].1.get("error").is_none());
 
@@ -330,7 +330,7 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
         None,
         vec![
             tool_reply(&[find("rahim", "seller")]),
-            final_reply("{{r1.matches.0.name}} {{p1.balance}}"),
+            final_reply("{{r1.matches.0.name}} {{r2.balance}}"),
         ],
     );
     let _ = reply;
@@ -339,7 +339,7 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
         .iter()
         .map(|(_, v)| v["id"].as_str().unwrap_or("").to_owned())
         .collect();
-    assert_eq!(ids, ["r1", "p1", "p2"], "{:?}", tools);
+    assert_eq!(ids, ["r1", "r2", "r3"], "{:?}", tools);
     assert!(tools[2].1.get("error").is_none(), "{}", tools[2].1);
     assert!(
         tools[2].1.to_string().contains("total_comm"),
@@ -354,14 +354,14 @@ fn what_a_buyer_bought_and_commission_are_read_ahead_when_no_period_is_named() {
         None,
         vec![
             tool_reply(&[find("akram", "buyer")]),
-            final_reply("{{r1.matches.0.name}} {{p1.balance}}"),
+            final_reply("{{r1.matches.0.name}} {{r2.balance}}"),
         ],
     );
     let ids: Vec<String> = tool_messages(&requests[1])
         .iter()
         .map(|(_, v)| v["id"].as_str().unwrap_or("").to_owned())
         .collect();
-    assert_eq!(ids, ["r1", "p1"]);
+    assert_eq!(ids, ["r1", "r2"]);
 }
 
 // ---- repair -----------------------------------------------------------------------------------
@@ -376,7 +376,7 @@ fn a_typed_name_that_the_results_hold_is_put_back_and_no_rewrite_is_asked() {
         None,
         vec![
             tool_reply(&[find("akram", "buyer")]),
-            final_reply("اکرم ٹول ٹیکس کے ذمے {{p1.balance}} باقی ہیں۔"),
+            final_reply("اکرم ٹول ٹیکس کے ذمے {{r2.balance}} باقی ہیں۔"),
         ],
     );
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
@@ -414,7 +414,7 @@ fn an_english_name_in_an_urdu_answer_and_a_name_in_a_next_question_are_put_back_
             tool_reply(&[find("akram", "buyer")]),
             answer_with(
                 "answer",
-                "Akram Toll Tax کے ذمے {{p1.balance}} باقی ہیں۔",
+                "Akram Toll Tax کے ذمے {{r2.balance}} باقی ہیں۔",
                 &["اکرم ٹول ٹیکس کی بکریاں؟"],
                 json!([]),
             ),
@@ -450,7 +450,7 @@ fn the_repair_checks_everything_again_so_another_fault_still_costs_the_rewrite()
 #[test]
 fn a_refused_reference_is_logged_by_its_path_for_the_next_live_run() {
     let h = Harness::day();
-    let bad = final_reply("{{r1.matches.0.name}} کے ذمے {{p1.rows.0.balance}} باقی ہیں۔");
+    let bad = final_reply("{{r1.matches.0.name}} کے ذمے {{r2.rows.0.balance}} باقی ہیں۔");
     let (reply, _) = h.ask(
         "how much does akram owe",
         None,
@@ -460,7 +460,7 @@ fn a_refused_reference_is_logged_by_its_path_for_the_next_live_run() {
     let (calls, _) = log_row(&h);
     let rewrite = calls.iter().find(|c| c["rewrite"] == true).unwrap();
     assert_eq!(rewrite["check_failed"], json!(["reference"]));
-    assert_eq!(rewrite["check_paths"], json!(["p1.rows.0.balance"]));
+    assert_eq!(rewrite["check_paths"], json!(["r2.rows.0.balance"]));
 }
 
 // ---- the repair, name by name -----------------------------------------------------------------
@@ -637,7 +637,7 @@ fn the_full_name_of_another_party_or_a_partner_is_refused_even_when_the_results_
     // this question's results): refused, told as the rule `name`, and it cannot be repaired
     // because the results do not say which record it is.
     let h = Harness::day();
-    let bad = final_reply("ارشد ملتانی کے ذمے {{p1.balance}} باقی ہیں۔");
+    let bad = final_reply("ارشد ملتانی کے ذمے {{r2.balance}} باقی ہیں۔");
     let (reply, requests) = h.ask(
         "how much does akram owe",
         None,
@@ -654,9 +654,9 @@ fn the_full_name_of_another_party_or_a_partner_is_refused_even_when_the_results_
 
     // The same in English, and a partner's name (Partner A, الف).
     for typed in [
-        "Arshad Multani owes {{p1.balance}}.",
-        "الف کے ذمے {{p1.balance}} باقی ہیں۔",
-        "Partner A has {{p1.balance}} to pay.",
+        "Arshad Multani owes {{r2.balance}}.",
+        "الف کے ذمے {{r2.balance}} باقی ہیں۔",
+        "Partner A has {{r2.balance}} to pay.",
     ] {
         let h = Harness::day();
         let bad = final_reply(typed);
@@ -688,7 +688,7 @@ fn only_a_full_name_in_whole_words_is_refused_never_a_part_of_one() {
         vec![
             tool_reply(&[find("akram", "buyer")]),
             final_reply(
-                "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں، ارشد سے الگ، ملتانی روکڑ۔",
+                "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں، ارشد سے الگ، ملتانی روکڑ۔",
             ),
         ],
     );

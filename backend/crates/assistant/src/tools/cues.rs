@@ -100,6 +100,9 @@ fn scenarios(question: &str) -> Vec<Scenario> {
             Scenario::Double,
             &[
                 "double",
+                "doubles",
+                "doubled",
+                "doubling",
                 "dugna",
                 "dugni",
                 "dogna",
@@ -117,12 +120,17 @@ fn scenarios(question: &str) -> Vec<Scenario> {
         ),
         (
             Scenario::Half,
-            &["half", "aadha", "adha", "aadhi", "adhi", "آدھا", "آدھی"],
+            &[
+                "half", "halves", "halved", "aadha", "adha", "aadhi", "adhi", "آدھا", "آدھی",
+            ],
         ),
         (
             Scenario::Triple,
             &[
                 "triple",
+                "triples",
+                "tripled",
+                "tripling",
                 "tigna",
                 "tigni",
                 "thrice",
@@ -239,10 +247,14 @@ mod tests {
             scenario("agar raftar double ho jaye to"),
             Some(Scenario::Double)
         );
+        // The English forms count: "doubles", "doubled" (plan 52 P52-S1); a longer word does not.
+        assert_eq!(scenario("if the pace doubles"), Some(Scenario::Double));
+        assert_eq!(scenario("if the pace tripled"), Some(Scenario::Triple));
+        assert_eq!(scenario("if the pace halves"), Some(Scenario::Half));
         assert_eq!(
-            scenario("if the pace doubles"),
+            scenario("if the doublet is sold"),
             None,
-            "doubles is not the word"
+            "doublet is not the word"
         );
         assert_eq!(scenario("agar raftar dugni ho"), Some(Scenario::Double));
         assert_eq!(scenario("رفتار دگنی ہو تو"), Some(Scenario::Double));

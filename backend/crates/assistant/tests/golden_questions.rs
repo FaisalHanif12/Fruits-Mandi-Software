@@ -82,8 +82,9 @@ fn e2e_47_two_balances_are_cited_checked_and_two_questions_are_counted() {
             if id.code() == "R13" && filters.party.as_ref().is_some_and(|p| p.record.id == h.world.akram))));
     // Three model calls: the third has every result.
     assert_eq!(requests.len(), 3);
-    // The step lines, in the panel's own words: finding, the card the app read ahead (a find with
-    // one match, plan 52 P52-S1), then the card and the ledger the model asked for, and the check.
+    // The step lines, in the panel's own words: finding, the card (the app reads it after a find with
+    // one match, plan 52 P52-S1; the model's own call for it is answered from that read, with no
+    // second line), the ledger, then the check.
     let steps: Vec<String> = h
         .steps
         .lock()
@@ -95,7 +96,6 @@ fn e2e_47_two_balances_are_cited_checked_and_two_questions_are_counted() {
         steps,
         [
             "assistant-step-finding",
-            "assistant-step-reading-card",
             "assistant-step-reading-card",
             "assistant-step-reading-ledger",
             "assistant-step-checking",

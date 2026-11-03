@@ -184,8 +184,9 @@ fn a_direction_word_the_model_writes_after_a_difference_is_not_printed_twice() {
             tool_reply("find", &json!({"text": "akram", "role": "buyer"})),
             tool_reply(
                 "calculate",
+                // The app read Arshad's card ahead as r2, so the second find is r3.
                 &json!({"op": "difference",
-                        "inputs": ["r1.matches.0.balance", "r2.matches.0.balance"]}),
+                        "inputs": ["r1.matches.0.balance", "r3.matches.0.balance"]}),
             ),
             final_reply(
                 "answer",

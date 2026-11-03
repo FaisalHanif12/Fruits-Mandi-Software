@@ -78,6 +78,10 @@ pub struct CallTiming {
     /// For the rewrite: the paths of the references that failed (`reference`, `earlier_question`).
     /// A path holds no name and no figure; it shows why the first answer was refused.
     pub check_paths: Vec<String>,
+    /// For the rewrite: what the other refused rules were about, as `rule:piece`: the number word,
+    /// the Latin letter, the never-use word, the month name, the path of a `show`, `choose` or
+    /// `next` (plan 52 P52-S1, item 9). Never a name and never a digit.
+    pub check_at: Vec<String>,
 }
 
 /// Where the time of one run of a question went. A question that waits for the partner code and
@@ -144,6 +148,11 @@ impl Timing {
                 {
                     map.insert("check_paths".to_owned(), serde_json::json!(c.check_paths));
                 }
+                if !c.check_at.is_empty()
+                    && let Some(map) = entry.as_object_mut()
+                {
+                    map.insert("check_at".to_owned(), serde_json::json!(c.check_at));
+                }
                 if !c.repaired.is_empty()
                     && let Some(map) = entry.as_object_mut()
                 {
@@ -177,6 +186,10 @@ pub struct Turn {
     /// set while a reply's tools run so that the question ends at once with "کون سا؟" or "not
     /// found" and no model call is spent on it (plan 52 item 8, PRD FR-7.87).
     pub ask_which: Option<String>,
+    /// What the app read ahead after a find (plan 52 P52-S1): the tool, its input as the model
+    /// would send it (without the empty fields), and the id of the result. A later call of the
+    /// model with the same tool and input gets that result back and reads nothing again.
+    pub prefetched: Vec<(String, Value, String)>,
 }
 
 /// What a waiting question waits for.

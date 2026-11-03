@@ -285,6 +285,32 @@ fn commission_input(party: &Party) -> String {
     .to_string()
 }
 
+/// The input of a read in one form that two calls can be compared by: the empty fields left out,
+/// and `rows: 20` (the default of a report) too. `None` for input that is not a JSON object.
+pub fn canonical(tool: &str, arguments: &str) -> Option<Value> {
+    let Value::Object(mut map) = serde_json::from_str::<Value>(arguments).ok()? else {
+        return None;
+    };
+    map.retain(|_, v| !v.is_null());
+    if tool == "report" && map.get("rows") == Some(&json!(20)) {
+        map.remove("rows");
+    }
+    Some(Value::Object(map))
+}
+
+/// The id of the result the app read ahead with this tool and input, if the model's call asks for
+/// the very same read.
+pub fn already_read(
+    read: &[(String, Value, String)],
+    tool: &str,
+    arguments: &str,
+) -> Option<String> {
+    let wanted = canonical(tool, arguments)?;
+    read.iter()
+        .find(|(name, input, _)| name == tool && *input == wanted)
+        .map(|(_, _, id)| id.clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,6 +334,36 @@ mod tests {
                 }
             })
             .collect()
+    }
+
+    #[test]
+    fn the_same_read_is_found_whatever_the_empty_fields_say() {
+        let ours = canonical("report", &report_input("R13", "r1.matches.0")).unwrap();
+        let read = vec![("report".to_owned(), ours, "r3".to_owned())];
+        // The model's R13 with rows null, or 20, or other fields null: the same read.
+        for rows in ["null", "20"] {
+            let model = format!(
+                r#"{{"id":"R13","party":"r1.matches.0","rows":{rows},"from":null,"to":null,"sort":null}}"#
+            );
+            assert_eq!(
+                already_read(&read, "report", &model).as_deref(),
+                Some("r3"),
+                "{rows}"
+            );
+        }
+        // 100 rows, a sort, another party or another tool: a different read.
+        for model in [
+            r#"{"id":"R13","party":"r1.matches.0","rows":100}"#,
+            r#"{"id":"R13","party":"r1.matches.0","sort":[{"column":"date","order":"desc"}]}"#,
+            r#"{"id":"R13","party":"a20"}"#,
+            r#"{"id":"R2","party":"r1.matches.0"}"#,
+        ] {
+            assert_eq!(already_read(&read, "report", model), None, "{model}");
+        }
+        assert_eq!(
+            already_read(&read, "party_card", r#"{"party":"r1.matches.0"}"#),
+            None
+        );
     }
 
     #[test]

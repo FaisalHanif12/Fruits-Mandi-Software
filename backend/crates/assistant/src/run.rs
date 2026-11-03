@@ -403,6 +403,26 @@ impl<'a> Run<'a> {
                 turn.ask_which.get_or_insert(find_id);
                 continue;
             }
+            // The very read the app made ahead: the model gets that result back, nothing is read
+            // twice and no new number is spent (plan 52 P52-S1).
+            if let Some(read_id) =
+                prefetch::already_read(&turn.prefetched, &call.name, &call.arguments)
+                && let Some(result) = state.find(&read_id)
+            {
+                let content = tool_result_json(result, &self.words).to_string();
+                if let Some(last) = turn.timing.calls.last_mut() {
+                    last.tools.push(ToolTiming {
+                        name: call.name.clone(),
+                        millis: 0,
+                        ok: true,
+                        prefetch: false,
+                    });
+                }
+                turn.counters.tool_calls = turn.counters.tool_calls.saturating_add(1);
+                turn.messages
+                    .push(tool_message(&call.id, content, Some(&read_id)));
+                continue;
+            }
             let env = self.env(&numbers, &question);
             // The step line goes out as the tool starts, so a slow report shows what it is doing.
             (self.d.emit)(step_of(&call, &env, &state));
@@ -538,7 +558,9 @@ impl<'a> Run<'a> {
                         prefetch: true,
                     });
                 }
-                let id = state.next_id('p');
+                // The normal numbers, as if the model had asked in its next reply: the example of
+                // the prompt (find r1, card r2, ledger r3) then holds.
+                let id = state.next_id(prefix_of(draft.tool));
                 let mut result = tools::stored(draft, id.clone(), index);
                 fit(&mut result, &self.words);
                 let content = tool_result_json(&result, &self.words).to_string();
@@ -549,7 +571,10 @@ impl<'a> Run<'a> {
                     "prefetch": true,
                 }));
                 state.results.push(result);
-                let call_id = format!("pre_{id}");
+                if let Some(input) = prefetch::canonical(&call.name, &call.arguments) {
+                    turn.prefetched.push((call.name.clone(), input, id.clone()));
+                }
+                let call_id = format!("pre_p{}", turn.prefetched.len());
                 calls.push(json!({"id": call_id, "type": "function",
                                   "function": {"name": call.name, "arguments": call.arguments}}));
                 answers.push(tool_message(&call_id, content, Some(&id)));
@@ -645,6 +670,7 @@ impl<'a> Run<'a> {
                         check_failed: Vec::new(),
                         repaired: Vec::new(),
                         check_paths: Vec::new(),
+                        check_at: Vec::new(),
                     });
                     break reply;
                 }
@@ -663,6 +689,7 @@ impl<'a> Run<'a> {
                         check_failed: Vec::new(),
                         repaired: Vec::new(),
                         check_paths: Vec::new(),
+                        check_at: Vec::new(),
                     });
                     let left = total.saturating_sub(self.started.elapsed());
                     if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
@@ -865,6 +892,24 @@ impl<'a> Run<'a> {
                                 .iter()
                                 .filter(|x| matches!(x.rule, "reference" | "earlier_question"))
                                 .map(|x| x.at.clone())
+                                .collect();
+                            last.check_at = failures
+                                .iter()
+                                .filter(|x| {
+                                    matches!(
+                                        x.rule,
+                                        "number_word"
+                                            | "script"
+                                            | "never_word"
+                                            | "month"
+                                            | "side_words"
+                                            | "show"
+                                            | "choose"
+                                            | "next"
+                                            | "too_long"
+                                    )
+                                })
+                                .map(|x| format!("{}:{}", x.rule, x.at))
                                 .collect();
                         }
                         match rewritten {

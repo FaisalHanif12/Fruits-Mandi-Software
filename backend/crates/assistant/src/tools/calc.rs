@@ -672,10 +672,22 @@ pub struct EstimateInput {
     pub target: Option<String>,
 }
 
+/// True when the estimate runs to the end of the year: the model said `until: "year_end"`, or it
+/// sent neither `ahead` nor `until` and the question says "to the end of the year" and names no
+/// number of months (plan 52 P52-S1, the time analysis: 14 questions lost a call to this).
+fn year_end_asked(env: &Env<'_>, parsed: &EstimateInput) -> bool {
+    if parsed.until.is_some() {
+        return true;
+    }
+    let months = env.numbers.iter().any(|n| n.unit == NumberUnit::Months);
+    parsed.ahead.is_none() && !months && cues::year_end(env.question)
+}
+
 /// Months ahead: a number of the question with months, or 6 (12 with a target) when the question
 /// has none; or, with `until: "year_end"`, the months left in the year when the question says "to
 /// the end of the year" (plan 52 item 5). A year end together with a months number is refused:
-/// which one is meant is the Owner's to say.
+/// which one is meant is the Owner's to say. When the model sends no `ahead` the app takes what the
+/// tool's own rule says: the one months number of the question, else 6, or 12 with a target.
 fn months_ahead(
     env: &Env<'_>,
     parsed: &EstimateInput,
@@ -686,22 +698,24 @@ fn months_ahead(
         .iter()
         .filter(|n| n.unit == NumberUnit::Months)
         .collect();
-    if let Some(until) = &parsed.until {
-        if until != "year_end" {
-            return Err(bad("ERR_OUT_OF_RANGE", "until", "only year_end"));
+    if year_end_asked(env, parsed) {
+        if let Some(until) = &parsed.until {
+            if until != "year_end" {
+                return Err(bad("ERR_OUT_OF_RANGE", "until", "only year_end"));
+            }
+            if !cues::year_end(env.question) {
+                return Err(bad(
+                    "ERR_OUT_OF_RANGE",
+                    "until",
+                    "the question does not say to the end of the year; ask the Owner how far ahead",
+                ));
+            }
         }
         if parsed.ahead.is_some() {
             return Err(bad(
                 "ERR_OUT_OF_RANGE",
                 "ahead",
                 "with until year_end, leave ahead out",
-            ));
-        }
-        if !cues::year_end(env.question) {
-            return Err(bad(
-                "ERR_OUT_OF_RANGE",
-                "until",
-                "the question does not say to the end of the year; ask the Owner how far ahead",
             ));
         }
         if !months.is_empty() {
@@ -725,9 +739,28 @@ fn months_ahead(
         return mandi_services::domain::forecast::months_to_year_end(current)
             .map_err(|e| ToolError::from_code(e.code(), Some("until")));
     }
-    let ahead = parsed
-        .ahead
-        .ok_or_else(|| bad("ERR_REQUIRED", "ahead", "months ahead, or until year_end"))?;
+    let has_target = parsed.target.is_some();
+    let ahead = match parsed.ahead {
+        Some(ahead) => ahead,
+        // Nothing sent: the question's own months number, else the default of the rule.
+        None => match months.as_slice() {
+            [] => {
+                if has_target {
+                    12
+                } else {
+                    6
+                }
+            }
+            [only] => only.number,
+            _ => {
+                return Err(bad(
+                    "ERR_REQUIRED",
+                    "ahead",
+                    "the question has more than one number of months; ask the Owner which one",
+                ));
+            }
+        },
+    };
     if months.is_empty() && cues::year_end(env.question) {
         return Err(bad(
             "ERR_OUT_OF_RANGE",
@@ -735,7 +768,6 @@ fn months_ahead(
             "the question says to the end of the year: use until year_end, not a number of months",
         ));
     }
-    let has_target = parsed.target.is_some();
     let allowed = if months.is_empty() {
         ahead == if has_target { 12 } else { 6 }
     } else {
@@ -1174,7 +1206,7 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             ])
         })
         .collect();
-    let to_year_end = parsed.until.is_some();
+    let to_year_end = year_end_asked(env, &parsed);
     let worked = if to_year_end {
         forecast::estimate_to_year_end(&history, current, what_if)
     } else {

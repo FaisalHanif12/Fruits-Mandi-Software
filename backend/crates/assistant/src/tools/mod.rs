@@ -331,7 +331,36 @@ pub fn lookup<'s>(
             "a result of an earlier question; read it again",
         ));
     }
-    result.node.get(rest).map(Found::Ref).ok_or_else(unknown)
+    if let Some(node) = result.node.get(rest) {
+        return Ok(Found::Ref(node));
+    }
+    // The model reads {"rs": 2880} in a result and writes `r2.balance.rs`: the figure is there, only
+    // the last word is extra. A path that goes on below a value by the field names of the value's
+    // own JSON is the value (plan 52 P52-S1: 18 of 24 reference rewrites of the full live run).
+    leaf_of_value(&result.node, rest)
+        .map(Found::Ref)
+        .ok_or_else(unknown)
+}
+
+/// The field names the JSON of a value has (`{"rs":..,"side":..}`, `{"n":..}`, `{"month":..}`,
+/// `{"date":..}`, `{"pct":..}`, a document's `label`, a name's `ur`, `en` and `tag`): a path may end
+/// with up to two of them after the value.
+const VALUE_FIELDS: &[&str] = &[
+    "rs", "n", "month", "date", "pct", "side", "checked", "places", "label", "ur", "en", "tag",
+];
+
+/// The value a path reaches when it goes on below it by `VALUE_FIELDS`, or `None`.
+fn leaf_of_value<'n>(root: &'n Node, rest: &[&str]) -> Option<&'n Node> {
+    for cut in (1..rest.len()).rev() {
+        let (head, tail) = rest.split_at(cut);
+        if tail.len() > 2 || !tail.iter().all(|s| VALUE_FIELDS.contains(s)) {
+            continue;
+        }
+        if let Some(node @ Node::Val(_)) = root.get(head) {
+            return Some(node);
+        }
+    }
+    None
 }
 
 /// A record the model names: its key prefix (`a`, `i`, `s` ...) and its id.

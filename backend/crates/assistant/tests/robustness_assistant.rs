@@ -1030,23 +1030,23 @@ fn attack_03_a_typed_name_of_any_account_or_partner_is_refused_even_when_the_res
         (
             "ur",
             "another buyer, in Urdu",
-            "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں اور ارشد ملتانی کے بھی۔"
+            "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں اور ارشد ملتانی کے بھی۔"
                 .to_owned(),
         ),
         (
             "ur",
             "a seller, in Urdu",
-            "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں، رحیم سے پوچھیں۔".to_owned(),
+            "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں، رحیم سے پوچھیں۔".to_owned(),
         ),
         (
             "en",
             "another buyer, in English",
-            "{{r1.matches.0.name}} owes {{p1.balance}}, and Arshad Multani too.".to_owned(),
+            "{{r1.matches.0.name}} owes {{r2.balance}}, and Arshad Multani too.".to_owned(),
         ),
         (
             "en",
             "a partner, in English",
-            "{{r1.matches.0.name}} owes {{p1.balance}}; ask Partner A.".to_owned(),
+            "{{r1.matches.0.name}} owes {{r2.balance}}; ask Partner A.".to_owned(),
         ),
     ];
     for (language, name, text) in cases {
@@ -1099,10 +1099,10 @@ fn tool_message_ids(body: &Value) -> Vec<String> {
 #[test]
 fn attack_04_a_reference_to_a_card_the_app_did_not_read_ahead_is_refused() {
     // Two Akrams: the find holds two buyers, so the app reads no card (it never guesses which one).
-    // A model that cites `p1` or `p9` anyway cites a result that does not exist: refused, twice,
+    // A model that cites `r2` or `r9` (the next numbers) anyway cites a result that does not exist: refused, twice,
     // and nothing is shown.
     let h = two_akrams();
-    for cited in ["p1", "p9"] {
+    for cited in ["r2", "r9"] {
         let text = format!("{{{{r1.matches.0.name}}}} کے ذمے {{{{{cited}.balance}}}} باقی ہیں۔");
         let content = answer("answer", &text);
         let (reply, requests) = ask(
@@ -1140,11 +1140,11 @@ fn attack_04_a_reference_to_a_card_the_app_did_not_read_ahead_is_refused() {
 #[test]
 fn attack_04_one_party_that_is_sure_and_one_that_is_not_get_a_card_only_for_the_sure_one() {
     // `find akram` holds two buyers (no card); `find arshad` holds one (a card, the first the app
-    // reads, so `p1`). Citing `p1` shows Arshad's checked balance and never Akram's.
+    // reads, the next r number, so `r3`). Citing `r3` shows Arshad's checked balance and never Akram's.
     let h = two_akrams();
     let content = answer(
         "answer",
-        "{{r2.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔",
+        "{{r2.matches.0.name}} کے ذمے {{r3.balance}} باقی ہیں۔",
     );
     let (reply, requests) = ask(
         &h,
@@ -1168,21 +1168,30 @@ fn attack_04_one_party_that_is_sure_and_one_that_is_not_get_a_card_only_for_the_
 
 #[test]
 fn attack_04_many_finds_in_one_reply_cost_the_app_a_bounded_number_of_reads() {
-    // Ten finds of the same buyer in one reply: the first eight run (attack 4: the rest are
-    // refused), the app adds cards only for finds that ran, every tool call has its tool message,
-    // and the question ends in an answer.
+    // Ten different finds of the same buyer in one reply: the first eight run (attack 4: the rest
+    // are refused), the app adds a card only for finds that ran, every tool call has its tool
+    // message, and the question ends in an answer.
     let h = Harness::day();
-    let finds: Vec<(&str, Value)> = (0..10).map(|_| find("akram", "buyer")).collect();
+    let texts = [
+        "akram",
+        "Akram",
+        "AKRAM",
+        "akram toll",
+        "akram toll tax",
+        "toll tax",
+        "akram t",
+        "akra",
+        "akr",
+        "akrm",
+    ];
+    let finds: Vec<(&str, Value)> = texts.iter().map(|t| find(t, "buyer")).collect();
     let (reply, requests) = ask(
         &h,
         "akram ka bakaya",
         None,
         vec![
             tool_reply(&finds),
-            final_reply(&answer(
-                "answer",
-                "{{r1.matches.0.name}} کے ذمے {{p1.balance}} باقی ہیں۔",
-            )),
+            final_reply(&answer("answer", "{{r1.matches.0.name}}")),
         ],
     );
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
@@ -1198,6 +1207,56 @@ fn attack_04_many_finds_in_one_reply_cost_the_app_a_bounded_number_of_reads() {
         read_ahead <= 8,
         "{read_ahead} reads ahead for 8 finds that ran"
     );
+    h.scan_requests();
+}
+
+#[test]
+fn attack_04_a_call_that_repeats_the_apps_own_read_gets_the_same_result_and_a_different_one_a_new_number()
+ {
+    // One buyer: `find` is r1 and the app reads his card ahead as r2. The model asks for the very
+    // same card: it is answered with r2 (no new number, no new read in the log). A different read
+    // (his ledger with 100 rows) is a new read with the next number, r3.
+    let h = Harness::day();
+    let (reply, requests) = ask(
+        &h,
+        "akram ka bakaya",
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer")]),
+            tool_reply(&[card(AKRAM)]),
+            tool_reply(&[(
+                "report",
+                report_args("R13", json!({"party": AKRAM, "rows": 100})),
+            )]),
+            final_reply(&answer(
+                "answer",
+                "{{r1.matches.0.name}} کے ذمے {{r2.balance}} باقی ہیں۔",
+            )),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let id_of = |body: &Value| -> String {
+        let last = messages(body)
+            .iter()
+            .rfind(|m| m["role"] == "tool")
+            .expect("a tool message");
+        let result: Value = serde_json::from_str(last["content"].as_str().unwrap()).unwrap();
+        result["id"].as_str().unwrap_or("").to_owned()
+    };
+    assert_eq!(
+        id_of(&requests[2]),
+        "r2",
+        "the repeat gets the app's own read"
+    );
+    assert_eq!(
+        id_of(&requests[3]),
+        "r3",
+        "a different read is a new number"
+    );
+    let (rows, _, _) = assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    let logged: Vec<Value> = serde_json::from_str(&rows[0].tool_calls_json).unwrap();
+    let ids: Vec<&str> = logged.iter().filter_map(|c| c["id"].as_str()).collect();
+    assert_eq!(ids, ["r1", "r2", "r3"], "the repeat logs no new read");
     h.scan_requests();
 }
 

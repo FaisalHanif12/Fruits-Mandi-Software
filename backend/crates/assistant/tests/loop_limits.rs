@@ -622,21 +622,23 @@ fn an_earlier_result_is_resent_with_only_the_rows_its_answer_used() {
     // In the second request, the first question's R13 result has its totals and summary and only
     // the row `je1` that the answer referred to.
     let messages = requests[0]["messages"].as_array().unwrap();
-    let r2 = messages
+    // (The app read his card ahead as r2 and the ledger as r3, plan 52 P52-S1; the model's own R13
+    // call was answered with that r3.)
+    let r3 = messages
         .iter()
         .filter(|m| m["role"] == "tool")
         .map(|m| serde_json::from_str::<Value>(m["content"].as_str().unwrap()).unwrap())
-        .find(|v| v["id"] == "r2")
+        .find(|v| v["id"] == "r3")
         .expect("the earlier R13 result");
-    let rows = r2["rows"].as_array().unwrap();
+    let rows = r3["rows"].as_array().unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["key"], "je1");
-    assert!(r2.get("totals").is_some() && r2.get("summary").is_some() && r2.get("count").is_some());
+    assert!(r3.get("totals").is_some() && r3.get("summary").is_some() && r3.get("count").is_some());
     // The earlier question's text and answer are there, and only the last 3 questions are sent.
     let all = requests[0].to_string();
     assert!(all.contains("ikram ka bill"));
     h.scan_requests();
-    // A reference to that old result in the new answer would be refused; ids run on (r3 for the
+    // A reference to that old result in the new answer would be refused; ids run on (r4 for the
     // second question's tiles).
     assert!(figures(answer_of(&second)).len() == 1);
 }
