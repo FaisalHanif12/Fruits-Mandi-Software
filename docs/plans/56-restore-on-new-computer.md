@@ -68,3 +68,21 @@ The commands run **before** sign-in, because no Owner exists yet on the new comp
 ## 7. Out of scope
 - Moving data between two computers that both stay in use (NFR-SCL-9).
 - Restoring part of the books.
+
+## 8. Lead decisions on backend3's R1 proposal (04-11-2026)
+
+- **Chain key: Option A.**
+  - The key travels inside the encrypted `.mbk` bundle (`Embedded.chain_key`), locked by the backup key. It is never in the `.json` sidecar or a plain local copy.
+  - Restore verifies both chains on the temporary copy with that key before it installs anything.
+  - The same applies to the signed-in restore.
+  - NFR-SEC-6 is updated (NFR v1.14).
+- **Q1:** backend3 may change `db/src/audit.rs` (key to and from hex, install, set) and the KeyStore impls. backend is told.
+- **Q2:** the command names are `backup_first_run_list`, `backup_first_run_preview` and `backup_first_run_restore` (Tech Stack 5.2), in a new file `commands/backup_first_run.rs`.
+- **Q3:** a copy with no chain key, and no matching key on this computer, is refused with ERR_BACKUP_CHAIN_KEY_MISSING. No copy is in the field yet.
+- **Q4:** the key error field is `backup_key` in these commands.
+- **Q5:** a false check (chains, balance, integrity) refuses, and the Owner picks an older copy. There is no override.
+- **First-run state:** no Owner exists (`users` count is 0), as for `setup_first_run`. NFR-SEC-4 now lists restore on a new computer as allowed before sign-in, only in that state.
+- **Settings from the old computer:** a `local_dir` that does not exist goes back to the default. `usb_folder` and `cloud_enabled` are kept.
+- **OpenRouter key:** after sign-in, the frontend shows "enter it again" when the assistant is on and no key is stored.
+- **Progress:** the new event `backup-restore-progress` with its phases. The preview and the restore each download the copy; there is no cache that holds secrets.
+- **Copies made before this change** carry no chain key. Umar's first cloud copies are among them, so after this is built, he makes one new copy.
