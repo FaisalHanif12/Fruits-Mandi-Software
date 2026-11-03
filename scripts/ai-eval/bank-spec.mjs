@@ -11,7 +11,8 @@
 //   label=@key              the number of the fact must be in the answer
 //   label=@a|@b             either number (two honest readings of the question)
 //   label!=@key             a NAME that must be in the answer (strict); `|` lists names that all fit
-//   first=@key;second=@key  the first name must come before the second in the answer
+//   first=@key;second=@key  the first name must come before the second in the answer (`second?=`:
+//                           the second need not be shown; when both are, the order still counts)
 // Facts are written as the scorer reads them: `2674320`, `1624972 Cr`, `31.99%`, `2026-06`.
 //
 // `use` lists the wordings (by position) that go into the bank. The others are spare wordings for a
@@ -546,7 +547,7 @@ const A = [
 const B = [
   {
     g: 'S01', section: 'advice', kind: 'advice', world: 'year', outcome: 'advice', tools: 'report:R20', filters: 'view=R20;sort=days,balance;general=0',
-    figures: 'first=@top.collect_first;second=@top.collect_second',
+    figures: 'first=@top.collect_first;second?=@top.collect_second',
     source: 'FR-7.88: advice from the books first',
     q: [r('kis se pehle wasooli karun'), u('پہلے کس سے وصولی کروں'), e('whom should I collect from first')],
   },

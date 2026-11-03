@@ -220,9 +220,9 @@ Q218		fruit	roman	0	year		mehmanon ke liye is saal kitne ka phal aaya	answered	r
 Q219		lent	roman	0	year		udhar rakam kitni baqi hai aur kitni wapsi ki tareekh guzar chuki	answered	tiles/report:R32	view=R32	open=@tiles.lent_open;overdue=@tiles.lent_overdue	oracle	A	dues
 Q220	Y75	item	roman	0	year		mujhe batao is saal kela saib aur aam teeno ka kitna kitna commission hua	answered	analytics:A	item=Banana,Apple,Mango;period=this year	banana=@a.year.banana.total_comm;apple=@a.year.apple.total_comm;mango=@a.year.mango.total_comm	oracle	A	item
 Q221	Y75	item	urdu	0	year		اس سال کیلا، سیب اور آم تینوں کا الگ الگ کتنا کمیشن ہوا	answered	analytics:A	item=Banana,Apple,Mango;period=this year	banana=@a.year.banana.total_comm;apple=@a.year.apple.total_comm;mango=@a.year.mango.total_comm	oracle	A	item
-Q222	S01	advice	roman	0	year		kis se pehle wasooli karun	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second=@top.collect_second	FR-7.88: advice from the books first	B	advice
-Q223	S01	advice	urdu	0	year		پہلے کس سے وصولی کروں	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second=@top.collect_second	FR-7.88: advice from the books first	B	advice
-Q224	S01	advice	en	0	year		whom should I collect from first	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second=@top.collect_second	FR-7.88: advice from the books first	B	advice
+Q222	S01	advice	roman	0	year		kis se pehle wasooli karun	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second?=@top.collect_second	FR-7.88: advice from the books first	B	advice
+Q223	S01	advice	urdu	0	year		پہلے کس سے وصولی کروں	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second?=@top.collect_second	FR-7.88: advice from the books first	B	advice
+Q224	S01	advice	en	0	year		whom should I collect from first	advice	report:R20	view=R20;sort=days,balance;general=0	first=@top.collect_first;second?=@top.collect_second	FR-7.88: advice from the books first	B	advice
 Q225	S02	advice	roman	1	year		kis gahak ko ab udhar na don	advice	report:R20/analytics:C	view=R20;general=0	risky!=Zahid Mehmood|Tariq Mehmood|Bilal Ahmed	oracle	B	advice
 Q226	S02	advice	en	0	year		which buyer should I stop giving credit to	advice	report:R20/analytics:C	view=R20;general=0	risky!=Zahid Mehmood|Tariq Mehmood|Bilal Ahmed	oracle	B	advice
 Q227	S03	advice	roman	0	year		kis byopari ko pehle payment karun	advice	report:R24	view=R24;general=0	first!=Haji Nazeer|Bashir|Tahir	oracle	B	advice

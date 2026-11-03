@@ -49,6 +49,9 @@ node scripts/ai-eval/run.mjs --check        # the bank meets its rules (no model
 node scripts/ai-eval/run.mjs --self-test    # the scorer on made-up replies
 node scripts/ai-eval/build-bank.mjs         # after editing bank-spec.mjs or questions-110.tsv
 node scripts/ai-eval/run.mjs --category A   # the live run of one category (the lead, with the key)
+node scripts/ai-eval/run.mjs --misses       # ask again every miss and every question lost to the network,
+                                            # and put the new rows in results.json (the score is of the whole bank)
+node scripts/ai-eval/run.mjs --only Q111,Q112 --merge   # the same for a list you give
 node scripts/ai-eval/run.mjs --results backend/target/ai-eval/results.json   # score a file again
 ```
 
@@ -98,9 +101,17 @@ Tightened:
 9. A change request must point to the right entry screen (`route=`).
 10. "Not understood after reading" and network failures are counted on their own lines and must be 0.
 
+The internet: when a question ends offline (or on a connection that dropped) the harness waits, up to
+10 minutes, until the host can be reached, and asks the SAME question again on a fresh copy of its books
+(up to 5 times). A question that stays lost is marked `network_lost`; the scorer never counts it as a result,
+lists it on its own ("LOST TO THE NETWORK") and `--misses` asks it again. A timeout is the service and stays a
+real miss.
+
 Time: the model's time only. Questions that end on a network failure or a timeout are counted apart. A
 follow-up counts its own time. The fixed part of the prompt is the prompt tokens of the first call of a fresh
-question less the question itself (`user_tokens`).
+question less the question itself (`user_tokens`), for the questions whose first call carried nothing the app
+read for it. What the app reads before the first call (the guide of a how-to, a period, the tiles) is added to
+that call; it is reported apart as "READ AHEAD", not as fixed part.
 
 A category meets plan 52 Section 2 when: A and C have no wrong figure and at least 98% answered; B at least
 95% good; D at least 98% the right topic; E only safe ends; and its p50 and p95 are inside its target.

@@ -562,6 +562,76 @@ fn user_tokens(text: &str) -> usize {
         .unwrap_or(0)
 }
 
+/// How long the harness waits for the internet to come back before it gives a question up.
+const NET_WAIT_LIMIT: Duration = Duration::from_secs(600);
+/// How many times one question is asked again after the internet came back.
+const NET_MAX_WAITS: u32 = 5;
+
+/// True when the question ended because the internet itself was lost: the app said offline, or a
+/// connection that was made dropped. Not a timeout (that is the service, and a real result).
+fn lost_network(row: &Value) -> bool {
+    let reply = &row["reply"];
+    match reply["outcome"].as_str() {
+        Some("offline") => true,
+        Some("error") => matches!(
+            reply["failure"]["kind"].as_str(),
+            Some("offline" | "dropped")
+        ),
+        _ => false,
+    }
+}
+
+/// True when the machine can reach the model's host now. It opens a connection and sends nothing,
+/// so no key and no question leave the machine.
+fn can_reach_the_host() -> bool {
+    use std::net::{TcpStream, ToSocketAddrs};
+    "openrouter.ai:443"
+        .to_socket_addrs()
+        .ok()
+        .and_then(|mut addrs| {
+            addrs.find(|a| TcpStream::connect_timeout(a, Duration::from_secs(5)).is_ok())
+        })
+        .is_some()
+}
+
+/// Waits, up to `limit`, until the host can be reached again. True when it can.
+fn internet_back(limit: Duration) -> bool {
+    let started = Instant::now();
+    loop {
+        if can_reach_the_host() {
+            return true;
+        }
+        if started.elapsed() >= limit {
+            return false;
+        }
+        eprintln!("the internet is gone; waiting (a check every 10 s)");
+        std::thread::sleep(Duration::from_secs(10));
+    }
+}
+
+/// Runs a question; if the internet was lost, waits for it and asks the SAME question again (on a
+/// fresh copy of its books), up to `max_waits` times. A row that is still lost has `network_lost`:
+/// the scorer never counts it as a result. A row that was asked again has `net_retries`.
+fn run_until_online(
+    mut run: impl FnMut() -> Value,
+    mut wait_for_internet: impl FnMut() -> bool,
+    max_waits: u32,
+) -> Value {
+    let mut row = run();
+    let mut waits = 0;
+    while lost_network(&row) {
+        if waits >= max_waits || !wait_for_internet() {
+            row["network_lost"] = json!(true);
+            row["net_retries"] = json!(waits);
+            return row;
+        }
+        waits += 1;
+        row = run();
+        row["net_retries"] = json!(waits);
+    }
+    row
+}
+
 #[test]
 #[ignore = "live: calls the real model with the key saved in the app; run it with scripts/ai-eval/run.mjs"]
 fn live_100_questions() {
@@ -643,9 +713,15 @@ fn live_100_questions() {
                     let Some(q) = list.get(at) else {
                         break;
                     };
-                    let row = run_one(q, &all, &by_id, Some(&masters), &model, &runtime, &|| {
-                        Box::new(OpenRouterClient)
-                    });
+                    let row = run_until_online(
+                        || {
+                            run_one(q, &all, &by_id, Some(&masters), &model, &runtime, &|| {
+                                Box::new(OpenRouterClient)
+                            })
+                        },
+                        || internet_back(NET_WAIT_LIMIT),
+                        NET_MAX_WAITS,
+                    );
                     let mut rows = results.lock().expect("the results");
                     rows.push(row);
                     flush(&rows);
@@ -984,4 +1060,73 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
     );
     assert_eq!(row["reply"]["outcome"], "answered", "{row}");
     assert_eq!(row["followup"], false);
+}
+
+#[test]
+fn a_question_lost_to_the_internet_is_asked_again_and_never_counted_as_a_result() {
+    // Not live. The harness waits for the connection and asks the same question again; a question
+    // that stays lost is marked and the scorer leaves it out.
+    let offline = || json!({"reply": {"outcome": "offline", "failure": {"kind": "offline"}}});
+    let dropped = || json!({"reply": {"outcome": "error", "failure": {"kind": "dropped"}}});
+    let timeout = || json!({"reply": {"outcome": "error", "failure": {"kind": "timeout"}}});
+    let answered = || json!({"reply": {"outcome": "answered", "failure": null}});
+    assert!(lost_network(&offline()) && lost_network(&dropped()));
+    assert!(
+        !lost_network(&timeout()),
+        "a timeout is the service, a real result"
+    );
+    assert!(!lost_network(&answered()));
+    // Offline twice, then the answer: asked three times, waited twice, the answer is the row.
+    let mut calls = 0;
+    let mut waits = 0;
+    let row = run_until_online(
+        || {
+            calls += 1;
+            if calls <= 2 { offline() } else { answered() }
+        },
+        || {
+            waits += 1;
+            true
+        },
+        5,
+    );
+    assert_eq!(row["reply"]["outcome"], "answered");
+    assert_eq!(row["net_retries"], 2);
+    assert_eq!((calls, waits), (3, 2));
+    // The internet does not come back: one question, no more asks, marked lost.
+    let mut calls = 0;
+    let row = run_until_online(
+        || {
+            calls += 1;
+            dropped()
+        },
+        || false,
+        5,
+    );
+    assert_eq!(row["network_lost"], true);
+    assert_eq!(calls, 1);
+    // It keeps going offline: stops after the most asks and is marked lost.
+    let mut calls = 0;
+    let row = run_until_online(
+        || {
+            calls += 1;
+            offline()
+        },
+        || true,
+        3,
+    );
+    assert_eq!(row["network_lost"], true);
+    assert_eq!(calls, 4, "the first ask and three more");
+    // A timeout is not asked again by the harness (the app has its own retry).
+    let mut calls = 0;
+    let row = run_until_online(
+        || {
+            calls += 1;
+            timeout()
+        },
+        || true,
+        5,
+    );
+    assert!(row.get("network_lost").is_none());
+    assert_eq!(calls, 1);
 }

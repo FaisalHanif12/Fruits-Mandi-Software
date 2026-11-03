@@ -22,6 +22,9 @@
 //   node scripts/ai-eval/run.mjs --category A         only the questions of category A (A,B also)
 //   node scripts/ai-eval/run.mjs --world year         only the questions of one world
 //   node scripts/ai-eval/run.mjs --only Q001,Q016     only these ids
+//   node scripts/ai-eval/run.mjs --misses             ask again every miss and every question lost to
+//                                                     the network, put the new rows in results.json
+//   node scripts/ai-eval/run.mjs --only Q111,Q112 --merge   the same for a list you give
 //   node scripts/ai-eval/run.mjs --threads 4          questions at once (default 1: honest times)
 //   node scripts/ai-eval/run.mjs --check              check the bank, no model, no cargo
 //   node scripts/ai-eval/run.mjs --self-test          check the scorer on made-up replies, no model
@@ -40,7 +43,8 @@
 // process is started without a shell, so nothing is split.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -99,7 +103,9 @@ const SAFE_ENDS = new Set([
   'records_differ',
 ]);
 // The kinds of failure that are the network's, not the model's (plan 52 item 6).
-const NETWORK_KINDS = new Set(['offline', 'dropped', 'timeout', 'busy', 'server']);
+const NETWORK_KINDS = new Set(['timeout', 'busy', 'server']);
+// The internet was lost: not a result of the app (the harness waits and asks again).
+const LOST_KINDS = new Set(['offline', 'dropped']);
 
 /** The five categories of plan 52 Section 2: their target times and what "meets" means. */
 const CATS = {
@@ -500,7 +506,7 @@ function score(question, result, oracle) {
     }
   })();
   const first = figuresText.match(/first=([A-Za-z ]+?)\s+\d/);
-  const second = figuresText.match(/second=([A-Za-z ]+?)\s+\d/);
+  const second = figuresText.match(/second\??=([A-Za-z ]+?)\s+\d/);
   if (first && second) {
     const a = found.order.indexOf(first[1].toLowerCase());
     const b = found.order.indexOf(second[1].toLowerCase());
@@ -546,16 +552,22 @@ function score(question, result, oracle) {
   if (result.clicked) notes.push(`which_one clicked: ${result.clicked.name}`);
   const afterReading = outcome === 'not_understood' && (result.tool_calls ?? []).some((c) => !c.error);
   const failure = reply?.failure?.kind ?? null;
-  const network = !!reply && (outcome === 'offline' || outcome === 'error' || NETWORK_KINDS.has(failure ?? ''));
+  // LOST: the internet itself went (offline, or a connection that dropped). Such a question is not
+  // scored at all: it is listed on its own and asked again (the harness waits for the connection and
+  // asks it again first; `network_lost` says it still failed).
+  const lost = !!reply && (outcome === 'offline' || LOST_KINDS.has(failure ?? '') || result.network_lost === true);
+  // NETWORK: the service failed (a timeout, busy, a server error): a real result, a miss.
+  const network = !!reply && !lost && (outcome === 'error' || NETWORK_KINDS.has(failure ?? ''));
   const shows = found.parts.length + found.all.length > 0;
   let kind;
-  if (reasons.length === 0) kind = 'PASS';
+  if (lost) kind = 'LOST (network)';
+  else if (reasons.length === 0) kind = 'PASS';
   else if (!reply) kind = 'MISS (harness)';
   else if (network) kind = 'MISS (network)';
   else if (SAFE_ENDS.has(outcome)) kind = 'MISS (safe end)';
   else if (shows || outcome === 'answered') kind = 'MISS (REVIEW: figure, party, period or source)';
   else kind = 'MISS';
-  return { id: question.id, cat: question.cat, pass: reasons.length === 0, kind, reasons, notes, outcome, figureMisses, afterReading, network, failure };
+  return { id: question.id, cat: question.cat, pass: reasons.length === 0 && !lost, kind, reasons, notes, outcome, figureMisses, afterReading, network, lost, failure };
 }
 
 /**
@@ -576,7 +588,7 @@ function groupAgreement(list, verdicts, results) {
         const topics = (results.get(q.id)?.tool_calls ?? []).filter((c) => c.tool === 'app_help').map((c) => c.input?.topic);
         return [...new Set(topics)].sort().join(',');
       }
-      if (v.network) return 'network'; // a lost connection says nothing about the figures
+      if (v.network || v.lost) return 'network'; // a lost connection says nothing about the figures
       return `${v.pass ? 'ok' : 'miss'}:${[...new Set(v.figureMisses)].sort().join(',')}`;
     });
     const real = signs.filter((s) => s !== 'network');
@@ -657,7 +669,7 @@ const ms = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)} s` : `${Math.round(n)} 
 
 /** The numbers of one category: counts, rates and times (model time apart from network time). */
 function categoryStats(cat, list, verdicts, results) {
-  const qs = list.filter((q) => q.cat === cat && verdicts.has(q.id));
+  const qs = list.filter((q) => q.cat === cat && verdicts.has(q.id) && !verdicts.get(q.id).lost);
   const vs = qs.map((q) => verdicts.get(q.id));
   const n = qs.length;
   const passed = vs.filter((v) => v.pass).length;
@@ -696,13 +708,36 @@ function categoryStats(cat, list, verdicts, results) {
   return { cat, n, passed, wrong, safe, unsafe, network, answeredRate, passRate, p50, p95, networkTimes, rulePassed, timeOk };
 }
 
+/**
+ * How many results the app read for a question BEFORE its first model call (the guide of a how-to,
+ * a period, the tiles). Such a result is in the log's tool list with `prefetch` (or, for the guide,
+ * with an id `h1`), and in no call's own tool list. A card the app reads right after the model's
+ * find is in the call's list with `prefetch` too, and is not counted here.
+ */
+function preReads(r) {
+  let calls;
+  try {
+    calls = typeof r.calls_json === 'string' ? JSON.parse(r.calls_json) : (r.calls_json ?? []);
+  } catch {
+    return 0;
+  }
+  const tools = calls.flatMap((c) => c.tools ?? []);
+  const flagged = (r.tool_calls ?? []).filter((t) => t.prefetch === true).length;
+  const flaggedInCalls = tools.filter((t) => t.prefetch === true).length;
+  const guides = (r.tool_calls ?? []).filter((t) => typeof t.id === 'string' && t.id.startsWith('h')).length;
+  const guidesInCalls = tools.filter((t) => t.name === 'app_help').length;
+  return Math.max(0, flagged - flaggedInCalls) + Math.max(0, guides - guidesInCalls);
+}
+
 function report(list, data) {
   const oracle = data.oracle ?? {};
   const results = new Map(data.results.map((r) => [r.id, r]));
   const ran = list.filter((q) => results.has(q.id));
   const verdicts = new Map(ran.map((q) => [q.id, score(q, results.get(q.id), oracle)]));
   const vlist = ran.map((q) => verdicts.get(q.id));
-  const passed = vlist.filter((v) => v.pass).length;
+  const lostV = vlist.filter((v) => v.lost);
+  const scoredV = vlist.filter((v) => !v.lost);
+  const passed = scoredV.filter((v) => v.pass).length;
   const lines = [];
   const say = (s = '') => lines.push(s);
   say(`AI EVAL  model ${data.meta.model}`);
@@ -710,7 +745,7 @@ function report(list, data) {
   say(`date ${new Date().toISOString().slice(0, 10)}   questions run ${ran.length} of ${list.length}   threads ${data.meta.threads ?? 1}`);
   say(`oracle facts ${Object.keys(oracle).length}   prefind ${data.meta.prefind === undefined ? 'not recorded' : data.meta.prefind ? 'ON' : 'off (as the app)'}`);
   say();
-  say(`SCORE ${passed} of ${ran.length}`);
+  say(`SCORE ${passed} of ${scoredV.length} scored${lostV.length ? `   (${lostV.length} lost to the network are NOT scored: they are listed below and must be asked again)` : ''}`);
   say();
   say('CATEGORY                 pass      wrong  answered  model time p50 / p95 (target)           network  rule');
   const cats = Object.keys(CATS).filter((c) => ran.some((q) => q.cat === c));
@@ -724,7 +759,7 @@ function report(list, data) {
   const netTimes = stats.flatMap((s) => s.networkTimes);
   say(`  (time is the model's: ${netTimes.length} questions that ended on a network failure or a timeout are counted apart, their time ${netTimes.length ? `p95 ${ms(percentile(netTimes, 0.95))}` : 'none'})`);
   say();
-  const misses = vlist.filter((v) => !v.pass);
+  const misses = scoredV.filter((v) => !v.pass);
   const review = misses.filter((v) => v.kind.includes('REVIEW'));
   const count = (word) => misses.filter((v) => v.kind.includes(word)).length;
   say(`MISSES ${misses.length}: wrong or missing figures to review ${review.length}, safe ends ${count('safe')}, network ${count('network')}, harness ${count('harness')}, oracle ${count('oracle')}, other ${misses.length - review.length - count('safe') - count('network') - count('harness') - count('oracle')}`);
@@ -733,6 +768,11 @@ function report(list, data) {
     say(`  ${v.id} [${q.cat}] [${v.kind}] ${q.question}`);
     say(`      expected ${q.outcome}: ${q.figures || q.filters}`);
     say(`      got ${v.outcome}${v.failure ? ` (${v.failure})` : ''}; ${v.reasons.join('; ')}`);
+  }
+  if (lostV.length) {
+    say();
+    say(`LOST TO THE NETWORK: ${lostV.length} questions, none of them scored: ${lostV.map((v) => v.id).join(' ')}`);
+    say('  ask them again with: node scripts/ai-eval/run.mjs --misses');
   }
   const noted = vlist.filter((v) => v.notes.length > 0);
   say();
@@ -767,16 +807,23 @@ function report(list, data) {
   say(`TOKENS  input ${t('in')}  cached ${t('cached')}  output ${t('out')}  reasoning ${t('reasoning')}`);
   say(`  per question: input ${Math.round(t('in') / Math.max(1, all.length))}, cached ${Math.round(t('cached') / Math.max(1, all.length))}, output ${Math.round(t('out') / Math.max(1, all.length))}`);
   // The fixed part as the model counts it (plan 52 item 0c): the prompt tokens of the FIRST call of a
-  // fresh question, less the question itself.
-  const fixed = all
-    // A call the provider filtered answers with 0 prompt tokens (content_filter): nothing to measure.
-    .filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number' && r.calls[0].prompt > 0)
-    .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+  // fresh question, less the question itself, for the questions whose first call carried nothing the
+  // app had read for it. What the app reads before the first call (the guide of a how-to, a period,
+  // the tiles) is added to that call but is not fixed: it is reported apart.
+  const firstCalls = all.filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number' && r.calls[0].prompt > 0);
+  const readAhead = (r) => preReads(r);
+  const plain = firstCalls.filter((r) => readAhead(r) === 0).map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+  const fixed = plain.length ? plain : firstCalls.map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
   const fixedMax = fixed.length ? Math.max(...fixed) : 0;
   const fixedO200k = Math.round(fixedMax / MODEL_COUNTS_MORE);
   say(
-    `  fixed part, first call of ${fixed.length} fresh questions, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K}; the prompt tokens of the first call less the question)`,
+    `  FIXED PART (system, tools, answer schema), first call of ${fixed.length} fresh questions with nothing read ahead, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K})`,
   );
+  const base = percentile(fixed, 0.5);
+  const extra = firstCalls.filter((r) => readAhead(r) > 0).map((r) => r.calls[0].prompt - (r.user_tokens ?? 0) - base);
+  if (extra.length) {
+    say(`  READ AHEAD by the app before the first call (NOT fixed: per question): ${extra.length} questions, +${Math.min(...extra)} to +${Math.max(...extra)} tokens, p50 +${percentile(extra, 0.5)}`);
+  }
   say(`PARALLEL tool calls that arrived with a bad input: ${badParallel} (in ${parallel.length} questions that asked for tools together)`);
   const limited = all.filter((r) => r.reply?.outcome === 'not_understood' && r.reply?.stop_reason);
   say(`LIMITS  ${limited.length} questions stopped at a limit (calls or tokens)`);
@@ -791,12 +838,12 @@ function report(list, data) {
   say(`URDU REVIEW SHEET ${REVIEW} (${ran.length} answers; the reviewer marks good or not, and for advice answers inside FR-7.88 or not; at least 95 of 100 advice answers must be good)`);
   const advice = list.filter((q) => q.cat === 'B' && results.has(q.id));
   say(`  advice answers to read for FR-7.88: ${advice.map((q) => q.id).join(' ')}`);
-  const meets = stats.length > 0 && stats.every((s) => s.rulePassed && s.timeOk) && bad.length === 0 && afterReading.length === 0 && failures.length === 0;
+  const meets = stats.length > 0 && stats.every((s) => s.rulePassed && s.timeOk) && bad.length === 0 && afterReading.length === 0 && failures.length === 0 && lostV.length === 0;
   say();
   say(
     meets
       ? 'RESULT: every category that ran meets plan 52 Section 2 (the Urdu review is still to do)'
-      : `RESULT: does NOT yet meet plan 52 Section 2 (${stats.filter((s) => !s.rulePassed).map((s) => `${s.cat} score`).concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`)).join(', ') || 'groups, reads or network'})`,
+      : `RESULT: does NOT yet meet plan 52 Section 2 (${stats.filter((s) => !s.rulePassed).map((s) => `${s.cat} score`).concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`)).join(', ') || 'groups, reads or network'}${lostV.length ? '; and questions lost to the network' : ''})`,
   );
   return { text: lines.join('\n'), meets, results, verdicts, stats, bad };
 }
@@ -844,9 +891,9 @@ function selectIds(list, { only, category, world }) {
 }
 
 /** Runs the ignored live test through cargo. The key is not passed: the app reads its own store. */
-function runLive(ids, model, threads) {
+function runLive(ids, model, threads, outFile = RESULTS) {
   mkdirSync(OUT_DIR, { recursive: true });
-  const env = { ...process.env, MANDI_EVAL_QUESTIONS: QUESTIONS, MANDI_EVAL_OUT: RESULTS };
+  const env = { ...process.env, MANDI_EVAL_QUESTIONS: QUESTIONS, MANDI_EVAL_OUT: outFile };
   if (ids.length) env.MANDI_EVAL_ONLY = ids.join(',');
   if (model) env.MANDI_EVAL_MODEL = model;
   if (threads) env.MANDI_EVAL_THREADS = String(threads);
@@ -855,6 +902,41 @@ function runLive(ids, model, threads) {
   const res = spawnSync('cargo', cmd, { cwd: BACKEND, env, stdio: ['ignore', 'inherit', 'inherit'] });
   if (res.error) throw new Error(`cannot start cargo: ${res.error.message}`);
   if (res.status !== 0) throw new Error(`the live test failed with exit code ${res.status}`);
+}
+
+/** The ids to ask again: every question that missed, was lost to the network, or was never asked. */
+function idsToAskAgain(list) {
+  if (!existsSync(RESULTS)) throw new Error(`--misses needs a results file at ${RESULTS}`);
+  const data = JSON.parse(readFileSync(RESULTS, 'utf8'));
+  if (data.waiting_for_key) throw new Error('the results file only says WAITING FOR KEY');
+  const oracle = data.oracle ?? {};
+  const results = new Map(data.results.map((r) => [r.id, r]));
+  return list
+    .filter((q) => {
+      const r = results.get(q.id);
+      if (!r) return true;
+      const v = score(q, r, oracle);
+      return v.lost || !v.pass;
+    })
+    .map((q) => q.id);
+}
+
+/**
+ * Puts the rows of a partial run (only some ids) into the whole results file, a new row for an old
+ * one of the same id. The file before the merge is kept as results.before-merge.json.
+ */
+function mergeResults(part, whole = RESULTS) {
+  const old = existsSync(whole) ? JSON.parse(readFileSync(whole, 'utf8')) : { meta: {}, oracle: {}, results: [] };
+  if (old.results) writeFileSync(join(dirname(whole), 'results.before-merge.json'), JSON.stringify(old));
+  const byId = new Map((old.results ?? []).map((r) => [r.id, r]));
+  for (const r of part.results ?? []) byId.set(r.id, r);
+  const merged = {
+    meta: { ...(old.meta ?? {}), ...(part.meta ?? {}), questions: byId.size, merged: true },
+    oracle: { ...(old.oracle ?? {}), ...(part.oracle ?? {}) },
+    results: [...byId.values()],
+  };
+  writeFileSync(whole, JSON.stringify(merged));
+  return merged;
 }
 
 // ---- the self test -------------------------------------------------------------------------
@@ -954,6 +1036,13 @@ function selfTest() {
   // A which_one that the harness clicked is noted, and its answer is scored like any other.
   const clickedRow = score(mk({ figures: 'g=@a.x' }), { reply: answered([money(500)]), tool_calls: [], clicked: { name: 'Rahim' } }, oracle);
   expect(clickedRow.pass && clickedRow.notes.some((n) => n.includes('clicked')), 'a clicked question was not noted');
+  // "Whom first": the second party is optional (`second?=`); when both are shown the order counts.
+  const order = mk({ outcome: 'advice', figures: 'first=Zahid Mehmood 500 Dr 202 days;second?=Tariq Mehmood 700 Dr 90 days' });
+  const adviceOf = (parts) => ({ outcome: 'advice', answer: { parts, tables: [], charts: [], estimate: null, advice: true, general_advice: false, sources: [{ kind: 'report' }], differences: [], next: [] } });
+  expect(score(order, { reply: adviceOf([name('Zahid Mehmood', 'زاہد'), dr(500)]), tool_calls: [] }, {}).pass, 'the first alone was refused');
+  expect(score(order, { reply: adviceOf([name('Zahid Mehmood', 'زاہد'), dr(500), name('Tariq Mehmood', 'طارق'), dr(700)]), tool_calls: [] }, {}).pass, 'both in order were refused');
+  expect(!score(order, { reply: adviceOf([name('Tariq Mehmood', 'طارق'), dr(700), name('Zahid Mehmood', 'زاہد'), dr(500)]), tool_calls: [] }, {}).pass, 'the wrong order passed');
+  expect(!score(order, { reply: adviceOf([name('Tariq Mehmood', 'طارق'), dr(700)]), tool_calls: [] }, {}).pass, 'the second alone passed for the first');
   // A figure question that ends as advice passes with one unasked point and the right figures only.
   const unasked = mk({ figures: 'g=@a.x' });
   const withAdvice = (bullets, general = false) => ({
@@ -965,8 +1054,8 @@ function selfTest() {
   expect(!score(mk({ figures: 'g=@a.y' }), { reply: withAdvice(1), tool_calls: [] }, oracle).pass, 'advice with a wrong figure passed');
   expect(!score(unasked, { reply: withAdvice(0, true), tool_calls: [] }, oracle).pass, 'general advice passed for a figure question');
   // A network failure is its own kind of miss, and is kept out of the model's time.
-  const down = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] }, oracle);
-  expect(!down.pass && down.kind.includes('network') && down.network, 'a network failure was not its own kind');
+  const down = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'error', answer: null, failure: { kind: 'busy' } }, tool_calls: [] }, oracle);
+  expect(!down.pass && down.kind.includes('network') && down.network, 'a service failure was not its own kind');
   expect(score(mk({}), { reply: { outcome: 'not_understood', answer: null }, tool_calls: [{ tool: 'report' }] }, {}).afterReading, 'not understood after reading was not seen');
 
   // Groups agree on the required figures only.
@@ -990,6 +1079,27 @@ function selfTest() {
   const st2 = categoryStats('D', [{ id: 'N1', cat: 'D' }, { id: 'N2', cat: 'D' }], vs2, new Map([['N1', { millis: 4000 }], ['N2', { millis: 60000 }]]));
   expect(st2.p95 === 4000 && st2.networkTimes.length === 1, 'network time was counted as model time');
 
+  // A question lost to the internet is not scored and is listed on its own; a timeout is a real miss.
+  const gone = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] }, oracle);
+  expect(gone.lost && !gone.pass && gone.kind === 'LOST (network)' && !gone.network, 'offline was not lost');
+  const slow = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'error', answer: null, failure: { kind: 'timeout' } }, tool_calls: [] }, oracle);
+  expect(!slow.lost && slow.network && !slow.pass, 'a timeout was lost, not a miss');
+  expect(score(mk({}), { reply: { outcome: 'error', answer: null, failure: { kind: 'dropped' } }, tool_calls: [], network_lost: true }, {}).lost, 'a harness-marked loss was scored');
+  const lv = new Map([['L1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false }], ['L2', { pass: false, kind: 'LOST (network)', outcome: 'offline', network: false, lost: true }]]);
+  const lstats = categoryStats('A', [{ id: 'L1', cat: 'A' }, { id: 'L2', cat: 'A' }], lv, new Map([['L1', { millis: 1000 }], ['L2', { millis: 999999 }]]));
+  expect(lstats.n === 1 && lstats.passed === 1, 'a lost question counted in the category');
+  // Results of a partial run go into the whole file, a new row for an old one.
+  const dir = mkdtempSync(join(tmpdir(), 'ai-eval-'));
+  const whole = join(dir, 'results.json');
+  writeFileSync(whole, JSON.stringify({ meta: { model: 'm' }, oracle: { a: '1' }, results: [{ id: 'A', v: 1 }, { id: 'B', v: 1 }] }));
+  const merged = mergeResults({ meta: { model: 'm' }, oracle: { b: '2' }, results: [{ id: 'B', v: 2 }, { id: 'C', v: 1 }] }, whole);
+  expect(merged.results.map((r) => `${r.id}${r.v}`).join() === 'A1,B2,C1' && merged.oracle.a === '1' && merged.oracle.b === '2', 'the merge is wrong');
+  expect(existsSync(join(dir, 'results.before-merge.json')), 'the file before the merge was not kept');
+  // What the app read before the first call is not fixed.
+  expect(preReads({ tool_calls: [{ id: 'r1', tool: 'period', prefetch: true }, { id: 'r2', tool: 'analytics' }], calls_json: JSON.stringify([{ tools: [{ name: 'analytics' }] }]) }) === 1, 'a period read ahead was missed');
+  expect(preReads({ tool_calls: [{ id: 'h1', tool: 'app_help' }], calls_json: JSON.stringify([{ tools: [] }]) }) === 1, 'a guide read ahead was missed');
+  expect(preReads({ tool_calls: [{ id: 'h1', tool: 'app_help' }], calls_json: JSON.stringify([{ tools: [{ name: 'app_help' }] }]) }) === 0, 'the model\'s own guide read was taken for a read ahead');
+  expect(preReads({ tool_calls: [{ id: 'r2', prefetch: true }], calls_json: JSON.stringify([{ tools: [{ name: 'party_card', prefetch: true }] }]) }) === 0, 'a card read right after the find was taken for a read ahead');
   // Selecting by category, world and id.
   expect(selectIds(list, { category: 'D' }).every((id) => byId(id).cat === 'D'), '--category chose a wrong question');
   expect(selectIds(list, { world: 'thin' }).length > 0 && selectIds(list, { only: 'Q001,Q002' }).length === 2, '--world or --only chose wrongly');
@@ -1016,10 +1126,24 @@ function main() {
     return;
   }
   const file = option('--results');
-  const ids = selectIds(list, { only: option('--only'), category: option('--category'), world: option('--world') });
+  let ids = selectIds(list, { only: option('--only'), category: option('--category'), world: option('--world') });
+  // --misses asks again what missed or was lost to the network; --merge puts a partial run into the
+  // whole results file, so the score is always of the whole bank.
+  const asksAgain = flag('--misses');
+  const merging = flag('--merge') || asksAgain;
   if (!file) {
     try {
-      runLive(ids, option('--model'), option('--threads'));
+      if (asksAgain) {
+        ids = idsToAskAgain(list);
+        console.log(`ai-eval: asking ${ids.length} questions again: ${ids.join(',')}`);
+      }
+      const part = merging ? join(OUT_DIR, 'results.part.json') : RESULTS;
+      runLive(ids, option('--model'), option('--threads'), part);
+      if (merging) {
+        const rows = JSON.parse(readFileSync(part, 'utf8'));
+        if (!rows.waiting_for_key) mergeResults(rows);
+        else writeFileSync(RESULTS, JSON.stringify(rows));
+      }
     } catch (error) {
       console.error(`ai-eval: ${error.message}`);
       process.exit(2);
@@ -1035,7 +1159,7 @@ function main() {
     console.log('WAITING FOR KEY: no OpenRouter key is saved in the app. Umar pastes it in Settings, in the question group, then run this again.');
     process.exit(3);
   }
-  const shown = ids.length ? new Set(ids) : null;
+  const shown = ids.length && !merging ? new Set(ids) : null;
   const scored = shown ? list.filter((q) => shown.has(q.id)) : list;
   const { text, meets, results, verdicts, stats } = report(scored, data);
   console.log(text);
@@ -1049,7 +1173,8 @@ function main() {
         date: new Date().toISOString(),
         model: data.meta.model,
         categories: stats.map(({ networkTimes, ...s }) => ({ ...s, networkQuestions: networkTimes.length })),
-        misses: [...verdicts.values()].filter((v) => !v.pass).map((v) => v.id),
+        misses: [...verdicts.values()].filter((v) => !v.pass && !v.lost).map((v) => v.id),
+        lost: [...verdicts.values()].filter((v) => v.lost).map((v) => v.id),
         meets,
       },
       null,

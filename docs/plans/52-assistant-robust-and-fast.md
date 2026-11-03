@@ -116,3 +116,10 @@ Also:
 - Added by Umar: "increase the tool call or timeout so we won't see the error". The new limits are 6 model calls plus one rewrite, 12 tool calls, 90,000 input and 4,000 output tokens, 30 s a call and 90 s a question (NFR v1.12, Code Standards v1.16, PRD v1.19 E96 and A87). Item 1 still holds: the last call always answers.
 - The prompt changes these need (system.md: the limits line, chaining, general advice; the answer schema: the general advice kind or flag) are drafted by backend and go into D6-system-prompt v1.3 through the lead, as before.
 - Umar, 02-11-2026: "9,500 limit we can go up to align or achieve the goal". The lead sets the fixed-part limit to 11,000 tokens (o200k_base, as P1 measures). The live run also reports the fixed part as the model counts it, about 3.4% more. The documents change with the v1.3 prompt: NFR-AI-5, Code Standards Q9 and D6-system-prompt.
+
+## 7. Lead decisions during the loop (03-11-2026)
+
+- **Live run 2** (369 questions): 115 questions were lost to three internet drops and 3 timed out. Of the 254 scored, 232 passed: A 100/113, B 38/44, C 37/37, D 20/21, E 37/39. The real defects went to backend.
+- **The harness survives a dropped connection.** A question that ends offline is asked again after the connection is back (waiting up to 10 minutes, at most 5 tries). A question still lost is reported apart and is never scored. While any question is lost, the run cannot say "meets". A timeout is still a real miss.
+- **The fixed part is 10,997 tokens as the model counts it (about 10,652 by o200k), within 11,000.** The higher first-call numbers came from what the app reads ahead for that question (+86 to +1,204). That is reported apart and is not part of the NFR limit.
+- **Scorer change S01 (shown to Umar):** "whom should I collect from first" asks for one party. The second party's figure becomes optional (`second?=`). The order check still applies when both parties are shown. Reason: Q223 and Q224 named the right first party and figure and showed the ordered list, so the answers were right. Refused: a no-side exception for list amounts. A Dr or Cr figure must still show its side.
