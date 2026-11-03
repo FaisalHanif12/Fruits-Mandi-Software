@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.20 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.21 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026 and 01-11-2026 (three), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.20 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.21 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.13 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.17 |
@@ -1893,7 +1893,7 @@ Umar: filter by month or year, and see how much commission we got by item (for e
 | Goods | مال | All, consigned goods, trip goods, garden goods (v1.6) |
 | Partner | شراکت دار | Views F, G, I, J and K only |
 | Commission side | جانب | Both, seller only, buyer only |
-| Compare | موازنہ | Off, previous period, same period last year |
+| Compare | موازنہ | Off, previous period, same period last year. A period of whole calendar months is compared with the same number of whole months before it (September with August, a quarter with the quarter before); any other period with the same number of days just before it [A] (A91, v1.21) |
 
 FR-18.1 [C] In views A to E and H, item, seller, buyer, city, اڈا, garden, trip, goods, side and period combine freely. Example: "کیلا, seller رحیم, monthly, 2026". The partner filter applies to views F, G, I, J and K, which work on periods (FR-17.5).
 
@@ -2339,6 +2339,7 @@ Money rule: every money input and every stored money result is a **whole number 
 | A88 | Left out of what is sent: phones, addresses, father or firm names, notes and reasons (FR-7.83) | Left out | Should the father or firm name be sent, to tell two people apart in the text? |
 | A89 | The answer text is at most 130 words (filled references count as one word each): one direct sentence and up to 5 points | 130 words | Longer or shorter? |
 | A90 | When an answer's own figures plainly call for action, the model may add one advice point unasked (FR-7.88) | One point unasked; at most 3 when asked | More, fewer, or only when asked? |
+| A91 | "Previous period" of whole calendar months is the whole months before it; of any other period, the same number of days just before it (FR-18.1) | September against August, not 2 to 31 August | Is that how the shop compares months? |
 | A42 | Some old lines (mostly کیلا) have no rate and an amount that is not qty × a whole rate (4 نگ = 2,950) | Weight items (rate per kg) | Is کیلا sold by weight, or is a lump amount typed? |
 
 ---
@@ -2606,4 +2607,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.18 | 02-11-2026 | Umar's change of 02-11-2026, approved by Umar: the assistant also helps with the app itself, from a guide of every screen through the tool `app_help` (FR-7.89); the answer's length follows the question (FR-7.89). With NFR v1.10, a model call may take 30 seconds and a question 60. No money rule, posting or test number changed. |
 | 1.19 | 02-11-2026 | Umar's decisions of 02-11-2026 (plan 52), approved by Umar: up to 6 model calls and 12 tool calls a question, with the last call always answering (FR-7.87, E96, A87); find and read in one call when the find has one match; general advice marked "عام مشورہ" when the books cannot answer (FR-7.88). With NFR v1.12. No money rule, posting or test number changed. |
 | 1.20 | 03-11-2026 | Umar's decisions for plan 52, approved by Umar: an estimate to the end of the year gives the whole year (the books so far plus the months left), and what-if estimates scale the same pace (FR-7.86). The fixed part of a request may be 11,000 tokens (NFR v1.13). No money rule, posting or test number changed. |
+| 1.21 | 03-11-2026 | Lead's [A] item for Umar (A91), found by the live test of plan 52: "compare with the previous period" for whole calendar months means the whole months before (FR-18.1). No money rule or test number changed. |
 
