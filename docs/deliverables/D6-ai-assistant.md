@@ -1,6 +1,6 @@
 # D6. Ask the app: a thinking assistant over the books
 
-Version 2.2, 02-11-2026 (Umar: the system prompt must be professional, robust and well rounded, real-time, and an expert for advice and the future. The exact instructions, tools and answer schema are now `D6-system-prompt.md`; advice from the books is FR-7.88. Version 2.1: an independent review's 12 points fixed: references by record, number words, the log rows, the limits, the target question. Umar, 02-11-2026: the model is the brain; it reads every section through read-only tools, adds up, compares, estimates the future and writes the answer itself, and the app checks every figure. Replaces version 1.1, where the app wrote the answer). Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a (NFR-AI-1 to NFR-AI-9), Tech Stack v1.8 Section 4.8, Code Standards v1.13 Section 5.7 (Q1 to Q11) and M14, Architecture v1.15 Section 21, money agent v1.8 Section 9.1. Deliverable 6. Read `README.md` in this folder first, then `changes-v1.16.md`, then this file, then `D6-system-prompt.md` (the model's exact instructions, tools and answer schema).
+Version 2.3, 04-11-2026 (Umar, 04-11-2026: the fastest Azure server, plan 54). Version 2.2, 02-11-2026 (Umar: the system prompt must be professional, robust and well rounded, real-time, and an expert for advice and the future. The exact instructions, tools and answer schema are now `D6-system-prompt.md`; advice from the books is FR-7.88. Version 2.1: an independent review's 12 points fixed: references by record, number words, the log rows, the limits, the target question. Umar, 02-11-2026: the model is the brain; it reads every section through read-only tools, adds up, compares, estimates the future and writes the answer itself, and the app checks every figure. Replaces version 1.1, where the app wrote the answer). Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a (NFR-AI-1 to NFR-AI-9), Tech Stack v1.8 Section 4.8, Code Standards v1.13 Section 5.7 (Q1 to Q11) and M14, Architecture v1.15 Section 21, money agent v1.8 Section 9.1. Deliverable 6. Read `README.md` in this folder first, then `changes-v1.16.md`, then this file, then `D6-system-prompt.md` (the model's exact instructions, tools and answer schema).
 Depends on: the current tree, branch `feature/d5-early` at `d6aff46` or later (plans up to 47 built). D6 is built on its own branch `feature/assistant`, made from that head. Plan files: `48-assistant-core`, `49-assistant-panel`, `50-assistant-proof`.
 **When:** now, before the single review gate (Umar, 01-11-2026: "It should work first and then we would run the gate"). The one gate then covers D3, D4, D4R, D5 and D6 together.
 
@@ -116,10 +116,13 @@ The first request body for the worked question (instructions and schemas shorten
     "allow_fallbacks": false,
     "zdr": true,
     "data_collection": "deny",
-    "require_parameters": true
+    "require_parameters": true,
+    "sort": "latency"
   }
 }
 ```
+
+`"sort": "latency"` (Umar, 04-11-2026, plan 54): among the Azure servers that serve the model, OpenRouter sends each call to the one answering fastest at that moment. It is still Azure only, with no fallback, zero retention and no data collection.
 
 The provider block is a constant inside `request_body()` (Code Standards Q7), not a setting. `require_parameters: true` makes OpenRouter refuse the call (HTTP 404) if Azure ever stops supporting tools, strict JSON or the seed, instead of sending it somewhere that would ignore them. The connection test (FR-7.85) shows that error.
 

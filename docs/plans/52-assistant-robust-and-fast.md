@@ -153,3 +153,9 @@ Umar: "ask these kind of the question as well which would be the mix english or 
   - A partner per row in R37 while the section is locked must be hidden. Fix now.
   - The sum guard also covers two rows of one unfiltered result. کل / kal and جمع are not "together" words on their own.
   - The new fields and the `asked` rule wait for D6 v1.5, after the next live run.
+
+### 8.5 Contract note (03-11-2026)
+- When `found_as` is set, the question stays waiting (a which-one with that one party). The panel's "show his purchases" button sends an `assistant_pick` on the waiting question, not a new question.
+- So it is not counted in the 20 a day (FR-7.81), and the model stays on the Owner's question.
+- The answer after the pick must say purchases, never sales. Robustness N03 checks this.
+- Accepted by the lead.
