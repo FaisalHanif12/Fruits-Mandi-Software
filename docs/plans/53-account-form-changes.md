@@ -96,3 +96,8 @@ Umar: "in the staff section build the active or deactive button so once the pers
   - This follows Umar's "add it any time".
   - If Umar wants month-closed months frozen even for this, it is a one-line rule to add.
 - **For the D6 prompt v1.5 list:** R6's `phone_charge` (the فون charge, money) is hidden from the assistant by the column filter for "phone". The filter must hide phone numbers only, never the charge. This needs a tools.json column-list change, so it goes in v1.5 with `asked`, `capital`, `by_for` and `peak`/`lowest`.
+- **A day's close row after a later opening on that day.**
+  - The close row (`day_closes`) keeps the figures as they were when the day was closed. It is a record of that moment, not a live total, and it is not rewritten.
+  - The later opening is explained by its audit row ("opening on a closed day") and by its own journal entry.
+  - The trial balance still balances, and both hash chains verify.
+  - Robustness's test checks the audit row and the balance instead of an equal close row.
