@@ -88,3 +88,11 @@ Umar: "in the staff section build the active or deactive button so once the pers
 - The worked example holds on R35 and on the seller bill print data.
 - Deactivating a munshi removes him from the next print. Adding an active munshi adds him.
 - The print tests and fixtures are updated only for the header people. No money figure changes.
+
+## 9. Lead decisions (04-11-2026)
+- **A new account's opening dated inside a month that is already month-closed is allowed.**
+  - The opening entry is the account against ابتدائی فرق. It touches no income and no shop expense, so the month close and every partner share stay exactly the same.
+  - The money agent found no bug.
+  - This follows Umar's "add it any time".
+  - If Umar wants month-closed months frozen even for this, it is a one-line rule to add.
+- **For the D6 prompt v1.5 list:** R6's `phone_charge` (the فون charge, money) is hidden from the assistant by the column filter for "phone". The filter must hide phone numbers only, never the charge. This needs a tools.json column-list change, so it goes in v1.5 with `asked`, `capital`, `by_for` and `peak`/`lowest`.

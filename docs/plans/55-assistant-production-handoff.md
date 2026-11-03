@@ -66,3 +66,31 @@ Plan 54's S2 and S3 become steps 1 and 2. S1, S4, S5 and S6 stay as written.
 - Requirement docs change only with Umar's approval.
 - The key is never read, printed or written.
 - The formal review gate (reviewer and robustness reviews of the whole run) waits for Umar's "continue", as before. These gates are acceptance tests of the assistant, not that gate.
+
+## 7. Contract (agreed 04-11-2026, backend's proposal, lead decisions)
+
+1. **A help or print answer made with no model call.**
+   - `answered`, whose `answer.parts` hold only the guide's own words, names and dates.
+   - A new field `how: HowStep[]` holds `{id, args}`, which frontend2 turns into reviewed text. The step ids:
+     - `assistant-how-open-report` {report};
+     - `assistant-how-set-party` {role, party, code};
+     - `assistant-how-set-day` {day}, or `assistant-how-set-dates` {from, to};
+     - `assistant-how-press-print`.
+   - Dates are ISO. The steps use the same values as the button.
+2. **The buttons.**
+   - `answer.sources[0]` is `Report { result_id: "", id, filters }`. An empty `result_id` means the source is a link only.
+   - `sources[1]` is the second button.
+   - The filters per report are as in plan 54 §6.4.
+3. **No such party, or the wrong role:** `not_found` with `asked_role` and `found_as`, and no model call.
+4. **Progress,** `assistant://step`. New ids:
+   - `assistant-step-understood` {kind};
+   - `assistant-step-writing`;
+   - `assistant-step-retrying` (after the 12 s first-byte limit);
+   - `assistant-step-tools-off` (at 20 s).
+5. **The slow line.**
+   - At 25 s there is a new outcome `time_limit`: the plain tables of what was read, plus the "جواب میں دیر ہو رہی ہے، یہ پڑھا ہوا ریکارڈ ہے" line.
+   - When nothing was read, FR-7.81's "جواب نہیں آ سکا" stands.
+   - A slow line is never shown as offline or as an error.
+   - Lead decision, to show Umar at the hand-over: the slow line keeps what was read.
+6. **Counting.** A question with no model call does not count toward the 20 a day; this is already FR-7.81, which counts at the model's first reply. It is logged with 0 model calls and a `local` mark.
+7. **The cued read (S3)** runs before call 1, and its results are the sources. Every figure is still checked.
