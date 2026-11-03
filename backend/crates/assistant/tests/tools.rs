@@ -175,11 +175,14 @@ fn find_reads_every_role_and_gives_a_checked_balance_for_accounts() {
     assert_eq!(m["balance"]["checked"], true);
     assert_eq!(m["balance"]["places"]["party_card"], 2_880);
     assert_eq!(m["balance"]["places"]["R13"], 2_880);
-    // A seller is not found as a buyer, and any_party finds both.
+    // A seller is not found as a buyer: the search is widened to the other role, and says so (each
+    // match keeps its own type), and any_party finds both.
     let none = s
         .run("find", json!({"text": "karim", "role": "buyer"}))
         .unwrap();
-    assert!(s.json(&none)["matches"].as_array().unwrap().is_empty());
+    let widened = s.json(&none);
+    assert_eq!(widened["widened"], "seller");
+    assert_eq!(widened["matches"][0]["type"], "seller");
     let any = s
         .run("find", json!({"text": "karim", "role": "any_party"}))
         .unwrap();

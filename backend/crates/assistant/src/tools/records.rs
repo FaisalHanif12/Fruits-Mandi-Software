@@ -4,8 +4,11 @@
 //! and the tag. The model only passes keys (`a20`, `i41`); the names are read back from the results
 //! that showed those keys, so nothing is looked up twice and nothing is typed by the model.
 
+use mandi_services::assist;
+use mandi_services::core::accounts::AccountType;
 use mandi_services::core::dates::BusinessDate;
 
+use super::party::type_word;
 use super::{Env, State, ToolError, parse_key, record};
 use crate::results::{NameVal, Node, Val};
 use crate::source::AnswerRecord;
@@ -92,4 +95,35 @@ pub fn named(
 /// A date as `YYYY-MM-DD` text, for the filters of a source.
 pub fn iso(date: BusinessDate) -> String {
     date.to_iso()
+}
+
+/// Refuses an account of another type than the field takes: a buyer's key in a `seller` field and
+/// the reverse. A key says only that it is an account (`a20`), so a buyer found in place of a seller
+/// (a `find` that was widened to the other role) would otherwise give a seller's report of nothing,
+/// with every check passing (money review, plan 52 P52-S1).
+///
+/// # Errors
+/// `ERR_FORMAT_INVALID` when the account is of another type; `ERR_INTERNAL` when it cannot be read.
+pub fn require_type(
+    env: &Env<'_>,
+    id: i64,
+    field: &str,
+    want: AccountType,
+) -> Result<(), ToolError> {
+    let card = assist::party_card(env.ctx, id)
+        .map_err(|_| ToolError::new("ERR_INTERNAL", field, "the account could not be read"))?;
+    if card.account_type == want {
+        return Ok(());
+    }
+    Err(ToolError::new(
+        "ERR_FORMAT_INVALID",
+        field,
+        &format!(
+            "this account is a {} and not a {}; use the {} field, or find the {} again",
+            type_word(card.account_type),
+            type_word(want),
+            type_word(card.account_type),
+            type_word(want)
+        ),
+    ))
 }

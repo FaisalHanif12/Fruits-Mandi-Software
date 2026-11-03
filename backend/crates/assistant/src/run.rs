@@ -59,8 +59,10 @@ use crate::limits::{
 };
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
 use crate::prefetch;
+use crate::prefind;
 use crate::request::{Parts, RESULT_MARK, request_body, user_message};
 use crate::results::{Node, ToolResult, Words, fit, tool_result_json};
+use crate::route;
 use crate::runtime::Runtime;
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
@@ -467,6 +469,10 @@ impl<'a> Run<'a> {
                     turn.counters.tool_calls = turn.counters.tool_calls.saturating_add(1);
                     if !notes.is_empty() {
                         typed::add_note(&mut draft.node, &notes.join("; "));
+                    }
+                    // What this report holds and where the nearby figure is (plan 52 P52-S1).
+                    if let Some(note) = route::scope_note(&call.name, &call.arguments) {
+                        typed::add_note(&mut draft.node, note);
                     }
                     let id = state.next_id(prefix_of(draft.tool));
                     let mut result = tools::stored(draft, id.clone(), index);
@@ -960,6 +966,14 @@ impl<'a> Run<'a> {
                     }
                 }
             };
+            // The party the app found is always named in an answer about him.
+            if matches!(
+                f.outcome,
+                AskOutcome::Answered | AskOutcome::Estimate | AskOutcome::Advice
+            ) && let (Some(answer), Some(found)) = (f.answer.as_mut(), turn.prefound.as_ref())
+            {
+                prefind::ensure_name(answer, found, &prefind::cited_ids(&content));
+            }
             f.model_text = Some(json_text(written_by_model.as_deref().unwrap_or(&content)));
             f.finish_reason = Some(finish_reason);
             return f;
@@ -1085,7 +1099,13 @@ impl<'a> Run<'a> {
     /// is in the log with `prefetch: true`, and a later identical call of the model gets it back
     /// (plan 52 P52-S1: 62 questions began with a call that only asked for a period, 43 with the
     /// tiles). Nothing is said when the tool cannot be read.
-    fn preread_tool(&self, conv: &mut Conversation, turn: &mut Turn, tool: &str, arguments: &str) {
+    fn preread_tool(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        tool: &str,
+        arguments: &str,
+    ) -> Option<String> {
         let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
         let numbers = figures::question_numbers(&turn.question);
         let question = turn.question.clone();
@@ -1100,6 +1120,7 @@ impl<'a> Run<'a> {
             arguments: arguments.to_owned(),
         };
         (self.d.emit)(step_of(&call, &env, &state));
+        let mut read = None;
         if let Ok(draft) = tools::call(&env, &state, tool, arguments) {
             let id = state.next_id(prefix_of(draft.tool));
             let mut result = tools::stored(draft, id.clone(), index);
@@ -1120,6 +1141,69 @@ impl<'a> Run<'a> {
             }));
             turn.messages
                 .push(tool_message(&call_id, content, Some(&id)));
+            read = Some(id);
+        }
+        conv.results = state.results;
+        read
+    }
+
+    /// Finds the party a plain lookup question names, before the first call, when there is no
+    /// doubt (see `prefind`): one word finds exactly one account in the role the question implies,
+    /// no other word finds a different single account. Then the find, his card and what the
+    /// question names are read as r1, r2 ... and the model's first call can answer.
+    fn prefind(&self, conv: &mut Conversation, turn: &mut Turn) {
+        let numbers = figures::question_numbers(&turn.question);
+        if !conv.turns.is_empty() || !prefind::plain_lookup(&turn.question, numbers.is_empty()) {
+            return;
+        }
+        let words = prefind::name_words(&turn.question);
+        if words.is_empty() || words.len() > prefind::MAX_WORDS {
+            return;
+        }
+        let role = prefind::role_of(&turn.question);
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
+        let scratch = State {
+            results: Vec::new(),
+            turn: index,
+        };
+        // The words that find exactly one account, with its key.
+        let mut singles: Vec<(String, String)> = Vec::new();
+        for word in &words {
+            let arguments = json!({"text": word, "role": role}).to_string();
+            let Ok(draft) = tools::call(&env, &scratch, "find", &arguments) else {
+                continue;
+            };
+            if let Some(key) = prefind::single_key(&draft.node) {
+                singles.push((word.clone(), key));
+            }
+        }
+        let mut keys: Vec<&String> = singles.iter().map(|(_, k)| k).collect();
+        keys.dedup();
+        let [only] = keys.as_slice() else {
+            return;
+        };
+        let Some((word, _)) = singles.iter().find(|(_, k)| k == *only) else {
+            return;
+        };
+        let arguments = json!({"text": word, "role": role}).to_string();
+        let Some(find_id) = self.preread_tool(conv, turn, "find", &arguments) else {
+            return;
+        };
+        let mut state = State {
+            results: std::mem::take(&mut conv.results),
+            turn: index,
+        };
+        if prefetch::single_party_match(&state, &find_id).is_some() {
+            turn.prefound = state
+                .find(&find_id)
+                .and_then(|r| r.node.get(&["matches", "0", "name"]).cloned())
+                .and_then(|n| match n {
+                    Node::Val(crate::results::Val::Name(name)) => Some(name.answer_name()),
+                    _ => None,
+                });
+            self.prefetch(turn, &mut state, index, &numbers, &question, &[find_id]);
         }
         conv.results = state.results;
     }
@@ -1687,9 +1771,26 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
         // already ask for the report (plan 52 P52-S1).
         let input = json!({"kind": kind, "month": null, "day": null, "from": null,
                            "to": null, "n": null});
-        run.preread_tool(&mut conv, &mut turn, "period", &input.to_string());
+        let period = run.preread_tool(&mut conv, &mut turn, "period", &input.to_string());
+        // "How many بکری" in a plural word: the number is the bikri_count of view B, not the lines
+        // of R2 (Q152 of the live run of 03-11-2026: 122 lines read as 122 بکری, the books hold
+        // 32). View B is read for the same period, so the first call can answer.
+        if let Some(id) = period
+            && route::bikri_count_asked(text)
+        {
+            let view = json!({
+                "view": "B", "from": format!("{id}.from"), "to": format!("{id}.to"),
+                "group_by": null, "item": null, "seller": null, "buyer": null, "city": null,
+                "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
+                "side": null, "compare": null, "sort": null, "rows": null
+            });
+            run.preread_tool(&mut conv, &mut turn, "analytics", &view.to_string());
+        }
     } else if cues::tile_question(text) {
         run.preread_tool(&mut conv, &mut turn, "tiles", "{}");
+    } else if d.runtime.prefind() {
+        // A plain question about one party the app can name without a doubt (item 10).
+        run.prefind(&mut conv, &mut turn);
     }
     let finished = run.drive(&mut conv, &mut turn, Vec::new());
     run.conclude(conv, turn, finished, Source::Model, None)

@@ -604,13 +604,10 @@ mod put_back {
         let s = state(vec![result("r1", vec![item])]);
         let names = NameSet::new(&s, &[]);
         assert_eq!(names.put_back(&s, "کیلا بکا"), None);
-        let s = state(vec![result("r1", vec![name("شاہد", "Shahid", "03049999")])]);
+        let s = state(vec![result("r1", vec![name("شاہد", "Shahid", "0030")])]);
         let names = NameSet::new(&s, &[]);
         assert_eq!(names.put_back(&s, "شاہد کے ذمے"), None);
-        let s = state(vec![result(
-            "r1",
-            vec![name("شاہد", "Shahid", "030119999")],
-        )]);
+        let s = state(vec![result("r1", vec![name("شاہد", "Shahid", "0031")])]);
         let names = NameSet::new(&s, &[]);
         assert_eq!(names.put_back(&s, "شاہد کے ذمے"), None);
     }
@@ -688,12 +685,31 @@ mod put_back {
     }
 
     #[test]
+    fn the_two_shared_pukhta_accounts_are_never_a_record_to_put_a_name_back_to() {
+        // 0030 (buyers) and 0031 (sellers) hold many people: a typed name that is the account's
+        // own name says no one person (migration 0007 changed their codes from 03049999 and
+        // 030119999; the old codes no longer exist).
+        for code in ["0030", "0031"] {
+            let s = state(vec![result("r1", vec![name("شاہد", "Shahid", code)])]);
+            let names = NameSet::new(&s, &[]);
+            assert_eq!(names.put_back(&s, "شاہد کے ذمے"), None, "{code}");
+        }
+        // An ordinary account with the same shape is put back.
+        let s = state(vec![result("r1", vec![name("شاہد", "Shahid", "0042")])]);
+        let names = NameSet::new(&s, &[]);
+        assert_eq!(
+            names.put_back(&s, "شاہد کے ذمے").as_deref(),
+            Some("{{r1.matches.0.name}} کے ذمے")
+        );
+    }
+
+    #[test]
     fn the_longer_name_wins_over_the_shorter_one_inside_it() {
         let s = state(vec![result(
             "r1",
             vec![
-                name("ارشد", "Arshad", "0030"),
-                name("ارشد ملتانی", "Arshad Multani", "0031"),
+                name("ارشد", "Arshad", "0040"),
+                name("ارشد ملتانی", "Arshad Multani", "0041"),
             ],
         )]);
         let names = NameSet::new(&s, &[]);

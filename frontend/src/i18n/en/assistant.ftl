@@ -444,6 +444,10 @@ assistant-working-percent-of = Percent
 # review: pending
 assistant-working-change-percent = Change in percent
 # review: pending
+assistant-working-percent-more = An amount and a percent more: the amount times (100% + the percent)
+# review: pending
+assistant-working-percent-less = An amount and a percent less: the amount times (100% − the percent)
+# review: pending
 assistant-working-same-pace = Same pace: the average of the past months, times the months ahead
 # review: pending
 assistant-working-year-parts = The last line: the months of the books so far + the estimate for the months left

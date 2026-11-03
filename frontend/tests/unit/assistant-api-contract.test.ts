@@ -79,6 +79,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.assistantAsk(real.REPLY_ADVICE_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_ESTIMATE_WHAT_IF_REQUEST);
     await api.assistantAsk(real.REPLY_ESTIMATE_YEAR_END_REQUEST);
+    await api.assistantAsk(real.REPLY_ANSWERED_PERCENT_MORE_REQUEST);
     await api.assistantAsk(real.REPLY_GENERAL_ADVICE_REQUEST);
     await api.assistantAsk(real.REPLY_HELP_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST);
@@ -98,6 +99,7 @@ describe('each wrapper sends the command and `{ input }`', () => {
       ['assistant_ask', { input: real.REPLY_ADVICE_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ESTIMATE_WHAT_IF_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ESTIMATE_YEAR_END_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_ANSWERED_PERCENT_MORE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_GENERAL_ADVICE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_HELP_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST }],
@@ -141,6 +143,7 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['advice', real.REPLY_ADVICE],
   ['answered with a route', real.REPLY_ANSWERED_ROUTE],
   ['advice with a route', real.REPLY_ADVICE_ROUTE],
+  ['answered percent more', real.REPLY_ANSWERED_PERCENT_MORE],
   ['general advice', real.REPLY_GENERAL_ADVICE],
   ['help with a main screen', real.REPLY_HELP_ROUTE],
   ['which one', real.REPLY_WHICH_ONE],
@@ -367,6 +370,39 @@ function idsIn(reply: AskReply): string[] {
   if (reply.failure !== null) ids.push(failureMessageId(reply.failure.kind));
   return ids;
 }
+
+/** Every working title the backend's source names, read from the source, so a new one fails here first. */
+function workingTitlesInBackend(): string[] {
+  const dir = path.resolve(__dirname, '../../../backend/crates/assistant/src');
+  const found = new Set<string>();
+  const walk = (folder: string) => {
+    for (const entry of readdirSync(folder, { withFileTypes: true })) {
+      const full = path.join(folder, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.rs')) {
+        for (const match of readFileSync(full, 'utf8').matchAll(/"(assistant-working-[a-z-]+)"/g)) {
+          found.add(match[1] ?? '');
+        }
+      }
+    }
+  };
+  walk(dir);
+  return [...found].sort();
+}
+
+describe('every working title the backend can send has words in both languages', () => {
+  it('reads the titles from the backend source, including the percent more and less', () => {
+    const titles = workingTitlesInBackend();
+    expect(titles).toContain('assistant-working-percent-more');
+    expect(titles).toContain('assistant-working-percent-less');
+    expect(titles.length).toBeGreaterThan(9);
+  });
+
+  it.each(LANGUAGES)('%s', (language) => {
+    const missing = workingTitlesInBackend().filter((id) => !bundles[language].hasMessage(id));
+    expect(missing).toEqual([]);
+  });
+});
 
 describe('every message ID the backend sends has words in both languages', () => {
   it.each(LANGUAGES)('%s', (language) => {

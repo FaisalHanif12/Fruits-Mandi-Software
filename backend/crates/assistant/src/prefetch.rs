@@ -18,6 +18,7 @@
 //! | a ledger (`khata`, `hisab`, `bill`) | R13 | R13 |
 //! | what he bought (`khareeda`, `bought`) | R2 with him as `party` | nothing more |
 //! | commission (`commission`, `کمیشن`) | view C with him as `buyer` | view B with him as `seller` |
+//! | goods left (`maal` and `baqi` or `bacha`) | nothing more | R10 with him as `party` (whatever period) |
 //!
 //! Nothing here works out a figure: the tools are the same ones the model calls.
 //!
@@ -77,6 +78,54 @@ const PURCHASE_CUES: &[&str] = &[
     "خریدے",
     "خریدی",
     "خرید",
+];
+
+/// The words that name goods, and the words that say goods are left: together they ask for a
+/// seller's stock ("رحیم کے مال میں کتنا باقی ہے"). One of them alone does not: "baqi" is also the
+/// balance ("ikram ka kitna baqi hai").
+const STOCK_GOODS: &[&str] = &["maal", "mal", "goods", "stock", "stok", "مال", "سٹاک"];
+const STOCK_LEFT: &[&str] = &[
+    "bacha",
+    "bachi",
+    "bache",
+    "bachay",
+    "bachta",
+    "bachti",
+    "baqi",
+    "baki",
+    "left",
+    "remaining",
+    "unsold",
+    "pada",
+    "para",
+    "باقی",
+    "بچا",
+    "بچی",
+    "بچے",
+    "پڑا",
+    "پڑی",
+];
+
+/// A word for money beside goods and "left" makes it a question about what is owed ("رحیم کے مال کے
+/// پیسے کتنے باقی ہیں"), not about the goods: no stock is read for it.
+const STOCK_MONEY: &[&str] = &[
+    "paisa",
+    "paise",
+    "paisay",
+    "raqam",
+    "rupay",
+    "rupee",
+    "rupees",
+    "money",
+    "amount",
+    "payable",
+    "dena",
+    "lena",
+    "پیسے",
+    "پیسہ",
+    "رقم",
+    "روپے",
+    "روپیہ",
 ];
 
 /// The words that ask for commission.
@@ -223,6 +272,11 @@ pub fn single_party_match(state: &State, find_id: &str) -> Option<Party> {
     let [only] = matches.as_slice() else {
         return None;
     };
+    // A match found only because the search was widened to the other role is for the model to
+    // confirm (a buyer found for a "seller" search): nothing is read ahead for it.
+    if result.node.get(&["widened"]).is_some() {
+        return None;
+    }
     let more = matches!(result.node.get(&["more"]), Some(Node::Bool(true)));
     // A match found by the spelling rules alone is for the model to confirm with the Owner.
     let by_rules = matches!(result.node.get(&["via"]), Some(Node::Str(s)) if s == "rules");
@@ -242,6 +296,12 @@ pub fn single_party_match(state: &State, find_id: &str) -> Option<Party> {
 pub fn reads(question: &str, party: &Party) -> Vec<(&'static str, String)> {
     let path = party.path.as_str();
     let mut out = vec![("party_card", json!({"party": path}).to_string())];
+    // The goods a seller still has are read as they are now, whatever period the question names
+    // (Q065 of the live run of 03-11-2026: his payable was read for "how much of his goods is
+    // left"). R10 takes the seller as `party`.
+    if party.kind == Kind::Seller && stock_asked(question) {
+        out.push(("report", report_input("R10", path)));
+    }
     if period_named(question) {
         return out;
     }
@@ -256,6 +316,16 @@ pub fn reads(question: &str, party: &Party) -> Vec<(&'static str, String)> {
         out.push(("analytics", commission_input(party)));
     }
     out
+}
+
+/// True when the question asks how much of a seller's goods is left: a word for goods and a word
+/// for left together.
+///
+/// Example: "رحیم کے مال میں کتنا باقی ہے" is true; "ikram ka kitna baqi hai" and "رحیم کے مال کے پیسے
+/// کتنے باقی ہیں" are false.
+pub fn stock_asked(question: &str) -> bool {
+    let words = words_of(question);
+    has_any(&words, STOCK_GOODS) && has_any(&words, STOCK_LEFT) && !has_any(&words, STOCK_MONEY)
 }
 
 /// The input of a report for a party: the first 20 rows, no dates.

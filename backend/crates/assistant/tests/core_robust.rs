@@ -142,7 +142,6 @@ fn what_one_more_try_cannot_cure_is_not_tried_again() {
             kind: FailureKind::NoEndpoint,
             http_status: Some(404),
         },
-        CallError::new(FailureKind::Timeout),
         CallError::new(FailureKind::BadReply),
         CallError {
             kind: FailureKind::Other,

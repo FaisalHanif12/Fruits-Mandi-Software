@@ -1,0 +1,104 @@
+{
+  "question_id": 48,
+  "conversation_id": "c-1",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "اس سال اب تک کمیشن "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 544800
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " ہے؛ دس فیصد زیادہ ہوتا تو "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "money",
+          "paisa": 599300
+        },
+        "dir": null,
+        "checked": false,
+        "working": {
+          "title_id": "assistant-working-percent-more",
+          "steps": [
+            {
+              "op": "times",
+              "inputs": [
+                {
+                  "type": "money",
+                  "paisa": 544800
+                },
+                {
+                  "type": "percent",
+                  "hundredths": 11000
+                }
+              ],
+              "result": {
+                "type": "money",
+                "paisa": 599300
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "text",
+        "text": " بنتا۔"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "general_advice": false,
+    "sources": [
+      {
+        "kind": "analytics",
+        "result_id": "r2",
+        "label_id": "analytics-view-a-title",
+        "view": "A",
+        "filters": {
+          "period": null,
+          "from": "2026-01-01",
+          "to": "2026-10-10",
+          "group_by": null,
+          "item": null,
+          "seller": null,
+          "buyer": null,
+          "city": null,
+          "adda": null,
+          "side": "both",
+          "compare": "off",
+          "partner": null,
+          "trip": null,
+          "garden": null,
+          "goods": "all",
+          "trip_view": null
+        }
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T13:12:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 3,
+  "limit": 20
+}

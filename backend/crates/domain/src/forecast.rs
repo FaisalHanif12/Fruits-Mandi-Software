@@ -52,10 +52,12 @@
 //! ```
 
 use mandi_core::error::ErrorCode;
-use mandi_core::money::{Bps, MAX_RUPEES, MoneyError, Paisa, apply_bps};
+use mandi_core::money::{MoneyError, Paisa};
 use thiserror::Error;
 
-use crate::figures::{CalcOp, Dir, FigureError, Op, Step, Value, calculate, divided_by, times};
+use crate::figures::{
+    CalcOp, Dir, FigureError, Step, Value, calculate, divided_by, scale_amount, times,
+};
 
 /// Most months ahead an estimate looks (PRD FR-7.86).
 pub const MAX_MONTHS_AHEAD: u32 = 12;
@@ -70,9 +72,9 @@ const MAX_HISTORY: usize = 1_200;
 /// The steps between the first and the last of the growth months.
 const GROWTH_STEPS: i64 = 5;
 /// 100% in bps.
-const ONE: i32 = 10_000;
+const ONE: i32 = crate::figures::ONE_BPS;
 /// The biggest what-if factor, in bps of 100%: 10 times the pace.
-pub const MAX_FACTOR_BPS: i32 = 100_000;
+pub const MAX_FACTOR_BPS: i32 = crate::figures::MAX_FACTOR_BPS;
 
 /// The factor of a what-if on the pace, in bps of 100% (20,000 is 200%, "the pace doubles").
 /// From 1 to [`MAX_FACTOR_BPS`], never 10,000 (the same pace again).
@@ -663,32 +665,11 @@ fn same_pace(ctx: &Context<'_>) -> Result<MethodEstimate, ForecastError> {
 /// rounding the whole product, so double and triple are exact and 48,333 down 50% is 24,167.
 /// The step is `pace × factor%` with the rounded result, so the Owner can check it.
 fn scale_pace(per_month: Paisa, factor: PaceFactor) -> Result<Step, ForecastError> {
-    if per_month < Paisa::ZERO {
-        return Err(ForecastError::NegativePace);
-    }
-    let f = i64::from(factor.0);
-    let whole = f.checked_div(i64::from(ONE)).ok_or(FigureError::Overflow)?;
-    let rest = f.checked_rem(i64::from(ONE)).ok_or(FigureError::Overflow)?;
-    let rest = i32::try_from(rest).map_err(|_| FigureError::Overflow)?;
-    let exact = per_month
-        .as_paisa()
-        .checked_mul(whole)
-        .ok_or(FigureError::Overflow)?;
-    let fraction = apply_bps(per_month, Bps::new(rest)?)?;
-    let scaled = exact
-        .checked_add(fraction.as_paisa())
-        .ok_or(FigureError::Overflow)?;
-    let scaled = Paisa::try_from_paisa(scaled)?;
-    // A scaled month above the largest allowed amount is refused. A total (the month times at most
-    // 12 months) still fits a 64-bit figure and a safe JavaScript integer, as same pace always did.
-    let largest = Paisa::from_rupees(MAX_RUPEES)?;
-    if scaled > largest {
-        return Err(FigureError::Overflow.into());
-    }
-    Ok(Step {
-        op: Op::Times,
-        inputs: vec![Value::Money(per_month), Value::Percent(f)],
-        result: Value::Money(scaled),
+    // The one scaling and rounding lives in `figures::scale_amount`, which the calculator's percent more
+    // and less use too.
+    scale_amount(per_month, factor.0).map_err(|e| match e {
+        FigureError::NegativeBase => ForecastError::NegativePace,
+        other => ForecastError::Figure(other),
     })
 }
 

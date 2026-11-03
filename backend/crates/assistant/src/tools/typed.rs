@@ -183,6 +183,11 @@ fn names_it(node: &Node, typed: &str) -> bool {
     let Some(first) = node.get(&["matches", "0"]) else {
         return false;
     };
+    // Found as the other role (a buyer typed in a seller field): it is not what the field asked
+    // for, so it is never taken without the Owner.
+    if node.get(&["widened"]).is_some() {
+        return false;
+    }
     // Found as its Urdu spelling ("kela" for کیلا): named, when the word list or a learned pair
     // made the spelling; a spelling made by the rules alone is only a guess.
     if let Some(Node::Str(via)) = node.get(&["via"]) {
@@ -205,8 +210,15 @@ fn names_it(node: &Node, typed: &str) -> bool {
             && (name.starts_with(typed) || name.split(' ').any(|word| word.starts_with(typed)))
     };
     let tag = name.tag.as_deref().map(text::search_en).unwrap_or_default();
+    let ur_name = text::search_ur(&name.name_ur);
+    // The oblique plural of an Urdu noun ends in ے where the name ends in ا: "کیلے کا کمیشن" names
+    // the item کیلا (Q130 of the live run of 03-11-2026).
+    let oblique = ur.strip_suffix('ے').map(|stem| format!("{stem}ا"));
     starts(&text::search_en(&name.name_en), &en)
-        || starts(&text::search_ur(&name.name_ur), &ur)
+        || starts(&ur_name, &ur)
+        || oblique
+            .as_deref()
+            .is_some_and(|base| starts(&ur_name, base))
         || (!tag.is_empty() && tag == en)
 }
 

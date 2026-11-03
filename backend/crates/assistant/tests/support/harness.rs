@@ -44,6 +44,9 @@ impl Harness {
 
     pub fn over(world: world::World) -> Self {
         let runtime = Runtime::new(Arc::new(MemoryKeyStore::default()));
+        // The tests script the model's own `find`; the app does not find the party first (plan 52
+        // P52-S1, item 10). The tests of that step switch it on with `runtime.set_prefind(true)`.
+        runtime.set_prefind(false);
         runtime.keys().set(TEST_KEY).unwrap();
         assistant::set_config(
             &world.env.ctx,

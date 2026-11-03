@@ -18,6 +18,12 @@ pub struct Runtime {
     conversations: AtomicU64,
     memory: Mutex<HashMap<String, Conversation>>,
     busy: AtomicBool,
+    /// Whether the app finds the party of a plain lookup question before the first call (plan 52
+    /// P52-S1, item 10). OFF in the app until the findings of the money agent's identity review
+    /// are fixed (a role-only search can pre-find a near name in the wrong role, the shared پختہ
+    /// accounts can be found, one ambiguous word does not stop it). The tests of this step switch
+    /// it on.
+    prefind: AtomicBool,
 }
 
 /// Held while a question runs: only one question runs at a time (`ERR_ASSISTANT_BUSY`). Dropping it
@@ -47,7 +53,18 @@ impl Runtime {
             conversations: AtomicU64::new(0),
             memory: Mutex::new(HashMap::new()),
             busy: AtomicBool::new(false),
+            prefind: AtomicBool::new(false),
         }
+    }
+
+    /// True while the app may find the party of a plain lookup question itself.
+    pub fn prefind(&self) -> bool {
+        self.prefind.load(Ordering::Relaxed)
+    }
+
+    /// Switches the pre-find on or off (a test switch; it is off in the app for now).
+    pub fn set_prefind(&self, on: bool) {
+        self.prefind.store(on, Ordering::Relaxed);
     }
 
     /// The real runtime: the key in Windows Credential Manager.

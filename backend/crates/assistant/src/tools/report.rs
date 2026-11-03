@@ -17,7 +17,8 @@ use mandi_reports::reports::{
     ReportRunInput, Row, RowKind, catalog, run as engine_run, run_first_rows, statement_page,
     statement_request,
 };
-use mandi_services::core::accounts::BalanceSide;
+use mandi_services::core::accounts::{AccountType, BalanceSide};
+use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::paging::{SortDirection, SortInput};
@@ -32,7 +33,7 @@ use super::cells::{
     Order, cell_node, compare_cells, is_left_out, mixed_sides, order_of, row_key, shown_key,
     signed_paisa,
 };
-use super::records::named;
+use super::records::{named, require_type};
 use super::teach::{column_words, report_fields};
 use super::{
     Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, lookup, report_rule,
@@ -162,6 +163,9 @@ struct Built {
     party: Option<AnswerRecord>,
     /// What the tool did that the model did not ask for, given back as `note` (plan 52 item 2).
     notes: Vec<String>,
+    /// True when the model asked for a sort: the heading and total lines are then given apart
+    /// (`headings`), never among the ranked rows (Q194 of the live run of 03-11-2026).
+    ranked: bool,
 }
 
 fn takes_or(takes: &[FilterKind], kind: FilterKind, field: &str) -> Result<(), ToolError> {
@@ -227,6 +231,7 @@ fn build_filters(
                 person_key: None,
             });
         } else if takes.contains(&FilterKind::Seller) {
+            require_type(env, account_id, "party", AccountType::Seller)?;
             filters.seller_id = Some(account_id);
             source.seller = Some(record.clone());
         } else {
@@ -313,6 +318,7 @@ fn build_filters(
         source,
         party: party_record,
         notes: Vec::new(),
+        ranked: false,
     })
 }
 
@@ -379,12 +385,19 @@ fn read_statement(
     sort: Option<SortInput>,
 ) -> Result<ReportPage, Stop> {
     let request = statement_request(env.ctx.db(), filters).map_err(reports_stop)?;
+    // The request holds ISO dates; the statement service takes `DD-MM-YYYY` (Q202 of the live run
+    // of 03-11-2026: every R31 with dates was refused with ERR_DATE_INVALID).
+    let day = |iso: &Option<String>| {
+        iso.as_deref()
+            .and_then(BusinessDate::parse_iso)
+            .map(format_ddmmyyyy)
+    };
     let statement = partners::statement(
         env.ctx,
         &PartnersStatementInput {
             partner_id: request.partner_id,
-            from: request.from.clone(),
-            to: request.to.clone(),
+            from: day(&request.from),
+            to: day(&request.to),
             offset: u32::try_from(offset).unwrap_or(0),
             limit: u32::try_from(limit).unwrap_or(0),
             sort,
@@ -724,6 +737,7 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
         }
         keys = known;
     }
+    built.ranked = !keys.is_empty();
     let in_memory = parsed.where_.is_some() || keys.len() > 1;
     let (page, rows, matched) = if in_memory {
         if id == ReportId::R31 {
@@ -924,6 +938,7 @@ fn assemble(
         .as_of
         .as_deref()
         .is_some_and(|day| day < env.today.to_iso().as_str());
+    let mut headings = Vec::new();
     for (place, row) in rows.iter().enumerate() {
         let absolute = usize::try_from(page.offset)
             .unwrap_or(0)
@@ -944,7 +959,14 @@ fn assemble(
         {
             slot.1 = node;
         }
-        keyed.push((key, Node::Obj(fields)));
+        // A heading or total line holds the sums of the lines under it. In a sorted list it is
+        // given apart, so it is never read as the biggest or the smallest row (Q194: the total of
+        // all shop expenses was cited as the biggest head).
+        if built.ranked && row.kind != RowKind::Normal {
+            headings.push((key, Node::Obj(fields)));
+        } else {
+            keyed.push((key, Node::Obj(fields)));
+        }
     }
     let totals: Vec<(String, Node)> = kept
         .iter()
@@ -1022,8 +1044,16 @@ fn assemble(
             ]),
         ));
     }
-    if !built.notes.is_empty() {
-        fields.push(("note", Node::Str(built.notes.join("; "))));
+    let mut notes = built.notes.clone();
+    if !headings.is_empty() {
+        notes.push(
+            "the heading and total lines are given apart in `headings`: each holds the sums of \
+             the lines under it, so it is not a row to rank"
+                .to_owned(),
+        );
+    }
+    if !notes.is_empty() {
+        fields.push(("note", Node::Str(notes.join("; "))));
     }
     fields.extend([
         ("columns", Node::List(keys_of_columns)),
@@ -1035,6 +1065,9 @@ fn assemble(
         ("summary", Node::Obj(summary)),
         ("matched", matched_node),
     ]);
+    if !headings.is_empty() {
+        fields.push(("headings", Node::Keyed(headings)));
+    }
     let mut draft = Draft::new("report", args.clone(), Node::obj(fields));
     // With `where` the totals row of the table is the matching rows' totals, not the whole filter's.
     let shown_totals: Vec<Cell> = match &matched {

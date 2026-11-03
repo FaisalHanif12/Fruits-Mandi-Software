@@ -141,10 +141,14 @@ fn a_call_that_fails_keeps_the_time_the_app_waited() {
     assert!(row.total_millis.unwrap() >= 150);
     assert!(row.model_millis.unwrap() >= 150);
     let calls: Vec<Value> = serde_json::from_str(row.calls_json.as_deref().unwrap()).unwrap();
-    assert_eq!(calls.len(), 1);
-    assert_eq!(calls[0]["failed"], true);
-    assert!(calls[0]["model_ms"].as_i64().unwrap() >= 150);
-    assert_eq!(calls[0]["tokens_in"], 0);
+    // A timeout is tried once more when 20 seconds are left (Q237 and Q313 of the live run of
+    // 03-11-2026): both tries are in the log, each with the time the app waited.
+    assert_eq!(calls.len(), 2);
+    for call in &calls {
+        assert_eq!(call["failed"], true);
+        assert!(call["model_ms"].as_i64().unwrap() >= 150);
+        assert_eq!(call["tokens_in"], 0);
+    }
 }
 
 #[test]

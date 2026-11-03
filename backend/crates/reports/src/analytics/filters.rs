@@ -110,8 +110,33 @@ fn year_back(day: BusinessDate) -> Option<BusinessDate> {
         .or_else(|| BusinessDate::from_ymd(year, day.month(), day.day().checked_sub(1)?))
 }
 
-/// The compared period (PRD 18.1): the same number of days ending the day before `from`, or
-/// the same dates one year earlier.
+/// The month a date is in, counted from year 0: the year times 12 plus the month minus 1.
+fn month_index(day: BusinessDate) -> Option<i64> {
+    i64::from(day.year())
+        .checked_mul(12)?
+        .checked_add(i64::from(day.month()))?
+        .checked_sub(1)
+}
+
+/// How many whole calendar months a period covers, when it starts on the 1st of a month and ends
+/// on the last day of a month. `None` for any other period.
+///
+/// Example: `01-10-26` to `31-10-26` is 1 month; `01-01-26` to `31-03-26` is 3; `02-10-26` to
+/// `31-10-26` is not whole months.
+fn whole_months(from: BusinessDate, to: BusinessDate) -> Option<i64> {
+    if from.day() != 1 || to.next_day()?.day() != 1 {
+        return None;
+    }
+    let months = month_index(to)?
+        .checked_sub(month_index(from)?)?
+        .checked_add(1)?;
+    (months >= 1).then_some(months)
+}
+
+/// The compared period (PRD 18.1). Previous: for whole calendar months, the same number of whole
+/// calendar months before (October is compared with September, not with the 31 days before it);
+/// for any other period, the same number of days ending the day before `from`. Last year: the same
+/// dates one year earlier.
 fn compared(
     compare: AnalyticsCompare,
     from: BusinessDate,
@@ -120,8 +145,14 @@ fn compared(
     match compare {
         AnalyticsCompare::Off => None,
         AnalyticsCompare::Previous => {
-            let days = to.days_after(from).checked_add(1)?;
             let end = from.previous_day()?;
+            if let Some(months) = whole_months(from, to) {
+                let back = month_index(from)?.checked_sub(months)?;
+                let year = i32::try_from(back.div_euclid(12)).ok()?;
+                let month = u32::try_from(back.rem_euclid(12)).ok()?.checked_add(1)?;
+                return Some((BusinessDate::from_ymd(year, month, 1)?, end));
+            }
+            let days = to.days_after(from).checked_add(1)?;
             let start = back_days(end, days.checked_sub(1)?)?;
             Some((start, end))
         }
@@ -130,11 +161,13 @@ fn compared(
 }
 
 /// The compared period of a period given as ISO dates (PRD 18.1), the way the engine works it out:
-/// the same number of days ending the day before `from`, or the same dates one year earlier. For
-/// the assistant, which must say what a comparison covers before it reads it (plan 52 item 2).
-/// `None` for no comparison or a date that does not exist.
+/// the whole calendar months before a whole-month period, else the same number of days ending the
+/// day before `from`; or the same dates one year earlier. For the assistant, which must say what a
+/// comparison covers before it reads it (plan 52 item 2). `None` for no comparison or a date that
+/// does not exist.
 ///
-/// Example: `10-10-26` to `10-10-26` compared with the previous period is `09-10-26` to `09-10-26`.
+/// Example: `10-10-26` to `10-10-26` compared with the previous period is `09-10-26` to `09-10-26`;
+/// `01-09-26` to `30-09-26` is compared with `01-08-26` to `31-08-26`.
 pub fn compare_window(compare: AnalyticsCompare, from: &str, to: &str) -> Option<(String, String)> {
     let (from, to) = (BusinessDate::parse_iso(from)?, BusinessDate::parse_iso(to)?);
     compared(compare, from, to).map(|(a, b)| (a.to_iso(), b.to_iso()))
@@ -581,6 +614,91 @@ mod tests {
     }
 
     #[test]
+    fn whole_calendar_months_are_compared_with_the_months_before() {
+        let previous = |from: (i32, u32, u32), to: (i32, u32, u32)| {
+            compared(
+                AnalyticsCompare::Previous,
+                day(from.0, from.1, from.2),
+                day(to.0, to.1, to.2),
+            )
+            .map(|(a, b)| (a.to_iso(), b.to_iso()))
+        };
+        let iso = |a: &str, b: &str| Some((a.to_owned(), b.to_owned()));
+        // September 2026 against August (31 days) and not against 02-08 to 31-08.
+        assert_eq!(
+            previous((2026, 9, 1), (2026, 9, 30)),
+            iso("2026-08-01", "2026-08-31")
+        );
+        // February of a common year (28 days) against January.
+        assert_eq!(
+            previous((2027, 2, 1), (2027, 2, 28)),
+            iso("2027-01-01", "2027-01-31")
+        );
+        // January against the December before, over the year end.
+        assert_eq!(
+            previous((2027, 1, 1), (2027, 1, 31)),
+            iso("2026-12-01", "2026-12-31")
+        );
+        // A quarter against the quarter before; a whole year against the year before.
+        assert_eq!(
+            previous((2026, 7, 1), (2026, 9, 30)),
+            iso("2026-04-01", "2026-06-30")
+        );
+        assert_eq!(
+            previous((2026, 1, 1), (2026, 12, 31)),
+            iso("2025-01-01", "2025-12-31")
+        );
+        // Not whole months: the same number of days before, as always.
+        assert_eq!(
+            previous((2026, 10, 2), (2026, 10, 31)),
+            iso("2026-09-02", "2026-10-01")
+        );
+        assert_eq!(
+            previous((2026, 10, 1), (2026, 10, 20)),
+            iso("2026-09-11", "2026-09-30")
+        );
+        // The month so far (this month) is not a whole month either.
+        assert_eq!(
+            previous((2026, 11, 1), (2026, 11, 3)),
+            iso("2026-10-29", "2026-10-31")
+        );
+    }
+
+    #[test]
+    fn every_whole_month_of_ten_years_goes_back_to_the_month_before_it() {
+        for year in 2020..=2030 {
+            for month in 1..=12u32 {
+                let first = day(year, month, 1);
+                let last = first
+                    .next_day()
+                    .map(|_| {
+                        let (y, m) = if month == 12 {
+                            (year + 1, 1)
+                        } else {
+                            (year, month + 1)
+                        };
+                        day(y, m, 1).previous_day().unwrap()
+                    })
+                    .unwrap();
+                let (a, b) = compared(AnalyticsCompare::Previous, first, last).unwrap();
+                // It ends the day before the month starts and starts on the 1st of the month before.
+                assert_eq!(b, first.previous_day().unwrap(), "{year}-{month}");
+                assert_eq!(a.day(), 1, "{year}-{month}");
+                let (py, pm) = if month == 1 {
+                    (year - 1, 12)
+                } else {
+                    (year, month - 1)
+                };
+                assert_eq!((a.year(), a.month()), (py, pm), "{year}-{month}");
+                assert_eq!(
+                    b.year() * 12 + i32::try_from(b.month()).unwrap(),
+                    py * 12 + i32::try_from(pm).unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
     fn the_compared_periods() {
         // 10 days ending 20-10: the previous period is 10 days ending 09-10.
         let (a, b) = compared(
@@ -604,7 +722,8 @@ mod tests {
             (a.to_iso(), b.to_iso()),
             ("2026-10-09".into(), "2026-10-09".into())
         );
-        // A whole month goes back over the month end.
+        // A whole calendar month is compared with the whole calendar month before it, not with
+        // the 31 days before it (Q146 of the live run of 03-11-2026: September against August).
         let (a, b) = compared(
             AnalyticsCompare::Previous,
             day(2026, 10, 1),
@@ -613,7 +732,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             (a.to_iso(), b.to_iso()),
-            ("2026-08-31".into(), "2026-09-30".into())
+            ("2026-09-01".into(), "2026-09-30".into())
         );
         // The same dates last year; 29 February becomes 28 February.
         let (a, b) = compared(

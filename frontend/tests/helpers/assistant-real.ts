@@ -37,6 +37,8 @@ import assistantReplyAdviceRoute from '../fixtures/assistant_reply_advice_route.
 import assistantReplyAdviceRouteRequest from '../fixtures/assistant_reply_advice_route_request.json';
 import assistantReplyAdviceRequest from '../fixtures/assistant_reply_advice_request.json';
 import assistantReplyAnswered from '../fixtures/assistant_reply_answered.json';
+import assistantReplyAnsweredPercentMore from '../fixtures/assistant_reply_answered_percent_more.json';
+import assistantReplyAnsweredPercentMoreRequest from '../fixtures/assistant_reply_answered_percent_more_request.json';
 import assistantReplyAnsweredRoute from '../fixtures/assistant_reply_answered_route.json';
 import assistantReplyAnsweredRouteRequest from '../fixtures/assistant_reply_answered_route_request.json';
 import assistantReplyAnsweredChart from '../fixtures/assistant_reply_answered_chart.json';
@@ -164,6 +166,10 @@ export const REPLY_ADVICE = readAskReply(assistantReplyAdvice);
 export const REPLY_ADVICE_REQUEST = readAssistantAskInput(assistantReplyAdviceRequest);
 export const REPLY_ADVICE_ROUTE = readAskReply(assistantReplyAdviceRoute);
 export const REPLY_ADVICE_ROUTE_REQUEST = readAssistantAskInput(assistantReplyAdviceRouteRequest);
+export const REPLY_ANSWERED_PERCENT_MORE = readAskReply(assistantReplyAnsweredPercentMore);
+export const REPLY_ANSWERED_PERCENT_MORE_REQUEST = readAssistantAskInput(
+  assistantReplyAnsweredPercentMoreRequest,
+);
 export const REPLY_ANSWERED_ROUTE = readAskReply(assistantReplyAnsweredRoute);
 export const REPLY_ANSWERED_ROUTE_REQUEST = readAssistantAskInput(
   assistantReplyAnsweredRouteRequest,

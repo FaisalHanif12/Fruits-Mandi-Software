@@ -473,6 +473,45 @@ fn answered_sum() -> AskReply {
     r
 }
 
+/// "agar is saal commission 10 percent zyada hota to kitna hota" (plan 52 P52-S1, Q290): the
+/// calculator's `percent_more`. This year's commission so far is 5,448 (E2E-11); 10% more is 5,993.
+/// The working is one `times` step with the factor as a percent (110.00%).
+fn answered_percent_more() -> AskReply {
+    let more = AnswerPart::Figure {
+        cell: money(5_993),
+        dir: None,
+        checked: false,
+        working: Some(AnswerWorking {
+            title_id: "assistant-working-percent-more".to_owned(),
+            steps: vec![WorkingStep {
+                op: WorkingOp::Times,
+                inputs: vec![money(5_448), Cell::Percent { hundredths: 11_000 }],
+                result: money(5_993),
+            }],
+        }),
+    };
+    let mut a = answer(vec![
+        text("اس سال اب تک کمیشن "),
+        figure(money(5_448), false),
+        text(" ہے؛ دس فیصد زیادہ ہوتا تو "),
+        more,
+        text(" بنتا۔"),
+    ]);
+    a.sources = vec![AnswerSource::Analytics {
+        result_id: "r2".to_owned(),
+        label_id: "analytics-view-a-title".to_owned(),
+        view: mandi_reports::analytics::AnalyticsView::A,
+        filters: SourceAnalyticsFilters {
+            from: "2026-01-01".to_owned(),
+            to: "2026-10-10".to_owned(),
+            ..SourceAnalyticsFilters::default()
+        },
+    }];
+    let mut r = reply(48, AskOutcome::Answered);
+    r.answer = Some(a);
+    r
+}
+
 /// A comparison with a direction word and a monthly chart (E2E-59 history, view A).
 fn answered_chart() -> AskReply {
     let months: Vec<AnswerMonth> = (4..=9).map(|m| month(2026, m)).collect();
@@ -1398,6 +1437,11 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_answered_sum",
             ask("akram aur arshad dono ka mila kar kitna hai"),
             answered_sum(),
+        ),
+        (
+            "assistant_reply_answered_percent_more",
+            ask("agar is saal commission 10 percent zyada hota to kitna hota"),
+            answered_percent_more(),
         ),
         (
             "assistant_reply_answered_chart",

@@ -444,6 +444,10 @@ assistant-working-percent-of = فیصد
 # review: pending
 assistant-working-change-percent = تبدیلی کا فیصد
 # review: pending
+assistant-working-percent-more = رقم اور فیصد زیادہ: رقم × (100% + فیصد)
+# review: pending
+assistant-working-percent-less = رقم اور فیصد کم: رقم × (100% − فیصد)
+# review: pending
 assistant-working-same-pace = اسی رفتار سے: پچھلے مہینوں کا اوسط، مہینوں سے ضرب
 # review: pending
 assistant-working-year-parts = آخری سطر: اب تک کے کھاتوں کے مہینے + باقی مہینوں کا اندازہ

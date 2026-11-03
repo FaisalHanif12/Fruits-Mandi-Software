@@ -21,12 +21,13 @@ use mandi_reports::analytics::{
     AnalyticsSide, AnalyticsView, catalog, compare_window, run as engine_run,
 };
 use mandi_reports::reports::{Cell, Column, PartyFilter, Row};
+use mandi_services::core::accounts::AccountType;
 use mandi_services::core::paging::{SortDirection, SortInput};
 use serde::Deserialize;
 use serde_json::Value as Json;
 
 use super::cells::{cell_node, compare_cells, is_left_out};
-use super::records::named;
+use super::records::{named, require_type};
 use super::report::{DEFAULT_ROWS, MAX_ROWS, OrderWord, SortKey, reports_stop};
 use super::teach::{column_words, views_with};
 use super::{Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, view_rule};
@@ -166,11 +167,13 @@ fn build_filters(
     }
     if let Some((id, record)) = one("seller", &parsed.seller, "a")? {
         takes_or(takes, K::Seller, "seller")?;
+        require_type(env, id, "seller", AccountType::Seller)?;
         filters.seller_id = Some(id);
         source.seller = Some(record);
     }
     if let Some((id, record)) = one("buyer", &parsed.buyer, "a")? {
         takes_or(takes, K::Buyer, "buyer")?;
+        require_type(env, id, "buyer", AccountType::Buyer)?;
         filters.buyer = Some(PartyFilter {
             account_id: id,
             person_key: None,
@@ -264,7 +267,7 @@ fn build_filters(
                 } else {
                     format!(
                         "no dates were given, so this month so far ({from} to {to}) is compared \
-                         with the same number of days before it"
+                         with the period just before it (its dates are in `compare`)"
                     )
                 });
                 compare = if by_year {
@@ -772,6 +775,42 @@ fn row_fields(
     fields
 }
 
+/// True when the filters narrow the books to some items, parties, places or goods (the period,
+/// the side and the grouping do not narrow).
+fn is_narrowed(filters: &AnalyticsFilters) -> bool {
+    filters.item_id.is_some()
+        || filters.seller_id.is_some()
+        || filters.buyer.is_some()
+        || filters.city_id.is_some()
+        || filters.adda_id.is_some()
+        || filters.trip_id.is_some()
+        || filters.garden_id.is_some()
+        || filters.goods != AnalyticsGoods::All
+}
+
+/// The column of view A that is each row's share of the table's commission.
+const SHARE_COLUMN: &str = "share";
+
+/// True when the share of view A would be trivial: the filters left one row, so its share of the
+/// table is 100% whatever the books hold. The model reads it as "the share of all commission"
+/// (Q029 of the live run of 03-11-2026), so the figure is not given.
+fn share_is_trivial(view: AnalyticsView, built: &Built, page: &AnalyticsPage) -> bool {
+    view == AnalyticsView::A && is_narrowed(&built.filters) && page.total_count <= 1
+}
+
+/// What the share column is when it is not left out: with a narrowing filter it is the share of
+/// the filtered table, not of all commission. A view with a share column and a narrowing filter
+/// carries this note; views A and H have one.
+const NARROWED_SHARE_NOTE: &str = "the share column is each row's share of THIS filtered table, \
+    not of all commission; for an item's share of all commission read view A without the item \
+    filter, for a seller's or a buyer's read view H without that filter, and take the row's share";
+
+/// What is said when the only row would have a share of 100%: where the real share is.
+const TRIVIAL_SHARE_NOTE: &str = "the share column is left out: with these filters the table has \
+    one row, so its share would be 100% of the filtered table. For an item's share of ALL \
+    commission read view A without the item filter; for a seller's or a buyer's share read view H \
+    without that filter; then take the share of its row";
+
 fn assemble(
     env: &Env<'_>,
     args: &Json,
@@ -781,6 +820,13 @@ fn assemble(
     rows: &[mandi_reports::analytics::AnalyticsRow],
     hidden_parts: bool,
 ) -> Draft {
+    let no_share = share_is_trivial(view, built, page);
+    let mut notes = built.notes.clone();
+    if no_share {
+        notes.push(TRIVIAL_SHARE_NOTE.to_owned());
+    } else if matches!(view, AnalyticsView::A | AnalyticsView::H) && is_narrowed(&built.filters) {
+        notes.push(NARROWED_SHARE_NOTE.to_owned());
+    }
     let compare_at = if built.compare == AnalyticsCompare::Off {
         None
     } else {
@@ -794,6 +840,7 @@ fn assemble(
         .enumerate()
         .filter(|(i, c)| !is_left_out(c) && !compare_at.is_some_and(|(a, b)| *i == a || *i == b))
         .map(|(i, c)| Node::Str(shown_key(i, c)))
+        .filter(|n| !(no_share && matches!(n, Node::Str(k) if k == SHARE_COLUMN)))
         .collect();
     let mut used = Vec::new();
     let keyed: Vec<(String, Node)> = rows
@@ -810,16 +857,16 @@ fn assemble(
                 place,
                 &mut used,
             );
-            (
-                key,
-                Node::Obj(row_fields(env, &columns, &row.cells, compare_at, figure)),
-            )
+            let mut fields = row_fields(env, &columns, &row.cells, compare_at, figure);
+            fields.retain(|(k, _)| !(no_share && k == SHARE_COLUMN));
+            (key, Node::Obj(fields))
         })
         .collect();
     let totals_fields = row_fields(env, &columns, &page.totals, None, figure);
     let totals: Vec<(String, Node)> = totals_fields
         .into_iter()
         .filter(|(_, node)| !matches!(node, Node::Null))
+        .filter(|(k, _)| !(no_share && k == SHARE_COLUMN))
         .collect();
     let compare = compare_at.map_or(Node::Null, |(earlier, change)| {
         compare_node(
@@ -858,8 +905,8 @@ fn assemble(
         ("series", series),
     ];
     // What the tool did that was not asked for (plan 52 item 2).
-    if !built.notes.is_empty() {
-        fields.push(("note", Node::Str(built.notes.join("; "))));
+    if !notes.is_empty() {
+        fields.push(("note", Node::Str(notes.join("; "))));
     }
     let node = Node::obj(fields);
     let mut draft = Draft::new("analytics", args.clone(), node);

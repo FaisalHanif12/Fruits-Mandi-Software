@@ -365,8 +365,10 @@ pub(crate) fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
         .collect()
 }
 
-/// The account codes that stand for many people (the two پختہ کھاتہ accounts, PRD FR-13.1).
-const PUKHTA_CODES: [&str; 2] = ["03049999", "030119999"];
+/// The account codes that stand for many people: the two shared پختہ کھاتہ accounts, buyers' 0030
+/// and sellers' 0031 since migration 0007 (PRD FR-13.1). A name carrying one of them says no
+/// record, so a typed name is never put back as a reference to the shared account.
+const PUKHTA_CODES: [&str; 2] = ["0030", "0031"];
 
 /// Which record a name in the results is, or `None` when it does not say (see [`NameSet::put_back`]).
 ///

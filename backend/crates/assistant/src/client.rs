@@ -92,13 +92,19 @@ impl CallError {
     }
 
     /// True for a failure that one more try can cure (plan 52 item 6): the network (no internet, or
-    /// a connection that dropped), HTTP 429 and HTTP 5xx. A
-    /// timeout is not tried again (the next try would wait as long), and neither is a wrong key,
-    /// no credit, no Azure endpoint, a reply that cannot be read, or any other status.
+    /// a connection that dropped), HTTP 429, HTTP 5xx and, since the live run of 03-11-2026 (Q237
+    /// and Q313: a second call that timed out after 30 seconds ended the question with nothing), a
+    /// timeout. A wrong key, no credit, no Azure endpoint, a reply that cannot be read or any other
+    /// status is not tried again. The retry is only made when `RETRY_MIN_LEFT_SECS` of the question
+    /// are left, so a timeout late in a question is final.
     pub fn retryable(self) -> bool {
         matches!(
             self.kind,
-            FailureKind::Offline | FailureKind::Dropped | FailureKind::Busy | FailureKind::Server
+            FailureKind::Offline
+                | FailureKind::Dropped
+                | FailureKind::Busy
+                | FailureKind::Server
+                | FailureKind::Timeout
         )
     }
 
@@ -535,10 +541,11 @@ mod tests {
         }
         assert!(status(FailureKind::Busy, 429).retryable());
         assert!(status(FailureKind::Server, 503).retryable());
-        // Never: a timeout, a wrong key, no credit, no Azure endpoint, a reply that cannot be
-        // read, and an unknown status such as 400.
+        // A timeout is tried once more too (Q237 and Q313 of the live run of 03-11-2026).
+        assert!(CallError::new(FailureKind::Timeout).retryable());
+        // Never: a wrong key, no credit, no Azure endpoint, a reply that cannot be read, and an
+        // unknown status such as 400.
         for kind in [
-            FailureKind::Timeout,
             FailureKind::BadKey,
             FailureKind::NoCredit,
             FailureKind::NoEndpoint,

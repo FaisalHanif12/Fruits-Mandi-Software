@@ -190,6 +190,9 @@ pub struct Turn {
     /// would send it (without the empty fields), and the id of the result. A later call of the
     /// model with the same tool and input gets that result back and reads nothing again.
     pub prefetched: Vec<(String, Value, String)>,
+    /// The party the app found itself before the first call (plan 52 P52-S1, item 10). The answer
+    /// always shows his name when it is about him.
+    pub prefound: Option<crate::answer::AnswerName>,
 }
 
 /// What a waiting question waits for.

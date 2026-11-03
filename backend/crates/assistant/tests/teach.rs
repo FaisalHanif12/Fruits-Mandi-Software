@@ -400,7 +400,7 @@ fn a_comparison_with_no_dates_means_this_month_so_far_or_this_year_with_years() 
             .expect("the comparison is given");
         s.json(&id)
     };
-    // No dates: this month so far against the same number of days before it.
+    // No dates: this month so far against the period just before it (the same number of days).
     let v = ok(&mut s, json!({"compare": "previous", "rows": 10}));
     assert_eq!(v["filters"]["from"], "2026-10-01");
     assert_eq!(v["filters"]["to"], "2026-10-10");

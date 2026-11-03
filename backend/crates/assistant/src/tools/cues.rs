@@ -70,6 +70,30 @@ pub fn year_end(question: &str) -> bool {
     )
 }
 
+/// The question asks for one year ahead in words, not digits: "agle ek saal", "next one year". It is
+/// 12 months. (A number with months, "agle 12 mahine", is read as a number.)
+///
+/// Example: "agle ek saal ka commission ka andaza lagao" is true; "agle 6 mahine" is false.
+pub fn year_ahead(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "agle ek saal",
+            "agla ek saal",
+            "ek saal ka andaza",
+            "ek saal ke andaza",
+            "aane wale ek saal",
+            "next one year",
+            "one year ahead",
+            "a year ahead",
+            "one year from now",
+            "اگلے ایک سال",
+            "اگلا ایک سال",
+            "ایک سال کا اندازہ",
+        ],
+    )
+}
+
 /// The question asks "what if": agar, if, suppose, فرض (money review: a past fact such as "commission
 /// doubled last year" or "up to December" is not a scenario).
 pub fn conditional(question: &str) -> bool {
@@ -162,58 +186,118 @@ pub fn scenarios_clash(question: &str) -> bool {
     scenarios(question).len() > 1
 }
 
+/// The words for "more": zyada, barh, increase, up.
+const MORE_WORDS: &[&str] = &[
+    "zyada",
+    "ziyada",
+    "zyadah",
+    "barh",
+    "barhe",
+    "barhta",
+    "barhay",
+    "barhna",
+    "badh",
+    "increase",
+    "increases",
+    "more",
+    "higher",
+    "up",
+    "اضافہ",
+    "زیادہ",
+    "بڑھ",
+    "بڑھے",
+    "بڑھنا",
+];
+
+/// The words for "less": kam, ghat, decrease, down.
+const LESS_WORDS: &[&str] = &[
+    "kam",
+    "kami",
+    "ghat",
+    "ghate",
+    "ghatay",
+    "ghatna",
+    "decrease",
+    "decreases",
+    "less",
+    "lower",
+    "down",
+    "drop",
+    "کم",
+    "کمی",
+    "گھٹ",
+    "گھٹے",
+    "گھٹنا",
+];
+
 /// The question says "more": zyada, barh, increase, up.
 pub fn says_more(question: &str) -> bool {
-    has(
-        question,
-        &[
-            "zyada",
-            "ziyada",
-            "zyadah",
-            "barh",
-            "barhe",
-            "barhta",
-            "barhay",
-            "barhna",
-            "badh",
-            "increase",
-            "increases",
-            "more",
-            "higher",
-            "up",
-            "اضافہ",
-            "زیادہ",
-            "بڑھ",
-            "بڑھے",
-            "بڑھنا",
-        ],
-    )
+    has(question, MORE_WORDS)
 }
 
 /// The question says "less": kam, ghat, decrease, down.
 pub fn says_less(question: &str) -> bool {
-    has(
-        question,
-        &[
-            "kam",
-            "kami",
-            "ghat",
-            "ghate",
-            "ghatay",
-            "ghatna",
-            "decrease",
-            "decreases",
-            "less",
-            "lower",
-            "down",
-            "drop",
-            "کم",
-            "کمی",
-            "گھٹ",
-            "گھٹے",
-            "گھٹنا",
-        ],
-    )
+    has(question, LESS_WORDS)
+}
+
+/// A percent more or less that the question asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PercentChange {
+    /// "10 percent zyada": the figure with the percent added.
+    More,
+    /// "10 percent kam": the figure with the percent taken off.
+    Less,
+}
+
+/// The words that may stand between a percent number and its "more" or "less": the unit and a
+/// link word.
+const PERCENT_FILLER: &[&str] = &[
+    "percent", "fisad", "feesad", "fi", "sad", "pc", "pct", "se", "say", "than", "فیصد", "سے",
+];
+
+/// The question asks for a figure "with a percent more or less": a what-if (agar, if), one percent
+/// number, and the word for more or less right after it ("10 percent zyada", "10% higher").
+/// Refused (`None`) when the percent is a rate or a past fact: "commission 7% hota to kitna
+/// zyada milta" has the word too far from the number, and "is saal ka commission pichle saal se
+/// 10% zyada hai" is no what-if (money review, plan 52 P52-S1).
+///
+/// Example: "agar is saal commission 10 percent zyada hota" is `More`; "agar commission 7% hota to
+/// kitna zyada milta" and "commission 10% zyada hai" are `None`.
+pub fn percent_change(question: &str, percent_numbers: usize) -> Option<PercentChange> {
+    if percent_numbers != 1 || !conditional(question) {
+        return None;
+    }
+    let spaced = spaced(question);
+    let words: Vec<&str> = spaced.split_whitespace().collect();
+    let key = |w: &str| text::search_ur(&text::search_en(w));
+    let more: Vec<String> = MORE_WORDS.iter().map(|w| key(w)).collect();
+    let less: Vec<String> = LESS_WORDS.iter().map(|w| key(w)).collect();
+    let filler: Vec<String> = PERCENT_FILLER.iter().map(|w| key(w)).collect();
+    let (mut said_more, mut said_less) = (false, false);
+    for (at, word) in words.iter().enumerate() {
+        if word.is_empty() || !word.chars().all(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        // The next words: fillers, then one word for more or less.
+        for next in words.iter().skip(at.saturating_add(1)).take(3) {
+            if more.iter().any(|m| m == next) {
+                said_more = true;
+                break;
+            }
+            if less.iter().any(|m| m == next) {
+                said_less = true;
+                break;
+            }
+            if !filler.iter().any(|f| f == next) {
+                break;
+            }
+        }
+    }
+    match (said_more, said_less) {
+        (true, false) => Some(PercentChange::More),
+        (false, true) => Some(PercentChange::Less),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -468,6 +552,84 @@ mod prefetch_tests {
             "cash of 5000",
         ] {
             assert!(!tile_question(q), "{q}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod percent_change_tests {
+    use super::*;
+
+    #[test]
+    fn a_what_if_with_one_percent_and_the_word_right_after_it_is_a_percent_change() {
+        for q in [
+            "agar is saal commission 10 percent zyada hota to kitna hota",
+            "if this year's commission had been 10 percent higher, what would it be",
+            "agar commission 10% zyada hota to kitna hota",
+            "agar sales 15 percent se kam hoti to",
+        ] {
+            let found = percent_change(q, 1);
+            assert!(found.is_some(), "{q}");
+        }
+        assert_eq!(
+            percent_change("agar commission 10 percent zyada hota to kitna", 1),
+            Some(PercentChange::More)
+        );
+        assert_eq!(
+            percent_change("agar sales 15 percent kam hoti to kitni hoti", 1),
+            Some(PercentChange::Less)
+        );
+    }
+
+    #[test]
+    fn a_rate_a_past_fact_or_two_percents_are_not() {
+        // The word is far from the number: 7% is a rate.
+        assert_eq!(
+            percent_change("agar commission 7% hota to kitna zyada milta", 1),
+            None
+        );
+        // No what-if: a fact, and the reverse question.
+        assert_eq!(
+            percent_change(
+                "is saal ka commission pichle saal se 10% zyada hai to pichle saal kitna tha",
+                1
+            ),
+            None
+        );
+        // Two percent numbers (or none), and both more and less after numbers.
+        assert_eq!(
+            percent_change("agar 6% ki jagah 10% zyada hota to", 2),
+            None
+        );
+        assert_eq!(percent_change("agar commission zyada hota to", 0), None);
+        assert_eq!(
+            percent_change("agar 10 percent zyada aur 5 percent kam hota", 1),
+            None
+        );
+    }
+}
+
+#[cfg(test)]
+mod year_ahead_tests {
+    use super::*;
+
+    #[test]
+    fn one_year_in_words_is_twelve_months_ahead_and_other_phrases_are_not() {
+        for q in [
+            "agle ek saal ka commission ka andaza lagao",
+            "اگلے ایک سال کے کمیشن کا اندازہ لگائیں",
+            "estimate the commission for the next one year",
+            "commission one year ahead",
+        ] {
+            assert!(year_ahead(q), "{q}");
+        }
+        for q in [
+            "agle 6 mahine ka andaza",
+            "is saal ke aakhir tak commission kitna",
+            "next year ka commission",
+            "pichle saal ka commission",
+        ] {
+            assert!(!year_ahead(q), "{q}");
         }
     }
 }

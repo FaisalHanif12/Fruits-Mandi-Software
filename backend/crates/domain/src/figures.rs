@@ -49,7 +49,7 @@
 use std::cmp::Ordering;
 
 use mandi_core::error::ErrorCode;
-use mandi_core::money::{MoneyError, Paisa, Qty, avg_rate, hundredths};
+use mandi_core::money::{Bps, MAX_RUPEES, MoneyError, Paisa, Qty, apply_bps, avg_rate, hundredths};
 use thiserror::Error;
 
 /// Most inputs one calculation takes (a table of 100 rows at most is summed in the tool).
@@ -117,6 +117,11 @@ pub enum CalcOp {
     PercentOf,
     /// `(second − first) ÷ first × 100`, exactly 2 inputs.
     ChangePercent,
+    /// `first × (100% + percent)`: an amount and a percent more, exactly 2 inputs (an amount, then
+    /// a percent). The one rounding is the shared one, through [`scale_amount`].
+    PercentMore,
+    /// `first × (100% − percent)`: an amount and a percent less, exactly 2 inputs.
+    PercentLess,
 }
 
 /// One kind of step in a working. The first five are the [`CalcOp`]s; `Times` and `DividedBy` are
@@ -193,6 +198,12 @@ pub enum FigureError {
     /// of) where that means nothing.
     #[error("the two figures are on opposite sides")]
     MixedSigns,
+    /// A percent more or less of a figure below 0 (a loss): up or down of a loss would be a guess.
+    #[error("the figure is below 0")]
+    NegativeBase,
+    /// A percent more or less outside 0.01% to 900% (more) or 0.01% to 99.99% (less).
+    #[error("the percent is out of range")]
+    PercentOutOfRange,
     /// A caller bug (a value that is not a whole rupee, a count of 0). Never the Owner's input.
     #[error("internal")]
     Internal,
@@ -210,6 +221,8 @@ impl FigureError {
             | FigureError::NeedsTwoInputs
             | FigureError::MixedKinds
             | FigureError::PercentInput
+            | FigureError::NegativeBase
+            | FigureError::PercentOutOfRange
             | FigureError::MixedSigns => ErrorCode::ErrOutOfRange,
         }
     }
@@ -241,12 +254,16 @@ pub fn calculate(op: CalcOp, inputs: &[Value]) -> Result<Calc, FigureError> {
     if inputs.len() > MAX_INPUTS {
         return Err(FigureError::TooManyInputs);
     }
-    if inputs.iter().any(|v| matches!(v, Value::Percent(_))) {
-        return Err(FigureError::PercentInput);
-    }
-    let first = *inputs.first().ok_or(FigureError::NoInputs)?;
-    if !inputs.iter().all(|v| same_kind(first, *v)) {
-        return Err(FigureError::MixedKinds);
+    // A percent more or less is the one operation whose second input is a percent, and whose two
+    // inputs are of two kinds: its own function checks them.
+    if !matches!(op, CalcOp::PercentMore | CalcOp::PercentLess) {
+        if inputs.iter().any(|v| matches!(v, Value::Percent(_))) {
+            return Err(FigureError::PercentInput);
+        }
+        let first = *inputs.first().ok_or(FigureError::NoInputs)?;
+        if !inputs.iter().all(|v| same_kind(first, *v)) {
+            return Err(FigureError::MixedKinds);
+        }
     }
     let (result, dir, step_op) = match op {
         CalcOp::Sum => (sum(inputs)?, None, Op::Sum),
@@ -265,6 +282,8 @@ pub fn calculate(op: CalcOp, inputs: &[Value]) -> Result<Calc, FigureError> {
             let (result, dir) = change_percent(a, b)?;
             (result, Some(dir), Op::ChangePercent)
         }
+        // Its inputs are two kinds (an amount, a percent), so it ends here, with its own working.
+        CalcOp::PercentMore | CalcOp::PercentLess => return percent_changed(op, inputs),
     };
     Ok(Calc {
         result,
@@ -423,6 +442,87 @@ fn change_of(o: i128, n: i128) -> Result<(Value, Dir), FigureError> {
     }
     let delta = n.checked_sub(o).ok_or(FigureError::Overflow)?;
     Ok((Value::Percent(hundredths(delta, o)?), Dir::of_i128(delta)))
+}
+
+/// The most a figure is scaled to, in basis points of itself (1,000%).
+pub(crate) const MAX_FACTOR_BPS: i32 = 100_000;
+/// 100% in basis points.
+pub(crate) const ONE_BPS: i32 = 10_000;
+
+/// `base × factor`, with `factor` in basis points of 100% (11,000 is 110%): `round_half_up(base ×
+/// factor ÷ 10,000)`, rounded once, as the step `base × factor%` the Owner can check.
+///
+/// `Bps` holds only 0 to 10,000, so the factor is split: `factor = whole × 10,000 + rest`, and
+/// the result is `base × whole` (exact) plus `apply_bps(base, rest)` (the one rounding, half up,
+/// by the shared function). Whole rupees added to a half-up rounded figure give the same result as
+/// rounding the whole product, so double and triple are exact and 48,333 down 50% is 24,167. A
+/// result above the largest allowed amount is refused.
+///
+/// # Errors
+/// `NegativeBase` for a figure below 0, `Overflow`.
+pub(crate) fn scale_amount(base: Paisa, factor: i32) -> Result<Step, FigureError> {
+    if base < Paisa::ZERO {
+        return Err(FigureError::NegativeBase);
+    }
+    let f = i64::from(factor);
+    let whole = f
+        .checked_div(i64::from(ONE_BPS))
+        .ok_or(FigureError::Overflow)?;
+    let rest = f
+        .checked_rem(i64::from(ONE_BPS))
+        .ok_or(FigureError::Overflow)?;
+    let rest = i32::try_from(rest).map_err(|_| FigureError::Overflow)?;
+    let exact = base
+        .as_paisa()
+        .checked_mul(whole)
+        .ok_or(FigureError::Overflow)?;
+    let fraction = apply_bps(base, Bps::new(rest)?)?;
+    let total = exact
+        .checked_add(fraction.as_paisa())
+        .ok_or(FigureError::Overflow)?;
+    let total = Paisa::try_from_paisa(total)?;
+    let largest = Paisa::from_rupees(MAX_RUPEES)?;
+    if total > largest {
+        return Err(FigureError::Overflow);
+    }
+    Ok(Step {
+        op: Op::Times,
+        inputs: vec![Value::Money(base), Value::Percent(f)],
+        result: Value::Money(total),
+    })
+}
+
+/// An amount and a percent more or less: `base × (100% ± percent)`, rounded once (see [`scale_amount`]).
+/// The percent is the second input, in hundredths of a percent (1,000 is 10.00%): 0.01% to 900%
+/// more, 0.01% to 99.99% less. Only an amount of 0 or more.
+///
+/// Example: 8,360,110 and 10.00% more is 9,196,121 (8,360,110 × 110.00%); 48,333 and 50.00% less
+/// is 24,167.
+fn percent_changed(op: CalcOp, inputs: &[Value]) -> Result<Calc, FigureError> {
+    let (base, percent) = two(inputs)?;
+    let (Value::Money(base), Value::Percent(percent)) = (base, percent) else {
+        return Err(FigureError::MixedKinds);
+    };
+    let percent = i32::try_from(percent).map_err(|_| FigureError::PercentOutOfRange)?;
+    let (factor, allowed) = match op {
+        CalcOp::PercentLess => (
+            ONE_BPS.checked_sub(percent),
+            (1..ONE_BPS).contains(&percent),
+        ),
+        _ => (
+            ONE_BPS.checked_add(percent),
+            (1..=MAX_FACTOR_BPS.saturating_sub(ONE_BPS)).contains(&percent),
+        ),
+    };
+    let factor = factor
+        .filter(|_| allowed)
+        .ok_or(FigureError::PercentOutOfRange)?;
+    let step = scale_amount(base, factor)?;
+    Ok(Calc {
+        result: step.result,
+        dir: None,
+        steps: vec![step],
+    })
 }
 
 /// A step `first × second` for an estimate's working (per month × months ahead). Money times a

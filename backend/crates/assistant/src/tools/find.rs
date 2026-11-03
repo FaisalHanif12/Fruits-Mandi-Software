@@ -357,14 +357,18 @@ fn urdu_matches(
     })
 }
 
-/// The tool.
-pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
-    let parsed: Input = input(args)?;
-    let query = parsed.text.trim();
-    if query.is_empty() {
-        return Err(ToolError::new("ERR_REQUIRED", "text", "nothing to find").into());
-    }
-    let role = parsed.role;
+/// What one search of one role found: the matches, whether there are more, and how a word typed in
+/// English letters was found as an Urdu spelling or an item alias.
+struct Found {
+    matches: Vec<Node>,
+    more: bool,
+    via: Option<(&'static str, String)>,
+}
+
+/// The matches of a word in one role: as typed, then, for an empty answer, as the Urdu spelling of
+/// a Roman Urdu word (the same word list and learned pairs as the typing help), then, for an item,
+/// by the assistant's own aliases.
+fn search_role(env: &Env<'_>, role: Role, query: &str) -> Result<Found, Stop> {
     let (mut matches, mut more) = matches_for(env, role, query)?;
     // Nothing found for a word in English letters: a Roman Urdu spelling of an Urdu name ("kela",
     // "saib", "alif") is tried in Urdu letters, by the same word list and learned pairs as the
@@ -414,39 +418,122 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
             }
         }
     }
+    Ok(Found { matches, more, via })
+}
+
+/// The words that only say what a garden or a trip is, in Roman Urdu, Urdu letters and English:
+/// "shahpur bag" is the garden "Shahpur" (Q209 of the live run of 03-11-2026).
+fn role_words(role: Role) -> &'static [&'static str] {
+    match role {
+        Role::Garden => &[
+            "bag",
+            "bagh",
+            "baag",
+            "baagh",
+            "garden",
+            "gardens",
+            "باغ",
+            "باغات",
+            "بیگ",
+        ],
+        Role::Trip => &["safar", "trip", "trips", "سفر"],
+        _ => &[],
+    }
+}
+
+/// The query without the words that only name the kind of record (`role_words`). Empty when the
+/// query is nothing but such words.
+fn without_role_words(role: Role, query: &str) -> String {
+    let words = role_words(role);
+    query
+        .split_whitespace()
+        .filter(|w| !words.contains(&w.to_lowercase().as_str()))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The other roles asked when a buyer, a seller or any party is not found: a buyer typed as a
+/// seller and the reverse (Q070: two buyers asked for as sellers), and a partner typed as a party
+/// (Q055: "alif ka khalis"). Their matches say their `type`, and the result says it was widened.
+fn widened_roles(role: Role) -> &'static [Role] {
+    match role {
+        Role::Buyer => &[Role::Seller],
+        Role::Seller => &[Role::Buyer],
+        Role::AnyParty => &[Role::Partner],
+        _ => &[],
+    }
+}
+
+/// The tool.
+pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, Stop> {
+    let parsed: Input = input(args)?;
+    let query = parsed.text.trim();
+    if query.is_empty() {
+        return Err(ToolError::new("ERR_REQUIRED", "text", "nothing to find").into());
+    }
+    let role = parsed.role;
+    let mut found = search_role(env, role, query)?;
+    let mut notes: Vec<String> = Vec::new();
+    // "shahpur bag" / "safar 2": a garden or a trip is found by the rest of the words.
+    if found.matches.is_empty() {
+        let rest = without_role_words(role, query);
+        if !rest.is_empty() && rest != query {
+            let again = search_role(env, role, &rest)?;
+            if !again.matches.is_empty() {
+                found = again;
+                notes.push(format!(
+                    "found as \"{rest}\", without the word for the kind"
+                ));
+            }
+        }
+    }
+    // Nothing as that role: the other role of a party, or a partner, is asked. A locked partner
+    // section is not a reason to stop the question here: the widening is left out.
+    let mut widened: Option<Role> = None;
+    if found.matches.is_empty() {
+        for other in widened_roles(role) {
+            match search_role(env, *other, query) {
+                Ok(again) if !again.matches.is_empty() => {
+                    found = again;
+                    widened = Some(*other);
+                    notes.push(format!(
+                        "no {} has this name; these are found as {}, see each match's type",
+                        role.word(),
+                        other.word()
+                    ));
+                    break;
+                }
+                Ok(_) | Err(Stop::Locked) => {}
+                Err(other_error) => return Err(other_error),
+            }
+        }
+    }
+    let Found { matches, more, via } = found;
     let mut fields = vec![
         ("text", Node::Str(query.to_owned())),
         ("role", Node::Str(role.word().to_owned())),
         ("matches", Node::List(matches)),
         ("more", Node::Bool(more)),
     ];
+    if let Some(other) = widened {
+        fields.push(("widened", Node::Str(other.word().to_owned())));
+    }
     if let Some((source, _)) = &via {
         fields.push(("via", Node::Str((*source).to_owned())));
-        if *source == "rules" {
-            fields.push((
-                "note",
-                Node::Str(
-                    "found through the spelling rules only, not the word list: check that this \
-                     is the one asked for"
-                        .to_owned(),
-                ),
-            ));
-        } else if *source == ALIAS_SOURCE {
-            fields.push((
-                "note",
-                Node::Str(
-                    "the word was not found as typed; it was found as its usual spelling"
-                        .to_owned(),
-                ),
-            ));
-        } else {
-            fields.push((
-                "note",
-                Node::Str(
-                    "the word was not found as typed; it was found as its Urdu spelling".to_owned(),
-                ),
-            ));
-        }
+        notes.push(
+            if *source == "rules" {
+                "found through the spelling rules only, not the word list: check that this is the \
+                 one asked for"
+            } else if *source == ALIAS_SOURCE {
+                "the word was not found as typed; it was found as its usual spelling"
+            } else {
+                "the word was not found as typed; it was found as its Urdu spelling"
+            }
+            .to_owned(),
+        );
+    }
+    if !notes.is_empty() {
+        fields.push(("note", Node::Str(notes.join("; "))));
     }
     Ok(Draft::new("find", args.clone(), Node::obj(fields)))
 }
@@ -454,6 +541,32 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_words_for_the_kind_of_record_are_left_out_of_a_garden_or_trip_name() {
+        assert_eq!(without_role_words(Role::Garden, "shahpur bag"), "shahpur");
+        assert_eq!(
+            without_role_words(Role::Garden, "Shahpur Garden"),
+            "Shahpur"
+        );
+        assert_eq!(without_role_words(Role::Garden, "شاہ پور باغ"), "شاہ پور");
+        assert_eq!(without_role_words(Role::Trip, "safar 2"), "2");
+        // Nothing but the kind word: nothing is left.
+        assert_eq!(without_role_words(Role::Garden, "bagh"), "");
+        // Other roles keep their words.
+        assert_eq!(without_role_words(Role::Item, "bag"), "bag");
+        assert_eq!(without_role_words(Role::Buyer, "akram bagh"), "akram bagh");
+    }
+
+    #[test]
+    fn a_buyer_or_seller_not_found_widens_to_the_other_role_and_any_party_to_a_partner() {
+        assert_eq!(widened_roles(Role::Buyer), [Role::Seller]);
+        assert_eq!(widened_roles(Role::Seller), [Role::Buyer]);
+        assert_eq!(widened_roles(Role::AnyParty), [Role::Partner]);
+        assert!(widened_roles(Role::Item).is_empty());
+        assert!(widened_roles(Role::Partner).is_empty());
+        assert!(widened_roles(Role::Garden).is_empty());
+    }
 
     #[test]
     fn the_item_aliases_give_the_usual_spelling_in_any_case() {

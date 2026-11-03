@@ -25,7 +25,7 @@ use mandi_reports::analytics::{
     run as engine_run,
 };
 use mandi_reports::reports::{Cell, PartyFilter};
-use mandi_services::core::accounts::BalanceSide;
+use mandi_services::core::accounts::{AccountType, BalanceSide};
 use mandi_services::core::money::Paisa;
 use mandi_services::domain::figures::{
     Calc, CalcOp, Dir, NumberUnit, Op, QuestionNumber, Step, Value,
@@ -37,7 +37,7 @@ use serde_json::Value as Json;
 
 use super::cells::{is_total_line, magnitude};
 use super::cues;
-use super::records::named;
+use super::records::{named, require_type};
 use super::report::reports_stop;
 use super::{Draft, Env, State, Stop, ToolError, input, lookup, service_stop};
 use crate::answer::{
@@ -143,6 +143,10 @@ pub enum OpWord {
     PercentOf,
     /// A change in percent.
     ChangePercent,
+    /// An amount and a percent more (`first × (100% + percent)`).
+    PercentMore,
+    /// An amount and a percent less (`first × (100% − percent)`).
+    PercentLess,
 }
 
 impl OpWord {
@@ -153,6 +157,8 @@ impl OpWord {
             OpWord::Average => CalcOp::Average,
             OpWord::PercentOf => CalcOp::PercentOf,
             OpWord::ChangePercent => CalcOp::ChangePercent,
+            OpWord::PercentMore => CalcOp::PercentMore,
+            OpWord::PercentLess => CalcOp::PercentLess,
         }
     }
 
@@ -163,6 +169,8 @@ impl OpWord {
             OpWord::Average => "average",
             OpWord::PercentOf => "percent_of",
             OpWord::ChangePercent => "change_percent",
+            OpWord::PercentMore => "percent_more",
+            OpWord::PercentLess => "percent_less",
         }
     }
 
@@ -173,6 +181,8 @@ impl OpWord {
             OpWord::Average => "assistant-working-average",
             OpWord::PercentOf => "assistant-working-percent-of",
             OpWord::ChangePercent => "assistant-working-change-percent",
+            OpWord::PercentMore => "assistant-working-percent-more",
+            OpWord::PercentLess => "assistant-working-percent-less",
         }
     }
 }
@@ -197,6 +207,9 @@ enum Pending {
     Amount(i64),
     /// A question number with months, days or years.
     Counted(i64),
+    /// A question number with a % sign, in hundredths of a percent (10% is 1,000). Only a percent
+    /// more or less takes it.
+    Percent(i64),
 }
 
 fn money_value(paisa: Paisa) -> Value {
@@ -265,11 +278,11 @@ fn pending_of_question(number: &QuestionNumber, field: &str) -> Result<Pending, 
         NumberUnit::Months | NumberUnit::Days | NumberUnit::Years => {
             Ok(Pending::Counted(number.number))
         }
-        NumberUnit::Percent => Err(bad(
-            "ERR_OUT_OF_RANGE",
-            field,
-            "a percent cannot be an input",
-        )),
+        // The calculator refuses a percent beside any operation but a percent more or less.
+        NumberUnit::Percent => number
+            .bps
+            .map(|bps| Pending::Percent(i64::from(bps)))
+            .ok_or_else(|| bad("ERR_OUT_OF_RANGE", field, "a percent cannot be an input")),
     }
 }
 
@@ -326,7 +339,13 @@ fn expand(
             ("count", Node::Val(Val::Count(n))) => Some(*n),
             _ => None,
         });
-        let sent = i64::try_from(lines_sent).unwrap_or(i64::MAX);
+        // The heading and total lines of a sorted report are given apart (`headings`): they are
+        // part of its count and were sent.
+        let apart = match result.node.get(&["headings"]) {
+            Some(Node::Keyed(rows)) => rows.len(),
+            _ => 0,
+        };
+        let sent = i64::try_from(lines_sent.saturating_add(apart)).unwrap_or(i64::MAX);
         if cut || count.is_some_and(|n| n > sent) {
             return Err(bad(
                 "ERR_OUT_OF_RANGE",
@@ -412,6 +431,10 @@ fn settle(pending: Vec<Pending>) -> Result<(Vec<Value>, Option<bool>), ToolError
             Pending::Counted(n) => {
                 every_input_checked = false;
                 Value::Count(n)
+            }
+            Pending::Percent(h) => {
+                every_input_checked = false;
+                Value::Percent(h)
             }
             Pending::Plain(n) => {
                 every_input_checked = false;
@@ -554,6 +577,36 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
         pending = buyer_balance_over_an_amount(env, state, &parsed.inputs, pending)?;
     }
     let (values, checked) = settle(pending)?;
+    // "10 percent more" is the Owner's own what-if: the question must be a what-if (agar, if),
+    // hold one percent number and say more (or less) right after it. A rate ("7% hota to") or a
+    // past fact ("pichle saal se 10% zyada hai") is not a figure to scale.
+    let percents = env
+        .numbers
+        .iter()
+        .filter(|n| n.unit == NumberUnit::Percent)
+        .count();
+    let said = cues::percent_change(env.question, percents);
+    match (parsed.op, said) {
+        (OpWord::PercentMore, Some(cues::PercentChange::More))
+        | (OpWord::PercentLess, Some(cues::PercentChange::Less))
+        | (
+            OpWord::Sum
+            | OpWord::Difference
+            | OpWord::Average
+            | OpWord::PercentOf
+            | OpWord::ChangePercent,
+            _,
+        ) => {}
+        (OpWord::PercentMore | OpWord::PercentLess, _) => {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "op",
+                "a percent more or less needs a what-if question (agar, if) with one percent \
+                 number and the word more or less right after it; ask the Owner what he means",
+            )
+            .into());
+        }
+    }
     let calc = figures::calculate(parsed.op.calc(), &values).map_err(service_stop)?;
     let node = Node::obj(vec![
         ("op", Node::Str(parsed.op.word().to_owned())),
@@ -740,17 +793,18 @@ fn months_ahead(
             .map_err(|e| ToolError::from_code(e.code(), Some("until")));
     }
     let has_target = parsed.target.is_some();
+    // "ek saal" (one year ahead) is 12 months: the question holds no digit, so no months number
+    // (Q285 and Q286 of the live run of 03-11-2026).
+    let default_ahead: i64 = if has_target || cues::year_ahead(env.question) {
+        12
+    } else {
+        6
+    };
     let ahead = match parsed.ahead {
         Some(ahead) => ahead,
         // Nothing sent: the question's own months number, else the default of the rule.
         None => match months.as_slice() {
-            [] => {
-                if has_target {
-                    12
-                } else {
-                    6
-                }
-            }
+            [] => default_ahead,
             [only] => only.number,
             _ => {
                 return Err(bad(
@@ -769,7 +823,7 @@ fn months_ahead(
         ));
     }
     let allowed = if months.is_empty() {
-        ahead == if has_target { 12 } else { 6 }
+        ahead == default_ahead
     } else {
         months.iter().any(|n| n.number == ahead)
     };
@@ -777,7 +831,7 @@ fn months_ahead(
         return Err(bad(
             "ERR_OUT_OF_RANGE",
             "ahead",
-            "months ahead must be a number of the question with months; with none, 6 (12 for a target)",
+            "months ahead must be a number of the question with months; with none, 6 (12 for a target or one year)",
         ));
     }
     u32::try_from(ahead)
@@ -977,11 +1031,13 @@ fn read_history(
     }
     if let Some(text) = &parsed.seller {
         let (id, record) = named(env, state, text, "seller", &["a"])?;
+        require_type(env, id, "seller", AccountType::Seller)?;
         filters.seller_id = Some(id);
         source.seller = Some(record);
     }
     if let Some(text) = &parsed.buyer {
         let (id, record) = named(env, state, text, "buyer", &["a"])?;
+        require_type(env, id, "buyer", AccountType::Buyer)?;
         filters.buyer = Some(PartyFilter {
             account_id: id,
             person_key: None,

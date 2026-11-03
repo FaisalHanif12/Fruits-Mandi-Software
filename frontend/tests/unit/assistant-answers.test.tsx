@@ -11,11 +11,13 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnswerEstimate } from '../../src/bindings/AnswerEstimate';
+import type { AnswerWorking } from '../../src/bindings/AnswerWorking';
 import type { AskReply } from '../../src/bindings/AskReply';
 import type { EstimateMethod } from '../../src/bindings/EstimateMethod';
 import type { AssistantStep } from '../../src/bindings/AssistantStep';
 import * as assistantApi from '../../src/features/assistant/api';
 import { AnswerBlock } from '../../src/features/assistant/components/AnswerBlock';
+import { Figure } from '../../src/features/assistant/components/Figure';
 import { AnswerText } from '../../src/features/assistant/components/AnswerText';
 import { useAssistantStore } from '../../src/features/assistant/store';
 import { PARTNER_CODE_KEY } from '../../src/features/partners';
@@ -457,6 +459,73 @@ describe.each(LANGUAGES)('the bands (%s)', (language) => {
       }),
     ).toBeNull();
   });
+});
+
+describe.each(LANGUAGES)('the working of a percent more or less (%s)', (language) => {
+  beforeEach(() => {
+    setLanguage(language);
+  });
+
+  it("backend's own answer: this year's commission and 10% more, with its working", async () => {
+    await renderShellRouted();
+    const user = await ask(
+      language,
+      real.REPLY_ANSWERED_PERCENT_MORE,
+      'agar is saal commission 10 percent zyada hota to kitna hota',
+    );
+    const answer = within(panelOf(language)).getByLabelText(
+      message(language, 'assistant-answer-label'),
+    );
+    expect([...answer.querySelectorAll('bdi.number-run')].map((node) => node.textContent)).toEqual([
+      '5,448',
+      '5,993',
+    ]);
+    // Only the figure the calculator made has the ⓘ; the books' figure is checked by its source.
+    const infos = within(answer).getAllByRole('button', {
+      name: message(language, 'calc-info-label'),
+    });
+    expect(infos).toHaveLength(1);
+    await user.click(infos[0] ?? answer);
+    const shown = visible(document.body.textContent);
+    expect(shown).toContain(message(language, 'assistant-working-percent-more'));
+    expect(shown).toContain('5,448 × 110.00% = 5,993');
+  });
+
+  it.each([
+    // 8,360,110 and 10.00% more: the amount times 110.00%.
+    [
+      'assistant-working-percent-more',
+      836_011_000,
+      11_000,
+      919_612_100,
+      '8,360,110 × 110.00% = 9,196,121',
+    ],
+    // 48,333 and 50.00% less: the amount times 50.00%, rounded once.
+    ['assistant-working-percent-less', 4_833_300, 5_000, 2_416_700, '48,333 × 50.00% = 24,167'],
+  ])(
+    '%s: its own title and the step, with the percent and its sign',
+    async (id, base, factor, result, line) => {
+      const working: AnswerWorking = {
+        title_id: id,
+        steps: [
+          {
+            op: 'times',
+            inputs: [money(base), { type: 'percent', hundredths: factor }],
+            result: money(result),
+          },
+        ],
+      };
+      const view = renderIn(
+        language,
+        <Figure cell={money(result)} dir={null} checked={false} working={working} />,
+      );
+      const user = userEvent.setup();
+      await user.click(view.getByRole('button', { name: message(language, 'calc-info-label') }));
+      const shown = visible(document.body.textContent);
+      expect(shown).toContain(message(language, id));
+      expect(shown).toContain(line);
+    },
+  );
 });
 
 describe.each(LANGUAGES)('general advice (%s)', (language) => {
