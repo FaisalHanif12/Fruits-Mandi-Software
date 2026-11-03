@@ -64,3 +64,32 @@ No quality loss: every category scores at least what it scored in the run before
 - Golden numbers never change.
 - The key is never read, printed or written.
 - Targeted tests only; the live runs are by the lead.
+
+## 6. Umar's addition of 04-11-2026: print any party, any period, with a button and the steps
+
+Umar: "main ne faisal ki sale ya bikri ki aik month ya kal ki ya aaj ki bikri ka print lena hai ... provide the button to go exact where the Faisal record exists, also tell the exact instruction how I can take the print: go there, set the filter and take the print of the whole month."
+
+### 6.1 What the answer gives (always both)
+1. **A button** that opens the right report with the party and the period already set, so the Owner presses Print (F9) and nothing else.
+2. **The steps, with the real values filled in**, so he can do it by hand next time. Example for "Faisal ki pichle mahine ki bikri ka print":
+   1. رپورٹ کھولیں ← ادھاری تفصیل (R5).
+   2. گاہک: فیصل (code 7). از: 01-10-2026، تا: 31-10-2026.
+   3. چھاپیں (F9) دبائیں۔ زبان اور کاغذ چن کر پرنٹ کریں، یا پی ڈی ایف بنائیں۔
+- The steps are made by the app from the guide and the found party and dates, not typed by the model. The steps and the button always agree.
+
+### 6.2 Which report (backend maps it; the guide holds the steps)
+| Asked | One day | A period (a month, kal to aaj, "1 se 15 tak") |
+|---|---|---|
+| A buyer's bikri or bill | R35, his day slip | R5 for that buyer and range; R13 (his khata with items) offered as a second button |
+| A seller's bikri | R6 for that seller and day | R6 for that seller and range; R13 as a second button |
+| A whole day or period, no party | R34, the day summary | R2, the full sales register, for the range |
+| A party's khata or statement | R13 or R14 for the range | the same |
+
+- The party comes from find, in his real role. A buyer is never printed as a seller (plan 52 §8).
+- A name that is not found gives the "no such party" answer.
+- A period in words becomes exact dates: aaj, kal, is mahine, pichle mahine, October, "1 se 15 tak", "pichle hafte".
+
+### 6.3 Owners
+- **backend.** The print intent and the period words, the report and filter mapping above, and the steps built from guide.json with the values filled in. This is part of S2, so no model call is needed when the intent and party are sure.
+- **frontend2.** The button opens the report with its filters set (party, from, to). Check that every report in 6.2 accepts filters from a link, and add that where one does not. Tests in both languages.
+- **robustness.** Print questions for each row of 6.2, in three languages and mixed, for today, yesterday, a month, a named month and a range. Expect the report, the party, the dates and the steps.
