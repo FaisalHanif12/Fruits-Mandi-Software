@@ -2,15 +2,10 @@
 import type { Language } from './Language';
 
 /**
- * Input of `reports_collection_print_data` (plan 17e): the same day and filters as
+ * Input of `reports_collection_print_data` (plan 17e): the same filters as
  * `assist_collection_list`, and the print language.
  */
 export type CollectionPrintDataInput = {
-  /**
-   * The day, `DD-MM-YYYY` or a shortcut (PRD FR-7.19). Buyers whose collection day is this
-   * weekday are on the list.
-   */
-  date: string;
   /**
    * Only this collector (a staff member). Missing means every collector.
    */

@@ -7,6 +7,7 @@
 // into Urdu (FR-7.25). Leaving with unsaved changes asks "Save changes?" (PRD FR-7.9).
 
 import { Localized } from '@fluent/react';
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalization } from '@fluent/react';
 import { Plus, X } from 'lucide-react';
@@ -23,6 +24,7 @@ import {
   Field,
   fieldError,
   FreeTextInput,
+  LinkButton,
   NamePair,
   Select,
   showToast,
@@ -89,6 +91,7 @@ interface FirmTabProps {
 
 export function FirmTab({ firm }: FirmTabProps) {
   const { l10n } = useLocalization();
+  const navigate = useNavigate();
   const { values, setField, setValues } = useFormState<FirmFields>(fieldsOf(firm));
   // The contact persons being edited. They belong to the saved firm they were made against: when a
   // save brings a new `firm`, they are no longer read and the saved ones show (no effect needed).
@@ -270,6 +273,17 @@ export function FirmTab({ firm }: FirmTabProps) {
           <Localized id="settings-firm-contacts-help">
             <p className="type-body text-ink-muted" />
           </Localized>
+          {/* The munshis come from the staff list now (PRD v1.23): said here, with a way there. */}
+          <Localized id="settings-firm-munshi-note">
+            <p className="type-body text-ink" />
+          </Localized>
+          <LinkButton
+            onClick={() => {
+              void navigate({ to: '/index/$kind', params: { kind: 'staff' } });
+            }}
+          >
+            <Localized id="settings-firm-munshi-link" />
+          </LinkButton>
           {fieldError(error, 'firm_contacts') === undefined ? null : (
             <p role="alert" className="type-body text-due">
               {fieldError(error, 'firm_contacts')}

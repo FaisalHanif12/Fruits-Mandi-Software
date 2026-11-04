@@ -13,7 +13,7 @@ import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { fakePlan16, refused } from '../helpers/bikri-plan16';
-import { cellOf, named, salesGrid, textOf } from '../helpers/bikri-screen';
+import { cellOf, focusedIn, named, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -81,6 +81,9 @@ describe.each(LANGUAGES)('the edit rules in words (%s)', (language) => {
         ? 'ارشد ملتانی'
         : 'Arshad Multani';
 
+  /** Where focus was in the sales grid just before F10: "row:column", the cell he was typing in. */
+  let focusBeforeSave: string | null = null;
+
   /** The entry open for edit, a new rate typed and F10 pressed, so the backend can refuse it. */
   const openAndSave = async (entry: number, field: string, rule: string) => {
     const plan = fakePlan16();
@@ -98,6 +101,7 @@ describe.each(LANGUAGES)('the edit rules in words (%s)', (language) => {
     const user = userEvent.setup();
     await user.click(cellOf(salesGrid(language), 0, 'rate'));
     await user.keyboard('610{Enter}');
+    focusBeforeSave = focusedIn(salesGrid(language));
     press('F10');
     return plan;
   };
@@ -134,7 +138,11 @@ describe.each(LANGUAGES)('the edit rules in words (%s)', (language) => {
     });
     // It scrolled to the list that holds the words, not somewhere else.
     expect(scroll.mock.contexts.some((target) => (target as Element).contains(alert))).toBe(true);
-    expect(salesGrid(language).contains(document.activeElement)).toBe(true);
+    // The focus stays in the cell he was typing in. A picker cell opens its picker in a popup on the
+    // page (plan 46), so the field with the cursor is outside the grid's element: the cell the grid
+    // shows as focused is the line's, and it is the one that had the focus before the save.
+    expect(focusBeforeSave).not.toBeNull();
+    expect(focusedIn(salesGrid(language))).toBe(focusBeforeSave);
   });
 
   it('a lot or line the rule points at is named in the list', async () => {

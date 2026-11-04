@@ -46,6 +46,13 @@ settings-firm-contacts-title = People in the print header
 # review: pending
 settings-firm-contacts-help = Up to 6 people. On every print the owners are printed under the firm name first, then the munshi. A phone can be left empty. For example "Munshi Asif Bhatti 0300-4058860".
 
+# The munshis are not typed here any more: the active ones of the staff list print too (PRD v1.23).
+# review: pending
+settings-firm-munshi-note = The munshis are managed in the staff list. Every active munshi prints in every header, after the people below. To stop one from printing, make him inactive there.
+
+# review: pending
+settings-firm-munshi-link = Open the staff list
+
 # review: pending
 settings-firm-contacts-empty = No person yet. The print header shows no line for the owners and the munshi.
 

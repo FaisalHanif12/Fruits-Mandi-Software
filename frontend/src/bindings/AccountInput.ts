@@ -122,10 +122,6 @@ export type AccountInput = {
    */
   collector_staff_id: number | null;
   /**
-   * The collection day, 0 (Monday) to 6 (Sunday). Null if none.
-   */
-  collection_weekday: number | null;
-  /**
    * False hides the account from pickers; reports keep it.
    */
   is_active: boolean;

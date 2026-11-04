@@ -47,6 +47,12 @@ settings-firm-contacts-title = پرنٹ کے ہیڈر کے افراد
 settings-firm-contacts-help = زیادہ سے زیادہ 6 افراد۔ ہر پرنٹ میں فرم کے نام کے نیچے پہلے مالک چھپتے ہیں، پھر منشی۔ فون خالی چھوڑ سکتے ہیں۔ مثلاً "منشی آصف بھٹی 0300-4058860"۔
 
 # review: pending
+settings-firm-munshi-note = منشی عملے کی فہرست میں سنبھالے جاتے ہیں۔ ہر فعال منشی ہر پرنٹ کے سرے پر نیچے کے افراد کے بعد چھپتا ہے۔ کسی کو چھپنے سے روکنا ہو تو وہاں اسے غیر فعال کریں۔
+
+# review: pending
+settings-firm-munshi-link = عملے کی فہرست کھولیں
+
+# review: pending
 settings-firm-contacts-empty = ابھی کوئی فرد نہیں۔ پرنٹ کے اوپر مالک اور منشی کی سطر نہیں آئے گی۔
 
 # $number: 1 to 6.

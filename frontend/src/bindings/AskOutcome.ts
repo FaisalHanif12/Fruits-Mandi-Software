@@ -19,4 +19,5 @@ export type AskOutcome =
   | 'locked'
   | 'limit_reached'
   | 'offline'
-  | 'error';
+  | 'error'
+  | 'time_limit';

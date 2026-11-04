@@ -70,6 +70,21 @@ pub trait CloudStore: Send + Sync {
     /// [`CloudError`].
     fn get_file(&self, key: &str, dest: &Path) -> Result<(), CloudError>;
 
+    /// Like [`CloudStore::get_file`], and tells `progress(done, total)` in bytes as the file
+    /// arrives. A store that cannot tell calls it once at the end, or never.
+    ///
+    /// # Errors
+    /// [`CloudError`].
+    fn get_file_progress(
+        &self,
+        key: &str,
+        dest: &Path,
+        progress: &mut dyn FnMut(u64, u64),
+    ) -> Result<(), CloudError> {
+        let _ = progress;
+        self.get_file(key, dest)
+    }
+
     /// Every object whose key starts with `prefix` (a folder, ending in `/`).
     ///
     /// # Errors
@@ -96,9 +111,45 @@ pub trait CloudFactory: Send + Sync {
         secrets: &dyn SecretStore,
     ) -> Result<Arc<dyn CloudStore>, BackupError>;
 
+    /// The store for an account typed on the first screen of a new computer (PRD FR-20.11),
+    /// before anything is saved. It reads no setting and no stored key.
+    ///
+    /// # Errors
+    /// `ERR_BACKUP_CLOUD_NOT_CONFIGURED` when the account cannot be used.
+    fn open_account(&self, account: &CloudAccount) -> Result<Arc<dyn CloudStore>, BackupError>;
+
     /// True when [`CloudFactory::open`] would work: the cloud copy is on and its details and keys
     /// are all there. Cheap: it makes no connection.
     fn ready(&self, settings: &BackupSettings, secrets: &dyn SecretStore) -> bool;
+}
+
+/// A cloud account as the Owner typed it on the first screen (PRD FR-20.11). Checked before it
+/// gets here. Its `Debug` text never shows the keys (NFR-OBS-2).
+#[derive(Clone, PartialEq, Eq)]
+pub struct CloudAccount {
+    /// The S3 endpoint, `https://...`.
+    pub endpoint: String,
+    /// The bucket.
+    pub bucket: String,
+    /// The region.
+    pub region: String,
+    /// The folder inside the bucket.
+    pub prefix: String,
+    /// The access key id.
+    pub key_id: String,
+    /// The secret access key.
+    pub secret: String,
+}
+
+impl std::fmt::Debug for CloudAccount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CloudAccount")
+            .field("endpoint", &self.endpoint)
+            .field("bucket", &self.bucket)
+            .field("key_id", &"[hidden]")
+            .field("secret", &"[hidden]")
+            .finish_non_exhaustive()
+    }
 }
 
 fn not_configured(detail: &str) -> BackupError {
@@ -108,6 +159,33 @@ fn not_configured(detail: &str) -> BackupError {
 /// Builds the S3 store for Cloudflare R2 (or any S3-compatible service) with `object_store`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct S3Factory;
+
+/// Builds the S3 store from the plain parts. Makes no connection.
+fn build_s3(account: &CloudAccount) -> Result<Arc<dyn CloudStore>, BackupError> {
+    // A request that hangs must not hold the app up at exit: short timeouts and a few tries.
+    let options = object_store::ClientOptions::new()
+        .with_connect_timeout(Duration::from_secs(10))
+        .with_timeout(Duration::from_secs(60));
+    let retry = object_store::RetryConfig {
+        backoff: object_store::BackoffConfig::default(),
+        max_retries: 3,
+        retry_timeout: Duration::from_secs(90),
+    };
+    let store = object_store::aws::AmazonS3Builder::new()
+        .with_client_options(options)
+        .with_retry(retry)
+        .with_endpoint(account.endpoint.clone())
+        .with_bucket_name(account.bucket.clone())
+        .with_region(account.region.clone())
+        .with_access_key_id(account.key_id.clone())
+        .with_secret_access_key(account.secret.clone())
+        .build()
+        .map_err(|e| not_configured(&format!("cloud account: {e}")))?;
+    Ok(Arc::new(ObjectStoreCloud::new(
+        Arc::new(store),
+        &account.prefix,
+    )?))
+}
 
 impl CloudFactory for S3Factory {
     fn open(
@@ -123,29 +201,18 @@ impl CloudFactory for S3Factory {
         let (Some(access), Some(secret)) = (access, secret) else {
             return Err(not_configured("no cloud keys"));
         };
-        // A request that hangs must not hold the app up at exit: short timeouts and a few tries.
-        let options = object_store::ClientOptions::new()
-            .with_connect_timeout(Duration::from_secs(10))
-            .with_timeout(Duration::from_secs(60));
-        let retry = object_store::RetryConfig {
-            backoff: object_store::BackoffConfig::default(),
-            max_retries: 3,
-            retry_timeout: Duration::from_secs(90),
-        };
-        let store = object_store::aws::AmazonS3Builder::new()
-            .with_client_options(options)
-            .with_retry(retry)
-            .with_endpoint(settings.cloud_endpoint.clone())
-            .with_bucket_name(settings.cloud_bucket.clone())
-            .with_region(settings.cloud_region.clone())
-            .with_access_key_id(access)
-            .with_secret_access_key(secret)
-            .build()
-            .map_err(|e| not_configured(&format!("cloud account: {e}")))?;
-        Ok(Arc::new(ObjectStoreCloud::new(
-            Arc::new(store),
-            &settings.cloud_prefix,
-        )?))
+        build_s3(&CloudAccount {
+            endpoint: settings.cloud_endpoint.clone(),
+            bucket: settings.cloud_bucket.clone(),
+            region: settings.cloud_region.clone(),
+            prefix: settings.cloud_prefix.clone(),
+            key_id: access,
+            secret,
+        })
+    }
+
+    fn open_account(&self, account: &CloudAccount) -> Result<Arc<dyn CloudStore>, BackupError> {
+        build_s3(account)
     }
 
     fn ready(&self, settings: &BackupSettings, secrets: &dyn SecretStore) -> bool {
@@ -200,7 +267,27 @@ fn classify(error: &object_store::Error) -> CloudError {
         object_store::Error::NotFound { .. } => CloudError::NotFound,
         object_store::Error::Unauthenticated { .. }
         | object_store::Error::PermissionDenied { .. } => CloudError::Refused(error.to_string()),
-        _ => CloudError::Offline(error.to_string()),
+        other => classify_text(&other.to_string()),
+    }
+}
+
+/// S3 answers a wrong bucket or wrong keys with an XML error code that `object_store` may leave
+/// in the message of a generic error. Reading the code keeps "wrong bucket" and "wrong keys"
+/// apart from "no internet" on the first screen of a new computer (PRD FR-20.11).
+fn classify_text(text: &str) -> CloudError {
+    if text.contains("NoSuchBucket") {
+        CloudError::NotFound
+    } else if [
+        "InvalidAccessKeyId",
+        "SignatureDoesNotMatch",
+        "AccessDenied",
+    ]
+    .iter()
+    .any(|code| text.contains(code))
+    {
+        CloudError::Refused(text.to_owned())
+    } else {
+        CloudError::Offline(text.to_owned())
     }
 }
 
@@ -242,6 +329,15 @@ impl CloudStore for ObjectStoreCloud {
     }
 
     fn get_file(&self, key: &str, dest: &Path) -> Result<(), CloudError> {
+        self.get_file_progress(key, dest, &mut |_, _| {})
+    }
+
+    fn get_file_progress(
+        &self,
+        key: &str,
+        dest: &Path,
+        progress: &mut dyn FnMut(u64, u64),
+    ) -> Result<(), CloudError> {
         use object_store::ObjectStoreExt;
         let location = self.path(key);
         let partial = partial_path(dest);
@@ -264,6 +360,7 @@ impl CloudStore for ObjectStoreCloud {
                 out.write_all(&bytes)
                     .map_err(|e| CloudError::Refused(format!("file: {e}")))?;
                 at = end;
+                progress(at, meta.size);
             }
             out.sync_all()
                 .map_err(|e| CloudError::Refused(format!("file: {e}")))?;
@@ -423,6 +520,10 @@ impl CloudFactory for FixedCloud {
         } else {
             Err(not_configured("the cloud copy is off"))
         }
+    }
+
+    fn open_account(&self, _account: &CloudAccount) -> Result<Arc<dyn CloudStore>, BackupError> {
+        Ok(Arc::clone(&self.0))
     }
 
     fn ready(&self, settings: &BackupSettings, _secrets: &dyn SecretStore) -> bool {

@@ -60,11 +60,10 @@ afterEach(() => {
 });
 
 describe('the address of the hidden print window for the collection list', () => {
-  it('reads a good address, the day as the command takes it', () => {
+  it('reads a good address: the day in it is checked and not sent, the list has no day', () => {
     expect(parseCollectionPrintParams(`?${GOOD}`)).toEqual({
       job: 'job-1',
       input: {
-        date: '10-10-2026',
         collector_staff_id: null,
         city_id: null,
         search: null,
@@ -83,7 +82,6 @@ describe('the address of the hidden print window for the collection list', () =>
     ).toEqual({
       job: 'a_b-1',
       input: {
-        date: '10-10-2026',
         collector_staff_id: 81,
         city_id: 91,
         search: null,
@@ -126,7 +124,6 @@ describe('the print route for the collection list', () => {
         command: 'reports_collection_print_data',
         args: {
           input: {
-            date: '10-10-2026',
             collector_staff_id: null,
             city_id: null,
             search: null,
@@ -155,7 +152,6 @@ describe('the print route for the collection list', () => {
     });
     expect(calls[0]?.args).toEqual({
       input: {
-        date: '10-10-2026',
         collector_staff_id: 81,
         city_id: 91,
         search: null,

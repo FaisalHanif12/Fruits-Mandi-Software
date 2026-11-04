@@ -12,8 +12,6 @@ use std::sync::{Mutex, PoisonError};
 
 use keyring::Entry;
 
-/// The service name of every secret of the app (the same as the backup and audit keys use).
-pub const KEYRING_SERVICE: &str = "pk.mandisoftware.app";
 /// The entry of this key: its own, apart from the backup and audit keys.
 pub const KEYRING_ENTRY: &str = "openrouter_api_key";
 /// Longest key accepted.
@@ -49,7 +47,16 @@ pub trait KeyStore: Send + Sync {
 pub struct KeyringStore;
 
 fn entry() -> Result<Entry, KeyStoreError> {
-    Entry::new(KEYRING_SERVICE, KEYRING_ENTRY).map_err(|e| KeyStoreError(format!("{e}")))
+    // The service name of every secret of the app, with the developer profile suffix in a debug
+    // build (`mandi_core::profile`), so a test run never touches the real entries.
+    Entry::new(&KeyringStore::service(), KEYRING_ENTRY).map_err(|e| KeyStoreError(format!("{e}")))
+}
+
+impl KeyringStore {
+    /// The Keychain / Credential Manager service name of the key.
+    pub fn service() -> String {
+        mandi_services::core::profile::keyring_service()
+    }
 }
 
 impl KeyStore for KeyringStore {

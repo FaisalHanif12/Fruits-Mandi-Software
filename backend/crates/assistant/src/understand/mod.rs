@@ -1,0 +1,679 @@
+//! Step 1 of plan 55, "understand": what a question is about, before any model is called.
+//!
+//! The app reads the Owner's question itself, in Roman Urdu, Urdu letters, English or a mix, with
+//! misspellings, and answers with a typed [`Understanding`]:
+//!
+//! - the **intent**: figure, list, print, how-to, navigate, forecast, what-if, advice, change
+//!   request, not in the app, or unclear;
+//! - the **parties**, each found in his real role (seller, buyer, partner, garden, trip, khata,
+//!   staff), or not found (with the role that was asked), or found in another role, or several;
+//! - the **items**, with plurals and spellings (apples, kele, saib, کیلے, mausami);
+//! - the **period** as exact dates (aaj, kal, parson, is hafte, pichle mahine, October, "1 se 15
+//!   tak", is saal, ab tak);
+//! - the **figure** asked (balance, sale, commission, dues, payable, stock, cash ...) and whether
+//!   two were asked together ("commission aur sale");
+//! - for a print or an open-the-screen request, the **report** and its filters (plan 54 Section 6.2
+//!   and 6.4), with a second report where the plan gives one; for a how-to, the **guide topic**;
+//! - a **confidence** for each part, and one overall `sure` flag.
+//!
+//! `sure` means: the app understood the whole question, including a name that does not exist. It does
+//! not decide who answers. The caller routes by intent (plan 55 Section 2). Not sure is a valid, safe
+//! result: the model path takes over.
+//!
+//! The module only reads. It writes nothing, calls no model and never touches a key. It uses the
+//! search index, the item and partner lists and the transliteration words of the services, through
+//! their public functions (Code Standards B29). No money or quantity is worked out here (Code
+//! Standards Q5).
+//!
+//! Example (worked day, today 10-10-2026): "faisal ki aaj ki bikri ka print" with Faisal a buyer is
+//! `Print`, party Faisal as a buyer, period 10-10-2026, report R35 with `party` and `as_of`.
+
+use chrono::NaiveDate;
+use mandi_services::Context;
+use mandi_services::auth::Actor;
+use mandi_services::core::auth::Language;
+use mandi_services::core::dates::BusinessDate;
+
+mod change;
+mod compose_change;
+mod compose_common;
+mod compose_help;
+mod compose_missing;
+mod compose_outside;
+mod compose_print;
+mod compose_route;
+mod items;
+mod lexicon;
+mod plan;
+mod reads;
+mod scan;
+mod what;
+mod when;
+mod who;
+
+pub use compose_change::compose_change;
+pub use compose_common::Composed;
+pub use compose_help::{compose_help, compose_navigate};
+pub use compose_missing::compose_missing;
+pub use compose_outside::{compose_outside, outside_message};
+pub use compose_print::compose_print;
+pub use compose_route::compose;
+pub use plan::{PlanFilters, ReportPlan};
+pub use reads::{PlannedRead, plan_reads};
+
+/// How sure the app is of one part of the understanding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Confidence {
+    /// A guess, or the parts disagree.
+    Low,
+    /// Read from the words, with one weaker sign.
+    Medium,
+    /// Read from clear words, and checked against the books where that applies.
+    High,
+}
+
+/// One part of the understanding and how sure the app is of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Part<T> {
+    /// What was understood.
+    pub value: T,
+    /// How sure.
+    pub confidence: Confidence,
+}
+
+/// What the question wants.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Intent {
+    /// One figure (or two): "faisal ka bakaya kitna hai".
+    Figure,
+    /// A list or a table: "faisal ne kya kya khareeda", "top 5 buyers".
+    List,
+    /// A printout: "faisal ki aaj ki bikri ka print".
+    Print,
+    /// How to do something in the app, or what a screen is: "wasooli kaise likhun".
+    HowTo,
+    /// Open a screen or a report: "dashboard kholo", "faisal ka khata kholo".
+    Navigate,
+    /// A figure ahead in time: "agle mahine commission kitna hoga".
+    Forecast,
+    /// A figure under a condition: "agar raftar double ho to".
+    WhatIf,
+    /// Advice: "sale kaise barhayen", "kisko udhar na dun".
+    Advice,
+    /// An instruction to write: "5000 jama karo", "wasooli likh do".
+    ChangeRequest,
+    /// Something the app does not keep: weather, GST, a bank balance, the rate in Lahore.
+    NotInApp,
+    /// The app could not tell.
+    Unclear,
+}
+
+/// What a party, a record or a person is in the books.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PartyRole {
+    /// A seller (بیوپاری).
+    Seller,
+    /// A buyer (گاہک).
+    Buyer,
+    /// A partner (شراکت دار).
+    Partner,
+    /// A garden (باغ).
+    Garden,
+    /// A market trip (مارکیٹ سفر).
+    Trip,
+    /// A الگ کھاتہ.
+    Khata,
+    /// A staff member or any person who borrows (ادھار رقم).
+    Staff,
+}
+
+impl PartyRole {
+    /// The role as the reply of the ask commands names it (`AskReply.asked_role`, `FoundAs.role`).
+    /// A khata or a person who borrowed is "any other record" there.
+    ///
+    /// Example: `PartyRole::Buyer.asked_role()` is `AskedRole::Buyer`.
+    pub fn asked_role(self) -> crate::ask::AskedRole {
+        use crate::ask::AskedRole;
+        match self {
+            PartyRole::Seller => AskedRole::Seller,
+            PartyRole::Buyer => AskedRole::Buyer,
+            PartyRole::Partner => AskedRole::Partner,
+            PartyRole::Garden => AskedRole::Garden,
+            PartyRole::Trip => AskedRole::Trip,
+            PartyRole::Khata | PartyRole::Staff => AskedRole::Any,
+        }
+    }
+}
+
+/// A record found in the books. The key is the one `find` gives: `a12` for an account, `s3` for a
+/// partner, `g2` for a garden, `t5` for a trip.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartyHit {
+    /// The key.
+    pub key: String,
+    /// The id of the record (the account, the partner, the garden or the trip).
+    pub id: i64,
+    /// What he is in the books.
+    pub role: PartyRole,
+    /// His code, empty for a partner.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+    /// The tag after the name, if any.
+    pub tag: Option<String>,
+    /// True for a پختہ کھاتہ party.
+    pub pukhta: bool,
+}
+
+/// An item found in the books.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemHit {
+    /// The key, `i7`.
+    pub key: String,
+    /// The id.
+    pub id: i64,
+    /// The code.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+}
+
+/// What a name led to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Outcome<T> {
+    /// Exactly one record, in the role asked (or in no particular role).
+    Found(T),
+    /// Exactly one record, but in another role than the one asked: a buyer asked as a seller.
+    FoundAs(T),
+    /// More than one record. The list is the first five.
+    Several(Vec<T>),
+    /// No record has this name.
+    NotFound,
+}
+
+impl<T> Outcome<T> {
+    /// The one record, whether found in the role asked or in another.
+    pub fn hit(&self) -> Option<&T> {
+        match self {
+            Outcome::Found(hit) | Outcome::FoundAs(hit) => Some(hit),
+            Outcome::Several(_) | Outcome::NotFound => None,
+        }
+    }
+}
+
+/// A person or a place the question names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartyRef {
+    /// The words as typed (normalised).
+    pub text: String,
+    /// The first and the after-last word of the name in the question.
+    pub words: (usize, usize),
+    /// The role the question asked for, from its words ("seller", "becha", "khareeda"), if it said.
+    pub asked_role: Option<PartyRole>,
+    /// What the books say.
+    pub outcome: Outcome<PartyHit>,
+    /// How sure.
+    pub confidence: Confidence,
+}
+
+/// The kinds of record besides parties and items that a question can name and the app resolves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordKind {
+    /// An expense head (بجلی).
+    ExpenseHead,
+    /// A city.
+    City,
+    /// A truck stand (اڈا).
+    Adda,
+}
+
+/// A record of another master list found in the books. The key is the one `find` gives: `eh3`
+/// for an expense head, `ct4` for a city, `ad5` for an اڈا.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordHit {
+    /// Which list.
+    pub kind: RecordKind,
+    /// The key.
+    pub key: String,
+    /// The id.
+    pub id: i64,
+    /// The code.
+    pub code: String,
+    /// Urdu name.
+    pub name_ur: String,
+    /// English name.
+    pub name_en: String,
+}
+
+/// An expense head, a city or an اڈا the question names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordRef {
+    /// The words as typed (normalised).
+    pub text: String,
+    /// The first and the after-last word of the name in the question.
+    pub words: (usize, usize),
+    /// What the books say.
+    pub outcome: Outcome<RecordHit>,
+    /// How sure.
+    pub confidence: Confidence,
+}
+
+/// What a question outside the books is about: the app says plainly that it does not keep it, with
+/// the nearest thing it does keep.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutsideKind {
+    /// The weather.
+    Weather,
+    /// GST or any tax.
+    Tax,
+    /// A bank balance.
+    Bank,
+    /// The rate of goods in another market ("lahore mein kele ka rate", "mandi ka rate").
+    MarketRate,
+    /// The dollar, gold, petrol, the stock market.
+    Prices,
+    /// Anything else the app does not keep (news, cricket, a joke).
+    Other,
+}
+
+/// What the app chose because the question did not say.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Assumed {
+    /// The measure of a ranking: total commission (view H, PRD 18.2).
+    Measure,
+    /// The period of a ranking: this year.
+    Period,
+}
+
+/// An item the question names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemRef {
+    /// The words as typed (normalised).
+    pub text: String,
+    /// The first and the after-last word of the name in the question.
+    pub words: (usize, usize),
+    /// What the books say.
+    pub outcome: Outcome<ItemHit>,
+    /// How sure.
+    pub confidence: Confidence,
+}
+
+/// The kinds of period a question can name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PeriodKind {
+    /// آج.
+    Today,
+    /// کل in a past question.
+    Yesterday,
+    /// پرسوں in a past question.
+    DayBeforeYesterday,
+    /// کل in a future question.
+    Tomorrow,
+    /// پرسوں in a future question.
+    DayAfterTomorrow,
+    /// This week, Monday to today.
+    ThisWeek,
+    /// Last week, Monday to Sunday.
+    LastWeek,
+    /// Next week.
+    NextWeek,
+    /// The 1st to today.
+    ThisMonth,
+    /// The whole of last month.
+    LastMonth,
+    /// The whole of next month.
+    NextMonth,
+    /// 1 January to today.
+    ThisYear,
+    /// The whole of last year.
+    LastYear,
+    /// The whole of next year.
+    NextYear,
+    /// A month by name.
+    Month {
+        /// The year.
+        year: i32,
+        /// 1 to 12.
+        month: u32,
+    },
+    /// One day by its date.
+    Date,
+    /// From one date to another.
+    Range,
+    /// The last N days, up to today.
+    LastDays(u32),
+    /// The last N weeks, up to today.
+    LastWeeks(u32),
+    /// The last N months, up to today.
+    LastMonths(u32),
+    /// The last N years, up to today.
+    LastYears(u32),
+    /// This month and the following ones, N months in all.
+    NextMonths(u32),
+    /// This month and the following ones, N years in all.
+    NextYears(u32),
+    /// From today for N days (or N weeks as days).
+    NextDays(u32),
+    /// A whole year by its number (2025), or up to today for this one.
+    Year(i32),
+    /// From the first day of the books to today.
+    UpToNow,
+    /// From today to 31 December.
+    YearEnd,
+}
+
+/// A period as exact dates.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PeriodRef {
+    /// Which kind.
+    pub kind: PeriodKind,
+    /// The first day. `None` only when the books hold nothing yet (`UpToNow`).
+    pub from: Option<NaiveDate>,
+    /// The last day.
+    pub to: NaiveDate,
+    /// How sure.
+    pub confidence: Confidence,
+    /// True when the period lies after today.
+    pub future: bool,
+    /// The words as typed (normalised).
+    pub words: String,
+}
+
+impl PeriodRef {
+    /// The first day as `YYYY-MM-DD`, or empty.
+    pub fn from_iso(&self) -> String {
+        self.from
+            .map(|d| d.format("%Y-%m-%d").to_string())
+            .unwrap_or_default()
+    }
+
+    /// The last day as `YYYY-MM-DD`.
+    pub fn to_iso(&self) -> String {
+        self.to.format("%Y-%m-%d").to_string()
+    }
+}
+
+/// The figure a question asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FigureKind {
+    /// A party's balance (bakaya, lena, dena).
+    Balance,
+    /// Sales, the amount (bikri).
+    Sale,
+    /// How many بکری (bikriyan).
+    SaleCount,
+    /// Commission.
+    Commission,
+    /// لاگا.
+    Laga,
+    /// What a buyer bought (khareeda).
+    Purchases,
+    /// The shop's dues from buyers (ugrahi).
+    Dues,
+    /// Money received (wasooli hui).
+    Receipts,
+    /// What the shop owes sellers (adaigi baqi).
+    Payable,
+    /// Advances to sellers (peshgi).
+    Advance,
+    /// Goods not sold (baqi maal).
+    Stock,
+    /// Cash in hand (roqar).
+    Cash,
+    /// A partner's capital (sarmaya).
+    Capital,
+    /// A partner's total (kul raqam).
+    PartnerTotal,
+    /// A partner's share (hissa).
+    PartnerShare,
+    /// Profit or loss (munafa).
+    Profit,
+    /// Expenses (kharcha).
+    Expense,
+    /// Fruit taken (phal).
+    FruitTaken,
+    /// Money lent (udhar raqam).
+    MoneyLent,
+    /// The dead amount (doobi raqam).
+    DeadAmount,
+    /// A rate (rate, bhao).
+    Rate,
+    /// The summary of a day (khulasa).
+    DaySummary,
+    /// A party's ledger (khata, hisab).
+    Ledger,
+    /// A party's statement (fard hisab).
+    Statement,
+    /// The day book (roznamcha).
+    DayBook,
+    /// The trial balance.
+    TrialBalance,
+    /// The result of a garden or a trip.
+    Result,
+}
+
+/// What a list is over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ListOver {
+    /// Items.
+    Items,
+    /// Buyers.
+    Buyers,
+    /// Sellers.
+    Sellers,
+    /// Parties of any side.
+    Parties,
+}
+
+/// Highest or lowest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rank {
+    /// Sab se zyada, top.
+    Most,
+    /// Sab se kam, lowest.
+    Least,
+}
+
+/// What a list question asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ListAsk {
+    /// What it is over, if it said.
+    pub over: Option<ListOver>,
+    /// Highest or lowest, if it said.
+    pub rank: Option<Rank>,
+    /// "top 5": how many, if it said.
+    pub n: Option<u32>,
+}
+
+/// Why the app is not (fully) sure. Each is a reason for the model path to take over, or for the
+/// caller to ask the Owner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Doubt {
+    /// The question is empty, or too long to read.
+    NothingToRead,
+    /// A name matched more than one record.
+    SeveralMatches,
+    /// A name is close to a record but not the same.
+    CloseSpelling,
+    /// A name that may be a party or an item matched both.
+    NameOrItem,
+    /// Words the app does not know stand where a name should be.
+    UnknownWords,
+    /// More than one period was named (a comparison).
+    SeveralPeriods,
+    /// A print or report needs a day or a range and the question gave none.
+    NoPeriod,
+    /// A print or figure needs a party and the question named none.
+    NoParty,
+    /// No figure, screen or topic could be read.
+    NoFigure,
+    /// No topic of the guide fits.
+    NoTopic,
+    /// No report fits this request.
+    NoReport,
+    /// Two kinds of question are mixed.
+    MixedIntent,
+    /// The question compares two things, or asks for a share or a change.
+    Comparison,
+    /// A partner is named while the partner section is locked.
+    PartnerLocked,
+    /// A read of the books failed.
+    LookupFailed,
+    /// The question was cut for length.
+    Cut,
+    /// The meaning of کل / kal depends on a verb that is not clear.
+    TenseUnclear,
+    /// A name is not a party or an item but another record (an expense head, a city, an اڈا).
+    OtherRecord,
+    /// Several things and several figures were asked at once ("kela ke kitne commission or sale,
+    /// saib ke kitne"): a table of answers, for the model path.
+    TwoParts,
+}
+
+/// What the app understood of one question.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Understanding {
+    /// What the question wants.
+    pub intent: Part<Intent>,
+    /// Every person or place named, in the order of the question.
+    pub parties: Vec<PartyRef>,
+    /// Every item named.
+    pub items: Vec<ItemRef>,
+    /// Every expense head, city or اڈا named.
+    pub records: Vec<RecordRef>,
+    /// Every period named. One for most questions.
+    pub periods: Vec<PeriodRef>,
+    /// The figures asked, in the order of the question. Empty when none.
+    pub figures: Part<Vec<FigureKind>>,
+    /// What the app chose because the question did not say (a ranking with no measure or period).
+    /// The answer says so: "is saal, کل کمیشن کے حساب سے".
+    pub assumed: Vec<Assumed>,
+    /// For `NotInApp`: what the question is about.
+    pub outside: Option<OutsideKind>,
+    /// True when two figures were asked in one breath ("commission aur sale").
+    pub two_figures: bool,
+    /// True when ONE figure for several things was asked ("dono ka mila kar").
+    pub sum_asked: bool,
+    /// True when the question compares, or asks for a share or a change.
+    pub compare: bool,
+    /// For a list: what it is over and how it is ranked.
+    pub list: Option<ListAsk>,
+    /// For a print or an open-the-report request: the report and its filters (plan 54 6.2). Always
+    /// `None` when `sure` is false: a question that is not sure never has a button (a wrong, wider date
+    /// on a button is worse than none).
+    pub report: Option<ReportPlan>,
+    /// For a how-to: the topic of the guide.
+    pub topic: Option<Part<&'static str>>,
+    /// For navigate: the screen name of the answer schema, when one fits. For a change request: the
+    /// entry screen that does it (`wasooli`, `peshgi`, `kharcha` ...), when the question says
+    /// plainly which; `None` when it could be two or none. The amount is never kept.
+    pub screen: Option<&'static str>,
+    /// True when the question also asks how to do it ("kaise nikalun"): the steps are wanted.
+    pub wants_steps: bool,
+    /// True when the question names a garden, a trip, own goods or the guests by word. The reads
+    /// of [`plan_reads`] have no filter for them, so such a question is the model's.
+    pub scoped: bool,
+    /// True when the app understood the whole question. The caller routes by intent.
+    pub sure: bool,
+    /// Why the app is not fully sure, or what it noted.
+    pub doubts: Vec<Doubt>,
+}
+
+impl Understanding {
+    /// The first period, if any.
+    pub fn period(&self) -> Option<&PeriodRef> {
+        self.periods.first()
+    }
+
+    /// The first figure, if any.
+    pub fn figure(&self) -> Option<FigureKind> {
+        self.figures.value.first().copied()
+    }
+
+    /// The first party named, if any.
+    pub fn party(&self) -> Option<&PartyRef> {
+        self.parties.first()
+    }
+
+    /// True when a name was asked for and no record has it.
+    pub fn has_not_found(&self) -> bool {
+        self.parties
+            .iter()
+            .any(|p| matches!(p.outcome, Outcome::NotFound))
+    }
+}
+
+/// What the understanding reads: the books through the services, in the Owner's session.
+pub struct Reader<'a> {
+    /// The services context (the database, the search index).
+    pub ctx: &'a Context,
+    /// The signed-in Owner.
+    pub actor: &'a Actor,
+    /// The app language (it decides nothing about the words; the question may be in any language).
+    pub language: Language,
+    /// Today, the Pakistan date.
+    pub today: BusinessDate,
+    /// True while the partner section is locked (PRD FR-7.82): no partner is looked up.
+    pub partner_locked: bool,
+}
+
+impl Reader<'_> {
+    fn today_date(&self) -> Option<NaiveDate> {
+        NaiveDate::parse_from_str(&self.today.to_iso(), "%Y-%m-%d").ok()
+    }
+}
+
+/// Understands one question. Only reads. See the module documentation.
+///
+/// Example: "faisal ka bakaya kitna hai" is `Figure`, the figure `Balance`, the party Faisal.
+pub fn understand(reader: &Reader<'_>, question: &str) -> Understanding {
+    let Some(today) = reader.today_date() else {
+        return what::nothing(Doubt::LookupFailed);
+    };
+    let scan = scan::Scan::new(question, today);
+    if scan.words.is_empty() {
+        return what::nothing(Doubt::NothingToRead);
+    }
+    let mut periods = when::periods(&scan, today);
+    fill_start_of_books(reader, &mut periods);
+    let names = who::resolve(reader, &scan, &periods);
+    // A cue inside a name that was found ("Imran Fruit", "Akram Toll Tax") is part of the name.
+    let scan = scan.without_spans(&names.spans);
+    what::assemble(reader, &scan, names, periods)
+}
+
+/// Builds the word table and the typing word list now, so the first question of the Owner is not
+/// the slow one (about 85 ms in a debug build, once). Call it at start-up. Reads only.
+pub fn warm_up(reader: &Reader<'_>) {
+    let _ = understand(reader, "faisal ka bakaya kitna hai");
+}
+
+/// Builds the tables of words that need no database: the cues, the period words, the guide and the
+/// function words, so the first question of the Owner is not the slow one. Needs no signed-in
+/// session, so the app calls it at start-up, next to `translit::warm_up` (which loads the typing
+/// word list).
+pub fn warm_words() {
+    let Some(day) = NaiveDate::from_ymd_opt(2026, 1, 1) else {
+        return;
+    };
+    let sample = "faisal ka bakaya kitna hai pichle mahine ki wasooli kaise likhun";
+    let scan = scan::Scan::new(sample, day);
+    let _ = when::periods(&scan, day);
+    let _ = crate::prompt::guide();
+    let _ = crate::prompt::words();
+    let _ = crate::help_guard::topic_of_question(sample, &[]);
+}
+
+/// "Ab tak" starts at the first day of the books, when there is one.
+fn fill_start_of_books(reader: &Reader<'_>, periods: &mut [PeriodRef]) {
+    for period in periods.iter_mut().filter(|p| p.kind == PeriodKind::UpToNow) {
+        period.from = mandi_services::day::first_book_day(reader.ctx)
+            .ok()
+            .flatten()
+            .and_then(|d| NaiveDate::parse_from_str(&d.to_iso(), "%Y-%m-%d").ok());
+    }
+}

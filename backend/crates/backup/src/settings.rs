@@ -97,6 +97,39 @@ fn required(field: &str) -> BackupError {
     BackupError::new(BackupCode::ErrRequired, "required").on_field(field)
 }
 
+/// The most characters of a cloud address.
+const ENDPOINT_MAX: usize = 300;
+/// The most characters of a cloud region.
+const REGION_MAX: usize = 64;
+
+/// The value `reason` of `ERR_OUT_OF_RANGE` on the cloud address, or none when the address is
+/// fine: `https` when it is not one word that starts with `https://` and has a host, `path` when
+/// a path, a query or a fragment follows the host. A lone `/` after the host is allowed.
+/// Example: `https://acct.r2.cloudflarestorage.com/mandi-backup` gives `path`: the bucket name
+/// goes in the bucket field.
+pub(crate) fn endpoint_problem(endpoint: &str) -> Option<&'static str> {
+    const HTTPS: &str = "https";
+    const PATH: &str = "path";
+    // A host name is at most 253 characters; 300 leaves room for the scheme and a port.
+    if endpoint.len() > ENDPOINT_MAX
+        || endpoint
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control())
+    {
+        return Some(HTTPS);
+    }
+    let Some(rest) = endpoint.strip_prefix("https://") else {
+        return Some(HTTPS);
+    };
+    // `?` and `#` end the host like `/` does.
+    let host_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (host, after) = rest.split_at(host_end);
+    if host.is_empty() {
+        return Some(HTTPS);
+    }
+    (!(after.is_empty() || after == "/")).then_some(PATH)
+}
+
 fn is_full_path(text: &str) -> bool {
     std::path::Path::new(text).is_absolute()
 }
@@ -130,11 +163,14 @@ impl BackupSettings {
             let endpoint = self.cloud_endpoint.trim();
             if endpoint.is_empty() {
                 problems.push(required("cloud_endpoint"));
-            } else if !endpoint.starts_with("https://") {
-                problems.push(out_of_range(
-                    "cloud_endpoint",
-                    "endpoint must start with https://",
-                ));
+            } else if let Some(reason) = endpoint_problem(endpoint) {
+                // The message says what is wrong: `https` (the address must start with https://
+                // and be one word) or `path` (something follows the host, for example the bucket
+                // name, which belongs in its own field).
+                problems.push(
+                    out_of_range("cloud_endpoint", "endpoint form")
+                        .with("reason", ErrorValue::Text(reason.to_owned())),
+                );
             }
             let bucket = self.cloud_bucket.trim();
             if bucket.is_empty() {
@@ -147,8 +183,15 @@ impl BackupSettings {
             {
                 problems.push(out_of_range("cloud_bucket", "bucket name"));
             }
-            if self.cloud_region.trim().is_empty() {
+            let region = self.cloud_region.trim();
+            if region.is_empty() {
                 problems.push(required("cloud_region"));
+            } else if region.len() > REGION_MAX
+                || !region
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+            {
+                problems.push(out_of_range("cloud_region", "region"));
             }
         }
         let prefix = &self.cloud_prefix;
@@ -237,6 +280,53 @@ mod tests {
         for bad in ["9:00", "24:00", "12:60", "12-00", "", "ab:cd"] {
             assert_eq!(closing_minutes(bad), None, "{bad}");
         }
+    }
+
+    #[test]
+    fn the_cloud_address_says_why_it_is_refused() {
+        for fine in [
+            "https://acct.r2.cloudflarestorage.com",
+            "https://acct.r2.cloudflarestorage.com/",
+            "https://localhost:9000",
+            "https://s3.eu-west-1.amazonaws.com",
+        ] {
+            assert_eq!(endpoint_problem(fine), None, "{fine}");
+        }
+        for (bad, reason) in [
+            ("http://acct.r2.cloudflarestorage.com", "https"),
+            ("acct.r2.cloudflarestorage.com", "https"),
+            ("ftp://acct.com", "https"),
+            ("https://", "https"),
+            ("https:///mandi", "https"),
+            ("https://a b.com", "https"),
+            ("https://acct.com\n", "https"),
+            ("https://acct.r2.cloudflarestorage.com/mandi-backup", "path"),
+            (
+                "https://acct.r2.cloudflarestorage.com/mandi-backup/",
+                "path",
+            ),
+            ("https://acct.r2.cloudflarestorage.com//", "path"),
+            ("https://acct.com?x=1", "path"),
+            ("https://acct.com#top", "path"),
+        ] {
+            assert_eq!(endpoint_problem(bad), Some(reason), "{bad}");
+        }
+        // And it travels with the error, on the field of the address.
+        let settings = BackupSettings {
+            cloud_enabled: true,
+            cloud_endpoint: "https://acct.r2.cloudflarestorage.com/mandi-backup".into(),
+            cloud_bucket: "mandi-backup".into(),
+            ..BackupSettings::default()
+        };
+        let items = settings.validate().unwrap_err().all();
+        assert_eq!(items.len(), 1);
+        let item = items.first().unwrap();
+        assert_eq!(item.field.as_deref(), Some("cloud_endpoint"));
+        assert_eq!(item.code, BackupCode::ErrOutOfRange);
+        assert_eq!(
+            item.values.get("reason"),
+            Some(&ErrorValue::Text("path".into()))
+        );
     }
 
     #[test]

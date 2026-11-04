@@ -495,6 +495,7 @@ mod tests {
             advice: false,
             general_advice: false,
             sources,
+            how: Vec::new(),
             differences: Vec::new(),
             next: Vec::new(),
             read_at: String::new(),

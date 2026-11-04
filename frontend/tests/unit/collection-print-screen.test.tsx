@@ -100,7 +100,7 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
       name: (name) => visible(name).startsWith(message(language, 'vouchers-print')),
     })[0];
 
-  it('the screen has a Print button that shows its key, and it opens the box with the day of the screen', async () => {
+  it('the screen has a Print button that shows its key, and it opens the box with no day (the list has none)', async () => {
     const { user } = await open();
     const button = must(printButton());
     expect(visible(button.textContent)).toContain('F9');
@@ -109,8 +109,8 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
     expect(visible(box.textContent)).toContain(
       message(language, 'vouchers-collection-print-title'),
     );
-    // The day of the screen, as typed there.
-    expect(visible(box.textContent)).toContain('10-10-2026');
+    // The list has no day (plan 53): the words do not name one.
+    expect(visible(box.textContent)).not.toContain('10-10-2026');
   });
 
   it('keyboard only: F9 opens the box, Tab reaches Print, Enter prints the list of the screen, Esc closes', async () => {
@@ -125,7 +125,6 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
       expect(reportsApi.reportsPrintCollection).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(reportsApi.reportsPrintCollection).mock.calls[0]?.[0]).toEqual({
-      date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
       search: null,
@@ -148,7 +147,7 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
     });
   });
 
-  it('prints the day and the filters of the screen: the collector and the city he picked', async () => {
+  it('prints the filters of the screen: the collector and the city he picked', async () => {
     const { user } = await open();
     // The collector and the city are behind "More filters".
     await user.click(
@@ -172,7 +171,6 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
       expect(reportsApi.reportsPrintCollection).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(reportsApi.reportsPrintCollection).mock.calls[0]?.[0]).toMatchObject({
-      date: '10-10-2026',
       collector_staff_id: 81,
       city_id: 91,
       search: null,

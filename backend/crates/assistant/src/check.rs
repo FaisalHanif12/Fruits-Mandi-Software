@@ -955,7 +955,9 @@ impl Check<'_> {
                         let fits = if answer.kind == AnswerKind::WhichOne {
                             n >= 2 || (n == 1 && r.id.starts_with('f'))
                         } else {
-                            n == 0
+                            // No match at all, or matches of another role than the one asked
+                            // (a buyer found for a seller): not found as that role.
+                            n == 0 || r.node.get(&["widened"]).is_some()
                         };
                         if !fits {
                             failures.push(Failure::new("choose", &r.id));

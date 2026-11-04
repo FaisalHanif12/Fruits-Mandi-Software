@@ -496,44 +496,50 @@ impl BackupService {
             .parts
             .cloud
             .open(settings, self.parts.secrets.as_ref())?;
-        let objects = store
-            .list(CLOUD_DIR)
-            .map_err(crate::cloud::CloudError::into_backup_error)?;
-        let manifests: std::collections::BTreeSet<&str> = objects
-            .iter()
-            .filter_map(|o| o.key.strip_prefix(CLOUD_DIR))
-            .filter(|name| name.ends_with(".json"))
-            .collect();
-        Ok(objects
-            .iter()
-            .filter_map(|object| {
-                let name = object.key.strip_prefix(CLOUD_DIR)?;
-                if !is_copy_name(BackupKind::Cloud, name) {
-                    return None;
-                }
-                // The manifest is uploaded after the bundle and checked, so its presence says
-                // the upload finished.
-                let status = if manifests.contains(manifest_name(name).as_str()) {
-                    RowStatus::Good
-                } else {
-                    RowStatus::Unchecked
-                };
-                Some(BackupRow {
-                    kind: BackupKind::Cloud,
-                    name: name.to_owned(),
-                    created_at: parse_stamp(name)
-                        .map_or_else(|| format_utc(object.modified), format_utc),
-                    size_bytes: object.size,
-                    encrypted: true,
-                    status,
-                })
-            })
-            .collect())
+        cloud_rows_from(store.as_ref()).map_err(crate::cloud::CloudError::into_backup_error)
     }
 }
 
+/// The copies in a cloud store, with the result of their check from the manifest next to them.
+/// The first screen of a new computer asks for these before anything else is set up.
+pub(crate) fn cloud_rows_from(
+    store: &dyn crate::cloud::CloudStore,
+) -> Result<Vec<BackupRow>, crate::cloud::CloudError> {
+    let objects = store.list(CLOUD_DIR)?;
+    let manifests: std::collections::BTreeSet<&str> = objects
+        .iter()
+        .filter_map(|o| o.key.strip_prefix(CLOUD_DIR))
+        .filter(|name| name.ends_with(".json"))
+        .collect();
+    Ok(objects
+        .iter()
+        .filter_map(|object| {
+            let name = object.key.strip_prefix(CLOUD_DIR)?;
+            if !is_copy_name(BackupKind::Cloud, name) {
+                return None;
+            }
+            // The manifest is uploaded after the bundle and checked, so its presence says
+            // the upload finished.
+            let status = if manifests.contains(manifest_name(name).as_str()) {
+                RowStatus::Good
+            } else {
+                RowStatus::Unchecked
+            };
+            Some(BackupRow {
+                kind: BackupKind::Cloud,
+                name: name.to_owned(),
+                created_at: parse_stamp(name)
+                    .map_or_else(|| format_utc(object.modified), format_utc),
+                size_bytes: object.size,
+                encrypted: true,
+                status,
+            })
+        })
+        .collect())
+}
+
 /// The copies in one folder, with the result of their check from the manifest next to them.
-fn scan_folder(kind: BackupKind, dir: &Path) -> Vec<BackupRow> {
+pub(crate) fn scan_folder(kind: BackupKind, dir: &Path) -> Vec<BackupRow> {
     let Ok(entries) = fs::read_dir(dir) else {
         return Vec::new();
     };
@@ -544,7 +550,10 @@ fn scan_folder(kind: BackupKind, dir: &Path) -> Vec<BackupRow> {
             if !is_copy_name(kind, &name) {
                 return None;
             }
-            let size_bytes = entry.metadata().ok()?.len();
+            // A link is followed; a directory, a broken or looping link and a device are not
+            // copies (R4-6).
+            let meta = fs::metadata(entry.path()).ok().filter(|m| m.is_file())?;
+            let size_bytes = meta.len();
             let manifest: Option<Manifest> = fs::read(dir.join(manifest_name(&name)))
                 .ok()
                 .and_then(|bytes| serde_json::from_slice(&bytes).ok());

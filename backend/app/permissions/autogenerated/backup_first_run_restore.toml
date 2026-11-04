@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-backup-first-run-restore"
+description = "Enables the backup_first_run_restore command without any pre-configured scope."
+commands.allow = ["backup_first_run_restore"]
+
+[[permission]]
+identifier = "deny-backup-first-run-restore"
+description = "Denies the backup_first_run_restore command without any pre-configured scope."
+commands.deny = ["backup_first_run_restore"]

@@ -19,8 +19,6 @@ use thiserror::Error;
 use crate::clock::{Clock, format_utc};
 use crate::error::DbError;
 
-/// Credential Manager service name (Tech Stack 7: the bundle identifier).
-pub const KEYRING_SERVICE: &str = "pk.mandisoftware.app";
 /// Credential Manager entry name of the audit chain key.
 pub const KEYRING_ENTRY: &str = "audit-chain-key";
 /// Bytes in the key.
@@ -60,6 +58,48 @@ impl AuditKey {
             .map(Self)
             .map_err(|_| DbError::KeyStore("the stored audit key has the wrong length".to_owned()))
     }
+
+    /// The key as 64 lower-case hex characters. It exists for ONE use: the encrypted bundle of a
+    /// USB or cloud copy carries the key, locked by the backup key, so a restore on a new
+    /// computer can verify the chains (PRD FR-20.11, NFR-SEC-6). The text must never reach a
+    /// log, the data file, a manifest or any plain file.
+    pub fn to_hex(&self) -> String {
+        self.0.iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+
+    /// Reads a key written by [`AuditKey::to_hex`].
+    ///
+    /// # Errors
+    /// `DbError::KeyStore` when the text is not 64 hex characters.
+    pub fn from_hex(text: &str) -> Result<Self, DbError> {
+        let bad = || DbError::KeyStore("the audit key in the copy has the wrong form".to_owned());
+        let bytes = text.as_bytes();
+        if bytes.len() != KEY_LEN * 2 {
+            return Err(bad());
+        }
+        let mut key = [0_u8; KEY_LEN];
+        for (slot, pair) in key.iter_mut().zip(bytes.chunks(2)) {
+            let digit = |c: u8| match c {
+                b'0'..=b'9' => Some(c - b'0'),
+                b'a'..=b'f' => Some(c - b'a' + 10),
+                b'A'..=b'F' => Some(c - b'A' + 10),
+                _ => None,
+            };
+            let (Some(high), Some(low)) = (
+                pair.first().copied().and_then(digit),
+                pair.get(1).copied().and_then(digit),
+            ) else {
+                return Err(bad());
+            };
+            *slot = high << 4 | low;
+        }
+        Ok(Self(key))
+    }
+
+    /// True when both keys are the same bytes.
+    pub fn same_as(&self, other: &AuditKey) -> bool {
+        self.0 == other.0
+    }
 }
 
 impl fmt::Debug for AuditKey {
@@ -75,34 +115,65 @@ pub trait KeyStore: Send + Sync {
     /// # Errors
     /// `DbError::KeyStore` when the store cannot be reached.
     fn audit_key(&self) -> Result<AuditKey, DbError>;
+
+    /// Stores `key` in place of the one that is there. A restore on a new computer calls this,
+    /// because the restored chains were made with the key of the old computer (PRD FR-20.11).
+    ///
+    /// # Errors
+    /// `DbError::KeyStore` when the store cannot be written, or cannot be changed at all (the
+    /// default: a read-only store).
+    fn set_audit_key(&self, _key: &AuditKey) -> Result<(), DbError> {
+        Err(DbError::KeyStore(
+            "this key store cannot be changed".to_owned(),
+        ))
+    }
 }
 
 /// The key lives in memory. For tests.
 #[derive(Debug, Clone)]
-pub struct MemoryKeyStore(AuditKey);
+pub struct MemoryKeyStore(Arc<Mutex<AuditKey>>);
 
 impl MemoryKeyStore {
     /// A store that holds this key.
     pub fn new(key: AuditKey) -> Self {
-        Self(key)
+        Self(Arc::new(Mutex::new(key)))
     }
 }
 
 impl KeyStore for MemoryKeyStore {
     fn audit_key(&self) -> Result<AuditKey, DbError> {
-        Ok(self.0.clone())
+        Ok(self
+            .0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone())
+    }
+
+    fn set_audit_key(&self, key: &AuditKey) -> Result<(), DbError> {
+        *self.0.lock().unwrap_or_else(PoisonError::into_inner) = key.clone();
+        Ok(())
     }
 }
 
-/// The key lives in Windows Credential Manager (`keyring`), service `pk.mandisoftware.app`,
-/// entry `audit-chain-key`.
+/// The key lives in Windows Credential Manager (`keyring`), service `pk.mandisoftware.app`
+/// (with a dot and the name added under a developer profile, `mandi_core::profile`), entry
+/// `audit-chain-key`.
 #[derive(Debug, Clone, Default)]
 pub struct KeyringKeyStore;
+
+impl KeyringKeyStore {
+    /// The Credential Manager service name this store uses: the real app's, or the one of the
+    /// developer profile (`MANDI_PROFILE`, plan 56 R5).
+    pub fn service() -> String {
+        mandi_core::profile::keyring_service()
+    }
+}
 
 impl KeyStore for KeyringKeyStore {
     fn audit_key(&self) -> Result<AuditKey, DbError> {
         let store_error = |e: keyring::Error| DbError::KeyStore(e.to_string());
-        let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ENTRY).map_err(store_error)?;
+        let entry =
+            keyring::Entry::new(&KeyringKeyStore::service(), KEYRING_ENTRY).map_err(store_error)?;
         match entry.get_secret() {
             Ok(bytes) => AuditKey::from_slice(&bytes),
             Err(keyring::Error::NoEntry) => {
@@ -112,6 +183,14 @@ impl KeyStore for KeyringKeyStore {
             }
             Err(error) => Err(store_error(error)),
         }
+    }
+
+    fn set_audit_key(&self, key: &AuditKey) -> Result<(), DbError> {
+        let store_error = |e: keyring::Error| DbError::KeyStore(e.to_string());
+        keyring::Entry::new(&KeyringKeyStore::service(), KEYRING_ENTRY)
+            .map_err(store_error)?
+            .set_secret(&key.0)
+            .map_err(store_error)
     }
 }
 
@@ -169,6 +248,19 @@ impl Auditor {
         let key = self.keys.audit_key()?;
         *cached = Some(key.clone());
         Ok(key)
+    }
+
+    /// Stores `key` in the key store and keeps it in memory instead of the one used so far.
+    /// A restore calls this when the restored chains need the key of another computer (PRD
+    /// FR-20.11). If the store refuses, nothing changes.
+    ///
+    /// # Errors
+    /// `DbError::KeyStore`.
+    pub fn install_key(&self, key: AuditKey) -> Result<(), DbError> {
+        let mut cached = self.key.lock().unwrap_or_else(PoisonError::into_inner);
+        self.keys.set_audit_key(&key)?;
+        *cached = Some(key);
+        Ok(())
     }
 
     /// Adds one audit row inside the caller's transaction (Code Standards S7) and returns its
@@ -319,4 +411,50 @@ pub fn verify_audit_chain(conn: &Connection, key: &AuditKey) -> Result<(), Verif
         previous = stored;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_key_round_trips_through_hex() {
+        let key = AuditKey::from_bytes([
+            0, 1, 2, 3, 250, 251, 252, 253, 254, 255, 16, 32, 64, 128, 7, 8, 9, 10, 11, 12, 13, 14,
+            15, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+        ]);
+        let text = key.to_hex();
+        assert_eq!(text.len(), 64);
+        assert!(text.starts_with("00010203fafbfcfd"));
+        assert!(AuditKey::from_hex(&text).unwrap().same_as(&key));
+        assert!(
+            AuditKey::from_hex(&text.to_uppercase())
+                .unwrap()
+                .same_as(&key)
+        );
+    }
+
+    #[test]
+    fn a_bad_hex_text_is_refused() {
+        for bad in ["", "00", &"0".repeat(63), &"0".repeat(65), &"g".repeat(64)] {
+            assert!(AuditKey::from_hex(bad).is_err(), "{bad}");
+        }
+        let text = format!("{:?}", AuditKey::from_bytes([1; 32]));
+        assert!(!text.contains("01"), "Debug never shows the key");
+    }
+
+    #[test]
+    fn installing_a_key_changes_the_store_and_the_key_used() {
+        let old = AuditKey::from_bytes([1; 32]);
+        let new = AuditKey::from_bytes([2; 32]);
+        let store = Arc::new(MemoryKeyStore::new(old.clone()));
+        let auditor = Auditor::new(
+            store.clone(),
+            Arc::new(crate::clock::ManualClock::new(chrono::Utc::now())),
+        );
+        assert!(auditor.key().unwrap().same_as(&old));
+        auditor.install_key(new.clone()).unwrap();
+        assert!(auditor.key().unwrap().same_as(&new));
+        assert!(store.audit_key().unwrap().same_as(&new));
+    }
 }

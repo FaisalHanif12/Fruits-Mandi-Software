@@ -241,6 +241,11 @@ fn p5_the_sixteen_examples_run_as_golden_questions() {
             .unwrap();
         }
         let runtime = Runtime::new(Arc::new(MemoryKeyStore::default()));
+        // The recorded transcripts replay the model's own calls and answers, so the app's own
+        // shortcuts (local answers, reads before the first call, low effort) are off here.
+        runtime.set_local(false);
+        runtime.set_read_first(false);
+        runtime.set_low_effort(false);
         runtime.keys().set(TEST_KEY).unwrap();
         assistant::set_config(&w.env.ctx, &w.owner, true, "openai/gpt-6-luna", true).unwrap();
         let mut conversation: Option<String> = None;

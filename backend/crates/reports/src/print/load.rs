@@ -2,7 +2,9 @@
 //! (plan 14). The only part of the print data that touches the database.
 
 use mandi_core::edit::EditStamp;
-use mandi_core::firm::{FirmContact, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK};
+use mandi_core::firm::{
+    FirmContact, FirmRole, MAX_CONTACTS, SETTING_KEY_CONTACTS, SETTING_KEY_TRADE_MARK,
+};
 use mandi_core::money::Grouping;
 use mandi_core::printing::PrintSetup;
 use mandi_db::Db;
@@ -145,13 +147,60 @@ pub(crate) fn load_default_language(
         .unwrap_or(mandi_core::auth::Language::Ur))
 }
 
-/// The saved contact persons, at most [`MAX_CONTACTS`]. A damaged value gives none, so a print is
-/// never stopped by it.
+/// The most active munshis of the staff list that the header adds (plan 53 T4).
+const MAX_STAFF_MUNSHIS: usize = 3;
+
+/// The people of every print header (PRD Section 21, v1.23, plan 53 T4): the people typed in
+/// Settings, in their order, then the active staff whose job is منشی, by staff id. A staff munshi who
+/// is in the Settings list too (the same Urdu name and phone) prints once. At most
+/// [`MAX_STAFF_MUNSHIS`] munshis come from the staff list and at most [`MAX_CONTACTS`] people in
+/// all. A damaged Settings value gives no typed people, so a print is never stopped by it.
+///
+/// Example: Settings has Maher Adnan (owner); staff has آصف (munshi, active) and اسلم (collector):
+/// the header has Maher Adnan, then آصف. Make آصف inactive and add بلال: Maher Adnan, then بلال.
 fn load_contacts(conn: &Connection) -> Result<Vec<FirmContact>, ReportsError> {
     let mut contacts: Vec<FirmContact> = setting(conn, SETTING_KEY_CONTACTS)?
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default();
     contacts.truncate(MAX_CONTACTS);
+    // The same person: the same Urdu name (after the search normalisation) and the same phone digits.
+    let key = |name_ur: &str, phone: &str| {
+        (
+            mandi_core::text::search_ur(name_ur),
+            phone
+                .chars()
+                .filter(char::is_ascii_digit)
+                .collect::<String>(),
+        )
+    };
+    let mut statement = conn.prepare(
+        "SELECT name_ur, name_en, COALESCE(phone, '') FROM staff \
+         WHERE role = 'munshi' AND is_active = 1 ORDER BY id",
+    )?;
+    let munshis = statement.query_map([], |row| {
+        Ok(FirmContact {
+            name_ur: row.get(0)?,
+            name_en: row.get(1)?,
+            role: FirmRole::Munshi,
+            phone: row.get(2)?,
+        })
+    })?;
+    let mut added = 0usize;
+    for munshi in munshis {
+        let munshi = munshi?;
+        if added >= MAX_STAFF_MUNSHIS || contacts.len() >= MAX_CONTACTS {
+            break;
+        }
+        let same = key(&munshi.name_ur, &munshi.phone);
+        if contacts
+            .iter()
+            .any(|have| key(&have.name_ur, &have.phone) == same)
+        {
+            continue;
+        }
+        contacts.push(munshi);
+        added = added.saturating_add(1);
+    }
     Ok(contacts)
 }
 

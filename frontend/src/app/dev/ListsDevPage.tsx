@@ -2,7 +2,7 @@
 // rules, the audit log and the partner setup inside the app shell, answered by a stand-in for the
 // backend (tests/helpers/dev-bridge-lists.ts), so they can be opened in a plain browser tab and
 // photographed in both languages at every window size. `<screen>` is one of `accounts`, `openings`,
-// `chart`, `rules`, `audit`, `partners`, `menu`, or the path of a master (`cities`, `items`,
+// `chart`, `rules`, `audit`, `partners`, `menu`, `staff-form`, or the path of a master (`cities`, `items`,
 // `packings`...). Flags in the hash: `?many` (340 rows, to see the page buttons), `&empty`, `&down`.
 // Never shipped: the route exists only when import.meta.env.DEV is true (app/router.tsx).
 
@@ -12,6 +12,8 @@ import { installDevBridge } from '../../../tests/helpers/dev-bridge';
 import { AuditLog } from '../../features/audit/pages/AuditPage';
 import { AccountListPage } from '../../features/masters/pages/AccountListPage';
 import { ChartPage } from '../../features/masters/pages/ChartPage';
+import { MasterForm } from '../../features/masters/components/MasterForm';
+import { configOfKind } from '../../features/masters/configs';
 import { MasterListPage } from '../../features/masters/pages/MasterListPage';
 import { MastersMenuPage } from '../../features/masters/pages/MastersMenuPage';
 import { OpeningsPage } from '../../features/masters/pages/OpeningsPage';
@@ -31,6 +33,25 @@ const SCREENS: Record<string, () => ReactElement> = {
   audit: () => <AuditLog />,
   partners: () => <PartnerSetupPage />,
   menu: () => <MastersMenuPage />,
+  // The form of a staff member, with his فعال / غیر فعال switch (plan 53 T5).
+  'staff-form': () => (
+    <MasterForm
+      config={configOfKind('staff')}
+      suggestedCode=""
+      record={{
+        kind: 'staff',
+        id: 31,
+        version: 1,
+        code: '0060',
+        is_active: true,
+        names: { name_ur: 'آصف بھٹی', name_en: 'Asif Bhatti' },
+        text: { job: 'munshi', phone: '03004058860' },
+        refs: {},
+        shown: {},
+        lists: {},
+      }}
+    />
+  ),
 };
 
 export function ListsDevPage() {

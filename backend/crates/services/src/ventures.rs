@@ -200,16 +200,11 @@ pub(crate) fn require_open_day(
     date: BusinessDate,
     field: &str,
 ) -> Result<(), ServiceError> {
-    let (closed_up_to, _) = day::window(ctx)?;
+    let (closed_up_to, today) = day::window(ctx)?;
     match closed_up_to {
-        Some(closed) if date <= closed => Err(ServiceError::Rejected(vec![Rejection {
-            code: ErrorCode::ErrDateClosed,
-            field: Some(field.to_owned()),
-            values: std::collections::BTreeMap::from([(
-                "closed_up_to".to_owned(),
-                ErrorValue::Text(closed.to_iso()),
-            )]),
-        }])),
+        Some(closed) if date <= closed => {
+            Err(day::closed_rejection_at(closed, closed_up_to, today, field))
+        }
         _ => Ok(()),
     }
 }

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "assistant-step-understood",
+    "args": [
+      {
+        "name": "kind",
+        "value": {
+          "type": "text",
+          "text": "print"
+        }
+      }
+    ]
+  }
+]

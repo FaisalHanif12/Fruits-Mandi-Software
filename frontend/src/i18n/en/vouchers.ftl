@@ -423,7 +423,7 @@ vouchers-print-title = Print voucher { $number }
 vouchers-collection-title = { -agrahi } list
 
 # review: pending
-vouchers-collection-help = The buyers to collect from on this day. Type only the amounts received and save them all together. A row left empty or at 0 is skipped.
+vouchers-collection-help = Every buyer who owes money, by collector and city. Type only the amounts received and save them all together. A row left empty or at 0 is skipped.
 
 # review: pending
 vouchers-collection-back = Back to { -wasooli }
@@ -434,6 +434,10 @@ vouchers-collection-count = { $count ->
     [1] 1 buyer is on the list.
    *[other] { $count } buyers are on the list.
 }
+
+# The day the receipts of the round are written on (an open day, as for any receipt).
+# review: pending
+vouchers-collection-receipt-date = Date of the receipts
 
 # review: pending
 vouchers-collection-total = Total dues
@@ -470,10 +474,10 @@ vouchers-collection-some-refused = { $count ->
 vouchers-collection-problems = These receipts were not saved
 
 # review: pending
-vouchers-collection-empty = No collection is planned for this day
+vouchers-collection-empty = No buyer owes anything
 
 # review: pending
-vouchers-collection-empty-help = A buyer comes on the list on the collection day set in his account. Try another date, collector or city.
+vouchers-collection-empty-help = A buyer is on this list while he owes money. Try another collector or city.
 
 # review: pending
 vouchers-collection-failed = The collection list could not be opened
@@ -575,9 +579,8 @@ vouchers-number-general = G-{ $number }
 # review: pending
 vouchers-collection-print-title = Print the { -agrahi } list
 
-# $date is the day of the list, for example 10-10-2026.
 # review: pending
-vouchers-collection-print-help = Prints the { -agrahi } list of { $date }, as it is on the screen. Choose the language and where it goes.
+vouchers-collection-print-help = Prints the { -agrahi } list, as it is on the screen. Choose the language and where it goes.
 
 # The hint inside the search box of the collection list (the code, the name or the phone of a buyer).
 # review: pending

@@ -25,7 +25,7 @@ mod support;
 
 use std::path::{Path, PathBuf};
 
-use mandi_services::core::accounts::{AccountInput, SearchGlobalInput};
+use mandi_services::core::accounts::SearchGlobalInput;
 use mandi_services::core::bikri::{BikriSaveInput, LineChargeMethod, PaymentType, PukhtaInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::vouchers::{
@@ -162,42 +162,6 @@ fn preview_request(kind: &str, fields: &Value, replacing: Option<i64>) -> Value 
     json!({ "entry": entry(kind, fields), "replacing_voucher_id": replacing })
 }
 
-/// The form of an existing account, to change one field of it.
-fn account_form(w: &World, id: i64) -> AccountInput {
-    let row = mandi_services::accounts::get(&w.env.ctx, id).unwrap();
-    AccountInput {
-        id: Some(id),
-        version: Some(row.version),
-        account_type: mandi_services::core::accounts::AccountType::Buyer,
-        is_pukhta_party: false,
-        control_id: None,
-        code: row.code.clone(),
-        name_ur: row.name_ur.clone(),
-        name_en: row.name_en.clone(),
-        confirmed_rules_words: Vec::new(),
-        father_or_firm_ur: row.father_or_firm_ur.clone(),
-        father_or_firm_en: row.father_or_firm_en.clone(),
-        city_id: row.city.as_ref().map(|c| c.id),
-        adda_id: None,
-        phone1: row.phone1.clone(),
-        phone2: String::new(),
-        address: String::new(),
-        linked_account_id: None,
-        opening_date: String::new(),
-        opening_dr: String::new(),
-        opening_cr: String::new(),
-        opening_is_advance: false,
-        credit_allowed: row.credit_allowed,
-        credit_limit: String::new(),
-        default_marka_id: None,
-        collector_staff_id: None,
-        collection_weekday: None,
-        is_active: true,
-        note: String::new(),
-        tag: String::new(),
-    }
-}
-
 fn make_regular_request(key: &str, words: &[String]) -> Value {
     json!({
         "person_key": key,
@@ -209,7 +173,7 @@ fn make_regular_request(key: &str, words: &[String]) -> Value {
             "phone1": "03000000000", "phone2": "", "address": "", "linked_account_id": null,
             "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
             "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-            "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": ""
+            "collector_staff_id": null, "is_active": true, "note": ""
         }
     })
 }
@@ -486,23 +450,13 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
         vouchers::advances_report(ctx, &typed::<AdvancesReportInput>(&report_request)).unwrap();
     pair("advances_report_all", &report_request, &report);
 
-    // 13. The collection round: the buyers whose collection day is Saturday, then the round's
-    // receipts: one saved, one blank (skipped) and one refused.
-    for id in [w.akram, w.arshad] {
-        let mut input = account_form(&w, id);
-        input.collection_weekday = Some(5);
-        confirming(|words| {
-            let mut attempt = input.clone();
-            attempt.confirmed_rules_words = words.to_vec();
-            mandi_services::accounts::save(ctx, owner, &attempt)
-        });
-    }
-    let round_request =
-        json!({ "date": "10-10-2026", "collector_staff_id": null, "city_id": null });
+    // 13. The collection round: every active buyer who owes (there is no collection day, plan 53
+    // T2), then the round's receipts: one saved, one blank (skipped) and one refused.
+    let round_request = json!({ "collector_staff_id": null, "city_id": null });
     let round =
         vouchers::collection_list(ctx, &typed::<CollectionListInput>(&round_request)).unwrap();
     assert!(!round.groups.is_empty());
-    pair("assist_collection_list_saturday", &round_request, &round);
+    pair("assist_collection_list", &round_request, &round);
     let batch_request = json!({ "rows": [
         receipt_json(w.arshad, "1,000"),
         receipt_json(w.akram, ""),

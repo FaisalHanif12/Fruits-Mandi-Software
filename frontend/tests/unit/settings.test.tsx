@@ -119,6 +119,19 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
   });
 
   describe('firm', () => {
+    it('says the munshis are managed in the staff list, with a link that opens it (PRD v1.23)', async () => {
+      const { user, router } = await open();
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'settings-firm-munshi-note'),
+      );
+      await user.click(
+        screen.getByRole('button', { name: named(language, 'settings-firm-munshi-link') }),
+      );
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/index/staff');
+      });
+    });
+
     it('shows the saved firm, and F10 saves what was changed with a message', async () => {
       vi.mocked(settingsApi.settingsSetFirm).mockImplementation((input) => Promise.resolve(input));
       const { user } = await open();

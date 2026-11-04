@@ -257,6 +257,14 @@ fn the_backup_story_through_the_real_commands_matches_the_fixtures() {
     ] {
         assert!(fields.contains(&field), "{field} in {fields:?}");
     }
+    // The cloud address says why it is refused: `http://nope` is not https.
+    let endpoint = refused["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["field"] == "cloud_endpoint")
+        .unwrap();
+    assert_eq!(endpoint["values"], json!({ "reason": "https" }));
     // The closing time carries its bounds, because its message says "between min and max".
     let time = refused["errors"]
         .as_array()

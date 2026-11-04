@@ -14,7 +14,7 @@ mod worked;
 mod world;
 
 use harness::{Harness, answer_of, figures};
-use mandi_assistant::ask::AskOutcome;
+use mandi_assistant::ask::{AskOutcome, AskedRole};
 use serde_json::{Value, json};
 
 fn usage() -> Value {
@@ -696,7 +696,14 @@ fn q070_a_typed_seller_filter_never_takes_a_buyer_in_its_place() {
         ],
     );
     assert_eq!(requests.len(), 1, "no second model call");
-    assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    // Plan 52 Section 8: the question ends as not found for a seller, and says who he is.
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Seller));
+    let found = reply.found_as.as_ref().expect("found as a buyer");
+    assert_eq!(found.role, AskedRole::Buyer);
+    assert_eq!(found.name.name_en, "Akram Toll Tax");
+    assert_eq!(reply.options.len(), 1, "he is offered by name");
+    assert!(reply.answer.is_none());
 }
 
 #[test]
@@ -878,7 +885,7 @@ fn a_seller_field_never_takes_a_buyers_key_and_the_reverse() {
     // with the type said, never a seller's report of nothing.
     let h = Harness::day();
     let (_, requests) = h.ask(
-        "arshad ka maal kitna bika",
+        "arshad ke baare mein batao",
         None,
         vec![
             tool_reply(&[
@@ -1791,4 +1798,1185 @@ fn every_combining_operation_refuses_figures_of_different_items_unless_the_quest
         ],
     );
     assert!(tool_error_codes(&requests[2]).is_empty());
+}
+
+#[test]
+fn r37_read_by_the_assistant_while_the_partner_section_is_locked_shows_no_partner_fruit() {
+    use mandi_services::core::fruit::{FruitInput, FruitSource};
+    use mandi_services::core::partner_code::PartnerCodeSetInput;
+    let h = Harness::over(worked::part_sold_world());
+    let [a, _, _] = h.world.partners;
+    let nazeer = world::add_account(
+        &h.world.env,
+        &h.world.owner,
+        mandi_services::core::accounts::AccountType::Seller,
+        "حاجی نذیر",
+        "Haji Nazeer",
+        true,
+        "",
+    );
+    let take = |partner: Option<i64>, qty: &str, rate: &str| FruitInput {
+        for_guests: partner.is_none(),
+        partner_id: partner,
+        date: "10-10-2026".into(),
+        source: FruitSource::OtherShop,
+        lot_id: None,
+        agent_account_id: Some(nazeer),
+        item_id: Some(h.world.apple),
+        packing_id: Some(h.world.box_),
+        qty: qty.into(),
+        weight: None,
+        rate: rate.into(),
+        note: None,
+        editing_id: None,
+    };
+    let (ctx, owner) = (&h.world.env.ctx, &h.world.owner);
+    mandi_services::fruit::save(ctx, owner, &take(Some(a), "20", "1,800")).unwrap();
+    mandi_services::fruit::save(ctx, owner, &take(None, "3", "1,000")).unwrap();
+    mandi_services::partner_code::set(
+        ctx,
+        owner,
+        &PartnerCodeSetInput {
+            password: common::OWNER_PASSWORD.to_owned(),
+            code: "4826".to_owned(),
+            code_again: "4826".to_owned(),
+        },
+    )
+    .unwrap();
+    mandi_services::partner_code::lock(ctx).unwrap();
+    let (_, requests) = h.ask(
+        "fal ka register",
+        None,
+        vec![
+            tool_reply(&[report("R37", json!({"rows": 100}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    let result = result_of(&requests[1], "r1");
+    assert_eq!(result["count"]["n"], 1, "{result}");
+    assert_eq!(result["totals"]["value"]["rs"], 3_000, "{result}");
+    assert!(result.get("by_for").is_none(), "{result}");
+    let text = result.to_string();
+    assert!(
+        !text.contains("Partner A") && !text.contains("الف"),
+        "{text}"
+    );
+}
+
+// ---- the scope guard of calculate, round 2 (robustness_cues, the money agent's review) ------------
+
+/// Reads banana (r1), apple (r2) and all items (r3), then runs the calculation and gives the codes
+/// of the errors and the reply.
+fn combine(
+    question: &str,
+    op: &str,
+    inputs: &[&str],
+    extra: Vec<(&'static str, Value)>,
+) -> (Vec<String>, mandi_assistant::ask::AskReply) {
+    let h = Harness::day();
+    let mut first = vec![
+        analytics("A", json!({"item": "banana"})),
+        analytics("A", json!({"item": "apple"})),
+        analytics("A", json!({})),
+    ];
+    first.extend(extra);
+    let (reply, requests) = h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&first),
+            tool_reply(&[("calculate", json!({"op": op, "inputs": inputs}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    (tool_error_codes(&requests[2]), reply)
+}
+
+#[test]
+fn two_rows_of_one_unfiltered_result_are_two_things_to_combine() {
+    let (codes, _) = combine(
+        "kela aur saib ka commission",
+        "sum",
+        &["r3.rows.i1.total_comm", "r3.rows.i2.total_comm"],
+        vec![],
+    );
+    assert_eq!(codes, ["ERR_OUT_OF_RANGE"]);
+    let (codes, _) = combine(
+        "kele aur saib ka commission mila kar",
+        "sum",
+        &["r3.rows.i1.total_comm", "r3.rows.i2.total_comm"],
+        vec![],
+    );
+    assert!(codes.is_empty());
+    // A row and the totals of the same result: banana and all.
+    let (codes, _) = combine(
+        "kela ka commission",
+        "sum",
+        &["r3.rows.i1.total_comm", "r3.totals.total_comm"],
+        vec![],
+    );
+    assert_eq!(codes, ["ERR_OUT_OF_RANGE"]);
+    // The banana row of the unfiltered view against banana's own view is one thing.
+    let (codes, _) = combine(
+        "kele ka farq",
+        "difference",
+        &["r3.rows.i1.total_comm", "r1.totals.total_comm"],
+        vec![],
+    );
+    assert!(codes.is_empty(), "{codes:?}");
+}
+
+#[test]
+fn an_item_is_never_added_to_the_total_of_all_even_when_the_question_says_total() {
+    // "kele ka total commission": the total is banana's own. Banana + all is 9,376, not that.
+    for question in ["kele ka total commission", "kele ka commission mila kar"] {
+        let (codes, reply) = combine(
+            question,
+            "sum",
+            &["r1.totals.total_comm", "r3.totals.total_comm"],
+            vec![],
+        );
+        assert_eq!(codes, ["ERR_OUT_OF_RANGE"], "{question}");
+        let _ = reply;
+    }
+    // A tile is the total of all too.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kela ka commission",
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({"item": "banana"})), ("tiles", json!({}))]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.today_commission.amount"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    let detail = requests[2]["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["role"] == "tool")
+        .filter_map(|m| serde_json::from_str::<Value>(m["content"].as_str()?).ok())
+        .find_map(|v| v["error"]["detail"].as_str().map(str::to_owned))
+        .expect("a refusal");
+    assert!(detail.contains("part of another"), "{detail}");
+}
+
+#[test]
+fn a_calculation_carries_the_scopes_of_its_inputs_to_the_next_one() {
+    // c1 = banana alone passes; then c1 + apple is a combination of two items and is refused.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kela aur saib ka commission",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm"]}),
+            )]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["c1.result", "r2.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[3]), ["ERR_OUT_OF_RANGE"]);
+}
+
+#[test]
+fn the_side_and_the_matches_of_a_find_are_part_of_whose_figure_it_is() {
+    // Banana from the seller side only and banana both sides are not one figure.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kele ka commission",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana", "side": "seller"})),
+                analytics("A", json!({"item": "banana"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);
+    // Two matches of one find are two parties.
+    let h = Harness::day();
+    world::add_account(
+        &h.world.env,
+        &h.world.owner,
+        mandi_services::core::accounts::AccountType::Buyer,
+        "اکرم بلوچ",
+        "Akram Baloch",
+        true,
+        "",
+    );
+    let (_, requests) = h.ask(
+        "akram ka bakaya",
+        None,
+        vec![
+            tool_reply(&[find("akram", "buyer")]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.matches.0.balance", "r1.matches.1.balance"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);
+}
+
+#[test]
+fn an_average_needs_the_word_average_and_a_sum_needs_a_together_word() {
+    let both = ["r1.totals.total_comm", "r2.totals.total_comm"];
+    // "mila kar" is a sum, not an average; "average" is an average, not a sum.
+    let (codes, _) = combine(
+        "kele aur saib ka commission mila kar",
+        "average",
+        &both,
+        vec![],
+    );
+    assert_eq!(codes, ["ERR_OUT_OF_RANGE"]);
+    let (codes, _) = combine(
+        "kele aur saib ke commission ka average",
+        "average",
+        &both,
+        vec![],
+    );
+    assert!(codes.is_empty());
+    let (codes, _) = combine(
+        "kele aur saib ke commission ka average",
+        "sum",
+        &both,
+        vec![],
+    );
+    assert_eq!(codes, ["ERR_OUT_OF_RANGE"]);
+    // "dono ka" is a together word.
+    let (codes, _) = combine("kele aur saib dono ka commission", "sum", &both, vec![]);
+    assert!(codes.is_empty());
+}
+
+// ---- the scope guard, round 3 (the money agent's second review: wildcards, parts, filters) -----
+
+/// Runs the first calls on `h`, then one calculation, and gives the codes of the refusals.
+fn calc_after(
+    h: &Harness,
+    question: &str,
+    first: Vec<(&'static str, Value)>,
+    op: &str,
+    inputs: &[&str],
+) -> Vec<String> {
+    let (_, requests) = h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&first),
+            tool_reply(&[("calculate", json!({"op": op, "inputs": inputs}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    tool_error_codes(&requests[2])
+}
+
+fn refused(codes: &[String]) -> bool {
+    codes == ["ERR_OUT_OF_RANGE"]
+}
+
+#[test]
+fn a_wildcard_over_rows_is_one_scope_for_each_row() {
+    // View A holds banana 3,928 and apple 1,520. `rows.*` is two things, not one.
+    let all = || vec![analytics("A", json!({}))];
+    let rows = &["r1.rows.*.total_comm"];
+    let h = Harness::day();
+    // The 2,724 of the robustness finding: an average nobody asked for.
+    assert!(refused(&calc_after(
+        &h,
+        "kela aur saib ka commission",
+        all(),
+        "average",
+        rows
+    )));
+    let h = Harness::day();
+    assert!(
+        calc_after(
+            &h,
+            "kele aur saib ke commission ka average",
+            all(),
+            "average",
+            rows
+        )
+        .is_empty()
+    );
+    // A sum of rows is a figure for "together" only.
+    let h = Harness::day();
+    assert!(refused(&calc_after(
+        &h,
+        "kela aur saib ka commission",
+        all(),
+        "sum",
+        rows
+    )));
+    let h = Harness::day();
+    assert!(
+        calc_after(
+            &h,
+            "kele aur saib ka commission mila kar",
+            all(),
+            "sum",
+            rows
+        )
+        .is_empty()
+    );
+    // A difference of two rows is a comparison only.
+    let h = Harness::day();
+    assert!(refused(&calc_after(
+        &h,
+        "kela aur saib ka commission",
+        all(),
+        "difference",
+        rows
+    )));
+    let h = Harness::day();
+    assert!(
+        calc_after(
+            &h,
+            "kele aur saib ke commission ka farq",
+            all(),
+            "difference",
+            rows
+        )
+        .is_empty()
+    );
+    // The rows and the totals of their own result are a part and its whole, whatever is said.
+    let h = Harness::day();
+    assert!(refused(&calc_after(
+        &h,
+        "sab ka total commission mila kar",
+        all(),
+        "sum",
+        &["r1.rows.*.total_comm", "r1.totals.total_comm"],
+    )));
+}
+
+#[test]
+fn the_matches_of_a_find_are_a_scope_each_and_a_cut_list_is_never_summed() {
+    let akrams = |h: &Harness| {
+        world::add_account(
+            &h.world.env,
+            &h.world.owner,
+            mandi_services::core::accounts::AccountType::Buyer,
+            "اکرم بلوچ",
+            "Akram Baloch",
+            true,
+            "",
+        );
+    };
+    let h = Harness::day();
+    akrams(&h);
+    let both = &["r1.matches.*.balance"];
+    assert!(refused(&calc_after(
+        &h,
+        "akram ka bakaya",
+        vec![find("akram", "buyer")],
+        "sum",
+        both
+    )));
+    let h = Harness::day();
+    akrams(&h);
+    assert!(
+        calc_after(
+            &h,
+            "dono akram ka bakaya mila kar",
+            vec![find("akram", "buyer")],
+            "sum",
+            both
+        )
+        .is_empty()
+    );
+    // More buyers than the list holds: the list is cut, so a sum over it is wrong, with or without
+    // the word for together.
+    let h = Harness::day();
+    for (ur, en) in [
+        ("ظفر الف", "Zafar A"),
+        ("ظفر ب", "Zafar B"),
+        ("ظفر ج", "Zafar C"),
+        ("ظفر د", "Zafar D"),
+        ("ظفر ہ", "Zafar E"),
+        ("ظفر و", "Zafar F"),
+    ] {
+        world::add_account(
+            &h.world.env,
+            &h.world.owner,
+            mandi_services::core::accounts::AccountType::Buyer,
+            ur,
+            en,
+            true,
+            "",
+        );
+    }
+    let codes = calc_after(
+        &h,
+        "sab zafar ka bakaya mila kar",
+        vec![find("zafar", "buyer")],
+        "sum",
+        both,
+    );
+    assert!(refused(&codes), "{codes:?}");
+}
+
+#[test]
+fn a_part_of_a_result_is_never_added_to_its_whole() {
+    // The rows that pass `where` are a part of the report: their totals and the report's totals
+    // are not two things to add.
+    let h = Harness::day();
+    let where_big = json!({"column": "gross", "op": "gt", "value": "q.n1"});
+    let codes = calc_after(
+        &h,
+        "5000 se zyada ka total gross mila kar",
+        vec![report("R6", json!({"where": where_big}))],
+        "sum",
+        &["r1.totals.gross", "r1.matched.totals.gross"],
+    );
+    assert!(refused(&codes), "{codes:?}");
+    // The busiest month and the total of the same trend: the same.
+    let h = Harness::over(worked::months_world(&[
+        (8, true, 10, 1_000),
+        (9, false, 20, 1_000),
+    ]));
+    let codes = calc_after(
+        &h,
+        "peak mahine aur total gross mila kar",
+        vec![analytics(
+            "G",
+            json!({"from": "2026-08-01", "to": "2026-09-30"}),
+        )],
+        "sum",
+        &["r1.peak.gross.value", "r1.totals.gross"],
+    );
+    assert!(refused(&codes), "{codes:?}");
+}
+
+#[test]
+fn a_report_read_for_one_bikri_is_a_part_of_the_report_for_all() {
+    // R1 for sale 1 (gross 29,400) and the all-sales R6 are a part and its whole.
+    let h = Harness::day();
+    let codes = calc_after(
+        &h,
+        "bikri 1 aur sab ka total gross mila kar",
+        vec![report("R1", json!({"bikri": 1})), report("R6", json!({}))],
+        "sum",
+        &["r1.totals.gross", "r2.totals.gross"],
+    );
+    assert!(refused(&codes), "{codes:?}");
+}
+
+#[test]
+fn a_chain_holding_a_part_and_the_same_figure_from_two_periods_are_not_added_without_a_word() {
+    // c1 = banana + apple (asked together). c2 = c1 + banana counts banana twice.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kela aur saib ka commission mila kar",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["c1.result", "r1.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[3]), ["ERR_OUT_OF_RANGE"]);
+    // Banana for two periods apart: a sum needs the word, a difference is the comparison it is.
+    let world = || {
+        Harness::over(worked::months_world(&[
+            (8, true, 10, 1_000),
+            (9, true, 20, 1_000),
+        ]))
+    };
+    let periods = |one: (&str, &str), two: (&str, &str)| {
+        vec![
+            analytics("A", json!({"item": "banana", "from": one.0, "to": one.1})),
+            analytics("A", json!({"item": "banana", "from": two.0, "to": two.1})),
+        ]
+    };
+    let apart = || periods(("2026-08-01", "2026-08-31"), ("2026-09-01", "2026-09-30"));
+    let both = &["r1.totals.total_comm", "r2.totals.total_comm"];
+    let h = world();
+    assert!(refused(&calc_after(
+        &h,
+        "kele ka commission",
+        apart(),
+        "sum",
+        both
+    )));
+    let h = world();
+    assert!(calc_after(&h, "kele ka commission mila kar", apart(), "sum", both).is_empty());
+    let h = world();
+    assert!(calc_after(&h, "kele ka commission farq", apart(), "difference", both).is_empty());
+    // Periods that share days are never added up, whatever the question says; nor is the same
+    // period read twice.
+    let h = world();
+    let overlap = periods(("2026-08-01", "2026-09-30"), ("2026-09-01", "2026-09-30"));
+    let why = why_refused(&h, "kele ka commission mila kar", overlap, "sum", both);
+    assert!(why.contains("share days"), "{why}");
+    let h = world();
+    let twice = periods(("2026-09-01", "2026-09-30"), ("2026-09-01", "2026-09-30"));
+    let why = why_refused(&h, "kele ka commission mila kar", twice, "sum", both);
+    assert!(why.contains("share days"), "{why}");
+    // The same figure named twice.
+    let h = world();
+    let why = why_refused(
+        &h,
+        "kele ka commission mila kar",
+        apart(),
+        "sum",
+        &["r1.totals.total_comm", "r1.totals.total_comm"],
+    );
+    assert!(why.contains("counted twice"), "{why}");
+}
+
+/// The detail of the first refusal of a calculation ("" when it ran).
+fn why_refused(
+    h: &Harness,
+    question: &str,
+    first: Vec<(&'static str, Value)>,
+    op: &str,
+    inputs: &[&str],
+) -> String {
+    let (_, requests) = h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&first),
+            tool_reply(&[("calculate", json!({"op": op, "inputs": inputs}))]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    requests[2]["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["role"] == "tool")
+        .filter_map(|m| serde_json::from_str::<Value>(m["content"].as_str()?).ok())
+        .find_map(|v| v["error"]["detail"].as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+
+#[test]
+fn each_refusal_of_the_scope_guard_says_why() {
+    // Different things, asked without the word for it.
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "kela aur saib ka commission",
+        vec![analytics("A", json!({}))],
+        "average",
+        &["r1.rows.*.total_comm"],
+    );
+    assert!(why.contains("different things"), "{why}");
+    // A part and its whole: said, whatever the question asks.
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "sab ka total commission mila kar",
+        vec![analytics("A", json!({}))],
+        "sum",
+        &["r1.rows.*.total_comm", "r1.totals.total_comm"],
+    );
+    assert!(why.contains("part of another"), "{why}");
+    // A chain with a part of itself.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kela aur saib ka commission mila kar",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["c1.result", "r1.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    let detail = requests[3]["messages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|m| m["role"] == "tool")
+        .filter_map(|m| serde_json::from_str::<Value>(m["content"].as_str()?).ok())
+        .find_map(|v| v["error"]["detail"].as_str().map(str::to_owned))
+        .unwrap_or_default();
+    assert!(detail.contains("counted twice"), "{detail}");
+    // A cut list of matches.
+    let h = Harness::day();
+    for (ur, en) in [
+        ("ظفر الف", "Zafar A"),
+        ("ظفر ب", "Zafar B"),
+        ("ظفر ج", "Zafar C"),
+        ("ظفر د", "Zafar D"),
+        ("ظفر ہ", "Zafar E"),
+        ("ظفر و", "Zafar F"),
+    ] {
+        world::add_account(
+            &h.world.env,
+            &h.world.owner,
+            mandi_services::core::accounts::AccountType::Buyer,
+            ur,
+            en,
+            true,
+            "",
+        );
+    }
+    let why = why_refused(
+        &h,
+        "sab zafar ka bakaya mila kar",
+        vec![find("zafar", "buyer")],
+        "sum",
+        &["r1.matches.*.balance"],
+    );
+    assert!(why.contains("not every row was read"), "{why}");
+}
+
+#[test]
+fn a_row_and_its_own_earlier_period_or_difference_are_other_figures() {
+    // Banana in August and September; view A for September with the earlier month beside it.
+    let world = || {
+        Harness::over(worked::months_world(&[
+            (8, true, 10, 1_000),
+            (9, true, 20, 1_000),
+        ]))
+    };
+    let september = || {
+        vec![analytics(
+            "A",
+            json!({"from": "2026-09-01", "to": "2026-09-30", "compare": "previous"}),
+        )]
+    };
+    let now_and_difference = &["r1.rows.i1.total_comm", "r1.rows.i1.difference.total_comm"];
+    // The difference is worked out from both months: now plus the difference is nobody's figure.
+    let h = world();
+    let why = why_refused(
+        &h,
+        "kele ka commission",
+        september(),
+        "sum",
+        now_and_difference,
+    );
+    assert!(why.contains("part of another"), "{why}");
+    let h = world();
+    let why = why_refused(
+        &h,
+        "kele ka commission mila kar",
+        september(),
+        "sum",
+        now_and_difference,
+    );
+    assert!(why.contains("part of another"), "{why}");
+    // The earlier month beside this one is a sum only when asked.
+    let now_and_earlier = &["r1.rows.i1.total_comm", "r1.rows.i1.earlier.total_comm"];
+    let h = world();
+    assert!(refused(&calc_after(
+        &h,
+        "kele ka commission",
+        september(),
+        "sum",
+        now_and_earlier
+    )));
+    let h = world();
+    assert!(
+        calc_after(
+            &h,
+            "kele ka commission mila kar",
+            september(),
+            "sum",
+            now_and_earlier
+        )
+        .is_empty()
+    );
+}
+
+#[test]
+fn a_chain_is_checked_part_by_part_and_a_wildcard_and_its_own_row_are_counted_twice() {
+    // c1 = banana + apple (asked together); c1 + all items holds banana and apple twice.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kela aur saib ka commission mila kar",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+                analytics("A", json!({})),
+            ]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.total_comm", "r2.totals.total_comm"]}),
+            )]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["c1.result", "r3.totals.total_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[3]), ["ERR_OUT_OF_RANGE"]);
+    // Every row and one of the rows again.
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "sab items ka commission mila kar",
+        vec![analytics("A", json!({}))],
+        "sum",
+        &["r1.rows.*.total_comm", "r1.rows.i1.total_comm"],
+    );
+    assert!(why.contains("counted twice"), "{why}");
+}
+
+#[test]
+fn a_bare_total_does_not_sum_every_row_or_every_match() {
+    // "kele ka total commission" names one item: the sum of every row is not his.
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "kele ka total commission",
+        vec![analytics("A", json!({}))],
+        "sum",
+        &["r1.rows.*.total_comm"],
+    );
+    assert!(why.contains("every row or every match"), "{why}");
+    // Two buyers called Akram: "kul bakaya" of one of them is not their sum.
+    let h = Harness::day();
+    world::add_account(
+        &h.world.env,
+        &h.world.owner,
+        mandi_services::core::accounts::AccountType::Buyer,
+        "اکرم بلوچ",
+        "Akram Baloch",
+        true,
+        "",
+    );
+    let why = why_refused(
+        &h,
+        "akram ka kul bakaya",
+        vec![find("akram", "buyer")],
+        "sum",
+        &["r1.matches.*.balance"],
+    );
+    assert!(why.contains("every row or every match"), "{why}");
+    // The strong words still let a sum of every row through, and "alag alag" takes them away.
+    let h = Harness::day();
+    assert!(
+        calc_after(
+            &h,
+            "sab items ka commission mila kar",
+            vec![analytics("A", json!({}))],
+            "sum",
+            &["r1.rows.*.total_comm"],
+        )
+        .is_empty()
+    );
+    let h = Harness::day();
+    assert!(refused(&calc_after(
+        &h,
+        "dono ka commission alag alag",
+        vec![analytics("A", json!({}))],
+        "sum",
+        &["r1.rows.*.total_comm"],
+    )));
+}
+
+#[test]
+fn a_tile_is_not_added_to_the_part_of_it_that_another_tile_holds() {
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "kul dues mila kar",
+        vec![("tiles", json!({}))],
+        "sum",
+        &["r1.total_dues.amount", "r1.buyers_dues.amount"],
+    );
+    assert!(why.contains("part of another"), "{why}");
+}
+
+#[test]
+fn a_word_for_one_things_own_total_does_not_sum_every_row() {
+    // "in total", "overall" and "both" fit "banana's commission in total" as well as "all of it".
+    for question in [
+        "banana ka commission in total kitna",
+        "kele ka overall commission",
+        "kele ka commission both sides",
+    ] {
+        let h = Harness::day();
+        let why = why_refused(
+            &h,
+            question,
+            vec![analytics("A", json!({}))],
+            "sum",
+            &["r1.rows.*.total_comm"],
+        );
+        assert!(
+            why.contains("every row or every match"),
+            "{question}: {why}"
+        );
+    }
+}
+
+#[test]
+fn a_calculation_is_not_added_to_one_of_its_own_parts_even_in_one_scope() {
+    // c1 = banana's seller commission + his buyer commission (one scope, no word needed); c2 adds
+    // his seller commission again.
+    let h = Harness::day();
+    let (_, requests) = h.ask(
+        "kele ka commission",
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({"item": "banana"}))]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["r1.totals.seller_comm", "r1.totals.buyer_comm"]}),
+            )]),
+            tool_reply(&[(
+                "calculate",
+                json!({"op": "sum", "inputs": ["c1.result", "r1.totals.seller_comm"]}),
+            )]),
+            final_reply("ٹھیک ہے۔"),
+        ],
+    );
+    // c1 ran; c2 was refused.
+    assert_eq!(tool_error_codes(&requests[3]), ["ERR_OUT_OF_RANGE"]);
+}
+
+#[test]
+fn a_measure_and_its_part_are_found_across_two_results() {
+    // banana's total commission (r1) and the laga of the banana row of the unfiltered view (r2).
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "kele ka commission aur laga",
+        vec![
+            analytics("A", json!({"item": "banana"})),
+            analytics("A", json!({})),
+        ],
+        "sum",
+        &["r1.totals.total_comm", "r2.rows.i1.laga"],
+    );
+    assert!(why.contains("part of another"), "{why}");
+}
+
+#[test]
+fn the_earlier_periods_total_is_the_earlier_period_and_not_a_part() {
+    let world = || {
+        Harness::over(worked::months_world(&[
+            (8, true, 10, 1_000),
+            (9, true, 20, 1_000),
+        ]))
+    };
+    let september = || {
+        vec![analytics(
+            "A",
+            json!({"from": "2026-09-01", "to": "2026-09-30", "compare": "previous"}),
+        )]
+    };
+    // This month and last month together are two periods, asked for together.
+    let h = world();
+    assert!(
+        calc_after(
+            &h,
+            "is mahine aur pichle mahine ka commission mila kar",
+            september(),
+            "sum",
+            &["r1.totals.total_comm", "r1.compare.totals.total_comm"],
+        )
+        .is_empty()
+    );
+    // The earlier total and the earlier banana row are a whole and its part.
+    let h = world();
+    let why = why_refused(
+        &h,
+        "commission mila kar",
+        september(),
+        "sum",
+        &[
+            "r1.compare.totals.total_comm",
+            "r1.rows.i1.earlier.total_comm",
+        ],
+    );
+    assert!(why.contains("part of another"), "{why}");
+}
+
+#[test]
+fn balances_of_two_ranges_are_never_added_up() {
+    // Akram's closing balance read for September and for October: two positions of one account.
+    let h = Harness::day();
+    let party = |from: &str, to: &str| {
+        report(
+            "R13",
+            json!({"party": "r1.matches.0", "from": from, "to": to}),
+        )
+    };
+    let why = why_refused(
+        &h,
+        "akram ka september aur october ka bakaya mila kar",
+        vec![
+            find("akram", "buyer"),
+            party("2026-09-01", "2026-09-30"),
+            party("2026-10-01", "2026-10-31"),
+        ],
+        "sum",
+        &["r2.totals.balance", "r3.totals.balance"],
+    );
+    assert!(why.contains("share days"), "{why}");
+}
+
+#[test]
+fn a_heading_row_named_by_its_key_is_the_whole_of_the_rows_under_it() {
+    let h = Harness::day();
+    let why = why_refused(
+        &h,
+        "sab ka total bakaya mila kar",
+        vec![report("R21", json!({}))],
+        "sum",
+        &["r1.rows.h1.balance", "r1.rows.a20.balance"],
+    );
+    assert!(why.contains("part of another"), "{why}");
+}
+
+// ---- Plan 52 Section 8: the kind of record asked for, and who the name is instead ---------------
+
+/// The model ends the question as not found, pointing at its find.
+fn not_found_reply(find_id: &str) -> Value {
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant",
+            "content": json!({"kind": "not_found", "text": "", "show": [], "next": [],
+                "choose": find_id, "entry": null, "nearest": null}).to_string()}}],
+        "usage": usage(),
+    })
+}
+
+fn logged_tools(h: &Harness) -> Vec<String> {
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    let log: Vec<Value> = serde_json::from_str(&rows[0].tool_calls_json).unwrap();
+    log.iter()
+        .map(|entry| entry["tool"].as_str().unwrap_or("").to_owned())
+        .collect()
+}
+
+#[test]
+fn a_name_that_is_nobody_says_which_kind_of_record_was_asked_for() {
+    // Plan 52 Section 8(a): every `not_found` carries `asked_role`; with no such name at all there
+    // is no `found_as`.
+    for (question, call, role) in [
+        (
+            "zzzparty ne kya becha",
+            find("zzzparty", "seller"),
+            AskedRole::Seller,
+        ),
+        (
+            "zzzparty ne kya khareeda",
+            find("zzzparty", "buyer"),
+            AskedRole::Buyer,
+        ),
+        (
+            "zzzfruit par commission",
+            find("zzzfruit", "item"),
+            AskedRole::Item,
+        ),
+        (
+            "zzzpartner ka hissa",
+            find("zzzpartner", "partner"),
+            AskedRole::Partner,
+        ),
+        (
+            "zzzgarden ka hisab",
+            find("zzzgarden", "garden"),
+            AskedRole::Garden,
+        ),
+        ("zzztrip ka hisab", find("zzztrip", "trip"), AskedRole::Trip),
+        (
+            "zzzparty ka khata",
+            find("zzzparty", "any_party"),
+            AskedRole::Any,
+        ),
+    ] {
+        let h = Harness::day();
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            vec![tool_reply(&[call]), not_found_reply("r1")],
+        );
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::NotFound,
+            "{question}: {reply:#?}"
+        );
+        assert_eq!(reply.asked_role, Some(role), "{question}");
+        assert!(reply.found_as.is_none(), "{question}: nobody has this name");
+        assert_eq!(requests.len(), 2, "{question}");
+    }
+    // A typed item filter is an item search too.
+    let h = Harness::day();
+    let (reply, _) = h.ask(
+        "zzzfruit par commission",
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({"item": "zzzfruit"}))]),
+            final_reply("x"),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Item));
+    // Every other outcome leaves both fields out.
+    let h = Harness::day();
+    let (reply, _) = h.ask("aaj ka cash kitna hai", None, vec![final_reply("x")]);
+    assert!(reply.asked_role.is_none() && reply.found_as.is_none());
+}
+
+#[test]
+fn a_buyer_asked_as_a_seller_is_found_as_a_buyer_and_his_purchases_are_not_read_as_sales() {
+    // "Arshad ne kya becha": Arshad is a buyer. Nothing of his is read: the question ends as not
+    // found for a seller, with him as `found_as` and offered by name, and no second model call
+    // (the model could only present what he bought as what he sold).
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "arshad ne kya becha",
+        None,
+        vec![tool_reply(&[find("arshad", "seller")]), final_reply("x")],
+    );
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Seller));
+    let found = reply.found_as.as_ref().expect("found as a buyer");
+    assert_eq!(found.role, AskedRole::Buyer);
+    assert_eq!(found.name.name_en, "Arshad Multani");
+    assert!(found.key.starts_with('a'), "{}", found.key);
+    assert_eq!(reply.options.len(), 1);
+    assert!(reply.answer.is_none(), "no figure of his purchases");
+    assert_eq!(requests.len(), 1, "the model was not called again");
+    assert_eq!(logged_tools(&h), ["find"], "nothing of his was read");
+    h.scan_requests();
+}
+
+#[test]
+fn a_seller_asked_as_a_buyer_is_found_as_a_seller() {
+    // The reverse case: "Rahim ne kya khareeda", and Rahim is a seller.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "rahim ne kya khareeda",
+        None,
+        vec![tool_reply(&[find("rahim", "buyer")]), final_reply("x")],
+    );
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Buyer));
+    let found = reply.found_as.as_ref().expect("found as a seller");
+    assert_eq!(found.role, AskedRole::Seller);
+    assert_eq!(found.name.name_en, "Rahim");
+    assert!(reply.answer.is_none());
+    assert_eq!(requests.len(), 1);
+    assert_eq!(logged_tools(&h), ["find"]);
+}
+
+#[test]
+fn a_search_for_any_party_that_finds_only_the_other_role_stops_the_same_way() {
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "arshad ne aaj kya becha",
+        None,
+        vec![tool_reply(&[find("arshad", "any_party")]), final_reply("x")],
+    );
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Seller));
+    assert_eq!(
+        reply.found_as.as_ref().map(|f| f.role),
+        Some(AskedRole::Buyer)
+    );
+    assert_eq!(requests.len(), 1);
+}
+
+#[test]
+fn a_name_is_read_as_the_role_the_question_means_and_a_verb_of_the_other_side_does_not_stop_it() {
+    // "Arshad ko kitna becha" is sold TO Arshad: a buyer, searched as a buyer. "Rahim se kitna
+    // khareeda" is bought FROM Rahim: a seller, searched as a seller. Both are right.
+    for (question, call) in [
+        ("arshad ko kitna becha", find("arshad", "buyer")),
+        ("rahim se kitna khareeda", find("rahim", "seller")),
+        ("arshad ka hisab", find("arshad", "buyer")),
+    ] {
+        let h = Harness::day();
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            vec![tool_reply(&[call]), final_reply("{{r1.matches.0.name}}")],
+        );
+        assert_ne!(
+            reply.outcome,
+            AskOutcome::NotFound,
+            "{question}: {reply:#?}"
+        );
+        assert!(
+            reply.asked_role.is_none() && reply.found_as.is_none(),
+            "{question}"
+        );
+        assert!(requests.len() >= 2, "{question}: the model went on");
+    }
+}
+
+#[test]
+fn a_question_without_a_trade_verb_still_reads_a_widened_buyer() {
+    // No verb says the role: the widened buyer is read as before (Q070-style questions), with the
+    // type shown on the match. Only the verb stops it.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "arshad ka bakaya kitna hai",
+        None,
+        vec![tool_reply(&[find("arshad", "seller")]), final_reply("x")],
+    );
+    assert_ne!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert!(reply.found_as.is_none());
+    assert!(requests.len() >= 2);
+}
+
+#[test]
+fn a_model_written_not_found_on_a_widened_find_names_who_he_is() {
+    // The question has no verb, the find was widened to a buyer, and the model ends the question
+    // as not found: the app adds the role asked for and who he is.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "arshad ka maal",
+        None,
+        vec![
+            tool_reply(&[find("arshad", "seller")]),
+            not_found_reply("r1"),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Seller));
+    let found = reply.found_as.as_ref().expect("found as a buyer");
+    assert_eq!(found.role, AskedRole::Buyer);
+    assert_eq!(found.name.name_en, "Arshad Multani");
+    assert_eq!(requests.len(), 2);
 }

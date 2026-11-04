@@ -277,10 +277,6 @@ pub struct AccountInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub collector_staff_id: Option<i64>,
-    /// The collection day, 0 (Monday) to 6 (Sunday). Null if none.
-    #[serde(default)]
-    #[ts(type = "number | null")]
-    pub collection_weekday: Option<i64>,
     /// False hides the account from pickers; reports keep it.
     pub is_active: bool,
     /// A note, up to 500 characters.
@@ -441,9 +437,6 @@ pub struct AccountRow {
     pub default_marka: Option<RecordRef>,
     /// The collector, if any.
     pub collector: Option<RecordRef>,
-    /// The collection day, 0 (Monday) to 6 (Sunday), or null.
-    #[ts(type = "number | null")]
-    pub collection_weekday: Option<i64>,
     /// A system account of PRD FR-10.4: its code cannot change and it cannot be deleted.
     pub is_system: bool,
     /// False for the accounts that cannot take an opening balance (see `can_take_opening`), so

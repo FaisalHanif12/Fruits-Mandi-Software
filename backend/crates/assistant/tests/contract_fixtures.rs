@@ -24,9 +24,9 @@ use mandi_assistant::answer::{
     FigureDirection, PlaceValue, WorkingOp, WorkingStep,
 };
 use mandi_assistant::ask::{
-    AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantNewConversationInput,
-    AssistantPickInput, AssistantQuickInput, AssistantRerunInput, ConversationStarted, FailureKind,
-    StopReason,
+    AskOutcome, AskReply, AskedRole, AssistantAskInput, AssistantFailure,
+    AssistantNewConversationInput, AssistantPickInput, AssistantQuickInput, AssistantRerunInput,
+    ConversationStarted, FailureKind, FoundAs, StopReason,
 };
 use mandi_assistant::limits::DAILY_LIMIT;
 use mandi_assistant::log::{
@@ -202,6 +202,8 @@ fn reply(question_id: i64, outcome: AskOutcome) -> AskReply {
         stop_reason: None,
         count_today: 3,
         limit: DAILY_LIMIT,
+        asked_role: None,
+        found_as: None,
     }
 }
 
@@ -214,6 +216,7 @@ fn answer(parts: Vec<AnswerPart>) -> Answer {
         advice: false,
         general_advice: false,
         sources: Vec::new(),
+        how: Vec::new(),
         differences: Vec::new(),
         next: Vec::new(),
         read_at: READ_AT.to_owned(),
@@ -1172,6 +1175,7 @@ fn which_one() -> AskReply {
 /// The name is not found: the three closest names.
 fn not_found() -> AskReply {
     let mut r = reply(8, AskOutcome::NotFound);
+    r.asked_role = Some(AskedRole::Any);
     r.options = vec![
         AnswerOption {
             key: "a20".to_owned(),
@@ -1190,6 +1194,28 @@ fn not_found() -> AskReply {
             dead: false,
         },
     ];
+    r
+}
+
+/// "Faisal ne aaj kya becha", and the only Faisal is a buyer (plan 52 Section 8): not found as a
+/// seller, and he is a buyer. His name is offered, so that "show his purchases" is one click.
+fn not_found_other_role() -> AskReply {
+    let mut r = reply(8, AskOutcome::NotFound);
+    r.asked_role = Some(AskedRole::Seller);
+    r.found_as = Some(FoundAs {
+        key: "a20".to_owned(),
+        id: 20,
+        role: AskedRole::Buyer,
+        name: akram(),
+    });
+    r.options = vec![AnswerOption {
+        key: "a20".to_owned(),
+        name: akram(),
+        city: None,
+        balance: Some(dr(2_880)),
+        checked: true,
+        dead: false,
+    }];
     r
 }
 
@@ -1282,6 +1308,17 @@ fn stopped_tokens_with_table() -> AskReply {
     a.sources = vec![card_source("r2", 20, akram()), r13_source()];
     let mut r = reply(20, AskOutcome::NotUnderstood);
     r.stop_reason = Some(StopReason::Tokens);
+    r.answer = Some(a);
+    r
+}
+
+/// The question reached its hard limit of 25 seconds after it read a table (plan 55 Section 3): the
+/// table is shown as it is, with no word of the model's, and the panel adds its plain "late" line.
+fn time_limit() -> AskReply {
+    let mut a = answer(Vec::new());
+    a.tables = vec![r13_table()];
+    a.sources = vec![card_source("r2", 20, akram()), r13_source()];
+    let mut r = reply(21, AskOutcome::TimeLimit);
     r.answer = Some(a);
     r
 }
@@ -1489,6 +1526,11 @@ fn contract_fixtures_are_the_contract() {
             not_found(),
         ),
         (
+            "assistant_reply_not_found_other_role",
+            ask("faisal ne aaj kya becha"),
+            not_found_other_role(),
+        ),
+        (
             "assistant_reply_need_dates",
             ask("pichle teen hafte ki bikri"),
             reply(16, AskOutcome::NeedDates),
@@ -1542,6 +1584,11 @@ fn contract_fixtures_are_the_contract() {
             "assistant_reply_checks_failed",
             ask("ikram ke total bakaya kitne hai"),
             checks_failed(),
+        ),
+        (
+            "assistant_reply_time_limit",
+            ask("ikram ke total bakaya kitne hai"),
+            time_limit(),
         ),
         (
             "assistant_reply_records_differ",

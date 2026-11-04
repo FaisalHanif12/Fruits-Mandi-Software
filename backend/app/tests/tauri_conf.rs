@@ -337,6 +337,9 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-backup-settings-set",
             "allow-backup-key-setup",
             "allow-backup-key-confirm",
+            "allow-backup-first-run-list",
+            "allow-backup-first-run-preview",
+            "allow-backup-first-run-restore",
             // Run B, plan 20 (append-only block).
             "allow-reports-catalog",
             "allow-reports-run",
@@ -400,6 +403,17 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-partners-code-unlock",
             "allow-partners-code-lock",
             "allow-partners-code-reset",
+            "allow-assistant-status",
+            "allow-assistant-ask",
+            "allow-assistant-quick",
+            "allow-assistant-pick",
+            "allow-assistant-rerun",
+            "allow-assistant-new-conversation",
+            "allow-assistant-settings-set",
+            "allow-assistant-key-save",
+            "allow-assistant-key-remove",
+            "allow-assistant-test",
+            "allow-assistant-log-list",
             "core:event:default",
             "window-state:default",
             "updater:allow-check",
@@ -408,7 +422,8 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "dialog:allow-message",
             "dialog:allow-ask",
             "dialog:allow-confirm",
-            "dialog:allow-save"
+            "dialog:allow-save",
+            "dialog:allow-open"
         ])
     );
     assert_eq!(

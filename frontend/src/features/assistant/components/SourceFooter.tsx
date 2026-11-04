@@ -41,6 +41,15 @@ export function readTimeText(readAt: string, l10n: ReactLocalization): string {
   return `${isoToDisplayDate(date)} ${stampTimeText(time, l10n)}`;
 }
 
+/**
+ * A source with no `result_id` was not read for this answer: it is only a link (the answer to "how do I
+ * print this?" opens a report with its filters set, plan 54 S2). It gets its button but is not named
+ * in the source line, which says where the books were read from.
+ */
+function wasRead(source: AnswerSource): boolean {
+  return source.result_id !== '';
+}
+
 /** "ماخذ: …": every source once, then the time. */
 export function SourceLine({
   sources,
@@ -51,6 +60,7 @@ export function SourceLine({
 }) {
   const { l10n } = useLocalization();
   const labels = sources
+    .filter(wasRead)
     .map((source) => sourceLabel(source, l10n))
     .filter((label, index, all) => all.indexOf(label) === index);
   if (labels.length === 0) return null;
@@ -122,10 +132,14 @@ export function SourceButtons({ sources }: { sources: readonly AnswerSource[] })
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {buttons.map((source) => {
+        {buttons.map((source, index) => {
           const label = sourceLabel(source, l10n);
           return (
-            <span key={`${source.kind}-${source.result_id}`} className="flex flex-wrap gap-2">
+            // Two link-only sources of one kind share an empty `result_id`, so the place is in the key.
+            <span
+              key={`${source.kind}-${source.result_id}-${String(index)}`}
+              className="flex flex-wrap gap-2"
+            >
               <Button
                 {...(several
                   ? {

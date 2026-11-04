@@ -64,7 +64,27 @@ const TRIGGERS_OF_0004: [&str; 7] = [
     "bikri_lots_no_replace",
     "bikri_sales_no_replace",
 ];
-const LATEST_VERSION: i64 = 10;
+/// The newest schema version: the highest number among the migration files, so a new migration never
+/// needs this file edited (it was a constant, and went stale at 0011).
+fn latest_version() -> i64 {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("db")
+        .join("migrations");
+    std::fs::read_dir(dir)
+        .expect("the migrations folder")
+        .filter_map(|e| {
+            e.ok()?
+                .file_name()
+                .to_str()?
+                .split('_')
+                .next()?
+                .parse::<i64>()
+                .ok()
+        })
+        .max()
+        .expect("at least one migration")
+}
 /// The tables migration 0006 adds (plan 16b). A file of an old release does not have them, and
 /// they are empty in this test, so the row fingerprint leaves them out.
 const TABLES_OF_0006: [&str; 8] = [
@@ -175,7 +195,6 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
         tag: String::new(),
@@ -325,8 +344,10 @@ fn assert_balance_is(balance: &Balance, dr: i64, cr: i64, note: &str) {
     assert_eq!(balance.amount_paisa.as_paisa(), amount, "{note}: amount");
 }
 
-/// All rows of all tables (except those named), hashed.
-fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
+/// The tables of a file and the columns of each, in order.
+type Shape = Vec<(String, Vec<String>)>;
+
+fn shape_of(dir: &TempDir) -> Shape {
     let conn = raw(dir);
     let tables: Vec<String> = {
         let mut statement = conn
@@ -340,29 +361,60 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
             .collect::<Result<_, _>>()
             .unwrap()
     };
+    tables
+        .into_iter()
+        .map(|table| {
+            let columns: Vec<String> = {
+                let mut info = conn
+                    .prepare(&format!("PRAGMA table_info(\"{table}\")"))
+                    .unwrap();
+                info.query_map([], |r| r.get::<_, String>(1))
+                    .unwrap()
+                    .collect::<Result<Vec<_>, _>>()
+                    .unwrap()
+            };
+            (table, columns)
+        })
+        .collect()
+}
+
+/// All rows of all tables (except those named), hashed.
+fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
+    fingerprint_in(dir, skip, None)
+}
+
+/// As [`fingerprint`]. With a `shape` (the tables and columns of an OLD file) only those tables and
+/// columns are hashed: what a later migration adds (a table, a column) is not a changed row. This
+/// keeps the migration tests true for every migration after the old file's version, with no list to
+/// extend (the lists of 0005, 0006 and 0009 are still used without a shape).
+fn fingerprint_in(dir: &TempDir, skip: &[&str], shape: Option<&Shape>) -> u64 {
+    let now = shape_of(dir);
     let mut hasher = DefaultHasher::new();
-    for table in tables.iter().filter(|t| {
+    for (table, all_columns) in now.iter().filter(|(t, _)| {
         !skip.contains(&t.as_str())
-            && !TABLES_OF_0006.contains(&t.as_str())
-            && !TABLES_OF_0009.contains(&t.as_str())
+            && match shape {
+                Some(old) => old.iter().any(|(name, _)| name == t),
+                None => {
+                    !TABLES_OF_0006.contains(&t.as_str()) && !TABLES_OF_0009.contains(&t.as_str())
+                }
+            }
     }) {
+        let conn = raw(dir);
         table.hash(&mut hasher);
-        let names: Vec<String> = {
-            let mut info = conn
-                .prepare(&format!("PRAGMA table_info(\"{table}\")"))
-                .unwrap();
-            info.query_map([], |r| r.get::<_, String>(1))
-                .unwrap()
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap()
-                .into_iter()
-                .filter(|c| {
+        let names: Vec<String> = all_columns
+            .iter()
+            .filter(|c| match shape {
+                Some(old) => old
+                    .iter()
+                    .any(|(name, cols)| name == table && cols.contains(c)),
+                None => {
                     !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str()))
                         && !COLUMNS_OF_0006.contains(&(table.as_str(), c.as_str()))
                         && !COLUMNS_OF_0009.contains(&(table.as_str(), c.as_str()))
-                })
-                .collect()
-        };
+                }
+            })
+            .cloned()
+            .collect();
         let filter = if table == "account_controls" {
             format!(
                 "WHERE code NOT IN ({})",
@@ -1159,7 +1211,8 @@ fn migration_case(with_draft: bool, from_version: i64) {
         busy_total,
         "dropping indexes changed data"
     );
-    let rows_before = fingerprint(&dir, &["audit_log"]);
+    let old_shape = shape_of(&dir);
+    let rows_before = fingerprint_in(&dir, &["audit_log"], Some(&old_shape));
     let audit_rows_before = audit_total(&dir);
     let old_file_numbers: Vec<(i64, i64, i64)> = old_all_accounts(&raw(&dir), None);
 
@@ -1171,7 +1224,7 @@ fn migration_case(with_draft: bool, from_version: i64) {
     let version: i64 = raw(&dir)
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, LATEST_VERSION, "schema version after opening");
+    assert_eq!(version, latest_version(), "schema version after opening");
     for name in INDEXES_OF_0002 {
         assert!(
             index_names(&dir).iter().any(|n| n == name),
@@ -1184,7 +1237,7 @@ fn migration_case(with_draft: bool, from_version: i64) {
         "a table, trigger or view differs from the latest file (the triggers of 0003 and 0004 must be back)"
     );
     assert_eq!(
-        fingerprint(&dir, &["audit_log"]),
+        fingerprint_in(&dir, &["audit_log"], Some(&old_shape)),
         rows_before,
         "the migration changed a row"
     );
@@ -1209,7 +1262,10 @@ fn migration_case(with_draft: bool, from_version: i64) {
         .map(|e| e.unwrap().path())
         .filter(|p| {
             p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
-                n.starts_with(&format!("pre-migration-{from_version}-{LATEST_VERSION}-"))
+                n.starts_with(&format!(
+                    "pre-migration-{from_version}-{}-",
+                    latest_version()
+                ))
             })
         })
         .collect();

@@ -48,5 +48,14 @@ export function message(
   if (pattern == null) throw new Error(`${language}: no message ${id}`);
   // The <num> and <name> markup of a message is drawn as a number or a name in the page, so its
   // text is what is compared.
-  return visible(bundle.formatPattern(pattern, args)).replace(/<\/?(num|name|money|key)>/g, '');
+  // A message that selects on a variable the caller did not give reads its default variant, the way the
+  // app does; any other error is a real one. Two such selectors exist: the closed-day message selects
+  // on `today_state`, and the out-of-range message on `reason` (the cloud address; the app sends an
+  // empty `reason` when the backend sends none, so the plain range reads).
+  const errors: Error[] = [];
+  const text = bundle.formatPattern(pattern, args, errors);
+  const SELECTORS = ['Unknown variable: $today_state', 'Unknown variable: $reason'];
+  const real = errors.filter((error) => !SELECTORS.some((known) => error.message.includes(known)));
+  if (real[0] !== undefined) throw real[0];
+  return visible(text).replace(/<\/?(num|name|money|key)>/g, '');
 }

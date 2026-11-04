@@ -215,6 +215,9 @@
     "allow-backup-settings-set",
     "allow-backup-key-setup",
     "allow-backup-key-confirm",
+    "allow-backup-first-run-list",
+    "allow-backup-first-run-preview",
+    "allow-backup-first-run-restore",
     "allow-reports-catalog",
     "allow-reports-run",
     "allow-reports-print-data",
@@ -294,6 +297,7 @@
     "dialog:allow-message",
     "dialog:allow-ask",
     "dialog:allow-confirm",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "dialog:allow-open"
   ]
 }

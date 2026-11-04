@@ -112,7 +112,7 @@ fn the_real_answers_of_the_plan_17e_commands_are_the_fixtures() {
             "city_id": null, "adda_id": null, "phone1": "", "phone2": "", "address": "",
             "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
             "opening_is_advance": false, "credit_allowed": true, "credit_limit": "",
-            "default_marka_id": null, "collector_staff_id": null, "collection_weekday": 5,
+            "default_marka_id": null, "collector_staff_id": null,
             "is_active": true, "note": "", "tag": tag });
         accounts::save(ctx, &w.owner, &typed::<AccountInput>(&edit)).unwrap();
     }
@@ -220,10 +220,9 @@ fn the_real_answers_of_the_plan_17e_commands_are_the_fixtures() {
 
     // The collection list: 2,880 and 18,684, 21,564 in all, in both languages.
     for (language, name) in [(Language::Ur, "ur"), (Language::En, "en")] {
-        let request = json!({ "date": "10-10-2026", "collector_staff_id": null, "city_id": null,
+        let request = json!({ "collector_staff_id": null, "city_id": null,
             "language": language });
-        let (list, filters) =
-            printing::collection_for_print(ctx, "10-10-2026", None, None).unwrap();
+        let (list, filters) = printing::collection_for_print(ctx, None, None).unwrap();
         let data = collection_print_data(w.env.ctx.db(), &list, &filters, language).unwrap();
         assert_eq!(data.total.amount, "21,564");
         assert_eq!(data.groups[0].rows[0].tag.as_deref(), Some("K"));

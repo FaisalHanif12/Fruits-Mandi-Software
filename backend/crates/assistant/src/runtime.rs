@@ -24,6 +24,19 @@ pub struct Runtime {
     /// accounts can be found, one ambiguous word does not stop it). The tests of this step switch
     /// it on.
     prefind: AtomicBool,
+    /// Whether the app answers by itself, with no model call, a question it understood completely
+    /// and whose answer is already in the app: a print, a how-to, a name nobody has (plan 54 S2,
+    /// plan 55 Section 2). ON in the app. The tests of the model path (recorded transcripts of
+    /// the model's own help and lookup answers) switch it off; the tests of the local answers
+    /// switch it on.
+    local: AtomicBool,
+    /// Whether the app reads the books before the first call when it understood the question
+    /// (plan 54 S3). ON in the app; the recorded transcripts of the model's own tool choices switch
+    /// it off.
+    read_first: AtomicBool,
+    /// Whether a call whose data is already read, and help, think "low" (plan 54 S4). ON in the
+    /// app until the bank shows a quality drop; the tests of the recorded requests switch it off.
+    low_effort: AtomicBool,
 }
 
 /// Held while a question runs: only one question runs at a time (`ERR_ASSISTANT_BUSY`). Dropping it
@@ -54,6 +67,9 @@ impl Runtime {
             memory: Mutex::new(HashMap::new()),
             busy: AtomicBool::new(false),
             prefind: AtomicBool::new(false),
+            local: AtomicBool::new(true),
+            read_first: AtomicBool::new(true),
+            low_effort: AtomicBool::new(true),
         }
     }
 
@@ -65,6 +81,36 @@ impl Runtime {
     /// Switches the pre-find on or off (a test switch; it is off in the app for now).
     pub fn set_prefind(&self, on: bool) {
         self.prefind.store(on, Ordering::Relaxed);
+    }
+
+    /// True while the app may answer a completely understood question by itself.
+    pub fn local(&self) -> bool {
+        self.local.load(Ordering::Relaxed)
+    }
+
+    /// Switches the local answers on or off (a test switch; they are on in the app).
+    pub fn set_local(&self, on: bool) {
+        self.local.store(on, Ordering::Relaxed);
+    }
+
+    /// True while the app may read the books before the first call.
+    pub fn read_first(&self) -> bool {
+        self.read_first.load(Ordering::Relaxed)
+    }
+
+    /// Switches the read before the first call on or off (a test switch).
+    pub fn set_read_first(&self, on: bool) {
+        self.read_first.store(on, Ordering::Relaxed);
+    }
+
+    /// True while a call with its data already read thinks "low".
+    pub fn low_effort(&self) -> bool {
+        self.low_effort.load(Ordering::Relaxed)
+    }
+
+    /// Switches the low effort on or off (a test switch).
+    pub fn set_low_effort(&self, on: bool) {
+        self.low_effort.store(on, Ordering::Relaxed);
     }
 
     /// The real runtime: the key in Windows Credential Manager.

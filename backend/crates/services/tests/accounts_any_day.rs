@@ -106,7 +106,7 @@ fn buyer_request(date: &str, dr: &str) -> Value {
         "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
         "opening_date": date, "opening_dr": dr, "opening_cr": "", "opening_is_advance": false,
         "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-        "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": "",
+        "collector_staff_id": null, "is_active": true, "note": "",
         "tag": ""
     })
 }
@@ -205,14 +205,146 @@ fn a_new_buyer_with_no_opening_saves_on_a_closed_day() {
     ledger::verify_journal_chain(&env.ctx).unwrap();
 }
 
+/// The audit rows of an opening posted on a closed day.
+fn closed_day_audits(dir: &TempDir) -> i64 {
+    count(
+        dir,
+        "SELECT COUNT(*) FROM audit_log WHERE entity = 'account' \
+         AND action = 'opening_on_closed_day' AND reason = 'opening on a closed day'",
+    )
+}
+
+/// The debits and the credits of every line in the books.
+fn books(dir: &TempDir) -> (i64, i64) {
+    (
+        count(dir, "SELECT COALESCE(SUM(dr_paisa), 0) FROM journal_lines"),
+        count(dir, "SELECT COALESCE(SUM(cr_paisa), 0) FROM journal_lines"),
+    )
+}
+
 #[test]
-fn an_opening_on_a_closed_date_is_refused_with_what_the_form_needs() {
+fn a_new_account_saves_its_opening_on_a_closed_day_and_the_books_balance() {
+    // Plan 53 T1 (PRD FR-10.11): the days up to 30-10-26 are closed, today is 31-10-26. A new buyer
+    // طارق with 5,000 بنام on 30-10-26 saves, and the opening is dated 30-10-26.
+    let (dir, env, owner) = world("2026-10-30");
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let tariq = save(&env, &owner, &buyer_request("30-10-2026", "5,000")).unwrap();
+    assert_eq!(tariq.opening_dr_paisa, Paisa::from_rupees(5_000).unwrap());
+    assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-30"));
+    assert_eq!(
+        tariq.balance,
+        Balance {
+            amount_paisa: Paisa::from_rupees(5_000).unwrap(),
+            side: BalanceSide::Dr,
+        }
+    );
+    // One opening entry, dated 30-10-26: طارق بنام 5,000, ابتدائی فرق جمع 5,000.
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM journal_entries"),
+        entries + 1
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_entries WHERE posting_type = 'opening' \
+             AND entry_date = '2026-10-30' AND status = 'posted'"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_lines WHERE dr_paisa = 500000 AND account_id = \
+             (SELECT id FROM accounts WHERE name_en = 'Tariq Mehmood')"
+        ),
+        1
+    );
+    assert_eq!(
+        count(
+            &dir,
+            "SELECT COUNT(*) FROM journal_lines WHERE cr_paisa = 500000 AND account_id = \
+             (SELECT id FROM accounts WHERE code = '06019999')"
+        ),
+        1
+    );
+    // The books still balance, and an audit row says what was done and why.
+    let (dr, cr) = books(&dir);
+    assert_eq!(dr, cr);
+    assert_eq!(closed_day_audits(&dir), 1);
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+
+    // An opening on an open day writes no such row.
+    let mut open = buyer_request("31-10-2026", "2,000");
+    open["name_ur"] = json!("ناصر علی");
+    open["name_en"] = json!("Nasir Ali");
+    save(&env, &owner, &open).unwrap();
+    assert_eq!(closed_day_audits(&dir), 1);
+}
+
+#[test]
+fn a_new_account_saves_its_opening_even_when_today_is_closed_too() {
+    // Closed at night: the days up to 31-10-26, today included, are closed.
+    let (dir, env, owner) = world("2026-10-31");
+    let tariq = save(&env, &owner, &buyer_request("31-10-2026", "5,000")).unwrap();
+    assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-31"));
+    assert_eq!(closed_day_audits(&dir), 1);
+    let (dr, cr) = books(&dir);
+    assert_eq!(dr, cr);
+    // An old closed day too.
+    let mut old = buyer_request("01-01-2026", "300");
+    old["name_ur"] = json!("ناصر علی");
+    old["name_en"] = json!("Nasir Ali");
+    save(&env, &owner, &old).unwrap();
+    assert_eq!(closed_day_audits(&dir), 2);
+    ledger::verify_journal_chain(&env.ctx).unwrap();
+}
+
+#[test]
+fn a_new_account_with_an_opening_after_today_is_refused_and_nothing_is_written() {
     let (dir, env, owner) = world("2026-10-30");
     let accounts_before = count(&dir, "SELECT COUNT(*) FROM accounts");
     let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
+    let error = save(&env, &owner, &buyer_request("01-11-2026", "5,000")).unwrap_err();
+    let ServiceError::Rejected(items) = &error else {
+        panic!("{error:?}");
+    };
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].code, ErrorCode::ErrDateInFuture);
+    assert_eq!(items[0].field.as_deref(), Some("opening_date"));
+    assert_eq!(
+        count(&dir, "SELECT COUNT(*) FROM accounts"),
+        accounts_before
+    );
+    assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    assert_eq!(closed_day_audits(&dir), 0);
+}
 
-    // 5,000 on 30-10-26 posts, so the closed date is refused. Today (31-10-26) is open.
-    let request = buyer_request("30-10-2026", "5,000");
+/// A saved buyer with 5,000 on 30-10-26, then the days up to `closed_up_to` closed, and the form
+/// that changes his opening to 6,000 on `date`.
+fn changed_opening_request(
+    closed_up_to: &str,
+    date: &str,
+) -> (TempDir, TestEnv, auth::Actor, Value) {
+    let (dir, env, owner) = world("2026-10-29");
+    let tariq = save(&env, &owner, &buyer_request("30-10-2026", "5,000")).unwrap();
+    raw(&dir)
+        .execute(
+            "UPDATE day_state SET closed_up_to_date = ?1 WHERE id = 1",
+            [closed_up_to],
+        )
+        .unwrap();
+    let mut change = buyer_request(date, "6,000");
+    change["id"] = json!(tariq.id);
+    change["version"] = json!(tariq.version);
+    (dir, env, owner, change)
+}
+
+#[test]
+fn a_changed_opening_on_a_closed_date_is_refused_with_what_the_form_needs() {
+    // Only a NEW account is dated on a closed day. Changing the opening of an existing account
+    // still needs an open date, and the refusal carries what the form needs (plan 53 T1).
+    let (dir, env, owner, request) = changed_opening_request("2026-10-30", "30-10-2026");
+    let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
     let error = save(&env, &owner, &request).unwrap_err();
     let ServiceError::Rejected(items) = &error else {
         panic!("{error:?}");
@@ -226,49 +358,23 @@ fn an_opening_on_a_closed_date_is_refused_with_what_the_form_needs() {
     );
     assert_eq!(text_value(&error, "today").as_deref(), Some("31-10-2026"));
     assert_eq!(number_value(&error, "today_open"), Some(1));
-    // Nothing was written: the account is not made without its opening.
-    assert_eq!(
-        count(&dir, "SELECT COUNT(*) FROM accounts"),
-        accounts_before
-    );
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    assert_eq!(closed_day_audits(&dir), 0);
     pair("accounts_save_opening_date_closed", &request, &error);
 
-    // "Use today": the same form with today's date saves, and the opening posts on 31-10-26.
-    let tariq = save(&env, &owner, &buyer_request("31-10-2026", "5,000")).unwrap();
-    assert_eq!(tariq.opening_dr_paisa, Paisa::from_rupees(5_000).unwrap());
-    assert_eq!(tariq.opening_date.as_deref(), Some("2026-10-31"));
-    assert_eq!(
-        count(
-            &dir,
-            "SELECT COUNT(*) FROM journal_entries WHERE posting_type = 'opening' \
-             AND entry_date = '2026-10-31'"
-        ),
-        1
-    );
-    assert_eq!(
-        tariq.balance,
-        Balance {
-            amount_paisa: Paisa::from_rupees(5_000).unwrap(),
-            side: BalanceSide::Dr,
-        }
-    );
-
-    // "Save without the opening": the same form with the amount taken out saves at once.
-    let mut without = buyer_request("30-10-2026", "");
-    without["name_ur"] = json!("ناصر علی");
-    without["name_en"] = json!("Nasir Ali");
-    save(&env, &owner, &without).unwrap();
-    ledger::verify_journal_chain(&env.ctx).unwrap();
+    // "Use today": the same change dated today saves; the old opening is reversed on its own day,
+    // so that day must be open too, which it is not: the Owner reopens it first (FR-21.2).
+    let mut today = request.clone();
+    today["opening_date"] = json!("31-10-2026");
+    let error = save(&env, &owner, &today).unwrap_err();
+    assert!(matches!(&error, ServiceError::Rejected(items)
+        if items[0].code == ErrorCode::ErrDateClosed));
 }
 
 #[test]
-fn when_today_is_closed_too_the_refusal_says_so() {
-    // Closed at night: the days up to 31-10-26, today included, are closed.
-    let (dir, env, owner) = world("2026-10-31");
+fn when_today_is_closed_too_the_refusal_of_a_changed_opening_says_so() {
+    let (dir, env, owner, request) = changed_opening_request("2026-10-31", "31-10-2026");
     let entries = count(&dir, "SELECT COUNT(*) FROM journal_entries");
-
-    let request = buyer_request("31-10-2026", "5,000");
     let error = save(&env, &owner, &request).unwrap_err();
     let ServiceError::Rejected(items) = &error else {
         panic!("{error:?}");
@@ -281,12 +387,8 @@ fn when_today_is_closed_too_the_refusal_says_so() {
     );
     assert_eq!(text_value(&error, "today").as_deref(), Some("31-10-2026"));
     assert_eq!(number_value(&error, "today_open"), Some(0));
-    pair("accounts_save_opening_date_today_closed", &request, &error);
-
-    // The account with no opening saves at once, at 9 pm, with today closed (PRD FR-10.11).
-    let tariq = save(&env, &owner, &buyer_request("31-10-2026", "")).unwrap();
-    assert_eq!(tariq.name_en, "Tariq Mehmood");
     assert_eq!(count(&dir, "SELECT COUNT(*) FROM journal_entries"), entries);
+    pair("accounts_save_opening_date_today_closed", &request, &error);
 }
 
 #[test]

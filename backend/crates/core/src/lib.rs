@@ -36,6 +36,7 @@ pub mod paging;
 pub mod partner_code;
 pub mod partners;
 pub mod printing;
+pub mod profile;
 pub mod purchases;
 pub mod row_source;
 pub mod rules;

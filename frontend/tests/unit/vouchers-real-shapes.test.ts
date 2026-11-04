@@ -176,7 +176,7 @@ describe('the canned data of the component tests has the real shape', () => {
   });
 
   it('the collection list and the result of the batch of receipts', () => {
-    expect(same(real.COLLECTION_SATURDAY, collectionList('two'))).toBeNull();
+    expect(same(real.COLLECTION_LIST, collectionList('two'))).toBeNull();
     // A batch answer has a result for each row: saved, skipped, or refused with its problem.
     const [saved, skipped, refused] = real.RECEIPTS_BATCH.rows;
     expect(saved?.saved).not.toBeNull();

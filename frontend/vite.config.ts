@@ -9,15 +9,18 @@ const DEV_PORT = 5173;
 const TEST_TIMEOUT_MS = 30_000;
 const HOOK_TIMEOUT_MS = 30_000;
 
-// Three files type into pickers, one picker after another, with the backend's real answers. On a
+// Four files type into pickers, one picker after another, with the backend's real answers. On a
 // machine that is also running the other test files they take several times longer, and a click on a
 // list that is drawn again at that moment is lost. They run alone, one file at a time, after the other
 // files, with more room per test (`pnpm test` runs the project `main` and then `sensitive`). The
 // fruit helper also tries a lost pick again (tests/unit/fruit-real-answers.test.tsx).
+// The trip file is here because its first test, a purchase of three lines typed with the keyboard
+// only, passes alone and as a whole file (57 of 57) and fails only when the whole suite runs at once.
 const LOAD_SENSITIVE_TESTS = [
   'tests/unit/fruit-real-answers.test.tsx',
   'tests/unit/bikri-edit-rules.test.tsx',
   'tests/unit/bikri-later-sale.test.tsx',
+  'tests/unit/trips-trip.test.tsx',
 ];
 const SENSITIVE_TEST_TIMEOUT_MS = 90_000;
 

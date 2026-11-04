@@ -5,8 +5,8 @@
 // Rahim, cash lent 3,000 to Akram, then the rest.
 
 import advancesKarim from '../fixtures/assist_advances_karim.json';
-import collectionSaturday from '../fixtures/assist_collection_list_saturday.json';
-import collectionSaturdayRequest from '../fixtures/assist_collection_list_saturday_request.json';
+import collectionList from '../fixtures/assist_collection_list.json';
+import collectionListRequest from '../fixtures/assist_collection_list_request.json';
 import openBillsAkram from '../fixtures/assist_open_bills_akram.json';
 import openBillsAkramRequest from '../fixtures/assist_open_bills_akram_request.json';
 import openBillsTruncated from '../fixtures/assist_open_bills_truncated.json';
@@ -197,7 +197,7 @@ export const OPEN_BILLS_TRUNCATED: OpenBills = readOpenBills(openBillsTruncated)
 export const OPEN_PAYABLES_RAHIM: OpenPayables = readOpenPayables(openPayablesRahim);
 export const OPEN_PAYABLES_TRUNCATED: OpenPayables = readOpenPayables(openPayablesTruncated);
 export const ADVANCES_KARIM: AdvancesInfo = readAdvancesInfo(advancesKarim);
-export const COLLECTION_SATURDAY: CollectionList = readCollectionList(collectionSaturday);
+export const COLLECTION_LIST: CollectionList = readCollectionList(collectionList);
 export const RECEIPTS_BATCH: ReceiptsSaved = readReceiptsSaved(saveReceiptsBatch);
 export const MADE_REGULAR: MadeRegular = readMadeRegular(makeRegular);
 export const SLIP_RECEIPT_UR: PrintData = readPrintData(slipReceiptUr);
@@ -237,7 +237,7 @@ export const REQUEST_LIST_ALL: VouchersListInput = readVouchersListInput(listAll
 export const REQUEST_OPEN_BILLS_AKRAM: OpenBillsInput = readOpenBillsInput(openBillsAkramRequest);
 export const REQUEST_OPEN_PAYABLES_RAHIM: OpenPayablesInput =
   readOpenPayablesInput(openPayablesRahimRequest);
-export const REQUEST_COLLECTION_SATURDAY: CollectionListInput =
-  readCollectionListInput(collectionSaturdayRequest);
+export const REQUEST_COLLECTION_LIST: CollectionListInput =
+  readCollectionListInput(collectionListRequest);
 export const REQUEST_RECEIPTS_BATCH: ReceiptsInput = readReceiptsInput(saveReceiptsBatchRequest);
 export const REQUEST_MAKE_REGULAR: MakeRegularInput = readMakeRegularInput(makeRegularRequest);

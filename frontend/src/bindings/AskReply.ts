@@ -2,8 +2,10 @@
 import type { Answer } from './Answer';
 import type { AnswerOption } from './AnswerOption';
 import type { AskOutcome } from './AskOutcome';
+import type { AskedRole } from './AskedRole';
 import type { AssistantFailure } from './AssistantFailure';
 import type { EntryRoute } from './EntryRoute';
+import type { FoundAs } from './FoundAs';
 import type { StopReason } from './StopReason';
 
 /**
@@ -15,6 +17,7 @@ import type { StopReason } from './StopReason';
  * |---|---|---|---|---|
  * | answered, estimate, advice | set | empty | null, or set when a change was also asked | null |
  * | which_one, not_found | null | the matches | null | null |
+ * | not_found only | `asked_role` set; `found_as` set when the name is another role's | | | |
  * | need_dates, need_party, not_understood | null | empty | null | null |
  * | not_understood with `stop_reason` | null, or the plain tables of the results that were read | empty | null | null |
  * | outside_books | set (the nearest source) or null | empty | null | null |
@@ -23,6 +26,7 @@ import type { StopReason } from './StopReason';
  * | locked | null | empty | null | null (`locked` is true) |
  * | limit_reached | null | empty | null | null |
  * | offline, error | null | empty | null | set |
+ * | time_limit | set (the plain tables of what was read) | empty | null | null |
  */
 export type AskReply = {
   /**
@@ -75,4 +79,14 @@ export type AskReply = {
    * The daily limit, 20.
    */
   limit: number;
+  /**
+   * For `not_found`: the kind of record that was asked for (plan 52 Section 8). Missing for
+   * every other outcome.
+   */
+  asked_role?: AskedRole;
+  /**
+   * For `not_found` when the name exists in another role: that record, with his role. Missing
+   * otherwise (no such name at all, or any other outcome).
+   */
+  found_as?: FoundAs;
 };

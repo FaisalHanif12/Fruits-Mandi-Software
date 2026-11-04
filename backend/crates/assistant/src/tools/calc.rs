@@ -334,7 +334,7 @@ fn expand(
     if let Node::Obj(fields) = &result.node {
         let cut = fields
             .iter()
-            .any(|(k, v)| k == "rows_cut" && matches!(v, Node::Bool(true)));
+            .any(|(k, v)| (k == "rows_cut" || k == "more") && matches!(v, Node::Bool(true)));
         let count = fields.iter().find_map(|(k, v)| match (k.as_str(), v) {
             ("count", Node::Val(Val::Count(n))) => Some(*n),
             _ => None,
@@ -563,54 +563,6 @@ fn result_node(calc: &Calc, checked: Option<bool>) -> Node {
     })
 }
 
-/// Whose figure each input path is: the single item, seller, buyer or party its result was read
-/// for. Inputs of a result with no such filter (or a question number) have none and are left out.
-fn scopes_of(state: &State, paths: &[String]) -> Vec<String> {
-    use crate::answer::AnswerSource;
-    paths
-        .iter()
-        .filter_map(|path| {
-            let root = path.split('.').next()?;
-            let result = state.find(root)?;
-            let key = |kind: &str, id: Option<i64>| id.map(|id| format!("{kind}{id}"));
-            match result.source.as_ref()? {
-                AnswerSource::Analytics { filters, .. } => {
-                    let parts: Vec<String> = [
-                        key("i", filters.item.as_ref().map(|r| r.id)),
-                        key("s", filters.seller.as_ref().map(|r| r.id)),
-                        key("b", filters.buyer.as_ref().map(|p| p.record.id)),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    .collect();
-                    Some(if parts.is_empty() {
-                        "*".to_owned()
-                    } else {
-                        parts.join("|")
-                    })
-                }
-                AnswerSource::Report { filters, .. } => {
-                    let parts: Vec<String> = [
-                        key("p", filters.party.as_ref().map(|p| p.record.id)),
-                        key("s", filters.seller.as_ref().map(|r| r.id)),
-                        key("i", filters.item.as_ref().map(|r| r.id)),
-                    ]
-                    .into_iter()
-                    .flatten()
-                    .collect();
-                    Some(if parts.is_empty() {
-                        "*".to_owned()
-                    } else {
-                        parts.join("|")
-                    })
-                }
-                AnswerSource::PartyCard { party, .. } => Some(format!("p{}", party.id)),
-                AnswerSource::Tiles { .. } => None,
-            }
-        })
-        .collect()
-}
-
 /// The tool `calculate`.
 pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: CalcInput = input(args)?;
@@ -625,44 +577,87 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
         pending = buyer_balance_over_an_amount(env, state, &parsed.inputs, pending)?;
     }
     let (values, checked) = settle(pending)?;
-    // Figures that belong to different items or parties (or one item and the unfiltered total) are
-    // combined only when the question asks for that kind of figure: a sum or an average when it
-    // says together (mila kar, total), a difference when it compares, a percent when it asks for a
-    // share or a change. Otherwise each is asked for on its own, and a result of the combination
-    // would show as if it were one item's figure (Q112; robustness_cues: 9,376 and 2,724 for
-    // "kela ka commission").
-    let wanted: Option<(bool, &str)> = match parsed.op {
-        OpWord::Sum | OpWord::Average => Some((
-            cues::together(env.question),
-            "the question does not ask for them together (mila kar, total)",
-        )),
-        OpWord::Difference => Some((
-            cues::comparing(env.question),
-            "the question does not compare them (farq, difference, zyada, kam)",
-        )),
-        OpWord::PercentOf | OpWord::ChangePercent => Some((
-            cues::share_or_change(env.question),
-            "the question does not ask for a share or a change in percent",
-        )),
-        OpWord::PercentMore | OpWord::PercentLess => None,
-    };
-    if let Some((asked, why)) = wanted
-        && !asked
-    {
-        let scopes = scopes_of(state, &parsed.inputs);
-        let mut distinct: Vec<&String> = Vec::new();
-        for scope in &scopes {
-            if !distinct.contains(&scope) {
-                distinct.push(scope);
-            }
-        }
-        if distinct.len() >= 2 {
+    // Figures that belong to different things (two items, an item and the total of all, a row and
+    // another row) are combined only when the question asks for that kind of figure: a sum when it
+    // says together (mila kar, total), an average when it says average, a difference when it
+    // compares, a percent when it asks for a share or a change. Otherwise each is asked for on its
+    // own, and the result of the combination would show as if it were one item's figure (Q112;
+    // robustness_cues: 9,376 and 2,724 for "kela ka commission"). An item added to the total of
+    // all is never a figure, whatever the question says. Scopes: `scope.rs`.
+    let figures_in = super::scope::inputs_of(state, &parsed.inputs);
+    let mix = super::scope::mix_of(&figures_in);
+    let adds_up = matches!(parsed.op, OpWord::Sum | OpWord::Average);
+    // A part and its whole are never added up or averaged, whatever the question says; nor is a
+    // figure named twice, or a calculation and one of its own parts.
+    if adds_up && (mix.whole_and_part || mix.twice) {
+        let why = if mix.twice {
+            "one of them is named twice or is already inside another, so it would be counted twice"
+        } else {
+            "one of them is a part of another (an item of the total of all, a side of its total)"
+        };
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "inputs",
+            &format!(
+                "these figures cannot be added up or averaged: {why}; give each one's own figure, \
+                 read for that item or party"
+            ),
+        )
+        .into());
+    }
+    // The same figure of one thing read for two periods is added only for two periods that are
+    // known to be apart: this year and this month share days, and a balance of two days is no sum.
+    if adds_up && mix.repeated && mix.overlapping {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "inputs",
+            "these are the same figure read for periods that share days, or for days that are not \
+             known, so they cannot be added up or averaged; read the periods apart (from and to \
+             that do not overlap)",
+        )
+        .into());
+    }
+    // The figures of every row or every match are summed only when the question says all of them
+    // together: a bare "total" can mean one item's own total.
+    if parsed.op == OpWord::Sum && mix.wild >= 2 && !cues::together_strong(env.question) {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "inputs",
+            "a sum of every row or every match needs the question to say all of them together \
+             (mila kar, sab ka, dono ka); use totals for the total of a table, or read each one \
+             on its own",
+        )
+        .into());
+    }
+    // The same figure read for two periods needs the sum or average to be asked for too.
+    if mix.distinct >= 2 || (adds_up && mix.repeated) {
+        let percent_in_question = env.numbers.iter().any(|n| n.unit == NumberUnit::Percent);
+        let (asked, why) = match parsed.op {
+            OpWord::Sum => (
+                cues::together(env.question),
+                "the question does not ask for them together (mila kar, total)",
+            ),
+            OpWord::Average => (
+                cues::average_asked(env.question),
+                "the question does not ask for their average",
+            ),
+            OpWord::Difference => (
+                cues::comparing(env.question),
+                "the question does not compare them (farq, difference)",
+            ),
+            OpWord::PercentOf | OpWord::ChangePercent => (
+                percent_in_question || cues::share_or_change(env.question),
+                "the question does not ask for a share or a change in percent",
+            ),
+            OpWord::PercentMore | OpWord::PercentLess => (true, ""),
+        };
+        if !asked {
             return Err(bad(
                 "ERR_OUT_OF_RANGE",
                 "inputs",
                 &format!(
-                    "these figures belong to different items or parties, and {why}; give each \
-                     one's own figure, read for that item or party"
+                    "these figures belong to different things, and {why}; give each one's own \
+                     figure, read for that item or party"
                 ),
             )
             .into());

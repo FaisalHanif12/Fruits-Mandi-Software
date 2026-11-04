@@ -347,21 +347,20 @@ pub fn record_voucher(
     })
 }
 
-/// The collection list of a day with the names of its filters, read for a print (plan 17e, PRD
+/// The collection list with the names of its filters, read for a print (plan 17e, PRD
 /// FR-15.6). The list is the one the screen reads, `vouchers::collection_list`; the print builder
 /// takes it as it is and checks that it adds up (two reads of the same value, accepted deviation
 /// from Code Standards B2). Only reads.
 ///
 /// # Errors
-/// The date codes on `date`; `ERR_NOT_FOUND` on `collector_staff_id` or `city_id` for an id that
-/// is not a staff member or a city.
+/// `ERR_NOT_FOUND` on `collector_staff_id` or `city_id` for an id that is not a staff member or a
+/// city.
 pub fn collection_for_print(
     ctx: &Context,
-    date: &str,
     collector_staff_id: Option<i64>,
     city_id: Option<i64>,
 ) -> Result<(CollectionList, CollectionFilterNames), ServiceError> {
-    collection_for_print_searching(ctx, date, collector_staff_id, city_id, None)
+    collection_for_print_searching(ctx, collector_staff_id, city_id, None)
 }
 
 /// As [`collection_for_print`], for the rows the screen's search keeps: what is printed is what is
@@ -371,7 +370,6 @@ pub fn collection_for_print(
 /// As [`collection_for_print`].
 pub fn collection_for_print_searching(
     ctx: &Context,
-    date: &str,
     collector_staff_id: Option<i64>,
     city_id: Option<i64>,
     search: Option<&str>,
@@ -407,7 +405,6 @@ pub fn collection_for_print_searching(
         ctx,
         &CollectionListInput {
             search: search.map(str::to_owned),
-            date: date.to_owned(),
             collector_staff_id,
             city_id,
             // A print holds every buyer (PRD FR-19.11).
@@ -459,7 +456,6 @@ pub fn plan_collection(
     errors.finish()?;
     let (list, filters) = collection_for_print_searching(
         ctx,
-        &input.date,
         input.collector_staff_id,
         input.city_id,
         input.search.as_deref(),

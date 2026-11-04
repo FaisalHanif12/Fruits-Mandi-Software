@@ -13,7 +13,7 @@
 //! checked`, `text " باقی ہیں۔"`, and one table of R13 with its last rows.
 
 use mandi_reports::analytics::{AnalyticsKey, AnalyticsView};
-use mandi_reports::reports::{Cell, Column, Names, ReportId, Row};
+use mandi_reports::reports::{Cell, Column, MessageArg, Names, ReportId, Row};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -497,6 +497,10 @@ pub struct Answer {
     pub general_advice: bool,
     /// Every source read, for the source line and the buttons.
     pub sources: Vec<AnswerSource>,
+    /// The steps to do it by hand, with the real values filled in, for a print or a how-to that
+    /// names a report (plan 54 Section 6). Empty for every other answer. `assistant-how-press-print`
+    /// is the last step.
+    pub how: Vec<HowStep>,
     /// Figures whose two places differ (only with outcome `records_differ`).
     pub differences: Vec<FigureDifference>,
     /// Up to 3 suggested questions, as plain text in the app language. A click sends one as a
@@ -504,6 +508,24 @@ pub struct Answer {
     pub next: Vec<String>,
     /// When the books were read, UTC, `YYYY-MM-DDTHH:MM:SSZ`.
     pub read_at: String,
+}
+
+/// One step of "how do I do it" with the real values filled in (plan 54 Section 6, plan 55 Section
+/// 2). The id is a Fluent message of the panel (`assistant-how-open-report`, `-set-party`,
+/// `-set-day`, `-set-dates`, `-press-print`) and its arguments are the values: the report, the
+/// party and his code, the dates as `YYYY-MM-DD`. The panel writes the line in the app language;
+/// no word is written here. The steps are made from the same values as the answer's report button,
+/// so the button and the steps always agree.
+///
+/// Example: a buyer's October bills: `assistant-how-open-report` {report "R5"},
+/// `assistant-how-set-party` {role "buyer", party names, code "0007"},
+/// `assistant-how-set-dates` {from "2026-10-01", to "2026-10-31"}, `assistant-how-press-print`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct HowStep {
+    /// Fluent message ID.
+    pub id: String,
+    /// Its arguments, by name.
+    pub args: Vec<MessageArg>,
 }
 
 /// A record offered after "کون سا؟" or when a name is not found (PRD FR-7.77).

@@ -30,7 +30,6 @@ use mandi_services::core::printing::{
     pdf_file_name,
 };
 use mandi_services::printing::{self, CollectionPrintPlan, PrintPlan, VoucherPrintPlan};
-use tauri::Manager;
 
 use crate::error::{UiError, UiErrorItem};
 use crate::print_types::{Job, JobError, JobTarget};
@@ -62,7 +61,7 @@ pub async fn run<R: tauri::Runtime>(
 ) -> Result<PrintOutcome, UiError> {
     let state = AppState::of(&app)?;
     // Only looked up here; an error is raised after the sign-in check (Code Standards S1).
-    let data_dir = app.path().app_data_dir();
+    let data_dir = crate::profile::app_data_dir(&app);
     let prepared = {
         let state = state.clone();
         run_blocking("reports_print", move || {
@@ -109,7 +108,7 @@ pub async fn run_voucher<R: tauri::Runtime>(
     input: PrintVoucherInput,
 ) -> Result<PrintOutcome, UiError> {
     let state = AppState::of(&app)?;
-    let data_dir = app.path().app_data_dir();
+    let data_dir = crate::profile::app_data_dir(&app);
     let (actor, plan, job) = {
         let state = state.clone();
         run_blocking("reports_print_voucher", move || {
@@ -155,7 +154,7 @@ pub async fn run_collection<R: tauri::Runtime>(
     input: PrintCollectionInput,
 ) -> Result<PrintOutcome, UiError> {
     let state = AppState::of(&app)?;
-    let data_dir = app.path().app_data_dir();
+    let data_dir = crate::profile::app_data_dir(&app);
     let (actor, plan, job) = {
         let state = state.clone();
         run_blocking("reports_print_collection", move || {

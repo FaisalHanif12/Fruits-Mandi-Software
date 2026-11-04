@@ -2,10 +2,15 @@
 //! plan 18). Depends on `mandi-db` and `mandi-core`.
 
 pub mod api;
+pub mod chain;
 pub mod cloud;
 pub mod daily_pack;
 pub mod day_settings;
 pub mod error;
+pub mod first_run;
+pub mod first_run_api;
+pub mod first_run_install;
+pub mod first_run_source;
 pub mod io;
 pub mod key;
 pub mod model;

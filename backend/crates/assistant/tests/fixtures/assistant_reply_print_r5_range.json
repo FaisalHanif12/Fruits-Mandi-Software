@@ -1,0 +1,171 @@
+{
+  "question_id": 1,
+  "conversation_id": "c-20261010090000000-0",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "ہر رپورٹ، پرچی اور فہرست کسی بھی دن اور کسی بھی پارٹی کے لیے چھپ سکتی ہے، پی ڈی ایف میں محفوظ ہو سکتی ہے یا ایکسل میں لی جا سکتی ہے۔ چھپائی ایپ کی زبان میں ہوتی ہے جب تک آپ دوسری نہ چنیں۔"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "general_advice": false,
+    "sources": [
+      {
+        "kind": "report",
+        "result_id": "",
+        "label_id": "report-r5-title",
+        "id": "R5",
+        "filters": {
+          "shortcut": null,
+          "from": "2026-09-01",
+          "to": "2026-09-30",
+          "as_of": "",
+          "party": {
+            "record": {
+              "id": 20,
+              "code": "0020",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null
+            },
+            "person_key": null
+          },
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      },
+      {
+        "kind": "report",
+        "result_id": "",
+        "label_id": "report-r13-title",
+        "id": "R13",
+        "filters": {
+          "shortcut": null,
+          "from": "2026-09-01",
+          "to": "2026-09-30",
+          "as_of": "",
+          "party": {
+            "record": {
+              "id": 20,
+              "code": "0020",
+              "name_ur": "اکرم ٹول ٹیکس",
+              "name_en": "Akram Toll Tax",
+              "tag": null
+            },
+            "person_key": null
+          },
+          "seller": null,
+          "zamindar": null,
+          "item": null,
+          "city": null,
+          "adda": null,
+          "detail": false,
+          "group_by": null,
+          "status": null,
+          "partner": null,
+          "voucher_type": null,
+          "trip_view": null,
+          "garden": null,
+          "garden_view": null,
+          "bikri": null,
+          "guests_only": false
+        }
+      }
+    ],
+    "how": [
+      {
+        "id": "assistant-how-open-report",
+        "args": [
+          {
+            "name": "report",
+            "value": {
+              "type": "text",
+              "text": "R5"
+            }
+          }
+        ]
+      },
+      {
+        "id": "assistant-how-set-party",
+        "args": [
+          {
+            "name": "role",
+            "value": {
+              "type": "text",
+              "text": "buyer"
+            }
+          },
+          {
+            "name": "party",
+            "value": {
+              "type": "names",
+              "names": {
+                "ur": "اکرم ٹول ٹیکس",
+                "en": "Akram Toll Tax"
+              }
+            }
+          },
+          {
+            "name": "code",
+            "value": {
+              "type": "text",
+              "text": "0020"
+            }
+          }
+        ]
+      },
+      {
+        "id": "assistant-how-set-dates",
+        "args": [
+          {
+            "name": "from",
+            "value": {
+              "type": "text",
+              "text": "2026-09-01"
+            }
+          },
+          {
+            "name": "to",
+            "value": {
+              "type": "text",
+              "text": "2026-09-30"
+            }
+          }
+        ]
+      },
+      {
+        "id": "assistant-how-press-print",
+        "args": []
+      }
+    ],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T09:00:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 0,
+  "limit": 20
+}

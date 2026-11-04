@@ -139,7 +139,6 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       expect(vouchersApi.assistCollectionList).toHaveBeenCalledTimes(2);
     });
     expect(vouchersApi.assistCollectionList).toHaveBeenNthCalledWith(1, {
-      date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
       search: null,
@@ -147,7 +146,6 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       limit: 100,
     });
     expect(vouchersApi.assistCollectionList).toHaveBeenNthCalledWith(2, {
-      date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
       search: null,
@@ -187,10 +185,9 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     ).toBeInTheDocument();
   });
 
-  it('asks for today with no collector or city, and lists each buyer with his dues and days from the backend', async () => {
+  it('asks for no day, no collector and no city, and lists each buyer with his dues and days from the backend', async () => {
     await open();
     expect(vouchersApi.assistCollectionList).toHaveBeenCalledWith({
-      date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
       search: null,
@@ -238,6 +235,33 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
     expect(
       (await screen.findAllByText((content) => visible(content) === toast)).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('the list has no day: only the date of the receipts, which starts as today and, changed, keeps what was typed', async () => {
+    const { user } = await open();
+    // No weekday and no day list: the words of the old collection day are not on the screen.
+    expect(pageText()).not.toMatch(/Collection day|اگراہی کا دن/);
+    const dateBox = screen.getByLabelText<HTMLInputElement>(
+      (name) => visible(name) === message(language, 'vouchers-collection-receipt-date'),
+    );
+    expect(dateBox.value).toBe('10-10-2026');
+    const [first] = rowIds();
+    if (first === undefined) throw new Error('rows');
+    await typeInto(user, first, '2880');
+    const reads = vi.mocked(vouchersApi.assistCollectionList).mock.calls.length;
+    await user.clear(dateBox);
+    await user.type(dateBox, '11-10-2026');
+    // The same list stays: no new read, and the amount typed is still there.
+    expect(vi.mocked(vouchersApi.assistCollectionList).mock.calls.length).toBe(reads);
+    expect(cell(first, 'received')).toContain('2,880');
+    press('F10');
+    await waitFor(() => {
+      expect(vouchersApi.vouchersSaveReceiptsBatch).toHaveBeenCalledTimes(1);
+    });
+    // The receipts are written on the date of the box.
+    expect(vi.mocked(vouchersApi.vouchersSaveReceiptsBatch).mock.calls[0]?.[0]).toEqual([
+      expect.objectContaining({ date: '11-10-2026', account_id: 21, amount: '2880' }),
+    ]);
   });
 
   it('a row left empty is not sent, and nothing to save leaves the button off', async () => {

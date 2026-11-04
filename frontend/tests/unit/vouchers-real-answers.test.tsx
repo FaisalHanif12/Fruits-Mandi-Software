@@ -335,7 +335,7 @@ describe.each(LANGUAGES)(
     });
 
     it('the list of the day has buyers with no collector or city; a saved row goes, a refused one keeps its words', async () => {
-      vi.mocked(vouchersApi.assistCollectionList).mockResolvedValue(real.COLLECTION_SATURDAY);
+      vi.mocked(vouchersApi.assistCollectionList).mockResolvedValue(real.COLLECTION_LIST);
       const [savedRow, , refusedRow] = real.RECEIPTS_BATCH.rows;
       const refusal = refusedRow?.errors[0];
       if (savedRow === undefined || refusedRow === undefined || refusal === undefined) {

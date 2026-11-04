@@ -55,6 +55,8 @@ pub mod partner_code;
 pub(crate) mod partner_gate;
 // Plan 48, ask the app (append-only block).
 pub mod assistant;
+// Plan 56, restore on a new computer (append-only block).
+pub mod backup_first_run;
 
 use std::fmt;
 

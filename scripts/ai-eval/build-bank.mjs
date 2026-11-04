@@ -57,7 +57,8 @@ export function buildText() {
       next += 1;
       ids.push(id);
       const after = entry.after ? firstId.get(entry.after) : '';
-      if (entry.after && !after) throw new Error(`${entry.g} follows ${entry.after}, not built yet`);
+      if (entry.after && !after)
+        throw new Error(`${entry.g} follows ${entry.after}, not built yet`);
       const row = {
         id,
         group: wordings.length >= 2 ? entry.g : '',

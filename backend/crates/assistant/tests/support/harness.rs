@@ -47,6 +47,11 @@ impl Harness {
         // The tests script the model's own `find`; the app does not find the party first (plan 52
         // P52-S1, item 10). The tests of that step switch it on with `runtime.set_prefind(true)`.
         runtime.set_prefind(false);
+        // The recorded transcripts replay the model's own answers; the local answers (plan 54 S2)
+        // are switched on by the tests of that step with `runtime.set_local(true)`.
+        runtime.set_local(false);
+        runtime.set_read_first(false);
+        runtime.set_low_effort(false);
         runtime.keys().set(TEST_KEY).unwrap();
         assistant::set_config(
             &world.env.ctx,

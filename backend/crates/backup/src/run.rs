@@ -21,7 +21,7 @@ use crate::cloud::CloudError;
 use crate::daily_pack::seal_file;
 use crate::error::{BackupCode, BackupError, CloudReason};
 use crate::io::{copy_atomic, hash_file, remove_quietly, require_room, write_atomic, write_error};
-use crate::model::{BackupKind, Embedded, InnerManifest, MANIFEST_FORMAT, Manifest};
+use crate::model::{BackupKind, Embedded, InnerManifest, MANIFEST_FORMAT, Manifest, SecretText};
 use crate::names::{bundle_name, is_copy_name, local_name, manifest_name, stamp};
 use crate::pack::{Sealed, open, seal};
 use crate::retention::{KEEP_LOCAL, KEEP_USB, cloud_delete, newest_n_delete};
@@ -465,6 +465,8 @@ impl BackupService {
             app_version: self.config.app_version.clone(),
             schema_version: inspected.schema_version,
             inner: inner_of(inspected),
+            // The key of the tamper checks goes inside the locked bundle only (PRD FR-20.11).
+            chain_key: Some(SecretText::new(self.db.auditor().key()?.to_hex())),
         };
         let sealed = seal(
             snap,

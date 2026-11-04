@@ -24,7 +24,7 @@ use crate::io::{copy_atomic, hash_file, remove_quietly, require_room, write_atom
 use crate::key::BackupKey;
 use crate::model::{BackupKind, BackupTotals, Embedded, MANIFEST_FORMAT, Manifest};
 use crate::names::{check_name, local_name, manifest_name, parse_stamp, stamp};
-use crate::pack::open;
+use crate::pack::open_checked;
 use crate::retention::newest_n_delete;
 use crate::secrets::SecretName;
 use crate::service::{BackupService, CLOUD_DIR, usb_present};
@@ -39,23 +39,75 @@ fn corrupt(detail: impl std::fmt::Display) -> BackupError {
 }
 
 /// A copy brought into the scratch folder, not yet opened.
-struct Fetched {
-    path: PathBuf,
-    encrypted: bool,
-    manifest: Option<Manifest>,
+pub(crate) struct Fetched {
+    pub(crate) path: PathBuf,
+    pub(crate) encrypted: bool,
+    pub(crate) manifest: Option<Manifest>,
 }
 
 /// A copy opened and checked: a plain SQLite file in the scratch folder.
-struct Opened {
-    plain: PathBuf,
-    inspected: Inspected,
-    created_at: String,
-    size_bytes: u64,
-    key_used: Option<BackupKey>,
+pub(crate) struct Opened {
+    pub(crate) plain: PathBuf,
+    pub(crate) inspected: Inspected,
+    pub(crate) created_at: String,
+    pub(crate) size_bytes: u64,
+    pub(crate) key_used: Option<BackupKey>,
+    /// The key of the tamper checks that the bundle carried, as hex (PRD FR-20.11). Null for a
+    /// plain copy or one made before the key was added.
+    pub(crate) chain_key: Option<String>,
+}
+
+fn check_text(name: &str) -> mandi_core::error::ErrorValue {
+    mandi_core::error::ErrorValue::Text(name.to_owned())
+}
+
+/// Reads the manifest next to a fetched copy and checks the copy against its checksum. A copy
+/// with no manifest passes here: the encryption still protects a bundle.
+pub(crate) fn finish_fetch(
+    path: PathBuf,
+    manifest_file: &Path,
+    encrypted: bool,
+) -> Result<Fetched, BackupError> {
+    let manifest: Option<Manifest> = fs::read(manifest_file)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok());
+    if let Some(m) = &manifest {
+        let sum = hash_file(&path).map_err(|e| BackupError::io("copy", &e))?;
+        if sum != m.file_blake3 {
+            return Err(
+                corrupt("the copy does not match the checksum recorded when it was made")
+                    .with("check", check_text("checksum")),
+            );
+        }
+    }
+    Ok(Fetched {
+        path,
+        encrypted,
+        manifest,
+    })
+}
+
+/// True when the unpacked copy holds an Owner. A copy made on a computer that was never set up
+/// holds none: restoring it would leave nobody who can sign in.
+pub(crate) fn copy_has_owner(plain: &Path) -> Result<bool, BackupError> {
+    let conn = Connection::open_with_flags(
+        plain,
+        mandi_db::rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+            | mandi_db::rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .map_err(corrupt)?;
+    let users: i64 = conn
+        .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+        .map_err(corrupt)?;
+    Ok(users > 0)
+}
+
+pub(crate) fn no_owner(field: &str) -> BackupError {
+    BackupError::new(BackupCode::ErrBackupNoOwner, "the copy holds no Owner").on_field(field)
 }
 
 impl BackupService {
-    fn work_dir(&self, label: &str) -> Result<PathBuf, BackupError> {
+    pub(crate) fn work_dir(&self, label: &str) -> Result<PathBuf, BackupError> {
         let dir = self
             .tmp_dir()
             .join(format!("{label}-{}", stamp(self.now())));
@@ -63,7 +115,7 @@ impl BackupService {
         Ok(dir)
     }
 
-    fn app_schema_version(&self) -> i64 {
+    pub(crate) fn app_schema_version(&self) -> i64 {
         i64::try_from(self.db.migration().to).unwrap_or(i64::MAX)
     }
 
@@ -124,22 +176,7 @@ impl BackupService {
                 );
             }
         }
-        let manifest: Option<Manifest> = fs::read(&manifest_file)
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok());
-        if let Some(m) = &manifest {
-            let sum = hash_file(&path).map_err(|e| BackupError::io("copy", &e))?;
-            if sum != m.file_blake3 {
-                return Err(corrupt(
-                    "the copy does not match the checksum recorded when it was made",
-                ));
-            }
-        }
-        Ok(Fetched {
-            path,
-            encrypted,
-            manifest,
-        })
+        finish_fetch(path, &manifest_file, encrypted)
     }
 
     fn key_from(&self, typed: Option<&str>) -> Result<BackupKey, BackupError> {
@@ -156,7 +193,7 @@ impl BackupService {
     }
 
     /// Unlocks the copy and returns the plain database file and the manifest inside.
-    fn unpack(
+    pub(crate) fn unpack(
         &self,
         fetched: &Fetched,
         typed: Option<&str>,
@@ -167,7 +204,19 @@ impl BackupService {
         }
         let key = self.key_from(typed)?;
         let plain = work.join("plain.db");
-        let embedded = open(&fetched.path, &key, &plain)?;
+        // The room for the unpacked database is checked as soon as the manifest says how big it
+        // is, before the first byte is written (NFR-REL-10): twice its size, for the upgrade copy.
+        let embedded = open_checked(&fetched.path, &key, &plain, &|embedded| {
+            require_room(
+                self.parts.disk.as_ref(),
+                work,
+                embedded
+                    .inner
+                    .plain_size
+                    .saturating_mul(2)
+                    .saturating_add(ROOM_MARGIN),
+            )
+        })?;
         Ok((plain, Some(embedded), Some(key)))
     }
 
@@ -180,8 +229,33 @@ impl BackupService {
         work: &Path,
     ) -> Result<Opened, BackupError> {
         let fetched = self.fetch(settings, backup, work)?;
-        let (plain, embedded, key_used) = self.unpack(&fetched, typed, work)?;
-        let inspected = inspect(&plain)?;
+        self.open_fetched(&fetched, &backup.name, typed, work)
+    }
+
+    /// Unlock a fetched copy and check what is inside. `name` is the file name of the copy: it
+    /// dates a plain copy that has no manifest.
+    pub(crate) fn open_fetched(
+        &self,
+        fetched: &Fetched,
+        name: &str,
+        typed: Option<&str>,
+        work: &Path,
+    ) -> Result<Opened, BackupError> {
+        let (plain, embedded, key_used) = self.unpack(fetched, typed, work)?;
+        Self::check_unpacked(fetched, name, plain, embedded, key_used)
+    }
+
+    /// Checks an unlocked copy: the database passes its integrity check, and its tables and
+    /// schema are what was recorded when the copy was made. Each failure names its check in the
+    /// value `check` (`integrity`, `counts`, `balanced`), for the first screen of a new computer.
+    pub(crate) fn check_unpacked(
+        fetched: &Fetched,
+        name: &str,
+        plain: PathBuf,
+        embedded: Option<Embedded>,
+        key_used: Option<BackupKey>,
+    ) -> Result<Opened, BackupError> {
+        let inspected = inspect(&plain).map_err(|e| e.with("check", check_text("integrity")))?;
         let (created_at, expected) = match (&embedded, &fetched.manifest) {
             (Some(e), _) => (
                 e.created_at.clone(),
@@ -193,19 +267,15 @@ impl BackupService {
                     .as_ref()
                     .map(|i| (m.schema_version, i.counts.clone())),
             ),
-            (None, None) => (
-                parse_stamp(&backup.name)
-                    .map(format_utc)
-                    .unwrap_or_default(),
-                None,
-            ),
+            (None, None) => (parse_stamp(name).map(format_utc).unwrap_or_default(), None),
         };
         if let Some((schema, counts)) = expected
             && (schema != inspected.schema_version || counts != inspected.counts)
         {
             return Err(corrupt(
                 "the database inside does not match what was recorded when it was made",
-            ));
+            )
+            .with("check", check_text("counts")));
         }
         Ok(Opened {
             plain,
@@ -213,6 +283,10 @@ impl BackupService {
             inspected,
             created_at,
             key_used,
+            chain_key: embedded
+                .as_ref()
+                .and_then(|e| e.chain_key.as_ref())
+                .map(|k| k.expose().to_owned()),
         })
     }
 
@@ -314,6 +388,32 @@ impl BackupService {
         Ok(name)
     }
 
+    /// Upgrades the unpacked copy `plain` to the schema of this app (NFR-SCL-8, NFR-REL-13).
+    /// Returns the books of the upgraded copy.
+    pub(crate) fn upgrade_copy(
+        &self,
+        plain: &Path,
+        work: &Path,
+    ) -> Result<BackupTotals, BackupError> {
+        let mut conn = Connection::open(plain)?;
+        migrate::migrate(
+            &mut conn,
+            &work.join("pre-migration"),
+            self.db.clock().as_ref(),
+        )
+        .map_err(|e| BackupError::new(BackupCode::ErrMigrationFailed, e))?;
+        let _: String =
+            conn.pragma_update_and_check(None, "journal_mode", "DELETE", |row| row.get(0))?;
+        drop(conn);
+        let upgraded = inspect(plain).map_err(|e| {
+            BackupError::new(
+                BackupCode::ErrMigrationFailed,
+                format!("after the upgrade: {e}"),
+            )
+        })?;
+        Ok(upgraded.totals)
+    }
+
     /// Restores a copy over the live data (FR-20.9). The caller then throws away what the
     /// services keep in memory (`Context::invalidate_caches`), rebuilds the search index and
     /// signs the user out, because the users and sessions come from the restored data.
@@ -369,32 +469,30 @@ impl BackupService {
         // The safety copy comes before anything is changed. If it fails, nothing was touched.
         let safety_name = self.safety_copy()?;
 
-        let mut plain = opened.plain.clone();
-        let mut totals = opened.inspected.totals.clone();
-        if from < app {
-            let mut conn = Connection::open(&plain)?;
-            migrate::migrate(
-                &mut conn,
-                &work.join("pre-migration"),
-                self.db.clock().as_ref(),
-            )
-            .map_err(|e| BackupError::new(BackupCode::ErrMigrationFailed, e))?;
-            let _: String =
-                conn.pragma_update_and_check(None, "journal_mode", "DELETE", |row| row.get(0))?;
-            drop(conn);
-            let upgraded = inspect(&plain).map_err(|e| {
-                BackupError::new(
-                    BackupCode::ErrMigrationFailed,
-                    format!("after the upgrade: {e}"),
-                )
-            })?;
-            totals = upgraded.totals;
-            plain = opened.plain.clone();
-        }
+        let plain = opened.plain.clone();
+        let totals = if from < app {
+            self.upgrade_copy(&plain, work)?
+        } else {
+            opened.inspected.totals.clone()
+        };
 
-        self.db
+        // A copy with no Owner would leave nobody to sign in.
+        if !copy_has_owner(&plain)? {
+            return Err(no_owner("backup"));
+        }
+        // The chains of the copy must verify before anything is installed, and the key that
+        // makes them verify must be this computer's key afterwards (PRD FR-20.11).
+        let chain_key = self.pick_chain_key(&plain, opened.chain_key.as_deref(), "backup")?;
+        let previous_key = self.install_chain_key(&chain_key)?;
+
+        let replaced = self
+            .db
             .replace_contents_from(&plain)
-            .map_err(|e| BackupError::new(BackupCode::ErrBackupRestoreFailed, e))?;
+            .map_err(|e| BackupError::new(BackupCode::ErrBackupRestoreFailed, e));
+        if let Err(error) = replaced {
+            self.put_chain_key_back(previous_key);
+            return Err(error);
+        }
         // The data file must now show the books of the copy. If not, the safety copy goes back.
         let after = self.live_totals();
         if !matches!(&after, Ok(now) if *now == totals) {
@@ -402,6 +500,7 @@ impl BackupService {
             if let Err(error) = self.db.replace_contents_from(&back) {
                 tracing::error!("cannot put the safety copy back: {error}");
             }
+            self.put_chain_key_back(previous_key);
             return Err(BackupError::new(
                 BackupCode::ErrBackupRestoreFailed,
                 "the books after the restore differ from the copy",

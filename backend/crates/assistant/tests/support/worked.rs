@@ -55,7 +55,6 @@ fn seller_rahim(env: &TestEnv, owner: &auth::Actor) -> i64 {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: PRIVATE_NOTE.into(),
         tag: String::new(),

@@ -200,6 +200,13 @@ pub struct Turn {
     /// The typed-name finds (`f1` ...) that matched none, several, or only a close spelling: they
     /// are kept for the Owner's choice and are never read, in this reply or a later one.
     pub unclear: Vec<String>,
+    /// A find that found only parties of the other role than the question's verb gives ("Faisal ne
+    /// kya becha", and he is a buyer): the find's id and the role the verb asks for. The question
+    /// ends as not found with `found_as` (plan 52 Section 8).
+    pub wrong_role: Option<(String, crate::ask::AskedRole)>,
+    /// True when the app read the books before the first call (plan 54 S3) or gave the guide
+    /// (help): the data is in the call, so the model has only to write, and thinks less (S4).
+    pub read_first: bool,
 }
 
 /// What a waiting question waits for.

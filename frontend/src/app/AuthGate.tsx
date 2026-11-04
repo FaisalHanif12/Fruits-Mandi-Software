@@ -16,7 +16,7 @@ import { BikriDraftOffer } from '../features/bikri/draft-offer';
 import { UndoHost } from '../features/bikri/undo';
 import { useAuthStatus, useLock, useLogout, useSavePreferences } from '../features/auth/hooks';
 import { LoginPage } from '../features/auth/pages/LoginPage';
-import { WizardPage } from '../features/auth/pages/WizardPage';
+import { AfterRestoreCard, useRestoreStore } from '../features/restore';
 import { useSettings } from '../features/settings/hooks';
 import { useApplyNumberGrouping } from '../features/settings/maintenance-hooks';
 import { asScreenType, screenTypeOf, type ScreenType } from '../features/vouchers/screen-type';
@@ -25,6 +25,7 @@ import { isoToDisplayDate } from '../shared/format';
 import { useLanguageStore } from '../shared/i18n';
 import { SHORTCUTS, useEscape, useShortcut } from '../shared/keyboard';
 import { ErrorState, LoadingState } from '../shared/ui';
+import { FirstRunGate } from './FirstRunGate';
 import { AppShell } from './layout/AppShell';
 import { MainNav } from './layout/MainNav';
 import { ModuleMenu, RokarMenu } from './layout/ModuleMenu';
@@ -186,6 +187,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
       {/* Undo straight after a save works from any screen (PRD FR-7.47, plan 16). */}
       {locked ? null : <UndoHost />}
       {locked ? null : <GuideCard />}
+      {/* After the first sign-in on a restored computer: make a new backup, retype the OpenRouter
+          key (plan 56). */}
+      {locked ? null : <AfterRestoreCard />}
       {locked ? <LockOverlay userName={user.display_name} /> : null}
     </>
   );
@@ -193,6 +197,9 @@ function SignedIn({ user, locked }: { user: SessionUser; locked: boolean }) {
 
 export function AuthGate() {
   const status = useAuthStatus();
+  // The restore pages stay on screen until the Owner presses "sign in", even though the computer
+  // has a data file as soon as the books are in place (plan 56).
+  const restoring = useRestoreStore((state) => state.active);
   useLoginLanguage(status.data);
   if (status.isPending) {
     return (
@@ -215,7 +222,7 @@ export function AuthGate() {
     );
   }
   const current = status.data;
-  if (current.first_run) return <WizardPage />;
+  if (current.first_run || restoring) return <FirstRunGate />;
   if (current.session === null) return <LoginPage status={current} />;
   return <SignedIn user={current.session} locked={current.locked} />;
 }

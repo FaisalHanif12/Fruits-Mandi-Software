@@ -31,13 +31,23 @@ function Scenario() {
     if (started.current) return;
     started.current = true;
     const store = useAssistantStore.getState();
+    // The pending step lines, so a second run of this effect (React draws twice in development) does not
+    // add them twice.
+    const timers: number[] = [];
+    const later = (run: () => void, millis: number) => {
+      timers.push(window.setTimeout(run, millis));
+    };
     if (devValue('open') !== null || devValue('tall') !== null) store.openDock();
     if (devValue('tall') !== null) store.setTall(true);
     const ask = devValue('ask');
     const chip = devValue('chip');
     // Two step lines while a slow question works, as the backend's step events would give them.
     if (devValue('steps') !== null) {
-      window.setTimeout(() => {
+      later(() => {
+        store.addStep({
+          id: 'assistant-step-understood',
+          args: [{ name: 'kind', value: { type: 'text', text: 'figure' } }],
+        });
         store.addStep({
           id: 'assistant-step-finding',
           args: [{ name: 'text', value: { type: 'text', text: 'ikram' } }],
@@ -53,12 +63,24 @@ function Scenario() {
         });
       }, 400);
     }
+    // The steps of a slow question (plan 55): the first try got no reply and goes out again, then the
+    // tools are turned off and the answer is written from what was read.
+    if (devValue('steps') === 'slow') {
+      later(() => {
+        store.addStep({ id: 'assistant-step-retrying', args: [] });
+      }, 3000);
+      later(() => {
+        store.addStep({ id: 'assistant-step-tools-off', args: [] });
+        store.addStep({ id: 'assistant-step-writing', args: [] });
+      }, 6000);
+    }
     if (ask !== null) runner.ask(ask);
     else if (chip !== null) runner.quick(chip as QuickChip, null);
     // The page is drawn twice at start-up in development (the panel forgets its conversation when it
     // goes away), so the scenario may run again.
     return () => {
       started.current = false;
+      for (const timer of timers) window.clearTimeout(timer);
     };
   }, [runner]);
   return null;

@@ -393,6 +393,17 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
     await typeVoucher(user, language, 'vouchers-field-buyer', '0', '10000');
     press('F2');
     await waitingCard(language);
+    // The next voucher starts at the buyer field, and its list opens on focus (plan 46). The first Esc
+    // closes that list, the second leaves (PRD FR-7.18), so the test waits for the list to be open, closes
+    // it, and only then asks to leave. It does not depend on how soon the focus came back.
+    const expanded = () => document.activeElement?.getAttribute('aria-expanded');
+    await waitFor(() => {
+      expect(expanded()).toBe('true');
+    });
+    press('Escape');
+    await waitFor(() => {
+      expect(expanded()).not.toBe('true');
+    });
     press('Escape');
     expect(
       await screen.findByRole('button', {

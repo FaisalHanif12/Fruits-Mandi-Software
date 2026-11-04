@@ -2,7 +2,8 @@
 // the same filters already in its boxes. The filters are the backend's own, as the tool read them
 // (`SourceReportFilters`, `SourceAnalyticsFilters`, with the names of every record in them); this file
 // only turns them into the address each screen reads (`ReportSearch`, `AnalyticsSearch`) and into
-// the filters a print asks for. Nothing is worked out.
+// the filters a print asks for. Nothing is worked out. The backend writes a date as `YYYY-MM-DD`; the
+// boxes of every screen show `DD-MM-YYYY`, so a date is shown that way here (the backend reads both).
 
 import type { AnalyticsFilters } from '../../bindings/AnalyticsFilters';
 import type { AnswerRecord } from '../../bindings/AnswerRecord';
@@ -12,6 +13,7 @@ import type { SourceParty } from '../../bindings/SourceParty';
 import type { SourceReportFilters } from '../../bindings/SourceReportFilters';
 import type { AnalyticsSearch } from '../analytics';
 import type { ReportSearch } from '../reports';
+import { isoToDisplayDate } from '../../shared/format';
 
 /** A record as a picker holds it, with its names, so the box shows who it is. */
 function picked(record: AnswerRecord) {
@@ -53,9 +55,11 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
   return {
     // A date shortcut wins over the two dates, as it does in the filter boxes.
     ...(filters.shortcut === null ? {} : { period: filters.shortcut }),
-    ...(filters.shortcut === null && filters.from !== '' ? { from: filters.from } : {}),
-    ...(filters.shortcut === null && filters.to !== '' ? { to: filters.to } : {}),
-    ...(filters.as_of === '' ? {} : { as_of: filters.as_of }),
+    ...(filters.shortcut === null && filters.from !== ''
+      ? { from: isoToDisplayDate(filters.from) }
+      : {}),
+    ...(filters.shortcut === null && filters.to !== '' ? { to: isoToDisplayDate(filters.to) } : {}),
+    ...(filters.as_of === '' ? {} : { as_of: isoToDisplayDate(filters.as_of) }),
     ...partyOf(filters.party),
     ...(filters.seller === null ? {} : { seller: picked(filters.seller) }),
     ...(filters.zamindar === null ? {} : { zamindar: picked(filters.zamindar) }),
@@ -79,8 +83,10 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
 export function analyticsSearchFromFilters(filters: SourceAnalyticsFilters): AnalyticsSearch {
   return {
     ...(filters.period === null ? {} : { period: filters.period }),
-    ...(filters.period === null && filters.from !== '' ? { from: filters.from } : {}),
-    ...(filters.period === null && filters.to !== '' ? { to: filters.to } : {}),
+    ...(filters.period === null && filters.from !== ''
+      ? { from: isoToDisplayDate(filters.from) }
+      : {}),
+    ...(filters.period === null && filters.to !== '' ? { to: isoToDisplayDate(filters.to) } : {}),
     ...(filters.group_by === null ? {} : { group_by: filters.group_by }),
     ...(filters.item === null ? {} : { item: picked(filters.item) }),
     ...(filters.seller === null ? {} : { seller: picked(filters.seller) }),
@@ -101,9 +107,9 @@ export function analyticsSearchFromFilters(filters: SourceAnalyticsFilters): Ana
 export function reportFiltersOf(filters: SourceReportFilters): ReportFilters {
   return {
     shortcut: filters.shortcut,
-    from: filters.from,
-    to: filters.to,
-    as_of: filters.as_of,
+    from: isoToDisplayDate(filters.from),
+    to: isoToDisplayDate(filters.to),
+    as_of: isoToDisplayDate(filters.as_of),
     party:
       filters.party === null
         ? null
@@ -131,8 +137,8 @@ export function reportFiltersOf(filters: SourceReportFilters): ReportFilters {
 export function analyticsFiltersOf(filters: SourceAnalyticsFilters): AnalyticsFilters {
   return {
     period: filters.period,
-    from: filters.from,
-    to: filters.to,
+    from: isoToDisplayDate(filters.from),
+    to: isoToDisplayDate(filters.to),
     group_by: filters.group_by,
     item_id: filters.item?.id ?? null,
     seller_id: filters.seller?.id ?? null,

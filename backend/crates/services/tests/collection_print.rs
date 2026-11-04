@@ -17,9 +17,6 @@ use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, auth, printing};
 use tempfile::TempDir;
 
-/// The weekday of 10-10-2026, a Saturday (0 is Monday).
-const SATURDAY: i64 = 5;
-
 fn ready() -> (TempDir, TestEnv, auth::Actor) {
     let (dir, env) = env();
     set_up(&env);
@@ -29,7 +26,7 @@ fn ready() -> (TempDir, TestEnv, auth::Actor) {
     (dir, env, owner)
 }
 
-fn form(ur: &str, en: &str, owes: &str, weekday: Option<i64>, tag: &str) -> AccountInput {
+fn form(ur: &str, en: &str, owes: &str, tag: &str) -> AccountInput {
     AccountInput {
         id: None,
         version: None,
@@ -56,7 +53,6 @@ fn form(ur: &str, en: &str, owes: &str, weekday: Option<i64>, tag: &str) -> Acco
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: weekday,
         is_active: true,
         note: String::new(),
         tag: tag.into(),
@@ -93,31 +89,19 @@ fn first_error(error: ServiceError) -> (ErrorCode, Option<String>) {
     }
 }
 
-/// The three buyers: اکرم and ارشد on Saturday, ناصر on Wednesday.
+/// The three buyers: اکرم, ارشد and ناصر. A weekday is not kept on an account any more (plan 53).
 fn buyers(env: &TestEnv, owner: &auth::Actor) -> (AccountRow, AccountRow, AccountRow) {
     let akram = save(
         env,
         owner,
-        form(
-            "اکرم ٹول ٹیکس",
-            "Akram Toll Tax",
-            "2,880",
-            Some(SATURDAY),
-            "",
-        ),
+        form("اکرم ٹول ٹیکس", "Akram Toll Tax", "2,880", ""),
     );
     let arshad = save(
         env,
         owner,
-        form(
-            "ارشد ملتانی",
-            "Arshad Multani",
-            "18,684",
-            Some(SATURDAY),
-            "k",
-        ),
+        form("ارشد ملتانی", "Arshad Multani", "18,684", "k"),
     );
-    let nasir = save(env, owner, form("ناصر", "Nasir", "5,000", Some(2), ""));
+    let nasir = save(env, owner, form("ناصر", "Nasir", "5,000", ""));
     (akram, arshad, nasir)
 }
 
@@ -126,17 +110,15 @@ fn rupees(value: i64) -> Paisa {
 }
 
 #[test]
-fn the_print_has_the_buyers_of_the_day_and_a_total_below_the_shops_dues() {
+fn the_print_has_every_buyer_who_owes_and_a_total_equal_to_their_dues() {
     let (_dir, env, owner) = ready();
     let (akram, arshad, nasir) = buyers(&env, &owner);
-    let (list, filters) =
-        printing::collection_for_print(&env.ctx, "10-10-2026", None, None).unwrap();
+    let (list, filters) = printing::collection_for_print(&env.ctx, None, None).unwrap();
     // The same list the screen reads.
     let screen = mandi_services::vouchers::collection_list(
         &env.ctx,
         &mandi_services::core::vouchers::CollectionListInput {
             search: None,
-            date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
             // A print holds every buyer, so the screen is read the same way.
@@ -151,56 +133,43 @@ fn the_print_has_the_buyers_of_the_day_and_a_total_below_the_shops_dues() {
         let rows = &data.groups[0].rows;
         assert_eq!(
             rows.iter().map(|r| r.dues.as_str()).collect::<Vec<_>>(),
-            vec!["2,880", "18,684"]
+            vec!["2,880", "18,684", "5,000"]
         );
-        assert_eq!(data.total.amount, "21,564");
-        assert_eq!(data.buyer_count, "2");
-        // Short codes: the running numbers of the first two buyers, 0020 and 0021 (plan 32).
+        assert_eq!(data.total.amount, "26,564");
+        assert_eq!(data.buyer_count, "3");
+        // Short codes: the running numbers of the buyers, 0020, 0021 and 0022 (plan 32).
         assert_eq!(rows[0].code, "0");
         assert_eq!(rows[1].code, "1");
+        assert_eq!(rows[2].code, "2");
         // The tag of ارشد is its own field.
         assert_eq!(rows[0].tag, None);
         assert_eq!(rows[1].tag.as_deref(), Some("K"));
     }
-    // ناصر is on another weekday, so the total of this list is below what all buyers owe
-    // (PRD FR-19.9): 21,564 here against 26,564 for every buyer. It is not the shop's اگراہی.
+    // Plan 53 T2: every active buyer who owes is on the list, so its total is what they owe
+    // (here 26,564). It is the shop's اگراہی when no filter is set (PRD FR-19.9).
     let all: Paisa = [&akram, &arshad, &nasir]
         .iter()
         .map(|row| row.balance.amount_paisa)
         .try_fold(Paisa::ZERO, Paisa::checked_add)
         .unwrap();
     assert_eq!(all, rupees(26_564));
-    assert_eq!(list.total_paisa, rupees(21_564));
-    assert!(list.total_paisa < all);
-    // Another day of the week is another list.
-    let (wednesday, _) =
-        printing::collection_for_print(&env.ctx, "07-10-2026", None, None).unwrap();
-    assert_eq!(wednesday.total_paisa, rupees(5_000));
+    assert_eq!(list.total_paisa, all);
 }
 
 #[test]
-fn unknown_filters_and_bad_dates_are_refused_at_their_fields() {
+fn unknown_filters_are_refused_at_their_fields() {
     let (_dir, env, _owner) = ready();
     assert_eq!(
-        first_error(
-            printing::collection_for_print(&env.ctx, "10-10-2026", Some(999), None).unwrap_err()
-        ),
+        first_error(printing::collection_for_print(&env.ctx, Some(999), None).unwrap_err()),
         (
             ErrorCode::ErrNotFound,
             Some("collector_staff_id".to_owned())
         )
     );
     assert_eq!(
-        first_error(
-            printing::collection_for_print(&env.ctx, "10-10-2026", None, Some(999)).unwrap_err()
-        ),
+        first_error(printing::collection_for_print(&env.ctx, None, Some(999)).unwrap_err()),
         (ErrorCode::ErrNotFound, Some("city_id".to_owned()))
     );
-    let (code, field) = first_error(
-        printing::collection_for_print(&env.ctx, "31-02-2026", None, None).unwrap_err(),
-    );
-    assert_eq!(field.as_deref(), Some("date"));
-    assert_ne!(code, ErrorCode::ErrInternal);
 }
 
 #[test]
@@ -209,7 +178,6 @@ fn the_plan_checks_copies_names_the_pdf_by_the_day_and_the_audit_row_records_the
     buyers(&env, &owner);
     let input = |copies: Option<&str>| PrintCollectionInput {
         search: None,
-        date: "10-10-2026".into(),
         collector_staff_id: None,
         city_id: None,
         language: Language::Ur,
@@ -242,8 +210,8 @@ fn the_plan_checks_copies_names_the_pdf_by_the_day_and_the_audit_row_records_the
             |r| r.get(0),
         )
         .unwrap();
-    assert!(new_json.contains("\"buyers\":2"), "{new_json}");
-    assert!(new_json.contains("\"total_paisa\":2156400"), "{new_json}");
+    assert!(new_json.contains("\"buyers\":3"), "{new_json}");
+    assert!(new_json.contains("\"total_paisa\":2656400"), "{new_json}");
     assert_chain_ok(&dir);
 }
 
@@ -275,13 +243,13 @@ fn a_bikri_print_refuses_the_voucher_slip_and_the_collection_list() {
 fn a_search_keeps_the_buyers_it_names_and_the_print_and_totals_follow() {
     let (_dir, env, owner) = ready();
     buyers(&env, &owner);
-    let all = printing::collection_for_print(&env.ctx, "10-10-2026", None, None)
+    let all = printing::collection_for_print(&env.ctx, None, None)
         .unwrap()
         .0;
-    assert_eq!(all.total_count, 2);
+    assert_eq!(all.total_count, 3);
     // The screen's search and the print's search give the same list.
     let searched = |text: &str| {
-        printing::collection_for_print_searching(&env.ctx, "10-10-2026", None, None, Some(text))
+        printing::collection_for_print_searching(&env.ctx, None, None, Some(text))
             .unwrap()
             .0
     };
@@ -294,7 +262,7 @@ fn a_search_keeps_the_buyers_it_names_and_the_print_and_totals_follow() {
     assert_eq!(arshad.total_paisa, rupees(18_684));
     // Urdu name, phone and code are searched too.
     assert_eq!(searched("اکرم").total_count, 1);
-    assert_eq!(searched("1234567").total_count, 2);
+    assert_eq!(searched("1234567").total_count, 3);
     assert_eq!(searched("zzz").total_count, 0);
     assert_eq!(searched("zzz").total_paisa, rupees(0));
 }
@@ -308,7 +276,6 @@ fn the_print_job_and_the_print_data_have_the_list_the_screen_shows_for_the_same_
             &env.ctx,
             &mandi_services::core::vouchers::CollectionListInput {
                 search: Some(text.to_owned()),
-                date: "10-10-2026".into(),
                 collector_staff_id: None,
                 city_id: None,
                 offset: 0,
@@ -322,7 +289,6 @@ fn the_print_job_and_the_print_data_have_the_list_the_screen_shows_for_the_same_
             &env.ctx,
             &PrintCollectionInput {
                 search: Some(text.to_owned()),
-                date: "10-10-2026".into(),
                 collector_staff_id: None,
                 city_id: None,
                 language: Language::En,
@@ -333,14 +299,57 @@ fn the_print_job_and_the_print_data_have_the_list_the_screen_shows_for_the_same_
         .unwrap();
         assert_eq!(plan.list, screen, "print job, search {text:?}");
         // The print data of the preview window is the same list.
-        let (data_list, _) = printing::collection_for_print_searching(
-            &env.ctx,
-            "10-10-2026",
-            None,
-            None,
-            Some(text),
-        )
-        .unwrap();
+        let (data_list, _) =
+            printing::collection_for_print_searching(&env.ctx, None, None, Some(text)).unwrap();
         assert_eq!(data_list, screen, "print data, search {text:?}");
+    }
+}
+
+#[test]
+fn every_active_buyer_who_owes_is_listed_on_any_day_and_nobody_else() {
+    // Plan 53 T2: no collection day. A buyer who owes and is active is listed; one who owes
+    // nothing, one who is owed, and an inactive one are not. The cash buyer and the پختہ کھاتہ
+    // account are never on it.
+    let (_dir, env, owner) = ready();
+    let (akram, arshad, nasir) = buyers(&env, &owner);
+    save(&env, &owner, form("صفر", "Zero", "", ""));
+    let mut owed = form("طلب", "Talab", "", "");
+    owed.opening_cr = "700".into();
+    save(&env, &owner, owed);
+    accounts::set_active(&env.ctx, &owner, nasir.id, false).unwrap();
+    let list_on = |year: i32, month: u32, day: u32| {
+        set_today(&env, year, month, day);
+        mandi_services::vouchers::collection_list(
+            &env.ctx,
+            &mandi_services::core::vouchers::CollectionListInput {
+                search: None,
+                collector_staff_id: None,
+                city_id: None,
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let ids = |list: &mandi_services::core::vouchers::CollectionList| {
+        list.groups
+            .iter()
+            .flat_map(|g| g.buyers.iter().map(|b| b.account.id))
+            .collect::<Vec<_>>()
+    };
+    // Saturday 10-10-26.
+    let saturday = list_on(2026, 10, 10);
+    assert_eq!(ids(&saturday), [akram.id, arshad.id]);
+    assert_eq!(saturday.total_paisa, rupees(21_564));
+    assert_eq!(saturday.total_count, 2);
+    // Any other weekday: the same buyers, and the age of the bills counted to that day.
+    for (day, extra) in [(12, 2), (14, 4), (17, 7)] {
+        let other = list_on(2026, 10, day);
+        assert_eq!(ids(&other), [akram.id, arshad.id], "10-{day}");
+        assert_eq!(other.total_paisa, rupees(21_564));
+        let days = |list: &mandi_services::core::vouchers::CollectionList| {
+            list.groups[0].buyers[0].oldest_days
+        };
+        assert_eq!(days(&other), days(&saturday).map(|d| d + extra), "10-{day}");
     }
 }

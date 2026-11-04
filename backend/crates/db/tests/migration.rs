@@ -10,9 +10,9 @@ use chrono::{TimeZone, Utc};
 use mandi_core::error::ErrorCode;
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
-    self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIMING_SQL, BALANCE_INDEXES_SQL,
-    BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL,
-    EDIT_WINDOWS_SQL, INIT_SQL, MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL,
+    self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIME_LIMIT_SQL, ASSISTANT_TIMING_SQL,
+    BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL,
+    DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL, MigrationOutcome, PARTS_ARE_SOFT_STATE_SQL,
     PUKHTA_PARTY_ACCOUNTS_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL,
     STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
     TRIPS_GARDENS_FRUIT_KHATA_SQL,
@@ -23,7 +23,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 17;
+const LATEST: usize = 18;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -310,6 +310,14 @@ fn released_version_16() -> Migrations<'static> {
     Migrations::new(all)
 }
 
+/// The file as released with migration 17 (the time of a question).
+fn released_version_17() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    Migrations::new(all)
+}
+
 /// The name and SQL of every object of one kind (`table`, `index`, `trigger`), by name.
 fn schema(conn: &Connection, kind: &str) -> Vec<String> {
     conn.prepare(
@@ -584,10 +592,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 18).unwrap();
+    conn.pragma_update(None, "user_version", 19).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 18);
+    assert_eq!(user_version(&conn), 19);
     assert!(!backups.exists());
 }
 
@@ -3409,7 +3417,8 @@ fn migration_17_adds_four_nullable_columns_and_keeps_every_question_as_it_was() 
         .filter(|t| !t.starts_with("assistant_questions:"))
         .collect();
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_17(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (16, 17));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 17);
@@ -3478,4 +3487,134 @@ fn migration_17_adds_four_nullable_columns_and_keeps_every_question_as_it_was() 
     ] {
         assert_eq!(ASSISTANT_TIMING_SQL.matches(word).count(), 0, "{word}");
     }
+}
+
+#[test]
+fn migration_18_widens_the_outcomes_of_the_question_log_and_keeps_every_question_as_it_was() {
+    // Plan 54 S5 (plan 55 Section 3): a file at version 17 with questions in the log, a continuation
+    // among them, is upgraded. The table is made again with `time_limit` among its outcomes; every
+    // row keeps its id, its values and its link to its parent, the append-only triggers and the
+    // indexes are the same and still hold, and a copy is taken first.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_17(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 17);
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome, tool_calls_json, model_calls, total_millis, \
+         calls_json) VALUES ('2026-11-02T14:46:44.402Z', '2026-11-02', 'ikram ke bakaya', 'ur', \
+         'c-1', 'model', 1, 'which_one', '[{\"tool\":\"find\"}]', 2, 8123, '[{\"ms\":4000}]')",
+        [],
+    )
+    .unwrap();
+    // A continuation of it (after "کون سا؟"), and a chip.
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, parent_id, source, counted, outcome, model_calls) \
+         VALUES ('2026-11-02T14:47:10.000Z', '2026-11-02', 'a20', 'ur', 'c-1', 1, 'continue', 0, \
+         'answered', 1)",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome) \
+         VALUES ('2026-11-02T14:50:00.000Z', '2026-11-02', 'cash_in_hand', 'ur', 'c-2', 'chip', 0, \
+         'answered')",
+        [],
+    )
+    .unwrap();
+    // The old CHECK refuses the new outcome.
+    assert!(
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome) VALUES ('2026-11-02T15:00:00.000Z', \
+             '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'time_limit')",
+            [],
+        )
+        .is_err()
+    );
+    let before = all_rows_without(&conn, &[]);
+    let indexes_before = schema(&conn, "index");
+    let triggers_before = schema(&conn, "trigger");
+    let tables_before: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (17, 18));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 18);
+    // Every row, id, value and link is as it was.
+    assert_eq!(
+        all_rows_without(&conn, &[]),
+        before,
+        "every row is as it was"
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM assistant_questions WHERE parent_id = 1 AND id = 2"
+        ),
+        1
+    );
+    let broken = conn
+        .prepare("PRAGMA foreign_key_check")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .count();
+    assert_eq!(broken, 0, "no link is broken");
+    // No other table, no index and no trigger changed (the same names and the same rules).
+    let tables_after: Vec<String> = schema(&conn, "table")
+        .into_iter()
+        .filter(|t| !t.starts_with("assistant_questions:"))
+        .collect();
+    assert_eq!(tables_after, tables_before, "no other table changed");
+    assert_eq!(schema(&conn, "index"), indexes_before, "no index changed");
+    assert_eq!(
+        schema(&conn, "trigger"),
+        triggers_before,
+        "no trigger changed"
+    );
+    // The new outcome is accepted and the others still are; a word that is not one is not.
+    conn.execute(
+        "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome, finish_reason) VALUES \
+         ('2026-11-02T15:00:00.000Z', '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'time_limit', \
+         'time_limit')",
+        [],
+    )
+    .unwrap();
+    assert!(
+        conn.execute(
+            "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \
+             conversation_id, source, counted, outcome) VALUES ('2026-11-02T15:01:00.000Z', \
+             '2026-11-02', 'x', 'ur', 'c-3', 'model', 0, 'slow')",
+            [],
+        )
+        .is_err()
+    );
+    // The log is still append-only, and a row cannot be replaced.
+    for sql in [
+        "UPDATE assistant_questions SET outcome = 'answered'",
+        "DELETE FROM assistant_questions",
+        "INSERT OR REPLACE INTO assistant_questions (id, asked_at, asked_day, question, language, \
+         conversation_id, source, counted, outcome) VALUES (1, '2026-11-02T15:02:00.000Z', \
+         '2026-11-02', 'x', 'ur', 'c-4', 'model', 0, 'answered')",
+    ] {
+        let error = conn.execute(sql, []).unwrap_err();
+        assert!(
+            error.to_string().contains("ERR_APPEND_ONLY"),
+            "{sql}: {error}"
+        );
+    }
+    // The migration deletes and updates no row: it only copies them.
+    assert_eq!(ASSISTANT_TIME_LIMIT_SQL.matches("DELETE FROM").count(), 0);
+    assert_eq!(
+        ASSISTANT_TIME_LIMIT_SQL.matches("UPDATE assistant").count(),
+        0
+    );
 }

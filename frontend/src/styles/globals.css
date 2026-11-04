@@ -102,6 +102,17 @@ body {
   }
 }
 
+/* A screen of a fixed height (a list with its own scrolling table) runs on down through the screen's bottom
+   padding, which is as tall as the round launcher and its gaps, so it reaches the status bar. It ends
+   with a spacer of that height (`h-corner`), so its page buttons and totals stay clear of the launcher,
+   also when the window is so short that the screen scrolls (plan 52, after Umar's own test). */
+@utility fill-to-corner {
+  block-size: calc(100% + var(--chat-corner));
+
+  /* The padding is added again after the screen in the scroll area: take it back, or the screen scrolls. */
+  margin-block-end: calc(-1 * var(--chat-corner));
+}
+
 /* Type roles (design system 3). One class, the right font and size for each script. */
 @utility type-title {
   font-family: var(--font-text);

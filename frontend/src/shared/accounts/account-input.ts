@@ -44,7 +44,6 @@ export function accountInputOf(
     credit_limit: draft.credit_limit,
     default_marka_id: draft.default_marka?.id ?? null,
     collector_staff_id: draft.collector?.id ?? null,
-    collection_weekday: draft.collection_weekday,
     is_active: draft.is_active,
     note: draft.note,
   };

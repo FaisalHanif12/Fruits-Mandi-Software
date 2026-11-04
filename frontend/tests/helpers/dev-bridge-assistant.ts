@@ -47,6 +47,15 @@ export const REPLIES: Readonly<Record<string, AskReply>> = {
   limit: real.REPLY_LIMIT_REACHED,
   offline: real.REPLY_OFFLINE,
   error: real.REPLY_ERROR_404,
+  // The line gave no answer in time, and a connection that dropped: the PRD line first, then the reason (FR-7.81).
+  timeout: { ...real.REPLY_ERROR_404, failure: { kind: 'timeout', http_status: null } },
+  dropped: { ...real.REPLY_ERROR_404, failure: { kind: 'dropped', http_status: null } },
+  // "How do I print this?" (plan 54 S2): the how-to words, numbered steps and a link-only button for each report.
+  print: real.REPLY_PRINT_R5_RANGE,
+  print_day: real.REPLY_PRINT_R35_DAY,
+  print_ledger: real.REPLY_PRINT_R13_LEDGER,
+  // The question ran out of time after it read (plan 55): what was read, as plain tables.
+  time_limit: real.REPLY_TIME_LIMIT,
 };
 
 /** The reply for a question: the one the flag names, else by a word of the question. */
@@ -55,6 +64,7 @@ function replyFor(text: string): AskReply {
   const found = named === null ? undefined : REPLIES[named];
   if (found !== undefined) return found;
   const lower = text.toLowerCase();
+  if (lower.includes('print')) return real.REPLY_PRINT_R5_RANGE;
   if (lower.includes('aakhir')) return real.REPLY_ESTIMATE_YEAR_END;
   if (lower.includes('double')) return real.REPLY_ESTIMATE_WHAT_IF;
   if (lower.includes('barhayen')) return real.REPLY_GENERAL_ADVICE;
@@ -96,7 +106,10 @@ const handlers: Record<string, (input: Input) => unknown> = {
 
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */
 export function installAssistantDevBridge(): void {
-  const delay = devValue('slow') === null ? 20 : 6000;
+  const slow = devValue('slow');
+  const seconds = Number(slow);
+  const delay =
+    slow === null ? 20 : Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 6000;
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
     configurable: true,
     value: {

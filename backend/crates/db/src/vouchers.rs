@@ -1460,14 +1460,13 @@ pub struct CollectionCandidate {
     pub city: Option<RecordRef>,
 }
 
-/// The active buyers (not the cash buyer and not the پختہ کھاتہ account) whose collection
-/// weekday is `weekday`, by code, filtered by collector and city.
+/// The active buyers (not the cash buyer and not the پختہ کھاتہ account), by code, filtered by
+/// collector and city. A collection weekday is not used: a buyer is collected any day (plan 53 T2).
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn collection_candidates(
     conn: &Connection,
-    weekday: i64,
     collector_staff_id: Option<i64>,
     city_id: Option<i64>,
 ) -> rusqlite::Result<Vec<CollectionCandidate>> {
@@ -1479,12 +1478,11 @@ pub fn collection_candidates(
          LEFT JOIN staff s ON s.id = a.collector_staff_id
          LEFT JOIN cities c ON c.id = a.city_id
          WHERE k.code = '0304' AND a.is_active = 1 AND a.is_pukhta_khata = 0 AND a.code <> '03040000'
-           AND a.collection_weekday = ?1
-           AND (?2 IS NULL OR a.collector_staff_id = ?2) AND (?3 IS NULL OR a.city_id = ?3)
+           AND (?1 IS NULL OR a.collector_staff_id = ?1) AND (?2 IS NULL OR a.city_id = ?2)
          ORDER BY {}",
         crate::codes::order_by_code("a.code")
     ))?;
-    let rows = statement.query_map(params![weekday, collector_staff_id, city_id], |r| {
+    let rows = statement.query_map(params![collector_staff_id, city_id], |r| {
         let collector_id: Option<i64> = r.get(5)?;
         let city_id: Option<i64> = r.get(8)?;
         Ok(CollectionCandidate {

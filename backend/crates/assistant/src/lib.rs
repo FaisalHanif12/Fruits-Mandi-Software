@@ -54,6 +54,7 @@ pub mod settings;
 pub mod source;
 pub mod step;
 pub mod tools;
+pub mod understand;
 
 /// The name of this crate. Used as context in log lines and errors (Code Standards B12).
 pub const CRATE: &str = env!("CARGO_PKG_NAME");

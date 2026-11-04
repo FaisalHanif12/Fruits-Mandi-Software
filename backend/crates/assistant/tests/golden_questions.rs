@@ -168,6 +168,53 @@ fn e2e_49_commission_on_banana_this_month_is_read_from_view_a_with_its_filters()
     h.scan_requests();
 }
 
+// ---- Plan 52 Section 8(b): a party's day in one report call -----------------------------------
+
+#[test]
+fn p52_a_buyers_day_is_one_party_day_sheet_with_each_item_and_the_days_bill() {
+    // "akram ne aaj kya aur kitna khareeda": one R35 read for him and the day (`as_of`). Each item
+    // line has its packing, qty and amount; the sheet's summary has the day's bill (12,000 of
+    // goods + 720 commission + 160 laga = 12,880, E2E-43). Nothing is added up by the model.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "akram ne aaj kya aur kitna khareeda",
+        None,
+        fixture!("p52-buyers-day"),
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    assert_eq!(count(figs[0].0), 20);
+    assert_eq!(money(figs[1].0), 12_000);
+    assert_eq!(money(figs[2].0), 12_880);
+    assert_eq!(
+        requests.len(),
+        3,
+        "find and period, then the sheet, then the answer"
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn p52_a_sellers_day_is_one_party_day_sheet_with_each_line_and_the_days_gross() {
+    // "rahim ne aaj kya aur kitna becha": R35 for the seller lists the sale lines (20 at 600 and
+    // 30 at 580, banana) and the day's gross sale 29,400 (E2E-1).
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "rahim ne aaj kya aur kitna becha",
+        None,
+        fixture!("p52-sellers-day"),
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let figs = figures(answer_of(&reply));
+    assert_eq!(count(figs[0].0), 20);
+    assert_eq!(money(figs[1].0), 12_000);
+    assert_eq!(count(figs[2].0), 30);
+    assert_eq!(money(figs[3].0), 17_400);
+    assert_eq!(money(figs[4].0), 29_400);
+    assert_eq!(requests.len(), 3);
+    h.scan_requests();
+}
+
 // ---- E2E-50 and the relock part of E2E-54 ----------------------------------------------------
 
 #[test]

@@ -53,7 +53,6 @@ export function newAccountValues(
     credit_limit: '',
     default_marka: null,
     collector: null,
-    collection_weekday: null,
     is_active: true,
     note: '',
   };
@@ -92,7 +91,6 @@ export function accountValuesOf(row: AccountRow, grouping: Grouping): AccountFor
     credit_limit: openingText(row.credit_limit_paisa, grouping),
     default_marka: row.default_marka,
     collector: row.collector,
-    collection_weekday: row.collection_weekday,
     is_active: row.is_active,
     note: row.note,
   };
@@ -108,7 +106,6 @@ const TEXT_FIELDS = [
   'opening_dr',
   'opening_cr',
   'credit_limit',
-  'collection_weekday',
   'note',
 ] as const;
 const FLAG_FIELDS = ['opening_is_advance', 'credit_allowed', 'is_active'] as const;

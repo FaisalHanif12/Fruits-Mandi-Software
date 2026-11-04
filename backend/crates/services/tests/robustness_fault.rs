@@ -93,7 +93,6 @@ fn buyer_input(n: u64) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
         tag: String::new(),

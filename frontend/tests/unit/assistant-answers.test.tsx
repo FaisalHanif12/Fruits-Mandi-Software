@@ -616,10 +616,74 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     expect(useAssistantStore.getState().entries).toHaveLength(1);
   });
 
+  it.each(['seller', 'buyer', 'item', 'partner', 'garden', 'trip', 'any'] as const)(
+    'not found as a %s: says that no such record has that name, in the role asked, with no list when there are no near names',
+    async (role) => {
+      await renderShellRouted();
+      await ask(
+        language,
+        { ...real.REPLY_NOT_FOUND, asked_role: role, options: [] },
+        'zzzz ka hisab',
+      );
+      expect(text(language)).toContain(message(language, 'assistant-not-found-role', { role }));
+      // The role word is the glossary's: a seller is not called a buyer, and "any" names no role.
+      if (role !== 'any') {
+        const other = role === 'seller' ? 'buyer' : 'seller';
+        expect(text(language)).not.toContain(
+          message(language, 'assistant-not-found-role', { role: other }),
+        );
+      }
+      expect(text(language)).not.toContain(message(language, 'assistant-not-found-closest'));
+      expect(text(language)).not.toContain(
+        message(language, 'assistant-found-as-other', { asked: '', found: '' }),
+      );
+    },
+  );
+
+  it('not found as a name of another role: says what he is, offers his purchases as a pick on the waiting question, and keeps no copy of him in the list', async () => {
+    await renderShellRouted();
+    const user = await ask(language, real.REPLY_NOT_FOUND_OTHER_ROLE, 'faisal ne aaj kya becha');
+    const found = real.REPLY_NOT_FOUND_OTHER_ROLE.found_as;
+    if (found === undefined) throw new Error('the fixture names the other role');
+    const name = language === 'ur' ? found.name.name_ur : found.name.name_en;
+    expect(text(language)).toContain(
+      message(language, 'assistant-found-as-other', {
+        asked: message(language, 'assistant-role-seller'),
+        found: message(language, 'assistant-role-buyer'),
+      }),
+    );
+    // It says what he is instead of "no seller by that name".
+    expect(text(language)).not.toContain(
+      message(language, 'assistant-not-found-role', { role: 'seller' }),
+    );
+    // The button is the follow-up question for a buyer: his purchases.
+    const question = message(language, 'assistant-found-as-ask', { found: 'buyer', name });
+    vi.mocked(assistantApi.assistantAsk).mockClear();
+    vi.mocked(assistantApi.assistantPick).mockResolvedValue(real.PICK_MATCH);
+    await user.click(
+      within(panelOf(language)).getByRole('button', {
+        name: (label) => visible(label) === question,
+      }),
+    );
+    // The question waits for his choice, so the button goes on with it as a pick (not counted again,
+    // PRD FR-7.81) and does not send a new question.
+    await waitFor(() => {
+      expect(assistantApi.assistantPick).toHaveBeenCalledWith({
+        question_id: real.REPLY_NOT_FOUND_OTHER_ROLE.question_id,
+        choice: { type: 'match', key: found.key },
+      });
+    });
+    expect(assistantApi.assistantAsk).not.toHaveBeenCalled();
+    // The only near name is he himself: no list of near names under the line.
+    expect(text(language)).not.toContain(message(language, 'assistant-not-found-closest'));
+  });
+
   it('not found: the words and the three closest names as buttons', async () => {
     await renderShellRouted();
     await ask(language, real.REPLY_NOT_FOUND, 'akrm');
-    expect(text(language)).toContain(message(language, 'assistant-not-found'));
+    expect(text(language)).toContain(
+      message(language, 'assistant-not-found-role', { role: 'any' }),
+    );
     expect(text(language)).toContain(message(language, 'assistant-not-found-closest'));
     expect(within(panelOf(language)).getAllByRole('button', { name: /0020|0022/ })).toHaveLength(2);
   });
@@ -807,6 +871,146 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     });
   });
 
+  it('out of time (plan 55): says the answer is slow, shows the plain tables that were read and their buttons, no model figure', async () => {
+    await renderShellRouted();
+    await ask(language, real.REPLY_TIME_LIMIT, 'ikram ka hisab batao');
+    expect(text(language)).toContain(message(language, 'assistant-time-limit'));
+    expect(text(language)).toContain(message(language, 'assistant-stopped-tables'));
+    expect(text(language)).not.toContain(message(language, 'assistant-not-understood'));
+    const panel = panelOf(language);
+    expect(within(panel).getAllByRole('table')).toHaveLength(1);
+    expect(
+      panel.querySelector('[aria-label="' + message(language, 'assistant-answer-label') + '"]'),
+    ).toBeNull();
+    // The one report that was read opens, and it prints, with the filters it was read with.
+    expect(
+      within(panel).getByRole('button', {
+        name: named(language, 'assistant-open-report'),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('button', { name: named(language, 'assistant-print') }),
+    ).toBeInTheDocument();
+  });
+
+  it('a source with an empty result_id is only a link: both buttons draw and print, and the source line leaves it out (plan 54 S2)', async () => {
+    const report = real.REPLY_TIME_LIMIT.answer?.sources.find((source) => source.kind === 'report');
+    const read = real.REPLY_TIME_LIMIT.answer?.sources.find(
+      (source) => source.kind === 'party_card',
+    );
+    if (report?.kind !== 'report' || read === undefined || real.REPLY_TIME_LIMIT.answer === null) {
+      throw new Error('the fixture has no report source');
+    }
+    const link = (id: 'R13' | 'R14') => ({ ...report, id, result_id: '' });
+    const reply: AskReply = {
+      ...real.REPLY_TIME_LIMIT,
+      outcome: 'answered',
+      answer: {
+        ...real.REPLY_TIME_LIMIT.answer,
+        parts: [{ type: 'text', text: 'x' }],
+        tables: [],
+        sources: [link('R13'), link('R14')],
+      },
+    };
+    await renderShellRouted();
+    await ask(language, reply);
+    const panel = panelOf(language);
+    const label = (id: string) => `${id} ${message(language, report.label_id)}`;
+    for (const id of ['R13', 'R14']) {
+      expect(
+        within(panel).getByRole('button', {
+          name: named(language, 'assistant-open-report-of', { source: label(id) }),
+        }),
+      ).toBeInTheDocument();
+      expect(
+        within(panel).getByRole('button', {
+          name: named(language, 'assistant-print-of', { source: label(id) }),
+        }),
+      ).toBeInTheDocument();
+    }
+    // Nothing was read, so no "source:" line names them and no read time is claimed.
+    const sourceLine = message(language, 'assistant-sources-line', {
+      sources: 'SRC',
+      time: 'TIME',
+    });
+    const lead = sourceLine.slice(0, sourceLine.indexOf('SRC')).trim();
+    expect(text(language)).not.toContain(lead);
+  });
+
+  it('when one source was read and one is a link, the source line names only the one that was read', async () => {
+    const answer = real.REPLY_TIME_LIMIT.answer;
+    const report = answer?.sources.find((source) => source.kind === 'report');
+    const card = answer?.sources.find((source) => source.kind === 'party_card');
+    if (answer === null || report?.kind !== 'report' || card === undefined) {
+      throw new Error('the fixture has no report source');
+    }
+    const reply: AskReply = {
+      ...real.REPLY_TIME_LIMIT,
+      outcome: 'answered',
+      answer: {
+        ...answer,
+        parts: [{ type: 'text', text: 'x' }],
+        tables: [],
+        sources: [card, { ...report, id: 'R35', result_id: '' }],
+      },
+    };
+    await renderShellRouted();
+    await ask(language, reply);
+    const line = message(language, 'assistant-sources-line', { sources: 'SRC', time: 'TIME' });
+    const lead = line.slice(0, line.indexOf('SRC')).trim();
+    const shown = text(language);
+    expect(shown).toContain(lead);
+    // The party card was read and is named in the line; the R35 report is only a button.
+    const afterLead = shown.slice(shown.indexOf(lead));
+    expect(afterLead).toContain(message(language, 'assistant-source-party-card'));
+    expect(afterLead).not.toContain('R35');
+  });
+
+  it('outside the books (plan 55 Section 7): the plain line of what the app does not keep, above the nearest report and its button', async () => {
+    const base = real.REPLY_OUTSIDE_BOOKS;
+    if (base.answer === null) throw new Error('the fixture has no answer');
+    const reply: AskReply = {
+      ...base,
+      answer: {
+        ...base.answer,
+        parts: [{ type: 'text', text: message(language, 'assistant-outside-tax') }],
+      },
+    };
+    await renderShellRouted();
+    await ask(language, reply, 'gst kitna banta hai');
+    const shown = text(language);
+    expect(shown).toContain(message(language, 'assistant-outside-books'));
+    expect(shown).toContain(message(language, 'assistant-outside-tax'));
+    // The line of what the app keeps comes before the nearest report.
+    expect(shown.indexOf(message(language, 'assistant-outside-tax'))).toBeLessThan(
+      shown.indexOf(message(language, 'assistant-outside-books-nearest')),
+    );
+    expect(
+      within(panelOf(language)).getByRole('button', {
+        name: named(language, 'assistant-open-report'),
+      }),
+    ).toBeInTheDocument();
+    // Every one of the six lines the backend can send has words in this language.
+    for (const id of ['weather', 'tax', 'bank', 'market-rate', 'prices', 'other']) {
+      expect(message(language, `assistant-outside-${id}`)).not.toContain('$');
+    }
+  });
+
+  it('out of time, a party card that was read gives his name and his checked balance above the tables (plan 55)', async () => {
+    const base = real.REPLY_TIME_LIMIT;
+    const answered = real.REPLY_ANSWERED.answer;
+    if (base.answer === null || answered === null) throw new Error('a fixture has no answer');
+    const parts = answered.parts.filter((part) => part.type === 'name' || part.type === 'figure');
+    expect(parts.length).toBeGreaterThan(1);
+    const reply: AskReply = { ...base, answer: { ...base.answer, parts } };
+    await renderShellRouted();
+    await ask(language, reply, 'ikram ka hisab');
+    const panel = panelOf(language);
+    expect(text(language)).toContain(message(language, 'assistant-time-limit'));
+    expect(text(language)).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+    expect(within(panel).getAllByRole('table')).toHaveLength(1);
+  });
+
   it('checks failed: the words, the plain tables of the records, and no figure of the model', async () => {
     await renderShellRouted();
     await ask(language, real.REPLY_CHECKS_FAILED);
@@ -866,15 +1070,20 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     );
   });
 
-  it('a timeout says the answer took too long and to ask again, with the ask again button', async () => {
+  it('a timeout shows the PRD line first (FR-7.81, no answer came), then the reason, with the ask again button', async () => {
     await renderShellRouted();
     const user = await ask(language, {
       ...real.REPLY_ERROR_404,
       failure: { kind: 'timeout', http_status: null },
     });
-    expect(text(language)).toContain(message(language, 'assistant-failure-timeout'));
-    // One line says it: the general "no answer came" line would repeat it.
-    expect(text(language)).not.toContain(message(language, 'assistant-error'));
+    const shown = text(language);
+    expect(shown).toContain(message(language, 'assistant-error'));
+    expect(shown).toContain(message(language, 'assistant-failure-timeout'));
+    // The PRD line is the main line and the reason follows it.
+    expect(shown.indexOf(message(language, 'assistant-error'))).toBeLessThan(
+      shown.indexOf(message(language, 'assistant-failure-timeout')),
+    );
+    expect(shown).not.toContain(message(language, 'assistant-offline'));
     vi.mocked(assistantApi.assistantAsk).mockClear();
     vi.mocked(assistantApi.assistantAsk).mockResolvedValue(real.REPLY_ANSWERED);
     await user.click(
@@ -893,6 +1102,8 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
       ...real.REPLY_ERROR_404,
       failure: { kind: 'dropped', http_status: null },
     });
+    // The PRD line (FR-7.81) and then its own reason.
+    expect(text(language)).toContain(message(language, 'assistant-error'));
     expect(text(language)).toContain(message(language, 'assistant-failure-dropped'));
     expect(text(language)).not.toContain(message(language, 'assistant-offline'));
     expect(text(language)).not.toContain(message(language, 'assistant-failure-offline'));
@@ -1115,6 +1326,166 @@ describe.each(LANGUAGES)('asking is off or has no key (%s)', (language) => {
     });
   });
 });
+
+describe.each(LANGUAGES)(
+  'how to print this: steps and link-only buttons (plan 54 S2) (%s)',
+  (language) => {
+    beforeEach(() => {
+      setLanguage(language);
+    });
+
+    const akram = language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax';
+    const howItems = () =>
+      within(
+        within(panelOf(language)).getByRole('list', {
+          name: message(language, 'assistant-how-label'),
+        }),
+      )
+        .getAllByRole('listitem')
+        .map((item) => visible(item.textContent));
+
+    it('a range of buyer bills: the how-to words, the numbered steps with the real party and dates, and nothing claimed as read', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_PRINT_R5_RANGE, 'akram ke bills ka print kaise nikalen');
+      const panel = panelOf(language);
+      // The words come first, then the steps as a numbered list in the order sent.
+      expect(
+        within(panel).getByRole('list', { name: message(language, 'assistant-how-label') }).tagName,
+      ).toBe('OL');
+      expect(howItems()).toEqual([
+        message(language, 'assistant-how-open-report', { report: 'R5' }),
+        message(language, 'assistant-how-set-party', {
+          role: 'buyer',
+          party: akram,
+          code: '0020',
+        }),
+        message(language, 'assistant-how-set-dates', { from: '01-09-2026', to: '30-09-2026' }),
+        message(language, 'assistant-how-press-print'),
+      ]);
+      expect(within(panel).queryAllByRole('table')).toHaveLength(0);
+      // Nothing was read, so there is no "source:" line and no read time.
+      const line = message(language, 'assistant-sources-line', { sources: 'SRC', time: 'TIME' });
+      expect(text(language)).not.toContain(line.slice(0, line.indexOf('SRC')).trim());
+    });
+
+    it('a range of buyer bills has two buttons, each with its print: the bills and the ledger', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_PRINT_R5_RANGE, 'akram ke bills ka print kaise nikalen');
+      const panel = panelOf(language);
+      for (const id of ['R5', 'R13']) {
+        const label = `${id} ${message(language, id === 'R5' ? 'report-r5-title' : 'report-r13-title')}`;
+        expect(
+          within(panel).getByRole('button', {
+            name: named(language, 'assistant-open-report-of', { source: label }),
+          }),
+        ).toBeInTheDocument();
+        expect(
+          within(panel).getByRole('button', {
+            name: named(language, 'assistant-print-of', { source: label }),
+          }),
+        ).toBeInTheDocument();
+      }
+    });
+
+    it('a day slip: one day in the step, one button, and it opens the report with the party and the day set', async () => {
+      await renderShellRouted();
+      const user = await ask(language, real.REPLY_PRINT_R35_DAY, 'akram ki parchi 10 tarikh ki');
+      expect(howItems()).toContain(
+        message(language, 'assistant-how-set-day', { day: '10-10-2026' }),
+      );
+      expect(howItems().join(' ')).not.toContain('2026-10-10');
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: named(language, 'assistant-open-report'),
+        }),
+      );
+      const route = routeNow();
+      expect(route.path).toBe('/reports/$id');
+      expect(route.params).toEqual({ id: 'R35' });
+      expect(route.search).toMatchObject({ party: 20, as_of: '10-10-2026' });
+    });
+
+    it('the report button opens R5 with the party and the dates already set, so the Owner only presses F9', async () => {
+      await renderShellRouted();
+      const user = await ask(
+        language,
+        real.REPLY_PRINT_R5_RANGE,
+        'akram ke bills ka print kaise nikalen',
+      );
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: named(language, 'assistant-open-report-of', {
+            source: `R5 ${message(language, 'report-r5-title')}`,
+          }),
+        }),
+      );
+      const route = routeNow();
+      expect(route.params).toEqual({ id: 'R5' });
+      expect(route.search).toMatchObject({ party: 20, from: '01-09-2026', to: '30-09-2026' });
+    });
+
+    it('the print button of the second report prints with the same party and dates', async () => {
+      vi.mocked(reportsApi.reportsPrintReport).mockResolvedValue({ printed: [], pdf_paths: null });
+      await renderShellRouted();
+      const user = await ask(
+        language,
+        real.REPLY_PRINT_R5_RANGE,
+        'akram ke bills ka print kaise nikalen',
+      );
+      await user.click(
+        within(panelOf(language)).getByRole('button', {
+          name: named(language, 'assistant-print-of', {
+            source: `R13 ${message(language, 'report-r13-title')}`,
+          }),
+        }),
+      );
+      await waitFor(() => {
+        expect(reportsApi.reportsPrintReport).toHaveBeenCalledTimes(1);
+      });
+      const sent = vi.mocked(reportsApi.reportsPrintReport).mock.calls[0]?.[0];
+      expect(sent?.report.id).toBe('R13');
+      expect(sent?.report.language).toBe(language);
+      expect(sent?.report.filters.party).toEqual({ account_id: 20, person_key: null });
+      expect(sent?.report.filters.from).toBe('01-09-2026');
+      expect(sent?.report.filters.to).toBe('30-09-2026');
+    });
+
+    it('keyboard only: Tab reaches the open button and Enter opens the report', async () => {
+      await renderShellRouted();
+      const user = await ask(language, real.REPLY_PRINT_R35_DAY, 'akram ki parchi 10 tarikh ki');
+      let reached = false;
+      for (let step = 0; step < 40 && !reached; step += 1) {
+        await user.tab();
+        reached = (document.activeElement?.textContent ?? '').includes(
+          message(language, 'assistant-open-report'),
+        );
+      }
+      expect(reached).toBe(true);
+      await user.keyboard('{Enter}');
+      expect(routeNow().path).toBe('/reports/$id');
+      expect(routeNow().params).toEqual({ id: 'R35' });
+    });
+
+    it('a switch of language rewrites the steps in the other language and keeps the dates', async () => {
+      await renderShellRouted();
+      await ask(language, real.REPLY_PRINT_R5_RANGE, 'akram ke bills ka print kaise nikalen');
+      const other: Language = language === 'ur' ? 'en' : 'ur';
+      setLanguage(other);
+      const items = within(
+        within(panelOf(other)).getByRole('list', {
+          name: message(other, 'assistant-how-label'),
+        }),
+      )
+        .getAllByRole('listitem')
+        .map((item) => visible(item.textContent));
+      expect(items[2]).toBe(
+        message(other, 'assistant-how-set-dates', { from: '01-09-2026', to: '30-09-2026' }),
+      );
+      expect(items[1]).toContain(other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+      expect(items[1]).not.toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+    });
+  },
+);
 
 describe.each(LANGUAGES)('the steps and the count (%s)', (language) => {
   beforeEach(() => {

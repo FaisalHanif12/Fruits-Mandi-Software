@@ -3,15 +3,10 @@ import type { Language } from './Language';
 import type { PrintTo } from './PrintTo';
 
 /**
- * Input of `reports_print_collection` (plan 17e): print or save as PDF the collection list of one
- * day (PRD FR-15.6).
+ * Input of `reports_print_collection` (plan 17e): print or save as PDF the collection list, every
+ * active buyer who owes (PRD FR-15.6, plan 53 T2: there is no collection day).
  */
 export type PrintCollectionInput = {
-  /**
-   * The day, `DD-MM-YYYY` or a shortcut (PRD FR-7.19). Buyers whose collection day is this
-   * weekday are on the list.
-   */
-  date: string;
   /**
    * Only this collector (a staff member). Missing means every collector.
    */

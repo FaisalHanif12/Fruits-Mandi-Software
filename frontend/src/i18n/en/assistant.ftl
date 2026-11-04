@@ -82,6 +82,22 @@ assistant-step-estimating = Working out the estimate…
 assistant-step-checking = Checking the figures…
 # review: pending
 assistant-step-rewriting = Writing the answer again…
+# review: pending
+assistant-step-understood = { $kind ->
+    [list] Understood: you want a list from the books.
+    [print] Understood: you want to print something.
+    [help] Understood: you want to know how to do something in the app.
+    [advice] Understood: you want advice.
+   *[figure] Understood: you want a figure from the books.
+}
+# review: pending
+assistant-step-writing = Writing the answer…
+# review: pending
+assistant-step-retrying = This is taking longer than usual. Trying again…
+# review: pending
+assistant-step-tools-off = Still slow. I will stop reading and write the answer from what I have already read…
+# review: pending
+assistant-waited = Waited { $seconds } s
 
 ## The quick questions (FR-7.80). They need no internet and no model, and they are not counted.
 
@@ -206,6 +222,45 @@ assistant-which-one-more = There are more, type the code
 assistant-not-found = Name not found
 # review: pending
 assistant-not-found-closest = The closest names:
+# The name asked about is in no list of the role that was asked (plan 52 8.2). The role words are the glossary's.
+# review: pending
+assistant-not-found-role = { $role ->
+    [seller] There is no { -beopari } by the name you asked about.
+    [buyer] There is no { -gahak } by the name you asked about.
+    [item] There is no { -qism-maal } by the name you asked about.
+    [partner] There is no { -shirakat-dar } by the name you asked about.
+    [garden] There is no { -bagh } by the name you asked about.
+    [trip] There is no { -market-safar } by the name you asked about.
+   *[any] There is no name like the one you asked about.
+}
+# The name exists in another role: "This name is a Buyer, not a Seller." The role words carry their article.
+# review: pending
+assistant-found-as-other = This name is { $found }, not { $asked }.
+# review: pending
+assistant-role-seller = a { -beopari }
+# review: pending
+assistant-role-buyer = a { -gahak }
+# review: pending
+assistant-role-item = an { -qism-maal }
+# review: pending
+assistant-role-partner = a { -shirakat-dar }
+# review: pending
+assistant-role-garden = a { -bagh }
+# review: pending
+assistant-role-trip = a { -market-safar }
+# review: pending
+assistant-role-any = any list
+# The button under it: the follow-up question for the role the name was found in, sent as a new question.
+# review: pending
+assistant-found-as-ask = { $found ->
+    [seller] Show the { -bikri } of { $name }
+    [buyer] Show the { -khareedari } of { $name }
+    [item] Show the { -bikri } of { $name }
+    [partner] Show the { -hissa } of { $name }
+    [garden] Show the { -khata } of { $name }
+    [trip] Show the { -khata } of { $name }
+   *[other] Show { $name }
+}
 # review: pending
 assistant-option-balance-label = Balance
 # review: pending
@@ -216,6 +271,18 @@ assistant-need-party = Whose? Type the name or the code.
 assistant-outside-books = This question is outside the books
 # review: pending
 assistant-outside-books-nearest = The nearest report:
+# review: pending
+assistant-outside-weather = This app does not keep the weather. It keeps only your shop's books.
+# review: pending
+assistant-outside-tax = This app does not work out GST or any tax. It keeps your sales, commission and expenses.
+# review: pending
+assistant-outside-bank = This app does not keep a bank balance. All your money is in one cash account.
+# review: pending
+assistant-outside-market-rate = This app does not know today's rate in another market. It keeps the rates of your own sales.
+# review: pending
+assistant-outside-prices = This app does not keep prices outside your shop, such as the dollar, gold or petrol.
+# review: pending
+assistant-outside-other = This app does not keep this. It keeps your shop's books: sales, parties, cash, expenses and partners.
 # review: pending
 assistant-change-refused = I can only tell, not write
 # review: pending
@@ -233,7 +300,42 @@ assistant-stopped-calls = I could not finish reading the books. Please ask in sm
 # review: pending
 assistant-stopped-tokens = The books I read were too large for one answer. Please ask in smaller parts, for example a shorter period.
 # review: pending
+assistant-time-limit = The answer is taking too long. This is the record I have read.
+# review: pending
 assistant-stopped-tables = The records I did read are below.
+
+## The how-to steps under an answer that shows how to print or find something (plan 54 S2). The
+## backend sends the step ids and their values; the dates are shown as DD-MM-YYYY.
+
+# review: pending
+assistant-how-label = Steps
+# review: pending
+assistant-how-open-report = Open report { $report }
+# review: pending
+assistant-how-role = { $role ->
+    [seller] { -beopari }
+    [partner] { -shirakat-dar }
+    [garden] { -bagh }
+    [trip] { -market-safar }
+    [khata] { -alag-khata }
+    [staff] staff member
+    [city] city
+    [adda] { -adda }
+    [head] expense head
+   *[buyer] { -gahak }
+}
+# review: pending
+assistant-how-set-party = Choose the { assistant-how-role }: { $party } ({ $code })
+# review: pending
+assistant-how-set-record = Choose the { assistant-how-role }: { $name }
+# review: pending
+assistant-how-find-row = Look at the row for { $name }
+# review: pending
+assistant-how-set-day = Set the date to { $day }
+# review: pending
+assistant-how-set-dates = Set the dates from { $from } to { $to }
+# review: pending
+assistant-how-press-print = Press F9 to print
 # review: pending
 assistant-checks-failed = I could not write a checked answer; the records are below
 # review: pending
@@ -403,6 +505,8 @@ assistant-outcome-limit-reached = Limit reached
 assistant-outcome-offline = No internet
 # review: pending
 assistant-outcome-error = Error
+# review: pending
+assistant-outcome-time-limit = Out of time, the records read were shown
 
 ## Sources, buttons and the estimate band (FR-7.74, FR-7.86).
 

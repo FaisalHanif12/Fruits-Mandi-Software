@@ -1,5 +1,10 @@
 export { CommandError, callCommand, hasAppBridge, isUiError, toUiError } from './invoke';
-export { chooseSavePath, type SavePathOptions } from './dialog';
+export {
+  chooseOpenPath,
+  chooseSavePath,
+  type OpenPathOptions,
+  type SavePathOptions,
+} from './dialog';
 export { emitEvent, listenEvent } from './events';
 export {
   FALLBACK_ERROR_MESSAGE_ID,

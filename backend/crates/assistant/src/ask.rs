@@ -16,7 +16,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::answer::{Answer, AnswerOption, EntryRoute};
+use crate::answer::{Answer, AnswerName, AnswerOption, EntryRoute};
 
 /// How a question ended (PRD FR-7.84). The log stores the same word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -55,6 +55,11 @@ pub enum AskOutcome {
     Offline,
     /// The model could not answer (see `failure`).
     Error,
+    /// The question reached its hard limit of 25 seconds (plan 55 Section 3), or the line dropped
+    /// after the books were read: `answer` holds what was read as plain tables, and the panel adds
+    /// a plain line that the answer is late. Never an error and never "not understood". If
+    /// nothing was read the question ends as `error` instead.
+    TimeLimit,
 }
 
 /// Why a model call or the connection test failed. The panel has one reviewed message for each.
@@ -67,8 +72,10 @@ pub enum FailureKind {
     /// The connection was made and then dropped before the answer came, even after one retry
     /// (plan 52 item 6). The internet may be fine, so the panel does not say it is down.
     Dropped,
-    /// No reply within 30 seconds, or the question went past 90. A timeout at any stage, the wait
-    /// for the first byte or the read of the body, is this and never `bad_reply`.
+    /// No reply within 12 seconds of a try (and again after the one retry), or the question went
+    /// past 25 (plan 55 Section 3). A timeout at any stage, the wait for the first byte or the read
+    /// of the body, is this and never `bad_reply`. When the books were read first, the question
+    /// ends as `time_limit` with what was read instead.
     Timeout,
     /// HTTP 401: the key is wrong.
     BadKey,
@@ -122,6 +129,48 @@ impl StopReason {
     }
 }
 
+/// The kind of record a name was asked for, with a `not_found` (plan 52 Section 8). The panel's
+/// words follow it: "no seller by that name", "no item by that name".
+///
+/// Example: "Faisal ne kya becha" searches a seller: `seller`. A made-up item gives `item`; a
+/// search in no particular role (a city, a ledger of any account) gives `any`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum AskedRole {
+    /// A seller (بیوپاری).
+    Seller,
+    /// A buyer (گاہک).
+    Buyer,
+    /// An item (قسم مال).
+    Item,
+    /// A partner (شراکت دار).
+    Partner,
+    /// A garden (باغ).
+    Garden,
+    /// A market trip (مارکیٹ سفر).
+    Trip,
+    /// Any other record, or any account.
+    Any,
+}
+
+/// A name that exists, but in another role than the one asked (plan 52 Section 8). With a
+/// `not_found`: "This name is a buyer, not a seller."
+///
+/// Example: Faisal is a buyer and was asked as a seller: `{"key":"a31","id":31,"role":"buyer",
+/// "name":{"name_ur":"فیصل","name_en":"Faisal",...}}`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct FoundAs {
+    /// The record's key, for example `a31`. `assistant_pick` takes it.
+    pub key: String,
+    /// The record's id.
+    #[ts(type = "number")]
+    pub id: i64,
+    /// What he is: `seller`, `buyer` or `partner`.
+    pub role: AskedRole,
+    /// His name with the tag and code, to be shown through `displayName`.
+    pub name: AnswerName,
+}
+
 /// What every ask command gives back (plan 48 Section 4).
 ///
 /// Which fields are set for each outcome:
@@ -130,6 +179,7 @@ impl StopReason {
 /// |---|---|---|---|---|
 /// | answered, estimate, advice | set | empty | null, or set when a change was also asked | null |
 /// | which_one, not_found | null | the matches | null | null |
+/// | not_found only | `asked_role` set; `found_as` set when the name is another role's | | | |
 /// | need_dates, need_party, not_understood | null | empty | null | null |
 /// | not_understood with `stop_reason` | null, or the plain tables of the results that were read | empty | null | null |
 /// | outside_books | set (the nearest source) or null | empty | null | null |
@@ -138,6 +188,7 @@ impl StopReason {
 /// | locked | null | empty | null | null (`locked` is true) |
 /// | limit_reached | null | empty | null | null |
 /// | offline, error | null | empty | null | set |
+/// | time_limit | set (the plain tables of what was read) | empty | null | null |
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct AskReply {
     /// The row of the question log this reply is. `assistant_pick` and `assistant_rerun` take it.
@@ -169,6 +220,16 @@ pub struct AskReply {
     /// The daily limit, 20.
     #[ts(type = "number")]
     pub limit: i64,
+    /// For `not_found`: the kind of record that was asked for (plan 52 Section 8). Missing for
+    /// every other outcome.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub asked_role: Option<AskedRole>,
+    /// For `not_found` when the name exists in another role: that record, with his role. Missing
+    /// otherwise (no such name at all, or any other outcome).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub found_as: Option<FoundAs>,
 }
 
 /// A typed question.

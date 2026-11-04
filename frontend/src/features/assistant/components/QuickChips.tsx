@@ -39,7 +39,7 @@ export function QuickChips({ onQuick, busy, pickerAbove = false }: QuickChipsPro
   if (choosing) {
     return (
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 max-w-container-field flex-1">
+        <div className="min-w-0 max-w-field flex-1">
           <Field
             label={<Localized id="assistant-party-pick-label" />}
             hint={<Localized id="assistant-party-pick-hint" />}

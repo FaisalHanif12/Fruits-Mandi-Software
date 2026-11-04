@@ -120,8 +120,8 @@ pub async fn assist_open_payables<R: tauri::Runtime>(
     .await
 }
 
-/// The اگراہی فہرست (PRD FR-15.6): the buyers planned for a day by their collection weekday,
-/// with their dues, grouped by collector and city. Read only. Errors: the date codes on `date`.
+/// The اگراہی فہرست (PRD FR-15.6, plan 53 T2): every active buyer who owes, with his dues, grouped
+/// by collector and city. There is no collection day. Read only.
 #[tauri::command]
 pub async fn assist_collection_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,

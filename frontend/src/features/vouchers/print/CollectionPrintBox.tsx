@@ -1,7 +1,7 @@
 // The print box of the collection list (اگراہی فہرست, PRD FR-15.6, FR-7.36), opened from the
 // collection screen: the print language (the app language to start), where it goes (printer or PDF)
-// and the copies. The day and the filters are the screen's own, so the paper is exactly the list the
-// user sees. The paper size comes from the Printing settings.
+// and the copies. The filters are the screen's own, so the paper is exactly the list the user sees
+// (every buyer who owes, by collector and city; the list has no day, plan 53). The paper size comes from the Printing settings.
 //
 // Printing works on Windows only (plan 14 contract 8). Elsewhere the backend answers
 // `ERR_PRINT_WINDOWS_ONLY` and the "Preview" shows the same list in the app, laid out exactly as it
@@ -23,10 +23,8 @@ import { usePrintCollection } from '../../reports';
 import { usePrintingSettings } from '../../settings';
 import { CollectionPrintView } from './CollectionPrintView';
 
-/** The list to print: the day and the filters of the collection screen. */
+/** The list to print: the filters of the collection screen. */
 export interface CollectionPrintTarget {
-  /** The day as the screen typed it (`DD-MM-YYYY`). */
-  date: string;
   collectorStaffId: number | null;
   cityId: number | null;
   /** The search text of the screen: only the buyers it finds are printed. Null: no search. */
@@ -58,7 +56,6 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
       setOutcome(null);
       try {
         const result = await print.mutateAsync({
-          date: target.date,
           collector_staff_id: target.collectorStaffId,
           city_id: target.cityId,
           search: target.search,
@@ -91,7 +88,6 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
           key={language}
           mode="preview"
           input={{
-            date: target.date,
             collector_staff_id: target.collectorStaffId,
             city_id: target.cityId,
             search: target.search,
@@ -119,7 +115,7 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
       }}
       className="flex flex-col gap-4"
     >
-      <Localized id="vouchers-collection-print-help" vars={{ date: target.date }}>
+      <Localized id="vouchers-collection-print-help">
         <p className="type-body text-ink-muted" />
       </Localized>
       {error === null ? null : <ErrorNotice error={error} fieldsShown={['copies']} />}

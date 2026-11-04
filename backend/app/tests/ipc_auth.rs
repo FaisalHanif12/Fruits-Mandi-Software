@@ -1139,7 +1139,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "father_or_firm_en": "", "city_id": null, "adda_id": null, "phone1": "", "phone2": "",
                 "address": "", "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
                 "opening_is_advance": false, "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-                "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": "" } }),
+                "collector_staff_id": null, "is_active": true, "note": "" } }),
             true,
         ),
         (
@@ -1203,7 +1203,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "adda_id": null, "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
                 "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
                 "credit_allowed": true, "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
-                "collection_weekday": null, "is_active": true, "note": "" } } }),
+                "is_active": true, "note": "" } } }),
             true,
         ),
         ("reports_list_printers", json!({}), true),
@@ -1254,6 +1254,25 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             "backup_key_confirm",
             json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
             true,
+        ),
+        // Plan 56, restore on a new computer (append-only block): open before sign-in, and
+        // refused with ERR_ALREADY_SET_UP once an Owner exists.
+        (
+            "backup_first_run_list",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" } } }),
+            false,
+        ),
+        (
+            "backup_first_run_preview",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" }, "copy": null,
+                "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
+        ),
+        (
+            "backup_first_run_restore",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" },
+                "copy": "mandi-20200101T000000000Z.mbk", "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
         ),
         // Run B, plan 20 (append-only block).
         ("reports_catalog", json!({}), true),
@@ -1629,6 +1648,9 @@ fn without_a_session_every_protected_command_is_refused_without_a_row() {
                         | "setup_first_run"
                         | "auth_login"
                         | "auth_recover"
+                        | "backup_first_run_list"
+                        | "backup_first_run_preview"
+                        | "backup_first_run_restore"
                 ),
                 "{command} is open to everyone but is not on the list"
             );
@@ -2293,7 +2315,7 @@ fn the_voucher_commands_work_through_the_ipc() {
                 "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
                 "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
                 "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-                "collector_staff_id": null, "collection_weekday": 5, "is_active": true,
+                "collector_staff_id": null, "is_active": true,
                 "note": "" } }),
         )["id"]
             .as_i64()
@@ -2454,15 +2476,14 @@ fn the_voucher_commands_work_through_the_ipc() {
         "ERR_VOUCHER_CANCELLED"
     );
 
-    // The collection list (buyers planned on a Saturday), the payables and the advances report.
+    // The collection list (every buyer who owes, no collection day), the payables and the
+    // advances report.
     let list = h.ok(
         "assist_collection_list",
-        json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null } }),
+        json!({ "input": { "collector_staff_id": null, "city_id": null } }),
     );
-    assert_eq!(
-        (list["weekday"].clone(), list["total_paisa"].clone()),
-        (json!(5), json!(300_000))
-    );
+    assert_eq!(list["total_paisa"], json!(300_000));
+    assert!(list.get("weekday").is_none());
     let payables = h.ok(
         "assist_open_payables",
         json!({ "input": { "seller_id": rahim, "person_key": null, "include_settled": false } }),
@@ -2534,7 +2555,7 @@ fn the_bikri_commands_work_through_the_ipc() {
                 "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
                 "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
                 "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-                "collector_staff_id": null, "collection_weekday": null, "is_active": true,
+                "collector_staff_id": null, "is_active": true,
                 "note": "" } }),
         )["id"]
             .as_i64()
@@ -2983,7 +3004,7 @@ fn tag_account_json(tag: &str) -> Value {
         "city_id": null, "adda_id": null, "phone1": "03001234567", "phone2": "", "address": "",
         "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
         "opening_is_advance": false, "credit_allowed": true, "credit_limit": "",
-        "default_marka_id": null, "collector_staff_id": null, "collection_weekday": null,
+        "default_marka_id": null, "collector_staff_id": null,
         "is_active": true, "note": "", "tag": tag })
 }
 
@@ -3083,9 +3104,9 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
         "ERR_REQUIRED"
     );
 
-    // The collection list: an empty day prints an empty list; the print command needs Windows.
-    let request = json!({ "date": "10-10-2026", "collector_staff_id": null, "city_id": null,
-        "language": "ur" });
+    // The collection list: with no buyer who owes it prints an empty list; the print command
+    // needs Windows.
+    let request = json!({ "collector_staff_id": null, "city_id": null, "language": "ur" });
     let empty = h.ok("reports_collection_print_data", json!({ "input": request }));
     assert_eq!(empty["doc"], "collection_list");
     assert_eq!(empty["groups"], json!([]));
@@ -3095,8 +3116,7 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
     assert_eq!(
         h.code(
             "reports_collection_print_data",
-            json!({ "input": { "date": "10-10-2026", "collector_staff_id": 99, "city_id": null,
-                "language": "ur" } })
+            json!({ "input": { "collector_staff_id": 99, "city_id": null, "language": "ur" } })
         ),
         "ERR_NOT_FOUND"
     );
@@ -3104,7 +3124,7 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
         assert_eq!(
             h.code(
                 "reports_print_collection",
-                json!({ "input": { "date": "10-10-2026", "collector_staff_id": null, "city_id": null,
+                json!({ "input": { "collector_staff_id": null, "city_id": null,
                     "language": "ur", "copies": null, "to": "pdf" } })
             ),
             "ERR_PRINT_WINDOWS_ONLY"

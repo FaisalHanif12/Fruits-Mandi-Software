@@ -17,6 +17,7 @@
 //! - `r20.<buyer|total>.<column>` and the same for `r24`, `r26`, `r32`, `r38`: balance lists.
 //! - `r12.<period>.<line>`, `r30.<period>.<partner|total>.<column>`, `r29.<period>.<head|total>...`
 //! - `tiles.<name>`, `partner.<a|b|c>.<column>`, `top.<what>`: leaders worked out from the rows.
+//! - `cal.<name>`: the dates a period in words becomes (today, yesterday, month_start, last_month_start ...).
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
@@ -44,6 +45,47 @@ pub const PARTY_DAYS: [&str; 5] = [
     "d2026_09_18",
     "d2026_04_25",
 ];
+
+/// The dates a period in words becomes (`cal.<name>`, `YYYY-MM-DD`), worked out by the app's OWN
+/// period helper (`mandi_assistant::tools::period::compute`, the one behind the `period` tool and
+/// the understand step), so the bank expects what the app means: "last week" is the calendar week
+/// before this one, Monday to Sunday. Only the two ends of "1 se 15 October" are the Owner's own
+/// dates, given as a range.
+fn calendar(o: &mut Oracle) {
+    use mandi_assistant::tools::period::{Input, compute};
+    let today = date(TODAY);
+    let day = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    let range_of = |kind: &str, month: Option<i64>| {
+        let input: Input = serde_json::from_value(serde_json::json!({
+            "kind": kind, "month": month, "day": null, "from": null, "to": null, "n": null
+        }))
+        .unwrap_or_else(|e| panic!("period input {kind}: {e}"));
+        compute(today, &input, &[]).unwrap_or_else(|e| panic!("period {kind}: {e:?}"))
+    };
+    let first = |kind: &str, month: Option<i64>| range_of(kind, month).from.expect("a first day");
+    let last = |kind: &str, month: Option<i64>| range_of(kind, month).to;
+    for (name, value) in [
+        ("today", last("today", None)),
+        ("yesterday", last("yesterday", None)),
+        ("month_start", first("this_month", None)),
+        ("last_month_start", first("last_month", None)),
+        ("last_month_end", last("last_month", None)),
+        ("sep_start", first("month", Some(9))),
+        ("sep_end", last("month", Some(9))),
+        ("last_week_start", first("last_week", None)),
+        ("last_week_end", last("last_week", None)),
+        (
+            "oct_01",
+            NaiveDate::from_ymd_opt(today.year(), 10, 1).unwrap_or(today),
+        ),
+        (
+            "oct_15",
+            NaiveDate::from_ymd_opt(today.year(), 10, 15).unwrap_or(today),
+        ),
+    ] {
+        o.put(format!("cal.{name}"), day(value));
+    }
+}
 
 /// The whole rupees a money cell holds.
 fn rupees_of(cell: &Cell) -> Option<i64> {
@@ -446,6 +488,9 @@ pub fn compute(y: &Year) -> Oracle {
             &run_a(y, AnalyticsView::A, f),
         );
     }
+    // The calendar of the print questions (plan 54 section 6): the exact dates a period in words
+    // becomes, from the oracle's own clock (today is fixed), never typed in the bank.
+    calendar(&mut o);
     // A party's day (plan 52 section 8.1): what one buyer bought or one seller sold on one day,
     // each item with its qty and amount, and the day's total. Only a day on which the party has
     // lines is written. A buyer's amount is also given with the commission and laga added (the

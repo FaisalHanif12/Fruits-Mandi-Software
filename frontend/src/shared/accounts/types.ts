@@ -85,8 +85,6 @@ export interface AccountDraft {
   credit_limit: string;
   default_marka: AccountRef | null;
   collector: AccountRef | null;
-  /** 0 (Monday) to 6 (Sunday), or null for no day. */
-  collection_weekday: number | null;
   is_active: boolean;
   note: string;
 }

@@ -526,3 +526,106 @@ fn the_months_list_says_where_each_month_stands() {
         (MonthState::Ready, 1)
     );
 }
+
+#[test]
+fn a_new_accounts_opening_inside_a_closed_month_leaves_the_month_close_as_it_was() {
+    // Plan 53 §9 (Umar): a NEW account's opening may be dated inside a month-closed month. It
+    // touches no income or expense account, so the month close, the partners' totals and the
+    // share rows stay exactly as they were; only ابتدائی فرق and the new account move.
+    let w = october_closed();
+    close(&w.env.ctx, &w.owner, &input("2026-10")).unwrap();
+    let months = || {
+        list(&w.env.ctx)
+            .unwrap()
+            .rows
+            .into_iter()
+            .map(|r| (r.month, r.state, r.closed_on))
+            .collect::<Vec<_>>()
+    };
+    let before = (
+        months(),
+        totals(&w),
+        shares(&w),
+        trial(&w),
+        [ReportId::R28, ReportId::R29, ReportId::R30]
+            .iter()
+            .map(|id| page_totals(&w, *id))
+            .collect::<Vec<_>>(),
+        raw(&w.dir)
+            .query_row(
+                "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+                 FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+                 WHERE substr(a.code, 1, 2) IN ('04', '05')",
+                [],
+                |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+            )
+            .unwrap(),
+    );
+    assert_eq!(months()[1].1, MonthState::Closed);
+
+    // A new buyer with 5,000 بنام, dated 10-10-26: inside October, a month-closed month.
+    let input_json = serde_json::json!({
+        "id": null, "version": null, "account_type": "buyer", "control_id": null, "code": "",
+        "name_ur": "طارق محمود", "name_en": "Tariq Mehmood", "confirmed_rules_words": [],
+        "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
+        "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
+        "opening_date": "10-10-2026", "opening_dr": "5,000", "opening_cr": "",
+        "opening_is_advance": false, "credit_allowed": true, "credit_limit": "",
+        "default_marka_id": null, "collector_staff_id": null, "is_active": true, "note": "",
+        "tag": ""
+    });
+    let mut form: mandi_services::core::accounts::AccountInput =
+        serde_json::from_value(input_json).unwrap();
+    let saved = loop {
+        match mandi_services::accounts::save(&w.env.ctx, &w.owner, &form) {
+            Ok(row) => break row,
+            Err(ServiceError::Rejected(items))
+                if items
+                    .iter()
+                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
+            {
+                for item in items {
+                    if let Some(mandi_services::core::error::ErrorValue::Text(words)) =
+                        item.values.get("words")
+                    {
+                        form.confirmed_rules_words
+                            .extend(words.split(' ').map(str::to_owned));
+                    }
+                }
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    };
+    assert_eq!(saved.opening_date.as_deref(), Some("2026-10-10"));
+
+    let after = (
+        months(),
+        totals(&w),
+        shares(&w),
+        trial(&w),
+        [ReportId::R28, ReportId::R29, ReportId::R30]
+            .iter()
+            .map(|id| page_totals(&w, *id))
+            .collect::<Vec<_>>(),
+        raw(&w.dir)
+            .query_row(
+                "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+                 FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+                 WHERE substr(a.code, 1, 2) IN ('04', '05')",
+                [],
+                |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+            )
+            .unwrap(),
+    );
+    // The month is still closed, with the same close; nobody's total, no share row, no income or
+    // expense line and none of the month's reports moved.
+    assert_eq!(before.0, after.0);
+    assert_eq!(before.1, after.1, "the partners' totals");
+    assert_eq!(before.2, after.2, "no share row");
+    assert_eq!(before.4, after.4, "R28, R29 and R30");
+    assert_eq!(before.5, after.5, "income and expense lines");
+    // Only the opening moved the trial balance, on both sides by the same 5,000, and it balances.
+    assert_eq!(after.3.0, before.3.0 + 5_000);
+    assert_eq!(after.3.1, before.3.1 + 5_000);
+    ledger::verify_journal_chain(&w.env.ctx).unwrap();
+}

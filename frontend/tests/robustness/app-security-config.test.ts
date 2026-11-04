@@ -52,6 +52,10 @@ const PLUGIN_PERMISSIONS = new Set([
   // folder) and writes the file itself: the Excel export and the support file. A one-line update
   // made by frontend at the lead's word, not by robustness.
   'dialog:allow-save',
+  // Plan 56 (approved there, Section 8, Q4): the open dialog only returns a path, for the file and
+  // folder picker of "restore on a new computer". The backend checks the path itself and reads the
+  // copy itself (ERR_ALREADY_SET_UP once a shop exists). Nothing else is added.
+  'dialog:allow-open',
 ]);
 
 /** The five plugins of Tech Stack 2. */

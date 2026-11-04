@@ -29,7 +29,6 @@
   "credit_limit_paisa": null,
   "default_marka": null,
   "collector": null,
-  "collection_weekday": null,
   "is_system": false,
   "can_take_opening": true,
   "is_pukhta_khata": false,

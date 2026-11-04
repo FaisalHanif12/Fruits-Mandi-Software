@@ -42,6 +42,7 @@ import type { SearchHit } from '../../../shared/search';
 import type { FieldSpec, MasterConfig } from '../configs';
 import { MasterFieldInput, fieldPath } from './MasterFieldInput';
 import { labelOf, newValues, sameValues, valuesOf, type FormValues } from '../draft';
+import { ActiveSwitch, useActiveChange } from '../active';
 import { useSaveMaster, useSetMasterActive } from '../hooks';
 import { useMasterFocus } from '../store';
 import type { MasterRecord } from '../types';
@@ -105,6 +106,10 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
   const [askLeave, setAskLeave] = useState(false);
   const save = useSaveMaster(config.kind);
   const setActive = useSetMasterActive(config.kind);
+  // Staff have the فعال / غیر فعال switch in the form (PRD v1.23); it changes the person at once and the
+  // form stays, so the Owner sees the new state. The other masters keep the button and its question.
+  const activeChange = useActiveChange(config.kind);
+  const hasSwitch = config.activeSwitch === true && record !== null;
   const remember = useMasterFocus((state) => state.remember);
   const containerRef = useFocusFirstField<HTMLFormElement>();
   const nameRef = useRef<HTMLFormElement>(null);
@@ -280,12 +285,24 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
     <div className="flex max-w-form flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         {embedded === undefined ? heading : null}
-        {record !== null && !record.is_active ? (
+        {record !== null && !record.is_active && !hasSwitch ? (
           <Localized id="masters-status-inactive">
             <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
           </Localized>
         ) : null}
+        {hasSwitch ? (
+          <ActiveSwitch
+            record={record}
+            onChange={activeChange.change}
+            busy={activeChange.isPending}
+          />
+        ) : null}
       </div>
+      {hasSwitch ? (
+        <Localized id="masters-staff-active-note">
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      ) : null}
       {record !== null && !record.is_active ? (
         <Localized id="masters-inactive-note">
           <p className="type-body text-ink-muted" />
@@ -366,7 +383,7 @@ export function MasterForm({ config, record, suggestedCode, embedded }: MasterFo
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {record === null ? null : record.is_active ? (
+            {record === null || hasSwitch ? null : record.is_active ? (
               <Button
                 variant="danger"
                 busy={setActive.isPending}

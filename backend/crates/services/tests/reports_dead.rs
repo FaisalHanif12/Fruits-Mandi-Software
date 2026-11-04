@@ -920,7 +920,7 @@ fn a_dead_seller_leaves_r24_and_r26_and_a_dead_one_time_person_is_not_made_regul
             "phone1": "03000000000", "phone2": "", "address": "", "linked_account_id": null,
             "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
             "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-            "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": ""
+            "collector_staff_id": null, "is_active": true, "note": ""
         }
     });
     let input: mandi_services::core::vouchers::MakeRegularInput =

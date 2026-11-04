@@ -1,13 +1,13 @@
 // The address of the hidden print window for the collection list (plan 17e, PRD FR-15.6):
 // `#/print?collection=<YYYY-MM-DD>&doc=collection_list&language=<ur|en>[&collector=<id>][&city=<id>]
 // &job=<job>`. The window is opened by the backend, so every value is read as plain text and checked
-// here. A value that is not right is a failed print, never a guess. The day is `YYYY-MM-DD` in the
-// address and `DD-MM-YYYY` in the command (PRD FR-7.19), so the same day is sent. The job name is
-// checked by the same function as every other print window (one rule for the window).
+// here. A value that is not right is a failed print, never a guess. The day in the address is the day
+// the list was made on; the list itself has no day (every buyer who owes is on it, PRD FR-15.6, plan
+// 53), so it is checked and not sent. The job name is checked by the same function as every other print
+// window (one rule for the window).
 
 import type { CollectionPrintDataInput } from '../../../bindings/CollectionPrintDataInput';
 import type { Language } from '../../../bindings/Language';
-import { isoToDisplayDate } from '../../../shared/format';
 import { jobOf, positiveInt } from '../../../shared/print';
 
 export interface CollectionPrintParams {
@@ -63,7 +63,6 @@ export function parseCollectionPrintParams(searchStr: string): CollectionPrintPa
   return {
     job,
     input: {
-      date: isoToDisplayDate(day),
       collector_staff_id: collector,
       city_id: city,
       search: search.get('search'),

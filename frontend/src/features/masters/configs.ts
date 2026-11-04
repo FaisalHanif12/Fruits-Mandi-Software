@@ -80,6 +80,12 @@ export interface MasterConfig {
   shown: readonly ShownSpec[];
   /** Columns after the code and the names. */
   extraColumns: readonly ListColumn<MasterRecord>[];
+  /**
+   * The list has a فعال / غیر فعال switch on each row and the form has one too (staff, PRD v1.23): an
+   * active munshi prints in every header. Such a list shows the inactive ones too, so a person made
+   * inactive stays in sight to be made active again.
+   */
+  activeSwitch?: boolean;
 }
 
 const choice = (prefix: string, values: readonly string[]): ChoiceOption[] =>
@@ -367,6 +373,7 @@ export const MASTER_CONFIGS: readonly MasterConfig[] = [
       latinColumn('phone', 'masters-staff-phone'),
       shownColumn('account_code', 'masters-staff-account'),
     ],
+    activeSwitch: true,
   },
 ];
 
@@ -381,8 +388,14 @@ export function configOfPath(path: string): MasterConfig | undefined {
   return MASTER_CONFIGS.find((config) => config.path === path);
 }
 
-/** The columns of a master's list: code, name, the other script's name, its own, then the state. */
-export function columnsOf(config: MasterConfig): ListColumn<MasterRecord>[] {
+/**
+ * The columns of a master's list: code, name, the other script's name, its own, then the state. A list
+ * with `activeSwitch` gets the switch column from the screen (`activeColumn`), which can change a master.
+ */
+export function columnsOf(
+  config: MasterConfig,
+  statusColumn?: ListColumn<MasterRecord>,
+): ListColumn<MasterRecord>[] {
   const columns: ListColumn<MasterRecord>[] = [];
   if (config.hasCode) {
     columns.push({
@@ -414,12 +427,15 @@ export function columnsOf(config: MasterConfig): ListColumn<MasterRecord>[] {
       },
     );
   }
-  columns.push(...config.extraColumns, {
-    field: 'status',
-    type: 'status',
-    headerId: 'masters-col-status',
-    value: (row, { text }) =>
-      text(row.is_active ? 'masters-status-active' : 'masters-status-inactive'),
-  });
+  columns.push(
+    ...config.extraColumns,
+    statusColumn ?? {
+      field: 'status',
+      type: 'status',
+      headerId: 'masters-col-status',
+      value: (row, { text }) =>
+        text(row.is_active ? 'masters-status-active' : 'masters-status-inactive'),
+    },
+  );
   return columns;
 }

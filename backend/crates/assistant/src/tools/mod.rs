@@ -36,6 +36,7 @@ pub mod party;
 pub mod period;
 pub mod records;
 pub mod report;
+pub mod scope;
 pub mod teach;
 pub mod tiles;
 pub mod typed;

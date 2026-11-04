@@ -1,8 +1,8 @@
-// The collection list on paper (اگراہی فہرست, PRD FR-15.6, FR-7.61, FR-19.13): the buyers planned for
-// a day, by collector and then by city, each with his short code, name with tag, phone, dues and
+// The collection list on paper (اگراہی فہرست, PRD FR-15.6, FR-7.61, FR-19.13): every buyer who owes,
+// by collector and then by city, each with his short code, name with tag, phone, dues and
 // oldest open bill, an empty column for the collector's note, a total for every group and the total
-// OF THIS LIST under the last group. It is NOT the shop's total اگراہی (R20): the list holds only
-// the buyers whose collection day is this weekday. It sits under the shared header and footer, and
+// OF THIS LIST under the last group. With no filter it is the shop's total اگراہی (R20); a collector,
+// a city or a search narrows it. There is no day on it (plan 53). It sits under the shared header and footer, and
 // lays out what the backend sent: every number, date and total is already formatted, and the
 // template adds nothing up (CLAUDE.md rule 1).
 //

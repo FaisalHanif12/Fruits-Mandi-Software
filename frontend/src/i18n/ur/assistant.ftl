@@ -82,6 +82,22 @@ assistant-step-estimating = اندازہ لگا رہا ہوں…
 assistant-step-checking = حساب جانچ رہا ہوں…
 # review: pending
 assistant-step-rewriting = جواب دوبارہ لکھ رہا ہوں…
+# review: pending
+assistant-step-understood = { $kind ->
+    [list] سمجھ گیا: آپ کھاتوں سے ایک فہرست چاہتے ہیں۔
+    [print] سمجھ گیا: آپ کچھ پرنٹ کرنا چاہتے ہیں۔
+    [help] سمجھ گیا: آپ جاننا چاہتے ہیں کہ ایپ میں یہ کام کیسے ہوتا ہے۔
+    [advice] سمجھ گیا: آپ مشورہ چاہتے ہیں۔
+   *[figure] سمجھ گیا: آپ کھاتوں سے ایک رقم چاہتے ہیں۔
+}
+# review: pending
+assistant-step-writing = جواب لکھ رہا ہوں…
+# review: pending
+assistant-step-retrying = معمول سے زیادہ دیر لگ رہی ہے، دوبارہ کوشش کر رہا ہوں…
+# review: pending
+assistant-step-tools-off = اب بھی دیر ہو رہی ہے۔ مزید پڑھنا بند کر کے جو پڑھ چکا ہوں اسی سے جواب لکھ رہا ہوں…
+# review: pending
+assistant-waited = { $seconds } سیکنڈ انتظار
 
 ## The quick questions (FR-7.80). They need no internet and no model, and they are not counted.
 
@@ -207,6 +223,42 @@ assistant-not-found = یہ نام نہیں ملا
 # review: pending
 assistant-not-found-closest = سب سے قریب کے نام:
 # review: pending
+assistant-not-found-role = { $role ->
+    [seller] آپ جس { -beopari } کا پوچھ رہے ہیں، اس نام کا کوئی { -beopari } نہیں۔
+    [buyer] آپ جس { -gahak } کا پوچھ رہے ہیں، اس نام کا کوئی { -gahak } نہیں۔
+    [item] آپ جس { -qism-maal } کا پوچھ رہے ہیں، اس نام کی کوئی { -qism-maal } نہیں۔
+    [partner] آپ جس { -shirakat-dar } کا پوچھ رہے ہیں، اس نام کا کوئی { -shirakat-dar } نہیں۔
+    [garden] آپ جس { -bagh } کا پوچھ رہے ہیں، اس نام کا کوئی { -bagh } نہیں۔
+    [trip] آپ جس { -market-safar } کا پوچھ رہے ہیں، اس نام کا کوئی { -market-safar } نہیں۔
+   *[any] آپ جس نام کا پوچھ رہے ہیں، وہ کھاتوں میں نہیں ملا۔
+}
+# review: pending
+assistant-found-as-other = یہ نام { $asked } نہیں، { $found } ہے۔
+# review: pending
+assistant-role-seller = { -beopari }
+# review: pending
+assistant-role-buyer = { -gahak }
+# review: pending
+assistant-role-item = { -qism-maal }
+# review: pending
+assistant-role-partner = { -shirakat-dar }
+# review: pending
+assistant-role-garden = { -bagh }
+# review: pending
+assistant-role-trip = { -market-safar }
+# review: pending
+assistant-role-any = کوئی فہرست
+# review: pending
+assistant-found-as-ask = { $found ->
+    [seller] { $name } کی { -bikri } دکھائیں
+    [buyer] { $name } کی { -khareedari } دکھائیں
+    [item] { $name } کی { -bikri } دکھائیں
+    [partner] { $name } کا { -hissa } دکھائیں
+    [garden] { $name } کا { -khata } دکھائیں
+    [trip] { $name } کا { -khata } دکھائیں
+   *[other] { $name } دکھائیں
+}
+# review: pending
 assistant-option-balance-label = بقایا
 # review: pending
 assistant-need-dates = مدت واضح نہیں۔ شروع اور آخری تاریخ لکھ کر دوبارہ پوچھیں، مثلاً 01-10-2026 سے 15-10-2026 تک۔
@@ -216,6 +268,18 @@ assistant-need-party = کس پارٹی کا؟ اس کا نام یا کوڈ لک�
 assistant-outside-books = یہ سوال کھاتوں سے باہر ہے
 # review: pending
 assistant-outside-books-nearest = سب سے قریب کی رپورٹ:
+# review: pending
+assistant-outside-weather = یہ ایپ موسم کا حال نہیں رکھتی۔ یہ صرف آپ کی دکان کے کھاتے رکھتی ہے۔
+# review: pending
+assistant-outside-tax = یہ ایپ جی ایس ٹی یا کوئی ٹیکس نہیں نکالتی۔ یہ آپ کی { -bikri }، { -commission } اور { -kharcha } رکھتی ہے۔
+# review: pending
+assistant-outside-bank = یہ ایپ بینک کا بیلنس نہیں رکھتی۔ آپ کی ساری رقم ایک ہی کھاتے { -rokar } میں ہے۔
+# review: pending
+assistant-outside-market-rate = یہ ایپ کسی دوسری منڈی کا آج کا ریٹ نہیں جانتی۔ یہ آپ کی اپنی { -bikri } کے ریٹ رکھتی ہے۔
+# review: pending
+assistant-outside-prices = یہ ایپ آپ کی دکان سے باہر کی قیمتیں نہیں رکھتی، جیسے ڈالر، سونا یا پیٹرول۔
+# review: pending
+assistant-outside-other = یہ ایپ یہ چیز نہیں رکھتی۔ یہ آپ کی دکان کے کھاتے رکھتی ہے: { -bikri }، پارٹیاں، { -rokar }، { -kharcha } اور { -shirakat-dar }۔
 # review: pending
 assistant-change-refused = میں صرف بتا سکتا ہوں، کچھ لکھ نہیں سکتا
 # review: pending
@@ -233,7 +297,42 @@ assistant-stopped-calls = میں کھاتے پورے نہیں پڑھ سکا۔ س
 # review: pending
 assistant-stopped-tokens = پڑھے ہوئے کھاتے ایک جواب کے لیے بہت بڑے تھے۔ سوال چھوٹے حصوں میں پوچھیں، مثلاً کم مدت۔
 # review: pending
+assistant-time-limit = جواب میں دیر ہو رہی ہے، یہ پڑھا ہوا ریکارڈ ہے۔
+# review: pending
 assistant-stopped-tables = جو ریکارڈ میں پڑھ سکا وہ نیچے ہیں۔
+
+## The how-to steps under an answer that shows how to print or find something (plan 54 S2). The
+## backend sends the step ids and their values; the dates are shown as DD-MM-YYYY.
+
+# review: pending
+assistant-how-label = طریقہ
+# review: pending
+assistant-how-open-report = رپورٹ { $report } کھولیں
+# review: pending
+assistant-how-role = { $role ->
+    [seller] { -beopari }
+    [partner] { -shirakat-dar }
+    [garden] { -bagh }
+    [trip] { -market-safar }
+    [khata] { -alag-khata }
+    [staff] عملے کا فرد
+    [city] شہر
+    [adda] { -adda }
+    [head] { -kharcha } مد
+   *[buyer] { -gahak }
+}
+# review: pending
+assistant-how-set-party = { assistant-how-role } چنیں: { $party } ({ $code })
+# review: pending
+assistant-how-set-record = { assistant-how-role } چنیں: { $name }
+# review: pending
+assistant-how-find-row = { $name } کی سطر دیکھیں
+# review: pending
+assistant-how-set-day = تاریخ { $day } رکھیں
+# review: pending
+assistant-how-set-dates = تاریخیں { $from } سے { $to } تک رکھیں
+# review: pending
+assistant-how-press-print = پرنٹ کے لیے F9 دبائیں
 # review: pending
 assistant-checks-failed = میں جانچا ہوا جواب نہیں لکھ سکا، نیچے اصل ریکارڈ ہے
 # review: pending
@@ -403,6 +502,8 @@ assistant-outcome-limit-reached = حد پوری
 assistant-outcome-offline = انٹرنیٹ نہیں
 # review: pending
 assistant-outcome-error = خرابی
+# review: pending
+assistant-outcome-time-limit = وقت ختم، پڑھا ہوا ریکارڈ دکھایا گیا
 
 ## Sources, buttons and the estimate band (FR-7.74, FR-7.86).
 

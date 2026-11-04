@@ -599,6 +599,19 @@ const EXPECTED_FILES: &[&str] = &[
     "WireCode.ts",
     "BackupErrorItem.ts",
     "BackupWireError.ts",
+    // Plan 56, restore on a new computer (append-only block).
+    "CloudAccountInput.ts",
+    "RestoreSource.ts",
+    "FirstRunListInput.ts",
+    "FirstRunCopies.ts",
+    "FirstRunPreviewInput.ts",
+    "FirstRunRestoreInput.ts",
+    "FirstRunCheckName.ts",
+    "FirstRunCheck.ts",
+    "FirstRunPreview.ts",
+    "FirstRunRestoreDone.ts",
+    "RestoreStage.ts",
+    "RestoreProgress.ts",
     // Run B, plan 20 (append-only block).
     "ReportId.ts",
     "ReportGroup.ts",
@@ -793,6 +806,7 @@ const EXPECTED_FILES: &[&str] = &[
     "EstimateMethod.ts",
     "EstimateMethodKind.ts",
     "AnswerWorking.ts",
+    "HowStep.ts",
     "WorkingStep.ts",
     "WorkingOp.ts",
     "PlaceValue.ts",
@@ -1291,6 +1305,15 @@ fn export_bindings() {
     mandi_backup::api::BackupSettingsInput::export_all(&cfg).unwrap();
     mandi_backup::BackupCode::export_all(&cfg).unwrap();
     mandi_app_lib::commands::backup::BackupWireError::export_all(&cfg).unwrap();
+    // Plan 56, restore on a new computer (append-only block).
+    mandi_backup::api::RestoreSource::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunListInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunCopies::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunPreviewInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunRestoreInput::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunPreview::export_all(&cfg).unwrap();
+    mandi_backup::api::FirstRunRestoreDone::export_all(&cfg).unwrap();
+    mandi_backup::api::RestoreProgress::export_all(&cfg).unwrap();
     // Run B, plan 20 (append-only block).
     mandi_reports::reports::CatalogEntry::export_all(&cfg).unwrap();
     mandi_reports::reports::ReportRunInput::export_all(&cfg).unwrap();

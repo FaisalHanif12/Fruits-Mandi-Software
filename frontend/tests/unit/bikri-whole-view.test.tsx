@@ -138,9 +138,12 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     const strip = () =>
       screen.getByRole('region', { name: named(message(language, 'bikri-strip-label')) });
     // Two lots: the one line names the lot it shows, so the numbers are not taken for the sale's.
-    expect(visible(strip().textContent)).toContain(
-      message(language, 'bikri-summary-lot', { lot: 2 }),
-    );
+    // The strip fills in when the preview answers, so a busy machine needs the wait.
+    await waitFor(() => {
+      expect(visible(strip().textContent)).toContain(
+        message(language, 'bikri-summary-lot', { lot: 2 }),
+      );
+    });
     await user.click(switchTo(linesArea(language, false), language, true));
     await waitFor(() => {
       expect(visible(strip().textContent)).toContain(message(language, 'bikri-summary-whole'));

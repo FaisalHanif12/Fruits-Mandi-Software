@@ -271,7 +271,6 @@ fn run(path: &Path) -> Result<(), ServiceError> {
                     credit_limit: String::new(),
                     default_marka_id: None,
                     collector_staff_id: None,
-                    collection_weekday: None,
                     is_active: true,
                     note: String::new(),
                     tag: String::new(),

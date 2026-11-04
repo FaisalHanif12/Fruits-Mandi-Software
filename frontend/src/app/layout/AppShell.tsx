@@ -81,22 +81,20 @@ export function AppShell({
           {/* The Index form of a picker's "add" button is drawn over the screen, in the slot below
               (shared/ui/work-area.ts). */}
           <div className="relative flex min-h-0 flex-1 flex-col">
+            {/* The screen runs down to the status bar. The round launcher floats over its end corner, so the
+                bottom padding of the screen is as tall as the launcher and its gaps (`pb-corner`): the last
+                row of any screen can scroll clear of it and nothing is left under it (plan 52, changed
+                after Umar's own test: no empty band under the content). */}
             {/* `relative` makes the screen the containing block of the hidden native <select> that
                 Radix Select keeps beside each drop-down. Without it that element sits against the
                 window, outside this scroll area, and the whole page scrolled (finding 29). */}
             <main
               ref={screen}
-              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto p-6 short:py-2 wide:mx-auto wide:w-full wide:max-w-page"
+              className="relative min-h-0 flex-1 scroll-pb-strip overflow-auto px-6 pt-6 pb-corner short:pt-2 wide:mx-auto wide:w-full wide:max-w-page"
             >
               {/* Run B, plan 20 (FR-7.65): the party card's ledger and statement buttons open here. */}
               <PartyReportLinks>{children}</PartyReportLinks>
             </main>
-            {/* The corner of the round launcher (plan 52): it floats over the end corner above the
-                status bar, so a band as tall as the launcher and its gaps is kept under the screen.
-                It is outside the scroll area, not padding in it: a screen whose content is taller than
-                its box overflows with no padding after it, and its last row or page buttons would end
-                under the launcher. Here the last row of any screen ends above it. */}
-            <div aria-hidden="true" className="h-corner shrink-0" />
             <div ref={setSlot} className="pointer-events-none absolute inset-0 z-40" />
           </div>
         </div>

@@ -195,7 +195,7 @@ describe.each(LANGUAGES)('the collection list template (%s)', (language: Languag
   });
 });
 
-const TARGET = { date: '10-10-2026', collectorStaffId: 7, cityId: null, search: null };
+const TARGET = { collectorStaffId: 7, cityId: null, search: null };
 
 describe.each(LANGUAGES)('the print box of the collection list (%s)', (language: Language) => {
   beforeEach(() => {
@@ -230,9 +230,7 @@ describe.each(LANGUAGES)('the print box of the collection list (%s)', (language:
     open();
     const box = await screen.findByRole('dialog');
     expect(textOf(box)).toContain(message(language, 'vouchers-collection-print-title'));
-    expect(textOf(box)).toContain(
-      message(language, 'vouchers-collection-print-help', { date: '10-10-2026' }),
-    );
+    expect(textOf(box)).toContain(message(language, 'vouchers-collection-print-help'));
     const choice = within(box).getByRole('button', {
       name: (name) => visible(name) === message(language, `common-language-${language}`),
     });
@@ -251,7 +249,6 @@ describe.each(LANGUAGES)('the print box of the collection list (%s)', (language:
       expect(reportsApi.reportsPrintCollection).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(reportsApi.reportsPrintCollection).mock.calls[0]?.[0]).toEqual({
-      date: '10-10-2026',
       collector_staff_id: 7,
       city_id: null,
       search: null,
@@ -298,7 +295,6 @@ describe.each(LANGUAGES)('the print box of the collection list (%s)', (language:
       return found;
     });
     expect(reportsApi.reportsCollectionPrintData).toHaveBeenCalledWith({
-      date: '10-10-2026',
       collector_staff_id: 7,
       city_id: null,
       search: null,

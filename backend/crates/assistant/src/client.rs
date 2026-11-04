@@ -292,6 +292,7 @@ impl ModelClient for OpenRouterClient {
 pub struct RecordedClient {
     replies: Mutex<VecDeque<Result<Value, CallError>>>,
     seen: Mutex<Vec<Value>>,
+    waits: Mutex<Vec<Duration>>,
 }
 
 impl RecordedClient {
@@ -305,7 +306,16 @@ impl RecordedClient {
         Self {
             replies: Mutex::new(results.into()),
             seen: Mutex::new(Vec::new()),
+            waits: Mutex::new(Vec::new()),
         }
+    }
+
+    /// The time each call was allowed to wait, in order (the `timeout` the app gave it).
+    pub fn waits(&self) -> Vec<Duration> {
+        self.waits
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     /// The request bodies it was given, in order.
@@ -322,7 +332,11 @@ impl ModelClient for RecordedClient {
         Duration::ZERO
     }
 
-    fn call(&self, _key: &str, body: &Value, _timeout: Duration) -> Result<Reply, CallError> {
+    fn call(&self, _key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError> {
+        self.waits
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(timeout);
         self.seen
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

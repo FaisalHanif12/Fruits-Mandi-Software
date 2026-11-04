@@ -90,6 +90,37 @@ pub struct Embedded {
     pub schema_version: i64,
     /// Checksums, counts and totals.
     pub inner: InnerManifest,
+    /// The key of the journal and audit hash chains (NFR-SEC-6) as 64 hex characters. It lives
+    /// ONLY inside the encrypted bundle, locked by the backup key, so a restore on a new
+    /// computer can verify the chains (PRD FR-20.11). Never in the `.json` file next to a copy,
+    /// never in a plain local copy, never in a log. Copies made before this field existed have
+    /// none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chain_key: Option<SecretText>,
+}
+
+/// A secret kept as text inside the encrypted bundle. Its `Debug` text never shows it
+/// (NFR-OBS-2), so a log line of a manifest cannot leak it.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SecretText(String);
+
+impl SecretText {
+    /// Wraps a secret.
+    pub fn new(text: String) -> Self {
+        Self(text)
+    }
+
+    /// The secret. Use it only to hand it to the key code, never to print it.
+    pub fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for SecretText {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[hidden]")
+    }
 }
 
 /// The `.json` file kept next to every copy. For an encrypted copy it holds no money and no
@@ -122,3 +153,54 @@ pub struct Manifest {
 
 /// The format number written to every manifest.
 pub const MANIFEST_FORMAT: u32 = 1;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn embedded(chain_key: Option<&str>) -> Embedded {
+        Embedded {
+            format: MANIFEST_FORMAT,
+            created_at: "2026-10-10T09:00:00.000Z".into(),
+            app_version: "test".into(),
+            schema_version: 18,
+            inner: InnerManifest {
+                plain_blake3: "ab".into(),
+                plain_size: 1,
+                counts: BTreeMap::new(),
+                totals: BackupTotals {
+                    accounts: 0,
+                    bikri_entries: 0,
+                    vouchers: 0,
+                    journal_entries: 0,
+                    audit_rows: 0,
+                    last_entry_date: None,
+                    debit_paisa: Paisa::ZERO,
+                    credit_paisa: Paisa::ZERO,
+                    cash_paisa: Paisa::ZERO,
+                },
+            },
+            chain_key: chain_key.map(|k| SecretText::new(k.to_owned())),
+        }
+    }
+
+    #[test]
+    fn the_chain_key_is_written_only_when_there_is_one_and_old_bundles_still_read() {
+        let with = serde_json::to_string(&embedded(Some("0a0b"))).unwrap();
+        assert!(with.contains("\"chain_key\":\"0a0b\""));
+        let without = serde_json::to_string(&embedded(None)).unwrap();
+        assert!(!without.contains("chain_key"), "{without}");
+        // A bundle made before the field existed has no such key and still reads.
+        let old: Embedded = serde_json::from_str(&without).unwrap();
+        assert_eq!(old.chain_key, None);
+        let new: Embedded = serde_json::from_str(&with).unwrap();
+        assert_eq!(new.chain_key.unwrap().expose(), "0a0b");
+    }
+
+    #[test]
+    fn the_debug_text_of_a_manifest_never_shows_the_chain_key() {
+        let shown = format!("{:?}", embedded(Some("deadbeefcafe")));
+        assert!(!shown.contains("deadbeefcafe"), "{shown}");
+        assert!(shown.contains("[hidden]"));
+    }
+}

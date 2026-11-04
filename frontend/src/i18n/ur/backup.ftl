@@ -328,6 +328,9 @@ backup-check-counts = اندراجات کی تعداد درست ہے
 backup-check-balanced = حساب برابر ہے
 
 # review: pending
+backup-check-chains = ایپ سے باہر حساب میں کوئی تبدیلی نہیں ہوئی
+
+# review: pending
 backup-check-passed = پاس
 
 # review: pending

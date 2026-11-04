@@ -30,6 +30,7 @@ export { EmptyState } from './EmptyState';
 export { EntryPartsCard, EntryPartsList } from './EntryPartsCard';
 export { EntrySources, sourceOf } from './EntrySources';
 export { ErrorMessage, useErrorText, type ErrorLike } from './ErrorMessage';
+export { ChoiceCard } from './ChoiceCard';
 export { ErrorNotice } from './ErrorNotice';
 export { ErrorState } from './ErrorState';
 export { Fact } from './Fact';

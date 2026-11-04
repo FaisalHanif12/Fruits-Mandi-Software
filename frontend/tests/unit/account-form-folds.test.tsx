@@ -78,6 +78,29 @@ describe.each(LANGUAGES)('the account form folds (%s)', (language) => {
     ).not.toBeInTheDocument();
   });
 
+  it('the credit part has the credit tick, the limit and the collector, and no collection day (plan 53)', async () => {
+    fakeAccounts([NASIR]);
+    await renderApp('/index/accounts/23');
+    const user = userEvent.setup();
+    const credit = await section(language, 'accounts-section-credit');
+    await user.click(credit);
+    expect(credit).toHaveAttribute('aria-expanded', 'true');
+    // The credit tick, the limit and the collector are there, as before.
+    expect(
+      await screen.findByLabelText<HTMLInputElement>(
+        named(message(language, 'accounts-field-credit-limit')),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: named(message(language, 'accounts-field-collector')) }),
+    ).toBeInTheDocument();
+    // The account has no collection day: it is collected any day. No weekday list is in the form.
+    for (const day of ['Saturday', 'Sunday', 'Monday', 'ہفتہ', 'اتوار', 'پیر']) {
+      expect(screen.queryByText(day)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/Collection day|کا دن/)).not.toBeInTheDocument();
+  });
+
   it('a shut part says how many of its fields hold a value, and opens with Enter on its heading', async () => {
     fakeAccounts([NASIR]);
     await renderApp('/index/accounts/23');

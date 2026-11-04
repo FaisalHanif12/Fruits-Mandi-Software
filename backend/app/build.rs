@@ -216,6 +216,10 @@ const APP_COMMANDS: &[&str] = &[
     "backup_settings_set",
     "backup_key_setup",
     "backup_key_confirm",
+    // Plan 56, restore on a new computer (append-only block).
+    "backup_first_run_list",
+    "backup_first_run_preview",
+    "backup_first_run_restore",
     // Run B, plan 20 (append-only block).
     "reports_catalog",
     "reports_run",

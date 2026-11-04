@@ -1,9 +1,12 @@
 // A question being worked on (PRD FR-7.73, NFR-AI-3): the first line "سوال سمجھ رہا ہوں…" at once,
 // then one line for each step the backend reports, in the app's own reviewed words ("اکرم ٹول ٹیکس کا
 // کھاتہ دیکھ رہا ہوں…"). A step the build has no words for is told in the plain line "جواب تیار کر رہا
-// ہوں…", never as a raw id. No animation: the lines are the progress.
+// ہوں…", never as a raw id. No animation: the lines are the progress. After a few seconds the last line
+// says how long the Owner has waited, from this screen's own clock (plan 55): the backend sends the
+// steps ("trying again", "still slow") and this only counts the seconds.
 
 import { useLocalization } from '@fluent/react';
+import { useEffect, useState } from 'react';
 import type { AssistantStep } from '../../../bindings/AssistantStep';
 import type { ReportMessageArg } from '../../../bindings/ReportMessageArg';
 import type { ListContext } from '../../../shared/grid';
@@ -31,7 +34,27 @@ const STEP_NEEDS: Readonly<Record<string, string>> = {
   'assistant-step-reading-card': 'name',
   'assistant-step-reading-ledger': 'name',
   'assistant-step-reading-report': 'report',
+  'assistant-step-understood': 'kind',
 };
+
+const MILLIS_PER_SECOND = 1000;
+/** Fewer seconds than this are not worth a line: most questions are answered by then. */
+const SECONDS_BEFORE_SHOWN = 5;
+
+/** The whole seconds since this question started waiting, counted on the screen's own clock. */
+export function useWaitedSeconds(): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      setSeconds(Math.trunc((Date.now() - started) / MILLIS_PER_SECOND));
+    }, MILLIS_PER_SECOND);
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+  return seconds;
+}
 
 /** The words of one step line. */
 export function stepText(
@@ -51,6 +74,7 @@ export function StepLines({ steps }: { steps: readonly AssistantStep[] }) {
   const { l10n } = useLocalization();
   const context = useListContext();
   const known = (id: string) => l10n.getBundle(id) !== null;
+  const waited = useWaitedSeconds();
   return (
     <ul
       role="status"
@@ -64,6 +88,12 @@ export function StepLines({ steps }: { steps: readonly AssistantStep[] }) {
           {stepText(step, context, known)}
         </li>
       ))}
+      {waited < SECONDS_BEFORE_SHOWN ? null : (
+        // The count changes every second: it is for the eye, so the live region does not read it out.
+        <li aria-hidden="true" className="type-body">
+          {context.text('assistant-waited', { seconds: String(waited) })}
+        </li>
+      )}
     </ul>
   );
 }

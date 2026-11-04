@@ -46,9 +46,12 @@ err-qty-too-large = تعداد بہت زیادہ ہے۔ زیادہ سے زیاد
 err-weight-too-large = وزن بہت زیادہ ہے۔ زیادہ سے زیادہ { $max } کلو لکھ سکتے ہیں۔
 # review: pending
 err-date-invalid = یہ تاریخ درست نہیں۔ دن، مہینہ اور سال درست لکھیں۔
-# PRD FR-6.6. $closed_up_to: DD-MM-YYYY.
 # review: pending
-err-date-closed = یہ دن بند ہو چکا ہے۔ { $closed_up_to } کے بعد کی تاریخ لکھیں، یا مالک سے دن کھلوائیں۔
+err-date-closed = { $today_state ->
+    [open] یہ دن بند ہو چکا ہے۔ آج کی تاریخ ({ $today }) لکھیں، یا مالک سے دن کھلوائیں۔
+    [closed] یہ دن بند ہے اور آج کا دن بھی بند ہے۔ مالک سے دن کھلوائیں۔
+   *[other] یہ دن بند ہو چکا ہے۔ مالک سے دن کھلوائیں۔
+}
 # PRD FR-6.6. $today: DD-MM-YYYY.
 # review: pending
 err-date-in-future = آگے کی تاریخ نہیں لکھ سکتے۔ آج ({ $today }) یا اس سے پہلے کی تاریخ لکھیں۔
@@ -140,9 +143,14 @@ err-not-locked = ایپ لاک نہیں ہے۔
 err-recovery-code-wrong = صارف کا نام یا ریکوری کوڈ غلط ہے۔ دیکھ کر دوبارہ لکھیں۔
 # review: pending
 err-already-set-up = پہلی ترتیب پہلے ہی مکمل ہو چکی ہے۔ لاگ ان کریں۔
-# $min and $max: the allowed range.
+# $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
+# does not start with https:// or is not one word, path means something follows the host name.
 # review: pending
-err-out-of-range = یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
+err-out-of-range = { $reason ->
+    [https] کلاؤڈ کا پتہ https سے شروع ہونا چاہیے اور ایک ہی لفظ ہونا چاہیے، مثلاً https://your-account.r2.cloudflarestorage.com۔
+    [path] صرف کلاؤڈ کا پتہ لکھیں، مثلاً https://your-account.r2.cloudflarestorage.com۔ { backup-set-bucket } اپنے خانے میں لکھیں۔
+   *[other] یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
+}
 # review: pending
 err-not-logged-in = پہلے لاگ ان کریں۔
 # PRD FR-8.4.
@@ -427,7 +435,7 @@ err-trip-entry-cancelled = یہ اندراج پہلے ہی منسوخ ہو چک�
 ## ڈیٹا اپ ڈیٹ) ان کے الفاظ اوپر والے ہی ہیں۔
 
 # review: pending
-err-backup-not-found = یہ کاپی نہیں ملی۔ ہو سکتا ہے ہٹا دی گئی ہو۔ فہرست دوبارہ کھولیں اور پھر کوشش کریں۔
+err-backup-not-found = یہ کاپی نہیں ملی۔ ہو سکتا ہے ہٹا دی گئی ہو۔ کاپیاں دوبارہ تلاش کریں اور پھر کوشش کریں۔
 
 # review: pending
 err-backup-key-not-set = اس کمپیوٹر پر ابھی بیک اپ کی چابی نہیں ہے۔ پہلے چابی بنائیں۔
@@ -457,14 +465,14 @@ err-backup-cloud-not-configured = کلاؤڈ کاپی ابھی ترتیب نہی
 # review: pending
 err-backup-cloud-failed =
     { $reason ->
-        [offline] کلاؤڈ تک رسائی نہیں ہو سکی۔ انٹرنیٹ دیکھیں۔ کاپی انتظار میں رہتی ہے اور خود بخود دوبارہ بھیجی جاتی ہے۔
-        [refused] کلاؤڈ نے کاپی قبول نہیں کی۔ بیک اپ کی ترتیبات میں کلاؤڈ کی چابیاں دیکھیں۔
-        [not_found] کلاؤڈ کا بکٹ یا کاپی نہیں ملی۔ بیک اپ کی ترتیبات میں بکٹ کا نام دیکھیں۔
+        [offline] کلاؤڈ تک رسائی نہیں ہو سکی۔ انٹرنیٹ اور کلاؤڈ کا پتہ دیکھیں۔ جو کاپی بن رہی تھی وہ انتظار میں رہتی ہے اور خود بخود دوبارہ بھیجی جاتی ہے۔
+        [refused] کلاؤڈ نے چابیاں قبول نہیں کیں۔ کلاؤڈ کی رسائی کی چابی اور خفیہ چابی دیکھیں۔
+        [not_found] کلاؤڈ کا بکٹ یا کاپی نہیں ملی۔ بکٹ کا نام اور فولڈر کا نام دیکھیں۔
        *[other] کلاؤڈ کاپی نہیں بن سکی۔ کچھ دیر بعد دوبارہ کوشش کریں۔
     }
 
 # review: pending
-err-backup-usb-not-present = یو ایس بی ڈرائیو لگی ہوئی نہیں۔ اسے لگائیں، یا بیک اپ کی ترتیبات میں یو ایس بی کاپی بند کر دیں۔
+err-backup-usb-not-present = یو ایس بی ڈرائیو، فولڈر یا فائل نہیں ملی۔ ڈرائیو لگائیں اور راستہ دیکھ لیں۔ یو ایس بی کاپیاں روکنی ہوں تو بیک اپ کی ترتیبات میں انہیں بند کر دیں۔
 
 # review: pending
 err-backup-usb-failed = یو ایس بی ڈرائیو پر کاپی نہیں بن سکی۔ ڈرائیو اور فولڈر دیکھیں۔
@@ -482,10 +490,16 @@ err-backup-not-confirmed = بحالی شروع ہونے سے پہلے تصدیق
 err-backup-newer-than-app = یہ کاپی اس کمپیوٹر کی ایپ سے نئے ورژن کی ہے۔ پہلے ایپ اپ ڈیٹ کریں۔
 
 # review: pending
+err-backup-chain-key-missing = اس کاپی میں چھیڑ چھاڑ کی جانچ کی چابی نہیں ہے، اس لیے نئے کمپیوٹر پر اس پر بھروسا نہیں کیا جا سکتا۔ دوسری کاپی استعمال کریں، یا مدد کے لیے رابطہ کریں۔
+
+# review: pending
+err-backup-no-owner = جس کمپیوٹر نے یہ کاپی بنائی اس کی پہلی ترتیب کبھی مکمل نہیں ہوئی تھی، اس لیے بحال کرنے کے بعد کوئی لاگ ان نہیں کر سکے گا۔ کچھ نہیں بدلا۔ کوئی اور کاپی استعمال کریں۔
+
+# review: pending
 err-backup-not-started = بیک اپ کی سروس ابھی چل نہیں رہی۔ ذرا انتظار کریں اور دوبارہ کوشش کریں۔
 
 # review: pending
-err-backup-restore-failed = بحالی مکمل نہیں ہو سکی۔ ایپ بند کر کے دوبارہ کھولیں۔ اگر کھاتے غلط لگیں تو مدد کے لیے رابطہ کریں: بحالی سے پہلے حفاظتی کاپی بنائی گئی تھی۔
+err-backup-restore-failed = بحالی مکمل نہیں ہو سکی۔ ایپ بند کر کے دوبارہ کھولیں۔ اگر کھاتے غلط لگیں تو مدد کے لیے رابطہ کریں: اس کمپیوٹر پر پہلے سے حساب ہو تو بحالی سے پہلے حفاظتی کاپی بنائی گئی تھی۔
 
 ## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
 

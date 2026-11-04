@@ -76,6 +76,16 @@ pub enum BackupCode {
     ErrBackupNotConfirmed,
     /// The backup was made by a newer version of the app than this one. It is not restored.
     ErrBackupNewerThanApp,
+    /// The copy carries no key for the tamper checks, and no key on this computer makes its
+    /// journal and audit chains verify. It is refused: the books would show as tampered with.
+    /// Field `copy`. Make a new copy on the old computer, or pick a newer copy (PRD FR-20.11).
+    ErrBackupChainKeyMissing,
+    /// The copy was made on a computer that was never set up: it holds no Owner. Restoring it
+    /// would leave nobody to sign in. Field `copy` (`backup` for the signed-in restore).
+    ErrBackupNoOwner,
+    /// A restore on a new computer was asked for, but an Owner already exists on this computer.
+    /// Same text as the `mandi-core` code of the same name (PRD FR-20.11).
+    ErrAlreadySetUp,
     /// The backup is not running: the data file did not open, so there is nothing to back up.
     ErrBackupNotStarted,
     /// The restore failed after the safety copy. The data file is as it was. The safety copy
@@ -197,6 +207,14 @@ impl BackupError {
             Some(ErrorValue::Text(text)) => CloudReason::from_text(text),
             _ => None,
         }
+    }
+
+    /// The same error with another cause for the log. Used where the cause the other side sent
+    /// back must not be kept (it can hold a key id, NFR-OBS-2).
+    #[must_use]
+    pub fn with_detail(mut self, detail: &str) -> Self {
+        self.detail = detail.to_owned();
+        self
     }
 
     /// The same error, with one more value for the message.

@@ -111,16 +111,15 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     expect(screen.getByText('58,484')).toBeInTheDocument();
   });
 
-  it('keeps a band under the screen for the round launcher, outside the scroll area (plan 52)', async () => {
+  it('runs the screen down to the status bar: no band under it, and a bottom padding as tall as the round launcher with its gaps', async () => {
     await renderApp();
     const main = await screen.findByRole('main');
-    // The band is the next element after the screen, not padding in it: a screen taller than its box
-    // overflows with no padding after it, and its last row would end under the launcher.
-    const band = main.nextElementSibling;
-    expect(band).not.toBeNull();
-    expect(band).toHaveAttribute('aria-hidden', 'true');
-    expect(band).toHaveClass('h-corner');
-    expect(main.className).not.toMatch(/(^|\s)pb-/);
+    // Nothing is kept under the screen: the next element is not an empty band.
+    const next = main.nextElementSibling;
+    expect(next?.getAttribute('aria-hidden')).not.toBe('true');
+    // The padding is inside the scroll area, so a long screen scrolls clear of the launcher.
+    expect(main.className).toMatch(/(^|\s)pb-corner(\s|$)/);
+    expect(main.className).toContain('overflow-auto');
   });
 
   it('a closed day is said in words', async () => {

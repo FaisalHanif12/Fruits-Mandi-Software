@@ -99,12 +99,15 @@ function groupedNumber(value: number, grouping: Grouping): string {
  * (`cash_after`), so a message never shows raw paisa (plan 12 contract 4). A number that names a
  * record (`bikri_number`) also comes as `<name>_zero`, `yes` or `no`, because 0 means "none" there
  * and Fluent matches a number key only against a number, never against the text "0" (plan 37).
+ * `today_open` (1 or 0, with a closed-day error, plan 53) also comes as `today_state`, `open` or
+ * `closed`, so the message can offer today's date when today is open and the reopening when it is not.
  */
 export function messageVars(
   values: UiErrorItem['values'],
   grouping: Grouping,
 ): Record<string, string> {
-  const vars: Record<string, string> = {};
+  // `reason` selects the words of a refusal that has several (the cloud address); with none, the plain words.
+  const vars: Record<string, string> = { reason: '' };
   for (const [key, value] of Object.entries(values)) {
     if (typeof value === 'number' && key.endsWith(PAISA_SUFFIX) && Number.isSafeInteger(value)) {
       const money = formatPaisaValue(value, { grouping });
@@ -115,6 +118,9 @@ export function messageVars(
     // A value that is exactly a real day, YYYY-MM-DD, is shown as DD-MM-YYYY (Code Standards G9);
     // any other text passes as it is.
     vars[key] = typeof value === 'number' ? groupedNumber(value, grouping) : isoDayToDisplay(value);
+    if (typeof value === 'number' && key === 'today_open') {
+      vars['today_state'] = value === 1 ? 'open' : 'closed';
+    }
     if (typeof value === 'number' && key.endsWith(NUMBER_SUFFIX)) {
       vars[`${key}_zero`] = value === 0 ? 'yes' : 'no';
     }

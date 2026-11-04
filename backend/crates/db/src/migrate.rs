@@ -114,6 +114,13 @@ pub const SPEED_INDEXES_SQL: &str = include_str!("../migrations/0016_speed_index
 /// only: every existing row gets NULL, and the append-only triggers of migration 15 are not touched.
 pub const ASSISTANT_TIMING_SQL: &str = include_str!("../migrations/0017_assistant_timing.sql");
 
+/// The eighteenth migration (plan 54 S5, plan 55 Section 3): the question log accepts the outcome
+/// `time_limit`. The table is made again with the longer CHECK and every row is copied as it is;
+/// the append-only triggers and the indexes are made again. No book, amount, id or chain hash
+/// changes.
+pub const ASSISTANT_TIME_LIMIT_SQL: &str =
+    include_str!("../migrations/0018_assistant_time_limit.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -143,6 +150,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(ASSISTANT_QUESTIONS_SQL),
         M::up(SPEED_INDEXES_SQL),
         M::up(ASSISTANT_TIMING_SQL),
+        M::up(ASSISTANT_TIME_LIMIT_SQL),
     ])
 }
 

@@ -1,5 +1,6 @@
-// اگراہی فہرست (route /bikri/collection; PRD FR-15.6, FR-7.61, FR-15.1): the buyers planned for a day,
-// by collector and city, with their dues from the backend. The round is one list already filled:
+// اگراہی فہرست (route /bikri/collection; PRD FR-15.6, FR-7.61, FR-15.1): every buyer who owes, by
+// collector and city, with his dues from the backend. The list has no day (plan 53): a buyer is on it
+// while he owes money. The date box is only the day the receipts of the round are written on. The round is one list already filled:
 // the munshi types only the amounts received and saves them together. Each row is its own receipt
 // and its own posting event, so a row the backend refuses keeps its message at its cell while the
 // others are saved; a row left empty (or at 0) is skipped.
@@ -277,13 +278,14 @@ function CollectionRound({ list, date, carried, onSaved, saveSlot }: RoundProps)
 export function CollectionPage() {
   const navigate = useNavigate();
   const day = useDayStatus();
-  // The day field is empty until today is known, then starts as today; the user may change it.
+  // The date of the receipts: empty until today is known, then starts as today; the user may change it.
+  // It does not choose who is listed, and changing it keeps what was typed.
   const [dayText, setDayText] = useState<string | null>(null);
   const [collector, setCollector] = useState<PickerValue | null>(null);
   const [city, setCity] = useState<PickerValue | null>(null);
   // Only the buyers whose code, name or phone holds this text are on the list (`search`).
   const [search, setSearch] = useState('');
-  // The print box of the list (PRD FR-15.6): it prints the day and the filters typed here.
+  // The print box of the list (PRD FR-15.6): it prints the filters typed here.
   const [printOpen, setPrintOpen] = useState(false);
   // Where the round puts its "save all" button (the row of the screen's buttons).
   const [saveSlot, setSaveSlot] = useState<HTMLElement | null>(null);
@@ -294,15 +296,11 @@ export function CollectionPage() {
   });
   const today = day.data === undefined ? '' : isoToDisplayDate(day.data.today);
   const date = dayText ?? today;
-  const input: Omit<CollectionListInput, 'offset' | 'limit'> | null =
-    date.trim() === ''
-      ? null
-      : {
-          date: date.trim(),
-          collector_staff_id: collector?.id ?? null,
-          city_id: city?.id ?? null,
-          search: search.trim() === '' ? null : search.trim(),
-        };
+  const input: Omit<CollectionListInput, 'offset' | 'limit'> = {
+    collector_staff_id: collector?.id ?? null,
+    city_id: city?.id ?? null,
+    search: search.trim() === '' ? null : search.trim(),
+  };
   const list = useCollectionList(input);
   const total = list.data;
   useShortcut(
@@ -310,11 +308,11 @@ export function CollectionPage() {
     () => {
       setPrintOpen(true);
     },
-    { enabled: !printOpen && input !== null },
+    { enabled: !printOpen },
   );
 
   let body;
-  if (day.isPending || (list.isPending && input !== null)) {
+  if (day.isPending || list.isPending) {
     body = <LoadingState />;
   } else if (day.isError || list.isError) {
     body = (
@@ -346,7 +344,7 @@ export function CollectionPage() {
   } else if (total !== undefined) {
     body = (
       <CollectionRound
-        key={`${String(round.n)}-${date}-${String(collector?.id)}-${String(city?.id)}-${search.trim()}`}
+        key={`${String(round.n)}-${String(collector?.id)}-${String(city?.id)}-${search.trim()}`}
         list={total}
         date={date}
         carried={round.carried}
@@ -370,7 +368,6 @@ export function CollectionPage() {
         <>
           <Button
             shortcut={SHORTCUTS.print}
-            disabled={input === null}
             onClick={() => {
               setPrintOpen(true);
             }}
@@ -431,7 +428,7 @@ export function CollectionPage() {
               </>
             }
           >
-            <Field label={<Localized id="vouchers-field-date" />}>
+            <Field label={<Localized id="vouchers-collection-receipt-date" />}>
               {(control) => <DateInput {...control} value={date} onChange={setDayText} />}
             </Field>
             {/* The dues of the round are the backend's total, beside the filters. */}
@@ -455,18 +452,15 @@ export function CollectionPage() {
       }
     >
       {body}
-      {input === null ? null : (
-        <CollectionPrintBox
-          open={printOpen}
-          onOpenChange={setPrintOpen}
-          target={{
-            date: input.date,
-            collectorStaffId: input.collector_staff_id,
-            cityId: input.city_id,
-            search: input.search,
-          }}
-        />
-      )}
+      <CollectionPrintBox
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        target={{
+          collectorStaffId: input.collector_staff_id,
+          cityId: input.city_id,
+          search: input.search,
+        }}
+      />
     </ListPage>
   );
 }

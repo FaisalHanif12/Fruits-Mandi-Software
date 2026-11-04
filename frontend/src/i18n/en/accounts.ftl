@@ -85,7 +85,7 @@ accounts-show-inactive = Show the inactive ones too
 # review: pending
 accounts-more-columns = More columns
 
-## Types and weekdays.
+## Types.
 
 # review: pending
 accounts-type-all = All
@@ -111,27 +111,6 @@ accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = Other
-
-# review: pending
-accounts-weekday-sat = Saturday
-
-# review: pending
-accounts-weekday-sun = Sunday
-
-# review: pending
-accounts-weekday-mon = Monday
-
-# review: pending
-accounts-weekday-tue = Tuesday
-
-# review: pending
-accounts-weekday-wed = Wednesday
-
-# review: pending
-accounts-weekday-thu = Thursday
-
-# review: pending
-accounts-weekday-fri = Friday
 
 ## List columns and totals (PRD FR-10.5).
 
@@ -261,9 +240,6 @@ accounts-field-credit-limit = Credit limit
 
 # review: pending
 accounts-field-collector = Collector
-
-# review: pending
-accounts-field-weekday = Collection day
 
 # review: pending
 accounts-field-linked = Linked account
@@ -423,17 +399,19 @@ openings-none-with-help = Choose "No opening balance yet" to write the first one
 # review: pending
 openings-show-all-button = Show all accounts
 
-## An opening balance needs an open day (plan 44, PRD FR-10.11): an account itself saves on any day.
+## A changed opening balance needs an open day (plan 44, plan 53, PRD FR-10.11). A new account saves its
+## opening on any day, so this appears only when the opening of an existing account is changed.
 
 # review: pending
-accounts-opening-closed-today-open = This date is closed, so an opening balance cannot go on it. The account saves on any day, but an opening balance goes on the date of an open day.
+accounts-opening-closed-today-open = The date of this opening balance is a closed day, so it cannot be changed there. Use today's date, which is open, or reopen the day.
 
 # review: pending
-accounts-opening-closed-today-closed = Today is closed too, so an opening balance cannot go on now. The account can be saved without an opening balance, or the day can be reopened to put the balance on.
+accounts-opening-closed-today-closed = This day is closed, so this opening balance cannot be changed now. Reopen the day to change it.
+
+# The line under the opening date field itself.
+# review: pending
+accounts-opening-closed-short = This date is closed.
 
 # $today: today's date, DD-MM-YYYY.
 # review: pending
 accounts-opening-closed-use-today = Use today's date ({ $today })
-
-# review: pending
-accounts-opening-closed-without = Save without the opening balance

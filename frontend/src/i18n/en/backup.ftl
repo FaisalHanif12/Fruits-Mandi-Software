@@ -330,6 +330,9 @@ backup-check-counts = The number of records is right
 backup-check-balanced = The books balance
 
 # review: pending
+backup-check-chains = The books were not changed outside the app
+
+# review: pending
 backup-check-passed = Passed
 
 # review: pending

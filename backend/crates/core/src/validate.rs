@@ -108,8 +108,25 @@ pub fn date(field: &str, input: &str, today: BusinessDate) -> Result<BusinessDat
     dates::parse_ddmmyyyy(input, today).map_err(|c| error(c, field))
 }
 
+/// The two values every `ERR_DATE_CLOSED` carries besides the closed date, so a screen never asks
+/// for "a date after X" when X is today (plan 53): `today` (`DD-MM-YYYY`) and `today_open`
+/// (1 when today is an open day, else 0).
+///
+/// Example: days up to 31-10-2026 closed, today 31-10-2026: `today` "31-10-2026", `today_open` 0.
+pub fn closed_day_values(
+    closed_up_to: Option<BusinessDate>,
+    today: BusinessDate,
+) -> [(&'static str, ErrorValue); 2] {
+    let today_open = closed_up_to.is_none_or(|closed| today > closed);
+    [
+        ("today", ErrorValue::Text(dates::format_ddmmyyyy(today))),
+        ("today_open", ErrorValue::Number(i64::from(today_open))),
+    ]
+}
+
 /// A posting date: a valid date after the "closed up to" date and not after today
-/// (PRD FR-6.6). The error carries the date that limits it, as `DD-MM-YYYY`.
+/// (PRD FR-6.6). The error carries the date that limits it, as `DD-MM-YYYY`; `ERR_DATE_CLOSED` also
+/// carries `today` and `today_open` ([`closed_day_values`]).
 pub fn posting_date(
     field: &str,
     input: &str,
@@ -122,8 +139,14 @@ pub fn posting_date(
             (ErrorCode::ErrDateClosed, Some(closed)) => ("closed_up_to", closed),
             _ => ("today", today),
         };
-        FieldError::new(code, field)
-            .with(limit.0, ErrorValue::Text(dates::format_ddmmyyyy(limit.1)))
+        let mut error = FieldError::new(code, field)
+            .with(limit.0, ErrorValue::Text(dates::format_ddmmyyyy(limit.1)));
+        if code == ErrorCode::ErrDateClosed {
+            for (key, value) in closed_day_values(closed_up_to, today) {
+                error = error.with(key, value);
+            }
+        }
+        error
     })?;
     Ok(value)
 }
@@ -464,5 +487,42 @@ mod tag_tests {
                 prop_assert_eq!(tag("tag", &saved).unwrap(), Some(saved.clone()));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod closed_day_tests {
+    use super::*;
+
+    fn day(d: u32) -> BusinessDate {
+        BusinessDate::from_ymd(2026, 10, d).unwrap()
+    }
+
+    #[test]
+    fn a_closed_date_error_carries_today_and_whether_it_is_open() {
+        // Days up to 30-10 closed, today 31-10: today is open.
+        let error = posting_date("date", "30-10-2026", Some(day(30)), day(31)).unwrap_err();
+        assert_eq!(error.code, ErrorCode::ErrDateClosed);
+        assert_eq!(
+            error.values.get("closed_up_to"),
+            Some(&ErrorValue::Text("30-10-2026".into()))
+        );
+        assert_eq!(
+            error.values.get("today"),
+            Some(&ErrorValue::Text("31-10-2026".into()))
+        );
+        assert_eq!(error.values.get("today_open"), Some(&ErrorValue::Number(1)));
+        // Closed at night: today is closed too.
+        let error = posting_date("date", "31-10-2026", Some(day(31)), day(31)).unwrap_err();
+        assert_eq!(error.values.get("today_open"), Some(&ErrorValue::Number(0)));
+        // A future date is another code and carries no such values.
+        let error = posting_date("date", "01-11-2026", Some(day(30)), day(31)).unwrap_err();
+        assert_eq!(error.code, ErrorCode::ErrDateInFuture);
+        assert!(!error.values.contains_key("today_open"));
+        // Nothing closed yet: today is open.
+        assert_eq!(
+            closed_day_values(None, day(31))[1],
+            ("today_open", ErrorValue::Number(1))
+        );
     }
 }

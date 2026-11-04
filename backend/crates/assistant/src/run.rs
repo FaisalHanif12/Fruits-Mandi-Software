@@ -41,8 +41,8 @@ use serde_json::{Value, json};
 
 use crate::answer::{Answer, AnswerOption, AnswerSource, EntryRoute, EntryScreen};
 use crate::ask::{
-    AskOutcome, AskReply, AssistantAskInput, AssistantFailure, AssistantPickInput,
-    AssistantRerunInput, FailureKind, PickChoice, StopReason,
+    AskOutcome, AskReply, AskedRole, AssistantAskInput, AssistantFailure, AssistantPickInput,
+    AssistantRerunInput, FailureKind, FoundAs, PickChoice, StopReason,
 };
 use crate::check::{Check, Failure, NameBook, NameSet, Verdict};
 use crate::client::{CallError, ModelClient, Reply, ToolCall};
@@ -51,9 +51,9 @@ use crate::echo;
 use crate::fill;
 use crate::help_guard;
 use crate::limits::{
-    CALL_TIMEOUT_SECS, DAILY_LIMIT, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
+    DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
     MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_REWRITES, MAX_TOOL_CALLS, QUESTION_TIMEOUT_SECS,
-    RETRY_MIN_LEFT_SECS,
+    RETRY_MIN_LEFT_SECS, TOOLS_OFF_AT_SECS,
 };
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
 use crate::prefetch;
@@ -98,6 +98,10 @@ pub(crate) struct Finished {
     pub model_text: Option<String>,
     pub wait: Option<Wait>,
     pub finish_reason: Option<String>,
+    /// For `not_found`: the kind of record that was asked for (plan 52 Section 8).
+    pub asked_role: Option<AskedRole>,
+    /// For `not_found`: the name as the record of another role.
+    pub found_as: Option<FoundAs>,
 }
 
 impl Finished {
@@ -114,6 +118,8 @@ impl Finished {
             model_text: None,
             wait: None,
             finish_reason: None,
+            asked_role: None,
+            found_as: None,
         }
     }
 
@@ -125,6 +131,16 @@ impl Finished {
             answer: tables,
             finish_reason: Some(reason.word().to_owned()),
             ..Self::plain(AskOutcome::NotUnderstood)
+        }
+    }
+
+    /// The question ran out of time (or the line dropped late) after the books were read: what
+    /// was read is shown as plain tables (plan 55 Section 3). The log keeps the word `time_limit`.
+    pub(crate) fn time_limited(tables: Answer) -> Self {
+        Self {
+            answer: Some(tables),
+            finish_reason: Some("time_limit".to_owned()),
+            ..Self::plain(AskOutcome::TimeLimit)
         }
     }
 
@@ -189,6 +205,7 @@ fn outcome_word(outcome: AskOutcome) -> &'static str {
         AskOutcome::LimitReached => "limit_reached",
         AskOutcome::Offline => "offline",
         AskOutcome::Error => "error",
+        AskOutcome::TimeLimit => "time_limit",
     }
 }
 
@@ -490,6 +507,15 @@ impl<'a> Run<'a> {
                     state.results.push(result);
                     turn.messages
                         .push(tool_message(&call.id, content, Some(&id)));
+                    // The only parties found are of the other role than the question's verb gives
+                    // ("Faisal ne kya becha" and he is a buyer): the question will end as not found
+                    // with him as `found_as`, and nothing of his is read as the other role's.
+                    if turn.wrong_role.is_none()
+                        && batch_finds.last() == Some(&id)
+                        && let Some(role) = route::wrong_role_found(&question, &state, &id)
+                    {
+                        turn.wrong_role = Some((id.clone(), role));
+                    }
                 }
                 Err(Stop::Error(error)) => {
                     if let Some(last) = turn.timing.calls.last_mut() {
@@ -515,7 +541,12 @@ impl<'a> Run<'a> {
         }
         // The model sent only finds and they matched one party each: read his card (and his
         // ledger when the question names one) now, so the next call can answer (P52-S1).
-        if paused.is_none() && only_finds && turn.ask_which.is_none() && !batch_finds.is_empty() {
+        if paused.is_none()
+            && only_finds
+            && turn.ask_which.is_none()
+            && turn.wrong_role.is_none()
+            && !batch_finds.is_empty()
+        {
             self.prefetch(turn, &mut state, index, &numbers, &question, &batch_finds);
         }
         conv.results = state.results;
@@ -605,9 +636,184 @@ impl<'a> Run<'a> {
         (!answer.tables.is_empty()).then_some(answer)
     }
 
-    /// One model call, within the limits of the question. A call that failed on the network, on
-    /// 429 or on a 5xx is tried once more after a short wait, when enough of the question is left
-    /// (plan 52 item 6); the failed try is in the timing, and only the reply that came is counted.
+    /// What the app understood of the question, when it understood the whole of it (plan 55
+    /// Section 2). The progress line "understood" says of what kind.
+    ///
+    /// In a follow-up (`follow_up`), a question that leans on the earlier ones is left to the model,
+    /// which sees them (money review R-c): see [`leans_on_earlier_questions`].
+    fn understand_question(
+        &self,
+        text: &str,
+        follow_up: bool,
+    ) -> Option<crate::understand::Understanding> {
+        use crate::understand::{self, Intent};
+        let reader = understand::Reader {
+            ctx: &self.snap,
+            actor: self.d.actor,
+            language: self.language,
+            today: self.today,
+            partner_locked: self.partner_locked,
+        };
+        let understood = understand::understand(&reader, text);
+        if !understood.sure || (follow_up && leans_on_earlier_questions(&understood)) {
+            return None;
+        }
+        let kind = match understood.intent.value {
+            Intent::Print => "print",
+            Intent::HowTo | Intent::Navigate => "help",
+            Intent::List => "list",
+            Intent::Advice | Intent::Forecast | Intent::WhatIf => "advice",
+            _ => "figure",
+        };
+        (self.d.emit)(AssistantStep {
+            id: "assistant-step-understood".to_owned(),
+            args: vec![MessageArg {
+                name: "kind".to_owned(),
+                value: ArgValue::Text {
+                    text: kind.to_owned(),
+                },
+            }],
+        });
+        Some(understood)
+    }
+
+    /// Reads, before the first call, what the model would have chosen to read (plan 54 S3, plan 55
+    /// Section 2). True when something was read. The reads are the tools themselves, with the
+    /// filters `understand::plan_reads` gives; a read the tool refuses is dropped, and the model
+    /// carries on from what was read.
+    fn read_first(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        understood: &crate::understand::Understanding,
+    ) -> bool {
+        let Some(reads) = crate::understand::plan_reads(understood) else {
+            return false;
+        };
+        let mut read_any = false;
+        for read in reads {
+            let done = self.preread_tool(conv, turn, read.tool, &read.input.to_string());
+            read_any |= done.is_some();
+        }
+        read_any
+    }
+
+    /// An answer the app writes by itself, with no model call (plan 54 S2, plan 55 Section 2):
+    /// only when the app understood the whole question and the answer is already written in the
+    /// app. The one door is `understand::compose` (backend2's composers): a print request opens its
+    /// report with the party and the dates filled and gives the steps, a how-to answers from the
+    /// guide, a screen opens, a question outside the books gets its words, and a name that no
+    /// record has, or that only a record of the other role has ("Faisal ne kya becha" and he is a
+    /// buyer), ends as not found with the kind of record asked for. Anything else, and anything the
+    /// app is not sure of, goes to the model as before. The log keeps `local` as its finish reason.
+    ///
+    /// Only one thing is added here: for a name found in the other role, the `find` runs as the
+    /// model would send it, so "show him as a buyer" is one click (it needs the options and the
+    /// wait of the record that was found, which a pure composer cannot read).
+    fn local_answer(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        understood: &crate::understand::Understanding,
+    ) -> Option<Finished> {
+        use crate::understand::{Outcome, PartyRole};
+        let read_at = self.read_at();
+        let composed =
+            crate::understand::compose(understood, self.language, &self.words, &read_at)?;
+        let local = |mut finished: Finished| {
+            finished.finish_reason = Some("local".to_owned());
+            Some(finished)
+        };
+        if composed.outcome == AskOutcome::NotFound && composed.found_as.is_some() {
+            let party = understood
+                .parties
+                .iter()
+                .find(|p| matches!(p.outcome, Outcome::FoundAs(_)))?;
+            let asked = composed.asked_role.unwrap_or(AskedRole::Any);
+            let word = match party.asked_role {
+                Some(PartyRole::Seller) => "seller",
+                Some(PartyRole::Buyer) => "buyer",
+                _ => return local(Self::finished_of(composed)),
+            };
+            let input = json!({"text": party.text, "role": word});
+            let id = self.preread_tool(conv, turn, "find", &input.to_string())?;
+            // The model has not been asked yet. When the Owner clicks the name (a pick), the model
+            // goes on from these messages, so they must start with his question (money review
+            // BUG-6). The find wrote nothing before it, so the question goes first.
+            let question = turn.question.clone();
+            let numbers = figures::question_numbers(&question);
+            turn.messages.insert(
+                0,
+                user_message(&self.today_iso, self.language, &question, &numbers),
+            );
+            return local(self.not_found_in_other_role(conv, &id, asked));
+        }
+        local(Self::finished_of(composed))
+    }
+
+    /// The ending of a question from what a local composer made.
+    fn finished_of(composed: crate::understand::Composed) -> Finished {
+        let mut finished = Finished::plain(composed.outcome);
+        finished.answer = composed.answer;
+        finished.asked_role = composed.asked_role;
+        finished.found_as = composed.found_as;
+        finished.entry_route = composed.entry_route;
+        finished
+    }
+
+    /// What was read for this question, to show when time runs out (plan 55 Section 3): the
+    /// tables, and a party card's name and checked balance. `None` if nothing that shows was read.
+    fn read_so_far(&self, conv: &Conversation, question: &str) -> Option<Answer> {
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        fill::read_so_far(&state, &self.read_at(), self.card_field(question))
+    }
+
+    /// The field of a party card that holds the figure the question asks for, so that a slow line
+    /// never shows his balance for a question about his advance (money review R-b). It reads the
+    /// question again with the same understanding, only when time has run out, so it costs
+    /// nothing on the way to an answer. `None` when the figure is not one a card holds.
+    fn card_field(&self, question: &str) -> Option<&'static str> {
+        use crate::understand::{self, FigureKind};
+        let reader = understand::Reader {
+            ctx: &self.snap,
+            actor: self.d.actor,
+            language: self.language,
+            today: self.today,
+            partner_locked: self.partner_locked,
+        };
+        match understand::understand(&reader, question).figure()? {
+            FigureKind::Balance | FigureKind::Dues => Some(fill::CARD_BALANCE),
+            FigureKind::Advance => Some(fill::CARD_ADVANCE),
+            FigureKind::Payable => Some(fill::CARD_PAYABLE),
+            _ => None,
+        }
+    }
+
+    /// How the question ends when it has no time left, or when a call failed late (plan 55
+    /// Section 3): with what was read, shown as plain tables (`time_limit`), or, when nothing was
+    /// read, with the failure itself. Only a slow or dropped line is a matter of time: a wrong
+    /// key, no credit or no internet end as they always did.
+    fn out_of_time(&self, conv: &Conversation, turn: &Turn, error: CallError) -> Box<Finished> {
+        let slow = matches!(
+            error.kind,
+            FailureKind::Timeout | FailureKind::Dropped | FailureKind::Busy | FailureKind::Server
+        );
+        match self.read_so_far(conv, &turn.question) {
+            Some(read) if slow => Box::new(Finished::time_limited(read)),
+            _ => Box::new(Finished::failed(error)),
+        }
+    }
+
+    /// One model call, within the limits of the question (plan 54 S5, plan 55 Section 3). The
+    /// reply of the model comes whole, so a try is cut when no reply has come in
+    /// [`FIRST_BYTE_SECS`]. A call that failed on the network, on 429, on a 5xx or by that cut is
+    /// tried once more after a short wait, when enough of the question is left (plan 52 item 6).
+    /// The whole question has [`QUESTION_TIMEOUT_SECS`]: from [`TOOLS_OFF_AT_SECS`] the call goes
+    /// out with the tools off, and at the limit the question ends with what was read. The failed
+    /// try is in the timing, and only the reply that came is counted.
     fn call_model(
         &self,
         conv: &Conversation,
@@ -616,9 +822,7 @@ impl<'a> Run<'a> {
     ) -> Result<Reply, Box<Finished>> {
         let total = Duration::from_secs(QUESTION_TIMEOUT_SECS);
         if self.started.elapsed() >= total {
-            return Err(Box::new(Finished::failed(CallError::new(
-                FailureKind::Timeout,
-            ))));
+            return Err(self.out_of_time(conv, turn, CallError::new(FailureKind::Timeout)));
         }
         let c = &turn.counters;
         let over_calls = !rewrite && c.model_calls >= MAX_MODEL_CALLS;
@@ -647,19 +851,32 @@ impl<'a> Run<'a> {
         let max_completion_tokens = MAX_OUTPUT_TOKENS
             .saturating_sub(out_used)
             .min(MAX_CALL_OUTPUT_TOKENS);
-        let body = request_body(&Parts {
-            model: &self.model,
-            conversation: conv,
-            current: turn,
-            words: &self.words,
-            partner_locked: self.partner_locked,
-            max_completion_tokens,
-            tools_off: tools_off(turn, rewrite),
-        });
         let mut retried = false;
         let reply = loop {
-            let left = total.saturating_sub(self.started.elapsed());
-            let timeout = Duration::from_secs(CALL_TIMEOUT_SECS).min(left);
+            let elapsed = self.started.elapsed();
+            let left = total.saturating_sub(elapsed);
+            if left.is_zero() {
+                return Err(self.out_of_time(conv, turn, CallError::new(FailureKind::Timeout)));
+            }
+            // From 20 s the call must answer from what has been read.
+            let late = elapsed >= Duration::from_secs(TOOLS_OFF_AT_SECS);
+            let tools_already_off = tools_off(turn, rewrite);
+            if late && !tools_already_off {
+                (self.d.emit)(step("assistant-step-tools-off"));
+            }
+            let body = request_body(&Parts {
+                model: &self.model,
+                conversation: conv,
+                current: turn,
+                words: &self.words,
+                partner_locked: self.partner_locked,
+                max_completion_tokens,
+                tools_off: tools_already_off || late,
+                low_effort: turn.read_first && self.d.runtime.low_effort(),
+            });
+            // The first try waits FIRST_BYTE_SECS; the one retry has all the time that is left.
+            let first_try = Duration::from_secs(FIRST_BYTE_SECS).min(left);
+            let timeout = if retried { left } else { first_try };
             let sent = Instant::now();
             let result = self.d.client.call(&key, &body, timeout);
             let model_millis = millis_since(sent);
@@ -703,10 +920,11 @@ impl<'a> Run<'a> {
                     if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
                     {
                         retried = true;
+                        (self.d.emit)(step("assistant-step-retrying"));
                         std::thread::sleep(self.d.client.retry_wait());
                         continue;
                     }
-                    return Err(Box::new(Finished::failed(e)));
+                    return Err(self.out_of_time(conv, turn, e));
                 }
             }
         };
@@ -737,6 +955,9 @@ impl<'a> Run<'a> {
             if let Some(rest) = self.run_calls(conv, turn, pending) {
                 return paused(rest);
             }
+            if let Some((find_id, asked)) = turn.wrong_role.take() {
+                return self.not_found_in_other_role(conv, &find_id, asked);
+            }
             if let Some(find_id) = turn.ask_which.take()
                 && !read_data_since(turn, log_start)
             {
@@ -744,6 +965,11 @@ impl<'a> Run<'a> {
             }
         }
         loop {
+            // The books were read before the first call: this call only writes the answer, and
+            // the panel says so (plan 55 Section 2).
+            if turn.read_first && turn.counters.model_calls == 0 {
+                (self.d.emit)(step("assistant-step-writing"));
+            }
             let off = tools_off(turn, false);
             let reply = match self.call_model(conv, turn, false) {
                 Ok(r) => r,
@@ -778,6 +1004,9 @@ impl<'a> Run<'a> {
             let log_start = turn.tool_log.len();
             if let Some(rest) = self.run_calls(conv, turn, reply.tool_calls) {
                 return paused(rest);
+            }
+            if let Some((find_id, asked)) = turn.wrong_role.take() {
+                return self.not_found_in_other_role(conv, &find_id, asked);
             }
             // A name that matched none or several ends the question with "which one" at once, with
             // no model call. Not when the same reply also read the books for another name: the
@@ -1012,7 +1241,10 @@ impl<'a> Run<'a> {
             Some(Node::List(items)) => items.len(),
             _ => 0,
         };
-        let mut f = Finished::plain(if count == 0 {
+        // A name that exists only in another role than the one asked (a buyer in a seller's field)
+        // is not found as that role, and says what he is (plan 52 Section 8).
+        let widened = route::is_widened(&state, find_id);
+        let mut f = Finished::plain(if count == 0 || widened {
             AskOutcome::NotFound
         } else {
             AskOutcome::WhichOne
@@ -1021,11 +1253,39 @@ impl<'a> Run<'a> {
         f.more_options = found
             .and_then(|r| r.node.get(&["more"]))
             .is_some_and(|n| matches!(n, Node::Bool(true)));
+        if f.outcome == AskOutcome::NotFound {
+            f.asked_role = route::asked_role_of_find(&state, find_id);
+            f.found_as = route::found_as_of(&state, find_id, f.asked_role);
+        }
         if count > 0 {
             f.wait = Some(Wait::Which {
                 find_id: find_id.to_owned(),
             });
         }
+        f
+    }
+
+    /// Ends the question as "not found" for a name that exists in the other role than the question's
+    /// verb gives ("Faisal ne kya becha", and he is a buyer): no model call, `asked_role` the role
+    /// of the verb, `found_as` the party, and his name offered, so that "show his purchases" is one
+    /// click (plan 52 Section 8).
+    fn not_found_in_other_role(
+        &self,
+        conv: &Conversation,
+        find_id: &str,
+        asked: AskedRole,
+    ) -> Finished {
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        let mut f = Finished::plain(AskOutcome::NotFound);
+        f.options = fill::options_of(&state, find_id);
+        f.asked_role = Some(asked);
+        f.found_as = route::found_as_of(&state, find_id, Some(asked));
+        f.wait = Some(Wait::Which {
+            find_id: find_id.to_owned(),
+        });
         f
     }
 
@@ -1310,7 +1570,13 @@ impl<'a> Run<'a> {
                     .find(&find_id)
                     .and_then(|r| r.node.get(&["more"]).cloned())
                     .is_some_and(|n| matches!(n, crate::results::Node::Bool(true)));
-                if parsed.kind == AnswerKind::WhichOne {
+                if parsed.kind == AnswerKind::NotFound {
+                    f.asked_role = route::asked_role_of_find(state, &find_id);
+                    f.found_as = route::found_as_of(state, &find_id, f.asked_role);
+                }
+                if parsed.kind == AnswerKind::WhichOne
+                    || (parsed.kind == AnswerKind::NotFound && !f.options.is_empty())
+                {
                     f.wait = Some(Wait::Which { find_id });
                 }
                 f
@@ -1332,6 +1598,7 @@ impl<'a> Run<'a> {
                         advice: false,
                         general_advice: false,
                         sources: vec![source],
+                        how: Vec::new(),
                         differences: Vec::new(),
                         next: Vec::new(),
                         read_at: read_at.to_owned(),
@@ -1416,6 +1683,8 @@ impl<'a> Run<'a> {
             stop_reason: f.stop_reason,
             count_today: assistant::count_today(self.d.ctx)?,
             limit: DAILY_LIMIT,
+            asked_role: f.asked_role,
+            found_as: f.found_as,
         })
     }
 }
@@ -1574,6 +1843,58 @@ fn help_repaired_content(
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the
 /// last model call the question may make, or the tool calls are used up, or it is the rewrite
 /// (which may not read anything new, D6-system-prompt 5.3).
+/// True when a question that reads the books takes something from the questions before it, so the
+/// app, which reads only the new words, would read the wrong thing (money review R-c).
+///
+/// Two cases. A figure that depends on a period, with no period named: after "akram ka pichle mahine
+/// ka commission", "arshad ka commission?" means last month too, and the app alone would read all
+/// time. A question that names no party, item, record or period, and is not about the shop now:
+/// "uska print nikalo" or "aur batao" has no subject of its own.
+///
+/// Example: after any question, "cash kitna hai" does not lean (cash now needs nothing before it),
+/// and "faisal ki aaj ki bikri ka print" does not lean (a party and a day).
+fn leans_on_earlier_questions(u: &crate::understand::Understanding) -> bool {
+    use crate::understand::{FigureKind, Intent};
+    if !matches!(
+        u.intent.value,
+        Intent::Figure | Intent::List | Intent::Print
+    ) {
+        return false;
+    }
+    let has_period = !u.periods.is_empty();
+    let has_subject =
+        !u.parties.is_empty() || !u.items.is_empty() || !u.records.is_empty() || u.list.is_some();
+    let depends_on_period = matches!(
+        u.figure(),
+        Some(
+            FigureKind::Sale
+                | FigureKind::SaleCount
+                | FigureKind::Commission
+                | FigureKind::Laga
+                | FigureKind::Purchases
+                | FigureKind::Receipts
+                | FigureKind::Profit
+                | FigureKind::Expense
+                | FigureKind::FruitTaken
+                | FigureKind::Rate
+        )
+    );
+    let about_the_shop_now = matches!(
+        u.figure(),
+        Some(
+            FigureKind::Cash
+                | FigureKind::Dues
+                | FigureKind::Payable
+                | FigureKind::Advance
+                | FigureKind::Stock
+                | FigureKind::MoneyLent
+                | FigureKind::DeadAmount
+                | FigureKind::DaySummary
+        )
+    );
+    (depends_on_period && !has_period) || (!has_subject && !has_period && !about_the_shop_now)
+}
+
 fn tools_off(turn: &Turn, rewrite: bool) -> bool {
     let counters = &turn.counters;
     rewrite
@@ -1795,6 +2116,20 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
         question: text.to_owned(),
         ..Turn::default()
     };
+    // The app writes the answer itself when it understood the whole question and the answer is
+    // already in the app. It costs no model call, so it is not counted and the daily limit does
+    // not stop it (FR-7.81).
+    let understood = if d.runtime.local() || d.runtime.read_first() {
+        run.understand_question(text, !conv.turns.is_empty())
+    } else {
+        None
+    };
+    if d.runtime.local()
+        && let Some(u) = &understood
+        && let Some(finished) = run.local_answer(&mut conv, &mut turn, u)
+    {
+        return run.conclude(conv, turn, finished, Source::Model, None);
+    }
     if assistant::count_today(d.ctx)? >= DAILY_LIMIT {
         return run.conclude(
             conv,
@@ -1814,6 +2149,14 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
         turn.general_advice = true;
     } else if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
         run.preread_help(&mut conv, &mut turn, topic);
+        turn.read_first = true;
+    } else if d.runtime.read_first()
+        && let Some(u) = &understood
+        && run.read_first(&mut conv, &mut turn, u)
+    {
+        // The books were read for the question before the first call (plan 54 S3): the call has
+        // only to write the answer.
+        turn.read_first = true;
     } else if let Some(kind) = cues::period_kind(text) {
         // One clear period in the question: read it before the first call, so that call can
         // already ask for the report (plan 52 P52-S1).

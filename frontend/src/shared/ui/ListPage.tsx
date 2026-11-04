@@ -28,7 +28,7 @@ interface ListPageProps {
 
 export function ListPage({ titleId, help, actions, filters, children }: ListPageProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
+    <div className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
           <Localized id={titleId}>
@@ -39,7 +39,12 @@ export function ListPage({ titleId, help, actions, filters, children }: ListPage
         {actions === undefined ? null : <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
       {filters === undefined ? null : <div className="shrink-0">{filters}</div>}
-      <div className="flex min-h-0 flex-1 flex-col gap-3">{children}</div>
+      {/* No `min-h-0` here: when the window is too short for the list's floor of rows, this box grows with
+          it, so the spacer below it always comes after the page buttons. */}
+      <div className="flex flex-1 flex-col gap-3">{children}</div>
+      {/* The corner of the round launcher: the list ends above it, and when the window is too short for the
+          list it scrolls on past its last button before this spacer ends (plan 52). */}
+      <div aria-hidden="true" className="h-corner shrink-0" />
     </div>
   );
 }

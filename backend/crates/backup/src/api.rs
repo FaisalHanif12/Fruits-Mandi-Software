@@ -11,6 +11,8 @@ use crate::error::{BackupCode, CloudReason};
 use crate::model::{BackupKind, BackupTotals};
 use crate::settings::BackupSettings;
 
+pub use crate::first_run_api::*;
+
 /// Page size of `backup_list` when the screen sends none (Code Standards B31).
 pub const DEFAULT_PAGE: i64 = 100;
 

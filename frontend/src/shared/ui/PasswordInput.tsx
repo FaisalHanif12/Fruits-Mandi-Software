@@ -12,6 +12,11 @@ interface PasswordInputProps extends FieldControlProps {
   onChange: (text: string) => void;
   /** For the browser's own helpers: 'current-password' or 'new-password'. */
   autoComplete?: 'current-password' | 'new-password';
+  /**
+   * Draws the eye that shows the text. A key that must never be seen in plain form after it is typed
+   * (the cloud keys and the backup key of the restore screens, plan 56) turns it off.
+   */
+  canReveal?: boolean;
 }
 
 export function PasswordInput({
@@ -22,6 +27,7 @@ export function PasswordInput({
   value,
   onChange,
   autoComplete = 'current-password',
+  canReveal = true,
 }: PasswordInputProps) {
   const { l10n } = useLocalization();
   const [shown, setShown] = useState(false);
@@ -31,7 +37,7 @@ export function PasswordInput({
           both languages, the button sits at the end of the page's direction (left in Urdu). */}
       <input
         id={id}
-        type={shown ? 'text' : 'password'}
+        type={shown && canReveal ? 'text' : 'password'}
         dir="ltr"
         lang="en"
         value={value}
@@ -45,22 +51,24 @@ export function PasswordInput({
         }}
         className={`${controlClasses({ invalid, readOnly })} type-number-field pe-control ps-control`}
       />
-      <button
-        type="button"
-        tabIndex={-1}
-        aria-label={l10n.getString(shown ? 'common-password-hide' : 'common-password-show')}
-        aria-pressed={shown}
-        onClick={() => {
-          setShown((current) => !current);
-        }}
-        className="absolute inset-y-0 end-0 flex w-control items-center justify-center text-ink-muted"
-      >
-        {shown ? (
-          <EyeOff aria-hidden="true" className="size-icon-md" />
-        ) : (
-          <Eye aria-hidden="true" className="size-icon-md" />
-        )}
-      </button>
+      {canReveal ? (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={l10n.getString(shown ? 'common-password-hide' : 'common-password-show')}
+          aria-pressed={shown}
+          onClick={() => {
+            setShown((current) => !current);
+          }}
+          className="absolute inset-y-0 end-0 flex w-control items-center justify-center text-ink-muted"
+        >
+          {shown ? (
+            <EyeOff aria-hidden="true" className="size-icon-md" />
+          ) : (
+            <Eye aria-hidden="true" className="size-icon-md" />
+          )}
+        </button>
+      ) : null}
     </div>
   );
 }

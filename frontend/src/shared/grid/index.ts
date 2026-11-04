@@ -4,6 +4,7 @@ export { EntryGrid } from './EntryGrid';
 export { REMOVE_COLUMN_ID, type RemoveQuestion } from './removeRow';
 export {
   ListGrid,
+  type ListCellControl,
   type ListColumn,
   type ListContext,
   type ListMonths,

@@ -140,7 +140,6 @@ describe('what the account form sends', () => {
       credit_limit: '',
       default_marka: null,
       collector: null,
-      collection_weekday: null,
       is_active: true,
       note: '',
     };

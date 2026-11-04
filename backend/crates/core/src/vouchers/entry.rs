@@ -558,9 +558,6 @@ pub struct AdvancesReport {
 /// Input of `assist_collection_list`.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct CollectionListInput {
-    /// The day, `DD-MM-YYYY` or a shortcut. Buyers whose collection day is this weekday are
-    /// planned.
-    pub date: String,
     /// Only this collector.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -631,11 +628,8 @@ pub struct CollectionGroupTotal {
 /// Today's planned collections (PRD FR-15.6). Read only; printable by the screen.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct CollectionList {
-    /// The day, `YYYY-MM-DD`.
+    /// Today, `YYYY-MM-DD`: the day the ages of the bills are counted to.
     pub date: String,
-    /// Its weekday, 0 (Monday) to 6 (Sunday), as stored on the account.
-    #[ts(type = "number")]
-    pub weekday: u32,
     /// By collector, then city. A page holds the groups that have buyers on it, each with only the
     /// buyers of the page; a group's own total stays over all its buyers.
     pub groups: Vec<CollectionGroup>,

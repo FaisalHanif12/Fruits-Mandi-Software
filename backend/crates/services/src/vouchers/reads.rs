@@ -451,27 +451,22 @@ pub fn advances_report(
     })
 }
 
-/// The اگراہی فہرست of a day (PRD FR-15.6, FR-7.61): the active buyers whose collection weekday is
-/// the weekday of the day and who owe something, with their dues and the age of their oldest open
-/// bill, grouped by collector and city. Only reads. Team default (plan 15): the weekday set on
-/// the buyer's account decides.
+/// The اگراہی فہرست (PRD FR-15.6, FR-7.61, plan 53 T2): every active buyer who owes something, with
+/// his dues and the age of his oldest open bill, grouped by collector and city. There is no
+/// collection day: a buyer is collected any day. The cash buyer, the پختہ کھاتہ account and a
+/// person in the dead amount (inactive) are not on it. The totals are over the whole filter
+/// (Code Standards B31). Only reads.
 ///
 /// # Errors
-/// The date codes on `date`.
+/// `ServiceError::Db` for a database error.
 pub fn collection_list(
     ctx: &Context,
     input: &CollectionListInput,
 ) -> Result<CollectionList, ServiceError> {
     let (_, today) = day::window(ctx)?;
-    let date = validate::date("date", &input.date, today)?;
-    let weekday = date.weekday_from_monday();
     ctx.db.read(|conn| {
-        let candidates = repo::collection_candidates(
-            conn,
-            i64::from(weekday),
-            input.collector_staff_id,
-            input.city_id,
-        )?;
+        let candidates =
+            repo::collection_candidates(conn, input.collector_staff_id, input.city_id)?;
         let ids: Vec<i64> = candidates.iter().map(|c| c.account.id).collect();
         let totals = ledger_repo::totals_for_accounts(conn, &ids)?;
         let oldest = repo::oldest_open_bill_dates(conn, &ids)?;
@@ -571,8 +566,7 @@ pub fn collection_list(
             }
         }
         Ok(CollectionList {
-            date: date.to_iso(),
-            weekday,
+            date: today.to_iso(),
             groups: page,
             total_count,
             group_totals,

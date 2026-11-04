@@ -84,7 +84,6 @@ describe('what goes to the backend', () => {
     credit_limit: '',
     default_marka: null,
     collector: null,
-    collection_weekday: null,
     is_active: true,
     note: '',
   };
@@ -148,9 +147,37 @@ describe.each(LANGUAGES)('the opening date of a closed day (%s)', (language) => 
     });
   });
 
-  it('today is closed too: "save without the opening balance" empties the amount', async () => {
+  it('the offer scrolls itself into view when the save is refused, so the reason is never out of sight', async () => {
+    const scrolled = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrolled,
+    });
+    try {
+      vi.mocked(accountApi.accountsSave).mockRejectedValueOnce(closedDate(1));
+      await typeOpening();
+      expect(scrolled).not.toHaveBeenCalled();
+      press('F10');
+      const button = await screen.findByRole('button', {
+        name: named(
+          message(language, 'accounts-opening-closed-use-today', { today: '31-10-2026' }),
+        ),
+      });
+      await waitFor(() => {
+        expect(scrolled).toHaveBeenCalledWith({ block: 'nearest' });
+      });
+      // The element that scrolled holds the offer's own words and buttons.
+      const target = scrolled.mock.contexts.at(-1);
+      expect(target).toBeInstanceOf(HTMLElement);
+      expect((target as HTMLElement).contains(button)).toBe(true);
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    }
+  });
+
+  it('today is closed: the day is said to be closed, there is no "date after" line and no way but reopening', async () => {
     vi.mocked(accountApi.accountsSave).mockRejectedValueOnce(closedDate(0));
-    const user = await typeOpening();
+    await typeOpening();
     press('F10');
     expect(
       visible(
@@ -167,17 +194,49 @@ describe.each(LANGUAGES)('the opening date of a closed day (%s)', (language) => 
           ),
       }),
     ).toBeNull();
-    await user.click(
-      screen.getByRole('button', {
-        name: named(message(language, 'accounts-opening-closed-without')),
-      }),
+    // Neither "enter a date after X" (X is today here, so no later date is allowed) nor "save without".
+    const shown = visible(document.body.textContent);
+    expect(shown).not.toContain(
+      message(language, 'err-date-closed', { closed_up_to: '30-10-2026' }),
     );
-    await waitFor(async () => {
-      expect((await field('accounts-field-opening-dr')).value).toBe('');
-    });
+    expect(shown).toContain(message(language, 'edit-action-fix-day'));
+    expect(
+      screen.getAllByRole('button').filter((button) => {
+        const label = visible(button.textContent);
+        return (
+          label === message(language, 'edit-action-fix-day') ||
+          label.startsWith(
+            message(language, 'accounts-opening-closed-use-today', { today: '' }).slice(0, 4),
+          )
+        );
+      }),
+    ).toHaveLength(1);
   });
 
-  it('today is closed too: "reopen the day and fix" asks why and reopens', async () => {
+  it('today is open: the plain "date after X" line is not shown either; today and the reopening are both offered', async () => {
+    vi.mocked(accountApi.accountsSave).mockRejectedValueOnce(closedDate(1));
+    await typeOpening();
+    press('F10');
+    expect(
+      await screen.findByText(message(language, 'accounts-opening-closed-today-open')),
+    ).toBeInTheDocument();
+    // Today's date helps when the new date is the closed one; the reopening helps when the OLD opening is.
+    expect(
+      screen.getByRole('button', {
+        name: named(
+          message(language, 'accounts-opening-closed-use-today', { today: '31-10-2026' }),
+        ),
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: named(message(language, 'edit-action-fix-day')) }),
+    ).toBeInTheDocument();
+    expect(visible(document.body.textContent)).not.toContain(
+      message(language, 'err-date-closed', { closed_up_to: '30-10-2026' }),
+    );
+  });
+
+  it('today is closed: "reopen the day and fix" asks why and reopens', async () => {
     vi.mocked(accountApi.accountsSave).mockRejectedValueOnce(closedDate(0));
     vi.mocked(editApi.dayFixOpen).mockResolvedValue(DAY_FIX_OPEN_E2E_45);
     const user = await typeOpening();

@@ -949,3 +949,733 @@ fn cue_e_general_advice_with_the_tools_off_cannot_read_or_write_when_the_model_c
     assert_eq!(reply.outcome, AskOutcome::NotUnderstood, "{reply:#?}");
     assert!(reply.answer.as_ref().is_none_or(|a| figures(a).is_empty()));
 }
+
+// ---- (f) the scope guard of `calculate`: rows, wildcards, headings, matches, matched ------------
+// The guard knows whose figure each input is. Figures of different things are combined only when
+// the question asks for it, a part and its whole never, and a calculation never with one of its own
+// parts. Every case ends with the separate figures, and the combined one is never shown.
+
+fn report(id: &str, set: Value) -> (&'static str, Value) {
+    let mut call = json!({
+        "id": id, "adda": null, "as_of": null, "bikri": null, "city": null, "collector": null,
+        "from": null, "garden": null, "group_by": null, "item": null, "partner": null,
+        "party": null, "rows": null, "sort": null, "to": null, "trip": null, "where": null
+    });
+    for (k, v) in set.as_object().unwrap() {
+        call[k] = v.clone();
+    }
+    ("report", call)
+}
+
+const TWO_ITEMS_OWN: &str =
+    "{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}} {{r1.rows.i2.name}} {{r1.rows.i2.total_comm}}";
+
+/// One unfiltered view A, one calculation over `inputs`, the answer the model gives after it.
+fn rows_then(
+    h: &Harness,
+    question: &str,
+    op: &str,
+    inputs: &[&str],
+    answer: &str,
+) -> (AskReply, Vec<Value>) {
+    h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&[analytics("A", json!({}))]),
+            tool_reply(&[calculate(op, inputs)]),
+            final_reply(answer),
+            final_reply(TWO_ITEMS_OWN),
+        ],
+    )
+}
+
+#[test]
+fn cue_f_a_sum_over_every_row_of_a_view_needs_a_strong_together_word() {
+    let h = Harness::day();
+    // Each item was asked for: the sum of the rows is a figure nobody asked for.
+    let (reply, requests) = rows_then(
+        &h,
+        "kela aur saib ka commission",
+        "sum",
+        &["r1.rows.*.total_comm"],
+        "{{c1.result}}",
+    );
+    assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);
+    assert_eq!(money_of(&reply), [3_928, 1_520], "shown: {reply:#?}");
+    // A bare "total" or "kul" can be one item's own total ("kele ka total commission"): a sum of
+    // every row needs a strong word (mila kar, dono ka, sab ka, combined, together).
+    for question in [
+        "kele ka total commission",
+        "kela aur saib ka kul commission",
+        "kela aur saib ka total commission",
+    ] {
+        let (reply, requests) = rows_then(
+            &h,
+            question,
+            "sum",
+            &["r1.rows.*.total_comm"],
+            "{{c1.result}}",
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{question}: a weak word is not enough for every row; shown: {:?}",
+            money_of(&reply)
+        );
+        assert!(
+            !money_of(&reply).contains(&5_448),
+            "{question}: the sum of every item was shown for an item's own total"
+        );
+    }
+    // Asked together in a strong word, the same sum is the all-items figure.
+    for question in [
+        "kela aur saib ka commission mila kar",
+        "dono ka commission kitna hai",
+        "banana and apple commission together",
+    ] {
+        let (reply, requests) = rows_then(
+            &h,
+            question,
+            "sum",
+            &["r1.rows.*.total_comm"],
+            "{{c1.result}}",
+        );
+        assert!(
+            tool_error_codes(&requests[2]).is_empty(),
+            "{question}: {requests:#?}"
+        );
+        assert_eq!(money_of(&reply), [5_448], "{question}");
+    }
+    // An average of the rows needs the word average, not only the word for a sum.
+    let (reply, requests) = rows_then(
+        &h,
+        "kela aur saib ka commission mila kar",
+        "average",
+        &["r1.rows.*.total_comm"],
+        "{{c1.result}}",
+    );
+    assert_eq!(
+        tool_error_codes(&requests[2]),
+        ["ERR_OUT_OF_RANGE"],
+        "a sum word is not the word average; shown: {:?}",
+        money_of(&reply)
+    );
+    let (reply, requests) = rows_then(
+        &h,
+        "kela aur saib ka average commission",
+        "average",
+        &["r1.rows.*.total_comm"],
+        "{{c1.result}}",
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty());
+    assert_eq!(money_of(&reply), [2_724]);
+}
+
+#[test]
+fn cue_f_a_part_and_its_whole_are_never_added_even_when_the_sum_is_asked() {
+    let h = Harness::day();
+    for inputs in [
+        // Every row and the total line under them.
+        &["r1.rows.*.total_comm", "r1.totals.total_comm"][..],
+        // One row and the total of all.
+        &["r1.rows.i1.total_comm", "r1.totals.total_comm"][..],
+        // The total of all and a read of one item.
+        &["r1.totals.total_comm", "r2.totals.total_comm"][..],
+    ] {
+        let (reply, requests) = h.ask(
+            "kela aur saib ka kul commission mila kar",
+            None,
+            vec![
+                tool_reply(&[
+                    analytics("A", json!({})),
+                    analytics("A", json!({"item": "banana"})),
+                ]),
+                tool_reply(&[calculate("sum", inputs)]),
+                final_reply("{{c1.result}}"),
+                final_reply("{{r2.rows.i1.name}} {{r2.rows.i1.total_comm}}"),
+            ],
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{inputs:?}: a part and its whole; shown: {:?}",
+            money_of(&reply)
+        );
+        let shown = money_of(&reply);
+        assert!(
+            !shown.contains(&10_896) && !shown.contains(&9_376) && !shown.contains(&7_856),
+            "{inputs:?}: counted twice: {shown:?}"
+        );
+    }
+}
+
+#[test]
+fn cue_f_a_calculation_is_never_added_to_one_of_its_own_parts() {
+    // c1 is banana + apple, asked together. c2 adds c1 and banana again: banana is counted twice.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "kela aur saib ka kul commission mila kar",
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+            ]),
+            tool_reply(&[calculate(
+                "sum",
+                &["r1.totals.total_comm", "r2.totals.total_comm"],
+            )]),
+            tool_reply(&[calculate("sum", &["c1.result", "r1.totals.total_comm"])]),
+            final_reply("{{c1.result}}"),
+        ],
+    );
+    assert_eq!(tool_error_codes(&requests[3]), ["ERR_OUT_OF_RANGE"]);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(money_of(&reply), [5_448], "only the first sum is shown");
+}
+
+#[test]
+fn cue_f_the_heading_lines_of_a_sorted_report_are_not_rows_to_add() {
+    // R17 sorted: the head lines (assets, payables ...) are given apart in `headings`, and each
+    // holds the sums of the lines under it. Adding them to the rows counts every rupee twice.
+    let h = Harness::day();
+    let sorted = json!({"sort": [{"column": "debit", "order": "desc"}]});
+    let (reply, requests) = h.ask(
+        "trial balance ka kul debit mila kar",
+        None,
+        vec![
+            tool_reply(&[report("R17", sorted)]),
+            tool_reply(&[calculate(
+                "sum",
+                &["r1.headings.*.debit", "r1.rows.*.debit"],
+            )]),
+            final_reply("{{r1.totals.debit}}"),
+        ],
+    );
+    assert!(
+        !tool_error_codes(&requests[2]).is_empty(),
+        "headings and rows added together: {:?}",
+        requests[2]
+    );
+    // The total line of the report is the true figure.
+    assert_eq!(money_of(&reply), [72_888], "{reply:#?}");
+}
+
+#[test]
+fn cue_f_the_rows_of_a_sorted_report_leave_out_its_heading_lines() {
+    // The sum of the debit rows of R17 (sorted: heads apart) is the controls' debit, not the heads'
+    // and the controls' together. With the heads in, it would be the heads' total (72,888) plus.
+    let h = Harness::day();
+    let sorted = json!({"sort": [{"column": "debit", "order": "desc"}]});
+    let (_, requests) = h.ask(
+        "trial balance ka kul debit mila kar",
+        None,
+        vec![
+            tool_reply(&[report("R17", sorted)]),
+            tool_reply(&[calculate("sum", &["r1.rows.*.debit"])]),
+            final_reply("{{c1.result}}"),
+        ],
+    );
+    let c1 = result_of(&requests[2], "c1");
+    // Controls: 58,484 + 21,564 + 3,000 + 2,000 (the lines that are not heads).
+    assert_eq!(c1["result"]["rs"], 85_048, "{c1}");
+}
+
+#[test]
+fn cue_f_two_matches_of_one_name_are_not_added_unless_the_question_says_both() {
+    // Two buyers are both named Akram. "akram ka bakaya" must never be the sum of the two.
+    let h = Harness::day();
+    world::add_account_tagged(
+        &h.world.env,
+        &h.world.owner,
+        AccountType::Buyer,
+        ("اکرم ٹول ٹیکس", "Akram Toll Tax"),
+        (true, ""),
+        "B",
+    );
+    for (question, summed) in [
+        ("akram ka bakaya kitna hai", false),
+        ("dono akram ka bakaya mila kar kitna hai", true),
+    ] {
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[find("akram", "buyer")]),
+                tool_reply(&[calculate("sum", &["r1.matches.*.balance"])]),
+                final_reply("{{c1.result}}"),
+                reply_full("which_one", "", json!([]), json!("r1"), Value::Null),
+            ],
+        );
+        let refused = requests
+            .get(2)
+            .is_some_and(|b| tool_error_codes(b) == ["ERR_OUT_OF_RANGE"]);
+        if summed {
+            assert!(!refused, "{question}: both asked for together: {reply:#?}");
+        } else {
+            assert!(
+                refused || reply.outcome == AskOutcome::WhichOne,
+                "{question}: two people's dues must not become one figure: {reply:#?}"
+            );
+            assert!(
+                reply
+                    .answer
+                    .iter()
+                    .flat_map(figures)
+                    .all(|(c, _)| harness::balance(c).0 != 2_880),
+                "{question}: {reply:#?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn cue_f_the_matched_part_of_a_report_and_its_whole_are_never_added() {
+    // R20 with `where`: `matched.totals` is a part of `totals`. Adding them is a part and its whole.
+    let h = Harness::day();
+    let (reply, requests) = h.ask(
+        "5000 se zyada bakaya wale gahak ka kul bakaya mila kar",
+        None,
+        vec![
+            tool_reply(&[report(
+                "R20",
+                json!({"where": {"column": "balance", "op": "gt", "value": "q.n1"}}),
+            )]),
+            tool_reply(&[calculate(
+                "sum",
+                &["r1.matched.totals.balance", "r1.totals.balance"],
+            )]),
+            final_reply("{{r1.matched.totals.balance}}"),
+            final_reply("{{r1.totals.balance}}"),
+        ],
+    );
+    assert_eq!(
+        tool_error_codes(&requests[2]),
+        ["ERR_OUT_OF_RANGE"],
+        "matched and the whole: {reply:#?}"
+    );
+}
+
+#[test]
+fn cue_f_two_rows_by_name_need_the_together_word() {
+    let h = Harness::day();
+    let read = || {
+        vec![
+            tool_reply(&[report(
+                "R20",
+                json!({"sort": [{"column": "balance", "order": "desc"}]}),
+            )]),
+            tool_reply(&[calculate(
+                "sum",
+                &["r1.rows.a20.balance", "r1.rows.a21.balance"],
+            )]),
+        ]
+    };
+    let mut replies = read();
+    replies.push(final_reply("{{c1.result}}"));
+    replies.push(final_reply(
+        "{{r1.rows.a20.name}} {{r1.rows.a20.balance}} {{r1.rows.a21.name}} {{r1.rows.a21.balance}}",
+    ));
+    let (reply, requests) = h.ask("akram aur arshad ka bakaya", None, replies);
+    assert_eq!(tool_error_codes(&requests[2]), ["ERR_OUT_OF_RANGE"]);
+    assert!(
+        !figures(answer_of(&reply))
+            .iter()
+            .any(|(c, _)| harness::balance(c).0 == 21_564),
+        "the sum of two people was shown: {reply:#?}"
+    );
+    let mut replies = read();
+    replies.push(final_reply("{{c1.result}}"));
+    let (reply, requests) = h.ask("akram aur arshad ka bakaya mila kar", None, replies);
+    assert!(tool_error_codes(&requests[2]).is_empty(), "{requests:#?}");
+    assert!(
+        figures(answer_of(&reply))
+            .iter()
+            .any(|(c, _)| harness::balance(c).0 == 21_564),
+        "{reply:#?}"
+    );
+}
+
+// ---- (g) the scope guard after the money review B5: the same figure twice, a part of itself, ----
+// ---- measures made of other measures, periods that share days --------------------------------
+// These are refused for a sum or an average whatever the question says, because the combined figure
+// would count something twice.
+
+/// Banana and apple, each read apart, then the unfiltered view, then one calculation.
+fn three_reads_then(
+    h: &Harness,
+    question: &str,
+    calc: Vec<(&'static str, Value)>,
+    answer: &str,
+) -> (AskReply, Vec<Value>) {
+    h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&[
+                analytics("A", json!({"item": "banana"})),
+                analytics("A", json!({"item": "apple"})),
+                analytics("A", json!({})),
+            ]),
+            tool_reply(&calc),
+            final_reply(answer),
+            final_reply("{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}}"),
+        ],
+    )
+}
+
+const ASKED_TOGETHER: &str = "kela aur saib ka commission mila kar";
+
+#[test]
+fn cue_g_a_figure_named_twice_is_never_added_even_when_the_sum_is_asked() {
+    let h = Harness::day();
+    for inputs in [
+        // The same path twice.
+        &["r1.totals.total_comm", "r1.totals.total_comm"][..],
+        // A row and the wildcard that holds the row.
+        &["r3.rows.i1.total_comm", "r3.rows.*.total_comm"][..],
+        // The total line of a read of one item, and its own row.
+        &["r1.totals.total_comm", "r1.rows.i1.total_comm"][..],
+    ] {
+        let (reply, requests) = three_reads_then(
+            &h,
+            ASKED_TOGETHER,
+            vec![calculate("sum", inputs)],
+            "{{c1.result}}",
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{inputs:?}: counted twice; shown {:?}",
+            money_of(&reply)
+        );
+        let shown = money_of(&reply);
+        assert!(
+            !shown.contains(&7_856) && !shown.contains(&10_896),
+            "{inputs:?}: {shown:?}"
+        );
+    }
+}
+
+#[test]
+fn cue_g_a_chain_is_never_added_to_the_total_of_all_or_to_its_own_part() {
+    let h = Harness::day();
+    for second in [
+        // c1 is banana + apple; the total of all items is the same money again.
+        &["c1.result", "r3.totals.total_comm"][..],
+        // c1 and banana: banana is inside c1.
+        &["c1.result", "r1.totals.total_comm"][..],
+        // c1 and one row of the unfiltered view that is inside c1.
+        &["c1.result", "r3.rows.i2.total_comm"][..],
+    ] {
+        let (reply, requests) = h.ask(
+            ASKED_TOGETHER,
+            None,
+            vec![
+                tool_reply(&[
+                    analytics("A", json!({"item": "banana"})),
+                    analytics("A", json!({"item": "apple"})),
+                    analytics("A", json!({})),
+                ]),
+                tool_reply(&[calculate(
+                    "sum",
+                    &["r1.totals.total_comm", "r2.totals.total_comm"],
+                )]),
+                tool_reply(&[calculate("sum", second)]),
+                final_reply("{{c1.result}}"),
+            ],
+        );
+        assert_eq!(
+            tool_error_codes(&requests[3]),
+            ["ERR_OUT_OF_RANGE"],
+            "{second:?}: a chain against its own part or the whole"
+        );
+        assert_eq!(money_of(&reply), [5_448], "{second:?}: only the first sum");
+    }
+}
+
+#[test]
+fn cue_g_a_commission_is_never_added_to_a_part_of_itself() {
+    // total_comm is seller commission + buyer commission + laga. Adding laga to it counts laga twice.
+    let h = Harness::day();
+    for inputs in [
+        &["r1.totals.total_comm", "r1.totals.laga"][..],
+        &["r1.totals.total_comm", "r1.totals.buyer_comm"][..],
+        &["r1.totals.seller_comm", "r1.totals.total_comm"][..],
+        // The same inside one row of the unfiltered view.
+        &["r3.rows.i1.total_comm", "r3.rows.i1.laga"][..],
+    ] {
+        let (reply, requests) = three_reads_then(
+            &h,
+            ASKED_TOGETHER,
+            vec![calculate("sum", inputs)],
+            "{{c1.result}}",
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{inputs:?}; shown {:?}",
+            money_of(&reply)
+        );
+    }
+    // Two parts that are not inside each other are a real sum: buyer commission and laga of banana.
+    let (reply, requests) = three_reads_then(
+        &h,
+        "kele ka buyer commission aur laga mila kar",
+        vec![calculate(
+            "sum",
+            &["r1.totals.buyer_comm", "r1.totals.laga"],
+        )],
+        "{{c1.result}}",
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty(), "{requests:#?}");
+    assert_eq!(money_of(&reply), [2_164], "1,764 + 400");
+}
+
+#[test]
+fn cue_g_a_row_is_never_added_to_its_own_difference_and_its_earlier_period_needs_the_word() {
+    // A read with a comparison gives each row `earlier` (the figure of the period before) and
+    // `difference` (this period less the earlier one). The difference is made of the two, so adding
+    // it to either counts money twice. The earlier period itself is other days: this month plus the
+    // month before is a real sum, but only when the question asks for the two together.
+    let h = Harness::day();
+    let compare = json!({"from": "2026-10-01", "to": "2026-10-31", "compare": "previous"});
+    let run = |question: &str, inputs: &[&str]| {
+        h.ask(
+            question,
+            None,
+            vec![
+                tool_reply(&[analytics("A", compare.clone())]),
+                tool_reply(&[calculate("sum", inputs)]),
+                final_reply("{{c1.result}}"),
+                final_reply("{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}}"),
+            ],
+        )
+    };
+    for inputs in [
+        &["r1.rows.i1.total_comm", "r1.rows.i1.difference.total_comm"][..],
+        &[
+            "r1.rows.i1.earlier.total_comm",
+            "r1.rows.i1.difference.total_comm",
+        ][..],
+        &["r1.totals.total_comm", "r1.compare.difference.total_comm"][..],
+        &[
+            "r1.rows.i1.difference.total_comm",
+            "r1.rows.i1.difference.total_comm",
+        ][..],
+    ] {
+        let (reply, requests) = run(ASKED_TOGETHER, inputs);
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{inputs:?}: shown {:?}",
+            money_of(&reply)
+        );
+    }
+    // This period and the one before it: asked together it is allowed, not asked it is refused.
+    let both = &["r1.rows.i1.total_comm", "r1.rows.i1.earlier.total_comm"][..];
+    let (reply, requests) = run(
+        "kele ka is mahine aur pichle mahine ka commission mila kar",
+        both,
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty(), "{requests:#?}");
+    assert_eq!(
+        money_of(&reply),
+        [3_928],
+        "3,928 this month and 0 before it"
+    );
+    let (reply, requests) = run("kele ka is mahine aur pichle mahine ka commission", both);
+    assert_eq!(
+        tool_error_codes(&requests[2]),
+        ["ERR_OUT_OF_RANGE"],
+        "shown {:?}",
+        money_of(&reply)
+    );
+}
+
+/// Banana's commission read for two spans, then one sum over the two totals.
+fn two_spans(
+    h: &Harness,
+    question: &str,
+    first: (&str, &str),
+    second: (&str, &str),
+    op: &str,
+) -> (AskReply, Vec<Value>) {
+    h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&[
+                analytics(
+                    "A",
+                    json!({"item": "banana", "from": first.0, "to": first.1}),
+                ),
+                analytics(
+                    "A",
+                    json!({"item": "banana", "from": second.0, "to": second.1}),
+                ),
+            ]),
+            tool_reply(&[calculate(
+                op,
+                &["r1.totals.total_comm", "r2.totals.total_comm"],
+            )]),
+            final_reply("{{c1.result}}"),
+            final_reply("{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}}"),
+        ],
+    )
+}
+
+#[test]
+fn cue_g_the_same_figure_for_periods_that_share_days_is_never_added() {
+    let h = Harness::day();
+    for (what, first, second) in [
+        (
+            "the same period twice",
+            ("2026-10-01", "2026-10-31"),
+            ("2026-10-01", "2026-10-31"),
+        ),
+        (
+            "a month and a day inside it",
+            ("2026-10-01", "2026-10-31"),
+            ("2026-10-10", "2026-10-10"),
+        ),
+        (
+            "two periods that overlap by one day",
+            ("2026-10-01", "2026-10-10"),
+            ("2026-10-10", "2026-10-31"),
+        ),
+    ] {
+        for op in ["sum", "average"] {
+            let question = if op == "sum" {
+                "kele ka october ka commission mila kar"
+            } else {
+                "kele ka october ka average commission"
+            };
+            let (reply, requests) = two_spans(&h, question, first, second, op);
+            assert_eq!(
+                tool_error_codes(&requests[2]),
+                ["ERR_OUT_OF_RANGE"],
+                "{what} ({op}): shown {:?}",
+                money_of(&reply)
+            );
+        }
+    }
+}
+
+#[test]
+fn cue_g_the_same_figure_for_periods_apart_is_added_only_when_asked() {
+    let h = Harness::day();
+    let apart = (("2026-10-01", "2026-10-09"), ("2026-10-10", "2026-10-31"));
+    // Asked together: the two parts of October are the month.
+    let (reply, requests) = two_spans(
+        &h,
+        "kele ka 1 se 9 october aur 10 se 31 october ka commission mila kar",
+        apart.0,
+        apart.1,
+        "sum",
+    );
+    assert!(tool_error_codes(&requests[2]).is_empty(), "{requests:#?}");
+    assert_eq!(money_of(&reply), [3_928]);
+    // Not asked: the two are two figures.
+    let (reply, requests) = two_spans(
+        &h,
+        "kele ka 1 se 9 october aur 10 se 31 october ka commission",
+        apart.0,
+        apart.1,
+        "sum",
+    );
+    assert_eq!(
+        tool_error_codes(&requests[2]),
+        ["ERR_OUT_OF_RANGE"],
+        "shown {:?}",
+        money_of(&reply)
+    );
+}
+
+#[test]
+fn cue_g_a_balance_on_two_days_is_never_added() {
+    // R20 as of two days: the dues of one day plus the dues of the next are the same money twice.
+    let h = Harness::day();
+    let as_of = |day: &str| report("R20", json!({"as_of": day}));
+    let (reply, requests) = h.ask(
+        "gahakon ka bakaya 10 aur 11 october ko mila kar",
+        None,
+        vec![
+            tool_reply(&[as_of("2026-10-10"), as_of("2026-10-11")]),
+            tool_reply(&[calculate(
+                "sum",
+                &["r1.totals.balance", "r2.totals.balance"],
+            )]),
+            final_reply("{{c1.result}}"),
+            final_reply("{{r1.totals.balance}}"),
+        ],
+    );
+    assert_eq!(
+        tool_error_codes(&requests[2]),
+        ["ERR_OUT_OF_RANGE"],
+        "shown {:?}",
+        reply.answer.iter().flat_map(figures).count()
+    );
+}
+
+#[test]
+fn cue_g_a_tile_total_is_never_added_to_a_part_of_itself() {
+    // total_dues is the buyers' dues plus the sellers' dues plus the dead amount (tile).
+    let h = Harness::day();
+    for inputs in [
+        &["r1.total_dues.amount", "r1.buyers_dues.amount"][..],
+        &["r1.total_dues.amount", "r1.dead_amount.amount"][..],
+        &["r1.sellers_dues.amount", "r1.total_dues.amount"][..],
+    ] {
+        let (_, requests) = h.ask(
+            "total dues aur buyers ke dues mila kar",
+            None,
+            vec![
+                tool_reply(&[("tiles", json!({}))]),
+                tool_reply(&[calculate("sum", inputs)]),
+                final_reply("{{r1.total_dues.amount}}"),
+            ],
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{inputs:?}"
+        );
+    }
+}
+
+#[test]
+fn cue_g_the_words_average_and_apart_take_the_together_word_away() {
+    // "average" and "alag alag" say the opposite of one figure for both: a sum is not asked.
+    let h = Harness::day();
+    for question in [
+        "kela aur saib ka average commission mila kar",
+        "kela aur saib ka commission alag alag mila kar",
+        "banana and apple commission separately, together",
+    ] {
+        let (reply, requests) = h.ask(
+            question,
+            None,
+            banana_apple_then(
+                vec![calculate(
+                    "sum",
+                    &["r1.totals.total_comm", "r2.totals.total_comm"],
+                )],
+                vec![
+                    final_reply("{{c1.result}}"),
+                    final_reply(
+                        "{{r1.rows.i1.name}} {{r1.rows.i1.total_comm}} {{r2.rows.i2.name}} {{r2.rows.i2.total_comm}}",
+                    ),
+                ],
+            ),
+        );
+        assert_eq!(
+            tool_error_codes(&requests[2]),
+            ["ERR_OUT_OF_RANGE"],
+            "{question}: shown {:?}",
+            money_of(&reply)
+        );
+        assert_eq!(money_of(&reply), [3_928, 1_520], "{question}");
+    }
+}

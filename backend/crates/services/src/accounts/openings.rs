@@ -8,8 +8,8 @@
 use mandi_db::accounts as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
-    BUYER_CONTROL, Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningPreviewRow, OpeningRequest,
-    OpeningsInput, OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL,
+    BUYER_CONTROL, Balance, LineError, OPENING_DIFFERENCE_CODE, OpeningDay, OpeningPreviewRow,
+    OpeningRequest, OpeningsInput, OpeningsPreview, OpeningsSaved, RecordRef, SELLER_CONTROL,
     opening_request_in_force,
 };
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
@@ -96,6 +96,10 @@ fn on_line(error: ServiceError, index: usize) -> ServiceError {
 /// # Errors
 /// `ERR_OPENING_NOT_ALLOWED`; the date codes (the old entry's date must be open too);
 /// `ERR_AMOUNT_TOO_LARGE`; `ERR_JOURNAL_UNBALANCED` (a bug signal).
+// Eight plain arguments: the transaction, who and when, the account, the wanted opening, the field
+// to blame and the days it may be dated on. A struct would only move them into a type used by
+// three callers.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn apply(
     ctx: &Context,
     tx: &Connection,
@@ -104,6 +108,7 @@ pub(crate) fn apply(
     facts: &repo::AccountFacts,
     wanted: &OpeningRequest,
     amount_field: &str,
+    day: OpeningDay,
 ) -> Result<bool, ServiceError> {
     let have = current_opening(facts)?;
     if same_opening(&have, wanted) {
@@ -165,21 +170,27 @@ pub(crate) fn apply(
                 AccountId::new(difference_id(tx)?),
             )
             .map_err(ledger::ledger_error)?;
-            let posted = ledger::post(
-                ctx,
-                tx,
-                user_id,
-                &PostingEvent {
-                    date,
-                    posting_type: PostingType::Opening,
-                    source_type: SourceType::Account,
-                    source_id: facts.id,
-                    narration: None,
-                    reverses: None,
-                    entry,
-                },
-            )
+            let event = PostingEvent {
+                date,
+                posting_type: PostingType::Opening,
+                source_type: SourceType::Account,
+                source_id: facts.id,
+                narration: None,
+                reverses: None,
+                entry,
+            };
+            // A new account is dated on any day up to today, a closed one too (PRD FR-10.11); it
+            // has no old entry (`have` is empty), so no closed entry is touched.
+            let new_account = day == OpeningDay::NewAccount && !have.has_amount();
+            let posted = if new_account {
+                ledger::post_new_opening(ctx, tx, user_id, &event)
+            } else {
+                ledger::post(ctx, tx, user_id, &event)
+            }
             .map_err(on_opening_date)?;
+            if new_account {
+                audit_closed_day_opening(ctx, tx, user_id, facts.id, date, wanted)?;
+            }
             repo::set_opening(
                 tx,
                 facts.id,
@@ -207,6 +218,39 @@ pub(crate) fn apply(
     }
     Ok(true)
 }
+
+/// The audit row of an opening dated on a closed day (S7): who, which account, which day and how
+/// much. An opening on an open day needs none: it is an ordinary posting.
+fn audit_closed_day_opening(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    account_id: i64,
+    date: BusinessDate,
+    wanted: &OpeningRequest,
+) -> Result<(), ServiceError> {
+    let (closed_up_to, _) = day::window(ctx)?;
+    if closed_up_to.is_none_or(|closed| date > closed) {
+        return Ok(());
+    }
+    ctx.db.auditor().write(
+        tx,
+        &Event::new(Some(user_id), "opening_on_closed_day", "account")
+            .entity_id(account_id)
+            .new_value(json!({
+                "date": date.to_iso(),
+                "dr_paisa": wanted.dr.as_paisa(),
+                "cr_paisa": wanted.cr.as_paisa(),
+                "is_advance": wanted.is_advance,
+            }))
+            .reason(CLOSED_DAY_OPENING_REASON)
+            .into_entry(),
+    )?;
+    Ok(())
+}
+
+/// The reason written with an opening on a closed day (plan 53 T1).
+pub const CLOSED_DAY_OPENING_REASON: &str = "opening on a closed day";
 
 /// One line of the grid, checked.
 struct PlannedLine {
@@ -462,8 +506,17 @@ pub fn openings_save(
             };
             let have = current_opening(facts)?;
             let field = format!("lines[{index}].opening_dr");
-            if apply(ctx, tx, actor.user_id, &now, facts, wanted, &field)
-                .map_err(|e| on_line(e, index))?
+            if apply(
+                ctx,
+                tx,
+                actor.user_id,
+                &now,
+                facts,
+                wanted,
+                &field,
+                OpeningDay::Open,
+            )
+            .map_err(|e| on_line(e, index))?
             {
                 ctx.db.auditor().write(
                     tx,

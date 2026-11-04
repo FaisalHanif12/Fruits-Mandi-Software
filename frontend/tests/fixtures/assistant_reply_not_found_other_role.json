@@ -1,0 +1,44 @@
+{
+  "question_id": 8,
+  "conversation_id": "c-1",
+  "outcome": "not_found",
+  "answer": null,
+  "options": [
+    {
+      "key": "a20",
+      "name": {
+        "name_ur": "اکرم ٹول ٹیکس",
+        "name_en": "Akram Toll Tax",
+        "tag": null,
+        "code": "0020"
+      },
+      "city": null,
+      "balance": {
+        "type": "balance",
+        "paisa": 288000,
+        "side": "dr"
+      },
+      "checked": true,
+      "dead": false
+    }
+  ],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 3,
+  "limit": 20,
+  "asked_role": "seller",
+  "found_as": {
+    "key": "a20",
+    "id": 20,
+    "role": "buyer",
+    "name": {
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "tag": null,
+      "code": "0020"
+    }
+  }
+}

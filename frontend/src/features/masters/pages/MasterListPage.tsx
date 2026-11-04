@@ -12,6 +12,7 @@ import { useClientPager, useFocusFirstField, useLoadRest } from '../../../shared
 import { PagedList } from '../../../shared/grid';
 import { SHORTCUTS, formNavigationProps, useEscape, useShortcut } from '../../../shared/keyboard';
 import { Button, Checkbox, EmptyState, ErrorState, FilterBar, ListPage } from '../../../shared/ui';
+import { activeColumn, useActiveChange } from '../active';
 import { columnsOf, configOfPath, type MasterConfig } from '../configs';
 import { useMasterFilter, useMasterList } from '../hooks';
 import { useMasterFocus } from '../store';
@@ -28,7 +29,8 @@ export function MasterListPage() {
 function MasterList({ config }: { config: MasterConfig }) {
   const navigate = useNavigate();
   const [filterText, setFilterText] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  // A list with the فعال / غیر فعال switch shows the inactive ones too: one made inactive stays in sight.
+  const [showInactive, setShowInactive] = useState(config.activeSwitch === true);
   // The list holds the inactive masters too; the tick only shows or hides them, with no new call.
   const list = useMasterList(config.kind, true);
   const filter = useMasterFilter(config.kind, filterText);
@@ -38,7 +40,12 @@ function MasterList({ config }: { config: MasterConfig }) {
   // page buttons turn the pages in memory (`useClientPager`).
   useLoadRest(list, true);
   const containerRef = useFocusFirstField<HTMLDivElement>();
-  const columns = useMemo(() => columnsOf(config), [config]);
+  const active = useActiveChange(config.kind);
+  const { change } = active;
+  const columns = useMemo(
+    () => columnsOf(config, config.activeSwitch === true ? activeColumn(change) : undefined),
+    [config, change],
+  );
 
   const openNew = () => {
     void navigate({ to: '/index/$kind/new', params: { kind: config.path } });

@@ -74,10 +74,20 @@ import assistantReplyNeedParty from '../fixtures/assistant_reply_need_party.json
 import assistantReplyNeedPartyRequest from '../fixtures/assistant_reply_need_party_request.json';
 import assistantReplyNotFound from '../fixtures/assistant_reply_not_found.json';
 import assistantReplyNotFoundRequest from '../fixtures/assistant_reply_not_found_request.json';
+import assistantReplyNotFoundOtherRole from '../fixtures/assistant_reply_not_found_other_role.json';
+import assistantReplyNotFoundOtherRoleRequest from '../fixtures/assistant_reply_not_found_other_role_request.json';
 import assistantReplyNotUnderstoodCalls from '../fixtures/assistant_reply_not_understood_calls.json';
 import assistantReplyNotUnderstoodCallsRequest from '../fixtures/assistant_reply_not_understood_calls_request.json';
 import assistantReplyNotUnderstoodTokensTable from '../fixtures/assistant_reply_not_understood_tokens_table.json';
 import assistantReplyNotUnderstoodTokensTableRequest from '../fixtures/assistant_reply_not_understood_tokens_table_request.json';
+import assistantReplyPrintR13Ledger from '../fixtures/assistant_reply_print_r13_ledger.json';
+import assistantReplyPrintR13LedgerRequest from '../fixtures/assistant_reply_print_r13_ledger_request.json';
+import assistantReplyPrintR35Day from '../fixtures/assistant_reply_print_r35_day.json';
+import assistantReplyPrintR35DayRequest from '../fixtures/assistant_reply_print_r35_day_request.json';
+import assistantReplyPrintR5Range from '../fixtures/assistant_reply_print_r5_range.json';
+import assistantReplyPrintR5RangeRequest from '../fixtures/assistant_reply_print_r5_range_request.json';
+import assistantReplyTimeLimit from '../fixtures/assistant_reply_time_limit.json';
+import assistantReplyTimeLimitRequest from '../fixtures/assistant_reply_time_limit_request.json';
 import assistantReplyNotUnderstood from '../fixtures/assistant_reply_not_understood.json';
 import assistantReplyNotUnderstoodRequest from '../fixtures/assistant_reply_not_understood_request.json';
 import assistantReplyOffline from '../fixtures/assistant_reply_offline.json';
@@ -95,6 +105,7 @@ import assistantSettingsSetRequest from '../fixtures/assistant_settings_set_requ
 import assistantStatusOff from '../fixtures/assistant_status_off.json';
 import assistantStatusOn from '../fixtures/assistant_status_on.json';
 import assistantStepReadingReport from '../fixtures/assistant_step_reading_report.json';
+import assistantStepsPrint from '../fixtures/assistant_steps_print.json';
 import assistantTestNoEndpoint from '../fixtures/assistant_test_no_endpoint.json';
 import assistantTestWorked from '../fixtures/assistant_test_worked.json';
 
@@ -136,6 +147,9 @@ function readAssistantStatus(value: unknown): AssistantStatus {
 }
 function readAssistantStep(value: unknown): AssistantStep {
   return value as AssistantStep;
+}
+function readAssistantSteps(value: unknown): AssistantStep[] {
+  return value as AssistantStep[];
 }
 function readAssistantTestResult(value: unknown): AssistantTestResult {
   return value as AssistantTestResult;
@@ -224,6 +238,10 @@ export const REPLY_NOT_UNDERSTOOD = readAskReply(assistantReplyNotUnderstood);
 export const REPLY_NOT_UNDERSTOOD_REQUEST = readAssistantAskInput(
   assistantReplyNotUnderstoodRequest,
 );
+export const REPLY_NOT_FOUND_OTHER_ROLE = readAskReply(assistantReplyNotFoundOtherRole);
+export const REPLY_NOT_FOUND_OTHER_ROLE_REQUEST = readAssistantAskInput(
+  assistantReplyNotFoundOtherRoleRequest,
+);
 export const REPLY_NOT_UNDERSTOOD_CALLS = readAskReply(assistantReplyNotUnderstoodCalls);
 export const REPLY_NOT_UNDERSTOOD_CALLS_REQUEST = readAssistantAskInput(
   assistantReplyNotUnderstoodCallsRequest,
@@ -234,6 +252,19 @@ export const REPLY_NOT_UNDERSTOOD_TOKENS_TABLE = readAskReply(
 export const REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST = readAssistantAskInput(
   assistantReplyNotUnderstoodTokensTableRequest,
 );
+// "How do I print this?" (plan 54 S2): the how-to words, the steps, and a link-only button for each report.
+export const REPLY_PRINT_R13_LEDGER = readAskReply(assistantReplyPrintR13Ledger);
+export const REPLY_PRINT_R13_LEDGER_REQUEST = readAssistantAskInput(
+  assistantReplyPrintR13LedgerRequest,
+);
+export const REPLY_PRINT_R35_DAY = readAskReply(assistantReplyPrintR35Day);
+export const REPLY_PRINT_R35_DAY_REQUEST = readAssistantAskInput(assistantReplyPrintR35DayRequest);
+export const REPLY_PRINT_R5_RANGE = readAskReply(assistantReplyPrintR5Range);
+export const REPLY_PRINT_R5_RANGE_REQUEST = readAssistantAskInput(
+  assistantReplyPrintR5RangeRequest,
+);
+export const REPLY_TIME_LIMIT = readAskReply(assistantReplyTimeLimit);
+export const REPLY_TIME_LIMIT_REQUEST = readAssistantAskInput(assistantReplyTimeLimitRequest);
 export const REPLY_OFFLINE = readAskReply(assistantReplyOffline);
 export const REPLY_OFFLINE_REQUEST = readAssistantAskInput(assistantReplyOfflineRequest);
 export const REPLY_OUTSIDE_BOOKS = readAskReply(assistantReplyOutsideBooks);
@@ -251,5 +282,6 @@ export const SETTINGS_SET_REQUEST = readAssistantSettingsSetInput(assistantSetti
 export const STATUS_OFF = readAssistantStatus(assistantStatusOff);
 export const STATUS_ON = readAssistantStatus(assistantStatusOn);
 export const STEP_READING_REPORT = readAssistantStep(assistantStepReadingReport);
+export const STEPS_PRINT = readAssistantSteps(assistantStepsPrint);
 export const TEST_NO_ENDPOINT = readAssistantTestResult(assistantTestNoEndpoint);
 export const TEST_WORKED = readAssistantTestResult(assistantTestWorked);

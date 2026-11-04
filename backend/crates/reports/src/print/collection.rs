@@ -1,8 +1,8 @@
 //! Print data of the collection list (اگراہی فہرست, PRD FR-15.6, FR-7.61, FR-19.13; plan 17e).
 //!
-//! The list is the buyers planned for one day, with their dues, by collector and then by city. It
-//! is the fifth built print, so it has the same header and footer as the other four and the same
-//! rules: every number is formatted for print here, every title and label is a Fluent message ID,
+//! The list is every active buyer who owes (plan 53: there is no collection day), with his dues,
+//! by collector and then by city. It is the fifth built print, so it has the same header and
+//! footer as the other four and the same rules: every number is formatted for print here, every title and label is a Fluent message ID,
 //! and names are in the print language.
 //!
 //! Plan 17e T1 holds the types only. The builder (`collection_print_data`) comes in T2, from the
@@ -31,13 +31,10 @@ use super::load::{FirmNames, load_firm, load_grouping, load_setup};
 use super::{AmountRole, PrintAmount, PrintFact, TextDir};
 use crate::error::ReportsError;
 
-/// Input of `reports_collection_print_data` (plan 17e): the same day and filters as
+/// Input of `reports_collection_print_data` (plan 17e): the same filters as
 /// `assist_collection_list`, and the print language.
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct CollectionPrintDataInput {
-    /// The day, `DD-MM-YYYY` or a shortcut (PRD FR-7.19). Buyers whose collection day is this
-    /// weekday are on the list.
-    pub date: String,
     /// Only this collector (a staff member). Missing means every collector.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -181,8 +178,8 @@ fn checked_sum(amounts: impl Iterator<Item = Paisa>) -> Result<Paisa, ReportsErr
 /// groups add up to the list total (all with checked additions). A list that does not add up is
 /// not printed.
 ///
-/// The total is the total OF THIS LIST: only the active buyers whose collection day is the day's.
-/// It is not the shop's total اگراہی (PRD FR-19.9).
+/// The total is the total OF THIS LIST: the active buyers who owe, within the filter. It is not
+/// the shop's total اگراہی (PRD FR-19.9).
 ///
 /// # Errors
 /// `ReportsError::Data` for a list that does not add up or a stored date that is not a date;

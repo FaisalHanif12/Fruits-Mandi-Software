@@ -19,7 +19,16 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+use std::sync::Arc;
+
+use mandi_app_lib::backup_runtime::BackupRuntime;
 use mandi_app_lib::state::AppState;
+use mandi_backup::cloud::{FixedCloud, LocalFolderCloud};
+use mandi_backup::daily_pack::PendingPack;
+use mandi_backup::io::NoHook;
+use mandi_backup::secrets::MemorySecretStore;
+use mandi_backup::service::{BackupConfig, BackupParts, BackupService};
+use mandi_services::db::disk::FixedDiskProbe;
 use mandi_services::db::rusqlite::{Connection, types::Value as SqlValue};
 use mandi_services::testing::TestEnv;
 use serde_json::{Value, json};
@@ -31,13 +40,18 @@ use tempfile::TempDir;
 const OWNER_PASSWORD: &str = "secret1";
 
 /// The commands anyone may call before signing in (NFR-SEC-4).
-const OPEN: [&str; 6] = [
+const OPEN: [&str; 9] = [
     "app_info",
     "app_data_status",
     "auth_status",
     "setup_first_run",
     "auth_login",
     "auth_recover",
+    // Plan 56, restore on a new computer: open before sign-in, refused with ERR_ALREADY_SET_UP once
+    // an Owner exists.
+    "backup_first_run_list",
+    "backup_first_run_preview",
+    "backup_first_run_restore",
 ];
 
 struct Harness {
@@ -48,11 +62,40 @@ struct Harness {
 
 impl Harness {
     fn new() -> Self {
+        Self::build(false)
+    }
+
+    /// The same app with the backup service started (memory secrets, a folder for the cloud), as
+    /// it is in the real app. Without it every backup command says ERR_BACKUP_NOT_STARTED.
+    fn with_backup() -> Self {
+        Self::build(true)
+    }
+
+    fn build(backup: bool) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let env = TestEnv::new(dir.path()).unwrap();
         let state = AppState::with_context(env.ctx.clone());
-        let app = mock_builder()
-            .manage(state)
+        let mut builder = mock_builder().manage(state);
+        if backup {
+            let service = Arc::new(BackupService::new(
+                Arc::clone(env.ctx.db()),
+                BackupConfig {
+                    backups_dir: dir.path().join("backups"),
+                    app_version: "0.0.0-test".to_owned(),
+                },
+                BackupParts {
+                    secrets: Arc::new(MemorySecretStore::default()),
+                    cloud: Arc::new(FixedCloud(Arc::new(LocalFolderCloud::new(
+                        dir.path().join("cloud"),
+                    )))),
+                    disk: Arc::new(FixedDiskProbe(10 * 1024 * 1024 * 1024)),
+                    hook: Arc::new(NoHook),
+                    pack: Arc::new(PendingPack),
+                },
+            ));
+            builder = builder.manage(BackupRuntime::new(service));
+        }
+        let app = builder
             .invoke_handler(mandi_app_lib::handler())
             .build(mandi_app_lib::context())
             .unwrap();
@@ -992,7 +1035,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "father_or_firm_en": "", "city_id": null, "adda_id": null, "phone1": "", "phone2": "",
                 "address": "", "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
                 "opening_is_advance": false, "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-                "collector_staff_id": null, "collection_weekday": null, "is_active": true, "note": "" } }),
+                "collector_staff_id": null, "is_active": true, "note": "" } }),
             true,
         ),
         (
@@ -1056,7 +1099,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "adda_id": null, "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
                 "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
                 "credit_allowed": true, "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
-                "collection_weekday": null, "is_active": true, "note": "" } } }),
+                "is_active": true, "note": "" } } }),
             true,
         ),
         ("reports_list_printers", json!({}), true),
@@ -1107,6 +1150,25 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             "backup_key_confirm",
             json!({ "input": { "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
             true,
+        ),
+        // Plan 56, restore on a new computer: open before sign-in, refused with ERR_ALREADY_SET_UP
+        // once an Owner exists.
+        (
+            "backup_first_run_list",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" } } }),
+            false,
+        ),
+        (
+            "backup_first_run_preview",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" }, "copy": null,
+                "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
+        ),
+        (
+            "backup_first_run_restore",
+            json!({ "input": { "source": { "folder": "/mandi-test-no-such-folder" },
+                "copy": "mandi-20200101T000000000Z.mbk", "key": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ" } }),
+            false,
         ),
         // Run B, plan 20 (append-only block).
         ("reports_catalog", json!({}), true),
@@ -1967,6 +2029,119 @@ fn hostile_input_to_every_command_never_ends_in_an_internal_error_or_breaks_the_
 // ---------------------------------------------------------------------------------------------
 // auth_change_password through the command (PRD FR-5.6, NFR-SEC-1, NFR-SEC-2, NFR-SEC-4).
 // ---------------------------------------------------------------------------------------------
+
+/// Plan 56: once a shop exists, the three commands of "restore on a new computer" are refused with
+/// ERR_ALREADY_SET_UP, whatever the input, whoever is signed in (nobody, the Owner, a locked
+/// screen). The refusal comes BEFORE any look at the input, so a hostile path or key tells nothing
+/// (not even whether a folder exists), reads nothing and writes nothing.
+#[test]
+fn the_restore_on_a_new_computer_is_refused_once_a_shop_exists_for_every_source_and_input() {
+    let h = Harness::with_backup();
+    h.set_up();
+    let files = |h: &Harness| {
+        let mut names: Vec<String> = files_under(h.dir.path())
+            .into_iter()
+            .map(|p| p.display().to_string())
+            .filter(|p| !p.ends_with("-wal") && !p.ends_with("-shm"))
+            .collect();
+        names.sort();
+        names
+    };
+
+    let key = "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ";
+    let cloud = json!({ "cloud": {
+        "endpoint": "https://example.invalid", "bucket": "b", "region": "auto", "prefix": "mandi",
+        "key_id": "AKIAEXAMPLE", "secret": "secret-value" } });
+    let sources: Vec<Value> = vec![
+        cloud,
+        json!({ "folder": "/mandi-test-no-such-folder" }),
+        json!({ "folder": "/" }),
+        json!({ "folder": "../../etc" }),
+        json!({ "file": "/mandi-test-no-such-file.mbk" }),
+        json!({ "file": "/etc/passwd" }),
+        json!({ "folder": "x".repeat(5_000) }),
+        json!({ "cloud": { "endpoint": "http://not-secure", "bucket": "", "region": "", "prefix": "..",
+            "key_id": "", "secret": "" } }),
+    ];
+    let payloads = |source: &Value| -> Vec<(&'static str, Value)> {
+        vec![
+            (
+                "backup_first_run_list",
+                json!({ "input": { "source": source } }),
+            ),
+            (
+                "backup_first_run_preview",
+                json!({ "input": { "source": source, "copy": null, "key": key } }),
+            ),
+            (
+                "backup_first_run_restore",
+                json!({ "input": { "source": source, "copy": "mandi-20200101T000000000Z.mbk", "key": key } }),
+            ),
+        ]
+    };
+    let mut rng = Rng(0x5E71_0056);
+    let mut problems: Vec<String> = Vec::new();
+    let mut calls = 0_u32;
+    for state in ["signed out", "signed in", "locked"] {
+        match state {
+            "signed in" => h.login(),
+            "locked" => {
+                h.ok("auth_lock", json!({}));
+            }
+            _ => {}
+        }
+        // Signing in and locking write their own audit rows; the calls below must write nothing.
+        let before = h.fingerprint();
+        let files_before = files(&h);
+        for source in &sources {
+            for (command, payload) in payloads(source) {
+                calls += 1;
+                let code = h.code(command, payload);
+                if code != "ERR_ALREADY_SET_UP" {
+                    problems.push(format!("{state}: {command} {source} gave {code}"));
+                }
+            }
+        }
+        // Hostile values in every leaf of every payload: refused by a service with
+        // ERR_ALREADY_SET_UP, or by the IPC layer before any service. Never accepted, never
+        // ERR_INTERNAL.
+        for (command, payload) in payloads(&sources[1]) {
+            let mut paths = Vec::new();
+            leaf_paths(&payload, &mut Vec::new(), &mut paths);
+            for _ in 0..40 {
+                let mut mutated = payload.clone();
+                let path = &paths[rng.below(paths.len())];
+                set_at(&mut mutated, path, hostile(&mut rng));
+                calls += 1;
+                match h.call(command, mutated.clone()) {
+                    Ok(_) => problems.push(format!(
+                        "{state}: {command} ACCEPTED {}",
+                        mutated.to_string().chars().take(200).collect::<String>()
+                    )),
+                    Err(error) => match error["errors"][0]["code"].as_str() {
+                        Some("ERR_ALREADY_SET_UP") | None => {}
+                        Some(other) => problems.push(format!(
+                            "{state}: {command} gave {other} for {}",
+                            mutated.to_string().chars().take(200).collect::<String>()
+                        )),
+                    },
+                }
+            }
+        }
+        assert_eq!(
+            h.fingerprint(),
+            before,
+            "{state}: a refused call wrote something"
+        );
+        assert_eq!(
+            files(&h),
+            files_before,
+            "{state}: a refused call made or removed a file"
+        );
+    }
+    assert!(calls >= 400);
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
 
 fn change(current: &str, new: &str, repeat: &str) -> Value {
     json!({ "input": { "current": current, "new": new, "repeat": repeat } })

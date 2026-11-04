@@ -415,11 +415,8 @@ fn check_ready(conn: &Connection, span: &Span, today: BusinessDate) -> Result<()
         ));
     }
     // The entry is dated today, so today must still be open (PRD FR-6.6).
-    if closed.is_some_and(|c| c >= today) {
-        return Err(ServiceError::reject_field(
-            ErrorCode::ErrDateClosed,
-            "month",
-        ));
+    if let Some(c) = closed.filter(|c| *c >= today) {
+        return Err(crate::day::closed_rejection_at(c, closed, today, "month"));
     }
     if repo::active(conn, &span.month)?.is_some() {
         return Err(ServiceError::reject_field(

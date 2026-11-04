@@ -125,9 +125,53 @@ const CITIES = Array.from({ length: MANY }, (_, index) => ({
   is_active: index % 17 !== 5,
 }));
 
+/** The staff of the development page: two munshis (one inactive) and a collector (plan 53 T5). */
+const STAFF = [
+  {
+    id: 31,
+    name_ur: 'آصف بھٹی',
+    name_en: 'Asif Bhatti',
+    code: '0060',
+    job: 'munshi',
+    phone: '03004058860',
+    active: true,
+  },
+  {
+    id: 32,
+    name_ur: 'اسلم',
+    name_en: 'Aslam',
+    code: '0061',
+    job: 'collector',
+    phone: null,
+    active: true,
+  },
+  {
+    id: 33,
+    name_ur: 'بلال',
+    name_en: 'Bilal',
+    code: '0062',
+    job: 'munshi',
+    phone: '03012222222',
+    active: false,
+  },
+].map((person) => ({
+  kind: 'staff' as const,
+  id: person.id,
+  version: 1,
+  name_ur: person.name_ur,
+  name_en: person.name_en,
+  code: person.code,
+  job: person.job,
+  phone: person.phone,
+  account_id: null,
+  account_code: null,
+  is_active: person.active,
+}));
+
 function masterRows(kind: string) {
   const many = flag('many');
   if (flag('empty')) return [];
+  if (kind === 'staff') return STAFF;
   if (kind === 'item') {
     const real = itemsList.rows;
     if (!many) return real;
@@ -323,6 +367,14 @@ export const listsHandlers: Record<string, Handler> = {
       total_count: kept.length,
       totals: { active_count: shown.filter((row) => row.is_active).length },
     };
+  },
+  // The switch of a staff member: the row changes in memory, so the page can be pressed (plan 53 T5).
+  masters_set_active: (input) => {
+    const row = STAFF.find((person) => person.id === input['id']);
+    if (row === undefined) throw down();
+    row.is_active = input['is_active'] === true;
+    row.version += 1;
+    return row;
   },
   search_masters: () => [],
   rules_list: (input) => {

@@ -216,7 +216,11 @@ fn save(w: &support::World, draft: &BikriDraft) {
 /// PRD 4.4 to 4.7: Events 1 and 2 (the two بکری), Event 3 (اکرم pays 10,000) and Event 4
 /// (رحیم is paid 4,316).
 pub fn worked_day() -> Rig {
-    let w = support::world();
+    worked_day_with(support::world())
+}
+
+/// The same day in a world the test built itself (for example one that kept the recovery code).
+pub fn worked_day_with(w: support::World) -> Rig {
     save(&w, &support::event1(&w));
     save(&w, &event2(&w));
     vouchers::save_receipt(&w.env.ctx, &w.owner, &rupees_input(w.akram, "10,000")).unwrap();

@@ -41,5 +41,6 @@
   "failure": null,
   "stop_reason": null,
   "count_today": 3,
-  "limit": 20
+  "limit": 20,
+  "asked_role": "any"
 }

@@ -5,15 +5,12 @@
 //! confirmed are checked by `services::accounts` with these results.
 
 use super::{AccountInput, AccountType, FIRST_SERIAL, LAST_SERIAL, code_type_for};
-use crate::dates::{self, BusinessDate};
-use crate::error::{ErrorCode, ErrorValue, FieldError};
+use crate::dates::BusinessDate;
+use crate::error::{ErrorCode, FieldError};
 use crate::masters::{ColValue, NameTexts, Reference};
 use crate::money::Paisa;
 use crate::text;
 use crate::validate::{self, FieldErrors};
-
-/// The largest collection weekday (0 = Monday, 6 = Sunday).
-pub const MAX_WEEKDAY: i64 = 6;
 
 /// An opening amount typed on an account form or a line of the openings grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -162,6 +159,49 @@ pub fn opening_request_in_force(
     window: (Option<BusinessDate>, BusinessDate),
     in_force: Option<&OpeningRequest>,
 ) -> Result<OpeningRequest, Vec<FieldError>> {
+    opening_request_on(
+        prefix,
+        opening_date,
+        opening_dr,
+        opening_cr,
+        is_advance,
+        is_seller,
+        window,
+        in_force,
+        OpeningDay::Open,
+    )
+}
+
+/// Which days an opening may be dated on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpeningDay {
+    /// An open day: after the "closed up to" date and not after today (PRD FR-6.6). A new or a
+    /// changed opening of an existing account.
+    Open,
+    /// A new account: any day up to today, even a closed one (PRD FR-10.11, plan 53 T1). The
+    /// account has no opening yet, so nothing is reversed and no closed entry is touched; the
+    /// service writes an audit row for it.
+    NewAccount,
+}
+
+/// [`opening_request_in_force`] with the days the opening may be dated on.
+///
+/// # Errors
+/// As [`opening_request`]. For [`OpeningDay::NewAccount`] only a date after today is refused
+/// (`ERR_DATE_IN_FUTURE`).
+// Nine plain arguments: the ones above and the rule.
+#[allow(clippy::too_many_arguments)]
+pub fn opening_request_on(
+    prefix: &str,
+    opening_date: &str,
+    opening_dr: &str,
+    opening_cr: &str,
+    is_advance: bool,
+    is_seller: bool,
+    window: (Option<BusinessDate>, BusinessDate),
+    in_force: Option<&OpeningRequest>,
+    day: OpeningDay,
+) -> Result<OpeningRequest, Vec<FieldError>> {
     let (closed_up_to, today) = window;
     let mut errors = FieldErrors::default();
     let f = |name: &str| format!("{prefix}{name}");
@@ -199,10 +239,15 @@ pub fn opening_request_in_force(
                 if unchanged {
                     Some(date)
                 } else {
-                    match validate::posting_date(&field, opening_date, closed_up_to, today) {
+                    // A new account may be dated on a closed day: only a future date is refused.
+                    let limit = match day {
+                        OpeningDay::Open => closed_up_to,
+                        OpeningDay::NewAccount => None,
+                    };
+                    match validate::posting_date(&field, opening_date, limit, today) {
                         Ok(date) => Some(date),
                         Err(error) => {
-                            errors.push(closed_opening_hint(error, closed_up_to, today));
+                            errors.push(error);
                             None
                         }
                     }
@@ -219,23 +264,6 @@ pub fn opening_request_in_force(
         cr,
         is_advance,
     })
-}
-
-/// Adds what the form needs to the "closed day" error of an opening date (PRD FR-10.11): `today`
-/// (`DD-MM-YYYY`) and `today_open` (1 when today is an open day, else 0), so it can offer "use
-/// today", or "save without the opening", or "reopen the day". Any other error is returned as it is.
-fn closed_opening_hint(
-    error: FieldError,
-    closed_up_to: Option<BusinessDate>,
-    today: BusinessDate,
-) -> FieldError {
-    if error.code != ErrorCode::ErrDateClosed {
-        return error;
-    }
-    let today_open = closed_up_to.is_none_or(|closed| today > closed);
-    error
-        .with("today", ErrorValue::Text(dates::format_ddmmyyyy(today)))
-        .with("today_open", ErrorValue::Number(i64::from(today_open)))
 }
 
 /// The serial inside a full account code of the old scheme (control code plus 4 digits), used for
@@ -348,15 +376,6 @@ pub fn prepare_account(
         "credit_limit",
         &input.credit_limit,
     ));
-    if let Some(day) = input.collection_weekday
-        && !(0..=MAX_WEEKDAY).contains(&day)
-    {
-        errors.push(
-            error(ErrorCode::ErrOutOfRange, "collection_weekday")
-                .with("min", crate::error::ErrorValue::Number(0))
-                .with("max", crate::error::ErrorValue::Number(MAX_WEEKDAY)),
-        );
-    }
     let mut references = Vec::new();
     reference(
         &mut errors,
@@ -396,7 +415,7 @@ pub fn prepare_account(
     if input.id.is_some() && input.linked_account_id == input.id {
         errors.push(error(ErrorCode::ErrNotFound, "linked_account_id"));
     }
-    let opening = match opening_request_in_force(
+    let opening = match opening_request_on(
         "",
         &input.opening_date,
         &input.opening_dr,
@@ -405,6 +424,12 @@ pub fn prepare_account(
         input.account_type == AccountType::Seller,
         (closed_up_to, today),
         opening_in_force,
+        // A new account (no id) is dated on any day up to today (PRD FR-10.11).
+        if input.id.is_none() {
+            OpeningDay::NewAccount
+        } else {
+            OpeningDay::Open
+        },
     ) {
         Ok(opening) => opening,
         Err(found) => {
@@ -464,7 +489,6 @@ pub fn prepare_account(
         ),
         ("default_marka_id", id_or_null(input.default_marka_id)),
         ("collector_staff_id", id_or_null(input.collector_staff_id)),
-        ("collection_weekday", id_or_null(input.collection_weekday)),
         ("is_active", ColValue::Int(i64::from(input.is_active))),
         ("note", optional(&note)),
     ];

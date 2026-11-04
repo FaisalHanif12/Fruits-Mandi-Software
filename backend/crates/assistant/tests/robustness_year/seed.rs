@@ -557,7 +557,8 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
 
     let a = world::new_partner(&env, &owner, "الف", "Partner A");
     let b = world::new_partner(&env, &owner, "ب", "Partner B");
-    let c = world::new_partner(&env, &owner, "ج", "Partner C");
+    // The third partner is Usman (Umar's own question "usman shirakat daar ka kitna hai abhi").
+    let c = world::new_partner(&env, &owner, "عثمان", "Usman");
     partners::set_shares(
         &env.ctx,
         &owner,

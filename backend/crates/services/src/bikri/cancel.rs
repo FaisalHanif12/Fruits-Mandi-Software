@@ -93,15 +93,8 @@ fn cash_of(conn: &Connection, live: &[Live]) -> Result<Paisa, ServiceError> {
     Ok(total)
 }
 
-fn closed_error(day: BusinessDate, field: &str) -> ServiceError {
-    ServiceError::Rejected(vec![Rejection {
-        code: ErrorCode::ErrDateClosed,
-        field: Some(field.to_owned()),
-        values: std::collections::BTreeMap::from([(
-            "closed_up_to".to_owned(),
-            ErrorValue::Text(day.to_iso()),
-        )]),
-    }])
+fn closed_error(ctx: &Context, day: BusinessDate, field: &str) -> ServiceError {
+    crate::day::closed_rejection(ctx, day, field)
 }
 
 /// A بکری with a lot of a closed garden is not cancelled until the closing is undone (PRD FR-12.38):
@@ -190,7 +183,7 @@ fn cancel_in(
     let now = ctx.now_text();
     let live = live_postings(tx, detail.id)?;
     if let Some(day) = closed_days(&live, closed_up_to).first() {
-        return Err(closed_error(*day, "id"));
+        return Err(closed_error(ctx, *day, "id"));
     }
     // The cash question of the whole action (PRD FR-6.7).
     let change = cash_of(tx, &live)?.checked_neg().map_err(money_error)?;

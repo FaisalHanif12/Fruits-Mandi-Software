@@ -117,10 +117,6 @@ export type AccountRow = {
    */
   collector: RecordRef | null;
   /**
-   * The collection day, 0 (Monday) to 6 (Sunday), or null.
-   */
-  collection_weekday: number | null;
-  /**
    * A system account of PRD FR-10.4: its code cannot change and it cannot be deleted.
    */
   is_system: boolean;

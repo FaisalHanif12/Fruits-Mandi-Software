@@ -29,6 +29,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { fakeAccountSearch } from '../helpers/accounts';
 import { fakeGardens } from '../helpers/gardens';
 import { fakePartners } from '../helpers/partners';
 import { paisaForTest } from '../helpers/paisa';
@@ -68,6 +69,9 @@ beforeEach(() => {
   healthyBackend();
   fakePartners([]);
   fakeGardens();
+  // The party box of a report asks the account search page by page. After `resetAllMocks` it would answer
+  // nothing at all, and a picker that gets no page throws; a real empty page is the honest answer here.
+  fakeAccountSearch([]);
 });
 
 afterEach(() => {

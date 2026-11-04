@@ -7,10 +7,6 @@ use std::sync::{Mutex, PoisonError};
 
 use crate::error::BackupError;
 
-/// Credential Manager service name (Tech Stack 7: the bundle identifier). The same service as
-/// the audit chain key; the entry names differ.
-pub const KEYRING_SERVICE: &str = "pk.mandisoftware.app";
-
 /// The secrets this crate keeps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SecretName {
@@ -58,12 +54,22 @@ pub trait SecretStore: Send + Sync {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct KeyringSecretStore;
 
+impl KeyringSecretStore {
+    /// The Credential Manager service name this store uses (Tech Stack 7: the bundle
+    /// identifier). It is the same service as the audit chain key; the entry names differ. A
+    /// developer profile (`MANDI_PROFILE`, plan 56 R5) adds a dot and its name, so a test run
+    /// never reads or writes the real entries.
+    pub fn service() -> String {
+        mandi_core::profile::keyring_service()
+    }
+}
+
 fn keyring_error(error: &keyring::Error) -> BackupError {
     BackupError::internal(format!("credential store: {error}"))
 }
 
 fn entry(name: SecretName) -> Result<keyring::Entry, BackupError> {
-    keyring::Entry::new(KEYRING_SERVICE, name.entry()).map_err(|e| keyring_error(&e))
+    keyring::Entry::new(&KeyringSecretStore::service(), name.entry()).map_err(|e| keyring_error(&e))
 }
 
 impl SecretStore for KeyringSecretStore {

@@ -135,7 +135,6 @@ pub fn add_account_tagged(
         credit_limit: credit_limit.into(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
         tag: tag.into(),

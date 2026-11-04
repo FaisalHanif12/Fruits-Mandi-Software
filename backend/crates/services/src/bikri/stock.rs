@@ -224,16 +224,11 @@ fn required_reason(text: &str) -> Result<String, FieldError> {
 
 /// The day of a stock move must be an open day (PRD FR-6.6).
 fn check_open(ctx: &Context, date: BusinessDate, field: &str) -> Result<(), ServiceError> {
-    let (closed_up_to, _) = day::window(ctx)?;
+    let (closed_up_to, today) = day::window(ctx)?;
     match closed_up_to {
-        Some(closed) if date <= closed => Err(ServiceError::Rejected(vec![Rejection {
-            code: ErrorCode::ErrDateClosed,
-            field: Some(field.to_owned()),
-            values: std::collections::BTreeMap::from([(
-                "closed_up_to".to_owned(),
-                ErrorValue::Text(closed.to_iso()),
-            )]),
-        }])),
+        Some(closed) if date <= closed => {
+            Err(day::closed_rejection_at(closed, closed_up_to, today, field))
+        }
         _ => Ok(()),
     }
 }

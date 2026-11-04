@@ -16,7 +16,9 @@
     {
       "code": "ERR_OUT_OF_RANGE",
       "field": "cloud_endpoint",
-      "values": {}
+      "values": {
+        "reason": "https"
+      }
     },
     {
       "code": "ERR_REQUIRED",

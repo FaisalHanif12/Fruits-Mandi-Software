@@ -625,6 +625,8 @@ fn calculate_keeps_the_kind_of_its_inputs_and_gives_a_difference_its_size_and_di
         number(300_000, "3 lakh", NumberUnit::Amount),
         number(10, "10%", NumberUnit::Percent),
     ]);
+    // The words of the question that let the calculator combine two parties (plan 52).
+    s.question = "mila kar farq".into();
     // "48,000 to 51,000": 3,000 more (size and direction up).
     let up = s
         .run(
@@ -723,6 +725,7 @@ fn calculate_keeps_the_kind_of_its_inputs_and_gives_a_difference_its_size_and_di
 fn a_sum_over_every_row_is_refused_when_the_rows_were_cut() {
     let w = day();
     let mut s = Session::new(&w);
+    s.question = "sab ka kul total".into();
     // All rows are there: summed.
     let r20 = s.run("report", report("R20", json!({}))).unwrap();
     assert_eq!(r20, "r1");
@@ -879,6 +882,8 @@ fn a_check_mark_needs_every_input_checked_and_a_number_takes_the_side_beside_it(
     // the Owner typed, never read from the books.
     let w = day();
     let mut s = Session::new(&w).with_numbers(vec![number(48_000, "48,000", NumberUnit::Plain)]);
+    // The words of the question that let the calculator combine two parties (plan 52).
+    s.question = "mila kar farq percent".into();
     s.run("find", json!({"text": "akram", "role": "buyer"}))
         .unwrap();
     s.run("find", json!({"text": "karim", "role": "seller"}))
@@ -930,6 +935,8 @@ fn an_average_sends_how_many_figures_it_was_over_as_its_last_input() {
     use mandi_reports::reports::Cell;
     let w = day();
     let mut s = Session::new(&w);
+    // The words of the question that let the calculator combine two parties (plan 52).
+    s.question = "average".into();
     s.run("find", json!({"text": "akram", "role": "buyer"}))
         .unwrap();
     s.run("find", json!({"text": "arshad", "role": "buyer"}))
@@ -954,6 +961,7 @@ fn a_heading_or_total_line_is_never_counted_added_up_or_filtered() {
     // C3 and R1. R21 and R24 have a heading line with the sum of the lines under it.
     let w = day();
     let mut s = Session::new(&w).with_numbers(vec![number(0, "0", NumberUnit::Plain)]);
+    s.question = "sab ka kul total".into();
     let more_than_nothing = |column: &str| json!({"column": column, "op": "gt", "value": "q.n1"});
     let r21 = s
         .run(
@@ -1149,6 +1157,8 @@ fn what_percent_of_the_total_dues_a_buyer_owes_is_worked_out_from_his_debit_bala
     // two inputs is still refused, because there the side matters.
     let w = day();
     let mut s = Session::new(&w);
+    // The words of the question that let the calculator combine two parties (plan 52).
+    s.question = "kitna percent".into();
     let find = s
         .run("find", json!({"text": "arshad", "role": "buyer"}))
         .unwrap();
@@ -1216,6 +1226,8 @@ fn a_balance_with_no_second_place_beside_a_checked_one_gives_no_check_mark() {
     let w = day();
     common::set_today(&w.env, 2026, 10, 11);
     let mut s = Session::new(&w).with_today("2026-10-11");
+    // The words of the question that let the calculator combine two parties (plan 52).
+    s.question = "mila kar".into();
     let past = s
         .run("report", report("R20", json!({"as_of": "2026-10-10"})))
         .unwrap();

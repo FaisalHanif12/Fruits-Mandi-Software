@@ -334,11 +334,15 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     await typePurchaseLine(user, 2, { ...oranges(), qty: '10', rate: '2000', otherQty: '4' });
     // Each line's value is its own: 80 × 1,200, 40 × 900 and 10 × 2,000, and the money of the whole
     // entry is the backend's: 96,400 (with the freight) + 36,000 + 20,000.
+    // All three together: the grid draws its rows one after another, and on a busy machine the third
+    // line can show its value before the others do.
     await waitFor(() => {
-      expect(lineCellText(2, 'value')).toBe('20,000');
+      expect([0, 1, 2].map((row) => lineCellText(row, 'value'))).toEqual([
+        '96,000',
+        '36,000',
+        '20,000',
+      ]);
     });
-    expect(lineCellText(0, 'value')).toBe('96,000');
-    expect(lineCellText(1, 'value')).toBe('36,000');
     // What is left for our shop, line by line: 80 − 30, 40, 10 − 4.
     await waitFor(() => {
       expect([0, 1, 2].map((row) => lineCellText(row, 'ourQty'))).toEqual(['50', '40', '6']);
@@ -981,12 +985,15 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     });
     const otherNames = { b: other === 'ur' ? 'ب' : 'Partner B' };
     // The grid is made again for the other direction, from the lines in the store.
+    // Every cell of the line is waited for together: the new grid draws its cells one after another.
     await waitFor(() => {
-      expect(lineCellText(0, 'qty')).toBe('20');
+      expect(['qty', 'rate', 'freight', 'item'].map((column) => lineCellText(0, column))).toEqual([
+        '20',
+        '500',
+        '400',
+        other === 'ur' ? 'مالٹا' : 'Orange',
+      ]);
     });
-    expect(lineCellText(0, 'rate')).toBe('500');
-    expect(lineCellText(0, 'freight')).toBe('400');
-    expect(lineCellText(0, 'item')).toBe(other === 'ur' ? 'مالٹا' : 'Orange');
     expect(
       screen.getByRole('combobox', { name: named(message(other, 'purchases-field-supplier')) }),
     ).toHaveValue('Haji Nazir');

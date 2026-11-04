@@ -53,7 +53,7 @@ pub async fn reports_print<R: tauri::Runtime>(
 /// 17e): the buyers planned for the day with their dues, by collector and then by city, each with
 /// his short code, name with tag, phone, dues and oldest open bill, then the totals row, under the
 /// shared header and footer (FR-19.13). Names, digits and dates are in the print language. Read
-/// only. Errors: the date codes on `date`; `ERR_NOT_FOUND` on `collector_staff_id` or `city_id`.
+/// only. Errors: `ERR_NOT_FOUND` on `collector_staff_id` or `city_id`.
 /// The list is the one `assist_collection_list` gives; its total is the total of this list, not
 /// the shop's total اگراہی. A list whose rows do not add up to its totals is not printed.
 #[tauri::command]
@@ -66,7 +66,6 @@ pub async fn reports_collection_print_data<R: tauri::Runtime>(
         // Two reads of the same value (accepted deviation from Code Standards B2, plan 17e).
         let (list, filters) = printing::collection_for_print_searching(
             ctx,
-            &input.date,
             input.collector_staff_id,
             input.city_id,
             input.search.as_deref(),

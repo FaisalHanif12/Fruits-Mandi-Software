@@ -1,5 +1,5 @@
 // One answer (PRD FR-7.74), in this order: the advice band when it is advice, the answer text with its
-// figures, the tables and charts, the estimate band, the buttons, the source line and the next
+// figures, the numbered steps of a "how do I print this?" answer, the tables and charts, the estimate band, the buttons, the source line and the next
 // questions. The panel shows what the backend sent and nothing else: it never sums, never builds a
 // figure, and never fills a gap in the model's words (CLAUDE.md rule 1, Code Standards F2, M12).
 
@@ -11,6 +11,7 @@ import { AnswerChartView } from './AnswerChartView';
 import { AnswerTableView } from './AnswerTableView';
 import { AnswerText } from './AnswerText';
 import { AdviceBand, EstimateBand, GeneralAdviceBand } from './Bands';
+import { HowSteps } from './HowSteps';
 import { RoundChip } from './RoundChip';
 import { SourceButtons, SourceLine } from './SourceFooter';
 
@@ -52,6 +53,7 @@ export function AnswerBlock({
       ) : null}
       <AnswerText parts={answer.parts} />
       {afterText}
+      <HowSteps steps={answer.how} />
       {answer.tables.map((table) => (
         <AnswerTableView key={table.result_id} table={table} />
       ))}

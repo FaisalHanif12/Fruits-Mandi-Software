@@ -11,6 +11,7 @@
 //! | R29, R33, R36, R37, views G, I, J with a partner picked | refused |
 //! | R33 by partner, R36 by partner | refused |
 //! | R29 without a partner | runs, the money partners took and gave back is left out |
+//! | R37 without a partner | runs with the fruit for the shop's guests only (rows and totals) |
 //! | R34 | runs, the partner shares, money taken, returned and capital are left out |
 //! | views I and J | run, the columns of each partner are left out |
 //!
@@ -46,6 +47,9 @@ pub fn report_need(id: ReportId, filters: &ReportFilters) -> PartnerNeed {
             PartnerNeed::Refuse
         }
         ReportId::R37 if partner_picked => PartnerNeed::Refuse,
+        // The register of everyone lists each entry's partner and his amount: while locked it runs
+        // with the guests' fruit only (its rows and its totals), no partner's.
+        ReportId::R37 if filters.guests_only != Some(true) => PartnerNeed::HideParts,
         _ => PartnerNeed::None,
     }
 }
@@ -72,6 +76,12 @@ mod tests {
         assert_eq!(report_need(ReportId::R31, &plain), PartnerNeed::Refuse);
         assert_eq!(report_need(ReportId::R29, &plain), PartnerNeed::HideParts);
         assert_eq!(report_need(ReportId::R34, &plain), PartnerNeed::HideParts);
+        assert_eq!(report_need(ReportId::R37, &plain), PartnerNeed::HideParts);
+        let guests = ReportFilters {
+            guests_only: Some(true),
+            ..ReportFilters::default()
+        };
+        assert_eq!(report_need(ReportId::R37, &guests), PartnerNeed::None);
         assert_eq!(report_need(ReportId::R33, &plain), PartnerNeed::None);
         assert_eq!(report_need(ReportId::R2, &plain), PartnerNeed::None);
         let by_partner = ReportFilters {

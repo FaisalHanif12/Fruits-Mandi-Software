@@ -318,6 +318,7 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
         ),
         general_advice: answer.kind == crate::model_answer::AnswerKind::GeneralAdvice,
         sources: sources_of(state),
+        how: Vec::new(),
         differences: Vec::new(),
         next: answer
             .next
@@ -350,10 +351,63 @@ pub fn plain_tables(state: &State, read_at: &str) -> Answer {
         advice: false,
         general_advice: false,
         sources: sources_of(state),
+        how: Vec::new(),
         differences: Vec::new(),
         next: Vec::new(),
         read_at: read_at.to_owned(),
     }
+}
+
+/// The field of a party card that holds the figure a question asked for (money review R-b): the
+/// balance for a balance or dues question, the open advance for a peshgi question, the payable
+/// for an adaigi question.
+pub const CARD_BALANCE: &str = "balance";
+/// The card field of an advance question.
+pub const CARD_ADVANCE: &str = "open_advance";
+/// The card field of a payable question.
+pub const CARD_PAYABLE: &str = "payable";
+
+/// What was read for a question that ran out of time (plan 55 Section 3): the plain tables as in
+/// [`plain_tables`], and for each party card read, his name and the figure of the card that the
+/// Owner asked for (`card_field`); a read of the tiles shows as its source. `None` when nothing
+/// that shows was read: a `find` alone has no figure and is not an answer.
+///
+/// When the app does not know which figure of the card was asked (`card_field` is `None`), the
+/// card shows no figure: a balance given for an advance question would be a real number for the
+/// wrong thing.
+///
+/// Example: "ikram ke total bakaya kitne hai", the card read and then the line drops: the answer
+/// holds `name اکرم ٹول ٹیکس`, `figure 2,880 بنام ✓`, and the card and R13 as sources.
+/// "rahim ki peshgi kitni hai" shows his open advance, 15,000, and not his balance.
+pub fn read_so_far(state: &State, read_at: &str, card_field: Option<&str>) -> Option<Answer> {
+    let mut answer = plain_tables(state, read_at);
+    for result in state
+        .results
+        .iter()
+        .filter(|r| r.turn == state.turn && r.tool == "party_card")
+    {
+        let Some(field) = card_field else { break };
+        let (Some(Node::Val(name)), Some(Node::Val(figure))) = (
+            result.node.get(&["party", "name"]),
+            result.node.get(&[field]),
+        ) else {
+            continue;
+        };
+        if !answer.parts.is_empty() {
+            answer.parts.push(AnswerPart::Text {
+                text: "\n".to_owned(),
+            });
+        }
+        answer.parts.push(part_of_val(name, None));
+        answer.parts.push(part_of_val(figure, None));
+    }
+    let shows = !answer.tables.is_empty()
+        || !answer.parts.is_empty()
+        || answer
+            .sources
+            .iter()
+            .any(|s| matches!(s, AnswerSource::Tiles { .. }));
+    shows.then_some(answer)
 }
 
 /// The Fluent message of a place of a figure (the frontend's `assistant-place-*`).
@@ -453,6 +507,7 @@ pub fn differ_answer(env: &Env<'_>, state: &State, paths: &[String], read_at: &s
         advice: false,
         general_advice: false,
         sources: sources_of(state),
+        how: Vec::new(),
         differences: differences(env, state, paths),
         next: Vec::new(),
         read_at: read_at.to_owned(),

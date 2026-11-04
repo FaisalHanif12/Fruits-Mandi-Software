@@ -749,6 +749,171 @@ describe.each(LANGUAGES)('masters with their own fields (%s)', (language) => {
     expect(screen.getByLabelText(message(language, 'masters-field-code'))).toBeInTheDocument();
   });
 
+  describe('the فعال / غیر فعال switch of the staff (PRD v1.23)', () => {
+    const ASIF = record('staff', 31, '0060', 'آصف', 'Asif', {
+      text: { job: 'munshi', phone: '03004058860' },
+    });
+    const ASLAM = record('staff', 32, '0061', 'اسلم', 'Aslam', {
+      text: { job: 'collector', phone: '' },
+      is_active: false,
+    });
+    const switchOf = (rowId: number) => {
+      const found = document.querySelector<HTMLElement>(
+        `.ag-row[row-id="${String(rowId)}"] [data-cell-control]`,
+      );
+      if (found === null) throw new Error(`no switch in row ${String(rowId)}`);
+      return found;
+    };
+    const wordOf = (id: string) => named(message(language, id));
+
+    it('every row has the two words as a switch, the inactive ones are shown, and the page says so', async () => {
+      fakeMasters({ staff: [ASIF, ASLAM] });
+      await renderApp('/index/staff');
+      expect(
+        await screen.findByText(visible(message(language, 'masters-staff-title')), {
+          selector: 'h1',
+        }),
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      // Asif is active, Aslam is not; each row carries both words, the pressed one marked.
+      const asif = within(switchOf(31)).getAllByRole('button');
+      expect(asif.map((button) => visible(button.textContent))).toEqual([
+        message(language, 'masters-status-active'),
+        message(language, 'masters-status-inactive'),
+      ]);
+      expect(asif.map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+      const aslam = within(switchOf(32)).getAllByRole('button');
+      expect(aslam.map((button) => button.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+      // "Show the inactive ones too" is already ticked here.
+      expect(screen.getByRole('checkbox', { name: wordOf('masters-show-inactive') })).toBeChecked();
+    });
+
+    it('a click on the other word makes him inactive through the ordinary master save, and does not open the row', async () => {
+      const store = fakeMasters({ staff: [ASIF, ASLAM] });
+      const { router } = await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      const user = userEvent.setup();
+      await user.click(
+        within(switchOf(31)).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(store.rows.staff.find((row) => row.id === 31)?.is_active).toBe(false);
+      expect(
+        await screen.findByText(message(language, 'masters-made-inactive')),
+      ).toBeInTheDocument();
+      // He stays in the list, now marked inactive, and the screen is still the list.
+      await waitFor(() => {
+        const buttons = within(switchOf(31)).getAllByRole('button');
+        expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([
+          'false',
+          'true',
+        ]);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff');
+      // And one who was inactive is made active again the same way.
+      await user.click(
+        within(switchOf(32)).getByRole('button', { name: wordOf('masters-status-active') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 32, true);
+      });
+    });
+
+    it('Space on the focused row changes the switch, and Enter still opens the row', async () => {
+      fakeMasters({ staff: [ASIF, ASLAM] });
+      const { router } = await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31', '32']);
+      });
+      const user = userEvent.setup();
+      await user.click(cellElement(31, 'status'));
+      await user.keyboard(' ');
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff');
+      await user.click(cellElement(31, 'code'));
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/index/staff/31');
+      });
+    });
+
+    it('a failed change says so, and the row keeps its word', async () => {
+      fakeMasters({ staff: [ASIF] });
+      vi.mocked(mastersApi.mastersSetActive).mockRejectedValueOnce(new Error('down'));
+      await renderApp('/index/staff');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['31']);
+      });
+      const user = userEvent.setup();
+      await user.click(
+        within(switchOf(31)).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      expect(
+        await screen.findByText(message(language, 'masters-active-failed')),
+      ).toBeInTheDocument();
+      const buttons = within(switchOf(31)).getAllByRole('button');
+      expect(buttons.map((button) => button.getAttribute('aria-pressed'))).toEqual([
+        'true',
+        'false',
+      ]);
+    });
+
+    it('the form has the same switch, with the note, and it changes him without leaving the form', async () => {
+      fakeMasters({ staff: [ASIF] });
+      const { router } = await renderApp('/index/staff/31');
+      const group = await screen.findByRole('group', {
+        name: wordOf('masters-active-switch-label'),
+      });
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'masters-staff-active-note'),
+      );
+      // The old "make inactive" button is not there: the switch is the way.
+      expect(
+        screen.queryByRole('button', {
+          name: new RegExp(message(language, 'masters-make-inactive')),
+        }),
+      ).not.toBeInTheDocument();
+      const user = userEvent.setup();
+      await user.click(
+        within(group).getByRole('button', { name: wordOf('masters-status-inactive') }),
+      );
+      await waitFor(() => {
+        expect(mastersApi.mastersSetActive).toHaveBeenCalledWith('staff', 31, false);
+      });
+      expect(router.state.location.pathname).toBe('/index/staff/31');
+    });
+
+    it('a new staff member has no switch, and the other lists keep their own button and tick', async () => {
+      fakeMasters({ city: [KOT] });
+      await renderApp('/index/staff/new');
+      await screen.findByLabelText(named(message(language, 'masters-staff-job')));
+      expect(
+        screen.queryByRole('group', { name: wordOf('masters-active-switch-label') }),
+      ).not.toBeInTheDocument();
+      leaveAppWindow();
+      resetClientState(language);
+      signedIn(sessionUser({ language }));
+      fakeMasters({ city: [KOT] });
+      await renderApp('/index/cities');
+      await waitFor(() => {
+        expect(sortedRowIds()).toEqual(['1']);
+      });
+      // A city list: no switch in a row, and the inactive ones are hidden until the tick.
+      expect(document.querySelector('[data-cell-control]')).toBeNull();
+      expect(
+        screen.getByRole('checkbox', { name: wordOf('masters-show-inactive') }),
+      ).not.toBeChecked();
+    });
+  });
+
   it('a mark has an owner seller, found with the account picker and sent back as chosen', async () => {
     const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
     fakeAccountSearch([RAHIM]);

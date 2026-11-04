@@ -25,10 +25,18 @@
 //   node scripts/ai-eval/run.mjs --misses             ask again every miss and every question lost to
 //                                                     the network, put the new rows in results.json
 //   node scripts/ai-eval/run.mjs --only Q111,Q112 --merge   the same for a list you give
-//   node scripts/ai-eval/run.mjs --threads 4          questions at once (default 1: honest times)
+//   node scripts/ai-eval/run.mjs --threads 4          questions at once (default 3; --threads 1 is the quietest line).
+//                                                     Each question has its own copy of its books and its own
+//                                                     conversation, and its time is its own.
 //   node scripts/ai-eval/run.mjs --check              check the bank, no model, no cargo
 //   node scripts/ai-eval/run.mjs --self-test          check the scorer on made-up replies, no model
 //   node scripts/ai-eval/run.mjs --results FILE       score a results file again, no model
+//   --bank FILE         another bank file (for example a hidden one). Only the per-row rules apply (no
+//                       size or mix rules, no frozen 110, no spec rebuild). Run live or with --check, scored
+//                       the same way (speed budget and button checks too). The results go to
+//                       backend/target/ai-eval-<name of the file>/, never into the team bank's folder.
+//   --oracle-dump FILE  write the oracle facts with their values, and the names of the parties, items,
+//                       partners, gardens and trips, as JSON. No model, no key. For the independent tester.
 //   --model NAME        another model name (default: the app's default)
 //   --review-out FILE   write the Urdu review sheet here instead of scripts/ai-eval/urdu-review.tsv
 //   --detail-out FILE   write the detail of every miss here (default backend/target/ai-eval/misses.txt)
@@ -45,7 +53,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildText } from './build-bank.mjs';
@@ -60,15 +68,26 @@ const option = (name) => {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 const BACKEND = join(ROOT, 'backend');
-const QUESTIONS = join(HERE, 'questions.tsv');
+// --bank FILE: another bank (a hidden one). Its results live in their own folder.
+const BANK = option('--bank') ? resolve(option('--bank')) : null;
+const QUESTIONS = BANK ?? join(HERE, 'questions.tsv');
 const FROZEN = join(HERE, 'questions-110.tsv');
 const MANIFEST = join(HERE, 'oracle-keys.txt');
+const OUT_DIR = join(
+  BACKEND,
+  'target',
+  BANK ? `ai-eval-${basename(BANK).replace(/\.[^.]*$/, '')}` : 'ai-eval',
+);
 const REVIEW = option('--review-out')
   ? resolve(option('--review-out'))
-  : join(HERE, 'urdu-review.tsv');
-const OUT_DIR = join(BACKEND, 'target', 'ai-eval');
+  : BANK
+    ? join(OUT_DIR, 'urdu-review.tsv')
+    : join(HERE, 'urdu-review.tsv');
+const THREADS_DEFAULT = '3';
 const RESULTS = join(OUT_DIR, 'results.json');
-const DETAIL = option('--detail-out') ? resolve(option('--detail-out')) : join(OUT_DIR, 'misses.txt');
+const DETAIL = option('--detail-out')
+  ? resolve(option('--detail-out'))
+  : join(OUT_DIR, 'misses.txt');
 const SUMMARY = join(OUT_DIR, 'summary.json');
 
 // D6-A19, NFR v1.13: the fixed part is at most 11,000 tokens counted with o200k. The model counts
@@ -90,6 +109,7 @@ const OUTCOMES = new Set([
   'not_understood',
   'checks_failed',
   'records_differ',
+  'time_limit',
   'safe',
 ]);
 // A safe end: the app asked, refused or said it could not, and showed no wrong figure.
@@ -101,6 +121,7 @@ const SAFE_ENDS = new Set([
   'not_understood',
   'checks_failed',
   'records_differ',
+  'time_limit',
 ]);
 // The kinds of failure that are the network's, not the model's (plan 52 item 6).
 const NETWORK_KINDS = new Set(['timeout', 'busy', 'server']);
@@ -109,20 +130,67 @@ const LOST_KINDS = new Set(['offline', 'dropped']);
 
 /** The five categories of plan 52 Section 2: their target times and what "meets" means. */
 const CATS = {
-  A: { title: 'real-time data', p50: 6000, p95: 12000, rule: 'no wrong figure, at least 98% answered' },
+  A: {
+    title: 'real-time data',
+    p50: 6000,
+    p95: 12000,
+    rule: 'no wrong figure, at least 98% answered',
+  },
   B: { title: 'suggestions', p50: 6000, p95: 12000, rule: 'at least 95% good' },
-  C: { title: 'forecasts and what-ifs', p50: 15000, p95: 25000, rule: 'no wrong figure, at least 98% answered' },
+  C: {
+    title: 'forecasts and what-ifs',
+    p50: 15000,
+    p95: 25000,
+    rule: 'no wrong figure, at least 98% answered',
+  },
   D: { title: 'help with the app', p50: 5000, p95: 10000, rule: 'at least 98% the right topic' },
-  E: { title: 'mixed and hard', p50: 6000, p95: 12000, rule: 'safe ends only, never a wrong figure' },
+  E: {
+    title: 'mixed and hard',
+    p50: 6000,
+    p95: 12000,
+    rule: 'safe ends only, never a wrong figure',
+  },
 };
 
 const HELP_TOPICS = [
-  'bikri_book', 'today_sales', 'unsold_stock', 'later_sale', 'receipt', 'collection_list', 'payment',
-  'advance', 'pukhta_khata', 'edit_and_cancel', 'cash_book', 'shop_expense', 'personal_expense',
-  'money_lent', 'separate_khata', 'general_journal', 'fruit_taken', 'gardens', 'market_trips',
-  'partners', 'partner_capital', 'analytics', 'reports', 'dashboard', 'day_close', 'month_close',
-  'backup', 'settings', 'masters', 'accounts', 'search', 'commission_rules', 'dead_amount',
-  'language_switch', 'keys', 'printing', 'ask_the_app', 'sign_in',
+  'bikri_book',
+  'today_sales',
+  'unsold_stock',
+  'later_sale',
+  'receipt',
+  'collection_list',
+  'payment',
+  'advance',
+  'pukhta_khata',
+  'edit_and_cancel',
+  'cash_book',
+  'shop_expense',
+  'personal_expense',
+  'money_lent',
+  'separate_khata',
+  'general_journal',
+  'fruit_taken',
+  'gardens',
+  'market_trips',
+  'partners',
+  'partner_capital',
+  'analytics',
+  'reports',
+  'dashboard',
+  'day_close',
+  'month_close',
+  'backup',
+  'settings',
+  'masters',
+  'accounts',
+  'search',
+  'commission_rules',
+  'dead_amount',
+  'language_switch',
+  'keys',
+  'printing',
+  'ask_the_app',
+  'sign_in',
 ];
 
 // ---- the list ------------------------------------------------------------------------------
@@ -143,8 +211,19 @@ function loadList(file = QUESTIONS) {
 
 /** The mix of D6 Section 3 for the frozen first 110 questions (kept as a subset). */
 const KINDS_OF_110 = {
-  party: 15, sales: 9, analytics: 11, dues: 9, cash: 7, partners: 6, stock: 8, sums: 7,
-  estimates: 10, advice: 8, followup: 5, trap: 5, help: 10,
+  party: 15,
+  sales: 9,
+  analytics: 11,
+  dues: 9,
+  cash: 7,
+  partners: 6,
+  stock: 8,
+  sums: 7,
+  estimates: 10,
+  advice: 8,
+  followup: 5,
+  trap: 5,
+  help: 10,
 };
 
 function checkFrozen110(list) {
@@ -178,8 +257,13 @@ function refsOf(figures) {
   return [...figures.matchAll(/@([A-Za-z0-9_.]+)/g)].map((m) => m[1]);
 }
 
-/** Checks the whole bank. Returns problems and a summary. */
-function checkList(list) {
+/**
+ * Checks the whole bank. Returns problems and a summary. With `perRow` (a bank given with --bank)
+ * only the rules of each row apply: unique ids, a known follow-up, a question and an outcome, a known
+ * outcome, world and category, a section, no reference in a question, and every `@key` a fact of the
+ * oracle. The size, the mix, the frozen 110, the facets and the spec rebuild belong to the team bank.
+ */
+function checkList(list, perRow = false) {
   const problems = [];
   const count = (pred) => list.filter(pred).length;
   const n = list.length;
@@ -199,7 +283,8 @@ function checkList(list) {
     ids.add(q.id);
   }
   for (const q of list) {
-    if (q.after && !ids.has(q.after)) problems.push(`${q.id} follows ${q.after}, which is not in the list`);
+    if (q.after && !ids.has(q.after))
+      problems.push(`${q.id} follows ${q.after}, which is not in the list`);
     if (!q.question || !q.outcome) problems.push(`${q.id} has no question or outcome`);
     if (!OUTCOMES.has(q.outcome)) problems.push(`${q.id} has the unknown outcome ${q.outcome}`);
     if (!WORLDS.has(q.world)) problems.push(`${q.id} has the unknown world ${q.world}`);
@@ -207,64 +292,163 @@ function checkList(list) {
     if (!q.section) problems.push(`${q.id} has no section`);
     if (/@/.test(q.question)) problems.push(`${q.id}: a question may not hold a reference`);
   }
-  // The frozen first 110 keep the mix of D6 Section 3.
-  problems.push(...checkFrozen110(list.slice(0, 110)));
-  // Size and mix of the whole bank.
-  if (n < 300) problems.push(`only ${n} questions (at least 300)`);
-  const MIN_CAT = { A: 150, B: 40, C: 35, D: 45, E: 40 };
-  for (const [c, min] of Object.entries(MIN_CAT))
-    if (byCat[c] < min) problems.push(`category ${c}: ${byCat[c]} questions (at least ${min})`);
-  const share = (k) => (100 * k) / Math.max(1, n);
-  if (share(languages.roman) < 38 || share(languages.roman) > 50)
-    problems.push(`Roman Urdu is ${share(languages.roman).toFixed(0)}% (38 to 50)`);
-  if (share(languages.urdu) < 25 || share(languages.urdu) > 40)
-    problems.push(`Urdu letters are ${share(languages.urdu).toFixed(0)}% (25 to 40)`);
-  if (share(languages.en) < 20 || share(languages.en) > 32)
-    problems.push(`English is ${share(languages.en).toFixed(0)}% (20 to 32)`);
-  if (misspelled < 40) problems.push(`only ${misspelled} misspelled (at least 40)`);
-  if (bigGroups < 35) problems.push(`only ${bigGroups} groups of 3 or more wordings (at least 35)`);
-  // Category A covers every section of the books.
-  const sectionCount = (s) => count((q) => q.cat === 'A' && q.section === s);
-  const NEED3 = ['item', 'seller', 'buyer', 'partner', 'period', 'cash', 'dues', 'stock', 'day', 'month', 'expense'];
-  const NEED2 = ['garden', 'trip', 'fruit', 'capital'];
-  for (const s of NEED3) if (sectionCount(s) < 3) problems.push(`category A: section ${s} has ${sectionCount(s)} (at least 3)`);
-  for (const s of NEED2) if (sectionCount(s) < 2) problems.push(`category A: section ${s} has ${sectionCount(s)} (at least 2)`);
-  // Every item, and the names of Umar's own examples, are in the bank.
-  const allFigures = list.map((q) => q.figures).join(';');
-  for (const item of ['banana', 'apple', 'mosambi', 'mango', 'grapes', 'potato'])
-    if (!allFigures.includes(`.${item}.`)) problems.push(`no question reads the item ${item}`);
-  for (const text of [
-    'kela ke is saal kitne commission or sale huwe',
-    'Faisal ne kitne ka saman khareeda',
-    'sales bherane ke tareeky batao',
-  ])
-    if (!list.some((q) => q.question.includes(text))) problems.push(`Umar's own question is missing: ${text}`);
-  if (!list.some((q) => /akram/i.test(q.question) && q.outcome === 'which_one'))
-    problems.push('no question about the two Akrams ends in which_one');
-  // Category D covers every topic of the guide.
-  const topics = new Set(list.map((q) => (q.filters.match(/topic=([a-z_]+)/) ?? [])[1]).filter(Boolean));
-  for (const t of HELP_TOPICS) if (!topics.has(t)) problems.push(`no help question for the topic ${t}`);
-  // General advice is tested where the books are thin.
-  if (count((q) => q.filters.includes('general=1')) < 8) problems.push('fewer than 8 general advice questions');
-  // The three facets of plan 52 section 8.1: M (mixed language), a party's day, no such party.
-  const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
-  const facets = { M: list.filter((q) => facetOf(q) === 'M'), day: list.filter((q) => facetOf(q) === 'day'), nosuch: list.filter((q) => facetOf(q) === 'nosuch') };
-  const A_SECTIONS = ['item', 'seller', 'buyer', 'partner', 'period', 'cash', 'dues', 'stock', 'garden', 'trip', 'fruit', 'expense', 'capital', 'day', 'month'];
-  const mixedSections = new Set(facets.M.map((q) => q.section));
-  for (const s of A_SECTIONS) if (!mixedSections.has(s)) problems.push(`facet M: no mixed-language question for the section ${s}`);
-  for (const lang of ['roman', 'urdu', 'en'])
+  if (!perRow) {
+    // The frozen first 110 keep the mix of D6 Section 3.
+    problems.push(...checkFrozen110(list.slice(0, 110)));
+    // Size and mix of the whole bank.
+    if (n < 300) problems.push(`only ${n} questions (at least 300)`);
+    const MIN_CAT = { A: 150, B: 40, C: 35, D: 45, E: 40 };
+    for (const [c, min] of Object.entries(MIN_CAT))
+      if (byCat[c] < min) problems.push(`category ${c}: ${byCat[c]} questions (at least ${min})`);
+    const share = (k) => (100 * k) / Math.max(1, n);
+    if (share(languages.roman) < 38 || share(languages.roman) > 50)
+      problems.push(`Roman Urdu is ${share(languages.roman).toFixed(0)}% (38 to 50)`);
+    if (share(languages.urdu) < 25 || share(languages.urdu) > 40)
+      problems.push(`Urdu letters are ${share(languages.urdu).toFixed(0)}% (25 to 40)`);
+    if (share(languages.en) < 20 || share(languages.en) > 32)
+      problems.push(`English is ${share(languages.en).toFixed(0)}% (20 to 32)`);
+    if (misspelled < 40) problems.push(`only ${misspelled} misspelled (at least 40)`);
+    if (bigGroups < 35)
+      problems.push(`only ${bigGroups} groups of 3 or more wordings (at least 35)`);
+    // Category A covers every section of the books.
+    const sectionCount = (s) => count((q) => q.cat === 'A' && q.section === s);
+    const NEED3 = [
+      'item',
+      'seller',
+      'buyer',
+      'partner',
+      'period',
+      'cash',
+      'dues',
+      'stock',
+      'day',
+      'month',
+      'expense',
+    ];
+    const NEED2 = ['garden', 'trip', 'fruit', 'capital'];
+    for (const s of NEED3)
+      if (sectionCount(s) < 3)
+        problems.push(`category A: section ${s} has ${sectionCount(s)} (at least 3)`);
+    for (const s of NEED2)
+      if (sectionCount(s) < 2)
+        problems.push(`category A: section ${s} has ${sectionCount(s)} (at least 2)`);
+    // Every item, and the names of Umar's own examples, are in the bank.
+    const allFigures = list.map((q) => q.figures).join(';');
+    for (const item of ['banana', 'apple', 'mosambi', 'mango', 'grapes', 'potato'])
+      if (!allFigures.includes(`.${item}.`)) problems.push(`no question reads the item ${item}`);
+    for (const text of [
+      'kela ke is saal kitne commission or sale huwe',
+      'Faisal ne kitne ka saman khareeda',
+      'sales bherane ke tareeky batao',
+    ])
+      if (!list.some((q) => q.question.includes(text)))
+        problems.push(`Umar's own question is missing: ${text}`);
+    if (!list.some((q) => /akram/i.test(q.question) && q.outcome === 'which_one'))
+      problems.push('no question about the two Akrams ends in which_one');
+    // Category D covers every topic of the guide.
+    const topics = new Set(
+      list.map((q) => (q.filters.match(/topic=([a-z_]+)/) ?? [])[1]).filter(Boolean),
+    );
+    for (const t of HELP_TOPICS)
+      if (!topics.has(t)) problems.push(`no help question for the topic ${t}`);
+    // General advice is tested where the books are thin.
+    if (count((q) => q.filters.includes('general=1')) < 8)
+      problems.push('fewer than 8 general advice questions');
+    // The three facets of plan 52 section 8.1: M (mixed language), a party's day, no such party.
+    const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
+    const facets = {
+      M: list.filter((q) => facetOf(q) === 'M'),
+      day: list.filter((q) => facetOf(q) === 'day'),
+      nosuch: list.filter((q) => facetOf(q) === 'nosuch'),
+      print: list.filter((q) => facetOf(q) === 'print'),
+      U: list.filter((q) => facetOf(q) === 'U'),
+    };
+    const A_SECTIONS = [
+      'item',
+      'seller',
+      'buyer',
+      'partner',
+      'period',
+      'cash',
+      'dues',
+      'stock',
+      'garden',
+      'trip',
+      'fruit',
+      'expense',
+      'capital',
+      'day',
+      'month',
+    ];
+    const mixedSections = new Set(facets.M.map((q) => q.section));
+    for (const s of A_SECTIONS)
+      if (!mixedSections.has(s))
+        problems.push(`facet M: no mixed-language question for the section ${s}`);
+    for (const lang of ['roman', 'urdu', 'en'])
+      for (const [name, qs] of Object.entries(facets))
+        if (!qs.some((q) => q.lang === lang)) problems.push(`facet ${name}: no ${lang} wording`);
     for (const [name, qs] of Object.entries(facets))
-      if (!qs.some((q) => q.lang === lang)) problems.push(`facet ${name}: no ${lang} wording`);
-  for (const [name, qs] of Object.entries(facets))
-    for (const q of qs) if (!q.group) problems.push(`${q.id} (facet ${name}) is in no group of the same meaning`);
-  const dayText = facets.day.map((q) => q.filters).join(' ');
-  for (const need of ['buyer=', 'seller=', 'period=today', 'period=yesterday', 'period=2026-'])
-    if (!dayText.includes(need)) problems.push(`facet day: no question with ${need}`);
-  if (!facets.day.some((q) => (q.figures.match(/_qty=/g) ?? []).length >= 2)) problems.push('facet day: no day with two items');
-  const nsText = facets.nosuch.map((q) => q.filters).join(' ');
-  for (const need of ['asked_role=seller', 'asked_role=buyer', 'found_as=buyer', 'found_as=seller'])
-    if (!nsText.includes(need)) problems.push(`facet nosuch: no question with ${need}`);
-  if (!facets.nosuch.some((q) => q.misspelled && q.outcome === 'answered')) problems.push('facet nosuch: no misspelled real name that must be found');
+      for (const q of qs)
+        if (!q.group) problems.push(`${q.id} (facet ${name}) is in no group of the same meaning`);
+    const dayText = facets.day.map((q) => q.filters).join(' ');
+    for (const need of ['buyer=', 'seller=', 'period=today', 'period=yesterday', 'period=2026-'])
+      if (!dayText.includes(need)) problems.push(`facet day: no question with ${need}`);
+    if (!facets.day.some((q) => (q.figures.match(/_qty=/g) ?? []).length >= 2))
+      problems.push('facet day: no day with two items');
+    // Print (plan 54 Section 6): every kind of party for every period, in three languages.
+    const printCells = new Set(
+      facets.print.map(
+        (q) =>
+          `${(q.filters.match(/pkind=([a-z]+)/) ?? [])[1]}/${(q.filters.match(/pperiod=([a-z_]+)/) ?? [])[1]}`,
+      ),
+    );
+    for (const kind of ['buyer', 'seller', 'all', 'khata'])
+      for (const period of [
+        'today',
+        'yesterday',
+        'month',
+        'last_month',
+        'named',
+        'range',
+        'last_week',
+      ])
+        if (!printCells.has(`${kind}/${period}`))
+          problems.push(`facet print: no question for ${kind} / ${period}`);
+    if (!facets.print.some((q) => q.filters.includes('pkind=ambiguous')))
+      problems.push('facet print: no question for a name that two accounts share');
+    if (!facets.print.some((q) => q.filters.includes('pkind=nosuch')))
+      problems.push('facet print: no question for a name nobody has');
+    if (
+      facets.print
+        .filter((q) => q.figures.includes('print.report='))
+        .some((q) => !q.figures.includes('print.steps='))
+    )
+      problems.push('facet print: a print question without the steps');
+    // Umar's own questions (plan 55 gate 4), word for word, each with an Urdu and an English twin.
+    for (const text of [
+      'mujhay faisal ka khata batao?',
+      'usman shirakat daar ka kitna hai abhi ?',
+      'apni sale ko ziyada kaise karain ?',
+      'hum apni sale ko kaise bhera sakhty hain ?',
+      'mujhay bikri add krne ka tareeka batao?',
+      'is main market safar kiya hai iski mujhay samaj nahi aa rahi ?',
+      'sales bherane ke tareeky batao ?',
+      'faisal ki aj ki bikri ka main ne print nikalna hai ?',
+      'main ne faisal ki aj ki bikri ka print nikalna hai ?',
+    ])
+      if (!facets.U.some((q) => q.question === text))
+        problems.push(`facet U: Umar's question is missing or changed: ${text}`);
+    const nsText = facets.nosuch.map((q) => q.filters).join(' ');
+    for (const need of [
+      'asked_role=seller',
+      'asked_role=buyer',
+      'found_as=buyer',
+      'found_as=seller',
+    ])
+      if (!nsText.includes(need)) problems.push(`facet nosuch: no question with ${need}`);
+    if (!facets.nosuch.some((q) => q.misspelled && q.outcome === 'answered'))
+      problems.push('facet nosuch: no misspelled real name that must be found');
+  }
   // Every `@key` is a fact the oracle gives.
   const keys = manifestKeys();
   if (!keys) problems.push('scripts/ai-eval/oracle-keys.txt is missing');
@@ -273,15 +457,31 @@ function checkList(list) {
       for (const ref of refsOf(q.figures))
         if (!keys.has(ref)) problems.push(`${q.id}: the oracle has no fact @${ref}`);
   // The file is what the spec builds.
-  try {
-    if (readFileSync(QUESTIONS, 'utf8') !== buildText())
-      problems.push('questions.tsv is not what bank-spec.mjs builds: run node scripts/ai-eval/build-bank.mjs');
-  } catch (error) {
-    problems.push(`the spec does not build: ${error.message}`);
+  if (!perRow) {
+    try {
+      if (readFileSync(QUESTIONS, 'utf8') !== buildText())
+        problems.push(
+          'questions.tsv is not what bank-spec.mjs builds: run node scripts/ai-eval/build-bank.mjs',
+        );
+    } catch (error) {
+      problems.push(`the spec does not build: ${error.message}`);
+    }
   }
+  const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
+  const facets = Object.fromEntries(
+    ['M', 'day', 'nosuch', 'print', 'U'].map((k) => [k, list.filter((q) => facetOf(q) === k)]),
+  );
   return {
     problems,
-    summary: { total: n, byCat, languages, misspelled, groups: groups.size, bigGroups, facets: Object.fromEntries(Object.entries(facets).map(([k, v]) => [k, v.length])) },
+    summary: {
+      total: n,
+      byCat,
+      languages,
+      misspelled,
+      groups: groups.size,
+      bigGroups,
+      facets: Object.fromEntries(Object.entries(facets).map(([k, v]) => [k, v.length])),
+    },
   };
 }
 
@@ -352,12 +552,17 @@ function collect(reply) {
   }
   const monthOf = (m) => (m ? `${m.year}-${String(m.month).padStart(2, '0')}` : null);
   for (const method of answer.estimate?.methods ?? []) {
-    out.all.push(...cellValues(method.total), ...cellValues(method.per_month), ...cellValues(method.step));
+    out.all.push(
+      ...cellValues(method.total),
+      ...cellValues(method.per_month),
+      ...cellValues(method.step),
+    );
     const target = monthOf(method.target_month);
     if (target) out.months.add(`${method.kind}:${target}`);
   }
   for (const chart of answer.charts ?? []) {
-    for (const series of chart.series ?? []) for (const cell of series.values ?? []) out.all.push(...cellValues(cell));
+    for (const series of chart.series ?? [])
+      for (const cell of series.values ?? []) out.all.push(...cellValues(cell));
   }
   return out;
 }
@@ -375,14 +580,21 @@ function parseValue(label, value, strict) {
   if (tag) return { ...parseValue(label, value.slice(0, -tag.length - 1), strict), needs: tag };
   let m;
   if (strict) return { kind: 'name', name: value.toLowerCase(), strict: true };
-  if ((m = value.match(/^(-?\d+(?:\.\d+)?)%$/))) return { kind: 'percent', n: Math.round(Number(m[1]) * 100) };
+  if ((m = value.match(/^(-?\d+(?:\.\d+)?)%$/)))
+    return { kind: 'percent', n: Math.round(Number(m[1]) * 100) };
   if (/^\d{4}-\d{2}$/.test(label === 'date' ? '' : value)) return { kind: 'month', month: value };
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return { kind: 'date', date: value };
   if ((m = value.match(/^(-?\d+)(?:\s+(Dr|Cr|up|down))?/)))
     return { kind: 'amount', n: Number(m[1]), side: m[2]?.toLowerCase(), text: value };
   // "Arshad Multani 18684 Dr 36 days": a name with its amount (advice).
   if ((m = value.match(/^([A-Za-z ]+?)\s+(-?\d+)(?:\s+(Dr|Cr))?/)))
-    return { kind: 'amount', n: Number(m[2]), side: m[3]?.toLowerCase(), text: value, name: m[1].toLowerCase() };
+    return {
+      kind: 'amount',
+      n: Number(m[2]),
+      side: m[3]?.toLowerCase(),
+      text: value,
+      name: m[1].toLowerCase(),
+    };
   return { kind: 'name', name: value.toLowerCase() };
 }
 
@@ -419,8 +631,10 @@ function hasNumber(found, want) {
   return found.all.some((v) => {
     if (want.kind === 'percent') return v.kind === 'percent' && v.n === want.n;
     if (v.kind === 'percent') return false;
-    const same = v.n === want.n || (want.n < 0 && v.kind === 'balance' && v.side === 'cr' && v.n === -want.n);
-    const side = !want.side || want.side === 'up' || want.side === 'down' || v.side === want.side || v.n === 0;
+    const same =
+      v.n === want.n || (want.n < 0 && v.kind === 'balance' && v.side === 'cr' && v.n === -want.n);
+    const side =
+      !want.side || want.side === 'up' || want.side === 'down' || v.side === want.side || v.n === 0;
     return same && side;
   });
 }
@@ -429,7 +643,9 @@ function hasNumber(found, want) {
 
 function toolSeen(log, token) {
   const [tool, detail] = token.split(':');
-  return (log ?? []).some((c) => c.tool === tool && (!detail || c.input?.id === detail || c.input?.view === detail));
+  return (log ?? []).some(
+    (c) => c.tool === tool && (!detail || c.input?.id === detail || c.input?.view === detail),
+  );
 }
 
 /** True when every group of the tools note was used (another route is a note, not a miss). */
@@ -449,15 +665,229 @@ function altMet(alt, label, found, reply) {
   if (alt.kind === 'name') {
     if (found.names.has(alt.name)) return true;
     // A name that need not be in the answer text counts when the record was read (a note only).
-    return !alt.strict && JSON.stringify(reply?.answer?.sources ?? []).toLowerCase().includes(alt.name);
+    return (
+      !alt.strict &&
+      JSON.stringify(reply?.answer?.sources ?? [])
+        .toLowerCase()
+        .includes(alt.name)
+    );
   }
   if (alt.kind === 'month') {
     // A target month belongs to its method: `pace_month` is the same-pace method's month.
     const word = (label.match(/^(pace|growth|season)_month$/) ?? [])[1];
-    return [...found.months].some((m) => (word ? m.startsWith(`same_${word}:`) : true) && m.endsWith(alt.month));
+    return [...found.months].some(
+      (m) => (word ? m.startsWith(`same_${word}:`) : true) && m.endsWith(alt.month),
+    );
   }
   if (alt.kind === 'date') return true; // a date is shown as a date part; the text is not checked further
   return hasNumber(found, alt);
+}
+
+/**
+ * The `print.` pieces of an expected-figures text (plan 54 Section 6): the report the button must open
+ * and its party and dates, apart from the figures. `print.report=R5;print.party=Faisal;print.from=..`.
+ */
+function splitPrint(text) {
+  const want = {};
+  const rest = [];
+  for (const piece of text.split(';').filter(Boolean)) {
+    const at = piece.indexOf('=');
+    const label = piece.slice(0, at).trim();
+    if (label.startsWith('print.')) want[label.slice(6)] = piece.slice(at + 1).trim();
+    else rest.push(piece);
+  }
+  return { want: Object.keys(want).length ? want : null, rest: rest.join(';') };
+}
+
+/** The report sources (the buttons) of an answer. */
+function reportSources(reply) {
+  return (reply?.answer?.sources ?? []).filter((s) => s.kind === 'report');
+}
+
+/** One line for a report button: the report, the party and the dates it opens with. */
+function describeButton(source) {
+  const f = source.filters ?? {};
+  const name = (rec) => (rec?.record ?? rec)?.name_en;
+  const who = name(f.party) ?? name(f.seller) ?? name(f.zamindar) ?? 'no party';
+  const dates = f.as_of
+    ? `as_of ${f.as_of}`
+    : f.shortcut && !f.from && !f.to
+      ? `shortcut ${f.shortcut}`
+      : `${f.from || '-'}..${f.to || '-'}`;
+  return `${source.id} ${who} ${dates}`;
+}
+
+/** Does one report source meet what the print question wants? Returns the reasons it does not. */
+function printProblems(want, source) {
+  const f = source.filters ?? {};
+  const problems = [];
+  const name = (rec) => (rec?.record ?? rec)?.name_en?.toLowerCase();
+  if (!want.report.split('|').includes(source.id))
+    problems.push(`report ${source.id}, wanted ${want.report}`);
+  if (want.party && name(f.party) !== want.party.toLowerCase())
+    problems.push(`party ${name(f.party) ?? 'none'}, wanted ${want.party}`);
+  if (
+    want.seller &&
+    ![name(f.seller), name(f.zamindar), name(f.party)].includes(want.seller.toLowerCase())
+  )
+    problems.push(`seller ${name(f.seller) ?? name(f.party) ?? 'none'}, wanted ${want.seller}`);
+  if (want.as_of) {
+    if (f.as_of !== want.as_of) problems.push(`as_of ${f.as_of || 'empty'}, wanted ${want.as_of}`);
+  } else {
+    if (f.from !== want.from)
+      problems.push(
+        `from ${f.from || 'empty'}${f.shortcut ? ` (shortcut ${f.shortcut})` : ''}, wanted ${want.from}`,
+      );
+    if (f.to !== want.to) problems.push(`to ${f.to || 'empty'}, wanted ${want.to}`);
+  }
+  return problems;
+}
+
+/** True when the reply carries the steps field of the print contract: `answer.how` (plan 55 Section 7). */
+function hasStepsField(reply) {
+  return !!reply?.answer && typeof reply.answer === 'object' && 'how' in reply.answer;
+}
+
+/** The value of a step argument: a text, the English name of a `names`, or a number. */
+function stepArg(step, name) {
+  const arg = (step?.args ?? []).find((a) => a.name === name);
+  const v = arg?.value;
+  if (!v) return null;
+  if (v.type === 'text') return v.text;
+  if (v.type === 'names') return v.names?.en ?? null;
+  if (v.type === 'number') return String(v.value);
+  return null;
+}
+
+/**
+ * The steps of a print answer against its button (plan 55 Section 7): open the report, set the party
+ * (his real role, name and code), set the day or the dates, press print. Each value is the button's.
+ */
+function stepProblems(want, source, how) {
+  const problems = [];
+  const f = source.filters ?? {};
+  const steps = Array.isArray(how) ? how : [];
+  if (steps.length === 0) return ['no steps'];
+  const ids = steps.map((st) => st.id);
+  const byId = (id) => steps.find((st) => st.id === id);
+  if (ids[0] !== 'assistant-how-open-report')
+    problems.push(`the first step is ${ids[0]}, not open-report`);
+  if (ids[ids.length - 1] !== 'assistant-how-press-print')
+    problems.push(`the last step is ${ids[ids.length - 1]}, not press-print`);
+  const open = byId('assistant-how-open-report');
+  if (open && stepArg(open, 'report') !== source.id)
+    problems.push(`steps open ${stepArg(open, 'report')}, the button opens ${source.id}`);
+  const partyWanted = want.party ?? want.seller;
+  const setParty = byId('assistant-how-set-party');
+  if (partyWanted) {
+    if (!setParty) problems.push('no set-party step');
+    else {
+      if ((stepArg(setParty, 'party') ?? '').toLowerCase() !== partyWanted.toLowerCase())
+        problems.push(`steps set the party ${stepArg(setParty, 'party')}, wanted ${partyWanted}`);
+      if (want.role && stepArg(setParty, 'role') !== want.role)
+        problems.push(`steps set the role ${stepArg(setParty, 'role')}, he is a ${want.role}`);
+      const record =
+        (f.party ?? f.seller ?? f.zamindar)?.record ?? f.party ?? f.seller ?? f.zamindar;
+      if (record?.code && stepArg(setParty, 'code') !== record.code)
+        problems.push(
+          `steps give the code ${stepArg(setParty, 'code')}, the button has ${record.code}`,
+        );
+    }
+  } else if (setParty && !want.optionalParty) {
+    // A report with no party (R34, R2) names none in its steps.
+    problems.push('a set-party step on a report with no party');
+  }
+  if (want.as_of) {
+    const day = byId('assistant-how-set-day');
+    if (!day || stepArg(day, 'day') !== want.as_of)
+      problems.push(
+        `steps set the day ${day ? stepArg(day, 'day') : 'none'}, wanted ${want.as_of}`,
+      );
+  } else {
+    const dates = byId('assistant-how-set-dates');
+    if (!dates) problems.push('no set-dates step');
+    else {
+      if (stepArg(dates, 'from') !== want.from)
+        problems.push(`steps set from ${stepArg(dates, 'from')}, wanted ${want.from}`);
+      if (stepArg(dates, 'to') !== want.to)
+        problems.push(`steps set to ${stepArg(dates, 'to')}, wanted ${want.to}`);
+    }
+  }
+  return problems;
+}
+
+/** The text a numeric cell is compared by: whole rupees, a count, `p<hundredths>`, `g<grams>`. */
+function cellKey(cell) {
+  switch (cell?.type) {
+    case 'money':
+    case 'balance':
+      return String(Math.abs(Math.trunc(cell.paisa / 100)));
+    case 'number':
+      return String(Math.abs(cell.value));
+    case 'percent':
+      return `p${cell.hundredths}`;
+    case 'weight':
+      return `g${cell.grams}`;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The figures of an answer a button must hold (plan 55 gate 3): every figure of its text, except one
+ * that came from a calculation (then the inputs of its working are the figures), and every number
+ * of its tables.
+ */
+function answerFigures(answer) {
+  const out = [];
+  for (const part of answer?.parts ?? []) {
+    if (part.type !== 'figure') continue;
+    const steps = part.working?.steps ?? [];
+    if (steps.length) {
+      const results = new Set(steps.map((st) => cellKey(st.result)));
+      for (const st of steps)
+        for (const input of st.inputs ?? []) {
+          const key = cellKey(input);
+          // The result of an earlier step is not a figure of a report.
+          if (key && !results.has(key)) out.push(key);
+        }
+    } else {
+      const key = cellKey(part.cell);
+      if (key) out.push(key);
+    }
+  }
+  for (const table of answer?.tables ?? []) {
+    const cells = [...(table.totals ?? [])];
+    for (const row of table.rows ?? []) cells.push(...(row.row?.cells ?? []));
+    for (const cell of cells) {
+      const key = cellKey(cell);
+      if (key) out.push(key);
+    }
+  }
+  return out;
+}
+
+/** The English name of a `found_as` record. */
+function roleName(found) {
+  return found?.name?.name_en ?? null;
+}
+
+/**
+ * The sides a named party is read on in the sources of an answer: `seller` when a source is filtered
+ * to him as a seller, `buyer` as a buyer. A party card or a ledger takes neither side.
+ */
+function sourceSides(reply, who) {
+  const sides = new Set();
+  const is = (rec) => {
+    const r = rec?.record ?? rec;
+    return !!r && typeof r.name_en === 'string' && r.name_en.toLowerCase() === who;
+  };
+  for (const source of reply?.answer?.sources ?? []) {
+    const f = source.filters ?? {};
+    if (is(f.seller) || is(f.zamindar)) sides.add('seller');
+    if (is(f.buyer)) sides.add('buyer');
+  }
+  return sides;
 }
 
 /** The role a `found_as` holds: a word, or a record with its role (`role`, `type`, `party_type`, `kind`). */
@@ -474,29 +904,55 @@ function roleOf(found) {
 function score(question, result, oracle) {
   const reply = result.reply;
   const outcome = reply?.outcome ?? 'none';
+  // A name found in another role (plan 52 Section 8.5): the question waited, the harness clicked his
+  // name, and `reply` is the answer after the click. The first reply (outcome and roles) is judged
+  // apart, the answer after the click on his figures.
+  const clickFirst = result.first_reply ?? null;
+  const gate = clickFirst ?? reply;
+  const judged = gate?.outcome ?? 'none';
   const found = collect(reply);
   const reasons = [];
   const notes = [];
   const figureMisses = [];
   let wanted = [];
+  let printWant = null;
   try {
-    wanted = expectedFigures(resolveFigures(question.figures, oracle));
+    const split = splitPrint(resolveFigures(question.figures, oracle));
+    printWant = split.want;
+    wanted = expectedFigures(split.rest);
   } catch (error) {
-    return { id: question.id, cat: question.cat, pass: false, kind: 'MISS (oracle)', reasons: [error.message], notes, outcome, figureMisses };
+    return {
+      id: question.id,
+      cat: question.cat,
+      pass: false,
+      kind: 'MISS (oracle)',
+      reasons: [error.message],
+      notes,
+      outcome,
+      figureMisses,
+    };
   }
   const expectedOutcome = question.outcome;
   if (expectedOutcome === 'safe') {
-    const ok = outcome === 'answered' || outcome === 'outside_books' || outcome === 'change_refused' || SAFE_ENDS.has(outcome);
+    const ok =
+      outcome === 'answered' ||
+      outcome === 'outside_books' ||
+      outcome === 'change_refused' ||
+      SAFE_ENDS.has(outcome);
     if (!ok) reasons.push(`outcome ${outcome}`);
     if (found.all.some((v) => v.n === 99999)) reasons.push('shows 99,999');
-  } else if (outcome !== expectedOutcome) {
+  } else if (judged !== expectedOutcome) {
     // PRD FR-7.88, "unasked, one point" (Umar): a figure question may end as advice when the advice
     // part is one point at most (one bullet). The figures are scored below as always, so a wrong
     // or missing figure is still a miss.
     const onePoint = (found.text.match(/•/g) ?? []).length <= 1;
-    const unasked = expectedOutcome === 'answered' && outcome === 'advice' && reply?.answer?.general_advice !== true && onePoint;
+    const unasked =
+      expectedOutcome === 'answered' &&
+      outcome === 'advice' &&
+      reply?.answer?.general_advice !== true &&
+      onePoint;
     if (unasked) notes.push('advice: one unasked point (FR-7.88)');
-    else reasons.push(`outcome ${outcome}, wanted ${expectedOutcome}`);
+    else reasons.push(`outcome ${judged}, wanted ${expectedOutcome}`);
   }
   const matched = routeMatched(question, result);
   const nothingShown = found.all.length === 0 && found.parts.length === 0;
@@ -519,7 +975,9 @@ function score(question, result, oracle) {
       reasons.push(`month ${want.alts.map((a) => a.month).join(' or ')} (${want.label}) missing`);
       figureMisses.push(want.label);
     } else {
-      reasons.push(`figure ${want.label}=${want.alts.map((a) => a.text ?? a.n).join(' or ')} missing`);
+      reasons.push(
+        `figure ${want.label}=${want.alts.map((a) => a.text ?? a.n).join(' or ')} missing`,
+      );
       figureMisses.push(want.label);
     }
   }
@@ -543,28 +1001,132 @@ function score(question, result, oracle) {
   }
   // A help question must ask the guide for its topic (plan 51 B3).
   const topicWant = question.filters.match(/topic=([a-z_]+)/);
-  if (topicWant && !(result.tool_calls ?? []).some((c) => c.tool === 'app_help' && c.input?.topic === topicWant[1]))
+  if (
+    topicWant &&
+    !(result.tool_calls ?? []).some((c) => c.tool === 'app_help' && c.input?.topic === topicWant[1])
+  )
     reasons.push(`app_help topic ${topicWant[1]} not asked`);
   // A change request ends in a refusal that points to the right entry screen.
   const route = question.filters.match(/route=([a-z_]+)/);
-  if (route && reply?.entry_route?.screen !== route[1]) reasons.push(`entry route is not ${route[1]}`);
+  if (route && reply?.entry_route?.screen !== route[1])
+    reasons.push(`entry route is not ${route[1]}`);
   // "No such party" (plan 52 section 8): a not_found says which role was asked (`asked_role`) and,
   // when the name is a party of another role, which (`found_as`). Until the app puts the field in
   // the reply the question is PENDING, not a pass and not a miss.
   const wantsRole = (question.filters.match(/(?:^|;)asked_role=([a-z_]+)/) ?? [])[1];
   const wantsFound = (question.filters.match(/(?:^|;)found_as=([a-z_]+)/) ?? [])[1];
-  const fieldThere = !!reply && ('asked_role' in reply || 'found_as' in reply);
-  const pending = !!(wantsRole || wantsFound) && !!reply && !fieldThere;
+  const fieldThere = !!gate && ('asked_role' in gate || 'found_as' in gate);
+  // A row from a build that has the fields (`asked_role_field`) is scored on them; a row from an
+  // older build, with neither field, waits.
+  const contract = result.asked_role_field === true;
+  const pending = !!(wantsRole || wantsFound) && !!gate && !fieldThere && !contract;
+  if (!fieldThere && contract && (wantsRole || wantsFound) && judged === 'not_found')
+    reasons.push('a not_found with no asked_role (the build has the field)');
   if (fieldThere) {
-    if (wantsRole && reply.asked_role !== wantsRole) reasons.push(`asked_role is ${reply.asked_role ?? 'empty'}, wanted ${wantsRole}`);
-    const foundRole = roleOf(reply.found_as);
-    if (wantsFound && foundRole !== wantsFound) reasons.push(`found_as is ${foundRole ?? 'empty'}, wanted ${wantsFound}`);
-    if (wantsRole && !wantsFound && foundRole) reasons.push(`found_as is ${foundRole} for a name nobody has`);
+    if (wantsRole && gate.asked_role !== wantsRole)
+      reasons.push(`asked_role is ${gate.asked_role ?? 'empty'}, wanted ${wantsRole}`);
+    const foundRole = roleOf(gate.found_as);
+    if (wantsFound && foundRole !== wantsFound)
+      reasons.push(`found_as is ${foundRole ?? 'empty'}, wanted ${wantsFound}`);
+    if (wantsRole && !wantsFound && foundRole)
+      reasons.push(`found_as is ${foundRole} for a name nobody has`);
   }
-  if (question.outcome === 'change_refused' && question.id === 'Q096' && reply?.entry_route?.screen !== 'wasooli')
+  // Plan 55 gate 3, every button against the data: each report or view the answer offers was opened
+  // by the harness with the button's own filters through the same backend command; the answer's
+  // figures must be in what it holds. A figure that is not there is a wrong place or wrong filters.
+  if (Array.isArray(result.buttons) && result.buttons.length > 0 && reply?.answer) {
+    const real = result.buttons.filter((b) => !b.skipped);
+    if (real.length === 0) {
+      notes.push('buttons: only the dashboard tiles, not checked');
+    } else {
+      for (const b of real)
+        if (b.error) reasons.push(`button ${b.label} fails to open: ${b.error}`);
+      const held = new Set(real.flatMap((b) => b.numbers ?? []));
+      const ownNumbers = new Set(
+        (question.question.match(/\d+/g) ?? []).map((d) => String(Number(d))),
+      );
+      const missing = [...new Set(answerFigures(reply.answer))].filter(
+        (k) => !held.has(k) && !ownNumbers.has(k),
+      );
+      if (missing.length) {
+        const why = `button: ${missing.length} figure(s) of the answer are not in what the button opens (${real.map((b) => b.label).join(', ')}): ${missing.slice(0, 4).join(', ')}`;
+        if (result.buttons.some((b) => b.skipped))
+          notes.push(`${why} (the dashboard is also a button, not checked)`);
+        else {
+          reasons.push(why);
+          figureMisses.push('button');
+        }
+      }
+    }
+  }
+  // A print request (plan 54 Section 6): the answer is a button on the right report with the party
+  // in his real role and the exact dates, and the steps; it is never a change request. Until the
+  // app puts the steps in the reply (the S2 contract) the question is PENDING, and the button check
+  // is only a note.
+  let printPending = false;
+  if (printWant && reply) {
+    const contractIn = result.print_contract === true || hasStepsField(reply);
+    const found = reportSources(reply);
+    const problems = [];
+    if (reply.outcome === 'change_refused' || reply.entry_route)
+      problems.push('a print request was answered as a change request');
+    if (!found.length) problems.push('no report button');
+    else if (!found.some((src) => printProblems(printWant, src).length === 0)) {
+      problems.push(
+        `the button is wrong: ${found.map((src) => `${describeButton(src)} (${printProblems(printWant, src).join('; ')})`).join(' | ')}`,
+      );
+    }
+    if (contractIn && printWant.steps) {
+      // The button is the first source (plan 55 Section 7), and the steps are made from its values.
+      const first = reply.answer?.sources?.[0];
+      if (!first || first.kind !== 'report' || printProblems(printWant, first).length > 0)
+        problems.push(
+          `the first source is not the right button: ${first ? (first.kind === 'report' ? describeButton(first) : first.kind) : 'none'}`,
+        );
+      const matching = found.find((src) => printProblems(printWant, src).length === 0);
+      if (matching)
+        for (const why of stepProblems(printWant, matching, reply.answer?.how)) problems.push(why);
+      else problems.push('no steps to check, the button is wrong');
+    }
+    if (contractIn) {
+      for (const why of problems) reasons.push(`print: ${why}`);
+      if (problems.length) figureMisses.push('print');
+    } else {
+      printPending = true;
+      notes.push(
+        problems.length
+          ? `print (pending the steps field): ${problems.join('; ')}`
+          : 'print (pending the steps field): the button is right',
+      );
+    }
+  }
+  // After the click on a name found in another role: his figures in his real role, never in the role
+  // that was asked ("Faisal ne becha": his purchases, no sale figure).
+  if (clickFirst && wantsFound) {
+    const who = (roleName(clickFirst.found_as) ?? '').toLowerCase();
+    const sides = sourceSides(reply, who);
+    if (wantsFound === 'buyer' && sides.has('seller'))
+      reasons.push(
+        `after the click: ${who} is read as a seller, but he is a buyer (sales instead of purchases)`,
+      );
+    if (wantsFound === 'seller' && sides.has('buyer'))
+      reasons.push(
+        `after the click: ${who} is read as a buyer, but he is a seller (purchases instead of sales)`,
+      );
+    if (reply?.outcome !== 'answered')
+      reasons.push(
+        `after the click: outcome ${reply?.outcome ?? 'none'}, wanted answered (his figures)`,
+      );
+  }
+  if (
+    question.outcome === 'change_refused' &&
+    question.id === 'Q096' &&
+    reply?.entry_route?.screen !== 'wasooli'
+  )
     reasons.push('entry route is not wasooli');
   if (question.outcome === 'outside_books' && question.filters.includes('nearest=party_card')) {
-    if (!JSON.stringify(reply?.answer?.sources ?? []).includes('party_card')) reasons.push('no party card button');
+    if (!JSON.stringify(reply?.answer?.sources ?? []).includes('party_card'))
+      reasons.push('no party card button');
   }
   // General advice (plan 52 item 11): marked, and carrying no figure of its own. With data the
   // answer stands on the books (FR-7.88): a source, and not marked general.
@@ -577,37 +1139,62 @@ function score(question, result, oracle) {
     }
     if (/[0-9۰-۹]/.test(found.text)) notes.push('general advice text has digits');
   }
-  if (question.filters.includes('general=1') && !general) reasons.push('not marked as general advice');
+  if (question.filters.includes('general=1') && !general)
+    reasons.push('not marked as general advice');
   if (question.filters.includes('general=0')) {
     if (general) reasons.push('marked general advice although the books have the data');
-    else if (outcome === 'advice' && (reply?.answer?.sources ?? []).length === 0) reasons.push('advice with no source in the books');
+    else if (outcome === 'advice' && (reply?.answer?.sources ?? []).length === 0)
+      reasons.push('advice with no source in the books');
   }
-  if (question.filters.includes('onecall=1') && (result.model_calls ?? 0) > 1) notes.push(`${result.model_calls} model calls (one wanted)`);
+  if (question.filters.includes('onecall=1') && (result.model_calls ?? 0) > 1)
+    notes.push(`${result.model_calls} model calls (one wanted)`);
   // Tools are a note: another route to the same figure is not a miss.
   if (!matched) {
     for (const group of question.tools.split(',').filter(Boolean))
-      if (!group.split('/').some((t) => toolSeen(result.tool_calls, t))) notes.push(`tool ${group} not used`);
+      if (!group.split('/').some((t) => toolSeen(result.tool_calls, t)))
+        notes.push(`tool ${group} not used`);
   }
-  if (result.clicked) notes.push(`which_one clicked: ${result.clicked.name}`);
-  const afterReading = outcome === 'not_understood' && (result.tool_calls ?? []).some((c) => !c.error);
+  if (result.clicked)
+    notes.push(
+      `clicked after ${result.clicked.first_outcome ?? 'which_one'}: ${result.clicked.name}`,
+    );
+  const afterReading =
+    outcome === 'not_understood' && (result.tool_calls ?? []).some((c) => !c.error);
   const failure = reply?.failure?.kind ?? null;
   // LOST: the internet itself went (offline, or a connection that dropped). Such a question is not
   // scored at all: it is listed on its own and asked again (the harness waits for the connection and
   // asks it again first; `network_lost` says it still failed).
-  const lost = !!reply && (outcome === 'offline' || LOST_KINDS.has(failure ?? '') || result.network_lost === true);
+  const lost =
+    !!reply &&
+    (outcome === 'offline' || LOST_KINDS.has(failure ?? '') || result.network_lost === true);
   // NETWORK: the service failed (a timeout, busy, a server error): a real result, a miss.
   const network = !!reply && !lost && (outcome === 'error' || NETWORK_KINDS.has(failure ?? ''));
   const shows = found.parts.length + found.all.length > 0;
   let kind;
   if (lost) kind = 'LOST (network)';
   else if (pending) kind = 'PENDING (asked_role is not in the reply yet)';
+  else if (printPending) kind = 'PENDING (the print steps are not in the reply yet)';
   else if (reasons.length === 0) kind = 'PASS';
   else if (!reply) kind = 'MISS (harness)';
   else if (network) kind = 'MISS (network)';
   else if (SAFE_ENDS.has(outcome)) kind = 'MISS (safe end)';
   else if (shows || outcome === 'answered') kind = 'MISS (REVIEW: figure, party, period or source)';
   else kind = 'MISS';
-  return { id: question.id, cat: question.cat, pass: reasons.length === 0 && !lost && !pending, kind, reasons, notes, outcome, figureMisses, afterReading, network, lost, pending, failure };
+  return {
+    id: question.id,
+    cat: question.cat,
+    pass: reasons.length === 0 && !lost && !pending && !printPending,
+    kind,
+    reasons,
+    notes,
+    outcome,
+    figureMisses,
+    afterReading,
+    network,
+    lost,
+    pending: pending || printPending,
+    failure,
+  };
 }
 
 /**
@@ -625,7 +1212,9 @@ function groupAgreement(list, verdicts, results) {
       const v = verdicts.get(q.id);
       if (q.kind === 'help') {
         // A help group agrees on the topic it asked for.
-        const topics = (results.get(q.id)?.tool_calls ?? []).filter((c) => c.tool === 'app_help').map((c) => c.input?.topic);
+        const topics = (results.get(q.id)?.tool_calls ?? [])
+          .filter((c) => c.tool === 'app_help')
+          .map((c) => c.input?.topic);
         return [...new Set(topics)].sort().join(',');
       }
       if (v.network || v.lost || v.pending) return 'network'; // a lost connection, or a field not built yet, says nothing about the figures
@@ -639,7 +1228,20 @@ function groupAgreement(list, verdicts, results) {
 
 // ---- the review sheet ----------------------------------------------------------------------
 
-const MONTHS_UR = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+const MONTHS_UR = [
+  'جنوری',
+  'فروری',
+  'مارچ',
+  'اپریل',
+  'مئی',
+  'جون',
+  'جولائی',
+  'اگست',
+  'ستمبر',
+  'اکتوبر',
+  'نومبر',
+  'دسمبر',
+];
 const group3 = (n) => Math.abs(n).toLocaleString('en-US');
 const DIR_UR = { up: 'زیادہ', down: 'کم', same: 'برابر' };
 
@@ -649,7 +1251,8 @@ function showFigure(part) {
   let text = '';
   if (cell.type === 'money') text = `${cell.paisa < 0 ? '-' : ''}${group3(cell.paisa / 100)}`;
   else if (cell.type === 'balance')
-    text = `${group3(cell.paisa / 100)} ${cell.side === 'dr' ? 'بنام' : cell.side === 'cr' ? 'جمع' : ''}`.trim();
+    text =
+      `${group3(cell.paisa / 100)} ${cell.side === 'dr' ? 'بنام' : cell.side === 'cr' ? 'جمع' : ''}`.trim();
   else if (cell.type === 'number') text = group3(cell.value);
   else if (cell.type === 'percent') text = `${(cell.hundredths / 100).toFixed(2)}%`;
   else text = JSON.stringify(cell);
@@ -670,7 +1273,8 @@ function answerAsShown(reply) {
     return '';
   });
   const extra = [];
-  if (answer.tables?.length) extra.push(`[جدول: ${answer.tables.map((t) => t.rows.length).join('، ')} قطاریں]`);
+  if (answer.tables?.length)
+    extra.push(`[جدول: ${answer.tables.map((t) => t.rows.length).join('، ')} قطاریں]`);
   if (answer.estimate) extra.push('[اندازہ، یقینی نہیں]');
   if (answer.general_advice) extra.push('[عام مشورہ]');
   else if (answer.advice) extra.push('[مشورہ، فیصلہ آپ کا]');
@@ -679,7 +1283,16 @@ function answerAsShown(reply) {
 }
 
 function writeReview(list, results) {
-  const head = ['id', 'question', 'outcome', 'answer_as_shown', 'good', 'note', 'advice_inside_fr_7_88', 'cat'];
+  const head = [
+    'id',
+    'question',
+    'outcome',
+    'answer_as_shown',
+    'good',
+    'note',
+    'advice_inside_fr_7_88',
+    'cat',
+  ];
   const clean = (s) => String(s).replace(/[\t\r\n]+/g, ' ');
   const rows = list.map((q) => {
     const r = results.get(q.id);
@@ -694,6 +1307,7 @@ function writeReview(list, results) {
       q.cat,
     ].map(clean);
   });
+  mkdirSync(dirname(REVIEW), { recursive: true });
   writeFileSync(REVIEW, [head, ...rows].map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
 }
 
@@ -709,13 +1323,21 @@ const ms = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)} s` : `${Math.round(n)} 
 
 /** The numbers of one category: counts, rates and times (model time apart from network time). */
 function categoryStats(cat, list, verdicts, results) {
-  const qs = list.filter((q) => q.cat === cat && verdicts.has(q.id) && !verdicts.get(q.id).lost && !verdicts.get(q.id).pending);
+  const qs = list.filter(
+    (q) =>
+      q.cat === cat &&
+      verdicts.has(q.id) &&
+      !verdicts.get(q.id).lost &&
+      !verdicts.get(q.id).pending,
+  );
   const vs = qs.map((q) => verdicts.get(q.id));
   const n = qs.length;
   const passed = vs.filter((v) => v.pass).length;
   const wrong = vs.filter((v) => v.kind.includes('REVIEW')).length;
   const misses = vs.filter((v) => !v.pass);
-  const unsafe = misses.filter((v) => !SAFE_ENDS.has(v.outcome) && !v.network && !v.kind.includes('REVIEW')).length;
+  const unsafe = misses.filter(
+    (v) => !SAFE_ENDS.has(v.outcome) && !v.network && !v.kind.includes('REVIEW'),
+  ).length;
   const network = vs.filter((v) => v.network).length;
   const safe = misses.filter((v) => v.kind.includes('safe')).length;
   const modelTimes = [];
@@ -745,7 +1367,195 @@ function categoryStats(cat, list, verdicts, results) {
   }
   const target = CATS[cat];
   const timeOk = n === 0 || (p50 <= target.p50 && p95 <= target.p95);
-  return { cat, n, passed, wrong, safe, unsafe, network, answeredRate, passRate, p50, p95, networkTimes, rulePassed, timeOk };
+  return {
+    cat,
+    n,
+    passed,
+    wrong,
+    safe,
+    unsafe,
+    network,
+    answeredRate,
+    passRate,
+    p50,
+    p95,
+    networkTimes,
+    rulePassed,
+    timeOk,
+  };
+}
+
+const mean = (xs) => (xs.length ? sum(xs) / xs.length : 0);
+
+/**
+ * Plan 54: how many model calls a question needed and where its time went. Over the scored
+ * questions of a group (a category, or the help questions): the calls (none, one, two, more), the
+ * stages (before the first call, each call, between calls, after the last one, the app's own tools)
+ * and the reasoning tokens of each call. The stage times need `calls[].at_ms` (the harness writes
+ * it); a row without it is counted in the calls but left out of the stages.
+ */
+function speedStats(qs, verdicts, results) {
+  const rows = qs
+    .filter(
+      (q) =>
+        verdicts.has(q.id) &&
+        !verdicts.get(q.id).lost &&
+        !verdicts.get(q.id).pending &&
+        !verdicts.get(q.id).network,
+    )
+    .map((q) => results.get(q.id))
+    .filter(Boolean);
+  const calls = (r) => r.model_calls ?? (r.calls ?? []).length;
+  const by = { none: 0, one: 0, two: 0, more: 0 };
+  for (const r of rows) {
+    const n = calls(r);
+    if (n === 0) by.none += 1;
+    else if (n === 1) by.one += 1;
+    else if (n === 2) by.two += 1;
+    else by.more += 1;
+  }
+  const stage = {
+    before: [],
+    call1: [],
+    call2: [],
+    call3: [],
+    between: [],
+    after: [],
+    tools: [],
+    noCall: [],
+  };
+  const reasoning = { call1: [], call2: [], call3: [] };
+  for (const r of rows) {
+    const cs = r.calls ?? [];
+    cs.forEach((c, i) => {
+      const key = `call${Math.min(i + 1, 3)}`;
+      (reasoning[key] ??= []).push(c.reasoning ?? 0);
+      stage[key].push(c.millis ?? 0);
+    });
+    stage.tools.push(r.tool_millis ?? 0);
+    if (cs.length === 0) stage.noCall.push(r.millis ?? 0);
+    const timed = cs.length > 0 && cs.every((c) => typeof c.at_ms === 'number') && !r.clicked;
+    if (!timed) continue;
+    stage.before.push(cs[0].at_ms);
+    for (let i = 0; i + 1 < cs.length; i += 1)
+      stage.between.push(Math.max(0, cs[i + 1].at_ms - (cs[i].at_ms + cs[i].millis)));
+    const last = cs[cs.length - 1];
+    stage.after.push(Math.max(0, (r.millis ?? 0) - (last.at_ms + last.millis)));
+  }
+  const n = rows.length;
+  return {
+    n,
+    by,
+    oneOrNone: n ? (by.none + by.one) / n : 0,
+    none: n ? by.none / n : 0,
+    stage,
+    reasoning,
+  };
+}
+
+/**
+ * The speed budget of plan 55 Section 3, by kind of question, on the time the Owner waits (the whole
+ * question, a network failure left out):
+ *
+ * - how-to, print, navigation, no such party, not in the app: p50 1 s, p95 2 s, hard limit 3 s;
+ * - figures and lists (the rest of category A): 5 s, 10 s, hard limit 25 s;
+ * - advice, forecasts and what-ifs (B and C): 10 s, 20 s, hard limit 25 s;
+ * - mixed and hard (E, not named by the plan): the plan 52 time, 6 s and 12 s, hard limit 25 s.
+ *
+ * `ok` is true when every group is inside its budget and no question is over its hard limit.
+ */
+function speedBudget(list, verdicts, results) {
+  const local = (q) =>
+    q.kind === 'help' ||
+    q.kind === 'print' ||
+    q.outcome === 'not_found' ||
+    q.outcome === 'outside_books';
+  const groups = [
+    {
+      name: 'how-to, print, navigation, no such party, not in the app',
+      pick: local,
+      p50: 1000,
+      p95: 2000,
+      hard: 3000,
+    },
+    {
+      name: 'figures and lists (A)',
+      pick: (q) => q.cat === 'A' && !local(q),
+      p50: 5000,
+      p95: 10000,
+      hard: 25000,
+    },
+    {
+      name: 'advice, forecasts, what-ifs (B, C)',
+      pick: (q) => (q.cat === 'B' || q.cat === 'C') && !local(q),
+      p50: 10000,
+      p95: 20000,
+      hard: 25000,
+    },
+    {
+      name: 'mixed and hard (E)',
+      pick: (q) => q.cat === 'E' && !local(q),
+      p50: 6000,
+      p95: 12000,
+      hard: 25000,
+    },
+  ];
+  const out = groups.map((g) => {
+    const qs = list.filter(
+      (q) =>
+        g.pick(q) &&
+        results.has(q.id) &&
+        verdicts.has(q.id) &&
+        !verdicts.get(q.id).lost &&
+        !verdicts.get(q.id).pending &&
+        !verdicts.get(q.id).network,
+    );
+    const times = qs.map((q) => results.get(q.id).millis ?? 0);
+    const p50 = percentile(times, 0.5);
+    const p95 = percentile(times, 0.95);
+    const over = qs.filter((q) => (results.get(q.id).millis ?? 0) > g.hard).map((q) => q.id);
+    return {
+      ...g,
+      n: qs.length,
+      p50v: p50,
+      p95v: p95,
+      over,
+      within: qs.length === 0 || (p50 <= g.p50 && p95 <= g.p95),
+    };
+  });
+  return { groups: out, ok: out.every((g) => g.within && g.over.length === 0) };
+}
+
+/** `p50 / p95` of a list of milliseconds, or a dash. */
+const p50p95 = (xs) =>
+  xs.length ? `${ms(percentile(xs, 0.5))} / ${ms(percentile(xs, 0.95))}` : '-';
+
+/** The lines of the speed report for one group of questions. */
+function speedLines(label, st, target) {
+  if (st.n === 0) return [];
+  const out = [];
+  const { none, one, two, more } = st.by;
+  const share = `${(100 * st.oneOrNone).toFixed(1)}%`;
+  const flag =
+    target === undefined
+      ? ''
+      : st.oneOrNone >= target
+        ? `  OK (target ${100 * target}%)`
+        : `  UNDER (target ${100 * target}%)`;
+  out.push(
+    `  ${label}  ${st.n} questions   model calls 0 / 1 / 2 / 3+: ${none} / ${one} / ${two} / ${more}   one call or none ${share}${flag}`,
+  );
+  out.push(
+    `      time p50 / p95:  before call 1 ${p50p95(st.stage.before)}   call 1 ${p50p95(st.stage.call1)}   call 2 ${p50p95(st.stage.call2)}   call 3+ ${p50p95(st.stage.call3)}   between calls ${p50p95(st.stage.between)}   after last call ${p50p95(st.stage.after)}   app tools ${p50p95(st.stage.tools)}   no model call ${p50p95(st.stage.noCall)}`,
+  );
+  const r = (xs) =>
+    xs.length
+      ? `p50 ${Math.round(percentile(xs, 0.5))}, p95 ${Math.round(percentile(xs, 0.95))}, mean ${Math.round(mean(xs))}`
+      : '-';
+  out.push(
+    `      reasoning tokens a call:  call 1 ${r(st.reasoning.call1)}   call 2 ${r(st.reasoning.call2)}   call 3+ ${r(st.reasoning.call3)}`,
+  );
+  return out;
 }
 
 /**
@@ -764,7 +1574,9 @@ function preReads(r) {
   const tools = calls.flatMap((c) => c.tools ?? []);
   const flagged = (r.tool_calls ?? []).filter((t) => t.prefetch === true).length;
   const flaggedInCalls = tools.filter((t) => t.prefetch === true).length;
-  const guides = (r.tool_calls ?? []).filter((t) => typeof t.id === 'string' && t.id.startsWith('h')).length;
+  const guides = (r.tool_calls ?? []).filter(
+    (t) => typeof t.id === 'string' && t.id.startsWith('h'),
+  ).length;
   const guidesInCalls = tools.filter((t) => t.name === 'app_help').length;
   return Math.max(0, flagged - flaggedInCalls) + Math.max(0, guides - guidesInCalls);
 }
@@ -783,12 +1595,20 @@ function report(list, data) {
   const say = (s = '') => lines.push(s);
   say(`AI EVAL  model ${data.meta.model}`);
   say(`endpoint ${data.meta.endpoint}`);
-  say(`date ${new Date().toISOString().slice(0, 10)}   questions run ${ran.length} of ${list.length}   threads ${data.meta.threads ?? 1}`);
-  say(`oracle facts ${Object.keys(oracle).length}   prefind ${data.meta.prefind === undefined ? 'not recorded' : data.meta.prefind ? 'ON' : 'off (as the app)'}`);
+  say(
+    `date ${new Date().toISOString().slice(0, 10)}   questions run ${ran.length} of ${list.length}   threads ${data.meta.threads ?? 1}${BANK ? '   bank ' + basename(BANK) : ''}`,
+  );
+  say(
+    `oracle facts ${Object.keys(oracle).length}   prefind ${data.meta.prefind === undefined ? 'not recorded' : data.meta.prefind ? 'ON' : 'off (as the app)'}`,
+  );
   say();
-  say(`SCORE ${passed} of ${scoredV.length} scored${lostV.length ? `   (${lostV.length} lost to the network are NOT scored: they are listed below and must be asked again)` : ''}${pendingV.length ? `   (${pendingV.length} PENDING, not scored: the reply has no asked_role / found_as yet)` : ''}`);
+  say(
+    `SCORE ${passed} of ${scoredV.length} scored${lostV.length ? `   (${lostV.length} lost to the network are NOT scored: they are listed below and must be asked again)` : ''}${pendingV.length ? `   (${pendingV.length} PENDING, not scored: the reply lacks a field of the contract, see below)` : ''}`,
+  );
   say();
-  say('CATEGORY                 pass      wrong  answered  model time p50 / p95 (target)           network  rule');
+  say(
+    'CATEGORY                 pass      wrong  answered  model time p50 / p95 (target)           network  rule',
+  );
   const cats = Object.keys(CATS).filter((c) => ran.some((q) => q.cat === c));
   const stats = cats.map((c) => categoryStats(c, list, verdicts, results));
   for (const s of stats) {
@@ -797,13 +1617,77 @@ function report(list, data) {
       `${s.cat} ${t.title.padEnd(22)} ${`${s.passed}/${s.n}`.padEnd(8)} ${String(s.wrong).padEnd(6)} ${`${(100 * s.answeredRate).toFixed(1)}%`.padEnd(9)} ${ms(s.p50)} / ${ms(s.p95)} (${ms(t.p50)} / ${ms(t.p95)}) ${s.timeOk ? 'OK ' : 'OVER'}   ${String(s.network).padEnd(7)} ${s.rulePassed ? 'MEETS' : 'NOT YET'}  [${t.rule}]`,
     );
   }
+  // Plan 54: model calls and the time of each stage, by category and for the help and print questions.
+  say();
+  say(
+    "SPEED (plan 54): how many model calls a question needed, and where its time went (model time apart from the app's own work)",
+  );
+  const speed = {};
+  for (const c of cats) {
+    const st = speedStats(
+      list.filter((q) => q.cat === c),
+      verdicts,
+      results,
+    );
+    speed[c] = st;
+    for (const line of speedLines(c, st, c === 'A' ? 0.7 : undefined)) say(line);
+  }
+  const kindOf = (k) => list.filter((q) => q.kind === k);
+  for (const [k, label] of [
+    ['help', 'help (how-to)'],
+    ['print', 'print'],
+  ]) {
+    const st = speedStats(kindOf(k), verdicts, results);
+    speed[k] = st;
+    const lines = speedLines(label, st);
+    if (lines.length) {
+      for (const line of lines) say(line);
+      say(
+        `      answered with no model call: ${st.by.none} of ${st.n} (${(100 * st.none).toFixed(1)}%)`,
+      );
+    }
+  }
+  // Plan 55 gate 3: the buttons of the answers, each opened with its own filters.
+  const withButtons = ran.filter(
+    (q) => (results.get(q.id)?.buttons ?? []).length > 0 && !verdicts.get(q.id)?.lost,
+  );
+  if (ran.some((q) => Array.isArray(results.get(q.id)?.buttons))) {
+    const onlyTiles = withButtons.filter((q) => results.get(q.id).buttons.every((b) => b.skipped));
+    const wrong = withButtons.filter((q) =>
+      (verdicts.get(q.id)?.reasons ?? []).some((x) => x.startsWith('button')),
+    );
+    say(
+      `  BUTTONS (plan 55 gate 3): ${withButtons.length - onlyTiles.length} answers with a report or view button were opened with the button's filters and their figures looked for in it; ${onlyTiles.length} answers have only the dashboard tiles (not checked); wrong place or wrong filters: ${wrong.length === 0 ? 'none' : wrong.map((q) => q.id).join(' ')}`,
+    );
+  }
+  // Plan 55 Section 3: the speed budget by kind and the hard limits. They are part of "meets".
+  const budget = speedBudget(list, verdicts, results);
+  say(
+    '  SPEED BUDGET (plan 55 Section 3), the time the Owner waits, p50 / p95 against the budget, and the hard limit:',
+  );
+  for (const g of budget.groups) {
+    if (g.n === 0) continue;
+    say(
+      `    ${g.name}: ${g.n} questions   ${ms(g.p50v)} / ${ms(g.p95v)} (budget ${ms(g.p50)} / ${ms(g.p95)}) ${g.within ? 'OK' : 'OVER'}   hard limit ${ms(g.hard)}: ${g.over.length === 0 ? 'none over' : `${g.over.length} OVER: ${g.over.join(' ')}`}`,
+    );
+  }
+  const oneCallOk = !speed.A || speed.A.n === 0 || speed.A.oneOrNone >= 0.7;
+  const over25 = budget.groups.flatMap((g) => (g.hard === 25000 ? g.over : []));
+  const slowLocal = budget.groups.flatMap((g) => (g.hard === 3000 ? g.over : []));
+  say(
+    `  HARD LIMITS: no question over 25 s: ${over25.length === 0 ? 'ok' : `${over25.length} over: ${over25.join(' ')}`}   how-to, print, navigation under 3 s: ${slowLocal.length === 0 ? 'ok' : `${slowLocal.length} over: ${slowLocal.join(' ')}`}   category A in one call or none, at least 70%: ${speed.A && speed.A.n ? `${(100 * speed.A.oneOrNone).toFixed(1)}% ${oneCallOk ? 'ok' : 'UNDER'}` : 'not run'}`,
+  );
   const netTimes = stats.flatMap((s) => s.networkTimes);
-  say(`  (time is the model's: ${netTimes.length} questions that ended on a network failure or a timeout are counted apart, their time ${netTimes.length ? `p95 ${ms(percentile(netTimes, 0.95))}` : 'none'})`);
+  say(
+    `  (time is the model's: ${netTimes.length} questions that ended on a network failure or a timeout are counted apart, their time ${netTimes.length ? `p95 ${ms(percentile(netTimes, 0.95))}` : 'none'})`,
+  );
   say();
   const misses = scoredV.filter((v) => !v.pass);
   const review = misses.filter((v) => v.kind.includes('REVIEW'));
   const count = (word) => misses.filter((v) => v.kind.includes(word)).length;
-  say(`MISSES ${misses.length}: wrong or missing figures to review ${review.length}, safe ends ${count('safe')}, network ${count('network')}, harness ${count('harness')}, oracle ${count('oracle')}, other ${misses.length - review.length - count('safe') - count('network') - count('harness') - count('oracle')}`);
+  say(
+    `MISSES ${misses.length}: wrong or missing figures to review ${review.length}, safe ends ${count('safe')}, network ${count('network')}, harness ${count('harness')}, oracle ${count('oracle')}, other ${misses.length - review.length - count('safe') - count('network') - count('harness') - count('oracle')}`,
+  );
   for (const v of misses) {
     const q = list.find((x) => x.id === v.id);
     say(`  ${v.id} [${q.cat}] [${v.kind}] ${q.question}`);
@@ -812,33 +1696,53 @@ function report(list, data) {
   }
   if (lostV.length) {
     say();
-    say(`LOST TO THE NETWORK: ${lostV.length} questions, none of them scored: ${lostV.map((v) => v.id).join(' ')}`);
+    say(
+      `LOST TO THE NETWORK: ${lostV.length} questions, none of them scored: ${lostV.map((v) => v.id).join(' ')}`,
+    );
     say('  ask them again with: node scripts/ai-eval/run.mjs --misses');
   }
   if (pendingV.length) {
     say();
-    say(`PENDING (the field asked_role / found_as is not in the reply yet; neither a pass nor a miss): ${pendingV.length} questions: ${pendingV.map((v) => v.id).join(' ')}`);
+    say(
+      `PENDING (a field of the contract is not in the reply yet; neither a pass nor a miss): ${pendingV.length} questions`,
+    );
+    const pendingBy = (word) => pendingV.filter((v) => v.kind.includes(word)).map((v) => v.id);
+    if (pendingBy('asked_role').length)
+      say(`  asked_role / found_as: ${pendingBy('asked_role').join(' ')}`);
+    if (pendingBy('print').length)
+      say(`  print steps (plan 54 S2): ${pendingBy('print').join(' ')}`);
   }
   const noted = vlist.filter((v) => v.notes.length > 0);
   say();
-  say(`notes (not misses): ${noted.length} questions used another tool route, said a zero in words, or showed no name`);
+  say(
+    `notes (not misses): ${noted.length} questions used another tool route, said a zero in words, or showed no name`,
+  );
   for (const v of noted.slice(0, 40)) say(`  ${v.id}: ${v.notes.join('; ')}`);
   // No "not understood" after the model has read data; no network failure.
   const afterReading = vlist.filter((v) => v.afterReading);
   say();
-  say(`NOT UNDERSTOOD AFTER READING: ${afterReading.length} ${afterReading.length ? afterReading.map((v) => v.id).join(' ') : '(none, as plan 52 wants)'}`);
+  say(
+    `NOT UNDERSTOOD AFTER READING: ${afterReading.length} ${afterReading.length ? afterReading.map((v) => v.id).join(' ') : '(none, as plan 52 wants)'}`,
+  );
   const clicked = ran.map((q) => results.get(q.id)).filter((r) => r.clicked);
   if (clicked.length) {
-    say(`CLICKED  ${clicked.length} misspelled names were asked "which one" and the matching option was clicked, as on the panel (both times counted): ${clicked.map((r) => `${r.id} ${r.clicked.name}`).join(', ')}`);
+    say(
+      `CLICKED  ${clicked.length} questions waited for a click (a misspelled name asked "which one", or a name found in another role) and the matching button was clicked, as on the panel (both times counted): ${clicked.map((r) => `${r.id} ${r.clicked.name}`).join(', ')}`,
+    );
   }
   const failures = vlist.filter((v) => v.network);
   const byKind = {};
-  for (const v of failures) byKind[v.failure ?? v.outcome] = (byKind[v.failure ?? v.outcome] ?? 0) + 1;
-  say(`NETWORK FAILURES: ${failures.length} ${failures.length ? JSON.stringify(byKind) : '(none, as plan 52 wants)'}`);
+  for (const v of failures)
+    byKind[v.failure ?? v.outcome] = (byKind[v.failure ?? v.outcome] ?? 0) + 1;
+  say(
+    `NETWORK FAILURES: ${failures.length} ${failures.length ? JSON.stringify(byKind) : '(none, as plan 52 wants)'}`,
+  );
   // Groups of the same meaning.
   const bad = groupAgreement(list, verdicts, results);
   say();
-  say(`GROUPS of the same question (required figures only): ${bad.length === 0 ? 'every group reaches the same figures' : `${bad.length} DISAGREE`}`);
+  say(
+    `GROUPS of the same question (required figures only): ${bad.length === 0 ? 'every group reaches the same figures' : `${bad.length} DISAGREE`}`,
+  );
   for (const g of bad) say(`  ${g.group} ${g.members.join(' ')}: ${g.signs.join('  |  ')}`);
   // Tools, model calls, tokens.
   const all = ran.map((q) => results.get(q.id));
@@ -848,49 +1752,88 @@ function report(list, data) {
   const parallel = all.filter((r) => (r.calls ?? []).some((c) => c.tool_calls >= 2));
   const badParallel = sum(parallel.map((r) => (r.tool_calls ?? []).filter((c) => c.error).length));
   say();
-  say(`TOOL CALLS ${sum(toolCalls)} (${(sum(toolCalls) / Math.max(1, all.length)).toFixed(1)} a question)   MODEL CALLS ${sum(modelCalls)} (${(sum(modelCalls) / Math.max(1, all.length)).toFixed(1)} a question)`);
-  say(`TOKENS  input ${t('in')}  cached ${t('cached')}  output ${t('out')}  reasoning ${t('reasoning')}`);
-  say(`  per question: input ${Math.round(t('in') / Math.max(1, all.length))}, cached ${Math.round(t('cached') / Math.max(1, all.length))}, output ${Math.round(t('out') / Math.max(1, all.length))}`);
+  say(
+    `TOOL CALLS ${sum(toolCalls)} (${(sum(toolCalls) / Math.max(1, all.length)).toFixed(1)} a question)   MODEL CALLS ${sum(modelCalls)} (${(sum(modelCalls) / Math.max(1, all.length)).toFixed(1)} a question)`,
+  );
+  say(
+    `TOKENS  input ${t('in')}  cached ${t('cached')}  output ${t('out')}  reasoning ${t('reasoning')}`,
+  );
+  say(
+    `  per question: input ${Math.round(t('in') / Math.max(1, all.length))}, cached ${Math.round(t('cached') / Math.max(1, all.length))}, output ${Math.round(t('out') / Math.max(1, all.length))}`,
+  );
   // The fixed part as the model counts it (plan 52 item 0c): the prompt tokens of the FIRST call of a
   // fresh question, less the question itself, for the questions whose first call carried nothing the
   // app had read for it. What the app reads before the first call (the guide of a how-to, a period,
   // the tiles) is added to that call but is not fixed: it is reported apart.
-  const firstCalls = all.filter((r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number' && r.calls[0].prompt > 0);
+  const firstCalls = all.filter(
+    (r) => !r.followup && typeof r.calls?.[0]?.prompt === 'number' && r.calls[0].prompt > 0,
+  );
   const readAhead = (r) => preReads(r);
-  const plain = firstCalls.filter((r) => readAhead(r) === 0).map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
-  const fixed = plain.length ? plain : firstCalls.map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+  const plain = firstCalls
+    .filter((r) => readAhead(r) === 0)
+    .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+  const fixed = plain.length
+    ? plain
+    : firstCalls.map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
   const fixedMax = fixed.length ? Math.max(...fixed) : 0;
   const fixedO200k = Math.round(fixedMax / MODEL_COUNTS_MORE);
   say(
     `  FIXED PART (system, tools, answer schema), first call of ${fixed.length} fresh questions with nothing read ahead, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K})`,
   );
   const base = percentile(fixed, 0.5);
-  const extra = firstCalls.filter((r) => readAhead(r) > 0).map((r) => r.calls[0].prompt - (r.user_tokens ?? 0) - base);
+  const extra = firstCalls
+    .filter((r) => readAhead(r) > 0)
+    .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0) - base);
   if (extra.length) {
-    say(`  READ AHEAD by the app before the first call (NOT fixed: per question): ${extra.length} questions, +${Math.min(...extra)} to +${Math.max(...extra)} tokens, p50 +${percentile(extra, 0.5)}`);
+    say(
+      `  READ AHEAD by the app before the first call (NOT fixed: per question): ${extra.length} questions, +${Math.min(...extra)} to +${Math.max(...extra)} tokens, p50 +${percentile(extra, 0.5)}`,
+    );
   }
-  say(`PARALLEL tool calls that arrived with a bad input: ${badParallel} (in ${parallel.length} questions that asked for tools together)`);
+  say(
+    `PARALLEL tool calls that arrived with a bad input: ${badParallel} (in ${parallel.length} questions that asked for tools together)`,
+  );
   const limited = all.filter((r) => r.reply?.outcome === 'not_understood' && r.reply?.stop_reason);
   say(`LIMITS  ${limited.length} questions stopped at a limit (calls or tokens)`);
   const oneCall = list.filter((q) => q.filters.includes('onecall=1') && results.has(q.id));
   if (oneCall.length) {
     const one = oneCall.filter((q) => (results.get(q.id).model_calls ?? 0) <= 1).length;
-    say(`ONE CALL  ${one} of ${oneCall.length} help or general advice questions needed one model call`);
+    say(
+      `ONE CALL  ${one} of ${oneCall.length} help or general advice questions needed one model call`,
+    );
   }
   const callTimes = all.flatMap((r) => (r.calls ?? []).map((c) => c.millis));
-  say(`TIME  total ${ms(sum(all.map((r) => r.millis ?? 0)))}   one model call: p50 ${ms(percentile(callTimes, 0.5))}, p95 ${ms(percentile(callTimes, 0.95))}, max ${ms(callTimes.length ? Math.max(...callTimes) : 0)}   a follow-up counts its own time only`);
+  say(
+    `TIME  total ${ms(sum(all.map((r) => r.millis ?? 0)))}   one model call: p50 ${ms(percentile(callTimes, 0.5))}, p95 ${ms(percentile(callTimes, 0.95))}, max ${ms(callTimes.length ? Math.max(...callTimes) : 0)}   a follow-up counts its own time only`,
+  );
   say();
-  say(`URDU REVIEW SHEET ${REVIEW} (${ran.length} answers; the reviewer marks good or not, and for advice answers inside FR-7.88 or not; at least 95 of 100 advice answers must be good)`);
+  say(
+    `URDU REVIEW SHEET ${REVIEW} (${ran.length} answers; the reviewer marks good or not, and for advice answers inside FR-7.88 or not; at least 95 of 100 advice answers must be good)`,
+  );
   const advice = list.filter((q) => q.cat === 'B' && results.has(q.id));
   say(`  advice answers to read for FR-7.88: ${advice.map((q) => q.id).join(' ')}`);
-  const meets = stats.length > 0 && stats.every((s) => s.rulePassed && s.timeOk) && bad.length === 0 && afterReading.length === 0 && failures.length === 0 && lostV.length === 0 && pendingV.length === 0;
+  const meets =
+    stats.length > 0 &&
+    stats.every((s) => s.rulePassed && s.timeOk) &&
+    bad.length === 0 &&
+    afterReading.length === 0 &&
+    failures.length === 0 &&
+    lostV.length === 0 &&
+    pendingV.length === 0 &&
+    budget.ok &&
+    oneCallOk;
   say();
   say(
     meets
-      ? 'RESULT: every category that ran meets plan 52 Section 2 (the Urdu review is still to do)'
-      : `RESULT: does NOT yet meet plan 52 Section 2 (${stats.filter((s) => !s.rulePassed).map((s) => `${s.cat} score`).concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`)).join(', ') || 'groups, reads or network'}${lostV.length ? '; and questions lost to the network' : ''}${pendingV.length ? '; and questions pending the asked_role field' : ''})`,
+      ? 'RESULT: every category that ran meets plan 52 Section 2 and the speed of plan 55 Section 3 (the Urdu review is still to do)'
+      : `RESULT: does NOT yet meet plan 52 Section 2 and plan 55 Section 3 (${
+          stats
+            .filter((s) => !s.rulePassed)
+            .map((s) => `${s.cat} score`)
+            .concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`))
+            .join(', ') || 'groups, reads or network'
+        }${lostV.length ? '; and questions lost to the network' : ''}${pendingV.length ? '; and questions pending a field of the contract' : ''}${budget.ok ? '' : '; and the speed budget or a hard limit'}${oneCallOk ? '' : '; and category A under 70% in one call'})`,
   );
-  return { text: lines.join('\n'), meets, results, verdicts, stats, bad };
+  return { text: lines.join('\n'), meets, results, verdicts, stats, bad, speed, budget };
 }
 
 /** One text of every miss for the loop of plan 52 item 14: the answer, the calls, the time. */
@@ -910,10 +1853,20 @@ function writeDetail(list, data, verdicts) {
     out.push(`${q.id} [${q.cat}] ${q.world} ${v.kind}`);
     out.push(`  question  ${q.question}${q.after ? `   (after ${q.after})` : ''}`);
     out.push(`  expected  ${q.outcome}: ${expected || q.filters}`);
-    out.push(`  got       ${v.outcome}${v.failure ? ` (${v.failure})` : ''}; ${v.reasons.join('; ')}`);
+    out.push(
+      `  got       ${v.outcome}${v.failure ? ` (${v.failure})` : ''}; ${v.reasons.join('; ')}`,
+    );
+    if (r.first_reply)
+      out.push(
+        `  first     ${r.first_reply.outcome}; asked_role ${r.first_reply.asked_role ?? '-'}; found_as ${roleOf(r.first_reply.found_as) ?? '-'} ${roleName(r.first_reply.found_as) ?? ''} (the answer below is after the click)`,
+      );
     out.push(`  answer    ${answerAsShown(r.reply)}`);
-    out.push(`  tools     ${(r.tool_calls ?? []).map((c) => `${c.tool}${c.error ? '!' : ''}(${JSON.stringify(c.input ?? {}).slice(0, 110)})`).join('  ')}`);
-    out.push(`  calls     ${(r.calls ?? []).map((c) => `${c.millis} ms ${c.finish} +${c.tool_calls}t`).join(' | ')}   ${r.millis} ms, ${r.model_calls} calls, finish ${r.finish_reason ?? '-'}`);
+    out.push(
+      `  tools     ${(r.tool_calls ?? []).map((c) => `${c.tool}${c.error ? '!' : ''}(${JSON.stringify(c.input ?? {}).slice(0, 110)})`).join('  ')}`,
+    );
+    out.push(
+      `  calls     ${(r.calls ?? []).map((c) => `${c.millis} ms ${c.finish} +${c.tool_calls}t`).join(' | ')}   ${r.millis} ms, ${r.model_calls} calls, finish ${r.finish_reason ?? '-'}`,
+    );
     if (r.calls_json) out.push(`  calls_json ${String(r.calls_json).slice(0, 600)}`);
     if (r.error) out.push(`  harness   ${r.error}`);
     out.push('');
@@ -926,12 +1879,32 @@ function writeDetail(list, data, verdicts) {
 
 /** The ids a run asks about, from --only, --category and --world. Empty: all of them. */
 function selectIds(list, { only, category, world }) {
-  const wanted = new Set((only ?? '').split(',').map((s) => s.trim()).filter(Boolean));
-  const cats = new Set((category ?? '').split(',').map((s) => s.trim().toUpperCase()).filter(Boolean));
-  const worlds = new Set((world ?? '').split(',').map((s) => s.trim()).filter(Boolean));
+  const wanted = new Set(
+    (only ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  const cats = new Set(
+    (category ?? '')
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean),
+  );
+  const worlds = new Set(
+    (world ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
   if (wanted.size === 0 && cats.size === 0 && worlds.size === 0) return [];
   return list
-    .filter((q) => (wanted.size === 0 || wanted.has(q.id)) && (cats.size === 0 || cats.has(q.cat)) && (worlds.size === 0 || worlds.has(q.world)))
+    .filter(
+      (q) =>
+        (wanted.size === 0 || wanted.has(q.id)) &&
+        (cats.size === 0 || cats.has(q.cat)) &&
+        (worlds.size === 0 || worlds.has(q.world)),
+    )
     .map((q) => q.id);
 }
 
@@ -942,9 +1915,25 @@ function runLive(ids, model, threads, outFile = RESULTS) {
   if (ids.length) env.MANDI_EVAL_ONLY = ids.join(',');
   if (model) env.MANDI_EVAL_MODEL = model;
   if (threads) env.MANDI_EVAL_THREADS = String(threads);
-  const cmd = ['test', '-j', '4', '-p', 'mandi-assistant', '--test', 'robustness_live', '--', '--ignored', '--nocapture', 'live_100_questions'];
+  const cmd = [
+    'test',
+    '-j',
+    '4',
+    '-p',
+    'mandi-assistant',
+    '--test',
+    'robustness_live',
+    '--',
+    '--ignored',
+    '--nocapture',
+    'live_100_questions',
+  ];
   console.log(`ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}`);
-  const res = spawnSync('cargo', cmd, { cwd: BACKEND, env, stdio: ['ignore', 'inherit', 'inherit'] });
+  const res = spawnSync('cargo', cmd, {
+    cwd: BACKEND,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
   if (res.error) throw new Error(`cannot start cargo: ${res.error.message}`);
   if (res.status !== 0) throw new Error(`the live test failed with exit code ${res.status}`);
 }
@@ -971,8 +1960,11 @@ function idsToAskAgain(list) {
  * one of the same id. The file before the merge is kept as results.before-merge.json.
  */
 function mergeResults(part, whole = RESULTS) {
-  const old = existsSync(whole) ? JSON.parse(readFileSync(whole, 'utf8')) : { meta: {}, oracle: {}, results: [] };
-  if (old.results) writeFileSync(join(dirname(whole), 'results.before-merge.json'), JSON.stringify(old));
+  const old = existsSync(whole)
+    ? JSON.parse(readFileSync(whole, 'utf8'))
+    : { meta: {}, oracle: {}, results: [] };
+  if (old.results)
+    writeFileSync(join(dirname(whole), 'results.before-merge.json'), JSON.stringify(old));
   const byId = new Map((old.results ?? []).map((r) => [r.id, r]));
   for (const r of part.results ?? []) byId.set(r.id, r);
   const merged = {
@@ -998,33 +1990,89 @@ function selfTest() {
   const expect = (cond, m) => {
     if (!cond) fail(m);
   };
-  const dr = (n) => ({ type: 'figure', cell: { type: 'balance', paisa: n * 100, side: 'dr' }, dir: null, checked: true });
-  const money = (n) => ({ type: 'figure', cell: { type: 'money', paisa: n * 100 }, dir: null, checked: true });
-  const name = (en, ur) => ({ type: 'name', name: { name_en: en, name_ur: ur, tag: null, code: null } });
+  const dr = (n) => ({
+    type: 'figure',
+    cell: { type: 'balance', paisa: n * 100, side: 'dr' },
+    dir: null,
+    checked: true,
+  });
+  const money = (n) => ({
+    type: 'figure',
+    cell: { type: 'money', paisa: n * 100 },
+    dir: null,
+    checked: true,
+  });
+  const name = (en, ur) => ({
+    type: 'name',
+    name: { name_en: en, name_ur: ur, tag: null, code: null },
+  });
   const text = (t) => ({ type: 'text', text: t });
   const answered = (parts, extra = {}, answerExtra = {}) => ({
     outcome: 'answered',
-    answer: { parts, tables: [], charts: [], estimate: null, advice: false, sources: [], differences: [], next: [], ...answerExtra },
+    answer: {
+      parts,
+      tables: [],
+      charts: [],
+      estimate: null,
+      advice: false,
+      sources: [],
+      differences: [],
+      next: [],
+      ...answerExtra,
+    },
     ...extra,
   });
   const byId = (id) => list.find((q) => q.id === id);
 
   // The old cases still hold.
   const q1 = byId('Q001');
-  expect(score(q1, { reply: answered([name('Akram Toll Tax', 'اکرم ٹول ٹیکس'), text(' کے ذمے '), dr(2880)]), tool_calls: [{ tool: 'find' }, { tool: 'party_card' }] }, {}).pass, 'a right answer missed');
+  expect(
+    score(
+      q1,
+      {
+        reply: answered([name('Akram Toll Tax', 'اکرم ٹول ٹیکس'), text(' کے ذمے '), dr(2880)]),
+        tool_calls: [{ tool: 'find' }, { tool: 'party_card' }],
+      },
+      {},
+    ).pass,
+    'a right answer missed',
+  );
   const wrong = score(q1, { reply: answered([dr(2800)]), tool_calls: [] }, {});
   expect(!wrong.pass && wrong.kind.includes('REVIEW'), 'a wrong figure was not flagged for review');
   const ask = score(q1, { reply: { outcome: 'which_one', answer: null }, tool_calls: [] }, {});
   expect(!ask.pass && ask.kind.includes('safe'), 'which_one was not a safe end');
   const q96 = byId('Q096');
-  expect(score(q96, { reply: { outcome: 'change_refused', answer: null, entry_route: { screen: 'wasooli' } }, tool_calls: [] }, {}).pass, 'a refusal missed');
-  const sheet = answerAsShown(answered([name('Akram Toll Tax', 'اکرم ٹول ٹیکس'), text(' کے ذمے '), dr(2880)]));
+  expect(
+    score(
+      q96,
+      {
+        reply: { outcome: 'change_refused', answer: null, entry_route: { screen: 'wasooli' } },
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'a refusal missed',
+  );
+  const sheet = answerAsShown(
+    answered([name('Akram Toll Tax', 'اکرم ٹول ٹیکس'), text(' کے ذمے '), dr(2880)]),
+  );
   expect(sheet.includes('2,880 بنام ✓'), `the review text is "${sheet}"`);
 
   // Figures: forms, alternatives, optional, strict names.
-  const e = expectedFigures('same_pace=288000;pace_month=2027-04;share=72.10%;sum=21564 Dr;opt?=5;top!=Banana|Apple;x=1|2');
-  expect(e.length === 7 && e[1].alts[0].kind === 'month' && e[2].alts[0].n === 7210 && e[3].alts[0].side === 'dr', 'expected figures were read wrongly');
-  expect(e[4].optional && e[5].strict && e[5].alts.length === 2 && e[6].alts.length === 2, 'optional, strict or alternative forms were read wrongly');
+  const e = expectedFigures(
+    'same_pace=288000;pace_month=2027-04;share=72.10%;sum=21564 Dr;opt?=5;top!=Banana|Apple;x=1|2',
+  );
+  expect(
+    e.length === 7 &&
+      e[1].alts[0].kind === 'month' &&
+      e[2].alts[0].n === 7210 &&
+      e[3].alts[0].side === 'dr',
+    'expected figures were read wrongly',
+  );
+  expect(
+    e[4].optional && e[5].strict && e[5].alts.length === 2 && e[6].alts.length === 2,
+    'optional, strict or alternative forms were read wrongly',
+  );
   const oracle = { 'a.x': '500', 'a.y': '700', 'n.top': 'Banana' };
   expect(resolveFigures('p=@a.x;q=@a.y', oracle) === 'p=500;q=700', 'the oracle was not filled in');
   let threw = false;
@@ -1034,164 +2082,1427 @@ function selfTest() {
     threw = true;
   }
   expect(threw, 'a missing oracle fact did not stop the scorer');
-  const mk = (over) => ({ id: 'T1', cat: 'A', kind: 'x', outcome: 'answered', tools: '', filters: '', figures: '', ...over });
+  const mk = (over) => ({
+    id: 'T1',
+    cat: 'A',
+    kind: 'x',
+    outcome: 'answered',
+    tools: '',
+    filters: '',
+    figures: '',
+    ...over,
+  });
   // Either of two honest readings passes; neither fails.
   const alt = mk({ figures: 'v=@a.x|@a.y' });
-  expect(score(alt, { reply: answered([money(700)]), tool_calls: [] }, oracle).pass, 'the second reading was not accepted');
-  expect(!score(alt, { reply: answered([money(600)]), tool_calls: [] }, oracle).pass, 'a wrong figure passed as a reading');
+  expect(
+    score(alt, { reply: answered([money(700)]), tool_calls: [] }, oracle).pass,
+    'the second reading was not accepted',
+  );
+  expect(
+    !score(alt, { reply: answered([money(600)]), tool_calls: [] }, oracle).pass,
+    'a wrong figure passed as a reading',
+  );
   // An optional figure may be missing; a required one may not.
-  expect(score(mk({ figures: 'g=@a.x;c?=@a.y' }), { reply: answered([money(500)]), tool_calls: [] }, oracle).pass, 'an optional figure was required');
-  expect(!score(mk({ figures: 'g=@a.x;c=@a.y' }), { reply: answered([money(500)]), tool_calls: [] }, oracle).pass, 'a required figure was optional');
+  expect(
+    score(
+      mk({ figures: 'g=@a.x;c?=@a.y' }),
+      { reply: answered([money(500)]), tool_calls: [] },
+      oracle,
+    ).pass,
+    'an optional figure was required',
+  );
+  expect(
+    !score(
+      mk({ figures: 'g=@a.x;c=@a.y' }),
+      { reply: answered([money(500)]), tool_calls: [] },
+      oracle,
+    ).pass,
+    'a required figure was optional',
+  );
   // A strict name must be named.
   const top = mk({ figures: 'top!=@n.top' });
-  expect(score(top, { reply: answered([name('Banana', 'کیلا')]), tool_calls: [] }, oracle).pass, 'a strict name missed');
-  expect(!score(top, { reply: answered([name('Apple', 'سیب')]), tool_calls: [] }, oracle).pass, 'a wrong strict name passed');
+  expect(
+    score(top, { reply: answered([name('Banana', 'کیلا')]), tool_calls: [] }, oracle).pass,
+    'a strict name missed',
+  );
+  expect(
+    !score(top, { reply: answered([name('Apple', 'سیب')]), tool_calls: [] }, oracle).pass,
+    'a wrong strict name passed',
+  );
   // A zero said in words passes only with the route matched and no other figure; a wrong one never.
   const zero = mk({ figures: 'gross=0', tools: 'tiles' });
-  expect(score(zero, { reply: answered([text('آج کوئی بکری نہیں')]), tool_calls: [{ tool: 'tiles' }] }, {}).pass, 'a zero said in words missed');
-  expect(!score(zero, { reply: answered([text('آج کوئی بکری نہیں')]), tool_calls: [{ tool: 'report' }] }, {}).pass, 'a zero passed with another route');
-  expect(!score(zero, { reply: answered([money(1200)]), tool_calls: [{ tool: 'tiles' }] }, {}).pass, 'a zero passed beside another figure');
+  expect(
+    score(
+      zero,
+      { reply: answered([text('آج کوئی بکری نہیں')]), tool_calls: [{ tool: 'tiles' }] },
+      {},
+    ).pass,
+    'a zero said in words missed',
+  );
+  expect(
+    !score(
+      zero,
+      { reply: answered([text('آج کوئی بکری نہیں')]), tool_calls: [{ tool: 'report' }] },
+      {},
+    ).pass,
+    'a zero passed with another route',
+  );
+  expect(
+    !score(zero, { reply: answered([money(1200)]), tool_calls: [{ tool: 'tiles' }] }, {}).pass,
+    'a zero passed beside another figure',
+  );
   const zeroNote = mk({ figures: 'gross=100' });
-  expect(!score(zeroNote, { reply: answered([text('کوئی بکری نہیں')]), tool_calls: [] }, {}).pass, 'a words-only answer passed for a figure that is not 0');
+  expect(
+    !score(zeroNote, { reply: answered([text('کوئی بکری نہیں')]), tool_calls: [] }, {}).pass,
+    'a words-only answer passed for a figure that is not 0',
+  );
   // Months belong to their method.
   const est = (kind, m) => ({
     outcome: 'estimate',
-    answer: { parts: [], tables: [], charts: [], advice: false, sources: [], differences: [], next: [], estimate: { methods: [{ kind, total: { type: 'money', paisa: 100 }, target_month: { year: 2027, month: m } }] } },
+    answer: {
+      parts: [],
+      tables: [],
+      charts: [],
+      advice: false,
+      sources: [],
+      differences: [],
+      next: [],
+      estimate: {
+        methods: [
+          { kind, total: { type: 'money', paisa: 100 }, target_month: { year: 2027, month: m } },
+        ],
+      },
+    },
   });
   const pm = mk({ outcome: 'estimate', figures: 'pace_month=2027-02' });
-  expect(score(pm, { reply: est('same_pace', 2), tool_calls: [] }, {}).pass, 'the pace month missed');
-  expect(!score(pm, { reply: est('same_growth', 2), tool_calls: [] }, {}).pass, 'the growth month passed for the pace month');
+  expect(
+    score(pm, { reply: est('same_pace', 2), tool_calls: [] }, {}).pass,
+    'the pace month missed',
+  );
+  expect(
+    !score(pm, { reply: est('same_growth', 2), tool_calls: [] }, {}).pass,
+    'the growth month passed for the pace month',
+  );
   // General advice: marked, with no figure; with data, from the books and not marked.
   const adviceReply = (general, parts, sources = []) => ({
     outcome: 'advice',
-    answer: { parts, tables: [], charts: [], estimate: null, advice: true, general_advice: general, sources, differences: [], next: [] },
+    answer: {
+      parts,
+      tables: [],
+      charts: [],
+      estimate: null,
+      advice: true,
+      general_advice: general,
+      sources,
+      differences: [],
+      next: [],
+    },
   });
   const gen = mk({ outcome: 'advice', filters: 'general=1;onecall=1' });
-  expect(score(gen, { reply: adviceReply(true, [text('قیمت مناسب رکھیں')]), tool_calls: [], model_calls: 1 }, {}).pass, 'general advice missed');
-  expect(!score(gen, { reply: adviceReply(true, [text('قیمت'), money(5)]), tool_calls: [], model_calls: 1 }, {}).pass, 'general advice with a figure passed');
-  expect(!score(gen, { reply: adviceReply(false, [text('قیمت')], [{ kind: 'report' }]), tool_calls: [], model_calls: 1 }, {}).pass, 'unmarked advice passed as general');
+  expect(
+    score(
+      gen,
+      { reply: adviceReply(true, [text('قیمت مناسب رکھیں')]), tool_calls: [], model_calls: 1 },
+      {},
+    ).pass,
+    'general advice missed',
+  );
+  expect(
+    !score(
+      gen,
+      { reply: adviceReply(true, [text('قیمت'), money(5)]), tool_calls: [], model_calls: 1 },
+      {},
+    ).pass,
+    'general advice with a figure passed',
+  );
+  expect(
+    !score(
+      gen,
+      {
+        reply: adviceReply(false, [text('قیمت')], [{ kind: 'report' }]),
+        tool_calls: [],
+        model_calls: 1,
+      },
+      {},
+    ).pass,
+    'unmarked advice passed as general',
+  );
   const books = mk({ outcome: 'advice', filters: 'general=0' });
-  expect(score(books, { reply: adviceReply(false, [text('قیمت')], [{ kind: 'report' }]), tool_calls: [] }, {}).pass, 'advice from the books missed');
-  expect(!score(books, { reply: adviceReply(true, [text('قیمت')]), tool_calls: [] }, {}).pass, 'general advice passed where the books have data');
+  expect(
+    score(
+      books,
+      { reply: adviceReply(false, [text('قیمت')], [{ kind: 'report' }]), tool_calls: [] },
+      {},
+    ).pass,
+    'advice from the books missed',
+  );
+  expect(
+    !score(books, { reply: adviceReply(true, [text('قیمت')]), tool_calls: [] }, {}).pass,
+    'general advice passed where the books have data',
+  );
   // One side of the commission passes only when the answer names the side (lead 03-11-2026).
   const side = mk({ figures: 'c=@a.x|@a.y#seller' });
-  expect(score(side, { reply: answered([text('بیوپاری کا کمیشن '), money(700)]), tool_calls: [] }, oracle).pass, 'the seller side named was not accepted');
-  expect(!score(side, { reply: answered([text('کمیشن '), money(700)]), tool_calls: [] }, oracle).pass, 'a bare commission passed for the seller side');
-  expect(score(side, { reply: answered([text('کمیشن '), money(500)]), tool_calls: [] }, oracle).pass, 'the total was refused');
+  expect(
+    score(
+      side,
+      { reply: answered([text('بیوپاری کا کمیشن '), money(700)]), tool_calls: [] },
+      oracle,
+    ).pass,
+    'the seller side named was not accepted',
+  );
+  expect(
+    !score(side, { reply: answered([text('کمیشن '), money(700)]), tool_calls: [] }, oracle).pass,
+    'a bare commission passed for the seller side',
+  );
+  expect(
+    score(side, { reply: answered([text('کمیشن '), money(500)]), tool_calls: [] }, oracle).pass,
+    'the total was refused',
+  );
   // A which_one that the harness clicked is noted, and its answer is scored like any other.
-  const clickedRow = score(mk({ figures: 'g=@a.x' }), { reply: answered([money(500)]), tool_calls: [], clicked: { name: 'Rahim' } }, oracle);
-  expect(clickedRow.pass && clickedRow.notes.some((n) => n.includes('clicked')), 'a clicked question was not noted');
+  const clickedRow = score(
+    mk({ figures: 'g=@a.x' }),
+    { reply: answered([money(500)]), tool_calls: [], clicked: { name: 'Rahim' } },
+    oracle,
+  );
+  expect(
+    clickedRow.pass && clickedRow.notes.some((n) => n.includes('clicked')),
+    'a clicked question was not noted',
+  );
   // "Whom first": the second party is optional (`second?=`); when both are shown the order counts.
-  const order = mk({ outcome: 'advice', figures: 'first=Zahid Mehmood 500 Dr 202 days;second?=Tariq Mehmood 700 Dr 90 days' });
-  const adviceOf = (parts) => ({ outcome: 'advice', answer: { parts, tables: [], charts: [], estimate: null, advice: true, general_advice: false, sources: [{ kind: 'report' }], differences: [], next: [] } });
-  expect(score(order, { reply: adviceOf([name('Zahid Mehmood', 'زاہد'), dr(500)]), tool_calls: [] }, {}).pass, 'the first alone was refused');
-  expect(score(order, { reply: adviceOf([name('Zahid Mehmood', 'زاہد'), dr(500), name('Tariq Mehmood', 'طارق'), dr(700)]), tool_calls: [] }, {}).pass, 'both in order were refused');
-  expect(!score(order, { reply: adviceOf([name('Tariq Mehmood', 'طارق'), dr(700), name('Zahid Mehmood', 'زاہد'), dr(500)]), tool_calls: [] }, {}).pass, 'the wrong order passed');
-  expect(!score(order, { reply: adviceOf([name('Tariq Mehmood', 'طارق'), dr(700)]), tool_calls: [] }, {}).pass, 'the second alone passed for the first');
+  const order = mk({
+    outcome: 'advice',
+    figures: 'first=Zahid Mehmood 500 Dr 202 days;second?=Tariq Mehmood 700 Dr 90 days',
+  });
+  const adviceOf = (parts) => ({
+    outcome: 'advice',
+    answer: {
+      parts,
+      tables: [],
+      charts: [],
+      estimate: null,
+      advice: true,
+      general_advice: false,
+      sources: [{ kind: 'report' }],
+      differences: [],
+      next: [],
+    },
+  });
+  expect(
+    score(order, { reply: adviceOf([name('Zahid Mehmood', 'زاہد'), dr(500)]), tool_calls: [] }, {})
+      .pass,
+    'the first alone was refused',
+  );
+  expect(
+    score(
+      order,
+      {
+        reply: adviceOf([
+          name('Zahid Mehmood', 'زاہد'),
+          dr(500),
+          name('Tariq Mehmood', 'طارق'),
+          dr(700),
+        ]),
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'both in order were refused',
+  );
+  expect(
+    !score(
+      order,
+      {
+        reply: adviceOf([
+          name('Tariq Mehmood', 'طارق'),
+          dr(700),
+          name('Zahid Mehmood', 'زاہد'),
+          dr(500),
+        ]),
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'the wrong order passed',
+  );
+  expect(
+    !score(order, { reply: adviceOf([name('Tariq Mehmood', 'طارق'), dr(700)]), tool_calls: [] }, {})
+      .pass,
+    'the second alone passed for the first',
+  );
   // A figure question that ends as advice passes with one unasked point and the right figures only.
   const unasked = mk({ figures: 'g=@a.x' });
   const withAdvice = (bullets, general = false) => ({
     outcome: 'advice',
-    answer: { parts: [money(500), text(`${'\n• نکتہ'.repeat(bullets)}`)], tables: [], charts: [], estimate: null, advice: true, general_advice: general, sources: [], differences: [], next: [] },
+    answer: {
+      parts: [money(500), text(`${'\n• نکتہ'.repeat(bullets)}`)],
+      tables: [],
+      charts: [],
+      estimate: null,
+      advice: true,
+      general_advice: general,
+      sources: [],
+      differences: [],
+      next: [],
+    },
   });
-  expect(score(unasked, { reply: withAdvice(1), tool_calls: [] }, oracle).pass, 'one unasked point was refused');
-  expect(!score(unasked, { reply: withAdvice(2), tool_calls: [] }, oracle).pass, 'two unasked points passed');
-  expect(!score(mk({ figures: 'g=@a.y' }), { reply: withAdvice(1), tool_calls: [] }, oracle).pass, 'advice with a wrong figure passed');
-  expect(!score(unasked, { reply: withAdvice(0, true), tool_calls: [] }, oracle).pass, 'general advice passed for a figure question');
+  expect(
+    score(unasked, { reply: withAdvice(1), tool_calls: [] }, oracle).pass,
+    'one unasked point was refused',
+  );
+  expect(
+    !score(unasked, { reply: withAdvice(2), tool_calls: [] }, oracle).pass,
+    'two unasked points passed',
+  );
+  expect(
+    !score(mk({ figures: 'g=@a.y' }), { reply: withAdvice(1), tool_calls: [] }, oracle).pass,
+    'advice with a wrong figure passed',
+  );
+  expect(
+    !score(unasked, { reply: withAdvice(0, true), tool_calls: [] }, oracle).pass,
+    'general advice passed for a figure question',
+  );
   // A network failure is its own kind of miss, and is kept out of the model's time.
-  const down = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'error', answer: null, failure: { kind: 'busy' } }, tool_calls: [] }, oracle);
-  expect(!down.pass && down.kind.includes('network') && down.network, 'a service failure was not its own kind');
-  expect(score(mk({}), { reply: { outcome: 'not_understood', answer: null }, tool_calls: [{ tool: 'report' }] }, {}).afterReading, 'not understood after reading was not seen');
+  const down = score(
+    mk({ figures: 'g=@a.x' }),
+    { reply: { outcome: 'error', answer: null, failure: { kind: 'busy' } }, tool_calls: [] },
+    oracle,
+  );
+  expect(
+    !down.pass && down.kind.includes('network') && down.network,
+    'a service failure was not its own kind',
+  );
+  expect(
+    score(
+      mk({}),
+      { reply: { outcome: 'not_understood', answer: null }, tool_calls: [{ tool: 'report' }] },
+      {},
+    ).afterReading,
+    'not understood after reading was not seen',
+  );
 
   // Groups agree on the required figures only.
   const g1 = { id: 'G1', group: 'GG', kind: 'x', cat: 'A' };
   const g2 = { id: 'G2', group: 'GG', kind: 'x', cat: 'A' };
-  const same = new Map([['G1', { pass: true, figureMisses: [], network: false }], ['G2', { pass: true, figureMisses: [], network: false }]]);
-  expect(groupAgreement([g1, g2], same, new Map([['G1', {}], ['G2', {}]])).length === 0, 'a group of passes disagreed');
-  const mixed = new Map([['G1', { pass: true, figureMisses: [], network: false }], ['G2', { pass: false, figureMisses: ['gross'], network: false }]]);
-  expect(groupAgreement([g1, g2], mixed, new Map([['G1', {}], ['G2', {}]])).length === 1, 'a group with one wrong member agreed');
+  const same = new Map([
+    ['G1', { pass: true, figureMisses: [], network: false }],
+    ['G2', { pass: true, figureMisses: [], network: false }],
+  ]);
+  expect(
+    groupAgreement(
+      [g1, g2],
+      same,
+      new Map([
+        ['G1', {}],
+        ['G2', {}],
+      ]),
+    ).length === 0,
+    'a group of passes disagreed',
+  );
+  const mixed = new Map([
+    ['G1', { pass: true, figureMisses: [], network: false }],
+    ['G2', { pass: false, figureMisses: ['gross'], network: false }],
+  ]);
+  expect(
+    groupAgreement(
+      [g1, g2],
+      mixed,
+      new Map([
+        ['G1', {}],
+        ['G2', {}],
+      ]),
+    ).length === 1,
+    'a group with one wrong member agreed',
+  );
 
   // Categories: the rule of each, the time apart from the network.
   const vs = new Map([
     ['C1', { pass: true, kind: 'PASS', outcome: 'answered', network: false }],
-    ['C2', { pass: false, kind: 'MISS (REVIEW: figure, party, period or source)', outcome: 'answered', network: false }],
+    [
+      'C2',
+      {
+        pass: false,
+        kind: 'MISS (REVIEW: figure, party, period or source)',
+        outcome: 'answered',
+        network: false,
+      },
+    ],
   ]);
-  const cl = [{ id: 'C1', cat: 'A' }, { id: 'C2', cat: 'A' }];
-  const rs = new Map([['C1', { millis: 5000 }], ['C2', { millis: 7000 }]]);
+  const cl = [
+    { id: 'C1', cat: 'A' },
+    { id: 'C2', cat: 'A' },
+  ];
+  const rs = new Map([
+    ['C1', { millis: 5000 }],
+    ['C2', { millis: 7000 }],
+  ]);
   const st = categoryStats('A', cl, vs, rs);
   expect(!st.rulePassed && st.wrong === 1, 'category A met its rule with a wrong figure');
-  const vs2 = new Map([['N1', { pass: true, kind: 'PASS', outcome: 'answered', network: false }], ['N2', { pass: false, kind: 'MISS (network)', outcome: 'offline', network: true }]]);
-  const st2 = categoryStats('D', [{ id: 'N1', cat: 'D' }, { id: 'N2', cat: 'D' }], vs2, new Map([['N1', { millis: 4000 }], ['N2', { millis: 60000 }]]));
-  expect(st2.p95 === 4000 && st2.networkTimes.length === 1, 'network time was counted as model time');
+  const vs2 = new Map([
+    ['N1', { pass: true, kind: 'PASS', outcome: 'answered', network: false }],
+    ['N2', { pass: false, kind: 'MISS (network)', outcome: 'offline', network: true }],
+  ]);
+  const st2 = categoryStats(
+    'D',
+    [
+      { id: 'N1', cat: 'D' },
+      { id: 'N2', cat: 'D' },
+    ],
+    vs2,
+    new Map([
+      ['N1', { millis: 4000 }],
+      ['N2', { millis: 60000 }],
+    ]),
+  );
+  expect(
+    st2.p95 === 4000 && st2.networkTimes.length === 1,
+    'network time was counted as model time',
+  );
 
   // A question lost to the internet is not scored and is listed on its own; a timeout is a real miss.
-  const gone = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] }, oracle);
-  expect(gone.lost && !gone.pass && gone.kind === 'LOST (network)' && !gone.network, 'offline was not lost');
-  const slow = score(mk({ figures: 'g=@a.x' }), { reply: { outcome: 'error', answer: null, failure: { kind: 'timeout' } }, tool_calls: [] }, oracle);
+  const gone = score(
+    mk({ figures: 'g=@a.x' }),
+    { reply: { outcome: 'offline', answer: null, failure: { kind: 'offline' } }, tool_calls: [] },
+    oracle,
+  );
+  expect(
+    gone.lost && !gone.pass && gone.kind === 'LOST (network)' && !gone.network,
+    'offline was not lost',
+  );
+  const slow = score(
+    mk({ figures: 'g=@a.x' }),
+    { reply: { outcome: 'error', answer: null, failure: { kind: 'timeout' } }, tool_calls: [] },
+    oracle,
+  );
   expect(!slow.lost && slow.network && !slow.pass, 'a timeout was lost, not a miss');
-  expect(score(mk({}), { reply: { outcome: 'error', answer: null, failure: { kind: 'dropped' } }, tool_calls: [], network_lost: true }, {}).lost, 'a harness-marked loss was scored');
-  const lv = new Map([['L1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false }], ['L2', { pass: false, kind: 'LOST (network)', outcome: 'offline', network: false, lost: true }]]);
-  const lstats = categoryStats('A', [{ id: 'L1', cat: 'A' }, { id: 'L2', cat: 'A' }], lv, new Map([['L1', { millis: 1000 }], ['L2', { millis: 999999 }]]));
+  expect(
+    score(
+      mk({}),
+      {
+        reply: { outcome: 'error', answer: null, failure: { kind: 'dropped' } },
+        tool_calls: [],
+        network_lost: true,
+      },
+      {},
+    ).lost,
+    'a harness-marked loss was scored',
+  );
+  const lv = new Map([
+    ['L1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false }],
+    ['L2', { pass: false, kind: 'LOST (network)', outcome: 'offline', network: false, lost: true }],
+  ]);
+  const lstats = categoryStats(
+    'A',
+    [
+      { id: 'L1', cat: 'A' },
+      { id: 'L2', cat: 'A' },
+    ],
+    lv,
+    new Map([
+      ['L1', { millis: 1000 }],
+      ['L2', { millis: 999999 }],
+    ]),
+  );
   expect(lstats.n === 1 && lstats.passed === 1, 'a lost question counted in the category');
+  // Plan 54: calls and stages. Two questions: one needs two calls, one needs none.
+  const sq = [
+    { id: 'S1', cat: 'A', kind: 'x' },
+    { id: 'S2', cat: 'D', kind: 'help' },
+  ];
+  const sv = new Map(
+    sq.map((q) => [q.id, { pass: true, lost: false, pending: false, network: false }]),
+  );
+  const sr = new Map([
+    [
+      'S1',
+      {
+        id: 'S1',
+        model_calls: 2,
+        millis: 9000,
+        tool_millis: 40,
+        calls: [
+          { at_ms: 100, millis: 3000, reasoning: 20 },
+          { at_ms: 3200, millis: 5000, reasoning: 400 },
+        ],
+      },
+    ],
+    ['S2', { id: 'S2', model_calls: 0, millis: 800, tool_millis: 5, calls: [] }],
+  ]);
+  const sp = speedStats(sq, sv, sr);
+  expect(
+    sp.n === 2 && sp.by.none === 1 && sp.by.two === 1 && sp.oneOrNone === 0.5,
+    'the calls were counted wrong',
+  );
+  expect(
+    sp.stage.before[0] === 100 && sp.stage.between[0] === 100 && sp.stage.after[0] === 800,
+    `the stages were cut wrong: ${JSON.stringify(sp.stage)}`,
+  );
+  expect(
+    sp.stage.call1[0] === 3000 &&
+      sp.stage.call2[0] === 5000 &&
+      sp.reasoning.call2[0] === 400 &&
+      sp.stage.noCall[0] === 800,
+    'a call or a reasoning count was wrong',
+  );
+  expect(
+    speedLines('A', sp, 0.7).join('\n').includes('UNDER'),
+    'a one-call share under the target was not flagged',
+  );
+  // A row with no start times is counted in the calls but not cut into stages.
+  const old = speedStats(
+    [sq[0]],
+    sv,
+    new Map([
+      ['S1', { id: 'S1', model_calls: 1, millis: 1000, calls: [{ millis: 900, reasoning: 5 }] }],
+    ]),
+  );
+  expect(
+    old.by.one === 1 && old.stage.before.length === 0 && old.stage.call1[0] === 900,
+    'a row without start times broke the stages',
+  );
+  // Plan 55 Section 3: the speed budget by kind and the hard limits.
+  const bl = [
+    { id: 'B1', cat: 'D', kind: 'help', outcome: 'answered' },
+    { id: 'B2', cat: 'A', kind: 'x', outcome: 'answered' },
+    { id: 'B3', cat: 'B', kind: 'advice', outcome: 'advice' },
+  ];
+  const bv = new Map(
+    bl.map((q) => [q.id, { pass: true, lost: false, pending: false, network: false }]),
+  );
+  const fast = speedBudget(
+    bl,
+    bv,
+    new Map([
+      ['B1', { millis: 600 }],
+      ['B2', { millis: 4000 }],
+      ['B3', { millis: 9000 }],
+    ]),
+  );
+  expect(
+    fast.ok && fast.groups.filter((g) => g.n > 0).length === 3,
+    'a run inside every budget was not ok',
+  );
+  const slowHelp = speedBudget(
+    bl,
+    bv,
+    new Map([
+      ['B1', { millis: 5000 }],
+      ['B2', { millis: 4000 }],
+      ['B3', { millis: 9000 }],
+    ]),
+  );
+  expect(
+    !slowHelp.ok && slowHelp.groups[0].over.includes('B1') && !slowHelp.groups[0].within,
+    'a help answer over 3 s was ok',
+  );
+  const slowFigure = speedBudget(
+    bl,
+    bv,
+    new Map([
+      ['B1', { millis: 600 }],
+      ['B2', { millis: 26000 }],
+      ['B3', { millis: 9000 }],
+    ]),
+  );
+  expect(
+    !slowFigure.ok && slowFigure.groups[1].over.includes('B2'),
+    'a figure answer over 25 s was ok',
+  );
+  const overP50 = speedBudget(
+    bl,
+    bv,
+    new Map([
+      ['B1', { millis: 600 }],
+      ['B2', { millis: 7000 }],
+      ['B3', { millis: 9000 }],
+    ]),
+  );
+  expect(
+    !overP50.ok && overP50.groups[1].over.length === 0 && !overP50.groups[1].within,
+    'a median over the budget was ok',
+  );
+  expect(
+    score(
+      mk({}),
+      { reply: { outcome: 'time_limit', answer: null }, tool_calls: [] },
+      {},
+    ).kind.includes('safe') ||
+      !score(mk({}), { reply: { outcome: 'time_limit', answer: null }, tool_calls: [] }, {}).pass,
+    'time_limit was passed as an answer',
+  );
   // "No such party": the role fields are scored once the reply carries them, and are PENDING before.
   const nf = mk({ outcome: 'not_found', filters: 'facet=nosuch;asked_role=seller;found_as=buyer' });
   const noField = score(nf, { reply: { outcome: 'not_found', answer: null }, tool_calls: [] }, {});
-  expect(noField.pending && !noField.pass && noField.kind.startsWith('PENDING'), 'a missing asked_role was not pending');
-  const rolesOk = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: { role: 'buyer', name: 'Faisal' } }, tool_calls: [] }, {});
+  expect(
+    noField.pending && !noField.pass && noField.kind.startsWith('PENDING'),
+    'a missing asked_role was not pending',
+  );
+  const rolesOk = score(
+    nf,
+    {
+      reply: {
+        outcome: 'not_found',
+        answer: null,
+        asked_role: 'seller',
+        found_as: { role: 'buyer', name: 'Faisal' },
+      },
+      tool_calls: [],
+    },
+    {},
+  );
   expect(rolesOk.pass && !rolesOk.pending, 'the right roles missed');
-  expect(score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: 'buyer' }, tool_calls: [] }, {}).pass, 'found_as as a word missed');
-  const wrongAsked = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'buyer' }, tool_calls: [] }, {});
-  expect(!wrongAsked.pass && !wrongAsked.pending && wrongAsked.reasons.some((x) => x.includes('asked_role')), 'a wrong asked_role passed');
-  const noFound = score(nf, { reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: null }, tool_calls: [] }, {});
-  expect(!noFound.pass && noFound.reasons.some((x) => x.includes('found_as')), 'a missing found_as passed');
+  expect(
+    score(
+      nf,
+      {
+        reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: 'buyer' },
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'found_as as a word missed',
+  );
+  const wrongAsked = score(
+    nf,
+    {
+      reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'buyer' },
+      tool_calls: [],
+    },
+    {},
+  );
+  expect(
+    !wrongAsked.pass &&
+      !wrongAsked.pending &&
+      wrongAsked.reasons.some((x) => x.includes('asked_role')),
+    'a wrong asked_role passed',
+  );
+  const noFound = score(
+    nf,
+    {
+      reply: { outcome: 'not_found', answer: null, asked_role: 'seller', found_as: null },
+      tool_calls: [],
+    },
+    {},
+  );
+  expect(
+    !noFound.pass && noFound.reasons.some((x) => x.includes('found_as')),
+    'a missing found_as passed',
+  );
   const made = mk({ outcome: 'not_found', filters: 'facet=nosuch;asked_role=buyer' });
-  expect(score(made, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: null }, tool_calls: [] }, {}).pass, 'a made-up name missed');
-  expect(!score(made, { reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'seller' }, tool_calls: [] }, {}).pass, 'a found_as for a made-up name passed');
-  expect(score(made, { reply: { outcome: 'not_found', answer: null }, tool_calls: [] }, {}).pending, 'a made-up name without the field was not pending');
-  const pv = new Map([['P1', { pass: true, kind: 'PASS', outcome: 'answered', network: false, lost: false, pending: false }], ['P2', { pass: false, kind: 'PENDING', outcome: 'not_found', network: false, lost: false, pending: true }]]);
-  const pstats = categoryStats('E', [{ id: 'P1', cat: 'E' }, { id: 'P2', cat: 'E' }], pv, new Map([['P1', { millis: 1000 }], ['P2', { millis: 1000 }]]));
+  expect(
+    score(
+      made,
+      {
+        reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: null },
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'a made-up name missed',
+  );
+  expect(
+    !score(
+      made,
+      {
+        reply: { outcome: 'not_found', answer: null, asked_role: 'buyer', found_as: 'seller' },
+        tool_calls: [],
+      },
+      {},
+    ).pass,
+    'a found_as for a made-up name passed',
+  );
+  expect(
+    score(made, { reply: { outcome: 'not_found', answer: null }, tool_calls: [] }, {}).pending,
+    'a made-up name without the field was not pending',
+  );
+  const built = score(
+    made,
+    { reply: { outcome: 'not_found', answer: null }, tool_calls: [], asked_role_field: true },
+    {},
+  );
+  expect(
+    !built.pending && !built.pass && built.reasons.some((x) => x.includes('asked_role')),
+    'a not_found with no field passed or waited in a build that has it',
+  );
+  const builtOther = score(
+    made,
+    {
+      reply: {
+        outcome: 'answered',
+        answer: {
+          parts: [],
+          tables: [],
+          charts: [],
+          estimate: null,
+          advice: false,
+          sources: [],
+          differences: [],
+          next: [],
+        },
+      },
+      tool_calls: [],
+      asked_role_field: true,
+    },
+    {},
+  );
+  expect(
+    !builtOther.pending && !builtOther.pass,
+    'an answered reply to a nobody was pending in a build that has the field',
+  );
+  // Plan 55 gate 3: every figure of the answer is in what the button opens.
+  const bq = mk({ figures: 'v=12880', question: 'akram ka bakaya' });
+  const withButtons = (parts, buttons, answerExtra = {}) => ({
+    reply: answered(parts, {}, answerExtra),
+    tool_calls: [],
+    buttons,
+  });
+  const held = [{ kind: 'report', label: 'R13', error: null, numbers: ['12880', '10000'] }];
+  expect(
+    score(bq, withButtons([money(12880)], held), {}).pass,
+    'a figure held by its button missed',
+  );
+  const notHeld = score(
+    bq,
+    withButtons([money(12880)], [{ kind: 'report', label: 'R5', error: null, numbers: ['5000'] }]),
+    {},
+  );
+  expect(
+    !notHeld.pass &&
+      notHeld.reasons.some((x) => x.startsWith('button:')) &&
+      notHeld.figureMisses.includes('button'),
+    'a figure missing from its button passed',
+  );
+  const broken = score(
+    bq,
+    withButtons(
+      [money(12880)],
+      [{ kind: 'report', label: 'R5', error: 'ERR_DATE_INVALID', numbers: [] }],
+    ),
+    {},
+  );
+  expect(
+    !broken.pass && broken.reasons.some((x) => x.includes('fails to open')),
+    'a button that fails passed',
+  );
+  const tilesOnly = score(
+    bq,
+    withButtons([money(12880)], [{ kind: 'tiles', label: 'tiles', skipped: true }]),
+    {},
+  );
+  expect(
+    tilesOnly.pass && tilesOnly.notes.some((x) => x.includes('only the dashboard tiles')),
+    'tiles only was not a note',
+  );
+  const beside = score(
+    bq,
+    withButtons(
+      [money(12880)],
+      [...held.map((b) => ({ ...b, numbers: [] })), { kind: 'tiles', skipped: true }],
+    ),
+    {},
+  );
+  expect(
+    beside.pass && beside.notes.some((x) => x.includes('not in what the button opens')),
+    'a figure missing with tiles beside it was a miss',
+  );
+  // A figure worked out by the calculator is checked by its inputs, and a number of the question is not a figure of the books.
+  const calcPart = {
+    type: 'figure',
+    cell: { type: 'money', paisa: 2156400 },
+    dir: null,
+    checked: true,
+    working: {
+      title_id: 'w',
+      steps: [
+        {
+          op: 'sum',
+          inputs: [
+            { type: 'money', paisa: 288000 },
+            { type: 'money', paisa: 1868400 },
+          ],
+          result: { type: 'money', paisa: 2156400 },
+        },
+      ],
+    },
+  };
+  const cq = mk({ figures: '', question: 'akram aur arshad ka bakaya mila kar, 5000 se zyada' });
+  expect(
+    score(
+      cq,
+      {
+        reply: answered([calcPart, money(5000)], {}),
+        tool_calls: [],
+        buttons: [{ kind: 'report', label: 'R20', error: null, numbers: ['2880', '18684'] }],
+      },
+      {},
+    ).pass,
+    'a calculation checked by its inputs, or a number of the question, missed',
+  );
+  expect(
+    !score(
+      cq,
+      {
+        reply: answered([calcPart], {}),
+        tool_calls: [],
+        buttons: [{ kind: 'report', label: 'R20', error: null, numbers: ['2880'] }],
+      },
+      {},
+    ).pass,
+    'a calculation with an input missing from the button passed',
+  );
+  // A row without buttons (an older file) is not checked.
+  expect(
+    score(bq, { reply: answered([money(12880)]), tool_calls: [] }, {}).pass,
+    'a row without buttons was checked',
+  );
+  // A print request (plan 54 Section 6, plan 55 Section 7): the button (first source), the party in his
+  // real role, the dates and the steps (`answer.how`); never a change request. PENDING until
+  // `answer.how` is in the reply.
+  const pq = mk({
+    filters: 'facet=print;pkind=buyer;pperiod=last_month',
+    figures:
+      'print.report=R5;print.party=Faisal;print.role=buyer;print.from=@cal.a;print.to=@cal.b;print.steps=1',
+  });
+  const pOracle = { 'cal.a': '2026-10-01', 'cal.b': '2026-10-31' };
+  const button = (over = {}) => ({
+    kind: 'report',
+    result_id: '',
+    id: 'R5',
+    filters: {
+      from: '2026-10-01',
+      to: '2026-10-31',
+      as_of: '',
+      shortcut: null,
+      party: { record: { name_en: 'Faisal', code: '7' }, person_key: null },
+      ...over,
+    },
+  });
+  const step = (id, args = []) => ({ id, args: args.map(([name, value]) => ({ name, value })) });
+  const rightSteps = () => [
+    step('assistant-how-open-report', [['report', text('R5')]]),
+    step('assistant-how-set-party', [
+      ['role', text('buyer')],
+      ['party', { type: 'names', names: { ur: 'فیصل', en: 'Faisal' } }],
+      ['code', text('7')],
+    ]),
+    step('assistant-how-set-dates', [
+      ['from', text('2026-10-01')],
+      ['to', text('2026-10-31')],
+    ]),
+    step('assistant-how-press-print'),
+  ];
+  const printReply = (src, how = rightSteps(), extra = {}) =>
+    answered([], {}, { sources: [src], how, ...extra });
+  // Before the app puts `answer.how` in the reply: pending, and the button check is a note.
+  const early = score(
+    pq,
+    { reply: answered([], {}, { sources: [button()] }), tool_calls: [] },
+    pOracle,
+  );
+  expect(
+    early.pending && !early.pass && early.notes.some((x) => x.includes('the button is right')),
+    'a right button without answer.how was not pending',
+  );
+  const wrongButton = score(
+    pq,
+    { reply: printReply(button({ to: '2026-10-30' })), tool_calls: [] },
+    pOracle,
+  );
+  expect(
+    !wrongButton.pass &&
+      !wrongButton.pending &&
+      wrongButton.reasons.some((x) => x.includes('to 2026-10-30')),
+    'a wrong end date passed',
+  );
+  const shortcut = score(
+    pq,
+    { reply: printReply(button({ from: '', to: '', shortcut: 'last_month' })), tool_calls: [] },
+    pOracle,
+  );
+  expect(
+    !shortcut.pass && shortcut.reasons.some((x) => x.includes('shortcut')),
+    'a shortcut instead of dates passed',
+  );
+  const wrongParty = score(
+    pq,
+    { reply: printReply(button({ party: { record: { name_en: 'Kashif Ali' } } })), tool_calls: [] },
+    pOracle,
+  );
+  expect(
+    !wrongParty.pass && wrongParty.reasons.some((x) => x.includes('party kashif ali')),
+    'a wrong party passed',
+  );
+  const change = score(
+    pq,
+    {
+      reply: { outcome: 'change_refused', answer: null, entry_route: { screen: 'wasooli' } },
+      tool_calls: [],
+      print_contract: true,
+    },
+    pOracle,
+  );
+  expect(
+    !change.pass && change.reasons.some((x) => x.includes('change request')),
+    'a print answered as a change request passed',
+  );
+  const noSteps = score(pq, { reply: printReply(button(), []), tool_calls: [] }, pOracle);
+  expect(
+    !noSteps.pass && !noSteps.pending && noSteps.reasons.some((x) => x.includes('no steps')),
+    'a print with empty steps passed or waited',
+  );
+  expect(
+    score(pq, { reply: printReply(button()), tool_calls: [] }, pOracle).pass,
+    'a right print with its steps missed',
+  );
+  // The steps must be made from the button's values.
+  const withStep = (idx, replace) => rightSteps().map((st, i) => (i === idx ? replace : st));
+  const badReport = score(
+    pq,
+    {
+      reply: printReply(
+        button(),
+        withStep(0, step('assistant-how-open-report', [['report', text('R35')]])),
+      ),
+      tool_calls: [],
+    },
+    pOracle,
+  );
+  expect(
+    !badReport.pass && badReport.reasons.some((x) => x.includes('steps open R35')),
+    'steps that open another report passed',
+  );
+  const badRole = score(
+    pq,
+    {
+      reply: printReply(
+        button(),
+        withStep(
+          1,
+          step('assistant-how-set-party', [
+            ['role', text('seller')],
+            ['party', { type: 'names', names: { en: 'Faisal' } }],
+            ['code', text('7')],
+          ]),
+        ),
+      ),
+      tool_calls: [],
+    },
+    pOracle,
+  );
+  expect(
+    !badRole.pass && badRole.reasons.some((x) => x.includes('he is a buyer')),
+    'a buyer set as a seller in the steps passed',
+  );
+  const badDates = score(
+    pq,
+    {
+      reply: printReply(
+        button(),
+        withStep(
+          2,
+          step('assistant-how-set-dates', [
+            ['from', text('2026-10-01')],
+            ['to', text('2026-10-30')],
+          ]),
+        ),
+      ),
+      tool_calls: [],
+    },
+    pOracle,
+  );
+  expect(
+    !badDates.pass && badDates.reasons.some((x) => x.includes('steps set to 2026-10-30')),
+    'steps with another end date passed',
+  );
+  const noPrint = score(
+    pq,
+    { reply: printReply(button(), rightSteps().slice(0, 3)), tool_calls: [] },
+    pOracle,
+  );
+  expect(
+    !noPrint.pass && noPrint.reasons.some((x) => x.includes('press-print')),
+    'steps that do not end with press-print passed',
+  );
+  const notFirst = score(
+    pq,
+    {
+      reply: answered(
+        [],
+        {},
+        { sources: [{ kind: 'tiles', result_id: 'r1' }, button()], how: rightSteps() },
+      ),
+      tool_calls: [],
+    },
+    pOracle,
+  );
+  expect(
+    !notFirst.pass && notFirst.reasons.some((x) => x.includes('first source')),
+    'a right button that is not the first source passed',
+  );
+  const day = mk({
+    filters: 'facet=print;pkind=buyer;pperiod=today',
+    figures:
+      'print.report=R35;print.party=Faisal;print.role=buyer;print.as_of=@cal.a;print.steps=1',
+  });
+  const dayButton = {
+    kind: 'report',
+    id: 'R35',
+    filters: {
+      as_of: '2026-10-01',
+      from: '',
+      to: '',
+      party: { record: { name_en: 'Faisal', code: '7' } },
+    },
+  };
+  const daySteps = [
+    step('assistant-how-open-report', [['report', text('R35')]]),
+    step('assistant-how-set-party', [
+      ['role', text('buyer')],
+      ['party', { type: 'names', names: { en: 'Faisal' } }],
+      ['code', text('7')],
+    ]),
+    step('assistant-how-set-day', [['day', text('2026-10-01')]]),
+    step('assistant-how-press-print'),
+  ];
+  expect(
+    score(day, { reply: printReply(dayButton, daySteps), tool_calls: [] }, pOracle).pass,
+    'a right day slip with its steps missed',
+  );
+  const sell = mk({
+    filters: 'facet=print;pkind=seller;pperiod=month',
+    figures:
+      'print.report=R6;print.seller=Karim;print.role=seller;print.from=@cal.a;print.to=@cal.b;print.steps=1',
+  });
+  const sellButton = {
+    kind: 'report',
+    id: 'R6',
+    filters: { from: '2026-10-01', to: '2026-10-31', seller: { name_en: 'Karim', code: '11' } },
+  };
+  const sellSteps = [
+    step('assistant-how-open-report', [['report', text('R6')]]),
+    step('assistant-how-set-party', [
+      ['role', text('seller')],
+      ['party', { type: 'names', names: { en: 'Karim' } }],
+      ['code', text('11')],
+    ]),
+    step('assistant-how-set-dates', [
+      ['from', text('2026-10-01')],
+      ['to', text('2026-10-31')],
+    ]),
+    step('assistant-how-press-print'),
+  ];
+  expect(
+    score(sell, { reply: printReply(sellButton, sellSteps), tool_calls: [] }, pOracle).pass,
+    'a right seller print with its steps missed',
+  );
+  // No party (R34 or R2): the steps name none.
+  const noParty = mk({
+    filters: 'facet=print;pkind=all;pperiod=month',
+    figures: 'print.report=R2;print.from=@cal.a;print.to=@cal.b;print.steps=1',
+  });
+  const wholeButton = {
+    kind: 'report',
+    id: 'R2',
+    filters: { from: '2026-10-01', to: '2026-10-31' },
+  };
+  const wholeSteps = [
+    step('assistant-how-open-report', [['report', text('R2')]]),
+    step('assistant-how-set-dates', [
+      ['from', text('2026-10-01')],
+      ['to', text('2026-10-31')],
+    ]),
+    step('assistant-how-press-print'),
+  ];
+  expect(
+    score(noParty, { reply: printReply(wholeButton, wholeSteps), tool_calls: [] }, pOracle).pass,
+    'a right whole-sales print missed',
+  );
+  expect(
+    !score(
+      noParty,
+      {
+        reply: printReply(wholeButton, [
+          wholeSteps[0],
+          step('assistant-how-set-party', [['role', text('buyer')]]),
+          ...wholeSteps.slice(1),
+        ]),
+        tool_calls: [],
+      },
+      pOracle,
+    ).pass,
+    'a party in the steps of a report with none passed',
+  );
+  // A name found in another role: judged on the first reply (outcome, roles) and, after the click on
+  // his name, on his figures in his real role.
+  const wrongRole = mk({
+    outcome: 'not_found',
+    filters: 'facet=nosuch;asked_role=seller;found_as=buyer',
+    figures: 'qty=18;total=31680',
+  });
+  const firstReply = {
+    outcome: 'not_found',
+    answer: null,
+    asked_role: 'seller',
+    found_as: {
+      key: 'a31',
+      id: 31,
+      role: 'buyer',
+      name: { name_en: 'Faisal', name_ur: 'فیصل', tag: null, code: null },
+    },
+  };
+  const afterClick = (sources) => answered([money(18), money(31680)], {}, { sources });
+  const buyerSource = {
+    kind: 'analytics',
+    result_id: 'r1',
+    view: 'C',
+    filters: { buyer: { record: { name_en: 'Faisal' }, person_key: null }, seller: null },
+  };
+  const sellerSource = {
+    kind: 'analytics',
+    result_id: 'r1',
+    view: 'B',
+    filters: { seller: { name_en: 'Faisal' }, buyer: null },
+  };
+  expect(
+    score(
+      wrongRole,
+      {
+        first_reply: firstReply,
+        reply: afterClick([buyerSource]),
+        tool_calls: [],
+        asked_role_field: true,
+      },
+      {},
+    ).pass,
+    'a buyer asked as a seller and read as a buyer missed',
+  );
+  const asSeller = score(
+    wrongRole,
+    {
+      first_reply: firstReply,
+      reply: afterClick([sellerSource]),
+      tool_calls: [],
+      asked_role_field: true,
+    },
+    {},
+  );
+  expect(
+    !asSeller.pass && asSeller.reasons.some((x) => x.includes('after the click')),
+    'a buyer read as a seller after the click passed',
+  );
+  const noAnswer = score(
+    wrongRole,
+    {
+      first_reply: firstReply,
+      reply: { outcome: 'which_one', answer: null },
+      tool_calls: [],
+      asked_role_field: true,
+    },
+    {},
+  );
+  expect(
+    !noAnswer.pass && noAnswer.reasons.some((x) => x.includes('wanted answered')),
+    'no figures after the click passed',
+  );
+  const wrongFound = score(
+    wrongRole,
+    {
+      first_reply: { ...firstReply, found_as: { ...firstReply.found_as, role: 'seller' } },
+      reply: afterClick([buyerSource]),
+      tool_calls: [],
+      asked_role_field: true,
+    },
+    {},
+  );
+  expect(
+    !wrongFound.pass && wrongFound.reasons.some((x) => x.includes('found_as')),
+    'a wrong found_as role passed',
+  );
+  expect(
+    !score(
+      wrongRole,
+      {
+        first_reply: firstReply,
+        reply: answered([money(17), money(31680)]),
+        tool_calls: [],
+        asked_role_field: true,
+      },
+      {},
+    ).pass,
+    'a wrong qty after the click passed',
+  );
+  const sellerRole = mk({
+    outcome: 'not_found',
+    filters: 'facet=nosuch;asked_role=buyer;found_as=seller',
+    figures: 'qty=87',
+  });
+  const karim = {
+    outcome: 'not_found',
+    answer: null,
+    asked_role: 'buyer',
+    found_as: { role: 'seller', name: { name_en: 'Karim' } },
+  };
+  const karimBuyer = { kind: 'analytics', filters: { buyer: { record: { name_en: 'Karim' } } } };
+  expect(
+    !score(
+      sellerRole,
+      {
+        first_reply: karim,
+        reply: answered([money(87)], {}, { sources: [karimBuyer] }),
+        tool_calls: [],
+        asked_role_field: true,
+      },
+      {},
+    ).pass,
+    'a seller read as a buyer after the click passed',
+  );
+  expect(
+    score(
+      sellerRole,
+      {
+        first_reply: karim,
+        reply: answered([money(87)], {}, { sources: [] }),
+        tool_calls: [],
+        asked_role_field: true,
+      },
+      {},
+    ).pass,
+    'a seller read in his role missed',
+  );
+  const pv = new Map([
+    [
+      'P1',
+      {
+        pass: true,
+        kind: 'PASS',
+        outcome: 'answered',
+        network: false,
+        lost: false,
+        pending: false,
+      },
+    ],
+    [
+      'P2',
+      {
+        pass: false,
+        kind: 'PENDING',
+        outcome: 'not_found',
+        network: false,
+        lost: false,
+        pending: true,
+      },
+    ],
+  ]);
+  const pstats = categoryStats(
+    'E',
+    [
+      { id: 'P1', cat: 'E' },
+      { id: 'P2', cat: 'E' },
+    ],
+    pv,
+    new Map([
+      ['P1', { millis: 1000 }],
+      ['P2', { millis: 1000 }],
+    ]),
+  );
   expect(pstats.n === 1 && pstats.passed === 1, 'a pending question counted in the category');
   // Results of a partial run go into the whole file, a new row for an old one.
   const dir = mkdtempSync(join(tmpdir(), 'ai-eval-'));
   const whole = join(dir, 'results.json');
-  writeFileSync(whole, JSON.stringify({ meta: { model: 'm' }, oracle: { a: '1' }, results: [{ id: 'A', v: 1 }, { id: 'B', v: 1 }] }));
-  const merged = mergeResults({ meta: { model: 'm' }, oracle: { b: '2' }, results: [{ id: 'B', v: 2 }, { id: 'C', v: 1 }] }, whole);
-  expect(merged.results.map((r) => `${r.id}${r.v}`).join() === 'A1,B2,C1' && merged.oracle.a === '1' && merged.oracle.b === '2', 'the merge is wrong');
-  expect(existsSync(join(dir, 'results.before-merge.json')), 'the file before the merge was not kept');
+  writeFileSync(
+    whole,
+    JSON.stringify({
+      meta: { model: 'm' },
+      oracle: { a: '1' },
+      results: [
+        { id: 'A', v: 1 },
+        { id: 'B', v: 1 },
+      ],
+    }),
+  );
+  const merged = mergeResults(
+    {
+      meta: { model: 'm' },
+      oracle: { b: '2' },
+      results: [
+        { id: 'B', v: 2 },
+        { id: 'C', v: 1 },
+      ],
+    },
+    whole,
+  );
+  expect(
+    merged.results.map((r) => `${r.id}${r.v}`).join() === 'A1,B2,C1' &&
+      merged.oracle.a === '1' &&
+      merged.oracle.b === '2',
+    'the merge is wrong',
+  );
+  expect(
+    existsSync(join(dir, 'results.before-merge.json')),
+    'the file before the merge was not kept',
+  );
   // What the app read before the first call is not fixed.
-  expect(preReads({ tool_calls: [{ id: 'r1', tool: 'period', prefetch: true }, { id: 'r2', tool: 'analytics' }], calls_json: JSON.stringify([{ tools: [{ name: 'analytics' }] }]) }) === 1, 'a period read ahead was missed');
-  expect(preReads({ tool_calls: [{ id: 'h1', tool: 'app_help' }], calls_json: JSON.stringify([{ tools: [] }]) }) === 1, 'a guide read ahead was missed');
-  expect(preReads({ tool_calls: [{ id: 'h1', tool: 'app_help' }], calls_json: JSON.stringify([{ tools: [{ name: 'app_help' }] }]) }) === 0, 'the model\'s own guide read was taken for a read ahead');
-  expect(preReads({ tool_calls: [{ id: 'r2', prefetch: true }], calls_json: JSON.stringify([{ tools: [{ name: 'party_card', prefetch: true }] }]) }) === 0, 'a card read right after the find was taken for a read ahead');
+  expect(
+    preReads({
+      tool_calls: [
+        { id: 'r1', tool: 'period', prefetch: true },
+        { id: 'r2', tool: 'analytics' },
+      ],
+      calls_json: JSON.stringify([{ tools: [{ name: 'analytics' }] }]),
+    }) === 1,
+    'a period read ahead was missed',
+  );
+  expect(
+    preReads({
+      tool_calls: [{ id: 'h1', tool: 'app_help' }],
+      calls_json: JSON.stringify([{ tools: [] }]),
+    }) === 1,
+    'a guide read ahead was missed',
+  );
+  expect(
+    preReads({
+      tool_calls: [{ id: 'h1', tool: 'app_help' }],
+      calls_json: JSON.stringify([{ tools: [{ name: 'app_help' }] }]),
+    }) === 0,
+    "the model's own guide read was taken for a read ahead",
+  );
+  expect(
+    preReads({
+      tool_calls: [{ id: 'r2', prefetch: true }],
+      calls_json: JSON.stringify([{ tools: [{ name: 'party_card', prefetch: true }] }]),
+    }) === 0,
+    'a card read right after the find was taken for a read ahead',
+  );
   // Selecting by category, world and id.
-  expect(selectIds(list, { category: 'D' }).every((id) => byId(id).cat === 'D'), '--category chose a wrong question');
-  expect(selectIds(list, { world: 'thin' }).length > 0 && selectIds(list, { only: 'Q001,Q002' }).length === 2, '--world or --only chose wrongly');
-  console.log(`self-test ok: the bank has ${list.length} questions in 5 categories and the scorer reads right, wrong, optional, zero, strict-name, general-advice and network cases`);
+  expect(
+    selectIds(list, { category: 'D' }).every((id) => byId(id).cat === 'D'),
+    '--category chose a wrong question',
+  );
+  expect(
+    selectIds(list, { world: 'thin' }).length > 0 &&
+      selectIds(list, { only: 'Q001,Q002' }).length === 2,
+    '--world or --only chose wrongly',
+  );
+  console.log(
+    `self-test ok: the bank has ${list.length} questions in 5 categories and the scorer reads right, wrong, optional, zero, strict-name, general-advice and network cases`,
+  );
 }
 
 // ---- main ----------------------------------------------------------------------------------
 
+/**
+ * --oracle-dump FILE: writes the oracle facts with their values, and the names of the parties,
+ * items, partners, gardens and trips, as JSON. It runs one offline test through cargo (no model, no
+ * key, no network): the books of the rich year are built again, which takes a few minutes.
+ */
+function oracleDump(out) {
+  mkdirSync(dirname(out), { recursive: true });
+  const env = { ...process.env, MANDI_ORACLE_JSON: out };
+  const cmd = [
+    'test',
+    '-j',
+    '4',
+    '-p',
+    'mandi-assistant',
+    '--test',
+    'robustness_live',
+    '--',
+    '--nocapture',
+    '--exact',
+    'dump_the_oracle_json',
+  ];
+  console.log(`ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}`);
+  const res = spawnSync('cargo', cmd, {
+    cwd: BACKEND,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+  if (res.error) throw new Error(`cannot start cargo: ${res.error.message}`);
+  if (res.status !== 0) throw new Error(`the oracle dump failed with exit code ${res.status}`);
+  if (!existsSync(out)) throw new Error(`no dump was written at ${out}`);
+  const dump = JSON.parse(readFileSync(out, 'utf8'));
+  const keys = manifestKeys();
+  const missing = keys ? [...keys].filter((k) => !(k in dump.facts)) : [];
+  if (missing.length)
+    throw new Error(
+      `the dump lacks ${missing.length} keys of oracle-keys.txt, for example ${missing.slice(0, 3).join(', ')}`,
+    );
+  console.log(
+    `oracle dump: ${Object.keys(dump.facts).length} facts, ${dump.parties.length} parties, ${dump.items.length} items, ${dump.partners.length} partners, ${dump.gardens.length} gardens, ${dump.trips.length} trips -> ${out}`,
+  );
+}
+
+/** The columns a bank must have for the scorer and the live test to read it. */
+const BANK_COLUMNS = [
+  'id',
+  'group',
+  'kind',
+  'lang',
+  'misspelled',
+  'world',
+  'after',
+  'question',
+  'outcome',
+  'tools',
+  'filters',
+  'figures',
+  'source',
+  'cat',
+  'section',
+];
+
 function main() {
   if (flag('--self-test')) return selfTest();
+  if (option('--oracle-dump')) {
+    try {
+      return oracleDump(resolve(option('--oracle-dump')));
+    } catch (error) {
+      console.error(`ai-eval: ${error.message}`);
+      process.exit(2);
+    }
+  }
+  if (BANK) {
+    if (!existsSync(BANK)) {
+      console.error(`ai-eval: no bank file at ${BANK}`);
+      process.exit(2);
+    }
+    const head = readFileSync(BANK, 'utf8').split('\n', 1)[0].split('\t');
+    const lacking = BANK_COLUMNS.filter((c) => !head.includes(c));
+    if (lacking.length) {
+      console.error(`ai-eval: the bank ${BANK} lacks the columns: ${lacking.join(', ')}`);
+      process.exit(2);
+    }
+  }
   const list = loadList();
-  const { problems, summary } = checkList(list);
-  console.log(`ai-eval: bank ${QUESTIONS}`);
+  const { problems, summary } = checkList(list, Boolean(BANK));
+  console.log(
+    `ai-eval: bank ${QUESTIONS}${BANK ? ' (another bank: the per-row rules only; results in ' + OUT_DIR + ')' : ''}`,
+  );
   const c = summary.byCat;
   console.log(
     `  ${summary.total} questions: A ${c.A}, B ${c.B}, C ${c.C}, D ${c.D}, E ${c.E}; Roman Urdu ${summary.languages.roman}, Urdu letters ${summary.languages.urdu}, English ${summary.languages.en}; ${summary.misspelled} misspelled; ${summary.groups} groups (${summary.bigGroups} of 3 or more)`,
   );
   const fc = summary.facets;
-  console.log(`  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}`);
+  console.log(
+    `  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}, print ${fc.print}, Umar's own (U) ${fc.U}`,
+  );
   if (problems.length) {
     console.error(`the bank breaks its rules:\n  ${problems.join('\n  ')}`);
     process.exit(2);
   }
   if (flag('--check')) {
-    console.log('the bank meets its rules: the first 110 keep the D6 mix, all five categories, every section, every help topic, every @key is a fact of the oracle, and questions.tsv is what the spec builds');
+    console.log(
+      BANK
+        ? 'the bank meets the per-row rules: unique ids, known follow-ups, outcomes, worlds and categories, and every @key is a fact of the oracle'
+        : 'the bank meets its rules: the first 110 keep the D6 mix, all five categories, every section, every help topic, every @key is a fact of the oracle, and questions.tsv is what the spec builds',
+    );
     return;
   }
   const file = option('--results');
-  let ids = selectIds(list, { only: option('--only'), category: option('--category'), world: option('--world') });
+  let ids = selectIds(list, {
+    only: option('--only'),
+    category: option('--category'),
+    world: option('--world'),
+  });
   // --misses asks again what missed or was lost to the network; --merge puts a partial run into the
   // whole results file, so the score is always of the whole bank.
   const asksAgain = flag('--misses');
@@ -1203,7 +3514,7 @@ function main() {
         console.log(`ai-eval: asking ${ids.length} questions again: ${ids.join(',')}`);
       }
       const part = merging ? join(OUT_DIR, 'results.part.json') : RESULTS;
-      runLive(ids, option('--model'), option('--threads'), part);
+      runLive(ids, option('--model'), option('--threads') ?? THREADS_DEFAULT, part);
       if (merging) {
         const rows = JSON.parse(readFileSync(part, 'utf8'));
         if (!rows.waiting_for_key) mergeResults(rows);
@@ -1221,14 +3532,19 @@ function main() {
   }
   const data = JSON.parse(readFileSync(path, 'utf8'));
   if (data.waiting_for_key) {
-    console.log('WAITING FOR KEY: no OpenRouter key is saved in the app. Umar pastes it in Settings, in the question group, then run this again.');
+    console.log(
+      'WAITING FOR KEY: no OpenRouter key is saved in the app. Umar pastes it in Settings, in the question group, then run this again.',
+    );
     process.exit(3);
   }
   const shown = ids.length && !merging ? new Set(ids) : null;
   const scored = shown ? list.filter((q) => shown.has(q.id)) : list;
-  const { text, meets, results, verdicts, stats } = report(scored, data);
+  const { text, meets, results, verdicts, stats, speed, budget } = report(scored, data);
   console.log(text);
-  writeReview(scored.filter((q) => results.has(q.id)), results);
+  writeReview(
+    scored.filter((q) => results.has(q.id)),
+    results,
+  );
   writeDetail(scored, data, verdicts);
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(
@@ -1237,9 +3553,50 @@ function main() {
       {
         date: new Date().toISOString(),
         model: data.meta.model,
-        categories: stats.map(({ networkTimes, ...s }) => ({ ...s, networkQuestions: networkTimes.length })),
-        misses: [...verdicts.values()].filter((v) => !v.pass && !v.lost && !v.pending).map((v) => v.id),
+        categories: stats.map(({ networkTimes, ...s }) => ({
+          ...s,
+          networkQuestions: networkTimes.length,
+        })),
+        misses: [...verdicts.values()]
+          .filter((v) => !v.pass && !v.lost && !v.pending)
+          .map((v) => v.id),
         pending: [...verdicts.values()].filter((v) => v.pending).map((v) => v.id),
+        budget: budget && {
+          ok: budget.ok,
+          groups: budget.groups.map((g) => ({
+            name: g.name,
+            n: g.n,
+            p50: g.p50v,
+            p95: g.p95v,
+            over: g.over,
+          })),
+        },
+        speed: Object.fromEntries(
+          Object.entries(speed ?? {}).map(([k, st]) => [
+            k,
+            {
+              questions: st.n,
+              calls: st.by,
+              oneOrNone: st.oneOrNone,
+              stageMillis: Object.fromEntries(
+                Object.entries(st.stage).map(([name, xs]) => [
+                  name,
+                  { p50: percentile(xs, 0.5), p95: percentile(xs, 0.95), n: xs.length },
+                ]),
+              ),
+              reasoningTokens: Object.fromEntries(
+                Object.entries(st.reasoning).map(([name, xs]) => [
+                  name,
+                  {
+                    p50: percentile(xs, 0.5),
+                    p95: percentile(xs, 0.95),
+                    mean: Math.round(mean(xs)),
+                  },
+                ]),
+              ),
+            },
+          ]),
+        ),
         lost: [...verdicts.values()].filter((v) => v.lost).map((v) => v.id),
         meets,
       },

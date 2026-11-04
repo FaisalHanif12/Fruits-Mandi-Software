@@ -8,13 +8,9 @@ import type { CollectionGroupTotal } from './CollectionGroupTotal';
  */
 export type CollectionList = {
   /**
-   * The day, `YYYY-MM-DD`.
+   * Today, `YYYY-MM-DD`: the day the ages of the bills are counted to.
    */
   date: string;
-  /**
-   * Its weekday, 0 (Monday) to 6 (Sunday), as stored on the account.
-   */
-  weekday: number;
   /**
    * By collector, then city. A page holds the groups that have buyers on it, each with only the
    * buyers of the page; a group's own total stays over all its buyers.

@@ -664,6 +664,21 @@ const backupDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Plan 56: the development page of the first screen and the restore pages (dev only). ----
+const restoreDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/restore',
+        component: lazyRouteComponent(
+          () => import('./dev/RestoreFirstRunPage'),
+          'RestoreFirstRunPage',
+        ),
+      }),
+    ]
+  : [];
+// ---- end of plan 56 block ----
+
 // ---- Run B, plan 20: the development pages of the report screens (dev only, like the others). ----
 const reportsDevRoutes = import.meta.env.DEV
   ? [
@@ -763,6 +778,7 @@ const routeTree = rootRoute.addChildren([
   printRoute,
   ...devRoutes,
   ...backupDevRoutes,
+  ...restoreDevRoutes,
   ...reportsDevRoutes,
   ...analyticsDevRoutes,
   ...settingsDevRoutes,

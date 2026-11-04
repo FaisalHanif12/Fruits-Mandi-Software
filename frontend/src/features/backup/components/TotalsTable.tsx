@@ -12,11 +12,13 @@ import type { BackupTotals } from '../types';
 interface TotalsTableProps {
   /**
    * Before a restore the columns are "In this copy" and "Now"; after a test restore they are
-   * "Restored test copy" and "Live data".
+   * "Restored test copy" and "Live data". On a new computer (plan 56) there are no books to compare
+   * with, so `copy` is one column: "In this copy".
    */
-  variant: 'restore' | 'test';
+  variant: 'restore' | 'test' | 'copy';
   copy: BackupTotals;
-  now: BackupTotals;
+  /** The books now. Left out for the `copy` variant. */
+  now?: BackupTotals;
 }
 
 /** The words of the table for each use, as Fluent message IDs. */
@@ -30,6 +32,11 @@ const WORDS = {
     label: 'backup-test-totals-label',
     copy: 'backup-totals-restored',
     now: 'backup-totals-live',
+  },
+  copy: {
+    label: 'restore-totals-label',
+    copy: 'backup-totals-in-backup',
+    now: 'backup-totals-now',
   },
 } as const;
 
@@ -78,20 +85,33 @@ export function TotalsTable({ variant, copy, now }: TotalsTableProps) {
       header: <Localized id="backup-totals-what" />,
       cell: (line) => <Localized id={line.labelId} />,
     },
-    {
-      id: 'copy',
-      header: <Localized id={words.copy} />,
-      kind: 'number',
-      size: 'qty',
-      cell: (line) => line.of(copy),
-    },
-    {
-      id: 'now',
-      header: <Localized id={words.now} />,
-      kind: 'number',
-      size: 'qty',
-      cell: (line) => line.of(now),
-    },
+    // Alone in its table (a new computer, plan 56) the column has room for a date on one line.
+    now === undefined
+      ? {
+          id: 'copy',
+          header: <Localized id={words.copy} />,
+          kind: 'number',
+          size: 'money',
+          cell: (line) => line.of(copy),
+        }
+      : {
+          id: 'copy',
+          header: <Localized id={words.copy} />,
+          kind: 'number',
+          size: 'qty',
+          cell: (line) => line.of(copy),
+        },
+    ...(now === undefined
+      ? []
+      : [
+          {
+            id: 'now',
+            header: <Localized id={words.now} />,
+            kind: 'number' as const,
+            size: 'qty' as const,
+            cell: (line: Line) => line.of(now),
+          },
+        ]),
   ];
   return (
     <Table

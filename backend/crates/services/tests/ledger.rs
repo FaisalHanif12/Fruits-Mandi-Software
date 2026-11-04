@@ -71,7 +71,6 @@ fn buyer_akram(env: &TestEnv, owner: &auth::Actor) -> i64 {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
         tag: String::new(),

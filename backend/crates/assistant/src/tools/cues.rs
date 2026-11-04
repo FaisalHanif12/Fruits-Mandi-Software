@@ -142,11 +142,13 @@ pub fn commission_and_sales_asked(question: &str) -> bool {
     })
 }
 
-/// The question compares things: farq, difference, compare, "zyada" or "kam" than, versus.
+/// The question compares things: farq, difference, compare, versus, "se zyada" or "se kam", more or
+/// less "than". A "sab se zyada" (the most) question is a top list and does not compare.
 ///
-/// Example: "kele aur saib ke commission mein farq" is true; "kele aur saib ka commission" is false.
+/// Example: "kele aur saib ke commission mein farq" is true; "sab se zyada commission kis item ka"
+/// is false.
 pub fn comparing(question: &str) -> bool {
-    has(
+    let strong = has(
         question,
         &[
             "farq",
@@ -160,28 +162,70 @@ pub fn comparing(question: &str) -> bool {
             "muqabla",
             "muqable",
             "muqabale",
-            "zyada",
-            "ziyada",
-            "kam",
-            "more",
-            "less",
-            "higher",
-            "lower",
-            "than",
             "versus",
             "vs",
             "فرق",
             "موازنہ",
             "مقابلے",
             "مقابلہ",
-            "زیادہ",
-            "کم",
         ],
-    )
+    );
+    // "akram se kitna zyada": "se" with a word for more or less within three words after it, and not
+    // "sab se zyada" (the most). "more than", "less than" and the like are plain phrases.
+    let spaced = spaced(question);
+    let words: Vec<&str> = spaced.split_whitespace().collect();
+    let key = |w: &str| text::search_ur(&text::search_en(w));
+    let se: Vec<String> = ["se", "سے"].iter().map(|w| key(w)).collect();
+    let sab: Vec<String> = ["sab", "سب"].iter().map(|w| key(w)).collect();
+    let more_less: Vec<String> = [
+        "zyada",
+        "ziyada",
+        "ziada",
+        "zayada",
+        "zyadah",
+        "kam",
+        "زیادہ",
+        "کم",
+    ]
+    .iter()
+    .map(|w| key(w))
+    .collect();
+    let se_than = words.iter().enumerate().any(|(at, word)| {
+        se.iter().any(|s| s == word)
+            // Not "sab se zyada" (the most), and not "kis item se sab se zyada" either: a "se"
+            // followed by "sab" starts the top-list phrase.
+            && !at
+                .checked_sub(1)
+                .and_then(|before| words.get(before))
+                .is_some_and(|before| sab.iter().any(|s| s == before))
+            && !words
+                .get(at.saturating_add(1))
+                .is_some_and(|next| sab.iter().any(|s| s == next))
+            && words
+                .iter()
+                .skip(at.saturating_add(1))
+                .take(3)
+                .any(|next| more_less.iter().any(|m| m == next))
+    });
+    // "more than 5000 wale" is a threshold, not a comparison: the phrase counts only when a word
+    // follows that is not a number.
+    let than_words = [
+        "more", "less", "higher", "lower", "greater", "bigger", "smaller",
+    ];
+    let than = se_than
+        || words.iter().enumerate().any(|(at, word)| {
+            than_words.contains(word)
+                && words.get(at.saturating_add(1)) == Some(&"than")
+                && words
+                    .get(at.saturating_add(2))
+                    .is_some_and(|next| !next.chars().any(char::is_numeric))
+        });
+    strong || than
 }
 
 /// The question asks for a share or a change in percent: percent, fisad, share, hissa, ratio,
-/// change, increase, decrease, or it compares.
+/// "of all", "out of", change, increase, decrease, or it compares. (A percent number of the
+/// question is checked beside this, where the numbers are known.)
 ///
 /// Example: "kele ka hissa kitna hai" is true; "kela ka commission" is false.
 pub fn share_or_change(question: &str) -> bool {
@@ -191,6 +235,7 @@ pub fn share_or_change(question: &str) -> bool {
             &[
                 "percent",
                 "percentage",
+                "persent",
                 "fisad",
                 "feesad",
                 "share",
@@ -204,13 +249,29 @@ pub fn share_or_change(question: &str) -> bool {
                 "ghate",
                 "increase",
                 "decrease",
+                "of all",
+                "out of",
+                "mein se",
                 "فیصد",
+                "پرسنٹ",
                 "حصہ",
                 "اضافہ",
                 "کمی",
                 "تبدیلی",
             ],
         )
+}
+
+/// The question asks for an average: average, avg, ausat.
+///
+/// Example: "kele aur saib ke commission ka average" is true.
+pub fn average_asked(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "average", "avg", "ausat", "ausatan", "osat", "avarage", "averege", "mean", "اوسط",
+        ],
+    )
 }
 
 /// The question asks for ONE figure for several things together: "mila kar", "total", "kul",
@@ -220,39 +281,83 @@ pub fn share_or_change(question: &str) -> bool {
 /// Example: "akram aur arshad dono ka mila kar kitna hai" is true; "kele or saib ka comision aur
 /// bikri btao" is false.
 pub fn together(question: &str) -> bool {
+    !average_asked(question)
+        && !asked_apart(question)
+        && (has(question, &TOGETHER_STRONG) || has(question, &TOGETHER_WEAK))
+}
+
+/// The question says all of them together in words that cannot mean one thing's own total:
+/// "mila kar", "dono ka", "sab ka", "combined". A sum of every row or every match needs this: a
+/// bare "total" can be one item's total ("kele ka total commission").
+///
+/// Example: "sab items ka commission mila kar" is true; "kele ka total commission" is false.
+pub fn together_strong(question: &str) -> bool {
+    !average_asked(question) && !asked_apart(question) && has(question, &TOGETHER_STRONG)
+}
+
+/// The question asks for each one on its own: "alag alag", "separately", "har ek".
+fn asked_apart(question: &str) -> bool {
     has(
         question,
         &[
-            "mila kar",
-            "mila ke",
-            "milakar",
-            "milake",
-            "milakar",
-            "total",
-            "kul",
-            "kul mila kar",
-            "sum",
-            "average",
-            "avg",
-            "ausat",
-            "اوسط",
-            "combined",
-            "together",
-            "altogether",
-            "in all",
-            "in total",
-            "overall",
-            "sab ka",
-            "sab ko mila kar",
-            "ملا کر",
-            "ملا کے",
-            "ٹوٹل",
-            "کل",
-            "جمع",
-            "میزان",
+            "alag alag",
+            "separately",
+            "each one",
+            "each of",
+            "har ek",
+            "ek ek",
+            "الگ الگ",
+            "ہر ایک",
         ],
     )
 }
+
+const TOGETHER_STRONG: [&str; 26] = [
+    "mila kar",
+    "mila ke",
+    "milakar",
+    "milake",
+    "combined",
+    "together",
+    "dono ka",
+    "donon ka",
+    "dono ki",
+    "dono ke",
+    "donon ki",
+    "donon ke",
+    "jama karo",
+    "jor kar",
+    "jod kar",
+    "sab ka",
+    "sab ko mila kar",
+    "دونوں کا",
+    "دونوں کی",
+    "دونوں کے",
+    "ملا کر",
+    "ملا کے",
+    "سب کا",
+    "جوڑ کر",
+    "جمع کرو",
+    "کل ملا کر",
+];
+
+/// Words for a total that fit one thing's own total too ("kele ka commission in total", "overall",
+/// "both sides"): two named things with one of them are one sum; every row of a table with one of
+/// them is not.
+const TOGETHER_WEAK: [&str; 12] = [
+    "total",
+    "kul",
+    "sum",
+    "in total",
+    "in all",
+    "altogether",
+    "overall",
+    "both",
+    "plus",
+    "add",
+    "ٹوٹل",
+    "میزان",
+];
 
 /// The question asks for one year ahead in words, not digits: "agle ek saal", "next one year". It is
 /// 12 months. (A number with months, "agle 12 mahine", is read as a number.)
@@ -487,6 +592,50 @@ pub fn percent_change(question: &str, percent_numbers: usize) -> Option<PercentC
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_average_question_is_not_a_together_question() {
+        for q in [
+            "kele aur saib dono ka average",
+            "sab ka average commission",
+            "mila kar average",
+            "dono ka ausatan kitna",
+        ] {
+            assert!(average_asked(q), "{q}");
+            assert!(!together(q), "{q}");
+        }
+        for q in [
+            "dono ki mila kar",
+            "kele aur saib dono ke commission",
+            "both banana and apple",
+            "jod kar batao",
+        ] {
+            assert!(together(q), "{q}");
+        }
+        assert!(!together("kele aur saib ka commission"));
+    }
+
+    #[test]
+    fn a_top_list_or_a_threshold_is_not_a_comparison() {
+        for q in [
+            "kis item se sab se zyada commission aya",
+            "sab se zyada bikne wala item",
+            "5000 se more than 5000 wale buyers",
+            "more than 5000 wale buyers",
+        ] {
+            assert!(!comparing(q), "{q}");
+        }
+        for q in [
+            "akram se kitna zyada hai arshad",
+            "banana is more than apple",
+            "kela saib se ziada hai",
+            "kele ka saib se farq",
+        ] {
+            assert!(comparing(q), "{q}");
+        }
+        // A plain amount question is not a share.
+        assert!(!share_or_change("kele ka commission kitna banta hai"));
+    }
 
     #[test]
     fn the_end_of_the_year_is_found_in_every_script() {
@@ -825,7 +974,7 @@ mod together_tests {
             "akram aur arshad dono ka mila kar kitna hai",
             "kele or saib ka total commission",
             "what is the combined commission of banana and apple",
-            "کیلے اور سیب کا کل کمیشن",
+            "کیلے اور سیب کا ٹوٹل کمیشن",
         ] {
             assert!(together(q), "{q}");
         }
@@ -833,6 +982,8 @@ mod together_tests {
             "kele or saib ka is sal ka comision aur bikri btao",
             "commission of banana and apple this year",
             "کیلے اور سیب کا کمیشن بتائیں",
+            // کل is also tomorrow or yesterday, جمع also the credit side: not "together" alone.
+            "کل کا کمیشن اور جمع کا کمیشن",
         ] {
             assert!(!together(q), "{q}");
         }

@@ -24,7 +24,7 @@ import type {
 import { AgGridReact } from 'ag-grid-react';
 import type { MonthSubtotal } from '../../bindings/MonthSubtotal';
 import type { SortInput } from '../../bindings/SortInput';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import type { Language } from '../../i18n';
 import { formatPaisa, formatPaisaValue, groupDigits, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
@@ -58,9 +58,32 @@ export interface ListContext {
   signedMoney: (value: number) => string;
 }
 
+/**
+ * A column whose cell is a control the user presses (a switch, a button), drawn by the screen with the
+ * shared components. A click or Enter on the control does its own job and never opens the row; `Space`
+ * on the focused cell of the column does the same as pressing the control (the keyboard way to it).
+ */
+export interface ListCellControl<T> {
+  /** The control of one row. It reads its own state and runs its own command (CLAUDE.md rule 1). */
+  readonly render: (row: T, context: ListContext) => ReactNode;
+  /** What `Space` does on the focused cell of this column. */
+  readonly onSpace: (row: T) => void;
+}
+
+/** The mark on the element of a cell control, so a click or a key on it is not the row's. */
+const CELL_CONTROL_MARK = 'data-cell-control';
+
+/** True when the event comes from inside a cell control. */
+function fromCellControl(event: Event | null | undefined): boolean {
+  const target = event?.target;
+  return target instanceof Element && target.closest(`[${CELL_CONTROL_MARK}]`) !== null;
+}
+
 export interface ListColumn<T> {
   /** The ID of the column. */
   readonly field: string;
+  /** A control in the cell instead of text (see `ListCellControl`). The text of `value` is its name for search. */
+  readonly control?: ListCellControl<T> | undefined;
   readonly type: ListColumnType;
   /** The Fluent message ID of the header. */
   readonly headerId: string;
@@ -287,6 +310,7 @@ function toColDef<T>(
       // A name: words at the start edge, even when it is made of digits (a trip is its number and day).
       ...(column.type === 'name' ? ['cell-name'] : []),
       ...(column.wrap === true ? ['cell-wrap'] : []),
+      ...(column.control === undefined ? [] : ['cell-control']),
     ],
     ...(column.tip === undefined
       ? {}
@@ -322,7 +346,20 @@ function toColDef<T>(
     // A text cell with a number inside keeps it in order and in Inter in Urdu (F25). Only a cell that
     // holds a number gets the renderer; every other cell is drawn by the grid as before. In a list
     // whose rows grow with a long column, every other cell is put in the middle of its row too.
-    ...(column.script === undefined && unitOf === undefined && !isListNumberLike(column.type)
+    ...(column.control === undefined
+      ? {}
+      : {
+          cellRenderer: (params: ICellRendererParams<T>) =>
+            params.data === undefined || params.node.rowPinned != null ? null : (
+              <span {...{ [CELL_CONTROL_MARK]: '' }}>
+                {column.control?.render(params.data, context)}
+              </span>
+            ),
+        }),
+    ...(column.control === undefined &&
+    column.script === undefined &&
+    unitOf === undefined &&
+    !isListNumberLike(column.type)
       ? growing
         ? { cellRenderer: FillCell }
         : {
@@ -631,7 +668,20 @@ function GridInner<T>({
 
   const onCellKeyDown = (event: CellKeyDownEvent<T>) => {
     const key = event.event;
-    if (!(key instanceof KeyboardEvent) || key.key !== 'Enter' || event.data === undefined) return;
+    if (!(key instanceof KeyboardEvent) || event.data === undefined) return;
+    // A key on a control in a cell is the control's own: Enter or Space presses it, and the row is not opened.
+    if (fromCellControl(key)) return;
+    // Space on the focused cell of a control column does what its control does.
+    if (key.key === ' ') {
+      const control = columns.find(
+        (candidate) => candidate.field === event.column.getColId(),
+      )?.control;
+      if (control === undefined || isMonthHeading(event.data) || event.node.isRowPinned()) return;
+      key.preventDefault();
+      control.onSpace(event.data);
+      return;
+    }
+    if (key.key !== 'Enter') return;
     // A month heading opens nothing.
     if (isMonthHeading(event.data)) return;
     key.preventDefault();
@@ -698,6 +748,8 @@ function GridInner<T>({
         onCellKeyDown={onCellKeyDown}
         onCellDoubleClicked={(event) => {
           if (event.data === undefined || isMonthHeading(event.data)) return;
+          // Two quick presses of a control are not a double click on the row.
+          if (fromCellControl(event.event)) return;
           const column = event.column.getColId();
           if (event.node.isRowPinned()) {
             onOpenTotals?.(column);

@@ -119,7 +119,16 @@ masters-expense-head-empty = { masters-expense-head-title } ابھی خالی ہ
 masters-staff-title = عملے کی فہرست
 
 # review: pending
-masters-staff-help = منشی، { -agrahi } والے اور مزدور۔
+masters-staff-help = منشی، { -agrahi } والے اور مزدور۔ فعال منشی ہر پرنٹ کے سرے پر چھپتا ہے۔
+
+# review: pending
+masters-active-switch-label = فعال یا غیر فعال
+
+# review: pending
+masters-active-failed = تبدیلی محفوظ نہیں ہو سکی، دوبارہ کوشش کریں۔
+
+# review: pending
+masters-staff-active-note = فعال منشی ہر پرنٹ کے سرے پر چھپتا ہے، غیر فعال نہیں چھپتا۔
 
 # review: pending
 masters-staff-new = عملے کا نیا فرد

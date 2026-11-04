@@ -28,6 +28,8 @@ use crate::results::{ToolResult, Words, fit, tool_result_json};
 pub const ANSWER_SCHEMA_NAME: &str = "answer";
 /// How hard the model thinks (Tech Stack 4.8 [A]).
 pub const REASONING_EFFORT: &str = "medium";
+/// The reasoning effort of a call whose data is already read, and of help (plan 54 S4).
+pub const LOW_REASONING_EFFORT: &str = "low";
 /// The fixed seed of every call.
 pub const SEED: i64 = 20_261_102;
 /// `tool_choice` while the model may call tools.
@@ -67,6 +69,7 @@ pub const BODY_KEYS_ALLOWED: [&str; 13] = [
 pub fn provider() -> Value {
     json!({
         "only": ["azure"],
+        "sort": "latency",
         "allow_fallbacks": false,
         "zdr": true,
         "data_collection": "deny",
@@ -228,6 +231,9 @@ pub struct Parts<'a> {
     /// so the model must answer from what it has read (plan 52 item 1, PRD E96). The `tools`
     /// list is still sent, so the fixed part stays the same and stays cached.
     pub tools_off: bool,
+    /// True when the call only has to write the answer from data already read (plan 54 S4): the
+    /// model thinks less ("low"). Forecasts, what-ifs and advice keep "medium".
+    pub low_effort: bool,
 }
 
 /// The body of one call.
@@ -261,7 +267,7 @@ pub fn request_body(parts: &Parts<'_>) -> Value {
             "type": "json_schema",
             "json_schema": {"name": ANSWER_SCHEMA_NAME, "strict": true, "schema": answer_schema()},
         },
-        "reasoning": {"effort": REASONING_EFFORT},
+        "reasoning": {"effort": if parts.low_effort { LOW_REASONING_EFFORT } else { REASONING_EFFORT }},
         "max_completion_tokens": parts.max_completion_tokens,
         "seed": SEED,
         "provider": provider(),
@@ -297,6 +303,7 @@ mod tests {
             partner_locked: true,
             max_completion_tokens,
             tools_off,
+            low_effort: false,
         })
     }
 
@@ -335,6 +342,7 @@ mod tests {
             body["provider"],
             json!({
                 "only": ["azure"],
+                "sort": "latency",
                 "allow_fallbacks": false,
                 "zdr": true,
                 "data_collection": "deny",

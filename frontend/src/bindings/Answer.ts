@@ -5,6 +5,7 @@ import type { AnswerPart } from './AnswerPart';
 import type { AnswerSource } from './AnswerSource';
 import type { AnswerTable } from './AnswerTable';
 import type { FigureDifference } from './FigureDifference';
+import type { HowStep } from './HowStep';
 
 /**
  * An answer (PRD FR-7.74). The order on the screen is: the parts, the tables and charts, the
@@ -46,6 +47,12 @@ export type Answer = {
    * Every source read, for the source line and the buttons.
    */
   sources: Array<AnswerSource>;
+  /**
+   * The steps to do it by hand, with the real values filled in, for a print or a how-to that
+   * names a report (plan 54 Section 6). Empty for every other answer. `assistant-how-press-print`
+   * is the last step.
+   */
+  how: Array<HowStep>;
   /**
    * Figures whose two places differ (only with outcome `records_differ`).
    */

@@ -301,6 +301,43 @@ pub fn post_ordered(
     order_key: Option<i64>,
 ) -> Result<Posted, ServiceError> {
     check_posting_date(ctx, event.date)?;
+    post_checked(ctx, tx, user_id, event, order_key)
+}
+
+/// Posts the opening entry of a NEW account (PRD FR-10.11, plan 53 T1). Its date may lie on a
+/// closed day; a date after today is still refused. This is the only posting that skips the
+/// closed-day check: the caller is the account save, for an account that has no opening yet, and
+/// it writes the audit row.
+///
+/// # Errors
+/// As [`post`], with `ERR_DATE_IN_FUTURE` for a date after today instead of the closed-day code.
+pub(crate) fn post_new_opening(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+) -> Result<Posted, ServiceError> {
+    if event.posting_type != PostingType::Opening
+        || event.source_type != SourceType::Account
+        || event.reverses.is_some()
+    {
+        return Err(ServiceError::Data(
+            "only an opening may be posted on a closed day".to_owned(),
+        ));
+    }
+    let (_, today) = day::window(ctx)?;
+    validate::posting_date("entry_date", &format_ddmmyyyy(event.date), None, today)?;
+    post_checked(ctx, tx, user_id, event, None)
+}
+
+/// The rest of [`post_ordered`], after the date has been checked.
+fn post_checked(
+    ctx: &Context,
+    tx: &Connection,
+    user_id: i64,
+    event: &PostingEvent,
+    order_key: Option<i64>,
+) -> Result<Posted, ServiceError> {
     check_own_goods_account(tx, &event.entry)?;
     // PRD FR-17.6: a month close only moves balances that are already posted, so it may touch an
     // expense head that was made inactive after the month (like a reversal, it skips this check).

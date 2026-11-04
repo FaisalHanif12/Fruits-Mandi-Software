@@ -5,11 +5,6 @@
  */
 export type CollectionListInput = {
   /**
-   * The day, `DD-MM-YYYY` or a shortcut. Buyers whose collection day is this weekday are
-   * planned.
-   */
-  date: string;
-  /**
    * Only this collector.
    */
   collector_staff_id: number | null;

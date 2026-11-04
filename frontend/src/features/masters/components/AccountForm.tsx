@@ -120,10 +120,6 @@ function namesOfText(text: string): NamePairValue {
   if (typed === '' || /^\d+$/.test(typed)) return { urdu: '', english: '' };
   return URDU_LETTER.test(typed) ? { urdu: typed, english: '' } : { urdu: '', english: typed };
 }
-/** The name of each day by the backend's number: 0 is Monday, 6 is Sunday. */
-const WEEKDAY_NAMES = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
-/** The order the list shows them in: the mandi week starts on Saturday. */
-const WEEKDAY_ORDER = [5, 6, 0, 1, 2, 3, 4] as const;
 
 function toRef(hit: SearchHit): AccountRef {
   return pickedOf(hit);
@@ -153,7 +149,6 @@ const FIELD_PATHS = [
   'credit_limit',
   'default_marka_id',
   'collector_staff_id',
-  'collection_weekday',
   'note',
 ];
 
@@ -631,7 +626,17 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
             <FormGrid columns={3}>
               <Field
                 label={<Localized id="accounts-field-opening-date" />}
-                error={fieldError(error, 'opening_date')}
+                // A closed day is said here in a few words, and the way out is offered under the fields. The
+                // plain "enter a date after X" line cannot be followed when X is today, so it is not shown.
+                error={
+                  openingOffer === null ? (
+                    fieldError(error, 'opening_date')
+                  ) : (
+                    <span className="block">
+                      <Localized id="accounts-opening-closed-short" />
+                    </span>
+                  )
+                }
               >
                 {(props) => (
                   <DateInput
@@ -665,15 +670,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                   setValues((current) => ({ ...current, opening_date: today }));
                   save.reset();
                 }}
-                onSaveWithout={() => {
-                  setValues((current) => ({
-                    ...current,
-                    opening_dr: '',
-                    opening_cr: '',
-                    opening_is_advance: false,
-                  }));
-                  save.reset();
-                }}
                 onReopen={() => {
                   fixFlow.start({
                     date: values.opening_date,
@@ -700,7 +696,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
             <FoldSection
               title={<Localized id="accounts-section-credit" />}
               filled={filledCount(values.credit_limit)}
-              forceOpen={has('credit_limit', 'collector_staff_id', 'collection_weekday')}
+              forceOpen={has('credit_limit', 'collector_staff_id')}
             >
               <FormGrid columns={4}>
                 <Checkbox
@@ -733,28 +729,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                       scope="staff"
                       value={values.collector}
                       onChange={ref('collector')}
-                    />
-                  )}
-                </Field>
-                <Field
-                  label={<Localized id="accounts-field-weekday" />}
-                  error={fieldError(error, 'collection_weekday')}
-                >
-                  {(props) => (
-                    <Select
-                      {...props}
-                      value={
-                        values.collection_weekday === null
-                          ? undefined
-                          : String(values.collection_weekday)
-                      }
-                      onChange={(next) => {
-                        setValues((current) => ({ ...current, collection_weekday: Number(next) }));
-                      }}
-                      options={WEEKDAY_ORDER.map((day) => ({
-                        value: String(day),
-                        label: <Localized id={`accounts-weekday-${WEEKDAY_NAMES[day]}`} />,
-                      }))}
                     />
                   )}
                 </Field>

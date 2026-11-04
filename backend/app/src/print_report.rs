@@ -37,7 +37,6 @@ use mandi_services::db::audit::AuditEntry;
 use mandi_services::{Context, ServiceError, printing};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use tauri::Manager;
 use ts_rs::TS;
 
 use crate::commands::reports_engine::{engine_error, statement_all};
@@ -384,7 +383,7 @@ pub async fn run_report<R: tauri::Runtime>(
     input: PrintReportInput,
 ) -> Result<PrintOutcome, UiError> {
     let state = AppState::of(&app)?;
-    let data_dir = app.path().app_data_dir();
+    let data_dir = crate::profile::app_data_dir(&app);
     let prepared = {
         let state = state.clone();
         run_blocking("reports_print_report", move || {
@@ -405,7 +404,7 @@ pub async fn run_analytics<R: tauri::Runtime>(
     input: PrintAnalyticsViewInput,
 ) -> Result<PrintOutcome, UiError> {
     let state = AppState::of(&app)?;
-    let data_dir = app.path().app_data_dir();
+    let data_dir = crate::profile::app_data_dir(&app);
     let prepared = {
         let state = state.clone();
         run_blocking("analytics_print_view", move || {

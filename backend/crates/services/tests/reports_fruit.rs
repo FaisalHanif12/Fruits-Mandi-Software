@@ -326,6 +326,39 @@ fn r10(w: &World) -> (Vec<[i64; 5]>, [i64; 5]) {
     )
 }
 
+// ---- R37 while the partner section is locked -----------------------------------------------------
+
+#[test]
+fn r37_while_the_partner_section_is_locked_lists_the_guests_only_with_their_totals() {
+    // E2E-42: الف's 1,160 of fruit and the guests' 3,000. With the partner parts hidden (the lock,
+    // PRD FR-17.11) no partner's entry and no partner's amount is listed, and the totals are the
+    // guests' own: 3 نگ and 3,000.
+    let (w, _, _) = e2e_42();
+    let page = r37(
+        &w,
+        ReportFilters {
+            hide_partners: true,
+            ..day("10-10-2026", "10-10-2026")
+        },
+    );
+    assert_eq!(
+        entries(&page),
+        vec![entry(
+            "fruit-for-guests",
+            "Apple",
+            3,
+            1_000,
+            3_000,
+            "fruit-source-other"
+        )]
+    );
+    assert_eq!(page.total_count, 1);
+    assert_eq!((n(&page.totals[7]), n(&page.totals[9])), (3, 3_000));
+    // Not locked: both entries, as before.
+    let open = r37(&w, day("10-10-2026", "10-10-2026"));
+    assert_eq!(open.total_count, 2);
+}
+
 // ---- E2E-42 -----------------------------------------------------------------------------------
 
 #[test]

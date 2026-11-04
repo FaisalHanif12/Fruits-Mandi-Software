@@ -1,0 +1,18 @@
+{
+  "assistant_was_on": false,
+  "chain_key_restored": false,
+  "cloud_needs_keys": false,
+  "restored_from": "2026-10-10T09:00:00.000Z",
+  "totals": {
+    "accounts": 17,
+    "audit_rows": 6,
+    "bikri_entries": 0,
+    "cash_paisa": 0,
+    "credit_paisa": 0,
+    "debit_paisa": 0,
+    "journal_entries": 0,
+    "last_entry_date": null,
+    "vouchers": 0
+  },
+  "upgraded_from": null
+}

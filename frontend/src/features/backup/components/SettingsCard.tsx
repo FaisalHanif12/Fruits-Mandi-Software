@@ -114,7 +114,8 @@ export function SettingsCard() {
   const change = <K extends keyof BackupSettings>(key: K, value: BackupSettings[K]) => {
     if (draft !== undefined) setEdits({ ...draft, [key]: value });
   };
-  const text = (key: TextKey, labelId: string, hintId?: string, lang?: string) =>
+  // `ltr` is for an address or a path: in an Urdu page its signs (`https://`) would jump to the other side (NFR-URD-13).
+  const text = (key: TextKey, labelId: string, hintId?: string, lang?: string, dir?: 'ltr') =>
     draft === undefined ? null : (
       <Field
         label={<Localized id={labelId} />}
@@ -125,6 +126,7 @@ export function SettingsCard() {
           <TextInput
             {...control}
             lang={lang}
+            dir={dir}
             value={draft[key]}
             onChange={(next) => {
               change(key, next);
@@ -203,7 +205,7 @@ export function SettingsCard() {
         />
         {draft.cloud_enabled ? (
           <>
-            {text('cloud_endpoint', 'backup-set-endpoint', 'backup-set-endpoint-hint', 'en')}
+            {text('cloud_endpoint', 'backup-set-endpoint', 'backup-set-endpoint-hint', 'en', 'ltr')}
             {text('cloud_bucket', 'backup-set-bucket', undefined, 'en')}
             {text('cloud_region', 'backup-set-region', 'backup-set-region-hint', 'en')}
             {text('cloud_prefix', 'backup-set-prefix', 'backup-set-prefix-hint', 'en')}

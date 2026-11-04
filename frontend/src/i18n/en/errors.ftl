@@ -48,9 +48,15 @@ err-qty-too-large = The quantity is too large. The most you can enter is { $max 
 err-weight-too-large = The weight is too large. The most you can enter is { $max } kg.
 # review: pending
 err-date-invalid = This date is not valid. Enter the day, month and year correctly.
-# PRD FR-6.6. $closed_up_to: DD-MM-YYYY.
+# PRD FR-6.6, plan 53. It never asks for "a date after X": X may be today, and no later date is allowed.
+# $today: DD-MM-YYYY. $today_state: open or closed (today_open of the backend); missing says only
+# that the day is closed and the Owner can reopen it.
 # review: pending
-err-date-closed = This day is closed. Enter a date after { $closed_up_to }, or ask the Owner to reopen the day.
+err-date-closed = { $today_state ->
+    [open] This day is closed. Use today's date ({ $today }), or ask the Owner to reopen the day.
+    [closed] This day is closed, and so is today. Ask the Owner to reopen the day.
+   *[other] This day is closed. Ask the Owner to reopen the day.
+}
 # PRD FR-6.6. $today: DD-MM-YYYY.
 # review: pending
 err-date-in-future = A future date is not allowed. Enter today ({ $today }) or an earlier date.
@@ -142,9 +148,14 @@ err-not-locked = The app is not locked.
 err-recovery-code-wrong = The user name or the recovery code is wrong. Check and type them again.
 # review: pending
 err-already-set-up = First-time setup is already done. Please sign in.
-# $min and $max: the allowed range.
+# $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
+# does not start with https:// or is not one word, path means something follows the host name.
 # review: pending
-err-out-of-range = This value must be between { $min } and { $max }.
+err-out-of-range = { $reason ->
+    [https] The cloud address must start with https:// and be one word, for example https://your-account.r2.cloudflarestorage.com.
+    [path] Write only the cloud address, for example https://your-account.r2.cloudflarestorage.com. The bucket name goes in the field { backup-set-bucket }.
+   *[other] This value must be between { $min } and { $max }.
+}
 # review: pending
 err-not-logged-in = Please sign in first.
 # PRD FR-8.4.
@@ -429,7 +440,7 @@ err-trip-entry-cancelled = This entry is cancelled already.
 ## migration) share the messages above.
 
 # review: pending
-err-backup-not-found = This copy was not found. It may have been removed. Refresh the list and try again.
+err-backup-not-found = This copy was not found. It may have been removed. Look for the copies again and try again.
 
 # review: pending
 err-backup-key-not-set = There is no backup key on this computer yet. Make the key first.
@@ -459,14 +470,14 @@ err-backup-cloud-not-configured = The cloud copy is not set up. Fill in the clou
 # review: pending
 err-backup-cloud-failed =
     { $reason ->
-        [offline] The cloud could not be reached. Check the internet. The copy waits and is sent again by itself.
-        [refused] The cloud refused the copy. Check the cloud keys in the backup settings.
-        [not_found] The cloud bucket or the copy was not found. Check the bucket name in the backup settings.
+        [offline] The cloud could not be reached. Check the internet and the cloud address. A copy that was being made waits and is sent again by itself.
+        [refused] The cloud did not accept the keys. Check the cloud access key and the cloud secret key.
+        [not_found] The cloud bucket or the copy was not found. Check the bucket name and the folder name.
        *[other] The cloud copy failed. Try again later.
     }
 
 # review: pending
-err-backup-usb-not-present = The USB drive is not plugged in. Plug it in, or switch the USB copy off in the backup settings.
+err-backup-usb-not-present = The USB drive, the folder or the file was not found. Plug the drive in and check the path. To stop the USB copies, switch them off in the backup settings.
 
 # review: pending
 err-backup-usb-failed = The copy to the USB drive failed. Check the drive and the folder.
@@ -484,10 +495,16 @@ err-backup-not-confirmed = Please confirm before the restore starts. Nothing was
 err-backup-newer-than-app = This copy is from a newer version of the app than the one on this computer. Update the app first.
 
 # review: pending
+err-backup-chain-key-missing = This copy has no key for the tamper checks, so it cannot be trusted on a new computer. Use another copy, or contact support.
+
+# review: pending
+err-backup-no-owner = The first-time setup was never finished on the computer that made this copy, so nobody could sign in after restoring it. Nothing was changed. Use another copy.
+
+# review: pending
 err-backup-not-started = The backup service is not running yet. Wait a moment and try again.
 
 # review: pending
-err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: a safety copy was made before the restore.
+err-backup-restore-failed = The restore could not be finished. Close the app and open it again. If your books look wrong, contact support: when there were books on this computer, a safety copy was made before the restore.
 
 ## Plan 17: the cash book area (PRD 16, FR-16.9, FR-17.8, 16.4).
 

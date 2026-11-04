@@ -52,7 +52,16 @@ import {
   type WizardNameKey,
 } from '../wizard-store';
 
-export function WizardPage() {
+interface WizardPageProps {
+  /**
+   * Back to the first screen of a new install (plan 56). Given when the wizard was opened from it:
+   * the first step then has a Back button, so the Owner who chose "new shop" by mistake can still
+   * bring his data back.
+   */
+  onBack?: (() => void) | undefined;
+}
+
+export function WizardPage({ onBack }: WizardPageProps = {}) {
   const { l10n } = useLocalization();
   const step = useWizardStore((state) => state.step);
   const values = useWizardStore((state) => state.values);
@@ -173,6 +182,14 @@ export function WizardPage() {
       setStep(0);
     },
     step === 1,
+  );
+  // On the first step, Esc goes back to the first screen of a new install (plan 56).
+  useEscape(
+    'leave',
+    () => {
+      onBack?.();
+    },
+    step === 0 && onBack !== undefined,
   );
   const navigation = useFormNavigation(goOn);
   const steps = [
@@ -342,10 +359,24 @@ export function WizardPage() {
                   </>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  {step === 0 ? (
+                  {step === 0 && onBack === undefined ? (
                     <Localized id="auth-wizard-later">
                       <span className="type-body text-ink-muted" />
                     </Localized>
+                  ) : step === 0 ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        shortcut={SHORTCUTS.back}
+                        onClick={() => {
+                          onBack?.();
+                        }}
+                      >
+                        <Localized id="common-back" />
+                      </Button>
+                      <Localized id="auth-wizard-later">
+                        <span className="type-body text-ink-muted" />
+                      </Localized>
+                    </div>
                   ) : (
                     <Button
                       shortcut={SHORTCUTS.back}

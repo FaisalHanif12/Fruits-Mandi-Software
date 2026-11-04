@@ -10,6 +10,7 @@ pub mod print_report;
 pub mod print_types;
 #[cfg(windows)]
 mod print_windows;
+pub mod profile;
 pub mod refs;
 pub mod runner;
 pub mod sheet_pack;
@@ -29,11 +30,21 @@ pub const MAIN_WINDOW: &str = "main";
 /// Plugins are only the five of Tech Stack 2. Single instance comes first, so a
 /// second launch only brings the first window to the front (NFR-REL-9).
 pub fn run() -> tauri::Result<()> {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    // The developer profile (plan 56 R5): a bad MANDI_PROFILE name stops the app here, before
+    // anything is opened. It never falls back to the real data.
+    let profile = profile::current()?;
+    let mut builder = tauri::Builder::default();
+    if profile::uses_single_instance(profile.as_deref()) {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             focus_main_window(app);
-        }))
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        }));
+    }
+    builder
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_filename(profile::window_state_file(profile.as_deref()))
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
@@ -42,7 +53,7 @@ pub fn run() -> tauri::Result<()> {
             if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
                 webview2::apply(&window)?;
             }
-            let data_dir = app.path().app_data_dir()?;
+            let data_dir = profile::app_data_dir(app.handle())?;
             start_logging(app, &data_dir);
             // Never fails: a damaged or unupgradable data file is kept in the state, and the
             // screen learns of it through app_data_status (NFR-REL-6, NFR-REL-7).
@@ -296,6 +307,10 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::backup::backup_settings_set,
         commands::backup::backup_key_setup,
         commands::backup::backup_key_confirm,
+        // Plan 56, restore on a new computer (append-only block).
+        commands::backup_first_run::backup_first_run_list,
+        commands::backup_first_run::backup_first_run_preview,
+        commands::backup_first_run::backup_first_run_restore,
         // Run B, plan 20 (append-only block).
         commands::reports_engine::reports_catalog,
         commands::reports_engine::reports_run,

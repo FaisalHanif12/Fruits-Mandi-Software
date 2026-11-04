@@ -24,6 +24,9 @@ const MANIFEST_LIMIT: usize = 1024 * 1024;
 /// scrypt work factor (`N = 2^15`, 32 MiB). The key has 120 bits of chance, so a slow guess
 /// check adds nothing, and a backup must not wait seconds for it on a small computer.
 pub const WORK_FACTOR: u8 = 15;
+/// The biggest database a manifest may claim: 1 TiB. A real shop is under 2 GB (NFR-SCL-4), so a
+/// claim above this is a lie, and it is refused as a damaged copy, not as a full disk.
+pub const MAX_PLAIN_SIZE: u64 = 1 << 40;
 /// zstd level 3: fast and about as small as the data allows.
 const ZSTD_LEVEL: i32 = 3;
 
@@ -126,8 +129,23 @@ fn seal_to(
 /// not match its checksum; `ERR_BACKUP_NOT_FOUND` when the file is not there. Nothing is
 /// written to `out_db` unless everything is right.
 pub fn open(bundle: &Path, key: &BackupKey, out_db: &Path) -> Result<Embedded, BackupError> {
+    open_checked(bundle, key, out_db, &|_| Ok(()))
+}
+
+/// Like [`open`], and calls `check` with the manifest as soon as it is read, before the first
+/// byte of the database is written. The caller refuses there a copy that needs more room than the
+/// disk has (NFR-REL-10). Whatever `check` returns is returned, and nothing is written.
+///
+/// # Errors
+/// Those of [`open`], and the error of `check`.
+pub fn open_checked(
+    bundle: &Path,
+    key: &BackupKey,
+    out_db: &Path,
+    check: &dyn Fn(&Embedded) -> Result<(), BackupError>,
+) -> Result<Embedded, BackupError> {
     let partial = partial_path(out_db);
-    let result = open_to(bundle, key, &partial).and_then(|embedded| {
+    let result = open_to(bundle, key, &partial, check).and_then(|embedded| {
         fs::rename(&partial, out_db).map_err(|e| BackupError::io("unpack", &e))?;
         Ok(embedded)
     });
@@ -146,11 +164,19 @@ fn map_decrypt(error: DecryptError) -> BackupError {
             "the key does not open the backup",
         )
         .on_field("key"),
+        DecryptError::ExcessiveWork { .. } => {
+            corrupt("the bundle asks for more key work than any bundle of this app")
+        }
         other => corrupt(format!("age: {other}")),
     }
 }
 
-fn open_to(bundle: &Path, key: &BackupKey, partial: &Path) -> Result<Embedded, BackupError> {
+fn open_to(
+    bundle: &Path,
+    key: &BackupKey,
+    partial: &Path,
+    check: &dyn Fn(&Embedded) -> Result<(), BackupError>,
+) -> Result<Embedded, BackupError> {
     let file = File::open(bundle).map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             BackupError::new(BackupCode::ErrBackupNotFound, "bundle is not there")
@@ -162,7 +188,11 @@ fn open_to(bundle: &Path, key: &BackupKey, partial: &Path) -> Result<Embedded, B
     if !decryptor.is_scrypt() {
         return Err(corrupt("the bundle is not locked with a key"));
     }
-    let identity = age::scrypt::Identity::new(key.passphrase());
+    // The header says how much work the key check needs, and the decryptor does that work BEFORE
+    // it knows the key is wrong. This app made the bundle itself with `WORK_FACTOR`, so a header
+    // that asks for more is not ours and is refused at once (NFR-REL-5, NFR-REL-6).
+    let mut identity = age::scrypt::Identity::new(key.passphrase());
+    identity.set_max_work_factor(WORK_FACTOR);
     let reader = decryptor
         .decrypt(iter::once(&identity as &dyn age::Identity))
         .map_err(map_decrypt)?;
@@ -191,6 +221,11 @@ fn open_to(bundle: &Path, key: &BackupKey, partial: &Path) -> Result<Embedded, B
     let embedded: Embedded =
         serde_json::from_slice(&manifest).map_err(|e| corrupt(format!("manifest: {e}")))?;
 
+    if embedded.inner.plain_size > MAX_PLAIN_SIZE {
+        return Err(corrupt("the manifest claims an impossible database size"));
+    }
+    // Room first: nothing of the database is written before the caller says there is space.
+    check(&embedded)?;
     if let Some(dir) = partial.parent() {
         fs::create_dir_all(dir).map_err(|e| BackupError::io("unpack", &e))?;
     }
@@ -201,12 +236,19 @@ fn open_to(bundle: &Path, key: &BackupKey, partial: &Path) -> Result<Embedded, B
         BackupKind::Local,
     );
     let mut buffer = vec![0_u8; CHUNK];
+    let mut written: u64 = 0;
     loop {
         let count = plain
             .read(&mut buffer)
             .map_err(|e| corrupt(format!("data: {e}")))?;
         if count == 0 {
             break;
+        }
+        // The manifest says how big the database is. A bundle that unpacks to more is stopped
+        // at once, not after its last byte.
+        written = written.saturating_add(u64::try_from(count).unwrap_or(u64::MAX));
+        if written > embedded.inner.plain_size {
+            return Err(corrupt("the data is longer than its manifest says"));
         }
         if let Some(chunk) = buffer.get(..count) {
             out.write_all(chunk)
@@ -237,6 +279,7 @@ mod tests {
             created_at: "2026-10-10T09:00:00.000Z".into(),
             app_version: "test".into(),
             schema_version: 6,
+            chain_key: None,
             inner: InnerManifest {
                 plain_blake3: crate::io::hash_file(plain).unwrap(),
                 plain_size: fs::metadata(plain).unwrap().len(),

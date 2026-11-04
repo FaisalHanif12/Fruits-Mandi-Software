@@ -623,7 +623,7 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
       fail({
         code: 'ERR_DATE_CLOSED',
         field: 'opening_date',
-        values: { closed_up_to: '09-10-2026' },
+        values: { closed_up_to: '09-10-2026', today: '10-10-2026', today_open: 1 },
       }),
     );
     await renderApp('/index/accounts/new');
@@ -642,7 +642,11 @@ describe.each(LANGUAGES)('the account form (%s)', (language) => {
     });
     expect(
       visible(document.getElementById(date.getAttribute('aria-describedby') ?? '')?.textContent),
-    ).toBe(message(language, 'err-date-closed', { closed_up_to: '09-10-2026' }));
+    ).toBe(message(language, 'accounts-opening-closed-short'));
+    // Not the line that asks for a date after the closed one (plan 53): the way out is offered below.
+    expect(visible(document.body.textContent)).not.toContain(
+      message(language, 'err-date-closed', { closed_up_to: '09-10-2026' }),
+    );
     expect(date.value).toBe('10-10-2026');
   });
 

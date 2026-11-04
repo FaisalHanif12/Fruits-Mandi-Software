@@ -119,7 +119,17 @@ masters-expense-head-empty = { masters-expense-head-title } is empty
 masters-staff-title = Staff list
 
 # review: pending
-masters-staff-help = Munshis, collectors and labourers.
+masters-staff-help = Munshis, collectors and labourers. An active munshi prints in every header.
+
+# The فعال / غیر فعال switch on each row and in the form of a staff member (PRD v1.23).
+# review: pending
+masters-active-switch-label = Active or inactive
+
+# review: pending
+masters-active-failed = The change could not be saved. Try again.
+
+# review: pending
+masters-staff-active-note = An active munshi prints in every header. An inactive one does not.
 
 # review: pending
 masters-staff-new = New staff member

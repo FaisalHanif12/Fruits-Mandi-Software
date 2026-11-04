@@ -68,7 +68,6 @@ fn golden_list() -> CollectionList {
     CollectionList {
         group_totals: Vec::new(),
         date: "2026-10-10".into(),
-        weekday: 5,
         total_count: 2,
         offset: 0,
         limit: 100,
@@ -107,7 +106,6 @@ fn grouped_list() -> CollectionList {
     CollectionList {
         group_totals: Vec::new(),
         date: "2026-10-10".into(),
-        weekday: 5,
         total_count: 3,
         offset: 0,
         limit: 100,
@@ -429,7 +427,6 @@ fn an_empty_list_has_no_groups_and_a_zero_total() {
     let list = CollectionList {
         group_totals: Vec::new(),
         date: "2026-10-10".into(),
-        weekday: 5,
         total_count: 0,
         offset: 0,
         limit: 100,

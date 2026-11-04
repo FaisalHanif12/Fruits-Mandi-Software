@@ -85,7 +85,7 @@ accounts-show-inactive = غیر فعال بھی دکھائیں
 # review: pending
 accounts-more-columns = مزید کالم
 
-## Types and weekdays.
+## Types.
 
 # review: pending
 accounts-type-all = سب
@@ -111,27 +111,6 @@ accounts-type-money_lent = { -adhar-raqam }
 
 # review: pending
 accounts-type-other = دیگر
-
-# review: pending
-accounts-weekday-sat = ہفتہ
-
-# review: pending
-accounts-weekday-sun = اتوار
-
-# review: pending
-accounts-weekday-mon = پیر
-
-# review: pending
-accounts-weekday-tue = منگل
-
-# review: pending
-accounts-weekday-wed = بدھ
-
-# review: pending
-accounts-weekday-thu = جمعرات
-
-# review: pending
-accounts-weekday-fri = جمعہ
 
 ## List columns and totals (PRD FR-10.5).
 
@@ -261,9 +240,6 @@ accounts-field-credit-limit = ادھار کی حد
 
 # review: pending
 accounts-field-collector = { -agrahi } والا
-
-# review: pending
-accounts-field-weekday = { -agrahi } کا دن
 
 # review: pending
 accounts-field-linked = منسلک کھاتہ
@@ -423,17 +399,18 @@ openings-none-with-help = پہلے بقایا لکھنے کے لیے «ابھی 
 # review: pending
 openings-show-all-button = تمام کھاتے دکھائیں
 
-## An opening balance needs an open day (plan 44, PRD FR-10.11): an account itself saves on any day.
+## بدلی ہوئی ابتدائی رقم کے لیے کھلا دن چاہیے (منصوبہ 44، 53)۔ نیا کھاتہ اپنی ابتدائی رقم کسی بھی دن لگا سکتا ہے،
+## اس لیے یہ پیغام صرف تب آتا ہے جب پہلے سے موجود کھاتے کی ابتدائی رقم بدلی جائے۔
 
 # review: pending
-accounts-opening-closed-today-open = یہ تاریخ بند ہو چکی ہے، اس لیے ابتدائی رقم اس پر نہیں لگ سکتی۔ کھاتہ کسی بھی دن محفوظ ہو جاتا ہے، لیکن ابتدائی رقم کھلے دن کی تاریخ پر لگتی ہے۔
+accounts-opening-closed-today-open = اس ابتدائی رقم کی تاریخ بند دن کی ہے، اس لیے وہاں اسے بدلا نہیں جا سکتا۔ آج کی تاریخ لگائیں، جو کھلی ہے، یا دن دوبارہ کھولیں۔
 
 # review: pending
-accounts-opening-closed-today-closed = آج کا دن بھی بند ہے، اس لیے ابتدائی رقم ابھی نہیں لگ سکتی۔ کھاتہ بغیر ابتدائی رقم کے محفوظ ہو سکتا ہے، یا دن کھول کر رقم لگائی جا سکتی ہے۔
+accounts-opening-closed-today-closed = یہ دن بند ہے، اس لیے یہ ابتدائی رقم ابھی بدلی نہیں جا سکتی۔ بدلنے کے لیے دن دوبارہ کھولیں۔
+
+# review: pending
+accounts-opening-closed-short = یہ تاریخ بند ہے۔
 
 # $today: today's date, DD-MM-YYYY.
 # review: pending
 accounts-opening-closed-use-today = آج کی تاریخ ({ $today }) لگائیں
-
-# review: pending
-accounts-opening-closed-without = ابتدائی رقم کے بغیر محفوظ کریں

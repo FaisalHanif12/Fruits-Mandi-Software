@@ -43,7 +43,7 @@ fn form(kind: &str, pukhta: bool, ur: &str, en: &str, phone: &str, credit: bool)
         "city_id": null, "adda_id": null, "phone1": phone, "phone2": "", "address": "",
         "linked_account_id": null, "opening_date": "", "opening_dr": "", "opening_cr": "",
         "opening_is_advance": false, "credit_allowed": credit, "credit_limit": "",
-        "default_marka_id": null, "collector_staff_id": null, "collection_weekday": null,
+        "default_marka_id": null, "collector_staff_id": null,
         "is_active": true, "note": "", "tag": ""
     })
 }

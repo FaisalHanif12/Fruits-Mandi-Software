@@ -2,7 +2,23 @@
 // finding 2). Error values are display units, never paisa.
 
 import { describe, expect, it } from 'vitest';
-import { messageVars } from '../../src/shared/api';
+import { messageVars as messageVarsWithReason } from '../../src/shared/api';
+
+type Vars = ReturnType<typeof messageVarsWithReason>;
+
+/**
+ * The variables a message reads, without `reason`. Every error has `reason`, empty when the backend
+ * sends none, so the out-of-range message reads its plain range and Fluent never reports a missing
+ * variable; each test below checks that default, and the `reason` tests at the end check the rest.
+ */
+function messageVars(
+  values: Parameters<typeof messageVarsWithReason>[0],
+  grouping: Parameters<typeof messageVarsWithReason>[1],
+): Vars {
+  const { reason, ...rest } = messageVarsWithReason(values, grouping);
+  expect(reason).toBe('');
+  return rest;
+}
 
 describe('messageVars', () => {
   it('groups the money limit, 10,00,00,00,000 rupees, in both groupings', () => {
@@ -127,5 +143,13 @@ describe('messageVars', () => {
       bikri_number: '7',
       bikri_number_zero: 'no',
     });
+  });
+  it('passes the reason the backend sends (the cloud address) as it is, and is empty with none', () => {
+    expect(messageVarsWithReason({ reason: 'https' }, 'lakh')).toEqual({ reason: 'https' });
+    expect(messageVarsWithReason({ reason: 'path', max: 5 }, 'international')).toEqual({
+      reason: 'path',
+      max: '5',
+    });
+    expect(messageVarsWithReason({}, 'international')).toEqual({ reason: '' });
   });
 });

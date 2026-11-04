@@ -25,17 +25,22 @@ pub const MAX_INPUT_TOKENS: u32 = 90_000;
 /// one-call help and the whole-year estimate. It was 9,500 in v1.2: the tools list the sort and
 /// where words of every report and view, and the tool `app_help` comes with the help button.
 pub const MAX_PREFIX_TOKENS: u32 = 11_000;
-/// Seconds one model call may take. 30 since Umar's answer of 02-11-2026 (plan 51 B3): the model
-/// takes 7 to 9 seconds a call on his questions, and 15 cut off a slow one while it was answering.
-pub const CALL_TIMEOUT_SECS: u64 = 30;
-/// Seconds one whole question may take (NFR-AI-3: 90 since plan 52; 60 before).
-pub const QUESTION_TIMEOUT_SECS: u64 = 90;
+/// Seconds one try of a model call may wait for the reply (plan 54 S5, plan 55 §3): the first try
+/// is cut at 12 s, as the model takes 4 to 9 s a call on a good line, and it is tried once more.
+/// The reply of the model comes whole, so this is the wait for the first byte of it.
+pub const FIRST_BYTE_SECS: u64 = 12;
+/// Seconds after which the last call of a question goes out with the tools off, and answers from
+/// what has been read (plan 55 §3).
+pub const TOOLS_OFF_AT_SECS: u64 = 20;
+/// Seconds one whole question may take (plan 55 §3: 25; it was 90, NFR-AI-3). At 25 s the panel
+/// shows what was read as plain tables (outcome `time_limit`), and no model call is made.
+pub const QUESTION_TIMEOUT_SECS: u64 = 25;
 /// Milliseconds to wait before the one retry of a call that failed on the network, on 429 or on a
 /// 5xx (plan 52 item 6). The client may say another time (the tests say none).
 pub const RETRY_WAIT_MILLIS: u64 = 1_500;
 /// Seconds of the question that must be left for a retry to be tried. A retry that cannot finish
 /// is not started.
-pub const RETRY_MIN_LEFT_SECS: u64 = 20;
+pub const RETRY_MIN_LEFT_SECS: u64 = 6;
 /// Bytes of JSON of one tool result; rows are dropped from the end to fit.
 pub const MAX_RESULT_BYTES: usize = 16_000;
 /// Words of an answer, counted after the references are filled, each reference as one word.

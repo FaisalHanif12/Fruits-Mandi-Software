@@ -1,0 +1,48 @@
+{
+  "app_schema_version": 18,
+  "checks": [
+    {
+      "name": "opens",
+      "ok": true
+    },
+    {
+      "name": "checksum",
+      "ok": true
+    },
+    {
+      "name": "integrity",
+      "ok": true
+    },
+    {
+      "name": "counts",
+      "ok": true
+    },
+    {
+      "name": "balanced",
+      "ok": true
+    },
+    {
+      "name": "chains",
+      "ok": true
+    }
+  ],
+  "copy": {
+    "kind": "usb",
+    "name": "mandi-20261010T090000000Z.mbk"
+  },
+  "created_at": "2026-10-10T09:00:00.000Z",
+  "needs_upgrade": false,
+  "schema_version": 18,
+  "size_bytes": 0,
+  "totals": {
+    "accounts": 17,
+    "audit_rows": 5,
+    "bikri_entries": 0,
+    "cash_paisa": 0,
+    "credit_paisa": 0,
+    "debit_paisa": 0,
+    "journal_entries": 0,
+    "last_entry_date": null,
+    "vouchers": 0
+  }
+}

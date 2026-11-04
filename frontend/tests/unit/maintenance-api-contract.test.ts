@@ -124,6 +124,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
       'limit',
       'months',
       'offset',
+      'partners_locked',
       'rows',
       'total_count',
     ]);

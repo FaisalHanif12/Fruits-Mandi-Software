@@ -237,7 +237,7 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.collection_weekday, a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag,
+        a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag,
         a.is_pukhta_party
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
@@ -318,7 +318,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             // The linked account is an account too, so it carries its tag (PRD 10.2).
             let mut linked = optional_ref(r, 23, Some(24))?;
             if let Some(linked) = linked.as_mut() {
-                linked.tag = r.get(46)?;
+                linked.tag = r.get(45)?;
             }
             linked
         },
@@ -330,20 +330,19 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
         credit_limit_paisa: credit_limit.map(paisa).transpose()?,
         default_marka: marka_ref(r)?,
         collector: optional_ref(r, 36, None)?,
-        collection_weekday: r.get(39)?,
-        is_system: r.get(40)?,
+        is_system: r.get(39)?,
         can_take_opening: can_take_opening(
-            &r.get::<_, String>(44)?,
+            &r.get::<_, String>(43)?,
             &r.get::<_, String>(4)?,
             &r.get::<_, String>(2)?,
-            r.get(41)?,
+            r.get(40)?,
         ),
-        is_pukhta_khata: r.get(41)?,
-        is_pukhta_party: r.get(47)?,
-        is_active: r.get(42)?,
-        note: r.get::<_, Option<String>>(43)?.unwrap_or_default(),
+        is_pukhta_khata: r.get(40)?,
+        is_pukhta_party: r.get(46)?,
+        is_active: r.get(41)?,
+        note: r.get::<_, Option<String>>(42)?.unwrap_or_default(),
         balance: Balance::ZERO,
-        tag: r.get(45)?,
+        tag: r.get(44)?,
     })
 }
 

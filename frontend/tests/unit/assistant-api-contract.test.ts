@@ -80,10 +80,15 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.assistantAsk(real.REPLY_ESTIMATE_WHAT_IF_REQUEST);
     await api.assistantAsk(real.REPLY_ESTIMATE_YEAR_END_REQUEST);
     await api.assistantAsk(real.REPLY_ANSWERED_PERCENT_MORE_REQUEST);
+    await api.assistantAsk(real.REPLY_NOT_FOUND_OTHER_ROLE_REQUEST);
     await api.assistantAsk(real.REPLY_GENERAL_ADVICE_REQUEST);
     await api.assistantAsk(real.REPLY_HELP_ROUTE_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST);
     await api.assistantAsk(real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST);
+    await api.assistantAsk(real.REPLY_TIME_LIMIT_REQUEST);
+    await api.assistantAsk(real.REPLY_PRINT_R5_RANGE_REQUEST);
+    await api.assistantAsk(real.REPLY_PRINT_R35_DAY_REQUEST);
+    await api.assistantAsk(real.REPLY_PRINT_R13_LEDGER_REQUEST);
     await api.assistantQuick(real.QUICK_CASH_IN_HAND_REQUEST);
     await api.assistantPick(real.PICK_MATCH_REQUEST);
     await api.assistantPick(real.PICK_PARTNER_CODE_REQUEST);
@@ -100,10 +105,15 @@ describe('each wrapper sends the command and `{ input }`', () => {
       ['assistant_ask', { input: real.REPLY_ESTIMATE_WHAT_IF_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ESTIMATE_YEAR_END_REQUEST }],
       ['assistant_ask', { input: real.REPLY_ANSWERED_PERCENT_MORE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_NOT_FOUND_OTHER_ROLE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_GENERAL_ADVICE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_HELP_ROUTE_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_CALLS_REQUEST }],
       ['assistant_ask', { input: real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_TIME_LIMIT_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_PRINT_R5_RANGE_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_PRINT_R35_DAY_REQUEST }],
+      ['assistant_ask', { input: real.REPLY_PRINT_R13_LEDGER_REQUEST }],
       ['assistant_quick', { input: real.QUICK_CASH_IN_HAND_REQUEST }],
       ['assistant_pick', { input: real.PICK_MATCH_REQUEST }],
       ['assistant_pick', { input: real.PICK_PARTNER_CODE_REQUEST }],
@@ -148,11 +158,16 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
   ['help with a main screen', real.REPLY_HELP_ROUTE],
   ['which one', real.REPLY_WHICH_ONE],
   ['not found', real.REPLY_NOT_FOUND],
+  ['not found in another role', real.REPLY_NOT_FOUND_OTHER_ROLE],
   ['need dates', real.REPLY_NEED_DATES],
   ['need party', real.REPLY_NEED_PARTY],
   ['not understood', real.REPLY_NOT_UNDERSTOOD],
   ['not understood after the calls', real.REPLY_NOT_UNDERSTOOD_CALLS],
   ['not understood after the tokens, with a table', real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE],
+  ['out of time, with the table that was read', real.REPLY_TIME_LIMIT],
+  ['how to print a range of buyer bills', real.REPLY_PRINT_R5_RANGE],
+  ['how to print a buyer’s day slip', real.REPLY_PRINT_R35_DAY],
+  ['how to print a ledger', real.REPLY_PRINT_R13_LEDGER],
   ['outside books', real.REPLY_OUTSIDE_BOOKS],
   ['change refused', real.REPLY_CHANGE_REFUSED],
   ['checks failed', real.REPLY_CHECKS_FAILED],
@@ -169,20 +184,38 @@ const REPLIES: readonly (readonly [string, AskReply])[] = [
 
 describe('the answers carry exactly the fields of the generated types', () => {
   it.each(REPLIES)('AskReply: %s', (_name, reply) => {
-    expect(keysOf(reply)).toEqual([
-      'answer',
-      'conversation_id',
-      'count_today',
-      'entry_route',
-      'failure',
-      'limit',
-      'locked',
-      'more_options',
-      'options',
-      'outcome',
-      'question_id',
-      'stop_reason',
-    ]);
+    // `asked_role` and `found_as` are there only for a not_found (plan 52 Section 8), the second only
+    // when the name is another role's.
+    const optional = [
+      ...(reply.asked_role === undefined ? [] : ['asked_role']),
+      ...(reply.found_as === undefined ? [] : ['found_as']),
+    ];
+    expect(keysOf(reply)).toEqual(
+      [
+        'answer',
+        'conversation_id',
+        'count_today',
+        'entry_route',
+        'failure',
+        'limit',
+        'locked',
+        'more_options',
+        'options',
+        'outcome',
+        'question_id',
+        'stop_reason',
+        ...optional,
+      ].sort(),
+    );
+    if (reply.asked_role !== undefined) expect(reply.outcome).toBe('not_found');
+    if (reply.found_as !== undefined) expect(reply.asked_role).toBeDefined();
+  });
+
+  it('a not_found says which role was asked, and the other-role one names the role he is', () => {
+    expect(real.REPLY_NOT_FOUND.asked_role).toBe('any');
+    expect(real.REPLY_NOT_FOUND.found_as).toBeUndefined();
+    expect(real.REPLY_NOT_FOUND_OTHER_ROLE.asked_role).toBe('seller');
+    expect(real.REPLY_NOT_FOUND_OTHER_ROLE.found_as?.role).toBe('buyer');
   });
 
   it('an Answer: parts, tables, charts, the estimate, advice, sources, differences, next, read_at', () => {
@@ -197,6 +230,7 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'differences',
         'estimate',
         'general_advice',
+        'how',
         'next',
         'parts',
         'read_at',
@@ -319,11 +353,83 @@ describe('the answers carry exactly the fields of the generated types', () => {
     expect(real.REPLY_NOT_UNDERSTOOD_TOKENS_TABLE.stop_reason).toBe('tokens');
   });
 
+  it('a question that ran out of time is its own outcome, with the plain tables of what was read and no stop_reason (plan 55)', () => {
+    const reply = real.REPLY_TIME_LIMIT;
+    expect(reply.outcome).toBe('time_limit');
+    expect(reply.stop_reason).toBeNull();
+    expect(reply.failure).toBeNull();
+    expect(reply.answer?.parts).toEqual([]);
+    expect(reply.answer?.tables.length).toBeGreaterThan(0);
+    expect(reply.answer?.charts).toEqual([]);
+    expect(reply.answer?.estimate).toBeNull();
+  });
+
   it('the stored key never appears: the status holds only its last four characters', () => {
     for (const status of [real.STATUS_ON, real.KEY_SAVE, real.KEY_REMOVE, real.SETTINGS_SET]) {
       expect(JSON.stringify(status)).not.toMatch(/sk-/);
       if (status.key_last4 !== null) expect(status.key_last4).toHaveLength(4);
     }
+  });
+});
+
+describe('a how-to answer (plan 54 S2)', () => {
+  const printReplies = [
+    ['R5', real.REPLY_PRINT_R5_RANGE],
+    ['R35', real.REPLY_PRINT_R35_DAY],
+    ['R13', real.REPLY_PRINT_R13_LEDGER],
+  ] as const;
+
+  it('is an answered reply with the how-to words, no table, steps that end with F9 and a link for each report', () => {
+    for (const [report, reply] of printReplies) {
+      expect(reply.outcome, report).toBe('answered');
+      const answer = reply.answer;
+      if (answer === null) throw new Error('no answer');
+      expect(
+        answer.parts.every((part) => part.type === 'text'),
+        report,
+      ).toBe(true);
+      expect(answer.tables, report).toEqual([]);
+      expect(answer.how.at(0)?.id, report).toBe('assistant-how-open-report');
+      expect(answer.how.at(-1)?.id, report).toBe('assistant-how-press-print');
+      // A link only: nothing was read, so `result_id` is empty and the filters are the ones to set.
+      expect(answer.sources.length, report).toBeGreaterThan(0);
+      for (const source of answer.sources) {
+        expect(source.kind, report).toBe('report');
+        expect(source.result_id, report).toBe('');
+      }
+      expect(answer.sources[0]?.kind === 'report' && answer.sources[0].id, report).toBe(report);
+    }
+  });
+
+  it('names the party, the role and the dates the steps must set, as ISO text the panel shows as DD-MM-YYYY', () => {
+    const steps = real.REPLY_PRINT_R5_RANGE.answer?.how ?? [];
+    const party = steps.find((step) => step.id === 'assistant-how-set-party');
+    expect(party?.args.map((arg) => arg.name)).toEqual(['role', 'party', 'code']);
+    const dates = steps.find((step) => step.id === 'assistant-how-set-dates');
+    expect(dates?.args).toEqual([
+      { name: 'from', value: { type: 'text', text: '2026-09-01' } },
+      { name: 'to', value: { type: 'text', text: '2026-09-30' } },
+    ]);
+    const day = real.REPLY_PRINT_R35_DAY.answer?.how.find(
+      (step) => step.id === 'assistant-how-set-day',
+    );
+    expect(day?.args).toEqual([{ name: 'day', value: { type: 'text', text: '2026-10-10' } }]);
+  });
+
+  it('gives a second button when a second report fits (the range of bills also has the ledger)', () => {
+    const ids = (real.REPLY_PRINT_R5_RANGE.answer?.sources ?? []).map((source) =>
+      source.kind === 'report' ? source.id : source.kind,
+    );
+    expect(ids).toEqual(['R5', 'R13']);
+  });
+
+  it('the understood step of a print question carries its kind', () => {
+    expect(real.STEPS_PRINT).toEqual([
+      {
+        id: 'assistant-step-understood',
+        args: [{ name: 'kind', value: { type: 'text', text: 'print' } }],
+      },
+    ]);
   });
 });
 
@@ -363,6 +469,7 @@ function idsIn(reply: AskReply): string[] {
     for (const source of answer.sources) {
       if (source.kind === 'report' || source.kind === 'analytics') ids.push(source.label_id);
     }
+    ids.push(...answer.how.map((step) => step.id));
     for (const difference of answer.differences) {
       ids.push(difference.figure_id, ...difference.places.map((place) => place.place_id));
     }
@@ -412,7 +519,7 @@ describe('every message ID the backend sends has words in both languages', () =>
         if (!bundles[language].hasMessage(id)) missing.add(id);
       }
     }
-    for (const id of [real.STEP_READING_REPORT.id]) {
+    for (const id of [real.STEP_READING_REPORT.id, ...real.STEPS_PRINT.map((step) => step.id)]) {
       if (!bundles[language].hasMessage(id)) missing.add(id);
     }
     expect([...missing]).toEqual([]);

@@ -30,7 +30,6 @@ function page(offset: number, groups: CollectionList['groups']): CollectionList 
   const count = groups.reduce((sum, group) => sum + group.buyers.length, 0);
   return {
     date: '2026-10-10',
-    weekday: 5,
     groups,
     group_totals: [],
     total_count: 5,

@@ -152,7 +152,6 @@ describe('each wrapper sends the command and the input of the backend', () => {
 
   it('assist_collection_list and vouchers_save_receipts_batch', async () => {
     const list: CollectionListInput = {
-      date: '10-10-2026',
       collector_staff_id: null,
       city_id: null,
       search: null,
@@ -194,7 +193,6 @@ describe('each wrapper sends the command and the input of the backend', () => {
       credit_limit: '',
       default_marka_id: null,
       collector_staff_id: null,
-      collection_weekday: null,
       is_active: true,
       note: '',
     };
@@ -263,9 +261,9 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
     expect(call).toHaveBeenLastCalledWith('assist_open_payables', {
       input: real.REQUEST_OPEN_PAYABLES_RAHIM,
     });
-    await api.assistCollectionList(real.REQUEST_COLLECTION_SATURDAY);
+    await api.assistCollectionList(real.REQUEST_COLLECTION_LIST);
     expect(call).toHaveBeenLastCalledWith('assist_collection_list', {
-      input: real.REQUEST_COLLECTION_SATURDAY,
+      input: real.REQUEST_COLLECTION_LIST,
     });
     await api.vouchersSaveReceiptsBatch(real.REQUEST_RECEIPTS_BATCH.rows);
     expect(call).toHaveBeenLastCalledWith('vouchers_save_receipts_batch', {

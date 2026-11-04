@@ -1294,7 +1294,6 @@ fn attack_03_a_record_name_can_not_hold_braces_or_markup() {
             credit_limit: String::new(),
             default_marka_id: None,
             collector_staff_id: None,
-            collection_weekday: None,
             is_active: true,
             note: String::new(),
             tag: String::new(),
@@ -1997,12 +1996,18 @@ fn attack_05_a_reply_that_stopped_early_or_for_another_reason_is_not_used() {
 
 #[test]
 fn attack_05_a_reply_of_a_megabyte_never_reaches_the_screen() {
-    // The real client refuses a body over this size before it reads it. A valid answer with a
-    // huge text (what a recorded client can deliver) fails the 130-word check twice.
+    // The real client refuses a body over this size before it reads it (client.rs). So the largest
+    // reply that can reach the checks is a little under it: a valid answer with a text of 100,000
+    // words (about 700 KB) fails the 130-word check twice. A text twice that size was only slower
+    // to check, and on a loaded machine it ran into the 25 s hard limit (plan 55 Section 3).
     assert_eq!(mandi_assistant::client::MAX_REPLY_BYTES, 1_000_000);
     let h = Harness::day();
-    let huge = answer("answer", &"کام ".repeat(250_000));
-    assert!(huge.len() > 1_000_000);
+    let huge = answer("answer", &"کام ".repeat(100_000));
+    assert!(
+        huge.len() > 650_000 && huge.len() < mandi_assistant::client::MAX_REPLY_BYTES,
+        "{} bytes",
+        huge.len()
+    );
     let (reply, requests) = ask(
         &h,
         "ikram",
@@ -2232,7 +2237,10 @@ fn attack_06_a_failure_in_the_middle_of_a_question_ends_it_once_and_counts_it_on
             kind,
             http_status: status,
         };
-        // The call that failed is tried once more (plan 52 item 6), and fails again.
+        // The call that failed is tried once more (plan 52 item 6), and fails again. The first
+        // call found Akram, so the app read his party card by itself. A party card counts as read
+        // (plan 55 Section 3): the line is shown as slow, with the card and his checked balance.
+        // It is not an error.
         let client = RecordedClient::with_results(vec![
             Ok(tool_reply(&[find("ikram", "buyer")])),
             Err(failure),
@@ -2240,9 +2248,14 @@ fn attack_06_a_failure_in_the_middle_of_a_question_ends_it_once_and_counts_it_on
         ]);
         let before = reply_count(&h);
         let reply = ask_client(&h, "ikram ke total bakaya kitne hai", &client);
-        assert_eq!(reply.outcome, AskOutcome::Error, "{kind:?}");
+        assert_eq!(reply.outcome, AskOutcome::TimeLimit, "{kind:?}: {reply:#?}");
         assert_eq!(client.requests().len(), 3, "one retry, no more");
-        assert_eq!(reply.failure.map(|f| f.kind), Some(kind));
+        assert!(reply.failure.is_none(), "a slow line is not a failure");
+        let shown = format!("{:?}", reply.answer);
+        assert!(
+            shown.contains("Akram"),
+            "{kind:?}: the card that was read is shown: {reply:#?}"
+        );
         // The model answered once, so the question was used: counted once, not twice.
         assert_eq!(reply.count_today, before + 1, "{kind:?}");
         assert_app_still_free(&h);
@@ -2262,9 +2275,13 @@ impl ModelClient for TimeoutSpy {
 }
 
 #[test]
-fn attack_06_a_call_is_given_30_seconds_and_a_question_90() {
-    assert_eq!(limits::CALL_TIMEOUT_SECS, 30);
-    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 90);
+fn attack_06_a_try_is_given_12_seconds_and_a_question_25() {
+    // Plan 55 Section 3 (Umar: over 30 s has no purpose): one try waits 12 s for the model, the
+    // tools go off at 20 s, a whole question may take 25 s, and a retry needs 6 s left.
+    assert_eq!(limits::FIRST_BYTE_SECS, 12);
+    assert_eq!(limits::TOOLS_OFF_AT_SECS, 20);
+    assert_eq!(limits::QUESTION_TIMEOUT_SECS, 25);
+    assert_eq!(limits::RETRY_MIN_LEFT_SECS, 6);
     let h = Harness::day();
     let spy = TimeoutSpy {
         asked: Mutex::new(Vec::new()),
@@ -2273,14 +2290,16 @@ fn attack_06_a_call_is_given_30_seconds_and_a_question_90() {
     assert_eq!(reply.outcome, AskOutcome::Error);
     assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
     let asked = spy.asked.lock().unwrap().clone();
-    // A timeout is tried once more (20 s or more of the 90 are left), and the retry has its 30 s
-    // again because almost nothing was used.
+    // A timeout is tried once more (6 s or more of the 25 are left). The first try waits 12 s at
+    // most; the retry has the time that is left, never more than the question has.
     assert_eq!(asked.len(), 2, "{asked:?}");
     assert!(
-        asked
-            .iter()
-            .all(|t| *t <= Duration::from_secs(30) && *t > Duration::from_secs(29)),
-        "{asked:?}"
+        asked[0] <= Duration::from_secs(12) && asked[0] > Duration::from_secs(11),
+        "the first try: {asked:?}"
+    );
+    assert!(
+        asked[1] <= Duration::from_secs(25) && asked[1] >= asked[0],
+        "the retry: {asked:?}"
     );
     assert_app_still_free(&h);
 }
@@ -2323,32 +2342,41 @@ struct SlowClient {
 }
 
 impl ModelClient for SlowClient {
-    fn call(&self, _key: &str, _body: &Value, _timeout: Duration) -> Result<Reply, CallError> {
+    fn call(&self, _key: &str, _body: &Value, timeout: Duration) -> Result<Reply, CallError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
+        // As a real client: a reply later than the time it was given is a timeout.
+        if self.wait > timeout {
+            std::thread::sleep(timeout);
+            return Err(CallError::new(FailureKind::Timeout));
+        }
         std::thread::sleep(self.wait);
         Reply::from_json(&tool_reply(&[("tiles", json!({}))]))
     }
 }
 
 #[test]
-#[ignore = "slow: it waits 90 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_90_seconds"]
-fn attack_06_a_question_past_90_seconds_is_stopped_before_the_next_call() {
+#[ignore = "slow: it waits about 25 seconds on purpose; run: cargo test -p mandi-assistant --test robustness_assistant -- --ignored attack_06_a_question_past_25_seconds"]
+fn attack_06_a_question_past_25_seconds_is_stopped_with_what_was_read() {
+    // Plan 55 Section 3. Every call takes 10 s and asks for one more read. The third call goes out
+    // at 20 s with the tools off and has 5 s left; it does not come back in time. At 25 s the
+    // question ends with the tables that were read, and no fourth call is made.
     let h = Harness::day();
     let slow = SlowClient {
-        wait: Duration::from_secs(30),
+        wait: Duration::from_secs(10),
         calls: AtomicUsize::new(0),
     };
     let started = Instant::now();
     let reply = ask_client(&h, "ikram", &slow);
     let took = started.elapsed();
-    assert_eq!(reply.outcome, AskOutcome::Error, "{reply:#?}");
-    assert_eq!(reply.failure.map(|f| f.kind), Some(FailureKind::Timeout));
+    assert_eq!(reply.outcome, AskOutcome::TimeLimit, "{reply:#?}");
+    assert!(reply.failure.is_none(), "a slow line is not a failure");
+    assert!(reply.answer.is_some(), "what was read is shown");
     assert_eq!(
         slow.calls.load(Ordering::SeqCst),
         3,
         "the fourth call is never made"
     );
-    assert!(took < Duration::from_secs(100), "{took:?}");
+    assert!(took <= Duration::from_secs(26), "{took:?}");
     assert_app_still_free(&h);
 }
 
@@ -2597,7 +2625,6 @@ fn rich_buyer(w: &world::World) -> i64 {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: "SECRETACCOUNTNOTE".into(),
         tag: String::new(),

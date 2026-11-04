@@ -8,12 +8,13 @@ or writes the key.
 | File | What it is |
 |---|---|
 | `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (434 questions). Built, never edited by hand. |
+| `questions.tsv` | The bank (567 questions). Built, never edited by hand. |
 | `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
 | `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
 | `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
 | `oracle-keys.txt` | The facts the oracle gives (the `@key` of a question). Checked by a Rust test. |
 | `urdu-review.tsv` | The sheet for the Urdu reviewer, written by every run. |
+| `check-modes.mjs` | A scripted check of `--bank` and `--threads` (no model, no key, no cargo). |
 
 The oracle itself is Rust: `backend/crates/assistant/tests/robustness_year/` (`seed.rs` builds the books
 through the app's own save functions, `oracle.rs` asks the app's own reports and analytics).
@@ -41,6 +42,25 @@ Urdu and English twins in a group:
 | day, a party's day | 15 | "X ne aaj / kal / 18 September ko kya aur kitna khareeda (becha)": a buyer today, a buyer yesterday, a buyer on a date with two items, a seller yesterday, a seller on a date with two items. Each item's qty and amount and the day's total, all from the oracle (`buyer_day.*`, `seller_day.*`). A buyer's amount is the value or the value with commission and laga (`with_charges`); both are true figures of the app. |
 | nosuch, no such party | 14 | A made-up seller and a made-up buyer end in `not_found` with `asked_role`. A buyer asked as a seller ends in `not_found` with `asked_role=seller` and `found_as=buyer`; a seller asked as a buyer the reverse. A misspelled real seller (Raheem for Rahim) is still found, with his figures (category A). |
 
+A fourth facet, **print** (plan 54 Section 6, `facet=print`, 104 questions): "print X's sales for a period"
+for every row of the report map (a buyer, a seller, no party, a khata) and every period in words (aaj, kal,
+is mahine, pichle mahine, a named month, "1 se 15 October tak", pichle hafte), each in Roman Urdu, Urdu and
+English, the buyer cells also mixed; "akram ka bill nikalna" (two Akrams: which one) and a name nobody has.
+The expected report, party and dates are in the `figures` column as `print.report`, `print.party` or
+`print.seller`, `print.as_of` or `print.from` and `print.to`, and `print.steps`. The dates are the oracle's
+calendar (`@cal.today`, `@cal.last_month_start` ...), never typed; "last week" is the calendar week before
+this one, Monday to Sunday. The dates are not the bank's own rule: the oracle asks the app's period helper
+(`mandi_assistant::tools::period::compute`, `Kind::LastWeek`, the one behind the `period` tool). The report
+date shortcuts (FR-19.2) and the analytics period filter have no "last week"; the helper is the app's rule.
+"1 se 15 tak" with no month is the latest month where the 15th has come (today 05-11-2026: 1 to 15 October).
+
+Facet **U** (plan 55 gate 4, `facet=U`, 25 questions): Umar's own questions from his log, word for word with his
+spelling, each with its Urdu and English twin: "mujhay faisal ka khata batao?", "usman shirakat daar ka kitna
+hai abhi ?", the three sales-growth questions, "mujhay bikri add krne ka tareeka batao?", the market safar
+question and the two word orders of "faisal ki aj ki bikri ka print". In the year world Faisal is a buyer and
+the third partner is Usman (he was Partner C). His quick chips (total_dues, today_sales, party_ledger,
+sellers_payable) are checked against the oracle in `robustness_live.rs` with no model call.
+
 Worlds: `day`, `late`, `e59`, `e42`, `e34` (the PRD's), `year` (12 months, 369 بکری, today 05-11-2026) and
 `thin` (set up, no sale: the Owner's data today).
 
@@ -63,7 +83,34 @@ node scripts/ai-eval/run.mjs --misses       # ask again every miss and every que
                                             # and put the new rows in results.json (the score is of the whole bank)
 node scripts/ai-eval/run.mjs --only Q111,Q112 --merge   # the same for a list you give
 node scripts/ai-eval/run.mjs --results backend/target/ai-eval/results.json   # score a file again
+node scripts/ai-eval/run.mjs --threads 1    # the live run on one line (default 3; see below)
+node scripts/ai-eval/run.mjs --bank FILE --check   # another bank (a hidden one): the per-row rules only
+node scripts/ai-eval/run.mjs --bank FILE    # ... run live and scored the same way
+node scripts/ai-eval/run.mjs --oracle-dump out.json   # the oracle facts with values, and the names
+node scripts/ai-eval/check-modes.mjs        # --bank and --threads behave as written (no model, no key)
 ```
+
+**Threads.** The live run asks 3 questions at once by default (`--threads N`, 1 to 8), which takes the
+567 questions from about 90 minutes to about 30. Each question has its own copy of its books and its
+own conversation, and its time is the question's own (the clock starts when that question is asked).
+The rows come back in the order they finish; the scorer finds a row by its id. The provider may answer
+a little slower, or say it is busy, when several run at once: use `--threads 1` for a timing check on
+the quietest line. `cargo test -p mandi-assistant --test robustness_live a_scripted_run_gives_the_same_rows`
+proves, with a scripted model and no key, that 1, 3 and 4 threads give the same rows.
+
+**Another bank (`--bank FILE`).** Only the rules of each row apply (unique ids, a known follow-up, a
+question and an outcome, a known outcome, world and category, a section, no reference in a question,
+every `@key` a fact of the oracle). The size and mix rules, the frozen 110, the facets and the spec
+rebuild belong to the team bank and are skipped. The file needs the same columns as `questions.tsv`.
+The results, the misses, the summary and the Urdu review sheet go to
+`backend/target/ai-eval-<name of the file>/`, never into `backend/target/ai-eval/`.
+
+**The oracle dump (`--oracle-dump FILE`).** One offline test through cargo (no model, no key, no
+network). It writes JSON: `facts` (every key of `oracle-keys.txt` with its value, the rich year and the
+thin books), `parties` (id, code, role, control, Urdu and English names, tag, city), `items`,
+`partners` (with the share), `gardens`, `trips` (number, day, status, market), `trip_purchases` (trip,
+purchase number, day, item, qty), and `worlds.year` and `worlds.day` with the same lists for the PRD
+worked day. It builds the rich year twice, which takes a few minutes in a debug build.
 
 To write `oracle-keys.txt` again after changing the books or the oracle:
 
@@ -73,6 +120,23 @@ MANDI_ORACLE_MANIFEST="$PWD/scripts/ai-eval/oracle-keys.txt" \
 ```
 
 Tests that need no key (from `backend/`): `cargo test -p mandi-assistant --test robustness_live`.
+
+## The speed report (plan 54)
+
+Every run prints a SPEED block: for each category, and for the help and print questions, how many model
+calls a question needed (none, one, two, three or more), the share answered in one call or none (category A
+has a target of 70%), the share of help and print answered with no model call, the time of each stage
+(before the first call, call 1, call 2, call 3 and after, between calls, after the last call, the app's own
+tools, and the whole question when there is no model call), and the reasoning tokens of each call. The stage
+times come from `calls[].at_ms`, written by the harness. The block ends with the hard limit of plan 55: no
+question over 25 s, and local help or print over 3 s. `summary.json` keeps the same numbers (`speed`).
+
+## Slow and lost lines (plan 55 gate 6)
+
+`backend/crates/assistant/tests/robustness_slow_line.rs` puts a bad line in front of a scripted model: a call
+can be delayed or dropped. It checks the hard limits of plan 55 Section 3: no question over 25 s, the last
+call at 20 s with the tools off, what was read shown at 25 s (never an error), and no answer lost after a drop.
+The tests that really wait are `#[ignore]`d with their reason; the fast drop tests run every time.
 
 ## What a run writes
 
@@ -105,11 +169,43 @@ Loosened (each one asked for, or an honest second reading):
 Pending (plan 52 Section 8.2, lead, 03-11-2026):
 
 11. A question whose `filters` hold `asked_role=` or `found_as=` is **PENDING** while the reply has neither field
-    (`asked_role`, `found_as` at the top of the reply). It is neither a pass nor a miss: it is not in the
-    score, it is listed on its own, `--misses` asks it again, and the run cannot say "meets" while any is
-    pending. Once a field is there, `asked_role` must be the asked role, and `found_as` (a word, or a record
-    with `role`, `type`, `party_type` or `kind`) must be the role the name has; a made-up name must have no
+    (`asked_role`, `found_as` at the top of the reply) and its row comes from an older build. The harness marks
+    every row of a build that has the fields with `asked_role_field: true`; for such a row a `not_found` with no
+    `asked_role` is a miss, never pending. Pending is neither a pass nor a miss: it is not in the score, it is
+    listed on its own, `--misses` asks it again, and the run cannot say "meets" while any is pending. Once a
+    field is there, `asked_role` must be the asked role (seller, buyer, item, partner, garden, trip or any),
+    and `found_as` (`{key, id, role, name}`) must have the role the name has; a made-up name must have no
     `found_as`.
+
+    A name found in another role (N03 Faisal asked as a seller, N04 Karim asked as a buyer) leaves the
+    question waiting. The harness clicks his name (an `assistant_pick`, as the panel's "show his purchases"
+    button does) and keeps the reply before the click in the row as `first_reply`. The scorer judges the
+    outcome and the roles on `first_reply`, and the figures on the answer after the click: his purchases (a
+    buyer) or his sales (a seller), never the other. A source filtered to him in the other role, or no
+    answer after the click, is a miss.
+
+12. A print question is **PENDING** while the answer has no `how` key (plan 55 Section 7) and the row is not
+    marked `print_contract: true`. The button is `answer.sources[0]` (kind report: the report id, the party
+    or seller, the exact `from` and `to`, or `as_of` for the day slip R35); a shortcut instead of dates is a
+    miss. While pending, the button check is only a note. Once `answer.how` is in the reply it must hold the
+    steps, made from the button's own values: open-report (the same report), set-party (his real role, name and
+    code; none for a report with no party), set-day or set-dates (the same day or dates) and press-print last.
+    A print request answered as a change request is a miss.
+
+14. **Speed is part of "meets"** (plan 55 Section 3, lead 04-11-2026). "Meets" is plan 52 Section 2 and: the
+    speed budget by kind on the time the Owner waits (how-to, print, navigation, no such party, not in the
+    app: p50 1 s, p95 2 s; figures and lists: 5 s and 10 s; advice, forecasts and what-ifs: 10 s and 20 s; the
+    mixed and hard questions keep 6 s and 12 s); the hard limits (no question over 25 s, how-to, print and
+    navigation under 3 s); and category A answered in one call or none at least 70% of the time. The outcome
+    `time_limit` (a slow line ended at the limit with the tables that were read) is a safe end, not an
+    answer.
+
+13. **Every button against the data** (plan 55 gate 3). The harness opens each report or view an answer offers as
+    a button, with the button's own filters, through the same backend command the screen uses (a party card
+    opens his ledger R13), and writes the figures it holds into the row (`buttons`). A figure of the answer
+    (or, for a calculated figure, the inputs of its working; a number of the question is left out) that is not
+    in what the buttons open is a miss: a wrong place or wrong filters. A button that fails to open is a miss.
+    The dashboard tiles are not run: an answer whose only button is the tiles is a note, not checked.
 
 Tightened:
 

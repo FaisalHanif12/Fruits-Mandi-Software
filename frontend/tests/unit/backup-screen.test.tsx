@@ -902,6 +902,8 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
         refused(
           { code: 'ERR_REQUIRED', field: 'usb_folder' },
           { code: 'ERR_REQUIRED', field: 'cloud_bucket' },
+          // The cloud address, refused with the reason the backend's own refusal carries (below).
+          { code: 'ERR_OUT_OF_RANGE', field: 'cloud_endpoint', values: { reason: 'https' } },
         ),
       );
       await user.click(
@@ -926,6 +928,25 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       expect((await label('backup-set-endpoint')).value).toBe('https://x.example');
       // The same problems the backend's own refused request carries are all drawn.
       expect(SETTINGS_REFUSED.errors.map((item) => item.field)).toContain('closing_time');
+      // The cloud address says why it was refused, in the words of the reason the backend sends.
+      const endpointRefusal = SETTINGS_REFUSED.errors.find(
+        (item) => item.field === 'cloud_endpoint',
+      );
+      expect(endpointRefusal?.values['reason']).toBe('https');
+      expect((await label('backup-set-endpoint')).getAttribute('aria-invalid')).toBe('true');
+      expect(visible(document.body.textContent)).toContain(
+        message(language, 'err-out-of-range', { reason: 'https' }),
+      );
+    });
+
+    it('the cloud address is written left to right, also in Urdu, so https:// keeps its place (NFR-URD-13)', async () => {
+      const { user } = await open();
+      await user.click(
+        await screen.findByRole('checkbox', {
+          name: named(message(language, 'backup-set-cloud-on')),
+        }),
+      );
+      expect(await label('backup-set-endpoint')).toHaveAttribute('dir', 'ltr');
     });
 
     it('removing a stored key sends an empty text, and keeping it sends nothing', async () => {

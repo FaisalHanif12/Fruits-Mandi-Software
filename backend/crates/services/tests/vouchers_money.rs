@@ -1436,7 +1436,6 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
     };
     for (id, collector_id) in [(w.akram, Some(collector)), (w.arshad, None)] {
         let mut input: AccountInput = account_form(&w, id);
-        input.collection_weekday = Some(5);
         input.collector_staff_id = collector_id;
         let mut words: Vec<String> = Vec::new();
         loop {
@@ -1465,7 +1464,6 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
         &w.env.ctx,
         &CollectionListInput {
             search: None,
-            date: "10-10-2026".into(),
             collector_staff_id: None,
             city_id: None,
             offset: 0,
@@ -1473,10 +1471,7 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
         },
     )
     .unwrap();
-    assert_eq!(
-        (list.weekday, list.total_paisa.rupees()),
-        (5, 12_880 + 18_684)
-    );
+    assert_eq!(list.total_paisa.rupees(), 12_880 + 18_684);
     // Two groups: the buyers of the collector, then those with none (a missing collector sorts
     // first), each with its dues and the age of the oldest bill.
     assert_eq!(list.groups.len(), 2);
@@ -1507,7 +1502,6 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
             &w.env.ctx,
             &CollectionListInput {
                 search: None,
-                date: "10-10-2026".into(),
                 collector_staff_id: None,
                 city_id: None,
                 offset,
@@ -1568,20 +1562,27 @@ fn the_collection_round_lists_the_planned_buyers_and_saves_the_receipts() {
     for offset in [0, 1, 2] {
         assert_eq!(page(offset, 1).group_totals, list.group_totals);
     }
-    // Another day of the week lists nobody.
-    let monday = vouchers::collection_list(
+    // Plan 53 T2: there is no collection day. The same buyers are listed on every day, whatever
+    // weekday was once set on the account.
+    // The collector's filter keeps his buyers; a missing collector is "everybody".
+    let collector_only = vouchers::collection_list(
         &w.env.ctx,
         &CollectionListInput {
             search: None,
-            date: "05-10-2026".into(),
-            collector_staff_id: None,
+            collector_staff_id: Some(collector),
             city_id: None,
             offset: 0,
             limit: 0,
         },
     )
     .unwrap();
-    assert!(monday.groups.is_empty());
+    assert_eq!(
+        (
+            collector_only.total_count,
+            collector_only.total_paisa.rupees()
+        ),
+        (1, 12_880)
+    );
     // The round: اکرم pays 5,000; ارشد is left at 0 and skipped; a wrong amount fails alone.
     let mut bad = receipt(w.arshad, "abc");
     bad.narration = "x".into();
@@ -1639,7 +1640,6 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         credit_limit: String::new(),
         default_marka_id: None,
         collector_staff_id: None,
-        collection_weekday: None,
         is_active: true,
         note: String::new(),
         tag: String::new(),

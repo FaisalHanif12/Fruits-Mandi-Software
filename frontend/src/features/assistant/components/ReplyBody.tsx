@@ -19,6 +19,7 @@ import { isMainScreen, useAssistantNavigation } from '../navigation';
 import type { DockEntry } from '../store';
 import { AnswerBlock } from './AnswerBlock';
 import { AnswerTableView } from './AnswerTableView';
+import { AnswerText } from './AnswerText';
 import { NameWithCode } from './AnswerText';
 import { OptionsList } from './OptionsList';
 import { SourceButtons } from './SourceFooter';
@@ -68,21 +69,8 @@ function Failure({ reply, retry }: { reply: AskReply; retry: (() => void) | null
   const { l10n } = useLocalization();
   const kind = reply.failure?.kind;
   const status = reply.failure?.http_status ?? null;
-  // A timeout says so in one line ("took too long, ask again"); the general line would repeat it.
-  if (kind === 'timeout') {
-    return (
-      <div className="flex flex-col gap-2">
-        <Notice tone="error">{l10n.getString(failureMessageId(kind))}</Notice>
-        {retry === null ? null : (
-          <div>
-            <Button onClick={retry}>
-              <Localized id="assistant-error-retry" />
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  // Every failure says the PRD line first (FR-7.81, "no answer came, try again"), then what happened in
+  // its own words: a timeout, a dropped line, a wrong key. An offline question has its own first line.
   return (
     <div className="flex flex-col gap-2">
       <Notice tone={reply.outcome === 'offline' ? 'info' : 'error'}>
@@ -213,17 +201,21 @@ function ChangeRefusedView({ route }: { route: EntryRoute | null }) {
 /**
  * A question that a limit stopped after it read (plan 51 B2, PRD E96): not "I did not understand" but
  * what happened, and to ask in smaller parts, with any plain tables that were read (no figure of the
- * model's, FR-7.76).
+ * model's, FR-7.76). A question that ran out of time (`time`, plan 55) says so and shows the same.
  */
-function StoppedView({ reply, reason }: { reply: AskReply; reason: StopReason }) {
+function StoppedView({ reply, reason }: { reply: AskReply; reason: StopReason | 'time' }) {
   const tables = reply.answer?.tables ?? [];
   return (
     <div className="flex flex-col gap-3">
       <Notice tone="warn">
-        <Localized id={`assistant-stopped-${reason}`}>
+        <Localized id={reason === 'time' ? 'assistant-time-limit' : `assistant-stopped-${reason}`}>
           <span />
         </Localized>
       </Notice>
+      {reply.answer === null || reply.answer.parts.length === 0 ? null : (
+        // A party card that was read gives his name and his checked balance (plan 55 Section 3).
+        <AnswerText parts={reply.answer.parts} />
+      )}
       {tables.length === 0 ? null : (
         <>
           <Localized id="assistant-stopped-tables">
@@ -235,6 +227,90 @@ function StoppedView({ reply, reason }: { reply: AskReply; reason: StopReason })
         </>
       )}
       {reply.answer === null ? null : <SourceButtons sources={reply.answer.sources} />}
+    </div>
+  );
+}
+
+/**
+ * "No such name" (PRD FR-7.77, plan 52 Section 8). It says which kind of record was asked for ("no seller
+ * by that name"); when the name is another role's, it says what he is instead ("This name is a buyer,
+ * not a seller") and offers the follow-up for that role as a button. The question is waiting for his
+ * choice (the backend holds it, as for "which one?"), so the button goes on with it as a pick: it is not
+ * counted again (FR-7.81). The nearest names stay, without the person already named in the line above.
+ */
+function NotFoundView({
+  reply,
+  onPick,
+  entryId,
+  busy,
+}: {
+  reply: AskReply;
+  onPick: (entryId: number, choice: PickChoice) => void;
+  entryId: number;
+  busy: boolean;
+}) {
+  const language = useLanguage();
+  const context = useListContext();
+  const found = reply.found_as;
+  const options =
+    found === undefined
+      ? reply.options
+      : reply.options.filter((option) => option.key !== found.key);
+  let lead;
+  if (found !== undefined && reply.asked_role !== undefined) {
+    const followUp = context.text('assistant-found-as-ask', {
+      found: found.role,
+      name: displayName(found.name, language),
+    });
+    lead = (
+      <div className="flex flex-col gap-2">
+        <p className="type-lead text-ink">
+          {context.text('assistant-found-as-other', {
+            asked: context.text(`assistant-role-${reply.asked_role}`),
+            found: context.text(`assistant-role-${found.role}`),
+          })}
+        </p>
+        <div>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              onPick(entryId, { type: 'match', key: found.key });
+            }}
+          >
+            {followUp}
+          </Button>
+        </div>
+      </div>
+    );
+  } else if (reply.asked_role !== undefined) {
+    lead = (
+      <p className="type-lead text-ink">
+        {context.text('assistant-not-found-role', { role: reply.asked_role })}
+      </p>
+    );
+  } else {
+    lead = (
+      <Localized id="assistant-not-found">
+        <p className="type-lead text-ink" />
+      </Localized>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {lead}
+      {options.length === 0 ? null : (
+        <>
+          <Localized id="assistant-not-found-closest">
+            <p className="type-body text-ink-muted" />
+          </Localized>
+          <OptionsList
+            options={options}
+            onPick={(key) => {
+              onPick(entryId, { type: 'match', key });
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -307,26 +383,7 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
         </div>
       );
     case 'not_found':
-      return (
-        <div className="flex flex-col gap-2">
-          <Localized id="assistant-not-found">
-            <p className="type-lead text-ink" />
-          </Localized>
-          {reply.options.length === 0 ? null : (
-            <>
-              <Localized id="assistant-not-found-closest">
-                <p className="type-body text-ink-muted" />
-              </Localized>
-              <OptionsList
-                options={reply.options}
-                onPick={(key) => {
-                  onPick(entry.id, { type: 'match', key });
-                }}
-              />
-            </>
-          )}
-        </div>
-      );
+      return <NotFoundView reply={reply} onPick={onPick} entryId={entry.id} busy={busy} />;
     case 'need_dates':
       return (
         <Notice tone="info">
@@ -353,6 +410,10 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
               <span />
             </Localized>
           </Notice>
+          {reply.answer === null || reply.answer.parts.length === 0 ? null : (
+            // What the app does not keep, in a plain line (plan 55 Section 7), above the nearest thing it does.
+            <AnswerText parts={reply.answer.parts} />
+          )}
           {reply.answer === null || reply.answer.sources.length === 0 ? null : (
             <>
               <Localized id="assistant-outside-books-nearest">
@@ -375,6 +436,10 @@ export function ReplyBody({ entry, onAsk, onPick, busy }: ReplyBodyProps) {
       ) : (
         <StoppedView reply={reply} reason={reply.stop_reason} />
       );
+    case 'time_limit':
+      // The question ran out of time after it read (plan 55 Section 3): the plain tables of what was
+      // read, with their sources, and no figure of the model's.
+      return <StoppedView reply={reply} reason="time" />;
     case 'checks_failed':
       // The records the model read, as plain tables with their sources and no figure of the model's.
       return (

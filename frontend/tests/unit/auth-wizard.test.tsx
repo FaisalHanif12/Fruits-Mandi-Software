@@ -23,6 +23,7 @@ import {
   renderApp,
   resetClientState,
   sessionUser,
+  startNewShop,
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
 import { KEY_SETUP } from '../helpers/backup-real';
@@ -90,6 +91,7 @@ describe.each(LANGUAGES)('first-run wizard (%s)', (language) => {
 
   async function start() {
     await renderApp();
+    await startNewShop(language);
     await screen.findByRole('heading', { name: message(language, 'auth-wizard-firm-title') });
     return userEvent.setup();
   }

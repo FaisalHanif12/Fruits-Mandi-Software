@@ -11,6 +11,12 @@ interface TextInputProps extends FieldControlProps {
   placeholder?: string;
   /** Set when the text is in the other language, for example an English name on an Urdu screen. */
   lang?: string | undefined;
+  /**
+   * Set to `ltr` for an address, a path or a code that is always written left to right. In a
+   * right-to-left page the signs at the end of such text (`https://`) would otherwise jump to the
+   * other side while it is typed (NFR-URD-13).
+   */
+  dir?: 'ltr' | undefined;
   /** The fully rounded look of the chat window's question box. */
   pill?: boolean | undefined;
 }
@@ -24,6 +30,7 @@ export function TextInput({
   onChange,
   placeholder,
   lang,
+  dir,
   pill,
 }: TextInputProps) {
   return (
@@ -31,6 +38,7 @@ export function TextInput({
       id={id}
       type="text"
       lang={lang}
+      dir={dir}
       value={value}
       placeholder={placeholder}
       readOnly={readOnly}

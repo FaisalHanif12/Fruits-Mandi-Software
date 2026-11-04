@@ -423,7 +423,7 @@ vouchers-print-title = واؤچر { $number } پرنٹ کریں
 vouchers-collection-title = { -agrahi } فہرست
 
 # review: pending
-vouchers-collection-help = اس دن جن گاہکوں سے وصولی کرنی ہے ان کی فہرست۔ صرف وصول ہونے والی رقم لکھیں اور سب ایک ساتھ محفوظ کریں۔ خالی یا 0 والی لائن چھوڑ دی جاتی ہے۔
+vouchers-collection-help = ہر وہ { -gahak } جس کے ذمے رقم ہے، اگراہی والے اور شہر کے حساب سے۔ صرف وصول ہونے والی رقم لکھیں اور سب ایک ساتھ محفوظ کریں۔ خالی یا 0 والی لائن چھوڑ دی جاتی ہے۔
 
 # review: pending
 vouchers-collection-back = { -wasooli } پر واپس
@@ -434,6 +434,9 @@ vouchers-collection-count = { $count ->
     [1] فہرست میں ایک { -gahak } ہے۔
    *[other] فہرست میں { $count } { -gahak } ہیں۔
 }
+
+# review: pending
+vouchers-collection-receipt-date = رسیدوں کی تاریخ
 
 # review: pending
 vouchers-collection-total = کل ذمے
@@ -470,10 +473,10 @@ vouchers-collection-some-refused = { $count ->
 vouchers-collection-problems = یہ وصولیاں محفوظ نہیں ہوئیں
 
 # review: pending
-vouchers-collection-empty = اس دن کسی { -gahak } کی { -agrahi } مقرر نہیں
+vouchers-collection-empty = کسی { -gahak } کے ذمے کچھ نہیں
 
 # review: pending
-vouchers-collection-empty-help = { -gahak } کے کھاتے میں اگراہی کا دن لکھا ہو تو وہ اس دن کی فہرست میں آتا ہے۔ دوسری تاریخ، اگراہی والا یا شہر چن کر دیکھیں۔
+vouchers-collection-empty-help = جب تک { -gahak } کے ذمے رقم ہے وہ اس فہرست میں رہتا ہے۔ دوسرا اگراہی والا یا شہر چن کر دیکھیں۔
 
 # review: pending
 vouchers-collection-failed = { -agrahi } فہرست کھل نہیں سکی
@@ -575,9 +578,8 @@ vouchers-number-general = ج-{ $number }
 # review: pending
 vouchers-collection-print-title = { -agrahi } فہرست پرنٹ کریں
 
-# $date is the day of the list, for example 10-10-2026.
 # review: pending
-vouchers-collection-print-help = { $date } کی { -agrahi } فہرست، جیسی اسکرین پر ہے ویسی ہی پرنٹ ہوگی۔ زبان اور پرنٹ کی جگہ چنیں۔
+vouchers-collection-print-help = { -agrahi } فہرست، جیسی اسکرین پر ہے ویسی ہی پرنٹ ہوگی۔ زبان اور پرنٹ کی جگہ چنیں۔
 
 # The hint inside the search box of the collection list (the code, the name or the phone of a buyer).
 # review: pending

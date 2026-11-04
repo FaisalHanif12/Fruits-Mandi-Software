@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use mandi_db::masters as master_repo;
 use mandi_db::partners as repo;
 use mandi_db::rusqlite::Connection;
-use mandi_domain::core::accounts::OpeningRequest;
+use mandi_domain::core::accounts::{OpeningDay, OpeningRequest};
 use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::masters::AccountToMake;
@@ -375,6 +375,7 @@ fn post_opening_capital(
         &facts,
         &wanted,
         "opening_capital",
+        OpeningDay::Open,
     )
     .map_err(on_opening_capital)?;
     ctx.db.auditor().write(

@@ -53,6 +53,20 @@ Ask the app: a chat window above a round launcher at the end of every screen, an
 - A question a limit stopped (`not_understood` with `stop_reason`) says so ("I could not finish reading
   the books, ask in smaller parts") and shows the plain tables that were read. A timeout is one line and
   an ask-again button. The Settings log shows how long each question took (`timing.ts`).
+- A question that ran out of time after it read (outcome `time_limit`, plan 55) says so in one warning
+  line ("the answer is taking too long, this is the record I have read") and shows the plain tables
+  that were read with their buttons. If nothing was read the failure line stands instead.
+- "How do I print this?" (plan 54 S2): an answer with `how` steps shows them as a numbered list under
+  its words (`HowSteps.tsx`). The backend sends each step as a message id and its values; the panel
+  writes them in its own reviewed words, shows ISO dates as DD-MM-YYYY, and skips a step it has no
+  words for or one that comes without a value. The answer's sources are links only (an empty
+  `result_id`: nothing was read), so each one gets its open and print buttons but is left out of the
+  "Source:" line. The buttons open the report with the party and the dates already in the boxes
+  (`addresses.ts` shows a date as DD-MM-YYYY, for the opened report and for the print), so the Owner
+  only presses F9.
+- While a question works, `StepLines` shows the first line, then one line for each step the backend
+  sends (including "understood", "writing", "trying again" and "still slow"), and after 5 seconds the
+  seconds waited, counted on the screen's own clock and hidden from the live region.
 - The shut launcher never covers a control: the shell keeps a band under every screen as tall as the
   launcher and its gaps (`--chat-corner`; the launcher is 48 px and nearer the edge in a window under
   800 px high). Do not move screen controls to avoid it.

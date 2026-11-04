@@ -11,7 +11,7 @@ use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::{
     DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened, DayFixStayedOpen,
 };
-use mandi_domain::core::error::ErrorCode;
+use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
@@ -24,7 +24,7 @@ use serde_json::json;
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::context::Context;
-use crate::error::{ServiceError, money_error};
+use crate::error::{Rejection, ServiceError, money_error};
 use crate::ledger;
 
 /// The storage and display form of a business date.
@@ -39,6 +39,38 @@ pub struct DayStatusInfo {
     pub closed_up_to: Option<String>,
     /// True when today is after the closed-up-to date.
     pub today_open: bool,
+}
+
+/// The refusal of a closed day (`ERR_DATE_CLOSED`) on `field`, with every value a screen needs
+/// (plan 53): `closed_up_to` (the closed day shown, as `YYYY-MM-DD`), `today` (`DD-MM-YYYY`) and
+/// `today_open` (1 or 0), from [`validate::closed_day_values`]. `closed_up_to` is the real
+/// closed-up-to date of the books, `today` today.
+pub(crate) fn closed_rejection_at(
+    shown: BusinessDate,
+    closed_up_to: Option<BusinessDate>,
+    today: BusinessDate,
+    field: &str,
+) -> ServiceError {
+    let mut values = std::collections::BTreeMap::from([(
+        "closed_up_to".to_owned(),
+        ErrorValue::Text(shown.to_iso()),
+    )]);
+    for (key, value) in validate::closed_day_values(closed_up_to, today) {
+        values.insert(key.to_owned(), value);
+    }
+    ServiceError::Rejected(vec![Rejection {
+        code: ErrorCode::ErrDateClosed,
+        field: Some(field.to_owned()),
+        values,
+    }])
+}
+
+/// [`closed_rejection_at`] for the books as they are now.
+pub(crate) fn closed_rejection(ctx: &Context, shown: BusinessDate, field: &str) -> ServiceError {
+    match window(ctx) {
+        Ok((closed_up_to, today)) => closed_rejection_at(shown, closed_up_to, today, field),
+        Err(error) => error,
+    }
 }
 
 /// The open window for postings: the "closed up to" date and today (PRD FR-6.6). A posting date

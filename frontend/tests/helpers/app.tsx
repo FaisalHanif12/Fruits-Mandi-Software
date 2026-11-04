@@ -4,7 +4,8 @@
 // with, the same as it would with the real commands.
 
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { act, fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import type { AuthStatus } from '../../src/bindings/AuthStatus';
 import type { DayStatus } from '../../src/bindings/DayStatus';
@@ -22,6 +23,9 @@ import { useLanguageStore } from '../../src/shared/i18n';
 import { useToastStore } from '../../src/shared/ui';
 import { useTextSizeStore } from '../../src/app/layout/text-size';
 import { useWizardStore } from '../../src/features/auth/wizard-store';
+import { useAfterRestoreStore } from '../../src/features/restore/after-restore-store';
+import { useRestoreStore } from '../../src/features/restore/store';
+import { message } from './render';
 import { refusal, type RefusalItem } from './ui-error';
 import { CommandError } from '../../src/shared/api';
 
@@ -117,6 +121,9 @@ export function resetClientState(language: Language = 'ur') {
     useLanguageStore.setState({ language });
     useTextSizeStore.setState({ chosen: 100 });
     useWizardStore.getState().reset();
+    // The first screen of a new install (plan 56) starts as it does on a new computer.
+    useRestoreStore.getState().reset();
+    useAfterRestoreStore.getState().clear();
     // A message of an earlier test must not be on the screen of the next one.
     useToastStore.setState({ toasts: [] });
   });
@@ -147,6 +154,16 @@ export async function renderApp(path = '/') {
 
 function expectSomethingShown() {
   if (document.body.textContent === '') throw new Error('nothing on screen yet');
+}
+
+/**
+ * On a new install the first screen comes first (plan 56, PRD FR-20.11). A test of the first-run
+ * wizard goes through it the way the Owner does: the first choice, a new shop, has focus, so Enter
+ * opens the wizard.
+ */
+export async function startNewShop(language: Language) {
+  await screen.findByRole('heading', { name: message(language, 'restore-start-title') });
+  await userEvent.setup().keyboard('{Enter}');
 }
 
 export function leaveAppWindow() {

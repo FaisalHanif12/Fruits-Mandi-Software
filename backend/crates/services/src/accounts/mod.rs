@@ -13,8 +13,8 @@ use mandi_db::codes::CodeTable;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
-    ControlRule, OpeningRequest, SimilarAccount, account_code_for, can_take_opening, code_type_for,
-    prepare_account,
+    ControlRule, OpeningDay, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
+    code_type_for, prepare_account,
 };
 use mandi_domain::core::codes::{FIRST_PUKHTA_PARTY_RUNNING, build_code, check_typed_code};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
@@ -555,6 +555,12 @@ fn write(
         &facts,
         &prepared.opening,
         "opening_dr",
+        // A new account is dated on any day up to today; an edit needs an open day (plan 53 T1).
+        if old.is_none() {
+            OpeningDay::NewAccount
+        } else {
+            OpeningDay::Open
+        },
     )?;
 
     let learned = checks

@@ -23,6 +23,7 @@ import {
   renderApp,
   resetClientState,
   sessionUser,
+  startNewShop,
 } from '../helpers/app';
 import { KEY_SETUP } from '../helpers/backup-real';
 import { fakeMasters } from '../helpers/masters';
@@ -87,6 +88,7 @@ describe.each(LANGUAGES)('the backup key step of the wizard (%s)', (language) =>
   /** The firm and Owner steps, then the recovery code step finished: the key step is next. */
   async function toKeyStep() {
     await renderApp();
+    await startNewShop(language);
     const user = userEvent.setup();
     await screen.findByRole('heading', {
       name: (name) => visible(name) === message(language, 'auth-wizard-firm-title'),
@@ -227,6 +229,7 @@ describe.each(LANGUAGES)('the backup key step of the wizard (%s)', (language) =>
   it('with no sign-in after the setup there is no key step: the wizard ends at the sign-in screen', async () => {
     vi.mocked(authApi.authLogin).mockRejectedValue(fail({ code: 'ERR_INTERNAL' }));
     await renderApp();
+    await startNewShop(language);
     const user = userEvent.setup();
     await screen.findByRole('heading', {
       name: (name) => visible(name) === message(language, 'auth-wizard-firm-title'),

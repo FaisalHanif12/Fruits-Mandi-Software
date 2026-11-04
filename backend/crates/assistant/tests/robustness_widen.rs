@@ -15,7 +15,7 @@ mod worked;
 mod world;
 
 use harness::{Harness, answer_of, balance, figures};
-use mandi_assistant::ask::AskOutcome;
+use mandi_assistant::ask::{AskOutcome, AskedRole};
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::partner_code::PartnerCodeSetInput;
 use mandi_services::partner_code;
@@ -117,8 +117,9 @@ fn a_find_in_the_wrong_role_says_it_widened_and_gives_the_real_type_of_each_matc
 #[test]
 fn a_typed_filter_never_takes_a_widened_match() {
     // `analytics seller: "arshad"` typed by the model, with Arshad a buyer: the seller filter must
-    // not quietly take the buyer. The question stops at once asking which one (no further model
-    // call), the buyer is only offered by name, and no seller figure is shown.
+    // not quietly take the buyer. The question stops at once (no further model call) as "not found"
+    // for the role asked (plan 52 Section 8): `asked_role` is seller and `found_as` says he is a
+    // buyer, the buyer is only offered by name, and no seller figure is shown.
     let h = Harness::day();
     let (reply, requests) = h.ask(
         "arshad ke maal par commission",
@@ -133,7 +134,11 @@ fn a_typed_filter_never_takes_a_widened_match() {
         1,
         "the app asked, the model was not called again"
     );
-    assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    assert_eq!(reply.asked_role, Some(AskedRole::Seller), "{reply:#?}");
+    let found_as = reply.found_as.as_ref().expect("he is a buyer: found_as");
+    assert_eq!(found_as.role, AskedRole::Buyer);
+    assert_eq!(found_as.name.name_en, "Arshad Multani");
     assert_eq!(
         reply
             .options

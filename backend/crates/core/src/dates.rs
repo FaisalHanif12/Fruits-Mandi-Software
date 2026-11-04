@@ -56,8 +56,7 @@ impl BusinessDate {
         self.0.day()
     }
 
-    /// The weekday as the account form stores it: 0 is Monday, 6 is Sunday (the
-    /// `collection_weekday` of an account, PRD FR-15.6).
+    /// The weekday: 0 is Monday, 6 is Sunday (for the start of a week).
     ///
     /// ```
     /// use mandi_core::dates::BusinessDate;

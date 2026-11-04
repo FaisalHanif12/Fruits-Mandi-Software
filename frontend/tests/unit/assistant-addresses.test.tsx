@@ -247,13 +247,26 @@ describe('the filters of an answer’s source', () => {
       bikri: { id: 11, number: 4 },
       group_by: 'day',
     });
-    // The two dates are carried when there is no shortcut.
+    // The two dates are carried when there is no shortcut, as the boxes show them: DD-MM-YYYY.
     expect(reportSearchFromFilters(reportSource({ from: '2026-10-01', to: '2026-10-10' }))).toEqual(
       {
-        from: '2026-10-01',
-        to: '2026-10-10',
+        from: '01-10-2026',
+        to: '10-10-2026',
       },
     );
+    // The as-of day too; a date that is not an ISO day is carried as it came.
+    expect(reportSearchFromFilters(reportSource({ as_of: '2026-10-10' }))).toEqual({
+      as_of: '10-10-2026',
+    });
+    expect(reportSearchFromFilters(reportSource({ from: '10-9' }))).toEqual({ from: '10-9' });
+  });
+
+  it('a print of a source asks for its dates the way the boxes show them', () => {
+    const asked = reportFiltersOf(
+      reportSource({ from: '2026-10-01', to: '2026-10-10', as_of: '2026-10-10' }),
+    );
+    expect([asked.from, asked.to, asked.as_of]).toEqual(['01-10-2026', '10-10-2026', '10-10-2026']);
+    expect(reportFiltersOf(reportSource({})).from).toBe('');
   });
 
   it('a one-time person is one person of his account', () => {

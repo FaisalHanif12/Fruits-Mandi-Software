@@ -300,7 +300,9 @@ pub(crate) fn run(
         from: typed.from.as_deref(),
         to: typed.to.as_deref(),
         partner_id: typed.partner_id,
-        guests_only: typed.guests_only,
+        // While the partner section is locked, only the fruit for the shop's guests is listed,
+        // with its totals: no partner's entry and no partner's amount (PRD FR-17.11).
+        guests_only: typed.guests_only || typed.hide_partners,
         item_id: typed.item_id,
         garden_id: typed.garden_id,
         lots: LotKind::Any,

@@ -489,25 +489,44 @@ impl Db {
     /// `DataCheckFailed` when `source` is not a database or the file fails its check after the
     /// copy; `Busy`; an I/O error; any other SQLite error.
     pub fn replace_contents_from(&self, source: &Path) -> Result<(), DbError> {
+        self.replace_contents_if(source, |_| Ok(()))
+    }
+
+    /// Like [`Db::replace_contents_from`], and runs `guard` on the write connection once both
+    /// connections are held and before the first page is copied. If `guard` returns an error, the
+    /// data file is not touched and the error is returned. Because the guard runs under the same
+    /// lock as the copy, what it saw cannot change before the copy: a restore on a new computer
+    /// uses it to be sure that no Owner was set up meanwhile (PRD FR-20.11), and to save the key
+    /// of the copy's hash chains at the same moment.
+    ///
+    /// # Errors
+    /// The error of `guard`; those of [`Db::replace_contents_from`].
+    pub fn replace_contents_if<E: From<DbError>>(
+        &self,
+        source: &Path,
+        guard: impl FnOnce(&Connection) -> Result<(), E>,
+    ) -> Result<(), E> {
         let from = Connection::open_with_flags(
             source,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-        )?;
+        )
+        .map_err(DbError::from)?;
         {
             let mut writer = lock(&self.writer);
             let _reader = lock(&self.reader);
-            let copy = rusqlite::backup::Backup::new(&from, &mut writer)?;
+            guard(&writer)?;
+            let copy = rusqlite::backup::Backup::new(&from, &mut writer).map_err(DbError::from)?;
             // One step with every page (-1): the data file changes in one transaction. A step
             // that finds a lock is tried again a moment later.
             let mut tries = 0_u32;
             loop {
-                match copy.step(-1)? {
+                match copy.step(-1).map_err(DbError::from)? {
                     rusqlite::backup::StepResult::Done => break,
                     rusqlite::backup::StepResult::More => {}
                     _ => {
                         tries += 1;
                         if tries > 400 {
-                            return Err(DbError::Busy);
+                            return Err(DbError::Busy.into());
                         }
                         std::thread::sleep(Duration::from_millis(25));
                     }
@@ -519,9 +538,7 @@ impl Db {
         }
         match self.run_quick_check() {
             DataState::Ok => Ok(()),
-            _ => Err(DbError::DataCheckFailed(
-                self.failure_detail().unwrap_or_default(),
-            )),
+            _ => Err(DbError::DataCheckFailed(self.failure_detail().unwrap_or_default()).into()),
         }
     }
 

@@ -117,6 +117,9 @@ impl AppState {
                 mandi_services::translit::warm_up(&warm);
                 // Build the search index too (NFR-SPD-6, Code Standards B27).
                 mandi_services::search::warm_up(&warm);
+                // And the word tables of the assistant's understanding, so the first question of
+                // the Owner is not the slow one (plan 55). No database, no sign-in needed.
+                mandi_assistant::understand::warm_words();
             })
         {
             tracing::warn!("cannot start the warm-up thread: {error}");

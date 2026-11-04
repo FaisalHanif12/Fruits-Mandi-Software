@@ -490,7 +490,6 @@ export function collectionList(rows: 'two' | 'none' = 'two') {
   };
   return {
     date: TODAY_ISO,
-    weekday: 5,
     groups: rows === 'none' ? [] : [group],
     group_totals:
       rows === 'none'
