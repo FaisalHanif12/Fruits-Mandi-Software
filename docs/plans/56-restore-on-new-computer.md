@@ -106,3 +106,7 @@ The commands run **before** sign-in, because no Owner exists yet on the new comp
   - **R4-3, follow-up after this run.** Unpacking has no size cap. It can only happen with the right backup key, so it is low risk. A cap is planned.
   - **R4-9, follow-up after this run.** Partner share rows are in no chain, which is NFR-SEC-6 by design. A restore-time check is added later, so a copy whose partner shares no longer add up to the books (FR-6.5) is refused.
 - **Speed (R4, debug build on this Mac, under heavy load).** Two years (20,006 entries) restore in 12.4 s and ten years (317 MB) in 46.4 s, against the 300 s target. This must be checked on the reference hardware before go-live.
+- **The 2 GB ceiling (NFR-SCL-4, robustness, debug build under load):** the whole flow took 517 s (8.6 minutes): preview 278 s, restore 240 s.
+  - Ten years at normal volume (NFR-BAK-12) is 46 s, inside its 300 s.
+  - Follow-up: let the restore reuse the preview's unpacked, checked copy (same copy, same key, a temporary folder removed afterwards). That would bring the 2 GB case to about 280 s.
+  - Owner: backend3, after the live runs. It must be checked on the reference hardware before go-live.
