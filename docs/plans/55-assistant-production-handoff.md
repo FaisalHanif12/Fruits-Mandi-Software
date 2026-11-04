@@ -178,3 +178,17 @@ These are forecasts the app does not keep. Each gives its honest answer, and the
 - fruit taken (answered with what was taken so far).
 
 Not approved: the audit log how-to. It becomes gap Q4b, a guide topic in D6 v1.5.
+
+## 12. Paused by Umar, 05-11-2026 about 01:55 (agents kept alive, NOT stopped)
+
+Umar: "stop the working of the agents ... do not kill or cancel any agents, just stop the working." Each teammate finishes only the edit it is in the middle of, sends the lead one state note, and waits. Everyone keeps its context. On "continue" the lead tells each to resume from its note.
+
+The state when paused (the lead's view; each teammate's own note is the detail):
+- **backend:** the deadline and hedge are done. Next: the WRONG FIGURE group (fixed, money review running), then buttons, the click, auto-repair and the compose_figure wiring.
+- **backend2:** the 30 run-1 understand defects and compose_figure, with the money review running. Then print plans for all 38 reports, entry routes, and plan_reads for backend4's new inputs.
+- **backend3:** forecast gaps F1 to F6, money review running, calc.rs mid-edit.
+- **backend4:** R1 to R6 and P1 to P4 are done (handoff accepted). Next: a screen AnswerSource and the collector filter.
+- **robustness:** bank 1,126 committed. Next: the 264 remaining capability cells, one wording each, then clippy on oracle.rs and robustness_live.rs.
+- **frontend2:** the instant sentences are done. It waits for the screen source shape.
+- **frontend3 and the hidden tester:** idle. Hidden bank 244, plus 50 in round 2.
+- **lead:** D6 v1.5 (one change: backend4's and backend3's drafts, the collected prompt items, the fixed-part limit raised to 11,500), commit, rebuild, then live run 2 with --threads 4.
