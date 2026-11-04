@@ -67,15 +67,41 @@ function cellsOf(q) {
   const f = q.filters;
   const figs = q.figures;
   const topic = (f.match(/topic=([a-z_]+)/) ?? [])[1];
+  // A question written for a cell says which one in its `source` ("capability.tsv R20 / list").
+  const named = (q.source ?? '').match(/^capability\.tsv (\S+) \/ (\w+)$/);
+  if (named) {
+    add(named[1], named[2]);
+    return out;
+  }
+  // The groups of facet MIX (one question: a real figure and a forecast) fill the mixed cell of their rows.
+  const MIX_CELLS = {
+    MX01: ['record-expense_head'],
+    MX02: ['view-A', 'record-item'],
+    MX03: ['record-buyer', 'R20', 'tile-buyers_dues'],
+    MX04: ['tile-today_sales'],
+    MX05: ['view-G'],
+    MX06: ['tile-today_commission', 'R28'],
+    MX07: ['R12', 'tile-cash_in_hand'],
+    MX08: ['view-B', 'record-seller'],
+    MX09: ['R30'],
+    MX10: ['R29', 'tile-today_expenses'],
+  };
+  if (MIX_CELLS[q.group]) {
+    for (const row of MIX_CELLS[q.group]) add(row, 'mixed');
+    return out;
+  }
   if (q.cat === 'D' || q.kind === 'help') {
     // A question that asks to OPEN a screen has route= beside its topic (facet CAP).
     if (topic) add(`topic-${topic}`, /(?:^|;)route=/.test(f) ? 'print' : 'howto');
+    // Opening the dashboard is the "print or open" of every tile.
+    if (topic === 'dashboard' && /(?:^|;)route=dashboard/.test(f))
+      for (const row of ROWS) if (row.kind === 'tile') add(row.id, 'print');
     return out;
   }
   const facet = (f.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
   const printReport = (figs.match(/print\.report=([R0-9|]+)/) ?? [])[1];
   if (facet === 'print' || q.kind === 'print') {
-    for (const r of (printReport ?? '').split('|').filter(Boolean)) add(`report-${r}`, 'print');
+    for (const r of (printReport ?? '').split('|').filter(Boolean)) add(`${r}`, 'print');
     const role = (figs.match(/print\.role=([a-z_]+)/) ?? [])[1];
     if (role) add(`record-${role}`, 'print');
     return out;
@@ -114,7 +140,7 @@ function cellsOf(q) {
   }
   if (q.cat === 'B') {
     const t = q.tools;
-    for (const m of t.matchAll(/report:(R\d+)/g)) add(`report-${m[1]}`, 'advice');
+    for (const m of t.matchAll(/report:(R\d+)/g)) add(`${m[1]}`, 'advice');
     for (const m of t.matchAll(/analytics:([A-K])/g)) add(`view-${m[1]}`, 'advice');
     if (/tiles/.test(t)) add('tile-cash_in_hand', 'advice');
     if (!t) add('tile-total_dues', 'advice');
@@ -132,13 +158,13 @@ function cellsOf(q) {
   )
     qtype = 'list';
   const rows = new Set();
-  for (const m of q.tools.matchAll(/report:(R\d+)/g)) rows.add(`report-${m[1]}`);
+  for (const m of q.tools.matchAll(/report:(R\d+)/g)) rows.add(`${m[1]}`);
   for (const m of q.tools.matchAll(/analytics:([A-K])/g)) rows.add(`view-${m[1]}`);
   for (const key of figs.matchAll(/@([A-Za-z0-9_.]+)/g)) {
     const k = key[1];
     for (const [re, id] of TILE_OF_KEY) if (re.test(k)) rows.add(id);
     const head = k.split('.')[0];
-    const rid = /^r(\d+)$/.test(head) ? `report-R${head.slice(1)}` : null;
+    const rid = /^r(\d+)$/.test(head) ? `R${head.slice(1)}` : null;
     if (rid) rows.add(rid);
     if (head === 'a') rows.add('view-A');
     if (head === 'b') rows.add('view-B');
@@ -166,8 +192,8 @@ function cellsOf(q) {
   if (/trip=/.test(f)) rows.add('record-trip');
   if (/fruit/.test(q.section)) rows.add('figure-fruit_partner');
   if (/capital/.test(q.section)) rows.add('figure-partner_capital');
-  if (/expense/.test(q.section)) (rows.add('record-expense_head'), rows.add('report-R29'));
-  if (/lent/.test(q.kind)) (rows.add('report-R32'), rows.add('record-money_lent'));
+  if (/expense/.test(q.section)) (rows.add('record-expense_head'), rows.add('R29'));
+  if (/lent/.test(q.kind)) (rows.add('R32'), rows.add('record-money_lent'));
   for (const r of rows) add(r, qtype);
   return out;
 }

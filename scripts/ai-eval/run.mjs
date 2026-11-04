@@ -395,9 +395,12 @@ function checkList(list, perRow = false) {
     for (const lang of ['roman', 'urdu', 'en'])
       for (const [name, qs] of Object.entries(facets))
         if (!qs.some((q) => q.lang === lang)) problems.push(`facet ${name}: no ${lang} wording`);
+    // Facet CAP holds one question for a cell of the capability matrix (the lead's ruling, 05-11-2026):
+    // a single wording needs no group.
     for (const [name, qs] of Object.entries(facets))
       for (const q of qs)
-        if (!q.group) problems.push(`${q.id} (facet ${name}) is in no group of the same meaning`);
+        if (!q.group && name !== 'CAP')
+          problems.push(`${q.id} (facet ${name}) is in no group of the same meaning`);
     const dayText = facets.day.map((q) => q.filters).join(' ');
     for (const need of ['buyer=', 'seller=', 'period=today', 'period=yesterday', 'period=2026-'])
       if (!dayText.includes(need)) problems.push(`facet day: no question with ${need}`);
@@ -862,6 +865,17 @@ function compactFilters(value) {
 }
 
 /**
+ * The filters of a local `report` log entry. The app writes them beside the report id in `input`
+ * (backend's final shape, 05-11-2026: `{"id":"R35","as_of":"...","party":{...}}`); a nested `filters`
+ * key is read as well.
+ */
+function filtersOfEntry(input) {
+  if (input?.filters && typeof input.filters === 'object') return input.filters;
+  const { id: _id, ...rest } = input ?? {};
+  return rest;
+}
+
+/**
  * A local answer writes one `report` entry in its log for each report button, in order, with the
  * button's own filters (`input.id`, `input.filters`). They must be the same as the buttons of the
  * answer: a log that says one thing and a button that opens another is a defect.
@@ -882,7 +896,7 @@ function logButtonProblems(result, reply) {
     if (entry.input.id !== button.id)
       problems.push(`log entry ${i + 1} is ${entry.input.id}, the button is ${button.id}`);
     else if (
-      JSON.stringify(compactFilters(entry.input.filters ?? {})) !==
+      JSON.stringify(compactFilters(filtersOfEntry(entry.input))) !==
       JSON.stringify(compactFilters(button.filters ?? {}))
     )
       problems.push(`log entry ${i + 1} (${entry.input.id}) has other filters than its button`);
@@ -917,6 +931,11 @@ function printProblems(want, source) {
     ![name(f.seller), name(f.zamindar), name(f.party)].includes(want.seller.toLowerCase())
   )
     problems.push(`seller ${name(f.seller) ?? name(f.party) ?? 'none'}, wanted ${want.seller}`);
+  // A partner, a garden, a city or a truck stand named in the question is the record the button is set to.
+  for (const kind of ['partner', 'garden', 'city', 'adda']) {
+    if (want[kind] && name(f[kind]) !== want[kind].toLowerCase())
+      problems.push(`${kind} ${name(f[kind]) ?? 'none'}, wanted ${want[kind]}`);
+  }
   if (want.as_of) {
     if (f.as_of !== want.as_of) problems.push(`as_of ${f.as_of || 'empty'}, wanted ${want.as_of}`);
   } else {
@@ -1214,7 +1233,7 @@ function score(question, result, oracle) {
   }
   const expectedOutcome = question.outcome;
   // A mixed question (a real figure and a forecast) ends as an estimate or as an answer.
-  const isMix = /(?:^|;)facet=MIX(?:;|$)/.test(question.filters);
+  const isMix = /(?:^|;)(?:facet=MIX|mix=1)(?:;|$)/.test(question.filters);
   if (expectedOutcome === 'safe') {
     const ok =
       outcome === 'answered' ||
@@ -3668,12 +3687,7 @@ function selfTest() {
     'a set-day step with another day passed',
   );
   // The local log of a print answer: one report entry for each button, with the button's filters.
-  const logEntry = (id, filters) => ({
-    id: 'l0',
-    tool: 'report',
-    local: true,
-    input: { id, filters },
-  });
+  const logEntry = (id, filters) => ({ tool: 'report', local: true, input: { id, ...filters } });
   const goodLog = [
     logEntry('R5', {
       from: '2026-10-05',

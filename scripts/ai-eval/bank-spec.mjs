@@ -28,6 +28,11 @@ import { fileURLToPath } from 'node:url';
 
 import A2 from './bank-spec-a2.mjs';
 import CAP from './bank-spec-cap.mjs';
+import MORE from './bank-spec-cap-more.mjs';
+import FORECASTS from './bank-spec-cap-forecast.mjs';
+import NOSUCH from './bank-spec-cap-nosuch.mjs';
+import PRINTS from './bank-spec-cap-print.mjs';
+import REGISTERS from './bank-spec-cap-registers.mjs';
 import MIX from './bank-spec-mix.mjs';
 
 const r = (text) => ['roman', text];
@@ -2610,6 +2615,11 @@ const ENTRIES = [
   ...gate(MIX, 'C'),
   // Facet CAP (plan 55 Section 11): the cells of the capability matrix that had no question.
   ...gate(CAP, 'A'),
+  ...gate(MORE, 'A'),
+  ...gate(REGISTERS, 'A'),
+  ...gate(NOSUCH, 'E'),
+  ...gate(PRINTS, 'A'),
+  ...gate(FORECASTS, 'C'),
 ];
 
 export default ENTRIES;

@@ -950,6 +950,21 @@ const TOPICS = [
   ['sign_in', null],
 ];
 
+/** The entry screens (model_answer.rs `is_entry_screen`): the others are main screens. */
+const ENTRY_SCREENS = new Set([
+  'bikri',
+  'wasooli',
+  'adaigi',
+  'peshgi',
+  'kharcha',
+  'udhar_raqam',
+  'alag_khata',
+  'sarmaya',
+  'phal',
+  'general',
+  'account',
+]);
+
 const TOPIC_ROWS = TOPICS.map(([topic, screen, gap]) => ({
   id: `topic-${topic}`,
   kind: 'topic',
@@ -968,13 +983,14 @@ const TOPIC_ROWS = TOPICS.map(([topic, screen, gap]) => ({
     mixed: X('x'),
     nosuch: X('x'),
     outside: X('not an outside question'),
-    change: screen
+    // Only the eleven entry screens take a request to write; a main screen is only opened (the print cell).
+    change: ENTRY_SCREENS.has(screen)
       ? gap
         ? `A:local: ${screen} screen opens (the specific entry: G ${gap})`
         : A(`local: ${screen} screen with the party`)
       : gap
         ? G(gap)
-        : X('not an entry'),
+        : X('a main screen takes no entry; opening it is the print cell'),
   },
 }));
 

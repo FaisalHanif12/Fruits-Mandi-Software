@@ -8,10 +8,13 @@ or writes the key.
 | File | What it is |
 |---|---|
 | `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (687 questions). Built, never edited by hand. |
+| `questions.tsv` | The bank (831 questions). Built, never edited by hand. |
 | `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
 | `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
 | `bank-spec-a2.mjs` | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`. |
+| `bank-spec-mix.mjs` | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026). |
+| `bank-spec-cap.mjs` | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen. |
+| `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv` | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code. |
 | `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
 | `oracle-keys.txt` | The facts the oracle gives (the `@key` of a question). Checked by a Rust test. |
 | `urdu-review.tsv` | The sheet for the Urdu reviewer, written by every run. |
@@ -72,6 +75,21 @@ Roman Urdu or Urdu with English words, and misspelled (17). Every figure is an o
 REAL-TIME FIGURES lines: the share answered right with no model call ("instant", target 60%), right in no call or
 one (85%), and the wait (p50 2 s, p95 8 s). A2 is gated in "meets"; the same lines for all of category A are shown
 but not gated, because A also holds comparisons, two-part questions and follow-ups.
+
+Facet **MIX** (`facet=MIX`, category C, 10 groups of 3): ONE question that asks for a real figure and a forecast or a
+what-if ("pichle mahine electricity ka kitna kharcha hua aur agle 3 mahine ka estimate kitna hai"). The labels of
+`figures` split the two parts: `real_*` (a figure of the books) and `est_*` (an estimate, any of the three methods
+counts: the band). The scorer keeps them apart (PRD FR-7.76 point 4): a real figure shown as an estimate, or an
+estimate shown as a figure of the books, is a miss. A group whose estimate has no route yet (a head, cash, a
+party's balance: gaps F2, F5, F4) carries `pending=<reason>` in its filters: it is PENDING (neither a pass nor a
+miss) and the run cannot say "meets" while it waits.
+
+Facet **CAP** (`facet=CAP`): the questions that fill cells of `capability.tsv`. This file's first part holds the
+screens: 29 groups that OPEN a screen (answered, the guide topic and the screen route are both checked) and 11
+that ask to WRITE (change_refused with the entry screen). The reports and views with oracle figures follow.
+
+A group whose figures name an oracle fact that is not in `oracle-keys.txt` yet is left out of the bank and listed by
+`run.mjs --check` ("waiting for new oracle facts"); it comes in by itself when the oracle has been run again.
 
 Worlds: `day`, `late`, `e59`, `e42`, `e34` (the PRD's), `year` (12 months, 369 بکری, today 05-11-2026) and
 `thin` (set up, no sale: the Owner's data today).

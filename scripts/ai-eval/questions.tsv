@@ -689,144 +689,439 @@ Q687	Z44	partner	en	1	year		what is partnr B's total	answered		facet=A2;partner=
 Q688	MX01	mixed_forecast	roman	0	year		pichle mahine electricity ka kitna kharcha hua aur agle 3 mahine ka estimate kitna hai	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
 Q689	MX01	mixed_forecast	urdu	0	year		پچھلے مہینے بجلی کا کتنا خرچہ ہوا اور اگلے 3 مہینوں کا اندازہ کتنا ہے	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
 Q690	MX01	mixed_forecast	en	0	year		how much did electricity cost last month and what is the estimate for the next 3 months	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
-Q691	MX03	mixed_forecast	roman	0	year		faisal ka bakaya kitna hai aur isi raftar se 2 mahine baad kitna hoga	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
-Q692	MX03	mixed_forecast	urdu	0	year		فیصل کا بقایا کتنا ہے اور اسی رفتار سے 2 مہینے بعد کتنا ہو گا	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
-Q693	MX03	mixed_forecast	en	1	year		what does Faisal owe now and how much at this pace after 2 monhts	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
-Q694	MX04	mixed_forecast	roman	0	year		aaj ki bikri batao aur agar raftar double ho to mahine ka kitna	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
-Q695	MX04	mixed_forecast	urdu	0	year		آج کی بکری بتاؤ اور اگر رفتار دگنی ہو جائے تو مہینے کا کتنا	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
-Q696	MX04	mixed_forecast	en	0	year		tell me today's sales and what the month would be if the pace doubles	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
-Q697	MX05	mixed_forecast	roman	0	year		pichle mahine ki bikri kitni thi aur agle 3 mahine ki bikri ka andaza batao	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
-Q698	MX05	mixed_forecast	urdu	0	year		پچھلے مہینے کی بکری کتنی تھی اور اگلے 3 مہینوں کی بکری کا اندازہ بتاؤ	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
-Q699	MX05	mixed_forecast	en	0	year		what were last month sales and estimate the sales of the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
-Q700	MX06	mixed_forecast	roman	1	year		is mahine commision kitna hua aur mahine ke end tak kitna hoga	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
-Q701	MX06	mixed_forecast	urdu	0	year		اس مہینے کمیشن کتنا ہوا اور مہینے کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
-Q702	MX06	mixed_forecast	en	0	year		commission this month so far, and the estimate for the whole month	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
-Q703	MX07	mixed_forecast	roman	0	year		cash abhi kitna hai aur agle mahine kitna ho jayega	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
-Q704	MX07	mixed_forecast	urdu	0	year		ابھی کیش کتنا ہے اور اگلے مہینے کتنا ہو جائے گا	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
-Q705	MX07	mixed_forecast	en	0	year		how much cash do we have now and how much will we have next month	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
-Q706	MX09	mixed_forecast	roman	0	year		is saal ka profit kitna hua aur saal ke aakhir tak kitna hoga	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
-Q707	MX09	mixed_forecast	urdu	0	year		اس سال کا منافع کتنا ہوا اور سال کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
-Q708	MX09	mixed_forecast	en	0	year		profit this year so far and what it will be by the end of the year	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
-Q709	MX10	mixed_forecast	roman	0	year		pichle mahine dukan ka kharcha kitna tha aur agle 3 mahine ka estimate	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
-Q710	MX10	mixed_forecast	urdu	0	year		پچھلے مہینے دکان کا خرچہ کتنا تھا اور اگلے 3 مہینوں کا اندازہ	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
-Q711	MX10	mixed_forecast	en	0	year		shop expenses last month and the estimate for the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
-Q712	CP-open-bikri	help	roman	0	year		bikri book kholo	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
-Q713	CP-open-bikri	help	urdu	0	year		بکری بک کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
-Q714	CP-open-bikri	help	en	0	year		take me to the sale book	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
-Q715	CP-open-wasooli	help	roman	0	year		wasooli screen dikhao	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
-Q716	CP-open-wasooli	help	urdu	0	year		مجھے وصولی پر لے چلیں	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
-Q717	CP-open-wasooli	help	en	0	year		I want to open the receipt screen	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
-Q718	CP-open-adaigi	help	roman	0	year		mujhe adaigi par le chalo	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
-Q719	CP-open-adaigi	help	urdu	0	year		ادائیگی والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
-Q720	CP-open-adaigi	help	en	0	year		open the payment screen	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
-Q721	CP-open-peshgi	help	roman	0	year		peshgi wala page kholna hai	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
-Q722	CP-open-peshgi	help	urdu	0	year		پیشگی کھولیں	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
-Q723	CP-open-peshgi	help	en	0	year		show me the advance screen	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
-Q724	CP-open-kharcha	help	roman	0	year		kharcha kholo	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
-Q725	CP-open-kharcha	help	urdu	0	year		خرچہ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
-Q726	CP-open-kharcha	help	en	0	year		take me to the expense screen	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
-Q727	CP-open-udhar_raqam	help	roman	0	year		udhar raqam screen dikhao	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
-Q728	CP-open-udhar_raqam	help	urdu	0	year		مجھے ادھار رقم پر لے چلیں	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
-Q729	CP-open-udhar_raqam	help	en	0	year		I want to open money lent	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
-Q730	CP-open-alag_khata	help	roman	0	year		mujhe alag khata par le chalo	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
-Q731	CP-open-alag_khata	help	urdu	0	year		الگ کھاتہ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
-Q732	CP-open-alag_khata	help	en	0	year		open the separate khata	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
-Q733	CP-open-sarmaya	help	roman	0	year		sarmaya wala page kholna hai	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
-Q734	CP-open-sarmaya	help	urdu	0	year		سرمایہ کھولیں	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
-Q735	CP-open-sarmaya	help	en	0	year		show me partner capital	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
-Q736	CP-open-phal	help	roman	0	year		phal kholo	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
-Q737	CP-open-phal	help	urdu	0	year		پھل کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
-Q738	CP-open-phal	help	en	0	year		take me to fruit taken	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
-Q739	CP-open-general	help	roman	0	year		general journal screen dikhao	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
-Q740	CP-open-general	help	urdu	0	year		مجھے جنرل پر لے چلیں	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
-Q741	CP-open-general	help	en	0	year		I want to open the journal	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
-Q742	CP-open-dashboard	help	roman	0	year		mujhe dashboard par le chalo	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
-Q743	CP-open-dashboard	help	urdu	0	year		ڈیش بورڈ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
-Q744	CP-open-dashboard	help	en	0	year		open the dashboard	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
-Q745	CP-open-settings	help	roman	0	year		settings wala page kholna hai	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
-Q746	CP-open-settings	help	urdu	0	year		ترتیبات کھولیں	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
-Q747	CP-open-settings	help	en	0	year		show me settings	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
-Q748	CP-open-masters	help	roman	0	year		index kholo	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
-Q749	CP-open-masters	help	urdu	0	year		انڈکس کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
-Q750	CP-open-masters	help	en	0	year		take me to the index	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
-Q751	CP-open-accounts	help	roman	0	year		khaton ki list screen dikhao	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
-Q752	CP-open-accounts	help	urdu	0	year		مجھے کھاتوں کی فہرست پر لے چلیں	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
-Q753	CP-open-accounts	help	en	0	year		I want to open the accounts list	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
-Q754	CP-open-commission_rules	help	roman	0	year		mujhe commission rules par le chalo	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
-Q755	CP-open-commission_rules	help	urdu	0	year		کمیشن اصول والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
-Q756	CP-open-commission_rules	help	en	0	year		open commission rules	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
-Q757	CP-open-today_sales	help	roman	0	year		aaj ki bikri ki list wala page kholna hai	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
-Q758	CP-open-today_sales	help	urdu	0	year		آج کی بکری کھولیں	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
-Q759	CP-open-today_sales	help	en	0	year		show me today's sales list	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
-Q760	CP-open-unsold_stock	help	roman	0	year		baqi maal kholo	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
-Q761	CP-open-unsold_stock	help	urdu	0	year		باقی مال کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
-Q762	CP-open-unsold_stock	help	en	0	year		take me to unsold stock	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
-Q763	CP-open-pukhta_khata	help	roman	0	year		pukhta khata screen dikhao	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
-Q764	CP-open-pukhta_khata	help	urdu	0	year		مجھے پختہ کھاتہ پر لے چلیں	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
-Q765	CP-open-pukhta_khata	help	en	0	year		I want to open pukhta khata	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
-Q766	CP-open-collection_list	help	roman	0	year		mujhe agrahi list par le chalo	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
-Q767	CP-open-collection_list	help	urdu	0	year		اگراہی فہرست والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
-Q768	CP-open-collection_list	help	en	0	year		open the collection list	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
-Q769	CP-open-cash_book	help	roman	0	year		rokar book wala page kholna hai	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
-Q770	CP-open-cash_book	help	urdu	0	year		روکڑ بک کھولیں	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
-Q771	CP-open-cash_book	help	en	0	year		show me the cash book	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
-Q772	CP-open-gardens	help	roman	0	year		baghat kholo	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
-Q773	CP-open-gardens	help	urdu	0	year		باغات کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
-Q774	CP-open-gardens	help	en	0	year		take me to gardens	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
-Q775	CP-open-market_trips	help	roman	0	year		market safar screen dikhao	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
-Q776	CP-open-market_trips	help	urdu	0	year		مجھے مارکیٹ سفر پر لے چلیں	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
-Q777	CP-open-market_trips	help	en	0	year		I want to open market trips	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
-Q778	CP-open-partners	help	roman	0	year		mujhe shirakat daar par le chalo	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
-Q779	CP-open-partners	help	urdu	0	year		شراکت دار والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
-Q780	CP-open-partners	help	en	0	year		open the partners screen	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
-Q781	CP-open-month_close	help	roman	0	year		mahina band wala page kholna hai	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
-Q782	CP-open-month_close	help	urdu	0	year		مہینہ بند کھولیں	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
-Q783	CP-open-month_close	help	en	0	year		show me month close	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
-Q784	CP-open-day_close	help	roman	0	year		din band kholo	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
-Q785	CP-open-day_close	help	urdu	0	year		دن بند کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
-Q786	CP-open-day_close	help	en	0	year		take me to day close	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
-Q787	CP-open-reports	help	roman	0	year		reports screen dikhao	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
-Q788	CP-open-reports	help	urdu	0	year		مجھے رپورٹ پر لے چلیں	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
-Q789	CP-open-reports	help	en	0	year		I want to open reports	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
-Q790	CP-open-dead_amount	help	roman	0	year		mujhe doobi raqam par le chalo	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
-Q791	CP-open-dead_amount	help	urdu	0	year		ڈوبی رقم والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
-Q792	CP-open-dead_amount	help	en	0	year		open the dead amount	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
-Q793	CP-open-analytics	help	roman	0	year		tajziyat wala page kholna hai	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
-Q794	CP-open-analytics	help	urdu	0	year		تجزیات کھولیں	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
-Q795	CP-open-analytics	help	en	0	year		show me analytics	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
-Q796	CP-open-backup	help	roman	0	year		backup kholo	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
-Q797	CP-open-backup	help	urdu	0	year		بیک اپ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
-Q798	CP-open-backup	help	en	0	year		take me to backup	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
-Q799	CP-write-bikri	change	roman	0	year		bikri book likh do	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
-Q800	CP-write-bikri	change	urdu	0	year		بکری بک کی اندراج کرنی ہے	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
-Q801	CP-write-bikri	change	en	0	year		record the sale book	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
-Q802	CP-write-wasooli	change	roman	0	year		wasooli ki entry karni hai	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
-Q803	CP-write-wasooli	change	urdu	0	year		وصولی درج کریں	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
-Q804	CP-write-wasooli	change	en	0	year		write the receipt screen	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
-Q805	CP-write-adaigi	change	roman	0	year		adaigi darj karo	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
-Q806	CP-write-adaigi	change	urdu	0	year		ادائیگی لکھ دو	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
-Q807	CP-write-adaigi	change	en	0	year		enter the payment screen	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
-Q808	CP-write-peshgi	change	roman	0	year		peshgi likh do	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
-Q809	CP-write-peshgi	change	urdu	0	year		پیشگی کی اندراج کرنی ہے	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
-Q810	CP-write-peshgi	change	en	0	year		record the advance screen	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
-Q811	CP-write-kharcha	change	roman	0	year		kharcha ki entry karni hai	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
-Q812	CP-write-kharcha	change	urdu	0	year		خرچہ درج کریں	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
-Q813	CP-write-kharcha	change	en	0	year		write the expense screen	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
-Q814	CP-write-udhar_raqam	change	roman	0	year		udhar raqam darj karo	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
-Q815	CP-write-udhar_raqam	change	urdu	0	year		ادھار رقم لکھ دو	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
-Q816	CP-write-udhar_raqam	change	en	0	year		enter money lent	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
-Q817	CP-write-alag_khata	change	roman	0	year		alag khata likh do	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
-Q818	CP-write-alag_khata	change	urdu	0	year		الگ کھاتہ کی اندراج کرنی ہے	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
-Q819	CP-write-alag_khata	change	en	0	year		record the separate khata	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
-Q820	CP-write-sarmaya	change	roman	0	year		sarmaya ki entry karni hai	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
-Q821	CP-write-sarmaya	change	urdu	0	year		سرمایہ درج کریں	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
-Q822	CP-write-sarmaya	change	en	0	year		write partner capital	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
-Q823	CP-write-phal	change	roman	0	year		phal darj karo	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
-Q824	CP-write-phal	change	urdu	0	year		پھل لکھ دو	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
-Q825	CP-write-phal	change	en	0	year		enter fruit taken	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
-Q826	CP-write-general	change	roman	0	year		general journal likh do	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
-Q827	CP-write-general	change	urdu	0	year		جنرل کی اندراج کرنی ہے	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
-Q828	CP-write-general	change	en	0	year		record the journal	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
-Q829	CP-write-account	change	roman	0	year		naya khata ki entry karni hai	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
-Q830	CP-write-account	change	urdu	0	year		نیا کھاتہ درج کریں	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
-Q831	CP-write-account	change	en	0	year		write a new account	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q691	MX02	mixed_forecast	roman	0	year		is saal kele ka commission kitna hua aur saal ke aakhir tak kitna hoga	estimate		facet=MIX;item=Banana;period=this year;until=year_end	real_comm=@a.year.banana.total_comm;est_year=@est_item.banana.commission.year_end.same_pace|@est_item.banana.commission.year_end.same_growth|@est_item.banana.commission.year_end.same_season|@est_item.banana.commission.year_total.same_pace|@est_item.banana.commission.year_total.same_growth|@est_item.banana.commission.year_total.same_season	Umar 05-11-2026	C	item
+Q692	MX02	mixed_forecast	roman	1	year		is sal kele ka comision kitna hua aur sal ke akhir tak kitna hoga	estimate		facet=MIX;item=Banana;period=this year;until=year_end	real_comm=@a.year.banana.total_comm;est_year=@est_item.banana.commission.year_end.same_pace|@est_item.banana.commission.year_end.same_growth|@est_item.banana.commission.year_end.same_season|@est_item.banana.commission.year_total.same_pace|@est_item.banana.commission.year_total.same_growth|@est_item.banana.commission.year_total.same_season	Umar 05-11-2026	C	item
+Q693	MX02	mixed_forecast	en	0	year		what was the banana commission this year and what will it be by the end of the year	estimate		facet=MIX;item=Banana;period=this year;until=year_end	real_comm=@a.year.banana.total_comm;est_year=@est_item.banana.commission.year_end.same_pace|@est_item.banana.commission.year_end.same_growth|@est_item.banana.commission.year_end.same_season|@est_item.banana.commission.year_total.same_pace|@est_item.banana.commission.year_total.same_growth|@est_item.banana.commission.year_total.same_season	Umar 05-11-2026	C	item
+Q694	MX03	mixed_forecast	roman	0	year		faisal ka bakaya kitna hai aur isi raftar se 2 mahine baad kitna hoga	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q695	MX03	mixed_forecast	urdu	0	year		فیصل کا بقایا کتنا ہے اور اسی رفتار سے 2 مہینے بعد کتنا ہو گا	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q696	MX03	mixed_forecast	en	1	year		what does Faisal owe now and how much at this pace after 2 monhts	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q697	MX04	mixed_forecast	roman	0	year		aaj ki bikri batao aur agar raftar double ho to mahine ka kitna	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q698	MX04	mixed_forecast	urdu	0	year		آج کی بکری بتاؤ اور اگر رفتار دگنی ہو جائے تو مہینے کا کتنا	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q699	MX04	mixed_forecast	en	0	year		tell me today's sales and what the month would be if the pace doubles	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q700	MX05	mixed_forecast	roman	0	year		pichle mahine ki bikri kitni thi aur agle 3 mahine ki bikri ka andaza batao	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q701	MX05	mixed_forecast	urdu	0	year		پچھلے مہینے کی بکری کتنی تھی اور اگلے 3 مہینوں کی بکری کا اندازہ بتاؤ	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q702	MX05	mixed_forecast	en	0	year		what were last month sales and estimate the sales of the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q703	MX06	mixed_forecast	roman	1	year		is mahine commision kitna hua aur mahine ke end tak kitna hoga	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q704	MX06	mixed_forecast	urdu	0	year		اس مہینے کمیشن کتنا ہوا اور مہینے کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q705	MX06	mixed_forecast	en	0	year		commission this month so far, and the estimate for the whole month	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q706	MX07	mixed_forecast	roman	0	year		cash abhi kitna hai aur agle mahine kitna ho jayega	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q707	MX07	mixed_forecast	urdu	0	year		ابھی کیش کتنا ہے اور اگلے مہینے کتنا ہو جائے گا	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q708	MX07	mixed_forecast	en	0	year		how much cash do we have now and how much will we have next month	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q709	MX08	mixed_forecast	roman	0	year		rahim ka is saal kitna maal bika aur agle 3 mahine ka andaza	estimate		facet=MIX;seller=Rahim;period=this year;ahead=3	real_sales=@b.year.rahim.gross;est_next=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	Umar 05-11-2026	C	seller
+Q710	MX08	mixed_forecast	urdu	0	year		رحیم کا اس سال کتنا مال بکا اور اگلے 3 مہینوں کا اندازہ	estimate		facet=MIX;seller=Rahim;period=this year;ahead=3	real_sales=@b.year.rahim.gross;est_next=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	Umar 05-11-2026	C	seller
+Q711	MX08	mixed_forecast	en	0	year		how much of Rahim's goods sold this year and the estimate for the next 3 months	estimate		facet=MIX;seller=Rahim;period=this year;ahead=3	real_sales=@b.year.rahim.gross;est_next=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	Umar 05-11-2026	C	seller
+Q712	MX09	mixed_forecast	roman	0	year		is saal ka profit kitna hua aur saal ke aakhir tak kitna hoga	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q713	MX09	mixed_forecast	urdu	0	year		اس سال کا منافع کتنا ہوا اور سال کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q714	MX09	mixed_forecast	en	0	year		profit this year so far and what it will be by the end of the year	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q715	MX10	mixed_forecast	roman	0	year		pichle mahine dukan ka kharcha kitna tha aur agle 3 mahine ka estimate	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q716	MX10	mixed_forecast	urdu	0	year		پچھلے مہینے دکان کا خرچہ کتنا تھا اور اگلے 3 مہینوں کا اندازہ	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q717	MX10	mixed_forecast	en	0	year		shop expenses last month and the estimate for the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q718	CP-open-bikri	help	roman	0	year		bikri book kholo	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q719	CP-open-bikri	help	urdu	0	year		بکری بک کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q720	CP-open-bikri	help	en	0	year		take me to the sale book	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q721	CP-open-wasooli	help	roman	0	year		wasooli screen dikhao	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q722	CP-open-wasooli	help	urdu	0	year		مجھے وصولی پر لے چلیں	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q723	CP-open-wasooli	help	en	0	year		I want to open the receipt screen	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q724	CP-open-adaigi	help	roman	0	year		mujhe adaigi par le chalo	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q725	CP-open-adaigi	help	urdu	0	year		ادائیگی والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q726	CP-open-adaigi	help	en	0	year		open the payment screen	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q727	CP-open-peshgi	help	roman	0	year		peshgi wala page kholna hai	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q728	CP-open-peshgi	help	urdu	0	year		پیشگی کھولیں	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q729	CP-open-peshgi	help	en	0	year		show me the advance screen	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q730	CP-open-kharcha	help	roman	0	year		kharcha kholo	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q731	CP-open-kharcha	help	urdu	0	year		خرچہ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q732	CP-open-kharcha	help	en	0	year		take me to the expense screen	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q733	CP-open-udhar_raqam	help	roman	0	year		udhar raqam screen dikhao	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q734	CP-open-udhar_raqam	help	urdu	0	year		مجھے ادھار رقم پر لے چلیں	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q735	CP-open-udhar_raqam	help	en	0	year		I want to open money lent	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q736	CP-open-alag_khata	help	roman	0	year		mujhe alag khata par le chalo	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q737	CP-open-alag_khata	help	urdu	0	year		الگ کھاتہ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q738	CP-open-alag_khata	help	en	0	year		open the separate khata	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q739	CP-open-sarmaya	help	roman	0	year		sarmaya wala page kholna hai	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q740	CP-open-sarmaya	help	urdu	0	year		سرمایہ کھولیں	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q741	CP-open-sarmaya	help	en	0	year		show me partner capital	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q742	CP-open-phal	help	roman	0	year		phal kholo	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q743	CP-open-phal	help	urdu	0	year		پھل کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q744	CP-open-phal	help	en	0	year		take me to fruit taken	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q745	CP-open-general	help	roman	0	year		general journal screen dikhao	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q746	CP-open-general	help	urdu	0	year		مجھے جنرل پر لے چلیں	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q747	CP-open-general	help	en	0	year		I want to open the journal	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q748	CP-open-dashboard	help	roman	0	year		mujhe dashboard par le chalo	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q749	CP-open-dashboard	help	urdu	0	year		ڈیش بورڈ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q750	CP-open-dashboard	help	en	0	year		open the dashboard	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q751	CP-open-settings	help	roman	0	year		settings wala page kholna hai	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q752	CP-open-settings	help	urdu	0	year		ترتیبات کھولیں	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q753	CP-open-settings	help	en	0	year		show me settings	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q754	CP-open-masters	help	roman	0	year		index kholo	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q755	CP-open-masters	help	urdu	0	year		انڈکس کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q756	CP-open-masters	help	en	0	year		take me to the index	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q757	CP-open-accounts	help	roman	0	year		khaton ki list screen dikhao	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q758	CP-open-accounts	help	urdu	0	year		مجھے کھاتوں کی فہرست پر لے چلیں	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q759	CP-open-accounts	help	en	0	year		I want to open the accounts list	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q760	CP-open-commission_rules	help	roman	0	year		mujhe commission rules par le chalo	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q761	CP-open-commission_rules	help	urdu	0	year		کمیشن اصول والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q762	CP-open-commission_rules	help	en	0	year		open commission rules	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q763	CP-open-today_sales	help	roman	0	year		aaj ki bikri ki list wala page kholna hai	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q764	CP-open-today_sales	help	urdu	0	year		آج کی بکری کھولیں	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q765	CP-open-today_sales	help	en	0	year		show me today's sales list	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q766	CP-open-unsold_stock	help	roman	0	year		baqi maal kholo	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q767	CP-open-unsold_stock	help	urdu	0	year		باقی مال کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q768	CP-open-unsold_stock	help	en	0	year		take me to unsold stock	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q769	CP-open-pukhta_khata	help	roman	0	year		pukhta khata screen dikhao	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q770	CP-open-pukhta_khata	help	urdu	0	year		مجھے پختہ کھاتہ پر لے چلیں	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q771	CP-open-pukhta_khata	help	en	0	year		I want to open pukhta khata	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q772	CP-open-collection_list	help	roman	0	year		mujhe agrahi list par le chalo	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q773	CP-open-collection_list	help	urdu	0	year		اگراہی فہرست والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q774	CP-open-collection_list	help	en	0	year		open the collection list	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q775	CP-open-cash_book	help	roman	0	year		rokar book wala page kholna hai	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q776	CP-open-cash_book	help	urdu	0	year		روکڑ بک کھولیں	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q777	CP-open-cash_book	help	en	0	year		show me the cash book	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q778	CP-open-gardens	help	roman	0	year		baghat kholo	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q779	CP-open-gardens	help	urdu	0	year		باغات کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q780	CP-open-gardens	help	en	0	year		take me to gardens	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q781	CP-open-market_trips	help	roman	0	year		market safar screen dikhao	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q782	CP-open-market_trips	help	urdu	0	year		مجھے مارکیٹ سفر پر لے چلیں	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q783	CP-open-market_trips	help	en	0	year		I want to open market trips	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q784	CP-open-partners	help	roman	0	year		mujhe shirakat daar par le chalo	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q785	CP-open-partners	help	urdu	0	year		شراکت دار والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q786	CP-open-partners	help	en	0	year		open the partners screen	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q787	CP-open-month_close	help	roman	0	year		mahina band wala page kholna hai	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q788	CP-open-month_close	help	urdu	0	year		مہینہ بند کھولیں	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q789	CP-open-month_close	help	en	0	year		show me month close	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q790	CP-open-day_close	help	roman	0	year		din band kholo	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q791	CP-open-day_close	help	urdu	0	year		دن بند کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q792	CP-open-day_close	help	en	0	year		take me to day close	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q793	CP-open-reports	help	roman	0	year		reports screen dikhao	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q794	CP-open-reports	help	urdu	0	year		مجھے رپورٹ پر لے چلیں	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q795	CP-open-reports	help	en	0	year		I want to open reports	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q796	CP-open-dead_amount	help	roman	0	year		mujhe doobi raqam par le chalo	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q797	CP-open-dead_amount	help	urdu	0	year		ڈوبی رقم والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q798	CP-open-dead_amount	help	en	0	year		open the dead amount	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q799	CP-open-analytics	help	roman	0	year		tajziyat wala page kholna hai	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q800	CP-open-analytics	help	urdu	0	year		تجزیات کھولیں	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q801	CP-open-analytics	help	en	0	year		show me analytics	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q802	CP-open-backup	help	roman	0	year		backup kholo	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q803	CP-open-backup	help	urdu	0	year		بیک اپ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q804	CP-open-backup	help	en	0	year		take me to backup	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q805	CP-write-bikri	change	roman	0	year		bikri book likh do	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q806	CP-write-bikri	change	urdu	0	year		بکری بک کی اندراج کرنی ہے	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q807	CP-write-bikri	change	en	0	year		record the sale book	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q808	CP-write-wasooli	change	roman	0	year		wasooli ki entry karni hai	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q809	CP-write-wasooli	change	urdu	0	year		وصولی درج کریں	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q810	CP-write-wasooli	change	en	0	year		write the receipt screen	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q811	CP-write-adaigi	change	roman	0	year		adaigi darj karo	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q812	CP-write-adaigi	change	urdu	0	year		ادائیگی لکھ دو	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q813	CP-write-adaigi	change	en	0	year		enter the payment screen	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q814	CP-write-peshgi	change	roman	0	year		peshgi likh do	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q815	CP-write-peshgi	change	urdu	0	year		پیشگی کی اندراج کرنی ہے	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q816	CP-write-peshgi	change	en	0	year		record the advance screen	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q817	CP-write-kharcha	change	roman	0	year		kharcha ki entry karni hai	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q818	CP-write-kharcha	change	urdu	0	year		خرچہ درج کریں	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q819	CP-write-kharcha	change	en	0	year		write the expense screen	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q820	CP-write-udhar_raqam	change	roman	0	year		udhar raqam darj karo	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q821	CP-write-udhar_raqam	change	urdu	0	year		ادھار رقم لکھ دو	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q822	CP-write-udhar_raqam	change	en	0	year		enter money lent	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q823	CP-write-alag_khata	change	roman	0	year		alag khata likh do	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q824	CP-write-alag_khata	change	urdu	0	year		الگ کھاتہ کی اندراج کرنی ہے	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q825	CP-write-alag_khata	change	en	0	year		record the separate khata	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q826	CP-write-sarmaya	change	roman	0	year		sarmaya ki entry karni hai	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q827	CP-write-sarmaya	change	urdu	0	year		سرمایہ درج کریں	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q828	CP-write-sarmaya	change	en	0	year		write partner capital	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q829	CP-write-phal	change	roman	0	year		phal darj karo	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q830	CP-write-phal	change	urdu	0	year		پھل لکھ دو	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q831	CP-write-phal	change	en	0	year		enter fruit taken	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q832	CP-write-general	change	roman	0	year		general journal likh do	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q833	CP-write-general	change	urdu	0	year		جنرل کی اندراج کرنی ہے	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q834	CP-write-general	change	en	0	year		record the journal	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q835	CP-write-account	change	roman	0	year		naya khata ki entry karni hai	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q836	CP-write-account	change	urdu	0	year		نیا کھاتہ درج کریں	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q837	CP-write-account	change	en	0	year		write a new account	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q838	CM-R20-list	dues	roman	0	year		sab gahakon ki baqaya list dikhao	answered	report:R20	facet=CAP;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	capability.tsv R20 / list	A	dues
+Q839	CM-R20-list	dues	urdu	0	year		تمام گاہکوں کے بقایا کی فہرست دکھائیں	answered	report:R20	facet=CAP;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	capability.tsv R20 / list	A	dues
+Q840	CM-R20-list	dues	en	0	year		show the list of what every buyer owes	answered	report:R20	facet=CAP;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	capability.tsv R20 / list	A	dues
+Q841	CM-R20-top	dues	roman	0	year		sab se zyada udhar kis gahak ke zimme hai	answered	report:R20	facet=CAP;view=R20;sort=balance	top!=@top.buyer_dues.name;amount=@top.buyer_dues.amount	capability.tsv R20 / top	A	dues
+Q842	CM-R20-top	dues	urdu	0	year		سب سے زیادہ ادھار کس گاہک کے ذمے ہے	answered	report:R20	facet=CAP;view=R20;sort=balance	top!=@top.buyer_dues.name;amount=@top.buyer_dues.amount	capability.tsv R20 / top	A	dues
+Q843	CM-R20-top	dues	en	0	year		which buyer owes the most	answered	report:R20	facet=CAP;view=R20;sort=balance	top!=@top.buyer_dues.name;amount=@top.buyer_dues.amount	capability.tsv R20 / top	A	dues
+Q844		advice	roman	1	year		baqaya wasool karne ke liye pehle kis ko phone karun	advice	report:R20	facet=CAP;view=R20;general=0	first=@top.collect_first	capability.tsv tile-buyers_dues / advice	B	advice
+Q845	CM-R24-top	dues	roman	0	year		sab se zyada paise kis bepari ko dene hain	answered	report:R24	facet=CAP;view=R24;sort=payable	top!=@top.seller_payable.name;amount=@top.seller_payable.amount	capability.tsv R24 / top	A	dues
+Q846	CM-R24-top	dues	urdu	0	year		سب سے زیادہ رقم کس بیوپاری کو دینی ہے	answered	report:R24	facet=CAP;view=R24;sort=payable	top!=@top.seller_payable.name;amount=@top.seller_payable.amount	capability.tsv R24 / top	A	dues
+Q847	CM-R24-top	dues	en	0	year		which seller do we owe the most	answered	report:R24	facet=CAP;view=R24;sort=payable	top!=@top.seller_payable.name;amount=@top.seller_payable.amount	capability.tsv R24 / top	A	dues
+Q848	CM-R24-list	dues	roman	1	year		sab byopariyon ka dena kitna kitna hai	answered	report:R24	facet=CAP;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	capability.tsv R24 / list	A	dues
+Q849	CM-R24-list	dues	urdu	0	year		تمام بیوپاریوں کا دینا الگ الگ دکھائیں	answered	report:R24	facet=CAP;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	capability.tsv R24 / list	A	dues
+Q850	CM-R24-list	dues	en	0	year		list what we owe each seller	answered	report:R24	facet=CAP;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	capability.tsv R24 / list	A	dues
+Q851		advice	urdu	1	year		بیوپاریوں کو پیسے دینے میں پہلے کس کو دوں	advice	report:R24	facet=CAP;view=R24;general=0	first=@top.pay_first	capability.tsv tile-sellers_payable / advice	B	advice
+Q852	CM-R26-list	dues	roman	0	year		peshgi ki list dikhao, kis ko kitni di thi	answered	report:R26	facet=CAP;view=R26	open=@r26.total.open;given=@r26.total.given	capability.tsv R26 / list	A	dues
+Q853	CM-R26-list	dues	urdu	0	year		پیشگی کی فہرست دکھائیں، کس کو کتنی دی تھی	answered	report:R26	facet=CAP;view=R26	open=@r26.total.open;given=@r26.total.given	capability.tsv R26 / list	A	dues
+Q854	CM-R26-list	dues	en	0	year		show the advances list: who was given how much	answered	report:R26	facet=CAP;view=R26	open=@r26.total.open;given=@r26.total.given	capability.tsv R26 / list	A	dues
+Q855	CM-R26-top	dues	roman	1	year		sab se zyada peshgi kis ke pas hai	answered	report:R26	facet=CAP;view=R26;sort=open	open=@r26.total.open	capability.tsv R26 / top	A	dues
+Q856	CM-R26-top	dues	urdu	0	year		سب سے زیادہ پیشگی کس کے پاس ہے	answered	report:R26	facet=CAP;view=R26;sort=open	open=@r26.total.open	capability.tsv R26 / top	A	dues
+Q857	CM-R26-top	dues	en	0	year		who holds the biggest open advance	answered	report:R26	facet=CAP;view=R26;sort=open	open=@r26.total.open	capability.tsv R26 / top	A	dues
+Q858		advice	en	1	year		what should I do to get the open advance back	advice	report:R26	facet=CAP;view=R26;general=0		capability.tsv tile-advances_open / advice	B	advice
+Q859	CM-R12-list	cash	roman	0	year		is mahine ki rokar book dikhao	answered	report:R12	facet=CAP;view=R12;period=this month	closing=@r12.month.sum.report_closing_balance	capability.tsv R12 / list	A	cash
+Q860	CM-R12-list	cash	urdu	0	year		اس مہینے کی روکڑ بک دکھائیں	answered	report:R12	facet=CAP;view=R12;period=this month	closing=@r12.month.sum.report_closing_balance	capability.tsv R12 / list	A	cash
+Q861	CM-R12-list	cash	en	0	year		show the cash book for this month	answered	report:R12	facet=CAP;view=R12;period=this month	closing=@r12.month.sum.report_closing_balance	capability.tsv R12 / list	A	cash
+Q862	CM-R12-day	cash	roman	1	year		kal raat rokar kitni bachi thi	answered	report:R12	facet=CAP;view=R12;period=yesterday	closing=@r12.yesterday.sum.report_closing_balance	capability.tsv R12 / day	A	cash
+Q863	CM-R12-day	cash	urdu	0	year		کل رات روکڑ کتنی بچی تھی	answered	report:R12	facet=CAP;view=R12;period=yesterday	closing=@r12.yesterday.sum.report_closing_balance	capability.tsv R12 / day	A	cash
+Q864	CM-R12-day	cash	en	0	year		how much cash was left at the end of yesterday	answered	report:R12	facet=CAP;view=R12;period=yesterday	closing=@r12.yesterday.sum.report_closing_balance	capability.tsv R12 / day	A	cash
+Q865		cash	roman	0	year		rokar pichle mahine ke end se ab kitni zyada ya kam hai	answered	report:R12	facet=CAP;view=R12	now=@r12.today.sum.report_closing_balance;before=@r12.last_month.sum.report_closing_balance	capability.tsv R12 / compare	A	cash
+Q866		advice	urdu	0	year		کیش کم ہو تو کیا کروں	advice	report:R12	facet=CAP;view=R12;general=0		capability.tsv tile-cash_in_hand / advice	B	advice
+Q867	CM-R23-figure	dues	roman	0	year		pichle mahine gahakon se kitni wasooli hui	answered	report:R23	facet=CAP;view=R23;period=last month	received=@r23.last_month.total.amount	capability.tsv R23 / figure	A	dues
+Q868	CM-R23-figure	dues	urdu	0	year		پچھلے مہینے گاہکوں سے کتنی وصولی ہوئی	answered	report:R23	facet=CAP;view=R23;period=last month	received=@r23.last_month.total.amount	capability.tsv R23 / figure	A	dues
+Q869	CM-R23-figure	dues	en	0	year		how much did we collect from buyers last month	answered	report:R23	facet=CAP;view=R23;period=last month	received=@r23.last_month.total.amount	capability.tsv R23 / figure	A	dues
+Q870		dues	en	0	year		collections last month against the whole year	answered	report:R23	facet=CAP;view=R23	last=@r23.last_month.total.amount;year=@r23.year.total.amount	capability.tsv R23 / compare	A	dues
+Q871	CM-R25-figure	dues	roman	0	year		is mahine byopariyon ko kitni adaigi hui	answered	report:R25	facet=CAP;view=R25;period=this month	paid=@r25.month.total.amount	capability.tsv R25 / figure	A	dues
+Q872	CM-R25-figure	dues	urdu	0	year		اس مہینے بیوپاریوں کو کتنی ادائیگی ہوئی	answered	report:R25	facet=CAP;view=R25;period=this month	paid=@r25.month.total.amount	capability.tsv R25 / figure	A	dues
+Q873	CM-R25-figure	dues	en	1	year		how much did we pay sellers this mont	answered	report:R25	facet=CAP;view=R25;period=this month	paid=@r25.month.total.amount	capability.tsv R25 / figure	A	dues
+Q874		dues	roman	0	year		adaigi is mahine pichle mahine se kitni kam ya zyada hai	answered	report:R25	facet=CAP;view=R25	month=@r25.month.total.amount;last=@r25.last_month.total.amount	capability.tsv R25 / compare	A	dues
+Q875	CM-R29-figure	expense	roman	0	year		is saal dukan ka kul kharcha kitna hua	answered	report:R29	facet=CAP;view=R29;period=this year	total=@r29.year.total.expense	capability.tsv R29 / figure	A	expense
+Q876	CM-R29-figure	expense	urdu	0	year		اس سال دکان کا کل خرچہ کتنا ہوا	answered	report:R29	facet=CAP;view=R29;period=this year	total=@r29.year.total.expense	capability.tsv R29 / figure	A	expense
+Q877	CM-R29-figure	expense	en	0	year		what is the total shop expense this year	answered	report:R29	facet=CAP;view=R29;period=this year	total=@r29.year.total.expense	capability.tsv R29 / figure	A	expense
+Q878	CM-R29-top	expense	roman	1	year		is sal sab se zyada kharcha kis mad mein hua	answered	report:R29	facet=CAP;view=R29;sort=expense	top!=@top.expense_head_year.name;amount=@top.expense_head_year.amount	capability.tsv R29 / top	A	expense
+Q879	CM-R29-top	expense	urdu	0	year		اس سال سب سے زیادہ خرچہ کس مد میں ہوا	answered	report:R29	facet=CAP;view=R29;sort=expense	top!=@top.expense_head_year.name;amount=@top.expense_head_year.amount	capability.tsv R29 / top	A	expense
+Q880	CM-R29-top	expense	en	0	year		which expense head cost the most this year	answered	report:R29	facet=CAP;view=R29;sort=expense	top!=@top.expense_head_year.name;amount=@top.expense_head_year.amount	capability.tsv R29 / top	A	expense
+Q881	CM-R29-list	expense	roman	0	year		pichle mahine ke tamam kharchon ki list	answered	report:R29	facet=CAP;view=R29;period=last month	total=@r29.last_month.total.expense	capability.tsv R29 / list	A	expense
+Q882	CM-R29-list	expense	urdu	0	year		پچھلے مہینے کے تمام خرچوں کی فہرست	answered	report:R29	facet=CAP;view=R29;period=last month	total=@r29.last_month.total.expense	capability.tsv R29 / list	A	expense
+Q883	CM-R29-list	expense	en	0	year		list all expenses of last month	answered	report:R29	facet=CAP;view=R29;period=last month	total=@r29.last_month.total.expense	capability.tsv R29 / list	A	expense
+Q884		expense	urdu	0	year		خرچہ پچھلے مہینے کتنا تھا اور اس سال کل کتنا	answered	report:R29	facet=CAP;view=R29	last=@r29.last_month.total.expense;year=@r29.year.total.expense	capability.tsv R29 / compare	A	expense
+Q885	CM-R30-figure	partner	roman	0	year		is saal ka kul munafa kitna hai	answered	report:R30	facet=CAP;view=R30;period=this year	profit=@r30.year.total.profit_share	capability.tsv R30 / figure	A	partner
+Q886	CM-R30-figure	partner	urdu	0	year		اس سال کا کل منافع کتنا ہے	answered	report:R30	facet=CAP;view=R30;period=this year	profit=@r30.year.total.profit_share	capability.tsv R30 / figure	A	partner
+Q887	CM-R30-figure	partner	en	0	year		what is the total profit this year	answered	report:R30	facet=CAP;view=R30;period=this year	profit=@r30.year.total.profit_share	capability.tsv R30 / figure	A	partner
+Q888	CM-R30-list	partner	roman	1	year		har shirakat dar ka is saal ka munafa alag alag batao	answered	report:R30	facet=CAP;view=R30;period=this year	a=@r30.year.partner_a.profit_share;b=@r30.year.partner_b.profit_share;c=@r30.year.usman.profit_share	capability.tsv R30 / list	A	partner
+Q889	CM-R30-list	partner	urdu	0	year		ہر شراکت دار کا اس سال کا منافع الگ الگ بتائیں	answered	report:R30	facet=CAP;view=R30;period=this year	a=@r30.year.partner_a.profit_share;b=@r30.year.partner_b.profit_share;c=@r30.year.usman.profit_share	capability.tsv R30 / list	A	partner
+Q890	CM-R30-list	partner	en	0	year		show each partner's profit share this year	answered	report:R30	facet=CAP;view=R30;period=this year	a=@r30.year.partner_a.profit_share;b=@r30.year.partner_b.profit_share;c=@r30.year.usman.profit_share	capability.tsv R30 / list	A	partner
+Q891		partner	en	0	year		profit last month against the whole year	answered	report:R30	facet=CAP;view=R30	year=@r30.year.total.profit_share;last=@r30.last_month.total.profit_share	capability.tsv R30 / compare	A	partner
+Q892		advice	roman	0	year		munafa barhane ke liye kharche ya commission mein se kya dekhun	advice	report:R30,report:R29	facet=CAP;view=R30;general=0		capability.tsv R30 / advice	B	advice
+Q893	CM-R32-list	lent	roman	0	year		udhar raqam ki list dikhao, kis ne kitni li	answered	report:R32	facet=CAP;view=R32	open=@r32.total.open;lent=@r32.total.lent	capability.tsv R32 / list	A	dues
+Q894	CM-R32-list	lent	urdu	0	year		ادھار رقم کی فہرست دکھائیں، کس نے کتنی لی	answered	report:R32	facet=CAP;view=R32	open=@r32.total.open;lent=@r32.total.lent	capability.tsv R32 / list	A	dues
+Q895	CM-R32-list	lent	en	0	year		show money lent: who took how much	answered	report:R32	facet=CAP;view=R32	open=@r32.total.open;lent=@r32.total.lent	capability.tsv R32 / list	A	dues
+Q896	CM-R32-top	lent	roman	1	year		udhar raqam mein sab se zyada kis ke zimme hai	answered	report:R32	facet=CAP;view=R32;sort=open	open=@r32.total.open	capability.tsv R32 / top	A	dues
+Q897	CM-R32-top	lent	urdu	0	year		ادھار رقم میں سب سے زیادہ کس کے ذمے ہے	answered	report:R32	facet=CAP;view=R32;sort=open	open=@r32.total.open	capability.tsv R32 / top	A	dues
+Q898	CM-R32-top	lent	en	0	year		who owes the most of the money lent	answered	report:R32	facet=CAP;view=R32;sort=open	open=@r32.total.open	capability.tsv R32 / top	A	dues
+Q899		advice	urdu	0	year		جس نے ادھار رقم واپس نہیں کی اس کا کیا کروں	advice	report:R32	facet=CAP;view=R32;general=0		capability.tsv R32 / advice	B	advice
+Q900	CM-R38-figure	dues	roman	0	year		doobi hui raqam kitni hai	answered	report:R38,tiles	facet=CAP;view=R38	dead=@tiles.dead	capability.tsv R38 / figure	A	dues
+Q901	CM-R38-figure	dues	urdu	0	year		ڈوبی ہوئی رقم کتنی ہے	answered	report:R38,tiles	facet=CAP;view=R38	dead=@tiles.dead	capability.tsv R38 / figure	A	dues
+Q902	CM-R38-figure	dues	en	0	year		how much is the dead amount	answered	report:R38,tiles	facet=CAP;view=R38	dead=@tiles.dead	capability.tsv R38 / figure	A	dues
+Q903	CM-R38-list	dues	roman	1	year		doobi raqam mein kis kis ka naam hai	answered	report:R38	facet=CAP;view=R38	dead=@tiles.dead;owed=@r38.total.owed_then	capability.tsv R38 / list	A	dues
+Q904	CM-R38-list	dues	urdu	0	year		ڈوبی رقم میں کس کس کا نام ہے	answered	report:R38	facet=CAP;view=R38	dead=@tiles.dead;owed=@r38.total.owed_then	capability.tsv R38 / list	A	dues
+Q905	CM-R38-list	dues	en	0	year		whose names are in the dead amount	answered	report:R38	facet=CAP;view=R38	dead=@tiles.dead;owed=@r38.total.owed_then	capability.tsv R38 / list	A	dues
+Q906		advice	en	0	year		how can the dead amount be recovered	advice	report:R38	facet=CAP;view=R38;general=0		capability.tsv R38 / advice	B	advice
+Q907	CM-R33-figure	trip	roman	0	year		market safar ka nafa ya nuqsan kitna raha	answered	report:R33	facet=CAP;view=R33	result=@trip1.result;second=@trip2.result	capability.tsv R33 / figure	A	trip
+Q908	CM-R33-figure	trip	urdu	0	year		مارکیٹ سفر کا نفع یا نقصان کتنا رہا	answered	report:R33	facet=CAP;view=R33	result=@trip1.result;second=@trip2.result	capability.tsv R33 / figure	A	trip
+Q909	CM-R33-figure	trip	en	0	year		what was the profit or loss of the market trips	answered	report:R33	facet=CAP;view=R33	result=@trip1.result;second=@trip2.result	capability.tsv R33 / figure	A	trip
+Q910	CM-R33-list	trip	roman	0	year		tamam market safar ki list, kitne ka maal kharida	answered	report:R33	facet=CAP;view=R33	cost1=@trip1.bought_cost;cost2=@trip2.bought_cost	capability.tsv R33 / list	A	trip
+Q911	CM-R33-list	trip	urdu	0	year		تمام مارکیٹ سفر کی فہرست، کتنے کا مال خریدا	answered	report:R33	facet=CAP;view=R33	cost1=@trip1.bought_cost;cost2=@trip2.bought_cost	capability.tsv R33 / list	A	trip
+Q912	CM-R33-list	trip	en	0	year		list all market trips and what was bought	answered	report:R33	facet=CAP;view=R33	cost1=@trip1.bought_cost;cost2=@trip2.bought_cost	capability.tsv R33 / list	A	trip
+Q913	CM-R33-top	trip	roman	1	year		kis safar mein sab se zyada nafa hua	answered	report:R33	facet=CAP;view=R33;sort=result	best=@trip2.result	capability.tsv R33 / top	A	trip
+Q914	CM-R33-top	trip	urdu	0	year		کس سفر میں سب سے زیادہ نفع ہوا	answered	report:R33	facet=CAP;view=R33;sort=result	best=@trip2.result	capability.tsv R33 / top	A	trip
+Q915	CM-R33-top	trip	en	0	year		which trip made the most profit	answered	report:R33	facet=CAP;view=R33;sort=result	best=@trip2.result	capability.tsv R33 / top	A	trip
+Q916		advice	roman	0	year		market safar se maal khareedna theek rahta hai ya nahi	advice	report:R33	facet=CAP;view=R33;general=0		capability.tsv R33 / advice	B	advice
+Q917	CM-R36-figure	garden	roman	0	year		baagh ka abhi ka balance kya hai	answered	report:R36,tiles	facet=CAP;view=R36	balance=@r36.total.balance	capability.tsv R36 / figure	A	garden
+Q918	CM-R36-figure	garden	urdu	0	year		باغ کا ابھی کا بیلنس کیا ہے	answered	report:R36,tiles	facet=CAP;view=R36	balance=@r36.total.balance	capability.tsv R36 / figure	A	garden
+Q919	CM-R36-figure	garden	en	0	year		what is the garden balance now	answered	report:R36,tiles	facet=CAP;view=R36	balance=@r36.total.balance	capability.tsv R36 / figure	A	garden
+Q920	CM-R36-list	garden	roman	1	year		baagh ke kharche aur commission alag alag batao	answered	report:R36	facet=CAP;view=R36	costs=@r36.total.costs;commission=@r36.total.commission	capability.tsv R36 / list	A	garden
+Q921	CM-R36-list	garden	urdu	0	year		باغ کے خرچے اور کمیشن الگ الگ بتائیں	answered	report:R36	facet=CAP;view=R36	costs=@r36.total.costs;commission=@r36.total.commission	capability.tsv R36 / list	A	garden
+Q922	CM-R36-list	garden	en	0	year		show the garden's costs and commission	answered	report:R36	facet=CAP;view=R36	costs=@r36.total.costs;commission=@r36.total.commission	capability.tsv R36 / list	A	garden
+Q923		advice	urdu	0	year		باغ کا ٹھیکہ کب بند کروں	advice	report:R36	facet=CAP;view=R36;general=0		capability.tsv R36 / advice	B	advice
+Q924	CM-R37-figure	fruit	roman	0	year		is saal partnaron ne kitne ka phal liya	answered	report:R37	facet=CAP;view=R37;period=this year	total=@r37.year.total.value	capability.tsv R37 / figure	A	fruit
+Q925	CM-R37-figure	fruit	urdu	0	year		اس سال شراکت داروں نے کتنے کا پھل لیا	answered	report:R37	facet=CAP;view=R37;period=this year	total=@r37.year.total.value	capability.tsv R37 / figure	A	fruit
+Q926	CM-R37-figure	fruit	en	0	year		how much fruit did the partners take this year	answered	report:R37	facet=CAP;view=R37;period=this year	total=@r37.year.total.value	capability.tsv R37 / figure	A	fruit
+Q927		fruit	en	0	year		fruit taken this year against last month	answered	report:R37	facet=CAP;view=R37	year=@r37.year.total.value;last=@r37.last_month.total.value	capability.tsv R37 / compare	A	fruit
+Q928	CM-R10-list	stock	roman	0	year		kis kis item ka kitna maal baqi hai	answered	report:R10	facet=CAP;view=R10	banana=@stock.banana.qty;apple=@stock.apple.qty;mango=@stock.mango.qty;mosambi=@stock.mosambi.qty;potato=@stock.potato.qty	capability.tsv R10 / list	A	stock
+Q929	CM-R10-list	stock	urdu	0	year		کس کس آئٹم کا کتنا مال باقی ہے	answered	report:R10	facet=CAP;view=R10	banana=@stock.banana.qty;apple=@stock.apple.qty;mango=@stock.mango.qty;mosambi=@stock.mosambi.qty;potato=@stock.potato.qty	capability.tsv R10 / list	A	stock
+Q930	CM-R10-list	stock	en	0	year		how much unsold stock is there of each item	answered	report:R10	facet=CAP;view=R10	banana=@stock.banana.qty;apple=@stock.apple.qty;mango=@stock.mango.qty;mosambi=@stock.mosambi.qty;potato=@stock.potato.qty	capability.tsv R10 / list	A	stock
+Q931	CM-R10-top	stock	roman	1	year		sab se zyada kis item ka maal pada hua hai	answered	report:R10	facet=CAP;view=R10;sort=balance	potato=@stock.potato.qty	capability.tsv R10 / top	A	stock
+Q932	CM-R10-top	stock	urdu	0	year		سب سے زیادہ کس آئٹم کا مال پڑا ہوا ہے	answered	report:R10	facet=CAP;view=R10;sort=balance	potato=@stock.potato.qty	capability.tsv R10 / top	A	stock
+Q933	CM-R10-top	stock	en	0	year		which item has the most unsold stock	answered	report:R10	facet=CAP;view=R10;sort=balance	potato=@stock.potato.qty	capability.tsv R10 / top	A	stock
+Q934		advice	roman	0	year		purana maal pehle bechna chahiye ya naya	advice	report:R10	facet=CAP;view=R10;general=0		capability.tsv R10 / advice	B	advice
+Q935		partner	urdu	0	year		پارٹنر الف کی کل رقم پچھلے مہینے کے مقابلے میں کتنی بدلی	answered	report:R31	facet=CAP;view=R31;partner=Partner A	total=@partner.partner_a.total	capability.tsv R31 / compare	A	partner
+Q936	CM-view-F-top	partner	roman	1	year		sab se zyada hissa kis shirakat dar ka bana	answered	analytics:F	facet=CAP;view=F;sort=income_share	a=@f.all.partner_a.income_share	capability.tsv view-F / top	A	partner
+Q937	CM-view-F-top	partner	urdu	0	year		سب سے زیادہ حصہ کس شراکت دار کا بنا	answered	analytics:F	facet=CAP;view=F;sort=income_share	a=@f.all.partner_a.income_share	capability.tsv view-F / top	A	partner
+Q938	CM-view-F-top	partner	en	0	year		which partner has the biggest share	answered	analytics:F	facet=CAP;view=F;sort=income_share	a=@f.all.partner_a.income_share	capability.tsv view-F / top	A	partner
+Q939		partner	en	0	year		what is the difference between Partner A's and Partner B's total	answered	report:R31	facet=CAP;view=R31	a=@partner.partner_a.total;b=@partner.partner_b.total	capability.tsv figure-partner_total / compare	A	partner
+Q940	CM-figure-partner_share-figure	partner	roman	0	year		partner a ka is mahine ka hissa kitna hai	answered	report:R30	facet=CAP;view=R30;period=this month	a=@partner.partner_a.month_share	capability.tsv figure-partner_share / figure	A	partner
+Q941	CM-figure-partner_share-figure	partner	urdu	0	year		پارٹنر الف کا اس مہینے کا حصہ کتنا ہے	answered	report:R30	facet=CAP;view=R30;period=this month	a=@partner.partner_a.month_share	capability.tsv figure-partner_share / figure	A	partner
+Q942	CM-figure-partner_share-figure	partner	en	0	year		Partner A's share this month	answered	report:R30	facet=CAP;view=R30;period=this month	a=@partner.partner_a.month_share	capability.tsv figure-partner_share / figure	A	partner
+Q943	CM-figure-partner_share-top	partner	roman	0	year		is saal kis partner ka hissa sab se zyada raha	answered	analytics:F	facet=CAP;view=F;period=this year	a=@partner.partner_a.year_share	capability.tsv figure-partner_share / top	A	partner
+Q944	CM-figure-partner_share-top	partner	urdu	0	year		اس سال کس پارٹنر کا حصہ سب سے زیادہ رہا	answered	analytics:F	facet=CAP;view=F;period=this year	a=@partner.partner_a.year_share	capability.tsv figure-partner_share / top	A	partner
+Q945	CM-figure-partner_share-top	partner	en	0	year		which partner had the biggest share this year	answered	analytics:F	facet=CAP;view=F;period=this year	a=@partner.partner_a.year_share	capability.tsv figure-partner_share / top	A	partner
+Q946	CM-figure-partner_capital-list	capital	roman	1	year		har partner ka sarmaya kitna laga hua hai	answered	report:R31	facet=CAP;view=R31	b=@partner.partner_b.capital;usman=@partner.usman.capital	capability.tsv figure-partner_capital / list	A	capital
+Q947	CM-figure-partner_capital-list	capital	urdu	0	year		ہر پارٹنر کا سرمایہ کتنا لگا ہوا ہے	answered	report:R31	facet=CAP;view=R31	b=@partner.partner_b.capital;usman=@partner.usman.capital	capability.tsv figure-partner_capital / list	A	capital
+Q948	CM-figure-partner_capital-list	capital	en	0	year		each partner's capital in the shop	answered	report:R31	facet=CAP;view=R31	b=@partner.partner_b.capital;usman=@partner.usman.capital	capability.tsv figure-partner_capital / list	A	capital
+Q949	CM-tile-sellers_dues-figure	dues	roman	0	year		kisi byopari ne humein paise dene hain	answered	tiles	facet=CAP;view=tiles	owe=@tiles.sellers_owe	capability.tsv tile-sellers_dues / figure	A	dues
+Q950	CM-tile-sellers_dues-figure	dues	urdu	0	year		کیا کسی بیوپاری نے ہمیں پیسے دینے ہیں	answered	tiles	facet=CAP;view=tiles	owe=@tiles.sellers_owe	capability.tsv tile-sellers_dues / figure	A	dues
+Q951	CM-tile-sellers_dues-figure	dues	en	0	year		does any seller owe the shop money	answered	tiles	facet=CAP;view=tiles	owe=@tiles.sellers_owe	capability.tsv tile-sellers_dues / figure	A	dues
+Q952	CM-tile-today_expenses-figure	expense	roman	0	year		aaj ka dukan ka kharcha kitna hua	answered	tiles	facet=CAP;view=tiles;period=today	exp=@tiles.expenses_today	capability.tsv tile-today_expenses / figure	A	expense
+Q953	CM-tile-today_expenses-figure	expense	urdu	0	year		آج کا دکان کا خرچہ کتنا ہوا	answered	tiles	facet=CAP;view=tiles;period=today	exp=@tiles.expenses_today	capability.tsv tile-today_expenses / figure	A	expense
+Q954	CM-tile-today_expenses-figure	expense	en	0	year		today's shop expenses	answered	tiles	facet=CAP;view=tiles;period=today	exp=@tiles.expenses_today	capability.tsv tile-today_expenses / figure	A	expense
+Q955		period	roman	0	year		aaj ki bikri kal se kitni zyada ya kam hai	answered	analytics:A	facet=CAP;view=A;period=today	today=@a.today.total.gross;yesterday=@a.yesterday.total.gross	capability.tsv tile-today_sales / compare	A	period
+Q956		period	urdu	0	year		آج کا کمیشن کل کے مقابلے میں کتنا ہے	answered	analytics:A	facet=CAP;view=A;period=today	today=@a.today.total.total_comm;yesterday=@a.yesterday.total.total_comm	capability.tsv tile-today_commission / compare	A	period
+Q957		advice	en	0	year		there is a lot of unsold stock, what should I do	advice	tiles,report:R10	facet=CAP;view=tiles		capability.tsv tile-stock / advice	B	advice
+Q958		advice	roman	0	year		safar ka baqi maal kaise nikalun	advice	tiles,report:R33	facet=CAP;view=tiles		capability.tsv tile-trips / advice	B	advice
+Q959		advice	urdu	0	year		باغ کا بیلنس مائنس ہے کیا کروں	advice	tiles,report:R36	facet=CAP;view=tiles		capability.tsv tile-gardens / advice	B	advice
+Q960		advice	en	0	year		how do I ask for the money lent back	advice	tiles,report:R32	facet=CAP;view=tiles		capability.tsv tile-money_lent_open / advice	B	advice
+Q961		advice	roman	0	year		doobi raqam ka hisab kaise saaf karun	advice	tiles,report:R38	facet=CAP;view=tiles		capability.tsv tile-dead_amount / advice	B	advice
+Q962		advice	urdu	0	year		کل بقایا بہت ہے، کیش کیسے نکالوں	advice	tiles,report:R20	facet=CAP;view=tiles		capability.tsv tile-total_dues / advice	B	advice
+Q963	CM-view-A-top	item	roman	0	year		is saal kis item se sab se zyada commission mila	answered	analytics:A	facet=CAP;view=A;period=this year	top!=@top.item_commission_year.name;amount=@top.item_commission_year.amount	capability.tsv view-A / top	A	item
+Q964	CM-view-A-top	item	urdu	0	year		اس سال کس آئٹم سے سب سے زیادہ کمیشن ملا	answered	analytics:A	facet=CAP;view=A;period=this year	top!=@top.item_commission_year.name;amount=@top.item_commission_year.amount	capability.tsv view-A / top	A	item
+Q965	CM-view-A-top	item	en	0	year		which item gave the most commission this year	answered	analytics:A	facet=CAP;view=A;period=this year	top!=@top.item_commission_year.name;amount=@top.item_commission_year.amount	capability.tsv view-A / top	A	item
+Q966	CM-view-A-list	item	roman	1	year		is mahine har item ki bikri alag alag dikhao	answered	analytics:A	facet=CAP;view=A;period=this month	total=@a.month.total.gross	capability.tsv view-A / list	A	item
+Q967	CM-view-A-list	item	urdu	0	year		اس مہینے ہر آئٹم کی بکری الگ الگ دکھائیں	answered	analytics:A	facet=CAP;view=A;period=this month	total=@a.month.total.gross	capability.tsv view-A / list	A	item
+Q968	CM-view-A-list	item	en	0	year		show this month sales item by item	answered	analytics:A	facet=CAP;view=A;period=this month	total=@a.month.total.gross	capability.tsv view-A / list	A	item
+Q969		item	en	0	year		is the commission this year more than last year	answered	analytics:A	facet=CAP;view=A;period=this year;compare=last_year	year=@a.year.total.total_comm;last=@a.last_year.total.total_comm	capability.tsv view-A / compare	A	item
+Q970	CM-view-B-top	seller	roman	0	year		is saal sab se zyada commission kis bepari ke maal se bana	answered	analytics:B	facet=CAP;view=B;period=this year	top!=@top.seller_commission_year.name;amount=@top.seller_commission_year.amount	capability.tsv view-B / top	A	seller
+Q971	CM-view-B-top	seller	urdu	0	year		اس سال سب سے زیادہ کمیشن کس بیوپاری کے مال سے بنا	answered	analytics:B	facet=CAP;view=B;period=this year	top!=@top.seller_commission_year.name;amount=@top.seller_commission_year.amount	capability.tsv view-B / top	A	seller
+Q972	CM-view-B-top	seller	en	0	year		whose goods gave the most commission this year	answered	analytics:B	facet=CAP;view=B;period=this year	top!=@top.seller_commission_year.name;amount=@top.seller_commission_year.amount	capability.tsv view-B / top	A	seller
+Q973	CM-view-B-list	seller	roman	0	year		is mahine har bepari ka maal kitna bika	answered	analytics:B	facet=CAP;view=B;period=this month	total=@b.month.total.gross	capability.tsv view-B / list	A	seller
+Q974	CM-view-B-list	seller	urdu	0	year		اس مہینے ہر بیوپاری کا مال کتنا بکا	answered	analytics:B	facet=CAP;view=B;period=this month	total=@b.month.total.gross	capability.tsv view-B / list	A	seller
+Q975	CM-view-B-list	seller	en	0	year		how much of each seller's goods sold this month	answered	analytics:B	facet=CAP;view=B;period=this month	total=@b.month.total.gross	capability.tsv view-B / list	A	seller
+Q976	CM-view-C-top	buyer	roman	1	year		is saal sab se zyada maal kis gahak ne khareeda	answered	analytics:C	facet=CAP;view=C;period=this year	top!=@top.buyer_purchase_year.name;amount=@top.buyer_purchase_year.amount	capability.tsv view-C / top	A	buyer
+Q977	CM-view-C-top	buyer	urdu	0	year		اس سال سب سے زیادہ مال کس گاہک نے خریدا	answered	analytics:C	facet=CAP;view=C;period=this year	top!=@top.buyer_purchase_year.name;amount=@top.buyer_purchase_year.amount	capability.tsv view-C / top	A	buyer
+Q978	CM-view-C-top	buyer	en	0	year		which buyer bought the most this year	answered	analytics:C	facet=CAP;view=C;period=this year	top!=@top.buyer_purchase_year.name;amount=@top.buyer_purchase_year.amount	capability.tsv view-C / top	A	buyer
+Q979	CM-view-C-list	buyer	roman	0	year		is mahine har gahak ne kitne ka maal khareeda	answered	analytics:C	facet=CAP;view=C;period=this month	total=@c.month.total.purchase_value	capability.tsv view-C / list	A	buyer
+Q980	CM-view-C-list	buyer	urdu	0	year		اس مہینے ہر گاہک نے کتنے کا مال خریدا	answered	analytics:C	facet=CAP;view=C;period=this month	total=@c.month.total.purchase_value	capability.tsv view-C / list	A	buyer
+Q981	CM-view-C-list	buyer	en	0	year		how much did each buyer buy this month	answered	analytics:C	facet=CAP;view=C;period=this month	total=@c.month.total.purchase_value	capability.tsv view-C / list	A	buyer
+Q982	CM-view-G-figure	period	roman	0	year		mahine ba mahine commission ka trend dikhao, is saal ka kul kitna	answered	analytics:G	facet=CAP;view=G;period=this year	year=@a.year.total.total_comm	capability.tsv view-G / figure	A	period
+Q983	CM-view-G-figure	period	urdu	0	year		مہینے بہ مہینے کمیشن کا ٹرینڈ دکھائیں، اس سال کا کل کتنا	answered	analytics:G	facet=CAP;view=G;period=this year	year=@a.year.total.total_comm	capability.tsv view-G / figure	A	period
+Q984	CM-view-G-figure	period	en	0	year		show the monthly commission trend and the year total	answered	analytics:G	facet=CAP;view=G;period=this year	year=@a.year.total.total_comm	capability.tsv view-G / figure	A	period
+Q985	CM-view-G-top	month	roman	0	year		kis mahine mein sab se zyada commission bana	answered	analytics:G	facet=CAP;view=G;sort=commission	top!=@top.month_commission.name;amount=@top.month_commission.amount	capability.tsv view-G / top	A	month
+Q986	CM-view-G-top	month	urdu	0	year		کس مہینے میں سب سے زیادہ کمیشن بنا	answered	analytics:G	facet=CAP;view=G;sort=commission	top!=@top.month_commission.name;amount=@top.month_commission.amount	capability.tsv view-G / top	A	month
+Q987	CM-view-G-top	month	en	0	year		which month gave the most commission	answered	analytics:G	facet=CAP;view=G;sort=commission	top!=@top.month_commission.name;amount=@top.month_commission.amount	capability.tsv view-G / top	A	month
+Q988	CM-view-H-figure	item	roman	0	year		top 10 mein sab se upar kaun sa item hai	answered	analytics:H	facet=CAP;view=H;period=this year	top!=@top.item_commission_year.name	capability.tsv view-H / figure	A	item
+Q989	CM-view-H-figure	item	urdu	0	year		ٹاپ 10 میں سب سے اوپر کون سا آئٹم ہے	answered	analytics:H	facet=CAP;view=H;period=this year	top!=@top.item_commission_year.name	capability.tsv view-H / figure	A	item
+Q990	CM-view-H-figure	item	en	0	year		which item is at the top of the top 10	answered	analytics:H	facet=CAP;view=H;period=this year	top!=@top.item_commission_year.name	capability.tsv view-H / figure	A	item
+Q991	CR-R2-figure	period	roman	0	year		is saal ki poori sales register ka total kitna hai	answered	report:R2	facet=CAP;view=R2;period=this year	total=@r2.year.total.value|@r2.year.total.buyer_total	capability.tsv R2 / figure	A	period
+Q992	CR-R2-figure	period	urdu	0	year		اس سال کی پوری سیلز رجسٹر کا ٹوٹل کتنا ہے	answered	report:R2	facet=CAP;view=R2;period=this year	total=@r2.year.total.value|@r2.year.total.buyer_total	capability.tsv R2 / figure	A	period
+Q993	CR-R2-figure	period	en	0	year		what is the total of the full sales register this year	answered	report:R2	facet=CAP;view=R2;period=this year	total=@r2.year.total.value|@r2.year.total.buyer_total	capability.tsv R2 / figure	A	period
+Q994		period	roman	1	year		pichle mahine ki puri sales register dikhao	answered	report:R2	facet=CAP;view=R2;period=last month	total=@r2.last_month.total.value|@r2.last_month.total.buyer_total	capability.tsv R2 / list	A	period
+Q995		day	urdu	0	year		کل کی ساری بکری کی لائنوں کا ٹوٹل	answered	report:R2	facet=CAP;view=R2;period=yesterday	total=@r2.yesterday.total.value|@r2.yesterday.total.buyer_total	capability.tsv R2 / day	A	day
+Q996		period	en	0	year		sales register total for this year and for last month	answered	report:R2	facet=CAP;view=R2	year=@r2.year.total.value|@r2.year.total.buyer_total;month=@r2.last_month.total.value|@r2.last_month.total.buyer_total	capability.tsv R2 / compare	A	period
+Q997	CR-R3-figure	period	roman	0	year		is saal ki naqdi bikri kitni hui	answered	report:R3	facet=CAP;view=R3;period=this year	total=@r3.year.total.value|@r3.year.total.buyer_total	capability.tsv R3 / figure	A	period
+Q998	CR-R3-figure	period	urdu	0	year		اس سال کی نقدی بکری کتنی ہوئی	answered	report:R3	facet=CAP;view=R3;period=this year	total=@r3.year.total.value|@r3.year.total.buyer_total	capability.tsv R3 / figure	A	period
+Q999	CR-R3-figure	period	en	1	year		cash sales this yaer	answered	report:R3	facet=CAP;view=R3;period=this year	total=@r3.year.total.value|@r3.year.total.buyer_total	capability.tsv R3 / figure	A	period
+Q1000		day	roman	0	year		kal ki naqdi bikri kitni thi	answered	report:R3	facet=CAP;view=R3;period=yesterday	total=@r3.yesterday.total.value|@r3.yesterday.total.buyer_total	capability.tsv R3 / day	A	day
+Q1001		period	urdu	0	year		نقدی اور ادھاری بکری میں اس سال کتنا فرق ہے	answered	report:R3,report:R4	facet=CAP;view=R3	cash=@r3.year.total.value|@r3.year.total.buyer_total;credit=@r4.year.total.value|@r4.year.total.buyer_total	capability.tsv R3 / compare	A	period
+Q1002	CR-R4-figure	period	roman	0	year		is saal ki udhari bikri kitni hai	answered	report:R4	facet=CAP;view=R4;period=this year	total=@r4.year.total.value|@r4.year.total.buyer_total	capability.tsv R4 / figure	A	period
+Q1003	CR-R4-figure	period	urdu	0	year		اس سال کی ادھاری بکری کتنی ہے	answered	report:R4	facet=CAP;view=R4;period=this year	total=@r4.year.total.value|@r4.year.total.buyer_total	capability.tsv R4 / figure	A	period
+Q1004	CR-R4-figure	period	en	0	year		credit sales this year	answered	report:R4	facet=CAP;view=R4;period=this year	total=@r4.year.total.value|@r4.year.total.buyer_total	capability.tsv R4 / figure	A	period
+Q1005		day	en	0	year		how much went on credit yesterday	answered	report:R4	facet=CAP;view=R4;period=yesterday	total=@r4.yesterday.total.value|@r4.yesterday.total.buyer_total	capability.tsv R4 / day	A	day
+Q1006	CR-R5-figure	period	roman	1	year		udhari bills ka is saal ka total kitna hai	answered	report:R5	facet=CAP;view=R5;period=this year	total=@r5.year.total.value|@r5.year.total.buyer_total	capability.tsv R5 / figure	A	period
+Q1007	CR-R5-figure	period	urdu	0	year		ادھاری بلوں کا اس سال کا ٹوٹل کتنا ہے	answered	report:R5	facet=CAP;view=R5;period=this year	total=@r5.year.total.value|@r5.year.total.buyer_total	capability.tsv R5 / figure	A	period
+Q1008	CR-R5-figure	period	en	0	year		what is the total of the credit bills this year	answered	report:R5	facet=CAP;view=R5;period=this year	total=@r5.year.total.value|@r5.year.total.buyer_total	capability.tsv R5 / figure	A	period
+Q1009		buyer	roman	0	year		faisal ke udhari bills dikhao	answered	report:R5	facet=CAP;view=R5;buyer=Faisal;period=this year	bill=@r5.faisal.year.total.buyer_total|@r5.faisal.year.total.value	capability.tsv R5 / list	A	buyer
+Q1010	CR-R6-figure	seller	roman	0	year		is saal bepariyon ko kitna sabit hua, khaam bikri aur safi bikri	answered	report:R6	facet=CAP;view=R6;period=this year	gross=@r6.year.total.gross;net=@r6.year.total.net	capability.tsv R6 / figure	A	seller
+Q1011	CR-R6-figure	seller	urdu	0	year		اس سال بیوپاریوں کی خام بکری اور صافی بکری کتنی رہی	answered	report:R6	facet=CAP;view=R6;period=this year	gross=@r6.year.total.gross;net=@r6.year.total.net	capability.tsv R6 / figure	A	seller
+Q1012	CR-R6-figure	seller	en	0	year		gross sale and net sale to the sellers this year	answered	report:R6	facet=CAP;view=R6;period=this year	gross=@r6.year.total.gross;net=@r6.year.total.net	capability.tsv R6 / figure	A	seller
+Q1013		day	urdu	0	year		کل بیوپاریوں کی خام بکری کتنی تھی	answered	report:R6	facet=CAP;view=R6;period=yesterday	gross=@r6.yesterday.total.gross	capability.tsv R6 / day	A	day
+Q1014		seller	en	0	year		Rahim's gross and net sale this year	answered	report:R6	facet=CAP;view=R6;seller=Rahim;period=this year	gross=@r6.rahim.year.total.gross;net=@r6.rahim.year.total.net	capability.tsv R6 / list	A	seller
+Q1015	CR-R7-figure	item	roman	0	year		har item ki is saal ki bikri ka total aur commission	answered	report:R7	facet=CAP;view=R7;period=this year	gross=@r7.year.total.gross;comm=@r7.year.total.total_comm	capability.tsv R7 / figure	A	item
+Q1016	CR-R7-figure	item	urdu	0	year		ہر آئٹم کی اس سال کی بکری کا ٹوٹل اور کمیشن	answered	report:R7	facet=CAP;view=R7;period=this year	gross=@r7.year.total.gross;comm=@r7.year.total.total_comm	capability.tsv R7 / figure	A	item
+Q1017	CR-R7-figure	item	en	0	year		item-wise sales total and commission this year	answered	report:R7	facet=CAP;view=R7;period=this year	gross=@r7.year.total.gross;comm=@r7.year.total.total_comm	capability.tsv R7 / figure	A	item
+Q1018	CR-R8-figure	period	roman	0	year		is saal kitne truck aaye aur kitni bikri hui	answered	report:R8	facet=CAP;view=R8;period=this year	trucks=@r8.year.total.trucks;gross=@r8.year.total.gross	capability.tsv R8 / figure	A	period
+Q1019	CR-R8-figure	period	urdu	0	year		اس سال کتنے ٹرک آئے اور کتنی بکری ہوئی	answered	report:R8	facet=CAP;view=R8;period=this year	trucks=@r8.year.total.trucks;gross=@r8.year.total.gross	capability.tsv R8 / figure	A	period
+Q1020	CR-R8-figure	period	en	0	year		how many trucks came this year and how much was sold	answered	report:R8	facet=CAP;view=R8;period=this year	trucks=@r8.year.total.trucks;gross=@r8.year.total.gross	capability.tsv R8 / figure	A	period
+Q1021		day	roman	1	year		kal kitne trak aaye	answered	report:R8	facet=CAP;view=R8;period=yesterday	trucks=@r8.yesterday.total.trucks;gross=@r8.yesterday.total.gross	capability.tsv R8 / day	A	day
+Q1022	CR-R11-figure	day	roman	0	year		kal ke roznamche ka total kitna hai	answered	report:R11	facet=CAP;view=R11;period=yesterday	debit=@r11.yesterday.total.debit	capability.tsv R11 / figure	A	day
+Q1023	CR-R11-figure	day	urdu	0	year		کل کے روزنامچے کا ٹوٹل کتنا ہے	answered	report:R11	facet=CAP;view=R11;period=yesterday	debit=@r11.yesterday.total.debit	capability.tsv R11 / figure	A	day
+Q1024	CR-R11-figure	day	en	0	year		what is the total of yesterday's day book	answered	report:R11	facet=CAP;view=R11;period=yesterday	debit=@r11.yesterday.total.debit	capability.tsv R11 / figure	A	day
+Q1025		day	urdu	0	year		کل روزنامچے میں کتنی اندراجات ہیں	answered	report:R11	facet=CAP;view=R11;period=yesterday	count=@r11.yesterday.count	capability.tsv R11 / list	A	day
+Q1026	CR-R13-figure	buyer	roman	0	year		faisal ke khate ka aakhri balance kitna hai	answered	report:R13	facet=CAP;view=R13;buyer=Faisal	balance=@r13.faisal.total.balance	capability.tsv R13 / figure	A	buyer
+Q1027	CR-R13-figure	buyer	urdu	0	year		فیصل کے کھاتے کا آخری بیلنس کتنا ہے	answered	report:R13	facet=CAP;view=R13;buyer=Faisal	balance=@r13.faisal.total.balance	capability.tsv R13 / figure	A	buyer
+Q1028	CR-R13-figure	buyer	en	0	year		what is the closing balance of Faisal's ledger	answered	report:R13	facet=CAP;view=R13;buyer=Faisal	balance=@r13.faisal.total.balance	capability.tsv R13 / figure	A	buyer
+Q1029		buyer	en	0	year		how much was debited and credited in Faisal's ledger	answered	report:R13	facet=CAP;view=R13;buyer=Faisal	debit=@r13.faisal.total.debit;credit=@r13.faisal.total.credit	capability.tsv R13 / list	A	buyer
+Q1030	CR-R14-figure	buyer	roman	0	year		faisal ka fard hisab: kitna khareeda aur kitna diya	answered	report:R14	facet=CAP;view=R14;buyer=Faisal	bought=@r14.faisal.sum.report_statement_bought;paid=@r14.faisal.sum.report_statement_paid	capability.tsv R14 / figure	A	buyer
+Q1031	CR-R14-figure	buyer	urdu	0	year		فیصل کا فرد حساب: کتنا خریدا اور کتنا دیا	answered	report:R14	facet=CAP;view=R14;buyer=Faisal	bought=@r14.faisal.sum.report_statement_bought;paid=@r14.faisal.sum.report_statement_paid	capability.tsv R14 / figure	A	buyer
+Q1032	CR-R14-figure	buyer	en	0	year		Faisal's statement: how much he bought and how much he paid	answered	report:R14	facet=CAP;view=R14;buyer=Faisal	bought=@r14.faisal.sum.report_statement_bought;paid=@r14.faisal.sum.report_statement_paid	capability.tsv R14 / figure	A	buyer
+Q1033	CR-R15-figure	period	roman	0	year		is saal wasooli aur adaigi ke vouchers ka total	answered	report:R15	facet=CAP;view=R15;period=this year	receipts=@r15.year.sum.report_doc_receipt;payments=@r15.year.sum.report_doc_payment	capability.tsv R15 / figure	A	period
+Q1034	CR-R15-figure	period	urdu	0	year		اس سال وصولی اور ادائیگی کے واؤچرز کا ٹوٹل	answered	report:R15	facet=CAP;view=R15;period=this year	receipts=@r15.year.sum.report_doc_receipt;payments=@r15.year.sum.report_doc_payment	capability.tsv R15 / figure	A	period
+Q1035	CR-R15-figure	period	en	0	year		total of the receipt and payment vouchers this year	answered	report:R15	facet=CAP;view=R15;period=this year	receipts=@r15.year.sum.report_doc_receipt;payments=@r15.year.sum.report_doc_payment	capability.tsv R15 / figure	A	period
+Q1036		period	roman	1	year		is saal kitne vouchers bane	answered	report:R15	facet=CAP;view=R15;period=this year	count=@r15.year.count	capability.tsv R15 / list	A	period
+Q1037	CR-R16-figure	accounts	roman	0	year		index mein kitne khate hain	answered	report:R16	facet=CAP;view=R16	count=@r16.count	capability.tsv R16 / figure	A	accounts
+Q1038	CR-R16-figure	accounts	urdu	0	year		انڈکس میں کتنے کھاتے ہیں	answered	report:R16	facet=CAP;view=R16	count=@r16.count	capability.tsv R16 / figure	A	accounts
+Q1039	CR-R16-figure	accounts	en	0	year		how many accounts are in the index	answered	report:R16	facet=CAP;view=R16	count=@r16.count	capability.tsv R16 / figure	A	accounts
+Q1040	CR-R17-figure	accounts	roman	1	year		madon ke balance ka total kitna hai	answered	report:R17	facet=CAP;view=R17	total=@r17.total.debit	capability.tsv R17 / figure	A	accounts
+Q1041	CR-R17-figure	accounts	urdu	0	year		مدوں کے بیلنس کا ٹوٹل کتنا ہے	answered	report:R17	facet=CAP;view=R17	total=@r17.total.debit	capability.tsv R17 / figure	A	accounts
+Q1042	CR-R17-figure	accounts	en	0	year		what is the total of the head balances	answered	report:R17	facet=CAP;view=R17	total=@r17.total.debit	capability.tsv R17 / figure	A	accounts
+Q1043	CR-R18-figure	accounts	roman	0	year		trial balance ka total kitna hai aur farq kitna hai	answered	report:R18	facet=CAP;view=R18	total=@r18.total.debit;diff=@r18.sum.report_difference	capability.tsv R18 / figure	A	accounts
+Q1044	CR-R18-figure	accounts	urdu	0	year		ٹرائل بیلنس کا ٹوٹل کتنا ہے اور فرق کتنا ہے	answered	report:R18	facet=CAP;view=R18	total=@r18.total.debit;diff=@r18.sum.report_difference	capability.tsv R18 / figure	A	accounts
+Q1045	CR-R18-figure	accounts	en	0	year		what is the trial balance total and the difference	answered	report:R18	facet=CAP;view=R18	total=@r18.total.debit;diff=@r18.sum.report_difference	capability.tsv R18 / figure	A	accounts
+Q1046	CR-R19-figure	accounts	roman	0	year		opening trial balance ka total kitna hai	answered	report:R19	facet=CAP;view=R19	total=@r19.total.debit	capability.tsv R19 / figure	A	accounts
+Q1047	CR-R19-figure	accounts	urdu	0	year		اوپننگ ٹرائل بیلنس کا ٹوٹل کتنا ہے	answered	report:R19	facet=CAP;view=R19	total=@r19.total.debit	capability.tsv R19 / figure	A	accounts
+Q1048	CR-R19-figure	accounts	en	0	year		what is the total of the opening trial balance	answered	report:R19	facet=CAP;view=R19	total=@r19.total.debit	capability.tsv R19 / figure	A	accounts
+Q1049	CR-R21-figure	dues	roman	0	year		shehar ke hisab se gahakon ka kul baqaya	answered	report:R21	facet=CAP;view=R21	total=@r21.total.balance	capability.tsv R21 / figure	A	dues
+Q1050	CR-R21-figure	dues	urdu	0	year		شہر کے حساب سے گاہکوں کا کل بقایا	answered	report:R21	facet=CAP;view=R21	total=@r21.total.balance	capability.tsv R21 / figure	A	dues
+Q1051	CR-R21-figure	dues	en	0	year		total dues from buyers by city	answered	report:R21	facet=CAP;view=R21	total=@r21.total.balance	capability.tsv R21 / figure	A	dues
+Q1052	CR-R22-figure	dues	roman	1	year		agrahi wale ke hisab se kul baqaya kitna hai	answered	report:R22	facet=CAP;view=R22	total=@r22.total.balance	capability.tsv R22 / figure	A	dues
+Q1053	CR-R22-figure	dues	urdu	0	year		اگراہی والے کے حساب سے کل بقایا کتنا ہے	answered	report:R22	facet=CAP;view=R22	total=@r22.total.balance	capability.tsv R22 / figure	A	dues
+Q1054	CR-R22-figure	dues	en	0	year		total dues by collector	answered	report:R22	facet=CAP;view=R22	total=@r22.total.balance	capability.tsv R22 / figure	A	dues
+Q1055	CR-R27-figure	seller	roman	0	year		is saal ke sab bills ki khaam aur safi bikri	answered	report:R27	facet=CAP;view=R27;period=this year	gross=@r27.year.total.gross;net=@r27.year.total.net	capability.tsv R27 / figure	A	seller
+Q1056	CR-R27-figure	seller	urdu	0	year		اس سال کے سب بلوں کی خام اور صافی بکری	answered	report:R27	facet=CAP;view=R27;period=this year	gross=@r27.year.total.gross;net=@r27.year.total.net	capability.tsv R27 / figure	A	seller
+Q1057	CR-R27-figure	seller	en	0	year		gross and net sale of all the bills this year	answered	report:R27	facet=CAP;view=R27;period=this year	gross=@r27.year.total.gross;net=@r27.year.total.net	capability.tsv R27 / figure	A	seller
+Q1058		seller	urdu	0	year		اس سال کتنے بل بنے	answered	report:R27	facet=CAP;view=R27;period=this year	count=@r27.year.count	capability.tsv R27 / list	A	seller
+Q1059	CR-R28-figure	period	roman	0	year		is saal ki kul aamdan kitni hai	answered	report:R28	facet=CAP;view=R28;period=this year	income=@r28.year.total.amount	capability.tsv R28 / figure	A	period
+Q1060	CR-R28-figure	period	urdu	0	year		اس سال کی کل آمدن کتنی ہے	answered	report:R28	facet=CAP;view=R28;period=this year	income=@r28.year.total.amount	capability.tsv R28 / figure	A	period
+Q1061	CR-R28-figure	period	en	0	year		what is the total income this year	answered	report:R28	facet=CAP;view=R28;period=this year	income=@r28.year.total.amount	capability.tsv R28 / figure	A	period
+Q1062	CR-R34-figure	day	roman	0	year		kal ka din ka khulasa batao, bikri aur commission	answered	report:R34	facet=CAP;view=R34;period=yesterday	sales=@a.yesterday.total.gross;comm=@a.yesterday.total.total_comm	capability.tsv R34 / figure	A	day
+Q1063	CR-R34-figure	day	urdu	0	year		کل کے دن کا خلاصہ بتائیں، بکری اور کمیشن	answered	report:R34	facet=CAP;view=R34;period=yesterday	sales=@a.yesterday.total.gross;comm=@a.yesterday.total.total_comm	capability.tsv R34 / figure	A	day
+Q1064	CR-R34-figure	day	en	0	year		give me yesterday's day summary: sales and commission	answered	report:R34	facet=CAP;view=R34;period=yesterday	sales=@a.yesterday.total.gross;comm=@a.yesterday.total.total_comm	capability.tsv R34 / figure	A	day
+Q1065	CR-R35-figure	buyer	roman	0	year		faisal ki aaj ki parchi mein aaj ka bill aur pichla baqaya kitna hai	answered	report:R35	facet=CAP;view=R35;buyer=Faisal;period=today	today=@r35.faisal.today.sum.report_r35_today_total;previous=@r35.faisal.today.sum.report_r35_previous	capability.tsv R35 / figure	A	buyer
+Q1066	CR-R35-figure	buyer	urdu	0	year		فیصل کی آج کی پرچی میں آج کا بل اور پچھلا بقایا کتنا ہے	answered	report:R35	facet=CAP;view=R35;buyer=Faisal;period=today	today=@r35.faisal.today.sum.report_r35_today_total;previous=@r35.faisal.today.sum.report_r35_previous	capability.tsv R35 / figure	A	buyer
+Q1067	CR-R35-figure	buyer	en	0	year		what are Faisal's bill today and his previous balance on today's slip	answered	report:R35	facet=CAP;view=R35;buyer=Faisal;period=today	today=@r35.faisal.today.sum.report_r35_today_total;previous=@r35.faisal.today.sum.report_r35_previous	capability.tsv R35 / figure	A	buyer
+Q1068		buyer	en	0	year		how many nag did Faisal buy today and for how much	answered	report:R35	facet=CAP;view=R35;buyer=Faisal;period=today	goods=@r35.faisal.today.sum.report_r35_goods;qty=@r35.faisal.today.sum.report_r35_total_qty	capability.tsv R35 / list	A	buyer
+Q1069		nosuch	roman	0	year		Hamid Kareem ke maal ki bikri ka khulasa dikhao	not_found	find	facet=CAP;asked_role=seller		capability.tsv R6 / nosuch	E	unknown
+Q1070		nosuch	urdu	0	year		نارنیا اڈا کی رپورٹ دکھائیں	not_found	find	facet=CAP;asked_role=any		capability.tsv R8 / nosuch	E	unknown
+Q1071		nosuch	en	0	year		show Babar Awan in the pukhta khata register	not_found	find	facet=CAP;asked_role=any		capability.tsv R9 / nosuch	E	unknown
+Q1072		nosuch	roman	0	year		Sultan Mirza ka khata dikhao	not_found	find	facet=CAP;asked_role=any		capability.tsv R13 / nosuch	E	unknown
+Q1073		nosuch	urdu	0	year		سلطان مرزا کا فرد حساب دکھائیں	not_found	find	facet=CAP;asked_role=any		capability.tsv R14 / nosuch	E	unknown
+Q1074		nosuch	en	0	year		what do buyers from Narnia owe	not_found	find	facet=CAP;asked_role=any		capability.tsv R21 / nosuch	E	unknown
+Q1075		nosuch	roman	0	year		Irfan Qasim ko kitna dena hai	not_found	find	facet=CAP;asked_role=seller		capability.tsv R24 / nosuch	E	unknown
+Q1076		nosuch	urdu	0	year		عرفان قاسم کی پیشگی کتنی ہے	not_found	find	facet=CAP;asked_role=seller		capability.tsv R26 / nosuch	E	unknown
+Q1077		nosuch	en	0	year		what is partner Zafar Iqbal's total	not_found	find	facet=CAP;asked_role=partner		capability.tsv R31 / nosuch	E	unknown
+Q1078		nosuch	roman	0	year		Zafar Iqbal ne udhar raqam kitni li hai	not_found	find	facet=CAP;asked_role=any		capability.tsv R32 / nosuch	E	unknown
+Q1079		nosuch	urdu	0	year		سفر 99 کا نفع کتنا رہا	not_found	find	facet=CAP;asked_role=trip		capability.tsv R33 / nosuch	E	unknown
+Q1080		nosuch	en	0	year		show Sultan Mirza's slip for today	not_found	find	facet=CAP;asked_role=any		capability.tsv R35 / nosuch	E	unknown
+Q1081		nosuch	roman	0	year		Gulabi baagh ka balance kitna hai	not_found	find	facet=CAP;asked_role=garden		capability.tsv R36 / nosuch	E	unknown
+Q1082		nosuch	urdu	0	year		کیوی کا اس سال کا کمیشن کتنا ہے	not_found	find	facet=CAP;asked_role=item		capability.tsv view-A / nosuch	E	unknown
+Q1083		nosuch	en	0	year		how much of Hamid Kareem's goods sold this year	not_found	find	facet=CAP;asked_role=seller		capability.tsv view-B / nosuch	E	unknown
+Q1084		nosuch	roman	0	year		Sultan Mirza ne is saal kitna maal khareeda	not_found	find	facet=CAP;asked_role=buyer		capability.tsv view-C / nosuch	E	unknown
+Q1085		nosuch	urdu	0	year		پارٹنر ظفر کا اس سال کا حصہ کتنا ہے	not_found	find	facet=CAP;asked_role=partner		capability.tsv view-F / nosuch	E	unknown
+Q1086		nosuch	en	0	year		show the report of the Gulabi garden	not_found	find	facet=CAP;asked_role=garden		capability.tsv view-I / nosuch	E	unknown
+Q1087		nosuch	roman	0	year		safar 99 ki report dikhao	not_found	find	facet=CAP;asked_role=trip		capability.tsv view-J / nosuch	E	unknown
+Q1088		nosuch	urdu	0	year		پارٹنر ظفر نے پھل کتنا لیا	not_found	find	facet=CAP;asked_role=partner		capability.tsv view-K / nosuch	E	unknown
+Q1089		nosuch	en	0	year		who is Babar Awan in pukhta khata	not_found	find	facet=CAP;asked_role=any		capability.tsv record-pukhta / nosuch	E	unknown
+Q1090		nosuch	roman	0	year		Irfan Qasim ko udhar raqam kitni di thi	not_found	find	facet=CAP;asked_role=any		capability.tsv record-money_lent / nosuch	E	unknown
+Q1091		nosuch	urdu	0	year		راحت بی بی کے الگ کھاتے میں کتنا ہے	not_found	find	facet=CAP;asked_role=any		capability.tsv record-separate_khata / nosuch	E	unknown
+Q1092		nosuch	roman	0	year		partner Zafar ka sarmaya kitna hai	not_found	find	facet=CAP;asked_role=partner		capability.tsv record-partner / nosuch	E	unknown
+Q1093		nosuch	urdu	0	year		گلابی باغ کا ٹھیکہ کتنا ہے	not_found	find	facet=CAP;asked_role=garden		capability.tsv record-garden / nosuch	E	unknown
+Q1094		nosuch	en	0	year		how much stock is left on trip 99	not_found	find	facet=CAP;asked_role=trip		capability.tsv record-trip / nosuch	E	unknown
+Q1095		nosuch	roman	0	year		kiwi ka kitna maal baqi hai	not_found	find	facet=CAP;asked_role=item		capability.tsv record-item / nosuch	E	unknown
+Q1096		nosuch	urdu	0	year		نارنیا شہر کے گاہکوں کا بقایا کتنا ہے	not_found	find	facet=CAP;asked_role=any		capability.tsv record-city / nosuch	E	unknown
+Q1097		nosuch	en	0	year		how many trucks came from the Narnia adda	not_found	find	facet=CAP;asked_role=any		capability.tsv record-adda / nosuch	E	unknown
+Q1098		nosuch	roman	0	year		agrahi wale Bilal Zaman ki list dikhao	not_found	find	facet=CAP;asked_role=any		capability.tsv record-collector / nosuch	E	unknown
+Q1099		print	roman	0	year		is mahine ki rokar book ka print nikalna hai	answered		facet=CAP;pkind=report;pperiod=month;section=cash	print.report=R12;print.from=@cal.month_start;print.to=@cal.today;print.steps=1	capability.tsv R12 / print	A	print
+Q1100		print	urdu	0	year		پچھلے مہینے کی روکڑ بک کا پرنٹ	answered		facet=CAP;pkind=report;pperiod=last_month;section=cash	print.report=R12;print.from=@cal.last_month_start;print.to=@cal.last_month_end;print.steps=1	capability.tsv R12 / print	A	print
+Q1101		print	en	0	year		print last month's expense report	answered		facet=CAP;pkind=report;pperiod=last_month;section=expense	print.report=R29;print.from=@cal.last_month_start;print.to=@cal.last_month_end;print.steps=1	capability.tsv R29 / print	A	print
+Q1102		print	roman	0	year		is mahine ke kharchon ka print	answered		facet=CAP;pkind=report;pperiod=month;section=expense	print.report=R29;print.from=@cal.month_start;print.to=@cal.today;print.steps=1	capability.tsv R29 / print	A	print
+Q1103		print	urdu	0	year		گاہکوں کے بقایا کا پرنٹ نکالنا ہے	answered		facet=CAP;pkind=report;pperiod=today;section=dues	print.report=R20;print.as_of=@cal.today;print.steps=1	capability.tsv R20 / print	A	print
+Q1104		print	en	0	year		print the list of what we owe the sellers	answered		facet=CAP;pkind=report;pperiod=today;section=dues	print.report=R24;print.as_of=@cal.today;print.steps=1	capability.tsv R24 / print	A	print
+Q1105		print	roman	0	year		trial balance ka print	answered		facet=CAP;pkind=report;pperiod=today;section=accounts	print.report=R18;print.as_of=@cal.today;print.steps=1	capability.tsv R18 / print	A	print
+Q1106		print	urdu	0	year		کل کے روزنامچے کا پرنٹ	answered		facet=CAP;pkind=report;pperiod=yesterday;section=day	print.report=R11;print.from=@cal.yesterday;print.to=@cal.yesterday;print.steps=1	capability.tsv R11 / print	A	print
+Q1107		print	en	0	year		print today's day book	answered		facet=CAP;pkind=report;pperiod=today;section=day	print.report=R11;print.from=@cal.today;print.to=@cal.today;print.steps=1	capability.tsv R11 / print	A	print
+Q1108		print	roman	0	year		is mahine ke phal register ka print	answered		facet=CAP;pkind=report;pperiod=month;section=fruit	print.report=R37;print.from=@cal.month_start;print.to=@cal.today;print.steps=1	capability.tsv R37 / print	A	print
+Q1109		print	en	0	year		print Partner A's statement for this month	answered		facet=CAP;pkind=report;pperiod=month;section=partner	print.report=R31;print.partner=Partner A;print.from=@cal.month_start;print.to=@cal.today	capability.tsv R31 / print	A	print
+Q1110		print	roman	0	year		partner b ka pichle mahine ka statement print karna hai	answered		facet=CAP;pkind=report;pperiod=last_month;section=partner	print.report=R31;print.partner=Partner B;print.from=@cal.last_month_start;print.to=@cal.last_month_end	capability.tsv R31 / print	A	print
+Q1111		estimates	roman	0	year		sales register ke hisab se agle 3 mahine ki bikri ka andaza	estimate	estimate	facet=CAP;view=R2;ahead=3	est=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	capability.tsv R2 / forecast	C	forecast
+Q1112		estimates	urdu	0	year		انکم رپورٹ کے حساب سے اگلے 3 مہینوں کی آمدن کا اندازہ	estimate	estimate	facet=CAP;view=R28;ahead=3	est=@est.commission.a3.same_pace|@est.commission.a3.same_growth|@est.commission.a3.same_season	capability.tsv R28 / forecast	C	forecast
+Q1113		estimates	en	0	year		estimate the shop expenses of the next 3 months	estimate	estimate	facet=CAP;view=R29;ahead=3	est=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	capability.tsv R29 / forecast	C	forecast
+Q1114		estimates	roman	0	year		agle 3 mahine ka munafa kitna rahega	estimate	estimate	facet=CAP;view=R30;ahead=3	est=@est.profit.a3.same_pace|@est.profit.a3.same_growth|@est.profit.a3.same_season	capability.tsv R30 / forecast	C	forecast
+Q1115		estimates	en	0	year		estimate how much Faisal will buy in the next 3 months	estimate	estimate	facet=CAP;buyer=Faisal;ahead=3	est=@est_party.faisal.sales.a3.same_pace|@est_party.faisal.sales.a3.same_growth|@est_party.faisal.sales.a3.same_season	capability.tsv R5 / forecast	C	forecast
+Q1116		estimates	urdu	0	year		رحیم کے مال کی اگلے 3 مہینوں کی بکری کا اندازہ	estimate	estimate	facet=CAP;seller=Rahim;ahead=3	est=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	capability.tsv R6 / forecast	C	forecast
+Q1117		estimates	roman	0	year		kele ki agle 3 mahine ki bikri kitni hogi	estimate	estimate	facet=CAP;item=Banana;ahead=3	est=@est_item.banana.sales.a3.same_pace|@est_item.banana.sales.a3.same_growth|@est_item.banana.sales.a3.same_season	capability.tsv R7 / forecast	C	forecast
+Q1118		estimates	en	0	year		how much will Tariq Mehmood buy in the next 3 months	estimate	estimate	facet=CAP;buyer=Tariq Mehmood;ahead=3	est=@est_party.tariq.sales.a3.same_pace|@est_party.tariq.sales.a3.same_growth|@est_party.tariq.sales.a3.same_season	capability.tsv view-C / forecast	C	forecast
+Q1119		estimates	urdu	0	year		اس پورے مہینے کا کمیشن کتنا ہو گا	estimate	estimate	facet=CAP;view=tiles;ahead=1	est=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	capability.tsv tile-today_commission / forecast	C	forecast
+Q1120		estimates	roman	0	year		is poore mahine dukan ka kharcha kitna hoga	estimate	estimate	facet=CAP;view=tiles;ahead=1	est=@est.shop_expenses.a1.same_pace|@est.shop_expenses.a1.same_growth|@est.shop_expenses.a1.same_season	capability.tsv tile-today_expenses / forecast	C	forecast
+Q1121		mixed_forecast	urdu	0	year		اس سال کی سیلز رجسٹر کا ٹوٹل اور اگلے 3 مہینوں کا اندازہ	estimate		facet=CAP;mix=1;view=R2;ahead=3	real_fig=@r2.year.total.value|@r2.year.total.buyer_total;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	capability.tsv R2 / mixed	C	forecast
+Q1122		mixed_forecast	roman	0	year		faisal ne is saal kitna khareeda aur agle 3 mahine ka andaza	estimate		facet=CAP;mix=1;buyer=Faisal;ahead=3	real_fig=@r5.faisal.year.total.buyer_total|@r5.faisal.year.total.value;est_next=@est_party.faisal.sales.a3.same_pace|@est_party.faisal.sales.a3.same_growth|@est_party.faisal.sales.a3.same_season	capability.tsv R5 / mixed	C	forecast
+Q1123		mixed_forecast	en	0	year		Rahim's gross sale this year and the estimate for the next 3 months	estimate		facet=CAP;mix=1;seller=Rahim;ahead=3	real_fig=@r6.rahim.year.total.gross;est_next=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	capability.tsv R6 / mixed	C	forecast
+Q1124		mixed_forecast	urdu	0	year		کیلے کی اس سال کی بکری اور اگلے 3 مہینوں کا اندازہ	estimate		facet=CAP;mix=1;item=Banana;ahead=3	real_fig=@a.year.banana.gross;est_next=@est_item.banana.sales.a3.same_pace|@est_item.banana.sales.a3.same_growth|@est_item.banana.sales.a3.same_season	capability.tsv R7 / mixed	C	forecast
+Q1125		mixed_forecast	roman	0	year		tariq mehmood ki is saal ki khareedari aur agle 3 mahine ka andaza	estimate		facet=CAP;mix=1;buyer=Tariq Mehmood;ahead=3	real_fig=@c.year.tariq_mehmood.purchase_value;est_next=@est_party.tariq.sales.a3.same_pace|@est_party.tariq.sales.a3.same_growth|@est_party.tariq.sales.a3.same_season	capability.tsv view-C / mixed	C	forecast
+Q1126		mixed_forecast	en	0	year		today's commission and the estimate of the whole month	estimate		facet=CAP;mix=1;view=tiles;ahead=1	real_fig=@tiles.commission_today;est_next=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	capability.tsv tile-today_commission / mixed	C	forecast
