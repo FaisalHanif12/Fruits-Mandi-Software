@@ -227,7 +227,12 @@ describe.each(LANGUAGES)('the day close screen with the real answer (%s)', (lang
       expect(upTo).toHaveAttribute('aria-invalid', 'true');
     });
     expect(visible(document.body.textContent)).toContain(
-      message(language, 'err-date-closed', { closed_up_to: '10-10-2026' }),
+      // The refusal also says what today is (plan 53): today is closed too, so the words ask for the reopening.
+      message(language, 'err-date-closed', {
+        closed_up_to: '10-10-2026',
+        today: '10-10-2026',
+        today_state: 'closed',
+      }),
     );
     expect(
       screen.getByRole('button', { name: named(message(language, 'day-close-button')) }),

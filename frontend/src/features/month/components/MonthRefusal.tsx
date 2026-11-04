@@ -14,7 +14,7 @@ import {
   errorsOutsideFields,
   messageVars,
 } from '../../../shared/api';
-import { isoToDisplayDate, useGrouping } from '../../../shared/format';
+import { useGrouping } from '../../../shared/format';
 import { Code, LinkButton } from '../../../shared/ui';
 import { monthErrorId, monthName } from '../text';
 
@@ -44,10 +44,8 @@ export function MonthRefusal({ error, month, fieldsShown = [] }: MonthRefusalPro
       {items.map((item, index) => {
         const wanted = monthErrorId(item.code) ?? errorMessageId(item.code);
         const id = l10n.getBundle(wanted) === null ? FALLBACK_ERROR_MESSAGE_ID : wanted;
+        // `closed_up_to` comes as DD-MM-YYYY from the backend, like every date it sends.
         const vars: Record<string, string> = { ...messageVars(item.values, grouping), month: name };
-        // The day the days are closed up to is a stored date: written as DD-MM-YYYY like every date.
-        const closedUpTo = item.values['closed_up_to'];
-        if (typeof closedUpTo === 'string') vars['closed_up_to'] = isoToDisplayDate(closedUpTo);
         return (
           <div key={`${item.code}-${String(index)}`} className="flex flex-col gap-1">
             <Localized id={id} vars={vars}>

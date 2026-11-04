@@ -78,14 +78,20 @@ describe('the other real answers of the day close preview', () => {
   it('the refusal of a closed day has the shape of a refusal, on the date field', () => {
     const canned: UiError = {
       ok: false,
-      errors: [{ code: 'ERR_DATE_CLOSED', field: 'up_to', values: { closed_up_to: '10-10-2026' } }],
+      errors: [
+        {
+          code: 'ERR_DATE_CLOSED',
+          field: 'up_to',
+          values: { closed_up_to: '10-10-2026', today: '10-10-2026', today_open: 0 },
+        },
+      ],
       ref: 'E-20261010-0007',
     };
     expect(same(real.REFUSED_DAY_CLOSED, canned)).toBeNull();
     expect(real.REFUSED_DAY_CLOSED.errors[0]).toMatchObject({
       code: 'ERR_DATE_CLOSED',
       field: 'up_to',
-      values: { closed_up_to: '10-10-2026' },
+      values: { closed_up_to: '10-10-2026', today: '10-10-2026', today_open: 0 },
     });
     expect(real.REQUEST_DAY_CLOSE_PREVIEW_CLOSED_DAY).toEqual({ up_to: '10-10-2026' });
   });
