@@ -21,7 +21,9 @@ Umar tested the account form on a closed day and asked for two changes:
   - The day's trial balance still balances. ابتدائی فرق moves by −5,000, and that is correct: his other side is in the old books.
   - The same opening dated 04-11-26 (after today) is refused.
 - **Changed opening.** Changing an existing account's opening, or clearing it, on a closed day is still refused with ERR_DATE_CLOSED.
-- **Collection list.** After Events 1 to 5 it shows اکرم 2,880 and ارشد 18,684. The list total, 21,564, equals R20 when no filter is set.
+- **Collection list.** After Events 1 to 5 it shows اکرم 2,880 and ارشد 18,684, total 21,564. On the worked day this equals R20.
+  - In general the list leaves out پختہ کھاتہ people and inactive buyers, and R20 counts them. So the list total is R20 less those dues.
+  - Example: with E2E-21's ناصر owing 2,000, R20 is 2,000 more than the list. A test pins this difference.
 
 ## 4. Contract
 
