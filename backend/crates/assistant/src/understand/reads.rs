@@ -24,18 +24,20 @@
 //! | his commission, sale or count over a period | `find`, view B (seller) or C (buyer) |
 //! | an item's commission, sale or rate; the item with a party | `find`, view A (with `seller` or `buyer`) |
 //! | the shop's sale or commission over a period | the tiles for today, else view A (B for the count) |
-//! | cash, dues, payables, advances, dead amount, money lent, now | the tiles |
+//! | cash, advances, dead amount, money lent, now | the tiles |
+//! | the shop's dues, the shop's payables, now | R20, R24 (the real list, with the total over the whole filter) |
 //! | goods left now | R10, oldest first |
 //! | cash, expenses, day summary, day book, receipts over a period | R12, R29, R34, R11, R23 |
 //! | the trial balance | R18 |
 //! | a list of buyers' dues or sellers' payables | R20 or R24, sorted |
 //! | the top buyers, sellers or items by commission | view H (A, B, C sorted for the lowest or for sales) |
-//! | the partners' totals, one partner's total | R31 |
+//! | the partners' totals, one partner's total (kul raqam, not his capital) | R31 |
 //! | dues of a city; sales of an اڈا; expenses (head) | R21; R8; R29 with the period |
 //!
 //! `None` when the question is not completely understood, compares things, has two figures, names
-//! more than one party, item or period, names a garden, a trip or own goods, or is not covered: the model
-//! decides then. A ranking or period the app assumed (`Understanding::assumed`) is read as assumed;
+//! more than one party, item or period, names a garden, a trip or own goods, asks what was given,
+//! paid or received (an event, not what is open now), asks a rate with no period, or is not covered:
+//! the model decides then. A ranking or period the app assumed (`Understanding::assumed`) is read as assumed;
 //! the caller states it in the answer.
 //!
 //! Example (today 10-10-2026): "kele ka commission pichle mahine" gives `period` last month, `find`
@@ -45,6 +47,7 @@ use serde_json::{Value, json};
 
 use super::lexicon::{Cue, key};
 use super::scan::Scan;
+use super::who::Names;
 use super::{
     Doubt, FigureKind, Intent, ListOver, Outcome, PartyHit, PartyRole, PeriodKind, PeriodRef, Rank,
     RecordHit, RecordKind, Understanding,
@@ -60,8 +63,9 @@ pub struct PlannedRead {
 }
 
 /// Doubts that are not blocking for an answer but that mean the app is not certain what was meant.
-const NOT_CARRIED: [Doubt; 6] = [
+const NOT_CARRIED: [Doubt; 7] = [
     Doubt::UnknownWords,
+    Doubt::TimeWord,
     Doubt::CloseSpelling,
     Doubt::OtherRecord,
     Doubt::Comparison,
@@ -91,21 +95,108 @@ const SCOPE_WORDS: [&str; 17] = [
     "goods",
 ];
 
-/// Phrases that scope a figure to own goods.
-const SCOPE_PHRASES: [&str; 3] = ["apna maal", "apna mal", "اپنا مال"];
+/// Words that say "my own" or "ours" before a word for goods: "apna maal", "apne maal", "hamara mal".
+const OWN_WORDS: [&str; 12] = [
+    "apna",
+    "apne",
+    "apni",
+    "hamara",
+    "hamare",
+    "hamari",
+    "own",
+    "our",
+    "اپنا",
+    "اپنے",
+    "اپنی",
+    "ہمارا",
+];
+
+/// Words for goods.
+const GOODS_WORDS: [&str; 7] = ["maal", "mal", "goods", "saman", "saaman", "مال", "سامان"];
+
+/// True when the words say "own goods": an own-word at most two words before a word for goods
+/// ("apna maal", "apne maal", "hamara apna mal").
+fn own_goods(scan: &Scan) -> bool {
+    let is = |list: &[&str], word: &str| list.iter().any(|x| key(x) == word);
+    scan.words.iter().enumerate().any(|(at, word)| {
+        is(&OWN_WORDS, word)
+            && (1..=2).any(|gap| {
+                scan.word(at.saturating_add(gap))
+                    .is_some_and(|next| is(&GOODS_WORDS, next))
+            })
+    })
+}
 
 /// True when the question names a garden, a trip, own goods or the guests, by word.
 pub(super) fn scoped(scan: &Scan) -> bool {
-    let joined = format!(" {} ", scan.words.join(" "));
-    SCOPE_PHRASES
-        .iter()
-        .any(|p| joined.contains(&format!(" {} ", key(p))))
+    own_goods(scan)
         || scan
             .words
             .iter()
             .any(|w| SCOPE_WORDS.iter().any(|s| key(s) == *w))
         || scan.has_exact(Cue::RoleGarden)
         || scan.has_exact(Cue::RoleTrip)
+}
+
+/// True when a print or an open-the-report request names a scope its link cannot carry: own goods,
+/// the guests, or a garden or a trip that no record was found for. A garden or a trip that was found
+/// has its own report (R36, R33), so it is no scope that is missing. The bare word "goods" is not a
+/// scope here: "unsold goods print" is the stock.
+///
+/// Example: "bagh ki is mahine ki bikri ka print" with no garden named: true (the report would be
+/// every sale of the shop).
+pub(super) fn print_scope_missing(scan: &Scan, names: &Names) -> bool {
+    let found = |role: PartyRole| {
+        names
+            .parties
+            .iter()
+            .any(|p| p.outcome.hit().is_some_and(|h| h.role == role))
+    };
+    let garden_word = scan.has_exact(Cue::RoleGarden)
+        || scan.words.iter().any(|w| {
+            [
+                "bagh",
+                "bag",
+                "baag",
+                "baagh",
+                "garden",
+                "gardens",
+                "باغ",
+                "باغات",
+            ]
+            .iter()
+            .any(|s| key(s) == *w)
+        });
+    let trip_word = scan.has_exact(Cue::RoleTrip)
+        || scan.words.iter().any(|w| {
+            ["safar", "trip", "trips", "سفر"]
+                .iter()
+                .any(|s| key(s) == *w)
+        });
+    own_goods(scan)
+        || scan.has_exact(Cue::Guests)
+        || (garden_word && !found(PartyRole::Garden))
+        || (trip_word && !found(PartyRole::Trip))
+}
+
+/// True when the question asks what was GIVEN, PAID or RECEIVED (an event of a period), and not what
+/// is open now: "rahim ko kitni peshgi di", "rahim ko kitni adaigi hui". The card of a party holds
+/// what is open now, so such a question is the model's (money review R-e). A balance is asked with a
+/// "give" verb only ("akram ko kitne paise diye"); "kitna hua" is a way to ask a balance.
+pub(super) fn happened(scan: &Scan, kinds: &[FigureKind]) -> bool {
+    const GIVE: [&str; 8] = ["di", "dee", "diya", "diye", "dia", "دی", "دیا", "دیے"];
+    const EVENT: [&str; 22] = [
+        "hui", "hue", "hua", "mili", "mila", "kiya", "kia", "kiye", "gayi", "gaya", "gaye",
+        "chuki", "chuka", "chuke", "paid", "given", "gave", "ہوئی", "ہوئے", "ہوا", "گئی", "گیا",
+    ];
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+    let open_figure = kinds
+        .iter()
+        .any(|k| matches!(k, FigureKind::Advance | FigureKind::Payable));
+    let balance_figure = kinds
+        .iter()
+        .any(|k| matches!(k, FigureKind::Balance | FigureKind::Dues));
+    (open_figure && (has(&GIVE) || has(&EVENT))) || (balance_figure && has(&GIVE))
 }
 
 // ---- the shapes of the inputs --------------------------------------------------------------------------
@@ -258,6 +349,7 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
         || u.compare
         || u.two_figures
         || u.scoped
+        || u.happened
         || u.periods.len() > 1
         || u.parties.len() > 1
         || u.items.len() > 1
@@ -376,6 +468,11 @@ fn party_figure(
             if period.is_some() {
                 return None;
             }
+            // A buyer's card holds no payable and no advance (a payment to a buyer is cash lent).
+            if role == PartyRole::Buyer && matches!(kind, FigureKind::Payable | FigureKind::Advance)
+            {
+                return None;
+            }
             plan.find(text, word);
             plan.read(party_card(&key));
         }
@@ -461,7 +558,9 @@ fn partner_figure(
     period: Option<&PeriodRef>,
     plan: &mut Plan,
 ) -> Option<()> {
-    if !matches!(kind, FigureKind::PartnerTotal | FigureKind::Capital) {
+    // R31 runs in the partner's kul raqam (E2E-37: ب 50,746, his capital 50,000). Only that is its
+    // figure; his capital or his share is the model's (money review R-f).
+    if kind != FigureKind::PartnerTotal {
         return None;
     }
     let (from, to) = dates(period);
@@ -489,6 +588,9 @@ fn item_figure(
 ) -> Option<()> {
     let (from, to) = dates(period);
     match kind {
+        // The rate of view A is the average of the whole period: with no period it would be the
+        // average of all time, which is no rate for today (money review R-d). The model asks.
+        FigureKind::Rate if period.is_none() => return None,
         FigureKind::Commission | FigureKind::Laga | FigureKind::Sale | FigureKind::Rate => {
             plan.find(text, "item");
             plan.read(analytics(
@@ -641,12 +743,29 @@ fn shop_figure(kind: FigureKind, period: Option<&PeriodRef>, plan: &mut Plan) ->
             ));
             plan.dated = true;
         }
-        // Dues, payables, advances, the dead amount, money lent and goods left, now.
-        FigureKind::Dues
-        | FigureKind::Payable
-        | FigureKind::Advance
-        | FigureKind::DeadAmount
-        | FigureKind::MoneyLent
+        // The shop's dues and payables are lists: R20 and R24 hold the total over the whole filter and
+        // the real list, so the button opens it (lead ruling of 04-11-2026). One party's dues stay on
+        // his card.
+        FigureKind::Dues if period.is_none() => {
+            plan.read(report(
+                "R20",
+                Rep {
+                    sort: Some(sorted("balance", "desc")),
+                    ..Rep::default()
+                },
+            ));
+        }
+        FigureKind::Payable if period.is_none() => {
+            plan.read(report(
+                "R24",
+                Rep {
+                    sort: Some(sorted("payable", "desc")),
+                    ..Rep::default()
+                },
+            ));
+        }
+        // Advances, the dead amount, money lent: the tiles, now.
+        FigureKind::Advance | FigureKind::DeadAmount | FigureKind::MoneyLent
             if period.is_none() =>
         {
             plan.read(tiles());
@@ -719,7 +838,7 @@ fn shop_figure(kind: FigureKind, period: Option<&PeriodRef>, plan: &mut Plan) ->
             plan.dated = period.is_some();
         }
         // All the partners' totals (the app asks for the code while the section is locked).
-        FigureKind::PartnerTotal | FigureKind::Capital => {
+        FigureKind::PartnerTotal => {
             plan.read(report(
                 "R31",
                 Rep {

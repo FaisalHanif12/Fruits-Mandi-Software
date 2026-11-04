@@ -996,6 +996,23 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     }
   });
 
+  it('outside the books, the real backend answer to a tax question: its words are the ones in the app, drawn above the nearest report', async () => {
+    const reply = real.REPLY_OUTSIDE_TAX;
+    const first = reply.answer?.parts[0];
+    expect(reply.outcome).toBe('outside_books');
+    if (first?.type !== 'text') throw new Error('the real answer has no plain line');
+    // The backend writes the line from the same Fluent file, in the language of the app (Urdu here).
+    expect(first.text).toBe(message('ur', 'assistant-outside-tax'));
+    await renderShellRouted();
+    await ask(language, reply, real.REPLY_OUTSIDE_TAX_REQUEST.text);
+    // The line is drawn as the backend sent it (a sentence is never translated), above the nearest report.
+    const shown = text(language);
+    expect(shown).toContain(first.text);
+    expect(shown.indexOf(first.text)).toBeLessThan(
+      shown.indexOf(message(language, 'assistant-outside-books-nearest')),
+    );
+  });
+
   it('out of time, a party card that was read gives his name and his checked balance above the tables (plan 55)', async () => {
     const base = real.REPLY_TIME_LIMIT;
     const answered = real.REPLY_ANSWERED.answer;

@@ -362,6 +362,9 @@ pub enum PeriodKind {
     Year(i32),
     /// From the first day of the books to today.
     UpToNow,
+    /// From the first day of the books up to and including a day the question named ("kal tak",
+    /// "30 september tak").
+    UpToDay,
     /// From today to 31 December.
     YearEnd,
 }
@@ -371,7 +374,7 @@ pub enum PeriodKind {
 pub struct PeriodRef {
     /// Which kind.
     pub kind: PeriodKind,
-    /// The first day. `None` only when the books hold nothing yet (`UpToNow`).
+    /// The first day. `None` only when the books hold nothing yet (`UpToNow`, `UpToDay`).
     pub from: Option<NaiveDate>,
     /// The last day.
     pub to: NaiveDate,
@@ -527,6 +530,9 @@ pub enum Doubt {
     Cut,
     /// The meaning of کل / kal depends on a verb that is not clear.
     TenseUnclear,
+    /// A time word stands that no period took ("pichli", "hafte mein", "din"): when the question
+    /// means is not clear.
+    TimeWord,
     /// A name is not a party or an item but another record (an expense head, a city, an اڈا).
     OtherRecord,
     /// Several things and several figures were asked at once ("kela ke kitne commission or sale,
@@ -577,6 +583,10 @@ pub struct Understanding {
     /// True when the question names a garden, a trip, own goods or the guests by word. The reads
     /// of [`plan_reads`] have no filter for them, so such a question is the model's.
     pub scoped: bool,
+    /// True when the question asks what was given, paid or received (an event of a period), not what
+    /// is open now ("rahim ko kitni peshgi di"). A party's card holds only what is open, so such a
+    /// question is the model's.
+    pub happened: bool,
     /// True when the app understood the whole question. The caller routes by intent.
     pub sure: bool,
     /// Why the app is not fully sure, or what it noted.
@@ -638,12 +648,13 @@ pub fn understand(reader: &Reader<'_>, question: &str) -> Understanding {
     if scan.words.is_empty() {
         return what::nothing(Doubt::NothingToRead);
     }
-    let mut periods = when::periods(&scan, today);
+    let read = when::read_periods(&scan, today);
+    let mut periods = read.periods;
     fill_start_of_books(reader, &mut periods);
     let names = who::resolve(reader, &scan, &periods);
     // A cue inside a name that was found ("Imran Fruit", "Akram Toll Tax") is part of the name.
     let scan = scan.without_spans(&names.spans);
-    what::assemble(reader, &scan, names, periods)
+    what::assemble(reader, &scan, names, periods, read.stray)
 }
 
 /// Builds the word table and the typing word list now, so the first question of the Owner is not
@@ -670,7 +681,10 @@ pub fn warm_words() {
 
 /// "Ab tak" starts at the first day of the books, when there is one.
 fn fill_start_of_books(reader: &Reader<'_>, periods: &mut [PeriodRef]) {
-    for period in periods.iter_mut().filter(|p| p.kind == PeriodKind::UpToNow) {
+    for period in periods
+        .iter_mut()
+        .filter(|p| matches!(p.kind, PeriodKind::UpToNow | PeriodKind::UpToDay))
+    {
         period.from = mandi_services::day::first_book_day(reader.ctx)
             .ok()
             .flatten()

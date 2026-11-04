@@ -51,6 +51,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         screen: None,
         wants_steps: false,
         scoped: false,
+        happened: false,
         sure: false,
         doubts: vec![doubt],
     }
@@ -104,13 +105,10 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
                 FigureKind::Dues
             }
         }
-        Cue::Payable => {
-            if has_party {
-                FigureKind::Balance
-            } else {
-                FigureKind::Payable
-            }
-        }
+        // A payable question about a named party stays a payable question: his card has a
+        // `payable` field, and for a seller with an advance that was not deducted it is not his
+        // ledger balance (E2E-28: payable 19,316, ledger 4,316 Cr). Lead ruling of 04-11-2026.
+        Cue::Payable => FigureKind::Payable,
         Cue::Advance => FigureKind::Advance,
         Cue::Stock => FigureKind::Stock,
         Cue::Cash => FigureKind::Cash,
@@ -678,6 +676,7 @@ pub(super) fn assemble(
     scan: &Scan,
     names: Names,
     periods: Vec<PeriodRef>,
+    time_word: bool,
 ) -> Understanding {
     let roles: Vec<PartyRole> = names
         .parties
@@ -704,6 +703,11 @@ pub(super) fn assemble(
     };
     let Chosen { intent, mut doubts } = intent_of(scan, &signs, &periods);
     doubts.extend(names.doubts.iter().copied());
+    // A time word that no period took ("pichli", "hafte mein"): for a figure, a list or a printout the
+    // period is part of the question, so the app is not sure of it. Help and the rest read no period.
+    if time_word && matches!(intent.value, Intent::Figure | Intent::List | Intent::Print) {
+        doubts.push(Doubt::TimeWord);
+    }
     if scan.cut {
         doubts.push(Doubt::Cut);
     }
@@ -760,9 +764,13 @@ pub(super) fn assemble(
                 })),
         first_day,
         trip_days,
+        unknown_words: names.doubts.contains(&Doubt::UnknownWords),
+        item_named: !names.items.is_empty(),
+        scope_missing: super::reads::print_scope_missing(scan, &names),
     });
     doubts.extend(planned.doubts.iter().copied());
 
+    let kinds_for_happened = kinds.clone();
     let mut understanding = Understanding {
         intent,
         parties: names.parties,
@@ -781,6 +789,7 @@ pub(super) fn assemble(
         screen,
         wants_steps,
         scoped: super::reads::scoped(scan),
+        happened: super::reads::happened(scan, &kinds_for_happened),
         sure: false,
         doubts,
     };
@@ -891,7 +900,7 @@ fn assume_ranking(u: &mut Understanding, reader: &Reader<'_>) {
 }
 
 /// Doubts that always send the question to the model.
-const BLOCKING: [Doubt; 11] = [
+const BLOCKING: [Doubt; 12] = [
     Doubt::NothingToRead,
     Doubt::SeveralMatches,
     Doubt::NameOrItem,
@@ -899,6 +908,7 @@ const BLOCKING: [Doubt; 11] = [
     Doubt::LookupFailed,
     Doubt::Cut,
     Doubt::TenseUnclear,
+    Doubt::TimeWord,
     Doubt::NoFigure,
     Doubt::NoParty,
     Doubt::TwoParts,

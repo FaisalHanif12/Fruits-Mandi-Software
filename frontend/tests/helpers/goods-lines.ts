@@ -6,6 +6,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
+import { expect } from 'vitest';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -58,11 +59,69 @@ async function enterRow(user: User, row: number, kind: LinesKind): Promise<void>
   await user.click(lineCell(row, 'item', kind));
 }
 
-/** Types a picker cell and takes the first match: waits for the list, so Enter finds it. */
-async function pick(user: User, text: string): Promise<void> {
-  await user.keyboard(text);
-  await screen.findAllByRole('option');
-  await user.keyboard('{Enter}');
+/** How many times a pick is tried when a busy machine loses it (see `pick`). */
+const PICK_TRIES = 3;
+/** How long one step of a pick is waited for before it counts as lost. */
+const PICK_STEP_MS = 4_000;
+
+/** Text for comparing: no direction marks, lower case. */
+const plain = (text: string | null): string =>
+  (text ?? '').replace(/[\u200e\u200f\u2066-\u2069]/g, '').toLowerCase();
+
+/** Where a pick is made: the cell of the line that holds the picker. */
+interface PickCell {
+  row: number;
+  kind: LinesKind;
+  field: 'item' | 'packing';
+}
+
+/** The option the open picker has highlighted, or null when none is. */
+function highlightedOption(): HTMLElement | null {
+  const id = document.activeElement?.getAttribute('aria-activedescendant') ?? '';
+  return id === '' ? null : document.getElementById(id);
+}
+
+/**
+ * Types a picker cell and takes the first match. A picker opens as soon as its cell has the focus
+ * (plan 46), so a list is on screen before the first letter is typed, and a list that is drawn
+ * again has no row highlighted for a moment. Enter must wait until the highlighted row is one that
+ * holds the typed text, or it takes nothing, or the first row of the whole list. The pick has
+ * landed only when the cell shows a name. On a busy machine a pick can be lost: the editor is left,
+ * the cell entered again and the text typed again, up to three times.
+ */
+async function pick(user: User, text: string, cell: PickCell): Promise<void> {
+  for (let attempt = 1; attempt <= PICK_TRIES; attempt += 1) {
+    if (attempt > 1) {
+      await user.keyboard('{Escape}');
+      await user.click(lineCell(cell.row, cell.field, cell.kind));
+    }
+    await user.keyboard(text);
+    try {
+      await waitFor(
+        () => {
+          expect(plain(highlightedOption()?.textContent ?? null)).toContain(plain(text));
+        },
+        { timeout: PICK_STEP_MS },
+      );
+    } catch {
+      // Nothing is highlighted, or a text the list does not show as typed (a code): take the first
+      // row with the arrow key, once the list is there.
+      await screen.findAllByRole('option');
+      if (highlightedOption() === null) await user.keyboard('{ArrowDown}');
+    }
+    await user.keyboard('{Enter}');
+    try {
+      await waitFor(
+        () => {
+          expect(lineCellText(cell.row, cell.field, cell.kind)).not.toBe('');
+        },
+        { timeout: PICK_STEP_MS },
+      );
+      return;
+    } catch (lost) {
+      if (attempt === PICK_TRIES) throw lost;
+    }
+  }
 }
 
 /** Types one stop of the line and presses Enter, which goes on to the next stop. */
@@ -101,8 +160,8 @@ async function typeOptional(
  */
 export async function typePurchaseLine(user: User, row: number, line: LineText): Promise<void> {
   await enterRow(user, row, 'purchase');
-  await pick(user, line.item);
-  await pick(user, line.packing);
+  await pick(user, line.item, { row, kind: 'purchase', field: 'item' });
+  await pick(user, line.packing, { row, kind: 'purchase', field: 'packing' });
   await typeStop(user, line.qty);
   if (line.weight !== undefined) await typeStop(user, line.weight);
   await typeStop(user, line.rate);
@@ -118,8 +177,8 @@ export async function typePurchaseLine(user: User, row: number, line: LineText):
 /** Types line `row` of a goods arrived entry: item, packing and quantity (three Enters). */
 export async function typeArrivalLine(user: User, row: number, line: LineText): Promise<void> {
   await enterRow(user, row, 'arrival');
-  await pick(user, line.item);
-  await pick(user, line.packing);
+  await pick(user, line.item, { row, kind: 'arrival', field: 'item' });
+  await pick(user, line.packing, { row, kind: 'arrival', field: 'packing' });
   await typeStop(user, line.qty);
   if (line.weight !== undefined) await typeStop(user, line.weight);
   await typeOptional(user, row, 'arrival', [

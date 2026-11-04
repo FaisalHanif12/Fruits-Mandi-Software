@@ -94,6 +94,8 @@ import assistantReplyOffline from '../fixtures/assistant_reply_offline.json';
 import assistantReplyOfflineRequest from '../fixtures/assistant_reply_offline_request.json';
 import assistantReplyOutsideBooks from '../fixtures/assistant_reply_outside_books.json';
 import assistantReplyOutsideBooksRequest from '../fixtures/assistant_reply_outside_books_request.json';
+import assistantReplyOutsideTax from '../fixtures/assistant_reply_outside_tax.json';
+import assistantReplyOutsideTaxRequest from '../fixtures/assistant_reply_outside_tax_request.json';
 import assistantReplyRecordsDiffer from '../fixtures/assistant_reply_records_differ.json';
 import assistantReplyRecordsDifferRequest from '../fixtures/assistant_reply_records_differ_request.json';
 import assistantReplyWhichOne from '../fixtures/assistant_reply_which_one.json';
@@ -269,6 +271,9 @@ export const REPLY_OFFLINE = readAskReply(assistantReplyOffline);
 export const REPLY_OFFLINE_REQUEST = readAssistantAskInput(assistantReplyOfflineRequest);
 export const REPLY_OUTSIDE_BOOKS = readAskReply(assistantReplyOutsideBooks);
 export const REPLY_OUTSIDE_BOOKS_REQUEST = readAssistantAskInput(assistantReplyOutsideBooksRequest);
+/** The backend's own answer to a tax question (plan 55 Section 7): the plain line in answer.parts, and R2. */
+export const REPLY_OUTSIDE_TAX = readAskReply(assistantReplyOutsideTax);
+export const REPLY_OUTSIDE_TAX_REQUEST = readAssistantAskInput(assistantReplyOutsideTaxRequest);
 export const REPLY_RECORDS_DIFFER = readAskReply(assistantReplyRecordsDiffer);
 export const REPLY_RECORDS_DIFFER_REQUEST = readAssistantAskInput(
   assistantReplyRecordsDifferRequest,

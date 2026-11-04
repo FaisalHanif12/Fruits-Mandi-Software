@@ -421,6 +421,7 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
     if ends_with_until || has_tarikh {
         end = next_index(end, 1);
     }
+    let mut straddles = false;
     let (year, month) = match (second.month.or(first.month), second.year.or(first.year)) {
         (Some(m), Some(y)) => (y, m),
         (Some(m), None) => {
@@ -430,7 +431,24 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
                 ..second
             };
             let date = date_of(&probe, today, None)?;
-            (date.year(), m)
+            // "1 se 15 november" on 4 November: its first day has come and its last has not. It
+            // looks ahead, so it is not last year's range; the app is not sure of it (money review
+            // R-h).
+            let first_day =
+                NaiveDate::from_ymd_opt(today.year(), first.month.unwrap_or(m), first.day);
+            let last_day = NaiveDate::from_ymd_opt(today.year(), m, second.day);
+            match (first_day, last_day) {
+                (Some(f), Some(l))
+                    if first.literal.is_none()
+                        && second.literal.is_none()
+                        && f <= today
+                        && l > today =>
+                {
+                    straddles = true;
+                    (today.year(), m)
+                }
+                _ => (date.year(), m),
+            }
         }
         (None, _) => {
             // Bare days: this month, or last month when the last day has not come yet.
@@ -463,7 +481,9 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
     if from > to {
         return None;
     }
-    let confidence = if has_month || first.literal.is_some() {
+    let confidence = if straddles {
+        Confidence::Low
+    } else if has_month || first.literal.is_some() {
         Confidence::High
     } else {
         Confidence::Medium
@@ -1121,14 +1141,131 @@ fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], t
     out.remove(drop);
 }
 
+/// "kal tak", "30 september tak": from the first day of the books up to and including that day, not
+/// that one day (money review BUG-3). The first day of the books is filled in by the caller, which
+/// can read them.
+///
+/// Example (today 04-11-2026): "kal tak" is the books up to 03-11-2026.
+fn until_day(
+    found: &PeriodRef,
+    start: usize,
+    end: usize,
+    scan: &Scan,
+    today: NaiveDate,
+) -> Option<(PeriodRef, usize)> {
+    let named_day = found.from == Some(found.to)
+        && matches!(
+            found.kind,
+            PeriodKind::Date | PeriodKind::Yesterday | PeriodKind::DayBeforeYesterday
+        );
+    if !named_day || !scan.word(end).is_some_and(|x| words().until.contains(x)) {
+        return None;
+    }
+    let end = next_index(end, 1);
+    Some((
+        period(
+            PeriodKind::UpToDay,
+            None,
+            found.to,
+            found.confidence,
+            typed(scan, start, end),
+            today,
+        ),
+        end,
+    ))
+}
+
+/// Words that stand before a unit of time to count it or to spread it ("do mahine", "har hafte"): the
+/// unit is then not "this" one.
+const COUNTING: [&str; 14] = [
+    "har", "poora", "pura", "pure", "puri", "poori", "aadha", "adha", "kai", "kuch", "ek", "aik",
+    "ہر", "پورا",
+];
+
+/// A word that points at a period before or after the one now ("pichla", "agle"), without the verbs
+/// that only end in the same letters ("gaye", "aane").
+fn is_head(word: &str) -> bool {
+    let w = words();
+    (w.last.contains(word) && !matches!(word, "gaye" | "gaya" | "gayi" | "گئے"))
+        || (w.next.contains(word) && !matches!(word, "aane" | "aanay" | "آنے"))
+}
+
+/// The time words that no period took ("mahine ka", "hafte ki", "pichli", "din"). A unit of a week,
+/// a month or a year with "ka / ki / ke" and nothing counting it is this one: "faisal ka mahine ka
+/// commission" is this month (lead ruling of 04-11-2026), added to `out`. Anything else is a time
+/// the app cannot place; the answer is `true`, and the question is not sure (money review BUG-4).
+fn stray_time_words(
+    scan: &Scan,
+    used: &[(usize, usize)],
+    today: NaiveDate,
+    out: &mut Vec<PeriodRef>,
+) -> bool {
+    let mut stray = false;
+    for at in 0..scan.words.len() {
+        let in_period = used.iter().any(|(s, e)| *s <= at && at < *e);
+        // A word of a phrase of the cue table is that phrase's, not a time.
+        let in_phrase = scan
+            .hits
+            .iter()
+            .any(|h| !h.fuzzy && h.start <= at && at < h.end);
+        let Some(word) = scan.word(at) else { continue };
+        if in_period || in_phrase {
+            continue;
+        }
+        let Some(unit) = unit_at(scan, at) else {
+            stray |= is_head(word);
+            continue;
+        };
+        let before = at.checked_sub(1);
+        let counted = before.is_some_and(|b| {
+            count_at(scan, b).is_some()
+                || scan
+                    .word(b)
+                    .is_some_and(|x| COUNTING.contains(&x) || is_head(x))
+        });
+        let possessive = scan
+            .word(next_index(at, 1))
+            .is_some_and(|x| matches!(x, "ka" | "ki" | "ke" | "kay" | "کا" | "کی" | "کے"));
+        match this_unit(unit, today) {
+            Some((kind, from, to)) if unit != Unit::Day && possessive && !counted => {
+                out.push(period(
+                    kind,
+                    Some(from),
+                    to,
+                    Confidence::Medium,
+                    word.to_owned(),
+                    today,
+                ));
+            }
+            _ => stray = true,
+        }
+    }
+    stray
+}
+
+/// The periods a question names and whether a time word was left that no period took.
+pub(super) struct PeriodsRead {
+    /// Every period, in order, as exact dates.
+    pub periods: Vec<PeriodRef>,
+    /// True when a time word stands that the app cannot place.
+    pub stray: bool,
+}
+
 /// Every period the question names, in order, as exact dates.
 ///
 /// Example (today 04-11-2026): "kal ki bikri kitni thi" is yesterday, 03-11-2026 (a past verb).
 pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
+    read_periods(scan, today).periods
+}
+
+/// The periods of a question, and whether a time word was left over.
+pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     let tense = tense_of(scan);
     let mut out: Vec<PeriodRef> = Vec::new();
     // For each period: the days of a range with no month of its own.
     let mut bare: Vec<Option<(u32, u32)>> = Vec::new();
+    // The words each period took.
+    let mut used: Vec<(usize, usize)> = Vec::new();
     let mut at = 0usize;
     while at < scan.words.len() {
         match read_at(scan, at, today, tense) {
@@ -1138,7 +1275,13 @@ pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
                 {
                     out.push(joined);
                     bare.push(None);
+                    used.push((at, joined_end));
                     at = joined_end;
+                } else if let Some((upto, upto_end)) = until_day(&found, at, end, scan, today) {
+                    out.push(upto);
+                    bare.push(None);
+                    used.push((at, upto_end));
+                    at = upto_end;
                 } else {
                     bare.push(if found.kind == PeriodKind::Range {
                         bare_days(scan, at)
@@ -1146,6 +1289,7 @@ pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
                         None
                     });
                     out.push(found);
+                    used.push((at, end));
                     at = end;
                 }
             }
@@ -1154,8 +1298,12 @@ pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
     }
     merge_month_and_days(&mut out, &bare, today);
     // "saal ke aakhir tak": from today to 31 December. The year it belongs to is not a second
-    // period.
-    if cues::year_end(&scan.raw) {
+    // period, and its "saal" is not a stray time word.
+    let year_end = cues::year_end(&scan.raw);
+    // A question that has a period already ("whole day's bikri for this month") is not unsure of its
+    // time for a stray word: only a question with none reads the stray word as its period.
+    let stray = !year_end && out.is_empty() && stray_time_words(scan, &used, today, &mut out);
+    if year_end {
         out.retain(|p| !matches!(p.kind, PeriodKind::ThisYear));
         if let Some(end) = NaiveDate::from_ymd_opt(today.year(), 12, 31) {
             out.push(period(
@@ -1168,5 +1316,8 @@ pub(super) fn periods(scan: &Scan, today: NaiveDate) -> Vec<PeriodRef> {
             ));
         }
     }
-    out
+    PeriodsRead {
+        periods: out,
+        stray,
+    }
 }

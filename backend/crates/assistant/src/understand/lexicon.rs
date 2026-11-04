@@ -80,6 +80,8 @@ pub(super) enum Cue {
     RoleStaff,
     /// alag khata.
     RoleKhata,
+    /// mehman, guests: the shop's guests (fruit taken for them, PRD 16.7). Not a name.
+    Guests,
     /// item, qisam.
     RoleItem,
     /// buyers, gahakon (many of them).
@@ -207,7 +209,7 @@ const INTENT: &[Entry] = &[
         Cue::PrintObject,
         &[
             "bill", "bills", "billing", "slip", "slips", "parchi", "parchee", "purchi", "پرچی",
-            "بل", "بلز", "رسید", "raseed", "receipt slip", "voucher",
+            "بل", "بلز", "رسید", "raseed", "receipt slip", "voucher", "register", "registers", "رجسٹر",
         ],
     ),
     (
@@ -447,6 +449,12 @@ const ROLES: &[Entry] = &[
         Cue::RoleKhata,
         &[
             "alag khata", "alag khate", "separate khata", "الگ کھاتہ", "الگ کھاتے",
+        ],
+    ),
+    (
+        Cue::Guests,
+        &[
+            "mehman", "mehmano", "mehmanon", "mehmaan", "guest", "guests", "مہمان", "مہمانوں",
         ],
     ),
     (
@@ -790,7 +798,8 @@ pub(super) const STOP: &[&str] = &[
     "madam", "uncle", "chacha", "shop", "dukan", "dukaan", "business", "karobar", "firm", "صاحب",
     "بھائی", "بھیا", "جی", "میاں", "چچا", "دکان", "کاروبار",
     "purana", "purani", "purane", "puranay", "naya", "nayi", "naye", "aakhri", "akhri", "pehla", "pehli",
-    "oldest", "newest", "latest", "first", "sabse", "hazar", "hazaar", "lakh", "lac", "crore", "karor",
+    "oldest", "newest", "latest", "first", "sabse", "report", "reports", "رپورٹ", "saari", "saara", "sara", "saray", "سارا", "whole",
+    "entire", "karni", "karne", "kijiye", "کرنی", "کرنے", "hazar", "hazaar", "lakh", "lac", "crore", "karor",
     "sau", "million", "thousand", "hundred", "billion", "book", "bak", "buk", "بک", "ہزار", "لاکھ",
     "کروڑ", "سو", "پرانا", "پرانی", "نیا", "نئی", "آخری", "پہلا", "پہلی",
     "ka", "ki", "ke", "kay", "ko", "se", "say", "ne", "nay", "mein", "me", "main", "men", "par",
@@ -811,7 +820,7 @@ pub(super) const STOP: &[&str] = &[
     "be", "been", "do", "does", "did", "i", "me", "my", "we", "our", "us", "you", "your", "he",
     "his", "she", "her", "they", "their", "it", "its", "this", "that", "these", "those", "have",
     "has", "had", "can", "could", "will", "would", "shall", "should", "may", "might", "tell",
-    "give", "need", "want", "please", "s", "than", "then", "what", "which", "who", "whom", "when",
+    "give", "need", "want", "please", "s", "take", "than", "then", "what", "which", "who", "whom", "when",
     "why", "also", "just", "so", "if", "about", "all", "any", "some", "ka", "kitna", "jo", "jis",
     "jin", "ke", "kaha", "kehna", "bolo", "boliye", "suna", "suniye", "dekho", "dekhna", "dekh",
     "dekhen", "dekhein", "sakta", "sakte", "sakti", "chahta", "chahte", "chahti", "chahiye", "raha",

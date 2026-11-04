@@ -337,7 +337,11 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("kele ka commission pichle mahine", "period{kind:last_month} | find{role:item,text:kele} | analytics{from:2026-09-01,item:$kela,to:2026-09-30,view:A}"),
     ("kele ka commission is saal", "period{kind:this_year} | find{role:item,text:kele} | analytics{from:2026-01-01,item:$kela,to:2026-10-10,view:A}"),
     ("kele ki bikri is mahine", "period{kind:this_month} | find{role:item,text:kele} | analytics{from:2026-10-01,item:$kela,to:2026-10-10,view:A}"),
-    ("kele ka rate", "find{role:item,text:kele} | analytics{item:$kela,view:A}"),
+    // The rate of view A is the average of the whole period. With no period it is the average of
+    // all time, no rate for today: the model asks (money review R-d).
+    ("kele ka rate", "NONE"),
+    ("kele ka bhao", "NONE"),
+    ("kele ka rate is mahine", "period{kind:this_month} | find{role:item,text:kele} | analytics{from:2026-10-01,item:$kela,to:2026-10-10,view:A}"),
     ("kele ka commission aaj", "period{kind:today} | find{role:item,text:kele} | analytics{from:2026-10-10,item:$kela,to:2026-10-10,view:A}"),
     ("saib ka commission", "find{role:item,text:saib} | analytics{item:$saib,view:A}"),
     ("kele ka commission rahim ka is mahine", "period{kind:this_month} | find{role:seller,text:rahim} | find{role:item,text:kele} | analytics{from:2026-10-01,item:$kela,seller:$rahim,to:2026-10-10,view:A}"),
@@ -362,11 +366,18 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("how much cash do we have", "tiles{}"),
     ("gala kitna hai", "tiles{}"),
     ("روکڑ کتنی ہے", "tiles{}"),
-    ("buyers ke dues kitne hain", "tiles{}"),
-    ("kul ugrahi kitni hai", "tiles{}"),
-    ("total dues", "tiles{}"),
-    ("sellers ka payable kitna hai", "tiles{}"),
-    ("kitni peshgi di hui hai", "tiles{}"),
+    // The shop's dues and payables are read from the lists, so the button opens the real list with
+    // the total over the whole filter (lead ruling of 04-11-2026). One party's stay on his card.
+    ("buyers ke dues kitne hain", "report{id:R20,sort:balance:desc}"),
+    ("kul ugrahi kitni hai", "report{id:R20,sort:balance:desc}"),
+    ("total dues", "report{id:R20,sort:balance:desc}"),
+    ("gahakon ke kul bakaya", "report{id:R20,sort:balance:desc}"),
+    ("sab gahakon ka bakaya", "report{id:R20,sort:balance:desc}"),
+    ("sellers ka payable kitna hai", "report{id:R24,sort:payable:desc}"),
+    ("sellers ka kul payable", "report{id:R24,sort:payable:desc}"),
+    ("beopariyon ko kul kitna dena hai", "report{id:R24,sort:payable:desc}"),
+    // What was GIVEN is an event, not what is open: the tile and the card hold what is open.
+    ("kitni peshgi di hui hai", "NONE"),
     ("doobi raqam kitni hai", "tiles{}"),
     ("udhar raqam kitni hai", "tiles{}"),
     ("baqi maal kitna hai", "report{id:R10,sort:days:desc}"),
@@ -384,7 +395,10 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("is mahine kitni wasooli hui", "period{kind:this_month} | report{from:2026-10-01,id:R23,to:2026-10-10}"),
     // ---- partners (R31); the city, the adda
     ("partners ki kul raqam", "report{id:R31}"),
-    ("partner b ka sarmaya", "find{role:partner,text:b} | report{id:R31,partner:$partner_b}"),
+    ("partner b ki kul raqam", "find{role:partner,text:b} | report{id:R31,partner:$partner_b}"),
+    ("partner a ki kul raqam", "find{role:partner,text:a} | report{id:R31,partner:$partner_a}"),
+    // R31 runs in the kul raqam (E2E-37: b 50,746, his capital 50,000), so his capital is not its figure.
+    ("partner b ka sarmaya", "NONE"),
     ("lahore ki ugrahi", "find{role:city,text:lahore} | report{city:$lahore,id:R21}"),
     ("swat adda ki bikri pichle mahine", "period{kind:last_month} | find{role:adda,text:swat adda} | report{adda:$swat,from:2026-09-01,id:R8,to:2026-09-30}"),
     // ---- lists and top N
@@ -420,6 +434,33 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("kharcha kitna hai", "NONE"),
     ("akram ne kele kitne liye pichle mahine", "NONE"),
     ("pichle mahine ka cash book", "period{kind:last_month} | report{from:2026-09-01,id:R12,to:2026-09-30}"),
+    // ---- BUG-3: a day with "tak" is the books up to that day (the first day of the books is 31-08-2026)
+    ("faisal ki kal tak ki bikri", "period{from:2026-08-31,kind:range,to:2026-10-09} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-08-31,to:2026-10-09,view:C}"),
+    ("akram ka 30 september tak ka khata", "period{from:2026-08-31,kind:range,to:2026-09-30} | find{role:buyer,text:akram} | report{from:2026-08-31,id:R13,party:$akram,to:2026-09-30}"),
+    // ---- BUG-4: a unit of time alone is this one; a time word the app cannot place is the model's
+    ("faisal ka mahine ka commission", "period{kind:this_month} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-10-01,to:2026-10-10,view:C}"),
+    ("faisal ka saal ka commission", "period{kind:this_year} | find{role:buyer,text:faisal} | analytics{buyer:$faisal,from:2026-01-01,to:2026-10-10,view:C}"),
+    ("akram ki hafte ki bikri", "period{kind:this_week} | find{role:buyer,text:akram} | analytics{buyer:$akram,from:2026-10-05,to:2026-10-10,view:C}"),
+    ("rahim ki pichli bikri", "NONE"),
+    ("faisal ka do mahine ka commission", "NONE"),
+    // ---- BUG-5: own goods, in the right grammar too
+    ("apne maal ki is mahine ki bikri kitni hai", "NONE"),
+    ("apna maal is mahine ki bikri", "NONE"),
+    ("hamare apne mal ki bikri aaj", "NONE"),
+    // ---- R-e: what was given, paid or received is an event
+    ("rahim ko kitni peshgi di", "NONE"),
+    ("rahim ko kitni adaigi hui", "NONE"),
+    ("akram ko kitne paise diye", "NONE"),
+    // ---- a payable question about a named party stays a payable question: his card has the field
+    ("karim ki adaigi kitni baqi hai", "find{role:seller,text:karim} | party_card{party:$karim}"),
+    // A buyer's card holds no advance (a payment to a buyer is cash lent).
+    ("akram ki peshgi kitni hai", "NONE"),
+    // ---- R-h: a range that looks ahead (its last day has not come) is not sure
+    ("1 se 15 october tak ka commission", "NONE"),
+    ("1 se 5 october tak ka commission", "period{from:2026-10-01,kind:range,to:2026-10-05} | analytics{from:2026-10-01,to:2026-10-05,view:A}"),
+    // ---- R-a: a spelling that differs in vowels only is the same name; a consonant off is not
+    ("akrm ka bakaya", "find{role:buyer,text:akrm} | party_card{party:$akram}"),
+    ("arshd ka bakaya", "find{role:buyer,text:arshd} | party_card{party:$arshad}"),
 ];
 
 #[test]
@@ -510,7 +551,7 @@ const YEAR: &[(&str, &str)] = &[
     ("pichle 3 mahine ka commission", "period{from:2026-08-05,kind:range,to:2026-11-05} | analytics{from:2026-08-05,to:2026-11-05,view:A}"),
     ("rahim ki bikri october mein", "period{from:2026-10-01,kind:range,to:2026-10-31} | find{role:seller,text:rahim} | analytics{from:2026-10-01,seller:$rahim,to:2026-10-31,view:B}"),
     ("cash kitna hai", "tiles{}"),
-    ("dues kitne hain", "tiles{}"),
+    ("dues kitne hain", "report{id:R20,sort:balance:desc}"),
     // A garden, a trip or own goods has no filter in the reads: the model chooses.
     ("shahpur garden ka result", "NONE"),
     ("shahpur bagh ki bikri", "NONE"),
@@ -665,14 +706,14 @@ fn what_is_not_sure_plans_no_reads() {
     };
     for question in [
         "partners ki kul raqam",
-        "partner b ka sarmaya",
+        "partner b ki kul raqam",
         "alif ki kul raqam",
     ] {
         let u = understand(&locked, question);
         assert!(plan_reads(&u).is_none(), "{question}: {u:?}");
     }
     // The same questions with the section open are planned.
-    for question in ["partners ki kul raqam", "partner b ka sarmaya"] {
+    for question in ["partners ki kul raqam", "partner b ki kul raqam"] {
         assert!(plan_reads(&understand(&reader(&w, today), question)).is_some());
     }
     // Close names, two parties and an empty question plan nothing.

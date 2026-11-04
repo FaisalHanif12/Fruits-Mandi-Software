@@ -21,7 +21,8 @@ use mandi_assistant::ask::{AskOutcome, AskedRole};
 use mandi_assistant::prompt::guide;
 use mandi_assistant::results::Words;
 use mandi_assistant::understand::{
-    Composed, OutsideKind, Reader, compose, outside_message, understand,
+    Composed, Doubt, OutsideKind, Reader, Understanding, compose, outside_message, plan_reads,
+    understand,
 };
 use mandi_reports::reports::{ArgValue, ReportId};
 use mandi_services::core::accounts::AccountType;
@@ -1020,4 +1021,263 @@ fn a_question_that_is_not_sure_never_has_a_button_or_steps() {
             "{question}"
         );
     }
+}
+
+// ---- the money review of 04-11-2026 (BUG-1 to BUG-5, R-a to R-i) ---------------------------------------
+
+fn ask(w: &world::World, question: &str, locked: bool) -> Understanding {
+    let reader = Reader {
+        ctx: &w.env.ctx,
+        actor: &w.owner,
+        language: Language::En,
+        today: BusinessDate::from_ymd(2026, 10, 10).expect("a date"),
+        partner_locked: locked,
+    };
+    understand(&reader, question)
+}
+
+/// The question is the model's: not sure, so no button and no steps, no local answer and no reads.
+fn assert_model_path(u: &Understanding, question: &str) {
+    assert!(!u.sure, "{question}: {u:?}");
+    assert!(
+        u.report.is_none(),
+        "{question}: a button for an unsure question: {:?}",
+        u.report
+    );
+    let words = Words::new().expect("words");
+    assert!(
+        compose(u, Language::En, &words, READ_AT).is_none(),
+        "{question}"
+    );
+    assert!(plan_reads(u).is_none(), "{question}");
+}
+
+/// BUG-1. A print for a name the app cannot place (a one-time person of the پختہ کھاتہ, an inactive
+/// account, a partner while the section is locked) must never become a print of the whole shop.
+/// "shahid ki aaj ki bikri ka print" was R34 for the whole day.
+#[test]
+fn a_print_for_a_name_the_app_cannot_place_never_opens_a_report_of_the_whole_shop() {
+    let w = books();
+    // Event 2 of the worked day: the one-time buyer شاہد is recorded on the پختہ کھاتہ.
+    worked::events_1_to_5(&w);
+    let zafar = world::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Buyer,
+        "ظفر",
+        "Zafar",
+        true,
+        "",
+    );
+    mandi_services::accounts::set_active(&w.env.ctx, &w.owner, zafar, false).expect("inactive");
+    for question in [
+        "shahid ki aaj ki bikri ka print",
+        "shahid ka bill ka print aaj ka",
+        "zafar ki pichle mahine ki bikri ka print",
+        "zafar ki aaj ki bikri ka print",
+    ] {
+        assert_model_path(&ask(&w, question, false), question);
+    }
+    // A locked partner section: "usman" may be a partner. R20 (every buyer's dues) is no answer.
+    let u = ask(&w, "usman ki wasooli ka print", true);
+    assert_model_path(&u, "usman ki wasooli ka print");
+    // The same question with no name is a print of the dues: the name is what blocks it.
+    let u = ask(&w, "wasooli ka print", false);
+    assert!(u.sure, "{u:?}");
+    // A name that is placed still prints.
+    let c = compose_for(&w, "faisal ki aaj ki bikri ka print", Language::En).expect("a print");
+    assert_eq!(button(answer_of(&c), 0).0, ReportId::R35);
+}
+
+/// BUG-2. A print drops the item and the scope word: "kele ki aaj ki bikri ka print" was R34 for all
+/// items. No report link has an item filter, and a garden, a trip, own goods or the guests need their
+/// own report, so such a print is the model's.
+#[test]
+fn a_print_that_names_an_item_or_a_scope_the_links_cannot_filter_is_not_sure() {
+    let w = books();
+    for question in [
+        "kele ki aaj ki bikri ka print",
+        "faisal ki kele ki bikri ka print",
+        "kele ka baqi maal print",
+        "bagh ki is mahine ki bikri ka print",
+        "safar ki aaj ki bikri ka print",
+        "apne maal ki is mahine ki bikri ka print",
+        "apna maal aaj ka print",
+        "mehman ki aaj ki bikri ka print",
+    ] {
+        assert_model_path(&ask(&w, question, false), question);
+    }
+    // Without the item or the scope word they print as before.
+    for (question, report) in [
+        ("baqi maal ka print", "R10"),
+        ("aaj ki bikri ka print", "R34"),
+        ("faisal ki aaj ki bikri ka print", "R35"),
+    ] {
+        let u = ask(&w, question, false);
+        assert!(u.sure, "{question}: {u:?}");
+        assert_eq!(u.report.as_ref().map(|r| r.id), Some(report), "{question}");
+    }
+}
+
+/// BUG-3. "kal tak" is the books up to and including yesterday, and the button, the steps and the
+/// dates all say so.
+#[test]
+fn a_print_up_to_a_day_is_the_books_up_to_that_day() {
+    let w = books();
+    let c = compose_for(&w, "faisal ki kal tak ki bikri ka print", Language::En)
+        .expect("a local answer");
+    let a = answer_of(&c);
+    let (id, from, to, _, party) = button(a, 0);
+    assert_eq!(
+        (id, from.as_str(), to.as_str(), party.as_deref()),
+        (ReportId::R5, "2026-08-31", "2026-10-09", Some("Faisal"))
+    );
+    agree(a);
+    let c = compose_for(
+        &w,
+        "akram ki 30 september tak ki bikri ka print",
+        Language::En,
+    )
+    .expect("a local answer");
+    let a = answer_of(&c);
+    let (id, from, to, _, party) = button(a, 0);
+    assert_eq!(
+        (id, from.as_str(), to.as_str(), party.as_deref()),
+        (
+            ReportId::R5,
+            "2026-08-31",
+            "2026-09-30",
+            Some("Akram Toll Tax")
+        )
+    );
+    agree(a);
+}
+
+/// BUG-4. A unit of time alone ("mahine ki") is this one; a time word the app cannot place
+/// ("pichli", "hafte mein") makes the print the model's.
+#[test]
+fn a_time_word_alone_is_this_month_or_the_print_is_not_sure() {
+    let w = books();
+    let c = compose_for(&w, "faisal ki mahine ki bikri ka print", Language::En)
+        .expect("a local answer");
+    let a = answer_of(&c);
+    let (id, from, to, _, _) = button(a, 0);
+    assert_eq!(
+        (id, from.as_str(), to.as_str()),
+        (ReportId::R5, "2026-10-01", "2026-10-10")
+    );
+    agree(a);
+    for question in [
+        "faisal ki pichli bikri ka print",
+        "faisal ki bikri ka print hafte mein",
+        "faisal ki do mahine ki bikri ka print",
+        "faisal ki har hafte ki bikri ka print",
+    ] {
+        let u = ask(&w, question, false);
+        assert_model_path(&u, question);
+        assert!(u.doubts.contains(&Doubt::TimeWord), "{question}: {u:?}");
+    }
+}
+
+/// BUG-5. "apne maal" is the right grammar for "my own goods"; it scopes a figure like "apna maal".
+#[test]
+fn own_goods_in_the_right_grammar_is_a_scope_word() {
+    let w = books();
+    for question in [
+        "apne maal ki is mahine ki bikri kitni hai",
+        "apna maal is mahine ki bikri",
+        "hamare apne mal ki bikri aaj",
+        "اپنے مال کی بکری آج",
+    ] {
+        let u = ask(&w, question, false);
+        assert!(u.scoped, "{question}: {u:?}");
+        assert!(plan_reads(&u).is_none(), "{question}");
+    }
+    // A word for goods alone is not a scope.
+    let u = ask(&w, "baqi maal kitna hai", false);
+    assert!(!u.scoped, "{u:?}");
+}
+
+/// R-a. A misspelt name must not become another person: "nasir" is one consonant off Nasim. The
+/// same name written with other vowels is still the person.
+#[test]
+fn a_name_one_consonant_off_is_not_taken_for_another_person() {
+    let w = books();
+    world::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Buyer,
+        "نسیم",
+        "Nasim",
+        true,
+        "",
+    );
+    for question in [
+        "nasir ka bakaya",
+        "nasir ki aaj ki bikri ka print",
+        "nasir ki aaj ki bikri",
+    ] {
+        let u = ask(&w, question, false);
+        assert_model_path(&u, question);
+        assert!(
+            u.doubts.contains(&Doubt::CloseSpelling),
+            "{question}: {:?}",
+            u.doubts
+        );
+    }
+    for question in ["nsim ka bakaya", "nasem ka bakaya", "nasim ka bakaya"] {
+        let u = ask(&w, question, false);
+        assert!(u.sure, "{question}: {u:?}");
+        assert!(plan_reads(&u).is_some(), "{question}");
+    }
+}
+
+/// R-g. A print of a party says what was asked: a receipt, an advance or a payment is in his khata
+/// (R13), not in the sale reports (R5, R6) that would have opened.
+#[test]
+fn a_print_of_a_party_opens_the_report_that_holds_the_figure_asked() {
+    let w = books();
+    for (question, party) in [
+        ("rahim ki is mahine ki peshgi ka print", "Rahim"),
+        ("akram ki is mahine ki wasooli ka print", "Akram Toll Tax"),
+        ("karim ki is mahine ki adaigi ka print", "Karim"),
+    ] {
+        let c = compose_for(&w, question, Language::En).expect("a local answer");
+        let a = answer_of(&c);
+        let (id, from, to, _, who) = button(a, 0);
+        assert_eq!(
+            (id, from.as_str(), to.as_str(), who.as_deref()),
+            (ReportId::R13, "2026-10-01", "2026-10-10", Some(party)),
+            "{question}"
+        );
+        agree(a);
+    }
+    // The sale reports still open for a sale.
+    let c = compose_for(&w, "rahim ki is mahine ki bikri ka print", Language::En)
+        .expect("a local answer");
+    assert_eq!(button(answer_of(&c), 0).0, ReportId::R6);
+    // A figure no report of a party holds is the model's.
+    let u = ask(&w, "akram ka cash ka print aaj ka", false);
+    assert!(u.report.is_none(), "{u:?}");
+}
+
+/// R-i. A real party is not declared absent for a spelling variant the matcher would not take
+/// (اکرام for اکرم, PRD FR-7.40): the model looks further.
+#[test]
+fn a_real_party_is_not_declared_absent_for_a_spelling_variant() {
+    let w = books();
+    for question in ["اکرام کا بقایا", "اکرام کی آج کی بکری کا پرنٹ"]
+    {
+        let u = ask(&w, question, false);
+        assert!(!u.has_not_found(), "{question}: {u:?}");
+        let c = compose_locked(&w, question, false);
+        assert!(
+            !c.as_ref()
+                .is_some_and(|c| c.outcome == AskOutcome::NotFound),
+            "{question}: {c:?}"
+        );
+    }
+    // A name that is really missing is still said to be missing.
+    let c = compose_locked(&w, "zubair ka bakaya", false);
+    assert!(c.is_some_and(|c| c.outcome == AskOutcome::NotFound));
 }

@@ -7,7 +7,7 @@ use mandi_db::partners as partner_repo;
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 use mandi_db::vouchers as repo;
 use mandi_domain::core::accounts::{Balance, BalanceSide, RecordRef};
-use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::dates::{self, BusinessDate};
 use mandi_domain::core::edit::{
     DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened, DayFixStayedOpen,
 };
@@ -42,8 +42,9 @@ pub struct DayStatusInfo {
 }
 
 /// The refusal of a closed day (`ERR_DATE_CLOSED`) on `field`, with every value a screen needs
-/// (plan 53): `closed_up_to` (the closed day shown, as `YYYY-MM-DD`), `today` (`DD-MM-YYYY`) and
-/// `today_open` (1 or 0), from [`validate::closed_day_values`]. `closed_up_to` is the real
+/// (plan 53): `closed_up_to` (the closed day shown), `today` and `today_open` (1 or 0), from
+/// [`validate::closed_day_values`]. Both dates are display text, `DD-MM-YYYY`, as every other
+/// `ERR_DATE_CLOSED` carries them (`validate::posting_date`). `closed_up_to` is the real
 /// closed-up-to date of the books, `today` today.
 pub(crate) fn closed_rejection_at(
     shown: BusinessDate,
@@ -53,7 +54,7 @@ pub(crate) fn closed_rejection_at(
 ) -> ServiceError {
     let mut values = std::collections::BTreeMap::from([(
         "closed_up_to".to_owned(),
-        ErrorValue::Text(shown.to_iso()),
+        ErrorValue::Text(dates::format_ddmmyyyy(shown)),
     )]);
     for (key, value) in validate::closed_day_values(closed_up_to, today) {
         values.insert(key.to_owned(), value);

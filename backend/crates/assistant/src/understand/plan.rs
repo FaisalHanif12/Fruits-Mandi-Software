@@ -22,6 +22,15 @@
 //! The party comes from the books in his real role: a buyer is never printed as a seller. The
 //! filters are the ones the report links take; no new link type.
 //!
+//! A print follows the figure asked (money review R-g): a receipt, an advance or a payment of a
+//! buyer or a seller is in his khata (R13), not in the sale reports; a figure no report of a party
+//! holds (cash, stock ...) plans no report.
+//!
+//! A report is never built wider than the question (money review BUG-1, BUG-2): none for a question
+//! that names an item (no link has an item filter), a garden, a trip, own goods or the guests that
+//! no report of its own covers, or a name the app cannot place (a one-time person, an inactive
+//! account, a partner while the section is locked). The model answers those.
+//!
 //! Example (today 10-10-2026): "faisal ki aaj ki bikri ka print", Faisal a buyer: R35 with
 //! `party` Faisal and `as_of` 2026-10-10.
 
@@ -129,6 +138,14 @@ pub(super) struct Input<'a> {
     pub first_day: Option<NaiveDate>,
     /// The days of the trip that is named (R33): its day to the day it closed, or to today.
     pub trip_days: Option<(NaiveDate, NaiveDate)>,
+    /// Words stand where a name should be and no record has them: a one-time person, an inactive
+    /// account, a partner while the section is locked. The report would be the whole shop's.
+    pub unknown_words: bool,
+    /// The question names an item. No report link has an item filter.
+    pub item_named: bool,
+    /// The question names a garden, a trip, own goods or the guests, and no record of it was found
+    /// (or the link has no filter for it).
+    pub scope_missing: bool,
 }
 
 pub(super) struct Planned {
@@ -198,6 +215,38 @@ fn shape_of(kind: FigureKind) -> Option<Shape> {
         FigureKind::DayBook => Shape::OneDay("R11"),
         _ => return None,
     })
+}
+
+/// What a print of a buyer or a seller is about.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Wants {
+    /// His sales, purchases, commission or balance (or nothing said): the sale reports hold them.
+    Sales,
+    /// A receipt, an advance or a payment: his khata holds them.
+    Khata,
+    /// A figure no report of a party holds (cash, stock, a partner's total ...).
+    Other,
+}
+
+fn wants_of(kinds: &[FigureKind]) -> Wants {
+    let mut khata = false;
+    for kind in kinds {
+        match kind {
+            FigureKind::Sale
+            | FigureKind::SaleCount
+            | FigureKind::Purchases
+            | FigureKind::Commission
+            | FigureKind::Laga
+            | FigureKind::DaySummary
+            | FigureKind::Balance
+            | FigureKind::Dues
+            | FigureKind::Ledger
+            | FigureKind::Statement => {}
+            FigureKind::Receipts | FigureKind::Advance | FigureKind::Payable => khata = true,
+            _ => return Wants::Other,
+        }
+    }
+    if khata { Wants::Khata } else { Wants::Sales }
 }
 
 /// The days of a plan.
@@ -279,7 +328,13 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
             _ => None,
         })
     };
+    // A named question is never widened to a wider report (money review BUG-1, BUG-2): a name the
+    // app cannot place, an item or a scope the links cannot filter by, and the report is the model's.
+    let blocked = input.unknown_words || input.item_named || input.scope_missing;
     let note = |report: ReportPlan| {
+        if blocked {
+            return none(Doubt::NoReport);
+        }
         let doubts = if report.assumed_period {
             vec![Doubt::NoPeriod]
         } else {
@@ -299,11 +354,20 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                 ..PlanFilters::default()
             };
             let ledger_like = input.statement || input.ledger || navigate;
+            let wants = wants_of(input.kinds);
             let report = match hit.role {
                 PartyRole::Buyer | PartyRole::Seller if input.statement => {
                     dated("R14", with_party(), true)
                 }
                 PartyRole::Buyer | PartyRole::Seller if ledger_like => {
+                    dated("R13", with_party(), true)
+                }
+                // A figure the sale reports do not hold (a receipt, an advance, a payment): only his
+                // khata holds it. Any other figure has no report of a party (money review R-g).
+                PartyRole::Buyer | PartyRole::Seller if wants == Wants::Other => {
+                    return none(Doubt::NoReport);
+                }
+                PartyRole::Buyer | PartyRole::Seller if wants == Wants::Khata => {
                     dated("R13", with_party(), true)
                 }
                 PartyRole::Buyer if days.one_day => plan_of(
@@ -556,6 +620,9 @@ mod tests {
             partner_locked: false,
             first_day: Some(day(2026, 8, 31)),
             trip_days: Some((day(2026, 8, 14), day(2026, 10, 22))),
+            unknown_words: false,
+            item_named: false,
+            scope_missing: false,
         }
     }
 

@@ -90,26 +90,99 @@ pub(super) fn word_grade(typed: &str, name: &str) -> u8 {
     0
 }
 
-/// How the typed words fit the words of a name: the sum of the grades and whether every one was the
-/// same. `None` when a typed word fits no word of the name.
-pub(super) fn grade_words(typed: &[String], name: &[String]) -> Option<(u32, bool)> {
+/// True when two words differ only in their vowels and doubled letters ("akram", "akrm", "akrum";
+/// "muhammad", "mohammed"). Such a spelling is the same name written another way. One consonant
+/// changed ("nasir", "nasim"; "nazir", "nasir") is another name: it is a close word, not a clear one.
+pub(super) fn sounds_alike(typed: &str, name: &str) -> bool {
+    if is_urdu(typed) || is_urdu(name) {
+        return is_urdu(typed)
+            && is_urdu(name)
+            && urdu_skeleton(typed).chars().count() >= 2
+            && urdu_skeleton(typed) == urdu_skeleton(name);
+    }
+    let (p, q) = (text::search_phonetic(typed), text::search_phonetic(name));
+    p.chars().count() >= 3 && p == q
+}
+
+/// An Urdu word without its vowel letters and doubled letters, its first letter always kept.
+fn urdu_skeleton(word: &str) -> String {
+    let mut out = String::new();
+    for (at, c) in word.chars().enumerate() {
+        let vowel = matches!(c, 'ا' | 'و' | 'ی' | 'ے' | 'آ' | 'ء' | 'ي' | 'ى');
+        if (at == 0 || !vowel) && !out.ends_with(c) {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// True when a word of the question is near a word of a name: one letter off (two from seven
+/// letters). A name that is near is not "missing from the books", whatever the matcher decided
+/// (PRD FR-7.40). It runs over every account name, so the cheap tests come first: the lengths, then
+/// the ends (one edit cannot change both the first and the last letter of a word of three or more).
+fn near_word(typed: &str, name: &str) -> bool {
+    if typed == name {
+        return true;
+    }
+    let (a, b) = (typed.chars().count(), name.chars().count());
+    if a < 3 || b < 3 {
+        return false;
+    }
+    let cap = if a >= 7 { 2 } else { 1 };
+    if a.abs_diff(b) > cap {
+        return false;
+    }
+    if cap == 1
+        && typed.chars().next() != name.chars().next()
+        && typed.chars().next_back() != name.chars().next_back()
+    {
+        return false;
+    }
+    edit_distance(typed, name, cap) <= cap
+}
+
+/// How the typed words fit the words of a name.
+pub(super) struct Fit {
+    /// The sum of the grades.
+    pub total: u32,
+    /// Every typed word was the same as a word of the name.
+    pub exact: bool,
+    /// Every typed word was the same, or the same name written another way ([`sounds_alike`]). A
+    /// word that is only one letter off is not clear: it may be another person.
+    pub clear: bool,
+}
+
+/// How the typed words fit the words of a name. `None` when a typed word fits no word of the name.
+pub(super) fn grade_fit(typed: &[String], name: &[String]) -> Option<Fit> {
     let mut free: Vec<&String> = name.iter().collect();
     let mut total = 0u32;
     let mut exact = true;
+    let mut clear = true;
     for word in typed {
-        let (at, grade) = free
+        let (at, grade, same_sound) = free
             .iter()
             .enumerate()
-            .map(|(at, n)| (at, word_grade(word, n)))
-            .max_by_key(|(_, g)| *g)?;
+            .map(|(at, n)| (at, word_grade(word, n), sounds_alike(word, n)))
+            .max_by_key(|(_, g, c)| (*g, *c))?;
         if grade == 0 {
             return None;
         }
         exact &= grade == 3;
+        clear &= grade == 3 || same_sound;
         total = total.saturating_add(u32::from(grade));
         free.remove(at);
     }
-    Some((total, exact))
+    Some(Fit {
+        total,
+        exact,
+        clear,
+    })
+}
+
+/// How the typed words fit the words of a name: the sum of the grades and whether every one was the
+/// same. `None` when a typed word fits no word of the name.
+pub(super) fn grade_words(typed: &[String], name: &[String]) -> Option<(u32, bool)> {
+    grade_fit(typed, name).map(|fit| (fit.total, fit.exact))
 }
 
 /// The score used to choose among hits: the grade first; a hit whose whole name was typed beats a
@@ -124,19 +197,37 @@ pub(super) fn score(total: u32, typed_len: usize, name_len: usize) -> u32 {
 pub(super) struct Best<T> {
     pub hits: Vec<T>,
     pub exact: bool,
+    /// True when every hit fitted clearly: the same words, or the same name in another spelling.
+    pub clear: bool,
     /// True when other records fitted too, only less well.
     pub others: bool,
 }
 
-/// Keeps the hits with the best score.
+/// Keeps the hits with the best score. For items and records, whose close spellings are taken as
+/// they come: every hit counts as clear.
 pub(super) fn best_of<T>(scored: Vec<(T, u32, bool)>) -> Option<Best<T>> {
-    let top = scored.iter().map(|(_, s, _)| *s).max()?;
-    let others = scored.iter().any(|(_, s, _)| *s < top);
-    let kept: Vec<(T, u32, bool)> = scored.into_iter().filter(|(_, s, _)| *s == top).collect();
-    let exact = kept.iter().all(|(_, _, e)| *e);
+    best_of_clear(
+        scored
+            .into_iter()
+            .map(|(h, s, e)| (h, s, e, true))
+            .collect(),
+    )
+}
+
+/// Keeps the hits with the best score, with whether each fitted clearly.
+pub(super) fn best_of_clear<T>(scored: Vec<(T, u32, bool, bool)>) -> Option<Best<T>> {
+    let top = scored.iter().map(|(_, s, _, _)| *s).max()?;
+    let others = scored.iter().any(|(_, s, _, _)| *s < top);
+    let kept: Vec<(T, u32, bool, bool)> = scored
+        .into_iter()
+        .filter(|(_, s, _, _)| *s == top)
+        .collect();
+    let exact = kept.iter().all(|(_, _, e, _)| *e);
+    let clear = kept.iter().all(|(_, _, _, c)| *c);
     Some(Best {
-        hits: kept.into_iter().map(|(h, _, _)| h).collect(),
+        hits: kept.into_iter().map(|(h, _, _, _)| h).collect(),
         exact,
+        clear,
         others,
     })
 }
@@ -264,7 +355,7 @@ impl<'a> Lookup<'a> {
                 }
             }
         }
-        best_of(scored)
+        best_of_clear(scored)
     }
 
     fn score_accounts(
@@ -272,7 +363,7 @@ impl<'a> Lookup<'a> {
         hits: &[AccountHit],
         typed: &[String],
         urdu_only: bool,
-    ) -> Vec<(PartyHit, u32, bool)> {
+    ) -> Vec<(PartyHit, u32, bool, bool)> {
         let use_urdu = urdu_only || typed.iter().any(|w| is_urdu(w));
         hits.iter()
             .filter_map(|hit| {
@@ -285,15 +376,16 @@ impl<'a> Lookup<'a> {
                 if !use_urdu && let Some(tag) = &hit.tag {
                     name.push(text::search_en(tag));
                 }
-                let (total, exact) = grade_words(typed, &name)?;
+                let fit = grade_fit(typed, &name)?;
                 // A spelling made from Roman letters is a guess: only the same word counts.
-                if urdu_only && !exact {
+                if urdu_only && !fit.exact {
                     return None;
                 }
                 Some((
                     self.party_hit(hit, role),
-                    score(total, typed.len(), name.len()),
-                    exact,
+                    score(fit.total, typed.len(), name.len()),
+                    fit.exact,
+                    fit.clear,
                 ))
             })
             .collect()
@@ -311,7 +403,7 @@ impl<'a> Lookup<'a> {
         let hits = self.list(scope, &joined);
         let numeric = typed.iter().all(|w| w.chars().all(|c| c.is_ascii_digit()));
         let use_urdu = typed.iter().any(|w| is_urdu(w));
-        let scored: Vec<(PartyHit, u32, bool)> = hits
+        let scored: Vec<(PartyHit, u32, bool, bool)> = hits
             .into_iter()
             .filter_map(|hit| {
                 let name = if use_urdu {
@@ -319,10 +411,14 @@ impl<'a> Lookup<'a> {
                 } else {
                     split_words(&text::search_en(&hit.name_en))
                 };
-                let (total, exact) = if numeric {
-                    (3, true)
+                let fit = if numeric {
+                    Fit {
+                        total: 3,
+                        exact: true,
+                        clear: true,
+                    }
                 } else {
-                    grade_words(typed, &name)?
+                    grade_fit(typed, &name)?
                 };
                 Some((
                     PartyHit {
@@ -335,12 +431,13 @@ impl<'a> Lookup<'a> {
                         tag: None,
                         pukhta: false,
                     },
-                    score(total, typed.len(), name.len()),
-                    exact,
+                    score(fit.total, typed.len(), name.len()),
+                    fit.exact,
+                    fit.clear,
                 ))
             })
             .collect();
-        best_of(scored)
+        best_of_clear(scored)
     }
 
     /// True when the typed words are the name of an account the search does not list (an inactive
@@ -363,10 +460,12 @@ impl<'a> Lookup<'a> {
                 })
                 .collect()
         });
+        // A word that is only near a word of a name counts too ("اکرام" for اکرم): such a name is not
+        // missing from the books, the model looks further (PRD FR-7.40).
         if !typed.is_empty()
             && names
                 .iter()
-                .any(|words| typed.iter().all(|t| words.contains(t)))
+                .any(|words| typed.iter().all(|t| words.iter().any(|w| near_word(t, w))))
         {
             return true;
         }
@@ -547,7 +646,11 @@ fn party_ref(
     best: Best<PartyHit>,
 ) -> PartyRef {
     let asked = wanted.filter(|w| w.hard).map(|w| w.role);
-    let sure = if best.exact && !best.others {
+    // A name that is only one letter off a name of the books may be another person ("nasir" for
+    // Nasim): the app is not sure of him (money review R-a).
+    let sure = if !best.clear {
+        Confidence::Low
+    } else if best.exact && !best.others {
         Confidence::High
     } else {
         Confidence::Medium
@@ -937,10 +1040,14 @@ fn name_at(
         return None;
     }
     let wanted = wanted_role(scan, span);
+    let mut unclear = false;
     let party = party_ok
         .then(|| look.match_accounts(typed))
         .flatten()
-        .map(|best| party_ref(scan, span, wanted, best));
+        .map(|best| {
+            unclear = !best.clear;
+            party_ref(scan, span, wanted, best)
+        });
     let item = if long {
         None
     } else {
@@ -961,6 +1068,9 @@ fn name_at(
             });
         }
         (Some(p), _) => {
+            if unclear {
+                names.doubts.push(Doubt::CloseSpelling);
+            }
             names.spans.push(span);
             names.parties.push(p);
         }
@@ -1048,6 +1158,9 @@ fn venture_and_partner_names(
             Some(best) => {
                 let wanted = wanted_role(scan, span);
                 names.spans.push(span);
+                if !best.clear {
+                    names.doubts.push(Doubt::CloseSpelling);
+                }
                 let mut reference = party_ref(scan, span, wanted, best);
                 if garden_cue || trip_cue {
                     reference.confidence = reference.confidence.max(Confidence::Medium);
@@ -1106,6 +1219,7 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
         let best = Best {
             hits: found,
             exact: !days.is_empty(),
+            clear: true,
             others: false,
         };
         names.spans.push((start, end));
@@ -1173,6 +1287,7 @@ fn single_word_partner(look: &Lookup<'_>, plain: &[String], cued: bool) -> Optio
     Some(Best {
         hits: vec![hit],
         exact: true,
+        clear: true,
         others: false,
     })
 }

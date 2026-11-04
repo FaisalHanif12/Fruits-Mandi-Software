@@ -1195,8 +1195,14 @@ fn the_worked_day_figures_periods_and_names() {
         ),
         // ---- the questions of Umar's own log and the facets of plan 52 Section 8
         (
+            // Ikram and Akram are two names: a changed first letter is not a spelling of the same
+            // one (money review R-a), so the app is not sure whose balance is asked.
             "ikram ke total bakaya kitne hai",
-            fig().sure().fig(&[F::Balance]).p(buyer("Akram Toll Tax")),
+            fig()
+                .unsure()
+                .fig(&[F::Balance])
+                .p(buyer("Akram Toll Tax"))
+                .doubt(Doubt::CloseSpelling),
         ),
         (
             "kela ke is saal kitne commission or sale, saib ke kitne",
@@ -3265,4 +3271,175 @@ fn the_period_words_give_the_dates_of_the_period_tool() {
         }
     }
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+/// Money review BUG-3, BUG-4 and R-h: a day with "tak" is the books up to it; a unit of time alone
+/// is this one; a time word the app cannot place makes the question the model's; a range that looks
+/// ahead is not sure. Today is 10-10-2026, a Saturday; the first day of the books is 31-08-2026.
+#[test]
+fn a_day_with_tak_a_lone_time_word_and_a_range_that_looks_ahead() {
+    let w = worked_books();
+    let books = Books {
+        env: &w.env,
+        owner: &w.owner,
+        today: on(2026, 10, 10),
+    };
+    let faisal = || P::Found(PartyRole::Buyer, "Faisal");
+    let cases: Vec<(&str, E)> = vec![
+        // BUG-3: up to and including that day, from the first day of the books.
+        (
+            "faisal ki kal tak ki bikri",
+            fig_sure_period(PeriodKind::UpToDay, "2026-08-31", "2026-10-09"),
+        ),
+        (
+            "faisal ki 30 september tak ki bikri",
+            fig_sure_period(PeriodKind::UpToDay, "2026-08-31", "2026-09-30"),
+        ),
+        (
+            "faisal ki parson tak ki bikri",
+            fig_sure_period(PeriodKind::UpToDay, "2026-08-31", "2026-10-08"),
+        ),
+        // Already right: "aaj tak" is the books up to now, "kal se aaj tak" is two days.
+        (
+            "faisal ki aaj tak ki bikri",
+            fig_sure_period(PeriodKind::UpToNow, "2026-08-31", "2026-10-10"),
+        ),
+        (
+            "faisal ki kal se aaj tak ki bikri",
+            fig_sure_period(PeriodKind::Range, "2026-10-09", "2026-10-10"),
+        ),
+        // BUG-4: a unit alone, with ka / ki / ke, is this one.
+        (
+            "faisal ka mahine ka commission",
+            fig_sure_period(PeriodKind::ThisMonth, "2026-10-01", "2026-10-10"),
+        ),
+        (
+            "faisal ki hafte ki bikri",
+            fig_sure_period(PeriodKind::ThisWeek, "2026-10-05", "2026-10-10"),
+        ),
+        (
+            "faisal ka saal ka commission",
+            fig_sure_period(PeriodKind::ThisYear, "2026-01-01", "2026-10-10"),
+        ),
+        // BUG-4: a time word nothing took, or a counted unit: not sure.
+        (
+            "faisal ki pichli bikri",
+            e(Intent::Figure)
+                .unsure()
+                .doubt(Doubt::TimeWord)
+                .p(faisal()),
+        ),
+        (
+            "faisal ka do mahine ka commission",
+            e(Intent::Figure)
+                .unsure()
+                .doubt(Doubt::TimeWord)
+                .p(faisal()),
+        ),
+        (
+            "faisal ki har hafte ki bikri",
+            E::default().unsure().doubt(Doubt::TimeWord).p(faisal()),
+        ),
+        (
+            "faisal ki bikri hafte mein",
+            e(Intent::Figure)
+                .unsure()
+                .doubt(Doubt::TimeWord)
+                .p(faisal()),
+        ),
+        // A help question with the same words is still help: the word is no period to read.
+        (
+            "din band kaise karen",
+            e(Intent::HowTo).sure().topic("day_close"),
+        ),
+        // R-h: "1 se 15 october" asked on 10 October has begun and is not over: it looks ahead, and
+        // it is not last year's. The app is not sure of it (the model is asked).
+        (
+            "faisal ki 1 se 15 october tak ki bikri",
+            e(Intent::Forecast)
+                .unsure()
+                .doubt(Doubt::TenseUnclear)
+                .p(faisal())
+                .pd(PeriodKind::Range, "2026-10-01", "2026-10-15"),
+        ),
+        // A range that is over is sure; one wholly ahead is last year's, as before.
+        (
+            "faisal ki 1 se 5 october tak ki bikri",
+            fig_sure_period(PeriodKind::Range, "2026-10-01", "2026-10-05"),
+        ),
+        (
+            "faisal ki 1 se 15 august tak ki bikri",
+            fig_sure_period(PeriodKind::Range, "2026-08-01", "2026-08-15"),
+        ),
+        (
+            "faisal ki 1 se 15 november tak ki bikri",
+            fig_sure_period(PeriodKind::Range, "2025-11-01", "2025-11-15"),
+        ),
+    ];
+    let (failures, slowest) = run(&books, &cases);
+    finish(
+        "tak, lone time words, ranges",
+        cases.len(),
+        &failures,
+        slowest,
+    );
+}
+
+/// A figure about Faisal in one period the app is sure of.
+fn fig_sure_period(kind: PeriodKind, from: &'static str, to: &'static str) -> E {
+    e(Intent::Figure)
+        .sure()
+        .p(P::Found(PartyRole::Buyer, "Faisal"))
+        .pd(kind, from, to)
+}
+
+/// Lead ruling of 04-11-2026 (money review, what.rs): a payable question about a NAMED party stays a
+/// payable question. His card has a `payable` field, and for a seller whose advance was not deducted
+/// it is not his ledger balance (E2E-28: payable 19,316, ledger 4,316 Cr).
+#[test]
+fn a_payable_question_about_a_named_party_stays_payable() {
+    let w = worked_books();
+    let books = Books {
+        env: &w.env,
+        owner: &w.owner,
+        today: on(2026, 10, 10),
+    };
+    let cases: Vec<(&str, E)> = vec![
+        (
+            "karim ka payable kitna hai",
+            e(Intent::Figure)
+                .sure()
+                .fig(&[FigureKind::Payable])
+                .p(seller("Karim")),
+        ),
+        (
+            "karim ki adaigi kitni baqi hai",
+            e(Intent::Figure)
+                .sure()
+                .fig(&[FigureKind::Payable])
+                .p(seller("Karim")),
+        ),
+        (
+            "how much payable does karim have",
+            e(Intent::Figure)
+                .sure()
+                .fig(&[FigureKind::Payable])
+                .p(seller("Karim")),
+        ),
+        // The shop's payable is still the shop's payable.
+        (
+            "sellers ka payable kitna hai",
+            e(Intent::Figure).sure().fig(&[FigureKind::Payable]),
+        ),
+        // A balance asked in other words is still a balance.
+        (
+            "karim ka bakaya kitna hai",
+            e(Intent::Figure)
+                .sure()
+                .fig(&[FigureKind::Balance])
+                .p(seller("Karim")),
+        ),
+    ];
+    let (failures, slowest) = run(&books, &cases);
+    finish("a named payable", cases.len(), &failures, slowest);
 }
