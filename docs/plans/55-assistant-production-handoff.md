@@ -169,3 +169,12 @@ Until now the banks grew from the questions we, or Umar, happened to ask. So eac
   - weather, tax, bank and outside market rates (an honest line);
   - a partner figure while the section is locked (it pauses for the code);
   - comparisons on views G and J, which are answered by two reads and a difference.
+
+### 11.2 Not-by-design cells approved (05-11-2026)
+These are forecasts the app does not keep. Each gives its honest answer, and the mixed twin still gives the real figure and invents no forecast figure:
+- cash-only or credit-only sales (answered with the total sales forecast);
+- per adda;
+- payments;
+- fruit taken (answered with what was taken so far).
+
+Not approved: the audit log how-to. It becomes gap Q4b, a guide topic in D6 v1.5.
