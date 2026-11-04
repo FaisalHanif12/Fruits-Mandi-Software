@@ -143,3 +143,29 @@ Until now the banks grew from the questions we, or Umar, happened to ask. So eac
    - The lead runs them.
    - The hand-over needs two rounds in a row with no new failure.
 3. **The gates of §4 stay.** The full bank twice in a row, the hidden bank, button-vs-data, Umar's log, slow line, and the lead's own test.
+
+### 11.1 First capability gaps (robustness, read from the code) and the lead's rulings (05-11-2026)
+
+| Gap | Ruling | Owner |
+|---|---|---|
+| F1: estimate offers commission_buyer, laga, receipts, garden_sales and trip_sales, but they always fail | Build their monthly series (view G or the journal) so they work. Money agent. | backend3 |
+| F2: forecast per expense head | Build: estimate takes `head`. Money agent. | backend3 (moved from backend) |
+| F3: partner profit forecast | Build from the partner's monthly share rows (view F) | backend3 |
+| F4: a party's balance "at this pace" | Build: the current balance plus the average monthly net change (bought minus paid) over the months he was active, shown as an estimate with its band. Money agent. | backend3 |
+| F5: cash, total dues and stock forecast | Cash and total dues: the same month-end balance method as F4. Stock "when will it sell": not by design for now (an honest line). | backend3 |
+| R1: commission and charge rules | Build a read-only read of the rules for a party, item, group or default. | backend4 (new) |
+| R2: the attention list, "آج کے کام" | Build a read of assist_attention. | backend4 |
+| R3: closed days and month close | Build a small read: closed up to, today open, last month close. | backend4 |
+| R4: audit log | A read of the audit rows for one entry. | backend4, after the above |
+| R5: master lists (staff, munshis, expense heads) | find roles for staff and expense heads, and counts. | backend4 |
+| R6: a truck number | The bikri find by truck through the report or find tool. | backend4 |
+| P1 to P4: report filters the tool doesn't pass (guests, voucher_type, status, detail, trip_view, garden_view, seller and zamindar on the sales reports, collector) | Pass them all through, as each report's spec allows. | backend4 |
+| 18 reports with no print or open plan | Plan rows for all 38 reports. frontend2 checks each link. | backend2 |
+| Change requests for garden or trip entries, later sale, edit, cancel | Entry routes for them. | backend2, with frontend2 for the routes |
+
+- **Prompt.** New reads should extend existing tools, for example a `what` value on one small `app_state` tool, rather than add many tools, so the fixed part stays near 11,000 tokens. If it must grow, the limit may go up (Umar, 02-11-2026: "we can go up to align or achieve the goal"). The lead records the new limit in D6 v1.5 and NFR-AI-5.
+- **Not by design (approved):**
+  - phone, address and father or firm name (FR-7.83);
+  - weather, tax, bank and outside market rates (an honest line);
+  - a partner figure while the section is locked (it pauses for the code);
+  - comparisons on views G and J, which are answered by two reads and a difference.
