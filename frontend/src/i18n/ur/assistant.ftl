@@ -654,3 +654,60 @@ assistant-failure-server = OpenRouter کی طرف سے خرابی آئی۔
 assistant-failure-bad-reply = ماڈل کا جواب پڑھا نہیں جا سکا۔
 # review: pending
 assistant-failure-other = نامعلوم خرابی۔
+
+# Instant answers, no model call (PRD FR-7.90, plan 55 Section 10). Same messages as the English file.
+# review: pending
+assistant-instant-period = { $shape ->
+    [day] { $day }
+    [range] { $from } سے { $to } تک
+    [all] اب تک
+   *[today] آج
+}
+# review: pending
+assistant-instant-sale = { $role ->
+    [item] { $name } کی { $period } کی { -bikri }: { $figure }
+    [seller] { -beopari } { $name } کی { $period } کی { -bikri }: { $figure }
+    [buyer] { $name } کی { $period } کی خریداری: { $figure }
+   *[shop] { $period } کی { -bikri }: { $figure }
+}
+# review: pending
+assistant-instant-sale-count = { $role ->
+    [seller] { -beopari } { $name } کی { $period } کی { -bikri } کی تعداد: { $figure }
+   *[shop] { $period } کی { -bikri } کی تعداد: { $figure }
+}
+# review: pending
+assistant-instant-commission = { $role ->
+    [item] { $name } پر { $period } کا { -commission }: { $figure }
+    [seller] { -beopari } { $name } کے مال پر { $period } کا { -commission }: { $figure }
+    [buyer] { $name } سے { $period } کا { -commission }: { $figure }
+   *[shop] { $period } کا { -commission }: { $figure }
+}
+# review: pending
+assistant-instant-laga = { $role ->
+    [item] { $name } پر { $period } کا { -laga }: { $figure }
+    [buyer] { $name } سے { $period } کا { -laga }: { $figure }
+   *[shop] { $period } کا { -laga }: { $figure }
+}
+# review: pending
+assistant-instant-party = { $kind ->
+    [payable] { $name } کو { -adaigi } باقی: { $figure }
+    [advance] { $name } کی { -peshgi } باقی: { $figure }
+   *[balance] { $name } کا { -baqaya }: { $figure }
+}
+# review: pending
+assistant-instant-shop = { $kind ->
+    [buyers-dues] گاہکوں کے ذمے: { $figure }
+    [total-dues] { -kul-agrahi }: { $figure }
+    [payable] بیوپاریوں کو { -adaigi } باقی: { $figure }
+    [advances] { -peshgi } باقی: { $figure }
+    [dead] { -doobi-raqam }: { $figure }
+    [lent] { -adhar-raqam } باقی: { $figure }
+   *[cash] موجود { -rokar }: { $figure }
+}
+# review: pending
+assistant-instant-stock = { $role ->
+    [item] { $name } کا { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+   *[shop] { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+}
+# review: pending
+assistant-instant-partner-total = { $name } کی { -kul-raqam }: { $figure }

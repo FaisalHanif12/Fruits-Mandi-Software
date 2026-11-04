@@ -1013,6 +1013,53 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     );
   });
 
+  it('an instant answer (FR-7.90): the sentence is drawn like any answer, with the name, the figure and its ✓, and the buttons', async () => {
+    const base = real.REPLY_ANSWERED;
+    const name = base.answer?.parts[0];
+    const figure = base.answer?.parts[2];
+    if (base.answer === null || name?.type !== 'name' || figure?.type !== 'figure') {
+      throw new Error('the fixture answer has no name and balance to build from');
+    }
+    // The backend writes the sentence from the Fluent message and puts the checked name and figure where
+    // the arguments were: here the marks are cut out of the real message and replaced by the real parts.
+    const sentence = message(language, 'assistant-instant-party', {
+      kind: 'balance',
+      name: 'NAMEMARK',
+      figure: 'FIGUREMARK',
+    });
+    const parts = sentence
+      .split(/(NAMEMARK|FIGUREMARK)/)
+      .filter((piece) => piece !== '')
+      .map((piece) =>
+        piece === 'NAMEMARK'
+          ? name
+          : piece === 'FIGUREMARK'
+            ? figure
+            : { type: 'text' as const, text: piece },
+      );
+    const reply: AskReply = { ...base, answer: { ...base.answer, parts, tables: [] } };
+    await renderShellRouted();
+    await ask(language, reply, 'akram ka balance');
+    const answer = within(panelOf(language)).getByLabelText(
+      message(language, 'assistant-answer-label'),
+    );
+    const shown = visible(answer.textContent);
+    expect(shown).toContain(language === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax');
+    expect(shown).toContain(message(language, 'glossary-baqaya'));
+    // The figure is a number with its side word and the ✓ of a checked figure.
+    expect([...answer.querySelectorAll('bdi.number-run')].map((node) => node.textContent)).toEqual([
+      '2,880',
+    ]);
+    expect(answer.querySelectorAll('[data-checked]')).toHaveLength(1);
+    expect(shown).toContain(message(language, 'report-side-dr'));
+    // Where it was read is a button, as for any answer.
+    expect(
+      within(panelOf(language)).getByRole('button', {
+        name: new RegExp(message(language, 'assistant-open-report')),
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('out of time, a party card that was read gives his name and his checked balance above the tables (plan 55)', async () => {
     const base = real.REPLY_TIME_LIMIT;
     const answered = real.REPLY_ANSWERED.answer;

@@ -657,3 +657,70 @@ assistant-failure-server = OpenRouter had an error.
 assistant-failure-bad-reply = The model's reply could not be read.
 # review: pending
 assistant-failure-other = An unknown error.
+
+# Instant answers, no model call (PRD FR-7.90, plan 55 Section 10). The backend writes the sentence from
+# these messages and fills the arguments itself. $name, $figure, $day, $from, $to, $qty and $lots arrive as
+# references that the app replaces by a checked figure, a name or a date, so no digit, month name or number
+# word is written here. $period is the message assistant-instant-period, already formatted. The selector
+# values ($shape, $role, $kind) are plain English words, written exactly as below.
+# review: pending
+assistant-instant-period = { $shape ->
+    [day] on { $day }
+    [range] from { $from } to { $to }
+    [all] so far
+   *[today] today
+}
+# review: pending
+assistant-instant-sale = { $role ->
+    [item] { $name } { -bikri } { $period }: { $figure }
+    [seller] { -bikri } of { -beopari } { $name } { $period }: { $figure }
+    [buyer] { -gahak } { $name } bought { $period }: { $figure }
+   *[shop] { -bikri } { $period }: { $figure }
+}
+# How many sales, as a count.
+# review: pending
+assistant-instant-sale-count = { $role ->
+    [seller] Number of { -bikri } entries of { -beopari } { $name } { $period }: { $figure }
+   *[shop] Number of { -bikri } entries { $period }: { $figure }
+}
+# The total commission (the seller side, the buyer side and Laga) for the shop, an item or a seller; for a
+# buyer, the commission charged to him.
+# review: pending
+assistant-instant-commission = { $role ->
+    [item] { -commission } on { $name } { $period }: { $figure }
+    [seller] { -commission } on the goods of { -beopari } { $name } { $period }: { $figure }
+    [buyer] { -commission } charged to { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -commission } { $period }: { $figure }
+}
+# review: pending
+assistant-instant-laga = { $role ->
+    [item] { -laga } on { $name } { $period }: { $figure }
+    [buyer] { -laga } charged to { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -laga } { $period }: { $figure }
+}
+# The figure carries its own side word and the tick, so no side word is written here.
+# review: pending
+assistant-instant-party = { $kind ->
+    [payable] Payable to { $name }: { $figure }
+    [advance] { $name }'s open { -peshgi }: { $figure }
+   *[balance] { $name }'s { -baqaya }: { $figure }
+}
+# The words of the quick-question chips, plus the figure.
+# review: pending
+assistant-instant-shop = { $kind ->
+    [buyers-dues] Buyers' dues: { $figure }
+    [total-dues] { -kul-agrahi }: { $figure }
+    [payable] Sellers payable: { $figure }
+    [advances] Advances open: { $figure }
+    [dead] { -doobi-raqam }: { $figure }
+    [lent] { -adhar-raqam }, open: { $figure }
+   *[cash] Cash in hand: { $figure }
+}
+# $qty is a count of { -nag }, $lots a count of lots. $lots is a reference, so the word for lot is not made plural.
+# review: pending
+assistant-instant-stock = { $role ->
+    [item] { $name } { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+   *[shop] { -baqi-maal }: { $qty } { -nag } ({ -lot }: { $lots })
+}
+# review: pending
+assistant-instant-partner-total = { $name }'s { -kul-raqam }: { $figure }
