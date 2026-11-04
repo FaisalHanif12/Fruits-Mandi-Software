@@ -192,3 +192,8 @@ The state when paused (the lead's view; each teammate's own note is the detail):
 - **frontend2:** the instant sentences are done. It waits for the screen source shape.
 - **frontend3 and the hidden tester:** idle. Hidden bank 244, plus 50 in round 2.
 - **lead:** D6 v1.5 (one change: backend4's and backend3's drafts, the collected prompt items, the fixed-part limit raised to 11,500), commit, rebuild, then live run 2 with --threads 4.
+- **Pause, completed about 03:45.** All eight teammates sent their state notes, and none was killed.
+- **For robustness on "continue":** fix bank rows Q1353, Q1359, Q1363, Q1371 and Q1374. A print with no period follows the app's rule (no period, or the whole books), not "this month".
+- **The lead's first steps on "continue":**
+  1. Ask Umar to approve the balance forecasts in PRD FR-7.86 and Code Standards M14 (backend3's finding).
+  2. Then D6 v1.5: backend4's drafts, backend3's estimate drafts, the new EntryScreenName values from backend, the collected prompt items, and the limit raised to 11,500.
