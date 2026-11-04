@@ -92,3 +92,16 @@ The commands run **before** sign-in, because no Owner exists yet on the new comp
 - **OpenRouter key:** after sign-in, the frontend shows "enter it again" when the assistant is on and no key is stored.
 - **Progress:** the new event `backup-restore-progress` with its phases. The preview and the restore each download the copy; there is no cache that holds secrets.
 - **Copies made before this change** carry no chain key. Umar's first cloud copies are among them, so after this is built, he makes one new copy.
+
+## 9. R4 results and the lead's rulings (04-11-2026)
+- **robustness's 5 major findings are fixed by backend3:**
+  - a shop set up during a restore;
+  - a copy with no owner;
+  - a huge scrypt factor;
+  - two nearly-full-disk checks.
+  robustness_restore_new_computer: 17 passed. robustness_security: 12 passed, including the 3 first-run commands, refused once a shop exists for 8 sources, 3 states and 120 hostile mutations.
+- **Minor findings:**
+  - **R4-6, fix now (backend3).** A folder or a broken link named like a copy is listed as a copy.
+  - **R4-7, fix now (backend3).** A cloud address with a line break, or 10,000 letters, is accepted. It goes in the same check as `reason`.
+  - **R4-3, follow-up after this run.** Unpacking has no size cap. It can only happen with the right backup key, so it is low risk. A cap is planned.
+  - **R4-9, by design, closed.** Partner share rows are in no chain. NFR-SEC-6 protects other tables through the journal: every money table can be rebuilt and compared from it.
