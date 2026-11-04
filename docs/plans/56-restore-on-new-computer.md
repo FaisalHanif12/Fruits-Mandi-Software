@@ -104,4 +104,5 @@ The commands run **before** sign-in, because no Owner exists yet on the new comp
   - **R4-6, fix now (backend3).** A folder or a broken link named like a copy is listed as a copy.
   - **R4-7, fix now (backend3).** A cloud address with a line break, or 10,000 letters, is accepted. It goes in the same check as `reason`.
   - **R4-3, follow-up after this run.** Unpacking has no size cap. It can only happen with the right backup key, so it is low risk. A cap is planned.
-  - **R4-9, by design, closed.** Partner share rows are in no chain. NFR-SEC-6 protects other tables through the journal: every money table can be rebuilt and compared from it.
+  - **R4-9, follow-up after this run.** Partner share rows are in no chain, which is NFR-SEC-6 by design. A restore-time check is added later, so a copy whose partner shares no longer add up to the books (FR-6.5) is refused.
+- **Speed (R4, debug build on this Mac, under heavy load).** Two years (20,006 entries) restore in 12.4 s and ten years (317 MB) in 46.4 s, against the 300 s target. This must be checked on the reference hardware before go-live.
