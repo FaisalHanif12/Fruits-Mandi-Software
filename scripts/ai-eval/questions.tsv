@@ -686,3 +686,147 @@ Q684	Z43	stock	en	0	year		unsold mosambi stock	answered		facet=A2;item=Mosambi	q
 Q685	Z44	partner	roman	0	year		partner b ki kul raqam kitni hai	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner
 Q686	Z44	partner	urdu	0	year		پارٹنر ب کی کل رقم	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner
 Q687	Z44	partner	en	1	year		what is partnr B's total	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner
+Q688	MX01	mixed_forecast	roman	0	year		pichle mahine electricity ka kitna kharcha hua aur agle 3 mahine ka estimate kitna hai	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
+Q689	MX01	mixed_forecast	urdu	0	year		پچھلے مہینے بجلی کا کتنا خرچہ ہوا اور اگلے 3 مہینوں کا اندازہ کتنا ہے	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
+Q690	MX01	mixed_forecast	en	0	year		how much did electricity cost last month and what is the estimate for the next 3 months	estimate		facet=MIX;head=Electricity;period=last month;ahead=3;pending=head_estimate	real_elec=@r29.last_month.electricity.expense	Umar 05-11-2026	C	expense
+Q691	MX03	mixed_forecast	roman	0	year		faisal ka bakaya kitna hai aur isi raftar se 2 mahine baad kitna hoga	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q692	MX03	mixed_forecast	urdu	0	year		فیصل کا بقایا کتنا ہے اور اسی رفتار سے 2 مہینے بعد کتنا ہو گا	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q693	MX03	mixed_forecast	en	1	year		what does Faisal owe now and how much at this pace after 2 monhts	estimate		facet=MIX;buyer=Faisal;ahead=2;pending=balance_forecast	real_bal=@buyer.faisal.balance	Umar 05-11-2026	C	dues
+Q694	MX04	mixed_forecast	roman	0	year		aaj ki bikri batao aur agar raftar double ho to mahine ka kitna	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q695	MX04	mixed_forecast	urdu	0	year		آج کی بکری بتاؤ اور اگر رفتار دگنی ہو جائے تو مہینے کا کتنا	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q696	MX04	mixed_forecast	en	0	year		tell me today's sales and what the month would be if the pace doubles	estimate		facet=MIX;period=today;what_if=double;ahead=1	real_today=@tiles.sales_today;est_double=@est.sales.a1.double_pace	Umar 05-11-2026	C	period
+Q697	MX05	mixed_forecast	roman	0	year		pichle mahine ki bikri kitni thi aur agle 3 mahine ki bikri ka andaza batao	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q698	MX05	mixed_forecast	urdu	0	year		پچھلے مہینے کی بکری کتنی تھی اور اگلے 3 مہینوں کی بکری کا اندازہ بتاؤ	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q699	MX05	mixed_forecast	en	0	year		what were last month sales and estimate the sales of the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_last=@a.last_month.total.gross;est_next=@est.sales.a3.same_pace|@est.sales.a3.same_growth|@est.sales.a3.same_season	Umar 05-11-2026	C	period
+Q700	MX06	mixed_forecast	roman	1	year		is mahine commision kitna hua aur mahine ke end tak kitna hoga	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q701	MX06	mixed_forecast	urdu	0	year		اس مہینے کمیشن کتنا ہوا اور مہینے کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q702	MX06	mixed_forecast	en	0	year		commission this month so far, and the estimate for the whole month	estimate		facet=MIX;period=this month;ahead=1	real_comm=@a.month.total.total_comm;est_month=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	Umar 05-11-2026	C	month
+Q703	MX07	mixed_forecast	roman	0	year		cash abhi kitna hai aur agle mahine kitna ho jayega	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q704	MX07	mixed_forecast	urdu	0	year		ابھی کیش کتنا ہے اور اگلے مہینے کتنا ہو جائے گا	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q705	MX07	mixed_forecast	en	0	year		how much cash do we have now and how much will we have next month	estimate		facet=MIX;view=tiles;ahead=1;pending=cash_forecast	real_cash=@tiles.cash	Umar 05-11-2026	C	cash
+Q706	MX09	mixed_forecast	roman	0	year		is saal ka profit kitna hua aur saal ke aakhir tak kitna hoga	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q707	MX09	mixed_forecast	urdu	0	year		اس سال کا منافع کتنا ہوا اور سال کے آخر تک کتنا ہو گا	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q708	MX09	mixed_forecast	en	0	year		profit this year so far and what it will be by the end of the year	estimate		facet=MIX;period=this year;until=year_end	real_profit=@r30.year.total.profit_share;est_profit=@est.profit.year_end.same_pace|@est.profit.year_end.same_growth|@est.profit.year_end.same_season|@est.profit.year_total.same_pace|@est.profit.year_total.same_growth|@est.profit.year_total.same_season	Umar 05-11-2026	C	period
+Q709	MX10	mixed_forecast	roman	0	year		pichle mahine dukan ka kharcha kitna tha aur agle 3 mahine ka estimate	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q710	MX10	mixed_forecast	urdu	0	year		پچھلے مہینے دکان کا خرچہ کتنا تھا اور اگلے 3 مہینوں کا اندازہ	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q711	MX10	mixed_forecast	en	0	year		shop expenses last month and the estimate for the next 3 months	estimate		facet=MIX;period=last month;ahead=3	real_exp=@r29.last_month.total.expense;est_exp=@est.shop_expenses.a3.same_pace|@est.shop_expenses.a3.same_growth|@est.shop_expenses.a3.same_season	Umar 05-11-2026	C	expense
+Q712	CP-open-bikri	help	roman	0	year		bikri book kholo	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q713	CP-open-bikri	help	urdu	0	year		بکری بک کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q714	CP-open-bikri	help	en	0	year		take me to the sale book	answered	app_help	facet=CAP;topic=bikri_book;route=bikri		capability.tsv: open a screen	D	help
+Q715	CP-open-wasooli	help	roman	0	year		wasooli screen dikhao	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q716	CP-open-wasooli	help	urdu	0	year		مجھے وصولی پر لے چلیں	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q717	CP-open-wasooli	help	en	0	year		I want to open the receipt screen	answered	app_help	facet=CAP;topic=receipt;route=wasooli		capability.tsv: open a screen	D	help
+Q718	CP-open-adaigi	help	roman	0	year		mujhe adaigi par le chalo	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q719	CP-open-adaigi	help	urdu	0	year		ادائیگی والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q720	CP-open-adaigi	help	en	0	year		open the payment screen	answered	app_help	facet=CAP;topic=payment;route=adaigi		capability.tsv: open a screen	D	help
+Q721	CP-open-peshgi	help	roman	0	year		peshgi wala page kholna hai	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q722	CP-open-peshgi	help	urdu	0	year		پیشگی کھولیں	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q723	CP-open-peshgi	help	en	0	year		show me the advance screen	answered	app_help	facet=CAP;topic=advance;route=peshgi		capability.tsv: open a screen	D	help
+Q724	CP-open-kharcha	help	roman	0	year		kharcha kholo	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q725	CP-open-kharcha	help	urdu	0	year		خرچہ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q726	CP-open-kharcha	help	en	0	year		take me to the expense screen	answered	app_help	facet=CAP;topic=shop_expense;route=kharcha		capability.tsv: open a screen	D	help
+Q727	CP-open-udhar_raqam	help	roman	0	year		udhar raqam screen dikhao	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q728	CP-open-udhar_raqam	help	urdu	0	year		مجھے ادھار رقم پر لے چلیں	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q729	CP-open-udhar_raqam	help	en	0	year		I want to open money lent	answered	app_help	facet=CAP;topic=money_lent;route=udhar_raqam		capability.tsv: open a screen	D	help
+Q730	CP-open-alag_khata	help	roman	0	year		mujhe alag khata par le chalo	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q731	CP-open-alag_khata	help	urdu	0	year		الگ کھاتہ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q732	CP-open-alag_khata	help	en	0	year		open the separate khata	answered	app_help	facet=CAP;topic=separate_khata;route=alag_khata		capability.tsv: open a screen	D	help
+Q733	CP-open-sarmaya	help	roman	0	year		sarmaya wala page kholna hai	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q734	CP-open-sarmaya	help	urdu	0	year		سرمایہ کھولیں	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q735	CP-open-sarmaya	help	en	0	year		show me partner capital	answered	app_help	facet=CAP;topic=partner_capital;route=sarmaya		capability.tsv: open a screen	D	help
+Q736	CP-open-phal	help	roman	0	year		phal kholo	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q737	CP-open-phal	help	urdu	0	year		پھل کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q738	CP-open-phal	help	en	0	year		take me to fruit taken	answered	app_help	facet=CAP;topic=fruit_taken;route=phal		capability.tsv: open a screen	D	help
+Q739	CP-open-general	help	roman	0	year		general journal screen dikhao	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q740	CP-open-general	help	urdu	0	year		مجھے جنرل پر لے چلیں	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q741	CP-open-general	help	en	0	year		I want to open the journal	answered	app_help	facet=CAP;topic=general_journal;route=general		capability.tsv: open a screen	D	help
+Q742	CP-open-dashboard	help	roman	0	year		mujhe dashboard par le chalo	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q743	CP-open-dashboard	help	urdu	0	year		ڈیش بورڈ والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q744	CP-open-dashboard	help	en	0	year		open the dashboard	answered	app_help	facet=CAP;topic=dashboard;route=dashboard		capability.tsv: open a screen	D	help
+Q745	CP-open-settings	help	roman	0	year		settings wala page kholna hai	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q746	CP-open-settings	help	urdu	0	year		ترتیبات کھولیں	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q747	CP-open-settings	help	en	0	year		show me settings	answered	app_help	facet=CAP;topic=settings;route=settings		capability.tsv: open a screen	D	help
+Q748	CP-open-masters	help	roman	0	year		index kholo	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q749	CP-open-masters	help	urdu	0	year		انڈکس کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q750	CP-open-masters	help	en	0	year		take me to the index	answered	app_help	facet=CAP;topic=masters;route=masters		capability.tsv: open a screen	D	help
+Q751	CP-open-accounts	help	roman	0	year		khaton ki list screen dikhao	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q752	CP-open-accounts	help	urdu	0	year		مجھے کھاتوں کی فہرست پر لے چلیں	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q753	CP-open-accounts	help	en	0	year		I want to open the accounts list	answered	app_help	facet=CAP;topic=accounts;route=accounts		capability.tsv: open a screen	D	help
+Q754	CP-open-commission_rules	help	roman	0	year		mujhe commission rules par le chalo	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q755	CP-open-commission_rules	help	urdu	0	year		کمیشن اصول والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q756	CP-open-commission_rules	help	en	0	year		open commission rules	answered	app_help	facet=CAP;topic=commission_rules;route=commission_rules		capability.tsv: open a screen	D	help
+Q757	CP-open-today_sales	help	roman	0	year		aaj ki bikri ki list wala page kholna hai	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q758	CP-open-today_sales	help	urdu	0	year		آج کی بکری کھولیں	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q759	CP-open-today_sales	help	en	0	year		show me today's sales list	answered	app_help	facet=CAP;topic=today_sales;route=today_sales		capability.tsv: open a screen	D	help
+Q760	CP-open-unsold_stock	help	roman	0	year		baqi maal kholo	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q761	CP-open-unsold_stock	help	urdu	0	year		باقی مال کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q762	CP-open-unsold_stock	help	en	0	year		take me to unsold stock	answered	app_help	facet=CAP;topic=unsold_stock;route=unsold_stock		capability.tsv: open a screen	D	help
+Q763	CP-open-pukhta_khata	help	roman	0	year		pukhta khata screen dikhao	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q764	CP-open-pukhta_khata	help	urdu	0	year		مجھے پختہ کھاتہ پر لے چلیں	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q765	CP-open-pukhta_khata	help	en	0	year		I want to open pukhta khata	answered	app_help	facet=CAP;topic=pukhta_khata;route=pukhta_khata		capability.tsv: open a screen	D	help
+Q766	CP-open-collection_list	help	roman	0	year		mujhe agrahi list par le chalo	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q767	CP-open-collection_list	help	urdu	0	year		اگراہی فہرست والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q768	CP-open-collection_list	help	en	0	year		open the collection list	answered	app_help	facet=CAP;topic=collection_list;route=collection_list		capability.tsv: open a screen	D	help
+Q769	CP-open-cash_book	help	roman	0	year		rokar book wala page kholna hai	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q770	CP-open-cash_book	help	urdu	0	year		روکڑ بک کھولیں	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q771	CP-open-cash_book	help	en	0	year		show me the cash book	answered	app_help	facet=CAP;topic=cash_book;route=cash_book		capability.tsv: open a screen	D	help
+Q772	CP-open-gardens	help	roman	0	year		baghat kholo	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q773	CP-open-gardens	help	urdu	0	year		باغات کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q774	CP-open-gardens	help	en	0	year		take me to gardens	answered	app_help	facet=CAP;topic=gardens;route=gardens		capability.tsv: open a screen	D	help
+Q775	CP-open-market_trips	help	roman	0	year		market safar screen dikhao	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q776	CP-open-market_trips	help	urdu	0	year		مجھے مارکیٹ سفر پر لے چلیں	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q777	CP-open-market_trips	help	en	0	year		I want to open market trips	answered	app_help	facet=CAP;topic=market_trips;route=market_trips		capability.tsv: open a screen	D	help
+Q778	CP-open-partners	help	roman	0	year		mujhe shirakat daar par le chalo	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q779	CP-open-partners	help	urdu	0	year		شراکت دار والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q780	CP-open-partners	help	en	0	year		open the partners screen	answered	app_help	facet=CAP;topic=partners;route=partners		capability.tsv: open a screen	D	help
+Q781	CP-open-month_close	help	roman	0	year		mahina band wala page kholna hai	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q782	CP-open-month_close	help	urdu	0	year		مہینہ بند کھولیں	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q783	CP-open-month_close	help	en	0	year		show me month close	answered	app_help	facet=CAP;topic=month_close;route=month_close		capability.tsv: open a screen	D	help
+Q784	CP-open-day_close	help	roman	0	year		din band kholo	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q785	CP-open-day_close	help	urdu	0	year		دن بند کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q786	CP-open-day_close	help	en	0	year		take me to day close	answered	app_help	facet=CAP;topic=day_close;route=day_close		capability.tsv: open a screen	D	help
+Q787	CP-open-reports	help	roman	0	year		reports screen dikhao	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q788	CP-open-reports	help	urdu	0	year		مجھے رپورٹ پر لے چلیں	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q789	CP-open-reports	help	en	0	year		I want to open reports	answered	app_help	facet=CAP;topic=reports;route=reports		capability.tsv: open a screen	D	help
+Q790	CP-open-dead_amount	help	roman	0	year		mujhe doobi raqam par le chalo	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q791	CP-open-dead_amount	help	urdu	0	year		ڈوبی رقم والا صفحہ کھولنا ہے	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q792	CP-open-dead_amount	help	en	0	year		open the dead amount	answered	app_help	facet=CAP;topic=dead_amount;route=dead_amount		capability.tsv: open a screen	D	help
+Q793	CP-open-analytics	help	roman	0	year		tajziyat wala page kholna hai	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q794	CP-open-analytics	help	urdu	0	year		تجزیات کھولیں	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q795	CP-open-analytics	help	en	0	year		show me analytics	answered	app_help	facet=CAP;topic=analytics;route=analytics		capability.tsv: open a screen	D	help
+Q796	CP-open-backup	help	roman	0	year		backup kholo	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q797	CP-open-backup	help	urdu	0	year		بیک اپ کی اسکرین دکھائیں	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q798	CP-open-backup	help	en	0	year		take me to backup	answered	app_help	facet=CAP;topic=backup;route=backup		capability.tsv: open a screen	D	help
+Q799	CP-write-bikri	change	roman	0	year		bikri book likh do	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q800	CP-write-bikri	change	urdu	0	year		بکری بک کی اندراج کرنی ہے	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q801	CP-write-bikri	change	en	0	year		record the sale book	change_refused		facet=CAP;route=bikri		capability.tsv: a request to write	E	change
+Q802	CP-write-wasooli	change	roman	0	year		wasooli ki entry karni hai	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q803	CP-write-wasooli	change	urdu	0	year		وصولی درج کریں	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q804	CP-write-wasooli	change	en	0	year		write the receipt screen	change_refused		facet=CAP;route=wasooli		capability.tsv: a request to write	E	change
+Q805	CP-write-adaigi	change	roman	0	year		adaigi darj karo	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q806	CP-write-adaigi	change	urdu	0	year		ادائیگی لکھ دو	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q807	CP-write-adaigi	change	en	0	year		enter the payment screen	change_refused		facet=CAP;route=adaigi		capability.tsv: a request to write	E	change
+Q808	CP-write-peshgi	change	roman	0	year		peshgi likh do	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q809	CP-write-peshgi	change	urdu	0	year		پیشگی کی اندراج کرنی ہے	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q810	CP-write-peshgi	change	en	0	year		record the advance screen	change_refused		facet=CAP;route=peshgi		capability.tsv: a request to write	E	change
+Q811	CP-write-kharcha	change	roman	0	year		kharcha ki entry karni hai	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q812	CP-write-kharcha	change	urdu	0	year		خرچہ درج کریں	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q813	CP-write-kharcha	change	en	0	year		write the expense screen	change_refused		facet=CAP;route=kharcha		capability.tsv: a request to write	E	change
+Q814	CP-write-udhar_raqam	change	roman	0	year		udhar raqam darj karo	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q815	CP-write-udhar_raqam	change	urdu	0	year		ادھار رقم لکھ دو	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q816	CP-write-udhar_raqam	change	en	0	year		enter money lent	change_refused		facet=CAP;route=udhar_raqam		capability.tsv: a request to write	E	change
+Q817	CP-write-alag_khata	change	roman	0	year		alag khata likh do	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q818	CP-write-alag_khata	change	urdu	0	year		الگ کھاتہ کی اندراج کرنی ہے	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q819	CP-write-alag_khata	change	en	0	year		record the separate khata	change_refused		facet=CAP;route=alag_khata		capability.tsv: a request to write	E	change
+Q820	CP-write-sarmaya	change	roman	0	year		sarmaya ki entry karni hai	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q821	CP-write-sarmaya	change	urdu	0	year		سرمایہ درج کریں	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q822	CP-write-sarmaya	change	en	0	year		write partner capital	change_refused		facet=CAP;route=sarmaya		capability.tsv: a request to write	E	change
+Q823	CP-write-phal	change	roman	0	year		phal darj karo	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q824	CP-write-phal	change	urdu	0	year		پھل لکھ دو	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q825	CP-write-phal	change	en	0	year		enter fruit taken	change_refused		facet=CAP;route=phal		capability.tsv: a request to write	E	change
+Q826	CP-write-general	change	roman	0	year		general journal likh do	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q827	CP-write-general	change	urdu	0	year		جنرل کی اندراج کرنی ہے	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q828	CP-write-general	change	en	0	year		record the journal	change_refused		facet=CAP;route=general		capability.tsv: a request to write	E	change
+Q829	CP-write-account	change	roman	0	year		naya khata ki entry karni hai	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q830	CP-write-account	change	urdu	0	year		نیا کھاتہ درج کریں	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change
+Q831	CP-write-account	change	en	0	year		write a new account	change_refused		facet=CAP;route=account		capability.tsv: a request to write	E	change

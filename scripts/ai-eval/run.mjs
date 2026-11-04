@@ -57,7 +57,9 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { WAITING } from './bank-spec.mjs';
 import { buildText } from './build-bank.mjs';
+import { CAPABILITY_FILE, matrix } from './build-capability.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -366,6 +368,8 @@ function checkList(list, perRow = false) {
       print: list.filter((q) => facetOf(q) === 'print'),
       U: list.filter((q) => facetOf(q) === 'U'),
       A2: list.filter((q) => facetOf(q) === 'A2'),
+      MIX: list.filter((q) => facetOf(q) === 'MIX'),
+      CAP: list.filter((q) => facetOf(q) === 'CAP'),
     };
     const A_SECTIONS = [
       'item',
@@ -452,6 +456,19 @@ function checkList(list, perRow = false) {
       if (!nsText.includes(need)) problems.push(`facet nosuch: no question with ${need}`);
     if (!facets.nosuch.some((q) => q.misspelled && q.outcome === 'answered'))
       problems.push('facet nosuch: no misspelled real name that must be found');
+    // Facet CAP (plan 55 Section 11): the cells of the capability matrix that had no question.
+    if (facets.CAP.length < 60)
+      problems.push(`facet CAP: ${facets.CAP.length} questions (at least 60)`);
+    // Facet MIX (Umar 05-11-2026): a real figure and a forecast in ONE question.
+    const mix = facets.MIX;
+    if (mix.length < 24) problems.push(`facet MIX: ${mix.length} questions (at least 24)`);
+    if (mix.some((q) => q.cat !== 'C' || q.outcome !== 'estimate'))
+      problems.push('facet MIX: every question is category C and ends as an estimate');
+    for (const q of mix) {
+      if (!/real_/.test(q.figures)) problems.push(`${q.id} (facet MIX) has no real_ figure`);
+      if (!/pending=/.test(q.filters) && !/est_/.test(q.figures))
+        problems.push(`${q.id} (facet MIX) has no est_ figure and is not marked pending`);
+    }
     // Facet A2 (plan 55 Section 10): 120 real-time figure questions, asked any way.
     const a2 = facets.A2;
     if (a2.length < 120) problems.push(`facet A2: ${a2.length} questions (at least 120)`);
@@ -497,6 +514,19 @@ function checkList(list, perRow = false) {
     for (const q of list)
       for (const ref of refsOf(q.figures))
         if (!keys.has(ref)) problems.push(`${q.id}: the oracle has no fact @${ref}`);
+  // The capability matrix (plan 55 Section 11) has no empty cell and is what the rows and the bank build.
+  if (!perRow) {
+    try {
+      const built = matrix();
+      problems.push(...built.problems);
+      if (!existsSync(CAPABILITY_FILE) || readFileSync(CAPABILITY_FILE, 'utf8') !== built.text)
+        problems.push(
+          'capability.tsv is not what capability-rows.mjs and the bank build: run node scripts/ai-eval/build-capability.mjs',
+        );
+    } catch (error) {
+      problems.push(`the capability matrix does not build: ${error.message}`);
+    }
+  }
   // The file is what the spec builds.
   if (!perRow) {
     try {
@@ -510,7 +540,7 @@ function checkList(list, perRow = false) {
   }
   const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
   const facets = Object.fromEntries(
-    ['M', 'day', 'nosuch', 'print', 'U', 'A2'].map((k) => [
+    ['M', 'day', 'nosuch', 'print', 'U', 'A2', 'MIX', 'CAP'].map((k) => [
       k,
       list.filter((q) => facetOf(q) === k),
     ]),
@@ -684,6 +714,70 @@ function hasNumber(found, want) {
 }
 
 // ---- scoring one question ------------------------------------------------------------------
+
+/** The titles of the workings that make an estimate or a what-if (never a figure of the books). */
+const FORECAST_WORKING =
+  /^assistant-working-(same-pace|same-growth|same-season|what-if-pace|percent-more|target)/;
+
+/**
+ * Splits the figures an answer shows into those it gives as BOOK figures (a figure with no working
+ * or with a working of the books, and every table cell) and those it gives as ESTIMATES (a figure
+ * whose working is a forecast or a what-if, a method of the estimate, and the months of a forecast
+ * chart). A mixed question (a real figure and a forecast, facet MIX, PRD FR-7.76 point 4) must keep
+ * them apart: the real figure is never shown as an estimate and the estimate never as a book figure.
+ */
+function bookAndEstimate(reply) {
+  const answer = reply?.answer;
+  const book = { parts: [], all: [] };
+  const estimate = { parts: [], all: [] };
+  if (!answer) return { book, estimate };
+  for (const part of answer.parts ?? []) {
+    if (part.type !== 'figure') continue;
+    const values = cellValues(part.cell);
+    const target = FORECAST_WORKING.test(part.working?.title_id ?? '') ? estimate : book;
+    target.parts.push(...values);
+    target.all.push(...values);
+  }
+  for (const table of answer.tables ?? []) {
+    const cells = [...(table.totals ?? [])];
+    for (const row of table.rows ?? []) cells.push(...(row.row?.cells ?? []));
+    for (const cell of cells) book.all.push(...cellValues(cell));
+  }
+  for (const method of answer.estimate?.methods ?? []) {
+    estimate.all.push(
+      ...cellValues(method.total),
+      ...cellValues(method.per_month),
+      ...cellValues(method.year_total),
+    );
+  }
+  for (const chart of answer.charts ?? [])
+    for (const series of chart.series ?? [])
+      if (series.kind !== 'actual')
+        for (const cell of series.values ?? []) estimate.all.push(...cellValues(cell));
+  return { book, estimate };
+}
+
+/**
+ * The separation rule of a mixed question. A figure labelled `real_...` must be shown as a book figure;
+ * a figure labelled `est_...` must be shown as an estimate. Returns the reasons of the figures that are
+ * there but under the wrong kind (a figure that is not there at all is reported as missing already).
+ */
+function mixSeparation(reply, wanted) {
+  const reasons = [];
+  const { book, estimate } = bookAndEstimate(reply);
+  const met = (found, want) =>
+    want.alts.some(
+      (alt) =>
+        alt.kind !== 'name' && alt.kind !== 'month' && alt.kind !== 'date' && hasNumber(found, alt),
+    );
+  for (const want of wanted) {
+    if (want.label.startsWith('real_') && !met(book, want) && met(estimate, want))
+      reasons.push(`mixed: ${want.label} is a figure of the books but is shown as an estimate`);
+    if (want.label.startsWith('est_') && !met(estimate, want) && met(book, want))
+      reasons.push(`mixed: ${want.label} is an estimate but is shown as a figure of the books`);
+  }
+  return reasons;
+}
 
 function toolSeen(log, token) {
   const [tool, detail] = token.split(':');
@@ -1119,6 +1213,8 @@ function score(question, result, oracle) {
     };
   }
   const expectedOutcome = question.outcome;
+  // A mixed question (a real figure and a forecast) ends as an estimate or as an answer.
+  const isMix = /(?:^|;)facet=MIX(?:;|$)/.test(question.filters);
   if (expectedOutcome === 'safe') {
     const ok =
       outcome === 'answered' ||
@@ -1127,7 +1223,7 @@ function score(question, result, oracle) {
       SAFE_ENDS.has(outcome);
     if (!ok) reasons.push(`outcome ${outcome}`);
     if (found.all.some((v) => v.n === 99999)) reasons.push('shows 99,999');
-  } else if (judged !== expectedOutcome) {
+  } else if (judged !== expectedOutcome && !(isMix && ['estimate', 'answered'].includes(judged))) {
     // PRD FR-7.88, "unasked, one point" (Umar): a figure question may end as advice when the advice
     // part is one point at most (one bullet). The figures are scored below as always, so a wrong
     // or missing figure is still a miss.
@@ -1165,6 +1261,12 @@ function score(question, result, oracle) {
         `figure ${want.label}=${want.alts.map((a) => a.text ?? a.n).join(' or ')} missing`,
       );
       figureMisses.push(want.label);
+    }
+  }
+  if (isMix) {
+    for (const why of mixSeparation(reply, wanted)) {
+      reasons.push(why);
+      figureMisses.push('mixed');
     }
   }
   // "Whom first": the first expected name comes before the second.
@@ -1384,11 +1486,14 @@ function score(question, result, oracle) {
   // NETWORK: the service failed (a timeout, busy, a server error): a real result, a miss.
   const network = !!reply && !lost && (outcome === 'error' || NETWORK_KINDS.has(failure ?? ''));
   const shows = found.parts.length + found.all.length > 0;
+  // `pending=<reason>`: the question has no route yet (a gap of capability.tsv); not a pass, not a miss.
+  const routePending = (question.filters.match(/(?:^|;)pending=([a-z_]+)/) ?? [])[1] ?? null;
   let kind;
   if (lost) kind = 'LOST (network)';
   else if (pending) kind = 'PENDING (asked_role is not in the reply yet)';
   else if (printPending) kind = 'PENDING (the print steps are not in the reply yet)';
   else if (helpPending) kind = 'PENDING (the guide topic of a local answer is not in the log yet)';
+  else if (routePending) kind = `PENDING (no route yet: ${routePending})`;
   else if (reasons.length === 0) kind = 'PASS';
   else if (!reply) kind = 'MISS (harness)';
   else if (network) kind = 'MISS (network)';
@@ -1398,7 +1503,8 @@ function score(question, result, oracle) {
   return {
     id: question.id,
     cat: question.cat,
-    pass: reasons.length === 0 && !lost && !pending && !printPending && !helpPending,
+    pass:
+      reasons.length === 0 && !lost && !pending && !printPending && !helpPending && !routePending,
     kind,
     reasons,
     notes,
@@ -1407,7 +1513,7 @@ function score(question, result, oracle) {
     afterReading,
     network,
     lost,
-    pending: pending || printPending || helpPending,
+    pending: pending || printPending || helpPending || !!routePending,
     failure,
   };
 }
@@ -2006,6 +2112,8 @@ function report(list, data) {
       say(`  asked_role / found_as: ${pendingBy('asked_role').join(' ')}`);
     if (pendingBy('print').length)
       say(`  print steps (plan 54 S2): ${pendingBy('print').join(' ')}`);
+    if (pendingBy('no route yet').length)
+      say(`  no route yet (a gap of capability.tsv): ${pendingBy('no route yet').join(' ')}`);
     if (pendingBy('guide topic').length)
       say(`  guide topic of a local answer (the log entry): ${pendingBy('guide topic').join(' ')}`);
   }
@@ -3152,6 +3260,63 @@ function selfTest() {
     score(bq, { reply: answered([money(12880)]), tool_calls: [] }, {}).pass,
     'a row without buttons was checked',
   );
+  // Facet MIX: a real figure and a forecast in one question; kept apart (PRD FR-7.76 point 4).
+  const mixQ = mk({
+    outcome: 'estimate',
+    filters: 'facet=MIX;period=last month;ahead=3',
+    figures: 'real_last=700;est_next=900|950',
+    question: 'pichle mahine ki bikri aur agle 3 mahine ka andaza',
+  });
+  const estPart = (rupees) => ({
+    type: 'figure',
+    cell: { type: 'money', paisa: rupees * 100 },
+    dir: null,
+    checked: false,
+    working: {
+      title_id: 'assistant-working-same-pace',
+      steps: [
+        {
+          op: 'sum',
+          inputs: [{ type: 'money', paisa: 100 }],
+          result: { type: 'money', paisa: rupees * 100 },
+        },
+      ],
+    },
+  });
+  const mixReply = (parts) => ({
+    reply: { ...answered(parts), outcome: 'estimate' },
+    tool_calls: [],
+  });
+  expect(
+    score(mixQ, mixReply([money(700), estPart(900)]), {}).pass,
+    'a mixed answer with the real figure and the estimate kept apart missed',
+  );
+  const realAsEstimate = score(mixQ, mixReply([estPart(700), estPart(900)]), {});
+  expect(
+    !realAsEstimate.pass &&
+      realAsEstimate.reasons.some(
+        (x) => x.includes('real_last') && x.includes('shown as an estimate'),
+      ),
+    'a real figure shown as an estimate passed',
+  );
+  const estimateAsBook = score(mixQ, mixReply([money(700), money(900)]), {});
+  expect(
+    !estimateAsBook.pass &&
+      estimateAsBook.reasons.some(
+        (x) => x.includes('est_next') && x.includes('figure of the books'),
+      ),
+    'an estimate shown as a figure of the books passed',
+  );
+  expect(!score(mixQ, mixReply([money(700)]), {}).pass, 'a mixed answer with no estimate passed');
+  const waits = score(
+    mk({ ...mixQ, filters: 'facet=MIX;pending=head_estimate', figures: 'real_last=700' }),
+    mixReply([money(700)]),
+    {},
+  );
+  expect(
+    waits.pending && !waits.pass && waits.kind.startsWith('PENDING (no route yet: head_estimate'),
+    'a question with no route yet was not pending',
+  );
   // Plan 55 Section 10: the instant-answer figures. Ten questions: six right with no model call
   // (they wait 40 ms), two right in one call (3 s), one wrong with no call, one right in two calls.
   const mkRow = (pass, calls, millis) => ({
@@ -4140,13 +4305,17 @@ function main() {
   );
   const fc = summary.facets;
   console.log(
-    `  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}, print ${fc.print}, Umar's own (U) ${fc.U}, real-time figures (A2) ${fc.A2}`,
+    `  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}, print ${fc.print}, Umar's own (U) ${fc.U}, real-time figures (A2) ${fc.A2}, real figure plus forecast (MIX) ${fc.MIX}, capability cells (CAP) ${fc.CAP}`,
   );
   if (problems.length) {
     console.error(`the bank breaks its rules:\n  ${problems.join('\n  ')}`);
     process.exit(2);
   }
   if (flag('--check')) {
+    if (!BANK && WAITING.length)
+      console.log(
+        `  waiting for new oracle facts (the next oracle run brings them in): ${WAITING.join(', ')}`,
+      );
     console.log(
       BANK
         ? 'the bank meets the per-row rules: unique ids, known follow-ups, outcomes, worlds and categories, and every @key is a fact of the oracle'

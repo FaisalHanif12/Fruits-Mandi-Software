@@ -23,7 +23,12 @@
 // tools (a note: the usual tools), filters (topic=, general=, route= ...), figures, source, after
 // (the g of the entry whose first wording is asked before this one).
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import A2 from './bank-spec-a2.mjs';
+import CAP from './bank-spec-cap.mjs';
+import MIX from './bank-spec-mix.mjs';
 
 const r = (text) => ['roman', text];
 const rm = (text) => ['roman', text, 'mis'];
@@ -2560,6 +2565,28 @@ const U = [
 const KEEP_E = { X14: [0, 1], X17: [0, 1] };
 for (const x of E) if (KEEP_E[x.g]) x.use = KEEP_E[x.g];
 
+// A group whose figures name a fact the oracle does not give yet (a new key waits for the next run of
+// `run.mjs --oracle-dump` / the oracle manifest) is left out of the bank and listed in WAITING, so
+// the bank is always whole and builds. It comes in by itself when the manifest has its keys.
+const KEYS = new Set(
+  readFileSync(fileURLToPath(new URL('./oracle-keys.txt', import.meta.url)), 'utf8')
+    .split('\n')
+    .filter(Boolean),
+);
+export const WAITING = [];
+const refsOf = (figures) => [...(figures ?? '').matchAll(/@([A-Za-z0-9_.]+)/g)].map((m) => m[1]);
+const gate = (list, cat) =>
+  list
+    .filter((x) => {
+      const missing = refsOf(x.figures).filter((k) => !KEYS.has(k));
+      if (missing.length)
+        WAITING.push(
+          `${x.g} (${missing[0]}${missing.length > 1 ? ` +${missing.length - 1}` : ''})`,
+        );
+      return missing.length === 0;
+    })
+    .map((x) => ({ cat, ...x }));
+
 const ENTRIES = [
   ...A.map((x) => ({ cat: 'A', ...x })),
   ...B.map((x) => ({ cat: 'B', ...x })),
@@ -2578,7 +2605,11 @@ const ENTRIES = [
   ...U.filter((x) => ['U03', 'U04', 'U07'].includes(x.g)).map((x) => ({ cat: 'B', ...x })),
   ...U.filter((x) => x.g === 'U05' || x.g === 'U06').map((x) => ({ cat: 'D', ...x })),
   // Facet A2 (plan 55 Section 10): 120 more real-time figure questions. Last, so no id moves.
-  ...A2.map((x) => ({ cat: 'A', ...x })),
+  ...gate(A2, 'A'),
+  // Facet MIX (Umar 05-11-2026): a real figure and a forecast in one question.
+  ...gate(MIX, 'C'),
+  // Facet CAP (plan 55 Section 11): the cells of the capability matrix that had no question.
+  ...gate(CAP, 'A'),
 ];
 
 export default ENTRIES;
