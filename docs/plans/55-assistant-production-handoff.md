@@ -128,3 +128,18 @@ After live run 1 (365/567; category A p50 9.8 s, 55% in one call or none), Umar 
 - **robustness.** 120 more category A questions in the team bank (facet A2), in every wording, every figure kind and role, today, yesterday, a month, a range and "ab tak", in Roman Urdu, Urdu, English and mixed, with misspellings. The scorer reports the instant-answer share for A.
 - **hiddentester.** 100 more HIDDEN category A questions, written in Umar's style, which the builders never see.
 - **Target for A:** at least 60% instant, at least 85% instant or one call, p50 2 s, p95 8 s, no wrong figure.
+
+## 11. Umar, 05-11-2026: "every question type exposes a flaw". Cover the whole app, not just the questions we think of
+
+Until now the banks grew from the questions we, or Umar, happened to ask. So each new kind of question, such as a forecast for one expense head, found a new gap. From now on, coverage starts from the app itself.
+
+1. **Capability matrix (robustness).**
+   - **Rows:** every thing the app holds or shows. That is every report R1 to R38, every analytics view A to K, every dashboard tile, every master list, every entry screen, every guide topic, and every partner, garden, trip and fruit figure.
+   - **Columns:** every question type: figure, list, top, compare, a party's day, print or open, how-to, forecast or what-if, advice, mixed (real plus forecast), no such party or wrong role, not in the app, change request.
+   - **Each cell** is either "answerable", with at least one bank question in three languages and a figure from the oracle, or "not answerable by design", with the honest answer it must give, which the lead approves.
+   - No cell may stay empty. A cell the assistant can't answer but should is a defect: it is fixed, as the expense-head forecast is being fixed.
+2. **Rounds until dry (hidden tester and lead).**
+   - After each live run, the hidden tester writes 50 new hidden questions aimed at the types and wordings that failed or were thin.
+   - The lead runs them.
+   - The hand-over needs two rounds in a row with no new failure.
+3. **The gates of §4 stay.** The full bank twice in a row, the hidden bank, button-vs-data, Umar's log, slow line, and the lead's own test.
