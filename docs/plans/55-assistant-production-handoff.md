@@ -113,3 +113,18 @@ Umar went to sleep and asked for every agent to be stopped. All work below is on
 
 Reminders for Umar: after the build, press Back up now once (older copies carry no chain key), and make sure his printed backup key sheet exists.
 - **Note at the pause:** the generated `frontend/src/bindings/` folder in the working tree was empty, because a `pnpm gen:types` run was stopped part way. On resume, backend runs `pnpm gen:types` first, once the workspace compiles, before any frontend check. The committed bindings are in git.
+
+## 10. Umar, 05-11-2026: focus on real-time figures, instant answers (PRD v1.25 FR-7.90)
+
+After live run 1 (365/567; category A p50 9.8 s, 55% in one call or none), Umar asked for the most focus on real-time figure questions, with accuracy and speed, asked any way. He approved instant answers for simple figures.
+
+- **backend2, the composer.** A new `compose_figure`, pure: it takes the Understanding plus the results of the planned reads and returns the Answer. It writes a reviewed sentence (a Fluent id per figure kind and role) with checked references and the buttons.
+  - It covers: a party's balance, dues, payable or advance; a sale or commission (shop, item, seller, buyer) for today or a period; cash in hand; the shop's total dues or payables; goods left; a partner's کل رقم.
+  - It returns None for anything else.
+- **backend, the wiring.** When the read plan is sure and compose_figure gives an answer, there is no model call.
+  - The same FR-7.76 checks run, including the two places that must agree. If a check fails, the question falls back to the one-call path.
+  - It is logged as local, with the read entries.
+- **frontend2.** The Fluent sentences in ur and en (# review: pending), and the panel shows them like any answer.
+- **robustness.** 120 more category A questions in the team bank (facet A2), in every wording, every figure kind and role, today, yesterday, a month, a range and "ab tak", in Roman Urdu, Urdu, English and mixed, with misspellings. The scorer reports the instant-answer share for A.
+- **hiddentester.** 100 more HIDDEN category A questions, written in Umar's style, which the builders never see.
+- **Target for A:** at least 60% instant, at least 85% instant or one call, p50 2 s, p95 8 s, no wrong figure.

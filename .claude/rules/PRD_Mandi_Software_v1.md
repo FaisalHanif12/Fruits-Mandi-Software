@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.24 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two) and 04-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.25 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.24 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.25 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.14 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.17 |
@@ -884,6 +884,15 @@ A figure from the calculator is checked when every figure it was made from is ch
 If a check fails, the app tells the model exactly what failed, and the model writes the answer once more; a figure whose two places differ is the one failure that is final, with no rewrite (point 2). If the second answer also fails, the panel shows the tool results the model read, as plain tables with their sources, and "میں جانچا ہوا جواب نہیں لکھ سکا، نیچے اصل ریکارڈ ہے" (I could not write a checked answer; the records are below). An unchecked figure is never shown.
 
 Example: "kul ugrahi kitni hai" after Events 1 to 5. The tile کل اگراہی is 21,564, and each part agrees with its report: buyers' dues 21,564 = R20 total 21,564; sellers' dues 0 = R24 0; dead amount 0 = R38 0. The answer shows "کل اگراہی 21,564 روپے ✓".
+
+FR-7.90 [C] **Instant answers for simple figures.** (Added in v1.25.) Umar (05-11-2026): a simple real-time figure question is answered by the app itself, with no model call, so the answer comes in under a second.
+- **When.** The app has understood the question for sure, and it asks for one figure, or for one figure per named party, item or period, from one read: a party's balance, dues, payable or open advance; today's or a period's sale or commission, for the shop, an item, a seller or a buyer; cash in hand; the shop's total dues or payables; goods left; a partner's کل رقم (behind the partner code, FR-7.82).
+- **How.**
+  - The app reads the figure with the same tools and the same checks as FR-7.76, including the two places that must agree.
+  - It writes the answer from a fixed, reviewed sentence in the app language, with the figure as a checked reference.
+  - It adds the same buttons as any answer.
+- **Everything else** still goes to the model: comparisons, advice, forecasts, two-part questions, follow-ups and anything not sure (FR-7.87).
+- **Example.** "akram ka bakaya" after Events 1 to 5 gives "اکرم ٹول ٹیکس کا بقایا: 2,880 بنام ✓" with the buttons کھاتہ and فرد حساب, with no model call and no count in the daily limit (FR-7.81).
 
 FR-7.77 [C] **Names and periods.** The model finds people and things with the tool `find`, which uses the smart search of FR-7.40 (code, short code, both names, tag, city; small mistakes forgiven) in the role the question names (buyer, seller, پختہ کھاتہ person, ادھار رقم person, الگ کھاتہ, partner, garden, trip, item).
 - One match: it is used. Two to five matches: the answer asks "کون سا؟" (Which one?) with a button for each (name with tag, code, city, balance); a click answers with no new question counted. More than five: the five closest, and "اور بھی ہیں، کوڈ لکھیں" (There are more, type the code). No match: "یہ نام نہیں ملا" (Name not found) with the three closest names as buttons. A person in the dead amount is found and shown as his party card shows him (FR-10.10).
@@ -2618,3 +2627,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.22 | 03-11-2026 | Umar's changes of 03-11-2026, made while testing the app himself, approved by Umar. A new account can be added with its opening balance at any time: the opening posts on its date even when that day is closed, against ابتدائی فرق, the one exception to FR-6.6 (FR-10.11, 10.2, E79). There is no collection day: the اگراہی فہرست lists every buyer who owes, by collector and city (10.2, FR-15.6). No money rule or test number changed. |
 | 1.23 | 03-11-2026 | Umar's second change of 03-11-2026, made while testing the app himself, approved by Umar. Munshis on prints are managed in the staff list: every active staff member whose job is منشی prints in every header after the people typed in Settings (at most 3 munshis, at most 6 people), and an inactive one does not. Each staff row has an active switch (10.3, Section 21, FR-19.13). No money rule, table or test number changed. |
 | 1.24 | 04-11-2026 | Umar's change of 04-11-2026, approved by Umar: restore on a new computer from the first screen, with a choice between a new shop and bringing back the data from the cloud or a USB drive or file (FR-20.11, NFR-INS-2, NFR-INS-6). No money rule, table or test number changed. |
+| 1.25 | 05-11-2026 | Umar's change of 05-11-2026, approved by Umar: simple real-time figure questions are answered by the app with a reviewed sentence and the checked figure, with no model call (FR-7.90). It changes his decision D6-Q1 of 02-11-2026 for those questions only. No money rule or test number changed. |
