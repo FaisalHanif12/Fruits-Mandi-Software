@@ -203,9 +203,9 @@ Q201	Y59	partner	roman	0	year		alif ne is saal zaati kharch ke liye kitna liya a
 Q202	Y59	partner	urdu	0	year		الف نے اس سال ذاتی خرچ کے لیے کتنا لیا اور کتنا واپس کیا	answered	report:R30/report:R29	partner=Partner A;period=this year	taken=@r30.year.partner_a.taken;returned=@r30.year.partner_a.returned	oracle	A	partner
 Q203		capital	roman	0	year		be ka sarmaya kitna laga hua hai	answered	partners/report:R31	partner=Partner B	capital=@partner.partner_b.capital	oracle	A	capital
 Q204		capital	roman	0	year		usman ne sarmaya wapas liya tha, ab uska sarmaya kitna reh gaya	answered	partners/report:R31	partner=Usman	capital=@partner.usman.capital	oracle	A	capital
-Q205	Y62	stock	roman	1	year		baki mal kitna he	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
-Q206	Y62	stock	urdu	0	year		باقی مال کتنا ہے	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
-Q207	Y62	stock	en	0	year		how much unsold stock is left	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty;lots=@tiles.stock_lots	oracle	A	stock
+Q205	Y62	stock	roman	1	year		baki mal kitna he	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty|@r10.total.balance;lots?=@tiles.stock_lots|@r10.count	oracle	A	stock
+Q206	Y62	stock	urdu	0	year		باقی مال کتنا ہے	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty|@r10.total.balance;lots?=@tiles.stock_lots|@r10.count	oracle	A	stock
+Q207	Y62	stock	en	0	year		how much unsold stock is left	answered	tiles/report:R10	view=R10	qty=@tiles.stock_qty|@r10.total.balance;lots?=@tiles.stock_lots|@r10.count	oracle	A	stock
 Q208		stock	roman	0	year		kele ka kitna maal baqi para hai	answered	report:R10	item=Banana	qty=@stock.banana.qty	oracle	A	stock
 Q209	Y65	garden	roman	1	year		shahpur bag ka abhi kitna balance he	answered	tiles/report:R36	garden=Shahpur Garden	balance=@tiles.gardens_balance	oracle	A	garden
 Q210	Y65	garden	urdu	0	year		شاہ پور باغ کا اب کتنا حساب بنتا ہے	answered	tiles/report:R36	garden=Shahpur Garden	balance=@tiles.gardens_balance	oracle	A	garden
@@ -227,8 +227,8 @@ Q225	S02	advice	roman	1	year		kis gahak ko ab udhar na don	advice	report:R20/ana
 Q226	S02	advice	en	0	year		which buyer should I stop giving credit to	advice	report:R20/analytics:C	view=R20;general=0	risky!=Zahid Mehmood|Tariq Mehmood|Bilal Ahmed	oracle	B	advice
 Q227	S03	advice	roman	0	year		kis byopari ko pehle payment karun	advice	report:R24	view=R24;general=0	first!=Haji Nazeer|Bashir|Tahir	oracle	B	advice
 Q228	S03	advice	en	0	year		which seller should I pay first	advice	report:R24	view=R24;general=0	first!=Haji Nazeer|Bashir|Tahir	oracle	B	advice
-Q229	S04	advice	roman	0	year		kaun sa kharcha kam kar sakta hun	advice	report:R29	view=R29;general=0	head!=Salaries|Shop Rent|Electricity	oracle	B	advice
-Q230	S04	advice	en	0	year		which expense can I cut down	advice	report:R29	view=R29;general=0	head!=Salaries|Shop Rent|Electricity	oracle	B	advice
+Q229	S04	advice	roman	0	year		kaun sa kharcha kam kar sakta hun	advice	report:R29	view=R29;general=0	head!=Salaries|Shop Rent|Electricity|Tea|Guests Food and Drinks	oracle	B	advice
+Q230	S04	advice	en	0	year		which expense can I cut down	advice	report:R29	view=R29;general=0	head!=Salaries|Shop Rent|Electricity|Tea|Guests Food and Drinks	oracle	B	advice
 Q231	S05	advice	roman	0	year		kaun sa item zyada becha jaye to fayda zyada hoga	advice	analytics:A	view=A;general=0	top!=@top.item_commission_year.name	oracle	B	advice
 Q232	S05	advice	urdu	0	year		کون سا مال زیادہ بیچیں تو فائدہ زیادہ ہو گا	advice	analytics:A	view=A;general=0	top!=@top.item_commission_year.name	oracle	B	advice
 Q233	S05	advice	en	0	year		which item should I push to earn more	advice	analytics:A	view=A;general=0	top!=@top.item_commission_year.name	oracle	B	advice
@@ -566,3 +566,123 @@ Q564	U05	help	en	0	day		tell me how to add a sale entry	answered	app_help	facet=
 Q565	U06	help	roman	1	day		is main market safar kiya hai iski mujhay samaj nahi aa rahi ?	answered	app_help	facet=U;topic=market_trips;onecall=1		Umar 04-11-2026: his own question log	D	help
 Q566	U06	help	urdu	0	day		اس میں مارکیٹ سفر کیا ہے، مجھے سمجھ نہیں آ رہی؟	answered	app_help	facet=U;topic=market_trips;onecall=1		Umar 04-11-2026: his own question log	D	help
 Q567	U06	help	en	0	day		what is the market trip in this, I do not understand it?	answered	app_help	facet=U;topic=market_trips;onecall=1		Umar 04-11-2026: his own question log	D	help
+Q568	Z01	buyer	roman	0	year		faisal ka bakaya	answered		facet=A2;buyer=Faisal	balance=@buyer.faisal.balance	plan 55 Section 10	A	buyer
+Q569	Z01	buyer	urdu	0	year		فیصل کے ذمے کتنا ہے	answered		facet=A2;buyer=Faisal	balance=@buyer.faisal.balance	plan 55 Section 10	A	buyer
+Q570	Z01	buyer	en	0	year		what does Faisal owe	answered		facet=A2;buyer=Faisal	balance=@buyer.faisal.balance	plan 55 Section 10	A	buyer
+Q571	Z02	buyer	roman	0	year		imran fruit se kitna lena hai	answered		facet=A2;buyer=Imran Fruit	balance=@buyer.imran.balance	plan 55 Section 10	A	buyer
+Q572	Z02	buyer	urdu	0	year		عمران فروٹ کا بقایا بتائیں	answered		facet=A2;buyer=Imran Fruit	balance=@buyer.imran.balance	plan 55 Section 10	A	buyer
+Q573	Z02	buyer	en	1	year		imran froot balance?	answered		facet=A2;buyer=Imran Fruit	balance=@buyer.imran.balance	plan 55 Section 10	A	buyer
+Q574	Z03	buyer	roman	1	year		oye tariq mehmod ka hisab jaldi bata	answered		facet=A2;buyer=Tariq Mehmood	balance=@buyer.tariq.balance	plan 55 Section 10	A	buyer
+Q575	Z03	buyer	urdu	0	year		طارق محمود نے کتنے پیسے دینے ہیں	answered		facet=A2;buyer=Tariq Mehmood	balance=@buyer.tariq.balance	plan 55 Section 10	A	buyer
+Q576	Z03	buyer	en	0	year		how much does Tariq Mehmood still owe us	answered		facet=A2;buyer=Tariq Mehmood	balance=@buyer.tariq.balance	plan 55 Section 10	A	buyer
+Q577	Z04	buyer	roman	0	year		zahid mehmood ka udhar kitna chal raha hai	answered		facet=A2;buyer=Zahid Mehmood	balance=@buyer.zahid.balance	plan 55 Section 10	A	buyer
+Q578	Z04	buyer	urdu	0	year		زاہد محمود کا ادھار	answered		facet=A2;buyer=Zahid Mehmood	balance=@buyer.zahid.balance	plan 55 Section 10	A	buyer
+Q579	Z04	buyer	en	0	year		Zahid Mehmood outstanding	answered		facet=A2;buyer=Zahid Mehmood	balance=@buyer.zahid.balance	plan 55 Section 10	A	buyer
+Q580	Z05	buyer	roman	1	year		kashif ali ka bkaya kitna hy	answered		facet=A2;buyer=Kashif Ali	balance=@buyer.kashif.balance	plan 55 Section 10	A	buyer
+Q581	Z05	buyer	urdu	0	year		کاشف علی کا بقایا کتنا ہے	answered		facet=A2;buyer=Kashif Ali	balance=@buyer.kashif.balance	plan 55 Section 10	A	buyer
+Q582	Z05	buyer	en	0	year		could you please tell me how much Kashif Ali owes	answered		facet=A2;buyer=Kashif Ali	balance=@buyer.kashif.balance	plan 55 Section 10	A	buyer
+Q583	Z06	buyer	roman	0	year		akram baloch ka bakaya	answered		facet=A2;buyer=Akram Baloch	balance=@buyer.akram_baloch.balance	plan 55 Section 10	A	buyer
+Q584	Z06	buyer	urdu	0	year		اکرم بلوچ کا بقایا کتنا ہے	answered		facet=A2;buyer=Akram Baloch	balance=@buyer.akram_baloch.balance	plan 55 Section 10	A	buyer
+Q585	Z06	buyer	en	0	year		akram baloch balance	answered		facet=A2;buyer=Akram Baloch	balance=@buyer.akram_baloch.balance	plan 55 Section 10	A	buyer
+Q586	Z07	buyer	roman	1	year		akrm tol tax ka hisab batao	answered		facet=A2;buyer=Akram Toll Tax	balance=@buyer.akram_toll_tax.balance	plan 55 Section 10	A	buyer
+Q587	Z07	buyer	urdu	0	year		اکرم ٹول ٹیکس کا بقایا	answered		facet=A2;buyer=Akram Toll Tax	balance=@buyer.akram_toll_tax.balance	plan 55 Section 10	A	buyer
+Q588	Z07	buyer	en	0	year		how much is Akram Toll Tax due to pay	answered		facet=A2;buyer=Akram Toll Tax	balance=@buyer.akram_toll_tax.balance	plan 55 Section 10	A	buyer
+Q589	Z09	buyer	roman	0	year		waqas brothers ka baqaya kya hai	answered		facet=A2;buyer=Waqas Brothers	balance=@buyer.waqas.balance	plan 55 Section 10	A	buyer
+Q590	Z09	buyer	urdu	0	year		وقاص برادرز کا بقایا	answered		facet=A2;buyer=Waqas Brothers	balance=@buyer.waqas.balance	plan 55 Section 10	A	buyer
+Q591	Z09	buyer	en	1	year		wakas brothrs balance	answered		facet=A2;buyer=Waqas Brothers	balance=@buyer.waqas.balance	plan 55 Section 10	A	buyer
+Q592	Z12	buyer	roman	0	year		rizwan butt ka kuch baqi hai	answered		facet=A2;buyer=Rizwan Butt	balance=@buyer.rizwan.balance	plan 55 Section 10	A	buyer
+Q593	Z12	buyer	urdu	0	year		رضوان بٹ کے ذمے کچھ ہے	answered		facet=A2;buyer=Rizwan Butt	balance=@buyer.rizwan.balance	plan 55 Section 10	A	buyer
+Q594	Z12	buyer	en	0	year		does Rizwan Butt owe anything	answered		facet=A2;buyer=Rizwan Butt	balance=@buyer.rizwan.balance	plan 55 Section 10	A	buyer
+Q595	Z13	seller	roman	1	year		rahim ko kitna dena he	answered		facet=A2;seller=Rahim	balance=@seller.rahim.balance	plan 55 Section 10	A	seller
+Q596	Z13	seller	urdu	0	year		رحیم کو کتنے پیسے دینے ہیں	answered		facet=A2;seller=Rahim	balance=@seller.rahim.balance	plan 55 Section 10	A	seller
+Q597	Z13	seller	en	0	year		how much do we owe Rahim	answered		facet=A2;seller=Rahim	balance=@seller.rahim.balance	plan 55 Section 10	A	seller
+Q598	Z14	seller	roman	1	year		kareem ka hisab?	answered		facet=A2;seller=Karim	balance=@seller.karim.balance	plan 55 Section 10	A	seller
+Q599	Z14	seller	urdu	0	year		کریم کو کتنا دینا ہے	answered		facet=A2;seller=Karim	balance=@seller.karim.balance	plan 55 Section 10	A	seller
+Q600	Z14	seller	en	0	year		karim payable	answered		facet=A2;seller=Karim	balance=@seller.karim.balance	plan 55 Section 10	A	seller
+Q601	Z15	seller	roman	1	year		haji nazir ki paymnt kitni banti he	answered		facet=A2;seller=Haji Nazeer	balance=@seller.haji_nazeer.balance	plan 55 Section 10	A	seller
+Q602	Z15	seller	urdu	0	year		حاجی نذیر کو کتنی ادائیگی کرنی ہے	answered		facet=A2;seller=Haji Nazeer	balance=@seller.haji_nazeer.balance	plan 55 Section 10	A	seller
+Q603	Z15	seller	en	0	year		amount payable to Haji Nazeer	answered		facet=A2;seller=Haji Nazeer	balance=@seller.haji_nazeer.balance	plan 55 Section 10	A	seller
+Q604	Z16	seller	roman	0	year		bashir ko kitna dena hai	answered		facet=A2;seller=Bashir	balance=@seller.bashir.balance	plan 55 Section 10	A	seller
+Q605	Z16	seller	urdu	0	year		بشیر کو کتنے دینے ہیں	answered		facet=A2;seller=Bashir	balance=@seller.bashir.balance	plan 55 Section 10	A	seller
+Q606	Z16	seller	en	0	year		how much to pay Bashir	answered		facet=A2;seller=Bashir	balance=@seller.bashir.balance	plan 55 Section 10	A	seller
+Q607	Z17	seller	roman	0	year		tahir ko kitna dena hai	answered		facet=A2;seller=Tahir	balance=@seller.tahir.balance|@r24.tahir.payable	plan 55 Section 10	A	seller
+Q608	Z17	seller	urdu	0	year		طاہر کو کتنے پیسے دینے ہیں	answered		facet=A2;seller=Tahir	balance=@seller.tahir.balance|@r24.tahir.payable	plan 55 Section 10	A	seller
+Q609	Z17	seller	en	0	year		what do we owe Tahir	answered		facet=A2;seller=Tahir	balance=@seller.tahir.balance|@r24.tahir.payable	plan 55 Section 10	A	seller
+Q610	Z19	dues	roman	0	year		tahir ne kitni peshgi li hui hai	answered		facet=A2;seller=Tahir	advance=@r24.tahir.advance_open	plan 55 Section 10	A	seller
+Q611	Z19	dues	urdu	0	year		طاہر کی کتنی پیشگی کھلی ہے	answered		facet=A2;seller=Tahir	advance=@r24.tahir.advance_open	plan 55 Section 10	A	seller
+Q612	Z19	dues	en	0	year		how much advance is open for Tahir	answered		facet=A2;seller=Tahir	advance=@r24.tahir.advance_open	plan 55 Section 10	A	seller
+Q613	Z20	dues	roman	0	year		sab ki peshgi kitni khuli hai	answered		facet=A2;view=tiles	advance=@tiles.advances_open	plan 55 Section 10	A	dues
+Q614	Z20	dues	urdu	0	year		کل پیشگی کتنی باقی ہے	answered		facet=A2;view=tiles	advance=@tiles.advances_open	plan 55 Section 10	A	dues
+Q615	Z20	dues	en	0	year		total open advances	answered		facet=A2;view=tiles	advance=@tiles.advances_open	plan 55 Section 10	A	dues
+Q616	Z21	cash	roman	1	year		rokad kitni he abhi	answered		facet=A2;view=tiles	cash=@tiles.cash	plan 55 Section 10	A	cash
+Q617	Z21	cash	urdu	0	year		ہاتھ میں کتنی نقدی ہے	answered		facet=A2;view=tiles	cash=@tiles.cash	plan 55 Section 10	A	cash
+Q618	Z21	cash	en	0	year		cash in hand?	answered		facet=A2;view=tiles	cash=@tiles.cash	plan 55 Section 10	A	cash
+Q619	Z22	dues	roman	0	year		total bakaya sab buyers ka	answered		facet=A2;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	plan 55 Section 10	A	dues
+Q620	Z22	dues	urdu	0	year		کل وصولی باقی کتنی ہے	answered		facet=A2;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	plan 55 Section 10	A	dues
+Q621	Z22	dues	en	0	year		total dues from buyers	answered		facet=A2;view=R20	total=@tiles.buyers_dues|@tiles.total_dues	plan 55 Section 10	A	dues
+Q622	Z23	dues	roman	0	year		byopariyon ko kul kitna dena hai	answered		facet=A2;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	plan 55 Section 10	A	dues
+Q623	Z23	dues	urdu	0	year		سب بیوپاریوں کو کتنا دینا ہے	answered		facet=A2;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	plan 55 Section 10	A	dues
+Q624	Z23	dues	en	0	year		total payable to sellers	answered		facet=A2;view=R24	payable=@tiles.sellers_payable|@r24.total.balance	plan 55 Section 10	A	dues
+Q625	Z24	period	roman	0	year		aaj ki bikri kitni hui	answered		facet=A2;period=today	gross=@tiles.sales_today;count?=@tiles.count_today	plan 55 Section 10	A	period
+Q626	Z24	period	urdu	0	year		آج کتنی بکری ہوئی	answered		facet=A2;period=today	gross=@tiles.sales_today;count?=@tiles.count_today	plan 55 Section 10	A	period
+Q627	Z24	period	en	0	year		sales today?	answered		facet=A2;period=today	gross=@tiles.sales_today;count?=@tiles.count_today	plan 55 Section 10	A	period
+Q628	Z25	period	roman	0	year		today ka commission kitna bana	answered		facet=A2;period=today	comm=@tiles.commission_today	plan 55 Section 10	A	period
+Q629	Z25	period	urdu	0	year		آج کا کمیشن بتاؤ	answered		facet=A2;period=today	comm=@tiles.commission_today	plan 55 Section 10	A	period
+Q630	Z25	period	en	0	year		what is today's commission	answered		facet=A2;period=today	comm=@tiles.commission_today	plan 55 Section 10	A	period
+Q631	Z26	period	roman	1	year		kl kitni bikri hui thi	answered		facet=A2;period=yesterday	gross=@a.yesterday.total.gross	plan 55 Section 10	A	period
+Q632	Z26	period	urdu	0	year		کل کی بکری کتنی تھی	answered		facet=A2;period=yesterday	gross=@a.yesterday.total.gross	plan 55 Section 10	A	period
+Q633	Z26	period	en	0	year		yesterday sales	answered		facet=A2;period=yesterday	gross=@a.yesterday.total.gross	plan 55 Section 10	A	period
+Q634	Z27	period	roman	0	year		kal ka commission	answered		facet=A2;period=yesterday	comm=@a.yesterday.total.total_comm	plan 55 Section 10	A	period
+Q635	Z27	period	urdu	0	year		کل کتنا کمیشن بنا	answered		facet=A2;period=yesterday	comm=@a.yesterday.total.total_comm	plan 55 Section 10	A	period
+Q636	Z27	period	en	0	year		commission yesterday please	answered		facet=A2;period=yesterday	comm=@a.yesterday.total.total_comm	plan 55 Section 10	A	period
+Q637	Z28	period	roman	0	year		is hafte ki bikri	answered		facet=A2;period=this week	gross=@a.week.total.gross	plan 55 Section 10	A	period
+Q638	Z28	period	urdu	0	year		اس ہفتے کتنی بکری ہوئی	answered		facet=A2;period=this week	gross=@a.week.total.gross	plan 55 Section 10	A	period
+Q639	Z28	period	en	1	year		how much did we sel this week	answered		facet=A2;period=this week	gross=@a.week.total.gross	plan 55 Section 10	A	period
+Q640	Z29	period	roman	0	year		is hafte commission kitna aya	answered		facet=A2;period=this week	comm=@a.week.total.total_comm	plan 55 Section 10	A	period
+Q641	Z29	period	urdu	0	year		اس week کا commission	answered		facet=A2;period=this week	comm=@a.week.total.total_comm	plan 55 Section 10	A	period
+Q642	Z29	period	en	0	year		commission this week	answered		facet=A2;period=this week	comm=@a.week.total.total_comm	plan 55 Section 10	A	period
+Q643	Z30	period	roman	0	year		is month ki sale kitni hai	answered		facet=A2;period=this month	gross=@a.month.total.gross	plan 55 Section 10	A	month
+Q644	Z30	period	urdu	0	year		اس مہینے کی کل بکری	answered		facet=A2;period=this month	gross=@a.month.total.gross	plan 55 Section 10	A	month
+Q645	Z30	period	en	0	year		total sales this month	answered		facet=A2;period=this month	gross=@a.month.total.gross	plan 55 Section 10	A	month
+Q646	Z31	period	roman	1	year		pichle mahine ka comision kitna tha	answered		facet=A2;period=last month	comm=@a.last_month.total.total_comm	plan 55 Section 10	A	month
+Q647	Z31	period	urdu	0	year		پچھلے مہینے کا کمیشن کتنا بنا	answered		facet=A2;period=last month	comm=@a.last_month.total.total_comm	plan 55 Section 10	A	month
+Q648	Z31	period	en	0	year		commission last month	answered		facet=A2;period=last month	comm=@a.last_month.total.total_comm	plan 55 Section 10	A	month
+Q649	Z32	period	roman	0	year		september ki bikri kitni thi	answered		facet=A2;period=September	gross=@a.m2026_09.total.gross	plan 55 Section 10	A	month
+Q650	Z32	period	urdu	0	year		ستمبر میں کتنی بکری ہوئی	answered		facet=A2;period=September	gross=@a.m2026_09.total.gross	plan 55 Section 10	A	month
+Q651	Z32	period	en	0	year		sales in September	answered		facet=A2;period=September	gross=@a.m2026_09.total.gross	plan 55 Section 10	A	month
+Q652	Z33	period	roman	0	year		august mein kitna maal biki	answered		facet=A2;period=August	gross=@a.m2026_08.total.gross	plan 55 Section 10	A	month
+Q653	Z33	period	urdu	0	year		اگست کی بکری کتنی رہی	answered		facet=A2;period=August	gross=@a.m2026_08.total.gross	plan 55 Section 10	A	month
+Q654	Z33	period	en	0	year		sales for August	answered		facet=A2;period=August	gross=@a.m2026_08.total.gross	plan 55 Section 10	A	month
+Q655	Z34	period	roman	0	year		15 october ko kitni bikri hui	answered		facet=A2;period=15 October	gross=@a.d2026_10_15.total.gross	plan 55 Section 10	A	day
+Q656	Z34	period	urdu	0	year		15 اکتوبر کی بکری	answered		facet=A2;period=15 October	gross=@a.d2026_10_15.total.gross	plan 55 Section 10	A	day
+Q657	Z34	period	en	0	year		sales on 15 October	answered		facet=A2;period=15 October	gross=@a.d2026_10_15.total.gross	plan 55 Section 10	A	day
+Q658	Z35	period	roman	0	year		is saal ki kul bikri	answered		facet=A2;period=this year	gross=@a.year.total.gross	plan 55 Section 10	A	period
+Q659	Z35	period	urdu	0	year		اس سال کی کل بکری کتنی ہے	answered		facet=A2;period=this year	gross=@a.year.total.gross	plan 55 Section 10	A	period
+Q660	Z35	period	en	0	year		total sales this year	answered		facet=A2;period=this year	gross=@a.year.total.gross	plan 55 Section 10	A	period
+Q661	Z36	period	roman	1	year		is sal ka comision kitna bana	answered		facet=A2;period=this year	comm=@a.year.total.total_comm	plan 55 Section 10	A	period
+Q662	Z36	period	urdu	0	year		اس سال کا کل کمیشن	answered		facet=A2;period=this year	comm=@a.year.total.total_comm	plan 55 Section 10	A	period
+Q663	Z36	period	en	0	year		commission this year	answered		facet=A2;period=this year	comm=@a.year.total.total_comm	plan 55 Section 10	A	period
+Q664	Z37	period	roman	0	year		ab tak ki kul bikri	answered		facet=A2;period=up to now	gross=@a.up_to_now.total.gross	plan 55 Section 10	A	period
+Q665	Z37	period	urdu	0	year		اب تک کی total sale	answered		facet=A2;period=up to now	gross=@a.up_to_now.total.gross	plan 55 Section 10	A	period
+Q666	Z37	period	en	0	year		sales so far, all time	answered		facet=A2;period=up to now	gross=@a.up_to_now.total.gross	plan 55 Section 10	A	period
+Q667	Z38	item	roman	0	year		aaj kele ki kitni bikri hui	answered		facet=A2;item=Banana;period=today	qty=@a.today.banana.qty;gross=@a.today.banana.gross	plan 55 Section 10	A	item
+Q668	Z38	item	urdu	0	year		آج کیلا کتنا بکا	answered		facet=A2;item=Banana;period=today	qty=@a.today.banana.qty;gross=@a.today.banana.gross	plan 55 Section 10	A	item
+Q669	Z38	item	en	0	year		how much banana was sold today	answered		facet=A2;item=Banana;period=today	qty=@a.today.banana.qty;gross=@a.today.banana.gross	plan 55 Section 10	A	item
+Q670	Z39	item	roman	1	year		sayb ka is sal ka comision	answered		facet=A2;item=Apple;period=this year	comm=@a.year.apple.total_comm	plan 55 Section 10	A	item
+Q671	Z39	item	urdu	0	year		سیب کا اس سال کتنا کمیشن بنا	answered		facet=A2;item=Apple;period=this year	comm=@a.year.apple.total_comm	plan 55 Section 10	A	item
+Q672	Z39	item	en	0	year		apple commission this year	answered		facet=A2;item=Apple;period=this year	comm=@a.year.apple.total_comm	plan 55 Section 10	A	item
+Q673	Z40	item	roman	0	year		aam ki is saal ki bikri	answered		facet=A2;item=Mango;period=this year	gross=@a.year.mango.gross	plan 55 Section 10	A	item
+Q674	Z40	item	urdu	0	year		آم کی اس سال کی بکری	answered		facet=A2;item=Mango;period=this year	gross=@a.year.mango.gross	plan 55 Section 10	A	item
+Q675	Z40	item	en	0	year		mango sales this year	answered		facet=A2;item=Mango;period=this year	gross=@a.year.mango.gross	plan 55 Section 10	A	item
+Q676	Z41	seller	roman	0	year		karim ka is saal kitna maal biki	answered		facet=A2;seller=Karim;period=this year	gross=@b.year.karim.gross	plan 55 Section 10	A	seller
+Q677	Z41	seller	urdu	0	year		کریم کا اس سال کتنا مال بکا	answered		facet=A2;seller=Karim;period=this year	gross=@b.year.karim.gross	plan 55 Section 10	A	seller
+Q678	Z41	seller	en	0	year		how much of Karim's goods sold this year	answered		facet=A2;seller=Karim;period=this year	gross=@b.year.karim.gross	plan 55 Section 10	A	seller
+Q679	Z42	buyer	roman	0	year		tariq mehmood ne is saal kitne ka maal khareeda	answered		facet=A2;buyer=Tariq Mehmood;period=this year	purchase=@c.year.tariq_mehmood.purchase_value	plan 55 Section 10	A	buyer
+Q680	Z42	buyer	urdu	0	year		طارق محمود نے اس سال کتنے کا مال خریدا	answered		facet=A2;buyer=Tariq Mehmood;period=this year	purchase=@c.year.tariq_mehmood.purchase_value	plan 55 Section 10	A	buyer
+Q681	Z42	buyer	en	0	year		how much did Tariq Mehmood buy this year	answered		facet=A2;buyer=Tariq Mehmood;period=this year	purchase=@c.year.tariq_mehmood.purchase_value	plan 55 Section 10	A	buyer
+Q682	Z43	stock	roman	1	year		mosmi ka kitna mal bacha he	answered		facet=A2;item=Mosambi	qty=@stock.mosambi.qty	plan 55 Section 10	A	stock
+Q683	Z43	stock	urdu	0	year		موسمی کا کتنا مال باقی ہے	answered		facet=A2;item=Mosambi	qty=@stock.mosambi.qty	plan 55 Section 10	A	stock
+Q684	Z43	stock	en	0	year		unsold mosambi stock	answered		facet=A2;item=Mosambi	qty=@stock.mosambi.qty	plan 55 Section 10	A	stock
+Q685	Z44	partner	roman	0	year		partner b ki kul raqam kitni hai	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner
+Q686	Z44	partner	urdu	0	year		پارٹنر ب کی کل رقم	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner
+Q687	Z44	partner	en	1	year		what is partnr B's total	answered		facet=A2;partner=Partner B	total=@partner.partner_b.total	plan 55 Section 10	A	partner

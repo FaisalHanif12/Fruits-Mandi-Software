@@ -23,6 +23,8 @@
 // tools (a note: the usual tools), filters (topic=, general=, route= ...), figures, source, after
 // (the g of the entry whose first wording is asked before this one).
 
+import A2 from './bank-spec-a2.mjs';
+
 const r = (text) => ['roman', text];
 const rm = (text) => ['roman', text, 'mis'];
 const u = (text) => ['urdu', text];
@@ -877,7 +879,9 @@ const A = [
     kind: 'stock',
     tools: 'tiles/report:R10',
     filters: 'view=R10',
-    figures: 'qty=@tiles.stock_qty;lots=@tiles.stock_lots',
+    // Two true readings (lead, 04-11-2026): the dashboard tile counts the goods of lots (256 in 21); R10 also
+    // lists the 30 nag of trip goods that are not yet sold (286 in 22 rows). Each is a figure of the app.
+    figures: 'qty=@tiles.stock_qty|@r10.total.balance;lots?=@tiles.stock_lots|@r10.count',
     q: [rm('baki mal kitna he'), u('باقی مال کتنا ہے'), e('how much unsold stock is left')],
   },
   {
@@ -1101,7 +1105,9 @@ const B = [
     outcome: 'advice',
     tools: 'report:R29',
     filters: 'view=R29;general=0',
-    figures: 'head!=Salaries|Shop Rent|Electricity',
+    // The big heads, or the optional ones (tea and guests' food, which are the ones a shop can cut): both
+    // are honest answers, so either set of names fits (lead, 04-11-2026).
+    figures: 'head!=Salaries|Shop Rent|Electricity|Tea|Guests Food and Drinks',
     q: [r('kaun sa kharcha kam kar sakta hun'), e('which expense can I cut down')],
   },
   {
@@ -2571,6 +2577,8 @@ const ENTRIES = [
   })),
   ...U.filter((x) => ['U03', 'U04', 'U07'].includes(x.g)).map((x) => ({ cat: 'B', ...x })),
   ...U.filter((x) => x.g === 'U05' || x.g === 'U06').map((x) => ({ cat: 'D', ...x })),
+  // Facet A2 (plan 55 Section 10): 120 more real-time figure questions. Last, so no id moves.
+  ...A2.map((x) => ({ cat: 'A', ...x })),
 ];
 
 export default ENTRIES;

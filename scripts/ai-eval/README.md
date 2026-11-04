@@ -8,9 +8,10 @@ or writes the key.
 | File | What it is |
 |---|---|
 | `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (567 questions). Built, never edited by hand. |
+| `questions.tsv` | The bank (687 questions). Built, never edited by hand. |
 | `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
 | `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
+| `bank-spec-a2.mjs` | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`. |
 | `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
 | `oracle-keys.txt` | The facts the oracle gives (the `@key` of a question). Checked by a Rust test. |
 | `urdu-review.tsv` | The sheet for the Urdu reviewer, written by every run. |
@@ -61,6 +62,17 @@ question and the two word orders of "faisal ki aj ki bikri ka print". In the yea
 the third partner is Usman (he was Partner C). His quick chips (total_dues, today_sales, party_ledger,
 sellers_payable) are checked against the oracle in `robustness_live.rs` with no model call.
 
+Facet **A2** (plan 55 Section 10, `facet=A2`, 120 questions): real-time figures asked any way, the questions the
+app answers by itself with no model call (PRD FR-7.90). 40 groups of 3 wordings: a buyer's balance (9 buyers, one at
+zero), a seller's payable (and an advance), the shop's cash, total dues, total payable and open advances, the shop's
+sale and commission for today, yesterday, this week, this month, last month, September, August, 15 October, this
+year and up to now, an item (banana today, apple, mango), a seller, a buyer, goods left (mosambi) and a partner's
+total. The wordings are very short, with no question word, long and polite, rude, Roman Urdu, Urdu letters, English,
+Roman Urdu or Urdu with English words, and misspelled (17). Every figure is an oracle key. The report ends with the
+REAL-TIME FIGURES lines: the share answered right with no model call ("instant", target 60%), right in no call or
+one (85%), and the wait (p50 2 s, p95 8 s). A2 is gated in "meets"; the same lines for all of category A are shown
+but not gated, because A also holds comparisons, two-part questions and follow-ups.
+
 Worlds: `day`, `late`, `e59`, `e42`, `e34` (the PRD's), `year` (12 months, 369 بکری, today 05-11-2026) and
 `thin` (set up, no sale: the Owner's data today).
 
@@ -88,10 +100,11 @@ node scripts/ai-eval/run.mjs --bank FILE --check   # another bank (a hidden one)
 node scripts/ai-eval/run.mjs --bank FILE    # ... run live and scored the same way
 node scripts/ai-eval/run.mjs --oracle-dump out.json   # the oracle facts with values, and the names
 node scripts/ai-eval/check-modes.mjs        # --bank and --threads behave as written (no model, no key)
+node scripts/ai-eval/run.mjs --results F --summary-out S --detail-out D --review-out R   # score a file again, write elsewhere
 ```
 
 **Threads.** The live run asks 3 questions at once by default (`--threads N`, 1 to 8), which takes the
-567 questions from about 90 minutes to about 30. Each question has its own copy of its books and its
+687 questions from about 110 minutes to about 35. Each question has its own copy of its books and its
 own conversation, and its time is the question's own (the clock starts when that question is asked).
 The rows come back in the order they finish; the scorer finds a row by its id. The provider may answer
 a little slower, or say it is busy, when several run at once: use `--threads 1` for a timing check on
@@ -206,6 +219,13 @@ Pending (plan 52 Section 8.2, lead, 03-11-2026):
     (or, for a calculated figure, the inputs of its working; a number of the question is left out) that is not
     in what the buttons open is a miss: a wrong place or wrong filters. A button that fails to open is a miss.
     The dashboard tiles are not run: an answer whose only button is the tiles is a note, not checked.
+
+15. **Local answers** (plan 55 Section 2, FR-7.90; finish_reason `local`, no model call). The app writes what it used
+    into `tool_calls_json`, each entry marked `"local": true` with an id `l<n>`: `app_help` with `input.topic`, one
+    `report` entry for each button in order with `input.id` and `input.filters` (only the filters that are set),
+    `tiles`, `find` (a name nobody has). A help question's topic is read from the entry. A local answer with no
+    such entry (a build before this) is PENDING: neither a pass nor a miss, and the run cannot say "meets". For a
+    print answer the report entries must be the same as the buttons (the same report and filters), or it is a miss.
 
 Tightened:
 

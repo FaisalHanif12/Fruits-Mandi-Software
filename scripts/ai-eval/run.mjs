@@ -40,6 +40,7 @@
 //   --model NAME        another model name (default: the app's default)
 //   --review-out FILE   write the Urdu review sheet here instead of scripts/ai-eval/urdu-review.tsv
 //   --detail-out FILE   write the detail of every miss here (default backend/target/ai-eval/misses.txt)
+//   --summary-out FILE  write the summary here (default backend/target/ai-eval/summary.json)
 //
 // The bank is built from questions-110.tsv (the frozen first 110) and bank-spec.mjs by
 // build-bank.mjs; `--check` fails if questions.tsv is not what they build.
@@ -88,7 +89,9 @@ const RESULTS = join(OUT_DIR, 'results.json');
 const DETAIL = option('--detail-out')
   ? resolve(option('--detail-out'))
   : join(OUT_DIR, 'misses.txt');
-const SUMMARY = join(OUT_DIR, 'summary.json');
+const SUMMARY = option('--summary-out')
+  ? resolve(option('--summary-out'))
+  : join(OUT_DIR, 'summary.json');
 
 // D6-A19, NFR v1.13: the fixed part is at most 11,000 tokens counted with o200k. The model counts
 // about 3.4% more, so as the model counts it the limit is about 11,400.
@@ -355,13 +358,14 @@ function checkList(list, perRow = false) {
     if (count((q) => q.filters.includes('general=1')) < 8)
       problems.push('fewer than 8 general advice questions');
     // The three facets of plan 52 section 8.1: M (mixed language), a party's day, no such party.
-    const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
+    const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
     const facets = {
       M: list.filter((q) => facetOf(q) === 'M'),
       day: list.filter((q) => facetOf(q) === 'day'),
       nosuch: list.filter((q) => facetOf(q) === 'nosuch'),
       print: list.filter((q) => facetOf(q) === 'print'),
       U: list.filter((q) => facetOf(q) === 'U'),
+      A2: list.filter((q) => facetOf(q) === 'A2'),
     };
     const A_SECTIONS = [
       'item',
@@ -448,6 +452,43 @@ function checkList(list, perRow = false) {
       if (!nsText.includes(need)) problems.push(`facet nosuch: no question with ${need}`);
     if (!facets.nosuch.some((q) => q.misspelled && q.outcome === 'answered'))
       problems.push('facet nosuch: no misspelled real name that must be found');
+    // Facet A2 (plan 55 Section 10): 120 real-time figure questions, asked any way.
+    const a2 = facets.A2;
+    if (a2.length < 120) problems.push(`facet A2: ${a2.length} questions (at least 120)`);
+    if (a2.some((q) => q.cat !== 'A' || q.outcome !== 'answered'))
+      problems.push('facet A2: every question is category A and ends in an answer');
+    if (a2.filter((q) => q.misspelled).length < 12)
+      problems.push('facet A2: fewer than 12 misspelled wordings');
+    const a2Text = a2.map((q) => `${q.filters};${q.figures}`).join(' ');
+    for (const need of [
+      'balance=',
+      'advance=',
+      'cash=',
+      'total=',
+      'payable=',
+      'gross=',
+      'comm=',
+      'qty=',
+      'buyer=',
+      'seller=',
+      'item=',
+      'partner=',
+      'period=today',
+      'period=yesterday',
+      'period=this week',
+      'period=this month',
+      'period=last month',
+      'period=September',
+      'period=15 October',
+      'period=this year',
+      'period=up to now',
+    ])
+      if (!a2Text.includes(need)) problems.push(`facet A2: no question with ${need}`);
+    // The same figure family in the wordings: short, with no question word, mixed language.
+    const words = (q) => q.question.trim().split(/\s+/).length;
+    if (!a2.some((q) => words(q) <= 3)) problems.push('facet A2: no very short wording');
+    if (!a2.some((q) => /[A-Za-z]/.test(q.question) && /[\u0600-\u06FF]/.test(q.question)))
+      problems.push('facet A2: no mixed Urdu letters and English wording');
   }
   // Every `@key` is a fact the oracle gives.
   const keys = manifestKeys();
@@ -467,9 +508,12 @@ function checkList(list, perRow = false) {
       problems.push(`the spec does not build: ${error.message}`);
     }
   }
-  const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z]+)/) ?? [])[1];
+  const facetOf = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
   const facets = Object.fromEntries(
-    ['M', 'day', 'nosuch', 'print', 'U'].map((k) => [k, list.filter((q) => facetOf(q) === k)]),
+    ['M', 'day', 'nosuch', 'print', 'U', 'A2'].map((k) => [
+      k,
+      list.filter((q) => facetOf(q) === k),
+    ]),
   );
   return {
     problems,
@@ -704,6 +748,54 @@ function reportSources(reply) {
   return (reply?.answer?.sources ?? []).filter((s) => s.kind === 'report');
 }
 
+/**
+ * A filters object as the question log writes it for a local answer: only the filters that are set
+ * (an empty text, false and null are left out), at any depth, so two objects compare as text.
+ */
+function compactFilters(value) {
+  if (Array.isArray(value)) return value.map(compactFilters);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) {
+      const v = compactFilters(value[key]);
+      if (v === null || v === false || v === '' || v === undefined) continue;
+      if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) continue;
+      out[key] = v;
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * A local answer writes one `report` entry in its log for each report button, in order, with the
+ * button's own filters (`input.id`, `input.filters`). They must be the same as the buttons of the
+ * answer: a log that says one thing and a button that opens another is a defect.
+ */
+function logButtonProblems(result, reply) {
+  const entries = (result?.tool_calls ?? []).filter(
+    (c) => c?.local === true && c.tool === 'report' && c.input,
+  );
+  if (entries.length === 0) return [];
+  const buttons = reportSources(reply);
+  const problems = [];
+  if (entries.length !== buttons.length)
+    problems.push(
+      `the local log has ${entries.length} report entries, the answer ${buttons.length} report buttons`,
+    );
+  entries.slice(0, buttons.length).forEach((entry, i) => {
+    const button = buttons[i];
+    if (entry.input.id !== button.id)
+      problems.push(`log entry ${i + 1} is ${entry.input.id}, the button is ${button.id}`);
+    else if (
+      JSON.stringify(compactFilters(entry.input.filters ?? {})) !==
+      JSON.stringify(compactFilters(button.filters ?? {}))
+    )
+      problems.push(`log entry ${i + 1} (${entry.input.id}) has other filters than its button`);
+  });
+  return problems;
+}
+
 /** One line for a report button: the report, the party and the dates it opens with. */
 function describeButton(source) {
   const f = source.filters ?? {};
@@ -805,7 +897,12 @@ function stepProblems(want, source, how) {
       );
   } else {
     const dates = byId('assistant-how-set-dates');
-    if (!dates) problems.push('no set-dates step');
+    const day = byId('assistant-how-set-day');
+    if (!dates && day && want.from && want.from === want.to) {
+      // One day (from = to): plan 55 Section 7 lets the steps say "set the day" for it.
+      if (stepArg(day, 'day') !== want.from)
+        problems.push(`steps set the day ${stepArg(day, 'day')}, wanted ${want.from}`);
+    } else if (!dates) problems.push('no set-dates step');
     else {
       if (stepArg(dates, 'from') !== want.from)
         problems.push(`steps set from ${stepArg(dates, 'from')}, wanted ${want.from}`);
@@ -834,12 +931,100 @@ function cellKey(cell) {
 }
 
 /**
- * The figures of an answer a button must hold (plan 55 gate 3): every figure of its text, except one
- * that came from a calculation (then the inputs of its working are the figures), and every number
- * of its tables.
+ * The guide topics a question was answered from. A model answer asks the guide (an `app_help` call).
+ * A local answer (plan 55 Section 2, no model call) makes no tool call; the app writes its guide
+ * topic in the question log as a local entry of `tool_calls_json`. The shape is read loosely so the
+ * log may name the topic in `input.topic`, `topic` or `args.topic`: an entry of `app_help`, or any
+ * entry marked `local`.
+ */
+function helpTopicsOf(result) {
+  const topics = [];
+  for (const c of result?.tool_calls ?? []) {
+    if (!c || (c.tool !== 'app_help' && c.local !== true)) continue;
+    const topic = c.input?.topic ?? c.topic ?? c.args?.topic;
+    if (typeof topic === 'string') topics.push(topic);
+  }
+  return topics;
+}
+
+/** True when the app logs its local answers (any entry of the row is marked `local`). */
+function logsLocalEntries(result) {
+  return (result?.tool_calls ?? []).some((c) => c && c.local === true);
+}
+
+/**
+ * The numbers a question itself holds, as the keys of a figure: its digits, and a number with a unit
+ * word spelled out ("30 lakh" is 3,000,000, "1 crore" 10,000,000, "5 hazar" 5,000). The app gives
+ * them back in its answer (a target), but they are not figures of the books.
+ */
+function numbersOfQuestion(text) {
+  const keys = new Set((text.match(/\d+/g) ?? []).map((d) => String(Number(d))));
+  const unit = /(\d+)\s*(lakh|lac|lakhs|لاکھ|crore|karor|کروڑ|hazar|hazaar|hazar|ہزار)/giu;
+  const times = (word) =>
+    /^(lakh|lac|lakhs|لاکھ)$/i.test(word)
+      ? 100000
+      : /^(crore|karor|کروڑ)$/i.test(word)
+        ? 10000000
+        : 1000;
+  for (const m of text.matchAll(unit)) keys.add(String(Number(m[1]) * times(m[2])));
+  return keys;
+}
+
+/**
+ * The values an answer gives as a forecast, by their keys: the months of a chart that are not
+ * actual, and the totals and monthly values of every method of the estimate. A forecast is the app's
+ * own working, so it is never in a report of the books.
+ */
+function forecastKeys(answer) {
+  const keys = new Set();
+  const add = (cell) => {
+    const key = cellKey(cell);
+    if (key) keys.add(key);
+  };
+  for (const chart of answer?.charts ?? [])
+    for (const series of chart.series ?? [])
+      if (series.kind !== 'actual') for (const value of series.values ?? []) add(value);
+  for (const method of answer?.estimate?.methods ?? []) {
+    add(method.per_month);
+    add(method.total);
+    add(method.year_total);
+    for (const step of method.working?.steps ?? []) add(step.result);
+    // The same-growth method adds one step to the last month, again and again; the months it
+    // projects appear as inputs of its last sum but are not made by a step of the working.
+    const stepPaisa = method.step?.paisa;
+    if (Number.isInteger(stepPaisa)) {
+      const sign = method.step_dir === 'down' ? -1 : 1;
+      const bases = (method.working?.steps ?? []).flatMap((st) =>
+        (st.inputs ?? []).filter((i) => i?.type === 'money').map((i) => i.paisa),
+      );
+      for (const base of bases)
+        for (let k = 1; k <= 24; k += 1) add({ type: 'money', paisa: base + sign * k * stepPaisa });
+    }
+  }
+  return keys;
+}
+
+/**
+ * The figures of an answer a button must hold (plan 55 gate 3), as {key, count}: every figure of
+ * its text, except one that came from a calculation (then the inputs of its working are the
+ * figures), and every number of its tables. A `count` is a plain number (a number of entries, a
+ * number of days), not an amount.
+ *
+ * In a working, three kinds of input are not figures of a report and are left out (plan 55 gate 3,
+ * lead 04-11-2026): the result of an earlier step; a constant of the calculation (a `number` or a
+ * `percent` input: the months used, a multiplier, a factor); and a value of the forecast the answer
+ * itself makes. The history the forecast stands on (the actual months) stays checked.
  */
 function answerFigures(answer) {
   const out = [];
+  const forecast = forecastKeys(answer);
+  // The result of any step of any working in the answer: a figure the app worked out itself, which
+  // may be shown beside the working that made it (the total of the months already booked).
+  const worked = new Set();
+  for (const part of answer?.parts ?? [])
+    for (const st of part.working?.steps ?? []) worked.add(cellKey(st.result));
+  worked.delete(null);
+  const isForecast = (key) => forecast.size > 0 && (forecast.has(key) || worked.has(key));
   for (const part of answer?.parts ?? []) {
     if (part.type !== 'figure') continue;
     const steps = part.working?.steps ?? [];
@@ -847,13 +1032,14 @@ function answerFigures(answer) {
       const results = new Set(steps.map((st) => cellKey(st.result)));
       for (const st of steps)
         for (const input of st.inputs ?? []) {
+          if (input?.type === 'number' || input?.type === 'percent') continue;
           const key = cellKey(input);
-          // The result of an earlier step is not a figure of a report.
-          if (key && !results.has(key)) out.push(key);
+          // The result of an earlier step, or a forecast value, is not a figure of a report.
+          if (key && !results.has(key) && !forecast.has(key)) out.push({ key, count: false });
         }
     } else {
       const key = cellKey(part.cell);
-      if (key) out.push(key);
+      if (key && !isForecast(key)) out.push({ key, count: part.cell?.type === 'number' });
     }
   }
   for (const table of answer?.tables ?? []) {
@@ -861,7 +1047,7 @@ function answerFigures(answer) {
     for (const row of table.rows ?? []) cells.push(...(row.row?.cells ?? []));
     for (const cell of cells) {
       const key = cellKey(cell);
-      if (key) out.push(key);
+      if (key) out.push({ key, count: cell?.type === 'number' });
     }
   }
   return out;
@@ -1000,12 +1186,20 @@ function score(question, result, oracle) {
     }
   }
   // A help question must ask the guide for its topic (plan 51 B3).
+  // A local answer (finish_reason `local`, no model call) asks the guide through the app itself; the
+  // question log names its topic in a local entry. A row of a build that does not log it yet cannot
+  // be judged: it is PENDING (neither a pass nor a miss) and the run cannot say "meets".
   const topicWant = question.filters.match(/topic=([a-z_]+)/);
-  if (
-    topicWant &&
-    !(result.tool_calls ?? []).some((c) => c.tool === 'app_help' && c.input?.topic === topicWant[1])
-  )
-    reasons.push(`app_help topic ${topicWant[1]} not asked`);
+  let helpPending = false;
+  if (topicWant && !helpTopicsOf(result).includes(topicWant[1])) {
+    const localAnswer = result.finish_reason === 'local' && (result.model_calls ?? 0) === 0;
+    if (localAnswer && !logsLocalEntries(result)) {
+      helpPending = true;
+      notes.push(
+        `help (pending the local log entry): the guide topic of a local answer is not in the log`,
+      );
+    } else reasons.push(`app_help topic ${topicWant[1]} not asked`);
+  }
   // A change request ends in a refusal that points to the right entry screen.
   const route = question.filters.match(/route=([a-z_]+)/);
   if (route && reply?.entry_route?.screen !== route[1])
@@ -1035,19 +1229,37 @@ function score(question, result, oracle) {
   // by the harness with the button's own filters through the same backend command; the answer's
   // figures must be in what it holds. A figure that is not there is a wrong place or wrong filters.
   if (Array.isArray(result.buttons) && result.buttons.length > 0 && reply?.answer) {
-    const real = result.buttons.filter((b) => !b.skipped);
+    // R31 (a partner's statement) is built from the services' statement, not by `reports::run`. A
+    // row made before the harness opened it that way holds the refusal of `reports::run`; that says
+    // nothing about the answer, so such a button is a note and not a miss.
+    const harnessGap = (b) => /R31 is built from the statement of the services/.test(b.error ?? '');
+    if (result.buttons.some(harnessGap))
+      notes.push('button R31: the old harness could not open it, not checked');
+    const real = result.buttons.filter((b) => !b.skipped && !harnessGap(b));
     if (real.length === 0) {
       notes.push('buttons: only the dashboard tiles, not checked');
     } else {
       for (const b of real)
         if (b.error) reasons.push(`button ${b.label} fails to open: ${b.error}`);
-      const held = new Set(real.flatMap((b) => b.numbers ?? []));
-      const ownNumbers = new Set(
-        (question.question.match(/\d+/g) ?? []).map((d) => String(Number(d))),
+      // What a button holds: the numbers of its cells and the number of its rows (an answer says
+      // "128 entries" or "9 lots"; the screen shows that count as its row count).
+      const held = new Set(
+        real.flatMap((b) => [
+          ...(b.numbers ?? []),
+          ...(Number.isInteger(b.rows) ? [String(b.rows)] : []),
+        ]),
       );
-      const missing = [...new Set(answerFigures(reply.answer))].filter(
-        (k) => !held.has(k) && !ownNumbers.has(k),
-      );
+      const ownNumbers = numbersOfQuestion(question.question);
+      // A party card button (R13 with his name) opens his ledger; the days or the entries the card
+      // gave ("16 days old") are not a cell of that ledger, so a plain count is not checked there.
+      const hasCard = real.some((b) => /^R13 /.test(b.label ?? ''));
+      const missing = [
+        ...new Set(
+          answerFigures(reply.answer)
+            .filter((f) => !held.has(f.key) && !ownNumbers.has(f.key) && !(f.count && hasCard))
+            .map((f) => f.key),
+        ),
+      ];
       if (missing.length) {
         const why = `button: ${missing.length} figure(s) of the answer are not in what the button opens (${real.map((b) => b.label).join(', ')}): ${missing.slice(0, 4).join(', ')}`;
         if (result.buttons.some((b) => b.skipped))
@@ -1066,6 +1278,8 @@ function score(question, result, oracle) {
   let printPending = false;
   if (printWant && reply) {
     const contractIn = result.print_contract === true || hasStepsField(reply);
+    // A local print answer writes one report entry for each button; they must agree (plan 55).
+    for (const why of logButtonProblems(result, reply)) reasons.push(`log: ${why}`);
     const found = reportSources(reply);
     const problems = [];
     if (reply.outcome === 'change_refused' || reply.entry_route)
@@ -1174,6 +1388,7 @@ function score(question, result, oracle) {
   if (lost) kind = 'LOST (network)';
   else if (pending) kind = 'PENDING (asked_role is not in the reply yet)';
   else if (printPending) kind = 'PENDING (the print steps are not in the reply yet)';
+  else if (helpPending) kind = 'PENDING (the guide topic of a local answer is not in the log yet)';
   else if (reasons.length === 0) kind = 'PASS';
   else if (!reply) kind = 'MISS (harness)';
   else if (network) kind = 'MISS (network)';
@@ -1183,7 +1398,7 @@ function score(question, result, oracle) {
   return {
     id: question.id,
     cat: question.cat,
-    pass: reasons.length === 0 && !lost && !pending && !printPending,
+    pass: reasons.length === 0 && !lost && !pending && !printPending && !helpPending,
     kind,
     reasons,
     notes,
@@ -1192,7 +1407,7 @@ function score(question, result, oracle) {
     afterReading,
     network,
     lost,
-    pending: pending || printPending,
+    pending: pending || printPending || helpPending,
     failure,
   };
 }
@@ -1212,9 +1427,8 @@ function groupAgreement(list, verdicts, results) {
       const v = verdicts.get(q.id);
       if (q.kind === 'help') {
         // A help group agrees on the topic it asked for.
-        const topics = (results.get(q.id)?.tool_calls ?? [])
-          .filter((c) => c.tool === 'app_help')
-          .map((c) => c.input?.topic);
+        const topics = helpTopicsOf(results.get(q.id));
+        if (v.pending) return 'network';
         return [...new Set(topics)].sort().join(',');
       }
       if (v.network || v.lost || v.pending) return 'network'; // a lost connection, or a field not built yet, says nothing about the figures
@@ -1454,6 +1668,61 @@ function speedStats(qs, verdicts, results) {
 }
 
 /**
+ * The instant-answer figures of plan 55 Section 10 for a set of questions: how many were answered
+ * right with no model call ("instant"), right in no call or one, and the wait of each group. A
+ * question lost to the network, pending or ended on a network failure is left out.
+ */
+function instantStats(qs, verdicts, results) {
+  const rows = qs
+    .filter((q) => {
+      const v = verdicts.get(q.id);
+      return v && results.has(q.id) && !v.lost && !v.pending && !v.network;
+    })
+    .map((q) => ({ v: verdicts.get(q.id), r: results.get(q.id) }));
+  const calls = (r) => r.model_calls ?? (r.calls ?? []).length;
+  const wait = (r) => r.millis ?? 0;
+  const n = rows.length;
+  const noCall = rows.filter((x) => calls(x.r) === 0);
+  const instant = rows.filter((x) => x.v.pass && calls(x.r) === 0);
+  const oneOrNone = rows.filter((x) => x.v.pass && calls(x.r) <= 1);
+  const all = rows.map((x) => wait(x.r));
+  const times = (xs) => xs.map((x) => wait(x.r));
+  const wrong = rows.filter((x) => !x.v.pass).length;
+  const p50 = percentile(all, 0.5);
+  const p95 = percentile(all, 0.95);
+  const instantShare = n ? instant.length / n : 0;
+  const oneShare = n ? oneOrNone.length / n : 0;
+  return {
+    n,
+    noCall: noCall.length,
+    wrong,
+    instant: instant.length,
+    instantShare,
+    oneOrNone: oneOrNone.length,
+    oneShare,
+    instantTimes: times(instant),
+    oneTimes: times(oneOrNone),
+    p50,
+    p95,
+    ok: n === 0 || (instantShare >= 0.6 && oneShare >= 0.85 && p50 <= 2000 && p95 <= 8000),
+  };
+}
+
+/** The lines of the instant-answer report for one group. */
+function instantLines(name, st) {
+  if (st.n === 0) return [`    ${name}: no question ran`];
+  const pct = (x) => `${(100 * x).toFixed(1)}%`;
+  const flag = (ok) => (ok ? 'OK' : 'UNDER');
+  const lines = [
+    `    ${name}: ${st.n} questions   no model call at all ${st.noCall} (${pct(st.noCall / st.n)}), of them right ${st.instant}`,
+    `      instant (right, no model call): ${st.instant} (${pct(st.instantShare)}) ${flag(st.instantShare >= 0.6)} vs 60%   wait p50 / p95 ${p50p95(st.instantTimes)}`,
+    `      instant or one call (right): ${st.oneOrNone} (${pct(st.oneShare)}) ${flag(st.oneShare >= 0.85)} vs 85%   wait p50 / p95 ${p50p95(st.oneTimes)}`,
+    `      every question: wait p50 ${ms(st.p50)} ${flag(st.p50 <= 2000)} vs 2 s, p95 ${ms(st.p95)} ${flag(st.p95 <= 8000)} vs 8 s   not right: ${st.wrong}`,
+  ];
+  return lines;
+}
+
+/**
  * The speed budget of plan 55 Section 3, by kind of question, on the time the Owner waits (the whole
  * question, a network failure left out):
  *
@@ -1672,6 +1941,32 @@ function report(list, data) {
     );
   }
   const oneCallOk = !speed.A || speed.A.n === 0 || speed.A.oneOrNone >= 0.7;
+  // Plan 55 Section 10: real-time figures answered instantly (no model call) and right. Shown for
+  // facet A2 (the 120 simple figures; gated) and for the whole of category A (shown, not gated: it
+  // also holds comparisons, two-part questions and follow-ups that need the model).
+  const facetOfQ = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
+  const instant = {
+    A2: instantStats(
+      list.filter((q) => facetOfQ(q) === 'A2'),
+      verdicts,
+      results,
+    ),
+    A: instantStats(
+      list.filter((q) => q.cat === 'A'),
+      verdicts,
+      results,
+    ),
+  };
+  const a2Ok = instant.A2.n === 0 || instant.A2.ok;
+  say();
+  say(
+    '  REAL-TIME FIGURES (plan 55 Section 10): a right answer with no model call ("instant"), and in no call or one; the wait of each. Target for A2: instant at least 60%, instant or one call at least 85%, p50 2 s, p95 8 s:',
+  );
+  for (const [name, st] of [
+    ['A2 (the 120 simple figures)', instant.A2],
+    ['A  (all of category A, not gated)', instant.A],
+  ])
+    for (const line of instantLines(name, st)) say(line);
   const over25 = budget.groups.flatMap((g) => (g.hard === 25000 ? g.over : []));
   const slowLocal = budget.groups.flatMap((g) => (g.hard === 3000 ? g.over : []));
   say(
@@ -1711,6 +2006,8 @@ function report(list, data) {
       say(`  asked_role / found_as: ${pendingBy('asked_role').join(' ')}`);
     if (pendingBy('print').length)
       say(`  print steps (plan 54 S2): ${pendingBy('print').join(' ')}`);
+    if (pendingBy('guide topic').length)
+      say(`  guide topic of a local answer (the log entry): ${pendingBy('guide topic').join(' ')}`);
   }
   const noted = vlist.filter((v) => v.notes.length > 0);
   say();
@@ -1820,7 +2117,8 @@ function report(list, data) {
     lostV.length === 0 &&
     pendingV.length === 0 &&
     budget.ok &&
-    oneCallOk;
+    oneCallOk &&
+    a2Ok;
   say();
   say(
     meets
@@ -1831,9 +2129,9 @@ function report(list, data) {
             .map((s) => `${s.cat} score`)
             .concat(stats.filter((s) => !s.timeOk).map((s) => `${s.cat} time`))
             .join(', ') || 'groups, reads or network'
-        }${lostV.length ? '; and questions lost to the network' : ''}${pendingV.length ? '; and questions pending a field of the contract' : ''}${budget.ok ? '' : '; and the speed budget or a hard limit'}${oneCallOk ? '' : '; and category A under 70% in one call'})`,
+        }${lostV.length ? '; and questions lost to the network' : ''}${pendingV.length ? '; and questions pending a field of the contract' : ''}${budget.ok ? '' : '; and the speed budget or a hard limit'}${oneCallOk ? '' : '; and category A under 70% in one call'}${a2Ok ? '' : '; and the real-time figures (A2) under their instant, one-call or wait target'})`,
   );
-  return { text: lines.join('\n'), meets, results, verdicts, stats, bad, speed, budget };
+  return { text: lines.join('\n'), meets, results, verdicts, stats, bad, speed, budget, instant };
 }
 
 /** One text of every miss for the loop of plan 52 item 14: the answer, the calls, the time. */
@@ -2854,6 +3152,272 @@ function selfTest() {
     score(bq, { reply: answered([money(12880)]), tool_calls: [] }, {}).pass,
     'a row without buttons was checked',
   );
+  // Plan 55 Section 10: the instant-answer figures. Ten questions: six right with no model call
+  // (they wait 40 ms), two right in one call (3 s), one wrong with no call, one right in two calls.
+  const mkRow = (pass, calls, millis) => ({
+    v: { pass, lost: false, pending: false, network: false },
+    r: { model_calls: calls, millis },
+  });
+  const rowsOf = [
+    ...Array.from({ length: 6 }, () => mkRow(true, 0, 40)),
+    mkRow(true, 1, 3000),
+    mkRow(true, 1, 3000),
+    mkRow(false, 0, 35),
+    mkRow(true, 2, 9000),
+  ];
+  const fakeQs = rowsOf.map((_, i) => ({ id: `I${i}` }));
+  const fakeV = new Map(rowsOf.map((x, i) => [`I${i}`, x.v]));
+  const fakeR = new Map(rowsOf.map((x, i) => [`I${i}`, x.r]));
+  const ist = instantStats(fakeQs, fakeV, fakeR);
+  expect(
+    ist.n === 10 && ist.instant === 6 && ist.noCall === 7 && ist.oneOrNone === 8 && ist.wrong === 1,
+    `instant counts wrong: ${JSON.stringify({ n: ist.n, i: ist.instant, nc: ist.noCall, o: ist.oneOrNone, w: ist.wrong })}`,
+  );
+  expect(
+    Math.abs(ist.instantShare - 0.6) < 1e-9 && Math.abs(ist.oneShare - 0.8) < 1e-9 && !ist.ok,
+    'the shares, or the target (60% instant, 85% instant or one call), were wrong',
+  );
+  const lostRow = new Map([['I0', { pass: true, lost: true, pending: false, network: false }]]);
+  expect(
+    instantStats([{ id: 'I0' }], lostRow, new Map([['I0', { model_calls: 0, millis: 40 }]])).n ===
+      0,
+    'a question lost to the network was counted in the instant share',
+  );
+  const goodRows = Array.from({ length: 10 }, (_, i) =>
+    mkRow(true, i < 7 ? 0 : 1, i < 7 ? 40 : 3000),
+  );
+  const gq = goodRows.map((_, i) => ({ id: `G${i}` }));
+  const gst = instantStats(
+    gq,
+    new Map(goodRows.map((x, i) => [`G${i}`, x.v])),
+    new Map(goodRows.map((x, i) => [`G${i}`, x.r])),
+  );
+  expect(gst.ok && gst.oneShare === 1, 'a set that meets the targets did not meet them');
+  // Run 1 gaps (lead, 04-11-2026). A number the answer gives as a count is held by the row count of
+  // its button; a plain count from a party card (days, entries) is not looked for in his ledger, but
+  // an amount still is.
+  const count = (n) => ({
+    type: 'figure',
+    cell: { type: 'number', value: n },
+    dir: null,
+    checked: true,
+  });
+  const rowsButton = (label, rows, numbers = []) => [
+    { kind: 'report', label, rows, error: null, numbers },
+  ];
+  expect(
+    score(bq, withButtons([money(12880), count(128)], rowsButton('R13', 128, ['12880'])), {}).pass,
+    'a count equal to the rows of its button missed',
+  );
+  expect(
+    !score(bq, withButtons([money(12880), count(129)], rowsButton('R13', 128, ['12880'])), {}).pass,
+    'a count that is not the rows of its button passed',
+  );
+  expect(
+    score(bq, withButtons([money(12880), count(16)], rowsButton('R13 Faisal', 139, ['12880'])), {})
+      .pass,
+    'a count of days from a party card was looked for in his ledger',
+  );
+  expect(
+    !score(bq, withButtons([money(12880), count(16)], rowsButton('R13', 139, ['12880'])), {}).pass,
+    'a count beside a plain R13 (no card) passed unchecked',
+  );
+  expect(
+    !score(bq, withButtons([money(12880)], rowsButton('R13 Faisal', 139, ['5000'])), {}).pass,
+    'an amount not held by a party card button passed',
+  );
+  // A forecast: the history it stands on is checked; the constants of the working and the forecast
+  // values it adds are not report figures.
+  const history = [
+    { type: 'money', paisa: 7529440000 },
+    { type: 'money', paisa: 7546540000 },
+  ];
+  const forecastPart = (inputs, resultPaisa) => ({
+    type: 'figure',
+    cell: { type: 'money', paisa: resultPaisa },
+    dir: null,
+    checked: false,
+    working: {
+      title_id: 'assistant-working-same-pace',
+      steps: [
+        {
+          op: 'average',
+          inputs: [...history, { type: 'number', value: 3 }],
+          result: { type: 'money', paisa: 7537990000 },
+        },
+        {
+          op: 'times',
+          inputs: [
+            { type: 'money', paisa: 7537990000 },
+            { type: 'number', value: 2 },
+          ],
+          result: { type: 'money', paisa: 15075980000 },
+        },
+        { op: 'sum', inputs, result: { type: 'money', paisa: resultPaisa } },
+      ],
+    },
+  });
+  const forecastExtra = {
+    estimate: {
+      methods: [
+        {
+          kind: 'same_pace',
+          per_month: { type: 'money', paisa: 7537990000 },
+          total: { type: 'money', paisa: 15075980000 },
+          working: { steps: [] },
+        },
+      ],
+    },
+    charts: [
+      {
+        series: [
+          { kind: 'actual', values: history },
+          { kind: 'same_growth', values: [{ type: 'money', paisa: 9326860000 }] },
+        ],
+      },
+    ],
+  };
+  const fq = mk({ figures: '', question: 'is raftar se saal ke aakhir tak commission' });
+  const fcPart = forecastPart([...history, { type: 'money', paisa: 9326860000 }], 9999999900);
+  const histHeld = [
+    {
+      kind: 'analytics',
+      label: 'view G',
+      rows: 12,
+      error: null,
+      numbers: ['75294400', '75465400'],
+    },
+  ];
+  expect(
+    score(
+      fq,
+      { reply: answered([fcPart], {}, forecastExtra), tool_calls: [], buttons: histHeld },
+      {},
+    ).pass,
+    'a forecast was looked for in the history (constants, a forecast value or its own result)',
+  );
+  expect(
+    !score(
+      fq,
+      {
+        reply: answered([fcPart], {}, forecastExtra),
+        tool_calls: [],
+        buttons: [
+          { kind: 'analytics', label: 'view G', rows: 12, error: null, numbers: ['75294400'] },
+        ],
+      },
+      {},
+    ).pass,
+    'a forecast whose history is not in the button passed',
+  );
+  // A what-if factor (a percent) and a count of months are constants of the calculation.
+  const factorPart = {
+    type: 'figure',
+    cell: { type: 'money', paisa: 91961210000 },
+    dir: null,
+    checked: false,
+    working: {
+      title_id: 'assistant-working-percent-more',
+      steps: [
+        {
+          op: 'times',
+          inputs: [
+            { type: 'money', paisa: 83601100000 },
+            { type: 'percent', hundredths: 11000 },
+          ],
+          result: { type: 'money', paisa: 91961210000 },
+        },
+      ],
+    },
+  };
+  expect(
+    score(
+      fq,
+      withButtons(
+        [factorPart],
+        [{ kind: 'analytics', label: 'view G', rows: 12, error: null, numbers: ['836011000'] }],
+      ),
+      {},
+    ).pass,
+    'a percent factor of a what-if was looked for in the button',
+  );
+  // R31 cannot be opened by `reports::run`: a row made before the harness opened it through the
+  // statement holds that refusal, which says nothing about the answer.
+  const r31Old = score(
+    bq,
+    withButtons(
+      [money(12880)],
+      [
+        {
+          kind: 'report',
+          label: 'R31',
+          rows: 0,
+          error: 'Data("R31 is built from the statement of the services")',
+          numbers: [],
+        },
+      ],
+    ),
+    {},
+  );
+  expect(
+    r31Old.pass && r31Old.notes.some((x) => x.includes('old harness')),
+    'the old harness refusal of R31 was a miss',
+  );
+  // A local help answer (no model call): its guide topic is read from the log entry the app writes.
+  const hq = mk({
+    cat: 'D',
+    kind: 'help',
+    filters: 'topic=receipt',
+    figures: '',
+    question: 'wasooli kaise karte hain',
+  });
+  const localHelp = (tool_calls) => ({
+    reply: answered([text('جی')]),
+    tool_calls,
+    finish_reason: 'local',
+    model_calls: 0,
+  });
+  const unlogged = score(hq, localHelp([]), {});
+  expect(
+    unlogged.pending && !unlogged.pass && unlogged.kind.startsWith('PENDING'),
+    'a local help answer with no log entry was not pending',
+  );
+  expect(
+    score(hq, localHelp([{ tool: 'app_help', local: true, input: { topic: 'receipt' } }]), {}).pass,
+    'a local help answer with its topic in the log missed',
+  );
+  const wrongLocal = score(
+    hq,
+    localHelp([{ tool: 'app_help', local: true, input: { topic: 'payment' } }]),
+    {},
+  );
+  expect(
+    !wrongLocal.pass &&
+      !wrongLocal.pending &&
+      wrongLocal.reasons.some((x) => x.includes('app_help topic receipt')),
+    'a local help answer with the wrong topic passed or waited',
+  );
+  expect(
+    score(
+      hq,
+      {
+        reply: answered([text('جی')]),
+        tool_calls: [{ tool: 'app_help', input: { topic: 'receipt' } }],
+        finish_reason: 'stop',
+        model_calls: 2,
+      },
+      {},
+    ).pass,
+    'a model help answer that asked the guide missed',
+  );
+  expect(
+    !score(
+      hq,
+      { reply: answered([text('جی')]), tool_calls: [], finish_reason: 'stop', model_calls: 2 },
+      {},
+    ).pass,
+    'a model help answer that never asked the guide passed',
+  );
   // A print request (plan 54 Section 6, plan 55 Section 7): the button (first source), the party in his
   // real role, the dates and the steps (`answer.how`); never a change request. PENDING until
   // `answer.how` is in the reply.
@@ -2892,6 +3456,99 @@ function selfTest() {
   ];
   const printReply = (src, how = rightSteps(), extra = {}) =>
     answered([], {}, { sources: [src], how, ...extra });
+  // One day print: the steps may say "set the day"; a range must say "set the dates".
+  const oneDayQ = mk({
+    filters: 'facet=print;pkind=buyer;pperiod=today',
+    figures:
+      'print.report=R5;print.party=Faisal;print.role=buyer;print.from=@cal.a;print.to=@cal.a;print.steps=1',
+  });
+  const oneDayOracle = { 'cal.a': '2026-10-05' };
+  const oneDayButton = button({ from: '2026-10-05', to: '2026-10-05' });
+  const oneDaySteps = (kind) => [
+    step('assistant-how-open-report', [['report', text('R5')]]),
+    step('assistant-how-set-party', [
+      ['role', text('buyer')],
+      ['party', { type: 'names', names: { ur: 'فیصل', en: 'Faisal' } }],
+      ['code', text('7')],
+    ]),
+    kind === 'day'
+      ? step('assistant-how-set-day', [['day', text('2026-10-05')]])
+      : step('assistant-how-set-dates', [
+          ['from', text('2026-10-05')],
+          ['to', text('2026-10-05')],
+        ]),
+    step('assistant-how-press-print'),
+  ];
+  expect(
+    score(
+      oneDayQ,
+      { reply: printReply(oneDayButton, oneDaySteps('day')), tool_calls: [] },
+      oneDayOracle,
+    ).pass,
+    'one day with a set-day step missed',
+  );
+  expect(
+    score(
+      oneDayQ,
+      { reply: printReply(oneDayButton, oneDaySteps('dates')), tool_calls: [] },
+      oneDayOracle,
+    ).pass,
+    'one day with a set-dates step missed',
+  );
+  const wrongDay = oneDaySteps('day');
+  wrongDay[2] = step('assistant-how-set-day', [['day', text('2026-10-06')]]);
+  expect(
+    !score(oneDayQ, { reply: printReply(oneDayButton, wrongDay), tool_calls: [] }, oneDayOracle)
+      .pass,
+    'a set-day step with another day passed',
+  );
+  // The local log of a print answer: one report entry for each button, with the button's filters.
+  const logEntry = (id, filters) => ({
+    id: 'l0',
+    tool: 'report',
+    local: true,
+    input: { id, filters },
+  });
+  const goodLog = [
+    logEntry('R5', {
+      from: '2026-10-05',
+      to: '2026-10-05',
+      party: { record: { name_en: 'Faisal', code: '7' }, person_key: null },
+    }),
+  ];
+  expect(
+    score(
+      oneDayQ,
+      { reply: printReply(oneDayButton, oneDaySteps('day')), tool_calls: goodLog },
+      oneDayOracle,
+    ).pass,
+    'a local log entry equal to its button missed',
+  );
+  const badLog = [logEntry('R5', { from: '2026-10-05', to: '2026-10-06' })];
+  const badLogVerdict = score(
+    oneDayQ,
+    { reply: printReply(oneDayButton, oneDaySteps('day')), tool_calls: badLog },
+    oneDayOracle,
+  );
+  expect(
+    !badLogVerdict.pass && badLogVerdict.reasons.some((x) => x.startsWith('log:')),
+    'a local log entry with other filters than its button passed',
+  );
+  expect(
+    !score(
+      pq,
+      {
+        reply: printReply(button(), [
+          step('assistant-how-open-report', [['report', text('R5')]]),
+          step('assistant-how-set-day', [['day', text('2026-10-01')]]),
+          step('assistant-how-press-print'),
+        ]),
+        tool_calls: [],
+      },
+      pOracle,
+    ).pass,
+    'a month printed with a set-day step passed',
+  );
   // Before the app puts `answer.how` in the reply: pending, and the button check is a note.
   const early = score(
     pq,
@@ -3483,7 +4140,7 @@ function main() {
   );
   const fc = summary.facets;
   console.log(
-    `  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}, print ${fc.print}, Umar's own (U) ${fc.U}`,
+    `  facets: M (mixed language) ${fc.M}, a party's day ${fc.day}, no such party ${fc.nosuch}, print ${fc.print}, Umar's own (U) ${fc.U}, real-time figures (A2) ${fc.A2}`,
   );
   if (problems.length) {
     console.error(`the bank breaks its rules:\n  ${problems.join('\n  ')}`);
@@ -3539,7 +4196,7 @@ function main() {
   }
   const shown = ids.length && !merging ? new Set(ids) : null;
   const scored = shown ? list.filter((q) => shown.has(q.id)) : list;
-  const { text, meets, results, verdicts, stats, speed, budget } = report(scored, data);
+  const { text, meets, results, verdicts, stats, speed, budget, instant } = report(scored, data);
   console.log(text);
   writeReview(
     scored.filter((q) => results.has(q.id)),
@@ -3594,6 +4251,23 @@ function main() {
                   },
                 ]),
               ),
+            },
+          ]),
+        ),
+        instant: Object.fromEntries(
+          Object.entries(instant ?? {}).map(([k, st]) => [
+            k,
+            {
+              questions: st.n,
+              noModelCall: st.noCall,
+              instantRight: st.instant,
+              instantShare: st.instantShare,
+              instantOrOneRight: st.oneOrNone,
+              instantOrOneShare: st.oneShare,
+              waitP50: st.p50,
+              waitP95: st.p95,
+              notRight: st.wrong,
+              meetsTarget: st.ok,
             },
           ]),
         ),
