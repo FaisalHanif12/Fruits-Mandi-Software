@@ -598,6 +598,7 @@ pub fn compute(y: &Year) -> Oracle {
         dump_report_rows(&mut o, name, &run_r(y, id, rfilters("all")), rows);
     }
     stock_by_item(&mut o, y);
+    capability_reports(&mut o, y);
 
     // The dashboard's tiles and the partners' totals.
     let now = dashboard::tiles_now(y.w.env.ctx.db()).expect("the tiles");
@@ -692,6 +693,124 @@ pub fn compute(y: &Year) -> Oracle {
     o
 }
 
+/// A report that may be refused for these filters: its facts are written only when it runs.
+fn try_r(y: &Year, id: ReportId, filters: ReportFilters) -> Option<ReportPage> {
+    reports::run(
+        y.w.env.ctx.db(),
+        &ReportRunInput {
+            id,
+            filters,
+            offset: 0,
+            limit: 100,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .ok()
+}
+
+/// The reports the capability matrix reads (plan 55 Section 11, `scripts/ai-eval/capability.tsv`)
+/// that the oracle did not dump before: the registers by period (totals, the summary lines and the
+/// count; their rows are documents), the balance lists as of today, and one buyer's and one seller's
+/// own reports. Keys: `<report>.<period>.total.<column>`, `<report>.<period>.count`, `r13.<buyer>...`.
+fn capability_reports(o: &mut Oracle, y: &Year) {
+    let periods = [
+        "today",
+        "yesterday",
+        "week",
+        "month",
+        "last_month",
+        "year",
+        "all",
+    ];
+    for p in periods {
+        for (id, name) in [
+            (ReportId::R2, "r2"),
+            (ReportId::R3, "r3"),
+            (ReportId::R4, "r4"),
+            (ReportId::R5, "r5"),
+            (ReportId::R6, "r6"),
+            (ReportId::R7, "r7"),
+            (ReportId::R8, "r8"),
+            (ReportId::R9, "r9"),
+            (ReportId::R11, "r11"),
+            (ReportId::R15, "r15"),
+            (ReportId::R27, "r27"),
+            (ReportId::R28, "r28"),
+            (ReportId::R34, "r34"),
+        ] {
+            // The day book and the day summary list a line or a day for each day: not for all time.
+            if matches!(id, ReportId::R11 | ReportId::R34) && p == "all" {
+                continue;
+            }
+            if let Some(page) = try_r(y, id, rfilters(p)) {
+                dump_report_rows(o, &format!("{name}.{p}"), &page, false);
+            }
+        }
+    }
+    let as_of = ReportFilters {
+        as_of: ddmmyyyy(date(TODAY)),
+        ..ReportFilters::default()
+    };
+    for (id, name, rows) in [
+        (ReportId::R16, "r16", false),
+        (ReportId::R17, "r17", false),
+        (ReportId::R18, "r18", false),
+        (ReportId::R21, "r21", true),
+        (ReportId::R22, "r22", true),
+    ] {
+        if let Some(page) = try_r(y, id, as_of.clone()) {
+            dump_report_rows(o, name, &page, rows);
+        }
+    }
+    if let Some(page) = try_r(y, ReportId::R19, ReportFilters::default()) {
+        dump_report_rows(o, "r19", &page, false);
+    }
+    // One buyer: his ledger, his statement, his bills and his day sheets.
+    for key in ["faisal", "akram_toll_tax"] {
+        let Some(b) = y.buyers.iter().find(|b| b.key == key) else {
+            continue;
+        };
+        let party = Some(PartyFilter {
+            account_id: b.id,
+            person_key: None,
+        });
+        let with = |base: ReportFilters| ReportFilters {
+            party: party.clone(),
+            ..base
+        };
+        for (id, name) in [(ReportId::R13, "r13"), (ReportId::R14, "r14")] {
+            if let Some(page) = try_r(y, id, with(rfilters("all"))) {
+                dump_report_rows(o, &format!("{name}.{key}"), &page, false);
+            }
+        }
+        if let Some(page) = try_r(y, ReportId::R5, with(rfilters("year"))) {
+            dump_report_rows(o, &format!("r5.{key}.year"), &page, false);
+        }
+        let sheet = ReportFilters {
+            as_of: ddmmyyyy(date(TODAY)),
+            party: party.clone(),
+            ..ReportFilters::default()
+        };
+        if let Some(page) = try_r(y, ReportId::R35, sheet) {
+            dump_report_rows(o, &format!("r35.{key}.today"), &page, false);
+        }
+    }
+    // One seller: his bills of the year.
+    for key in ["rahim", "karim"] {
+        let Some(s) = y.sellers.iter().find(|s| s.key == key) else {
+            continue;
+        };
+        let filters = ReportFilters {
+            seller_id: Some(s.id),
+            ..rfilters("year")
+        };
+        if let Some(page) = try_r(y, ReportId::R6, filters) {
+            dump_report_rows(o, &format!("r6.{key}.year"), &page, false);
+        }
+    }
+}
+
 /// The unsold goods by item, summed from the rows of R10 (the stock report).
 fn stock_by_item(o: &mut Oracle, y: &Year) {
     let page = run_r(y, ReportId::R10, rfilters("all"));
@@ -745,6 +864,15 @@ fn ranked(o: &Oracle, prefix: &str, suffix: &str) -> Vec<(String, i64)> {
     rows
 }
 
+/// The row with the smallest amount above zero (ties: the name that sorts first), as (slug, amount),
+/// leaving out the rows named in `skip`.
+fn lowest(o: &Oracle, prefix: &str, suffix: &str, skip: &[&str]) -> Option<(String, i64)> {
+    ranked(o, prefix, suffix)
+        .into_iter()
+        .filter(|(slug, n)| *n > 0 && !skip.contains(&slug.as_str()))
+        .min_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)))
+}
+
 fn shown(o: &Oracle, slug: &str) -> String {
     o.names
         .get(slug)
@@ -780,6 +908,59 @@ fn leaders(o: &mut Oracle) {
     if let Some((slug, n)) = ranked(o, "g.", ".commission").first() {
         puts.push(("top.month_commission.name".into(), slug.replace('_', "-")));
         puts.push(("top.month_commission.amount".into(), n.to_string()));
+    }
+    // The LOWEST ones (lead, 05-11-2026): the item, seller or buyer with the least commission or
+    // sale in a period, and the month with the least commission, each with its name and its amount,
+    // from the same rows. A row with no amount is not "the lowest" (it did not sell). Keys are
+    // `low.<what>.name` and `low.<what>.amount`.
+    // A seller row of view B can be the own goods of the trips or a garden, and a buyer row of view C
+    // the cash buyer with no name: they are not "a seller" or "a buyer" to the Owner. The plain key
+    // leaves them out; the key ending `_any` is the lowest row of the view as it stands.
+    let not_sellers = ["own_goods_trips", "shahpur_garden"];
+    let not_buyers = ["naqdi_mandi_cash_buyer"];
+    for period in ["year", "all", "last_month", "month"] {
+        for (what, view, suffix, skip) in [
+            ("item_commission", "a", ".total_comm", &[][..]),
+            ("item_gross", "a", ".gross", &[][..]),
+            ("seller_commission", "b", ".total_comm", &not_sellers[..]),
+            ("seller_gross", "b", ".gross", &not_sellers[..]),
+            ("buyer_purchase", "c", ".purchase_value", &not_buyers[..]),
+            ("buyer_commission", "c", ".buyer_comm", &not_buyers[..]),
+        ] {
+            let prefix = format!("{view}.{period}.");
+            if let Some((slug, n)) = lowest(o, &prefix, suffix, skip) {
+                puts.push((format!("low.{what}_{period}.name"), shown(o, &slug)));
+                puts.push((format!("low.{what}_{period}.amount"), n.to_string()));
+            }
+            if !skip.is_empty()
+                && let Some((slug, n)) = lowest(o, &prefix, suffix, &[])
+            {
+                puts.push((format!("low.{what}_{period}_any.name"), shown(o, &slug)));
+                puts.push((format!("low.{what}_{period}_any.amount"), n.to_string()));
+            }
+        }
+    }
+    // The month with the least commission: among the finished months, and among all months with
+    // the running one (which has only a few days), because both readings are honest.
+    let running = format!("{:04}_{:02}", TODAY.0, TODAY.1);
+    let months = ranked(o, "g.", ".commission");
+    let least = |skip_running: bool| {
+        months
+            .iter()
+            .filter(|(slug, n)| *n > 0 && !(skip_running && *slug == running))
+            .min_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)))
+            .cloned()
+    };
+    if let Some((slug, n)) = least(true) {
+        puts.push(("low.month_commission.name".into(), slug.replace('_', "-")));
+        puts.push(("low.month_commission.amount".into(), n.to_string()));
+    }
+    if let Some((slug, n)) = least(false) {
+        puts.push((
+            "low.month_commission_any.name".into(),
+            slug.replace('_', "-"),
+        ));
+        puts.push(("low.month_commission_any.amount".into(), n.to_string()));
     }
     // To collect from first: the oldest bill first, then the biggest balance.
     let mut collect: Vec<(String, i64, i64)> = ranked(o, "r20.", ".balance")
@@ -1104,42 +1285,153 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
             (so_far + doubled).to_string(),
         );
     }
-    use mandi_services::domain::forecast::{Method, YearMonth};
-    use mandi_services::forecast::{self, Forecast};
+    use mandi_services::domain::forecast::YearMonth;
     let today = date(TODAY);
     let Some(current) = YearMonth::new(today.year(), today.month()) else {
         return;
     };
     let last_full = today.with_day(1).unwrap_or(today) - Duration::days(1);
-    for (name, key) in [("banana", "kela"), ("apple", "saib")] {
-        let Some(item) = y.items.iter().find(|i| i.key == key) else {
+    // Every item (plan 55 Section 11: not banana and apple only), the commission and the sales: the
+    // next 1, 3, 6 and 12 months by each method, the pace doubled and tripled, and the year end.
+    // The keys of banana and apple commission for 3 and 6 months are the same as before.
+    for item in &y.items {
+        let name = item_name(item.key);
+        for (measure, column) in [("commission", "commission"), ("sales", "gross")] {
+            let mut f = afilters("all");
+            f.to = ddmmyyyy(last_full);
+            f.group_by = Some(analytics::AnalyticsGroupBy::Month);
+            f.item_id = Some(item.id);
+            let page = run_a(y, AnalyticsView::G, f);
+            if let Some(at) = page.columns.iter().position(|c| c.key == column) {
+                put_series_estimates(
+                    o,
+                    &format!("est_item.{name}.{measure}"),
+                    &history_of(&page, at),
+                    current,
+                );
+            }
+        }
+    }
+    // A seller's goods and a buyer's purchases (the sales measure with a seller or a buyer), for
+    // the mixed questions "Rahim ka maal is saal ... aur agle 3 mahine ka andaza".
+    for key in ["rahim", "karim"] {
+        let Some(s) = y.sellers.iter().find(|s| s.key == key) else {
             continue;
         };
         let mut f = afilters("all");
         f.to = ddmmyyyy(last_full);
         f.group_by = Some(analytics::AnalyticsGroupBy::Month);
-        f.item_id = Some(item.id);
+        f.seller_id = Some(s.id);
         let page = run_a(y, AnalyticsView::G, f);
-        let Some(at) = page.columns.iter().position(|c| c.key == "commission") else {
+        if let Some(at) = page.columns.iter().position(|c| c.key == "gross") {
+            put_series_estimates(
+                o,
+                &format!("est_party.{key}.sales"),
+                &history_of(&page, at),
+                current,
+            );
+        }
+    }
+    for key in ["faisal", "tariq"] {
+        let Some(b) = y.buyers.iter().find(|b| b.key == key) else {
             continue;
         };
-        let history = history_of(&page, at);
-        for ahead in [3u32, 6] {
-            if let Ok(Forecast::Estimate(e)) = forecast::estimate(&history, current, ahead, None) {
-                for m in &e.methods {
-                    let word = match m.method {
-                        Method::SamePace => "same_pace",
-                        Method::SameGrowth => "same_growth",
-                        Method::SameSeason => "same_season",
-                        Method::WhatIfPace => "what_if_pace",
-                    };
-                    o.put(
-                        format!("est_item.{name}.commission.a{ahead}.{word}"),
-                        m.total.rupees().to_string(),
-                    );
-                }
+        let mut f = afilters("all");
+        f.to = ddmmyyyy(last_full);
+        f.group_by = Some(analytics::AnalyticsGroupBy::Month);
+        f.buyer = Some(PartyFilter {
+            account_id: b.id,
+            person_key: None,
+        });
+        let page = run_a(y, AnalyticsView::G, f);
+        if let Some(at) = page.columns.iter().position(|c| c.key == "gross") {
+            put_series_estimates(
+                o,
+                &format!("est_party.{key}.sales"),
+                &history_of(&page, at),
+                current,
+            );
+        }
+    }
+}
+
+/// The estimates of one monthly series, as keys `<prefix>.a<N>.<method>` for 1, 3, 6 and 12 months
+/// ahead, the pace doubled and tripled, and the year end (`year_end`, and `year_total` with the
+/// months of the year so far). The same function as the assistant's `estimate` tool.
+fn put_series_estimates(
+    o: &mut Oracle,
+    prefix: &str,
+    history: &[mandi_services::domain::forecast::MonthValue],
+    current: mandi_services::domain::forecast::YearMonth,
+) {
+    use mandi_services::domain::forecast::Method;
+    use mandi_services::forecast::{self, Forecast};
+    for ahead in [1u32, 3, 6, 12] {
+        let Ok(Forecast::Estimate(e)) = forecast::estimate(history, current, ahead, None) else {
+            continue;
+        };
+        for m in &e.methods {
+            let word = method_word(m.method);
+            o.put(
+                format!("{prefix}.a{ahead}.{word}"),
+                m.total.rupees().to_string(),
+            );
+            if m.method == Method::SamePace
+                && let Some(per) = m.per_month
+            {
+                let ahead_n = i64::from(ahead);
+                o.put(
+                    format!("{prefix}.a{ahead}.double_pace"),
+                    (per.rupees() * 2 * ahead_n).to_string(),
+                );
+                o.put(
+                    format!("{prefix}.a{ahead}.triple_pace"),
+                    (per.rupees() * 3 * ahead_n).to_string(),
+                );
             }
         }
+    }
+    let months_left = 13 - date(TODAY).month();
+    if let Ok(Forecast::Estimate(e)) = forecast::estimate(history, current, months_left, None) {
+        let so_far: i64 = history
+            .iter()
+            .filter(|h| h.month.year() == current.year())
+            .map(|h| h.value.rupees())
+            .sum();
+        for m in &e.methods {
+            let word = method_word(m.method);
+            o.put(
+                format!("{prefix}.year_end.{word}"),
+                m.total.rupees().to_string(),
+            );
+            o.put(
+                format!("{prefix}.year_total.{word}"),
+                (so_far + m.total.rupees()).to_string(),
+            );
+        }
+    }
+}
+
+/// The English word the oracle uses for an item key of the seed (`kela` is `banana`).
+fn item_name(key: &str) -> &'static str {
+    match key {
+        "kela" => "banana",
+        "saib" => "apple",
+        "mausami" | "mosambi" => "mosambi",
+        "aam" | "mango" => "mango",
+        "angoor" | "grapes" => "grapes",
+        "aloo" | "potato" => "potato",
+        _ => "other",
+    }
+}
+
+fn method_word(m: mandi_services::domain::forecast::Method) -> &'static str {
+    use mandi_services::domain::forecast::Method;
+    match m {
+        Method::SamePace => "same_pace",
+        Method::SameGrowth => "same_growth",
+        Method::SameSeason => "same_season",
+        Method::WhatIfPace => "what_if_pace",
     }
 }
 

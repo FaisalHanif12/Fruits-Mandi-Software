@@ -695,6 +695,11 @@ fn open_buttons(w: &world::World, reply: &mandi_assistant::ask::AskReply) -> Vec
         .sources
         .iter()
         .map(|source| match source {
+            // R31 (a partner's statement) is put together by the services, not by `reports::run`;
+            // the app opens it with `statement_request` and `statement_page` (reports_engine.rs).
+            AnswerSource::Report { id, filters, .. } if *id == ReportId::R31 => {
+                statement_button(w, &filters.to_filters())
+            }
             AnswerSource::Report { id, filters, .. } => {
                 report_button(*id, filters.to_filters(), id.code().to_owned())
             }
@@ -751,6 +756,54 @@ fn open_buttons(w: &world::World, reply: &mandi_assistant::ask::AskReply) -> Vec
             }
         })
         .collect()
+}
+
+/// The button R31, the statement of a partner, opened the way the app opens it: the request is read
+/// from the button's filters (a partner is required), the services put the statement together, and
+/// the report engine turns it into a page. Every line is read (the same chunk the print uses).
+fn statement_button(w: &world::World, filters: &mandi_reports::reports::ReportFilters) -> Value {
+    use mandi_reports::reports::{statement_page, statement_request};
+    use mandi_services::core::dates::{BusinessDate, format_ddmmyyyy};
+    use mandi_services::core::statement::PartnersStatementInput;
+    use std::collections::BTreeSet;
+
+    const CHUNK: u32 = 10_000;
+    let typed = |iso: Option<&str>| iso.and_then(BusinessDate::parse_iso).map(format_ddmmyyyy);
+    let shown = |label: &str, rows: i64, error: Option<String>, numbers: BTreeSet<String>| {
+        json!({"kind": "report", "label": label, "rows": rows, "error": error,
+               "numbers": numbers.into_iter().collect::<Vec<_>>()})
+    };
+    let request = match statement_request(w.env.ctx.db(), filters) {
+        Ok(request) => request,
+        Err(e) => return shown("R31", 0, Some(format!("{e:?}")), BTreeSet::new()),
+    };
+    let statement = mandi_services::partners::statement(
+        &w.env.ctx,
+        &PartnersStatementInput {
+            group_by_month: false,
+            sort: None,
+            partner_id: request.partner_id,
+            from: typed(request.from.as_deref()),
+            to: typed(request.to.as_deref()),
+            offset: 0,
+            limit: CHUNK,
+        },
+    );
+    let statement = match statement {
+        Ok(statement) => statement,
+        Err(e) => return shown("R31", 0, Some(format!("{e:?}")), BTreeSet::new()),
+    };
+    match statement_page(&request, &statement, 0, i64::from(CHUNK)) {
+        Ok(page) => {
+            let mut numbers = BTreeSet::new();
+            cells_in(
+                &serde_json::to_value(&page).expect("a page as JSON"),
+                &mut numbers,
+            );
+            shown("R31", page.total_count, None, numbers)
+        }
+        Err(e) => shown("R31", 0, Some(format!("{e:?}")), BTreeSet::new()),
+    }
 }
 
 /// The tokens of a question text (o200k_base, the count the prompt test uses).
@@ -1846,6 +1899,36 @@ fn people_and_things(path: &std::path::Path) -> Value {
              FROM purchases p JOIN ventures v ON v.id = p.venture_id \
              JOIN items i ON i.id = p.item_id ORDER BY v.number, p.number"),
     })
+}
+
+#[test]
+fn the_button_r31_is_opened_through_the_statement_like_the_app_does() {
+    // Run 1 showed 10 answers whose R31 button "failed to open": `reports::run` never builds R31.
+    // The harness now opens it as the app does (statement_request, the services' statement,
+    // statement_page). On the PRD worked day partner Alif has a total of -1,004 and Ba of 746.
+    use mandi_reports::reports::ReportFilters;
+    let w = build("day", None);
+    let alif = ReportFilters {
+        partner_id: Some(1),
+        ..ReportFilters::default()
+    };
+    let button = statement_button(&w, &alif);
+    assert_eq!(button["error"], Value::Null, "{button}");
+    assert!(button["rows"].as_i64().unwrap_or(0) > 0, "{button}");
+    let numbers: Vec<&str> = button["numbers"]
+        .as_array()
+        .expect("numbers")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert!(
+        numbers.contains(&"1004"),
+        "Alif's total of -1,004 is in his statement: {numbers:?}"
+    );
+    // A statement with no partner is refused with the field, as on the screen.
+    let none = statement_button(&w, &ReportFilters::default());
+    let error = none["error"].as_str().unwrap_or("");
+    assert!(error.contains("partner_id"), "{none}");
 }
 
 #[test]

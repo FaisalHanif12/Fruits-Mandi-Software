@@ -8,12 +8,13 @@ or writes the key.
 | File | What it is |
 |---|---|
 | `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (831 questions). Built, never edited by hand. |
+| `questions.tsv` | The bank (1,126 questions). Built, never edited by hand. |
 | `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
 | `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
 | `bank-spec-a2.mjs` | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`. |
 | `bank-spec-mix.mjs` | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026). |
 | `bank-spec-cap.mjs` | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen. |
+| `bank-spec-cap-more.mjs`, `-registers.mjs`, `-nosuch.mjs`, `-print.mjs`, `-forecast.mjs` | The other parts of facet CAP: reports, views, tiles and records with oracle figures; the registers and lists; "no such record" for every row that names one; print and open of the mapped reports; the forecast and the mixed cells. |
 | `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv` | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code. |
 | `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
 | `oracle-keys.txt` | The facts the oracle gives (the `@key` of a question). Checked by a Rust test. |
@@ -122,7 +123,7 @@ node scripts/ai-eval/run.mjs --results F --summary-out S --detail-out D --review
 ```
 
 **Threads.** The live run asks 3 questions at once by default (`--threads N`, 1 to 8), which takes the
-687 questions from about 110 minutes to about 35. Each question has its own copy of its books and its
+1,126 questions from about 3 hours to about 60 minutes. Each question has its own copy of its books and its
 own conversation, and its time is the question's own (the clock starts when that question is asked).
 The rows come back in the order they finish; the scorer finds a row by its id. The provider may answer
 a little slower, or say it is busy, when several run at once: use `--threads 1` for a timing check on

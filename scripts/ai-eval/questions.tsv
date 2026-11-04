@@ -1125,3 +1125,270 @@ Q1123		mixed_forecast	en	0	year		Rahim's gross sale this year and the estimate f
 Q1124		mixed_forecast	urdu	0	year		کیلے کی اس سال کی بکری اور اگلے 3 مہینوں کا اندازہ	estimate		facet=CAP;mix=1;item=Banana;ahead=3	real_fig=@a.year.banana.gross;est_next=@est_item.banana.sales.a3.same_pace|@est_item.banana.sales.a3.same_growth|@est_item.banana.sales.a3.same_season	capability.tsv R7 / mixed	C	forecast
 Q1125		mixed_forecast	roman	0	year		tariq mehmood ki is saal ki khareedari aur agle 3 mahine ka andaza	estimate		facet=CAP;mix=1;buyer=Tariq Mehmood;ahead=3	real_fig=@c.year.tariq_mehmood.purchase_value;est_next=@est_party.tariq.sales.a3.same_pace|@est_party.tariq.sales.a3.same_growth|@est_party.tariq.sales.a3.same_season	capability.tsv view-C / mixed	C	forecast
 Q1126		mixed_forecast	en	0	year		today's commission and the estimate of the whole month	estimate		facet=CAP;mix=1;view=tiles;ahead=1	real_fig=@tiles.commission_today;est_next=@est.commission.a1.same_pace|@est.commission.a1.same_growth|@est.commission.a1.same_season	capability.tsv tile-today_commission / mixed	C	forecast
+Q1127		period	roman	0	year		bikri number 5 ka bill dikhao	answered	report:R1	facet=CAP		capability.tsv R1 / figure #rest	A	period
+Q1128		period	urdu	0	year		بکری نمبر 7 کے سارے لاٹ اور ان کی لائنیں دکھائیں	answered	report:R1	facet=CAP		capability.tsv R1 / list #rest	A	period
+Q1129		nosuch	roman	0	year		bikri number 99999 ka bill dikhao	safe		facet=CAP		capability.tsv R1 / nosuch #rest	E	unknown
+Q1130		period	en	1	year		who is the bigest in the sales register	answered	report:R2	facet=CAP		capability.tsv R2 / top #rest	A	period
+Q1131		advice	urdu	0	year		سیلز رجسٹر کے حساب سے اگلا قدم کیا ہو	advice	report:R2	facet=CAP		capability.tsv R2 / advice #rest	B	advice
+Q1132		period	roman	0	year		naqdi bikri, is saal ki puri list dikhao	answered	report:R3	facet=CAP	count=@r3.year.count	capability.tsv R3 / list #rest	A	period
+Q1133		period	en	0	year		cash sales: which one is the highest this year	answered	report:R3	facet=CAP		capability.tsv R3 / top #rest	A	period
+Q1134		period	urdu	0	year		ادھاری بکری، اس سال کی پوری فہرست دکھائیں	answered	report:R4	facet=CAP	count=@r4.year.count	capability.tsv R4 / list #rest	A	period
+Q1135		period	roman	0	year		udhari bikri, is saal sab se zyada kis ka hai	answered	report:R4	facet=CAP		capability.tsv R4 / top #rest	A	period
+Q1136		period	en	0	year		how is the credit sales this month against last month	answered	report:R4	facet=CAP		capability.tsv R4 / compare #rest	A	period
+Q1137		advice	roman	0	year		udhari bikri ke hisab se agla qadam kya ho	advice	report:R4	facet=CAP		capability.tsv R4 / advice #rest	B	advice
+Q1138		period	urdu	0	year		ادھاری بل میں سب سے بڑا کون ہے	answered	report:R5	facet=CAP		capability.tsv R5 / top #rest	A	period
+Q1139		period	roman	0	year		udhari bills: pichle mahine ka muqabla karo	answered	report:R5	facet=CAP		capability.tsv R5 / compare #rest	A	period
+Q1140		period	en	0	year		credit bills: show only yesterday's	answered	report:R5	facet=CAP	total=@r5.yesterday.total.buyer_total|@r5.yesterday.total.value	capability.tsv R5 / day #rest	A	period
+Q1141		advice	urdu	0	year		ادھاری بل کے حساب سے اگلا قدم کیا ہو	advice	report:R5	facet=CAP		capability.tsv R5 / advice #rest	B	advice
+Q1142		period	roman	1	year		bepaiyon ka khulasa mein sab se bara kaun hai	answered	report:R6	facet=CAP		capability.tsv R6 / top #rest	A	period
+Q1143		period	en	0	year		seller summary: compare with last month	answered	report:R6	facet=CAP		capability.tsv R6 / compare #rest	A	period
+Q1144		advice	urdu	0	year		بیوپاریوں کا خلاصہ دیکھ کر مجھے کیا کرنا چاہیے	advice	report:R6	facet=CAP		capability.tsv R6 / advice #rest	B	advice
+Q1145		period	roman	0	year		item wise bikri mein kya kya hai, list do	answered	report:R7	facet=CAP	count=@r7.year.count	capability.tsv R7 / list #rest	A	period
+Q1146		period	en	1	year		who is the bigest in the item-wise sales	answered	report:R7	facet=CAP		capability.tsv R7 / top #rest	A	period
+Q1147		period	roman	0	year		item wise bikri: pichle mahine ka muqabla karo	answered	report:R7	facet=CAP		capability.tsv R7 / compare #rest	A	period
+Q1148		period	urdu	0	year		آئٹم وار بکری، صرف کل کا دکھائیں	answered	report:R7	facet=CAP	gross=@r7.yesterday.total.gross	capability.tsv R7 / day #rest	A	period
+Q1149		advice	roman	0	year		item wise bikri ke hisab se agla qadam kya ho	advice	report:R7	facet=CAP		capability.tsv R7 / advice #rest	B	advice
+Q1150		period	en	1	year		truck stand reprt: show the full list for this year	answered	report:R8	facet=CAP	count=@r8.year.count	capability.tsv R8 / list #rest	A	period
+Q1151		period	urdu	0	year		اڈا رپورٹ، اس سال سب سے زیادہ کس کا ہے	answered	report:R8	facet=CAP		capability.tsv R8 / top #rest	A	period
+Q1152		period	roman	0	year		adda report is mahine pichle mahine se kitna alag hai	answered	report:R8	facet=CAP		capability.tsv R8 / compare #rest	A	period
+Q1153		print	en	0	year		print the truck stand report	answered	report:R8	facet=CAP		capability.tsv R8 / print #rest	A	period
+Q1154		advice	urdu	0	year		اڈا رپورٹ دیکھ کر مجھے کیا کرنا چاہیے	advice	report:R8	facet=CAP		capability.tsv R8 / advice #rest	B	advice
+Q1155		period	roman	0	year		pukhta khata register ka kul kitna bana	answered	report:R9	facet=CAP	count=@r9.all.count	capability.tsv R9 / figure #rest	A	period
+Q1156		period	en	0	year		pukhta khata register: show the full list for this year	answered	report:R9	facet=CAP	count=@r9.all.count	capability.tsv R9 / list #rest	A	period
+Q1157		period	roman	0	year		pukhta khata register, is saal sab se zyada kis ka hai	answered	report:R9	facet=CAP		capability.tsv R9 / top #rest	A	period
+Q1158		period	urdu	0	year		پختہ کھاتہ رجسٹر، صرف کل کا دکھائیں	answered	report:R9	facet=CAP	count=@r9.yesterday.count	capability.tsv R9 / day #rest	A	period
+Q1159		print	roman	0	year		baqi maal print karo	answered	report:R10	facet=CAP		capability.tsv R10 / print #rest	A	period
+Q1160		period	en	0	year		who is the biggest in the day book	answered	report:R11	facet=CAP		capability.tsv R11 / top #rest	A	period
+Q1161		period	urdu	0	year		روزنامچہ کل کا کیا رہا	answered	report:R11	facet=CAP	count=@r11.yesterday.count	capability.tsv R11 / day #rest	A	period
+Q1162		period	roman	0	year		rokar book mein sab se bara kaun hai	answered	report:R12	facet=CAP		capability.tsv R12 / top #rest	A	period
+Q1163		advice	en	0	year		what should I do next about the cash book	advice	report:R12	facet=CAP		capability.tsv R12 / advice #rest	B	advice
+Q1164		period	urdu	0	year		فیصل کا کھاتہ میں سب سے بڑا کون ہے	answered	report:R13	facet=CAP		capability.tsv R13 / top #rest	A	period
+Q1165		period	roman	0	year		Faisal ka khata: pichle mahine ka muqabla karo	answered	report:R13	facet=CAP		capability.tsv R13 / compare #rest	A	period
+Q1166		period	en	1	year		Faisal's leder: show only yesterday's	answered	report:R13	facet=CAP	balance=@r13.faisal.total.balance	capability.tsv R13 / day #rest	A	period
+Q1167		advice	roman	0	year		Faisal ka khata ke hisab se agla qadam kya ho	advice	report:R13	facet=CAP		capability.tsv R13 / advice #rest	B	advice
+Q1168		period	urdu	0	year		فیصل کا فرد حساب، اس سال کی پوری فہرست دکھائیں	answered	report:R14	facet=CAP		capability.tsv R14 / list #rest	A	period
+Q1169		period	roman	0	year		Faisal ka fard hisab, is saal sab se zyada kis ka hai	answered	report:R14	facet=CAP		capability.tsv R14 / top #rest	A	period
+Q1170		period	en	1	year		how is the Faisal's statment this month against last month	answered	report:R14	facet=CAP		capability.tsv R14 / compare #rest	A	period
+Q1171		period	urdu	0	year		فیصل کا فرد حساب کل کا کیا رہا	answered	report:R14	facet=CAP	balance=@r14.faisal.total.balance	capability.tsv R14 / day #rest	A	period
+Q1172		advice	roman	0	year		Faisal ka fard hisab dekh kar mujhe kya karna chahiye	advice	report:R14	facet=CAP		capability.tsv R14 / advice #rest	B	advice
+Q1173		period	en	0	year		vouchers: which one is the highest this year	answered	report:R15	facet=CAP		capability.tsv R15 / top #rest	A	period
+Q1174		period	urdu	0	year		واؤچرز اس مہینے پچھلے مہینے سے کتنا مختلف ہے	answered	report:R15	facet=CAP		capability.tsv R15 / compare #rest	A	period
+Q1175		period	roman	0	year		vouchers kal ka kya raha	answered	report:R15	facet=CAP	count=@r15.yesterday.count	capability.tsv R15 / day #rest	A	period
+Q1176		period	en	0	year		account index: show the full list for this year	answered	report:R16	facet=CAP	count=@r16.count	capability.tsv R16 / list #rest	A	period
+Q1177		period	roman	0	year		khaton ka index, is saal sab se zyada kis ka hai	answered	report:R16	facet=CAP		capability.tsv R16 / top #rest	A	period
+Q1178		period	urdu	0	year		کھاتوں کا انڈکس، صرف کل کا دکھائیں	answered	report:R16	facet=CAP	count=@r16.count	capability.tsv R16 / day #rest	A	period
+Q1179		period	roman	0	year		madon ka balance mein kya kya hai, list do	answered	report:R17	facet=CAP	count=@r17.count	capability.tsv R17 / list #rest	A	period
+Q1180		period	en	0	year		head balances: show only yesterday's	answered	report:R17	facet=CAP	total=@r17.total.debit	capability.tsv R17 / day #rest	A	period
+Q1181		period	urdu	0	year		ٹرائل بیلنس میں کیا کیا ہے، فہرست دیں	answered	report:R18	facet=CAP	count=@r18.count	capability.tsv R18 / list #rest	A	period
+Q1182		period	roman	1	year		trial balace, sirf kal ka dikhao	answered	report:R18	facet=CAP	total=@r18.total.debit	capability.tsv R18 / day #rest	A	period
+Q1183		period	en	0	year		list everything in the opening trial balance	answered	report:R19	facet=CAP	count=@r19.count	capability.tsv R19 / list #rest	A	period
+Q1184		period	urdu	0	year		گاہکوں کا بقایا، صرف کل کا دکھائیں	answered	report:R20	facet=CAP	total=@tiles.buyers_dues|@tiles.total_dues	capability.tsv R20 / day #rest	A	period
+Q1185		period	roman	0	year		shehar wise baqaya mein kya kya hai, list do	answered	report:R21	facet=CAP		capability.tsv R21 / list #rest	A	period
+Q1186		period	en	1	year		who is the bigest in the dues by city	answered	report:R21	facet=CAP		capability.tsv R21 / top #rest	A	period
+Q1187		period	roman	0	year		shehar wise baqaya: pichle mahine ka muqabla karo	answered	report:R21	facet=CAP		capability.tsv R21 / compare #rest	A	period
+Q1188		period	urdu	0	year		شہر وار بقایا، صرف کل کا دکھائیں	answered	report:R21	facet=CAP	total=@r21.total.balance	capability.tsv R21 / day #rest	A	period
+Q1189		print	roman	0	year		shehar wise baqaya print karo	answered	report:R21	facet=CAP		capability.tsv R21 / print #rest	A	period
+Q1190		advice	en	1	year		looing at the dues by city, what should I do	advice	report:R21	facet=CAP		capability.tsv R21 / advice #rest	B	advice
+Q1191		period	urdu	0	year		اگراہی والے وار بقایا میں کیا کیا ہے، فہرست دیں	answered	report:R22	facet=CAP		capability.tsv R22 / list #rest	A	period
+Q1192		period	roman	0	year		agrahi wale wise baqaya mein sab se bara kaun hai	answered	report:R22	facet=CAP		capability.tsv R22 / top #rest	A	period
+Q1193		period	en	0	year		what was the dues by collector yesterday	answered	report:R22	facet=CAP	total=@r22.total.balance	capability.tsv R22 / day #rest	A	period
+Q1194		advice	urdu	0	year		اگراہی والے وار بقایا دیکھ کر مجھے کیا کرنا چاہیے	advice	report:R22	facet=CAP		capability.tsv R22 / advice #rest	B	advice
+Q1195		period	roman	0	year		wasooli register mein kya kya hai, list do	answered	report:R23	facet=CAP	count=@r23.year.count	capability.tsv R23 / list #rest	A	period
+Q1196		period	en	0	year		who is the biggest in the receipts register	answered	report:R23	facet=CAP		capability.tsv R23 / top #rest	A	period
+Q1197		period	roman	0	year		wasooli register kal ka kya raha	answered	report:R23	facet=CAP	total=@r23.yesterday.total.amount	capability.tsv R23 / day #rest	A	period
+Q1198		advice	urdu	0	year		وصولی رجسٹر دیکھ کر مجھے کیا کرنا چاہیے	advice	report:R23	facet=CAP		capability.tsv R23 / advice #rest	B	advice
+Q1199		period	roman	0	year		byopariyon ka dena: pichle mahine ka muqabla karo	answered	report:R24	facet=CAP		capability.tsv R24 / compare #rest	A	period
+Q1200		period	en	0	year		seller payables: show only yesterday's	answered	report:R24	facet=CAP	payable=@tiles.sellers_payable|@r24.total.balance	capability.tsv R24 / day #rest	A	period
+Q1201		period	urdu	0	year		ادائیگی رجسٹر میں کیا کیا ہے، فہرست دیں	answered	report:R25	facet=CAP	count=@r25.year.count	capability.tsv R25 / list #rest	A	period
+Q1202		period	roman	1	year		adagi register mein sab se bara kaun hai	answered	report:R25	facet=CAP		capability.tsv R25 / top #rest	A	period
+Q1203		period	en	0	year		what was the payments register yesterday	answered	report:R25	facet=CAP	total=@r25.yesterday.total.amount	capability.tsv R25 / day #rest	A	period
+Q1204		advice	urdu	0	year		ادائیگی رجسٹر دیکھ کر مجھے کیا کرنا چاہیے	advice	report:R25	facet=CAP		capability.tsv R25 / advice #rest	B	advice
+Q1205		period	roman	0	year		peshgi khata kal ka kya raha	answered	report:R26	facet=CAP	open=@r26.total.open	capability.tsv R26 / day #rest	A	period
+Q1206		advice	en	1	year		looing at the advances, what should I do	advice	report:R26	facet=CAP		capability.tsv R26 / advice #rest	B	advice
+Q1207		period	roman	0	year		bill series, is saal sab se zyada kis ka hai	answered	report:R27	facet=CAP		capability.tsv R27 / top #rest	A	period
+Q1208		period	urdu	0	year		بل سیریز، صرف کل کا دکھائیں	answered	report:R27	facet=CAP	gross=@r27.yesterday.total.gross	capability.tsv R27 / day #rest	A	period
+Q1209		period	roman	0	year		income report mein kya kya hai, list do	answered	report:R28	facet=CAP	count=@r28.year.count	capability.tsv R28 / list #rest	A	period
+Q1210		period	en	1	year		who is the bigest in the income report	answered	report:R28	facet=CAP		capability.tsv R28 / top #rest	A	period
+Q1211		period	urdu	0	year		آمدن رپورٹ: پچھلے مہینے کا موازنہ کریں	answered	report:R28	facet=CAP		capability.tsv R28 / compare #rest	A	period
+Q1212		period	roman	0	year		income report, sirf kal ka dikhao	answered	report:R28	facet=CAP	income=@r28.yesterday.total.amount	capability.tsv R28 / day #rest	A	period
+Q1213		advice	en	0	year		what should I do next about the income report	advice	report:R28	facet=CAP		capability.tsv R28 / advice #rest	B	advice
+Q1214		period	urdu	0	year		خرچہ رپورٹ، صرف کل کا دکھائیں	answered	report:R29	facet=CAP	total=@r29.yesterday.total.expense	capability.tsv R29 / day #rest	A	period
+Q1215		period	roman	0	year		munafa aur partner hissa, is saal sab se zyada kis ka hai	answered	report:R30	facet=CAP		capability.tsv R30 / top #rest	A	period
+Q1216		period	en	0	year		profit and partner split: show only yesterday's	answered	report:R30	facet=CAP	profit=@r30.yesterday.total.profit_share	capability.tsv R30 / day #rest	A	period
+Q1217		period	roman	0	year		Partner A ka statement, is saal sab se zyada kis ka hai	answered	report:R31	facet=CAP		capability.tsv R31 / top #rest	A	period
+Q1218		period	urdu	0	year		پارٹنر الف کا اسٹیٹمنٹ، صرف کل کا دکھائیں	answered	report:R31	facet=CAP	a=@partner.partner_a.total	capability.tsv R31 / day #rest	A	period
+Q1219		advice	roman	0	year		Partner A ka statement ke hisab se agla qadam kya ho	advice	report:R31	facet=CAP		capability.tsv R31 / advice #rest	B	advice
+Q1220		period	en	0	year		money lent: show only yesterday's	answered	report:R32	facet=CAP	open=@r32.total.open	capability.tsv R32 / day #rest	A	period
+Q1221		period	urdu	0	year		مارکیٹ سفر کا نفع نقصان کل کا کیا رہا	answered	report:R33	facet=CAP	result=@j.all.total.result	capability.tsv R33 / day #rest	A	period
+Q1222		print	roman	1	year		maret safar ka nafa nuqsan ka print nikalna hai	answered	report:R33	facet=CAP		capability.tsv R33 / print #rest	A	period
+Q1223		period	en	0	year		list everything in the day summary	answered	report:R34	facet=CAP		capability.tsv R34 / list #rest	A	period
+Q1224		period	urdu	0	year		دن کا خلاصہ اس مہینے پچھلے مہینے سے کتنا مختلف ہے	answered	report:R34	facet=CAP		capability.tsv R34 / compare #rest	A	period
+Q1225		period	roman	0	year		din ka khulasa kal ka kya raha	answered	report:R34	facet=CAP		capability.tsv R34 / day #rest	A	period
+Q1226		advice	en	1	year		looing at the day summary, what should I do	advice	report:R34	facet=CAP		capability.tsv R34 / advice #rest	B	advice
+Q1227		period	roman	0	year		Faisal ki parchi, is saal sab se zyada kis ka hai	answered	report:R35	facet=CAP		capability.tsv R35 / top #rest	A	period
+Q1228		period	urdu	0	year		فیصل کی پرچی، صرف کل کا دکھائیں	answered	report:R35	facet=CAP	today=@r35.faisal.today.sum.report_r35_today_total	capability.tsv R35 / day #rest	A	period
+Q1229		period	roman	0	year		baghat ki report, is saal sab se zyada kis ka hai	answered	report:R36	facet=CAP		capability.tsv R36 / top #rest	A	period
+Q1230		period	en	1	year		garens report: show only yesterday's	answered	report:R36	facet=CAP	balance=@r36.total.balance	capability.tsv R36 / day #rest	A	period
+Q1231		print	urdu	0	year		باغات کی رپورٹ پرنٹ کریں	answered	report:R36	facet=CAP		capability.tsv R36 / print #rest	A	period
+Q1232		period	roman	0	year		phal register, is saal ki puri list dikhao	answered	report:R37	facet=CAP	count=@r37.year.count	capability.tsv R37 / list #rest	A	period
+Q1233		period	en	0	year		fruit register: which one is the highest this year	answered	report:R37	facet=CAP		capability.tsv R37 / top #rest	A	period
+Q1234		period	urdu	0	year		پھل رجسٹر، صرف کل کا دکھائیں	answered	report:R37	facet=CAP	total=@r37.yesterday.total.value	capability.tsv R37 / day #rest	A	period
+Q1235		period	roman	0	year		doobi raqam, is saal sab se zyada kis ka hai	answered	report:R38	facet=CAP		capability.tsv R38 / top #rest	A	period
+Q1236		period	en	0	year		analytics by seller: show only yesterday's	answered	analytics:B	facet=CAP		capability.tsv view-B / day #rest	A	period
+Q1237		forecast	roman	0	year		bepari wise tajziya mein Rahim ke maal ki agle 3 mahine ki bikri ka andaza	estimate	estimate	facet=CAP	est=@est_party.rahim.sales.a3.same_pace|@est_party.rahim.sales.a3.same_growth|@est_party.rahim.sales.a3.same_season	capability.tsv view-B / forecast #rest	C	forecast
+Q1238		period	urdu	0	year		گاہک وار تجزیہ، صرف کل کا دکھائیں	answered	analytics:C	facet=CAP		capability.tsv view-C / day #rest	A	period
+Q1239		period	roman	0	year		item aur mahine ka table ka kul kitna bana	answered	analytics:D	facet=CAP		capability.tsv view-D / figure #rest	A	period
+Q1240		period	en	0	year		item by month table: show the full list for this year	answered	analytics:D	facet=CAP		capability.tsv view-D / list #rest	A	period
+Q1241		period	urdu	0	year		آئٹم اور مہینے کا ٹیبل، اس سال سب سے زیادہ کس کا ہے	answered	analytics:D	facet=CAP		capability.tsv view-D / top #rest	A	period
+Q1242		period	roman	1	year		item aur mahne ka table is mahine pichle mahine se kitna alag hai	answered	analytics:D	facet=CAP		capability.tsv view-D / compare #rest	A	period
+Q1243		period	en	0	year		what was the item by month table yesterday	answered	analytics:D	facet=CAP		capability.tsv view-D / day #rest	A	period
+Q1244		advice	urdu	0	year		آئٹم اور مہینے کا ٹیبل دیکھ کر مجھے کیا کرنا چاہیے	advice	analytics:D	facet=CAP		capability.tsv view-D / advice #rest	B	advice
+Q1245		period	roman	0	year		bepari aur item ka table ka kul kitna bana	answered	analytics:E	facet=CAP		capability.tsv view-E / figure #rest	A	period
+Q1246		period	en	1	year		seler by item table: show the full list for this year	answered	analytics:E	facet=CAP		capability.tsv view-E / list #rest	A	period
+Q1247		period	roman	0	year		bepari aur item ka table, is saal sab se zyada kis ka hai	answered	analytics:E	facet=CAP		capability.tsv view-E / top #rest	A	period
+Q1248		period	urdu	0	year		بیوپاری اور آئٹم کا ٹیبل اس مہینے پچھلے مہینے سے کتنا مختلف ہے	answered	analytics:E	facet=CAP		capability.tsv view-E / compare #rest	A	period
+Q1249		period	roman	0	year		bepari aur item ka table kal ka kya raha	answered	analytics:E	facet=CAP		capability.tsv view-E / day #rest	A	period
+Q1250		advice	en	1	year		looing at the seller by item table, what should I do	advice	analytics:E	facet=CAP		capability.tsv view-E / advice #rest	B	advice
+Q1251		period	urdu	0	year		شراکت دار وار تجزیہ: پچھلے مہینے کا موازنہ کریں	answered	analytics:F	facet=CAP		capability.tsv view-F / compare #rest	A	period
+Q1252		period	roman	0	year		shirakat dar wise tajziya, sirf kal ka dikhao	answered	analytics:F	facet=CAP		capability.tsv view-F / day #rest	A	period
+Q1253		advice	en	0	year		what should I do next about the analytics by partner	advice	analytics:F	facet=CAP		capability.tsv view-F / advice #rest	B	advice
+Q1254		period	urdu	0	year		مہینہ بہ مہینہ ٹرینڈ، اس سال کی پوری فہرست دکھائیں	answered	analytics:G	facet=CAP		capability.tsv view-G / list #rest	A	period
+Q1255		period	roman	0	year		mahine ba mahine trend kal ka kya raha	answered	analytics:G	facet=CAP		capability.tsv view-G / day #rest	A	period
+Q1256		advice	en	0	year		looking at the monthly trend, what should I do	advice	analytics:G	facet=CAP		capability.tsv view-G / advice #rest	B	advice
+Q1257		period	roman	0	year		top 10 mein kya kya hai, list do	answered	analytics:H	facet=CAP		capability.tsv view-H / list #rest	A	period
+Q1258		period	urdu	0	year		ٹاپ 10، صرف کل کا دکھائیں	answered	analytics:H	facet=CAP		capability.tsv view-H / day #rest	A	period
+Q1259		advice	roman	0	year		top 10 ke hisab se agla qadam kya ho	advice	analytics:H	facet=CAP		capability.tsv view-H / advice #rest	B	advice
+Q1260		period	en	0	year		gardens analysis: show the full list for this year	answered	analytics:I	facet=CAP		capability.tsv view-I / list #rest	A	period
+Q1261		period	urdu	0	year		باغات کا تجزیہ، اس سال سب سے زیادہ کس کا ہے	answered	analytics:I	facet=CAP		capability.tsv view-I / top #rest	A	period
+Q1262		period	roman	1	year		bagat ka tajziya is mahine pichle mahine se kitna alag hai	answered	analytics:I	facet=CAP		capability.tsv view-I / compare #rest	A	period
+Q1263		period	en	0	year		what was the gardens analysis yesterday	answered	analytics:I	facet=CAP		capability.tsv view-I / day #rest	A	period
+Q1264		advice	urdu	0	year		باغات کا تجزیہ دیکھ کر مجھے کیا کرنا چاہیے	advice	analytics:I	facet=CAP		capability.tsv view-I / advice #rest	B	advice
+Q1265		period	roman	0	year		market safar ka tajziya mein kya kya hai, list do	answered	analytics:J	facet=CAP		capability.tsv view-J / list #rest	A	period
+Q1266		period	en	1	year		who is the bigest in the market trips analysis	answered	analytics:J	facet=CAP		capability.tsv view-J / top #rest	A	period
+Q1267		period	roman	0	year		market safar ka tajziya: pichle mahine ka muqabla karo	answered	analytics:J	facet=CAP		capability.tsv view-J / compare #rest	A	period
+Q1268		period	urdu	0	year		مارکیٹ سفر کا تجزیہ، صرف کل کا دکھائیں	answered	analytics:J	facet=CAP		capability.tsv view-J / day #rest	A	period
+Q1269		advice	roman	0	year		market safar ka tajziya ke hisab se agla qadam kya ho	advice	analytics:J	facet=CAP		capability.tsv view-J / advice #rest	B	advice
+Q1270		period	en	1	year		fruit analsis: show the full list for this year	answered	analytics:K	facet=CAP		capability.tsv view-K / list #rest	A	period
+Q1271		period	urdu	0	year		پھل کا تجزیہ، اس سال سب سے زیادہ کس کا ہے	answered	analytics:K	facet=CAP		capability.tsv view-K / top #rest	A	period
+Q1272		period	roman	0	year		phal ka tajziya is mahine pichle mahine se kitna alag hai	answered	analytics:K	facet=CAP		capability.tsv view-K / compare #rest	A	period
+Q1273		period	en	0	year		what was the fruit analysis yesterday	answered	analytics:K	facet=CAP		capability.tsv view-K / day #rest	A	period
+Q1274		advice	urdu	0	year		پھل کا تجزیہ دیکھ کر مجھے کیا کرنا چاہیے	advice	analytics:K	facet=CAP		capability.tsv view-K / advice #rest	B	advice
+Q1275		forecast	roman	0	year		is poore mahine ki bikri kitni hogi	estimate	estimate	facet=CAP	est=@est.sales.a1.same_pace|@est.sales.a1.same_growth|@est.sales.a1.same_season	capability.tsv tile-today_sales / forecast #rest	C	forecast
+Q1276		advice	en	0	year		today's sales are low, what should I do	advice	tiles	facet=CAP		capability.tsv tile-today_sales / advice #rest	B	advice
+Q1277		advice	roman	0	year		aaj commission kam bana, isko kaise barhaun	advice	tiles	facet=CAP		capability.tsv tile-today_commission / advice #rest	B	advice
+Q1278		cash	urdu	0	year		روکڑ آج کل سے کتنی زیادہ یا کم ہے	answered	report:R12	facet=CAP	now=@r12.today.sum.report_closing_balance;before=@r12.yesterday.sum.report_closing_balance	capability.tsv tile-cash_in_hand / compare #rest	A	cash
+Q1279		advice	roman	0	year		agar kisi bepari ne humein paise dene hon to kya karun	advice	tiles	facet=CAP		capability.tsv tile-sellers_dues / advice #rest	B	advice
+Q1280		advice	en	0	year		today's expenses are high, can they be cut	advice	tiles	facet=CAP		capability.tsv tile-today_expenses / advice #rest	B	advice
+Q1281		period	urdu	0	year		آخری بیک اپ کب ہوا تھا	answered	tiles	facet=CAP		capability.tsv tile-last_backup / figure #rest	A	period
+Q1282		advice	roman	1	year		bacup kab lena chahiye	advice	tiles	facet=CAP		capability.tsv tile-last_backup / advice #rest	B	advice
+Q1283		help	en	0	year		where do I see what needs my attention today	answered		facet=CAP;topic=dashboard;pending=Q2		capability.tsv dash-attention / howto #rest	D	help
+Q1284		help	urdu	0	year		دن بند کرنے سے پہلے کیا دیکھنا چاہیے	answered		facet=CAP;topic=day_close;pending=Q3		capability.tsv dash-day-state / howto #rest	D	help
+Q1285		change	roman	0	year		aaj ka din band karne ki entry karo	change_refused		facet=CAP;route=day_close;pending=Q3		capability.tsv dash-day-state / change #rest	E	change
+Q1286		help	en	1	year		open the commision rules page	answered		facet=CAP;topic=commission_rules;route=commission_rules;pending=Q1		capability.tsv rules / print #rest	D	help
+Q1287		help	roman	0	year		commission ka rate kaise badlun	answered		facet=CAP;topic=commission_rules;pending=Q1		capability.tsv rules / howto #rest	D	help
+Q1288		change	urdu	0	year		رحیم کے لیے نیا کمیشن اصول لکھ دو	change_refused		facet=CAP;route=commission_rules;pending=Q1		capability.tsv rules / change #rest	E	change
+Q1289		buyer	roman	0	year		sab gahakon ke naam aur unka baqaya ek ek karke dikhao	answered	report:R20	facet=CAP	total=@tiles.buyers_dues|@tiles.total_dues	capability.tsv record-buyer / list #rest	A	buyer
+Q1290		buyer	en	1	year		name the buyrs who owe the most	answered	report:R20	facet=CAP	top!=@top.buyer_dues.name	capability.tsv record-buyer / top #rest	A	buyer
+Q1291		buyer	urdu	0	year		فیصل نے اس سال کتنا خریدا اور پچھلے سال کتنا	answered	analytics:C	facet=CAP		capability.tsv record-buyer / compare #rest	A	buyer
+Q1292		forecast	roman	0	year		Faisal agle 6 mahine mein kitne ka maal khareedega	estimate	estimate	facet=CAP	est=@est_party.faisal.sales.a6.same_pace|@est_party.faisal.sales.a6.same_growth|@est_party.faisal.sales.a6.same_season	capability.tsv record-buyer / forecast #rest	C	forecast
+Q1293		advice	en	0	year		which buyer should I stop giving credit to	advice	report:R20	facet=CAP		capability.tsv record-buyer / advice #rest	B	advice
+Q1294		seller	urdu	0	year		تمام بیوپاریوں کو کتنا کتنا دینا ہے، فہرست دیں	answered	report:R24	facet=CAP	payable=@tiles.sellers_payable|@r24.total.balance	capability.tsv record-seller / list #rest	A	seller
+Q1295		seller	roman	0	year		jis bepari ko sab se zyada dena hai uska naam batao	answered	report:R24	facet=CAP	top!=@top.seller_payable.name	capability.tsv record-seller / top #rest	A	seller
+Q1296		seller	en	0	year		did Rahim's goods sell more or less this year than last year	answered	analytics:B	facet=CAP		capability.tsv record-seller / compare #rest	A	seller
+Q1297		forecast	roman	0	year		Rahim ke maal ki agle 6 mahine ki bikri ka andaza	estimate	estimate	facet=CAP	est=@est_party.rahim.sales.a6.same_pace|@est_party.rahim.sales.a6.same_growth|@est_party.rahim.sales.a6.same_season	capability.tsv record-seller / forecast #rest	C	forecast
+Q1298		advice	urdu	0	year		کس بیوپاری کو پہلے ادائیگی کروں تاکہ رشتہ اچھا رہے	advice	report:R24	facet=CAP		capability.tsv record-seller / advice #rest	B	advice
+Q1299		buyer	roman	0	year		pukhta khata ke logon ka kul baqaya kitna hai	answered	report:R9	facet=CAP	count=@r9.all.count	capability.tsv record-pukhta / figure #rest	A	buyer
+Q1300		buyer	en	0	year		show all the pukhta khata people and their balances	answered	report:R9	facet=CAP	count=@r9.all.count	capability.tsv record-pukhta / list #rest	A	buyer
+Q1301		day	urdu	0	year		آج پختہ کھاتہ میں کیا کیا بکا	answered	report:R9	facet=CAP		capability.tsv record-pukhta / day #rest	A	day
+Q1302		change	roman	1	year		pukta khata mein ek nayi entry likh do	change_refused		facet=CAP;route=pukhta_khata		capability.tsv record-pukhta / change #rest	E	change
+Q1303		lent	en	0	year		show the full list of people who took money lent	answered	report:R32	facet=CAP	open=@r32.total.open	capability.tsv record-money_lent / list #rest	A	dues
+Q1304		lent	urdu	0	year		آج کے دن ادھار رقم کتنی کھلی ہے	answered	report:R32	facet=CAP	open=@r32.total.open	capability.tsv record-money_lent / day #rest	A	dues
+Q1305		advice	roman	0	year		Aslam se udhar raqam wapas lene ka kya tareeka ho	advice	report:R32	facet=CAP		capability.tsv record-money_lent / advice #rest	B	advice
+Q1306		change	en	1	year		write an entry for lening Aslam 5000	change_refused		facet=CAP;route=udhar_raqam		capability.tsv record-money_lent / change #rest	E	change
+Q1307		buyer	roman	0	year		khandani khata mein abhi kitna hai	answered	party_card	facet=CAP		capability.tsv record-separate_khata / figure #rest	A	buyer
+Q1308		buyer	urdu	0	year		الگ کھاتوں کی فہرست اور ان کے بیلنس دکھائیں	answered	report:R13	facet=CAP		capability.tsv record-separate_khata / list #rest	A	buyer
+Q1309		buyer	roman	0	year		khandani khata is saal pichle saal se kitna badla	answered	report:R13	facet=CAP		capability.tsv record-separate_khata / compare #rest	A	buyer
+Q1310		day	en	1	year		what happned in the family khata today	answered	report:R13	facet=CAP		capability.tsv record-separate_khata / day #rest	A	day
+Q1311		print	urdu	0	year		خاندانی کھاتہ کا اس مہینے کا پرنٹ نکالنا ہے	answered		facet=CAP		capability.tsv record-separate_khata / print #rest	A	print
+Q1312		change	roman	0	year		khandani khata mein 4000 wapas aane ki entry likh do	change_refused		facet=CAP;route=alag_khata		capability.tsv record-separate_khata / change #rest	E	change
+Q1313		partner	en	0	year		which partner earned the biggest share this year	answered	analytics:F	facet=CAP	a=@f.year.partner_a.income_share	capability.tsv record-partner / top #rest	A	partner
+Q1314		partner	urdu	0	year		پارٹنر الف کا حصہ اس سال پچھلے سال سے کتنا زیادہ ہے	answered	analytics:F	facet=CAP		capability.tsv record-partner / compare #rest	A	partner
+Q1315		partner	roman	0	year		Partner A ke khate mein kal kya kya hua	answered	report:R31	facet=CAP		capability.tsv record-partner / day #rest	A	partner
+Q1316		print	en	0	year		print Partner A's statement for this month	answered		facet=CAP	print.report=R31;print.partner=Partner A;print.from=@cal.month_start;print.to=@cal.today	capability.tsv record-partner / print #rest	A	print
+Q1317		advice	roman	0	year		partnaron ke hisse ke baare mein mujhe kya dekhna chahiye	advice	report:R30	facet=CAP		capability.tsv record-partner / advice #rest	B	advice
+Q1318		garden	urdu	0	year		باغات کی پوری فہرست اور ہر ایک کا بیلنس دکھائیں	answered	report:R36	facet=CAP	balance=@r36.total.balance	capability.tsv record-garden / list #rest	A	garden
+Q1319		garden	roman	0	year		kaun sa baagh sab se zyada kamayi wala raha	answered	analytics:I	facet=CAP	result=@i.all.shahpur_garden.result	capability.tsv record-garden / top #rest	A	garden
+Q1320		garden	en	0	year		what happened in Shahpur garden yesterday	answered	report:R36	facet=CAP		capability.tsv record-garden / day #rest	A	garden
+Q1321		print	urdu	0	year		شاہ پور باغ کا اس مہینے کا پرنٹ نکالنا ہے	answered		facet=CAP	print.report=R36;print.garden=Shahpur Garden;print.from=@cal.month_start;print.to=@cal.today	capability.tsv record-garden / print #rest	A	print
+Q1322		advice	roman	1	year		Shahpur baagh ka hisab dekh kar kya faila karun	advice	report:R36	facet=CAP		capability.tsv record-garden / advice #rest	B	advice
+Q1323		change	en	0	year		write an entry for a new installment of Shahpur garden	change_refused		facet=CAP;route=gardens		capability.tsv record-garden / change #rest	E	change
+Q1324		trip	urdu	0	year		سارے مارکیٹ سفر اور ان کا نفع یا نقصان دکھائیں	answered	report:R33	facet=CAP	total=@j.all.total.result	capability.tsv record-trip / list #rest	A	trip
+Q1325		trip	roman	0	year		kaun sa market safar sab se zyada nafa wala raha	answered	analytics:J	facet=CAP	best=@trip2.result	capability.tsv record-trip / top #rest	A	trip
+Q1326		trip	en	1	year		what happned on the market trips yesterday	answered	report:R33	facet=CAP		capability.tsv record-trip / day #rest	A	trip
+Q1327		print	roman	0	year		market safar ki is mahine ki report ka print nikalna hai	answered		facet=CAP	print.report=R33;print.from=@cal.month_start;print.to=@cal.today	capability.tsv record-trip / print #rest	A	print
+Q1328		advice	urdu	0	year		اگلا مارکیٹ سفر کروں یا نہیں، حساب دیکھ کر بتائیں	advice	report:R33	facet=CAP		capability.tsv record-trip / advice #rest	B	advice
+Q1329		change	roman	0	year		market safar ki nayi khareedari likh do	change_refused		facet=CAP;route=market_trips		capability.tsv record-trip / change #rest	E	change
+Q1330		item	en	0	year		show this year's sales item by item	answered	analytics:A	facet=CAP	total=@a.year.total.gross	capability.tsv record-item / list #rest	A	item
+Q1331		item	urdu	0	year		اس سال سب سے زیادہ کون سا آئٹم بکا	answered	analytics:A	facet=CAP	top!=@top.item_qty_year.name	capability.tsv record-item / top #rest	A	item
+Q1332		item	roman	0	year		kal saib ki kitni bikri hui	answered	analytics:A	facet=CAP	gross=@a.yesterday.apple.gross	capability.tsv record-item / day #rest	A	item
+Q1333		advice	en	0	year		which item should I bring in more of to raise commission	advice	analytics:A	facet=CAP		capability.tsv record-item / advice #rest	B	advice
+Q1334		buyer	urdu	0	year		ملتان کے گاہکوں کا بقایا کتنا ہے	answered	report:R21	facet=CAP		capability.tsv record-city / figure #rest	A	buyer
+Q1335		buyer	roman	0	year		shehron ke hisab se gahakon ki list dikhao	answered	report:R21	facet=CAP	total=@r21.total.balance	capability.tsv record-city / list #rest	A	buyer
+Q1336		buyer	en	0	year		which city's buyers owe the most	answered	report:R21	facet=CAP		capability.tsv record-city / top #rest	A	buyer
+Q1337		buyer	roman	0	year		Multan ki bikri is saal pichle saal se kitni badli	answered	analytics:A	facet=CAP		capability.tsv record-city / compare #rest	A	buyer
+Q1338		print	urdu	0	year		شہر وار بقایا کا پرنٹ نکالنا ہے	answered		facet=CAP	print.report=R21;print.as_of=@cal.today	capability.tsv record-city / print #rest	A	print
+Q1339		advice	roman	0	year		kis shehar ke gahakon se wasooli par zyada zor dun	advice	report:R21	facet=CAP		capability.tsv record-city / advice #rest	B	advice
+Q1340		period	en	0	year		how much sold from Swat adda this year	answered	report:R8	facet=CAP	gross=@r8.year.total.gross	capability.tsv record-adda / figure #rest	A	period
+Q1341		period	urdu	0	year		تمام اڈوں کی رپورٹ اور ہر ایک کا مال دکھائیں	answered	report:R8	facet=CAP	trucks=@r8.year.total.trucks	capability.tsv record-adda / list #rest	A	period
+Q1342		period	roman	0	year		kaun sa adda sab se zyada maal laya	answered	report:R8	facet=CAP	gross=@r8.year.total.gross	capability.tsv record-adda / top #rest	A	period
+Q1343		period	en	0	year		how do sales from the truck stand compare with last month	answered	analytics:A	facet=CAP		capability.tsv record-adda / compare #rest	A	period
+Q1344		print	urdu	0	year		اڈا رپورٹ کا اس مہینے کا پرنٹ نکالنا ہے	answered		facet=CAP	print.report=R8;print.from=@cal.month_start;print.to=@cal.today	capability.tsv record-adda / print #rest	A	print
+Q1345		dues	roman	0	year		agrahi walon ki list aur unke hisab ka baqaya dikhao	answered	report:R22	facet=CAP	total=@r22.total.balance	capability.tsv record-collector / list #rest	A	dues
+Q1346		dues	en	1	year		which collctor has the most dues	answered	report:R22	facet=CAP	total=@r22.total.balance	capability.tsv record-collector / top #rest	A	dues
+Q1347		expense	roman	0	year		is saal ke kharche mad ke hisab se dikhao	answered	report:R29	facet=CAP	total=@r29.year.total.expense	capability.tsv record-expense_head / list #rest	A	expense
+Q1348		expense	urdu	0	year		اس سال سب سے بڑا خرچہ کس مد کا ہے	answered	report:R29	facet=CAP	top!=@top.expense_head_year.name	capability.tsv record-expense_head / top #rest	A	expense
+Q1349		expense	roman	0	year		kal bijli ka kharcha kitna hua	answered	report:R29	facet=CAP		capability.tsv record-expense_head / day #rest	A	expense
+Q1350		print	en	0	year		print the electricity expense for this month	answered		facet=CAP	print.report=R29;print.from=@cal.month_start;print.to=@cal.today	capability.tsv record-expense_head / print #rest	A	print
+Q1351		advice	urdu	0	year		چائے اور مہمان نوازی کا خرچہ کم کرنے کا کیا طریقہ ہو	advice	report:R29	facet=CAP		capability.tsv record-expense_head / advice #rest	B	advice
+Q1352		partner	roman	0	year		Partner A ki kul raqam kal tak kitni thi	answered	report:R31	facet=CAP		capability.tsv figure-partner_total / day #rest	A	partner
+Q1353		print	en	0	year		print Partner B's statement with the total	answered		facet=CAP	print.report=R31;print.partner=Partner B;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-partner_total / print #rest	A	print
+Q1354		advice	urdu	0	year		پارٹنر الف کی کل رقم دیکھ کر کیا تجویز ہے	advice	report:R31	facet=CAP		capability.tsv figure-partner_total / advice #rest	B	advice
+Q1355		partner	roman	0	year		har partner ka hissa aaj, mahine aur saal ka alag alag dikhao	answered	report:R30	facet=CAP	a=@partner.partner_a.today_share	capability.tsv figure-partner_share / list #rest	A	partner
+Q1356		partner	en	0	year		is Partner B's share this month more than last month	answered	analytics:F	facet=CAP		capability.tsv figure-partner_share / compare #rest	A	partner
+Q1357		partner	roman	0	year		Partner A ka aaj ka hissa kitna bana	answered	report:R30	facet=CAP	share=@partner.partner_a.today_share	capability.tsv figure-partner_share / day #rest	A	partner
+Q1358		capital	urdu	0	year		پارٹنر ب کا سرمایہ کل تک کتنا تھا	answered	report:R31	facet=CAP	capital=@partner.partner_b.capital	capability.tsv figure-partner_capital / day #rest	A	capital
+Q1359		print	roman	0	year		Usman ke sarmaye ka hisab print karna hai	answered		facet=CAP	print.report=R31;print.partner=Usman;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-partner_capital / print #rest	A	print
+Q1360		partner	en	0	year		how much did Partner A take for himself this month	answered	report:R31	facet=CAP	taken=@partner.partner_a.month_taken	capability.tsv figure-partner_taken / figure #rest	A	partner
+Q1361		partner	urdu	0	year		پارٹنروں نے جو رقم لی اور واپس کی اس کی فہرست دکھائیں	answered	report:R29	facet=CAP	taken=@r29.year.total.taken;returned=@r29.year.total.returned	capability.tsv figure-partner_taken / list #rest	A	partner
+Q1362		partner	roman	0	year		Partner B ne kal koi raqam li	answered	report:R31	facet=CAP		capability.tsv figure-partner_taken / day #rest	A	partner
+Q1363		print	en	0	year		print the money the partners took	answered		facet=CAP	print.report=R29;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-partner_taken / print #rest	A	print
+Q1364		garden	urdu	0	year		باغ کا ابھی کا بیلنس کتنا ہے اور ٹھیکہ کتنا باقی ہے	answered	report:R36,tiles	facet=CAP	balance=@tiles.gardens_balance	capability.tsv figure-garden_balance / figure #rest	A	garden
+Q1365		garden	roman	0	year		baagh ki qiston aur kharchon ki list dikhao	answered	report:R36	facet=CAP	costs=@r36.total.costs;installments=@r36.total.installments	capability.tsv figure-garden_balance / list #rest	A	garden
+Q1366		garden	en	1	year		what was the garen balance up to yesterday	answered	report:R36	facet=CAP		capability.tsv figure-garden_balance / day #rest	A	garden
+Q1367		print	roman	0	year		baagh ke balance ka print nikalna hai, is mahine ka	answered		facet=CAP	print.report=R36;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-garden_balance / print #rest	A	print
+Q1368		advice	urdu	0	year		باغ کا بیلنس مائنس سے نکالنے کے لیے کیا کروں	advice	report:R36	facet=CAP		capability.tsv figure-garden_balance / advice #rest	B	advice
+Q1369		garden	roman	0	year		baagh ka ab tak ka commission kitna bana	answered	report:R36	facet=CAP	commission=@r36.total.commission	capability.tsv figure-garden_result / figure #rest	A	garden
+Q1370		garden	en	1	year		where did the garen money come from, our shop or elsewhere	answered	report:R36	facet=CAP	money_in=@r36.total.money_in	capability.tsv figure-garden_result / list #rest	A	garden
+Q1371		print	urdu	0	year		باغ کے نتیجے کا پرنٹ نکالنا ہے	answered		facet=CAP	print.report=R36;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-garden_result / print #rest	A	print
+Q1372		trip	roman	0	year		har market safar ki khareedari aur bikri alag alag batao	answered	report:R33	facet=CAP	cost1=@trip1.bought_cost;cost2=@trip2.bought_cost	capability.tsv figure-trip_result / list #rest	A	trip
+Q1373		trip	en	0	year		what was the market trips profit up to yesterday	answered	report:R33	facet=CAP		capability.tsv figure-trip_result / day #rest	A	trip
+Q1374		print	urdu	0	year		مارکیٹ سفر کے نفع نقصان کا پرنٹ کریں	answered		facet=CAP	print.report=R33;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-trip_result / print #rest	A	print
+Q1375		advice	roman	0	year		jis safar mein nuqsan hua us se kya sabaq lun	advice	report:R33	facet=CAP		capability.tsv figure-trip_result / advice #rest	B	advice
+Q1376		stock	en	0	year		how much trip stock is left and what did it cost	answered	tiles	facet=CAP	qty=@tiles.trips_qty_left;cost=@tiles.trips_cost_left	capability.tsv figure-trip_stock / figure #rest	A	stock
+Q1377		stock	roman	0	year		safar ke baqi maal ki khareedari wise list dikhao	answered	report:R10	facet=CAP	qty=@trip2.left_qty	capability.tsv figure-trip_stock / list #rest	A	stock
+Q1378		print	urdu	0	year		سفر کے باقی مال کا پرنٹ نکالنا ہے	answered		facet=CAP		capability.tsv figure-trip_stock / print #rest	A	print
+Q1379		fruit	roman	0	year		partnaron ne jo phal liya uski puri list dikhao	answered	report:R37	facet=CAP	total=@r37.year.total.value	capability.tsv figure-fruit_partner / list #rest	A	fruit
+Q1380		fruit	en	0	year		which partner took the most fruit this year	answered	analytics:K	facet=CAP	a=@k.year.partner_a.value|@k.year.partner_a.qty	capability.tsv figure-fruit_partner / top #rest	A	fruit
+Q1381		fruit	urdu	0	year		پارٹنر الف نے پھل اس سال اور پچھلے مہینے کتنا لیا	answered	analytics:K	facet=CAP		capability.tsv figure-fruit_partner / compare #rest	A	fruit
+Q1382		fruit	roman	0	year		Partner A ne kal phal liya	answered	report:R37	facet=CAP		capability.tsv figure-fruit_partner / day #rest	A	fruit
+Q1383		print	en	0	year		print Partner A's fruit for this month	answered		facet=CAP	print.report=R37;print.partner=Partner A;print.from=@cal.month_start;print.to=@cal.today	capability.tsv figure-fruit_partner / print #rest	A	print
+Q1384		fruit	urdu	0	year		مہمانوں کے لیے اس سال کتنے کا پھل آیا	answered	analytics:K	facet=CAP	guests=@d.fruit_guests_year	capability.tsv figure-fruit_guests / figure #rest	A	fruit
+Q1385		fruit	roman	0	year		kal mehmanon ke liye phal aaya	answered	report:R37	facet=CAP		capability.tsv figure-fruit_guests / day #rest	A	fruit
+Q1386		help	en	1	year		open the persnal expense screen	answered		facet=CAP;topic=personal_expense;route=kharcha		capability.tsv topic-personal_expense / print #rest	D	help
+Q1387		change	roman	0	year		Partner A ka ghar ka kharcha likh do	change_refused		facet=CAP;route=kharcha		capability.tsv topic-personal_expense / change #rest	E	change
+Q1388		safe	urdu	0	year		جی ایس ٹی کتنا لگتا ہے	outside_books		facet=CAP		capability.tsv outside-tax / outside #rest	E	safe
+Q1389		safe	roman	0	year		bank mein mera kitna paisa hai	outside_books		facet=CAP		capability.tsv outside-bank / outside #rest	E	safe
+Q1390		safe	en	1	year		what is tody's dollar rate	outside_books		facet=CAP		capability.tsv outside-prices / outside #rest	E	safe
+Q1391		estimates	roman	0	year		saib ka agle 3 mahine ka commission kitna hoga	estimate	estimate	facet=CAP;pending=F6;item=Apple		capability.tsv record-item_seasonal / forecast #rest	C	forecast
+Q1392		estimates	urdu	0	year		موسمی کی اگلے 3 مہینوں کی بکری کا اندازہ	estimate	estimate	facet=CAP;pending=F6;item=Mosambi		capability.tsv record-item_seasonal / forecast #rest	C	forecast
+Q1393		estimates	en	0	year		estimate the mango commission for the next 3 months	estimate	estimate	facet=CAP;pending=F6;item=Mango		capability.tsv record-item_seasonal / forecast #rest	C	forecast

@@ -32,6 +32,7 @@ import MORE from './bank-spec-cap-more.mjs';
 import FORECASTS from './bank-spec-cap-forecast.mjs';
 import NOSUCH from './bank-spec-cap-nosuch.mjs';
 import PRINTS from './bank-spec-cap-print.mjs';
+import REST from './bank-spec-cap-rest.mjs';
 import REGISTERS from './bank-spec-cap-registers.mjs';
 import MIX from './bank-spec-mix.mjs';
 
@@ -2620,6 +2621,7 @@ const ENTRIES = [
   ...gate(NOSUCH, 'E'),
   ...gate(PRINTS, 'A'),
   ...gate(FORECASTS, 'C'),
+  ...gate(REST, 'A'),
 ];
 
 export default ENTRIES;

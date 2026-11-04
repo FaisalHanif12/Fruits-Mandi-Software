@@ -63,12 +63,14 @@ const RE_LIST =
 /** The cells (rowId|qtype) one bank question reaches. */
 function cellsOf(q) {
   const out = new Set();
+  // The generator of bank-spec-cap-rest.mjs asks which cells have no question OTHER than its own.
+  if (process.env.CAP_IGNORE_CX && /#rest$/.test(q.source ?? '')) return out;
   const add = (row, qtype) => out.add(`${row}|${qtype}`);
   const f = q.filters;
   const figs = q.figures;
   const topic = (f.match(/topic=([a-z_]+)/) ?? [])[1];
   // A question written for a cell says which one in its `source` ("capability.tsv R20 / list").
-  const named = (q.source ?? '').match(/^capability\.tsv (\S+) \/ (\w+)$/);
+  const named = (q.source ?? '').match(/^capability\.tsv (\S+) \/ (\w+)( #rest)?$/);
   if (named) {
     add(named[1], named[2]);
     return out;
@@ -313,9 +315,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.log(`${todo.length} answerable cells have no bank question`);
     process.exit(0);
   }
-  writeFileSync(CAPABILITY_FILE, text, 'utf8');
+  const outAt = process.argv.indexOf('--out');
+  const target = outAt >= 0 ? process.argv[outAt + 1] : CAPABILITY_FILE;
+  writeFileSync(target, text, 'utf8');
   const todo = lines.map((l) => l.split('\t')).filter((c) => c[4] === 'A' && c[9] === '0').length;
   console.log(
-    `wrote ${CAPABILITY_FILE}: ${lines.length} cells ${JSON.stringify(summary(lines))}; answerable with no bank question: ${todo}`,
+    `wrote ${target}: ${lines.length} cells ${JSON.stringify(summary(lines))}; answerable with no bank question: ${todo}`,
   );
 }

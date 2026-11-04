@@ -62,10 +62,16 @@ export const GAPS = {
     "no measure for a party's balance or dues (Umar's own mixed example); needs a ruling",
   ],
   F5: ['m', 'backend', 'no cash, stock or total dues projection'],
+  F6: [
+    'M',
+    'backend3',
+    'an item, seller or buyer with months of no sale (apple, mosambi, mango, seller Karim) gets no estimate: a month with no sale inside its active range must count as 0',
+  ],
   Q1: ['M', 'backend', 'no tool reads the commission and charge rules'],
   Q2: ['M', 'backend', 'no tool reads the attention list (آج کے کام, the bell)'],
   Q3: ['m', 'backend', 'no tool reads the day and month state (closed up to, month closed)'],
   Q4: ['m', 'backend', 'no tool reads the audit log, and no audit screen name to open'],
+  Q4b: ['m', 'lead', 'the guide has no audit-log topic although the audit screen exists (D6 v1.5)'],
   Q5: [
     'm',
     'backend',
@@ -571,7 +577,7 @@ const TILES = [
       compare: X('a log'),
       day: G('Q4'),
       print: G('Q4'),
-      howto: N('the guide has no audit topic: the app says the log is read only and where it is'),
+      howto: G('Q4b'),
       forecast: X('a log'),
       advice: X('a log'),
       mixed: X('a log'),
@@ -757,6 +763,16 @@ const RECORDS = [
     nosuch: G('Q5'),
     change: A('local: kharcha screen'),
   }),
+  record(
+    'item_seasonal',
+    'An item with months of no sale (apple, mosambi, mango)',
+    'oracle: no est_item keys for them',
+    {
+      forecast: G('F6'),
+      mixed: G('F6'),
+      nosuch: X('same as record-item'),
+    },
+  ),
   record('staff', 'Staff (عملہ: munshi, labour)', 'PRD 10.3; find has the collector role only', {
     figure: G('Q5'),
     list: G('Q5'),
