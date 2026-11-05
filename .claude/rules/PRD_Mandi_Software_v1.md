@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.29 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.30 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,11 +20,11 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.29 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.30 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.15 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.20 |
-| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.18 |
+| 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.19 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.9 |
 
 **Versions.** All six documents started at version 1.1, the baseline for build. Version 1.2 (12-10-2026) applies Umar's changes of 11-10-2026: one user with no roles, a choice to deduct an advance or not, partner money taken and returned, money lent to staff and others, cash lent to buyers, items in party ledgers, the shop's total اگراہی, and stricter Urdu spelling checks. Version 1.3 (15-10-2026) applies Umar's changes of 14-10-2026: partner capital (the money partners invest), the firm's own goods (bought and sold by the firm for profit or loss), and printing for any day and any party. Version 1.4 (15-10-2026) applies Umar's change of 15-10-2026: one خرچہ screen for shop expenses and a partner's personal spending, and related entries kept on one screen so the app is easy to use. Version 1.5 (15-10-2026) applies Umar's answers to the team's open questions after D1 and D2: commission typed on the بکری line by default, the rule tie, opening balances, a seller's opening credit, the cash warning and return-by dates. Version 1.6 (19-10-2026) applies Umar's changes of 18-10-2026 and 19-10-2026: gardens and market trips owned by the partners in them, one cash account with no bank, fruit taken by partners, complete analytics, the party day sheet, page-by-page lists, and dated lines in each partner's statement. Version 1.7 (22-10-2026) applies what Umar settled from the client's own prints of 18-10-2026: the buyer pays commission and لاگا and the seller commission only, three prints in the client's own layout (the buyer's day slip, ادھاری تفصیل and the all-buyers balance sheet), a clear layout for every other print, a short tag (نشان) after a name, and the firm's contact persons and trade mark on every print. Version 1.8 (27-10-2026) applies Umar's change of 27-10-2026, made while he tested the app himself: short codes by type (the first seller is 0010), an accounts list of sellers, buyers and پختہ کھاتہ only, and pickers that open on a click with a button to add what is missing. Version 1.9 (30-10-2026) applies Umar's change of 30-10-2026: in every table and print, a column of numbers and its total are centred under the column heading. Version 1.10 (30-10-2026) applies Umar's second change of that day: the dashboard shows buyers' dues, sellers' dues, the total اگراہی and the dead amount (ڈوبی رقم); a person who owes and has died or left the business is moved to the dead amount; and every Urdu word says exactly what its English says. Version 1.11 (31-10-2026) applies Umar's change of 31-10-2026: any missing list entry (an expense head, an item, a packing, a city, a seller ...) is added on the spot, from the list where it is needed, and is chosen at once. Version 1.12 (31-10-2026) applies Umar's second change of that day: the buyer's and the seller's day slips show each item with its total and the commission and لاگا on their own lines, the day summary lists every buyer and seller, and every print header carries the trade mark, the owners and the munshi. Version 1.16 (01-11-2026) applies Umar's third change of 01-11-2026: the Owner asks questions about his books in plain words, in Urdu, Roman Urdu or English, and the app answers from the live data with checked figures and a button to the full report (Section 7.7). It was amended on 02-11-2026, before release: the model is the brain, reads every section through read-only tools, adds up, compares and estimates the future, and writes the answer itself, while the app checks every figure. It also advises from the books, like an experienced munshi (FR-7.88). From now on, any change to a document raises its version (1.2, 1.3 ...) and adds a line to its change log. If the change affects other documents, they are updated in the same step.
@@ -135,6 +135,7 @@ Developers must use these exact Urdu words on Urdu screens and these exact Engli
 | قسم مال | Item | Item | کیلا، سیب، انگور، جاپانی پھل، مولی |
 | پیکنگ | Packing | Packing unit | پیٹی، کریٹ، بوری، دانہ |
 | مارکہ | Mark | Mark on crates showing whose goods they are | "AR" on رحیم's crates |
+| درجہ: اول / دوم / سوم | Quality: First / Second / Third | The quality of the goods on one sale line, which explains a different rate (FR-12.42) | سیب اول @ 1,200, سیب دوم @ 800 |
 | اڈا | Adda | Truck stand the truck came from | سوات اڈا |
 | خام بکری | Gross Sale | Gross sale before deductions | 29,400 |
 | صافی بکری | Net Sale | Net sale payable to seller | 19,316 |
@@ -1350,6 +1351,7 @@ Fields seen [S]: تاریخ, کوڈ گاہک, گاہک, تعداد بیوپار�
 | لاگا | لاگا | Read-only | | | [S] |
 | Buyer total | رقم گاہک | Read-only | | C5 | [S] |
 | Payment type | ادھاری / نقدی | Toggle | Yes | ادھاری if the buyer has credit allowed, else نقدی. نقدی منڈی is always نقدی. | [S] |
+| Quality | درجہ | Dropdown: blank, اول, دوم, سوم (English: First, Second, Third) | No | Blank by default. A fixed list: no other words. It tells why lines of one lot have different rates; it never changes a figure (FR-12.42, v1.30) | [C] |
 | Credit warning | | Icon | | Shows if over credit limit | [A] |
 | Note | نوٹ | Text | No | | [A] |
 
@@ -1357,6 +1359,14 @@ FR-12.3 [A] By default each line has one quantity and one rate, and the buyer ra
 FR-12.4 [A] Credit limit exceeded: warning (Owner setting can make it a block).
 FR-12.5 [C] پختہ کھاتہ lines require the one-time name. If ادھاری, phone is also required.
 FR-12.6 [A] A lot's sold qty can never be more than its received qty. [C] Umar (06-11-2026): a line that would sell more than the lot has left shows the error under its quantity at once, for example "اتنی تعداد دستیاب نہیں: صرف 50 نگ باقی ہیں", and is not worked out: it shows no amount, commission or total, and the lot and بکری totals leave it out until the quantity is fixed. In line order, the line that takes the lot over is the one refused. Every lot label shows its seller and item, for example "لاٹ 1: احسان، سیب".
+
+FR-12.42 [C] **Quality of a sale line (درجہ).** (Added in v1.30.) Umar (06-11-2026): the goods of one lot can differ in quality, and each quality sells at its own rate. The munshi sells them as separate lines of the lot, each with its own quantity and rate, and can mark each line with its quality from a fixed dropdown: اول, دوم, سوم (First, Second, Third), or leave it blank.
+- It is optional and never changes money: the line is still qty × rate with its own commission and لاگا (C1 to C5).
+- `Enter` does not stop on it (the line stays buyer, qty, rate, NFR-USE-6). It is reached with the arrow keys or the mouse.
+- It prints after the item on every print that shows sale lines, for the buyer and for the seller: the seller bill (R1), the buyer slips, ادھاری تفصیل (R5, "(سیب اول 10 . 1200)"), the party day slip (R35), the ledger with items (R13, R14) and the sales register (R2). A blank quality prints nothing.
+- An edit that changes only the quality keeps the line's stored rules and amounts (FR-12.20).
+- The assistant reads and writes it: "awwal seb aaj kitne ka bika", "doyam kele ka rate", and a line it shows carries its quality.
+Example: Ehsan's 20 پیٹی سیب: اکرم 10 اول @ 1,200 = 12,000; اکرم 6 دوم @ 800 = 4,800; ارشد 4 سوم @ 500 = 2,000. خام بکری 18,800; seller commission 720 + 288 + 120 = 1,128.
 
 ### 12.5 Live summary [S]
 
@@ -2638,3 +2648,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.27 | 06-11-2026 | Approved by Umar: a balance estimate also leaves out make-regular moves, partner capital and the dead amount (FR-7.86). The assistant's fixed part may be 11,500 tokens (NFR v1.15). No money rule, posting or test number changed. |
 | 1.28 | 06-11-2026 | Umar's change of 06-11-2026 from his test of the بکری screen: a line over the lot's quantity gets its error at once and no figures, and every lot label names its seller and item (FR-12.6). No money rule, posting or test number changed. |
 | 1.29 | 06-11-2026 | Approved by Umar: the shop sells vegetables as well as fruit; a Group filter (پھل / سبزی) on analytics views A, D and G and the sales reports R2 to R4, R7, R10 and R27, on screen, in print and in the assistant (18.1, FR-19.1). The assistant's fixed part may be 11,600 tokens (NFR v1.16). No money rule, posting or test number changed. |
+| 1.30 | 06-11-2026 | Umar's change of 06-11-2026: an optional quality (درجہ: اول, دوم, سوم) on each sale line, from a fixed dropdown, printed on the buyer's and the seller's prints and known to the assistant (12.4, FR-12.42, glossary). No money rule, posting or test number changed. |
