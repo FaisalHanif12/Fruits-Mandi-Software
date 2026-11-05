@@ -53,6 +53,7 @@ Words and where to read them:
 - phal, "ghar le gaye", mehman: R37 (`by_for`: each partner, guests); view K | pukhta khata, "ek dafa wala": R9
 - alag khata, khandani khata: find separate_khata; party_card; R13
 - rate, bhao: our own average sale rate, view A avg_rate
+- sabzi, phal (the whole group): item_group, never with item
 - kis mahine sab se zyada / kam: a monthly series' `peak` and `lowest` (month, value)
 - a party's one day ("kal kya khareeda"): R35 with `party` and `as_of`; cite its `summary`, add nothing up
 - kaise karun, kaise likhun, kahan dekhun, tareeka, kya hai, how do I, what is (a screen or a word): app_help (partner ka hisaab: partners; audit log: audit)

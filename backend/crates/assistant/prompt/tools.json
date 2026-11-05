@@ -83,6 +83,7 @@
      "as_of",
      "party",
      "item",
+     "item_group",
      "city",
      "adda",
      "collector",
@@ -136,6 +137,18 @@
        "string",
        "null"
       ]
+     },
+     "item_group": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "fruit",
+       "vegetable",
+       null
+      ],
+      "description": "A whole group (phal, sabzi), R2 R3 R4 R7 R10 R27"
      },
      "city": {
       "type": [
@@ -464,6 +477,7 @@
      "to",
      "group_by",
      "item",
+     "item_group",
      "seller",
      "buyer",
      "city",
@@ -523,6 +537,18 @@
        "string",
        "null"
       ]
+     },
+     "item_group": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "fruit",
+       "vegetable",
+       null
+      ],
+      "description": "A whole group (phal, sabzi), views A D G"
      },
      "seller": {
       "type": [
