@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.26 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.27 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,10 +20,10 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.26 |
-| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.14 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.27 |
+| 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.15 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
-| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.18 |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.19 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.18 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.9 |
 
@@ -934,7 +934,7 @@ The daily limit of 20 is fixed, not a setting.
 FR-7.86 [C] **Estimates of the future (اندازہ).** (Added 02-11-2026.) Umar: "if the commission is going at this speed, what would it be in the upcoming 6 months?" The model asks the app's estimator, which works out an estimate from the books by a fixed method. The model never makes up a future figure.
 - **What can be estimated:** any monthly series the books give: sales (خام بکری), commission (seller, buyer, لاگا, or all), for the whole shop or one item, seller or buyer; shop expenses; profit; وصولی; a garden's or trip's sales.
 - **Balances too** (v1.26, Umar 05-11-2026). "akram ka bakaya isi raftar se agle mahine kitna hoga", the cash in hand, or what all the buyers owe. The estimate is the balance now (from the books, the same figure as the party card or the tile) plus the average net change of a month times the months ahead. Only the same pace method is used, and it needs 3 full months.
-  - The net change of a month is its debits less its credits on that account. Openings and their reversals are left out, because they are not part of the pace.
+  - The net change of a month is its debits less its credits on that account. Left out, because they are not the normal pace of business: openings and their reversals, moving a پختہ کھاتہ person to his own account (FR-13.8), partner capital put in or taken back (cash, 17.4), and the dead amount (buyers' dues, v1.27).
   - A party's balance can end on either side, and it is shown with its side word (بنام or جمع). An estimate of what the buyers owe that would fall below 0 is refused.
   - A balance has no target, no what-if and no year end.
   - Example: اکرم owes 2,880 today. His net change in the last 3 full months was +3,000, −1,000 and +4,000, so the average is +2,000 a month. After 2 months he would owe 2,880 + 2,000 × 2 = 6,880 بنام.
@@ -2634,3 +2634,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.24 | 04-11-2026 | Umar's change of 04-11-2026, approved by Umar: restore on a new computer from the first screen, with a choice between a new shop and bringing back the data from the cloud or a USB drive or file (FR-20.11, NFR-INS-2, NFR-INS-6). No money rule, table or test number changed. |
 | 1.25 | 05-11-2026 | Umar's change of 05-11-2026, approved by Umar: simple real-time figure questions are answered by the app with a reviewed sentence and the checked figure, with no model call (FR-7.90). It changes his decision D6-Q1 of 02-11-2026 for those questions only. No money rule or test number changed. |
 | 1.26 | 05-11-2026 | Umar's second change of 05-11-2026, approved by Umar: the estimator also estimates a balance (a party's balance, the cash in hand, what the buyers owe) at the same pace (FR-7.86). Display only, marked as an estimate. No money rule, posting or test number changed. |
+| 1.27 | 06-11-2026 | Approved by Umar: a balance estimate also leaves out make-regular moves, partner capital and the dead amount (FR-7.86). The assistant's fixed part may be 11,500 tokens (NFR v1.15). No money rule, posting or test number changed. |
