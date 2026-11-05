@@ -295,3 +295,8 @@ To do on "continue":
 11. **Other open items:**
     - robustness's plan 57 T3: 6 of 7 tests pass, and the 7th has a fault in the test's own setup;
     - backend3: the plan 57 fixtures, the full run, and one HANDOFF for plans 57 and 58.
+12. **backend2's HANDOFF arrived at the pause:** the group reads, plan 58 T3 grade words (R2 lines, no instant answer, no tools.json change), and the print bank at 245 of 245. On "continue":
+    - plan the group rankings, now that backend4 allows B, C and H;
+    - the last rate of a buyer's item from R13;
+    - the compare plans;
+    - "up to now".
