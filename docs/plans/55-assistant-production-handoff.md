@@ -240,3 +240,8 @@ To do on "continue":
      - 10 print rows: Q1192, Q1204, Q1262, Q1411, Q1428, Q1439, Q1443, Q1447, Q1453, Q1458;
      - the planned report reads lack layout, seller, status, voucher_type and zamindar.
    - lead (v1.5): system.md lost `voucher_type` in the trim, and state_prompt fails on it. Put it back.
+8. **frontend2 batch 3 is done** (all its items, seller-own, the screen source, the collector box, the entry routes, and the W2 and W3 links). Vitest passed 8,578 tests, with the 4 failures fixed. On "continue":
+   - tell backend2 that seller-own is in;
+   - backend2 builds the plans for W2 (views A to K) and W3 (item prints) against frontend2's links;
+   - backend adds a fixture with a screen source;
+   - question for Umar: should the collector box list only staff whose job is collector?
