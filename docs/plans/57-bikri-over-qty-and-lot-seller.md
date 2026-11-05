@@ -54,3 +54,12 @@ The lot holds 50 پیٹی سیب. Line 1 is مانی, 70 نگ at 1,200.
 ## 6. Out of scope
 
 Changing how a lot's received quantity is typed, and later sales from باقی مال (they already check the stock left).
+
+## 7. Contract agreed (06-11-2026, backend3's proposal, lead decisions)
+
+- A refused line is a LinePreview with `calc: null`, plus `ERR_QTY_EXCEEDS_LOT` with `available` at `lots[i].sales[j].qty`. There is no type change and no new flag.
+- A refused line takes no stock. Later lines, `remaining_qty`, `sold_qty` and `balance_qty` count the accepted lines only. Line order decides which line is refused.
+  - Example, a 50 lot with 30 + 30: line 2 is refused, with 20 available.
+- Lot totals, the whole-بکری summary, the journal and the split are built from the accepted lines only. When no line is worked out, the lot's `totals` is null.
+- An own-goods line that the purchase cannot cover is refused the same way.
+- Lead: in a lot with a refused line, the ERR_QTY_LEFT_UNSOLD warning is dropped. It comes back once nothing is refused.
