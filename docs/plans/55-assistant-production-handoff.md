@@ -233,3 +233,10 @@ To do on "continue":
    - Q4: open the audit log by words (backend2 and backend4);
    - Q4b: the audit guide topic is in v1.5; robustness re-checks it.
 6. **The lead:** commit v1.5 and all work, rebuild the app, live run 2 (`--threads 4`), then the fix rounds and the hidden rounds per §11.
+7. **backend's crate run after the v1.5 switch:** 723 passed, 6 failed.
+   - The loop_limits failure is fixed by backend.
+   - robustness: the nine-tools attack test now needs 10 tools; oracle-keys.txt must be rewritten.
+   - backend2:
+     - 10 print rows: Q1192, Q1204, Q1262, Q1411, Q1428, Q1439, Q1443, Q1447, Q1453, Q1458;
+     - the planned report reads lack layout, seller, status, voucher_type and zamindar.
+   - lead (v1.5): system.md lost `voucher_type` in the trim, and state_prompt fails on it. Put it back.
