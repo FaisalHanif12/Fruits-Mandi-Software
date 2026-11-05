@@ -245,3 +245,45 @@ To do on "continue":
    - backend2 builds the plans for W2 (views A to K) and W3 (item prints) against frontend2's links;
    - backend adds a fixture with a screen source;
    - question for Umar: should the collector box list only staff whose job is collector?
+
+## 14. Paused by Umar, 06-11-2026 about 03:40 (agents kept alive)
+
+Done since §13:
+- PRD v1.27 to v1.30, NFR v1.16, Code Standards v1.20 and Architecture v1.19, all approved by Umar:
+  - the balance exclusions;
+  - the 11,600 limit;
+  - the Group filter;
+  - plan 57 (a line over the lot gets no figures; the lot labels name the seller and item);
+  - plan 58 (the sale line quality).
+- D6 prompt v1.5 is committed at 11,595 tokens.
+- K8: the dues series takes 0.45 s, down from 12 s.
+- Plan 57 T1 and T2 are done.
+- robustness: the item axis (2,070 cells), and a bank of 3,261 questions.
+
+To do on "continue":
+1. **backend:** P3. Add the 7 glossary terms to the not-needed list in tests/prompt.rs.
+2. **backend4:** the item_group HANDOFF, which includes views B, C and H. Its full test run was going at the pause.
+3. **backend3:** the plan 57 fixtures, and the plan 58 T1 HANDOFF. reports/src/reports/ids.rs:405 still fails clippy (items_after_test_module).
+4. **frontend3:**
+   - the party card cut-off at 1024x600;
+   - plan 58 T2 with option C, including the report-grade-* Fluent words;
+   - retake the plan 57 photos with the real fixtures.
+5. **frontend2:**
+   - the five step messages plus assistant-how-set-group;
+   - the Group box.
+6. **backend2:**
+   - plan 58 T3;
+   - the compare plans;
+   - group prints and opens;
+   - the last rate of a buyer's item from R13;
+   - Q1463;
+   - "up to now".
+7. **robustness:**
+   - apply the lead's N/G rulings to capability-items.tsv;
+   - plan 57 T3;
+   - the bench note.
+8. **The lead:**
+   - commit every plan's work;
+   - rebuild the app;
+   - live run 2 with `--threads 4`; for speed, run the ITEM facet with `--every 5`;
+   - the fix round, hidden round 4, my own test, then the hand-over.
