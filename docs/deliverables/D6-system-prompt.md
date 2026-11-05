@@ -787,7 +787,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
        "vegetable",
        null
       ],
-      "description": "A whole group (phal, sabzi), views A D G"
+      "description": "A whole group (phal, sabzi)"
      },
      "seller": {
       "type": [

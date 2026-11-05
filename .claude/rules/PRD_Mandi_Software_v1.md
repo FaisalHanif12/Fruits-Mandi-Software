@@ -1907,7 +1907,7 @@ Umar: filter by month or year, and see how much commission we got by item (for e
 | Period | مدت | آج، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ، یہ سال، پچھلا سال، custom from-to |
 | Group by | ترتیب | Day, month (ماہانہ), year (سالانہ) |
 | Item | قسم مال | All, or pick one or more |
-| Group | گروپ | All, پھل (fruit) or سبزی (vegetable): all the items of that group (v1.29, views A, D and G). Never together with Item. |
+| Group | گروپ | All, پھل (fruit) or سبزی (vegetable): all the items of that group (v1.29, views A, B, C, D, G and H). Never together with Item. |
 | Seller | بیوپاری | All, or pick |
 | Buyer | گاہک | All, or pick (پختہ کھاتہ persons included) |
 | City | شہر | All, or pick |
@@ -2647,5 +2647,5 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.26 | 05-11-2026 | Umar's second change of 05-11-2026, approved by Umar: the estimator also estimates a balance (a party's balance, the cash in hand, what the buyers owe) at the same pace (FR-7.86). Display only, marked as an estimate. No money rule, posting or test number changed. |
 | 1.27 | 06-11-2026 | Approved by Umar: a balance estimate also leaves out make-regular moves, partner capital and the dead amount (FR-7.86). The assistant's fixed part may be 11,500 tokens (NFR v1.15). No money rule, posting or test number changed. |
 | 1.28 | 06-11-2026 | Umar's change of 06-11-2026 from his test of the بکری screen: a line over the lot's quantity gets its error at once and no figures, and every lot label names its seller and item (FR-12.6). No money rule, posting or test number changed. |
-| 1.29 | 06-11-2026 | Approved by Umar: the shop sells vegetables as well as fruit; a Group filter (پھل / سبزی) on analytics views A, D and G and the sales reports R2 to R4, R7, R10 and R27, on screen, in print and in the assistant (18.1, FR-19.1). The assistant's fixed part may be 11,600 tokens (NFR v1.16). No money rule, posting or test number changed. |
+| 1.29 | 06-11-2026 | Approved by Umar: the shop sells vegetables as well as fruit; a Group filter (پھل / سبزی) on analytics views A, B, C, D, G and H and the sales reports R2 to R4, R7, R10 and R27, on screen, in print and in the assistant (18.1, FR-19.1). The assistant's fixed part may be 11,600 tokens (NFR v1.16). No money rule, posting or test number changed. |
 | 1.30 | 06-11-2026 | Umar's change of 06-11-2026: an optional quality (درجہ: اول, دوم, سوم) on each sale line, from a fixed dropdown, printed on the buyer's and the seller's prints and known to the assistant (12.4, FR-12.42, glossary). No money rule, posting or test number changed. |
