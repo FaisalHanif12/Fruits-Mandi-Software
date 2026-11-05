@@ -197,3 +197,39 @@ The state when paused (the lead's view; each teammate's own note is the detail):
 - **The lead's first steps on "continue":**
   1. Ask Umar to approve the balance forecasts in PRD FR-7.86 and Code Standards M14 (backend3's finding).
   2. Then D6 v1.5: backend4's drafts, backend3's estimate drafts, the new EntryScreenName values from backend, the collected prompt items, and the limit raised to 11,500.
+
+## 13. Paused by Umar again, 05-11-2026 about 18:45 (usage limit; agents kept alive)
+
+Done since the 12 resume:
+- PRD v1.26 and Code Standards v1.18: balance estimates (commit 1e335de).
+- backend: the instant answers re-checked; the 10 entry routes; the v1.5 switch (TOOL_NAMES has 10 tools, ALL is 40, phone_charge shown, an audit help cue).
+- backend2: compose_figure, the real-plus-forecast plan, print plans for 37 reports.
+- backend4: the Screen source, the collector filter on R22, R23 and R35, and ERR_BACKUP_CLOUD_ADDRESS_PATH (plan 53 §10).
+- frontend3: the restore fixes.
+- robustness: bank 1,494, oracle 6,255 facts, matrix A 705, N 26, G 29.
+- hidden tester: round 3 (50) written; all 344 hidden rows pass the checker.
+- D6 v1.5 assembled by the lead's helper (uncommitted). The prompt files equal the doc, and the fixed part is 11,494 tokens.
+
+To do on "continue":
+1. **Ask Umar:**
+   - raise the fixed-part limit 11,000 to 11,500 (NFR-AI-5, Code Standards Q9). backend was told to revert the 11,500 it set on its own.
+   - the PRD FR-7.86 wording that also leaves out capital moves, make-regular moves and the dead mark (backend3's S3).
+2. **backend3:** the balance pace uses the last 3 full months (lead's decision, PRD text). Then B1, S1, S4 and N1, the money review and the HANDOFF. robustness and the hidden tester re-dump est_balance afterwards.
+3. **frontend2** (unanswered at the pause):
+   - the `seller-own` role (it blocks backend2's two seller lines);
+   - SourceFooter.tsx TS2366 (the screen case);
+   - err-backup-cloud-address-path;
+   - the earlier list.
+4. **robustness:**
+   - remove the 21 pending=Q* flags once v1.5 is committed;
+   - the 4 seeded rules, and Rasheed as collector for two buyers (yes, with a dump diff);
+   - pass the new dump with the staff names to the hidden tester.
+5. **The 29 gaps left:**
+   - W2: open or print plans for analytics views A to K (backend2 with frontend2);
+   - W1: R1 by بکری number (backend2);
+   - W3: a print that names an item: R7, R27 and R10 links (frontend2, then backend2);
+   - P1: the guests' fruit print button (backend2);
+   - Q5: packing, marka, store and narration find roles (backend4);
+   - Q4: open the audit log by words (backend2 and backend4);
+   - Q4b: the audit guide topic is in v1.5; robustness re-checks it.
+6. **The lead:** commit v1.5 and all work, rebuild the app, live run 2 (`--threads 4`), then the fix rounds and the hidden rounds per §11.
