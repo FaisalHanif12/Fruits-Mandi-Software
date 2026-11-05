@@ -300,3 +300,4 @@ To do on "continue":
     - the last rate of a buyer's item from R13;
     - the compare plans;
     - "up to now".
+13. **frontend3's HANDOFF arrived at the pause:** the party card fix, and plan 58 T2 (option C, which fits 692 of 692 and 874 of 874). After backend4's gen:types, check that the bindings carry SaleGrade and every grade field. Then run typecheck and lint once over the whole frontend, and run frontend2's analytics group box tests.
