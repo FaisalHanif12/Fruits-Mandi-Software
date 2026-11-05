@@ -287,3 +287,11 @@ To do on "continue":
    - rebuild the app;
    - live run 2 with `--threads 4`; for speed, run the ITEM facet with `--every 5`;
    - the fix round, hidden round 4, my own test, then the hand-over.
+9. **First on "continue": backend4 runs `pnpm gen:types`.** The bindings were restored from HEAD at the pause, so they lack item_group, collector and SaleGrade. No frontend typecheck runs before that.
+10. **backend4's three questions for Umar:**
+    - view G's gardens column, for a garden with no main item;
+    - the item group is read live, so changing an item's group moves its history;
+    - R27 shows part of a bill under a group.
+11. **Other open items:**
+    - robustness's plan 57 T3: 6 of 7 tests pass, and the 7th has a fault in the test's own setup;
+    - backend3: the plan 57 fixtures, the full run, and one HANDOFF for plans 57 and 58.
