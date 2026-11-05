@@ -66,3 +66,10 @@ Ehsan's 20 پیٹی سیب, seller commission 6%:
 - `Enter` takes exactly 3 stops per line.
 - Every golden test passes with no number changed. fmt, clippy, typecheck, lint and i18n:check are clean.
 - The assistant answers "awwal seb aaj kitne ka bika" with a checked figure.
+
+## 7. Umar's choice (06-11-2026): the layout
+
+The sale lines grid has no room for one more column at 1024 or 1366 wide without a sideways scroll. That scroll breaks NFR-USE-15.
+- Umar chose: quality is a column right after the rate.
+- The ادھاری / نقدی toggle moves into the line details box under the grid, at every size. It still fills itself from the buyer's credit setting, and it keeps its key and mouse path.
+- The saved view and the prints show credit or cash as before.
