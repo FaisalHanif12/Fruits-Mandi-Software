@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.28 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.29 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,10 +20,10 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.28 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.29 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.15 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
-| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.19 |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.20 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.18 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.9 |
 
@@ -1897,6 +1897,7 @@ Umar: filter by month or year, and see how much commission we got by item (for e
 | Period | مدت | آج، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ، یہ سال، پچھلا سال، custom from-to |
 | Group by | ترتیب | Day, month (ماہانہ), year (سالانہ) |
 | Item | قسم مال | All, or pick one or more |
+| Group | گروپ | All, پھل (fruit) or سبزی (vegetable): all the items of that group (v1.29, views A, D and G). Never together with Item. |
 | Seller | بیوپاری | All, or pick |
 | Buyer | گاہک | All, or pick (پختہ کھاتہ persons included) |
 | City | شہر | All, or pick |
@@ -1982,7 +1983,7 @@ View F, partners, 10-10-26:
 
 ### 19.1 Common behaviour
 
-FR-19.1 [S] Each report first shows its filters: از, تا, and where relevant بیوپاری, زمیندار, گاہک, قسم مال, شہر, اڈا.
+FR-19.1 [S] Each report first shows its filters: از, تا, and where relevant بیوپاری, زمیندار, گاہک, قسم مال, شہر, اڈا. [C] Umar (06-11-2026, v1.29): the sales reports R2, R3, R4, R7, R10 and R27 also take گروپ (پھل or سبزی) in place of one item, so "is mahine sabzi ki bikri" opens and prints with all the vegetables together.
 FR-19.2 [A] Date shortcuts: آج، کل، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ.
 FR-19.3 [A] Every report: on-screen view, print (A4, in the print language of FR-7.36, page numbers, firm header, print time), save as PDF, Excel.
 FR-19.4 [S] Open a row (click or `Enter`) to see its source بکری or voucher.
@@ -2636,3 +2637,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.26 | 05-11-2026 | Umar's second change of 05-11-2026, approved by Umar: the estimator also estimates a balance (a party's balance, the cash in hand, what the buyers owe) at the same pace (FR-7.86). Display only, marked as an estimate. No money rule, posting or test number changed. |
 | 1.27 | 06-11-2026 | Approved by Umar: a balance estimate also leaves out make-regular moves, partner capital and the dead amount (FR-7.86). The assistant's fixed part may be 11,500 tokens (NFR v1.15). No money rule, posting or test number changed. |
 | 1.28 | 06-11-2026 | Umar's change of 06-11-2026 from his test of the بکری screen: a line over the lot's quantity gets its error at once and no figures, and every lot label names its seller and item (FR-12.6). No money rule, posting or test number changed. |
+| 1.29 | 06-11-2026 | Approved by Umar: the shop sells vegetables as well as fruit; a Group filter (پھل / سبزی) on analytics views A, D and G and the sales reports R2 to R4, R7, R10 and R27, on screen, in print and in the assistant (18.1, FR-19.1). The assistant's fixed part may be 11,600 tokens (NFR v1.16). No money rule, posting or test number changed. |
