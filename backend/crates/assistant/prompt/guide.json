@@ -882,6 +882,32 @@
         "example": "دوسرے سائز کے کاغذ پر چھاپنے کے لیے ترتیبات میں چھپائی کھولیں اور اس چیز کے لیے کاغذ چنیں۔"
       }
     },
+    "audit": {
+      "en": {
+        "title": "Audit Log",
+        "summary": "The audit log is a record of every change: who did it, when, what it was, and the old and new values. It can only be read. Nothing in it can be edited or deleted.",
+        "steps": [
+          "Open Settings from the main menu, then the Audit log tab.",
+          "Narrow the list with the filters: dates, Who, Action, Area, a record number with its area, or Words, which are looked for in the reason and in the old and new values.",
+          "Pick an entry with the arrow keys and press Enter to see each field that changed, Before and After.",
+          "Back to the list returns to the entries with the same filters."
+        ],
+        "keys": "Arrow keys move between entries; Enter opens one; Esc goes back.",
+        "example": "To see who changed a Sale, choose the area Sale, type its number and open the entry."
+      },
+      "ur": {
+        "title": "آڈٹ لاگ",
+        "summary": "آڈٹ لاگ ہر تبدیلی کا ریکارڈ ہے: کس نے کی، کب کی، کیا تھی اور پرانی اور نئی قیمتیں۔ اسے صرف پڑھا جا سکتا ہے۔ اس میں کچھ بدلا یا مٹایا نہیں جا سکتا۔",
+        "steps": [
+          "مرکزی مینو سے ترتیبات کھولیں، پھر آڈٹ لاگ کا ٹیب۔",
+          "فلٹر سے فہرست چھوٹی کریں: تاریخیں، کس نے، کام، حصہ، حصے کے ساتھ ریکارڈ نمبر، یا الفاظ، جو وجہ اور پرانی اور نئی قیمتوں میں ڈھونڈے جاتے ہیں۔",
+          "تیر کی کلیدوں سے اندراج چنیں اور Enter دبائیں تو ہر بدلی ہوئی چیز پہلے اور بعد میں کے ساتھ آ جاتی ہے۔",
+          "فہرست پر واپس جائیں تو انہی فلٹروں کے ساتھ اندراج آ جاتے ہیں۔"
+        ],
+        "keys": "تیر کی کلیدیں اندراجوں میں چلتی ہیں؛ Enter ایک کھولتا ہے؛ Esc واپس لے جاتا ہے۔",
+        "example": "کسی بکری کو کس نے بدلا، یہ دیکھنے کے لیے حصہ بکری چنیں، اس کا نمبر لکھیں اور اندراج کھولیں۔"
+      }
+    },
     "shop_expense": {
       "en": {
         "title": "Expense (Shop Expense)",

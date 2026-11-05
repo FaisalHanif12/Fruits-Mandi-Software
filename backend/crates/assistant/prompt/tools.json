@@ -32,7 +32,14 @@
        "item",
        "city",
        "adda",
-       "collector"
+       "collector",
+       "staff",
+       "expense_head",
+       "truck",
+       "packing",
+       "marka",
+       "store",
+       "narration"
       ]
      }
     }
@@ -64,7 +71,7 @@
   "type": "function",
   "function": {
    "name": "report",
-   "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today). Sort and where words are the columns of the report: R1 R6 date entry seller item qty gross freight commission labour munshiana cash_paid store_rent deductions net | R2 R3 R4 date entry buyer city item qty rate value buyer_total | R5 serial buyer detail value buyer_total | R7 name qty gross avg_rate seller_comm buyer_comm laga total_comm | R8 name trucks lots qty gross | R9 date entry side person item qty amount commission status open | R10 date entry seller item packing received sold written_off fruit_taken balance our_left other_left shop_name days | R11 date entry account debit credit | R12 date entry account cash_in cash_out balance | R13 R14 date entry detail debit credit balance | R15 R25 date entry account amount status | R16 name city debit credit | R17 code head debit credit | R18 name debit credit | R19 name opening_date debit credit | R20 name city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R21 name buyer balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R22 name buyer city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R23 date entry account amount collector status | R24 section seller payable advance_open owes_firm balance last_date | R26 name given returned adjusted open last_date | R27 entry date bill_date seller gross deductions net | R28 period account amount | R29 section name expense taken returned | R30 name income_share expense_share profit_share taken returned net | R31 name total date heading detail amount running | R32 name staff lent returned_cash returned_salary open oldest_open return_by days_past | R33 name purchase date item bought_qty bought_cost sold_qty sales_money commission total_commission cost_sold written_off_qty written_off_cost left_qty left_cost result | R34 date item count amount | R35 code party previous debit credit remaining collector | R36 name date status rent installments costs paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission money_in balance rent_due | R37 date entry for seller item packing weight qty rate value source | R38 name type date owed_then recovered corrections still_owed last_recovery status.",
+   "description": "A report R1 to R38 with its own filters: rows (20 unless rows is set, at most 100), the totals over the whole filter, the summary lines and the count. A filter the report does not have is an error. Balance lists (R20, R24, R26, R32) take as_of; others take from and to (empty: from the first date, to today). Sort and where words are the columns of the report: R1 R6 date entry seller item qty gross freight commission labour munshiana cash_paid store_rent phone_charge deductions net | R2 R3 R4 date entry buyer city item qty rate value buyer_total | R5 serial buyer detail value buyer_total | R7 name qty gross avg_rate seller_comm buyer_comm laga total_comm | R8 name trucks lots qty gross | R9 date entry side person item qty amount commission status open | R10 date entry seller item packing received sold written_off fruit_taken balance our_left other_left shop_name days | R11 date entry account debit credit | R12 date entry account cash_in cash_out balance | R13 R14 date entry detail debit credit balance | R15 R25 date entry account amount status | R16 name city debit credit | R17 code head debit credit | R18 name debit credit | R19 name opening_date debit credit | R20 name city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R21 name buyer balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R22 name buyer city balance oldest_date days age_0_7 age_8_30 age_31_90 age_91 | R23 date entry account amount collector status | R24 section seller payable advance_open owes_firm balance last_date | R26 name given returned adjusted open last_date | R27 entry date bill_date seller gross deductions net | R28 period account amount | R29 section name expense taken returned | R30 name income_share expense_share profit_share taken returned net | R31 name total date heading detail amount running | R32 name staff lent returned_cash returned_salary open oldest_open return_by days_past | R33 name purchase date item bought_qty bought_cost sold_qty sales_money commission total_commission cost_sold written_off_qty written_off_cost left_qty left_cost result | R34 date item count amount | R35 code party previous debit credit remaining collector | R36 name date status rent installments costs paid_shop paid_pocket sales_our_shop sales_other_shops other_in commission money_in balance rent_due | R37 date entry for seller item packing weight qty rate value source | R38 name type date owed_then recovered corrections still_owed last_recovery status.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -83,6 +90,11 @@
      "trip",
      "garden",
      "bikri",
+     "seller",
+     "zamindar",
+     "status",
+     "voucher_type",
+     "layout",
      "group_by",
      "where",
      "sort",
@@ -141,13 +153,15 @@
       "type": [
        "string",
        "null"
-      ]
+      ],
+      "description": "R22 R23 R35: a staff key from find role collector or staff"
      },
      "partner": {
       "type": [
        "string",
        "null"
-      ]
+      ],
+      "description": "\"guests\" for the guests' fruit (R37)"
      },
      "trip": {
       "type": [
@@ -167,6 +181,52 @@
        "null"
       ],
       "description": "A بکری number, for R1"
+     },
+     "seller": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "zamindar": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "paid",
+       "due",
+       null
+      ]
+     },
+     "voucher_type": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "R15: receipt payment advance shop_expense personal_expense general ..."
+     },
+     "layout": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "detail",
+       "trip",
+       "item",
+       "day",
+       "month",
+       "partner",
+       "garden",
+       null
+      ]
      },
      "group_by": {
       "type": [
@@ -223,6 +283,7 @@
        "munshiana",
        "cash_paid",
        "store_rent",
+       "phone_charge",
        "deductions",
        "net",
        "buyer",
@@ -737,7 +798,7 @@
   "type": "function",
   "function": {
    "name": "calculate",
-   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second), change_percent (from first to second), percent_more or percent_less (the amount first, then the percent of the question q.n1: the amount with that percent added or taken off) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
+   "description": "Exact sum, difference (first minus second), average, percent_of (first as a percent of second), change_percent (from first to second), percent_more or percent_less (that percent added or taken off) of figures already read for this question or numbers from it. rows.* takes every row of a result, only when all its rows were sent. Gives the result with its side or dir, checked when all inputs are, and the working.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -764,7 +825,7 @@
       "items": {
        "type": "string"
       },
-      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1. For percent_more and percent_less: the amount, then q.n1, only for a what-if question (agar, if) that has one percent number and says more or less right after it"
+      "description": "Paths such as r3.balance, r4.rows.*.balance or q.n1; for percent_more and percent_less: the amount, then q.n1, only in an agar or if question with one percent number"
      }
     }
    }
@@ -774,7 +835,7 @@
   "type": "function",
   "function": {
    "name": "estimate",
-   "description": "An estimate of the months ahead from the full months in the books, by same pace, same growth and, with 12 months, same season; and the month a target is passed. `until` year_end gives the whole year: the books' months so far (`year.so_far`) plus the months to December; each method has `year_total`; no `target` with it. `what_if` adds the same pace scaled by a factor the question names. Says when the history is too short.",
+   "description": "An estimate of the months ahead from the full months in the books, by same pace, same growth and, with 12 months, same season; and the month a target is passed. `until` year_end gives the whole year: the books' months so far (`year.so_far`) plus the months to December; each method has `year_total`; no `target` with it. `head` (shop_expenses) is one expense head, `partner` (profit) one partner's share; a filter a measure does not take is refused. A balance (`party_balance` with `party`, `cash_in_hand`, `buyers_dues`) is `now` from the books plus the average change of a month times the months: same pace only, `same_pace.total` after `ahead` months; no `until`, `what_if` or `target`.",
    "strict": true,
    "parameters": {
     "type": "object",
@@ -790,7 +851,10 @@
      "until",
      "what_if",
      "percent",
-     "target"
+     "target",
+     "head",
+     "partner",
+     "party"
     ],
     "properties": {
      "measure": {
@@ -805,7 +869,10 @@
        "profit",
        "receipts",
        "garden_sales",
-       "trip_sales"
+       "trip_sales",
+       "party_balance",
+       "cash_in_hand",
+       "buyers_dues"
       ]
      },
      "item": {
@@ -861,7 +928,7 @@
        "year_end",
        null
       ],
-      "description": "year_end: the whole year, the books so far plus the current month to December. Only when the question says to the end of the year; no target with it"
+      "description": "Only when the question says to the end of the year"
      },
      "what_if": {
       "type": [
@@ -876,7 +943,7 @@
        "down",
        null
       ],
-      "description": "A what-if on the pace. Only when the question asks agar/if and names it"
+      "description": "Only when the question asks agar or if and names it"
      },
      "percent": {
       "type": [
@@ -884,6 +951,27 @@
        "null"
       ],
       "description": "For up and down: the percent number of the question (q.n1)"
+     },
+     "head": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "shop_expenses: find role expense_head"
+     },
+     "partner": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "profit: find role partner"
+     },
+     "party": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "party_balance: a find match, never پختہ کھاتہ"
      }
     }
    }
@@ -933,6 +1021,7 @@
        "month_close",
        "backup",
        "settings",
+       "audit",
        "masters",
        "accounts",
        "search",
@@ -943,6 +1032,55 @@
        "printing",
        "ask_the_app",
        "sign_in"
+      ]
+     }
+    }
+   }
+  }
+ },
+ {
+  "type": "function",
+  "function": {
+   "name": "app_state",
+   "description": "The app's own state: rules (which commission or charge rule wins today), attention (آج کے کام), days (closed up to, month close) or audit (changes to one بکری or account, or the newest).",
+   "strict": true,
+   "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "what",
+     "party",
+     "item",
+     "bikri"
+    ],
+    "properties": {
+     "what": {
+      "type": "string",
+      "enum": [
+       "rules",
+       "attention",
+       "days",
+       "audit"
+      ]
+     },
+     "party": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "A seller, buyer or account: a find match or key"
+     },
+     "item": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "An item key, or fruit or vegetable"
+     },
+     "bikri": {
+      "type": [
+       "integer",
+       "null"
       ]
      }
     }
