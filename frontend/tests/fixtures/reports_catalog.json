@@ -138,7 +138,8 @@
       "date_range",
       "seller",
       "item",
-      "item_group"
+      "item_group",
+      "stock_view"
     ],
     "party_required": false
   },

@@ -5,6 +5,7 @@
 import type { ReportGardenView } from '../../bindings/ReportGardenView';
 import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
+import type { ReportStockView } from '../../bindings/ReportStockView';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import { pickedOrNull } from '../../shared/screen-state';
 import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
@@ -21,6 +22,7 @@ import {
   GROUP_BY_CHOICES,
   PAID_CHOICES,
   PERIOD_CHOICES,
+  STOCK_VIEW_CHOICES,
   TRIP_VIEW_CHOICES,
   VOUCHER_CHOICES,
 } from './filters';
@@ -61,6 +63,8 @@ export interface ReportSearch {
   item_group?: ItemGroupChoice;
   /** How the trip profit or loss (R33) is laid out. */
   trip_view?: ReportTripView;
+  /** How the stock report (R10) is laid out. */
+  stock_view?: ReportStockView;
   /** One garden (R36), by its id. */
   garden?: number;
   /** How the gardens report (R36) is laid out. */
@@ -156,6 +160,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const voucherType = oneOf(VOUCHER_CHOICES, search['voucher_type']);
   const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
+  const stockView = oneOf(STOCK_VIEW_CHOICES, search['stock_view']);
   const garden = positiveId(search['garden']);
   const gardenView = oneOf(GARDEN_VIEW_CHOICES, search['garden_view']);
   const bikri = readBikri(search['bikri'], search['bikri_number']);
@@ -180,6 +185,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(voucherType === undefined || voucherType === 'all' ? {} : { voucher_type: voucherType }),
     ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
+    ...(stockView === undefined ? {} : { stock_view: stockView }),
     ...(garden === undefined ? {} : { garden }),
     ...(gardenView === undefined ? {} : { garden_view: gardenView }),
     ...(bikri === undefined ? {} : { bikri }),
@@ -214,6 +220,7 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
     voucherType: search.voucher_type ?? 'all',
     itemGroup: search.item_group ?? 'all',
     tripView: search.trip_view ?? 'trip',
+    stockView: search.stock_view ?? 'lot',
     garden: search.garden ?? null,
     gardenView: search.garden_view ?? 'garden',
     bikri: search.bikri ?? null,

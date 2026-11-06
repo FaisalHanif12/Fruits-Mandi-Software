@@ -581,11 +581,11 @@ fn a_months_ahead_number_that_is_not_in_the_question_says_what_to_do() {
         .unwrap_err();
     assert_eq!(e.field.as_deref(), Some("ahead"));
     assert!(e.detail.contains("6"), "{}", e.detail);
-    // With none, 6 months works (the history is too short, which the result says).
+    // "agle mahine" with no number is one month (the history is too short, which the result says).
     let id = s.ok(
         "estimate",
         json!({"measure": "commission_all", "item": null, "seller": null, "buyer": null,
-               "garden": null, "trip": null, "ahead": 6, "target": null}),
+               "garden": null, "trip": null, "ahead": 1, "target": null}),
     );
     assert_eq!(s.json(&id)["too_short"], true);
 }

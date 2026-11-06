@@ -246,6 +246,8 @@ pub enum FilterKind {
     /// All the items of a group, پھل or سبزی (R2, R3, R4, R7, R10, R27), in place of one item
     /// (PRD v1.29).
     ItemGroup,
+    /// How R10 lays out the stock: one row for each lot or one row for each item.
+    StockView,
 }
 
 /// One report in the catalogue.
@@ -324,6 +326,20 @@ pub enum TripView {
     Month,
     /// One row for each partner of each trip: his %, money in and money back.
     Partner,
+}
+
+/// How R10 lays out the goods not yet sold: one row for each lot (the default), or one row for
+/// each item with its quantities over all its lots, the biggest balance first.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(rename = "ReportStockView")]
+pub enum StockView {
+    /// One row for each lot, trip purchase or garden arrival.
+    #[default]
+    Lot,
+    /// One row for each item: what was received, sold, written off, taken and is left, over all
+    /// the lots, purchases and arrivals of the filter.
+    Item,
 }
 
 /// How R36 lays out the gardens (PRD 19.2 R36: per garden; each partner's % and money).
@@ -420,6 +436,10 @@ pub struct ReportFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// How R10 lays out the stock. Missing means one row for each lot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub stock_view: Option<StockView>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner parts of
     /// this report are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -537,6 +557,10 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// The layout of R10 when it is by item. Missing for one row for each lot and any other report.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub stock_view: Option<StockView>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

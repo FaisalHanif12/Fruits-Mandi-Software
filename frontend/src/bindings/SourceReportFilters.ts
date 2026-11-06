@@ -5,6 +5,7 @@ import type { ReportDateShortcut } from './ReportDateShortcut';
 import type { ReportGardenView } from './ReportGardenView';
 import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportPaidFilter } from './ReportPaidFilter';
+import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
 import type { SourceBikri } from './SourceBikri';
 import type { SourceParty } from './SourceParty';
@@ -103,4 +104,8 @@ export type SourceReportFilters = {
    * One collector, a staff member (R22, R23, R35). Left out of the wire form when none.
    */
   collector?: AnswerRecord;
+  /**
+   * How R10 lays out the stock (one row for each item). Left out of the wire form when by lot.
+   */
+  stock_view?: ReportStockView;
 };

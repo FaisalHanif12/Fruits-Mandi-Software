@@ -317,6 +317,8 @@ pub(crate) const FILTER_PARTNER: &str = "report-filter-partner";
 // R33 says how it is laid out; the label is the whole fact.
 pub(crate) const FILTER_TRIP_BY_TRIP: &str = "report-filter-trip-by-trip";
 pub(crate) const FILTER_TRIP_BY_ITEM: &str = "report-filter-trip-by-item";
+/// R10 by item: a whole header fact with no value (the words are in the Fluent files).
+pub(crate) const FILTER_STOCK_BY_ITEM: &str = "report-filter-stock-by-item";
 pub(crate) const FILTER_TRIP_BY_DAY: &str = "report-filter-trip-by-day";
 pub(crate) const FILTER_TRIP_BY_MONTH: &str = "report-filter-trip-by-month";
 pub(crate) const FILTER_TRIP_BY_PARTNER: &str = "report-filter-trip-by-partner";

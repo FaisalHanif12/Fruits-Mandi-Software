@@ -15,6 +15,7 @@ import type { ReportRow } from '../../src/bindings/ReportRow';
 import type { UiError } from '../../src/bindings/UiError';
 import * as reportsApi from '../../src/features/reports/api';
 import { CommandError } from '../../src/shared/api';
+import { R10_BY_ITEM } from './reports-stock-by-item';
 import {
   CATALOG,
   PRINT_R13_AKRAM_UR,
@@ -242,6 +243,14 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     // page of its own).
     if (input.id === 'R35' && input.filters.party !== null && options.pages?.R35 === undefined) {
       answer = input.filters.party.account_id === 18 ? R35_SLIP_RAHIM : R35_SLIP_AKRAM;
+    }
+    // R10 answers by item when the layout box says so (unless the test brought a page of its own).
+    if (
+      input.id === 'R10' &&
+      options.pages?.R10 === undefined &&
+      input.filters.stock_view === 'item'
+    ) {
+      answer = R10_BY_ITEM;
     }
     // R33 answers in the layout asked for (unless the test brought a page of its own).
     if (input.id === 'R33' && options.pages?.R33 === undefined) {

@@ -217,7 +217,9 @@ fn the_catalogue_has_the_new_reports_with_their_filters() {
             FilterKind::Seller,
             FilterKind::Item,
             // PRD v1.29: all the items of a group.
-            FilterKind::ItemGroup
+            FilterKind::ItemGroup,
+            // R10 by lot or by item.
+            FilterKind::StockView
         ]
     );
     assert_eq!(

@@ -684,6 +684,10 @@ pub(crate) fn filter_facts(
         };
         facts.push(fact(label, String::new()));
     }
+    // R10 by item: the label is the whole fact.
+    if filters.stock_view == Some(crate::reports::model::StockView::Item) {
+        facts.push(fact(ids::FILTER_STOCK_BY_ITEM, String::new()));
+    }
     // R1: the بکری picked, by its number.
     if let Some(number) = filters.bikri_number {
         facts.push(fact(ids::FILTER_BIKRI, number.to_string()));

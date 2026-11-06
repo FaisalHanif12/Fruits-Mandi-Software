@@ -289,6 +289,21 @@ describe('the filters of an answer’s source', () => {
     expect(parseReportSearch({ item_group: 'meat' })).not.toHaveProperty('item_group');
   });
 
+  it('the stock by item (R10): the address carries the layout, the print sends it, and by lot or none sends nothing', () => {
+    const source = reportSource({ stock_view: 'item', from: '2026-10-01', to: '2026-10-31' });
+    expect(reportSearchFromFilters(source)).toEqual({
+      from: '01-10-2026',
+      to: '31-10-2026',
+      stock_view: 'item',
+    });
+    expect(reportFiltersOf(source)).toMatchObject({ stock_view: 'item' });
+    expect(reportSearchFromFilters(reportSource())).not.toHaveProperty('stock_view');
+    expect(reportFiltersOf(reportSource())).not.toHaveProperty('stock_view');
+    // The address, read again, chooses the layout; an unknown word chooses nothing.
+    expect(parseReportSearch({ stock_view: 'item' }).stock_view).toBe('item');
+    expect(parseReportSearch({ stock_view: 'pile' })).not.toHaveProperty('stock_view');
+  });
+
   it('a collector, a staff member (R22, R23, R35): the address carries him, the print sends his id, and none sends nothing', () => {
     const rasheed = { id: 12, code: null, name_ur: 'رشید', name_en: 'Rasheed', tag: null };
     const source = reportSource({ collector: rasheed, as_of: '2026-10-10' });

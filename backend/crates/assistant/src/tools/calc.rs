@@ -886,8 +886,8 @@ fn year_end_asked(env: &Env<'_>, parsed: &EstimateInput) -> bool {
     parsed.ahead.is_none() && !months && cues::year_end(env.question)
 }
 
-/// Months ahead: a number of the question with months, or 6 (12 with a target) when the question
-/// has none; or, with `until: "year_end"`, the months left in the year when the question says "to
+/// Months ahead: a number of the question with months, or 6 (12 with a target or one year, 1 for
+/// "next month") when the question has none; or, with `until: "year_end"`, the months left in the year when the question says "to
 /// the end of the year" (plan 52 item 5). A year end together with a months number is refused:
 /// which one is meant is the Owner's to say. When the model sends no `ahead` the app takes what the
 /// tool's own rule says: the one months number of the question, else 6, or 12 with a target.
@@ -945,8 +945,12 @@ fn months_ahead(
     let has_target = parsed.target.is_some();
     // "ek saal" (one year ahead) is 12 months: the question holds no digit, so no months number
     // (Q285 and Q286 of the live run of 03-11-2026).
+    // "agle mahine" (next month, no number) is one month: sent or not, it is 1 (live run 2, H369), so
+    // the total of the estimate is the one month and never a 6-month total.
     let default_ahead: i64 = if has_target || cues::year_ahead(env.question) {
         12
+    } else if months.is_empty() && cues::next_month(env.question) {
+        1
     } else {
         6
     };
@@ -981,7 +985,7 @@ fn months_ahead(
         return Err(bad(
             "ERR_OUT_OF_RANGE",
             "ahead",
-            "months ahead must be a number of the question with months; with none, 6 (12 for a target or one year)",
+            "months ahead must be a number of the question with months; with none, 6 (12 for a target or one year, 1 for next month)",
         ));
     }
     u32::try_from(ahead)

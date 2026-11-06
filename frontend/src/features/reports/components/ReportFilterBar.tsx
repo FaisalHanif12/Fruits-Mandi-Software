@@ -42,6 +42,7 @@ import { ReportPartnerSelect } from './ReportPartnerSelect';
 import { ReportPersonPicker } from './ReportPersonPicker';
 import { ReportBikriBox } from './ReportBikriBox';
 import { ReportGardenViewSelect } from './ReportGardenViewSelect';
+import { ReportStockViewSelect } from './ReportStockViewSelect';
 import { ReportTripViewSelect } from './ReportTripViewSelect';
 import { ReportVoucherTypeSelect } from './ReportVoucherTypeSelect';
 
@@ -355,6 +356,18 @@ export function ReportFilterBar({
         error={fieldError(error, 'filters.trip_view')}
         onChange={(tripView) => {
           onChange({ tripView });
+        }}
+      />,
+    );
+  }
+  if (takes('stock_view')) {
+    boxes.push(
+      <ReportStockViewSelect
+        key="stock_view"
+        value={state.stockView}
+        error={fieldError(error, 'filters.stock_view')}
+        onChange={(stockView) => {
+          onChange({ stockView });
         }}
       />,
     );

@@ -10,6 +10,7 @@ import type { ReportFilters } from '../../bindings/ReportFilters';
 import type { ReportGardenView } from '../../bindings/ReportGardenView';
 import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
+import type { ReportStockView } from '../../bindings/ReportStockView';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import type { VoucherType } from '../../bindings/VoucherType';
 import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
@@ -74,6 +75,14 @@ export const TRIP_VIEW_CHOICES: readonly ReportTripView[] = [
 /** The Fluent message of a trip layout: `report-filter-trip-by-partner`. */
 export function tripViewMessageId(view: ReportTripView): string {
   return `report-filter-trip-by-${view}`;
+}
+
+/** The stock report (R10) is laid out by lot (the default) or by item, the biggest balance first. */
+export const STOCK_VIEW_CHOICES: readonly ReportStockView[] = ['lot', 'item'];
+
+/** The Fluent message of a stock layout: `report-filter-stock-view-item`. */
+export function stockViewMessageId(view: ReportStockView): string {
+  return `report-filter-stock-view-${view}`;
 }
 
 /** The gardens report (R36) is laid out by garden (the default) or by partner. */
@@ -167,6 +176,8 @@ export interface ReportFilterState {
   itemGroup: ItemGroupChoice;
   /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
   tripView: ReportTripView;
+  /** How the stock report (R10) is laid out: by lot or by item. A layout, not a filter to clear. */
+  stockView: ReportStockView;
   /** One garden of the gardens report (R36); null is every garden. */
   garden: number | null;
   /** How the gardens report is laid out (R36): by garden or by partner. A layout, not a filter. */
@@ -199,6 +210,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   voucherType: 'all',
   itemGroup: 'all',
   tripView: 'trip',
+  stockView: 'lot',
   garden: null,
   gardenView: 'garden',
   bikri: null,
@@ -252,6 +264,8 @@ export function filtersToWire(
       ? { voucher_type: state.voucherType }
       : {}),
     ...(has('trip_view') ? { trip_view: state.tripView } : {}),
+    // The stock layout is sent only when it is not the first (the backend reads a missing key as by lot).
+    ...(has('stock_view') && state.stockView !== 'lot' ? { stock_view: state.stockView } : {}),
     // One collector is sent only when he is picked (the backend reads a missing key as every collector).
     ...(has('collector') && state.collector !== null ? { collector_id: state.collector.id } : {}),
     // The guests choice of the fruit register is sent only when it is set (the backend reads a

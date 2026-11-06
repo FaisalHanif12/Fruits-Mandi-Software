@@ -148,7 +148,7 @@ pub struct Input {
     #[serde(default)]
     pub voucher_type: Option<String>,
     /// How the report lays out its rows: `detail` (R14), `item` `day` `month` `partner` (R33),
-    /// `partner` (R36).
+    /// `partner` (R36), `item` (R10, one row for each item).
     #[serde(default)]
     pub layout: Option<String>,
     /// `day` or `month`, for R28.
@@ -1145,6 +1145,10 @@ fn assemble(
         if let Some(value) = value {
             echo.push((name, Node::Str(value)));
         }
+    }
+    // A read for a group says so, so a zero for a group with no sales is not taken for the whole.
+    if let Some(group) = page.filters.item_group {
+        echo.push(("item_group", Node::Str(group.as_str().to_owned())));
     }
     let mut fields = vec![
         ("source", Node::Str(id.code().to_owned())),

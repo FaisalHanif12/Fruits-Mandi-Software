@@ -906,6 +906,10 @@ fn assemble(
             echo.push((name, Node::Str(value)));
         }
     }
+    // A read for a group says so, so a zero for a group with no sales is not taken for the whole.
+    if let Some(group) = page.filters.item_group {
+        echo.push(("item_group", Node::Str(group.as_str().to_owned())));
+    }
     let series = chart
         .as_ref()
         .map_or(Node::Null, |(_, c)| series_node(page, c));

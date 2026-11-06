@@ -20,6 +20,7 @@ import {
   GROUP_BY_CHOICES,
   PAID_CHOICES,
   PERIOD_CHOICES,
+  STOCK_VIEW_CHOICES,
   TRIP_VIEW_CHOICES,
   VOUCHER_CHOICES,
   type ReportFilterState,
@@ -57,6 +58,7 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.voucherType !== base.voucherType) kept['voucherType'] = state.voucherType;
   if (state.itemGroup !== base.itemGroup) kept['itemGroup'] = state.itemGroup;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
+  if (state.stockView !== base.stockView) kept['stockView'] = state.stockView;
   if (state.garden !== null) kept['garden'] = state.garden;
   if (state.gardenView !== base.gardenView) kept['gardenView'] = state.gardenView;
   return Object.keys(kept).length === 0 ? null : kept;
@@ -87,6 +89,7 @@ export function filtersFromRemembered(raw: unknown): ReportFilterState | null {
     voucherType: choiceOr(raw['voucherType'], VOUCHER_CHOICES, base.voucherType),
     itemGroup: choiceOr(raw['itemGroup'], ITEM_GROUP_CHOICES, base.itemGroup),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
+    stockView: choiceOr(raw['stockView'], STOCK_VIEW_CHOICES, base.stockView),
     garden: idOrNull(raw['garden']),
     gardenView: choiceOr(raw['gardenView'], GARDEN_VIEW_CHOICES, base.gardenView),
   };

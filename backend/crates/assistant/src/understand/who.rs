@@ -713,6 +713,8 @@ fn party_ref(
 fn asks_something(scan: &Scan) -> bool {
     scan.has_any(&[
         Cue::HowMuch,
+        Cue::Define,
+        Cue::Total,
         Cue::Many,
         Cue::Print,
         Cue::Show,
@@ -1256,11 +1258,21 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
                 pukhta: false,
             })
             .collect();
-        if found.is_empty() {
-            continue;
-        }
         let start = number.map_or(hit.start, |(at, _)| at.min(hit.start));
         let end = number.map_or(hit.end, |(at, _)| at.saturating_add(1).max(hit.end));
+        // A trip number or day that no trip has ("safar 99"): no such trip, said as it is (live run 2,
+        // G9), never the guide or the screen of all trips.
+        if found.is_empty() {
+            names.spans.push((start, end));
+            names.parties.push(PartyRef {
+                text: scan.phrase(start, end),
+                words: (start, end),
+                asked_role: Some(PartyRole::Trip),
+                outcome: Outcome::NotFound,
+                confidence: Confidence::High,
+            });
+            continue;
+        }
         let best = Best {
             hits: found,
             exact: !days.is_empty(),

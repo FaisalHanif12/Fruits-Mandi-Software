@@ -594,6 +594,13 @@ const MONTH_WORDS: &[&str] = &[
     "mahino",
     "month",
     "months",
+    // Misspellings people type (live run 2, Q696: "after 2 monhts"): a number must not lose its unit.
+    "monhts",
+    "mnths",
+    "monts",
+    "monthes",
+    "mahene",
+    "mahenay",
     "مہینے",
     "مہینہ",
     "مہینوں",

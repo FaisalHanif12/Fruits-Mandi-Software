@@ -54,6 +54,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         guests: false,
         quality: false,
         last_one: false,
+        months_asked: false,
+        oldest: false,
         sum_strong: false,
         amount_named: false,
         item_group: None,
@@ -270,10 +272,12 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
     if found.is_empty()
         && scan.has(Cue::HowMuch)
         && roles == [PartyRole::Partner]
-        && scan
-            .hits
-            .iter()
-            .all(|h| matches!(h.cue, Cue::HowMuch | Cue::RolePartner | Cue::And))
+        && scan.hits.iter().all(|h| {
+            matches!(
+                h.cue,
+                Cue::HowMuch | Cue::RolePartner | Cue::And | Cue::ScreenName
+            )
+        })
         && !named.has_unexplained_words
     {
         found.push((0, FigureKind::PartnerTotal));
@@ -329,6 +333,11 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
 struct Signs {
     how: bool,
     how_much: bool,
+    /// A screen is named so that "show me" opens it.
+    screen_open: bool,
+    /// The name of that screen has two words or more ("today's sales list"): a time word inside it is
+    /// part of the name.
+    screen_long: bool,
     party_found: bool,
     /// A garden or a trip of the books was found by name (the words of its name are no cue).
     entry_party: bool,
@@ -574,7 +583,12 @@ fn intent_of(scan: &Scan, signs: &Signs, periods: &[PeriodRef]) -> Chosen {
     }
     // Open a screen or a report.
     let open = scan.has_exact(Cue::Open)
-        || (scan.has_exact(Cue::Show) && !signs.party_found && !signs.figures && !signs.how_much);
+        || (scan.has_exact(Cue::Show) && !signs.party_found && !signs.figures && !signs.how_much)
+        || (scan.has_exact(Cue::Show)
+            && signs.screen_open
+            && !signs.party_found
+            && (signs.screen_long || !signs.period)
+            && !signs.how_much);
     if open && !signs.how_much {
         return chosen(Intent::Navigate, Confidence::High);
     }
@@ -717,8 +731,56 @@ fn topic_of(scan: &Scan) -> Option<Part<&'static str>> {
     }
 }
 
+/// The topic of the screen a question names ("cash book", "day close", "gardens"): the longest name of
+/// [`SCREEN_NAMES`] in it, when one topic only is longest.
+fn screen_topic_of(scan: &Scan) -> Option<Part<&'static str>> {
+    let topics = &guide().topics;
+    let found: Vec<(usize, &'static str)> = super::lexicon::screen_windows(&scan.words)
+        .into_iter()
+        .filter(|(_, _, topic)| topics.contains_key(*topic))
+        .map(|(start, end, topic)| (end.saturating_sub(start), topic))
+        .collect();
+    let longest = found.iter().map(|(n, _)| *n).max()?;
+    let mut top: Vec<&'static str> = found
+        .iter()
+        .filter(|(n, _)| *n == longest)
+        .map(|(_, t)| *t)
+        .collect();
+    top.dedup();
+    match top.as_slice() {
+        [one] => Some(part(*one, Confidence::High)),
+        _ => None,
+    }
+}
+
+/// True when a "show me" names a screen so that it opens it: a name of two words ("cash book"), or the
+/// word "screen" or "page" beside a name ("wasooli screen dikhao"). A one-word figure name alone
+/// ("cash dikhao") asks for the figure.
+fn screen_open(scan: &Scan) -> bool {
+    let windows = super::lexicon::screen_windows(&scan.words);
+    let named = !windows.is_empty();
+    let long = windows.iter().any(|(s, e, _)| e.saturating_sub(*s) >= 2);
+    let word = scan.words.iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "screen" | "page" | "safha" | "صفحہ" | "سکرین" | "اسکرین"
+        )
+    });
+    named && (long || word)
+}
+
 /// The entry screen name of the answer schema whose topic is this one.
 pub(super) fn screen_of(topic: &str) -> Option<&'static str> {
+    // A screen whose name is the topic ("accounts", the list) before the others of the same topic
+    // ("account", the form).
+    let own = EntryScreenName::ALL.iter().copied().find(|name| {
+        *name == topic
+            && serde_json::from_value::<EntryScreenName>(serde_json::json!(name))
+                .is_ok_and(|screen| help_guard::topic_of(screen) == topic)
+    });
+    if own.is_some() {
+        return own;
+    }
     EntryScreenName::ALL.iter().copied().find(|name| {
         serde_json::from_value::<EntryScreenName>(serde_json::json!(name))
             .is_ok_and(|screen| help_guard::topic_of(screen) == topic)
@@ -817,7 +879,7 @@ fn needs_party(kinds: &[FigureKind]) -> bool {
 pub(super) fn assemble(
     reader: &Reader<'_>,
     scan: &Scan,
-    names: Names,
+    mut names: Names,
     periods: Vec<PeriodRef>,
     time_word: bool,
 ) -> Understanding {
@@ -833,12 +895,51 @@ pub(super) fn assemble(
         has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
     let (kinds, two_figures) = figures(scan, &named);
+    // An advance and a payable belong to a seller: a name found only as a seller is the seller asked
+    // for, though "ne ... li" reads like a buyer ("tahir ne kitni peshgi li hui hai", live run 2, Q610).
+    if kinds
+        .iter()
+        .any(|k| matches!(k, FigureKind::Advance | FigureKind::Payable))
+    {
+        for party in &mut names.parties {
+            if let Outcome::FoundAs(hit) = party.outcome.clone()
+                && hit.role == PartyRole::Seller
+            {
+                party.outcome = Outcome::Found(hit);
+                party.asked_role = None;
+            }
+        }
+    }
+    // "akram aur arshad ka jama": two named parties and "jama" (their total) are the sum of their
+    // balances, read for each of them (live run 2, Q069).
+    let jama = scan
+        .words
+        .iter()
+        .any(|w| matches!(w.as_str(), "jama" | "jamaa" | "جمع"))
+        && names
+            .parties
+            .iter()
+            .filter(|p| p.outcome.hit().is_some())
+            .count()
+            >= 2;
+    let kinds = if kinds.is_empty() && jama {
+        vec![FigureKind::Balance]
+    } else {
+        kinds
+    };
+    // "partner Zafar Iqbal's total": the word "partner" and a total are a partner's total, though the
+    // name stands between them.
+    let kinds = if kinds.is_empty() && scan.has(Cue::Total) && scan.has_exact(Cue::RolePartner) {
+        vec![FigureKind::PartnerTotal]
+    } else {
+        kinds
+    };
     // A word for a group of items ("sabzi", "phal") with no item named is a group, not a drop.
     let item_group = if !names.items.is_empty() {
         None
-    } else if scan.has_exact(Cue::VegetableWord) {
+    } else if group_word(scan, &names, Cue::VegetableWord) {
         Some(super::GroupWord::Vegetable)
-    } else if scan.has_exact(Cue::FruitWord)
+    } else if group_word(scan, &names, Cue::FruitWord)
         && !kinds.contains(&FigureKind::FruitTaken)
         && !scan.has(Cue::Guests)
         && !roles
@@ -851,7 +952,11 @@ pub(super) fn assemble(
     };
     let signs = Signs {
         how: scan.has(Cue::How),
-        how_much: scan.has(Cue::HowMuch),
+        how_much: scan.has(Cue::HowMuch) || how_it_went(scan, !kinds.is_empty()),
+        screen_open: screen_open(scan),
+        screen_long: super::lexicon::screen_windows(&scan.words)
+            .iter()
+            .any(|(start, end, _)| end.saturating_sub(*start) >= 2),
         party_found: names
             .parties
             .iter()
@@ -886,7 +991,7 @@ pub(super) fn assemble(
         Confidence::High
     };
     let compare = cues::comparing(&scan.raw);
-    let sum_asked = cues::together(&scan.raw);
+    let sum_asked = cues::together(&scan.raw) || jama;
     if periods.len() > 1 && !matches!(intent.value, Intent::Forecast) {
         doubts.push(Doubt::SeveralPeriods);
     }
@@ -897,7 +1002,12 @@ pub(super) fn assemble(
         doubts.push(Doubt::Comparison);
     }
     let topic = matches!(intent.value, Intent::HowTo | Intent::Navigate)
-        .then(|| topic_of(scan))
+        .then(|| {
+            // To open a screen, its own name is the best sign of which one.
+            screen_topic_of(scan)
+                .filter(|_| intent.value == Intent::Navigate)
+                .or_else(|| topic_of(scan))
+        })
         .flatten();
     let screen = match intent.value {
         Intent::Navigate => topic.as_ref().and_then(|t| screen_of(t.value)),
@@ -985,6 +1095,8 @@ pub(super) fn assemble(
         guests: scan.has_exact(Cue::Guests),
         quality: scan.has_exact(Cue::Quality),
         last_one: super::reads::last_one(scan),
+        months_asked: scan.has_exact(Cue::HowManyMonths),
+        oldest: super::reads::oldest(scan),
         item_group,
         bikri_number: super::reads::bikri_number(scan),
         truck: scan.truck.clone(),
@@ -999,13 +1111,42 @@ pub(super) fn assemble(
             ranking,
         ),
         total_dues: kinds_for_happened.contains(&FigureKind::Dues)
-            && (scan.has(Cue::Total) || scan.raw.contains("کل اگراہی"))
+            && dead_amount_included(scan)
             && !scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]),
         sure: false,
         doubts,
     };
     if understanding.intent.value == Intent::NotInApp {
         understanding.outside = outside_kind(scan);
+    }
+    // A screen named by its own name is opened whatever figure its words also are ("commission
+    // rules", "سرمایہ"): no report is looked for.
+    if understanding.intent.value == Intent::Navigate
+        && understanding.screen.is_some()
+        && screen_topic_of(scan).is_some()
+    {
+        understanding.doubts.retain(|d| *d != Doubt::NoReport);
+        // The screen wins over the report of its figure ("wasooli screen dikhao" opens the receipt
+        // screen, not the dues report), unless a report is asked by name ("dead amount report").
+        let report_word = scan
+            .words
+            .iter()
+            .any(|w| matches!(w.as_str(), "report" | "reports" | "رپورٹ" | "رپورٹس"));
+        let reports_screen = understanding
+            .topic
+            .as_ref()
+            .is_some_and(|t| t.value == "reports");
+        // A report name that is the screen's own name ("accounts list") is the screen.
+        let windows = super::lexicon::screen_windows(&scan.words);
+        let report_named = scan.hits.iter().any(|r| {
+            r.cue == Cue::ReportName
+                && !windows
+                    .iter()
+                    .any(|(start, end, _)| *start <= r.start && r.end <= *end)
+        });
+        if !report_named && (!report_word || reports_screen) {
+            understanding.report = None;
+        }
     }
     assume_ranking(&mut understanding, reader);
     assume_comparison(&mut understanding, reader);
@@ -1135,6 +1276,80 @@ fn assume_comparison(u: &mut Understanding, reader: &Reader<'_>) {
         u.periods.push(month);
         u.assumed.push(Assumed::Period);
     }
+}
+
+/// A word for a group of items: exact, or one letter off ("vegitables") when it is part of no name
+/// that was read. A group word spelt wrong is still the group: dropping it would answer for the whole
+/// shop (live run 2, C1: "how much was sold of vegitables last week" got the whole shop's 704,040).
+fn group_word(scan: &Scan, names: &Names, cue: Cue) -> bool {
+    scan.has_exact(cue)
+        || scan.hits.iter().any(|h| {
+            h.cue == cue
+                && h.fuzzy
+                && !names
+                    .spans
+                    .iter()
+                    .any(|(start, end)| h.start < *end && *start < h.end)
+        })
+}
+
+/// True when the dues asked include the dead amount: "doobi raqam samet", "sab milake jo lena hai",
+/// "with the dead amount". Only then is it the tile `total_dues`; "kul ugrahi" and "total dues" are the
+/// buyers' dues of R20 (PRD FR-19.9, live run 2: 20,324,367, not 21,751,319).
+fn dead_amount_included(scan: &Scan) -> bool {
+    let text = format!(" {} ", scan.words.join(" "));
+    let says = |phrase: &str| {
+        let keyed: Vec<String> = phrase.split(' ').map(key).collect();
+        text.contains(&format!(" {} ", keyed.join(" ")))
+    };
+    [
+        "sab milake",
+        "sab mila kar",
+        "sab milakar",
+        "sab mila ke",
+        "sabhi milake",
+        "jo lena hai",
+        "doobi raqam samet",
+        "doobi raqam ke saath",
+        "doobi raqam shamil",
+        "dubi raqam samet",
+        "dead amount included",
+        "including dead amount",
+        "including the dead amount",
+        "with dead amount",
+        "with the dead amount",
+        "سب ملا کر",
+        "سب ملا کے",
+        "ڈوبی رقم سمیت",
+        "ڈوبی رقم کے ساتھ",
+    ]
+    .iter()
+    .any(|p| says(p))
+}
+
+/// "how did onion sales go in August", "how were sales this month": a figure asked in the past tense,
+/// which is no how-to. Needs a figure word beside it, and no "you" or "calculate" (how it was made).
+///
+/// Example: "how did onion sales go in October" is true; "how do I print a bill" is false.
+fn how_it_went(scan: &Scan, has_figure: bool) -> bool {
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.contains(&w.as_str()));
+    has_figure
+        && has(&["how"])
+        && has(&["did", "was", "were", "has", "have", "had"])
+        && !has(&[
+            "you",
+            "your",
+            "calculate",
+            "calculated",
+            "work",
+            "worked",
+            "make",
+            "made",
+            "come",
+            "came",
+            "get",
+            "got",
+        ])
 }
 
 /// Doubts that always send the question to the model.

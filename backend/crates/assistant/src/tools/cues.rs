@@ -418,6 +418,29 @@ pub fn year_ahead(question: &str) -> bool {
     )
 }
 
+/// The question says "next month" (one month ahead) in words, with no number: "agle mahine", "next
+/// month", "اگلے مہینے". It is 1 month, as "agle ek saal" is 12 (the plural "agle mahino mein" is not
+/// it: that is "the coming months", 6). A number with months ("agle 3 mahine") is read as a number.
+///
+/// Example: "saag agle mahine kitna bikega" is true; "agle mahino mein kitna" and "agle 3 mahine" are
+/// false.
+pub fn next_month(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "agle mahine",
+            "agla mahina",
+            "agle mahine tak",
+            "aglay mahine",
+            "next month",
+            "اگلے مہینے",
+            "اگلے ماہ",
+            "اگلا مہینہ",
+            "اگلا ماہ",
+        ],
+    )
+}
+
 /// The question asks "what if": agar, if, suppose, فرض (money review: a past fact such as "commission
 /// doubled last year" or "up to December" is not a scenario).
 pub fn conditional(question: &str) -> bool {

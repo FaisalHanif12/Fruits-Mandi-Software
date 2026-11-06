@@ -5,7 +5,7 @@
 //! | Role | Key | Each match gives |
 //! |---|---|---|
 //! | `packing` | `pk5` | code, name, active |
-//! | `marka` | `mk2` | code, the owner seller's name; **never the mark text** |
+//! | `marka` | `mk2` | code, the owner seller's name; **never the mark text**; found by code, by mark, and by the owner's name |
 //! | `store` | `sr1` | code, name, active |
 //! | `narration` | `nr3` | the voucher kinds it is used in; **never its text** |
 //!
@@ -14,12 +14,14 @@
 //! narration only by its count and where it is used. Only active records are read. The word `all`
 //! (and the role's own word, such as `packing` or `godam`) lists everything; any other word is
 //! searched by the pickers' smart search, which also finds a mark by its text (what the Owner typed
-//! is not given back).
+//! is not given back). A marka is also found by its OWNER's name ("rahim ke marke": the markas of
+//! Rahim), which the pickers' search does not look at (hidden round 4, H391).
 //!
 //! Example (worked day): `find{text:"all", role:"packing"}` gives `count` 1 (پیٹی) and its match.
 
 use mandi_services::core::masters::{MasterKind, MasterRow};
 use mandi_services::core::search::SearchScope;
+use mandi_services::core::text;
 use mandi_services::{masters, search};
 
 use super::find::Role;
@@ -134,9 +136,18 @@ pub(super) fn list(env: &Env<'_>, role: Role, query: &str) -> Result<Node, Stop>
     } else {
         let hits =
             search::search(env.ctx, env.actor, spec.scope, query, 50).map_err(service_stop)?;
-        hits.iter()
+        let mut found: Vec<&MasterRow> = hits
+            .iter()
             .filter_map(|hit| rows.iter().find(|r| r.id() == hit.id))
-            .collect()
+            .collect();
+        // The markas of an owner: the search keys of a marka are its code and its mark, not the
+        // name of the seller it belongs to.
+        for row in rows.iter().filter(|r| owner_matches(r, query)) {
+            if !found.iter().any(|f| f.id() == row.id()) {
+                found.push(row);
+            }
+        }
+        found
     };
     let total = found.len();
     let matches = found
@@ -145,6 +156,31 @@ pub(super) fn list(env: &Env<'_>, role: Role, query: &str) -> Result<Node, Stop>
         .filter_map(|row| row_node(row))
         .collect();
     Ok(list_node(spec.role, query, matches, total, Vec::new()))
+}
+
+/// True when the row is a marka whose owner's name holds every word of the query, in either script
+/// (look-alike Urdu letters and capitals do not matter). Words of one letter are left out.
+///
+/// Example: the query "rahim" matches the marka of "Rahim"; "rahim khan" does not match "Rahim".
+fn owner_matches(row: &MasterRow, query: &str) -> bool {
+    let MasterRow::Marka(r) = row else {
+        return false;
+    };
+    let words = |key: String| -> Vec<String> {
+        key.split(' ')
+            .filter(|w| w.chars().count() > 1)
+            .map(str::to_owned)
+            .collect()
+    };
+    let (en, ur) = (words(text::search_en(query)), words(text::search_ur(query)));
+    let holds = |owner: &Option<String>, wanted: &[String], key: &dyn Fn(&str) -> String| {
+        let Some(owner) = owner else {
+            return false;
+        };
+        let owner = key(owner);
+        !wanted.is_empty() && wanted.iter().all(|w| owner.contains(w.as_str()))
+    };
+    holds(&r.owner_name_en, &en, &text::search_en) || holds(&r.owner_name_ur, &ur, &text::search_ur)
 }
 
 fn role_word(role: Role) -> &'static str {

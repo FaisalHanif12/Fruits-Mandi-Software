@@ -900,6 +900,18 @@ report-r10-title = { -baqi-maal }
 report-r10-help = آیا ہوا مال جو ابھی بکا نہیں: کتنا آیا، کتنا بکا، کتنا باقی ہے اور کتنے دن سے۔
 
 # review: pending
+report-filter-stock-by-item = { -qism-maal } وار { -baqi-maal }
+
+# review: pending
+report-filter-stock-view = ترتیب
+
+# review: pending
+report-filter-stock-view-lot = { -lot } وار
+
+# review: pending
+report-filter-stock-view-item = { -qism-maal } وار
+
+# review: pending
 report-r15-title = واؤچر
 
 # review: pending

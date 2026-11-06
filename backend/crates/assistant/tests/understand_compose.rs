@@ -709,6 +709,27 @@ fn partner(name: &str) -> Option<(String, bool)> {
     Some((name.to_owned(), false))
 }
 
+/// Live run 2 (G2): "بکری بک کی اندراج کرنی ہے" and "record the journal" are requests to write, refused with
+/// the screen that does it (the sale book, the journal), not answered with the guide.
+#[test]
+fn an_entry_request_in_the_clerks_words_is_refused_with_its_screen() {
+    let w = books();
+    for (question, screen) in [
+        ("بکری بک کی اندراج کرنی ہے", EntryScreen::Bikri),
+        ("bikri ki indraaj karni hai", EntryScreen::Bikri),
+        ("record the journal", EntryScreen::General),
+        ("جرنل کی اندراج کرنی ہے", EntryScreen::General),
+    ] {
+        for language in [Language::Ur, Language::En] {
+            let c = compose_for(&w, question, language)
+                .unwrap_or_else(|| panic!("no local answer for {question:?}"));
+            let (got, party) = route(&c);
+            assert_eq!(got, screen, "{question}");
+            assert!(party.is_none(), "{question}");
+        }
+    }
+}
+
 /// Plan 55 open point 4 (lead, 04-11-2026): a request to write is refused locally when the question
 /// is understood, with the entry screen that does it and the party as a hint. Nothing else of the
 /// question (no amount) reaches the route (PRD FR-7.53, rule 11).
@@ -1652,6 +1673,170 @@ fn an_item_that_is_not_in_the_books_is_no_such_item() {
                 .unwrap_or_else(|| panic!("{question}: no local answer, {u:?}"));
             assert_eq!(composed.outcome, AskOutcome::NotFound, "{question}");
             assert_eq!(composed.asked_role, Some(AskedRole::Item), "{question}");
+        }
+    }
+}
+
+/// Live run 2 (G1): 34 requests to open a screen, in Roman Urdu, Urdu and English ("take me to", "le
+/// chalo", "لے چلیں", "show me the cash book", "wasooli screen dikhao"). Each is understood as opening
+/// that screen, with the topic of the guide that describes it, and is answered locally with the route.
+#[test]
+fn a_request_to_open_a_screen_is_answered_with_its_topic_and_route() {
+    let w = books();
+    let reader = Reader {
+        ctx: &w.env.ctx,
+        actor: &w.owner,
+        language: Language::En,
+        today: BusinessDate::from_ymd(2026, 10, 10).expect("a date"),
+        partner_locked: false,
+    };
+    let cases: &[(&str, &str, EntryScreen)] = &[
+        ("take me to the sale book", "bikri_book", EntryScreen::Bikri),
+        ("wasooli screen dikhao", "receipt", EntryScreen::Wasooli),
+        ("مجھے وصولی پر لے چلیں", "receipt", EntryScreen::Wasooli),
+        ("mujhe adaigi par le chalo", "payment", EntryScreen::Adaigi),
+        ("پیشگی کھولیں", "advance", EntryScreen::Peshgi),
+        ("kharcha kholo", "shop_expense", EntryScreen::Kharcha),
+        (
+            "مجھے ادھار رقم پر لے چلیں",
+            "money_lent",
+            EntryScreen::UdharRaqam,
+        ),
+        (
+            "I want to open money lent",
+            "money_lent",
+            EntryScreen::UdharRaqam,
+        ),
+        ("سرمایہ کھولیں", "partner_capital", EntryScreen::Sarmaya),
+        (
+            "show me partner capital",
+            "partner_capital",
+            EntryScreen::Sarmaya,
+        ),
+        ("phal kholo", "fruit_taken", EntryScreen::Phal),
+        ("take me to fruit taken", "fruit_taken", EntryScreen::Phal),
+        (
+            "مجھے جنرل پر لے چلیں",
+            "general_journal",
+            EntryScreen::General,
+        ),
+        ("index kholo", "masters", EntryScreen::Masters),
+        ("take me to the index", "masters", EntryScreen::Masters),
+        (
+            "I want to open the accounts list",
+            "accounts",
+            EntryScreen::Accounts,
+        ),
+        (
+            "mujhe commission rules par le chalo",
+            "commission_rules",
+            EntryScreen::CommissionRules,
+        ),
+        (
+            "open commission rules",
+            "commission_rules",
+            EntryScreen::CommissionRules,
+        ),
+        (
+            "show me today's sales list",
+            "today_sales",
+            EntryScreen::TodaySales,
+        ),
+        ("baqi maal kholo", "unsold_stock", EntryScreen::UnsoldStock),
+        (
+            "take me to unsold stock",
+            "unsold_stock",
+            EntryScreen::UnsoldStock,
+        ),
+        (
+            "مجھے پختہ کھاتہ پر لے چلیں",
+            "pukhta_khata",
+            EntryScreen::PukhtaKhata,
+        ),
+        (
+            "mujhe agrahi list par le chalo",
+            "collection_list",
+            EntryScreen::CollectionList,
+        ),
+        (
+            "open the collection list",
+            "collection_list",
+            EntryScreen::CollectionList,
+        ),
+        ("روکڑ بک کھولیں", "cash_book", EntryScreen::CashBook),
+        ("show me the cash book", "cash_book", EntryScreen::CashBook),
+        ("take me to gardens", "gardens", EntryScreen::Gardens),
+        (
+            "مجھے مارکیٹ سفر پر لے چلیں",
+            "market_trips",
+            EntryScreen::MarketTrips,
+        ),
+        ("take me to day close", "day_close", EntryScreen::DayClose),
+        ("مجھے رپورٹ پر لے چلیں", "reports", EntryScreen::Reports),
+        (
+            "mujhe doobi raqam par le chalo",
+            "dead_amount",
+            EntryScreen::DeadAmount,
+        ),
+        (
+            "ڈوبی رقم والا صفحہ کھولنا ہے",
+            "dead_amount",
+            EntryScreen::DeadAmount,
+        ),
+        (
+            "open the dead amount",
+            "dead_amount",
+            EntryScreen::DeadAmount,
+        ),
+        ("take me to backup", "backup", EntryScreen::Backup),
+    ];
+    assert!(cases.len() >= 34, "{}", cases.len());
+    for (question, topic, screen) in cases {
+        let u = understand(&reader, question);
+        assert_eq!(
+            u.topic.as_ref().map(|t| t.value),
+            Some(*topic),
+            "{question}: the topic"
+        );
+        for language in [Language::Ur, Language::En] {
+            let c = compose_for(&w, question, language)
+                .unwrap_or_else(|| panic!("{question:?} was not answered locally"));
+            let got = c.entry_route.as_ref().map(|r| r.screen);
+            assert_eq!(got, Some(*screen), "{question}: the route");
+        }
+    }
+    // A figure asked with "show me" stays a figure: no screen opens for a name, a period or a figure
+    // word alone.
+    for question in [
+        "cash dikhao",
+        "akram ki wasooli dikhao",
+        "aaj ki bikri dikhao",
+    ] {
+        let c = compose_for(&w, question, Language::En);
+        assert!(
+            c.as_ref().is_none_or(|c| c.entry_route.is_none()),
+            "{question}: opened a screen"
+        );
+    }
+}
+
+/// Live run 2 (G9): a partner or a trip that is not in the books is "not found" with its role, never the
+/// guide's words or the screen of all trips. "What is partner Zafar Iqbal's total" and "safar 99 ki report
+/// dikhao" (no trip has number 99).
+#[test]
+fn an_unknown_partner_or_trip_is_not_found_with_its_role() {
+    let w = books();
+    for (question, role) in [
+        ("what is partner Zafar Iqbal's total", AskedRole::Partner),
+        ("partner Zafar Iqbal ki kul raqam", AskedRole::Partner),
+        ("safar 99 ki report dikhao", AskedRole::Trip),
+        ("safar 99 ka result", AskedRole::Trip),
+    ] {
+        for language in [Language::Ur, Language::En] {
+            let c = compose_for(&w, question, language)
+                .unwrap_or_else(|| panic!("{question:?} was not answered locally"));
+            assert_eq!(c.outcome, AskOutcome::NotFound, "{question}");
+            assert_eq!(c.asked_role, Some(role), "{question}");
         }
     }
 }

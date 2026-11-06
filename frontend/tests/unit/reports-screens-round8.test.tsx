@@ -179,7 +179,10 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
 
   async function choose(user: ReturnType<typeof userEvent.setup>, box: string, option: string) {
     await user.click(screen.getByRole('combobox', { name: m(box) }));
-    await user.click(await screen.findByRole('option', { name: option }));
+    // An option written with a glossary term carries invisible bidi marks, so names are compared as seen.
+    await user.click(
+      await screen.findByRole('option', { name: (name) => visible(name) === visible(option) }),
+    );
   }
 
   describe('R10 stock', () => {
@@ -259,6 +262,68 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       expect(screen.getByLabelText(m('report-filter-from'))).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: m('report-filter-seller') })).toBeInTheDocument();
       expect(screen.getByRole('combobox', { name: m('report-filter-item') })).toBeInTheDocument();
+    });
+
+    it('has a layout box: by lot first, and by item asks for it, draws one row for each item and opens nothing', async () => {
+      const { router, user } = await openReport('R10');
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      // By lot is the first layout and is not sent (the backend reads a missing key as by lot).
+      expect(lastRun()?.filters.stock_view).toBeUndefined();
+      const box = screen.getByRole('combobox', { name: m('report-filter-stock-view') });
+      expect(visible(box.textContent)).toContain(m('report-filter-stock-view-lot'));
+      await choose(user, 'report-filter-stock-view', m('report-filter-stock-view-item'));
+      await waitFor(() => {
+        expect(lastRun()?.filters.stock_view).toBe('item');
+        expect(drawnRows()).toEqual(['0', '1']);
+      }, SLOW_MS);
+      // The biggest balance first; the item names come through the language of the screen.
+      expect(cell('0', 'item')).toBe(names('سیب', 'Apple'));
+      expect(cell('0', 'balance')).toBe('10');
+      expect(cell('1', 'item')).toBe(names('کیلا', 'Banana'));
+      expect(cell('1', 'sold')).toBe('45');
+      expect(cell('1', 'fruit_taken')).toBe('2');
+      expect(cell('1', 'our_left')).toBe('3');
+      expect(cell('1', 'other_left')).toBe('0');
+      // The backend's totals over the whole filter, never a sum of the rows on screen.
+      expect(totalsCell('received')).toBe('70');
+      expect(totalsCell('balance')).toBe('13');
+      // The same steps as the lot layout: the write-offs wait for the wide step, no document column.
+      expect(drawnColumns()).toEqual([
+        'item',
+        'received',
+        'sold',
+        'fruit_taken',
+        'balance',
+        'our_left',
+        'other_left',
+      ]);
+      // A row of this layout has no record behind it: Enter on it opens nothing.
+      const target = cellElement('0', 'item');
+      if (target === null) throw new Error('no item cell');
+      await user.click(target);
+      await user.keyboard('{Enter}');
+      expect(router.state.location.pathname).toBe('/reports/R10');
+      // Back to by lot: the key is left out again.
+      await choose(user, 'report-filter-stock-view', m('report-filter-stock-view-lot'));
+      await waitFor(() => {
+        expect(lastRun()?.filters.stock_view).toBeUndefined();
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+    });
+
+    it('by item at the narrowest step draws the item and the two parts left', async () => {
+      vi.mocked(useLayoutStep).mockReturnValue('compact');
+      const { user } = await openReport('R10');
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0']);
+      }, SLOW_MS);
+      await choose(user, 'report-filter-stock-view', m('report-filter-stock-view-item'));
+      await waitFor(() => {
+        expect(drawnRows()).toEqual(['0', '1']);
+      }, SLOW_MS);
+      expect(drawnColumns()).toEqual(['item', 'our_left', 'other_left']);
     });
 
     it('has a fruit column between the write-offs and the balance, and writes what the backend sent', async () => {

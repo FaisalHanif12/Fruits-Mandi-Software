@@ -806,7 +806,8 @@ function hasNumber(found, want) {
 
 /** The titles of the workings that make an estimate or a what-if (never a figure of the books). */
 const FORECAST_WORKING =
-  /^assistant-working-(same-pace|same-growth|same-season|what-if-pace|percent-more|target)/;
+  /^assistant-working-(same-pace|same-growth|same-season|what-if-pace|percent-more|target|balance-pace)/;
+// `balance-pace` also covers `balance-pace-cash` and `balance-pace-dues` (the estimates of a balance, PRD FR-7.86).
 
 /**
  * Splits the figures an answer shows into those it gives as BOOK figures (a figure with no working
@@ -3595,6 +3596,27 @@ function selfTest() {
     reply: { ...answered(parts), outcome: 'estimate' },
     tool_calls: [],
   });
+  // The estimates of a balance (PRD FR-7.86) carry the workings balance-pace, balance-pace-cash and
+  // balance-pace-dues: their figures are estimates, never figures of the books.
+  for (const title of [
+    'assistant-working-balance-pace',
+    'assistant-working-balance-pace-cash',
+    'assistant-working-balance-pace-dues',
+  ]) {
+    const balancePart = (rupees) => ({
+      ...estPart(rupees),
+      working: { ...estPart(rupees).working, title_id: title },
+    });
+    expect(
+      score(mixQ, mixReply([money(700), balancePart(900)]), {}).pass,
+      `a balance estimate (${title}) was filed as a figure of the books`,
+    );
+    const asBook = score(mixQ, mixReply([money(700), money(900)]), {});
+    expect(
+      !asBook.pass && asBook.reasons.some((x) => x.includes('est_next')),
+      'a balance estimate shown as a book figure passed',
+    );
+  }
   expect(
     score(mixQ, mixReply([money(700), estPart(900)]), {}).pass,
     'a mixed answer with the real figure and the estimate kept apart missed',

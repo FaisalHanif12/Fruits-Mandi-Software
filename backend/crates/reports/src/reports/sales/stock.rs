@@ -34,7 +34,7 @@ use crate::reports::common::{col, count_of, load_parties, names_cell, pukhta_par
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, StockView,
 };
 
 /// A row waiting to be sorted: the day, the kind (a lot before a purchase), the document number
@@ -43,6 +43,14 @@ struct Pending {
     key: (String, u8, i64, i64),
     cells: Vec<Cell>,
     source: RowSource,
+}
+
+/// What one lot, purchase or arrival adds to the row of its item (R10 by item): received, sold,
+/// written off, taken, balance, our shop's part of the balance and the other shop's part.
+struct ItemPart {
+    item_id: i64,
+    names: (String, String),
+    amounts: [i64; 7],
 }
 
 /// The name of the other shop as typed (PRD FR-12.41), or nothing when none was given.
@@ -64,6 +72,73 @@ fn items_of_group(
     group
         .map(|group| crate::reports::common::item_ids_of_group(conn, group))
         .transpose()
+}
+
+/// R10 by item (PRD v1.32): one row for each item with the quantities of all its lots, trip
+/// purchases and garden arrivals, the biggest balance first (then the item's id). The totals are
+/// the same as the lot layout's, over the whole filter, so the two layouts always agree.
+fn by_item(
+    typed: &Typed,
+    item_parts: Vec<ItemPart>,
+    totals: [i64; 7],
+    spec: PageSpec,
+) -> Result<ReportPage, ReportsError> {
+    let mut items: std::collections::BTreeMap<i64, ((String, String), [i64; 7])> =
+        std::collections::BTreeMap::new();
+    for part in item_parts {
+        let slot = items
+            .entry(part.item_id)
+            .or_insert_with(|| (part.names.clone(), [0; 7]));
+        for (sum, amount) in slot.1.iter_mut().zip(part.amounts) {
+            *sum = sum
+                .checked_add(amount)
+                .ok_or_else(|| ReportsError::Data("the stock quantities do not fit".to_owned()))?;
+        }
+    }
+    let mut ordered: Vec<(i64, (String, String), [i64; 7])> = items
+        .into_iter()
+        .map(|(id, (names, sums))| (id, names, sums))
+        .collect();
+    // The balance is the fifth amount.
+    ordered.sort_by(|a, b| b.2.get(4).cmp(&a.2.get(4)).then_with(|| a.0.cmp(&b.0)));
+    let all_rows: Vec<Row> = ordered
+        .into_iter()
+        .map(|(_, (name_ur, name_en), sums)| {
+            let mut cells = vec![names_cell(Some(name_ur), Some(name_en))];
+            cells.extend(sums.iter().map(|value| Cell::Number { value: *value }));
+            Row {
+                cells,
+                source: None,
+                kind: RowKind::Normal,
+            }
+        })
+        .collect();
+    let mut total_cells = vec![Cell::Empty];
+    total_cells.extend(totals.iter().map(|value| Cell::Number { value: *value }));
+    Ok(ReportPage {
+        group_above: None,
+        tables: Vec::new(),
+        id: ReportId::R10,
+        title_id: ids::title_id("R10"),
+        filters: typed.resolved.clone(),
+        columns: vec![
+            col("item", ids::COL_ITEM, ColumnKind::Names),
+            col("received", ids::COL_RECEIVED, ColumnKind::Number),
+            col("sold", ids::COL_SOLD, ColumnKind::Number),
+            col("written_off", ids::COL_WRITTEN_OFF, ColumnKind::Number),
+            col("fruit_taken", ids::COL_FRUIT_TAKEN, ColumnKind::Number),
+            col("balance", ids::COL_BALANCE_QTY, ColumnKind::Number),
+            col("our_left", ids::COL_OUR_LEFT, ColumnKind::Number),
+            col("other_left", ids::COL_OTHER_LEFT, ColumnKind::Number),
+        ],
+        rows: spec.slice(&all_rows),
+        offset: spec.offset,
+        limit: spec.reported_limit(),
+        total_count: count_of(all_rows.len()),
+        totals_label_id: ids::TOTAL.to_owned(),
+        totals: total_cells,
+        summary: Vec::new(),
+    })
 }
 
 /// Builds R10.
@@ -143,6 +218,7 @@ pub(crate) fn run(
     ids_to_load.extend(arrivals.iter().map(|a| a.account.id));
     let parties = load_parties(conn, &ids_to_load)?;
 
+    let mut item_parts: Vec<ItemPart> = Vec::new();
     let mut pending: Vec<Pending> = Vec::with_capacity(
         lots.len()
             .saturating_add(purchases.len())
@@ -182,6 +258,19 @@ pub(crate) fn run(
             balance,
             (balance, 0),
         )?;
+        item_parts.push(ItemPart {
+            item_id: lot.item.id,
+            names: (lot.item.name_ur.clone(), lot.item.name_en.clone()),
+            amounts: [
+                lot.qty_received,
+                lot.qty_sold,
+                lot.qty_written_off,
+                lot.qty_taken,
+                balance,
+                balance,
+                0,
+            ],
+        });
         let mut seller = parties
             .get(&lot.seller.id)
             .cloned()
@@ -256,6 +345,19 @@ pub(crate) fn run(
             balance,
             (parts.our_left, parts.other_left),
         )?;
+        item_parts.push(ItemPart {
+            item_id: purchase.item.id,
+            names: (purchase.item.name_ur.clone(), purchase.item.name_en.clone()),
+            amounts: [
+                purchase.qty,
+                purchase.qty_sold,
+                purchase.qty_written_off,
+                0,
+                balance,
+                parts.our_left,
+                parts.other_left,
+            ],
+        });
         pending.push(Pending {
             key: (purchase.entry_date.clone(), 1, purchase.number, 0),
             cells: vec![
@@ -327,6 +429,19 @@ pub(crate) fn run(
             balance,
             (parts.our_left, parts.other_left),
         )?;
+        item_parts.push(ItemPart {
+            item_id: arrival.item.id,
+            names: (arrival.item.name_ur.clone(), arrival.item.name_en.clone()),
+            amounts: [
+                arrival.qty,
+                arrival.qty_sold,
+                arrival.qty_written_off,
+                0,
+                balance,
+                parts.our_left,
+                parts.other_left,
+            ],
+        });
         let garden = parties.get(&arrival.account.id).cloned().ok_or_else(|| {
             ReportsError::Data("an arrival has an unknown garden account".to_owned())
         })?;
@@ -375,6 +490,9 @@ pub(crate) fn run(
                 id: arrival.id,
             },
         });
+    }
+    if typed.stock_view == StockView::Item {
+        return by_item(typed, item_parts, totals, spec);
     }
     pending.sort_by(|a, b| a.key.cmp(&b.key));
     let all_rows: Vec<Row> = pending

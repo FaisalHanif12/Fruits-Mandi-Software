@@ -53,7 +53,7 @@ const READ_ONLY: [&str; 8] = [
 
 /// The nouns that name an entry screen, and the screen. A request that says exactly one of them has
 /// its screen. The role words (partner, garden, trip) are not here: they say who, not what.
-const ENTRY_NOUNS: [(Cue, &str); 11] = [
+const ENTRY_NOUNS: [(Cue, &str); 12] = [
     (Cue::Collection, "wasooli"),
     (Cue::Dues, "wasooli"),
     (Cue::Payable, "adaigi"),
@@ -66,6 +66,7 @@ const ENTRY_NOUNS: [(Cue, &str); 11] = [
     (Cue::Capital, "sarmaya"),
     (Cue::FruitTaken, "phal"),
     (Cue::Sale, "bikri"),
+    (Cue::Journal, "general"),
 ];
 
 /// Words that say "take it away" (delete, cancel, remove), in the normalised form of `Scan`.

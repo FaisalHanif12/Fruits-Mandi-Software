@@ -16,6 +16,7 @@
 
 use mandi_reports::analytics::{BalanceSubject, balance_series};
 use mandi_reports::reports::ReportId;
+use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::money::Paisa;
 use mandi_services::domain::figures::Dir;
 use mandi_services::domain::forecast::{BalanceEstimate, BalanceKind, MonthValue, YearMonth};
@@ -171,6 +172,9 @@ pub(super) fn run(
         ("now", balance_node(kind, series.now)),
     ];
     let mut draft;
+    // The months the working used: the cash book button opens on them, so the monthly changes of the
+    // working can be seen there (hidden round 4).
+    let span: Option<(YearMonth, YearMonth)>;
     match found {
         // The dues are never below 0: say what happened, so the model asks the Owner for fewer
         // months instead of losing the whole estimate.
@@ -194,6 +198,10 @@ pub(super) fn run(
             fields.push(("same_season", Node::Null));
             fields.push(("ahead", Node::List(Vec::new())));
             draft = Draft::new("estimate", args.clone(), Node::obj(fields));
+            span = changes
+                .first()
+                .zip(changes.last())
+                .map(|(first, last)| (first.month, last.month));
         }
         BalanceForecast::Estimate(e) => {
             fields.insert(1, ("too_short", Node::Bool(false)));
@@ -239,13 +247,14 @@ pub(super) fn run(
             }
             fields.push(("ahead", Node::Keyed(rows)));
             draft = Draft::new("estimate", args.clone(), Node::obj(fields));
+            span = Some((e.used_from, e.used_to));
             draft.shown = Some(Shown::Chart(
                 Box::new(chart(&changes, &e)?),
                 Some(Box::new(estimate_card(parsed, &changes, &e)?)),
             ));
         }
     }
-    draft.source = Some(source_of(kind, party, subject));
+    draft.source = Some(source_of(kind, party, subject, span));
     Ok(draft)
 }
 
@@ -336,24 +345,47 @@ fn estimate_card(
     })
 }
 
-/// The screen the buttons open: the party's ledger, the cash book, or the buyers' dues.
+/// The first and the last day of a run of months, `YYYY-MM-DD`: the 1st of the first month and the
+/// last day of the last month. `None` for a month outside the calendar.
+fn days_of(first: YearMonth, last: YearMonth) -> Option<(String, String)> {
+    let from = BusinessDate::from_ymd(first.year(), first.month(), 1)?;
+    let after = last.plus_months(1)?;
+    let to = BusinessDate::from_ymd(after.year(), after.month(), 1)?.previous_day()?;
+    Some((from.to_iso(), to.to_iso()))
+}
+
+/// The screen the buttons open: the party's ledger, the cash book over the months of the working,
+/// or the buyers' dues.
 fn source_of(
     kind: BalanceKind,
     party: Option<AnswerRecord>,
     subject: BalanceSubject,
+    span: Option<(YearMonth, YearMonth)>,
 ) -> AnswerSource {
-    let report = |id: ReportId| AnswerSource::Report {
+    let report = |id: ReportId, filters: SourceReportFilters| AnswerSource::Report {
         result_id: String::new(),
         label_id: report_label(id),
         id,
-        filters: SourceReportFilters::default(),
+        filters,
     };
     match (kind, subject, party) {
         (BalanceKind::Party, BalanceSubject::Party(_), Some(party)) => AnswerSource::PartyCard {
             result_id: String::new(),
             party,
         },
-        (BalanceKind::Cash, ..) => report(ReportId::R12),
-        _ => report(ReportId::R20),
+        (BalanceKind::Cash, ..) => {
+            let (from, to) = span
+                .and_then(|(first, last)| days_of(first, last))
+                .unwrap_or_default();
+            report(
+                ReportId::R12,
+                SourceReportFilters {
+                    from,
+                    to,
+                    ..SourceReportFilters::default()
+                },
+            )
+        }
+        _ => report(ReportId::R20, SourceReportFilters::default()),
     }
 }

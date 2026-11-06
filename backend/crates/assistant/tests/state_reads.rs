@@ -3212,3 +3212,313 @@ fn view_g_leaves_the_gardens_column_empty_under_a_group_and_r27_says_it_shows_pa
     );
     assert!(facts(ReportId::R27, None).is_empty());
 }
+
+/// The stock of E2E-16 (5 کیلا left of 50) with a second کیلا lot (30 received, 10 sold, 20 left) and
+/// a مولی lot (20 received, 15 sold, 5 left): two items, three lots.
+fn stock_world() -> world::World {
+    let w = worked::part_sold_world();
+    let mut banana = world::bare_lot(&w, "lot-3", w.karim, w.banana, "30");
+    banana.sales = vec![world::sale("s-1", w.akram, "10", "600")];
+    let mut radish = world::bare_lot(&w, "lot-4", w.karim, w.mooli, "20");
+    radish.sales = vec![world::sale("s-2", w.akram, "15", "100")];
+    let draft = BikriDraft {
+        header: HeaderInput {
+            entry_date: "13-10-2026".into(),
+            truck_no: Some("KHI-0099".into()),
+            ..world::header()
+        },
+        lots: vec![banana, radish],
+    };
+    bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap();
+    w
+}
+
+fn stock_page(
+    w: &world::World,
+    view: Option<mandi_reports::reports::StockView>,
+    group: Option<ItemGroup>,
+) -> mandi_reports::reports::ReportPage {
+    engine_run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            id: ReportId::R10,
+            filters: ReportFilters {
+                stock_view: view,
+                item_group: group,
+                ..ReportFilters::default()
+            },
+            offset: 0,
+            limit: 100,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .unwrap()
+}
+
+/// The figures of the row cells that are whole numbers (the item and text cells are left out).
+fn row_numbers(row: &mandi_reports::reports::Row) -> Vec<i64> {
+    row.cells.iter().filter_map(figure_of).collect()
+}
+
+#[test]
+fn r10_by_item_gives_one_row_for_each_item_with_the_quantities_of_all_its_lots() {
+    use mandi_reports::reports::StockView;
+    let w = stock_world();
+    // By lot: three lots (banana 5 left, banana 20 left, radish 5 left).
+    let lots = stock_page(&w, None, None);
+    assert_eq!(lots.total_count, 3);
+    // By item, worked by hand: banana received 50 + 30 = 80, sold 45 + 10 = 55, written off 0,
+    // taken 0, left 5 + 20 = 25 (all in our shop); radish 20, 15, 0, 0, 5, 5, 0. The biggest
+    // balance is first. Totals 100, 70, 0, 0, 30, 30, 0.
+    let items = stock_page(&w, Some(StockView::Item), None);
+    assert_eq!(items.total_count, 2);
+    let rows: Vec<Vec<i64>> = items.rows.iter().map(row_numbers).collect();
+    assert_eq!(
+        rows,
+        [vec![80, 55, 0, 0, 25, 25, 0], vec![20, 15, 0, 0, 5, 5, 0]]
+    );
+    let keys: Vec<&str> = items.columns.iter().map(|c| c.key.as_str()).collect();
+    assert_eq!(
+        keys,
+        [
+            "item",
+            "received",
+            "sold",
+            "written_off",
+            "fruit_taken",
+            "balance",
+            "our_left",
+            "other_left"
+        ]
+    );
+    let totals: Vec<i64> = items.totals.iter().filter_map(figure_of).collect();
+    assert_eq!(totals, [100, 70, 0, 0, 30, 30, 0]);
+    // The totals are the lot layout's, over the whole filter (the lot layout has 14 columns).
+    let lot_totals: Vec<i64> = lots.totals.iter().filter_map(figure_of).collect();
+    assert_eq!(lot_totals, totals);
+    assert_eq!(items.filters.stock_view, Some(StockView::Item));
+    assert_eq!(lots.filters.stock_view, None);
+    // A group keeps its items: the vegetable layout has the radish row only, the fruit one the banana.
+    let veg = stock_page(&w, Some(StockView::Item), Some(ItemGroup::Vegetable));
+    assert_eq!(
+        veg.rows.iter().map(row_numbers).collect::<Vec<_>>(),
+        [vec![20, 15, 0, 0, 5, 5, 0]]
+    );
+    let fruit = stock_page(&w, Some(StockView::Item), Some(ItemGroup::Fruit));
+    assert_eq!(
+        fruit.rows.iter().map(row_numbers).collect::<Vec<_>>(),
+        [vec![80, 55, 0, 0, 25, 25, 0]]
+    );
+    // Paging cuts the rows but not the totals.
+    let first = engine_run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            id: ReportId::R10,
+            filters: ReportFilters {
+                stock_view: Some(StockView::Item),
+                ..ReportFilters::default()
+            },
+            offset: 0,
+            limit: 1,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(first.rows.len(), 1);
+    assert_eq!(first.total_count, 2);
+    assert_eq!(
+        first
+            .totals
+            .iter()
+            .filter_map(figure_of)
+            .collect::<Vec<_>>(),
+        totals
+    );
+    // The layout is refused on a report that has none.
+    let refused = engine_run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            id: ReportId::R7,
+            filters: ReportFilters {
+                stock_view: Some(StockView::Item),
+                ..ReportFilters::default()
+            },
+            offset: 0,
+            limit: 100,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(&refused, mandi_reports::ReportsError::Rejected(i)
+            if i.iter().any(|e| e.field == "filters.stock_view")),
+        "{refused:?}"
+    );
+    // The print header says "by item", and says nothing for the lot layout.
+    let facts = |view: Option<StockView>| {
+        mandi_reports::reports::print_data(
+            w.env.ctx.db(),
+            &mandi_reports::reports::ReportPrintInput {
+                id: ReportId::R10,
+                filters: ReportFilters {
+                    stock_view: view,
+                    ..ReportFilters::default()
+                },
+                language: Language::En,
+                paper: None,
+                sort: None,
+                group_by_month: false,
+            },
+        )
+        .unwrap()
+        .filters
+        .into_iter()
+        .map(|f| f.label_id)
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        facts(Some(StockView::Item)),
+        ["report-filter-stock-by-item"]
+    );
+    assert!(facts(None).is_empty());
+}
+
+#[test]
+fn the_report_tool_reads_r10_by_item_with_layout_item() {
+    let w = stock_world();
+    let mut s = Session::new(&w);
+    let by_item = s.ok("report", report("R10", json!({"layout": "item"})));
+    assert_eq!(s.json(&by_item)["count"]["n"], 2);
+    assert_eq!(
+        button_filters(&s, &by_item).stock_view,
+        Some(mandi_reports::reports::StockView::Item)
+    );
+    // The first row is the item with the most left; its figures are citable from the tool result.
+    let j = s.json(&by_item);
+    assert_eq!(j["totals"]["balance"]["n"], 30, "{j}");
+    // `lot` is the default layout: three rows and no layout on the button.
+    let by_lot = s.ok("report", report("R10", json!({"layout": "lot"})));
+    assert_eq!(s.json(&by_lot)["count"]["n"], 3);
+    assert_eq!(button_filters(&s, &by_lot).stock_view, None);
+    let plain = s.ok("report", report("R10", json!({})));
+    assert_eq!(s.json(&plain)["count"]["n"], 3);
+    // A word it does not take lists the words; a report with no layout refuses it.
+    let wrong = s.error("report", report("R10", json!({"layout": "day"})));
+    assert_eq!(wrong.allowed, ["lot", "item"]);
+    let none = s.error("report", report("R7", json!({"layout": "item"})));
+    assert_eq!(none.code, "ERR_OUT_OF_RANGE");
+}
+
+#[test]
+fn on_the_rich_year_r10_by_item_has_the_totals_of_r10_by_lot() {
+    use mandi_reports::reports::StockView;
+    let y = seed::build();
+    let w = &y.w;
+    let lots = stock_page(w, None, None);
+    let items = stock_page(w, Some(StockView::Item), None);
+    // The balance of the lot layout is its fifth number-like column; compare every shared total by
+    // key.
+    let by_key = |page: &mandi_reports::reports::ReportPage| {
+        let columns: Vec<_> = page
+            .columns
+            .iter()
+            .map(|c| (c.key.clone(), c.kind))
+            .collect();
+        additive_sums(&columns, &page.totals)
+    };
+    let (a, b) = (by_key(&lots), by_key(&items));
+    for key in [
+        "received",
+        "sold",
+        "written_off",
+        "fruit_taken",
+        "balance",
+        "our_left",
+        "other_left",
+    ] {
+        assert_eq!(a.get(key), b.get(key), "{key}");
+    }
+    // The rows of the item layout add up to its own totals, one row for each item, biggest first.
+    let at = items
+        .columns
+        .iter()
+        .position(|c| c.key == "balance")
+        .unwrap();
+    let balances: Vec<i64> = items
+        .rows
+        .iter()
+        .filter_map(|r| r.cells.get(at).and_then(figure_of))
+        .collect();
+    assert_eq!(balances.iter().sum::<i64>(), b["balance"]);
+    assert!(balances.windows(2).all(|p| p[0] >= p[1]), "{balances:?}");
+    assert!(items.total_count <= lots.total_count);
+}
+
+#[test]
+fn an_item_group_read_passes_on_every_allowed_view_and_report_and_a_group_with_no_sales_is_zero() {
+    // Q1663: the tools refuse nothing wrong with `item_group`, in any period, and "vegetable last
+    // week" on books where only fruit sold is 0 (not an error, and not the fruit figure).
+    for (w, week) in [
+        (day(), ("2026-10-04", "2026-10-10")),
+        (seed::build().w, ("2026-05-01", "2026-05-07")),
+    ] {
+        let today = mandi_services::day::status(&w.env.ctx).unwrap().today;
+        let mut s = Session::new(&w).on(&today);
+        for group in ["fruit", "vegetable"] {
+            for window in [None, Some(week)] {
+                let (from, to) =
+                    window.map_or((Value::Null, Value::Null), |(f, t)| (json!(f), json!(t)));
+                for view in ["A", "B", "C", "D", "G", "H"] {
+                    let mut extra = json!({"item_group": group, "from": from, "to": to});
+                    if view == "D" || view == "G" {
+                        extra["group_by"] = json!("month");
+                    }
+                    s.ok("analytics", analytics_input(view, extra));
+                }
+                for id in ["R2", "R3", "R4", "R7", "R10", "R27"] {
+                    s.ok(
+                        "report",
+                        report(id, json!({"item_group": group, "from": from, "to": to})),
+                    );
+                }
+            }
+        }
+    }
+    // The worked day has only fruit. In the week of 10-10-26: vegetable is 0 with its own echo,
+    // fruit is the PRD figure 5,448, and the whole shop is fruit + vegetable.
+    let w = day();
+    let mut s = Session::new(&w);
+    let window = json!({"from": "2026-10-04", "to": "2026-10-10"});
+    let mut read = |extra: Value| {
+        let mut input = window.clone();
+        for (k, v) in extra.as_object().unwrap() {
+            input[k] = v.clone();
+        }
+        let id = s.ok("analytics", analytics_input("A", input));
+        s.json(&id)
+    };
+    let veg = read(json!({"item_group": "vegetable"}));
+    let fruit = read(json!({"item_group": "fruit"}));
+    let all = read(json!({}));
+    assert_eq!(veg["count"]["n"], 0, "{veg}");
+    assert_eq!(rs(&veg["totals"]["total_comm"]), 0);
+    assert_eq!(veg["filters"]["item_group"], "vegetable");
+    assert_eq!(fruit["filters"]["item_group"], "fruit");
+    assert_eq!(rs(&fruit["totals"]["total_comm"]), 5_448);
+    assert_eq!(
+        rs(&fruit["totals"]["total_comm"]) + rs(&veg["totals"]["total_comm"]),
+        rs(&all["totals"]["total_comm"])
+    );
+    assert!(all["filters"].get("item_group").is_none());
+}

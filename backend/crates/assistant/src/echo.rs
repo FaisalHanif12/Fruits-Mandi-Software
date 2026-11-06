@@ -14,6 +14,8 @@ use mandi_services::domain::figures::QuestionNumber;
 
 use crate::check::{padded, word_spans};
 use crate::model_answer::{Piece, pieces};
+use crate::results::Node;
+use crate::tools::State;
 
 /// The words for the numbers people say in words: Urdu, and English for an English answer.
 const WORDS: &[(i64, &[&str])] = &[
@@ -128,6 +130,153 @@ pub fn put_numbers_back(text: &str, numbers: &[QuestionNumber]) -> Option<String
     changed.then_some(out)
 }
 
+/// The value of a digit of any script the app takes (English, Arabic-Indic, Urdu), or `None`.
+fn digit_value(c: char) -> Option<u64> {
+    match c {
+        '0'..='9' => c.to_digit(10).map(u64::from),
+        '\u{0660}'..='\u{0669}' => u64::from(c).checked_sub(0x0660),
+        '\u{06F0}'..='\u{06F9}' => u64::from(c).checked_sub(0x06F0),
+        _ => None,
+    }
+}
+
+/// True for a character that joins digits into one figure (`30,000`, `3.5`) when a digit follows.
+fn joins_digits(c: char) -> bool {
+    matches!(c, ',' | '.' | '٬' | '٫')
+}
+
+/// A text with each standalone number written in digits that is exactly a number of the question put
+/// back as the reference to it, or `None` when no number is. The model wrote "3" for the Owner's own
+/// "agle 3 mahine"; it is his number, not a figure of the books (the number-word echo, for digits).
+/// A number that is part of a longer figure (`30,000`, `3.5`) is never touched.
+///
+/// Example: "اگلے 3 مہینے" with the question number 3 becomes "اگلے {{q.n1}} مہینے".
+pub fn put_digits_back(text: &str, numbers: &[QuestionNumber]) -> Option<String> {
+    if numbers.is_empty() {
+        return None;
+    }
+    let mut changed = false;
+    let mut out = String::new();
+    for piece in pieces(text) {
+        match piece {
+            Piece::Ref(r) => out.push_str(text.get(r.start..r.end).unwrap_or("")),
+            Piece::Words(w) => {
+                let chars: Vec<(usize, char)> = w.char_indices().collect();
+                let (mut at, mut i) = (0usize, 0usize);
+                while i < chars.len() {
+                    let Some(&(start, c)) = chars.get(i) else {
+                        break;
+                    };
+                    if digit_value(c).is_none() {
+                        i = i.saturating_add(1);
+                        continue;
+                    }
+                    let mut j = i;
+                    let mut value: Option<u64> = Some(0);
+                    while let Some(&(_, d)) = chars.get(j) {
+                        let Some(v) = digit_value(d) else { break };
+                        value = value
+                            .and_then(|x| x.checked_mul(10))
+                            .and_then(|x| x.checked_add(v));
+                        j = j.saturating_add(1);
+                    }
+                    let end = chars.get(j).map_or(w.len(), |&(b, _)| b);
+                    let before_joins = i
+                        .checked_sub(2)
+                        .and_then(|k| chars.get(k))
+                        .zip(i.checked_sub(1).and_then(|k| chars.get(k)))
+                        .is_some_and(|(&(_, d), &(_, sep))| {
+                            digit_value(d).is_some() && joins_digits(sep)
+                        });
+                    let after_joins = chars
+                        .get(j)
+                        .zip(chars.get(j.saturating_add(1)))
+                        .is_some_and(|(&(_, sep), &(_, d))| {
+                            joins_digits(sep) && digit_value(d).is_some()
+                        });
+                    let hit = value
+                        .filter(|_| !before_joins && !after_joins)
+                        .and_then(|v| {
+                            numbers
+                                .iter()
+                                .position(|n| u64::try_from(n.number).is_ok_and(|x| x == v))
+                        });
+                    if let Some(k) = hit {
+                        out.push_str(w.get(at..start).unwrap_or(""));
+                        out.push_str(&format!("{{{{q.n{}}}}}", k.saturating_add(1)));
+                        at = end;
+                        changed = true;
+                    }
+                    i = j;
+                }
+                out.push_str(w.get(at..).unwrap_or(""));
+            }
+        }
+    }
+    changed.then_some(out)
+}
+
+/// The path a mistyped reference should have been, or `None` when it needs no change or none is
+/// certain: `n1` is the question number `q.n1`, and a place in a keyed list is that row's key
+/// (`r3.rows.0.gross` is `r3.rows.i9.gross` when the first row of `r3` is `i9`). The model reads a
+/// keyed list as a list of objects in order, each with its `key`, so "the place 0" is the first
+/// object it was shown: the same row. A place past the last row, or a key that does not exist, is
+/// never guessed: the answer then fails and the rewrite is told the keys (hidden round 4, H363 and
+/// Q924: `by_for.0.home_value`).
+///
+/// Example: `r2.by_for.0.home_value` with the rows `s1` and `guests` is `r2.by_for.s1.home_value`.
+fn fixed_path(path: &str, state: &State, numbers: usize) -> Option<String> {
+    let segments: Vec<&str> = path.split('.').collect();
+    let [first, rest @ ..] = segments.as_slice() else {
+        return None;
+    };
+    if rest.is_empty() {
+        let k = first.strip_prefix('n')?.parse::<usize>().ok()?;
+        return (k >= 1 && k <= numbers).then(|| format!("q.n{k}"));
+    }
+    let mut node = &state.find(first)?.node;
+    let mut out = vec![(*first).to_owned()];
+    let mut changed = false;
+    for segment in rest {
+        match node {
+            Node::Keyed(rows)
+                if !rows.iter().any(|(key, _)| key == segment)
+                    && segment.parse::<usize>().is_ok_and(|at| at < rows.len()) =>
+            {
+                let (key, next) = rows.get(segment.parse::<usize>().ok()?)?;
+                out.push(key.clone());
+                node = next;
+                changed = true;
+            }
+            _ => {
+                node = node.get(&[segment])?;
+                out.push((*segment).to_owned());
+            }
+        }
+    }
+    changed.then(|| out.join("."))
+}
+
+/// A text with the references the model mistyped written right where that is certain (see
+/// `fixed_path`), or `None` when no reference needed it. The answer is checked again either way.
+pub fn fix_references(text: &str, state: &State, numbers: usize) -> Option<String> {
+    let mut changed = false;
+    let mut out = String::new();
+    for piece in pieces(text) {
+        match piece {
+            Piece::Words(w) => out.push_str(&w),
+            Piece::Ref(r) => match fixed_path(&r.path, state, numbers) {
+                Some(path) => {
+                    out.push_str(&format!("{{{{{path}}}}}"));
+                    changed = true;
+                }
+                None => out.push_str(text.get(r.start..r.end).unwrap_or("")),
+            },
+        }
+    }
+    changed.then_some(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,6 +313,34 @@ mod tests {
             back("next 12 months", "the next twelve months").as_deref(),
             Some("the next {{q.n1}} months")
         );
+    }
+
+    #[test]
+    fn a_digit_that_is_the_owners_own_number_becomes_his_number_and_no_other_does() {
+        assert_eq!(
+            back_digits("agle 3 mahine ka andaza", "اگلے 3 مہینوں کا اندازہ").as_deref(),
+            Some("اگلے {{q.n1}} مہینوں کا اندازہ")
+        );
+        // Urdu digits too.
+        assert_eq!(
+            back_digits("agle 3 mahine ka andaza", "اگلے ۳ مہینے").as_deref(),
+            Some("اگلے {{q.n1}} مہینے")
+        );
+        // Not his number, part of a longer figure, or inside a reference: left for the rewrite.
+        assert_eq!(back_digits("agle 3 mahine ka andaza", "اگلے 6 مہینے"), None);
+        assert_eq!(
+            back_digits("agle 3 mahine ka andaza", "کل 30,000 اور 3.5 اور 1,3"),
+            None
+        );
+        assert_eq!(
+            back_digits("agle 3 mahine ka andaza", "{{r1.rows.a3.days}}"),
+            None
+        );
+        assert_eq!(back_digits("agle mahine ka andaza", "اگلے 3 مہینے"), None);
+    }
+
+    fn back_digits(question: &str, text: &str) -> Option<String> {
+        put_digits_back(text, &question_numbers(question))
     }
 
     #[test]

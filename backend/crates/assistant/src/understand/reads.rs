@@ -233,6 +233,25 @@ pub(super) fn trip_word(scan: &Scan, names: &Names) -> bool {
 /// review R-e). A balance is asked with a "give" verb only ("akram ko kitne paise diye"); "kitna
 /// hua" is a way to ask a balance.
 pub(super) fn happened(scan: &Scan, kinds: &[FigureKind]) -> bool {
+    // "tahir ne kitni peshgi li hui hai": the state "has taken", which is the advance still open.
+    if kinds == [FigureKind::Advance] {
+        let text = format!(" {} ", scan.words.join(" "));
+        const STATE: [&str; 7] = [
+            "li hui hai",
+            "li hui he",
+            "liya hua hai",
+            "liya hua he",
+            "li hui hain",
+            "لی ہوئی ہے",
+            "لیا ہوا ہے",
+        ];
+        if STATE
+            .iter()
+            .any(|p| text.contains(&format!(" {} ", key(p))))
+        {
+            return false;
+        }
+    }
     // Words that give or take: never a way to ask what is open now.
     const FIRM: &[&str] = &[
         "di",
@@ -420,12 +439,48 @@ pub(super) fn other_measure(
     if flow {
         // "naqdi mandi" is a buyer's name; "naqdi bikri" is the cash sales.
         let cash_sales = has(&["naqdi", "nakdi", "نقدی"]) && !has(&["mandi", "منڈی"]);
+        // "commission bikri ka kitne fisad": one flow as a percent of another. Both are read, and the
+        // model divides them; there is no instant figure for a ratio.
+        const PERCENT: [&str; 5] = ["percent", "percentage", "fisad", "feesad", "فیصد"];
+        let flows = kinds
+            .iter()
+            .filter(|k| {
+                matches!(
+                    k,
+                    FigureKind::Sale | FigureKind::Commission | FigureKind::Laga
+                )
+            })
+            .count();
+        if flows >= 2
+            && has(&PERCENT)
+            && !cash_sales
+            && !side_asked(scan)
+            && !MEASURE.iter().any(|w| !PERCENT.contains(w) && has(&[w]))
+        {
+            return Measure::Quantity;
+        }
         if has(&MEASURE) || cash_sales || side_asked(scan) {
             return Measure::Other;
         }
+        // "aaj kele ki kitni bikri hui": the nag and the amount of one item are both asked, and the
+        // instant figure holds only the amount; the model gives both from view A (live run 2, Q667).
+        if has_item
+            && roles.is_empty()
+            && kinds == [FigureKind::Sale]
+            && has(&["kitni", "kitna", "kitne", "کتنی", "کتنا", "کتنے"])
+            && has(&["hui", "hua", "hue", "hoi", "ہوئی", "ہوا", "ہوئے"])
+        {
+            return Measure::Quantity;
+        }
         // "kitne nag bike": the quantity is in the same views as the amount, so the reads are the
         // same; the answer is the model's.
-        if scan.has_any(&[Cue::Unit, Cue::Goods]) {
+        // "raheem ke mal ka commission": the goods of a seller are the owner of the figure, not a
+        // quantity asked ("kitna mal bika" is).
+        let goods_of_someone = scan.hits.iter().filter(|h| h.cue == Cue::Goods).all(|h| {
+            scan.word(h.end)
+                .is_some_and(|w| matches!(w, "ka" | "ki" | "ke" | "kay" | "کا" | "کی" | "کے"))
+        });
+        if scan.has(Cue::Unit) || (scan.has(Cue::Goods) && !goods_of_someone) {
             return Measure::Quantity;
         }
         // "kis kis din kitna commission diya": the lines of the days, not one total.
@@ -750,10 +805,19 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     // mahine ka commission"): both periods are read, and the model writes the difference.
     if u.compare
         || (u.intent.value == Intent::Figure
-            && u.periods.len() == 2
+            && u.periods.len() >= 2
             && u.doubts.contains(&Doubt::SeveralPeriods))
     {
         return comparison_plan(u);
+    }
+    // "kis se pehle wasooli karon": the buyers' dues, oldest first.
+    if u.oldest {
+        return oldest_dues_plan(u);
+    }
+    // "mooli kitne mahine biki hai": the item's sales by month; no period, so it is read before the
+    // guards that want a sure period.
+    if u.months_asked {
+        return months_plan(u);
     }
     let forecast = u.intent.value == Intent::Forecast;
     if !u.sure
@@ -773,7 +837,7 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         return None;
     }
     // "akram ko kela aakhri kis rate pe diya": the newest sales of the item to the buyer (R2).
-    if u.last_one && u.figures.value.as_slice() == [FigureKind::Rate] {
+    if u.last_one && u.periods.is_empty() && u.figures.value.as_slice() == [FigureKind::Rate] {
         return last_rate_plan(u);
     }
     // The quality of a sale line (awwal, doyam, A grade): the lines of the sales, which carry it.
@@ -837,25 +901,25 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     (!reads.is_empty()).then_some(Planned { reads, lines })
 }
 
-/// The reads of one figure over two periods ("is mahine ka commission pichle mahine se kitna zyada hai",
-/// "august ke muqable september ka commission"): both periods are read before the model starts, and
-/// the model writes the difference. The figure is a flow (a sale, a commission, a laga), for the whole
-/// shop, one item, a group or one party; the periods are two closed, separate ones. When the earlier
-/// period is exactly the one the analytics `compare` works out for the later one, and the figure is the
-/// commission (the one figure `compare` compares), it is one view A read with `compare`; else it is the
-/// reads of each period. No instant answer.
+/// The reads of one figure over two to four periods ("is mahine ka commission pichle mahine se kitna
+/// zyada hai", "august ke muqable september ka commission", "how did onion sales go in August,
+/// September and October"): every period is read before the model starts, and the model writes the
+/// difference or the month by month figures. The figure is a flow (a sale, a commission, a laga), for
+/// the whole shop, one or two items, a group or one party; the periods are closed and separate. For
+/// two periods, when the earlier is exactly the one the analytics `compare` works out for the later,
+/// and the figure is the commission (the one figure `compare` compares), it is one view A read with
+/// `compare`; else it is the reads of each period. No instant answer.
 ///
 /// Example: October and September, both whole months, is view A for October with compare `previous`.
 fn comparison_plan(u: &Understanding) -> Option<Planned> {
     const LEFT: [Doubt; 2] = [Doubt::Comparison, Doubt::SeveralPeriods];
-    let [one, two] = u.periods.as_slice() else {
-        return None;
-    };
+    const MOST_PERIODS: usize = 4;
     let kind = match u.figures.value.as_slice() {
         [k @ (FigureKind::Sale | FigureKind::Commission | FigureKind::Laga)] => *k,
         _ => return None,
     };
     if u.intent.value != Intent::Figure
+        || !(2..=MOST_PERIODS).contains(&u.periods.len())
         || u.two_figures
         || u.scoped
         || u.happened
@@ -868,21 +932,19 @@ fn comparison_plan(u: &Understanding) -> Option<Planned> {
         || u.bikri_number.is_some()
         || u.other_measure != Measure::Same
         || u.doubts.iter().any(|d| !LEFT.contains(d))
-        || one.future
-        || two.future
-        || one.from.is_none()
-        || two.from.is_none()
+        || u.periods.iter().any(|p| p.future || p.from.is_none())
     {
         return None;
     }
-    let (later, earlier) = if one.to > two.to {
-        (one, two)
-    } else {
-        (two, one)
-    };
-    // Two separate periods, the earlier one entirely before the later one starts.
-    if later.from.is_none_or(|from| earlier.to >= from) {
-        return None;
+    // The latest first. Separate periods: each one ends before the next later one starts.
+    let mut ordered: Vec<&PeriodRef> = u.periods.iter().collect();
+    ordered.sort_by_key(|p| std::cmp::Reverse(p.to));
+    for pair in ordered.windows(2) {
+        if let [later, earlier] = pair
+            && later.from.is_none_or(|from| earlier.to >= from)
+        {
+            return None;
+        }
     }
     // Each period is planned as the single-period question it is.
     let sub = |p: &PeriodRef| {
@@ -893,22 +955,7 @@ fn comparison_plan(u: &Understanding) -> Option<Planned> {
         one.doubts.clear();
         plan(&one)
     };
-    let (now, before) = (sub(later)?, sub(earlier)?);
-    let (from, to) = (later.from.map(iso), iso(later.to));
-    let window = from.as_deref().and_then(|from| {
-        [
-            (AnalyticsCompare::Previous, "previous"),
-            (AnalyticsCompare::LastYear, "last_year"),
-        ]
-        .into_iter()
-        .find(|(how, _)| {
-            compare_window(*how, from, &to)
-                == Some((earlier.from.map(iso).unwrap_or_default(), iso(earlier.to)))
-        })
-        .map(|(_, word)| word)
-    });
-    let is_a =
-        |r: &PlannedRead| r.tool == "analytics" && r.input.get("view").is_some_and(|v| v == "A");
+    let plans: Vec<Planned> = ordered.iter().map(|p| sub(p)).collect::<Option<_>>()?;
     let others = |p: &Planned| {
         p.reads
             .iter()
@@ -916,13 +963,11 @@ fn comparison_plan(u: &Understanding) -> Option<Planned> {
             .cloned()
             .collect::<Vec<_>>()
     };
-    let (now_others, before_others) = (others(&now), others(&before));
     let mut reads: Vec<PlannedRead> = Vec::new();
     for tool in ["period", "find"] {
-        for read in now
-            .reads
+        for read in plans
             .iter()
-            .chain(&before.reads)
+            .flat_map(|p| &p.reads)
             .filter(|r| r.tool == tool)
         {
             if !reads.contains(read) {
@@ -930,23 +975,143 @@ fn comparison_plan(u: &Understanding) -> Option<Planned> {
             }
         }
     }
-    match (window, now_others.as_slice(), kind) {
-        // One read with `compare`: the earlier period is the one the tool works out.
-        (Some(word), [read], FigureKind::Commission) if is_a(read) => {
-            let mut read = read.clone();
-            if let Some(input) = read.input.as_object_mut() {
-                input.insert("compare".to_owned(), json!(word));
+    // Two periods, the earlier the one `compare` works out, the commission: one read with `compare`.
+    let one_read = match (ordered.as_slice(), plans.as_slice()) {
+        ([later, earlier], [now, _]) if kind == FigureKind::Commission => {
+            let (from, to) = (later.from.map(iso), iso(later.to));
+            let earlier_dates = (earlier.from.map(iso).unwrap_or_default(), iso(earlier.to));
+            let word = from.as_deref().and_then(|from| {
+                [
+                    (AnalyticsCompare::Previous, "previous"),
+                    (AnalyticsCompare::LastYear, "last_year"),
+                ]
+                .into_iter()
+                .find(|(how, _)| compare_window(*how, from, &to) == Some(earlier_dates.clone()))
+                .map(|(_, word)| word)
+            });
+            match (word, others(now).as_slice()) {
+                (Some(word), [read])
+                    if read.tool == "analytics"
+                        && read.input.get("view").is_some_and(|v| v == "A") =>
+                {
+                    let mut read = read.clone();
+                    if let Some(input) = read.input.as_object_mut() {
+                        input.insert("compare".to_owned(), json!(word));
+                    }
+                    Some(read)
+                }
+                _ => None,
             }
-            reads.push(read);
         }
-        _ => {
-            for read in now_others.into_iter().chain(before_others) {
+        _ => None,
+    };
+    match one_read {
+        Some(read) => reads.push(read),
+        None => {
+            for read in plans.iter().flat_map(others) {
                 if !reads.contains(&read) {
                     reads.push(read);
                 }
             }
         }
     }
+    Some(Planned {
+        reads,
+        lines: Vec::new(),
+    })
+}
+
+/// True when the question asks whom to collect from first: an "oldest" or "first" word and a "who" word
+/// ("kis se pehle wasooli karon", "who should I collect from first").
+pub(super) fn oldest(scan: &Scan) -> bool {
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+    has(&[
+        "pehle",
+        "pahle",
+        "pehly",
+        "pahly",
+        "purana",
+        "purane",
+        "purani",
+        "oldest",
+        "first",
+        "پہلے",
+        "پرانا",
+        "پرانے",
+        "پرانی",
+    ]) && has(&[
+        "kis", "kisse", "kiski", "kisko", "kon", "kaun", "who", "which", "whom", "کس", "کون",
+    ])
+}
+
+/// The buyers who owe, oldest first (R20 sorted by days, 5 rows), for "kis se pehle wasooli karon". The
+/// first row is the one to collect from first, with its days. No instant answer: the shop's total
+/// dues is no answer to "whom first" (live run 2, H4).
+///
+/// Example: Arshad 18,684 (36 days) comes before Akram 2,880.
+fn oldest_dues_plan(u: &Understanding) -> Option<Planned> {
+    if !matches!(
+        u.intent.value,
+        Intent::Figure | Intent::List | Intent::Advice
+    ) || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || !u.periods.is_empty()
+        || u.item_group.is_some()
+        || !matches!(
+            u.figures.value.as_slice(),
+            [FigureKind::Dues | FigureKind::Receipts | FigureKind::Balance]
+        )
+    {
+        return None;
+    }
+    Some(Planned {
+        reads: vec![report(
+            "R20",
+            Rep {
+                sort: Some(sorted("days", "desc")),
+                rows: Some(5),
+                ..Rep::default()
+            },
+        )],
+        lines: Vec::new(),
+    })
+}
+
+/// The month by month sales of one item, for "in how many months did it sell" ("mooli kitne mahine
+/// biki hai"): view D (item by month) for the item over all dates, with the item found first. The model
+/// counts the months with a figure. No period (the question asks it of all the books) and no instant
+/// answer.
+///
+/// Example: Radish is view D with the item and `group_by` month.
+fn months_plan(u: &Understanding) -> Option<Planned> {
+    if u.intent.value != Intent::Figure
+        || !u.periods.is_empty()
+        || !u.parties.is_empty()
+        || !u.records.is_empty()
+        || u.figures.value.as_slice() != [FigureKind::Sale]
+    {
+        return None;
+    }
+    let [item] = u.items.as_slice() else {
+        return None;
+    };
+    let Outcome::Found(goods) = &item.outcome else {
+        return None;
+    };
+    let mut plan = Plan::default();
+    plan.find(&goods.name_en, "item");
+    plan.read(PlannedRead {
+        tool: "analytics",
+        input: json!({
+            "view": "D", "from": null, "to": null, "group_by": "month", "item": goods.key,
+            "item_group": null, "seller": null, "buyer": null, "city": null, "adda": null,
+            "garden": null, "trip": null, "goods": null, "partner": null, "side": null,
+            "compare": null, "sort": null, "rows": null
+        }),
+    });
+    let mut reads = plan.finds;
+    reads.extend(plan.reads);
     Some(Planned {
         reads,
         lines: Vec::new(),
@@ -1144,8 +1309,8 @@ fn group_plan(u: &Understanding, group: GroupWord) -> Option<Planned> {
 /// Only one figure, one future period and at most one other period; a target, a what-if (another
 /// intent), a comparison or a name that was not found is the model's.
 ///
-/// "agle mahine" (one month, no number) is the model's: the tool takes the months from a number of the
-/// question, and with none it takes 6.
+/// "agle mahine" (one month, no number) is planned with `ahead` 1: the tool's own default for a question
+/// with no number is 6 months, and a 6-month total is no figure for one month.
 ///
 /// Example: "agle 3 mahine ka commission" is `estimate` with `commission_all` and `ahead` 3.
 fn forecast_plan(u: &Understanding) -> Option<Planned> {
@@ -1165,6 +1330,9 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
     };
     let (ahead, until) = match ahead_period.kind {
         PeriodKind::NextMonths(n) if (1..=12).contains(&n) => (Some(i64::from(n)), None),
+        // "agle mahine" with no number is one month: sent as a number, like "agle 3 mahine", so the tool
+        // does not take its own 6 months and the model never cites a 6-month total for one month.
+        PeriodKind::NextMonth => (Some(1), None),
         PeriodKind::YearEnd => (None, Some("year_end")),
         _ => return None,
     };
@@ -1765,6 +1933,25 @@ fn party_item_figure(
     period: Option<&PeriodRef>,
     plan: &mut Plan,
 ) -> Option<()> {
+    // What a buyer bought of an item ("how much tomato did Faisal buy this year"): the register of his
+    // lines (R2), whose totals hold the value and the bill total over the whole filter.
+    if kind == FigureKind::Purchases && phit.role == PartyRole::Buyer && !phit.pukhta {
+        let (from, to) = dates(period);
+        plan.find(ptext, "buyer");
+        plan.find(itext, "item");
+        plan.read(report(
+            "R2",
+            Rep {
+                from,
+                to,
+                party: Some(phit.key.clone()),
+                item: Some(ikey.to_owned()),
+                ..Rep::default()
+            },
+        ));
+        plan.dated = period.is_some();
+        return Some(());
+    }
     if !matches!(
         kind,
         FigureKind::Commission | FigureKind::Laga | FigureKind::Sale

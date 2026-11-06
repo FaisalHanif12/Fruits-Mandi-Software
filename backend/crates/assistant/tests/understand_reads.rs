@@ -23,7 +23,7 @@ use std::collections::HashMap;
 
 use mandi_assistant::results::{ToolResult, Words, fit};
 use mandi_assistant::tools::{Env, State, Stop, call};
-use mandi_assistant::understand::{PlannedRead, Reader, plan_reads, understand};
+use mandi_assistant::understand::{Intent, PlannedRead, Reader, plan_reads, understand};
 use mandi_reports::dashboard::BackupFacts;
 use mandi_services::core::accounts::AccountType;
 use mandi_services::core::auth::Language;
@@ -435,7 +435,7 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("akram aur arshad ka bakaya", "find{role:buyer,text:akram} | find{role:buyer,text:arshad} | party_card{party:$akram} | party_card{party:$arshad}"),
     ("faisal ka bakaya aur commission", "NONE"),
     ("kele aur saib ka commission", "find{role:item,text:Banana} | find{role:item,text:Apple} | analytics{item:$kela,view:A} | analytics{item:$saib,view:A}"),
-    ("agle mahine ka commission", "NONE"),
+    ("agle mahine ka commission", "estimate{ahead:1,measure:commission_all}"),
     ("sale kaise barhayen", "NONE"),
     ("wasooli kaise likhun", "NONE"),
     ("akram ki wasooli likh do", "NONE"),
@@ -559,7 +559,7 @@ const NEW_INPUTS: &[(&str, &str)] = &[
     ("is saal ke aakhir tak sale ka andaza", "estimate{measure:sales,until:year_end}"),
     // A target, a name not found or a figure the estimate has no measure for stays with the model.
     ("agle 6 mahine mein 500000 commission kab hoga", "NONE"),
-    ("agle mahine ka commission", "NONE"),
+    ("agle mahine ka commission", "estimate{ahead:1,measure:commission_all}"),
     ("agle 3 mahine ka cash", "NONE"),
 ];
 
@@ -722,9 +722,9 @@ fn every_read_has_every_field_of_its_schema_and_the_order_is_period_finds_reads(
             assert!(this >= rank, "{question:?}: {}", render_all(&reads));
             rank = this;
         }
-        // One period, or two for a comparison of two periods.
+        // One period, or up to four for a comparison or a month by month question.
         assert!(
-            reads.iter().filter(|r| r.tool == "period").count() <= 2,
+            reads.iter().filter(|r| r.tool == "period").count() <= 4,
             "{question:?}"
         );
     }
@@ -1411,4 +1411,402 @@ fn the_last_rate_of_an_item_sold_to_a_buyer_reads_his_newest_lines() {
         }
     }
     assert!(refused.is_empty(), "refused:\n{}", refused.join("\n"));
+}
+
+// ---- hidden round 4 (26/42) ------------------------------------------------------------------------------
+
+fn vegetable_key(w: &world::World, today: BusinessDate, question: &str) -> String {
+    let u = understand(&reader(w, today), question);
+    u.items
+        .first()
+        .and_then(|i| i.outcome.hit())
+        .map(|h| h.key.clone())
+        .unwrap_or_else(|| panic!("{question}: no item"))
+}
+
+/// Item 1: "How did onion sales go in August, September and October": a figure asked in the past tense, not
+/// the how-to of the sale book. View A for the onion, once for each month, before the model starts.
+#[test]
+fn how_did_a_thing_go_over_several_months_reads_each_month() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let onion = vegetable_key(&w, today, "pyaz ka commission");
+    let u = understand(
+        &reader(&w, today),
+        "how did onion sales go in August, September and October",
+    );
+    assert_eq!(u.intent.value, Intent::Figure, "a how-to, not a figure");
+    let want = format!(
+        "period{{from:2026-10-01,kind:range,to:2026-10-10}} | period{{from:2026-09-01,kind:range,to:2026-09-30}} | period{{from:2026-08-01,kind:range,to:2026-08-31}} | find{{role:item,text:Onion}} | analytics{{from:2026-10-01,item:{onion},to:2026-10-10,view:A}} | analytics{{from:2026-09-01,item:{onion},to:2026-09-30,view:A}} | analytics{{from:2026-08-01,item:{onion},to:2026-08-31,view:A}}"
+    );
+    let reads = plan_reads(&u).expect("reads");
+    assert_eq!(render_all(&reads), want);
+    let refused = run_plan(&w, today, "onion months", &reads);
+    assert!(refused.is_empty(), "refused: {refused:?}");
+    // A real how-to stays a how-to.
+    let u = understand(&reader(&w, today), "how do I print a bill");
+    assert_eq!(u.intent.value, Intent::HowTo);
+}
+
+/// Item 2: "tomato" and "potato" are two letters apart, but each name typed exactly is that item alone, and
+/// what Faisal bought of the item is read for him: his lines (R2) with the item, the year's totals.
+#[test]
+fn an_exact_english_item_name_is_taken_exactly() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    for (question, name) in [
+        ("how much tomato did Faisal buy this year", "Tomato"),
+        ("how much potato did Faisal buy this year", "Potato"),
+        (
+            "is tomato selling more this month than last month",
+            "Tomato",
+        ),
+        (
+            "is potato selling more this month than last month",
+            "Potato",
+        ),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let [item] = u.items.as_slice() else {
+            panic!("{question}: {} items", u.items.len());
+        };
+        let hit = item
+            .outcome
+            .hit()
+            .unwrap_or_else(|| panic!("{question}: not one item"));
+        assert_eq!(hit.name_en, name, "{question}");
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        let text = render_all(&reads);
+        assert!(
+            text.contains(&format!("item:{}", hit.key)),
+            "{question}: {text}"
+        );
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    let faisal = {
+        let u = understand(
+            &reader(&w, today),
+            "how much tomato did Faisal buy this year",
+        );
+        render_all(&plan_reads(&u).expect("reads"))
+    };
+    assert!(
+        faisal.contains("report{from:2026-01-01,id:R2,item:"),
+        "{faisal}"
+    );
+}
+
+/// Item 3: The average rate of an item in Urdu: "اوسط" is the word "average", not a name nobody has.
+#[test]
+fn the_urdu_average_rate_of_an_item_reads_view_a() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    let apple = {
+        let u = understand(&reader(&w, today), "seb ka commission");
+        u.items
+            .first()
+            .and_then(|i| i.outcome.hit())
+            .map(|h| h.key.clone())
+            .expect("apple")
+    };
+    let want = format!(
+        "period{{kind:last_month}} | find{{role:item,text:Apple}} | analytics{{from:2026-09-01,item:{apple},to:2026-09-30,view:A}}"
+    );
+    for question in [
+        "پچھلے مہینے سیب کا اوسط ریٹ کیا رہا",
+        "pichle mahine seb ka ausat rate kya raha",
+        "what was the average rate of apple last month",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        assert!(!u.has_not_found(), "{question}: a word taken for a name");
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        assert_eq!(got.as_deref(), Some(want.as_str()), "{question}");
+    }
+}
+
+/// Item 4: A misspelt Roman Urdu name with the same consonants is the item ("tmatar", "tmatr" for tamatar),
+/// as a medium guess; a short or different word is not guessed ("motor" is not "matar").
+#[test]
+fn a_misspelt_item_name_with_the_same_consonants_is_the_item() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    for word in ["tamatar", "tmatar", "tmatr", "tamatr", "tamtar", "tomatar"] {
+        let question = format!("{word} ka pichle mahine ka comision");
+        let u = understand(&reader(&w, today), &question);
+        let hit = u
+            .items
+            .first()
+            .and_then(|i| i.outcome.hit())
+            .unwrap_or_else(|| panic!("{question}: no item"));
+        assert_eq!(hit.name_en, "Tomato", "{question}");
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert!(
+            render_all(&reads).contains("find{role:item,text:Tomato}"),
+            "{question}"
+        );
+    }
+    let u = understand(&reader(&w, today), "motor ka pichle mahine ka comision");
+    assert!(
+        u.items
+            .iter()
+            .all(|i| i.outcome.hit().is_none_or(|h| h.name_en != "Peas")),
+        "motor is not matar"
+    );
+}
+
+/// Item 5: The two rows that ran out of time get their reads before the model starts: the goods left of
+/// each vegetable (R10 with the group), and the sales of an item by month (view D, all dates).
+#[test]
+fn the_vegetable_stock_list_and_the_months_of_an_item_are_read_first() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let radish = vegetable_key(&w, today, "mooli ka commission");
+    let onion = vegetable_key(&w, today, "pyaz ka commission");
+    let ready = include_str!("../prompt/tools.json").contains("\"item_group\"");
+    let stock = "report{id:R10,item_group:vegetable,sort:days:desc}";
+    for question in [
+        "kaun kaun si sabzi kitni baki padi hai",
+        "kaun si sabzi kitni baki hai",
+        "konsi sabzi kitni baki hai",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        assert_eq!(got.as_deref(), ready.then_some(stock), "{question}");
+    }
+    for (question, name, key) in [
+        ("mooli kitne mahine biki hai", "Radish", &radish),
+        ("how many months did onion sell", "Onion", &onion),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(
+            render_all(&reads),
+            format!(
+                "find{{role:item,text:{name}}} | analytics{{group_by:month,item:{key},view:D}}"
+            ),
+            "{question}"
+        );
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+}
+
+/// Hidden round 4, the forecast questions in Urdu letters: "سال کے آخر تک" is the year end (its words
+/// are known), "گا" and "bikega" are future suffixes and a sale verb, and a question that holds this
+/// year beside the year end keeps both periods (the real part, view A for this year, is read too).
+/// "Agle mahine" with no number is one month ahead (`ahead` 1, never the tool's default of 6).
+#[test]
+fn the_year_end_and_next_month_questions_in_urdu_letters_are_planned() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let tomato = vegetable_key(&w, today, "tamatar ka commission");
+    let saag = vegetable_key(&w, today, "saag ka commission");
+    let year_end = format!(
+        "find{{role:item,text:Tomato}} | estimate{{item:{tomato},measure:commission_all,until:year_end}}"
+    );
+    let both = format!(
+        "period{{kind:this_year}} | find{{role:item,text:Tomato}} | analytics{{from:2026-01-01,item:{tomato},to:2026-10-10,view:A}} | estimate{{item:{tomato},measure:commission_all,until:year_end}}"
+    );
+    let next =
+        format!("find{{role:item,text:Saag}} | estimate{{ahead:1,item:{saag},measure:sales}}");
+    let sales_both = format!(
+        "period{{kind:this_year}} | find{{role:item,text:Saag}} | analytics{{from:2026-01-01,item:{saag},to:2026-10-10,view:A}} | estimate{{ahead:1,item:{saag},measure:sales}}"
+    );
+    let cases: Vec<(&str, &String)> = vec![
+        ("ٹماٹر کا سال کے آخر تک کمیشن", &year_end),
+        ("tamatar ka saal ke aakhir tak commission", &year_end),
+        (
+            "how much will tomato commission be by the end of the year",
+            &year_end,
+        ),
+        (
+            "ٹماٹر کا اس سال کا کمیشن کتنا ہے اور سال کے آخر تک کتنا ہو گا",
+            &both,
+        ),
+        (
+            "tamatar ka is saal ka commission kitna hai aur saal ke aakhir tak kitna hoga",
+            &both,
+        ),
+        ("tomato commission this year so far and by year end", &both),
+        ("ساگ اگلے مہینے کتنا بکے گا", &next),
+        ("saag agle mahine kitna bikega", &next),
+        ("saag ki sale agle mahine kitni hogi", &next),
+        (
+            "ساگ کی اس سال کی بکری کتنی ہے اور اگلے مہینے کتنی ہو گی",
+            &sales_both,
+        ),
+        (
+            "saag ki is saal ki sale kitni hai aur agle mahine kitni hogi",
+            &sales_both,
+        ),
+    ];
+    let mut wrong = Vec::new();
+    let mut refused = Vec::new();
+    for (question, want) in cases {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u);
+        let text = got.as_deref().map(render_all);
+        if text.as_deref() != Some(want.as_str()) {
+            wrong.push(format!(
+                "{question:?}\n   got    {text:?}\n   wanted {want}"
+            ));
+        }
+        if let Some(reads) = got {
+            refused.extend(run_plan(&w, today, question, &reads));
+        }
+    }
+    assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    assert!(refused.is_empty(), "refused: {refused:?}");
+    // "is saal ke aakhir tak": the year belongs to the phrase, so there is no period of its own.
+    let u = understand(&reader(&w, today), "is saal ke aakhir tak sale ka andaza");
+    assert_eq!(
+        plan_reads(&u).as_deref().map(render_all).as_deref(),
+        Some("estimate{measure:sales,until:year_end}")
+    );
+}
+
+// ---- live run 2: a misspelt word is never dropped (C1, C2) and the reads of H2, H4, Q072 ------------------
+
+/// C1: a group word spelt wrong is still the group. "How much was sold of vegitables last week" read the
+/// whole shop (704,040 for an expected 0). The group is in the read, whatever the spelling.
+#[test]
+fn a_group_word_spelt_wrong_is_still_the_group() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let ready = include_str!("../prompt/tools.json").contains("\"item_group\"");
+    for (question, group) in [
+        ("how much was sold of vegitables last week", "vegetable"),
+        ("how much was sold of vegetabls last week", "vegetable"),
+        ("how much was sold of vegetables last week", "vegetable"),
+        ("subzi ki bikri pichle hafte", "vegetable"),
+        ("sabziyon ki bikri pichle hafte", "vegetable"),
+        ("how much was sold of fruts last week", "fruit"),
+        ("phl ki bikri pichle hafte", "fruit"),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        match (&got, ready) {
+            (Some(text), true) => {
+                assert!(
+                    text.contains(&format!("item_group:{group}")),
+                    "{question}: {text}"
+                );
+                assert!(
+                    text.contains("period{kind:last_week}"),
+                    "{question}: {text}"
+                );
+            }
+            (None, false) => {}
+            other => panic!("{question}: {other:?}"),
+        }
+    }
+}
+
+/// C2: a period word spelt wrong is a period. "kelaa ka coomision is sall kitna bana" answered for all
+/// the books. A time word that is neither read nor known (a four-letter word one letter off "sal") makes
+/// the question not sure, so there is no instant figure and no read for the wrong dates.
+#[test]
+fn a_period_word_spelt_wrong_is_never_dropped() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for (question, period) in [
+        ("kelaa ka coomision is sall kitna bana", "this_year"),
+        ("kela ka commission is sall", "this_year"),
+        ("kela ka commission is sail", "this_year"),
+        ("kela ka commission is saal", "this_year"),
+        ("kela ka commission is mahne", "this_month"),
+        ("kela ka commission is mhina", "this_month"),
+        ("kela ka commission pichle hafty", "last_week"),
+        ("kela ka commission pichle hfta", "last_week"),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let text = plan_reads(&u).map(|r| render_all(&r)).unwrap_or_default();
+        assert!(
+            text.contains(&format!("period{{kind:{period}}}")),
+            "{question}: {text}"
+        );
+    }
+    // A time word nothing reads: not sure, and no read for dates the question did not name.
+    let u = understand(&reader(&w, today), "kela ka commission is sakl");
+    assert!(!u.sure, "an unread time word left the question sure");
+    assert!(plan_reads(&u).is_none());
+}
+
+/// H4: "kis se pehle wasooli karon" asks whom to collect from first: the buyers' dues oldest first
+/// (R20 sorted by days), never the shop's one total. A named buyer is another question.
+#[test]
+fn whom_to_collect_from_first_reads_the_dues_oldest_first() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for question in ["kis se pehle wasooli karon", "kis se pahle wasuli karon"] {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        assert_eq!(
+            got.as_deref(),
+            Some("report{id:R20,rows:5,sort:days:desc}"),
+            "{question}"
+        );
+        let reads = plan_reads(&u).expect("reads");
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    let u = understand(&reader(&w, today), "akram se pehle wasooli");
+    assert_ne!(
+        plan_reads(&u).map(|r| render_all(&r)).as_deref(),
+        Some("report{id:R20,rows:5,sort:days:desc}")
+    );
+}
+
+/// Q072: "aaj commission bikri ka kitne fisad" is one flow over another: both are read (today's view A
+/// holds the sale and the commission with Laga) and the model divides them, not the commission rule's
+/// 6% (the figure test has the negative: no instant figure).
+#[test]
+fn a_percent_of_one_flow_over_another_reads_both_and_has_no_instant_figure() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for question in [
+        "aaj commission bikri ka kitne fisad",
+        "aaj commission bikri ka kitne percent hai",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        assert_eq!(
+            got.as_deref(),
+            Some("period{kind:today} | analytics{from:2026-10-10,to:2026-10-10,view:A}"),
+            "{question}"
+        );
+    }
+}
+
+/// G5 (live run 2): "akrm aur arshd ka jama kitna hua" is the sum of two buyers' balances: both cards are
+/// read and the model adds them (no instant figure); "aaj kele ki kitni bikri hui" asks the nag and the
+/// amount of one item, so view A is read for the model to give both. One buyer's "jama" is the model's.
+#[test]
+fn the_sum_of_two_parties_and_the_count_of_an_item_are_read_for_the_model() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for question in [
+        "akrm aur arshd ka jama kitna hua",
+        "akram aur arshad ka jama kitna hua",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        let text = render_all(&reads);
+        assert!(
+            text.contains("party_card{party:a20}") && text.contains("party_card{party:a21}"),
+            "{question}: {text}"
+        );
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    let u = understand(&reader(&w, today), "akram ka jama kitna hai");
+    assert!(plan_reads(&u).is_none(), "one buyer's jama is the model's");
+    let u = understand(&reader(&w, today), "aaj kele ki kitni bikri hui");
+    assert_eq!(
+        plan_reads(&u).as_deref().map(render_all).as_deref(),
+        Some(
+            "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,item:i1,to:2026-10-10,view:A}"
+        )
+    );
 }

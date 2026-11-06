@@ -23,4 +23,5 @@ export type ReportFilterKind =
   | 'bikri'
   | 'guests'
   | 'collector'
-  | 'item_group';
+  | 'item_group'
+  | 'stock_view';

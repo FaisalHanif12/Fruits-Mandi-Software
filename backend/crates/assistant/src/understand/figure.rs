@@ -28,7 +28,7 @@ use serde_json::Value;
 use super::reads::{Line, Planned, What, Who};
 use super::{FigureKind, PeriodKind, PeriodRef, Understanding, reads};
 use crate::model_answer::{AnswerKind, ModelAnswer};
-use crate::results::{Node, ToolResult, Val, Words};
+use crate::results::{Node, Side, ToolResult, Val, Words};
 
 /// The most partner rows one answer lists.
 const MAX_PARTNER_LINES: usize = 6;
@@ -368,7 +368,15 @@ impl Cx<'_> {
         {
             return None;
         }
+        // A seller's payable that is his whole credit balance is shown as the balance, so the answer
+        // carries the side word (جمع, Cr) as the ledger does (live run 2, Q600).
+        let credit_balance = matches!(
+            (card.node.get(&["balance"]), card.node.get(&["payable"])),
+            (Some(Node::Val(Val::Money(b))), Some(Node::Val(Val::Money(p))))
+                if b.side == Some(Side::Cr) && b.paisa == p.paisa && b.paisa != Paisa::ZERO
+        );
         let (kind, path): (&str, &[&str]) = match what {
+            What::Payable if credit_balance => ("payable", &["balance"]),
             What::Payable => ("payable", &["payable"]),
             What::Advance => ("advance", &["open_advance"]),
             _ => ("balance", &["balance"]),

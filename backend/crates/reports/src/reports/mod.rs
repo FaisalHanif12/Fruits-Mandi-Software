@@ -104,7 +104,7 @@ pub use model::{
     ArgValue, CatalogEntry, Cell, Column, ColumnKind, DateShortcut, DetailPart, FilterKind,
     GardenView, GroupBy, MessageArg, Names, PaidFilter, PartyFilter, PartyRef, ReportFilters,
     ReportGroup, ReportId, ReportPage, ReportPrintInput, ReportRunInput, ReportTable,
-    ResolvedFilters, Row, RowKind, RowSource, SourceKind, SummaryLine, TripView,
+    ResolvedFilters, Row, RowKind, RowSource, SourceKind, StockView, SummaryLine, TripView,
 };
 pub use print_data::{
     PrintArgValue, PrintCell, PrintDetailPart, PrintMessageArg, PrintOptions, PrintReportColumn,
@@ -266,6 +266,7 @@ const SPECS: &[Spec] = &[
             FilterKind::Seller,
             FilterKind::Item,
             FilterKind::ItemGroup,
+            FilterKind::StockView,
         ],
         false,
     ),

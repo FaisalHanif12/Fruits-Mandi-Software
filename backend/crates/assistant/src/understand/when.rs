@@ -111,13 +111,18 @@ fn words() -> &'static Words {
                 "آنے",
             ]),
             week: set(&[
-                "hafta", "hafte", "haftay", "haftah", "week", "weeks", "ہفتہ", "ہفتے",
+                "hafta", "hafte", "haftay", "haftah", "hafty", "haftaa", "hfta", "hfte", "week", "weeks",
+                "ہفتہ", "ہفتے",
             ]),
             month: set(&[
-                "mahina", "mahine", "mahinay", "mahiny", "mahiney", "mahinah", "mahino", "mahinon",
+                "mahina", "mahine", "mahinay", "mahiny", "mahiney", "mahinah", "mahino", "mahinon", "mahna",
+                "mahne", "mahena", "mahinaa", "mahinee", "mhina", "mhine",
                 "month", "months", "مہینہ", "مہینے", "مہینوں", "ماہ",
             ]),
-            year: set(&["saal", "sal", "saalon", "year", "years", "سال", "سالوں"]),
+            year: set(&[
+                "saal", "sal", "sall", "sail", "saall", "saaal", "saalon", "year", "years", "yr", "سال",
+                "سالوں",
+            ]),
             day: set(&["din", "dino", "day", "days", "دن", "دنوں"]),
             today: set(&["aaj", "aj", "today", "آج"]),
             kal: set(&["kal", "کل"]),
@@ -156,19 +161,31 @@ fn words() -> &'static Words {
 /// True when a word is a month, a unit of time or a day word written wrong by a letter ("septmber",
 /// "mahine" for "mahina"): a time word spelt wrong, never a person.
 pub(super) fn is_near_time_word(word: &str) -> bool {
+    // A word of an item ("saib", an apple) is no time word spelt wrong ("sail").
+    if super::items::is_item_word(word) {
+        return false;
+    }
     near_month(word).is_some() || {
         let w = words();
         let length = word.chars().count();
-        length >= 5
-            && word.chars().all(|c| c.is_ascii_lowercase())
-            && [&w.week, &w.month, &w.year, &w.day, &w.today, &w.parson]
-                .iter()
-                .any(|set| {
-                    set.iter().any(|candidate| {
-                        candidate.chars().count().abs_diff(length) <= 1
-                            && super::scan::edit_distance(word, candidate, 1) <= 1
-                    })
+        let first = word.chars().next();
+        // A word of four letters is one letter off a week, month or year word that starts with the
+        // same letter ("sall", "sail" for "sal"); not "near" for "year" (money review, live run 2, C2).
+        let sets: Vec<&HashSet<String>> = if length >= 5 {
+            vec![&w.week, &w.month, &w.year, &w.day, &w.today, &w.parson]
+        } else if length == 4 {
+            vec![&w.week, &w.month, &w.year]
+        } else {
+            Vec::new()
+        };
+        word.chars().all(|c| c.is_ascii_lowercase())
+            && sets.iter().any(|set| {
+                set.iter().any(|candidate| {
+                    candidate.chars().count().abs_diff(length) <= 1
+                        && (length >= 5 || candidate.chars().next() == first)
+                        && super::scan::edit_distance(word, candidate, 1) <= 1
                 })
+            })
     }
 }
 
@@ -1311,6 +1328,16 @@ fn stray_time_words(
         if in_period || in_phrase {
             continue;
         }
+        // A time word spelt wrong that no period took ("sall", "mahne"): never dropped silently, so
+        // the question is not sure of its time (live run 2, C2).
+        if !is_time_word(word)
+            && is_near_time_word(word)
+            && !super::lexicon::table().is_known(word)
+            && unit_at(scan, at).is_none()
+        {
+            stray = true;
+            continue;
+        }
         let Some(unit) = unit_at(scan, at) else {
             // "last rate", "pichli bar ... kis rate pe": the last sale of a rate, no time to place.
             let last_rate = scan.has(super::lexicon::Cue::Rate)
@@ -1347,6 +1374,35 @@ fn stray_time_words(
     stray
 }
 
+/// True when the year at `start..end` is the year of "saal ke aakhir tak" ("year end", "end of the
+/// year"): an end word follows it, directly or after "ke / ka / ki / of", or "end of" stands before it.
+/// "is saal ka commission ... saal ke aakhir tak" keeps its first year apart from the phrase.
+fn belongs_to_year_end(scan: &Scan, start: usize, end: usize) -> bool {
+    const END: [&str; 8] = [
+        "aakhir",
+        "akhir",
+        "end",
+        "khatam",
+        "آخر",
+        "اختتام",
+        "ختم",
+        "اخر",
+    ];
+    const LINK: [&str; 6] = ["ke", "ka", "ki", "of", "کے", "کا"];
+    let is_end = |i: usize| scan.word(i).is_some_and(|w| END.contains(&w));
+    let after = end;
+    if is_end(after) {
+        return true;
+    }
+    if scan.word(after).is_some_and(|w| LINK.contains(&w)) && is_end(next_index(after, 1)) {
+        return true;
+    }
+    // "end of the year", "end of this year": the year is the last word, "end of" before its words.
+    let before = start.checked_sub(1).and_then(|i| scan.word(i));
+    let before2 = start.checked_sub(2).and_then(|i| scan.word(i));
+    matches!((before2, before), (Some("end"), Some("of"))) || before == Some("end")
+}
+
 /// The periods a question names and whether a time word was left that no period took.
 pub(super) struct PeriodsRead {
     /// Every period, in order, as exact dates.
@@ -1370,10 +1426,20 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     let mut bare: Vec<Option<(u32, u32)>> = Vec::new();
     // The words each period took.
     let mut used: Vec<(usize, usize)> = Vec::new();
+    // "saal ke aakhir tak": from today to 31 December. The year of that phrase is not a second period.
+    let year_end = cues::year_end(&scan.raw);
     let mut at = 0usize;
     while at < scan.words.len() {
         match read_at(scan, at, today, tense) {
             Some((found, end)) => {
+                if year_end
+                    && found.kind == PeriodKind::ThisYear
+                    && belongs_to_year_end(scan, at, end)
+                {
+                    used.push((at, end));
+                    at = end;
+                    continue;
+                }
                 if let Some((joined, joined_end)) =
                     join_day_range(found.clone(), at, scan, end, today, tense)
                 {
@@ -1410,14 +1476,12 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     {
         out.retain(|p| p.kind != PeriodKind::UpToNow);
     }
-    // "saal ke aakhir tak": from today to 31 December. The year it belongs to is not a second
-    // period, and its "saal" is not a stray time word.
-    let year_end = cues::year_end(&scan.raw);
     // A question that has a period already ("whole day's bikri for this month") is not unsure of its
     // time for a stray word: only a question with none reads the stray word as its period.
     let stray = !year_end && out.is_empty() && stray_time_words(scan, &used, today, &mut out);
     if year_end {
-        out.retain(|p| !matches!(p.kind, PeriodKind::ThisYear));
+        // A lone "saal" is the year of the phrase; "is saal" before it stays (a period of its own).
+        out.retain(|p| !(p.kind == PeriodKind::ThisYear && p.words.split_whitespace().count() < 2));
         if let Some(end) = NaiveDate::from_ymd_opt(today.year(), 12, 31) {
             out.push(period(
                 PeriodKind::YearEnd,

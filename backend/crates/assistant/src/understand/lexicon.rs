@@ -172,6 +172,14 @@ pub(super) enum Cue {
     /// A question about the app's own state or lists (the rules, the attention list, the closed days,
     /// how many staff): see [`ASK_NAMES`].
     AskName,
+    /// "kitne mahine", "how many months": the number of months something sold in.
+    HowManyMonths,
+    /// The name of a screen of the app (cash book, day close, gardens), for "open it": see
+    /// [`SCREEN_NAMES`].
+    ScreenName,
+    /// The journal (جنرل) as the thing to write in: "journal", "jarnal", "general entry". Never the
+    /// bare word "general", which is also part of names.
+    Journal,
     /// The quality of a sale line: awwal, doyam, soyam, first quality, A grade, darja (PRD FR-12.42).
     Quality,
     /// The word "number" before a number ("bikri number 5"): see `reads::bikri_number`.
@@ -241,7 +249,9 @@ const INTENT: &[Entry] = &[
         &[
             "kholo", "kholna", "kholein", "kholen", "kholiye", "khol do", "kholdo", "kholni",
             "open", "jao", "jana", "le jao", "lejao", "le chalo", "chalo", "goto", "go to",
-            "navigate", "screen par", "screen pe", "page par", "page pe", "screen kholo", "کھولو",
+            "navigate", "screen par", "screen pe", "page par", "page pe", "screen kholo", "take me to",
+            "take me", "le chalein", "le chalen", "le chaliye", "le chalte", "لے چلیں", "لے چلیے",
+            "لے چلئے", "لے چلتے", "کھولو",
             "کھولنا", "کھولیں", "کھولیے", "کھول دو", "جاؤ", "جانا", "لے جاؤ", "لے چلو", "چلو",
             "سکرین پر", "اسکرین پر",
         ],
@@ -264,6 +274,9 @@ const INTENT: &[Entry] = &[
             "remove", "hata do", "hatao", "hatado", "mita do", "mitao", "mitado", "cancel karo",
             "cancel kar do", "cancel kardo", "write", "record karo", "record kar do", "post karo",
             "enter karo", "enter kar do", "create", "banao account", "naya account banao",
+            "indraaj karna hai", "indraaj karni hai", "indraj karna hai", "indraj karni hai",
+            "indraaj karo", "indraj karo", "record the", "record a", "اندراج کرنی ہے",
+            "اندراج کرنا ہے", "اندراج کرو", "اندراج کریں",
             "likhiye", "لکھ دو", "لکھو", "لکھ دیں", "لکھ دیجیے", "انٹری کرو", "انٹری کر دو",
             "ڈال دو", "ہٹا دو", "ہٹاؤ", "مٹا دو", "مٹاؤ", "منسوخ کرو", "منسوخ کر دو", "محفوظ کرو",
             "محفوظ کر دو",
@@ -379,7 +392,8 @@ const INTENT: &[Entry] = &[
         Cue::Many,
         &[
             "kis ka", "kis ki", "kis ke", "kya kya", "kaun kaun", "kon kon", "kaun se", "kon se", "konse", "kaunse", "kaun si",
-            "konsi", "kaunsi", "kis kis", "kisne kisne", "list", "lists", "fehrist", "fihrist",
+            "konsi", "kaunsi", "kis kis", "kisne kisne", "kaun kaun si", "kon kon si", "kaun kaun", "kon kon",
+            "کون کون سی", "کون کون سے", "list", "lists", "fehrist", "fihrist",
             "ki list", "sab ki list", "all the", "every", "each", "har", "har ek", "saray",
             "saaray", "sare", "sab", "tamam", "تمام", "ساری", "سارے", "سب", "ہر", "ہر ایک",
             "کیا کیا", "کون کون", "کون سے", "کون سی", "کس کس", "فہرست", "لسٹ",
@@ -474,6 +488,20 @@ const ROLES: &[Entry] = &[
         ],
     ),
     (
+        Cue::Journal,
+        &[
+            "journal", "jarnal", "jernal", "journal entry", "general entry", "جرنل", "جنرل اندراج",
+            "جنرل انٹری",
+        ],
+    ),
+    (
+        Cue::HowManyMonths,
+        &[
+            "kitne mahine", "kitne mahinay", "kitne mahino", "kitne mahinon", "how many months",
+            "کتنے مہینے", "کتنے مہینوں",
+        ],
+    ),
+    (
         Cue::Quality,
         &[
             "awwal", "awal", "aval", "avval", "doyam", "doem", "doum", "doyum", "dom", "soyam",
@@ -521,7 +549,7 @@ const ROLES: &[Entry] = &[
         &[
             "becha", "beche", "bechi", "bechna", "bechta", "bechte", "bechti", "bechay", "bheja", "bheje", "bheji", "bhejna", "maal bheja", "mal bheja",
             "supplied", "sent", "بھیجا", "بھیجے", "بھیجی", "مال بھیجا",
-            "beecha", "beeche", "bika", "bike", "biki", "bikta", "bikti", "bikte", "biktay", "bikay", "sold", "sell", "sells", "selling",
+            "beecha", "beeche", "bika", "bike", "biki", "bikta", "bikti", "bikte", "biktay", "bikay", "bikega", "bikegi", "bikenge", "sold", "sell", "sells", "selling",
             "بیچا", "بیچے", "بیچی", "بیچنا", "بیچتا", "بیچتے", "بکا", "بکے", "بکی", "بکتا", "بکتی", "بکتے",
         ],
     ),
@@ -702,13 +730,18 @@ const FIGURES: &[Entry] = &[
     ),
     (
         Cue::FruitWord,
-        &["phal", "phalon", "phalo", "fruit", "fruits", "پھل", "پھلوں"],
+        &[
+            "phal", "phalon", "phalo", "phl", "phalan", "fruit", "fruits", "frut", "fruts", "fruiit",
+            "پھل", "پھلوں",
+        ],
     ),
     (
         Cue::VegetableWord,
         &[
             "sabzi", "sabzian", "sabziyan", "sabziyon", "sabzion", "sabzee", "sabji", "sabjiyan",
-            "sabjiyon", "sabzi", "vegetable", "vegetables", "veggies", "veggie", "سبزی", "سبزیاں",
+            "sabjiyon", "sabzi", "subzi", "subzian", "subziyan", "subziyon", "sabziya", "vegetable",
+            "vegetables", "vegitable", "vegitables", "vegetabls", "vegtable", "vegtables", "veggies",
+            "veggie", "vegies", "سبزی", "سبزیاں",
             "سبزیوں", "سبزیات",
         ],
     ),
@@ -880,7 +913,9 @@ pub(super) const STOP: &[&str] = &[
     "rahi", "rahe", "rha", "rhi", "rhe", "gaya", "bohat", "bahut", "bahot", "zyada", "ziada",
     "ziyada", "kam", "thora", "thoda", "kitni", "kitne", "ka", "ke", "ko", "wapsi", "wapis", "now", "far", "till", "upto", "currently", "current", "muqable", "muqabla",
     "muqabale", "mawazna", "compare", "compared", "comparison", "versus", "vs", "with", "مقابلے",
-    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "time", "bar", "baar", "dafa", "dafah", "martaba", "بار", "دفعہ", "اور", "کس", "کسے", "کسی", "پہلے", "پہلا", "واپسی", "واپس", "کا", "کی", "کے",
+    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "jama", "jamaa", "screen", "page", "safha", "صفحہ", "fisad", "feesad", "percent", "percentage", "فیصد", "ga", "gi", "ge", "گا", "گی", "گے", "آخر", "اختتام", "aakhir", "akhir", "end", "khatam", "ختم",
+    "did", "go", "went", "going", "doing", "been", "padi", "pada", "padhi", "pade", "پڑی",
+    "پڑا", "ausat", "average", "avg", "اوسط", "time", "bar", "baar", "dafa", "dafah", "martaba", "بار", "دفعہ", "اور", "کس", "کسے", "کسی", "پہلے", "پہلا", "واپسی", "واپس", "کا", "کی", "کے",
     "کو", "سے", "نے", "میں", "پر", "تک", "ہے", "ہیں", "تھا", "تھی", "تھے", "ہو", "ہوا", "ہوئی",
     "ہوئے", "ہوگا", "ہوگی", "گیا", "گئی", "گئے", "کیا", "کیے", "دیا", "دی", "دیے", "لیا", "لی",
     "لیے", "کر", "کرو", "کریں", "کروں", "کرنا", "کرے", "بتاؤ", "بتائیں", "بتا", "کیوں", "کب", "کون",
@@ -939,6 +974,62 @@ pub(super) const REPORT_NAMES: &[(&str, &[&str])] = &[
     ("K", &["fruit analytics", "phal tajziya", "fruit taken analytics", "پھل تجزیہ"]),
     ("R38", &["doobi raqam report", "dubi raqam report", "dead amount report", "bad debt report", "ڈوبی رقم رپورٹ"]),
 ];
+
+/// The names of the screens, by the topic of the guide that describes each (PRD 5, `prompt/guide.json`):
+/// what the clerk says to open one. With an opening word ("kholo", "take me to", "dikhao") the topic and
+/// the screen follow from the name (live run 2, G1). A one-word name opens a screen only with a plain
+/// opening word; "show me" needs a name of two words or the word "screen" or "page".
+///
+/// Example: "take me to day close" is `day_close`; "روکڑ بک کھولیں" is `cash_book`.
+#[rustfmt::skip]
+pub(super) const SCREEN_NAMES: &[(&str, &[&str])] = &[
+    ("bikri_book", &["sale book", "sales book", "bikri book", "bikri bak", "bikri screen", "sale screen", "بکری بک"]),
+    ("receipt", &["wasooli", "wasuli", "wasooli screen", "receipt screen", "receipts screen", "وصولی"]),
+    ("payment", &["adaigi", "adaigi screen", "payment screen", "ادائیگی"]),
+    ("advance", &["peshgi", "peshgi screen", "advance screen", "پیشگی"]),
+    ("shop_expense", &["kharcha", "kharcha screen", "expense screen", "expenses screen", "خرچہ"]),
+    ("money_lent", &["udhar raqam", "udhaar raqam", "money lent", "money lent screen", "ادھار رقم"]),
+    ("partner_capital", &["partner capital", "partners capital", "sarmaya", "sarmaya screen", "capital screen", "سرمایہ"]),
+    ("fruit_taken", &["fruit taken", "phal", "phal screen", "fruit screen", "پھل"]),
+    ("general_journal", &["general", "general screen", "journal", "journal screen", "jarnal", "جنرل", "جرنل"]),
+    ("masters", &["index", "index screen", "masters", "masters screen", "انڈکس"]),
+    ("accounts", &["accounts list", "account list", "accounts screen", "اکاؤنٹس لسٹ", "کھاتوں کی فہرست"]),
+    ("commission_rules", &["commission rules", "commission rule", "rules screen", "commission usool", "کمیشن اصول"]),
+    ("today_sales", &["todays sales list", "today s sales list", "today s sales", "today sales list", "todays sales", "today sales", "aaj ki bikri list", "آج کی بکری فہرست"]),
+    ("unsold_stock", &["unsold stock", "unsold goods", "baqi maal", "baqi maal screen", "باقی مال"]),
+    ("pukhta_khata", &["pukhta khata", "pakka khata", "pukhta khata screen", "پختہ کھاتہ"]),
+    ("collection_list", &["collection list", "agrahi list", "agraahi list", "ugrahi list", "اگراہی فہرست", "اگراہی لسٹ"]),
+    ("cash_book", &["cash book", "cashbook", "roknad book", "rokar book", "روکڑ بک", "کیش بک"]),
+    ("gardens", &["gardens", "baghat", "bagh", "باغات", "باغ"]),
+    ("market_trips", &["market trips", "market trip", "market safar", "مارکیٹ سفر"]),
+    ("day_close", &["day close", "dayclose", "din band", "دن بند"]),
+    ("reports", &["reports", "report screen", "reports screen", "رپورٹ", "رپورٹس"]),
+    ("dead_amount", &["dead amount", "doobi raqam", "dubi raqam", "ڈوبی رقم"]),
+    ("backup", &["backup", "back up", "بیک اپ"]),
+];
+
+/// Where the names of the screens stand in the words of a question: (first word, after the last word,
+/// topic). Found by the words, so a name that another table also holds ("doobi raqam", "cash book") is
+/// found too.
+pub(super) fn screen_windows(words: &[String]) -> Vec<(usize, usize, &'static str)> {
+    let mut out = Vec::new();
+    for (topic, names) in SCREEN_NAMES {
+        for name in *names {
+            let phrase = words_of(name);
+            let size = phrase.len();
+            if size == 0 || size > words.len() {
+                continue;
+            }
+            for start in 0..=words.len().saturating_sub(size) {
+                let end = start.saturating_add(size);
+                if words.get(start..end) == Some(phrase.as_slice()) {
+                    out.push((start, end, *topic));
+                }
+            }
+        }
+    }
+    out
+}
 
 /// The report a hit of [`Cue::ReportName`] names, from the normalised words it covers.
 pub(super) fn report_named(words: &[String]) -> Option<&'static str> {
@@ -1060,6 +1151,19 @@ impl Table {
                             }
                         }
                         _ => phrases.push((words, *cue)),
+                    }
+                }
+            }
+        }
+        // The names of the screens add their words to the known words and take nothing away: a phrase
+        // here would hide the cue of a word it holds ("doobi raqam", "unsold stock"). The screen is
+        // found by `screen_windows`, from the words.
+        for (_, names) in SCREEN_NAMES {
+            for entry in *names {
+                for word in words_of(entry) {
+                    let cues = singles.entry(word).or_default();
+                    if !cues.contains(&Cue::ScreenName) {
+                        cues.push(Cue::ScreenName);
                     }
                 }
             }

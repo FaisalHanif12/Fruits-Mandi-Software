@@ -12,7 +12,7 @@ use super::common::{MasterTable, load_party, names_of, parse_day, pukhta_party};
 use super::grouped_sums::pukhta_names;
 use super::model::{
     DateShortcut, FilterKind, GardenView, GroupBy, Names, PaidFilter, ReportFilters,
-    ResolvedFilters, TripView,
+    ResolvedFilters, StockView, TripView,
 };
 use crate::error::ReportsError;
 
@@ -67,6 +67,8 @@ pub(crate) struct Typed {
     pub(crate) voucher_type: Option<mandi_core::vouchers::VoucherType>,
     /// The layout of R33. By trip when the screen sent nothing.
     pub(crate) trip_view: TripView,
+    /// The layout of R10. By lot when the screen sent nothing.
+    pub(crate) stock_view: StockView,
     /// The picked garden (R36).
     pub(crate) garden_id: Option<i64>,
     /// The layout of R36. By garden when the screen sent nothing.
@@ -207,6 +209,11 @@ pub(crate) fn resolve(
         FilterKind::TripView,
         input.trip_view.is_some(),
         "filters.trip_view",
+    );
+    refuse_unless(
+        FilterKind::StockView,
+        input.stock_view.is_some(),
+        "filters.stock_view",
     );
     refuse_unless(
         FilterKind::Bikri,
@@ -437,6 +444,12 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::TripView) {
         typed.trip_view = input.trip_view.unwrap_or_default();
         typed.resolved.trip_view = Some(typed.trip_view);
+    }
+    if takes.has(FilterKind::StockView) {
+        typed.stock_view = input.stock_view.unwrap_or_default();
+        // Only a layout that was asked for is echoed, so a plain R10 reads as it did.
+        typed.resolved.stock_view =
+            (typed.stock_view != StockView::Lot).then_some(typed.stock_view);
     }
     if takes.has(FilterKind::Bikri) {
         match input.bikri_id {

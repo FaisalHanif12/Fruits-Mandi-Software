@@ -50,6 +50,7 @@ pub mod results;
 pub mod route;
 pub mod run;
 pub mod runtime;
+pub mod scope_guard;
 pub mod service;
 pub mod settings;
 pub mod source;

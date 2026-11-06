@@ -473,7 +473,7 @@ describe('round 8: stock, vouchers, registers, trip profit or loss and the day s
     // The item group (fruit or vegetables) came with plan 55: R2, R3, R4, R7, R10 and R27 list it.
     expect(entryOf('R10')).toMatchObject({
       group: 'sales',
-      filters: ['date_range', 'seller', 'item', 'item_group'],
+      filters: ['date_range', 'seller', 'item', 'item_group', 'stock_view'],
     });
     expect(entryOf('R15')).toMatchObject({
       group: 'accounts',

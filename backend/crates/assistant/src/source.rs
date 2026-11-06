@@ -19,7 +19,7 @@ use mandi_reports::analytics::{
     AnalyticsSide, AnalyticsTripView,
 };
 use mandi_reports::reports::{
-    DateShortcut, GardenView, GroupBy, PaidFilter, PartyFilter, ReportFilters, TripView,
+    DateShortcut, GardenView, GroupBy, PaidFilter, PartyFilter, ReportFilters, StockView, TripView,
 };
 use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
@@ -126,6 +126,10 @@ pub struct SourceReportFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub collector: Option<AnswerRecord>,
+    /// How R10 lays out the stock (one row for each item). Left out of the wire form when by lot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub stock_view: Option<StockView>,
 }
 
 fn id_of(record: &Option<AnswerRecord>) -> Option<i64> {
@@ -158,6 +162,7 @@ impl SourceReportFilters {
             bikri_id: self.bikri.map(|b| b.id),
             guests_only: self.guests_only.then_some(true),
             collector_id: id_of(&self.collector),
+            stock_view: self.stock_view,
             ..ReportFilters::default()
         }
     }

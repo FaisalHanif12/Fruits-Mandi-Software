@@ -249,6 +249,13 @@ const LINKS: readonly {
     search: `item_group=fruit&from=${MONTH.from}&to=${MONTH.to}`,
     filters: { item_group: 'fruit', ...MONTH },
   })),
+  // The stock by item (R10): the layout is carried, and sent only when it is not by lot.
+  {
+    id: 'R10',
+    asked: 'the stock by item',
+    search: `stock_view=item&from=${MONTH.from}&to=${MONTH.to}`,
+    filters: { stock_view: 'item', ...MONTH },
+  },
   // A period only.
   ...(['R27', 'R30'] as const).map((id) => ({
     id,
@@ -336,7 +343,7 @@ describe('the address of a report reads every filter the print questions need', 
     expect(boxes('R20')).toEqual(['as_of', 'party', 'city']);
     expect(boxes('R24')).toEqual(['as_of', 'party']);
     // R10 is the stock over a period: it has no as-of box.
-    expect(boxes('R10')).toEqual(['date_range', 'seller', 'item', 'item_group']);
+    expect(boxes('R10')).toEqual(['date_range', 'seller', 'item', 'item_group', 'stock_view']);
     expect(boxes('R11')).toEqual(['date_range', 'party']);
     expect(boxes('R18')).toEqual(['as_of']);
     expect(boxes('R36')).toContain('garden');
@@ -492,6 +499,39 @@ describe.each(LANGUAGES)(
         expect(lastRun()?.filters).not.toHaveProperty('item_group');
       },
     );
+
+    it('the stock layout box shows the layout the address names, and "lot", an unknown word or none sends nothing', async () => {
+      fakeReports();
+      await renderApp(`/reports/R10?stock_view=item&from=${MONTH.from}&to=${MONTH.to}`);
+      await waitFor(() => {
+        expect(lastRun()?.filters).toMatchObject({ stock_view: 'item' });
+      }, SLOW_MS);
+      const box = await screen.findByRole('combobox', {
+        name: (name) => visible(name).includes(m('report-filter-stock-view')),
+      });
+      expect(visible(box.textContent)).toContain(m('report-filter-stock-view-item'));
+    });
+
+    it.each(['stock_view=lot', 'stock_view=pile', ''])(
+      'no stock layout is sent for "%s"',
+      async (extra) => {
+        fakeReports();
+        await renderApp(`/reports/R10?${extra}&from=${MONTH.from}&to=${MONTH.to}`);
+        await waitFor(() => {
+          expect(lastRun()?.id).toBe('R10');
+        }, SLOW_MS);
+        expect(lastRun()?.filters).not.toHaveProperty('stock_view');
+      },
+    );
+
+    it('a report that takes no stock layout never sends one, even when the address names one', async () => {
+      fakeReports();
+      await renderApp(`/reports/R12?stock_view=item&from=${MONTH.from}&to=${MONTH.to}`);
+      await waitFor(() => {
+        expect(lastRun()?.id).toBe('R12');
+      }, SLOW_MS);
+      expect(lastRun()?.filters).not.toHaveProperty('stock_view');
+    });
 
     it('a report that takes no group never sends one, even when the address names one', async () => {
       fakeReports();

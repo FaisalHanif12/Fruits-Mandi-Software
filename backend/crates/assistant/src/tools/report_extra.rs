@@ -11,7 +11,7 @@
 //! | `zamindar` | R2 R3 R4 R5 R6 R27 | `zamindar_id` |
 //! | `status` `paid` or `due` | R9 R38 | `status` |
 //! | `voucher_type` | R15 | `voucher_type` |
-//! | `layout` | R14 `detail`; R33 `item` `day` `month` `partner`; R36 `partner` | `detail`, `trip_view`, `garden_view` |
+//! | `layout` | R14 `detail`; R33 `item` `day` `month` `partner`; R36 `partner`; R10 `item` | `detail`, `trip_view`, `garden_view`, `stock_view` |
 //! | `partner: "guests"` | R37 | `guests_only` |
 //! | `item_group` `fruit` or `vegetable` | R2 R3 R4 R7 R10 R27 and analytics A D G | `item_group` |
 //!
@@ -21,7 +21,9 @@
 //! Example (worked day): `report{id:"R9", status:"due"}` keeps the one-time people who still owe;
 //! `report{id:"R37", partner:"guests"}` reads only the fruit taken for the shop's guests.
 
-use mandi_reports::reports::{FilterKind, GardenView, PaidFilter, ReportFilters, TripView};
+use mandi_reports::reports::{
+    FilterKind, GardenView, PaidFilter, ReportFilters, StockView, TripView,
+};
 use mandi_services::core::accounts::AccountType;
 use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
@@ -195,9 +197,10 @@ pub(super) fn apply(
     Ok(())
 }
 
-/// `layout` is one word for three reports: R14 with its lines (`detail`), R33 by `item`, `day`,
-/// `month` or `partner` (`trip`, the default, is the same as leaving it out), and R36 by `partner`
-/// (`garden`, the default, is the same as leaving it out).
+/// `layout` is one word for four reports: R14 with its lines (`detail`), R33 by `item`, `day`,
+/// `month` or `partner` (`trip`, the default, is the same as leaving it out), R36 by `partner`
+/// (`garden`, the default, is the same as leaving it out), and R10 by `item` (one row for each
+/// item with the quantities of all its lots; `lot`, the default, is the same as leaving it out).
 fn layout(
     word: &str,
     takes: &[FilterKind],
@@ -240,6 +243,17 @@ fn layout(
         };
         filters.garden_view = Some(view);
         source.garden_view = Some(view);
+        return Ok(());
+    }
+    if takes.contains(&FilterKind::StockView) {
+        // `lot` (the default) is the same as leaving it out.
+        let view = match word {
+            "lot" => StockView::Lot,
+            "item" => StockView::Item,
+            _ => return Err(wrong_word("layout", &["lot", "item"])),
+        };
+        filters.stock_view = Some(view);
+        source.stock_view = (view == StockView::Item).then_some(view);
         return Ok(());
     }
     Err(not_taken(takes, "layout"))

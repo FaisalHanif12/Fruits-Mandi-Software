@@ -652,6 +652,12 @@ pub struct Understanding {
     /// True when the question asks for the last one ("aakhri", "last", "pichla") and names no period:
     /// the last rate of an item sold to a buyer is the newest line of his sales (R2).
     pub last_one: bool,
+    /// True when the question asks in how many months something sold ("mooli kitne mahine biki hai"):
+    /// the item's sales by month (view D) hold the answer.
+    pub months_asked: bool,
+    /// True when the question asks whom to collect from first ("kis se pehle wasooli karon"): the
+    /// buyers' dues, oldest first (R20 sorted by days), are the answer.
+    pub oldest: bool,
     /// True when the question asks what was given, paid or received (an event of a period), not what
     /// is open now ("rahim ko kitni peshgi di"). A party's card holds only what is open, so such a
     /// question is the model's.

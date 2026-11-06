@@ -204,6 +204,10 @@ pub struct Turn {
     /// would send it (without the empty fields), and the id of the result. A later call of the
     /// model with the same tool and input gets that result back and reads nothing again.
     pub prefetched: Vec<(String, Value, String)>,
+    /// The reads the app planned for this question when it understood it (`understand::plan_reads`):
+    /// the tool and its input. The scope guard compares the views and reports an answer cites with
+    /// them, and reads them again when an answer cited others.
+    pub planned: Vec<(String, Value)>,
     /// The party the app found itself before the first call (plan 52 P52-S1, item 10). The answer
     /// always shows his name when it is about him.
     pub prefound: Option<crate::answer::AnswerName>,

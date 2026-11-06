@@ -77,7 +77,9 @@ fn figure(
     }
 }
 
-/// The working of a figure: the calculator's, or the method of an estimate the path points into.
+/// The working of a figure: the calculator's, or the method of an estimate the path points into
+/// (a total, a per-month step, or the figure of one month ahead: every estimated figure carries the
+/// working of its method, so it never reads like a figure of the books).
 fn working_of(result: &ToolResult, path: &str) -> Option<crate::answer::AnswerWorking> {
     if result.tool == "calculate" {
         return result.working.clone();
@@ -85,14 +87,16 @@ fn working_of(result: &ToolResult, path: &str) -> Option<crate::answer::AnswerWo
     if result.tool == "estimate"
         && let Some(Shown::Chart(_, Some(estimate))) = &result.shown
     {
-        let key = path.split('.').nth(1)?;
-        let kind = match key {
-            "same_pace" => crate::answer::EstimateMethodKind::SamePace,
-            "same_growth" => crate::answer::EstimateMethodKind::SameGrowth,
-            "same_season" => crate::answer::EstimateMethodKind::SameSeason,
-            "what_if_pace" => crate::answer::EstimateMethodKind::WhatIfPace,
-            _ => return None,
-        };
+        // The method is named by the first segment that is one: `e1.same_pace.total`, and also the
+        // figure of one month ahead, `e1.ahead.ah1.same_pace`, which belongs to the same method
+        // (live run 2, Q708: that figure was shown with no working, like a figure of the books).
+        let kind = path.split('.').skip(1).find_map(|segment| match segment {
+            "same_pace" => Some(crate::answer::EstimateMethodKind::SamePace),
+            "same_growth" => Some(crate::answer::EstimateMethodKind::SameGrowth),
+            "same_season" => Some(crate::answer::EstimateMethodKind::SameSeason),
+            "what_if_pace" => Some(crate::answer::EstimateMethodKind::WhatIfPace),
+            _ => None,
+        })?;
         return estimate
             .methods
             .iter()

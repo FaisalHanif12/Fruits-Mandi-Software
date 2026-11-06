@@ -52,23 +52,48 @@ pub struct Failure {
     pub at: String,
     /// For the side words: the reference of the balance.
     pub figure: Option<String>,
+    /// For a reference that missed a row of a keyed list (`r3.rows.0.gross`): the keys the list has,
+    /// so the one rewrite can name the row (rows are cited by key, never by place).
+    pub keys: Vec<String>,
+    /// For the scope rule: the results that hold the scope the question named, to cite instead.
+    pub instead: Vec<String>,
 }
 
 impl Failure {
-    fn new(rule: &'static str, at: &str) -> Self {
+    pub(crate) fn new(rule: &'static str, at: &str) -> Self {
         Self {
             rule,
             at: at.to_owned(),
             figure: None,
+            keys: Vec::new(),
+            instead: Vec::new(),
+        }
+    }
+
+    /// A cited view or report that dropped part of what the question named (`scope_guard`): `at` is
+    /// its result and `instead` the results that carry the right scope.
+    pub fn scope(at: &str, instead: &[String]) -> Self {
+        Self {
+            instead: instead.to_vec(),
+            ..Self::new("scope", at)
         }
     }
 
     /// The object of the `check_failed` message (D6-system-prompt 5.3).
     pub fn to_json(&self) -> serde_json::Value {
-        match &self.figure {
-            Some(figure) => serde_json::json!({"rule": self.rule, "at": self.at, "figure": figure}),
-            None => serde_json::json!({"rule": self.rule, "at": self.at}),
+        let mut out = serde_json::Map::new();
+        out.insert("rule".to_owned(), serde_json::json!(self.rule));
+        out.insert("at".to_owned(), serde_json::json!(self.at));
+        if let Some(figure) = &self.figure {
+            out.insert("figure".to_owned(), serde_json::json!(figure));
         }
+        if !self.keys.is_empty() {
+            out.insert("keys".to_owned(), serde_json::json!(self.keys));
+        }
+        if !self.instead.is_empty() {
+            out.insert("cite_instead".to_owned(), serde_json::json!(self.instead));
+        }
+        serde_json::Value::Object(out)
     }
 }
 
@@ -512,13 +537,45 @@ struct Resolved {
     path: String,
 }
 
+/// The keys of the keyed list a path missed, at most [`MAX_KEYS_HINT`]: `r3.rows.0.gross` on a result
+/// whose rows are `i9` and `i12` gives `["i9", "i12"]`. Empty when the path misses anywhere else.
+fn keys_hint(state: &State, path: &str) -> Vec<String> {
+    let mut parts = path.split('.');
+    let Some(result) = parts.next().and_then(|first| state.find(first)) else {
+        return Vec::new();
+    };
+    let mut node = &result.node;
+    for segment in parts {
+        if let Node::Keyed(rows) = node
+            && !rows.iter().any(|(key, _)| key == segment)
+        {
+            return rows
+                .iter()
+                .take(MAX_KEYS_HINT)
+                .map(|(key, _)| key.clone())
+                .collect();
+        }
+        match node.get(&[segment]) {
+            Some(next) => node = next,
+            None => return Vec::new(),
+        }
+    }
+    Vec::new()
+}
+
+/// The most keys a reference failure names.
+const MAX_KEYS_HINT: usize = 8;
+
 /// Follows a reference. `Err` carries the failure to report.
 fn resolve(env: &Env<'_>, state: &State, path: &str) -> Result<Resolved, Failure> {
     let found = lookup(env, state, path, "reference").map_err(|e: ToolError| {
         if e.code == "ERR_EARLIER_QUESTION" {
             Failure::new("earlier_question", path)
         } else {
-            Failure::new("reference", path)
+            Failure {
+                keys: keys_hint(state, path),
+                ..Failure::new("reference", path)
+            }
         }
     })?;
     let node = match &found {
@@ -668,6 +725,8 @@ fn side_failure(items: &[Item], at: usize, side: Side, figure: &str) -> Option<F
             rule: "side_words",
             at: w.clone(),
             figure: Some(figure.to_owned()),
+            keys: Vec::new(),
+            instead: Vec::new(),
         })
 }
 

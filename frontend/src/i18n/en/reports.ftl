@@ -899,6 +899,18 @@ report-r10-title = { -baqi-maal }
 report-r10-help = Goods received and not yet sold: what came, what was sold, what is left and for how many days.
 
 # review: pending
+report-filter-stock-by-item = { -stock } by { -qism-maal }
+
+# review: pending
+report-filter-stock-view = Show by
+
+# review: pending
+report-filter-stock-view-lot = By { -lot }
+
+# review: pending
+report-filter-stock-view-item = By { -qism-maal }
+
+# review: pending
 report-r15-title = Vouchers
 
 # review: pending

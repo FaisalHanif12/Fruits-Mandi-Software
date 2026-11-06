@@ -233,6 +233,33 @@ fn total_dues_node(t: &DuesParts, d: &Dues) -> Node {
     }
 }
 
+/// The tile of the total dues as the model reads it: its amount and what it holds. It is NOT the
+/// shop's total اگراہی of PRD FR-19.9 (that is R20's total, the tile `buyers_dues`): it adds the
+/// sellers who owe the firm and the dead amount (live run 2: 21,751,319 = 20,324,367 + 0 + 1,426,952,
+/// quoted for a question about the collectors' dues, whose answer is 20,324,367).
+fn total_dues_tile(amount: Node) -> Node {
+    Node::obj(vec![
+        ("amount", amount),
+        (
+            "holds",
+            Node::List(
+                ["buyers_dues", "sellers_dues", "dead_amount"]
+                    .iter()
+                    .map(|part| Node::Str((*part).to_owned()))
+                    .collect(),
+            ),
+        ),
+        (
+            "note",
+            Node::Str(
+                "total_dues is buyers_dues plus sellers_dues plus dead_amount. The shop's \
+                 ugrahi (dues of the buyers, by collector, by city, R20 to R23) is buyers_dues."
+                    .to_owned(),
+            ),
+        ),
+    ])
+}
+
 /// The three parts of the total dues as the tiles hold them.
 fn dues_parts(t: &DashboardTiles) -> DuesParts {
     DuesParts {
@@ -284,7 +311,7 @@ fn tiles_node(
         ),
         (
             "total_dues",
-            Node::obj(vec![("amount", total_dues_node(&dues_parts(t), dues))]),
+            total_dues_tile(total_dues_node(&dues_parts(t), dues)),
         ),
         (
             "dead_amount",
@@ -449,7 +476,7 @@ pub fn run_one(env: &Env<'_>, tile: Tile) -> Result<Draft, Stop> {
             let places = dues_places(env, &today).map_err(fail("R20, R24 or R38"))?;
             Node::obj(vec![(
                 "total_dues",
-                Node::obj(vec![("amount", total_dues_node(&parts, &places))]),
+                total_dues_tile(total_dues_node(&parts, &places)),
             )])
         }
         Tile::DeadAmount => {

@@ -6,6 +6,7 @@ import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportNames } from './ReportNames';
 import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportParty } from './ReportParty';
+import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
 import type { VoucherType } from './VoucherType';
 
@@ -101,4 +102,8 @@ export type ReportResolvedFilters = {
    * The item group picked (R2, R3, R4, R7, R10, R27).
    */
   item_group?: ItemGroup;
+  /**
+   * The layout of R10 when it is by item. Missing for one row for each lot and any other report.
+   */
+  stock_view?: ReportStockView;
 };

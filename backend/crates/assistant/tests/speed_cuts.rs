@@ -268,9 +268,18 @@ fn an_estimate_without_ahead_takes_the_rule_of_the_tool_and_no_call_is_lost_to_a
     );
     assert!(v.get("error").is_none(), "{v}");
     assert_eq!(v["ahead_count"]["n"], 12);
-    let v = estimate_result("agle mahine ka commission kitna hoga", json!({}));
+    let v = estimate_result("commission ka andaza batao", json!({}));
     assert!(v.get("error").is_none(), "{v}");
     assert_eq!(v["ahead_count"]["n"], 6);
+    // "agle mahine" (next month, no number) is one month, sent or not (lead, 06-11-2026).
+    let v = estimate_result("agle mahine ka commission kitna hoga", json!({}));
+    assert!(v.get("error").is_none(), "{v}");
+    assert_eq!(v["ahead_count"]["n"], 1);
+    let v = estimate_result("agle mahine ka commission kitna hoga", json!({"ahead": 1}));
+    assert_eq!(v["ahead_count"]["n"], 1, "{v}");
+    // "agle mahino mein" is the coming months: 6.
+    let v = estimate_result("agle mahino mein commission kitna hoga", json!({}));
+    assert_eq!(v["ahead_count"]["n"], 6, "{v}");
     let v = estimate_result("agle 3 mahine ka commission kitna hoga", json!({}));
     assert_eq!(v["ahead_count"]["n"], 3, "{v}");
     // Two months numbers: the Owner is asked.

@@ -121,7 +121,10 @@ pub fn report_fields(filters: &[FilterKind]) -> Vec<String> {
             FilterKind::Collector => out.push("collector"),
             FilterKind::Status => out.push("status"),
             FilterKind::VoucherType => out.push("voucher_type"),
-            FilterKind::Detail | FilterKind::TripView | FilterKind::GardenView => {
+            FilterKind::Detail
+            | FilterKind::TripView
+            | FilterKind::GardenView
+            | FilterKind::StockView => {
                 out.push("layout");
             }
             // The shop's guests are `partner: "guests"`.

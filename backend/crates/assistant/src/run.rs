@@ -63,6 +63,7 @@ use crate::request::{Parts, RESULT_MARK, request_body, user_message};
 use crate::results::{Node, ToolResult, Words, fit, tool_result_json};
 use crate::route;
 use crate::runtime::Runtime;
+use crate::scope_guard::{self, AskScope};
 use crate::settings::{AssistantTestResult, DEFAULT_MODEL};
 use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
 use crate::step::AssistantStep;
@@ -699,6 +700,23 @@ impl<'a> Run<'a> {
         read_any
     }
 
+    /// The views and reports the app planned for this question, read now or found already read: their
+    /// result ids, for the scope guard to name to the model.
+    fn read_planned(&self, conv: &mut Conversation, turn: &mut Turn) -> Vec<String> {
+        let mut ids = Vec::new();
+        for (tool, input) in turn.planned.clone() {
+            let arguments = input.to_string();
+            let id = prefetch::already_read(&turn.prefetched, &tool, &arguments)
+                .or_else(|| self.preread_tool(conv, turn, &tool, &arguments));
+            if let Some(id) = id
+                && (tool == "analytics" || tool == "report")
+            {
+                ids.push(id);
+            }
+        }
+        ids
+    }
+
     /// An answer the app writes by itself, with no model call (plan 54 S2, plan 55 Section 2):
     /// only when the app understood the whole question and the answer is already written in the
     /// app. The one door is `understand::compose` (backend2's composers): a print request opens its
@@ -1157,6 +1175,8 @@ impl<'a> Run<'a> {
         let mut repaired = false;
         let mut help_repaired = false;
         let mut echoed = false;
+        let mut digits_echoed = false;
+        let mut refs_fixed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -1195,6 +1215,27 @@ impl<'a> Run<'a> {
                 names: &names,
             }
             .run(&parsed);
+            // An answer must rest on views and reports with the scope the question named (live run
+            // 2, CRITICAL): the period, the item, the group, the party of the planned read.
+            let verdict = if matches!(verdict, Verdict::Ok) && !swapped {
+                let mut wrong = match AskScope::of_planned(&turn.planned) {
+                    Some(scope) => scope_guard::failures(&scope, &state, &parsed, &[]),
+                    None => Vec::new(),
+                };
+                // And an answer of the guide alone, when a figure was asked and read (G3).
+                wrong.extend(scope_guard::guide_only(
+                    &state,
+                    &parsed,
+                    help_guard::is_how_to(&turn.question, &numbers),
+                ));
+                if wrong.is_empty() {
+                    verdict
+                } else {
+                    Verdict::Retry(wrong)
+                }
+            } else {
+                verdict
+            };
             let read_at = self.read_at();
             let mut f = match verdict {
                 // The guide text is the app's own; if it somehow fails a check, the change
@@ -1243,6 +1284,37 @@ impl<'a> Run<'a> {
                         content = fixed;
                         continue;
                     }
+                    // The Owner's own number written in digits ("3 مہینوں" for his "3 mahine") is his
+                    // number too: put back as `{{q.nK}}` (hidden round 4).
+                    if !digits_echoed
+                        && failures.iter().any(|x| x.rule == "digit")
+                        && let Some(fixed) =
+                            map_texts(&content, &|text| echo::put_digits_back(text, &numbers))
+                    {
+                        digits_echoed = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("digit".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    // A reference the model mistyped where the right one is certain: `n1` for
+                    // `q.n1`, and `rows.0` for the one row of a result (hidden round 4, H363).
+                    if !refs_fixed
+                        && failures.iter().any(|x| x.rule == "reference")
+                        && let Some(fixed) = map_texts(&content, &|text| {
+                            echo::fix_references(text, &state, numbers.len())
+                        })
+                    {
+                        refs_fixed = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("reference".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
                     // A help answer that retyped the guide in its own words and broke the words rules
                     // (Latin key names, number words, a digit, too long) is written from the guide's
                     // own references instead of a rewrite call (plan 52 P52-S1).
@@ -1267,6 +1339,16 @@ impl<'a> Run<'a> {
                         (self.d.emit)(step("assistant-step-rewriting"));
                         turn.messages
                             .push(json!({"role": "assistant", "content": content}));
+                        // A view or report with another scope than the question's: the app reads
+                        // the planned ones (or finds them already read) and names them, so the one
+                        // rewrite can cite the right results (the rewrite has no tools).
+                        let mut failures = failures;
+                        if failures.iter().any(|x| x.rule == "scope") {
+                            let right = self.read_planned(conv, turn);
+                            for failure in failures.iter_mut().filter(|x| x.rule == "scope") {
+                                failure.instead = right.clone();
+                            }
+                        }
                         let list: Vec<Value> = failures.iter().map(|x| x.to_json()).collect();
                         turn.messages.push(json!({
                             "role": "user",
@@ -2421,6 +2503,16 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     } else {
         None
     };
+    turn.planned = understood
+        .as_ref()
+        .and_then(crate::understand::plan_reads)
+        .map(|reads| {
+            reads
+                .into_iter()
+                .map(|r| (r.tool.to_owned(), r.input))
+                .collect()
+        })
+        .unwrap_or_default();
     if d.runtime.local()
         && let Some(u) = &understood
         && let Some(finished) = run.local_answer(&mut conv, &mut turn, u)

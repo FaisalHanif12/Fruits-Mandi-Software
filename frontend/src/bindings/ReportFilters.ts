@@ -5,6 +5,7 @@ import type { ReportGardenView } from './ReportGardenView';
 import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportPartyFilter } from './ReportPartyFilter';
+import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
 import type { VoucherType } from './VoucherType';
 
@@ -105,4 +106,8 @@ export type ReportFilters = {
    * group.
    */
   item_group?: ItemGroup;
+  /**
+   * How R10 lays out the stock. Missing means one row for each lot.
+   */
+  stock_view?: ReportStockView;
 };

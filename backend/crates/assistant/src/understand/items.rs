@@ -276,6 +276,49 @@ fn alias(word: &str) -> Option<&'static str> {
         .map(|(_, e)| *e)
 }
 
+/// A word with its vowels, `h` and `y` taken out and each doubled letter made one: "tmatar", "tamatar"
+/// and "tamatr" are all "tmtr". Used only to find a misspelt name of the alias list.
+fn skeleton(word: &str) -> String {
+    let mut out = String::new();
+    for c in word.chars().filter(char::is_ascii_alphabetic) {
+        let c = c.to_ascii_lowercase();
+        if matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y' | 'h') {
+            continue;
+        }
+        if !out.ends_with(c) {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// The English name an alias of the same skeleton gives, when all aliases of that skeleton give the
+/// same one and the skeleton has 4 letters or more ("tmatar" is tomato; "motor" is nothing, because
+/// "mtr" is short). A guess: the caller marks it medium.
+fn alias_by_skeleton(word: &str) -> Option<&'static str> {
+    if !word.is_ascii() || word.chars().count() < 4 {
+        return None;
+    }
+    let wanted = skeleton(word);
+    if wanted.chars().count() < 4 {
+        return None;
+    }
+    let mut found: Option<&'static str> = None;
+    for (name, english) in ALIASES
+        .iter()
+        .filter(|(a, _)| a.is_ascii() && !a.contains(' '))
+    {
+        if skeleton(name) == wanted {
+            match found {
+                None => found = Some(english),
+                Some(before) if before == *english => {}
+                Some(_) => return None,
+            }
+        }
+    }
+    found
+}
+
 /// True for a word the alias list knows as an item (so it is not a month: "mirch" is not March).
 pub(super) fn is_item_word(word: &str) -> bool {
     alias(word).is_some()
@@ -406,6 +449,23 @@ pub(super) fn resolve(look: &Lookup<'_>, scan: &Scan, span: (usize, usize)) -> O
             }
         }
     }
+    // A misspelling of a Roman Urdu name ("tmatar", "tmatr" for tamatar): the same consonants.
+    let mut guessed = false;
+    if known.is_none()
+        && head.is_empty()
+        && !is_urdu(last)
+        && let Some(english) = alias_by_skeleton(last)
+    {
+        known = Some(english);
+        guessed = true;
+        if let Some(best) = search_items(look, &split_words(english)) {
+            let mut one = item_ref(scan, span, best);
+            if one.confidence > Confidence::Medium {
+                one.confidence = Confidence::Medium;
+            }
+            return Some(one);
+        }
+    }
     // As typed, then as the singular. A singular made from the word ("banate" -> "banata") must be
     // the same word as the item's: a close spelling counts only for the word as typed.
     for (at, form) in forms.iter().enumerate() {
@@ -435,7 +495,12 @@ pub(super) fn resolve(look: &Lookup<'_>, scan: &Scan, span: (usize, usize)) -> O
         text: scan.phrase(span.0, span.1),
         words: span,
         outcome: Outcome::NotFound,
-        confidence: Confidence::High,
+        // A name guessed from its consonants is not "no such item" for sure.
+        confidence: if guessed {
+            Confidence::Medium
+        } else {
+            Confidence::High
+        },
     })
 }
 

@@ -159,6 +159,14 @@ fn account_matches(
     )
     .map_err(service_stop)?;
     let hits: Vec<AccountHit> = hits.into_iter().filter(|h| keep(role, h)).collect();
+    // The name typed IS an account's name: no close spelling beside it (E2E-52: the names that start
+    // with it still stay, the Owner has to say which Akram).
+    let exact = Exact::of(query);
+    let hits = exact.without_close(
+        hits,
+        |h| exact.is(&h.name_ur, &h.name_en, h.tag.as_deref()),
+        |h| exact.holds(&h.name_ur, &h.name_en, h.tag.as_deref()),
+    );
     let more = hits.len() > MAX_OPTIONS;
     let mut matches = Vec::new();
     for hit in hits.into_iter().take(MAX_OPTIONS) {
@@ -193,6 +201,13 @@ fn list_matches(
     query: &str,
 ) -> Result<(Vec<Node>, bool), Stop> {
     let hits = search::search(env.ctx, env.actor, scope, query, ASK_LISTS).map_err(service_stop)?;
+    // "tomato" is Tomato, not Tomato and Potato: no close spelling beside an exact name.
+    let exact = Exact::of(query);
+    let hits = exact.without_close(
+        hits,
+        |h| exact.is(&h.name_ur, &h.name_en, None),
+        |h| exact.holds(&h.name_ur, &h.name_en, None),
+    );
     let more = hits.len() > MAX_OPTIONS;
     let matches = hits
         .into_iter()
@@ -215,6 +230,72 @@ fn list_matches(
         })
         .collect();
     Ok((matches, more))
+}
+
+/// The text typed, as the two keys a name is compared with (`core::text` normalisation: look-alike
+/// Urdu letters, case, spaces). A name is exact when its whole key is the whole typed key; it holds
+/// the typed text when the typed words start it or are whole words of it.
+///
+/// Example: "Tomato" and "tomato" are exact for the item Tomato, not for Potato; "Akram Toll Tax"
+/// holds "akram" without being exact; "tmatar" is exact for nothing, so its close spellings stay.
+struct Exact {
+    en: String,
+    ur: String,
+}
+
+impl Exact {
+    fn of(query: &str) -> Self {
+        Self {
+            en: text::search_en(query),
+            ur: text::search_ur(query),
+        }
+    }
+
+    /// The keys of a name, with and without its tag, each with the typed key of its script.
+    fn keys(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> Vec<(String, String)> {
+        let mut out = vec![
+            (self.en.clone(), text::search_en(name_en)),
+            (self.ur.clone(), text::search_ur(name_ur)),
+        ];
+        if tag.is_some() {
+            out.push((self.en.clone(), text::search_en_tagged(name_en, tag)));
+            out.push((self.ur.clone(), text::search_ur_tagged(name_ur, tag)));
+        }
+        out.retain(|(typed, _)| !typed.is_empty());
+        out
+    }
+
+    /// True when the typed text IS this name, with or without its tag.
+    fn is(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> bool {
+        self.keys(name_ur, name_en, tag)
+            .iter()
+            .any(|(typed, key)| typed == key)
+    }
+
+    /// True when the typed words start this name or are whole words of it ("akram" in "akram toll
+    /// tax"): a name the Owner may mean, unlike a close spelling ("potato" for "tomato").
+    fn holds(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> bool {
+        self.keys(name_ur, name_en, tag).iter().any(|(typed, key)| {
+            key.starts_with(typed.as_str()) || format!(" {key} ").contains(&format!(" {typed} "))
+        })
+    }
+
+    /// When any hit is exact, the exact hits and those that hold the typed text, all of them (two
+    /// accounts with the same name both stay); the close spellings go. When none is exact, every hit.
+    fn without_close<T>(
+        &self,
+        hits: Vec<T>,
+        is_exact: impl Fn(&T) -> bool,
+        holds: impl Fn(&T) -> bool,
+    ) -> Vec<T> {
+        if hits.iter().any(&is_exact) {
+            hits.into_iter()
+                .filter(|h| is_exact(h) || holds(h))
+                .collect()
+        } else {
+            hits
+        }
+    }
 }
 
 /// The words of a name as normalised keys, in both scripts: each word, and the whole name.
