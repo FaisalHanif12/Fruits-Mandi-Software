@@ -853,12 +853,17 @@ fn counted_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, us
     let w = words();
     let head = scan.word(at)?;
     let backward = w.last.contains(head);
-    let forward = w.next.contains(head);
+    // "in 3 months", "after 3 months": the months ahead (only months: "in 3 days" is no period here).
+    let after = matches!(head, "in" | "after");
+    let forward = w.next.contains(head) || after;
     if !backward && !forward {
         return None;
     }
     let n = count_at(scan, next_index(at, 1))?;
     let unit = unit_at(scan, next_index(at, 2))?;
+    if after && unit != Unit::Month {
+        return None;
+    }
     let count = u32::try_from(n).ok().filter(|c| (1..=1200).contains(c))?;
     let end = next_index(at, 3);
     let words_typed = typed(scan, at, end);

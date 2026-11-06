@@ -684,6 +684,10 @@ pub(crate) fn filter_facts(
         };
         facts.push(fact(label, String::new()));
     }
+    // R2, R3, R4: the quality picked. The word of the quality is the whole fact.
+    if let Some(grade) = filters.grade {
+        facts.push(fact(ids::grade_id(grade), String::new()));
+    }
     // R10 by item: the label is the whole fact.
     if filters.stock_view == Some(crate::reports::model::StockView::Item) {
         facts.push(fact(ids::FILTER_STOCK_BY_ITEM, String::new()));

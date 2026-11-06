@@ -248,6 +248,8 @@ pub enum FilterKind {
     ItemGroup,
     /// How R10 lays out the stock: one row for each lot or one row for each item.
     StockView,
+    /// The quality of the sale lines (اول، دوم، سوم) of R2, R3 and R4 (PRD FR-12.42).
+    Grade,
 }
 
 /// One report in the catalogue.
@@ -440,6 +442,12 @@ pub struct ReportFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub stock_view: Option<StockView>,
+    /// Only the sale lines of one quality (R2, R3, R4). Missing means every line, with or without
+    /// a quality. Never sent as "none": a line with no quality is read as the whole minus the
+    /// three qualities.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<mandi_core::bikri::SaleGrade>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner parts of
     /// this report are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -561,6 +569,10 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub stock_view: Option<StockView>,
+    /// The quality picked (R2, R3, R4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<mandi_core::bikri::SaleGrade>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

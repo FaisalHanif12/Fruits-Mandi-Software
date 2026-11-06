@@ -22,7 +22,8 @@
       "item",
       "item_group",
       "city",
-      "adda"
+      "adda",
+      "grade"
     ],
     "party_required": false
   },
@@ -39,7 +40,8 @@
       "item",
       "item_group",
       "city",
-      "adda"
+      "adda",
+      "grade"
     ],
     "party_required": false
   },
@@ -56,7 +58,8 @@
       "item",
       "item_group",
       "city",
-      "adda"
+      "adda",
+      "grade"
     ],
     "party_required": false
   },

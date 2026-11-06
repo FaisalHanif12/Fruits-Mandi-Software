@@ -24,4 +24,5 @@ export type ReportFilterKind =
   | 'guests'
   | 'collector'
   | 'item_group'
-  | 'stock_view';
+  | 'stock_view'
+  | 'grade';

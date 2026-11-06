@@ -256,6 +256,16 @@ fn run_plan(
     question: &str,
     reads: &[PlannedRead],
 ) -> Vec<String> {
+    run_plan_state(w, today, question, reads).0
+}
+
+/// [`run_plan`], and the state with every result that was read.
+fn run_plan_state(
+    w: &world::World,
+    today: BusinessDate,
+    question: &str,
+    reads: &[PlannedRead],
+) -> (Vec<String>, State) {
     let words = Words::new().expect("the words");
     let numbers = question_numbers(question);
     let mut state = State::default();
@@ -300,7 +310,7 @@ fn run_plan(
             Err(Stop::Locked) => refused.push(format!("{question:?}: {} locked", render(read))),
         }
     }
-    refused
+    (refused, state)
 }
 
 // ---- the cases -----------------------------------------------------------------------------------------
@@ -557,10 +567,11 @@ const NEW_INPUTS: &[(&str, &str)] = &[
     ("agle 3 mahine ka commission", "estimate{ahead:3,measure:commission_all}"),
     ("agle 3 mahine ka nuqsan", "estimate{ahead:3,measure:profit}"),
     ("is saal ke aakhir tak sale ka andaza", "estimate{measure:sales,until:year_end}"),
-    // A target, a name not found or a figure the estimate has no measure for stays with the model.
+    // A target, a name not found or a figure the estimate has no measure for (the dead amount) stays with the model.
     ("agle 6 mahine mein 500000 commission kab hoga", "NONE"),
     ("agle mahine ka commission", "estimate{ahead:1,measure:commission_all}"),
-    ("agle 3 mahine ka cash", "NONE"),
+    // Cash in hand has a measure of its own now (cash_in_hand): the tile and the estimate are read.
+    ("agle 3 mahine ka cash", "tiles{} | estimate{ahead:3,measure:cash_in_hand}"),
 ];
 
 #[test]
@@ -754,7 +765,7 @@ fn a_few_reads_in_full() {
         last.input,
         serde_json::json!({
             "view": "B", "from": "2026-09-01", "to": "2026-09-30", "group_by": null, "item": null,
-            "item_group": null, "seller": seller, "buyer": null, "city": null, "adda": null, "garden": null,
+            "item_group": null, "grade": null, "seller": seller, "buyer": null, "city": null, "adda": null, "garden": null,
             "trip": null, "goods": null, "partner": null, "side": null, "compare": null,
             "sort": null, "rows": null
         })
@@ -1142,7 +1153,7 @@ fn the_group_reads_once_the_tools_have_the_filter() {
     let table: &[(&str, &str)] = &[
         (
             "konsi sabzi kitni baki hai",
-            "report{id:R10,item_group:vegetable,sort:days:desc}",
+            "report{id:R10,item_group:vegetable,layout:item}",
         ),
         (
             "is saal sabzi se kitni commission bani",
@@ -1286,23 +1297,24 @@ fn a_ranking_of_buyers_or_sellers_for_an_item_or_a_group_reads_the_view_of_that_
 
 // ---- the quality of a sale line (plan 58 T3, PRD FR-12.42) -------------------------------------------------
 
-/// A quality word (awwal, doyam, soyam, اول, دوم, سوم, first quality, A grade, darja) reads the lines of the
-/// sales (R2), which carry the quality, for the period and the names: the model picks the lines of the
-/// quality and sums them. Never view A or a party's figure, which add every quality. Roman Urdu, Urdu
+/// A quality word (awwal, doyam, soyam, اول, دوم, سوم, first quality, A grade, darja) reads the figures of
+/// that quality: view A with the item, the period, the names and the grade (the tool's `grade` filter). With
+/// no quality named ("kis kis darje mein bike") it reads the sale lines (R2), which carry each quality.
+/// Never the figure of all the qualities. Roman Urdu, Urdu
 /// and English. A print has no quality filter, so it is the model's. No quality word: as before.
 #[rustfmt::skip]
 const QUALITY: &[(&str, &str)] = &[
-    ("awwal seb aaj kitne ka bika", "period{kind:today} | find{role:item,text:Apple} | report{from:2026-10-10,id:R2,item:i2,rows:100,to:2026-10-10}"),
-    ("doyam kele ka aaj ka rate", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:100,to:2026-10-10}"),
-    ("soyam kele ki is mahine ki bikri", "period{kind:this_month} | find{role:item,text:Banana} | report{from:2026-10-01,id:R2,item:i1,rows:100,to:2026-10-10}"),
+    ("awwal seb aaj kitne ka bika", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
+    ("doyam kele ka aaj ka rate", "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,grade:second,item:i1,to:2026-10-10,view:A}"),
+    ("soyam kele ki is mahine ki bikri", "period{kind:this_month} | find{role:item,text:Banana} | analytics{from:2026-10-01,grade:third,item:i1,to:2026-10-10,view:A}"),
     ("rahim ke seb kis kis darje mein bike", "find{role:item,text:Apple} | find{role:seller,text:rahim} | report{id:R2,item:i2,rows:100,seller:a18}"),
-    ("rahim ke awwal seb aaj kitne ke bike", "period{kind:today} | find{role:item,text:Apple} | find{role:seller,text:rahim} | report{from:2026-10-10,id:R2,item:i2,rows:100,seller:a18,to:2026-10-10}"),
-    ("arshad ne awwal seb kitne ka liya", "find{role:item,text:Apple} | find{role:buyer,text:arshad} | report{id:R2,item:i2,party:a21,rows:100}"),
-    ("اول سیب آج کتنے کا بکا", "period{kind:today} | find{role:item,text:Apple} | report{from:2026-10-10,id:R2,item:i2,rows:100,to:2026-10-10}"),
-    ("دوم کیلے کا آج کا ریٹ", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:100,to:2026-10-10}"),
-    ("how much first quality apple sold today", "period{kind:today} | find{role:item,text:Apple} | report{from:2026-10-10,id:R2,item:i2,rows:100,to:2026-10-10}"),
-    ("second quality banana rate today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:100,to:2026-10-10}"),
-    ("A grade apple sales this month", "period{kind:this_month} | find{role:item,text:Apple} | report{from:2026-10-01,id:R2,item:i2,rows:100,to:2026-10-10}"),
+    ("rahim ke awwal seb aaj kitne ke bike", "period{kind:today} | find{role:item,text:Apple} | find{role:seller,text:rahim} | analytics{from:2026-10-10,grade:first,item:i2,seller:a18,to:2026-10-10,view:A}"),
+    ("arshad ne awwal seb kitne ka liya", "find{role:item,text:Apple} | find{role:buyer,text:arshad} | analytics{buyer:a21,grade:first,item:i2,view:A}"),
+    ("اول سیب آج کتنے کا بکا", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
+    ("دوم کیلے کا آج کا ریٹ", "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,grade:second,item:i1,to:2026-10-10,view:A}"),
+    ("how much first quality apple sold today", "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-10-10,grade:first,item:i2,to:2026-10-10,view:A}"),
+    ("second quality banana rate today", "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,grade:second,item:i1,to:2026-10-10,view:A}"),
+    ("A grade apple sales this month", "period{kind:this_month} | find{role:item,text:Apple} | analytics{from:2026-10-01,grade:first,item:i2,to:2026-10-10,view:A}"),
     // A print has no quality filter, so it would show every quality: the model's.
     ("awwal seb ka print aaj ka", "NONE"),
     // No quality word: the same question reads as before (view A).
@@ -1359,6 +1371,13 @@ fn one_figure_over_two_periods_reads_both_periods_before_the_model_starts() {
     let today = on(2026, 10, 10);
     let wrong = check_table(&w, today, &HashMap::new(), COMPARE);
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    // A planned comparison is a sure question (the run reads from a sure understanding only).
+    for (question, want) in COMPARE {
+        if *want != "NONE" {
+            let u = understand(&reader(&w, today), question);
+            assert!(u.sure, "{question}: not sure, {:?}", u.doubts);
+        }
+    }
     let mut refused = Vec::new();
     for (question, _) in COMPARE {
         let u = understand(&reader(&w, today), question);
@@ -1438,6 +1457,11 @@ fn how_did_a_thing_go_over_several_months_reads_each_month() {
     assert_eq!(u.intent.value, Intent::Figure, "a how-to, not a figure");
     let want = format!(
         "period{{from:2026-10-01,kind:range,to:2026-10-10}} | period{{from:2026-09-01,kind:range,to:2026-09-30}} | period{{from:2026-08-01,kind:range,to:2026-08-31}} | find{{role:item,text:Onion}} | analytics{{from:2026-10-01,item:{onion},to:2026-10-10,view:A}} | analytics{{from:2026-09-01,item:{onion},to:2026-09-30,view:A}} | analytics{{from:2026-08-01,item:{onion},to:2026-08-31,view:A}}"
+    );
+    assert!(
+        u.sure,
+        "the run starts only from a sure understanding: {:?}",
+        u.doubts
     );
     let reads = plan_reads(&u).expect("reads");
     assert_eq!(render_all(&reads), want);
@@ -1564,7 +1588,7 @@ fn the_vegetable_stock_list_and_the_months_of_an_item_are_read_first() {
     let radish = vegetable_key(&w, today, "mooli ka commission");
     let onion = vegetable_key(&w, today, "pyaz ka commission");
     let ready = include_str!("../prompt/tools.json").contains("\"item_group\"");
-    let stock = "report{id:R10,item_group:vegetable,sort:days:desc}";
+    let stock = "report{id:R10,item_group:vegetable,layout:item}";
     for question in [
         "kaun kaun si sabzi kitni baki padi hai",
         "kaun si sabzi kitni baki hai",
@@ -1583,7 +1607,7 @@ fn the_vegetable_stock_list_and_the_months_of_an_item_are_read_first() {
         assert_eq!(
             render_all(&reads),
             format!(
-                "find{{role:item,text:{name}}} | analytics{{group_by:month,item:{key},view:D}}"
+                "find{{role:item,text:{name}}} | analytics{{from:2026-08-31,group_by:month,item:{key},to:2026-10-10,view:D}}"
             ),
             "{question}"
         );
@@ -1809,4 +1833,319 @@ fn the_sum_of_two_parties_and_the_count_of_an_item_are_read_for_the_model() {
             "period{kind:today} | find{role:item,text:Banana} | analytics{from:2026-10-10,item:i1,to:2026-10-10,view:A}"
         )
     );
+}
+
+/// "Mooli kitne mahine biki hai" counts the months of ALL the books: view D from the first day to today.
+/// The first run read it with no dates, took the tool's default period and said 1 month for 6. On the
+/// rich year (today 05-11-2026) radish sold in 6 months.
+#[test]
+fn the_months_an_item_sold_in_are_counted_over_all_the_books() {
+    let y = year::seed::build();
+    let today = on(2026, 11, 5);
+    let question = "mooli kitne mahine biki hai";
+    let u = understand(&reader(&y.w, today), question);
+    let reads = plan_reads(&u).expect("reads");
+    let text = render_all(&reads);
+    assert!(
+        text.contains("analytics{from:") && text.contains("to:2026-11-05,view:D}"),
+        "{text}"
+    );
+    let (refused, state) = run_plan_state(&y.w, today, question, &reads);
+    assert!(refused.is_empty(), "refused: {refused:?}");
+    let words = Words::new().expect("the words");
+    let view = state
+        .results
+        .iter()
+        .find(|r| r.tool == "analytics")
+        .map(|r| mandi_assistant::results::tool_result_json(r, &words))
+        .expect("the view");
+    // The months that hold a figure in the one row of the item: the columns `p_YYYY_MM`.
+    let months = view["rows"]
+        .as_array()
+        .and_then(|rows| rows.first())
+        .and_then(|row| row.as_object())
+        .map_or(0, |cells| {
+            cells
+                .iter()
+                .filter(|(key, value)| {
+                    key.starts_with("p_") && value["rs"].as_i64().is_some_and(|rs| rs != 0)
+                })
+                .count()
+        });
+    assert_eq!(months, 6, "{view}");
+}
+
+/// The goods left of each vegetable ("kaun kaun si sabzi kitni baki padi hai"): R10 laid out by item with
+/// the group, one row for each item, not the lots and not a total (the first run gave totals and advice).
+/// On the rich year: potato 130 and tomato 47.
+#[test]
+fn the_goods_left_of_each_vegetable_are_read_one_row_for_each_item() {
+    let y = year::seed::build();
+    let today = on(2026, 11, 5);
+    let question = "kaun kaun si sabzi kitni baki padi hai";
+    let u = understand(&reader(&y.w, today), question);
+    let reads = plan_reads(&u).expect("reads");
+    assert_eq!(
+        render_all(&reads),
+        "report{id:R10,item_group:vegetable,layout:item}"
+    );
+    let (refused, state) = run_plan_state(&y.w, today, question, &reads);
+    assert!(refused.is_empty(), "refused: {refused:?}");
+    let words = Words::new().expect("the words");
+    let stock = state
+        .results
+        .iter()
+        .find(|r| r.tool == "report")
+        .map(|r| mandi_assistant::results::tool_result_json(r, &words))
+        .expect("the stock");
+    let left: Vec<(String, i64)> = stock["rows"]
+        .as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|row| {
+                    Some((
+                        row["name"]["en"].as_str()?.to_owned(),
+                        row["balance"]["n"].as_i64()?,
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(
+        left,
+        [("Potato".to_owned(), 130), ("Tomato".to_owned(), 47)]
+    );
+}
+
+/// "Total agrahi collector wise batao", "agrahi collector wise", "collector wise dues": the title names the
+/// list of dues by collector (R22, as of today), and the figure words beside it only say what it is
+/// about. On the rich year its total is the shop's dues, 20,324,367, with a row for each collector.
+#[test]
+fn a_balance_list_named_by_its_title_is_read_as_that_list() {
+    let y = year::seed::build();
+    let today = on(2026, 11, 5);
+    for question in [
+        "total agrahi collector wise batao",
+        "agrahi collector wise",
+        "collector wise dues",
+    ] {
+        let u = understand(&reader(&y.w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), "report{id:R22}", "{question}");
+        let (refused, state) = run_plan_state(&y.w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+        let words = Words::new().expect("the words");
+        let list = state
+            .results
+            .iter()
+            .find(|r| r.tool == "report")
+            .map(|r| mandi_assistant::results::tool_result_json(r, &words).to_string())
+            .expect("the list");
+        assert!(list.contains("20324367"), "{question}: the total");
+        assert!(list.contains("2605353"), "{question}: a collector's row");
+    }
+}
+
+/// On the rich year (today 05-11-2026) the planned reads hold the books' figures: onion sold 442,130,
+/// 395,580 and 608,760 in August, September and October, and potato 111,060 this month so far against
+/// 1,894,960 last month.
+#[test]
+fn the_months_and_the_two_months_compare_hold_the_books_figures_on_the_rich_year() {
+    let y = year::seed::build();
+    let today = on(2026, 11, 5);
+    let words = Words::new().expect("the words");
+    let gross_of = |question: &str| -> Vec<String> {
+        let u = understand(&reader(&y.w, today), question);
+        assert!(
+            u.sure,
+            "{question}: the run starts only from a sure understanding"
+        );
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        let (refused, state) = run_plan_state(&y.w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+        state
+            .results
+            .iter()
+            .filter(|r| r.tool == "analytics")
+            .map(|r| {
+                let json = mandi_assistant::results::tool_result_json(r, &words);
+                json["totals"]["gross"]["rs"].to_string()
+            })
+            .collect()
+    };
+    // The latest month first, as the plan reads them.
+    assert_eq!(
+        gross_of("how did onion sales go in August, September and October"),
+        ["608760", "395580", "442130"]
+    );
+    assert_eq!(
+        gross_of("is potato selling more this month than last month"),
+        ["111060", "1894960"]
+    );
+}
+
+/// A balance now and the months ahead in one question: "cash in hand now and what will it be in 3 months",
+/// "rahim ka khata abhi kitna he aur agle mahine tak kitna ho jaye ga". The app reads what it is now (the
+/// tile, the party card) and the estimate (cash_in_hand, party_balance with the party, `ahead` 3 or 1), so
+/// the model answers from reads that are already in. "In 3 months" is a period of its own.
+#[test]
+fn a_balance_now_and_the_months_ahead_are_read_together() {
+    let y = year::seed::build();
+    let today = on(2026, 11, 5);
+    let cases = [
+        (
+            "cash in hand now and what will it be in 3 months",
+            "tiles{} | estimate{ahead:3,measure:cash_in_hand}",
+        ),
+        (
+            "cash kitna hai aur agle 3 mahine mein kitna hoga",
+            "tiles{} | estimate{ahead:3,measure:cash_in_hand}",
+        ),
+        (
+            "rahim ka khata abhi kitna he aur agle mahine tak kitna ho jaye ga",
+            "find{role:seller,text:rahim} | party_card{party:a18} | estimate{ahead:1,measure:party_balance,party:a18}",
+        ),
+    ];
+    for (question, want) in cases {
+        let u = understand(&reader(&y.w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), want, "{question}");
+        let refused = run_plan(&y.w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+}
+
+/// "Sab se zyada maal kis cheez ka para hai abhi": the goods left of each item, the most first (R10 laid
+/// out by item, sorted by balance, the top 5). "Para hai" with "maal" is the goods left; "cheez" is an item.
+#[test]
+fn the_item_with_the_most_goods_left_is_read_from_the_stock_by_item() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for (question, want) in [
+        (
+            "sab se zyada maal kis cheez ka para hai abhi",
+            "report{id:R10,layout:item,rows:5,sort:balance:desc}",
+        ),
+        (
+            "kaun si cheez ka maal sab se zyada baqi hai",
+            "report{id:R10,layout:item,rows:5,sort:balance:desc}",
+        ),
+        (
+            "sab se kam maal kis cheez ka baqi hai",
+            "report{id:R10,layout:item,rows:5,sort:balance:asc}",
+        ),
+        ("maal kis cheez ka pada hai", "report{id:R10,layout:item}"),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), want, "{question}");
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+}
+
+// ---- live run 2: lists in Urdu, "کل", and the quality of a line ------------------------------------------
+
+/// "پچھلے مہینے کے تمام خرچوں کی فہرست" is the expense report of last month (R29), "ڈوبی رقم میں کس کس کا
+/// نام ہے" the dead amount party by party (R38), and the staff names a list of the staff. The words خرچوں,
+/// نام, عملے and کام are known words, not a party that was not found (Q882, Q904, Q1433).
+#[test]
+fn lists_in_urdu_of_the_expenses_the_dead_amount_and_the_staff_are_read() {
+    let w = books();
+    let today = on(2026, 10, 10);
+    for (question, want) in [
+        (
+            "پچھلے مہینے کے تمام خرچوں کی فہرست",
+            "period{kind:last_month} | report{from:2026-09-01,id:R29,to:2026-09-30}",
+        ),
+        ("ڈوبی رقم میں کس کس کا نام ہے", "report{id:R38}"),
+        (
+            "سارے عملے کے نام اور ان کا کام دکھائیں",
+            "find{role:staff,text:all}",
+        ),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        assert!(!u.has_not_found(), "{question}: a word taken for a name");
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), want, "{question}");
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+}
+
+/// "سبجی کی quantity کل کتنی تھی": "سبجی" is the vegetables, "quantity" the nag, and "کل" with the past "تھی" is
+/// yesterday, not the total of all the books (Q1782 read 24,450 for an expected 0). "کل ملا کر" is a total.
+#[test]
+fn kal_with_a_past_verb_is_yesterday_and_kul_mila_kar_is_a_total() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let ready = include_str!("../prompt/tools.json").contains("\"item_group\"");
+    let want = "period{kind:yesterday} | analytics{from:2026-10-09,item_group:vegetable,to:2026-10-09,view:A}";
+    for question in [
+        "سبجی کی quantity کل کتنی تھی",
+        "سبزی کی quantity کل کتنی تھی",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let got = plan_reads(&u).map(|r| render_all(&r));
+        assert_eq!(got.as_deref(), ready.then_some(want), "{question}");
+    }
+    let u = understand(&reader(&w, today), "کل ملا کر سبجی کی بکری");
+    let text = plan_reads(&u).map(|r| render_all(&r)).unwrap_or_default();
+    assert!(
+        !text.contains("period{kind:yesterday}"),
+        "a total read as yesterday: {text}"
+    );
+}
+
+/// The quality a question names, in Roman Urdu, Urdu and English, and its usual misspellings (awal, avval,
+/// doem, soym, secnd, sekond). A question about one quality has no instant figure; with the tools'
+/// `grade` filter it reads view A with the item, the period and the grade (the figures of that quality
+/// only, never of all of them), and until then the sale lines.
+#[test]
+fn a_quality_word_names_the_grade_and_the_read_carries_it() {
+    use mandi_assistant::understand::GradeWord::{First, Second, Third};
+    let w = books();
+    let today = on(2026, 10, 10);
+    let ready = include_str!("../prompt/tools.json").contains("\"grade\"");
+    for (question, grade) in [
+        ("awwal seb aaj kitne ka bika", First),
+        ("awal appel aaj kitne ka bika", First),
+        ("avval seb aaj kitne ka bika", First),
+        ("اول سیب آج کتنے کا بکا", First),
+        ("first quality banana rate today", First),
+        ("A grade apple sales this month", First),
+        ("doyam kele ka aaj ka rate", Second),
+        ("doem seb aaj ki bikri", Second),
+        ("secnd apple rate today", Second),
+        ("sekond quality seb ka rate aaj", Second),
+        ("second apple sales this month", Second),
+        ("دوم کیلے کا آج کا ریٹ", Second),
+        ("soyam kele ki is mahine ki bikri", Third),
+        ("soym kele ka rate aaj", Third),
+        ("third quality apple rate today", Third),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        assert!(u.quality, "{question}: no quality");
+        assert_eq!(u.grade, Some(grade), "{question}");
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        let text = render_all(&reads);
+        let word = grade.tool_word();
+        if ready {
+            assert!(
+                text.contains("analytics{") && text.contains(&format!("grade:{word}")),
+                "{question}: {text}"
+            );
+        } else {
+            assert!(
+                text.contains("report{") && text.contains("id:R2"),
+                "{question}: {text}"
+            );
+        }
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    // All the qualities ("kis darje mein bike"): no one grade, the lines carry each.
+    let u = understand(&reader(&w, today), "rahim ke seb kis kis darje mein bike");
+    assert!(u.quality && u.grade.is_none());
+    assert!(plan_reads(&u).is_some());
 }

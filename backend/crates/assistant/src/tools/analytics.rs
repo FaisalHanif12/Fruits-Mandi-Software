@@ -62,6 +62,9 @@ pub struct Input {
     /// `fruit` or `vegetable`: all the items of the group, never with `item` (views A, B, C, D, G and H).
     #[serde(default)]
     pub item_group: Option<String>,
+    /// `first`, `second` or `third`: only the sale lines of that quality (view A).
+    #[serde(default)]
+    pub grade: Option<String>,
     /// A seller.
     pub seller: Option<String>,
     /// A buyer.
@@ -174,6 +177,12 @@ fn build_filters(
         let group = super::report_extra::parse_group(word, filters.item_id.is_some())?;
         filters.item_group = Some(group);
         source.item_group = Some(group);
+    }
+    if let Some(word) = &parsed.grade {
+        takes_or(takes, K::Grade, "grade")?;
+        let grade = super::report_extra::parse_grade(word)?;
+        filters.grade = Some(grade);
+        source.grade = Some(grade);
     }
     if let Some((id, record)) = one("seller", &parsed.seller, "a")? {
         takes_or(takes, K::Seller, "seller")?;
@@ -798,6 +807,7 @@ const HOW_TO_COMPARE_ANYWAY: &str = "The Owner can still be answered: read the o
 /// the side and the grouping do not narrow).
 fn is_narrowed(filters: &AnalyticsFilters) -> bool {
     filters.item_id.is_some()
+        || filters.grade.is_some()
         || filters.item_group.is_some()
         || filters.seller_id.is_some()
         || filters.buyer.is_some()
@@ -909,6 +919,10 @@ fn assemble(
     // A read for a group says so, so a zero for a group with no sales is not taken for the whole.
     if let Some(group) = page.filters.item_group {
         echo.push(("item_group", Node::Str(group.as_str().to_owned())));
+    }
+    // So the model can see the figure is for one quality, not for the whole item.
+    if let Some(grade) = page.filters.grade {
+        echo.push(("grade", Node::Str(grade.as_str().to_owned())));
     }
     let series = chart
         .as_ref()

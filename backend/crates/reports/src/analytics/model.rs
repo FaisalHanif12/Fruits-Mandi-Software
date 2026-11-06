@@ -205,6 +205,8 @@ pub enum AnalyticsFilterKind {
     Garden,
     /// All the items of a group, پھل or سبزی, in place of one item (views A, B, C, D, G and H; PRD v1.29).
     ItemGroup,
+    /// The quality of the sale lines, اول، دوم or سوم (view A; PRD FR-12.42).
+    Grade,
 }
 
 /// One view in the catalogue.
@@ -240,6 +242,11 @@ pub struct AnalyticsFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// Only the sale lines of one quality, اول، دوم or سوم (view A; PRD FR-12.42). Missing means
+    /// every line. Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<mandi_core::bikri::SaleGrade>,
     /// A seller.
     #[ts(type = "number | null")]
     pub seller_id: Option<i64>,
@@ -284,6 +291,7 @@ impl Default for AnalyticsFilters {
             group_by: None,
             item_id: None,
             item_group: None,
+            grade: None,
             seller_id: None,
             buyer: None,
             city_id: None,
@@ -317,6 +325,10 @@ pub struct AnalyticsResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// The quality picked (view A).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<mandi_core::bikri::SaleGrade>,
     /// The seller.
     pub seller: Option<PartyRef>,
     /// The buyer.

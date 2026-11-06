@@ -342,7 +342,8 @@ fn the_markas_of_an_owner_are_found_by_his_name_with_the_owner_and_never_the_mar
 fn the_cash_book_button_of_the_cash_estimate_opens_on_the_months_of_the_working() {
     // Akram pays 10,000 ... 15,000 on the 20th of April to September, so the cash changes by that
     // each month and the pace uses the last 3 months, July to September. The button opens R12 from
-    // 01-07-2026 to 30-09-2026: the changes of the working are there.
+    // 01-07-2026 to today, 10-10-2026: the months of the working are there and its closing cash is
+    // the cash now, the figure the estimate starts from (hidden round 4, H381).
     let w = worked::months_world(&[(4, true, 100, 100)]);
     for (month, amount) in [
         (4, "10,000"),
@@ -391,7 +392,270 @@ fn the_cash_book_button_of_the_cash_estimate_opens_on_the_months_of_the_working(
     assert_eq!(*id, ReportId::R12);
     assert_eq!(
         (filters.from.as_str(), filters.to.as_str()),
-        ("2026-07-01", "2026-09-30")
+        ("2026-07-01", "2026-10-10")
+    );
+}
+
+// ---- 5: the kind of an answer that cites the app's own estimate -------------------------------
+
+#[test]
+fn an_estimate_the_app_planned_is_labelled_estimate_when_the_model_wrote_the_plain_kind() {
+    // H364 and H389: "tomato commission this year and until year end" and "mosambi sale this year
+    // and the next 6 months". The app planned the estimate (e1) before the first call; the model
+    // cited its figures with kind `answer`, and the rewrite for a name did the same, so the question
+    // ended in `checks_failed` with every figure right. The Owner asked for the estimate, so the app
+    // sets the label itself and checks every rule again: no rewrite call, and the answer is an
+    // estimate with its amber band.
+    let h = banana_year();
+    let text = "{{r2.matches.0.name}} کی اس سال کی فروخت {{r3.totals.gross}} رہی۔ اگلے {{q.n1}} مہینوں کا اندازہ \
+                {{e1.same_pace.total}} ہے۔";
+    let (reply, requests) = h.ask(
+        "kela ki is saal ki sale aur agle 3 mahine ka andaza",
+        None,
+        vec![answer("answer", text)],
+    );
+    assert_eq!(
+        requests.len(),
+        1,
+        "one model call, no rewrite: told {:?}",
+        requests.last().map(told)
+    );
+    assert_eq!(reply.outcome, AskOutcome::Estimate, "{reply:#?}");
+    assert!(answer_of(&reply).estimate.is_some(), "the amber band shows");
+    // The log says what the app did.
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 100).unwrap();
+    let calls: Vec<Value> = serde_json::from_str(&rows[0].calls_json.clone().unwrap()).unwrap();
+    assert_eq!(calls[0]["repaired"], json!(["kind"]));
+    h.scan_requests();
+}
+
+#[test]
+fn an_estimate_the_app_did_not_plan_in_a_plain_answer_is_still_refused() {
+    // The guard is as it was for a question the app planned no estimate for (the app's reads are
+    // off here, so nothing is planned, as in the tests of the estimate): the model reads the
+    // estimate by its own tool call and writes kind `answer` twice. The figure of an estimate is
+    // never shown as a plain fact: the one rewrite is asked for because of the kind, and the
+    // question ends in `checks_failed`.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_read_first(false);
+    h.runtime.set_instant(false);
+    let input = json!({
+        "measure": "commission_all", "item": null, "seller": null, "buyer": null, "garden": null,
+        "trip": null, "head": null, "partner": null, "party": null, "ahead": 3, "until": null,
+        "what_if": null, "percent": null, "target": null
+    });
+    let plain = answer("answer", "{{e1.same_pace.total}} بنیں گے۔");
+    let (reply, requests) = h.ask(
+        "agle 3 mahine ka commission kitna hoga",
+        None,
+        vec![tool_reply(&[("estimate", input)]), plain.clone(), plain],
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+    let told_all: Vec<Value> = requests.iter().flat_map(told).collect();
+    assert!(
+        told_all.iter().any(|f| f["rule"] == "estimate_kind"),
+        "the kind was refused: {told_all:?}"
+    );
+}
+
+#[test]
+fn a_month_typed_by_name_is_put_back_as_the_label_of_the_period_by_the_app() {
+    // H394, Q1652 and Q1666 ("September mein sabzi ki bikri kitni hui"): the model types the month
+    // and its year ("ستمبر 2026") where the period result holds that month as its `label`. The
+    // month rule and the digit rule refused it and a rewrite call followed. The app writes the
+    // reference, the year typed after the month goes with it, and the answer is shown from the
+    // model's first reply.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    let (reply, requests) = h.ask(
+        "kela ki sale september mein",
+        None,
+        vec![answer(
+            "answer",
+            "ستمبر 2026 میں {{r2.matches.0.name}} کی خام بکری {{r3.totals.gross}} رہی۔",
+        )],
+    );
+    assert_eq!(
+        requests.len(),
+        1,
+        "one model call, no rewrite: told {:?}",
+        requests.last().map(told)
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 100).unwrap();
+    let calls: Vec<Value> = serde_json::from_str(&rows[0].calls_json.clone().unwrap()).unwrap();
+    assert_eq!(calls[0]["repaired"], json!(["month"]));
+    // A month the results do not hold is still refused.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    let wrong = answer(
+        "answer",
+        "اکتوبر میں {{r2.matches.0.name}} کی خام بکری {{r3.totals.gross}} رہی۔",
+    );
+    let (reply, requests) = h.ask(
+        "kela ki sale september mein",
+        None,
+        vec![wrong.clone(), wrong],
+    );
+    assert_eq!(requests.len(), 2, "October is not a month of the results");
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+}
+
+// ---- 8: the scope guard holds the quality (grade) of the question -----------------------------
+
+#[test]
+fn an_answer_that_cites_a_read_without_the_quality_of_the_question_is_refused() {
+    // Q1700 "اول کیلا کی sale آج": the first quality of the banana of the day (75,980 in the live
+    // books) and not the whole banana of the day (183,640). The app planned view A with the quality;
+    // the model reads view A again with no quality and cites that. The figure is real and checked in
+    // its two places, and for the wrong thing: the answer is refused, the model is told which result
+    // holds the right scope, and the rewrite cites it.
+    let h = Harness::day();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    h.runtime.set_read_first(true);
+    let question = "اول کیلا کی sale آج";
+    // What the app planned and read before the first call.
+    let (_, probe) = h.ask(question, None, vec![answer("not_understood", "")]);
+    let first = results_in(&probe[0]);
+    let planned: Vec<(String, Value)> = first
+        .iter()
+        .filter(|(_, v)| v["tool"] == "analytics")
+        .map(|(id, v)| (id.clone(), v.clone()))
+        .collect();
+    assert_eq!(planned.len(), 1, "one view A was planned: {first:#?}");
+    let (planned_id, _) = &planned[0];
+    // The model's own read of view A for the same item and day, with no quality.
+    let own = json!({
+        "view": "A", "from": "r1.from", "to": "r1.to", "item": "r2.matches.0", "grade": null,
+        "adda": null, "buyer": null, "city": null, "compare": null, "garden": null,
+        "goods": null, "group_by": null, "item_group": null, "partner": null, "rows": null,
+        "seller": null, "side": null, "sort": null, "trip": null
+    });
+    let h = Harness::day();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    h.runtime.set_read_first(true);
+    let wrong = answer(
+        "answer",
+        "آج {{r2.matches.0.name}} کی خام بکری {{r4.totals.gross}} رہی۔",
+    );
+    let (reply, requests) = h.ask(
+        question,
+        None,
+        vec![
+            tool_reply(&[("analytics", own)]),
+            wrong,
+            answer(
+                "answer",
+                &format!("آج {{{{r2.matches.0.name}}}} کی خام بکری {{{{{planned_id}.totals.gross}}}} رہی۔"),
+            ),
+        ],
+    );
+    let told_all: Vec<Value> = requests.iter().flat_map(told).collect();
+    assert!(
+        told_all.iter().any(|f| f["rule"] == "scope"),
+        "the read without the quality was refused: {told_all:?}"
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+}
+
+// ---- 7: an item typed in words is put back when it was read twice (one-call share) ------------
+
+#[test]
+fn an_item_typed_in_words_is_put_back_by_the_app_when_the_find_and_the_view_both_hold_it() {
+    // Hidden round 4: seven of twelve questions about an item took a rewrite call (the share of
+    // questions answered in one call fell from 72% to 42%). The app reads the item by `find` (r2,
+    // the match carries the item's code) and then view A (r3, a row keyed `i1` with no code). The
+    // two were taken for two records, so the item typed in the words ("کیلا") was never put back as
+    // a reference and the model had to write again. They are one item: the name is put back, with
+    // every rule checked again, and the answer is shown from the model's first reply.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    let (reply, requests) = h.ask(
+        "kela ki is saal ki sale",
+        None,
+        vec![answer(
+            "answer",
+            "اس سال کیلا کی خام بکری {{r3.totals.gross}} رہی۔",
+        )],
+    );
+    assert_eq!(
+        requests.len(),
+        1,
+        "one model call, no rewrite: told {:?}",
+        requests.last().map(told)
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 100).unwrap();
+    let calls: Vec<Value> = serde_json::from_str(&rows[0].calls_json.clone().unwrap()).unwrap();
+    assert_eq!(calls[0]["repaired"], json!(["name"]));
+    // A name that is not an item of the results is still refused.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    let (reply, requests) = h.ask(
+        "kela ki is saal ki sale",
+        None,
+        vec![
+            answer(
+                "answer",
+                "اس سال اکرم ٹول ٹیکس کی خام بکری {{r3.totals.gross}} رہی۔",
+            ),
+            answer(
+                "answer",
+                "اس سال اکرم ٹول ٹیکس کی خام بکری {{r3.totals.gross}} رہی۔",
+            ),
+        ],
+    );
+    assert_eq!(
+        requests.len(),
+        2,
+        "the typed party was refused and rewritten"
+    );
+    assert_eq!(reply.outcome, AskOutcome::ChecksFailed, "{reply:#?}");
+}
+
+// ---- 6: a whole-month range carries the month's label (H394) ----------------------------------
+
+#[test]
+fn a_period_for_one_whole_month_has_its_label_even_when_it_was_read_as_a_range() {
+    // H394: "vegetables sale in september" was planned as the range 01-09 to 30-09, which had no
+    // `label`; the rewrite cited `{{r1.label}}` and ended in `checks_failed` (reference). The month
+    // is now the label of the range too, so the model's answer names the month from it. The app's
+    // own instant answer is off so the question reaches the model.
+    let h = banana_year();
+    h.runtime.set_local(false);
+    h.runtime.set_instant(false);
+    let (reply, requests) = h.ask(
+        "kela ki sale september mein",
+        None,
+        vec![answer(
+            "answer",
+            "{{r1.label}} میں {{r2.matches.0.name}} کی خام بکری {{r3.totals.gross}} رہی۔",
+        )],
+    );
+    let first = results_in(&requests[0]);
+    let period = first
+        .iter()
+        .find(|(_, v)| v["tool"] == "period")
+        .map(|(_, v)| v.clone())
+        .expect("the period was read before the call");
+    assert_eq!(period["kind"], "Range", "planned as a range: {period}");
+    assert!(
+        period.to_string().contains("label"),
+        "the month has its label: {period}"
+    );
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(
+        requests.len(),
+        1,
+        "no rewrite: told {:?}",
+        requests.last().map(told)
     );
 }
 

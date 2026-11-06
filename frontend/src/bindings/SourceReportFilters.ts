@@ -7,6 +7,7 @@ import type { ReportGroupBy } from './ReportGroupBy';
 import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
+import type { SaleGrade } from './SaleGrade';
 import type { SourceBikri } from './SourceBikri';
 import type { SourceParty } from './SourceParty';
 import type { VoucherType } from './VoucherType';
@@ -52,6 +53,10 @@ export type SourceReportFilters = {
    * when none.
    */
   item_group?: ItemGroup;
+  /**
+   * Only the sale lines of one quality (R2, R3, R4). Left out of the wire form when none.
+   */
+  grade?: SaleGrade;
   /**
    * A city.
    */

@@ -69,6 +69,8 @@ pub(crate) struct Typed {
     pub(crate) trip_view: TripView,
     /// The layout of R10. By lot when the screen sent nothing.
     pub(crate) stock_view: StockView,
+    /// The quality picked (R2, R3, R4).
+    pub(crate) grade: Option<mandi_core::bikri::SaleGrade>,
     /// The picked garden (R36).
     pub(crate) garden_id: Option<i64>,
     /// The layout of R36. By garden when the screen sent nothing.
@@ -215,6 +217,7 @@ pub(crate) fn resolve(
         input.stock_view.is_some(),
         "filters.stock_view",
     );
+    refuse_unless(FilterKind::Grade, input.grade.is_some(), "filters.grade");
     refuse_unless(
         FilterKind::Bikri,
         input.bikri_id.is_some(),
@@ -444,6 +447,10 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::TripView) {
         typed.trip_view = input.trip_view.unwrap_or_default();
         typed.resolved.trip_view = Some(typed.trip_view);
+    }
+    if takes.has(FilterKind::Grade) {
+        typed.grade = input.grade;
+        typed.resolved.grade = input.grade;
     }
     if takes.has(FilterKind::StockView) {
         typed.stock_view = input.stock_view.unwrap_or_default();

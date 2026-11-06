@@ -2569,10 +2569,11 @@ fn the_worked_day_help_advice_changes_forecasts_and_things_not_in_the_app() {
             "what if the pace doubles, how much commission",
             e(Intent::WhatIf).sure().fig(&[F::Commission]),
         ),
-        // ---- comparisons and two periods: the model path
+        // ---- comparisons and two periods: both periods are read before the model starts (plan 55
+        // section 14), so the question is sure; its reads are in tests/understand_reads.rs
         (
             "is mahine ka commission pichle mahine se zyada hai",
-            e(Intent::Figure).unsure().compare().any_period(),
+            e(Intent::Figure).compare().any_period(),
         ),
         // ---- nothing to read
         ("", e(Intent::Unclear).unsure().doubt(Doubt::NothingToRead)),

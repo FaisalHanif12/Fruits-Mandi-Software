@@ -3522,3 +3522,334 @@ fn an_item_group_read_passes_on_every_allowed_view_and_report_and_a_group_with_n
     );
     assert!(all["filters"].get("item_group").is_none());
 }
+
+// ---- The quality of a sale line (PRD FR-12.42): the `grade` filter -----------------------------
+
+fn grade_of(word: &str) -> mandi_services::core::bikri::SaleGrade {
+    mandi_services::core::bikri::SaleGrade::parse(word).unwrap()
+}
+
+/// The ids of the items of the books by their English name.
+fn item_ids(w: &world::World) -> std::collections::HashMap<String, i64> {
+    masters::list(&w.env.ctx, MasterKind::Item, false)
+        .unwrap()
+        .into_iter()
+        .filter_map(|row| match row {
+            MasterRow::Item(item) => Some((item.name_en, item.id)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// View A for one item, one period and (maybe) one quality.
+fn view_a(
+    w: &world::World,
+    item: i64,
+    (from, to): (&str, &str),
+    grade: Option<&str>,
+) -> AnalyticsPage {
+    view_page(
+        w,
+        AnalyticsView::A,
+        AnalyticsFilters {
+            from: from.into(),
+            to: to.into(),
+            item_id: Some(item),
+            grade: grade.map(grade_of),
+            ..AnalyticsFilters::default()
+        },
+    )
+}
+
+/// The quantity, the sale amount (whole rupees) and the seller commission of the lines of an item
+/// that have NO quality, summed straight from the stored facts (sign +1 and -1), the way nothing
+/// of the engine does: the check that the three qualities and the lines with none are the whole.
+fn no_quality_lines(w: &world::World, item: i64, (from, to): (&str, &str)) -> (i64, i64, i64) {
+    let paisa = w
+        .env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row(
+                "SELECT COALESCE(SUM(f.sign * f.qty), 0),
+                        COALESCE(SUM(f.sign * f.seller_amount_paisa), 0),
+                        COALESCE(SUM(f.sign * f.seller_comm_paisa), 0)
+                 FROM analytics_facts f JOIN bikri_sales s ON s.id = f.sale_id
+                 WHERE s.grade IS NULL AND f.item_id = ?1 AND f.entry_date >= ?2
+                   AND f.entry_date <= ?3",
+                (item, from, to),
+                |r| {
+                    Ok((
+                        r.get::<_, i64>(0)?,
+                        r.get::<_, i64>(1)?,
+                        r.get::<_, i64>(2)?,
+                    ))
+                },
+            )
+            .map_err(|e| e.to_string())
+        })
+        .unwrap();
+    (paisa.0, paisa.1 / 100, paisa.2 / 100)
+}
+
+#[test]
+fn on_the_rich_year_a_quality_has_its_own_figure_and_the_qualities_make_the_item() {
+    let y = seed::build();
+    let w = &y.w;
+    let ids = item_ids(w);
+    let today = mandi_services::day::status(&w.env.ctx).unwrap().today;
+    let mut s = Session::new(w).on(&today);
+    // The five figures of the live run (Q1700, Q1704, Q1710, Q1832, Q1833), read through the tool:
+    // (item, quality, period, the figure, is it the quantity).
+    let cases = [
+        (
+            "Banana",
+            "first",
+            ("2026-11-05", "2026-11-05"),
+            75_980,
+            false,
+        ),
+        (
+            "Apple",
+            "third",
+            ("2026-10-26", "2026-11-01"),
+            290_590,
+            false,
+        ),
+        (
+            "Potato",
+            "third",
+            ("2025-01-01", "2025-12-31"),
+            219_900,
+            false,
+        ),
+        ("Mango", "third", ("2026-01-01", "2026-12-31"), 93, true),
+        ("Radish", "first", ("2025-01-01", "2025-12-31"), 74, true),
+    ];
+    for (name, grade, (from, to), figure, is_qty) in cases {
+        let found = s.find(&name.to_lowercase(), "item");
+        let id = s.ok(
+            "analytics",
+            analytics_input(
+                "A",
+                json!({"item": format!("{found}.matches.0"), "grade": grade, "from": from, "to": to}),
+            ),
+        );
+        let j = s.json(&id);
+        let got = if is_qty {
+            j["totals"]["nag"]["n"].as_i64().unwrap()
+        } else {
+            rs(&j["totals"]["gross"])
+        };
+        assert_eq!(got, figure, "{name} {grade} {from}..{to}: {j}");
+        // The result says it is for one quality, and the button carries it.
+        assert_eq!(j["filters"]["grade"], grade);
+        match &s.result(&id).source {
+            Some(AnswerSource::Analytics { filters, .. }) => {
+                assert_eq!(filters.grade, Some(grade_of(grade)));
+                assert_eq!(filters.to_filters().grade, Some(grade_of(grade)));
+            }
+            other => panic!("no analytics button: {other:?}"),
+        }
+        // And the same figure is not the whole item's.
+        let whole = view_a(w, ids[name], (from, to), None);
+        let whole_figure = if is_qty {
+            total_of(&whole, "qty")
+        } else {
+            total_of(&whole, "gross")
+        };
+        assert!(
+            whole_figure > figure,
+            "{name}: the item's whole is more than one quality"
+        );
+    }
+    // The three qualities and the lines with no quality are the whole item, in every period of
+    // the five questions, for the quantity, the sale amount and the seller commission.
+    let windows = [
+        ("2026-11-05", "2026-11-05"),
+        ("2026-10-26", "2026-11-01"),
+        ("2025-01-01", "2025-12-31"),
+        ("2026-01-01", "2026-12-31"),
+    ];
+    let mut with_no_quality = 0;
+    for name in ["Banana", "Apple", "Potato", "Mango", "Radish"] {
+        for window in windows {
+            let whole = view_a(w, ids[name], window, None);
+            let mut sum = (0, 0, 0);
+            for grade in ["first", "second", "third"] {
+                let page = view_a(w, ids[name], window, Some(grade));
+                sum.0 += total_of(&page, "qty");
+                sum.1 += total_of(&page, "gross");
+                sum.2 += total_of(&page, "seller_comm");
+            }
+            let none = no_quality_lines(w, ids[name], window);
+            if none.0 > 0 {
+                with_no_quality += 1;
+            }
+            assert_eq!(
+                (
+                    total_of(&whole, "qty"),
+                    total_of(&whole, "gross"),
+                    total_of(&whole, "seller_comm")
+                ),
+                (sum.0 + none.0, sum.1 + none.1, sum.2 + none.2),
+                "{name} {window:?}: first + second + third + no quality = the item"
+            );
+        }
+    }
+    assert!(
+        with_no_quality > 0,
+        "the year has lines with no quality, so the check means something"
+    );
+}
+
+#[test]
+fn the_quality_reaches_the_registers_and_is_refused_where_it_has_no_meaning() {
+    let y = seed::build();
+    let w = &y.w;
+    let ids = item_ids(w);
+    let banana = ids["Banana"];
+    let window = ("2026-11-05", "2026-11-05");
+    let register = |id: ReportId, grade: Option<&str>| {
+        engine_run(
+            w.env.ctx.db(),
+            &ReportRunInput {
+                id,
+                filters: ReportFilters {
+                    from: window.0.into(),
+                    to: window.1.into(),
+                    item_id: Some(banana),
+                    grade: grade.map(grade_of),
+                    ..ReportFilters::default()
+                },
+                offset: 0,
+                limit: 100,
+                sort: None,
+                group_by_month: false,
+            },
+        )
+        .unwrap()
+    };
+    // Today's first-quality banana: 40 نگ and 75,980 in view A. R2 holds its lines, R3 and R4 split
+    // them into cash and credit lines.
+    let a = view_a(w, banana, window, Some("first"));
+    assert_eq!(total_of(&a, "qty"), 40);
+    let r2 = register(ReportId::R2, Some("first"));
+    assert!(r2.total_count >= 1);
+    assert_eq!(
+        register(ReportId::R3, Some("first")).total_count
+            + register(ReportId::R4, Some("first")).total_count,
+        r2.total_count,
+        "cash lines + credit lines = every line of that quality"
+    );
+    // Every quality has its own lines: they never add up to more than the item's lines.
+    let counts: Vec<i64> = ["first", "second", "third"]
+        .iter()
+        .map(|g| register(ReportId::R2, Some(g)).total_count)
+        .collect();
+    assert!(counts.iter().sum::<i64>() <= register(ReportId::R2, None).total_count);
+    // R2's own totals row has the quantity of the lines it lists.
+    let columns: Vec<_> = r2.columns.iter().map(|c| (c.key.clone(), c.kind)).collect();
+    let sums = additive_sums(&columns, &r2.totals);
+    assert_eq!(sums.get("qty").copied(), Some(40), "{sums:?}");
+    // Through the tool.
+    let today = mandi_services::day::status(&w.env.ctx).unwrap().today;
+    let mut s = Session::new(w).on(&today);
+    let found = s.find("banana", "item");
+    for id in ["R2", "R3", "R4"] {
+        let read = s.ok(
+            "report",
+            report(
+                id,
+                json!({"item": format!("{found}.matches.0"), "grade": "first",
+                       "from": window.0, "to": window.1}),
+            ),
+        );
+        assert_eq!(s.json(&read)["filters"]["grade"], "first", "{id}");
+        assert_eq!(
+            button_filters(&s, &read).grade,
+            Some(grade_of("first")),
+            "{id}"
+        );
+    }
+    // A wrong word, a report with no quality and a view with none are refused on `grade`.
+    let word = s.error("report", report("R2", json!({"grade": "fourth"})));
+    assert_eq!(word.code, "ERR_OUT_OF_RANGE");
+    assert_eq!(word.field.as_deref(), Some("grade"));
+    assert_eq!(word.allowed, ["first", "second", "third"]);
+    for id in ["R5", "R7", "R10", "R27"] {
+        let error = s.error("report", report(id, json!({"grade": "first"})));
+        assert_eq!(error.code, "ERR_OUT_OF_RANGE", "{id}");
+    }
+    let view_word = s.error("analytics", analytics_input("A", json!({"grade": "none"})));
+    assert_eq!(view_word.allowed, ["first", "second", "third"]);
+    let view = s.error("analytics", analytics_input("B", json!({"grade": "first"})));
+    assert_eq!(view.code, "ERR_OUT_OF_RANGE");
+    assert_eq!(view.allowed, ["A"]);
+    // The engines refuse it too, at `filters.grade`.
+    let engine = analytics_run(
+        w.env.ctx.db(),
+        &AnalyticsRunInput {
+            view: AnalyticsView::D,
+            filters: AnalyticsFilters {
+                grade: Some(grade_of("first")),
+                ..AnalyticsFilters::default()
+            },
+            offset: 0,
+            limit: 100,
+            sort: None,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(&engine, mandi_reports::ReportsError::Rejected(i)
+            if i.iter().any(|e| e.field == "filters.grade")),
+        "{engine:?}"
+    );
+    // The print headers say the quality, in the words of the reports (the whole fact).
+    let facts = mandi_reports::reports::print_data(
+        w.env.ctx.db(),
+        &mandi_reports::reports::ReportPrintInput {
+            id: ReportId::R2,
+            filters: ReportFilters {
+                grade: Some(grade_of("second")),
+                ..ReportFilters::default()
+            },
+            language: Language::En,
+            paper: None,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .unwrap()
+    .filters;
+    assert_eq!(
+        facts
+            .iter()
+            .map(|f| f.label_id.as_str())
+            .collect::<Vec<_>>(),
+        ["report-grade-second"]
+    );
+    let view_facts = mandi_reports::analytics::print_data(
+        w.env.ctx.db(),
+        &mandi_reports::analytics::AnalyticsPrintInput {
+            view: AnalyticsView::A,
+            filters: AnalyticsFilters {
+                grade: Some(grade_of("third")),
+                ..AnalyticsFilters::default()
+            },
+            language: Language::En,
+            paper: None,
+            sort: None,
+        },
+    )
+    .unwrap()
+    .filters;
+    assert_eq!(
+        view_facts
+            .iter()
+            .map(|f| f.label_id.as_str())
+            .collect::<Vec<_>>(),
+        ["report-grade-third"]
+    );
+}

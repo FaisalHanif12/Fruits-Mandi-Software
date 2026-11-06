@@ -101,6 +101,17 @@ fn last_of_month(y: i32, m: u32) -> Option<NaiveDate> {
     day(ny, nm, 1)?.pred_opt()
 }
 
+/// The month a range is, when it is exactly one whole calendar month (first day to last day), so
+/// the result carries its `label` like the month periods do. The app plans "vegetables in
+/// september" as the range 01-09 to 30-09, and the answer must name the month from the label and
+/// not by typing it (hidden round 4, H394).
+///
+/// Example: 2026-09-01 to 2026-09-30 is September 2026; 2026-09-01 to 2026-09-29 is no month.
+fn whole_month(from: NaiveDate, to: NaiveDate) -> Option<(i32, u32)> {
+    (from.day() == 1 && last_of_month(from.year(), from.month()) == Some(to))
+        .then(|| (from.year(), from.month()))
+}
+
 fn one_month(first: NaiveDate, to: NaiveDate) -> Range {
     Range {
         from: Some(first),
@@ -232,7 +243,7 @@ pub fn compute(
             Range {
                 from: Some(from),
                 to,
-                month: None,
+                month: whole_month(from, to),
             }
         }
         Kind::LastNDays | Kind::LastNMonths | Kind::LastNYears | Kind::NextNMonths => {
@@ -489,6 +500,27 @@ mod tests {
         i.n = Some(6);
         let r = compute(d(2026, 10, 10), &i, &numbers).unwrap();
         assert_eq!((r.from, r.to), (Some(d(2026, 10, 1)), d(2027, 3, 31)));
+    }
+
+    #[test]
+    fn a_range_that_is_one_whole_month_is_labelled_with_it() {
+        // H394: "vegetables in september" is read as the range 01-09 to 30-09, and the answer
+        // writes the month from the label.
+        let today = d(2026, 11, 5);
+        let range = |from: &str, to: &str| {
+            let mut i = input(Kind::Range);
+            i.from = Some(from.to_owned());
+            i.to = Some(to.to_owned());
+            compute(today, &i, &[]).unwrap().month
+        };
+        assert_eq!(range("2026-09-01", "2026-09-30"), Some((2026, 9)));
+        assert_eq!(range("2024-02-01", "2024-02-29"), Some((2024, 2)));
+        assert_eq!(range("2026-12-01", "2026-12-31"), Some((2026, 12)));
+        // Not a whole month: no label.
+        assert_eq!(range("2026-09-01", "2026-09-29"), None);
+        assert_eq!(range("2026-09-02", "2026-09-30"), None);
+        assert_eq!(range("2026-08-01", "2026-09-30"), None);
+        assert_eq!(range("2026-09-01", "2026-09-01"), None);
     }
 
     #[test]

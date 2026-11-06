@@ -13,7 +13,8 @@
 //! | `voucher_type` | R15 | `voucher_type` |
 //! | `layout` | R14 `detail`; R33 `item` `day` `month` `partner`; R36 `partner`; R10 `item` | `detail`, `trip_view`, `garden_view`, `stock_view` |
 //! | `partner: "guests"` | R37 | `guests_only` |
-//! | `item_group` `fruit` or `vegetable` | R2 R3 R4 R7 R10 R27 and analytics A D G | `item_group` |
+//! | `item_group` `fruit` or `vegetable` | R2 R3 R4 R7 R10 R27 and analytics A B C D G H | `item_group` |
+//! | `grade` `first`, `second` or `third` | R2 R3 R4 and analytics A | `grade` |
 //!
 //! The `collector` input (R22, R23, R35) is read in `report.rs` with the other records; the
 //! reports crate has the filter in each of those three specs.
@@ -25,6 +26,7 @@ use mandi_reports::reports::{
     FilterKind, GardenView, PaidFilter, ReportFilters, StockView, TripView,
 };
 use mandi_services::core::accounts::AccountType;
+use mandi_services::core::bikri::SaleGrade;
 use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
 
@@ -51,6 +53,8 @@ pub(super) struct Extra<'a> {
     pub layout: Option<&'a str>,
     /// `fruit` or `vegetable`: all the items of a group, in place of one item.
     pub item_group: Option<&'a str>,
+    /// `first`, `second` or `third`: only the sale lines of that quality.
+    pub grade: Option<&'a str>,
 }
 
 /// The stored words of the voucher kinds, for the refusal of a wrong one.
@@ -97,6 +101,15 @@ pub(super) fn parse_group(word: &str, item_given: bool) -> Result<ItemGroup, Too
         ));
     }
     ItemGroup::parse(word.trim()).ok_or_else(|| wrong_word("item_group", &["fruit", "vegetable"]))
+}
+
+/// Reads the `grade` word of a report or an analytics view (PRD FR-12.42).
+///
+/// # Errors
+/// `ERR_OUT_OF_RANGE` on `grade` for a word that is not `first`, `second` or `third` (the allowed
+/// words are listed).
+pub(super) fn parse_grade(word: &str) -> Result<SaleGrade, ToolError> {
+    SaleGrade::parse(word.trim()).ok_or_else(|| wrong_word("grade", &["first", "second", "third"]))
 }
 
 /// True when the partner input means the guests (R37).
@@ -185,6 +198,14 @@ pub(super) fn apply(
     }
     if let Some(word) = extra.layout {
         layout(word, takes, filters, source)?;
+    }
+    if let Some(word) = extra.grade {
+        if !takes.contains(&FilterKind::Grade) {
+            return Err(not_taken(takes, "grade"));
+        }
+        let grade = parse_grade(word)?;
+        filters.grade = Some(grade);
+        source.grade = Some(grade);
     }
     if let Some(word) = extra.item_group {
         if !takes.contains(&FilterKind::ItemGroup) {
@@ -283,6 +304,17 @@ mod tests {
         assert_eq!(wrong.allowed, ["fruit", "vegetable"]);
         let both = parse_group("fruit", true).unwrap_err();
         assert_eq!(both.field.as_deref(), Some("item_group"));
+    }
+
+    #[test]
+    fn a_grade_is_one_of_three_words() {
+        assert_eq!(parse_grade("first").unwrap(), SaleGrade::First);
+        assert_eq!(parse_grade(" third ").unwrap(), SaleGrade::Third);
+        let wrong = parse_grade("fourth").unwrap_err();
+        assert_eq!(wrong.code, "ERR_OUT_OF_RANGE");
+        assert_eq!(wrong.field.as_deref(), Some("grade"));
+        assert_eq!(wrong.allowed, ["first", "second", "third"]);
+        assert!(parse_grade("none").is_err());
     }
 
     #[test]

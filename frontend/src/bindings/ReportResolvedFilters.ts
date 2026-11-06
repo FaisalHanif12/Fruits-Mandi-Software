@@ -8,6 +8,7 @@ import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportParty } from './ReportParty';
 import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
+import type { SaleGrade } from './SaleGrade';
 import type { VoucherType } from './VoucherType';
 
 /**
@@ -106,4 +107,8 @@ export type ReportResolvedFilters = {
    * The layout of R10 when it is by item. Missing for one row for each lot and any other report.
    */
   stock_view?: ReportStockView;
+  /**
+   * The quality picked (R2, R3, R4).
+   */
+  grade?: SaleGrade;
 };

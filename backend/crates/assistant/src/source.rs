@@ -21,6 +21,7 @@ use mandi_reports::analytics::{
 use mandi_reports::reports::{
     DateShortcut, GardenView, GroupBy, PaidFilter, PartyFilter, ReportFilters, StockView, TripView,
 };
+use mandi_services::core::bikri::SaleGrade;
 use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
 use serde::Serialize;
@@ -98,6 +99,10 @@ pub struct SourceReportFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// Only the sale lines of one quality (R2, R3, R4). Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<SaleGrade>,
     /// A city.
     pub city: Option<AnswerRecord>,
     /// An اڈا.
@@ -149,6 +154,7 @@ impl SourceReportFilters {
             zamindar_id: id_of(&self.zamindar),
             item_id: id_of(&self.item),
             item_group: self.item_group,
+            grade: self.grade,
             city_id: id_of(&self.city),
             adda_id: id_of(&self.adda),
             detail: self.detail,
@@ -186,6 +192,10 @@ pub struct SourceAnalyticsFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub item_group: Option<ItemGroup>,
+    /// Only the sale lines of one quality (view A). Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<SaleGrade>,
     /// A seller.
     pub seller: Option<AnswerRecord>,
     /// A buyer, and for a پختہ کھاتہ account the person.
@@ -219,6 +229,7 @@ impl Default for SourceAnalyticsFilters {
             group_by: None,
             item: None,
             item_group: None,
+            grade: None,
             seller: None,
             buyer: None,
             city: None,
@@ -244,6 +255,7 @@ impl SourceAnalyticsFilters {
             group_by: self.group_by,
             item_id: id_of(&self.item),
             item_group: self.item_group,
+            grade: self.grade,
             seller_id: id_of(&self.seller),
             buyer: self.buyer.as_ref().map(SourceParty::to_filter),
             city_id: id_of(&self.city),

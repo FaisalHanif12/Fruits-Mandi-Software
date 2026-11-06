@@ -302,7 +302,9 @@ fn words_of(question: &str) -> Vec<String> {
 }
 
 /// True when the question asks how, where or what and holds no number to write. "How much" and
-/// "how many" ask for a figure, so they are not help.
+/// "how many" ask for a figure, so they are not help; nor is "how did onion sales go in August"
+/// ("how did", "how was", "how were", "how has", "how have" ask how the books went, hidden round 4,
+/// H348: the guide read for it hid the planned reads and the question ran out of time).
 pub fn is_how_to(question: &str, numbers: &[QuestionNumber]) -> bool {
     if !numbers.is_empty() {
         return false;
@@ -310,7 +312,11 @@ pub fn is_how_to(question: &str, numbers: &[QuestionNumber]) -> bool {
     let words = words_of(question);
     let asks_figure = words.windows(2).any(|pair| match pair {
         [first, second] => {
-            first == "how" && matches!(second.as_str(), "much" | "many" | "long" | "old")
+            first == "how"
+                && matches!(
+                    second.as_str(),
+                    "much" | "many" | "long" | "old" | "did" | "was" | "were" | "has" | "have"
+                )
         }
         _ => false,
     });
@@ -695,6 +701,9 @@ mod tests {
             "akram ki 5 hazar wasooli likh do",
             "how much does akram owe",
             "how many sales today",
+            "how did onion sales go in August, September and October",
+            "how was potato selling last month",
+            "how have sales been this week",
             "akram ka rate barha do",
             "delete akram",
             "save karo",
@@ -722,6 +731,12 @@ mod tests {
         assert_eq!(topic("ye kaise karun"), None);
         assert_eq!(topic("akram ki wasooli kitni hai"), None);
         assert_eq!(topic("wasooli 5000 kaise likhun"), None);
+        // How the books went is a figure question, not a question about a screen (H348).
+        assert_eq!(
+            topic("how did onion sales go in August, September and October"),
+            None
+        );
+        assert_eq!(topic("how was the sale book last week"), None);
     }
 
     /// The 52 help questions of the live bank (plan 52 Section 2, category D) and the topic of the

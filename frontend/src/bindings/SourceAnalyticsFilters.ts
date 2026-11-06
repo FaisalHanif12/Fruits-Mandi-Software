@@ -7,6 +7,7 @@ import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
 import type { AnswerRecord } from './AnswerRecord';
 import type { ItemGroup } from './ItemGroup';
+import type { SaleGrade } from './SaleGrade';
 import type { SourceParty } from './SourceParty';
 
 /**
@@ -38,6 +39,10 @@ export type SourceAnalyticsFilters = {
    * none.
    */
   item_group?: ItemGroup;
+  /**
+   * Only the sale lines of one quality (view A). Left out of the wire form when none.
+   */
+  grade?: SaleGrade;
   /**
    * A seller.
    */

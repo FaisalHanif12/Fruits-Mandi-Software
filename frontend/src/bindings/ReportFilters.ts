@@ -7,6 +7,7 @@ import type { ReportPaidFilter } from './ReportPaidFilter';
 import type { ReportPartyFilter } from './ReportPartyFilter';
 import type { ReportStockView } from './ReportStockView';
 import type { ReportTripView } from './ReportTripView';
+import type { SaleGrade } from './SaleGrade';
 import type { VoucherType } from './VoucherType';
 
 /**
@@ -110,4 +111,10 @@ export type ReportFilters = {
    * How R10 lays out the stock. Missing means one row for each lot.
    */
   stock_view?: ReportStockView;
+  /**
+   * Only the sale lines of one quality (R2, R3, R4). Missing means every line, with or without
+   * a quality. Never sent as "none": a line with no quality is read as the whole minus the
+   * three qualities.
+   */
+  grade?: SaleGrade;
 };

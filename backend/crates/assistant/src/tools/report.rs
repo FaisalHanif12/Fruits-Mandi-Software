@@ -121,6 +121,9 @@ pub struct Input {
     /// R27).
     #[serde(default)]
     pub item_group: Option<String>,
+    /// `first`, `second` or `third`: only the sale lines of that quality (R2, R3, R4).
+    #[serde(default)]
+    pub grade: Option<String>,
     /// A city.
     pub city: Option<String>,
     /// An اڈا.
@@ -342,6 +345,7 @@ fn build_filters(
             voucher_type: input.voucher_type.as_deref(),
             layout: input.layout.as_deref(),
             item_group: input.item_group.as_deref(),
+            grade: input.grade.as_deref(),
         },
         takes,
         &mut filters,
@@ -1149,6 +1153,10 @@ fn assemble(
     // A read for a group says so, so a zero for a group with no sales is not taken for the whole.
     if let Some(group) = page.filters.item_group {
         echo.push(("item_group", Node::Str(group.as_str().to_owned())));
+    }
+    // So the model can see the figure is for one quality, not for the whole item.
+    if let Some(grade) = page.filters.grade {
+        echo.push(("grade", Node::Str(grade.as_str().to_owned())));
     }
     let mut fields = vec![
         ("source", Node::Str(id.code().to_owned())),

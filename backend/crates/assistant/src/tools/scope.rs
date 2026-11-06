@@ -10,6 +10,7 @@
 //! |---|---|
 //! | `v:I`, `r:R36` | gardens, trips and fruit taken: a part of everything, not its total |
 //! | `i1`, `a18`, `ct2`, `ad3`, `s1`, `t4`, `g5` | a filter of the read: item, seller or party, city, adda, partner, trip, garden |
+//! | `grade:first`, `grade:second`, `grade:third` | only the sale lines of one quality: a part of the item's whole figure |
 //! | `group:fruit`, `group:vegetable` | all the items of a group (PRD v1.29): a part of everything, and the whole of each of its items |
 //! | `goods:trip`, `side:seller`, `bikri:7`, `voucher:receipt`, `status:paid`, `guests` | the other filters that cut the figures down |
 //! | `i2` | the row of a result (`rows.i2`): an unfiltered view's row is the same as a read filtered to item 2 |
@@ -164,6 +165,12 @@ fn group_token(group: mandi_services::core::rules::ItemGroup) -> String {
     format!("{GROUP_PREFIX}{}", group.as_str())
 }
 
+/// The token of a quality filter: a part of the item's whole figure (`i1` is the whole of
+/// `i1|grade:first`), and first, second and third quality are three parts that may be added.
+fn grade_token(grade: mandi_services::core::bikri::SaleGrade) -> String {
+    format!("grade:{}", grade.as_str())
+}
+
 /// True for the token of an item group.
 fn is_group(token: &str) -> bool {
     token.starts_with(GROUP_PREFIX)
@@ -223,6 +230,9 @@ fn analytics_tokens(f: &SourceAnalyticsFilters) -> Vec<String> {
     if let Some(group) = f.item_group {
         keys.push(group_token(group));
     }
+    if let Some(grade) = f.grade {
+        keys.push(grade_token(grade));
+    }
     if let Some(buyer) = &f.buyer {
         keys.push(account(buyer));
     }
@@ -252,6 +262,9 @@ fn report_tokens(f: &SourceReportFilters) -> Vec<String> {
     add("g", f.garden.as_ref().map(|r| r.id));
     if let Some(group) = f.item_group {
         keys.push(group_token(group));
+    }
+    if let Some(grade) = f.grade {
+        keys.push(grade_token(grade));
     }
     if let Some(party) = &f.party {
         keys.push(account(party));

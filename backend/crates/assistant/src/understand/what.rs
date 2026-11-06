@@ -53,8 +53,10 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         scoped: false,
         guests: false,
         quality: false,
+        grade: None,
         last_one: false,
         months_asked: false,
+        months_range: None,
         oldest: false,
         sum_strong: false,
         amount_named: false,
@@ -265,6 +267,25 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
         } else if scan.has_exact(Cue::Sold) {
             found.push((0, FigureKind::Sale));
         }
+    }
+    // "سبجی کی quantity کل کتنی تھی": the quantity of a group (or an item) is the nag sold.
+    if found.is_empty()
+        && scan.has(Cue::Unit)
+        && (named.has_item || scan.has_exact(Cue::VegetableWord) || scan.has_exact(Cue::FruitWord))
+    {
+        found.push((0, FigureKind::Sale));
+    }
+    // "maal kis cheez ka para hai": goods lying (para, pada, padi) are the goods left.
+    if found.is_empty()
+        && scan.has(Cue::Goods)
+        && scan.words.iter().any(|w| {
+            matches!(
+                w.as_str(),
+                "para" | "pada" | "padi" | "pare" | "pade" | "paray" | "پڑا" | "پڑی" | "پڑے"
+            )
+        })
+    {
+        found.push((0, FigureKind::Stock));
     }
     // "usman shirakat daar ka kitna hai abhi": a partner and "kitna" ask for his total, when nothing
     // else is asked. A cue of another figure ("fruit"), or a word nothing explains ("home"), means
@@ -1074,6 +1095,7 @@ pub(super) fn assemble(
     let kinds_for_happened = kinds.clone();
     let roles_found = roles.clone();
     let has_item_found = names.items.iter().any(|i| i.outcome.hit().is_some());
+    let grade = super::reads::grade_of(scan, has_item_found || item_group.is_some());
     let mut understanding = Understanding {
         intent,
         parties: names.parties,
@@ -1093,9 +1115,14 @@ pub(super) fn assemble(
         wants_steps,
         scoped: super::reads::scoped(scan, &kinds_for_happened),
         guests: scan.has_exact(Cue::Guests),
-        quality: scan.has_exact(Cue::Quality),
+        quality: scan.has_exact(Cue::Quality) || grade.is_some(),
+        grade,
         last_one: super::reads::last_one(scan),
         months_asked: scan.has_exact(Cue::HowManyMonths),
+        months_range: scan
+            .has_exact(Cue::HowManyMonths)
+            .then(|| books_range(reader))
+            .flatten(),
         oldest: super::reads::oldest(scan),
         item_group,
         bikri_number: super::reads::bikri_number(scan),
@@ -1182,6 +1209,12 @@ pub(super) fn assemble(
         understanding.doubts.push(Doubt::NoFigure);
     }
     understanding.sure = is_sure(&understanding);
+    // Two or more periods of one figure ("august, september and october", "this month and last month")
+    // are not a doubt when every period can be read: the app plans the reads, and the run starts only
+    // from a sure understanding (live run 2, H348 and H371 read nothing).
+    if !understanding.sure && super::reads::periods_are_planned(&understanding) {
+        understanding.sure = true;
+    }
     // A question that is not sure never carries a button: a wrong, wider date on a button is worse
     // than no button. It goes to the model path (lead ruling of 04-11-2026).
     if !understanding.sure {
@@ -1325,6 +1358,15 @@ fn dead_amount_included(scan: &Scan) -> bool {
     ]
     .iter()
     .any(|p| says(p))
+}
+
+/// The first day of the books and today, as ISO dates: all the books, for a question that names no period
+/// and asks for all of them ("kitne mahine biki hai").
+fn books_range(reader: &Reader<'_>) -> Option<(String, String)> {
+    let first = mandi_services::day::first_book_day(reader.ctx)
+        .ok()
+        .flatten()?;
+    Some((first.to_iso(), reader.today.to_iso()))
 }
 
 /// "how did onion sales go in August", "how were sales this month": a figure asked in the past tense,

@@ -162,6 +162,7 @@ const REGISTER_GROUP_FILTERS: &[FilterKind] = &[
     FilterKind::ItemGroup,
     FilterKind::City,
     FilterKind::Adda,
+    FilterKind::Grade,
 ];
 
 /// The filters of the seller side reports R6 and R27.

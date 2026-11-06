@@ -1,6 +1,6 @@
 # D6 system prompt: the assistant's instructions, tools and answer
 
-Version 1.6, 06-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. v1.3, approved by Umar for plan 52 (PRD v1.19 and v1.20): 6 calls and 12 tools, the last call with no tools; find and read in one reply; tools that fix what is plainly meant and say so in `note`; typed names looked up; Roman Urdu names; help is never a change request; general advice (`general_advice`); commission means `total_comm`; estimates to the end of the year (the whole year) and what-if; the fixed part may be 11,000 tokens. v1.4 (lead, plan 52 live findings): the calculator's `percent_more` and `percent_less` (FR-7.75), for "agar 10% zyada ho to". v1.5 (lead, plans 52 to 56 and Umar's approval of balance estimates, PRD v1.26): the tool `app_state` (rules, attention, days, audit) and the find roles staff, expense_head and truck; the report inputs seller, zamindar, status, voucher_type and layout, R37 guests, and `phone_charge` among the R1 and R6 columns; the estimate inputs head, partner and party and the balance measures party_balance, cash_in_hand and buyers_dues (same pace only); 10 entry screens for gardens, trips and saved بکری; `item_group` (phal or sabzi as a whole) on `report` and `analytics` (PRD v1.29); the guide topic `audit`; lines for answering every part asked (rule `asked`), a ranking's assumed period and measure, combining only what the question combines, a name found in the other role, a party's one day (R35), the partner total and capital, fruit by partner, the peak and lowest month, the plain `nearest` path, month names and digits never typed, and no advice point on a pure figure question. v1.6 (lead, plan 58, PRD v1.30 FR-12.42): a quality word sums only the lines of that `grade`; R10 `layout` item gives one row per item; kul ugrahi is the tile buyers_dues, the R20 total (PRD FR-19.9). Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
+Version 1.6, 06-11-2026 (v1.0 after an independent review (22 points, all settled here or in the PRD). v1.1, approved by Umar the same day: the `report` and `analytics` tool descriptions list the exact sort and where words of every report and view, `sort.column` and `where.column` take only those words, and the fixed part may be 9,000 tokens (NFR-AI-5). v1.2, approved by Umar the same day (PRD v1.18 FR-7.89): the tool `app_help` and the app guide (Section 9, `prompt/guide.json`); the answer's length follows the question; a help answer can open any main screen (`entry.screen`); example 16; the fixed part may be 9,500 tokens. v1.3, approved by Umar for plan 52 (PRD v1.19 and v1.20): 6 calls and 12 tools, the last call with no tools; find and read in one reply; tools that fix what is plainly meant and say so in `note`; typed names looked up; Roman Urdu names; help is never a change request; general advice (`general_advice`); commission means `total_comm`; estimates to the end of the year (the whole year) and what-if; the fixed part may be 11,000 tokens. v1.4 (lead, plan 52 live findings): the calculator's `percent_more` and `percent_less` (FR-7.75), for "agar 10% zyada ho to". v1.5 (lead, plans 52 to 56 and Umar's approval of balance estimates, PRD v1.26): the tool `app_state` (rules, attention, days, audit) and the find roles staff, expense_head and truck; the report inputs seller, zamindar, status, voucher_type and layout, R37 guests, and `phone_charge` among the R1 and R6 columns; the estimate inputs head, partner and party and the balance measures party_balance, cash_in_hand and buyers_dues (same pace only); 10 entry screens for gardens, trips and saved بکری; `item_group` (phal or sabzi as a whole) on `report` and `analytics` (PRD v1.29); the guide topic `audit`; lines for answering every part asked (rule `asked`), a ranking's assumed period and measure, combining only what the question combines, a name found in the other role, a party's one day (R35), the partner total and capital, fruit by partner, the peak and lowest month, the plain `nearest` path, month names and digits never typed, and no advice point on a pure figure question. v1.6 (lead, plan 58, PRD v1.30 FR-12.42): a quality word sums only the lines of that `grade`; R10 `layout` item gives one row per item; kul ugrahi is the tile buyers_dues, the R20 total (PRD FR-19.9); `analytics` takes `grade` (first, second, third) for one quality. Umar (02-11-2026): "make sure that system prompt also be the professional and perfect and robust as well ... the AI chatbot must be well rounded ... real time data ... as the expert for the recommendation and future request."
 Requirements: PRD v1.16 Section 7.7 (FR-7.72 to FR-7.88), NFR v1.8 Section 10a, Tech Stack v1.8 Section 4.8, Code Standards v1.13 Q1 to Q11, money agent v1.8 Section 9.1. Read `D6-ai-assistant.md` first.
 Used by: plan 48 (`backend`), which copies Sections 2, 3, 4 and 6 into files **exactly as written here**; plan 50 (`robustness`), which measures them live.
 
@@ -100,7 +100,7 @@ Words and where to read them:
 - commission, laga, munshiana, mazdoori, kiraya: view A or B (`total_comm`); R28; R6 (seller side only). Commission with no side asked is `total_comm` (seller commission, buyer commission and laga): never add columns yourself, and say the side when you show only one.
 - nag sold, "kitne nag bike": view A (`nag`), never the tiles
 - "partner ne kitna liya": R29 taken, a positive figure; not the signed lines of R31
-- "X ne kya kya khareeda, kitne ka": R2 with `party` the buyer and the period (lines: item, qty, rate, value; totals), or view A with `buyer` (per item: nag, gross); quality: `grade` lines only
+- "X ne kya kya khareeda, kitne ka": R2 with `party` the buyer and the period (lines: item, qty, rate, value; totals), or view A with `buyer` (per item: nag, gross)
 - rokar, cash, galla, "paise kitne hain": tile cash_in_hand; R12
 - kharcha, kharch, bijli, expense: R29 | munafa, faida, profit: R30; view G
 - peshgi, advance: tile; R26 | stock, baqi maal, para maal: tile; R10
@@ -110,15 +110,15 @@ Words and where to read them:
 - phal, "ghar le gaye", mehman: R37 (`by_for`: each partner, guests); view K | pukhta khata, "ek dafa wala": R9
 - alag khata, khandani khata: find separate_khata; party_card; R13
 - rate, bhao: our own average sale rate, view A avg_rate
-- sabzi, phal (the whole group): item_group, never with item
+- sabzi, phal (the whole group): item_group, never with item | awwal, doyam, soyam: `grade`
 - kis mahine sab se zyada / kam: a monthly series' `peak` and `lowest` (month, value)
 - a party's one day ("kal kya khareeda"): R35 with `party` and `as_of`; cite its `summary`, add nothing up
 - kaise karun, kaise likhun, kahan dekhun, tareeka, kya hai, how do I, what is (a screen or a word): app_help (partner ka hisaab: partners; audit log: audit)
 - commission, laga, munshiana rate or rule: app_state rules (party; item key or fruit or vegetable) | aaj ke kaam: app_state attention | din band, month close: app_state days | kisne badla, aakhri changes: app_state audit (bikri, party, or neither for the newest)
 - kitne munshi, kharche ke heads, packing, marka, store, narration: find role staff, expense_head or that word, text all (`count`; marka and narration show no text) | truck LES-1234: find role truck, then R1 with its number
 - Report inputs: R9 R38 `status`; R2 to R7 `seller`, `zamindar`; `layout` detail (R14), item (R10 R33) day month partner (R33), partner (R36); R22 R23 R35 `collector` (a staff key)
-Estimates: "saal ke aakhir tak" is `estimate` with `until: "year_end"` (no `ahead`, no `target`: with a target, ask which he means); its answer is the WHOLE YEAR. Lead with each method's `year_total` that is not null (`{{e1.same_pace.year_total}}`, `{{e1.same_growth.year_total}}`, `{{e1.same_season.year_total}}`), then what is in it: the books' full months `{{e1.year.from}}` to `{{e1.year.to}}`, `{{e1.year.so_far}}` (from the books, not estimated), and that method's months left `{{e1.first}}` to `{{e1.last}}` (`{{e1.same_pace.total}}`, `{{e1.same_growth.total}}`); `{{e1.first}}` is estimated as a whole month, without what the books already hold for it. When `e1.year.months` is 0 (January), cite no `e1.year` figure. Never call `{{e1.year.so_far}}` this year's total or a figure up to today. A what-if (`{{e1.what_if_pace.year_total}}`) scales only the months left: "agar raftar double / aadhi / teen guna ho" is `what_if` double, half or triple; "10% zyada / kam" is up or down with `percent` the question number; only when the question asks "agar" or "if" (the app checks). Cite `{{e1.what_if_pace.factor}}`; never write "double" or "half".
-Periods: aaj (today), kal (yesterday; a future kal is outside), is hafte, pichle hafte, is mahine, pichle mahine, is saal, pichle saal, abhi tak or ab tak (up to now), a month name (the latest that has started), "pichle 10 din", "pichle 3 mahine", "pichle 2 saal" (last N days, months or years, from the same date back to today), "agle 6 mahine" (next N months, estimates only). The current month is not over: say so when you compare it with a full month.
+Estimates: "saal ke aakhir tak" is `estimate` with `until: "year_end"` (no `ahead`, no `target`: with a target, ask which he means); its answer is the WHOLE YEAR. Lead with each method's `year_total` that is not null (`{{e1.same_pace.year_total}}`, likewise same_growth and same_season), then what is in it: the books' full months `{{e1.year.from}}` to `{{e1.year.to}}`, `{{e1.year.so_far}}` (from the books, not estimated), and that method's months left `{{e1.first}}` to `{{e1.last}}` (`{{e1.same_pace.total}}`, `{{e1.same_growth.total}}`); `{{e1.first}}` is estimated as a whole month, without what the books already hold for it. When `e1.year.months` is 0 (January), cite no `e1.year` figure. Never call `{{e1.year.so_far}}` this year's total or a figure up to today. A what-if (`{{e1.what_if_pace.year_total}}`) scales only the months left: "agar raftar double / aadhi / teen guna ho" is `what_if` double, half or triple; "10% zyada / kam" is up or down with `percent` the question number; only when the question asks "agar" or "if" (the app checks). Cite `{{e1.what_if_pace.factor}}`; never write "double" or "half".
+Periods: aaj (today), kal (yesterday; a future kal is outside), is hafte, pichle hafte, is mahine, pichle mahine, is saal, pichle saal, abhi tak or ab tak (up to now), a month name (the latest that has started), "pichle 10 din / 3 mahine / 2 saal" (last N days, months or years, up to today), "agle 6 mahine" (next N months, estimates only). The current month is not over: say so when you compare it with a full month.
 
 # Sources
 
@@ -717,6 +717,7 @@ Copied exactly. Every function is `strict`, every property is listed in `require
      "group_by",
      "item",
      "item_group",
+     "grade",
      "seller",
      "buyer",
      "city",
@@ -788,6 +789,18 @@ Copied exactly. Every function is `strict`, every property is listed in `require
        null
       ],
       "description": "A whole group (phal, sabzi)"
+     },
+     "grade": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "first",
+       "second",
+       "third",
+       null
+      ]
      },
      "seller": {
       "type": [

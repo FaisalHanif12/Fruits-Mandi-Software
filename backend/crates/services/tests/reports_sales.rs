@@ -138,7 +138,9 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             // PRD v1.29: all the items of a group.
             FilterKind::ItemGroup,
             FilterKind::City,
-            FilterKind::Adda
+            FilterKind::Adda,
+            // PRD FR-12.42: the quality of the line.
+            FilterKind::Grade
         ]
     );
     assert_eq!(r2.group_title_id, "report-group-sales");

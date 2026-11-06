@@ -66,6 +66,8 @@ pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
         .text("je.entry_date >= ?", typed.from.as_deref())
         .text("je.entry_date <= ?", typed.to.as_deref())
         .text("s.payment_type = ?", payment)
+        // The quality of the line (PRD FR-12.42): only the lines of one quality.
+        .text("s.grade = ?", typed.grade.map(|g| g.as_str()))
         .id("s.buyer_account_id = ?", typed.party_id)
         .text("s.pukhta_person_key = ?", typed.person_key.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)

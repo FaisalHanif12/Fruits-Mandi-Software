@@ -131,6 +131,7 @@ pub fn report_fields(filters: &[FilterKind]) -> Vec<String> {
             FilterKind::Guests => out.push("partner"),
             FilterKind::Item => out.push("item"),
             FilterKind::ItemGroup => out.push("item_group"),
+            FilterKind::Grade => out.push("grade"),
             FilterKind::City => out.push("city"),
             FilterKind::Adda => out.push("adda"),
             FilterKind::GroupBy => out.push("group_by"),

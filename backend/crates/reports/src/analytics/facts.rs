@@ -165,6 +165,12 @@ pub(crate) fn conds(
         .id("f.item_id = ?", typed.item_id)
         // All the items of a group (PRD v1.29; views A, B, C, D, G and H, and the lines behind them).
         .item_group("f.item_id", typed.item_group)
+        // The quality of the line (PRD FR-12.42): a sale line never changes its quality, so the
+        // reversal rows of an edit carry the quality of the line they cancel.
+        .text(
+            "f.sale_id IN (SELECT id FROM bikri_sales WHERE grade = ?)",
+            typed.grade.map(|g| g.as_str()),
+        )
         .id("f.item_id = ?", key.item_id)
         .not_in("f.item_id", &key.not_item_ids)
         .id("f.seller_account_id = ?", typed.seller_id)

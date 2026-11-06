@@ -8,6 +8,7 @@ import type { AnalyticsTripView } from './AnalyticsTripView';
 import type { ItemGroup } from './ItemGroup';
 import type { ReportNames } from './ReportNames';
 import type { ReportParty } from './ReportParty';
+import type { SaleGrade } from './SaleGrade';
 
 /**
  * The filters as the backend read them, echoed back to the screen and into the print header.
@@ -37,6 +38,10 @@ export type AnalyticsResolvedFilters = {
    * The item group picked (views A, B, C, D, G and H).
    */
   item_group?: ItemGroup;
+  /**
+   * The quality picked (view A).
+   */
+  grade?: SaleGrade;
   /**
    * The seller.
    */

@@ -429,7 +429,8 @@ const INTENT: &[Entry] = &[
         Cue::Total,
         &[
             "kul", "total", "overall", "sum", "altogether", "poora", "pura", "puri", "poori", "dono", "donon",
-            "teeno", "mila kar", "milakar", "mila ke", "دونوں", "تینوں", "ملا کر",
+            "teeno", "mila kar", "milakar", "mila ke", "kul mila kar", "kul milakar", "دونوں", "تینوں",
+            "ملا کر", "کل ملا کر", "کل ملا کے", "کل میزان",
             "tamam", "ٹوٹل", "مجموعی", "میزان", "پورا", "پوری",
         ],
     ),
@@ -508,7 +509,8 @@ const ROLES: &[Entry] = &[
             "soem", "soum", "soyum", "som", "first quality", "first grade", "second quality",
             "second grade", "third quality", "third grade", "a grade", "b grade", "c grade",
             "grade a", "grade b", "grade c", "a quality", "b quality", "c quality", "quality",
-            "qualities", "grade", "grades", "darja", "darje", "darjay", "darjon", "darjey",
+            "qualities", "grade", "grades", "darja", "darje", "darjay", "darjon", "darjey", "secnd",
+            "sekond", "seccond", "frist", "fisrt", "thrd", "soym", "awl", "avl", "doyam", "dooyam", "dovam", "1st", "2nd", "3rd",
             "اول", "دوم", "سوم", "درجہ", "درجے", "درجات", "درجوں", "کوالٹی", "گریڈ",
         ],
     ),
@@ -521,7 +523,8 @@ const ROLES: &[Entry] = &[
     (
         Cue::RoleItem,
         &[
-            "item", "qisam", "kisam", "qism", "maal ki qisam", "قسم", "قسم مال", "آئٹم",
+            "item", "qisam", "kisam", "qism", "maal ki qisam", "cheez", "cheezon", "chiz", "چیز",
+            "چیزوں", "قسم", "قسم مال", "آئٹم",
         ],
     ),
     (
@@ -629,6 +632,7 @@ const FIGURES: &[Entry] = &[
             "peti", "petiyan", "petiyon", "pati", "crate", "crates", "carton", "cartons", "box",
             "boxes", "bori", "boriyan", "boriyon", "nag", "dana", "kg", "kilo", "kilos", "ton",
             "پیٹی", "پیٹیاں", "پیٹیوں", "کریٹ", "کارٹن", "بوری", "بوریاں", "نگ", "دانہ", "کلو",
+            "quantity", "qty", "quantities", "کوانٹیٹی",
         ],
     ),
     (
@@ -669,7 +673,8 @@ const FIGURES: &[Entry] = &[
         &[
             "stock", "stok", "baqi maal", "baki maal", "baqi mal", "baki mal", "maal bacha",
             "mal bacha", "bacha hua maal", "bacha maal", "unsold", "godown", "gudam", "باقی مال",
-            "سٹاک", "بچا مال", "بچا ہوا مال",
+            "سٹاک", "بچا مال", "بچا ہوا مال", "maal para", "maal pada", "maal padi", "maal pare",
+            "mal para", "mal pada", "mal padi", "مال پڑا", "مال پڑی", "مال پڑے",
         ],
     ),
     (
@@ -716,7 +721,7 @@ const FIGURES: &[Entry] = &[
         Cue::Expense,
         &[
             "kharcha", "kharch", "kharche", "kharchay", "kharcho", "expense", "expenses",
-            "spending", "خرچہ", "خرچ", "خرچے", "اخراجات",
+            "spending", "خرچہ", "خرچ", "خرچے", "خرچوں", "خرچات", "اخراجات",
         ],
     ),
     (
@@ -741,7 +746,7 @@ const FIGURES: &[Entry] = &[
             "sabzi", "sabzian", "sabziyan", "sabziyon", "sabzion", "sabzee", "sabji", "sabjiyan",
             "sabjiyon", "sabzi", "subzi", "subzian", "subziyan", "subziyon", "sabziya", "vegetable",
             "vegetables", "vegitable", "vegitables", "vegetabls", "vegtable", "vegtables", "veggies",
-            "veggie", "vegies", "سبزی", "سبزیاں",
+            "veggie", "vegies", "سبزی", "سبجی", "سبجیاں", "سبجیوں", "سبزیاں",
             "سبزیوں", "سبزیات",
         ],
     ),
@@ -913,7 +918,7 @@ pub(super) const STOP: &[&str] = &[
     "rahi", "rahe", "rha", "rhi", "rhe", "gaya", "bohat", "bahut", "bahot", "zyada", "ziada",
     "ziyada", "kam", "thora", "thoda", "kitni", "kitne", "ka", "ke", "ko", "wapsi", "wapis", "now", "far", "till", "upto", "currently", "current", "muqable", "muqabla",
     "muqabale", "mawazna", "compare", "compared", "comparison", "versus", "vs", "with", "مقابلے",
-    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "jama", "jamaa", "screen", "page", "safha", "صفحہ", "fisad", "feesad", "percent", "percentage", "فیصد", "ga", "gi", "ge", "گا", "گی", "گے", "آخر", "اختتام", "aakhir", "akhir", "end", "khatam", "ختم",
+    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "نام", "کام", "عملے", "عملہ", "jama", "jamaa", "screen", "page", "safha", "صفحہ", "fisad", "feesad", "percent", "percentage", "فیصد", "ga", "gi", "ge", "گا", "گی", "گے", "آخر", "اختتام", "aakhir", "akhir", "end", "khatam", "ختم",
     "did", "go", "went", "going", "doing", "been", "padi", "pada", "padhi", "pade", "پڑی",
     "پڑا", "ausat", "average", "avg", "اوسط", "time", "bar", "baar", "dafa", "dafah", "martaba", "بار", "دفعہ", "اور", "کس", "کسے", "کسی", "پہلے", "پہلا", "واپسی", "واپس", "کا", "کی", "کے",
     "کو", "سے", "نے", "میں", "پر", "تک", "ہے", "ہیں", "تھا", "تھی", "تھے", "ہو", "ہوا", "ہوئی",
@@ -1008,12 +1013,24 @@ pub(super) const SCREEN_NAMES: &[(&str, &[&str])] = &[
     ("backup", &["backup", "back up", "بیک اپ"]),
 ];
 
+/// Other spellings and the oblique forms of the names above ("kharche wali screen"). They find the
+/// screen by its words only: they are not added to the known words, because a word that is only near a
+/// figure word ("kharchon", the expenses) keeps its figure.
+#[rustfmt::skip]
+const SCREEN_FORMS: &[(&str, &[&str])] = &[
+    ("shop_expense", &["kharche", "kharchay", "kharchey", "kharchon", "خرچے"]),
+    ("receipt", &["vasooli", "vasuli", "وصولیاں"]),
+    ("payment", &["adaigy", "adayegi", "ادائیگیاں"]),
+    ("advance", &["peshgee", "pesgi"]),
+    ("partner_capital", &["sarmaye", "سرمائے"]),
+];
+
 /// Where the names of the screens stand in the words of a question: (first word, after the last word,
 /// topic). Found by the words, so a name that another table also holds ("doobi raqam", "cash book") is
 /// found too.
 pub(super) fn screen_windows(words: &[String]) -> Vec<(usize, usize, &'static str)> {
     let mut out = Vec::new();
-    for (topic, names) in SCREEN_NAMES {
+    for (topic, names) in SCREEN_NAMES.iter().chain(SCREEN_FORMS) {
         for name in *names {
             let phrase = words_of(name);
             let size = phrase.len();
@@ -1077,7 +1094,7 @@ pub(super) const ASK_NAMES: &[(&str, &[&str])] = &[
     ("staff_munshi", &["kitne munshi", "munshi kitne", "how many munshi", "how many munshis", "کتنے منشی", "منشی کتنے"]),
     ("staff_collector", &["kitne collector", "collector kitne", "how many collectors", "کتنے اگراہی والے"]),
     ("staff_labour", &["kitne mazdoor", "mazdoor kitne", "kitne labour", "how many labourers", "کتنے مزدور"]),
-    ("staff_all", &["kitne staff", "staff kitne", "kitne log kaam", "how many staff", "کتنا عملہ", "کتنے ملازم"]),
+    ("staff_all", &["kitne staff", "staff kitne", "kitne log kaam", "how many staff", "کتنا عملہ", "کتنے ملازم", "عملے کے نام", "سارے عملے کے نام", "عملے کی فہرست", "تمام عملہ"]),
     ("vouchers_receipt", &["sirf wasooli ki list", "sirf wasooli", "sirf wasooli ke voucher", "wasooli ke voucher", "receipt vouchers", "only receipts", "only receipt vouchers", "صرف وصولی"]),
     ("vouchers_payment", &["sirf adaigi ki list", "sirf adaigi", "sirf adaigi ke voucher", "adaigi ke voucher", "payment vouchers", "only payments", "صرف ادائیگی"]),
     ("vouchers_advance", &["sirf peshgi ki list", "sirf peshgi", "sirf peshgi ke voucher", "peshgi ke voucher", "advance vouchers", "only advances", "صرف پیشگی"]),

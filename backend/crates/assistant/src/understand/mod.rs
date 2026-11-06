@@ -583,6 +583,28 @@ impl GroupWord {
     }
 }
 
+/// The quality of a sale line a word names: awwal (first), doyam (second), soyam (third); PRD FR-12.42.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GradeWord {
+    /// اول, awwal, first quality, A grade.
+    First,
+    /// دوم, doyam, second quality, B grade.
+    Second,
+    /// سوم, soyam, third quality, C grade.
+    Third,
+}
+
+impl GradeWord {
+    /// The word the tools take for the quality (`first`, `second` or `third`).
+    pub fn tool_word(self) -> &'static str {
+        match self {
+            GradeWord::First => "first",
+            GradeWord::Second => "second",
+            GradeWord::Third => "third",
+        }
+    }
+}
+
 /// What the app understood of one question.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Understanding {
@@ -649,12 +671,18 @@ pub struct Understanding {
     /// answer for one of them: such a question has no instant figure, and its read is the lines of the
     /// sales (R2), which carry the quality.
     pub quality: bool,
+    /// Which quality it names, when one word does (awwal, doyam, soyam and their spellings). `None`
+    /// with `quality` true asks all the qualities ("kis darje mein bike"): the lines carry each one.
+    pub grade: Option<GradeWord>,
     /// True when the question asks for the last one ("aakhri", "last", "pichla") and names no period:
     /// the last rate of an item sold to a buyer is the newest line of his sales (R2).
     pub last_one: bool,
     /// True when the question asks in how many months something sold ("mooli kitne mahine biki hai"):
     /// the item's sales by month (view D) hold the answer.
     pub months_asked: bool,
+    /// For that question: the first day of the books and today, ISO. "Kitne mahine" with no period asks
+    /// all the books, so view D is read for these days, never for the tool's own default period.
+    pub months_range: Option<(String, String)>,
     /// True when the question asks whom to collect from first ("kis se pehle wasooli karon"): the
     /// buyers' dues, oldest first (R20 sorted by days), are the answer.
     pub oldest: bool,

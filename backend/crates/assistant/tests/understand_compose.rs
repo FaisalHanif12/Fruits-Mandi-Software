@@ -1691,6 +1691,28 @@ fn a_request_to_open_a_screen_is_answered_with_its_topic_and_route() {
         partner_locked: false,
     };
     let cases: &[(&str, &str, EntryScreen)] = &[
+        // Fillers ("wali", "zara", "khol do", "ki"): the same screens.
+        (
+            "kharche wali screen khol do zara",
+            "shop_expense",
+            EntryScreen::Kharcha,
+        ),
+        (
+            "wasooli wali screen khol do zara",
+            "receipt",
+            EntryScreen::Wasooli,
+        ),
+        ("peshgi wali screen khol do", "advance", EntryScreen::Peshgi),
+        (
+            "sarmaye wali screen kholo",
+            "partner_capital",
+            EntryScreen::Sarmaya,
+        ),
+        (
+            "adaigi ki screen khol do zara",
+            "payment",
+            EntryScreen::Adaigi,
+        ),
         ("take me to the sale book", "bikri_book", EntryScreen::Bikri),
         ("wasooli screen dikhao", "receipt", EntryScreen::Wasooli),
         ("مجھے وصولی پر لے چلیں", "receipt", EntryScreen::Wasooli),

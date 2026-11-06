@@ -17,6 +17,12 @@
 //! only on the dimensions the cited view or report takes. A scope that cannot be told (a date given
 //! as a reference to the period result) is never a violation.
 //!
+//! A quality (grade) of a sale line is a dimension like an item: "اول کیلا کی sale آج" asks for the
+//! lines of the first quality only (75,980), and the whole banana of the day (183,640) is another
+//! figure. When the planned read carries a `grade`, a cited report that takes the filter must carry
+//! it too (live run 2, the lead's note). View A and the reports with the Grade filter take it; the
+//! other views hold no quality.
+//!
 //! Example: the question "phal ki is saal ki sale" plans view A with `item_group: fruit` and the
 //! dates of this year; an answer that cites a view A with `item_group: null` is refused.
 
@@ -43,6 +49,8 @@ pub struct AskScope {
     /// The party, as his key (`a20`), in whichever of `party`, `buyer`, `seller` or `zamindar` the
     /// planned read carries it.
     pub party: Option<String>,
+    /// The quality of a sale line (`first`, `second` ...), as the planned read carries it.
+    pub grade: Option<String>,
 }
 
 fn text_of(input: &Value, field: &str) -> Option<String> {
@@ -74,6 +82,7 @@ impl AskScope {
             item: text_of(input, "item"),
             group: text_of(input, "item_group"),
             party,
+            grade: text_of(input, "grade"),
         };
         (scope != AskScope::default()).then_some(scope)
     }
@@ -105,6 +114,11 @@ fn is_word(text: &str) -> bool {
     !text.is_empty() && text.chars().all(|c| c.is_ascii_lowercase())
 }
 
+/// True for a quality as the tools write it: letters, digits and `_` (`first`, `a`, `grade_2`).
+fn is_grade(text: &str) -> bool {
+    !text.is_empty() && text.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
 /// Whether a field of a cited read breaks the scope: it was dropped (null), or it is another day or
 /// another key. A text that cannot be told (a reference) is not a violation.
 fn breaks(wanted: &Option<String>, field: Option<&Value>, same_kind: fn(&str) -> bool) -> bool {
@@ -127,13 +141,14 @@ fn violation(scope: &AskScope, input: &Value, takes: &Takes) -> bool {
     let period_breaks = takes.period && !dates_ok;
     let item_breaks = takes.item && breaks(&scope.item, input.get("item"), is_key);
     let group_breaks = takes.group && breaks(&scope.group, input.get("item_group"), is_word);
+    let grade_breaks = takes.grade && breaks(&scope.grade, input.get("grade"), is_grade);
     let party_breaks = takes.party
         && scope.party.is_some()
         && ["party", "buyer", "seller", "zamindar"]
             .iter()
             .filter_map(|f| input.get(*f))
             .all(|v| v.is_null() || v.as_str() == Some(""));
-    period_breaks || item_breaks || group_breaks || party_breaks
+    period_breaks || item_breaks || group_breaks || party_breaks || grade_breaks
 }
 
 /// The dimensions a cited view or report takes.
@@ -143,6 +158,7 @@ struct Takes {
     item: bool,
     group: bool,
     party: bool,
+    grade: bool,
 }
 
 fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
@@ -150,11 +166,27 @@ fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
         "analytics" => {
             let view = input.get("view").and_then(Value::as_str).unwrap_or("");
             let filters = VIEWS_WITH_FILTERS.contains(&view);
+            // The quality of the sale lines: the views whose catalogue entry has the filter (view A,
+            // PRD FR-12.42).
+            let grade = serde_json::from_value::<mandi_reports::analytics::AnalyticsView>(
+                Value::String(view.to_owned()),
+            )
+            .ok()
+            .and_then(|v| {
+                mandi_reports::analytics::catalog()
+                    .into_iter()
+                    .find(|e| e.id == v)
+            })
+            .is_some_and(|e| {
+                e.filters
+                    .contains(&mandi_reports::analytics::AnalyticsFilterKind::Grade)
+            });
             Some(Takes {
                 period: true,
                 item: filters,
                 group: filters,
                 party: filters,
+                grade,
             })
         }
         "report" => {
@@ -173,6 +205,7 @@ fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
                 item: has(F::Item),
                 group: has(F::ItemGroup),
                 party: has(F::Party) || has(F::Seller) || has(F::Zamindar),
+                grade: has(F::Grade),
             })
         }
         _ => None,
@@ -304,8 +337,7 @@ mod tests {
             from: Some("2026-01-01".into()),
             to: Some("2026-11-05".into()),
             item: Some("i1".into()),
-            group: None,
-            party: None,
+            ..AskScope::default()
         };
         let takes = takes_of("analytics", &json!({"view": "A"})).unwrap();
         let right = json!({"view": "A", "from": "2026-01-01", "to": "2026-11-05", "item": "i1"});
@@ -328,5 +360,55 @@ mod tests {
             &json!({"view": "G", "from": "2026-01-01", "to": "2026-11-05"}),
             &trend
         ));
+    }
+    #[test]
+    fn a_report_that_takes_the_quality_must_carry_the_quality_of_the_question() {
+        // "اول کیلا کی sale آج": the register of the day for the item, the first quality only.
+        let planned = vec![(
+            "report".to_owned(),
+            json!({"id": "R2", "from": "2026-11-05", "to": "2026-11-05", "item": "i1",
+                   "grade": "first"}),
+        )];
+        let scope = AskScope::of_planned(&planned).unwrap();
+        assert_eq!(scope.grade.as_deref(), Some("first"));
+        let takes = takes_of("report", &json!({"id": "R2"})).unwrap();
+        assert!(takes.grade, "R2 takes the quality filter");
+        let right = json!({"id": "R2", "from": "2026-11-05", "to": "2026-11-05", "item": "i1",
+                           "grade": "first"});
+        assert!(!violation(&scope, &right, &takes));
+        // The whole item of the day, with no quality: 183,640 and not 75,980.
+        let none = json!({"id": "R2", "from": "2026-11-05", "to": "2026-11-05", "item": "i1",
+                          "grade": null});
+        assert!(violation(&scope, &none, &takes));
+        let missing = json!({"id": "R2", "from": "2026-11-05", "to": "2026-11-05", "item": "i1"});
+        assert!(violation(&scope, &missing, &takes));
+        // Another quality.
+        let other = json!({"id": "R2", "from": "2026-11-05", "to": "2026-11-05", "item": "i1",
+                           "grade": "second"});
+        assert!(violation(&scope, &other, &takes));
+        // View A takes the quality (PRD FR-12.42): a planned view A with the grade refuses a cited
+        // view A without it; the other views hold no quality and are not asked for one. A question
+        // with no quality asks nothing of the cited read.
+        let view_a = takes_of("analytics", &json!({"view": "A"})).unwrap();
+        assert!(view_a.grade);
+        let planned_view = vec![(
+            "analytics".to_owned(),
+            json!({"view": "A", "from": "2026-11-05", "to": "2026-11-05", "item": "i1",
+                   "grade": "first"}),
+        )];
+        let view_scope = AskScope::of_planned(&planned_view).unwrap();
+        assert_eq!(view_scope.grade.as_deref(), Some("first"));
+        let whole_item = json!({"view": "A", "from": "2026-11-05", "to": "2026-11-05",
+                                "item": "i1", "grade": null});
+        assert!(violation(&view_scope, &whole_item, &view_a));
+        let first_only = json!({"view": "A", "from": "2026-11-05", "to": "2026-11-05",
+                                "item": "i1", "grade": "first"});
+        assert!(!violation(&view_scope, &first_only, &view_a));
+        assert!(!takes_of("analytics", &json!({"view": "B"})).unwrap().grade);
+        let plain = AskScope {
+            item: Some("i1".into()),
+            ..AskScope::default()
+        };
+        assert!(!violation(&plain, &none, &takes));
     }
 }

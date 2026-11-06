@@ -408,9 +408,6 @@ const PUKHTA_CODES: [&str; 2] = ["0030", "0031"];
 ///   row: the record's own names (`item:سیب|Apple`, `partner:الف|Partner A`), because an item and a
 ///   partner have one name each in the books.
 fn identity_of(entry: &NamePath) -> Option<String> {
-    if let Some(code) = entry.name.code.as_deref() {
-        return (!PUKHTA_CODES.contains(&code)).then(|| format!("code:{code}"));
-    }
     let names = format!("{}|{}", entry.name.name_ur, entry.name.name_en);
     let is_key = |prefix: char| {
         entry.row_key.as_deref().is_some_and(|key| {
@@ -418,9 +415,21 @@ fn identity_of(entry: &NamePath) -> Option<String> {
                 .is_some_and(|rest| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()))
         })
     };
-    match entry.path.rsplit('.').next() {
-        Some("name") if is_key('i') => Some(format!("item:{names}")),
-        Some("name") if is_key('s') => Some(format!("partner:{names}")),
+    let last = entry.path.rsplit('.').next();
+    // An item or a partner is told by its key, with or without the master's code on its name: the
+    // item a `find` match names (key `i8`, with its item code) and the same item's row in a view
+    // (`rows.i8`, no code) are one record. Told by the code first, they were two, a typed item name
+    // was never put back, and every question about an item that read it twice (the `find`, then
+    // view A) cost a rewrite call (hidden round 4, one-call share).
+    match last {
+        Some("name") if is_key('i') => return Some(format!("item:{names}")),
+        Some("name") if is_key('s') => return Some(format!("partner:{names}")),
+        _ => {}
+    }
+    if let Some(code) = entry.name.code.as_deref() {
+        return (!PUKHTA_CODES.contains(&code)).then(|| format!("code:{code}"));
+    }
+    match last {
         Some("item" | "packing") => Some(format!("item:{names}")),
         _ => None,
     }

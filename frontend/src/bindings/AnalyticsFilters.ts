@@ -7,6 +7,7 @@ import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
 import type { ItemGroup } from './ItemGroup';
 import type { ReportPartyFilter } from './ReportPartyFilter';
+import type { SaleGrade } from './SaleGrade';
 
 /**
  * The filters of a run, as the screen sends them (PRD 18.1). Dates are text as typed
@@ -39,6 +40,11 @@ export type AnalyticsFilters = {
    * is empty under a group (PRD v1.31). Left out of the wire form when none.
    */
   item_group?: ItemGroup;
+  /**
+   * Only the sale lines of one quality, اول، دوم or سوم (view A; PRD FR-12.42). Missing means
+   * every line. Left out of the wire form when none.
+   */
+  grade?: SaleGrade;
   /**
    * A seller.
    */

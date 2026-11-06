@@ -26,6 +26,8 @@ pub(crate) struct Typed {
     pub(crate) group_by: AnalyticsGroupBy,
     /// The picked item.
     pub(crate) item_id: Option<i64>,
+    /// The picked quality of the sale lines (view A).
+    pub(crate) grade: Option<mandi_core::bikri::SaleGrade>,
     /// The picked item group: all its items (views A, B, C, D, G and H).
     pub(crate) item_group: Option<mandi_core::rules::ItemGroup>,
     /// The picked seller.
@@ -216,6 +218,7 @@ pub(crate) fn resolve(
         group_by: AnalyticsGroupBy::Month,
         item_id: None,
         item_group: None,
+        grade: None,
         seller_id: None,
         buyer_id: None,
         person_key: None,
@@ -406,6 +409,15 @@ pub(crate) fn resolve(
         }
         typed.item_group = Some(group);
         typed.resolved.item_group = Some(group);
+    }
+
+    // The quality of the sale lines belongs to view A (PRD FR-12.42).
+    if let Some(grade) = input.grade {
+        if view != AnalyticsView::A {
+            problems.push(FieldError::new(ErrorCode::ErrOutOfRange, "filters.grade"));
+        }
+        typed.grade = Some(grade);
+        typed.resolved.grade = Some(grade);
     }
 
     // The comparison needs a closed period.

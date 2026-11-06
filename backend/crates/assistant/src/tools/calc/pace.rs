@@ -254,7 +254,7 @@ pub(super) fn run(
             ));
         }
     }
-    draft.source = Some(source_of(kind, party, subject, span));
+    draft.source = Some(source_of(kind, party, subject, span, &env.today.to_iso()));
     Ok(draft)
 }
 
@@ -354,13 +354,15 @@ fn days_of(first: YearMonth, last: YearMonth) -> Option<(String, String)> {
     Some((from.to_iso(), to.to_iso()))
 }
 
-/// The screen the buttons open: the party's ledger, the cash book over the months of the working,
-/// or the buyers' dues.
+/// The screen the buttons open: the party's ledger, the cash book from the first month of the
+/// working to today (so the cash now, the starting point of the estimate, is its closing cash), or
+/// the buyers' dues. `today` is `YYYY-MM-DD`.
 fn source_of(
     kind: BalanceKind,
     party: Option<AnswerRecord>,
     subject: BalanceSubject,
     span: Option<(YearMonth, YearMonth)>,
+    today: &str,
 ) -> AnswerSource {
     let report = |id: ReportId, filters: SourceReportFilters| AnswerSource::Report {
         result_id: String::new(),
@@ -374,8 +376,11 @@ fn source_of(
             party,
         },
         (BalanceKind::Cash, ..) => {
+            // The working's months and the cash now are both in it: the book runs to today, so its
+            // closing cash is the figure the estimate starts from (hidden round 4, H381).
             let (from, to) = span
                 .and_then(|(first, last)| days_of(first, last))
+                .map(|(from, last_day)| (from, today.to_owned().max(last_day)))
                 .unwrap_or_default();
             report(
                 ReportId::R12,

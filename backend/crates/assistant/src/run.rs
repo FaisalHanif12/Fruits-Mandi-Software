@@ -1177,6 +1177,8 @@ impl<'a> Run<'a> {
         let mut echoed = false;
         let mut digits_echoed = false;
         let mut refs_fixed = false;
+        let mut kind_set = false;
+        let mut months_fixed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -1310,6 +1312,41 @@ impl<'a> Run<'a> {
                         refs_fixed = true;
                         if let Some(last) = turn.timing.calls.last_mut() {
                             last.repaired.push("reference".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    // A month typed by name ("ستمبر 2026") where the results hold that month, as the
+                    // `label` of the period or a row's `month`: it is put back as the reference, with
+                    // every rule checked again, instead of a rewrite call (hidden round 4, H394).
+                    if !months_fixed
+                        && failures.iter().any(|x| x.rule == "month")
+                        && let Some(fixed) =
+                            map_texts(&content, &|text| echo::put_months_back(text, &state))
+                    {
+                        months_fixed = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("month".to_owned());
+                        }
+                        written_by_model.get_or_insert_with(|| content.clone());
+                        content = fixed;
+                        continue;
+                    }
+                    // An estimate figure under the plain kind, for a question the app itself planned an
+                    // estimate for (the Owner asked "next 6 months", "till year end"): the estimate is
+                    // the app's own and the Owner asked for it, so only the label is wrong. The app
+                    // sets it, with every rule checked again, instead of a rewrite that may flip the
+                    // kind (hidden round 4, H364 and H389). An answer to a question the app planned no
+                    // estimate for keeps the check as it was.
+                    if !kind_set
+                        && failures.iter().any(|x| x.rule == "estimate_kind")
+                        && turn.planned.iter().any(|(tool, _)| tool == "estimate")
+                        && let Some(fixed) = echo::as_estimate(&content)
+                    {
+                        kind_set = true;
+                        if let Some(last) = turn.timing.calls.last_mut() {
+                            last.repaired.push("kind".to_owned());
                         }
                         written_by_model.get_or_insert_with(|| content.clone());
                         content = fixed;

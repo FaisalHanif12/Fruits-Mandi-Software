@@ -74,6 +74,9 @@ pub(crate) fn filter_facts(
         };
         facts.push(fact(label, String::new()));
     }
+    if let Some(grade) = filters.grade {
+        facts.push(fact(crate::reports::ids::grade_id(grade), String::new()));
+    }
     if let Some(city) = &filters.city {
         facts.push(fact(ids::FILTER_CITY, fmt.names(city)));
     }

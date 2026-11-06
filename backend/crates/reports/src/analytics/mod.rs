@@ -151,6 +151,10 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
             .map_or(kinds.len(), |i| i.saturating_add(1));
         kinds.insert(at, AnalyticsFilterKind::ItemGroup);
     }
+    // The quality of the sale lines: view A only (PRD FR-12.42).
+    if view == AnalyticsView::A {
+        kinds.push(AnalyticsFilterKind::Grade);
+    }
     kinds
 }
 

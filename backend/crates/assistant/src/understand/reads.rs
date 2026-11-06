@@ -58,8 +58,8 @@ use super::lexicon::{Cue, key};
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    Doubt, FigureKind, GroupWord, Intent, ItemHit, ListOver, Measure, Outcome, PartyHit, PartyRole,
-    PeriodKind, PeriodRef, Rank, RecordHit, RecordKind, Understanding,
+    Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver, Measure, Outcome, PartyHit,
+    PartyRole, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind, Understanding,
 };
 
 /// One read to do before the first call: a tool and its input, as the model would send it.
@@ -451,6 +451,26 @@ pub(super) fn other_measure(
                 )
             })
             .count();
+        // "سبجی کی quantity کل کتنی تھی": the quantity of one item or group is the nag sold, read from the
+        // same views as the amount; the answer is the model's (no instant figure).
+        const COUNT: [&str; 7] = [
+            "qty",
+            "quantity",
+            "quantities",
+            "tadad",
+            "taadad",
+            "tadaad",
+            "تعداد",
+        ];
+        let group_word = scan.has_exact(Cue::VegetableWord) || scan.has_exact(Cue::FruitWord);
+        if (has_item || group_word)
+            && has(&COUNT)
+            && !cash_sales
+            && !side_asked(scan)
+            && !MEASURE.iter().any(|w| !COUNT.contains(w) && has(&[w]))
+        {
+            return Measure::Quantity;
+        }
         if flows >= 2
             && has(&PERCENT)
             && !cash_sales
@@ -623,17 +643,88 @@ struct An {
     buyer: Option<String>,
     sort: Option<Value>,
     rows: Option<u32>,
+    /// The quality of the lines, `first`, `second` or `third`; written (null if not set) only when the
+    /// tools' schema has the `grade` filter.
+    grade: Option<&'static str>,
 }
 
 fn analytics(view: &str, a: An) -> PlannedRead {
+    let mut input = json!({
+        "view": view, "from": a.from, "to": a.to, "group_by": null, "item": a.item,
+        "item_group": a.item_group, "seller": a.seller, "buyer": a.buyer, "city": null,
+        "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
+        "side": null, "compare": null, "sort": a.sort, "rows": a.rows
+    });
+    if grade_ready()
+        && let Some(map) = input.as_object_mut()
+    {
+        map.insert("grade".to_owned(), json!(a.grade));
+    }
     PlannedRead {
         tool: "analytics",
-        input: json!({
-            "view": view, "from": a.from, "to": a.to, "group_by": null, "item": a.item,
-            "item_group": a.item_group, "seller": a.seller, "buyer": a.buyer, "city": null,
-            "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
-            "side": null, "compare": null, "sort": a.sort, "rows": a.rows
-        }),
+        input,
+    }
+}
+
+/// True when the tools' schema (the prompt's `tools.json`) has the quality filter `grade` (on analytics,
+/// view A, only): the reads of a question about one quality then carry it. Until then such a question
+/// reads the sale lines.
+fn grade_ready() -> bool {
+    include_str!("../../prompt/tools.json").contains("\"grade\"")
+}
+
+/// The quality a question names: awwal, doyam, soyam, اول دوم سوم, first, second or third quality, A, B or
+/// C grade, and their usual misspellings. The English ordinals count only beside a quality word or a
+/// named item or group ("second apple rate"); "doyam", "soyam" and their spellings count anywhere.
+///
+/// Example: "doyam kele ka aaj ka rate" is the second quality.
+pub(super) fn grade_of(scan: &Scan, with_goods: bool) -> Option<GradeWord> {
+    const FIRST: [&str; 10] = [
+        "awwal", "awal", "aval", "avval", "awl", "avl", "اول", "1st", "frist", "fisrt",
+    ];
+    const SECOND: [&str; 9] = [
+        "doyam", "doem", "doum", "doyum", "dom", "dovam", "دوم", "2nd", "dooyam",
+    ];
+    const THIRD: [&str; 8] = [
+        "soyam", "soem", "soum", "soyum", "soym", "som", "سوم", "3rd",
+    ];
+    const FIRST_EN: [&str; 3] = ["first", "frst", "firt"];
+    const SECOND_EN: [&str; 4] = ["second", "secnd", "sekond", "seccond"];
+    const THIRD_EN: [&str; 3] = ["third", "thrd", "thired"];
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+    let quality_word = has(&[
+        "quality",
+        "qualities",
+        "grade",
+        "grades",
+        "darja",
+        "darje",
+        "darjay",
+        "درجہ",
+        "درجے",
+        "کوالٹی",
+        "گریڈ",
+    ]);
+    let letter = |l: &str| {
+        let words: Vec<&str> = scan.words.iter().map(String::as_str).collect();
+        words.windows(2).any(|p| {
+            matches!(p, [a, b] if (*a == l && matches!(*b, "grade" | "quality" | "class")) || (*b == l && matches!(*a, "grade" | "quality" | "class")))
+        })
+    };
+    let english = quality_word || with_goods;
+    let mut found: Vec<GradeWord> = Vec::new();
+    if has(&FIRST) || (english && has(&FIRST_EN)) || letter("a") {
+        found.push(GradeWord::First);
+    }
+    if has(&SECOND) || (english && has(&SECOND_EN)) || letter("b") {
+        found.push(GradeWord::Second);
+    }
+    if has(&THIRD) || (english && has(&THIRD_EN)) || letter("c") {
+        found.push(GradeWord::Third);
+    }
+    match found.as_slice() {
+        [one] => Some(*one),
+        _ => None,
     }
 }
 
@@ -752,6 +843,8 @@ pub(super) struct Planned {
 
 /// The most things (parties or items) one question may name and still be read by the app.
 const MAX_THINGS: usize = 3;
+/// The rows of a ranking asked with no number ("sab se zyada maal kis cheez ka para hai"): the top few.
+const RANKED_ROWS: u32 = 5;
 
 /// What a plan collects: the finds its reads need, and the reads.
 #[derive(Default)]
@@ -801,6 +894,14 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 
 /// The reads of a question and the figures an instant answer gives from them.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
+    // "total agrahi collector wise batao": a balance list asked by its title, with a figure word beside
+    // it. The title wins (as in a print): the list as of today.
+    if let Some(id) = titled_balance_list(u) {
+        return Some(Planned {
+            reads: vec![report(id, Rep::default())],
+            lines: Vec::new(),
+        });
+    }
     // "pichle mahine se zyada", or two periods named with no comparing word ("is mahine aur pichle
     // mahine ka commission"): both periods are read, and the model writes the difference.
     if u.compare
@@ -899,6 +1000,40 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         plan.lines
     };
     (!reads.is_empty()).then_some(Planned { reads, lines })
+}
+
+/// The balance list a question names by its title ("collector wise", R22) with no party, item or period:
+/// the list as of today holds the total and a row for each. Its figure words ("total agrahi") only say
+/// what it is about.
+///
+/// Example: "total agrahi collector wise batao" is R22.
+fn titled_balance_list(u: &Understanding) -> Option<&'static str> {
+    if !u.sure
+        || !matches!(u.intent.value, Intent::Figure | Intent::List)
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || !u.periods.is_empty()
+        || u.happened
+        || u.compare
+    {
+        return None;
+    }
+    u.figures.value.iter().find_map(|k| match k {
+        FigureKind::Report(id) if matches!(*id, "R16" | "R17" | "R22" | "R26" | "R32") => Some(*id),
+        _ => None,
+    })
+}
+
+/// True when the only doubt of a question is that it names several periods or compares them, and the
+/// app can read each period (`comparison_plan`): the question is then sure of what it asks.
+pub(super) fn periods_are_planned(u: &Understanding) -> bool {
+    u.doubts
+        .iter()
+        .all(|d| matches!(d, Doubt::Comparison | Doubt::SeveralPeriods))
+        && !u.doubts.is_empty()
+        && comparison_plan(u).is_some()
 }
 
 /// The reads of one figure over two to four periods ("is mahine ka commission pichle mahine se kitna
@@ -1079,11 +1214,11 @@ fn oldest_dues_plan(u: &Understanding) -> Option<Planned> {
 }
 
 /// The month by month sales of one item, for "in how many months did it sell" ("mooli kitne mahine
-/// biki hai"): view D (item by month) for the item over all dates, with the item found first. The model
-/// counts the months with a figure. No period (the question asks it of all the books) and no instant
-/// answer.
+/// biki hai"): view D (item by month) for the item from the first day of the books to today, with the
+/// item found first. The model counts the months with a figure. No period named (the question asks all
+/// the books) and no instant answer.
 ///
-/// Example: Radish is view D with the item and `group_by` month.
+/// Example: Radish is view D with the item, `group_by` month, from the first day to today.
 fn months_plan(u: &Understanding) -> Option<Planned> {
     if u.intent.value != Intent::Figure
         || !u.periods.is_empty()
@@ -1093,6 +1228,9 @@ fn months_plan(u: &Understanding) -> Option<Planned> {
     {
         return None;
     }
+    // All the books: the first day to today. Without them the tool takes its own default period and
+    // the count of months is wrong (live run, "mooli kitne mahine biki hai": 1 for 6).
+    let (from, to) = u.months_range.clone()?;
     let [item] = u.items.as_slice() else {
         return None;
     };
@@ -1104,7 +1242,7 @@ fn months_plan(u: &Understanding) -> Option<Planned> {
     plan.read(PlannedRead {
         tool: "analytics",
         input: json!({
-            "view": "D", "from": null, "to": null, "group_by": "month", "item": goods.key,
+            "view": "D", "from": from, "to": to, "group_by": "month", "item": goods.key,
             "item_group": null, "seller": null, "buyer": null, "city": null, "adda": null,
             "garden": null, "trip": null, "goods": null, "partner": null, "side": null,
             "compare": null, "sort": null, "rows": null
@@ -1242,7 +1380,29 @@ fn quality_plan(u: &Understanding) -> Option<Planned> {
             rep.party = Some(key);
         }
     }
-    plan.read(report("R2", rep));
+    match u.grade {
+        // One quality named, and the tools take the filter: the figures of that quality (view A with the
+        // item or group, the period and the grade); never the figure of all the qualities.
+        Some(grade) if grade_ready() => {
+            let mut a = An {
+                from: rep.from.clone(),
+                to: rep.to.clone(),
+                item: rep.item.clone(),
+                item_group: rep.item_group,
+                grade: Some(grade.tool_word()),
+                ..An::default()
+            };
+            if rep.seller.is_some() {
+                a.seller = rep.seller.clone();
+            }
+            if rep.party.is_some() {
+                a.buyer = rep.party.clone();
+            }
+            plan.read(analytics("A", a));
+        }
+        // No quality named ("kis darje mein bike"), or no filter yet: the lines, each with its quality.
+        _ => plan.read(report("R2", rep)),
+    }
     let mut reads = Vec::new();
     if let Some(p) = period {
         reads.push(period_read(p)?);
@@ -1269,7 +1429,7 @@ fn group_plan(u: &Understanding, group: GroupWord) -> Option<Planned> {
             reads: vec![report(
                 "R10",
                 Rep {
-                    sort: Some(sorted("days", "desc")),
+                    layout: Some("item"),
                     item_group: word,
                     ..Rep::default()
                 },
@@ -1343,15 +1503,34 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
         FigureKind::Expense => "shop_expenses",
         FigureKind::Profit => "profit",
         FigureKind::Receipts => "receipts",
+        // A balance now and the months ahead: cash in hand, the buyers' dues, or one party's balance.
+        FigureKind::Cash => "cash_in_hand",
+        FigureKind::Dues => "buyers_dues",
+        FigureKind::Balance | FigureKind::Ledger | FigureKind::Statement => "party_balance",
         _ => return None,
     };
+    let balance_now = matches!(measure, "cash_in_hand" | "buyers_dues" | "party_balance");
     let mut plan = Plan::default();
     // The real part: the same read as the question would have without the forecast.
     if let Some(real) = past.first() {
         figure_of_kind(u, *kind, Some(real), &mut plan)?;
+    } else if balance_now {
+        // What it is now: the card of the party, or the tile of the shop.
+        let now = match measure {
+            "party_balance" => FigureKind::Balance,
+            other => {
+                if other == "cash_in_hand" {
+                    FigureKind::Cash
+                } else {
+                    FigureKind::Dues
+                }
+            }
+        };
+        figure_of_kind(u, now, None, &mut plan)?;
     }
     // Who the estimate is for: one item, one seller or buyer, one expense head, one partner.
     let (mut item, mut seller, mut buyer, mut head, mut partner) = (None, None, None, None, None);
+    let mut party = None;
     for p in &u.parties {
         let Outcome::Found(hit) = &p.outcome else {
             continue;
@@ -1369,6 +1548,11 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
             (PartyRole::Partner, "profit") => {
                 plan.find(&p.text, "partner");
                 partner = key;
+            }
+            // One party's balance: his key goes in `party`; a pukhta person has none.
+            (PartyRole::Seller | PartyRole::Buyer, "party_balance") if !hit.pukhta => {
+                plan.find(&p.text, role_word(hit.role)?);
+                party = key;
             }
             _ => return None,
         }
@@ -1397,7 +1581,7 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
         tool: "estimate",
         input: json!({
             "measure": measure, "item": item, "seller": seller, "buyer": buyer,
-            "garden": null, "trip": null, "head": head, "partner": partner, "party": null,
+            "garden": null, "trip": null, "head": head, "partner": partner, "party": party,
             "ahead": ahead, "until": until, "what_if": null, "percent": null, "target": null
         }),
     });
@@ -2267,6 +2451,30 @@ fn list(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Optio
     if u.figures.value.len() > 1 {
         return None;
     }
+    // "پچھلے مہینے کے تمام خرچوں کی فہرست": the expenses of the period (R29); "ڈوبی رقم میں کس کس کا نام
+    // ہے": the dead amount, party by party (R38). No party, item or group beside them.
+    if item.is_none() && group.is_none() {
+        match measure {
+            Some(FigureKind::Expense) if ask.rank.is_none() => {
+                let (from, to) = dates(period);
+                plan.read(report(
+                    "R29",
+                    Rep {
+                        from,
+                        to,
+                        ..Rep::default()
+                    },
+                ));
+                plan.dated = period.is_some();
+                return Some(());
+            }
+            Some(FigureKind::DeadAmount) if period.is_none() => {
+                plan.read(report("R38", Rep::default()));
+                return Some(());
+            }
+            _ => {}
+        }
+    }
     // "kis kis ke dues hain": the figure says whose (dues are buyers', payables sellers', goods
     // items'). A balance alone could be either, so it is not guessed.
     // A group of items ("kaun si sabzi") is a list of items, whatever "kaun si" looks like, unless the
@@ -2317,11 +2525,17 @@ fn list(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Optio
         }
         // The goods left, oldest first.
         (ListOver::Items, Some(FigureKind::Stock)) if period.is_none() => {
+            // "sab se zyada maal kis cheez ka para hai": the item with the most goods left first.
+            let ranked = ask
+                .rank
+                .map(|_| (sorted("balance", order(least)), ask.n.or(Some(RANKED_ROWS))));
+            let (sort, rows) = ranked.unzip();
             plan.read(report(
                 "R10",
                 Rep {
-                    sort: Some(sorted("days", "desc")),
-                    rows: ask.n,
+                    layout: Some("item"),
+                    sort,
+                    rows: rows.unwrap_or(ask.n),
                     item_group: group,
                     ..Rep::default()
                 },
