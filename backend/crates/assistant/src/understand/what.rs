@@ -54,6 +54,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         guests: false,
         quality: false,
         grade: None,
+        capital_flow: None,
+        garden_goods: false,
         last_one: false,
         months_asked: false,
         months_range: None,
@@ -1096,6 +1098,9 @@ pub(super) fn assemble(
     let roles_found = roles.clone();
     let has_item_found = names.items.iter().any(|i| i.outcome.hit().is_some());
     let grade = super::reads::grade_of(scan, has_item_found || item_group.is_some());
+    let names_have_garden = roles_found
+        .iter()
+        .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
     let mut understanding = Understanding {
         intent,
         parties: names.parties,
@@ -1117,6 +1122,8 @@ pub(super) fn assemble(
         guests: scan.has_exact(Cue::Guests),
         quality: scan.has_exact(Cue::Quality) || grade.is_some(),
         grade,
+        capital_flow: super::reads::capital_flow(scan),
+        garden_goods: super::reads::garden_goods(scan, &names_have_garden),
         last_one: super::reads::last_one(scan),
         months_asked: scan.has_exact(Cue::HowManyMonths),
         months_range: scan

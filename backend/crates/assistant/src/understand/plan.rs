@@ -406,7 +406,13 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
     };
     // A named question is never widened to a wider report (money review BUG-1, BUG-2): a name the
     // app cannot place, an item or a scope the links cannot filter by, and the report is the model's.
-    let blocked = input.unknown_words || input.scope_missing;
+    // A staff member (a collector) is one of them: no report link has his filter.
+    let blocked = input.unknown_words
+        || input.scope_missing
+        || names
+            .records
+            .iter()
+            .any(|r| matches!(&r.outcome, Outcome::Found(h) if h.kind == RecordKind::Staff));
     let note = |report: ReportPlan| {
         if blocked {
             return none(Doubt::NoReport);

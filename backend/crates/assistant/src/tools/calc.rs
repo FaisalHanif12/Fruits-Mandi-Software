@@ -579,11 +579,52 @@ fn result_node(calc: &Calc, checked: Option<bool>) -> Node {
     })
 }
 
+/// True when the inputs add the debit total and the credit total of one balanced report: the day
+/// book (R11) and the trial balances (R18, R19) always have the two equal, because every entry
+/// balances (PRD FR-6.2), so they are one amount seen from its two sides. Their sum is double the
+/// total (live run 2, Q1024: 722,194 for a day book of 361,097).
+///
+/// Example: `["r2.totals.debit", "r2.totals.credit"]` with `r2` a read of R11.
+fn adds_both_sides_of_a_balanced_report(state: &State, paths: &[String]) -> bool {
+    paths.iter().any(|path| {
+        let Some((id, rest)) = path.split_once('.') else {
+            return false;
+        };
+        let other = match rest {
+            "totals.debit" => "totals.credit",
+            "totals.credit" => "totals.debit",
+            _ => return false,
+        };
+        paths.iter().any(|p| *p == format!("{id}.{other}"))
+            && state.find(id).is_some_and(|r| {
+                r.tool == "report"
+                    && matches!(
+                        r.input.get("id").and_then(Json::as_str),
+                        Some("R11" | "R18" | "R19")
+                    )
+            })
+    })
+}
+
 /// The tool `calculate`.
 pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: CalcInput = input(args)?;
     if parsed.inputs.is_empty() {
         return Err(bad("ERR_NO_INPUTS", "inputs", "no inputs").into());
+    }
+    // The debit and the credit total of a day book or a trial balance are one amount seen from two
+    // sides: their sum would be double the total of the book.
+    if matches!(parsed.op, OpWord::Sum | OpWord::Average)
+        && adds_both_sides_of_a_balanced_report(state, &parsed.inputs)
+    {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            "inputs",
+            "the debit total and the credit total of this report are the same amount seen from two \
+             sides (every entry balances): the total of the book is its debit total, which equals \
+             its credit total; cite totals.debit on its own and do not add the two",
+        )
+        .into());
     }
     let mut pending = Vec::new();
     for path in &parsed.inputs {

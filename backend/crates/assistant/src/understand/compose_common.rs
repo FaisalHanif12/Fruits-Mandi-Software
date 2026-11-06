@@ -307,6 +307,7 @@ fn record_word(kind: RecordKind) -> &'static str {
         RecordKind::ExpenseHead => "head",
         RecordKind::City => "city",
         RecordKind::Adda => "adda",
+        RecordKind::Staff => "staff",
     }
 }
 

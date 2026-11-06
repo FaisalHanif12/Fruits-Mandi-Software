@@ -132,32 +132,32 @@ cash_in	C	year	A			MX-cash_in-C-year	roman	roakar ki aamad
 cash_in	C	last_year	A			MX-cash_in-C-last_year	urdu	roakar ki aamad
 cash_in	C	r2026_10_01_2026_10_15	A			MX-cash_in-C-r2026_10_01_2026_10_15	en	roakar ki aamad
 cash_in	T	*	X		this question has no meaning for this subject			
-cash_out	F	today	A			MX-cash_out-F-today	roman	roakar ka kharcha
-cash_out	F	yesterday	A			MX-cash_out-F-yesterday	urdu	roakar ka kharcha
-cash_out	F	d2026_11_03	A			MX-cash_out-F-d2026_11_03	roman	roakar ka kharcha
-cash_out	F	d2026_10_14	A			MX-cash_out-F-d2026_10_14	urdu	roakar ka kharcha
-cash_out	F	week	A			MX-cash_out-F-week	en	roakar ka kharcha
-cash_out	F	last_week	A			MX-cash_out-F-last_week	roman	roakar ka kharcha
-cash_out	F	month	A			MX-cash_out-F-month	urdu	roakar ka kharcha
-cash_out	F	last_month	A			MX-cash_out-F-last_month	roman	roakar ka kharcha
-cash_out	F	m2026_09	A			MX-cash_out-F-m2026_09	urdu	roakar ka kharcha
-cash_out	F	m2026_08	A			MX-cash_out-F-m2026_08	en	roakar ka kharcha
-cash_out	F	year	A			MX-cash_out-F-year	roman	roakar ka kharcha
-cash_out	F	last_year	A			MX-cash_out-F-last_year	urdu	roakar ka kharcha
-cash_out	F	r2026_10_01_2026_10_15	A			MX-cash_out-F-r2026_10_01_2026_10_15	roman	roakar ka kharcha
-cash_out	F	up_to_now	A			MX-cash_out-F-up_to_now	urdu	roakar ka kharcha
+cash_out	F	today	A			MX-cash_out-F-today	roman	roakar se nikli raqam
+cash_out	F	yesterday	A			MX-cash_out-F-yesterday	urdu	roakar se nikli raqam
+cash_out	F	d2026_11_03	A			MX-cash_out-F-d2026_11_03	roman	roakar se nikli raqam
+cash_out	F	d2026_10_14	A			MX-cash_out-F-d2026_10_14	urdu	roakar se nikli raqam
+cash_out	F	week	A			MX-cash_out-F-week	en	roakar se nikli raqam
+cash_out	F	last_week	A			MX-cash_out-F-last_week	roman	roakar se nikli raqam
+cash_out	F	month	A			MX-cash_out-F-month	urdu	roakar se nikli raqam
+cash_out	F	last_month	A			MX-cash_out-F-last_month	roman	roakar se nikli raqam
+cash_out	F	m2026_09	A			MX-cash_out-F-m2026_09	urdu	roakar se nikli raqam
+cash_out	F	m2026_08	A			MX-cash_out-F-m2026_08	en	roakar se nikli raqam
+cash_out	F	year	A			MX-cash_out-F-year	roman	roakar se nikli raqam
+cash_out	F	last_year	A			MX-cash_out-F-last_year	urdu	roakar se nikli raqam
+cash_out	F	r2026_10_01_2026_10_15	A			MX-cash_out-F-r2026_10_01_2026_10_15	roman	roakar se nikli raqam
+cash_out	F	up_to_now	A			MX-cash_out-F-up_to_now	urdu	roakar se nikli raqam
 cash_out	L	*	X		this question has no meaning for this subject			
-cash_out	C	today	A			MX-cash_out-C-today	roman	roakar ka kharcha
-cash_out	C	yesterday	A			MX-cash_out-C-yesterday	urdu	roakar ka kharcha
-cash_out	C	d2026_10_14	A			MX-cash_out-C-d2026_10_14	roman	roakar ka kharcha
-cash_out	C	week	A			MX-cash_out-C-week	urdu	roakar ka kharcha
-cash_out	C	last_week	A			MX-cash_out-C-last_week	en	roakar ka kharcha
-cash_out	C	month	A			MX-cash_out-C-month	roman	roakar ka kharcha
-cash_out	C	last_month	A			MX-cash_out-C-last_month	urdu	roakar ka kharcha
-cash_out	C	m2026_09	A			MX-cash_out-C-m2026_09	roman	roakar ka kharcha
-cash_out	C	year	A			MX-cash_out-C-year	urdu	roakar ka kharcha
-cash_out	C	last_year	A			MX-cash_out-C-last_year	en	roakar ka kharcha
-cash_out	C	r2026_10_01_2026_10_15	A			MX-cash_out-C-r2026_10_01_2026_10_15	roman	roakar ka kharcha
+cash_out	C	today	A			MX-cash_out-C-today	roman	roakar se nikli raqam
+cash_out	C	yesterday	A			MX-cash_out-C-yesterday	urdu	roakar se nikli raqam
+cash_out	C	d2026_10_14	A			MX-cash_out-C-d2026_10_14	roman	roakar se nikli raqam
+cash_out	C	week	A			MX-cash_out-C-week	urdu	roakar se nikli raqam
+cash_out	C	last_week	A			MX-cash_out-C-last_week	en	roakar se nikli raqam
+cash_out	C	month	A			MX-cash_out-C-month	roman	roakar se nikli raqam
+cash_out	C	last_month	A			MX-cash_out-C-last_month	urdu	roakar se nikli raqam
+cash_out	C	m2026_09	A			MX-cash_out-C-m2026_09	roman	roakar se nikli raqam
+cash_out	C	year	A			MX-cash_out-C-year	urdu	roakar se nikli raqam
+cash_out	C	last_year	A			MX-cash_out-C-last_year	en	roakar se nikli raqam
+cash_out	C	r2026_10_01_2026_10_15	A			MX-cash_out-C-r2026_10_01_2026_10_15	roman	roakar se nikli raqam
 cash_out	T	*	X		this question has no meaning for this subject			
 cash_close	F	today	A			MX-cash_close-F-today	urdu	roakar
 cash_close	F	yesterday	A			MX-cash_close-F-yesterday	roman	roakar

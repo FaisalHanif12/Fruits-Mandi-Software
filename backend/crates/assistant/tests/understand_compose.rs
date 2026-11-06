@@ -1862,3 +1862,46 @@ fn an_unknown_partner_or_trip_is_not_found_with_its_role() {
         }
     }
 }
+
+/// F1 of live run 2: 49 questions whose answer was 0 ended as "not found" without a model. A word that is
+/// no name ("shirakat daaron", "personal", "logon", "put"), a staff member (a collector has no account),
+/// a partner said with "liya" and a misspelt Urdu item (صیب, پیاض, عام) are never "no such party".
+#[test]
+fn a_word_a_collector_a_partner_and_a_misspelt_item_are_never_not_found() {
+    let y = year::seed::build_thin();
+    let w = &y.w;
+    for question in [
+        "aaj shirakat daaron ne kitna sarmaya lagaya",
+        "how much capital invested did the partners put in on 3 November",
+        "14 October ko shirakat daaron ne kitna capitl invested lagaya",
+        "September mein shirakat daaron ne kitna capital invested lagaya",
+        "how much did the partners take for personal drawings today",
+        "kal shirakat daaron ne personal drawings ke liye kitna liya",
+        "14 October ko shirakat daaron ne zati kharcha ke liye kitna liya",
+        "is mahine shirakat daaron ne personal drawings ke liye kitna liya",
+        "pukhta khata ke logon ka kul baqaya kitna hai",
+        "رشید نے 3 نومبر کو کتنا collection کیا",
+        "Rasheeed ne 14 October ko kitni ugrahi ki",
+        "رشید نے اس ہفتے کتنی اگراہی کی",
+        "Rasheed ne is mahine kitna collection kiya",
+        "رشید نے 1 سے 15 اکتوبر تک کتنا collection کیا",
+        "Rasheeed ne pichle saal kitni wasooliyan kin",
+        "Rasheeed ki ugrahi is hafte pichle hafte se kitni zyada ya kam rahi",
+        "رشید کی اگراہی پچھلے سال اس سے پچھلے سال سے کتنی زیادہ یا کم رہی",
+        "Alif ne kal zaati kharche ke liye kitna liya",
+        "Alif ne is hafte zaati kharche ke liye kitna liya",
+        "آج صیب کی بکری کتنی ہوئی",
+        "پیاض کا اس ہفتے کتنا نگ بکا",
+        "سبجی کا کل بائر کمیشن کتنا ہے",
+        "عام سے ستمبر میں total کمیشن کتنا بنا",
+    ] {
+        let (u, local, _) = year_ask(w, question);
+        assert!(!u.has_not_found(), "{question}: a missing party");
+        assert!(
+            local
+                .as_ref()
+                .is_none_or(|c| c.outcome != AskOutcome::NotFound),
+            "{question}: ended as not found without a model"
+        );
+    }
+}

@@ -58,8 +58,9 @@ use super::lexicon::{Cue, key};
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver, Measure, Outcome, PartyHit,
-    PartyRole, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind, Understanding,
+    CapitalFlow, Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver, Measure,
+    Outcome, PartyHit, PartyRole, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind,
+    Understanding,
 };
 
 /// One read to do before the first call: a tool and its input, as the model would send it.
@@ -84,7 +85,10 @@ const NOT_CARRIED: [Doubt; 7] = [
 
 /// Words that scope a figure to a garden, a trip, own goods or the guests. The reads have no filter
 /// for them, so a question with one is the model's.
-const SCOPE_WORDS: [&str; 17] = [
+const SCOPE_WORDS: [&str; 20] = [
+    "baghat",
+    "baghaat",
+    "baghon",
     "bagh",
     "bag",
     "baag",
@@ -136,11 +140,14 @@ fn own_goods(scan: &Scan) -> bool {
     })
 }
 
-/// True when the question names a garden, a trip, own goods or the guests, by word. The guests are
-/// no scope for the fruit taken: the fruit register has a read for them (R37, partner `guests`).
+/// True when the question names a garden, a trip, own goods, the guests or the one-time people (پختہ
+/// کھاتہ), by word. The guests are no scope for the fruit taken: the fruit register has a read for them
+/// (R37, partner `guests`). The one-time people have no read of their own for a figure: the shop's
+/// dues are not theirs ("pukhta khata ka kul baqaya").
 pub(super) fn scoped(scan: &Scan, kinds: &[FigureKind]) -> bool {
     let guests_fruit = kinds.contains(&FigureKind::FruitTaken);
     own_goods(scan)
+        || scan.has_exact(Cue::Pukhta)
         || scan.words.iter().any(|w| {
             SCOPE_WORDS
                 .iter()
@@ -479,6 +486,12 @@ pub(super) fn other_measure(
         {
             return Measure::Quantity;
         }
+        // "seller commission on the banana Faisal bought": one side of the commission of a named party or
+        // item. View A holds the columns of each side, so the reads are made and the model picks the
+        // column; there is no instant figure (the views add both sides).
+        if side_asked(scan) && !has(&MEASURE) && !cash_sales && (has_item || !roles.is_empty()) {
+            return Measure::Quantity;
+        }
         if has(&MEASURE) || cash_sales || side_asked(scan) {
             return Measure::Other;
         }
@@ -509,10 +522,18 @@ pub(super) fn other_measure(
         }
         // "buyers ka commission", "commission from buyers on banana": a role word with no party of
         // that role named asks the buyers' side or one line for each of them, not the sum of both.
+        // A role word that names the side of a commission ("بیوپاری کا کمیشن") is no list of that role.
+        let role_word = |many: Cue, role: Cue| {
+            scan.has(many)
+                || scan
+                    .hits
+                    .iter()
+                    .any(|h| h.cue == role && !super::who::is_side_word(scan, h))
+        };
         let buyer_word =
-            scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]) && !roles.contains(&PartyRole::Buyer);
-        let seller_word = scan.has_any(&[Cue::ManySellers, Cue::RoleSeller])
-            && !roles.contains(&PartyRole::Seller);
+            role_word(Cue::ManyBuyers, Cue::RoleBuyer) && !roles.contains(&PartyRole::Buyer);
+        let seller_word =
+            role_word(Cue::ManySellers, Cue::RoleSeller) && !roles.contains(&PartyRole::Seller);
         let item_word = scan.has_any(&[Cue::ManyItems, Cue::RoleItem]) && !has_item;
         if !ranking && (buyer_word || seller_word || item_word) {
             return Measure::Other;
@@ -535,13 +556,9 @@ pub(super) fn other_measure(
 /// True when a commission or a laga is asked for one side: "seller commission", "buyer laga". The
 /// views hold the commission of both sides added together, so the sum would be the wrong figure.
 fn side_asked(scan: &Scan) -> bool {
-    scan.hits.iter().any(|side| {
-        matches!(side.cue, Cue::RoleSeller | Cue::RoleBuyer)
-            && scan.hits.iter().any(|figure| {
-                matches!(figure.cue, Cue::Commission | Cue::Laga)
-                    && (figure.start == side.end || side.start == figure.end)
-            })
-    })
+    scan.hits
+        .iter()
+        .any(|side| super::who::is_side_word(scan, side))
 }
 
 // ---- the shapes of the inputs --------------------------------------------------------------------------
@@ -598,6 +615,8 @@ struct Rep {
     partner: Option<String>,
     sort: Option<Value>,
     rows: Option<u32>,
+    /// A collector's key, from a `find` of role collector (R22, R23, R35).
+    collector: Option<String>,
     /// A seller (R2 to R7, R10, R26, R27) and a زمیندار (R2 to R6, R27): fields of the tool since
     /// D6 v1.5.
     seller: Option<String>,
@@ -617,7 +636,7 @@ struct Rep {
 fn report(id: &str, r: Rep) -> PlannedRead {
     let input = json!({
         "id": id, "from": r.from, "to": r.to, "as_of": r.as_of, "party": r.party,
-        "item": r.item, "city": r.city, "adda": r.adda, "collector": null,
+        "item": r.item, "city": r.city, "adda": r.adda, "collector": r.collector,
         "partner": r.partner, "trip": null, "garden": null, "bikri": null,
         "seller": r.seller, "zamindar": r.zamindar, "status": r.status,
         "voucher_type": r.voucher_type, "layout": r.layout,
@@ -646,13 +665,15 @@ struct An {
     /// The quality of the lines, `first`, `second` or `third`; written (null if not set) only when the
     /// tools' schema has the `grade` filter.
     grade: Option<&'static str>,
+    /// The kind of goods: `consigned`, `trip` or `garden`.
+    goods: Option<&'static str>,
 }
 
 fn analytics(view: &str, a: An) -> PlannedRead {
     let mut input = json!({
         "view": view, "from": a.from, "to": a.to, "group_by": null, "item": a.item,
         "item_group": a.item_group, "seller": a.seller, "buyer": a.buyer, "city": null,
-        "adda": null, "garden": null, "trip": null, "goods": null, "partner": null,
+        "adda": null, "garden": null, "trip": null, "goods": a.goods, "partner": null,
         "side": null, "compare": null, "sort": a.sort, "rows": a.rows
     });
     if grade_ready()
@@ -894,6 +915,16 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 
 /// The reads of a question and the figures an instant answer gives from them.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
+    // "اس سال شراکت داروں نے کتنا سرمایہ واپس لیا": the capital that came in or went back, the vouchers of
+    // that type (R15), never the drawings.
+    if let Some(planned) = capital_flow_plan(u) {
+        return Some(planned);
+    }
+    // "baghat ki ab tak apni dukan se kitni bikri": the gardens' goods sold in our shop (view A, goods
+    // garden), never the whole shop.
+    if let Some(planned) = garden_goods_plan(u) {
+        return Some(planned);
+    }
     // "total agrahi collector wise batao": a balance list asked by its title, with a figure word beside
     // it. The title wins (as in a print): the list as of today.
     if let Some(id) = titled_balance_list(u) {
@@ -938,7 +969,7 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         return None;
     }
     // "akram ko kela aakhri kis rate pe diya": the newest sales of the item to the buyer (R2).
-    if u.last_one && u.periods.is_empty() && u.figures.value.as_slice() == [FigureKind::Rate] {
+    if u.last_one && u.figures.value.as_slice() == [FigureKind::Rate] {
         return last_rate_plan(u);
     }
     // The quality of a sale line (awwal, doyam, A grade): the lines of the sales, which carry it.
@@ -1000,6 +1031,83 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         plan.lines
     };
     (!reads.is_empty()).then_some(Planned { reads, lines })
+}
+
+/// Capital in or out of the shop ("kitna sarmaya wapas liya", "how much capital did partners put in"):
+/// the capital vouchers of the period, `capital_out` or `capital_in` (R15), whose totals are the amount.
+/// The direction must be one of the two; capital taken back is not the partners' drawings (R29).
+///
+/// Example: "partners ne is saal kitna sarmaya wapas liya" is R15 `capital_out` for the year.
+fn capital_flow_plan(u: &Understanding) -> Option<Planned> {
+    if !u.sure
+        || !matches!(u.intent.value, Intent::Figure | Intent::List)
+        || u.figures.value.as_slice() != [FigureKind::Capital]
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.periods.len() > 1
+        || u.periods.iter().any(|p| p.future)
+    {
+        return None;
+    }
+    let voucher_type = match u.capital_flow? {
+        CapitalFlow::Out => "capital_out",
+        CapitalFlow::In => "capital_in",
+    };
+    let period = u.periods.first();
+    let (from, to) = dates(period);
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.push(report(
+        "R15",
+        Rep {
+            from,
+            to,
+            voucher_type: Some(voucher_type),
+            ..Rep::default()
+        },
+    ));
+    Some(Planned {
+        reads,
+        lines: Vec::new(),
+    })
+}
+
+/// The gardens' goods sold in our shop, for a period ("baghat ki ab tak apni dukan se kitni bikri"): view A
+/// with `goods` garden, with no garden named.
+fn garden_goods_plan(u: &Understanding) -> Option<Planned> {
+    if !u.sure
+        || !u.garden_goods
+        || u.intent.value != Intent::Figure
+        || u.figures.value.as_slice() != [FigureKind::Sale]
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || u.periods.len() != 1
+        || u.periods.iter().any(|p| p.future)
+    {
+        return None;
+    }
+    let period = u.periods.first()?;
+    let (from, to) = dates(Some(period));
+    Some(Planned {
+        reads: vec![
+            period_read(period)?,
+            analytics(
+                "A",
+                An {
+                    from,
+                    to,
+                    goods: Some("garden"),
+                    ..An::default()
+                },
+            ),
+        ],
+        lines: Vec::new(),
+    })
 }
 
 /// The balance list a question names by its title ("collector wise", R22) with no party, item or period:
@@ -1256,62 +1364,145 @@ fn months_plan(u: &Understanding) -> Option<Planned> {
     })
 }
 
-/// True when a word of the question asks for the last one: "aakhri", "last", "latest", "pichla".
-pub(super) fn last_one(scan: &Scan) -> bool {
-    const LAST: [&str; 10] = [
-        "aakhri",
-        "akhri",
-        "aakhir",
-        "last",
-        "latest",
-        "pichla",
-        "pichli",
-        "آخری",
-        "پچھلا",
-        "پچھلی",
+/// The direction of a question about capital: taken back ("wapas", "واپس", "withdrew", "taken back") or
+/// put in ("lagaya", "dala", "invested", "put in"); `None` when it says neither or both.
+pub(super) fn capital_flow(scan: &Scan) -> Option<CapitalFlow> {
+    const OUT: [&str; 12] = [
+        "wapas",
+        "wapis",
+        "wapsi",
+        "واپس",
+        "withdraw",
+        "withdrew",
+        "withdrawn",
+        "nikala",
+        "nikalwaya",
+        "نکالا",
+        "back",
+        "nikal",
     ];
-    scan.words.iter().any(|w| LAST.iter().any(|x| key(x) == *w))
+    const IN: [&str; 13] = [
+        "dala",
+        "daala",
+        "dali",
+        "lagaya",
+        "lagayi",
+        "invested",
+        "invest",
+        "deposit",
+        "deposited",
+        "ڈالا",
+        "لگایا",
+        "لگائی",
+        "put",
+    ];
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+    match (has(&OUT), has(&IN)) {
+        (true, false) => Some(CapitalFlow::Out),
+        (false, true) => Some(CapitalFlow::In),
+        _ => None,
+    }
 }
 
-/// The last rate of an item sold to one buyer ("akram ko kela aakhri kis rate pe diya", "last rate of
-/// banana to akram"): the register of the sales (R2) for the buyer and the item, newest first by date
-/// and then by entry, 5 rows. The first row is the last sale; its `rate` is the rate the buyer paid.
-/// No instant answer and no period (a period makes it another question).
+/// True when the question names the gardens' goods and no garden or trip was named: a garden word
+/// ("baghat", "gardens", "باغات") and none of the words of another scope (a trip, the guests, own goods).
+pub(super) fn garden_goods(scan: &Scan, named_a_garden_or_trip: &bool) -> bool {
+    // The plural only: "bagh ka commission" may be one garden's, and then the guards and the model decide.
+    const GARDEN: [&str; 5] = ["baghat", "baghaat", "baghon", "gardens", "باغات"];
+    const OTHER: [&str; 9] = [
+        "safar",
+        "trip",
+        "trips",
+        "سفر",
+        "mehman",
+        "مہمان",
+        "guest",
+        "guests",
+        "goods",
+    ];
+    let has = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+    !*named_a_garden_or_trip && has(&GARDEN) && !has(&OTHER) && !own_goods(scan)
+}
+
+/// True when the question asks for the last one: "aakhri" (always), or "last", "latest", "pichla" before a
+/// word for a rate or a sale ("last rate", "pichli bikri"). "Last week" and "pichle mahine" are periods,
+/// never the last one.
+pub(super) fn last_one(scan: &Scan) -> bool {
+    const ALWAYS: [&str; 4] = ["aakhri", "akhri", "aakhir", "آخری"];
+    const HEAD: [&str; 6] = ["last", "latest", "pichla", "pichli", "پچھلا", "پچھلی"];
+    const RATEISH: [&str; 16] = [
+        "rate", "rates", "price", "bhao", "bhaw", "sale", "bikri", "sold", "time", "bar", "baar",
+        "dafa", "entry", "ریٹ", "بھاؤ", "قیمت",
+    ];
+    let is = |w: &str, list: &[&str]| list.iter().any(|x| key(x) == w);
+    scan.words.iter().enumerate().any(|(at, w)| {
+        is(w, &ALWAYS)
+            || (is(w, &HEAD)
+                && scan
+                    .word(at.saturating_add(1))
+                    .is_some_and(|next| is(next, &RATEISH)))
+    })
+}
+
+/// The last rate of an item ("akram ko kela aakhri kis rate pe diya", "last rate of banana to akram",
+/// "what was the last rate of banana today", "آلو کا اب تک کا آخری ریٹ"): the register of the sales (R2)
+/// for the item, the period if one is named and the buyer if one is, newest first by date and then by
+/// entry, ONE row. That row is the last sale and its `rate` the answer: never the average of the period
+/// (live run 2, C8). No instant answer.
 ///
-/// Example: Akram and Banana is R2 with `party` his key, `item` its key, sorted by date and entry.
+/// Example: Banana today is R2 for the item and today, sorted by date and entry, 1 row.
 fn last_rate_plan(u: &Understanding) -> Option<Planned> {
-    if u.intent.value != Intent::Figure || !u.periods.is_empty() || !u.records.is_empty() {
+    if u.intent.value != Intent::Figure
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || u.periods.len() > 1
+        || u.periods.iter().any(|p| p.future)
+    {
         return None;
     }
-    let [party] = u.parties.as_slice() else {
-        return None;
-    };
     let [item] = u.items.as_slice() else {
         return None;
     };
-    let (Outcome::Found(buyer), Outcome::Found(goods)) = (&party.outcome, &item.outcome) else {
+    let Outcome::Found(goods) = &item.outcome else {
         return None;
     };
-    if buyer.role != PartyRole::Buyer || buyer.pukhta {
-        return None;
-    }
+    let buyer = match u.parties.as_slice() {
+        [] => None,
+        [party] => match &party.outcome {
+            Outcome::Found(hit) if hit.role == PartyRole::Buyer && !hit.pukhta => {
+                Some((party.text.clone(), hit.key.clone()))
+            }
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let period = u.periods.first();
+    let (from, to) = dates(period);
     let mut plan = Plan::default();
-    plan.find(&party.text, "buyer");
+    if let Some((text, _)) = &buyer {
+        plan.find(text, "buyer");
+    }
     plan.find(&goods.name_en, "item");
     plan.read(report(
         "R2",
         Rep {
-            party: Some(buyer.key.clone()),
+            from,
+            to,
+            party: buyer.map(|(_, key)| key),
             item: Some(goods.key.clone()),
             sort: Some(json!([
                 {"column": "date", "order": "desc"},
                 {"column": "entry", "order": "desc"}
             ])),
-            rows: Some(5),
+            rows: Some(1),
             ..Rep::default()
         },
     ));
-    let mut reads = plan.finds;
+    let mut reads = Vec::new();
+    if let Some(p) = period {
+        reads.push(period_read(p)?);
+    }
+    reads.extend(plan.finds);
     reads.extend(plan.reads);
     Some(Planned {
         reads,
@@ -2023,10 +2214,25 @@ fn partner_figure(
     plan: &mut Plan,
 ) -> Option<()> {
     let (from, to) = dates(period);
-    if period.is_some() && kind != FigureKind::FruitTaken {
+    if period.is_some() && !matches!(kind, FigureKind::FruitTaken | FigureKind::PartnerTaken) {
         return None;
     }
     match kind {
+        // The money he took and gave back: the expense report for him over the days (R29 has the
+        // partner filter; its taken and returned columns are the figure).
+        FigureKind::PartnerTaken => {
+            plan.find(text, "partner");
+            plan.read(report(
+                "R29",
+                Rep {
+                    from,
+                    to,
+                    partner: Some(hit.key.clone()),
+                    ..Rep::default()
+                },
+            ));
+            plan.dated = period.is_some();
+        }
         // His fruit taken: the register for him over the days.
         FigureKind::FruitTaken => {
             plan.find(text, "partner");
@@ -2195,6 +2401,20 @@ fn record_figure(
             ));
             plan.dated = period.is_some();
         }
+        // What a collector collected: the receipts register for him (R23 has the collector filter).
+        (RecordKind::Staff, FigureKind::Receipts) if period.is_some() => {
+            plan.find(text, "collector");
+            plan.read(report(
+                "R23",
+                Rep {
+                    from,
+                    to,
+                    collector: Some(hit.key.clone()),
+                    ..Rep::default()
+                },
+            ));
+            plan.dated = true;
+        }
         // The report has no expense-head filter: the period is read and the row is found in it.
         (RecordKind::ExpenseHead, FigureKind::Expense) if period.is_some() => {
             plan.read(report(
@@ -2352,6 +2572,19 @@ fn shop_figure(
             period?;
             plan.read(report(
                 "R23",
+                Rep {
+                    from,
+                    to,
+                    ..Rep::default()
+                },
+            ));
+            plan.dated = true;
+        }
+        // What the partners took: R29 holds it by partner (the partner section decides what it shows).
+        FigureKind::PartnerTaken => {
+            period?;
+            plan.read(report(
+                "R29",
                 Rep {
                     from,
                     to,

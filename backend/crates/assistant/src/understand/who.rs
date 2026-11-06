@@ -19,7 +19,7 @@ use mandi_services::core::text;
 use mandi_services::core::translit::Direction;
 use mandi_services::{bikri, coa, partners, search, translit};
 
-use super::lexicon::{Cue, table};
+use super::lexicon::{Cue, Hit, table};
 use super::scan::{Scan, edit_distance};
 use super::{
     Confidence, Doubt, ItemRef, Outcome, PartyHit, PartyRef, PartyRole, PeriodKind, PeriodRef,
@@ -589,6 +589,22 @@ const ROLE_CUES: [Cue; 7] = [
     Cue::RoleKhata,
 ];
 
+/// True when a seller or buyer word stands right before a commission or a laga word, with at most "ka /
+/// ki / ke" between: it says which side's charge is asked, not who the name is.
+pub(super) fn is_side_word(scan: &Scan, role: &Hit) -> bool {
+    if !matches!(role.cue, Cue::RoleSeller | Cue::RoleBuyer) {
+        return false;
+    }
+    scan.hits.iter().any(|charge| {
+        matches!(charge.cue, Cue::Commission | Cue::Laga)
+            && (charge.start == role.end
+                || (charge.start == role.end.saturating_add(1)
+                    && scan
+                        .word(role.end)
+                        .is_some_and(|w| matches!(w, "ka" | "ki" | "ke" | "کا" | "کی" | "کے"))))
+    })
+}
+
 /// The role the question asks the name at `span` in.
 pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
     let hard = |role| Some(Wanted { role, hard: true });
@@ -603,11 +619,14 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
             return hard(role);
         }
     }
-    // One role noun in the whole question.
-    let mut nouns: Vec<PartyRole> = ROLE_CUES
+    // One role noun in the whole question. A role word that names the side of a commission or a laga
+    // ("seller commission", "بیوپاری کا کمیشن") is no role of the name ("seller commission on the banana
+    // Faisal bought": Faisal is a buyer).
+    let mut nouns: Vec<PartyRole> = scan
+        .hits
         .iter()
-        .filter(|c| scan.has_exact(**c))
-        .filter_map(|c| role_of_cue(*c))
+        .filter(|h| !h.fuzzy && ROLE_CUES.contains(&h.cue) && !is_side_word(scan, h))
+        .filter_map(|h| role_of_cue(h.cue))
         .collect();
     nouns.dedup();
     if let [only] = nouns.as_slice() {
@@ -623,7 +642,13 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
         .unwrap_or_default();
     let to = matches!(next, "ko" | "کو") || before == "to";
     let from = matches!(next, "se" | "say" | "سے") || before == "from";
-    match (scan.has_exact(Cue::Sold), scan.has_exact(Cue::Bought)) {
+    // "Alif ne zaati kharche ke liye kitna liya": "kitna liya" is "how much did he take", not a
+    // purchase. The money a partner took is asked of a partner.
+    let taken = scan.has(Cue::PartnerTaken);
+    match (
+        scan.has_exact(Cue::Sold) && !taken,
+        scan.has_exact(Cue::Bought) && !taken,
+    ) {
         (true, false) => {
             return hard(if to {
                 PartyRole::Buyer
@@ -648,7 +673,12 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
     if scan.has(Cue::Dues) && !scan.has(Cue::Payable) {
         return soft(PartyRole::Buyer);
     }
-    if scan.has_any(&[Cue::Capital, Cue::PartnerTotal, Cue::PartnerShare]) {
+    if scan.has_any(&[
+        Cue::Capital,
+        Cue::PartnerTotal,
+        Cue::PartnerShare,
+        Cue::PartnerTaken,
+    ]) {
         return soft(PartyRole::Partner);
     }
     if scan.has(Cue::MoneyLent) {
@@ -915,6 +945,60 @@ fn other_record(look: &Lookup<'_>, typed: &[String]) -> Option<Other> {
     None
 }
 
+/// The staff member the unknown words of a question name, if they name one: a collector, a munshi or
+/// a labourer who has no account of his own. The words are tried from the longest run to a single
+/// word. A word that is also one letter off a common word must be the same as the name, not close.
+///
+/// Example: "Rasheed ne kitna collection kiya" names the collector Rasheed (`st3`); "kitna" names
+/// no one.
+fn staff_record(look: &Lookup<'_>, scan: &Scan, span: (usize, usize)) -> Option<RecordRef> {
+    let width = span.1.saturating_sub(span.0);
+    if width == 0 || width > 3 {
+        return None;
+    }
+    for len in (1..=width).rev() {
+        for start in span.0..=span.1.saturating_sub(len) {
+            let end = start.saturating_add(len);
+            let words = scan.words.get(start..end)?;
+            let letters: usize = words.iter().map(|w| w.chars().count()).sum();
+            if letters < 3 || words.iter().all(|w| table().is_known(w)) {
+                continue;
+            }
+            let exact_only = words.iter().any(|w| table().is_near_known(w));
+            let Some(best) = record_in(
+                look,
+                SearchScope::Staff,
+                (RecordKind::Staff, "st"),
+                words,
+                exact_only,
+            ) else {
+                continue;
+            };
+            let (outcome, confidence) = match best.hits.as_slice() {
+                [only] => (
+                    Outcome::Found(only.clone()),
+                    if best.exact && !best.others {
+                        Confidence::High
+                    } else {
+                        Confidence::Medium
+                    },
+                ),
+                many => (
+                    Outcome::Several(many.iter().take(KEEP).cloned().collect()),
+                    Confidence::Low,
+                ),
+            };
+            return Some(RecordRef {
+                text: scan.phrase(start, end),
+                words: (start, end),
+                outcome,
+                confidence,
+            });
+        }
+    }
+    None
+}
+
 /// The names of a question.
 pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -> Names {
     let look = Lookup::new(reader);
@@ -966,6 +1050,14 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
     reconcile_partners(&look, scan, &mut names);
     trip_names(&look, scan, periods, &mut names);
     for span in unknown {
+        // A staff member with no account of his own (a collector: "Rasheed ne kitna collection kiya")
+        // is a real record. It is looked for before the common words are trimmed off, because a name
+        // can be one letter off a common word (Rasheed and raseed, a receipt).
+        if let Some(record) = staff_record(&look, scan, span) {
+            names.spans.push(record.words);
+            names.records.push(record);
+            continue;
+        }
         // A common word spelt wrong ("kitny", "septmber", "gaahkon") is never a name that is missing
         // from the books: the words around it are what is looked at (money review of run 1).
         let vocabulary = |at: usize| {

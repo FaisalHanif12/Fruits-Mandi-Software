@@ -226,6 +226,19 @@ const ALIASES: &[(&str, &str)] = &[
     ("bottle gourd", "bottle gourd"),
     // The same names in Urdu letters: an item the books do not hold is "no such item", not an
     // unknown word.
+    ("سیب", "apple"),
+    ("آم", "mango"),
+    ("کیلا", "banana"),
+    ("انگور", "grapes"),
+    ("مالٹا", "orange"),
+    ("کینو", "kinnow"),
+    ("امرود", "guava"),
+    ("انار", "pomegranate"),
+    ("تربوز", "watermelon"),
+    ("آڑو", "peach"),
+    ("خوبانی", "apricot"),
+    ("کھجور", "dates"),
+    ("پپیتا", "papaya"),
     ("آلو", "potato"),
     ("الو", "potato"),
     ("کیلہ", "banana"),
@@ -309,6 +322,50 @@ fn alias_by_skeleton(word: &str) -> Option<&'static str> {
         .filter(|(a, _)| a.is_ascii() && !a.contains(' '))
     {
         if skeleton(name) == wanted {
+            match found {
+                None => found = Some(english),
+                Some(before) if before == *english => {}
+                Some(_) => return None,
+            }
+        }
+    }
+    found
+}
+
+/// An Urdu word with the letters that sound alike written as one: س ص ث, ز ض ظ ذ, ت ط, ح ہ, ا ع آ.
+/// "صیب" and "سیب" are both "سیب"; "پیاض" and "پیاز" are both "پیاز". Doubled letters are one.
+fn confused(word: &str) -> String {
+    let mut out = String::new();
+    for c in word.chars() {
+        let one = match c {
+            'ص' | 'ث' => 'س',
+            'ض' | 'ظ' | 'ذ' => 'ز',
+            'ط' => 'ت',
+            'ح' => 'ہ',
+            'ع' | 'آ' => 'ا',
+            other => other,
+        };
+        if !out.ends_with(one) {
+            out.push(one);
+        }
+    }
+    out
+}
+
+/// The English name of the Urdu item whose name sounds like the word typed, when every such name gives
+/// the same one: "صیب" is apple, "پیاض" is onion. A guess: the caller marks it medium, or low for a
+/// short word (عام for آم is also the common word "general").
+fn alias_by_sound(word: &str) -> Option<&'static str> {
+    if !is_urdu(word) || word.chars().count() < 2 {
+        return None;
+    }
+    let wanted = confused(word);
+    let mut found: Option<&'static str> = None;
+    for (name, english) in ALIASES
+        .iter()
+        .filter(|(a, _)| !a.is_ascii() && !a.contains(' '))
+    {
+        if confused(&key_of(name)) == wanted {
             match found {
                 None => found = Some(english),
                 Some(before) if before == *english => {}
@@ -462,6 +519,27 @@ pub(super) fn resolve(look: &Lookup<'_>, scan: &Scan, span: (usize, usize)) -> O
             let mut one = item_ref(scan, span, best);
             if one.confidence > Confidence::Medium {
                 one.confidence = Confidence::Medium;
+            }
+            return Some(one);
+        }
+    }
+    // A misspelling of an Urdu name whose letters sound alike ("صیب" for سیب, "پیاض" for پیاز): the item
+    // by its English name. Low for a word of two letters, which may be a common word (عام).
+    if known.is_none()
+        && head.is_empty()
+        && let Some(english) = alias_by_sound(last)
+    {
+        known = Some(english);
+        guessed = true;
+        if let Some(best) = search_items(look, &split_words(english)) {
+            let mut one = item_ref(scan, span, best);
+            let cap = if confused(last).chars().count() >= 3 {
+                Confidence::Medium
+            } else {
+                Confidence::Low
+            };
+            if one.confidence > cap {
+                one.confidence = cap;
             }
             return Some(one);
         }

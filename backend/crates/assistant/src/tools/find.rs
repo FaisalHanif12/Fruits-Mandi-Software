@@ -232,6 +232,63 @@ fn list_matches(
     Ok((matches, more))
 }
 
+/// Several accounts came back, and ONE is clear: its name is the typed name, or its name has the
+/// typed phonetic key ("kareem" is "krm", as Karim), while every other is only a close spelling
+/// (neither its name nor a word of it is the typed text). Then that one is the answer and the
+/// Owner is not asked which (live run 2, F5: "karim" and "kareem" each asked "which one" beside a
+/// close spelling). Two that are equally clear, or a name that starts with the typed text, still
+/// ask. It works on the merged matches, so a buyer and a seller of `any_party` are weighed
+/// together (each scope was cut apart before: a close buyer stayed beside the exact seller).
+///
+/// Example: "kareem" finds Karim (key `krm`) and Kareen (a close spelling): Karim alone.
+fn prefer_the_clear_one(matches: Vec<Node>, query: &str) -> Vec<Node> {
+    if matches.len() < 2 {
+        return matches;
+    }
+    let exact = Exact::of(query);
+    let typed_key = text::search_phonetic(query);
+    let latin_key = !typed_key.is_empty() && typed_key.is_ascii();
+    let name_of = |m: &Node| match m.get(&["name"]) {
+        Some(Node::Val(Val::Name(n))) => Some(n.clone()),
+        _ => None,
+    };
+    let clear = |m: &Node| {
+        name_of(m).is_some_and(|n| {
+            exact.is(&n.name_ur, &n.name_en, n.tag.as_deref())
+                || (latin_key && text::search_phonetic(&n.name_en) == typed_key)
+        })
+    };
+    let only_close = |m: &Node| {
+        !clear(m)
+            && name_of(m).is_some_and(|n| !exact.holds(&n.name_ur, &n.name_en, n.tag.as_deref()))
+    };
+    let clear_count = matches.iter().filter(|m| clear(m)).count();
+    if clear_count == 1 && matches.iter().all(|m| clear(m) || only_close(m)) {
+        return matches.into_iter().filter(|m| clear(m)).collect();
+    }
+    matches
+}
+
+/// True when one of the matches (as `find` writes them) is named exactly the typed text.
+fn names_the_typed_text(matches: &[Node], exact: &Exact) -> bool {
+    matches.iter().any(|m| {
+        matches!(
+            m.get(&["name"]),
+            Some(Node::Val(Val::Name(n))) if exact.is(&n.name_ur, &n.name_en, n.tag.as_deref())
+        )
+    })
+}
+
+/// True when one of the matches names the typed text, as a whole or as words of it.
+fn holds_the_typed_text(matches: &[Node], exact: &Exact) -> bool {
+    matches.iter().any(|m| {
+        matches!(
+            m.get(&["name"]),
+            Some(Node::Val(Val::Name(n))) if exact.holds(&n.name_ur, &n.name_en, n.tag.as_deref())
+        )
+    })
+}
+
 /// The text typed, as the two keys a name is compared with (`core::text` normalisation: look-alike
 /// Urdu letters, case, spaces). A name is exact when its whole key is the whole typed key; it holds
 /// the typed text when the typed words start it or are whole words of it.
@@ -565,11 +622,13 @@ fn without_role_words(role: Role, query: &str) -> String {
 
 /// The other roles asked when a buyer, a seller or any party is not found: a buyer typed as a
 /// seller and the reverse (Q070: two buyers asked for as sellers), and a partner typed as a party
-/// (Q055: "alif ka khalis"). Their matches say their `type`, and the result says it was widened.
+/// (Q055: "alif ka khalis"), also when the model asked for him as a buyer or a seller (live run 2,
+/// Q3827: "Alif ne kal zaati kharche ke liye kitna liya" ended as "no such buyer", and the partner
+/// had taken 0). Their matches say their `type`, and the result says it was widened.
 fn widened_roles(role: Role) -> &'static [Role] {
     match role {
-        Role::Buyer => &[Role::Seller],
-        Role::Seller => &[Role::Buyer],
+        Role::Buyer => &[Role::Seller, Role::Partner],
+        Role::Seller => &[Role::Buyer, Role::Partner],
         Role::AnyParty => &[Role::Partner],
         _ => &[],
     }
@@ -588,6 +647,9 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
         return Ok(draft);
     }
     let mut found = search_role(env, role, query)?;
+    if matches!(role, Role::Buyer | Role::Seller | Role::AnyParty) {
+        found.matches = prefer_the_clear_one(std::mem::take(&mut found.matches), query);
+    }
     let mut notes: Vec<String> = Vec::new();
     // "shahpur bag" / "safar 2": a garden or a trip is found by the rest of the words.
     if found.matches.is_empty() {
@@ -602,9 +664,29 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
             }
         }
     }
+    let mut widened: Option<Role> = None;
+    // The text is exactly a partner's name and the buyers or sellers it found are only close
+    // spellings of it (live run 2, Q3849: "Alif" as a buyer found Kashif Ali): it is the partner.
+    if matches!(role, Role::Buyer | Role::Seller | Role::AnyParty) && !found.matches.is_empty() {
+        let exact = Exact::of(query);
+        if !holds_the_typed_text(&found.matches, &exact) {
+            match search_role(env, Role::Partner, query) {
+                Ok(partners) if names_the_typed_text(&partners.matches, &exact) => {
+                    found = partners;
+                    widened = Some(Role::Partner);
+                    notes.push(format!(
+                        "this name is a partner's; no {} has it, only close spellings, which are \
+                         left out",
+                        role.word()
+                    ));
+                }
+                Ok(_) | Err(Stop::Locked) => {}
+                Err(other_error) => return Err(other_error),
+            }
+        }
+    }
     // Nothing as that role: the other role of a party, or a partner, is asked. A locked partner
     // section is not a reason to stop the question here: the widening is left out.
-    let mut widened: Option<Role> = None;
     if found.matches.is_empty() {
         for other in widened_roles(role) {
             match search_role(env, *other, query) {
@@ -675,8 +757,8 @@ mod tests {
 
     #[test]
     fn a_buyer_or_seller_not_found_widens_to_the_other_role_and_any_party_to_a_partner() {
-        assert_eq!(widened_roles(Role::Buyer), [Role::Seller]);
-        assert_eq!(widened_roles(Role::Seller), [Role::Buyer]);
+        assert_eq!(widened_roles(Role::Buyer), [Role::Seller, Role::Partner]);
+        assert_eq!(widened_roles(Role::Seller), [Role::Buyer, Role::Partner]);
         assert_eq!(widened_roles(Role::AnyParty), [Role::Partner]);
         assert!(widened_roles(Role::Item).is_empty());
         assert!(widened_roles(Role::Partner).is_empty());

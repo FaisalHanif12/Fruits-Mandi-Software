@@ -231,6 +231,8 @@ pub enum RecordKind {
     City,
     /// A truck stand (اڈا).
     Adda,
+    /// A staff member who has no account of his own (a collector, a munshi, a labourer): `st5`.
+    Staff,
 }
 
 /// A record of another master list found in the books. The key is the one `find` gives: `eh3`
@@ -605,6 +607,15 @@ impl GradeWord {
     }
 }
 
+/// The way capital moves in a question about it: put into the shop, or taken back out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CapitalFlow {
+    /// سرمایہ جمع: invested, put in.
+    In,
+    /// سرمایہ واپس: taken back, withdrawn.
+    Out,
+}
+
 /// What the app understood of one question.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Understanding {
@@ -674,6 +685,11 @@ pub struct Understanding {
     /// Which quality it names, when one word does (awwal, doyam, soyam and their spellings). `None`
     /// with `quality` true asks all the qualities ("kis darje mein bike"): the lines carry each one.
     pub grade: Option<GradeWord>,
+    /// For a question about capital: whether it asks what came in or what was taken back.
+    pub capital_flow: Option<CapitalFlow>,
+    /// True when the question names the gardens' goods with no garden named ("baghat ki bikri"): the
+    /// goods filter `garden` of view A reads them.
+    pub garden_goods: bool,
     /// True when the question asks for the last one ("aakhri", "last", "pichla") and names no period:
     /// the last rate of an item sold to a buyer is the newest line of his sales (R2).
     pub last_one: bool,

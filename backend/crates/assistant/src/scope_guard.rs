@@ -23,6 +23,10 @@
 //! it too (live run 2, the lead's note). View A and the reports with the Grade filter take it; the
 //! other views hold no quality.
 //!
+//! The same holds for the goods (consigned, trip, garden), the garden, the trip, the buyer and the
+//! seller (live run 2, Q1257: "the gardens' sale" read with no garden filter gave the whole shop's
+//! 95,006,520).
+//!
 //! Example: the question "phal ki is saal ki sale" plans view A with `item_group: fruit` and the
 //! dates of this year; an answer that cites a view A with `item_group: null` is refused.
 
@@ -51,6 +55,16 @@ pub struct AskScope {
     pub party: Option<String>,
     /// The quality of a sale line (`first`, `second` ...), as the planned read carries it.
     pub grade: Option<String>,
+    /// The buyer, as his key.
+    pub buyer: Option<String>,
+    /// The seller, as his key, in `seller` or `zamindar`.
+    pub seller: Option<String>,
+    /// The garden, as its key.
+    pub garden: Option<String>,
+    /// The market trip, as its key.
+    pub trip: Option<String>,
+    /// The kind of goods (`consigned`, `trip`, `garden`): `all` is no filter and is left out.
+    pub goods: Option<String>,
 }
 
 fn text_of(input: &Value, field: &str) -> Option<String> {
@@ -83,6 +97,11 @@ impl AskScope {
             group: text_of(input, "item_group"),
             party,
             grade: text_of(input, "grade"),
+            buyer: text_of(input, "buyer"),
+            seller: text_of(input, "seller").or_else(|| text_of(input, "zamindar")),
+            garden: text_of(input, "garden"),
+            trip: text_of(input, "trip"),
+            goods: text_of(input, "goods").filter(|g| g != "all"),
         };
         (scope != AskScope::default()).then_some(scope)
     }
@@ -119,6 +138,32 @@ fn is_grade(text: &str) -> bool {
     !text.is_empty() && text.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
+/// True for a kind of goods as the tools write it: lower case letters and `_`.
+fn is_goods(text: &str) -> bool {
+    !text.is_empty() && text.chars().all(|c| c.is_ascii_lowercase() || c == '_')
+}
+
+/// Whether a cited read dropped a party the question named: none of `fields` holds a key, or they
+/// hold only other keys. A reference or any other shape cannot be told and is not a violation.
+fn drops_party(wanted: &Option<String>, fields: &[&str], input: &Value) -> bool {
+    let Some(wanted) = wanted else {
+        return false;
+    };
+    for field in fields {
+        match input.get(*field) {
+            None | Some(Value::Null) => {}
+            Some(Value::String(s)) if s.is_empty() => {}
+            Some(Value::String(s)) if is_key(s) => {
+                if s == wanted {
+                    return false;
+                }
+            }
+            Some(_) => return false,
+        }
+    }
+    true
+}
+
 /// Whether a field of a cited read breaks the scope: it was dropped (null), or it is another day or
 /// another key. A text that cannot be told (a reference) is not a violation.
 fn breaks(wanted: &Option<String>, field: Option<&Value>, same_kind: fn(&str) -> bool) -> bool {
@@ -148,7 +193,24 @@ fn violation(scope: &AskScope, input: &Value, takes: &Takes) -> bool {
             .iter()
             .filter_map(|f| input.get(*f))
             .all(|v| v.is_null() || v.as_str() == Some(""));
-    period_breaks || item_breaks || group_breaks || party_breaks || grade_breaks
+    // The goods, the garden, the trip and the buyer or seller of the question (live run 2, Q1257: a
+    // read of the garden's sales that dropped the garden gave the whole shop's 95,006,520).
+    let goods_breaks = takes.goods && breaks(&scope.goods, input.get("goods"), is_goods);
+    let garden_breaks = takes.garden && breaks(&scope.garden, input.get("garden"), is_key);
+    let trip_breaks = takes.trip && breaks(&scope.trip, input.get("trip"), is_key);
+    let buyer_breaks = takes.buyer && drops_party(&scope.buyer, &["buyer", "party"], input);
+    let seller_breaks =
+        takes.seller && drops_party(&scope.seller, &["seller", "zamindar", "party"], input);
+    period_breaks
+        || item_breaks
+        || group_breaks
+        || party_breaks
+        || grade_breaks
+        || goods_breaks
+        || garden_breaks
+        || trip_breaks
+        || buyer_breaks
+        || seller_breaks
 }
 
 /// The dimensions a cited view or report takes.
@@ -159,6 +221,11 @@ struct Takes {
     group: bool,
     party: bool,
     grade: bool,
+    buyer: bool,
+    seller: bool,
+    garden: bool,
+    trip: bool,
+    goods: bool,
 }
 
 fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
@@ -166,9 +233,10 @@ fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
         "analytics" => {
             let view = input.get("view").and_then(Value::as_str).unwrap_or("");
             let filters = VIEWS_WITH_FILTERS.contains(&view);
-            // The quality of the sale lines: the views whose catalogue entry has the filter (view A,
-            // PRD FR-12.42).
-            let grade = serde_json::from_value::<mandi_reports::analytics::AnalyticsView>(
+            // What the view takes, from its catalogue entry: the quality of the sale lines (view A,
+            // PRD FR-12.42), the buyer, the seller, the garden, the trip and the goods.
+            use mandi_reports::analytics::AnalyticsFilterKind as K;
+            let kinds = serde_json::from_value::<mandi_reports::analytics::AnalyticsView>(
                 Value::String(view.to_owned()),
             )
             .ok()
@@ -177,16 +245,19 @@ fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
                     .into_iter()
                     .find(|e| e.id == v)
             })
-            .is_some_and(|e| {
-                e.filters
-                    .contains(&mandi_reports::analytics::AnalyticsFilterKind::Grade)
-            });
+            .map(|e| e.filters)
+            .unwrap_or_default();
             Some(Takes {
                 period: true,
                 item: filters,
                 group: filters,
                 party: filters,
-                grade,
+                grade: kinds.contains(&K::Grade),
+                buyer: kinds.contains(&K::Buyer),
+                seller: kinds.contains(&K::Seller),
+                garden: kinds.contains(&K::Garden),
+                trip: kinds.contains(&K::Trip),
+                goods: kinds.contains(&K::Goods),
             })
         }
         "report" => {
@@ -206,6 +277,12 @@ fn takes_of(tool: &str, input: &Value) -> Option<Takes> {
                 group: has(F::ItemGroup),
                 party: has(F::Party) || has(F::Seller) || has(F::Zamindar),
                 grade: has(F::Grade),
+                // A report's buyer is its `party`; no report takes a trip or the goods.
+                buyer: false,
+                seller: has(F::Seller) || has(F::Zamindar),
+                garden: has(F::Garden),
+                trip: false,
+                goods: false,
             })
         }
         _ => None,
@@ -410,5 +487,97 @@ mod tests {
             ..AskScope::default()
         };
         assert!(!violation(&plain, &none, &takes));
+    }
+    #[test]
+    fn a_read_that_dropped_the_goods_the_garden_the_trip_or_the_buyer_is_refused() {
+        // Q1257, the sales of the gardens: view A for the goods of gardens, and one garden. A read
+        // of the same view with no goods filter is the whole shop's sales.
+        let planned = vec![(
+            "analytics".to_owned(),
+            json!({"view": "A", "from": "2026-01-01", "to": "2026-11-05", "goods": "garden",
+                   "garden": "g1", "trip": null, "buyer": null, "seller": null}),
+        )];
+        let scope = AskScope::of_planned(&planned).unwrap();
+        assert_eq!(scope.goods.as_deref(), Some("garden"));
+        assert_eq!(scope.garden.as_deref(), Some("g1"));
+        let takes = takes_of("analytics", &json!({"view": "A"})).unwrap();
+        assert!(takes.goods && takes.garden && takes.trip && takes.buyer && takes.seller);
+        let base = json!({"view": "A", "from": "2026-01-01", "to": "2026-11-05"});
+        let with = |extra: Value| {
+            let mut v = base.clone();
+            if let (Some(m), Some(e)) = (v.as_object_mut(), extra.as_object()) {
+                for (k, x) in e {
+                    m.insert(k.clone(), x.clone());
+                }
+            }
+            v
+        };
+        let right = with(json!({"goods": "garden", "garden": "g1"}));
+        assert!(!violation(&scope, &right, &takes));
+        // The goods dropped, "all", another kind, and the garden dropped or another garden.
+        assert!(violation(&scope, &with(json!({"garden": "g1"})), &takes));
+        assert!(violation(
+            &scope,
+            &with(json!({"goods": "all", "garden": "g1"})),
+            &takes
+        ));
+        assert!(violation(
+            &scope,
+            &with(json!({"goods": "trip", "garden": "g1"})),
+            &takes
+        ));
+        assert!(violation(&scope, &with(json!({"goods": "garden"})), &takes));
+        assert!(violation(
+            &scope,
+            &with(json!({"goods": "garden", "garden": "g2"})),
+            &takes
+        ));
+        // A reference cannot be told.
+        assert!(!violation(
+            &scope,
+            &with(json!({"goods": "garden", "garden": "r2.matches.0"})),
+            &takes
+        ));
+        // "all" in the planned read is no filter, so nothing is asked.
+        let open = AskScope::of_planned(&[(
+            "analytics".to_owned(),
+            json!({"view": "A", "from": "2026-01-01", "to": "2026-11-05", "goods": "all"}),
+        )])
+        .unwrap();
+        assert_eq!(open.goods, None);
+        assert!(!violation(&open, &base, &takes));
+
+        // A trip.
+        let trip = AskScope::of_planned(&[(
+            "analytics".to_owned(),
+            json!({"view": "J", "from": "2026-01-01", "to": "2026-11-05", "trip": "t3"}),
+        )])
+        .unwrap();
+        let trip_takes = takes_of("analytics", &json!({"view": "J"})).unwrap();
+        assert!(trip_takes.trip);
+        assert!(violation(&trip, &base, &trip_takes));
+        assert!(violation(&trip, &with(json!({"trip": "t9"})), &trip_takes));
+        assert!(!violation(&trip, &with(json!({"trip": "t3"})), &trip_takes));
+
+        // A buyer: dropped, another buyer, or only a seller; the same buyer, or his party, pass.
+        let buyer = AskScope::of_planned(&[(
+            "analytics".to_owned(),
+            json!({"view": "A", "from": "2026-01-01", "to": "2026-11-05", "buyer": "a20"}),
+        )])
+        .unwrap();
+        assert!(violation(&buyer, &base, &takes));
+        assert!(violation(&buyer, &with(json!({"buyer": "a21"})), &takes));
+        assert!(violation(&buyer, &with(json!({"seller": "a5"})), &takes));
+        assert!(!violation(&buyer, &with(json!({"buyer": "a20"})), &takes));
+        assert!(!violation(
+            &buyer,
+            &with(json!({"buyer": "r2.matches.0"})),
+            &takes
+        ));
+        // The reports take a garden and a seller too.
+        let r36 = takes_of("report", &json!({"id": "R36"})).unwrap();
+        assert!(r36.garden);
+        let r6 = takes_of("report", &json!({"id": "R6"})).unwrap();
+        assert!(r6.seller && !r6.goods && !r6.trip);
     }
 }

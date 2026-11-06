@@ -990,9 +990,22 @@ fn day_word_at(
         // In Urdu letters, "کل" straight before a figure noun ("کل کمیشن", "کل بکری") is "total" as
         // often as it is "yesterday's": the genitive ("کل کا کمیشن") is what makes it a day. With no
         // verb to settle it, the app is not sure (money review, 05-11-2026).
+        // A word for the side stands between them in "کل بائر کمیشن" (total buyer commission).
+        let noun_at = scan
+            .hits
+            .iter()
+            .find(|h| {
+                !h.fuzzy
+                    && h.start == next_index(at, 1)
+                    && matches!(
+                        h.cue,
+                        super::lexicon::Cue::RoleBuyer | super::lexicon::Cue::RoleSeller
+                    )
+            })
+            .map_or(next_index(at, 1), |h| h.end);
         let before_noun = word == "کل"
             && scan.hits.iter().any(|h| {
-                h.start == next_index(at, 1)
+                h.start == noun_at
                     && matches!(
                         h.cue,
                         super::lexicon::Cue::Sale

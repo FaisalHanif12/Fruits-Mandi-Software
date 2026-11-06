@@ -442,7 +442,7 @@ const ROLES: &[Entry] = &[
         Cue::RoleBuyer,
         &[
             "buyer", "buyers", "gahak", "gaahak", "gahek", "gahk", "customer", "customers",
-            "khareedar", "khariddar", "kharidar", "client", "گاہک", "خریدار", "کسٹمر",
+            "khareedar", "khariddar", "kharidar", "client", "bayer", "گاہک", "خریدار", "کسٹمر", "بائر", "بایر",
         ],
     ),
     (
@@ -450,7 +450,7 @@ const ROLES: &[Entry] = &[
         &[
             "seller", "sellers", "byopari", "byopary", "beopari", "bayopari", "vyapari", "vypari",
             "zamindar", "zameendar", "bezgar", "bazgar", "bizgar", "grower", "supplier", "farmer",
-            "kisan", "بیوپاری", "زمیندار", "بزگر", "سپلائر", "کسان",
+            "kisan", "بیوپاری", "زمیندار", "بزگر", "سپلائر", "کسان", "سیلر",
         ],
     ),
     (
@@ -459,7 +459,9 @@ const ROLES: &[Entry] = &[
             "partner", "partners", "shareek", "shareekdar", "shirakat dar", "shirkat dar", "shirakat daar",
             "shirkat daar", "shirakatdar", "shirkatdar", "sharik",
             "partnron", "partneron", "partnaron", "partnarz", "shirakat daron", "shirkat daron",
-            "shirakatdaron", "shirkatdaron",
+            "shirakatdaron", "shirkatdaron", "shirakat daaron", "shirkat daaron", "sharakat daar", "sharakat daron",
+            "sharakat daaron", "sharkat daar", "sharkat daron", "sharkat daaron", "shirakat daro", "shirkat daro",
+            "shirakat daaro", "shirkat daaro", "shirakatdaaron", "shirkatdaaron", "sharakatdar", "sharkatdar",
             "شراکت دار", "شراکت داروں", "شریک", "شریکوں", "پارٹنر", "پارٹنروں", "پارٹنرز",
         ],
     ),
@@ -623,7 +625,8 @@ const FIGURES: &[Entry] = &[
         Cue::Collection,
         &[
             "ugrahi", "ugrai", "ugrahee", "ugrahy", "wasooli", "wasuli", "wasoli", "wasoolee",
-            "wusooli", "collection", "اگراہی", "اگرائی", "وصولی",
+            "wusooli", "collection", "wasooliyan", "wasuliyan", "wasooliyaan", "ugrahiyan", "ugrahian", "collections",
+            "اگراہی", "اگرائی", "وصولی", "وصولیاں", "وصولیوں", "اگراہیاں",
         ],
     ),
     (
@@ -815,10 +818,12 @@ const FIGURES: &[Entry] = &[
     (
         Cue::PartnerTaken,
         &[
-            "li hui raqam", "li hui rakam", "lee hui raqam", "liye hue paise", "partner drawings",
+            "li hui raqam", "li hui rakam", "lee hui raqam", "liya hua", "liye hue", "لیا ہوا", "لیے ہوئے", "liye hue paise", "partner drawings",
             "partners drawings", "drawings", "partners took", "partner took", "money taken by partners",
             "money taken by the partners", "taken by the partners", "partner has taken", "zaati kharcha", "zaati kharch", "zati kharcha",
-            "zaati kharche", "ذاتی خرچہ", "ذاتی خرچ", "لی ہوئی رقم", "لیے ہوئے پیسے",
+            "zaati kharche", "zati kharche", "zatee kharcha", "zaati kharchay", "personal drawings", "personal drawing",
+            "personal expense", "personal expenses", "personal kharcha", "personal kharch", "personal kharche",
+            "personal withdrawals", "drawing", "zaati drawings", "ذاتی خرچہ", "ذاتی خرچ", "لی ہوئی رقم", "لیے ہوئے پیسے",
         ],
     ),
 ];
@@ -893,6 +898,7 @@ pub(super) const STOP: &[&str] = &[
     "entire", "karni", "karne", "kijiye", "کرنی", "کرنے", "hazar", "hazaar", "lakh", "lac", "crore", "karor",
     "sau", "million", "thousand", "hundred", "billion", "book", "bak", "buk", "بک", "ہزار", "لاکھ",
     "کروڑ", "سو", "پرانا", "پرانی", "نیا", "نئی", "آخری", "پہلا", "پہلی",
+    "log", "logon", "logo", "lugon", "walon", "walo", "personal", "kin", "kiin", "کیں", "لوگ", "لوگوں", "والوں",
     "ka", "ki", "ke", "kay", "ko", "se", "say", "ne", "nay", "mein", "me", "main", "men", "par",
     "pe", "per", "tak", "tk", "ho", "hai", "he", "hain", "hen", "hy", "hoon", "hun", "tha", "thi",
     "the", "thay", "hoga", "hogi", "hoge", "hote", "hota", "hoti", "hua", "hui", "hue", "huwa",
@@ -918,7 +924,7 @@ pub(super) const STOP: &[&str] = &[
     "rahi", "rahe", "rha", "rhi", "rhe", "gaya", "bohat", "bahut", "bahot", "zyada", "ziada",
     "ziyada", "kam", "thora", "thoda", "kitni", "kitne", "ka", "ke", "ko", "wapsi", "wapis", "now", "far", "till", "upto", "currently", "current", "muqable", "muqabla",
     "muqabale", "mawazna", "compare", "compared", "comparison", "versus", "vs", "with", "مقابلے",
-    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "نام", "کام", "عملے", "عملہ", "jama", "jamaa", "screen", "page", "safha", "صفحہ", "fisad", "feesad", "percent", "percentage", "فیصد", "ga", "gi", "ge", "گا", "گی", "گے", "آخر", "اختتام", "aakhir", "akhir", "end", "khatam", "ختم",
+    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "put", "wapas", "نام", "کام", "عملے", "عملہ", "jama", "jamaa", "screen", "page", "safha", "صفحہ", "fisad", "feesad", "percent", "percentage", "فیصد", "ga", "gi", "ge", "گا", "گی", "گے", "آخر", "اختتام", "aakhir", "akhir", "end", "khatam", "ختم",
     "did", "go", "went", "going", "doing", "been", "padi", "pada", "padhi", "pade", "پڑی",
     "پڑا", "ausat", "average", "avg", "اوسط", "time", "bar", "baar", "dafa", "dafah", "martaba", "بار", "دفعہ", "اور", "کس", "کسے", "کسی", "پہلے", "پہلا", "واپسی", "واپس", "کا", "کی", "کے",
     "کو", "سے", "نے", "میں", "پر", "تک", "ہے", "ہیں", "تھا", "تھی", "تھے", "ہو", "ہوا", "ہوئی",

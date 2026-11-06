@@ -1302,6 +1302,28 @@ function forecastKeys(answer) {
  * `percent` input: the months used, a multiplier, a factor); and a value of the forecast the answer
  * itself makes. The history the forecast stands on (the actual months) stays checked.
  */
+/**
+ * The monthly changes of a balance estimate (PRD FR-7.86, `domain::forecast::balance_at_pace`): the first step of its
+ * working is the average of the net changes of the last months (in minus out of each month), each one a figure the app
+ * read from `balance_series`, not a cell of the R12 or R13 button. They count as found in the books when the step is
+ * an average of at least two of them that adds up: the sum of the changes over their number is the step's result,
+ * within one rupee (a party's balance changes are signed by their side: debit plus, credit minus).
+ */
+function monthlyChangesAgree(step) {
+  if (step?.op !== 'average') return false;
+  const signed = (cell) => {
+    if (cell?.type === 'money') return cell.paisa;
+    if (cell?.type === 'balance') return cell.side === 'cr' ? -cell.paisa : cell.paisa;
+    return null;
+  };
+  const months = (step.inputs ?? []).filter((i) => i?.type === 'money' || i?.type === 'balance');
+  const values = months.map(signed);
+  const result = signed(step.result);
+  if (months.length < 2 || result === null || values.some((v) => v === null)) return false;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return Math.abs(mean - result) <= 100;
+}
+
 function answerFigures(answer) {
   const out = [];
   const forecast = forecastKeys(answer);
@@ -1317,9 +1339,12 @@ function answerFigures(answer) {
     const steps = part.working?.steps ?? [];
     if (steps.length) {
       const results = new Set(steps.map((st) => cellKey(st.result)));
-      for (const st of steps)
+      const balancePace = /^assistant-working-balance-pace/.test(part.working?.title_id ?? '');
+      for (const [at, st] of steps.entries())
         for (const input of st.inputs ?? []) {
           if (input?.type === 'number' || input?.type === 'percent') continue;
+          // A monthly change of a balance estimate is found in the books (see monthlyChangesAgree).
+          if (balancePace && at === 0 && monthlyChangesAgree(st)) continue;
           const key = cellKey(input);
           // The result of an earlier step, or a forecast value, is not a figure of a report.
           if (key && !results.has(key) && !forecast.has(key)) out.push({ key, count: false });
@@ -3563,6 +3588,77 @@ function selfTest() {
       {},
     ).pass,
     'a calculation with an input missing from the button passed',
+  );
+  // A balance estimate (PRD FR-7.86): the first step of its working averages the net change of each month; those
+  // inputs are not cells of the R12 or R13 button and count as found in the books when they add up to the average.
+  // Cash now 11,619,887; the changes of three months -545,434, 3,485,527 and 1,877,836 average 1,605,976 a month.
+  const balancePart = (months, average) => ({
+    type: 'figure',
+    cell: { type: 'money', paisa: 1322586300 },
+    dir: null,
+    checked: false,
+    working: {
+      title_id: 'assistant-working-balance-pace-cash',
+      steps: [
+        {
+          op: 'average',
+          inputs: [
+            ...months.map((paisa) => ({ type: 'money', paisa })),
+            { type: 'number', value: months.length },
+          ],
+          result: { type: 'money', paisa: average },
+        },
+        {
+          op: 'times',
+          inputs: [
+            { type: 'money', paisa: average },
+            { type: 'number', value: 1 },
+          ],
+          result: { type: 'money', paisa: average },
+        },
+        {
+          op: 'sum',
+          inputs: [
+            { type: 'money', paisa: 1161988700 },
+            { type: 'money', paisa: average },
+          ],
+          result: { type: 'money', paisa: 1322586300 },
+        },
+      ],
+    },
+  });
+  const balanceQ = mk({
+    figures: '',
+    question: 'cash abhi kitna hai aur agle mahine kitna ho jayega',
+  });
+  const cashButton = [{ kind: 'report', label: 'R12', error: null, numbers: ['11619887'] }];
+  const goodMonths = [-54543400, 348552700, 187783600];
+  const goodBalance = score(
+    balanceQ,
+    {
+      reply: answered([balancePart(goodMonths, 160597600)], {}),
+      tool_calls: [],
+      buttons: cashButton,
+    },
+    {},
+  );
+  expect(
+    goodBalance.pass && !goodBalance.reasons.some((x) => x.startsWith('button:')),
+    'the monthly changes of a balance estimate were asked of the button',
+  );
+  // The same working with changes that do not average to its result is NOT found in the books.
+  const lied = score(
+    balanceQ,
+    {
+      reply: answered([balancePart([111100, 222200, 333300], 160597600)], {}),
+      tool_calls: [],
+      buttons: cashButton,
+    },
+    {},
+  );
+  expect(
+    lied.reasons.some((x) => x.startsWith('button:')),
+    'monthly changes that do not add up to the average were accepted',
   );
   // A row without buttons (an older file) is not checked.
   expect(

@@ -127,9 +127,9 @@ export const MONEY_SUBJECTS = [
     L: {
       key: (p) => `mx.${p}.r23.count`,
       label: 'count',
-      r: '{p} kitni {w} darj hui',
-      u: '{p} کتنی {w} درج ہوئیں',
-      e: 'how many {w} were entered {p}',
+      r: '{p} {w} ki kitni entries darj hui',
+      u: '{p} {w} کی کتنی اندراجات درج ہوئیں',
+      e: 'how many entries of {w} were made {p}',
     },
     C: {
       key: (p) => `mx.${p}.vs.receipts`,
@@ -160,9 +160,9 @@ export const MONEY_SUBJECTS = [
     L: {
       key: (p) => `mx.${p}.r25.count`,
       label: 'count',
-      r: '{p} kitni {w} darj hui',
-      u: '{p} کتنی {w} درج ہوئیں',
-      e: 'how many {w} were entered {p}',
+      r: '{p} {w} ki kitni entries darj hui',
+      u: '{p} {w} کی کتنی اندراجات درج ہوئیں',
+      e: 'how many entries of {w} were made {p}',
     },
     C: {
       key: (p) => `mx.${p}.vs.payments`,
@@ -214,11 +214,11 @@ export const MONEY_SUBJECTS = [
     section: 'cash',
     thing: [
       noun(
-        'roakar ka kharcha',
-        'روکڑ کا خرچہ',
+        'roakar se nikli raqam',
+        'روکڑ سے نکلی رقم',
         'cash out',
-        'rokar ka kharch',
-        'روکڑ کا خرچ',
+        'rokar se nikli rakam',
+        'روکڑ سے نکلی رکم',
         'cash outt',
       ),
     ],
@@ -234,8 +234,8 @@ export const MONEY_SUBJECTS = [
     C: {
       key: (p) => `mx.${p}.vs.cash_out`,
       label: 'diff',
-      r: '{p} roakar ka kharcha {v} se kitna zyada ya kam raha',
-      u: '{p} روکڑ کا خرچہ {v} سے کتنا زیادہ یا کم رہا',
+      r: '{p} roakar se nikli raqam {v} se kitni zyada ya kam rahi',
+      u: '{p} روکڑ سے نکلی رقم {v} سے کتنی زیادہ یا کم رہی',
       e: 'cash out {p} against {v}',
     },
   },
@@ -417,8 +417,8 @@ export const MONEY_SUBJECTS = [
       r: '{p} {w} kitna baqi tha',
       u: '{p} {w} کتنا باقی تھا',
       e: 'how much were the {w} {p}',
-      mr: '{p} {w} ka total kitna tha',
-      mu: '{p} {w} کا total کتنا تھا',
+      mr: '{p} {w} ka baqi total kitna tha',
+      mu: '{p} {w} کا باقی total کتنا تھا',
     },
     L: {
       key: (p) => `mx.asof.${p}.${report}.count`,
@@ -447,8 +447,8 @@ export const MONEY_SUBJECTS = [
       r: '{w} ne {p} kitna diya',
       u: '{w} نے {p} کتنا دیا',
       e: 'how much did {w} pay {p}',
-      mr: '{w} ne {p} kitna pay kiya',
-      mu: '{w} نے {p} کتنا pay کیا',
+      mr: '{w} se {p} kitni receipt wasool hui',
+      mu: '{w} سے {p} کتنی receipt وصول ہوئی',
     },
     L: {
       key: (p, w) => `mx.${p}.r23.${w.key}.count`,
@@ -460,9 +460,9 @@ export const MONEY_SUBJECTS = [
     C: {
       key: (p, w) => `mx.${p}.vs.paid_${w.key}`,
       label: 'diff',
-      r: '{w} ki adaigi {p} {v} se kitni zyada ya kam rahi',
-      u: '{w} کی ادائیگی {p} {v} سے کتنی زیادہ یا کم رہی',
-      e: "{w}'s payments {p} against {v}",
+      r: '{w} se {p} ki wasooli {v} se kitni zyada ya kam rahi',
+      u: '{w} سے {p} کی وصولی {v} سے کتنی زیادہ یا کم رہی',
+      e: 'payments received from {w} {p} against {v}',
     },
     T: ['X', 'a top of one buyer is his top item (the item axis)'],
   },

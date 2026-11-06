@@ -380,7 +380,7 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("aaj kitne nag bike", "period{kind:today} | analytics{from:2026-10-10,to:2026-10-10,view:A}"),
     ("kele ke kitne nag bike is mahine", "period{kind:this_month} | find{role:item,text:Banana} | analytics{from:2026-10-01,item:i1,to:2026-10-10,view:A}"),
     // Another number than the one the views hold: no reads, the model chooses.
-    ("how much seller commission did apple give this month", "NONE"),
+    ("how much seller commission did apple give this month", "period{kind:this_month} | find{role:item,text:Apple} | analytics{from:2026-10-01,item:i2,to:2026-10-10,view:A}"),
     ("partner a ka khalis kitna hai", "NONE"),
     ("pichle hafte ka commission", "period{kind:last_week} | analytics{from:2026-09-28,to:2026-10-04,view:A}"),
     ("october ka commission", "period{from:2026-10-01,kind:range,to:2026-10-10} | analytics{from:2026-10-01,to:2026-10-10,view:A}"),
@@ -1404,15 +1404,20 @@ fn one_figure_over_two_periods_reads_both_periods_before_the_model_starts() {
 /// It needs a "last" word, one buyer, one item and no period. No instant answer.
 #[rustfmt::skip]
 const LAST_RATE: &[(&str, &str)] = &[
-    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:5,sort:date:desc+entry:desc}"),
-    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:5,sort:date:desc+entry:desc}"),
-    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:5,sort:date:desc+entry:desc}"),
-    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:5,sort:date:desc+entry:desc}"),
-    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:5,sort:date:desc+entry:desc}"),
+    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
+    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
+    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
+    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
+    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
     // No "last" word, a period, no buyer, or "last sale" (not a rate): the model's.
     ("akram ko kela kis rate pe diya", "NONE"),
     ("akram ko kela pichle mahine kis rate pe diya", "NONE"),
-    ("kele ka last rate", "NONE"),
+    // An item with no buyer, with or without a period: the newest line of its sales, ONE row (live run 2, C8).
+    ("kele ka last rate", "find{role:item,text:Banana} | report{id:R2,item:i1,rows:1,sort:date:desc+entry:desc}"),
+    ("what was the last rate of banana today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:1,sort:date:desc+entry:desc,to:2026-10-10}"),
+    ("last rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | report{from:2026-09-28,id:R2,item:i2,rows:1,sort:date:desc+entry:desc,to:2026-10-04}"),
+    // "last week" is a period, not the last one: the average of the week, as ever.
+    ("rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | analytics{from:2026-09-28,item:i2,to:2026-10-04,view:A}"),
     ("kele ki last sale", "NONE"),
 ];
 
@@ -2148,4 +2153,150 @@ fn a_quality_word_names_the_grade_and_the_read_carries_it() {
     let u = understand(&reader(&w, today), "rahim ke seb kis kis darje mein bike");
     assert!(u.quality && u.grade.is_none());
     assert!(plan_reads(&u).is_some());
+}
+
+/// Live run 2: capital taken back is the `capital_out` vouchers (R15), never the drawings (R29), and
+/// capital put in is `capital_in` (C9); the gardens' goods sold in our shop are view A with `goods` garden,
+/// never the whole shop (C3); a seller or buyer side word before "commission" is the side of the charge,
+/// not the role of the person named, so the reads of the buyer and the item are made (C4, C6).
+#[test]
+fn capital_flow_garden_goods_and_a_side_of_the_commission_are_read_for_what_they_name() {
+    let w = books_with_vegetables();
+    let today = on(2026, 10, 10);
+    let ready = include_str!("../prompt/tools.json").contains("\"item_group\"");
+    let _ = ready;
+    for (question, want) in [
+        (
+            "اس سال شراکت داروں نے کتنا سرمایہ واپس لیا",
+            "period{kind:this_year} | report{from:2026-01-01,id:R15,to:2026-10-10,voucher_type:capital_out}",
+        ),
+        (
+            "how much capital did partners take back this year",
+            "period{kind:this_year} | report{from:2026-01-01,id:R15,to:2026-10-10,voucher_type:capital_out}",
+        ),
+        (
+            "how much capital did partners put in this year",
+            "period{kind:this_year} | report{from:2026-01-01,id:R15,to:2026-10-10,voucher_type:capital_in}",
+        ),
+        (
+            "gardens ki is saal ki bikri",
+            "period{kind:this_year} | analytics{from:2026-01-01,goods:garden,to:2026-10-10,view:A}",
+        ),
+    ] {
+        let u = understand(&reader(&w, today), question);
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), want, "{question}");
+        let refused = run_plan(&w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    // The side word is not the role of the name: Akram and Faisal are buyers.
+    for question in [
+        "seller commission on the banana Akram bought this year",
+        "اگست میں اکرم کے آلو پر بیوپاری کا کمیشن",
+    ] {
+        let u = understand(&reader(&w, today), question);
+        assert!(!u.has_not_found(), "{question}");
+        let text = plan_reads(&u)
+            .map(|r| render_all(&r))
+            .unwrap_or_else(|| panic!("{question}: no reads"));
+        assert!(text.contains("find{role:buyer,"), "{question}: {text}");
+        assert!(text.contains("analytics{buyer:"), "{question}: {text}");
+    }
+}
+
+/// F1 of the live run: a word that is no name, or a staff member, is never "no such party" (the app
+/// ends the question as not found by itself). The partners (plural), the money they took ("personal
+/// drawings") and what they put in are read as the shop's flows; a collector is a record, and what he
+/// collected is the receipts register for him; a partner is a partner even when "liya" is said; a
+/// misspelt Urdu item is the item.
+#[test]
+fn partners_drawings_a_collector_and_a_misspelt_item_are_read_not_missing() {
+    let y = year::seed::build_thin();
+    let today = on(2026, 11, 5);
+    for (question, want) in [
+        (
+            "aaj shirakat daaron ne kitna sarmaya lagaya",
+            "period{kind:today} | report{from:2026-11-05,id:R15,to:2026-11-05,voucher_type:capital_in}",
+        ),
+        (
+            "pichle hafte shirakat daaron ne kitna sarmaya lagaya",
+            "period{kind:last_week} | report{from:2026-10-26,id:R15,to:2026-11-01,voucher_type:capital_in}",
+        ),
+        (
+            "how much did the partners take for personal drawings today",
+            "period{kind:today} | report{from:2026-11-05,id:R29,to:2026-11-05}",
+        ),
+        (
+            "kal shirakat daaron ne personal drawings ke liye kitna liya",
+            "period{kind:yesterday} | report{from:2026-11-04,id:R29,to:2026-11-04}",
+        ),
+        (
+            "14 October ko shirakat daaron ne zati kharcha ke liye kitna liya",
+            "period{from:2026-10-14,kind:range,to:2026-10-14} | report{from:2026-10-14,id:R29,to:2026-10-14}",
+        ),
+        (
+            "Rasheed ne is mahine kitna collection kiya",
+            "period{kind:this_month} | find{role:collector,text:Rasheed} | report{collector:st2,from:2026-11-01,id:R23,to:2026-11-05}",
+        ),
+        (
+            "رشید نے اس ہفتے کتنی اگراہی کی",
+            "period{kind:this_week} | find{role:collector,text:Rasheed} | report{collector:st2,from:2026-11-02,id:R23,to:2026-11-05}",
+        ),
+        (
+            "Rasheeed ne 14 October ko kitni ugrahi ki",
+            "period{from:2026-10-14,kind:range,to:2026-10-14} | find{role:collector,text:Rasheed} | report{collector:st2,from:2026-10-14,id:R23,to:2026-10-14}",
+        ),
+        (
+            "Rasheeed ne pichle saal kitni wasooliyan kin",
+            "period{kind:last_year} | find{role:collector,text:Rasheed} | report{collector:st2,from:2025-01-01,id:R23,to:2025-12-31}",
+        ),
+        (
+            "رشید نے پچھلے سال کتنی وصولیاں کیں",
+            "period{kind:last_year} | find{role:collector,text:Rasheed} | report{collector:st2,from:2025-01-01,id:R23,to:2025-12-31}",
+        ),
+        (
+            "Alif ne kal zaati kharche ke liye kitna liya",
+            "period{kind:yesterday} | find{role:partner,text:alif} | report{from:2026-11-04,id:R29,partner:s1,to:2026-11-04}",
+        ),
+        (
+            "آج صیب کی بکری کتنی ہوئی",
+            "period{kind:today} | find{role:item,text:Apple} | analytics{from:2026-11-05,item:i2,to:2026-11-05,view:A}",
+        ),
+        (
+            "پیاض کا اس ہفتے کتنا نگ بکا",
+            "period{kind:this_week} | find{role:item,text:Onion} | analytics{from:2026-11-02,item:i9,to:2026-11-05,view:A}",
+        ),
+    ] {
+        let u = understand(&reader(&y.w, today), question);
+        assert!(!u.has_not_found(), "{question}: a missing party");
+        let reads = plan_reads(&u).unwrap_or_else(|| panic!("{question}: no reads"));
+        assert_eq!(render_all(&reads), want, "{question}");
+        let refused = run_plan(&y.w, today, question, &reads);
+        assert!(refused.is_empty(), "{question}: {refused:?}");
+    }
+    // A two-letter Urdu word that is also a common word (عام, general) is never taken for the item
+    // with a sure answer: the model reads it.
+    let u = understand(
+        &reader(&y.w, today),
+        "عام سے ستمبر میں total کمیشن کتنا بنا",
+    );
+    assert!(!u.has_not_found());
+    assert!(!u.sure, "عام is not sure");
+    // The one-time people have no figure of their own: the shop's dues are not theirs.
+    for question in [
+        "pukhta khata ka kul baqaya kitna hai",
+        "pukhta khata ke logon ka kul baqaya kitna hai",
+    ] {
+        let u = understand(&reader(&y.w, today), question);
+        assert!(!u.has_not_found(), "{question}");
+        assert!(plan_reads(&u).is_none(), "{question}: the shop's dues");
+    }
+    // "کل" before a word for the side of a charge is "total", so the day is not sure.
+    let u = understand(&reader(&y.w, today), "سبزی کا کل بائر کمیشن کتنا ہے");
+    assert!(
+        !u.periods
+            .iter()
+            .any(|p| p.confidence == mandi_assistant::understand::Confidence::High),
+        "کل is a day, sure"
+    );
 }
