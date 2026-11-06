@@ -11,10 +11,13 @@
 //   chip=<chip>     one quick question is asked at once   slow  the reply takes 6 seconds
 //   status=off|nokey   questions are off / no key is saved       down   every command fails
 //   steps           two step lines are shown while the question works (use with slow)
+//   lang=en|ur      the language the `instant` reply writes its sentences in (default: the page's)
 
 import type { AskReply } from '../../src/bindings/AskReply';
 import { dashboardHandlers, inputOf, refusal, type Input } from './dev-bridge-dashboard';
 import { devValue } from './dev-bridge';
+import { bundles } from '../../src/i18n';
+import { useLanguageStore } from '../../src/shared/i18n';
 import * as real from './assistant-real';
 
 /** The replies a page can ask for with `reply=<key>`. */
@@ -58,9 +61,44 @@ export const REPLIES: Readonly<Record<string, AskReply>> = {
   time_limit: real.REPLY_TIME_LIMIT,
 };
 
+/**
+ * An instant answer of two sentences (PRD FR-7.90): the sale and the commission of today, one "•" line each,
+ * written from the app's own Fluent messages in the language of the page, with the real money figure.
+ */
+function instantTwoLines(): AskReply {
+  const base = real.REPLY_ANSWERED;
+  const money = base.answer?.parts[6];
+  if (base.answer === null || money?.type !== 'figure') return base;
+  // `lang=en|ur` in the address chooses the language of the sentences, because a question asked at once is
+  // answered before the page switches to the language of the picture.
+  const flag = devValue('lang');
+  const bundle =
+    bundles[flag === 'en' || flag === 'ur' ? flag : useLanguageStore.getState().language];
+  const format = (id: string, args: Record<string, string>): string => {
+    const pattern = bundle.getMessage(id)?.value;
+    return pattern == null
+      ? ''
+      : bundle.formatPattern(pattern, args).replace(/[\u2066-\u2069]/g, '');
+  };
+  const period = format('assistant-instant-period', { shape: 'today' });
+  const line = (id: string) =>
+    format(id, { role: 'shop', period, figure: 'FIGUREMARK' })
+      .split(/(FIGUREMARK)/)
+      .filter((piece) => piece !== '')
+      .map((piece) => (piece === 'FIGUREMARK' ? money : { type: 'text' as const, text: piece }));
+  const parts = [
+    { type: 'text' as const, text: '• ' },
+    ...line('assistant-instant-sale'),
+    { type: 'text' as const, text: '\n• ' },
+    ...line('assistant-instant-commission'),
+  ];
+  return { ...base, answer: { ...base.answer, parts, tables: [] } };
+}
+
 /** The reply for a question: the one the flag names, else by a word of the question. */
 function replyFor(text: string): AskReply {
   const named = devValue('reply');
+  if (named === 'instant') return instantTwoLines();
   const found = named === null ? undefined : REPLIES[named];
   if (found !== undefined) return found;
   const lower = text.toLowerCase();

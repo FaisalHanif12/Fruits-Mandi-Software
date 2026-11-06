@@ -11,7 +11,7 @@ import type { ReportMessageArg } from '../../bindings/ReportMessageArg';
 import type { ReportParty } from '../../bindings/ReportParty';
 import type { ReportRowKind } from '../../bindings/ReportRowKind';
 import type { Language } from '../../i18n';
-import { formatBps, formatGrams, isoToDisplayDate } from '../../shared/format';
+import { formatBps, formatGrams, gradedItem, isoToDisplayDate } from '../../shared/format';
 import type { ListContext } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 
@@ -85,7 +85,12 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
       // The buyers' list (R5) writes a line the way the client's own print does: "(item qty . rate)".
       if (shortSale) {
         return text('report-detail-sale-short', {
-          item: displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
+          // The quality (درجہ) follows the item when the line has one: "(سیب اول 10 . 1200)" (FR-12.42).
+          item: gradedItem(
+            text,
+            displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
+            part.grade,
+          ),
           qty: String(part.qty),
           // The rate is written plain, "2600", as on the client's own print.
           rate: money(part.rate_paisa, true),
@@ -93,7 +98,11 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
       }
       return text('report-detail-sale', {
         number: String(part.bikri_number),
-        item: displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
+        item: gradedItem(
+          text,
+          displayName({ name_ur: part.item.ur, name_en: part.item.en }, language),
+          part.grade,
+        ),
         qty: String(part.qty),
         packing: displayName({ name_ur: part.packing.ur, name_en: part.packing.en }, language),
         rate: money(part.rate_paisa),

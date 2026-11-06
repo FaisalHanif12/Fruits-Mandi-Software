@@ -478,16 +478,21 @@ function idsIn(reply: AskReply): string[] {
   return ids;
 }
 
-/** Every working title the backend's source names, read from the source, so a new one fails here first. */
-function workingTitlesInBackend(): string[] {
+/**
+ * Every message ID of a kind (`working`, `measure`) the backend's source names, read from the source, so a
+ * new one fails here first. The IDs are plain words joined by dashes (a prefix such as `assistant-measure-`
+ * alone is not one).
+ */
+function idsOfKindInBackend(kind: 'working' | 'measure' | 'how'): string[] {
   const dir = path.resolve(__dirname, '../../../backend/crates/assistant/src');
   const found = new Set<string>();
+  const pattern = new RegExp(`"(assistant-${kind}-[a-z]+(?:-[a-z]+)*)"`, 'g');
   const walk = (folder: string) => {
     for (const entry of readdirSync(folder, { withFileTypes: true })) {
       const full = path.join(folder, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.name.endsWith('.rs')) {
-        for (const match of readFileSync(full, 'utf8').matchAll(/"(assistant-working-[a-z-]+)"/g)) {
+        for (const match of readFileSync(full, 'utf8').matchAll(pattern)) {
           found.add(match[1] ?? '');
         }
       }
@@ -496,6 +501,8 @@ function workingTitlesInBackend(): string[] {
   walk(dir);
   return [...found].sort();
 }
+
+const workingTitlesInBackend = () => idsOfKindInBackend('working');
 
 describe('every working title the backend can send has words in both languages', () => {
   it('reads the titles from the backend source, including the percent more and less', () => {
@@ -507,6 +514,42 @@ describe('every working title the backend can send has words in both languages',
 
   it.each(LANGUAGES)('%s', (language) => {
     const missing = workingTitlesInBackend().filter((id) => !bundles[language].hasMessage(id));
+    expect(missing).toEqual([]);
+  });
+});
+
+describe('every how-to step the backend can send has words in both languages', () => {
+  it('reads the steps from the backend source, including the new ones of plan 55', () => {
+    const steps = idsOfKindInBackend('how');
+    for (const id of [
+      'assistant-how-open-report',
+      'assistant-how-set-party',
+      'assistant-how-open-analytics',
+      'assistant-how-set-guests',
+      'assistant-how-set-bikri',
+      'assistant-how-assumed-day',
+    ]) {
+      expect(steps).toContain(id);
+    }
+  });
+
+  it.each(LANGUAGES)('%s', (language) => {
+    const missing = idsOfKindInBackend('how').filter((id) => !bundles[language].hasMessage(id));
+    expect(missing).toEqual([]);
+  });
+});
+
+describe('every measure the backend can name has words in both languages', () => {
+  it('reads the measures from the backend source, including the balance ones', () => {
+    const measures = idsOfKindInBackend('measure');
+    expect(measures).toContain('assistant-measure-sales');
+    expect(measures).toContain('assistant-measure-party-balance');
+    expect(measures).toContain('assistant-measure-partner-profit');
+    expect(measures.length).toBeGreaterThan(12);
+  });
+
+  it.each(LANGUAGES)('%s', (language) => {
+    const missing = idsOfKindInBackend('measure').filter((id) => !bundles[language].hasMessage(id));
     expect(missing).toEqual([]);
   });
 });

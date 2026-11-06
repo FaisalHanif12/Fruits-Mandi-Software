@@ -212,7 +212,13 @@ fn the_catalogue_has_the_new_reports_with_their_filters() {
     assert_eq!(find(ReportId::R10).group, ReportGroup::Sales);
     assert_eq!(
         find(ReportId::R10).filters,
-        vec![FilterKind::DateRange, FilterKind::Seller, FilterKind::Item]
+        vec![
+            FilterKind::DateRange,
+            FilterKind::Seller,
+            FilterKind::Item,
+            // PRD v1.29: all the items of a group.
+            FilterKind::ItemGroup
+        ]
     );
     assert_eq!(
         find(ReportId::R15).filters,
@@ -224,11 +230,20 @@ fn the_catalogue_has_the_new_reports_with_their_filters() {
     );
     for id in [ReportId::R23, ReportId::R25] {
         assert_eq!(find(id).group, ReportGroup::Collections);
-        assert_eq!(
-            find(id).filters,
-            vec![FilterKind::DateRange, FilterKind::Party]
-        );
     }
+    // R23 also takes one collector (plan 55 §11.1); R25 does not.
+    assert_eq!(
+        find(ReportId::R23).filters,
+        vec![
+            FilterKind::DateRange,
+            FilterKind::Party,
+            FilterKind::Collector
+        ]
+    );
+    assert_eq!(
+        find(ReportId::R25).filters,
+        vec![FilterKind::DateRange, FilterKind::Party]
+    );
     assert_eq!(
         find(ReportId::R33).filters,
         vec![

@@ -42,13 +42,30 @@ describe.each(STEPS)('the grids of the sale book in a %s window', (step) => {
   });
 });
 
-describe('the whole-sale view keeps the payment type except in the narrowest window', () => {
+describe('the payment type is not a column of the grid (it is in the details of the line)', () => {
+  it.each(STEPS)(
+    '%s: no payment column in the grid of one lot or in the whole-sale view',
+    (step) => {
+      expect(saleColumns(step).some((column) => column.field === 'payment')).toBe(false);
+      expect(allLinesColumns(step).some((column) => column.field === 'payment')).toBe(false);
+    },
+  );
+});
+
+describe('the quality column (درجہ) is right after the rate and never an Enter stop', () => {
+  it.each(STEPS)('%s: grid of one lot', (step) => {
+    const columns = saleColumns(step);
+    const at = columns.findIndex((column) => column.field === 'rate');
+    expect(columns[at + 1]?.field).toBe('grade');
+    expect(columns[at + 1]?.type).toBe('select');
+    expect(columns[at + 1]?.enterStop).toBe(false);
+  });
+
   it.each([
     ['compact', false],
     ['normal', true],
     ['wide', true],
-  ] as const)('%s: payment column %s', (step, kept) => {
-    const has = allLinesColumns(step).some((column) => column.field === 'payment');
-    expect(has).toBe(kept);
+  ] as const)('%s: in the whole-sale view: %s', (step, kept) => {
+    expect(allLinesColumns(step).some((column) => column.field === 'grade')).toBe(kept);
   });
 });

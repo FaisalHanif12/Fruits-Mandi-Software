@@ -11,6 +11,7 @@ use super::compose_common::{
     Composed, bare, guide_parts, guide_words, route_of, sources_of, steps_of,
 };
 use super::{Intent, Understanding};
+use crate::answer::{AnswerSource, ScreenRoute};
 
 /// The guide's answer to a how-to. `None` when the understanding holds no topic of the guide.
 pub fn compose_help(u: &Understanding, language: Language, read_at: &str) -> Option<Composed> {
@@ -47,6 +48,13 @@ pub fn compose_navigate(u: &Understanding, language: Language, read_at: &str) ->
     let topic = u.topic.as_ref()?.value;
     let words = guide_words(topic, language)?;
     answer.parts = guide_parts(words);
+    // The audit log is a tab of the settings: a link-only button opens it (plan 55 §11.1).
+    if topic == "audit" {
+        answer.sources = vec![AnswerSource::Screen {
+            result_id: String::new(),
+            route: ScreenRoute::Audit,
+        }];
+    }
     let mut composed = Composed::answered(answer);
     composed.entry_route = u.screen.and_then(route_of);
     Some(composed)

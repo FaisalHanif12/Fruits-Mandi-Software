@@ -26,6 +26,7 @@ import { TripFiguresCard, TripHeaderCard } from '../components/TripHeaderCard';
 import { TripPartnersCard } from '../components/TripPartnersCard';
 import { TripPurchasesSection } from '../components/TripPurchasesSection';
 import { useTrip, type TripView } from '../hooks';
+import { parseTripSearch, type TripOpenType } from '../screen-type';
 import type { TripEntryRow } from '../types';
 
 /** A positive whole number from the address, or nothing. */
@@ -38,11 +39,14 @@ function TripBody({
   view,
   today,
   initialPurchase,
+  initialType,
   pager,
 }: {
   view: TripView;
   today: string;
   initialPurchase: number | null;
+  /** The type of the entry form the address asks for (PRD FR-7.79), or none. */
+  initialType: TripOpenType | undefined;
   pager: PagerState;
 }) {
   const navigate = useNavigate();
@@ -116,6 +120,7 @@ function TripBody({
           purchases={detail.purchases}
           today={today}
           onPurchaseSaved={setSelectedPurchase}
+          initialType={initialType}
         />
       ) : (
         <Notice tone="info">
@@ -151,11 +156,22 @@ function TripBody({
 export function TripPage() {
   const { id: rawId } = useParams({ strict: false });
   const rawSearch: Record<string, unknown> = useSearch({ strict: false });
-  return <TripScreen id={positiveId(rawId)} purchase={positiveId(rawSearch['purchase'])} />;
+  const search = parseTripSearch(rawSearch);
+  return (
+    <TripScreen id={positiveId(rawId)} purchase={search.purchase ?? null} entryType={search.type} />
+  );
 }
 
 /** One trip by its id, with its four states. The development page shows it without a route. */
-export function TripScreen({ id, purchase }: { id: number | null; purchase: number | null }) {
+export function TripScreen({
+  id,
+  purchase,
+  entryType,
+}: {
+  id: number | null;
+  purchase: number | null;
+  entryType?: TripOpenType | undefined;
+}) {
   const day = useDayStatus();
   const trip = useTrip(id);
   if (trip.isPending || day.isPending) return <LoadingState />;
@@ -179,6 +195,7 @@ export function TripScreen({ id, purchase }: { id: number | null; purchase: numb
       view={trip.data}
       today={day.data.today}
       initialPurchase={purchase}
+      initialType={entryType}
       pager={trip.pager}
     />
   );

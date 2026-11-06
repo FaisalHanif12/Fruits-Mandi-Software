@@ -261,6 +261,49 @@ describe('the filters of an answer’s source', () => {
     expect(reportSearchFromFilters(reportSource({ from: '10-9' }))).toEqual({ from: '10-9' });
   });
 
+  it('an item group on an analytics view (A, B, D, G): the address carries it, the print sends it, and none sends nothing', () => {
+    const source = analyticsSource({ item_group: 'vegetable', period: 'this_month' });
+    expect(analyticsSearchFromFilters(source)).toEqual({
+      period: 'this_month',
+      item_group: 'vegetable',
+    });
+    expect(analyticsFiltersOf(source)).toMatchObject({ item_group: 'vegetable' });
+    expect(analyticsSearchFromFilters(analyticsSource())).not.toHaveProperty('item_group');
+    expect(analyticsFiltersOf(analyticsSource())).not.toHaveProperty('item_group');
+    expect(parseAnalyticsSearch({ item_group: 'fruit' }).item_group).toBe('fruit');
+    expect(parseAnalyticsSearch({ item_group: 'meat' })).not.toHaveProperty('item_group');
+  });
+
+  it('an item group, fruit or vegetables (R2, R3, R4, R7, R10, R27): the address carries it, the print sends it, and none sends nothing', () => {
+    const source = reportSource({ item_group: 'fruit', from: '2026-10-01', to: '2026-10-31' });
+    expect(reportSearchFromFilters(source)).toEqual({
+      from: '01-10-2026',
+      to: '31-10-2026',
+      item_group: 'fruit',
+    });
+    expect(reportFiltersOf(source)).toMatchObject({ item_group: 'fruit' });
+    expect(reportSearchFromFilters(reportSource())).not.toHaveProperty('item_group');
+    expect(reportFiltersOf(reportSource())).not.toHaveProperty('item_group');
+    // The address, read again, chooses the group.
+    expect(parseReportSearch({ item_group: 'vegetable' }).item_group).toBe('vegetable');
+    expect(parseReportSearch({ item_group: 'meat' })).not.toHaveProperty('item_group');
+  });
+
+  it('a collector, a staff member (R22, R23, R35): the address carries him, the print sends his id, and none sends nothing', () => {
+    const rasheed = { id: 12, code: null, name_ur: 'رشید', name_en: 'Rasheed', tag: null };
+    const source = reportSource({ collector: rasheed, as_of: '2026-10-10' });
+    expect(reportSearchFromFilters(source)).toEqual({
+      as_of: '10-10-2026',
+      collector: { id: 12, name_ur: 'رشید', name_en: 'Rasheed', tag: null, code: undefined },
+    });
+    expect(reportFiltersOf(source)).toMatchObject({ collector_id: 12, as_of: '10-10-2026' });
+    // The backend leaves the key out when there is none, and so does the address and the print.
+    expect(reportSearchFromFilters(reportSource())).not.toHaveProperty('collector');
+    expect(reportFiltersOf(reportSource())).not.toHaveProperty('collector_id');
+    // The address, read again, fills the box.
+    expect(parseReportSearch({ collector: { id: 12, name_en: 'Rasheed' } }).collector?.id).toBe(12);
+  });
+
   it('a print of a source asks for its dates the way the boxes show them', () => {
     const asked = reportFiltersOf(
       reportSource({ from: '2026-10-01', to: '2026-10-10', as_of: '2026-10-10' }),

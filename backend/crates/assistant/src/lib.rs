@@ -34,6 +34,7 @@ pub mod client;
 pub mod conversation;
 pub mod echo;
 pub mod fill;
+pub mod hedge;
 pub mod help_guard;
 pub mod keys;
 pub mod limits;

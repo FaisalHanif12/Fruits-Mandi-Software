@@ -33,7 +33,7 @@ pub(crate) mod print_data;
 mod sales;
 pub mod statement;
 pub(crate) mod view;
-mod vouchers;
+pub(crate) mod vouchers;
 #[doc(hidden)]
 pub mod workings;
 
@@ -140,7 +140,7 @@ struct Spec {
     party_required: bool,
 }
 
-/// The filters of the three sales registers: dates, the buyer, and the seller, زمیندار, item,
+/// The filters of the sales registers R2 to R5: dates, the buyer, and the seller, زمیندار, item,
 /// the buyer's city and اڈا (PRD FR-19.1).
 const REGISTER_FILTERS: &[FilterKind] = &[
     FilterKind::DateRange,
@@ -148,6 +148,18 @@ const REGISTER_FILTERS: &[FilterKind] = &[
     FilterKind::Seller,
     FilterKind::Zamindar,
     FilterKind::Item,
+    FilterKind::City,
+    FilterKind::Adda,
+];
+
+/// The filters of R2, R3 and R4: those of the registers, and the item group (PRD v1.29).
+const REGISTER_GROUP_FILTERS: &[FilterKind] = &[
+    FilterKind::DateRange,
+    FilterKind::Party,
+    FilterKind::Seller,
+    FilterKind::Zamindar,
+    FilterKind::Item,
+    FilterKind::ItemGroup,
     FilterKind::City,
     FilterKind::Adda,
 ];
@@ -161,8 +173,26 @@ const SELLER_SIDE_FILTERS: &[FilterKind] = &[
     FilterKind::Adda,
 ];
 
+/// The filters of R27: those of R6, and the item group (PRD v1.29).
+const SELLER_SIDE_GROUP_FILTERS: &[FilterKind] = &[
+    FilterKind::DateRange,
+    FilterKind::Seller,
+    FilterKind::Zamindar,
+    FilterKind::Item,
+    FilterKind::ItemGroup,
+    FilterKind::Adda,
+];
+
 /// The filters of the buyer dues reports R20 to R22.
 const DUES_FILTERS: &[FilterKind] = &[FilterKind::AsOf, FilterKind::Party, FilterKind::City];
+
+/// The filters of R22: the dues by collector, and one collector (plan 55 §11.1).
+const DUES_BY_COLLECTOR_FILTERS: &[FilterKind] = &[
+    FilterKind::AsOf,
+    FilterKind::Party,
+    FilterKind::City,
+    FilterKind::Collector,
+];
 
 const fn spec(
     id: ReportId,
@@ -182,9 +212,24 @@ const fn spec(
 const SPECS: &[Spec] = &[
     // The sale book is one بکری, so the بکری must be picked (it is the "required" filter here).
     spec(ReportId::R1, ReportGroup::Sales, &[FilterKind::Bikri], true),
-    spec(ReportId::R2, ReportGroup::Sales, REGISTER_FILTERS, false),
-    spec(ReportId::R3, ReportGroup::Sales, REGISTER_FILTERS, false),
-    spec(ReportId::R4, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(
+        ReportId::R2,
+        ReportGroup::Sales,
+        REGISTER_GROUP_FILTERS,
+        false,
+    ),
+    spec(
+        ReportId::R3,
+        ReportGroup::Sales,
+        REGISTER_GROUP_FILTERS,
+        false,
+    ),
+    spec(
+        ReportId::R4,
+        ReportGroup::Sales,
+        REGISTER_GROUP_FILTERS,
+        false,
+    ),
     spec(ReportId::R5, ReportGroup::Sales, REGISTER_FILTERS, false),
     spec(ReportId::R6, ReportGroup::Sales, SELLER_SIDE_FILTERS, false),
     spec(
@@ -195,6 +240,7 @@ const SPECS: &[Spec] = &[
             FilterKind::Party,
             FilterKind::Seller,
             FilterKind::Item,
+            FilterKind::ItemGroup,
             FilterKind::City,
             FilterKind::Adda,
         ],
@@ -215,7 +261,12 @@ const SPECS: &[Spec] = &[
     spec(
         ReportId::R10,
         ReportGroup::Sales,
-        &[FilterKind::DateRange, FilterKind::Seller, FilterKind::Item],
+        &[
+            FilterKind::DateRange,
+            FilterKind::Seller,
+            FilterKind::Item,
+            FilterKind::ItemGroup,
+        ],
         false,
     ),
     spec(
@@ -273,11 +324,20 @@ const SPECS: &[Spec] = &[
     spec(ReportId::R19, ReportGroup::Accounts, &[], false),
     spec(ReportId::R20, ReportGroup::Collections, DUES_FILTERS, false),
     spec(ReportId::R21, ReportGroup::Collections, DUES_FILTERS, false),
-    spec(ReportId::R22, ReportGroup::Collections, DUES_FILTERS, false),
+    spec(
+        ReportId::R22,
+        ReportGroup::Collections,
+        DUES_BY_COLLECTOR_FILTERS,
+        false,
+    ),
     spec(
         ReportId::R23,
         ReportGroup::Collections,
-        &[FilterKind::DateRange, FilterKind::Party],
+        &[
+            FilterKind::DateRange,
+            FilterKind::Party,
+            FilterKind::Collector,
+        ],
         false,
     ),
     spec(
@@ -301,7 +361,7 @@ const SPECS: &[Spec] = &[
     spec(
         ReportId::R27,
         ReportGroup::Collections,
-        SELLER_SIDE_FILTERS,
+        SELLER_SIDE_GROUP_FILTERS,
         false,
     ),
     spec(
@@ -359,7 +419,7 @@ const SPECS: &[Spec] = &[
     spec(
         ReportId::R35,
         ReportGroup::Business,
-        &[FilterKind::AsOf, FilterKind::Party],
+        &[FilterKind::AsOf, FilterKind::Party, FilterKind::Collector],
         false,
     ),
     // The gardens are picked by the day made, the main fruit, a partner in them, or one garden.

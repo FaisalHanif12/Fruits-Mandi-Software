@@ -289,6 +289,8 @@ assistant-open-entry = اندراج کی اسکرین کھولیں
 # review: pending
 assistant-open-screen = اسکرین کھولیں
 # review: pending
+assistant-open-screen-of = { $source }: اسکرین کھولیں
+# review: pending
 assistant-entry-neutral = رقم خالی رہتی ہے، آپ خود لکھتے ہیں
 # review: pending
 assistant-not-understood = سوال سمجھ نہیں آیا، دوسرے الفاظ میں پوچھیں
@@ -319,6 +321,7 @@ assistant-how-role = { $role ->
     [city] شہر
     [adda] { -adda }
     [head] { -kharcha } مد
+    [item] { -qism-maal }
    *[buyer] { -gahak }
 }
 # review: pending
@@ -327,6 +330,19 @@ assistant-how-set-party = { assistant-how-role } چنیں: { $party } ({ $code }
 assistant-how-set-record = { assistant-how-role } چنیں: { $name }
 # review: pending
 assistant-how-find-row = { $name } کی سطر دیکھیں
+# review: pending
+assistant-how-open-analytics = { -tajziat } کھولیں: قسم { $view }
+# review: pending
+assistant-how-set-group = { $group ->
+    [vegetable] { masters-item-group } چنیں: { masters-item-group-vegetable }
+   *[fruit] { masters-item-group } چنیں: { masters-item-group-fruit }
+}
+# review: pending
+assistant-how-set-guests = چنیں: صرف دکان کے { -mehman }
+# review: pending
+assistant-how-set-bikri = { -bikri } نمبر { $number } چنیں
+# review: pending
+assistant-how-assumed-day = کوئی دن نہیں بتایا گیا، اس لیے آج ({ $day }) لیا گیا ہے
 # review: pending
 assistant-how-set-day = تاریخ { $day } رکھیں
 # review: pending
@@ -557,6 +573,12 @@ assistant-working-what-if-pace = اسی رفتار، تبدیلی کے ساتھ
 # review: pending
 assistant-working-same-growth = اسی اضافے سے: ہر مہینے کی اوسط تبدیلی، ہر مہینے میں جمع
 # review: pending
+assistant-working-balance-pace = اسی رفتار سے: اب کا { -baqaya } + ایک مہینے کی اوسط تبدیلی، آگے کے مہینوں سے ضرب
+# review: pending
+assistant-working-balance-pace-cash = اسی رفتار سے: اب کی موجود { -rokar } + ایک مہینے کی اوسط تبدیلی، آگے کے مہینوں سے ضرب
+# review: pending
+assistant-working-balance-pace-dues = اسی رفتار سے: اب گاہکوں کے ذمے + ایک مہینے کی اوسط تبدیلی، آگے کے مہینوں سے ضرب
+# review: pending
 assistant-working-same-season = پچھلے سال جیسا: پچھلے سال کے وہی مہینے
 
 ## What an estimate is about, what a figure is, and where its two places are (FR-7.75, FR-7.76).
@@ -581,6 +603,16 @@ assistant-measure-receipts = { -wasooli }
 assistant-measure-garden-sales = { -bagh } کی فروخت
 # review: pending
 assistant-measure-trip-sales = { -safar } کی فروخت
+# review: pending
+assistant-measure-balance-change = ہر مہینے { -baqaya } میں تبدیلی
+# review: pending
+assistant-measure-party-balance = پارٹی کا { -baqaya }
+# review: pending
+assistant-measure-cash-balance = موجود { -rokar }
+# review: pending
+assistant-measure-buyers-dues = گاہکوں کے ذمے
+# review: pending
+assistant-measure-partner-profit = { -shirakat-dar } کا منافع
 # review: pending
 assistant-figure-party-balance = پارٹی کا بقایا
 # review: pending
@@ -677,15 +709,16 @@ assistant-instant-sale-count = { $role ->
 }
 # review: pending
 assistant-instant-commission = { $role ->
-    [item] { $name } پر { $period } کا { -commission }: { $figure }
-    [seller] { -beopari } { $name } کے مال پر { $period } کا { -commission }: { $figure }
-    [buyer] { $name } سے { $period } کا { -commission }: { $figure }
-   *[shop] { $period } کا { -commission }: { $figure }
+    [item] { $name } پر { $period } کا { -commission } ({ -laga } سمیت): { $figure }
+    [seller-own] { -beopari } { $name } سے لیا گیا { $period } کا { -commission }: { $figure }
+    [seller] { -beopari } { $name } کے مال پر { $period } کا کل { -commission } (دونوں طرف اور { -laga }، اوپر والی لائن سمیت): { $figure }
+    [buyer] { $name } سے لیا گیا { $period } کا { -commission }: { $figure }
+   *[shop] { $period } کا { -commission } ({ -laga } سمیت): { $figure }
 }
 # review: pending
 assistant-instant-laga = { $role ->
     [item] { $name } پر { $period } کا { -laga }: { $figure }
-    [buyer] { $name } سے { $period } کا { -laga }: { $figure }
+    [buyer] { $name } سے لیا گیا { $period } کا { -laga }: { $figure }
    *[shop] { $period } کا { -laga }: { $figure }
 }
 # review: pending
@@ -711,3 +744,5 @@ assistant-instant-stock = { $role ->
 }
 # review: pending
 assistant-instant-partner-total = { $name } کی { -kul-raqam }: { $figure }
+# review: pending
+assistant-instant-partner-capital = { $name } کا { -sarmaya }: { $figure }

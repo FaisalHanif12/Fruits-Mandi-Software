@@ -169,6 +169,8 @@ report-filter-city = City
 
 # review: pending
 report-filter-adda = { -adda }
+# review: pending
+report-filter-collector = Collector
 
 # review: pending
 report-filter-detail = With detail
@@ -470,6 +472,9 @@ report-r27-title = Bill Series
 
 # review: pending
 report-r27-help = The sellers' bills in number order, with the { -kham-bikri }, the deductions and the { -safi-bikri }.
+
+# review: pending
+report-r27-group-note = Each bill shows only the lots of this group.
 
 # review: pending
 report-r28-title = Income Report
@@ -1432,3 +1437,17 @@ report-col-new-balance = New Balance
 # when some line is weighed.
 # review: pending
 report-col-weight = Weight (kg)
+
+## The quality of a sale line (PRD FR-12.42): the column of the sales registers and of the party day slip, and its three words.
+
+# review: pending
+report-col-grade = { -darja }
+
+# review: pending
+report-grade-first = { -darja-awwal }
+
+# review: pending
+report-grade-second = { -darja-doyam }
+
+# review: pending
+report-grade-third = { -darja-soyam }

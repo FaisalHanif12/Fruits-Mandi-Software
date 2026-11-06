@@ -11,6 +11,7 @@ import type { BikriDetail } from '../../../../bindings/BikriDetail';
 import type { SavedTotals } from '../../../../bindings/SavedTotals';
 import { formatPaisa, useGrouping, type Paisa } from '../../../../shared/format';
 import { Field, Num, SegmentedControl, Select } from '../../../../shared/ui';
+import { lotLabelVars, useSavedLotWho } from '../../lot-name';
 
 interface Line {
   labelId: string;
@@ -73,7 +74,9 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
   // The whole بکری, or one lot (a بکری with several lots can pick which). It starts on the whole.
   const [whole, setWhole] = useState(true);
   const [lotIndex, setLotIndex] = useState(0);
-  const lot = whole ? undefined : detail.lots[lotIndex];
+  const lotWho = useSavedLotWho();
+  const selectedLot = detail.lots[lotIndex];
+  const lot = whole ? undefined : selectedLot;
   const totals = lot?.totals ?? detail.totals;
   // The test is on the text the backend's number is written as, so nothing is compared as a number.
   const hasRateDiff = formatPaisa(totals.rate_diff, { grouping }) !== '0';
@@ -100,7 +103,10 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
                   options={detail.lots.map((candidate, index) => ({
                     value: String(index),
                     label: (
-                      <Localized id="bikri-summary-lot" vars={{ lot: String(candidate.lot_no) }} />
+                      <Localized
+                        id="bikri-summary-lot"
+                        vars={{ ...lotLabelVars(candidate.lot_no, lotWho(candidate)) }}
+                      />
                     ),
                   }))}
                 />
@@ -117,7 +123,10 @@ export function SavedSummary({ detail }: { detail: BikriDetail }) {
               {
                 value: 'lot',
                 label: l10n.getString('bikri-summary-lot', {
-                  lot: String(detail.lots[lotIndex]?.lot_no ?? 1),
+                  ...lotLabelVars(
+                    detail.lots[lotIndex]?.lot_no ?? 1,
+                    selectedLot === undefined ? '' : lotWho(selectedLot),
+                  ),
                 }),
               },
               { value: 'whole', label: l10n.getString('bikri-summary-whole') },

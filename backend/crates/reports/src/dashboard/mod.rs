@@ -16,7 +16,7 @@ mod charts;
 mod lent;
 mod lists;
 mod model;
-mod narrow;
+pub(crate) mod narrow;
 mod signals;
 mod strip;
 mod tiles;

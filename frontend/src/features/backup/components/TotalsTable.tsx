@@ -1,11 +1,12 @@
 // The books of one backup next to the books now (PRD FR-20.9 before a restore, NFR-BAK-11 after a
 // test restore). Every figure is the backend's, read from the copy itself; the screen only lines
-// them up. Money is shown with `Num`, counts as plain numbers, the date as DD-MM-YYYY. Numbers are
+// them up. Money is shown with `Num`, counts with the thousands sign of the number grouping setting
+// (2,413), the date as DD-MM-YYYY. Numbers are
 // centred under their heading (NFR-USE-19, plan 39 R1).
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { ReactNode } from 'react';
-import { isoToDisplayDate } from '../../../shared/format';
+import { groupDigits, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { Num, Table, type TableColumn } from '../../../shared/ui';
 import type { BackupTotals } from '../types';
 
@@ -40,24 +41,35 @@ const WORDS = {
   },
 } as const;
 
+/** A count as text, with the group signs of the grouping in use (the same as the lists and Excel). */
+type CountText = (count: number) => string;
+
 interface Line {
   id: string;
   labelId: string;
-  of: (totals: BackupTotals) => ReactNode;
+  of: (totals: BackupTotals, count: CountText) => ReactNode;
 }
 
 const LINES: readonly Line[] = [
-  { id: 'accounts', labelId: 'backup-totals-accounts', of: (t) => <Num>{String(t.accounts)}</Num> },
+  {
+    id: 'accounts',
+    labelId: 'backup-totals-accounts',
+    of: (t, count) => <Num>{count(t.accounts)}</Num>,
+  },
   {
     id: 'bikri',
     labelId: 'backup-totals-bikri',
-    of: (t) => <Num>{String(t.bikri_entries)}</Num>,
+    of: (t, count) => <Num>{count(t.bikri_entries)}</Num>,
   },
-  { id: 'vouchers', labelId: 'backup-totals-vouchers', of: (t) => <Num>{String(t.vouchers)}</Num> },
+  {
+    id: 'vouchers',
+    labelId: 'backup-totals-vouchers',
+    of: (t, count) => <Num>{count(t.vouchers)}</Num>,
+  },
   {
     id: 'journal',
     labelId: 'backup-totals-journal',
-    of: (t) => <Num>{String(t.journal_entries)}</Num>,
+    of: (t, count) => <Num>{count(t.journal_entries)}</Num>,
   },
   {
     id: 'last',
@@ -78,6 +90,8 @@ const LINES: readonly Line[] = [
 
 export function TotalsTable({ variant, copy, now }: TotalsTableProps) {
   const { l10n } = useLocalization();
+  const grouping = useGrouping();
+  const count: CountText = (value) => groupDigits(String(value), grouping);
   const words = WORDS[variant];
   const columns: readonly TableColumn<Line>[] = [
     {
@@ -92,14 +106,14 @@ export function TotalsTable({ variant, copy, now }: TotalsTableProps) {
           header: <Localized id={words.copy} />,
           kind: 'number',
           size: 'money',
-          cell: (line) => line.of(copy),
+          cell: (line) => line.of(copy, count),
         }
       : {
           id: 'copy',
           header: <Localized id={words.copy} />,
           kind: 'number',
           size: 'qty',
-          cell: (line) => line.of(copy),
+          cell: (line) => line.of(copy, count),
         },
     ...(now === undefined
       ? []
@@ -109,7 +123,7 @@ export function TotalsTable({ variant, copy, now }: TotalsTableProps) {
             header: <Localized id={words.now} />,
             kind: 'number' as const,
             size: 'qty' as const,
-            cell: (line: Line) => line.of(now),
+            cell: (line: Line) => line.of(now, count),
           },
         ]),
   ];

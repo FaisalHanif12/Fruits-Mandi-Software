@@ -26,6 +26,8 @@ pub(crate) struct Typed {
     pub(crate) group_by: AnalyticsGroupBy,
     /// The picked item.
     pub(crate) item_id: Option<i64>,
+    /// The picked item group: all its items (views A, B, C, D, G and H).
+    pub(crate) item_group: Option<mandi_core::rules::ItemGroup>,
     /// The picked seller.
     pub(crate) seller_id: Option<i64>,
     /// The picked buyer account.
@@ -186,6 +188,20 @@ fn is_pukhta(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
 ///
 /// # Errors
 /// `ReportsError::Rejected` with every problem and its field; a database error.
+/// The views that take the item group (PRD v1.29): the item-wise A, the seller and buyer views B
+/// and C, the item and month view D, the trend G and the top ten H.
+pub(crate) fn takes_item_group(view: AnalyticsView) -> bool {
+    matches!(
+        view,
+        AnalyticsView::A
+            | AnalyticsView::B
+            | AnalyticsView::C
+            | AnalyticsView::D
+            | AnalyticsView::G
+            | AnalyticsView::H
+    )
+}
+
 pub(crate) fn resolve(
     conn: &Connection,
     today: BusinessDate,
@@ -199,6 +215,7 @@ pub(crate) fn resolve(
         to: None,
         group_by: AnalyticsGroupBy::Month,
         item_id: None,
+        item_group: None,
         seller_id: None,
         buyer_id: None,
         person_key: None,
@@ -379,6 +396,18 @@ pub(crate) fn resolve(
         }
     }
 
+    // The item group belongs to views A, B, C, D, G and H, and replaces one item (PRD v1.29).
+    if let Some(group) = input.item_group {
+        if !takes_item_group(view) || input.item_id.is_some() {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                "filters.item_group",
+            ));
+        }
+        typed.item_group = Some(group);
+        typed.resolved.item_group = Some(group);
+    }
+
     // The comparison needs a closed period.
     if input.compare != AnalyticsCompare::Off {
         match (&typed.from, &typed.to) {
@@ -523,8 +552,8 @@ pub(crate) fn resolve(
                     typed.adda_id = Some(id);
                     typed.resolved.adda = Some(names);
                 }
-                // The partner is read above.
-                MasterTable::Partners => {}
+                // The partner is read above; no view has a collector.
+                MasterTable::Partners | MasterTable::Staff => {}
             },
             None => problems.push(FieldError::new(ErrorCode::ErrNotFound, field)),
         }

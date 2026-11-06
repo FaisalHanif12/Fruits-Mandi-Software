@@ -37,7 +37,7 @@ interface PickerProps extends FieldControlProps {
 /**
  * The word of each list in the add row's and the empty list's Fluent messages, and the short form
  * it opens. A trip and a garden have none: they are made on their own screens (PRD 12.10, 12.11),
- * so their picker only finds.
+ * so their picker only finds. So does the collectors' picker: a collector is a staff member.
  */
 const ADD: Record<Exclude<SearchScope, VentureScope>, { noun: string; kind: AddRecordKind }> = {
   city: { noun: 'city', kind: 'city' },
@@ -55,7 +55,13 @@ const ADD: Record<Exclude<SearchScope, VentureScope>, { noun: string; kind: AddR
 };
 
 function isVentureScope(scope: SearchScope): scope is VentureScope {
-  return scope === 'trip' || scope === 'garden' || scope === 'trip_all' || scope === 'garden_all';
+  return (
+    scope === 'trip' ||
+    scope === 'garden' ||
+    scope === 'trip_all' ||
+    scope === 'garden_all' ||
+    scope === 'collector'
+  );
 }
 
 export function Picker({ scope, canAdd = true, addOwner, ...rest }: PickerProps) {

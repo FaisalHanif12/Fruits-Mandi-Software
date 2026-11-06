@@ -109,8 +109,17 @@ fn role_word(role: PartyRole) -> &'static str {
 /// What is wrong with the understanding of one print question, if anything.
 fn print_problems(u: &Understanding, want: &BTreeMap<String, String>) -> Vec<String> {
     let mut problems = Vec::new();
-    if u.intent.value != Intent::Print {
-        problems.push(format!("intent {:?}, wanted Print", u.intent.value));
+    // An open request ("open the analytics for banana") is `print.intent=navigate`: the same plan, no press-print.
+    let wanted_intent = if want.get("intent").is_some_and(|v| v == "navigate") {
+        Intent::Navigate
+    } else {
+        Intent::Print
+    };
+    if u.intent.value != wanted_intent {
+        problems.push(format!(
+            "intent {:?}, wanted {wanted_intent:?}",
+            u.intent.value
+        ));
     }
     let Some(plan) = &u.report else {
         problems.push(format!("no report plan; doubts {:?}", u.doubts));
@@ -120,8 +129,16 @@ fn print_problems(u: &Understanding, want: &BTreeMap<String, String>) -> Vec<Str
     if !wanted_reports.split('|').any(|r| r == plan.id) {
         problems.push(format!("report {}, wanted {wanted_reports}", plan.id));
     }
-    if plan.assumed_period {
-        problems.push("the period was assumed, not read".to_owned());
+    // A print that names no period follows the app's rule (understand/plan.rs `dated`): a report of a
+    // person or a thing opens on the whole books (`print.dates=none`, no dates), a report of a period
+    // with no person takes today to today and says so (`print.assumed=1`). Any other print reads its period.
+    let assumed_wanted = want.get("assumed").is_some_and(|v| v == "1");
+    if plan.assumed_period != assumed_wanted {
+        problems.push(if plan.assumed_period {
+            "the period was assumed, not read".to_owned()
+        } else {
+            "the period should have been assumed (no period named), it was read".to_owned()
+        });
     }
     let party_of = |key: &str| -> Option<(String, PartyRole)> {
         let hit = match key {
@@ -152,10 +169,40 @@ fn print_problems(u: &Understanding, want: &BTreeMap<String, String>) -> Vec<Str
             _ => {}
         }
     }
+    // An item, the shop's guests and one بکری are filters of the plan too (plan 55 W3, P1, R1).
+    if let Some(item) = want.get("item") {
+        let got = plan
+            .filters
+            .item
+            .as_ref()
+            .map(|i| i.name_en.clone())
+            .unwrap_or_default();
+        if !got.eq_ignore_ascii_case(item) {
+            problems.push(format!("item {got:?}, wanted {item}"));
+        }
+    }
+    if want.get("guests").is_some_and(|v| v == "1") && !plan.filters.guests {
+        problems.push("the plan is not set to the guests".to_owned());
+    }
+    if let Some(number) = want.get("bikri") {
+        let got = plan.filters.bikri.map(|(_, n)| n.to_string());
+        if got.as_deref() != Some(number.as_str()) {
+            problems.push(format!("bikri {got:?}, wanted {number}"));
+        }
+    }
     if let Some(day) = want.get("as_of") {
         let got = plan.filters.as_of.map(iso).unwrap_or_default();
         if &got != day {
             problems.push(format!("as_of {got:?}, wanted {day}"));
+        }
+    } else if want.get("dates").is_some_and(|v| v == "none") {
+        for (key, got) in [
+            ("from", plan.filters.from.map(iso)),
+            ("to", plan.filters.to.map(iso)),
+        ] {
+            if let Some(got) = got {
+                problems.push(format!("{key} {got:?}, wanted none (the whole books)"));
+            }
         }
     } else {
         for (key, got) in [
@@ -406,4 +453,43 @@ fn an_understanding_that_is_not_sure_gives_no_button_and_no_steps() {
         }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// A probe for finding out why one wording is not understood: it prints the intent, the report plan with its
+/// filters, the doubts and whether the understanding is sure. Run by hand:
+/// `MANDI_PROBE='print the mosambi sales so far|print the tomato sales' cargo test -p mandi-assistant --test
+/// robustness_understand probe -- --ignored --nocapture`.
+#[test]
+#[ignore = "a probe, run by hand with MANDI_PROBE"]
+fn probe_the_understanding_of_questions() {
+    let Ok(text) = std::env::var("MANDI_PROBE") else {
+        return;
+    };
+    let y = year::seed::build();
+    let today = BusinessDate::from_ymd(2026, 11, 5).expect("today");
+    let reader = Reader {
+        ctx: &y.w.env.ctx,
+        actor: &y.w.owner,
+        language: Language::En,
+        today,
+        partner_locked: false,
+    };
+    for question in text.split('|').map(str::trim).filter(|q| !q.is_empty()) {
+        let u = understand(&reader, question);
+        let plan = u.report.as_ref().map(|p| {
+            format!(
+                "{} item={:?} party={:?} from={:?} to={:?} assumed={}",
+                p.id,
+                p.filters.item.as_ref().map(|i| i.name_en.clone()),
+                p.filters.party.as_ref().map(|h| h.name_en.clone()),
+                p.filters.from.map(iso),
+                p.filters.to.map(iso),
+                p.assumed_period
+            )
+        });
+        println!(
+            "PROBE {question:?}: intent {:?}, sure {}, plan {plan:?}, doubts {:?}",
+            u.intent.value, u.sure, u.doubts
+        );
+    }
 }

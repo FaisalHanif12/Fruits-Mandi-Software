@@ -30,6 +30,8 @@ const PUKHTA_SELLER = {
 interface Seed {
   /** The lot: Rahim's bananas (default) or Karim's apples (Event 2), or a one-time seller. */
   lot?: 'rahim' | 'karim' | 'pukhta-seller';
+  /** The name typed for the one-time seller (lot `pukhta-seller`), in either or both scripts. */
+  pukhtaSeller?: { ur?: string; en?: string };
   /** The first sale line goes to the one-time buyer account. */
   pukhtaBuyer?: boolean;
   /** Text typed on the first line. */
@@ -56,6 +58,12 @@ export function seedBikriDraft(seed: Seed = {}): void {
         : {}),
       [LOT.sellerFilled]: ON,
       [LOT.memoryFilledFor]: String(seller.id),
+      ...(kind === 'pukhta-seller'
+        ? {
+            [LOT.pukhtaUr]: seed.pukhtaSeller?.ur ?? '',
+            [LOT.pukhtaEn]: seed.pukhtaSeller?.en ?? '',
+          }
+        : {}),
     },
     picked: {
       [LOT.seller]: seller,

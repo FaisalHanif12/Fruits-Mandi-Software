@@ -38,7 +38,8 @@ use chrono::NaiveDate;
 
 use super::who::Names;
 use super::{
-    Doubt, FigureKind, Intent, Outcome, PartyHit, PartyRole, PeriodRef, RecordHit, RecordKind,
+    Doubt, FigureKind, GroupWord, Intent, ItemHit, Outcome, PartyHit, PartyRole, PeriodRef,
+    RecordHit, RecordKind,
 };
 
 /// The filters of a report link.
@@ -60,6 +61,14 @@ pub struct PlanFilters {
     pub adda: Option<RecordHit>,
     /// The expense head (R29). Named in the steps only: the report has no expense-head filter.
     pub head: Option<RecordHit>,
+    /// The item (R2 to R4, R7, R10, R27 and the analytics views A, D, E, G).
+    pub item: Option<ItemHit>,
+    /// All the items of a group (phal, sabzi): the same reports and views as an item.
+    pub item_group: Option<GroupWord>,
+    /// Only the shop's guests (R37).
+    pub guests: bool,
+    /// The one بکری of R1: its row id and its number.
+    pub bikri: Option<(i64, i64)>,
     /// First day.
     pub from: Option<NaiveDate>,
     /// Last day.
@@ -94,6 +103,18 @@ impl PlanFilters {
             if let Some(h) = hit {
                 out.push((name, h.id.to_string()));
             }
+        }
+        if let Some(item) = &self.item {
+            out.push(("item", item.id.to_string()));
+        }
+        if let Some(group) = self.item_group {
+            out.push(("item_group", group.tool_word().to_owned()));
+        }
+        if self.guests {
+            out.push(("guests", "true".to_owned()));
+        }
+        if let Some((_, number)) = &self.bikri {
+            out.push(("bikri", number.to_string()));
         }
         for (name, date) in [
             ("from", &self.from),
@@ -141,11 +162,20 @@ pub(super) struct Input<'a> {
     /// Words stand where a name should be and no record has them: a one-time person, an inactive
     /// account, a partner while the section is locked. The report would be the whole shop's.
     pub unknown_words: bool,
-    /// The question names an item. No report link has an item filter.
-    pub item_named: bool,
     /// The question names a garden, a trip, own goods or the guests, and no record of it was found
     /// (or the link has no filter for it).
     pub scope_missing: bool,
+    /// The question says "garden" (bagh) and no garden of the books is named: the gardens report.
+    pub garden_word: bool,
+    /// The question says "trip" (safar) and no trip of the books is named: the trips report.
+    pub trip_word: bool,
+    /// The question names the shop's guests: with the fruit taken, the register of their fruit.
+    pub guests: bool,
+    /// The question names a group of items (sabzi, phal), and no item.
+    pub item_group: Option<GroupWord>,
+    /// A بکری number the question names ("bikri number 5"), and the row found for it (id, number).
+    pub bikri_number: Option<i64>,
+    pub bikri_row: Option<(i64, i64)>,
 }
 
 pub(super) struct Planned {
@@ -194,6 +224,31 @@ enum Shape {
     Stock,
     /// One day, as `from` and `to` (R11).
     OneDay(&'static str),
+    /// A list with no date and no party: R19 (opening trial) and R38 (the dead amount).
+    NoFilters(&'static str),
+    /// An analytics view A to K: the days are optional (the screen has its own), no day is assumed.
+    View(&'static str),
+}
+
+/// True for the id of an analytics view (A to K) and not of a report.
+pub(super) fn is_view(id: &str) -> bool {
+    matches!(
+        id,
+        "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K"
+    )
+}
+
+/// How a report named by its title takes its filters (the specs of the report engine, PRD 19.2).
+fn report_shape(id: &'static str) -> Option<Shape> {
+    Some(match id {
+        "R3" | "R4" | "R7" | "R8" | "R9" | "R15" | "R23" | "R25" | "R27" | "R28" | "R30" => {
+            Shape::Range(id)
+        }
+        "R16" | "R17" | "R22" | "R26" | "R32" => Shape::AsOf(id),
+        "R19" | "R38" => Shape::NoFilters(id),
+        _ if is_view(id) => Shape::View(id),
+        _ => return None,
+    })
 }
 
 /// The report a figure belongs to when no person or record is named.
@@ -207,9 +262,20 @@ fn shape_of(kind: FigureKind) -> Option<Shape> {
         | FigureKind::Purchases => Shape::Sales,
         FigureKind::Cash => Shape::Range("R12"),
         FigureKind::Expense => Shape::Range("R29"),
+        // The money the partners took or gave back: the expense report holds it by partner.
+        FigureKind::PartnerTaken => Shape::Range("R29"),
         FigureKind::FruitTaken => Shape::Range("R37"),
-        FigureKind::Dues | FigureKind::Receipts => Shape::AsOf("R20"),
+        FigureKind::Dues => Shape::AsOf("R20"),
+        // What was collected on the days: the receipts register, not the list of what is still due.
+        FigureKind::Receipts => Shape::Range("R23"),
         FigureKind::Payable => Shape::AsOf("R24"),
+        // The advances report, the profit split, the money lent and the dead amount lists: reports
+        // of the whole shop, with no party named.
+        FigureKind::Advance => Shape::AsOf("R26"),
+        FigureKind::Profit => Shape::Range("R30"),
+        FigureKind::MoneyLent => Shape::AsOf("R32"),
+        FigureKind::DeadAmount => Shape::NoFilters("R38"),
+        FigureKind::Report(id) => return report_shape(id),
         FigureKind::Stock => Shape::Stock,
         FigureKind::TrialBalance => Shape::AsOf("R18"),
         FigureKind::DayBook => Shape::OneDay("R11"),
@@ -282,6 +348,16 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
     if period.is_some_and(|p| p.future) {
         return none(Doubt::NoPeriod);
     }
+    // Two report titles in one question are two reports.
+    if input
+        .kinds
+        .iter()
+        .filter(|k| matches!(k, FigureKind::Report(_)))
+        .count()
+        > 1
+    {
+        return none(Doubt::NoReport);
+    }
     let navigate = input.intent == Intent::Navigate;
     let days = match period {
         Some(p) => Days {
@@ -330,21 +406,104 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
     };
     // A named question is never widened to a wider report (money review BUG-1, BUG-2): a name the
     // app cannot place, an item or a scope the links cannot filter by, and the report is the model's.
-    let blocked = input.unknown_words || input.item_named || input.scope_missing;
+    let blocked = input.unknown_words || input.scope_missing;
     let note = |report: ReportPlan| {
         if blocked {
             return none(Doubt::NoReport);
         }
-        let doubts = if report.assumed_period {
-            vec![Doubt::NoPeriod]
-        } else {
-            Vec::new()
-        };
+        // A period report with no day named opens on its own default, today to today, and the steps
+        // say so (lead ruling of 06-11-2026): it is a sure plan with `assumed_period`, not a doubt.
         Planned {
             report: Some(report),
-            doubts,
+            doubts: Vec::new(),
         }
     };
+
+    // One بکری by its number (R1): the row was looked up in the books.
+    if let Some(number) = input.bikri_number {
+        return match input.bikri_row {
+            Some(row) => note(plan_of(
+                "R1",
+                PlanFilters {
+                    bikri: Some(row),
+                    ..PlanFilters::default()
+                },
+                None,
+                false,
+            )),
+            None => {
+                let _ = number;
+                none(Doubt::NoReport)
+            }
+        };
+    }
+    // An item named, or a group of items: a link with the item filter or the group filter (R7, R10,
+    // R27, the registers and the item views).
+    if !names.items.is_empty() || input.item_group.is_some() {
+        let items: Vec<&ItemHit> = names
+            .items
+            .iter()
+            .filter_map(|i| match &i.outcome {
+                Outcome::Found(h) => Some(h),
+                _ => None,
+            })
+            .collect();
+        if items.len() != names.items.len() || items.len() > 1 || found.len() > 1 {
+            return none(Doubt::NoReport);
+        }
+        let mut filters = PlanFilters {
+            item: items.first().map(|i| (*i).clone()),
+            item_group: input.item_group,
+            ..PlanFilters::default()
+        };
+        if let Some(hit) = found.first() {
+            match hit.role {
+                PartyRole::Buyer => filters.party = Some((*hit).clone()),
+                PartyRole::Seller => filters.seller = Some((*hit).clone()),
+                _ => return none(Doubt::NoReport),
+            }
+        }
+        let titled = input.kinds.iter().find_map(|k| match k {
+            FigureKind::Report(id) => Some(*id),
+            _ => None,
+        });
+        let sales_like = input.kinds.iter().all(|k| {
+            matches!(
+                k,
+                FigureKind::Sale
+                    | FigureKind::SaleCount
+                    | FigureKind::Commission
+                    | FigureKind::Laga
+                    | FigureKind::DaySummary
+                    | FigureKind::Purchases
+            )
+        });
+        return match titled {
+            // Registers and views that take an item.
+            Some(id @ ("R3" | "R4" | "R7" | "R27" | "A" | "D" | "E" | "G")) => {
+                note(dated(id, filters, is_view(id)))
+            }
+            Some(_) => none(Doubt::NoReport),
+            // Goods left of one item: the stock report from the first day of the books to the day.
+            None if input.kinds == [FigureKind::Stock] && found.is_empty() => note(plan_of(
+                "R10",
+                PlanFilters {
+                    from: if days.named && !days.one_day {
+                        days.from
+                    } else {
+                        input.first_day
+                    },
+                    to: Some(days.to.unwrap_or(today)),
+                    ..filters
+                },
+                None,
+                false,
+            )),
+            // The sales of one item: the item-wise sales report.
+            None if sales_like => note(dated("R7", filters, false)),
+            None => none(Doubt::NoReport),
+        };
+    }
 
     match found.as_slice() {
         [hit] => {
@@ -354,6 +513,52 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                 ..PlanFilters::default()
             };
             let ledger_like = input.statement || input.ledger || navigate;
+            // A report named by its title, for one buyer or seller: the registers that take a party,
+            // and the advances report of one seller.
+            if let [FigureKind::Report(id)] = input.kinds
+                && matches!(hit.role, PartyRole::Buyer | PartyRole::Seller)
+            {
+                return match (*id, hit.role) {
+                    ("R3" | "R4" | "R7" | "R9" | "R15" | "R23" | "R25" | "R28", _) => {
+                        note(dated(id, with_party(), false))
+                    }
+                    // The views of one buyer (C) and of one seller (B, E).
+                    ("C", PartyRole::Buyer) => note(dated(id, with_party(), true)),
+                    ("B" | "E", PartyRole::Seller) => note(dated(
+                        id,
+                        PlanFilters {
+                            seller: Some(party.clone()),
+                            ..PlanFilters::default()
+                        },
+                        true,
+                    )),
+                    _ => none(Doubt::NoReport),
+                };
+            }
+            if let [FigureKind::Report(id)] = input.kinds {
+                let own = |filters: PlanFilters| note(dated(id, filters, true));
+                match (*id, hit.role) {
+                    ("F" | "G" | "J", PartyRole::Partner) => {
+                        return own(PlanFilters {
+                            partner: Some(party.clone()),
+                            ..PlanFilters::default()
+                        });
+                    }
+                    ("I", PartyRole::Garden) => {
+                        return own(PlanFilters {
+                            garden: Some(party.clone()),
+                            ..PlanFilters::default()
+                        });
+                    }
+                    ("J", PartyRole::Trip) => {
+                        return own(PlanFilters {
+                            trip: Some(party.clone()),
+                            ..PlanFilters::default()
+                        });
+                    }
+                    _ => return none(Doubt::NoReport),
+                }
+            }
             let wants = wants_of(input.kinds);
             let report = match hit.role {
                 PartyRole::Buyer | PartyRole::Seller if input.statement => {
@@ -407,6 +612,9 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                     };
                     if input.kinds.contains(&FigureKind::FruitTaken) {
                         dated("R37", filters, false)
+                    } else if input.kinds.contains(&FigureKind::PartnerTaken) {
+                        // The money one partner took or gave back: R29 for him, today if no day.
+                        dated("R29", filters, false)
                     } else {
                         dated("R31", filters, true)
                     }
@@ -449,6 +657,46 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                     report: Some(dated("R31", PlanFilters::default(), true)),
                     doubts: vec![Doubt::PartnerLocked],
                 };
+            }
+            // "bagh", "safar" with no garden or trip named: the gardens or the trips report of the days.
+            let titled_report = input
+                .kinds
+                .iter()
+                .any(|k| matches!(k, FigureKind::Report(_)));
+            if (input.garden_word || input.trip_word) && !titled_report {
+                let fits = input.kinds.iter().all(|k| {
+                    matches!(
+                        k,
+                        FigureKind::Sale
+                            | FigureKind::Commission
+                            | FigureKind::Profit
+                            | FigureKind::Result
+                            | FigureKind::Balance
+                            | FigureKind::Expense
+                            | FigureKind::Ledger
+                            | FigureKind::Statement
+                            | FigureKind::Purchases
+                            | FigureKind::DaySummary
+                            | FigureKind::Stock
+                    )
+                });
+                // Both words in one question is two reports.
+                if !fits || (input.garden_word && input.trip_word) {
+                    return none(Doubt::NoReport);
+                }
+                let id = if input.garden_word { "R36" } else { "R33" };
+                return note(dated(id, PlanFilters::default(), true));
+            }
+            // The shop's guests and the fruit: their register (R37 with guests only).
+            if input.guests && input.kinds.contains(&FigureKind::FruitTaken) {
+                return note(dated(
+                    "R37",
+                    PlanFilters {
+                        guests: true,
+                        ..PlanFilters::default()
+                    },
+                    false,
+                ));
             }
             let dues_only = input.kinds.iter().all(|k| {
                 matches!(
@@ -499,8 +747,19 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                     false,
                 )
             } else {
-                let shapes: Vec<Shape> = input.kinds.iter().filter_map(|k| shape_of(*k)).collect();
-                if shapes.len() != input.kinds.len() {
+                // The title of a report wins over the figures beside it: "collector wise dues" is R22.
+                let titled = input.kinds.iter().find_map(|k| match k {
+                    FigureKind::Report(id) => Some(*id),
+                    _ => None,
+                });
+                let shapes: Vec<Shape> = match titled {
+                    Some(id) => report_shape(id).into_iter().collect(),
+                    None => input.kinds.iter().filter_map(|k| shape_of(*k)).collect(),
+                };
+                if titled.is_none() && shapes.len() != input.kinds.len() {
+                    return none(Doubt::NoReport);
+                }
+                if titled.is_some() && shapes.is_empty() {
                     return none(Doubt::NoReport);
                 }
                 let shape = match shapes.split_first() {
@@ -514,9 +773,9 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                         if navigate {
                             return nothing();
                         }
-                        // No party and no day: nothing to print yet.
+                        // No party and no day: today's summary, and the steps say the day was taken.
                         if !days.named {
-                            return none(Doubt::NoPeriod);
+                            return note(plan_of("R34", range(PlanFilters::default()), None, true));
                         }
                         let id = if days.one_day { "R34" } else { "R2" };
                         plan_of(id, range(PlanFilters::default()), None, false)
@@ -553,6 +812,8 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                         }
                         dated(id, PlanFilters::default(), false)
                     }
+                    Shape::NoFilters(id) => plan_of(id, PlanFilters::default(), None, false),
+                    Shape::View(id) => dated(id, PlanFilters::default(), true),
                 }
             };
             note(report)
@@ -621,8 +882,13 @@ mod tests {
             first_day: Some(day(2026, 8, 31)),
             trip_days: Some((day(2026, 8, 14), day(2026, 10, 22))),
             unknown_words: false,
-            item_named: false,
             scope_missing: false,
+            garden_word: false,
+            trip_word: false,
+            guests: false,
+            item_group: None,
+            bikri_number: None,
+            bikri_row: None,
         }
     }
 

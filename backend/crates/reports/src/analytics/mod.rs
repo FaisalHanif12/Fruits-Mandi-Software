@@ -35,6 +35,7 @@ mod partner;
 mod partner_lines;
 pub(crate) mod print;
 mod seller;
+mod series;
 mod store;
 mod table;
 mod top;
@@ -61,6 +62,10 @@ pub use model::{
     AnalyticsPrintColumn, AnalyticsPrintData, AnalyticsPrintHeading, AnalyticsPrintInput,
     AnalyticsPrintRow, AnalyticsResolvedFilters, AnalyticsRow, AnalyticsRunInput,
     AnalyticsSavedView, AnalyticsSide, AnalyticsTripView, AnalyticsView, AnalyticsViewsSaveInput,
+};
+pub use series::{
+    BALANCE_WINDOW_MONTHS, BalanceSeries, BalanceSubject, MonthAmount, SalePart, balance_series,
+    expense_head_months, garden_sales_months, receipts_months, sale_part_months, trip_sales_months,
 };
 pub use store::{MAX_NAME_LETTERS, MAX_VIEWS, PREF_KEY, views_get, views_save};
 
@@ -136,6 +141,15 @@ fn filters_of(view: AnalyticsView) -> Vec<AnalyticsFilterKind> {
     }
     if view == AnalyticsView::J {
         kinds.push(AnalyticsFilterKind::TripView);
+    }
+    // All the items of a group, پھل or سبزی: views A, B, C, D, G and H (PRD v1.29). It goes right
+    // after the item in the list.
+    if filters::takes_item_group(view) {
+        let at = kinds
+            .iter()
+            .position(|k| *k == AnalyticsFilterKind::Item)
+            .map_or(kinds.len(), |i| i.saturating_add(1));
+        kinds.insert(at, AnalyticsFilterKind::ItemGroup);
     }
     kinds
 }

@@ -33,7 +33,7 @@ import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
-import { displayName, useLanguage } from '../../../shared/i18n';
+import { useLanguage } from '../../../shared/i18n';
 import type { EntryRow } from '../../../shared/grid';
 import { isFromStep, useLayoutStep, useRefusalIntoView } from '../../../shared/hooks';
 import { SHORTCUTS, useEscape, useShortcut } from '../../../shared/keyboard';
@@ -100,6 +100,7 @@ import {
   type BikriDraftStores,
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot, isPukhtaSeller } from '../draft';
+import { useLotWho } from '../lot-name';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
@@ -184,6 +185,8 @@ export interface NewMode {
    * that was restored or seeded: it is what the user left, and nothing is added to it.
    */
   readyLots: boolean;
+  /** The find box (F3) opens with the screen: the address asked for it (plan 55 Section 11.1). */
+  openFind: boolean;
 }
 
 interface EditorProps {
@@ -259,7 +262,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
       newBikri?.onSaved(saved, andNext);
     },
   });
-  const [findOpen, setFindOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(newBikri?.openFind ?? false);
   const [askReason, setAskReason] = useState(false);
   const dialogOpen = flow.ask !== null || findOpen || askReason;
 
@@ -361,16 +364,28 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     [preview, refused, flow.tried],
   );
   const formError = useMemo(() => errorOf(problems), [problems]);
+  // The lines the figures leave out: their quantity is wrong, so they are not worked out (PRD
+  // FR-12.6). The summary and the strip say so, so a missing figure is never taken for a zero.
+  const qtyRefused = problems.filter(
+    (problem) =>
+      problem.severity === 'error' && problem.where.kind === 'line' && problem.where.sub === 'qty',
+  );
+  const leftOutWhole = qtyRefused.length;
+  const leftOutLot = qtyRefused.filter(
+    (problem) => problem.where.kind === 'line' && problem.where.lot === lotIndex,
+  ).length;
   const say = useMemo(
     () => (id: string, vars?: Record<string, string>) => l10n.getString(id, vars),
     [l10n],
   );
-  // The lot of a line in the whole-sale view: its number and its seller (PRD FR-12.1).
+  // The lot of a line in the whole-sale view, and the name every label of a lot shows: its number
+  // and its seller and item (PRD FR-12.1, FR-12.6).
+  const lotWho = useLotWho();
   const lotLabel = (index: number) => {
-    const seller = lotRows[index]?.picked?.[LOT.seller];
-    return seller === undefined
+    const who = lotWho(lotRows[index]);
+    return who === ''
       ? say('bikri-all-lot-no-seller', { lot: String(index + 1) })
-      : say('bikri-all-lot', { lot: String(index + 1), seller: displayName(seller, language) });
+      : say('bikri-all-lot', { lot: String(index + 1), who });
   };
   const views = buildGridViews({
     preview,
@@ -454,8 +469,16 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // The user starts on the truck number, the first thing he types (PRD FR-12.2).
   useEffect(focusTruck, []);
 
+  // A sale whose every typed line is refused has nothing to total: its figures wait for the
+  // quantity, as the lot's do (`totals` is null then, PRD FR-12.6). It is a check that a line is
+  // worked out, never a sum.
+  const nothingCounted =
+    leftOutWhole > 0 &&
+    preview !== undefined &&
+    !preview.lots.some((lot) => lot.lines.some((line) => line.calc !== null));
+  const wholeTotals = nothingCounted ? null : (preview?.summary ?? null);
   const totals = whole
-    ? (preview?.summary ?? null)
+    ? wholeTotals
     : (preview?.lots.find((lot) => lot.key === lotKey)?.totals ?? null);
   const lotPreview = preview?.lots.find((lot) => lot.key === lotKey);
   const netIsNegative = whole
@@ -486,10 +509,12 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             totals={totals}
             whole={whole}
             lotNumber={lotIndex + 1}
+            lotWho={lotWho(lotRow)}
             onWholeChange={(next) => {
               stores.view.getState().setWhole(next);
             }}
             netIsNegative={netIsNegative}
+            leftOut={whole ? leftOutWhole : leftOutLot}
           />
           <SplitPanel preview={preview} />
         </>
@@ -638,7 +663,12 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             }}
           />
         </div>
-        <ProblemList problems={problems} selectedLot={lotIndex} activeLine={activeLine} />
+        <ProblemList
+          problems={problems}
+          selectedLot={lotIndex}
+          activeLine={activeLine}
+          whole={whole}
+        />
         <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
           <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
             <div
@@ -743,15 +773,18 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
       {wide || preview === undefined ? null : (
         <NumbersStrip
           lotNumber={lotIndex + 1}
+          lotWho={lotWho(lotRow)}
           lotCount={preview.lots.length}
           showWhole={whole}
           lot={{
             totals: lotPreview?.totals ?? null,
             netIsNegative: lotPreview?.net_is_negative ?? false,
+            leftOut: leftOutLot,
           }}
           whole={{
-            totals: preview.summary,
+            totals: wholeTotals,
             netIsNegative: preview.lots.some((lot) => lot.net_is_negative),
+            leftOut: leftOutWhole,
           }}
           cash={preview.cash}
         />
@@ -808,13 +841,17 @@ interface BikriBookProps {
  * A new draft: today as its date, or the draft the user chose to restore at start-up. The draft is
  * only read here (this runs again in development); the screen forgets it once it has opened.
  */
-function newSession(today: string, initialDraft: BikriBookProps['initialDraft']) {
+function newSession(
+  today: string,
+  initialDraft: BikriBookProps['initialDraft'],
+  openFind: boolean,
+) {
   const stores = createBikriDraft(isoToDisplayDate(today));
   const restored = usePendingRestore.getState().snapshot;
   if (restored !== null) applySnapshot(stores, restored);
   initialDraft?.(stores);
   // A restored or seeded draft is what the user left: today's trip goods are not added to it.
-  return { stores, key: 0, readyLots: restored === null && initialDraft === undefined };
+  return { stores, key: 0, readyLots: restored === null && initialDraft === undefined, openFind };
 }
 
 /**
@@ -825,7 +862,14 @@ function newSession(today: string, initialDraft: BikriBookProps['initialDraft'])
  */
 function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
   const navigate = useNavigate();
-  const [session, setSession] = useState(() => newSession(today, initialDraft));
+  // The address asks for the find box (`?find=true`, plan 55 Section 11.1): it opens with the first
+  // entry only, and the request is taken out of the address so a reload or a save does not ask again.
+  const rawSearch: Record<string, unknown> = useSearch({ strict: false });
+  const wantsFind = rawSearch['find'] === true;
+  const [session, setSession] = useState(() => newSession(today, initialDraft, wantsFind));
+  useEffect(() => {
+    if (wantsFind) void navigate({ to: '/bikri/book', search: {}, replace: true });
+  }, [wantsFind, navigate]);
   const [lastSaved, setLastSaved] = useState<{ id: number; number: number } | null>(null);
   // The undo button outlives the render it was made in: it reads the stores of the entry that is
   // open when it is pressed.
@@ -850,6 +894,7 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
           kind: 'new',
           lastSaved,
           readyLots: session.readyLots,
+          openFind: session.openFind,
           onSaved: (saved, andNext) => {
             setLastSaved({ id: saved.bikri_id, number: saved.number });
             afterSave(saved, andNext);
@@ -857,6 +902,7 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
               stores: createBikriDraft(isoToDisplayDate(today)),
               key: current.key + 1,
               readyLots: true,
+              openFind: false,
             }));
           },
           onUndo: (saved) => {

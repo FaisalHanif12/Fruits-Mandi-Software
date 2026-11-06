@@ -12,13 +12,13 @@
 use chrono::NaiveDate;
 
 use super::change;
-use super::lexicon::{Cue, Hit};
+use super::lexicon::{Cue, Hit, key};
 use super::plan;
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    Assumed, Confidence, Doubt, FigureKind, Intent, ListAsk, ListOver, Outcome, OutsideKind, Part,
-    PartyRole, PeriodRef, Rank, Reader, Understanding,
+    Assumed, Confidence, Doubt, FigureKind, Intent, ListAsk, ListOver, Measure, Outcome,
+    OutsideKind, Part, PartyRole, PeriodRef, Rank, Reader, Understanding,
 };
 use crate::help_guard;
 use crate::model_answer::EntryScreenName;
@@ -51,7 +51,17 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         screen: None,
         wants_steps: false,
         scoped: false,
+        guests: false,
+        quality: false,
+        last_one: false,
+        sum_strong: false,
+        amount_named: false,
+        item_group: None,
+        bikri_number: None,
+        truck: None,
         happened: false,
+        other_measure: Measure::Same,
+        total_dues: false,
         sure: false,
         doubts: vec![doubt],
     }
@@ -68,6 +78,8 @@ struct Named<'a> {
     roles: &'a [PartyRole],
     has_item: bool,
     has_period: bool,
+    /// True when a word of the question is in no table, is no function word and is part of no name.
+    has_unexplained_words: bool,
 }
 
 fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
@@ -78,10 +90,39 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
         .any(|r| matches!(r, PartyRole::Buyer | PartyRole::Seller));
     Some(match hit.cue {
         Cue::Balance => FigureKind::Balance,
-        Cue::Sale => FigureKind::Sale,
+        // "kitne bikri hue", "how many sale": how many, not how much. "kitni bikri" and "kitne ki
+        // bikri" ask the amount. An amount shown for a count would be a wrong figure.
+        Cue::Sale => {
+            let before = hit.start.checked_sub(1).and_then(|b| scan.word(b));
+            if matches!(before, Some("kitne" | "kitnay" | "کتنے" | "many")) {
+                FigureKind::SaleCount
+            } else {
+                FigureKind::Sale
+            }
+        }
         Cue::SalePlural => FigureKind::SaleCount,
         Cue::Commission => FigureKind::Commission,
-        Cue::Laga => FigureKind::Laga,
+        // "kitna laga hua hai" is "how much is put in" (a verb), not the laga charge.
+        Cue::Laga => {
+            // "aaj kitna laga": how much did it cost, a verb. The charge is "laga kitna hai".
+            let before = hit.start.checked_sub(1).and_then(|b| scan.word(b));
+            if before.is_some_and(|w| {
+                ["kitna", "kitni", "kitne", "کتنا", "کتنی", "کتنے"]
+                    .iter()
+                    .any(|x| key(x) == w)
+            }) {
+                return None;
+            }
+            let next = scan.word(hit.end);
+            if next.is_some_and(|w| {
+                ["hua", "hui", "hue", "huwa", "ہوا", "ہوئی", "ہوئے"]
+                    .iter()
+                    .any(|x| key(x) == w)
+            }) {
+                return None;
+            }
+            FigureKind::Laga
+        }
         Cue::Dues => {
             if has_party {
                 FigureKind::Balance
@@ -118,6 +159,19 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
         Cue::Profit => FigureKind::Profit,
         Cue::Expense => FigureKind::Expense,
         Cue::FruitTaken => FigureKind::FruitTaken,
+        Cue::PartnerTaken => FigureKind::PartnerTaken,
+        // "Partner A's fruit": the fruit he took. The bare word beside no partner is an item group.
+        Cue::FruitWord if roles.contains(&PartyRole::Partner) || scan.has(Cue::Guests) => {
+            FigureKind::FruitTaken
+        }
+        // The title of a report that no figure names: "udhari bikri", "adda report".
+        // The app's own state or lists: the rules, the attention list, the closed days, the staff.
+        Cue::AskName => FigureKind::Ask(super::lexicon::ask_named(
+            scan.words.get(hit.start..hit.end).unwrap_or_default(),
+        )?),
+        Cue::ReportName => FigureKind::Report(super::lexicon::report_named(
+            scan.words.get(hit.start..hit.end).unwrap_or_default(),
+        )?),
         // A person who borrowed is a staff account; a buyer or a seller "ka udhar" is his balance.
         Cue::MoneyLent => {
             if account_party && !roles.contains(&PartyRole::Staff) {
@@ -143,8 +197,13 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
         Cue::ResultWord => FigureKind::Result,
         // "baqi" alone is a balance; beside goods, a unit or an item it is stock.
         Cue::Pending => {
-            if scan.has_any(&[Cue::Goods, Cue::Stock, Cue::Unit])
-                || (named.has_item && !roles.contains(&PartyRole::Buyer))
+            if scan.has_any(&[
+                Cue::Goods,
+                Cue::Stock,
+                Cue::Unit,
+                Cue::VegetableWord,
+                Cue::FruitWord,
+            ]) || (named.has_item && !roles.contains(&PartyRole::Buyer))
             {
                 FigureKind::Stock
             } else {
@@ -205,21 +264,47 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
             found.push((0, FigureKind::Sale));
         }
     }
-    // "usman shirakat daar ka kitna hai abhi": a partner and "kitna" ask for his total.
-    if found.is_empty() && scan.has(Cue::HowMuch) && roles == [PartyRole::Partner] {
+    // "usman shirakat daar ka kitna hai abhi": a partner and "kitna" ask for his total, when nothing
+    // else is asked. A cue of another figure ("fruit"), or a word nothing explains ("home"), means
+    // another question: "how much fruit did partner A take home" is not his total.
+    if found.is_empty()
+        && scan.has(Cue::HowMuch)
+        && roles == [PartyRole::Partner]
+        && scan
+            .hits
+            .iter()
+            .all(|h| matches!(h.cue, Cue::HowMuch | Cue::RolePartner | Cue::And))
+        && !named.has_unexplained_words
+    {
         found.push((0, FigureKind::PartnerTotal));
     }
     // "byopariyon ko kitna dena hai": what the shop owes sellers. "sab gahakon ka bakaya": the dues.
+    // The direction counts: "dena" is what the shop pays, "lena" what it collects. "gahakon ko kitna
+    // dena hai" and "byopariyon se kitna lena hai" are the other way round, so they keep the plain
+    // balance word and, with no name, go to the model (money review, 05-11-2026).
     if !has_party {
+        let says = |list: &[&str]| scan.words.iter().any(|w| list.iter().any(|x| key(x) == *w));
+        let gives = says(&[
+            "dena", "dene", "dega", "degi", "denge", "dengi", "deta", "dete", "دینا", "دینے", "دے",
+        ]);
+        let takes = says(&[
+            "lena", "lene", "lenge", "lengi", "leta", "lete", "لینا", "لینے", "لے",
+        ]);
         for (_, kind) in &mut found {
             if *kind == FigureKind::Balance {
                 if scan.has(Cue::ManySellers) {
-                    *kind = FigureKind::Payable;
-                } else if scan.has_any(&[Cue::ManyBuyers, Cue::Total]) {
+                    if !takes {
+                        *kind = FigureKind::Payable;
+                    }
+                } else if scan.has_any(&[Cue::ManyBuyers, Cue::Total]) && !gives {
                     *kind = FigureKind::Dues;
                 }
             }
         }
+    }
+    // "cash balance": the cash, not a party's balance.
+    if !has_party && found.iter().any(|(_, k)| *k == FigureKind::Cash) {
+        found.retain(|(_, k)| *k != FigureKind::Balance);
     }
     found.sort_by_key(|(at, _)| *at);
     let kinds: Vec<FigureKind> = found.iter().map(|(_, k)| *k).collect();
@@ -245,6 +330,8 @@ struct Signs {
     how: bool,
     how_much: bool,
     party_found: bool,
+    /// A garden or a trip of the books was found by name (the words of its name are no cue).
+    entry_party: bool,
     item_found: bool,
     period: bool,
     figures: bool,
@@ -387,7 +474,22 @@ fn chosen(intent: Intent, confidence: Confidence) -> Chosen {
 
 /// The intent, by the order of Section 2 of the module documentation.
 fn intent_of(scan: &Scan, signs: &Signs, periods: &[PeriodRef]) -> Chosen {
-    let how_like = signs.how || scan.has_any(&[Cue::Where, Cue::Define, Cue::Capability]);
+    // "what is each partner's total now": a figure asked with "what is", not the meaning of a word.
+    // A word that is only explained has no party, no item, no period and no "now" beside it
+    // ("what is wasooli").
+    let now_words = scan.words.iter().any(|w| {
+        matches!(
+            w.as_str(),
+            "now" | "abhi" | "current" | "currently" | "اب" | "ابھی" | "موجودہ"
+        )
+    });
+    let defines_a_figure = scan.has(Cue::Define)
+        && !signs.how
+        && !scan.has_any(&[Cue::Where, Cue::Capability])
+        && signs.figures
+        && (signs.party_found || signs.item_found || signs.period || now_words);
+    let how_like = !defines_a_figure
+        && (signs.how || scan.has_any(&[Cue::Where, Cue::Define, Cue::Capability]));
     // Outside the app: only when no party of the books is named.
     let outside = outside_kind(scan).is_some();
     if outside && !signs.party_found {
@@ -398,7 +500,11 @@ fn intent_of(scan: &Scan, signs: &Signs, periods: &[PeriodRef]) -> Chosen {
     // A percent is also something to write ("commission 5 percent kar do"), unless it is asked
     // under a condition ("agar commission 8 percent kar den to").
     let percent_to_write = percent_numbers(scan) > 0 && !cues::conditional(&scan.raw);
-    let weak_write = scan.has_exact(Cue::WriteWeak) && (signs.amount || percent_to_write);
+    let weak_write = scan.has_exact(Cue::WriteWeak)
+        && (signs.amount
+            || percent_to_write
+            || signs.entry_party
+            || change::weak_write_of_an_entry(scan));
     if (strong_write || weak_write) && !how_like && !signs.how_much && !is_printish(scan) {
         return chosen(Intent::ChangeRequest, Confidence::High);
     }
@@ -412,8 +518,15 @@ fn intent_of(scan: &Scan, signs: &Signs, periods: &[PeriodRef]) -> Chosen {
         return chosen(Intent::ChangeRequest, Confidence::Medium);
     }
     // Advice: a way to get better, or a decision to be advised on.
+    // A phrase of the advice words that holds its own "how" ("ziyada kaise", "zyada kaise karen")
+    // has swallowed the word "kaise" as a cue, so it needs no other sign.
+    let advice_phrase = scan
+        .hits
+        .iter()
+        .any(|h| h.cue == Cue::Advice && !h.fuzzy && h.end.saturating_sub(h.start) >= 2);
     let asks_advice = scan.has(Cue::Decision)
         || scan.has(Cue::AdviceStrong)
+        || advice_phrase
         || (scan.has(Cue::Advice) && (signs.how || scan.has(Cue::Capability)));
     if asks_advice && !signs.how_much {
         let mut c = chosen(Intent::Advice, Confidence::High);
@@ -655,6 +768,36 @@ fn plan_days(
 
 // ---- assembling ---------------------------------------------------------------------------------------
 
+/// True when a word of the question is in no table of the app, is no function word, is no number
+/// and is part of no name that was read: the question says something the app did not understand.
+///
+/// Example: in "how much fruit did partner A take home", "home" is such a word.
+fn unexplained_words(scan: &Scan, names: &Names, periods: &[PeriodRef]) -> bool {
+    let table = super::lexicon::table();
+    let mut name_words: Vec<String> = Vec::new();
+    // The words of a period ("so far", "ab tak") are explained by the period.
+    for period in periods {
+        name_words.extend(period.words.split_whitespace().map(key));
+    }
+    let texts = names
+        .parties
+        .iter()
+        .map(|p| p.text.as_str())
+        .chain(names.items.iter().map(|i| i.text.as_str()))
+        .chain(names.records.iter().map(|r| r.text.as_str()));
+    for text in texts {
+        name_words.extend(text.split_whitespace().map(key));
+    }
+    scan.words.iter().enumerate().any(|(at, w)| {
+        !table.is_known(w)
+            && !name_words.contains(w)
+            && !super::when::is_time_word(w)
+            && !scan.hits.iter().any(|h| h.start <= at && at < h.end)
+            && !w.chars().all(|c| c.is_ascii_digit())
+            && w.chars().count() > 1
+    })
+}
+
 /// True when the figure needs a named person to be answered.
 fn needs_party(kinds: &[FigureKind]) -> bool {
     kinds.iter().any(|k| {
@@ -687,8 +830,25 @@ pub(super) fn assemble(
         roles: &roles,
         has_item: names.items.iter().any(|i| i.outcome.hit().is_some()),
         has_period: !periods.is_empty(),
+        has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
     let (kinds, two_figures) = figures(scan, &named);
+    // A word for a group of items ("sabzi", "phal") with no item named is a group, not a drop.
+    let item_group = if !names.items.is_empty() {
+        None
+    } else if scan.has_exact(Cue::VegetableWord) {
+        Some(super::GroupWord::Vegetable)
+    } else if scan.has_exact(Cue::FruitWord)
+        && !kinds.contains(&FigureKind::FruitTaken)
+        && !scan.has(Cue::Guests)
+        && !roles
+            .iter()
+            .any(|r| matches!(r, PartyRole::Partner | PartyRole::Garden | PartyRole::Trip))
+    {
+        Some(super::GroupWord::Fruit)
+    } else {
+        None
+    };
     let signs = Signs {
         how: scan.has(Cue::How),
         how_much: scan.has(Cue::HowMuch),
@@ -696,6 +856,9 @@ pub(super) fn assemble(
             .parties
             .iter()
             .any(|p| p.outcome.hit().is_some() || matches!(p.outcome, Outcome::Several(_))),
+        entry_party: roles
+            .iter()
+            .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip)),
         item_found: names.items.iter().any(|i| i.outcome.hit().is_some()),
         period: !periods.is_empty(),
         figures: !kinds.is_empty(),
@@ -743,8 +906,27 @@ pub(super) fn assemble(
         _ => None,
     };
     let list = (intent.value == Intent::List).then(|| list_ask(scan));
+    // A ranking ("top 5", "sab se zyada") reads its own view; a list of the lines of one party is not.
+    let ranking = list.is_some_and(|l| l.rank.is_some());
     let wants_steps = intent.value == Intent::Print && scan.has(Cue::How);
     let (first_day, trip_days) = plan_days(reader, intent.value, &names, &kinds);
+    // One بکری named by its number ("bikri number 5 ka print"): looked up in the books.
+    let bikri_number = (intent.value == Intent::Print)
+        .then(|| super::reads::bikri_number(scan))
+        .flatten();
+    let bikri_row = bikri_number.and_then(|number| {
+        mandi_services::bikri::find(
+            reader.ctx,
+            &mandi_services::core::bikri::BikriFindInput {
+                number: Some(number),
+                ..Default::default()
+            },
+        )
+        .ok()?
+        .into_iter()
+        .find(|r| r.number == number)
+        .map(|r| (r.id, number))
+    });
     let planned = plan::build(&plan::Input {
         intent: intent.value,
         names: &names,
@@ -765,12 +947,23 @@ pub(super) fn assemble(
         first_day,
         trip_days,
         unknown_words: names.doubts.contains(&Doubt::UnknownWords),
-        item_named: !names.items.is_empty(),
-        scope_missing: super::reads::print_scope_missing(scan, &names),
+        scope_missing: super::reads::print_scope_missing(scan, &kinds),
+        garden_word: super::reads::garden_word(scan, &names),
+        trip_word: super::reads::trip_word(scan, &names),
+        guests: scan.has_exact(Cue::Guests),
+        item_group,
+        bikri_number,
+        bikri_row,
     });
     doubts.extend(planned.doubts.iter().copied());
+    // A print has no quality filter: it would show every quality for the one asked (plan 58, FR-12.42).
+    if scan.has_exact(Cue::Quality) && intent.value == Intent::Print {
+        doubts.push(Doubt::NoReport);
+    }
 
     let kinds_for_happened = kinds.clone();
+    let roles_found = roles.clone();
+    let has_item_found = names.items.iter().any(|i| i.outcome.hit().is_some());
     let mut understanding = Understanding {
         intent,
         parties: names.parties,
@@ -788,8 +981,26 @@ pub(super) fn assemble(
         topic,
         screen,
         wants_steps,
-        scoped: super::reads::scoped(scan),
+        scoped: super::reads::scoped(scan, &kinds_for_happened),
+        guests: scan.has_exact(Cue::Guests),
+        quality: scan.has_exact(Cue::Quality),
+        last_one: super::reads::last_one(scan),
+        item_group,
+        bikri_number: super::reads::bikri_number(scan),
+        truck: scan.truck.clone(),
+        amount_named: signs.amount,
+        sum_strong: cues::together_strong(&scan.raw),
         happened: super::reads::happened(scan, &kinds_for_happened),
+        other_measure: super::reads::other_measure(
+            scan,
+            &kinds_for_happened,
+            &roles_found,
+            has_item_found,
+            ranking,
+        ),
+        total_dues: kinds_for_happened.contains(&FigureKind::Dues)
+            && (scan.has(Cue::Total) || scan.raw.contains("کل اگراہی"))
+            && !scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]),
         sure: false,
         doubts,
     };
@@ -797,6 +1008,7 @@ pub(super) fn assemble(
         understanding.outside = outside_kind(scan);
     }
     assume_ranking(&mut understanding, reader);
+    assume_comparison(&mut understanding, reader);
     // Several things and several figures at once is a table, not an answer.
     let several_things = understanding.items.len().max(understanding.parties.len()) >= 2;
     if several_things && understanding.figures.value.len() >= 2 {
@@ -879,10 +1091,13 @@ fn assume_ranking(u: &mut Understanding, reader: &Reader<'_>) {
     let Some(ask) = u.list.filter(|l| l.rank.is_some()) else {
         return;
     };
-    if !matches!(
-        ask.over,
-        Some(ListOver::Items | ListOver::Buyers | ListOver::Sellers)
-    ) {
+    // A group of items ("kaun si sabzi sab se zyada bikti hai") is a ranking of items.
+    if u.item_group.is_none()
+        && !matches!(
+            ask.over,
+            Some(ListOver::Items | ListOver::Buyers | ListOver::Sellers)
+        )
+    {
         return;
     }
     if u.figures.value.is_empty() {
@@ -895,6 +1110,29 @@ fn assume_ranking(u: &mut Understanding, reader: &Reader<'_>) {
         && let Some(year) = reader.today_date().and_then(super::when::this_year)
     {
         u.periods.push(year);
+        u.assumed.push(Assumed::Period);
+    }
+}
+
+/// "pichle mahine se kitna zyada hai" names only the month it is compared with: the other side is this
+/// month so far. The month is added and marked as assumed, so the two periods can be read before the
+/// model starts (`reads::comparison_plan`). Only for last month and one figure of a flow.
+fn assume_comparison(u: &mut Understanding, reader: &Reader<'_>) {
+    let one_flow = matches!(
+        u.figures.value.as_slice(),
+        [FigureKind::Sale | FigureKind::Commission | FigureKind::Laga]
+    );
+    if !u.compare || !one_flow || u.intent.value != Intent::Figure {
+        return;
+    }
+    let [only] = u.periods.as_slice() else {
+        return;
+    };
+    if only.kind != super::PeriodKind::LastMonth {
+        return;
+    }
+    if let Some(month) = reader.today_date().and_then(super::when::this_month_so_far) {
+        u.periods.push(month);
         u.assumed.push(Assumed::Period);
     }
 }

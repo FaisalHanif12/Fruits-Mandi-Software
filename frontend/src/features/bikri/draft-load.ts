@@ -176,6 +176,7 @@ function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
   if (sale.rate_differs) typed[SALE.differs] = ON;
   put(typed, SALE.buyerRate, sale.buyer_rate);
   put(typed, SALE.payment, sale.payment_type);
+  put(typed, SALE.grade, sale.grade);
   put(typed, SALE.note, sale.note);
   const charges: [string, string, SaleInput['seller_comm']][] = [
     [SALE.sellerCommValue, SALE.sellerCommMethod, sale.seller_comm],

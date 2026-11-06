@@ -9,7 +9,7 @@
 //! Example: `{{r2.balance}}` on a بنام balance of 288,000 paisa that was checked becomes
 //! `figure(balance cell 288000 dr, checked)`.
 
-use mandi_reports::reports::{Cell, Names};
+use mandi_reports::reports::{Cell, Names, ReportId};
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::auth::Language;
 use mandi_services::domain::figures::Dir;
@@ -21,6 +21,7 @@ use crate::answer::{
 use crate::limits::MAX_TABLE_ROWS;
 use crate::model_answer::{ModelAnswer, Piece, ShowAs, pieces};
 use crate::results::{Money, NameVal, Node, Shown, Side, ToolResult, Val};
+use crate::source::AnswerRecord;
 use crate::tools::{Env, State, lookup};
 
 fn direction(dir: Dir) -> FigureDirection {
@@ -195,19 +196,132 @@ fn set_source_id(mut source: AnswerSource, id: &str) -> AnswerSource {
         AnswerSource::PartyCard { result_id, .. }
         | AnswerSource::Report { result_id, .. }
         | AnswerSource::Analytics { result_id, .. }
+        | AnswerSource::Screen { result_id, .. }
         | AnswerSource::Tiles { result_id } => *result_id = id.to_owned(),
     }
     source
 }
 
-/// Every source read for this question, in the order of the results.
+/// Every source read for this question, in the order of the results. R31 read for everyone (the
+/// partner overview) is left out: the report screen needs a partner, so a button without one is
+/// refused (live run 1, Q052 and Q400). [`sources_cited`] gives the buttons of the partners an
+/// answer names.
 fn sources_of(state: &State) -> Vec<AnswerSource> {
     state
         .results
         .iter()
         .filter(|r| r.turn == state.turn)
         .filter_map(|r| r.source.clone().map(|s| set_source_id(s, &r.id)))
+        .filter(|s| !is_partner_overview(s))
         .collect()
+}
+
+/// R31 with no partner: the overview of every partner, which the report screen cannot open.
+fn is_partner_overview(source: &AnswerSource) -> bool {
+    matches!(
+        source,
+        AnswerSource::Report { id: ReportId::R31, filters, .. } if filters.partner.is_none()
+    )
+}
+
+/// The rows an answer cites inside a result: `r1.rows.s2.total` is (`r1`, `rows`, `s2`) and
+/// `r3.by_for.guests.value` is (`r3`, `by_for`, `guests`). Each one once, in the order cited.
+fn cited_rows(text: &str) -> Vec<(String, String, String)> {
+    let mut out: Vec<(String, String, String)> = Vec::new();
+    for piece in pieces(text) {
+        if let Piece::Ref(r) = piece {
+            let parts: Vec<&str> = r.path.split('.').collect();
+            if let [result, area @ ("rows" | "by_for"), key, ..] = parts.as_slice() {
+                let row = ((*result).to_owned(), (*area).to_owned(), (*key).to_owned());
+                if !out.contains(&row) {
+                    out.push(row);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The partner of a row named `s<id>` in the keyed rows `area` of a result, as the record a picker
+/// holds. `None` when the row has no such key or no name.
+fn partner_of_row(result: &ToolResult, area: &str, key: &str) -> Option<AnswerRecord> {
+    let id = key.strip_prefix('s')?.parse::<i64>().ok()?;
+    let Some(Node::Val(Val::Name(name))) = result.node.get(&[area, key, "name"]) else {
+        return None;
+    };
+    Some(AnswerRecord {
+        id,
+        code: name.code.clone(),
+        name_ur: name.name_ur.clone(),
+        name_en: name.name_en.clone(),
+        tag: name.tag.clone(),
+    })
+}
+
+/// The buttons of an answer: every source read, with the report made to open what the answer
+/// CITES (live run 1: Q052 and Q400 opened R31 with no partner and were refused; Q216, Q217,
+/// Q395 and Q218 opened the whole fruit register for a figure that is one partner's, or the
+/// guests'):
+/// - R31 read for everyone has one button for each partner whose row is cited, with that partner;
+/// - R37 read for everyone, when the answer cites its `by_for` rows, has one button for each
+///   partner cited and one with `guests_only` for the guests.
+///
+/// Anything else is as read.
+///
+/// Example: "ب کا سرمایہ {{r1.rows.s2.capital.invested}}" gives R31 with ب.
+fn sources_cited(state: &State, text: &str) -> Vec<AnswerSource> {
+    let cited = cited_rows(text);
+    let mut out = Vec::new();
+    for result in state.results.iter().filter(|r| r.turn == state.turn) {
+        let Some(source) = result.source.clone().map(|s| set_source_id(s, &result.id)) else {
+            continue;
+        };
+        let AnswerSource::Report {
+            result_id,
+            label_id,
+            id,
+            filters,
+        } = &source
+        else {
+            out.push(source);
+            continue;
+        };
+        let (area, whole_register) = match (id, filters.partner.is_none(), filters.guests_only) {
+            (ReportId::R31, true, _) => ("rows", false),
+            (ReportId::R37, true, false) => ("by_for", true),
+            _ => {
+                out.push(source);
+                continue;
+            }
+        };
+        let mut buttons = Vec::new();
+        for (cited_in, cited_area, key) in &cited {
+            if cited_in != &result.id || cited_area != area {
+                continue;
+            }
+            let mut opened = filters.clone();
+            if key == "guests" && area == "by_for" {
+                opened.guests_only = true;
+            } else if let Some(partner) = partner_of_row(result, area, key) {
+                opened.partner = Some(partner);
+            } else {
+                continue;
+            }
+            buttons.push(AnswerSource::Report {
+                result_id: result_id.clone(),
+                label_id: label_id.clone(),
+                id: *id,
+                filters: opened,
+            });
+        }
+        if buttons.is_empty() && whole_register {
+            // Nothing of the fruit register was cited by partner: the whole register, as read.
+            out.push(source);
+        } else {
+            out.extend(buttons);
+        }
+    }
+    out
 }
 
 fn estimate_of(result: &ToolResult) -> Option<AnswerEstimate> {
@@ -317,7 +431,7 @@ pub fn fill(env: &Env<'_>, state: &State, answer: &ModelAnswer, read_at: &str) -
                 | crate::model_answer::AnswerKind::GeneralAdvice
         ),
         general_advice: answer.kind == crate::model_answer::AnswerKind::GeneralAdvice,
-        sources: sources_of(state),
+        sources: sources_cited(state, &answer.text),
         how: Vec::new(),
         differences: Vec::new(),
         next: answer
@@ -564,6 +678,7 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::source::SourceReportFilters;
 
     #[test]
     fn a_direction_word_the_panel_already_prints_is_dropped_once() {
@@ -604,5 +719,145 @@ mod tests {
             without_repeated_direction(" more", Up, Language::Ur),
             " more"
         );
+    }
+
+    // ---- the buttons follow what the answer cites (live run 1: Q052, Q400, Q216, Q217, Q395, Q218)
+
+    fn name(en: &str, ur: &str) -> Node {
+        Node::Val(Val::Name(NameVal {
+            name_ur: ur.to_owned(),
+            name_en: en.to_owned(),
+            tag: None,
+            code: None,
+        }))
+    }
+
+    /// A report result with the given node, read for everyone (no partner).
+    fn everyone(id: ReportId, node: Node) -> State {
+        let result = ToolResult {
+            id: "r2".to_owned(),
+            tool: "report",
+            input: serde_json::json!({}),
+            node,
+            shown: None,
+            source: Some(AnswerSource::Report {
+                result_id: String::new(),
+                label_id: "report-title".to_owned(),
+                id,
+                filters: SourceReportFilters::default(),
+            }),
+            partner_parts_locked: false,
+            partner_data: true,
+            turn: 0,
+            working: None,
+        };
+        State {
+            results: vec![result],
+            turn: 0,
+        }
+    }
+
+    fn report_filters(source: &AnswerSource) -> &SourceReportFilters {
+        match source {
+            AnswerSource::Report { filters, .. } => filters,
+            other => panic!("not a report: {other:?}"),
+        }
+    }
+
+    fn overview_node() -> Node {
+        Node::obj(vec![(
+            "rows",
+            Node::Keyed(vec![
+                (
+                    "s1".to_owned(),
+                    Node::obj(vec![("name", name("Partner A", "الف"))]),
+                ),
+                (
+                    "s2".to_owned(),
+                    Node::obj(vec![("name", name("Partner B", "ب"))]),
+                ),
+                (
+                    "s3".to_owned(),
+                    Node::obj(vec![("name", name("Partner C", "ج"))]),
+                ),
+            ]),
+        )])
+    }
+
+    fn fruit_node() -> Node {
+        Node::obj(vec![(
+            "by_for",
+            Node::Keyed(vec![
+                (
+                    "s1".to_owned(),
+                    Node::obj(vec![("name", name("Partner A", "الف"))]),
+                ),
+                ("guests".to_owned(), Node::obj(vec![])),
+            ]),
+        )])
+    }
+
+    #[test]
+    fn the_partner_overview_has_one_button_for_each_partner_cited_and_none_when_none_is() {
+        let state = everyone(ReportId::R31, overview_node());
+        // Everyone cited: three buttons, each with its partner (Q052).
+        let all = sources_cited(
+            &state,
+            "{{r2.rows.s1.total}} {{r2.rows.s2.total}} {{r2.rows.s3.total}}",
+        );
+        let names: Vec<&str> = all
+            .iter()
+            .map(|s| {
+                report_filters(s)
+                    .partner
+                    .as_ref()
+                    .map_or("none", |p| p.name_en.as_str())
+            })
+            .collect();
+        assert_eq!(names, ["Partner A", "Partner B", "Partner C"]);
+        // One cited: one button with him (Q400).
+        let one = sources_cited(&state, "{{r2.rows.s2.capital.invested}}");
+        assert_eq!(one.len(), 1);
+        assert_eq!(
+            report_filters(&one[0]).partner.as_ref().map(|p| p.id),
+            Some(2)
+        );
+        // The same row twice is one button.
+        assert_eq!(
+            sources_cited(
+                &state,
+                "{{r2.rows.s2.total}} {{r2.rows.s2.capital.balance}}"
+            )
+            .len(),
+            1
+        );
+        // Nothing cited: no button, because R31 cannot open without a partner. The plain tables
+        // and the slow-line answer drop it too.
+        assert!(sources_cited(&state, "no figures").is_empty());
+        assert!(sources_of(&state).is_empty());
+    }
+
+    #[test]
+    fn the_fruit_register_opens_for_the_partner_or_the_guests_whose_row_is_cited() {
+        let state = everyone(ReportId::R37, fruit_node());
+        // Alif's home fruit (Q216, Q217, Q395): R37 with Partner A.
+        let home = sources_cited(&state, "{{r2.by_for.s1.home_value}}");
+        assert_eq!(home.len(), 1);
+        let filters = report_filters(&home[0]);
+        assert_eq!(
+            filters.partner.as_ref().map(|p| p.name_en.as_str()),
+            Some("Partner A")
+        );
+        assert!(!filters.guests_only);
+        // The guests (Q218): R37 with guests_only and no partner.
+        let guests = sources_cited(&state, "{{r2.by_for.guests.value}}");
+        assert_eq!(guests.len(), 1);
+        let filters = report_filters(&guests[0]);
+        assert!(filters.guests_only && filters.partner.is_none());
+        // The register as a whole (the total row cited, no by_for row): as read, for everyone.
+        let whole = sources_cited(&state, "{{r2.totals.value}}");
+        assert_eq!(whole.len(), 1);
+        let filters = report_filters(&whole[0]);
+        assert!(filters.partner.is_none() && !filters.guests_only);
     }
 }

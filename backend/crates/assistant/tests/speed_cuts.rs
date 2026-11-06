@@ -509,7 +509,9 @@ fn one_clear_period_is_read_first_so_the_first_call_asks_for_the_report() {
     // The first request already holds the period, with its own tool call and tool message.
     assert_eq!(result_ids(&requests[0]), ["r1"]);
     let first = tool_messages(&requests[0]);
-    assert_eq!(first[0].0, "pre_period");
+    // The id of a read made by the app is `pre_<tool>_<n>`: unique, so two reads of the same tool
+    // in one conversation never share a call id.
+    assert!(first[0].0.starts_with("pre_period"), "{}", first[0].0);
     assert_eq!(first[0].1["from"]["date"], "2026-10-01");
     assert_eq!(harness::money(figures(answer_of(&reply))[0].0), 41_400);
     let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();

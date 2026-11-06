@@ -41,4 +41,14 @@ export type EntryScreen =
   | 'reports'
   | 'dead_amount'
   | 'analytics'
-  | 'backup';
+  | 'backup'
+  | 'garden_installment'
+  | 'garden_cost'
+  | 'garden_sale'
+  | 'garden_close'
+  | 'trip_purchase'
+  | 'trip_cost'
+  | 'trip_sale'
+  | 'bikri_later_sale'
+  | 'bikri_edit'
+  | 'bikri_cancel';

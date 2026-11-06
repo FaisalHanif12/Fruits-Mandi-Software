@@ -11,6 +11,7 @@ import type { LotChargeMethod } from '../../bindings/LotChargeMethod';
 import type { LotInput } from '../../bindings/LotInput';
 import type { PaymentType } from '../../bindings/PaymentType';
 import type { PukhtaInput } from '../../bindings/PukhtaInput';
+import type { SaleGrade } from '../../bindings/SaleGrade';
 import type { SaleInput } from '../../bindings/SaleInput';
 import { isGardenAccount } from '../../shared/accounts';
 import { formatPaisa, type Paisa } from '../../shared/format';
@@ -110,6 +111,12 @@ function lineChargeInput(
   return { method: method === 'percent' || method === 'per_unit' ? method : fallback, value: text };
 }
 
+/** The quality of a line (PRD FR-12.42): one of the three words, or none. */
+function gradeOf(row: EntryRow): SaleGrade | null {
+  const typed = row.typed[SALE.grade];
+  return typed === 'first' || typed === 'second' || typed === 'third' ? typed : null;
+}
+
 function paymentOf(row: EntryRow): PaymentType | null {
   const typed = row.typed[SALE.payment];
   return typed === 'credit' || typed === 'cash' ? typed : null;
@@ -138,6 +145,8 @@ export function saleInput(row: EntryRow): SaleInput {
     rate_differs: row.typed[SALE.differs] === ON,
     buyer_rate: textOrNull(row.typed[SALE.buyerRate]),
     payment_type: paymentOf(row),
+    // Left out when there is none, so a line with no quality is sent exactly as before (FR-12.42).
+    ...(gradeOf(row) === null ? {} : { grade: gradeOf(row) }),
     seller_comm: lineChargeInput(
       row.typed[SALE.sellerCommValue],
       row.typed[SALE.sellerCommMethod],

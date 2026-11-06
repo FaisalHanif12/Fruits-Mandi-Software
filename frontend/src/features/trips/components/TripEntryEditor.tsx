@@ -124,15 +124,25 @@ interface TripEntryEditorProps {
   today: string;
   /** A purchase was saved: the screen shows it in the list. */
   onPurchaseSaved: (purchaseId: number) => void;
+  /** The type the form starts on, when the address names one (PRD FR-7.79); else the first. */
+  initialType?: EntryType | undefined;
 }
 
-export function TripEntryEditor({ trip, purchases, today, onPurchaseSaved }: TripEntryEditorProps) {
+export function TripEntryEditor({
+  trip,
+  purchases,
+  today,
+  onPurchaseSaved,
+  initialType,
+}: TripEntryEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const errorText = useErrorText();
   const language = useLanguage();
   const grouping = useGrouping();
-  const [draft, setDraft] = useState<EntryDraft>(() => newEntryDraft('purchase', today));
+  const [draft, setDraft] = useState<EntryDraft>(() =>
+    newEntryDraft(initialType ?? 'purchase', today),
+  );
   // The item lines of a purchase entry, kept above the grid so a language switch loses nothing.
   const [lines] = useState(() => createEntryStore());
   const rows = lines((state) => state.rows);

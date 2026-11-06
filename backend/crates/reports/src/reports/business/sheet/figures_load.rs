@@ -9,6 +9,8 @@
 
 use super::activity::SAME_DAY_PAIR;
 use super::*;
+use crate::reports::common::grade_of;
+use mandi_core::bikri::SaleGrade;
 use mandi_db::rusqlite::params_from_iter;
 use mandi_db::rusqlite::types::Value;
 
@@ -232,6 +234,8 @@ pub(super) struct BuyerLine {
     pub(super) qty: i64,
     /// The weight in grams of a line of an item sold by weight; `None` for any other line.
     pub(super) weight_grams: Option<i64>,
+    /// The quality of the goods of the line (PRD FR-12.42); `None` for a line with none.
+    pub(super) grade: Option<SaleGrade>,
     pub(super) rate: Paisa,
     pub(super) value: Paisa,
     pub(super) commission: Paisa,
@@ -251,6 +255,8 @@ pub(super) struct SellerLine {
     pub(super) qty: i64,
     /// The weight in grams of a line of an item sold by weight; `None` for any other line.
     pub(super) weight_grams: Option<i64>,
+    /// The quality of the goods of the line (PRD FR-12.42); `None` for a line with none.
+    pub(super) grade: Option<SaleGrade>,
     pub(super) rate: Paisa,
     pub(super) amount: Paisa,
     pub(super) commission: Paisa,
@@ -273,7 +279,7 @@ pub(super) fn buyer_lines(
         "SELECT e.entry_date, s.buyer_account_id, COALESCE(s.pukhta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa,
-                s.laga_paisa, s.buyer_total_paisa, s.payment_type = 'cash', s.weight_grams
+                s.laga_paisa, s.buyer_total_paisa, s.payment_type = 'cash', s.weight_grams, s.grade
          FROM bikri_sales s
          JOIN bikri_lots l ON l.id = s.lot_id
          JOIN items i ON i.id = l.item_id
@@ -308,11 +314,12 @@ pub(super) fn buyer_lines(
                 ],
                 r.get::<_, bool>(16)?,
                 r.get::<_, Option<i64>>(17)?,
+                r.get::<_, Option<String>>(18)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (text, n, cash, weight_grams) in rows {
+    for (text, n, cash, weight_grams, grade) in rows {
         let [day, person, item_ur, item_en, packing_ur, packing_en] = text;
         let [
             account_id,
@@ -339,6 +346,7 @@ pub(super) fn buyer_lines(
             },
             qty,
             weight_grams,
+            grade: grade_of(grade.as_deref())?,
             rate: paisa(rate)?,
             value: paisa(value)?,
             commission: paisa(commission)?,
@@ -392,7 +400,7 @@ pub(super) fn seller_lines_in(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.pukhta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.seller_rate_paisa, s.seller_amount_paisa, s.seller_comm_paisa,
-                s.weight_grams
+                s.weight_grams, s.grade
          {from_sales}
          JOIN items i ON i.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
@@ -425,11 +433,12 @@ pub(super) fn seller_lines_in(
                     r.get::<_, i64>(13)?,
                 ],
                 r.get::<_, Option<i64>>(14)?,
+                r.get::<_, Option<String>>(15)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (text, n, weight_grams) in rows {
+    for (text, n, weight_grams, grade) in rows {
         let [day, person, item_ur, item_en, packing_ur, packing_en] = text;
         let [
             account_id,
@@ -454,6 +463,7 @@ pub(super) fn seller_lines_in(
             },
             qty,
             weight_grams,
+            grade: grade_of(grade.as_deref())?,
             rate: paisa(rate)?,
             amount: paisa(amount)?,
             commission: paisa(commission)?,

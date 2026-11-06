@@ -34,6 +34,10 @@ pub struct Runtime {
     /// (plan 54 S3). ON in the app; the recorded transcripts of the model's own tool choices switch
     /// it off.
     read_first: AtomicBool,
+    /// Whether a simple figure is answered by the app itself, with no model call, from the reads
+    /// of the plan (PRD FR-7.90, plan 55 Section 10). ON in the app; the recorded transcripts of
+    /// the model's own answers switch it off, and the tests of the instant answers switch it on.
+    instant: AtomicBool,
     /// Whether a call whose data is already read, and help, think "low" (plan 54 S4). ON in the
     /// app until the bank shows a quality drop; the tests of the recorded requests switch it off.
     low_effort: AtomicBool,
@@ -69,6 +73,7 @@ impl Runtime {
             prefind: AtomicBool::new(false),
             local: AtomicBool::new(true),
             read_first: AtomicBool::new(true),
+            instant: AtomicBool::new(true),
             low_effort: AtomicBool::new(true),
         }
     }
@@ -101,6 +106,16 @@ impl Runtime {
     /// Switches the read before the first call on or off (a test switch).
     pub fn set_read_first(&self, on: bool) {
         self.read_first.store(on, Ordering::Relaxed);
+    }
+
+    /// True while the app may answer a simple figure by itself from the reads of the plan.
+    pub fn instant(&self) -> bool {
+        self.instant.load(Ordering::Relaxed)
+    }
+
+    /// Switches the instant figure answers on or off (a test switch; they are on in the app).
+    pub fn set_instant(&self, on: bool) {
+        self.instant.store(on, Ordering::Relaxed);
     }
 
     /// True while a call with its data already read thinks "low".

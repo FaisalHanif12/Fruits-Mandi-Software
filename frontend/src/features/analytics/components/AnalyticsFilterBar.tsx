@@ -22,6 +22,7 @@ import {
   Button,
   DateInput,
   Field,
+  ItemGroupSelect,
   Num,
   Picker,
   Select,
@@ -83,6 +84,7 @@ const FOLDED_FIELDS = [
   'filters.trip_id',
   'filters.garden_id',
   'filters.goods',
+  'filters.item_group',
   'filters.compare',
 ];
 
@@ -263,11 +265,24 @@ export function AnalyticsFilterBar({
             scope="item"
             value={state.item}
             onChange={(hit) => {
-              onChange({ item: valueOf(hit) });
+              // One item or a group of items, never both (the backend refuses both).
+              onChange({ item: valueOf(hit), ...(hit === null ? {} : { itemGroup: 'all' }) });
             }}
           />
         )}
       </Field>,
+    );
+  }
+  if (has('item_group')) {
+    primary.push(
+      <ItemGroupSelect
+        key="item_group"
+        value={state.itemGroup}
+        error={fieldError(error, 'filters.item_group')}
+        onChange={(itemGroup) => {
+          onChange({ itemGroup, ...(itemGroup === 'all' ? {} : { item: null }) });
+        }}
+      />,
     );
   }
   if (has('seller')) {

@@ -16,6 +16,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { Card, Fact, LinkButton, Num, Table, type TableColumn } from '../../../../shared/ui';
 import { isNegativePaisa } from '../../../../shared/format';
 import { purchaseNumberText } from '../../../purchases';
+import { GRADE_WORD_ID } from '../../grade';
+import { useSavedLotWho } from '../../lot-name';
 import { useLocalization } from '@fluent/react';
 
 /** The buyer of a line: the one-time person by his own name, else the account (PRD FR-13.2). */
@@ -28,6 +30,7 @@ function lineColumns(
   say: (id: string) => string,
   step: ReturnType<typeof useLayoutStep>,
   own: boolean,
+  graded: boolean,
 ): readonly TableColumn<SavedSale>[] {
   return [
     {
@@ -35,6 +38,19 @@ function lineColumns(
       header: say('glossary-gahak'),
       cell: (sale) => buyerName(sale, language),
     },
+    // The quality of the goods of a line (PRD FR-12.42). The column is there only when a line of the
+    // lot has one, so a lot with none reads exactly as before.
+    ...(graded
+      ? ([
+          {
+            id: 'grade',
+            header: say('glossary-darja'),
+            kind: 'centre',
+            size: 'status',
+            cell: (sale) => (sale.grade === undefined ? '' : say(GRADE_WORD_ID[sale.grade])),
+          },
+        ] satisfies readonly TableColumn<SavedSale>[])
+      : []),
     {
       id: 'qty',
       header: say('bikri-col-qty'),
@@ -125,14 +141,17 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
   const say = (id: string) => l10n.getString(id);
   const navigate = useNavigate();
   const purchase = lot.purchase;
-  const seller = displayName(lot.pukhta ?? lot.seller, language);
+  const lotWho = useSavedLotWho();
   const lines = lot.sales.filter((sale) => sale.is_active);
   return (
     <Card
       compact
       title={
         <span className="inline-flex flex-wrap items-center gap-2">
-          <Localized id="bikri-saved-lot-title" vars={{ lot: String(lot.lot_no), seller }}>
+          <Localized
+            id="bikri-saved-lot-title"
+            vars={{ lot: String(lot.lot_no), who: lotWho(lot) }}
+          >
             <span />
           </Localized>
           {purchase === null ? null : (
@@ -267,7 +286,13 @@ export function SavedLotCard({ lot }: SavedLotCardProps) {
       )}
       <Table
         label={l10n.getString('bikri-sales-label')}
-        columns={lineColumns(language, say, step, purchase !== null)}
+        columns={lineColumns(
+          language,
+          say,
+          step,
+          purchase !== null,
+          lines.some((sale) => sale.grade !== undefined),
+        )}
         rows={lines}
         rowKey={(sale) => String(sale.id)}
       />

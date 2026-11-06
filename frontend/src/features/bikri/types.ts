@@ -79,6 +79,8 @@ export const SALE = {
   buyer: 'buyer',
   qty: 'qty',
   rate: 'rate',
+  // The quality of the goods of the line (درجہ): first, second, third, or nothing (PRD FR-12.42).
+  grade: 'grade',
   amount: 'amount',
   sellerComm: 'sellerComm',
   buyerComm: 'buyerComm',

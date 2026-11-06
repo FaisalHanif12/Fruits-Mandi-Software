@@ -23,10 +23,19 @@ export interface HowStepView {
  */
 const HOW_NEEDS: Readonly<Record<string, readonly string[]>> = {
   'assistant-how-open-report': ['report'],
+  // An analytics view opens in place of a report (plan 55 W2): its letter A to K.
+  'assistant-how-open-analytics': ['view'],
   'assistant-how-set-party': ['role', 'party', 'code'],
   // A record with no code (a partner), and the row of a report the Owner must look at (a trip, a head).
   'assistant-how-set-record': ['role', 'name'],
   'assistant-how-find-row': ['name'],
+  // The guests' fruit (R37, `guests_only`) and one بکری by its number (R1).
+  // The item group of a report on fruit or on vegetables: `fruit` or `vegetable`.
+  'assistant-how-set-group': ['group'],
+  'assistant-how-set-guests': [],
+  'assistant-how-set-bikri': ['number'],
+  // A report of one day with no day named: today was taken, and the step after it says how to change it.
+  'assistant-how-assumed-day': ['day'],
   'assistant-how-set-day': ['day'],
   'assistant-how-set-dates': ['from', 'to'],
   'assistant-how-press-print': [],

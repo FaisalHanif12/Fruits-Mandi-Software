@@ -221,6 +221,47 @@ describe.each(LANGUAGES)('one garden (%s)', (language) => {
     }
   });
 
+  it.each(['installment', 'cost', 'other_sale'] as const)(
+    'the address chooses the type the form starts on: ?type=%s (an answer sends the Owner here)',
+    async (type) => {
+      fakeGardens();
+      await open(`/gardens/1?type=${type}`);
+      const pressed = within(typeList())
+        .getAllByRole('button')
+        .filter((button) => button.getAttribute('aria-pressed') === 'true');
+      expect(pressed.map((button) => visible(button.textContent))).toEqual([
+        message(language, `gardens-type-${type.replaceAll('_', '-')}`),
+      ]);
+    },
+  );
+
+  it('a type the screen does not know is left out: the form starts on the first type', async () => {
+    fakeGardens();
+    await open('/gardens/1?type=nonsense');
+    const pressed = within(typeList())
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true');
+    expect(pressed.map((button) => visible(button.textContent))).toEqual([
+      message(language, 'gardens-type-installment'),
+    ]);
+  });
+
+  it('?type=close puts the focus on the close button once the closing is ready, and closes nothing', async () => {
+    const fake = fakeGardens();
+    await open('/gardens/1?type=close');
+    const closeButton = () =>
+      screen.getByRole('button', { name: message(language, 'gardens-close-button') });
+    await waitFor(() => {
+      expect(closeButton()).toBeEnabled();
+    });
+    await waitFor(() => {
+      expect(closeButton()).toHaveFocus();
+    });
+    // Nothing is asked and nothing is closed until the Owner presses it (PRD FR-7.8).
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(fake.saved.closings).toHaveLength(0);
+  });
+
   it('an unknown garden says so with a retry button', async () => {
     fakeGardens();
     await renderApp('/gardens/99');

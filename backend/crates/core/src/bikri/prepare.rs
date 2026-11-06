@@ -1,6 +1,7 @@
 //! Reading the typed text of a draft: every value that cannot be read is left `None` and its
 //! mistake goes to the issues with its field.
 
+use super::grade::SaleGrade;
 use super::input::*;
 use super::prepared::*;
 use super::{MAX_LOTS, MAX_SALE_LINES};
@@ -61,6 +62,30 @@ fn optional_money(
         None => Some(Paisa::ZERO),
         Some(t) if is_blank(t) => Some(Paisa::ZERO),
         Some(t) => take(issues, validate::money(field, t)),
+    }
+}
+
+/// Reads the optional quality of a sale line (PRD FR-12.42) into `slot`: nothing or an empty text
+/// is no quality, the three words are one, and any other text is `ERR_OUT_OF_RANGE` on the field
+/// (false is returned, so the row is not worked out until it is fixed).
+fn optional_grade(
+    issues: &mut Vec<FieldError>,
+    field: &str,
+    text: Option<&str>,
+    slot: &mut Option<SaleGrade>,
+) -> bool {
+    let Some(text) = text.map(str::trim).filter(|t| !t.is_empty()) else {
+        return true;
+    };
+    match SaleGrade::parse(text) {
+        Some(grade) => {
+            *slot = Some(grade);
+            true
+        }
+        None => {
+            issues.push(FieldError::new(ErrorCode::ErrOutOfRange, field));
+            false
+        }
     }
 }
 
@@ -166,6 +191,7 @@ fn prepare_sale(
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
         note: None,
     };
     if is_blank_row {
@@ -211,6 +237,13 @@ fn prepare_sale(
     sale.buyer_comm = buyer_comm;
     sale.laga = laga;
     ok &= ok_a && ok_b && ok_c;
+    // The quality is not used by the maths either (PRD FR-12.42). Only the three words count.
+    ok &= optional_grade(
+        issues,
+        &sale_field(lot, index, "grade"),
+        input.grade.as_deref(),
+        &mut sale.grade,
+    );
     // A note is not used by the maths, but it must be a clean note (PRD Section 4.2). The save
     // keeps it.
     ok &= optional_note(

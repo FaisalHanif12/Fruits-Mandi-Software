@@ -260,6 +260,7 @@ fn sale_input(sale: &SavedSale, keep_ids: bool) -> SaleInput {
         seller_comm: typed_line_charge(&sale.seller_comm),
         buyer_comm: typed_line_charge(&sale.buyer_comm),
         laga: typed_line_charge(&sale.laga),
+        grade: sale.grade.map(|g| g.as_str().to_owned()),
         note: sale.note.clone(),
     }
 }

@@ -51,8 +51,9 @@ fn answer_with(text: &str, entry: &Value) -> Value {
 
 #[test]
 fn every_screen_name_of_the_schema_is_a_screen_the_answer_can_carry() {
-    // 11 entry screens as before and 19 main screens, in one list.
-    assert_eq!(EntryScreenName::ALL.len(), 30);
+    // 11 entry screens as before, 19 main screens, and the 10 entry screens of garden and trip
+    // entries, a later sale, an edit and a cancel (D6 v1.5), in one list.
+    assert_eq!(EntryScreenName::ALL.len(), 40);
     for name in EntryScreenName::ALL {
         let parsed: EntryScreenName = serde_json::from_value(json!(name))
             .unwrap_or_else(|_| panic!("{name} is not an EntryScreenName"));
@@ -71,6 +72,16 @@ fn every_screen_name_of_the_schema_is_a_screen_the_answer_can_carry() {
                     | "phal"
                     | "general"
                     | "account"
+                    | "garden_installment"
+                    | "garden_cost"
+                    | "garden_sale"
+                    | "garden_close"
+                    | "trip_purchase"
+                    | "trip_cost"
+                    | "trip_sale"
+                    | "bikri_later_sale"
+                    | "bikri_edit"
+                    | "bikri_cancel"
             ),
             "{name}"
         );

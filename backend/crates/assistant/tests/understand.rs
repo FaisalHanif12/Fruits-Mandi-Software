@@ -2004,7 +2004,10 @@ fn the_worked_day_prints_and_reports() {
         ),
         (
             "faisal ka bill nikalna hai",
-            print().unsure().p(buyer("Faisal")).doubt(Doubt::NoPeriod),
+            print()
+                .sure()
+                .p(buyer("Faisal"))
+                .rep(r("R35").party("Faisal").day("2026-10-10")),
         ),
         (
             "rahim ka bill nikalna hai pichle hafte ka",
@@ -2030,10 +2033,14 @@ fn the_worked_day_prints_and_reports() {
                 .pd(K::Today, "2026-10-10", "2026-10-10")
                 .rep(r("R35").party("Faisal").day("2026-10-10")),
         ),
-        // ---- not sure: no day for a bill, nothing to print, a name that does not exist
+        // ---- no day for a bill: today is taken and the steps say so (lead ruling of 06-11-2026);
+        // nothing to print, a name that does not exist: not sure
         (
             "faisal ka print",
-            print().unsure().p(buyer("Faisal")).doubt(Doubt::NoPeriod),
+            print()
+                .sure()
+                .p(buyer("Faisal"))
+                .rep(r("R35").party("Faisal").day("2026-10-10")),
         ),
         ("print", print().unsure()),
         (
@@ -2091,7 +2098,10 @@ fn the_worked_day_prints_and_reports() {
         ),
         (
             "cash book print",
-            print().unsure().fig(&[F::Cash]).doubt(Doubt::NoPeriod),
+            print()
+                .sure()
+                .fig(&[F::Cash])
+                .rep(r("R12").from("2026-10-10").to("2026-10-10")),
         ),
         (
             "pichle mahine ke kharche ka print",
@@ -2304,10 +2314,9 @@ fn the_worked_day_prints_and_reports() {
         (
             "faisal ka print",
             print()
-                .unsure()
+                .sure()
                 .p(buyer("Faisal"))
-                .doubt(Doubt::NoPeriod)
-                .no_rep(),
+                .rep(r("R35").party("Faisal").day("2026-10-10")),
         ),
         // ---- open a screen or a report
         (

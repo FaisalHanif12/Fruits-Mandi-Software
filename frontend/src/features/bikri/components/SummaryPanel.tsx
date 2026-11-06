@@ -12,6 +12,7 @@ import type { Working } from '../../../bindings/Working';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { CalcInfo, Num, SegmentedControl } from '../../../shared/ui';
 import { useLocalization } from '@fluent/react';
+import { lotLabelVars } from '../lot-name';
 import type { SummaryTotals } from '../types';
 import type { Paisa } from '../../../shared/format';
 
@@ -28,10 +29,14 @@ interface SummaryPanelProps {
   /** Which part is shown: the selected lot or the whole بکری. */
   whole: boolean;
   lotNumber: number | null;
+  /** The lot's seller and item, for its label on the switch (PRD FR-12.6). Empty: the number alone. */
+  lotWho?: string | undefined;
   /** Without it there is one lot only (a later sale) and the lot / whole switch is not drawn. */
   onWholeChange?: ((whole: boolean) => void) | undefined;
   /** The net is below zero: the seller owes the firm (PRD FR-12.7). */
   netIsNegative: boolean;
+  /** How many lines of this part the figures leave out, their quantity being wrong (PRD FR-12.6). */
+  leftOut?: number | undefined;
 }
 
 function sellerLines(totals: SummaryTotals): Line[] {
@@ -108,8 +113,10 @@ export function SummaryPanel({
   totals,
   whole,
   lotNumber,
+  lotWho,
   onWholeChange,
   netIsNegative,
+  leftOut = 0,
 }: SummaryPanelProps) {
   const { l10n } = useLocalization();
   const grouping = useGrouping();
@@ -135,7 +142,9 @@ export function SummaryPanel({
             options={[
               {
                 value: 'lot',
-                label: l10n.getString('bikri-summary-lot', { lot: String(lotNumber ?? 1) }),
+                label: l10n.getString('bikri-summary-lot', {
+                  ...lotLabelVars(lotNumber ?? 1, lotWho ?? ''),
+                }),
               },
               { value: 'whole', label: l10n.getString('bikri-summary-whole') },
             ]}
@@ -143,7 +152,8 @@ export function SummaryPanel({
         )}
       </div>
       {totals === null ? (
-        <Localized id="bikri-summary-incomplete">
+        // No line is worked out: when the reason is a quantity, the words say the totals wait for it.
+        <Localized id={leftOut > 0 ? 'bikri-summary-waits-qty' : 'bikri-summary-incomplete'}>
           <p className="type-body text-ink-muted" />
         </Localized>
       ) : (
@@ -170,6 +180,11 @@ export function SummaryPanel({
           </div>
         </div>
       )}
+      {totals !== null && leftOut > 0 ? (
+        <Localized id="bikri-left-out" vars={{ count: leftOut }}>
+          <p role="status" className="flex items-center gap-2 type-body text-warn" />
+        </Localized>
+      ) : null}
     </section>
   );
 }

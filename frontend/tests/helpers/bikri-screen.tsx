@@ -164,7 +164,14 @@ export async function typeEvent1Lot(user: User, language: Language) {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
   });
   await user.click(
-    screen.getByRole('button', { name: named(message(language, 'bikri-more-toggle', { lot: 1 })) }),
+    // The button names the lot after its number once the seller or item is chosen (PRD FR-12.6),
+    // so it is found by the words that come first.
+    screen.getByRole('button', {
+      name: (label) =>
+        visible(label).startsWith(
+          message(language, 'bikri-more-toggle', { lot: 1, who: '', named: 'no' }),
+        ),
+    }),
   );
   const labour = await screen.findByRole('group', {
     name: named(message(language, 'glossary-mazdoori')),

@@ -363,8 +363,6 @@ fn a_cloud_address_that_is_refused_says_why_on_the_first_screen_and_in_settings(
     for (address, reason) in [
         ("http://acct.r2.cloudflarestorage.com", "https"),
         ("acct.r2.cloudflarestorage.com", "https"),
-        // The bucket name put in the address (plan 53 section 10).
-        ("https://acct.r2.cloudflarestorage.com/mandi-backup", "path"),
     ] {
         // The first screen: the field is the one of the input.
         let mut account = old.account();
@@ -413,6 +411,80 @@ fn a_cloud_address_that_is_refused_says_why_on_the_first_screen_and_in_settings(
             "{address}"
         );
     }
+}
+
+/// The bucket name put at the end of the address (plan 53 section 10) has its own code, on the
+/// first screen and in Settings, with the address to use. Settings saves nothing.
+#[test]
+fn a_cloud_address_with_a_path_says_so_and_offers_the_address_without_it() {
+    let old = old_computer();
+    let new = new_computer(old.cloud.clone());
+    let address = "https://acct.r2.cloudflarestorage.com/mandidemo";
+
+    // The first screen: the field is the one of the input.
+    let mut account = old.account();
+    account.endpoint = address.into();
+    let error = new
+        .service
+        .first_run_list(&list_input(RestoreSource::Cloud(account)))
+        .unwrap_err();
+    assert_eq!(
+        codes(&error),
+        pairs(&[("ERR_BACKUP_CLOUD_ADDRESS_PATH", "source.cloud.endpoint")])
+    );
+    assert_eq!(
+        value_of(&error, "address").as_deref(),
+        Some("https://acct.r2.cloudflarestorage.com")
+    );
+    assert_eq!(value_of(&error, "path").as_deref(), Some("/mandidemo"));
+    assert_eq!(value_of(&error, "bucket").as_deref(), Some("mandidemo"));
+
+    // Settings: the same code and values on the field of Settings, and nothing is saved.
+    let owner = old.rig.w.owner.user_id;
+    let before = old.service.settings().unwrap();
+    let error = old
+        .service
+        .settings_set(
+            Some(owner),
+            &mandi_backup::api::BackupSettingsInput {
+                settings: mandi_backup::settings::BackupSettings {
+                    cloud_enabled: true,
+                    cloud_endpoint: address.into(),
+                    cloud_bucket: "mandidemo".into(),
+                    ..mandi_backup::settings::BackupSettings::default()
+                },
+                cloud_access_key_id: None,
+                cloud_secret_access_key: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(
+        codes(&error),
+        pairs(&[("ERR_BACKUP_CLOUD_ADDRESS_PATH", "cloud_endpoint")])
+    );
+    assert_eq!(
+        value_of(&error, "address").as_deref(),
+        Some("https://acct.r2.cloudflarestorage.com")
+    );
+    assert_eq!(value_of(&error, "bucket").as_deref(), Some("mandidemo"));
+    assert_eq!(old.service.settings().unwrap(), before, "nothing was saved");
+
+    // The address the error offers is accepted.
+    old.service
+        .settings_set(
+            Some(owner),
+            &mandi_backup::api::BackupSettingsInput {
+                settings: mandi_backup::settings::BackupSettings {
+                    cloud_enabled: true,
+                    cloud_endpoint: "https://acct.r2.cloudflarestorage.com".into(),
+                    cloud_bucket: "mandidemo".into(),
+                    ..mandi_backup::settings::BackupSettings::default()
+                },
+                cloud_access_key_id: None,
+                cloud_secret_access_key: None,
+            },
+        )
+        .unwrap();
 }
 
 #[test]

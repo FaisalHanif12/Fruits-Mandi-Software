@@ -82,6 +82,13 @@ pub struct CallTiming {
     /// the Latin letter, the never-use word, the month name, the path of a `show`, `choose` or
     /// `next` (plan 52 P52-S1, item 9). Never a name and never a digit.
     pub check_at: Vec<String>,
+    /// For a call that was sent twice (the hedge, plan 55 Section 3): which request this entry
+    /// describes, `first` or `copy`. `None` for a call sent once.
+    pub hedged: Option<&'static str>,
+    /// True for the entry of a hedged call that the question did not wait for: the request that
+    /// lost, or the copy when both failed. It is in the log, and left out of the time sums, since
+    /// its time is inside the time of the other one.
+    pub hedge_extra: bool,
 }
 
 /// Where the time of one run of a question went. A question that waits for the partner code and
@@ -97,6 +104,7 @@ impl Timing {
     pub fn model_millis(&self) -> i64 {
         self.calls
             .iter()
+            .filter(|c| !c.hedge_extra)
             .fold(0_i64, |sum, c| sum.saturating_add(c.model_millis))
     }
 
@@ -137,6 +145,12 @@ impl Timing {
                 // Only when there is something to say, so a normal call's entry stays as it was.
                 if let (Some(error), Some(map)) = (&c.error, entry.as_object_mut()) {
                     map.insert("error".to_owned(), serde_json::json!(error));
+                }
+                if let (Some(side), Some(map)) = (c.hedged, entry.as_object_mut()) {
+                    map.insert("hedged".to_owned(), serde_json::json!(side));
+                    if c.hedge_extra {
+                        map.insert("hedge_extra".to_owned(), serde_json::json!(true));
+                    }
                 }
                 if !c.check_failed.is_empty()
                     && let Some(map) = entry.as_object_mut()

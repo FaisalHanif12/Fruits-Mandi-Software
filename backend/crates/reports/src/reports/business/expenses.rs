@@ -35,14 +35,65 @@ use crate::reports::model::{
     Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
 
-/// The shop expense heads with a movement in the filter. A head is an account of head 05.
-fn heads_query(typed: &Typed) -> (String, Vec<Value>) {
+/// The conditions of the shop expense heads: posted entries of head 05 accounts, the entries of a
+/// month close left out (they only move amounts between accounts, PRD FR-17.6), and the dates.
+fn head_conds(typed: &Typed) -> Conds {
     let mut c = Conds::new();
     c.always("e.status = 'posted'")
         .always("e.source_type <> 'month_close'")
         .always("h.code = '05'")
         .text("e.entry_date >= ?", typed.from.as_deref())
         .text("e.entry_date <= ?", typed.to.as_deref());
+    c
+}
+
+/// The net shop expense (debit less credit) of ONE head for each month in the filter, oldest first,
+/// as `("YYYY-MM", amount)`: the very conditions of R29's rows with a month bucket, so the months
+/// add up to the head's row of R29 for the same dates (plan 55 F2). A head with no movement in a
+/// month has no row for it.
+///
+/// Example (the forecast fixture B): Electricity April 4,000, May 4,000, June 5,000 ...
+///
+/// # Errors
+/// A database error; `ReportsError::Money` if a stored amount is not whole rupees or a net does
+/// not fit.
+pub(crate) fn head_by_month(
+    conn: &Connection,
+    typed: &Typed,
+    account_id: i64,
+) -> Result<Vec<(String, Paisa)>, ReportsError> {
+    let mut c = head_conds(typed);
+    c.id("a.id = ?", Some(account_id));
+    let sql = format!(
+        "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+         JOIN account_controls c ON c.id = a.control_id
+         JOIN account_heads h ON h.id = c.head_id
+         WHERE {} GROUP BY 1 ORDER BY 1",
+        c.sql()
+    );
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement
+        .query_map(params_from_iter(c.args().iter()), |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, i64>(2)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = Vec::new();
+    for (month, dr, cr) in rows {
+        out.push((month, paisa(dr)?.checked_sub(paisa(cr)?)?));
+    }
+    Ok(out)
+}
+
+/// The shop expense heads with a movement in the filter. A head is an account of head 05.
+fn heads_query(typed: &Typed) -> (String, Vec<Value>) {
+    let c = head_conds(typed);
     let sql = format!(
         "SELECT a.code, a.name_ur, a.name_en,
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0), a.id

@@ -26,6 +26,7 @@ import {
 } from '../../../shared/ui';
 import type { UiError } from '../../../bindings/UiError';
 import { useBackupSettings, useSaveBackupSettings } from '../hooks';
+import { CloudAddressFix, cloudAddressPathOf } from './CloudAddressFix';
 import type { BackupSettings } from '../types';
 
 /** The fields this form draws, so a problem on any of them shows next to its field. */
@@ -76,6 +77,8 @@ export function SettingsCard() {
   const draft = edits ?? saved;
 
   const error = save.error === null ? null : uiErrorOf(save.error);
+  // The cloud address was written with a path after the host: the backend names the address to use.
+  const pathFix = cloudAddressPathOf(error, 'cloud_endpoint');
   const flight = useSingleFlight();
   const dirty =
     draft !== undefined &&
@@ -206,6 +209,22 @@ export function SettingsCard() {
         {draft.cloud_enabled ? (
           <>
             {text('cloud_endpoint', 'backup-set-endpoint', 'backup-set-endpoint-hint', 'en', 'ltr')}
+            {pathFix === null || draft.cloud_endpoint === pathFix.address ? null : (
+              <CloudAddressFix
+                fix={pathFix}
+                bucketEmpty={draft.cloud_bucket.trim() === ''}
+                onFix={(address, bucket) => {
+                  // Both boxes in one change, so the second does not undo the first; the old refusal was about
+                  // the old text, so it goes (nothing is saved yet: the Owner looks, then saves).
+                  save.reset();
+                  setEdits({
+                    ...draft,
+                    cloud_endpoint: address,
+                    ...(bucket === null ? {} : { cloud_bucket: bucket }),
+                  });
+                }}
+              />
+            )}
             {text('cloud_bucket', 'backup-set-bucket', undefined, 'en')}
             {text('cloud_region', 'backup-set-region', 'backup-set-region-hint', 'en')}
             {text('cloud_prefix', 'backup-set-prefix', 'backup-set-prefix-hint', 'en')}

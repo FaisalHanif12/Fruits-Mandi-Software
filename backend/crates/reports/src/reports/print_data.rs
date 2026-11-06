@@ -16,6 +16,7 @@
 
 use mandi_core::accounts::BalanceSide;
 use mandi_core::auth::Language;
+use mandi_core::bikri::SaleGrade;
 use mandi_core::english_words::english_words;
 use mandi_core::money::{Grouping, Paisa};
 use mandi_core::printing::Paper;
@@ -67,6 +68,11 @@ pub enum PrintDetailPart {
         item: String,
         /// The packing in the print language.
         packing: String,
+        /// The quality of the goods of the line (PRD FR-12.42): the template writes its Fluent
+        /// word after the item. Left out when the line has none, so an old print reads as before.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        grade: Option<SaleGrade>,
         /// The quantity.
         qty: String,
         /// The rate.
@@ -413,6 +419,7 @@ impl Fmt {
                 bikri_number,
                 item,
                 packing,
+                grade,
                 qty,
                 rate_paisa,
                 value_paisa,
@@ -422,6 +429,7 @@ impl Fmt {
                 bikri_number: self.style.count(*bikri_number),
                 item: self.names(item),
                 packing: self.names(packing),
+                grade: *grade,
                 qty: self.style.count(*qty),
                 rate: self.style.money(*rate_paisa)?,
                 value: self.style.money(*value_paisa)?,
@@ -618,6 +626,19 @@ pub(crate) fn filter_facts(
     if let Some(names) = &filters.item {
         facts.push(fact(ids::FILTER_ITEM, fmt.names(names)));
     }
+    // R2, R3, R4, R7, R10, R27: all the items of a group. The group's word is the whole fact.
+    if let Some(group) = filters.item_group {
+        let label = match group {
+            mandi_core::rules::ItemGroup::Fruit => ids::FILTER_GROUP_FRUIT,
+            mandi_core::rules::ItemGroup::Vegetable => ids::FILTER_GROUP_VEGETABLE,
+        };
+        facts.push(fact(label, String::new()));
+        // R27 is one row for each seller bill: under a group a bill shows only the lots of the
+        // group (PRD v1.31), so the header says so.
+        if id == ReportId::R27 {
+            facts.push(fact(ids::R27_GROUP_NOTE, String::new()));
+        }
+    }
     if let Some(names) = &filters.city {
         facts.push(fact(ids::FILTER_CITY, fmt.names(names)));
     }
@@ -626,6 +647,10 @@ pub(crate) fn filter_facts(
     }
     if let Some(names) = &filters.partner {
         facts.push(fact(ids::FILTER_PARTNER, fmt.names(names)));
+    }
+    // R22, R23, R35: the collector picked. The column heading "collector" is the label.
+    if let Some(names) = &filters.collector {
+        facts.push(fact(ids::COL_COLLECTOR, fmt.names(names)));
     }
     // The statement says whether it is balances only or with its lines. The label is the whole
     // fact, so the value is empty.

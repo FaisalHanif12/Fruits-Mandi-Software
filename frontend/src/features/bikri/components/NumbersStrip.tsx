@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import type { CashCheck } from '../../../bindings/CashCheck';
 import { formatPaisa, useGrouping } from '../../../shared/format';
 import { Num } from '../../../shared/ui';
+import { lotLabelVars } from '../lot-name';
 import type { SummaryTotals } from '../types';
 
 interface Group {
@@ -27,10 +28,14 @@ interface Group {
   totals: SummaryTotals | null;
   /** The net is below zero: the seller owes it (PRD FR-12.7). */
   netIsNegative: boolean;
+  /** How many lines the numbers leave out, their quantity being wrong (PRD FR-12.6). */
+  leftOut: number;
 }
 
 interface NumbersStripProps {
   lotNumber: number;
+  /** The lot's seller and item, said after its number (PRD FR-12.6). Empty: the number alone. */
+  lotWho?: string | undefined;
   /** How many lots the sale has. With one lot the lot is the whole sale, so no name is needed. */
   lotCount: number;
   /** The whole sale is on screen (the lot / whole switch of the summary): its numbers are shown. */
@@ -56,12 +61,12 @@ const NUMBERS = [
   },
 ] as const;
 
-function StripRow({ label, totals, netIsNegative }: Group) {
+function StripRow({ label, totals, netIsNegative, leftOut }: Group) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-4">
       {label === null ? null : <span className="type-label text-ink">{label}</span>}
       {totals === null ? (
-        <Localized id="bikri-strip-incomplete">
+        <Localized id={leftOut > 0 ? 'bikri-strip-waits-qty' : 'bikri-strip-incomplete'}>
           <span className="type-body text-ink-muted" />
         </Localized>
       ) : (
@@ -77,12 +82,18 @@ function StripRow({ label, totals, netIsNegative }: Group) {
           </span>
         ))
       )}
+      {totals !== null && leftOut > 0 ? (
+        <Localized id="bikri-strip-left-out" vars={{ count: leftOut }}>
+          <span className="type-body text-warn" />
+        </Localized>
+      ) : null}
     </div>
   );
 }
 
 export function NumbersStrip({
   lotNumber,
+  lotWho,
   lotCount,
   showWhole,
   lot,
@@ -102,7 +113,10 @@ export function NumbersStrip({
         <StripRow
           label={
             lotCount > 1 ? (
-              <Localized id="bikri-summary-lot" vars={{ lot: String(lotNumber) }} />
+              <Localized
+                id="bikri-summary-lot"
+                vars={{ ...lotLabelVars(lotNumber, lotWho ?? '') }}
+              />
             ) : null
           }
           {...lot}

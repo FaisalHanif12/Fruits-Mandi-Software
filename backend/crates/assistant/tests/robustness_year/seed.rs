@@ -152,6 +152,12 @@ pub struct Year {
     pub bikri_count: usize,
     /// (trip, item key, purchase id) of every trip purchase.
     pub purchase_ids: Vec<(i64, &'static str, i64)>,
+    /// Buyers who are inactive NOW (an account made inactive during the year). The ordinary days never need
+    /// this (a buyer buys only while he is active); the vegetable pass sells on past days and must skip them.
+    pub inactive_buyers: Vec<i64>,
+    /// Give the lines of the last days a quality (plan 58 T4, [`grade_lines`]). `false` builds the same books with no
+    /// quality at all, to prove that a quality changes no amount.
+    pub grades: bool,
 }
 
 pub struct Heads {
@@ -218,6 +224,16 @@ fn pocket(partner_id: i64, share: &str) -> VenturePartnerInput {
 
 /// Builds the whole year. Takes about half a minute in a debug build.
 pub fn build() -> Year {
+    build_with(true)
+}
+
+/// The same year with no quality on any line (plan 58 T4). Every amount of the books must be the same as in
+/// [`build`]: the quality is shown on prints and ledgers and changes no figure (PRD FR-12.42).
+pub fn build_without_grades() -> Year {
+    build_with(false)
+}
+
+fn build_with(grades: bool) -> Year {
     let (dir, env) = env();
     set_up(&env);
     login_owner(&env);
@@ -225,9 +241,11 @@ pub fn build() -> Year {
     let start = date(START);
     set_today(&env, START.0, START.1, START.2);
     let mut year = people_and_things(dir, env, owner);
+    year.grades = grades;
     opening_position(&year, start);
     let mut rng = Rng::new(20_261_105);
     run_days(&mut year, &mut rng);
+    vegetable_sales(&mut year);
     end_of_year(&year);
     year
 }
@@ -247,12 +265,141 @@ pub fn build_thin() -> Year {
     year
 }
 
+/// What a party's card holds besides his name: phones and an address. These are the values the assistant must
+/// never give (PRD FR-7.83); the privacy checks read them from the books.
+type Contact<'a> = (&'a str, &'a str, &'a str);
+
+/// An account (as `world::add_account` makes it) with a collector, a staff member who collects from him, and
+/// a contact (phone 1, phone 2, address).
+fn account_of(
+    env: &mandi_services::testing::TestEnv,
+    owner: &auth::Actor,
+    kind: AccountType,
+    (ur, en): (&str, &str),
+    (credit_allowed, credit_limit): (bool, &str),
+    collector: Option<i64>,
+    (phone1, phone2, address): Contact<'_>,
+) -> i64 {
+    let mut input = mandi_services::core::accounts::AccountInput {
+        id: None,
+        version: None,
+        account_type: kind,
+        is_pukhta_party: false,
+        control_id: None,
+        code: String::new(),
+        name_ur: ur.into(),
+        name_en: en.into(),
+        confirmed_rules_words: Vec::new(),
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_id: None,
+        adda_id: None,
+        phone1: phone1.into(),
+        phone2: phone2.into(),
+        address: address.into(),
+        linked_account_id: None,
+        opening_date: String::new(),
+        opening_dr: String::new(),
+        opening_cr: String::new(),
+        opening_is_advance: false,
+        credit_allowed,
+        credit_limit: credit_limit.into(),
+        default_marka_id: None,
+        collector_staff_id: collector,
+        is_active: true,
+        note: String::new(),
+        tag: String::new(),
+    };
+    loop {
+        match mandi_services::accounts::save(&env.ctx, owner, &input) {
+            Ok(row) => return row.id,
+            Err(ServiceError::Rejected(items)) if confirm_words(&items).is_some() => {
+                input
+                    .confirmed_rules_words
+                    .extend(confirm_words(&items).unwrap_or_default());
+            }
+            Err(other) => panic!("{other:?}"),
+        }
+    }
+}
+
 fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
+    // The staff of the shop: a munshi, a collector and a labourer, for the lists of `find` (plan 55 R5).
+    // The collector, Rasheed, collects from two buyers (Akram Toll Tax and Faisal): the collector filters
+    // of the reports (plan 55 P4) have something to find.
+    let mut rasheed: Option<i64> = None;
+    for (name_ur, name_en, job) in [
+        ("سلطان", "Sultan", "munshi"),
+        ("رشید", "Rasheed", "collector"),
+        ("نسیم", "Naseem", "labour"),
+    ] {
+        let row = confirming(|words| {
+            mandi_services::masters::save(
+                &env.ctx,
+                &owner,
+                &mandi_services::core::masters::MasterInput::Staff(
+                    mandi_services::core::masters::StaffInput {
+                        id: None,
+                        version: None,
+                        name_ur: name_ur.into(),
+                        name_en: name_en.into(),
+                        code: String::new(),
+                        job: job.into(),
+                        phone: if job == "collector" {
+                            "0306-6666666".into()
+                        } else {
+                            String::new()
+                        },
+                        confirmed_rules_words: words.to_vec(),
+                    },
+                ),
+            )
+        })
+        .expect("a staff member");
+        if job == "collector" {
+            rasheed = Some(row.id());
+        }
+    }
+    // A few parties have a phone and an address (the values the assistant must never give).
+    let contact_of = |en: &str| -> Contact<'static> {
+        match en {
+            "Rahim" => ("0301-1111111", "", "Gali 5, Sabzi Mandi, Kot Radha Kishan"),
+            "Karim" => (
+                "0302-2222222",
+                "",
+                "Plot 9, New Sabzi Mandi, Kot Radha Kishan",
+            ),
+            "Akram Toll Tax" => ("0303-3333333", "0304-4444444", "Shop 21, Toll Plaza Road"),
+            "Faisal" => ("0305-5555555", "", "House 7, Mohalla Islam Pura"),
+            _ => ("", "", ""),
+        }
+    };
     let seller = |ur: &str, en: &str| {
-        world::add_account(&env, &owner, AccountType::Seller, ur, en, true, "")
+        account_of(
+            &env,
+            &owner,
+            AccountType::Seller,
+            (ur, en),
+            (true, ""),
+            None,
+            contact_of(en),
+        )
     };
     let buyer = |ur: &str, en: &str, credit: bool, limit: &str| {
-        world::add_account(&env, &owner, AccountType::Buyer, ur, en, credit, limit)
+        let collector = if matches!(en, "Akram Toll Tax" | "Faisal") {
+            rasheed
+        } else {
+            None
+        };
+        account_of(
+            &env,
+            &owner,
+            AccountType::Buyer,
+            (ur, en),
+            (credit, limit),
+            collector,
+            contact_of(en),
+        )
     };
     let rahim = seller("رحیم", "Rahim");
     let karim = seller("کریم", "Karim");
@@ -264,6 +411,71 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
     let ghulam = seller("غلام رسول", "Ghulam Rasool");
     let nazeer = seller("حاجی نذیر", "Haji Nazeer");
     let sarfraz = seller("سرفراز", "Sarfraz");
+    // Two stores, three marks (each with the seller who owns it) and three standard narrations, for the lists
+    // of `find` (plan 55 R5). The mark text and the narration text are never given to the model (FR-7.83).
+    use mandi_services::core::masters::{MarkaInput, MasterInput, NarrationInput, StoreInput};
+    for (name_ur, name_en) in [("مین سٹور", "Main Store"), ("ٹھنڈا سٹور", "Cold Store")]
+    {
+        confirming(|words| {
+            mandi_services::masters::save(
+                &env.ctx,
+                &owner,
+                &MasterInput::Store(StoreInput {
+                    id: None,
+                    version: None,
+                    code: String::new(),
+                    name_ur: name_ur.into(),
+                    name_en: name_en.into(),
+                    confirmed_rules_words: words.to_vec(),
+                }),
+            )
+        })
+        .expect("a store");
+    }
+    for (mark_text, owner_account_id) in [("XQZ-77", rahim), ("AB-12", karim), ("KLM-5", naseer)] {
+        mandi_services::masters::save(
+            &env.ctx,
+            &owner,
+            &MasterInput::Marka(MarkaInput {
+                id: None,
+                version: None,
+                code: String::new(),
+                mark_text: mark_text.into(),
+                owner_account_id: Some(owner_account_id),
+            }),
+        )
+        .expect("a mark");
+    }
+    for (text_ur, text_en, used_in) in [
+        (
+            "سلطان نے بجلی کا بل ادا کیا 101",
+            "Sultan settled the electricity bill ref ZQ-101",
+            vec!["shop_expense"],
+        ),
+        (
+            "نقد وصولی نمبر 102",
+            "Cash receipt ref ZQ-102",
+            vec!["receipt"],
+        ),
+        (
+            "پیشگی ادا کی 103",
+            "Advance paid ref ZQ-103",
+            vec!["advance"],
+        ),
+    ] {
+        mandi_services::masters::save(
+            &env.ctx,
+            &owner,
+            &MasterInput::Narration(NarrationInput {
+                id: None,
+                version: None,
+                text_ur: text_ur.into(),
+                text_en: text_en.into(),
+                used_in: used_in.into_iter().map(str::to_owned).collect(),
+            }),
+        )
+        .expect("a narration");
+    }
 
     let start = date(START);
     let d = |days: i64| start + Duration::days(days);
@@ -438,6 +650,12 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
     let aam = world::add_item(&env, &owner, "آم", "Mango", "fruit", "unit");
     let angoor = world::add_item(&env, &owner, "انگور", "Grapes", "fruit", "unit");
     let aloo = world::add_item(&env, &owner, "آلو", "Potato", "vegetable", "unit");
+    // The other vegetables of the mandi (Umar, 06-11-2026): sold only by `vegetable_sales`, never by the
+    // ordinary days, so the days generated before are the same as they were.
+    let mooli = world::add_item(&env, &owner, "مولی", "Radish", "vegetable", "unit");
+    let tamatar = world::add_item(&env, &owner, "ٹماٹر", "Tomato", "vegetable", "unit");
+    let piyaz = world::add_item(&env, &owner, "پیاز", "Onion", "vegetable", "unit");
+    let saag = world::add_item(&env, &owner, "ساگ", "Saag", "vegetable", "unit");
     let box_ = world::add_packing(&env, &owner, "پیٹی", "Box");
     let bag = world::add_packing(&env, &owner, "بوری", "Bag");
 
@@ -490,6 +708,38 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
             base_rate: 1_100,
             months: all,
             qty: (80, 220),
+        },
+        ItemInfo {
+            key: "mooli",
+            id: mooli,
+            packing: bag,
+            base_rate: 700,
+            months: &[1, 2, 3, 10, 11, 12],
+            qty: (60, 160),
+        },
+        ItemInfo {
+            key: "tamatar",
+            id: tamatar,
+            packing: box_,
+            base_rate: 1_500,
+            months: all,
+            qty: (40, 120),
+        },
+        ItemInfo {
+            key: "piyaz",
+            id: piyaz,
+            packing: bag,
+            base_rate: 1_800,
+            months: all,
+            qty: (60, 180),
+        },
+        ItemInfo {
+            key: "saag",
+            id: saag,
+            packing: box_,
+            base_rate: 500,
+            months: &[1, 2, 3, 11, 12],
+            qty: (50, 140),
         },
     ];
     let sellers = vec![
@@ -636,6 +886,8 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
         haji_nazeer: nazeer,
         bikri_count: 0,
         purchase_ids: Vec::new(),
+        inactive_buyers: Vec::new(),
+        grades: true,
     }
 }
 
@@ -717,8 +969,39 @@ fn lot_for(
     };
     let leave_some = rng.chance(8);
     lot.sales = lines_for(y, rng, day, key, item, qty, leave_some);
+    if y.grades {
+        grade_lines(&mut lot.sales, day);
+    }
     let _ = month;
     lot
+}
+
+/// The quality of the lines of one lot (plan 58 T4): for the lots of the last 10 days, and of every third day
+/// before them, the line with the highest rate is `first`, the next `second`, the rest `third`; a tie goes by
+/// line order. It uses no random number, so the books of [`build_without_grades`] are the same in every figure.
+fn grade_lines(lines: &mut [SaleInput], day: NaiveDate) {
+    let age = (date(TODAY) - day).num_days();
+    if !(age < 10 || age % 3 == 0) {
+        return;
+    }
+    let rate = |line: &SaleInput| line.seller_rate.parse::<i64>().unwrap_or(0);
+    let mut order: Vec<(i64, usize)> = lines
+        .iter()
+        .enumerate()
+        .map(|(at, line)| (rate(line), at))
+        .collect();
+    // The highest rate first; the same rate: the earlier line first.
+    order.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    let words = ["first", "second", "third"];
+    let mut grade_of = vec!["third"; lines.len()];
+    for (rank, (_, at)) in order.iter().enumerate() {
+        if let (Some(slot), Some(word)) = (grade_of.get_mut(*at), words.get(rank)) {
+            *slot = word;
+        }
+    }
+    for (line, word) in lines.iter_mut().zip(grade_of) {
+        line.grade = Some(word.to_owned());
+    }
 }
 
 fn lines_for(
@@ -733,7 +1016,7 @@ fn lines_for(
     let active: Vec<&BuyerInfo> = y
         .buyers
         .iter()
-        .filter(|b| b.from <= day && day <= b.until)
+        .filter(|b| b.from <= day && day <= b.until && !y.inactive_buyers.contains(&b.id))
         .collect();
     let to_sell = if leave_some {
         qty - rng.range(3, (qty / 4).max(4))
@@ -813,6 +1096,73 @@ fn run_days(y: &mut Year, rng: &mut Rng) {
         cursor += Duration::days(1);
     }
     let _ = day_no;
+}
+
+/// Vegetables across the whole year (Umar, 06-11-2026): the ordinary days sell one vegetable only (potato), so
+/// this pass adds sales of mooli, aloo, tamatar, piyaz and saag, two بکری a month for each one in its season,
+/// from the sellers in turn. It runs after the ordinary days with a random source of its own (so the days
+/// before it are the same as they were) and before the day close; its dates are in the past and open. A
+/// vegetable carries no لاگا (PRD 4.2: the لاگا rule is for the fruit group).
+fn vegetable_sales(y: &mut Year) {
+    let mut rng = Rng::new(20_261_106);
+    let (start, today) = (date(START), date(TODAY));
+    let veg: Vec<usize> = y
+        .items
+        .iter()
+        .enumerate()
+        .filter(|(_, it)| matches!(it.key, "mooli" | "aloo" | "tamatar" | "piyaz" | "saag"))
+        .map(|(ix, _)| ix)
+        .collect();
+    // A buyer made inactive since cannot take a sale, even on a day when he bought (the account is checked now).
+    y.inactive_buyers =
+        y.w.env
+            .ctx
+            .db()
+            .read(|c| {
+                let mut st = c.prepare("SELECT id FROM accounts WHERE is_active = 0")?;
+                let rows = st.query_map([], |r| r.get::<_, i64>(0))?;
+                rows.collect::<Result<Vec<_>, mandi_services::db::rusqlite::Error>>()
+            })
+            .unwrap_or_default();
+    let mut turn = 0usize;
+    let (mut year, mut month) = (start.year(), start.month());
+    while (year, month) <= (today.year(), today.month()) {
+        for dom in [6u32, 20] {
+            for (nth, &ix) in veg.iter().enumerate() {
+                if !seasonal(&y.items[ix], month) {
+                    continue;
+                }
+                // Different items on different days; never a Sunday.
+                let spread = u32::try_from(nth).unwrap_or(0);
+                let Some(mut day) = NaiveDate::from_ymd_opt(year, month, dom + spread) else {
+                    continue;
+                };
+                if day.weekday() == Weekday::Sun {
+                    day += Duration::days(1);
+                }
+                if day < start || day > today {
+                    continue;
+                }
+                let seller_id = y.sellers[turn % y.sellers.len()].id;
+                turn += 1;
+                let item = &y.items[ix];
+                let lot = lot_for(y, &mut rng, day, "lot-v", seller_id, item);
+                let truck = format!("VEG-{}", rng.range(100, 999));
+                save_bikri(
+                    y,
+                    BikriDraft {
+                        header: header(day, &truck),
+                        lots: vec![lot],
+                    },
+                );
+            }
+        }
+        if month == 12 {
+            (year, month) = (year + 1, 1);
+        } else {
+            month += 1;
+        }
+    }
 }
 
 fn ordinary_bikri(y: &mut Year, rng: &mut Rng, day: NaiveDate) {
@@ -1515,4 +1865,42 @@ fn end_of_year(y: &Year) {
         },
     )
     .expect("close the days up to 31-10-2026");
+    // The commission rules of PRD 11.3 (the worked examples), at the very end and dated today, so no
+    // saved line changes: only what is sold from today on follows them. Seller commission:
+    //   Rahim + banana 5% (party and item), Rahim any item 3% (party), Karim any item 4% (party),
+    //   apple, any seller, 30 for each نگ (item). The rest follows the defaults and the group rule.
+    use mandi_services::core::rules::{ChargeMethod, ChargeSide, ChargeType, RuleInput};
+    let today = ddmmyyyy(date(TODAY));
+    let rule =
+        |account_id: Option<i64>, item_id: Option<i64>, method: ChargeMethod, value: &str| {
+            mandi_services::rules::save(
+                &y.w.env.ctx,
+                &y.w.owner,
+                &RuleInput {
+                    id: None,
+                    version: None,
+                    side: ChargeSide::Seller,
+                    charge_type: ChargeType::Commission,
+                    account_id,
+                    item_id,
+                    item_group: None,
+                    method,
+                    value: value.into(),
+                    from_date: today.clone(),
+                    to_date: String::new(),
+                    is_active: true,
+                    note: String::new(),
+                },
+            )
+            .expect("a commission rule");
+        };
+    rule(
+        Some(y.w.rahim),
+        Some(y.w.banana),
+        ChargeMethod::Percent,
+        "5",
+    );
+    rule(Some(y.w.rahim), None, ChargeMethod::Percent, "3");
+    rule(Some(y.w.karim), None, ChargeMethod::Percent, "4");
+    rule(None, Some(y.w.apple), ChargeMethod::PerUnit, "30");
 }

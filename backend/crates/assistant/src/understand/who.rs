@@ -71,6 +71,12 @@ pub(super) fn word_grade(typed: &str, name: &str) -> u8 {
     if typed == name {
         return 3;
     }
+    // The same word with a double letter written single ("tol" for "toll", "mohamad" for
+    // "mohammad"): a spelling of the name, not another word, even for a short word.
+    if !is_urdu(typed) && undouble(typed) == undouble(name) && undouble(typed).chars().count() >= 3
+    {
+        return 2;
+    }
     let (a, b) = (typed.chars().count(), name.chars().count());
     // Urdu words are short: a letter off in a four-letter word is another word (حامد, احمد).
     let shortest = if is_urdu(typed) { 5 } else { 4 };
@@ -90,6 +96,17 @@ pub(super) fn word_grade(typed: &str, name: &str) -> u8 {
     0
 }
 
+/// A word with every doubled letter written once.
+fn undouble(word: &str) -> String {
+    let mut out = String::with_capacity(word.len());
+    for c in word.chars() {
+        if !out.ends_with(c) {
+            out.push(c);
+        }
+    }
+    out
+}
+
 /// True when two words differ only in their vowels and doubled letters ("akram", "akrm", "akrum";
 /// "muhammad", "mohammed"). Such a spelling is the same name written another way. One consonant
 /// changed ("nasir", "nasim"; "nazir", "nasir") is another name: it is a close word, not a clear one.
@@ -99,6 +116,9 @@ pub(super) fn sounds_alike(typed: &str, name: &str) -> bool {
             && is_urdu(name)
             && urdu_skeleton(typed).chars().count() >= 2
             && urdu_skeleton(typed) == urdu_skeleton(name);
+    }
+    if undouble(typed) == undouble(name) && undouble(typed).chars().count() >= 3 {
+        return true;
     }
     let (p, q) = (text::search_phonetic(typed), text::search_phonetic(name));
     p.chars().count() >= 3 && p == q
@@ -944,6 +964,27 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
     reconcile_partners(&look, scan, &mut names);
     trip_names(&look, scan, periods, &mut names);
     for span in unknown {
+        // A common word spelt wrong ("kitny", "septmber", "gaahkon") is never a name that is missing
+        // from the books: the words around it are what is looked at (money review of run 1).
+        let vocabulary = |at: usize| {
+            scan.word(at)
+                // A word the table knows exactly (a place, a part of a firm's name) is looked up as a
+                // record; only a spelling one letter off a known word is dropped.
+                .is_some_and(|w| {
+                    !table().is_known(w)
+                        && (table().is_near_known(w) || super::when::is_near_time_word(w))
+                })
+        };
+        let mut span = span;
+        while span.0 < span.1 && vocabulary(span.0) {
+            span.0 = span.0.saturating_add(1);
+        }
+        while span.0 < span.1 && vocabulary(span.1.saturating_sub(1)) {
+            span.1 = span.1.saturating_sub(1);
+        }
+        if span.0 >= span.1 {
+            continue;
+        }
         let typed = scan.words.get(span.0..span.1).unwrap_or_default();
         let few = typed.len() <= 3 && typed.iter().map(|w| w.chars().count()).sum::<usize>() >= 3;
         // A record of another list (an expense head, a city, an اڈا, a packing ...) is no missing
@@ -985,7 +1026,11 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
                 });
             }
             // Words of the table that are also parts of names (cash, khata) are not unknown words.
-            None if typed.iter().all(|w| table().is_known(w)) => {}
+            None if typed.iter().enumerate().all(|(i, w)| {
+                // A word inside a phrase of the table ("market safar", "adda report") is known too.
+                let at = span.0.saturating_add(i);
+                table().is_known(w) || scan.hits.iter().any(|h| h.start <= at && at < h.end)
+            }) => {}
             None => names.doubts.push(Doubt::UnknownWords),
         }
     }

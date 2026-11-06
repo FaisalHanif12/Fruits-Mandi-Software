@@ -31,7 +31,7 @@ fn read_repo(relative: &str) -> String {
 // ---- P1 ---------------------------------------------------------------------------------------
 
 #[test]
-fn p1_the_fixed_part_is_at_most_11000_tokens() {
+fn p1_the_fixed_part_is_at_most_11600_tokens() {
     let bpe = tiktoken_rs::o200k_base().unwrap();
     let tools_min =
         serde_json::to_string(&serde_json::from_str::<Value>(TOOLS_JSON).unwrap()).unwrap();
@@ -152,17 +152,55 @@ fn terms(file: &str) -> Vec<(String, String)> {
 }
 
 /// Glossary terms of the Fluent files that the glossary line of `D6-system-prompt.md` does not hold
-/// (found by this test on 02-11-2026). The document is the lead's: the gap is reported to the lead
-/// as an open question. The test fails if a term leaves this list without being added to the
-/// prompt, or if another term goes missing.
-const GLOSSARY_GAPS: [&str; 7] = [
-    "-tijarati-nuqsan",
-    "-sell-date",
-    "-maal-aaya",
-    "-apni-dukan",
-    "-dusri-dukan",
-    "-mehman",
-    "-trade-mark",
+/// and need not hold (lead's ruling of 06-11-2026: no prompt tokens for them; the model reaches the
+/// things they name through the tools, and the answer shows the app's own words). Each has its
+/// reason. The test fails if a term leaves this list without being added to the prompt, or if
+/// another term goes missing.
+const GLOSSARY_GAPS: [(&str, &str); 11] = [
+    (
+        "-tijarati-nuqsan",
+        "the trip's profit or loss is read from R33 and the trip results, never typed by the model",
+    ),
+    (
+        "-sell-date",
+        "a field of the sale-date screen, not something a question names",
+    ),
+    (
+        "-maal-aaya",
+        "an arrival screen word; arrivals are reached through their lists and results",
+    ),
+    (
+        "-apni-dukan",
+        "the source of fruit taken, read from the `source` column of R37",
+    ),
+    (
+        "-dusri-dukan",
+        "the source of fruit taken, read from the `source` column of R37",
+    ),
+    (
+        "-mehman",
+        "the shop's guests of fruit taken, read from R37 (the for-column and the guests rows)",
+    ),
+    (
+        "-trade-mark",
+        "a word of the print header, not something a question asks about",
+    ),
+    (
+        "-darja",
+        "the quality of a sale line, read from the report columns and results, never typed",
+    ),
+    (
+        "-darja-awwal",
+        "a value of the quality column, shown as the app writes it",
+    ),
+    (
+        "-darja-doyam",
+        "a value of the quality column, shown as the app writes it",
+    ),
+    (
+        "-darja-soyam",
+        "a value of the quality column, shown as the app writes it",
+    ),
 ];
 
 #[test]
@@ -198,10 +236,12 @@ fn p3_every_glossary_term_is_in_the_prompt_with_its_english_word() {
         .iter()
         .map(|m| m.split(':').next().unwrap_or(""))
         .collect();
+    let allowed: Vec<&str> = GLOSSARY_GAPS.iter().map(|(id, _)| *id).collect();
     assert_eq!(
-        ids, GLOSSARY_GAPS,
+        ids, allowed,
         "not in the glossary line of system.md: {missing:#?}"
     );
+    assert!(GLOSSARY_GAPS.iter().all(|(_, why)| !why.is_empty()));
 }
 
 #[test]
@@ -286,7 +326,7 @@ fn check_strict(node: &Value, path: &str) {
 #[test]
 fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
     let defs = tools();
-    assert_eq!(defs.len(), 9);
+    assert_eq!(defs.len(), 10);
     for (def, name) in defs.iter().zip(TOOL_NAMES) {
         assert_eq!(def["type"], "function");
         assert_eq!(def["function"]["name"], name);
@@ -301,7 +341,9 @@ fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
             serde_json::from_value::<$ty>(value).expect(stringify!($ty));
         }};
     }
-    use mandi_assistant::tools::{analytics, calc, find, help, party, period, report, tiles};
+    use mandi_assistant::tools::{
+        analytics, calc, find, help, party, period, report, state, tiles,
+    };
     reads!(find::Input, json!({"text": "ikram", "role": "buyer"}));
     reads!(party::Input, json!({"party": "r1.matches.0"}));
     reads!(
@@ -332,6 +374,24 @@ fn p6_the_schemas_are_strict_and_the_inputs_round_trip() {
         calc::EstimateInput,
         json!({"measure": "commission_all", "item": null, "seller": null, "buyer": null,
                "garden": null, "trip": null, "ahead": 6, "target": null})
+    );
+    // The estimate with the fields of the forecast gaps (plan 55 11.1): head, partner and party.
+    reads!(
+        calc::EstimateInput,
+        json!({"measure": "shop_expenses", "item": null, "seller": null, "buyer": null,
+               "garden": null, "trip": null, "head": null, "partner": null, "party": null,
+               "ahead": 3, "until": null, "what_if": null, "percent": null, "target": null})
+    );
+    reads!(
+        calc::EstimateInput,
+        json!({"measure": "party_balance", "item": null, "seller": null, "buyer": null,
+               "garden": null, "trip": null, "head": null, "partner": null, "party": "a20",
+               "ahead": 3, "until": null, "what_if": null, "percent": null, "target": null})
+    );
+    // The state of the app: rules, attention, closed days, the audit log (plan 55 11.1, R1 to R4).
+    reads!(
+        state::Input,
+        json!({"what": "rules", "party": null, "item": null, "bikri": null})
     );
     reads!(help::Input, json!({"topic": "bikri_book"}));
     // Every topic of the enum of `app_help` is a topic of the guide, and a topic the guide has is

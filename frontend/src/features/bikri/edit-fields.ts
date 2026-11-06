@@ -49,6 +49,7 @@ export const SALE_FIELD_LABEL: Readonly<Record<string, string>> = {
   [SALE.buyer]: 'glossary-gahak',
   [SALE.qty]: 'bikri-col-qty',
   [SALE.rate]: 'bikri-col-rate',
+  [SALE.grade]: 'glossary-darja',
   [SALE.payment]: 'bikri-col-payment',
   [SALE.weight]: 'bikri-line-weight',
   [SALE.differs]: 'bikri-line-differs',
@@ -70,6 +71,11 @@ export function fixedWord(scope: 'lot' | 'line' | 'header', field: string, value
   if (scope === 'line' && field === SALE.payment) {
     if (value === 'credit') return 'glossary-udhari';
     if (value === 'cash') return 'glossary-naqdi';
+  }
+  if (scope === 'line' && field === SALE.grade) {
+    if (value === 'first') return 'glossary-darja-awwal';
+    if (value === 'second') return 'glossary-darja-doyam';
+    if (value === 'third') return 'glossary-darja-soyam';
   }
   if (scope === 'line' && field === SALE.differs) return value === '1' ? 'common-yes' : 'common-no';
   if (scope === 'lot' && field === LOT.adjustAdvance)

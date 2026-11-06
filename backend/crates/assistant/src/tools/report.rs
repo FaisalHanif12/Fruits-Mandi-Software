@@ -34,7 +34,9 @@ use super::cells::{
     Order, cell_node, compare_cells, is_left_out, mixed_sides, order_of, row_key, shown_key,
     signed_paisa,
 };
+use super::cues;
 use super::records::{named, require_type};
+use super::report_extra;
 use super::teach::{column_words, report_fields};
 use super::{
     Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, lookup, report_rule,
@@ -115,11 +117,15 @@ pub struct Input {
     pub party: Option<String>,
     /// An item.
     pub item: Option<String>,
+    /// `fruit` or `vegetable`: all the items of the group, never with `item` (R2, R3, R4, R7, R10,
+    /// R27).
+    #[serde(default)]
+    pub item_group: Option<String>,
     /// A city.
     pub city: Option<String>,
     /// An اڈا.
     pub adda: Option<String>,
-    /// A collector (no report has this filter yet: it is an error).
+    /// A collector, a staff member (R22, R23, R35).
     pub collector: Option<String>,
     /// A partner.
     pub partner: Option<String>,
@@ -129,6 +135,22 @@ pub struct Input {
     pub garden: Option<String>,
     /// A بکری number, for R1.
     pub bikri: Option<i64>,
+    /// A seller (R2 to R5, R6, R7, R10, R26, R27): plan 55 P1 to P4.
+    #[serde(default)]
+    pub seller: Option<String>,
+    /// A زمیندار (R2 to R5, R6, R27).
+    #[serde(default)]
+    pub zamindar: Option<String>,
+    /// `paid` or `due` (R9, R38).
+    #[serde(default)]
+    pub status: Option<String>,
+    /// One kind of voucher, in its stored word (R15).
+    #[serde(default)]
+    pub voucher_type: Option<String>,
+    /// How the report lays out its rows: `detail` (R14), `item` `day` `month` `partner` (R33),
+    /// `partner` (R36).
+    #[serde(default)]
+    pub layout: Option<String>,
     /// `day` or `month`, for R28.
     pub group_by: Option<String>,
     /// Keep the rows that pass.
@@ -179,7 +201,7 @@ fn takes_or(takes: &[FilterKind], kind: FilterKind, field: &str) -> Result<(), T
 
 /// A filter the report does not have: what it does take is listed (a balance list takes `as_of`
 /// where the others take `from` and `to`).
-fn not_taken(takes: &[FilterKind], field: &str) -> ToolError {
+pub(super) fn not_taken(takes: &[FilterKind], field: &str) -> ToolError {
     bad(
         "ERR_OUT_OF_RANGE",
         field,
@@ -258,12 +280,13 @@ fn build_filters(
         filters.adda_id = Some(adda_id);
         source.adda = Some(record);
     }
-    if input.collector.is_some() {
-        return Err(bad(
-            "ERR_OUT_OF_RANGE",
-            "collector",
-            "no report has a collector filter",
-        ));
+    if let Some(text) = &input.collector {
+        // R22, R23 and R35 take a collector (a staff member, found with role `collector` or
+        // `staff`); no other report does.
+        takes_or(takes, FilterKind::Collector, "collector")?;
+        let (collector_id, record) = named(env, state, text, "collector", &["st"])?;
+        filters.collector_id = Some(collector_id);
+        source.collector = Some(record);
     }
     if input.trip.is_some() {
         return Err(bad(
@@ -273,10 +296,15 @@ fn build_filters(
         ));
     }
     if let Some(text) = &input.partner {
-        takes_or(takes, FilterKind::Partner, "partner")?;
-        let (partner_id, record) = named(env, state, text, "partner", &["s"])?;
-        filters.partner_id = Some(partner_id);
-        source.partner = Some(record);
+        if report_extra::is_guests(text) {
+            // The shop's guests are not a partner: R37 reads only their fruit (plan 55 P1).
+            report_extra::guests(takes, &mut filters, &mut source)?;
+        } else {
+            takes_or(takes, FilterKind::Partner, "partner")?;
+            let (partner_id, record) = named(env, state, text, "partner", &["s"])?;
+            filters.partner_id = Some(partner_id);
+            source.partner = Some(record);
+        }
     }
     if let Some(text) = &input.garden {
         takes_or(takes, FilterKind::Garden, "garden")?;
@@ -304,6 +332,21 @@ fn build_filters(
             number,
         });
     }
+    report_extra::apply(
+        env,
+        state,
+        &report_extra::Extra {
+            seller: input.seller.as_deref(),
+            zamindar: input.zamindar.as_deref(),
+            status: input.status.as_deref(),
+            voucher_type: input.voucher_type.as_deref(),
+            layout: input.layout.as_deref(),
+            item_group: input.item_group.as_deref(),
+        },
+        takes,
+        &mut filters,
+        &mut source,
+    )?;
     if let Some(word) = &input.group_by {
         takes_or(takes, FilterKind::GroupBy, "group_by")?;
         let group = match word.as_str() {
@@ -333,6 +376,14 @@ fn report_sort(id: ReportId, keys: &[SortKey], env: &Env<'_>) -> Option<SortInpu
                 OrderWord::Asc => SortDirection::Asc,
                 OrderWord::Desc => SortDirection::Desc,
             },
+            language,
+        }),
+        // R31: a partner's statement newest first too, so the first row's `running` is his total
+        // now and the 20 rows shown are the latest, not the oldest (money review). The statement
+        // names its day column `entry_date`.
+        None if id == ReportId::R31 => Some(SortInput {
+            column: "entry_date".to_owned(),
+            direction: SortDirection::Desc,
             language,
         }),
         None if matches!(id, ReportId::R11 | ReportId::R12 | ReportId::R13) => Some(SortInput {
@@ -792,8 +843,35 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
     );
     draft.partner_data = partner_data;
     // A partner's capital, next to his statement, when the statement runs up to now (his capital
-    // balance is today's): Q203 and Q204 of the live run 2 found only his کل رقم.
+    // balance is today's): Q203 and Q204 of the live run 2 found only his کل رقم. Only when the
+    // question asks for the capital: its `balance` is a figure of its own, and beside the
+    // statement's closing it was cited for "kul raqam" (live run 1, Q198 and Q199: 0, with a tick;
+    // Q546 to Q548: Usman's capital for his کل رقم).
     if id == ReportId::R31
+        && cues::capital_asked(env.question)
+        && built.filters.partner_id.is_some()
+        && page
+            .filters
+            .to
+            .as_deref()
+            .is_some_and(|to| to < env.today.to_iso().as_str())
+        && let Node::Obj(fields) = &mut draft.node
+    {
+        // The capital is worked out for now only: an earlier day has none, and the closing of the
+        // statement is his کل رقم, not his capital (money review).
+        fields.push((
+            "capital".to_owned(),
+            Node::obj(vec![(
+                "note",
+                Node::Str(
+                    "his capital is given as of now only; for an earlier day it is not worked \
+                     out, and the closing of this statement is his کل رقم, not his capital"
+                        .to_owned(),
+                ),
+            )]),
+        ));
+    } else if id == ReportId::R31
+        && cues::capital_asked(env.question)
         && let Some(partner_id) = built.filters.partner_id
         && page
             .filters
@@ -1020,7 +1098,11 @@ fn assemble(
             ))
         })
         .filter(|(_, cell)| !matches!(cell, Cell::Empty))
-        .map(|(k, cell)| (k, cell_node(env, cell, false)))
+        .map(|(k, cell)| match (&closing, id, k.as_str()) {
+            // A partner's running total at the end of his statement is the closing, with its ticks.
+            (Some(m), ReportId::R31, "running") => (k, Node::Val(Val::Money(m.clone()))),
+            _ => (k, cell_node(env, cell, false)),
+        })
         .collect();
     let summary: Vec<(String, Node)> = page
         .summary
@@ -1029,7 +1111,9 @@ fn assemble(
             let key = summary_key(&line.label_id);
             // A party's closing balance carries its two places when the ledger runs up to now.
             let node = match (&closing, key.as_str()) {
-                (Some(m), "closing") => Node::Val(Val::Money(m.clone())),
+                (Some(m), "closing" | "partners_statement_closing") => {
+                    Node::Val(Val::Money(m.clone()))
+                }
                 _ => cell_node(env, &line.cell, false),
             };
             (key, node)
@@ -1157,23 +1241,68 @@ fn closing_check(
     built: &Built,
     page: &ReportPage,
 ) -> Result<Option<Money>, Stop> {
+    let up_to_now = page
+        .filters
+        .to
+        .as_deref()
+        .is_none_or(|to| to >= env.today.to_iso().as_str());
+    if id == ReportId::R31 {
+        return statement_closing_check(env, built, page, up_to_now);
+    }
     let Some(party) = &built.filters.party else {
         return Ok(None);
     };
     if !matches!(id, ReportId::R13 | ReportId::R14) {
         return Ok(None);
     }
-    let up_to_now = page
-        .filters
-        .to
-        .as_deref()
-        .is_none_or(|to| to >= env.today.to_iso().as_str());
     if !up_to_now {
         return Ok(None);
     }
     let card =
         mandi_services::assist::party_card(env.ctx, party.account_id).map_err(service_stop)?;
     Ok(Some(super::party::checked_balance(env, &card)?))
+}
+
+/// The closing of a partner's statement (his کل رقم) read in two places when the statement runs up
+/// to now: the statement's own closing, and the same partner's `total` in the partner overview,
+/// which the services work out apart (`money::total_of`). The ticked figure is then the کل رقم, as
+/// the capital is ticked: without it the capital was the figure that looked checked, and it was
+/// cited for a کل رقم question (live run 1, Q198, Q199, Q546 to Q548).
+///
+/// `None` for a statement that ends before today (there is no second place for an earlier day).
+fn statement_closing_check(
+    env: &Env<'_>,
+    built: &Built,
+    page: &ReportPage,
+    up_to_now: bool,
+) -> Result<Option<Money>, Stop> {
+    let Some(partner_id) = built.filters.partner_id else {
+        return Ok(None);
+    };
+    if !up_to_now {
+        return Ok(None);
+    }
+    let closing = page
+        .summary
+        .iter()
+        .find(|line| summary_key(&line.label_id) == "partners_statement_closing")
+        .and_then(|line| match line.cell {
+            Cell::Money { paisa } => Some(paisa),
+            _ => None,
+        });
+    let Some(closing) = closing else {
+        return Ok(None);
+    };
+    let overview = partners::overview(env.ctx).map_err(service_stop)?;
+    let Some(row) = overview.iter().find(|row| row.partner_id == partner_id) else {
+        return Ok(None);
+    };
+    Ok(Some(Money {
+        paisa: closing,
+        side: None,
+        checked: Some(row.total_paisa == closing),
+        places: vec![("R31", closing), ("partner_overview", row.total_paisa)],
+    }))
 }
 
 /// The most capital lines read for one partner (the page limit of the history).
@@ -1351,6 +1480,17 @@ fn partner_overview(
     source: &SourceReportFilters,
 ) -> Result<Draft, Stop> {
     let rows = partners::overview(env.ctx).map_err(service_stop)?;
+    let capital_asked = cues::capital_asked(env.question);
+    // The days asked for. The overview itself is today's; with a day the figure is each partner's
+    // statement closing at the end of `to` (money review: a dated read showed today's total, with
+    // a tick). There is no second place for an earlier day, so it has no tick.
+    let day = |iso: &str| {
+        (!iso.is_empty())
+            .then(|| BusinessDate::parse_iso(iso).map(format_ddmmyyyy))
+            .flatten()
+    };
+    let (from, to) = (day(&source.from), day(&source.to));
+    let up_to_now = source.to.is_empty() || source.to.as_str() >= env.today.to_iso().as_str();
     let mut keyed = Vec::new();
     let mut table_rows = Vec::new();
     for row in &rows {
@@ -1358,8 +1498,8 @@ fn partner_overview(
             env.ctx,
             &PartnersStatementInput {
                 partner_id: row.partner_id,
-                from: None,
-                to: None,
+                from: from.clone(),
+                to: to.clone(),
                 offset: 0,
                 limit: 1,
                 sort: None,
@@ -1367,33 +1507,42 @@ fn partner_overview(
             },
         )
         .map_err(service_stop)?;
-        let overview = row.total_paisa;
         let closing = statement.closing_total_paisa;
-        let money = Money {
-            paisa: overview,
-            side: None,
-            checked: Some(overview == closing),
-            places: vec![("partner_overview", overview), ("R31", closing)],
+        let (overview, money) = if up_to_now {
+            let overview = row.total_paisa;
+            (
+                overview,
+                Money {
+                    paisa: overview,
+                    side: None,
+                    checked: Some(overview == closing),
+                    places: vec![("partner_overview", overview), ("R31", closing)],
+                },
+            )
+        } else {
+            (closing, Money::plain(closing))
         };
-        keyed.push((
-            format!("s{}", row.partner_id),
-            Node::obj(vec![
-                (
-                    "name",
-                    Node::Val(Val::Name(NameVal {
-                        name_ur: row.name_ur.clone(),
-                        name_en: row.name_en.clone(),
-                        tag: None,
-                        code: None,
-                    })),
-                ),
-                ("total", Node::Val(Val::Money(money))),
-                (
-                    "capital",
-                    capital_node(env, row.partner_id, row.capital_balance_paisa)?,
-                ),
-            ]),
-        ));
+        let mut fields = vec![
+            (
+                "name",
+                Node::Val(Val::Name(NameVal {
+                    name_ur: row.name_ur.clone(),
+                    name_en: row.name_en.clone(),
+                    tag: None,
+                    code: None,
+                })),
+            ),
+            ("total", Node::Val(Val::Money(money))),
+        ];
+        // The capital only when the question asks for it: its `balance` beside `total` was cited
+        // for a کل رقم question (live run 1, Q198 to Q199, Q546 to Q548).
+        if capital_asked {
+            fields.push((
+                "capital",
+                capital_node(env, row.partner_id, row.capital_balance_paisa)?,
+            ));
+        }
+        keyed.push((format!("s{}", row.partner_id), Node::obj(fields)));
         table_rows.push(AnswerRow {
             row: Row {
                 cells: vec![
@@ -1412,9 +1561,29 @@ fn partner_overview(
         });
     }
     let count = i64::try_from(keyed.len()).unwrap_or(i64::MAX);
-    let node = Node::obj(vec![
+    let mut echo = Vec::new();
+    if !source.from.is_empty() {
+        echo.push(("from", Node::Str(source.from.clone())));
+    }
+    if !source.to.is_empty() {
+        echo.push(("to", Node::Str(source.to.clone())));
+    }
+    let mut fields = vec![
         ("source", Node::Str("R31".to_owned())),
         ("title", Node::Str(env.words.text(env.language, title_id))),
+        ("filters", Node::obj(echo)),
+    ];
+    if !up_to_now {
+        fields.push((
+            "note",
+            Node::Str(
+                "each total is his کل رقم at the end of `to`, worked from his statement; an \
+                 earlier day has no second place, so it is not checked"
+                    .to_owned(),
+            ),
+        ));
+    }
+    fields.extend([
         (
             "columns",
             Node::List(vec![
@@ -1429,6 +1598,7 @@ fn partner_overview(
         ("summary", Node::Obj(Vec::new())),
         ("matched", Node::Null),
     ]);
+    let node = Node::obj(fields);
     let mut draft = Draft::new("report", args.clone(), node);
     draft.shown = Some(Shown::Table(AnswerTable {
         result_id: String::new(),

@@ -182,6 +182,30 @@ pub enum AnswerSource {
         /// The result of this question it came from.
         result_id: String,
     },
+    /// A screen of the app that is not a report or a view: the commission rules, the day close,
+    /// the audit log, the dashboard (plan 55 §11.1). The button opens it as it is.
+    Screen {
+        /// The result of this question it came from.
+        result_id: String,
+        /// Which screen.
+        route: ScreenRoute,
+    },
+}
+
+/// The screens a [`AnswerSource::Screen`] button opens. The words are those of the frontend's
+/// `MAIN_SCREEN_PATHS` where it has them: `dashboard` is `/`, `commission_rules` is `/index/rules`,
+/// `day_close` is `/day`; `audit` is the audit log tab of Settings (`/settings?tab=audit`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ScreenRoute {
+    /// ڈیش بورڈ: the attention list "آج کے کام" is on it.
+    Dashboard,
+    /// کمیشن اصول.
+    CommissionRules,
+    /// دن بند کریں, with the closed-up-to day and the month close.
+    DayClose,
+    /// The audit log, in Settings.
+    Audit,
 }
 
 /// One row of an answer table: the report's own [`Row`] (cells, the record it opens, how it is
@@ -450,6 +474,26 @@ pub enum EntryScreen {
     Analytics,
     /// بیک اپ.
     Backup,
+    /// قسط: a garden installment.
+    GardenInstallment,
+    /// باغ خرچ: a garden running cost.
+    GardenCost,
+    /// دوسری دکان میں فروخت: a sale of a garden's goods in another shop.
+    GardenSale,
+    /// باغ بند: closing a garden.
+    GardenClose,
+    /// خریداری: a purchase of a market trip.
+    TripPurchase,
+    /// سفر خرچ: a cost of a market trip.
+    TripCost,
+    /// دوسری دکان میں فروخت: a sale of a trip's goods in another shop.
+    TripSale,
+    /// باقی مال کی بعد کی بکری: a later sale of a lot.
+    BikriLaterSale,
+    /// بکری کی تدوین: editing a posting of a بکری.
+    BikriEdit,
+    /// بکری منسوخ: cancelling a بکری.
+    BikriCancel,
 }
 
 /// The screen a refused change request opens (outcome `change_refused`).
@@ -464,6 +508,11 @@ pub struct EntryRoute {
     /// - `kharcha`, `sarmaya` and `phal`: a PARTNER record. `id` is `partners.id` and the names are
     ///   the partner's own; it is never his capital, drawings or 0604 account. A partner has no
     ///   code or tag, so those two are null.
+    /// - `garden_installment`, `garden_cost`, `garden_sale` and `garden_close`: the GARDEN record
+    ///   (`id` = the garden's id, key prefix `g`).
+    /// - `trip_purchase`, `trip_cost` and `trip_sale`: the TRIP record (`id` = the trip's id, key
+    ///   prefix `t`).
+    /// - `bikri_later_sale`, `bikri_edit` and `bikri_cancel`: no party.
     /// - Every other screen (`bikri`, `wasooli`, `adaigi`, `peshgi`, `udhar_raqam`, `alag_khata`,
     ///   `general`, `account`): the ACCOUNT record, with `id` = `accounts.id`.
     ///

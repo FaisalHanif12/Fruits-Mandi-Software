@@ -153,6 +153,11 @@ common-period-from = From
 # review: pending
 common-period-to = To
 
+# The item group box of the sales reports and the analytics views A, D and G (plan 55): fruit, vegetables, or both.
+# review: pending
+common-item-group = { masters-item-group }
+# review: pending
+common-item-group-all = Fruit and vegetables
 # review: pending
 common-filters-more = More filters
 
@@ -198,3 +203,8 @@ common-remove-line-title = Remove the line?
 
 # review: pending
 common-remove-line-confirm = Remove
+
+# An item with its quality after it: "Apple First", "سیب اول" (PRD FR-12.42). $item: the item's name.
+# $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
+# review: pending
+common-item-grade = { $item } { $grade }

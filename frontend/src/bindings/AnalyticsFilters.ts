@@ -5,6 +5,7 @@ import type { AnalyticsGroupBy } from './AnalyticsGroupBy';
 import type { AnalyticsPeriod } from './AnalyticsPeriod';
 import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
+import type { ItemGroup } from './ItemGroup';
 import type { ReportPartyFilter } from './ReportPartyFilter';
 
 /**
@@ -32,6 +33,12 @@ export type AnalyticsFilters = {
    * An item.
    */
   item_id: number | null;
+  /**
+   * All the items of a group, پھل (`fruit`) or سبزی (`vegetable`), in place of one item (views
+   * A, B, C, D, G and H; PRD v1.29). Never together with `item_id`. In view G the gardens column
+   * is empty under a group (PRD v1.31). Left out of the wire form when none.
+   */
+  item_group?: ItemGroup;
   /**
    * A seller.
    */

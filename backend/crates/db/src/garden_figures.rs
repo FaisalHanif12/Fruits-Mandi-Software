@@ -103,6 +103,48 @@ impl Money {
     }
 }
 
+/// The money the SALES brought into garden accounts, for each month: `(month "YYYY-MM", Σ credits,
+/// Σ debits)` of the lines of entries from our shop (`bikri`) and from sales in other shops
+/// (`venture`) dated `first` to `last`, the closing and its undo left out ([`NOT_A_CLOSING`]). The
+/// money of fruit taken (`fruit`) is not a sale and is not here. Over all months the credits less
+/// the debits are the `bikri` and `venture` parts of [`money_in_by_source`]. The rows of several
+/// accounts come in chunks, so one month can come more than once: the caller adds them up.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn sales_money_by_month(
+    conn: &Connection,
+    account_ids: &[i64],
+    first: &str,
+    last: &str,
+) -> rusqlite::Result<Vec<(String, i64, i64)>> {
+    let mut out = Vec::new();
+    for chunk in account_ids.chunks(500) {
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let mut statement = conn.prepare(&format!(
+            "SELECT substr(e.entry_date, 1, 7), COALESCE(SUM(l.cr_paisa), 0), COALESCE(SUM(l.dr_paisa), 0)
+             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
+             WHERE l.account_id IN ({marks}) AND e.status = 'posted' AND {NOT_A_CLOSING}
+               AND e.source_type IN ('bikri', 'venture')
+               AND e.entry_date >= ? AND e.entry_date <= ?
+             GROUP BY 1 ORDER BY 1"
+        ))?;
+        let mut args: Vec<rusqlite::types::Value> = chunk
+            .iter()
+            .map(|id| rusqlite::types::Value::Integer(*id))
+            .collect();
+        args.push(rusqlite::types::Value::Text(first.to_owned()));
+        args.push(rusqlite::types::Value::Text(last.to_owned()));
+        let rows = statement.query_map(rusqlite::params_from_iter(args.iter()), |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })?;
+        for row in rows {
+            out.push(row?);
+        }
+    }
+    Ok(out)
+}
+
 /// What the lines on the accounts of some gardens came from: for each garden account and kind of
 /// record (`bikri`, `venture`, `fruit`), `(account id, source type, Σ credits, Σ debits)`, the
 /// closing and its undo left out. One query for all the accounts, so money in splits into where it

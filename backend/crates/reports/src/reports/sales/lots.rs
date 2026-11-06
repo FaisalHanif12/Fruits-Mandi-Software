@@ -37,6 +37,8 @@ fn conds(typed: &Typed) -> Conds {
         .id("b.id = ?", typed.bikri_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
         .id("l.item_id = ?", typed.item_id)
+        // All the items of a group (PRD v1.29; R27 only: R6 never has one).
+        .item_group("l.item_id", typed.item_group)
         .id("b.adda_id = ?", typed.adda_id);
     c
 }

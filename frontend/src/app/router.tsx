@@ -20,6 +20,8 @@ import {
   parseLentSearch,
 } from '../features/cashbook/screen-type';
 import { parseFruitSearch } from '../features/fruit/screen-search';
+import { parseGardenSearch } from '../features/gardens/screen-type';
+import { parseTripSearch } from '../features/trips/screen-type';
 import { parseGeneralSearch } from '../features/cashbook/screen-type';
 import { parseCapitalSearch, parseStatementSearch } from '../features/partners/screen-type';
 import { parseVoucherSearch, type ScreenType } from '../features/vouchers/screen-type';
@@ -144,16 +146,22 @@ function positiveId(value: unknown): number | undefined {
 }
 
 // `/bikri/book` is a new بکری; `/bikri/book?id=12` opens a saved one read-only (plan 13);
-// `/bikri/book?id=12&edit=57` opens posting 57 of it for edit (plan 16).
+// `/bikri/book?id=12&edit=57` opens posting 57 of it for edit (plan 16); `/bikri/book?find=true` is a new
+// بکری with the find box (F3) already open, the way an answer sends the Owner to a بکری to edit or cancel
+// (plan 55 Section 11.1).
 const bikriBookRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/book',
-  validateSearch: (search: Record<string, unknown>): { id?: number; edit?: number } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { id?: number; edit?: number; find?: true } => {
     const id = positiveId(search['id']);
     const edit = positiveId(search['edit']);
+    const find = search['find'] === true || search['find'] === 'true';
     return {
       ...(id === undefined ? {} : { id }),
       ...(id !== undefined && edit !== undefined ? { edit } : {}),
+      ...(id === undefined && find ? { find: true as const } : {}),
     };
   },
   component: lazyRouteComponent(
@@ -203,6 +211,7 @@ const gardenNewRoute = createRoute({
 const gardenRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/gardens/$id',
+  validateSearch: parseGardenSearch,
   component: lazyRouteComponent(() => import('../features/gardens/pages/GardenPage'), 'GardenPage'),
 });
 
@@ -224,10 +233,7 @@ const tripNewRoute = createRoute({
 const tripRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/trips/$id',
-  validateSearch: (search: Record<string, unknown>): { purchase?: number } => {
-    const purchase = positiveId(search['purchase']);
-    return purchase === undefined ? {} : { purchase };
-  },
+  validateSearch: parseTripSearch,
   component: lazyRouteComponent(() => import('../features/trips/pages/TripPage'), 'TripPage'),
 });
 

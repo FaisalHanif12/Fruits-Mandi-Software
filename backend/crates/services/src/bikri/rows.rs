@@ -15,7 +15,7 @@ use mandi_db::rusqlite::Connection;
 use mandi_domain::bikri::{CleanPerson, clean_person};
 use mandi_domain::core::bikri::{
     LineCalc, LineCharge, LotCharge, LotChargeMethod, LotPreview, PaymentType, PreparedLot,
-    PreparedSale, SummaryTotals,
+    PreparedSale, SaleGrade, SummaryTotals,
 };
 use mandi_domain::core::money::{Grams, Paisa};
 use mandi_domain::ledger::bikri::{EntryLayout, JournalLot, JournalSale};
@@ -536,6 +536,7 @@ fn insert_sale(
             payment_type: calc.payment_type.as_str(),
             note: shaped.row.note.as_deref(),
             cost_paisa: calc.cost_of_goods.as_paisa(),
+            grade: shaped.row.grade.map(SaleGrade::as_str),
         },
         posting.user_id,
         posting.now,

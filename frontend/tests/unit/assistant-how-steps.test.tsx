@@ -65,6 +65,94 @@ describe.each(LANGUAGES)('the how-to steps (%s)', (language: Language) => {
     expect(list.textContent).not.toContain(language === 'ur' ? AKRAM_EN : AKRAM_UR);
   });
 
+  it('an item is written with the glossary word, and a day that was not named says today was taken', () => {
+    renderIn(
+      language,
+      <HowSteps
+        steps={[
+          { id: 'assistant-how-open-report', args: [text('report', 'R7')] },
+          {
+            id: 'assistant-how-set-party',
+            args: [text('role', 'item'), names('party', 'کیلا', 'Banana'), text('code', '0005')],
+          },
+          { id: 'assistant-how-assumed-day', args: [text('day', '2026-10-10')] },
+          {
+            id: 'assistant-how-set-dates',
+            args: [text('from', '2026-10-10'), text('to', '2026-10-10')],
+          },
+          { id: 'assistant-how-press-print', args: [] },
+        ]}
+      />,
+    );
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    const banana = language === 'ur' ? 'کیلا' : 'Banana';
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'assistant-how-open-report', { report: 'R7' }),
+      message(language, 'assistant-how-set-party', { role: 'item', party: banana, code: '0005' }),
+      message(language, 'assistant-how-assumed-day', { day: '10-10-2026' }),
+      message(language, 'assistant-how-set-dates', { from: '10-10-2026', to: '10-10-2026' }),
+      message(language, 'assistant-how-press-print'),
+    ]);
+    // The role is the item's glossary word (never the buyer's), and the day is not the ISO one.
+    expect(visible(items[1]?.textContent)).toContain(message(language, 'glossary-qism-maal'));
+    expect(visible(items[1]?.textContent)).not.toContain(message(language, 'glossary-gahak'));
+    expect(visible(items[2]?.textContent)).toContain('10-10-2026');
+    expect(visible(items[2]?.textContent)).not.toContain('2026-10-10');
+  });
+
+  it('an analytics view, the guests only, an item group and one بکری by its number each have words', () => {
+    renderIn(
+      language,
+      <HowSteps
+        steps={[
+          { id: 'assistant-how-open-analytics', args: [text('view', 'F')] },
+          { id: 'assistant-how-set-guests', args: [] },
+          { id: 'assistant-how-set-group', args: [text('group', 'vegetable')] },
+          {
+            id: 'assistant-how-set-bikri',
+            args: [{ name: 'number', value: { type: 'number', value: 4 } }],
+          },
+        ]}
+      />,
+    );
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'assistant-how-open-analytics', { view: 'F' }),
+      message(language, 'assistant-how-set-guests'),
+      message(language, 'assistant-how-set-group', { group: 'vegetable' }),
+      message(language, 'assistant-how-set-bikri', { number: 4 }),
+    ]);
+    // The view letter and the number are drawn as they came, and the glossary words are used.
+    expect(visible(items[0]?.textContent)).toContain(message(language, 'glossary-tajziat'));
+    expect(visible(items[1]?.textContent)).toContain(message(language, 'glossary-mehman'));
+    // The group is the item group's own word, and the two groups read differently.
+    expect(visible(items[2]?.textContent)).toContain(
+      message(language, 'masters-item-group-vegetable'),
+    );
+    expect(message(language, 'assistant-how-set-group', { group: 'fruit' })).toContain(
+      message(language, 'masters-item-group-fruit'),
+    );
+    expect(visible(items[3]?.textContent)).toContain('4');
+  });
+
+  it('a step of these kinds that arrives without its value is left out, never shown with a hole', () => {
+    renderIn(
+      language,
+      <HowSteps
+        steps={[
+          { id: 'assistant-how-open-analytics', args: [] },
+          { id: 'assistant-how-set-bikri', args: [] },
+          { id: 'assistant-how-assumed-day', args: [] },
+          { id: 'assistant-how-set-guests', args: [] },
+        ]}
+      />,
+    );
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items.map((item) => visible(item.textContent))).toEqual([
+      message(language, 'assistant-how-set-guests'),
+    ]);
+  });
+
   it('say "seller" for a seller and give both dates for a period', () => {
     renderIn(
       language,

@@ -36,6 +36,7 @@ mod pages;
 mod voucher;
 
 use mandi_core::auth::Language;
+use mandi_core::bikri::SaleGrade;
 use mandi_core::printing::{Paper, PrintDoc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -158,6 +159,12 @@ pub struct PrintLine {
     pub item: String,
     /// The packing in the print language.
     pub packing: String,
+    /// The quality of the goods of the line (PRD FR-12.42): the template writes its Fluent word
+    /// after the item. Absent if the line has none, so an old print reads as before. `detail`
+    /// already has the word, written from the same Fluent message in the print language.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<SaleGrade>,
     /// Quantity in نگ.
     pub qty: String,
     /// Weight in kg, for an item sold by weight. Null otherwise.

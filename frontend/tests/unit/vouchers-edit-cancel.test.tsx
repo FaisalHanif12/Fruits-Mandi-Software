@@ -25,7 +25,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters } from '../helpers/masters';
+import { expectOnlyCollectors } from '../helpers/collector-box';
+import { STAFF_ROSTER, fakeMasters } from '../helpers/masters';
 import { PAGE_ROWS } from '../helpers/pager';
 import { message, visible } from '../helpers/render';
 import {
@@ -105,6 +106,18 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
     await screen.findByRole('heading', { level: 1 });
     return { ...app, user: userEvent.setup() };
   }
+
+  it('the collector of a receipt is chosen among the collectors only: not the munshi, not one who left (plan 55)', async () => {
+    fakeMasters({ staff: STAFF_ROSTER });
+    const { user } = await open();
+    await expectOnlyCollectors(
+      user,
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'vouchers-field-collector')),
+      }),
+      language,
+    );
+  });
 
   it("lists the day's vouchers of the type, each with its number, account, amount and state", async () => {
     await open();

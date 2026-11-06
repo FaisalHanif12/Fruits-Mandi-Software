@@ -318,6 +318,31 @@ describe.each(LANGUAGES)('one trip (%s)', (language) => {
     packing: language === 'ur' ? 'پ' : 'Box',
   });
 
+  it.each(['purchase', 'cost', 'other_sale'] as const)(
+    'the address chooses the type the form starts on: ?type=%s (an answer sends the Owner here)',
+    async (type) => {
+      fakeTrips();
+      await open(`/trips/1?type=${type}`);
+      const pressed = within(typeList())
+        .getAllByRole('button')
+        .filter((button) => button.getAttribute('aria-pressed') === 'true');
+      expect(pressed.map((button) => visible(button.textContent))).toEqual([
+        message(language, `trips-type-${type.replaceAll('_', '-')}`),
+      ]);
+    },
+  );
+
+  it('a type the screen does not know is left out: the form starts on the first type', async () => {
+    fakeTrips();
+    await open('/trips/1?type=nonsense');
+    const pressed = within(typeList())
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-pressed') === 'true');
+    expect(pressed.map((button) => visible(button.textContent))).toEqual([
+      message(language, 'trips-type-purchase'),
+    ]);
+  });
+
   it('R1, R3: a purchase of three lines is typed with the keyboard only and one F10 saves all three, with the split of each line', async () => {
     // The cash in hand covers the 152,400, so there is no cash question.
     const fake = fakeTrips({ cashBefore: 500_000 });

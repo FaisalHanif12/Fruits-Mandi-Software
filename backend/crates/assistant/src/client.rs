@@ -3,10 +3,11 @@
 //!
 //! [`OpenRouterClient`] sends the request as plain JSON to the one URL [`API_URL`] over HTTPS, with
 //! the key in the `Authorization` header, read from the key store just before the call by the
-//! caller and dropped after it. A redirect is never followed. Each call is stopped after the time
-//! it is given (30 seconds, or what is left of the 60 of the question). A call that runs out of
-//! time at any stage, waiting for the first byte or reading the body, is a timeout and never an
-//! unreadable reply.
+//! caller and dropped after it. A redirect is never followed. Each call is over after the time it
+//! is given at the latest, TRUE to the clock (see [`crate::hedge`]: the HTTP client alone restarts
+//! its timer when the headers arrive), and a second copy of the request goes out when the first is
+//! slow. A call that runs out of time at any stage, waiting for the first byte or reading the body,
+//! is a timeout and never an unreadable reply.
 //!
 //! [`RecordedClient`] replays recorded replies for the tests and keeps the requests it was given, so
 //! a test can scan every request body (E2E-54). No commit test calls the network.
@@ -25,7 +26,8 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::ask::{AssistantFailure, FailureKind};
-use crate::limits::RETRY_WAIT_MILLIS;
+use crate::hedge::{Hedge, hedged_with};
+use crate::limits::{HEDGE_AFTER_SECS, HEDGE_MIN_COPY_SECS, RETRY_WAIT_MILLIS};
 
 /// The only URL the app calls for a question (NFR-SEC-9).
 pub const API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
@@ -124,6 +126,18 @@ pub trait ModelClient: Send + Sync {
     /// # Errors
     /// [`CallError`].
     fn call(&self, key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError>;
+
+    /// [`ModelClient::call`] with a note of what the hedge did, when the client sent a second copy
+    /// of the request (plan 55 Section 3). The real client does; the others send one request and
+    /// say nothing.
+    fn call_noted(
+        &self,
+        key: &str,
+        body: &Value,
+        timeout: Duration,
+    ) -> (Result<Reply, CallError>, Option<Hedge>) {
+        (self.call(key, body, timeout), None)
+    }
 
     /// How long to wait before the one retry of a failed call (plan 52 item 6). The tests' client
     /// says none.
@@ -281,9 +295,47 @@ impl OpenRouterClient {
     }
 }
 
+impl OpenRouterClient {
+    /// One call with a true deadline and a second copy when the first is slow (see [`hedged_with`]).
+    fn call_hedged(
+        url: &str,
+        https_only: bool,
+        key: &str,
+        body: &Value,
+        timeout: Duration,
+        hedge_after: Duration,
+        min_copy: Duration,
+    ) -> (Result<Reply, CallError>, Option<Hedge>) {
+        let (url, key, body) = (url.to_owned(), key.to_owned(), body.clone());
+        hedged_with(
+            move |budget| Self::call_to(&url, https_only, &key, &body, budget),
+            timeout,
+            hedge_after,
+            min_copy,
+        )
+    }
+}
+
 impl ModelClient for OpenRouterClient {
     fn call(&self, key: &str, body: &Value, timeout: Duration) -> Result<Reply, CallError> {
-        Self::call_to(API_URL, true, key, body, timeout)
+        self.call_noted(key, body, timeout).0
+    }
+
+    fn call_noted(
+        &self,
+        key: &str,
+        body: &Value,
+        timeout: Duration,
+    ) -> (Result<Reply, CallError>, Option<Hedge>) {
+        Self::call_hedged(
+            API_URL,
+            true,
+            key,
+            body,
+            timeout,
+            Duration::from_secs(HEDGE_AFTER_SECS),
+            Duration::from_secs(HEDGE_MIN_COPY_SECS),
+        )
     }
 }
 
@@ -436,6 +488,8 @@ mod tests {
         Silent,
         /// Sends the headers and a part of the body, then stalls.
         StallsInTheBody,
+        /// Waits this long, sends the headers and a part of the body, then stalls.
+        HeadersLateThenStall(Duration),
         /// Sends a whole reply.
         Replies(&'static str),
         /// Takes the request and closes the connection with no reply.
@@ -462,6 +516,14 @@ mod tests {
                 Server::HangsUp => {}
                 Server::Silent => std::thread::sleep(hold),
                 Server::StallsInTheBody => {
+                    let _ = stream.write_all(
+                        b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 5000\r\n\r\n{\"choices\":[",
+                    );
+                    let _ = stream.flush();
+                    std::thread::sleep(hold);
+                }
+                Server::HeadersLateThenStall(late) => {
+                    std::thread::sleep(late);
                     let _ = stream.write_all(
                         b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 5000\r\n\r\n{\"choices\":[",
                     );
@@ -504,6 +566,101 @@ mod tests {
         let (result, took) = call_local(&url, Duration::from_millis(400));
         assert_eq!(result.unwrap_err().kind, FailureKind::Timeout);
         assert!(took < Duration::from_secs(3), "{took:?}");
+    }
+
+    /// A server that handles one connection for each entry of the script, in the order they come.
+    fn serve_script(script: Vec<Server>, hold: Duration) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for how in script {
+                let Ok((mut stream, _)) = listener.accept() else {
+                    return;
+                };
+                std::thread::spawn(move || {
+                    let mut seen = Vec::new();
+                    let mut chunk = [0_u8; 4096];
+                    while !seen.windows(4).any(|w| w == b"\r\n\r\n") {
+                        match stream.read(&mut chunk) {
+                            Ok(0) | Err(_) => return,
+                            Ok(n) => seen.extend_from_slice(&chunk[..n]),
+                        }
+                    }
+                    match how {
+                        Server::Silent => std::thread::sleep(hold),
+                        Server::Replies(body) => {
+                            let head = format!(
+                                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                                body.len()
+                            );
+                            let _ = stream.write_all(head.as_bytes());
+                            let _ = stream.write_all(body.as_bytes());
+                            let _ = stream.flush();
+                        }
+                        _ => std::thread::sleep(hold),
+                    }
+                });
+            }
+        });
+        url
+    }
+
+    const GOOD: &str = r#"{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"{}"}}],"usage":{"prompt_tokens":10,"completion_tokens":2}}"#;
+
+    #[test]
+    fn headers_that_come_late_and_a_body_that_stalls_end_at_the_cut_and_not_after_it() {
+        // The plain HTTP client restarts its timer when the headers arrive: with a cut of 1.0 s and
+        // headers at 0.7 s it took 1.7 s (measured 05-11-2026; live run 1: a call of 23.8 s against
+        // a cut of 12 s, and six questions past 25 s). The call must end at the cut.
+        let url = serve(
+            Server::HeadersLateThenStall(Duration::from_millis(700)),
+            Duration::from_secs(5),
+        );
+        let started = Instant::now();
+        let (result, hedge) = OpenRouterClient::call_hedged(
+            &url,
+            false,
+            "sk-test",
+            &json!({}),
+            Duration::from_secs(1),
+            Duration::from_secs(60),
+            Duration::from_secs(3),
+        );
+        let took = started.elapsed();
+        assert_eq!(result.unwrap_err().kind, FailureKind::Timeout);
+        assert!(hedge.is_none(), "the copy was not due");
+        assert!(
+            took >= Duration::from_millis(950) && took < Duration::from_millis(1_300),
+            "{took:?}"
+        );
+    }
+
+    #[test]
+    fn a_silent_first_request_is_answered_by_the_copy_sent_after_the_hedge_time() {
+        // The first connection takes the request and never answers; the copy gets a whole reply.
+        let url = serve_script(
+            vec![Server::Silent, Server::Replies(GOOD)],
+            Duration::from_secs(5),
+        );
+        let started = Instant::now();
+        let (result, hedge) = OpenRouterClient::call_hedged(
+            &url,
+            false,
+            "sk-test",
+            &json!({}),
+            Duration::from_secs(3),
+            Duration::from_millis(300),
+            Duration::ZERO,
+        );
+        let took = started.elapsed();
+        assert_eq!(result.unwrap().usage.prompt_tokens, 10);
+        assert!(
+            took >= Duration::from_millis(300) && took < Duration::from_millis(1_200),
+            "{took:?}"
+        );
+        let hedge = hedge.expect("the copy was sent");
+        assert_eq!(hedge.attempts.len(), 2);
+        assert_eq!(hedge.attempts[1].end, crate::hedge::End::Won);
     }
 
     #[test]

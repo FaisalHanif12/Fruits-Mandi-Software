@@ -18,6 +18,7 @@ import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportRow } from '../../src/bindings/ReportRow';
 import * as gardensApi from '../../src/features/gardens/api';
 import * as reportsApi from '../../src/features/reports/api';
+import * as searchApi from '../../src/shared/search/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLayoutStep, type LayoutStep } from '../../src/shared/hooks/useLayoutStep';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -72,6 +73,10 @@ beforeEach(() => {
   // The party box of a report asks the account search page by page. After `resetAllMocks` it would answer
   // nothing at all, and a picker that gets no page throws; a real empty page is the honest answer here.
   fakeAccountSearch([]);
+  // The collector box of R35 (plan 55 Section 11.1) asks the staff list the same way: an empty page, not none.
+  vi.mocked(searchApi.searchMasters).mockResolvedValue([]);
+  vi.mocked(searchApi.searchRecent).mockResolvedValue([]);
+  vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -192,14 +197,18 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
   }
 
   describe('the table of every party', () => {
-    it('is in the catalogue with a day box and a party box, and no period', async () => {
+    it('is in the catalogue with a day box, a party box and a collector box, and no period', async () => {
       expect(CATALOG.find((entry) => entry.id === 'R35')).toMatchObject({
-        filters: ['as_of', 'party'],
+        filters: ['as_of', 'party', 'collector'],
         party_required: false,
       });
       await openSheet();
       expect(screen.getByLabelText(m('report-filter-day'))).toBeVisible();
       expect(screen.getByRole('combobox', { name: m('report-filter-party') })).toBeVisible();
+      // One collector can be picked (plan 55 Section 11.1); with none the sheet has every collector.
+      expect(
+        screen.getByRole('combobox', { name: named(m('report-filter-collector')) }),
+      ).toBeVisible();
       expect(screen.queryByRole('combobox', { name: m('report-filter-period') })).toBeNull();
       expect(screen.queryByLabelText(m('report-filter-as-of'))).toBeNull();
     });

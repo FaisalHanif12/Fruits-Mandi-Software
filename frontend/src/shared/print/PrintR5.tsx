@@ -14,6 +14,7 @@
 // other.
 
 import { useLocalization } from '@fluent/react';
+import { gradedItem } from '../format';
 import { Num } from '../ui/Num';
 import { PrintName } from './PrintName';
 import { R5_AMOUNT_IDS, type Paper, type PrintLine, type PrintPage } from './types';
@@ -37,7 +38,8 @@ function DetailLines({ lines }: { lines: readonly PrintLine[] }) {
           {line.weight_kg === null
             ? line.detail
             : l10n.getString('print-r5-line-weight', {
-                item: line.item,
+                // The quality follows the item here too; the other lines come ready from the backend.
+                item: gradedItem((id, vars) => l10n.getString(id, vars), line.item, line.grade),
                 weight: line.weight_kg,
                 rate: line.rate,
               })}

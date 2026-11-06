@@ -9,6 +9,7 @@ import type { ReportColumnKind } from '../../../bindings/ReportColumnKind';
 import type { ReportPrintCell } from '../../../bindings/ReportPrintCell';
 import type { ReportPrintDetailPart } from '../../../bindings/ReportPrintDetailPart';
 import type { ReportPrintMessageArg } from '../../../bindings/ReportPrintMessageArg';
+import { gradedItem } from '../../../shared/format';
 import { NumberRuns } from '../../../shared/grid/NumberRuns';
 import { PrintName } from '../../../shared/print';
 import { scriptOf } from '../../../shared/text/scriptHint';
@@ -30,6 +31,8 @@ export const ZERO_SIDE_ID = 'report-side-zero';
 
 function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSale: boolean }) {
   const { l10n } = useLocalization();
+  // The words of the print language, for the quality that follows an item (PRD FR-12.42).
+  const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   switch (part.kind) {
     case 'sale':
       // The buyers' list (R5) writes a line as the client's own print does: "(item qty . rate)".
@@ -39,7 +42,7 @@ function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSal
           <p className="print-nowrap">
             <NumberRuns
               text={l10n.getString('report-detail-sale-short', {
-                item: part.item,
+                item: gradedItem(say, part.item, part.grade),
                 qty: part.qty,
                 rate: part.rate,
               })}
@@ -52,7 +55,7 @@ function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSal
           <NumberRuns
             text={l10n.getString('report-detail-sale', {
               number: part.bikri_number,
-              item: part.item,
+              item: gradedItem(say, part.item, part.grade),
               qty: part.qty,
               packing: part.packing,
               rate: part.rate,

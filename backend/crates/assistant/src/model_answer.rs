@@ -145,12 +145,34 @@ pub enum EntryScreenName {
     Analytics,
     /// بیک اپ.
     Backup,
+    // Change requests for garden and trip entries, a later sale, an edit and a cancel (plan 55
+    // Section 11.1, D6 v1.5).
+    /// قسط: a garden installment.
+    GardenInstallment,
+    /// باغ خرچ: a garden running cost.
+    GardenCost,
+    /// دوسری دکان میں فروخت: a sale of a garden's goods in another shop.
+    GardenSale,
+    /// باغ بند: closing a garden.
+    GardenClose,
+    /// خریداری: a purchase of a market trip.
+    TripPurchase,
+    /// سفر خرچ: a cost of a market trip.
+    TripCost,
+    /// دوسری دکان میں فروخت: a sale of a trip's goods in another shop.
+    TripSale,
+    /// باقی مال کی بعد کی بکری: a later sale of a lot.
+    BikriLaterSale,
+    /// بکری کی تدوین: editing a posting of a بکری.
+    BikriEdit,
+    /// بکری منسوخ: cancelling a بکری.
+    BikriCancel,
 }
 
 impl EntryScreenName {
     /// Every name the answer schema offers, in the order of the schema. A test keeps this list equal
     /// to the `entry.screen` enum of `answer.schema.json`, both ways.
-    pub const ALL: [&'static str; 30] = [
+    pub const ALL: [&'static str; 40] = [
         "bikri",
         "wasooli",
         "adaigi",
@@ -181,6 +203,16 @@ impl EntryScreenName {
         "dead_amount",
         "analytics",
         "backup",
+        "garden_installment",
+        "garden_cost",
+        "garden_sale",
+        "garden_close",
+        "trip_purchase",
+        "trip_cost",
+        "trip_sale",
+        "bikri_later_sale",
+        "bikri_edit",
+        "bikri_cancel",
     ];
 
     /// True for the entry screens, which open empty with a party chosen when there is one. The
@@ -199,6 +231,16 @@ impl EntryScreenName {
                 | Self::Phal
                 | Self::General
                 | Self::Account
+                | Self::GardenInstallment
+                | Self::GardenCost
+                | Self::GardenSale
+                | Self::GardenClose
+                | Self::TripPurchase
+                | Self::TripCost
+                | Self::TripSale
+                | Self::BikriLaterSale
+                | Self::BikriEdit
+                | Self::BikriCancel
         )
     }
 }

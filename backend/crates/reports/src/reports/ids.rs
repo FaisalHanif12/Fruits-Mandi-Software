@@ -24,6 +24,15 @@ pub(crate) const COL_OPENING_DATE: &str = "report-col-opening-date";
 pub(crate) const COL_BUYER: &str = "report-col-buyer";
 pub(crate) const COL_SELLER: &str = "report-col-seller";
 pub(crate) const COL_ITEM: &str = "report-col-item";
+/// The quality of a sale line (PRD FR-12.42): the column that shows it, only in a report where
+/// some line has one. The cell is `GRADE_FIRST`, `GRADE_SECOND` or `GRADE_THIRD`, or empty.
+pub(crate) const COL_GRADE: &str = "report-col-grade";
+/// اول (First), the word of a cell of the quality column and of a quality on a print.
+pub(crate) const GRADE_FIRST: &str = "report-grade-first";
+/// دوم (Second).
+pub(crate) const GRADE_SECOND: &str = "report-grade-second";
+/// سوم (Third).
+pub(crate) const GRADE_THIRD: &str = "report-grade-third";
 pub(crate) const COL_QTY: &str = "report-col-qty";
 pub(crate) const COL_RATE: &str = "report-col-rate";
 pub(crate) const COL_VALUE: &str = "report-col-value";
@@ -296,6 +305,12 @@ pub(crate) const FILTER_PARTY: &str = "report-filter-party";
 pub(crate) const FILTER_SELLER: &str = "report-filter-seller";
 pub(crate) const FILTER_ZAMINDAR: &str = "report-filter-zamindar";
 pub(crate) const FILTER_ITEM: &str = "report-filter-item";
+/// The group words of the items, پھل and سبزی (PRD v1.29): each is the whole fact of the header.
+pub(crate) const FILTER_GROUP_FRUIT: &str = "masters-item-group-fruit";
+pub(crate) const FILTER_GROUP_VEGETABLE: &str = "masters-item-group-vegetable";
+/// R27 under a group: a bill with lots of both groups shows only this group's lots (PRD v1.31).
+/// A whole header fact with no value; the words are in the Fluent files.
+pub(crate) const R27_GROUP_NOTE: &str = "report-r27-group-note";
 pub(crate) const FILTER_CITY: &str = "report-filter-city";
 pub(crate) const FILTER_ADDA: &str = "report-filter-adda";
 pub(crate) const FILTER_PARTNER: &str = "report-filter-partner";
@@ -388,6 +403,15 @@ pub(crate) const R38_STATUS_OWING: &str = "dead-status-owing";
 pub(crate) const R38_STATUS_RECOVERED: &str = "dead-status-recovered";
 pub(crate) const R38_STATUS_UNDONE: &str = "dead-status-undone";
 pub(crate) const R38_STATUS_CREDIT: &str = "dead-status-credit";
+
+/// The Fluent ID of the word of a quality (PRD FR-12.42).
+pub(crate) const fn grade_id(grade: mandi_core::bikri::SaleGrade) -> &'static str {
+    match grade {
+        mandi_core::bikri::SaleGrade::First => GRADE_FIRST,
+        mandi_core::bikri::SaleGrade::Second => GRADE_SECOND,
+        mandi_core::bikri::SaleGrade::Third => GRADE_THIRD,
+    }
+}
 
 #[cfg(test)]
 mod tests {

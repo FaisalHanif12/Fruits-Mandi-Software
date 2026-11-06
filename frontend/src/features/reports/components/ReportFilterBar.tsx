@@ -20,6 +20,7 @@ import {
   ControlAccountPicker,
   DateInput,
   Field,
+  ItemGroupSelect,
   Picker,
   Select,
   fieldError,
@@ -283,6 +284,29 @@ export function ReportFilterBar({
       </Field>,
     );
   }
+  if (takes('collector')) {
+    // One collector, a staff member, of the dues by collector (R22), the receipts register (R23) and the
+    // day sheet (R35); with none picked the report has every collector.
+    pickers.push(
+      <Field
+        key="collector"
+        label={<Localized id="report-filter-collector" />}
+        error={fieldError(error, 'filters.collector_id')}
+      >
+        {(control) => (
+          <Picker
+            {...control}
+            canAdd={false}
+            scope="collector"
+            value={state.collector}
+            onChange={(hit) => {
+              onChange({ collector: valueOf(hit) });
+            }}
+          />
+        )}
+      </Field>,
+    );
+  }
   if (takes('partner')) {
     // R31 cannot run without a partner (the catalogue says so); R29 takes one or all.
     boxes.push(
@@ -295,6 +319,18 @@ export function ReportFilterBar({
         error={fieldError(error, takes('guests') ? 'filters.guests_only' : 'filters.partner_id')}
         onChange={(partner, guestsOnly) => {
           onChange({ partner, guestsOnly });
+        }}
+      />,
+    );
+  }
+  if (takes('item_group')) {
+    boxes.push(
+      <ItemGroupSelect
+        key="item_group"
+        value={state.itemGroup}
+        error={fieldError(error, 'filters.item_group')}
+        onChange={(itemGroup) => {
+          onChange({ itemGroup });
         }}
       />,
     );
@@ -436,7 +472,8 @@ export function ReportFilterBar({
     state.zamindar !== null ||
     state.item !== null ||
     state.city !== null ||
-    state.adda !== null;
+    state.adda !== null ||
+    state.collector !== null;
   // Open from the start when the address already filled one of the folded boxes.
   const [more, setMore] = useState(folderFilled);
   const shownMore = more || folderFilled;

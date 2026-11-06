@@ -53,12 +53,14 @@ const READ_ONLY: [&str; 8] = [
 
 /// The nouns that name an entry screen, and the screen. A request that says exactly one of them has
 /// its screen. The role words (partner, garden, trip) are not here: they say who, not what.
-const ENTRY_NOUNS: [(Cue, &str); 10] = [
+const ENTRY_NOUNS: [(Cue, &str); 11] = [
     (Cue::Collection, "wasooli"),
     (Cue::Dues, "wasooli"),
     (Cue::Payable, "adaigi"),
     (Cue::Advance, "peshgi"),
     (Cue::Expense, "kharcha"),
+    // ذاتی خرچہ and "li hui raqam" are types of the خرچہ screen.
+    (Cue::PartnerTaken, "kharcha"),
     (Cue::MoneyLent, "udhar_raqam"),
     (Cue::RoleKhata, "alag_khata"),
     (Cue::Capital, "sarmaya"),
@@ -70,6 +72,79 @@ const ENTRY_NOUNS: [(Cue, &str); 10] = [
 const REMOVE_WORDS: [&str; 12] = [
     "delete", "remove", "hata", "hatao", "hatado", "mita", "mitao", "mitado", "ہٹا", "ہٹاؤ", "مٹا",
     "مٹاؤ",
+];
+
+/// Words for an installment of a garden's rent (قسط).
+const INSTALLMENT_WORDS: [&str; 8] = [
+    "qist",
+    "qisat",
+    "qisst",
+    "kist",
+    "installment",
+    "instalment",
+    "installments",
+    "قسط",
+];
+
+/// Words for buying goods on a market trip (خریداری).
+const PURCHASE_WORDS: [&str; 8] = [
+    "khareedari",
+    "kharidari",
+    "khareedna",
+    "purchase",
+    "purchases",
+    "buy",
+    "buying",
+    "خریداری",
+];
+
+/// Words that close a garden (باغ بند کریں).
+const CLOSE_WORDS: [&str; 6] = ["band", "close", "closed", "khatam", "بند", "ختم"];
+
+/// Words that cancel an entry.
+const CANCEL_WORDS: [&str; 7] = ["cancel", "mansookh", "mansukh", "radd", "منسوخ", "ردّ", "رد"];
+
+/// Words that correct an entry already saved.
+const EDIT_WORDS: [&str; 12] = [
+    "edit",
+    "badlo",
+    "badal",
+    "badalna",
+    "tabdeel",
+    "theek",
+    "correct",
+    "change",
+    "update",
+    "ایڈٹ",
+    "بدلو",
+    "تبدیل",
+];
+
+/// Phrases for a sale in another shop (دوسری دکان میں فروخت). Joined with single spaces.
+const OTHER_SHOP_PHRASES: [&str; 9] = [
+    " doosri dukan ",
+    " dusri dukan ",
+    " doosri dukaan ",
+    " dusri dukaan ",
+    " dosri dukan ",
+    " other shop ",
+    " another shop ",
+    " دوسری دکان ",
+    " دوسرے آڑھتی ",
+];
+
+/// Phrases for a later sale of goods left over (باقی مال کی بکری). Joined with single spaces.
+const LATER_SALE_PHRASES: [&str; 10] = [
+    " baad mein ",
+    " baad main ",
+    " later sale ",
+    " baqi maal ",
+    " baki maal ",
+    " leftover ",
+    " bacha hua maal ",
+    " بعد میں ",
+    " باقی مال ",
+    " بچا ہوا مال ",
 ];
 
 /// Phrases that say "give": a payment out. Joined with single spaces.
@@ -125,6 +200,9 @@ pub(super) fn screen_of(
     names: &Names,
     topic: Option<&'static str>,
 ) -> Option<&'static str> {
+    if let Some(screen) = trade_screen(scan, names) {
+        return Some(screen);
+    }
     let mut nouns: Vec<&'static str> = ENTRY_NOUNS
         .iter()
         .filter(|(cue, _)| scan.has_exact(*cue))
@@ -178,4 +256,82 @@ pub(super) fn screen_of(
         return Some("account");
     }
     None
+}
+
+/// The entry of a garden or a trip, and a change to a بکری already saved (plan 55, lead order of
+/// 05-11-2026). The garden or the trip comes first, then the kind of entry:
+/// - garden: `garden_installment` (قسط), `garden_close` (بند), `garden_sale` (another shop),
+///   `garden_cost` (خرچہ);
+/// - trip: `trip_purchase` (خریداری), `trip_sale` (another shop), `trip_cost` (خرچہ);
+/// - بکری: `bikri_cancel`, `bikri_edit`, `bikri_later_sale` (goods left in باقی مال sold later).
+///
+/// `None` when the question does not say which kind of entry; the nouns and the model decide then.
+/// The party of a route is the garden or the trip when one is named; a بکری change carries none.
+///
+/// Example: "shahpur bagh ki qist likh do" is `garden_installment`; "bikri 5 cancel karo" is
+/// `bikri_cancel`; "bagh ka kharcha likh do" is `garden_cost`, not the shop's خرچہ screen.
+fn trade_screen(scan: &Scan, names: &Names) -> Option<&'static str> {
+    let hits = named(names);
+    let garden = has_role(&hits, &[PartyRole::Garden]) || scan.has_exact(Cue::RoleGarden);
+    let trip = has_role(&hits, &[PartyRole::Trip]) || scan.has_exact(Cue::RoleTrip);
+    let other_shop = says_phrase(scan, &OTHER_SHOP_PHRASES);
+    let expense = scan.has_exact(Cue::Expense);
+    if garden && !trip {
+        if says_any(scan, &INSTALLMENT_WORDS) {
+            return Some("garden_installment");
+        }
+        if says_any(scan, &CLOSE_WORDS) {
+            return Some("garden_close");
+        }
+        if other_shop {
+            return Some("garden_sale");
+        }
+        if expense {
+            return Some("garden_cost");
+        }
+    }
+    if trip && !garden {
+        if says_any(scan, &PURCHASE_WORDS) {
+            return Some("trip_purchase");
+        }
+        if other_shop {
+            return Some("trip_sale");
+        }
+        if expense {
+            return Some("trip_cost");
+        }
+    }
+    if garden || trip || !scan.has_exact(Cue::Sale) {
+        return None;
+    }
+    // A بکری already saved: only the بکری word beside the verb (no other entry noun).
+    let others = ENTRY_NOUNS
+        .iter()
+        .any(|(cue, screen)| *screen != "bikri" && scan.has_exact(*cue));
+    if others {
+        return None;
+    }
+    if says_any(scan, &CANCEL_WORDS) {
+        return Some("bikri_cancel");
+    }
+    if says_any(scan, &EDIT_WORDS) {
+        return Some("bikri_edit");
+    }
+    if says_phrase(scan, &LATER_SALE_PHRASES) {
+        return Some("bikri_later_sale");
+    }
+    None
+}
+
+/// True when a weak write word ("edit", "add", "change") stands beside the name of an entry that has
+/// no amount: a بکری, a garden, a trip, an installment or a purchase. Such a request is something to
+/// write, though no amount is told (the screens open empty).
+///
+/// Example: "bikri 5 edit karo" is a request; "commission change karo" is not (no entry).
+pub(super) fn weak_write_of_an_entry(scan: &Scan) -> bool {
+    scan.has_exact(Cue::Sale)
+        || scan.has_exact(Cue::RoleGarden)
+        || scan.has_exact(Cue::RoleTrip)
+        || says_any(scan, &INSTALLMENT_WORDS)
+        || says_any(scan, &PURCHASE_WORDS)
 }

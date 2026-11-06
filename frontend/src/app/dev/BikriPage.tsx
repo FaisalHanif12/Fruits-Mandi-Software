@@ -3,7 +3,7 @@
 // opened in a plain browser tab and photographed in both languages and at every window size. The
 // flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?id=41&edit=7`
 // its first entry open for edit; `?today` the list; `?pukhta` the register; `?stock` the goods left;
-// `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
+// `?over` Umar's case of plan 57 (50 in the lot, one line; type 70 over its quantity); `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
 // lot of trip goods of E2E-34 (with `?stock`, `?id=1` and `?id=1&edit=4` the same lot saved, in
 // the goods left list and open for edit), answered with the backend's real files; `?tripday` a new
 // بکری with two purchases of today already in it as lots (plan 33). Never shipped: the route exists
@@ -11,7 +11,13 @@
 
 import { Localized } from '@fluent/react';
 import { useState } from 'react';
-import { devFlag, installDevBridge, seedEvent1, seedOwn } from '../../../tests/helpers/dev-bridge';
+import {
+  devFlag,
+  installDevBridge,
+  seedEvent1,
+  seedOver,
+  seedOwn,
+} from '../../../tests/helpers/dev-bridge';
 import { paisaForTest } from '../../../tests/helpers/paisa';
 import { BikriDraftOffer } from '../../features/bikri/draft-offer';
 import { BikriBookPage } from '../../features/bikri/pages/BikriBookPage';
@@ -106,7 +112,9 @@ export function BikriPage() {
               ? undefined
               : devFlag('own')
                 ? seedOwn
-                : seedEvent1
+                : devFlag('over')
+                  ? seedOver
+                  : seedEvent1
           }
         />
       )}

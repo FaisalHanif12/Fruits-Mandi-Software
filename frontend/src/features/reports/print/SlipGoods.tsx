@@ -31,6 +31,9 @@ export function SlipGoods({ columns, rows }: SlipGoodsProps) {
       {rows.map((row, index) => {
         const item = row.cells[at('item')];
         const packing = row.cells[at('packing')];
+        // The quality of the line (PRD FR-12.42): a column that is there only when a line of the slip has
+        // one, and a cell that is empty for a line with none.
+        const grade = row.cells[at('grade')];
         const qty = row.cells[at('qty')];
         const rate = row.cells[at('rate')];
         const amount = row.cells[at('amount')];
@@ -47,6 +50,12 @@ export function SlipGoods({ columns, rows }: SlipGoodsProps) {
             <div className="print-compact-row">
               <span className="print-compact-name">
                 {item === undefined ? null : <Cell cell={item} />}
+                {grade === undefined || grade.type === 'empty' ? null : (
+                  <>
+                    {' '}
+                    <Cell cell={grade} />
+                  </>
+                )}
                 {packing === undefined || packing.type === 'empty' ? null : (
                   <>
                     {' '}

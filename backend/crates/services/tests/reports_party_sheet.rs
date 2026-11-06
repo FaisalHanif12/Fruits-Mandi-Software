@@ -139,7 +139,9 @@ fn the_catalogue_has_r35_with_the_day_and_the_party() {
         entry.filters,
         vec![
             mandi_reports::reports::FilterKind::AsOf,
-            mandi_reports::reports::FilterKind::Party
+            mandi_reports::reports::FilterKind::Party,
+            // One collector (plan 55 §11.1).
+            mandi_reports::reports::FilterKind::Collector
         ]
     );
     assert_eq!(entry.title_id, "report-r35-title");

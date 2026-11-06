@@ -6,6 +6,7 @@
 
 use mandi_core::auth::Language;
 use mandi_core::printing::Paper;
+use mandi_core::rules::ItemGroup;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -202,6 +203,8 @@ pub enum AnalyticsFilterKind {
     TripView,
     /// A garden (views A to E, G, H and I).
     Garden,
+    /// All the items of a group, پھل or سبزی, in place of one item (views A, B, C, D, G and H; PRD v1.29).
+    ItemGroup,
 }
 
 /// One view in the catalogue.
@@ -231,6 +234,12 @@ pub struct AnalyticsFilters {
     /// An item.
     #[ts(type = "number | null")]
     pub item_id: Option<i64>,
+    /// All the items of a group, پھل (`fruit`) or سبزی (`vegetable`), in place of one item (views
+    /// A, B, C, D, G and H; PRD v1.29). Never together with `item_id`. In view G the gardens column
+    /// is empty under a group (PRD v1.31). Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
     /// A seller.
     #[ts(type = "number | null")]
     pub seller_id: Option<i64>,
@@ -274,6 +283,7 @@ impl Default for AnalyticsFilters {
             to: String::new(),
             group_by: None,
             item_id: None,
+            item_group: None,
             seller_id: None,
             buyer: None,
             city_id: None,
@@ -303,6 +313,10 @@ pub struct AnalyticsResolvedFilters {
     pub group_by: Option<AnalyticsGroupBy>,
     /// The item.
     pub item: Option<Names>,
+    /// The item group picked (views A, B, C, D, G and H).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
     /// The seller.
     pub seller: Option<PartyRef>,
     /// The buyer.

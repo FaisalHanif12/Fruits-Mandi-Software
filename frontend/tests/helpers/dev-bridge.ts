@@ -5,7 +5,14 @@
 // any other command is refused with ERR_NOT_IMPLEMENTED, like a stub. Never part of a build: only
 // the development route imports it.
 
-import { EVENT1, IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import {
+  EVENT1,
+  IDS,
+  SELLER_MEMORY,
+  TRUCK_MEMORY,
+  previewFor,
+  previewWithOverLine,
+} from './bikri-data';
 import {
   cancelPreview,
   editable,
@@ -603,6 +610,8 @@ const handlers: Record<string, Handler> = {
   bikri_preview: (input) => {
     // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
     if (devFlag('own')) return fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input));
+    // `#/dev/bikri?offer&over` is Umar's case (plan 57): 50 in the lot and 70 typed on the line.
+    if (devFlag('over')) return previewWithOverLine(draftOf(input));
     const preview = previewFor(draftOf(input));
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
@@ -632,6 +641,8 @@ const handlers: Record<string, Handler> = {
         ? ownReal.OWN_GET_E41
         : ownReal.OWN_GET_E34
       : savedEvent1({
+          // `?id=41&grade` shows the quality of the lines in the saved view (plan 58).
+          ...(devFlag('grade') ? { lots: savedWithGrades() } : {}),
           status: devFlag('cancelled') ? 'cancelled' : 'saved',
           cancel_reason: devFlag('cancelled') ? 'wrong truck' : null,
           // Plan 44: the story of the edit kit. A closed day asks to be reopened first; an edited
@@ -661,7 +672,8 @@ const handlers: Record<string, Handler> = {
   drafts_get: () => {
     if (!devFlag('offer')) return null;
     const stores = createBikriDraft('10-10-2026');
-    seedEvent1(stores);
+    if (devFlag('over')) seedOver(stores);
+    else seedEvent1(stores);
     return { payload_json: serialiseDraft(stores), saved_at: '2026-10-10T07:30:00Z' };
   },
   drafts_save: () => ({ saved_at: '2026-10-10T07:30:00Z' }),
@@ -927,6 +939,19 @@ function fitOwnPreview(real: typeof ownReal.OWN_PREVIEW_E34, draft: BikriDraft) 
   return preview;
 }
 
+/** Event 1's lot with a quality on its two lines: First and Second (plan 58). */
+function savedWithGrades() {
+  return savedEvent1().lots.map((lot) => ({
+    ...lot,
+    sales: lot.sales.map(
+      (sale, index) =>
+        ({ ...sale, grade: index === 0 ? 'first' : 'second' }) as const satisfies Partial<
+          typeof sale
+        >,
+    ),
+  }));
+}
+
 /** The draft inside the input of `bikri_preview`. The screen sends it in the shape of the contract. */
 function draftOf(input: Input): BikriDraft {
   return input['draft'] as BikriDraft;
@@ -1072,6 +1097,21 @@ export function seedEvent1(stores: BikriDraftStores): void {
     typed: { qty: '20', rate: '600', qtyFilled: '1' },
   });
   sales.getState().addRow({ qty: '30', rate: '580', qtyFilled: '1' }, { buyer: arshad });
+}
+
+/**
+ * Umar's case (plan 57) typed into the stores, for the sample page `#/dev/bikri?offer&over`: Rahim's
+ * lot of 50 bananas with one line, Akram, 50 at 1,200. The photograph types 70 over the 50.
+ */
+export function seedOver(stores: BikriDraftStores): void {
+  seedEvent1(stores);
+  const lot = stores.lots.getState().rows[0];
+  if (lot === undefined) return;
+  const sales = stores.salesFor(lot.rowId);
+  const [first, second] = sales.getState().rows;
+  if (first === undefined) return;
+  sales.getState().patchRow(first.rowId, { typed: { qty: '50', rate: '1200', qtyFilled: '1' } });
+  if (second !== undefined) sales.getState().removeRow(second.rowId);
 }
 
 /** The own lot of E2E-34 typed into the stores, for the sample page `#/dev/bikri?own`. */

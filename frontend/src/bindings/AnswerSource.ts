@@ -2,6 +2,7 @@
 import type { AnalyticsView } from './AnalyticsView';
 import type { AnswerRecord } from './AnswerRecord';
 import type { ReportId } from './ReportId';
+import type { ScreenRoute } from './ScreenRoute';
 import type { SourceAnalyticsFilters } from './SourceAnalyticsFilters';
 import type { SourceReportFilters } from './SourceReportFilters';
 
@@ -67,4 +68,15 @@ export type AnswerSource =
        * The result of this question it came from.
        */
       result_id: string;
+    }
+  | {
+      kind: 'screen';
+      /**
+       * The result of this question it came from.
+       */
+      result_id: string;
+      /**
+       * Which screen.
+       */
+      route: ScreenRoute;
     };

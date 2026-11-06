@@ -46,7 +46,7 @@ export function AfterRestoreCard() {
     );
   };
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 flex justify-center p-4 print:hidden">
+    <div className="fixed inset-x-0 bottom-statusbar z-10 flex justify-center px-4 pb-4 pe-corner normal:pe-4 print:hidden">
       <div className="w-full max-w-form shadow-overlay">
         <Card title={<Localized id="restore-after-title" />}>
           <div className="flex flex-col gap-3">

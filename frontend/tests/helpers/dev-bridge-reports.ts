@@ -52,6 +52,7 @@ import {
   R36_PARTNER,
 } from './reports-gardens-real';
 import { PRINT_R35_TABLE_EN, PRINT_R35_TABLE_UR, R35_TABLE } from './reports-party-real';
+import { GRADE_R2, GRADE_R35_AKRAM } from './sale-grade-real';
 import {
   PRINT_R33_PARTNER_EN,
   R10_STOCK,
@@ -249,6 +250,9 @@ function page(input: Input): ReportPage {
         ? SLIP_BUYER_WEIGHED
         : blankPaid(party.account_id === 18 ? SLIP_SELLER_RAHIM : SLIP_BUYER_AKRAM);
   }
+  // `?grade` shows the real answers of plan 58: lines with a quality, a grade column in R2 and R35.
+  if (devFlag('grade') && id === 'R2') base = GRADE_R2;
+  if (devFlag('grade') && id === 'R35' && party?.account_id !== undefined) base = GRADE_R35_AKRAM;
   // The real fixtures written before plan 42 have no `tables`; the backend now always sends the field
   // (empty for every report but the day total sheet). Until the backend writes them again, say so here.
   base = { ...base, tables: (base as Partial<ReportPage>).tables ?? [] };

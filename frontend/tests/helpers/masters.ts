@@ -141,8 +141,14 @@ export function fakeMasters(
     return Promise.resolve(changed);
   });
   // The account scopes (seller, buyer, any account) belong to plan 08; a master list has no rows there.
+  // The collectors are the active staff whose job is `collector` (plan 55 Section 11.1): their own list,
+  // not a filter the screen puts on the staff, and read on every call, as the backend does.
   const rowsOf = (scope: string): MasterRecord[] =>
-    KINDS.find((kind) => kind === scope) === undefined ? [] : store.rows[scope as MasterKind];
+    scope === 'collector'
+      ? store.rows.staff.filter((row) => row.is_active && row.text['job'] === 'collector')
+      : KINDS.find((kind) => kind === scope) === undefined
+        ? []
+        : store.rows[scope as MasterKind];
   vi.mocked(searchApi.searchMasters).mockImplementation(({ scope, text }) =>
     Promise.resolve(
       rowsOf(scope)
@@ -163,3 +169,13 @@ export function fakeMasters(
   vi.mocked(searchApi.searchTouch).mockResolvedValue(null);
   return store;
 }
+
+/**
+ * The staff of a shop for a collector box (plan 55 Section 11.1): a collector, a munshi who is not one,
+ * and a collector who has left (inactive). Only the first is ever offered by the collector scope.
+ */
+export const STAFF_ROSTER: MasterRecord[] = [
+  record('staff', 81, '0001', 'اسلم', 'Aslam', { text: { job: 'collector' } }),
+  record('staff', 82, '0002', 'رفیق', 'Rafiq', { text: { job: 'munshi' } }),
+  record('staff', 83, '0003', 'زاہد', 'Zahid', { text: { job: 'collector' }, is_active: false }),
+];

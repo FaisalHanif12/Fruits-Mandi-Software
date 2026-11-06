@@ -470,17 +470,19 @@ describe('round 8: stock, vouchers, registers, trip profit or loss and the day s
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
   it('the catalogue lists the six new reports with the boxes the backend says', () => {
+    // The item group (fruit or vegetables) came with plan 55: R2, R3, R4, R7, R10 and R27 list it.
     expect(entryOf('R10')).toMatchObject({
       group: 'sales',
-      filters: ['date_range', 'seller', 'item'],
+      filters: ['date_range', 'seller', 'item', 'item_group'],
     });
     expect(entryOf('R15')).toMatchObject({
       group: 'accounts',
       filters: ['date_range', 'party', 'voucher_type'],
     });
+    // The collector box (a staff member) came with plan 55 Section 11.1: R22, R23 and R35 take one.
     expect(entryOf('R23')).toMatchObject({
       group: 'collections',
-      filters: ['date_range', 'party'],
+      filters: ['date_range', 'party', 'collector'],
     });
     expect(entryOf('R25')).toMatchObject({
       group: 'collections',
@@ -640,7 +642,7 @@ describe('round 11: the party day sheet (R35)', () => {
     expect(entry).toMatchObject({
       group: 'business',
       title_id: 'report-r35-title',
-      filters: ['as_of', 'party'],
+      filters: ['as_of', 'party', 'collector'],
       party_required: false,
     });
   });

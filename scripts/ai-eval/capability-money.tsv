@@ -1,0 +1,951 @@
+subject	qtype	period	status	owner	note	group	lang	thing
+receipts	F	today	A			MX-receipts-F-today	roman	wasooli
+receipts	F	yesterday	A			MX-receipts-F-yesterday	urdu	wasooli
+receipts	F	d2026_11_03	A			MX-receipts-F-d2026_11_03	en	wasooli
+receipts	F	d2026_10_14	A			MX-receipts-F-d2026_10_14	roman	wasooli
+receipts	F	week	A			MX-receipts-F-week	urdu	wasooli
+receipts	F	last_week	A			MX-receipts-F-last_week	roman	wasooli
+receipts	F	month	A			MX-receipts-F-month	urdu	wasooli
+receipts	F	last_month	A			MX-receipts-F-last_month	en	wasooli
+receipts	F	m2026_09	A			MX-receipts-F-m2026_09	roman	wasooli
+receipts	F	m2026_08	A			MX-receipts-F-m2026_08	urdu	wasooli
+receipts	F	year	A			MX-receipts-F-year	roman	wasooli
+receipts	F	last_year	A			MX-receipts-F-last_year	urdu	wasooli
+receipts	F	r2026_10_01_2026_10_15	A			MX-receipts-F-r2026_10_01_2026_10_15	en	wasooli
+receipts	F	up_to_now	A			MX-receipts-F-up_to_now	roman	wasooli
+receipts	L	today	A			MX-receipts-L-today	roman	wasooli
+receipts	L	yesterday	A			MX-receipts-L-yesterday	urdu	wasooli
+receipts	L	d2026_11_03	A			MX-receipts-L-d2026_11_03	en	wasooli
+receipts	L	d2026_10_14	A			MX-receipts-L-d2026_10_14	roman	wasooli
+receipts	L	week	A			MX-receipts-L-week	urdu	wasooli
+receipts	L	last_week	A			MX-receipts-L-last_week	roman	wasooli
+receipts	L	month	A			MX-receipts-L-month	urdu	wasooli
+receipts	L	last_month	A			MX-receipts-L-last_month	en	wasooli
+receipts	L	m2026_09	A			MX-receipts-L-m2026_09	roman	wasooli
+receipts	L	m2026_08	A			MX-receipts-L-m2026_08	urdu	wasooli
+receipts	L	year	A			MX-receipts-L-year	roman	wasooli
+receipts	L	last_year	A			MX-receipts-L-last_year	urdu	wasooli
+receipts	L	r2026_10_01_2026_10_15	A			MX-receipts-L-r2026_10_01_2026_10_15	en	wasooli
+receipts	L	up_to_now	A			MX-receipts-L-up_to_now	roman	wasooli
+receipts	C	today	A			MX-receipts-C-today	roman	wasooli
+receipts	C	yesterday	A			MX-receipts-C-yesterday	urdu	wasooli
+receipts	C	d2026_10_14	A			MX-receipts-C-d2026_10_14	en	wasooli
+receipts	C	week	A			MX-receipts-C-week	roman	wasooli
+receipts	C	last_week	A			MX-receipts-C-last_week	urdu	wasooli
+receipts	C	month	A			MX-receipts-C-month	roman	wasooli
+receipts	C	last_month	A			MX-receipts-C-last_month	urdu	wasooli
+receipts	C	m2026_09	A			MX-receipts-C-m2026_09	en	wasooli
+receipts	C	year	A			MX-receipts-C-year	roman	wasooli
+receipts	C	last_year	A			MX-receipts-C-last_year	urdu	wasooli
+receipts	C	r2026_10_01_2026_10_15	A			MX-receipts-C-r2026_10_01_2026_10_15	roman	wasooli
+receipts	T	today	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	yesterday	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	week	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	last_week	A			MX-receipts-T-last_week	roman	wasooli
+receipts	T	month	X		nothing in the books for this period (no row, so no fact)			
+receipts	T	last_month	A			MX-receipts-T-last_month	urdu	wasooli
+receipts	T	m2026_09	A			MX-receipts-T-m2026_09	en	wasooli
+receipts	T	m2026_08	A			MX-receipts-T-m2026_08	roman	wasooli
+receipts	T	year	A			MX-receipts-T-year	urdu	wasooli
+receipts	T	last_year	A			MX-receipts-T-last_year	roman	wasooli
+receipts	T	r2026_10_01_2026_10_15	A			MX-receipts-T-r2026_10_01_2026_10_15	urdu	wasooli
+receipts	T	up_to_now	A			MX-receipts-T-up_to_now	en	wasooli
+payments	F	today	A			MX-payments-F-today	urdu	adaigi
+payments	F	yesterday	A			MX-payments-F-yesterday	en	adaigi
+payments	F	d2026_11_03	A			MX-payments-F-d2026_11_03	roman	adaigi
+payments	F	d2026_10_14	A			MX-payments-F-d2026_10_14	urdu	adaigi
+payments	F	week	A			MX-payments-F-week	roman	adaigi
+payments	F	last_week	A			MX-payments-F-last_week	urdu	adaigi
+payments	F	month	A			MX-payments-F-month	en	adaigi
+payments	F	last_month	A			MX-payments-F-last_month	roman	adaigi
+payments	F	m2026_09	A			MX-payments-F-m2026_09	urdu	adaigi
+payments	F	m2026_08	A			MX-payments-F-m2026_08	roman	adaigi
+payments	F	year	A			MX-payments-F-year	urdu	adaigi
+payments	F	last_year	A			MX-payments-F-last_year	en	adaigi
+payments	F	r2026_10_01_2026_10_15	A			MX-payments-F-r2026_10_01_2026_10_15	roman	adaigi
+payments	F	up_to_now	A			MX-payments-F-up_to_now	urdu	adaigi
+payments	L	today	A			MX-payments-L-today	urdu	adaigi
+payments	L	yesterday	A			MX-payments-L-yesterday	en	adaigi
+payments	L	d2026_11_03	A			MX-payments-L-d2026_11_03	roman	adaigi
+payments	L	d2026_10_14	A			MX-payments-L-d2026_10_14	urdu	adaigi
+payments	L	week	A			MX-payments-L-week	roman	adaigi
+payments	L	last_week	A			MX-payments-L-last_week	urdu	adaigi
+payments	L	month	A			MX-payments-L-month	en	adaigi
+payments	L	last_month	A			MX-payments-L-last_month	roman	adaigi
+payments	L	m2026_09	A			MX-payments-L-m2026_09	urdu	adaigi
+payments	L	m2026_08	A			MX-payments-L-m2026_08	roman	adaigi
+payments	L	year	A			MX-payments-L-year	urdu	adaigi
+payments	L	last_year	A			MX-payments-L-last_year	en	adaigi
+payments	L	r2026_10_01_2026_10_15	A			MX-payments-L-r2026_10_01_2026_10_15	roman	adaigi
+payments	L	up_to_now	A			MX-payments-L-up_to_now	urdu	adaigi
+payments	C	today	A			MX-payments-C-today	urdu	adaigi
+payments	C	yesterday	A			MX-payments-C-yesterday	en	adaigi
+payments	C	d2026_10_14	A			MX-payments-C-d2026_10_14	roman	adaigi
+payments	C	week	A			MX-payments-C-week	urdu	adaigi
+payments	C	last_week	A			MX-payments-C-last_week	roman	adaigi
+payments	C	month	A			MX-payments-C-month	urdu	adaigi
+payments	C	last_month	A			MX-payments-C-last_month	en	adaigi
+payments	C	m2026_09	A			MX-payments-C-m2026_09	roman	adaigi
+payments	C	year	A			MX-payments-C-year	urdu	adaigi
+payments	C	last_year	A			MX-payments-C-last_year	roman	adaigi
+payments	C	r2026_10_01_2026_10_15	A			MX-payments-C-r2026_10_01_2026_10_15	urdu	adaigi
+payments	T	today	X		nothing in the books for this period (no row, so no fact)			
+payments	T	yesterday	X		nothing in the books for this period (no row, so no fact)			
+payments	T	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+payments	T	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+payments	T	week	A			MX-payments-T-week	urdu	adaigi
+payments	T	last_week	A			MX-payments-T-last_week	en	adaigi
+payments	T	month	A			MX-payments-T-month	roman	adaigi
+payments	T	last_month	A			MX-payments-T-last_month	urdu	adaigi
+payments	T	m2026_09	A			MX-payments-T-m2026_09	roman	adaigi
+payments	T	m2026_08	A			MX-payments-T-m2026_08	urdu	adaigi
+payments	T	year	A			MX-payments-T-year	en	adaigi
+payments	T	last_year	A			MX-payments-T-last_year	roman	adaigi
+payments	T	r2026_10_01_2026_10_15	A			MX-payments-T-r2026_10_01_2026_10_15	urdu	adaigi
+payments	T	up_to_now	A			MX-payments-T-up_to_now	roman	adaigi
+cash_in	F	today	A			MX-cash_in-F-today	en	roakar ki aamad
+cash_in	F	yesterday	A			MX-cash_in-F-yesterday	roman	roakar ki aamad
+cash_in	F	d2026_11_03	A			MX-cash_in-F-d2026_11_03	urdu	roakar ki aamad
+cash_in	F	d2026_10_14	A			MX-cash_in-F-d2026_10_14	roman	roakar ki aamad
+cash_in	F	week	A			MX-cash_in-F-week	urdu	roakar ki aamad
+cash_in	F	last_week	A			MX-cash_in-F-last_week	en	roakar ki aamad
+cash_in	F	month	A			MX-cash_in-F-month	roman	roakar ki aamad
+cash_in	F	last_month	A			MX-cash_in-F-last_month	urdu	roakar ki aamad
+cash_in	F	m2026_09	A			MX-cash_in-F-m2026_09	roman	roakar ki aamad
+cash_in	F	m2026_08	A			MX-cash_in-F-m2026_08	urdu	roakar ki aamad
+cash_in	F	year	A			MX-cash_in-F-year	en	roakar ki aamad
+cash_in	F	last_year	A			MX-cash_in-F-last_year	roman	roakar ki aamad
+cash_in	F	r2026_10_01_2026_10_15	A			MX-cash_in-F-r2026_10_01_2026_10_15	urdu	roakar ki aamad
+cash_in	F	up_to_now	A			MX-cash_in-F-up_to_now	roman	roakar ki aamad
+cash_in	L	*	X		this question has no meaning for this subject			
+cash_in	C	today	A			MX-cash_in-C-today	en	roakar ki aamad
+cash_in	C	yesterday	A			MX-cash_in-C-yesterday	roman	roakar ki aamad
+cash_in	C	d2026_10_14	A			MX-cash_in-C-d2026_10_14	urdu	roakar ki aamad
+cash_in	C	week	A			MX-cash_in-C-week	roman	roakar ki aamad
+cash_in	C	last_week	A			MX-cash_in-C-last_week	urdu	roakar ki aamad
+cash_in	C	month	A			MX-cash_in-C-month	en	roakar ki aamad
+cash_in	C	last_month	A			MX-cash_in-C-last_month	roman	roakar ki aamad
+cash_in	C	m2026_09	A			MX-cash_in-C-m2026_09	urdu	roakar ki aamad
+cash_in	C	year	A			MX-cash_in-C-year	roman	roakar ki aamad
+cash_in	C	last_year	A			MX-cash_in-C-last_year	urdu	roakar ki aamad
+cash_in	C	r2026_10_01_2026_10_15	A			MX-cash_in-C-r2026_10_01_2026_10_15	en	roakar ki aamad
+cash_in	T	*	X		this question has no meaning for this subject			
+cash_out	F	today	A			MX-cash_out-F-today	roman	roakar ka kharcha
+cash_out	F	yesterday	A			MX-cash_out-F-yesterday	urdu	roakar ka kharcha
+cash_out	F	d2026_11_03	A			MX-cash_out-F-d2026_11_03	roman	roakar ka kharcha
+cash_out	F	d2026_10_14	A			MX-cash_out-F-d2026_10_14	urdu	roakar ka kharcha
+cash_out	F	week	A			MX-cash_out-F-week	en	roakar ka kharcha
+cash_out	F	last_week	A			MX-cash_out-F-last_week	roman	roakar ka kharcha
+cash_out	F	month	A			MX-cash_out-F-month	urdu	roakar ka kharcha
+cash_out	F	last_month	A			MX-cash_out-F-last_month	roman	roakar ka kharcha
+cash_out	F	m2026_09	A			MX-cash_out-F-m2026_09	urdu	roakar ka kharcha
+cash_out	F	m2026_08	A			MX-cash_out-F-m2026_08	en	roakar ka kharcha
+cash_out	F	year	A			MX-cash_out-F-year	roman	roakar ka kharcha
+cash_out	F	last_year	A			MX-cash_out-F-last_year	urdu	roakar ka kharcha
+cash_out	F	r2026_10_01_2026_10_15	A			MX-cash_out-F-r2026_10_01_2026_10_15	roman	roakar ka kharcha
+cash_out	F	up_to_now	A			MX-cash_out-F-up_to_now	urdu	roakar ka kharcha
+cash_out	L	*	X		this question has no meaning for this subject			
+cash_out	C	today	A			MX-cash_out-C-today	roman	roakar ka kharcha
+cash_out	C	yesterday	A			MX-cash_out-C-yesterday	urdu	roakar ka kharcha
+cash_out	C	d2026_10_14	A			MX-cash_out-C-d2026_10_14	roman	roakar ka kharcha
+cash_out	C	week	A			MX-cash_out-C-week	urdu	roakar ka kharcha
+cash_out	C	last_week	A			MX-cash_out-C-last_week	en	roakar ka kharcha
+cash_out	C	month	A			MX-cash_out-C-month	roman	roakar ka kharcha
+cash_out	C	last_month	A			MX-cash_out-C-last_month	urdu	roakar ka kharcha
+cash_out	C	m2026_09	A			MX-cash_out-C-m2026_09	roman	roakar ka kharcha
+cash_out	C	year	A			MX-cash_out-C-year	urdu	roakar ka kharcha
+cash_out	C	last_year	A			MX-cash_out-C-last_year	en	roakar ka kharcha
+cash_out	C	r2026_10_01_2026_10_15	A			MX-cash_out-C-r2026_10_01_2026_10_15	roman	roakar ka kharcha
+cash_out	T	*	X		this question has no meaning for this subject			
+cash_close	F	today	A			MX-cash_close-F-today	urdu	roakar
+cash_close	F	yesterday	A			MX-cash_close-F-yesterday	roman	roakar
+cash_close	F	d2026_11_03	A			MX-cash_close-F-d2026_11_03	urdu	roakar
+cash_close	F	d2026_10_14	A			MX-cash_close-F-d2026_10_14	en	roakar
+cash_close	F	week	A			MX-cash_close-F-week	roman	roakar
+cash_close	F	last_week	A			MX-cash_close-F-last_week	urdu	roakar
+cash_close	F	month	A			MX-cash_close-F-month	roman	roakar
+cash_close	F	last_month	A			MX-cash_close-F-last_month	urdu	roakar
+cash_close	F	m2026_09	A			MX-cash_close-F-m2026_09	en	roakar
+cash_close	F	m2026_08	A			MX-cash_close-F-m2026_08	roman	roakar
+cash_close	F	year	A			MX-cash_close-F-year	urdu	roakar
+cash_close	F	last_year	A			MX-cash_close-F-last_year	roman	roakar
+cash_close	F	r2026_10_01_2026_10_15	A			MX-cash_close-F-r2026_10_01_2026_10_15	urdu	roakar
+cash_close	F	up_to_now	A			MX-cash_close-F-up_to_now	en	roakar
+cash_close	L	*	X		this question has no meaning for this subject			
+cash_close	C	*	X		this question has no meaning for this subject			
+cash_close	T	*	X		this question has no meaning for this subject			
+expense	F	today	A			MX-expense-F-today	roman	dukan ka kharcha
+expense	F	yesterday	A			MX-expense-F-yesterday	urdu	dukan ka kharcha
+expense	F	d2026_11_03	A			MX-expense-F-d2026_11_03	en	dukan ka kharcha
+expense	F	d2026_10_14	A			MX-expense-F-d2026_10_14	roman	dukan ka kharcha
+expense	F	week	A			MX-expense-F-week	urdu	dukan ka kharcha
+expense	F	last_week	A			MX-expense-F-last_week	roman	dukan ka kharcha
+expense	F	month	A			MX-expense-F-month	urdu	dukan ka kharcha
+expense	F	last_month	A			MX-expense-F-last_month	en	dukan ka kharcha
+expense	F	m2026_09	A			MX-expense-F-m2026_09	roman	dukan ka kharcha
+expense	F	m2026_08	A			MX-expense-F-m2026_08	urdu	dukan ka kharcha
+expense	F	year	A			MX-expense-F-year	roman	dukan ka kharcha
+expense	F	last_year	A			MX-expense-F-last_year	urdu	dukan ka kharcha
+expense	F	r2026_10_01_2026_10_15	A			MX-expense-F-r2026_10_01_2026_10_15	en	dukan ka kharcha
+expense	F	up_to_now	A			MX-expense-F-up_to_now	roman	dukan ka kharcha
+expense	L	*	N		R29 counts the heads and the partners together in one count: not one figure			
+expense	C	today	A			MX-expense-C-today	roman	dukan ka kharcha
+expense	C	yesterday	A			MX-expense-C-yesterday	urdu	dukan ka kharcha
+expense	C	d2026_10_14	A			MX-expense-C-d2026_10_14	en	dukan ka kharcha
+expense	C	week	A			MX-expense-C-week	roman	dukan ka kharcha
+expense	C	last_week	A			MX-expense-C-last_week	urdu	dukan ka kharcha
+expense	C	month	A			MX-expense-C-month	roman	dukan ka kharcha
+expense	C	last_month	A			MX-expense-C-last_month	urdu	dukan ka kharcha
+expense	C	m2026_09	A			MX-expense-C-m2026_09	en	dukan ka kharcha
+expense	C	year	A			MX-expense-C-year	roman	dukan ka kharcha
+expense	C	last_year	A			MX-expense-C-last_year	urdu	dukan ka kharcha
+expense	C	r2026_10_01_2026_10_15	A			MX-expense-C-r2026_10_01_2026_10_15	roman	dukan ka kharcha
+expense	T	today	X		nothing in the books for this period (no row, so no fact)			
+expense	T	yesterday	X		nothing in the books for this period (no row, so no fact)			
+expense	T	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+expense	T	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+expense	T	week	A			MX-expense-T-week	roman	dukan ka kharcha
+expense	T	last_week	A			MX-expense-T-last_week	urdu	dukan ka kharcha
+expense	T	month	A			MX-expense-T-month	en	dukan ka kharcha
+expense	T	last_month	A			MX-expense-T-last_month	roman	dukan ka kharcha
+expense	T	m2026_09	A			MX-expense-T-m2026_09	urdu	dukan ka kharcha
+expense	T	m2026_08	A			MX-expense-T-m2026_08	roman	dukan ka kharcha
+expense	T	year	A			MX-expense-T-year	urdu	dukan ka kharcha
+expense	T	last_year	A			MX-expense-T-last_year	en	dukan ka kharcha
+expense	T	r2026_10_01_2026_10_15	A			MX-expense-T-r2026_10_01_2026_10_15	roman	dukan ka kharcha
+expense	T	up_to_now	A			MX-expense-T-up_to_now	urdu	dukan ka kharcha
+expense_head	F	today	X		nothing in the books for this period (no row, so no fact)			
+expense_head	F	yesterday	X		nothing in the books for this period (no row, so no fact)			
+expense_head	F	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+expense_head	F	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+expense_head	F	week	A			MX-expense_head-F-week	urdu	chai
+expense_head	F	last_week	A			MX-expense_head-F-last_week	en	tankhwah
+expense_head	F	month	A			MX-expense_head-F-month	roman	dukan ka kiraya
+expense_head	F	last_month	A			MX-expense_head-F-last_month	urdu	dukan ka kiraya
+expense_head	F	m2026_09	A			MX-expense_head-F-m2026_09	roman	chai
+expense_head	F	m2026_08	A			MX-expense_head-F-m2026_08	urdu	tankhwah
+expense_head	F	year	A			MX-expense_head-F-year	en	bijli
+expense_head	F	last_year	A			MX-expense_head-F-last_year	roman	dukan ka kiraya
+expense_head	F	r2026_10_01_2026_10_15	A			MX-expense_head-F-r2026_10_01_2026_10_15	urdu	chai
+expense_head	F	up_to_now	A			MX-expense_head-F-up_to_now	roman	tankhwah
+expense_head	L	*	X		a head is one row			
+expense_head	C	today	X		nothing in the books for this period (no row, so no fact)			
+expense_head	C	yesterday	X		nothing in the books for this period (no row, so no fact)			
+expense_head	C	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+expense_head	C	week	A			MX-expense_head-C-week	urdu	chai
+expense_head	C	last_week	A			MX-expense_head-C-last_week	en	chai
+expense_head	C	month	A			MX-expense_head-C-month	roman	tankhwah
+expense_head	C	last_month	A			MX-expense_head-C-last_month	urdu	bijli
+expense_head	C	m2026_09	A			MX-expense_head-C-m2026_09	roman	dukan ka kiraya
+expense_head	C	year	A			MX-expense_head-C-year	urdu	chai
+expense_head	C	last_year	X		nothing in the books for this period (no row, so no fact)			
+expense_head	C	r2026_10_01_2026_10_15	A			MX-expense_head-C-r2026_10_01_2026_10_15	en	chai
+expense_head	T	*	X		a head is one row			
+personal_taken	F	today	A			MX-personal_taken-F-today	en	zaati kharcha
+personal_taken	F	yesterday	A			MX-personal_taken-F-yesterday	roman	zaati kharcha
+personal_taken	F	d2026_11_03	A			MX-personal_taken-F-d2026_11_03	urdu	zaati kharcha
+personal_taken	F	d2026_10_14	A			MX-personal_taken-F-d2026_10_14	roman	zaati kharcha
+personal_taken	F	week	A			MX-personal_taken-F-week	urdu	zaati kharcha
+personal_taken	F	last_week	A			MX-personal_taken-F-last_week	en	zaati kharcha
+personal_taken	F	month	A			MX-personal_taken-F-month	roman	zaati kharcha
+personal_taken	F	last_month	A			MX-personal_taken-F-last_month	urdu	zaati kharcha
+personal_taken	F	m2026_09	A			MX-personal_taken-F-m2026_09	roman	zaati kharcha
+personal_taken	F	m2026_08	A			MX-personal_taken-F-m2026_08	urdu	zaati kharcha
+personal_taken	F	year	A			MX-personal_taken-F-year	en	zaati kharcha
+personal_taken	F	last_year	A			MX-personal_taken-F-last_year	roman	zaati kharcha
+personal_taken	F	r2026_10_01_2026_10_15	A			MX-personal_taken-F-r2026_10_01_2026_10_15	urdu	zaati kharcha
+personal_taken	F	up_to_now	A			MX-personal_taken-F-up_to_now	roman	zaati kharcha
+personal_taken	L	*	X		this question has no meaning for this subject			
+personal_taken	C	today	A			MX-personal_taken-C-today	en	zaati kharcha
+personal_taken	C	yesterday	A			MX-personal_taken-C-yesterday	roman	zaati kharcha
+personal_taken	C	d2026_10_14	A			MX-personal_taken-C-d2026_10_14	urdu	zaati kharcha
+personal_taken	C	week	A			MX-personal_taken-C-week	roman	zaati kharcha
+personal_taken	C	last_week	A			MX-personal_taken-C-last_week	urdu	zaati kharcha
+personal_taken	C	month	A			MX-personal_taken-C-month	en	zaati kharcha
+personal_taken	C	last_month	A			MX-personal_taken-C-last_month	roman	zaati kharcha
+personal_taken	C	m2026_09	A			MX-personal_taken-C-m2026_09	urdu	zaati kharcha
+personal_taken	C	year	A			MX-personal_taken-C-year	roman	zaati kharcha
+personal_taken	C	last_year	A			MX-personal_taken-C-last_year	urdu	zaati kharcha
+personal_taken	C	r2026_10_01_2026_10_15	A			MX-personal_taken-C-r2026_10_01_2026_10_15	en	zaati kharcha
+personal_taken	T	*	X		this question has no meaning for this subject			
+personal_returned	F	today	A			MX-personal_returned-F-today	roman	wapsi
+personal_returned	F	yesterday	A			MX-personal_returned-F-yesterday	urdu	wapsi
+personal_returned	F	d2026_11_03	A			MX-personal_returned-F-d2026_11_03	roman	wapsi
+personal_returned	F	d2026_10_14	A			MX-personal_returned-F-d2026_10_14	urdu	wapsi
+personal_returned	F	week	A			MX-personal_returned-F-week	en	wapsi
+personal_returned	F	last_week	A			MX-personal_returned-F-last_week	roman	wapsi
+personal_returned	F	month	A			MX-personal_returned-F-month	urdu	wapsi
+personal_returned	F	last_month	A			MX-personal_returned-F-last_month	roman	wapsi
+personal_returned	F	m2026_09	A			MX-personal_returned-F-m2026_09	urdu	wapsi
+personal_returned	F	m2026_08	A			MX-personal_returned-F-m2026_08	en	wapsi
+personal_returned	F	year	A			MX-personal_returned-F-year	roman	wapsi
+personal_returned	F	last_year	A			MX-personal_returned-F-last_year	urdu	wapsi
+personal_returned	F	r2026_10_01_2026_10_15	A			MX-personal_returned-F-r2026_10_01_2026_10_15	roman	wapsi
+personal_returned	F	up_to_now	A			MX-personal_returned-F-up_to_now	urdu	wapsi
+personal_returned	L	*	X		this question has no meaning for this subject			
+personal_returned	C	*	X		this question has no meaning for this subject			
+personal_returned	T	*	X		this question has no meaning for this subject			
+advances	F	today	A			MX-advances-F-today	urdu	peshgi
+advances	F	yesterday	A			MX-advances-F-yesterday	roman	peshgi
+advances	F	d2026_11_03	A			MX-advances-F-d2026_11_03	urdu	peshgi
+advances	F	d2026_10_14	A			MX-advances-F-d2026_10_14	en	peshgi
+advances	F	week	X		the as-of day of this period is today: the same cell as "today"			
+advances	F	last_week	A			MX-advances-F-last_week	roman	peshgi
+advances	F	month	X		the as-of day of this period is today: the same cell as "today"			
+advances	F	last_month	A			MX-advances-F-last_month	urdu	peshgi
+advances	F	m2026_09	A			MX-advances-F-m2026_09	roman	peshgi
+advances	F	m2026_08	A			MX-advances-F-m2026_08	urdu	peshgi
+advances	F	year	X		the as-of day of this period is today: the same cell as "today"			
+advances	F	last_year	A			MX-advances-F-last_year	en	peshgi
+advances	F	r2026_10_01_2026_10_15	A			MX-advances-F-r2026_10_01_2026_10_15	roman	peshgi
+advances	F	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+advances	L	today	A			MX-advances-L-today	urdu	peshgi
+advances	L	yesterday	A			MX-advances-L-yesterday	roman	peshgi
+advances	L	d2026_11_03	A			MX-advances-L-d2026_11_03	urdu	peshgi
+advances	L	d2026_10_14	A			MX-advances-L-d2026_10_14	en	peshgi
+advances	L	week	X		the as-of day of this period is today: the same cell as "today"			
+advances	L	last_week	A			MX-advances-L-last_week	roman	peshgi
+advances	L	month	X		the as-of day of this period is today: the same cell as "today"			
+advances	L	last_month	A			MX-advances-L-last_month	urdu	peshgi
+advances	L	m2026_09	A			MX-advances-L-m2026_09	roman	peshgi
+advances	L	m2026_08	A			MX-advances-L-m2026_08	urdu	peshgi
+advances	L	year	X		the as-of day of this period is today: the same cell as "today"			
+advances	L	last_year	A			MX-advances-L-last_year	en	peshgi
+advances	L	r2026_10_01_2026_10_15	A			MX-advances-L-r2026_10_01_2026_10_15	roman	peshgi
+advances	L	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+advances	C	*	N		a balance list has no second period; two as-of days are two reads			
+advances	T	today	A			MX-advances-T-today	urdu	peshgi
+advances	T	yesterday	A			MX-advances-T-yesterday	roman	peshgi
+advances	T	d2026_11_03	A			MX-advances-T-d2026_11_03	urdu	peshgi
+advances	T	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+advances	T	week	X		the as-of day of this period is today: the same cell as "today"			
+advances	T	last_week	X		nothing in the books for this period (no row, so no fact)			
+advances	T	month	X		the as-of day of this period is today: the same cell as "today"			
+advances	T	last_month	X		nothing in the books for this period (no row, so no fact)			
+advances	T	m2026_09	X		nothing in the books for this period (no row, so no fact)			
+advances	T	m2026_08	X		nothing in the books for this period (no row, so no fact)			
+advances	T	year	X		the as-of day of this period is today: the same cell as "today"			
+advances	T	last_year	X		nothing in the books for this period (no row, so no fact)			
+advances	T	r2026_10_01_2026_10_15	X		nothing in the books for this period (no row, so no fact)			
+advances	T	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	F	today	A			MX-money_lent-F-today	roman	udhar raqam
+money_lent	F	yesterday	A			MX-money_lent-F-yesterday	urdu	udhar raqam
+money_lent	F	d2026_11_03	A			MX-money_lent-F-d2026_11_03	en	udhar raqam
+money_lent	F	d2026_10_14	A			MX-money_lent-F-d2026_10_14	roman	udhar raqam
+money_lent	F	week	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	F	last_week	A			MX-money_lent-F-last_week	urdu	udhar raqam
+money_lent	F	month	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	F	last_month	A			MX-money_lent-F-last_month	roman	udhar raqam
+money_lent	F	m2026_09	A			MX-money_lent-F-m2026_09	urdu	udhar raqam
+money_lent	F	m2026_08	A			MX-money_lent-F-m2026_08	en	udhar raqam
+money_lent	F	year	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	F	last_year	A			MX-money_lent-F-last_year	roman	udhar raqam
+money_lent	F	r2026_10_01_2026_10_15	A			MX-money_lent-F-r2026_10_01_2026_10_15	urdu	udhar raqam
+money_lent	F	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	L	today	A			MX-money_lent-L-today	roman	udhar raqam
+money_lent	L	yesterday	A			MX-money_lent-L-yesterday	urdu	udhar raqam
+money_lent	L	d2026_11_03	A			MX-money_lent-L-d2026_11_03	en	udhar raqam
+money_lent	L	d2026_10_14	A			MX-money_lent-L-d2026_10_14	roman	udhar raqam
+money_lent	L	week	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	L	last_week	A			MX-money_lent-L-last_week	urdu	udhar raqam
+money_lent	L	month	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	L	last_month	A			MX-money_lent-L-last_month	roman	udhar raqam
+money_lent	L	m2026_09	A			MX-money_lent-L-m2026_09	urdu	udhar raqam
+money_lent	L	m2026_08	A			MX-money_lent-L-m2026_08	en	udhar raqam
+money_lent	L	year	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	L	last_year	A			MX-money_lent-L-last_year	roman	udhar raqam
+money_lent	L	r2026_10_01_2026_10_15	A			MX-money_lent-L-r2026_10_01_2026_10_15	urdu	udhar raqam
+money_lent	L	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	C	*	N		a balance list has no second period; two as-of days are two reads			
+money_lent	T	today	A			MX-money_lent-T-today	roman	udhar raqam
+money_lent	T	yesterday	A			MX-money_lent-T-yesterday	urdu	udhar raqam
+money_lent	T	d2026_11_03	A			MX-money_lent-T-d2026_11_03	en	udhar raqam
+money_lent	T	d2026_10_14	A			MX-money_lent-T-d2026_10_14	roman	udhar raqam
+money_lent	T	week	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	T	last_week	A			MX-money_lent-T-last_week	urdu	udhar raqam
+money_lent	T	month	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	T	last_month	A			MX-money_lent-T-last_month	roman	udhar raqam
+money_lent	T	m2026_09	A			MX-money_lent-T-m2026_09	urdu	udhar raqam
+money_lent	T	m2026_08	A			MX-money_lent-T-m2026_08	en	udhar raqam
+money_lent	T	year	X		the as-of day of this period is today: the same cell as "today"			
+money_lent	T	last_year	X		nothing in the books for this period (no row, so no fact)			
+money_lent	T	r2026_10_01_2026_10_15	A			MX-money_lent-T-r2026_10_01_2026_10_15	roman	udhar raqam
+money_lent	T	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+dues	F	today	A			MX-dues-F-today	urdu	gahakon ka bakaya
+dues	F	yesterday	A			MX-dues-F-yesterday	en	gahakon ka bakaya
+dues	F	d2026_11_03	A			MX-dues-F-d2026_11_03	roman	gahakon ka bakaya
+dues	F	d2026_10_14	A			MX-dues-F-d2026_10_14	urdu	gahakon ka bakaya
+dues	F	week	X		the as-of day of this period is today: the same cell as "today"			
+dues	F	last_week	A			MX-dues-F-last_week	roman	gahakon ka bakaya
+dues	F	month	X		the as-of day of this period is today: the same cell as "today"			
+dues	F	last_month	A			MX-dues-F-last_month	urdu	gahakon ka bakaya
+dues	F	m2026_09	A			MX-dues-F-m2026_09	en	gahakon ka bakaya
+dues	F	m2026_08	A			MX-dues-F-m2026_08	roman	gahakon ka bakaya
+dues	F	year	X		the as-of day of this period is today: the same cell as "today"			
+dues	F	last_year	A			MX-dues-F-last_year	urdu	gahakon ka bakaya
+dues	F	r2026_10_01_2026_10_15	A			MX-dues-F-r2026_10_01_2026_10_15	roman	gahakon ka bakaya
+dues	F	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+dues	L	today	A			MX-dues-L-today	urdu	gahakon ka bakaya
+dues	L	yesterday	A			MX-dues-L-yesterday	en	gahakon ka bakaya
+dues	L	d2026_11_03	A			MX-dues-L-d2026_11_03	roman	gahakon ka bakaya
+dues	L	d2026_10_14	A			MX-dues-L-d2026_10_14	urdu	gahakon ka bakaya
+dues	L	week	X		the as-of day of this period is today: the same cell as "today"			
+dues	L	last_week	A			MX-dues-L-last_week	roman	gahakon ka bakaya
+dues	L	month	X		the as-of day of this period is today: the same cell as "today"			
+dues	L	last_month	A			MX-dues-L-last_month	urdu	gahakon ka bakaya
+dues	L	m2026_09	A			MX-dues-L-m2026_09	en	gahakon ka bakaya
+dues	L	m2026_08	A			MX-dues-L-m2026_08	roman	gahakon ka bakaya
+dues	L	year	X		the as-of day of this period is today: the same cell as "today"			
+dues	L	last_year	A			MX-dues-L-last_year	urdu	gahakon ka bakaya
+dues	L	r2026_10_01_2026_10_15	A			MX-dues-L-r2026_10_01_2026_10_15	roman	gahakon ka bakaya
+dues	L	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+dues	C	*	N		a balance list has no second period; two as-of days are two reads			
+dues	T	today	A			MX-dues-T-today	urdu	gahakon ka bakaya
+dues	T	yesterday	A			MX-dues-T-yesterday	en	gahakon ka bakaya
+dues	T	d2026_11_03	A			MX-dues-T-d2026_11_03	roman	gahakon ka bakaya
+dues	T	d2026_10_14	A			MX-dues-T-d2026_10_14	urdu	gahakon ka bakaya
+dues	T	week	X		the as-of day of this period is today: the same cell as "today"			
+dues	T	last_week	A			MX-dues-T-last_week	roman	gahakon ka bakaya
+dues	T	month	X		the as-of day of this period is today: the same cell as "today"			
+dues	T	last_month	A			MX-dues-T-last_month	urdu	gahakon ka bakaya
+dues	T	m2026_09	A			MX-dues-T-m2026_09	en	gahakon ka bakaya
+dues	T	m2026_08	A			MX-dues-T-m2026_08	roman	gahakon ka bakaya
+dues	T	year	X		the as-of day of this period is today: the same cell as "today"			
+dues	T	last_year	A			MX-dues-T-last_year	urdu	gahakon ka bakaya
+dues	T	r2026_10_01_2026_10_15	A			MX-dues-T-r2026_10_01_2026_10_15	roman	gahakon ka bakaya
+dues	T	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+payables	F	today	A			MX-payables-F-today	en	beparion ki raqam
+payables	F	yesterday	X		nothing in the books for this period (no row, so no fact)			
+payables	F	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+payables	F	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+payables	F	week	X		the as-of day of this period is today: the same cell as "today"			
+payables	F	last_week	X		nothing in the books for this period (no row, so no fact)			
+payables	F	month	X		the as-of day of this period is today: the same cell as "today"			
+payables	F	last_month	X		nothing in the books for this period (no row, so no fact)			
+payables	F	m2026_09	X		nothing in the books for this period (no row, so no fact)			
+payables	F	m2026_08	X		nothing in the books for this period (no row, so no fact)			
+payables	F	year	X		the as-of day of this period is today: the same cell as "today"			
+payables	F	last_year	X		nothing in the books for this period (no row, so no fact)			
+payables	F	r2026_10_01_2026_10_15	X		nothing in the books for this period (no row, so no fact)			
+payables	F	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+payables	L	today	A			MX-payables-L-today	en	beparion ki raqam
+payables	L	yesterday	A			MX-payables-L-yesterday	roman	beparion ki raqam
+payables	L	d2026_11_03	A			MX-payables-L-d2026_11_03	urdu	beparion ki raqam
+payables	L	d2026_10_14	A			MX-payables-L-d2026_10_14	roman	beparion ki raqam
+payables	L	week	X		the as-of day of this period is today: the same cell as "today"			
+payables	L	last_week	A			MX-payables-L-last_week	urdu	beparion ki raqam
+payables	L	month	X		the as-of day of this period is today: the same cell as "today"			
+payables	L	last_month	A			MX-payables-L-last_month	en	beparion ki raqam
+payables	L	m2026_09	A			MX-payables-L-m2026_09	roman	beparion ki raqam
+payables	L	m2026_08	A			MX-payables-L-m2026_08	urdu	beparion ki raqam
+payables	L	year	X		the as-of day of this period is today: the same cell as "today"			
+payables	L	last_year	A			MX-payables-L-last_year	roman	beparion ki raqam
+payables	L	r2026_10_01_2026_10_15	A			MX-payables-L-r2026_10_01_2026_10_15	urdu	beparion ki raqam
+payables	L	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+payables	C	*	N		a balance list has no second period; two as-of days are two reads			
+payables	T	today	A			MX-payables-T-today	en	beparion ki raqam
+payables	T	yesterday	X		nothing in the books for this period (no row, so no fact)			
+payables	T	d2026_11_03	X		nothing in the books for this period (no row, so no fact)			
+payables	T	d2026_10_14	X		nothing in the books for this period (no row, so no fact)			
+payables	T	week	X		the as-of day of this period is today: the same cell as "today"			
+payables	T	last_week	X		nothing in the books for this period (no row, so no fact)			
+payables	T	month	X		the as-of day of this period is today: the same cell as "today"			
+payables	T	last_month	X		nothing in the books for this period (no row, so no fact)			
+payables	T	m2026_09	X		nothing in the books for this period (no row, so no fact)			
+payables	T	m2026_08	X		nothing in the books for this period (no row, so no fact)			
+payables	T	year	X		the as-of day of this period is today: the same cell as "today"			
+payables	T	last_year	X		nothing in the books for this period (no row, so no fact)			
+payables	T	r2026_10_01_2026_10_15	X		nothing in the books for this period (no row, so no fact)			
+payables	T	up_to_now	X		the as-of day of this period is today: the same cell as "today"			
+buyer_paid	F	today	A			MX-buyer_paid-F-today	roman	Faisal
+buyer_paid	F	yesterday	A			MX-buyer_paid-F-yesterday	urdu	Akram Toll Tax
+buyer_paid	F	d2026_11_03	A			MX-buyer_paid-F-d2026_11_03	roman	Faisal
+buyer_paid	F	d2026_10_14	A			MX-buyer_paid-F-d2026_10_14	urdu	Akram Toll Tax
+buyer_paid	F	week	A			MX-buyer_paid-F-week	en	Faisal
+buyer_paid	F	last_week	A			MX-buyer_paid-F-last_week	roman	Akram Toll Tax
+buyer_paid	F	month	A			MX-buyer_paid-F-month	urdu	Faisal
+buyer_paid	F	last_month	A			MX-buyer_paid-F-last_month	roman	Akram Toll Tax
+buyer_paid	F	m2026_09	A			MX-buyer_paid-F-m2026_09	urdu	Faisal
+buyer_paid	F	m2026_08	A			MX-buyer_paid-F-m2026_08	en	Akram Toll Tax
+buyer_paid	F	year	A			MX-buyer_paid-F-year	roman	Faisal
+buyer_paid	F	last_year	A			MX-buyer_paid-F-last_year	urdu	Akram Toll Tax
+buyer_paid	F	r2026_10_01_2026_10_15	A			MX-buyer_paid-F-r2026_10_01_2026_10_15	roman	Faisal
+buyer_paid	F	up_to_now	A			MX-buyer_paid-F-up_to_now	urdu	Akram Toll Tax
+buyer_paid	L	today	A			MX-buyer_paid-L-today	roman	Faisal
+buyer_paid	L	yesterday	A			MX-buyer_paid-L-yesterday	urdu	Akram Toll Tax
+buyer_paid	L	d2026_11_03	A			MX-buyer_paid-L-d2026_11_03	roman	Faisal
+buyer_paid	L	d2026_10_14	A			MX-buyer_paid-L-d2026_10_14	urdu	Akram Toll Tax
+buyer_paid	L	week	A			MX-buyer_paid-L-week	en	Faisal
+buyer_paid	L	last_week	A			MX-buyer_paid-L-last_week	roman	Akram Toll Tax
+buyer_paid	L	month	A			MX-buyer_paid-L-month	urdu	Faisal
+buyer_paid	L	last_month	A			MX-buyer_paid-L-last_month	roman	Akram Toll Tax
+buyer_paid	L	m2026_09	A			MX-buyer_paid-L-m2026_09	urdu	Faisal
+buyer_paid	L	m2026_08	A			MX-buyer_paid-L-m2026_08	en	Akram Toll Tax
+buyer_paid	L	year	A			MX-buyer_paid-L-year	roman	Faisal
+buyer_paid	L	last_year	A			MX-buyer_paid-L-last_year	urdu	Akram Toll Tax
+buyer_paid	L	r2026_10_01_2026_10_15	A			MX-buyer_paid-L-r2026_10_01_2026_10_15	roman	Faisal
+buyer_paid	L	up_to_now	A			MX-buyer_paid-L-up_to_now	urdu	Akram Toll Tax
+buyer_paid	C	today	A			MX-buyer_paid-C-today	roman	Faisal
+buyer_paid	C	yesterday	A			MX-buyer_paid-C-yesterday	urdu	Akram Toll Tax
+buyer_paid	C	d2026_10_14	A			MX-buyer_paid-C-d2026_10_14	roman	Faisal
+buyer_paid	C	week	A			MX-buyer_paid-C-week	urdu	Akram Toll Tax
+buyer_paid	C	last_week	A			MX-buyer_paid-C-last_week	en	Faisal
+buyer_paid	C	month	A			MX-buyer_paid-C-month	roman	Akram Toll Tax
+buyer_paid	C	last_month	A			MX-buyer_paid-C-last_month	urdu	Faisal
+buyer_paid	C	m2026_09	A			MX-buyer_paid-C-m2026_09	roman	Akram Toll Tax
+buyer_paid	C	year	A			MX-buyer_paid-C-year	urdu	Faisal
+buyer_paid	C	last_year	A			MX-buyer_paid-C-last_year	en	Akram Toll Tax
+buyer_paid	C	r2026_10_01_2026_10_15	A			MX-buyer_paid-C-r2026_10_01_2026_10_15	roman	Faisal
+buyer_paid	T	*	X		a top of one buyer is his top item (the item axis)			
+buyer_bought	F	today	A			MX-buyer_bought-F-today	urdu	Akram Toll Tax
+buyer_bought	F	yesterday	A			MX-buyer_bought-F-yesterday	roman	Faisal
+buyer_bought	F	d2026_11_03	A			MX-buyer_bought-F-d2026_11_03	urdu	Akram Toll Tax
+buyer_bought	F	d2026_10_14	A			MX-buyer_bought-F-d2026_10_14	en	Faisal
+buyer_bought	F	week	A			MX-buyer_bought-F-week	roman	Akram Toll Tax
+buyer_bought	F	last_week	A			MX-buyer_bought-F-last_week	urdu	Faisal
+buyer_bought	F	month	A			MX-buyer_bought-F-month	roman	Akram Toll Tax
+buyer_bought	F	last_month	A			MX-buyer_bought-F-last_month	urdu	Faisal
+buyer_bought	F	m2026_09	A			MX-buyer_bought-F-m2026_09	en	Akram Toll Tax
+buyer_bought	F	m2026_08	A			MX-buyer_bought-F-m2026_08	roman	Faisal
+buyer_bought	F	year	A			MX-buyer_bought-F-year	urdu	Akram Toll Tax
+buyer_bought	F	last_year	A			MX-buyer_bought-F-last_year	roman	Faisal
+buyer_bought	F	r2026_10_01_2026_10_15	A			MX-buyer_bought-F-r2026_10_01_2026_10_15	urdu	Akram Toll Tax
+buyer_bought	F	up_to_now	A			MX-buyer_bought-F-up_to_now	en	Faisal
+buyer_bought	L	*	X		the lines of one buyer are the item axis			
+buyer_bought	C	today	A			MX-buyer_bought-C-today	urdu	Akram Toll Tax
+buyer_bought	C	yesterday	A			MX-buyer_bought-C-yesterday	roman	Faisal
+buyer_bought	C	d2026_10_14	A			MX-buyer_bought-C-d2026_10_14	urdu	Akram Toll Tax
+buyer_bought	C	week	A			MX-buyer_bought-C-week	en	Faisal
+buyer_bought	C	last_week	A			MX-buyer_bought-C-last_week	roman	Akram Toll Tax
+buyer_bought	C	month	A			MX-buyer_bought-C-month	urdu	Faisal
+buyer_bought	C	last_month	A			MX-buyer_bought-C-last_month	roman	Akram Toll Tax
+buyer_bought	C	m2026_09	A			MX-buyer_bought-C-m2026_09	urdu	Faisal
+buyer_bought	C	year	A			MX-buyer_bought-C-year	en	Akram Toll Tax
+buyer_bought	C	last_year	A			MX-buyer_bought-C-last_year	roman	Faisal
+buyer_bought	C	r2026_10_01_2026_10_15	A			MX-buyer_bought-C-r2026_10_01_2026_10_15	urdu	Akram Toll Tax
+buyer_bought	T	*	X		a top of one buyer is his top item (the item axis)			
+seller_paid	F	today	A			MX-seller_paid-F-today	roman	Karim
+seller_paid	F	yesterday	A			MX-seller_paid-F-yesterday	urdu	Rahim
+seller_paid	F	d2026_11_03	A			MX-seller_paid-F-d2026_11_03	en	Karim
+seller_paid	F	d2026_10_14	A			MX-seller_paid-F-d2026_10_14	roman	Rahim
+seller_paid	F	week	A			MX-seller_paid-F-week	urdu	Karim
+seller_paid	F	last_week	A			MX-seller_paid-F-last_week	roman	Rahim
+seller_paid	F	month	A			MX-seller_paid-F-month	urdu	Karim
+seller_paid	F	last_month	A			MX-seller_paid-F-last_month	en	Rahim
+seller_paid	F	m2026_09	A			MX-seller_paid-F-m2026_09	roman	Karim
+seller_paid	F	m2026_08	A			MX-seller_paid-F-m2026_08	urdu	Rahim
+seller_paid	F	year	A			MX-seller_paid-F-year	roman	Karim
+seller_paid	F	last_year	A			MX-seller_paid-F-last_year	urdu	Rahim
+seller_paid	F	r2026_10_01_2026_10_15	A			MX-seller_paid-F-r2026_10_01_2026_10_15	en	Karim
+seller_paid	F	up_to_now	A			MX-seller_paid-F-up_to_now	roman	Rahim
+seller_paid	L	today	A			MX-seller_paid-L-today	roman	Karim
+seller_paid	L	yesterday	A			MX-seller_paid-L-yesterday	urdu	Rahim
+seller_paid	L	d2026_11_03	A			MX-seller_paid-L-d2026_11_03	en	Karim
+seller_paid	L	d2026_10_14	A			MX-seller_paid-L-d2026_10_14	roman	Rahim
+seller_paid	L	week	A			MX-seller_paid-L-week	urdu	Karim
+seller_paid	L	last_week	A			MX-seller_paid-L-last_week	roman	Rahim
+seller_paid	L	month	A			MX-seller_paid-L-month	urdu	Karim
+seller_paid	L	last_month	A			MX-seller_paid-L-last_month	en	Rahim
+seller_paid	L	m2026_09	A			MX-seller_paid-L-m2026_09	roman	Karim
+seller_paid	L	m2026_08	A			MX-seller_paid-L-m2026_08	urdu	Rahim
+seller_paid	L	year	A			MX-seller_paid-L-year	roman	Karim
+seller_paid	L	last_year	A			MX-seller_paid-L-last_year	urdu	Rahim
+seller_paid	L	r2026_10_01_2026_10_15	A			MX-seller_paid-L-r2026_10_01_2026_10_15	en	Karim
+seller_paid	L	up_to_now	A			MX-seller_paid-L-up_to_now	roman	Rahim
+seller_paid	C	today	A			MX-seller_paid-C-today	roman	Karim
+seller_paid	C	yesterday	A			MX-seller_paid-C-yesterday	urdu	Rahim
+seller_paid	C	d2026_10_14	A			MX-seller_paid-C-d2026_10_14	en	Karim
+seller_paid	C	week	A			MX-seller_paid-C-week	roman	Rahim
+seller_paid	C	last_week	A			MX-seller_paid-C-last_week	urdu	Karim
+seller_paid	C	month	A			MX-seller_paid-C-month	roman	Rahim
+seller_paid	C	last_month	A			MX-seller_paid-C-last_month	urdu	Karim
+seller_paid	C	m2026_09	A			MX-seller_paid-C-m2026_09	en	Rahim
+seller_paid	C	year	A			MX-seller_paid-C-year	roman	Karim
+seller_paid	C	last_year	A			MX-seller_paid-C-last_year	urdu	Rahim
+seller_paid	C	r2026_10_01_2026_10_15	A			MX-seller_paid-C-r2026_10_01_2026_10_15	roman	Karim
+seller_paid	T	*	X		a top of one seller is his top item (the item axis)			
+seller_sold	F	today	A			MX-seller_sold-F-today	urdu	Rahim
+seller_sold	F	yesterday	A			MX-seller_sold-F-yesterday	en	Karim
+seller_sold	F	d2026_11_03	A			MX-seller_sold-F-d2026_11_03	roman	Rahim
+seller_sold	F	d2026_10_14	A			MX-seller_sold-F-d2026_10_14	urdu	Karim
+seller_sold	F	week	A			MX-seller_sold-F-week	roman	Rahim
+seller_sold	F	last_week	A			MX-seller_sold-F-last_week	urdu	Karim
+seller_sold	F	month	A			MX-seller_sold-F-month	en	Rahim
+seller_sold	F	last_month	A			MX-seller_sold-F-last_month	roman	Karim
+seller_sold	F	m2026_09	A			MX-seller_sold-F-m2026_09	urdu	Rahim
+seller_sold	F	m2026_08	A			MX-seller_sold-F-m2026_08	roman	Karim
+seller_sold	F	year	A			MX-seller_sold-F-year	urdu	Rahim
+seller_sold	F	last_year	A			MX-seller_sold-F-last_year	en	Karim
+seller_sold	F	r2026_10_01_2026_10_15	A			MX-seller_sold-F-r2026_10_01_2026_10_15	roman	Rahim
+seller_sold	F	up_to_now	A			MX-seller_sold-F-up_to_now	urdu	Karim
+seller_sold	L	*	X		the lines of one seller are the item axis			
+seller_sold	C	today	A			MX-seller_sold-C-today	urdu	Rahim
+seller_sold	C	yesterday	A			MX-seller_sold-C-yesterday	en	Karim
+seller_sold	C	d2026_10_14	A			MX-seller_sold-C-d2026_10_14	roman	Rahim
+seller_sold	C	week	A			MX-seller_sold-C-week	urdu	Karim
+seller_sold	C	last_week	A			MX-seller_sold-C-last_week	roman	Rahim
+seller_sold	C	month	A			MX-seller_sold-C-month	urdu	Karim
+seller_sold	C	last_month	A			MX-seller_sold-C-last_month	en	Rahim
+seller_sold	C	m2026_09	A			MX-seller_sold-C-m2026_09	roman	Karim
+seller_sold	C	year	A			MX-seller_sold-C-year	urdu	Rahim
+seller_sold	C	last_year	A			MX-seller_sold-C-last_year	roman	Karim
+seller_sold	C	r2026_10_01_2026_10_15	A			MX-seller_sold-C-r2026_10_01_2026_10_15	urdu	Rahim
+seller_sold	T	*	X		a top of one seller is his top item (the item axis)			
+collector	F	today	A			MX-collector-F-today	en	Rasheed
+collector	F	yesterday	A			MX-collector-F-yesterday	roman	Rasheed
+collector	F	d2026_11_03	A			MX-collector-F-d2026_11_03	urdu	Rasheed
+collector	F	d2026_10_14	A			MX-collector-F-d2026_10_14	roman	Rasheed
+collector	F	week	A			MX-collector-F-week	urdu	Rasheed
+collector	F	last_week	A			MX-collector-F-last_week	en	Rasheed
+collector	F	month	A			MX-collector-F-month	roman	Rasheed
+collector	F	last_month	A			MX-collector-F-last_month	urdu	Rasheed
+collector	F	m2026_09	A			MX-collector-F-m2026_09	roman	Rasheed
+collector	F	m2026_08	A			MX-collector-F-m2026_08	urdu	Rasheed
+collector	F	year	A			MX-collector-F-year	en	Rasheed
+collector	F	last_year	A			MX-collector-F-last_year	roman	Rasheed
+collector	F	r2026_10_01_2026_10_15	A			MX-collector-F-r2026_10_01_2026_10_15	urdu	Rasheed
+collector	F	up_to_now	A			MX-collector-F-up_to_now	roman	Rasheed
+collector	L	today	A			MX-collector-L-today	en	Rasheed
+collector	L	yesterday	A			MX-collector-L-yesterday	roman	Rasheed
+collector	L	d2026_11_03	A			MX-collector-L-d2026_11_03	urdu	Rasheed
+collector	L	d2026_10_14	A			MX-collector-L-d2026_10_14	roman	Rasheed
+collector	L	week	A			MX-collector-L-week	urdu	Rasheed
+collector	L	last_week	A			MX-collector-L-last_week	en	Rasheed
+collector	L	month	A			MX-collector-L-month	roman	Rasheed
+collector	L	last_month	A			MX-collector-L-last_month	urdu	Rasheed
+collector	L	m2026_09	A			MX-collector-L-m2026_09	roman	Rasheed
+collector	L	m2026_08	A			MX-collector-L-m2026_08	urdu	Rasheed
+collector	L	year	A			MX-collector-L-year	en	Rasheed
+collector	L	last_year	A			MX-collector-L-last_year	roman	Rasheed
+collector	L	r2026_10_01_2026_10_15	A			MX-collector-L-r2026_10_01_2026_10_15	urdu	Rasheed
+collector	L	up_to_now	A			MX-collector-L-up_to_now	roman	Rasheed
+collector	C	today	A			MX-collector-C-today	en	Rasheed
+collector	C	yesterday	A			MX-collector-C-yesterday	roman	Rasheed
+collector	C	d2026_10_14	A			MX-collector-C-d2026_10_14	urdu	Rasheed
+collector	C	week	A			MX-collector-C-week	roman	Rasheed
+collector	C	last_week	A			MX-collector-C-last_week	urdu	Rasheed
+collector	C	month	A			MX-collector-C-month	en	Rasheed
+collector	C	last_month	A			MX-collector-C-last_month	roman	Rasheed
+collector	C	m2026_09	A			MX-collector-C-m2026_09	urdu	Rasheed
+collector	C	year	A			MX-collector-C-year	roman	Rasheed
+collector	C	last_year	A			MX-collector-C-last_year	urdu	Rasheed
+collector	C	r2026_10_01_2026_10_15	A			MX-collector-C-r2026_10_01_2026_10_15	en	Rasheed
+collector	T	*	X		a top of one collector is his top buyer; a collector has the receipts list			
+partner_profit	F	today	A			MX-partner_profit-F-today	roman	Alif
+partner_profit	F	yesterday	A			MX-partner_profit-F-yesterday	urdu	Be
+partner_profit	F	d2026_11_03	A			MX-partner_profit-F-d2026_11_03	roman	Alif
+partner_profit	F	d2026_10_14	A			MX-partner_profit-F-d2026_10_14	urdu	Be
+partner_profit	F	week	A			MX-partner_profit-F-week	en	Alif
+partner_profit	F	last_week	A			MX-partner_profit-F-last_week	roman	Be
+partner_profit	F	month	A			MX-partner_profit-F-month	urdu	Alif
+partner_profit	F	last_month	A			MX-partner_profit-F-last_month	roman	Be
+partner_profit	F	m2026_09	A			MX-partner_profit-F-m2026_09	urdu	Alif
+partner_profit	F	m2026_08	A			MX-partner_profit-F-m2026_08	en	Be
+partner_profit	F	year	A			MX-partner_profit-F-year	roman	Alif
+partner_profit	F	last_year	A			MX-partner_profit-F-last_year	urdu	Be
+partner_profit	F	r2026_10_01_2026_10_15	A			MX-partner_profit-F-r2026_10_01_2026_10_15	roman	Alif
+partner_profit	F	up_to_now	A			MX-partner_profit-F-up_to_now	urdu	Be
+partner_profit	L	*	X		a partner has one row			
+partner_profit	C	today	A			MX-partner_profit-C-today	roman	Alif
+partner_profit	C	yesterday	A			MX-partner_profit-C-yesterday	urdu	Be
+partner_profit	C	d2026_10_14	A			MX-partner_profit-C-d2026_10_14	roman	Alif
+partner_profit	C	week	A			MX-partner_profit-C-week	urdu	Be
+partner_profit	C	last_week	A			MX-partner_profit-C-last_week	en	Alif
+partner_profit	C	month	A			MX-partner_profit-C-month	roman	Be
+partner_profit	C	last_month	A			MX-partner_profit-C-last_month	urdu	Alif
+partner_profit	C	m2026_09	A			MX-partner_profit-C-m2026_09	roman	Be
+partner_profit	C	year	A			MX-partner_profit-C-year	urdu	Alif
+partner_profit	C	last_year	A			MX-partner_profit-C-last_year	en	Be
+partner_profit	C	r2026_10_01_2026_10_15	A			MX-partner_profit-C-r2026_10_01_2026_10_15	roman	Alif
+partner_profit	T	today	A			MX-partner_profit-T-today	roman	Alif
+partner_profit	T	yesterday	A			MX-partner_profit-T-yesterday	urdu	Be
+partner_profit	T	d2026_11_03	A			MX-partner_profit-T-d2026_11_03	roman	Alif
+partner_profit	T	d2026_10_14	A			MX-partner_profit-T-d2026_10_14	urdu	Be
+partner_profit	T	week	A			MX-partner_profit-T-week	en	Alif
+partner_profit	T	last_week	X		nothing in the books for this period (no row, so no fact)			
+partner_profit	T	month	A			MX-partner_profit-T-month	roman	Alif
+partner_profit	T	last_month	A			MX-partner_profit-T-last_month	urdu	Be
+partner_profit	T	m2026_09	A			MX-partner_profit-T-m2026_09	roman	Alif
+partner_profit	T	m2026_08	A			MX-partner_profit-T-m2026_08	urdu	Be
+partner_profit	T	year	A			MX-partner_profit-T-year	en	Alif
+partner_profit	T	last_year	A			MX-partner_profit-T-last_year	roman	Be
+partner_profit	T	r2026_10_01_2026_10_15	A			MX-partner_profit-T-r2026_10_01_2026_10_15	urdu	Alif
+partner_profit	T	up_to_now	A			MX-partner_profit-T-up_to_now	roman	Be
+partner_taken	F	today	A			MX-partner_taken-F-today	urdu	Alif
+partner_taken	F	yesterday	A			MX-partner_taken-F-yesterday	roman	Alif
+partner_taken	F	d2026_11_03	A			MX-partner_taken-F-d2026_11_03	urdu	Alif
+partner_taken	F	d2026_10_14	A			MX-partner_taken-F-d2026_10_14	en	Alif
+partner_taken	F	week	A			MX-partner_taken-F-week	roman	Alif
+partner_taken	F	last_week	A			MX-partner_taken-F-last_week	urdu	Alif
+partner_taken	F	month	A			MX-partner_taken-F-month	roman	Alif
+partner_taken	F	last_month	A			MX-partner_taken-F-last_month	urdu	Alif
+partner_taken	F	m2026_09	A			MX-partner_taken-F-m2026_09	en	Alif
+partner_taken	F	m2026_08	A			MX-partner_taken-F-m2026_08	roman	Alif
+partner_taken	F	year	A			MX-partner_taken-F-year	urdu	Alif
+partner_taken	F	last_year	A			MX-partner_taken-F-last_year	roman	Alif
+partner_taken	F	r2026_10_01_2026_10_15	A			MX-partner_taken-F-r2026_10_01_2026_10_15	urdu	Alif
+partner_taken	F	up_to_now	A			MX-partner_taken-F-up_to_now	en	Alif
+partner_taken	L	*	X		this question has no meaning for this subject			
+partner_taken	C	today	A			MX-partner_taken-C-today	urdu	Alif
+partner_taken	C	yesterday	A			MX-partner_taken-C-yesterday	roman	Alif
+partner_taken	C	d2026_10_14	A			MX-partner_taken-C-d2026_10_14	urdu	Alif
+partner_taken	C	week	A			MX-partner_taken-C-week	en	Alif
+partner_taken	C	last_week	A			MX-partner_taken-C-last_week	roman	Alif
+partner_taken	C	month	A			MX-partner_taken-C-month	urdu	Alif
+partner_taken	C	last_month	A			MX-partner_taken-C-last_month	roman	Alif
+partner_taken	C	m2026_09	A			MX-partner_taken-C-m2026_09	urdu	Alif
+partner_taken	C	year	A			MX-partner_taken-C-year	en	Alif
+partner_taken	C	last_year	A			MX-partner_taken-C-last_year	roman	Alif
+partner_taken	C	r2026_10_01_2026_10_15	A			MX-partner_taken-C-r2026_10_01_2026_10_15	urdu	Alif
+partner_taken	T	*	X		this question has no meaning for this subject			
+capital_in	F	today	A			MX-capital_in-F-today	roman	sarmaya
+capital_in	F	yesterday	A			MX-capital_in-F-yesterday	urdu	sarmaya
+capital_in	F	d2026_11_03	A			MX-capital_in-F-d2026_11_03	en	sarmaya
+capital_in	F	d2026_10_14	A			MX-capital_in-F-d2026_10_14	roman	sarmaya
+capital_in	F	week	A			MX-capital_in-F-week	urdu	sarmaya
+capital_in	F	last_week	A			MX-capital_in-F-last_week	roman	sarmaya
+capital_in	F	month	A			MX-capital_in-F-month	urdu	sarmaya
+capital_in	F	last_month	A			MX-capital_in-F-last_month	en	sarmaya
+capital_in	F	m2026_09	A			MX-capital_in-F-m2026_09	roman	sarmaya
+capital_in	F	m2026_08	A			MX-capital_in-F-m2026_08	urdu	sarmaya
+capital_in	F	year	A			MX-capital_in-F-year	roman	sarmaya
+capital_in	F	last_year	A			MX-capital_in-F-last_year	urdu	sarmaya
+capital_in	F	r2026_10_01_2026_10_15	A			MX-capital_in-F-r2026_10_01_2026_10_15	en	sarmaya
+capital_in	F	up_to_now	A			MX-capital_in-F-up_to_now	roman	sarmaya
+capital_in	L	*	X		capital is one figure			
+capital_in	C	today	A			MX-capital_in-C-today	roman	sarmaya
+capital_in	C	yesterday	A			MX-capital_in-C-yesterday	urdu	sarmaya
+capital_in	C	d2026_10_14	A			MX-capital_in-C-d2026_10_14	en	sarmaya
+capital_in	C	week	A			MX-capital_in-C-week	roman	sarmaya
+capital_in	C	last_week	A			MX-capital_in-C-last_week	urdu	sarmaya
+capital_in	C	month	A			MX-capital_in-C-month	roman	sarmaya
+capital_in	C	last_month	A			MX-capital_in-C-last_month	urdu	sarmaya
+capital_in	C	m2026_09	A			MX-capital_in-C-m2026_09	en	sarmaya
+capital_in	C	year	A			MX-capital_in-C-year	roman	sarmaya
+capital_in	C	last_year	A			MX-capital_in-C-last_year	urdu	sarmaya
+capital_in	C	r2026_10_01_2026_10_15	A			MX-capital_in-C-r2026_10_01_2026_10_15	roman	sarmaya
+capital_in	T	*	X		capital is one figure			
+capital_out	F	today	A			MX-capital_out-F-today	urdu	sarmaya wapsi
+capital_out	F	yesterday	A			MX-capital_out-F-yesterday	en	sarmaya wapsi
+capital_out	F	d2026_11_03	A			MX-capital_out-F-d2026_11_03	roman	sarmaya wapsi
+capital_out	F	d2026_10_14	A			MX-capital_out-F-d2026_10_14	urdu	sarmaya wapsi
+capital_out	F	week	A			MX-capital_out-F-week	roman	sarmaya wapsi
+capital_out	F	last_week	A			MX-capital_out-F-last_week	urdu	sarmaya wapsi
+capital_out	F	month	A			MX-capital_out-F-month	en	sarmaya wapsi
+capital_out	F	last_month	A			MX-capital_out-F-last_month	roman	sarmaya wapsi
+capital_out	F	m2026_09	A			MX-capital_out-F-m2026_09	urdu	sarmaya wapsi
+capital_out	F	m2026_08	A			MX-capital_out-F-m2026_08	roman	sarmaya wapsi
+capital_out	F	year	A			MX-capital_out-F-year	urdu	sarmaya wapsi
+capital_out	F	last_year	A			MX-capital_out-F-last_year	en	sarmaya wapsi
+capital_out	F	r2026_10_01_2026_10_15	A			MX-capital_out-F-r2026_10_01_2026_10_15	roman	sarmaya wapsi
+capital_out	F	up_to_now	A			MX-capital_out-F-up_to_now	urdu	sarmaya wapsi
+capital_out	L	*	X		capital is one figure			
+capital_out	C	today	A			MX-capital_out-C-today	urdu	sarmaya wapsi
+capital_out	C	yesterday	A			MX-capital_out-C-yesterday	en	sarmaya wapsi
+capital_out	C	d2026_10_14	A			MX-capital_out-C-d2026_10_14	roman	sarmaya wapsi
+capital_out	C	week	A			MX-capital_out-C-week	urdu	sarmaya wapsi
+capital_out	C	last_week	A			MX-capital_out-C-last_week	roman	sarmaya wapsi
+capital_out	C	month	A			MX-capital_out-C-month	urdu	sarmaya wapsi
+capital_out	C	last_month	A			MX-capital_out-C-last_month	en	sarmaya wapsi
+capital_out	C	m2026_09	A			MX-capital_out-C-m2026_09	roman	sarmaya wapsi
+capital_out	C	year	A			MX-capital_out-C-year	urdu	sarmaya wapsi
+capital_out	C	last_year	A			MX-capital_out-C-last_year	roman	sarmaya wapsi
+capital_out	C	r2026_10_01_2026_10_15	A			MX-capital_out-C-r2026_10_01_2026_10_15	urdu	sarmaya wapsi
+capital_out	T	*	X		capital is one figure			
+capital_b	F	today	A			MX-capital_b-F-today	en	Be
+capital_b	F	yesterday	A			MX-capital_b-F-yesterday	roman	Be
+capital_b	F	d2026_11_03	A			MX-capital_b-F-d2026_11_03	urdu	Be
+capital_b	F	d2026_10_14	A			MX-capital_b-F-d2026_10_14	roman	Be
+capital_b	F	week	A			MX-capital_b-F-week	urdu	Be
+capital_b	F	last_week	A			MX-capital_b-F-last_week	en	Be
+capital_b	F	month	A			MX-capital_b-F-month	roman	Be
+capital_b	F	last_month	A			MX-capital_b-F-last_month	urdu	Be
+capital_b	F	m2026_09	A			MX-capital_b-F-m2026_09	roman	Be
+capital_b	F	m2026_08	A			MX-capital_b-F-m2026_08	urdu	Be
+capital_b	F	year	A			MX-capital_b-F-year	en	Be
+capital_b	F	last_year	A			MX-capital_b-F-last_year	roman	Be
+capital_b	F	r2026_10_01_2026_10_15	A			MX-capital_b-F-r2026_10_01_2026_10_15	urdu	Be
+capital_b	F	up_to_now	A			MX-capital_b-F-up_to_now	roman	Be
+capital_b	L	*	X		capital is one figure			
+capital_b	C	today	A			MX-capital_b-C-today	en	Be
+capital_b	C	yesterday	A			MX-capital_b-C-yesterday	roman	Be
+capital_b	C	d2026_10_14	A			MX-capital_b-C-d2026_10_14	urdu	Be
+capital_b	C	week	A			MX-capital_b-C-week	roman	Be
+capital_b	C	last_week	A			MX-capital_b-C-last_week	urdu	Be
+capital_b	C	month	A			MX-capital_b-C-month	en	Be
+capital_b	C	last_month	A			MX-capital_b-C-last_month	roman	Be
+capital_b	C	m2026_09	A			MX-capital_b-C-m2026_09	urdu	Be
+capital_b	C	year	A			MX-capital_b-C-year	roman	Be
+capital_b	C	last_year	A			MX-capital_b-C-last_year	urdu	Be
+capital_b	C	r2026_10_01_2026_10_15	A			MX-capital_b-C-r2026_10_01_2026_10_15	en	Be
+capital_b	T	*	X		capital is one figure			
+gardens_money_in	F	today	A			MX-gardens_money_in-F-today	roman	baghat ki aamad
+gardens_money_in	F	yesterday	A			MX-gardens_money_in-F-yesterday	urdu	baghat ki aamad
+gardens_money_in	F	d2026_11_03	A			MX-gardens_money_in-F-d2026_11_03	roman	baghat ki aamad
+gardens_money_in	F	d2026_10_14	A			MX-gardens_money_in-F-d2026_10_14	urdu	baghat ki aamad
+gardens_money_in	F	week	A			MX-gardens_money_in-F-week	en	baghat ki aamad
+gardens_money_in	F	last_week	A			MX-gardens_money_in-F-last_week	roman	baghat ki aamad
+gardens_money_in	F	month	A			MX-gardens_money_in-F-month	urdu	baghat ki aamad
+gardens_money_in	F	last_month	A			MX-gardens_money_in-F-last_month	roman	baghat ki aamad
+gardens_money_in	F	m2026_09	A			MX-gardens_money_in-F-m2026_09	urdu	baghat ki aamad
+gardens_money_in	F	m2026_08	A			MX-gardens_money_in-F-m2026_08	en	baghat ki aamad
+gardens_money_in	F	year	A			MX-gardens_money_in-F-year	roman	baghat ki aamad
+gardens_money_in	F	last_year	A			MX-gardens_money_in-F-last_year	urdu	baghat ki aamad
+gardens_money_in	F	r2026_10_01_2026_10_15	A			MX-gardens_money_in-F-r2026_10_01_2026_10_15	roman	baghat ki aamad
+gardens_money_in	F	up_to_now	A			MX-gardens_money_in-F-up_to_now	urdu	baghat ki aamad
+gardens_money_in	L	today	A			MX-gardens_money_in-L-today	roman	baghat ki aamad
+gardens_money_in	L	yesterday	A			MX-gardens_money_in-L-yesterday	urdu	baghat ki aamad
+gardens_money_in	L	d2026_11_03	A			MX-gardens_money_in-L-d2026_11_03	roman	baghat ki aamad
+gardens_money_in	L	d2026_10_14	A			MX-gardens_money_in-L-d2026_10_14	urdu	baghat ki aamad
+gardens_money_in	L	week	A			MX-gardens_money_in-L-week	en	baghat ki aamad
+gardens_money_in	L	last_week	A			MX-gardens_money_in-L-last_week	roman	baghat ki aamad
+gardens_money_in	L	month	A			MX-gardens_money_in-L-month	urdu	baghat ki aamad
+gardens_money_in	L	last_month	A			MX-gardens_money_in-L-last_month	roman	baghat ki aamad
+gardens_money_in	L	m2026_09	A			MX-gardens_money_in-L-m2026_09	urdu	baghat ki aamad
+gardens_money_in	L	m2026_08	A			MX-gardens_money_in-L-m2026_08	en	baghat ki aamad
+gardens_money_in	L	year	A			MX-gardens_money_in-L-year	roman	baghat ki aamad
+gardens_money_in	L	last_year	A			MX-gardens_money_in-L-last_year	urdu	baghat ki aamad
+gardens_money_in	L	r2026_10_01_2026_10_15	A			MX-gardens_money_in-L-r2026_10_01_2026_10_15	roman	baghat ki aamad
+gardens_money_in	L	up_to_now	A			MX-gardens_money_in-L-up_to_now	urdu	baghat ki aamad
+gardens_money_in	C	*	N		the gardens report has no second-period fact yet (view I is the screen for a garden comparison)			
+gardens_money_in	T	*	X		one garden in the books			
+gardens_installments	F	today	A			MX-gardens_installments-F-today	urdu	baghat ki qist
+gardens_installments	F	yesterday	A			MX-gardens_installments-F-yesterday	roman	baghat ki qist
+gardens_installments	F	d2026_11_03	A			MX-gardens_installments-F-d2026_11_03	urdu	baghat ki qist
+gardens_installments	F	d2026_10_14	A			MX-gardens_installments-F-d2026_10_14	en	baghat ki qist
+gardens_installments	F	week	A			MX-gardens_installments-F-week	roman	baghat ki qist
+gardens_installments	F	last_week	A			MX-gardens_installments-F-last_week	urdu	baghat ki qist
+gardens_installments	F	month	A			MX-gardens_installments-F-month	roman	baghat ki qist
+gardens_installments	F	last_month	A			MX-gardens_installments-F-last_month	urdu	baghat ki qist
+gardens_installments	F	m2026_09	A			MX-gardens_installments-F-m2026_09	en	baghat ki qist
+gardens_installments	F	m2026_08	A			MX-gardens_installments-F-m2026_08	roman	baghat ki qist
+gardens_installments	F	year	A			MX-gardens_installments-F-year	urdu	baghat ki qist
+gardens_installments	F	last_year	A			MX-gardens_installments-F-last_year	roman	baghat ki qist
+gardens_installments	F	r2026_10_01_2026_10_15	A			MX-gardens_installments-F-r2026_10_01_2026_10_15	urdu	baghat ki qist
+gardens_installments	F	up_to_now	A			MX-gardens_installments-F-up_to_now	en	baghat ki qist
+gardens_installments	L	*	X		covered by the gardens count			
+gardens_installments	C	*	N		see the gardens money in			
+gardens_installments	T	*	X		one garden in the books			
+trips_bought	F	today	A			MX-trips_bought-F-today	roman	market safar ki khareedari
+trips_bought	F	yesterday	A			MX-trips_bought-F-yesterday	urdu	market safar ki khareedari
+trips_bought	F	d2026_11_03	A			MX-trips_bought-F-d2026_11_03	en	market safar ki khareedari
+trips_bought	F	d2026_10_14	A			MX-trips_bought-F-d2026_10_14	roman	market safar ki khareedari
+trips_bought	F	week	A			MX-trips_bought-F-week	urdu	market safar ki khareedari
+trips_bought	F	last_week	A			MX-trips_bought-F-last_week	roman	market safar ki khareedari
+trips_bought	F	month	A			MX-trips_bought-F-month	urdu	market safar ki khareedari
+trips_bought	F	last_month	A			MX-trips_bought-F-last_month	en	market safar ki khareedari
+trips_bought	F	m2026_09	A			MX-trips_bought-F-m2026_09	roman	market safar ki khareedari
+trips_bought	F	m2026_08	A			MX-trips_bought-F-m2026_08	urdu	market safar ki khareedari
+trips_bought	F	year	A			MX-trips_bought-F-year	roman	market safar ki khareedari
+trips_bought	F	last_year	A			MX-trips_bought-F-last_year	urdu	market safar ki khareedari
+trips_bought	F	r2026_10_01_2026_10_15	A			MX-trips_bought-F-r2026_10_01_2026_10_15	en	market safar ki khareedari
+trips_bought	F	up_to_now	A			MX-trips_bought-F-up_to_now	roman	market safar ki khareedari
+trips_bought	L	today	A			MX-trips_bought-L-today	roman	market safar ki khareedari
+trips_bought	L	yesterday	A			MX-trips_bought-L-yesterday	urdu	market safar ki khareedari
+trips_bought	L	d2026_11_03	A			MX-trips_bought-L-d2026_11_03	en	market safar ki khareedari
+trips_bought	L	d2026_10_14	A			MX-trips_bought-L-d2026_10_14	roman	market safar ki khareedari
+trips_bought	L	week	A			MX-trips_bought-L-week	urdu	market safar ki khareedari
+trips_bought	L	last_week	A			MX-trips_bought-L-last_week	roman	market safar ki khareedari
+trips_bought	L	month	A			MX-trips_bought-L-month	urdu	market safar ki khareedari
+trips_bought	L	last_month	A			MX-trips_bought-L-last_month	en	market safar ki khareedari
+trips_bought	L	m2026_09	A			MX-trips_bought-L-m2026_09	roman	market safar ki khareedari
+trips_bought	L	m2026_08	A			MX-trips_bought-L-m2026_08	urdu	market safar ki khareedari
+trips_bought	L	year	A			MX-trips_bought-L-year	roman	market safar ki khareedari
+trips_bought	L	last_year	A			MX-trips_bought-L-last_year	urdu	market safar ki khareedari
+trips_bought	L	r2026_10_01_2026_10_15	A			MX-trips_bought-L-r2026_10_01_2026_10_15	en	market safar ki khareedari
+trips_bought	L	up_to_now	A			MX-trips_bought-L-up_to_now	roman	market safar ki khareedari
+trips_bought	C	*	N		the trips report has no second-period fact yet (view J is the screen for a trip comparison)			
+trips_bought	T	*	X		two trips in the books			
+trips_sales	F	today	A			MX-trips_sales-F-today	urdu	market safar ki bikri
+trips_sales	F	yesterday	A			MX-trips_sales-F-yesterday	en	market safar ki bikri
+trips_sales	F	d2026_11_03	A			MX-trips_sales-F-d2026_11_03	roman	market safar ki bikri
+trips_sales	F	d2026_10_14	A			MX-trips_sales-F-d2026_10_14	urdu	market safar ki bikri
+trips_sales	F	week	A			MX-trips_sales-F-week	roman	market safar ki bikri
+trips_sales	F	last_week	A			MX-trips_sales-F-last_week	urdu	market safar ki bikri
+trips_sales	F	month	A			MX-trips_sales-F-month	en	market safar ki bikri
+trips_sales	F	last_month	A			MX-trips_sales-F-last_month	roman	market safar ki bikri
+trips_sales	F	m2026_09	A			MX-trips_sales-F-m2026_09	urdu	market safar ki bikri
+trips_sales	F	m2026_08	A			MX-trips_sales-F-m2026_08	roman	market safar ki bikri
+trips_sales	F	year	A			MX-trips_sales-F-year	urdu	market safar ki bikri
+trips_sales	F	last_year	A			MX-trips_sales-F-last_year	en	market safar ki bikri
+trips_sales	F	r2026_10_01_2026_10_15	A			MX-trips_sales-F-r2026_10_01_2026_10_15	roman	market safar ki bikri
+trips_sales	F	up_to_now	A			MX-trips_sales-F-up_to_now	urdu	market safar ki bikri
+trips_sales	L	*	X		covered by the trips count			
+trips_sales	C	*	N		see the trips purchases			
+trips_sales	T	*	X		two trips in the books			
+trips_result	F	today	A			MX-trips_result-F-today	en	market safar ka nafa nuqsan
+trips_result	F	yesterday	A			MX-trips_result-F-yesterday	roman	market safar ka nafa nuqsan
+trips_result	F	d2026_11_03	A			MX-trips_result-F-d2026_11_03	urdu	market safar ka nafa nuqsan
+trips_result	F	d2026_10_14	A			MX-trips_result-F-d2026_10_14	roman	market safar ka nafa nuqsan
+trips_result	F	week	A			MX-trips_result-F-week	urdu	market safar ka nafa nuqsan
+trips_result	F	last_week	A			MX-trips_result-F-last_week	en	market safar ka nafa nuqsan
+trips_result	F	month	A			MX-trips_result-F-month	roman	market safar ka nafa nuqsan
+trips_result	F	last_month	A			MX-trips_result-F-last_month	urdu	market safar ka nafa nuqsan
+trips_result	F	m2026_09	A			MX-trips_result-F-m2026_09	roman	market safar ka nafa nuqsan
+trips_result	F	m2026_08	A			MX-trips_result-F-m2026_08	urdu	market safar ka nafa nuqsan
+trips_result	F	year	A			MX-trips_result-F-year	en	market safar ka nafa nuqsan
+trips_result	F	last_year	A			MX-trips_result-F-last_year	roman	market safar ka nafa nuqsan
+trips_result	F	r2026_10_01_2026_10_15	A			MX-trips_result-F-r2026_10_01_2026_10_15	urdu	market safar ka nafa nuqsan
+trips_result	F	up_to_now	A			MX-trips_result-F-up_to_now	roman	market safar ka nafa nuqsan
+trips_result	L	*	X		covered by the trips count			
+trips_result	C	*	N		see the trips purchases			
+trips_result	T	*	X		two trips in the books			
+fruit_value	F	today	A			MX-fruit_value-F-today	roman	phal
+fruit_value	F	yesterday	A			MX-fruit_value-F-yesterday	urdu	phal
+fruit_value	F	d2026_11_03	A			MX-fruit_value-F-d2026_11_03	roman	phal
+fruit_value	F	d2026_10_14	A			MX-fruit_value-F-d2026_10_14	urdu	phal
+fruit_value	F	week	A			MX-fruit_value-F-week	en	phal
+fruit_value	F	last_week	A			MX-fruit_value-F-last_week	roman	phal
+fruit_value	F	month	A			MX-fruit_value-F-month	urdu	phal
+fruit_value	F	last_month	A			MX-fruit_value-F-last_month	roman	phal
+fruit_value	F	m2026_09	A			MX-fruit_value-F-m2026_09	urdu	phal
+fruit_value	F	m2026_08	A			MX-fruit_value-F-m2026_08	en	phal
+fruit_value	F	year	A			MX-fruit_value-F-year	roman	phal
+fruit_value	F	last_year	A			MX-fruit_value-F-last_year	urdu	phal
+fruit_value	F	r2026_10_01_2026_10_15	A			MX-fruit_value-F-r2026_10_01_2026_10_15	roman	phal
+fruit_value	F	up_to_now	A			MX-fruit_value-F-up_to_now	urdu	phal
+fruit_value	L	today	A			MX-fruit_value-L-today	roman	phal
+fruit_value	L	yesterday	A			MX-fruit_value-L-yesterday	urdu	phal
+fruit_value	L	d2026_11_03	A			MX-fruit_value-L-d2026_11_03	roman	phal
+fruit_value	L	d2026_10_14	A			MX-fruit_value-L-d2026_10_14	urdu	phal
+fruit_value	L	week	A			MX-fruit_value-L-week	en	phal
+fruit_value	L	last_week	A			MX-fruit_value-L-last_week	roman	phal
+fruit_value	L	month	A			MX-fruit_value-L-month	urdu	phal
+fruit_value	L	last_month	A			MX-fruit_value-L-last_month	roman	phal
+fruit_value	L	m2026_09	A			MX-fruit_value-L-m2026_09	urdu	phal
+fruit_value	L	m2026_08	A			MX-fruit_value-L-m2026_08	en	phal
+fruit_value	L	year	A			MX-fruit_value-L-year	roman	phal
+fruit_value	L	last_year	A			MX-fruit_value-L-last_year	urdu	phal
+fruit_value	L	r2026_10_01_2026_10_15	A			MX-fruit_value-L-r2026_10_01_2026_10_15	roman	phal
+fruit_value	L	up_to_now	A			MX-fruit_value-L-up_to_now	urdu	phal
+fruit_value	C	today	A			MX-fruit_value-C-today	roman	phal
+fruit_value	C	yesterday	A			MX-fruit_value-C-yesterday	urdu	phal
+fruit_value	C	d2026_10_14	A			MX-fruit_value-C-d2026_10_14	roman	phal
+fruit_value	C	week	A			MX-fruit_value-C-week	urdu	phal
+fruit_value	C	last_week	A			MX-fruit_value-C-last_week	en	phal
+fruit_value	C	month	A			MX-fruit_value-C-month	roman	phal
+fruit_value	C	last_month	A			MX-fruit_value-C-last_month	urdu	phal
+fruit_value	C	m2026_09	A			MX-fruit_value-C-m2026_09	roman	phal
+fruit_value	C	year	A			MX-fruit_value-C-year	urdu	phal
+fruit_value	C	last_year	A			MX-fruit_value-C-last_year	en	phal
+fruit_value	C	r2026_10_01_2026_10_15	A			MX-fruit_value-C-r2026_10_01_2026_10_15	roman	phal
+fruit_value	T	*	X		the top partner of fruit taken is a row of view K, read by the model			
+fruit_qty	F	today	A			MX-fruit_qty-F-today	urdu	phal ka nag
+fruit_qty	F	yesterday	A			MX-fruit_qty-F-yesterday	roman	phal ka nag
+fruit_qty	F	d2026_11_03	A			MX-fruit_qty-F-d2026_11_03	urdu	phal ka nag
+fruit_qty	F	d2026_10_14	A			MX-fruit_qty-F-d2026_10_14	en	phal ka nag
+fruit_qty	F	week	A			MX-fruit_qty-F-week	roman	phal ka nag
+fruit_qty	F	last_week	A			MX-fruit_qty-F-last_week	urdu	phal ka nag
+fruit_qty	F	month	A			MX-fruit_qty-F-month	roman	phal ka nag
+fruit_qty	F	last_month	A			MX-fruit_qty-F-last_month	urdu	phal ka nag
+fruit_qty	F	m2026_09	A			MX-fruit_qty-F-m2026_09	en	phal ka nag
+fruit_qty	F	m2026_08	A			MX-fruit_qty-F-m2026_08	roman	phal ka nag
+fruit_qty	F	year	A			MX-fruit_qty-F-year	urdu	phal ka nag
+fruit_qty	F	last_year	A			MX-fruit_qty-F-last_year	roman	phal ka nag
+fruit_qty	F	r2026_10_01_2026_10_15	A			MX-fruit_qty-F-r2026_10_01_2026_10_15	urdu	phal ka nag
+fruit_qty	F	up_to_now	A			MX-fruit_qty-F-up_to_now	en	phal ka nag
+fruit_qty	L	*	X		covered by the fruit count			
+fruit_qty	C	*	N		see the fruit value			
+fruit_qty	T	*	X		see the fruit value			

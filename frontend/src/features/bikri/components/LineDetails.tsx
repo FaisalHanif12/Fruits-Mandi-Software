@@ -239,6 +239,25 @@ export function LineDetails({
             </Field>
           ) : null}
         </div>
+        {/* ادھاری / نقدی: the backend says first (the buyer's credit setting) and a choice here is sent as typed. */}
+        <Field
+          label={<Localized id="bikri-col-payment" />}
+          error={fieldError(error, path('payment_type'))}
+        >
+          {() => (
+            <SegmentedControl<string>
+              groupLabel={l10n.getString('bikri-col-payment')}
+              value={typed(SALE.payment) || (calc?.payment_type ?? '')}
+              onChange={(next) => {
+                setTyped(SALE.payment, next);
+              }}
+              options={[
+                { value: 'credit', label: l10n.getString('glossary-udhari') },
+                { value: 'cash', label: l10n.getString('glossary-naqdi') },
+              ]}
+            />
+          )}
+        </Field>
         {usesWeight ? (
           <Field
             label={<Localized id="bikri-line-weight" />}

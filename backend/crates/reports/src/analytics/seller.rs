@@ -25,7 +25,7 @@ use super::facts::{self, Sums, compare_range, run_range};
 use super::filters::Typed;
 use super::ids;
 use super::item::totals_by_id;
-use super::model::{AnalyticsKey, AnalyticsSide};
+use super::model::{AnalyticsGoods, AnalyticsKey, AnalyticsSide};
 use super::table::{Part, Table, col, compare_cells, compare_columns, count_of, part_cell, row};
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
@@ -41,6 +41,8 @@ fn lot_charges(conn: &Connection, typed: &Typed) -> Result<HashMap<i64, Paisa>, 
         .text("b.entry_date <= ?", typed.to.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)
         .id("l.item_id = ?", typed.item_id)
+        // All the items of a group (PRD v1.29): the lot charges follow the goods of the group.
+        .item_group("l.item_id", typed.item_group)
         .id("b.adda_id = ?", typed.adda_id);
     let sql = format!(
         "SELECT l.seller_account_id,
@@ -122,9 +124,15 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         slot.1.insert(bikri);
     }
 
-    // The net is given when the lots' charges can be matched to the rows.
-    let net_given =
-        typed.buyer_id.is_none() && typed.city_id.is_none() && typed.side != AnalyticsSide::Buyer;
+    // The net is given when the lots' charges can be matched to the rows. A garden, a trip or the
+    // goods filter narrows the sales to some lots, but the charges are read for every lot, so the
+    // net would take other sellers' charges off: it is left empty, as with a buyer or a city.
+    let net_given = typed.buyer_id.is_none()
+        && typed.city_id.is_none()
+        && typed.garden_id.is_none()
+        && typed.trip_id.is_none()
+        && typed.goods == AnalyticsGoods::All
+        && typed.side != AnalyticsSide::Buyer;
     let charges = if net_given {
         lot_charges(conn, typed)?
     } else {

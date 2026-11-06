@@ -70,6 +70,41 @@ pub fn year_end(question: &str) -> bool {
     )
 }
 
+/// The question asks for a partner's capital (the money he put in), and not for his کل رقم.
+///
+/// A partner's statement carries his کل رقم (everything he has in the firm). His capital is one
+/// part of it, and a figure of its own named `balance`, so a question that did not ask for it must
+/// not be shown it: "alif ki kul raqam" was answered with his capital, 0, with a tick (live run 1,
+/// Q198, Q199; Q546 to Q548: Usman's capital 200,000 for his کل رقم 2,506,856).
+///
+/// Example: "be ka sarmaya kitna laga hua hai" is true; "usman ka kitna hai abhi" is false.
+pub fn capital_asked(question: &str) -> bool {
+    has(
+        question,
+        &[
+            "sarmaya",
+            "sarmayah",
+            "sarmaiya",
+            "sarmaye",
+            "punji",
+            "paisa lagaya",
+            "paise lagaye",
+            "capital",
+            "investment",
+            "investments",
+            "invest",
+            "invests",
+            "invested",
+            "put in",
+            "سرمایہ",
+            "سرمایا",
+            "سرمائے",
+            "پونجی",
+            "سرمایہ کاری",
+        ],
+    )
+}
+
 /// The question asks for the commission.
 ///
 /// Example: "raheem ke mal ka commision is sal kitna he" is true.

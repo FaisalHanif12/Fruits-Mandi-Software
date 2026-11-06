@@ -391,6 +391,19 @@
 # review: pending
 -trade-mark = ٹریڈ مارک
 
+# The quality of the goods on one sale line, and its three names (PRD Section 3, FR-12.42)
+# review: pending
+-darja = درجہ
+
+# review: pending
+-darja-awwal = اول
+
+# review: pending
+-darja-doyam = دوم
+
+# review: pending
+-darja-soyam = سوم
+
 glossary-arhti = { -arhti }
 glossary-index = { -index }
 glossary-beopari = { -beopari }
@@ -477,3 +490,7 @@ glossary-dusri-dukan = { -dusri-dukan }
 glossary-mehman = { -mehman }
 glossary-nishan = { -nishan }
 glossary-trade-mark = { -trade-mark }
+glossary-darja = { -darja }
+glossary-darja-awwal = { -darja-awwal }
+glossary-darja-doyam = { -darja-doyam }
+glossary-darja-soyam = { -darja-soyam }

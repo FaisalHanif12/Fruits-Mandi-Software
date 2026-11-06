@@ -429,6 +429,7 @@ pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
         seller_comm: None,
         buyer_comm: None,
         laga: None,
+        grade: None,
         note: None,
     }
 }

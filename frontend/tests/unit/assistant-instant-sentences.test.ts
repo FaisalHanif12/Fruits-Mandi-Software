@@ -42,7 +42,7 @@ const SENTENCES: readonly Sentence[] = [
   {
     id: 'assistant-instant-commission',
     selector: 'role',
-    values: ['shop', 'item', 'seller', 'buyer'],
+    values: ['shop', 'item', 'seller', 'seller-own', 'buyer'],
     uses: { shop: ['period', 'figure'] },
     common: ['name', 'period', 'figure'],
   },
@@ -74,6 +74,12 @@ const SENTENCES: readonly Sentence[] = [
   },
   {
     id: 'assistant-instant-partner-total',
+    selector: '',
+    values: [''],
+    common: ['name', 'figure'],
+  },
+  {
+    id: 'assistant-instant-partner-capital',
     selector: '',
     values: [''],
     common: ['name', 'figure'],
@@ -122,6 +128,43 @@ describe.each(LANGUAGES)('the instant answer sentences (%s)', (language) => {
     expect(new Set(texts).size).toBe(texts.length);
   });
 
+  it('the commission of the shop or an item says it includes Laga; the buyer line does not', () => {
+    const laga = message(language, 'glossary-laga');
+    const args = { name: 'NAMEMARK', figure: 'FIGUREMARK', period: 'PERIODMARK' };
+    // The total on a seller's goods includes Laga too; what is charged to a seller or a buyer does not.
+    for (const role of ['shop', 'item', 'seller']) {
+      expect(message(language, 'assistant-instant-commission', { role, ...args })).toContain(laga);
+    }
+    for (const role of ['seller-own', 'buyer']) {
+      expect(message(language, 'assistant-instant-commission', { role, ...args })).not.toContain(
+        laga,
+      );
+    }
+  });
+
+  it('the total on a seller goods says it holds the line above, so the two figures cannot be added', () => {
+    const args = { name: 'NAMEMARK', figure: 'FIGUREMARK', period: 'PERIODMARK' };
+    const own = message(language, 'assistant-instant-commission', { role: 'seller-own', ...args });
+    const total = message(language, 'assistant-instant-commission', { role: 'seller', ...args });
+    expect(total).toContain(language === 'ur' ? 'اوپر والی لائن سمیت' : 'including the line above');
+    expect(own).not.toContain(language === 'ur' ? 'اوپر والی لائن' : 'line above');
+    // The two lines are about the same seller and period, and differ in what the figure is.
+    for (const text of [own, total]) {
+      expect(text).toContain('NAMEMARK');
+      expect(text).toContain('PERIODMARK');
+    }
+    expect(own).not.toBe(total);
+  });
+
+  it('the capital sentence is the partner and his capital with the figure', () => {
+    const text = message(language, 'assistant-instant-partner-capital', {
+      name: 'NAMEMARK',
+      figure: 'FIGUREMARK',
+    });
+    expect(text).toContain(message(language, 'glossary-sarmaya'));
+    expect(text.indexOf('NAMEMARK')).toBeLessThan(text.indexOf('FIGUREMARK'));
+  });
+
   it('a figure sentence never writes a side word: the figure carries its own', () => {
     for (const sentence of SENTENCES) {
       if (!['assistant-instant-party', 'assistant-instant-shop'].includes(sentence.id)) continue;
@@ -132,5 +175,68 @@ describe.each(LANGUAGES)('the instant answer sentences (%s)', (language) => {
         expect(text).not.toContain('جمع');
       }
     }
+  });
+});
+
+describe('the word order of the period in the sentences', () => {
+  const PERIODS = ['today', 'day', 'range', 'all'] as const;
+  /** Every sale, commission and Laga sentence puts the period before کی or کا, whatever the period is. */
+  const WITH_PERIOD = [
+    ['assistant-instant-sale', ['shop', 'item', 'seller', 'buyer']],
+    ['assistant-instant-sale-count', ['shop', 'seller']],
+    ['assistant-instant-commission', ['shop', 'item', 'seller', 'seller-own', 'buyer']],
+    ['assistant-instant-laga', ['shop', 'item', 'buyer']],
+  ] as const;
+
+  it.each(PERIODS)(
+    'period %s is followed by کی or کا in every sale, commission and Laga line',
+    (shape) => {
+      const period = message('ur', 'assistant-instant-period', {
+        shape,
+        day: 'DAYMARK',
+        from: 'FROMMARK',
+        to: 'TOMARK',
+      });
+      for (const [id, roles] of WITH_PERIOD) {
+        for (const role of roles) {
+          const text = message('ur', id, { role, name: 'NAMEMARK', figure: 'FIGUREMARK', period });
+          expect(text, `${id}/${role}`).toMatch(new RegExp(`${period} (کی|کا) `));
+        }
+      }
+    },
+  );
+
+  it('the buyer line never has two "سے" in a row around the period (a range has its own سے)', () => {
+    const range = message('ur', 'assistant-instant-period', {
+      shape: 'range',
+      from: 'FROMMARK',
+      to: 'TOMARK',
+    });
+    for (const id of ['assistant-instant-commission', 'assistant-instant-laga']) {
+      const text = message('ur', id, {
+        role: 'buyer',
+        name: 'NAMEMARK',
+        figure: 'FIGUREMARK',
+        period: range,
+      });
+      expect(text).not.toMatch(/سے\s+FROMMARK/);
+      expect(text).toContain('NAMEMARK سے لیا گیا');
+    }
+  });
+
+  it.each(PERIODS)('in English the period comes after the noun, for period %s', (shape) => {
+    const period = message('en', 'assistant-instant-period', {
+      shape,
+      day: 'DAYMARK',
+      from: 'FROMMARK',
+      to: 'TOMARK',
+    });
+    const text = message('en', 'assistant-instant-commission', {
+      role: 'shop',
+      name: 'NAMEMARK',
+      figure: 'FIGUREMARK',
+      period,
+    });
+    expect(text).toBe(`Commission (with ${message('en', 'glossary-laga')}) ${period}: FIGUREMARK`);
   });
 });

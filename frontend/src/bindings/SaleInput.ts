@@ -64,6 +64,13 @@ export type SaleInput = {
    */
   laga: LineChargeInput | null;
   /**
+   * The quality of the goods of this line (PRD FR-12.42): `"first"`, `"second"`, `"third"`, or
+   * `null` (an empty text is the same). It changes no figure. Any other text is
+   * `ERR_OUT_OF_RANGE` on `lots[i].sales[j].grade` (so the screen's dropdown, which has only
+   * the three words, can never send one).
+   */
+  grade?: 'first' | 'second' | 'third' | null;
+  /**
    * A note.
    */
   note: string | null;

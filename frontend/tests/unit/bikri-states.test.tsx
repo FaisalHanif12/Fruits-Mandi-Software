@@ -343,7 +343,8 @@ describe.each(LANGUAGES)('problems at their cells (%s)', (language) => {
     expect(cellOf(sales, 0, 'buyer')).toHaveClass('cell-warn');
     // Colour is never the only signal: both are written, with the lot and line they are about.
     const text = pageText();
-    expect(text).toContain(message(language, 'bikri-where-line', { lot: 1, line: 2 }));
+    // The quantity is told under the sale lines of the lot, with the line only (PRD FR-12.6).
+    expect(text).toContain(message(language, 'bikri-qty-note-line', { line: 2 }));
     expect(text).toContain(message(language, 'err-qty-exceeds-lot', { available: 30 }));
     expect(text).toContain(
       message(language, 'err-credit-limit-exceeded', { would_owe: '12,880', limit: '10,000' }),

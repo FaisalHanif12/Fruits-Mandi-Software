@@ -63,6 +63,13 @@ pub enum BackupCode {
     /// The cloud did not answer or refused (no internet, wrong keys). The copy waits in the
     /// queue and is tried again every 10 minutes (NFR-BAK-9). Value `reason`.
     ErrBackupCloudFailed,
+    /// The cloud address has a path after the host, for example `https://acct.r2.cloudflarestorage.com/mandidemo`
+    /// (plan 53 section 10). The bucket name goes in its own box; with a path the copy would
+    /// go into an extra folder. Field `cloud_endpoint` (`source.cloud.endpoint` on the first
+    /// screen). Values: `address` (the address cut off at the host, the one to use), `path`
+    /// (what was cut off, for example `/mandidemo`) and, when the path is one bucket-like word,
+    /// `bucket` (`mandidemo`) for an empty bucket box. Nothing was saved.
+    ErrBackupCloudAddressPath,
     /// The USB folder is not there: the drive is not plugged in (FR-20.4).
     ErrBackupUsbNotPresent,
     /// Writing to the USB drive failed, for example the drive was pulled out half way. No

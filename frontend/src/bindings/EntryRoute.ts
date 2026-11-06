@@ -18,6 +18,11 @@ export type EntryRoute = {
    * - `kharcha`, `sarmaya` and `phal`: a PARTNER record. `id` is `partners.id` and the names are
    *   the partner's own; it is never his capital, drawings or 0604 account. A partner has no
    *   code or tag, so those two are null.
+   * - `garden_installment`, `garden_cost`, `garden_sale` and `garden_close`: the GARDEN record
+   *   (`id` = the garden's id, key prefix `g`).
+   * - `trip_purchase`, `trip_cost` and `trip_sale`: the TRIP record (`id` = the trip's id, key
+   *   prefix `t`).
+   * - `bikri_later_sale`, `bikri_edit` and `bikri_cancel`: no party.
    * - Every other screen (`bikri`, `wasooli`, `adaigi`, `peshgi`, `udhar_raqam`, `alag_khata`,
    *   `general`, `account`): the ACCOUNT record, with `id` = `accounts.id`.
    *

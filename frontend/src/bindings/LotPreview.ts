@@ -62,13 +62,15 @@ export type LotPreview = {
    */
   phone: LotCharge | null;
   /**
-   * Quantity of the rows that have a valid quantity (blank rows left out). The same sum as the
-   * `remaining_qty` of the rows and the warning `ERR_QTY_LEFT_UNSOLD` use.
+   * Quantity of the rows that stand (blank rows and rows refused for being over the lot are left
+   * out, PRD FR-12.6). The same sum as the `remaining_qty` of the rows and the warning
+   * `ERR_QTY_LEFT_UNSOLD` use.
    */
   sold_qty: number;
   /**
-   * Quantity received less quantity sold, 0 if more was sold (that row has
-   * `ERR_QTY_EXCEEDS_LOT`). Null while the quantity received is not valid.
+   * Quantity received less the quantity of the rows that stand, never below 0. A row over the
+   * lot is refused (`ERR_QTY_EXCEEDS_LOT`) and takes nothing. Null while the quantity received
+   * is not valid.
    */
   balance_qty: number | null;
   /**

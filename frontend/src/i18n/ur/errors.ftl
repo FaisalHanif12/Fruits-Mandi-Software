@@ -144,11 +144,11 @@ err-recovery-code-wrong = صارف کا نام یا ریکوری کوڈ غلط �
 # review: pending
 err-already-set-up = پہلی ترتیب پہلے ہی مکمل ہو چکی ہے۔ لاگ ان کریں۔
 # $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
-# does not start with https:// or is not one word, path means something follows the host name.
+# does not start with https:// or is not one word. (An address with a path after the host is its own
+# refusal, ERR_BACKUP_CLOUD_ADDRESS_PATH.)
 # review: pending
 err-out-of-range = { $reason ->
     [https] کلاؤڈ کا پتہ https سے شروع ہونا چاہیے اور ایک ہی لفظ ہونا چاہیے، مثلاً https://your-account.r2.cloudflarestorage.com۔
-    [path] صرف کلاؤڈ کا پتہ لکھیں، مثلاً https://your-account.r2.cloudflarestorage.com۔ { backup-set-bucket } اپنے خانے میں لکھیں۔
    *[other] یہ قیمت { $min } سے { $max } کے درمیان ہونی چاہیے۔
 }
 # review: pending
@@ -236,7 +236,7 @@ err-date-range = آخری تاریخ پہلی تاریخ سے پہلے ہے۔ آ
 
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
-err-qty-exceeds-lot = تعداد { -lot } کی باقی تعداد سے زیادہ ہے۔ صرف { $available } { -nag } باقی ہیں۔
+err-qty-exceeds-lot = اتنی تعداد دستیاب نہیں: صرف { $available } { -nag } باقی ہیں۔
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = لائن پر { -commission } یا { -laga } بدلنا بند ہے۔ مالک اسے ترتیبات میں چالو کر سکتا ہے۔
@@ -492,6 +492,8 @@ err-backup-newer-than-app = یہ کاپی اس کمپیوٹر کی ایپ سے �
 # review: pending
 err-backup-chain-key-missing = اس کاپی میں چھیڑ چھاڑ کی جانچ کی چابی نہیں ہے، اس لیے نئے کمپیوٹر پر اس پر بھروسا نہیں کیا جا سکتا۔ دوسری کاپی استعمال کریں، یا مدد کے لیے رابطہ کریں۔
 
+# review: pending
+err-backup-cloud-address-path = کلاؤڈ کا پتہ صرف ہوسٹ تک ہونا چاہیے، اس کے بعد کچھ نہیں۔ { $path } پتے کا حصہ نہیں ہے۔ { $address } لکھیں، اور بکٹ کا نام { backup-set-bucket } کے خانے میں لکھیں۔
 # review: pending
 err-backup-no-owner = جس کمپیوٹر نے یہ کاپی بنائی اس کی پہلی ترتیب کبھی مکمل نہیں ہوئی تھی، اس لیے بحال کرنے کے بعد کوئی لاگ ان نہیں کر سکے گا۔ کچھ نہیں بدلا۔ کوئی اور کاپی استعمال کریں۔
 

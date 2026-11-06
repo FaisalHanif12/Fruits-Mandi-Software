@@ -42,6 +42,8 @@ pub(super) struct Scan {
     pub cut: bool,
     /// The question as typed, trimmed.
     pub raw: String,
+    /// A truck number the question holds, written `LES-1234`.
+    pub truck: Option<String>,
 }
 
 fn ascii_digit(c: char) -> char {
@@ -186,6 +188,52 @@ fn without_ordinal(word: &str) -> String {
     }
 }
 
+/// A truck number in the words: two or three letters and three or four digits, glued ("lhr0077"),
+/// joined by a hyphen ("LES-1234") or, with the letters in capitals, by a space ("LES 1234").
+/// Returns the first and the last-plus-one word and the number written `LES-1234`.
+///
+/// Example: "LES-1234 ki bikri" gives words 0 to 2 and `LES-1234`; "ali 1000 ki bikri" gives none
+/// (a name and an amount).
+fn truck_number(raw: &str, words: &[String]) -> Option<(usize, usize, String)> {
+    let letters_then_digits = |w: &str| -> Option<(String, String)> {
+        let at = w.find(|c: char| c.is_ascii_digit())?;
+        let (l, d) = w.split_at(at);
+        ((2..=3).contains(&l.chars().count())
+            && l.chars().all(|c| c.is_ascii_lowercase())
+            && (3..=4).contains(&d.chars().count())
+            && d.chars().all(|c| c.is_ascii_digit()))
+        .then(|| (l.to_owned(), d.to_owned()))
+    };
+    let lower = raw.to_ascii_lowercase();
+    for (at, word) in words.iter().enumerate() {
+        if let Some((l, d)) = letters_then_digits(word) {
+            return Some((
+                at,
+                at.saturating_add(1),
+                format!("{}-{d}", l.to_uppercase()),
+            ));
+        }
+        let next = words.get(at.saturating_add(1))?;
+        let letters = (2..=3).contains(&word.chars().count())
+            && word.chars().all(|c| c.is_ascii_lowercase())
+            && !table().is_known(word);
+        let digits =
+            (3..=4).contains(&next.chars().count()) && next.chars().all(|c| c.is_ascii_digit());
+        if letters && digits {
+            let hyphen = lower.contains(&format!("{word}-{next}"));
+            let capitals = raw.contains(&format!("{} {next}", word.to_ascii_uppercase()));
+            if hyphen || capitals {
+                return Some((
+                    at,
+                    at.saturating_add(2),
+                    format!("{}-{next}", word.to_uppercase()),
+                ));
+            }
+        }
+    }
+    None
+}
+
 impl Scan {
     /// Reads a question. `today` is needed only to place a date written without a year.
     pub(super) fn new(question: &str, today: NaiveDate) -> Self {
@@ -206,12 +254,23 @@ impl Scan {
         // not tarika).
         hits.retain(|h| !(h.fuzzy && words.get(h.start).is_some_and(|w| when::is_time_word(w))));
         let numbers = question_numbers(&digits);
+        // A truck number is no name and no amount: the words it covers are known (a hit of its own).
+        let truck = truck_number(&raw, &words);
+        if let Some((start, end, _)) = &truck {
+            hits.push(Hit {
+                cue: Cue::TruckNo,
+                start: *start,
+                end: *end,
+                fuzzy: false,
+            });
+        }
         Self {
             words,
             dates,
             hits,
             numbers,
             cut,
+            truck: truck.map(|(_, _, text)| text),
             raw,
         }
     }

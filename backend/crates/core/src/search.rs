@@ -31,6 +31,10 @@ pub enum SearchScope {
     ExpenseHead,
     /// عملہ.
     Staff,
+    /// The active staff whose job is `collector` (اگراہی والا), for the collector boxes of a receipt,
+    /// the collection list and an account (PRD FR-15.2, FR-7.61). The same codes and short codes as
+    /// `staff`; a munshi, a labourer and an inactive person are never offered.
+    Collector,
     /// بیوپاری accounts (control 03011). Plan 07 (account search), plan 08 (short codes).
     Seller,
     /// گاہک accounts (control 0304).
@@ -76,7 +80,8 @@ impl SearchScope {
             | SearchScope::Trip
             | SearchScope::Garden
             | SearchScope::TripAll
-            | SearchScope::GardenAll => return None,
+            | SearchScope::GardenAll
+            | SearchScope::Collector => return None,
             SearchScope::City => MasterKind::City,
             SearchScope::Item => MasterKind::Item,
             SearchScope::Packing => MasterKind::Packing,
@@ -99,6 +104,7 @@ impl SearchScope {
             SearchScope::Garden => "garden",
             SearchScope::TripAll => "trip_all",
             SearchScope::GardenAll => "garden_all",
+            SearchScope::Collector => "collector",
             _ => match self.master_kind() {
                 Some(kind) => kind.as_str(),
                 None => "unknown",

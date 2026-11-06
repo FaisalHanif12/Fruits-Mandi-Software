@@ -153,6 +153,52 @@ fn words() -> &'static Words {
     })
 }
 
+/// True when a word is a month, a unit of time or a day word written wrong by a letter ("septmber",
+/// "mahine" for "mahina"): a time word spelt wrong, never a person.
+pub(super) fn is_near_time_word(word: &str) -> bool {
+    near_month(word).is_some() || {
+        let w = words();
+        let length = word.chars().count();
+        length >= 5
+            && word.chars().all(|c| c.is_ascii_lowercase())
+            && [&w.week, &w.month, &w.year, &w.day, &w.today, &w.parson]
+                .iter()
+                .any(|set| {
+                    set.iter().any(|candidate| {
+                        candidate.chars().count().abs_diff(length) <= 1
+                            && super::scan::edit_distance(word, candidate, 1) <= 1
+                    })
+                })
+    }
+}
+
+/// The month a word is one letter off ("septmber" is September), for words of five letters or more.
+fn near_month(word: &str) -> Option<u32> {
+    let length = word.chars().count();
+    if length < 5 || !word.chars().all(|c| c.is_ascii_lowercase()) {
+        return None;
+    }
+    // A word of an item ("mirch", a chilli) is no spelling of a month ("march").
+    if super::items::is_item_word(word) {
+        return None;
+    }
+    let mut found: Option<u32> = None;
+    for (name, number) in &words().months {
+        if name.chars().count() < 5 || !name.chars().all(|c| c.is_ascii_lowercase()) {
+            continue;
+        }
+        if name.chars().count().abs_diff(length) <= 1
+            && super::scan::edit_distance(word, name, 1) <= 1
+        {
+            if found.is_some_and(|f| f != *number) {
+                return None;
+            }
+            found = Some(*number);
+        }
+    }
+    found
+}
+
 /// True for a word that names a time and never a person or a thing.
 pub(super) fn is_time_word(word: &str) -> bool {
     let w = words();
@@ -287,7 +333,7 @@ fn year_at(scan: &Scan, at: usize) -> Option<i32> {
 fn month_at(scan: &Scan, at: usize) -> Option<u32> {
     let word = scan.word(at)?;
     let w = words();
-    let month = w.months.get(word).copied()?;
+    let month = w.months.get(word).copied().or_else(|| near_month(word))?;
     if month == 5 {
         return None;
     }
@@ -919,7 +965,40 @@ fn day_word_at(
         }
         // کل / kal: yesterday after a past verb, tomorrow after a future one. With no verb a data
         // question is about what happened, so yesterday, a little less sure.
+        // In Urdu letters, "کل" straight before a figure noun ("کل کمیشن", "کل بکری") is "total" as
+        // often as it is "yesterday's": the genitive ("کل کا کمیشن") is what makes it a day. With no
+        // verb to settle it, the app is not sure (money review, 05-11-2026).
+        let before_noun = word == "کل"
+            && scan.hits.iter().any(|h| {
+                h.start == next_index(at, 1)
+                    && matches!(
+                        h.cue,
+                        super::lexicon::Cue::Sale
+                            | super::lexicon::Cue::SalePlural
+                            | super::lexicon::Cue::Commission
+                            | super::lexicon::Cue::Laga
+                            | super::lexicon::Cue::Dues
+                            | super::lexicon::Cue::Collection
+                            | super::lexicon::Cue::Payable
+                            | super::lexicon::Cue::Advance
+                            | super::lexicon::Cue::Balance
+                            | super::lexicon::Cue::Cash
+                            | super::lexicon::Cue::Stock
+                    )
+            });
+        // "اس سال کی کل بکری": with another time word in the question, "کل" is "total".
+        if before_noun
+            && scan
+                .words
+                .iter()
+                .enumerate()
+                .any(|(i, x)| i != at && !w.kal.contains(x) && is_time_word(x))
+        {
+            return None;
+        }
         return match tense {
+            // Only "کل کا / کی / کے" makes it a day: straight before a figure noun it is "total".
+            _ if before_noun => one(PeriodKind::Yesterday, today.pred_opt(), Confidence::Low),
             Tense::Past => one(PeriodKind::Yesterday, today.pred_opt(), Confidence::High),
             Tense::Future => one(PeriodKind::Tomorrow, today.succ_opt(), Confidence::High),
             Tense::None => one(PeriodKind::Yesterday, today.pred_opt(), Confidence::Medium),
@@ -967,8 +1046,8 @@ fn up_to_now_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, 
     if !two {
         return None;
     }
-    // "up to now" is "up to" + "now": a third word.
-    let taken = if first == "up" && scan.word(next_index(at, 2)) == Some("now") {
+    // "up to now" and "up to date" are "up to" + a third word.
+    let taken = if first == "up" && matches!(scan.word(next_index(at, 2)), Some("now" | "date")) {
         3
     } else {
         2
@@ -1048,6 +1127,20 @@ pub(super) fn this_year(today: NaiveDate) -> Option<PeriodRef> {
     let first = NaiveDate::from_ymd_opt(today.year(), 1, 1)?;
     Some(period(
         PeriodKind::ThisYear,
+        Some(first),
+        today,
+        Confidence::Medium,
+        String::new(),
+        today,
+    ))
+}
+
+/// This month so far (the 1st to today), the base of "pichle mahine se zyada" when the question names
+/// only the month it is compared with.
+pub(super) fn this_month_so_far(today: NaiveDate) -> Option<PeriodRef> {
+    let first = NaiveDate::from_ymd_opt(today.year(), today.month(), 1)?;
+    Some(period(
+        PeriodKind::ThisMonth,
         Some(first),
         today,
         Confidence::Medium,
@@ -1190,6 +1283,12 @@ fn is_head(word: &str) -> bool {
         || (w.next.contains(word) && !matches!(word, "aane" | "aanay" | "آنے"))
 }
 
+/// The words after "last" that make it the last sale of a rate, with a rate word in the question.
+const LAST_RATE_NEXT: [&str; 14] = [
+    "rate", "bhao", "price", "time", "bar", "baar", "dafa", "dafah", "martaba", "ریٹ", "بھاؤ",
+    "قیمت", "بار", "دفعہ",
+];
+
 /// The time words that no period took ("mahine ka", "hafte ki", "pichli", "din"). A unit of a week,
 /// a month or a year with "ka / ki / ke" and nothing counting it is this one: "faisal ka mahine ka
 /// commission" is this month (lead ruling of 04-11-2026), added to `out`. Anything else is a time
@@ -1213,7 +1312,12 @@ fn stray_time_words(
             continue;
         }
         let Some(unit) = unit_at(scan, at) else {
-            stray |= is_head(word);
+            // "last rate", "pichli bar ... kis rate pe": the last sale of a rate, no time to place.
+            let last_rate = scan.has(super::lexicon::Cue::Rate)
+                && scan
+                    .word(next_index(at, 1))
+                    .is_some_and(|x| LAST_RATE_NEXT.contains(&x));
+            stray |= is_head(word) && !last_rate;
             continue;
         };
         let before = at.checked_sub(1);
@@ -1297,6 +1401,15 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
         }
     }
     merge_month_and_days(&mut out, &bare, today);
+    // "is mahine ab tak": the "so far" is the month up to today, not a second period.
+    if out.len() > 1
+        && out.iter().any(|p| p.kind == PeriodKind::UpToNow)
+        && out
+            .iter()
+            .any(|p| p.kind != PeriodKind::UpToNow && p.from.is_some() && p.to == today)
+    {
+        out.retain(|p| p.kind != PeriodKind::UpToNow);
+    }
     // "saal ke aakhir tak": from today to 31 December. The year it belongs to is not a second
     // period, and its "saal" is not a stray time word.
     let year_end = cues::year_end(&scan.raw);

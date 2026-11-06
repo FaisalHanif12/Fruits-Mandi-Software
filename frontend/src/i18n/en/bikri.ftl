@@ -78,6 +78,10 @@ bikri-truck-continue = Continue with this new sale
 
 ## The lots (PRD 12.3) and the sale lines (PRD 12.4).
 
+# The empty choice of the quality list of a sale line (PRD FR-12.42).
+# review: pending
+bikri-grade-none = No quality
+
 # review: pending
 bikri-lots-title = Lots
 
@@ -87,8 +91,17 @@ bikri-lots-label = Lots of this sale
 # review: pending
 bikri-lots-add = Add a lot
 
+# A lot named by its seller and item, for the labels of a lot (PRD FR-12.6): "Ehsan, Apple". Only the
+# two names are joined here; while only one of them is chosen, the label shows that name alone.
 # review: pending
-bikri-sales-title = Sales of lot { $lot }
+bikri-lot-who = { $seller }, { $item }
+
+# $lot: the lot number. $who: the lot's name (bikri-lot-who). $named: yes when it has one.
+# review: pending
+bikri-sales-title = { $named ->
+    [yes] Sales of lot { $lot }: { $who }
+   *[no] Sales of lot { $lot }
+}
 
 # review: pending
 bikri-sales-label = Sale lines
@@ -136,7 +149,10 @@ bikri-rate-hint-last-day = Last rate on { $date }: { $rate }
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending
-bikri-more-toggle = More about lot { $lot }
+bikri-more-toggle = { $named ->
+    [yes] More about lot { $lot }: { $who }
+   *[no] More about lot { $lot }
+}
 
 # review: pending
 bikri-more-weight = Weight (kg)
@@ -231,13 +247,33 @@ bikri-pukhta-phone = Phone number
 bikri-summary-title = Summary
 
 # review: pending
-bikri-summary-lot = Lot { $lot }
+bikri-summary-lot = { $named ->
+    [yes] Lot { $lot }: { $who }
+   *[no] Lot { $lot }
+}
 
 # review: pending
 bikri-summary-whole = Whole sale
 
 # review: pending
 bikri-summary-incomplete = This lot cannot be worked out yet. Enter the buyer, the quantity and the rate.
+
+# A line that sells more than the lot has left, or has a quantity that is not a number, is not worked
+# out (PRD FR-12.6). When no line of the lot or sale is, these words stand where the figures would be.
+# review: pending
+bikri-summary-waits-qty = The totals wait until the quantity is fixed.
+
+# When other lines are worked out, the figures leave the refused lines out and say so.
+# $count: how many lines are left out.
+# review: pending
+bikri-left-out = { $count ->
+    [one] One line is left out of these figures until its quantity is fixed.
+   *[other] { $count } lines are left out of these figures until their quantity is fixed.
+}
+
+# The line a quantity problem written under the sale lines is about. $line: the line number.
+# review: pending
+bikri-qty-note-line = Line { $line }:
 
 # review: pending
 bikri-summary-seller-side = Seller side
@@ -279,9 +315,9 @@ bikri-shares-open-setup = Open { -shirakat-dar } setup
 # review: pending
 bikri-col-lot = { -lot }
 
-# The lot of a line in the whole-sale view: its number and its seller.
+# The lot of a line in the whole-sale view: its number and its name (seller and item, bikri-lot-who).
 # review: pending
-bikri-all-lot = { $lot } { $seller }
+bikri-all-lot = { $lot } { $who }
 
 # review: pending
 bikri-all-lot-no-seller = { $lot }
@@ -295,6 +331,15 @@ bikri-strip-label = Key numbers of this sale
 
 # review: pending
 bikri-strip-incomplete = Not worked out yet
+
+# review: pending
+bikri-strip-waits-qty = Waiting for the quantity
+
+# review: pending
+bikri-strip-left-out = { $count ->
+    [one] One line left out
+   *[other] { $count } lines left out
+}
 
 # The name of the switch above the sale lines: one lot, or the whole sale (PRD FR-12.1).
 # review: pending
@@ -421,7 +466,7 @@ bikri-saved-at = Time saved
 bikri-saved-failed = The { -bikri } could not be opened
 
 # review: pending
-bikri-saved-lot-title = { -lot } { $lot }: { $seller }
+bikri-saved-lot-title = { -lot } { $lot }: { $who }
 
 # review: pending
 bikri-saved-pick-lot = Which { -lot } to show

@@ -19,6 +19,7 @@
 //! `FieldError { code: ErrNotANumber, field: "lots[0].sales[2].qty", .. }`.
 
 mod edit;
+mod grade;
 mod input;
 mod prepare;
 mod prepared;
@@ -29,6 +30,7 @@ mod saved;
 mod tests;
 
 pub use edit::*;
+pub use grade::SaleGrade;
 pub use input::*;
 pub use prepare::{prepare_draft, split_freight};
 pub use prepared::*;

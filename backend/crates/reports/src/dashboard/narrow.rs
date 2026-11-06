@@ -94,7 +94,7 @@ pub struct TilesNow {
     pub tiles: DashboardTiles,
 }
 
-fn cash_of(conn: &Connection) -> Result<Paisa, ReportsError> {
+pub(crate) fn cash_of(conn: &Connection) -> Result<Paisa, ReportsError> {
     let cash_id = account_repo::id_by_code(conn, CASH_ACCOUNT_CODE)?
         .ok_or_else(|| ReportsError::Data("the cash account is missing".to_owned()))?;
     let cash = totals_of(conn, cash_id, None, None)?;
@@ -116,7 +116,7 @@ fn sales_of(conn: &Connection, today: &str) -> Result<SalesToday, ReportsError> 
     })
 }
 
-fn buyers_of(conn: &Connection, today: BusinessDate) -> Result<Paisa, ReportsError> {
+pub(crate) fn buyers_of(conn: &Connection, today: BusinessDate) -> Result<Paisa, ReportsError> {
     let mut total = Paisa::ZERO;
     for buyer in buyers_balances_now(conn, today)? {
         add(&mut total, buyer.balance)?;

@@ -272,6 +272,7 @@ fn r13_table() -> AnswerTable {
                 ur: "پیٹی".to_owned(),
                 en: "Box".to_owned(),
             },
+            grade: None,
             qty: 20,
             rate_paisa: rs(600),
             value_paisa: rs(12_000),

@@ -5,6 +5,7 @@ import type { AnalyticsGroupBy } from './AnalyticsGroupBy';
 import type { AnalyticsPeriod } from './AnalyticsPeriod';
 import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
+import type { ItemGroup } from './ItemGroup';
 import type { ReportNames } from './ReportNames';
 import type { ReportParty } from './ReportParty';
 
@@ -32,6 +33,10 @@ export type AnalyticsResolvedFilters = {
    * The item.
    */
   item: ReportNames | null;
+  /**
+   * The item group picked (views A, B, C, D, G and H).
+   */
+  item_group?: ItemGroup;
   /**
    * The seller.
    */

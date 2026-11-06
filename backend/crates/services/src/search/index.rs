@@ -89,7 +89,7 @@ fn code_type_of(kind: SearchScope, account_type: Option<AccountType>) -> Option<
     match (kind, account_type) {
         (SearchScope::Item, _) => Some(CodeType::Item),
         (SearchScope::Packing, _) => Some(CodeType::Packing),
-        (SearchScope::Staff, _) => Some(CodeType::Staff),
+        (SearchScope::Staff | SearchScope::Collector, _) => Some(CodeType::Staff),
         (SearchScope::Trip | SearchScope::TripAll, _) => Some(CodeType::Trip),
         (SearchScope::Garden | SearchScope::GardenAll, _) => Some(CodeType::Garden),
         (_, Some(AccountType::Seller)) => Some(CodeType::Seller),
@@ -204,9 +204,9 @@ impl Index {
         self.scopes.insert(scope, entries);
     }
 
-    /// Puts the open trips or the open gardens in the index (plan 34): the scope is `Trip` or
-    /// `Garden`. They are small lists that change with every sale, so the service builds this index
-    /// for the call and does not keep it.
+    /// Puts the open trips or the open gardens in the index (plan 34), or the active collectors: the
+    /// scope is `Trip`, `Garden` or `Collector`. They are small lists that change often, so the
+    /// service builds this index for the call and does not keep it.
     pub fn set_ventures(&mut self, scope: SearchScope, sources: Vec<SearchSource>) {
         let mut entries: Vec<Arc<Entry>> = sources
             .into_iter()

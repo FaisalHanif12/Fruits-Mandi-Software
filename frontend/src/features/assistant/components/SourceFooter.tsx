@@ -7,6 +7,7 @@ import { useLocalization, type ReactLocalization } from '@fluent/react';
 import { useMutation } from '@tanstack/react-query';
 import { FileText, Printer } from 'lucide-react';
 import type { AnswerSource } from '../../../bindings/AnswerSource';
+import type { ScreenRoute } from '../../../bindings/ScreenRoute';
 import { uiErrorOf } from '../../../shared/api';
 import { isoToDisplayDate, utcToLocalDisplay, utcToLocalTime } from '../../../shared/format';
 import { useLanguage } from '../../../shared/i18n';
@@ -15,6 +16,14 @@ import { analyticsPrintView } from '../../analytics';
 import { reportsPrintReport } from '../../reports';
 import { analyticsFiltersOf, reportFiltersOf } from '../addresses';
 import { useAssistantNavigation } from '../navigation';
+
+/** The message of the name of each screen a source can send the Owner to (the screen's own title). */
+const SCREEN_LABEL_IDS: Readonly<Record<ScreenRoute, string>> = {
+  dashboard: 'layout-nav-dashboard',
+  commission_rules: 'masters-rules-title',
+  day_close: 'day-title',
+  audit: 'settings-tab-audit',
+};
 
 /** The name of a source for the source line and for a button's accessible name. */
 export function sourceLabel(source: AnswerSource, l10n: ReactLocalization): string {
@@ -29,6 +38,8 @@ export function sourceLabel(source: AnswerSource, l10n: ReactLocalization): stri
       });
     case 'tiles':
       return l10n.getString('layout-nav-dashboard');
+    case 'screen':
+      return l10n.getString(SCREEN_LABEL_IDS[source.route]);
   }
 }
 
@@ -112,13 +123,31 @@ function usePrintSource() {
   });
 }
 
-/** The sources a button can open: a report, a view, or the dashboard. A party card has none. */
+/** The sources a button can open: a report, a view, the dashboard or a screen. A party card has none. */
 function openable(sources: readonly AnswerSource[]): AnswerSource[] {
   return sources.filter((source) => source.kind !== 'party_card');
 }
 
 function printable(source: AnswerSource): boolean {
   return source.kind === 'report' || source.kind === 'analytics';
+}
+
+/** The words of the button that opens a source: a screen is opened, a report is the full report. */
+function buttonText(
+  source: AnswerSource,
+  label: string,
+  several: boolean,
+  l10n: ReactLocalization,
+): string {
+  if (source.kind === 'tiles') return l10n.getString('assistant-open-dashboard');
+  if (source.kind === 'screen') {
+    return several
+      ? l10n.getString('assistant-open-screen-of', { source: label })
+      : l10n.getString('assistant-open-screen');
+  }
+  return several
+    ? l10n.getString('assistant-open-report-of', { source: label })
+    : l10n.getString('assistant-open-report');
 }
 
 export function SourceButtons({ sources }: { sources: readonly AnswerSource[] }) {
@@ -143,7 +172,8 @@ export function SourceButtons({ sources }: { sources: readonly AnswerSource[] })
               <Button
                 {...(several
                   ? {
-                      accessibleName: l10n.getString('assistant-open-report-of', { source: label }),
+                      // The name says what the text says (the label is in the name), whatever the source is.
+                      accessibleName: buttonText(source, label, several, l10n),
                     }
                   : {})}
                 onClick={() => {
@@ -151,11 +181,7 @@ export function SourceButtons({ sources }: { sources: readonly AnswerSource[] })
                 }}
               >
                 <FileText aria-hidden="true" className="size-icon-md" />
-                {source.kind === 'tiles'
-                  ? l10n.getString('assistant-open-dashboard')
-                  : several
-                    ? l10n.getString('assistant-open-report-of', { source: label })
-                    : l10n.getString('assistant-open-report')}
+                {buttonText(source, label, several, l10n)}
               </Button>
               {printable(source) ? (
                 <Button

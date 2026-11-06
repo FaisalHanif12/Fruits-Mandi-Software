@@ -16,6 +16,8 @@ interface ProblemListProps {
   activeLine: number;
   /** False on a screen that has no header fields (a later sale), so header problems are listed. */
   headerShown?: boolean;
+  /** The whole-sale view is on: the notes under the lines grid tell the quantity problems of every lot. */
+  whole?: boolean;
 }
 
 /** Is the problem shown by a field with words under it? Then the list leaves it out. */
@@ -24,6 +26,7 @@ function shownByField(
   selectedLot: number,
   activeLine: number,
   headerShown: boolean,
+  whole: boolean,
 ): boolean {
   const { where } = problem;
   if (where.kind === 'header') return headerShown;
@@ -37,6 +40,14 @@ function shownByField(
     );
   }
   if (where.kind === 'line') {
+    // A problem of a quantity is written under the lines grid, for the lines that grid shows.
+    if (
+      where.sub === 'qty' &&
+      problem.severity === 'error' &&
+      (whole || where.lot === selectedLot)
+    ) {
+      return true;
+    }
     return (
       where.lot === selectedLot &&
       where.line === activeLine &&
@@ -52,10 +63,11 @@ export function ProblemList({
   selectedLot,
   activeLine,
   headerShown = true,
+  whole = false,
 }: ProblemListProps) {
   const navigate = useNavigate();
   const listed = problems.filter(
-    (problem) => !shownByField(problem, selectedLot, activeLine, headerShown),
+    (problem) => !shownByField(problem, selectedLot, activeLine, headerShown, whole),
   );
   if (listed.length === 0) return null;
   return (

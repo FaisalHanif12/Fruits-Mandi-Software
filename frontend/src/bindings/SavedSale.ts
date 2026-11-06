@@ -2,6 +2,7 @@
 import type { Paisa } from '../shared/format/money';
 import type { PaymentType } from './PaymentType';
 import type { RecordRef } from './RecordRef';
+import type { SaleGrade } from './SaleGrade';
 import type { SaleState } from './SaleState';
 import type { SavedCharge } from './SavedCharge';
 import type { SavedPukhta } from './SavedPukhta';
@@ -96,6 +97,11 @@ export type SavedSale = {
    * shows the lines in state `cancelled`; a saved one shows the lines `in_force`.
    */
   state: SaleState;
+  /**
+   * The quality of the goods of this line (PRD FR-12.42). Left out of the JSON when the line
+   * has none, so every older answer reads exactly as before.
+   */
+  grade?: SaleGrade;
   /**
    * A note.
    */

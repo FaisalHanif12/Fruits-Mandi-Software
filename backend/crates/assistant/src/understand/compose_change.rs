@@ -55,6 +55,13 @@ fn takes_party(screen: EntryScreen) -> bool {
             | EntryScreen::Phal
             | EntryScreen::General
             | EntryScreen::Account
+            | EntryScreen::GardenInstallment
+            | EntryScreen::GardenCost
+            | EntryScreen::GardenSale
+            | EntryScreen::GardenClose
+            | EntryScreen::TripPurchase
+            | EntryScreen::TripCost
+            | EntryScreen::TripSale
     )
 }
 
@@ -66,6 +73,14 @@ fn fits(screen: EntryScreen, role: PartyRole) -> bool {
         }
         EntryScreen::UdharRaqam => role == PartyRole::Staff,
         EntryScreen::AlagKhata => role == PartyRole::Khata,
+        // The entry of a garden or a trip is made on that garden or that trip.
+        EntryScreen::GardenInstallment
+        | EntryScreen::GardenCost
+        | EntryScreen::GardenSale
+        | EntryScreen::GardenClose => role == PartyRole::Garden,
+        EntryScreen::TripPurchase | EntryScreen::TripCost | EntryScreen::TripSale => {
+            role == PartyRole::Trip
+        }
         EntryScreen::Wasooli | EntryScreen::Adaigi | EntryScreen::Peshgi => {
             matches!(role, PartyRole::Seller | PartyRole::Buyer)
         }

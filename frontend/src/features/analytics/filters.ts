@@ -4,7 +4,7 @@
 // (CLAUDE.md rule 1). Nothing is worked out here.
 
 import type { ReportPerson } from '../reports';
-import type { PickerValue } from '../../shared/ui';
+import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 import type {
   AnalyticsCompare,
   AnalyticsFilterKind,
@@ -80,6 +80,8 @@ export interface AnalyticsFilterState {
   /** One garden (view I and the views that take it), or all (null). */
   garden: number | null;
   goods: AnalyticsGoods;
+  /** All the items of a group, fruit or vegetables (views A, D and G); never together with an item. */
+  itemGroup: ItemGroupChoice;
   /** The layout of view J. */
   tripView: AnalyticsTripView;
 }
@@ -102,6 +104,7 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   trip: null,
   garden: null,
   goods: 'all',
+  itemGroup: 'all',
   tripView: 'trip',
 };
 
@@ -141,6 +144,10 @@ export function filtersToWire(
     trip_id: has('trip') ? state.trip : null,
     garden_id: has('garden') ? state.garden : null,
     goods: has('goods') ? state.goods : 'all',
+    // A group of items is sent only when it is chosen, and never with one item (the backend refuses both).
+    ...(has('item_group') && state.itemGroup !== 'all' && state.item === null
+      ? { item_group: state.itemGroup }
+      : {}),
     // The first layout is the backend's default, so it is left null, like the month of group_by.
     trip_view: has('trip_view') && state.tripView !== 'trip' ? state.tripView : null,
   };
@@ -184,6 +191,7 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     trip: filters.trip_id,
     garden: filters.garden_id,
     goods: filters.goods,
+    itemGroup: filters.item_group ?? 'all',
     tripView: filters.trip_view ?? 'trip',
   };
 }
@@ -208,6 +216,7 @@ export function isUnfiltered(
     wire.partner_id === null &&
     wire.trip_id === null &&
     wire.garden_id === null &&
-    wire.goods === 'all'
+    wire.goods === 'all' &&
+    wire.item_group === undefined
   );
 }

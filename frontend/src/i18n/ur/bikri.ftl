@@ -78,6 +78,10 @@ bikri-truck-continue = نئی { -bikri } جاری رکھیں
 
 ## The lots (PRD 12.3) and the sale lines (PRD 12.4).
 
+# The empty choice of the quality list of a sale line (PRD FR-12.42).
+# review: pending
+bikri-grade-none = کوئی درجہ نہیں
+
 # review: pending
 bikri-lots-title = { -lot }
 
@@ -87,8 +91,17 @@ bikri-lots-label = اس { -bikri } کے { -lot }
 # review: pending
 bikri-lots-add = { -lot } شامل کریں
 
+# { -lot } کا نام اس کے بیوپاری اور مال سے، { -lot } کے ہر عنوان کے لیے (PRD FR-12.6): "احسان، سیب"۔
+# یہاں صرف دونوں نام جوڑے جاتے ہیں؛ جب تک ایک ہی چنا ہو، عنوان میں وہی نام اکیلا آتا ہے۔
 # review: pending
-bikri-sales-title = { -lot } { $lot } کی { -bikri }
+bikri-lot-who = { $seller }، { $item }
+
+# $lot: { -lot } نمبر۔ $who: { -lot } کا نام (bikri-lot-who)۔ $named: جب نام ہو تو yes۔
+# review: pending
+bikri-sales-title = { $named ->
+    [yes] { -lot } { $lot } کی { -bikri }: { $who }
+   *[no] { -lot } { $lot } کی { -bikri }
+}
 
 # review: pending
 bikri-sales-label = { -bikri } کی لائنیں
@@ -136,7 +149,10 @@ bikri-rate-hint-last-day = { $date } کا آخری ریٹ { $rate }
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending
-bikri-more-toggle = { -lot } { $lot } کی مزید باتیں
+bikri-more-toggle = { $named ->
+    [yes] { -lot } { $lot } کی مزید باتیں: { $who }
+   *[no] { -lot } { $lot } کی مزید باتیں
+}
 
 # review: pending
 bikri-more-weight = وزن (کلو)
@@ -231,13 +247,33 @@ bikri-pukhta-phone = فون نمبر
 bikri-summary-title = خلاصہ
 
 # review: pending
-bikri-summary-lot = { -lot } { $lot }
+bikri-summary-lot = { $named ->
+    [yes] { -lot } { $lot }: { $who }
+   *[no] { -lot } { $lot }
+}
 
 # review: pending
 bikri-summary-whole = پوری { -bikri }
 
 # review: pending
 bikri-summary-incomplete = اس { -lot } کا حساب ابھی نہیں بن سکتا۔ { -gahak }، تعداد اور ریٹ لکھیں۔
+
+# جو لائن { -lot } میں باقی تعداد سے زیادہ بیچے، یا جس کی تعداد عدد نہ ہو، اس کا حساب نہیں بنتا (PRD FR-12.6)۔
+# جب { -lot } یا { -bikri } کی کوئی لائن نہ بنے تو رقموں کی جگہ یہ الفاظ آتے ہیں۔
+# review: pending
+bikri-summary-waits-qty = تعداد ٹھیک ہونے تک میزان انتظار میں ہے۔
+
+# جب باقی لائنوں کا حساب بنے تو رقموں میں رد ہونے والی لائنیں شامل نہیں ہوتیں، اور یہ بتایا جاتا ہے۔
+# $count: کتنی لائنیں شامل نہیں۔
+# review: pending
+bikri-left-out = { $count ->
+    [one] ایک لائن ان رقموں میں شامل نہیں، جب تک اس کی تعداد ٹھیک نہ ہو۔
+   *[other] { $count } لائنیں ان رقموں میں شامل نہیں، جب تک ان کی تعداد ٹھیک نہ ہو۔
+}
+
+# وہ لائن جس کا تعداد کا مسئلہ بکری کی لائنوں کے نیچے لکھا ہے۔ $line: لائن نمبر۔
+# review: pending
+bikri-qty-note-line = لائن { $line }:
 
 # review: pending
 bikri-summary-seller-side = { -beopari } کی طرف
@@ -281,7 +317,7 @@ bikri-col-lot = { -lot }
 
 # The lot of a line in the whole-sale view: its number and its seller.
 # review: pending
-bikri-all-lot = { $lot } { $seller }
+bikri-all-lot = { $lot } { $who }
 
 # review: pending
 bikri-all-lot-no-seller = { $lot }
@@ -295,6 +331,15 @@ bikri-strip-label = اس { -bikri } کے اہم اعداد
 
 # review: pending
 bikri-strip-incomplete = ابھی حساب نہیں ہوا
+
+# review: pending
+bikri-strip-waits-qty = تعداد کا انتظار ہے
+
+# review: pending
+bikri-strip-left-out = { $count ->
+    [one] ایک لائن شامل نہیں
+   *[other] { $count } لائنیں شامل نہیں
+}
 
 # The name of the switch above the sale lines: one lot, or the whole sale (PRD FR-12.1).
 # review: pending
@@ -421,7 +466,7 @@ bikri-saved-at = محفوظ ہونے کا وقت
 bikri-saved-failed = { -bikri } کھل نہیں سکی
 
 # review: pending
-bikri-saved-lot-title = { -lot } { $lot }: { $seller }
+bikri-saved-lot-title = { -lot } { $lot }: { $who }
 
 # review: pending
 bikri-saved-pick-lot = کون سی { -lot } دکھانی ہے

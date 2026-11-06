@@ -4,6 +4,7 @@
 // every quantity, rate and amount is a string already made by the backend.
 
 import { useLocalization } from '@fluent/react';
+import { gradedItem } from '../format';
 import { Code } from '../ui/Code';
 import { Num } from '../ui/Num';
 import { ScriptText } from '../ui/ScriptText';
@@ -32,14 +33,21 @@ function figureClass(column: PrintColumn): string {
   return column === 'qty' ? 'print-num print-col-qty' : 'print-num print-col-num';
 }
 
+/** The item of a line with its quality after it, in the language of the print (PRD FR-12.42). */
+function useItemText(): (line: PrintLine) => string {
+  const { l10n } = useLocalization();
+  return (line) => gradedItem((id, vars) => l10n.getString(id, vars), line.item, line.grade);
+}
+
 function Cell({ column, line }: { column: PrintColumn; line: PrintLine }) {
+  const itemText = useItemText();
   switch (column) {
     case 'date':
       return <Num>{line.date}</Num>;
     case 'buyer':
       return <PrintName name={line.name ?? ''} tag={line.name_tag} />;
     case 'item':
-      return <ScriptText>{line.item}</ScriptText>;
+      return <ScriptText>{itemText(line)}</ScriptText>;
     case 'packing':
       return <ScriptText>{line.packing}</ScriptText>;
     case 'qty':
@@ -98,6 +106,7 @@ function LineRows({ line, columns }: { line: PrintLine; columns: readonly PrintC
 }
 
 function CompactLines({ lines, columns }: Omit<PrintGoodsProps, 'paper'>) {
+  const itemText = useItemText();
   const showDate = columns.includes('date');
   const showBuyer = columns.includes('buyer');
   return (
@@ -111,7 +120,7 @@ function CompactLines({ lines, columns }: Omit<PrintGoodsProps, 'paper'>) {
                   <PrintName name={line.name} tag={line.name_tag} />{' '}
                 </>
               ) : null}
-              <ScriptText>{line.item}</ScriptText> <ScriptText>{line.packing}</ScriptText>
+              <ScriptText>{itemText(line)}</ScriptText> <ScriptText>{line.packing}</ScriptText>
             </span>
             {showDate ? <Num>{line.date}</Num> : null}
           </div>

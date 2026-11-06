@@ -84,12 +84,24 @@ const handlers: Record<string, () => unknown> = {
         },
       ]);
     }
-    for (const reason of ['https', 'path']) {
-      if (devFlag(reason)) {
-        throw refusalOf([
-          { code: 'ERR_OUT_OF_RANGE', field: 'source.cloud.endpoint', values: { reason } },
-        ]);
-      }
+    if (devFlag('https')) {
+      throw refusalOf([
+        { code: 'ERR_OUT_OF_RANGE', field: 'source.cloud.endpoint', values: { reason: 'https' } },
+      ]);
+    }
+    // An address with a path after the host is its own refusal (ERR_BACKUP_CLOUD_ADDRESS_PATH).
+    if (devFlag('path')) {
+      throw refusalOf([
+        {
+          code: 'ERR_BACKUP_CLOUD_ADDRESS_PATH',
+          field: 'source.cloud.endpoint',
+          values: {
+            address: 'https://shop.r2.cloudflarestorage.com',
+            path: '/mandi-bucket',
+            bucket: 'mandi-bucket',
+          },
+        },
+      ]);
     }
     return copies();
   },

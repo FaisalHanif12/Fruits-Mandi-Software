@@ -21,6 +21,7 @@ use mandi_reports::analytics::{
 use mandi_reports::reports::{
     DateShortcut, GardenView, GroupBy, PaidFilter, PartyFilter, ReportFilters, TripView,
 };
+use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
 use serde::Serialize;
 use ts_rs::TS;
@@ -92,6 +93,11 @@ pub struct SourceReportFilters {
     pub zamindar: Option<AnswerRecord>,
     /// An item.
     pub item: Option<AnswerRecord>,
+    /// All the items of a group, پھل or سبزی (R2, R3, R4, R7, R10, R27). Left out of the wire form
+    /// when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
     /// A city.
     pub city: Option<AnswerRecord>,
     /// An اڈا.
@@ -116,6 +122,10 @@ pub struct SourceReportFilters {
     pub bikri: Option<SourceBikri>,
     /// Only the fruit taken for the shop's guests (R37).
     pub guests_only: bool,
+    /// One collector, a staff member (R22, R23, R35). Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub collector: Option<AnswerRecord>,
 }
 
 fn id_of(record: &Option<AnswerRecord>) -> Option<i64> {
@@ -134,6 +144,7 @@ impl SourceReportFilters {
             seller_id: id_of(&self.seller),
             zamindar_id: id_of(&self.zamindar),
             item_id: id_of(&self.item),
+            item_group: self.item_group,
             city_id: id_of(&self.city),
             adda_id: id_of(&self.adda),
             detail: self.detail,
@@ -146,6 +157,7 @@ impl SourceReportFilters {
             garden_view: self.garden_view,
             bikri_id: self.bikri.map(|b| b.id),
             guests_only: self.guests_only.then_some(true),
+            collector_id: id_of(&self.collector),
             ..ReportFilters::default()
         }
     }
@@ -164,6 +176,11 @@ pub struct SourceAnalyticsFilters {
     pub group_by: Option<AnalyticsGroupBy>,
     /// An item.
     pub item: Option<AnswerRecord>,
+    /// All the items of a group, پھل or سبزی (views A, B, C, D, G and H). Left out of the wire form when
+    /// none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
     /// A seller.
     pub seller: Option<AnswerRecord>,
     /// A buyer, and for a پختہ کھاتہ account the person.
@@ -196,6 +213,7 @@ impl Default for SourceAnalyticsFilters {
             to: String::new(),
             group_by: None,
             item: None,
+            item_group: None,
             seller: None,
             buyer: None,
             city: None,
@@ -220,6 +238,7 @@ impl SourceAnalyticsFilters {
             to: self.to.clone(),
             group_by: self.group_by,
             item_id: id_of(&self.item),
+            item_group: self.item_group,
             seller_id: id_of(&self.seller),
             buyer: self.buyer.as_ref().map(SourceParty::to_filter),
             city_id: id_of(&self.city),

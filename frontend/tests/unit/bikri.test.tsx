@@ -2,7 +2,7 @@
 // keyboard, against a fake backend that answers with the numbers of Event 1 (PRD 4.4). The screen
 // works out no money: every number on it is a number the fake backend sent.
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -365,29 +365,41 @@ describe.each(LANGUAGES)('keys of the grids (%s)', (language) => {
     });
   });
 
-  it('a click or Space changes ادھاری to نقدی and back, and the backend is told each time', async () => {
+  it('the payment type is chosen in the details of the line: a click or Space changes ادھاری to نقدی and back, and the backend is told each time', async () => {
     const { backend, user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
-    const sales = salesGrid(language);
-    // The backend says first: the buyer has credit, so the line is ادھاری.
+    // The details of the line (plan 58): the table has the same columns at every size, and the
+    // payment type is a choice under it. The backend says first: the buyer has credit.
+    const details = () => {
+      const section = document.querySelector<HTMLElement>(
+        'section[aria-labelledby^="line-details-"]',
+      );
+      if (section === null) throw new Error('no details of the line');
+      return section;
+    };
+    // The details are those of the line that has the focus: the first line.
+    await user.click(cellOf(salesGrid(language), 0, 'rate'));
+    const word = (id: string) => message(language, id);
+    const choice = (id: string) =>
+      within(details()).getByRole('button', { name: (name) => visible(name) === word(id) });
     await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-udhari'));
+      expect(choice('glossary-udhari')).toHaveAttribute('aria-pressed', 'true');
     });
-    // A click on the cell moves to the next word.
-    await user.click(cellOf(sales, 0, 'payment'));
+    // The grid has no payment column any more.
+    expect(salesGrid(language).querySelector('.ag-header-cell[col-id="payment"]')).toBeNull();
+    await user.click(choice('glossary-naqdi'));
     await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-naqdi'));
-    });
-    await waitFor(() => {
+      expect(choice('glossary-naqdi')).toHaveAttribute('aria-pressed', 'true');
       expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('cash');
     });
-    // Space moves on again, back to ادھاری.
+    // The keyboard does the same: the other word has the focus and Space presses it.
+    act(() => {
+      choice('glossary-udhari').focus();
+    });
     await user.keyboard(' ');
     await waitFor(() => {
-      expect(textOf(sales, 0, 'payment')).toBe(message(language, 'glossary-udhari'));
-    });
-    await waitFor(() => {
+      expect(choice('glossary-udhari')).toHaveAttribute('aria-pressed', 'true');
       expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('credit');
     });
   });

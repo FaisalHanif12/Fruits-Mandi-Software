@@ -171,7 +171,9 @@ pub struct LinePreview {
     pub remaining_qty: i64,
     /// The last rate of this item and packing, as grey text only (PRD FR-7.53).
     pub rate_hint: Option<RateHint>,
-    /// The numbers, or null while the row is not complete.
+    /// The numbers, or null while the row is not complete. Also null for a row refused because it
+    /// takes the lot over the quantity it has left (`ERR_QTY_EXCEEDS_LOT` on its quantity, PRD
+    /// FR-12.6): it has no amount, commission or total, and the lot and the whole بکری leave it out.
     pub calc: Option<LineCalc>,
     /// Warnings of this row (also in the list of the whole preview).
     pub warnings: Vec<FieldError>,
@@ -367,12 +369,14 @@ pub struct LotPreview {
     pub munshiana: Option<LotCharge>,
     /// فون as it will be charged.
     pub phone: Option<LotCharge>,
-    /// Quantity of the rows that have a valid quantity (blank rows left out). The same sum as the
-    /// `remaining_qty` of the rows and the warning `ERR_QTY_LEFT_UNSOLD` use.
+    /// Quantity of the rows that stand (blank rows and rows refused for being over the lot are left
+    /// out, PRD FR-12.6). The same sum as the `remaining_qty` of the rows and the warning
+    /// `ERR_QTY_LEFT_UNSOLD` use.
     #[ts(type = "number")]
     pub sold_qty: i64,
-    /// Quantity received less quantity sold, 0 if more was sold (that row has
-    /// `ERR_QTY_EXCEEDS_LOT`). Null while the quantity received is not valid.
+    /// Quantity received less the quantity of the rows that stand, never below 0. A row over the
+    /// lot is refused (`ERR_QTY_EXCEEDS_LOT`) and takes nothing. Null while the quantity received
+    /// is not valid.
     #[ts(type = "number | null")]
     pub balance_qty: Option<i64>,
     /// True if the net is below 0: the seller owes the firm (PRD FR-12.7).

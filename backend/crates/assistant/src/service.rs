@@ -138,7 +138,7 @@ fn parse<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, ServiceError> 
         .map_err(|e| ServiceError::Data(format!("question log: {e}")))
 }
 
-/// The tools of one log row: the name, and the report id or view letter it read.
+/// The tools of one log row: the name, and the report id, view letter or guide topic it read.
 fn tools_of(tool_calls_json: &str) -> Vec<LogTool> {
     let calls: Vec<Value> = serde_json::from_str(tool_calls_json).unwrap_or_default();
     calls
@@ -147,7 +147,11 @@ fn tools_of(tool_calls_json: &str) -> Vec<LogTool> {
             let tool = call.get("tool")?.as_str()?.to_owned();
             let input = call.get("input");
             let source = input
-                .and_then(|i| i.get("id").or_else(|| i.get("view")))
+                .and_then(|i| {
+                    i.get("id")
+                        .or_else(|| i.get("view"))
+                        .or_else(|| i.get("topic"))
+                })
                 .and_then(Value::as_str)
                 .map(str::to_owned);
             Some(LogTool { tool, source })

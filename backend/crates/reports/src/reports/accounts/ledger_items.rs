@@ -18,7 +18,7 @@ use mandi_core::money::Paisa;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use crate::error::ReportsError;
-use crate::reports::common::{IN_CHUNK, paisa, placeholders};
+use crate::reports::common::{IN_CHUNK, grade_of, paisa, placeholders};
 use crate::reports::model::{DetailPart, Names};
 
 /// A ledger line that may have items.
@@ -56,6 +56,8 @@ struct SaleRow {
     item: Names,
     packing: Names,
     bikri_number: i64,
+    /// The stored quality of the line, as text (PRD FR-12.42).
+    grade: Option<String>,
 }
 
 /// The items of the lines asked for, by `(entry id, line no)`. A line with nothing to show has
@@ -159,7 +161,8 @@ fn load_sales(
             "SELECT s.journal_entry_id, s.lot_id, s.buyer_account_id, s.pukhta_person_key, s.qty,
                     s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa, s.laga_paisa,
                     s.buyer_total_paisa, s.seller_amount_paisa, l.seller_account_id,
-                    l.pukhta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number
+                    l.pukhta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number,
+                    s.grade
              FROM bikri_sales s
              JOIN bikri_lots l ON l.id = s.lot_id
              JOIN items i ON i.id = l.item_id
@@ -195,6 +198,7 @@ fn load_sales(
                         en: r.get(16)?,
                     },
                     bikri_number: r.get(17)?,
+                    grade: r.get(18)?,
                 },
             ))
         })?;
@@ -238,6 +242,7 @@ fn detail_of_line(
             bikri_number: sale.bikri_number,
             item: sale.item.clone(),
             packing: sale.packing.clone(),
+            grade: grade_of(sale.grade.as_deref())?,
             qty: sale.qty,
             rate_paisa: paisa(sale.buyer_rate)?,
             value_paisa: paisa(sale.buyer_value)?,

@@ -7,7 +7,7 @@
 // names yet, and the view's first answer names it (the page already does that for a saved view).
 
 import { pickedOrNull } from '../../shared/screen-state';
-import type { PickerValue } from '../../shared/ui';
+import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
 import {
   COMPARE_CHOICES,
   EMPTY_ANALYTICS_FILTERS,
@@ -42,6 +42,8 @@ export interface AnalyticsSearch {
   side?: AnalyticsSide;
   compare?: AnalyticsCompare;
   goods?: AnalyticsGoods;
+  /** All the items of a group, fruit or vegetables; `all` is the same as leaving it out. */
+  item_group?: ItemGroupChoice;
   trip_view?: AnalyticsTripView;
   /** A partner, a trip or a garden, by id. */
   partner?: number;
@@ -85,6 +87,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
   const side = oneOf(SIDE_CHOICES, search['side']);
   const compare = oneOf(COMPARE_CHOICES, search['compare']);
   const goods = oneOf(GOODS_CHOICES, search['goods']);
+  const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
   const partner = positiveId(search['partner']);
   const trip = positiveId(search['trip']);
@@ -102,6 +105,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
     ...(side === undefined ? {} : { side }),
     ...(compare === undefined ? {} : { compare }),
     ...(goods === undefined ? {} : { goods }),
+    ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
     ...(partner === undefined ? {} : { partner }),
     ...(trip === undefined ? {} : { trip }),
@@ -130,6 +134,7 @@ export function filtersFromSearch(search: AnalyticsSearch): AnalyticsFilterState
     side: search.side ?? 'both',
     compare: search.compare ?? 'off',
     goods: search.goods ?? 'all',
+    itemGroup: search.item_group ?? 'all',
     tripView: search.trip_view ?? 'trip',
     partner: search.partner ?? null,
     trip: search.trip ?? null,

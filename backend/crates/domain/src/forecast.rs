@@ -20,6 +20,10 @@
 //! left (`estimate_to_year_end`, plan 52, Umar 02-11-2026). The current month is counted as a
 //! whole estimated month; its days so far are not added.
 //!
+//! A balance (a party, the cash in hand, the buyers' dues) is a level and not a flow, so it has its
+//! own line, [`balance_at_pace`] (plan 55 F4 and F5): the balance now plus the average monthly net
+//! change times the months ahead. See that function.
+//!
 //! The total of same pace is the per-month figure times the months, so the shown figures always
 //! agree. The total of the other two is the sum of their months. With a target, the target month
 //! is the first month ahead whose running total reaches the target (at least the target).
@@ -52,11 +56,11 @@
 //! ```
 
 use mandi_core::error::ErrorCode;
-use mandi_core::money::{MoneyError, Paisa};
+use mandi_core::money::{MAX_RUPEES, MoneyError, Paisa};
 use thiserror::Error;
 
 use crate::figures::{
-    CalcOp, Dir, FigureError, Step, Value, calculate, divided_by, scale_amount, times,
+    CalcOp, Dir, FigureError, Op, Step, Value, calculate, divided_by, scale_amount, times,
 };
 
 /// Most months ahead an estimate looks (PRD FR-7.86).
@@ -281,6 +285,9 @@ pub enum ForecastError {
     /// A what-if on a pace below 0 (a loss): up or down of a loss would be a guess.
     #[error("a what-if needs a pace of 0 or more")]
     NegativePace,
+    /// A balance that is never below 0 (the buyers' dues) would be below 0 at this pace.
+    #[error("at this pace the balance would be below 0")]
+    BelowZero,
     /// A calculation failed.
     #[error(transparent)]
     Figure(#[from] FigureError),
@@ -295,7 +302,8 @@ impl ForecastError {
             | ForecastError::TargetNotPositive
             | ForecastError::HistoryNotConsecutive
             | ForecastError::FactorOutOfRange
-            | ForecastError::NegativePace => ErrorCode::ErrOutOfRange,
+            | ForecastError::NegativePace
+            | ForecastError::BelowZero => ErrorCode::ErrOutOfRange,
             ForecastError::Figure(error) => error.code(),
         }
     }
@@ -744,6 +752,21 @@ fn same_growth(ctx: &Context<'_>) -> Result<MethodEstimate, ForecastError> {
     )?;
     let mut steps = difference.steps;
     steps.push(divided);
+    // The months themselves: the last month plus the change, month after month, so the sum of the
+    // months at the end of the working has a step that produces each of them (PRD FR-7.43, B30).
+    // The chain is the raw one: a month that would be below 0 shows its raw figure here and is 0 in
+    // the sum (PRD FR-7.86: a month is never below 0), and the month after it starts from the raw
+    // figure, so a loss that comes back above 0 is explained step by step too.
+    let mut previous = last;
+    for _ in 0..ctx.ahead {
+        let next = previous.checked_add(change)?;
+        steps.push(Step {
+            op: Op::Sum,
+            inputs: vec![Value::Money(previous), Value::Money(change)],
+            result: Value::Money(next),
+        });
+        previous = next;
+    }
     finish(
         ctx,
         Parts {
@@ -777,4 +800,219 @@ fn same_season(ctx: &Context<'_>) -> Result<MethodEstimate, ForecastError> {
             step: None,
         },
     )
+}
+
+// ---- a balance at the same pace (plan 55 F4, F5) ------------------------------------------------
+
+/// The months of change a balance estimate averages: the last 3 full months, the same pace as the
+/// other estimates (PRD FR-7.86, "Balances too"). It needs 3 full months, so it is also the least.
+pub const BALANCE_MONTHS_MAX: usize = PACE_MONTHS;
+
+/// What the balance is, which says how it may move and how it is shown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BalanceKind {
+    /// A party's balance: بنام above 0, جمع below 0. It may change side.
+    Party,
+    /// The cash in hand: a plain signed amount. It may go below 0 (PRD FR-6.7).
+    Cash,
+    /// The buyers' dues (R20): a plain amount, never below 0.
+    Dues,
+}
+
+impl BalanceKind {
+    /// The balance as the calculator's kind of figure: a party's balance has a side, the others
+    /// are amounts.
+    fn value(self, paisa: Paisa) -> Value {
+        match self {
+            BalanceKind::Party => Value::Balance(paisa),
+            BalanceKind::Cash | BalanceKind::Dues => Value::Money(paisa),
+        }
+    }
+}
+
+/// A balance some months from today at the pace of its past months.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BalanceEstimate {
+    /// What the balance is.
+    pub kind: BalanceKind,
+    /// The month of the first row: the month `today + 1 month` falls in.
+    pub first: YearMonth,
+    /// The month of the last row.
+    pub last: YearMonth,
+    /// How many months ahead (1 to 12).
+    pub ahead: u32,
+    /// The balance now, from the books. A book figure, not an estimate.
+    pub now: Paisa,
+    /// How many months of change were averaged.
+    pub months_used: u32,
+    /// The first of those months.
+    pub used_from: YearMonth,
+    /// The last of those months.
+    pub used_to: YearMonth,
+    /// The average net change of a month, signed: above 0 the balance grows on the debit side.
+    pub per_month: Paisa,
+    /// `per_month` times the months ahead.
+    pub change: Paisa,
+    /// The balance after 1, 2, ... `ahead` months, signed. The last one is `total`.
+    pub after: Vec<Paisa>,
+    /// The balance after `ahead` months: `now + change`.
+    pub total: Paisa,
+    /// The working, built by the same code that worked the figures out: the average, the
+    /// months, the sum.
+    pub steps: Vec<Step>,
+}
+
+/// A figure of the calculator as a signed amount, whichever of money or balance it is.
+fn signed_of(value: Value) -> Result<Paisa, ForecastError> {
+    match value {
+        Value::Money(p) | Value::Balance(p) => Ok(p),
+        _ => Err(FigureError::MixedKinds.into()),
+    }
+}
+
+/// An amount no bigger than the largest allowed amount, in size (so a large credit is refused as
+/// a large debit is).
+fn within_limit(amount: Paisa) -> Result<(), ForecastError> {
+    let size = amount
+        .as_paisa()
+        .checked_abs()
+        .ok_or(FigureError::Overflow)?;
+    let largest = Paisa::from_rupees(MAX_RUPEES)?.as_paisa();
+    if size > largest {
+        return Err(FigureError::Overflow.into());
+    }
+    Ok(())
+}
+
+/// The balance `1, 2, ... ahead` months from today at the pace of the past months (PRD FR-7.86 v1.27,
+/// "Balances too", plan 55 F4 and F5).
+///
+/// `now` is the balance now from the books (signed: بنام above 0). `changes` are the net changes
+/// of the full months before `current`, oldest first, consecutive and ending the month before
+/// `current`: for each month, debits less credits (a quiet month is 0). The pace is the average
+/// of the LAST 3 of them ([`BALANCE_MONTHS_MAX`]), the same pace as the other estimates, and fewer
+/// than [`PACE_MONTHS`] are no estimate. The current month is not finished, so it is not in
+/// `changes`; what it has so far is in `now`.
+///
+/// 1. `per_month` is the average of the 3 changes, rounded once to a whole rupee, half up on the
+///    size and then given its sign (the calculator's average, `avg_rate`). Dividing by 3 never
+///    leaves an exact half, so the rounding is to the nearer rupee, never a tie.
+/// 2. `change` is `per_month` times `ahead`, exact.
+/// 3. `total` is `now + change`, and row `j` of `after` is `now + per_month × j`, so the last row is
+///    the total and every row agrees with the working.
+///
+/// The row `j` is the balance `j` months from today, and `first` and `last` are the months those
+/// days fall in (today in October: `first` is November). Nothing here is posted or saved.
+///
+/// Example (the PRD): Akram owes 2,880 now and his changes in the last 3 full months were +3,000,
+/// -1,000 and +4,000. The average is +2,000 a month, so after 2 months he owes 2,880 + 2,000 × 2 =
+/// 6,880 بنام. On fixture B of the forecast tests (his last 3 changes 27,200, 35,800 and 44,400)
+/// the pace is 35,800 a month.
+///
+/// ```
+/// use mandi_domain::core::money::Paisa;
+/// use mandi_domain::forecast::{BalanceKind, MonthValue, YearMonth, balance_at_pace};
+/// let rs = |r| Paisa::from_rupees(r).unwrap();
+/// let changes: Vec<MonthValue> = [3_000, -1_000, 4_000]
+///     .iter()
+///     .enumerate()
+///     .map(|(i, v)| MonthValue {
+///         month: YearMonth::new(2026, 7 + i as u32).unwrap(),
+///         value: rs(*v),
+///     })
+///     .collect();
+/// let october = YearMonth::new(2026, 10).unwrap();
+/// let e = balance_at_pace(BalanceKind::Party, rs(2_880), &changes, october, 2).unwrap();
+/// assert_eq!(e.per_month, rs(2_000));
+/// assert_eq!(e.after, vec![rs(4_880), rs(6_880)]);
+/// assert_eq!(e.total, rs(6_880));
+/// ```
+///
+/// # Errors
+/// `AheadOutOfRange`; `HistoryNotConsecutive`; `TooLittleHistory` (fewer than 3 months);
+/// `BelowZero` for the dues at a pace that takes them below 0; `Overflow` for a figure above the
+/// largest allowed amount in size.
+pub fn balance_at_pace(
+    kind: BalanceKind,
+    now: Paisa,
+    changes: &[MonthValue],
+    current: YearMonth,
+    ahead: u32,
+) -> Result<BalanceEstimate, ForecastError> {
+    if ahead == 0 || ahead > MAX_MONTHS_AHEAD {
+        return Err(ForecastError::AheadOutOfRange);
+    }
+    check_history(changes, current)?;
+    within_limit(now)?;
+    let n = changes.len();
+    let available = u32::try_from(n).map_err(|_| FigureError::Overflow)?;
+    if n < PACE_MONTHS {
+        return Err(ForecastError::TooLittleHistory { months: available });
+    }
+    let take = n.min(BALANCE_MONTHS_MAX);
+    let used = changes
+        .get(
+            n.checked_sub(take)
+                .ok_or(ForecastError::HistoryNotConsecutive)?..,
+        )
+        .ok_or(ForecastError::HistoryNotConsecutive)?;
+    let (used_from, used_to) = span(used)?;
+
+    // 1. The average change of a month: one rounding. The changes are figures of the kind of the
+    // balance, so the working of a party's balance says "جمع" and "بنام" and never a minus sign.
+    let figures: Vec<Value> = used.iter().map(|m| kind.value(m.value)).collect();
+    let average = calculate(CalcOp::Average, &figures)?;
+    let per_month = signed_of(average.result)?;
+    within_limit(per_month)?;
+    // 2. Times the months ahead: exact.
+    let mut months_step = times(per_month, i64::from(ahead))?;
+    let change = signed_of(months_step.result)?;
+    within_limit(change)?;
+    months_step.inputs = vec![kind.value(per_month), Value::Count(i64::from(ahead))];
+    months_step.result = kind.value(change);
+    // 3. The balance now plus that.
+    let summed = calculate(CalcOp::Sum, &[kind.value(now), kind.value(change)])?;
+    let total = signed_of(summed.result)?;
+    within_limit(total)?;
+
+    // The balance after each month, from the same two figures, so the rows agree with the total.
+    let mut after = Vec::new();
+    for j in 1..=ahead {
+        let moved = per_month
+            .as_paisa()
+            .checked_mul(i64::from(j))
+            .ok_or(FigureError::Overflow)?;
+        let value = now
+            .as_paisa()
+            .checked_add(moved)
+            .ok_or(FigureError::Overflow)?;
+        let value = Paisa::try_from_paisa(value)?;
+        within_limit(value)?;
+        if kind == BalanceKind::Dues && value < Paisa::ZERO {
+            return Err(ForecastError::BelowZero);
+        }
+        after.push(value);
+    }
+    if after.last().copied() != Some(total) {
+        return Err(FigureError::Internal.into());
+    }
+
+    let mut steps = average.steps;
+    steps.push(months_step);
+    steps.extend(summed.steps);
+    Ok(BalanceEstimate {
+        kind,
+        first: current.plus_months(1).ok_or(FigureError::Overflow)?,
+        last: current.plus_months(ahead).ok_or(FigureError::Overflow)?,
+        ahead,
+        now,
+        months_used: used_count(used)?,
+        used_from,
+        used_to,
+        per_month,
+        change,
+        after,
+        total,
+        steps,
+    })
 }

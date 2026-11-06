@@ -196,6 +196,7 @@ fn r13_for_akram_is_e2e_33() {
                 bikri_number,
                 item,
                 packing,
+                grade,
                 qty,
                 rate_paisa,
                 value_paisa,
@@ -203,6 +204,7 @@ fn r13_for_akram_is_e2e_33() {
                 laga_paisa,
             }) => {
                 assert_eq!(*bikri_number, 1);
+                assert_eq!(*grade, None, "a line with no quality has none");
                 assert_eq!((item.en.as_str(), packing.en.as_str()), ("Banana", "Box"));
                 assert_eq!(*qty, 20);
                 assert_eq!(rate_paisa.rupees(), 600);

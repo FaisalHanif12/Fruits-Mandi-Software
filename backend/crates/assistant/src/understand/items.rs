@@ -129,10 +129,156 @@ const ALIASES: &[(&str, &str)] = &[
     ("baingan", "brinjal"),
     ("brinjal", "brinjal"),
     ("karela", "bitter gourd"),
+    // Vegetables, with the spellings that are written (the item master decides the English name).
+    ("piaz", "onion"),
+    ("pyaj", "onion"),
+    ("pyaaj", "onion"),
+    ("piyaaz", "onion"),
+    ("onions", "onion"),
+    ("aalu", "potato"),
+    ("aluu", "potato"),
+    ("allo", "potato"),
+    ("potatoes", "potato"),
+    ("tamatr", "tomato"),
+    ("tamaatar", "tomato"),
+    ("tamatar", "tomato"),
+    ("tomatoes", "tomato"),
+    ("gajr", "carrot"),
+    ("gaajar", "carrot"),
+    ("carrots", "carrot"),
+    ("moli", "radish"),
+    ("mooly", "radish"),
+    ("gobhee", "cauliflower"),
+    ("gobee", "cauliflower"),
+    ("bandgobi", "cabbage"),
+    ("bandh", "cabbage"),
+    ("cabbage", "cabbage"),
+    ("paalak", "spinach"),
+    ("palk", "spinach"),
+    ("saag", "saag"),
+    ("sag", "saag"),
+    ("saaag", "saag"),
+    ("sarson", "saag"),
+    ("bhindee", "okra"),
+    ("bhendee", "okra"),
+    ("bhindy", "okra"),
+    ("ladyfinger", "okra"),
+    ("mirch", "chilli"),
+    ("mirchi", "chilli"),
+    ("mirchy", "chilli"),
+    ("mirchen", "chilli"),
+    ("chilli", "chilli"),
+    ("chili", "chilli"),
+    ("chillies", "chilli"),
+    ("shimla", "capsicum"),
+    ("capsicum", "capsicum"),
+    ("adrk", "ginger"),
+    ("adrakh", "ginger"),
+    ("lehsun", "garlic"),
+    ("lasan", "garlic"),
+    ("lahsun", "garlic"),
+    ("lasun", "garlic"),
+    ("kadu", "pumpkin"),
+    ("kaddoo", "pumpkin"),
+    ("kadoo", "pumpkin"),
+    ("pumpkin", "pumpkin"),
+    ("lauki", "bottle gourd"),
+    ("ghia", "bottle gourd"),
+    ("tori", "ridge gourd"),
+    ("turai", "ridge gourd"),
+    ("tinda", "tinda"),
+    ("arvi", "taro"),
+    ("dhaniya", "coriander"),
+    ("dhania", "coriander"),
+    ("coriander", "coriander"),
+    ("pudina", "mint"),
+    ("mint", "mint"),
+    ("methi", "fenugreek"),
+    ("chukandar", "beetroot"),
+    ("beetroot", "beetroot"),
+    ("shakarkandi", "sweet potato"),
+    ("shaljum", "turnip"),
+    ("turnip", "turnip"),
+    ("beans", "beans"),
+    ("cucumbers", "cucumber"),
+    ("kheeray", "cucumber"),
+    // Names of two words, and the synonyms of one item.
+    ("shimla mirch", "capsicum"),
+    ("simla mirch", "capsicum"),
+    ("shimla mirchi", "capsicum"),
+    ("simla mirchi", "capsicum"),
+    ("shamla mirch", "capsicum"),
+    ("shimlah mirch", "capsicum"),
+    ("simla", "capsicum"),
+    ("bell pepper", "capsicum"),
+    ("green pepper", "capsicum"),
+    ("hari mirch", "green chilli"),
+    ("lal mirch", "red chilli"),
+    ("kali mirch", "black pepper"),
+    ("phool gobi", "cauliflower"),
+    ("phul gobi", "cauliflower"),
+    ("band gobi", "cabbage"),
+    ("patta gobi", "cabbage"),
+    ("hara dhaniya", "coriander"),
+    ("mitha kaddu", "pumpkin"),
+    ("sweet potato", "sweet potato"),
+    ("bitter gourd", "bitter gourd"),
+    ("bottle gourd", "bottle gourd"),
+    // The same names in Urdu letters: an item the books do not hold is "no such item", not an
+    // unknown word.
+    ("آلو", "potato"),
+    ("الو", "potato"),
+    ("کیلہ", "banana"),
+    ("مسمی", "mosambi"),
+    ("مسمبی", "mosambi"),
+    ("پیاز", "onion"),
+    ("ٹماٹر", "tomato"),
+    ("مولی", "radish"),
+    ("ساگ", "saag"),
+    ("گوبھی", "cauliflower"),
+    ("بند گوبھی", "cabbage"),
+    ("گاجر", "carrot"),
+    ("بھنڈی", "okra"),
+    ("مرچ", "chilli"),
+    ("ہری مرچ", "green chilli"),
+    ("لال مرچ", "red chilli"),
+    ("شملہ مرچ", "capsicum"),
+    ("ادرک", "ginger"),
+    ("لہسن", "garlic"),
+    ("کدو", "pumpkin"),
+    ("پالک", "spinach"),
+    ("مٹر", "peas"),
+    ("کھیرا", "cucumber"),
+    ("بینگن", "brinjal"),
+    ("کریلا", "bitter gourd"),
+    ("لیموں", "lemon"),
+    ("شلجم", "turnip"),
+    ("دھنیا", "coriander"),
+    ("پودینہ", "mint"),
+    ("میتھی", "fenugreek"),
+    ("چقندر", "beetroot"),
+    ("لوکی", "bottle gourd"),
+    ("توری", "ridge gourd"),
+    ("ٹنڈا", "tinda"),
+    ("اروی", "taro"),
 ];
 
+/// The key of an alias as `Scan` writes the words of a question: the Urdu look-alike letters are one
+/// letter each, so an alias in Urdu letters is the same as the word typed.
+fn key_of(alias: &str) -> String {
+    text::search_ur(&text::search_en(alias))
+}
+
 fn alias(word: &str) -> Option<&'static str> {
-    ALIASES.iter().find(|(a, _)| *a == word).map(|(_, e)| *e)
+    ALIASES
+        .iter()
+        .find(|(a, _)| *a == word || (!a.is_ascii() && key_of(a) == word))
+        .map(|(_, e)| *e)
+}
+
+/// True for a word the alias list knows as an item (so it is not a month: "mirch" is not March).
+pub(super) fn is_item_word(word: &str) -> bool {
+    alias(word).is_some()
 }
 
 /// The word as it may be written in the singular, most likely first (apples, kele, kelon, کیلے).
@@ -249,15 +395,14 @@ pub(super) fn resolve(look: &Lookup<'_>, scan: &Scan, span: (usize, usize)) -> O
         words
     };
     let mut known: Option<&'static str> = None;
-    // The list of Roman Urdu names: the English name is searched.
-    if head.is_empty() {
-        for form in &forms {
-            if let Some(english) = alias(form) {
-                known = Some(english);
-                let words = vec![english.to_owned()];
-                if let Some(best) = search_items(look, &words) {
-                    return Some(item_ref(scan, span, best));
-                }
+    // The list of Roman Urdu names: the English name is searched. A name of two words ("shimla
+    // mirch") is looked up whole, with its last word in its singular forms.
+    for form in &forms {
+        if let Some(english) = alias(&with_head(form).join(" ")) {
+            known = Some(english);
+            let words = split_words(english);
+            if let Some(best) = search_items(look, &words) {
+                return Some(item_ref(scan, span, best));
             }
         }
     }

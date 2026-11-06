@@ -10,7 +10,7 @@
 // Four states: loading, an error with a retry (also for a garden that does not exist), the garden.
 
 import { Localized } from '@fluent/react';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -29,6 +29,7 @@ import { GardenHistorySection } from '../components/GardenHistorySection';
 import { GardenPartnersCard } from '../components/GardenPartnersCard';
 import { ReopenGardenDialog } from '../components/ReopenGardenDialog';
 import { useGarden, type GardenView } from '../hooks';
+import { parseGardenSearch } from '../screen-type';
 import type { ArrivalRow, GardenHistoryRow } from '../types';
 
 /** A positive whole number from the address, or nothing. */
@@ -47,6 +48,9 @@ function GardenBody({
   pager: PagerState;
 }) {
   const navigate = useNavigate();
+  // What the address asks the screen to open on (PRD FR-7.79): an entry type, or the closing.
+  const rawSearch: Record<string, unknown> = useSearch({ strict: false });
+  const openType = parseGardenSearch(rawSearch).type;
   const [reopening, setReopening] = useState(false);
   // The entry open for edit (plan 44): the form of a new entry gives way to its edit form.
   const [editing, setEditing] = useState<GardenHistoryRow | null>(null);
@@ -106,7 +110,11 @@ function GardenBody({
           }}
         />
       ) : open ? (
-        <GardenEntryEditor garden={garden} today={today} />
+        <GardenEntryEditor
+          garden={garden}
+          today={today}
+          initialType={openType === undefined || openType === 'close' ? undefined : openType}
+        />
       ) : (
         <Notice
           tone="info"
@@ -155,7 +163,9 @@ function GardenBody({
           setEditing(row);
         }}
       />
-      {open ? <CloseGardenCard garden={garden} today={today} /> : null}
+      {open ? (
+        <CloseGardenCard garden={garden} today={today} focusOnOpen={openType === 'close'} />
+      ) : null}
       <ReopenGardenDialog garden={garden} open={reopening} onOpenChange={setReopening} />
     </div>
   );

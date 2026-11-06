@@ -19,7 +19,10 @@ export type EntryColumnType =
   // A record chosen from a list in the cell: an account, or an item, packing and the like.
   | 'picker'
   // One of a few fixed words (ادھاری / نقدی), changed with Space or a click.
-  | 'choice';
+  | 'choice'
+  // One of a few fixed words that is optional, chosen from a small list in a popup under the cell
+  // (the quality of a sale line: اول, دوم, سوم, or nothing). Space, Alt+↓ or a click opens it.
+  | 'select';
 
 /**
  * The types the user never types in: `calc` (a number from the backend) and `label` (words the
@@ -114,7 +117,10 @@ export interface EntryColumn {
   readonly showsCalc?: boolean;
   /** For a `picker` column: which records it offers. */
   readonly picker?: PickerSpec;
-  /** For a `choice` column: its words. Space or a click changes to the next one. */
+  /**
+   * For a `choice` column: its words. Space or a click changes to the next one. For a `select`
+   * column: the words of its list, in order; the one with the value '' is the empty choice.
+   */
   readonly choices?: readonly ChoiceSpec[];
   /** A calculated cell of this column has the ⓘ with the backend's working (PRD FR-7.43). */
   readonly explain?: boolean;

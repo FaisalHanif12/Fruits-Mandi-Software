@@ -108,6 +108,9 @@ const ROUTES: readonly string[] = [
     '/bikri/book',
     '/bikri/voucher',
     '/rokar/expense',
+    // The entries of one garden and one trip (plan 55 Section 11.1).
+    '/gardens/$id',
+    '/trips/$id',
     '/settings',
     // The main screens a help answer opens (PRD FR-7.89), each with its own route.
     ...Object.values(MAIN_SCREEN_PATHS),

@@ -22,6 +22,7 @@ mod cancel;
 mod common;
 mod edit;
 mod fixtures;
+mod grade;
 #[allow(dead_code)]
 #[path = "../bikri_save/helpers.rs"]
 mod helpers;

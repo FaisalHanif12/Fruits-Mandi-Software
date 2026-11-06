@@ -15,6 +15,8 @@ mod worked;
 #[allow(dead_code)]
 #[path = "../../services/tests/bikri_preview/support.rs"]
 mod world;
+#[path = "robustness_year/mod.rs"]
+mod year;
 
 use mandi_assistant::answer::{Answer, AnswerPart, AnswerSource, EntryScreen};
 use mandi_assistant::ask::{AskOutcome, AskedRole};
@@ -670,7 +672,6 @@ fn figures_lists_advice_and_what_is_not_sure_go_on_to_the_model_path() {
         "faisal ne kya kya khareeda",
         "sale kaise barhayen",
         "agle mahine commission kitna hoga",
-        "faisal ka print",
         "hello",
         "",
     ] {
@@ -748,7 +749,7 @@ fn a_request_to_write_is_refused_with_the_entry_screen_and_the_party_as_a_hint()
             EntryScreen::Sarmaya,
             partner("Partner B"),
         ),
-        ("cancel bikri 5", EntryScreen::Bikri, None),
+        ("cancel bikri 5", EntryScreen::BikriCancel, None),
         // The verb and the party say it when no screen is named.
         ("akram ne 5000 diye", EntryScreen::Wasooli, akram.clone()),
         (
@@ -990,8 +991,6 @@ fn a_question_that_is_not_sure_never_has_a_button_or_steps() {
         // Two periods: a comparison.
         "faisal ki bikri ka print pichle mahine ka aur is mahine ka",
         "faisal ki pichle mahine aur is mahine ki 1 se 15 tak ki bikri ka print",
-        // No day for a bill.
-        "faisal ka print",
         // Nothing to print.
         "print",
         // Two parties.
@@ -1090,25 +1089,28 @@ fn a_print_for_a_name_the_app_cannot_place_never_opens_a_report_of_the_whole_sho
 }
 
 /// BUG-2. A print drops the item and the scope word: "kele ki aaj ki bikri ka print" was R34 for all
-/// items. No report link has an item filter, and a garden, a trip, own goods or the guests need their
-/// own report, so such a print is the model's.
+/// items. It is now R7 with the item filter (W3); own goods and the guests' sales have no report, so
+/// such a print is the model's (a garden or a trip word alone is the report of all
+/// gardens or all trips).
 #[test]
 fn a_print_that_names_an_item_or_a_scope_the_links_cannot_filter_is_not_sure() {
     let w = books();
     for question in [
-        "kele ki aaj ki bikri ka print",
-        "faisal ki kele ki bikri ka print",
-        "kele ka baqi maal print",
-        "bagh ki is mahine ki bikri ka print",
-        "safar ki aaj ki bikri ka print",
         "apne maal ki is mahine ki bikri ka print",
         "apna maal aaj ka print",
         "mehman ki aaj ki bikri ka print",
     ] {
         assert_model_path(&ask(&w, question, false), question);
     }
-    // Without the item or the scope word they print as before.
+    // Without the item or the scope word they print as before. A garden or a trip word with no garden
+    // or trip named is the gardens or the trips report of the days (R36, R33): they hold the sales.
     for (question, report) in [
+        // An item named: the item-wise sales (R7) or the stock (R10) with the item filter.
+        ("kele ki aaj ki bikri ka print", "R7"),
+        ("faisal ki kele ki aaj ki bikri ka print", "R7"),
+        ("kele ka baqi maal print", "R10"),
+        ("bagh ki is mahine ki bikri ka print", "R36"),
+        ("safar ki aaj ki bikri ka print", "R33"),
         ("baqi maal ka print", "R10"),
         ("aaj ki bikri ka print", "R34"),
         ("faisal ki aaj ki bikri ka print", "R35"),
@@ -1280,4 +1282,376 @@ fn a_real_party_is_not_declared_absent_for_a_spelling_variant() {
     // A name that is really missing is still said to be missing.
     let c = compose_locked(&w, "zubair ka bakaya", false);
     assert!(c.is_some_and(|c| c.outcome == AskOutcome::NotFound));
+}
+
+/// One line for each question of the file in `SURVEY`: what the app understood and what it would
+/// answer without a model. A tool for the person who builds, not a check:
+/// `WORLD=full SURVEY=/path cargo test -p mandi-assistant --test understand_compose -- --ignored
+/// --nocapture survey_local`. `WORLD` is `worked`, `year` (thin) or `full`; `LANG=ur` the Urdu app.
+#[test]
+#[ignore = "a tool for the person who builds, not a check"]
+fn survey_local() {
+    let Ok(file) = std::env::var("SURVEY") else {
+        return;
+    };
+    let language = if std::env::var("LANG").as_deref() == Ok("ur") {
+        Language::Ur
+    } else {
+        Language::En
+    };
+    let text = std::fs::read_to_string(file).expect("the file");
+    let world = std::env::var("WORLD").unwrap_or_default();
+    let y;
+    let (w, today) = match world.as_str() {
+        "year" | "full" => {
+            y = if world == "full" {
+                year::seed::build()
+            } else {
+                year::seed::build_thin()
+            };
+            (&y.w, BusinessDate::from_ymd(2026, 11, 5).expect("a date"))
+        }
+        _ => {
+            let b = Box::leak(Box::new(books()));
+            worked::events_1_to_5(b);
+            (&*b, BusinessDate::from_ymd(2026, 10, 10).expect("a date"))
+        }
+    };
+    let words = Words::new().expect("the words");
+    for question in text.lines().filter(|l| !l.trim().is_empty()) {
+        let reader = Reader {
+            ctx: &w.env.ctx,
+            actor: &w.owner,
+            language,
+            today,
+            partner_locked: false,
+        };
+        let u = understand(&reader, question);
+        let local = compose(&u, language, &words, READ_AT);
+        let names: Vec<String> = u
+            .parties
+            .iter()
+            .map(|p| {
+                format!(
+                    "{}={}",
+                    p.text,
+                    match &p.outcome {
+                        mandi_assistant::understand::Outcome::Found(h) =>
+                            format!("{:?}:{}", h.role, h.name_en),
+                        mandi_assistant::understand::Outcome::FoundAs(h) =>
+                            format!("as {:?}:{}", h.role, h.name_en),
+                        mandi_assistant::understand::Outcome::Several(v) =>
+                            format!("several{}", v.len()),
+                        mandi_assistant::understand::Outcome::NotFound => "NOTFOUND".to_owned(),
+                    }
+                )
+            })
+            .collect();
+        println!(
+            "{question:55} => {:?}{} {:?} | {:?} | {:?} | {:?} | local {}",
+            u.intent.value,
+            if u.sure { "" } else { " UNSURE" },
+            u.figures.value,
+            names,
+            u.doubts,
+            u.periods.iter().map(|p| p.kind).collect::<Vec<_>>(),
+            local.map_or_else(
+                || "none".to_owned(),
+                |c| format!(
+                    "{:?}{}",
+                    c.outcome,
+                    c.answer
+                        .as_ref()
+                        .map_or(String::new(), |a| format!(" how={}", a.how.len()))
+                )
+            )
+        );
+    }
+}
+
+// ---- the defects of live run 1 (lead's list of 04-11-2026, 30 questions) --------------------------------
+
+fn year_ask(
+    y: &world::World,
+    question: &str,
+) -> (
+    Understanding,
+    Option<Composed>,
+    Option<Vec<mandi_assistant::understand::PlannedRead>>,
+) {
+    let reader = Reader {
+        ctx: &y.env.ctx,
+        actor: &y.owner,
+        language: Language::Ur,
+        today: BusinessDate::from_ymd(2026, 11, 5).expect("a date"),
+        partner_locked: false,
+    };
+    let words = Words::new().expect("the words");
+    let u = understand(&reader, question);
+    let local = compose(&u, Language::Ur, &words, READ_AT);
+    let reads = plan_reads(&u);
+    (u, local, reads)
+}
+
+/// Group 1. A common word, a question word or a misspelt month is never a missing party: "aj ki
+/// bikri kitny ki hui" said "no such party kitny" without a model. A local "no such party" is for a
+/// token that is clearly a name.
+#[test]
+fn a_common_word_is_never_a_missing_party() {
+    use mandi_assistant::understand::Outcome;
+    let y = year::seed::build();
+    let w = &y.w;
+    for question in [
+        "aj ki bikri kitny ki hui",
+        "sab gaahkon ka bakaya kitna hai",
+        "شراکت داروں کا آج کا منافع حصہ کتنا ہے",
+        "شراکت داروں کے خرچے کا حصہ کتنا ہے",
+        "پہلے کس سے وصولی کروں",
+        "septmber ka comision kitna tha",
+        "teeno partnron ka abhi tak ka kul raqam kitna he",
+        "تینوں شراکت داروں کی کل رقم اب کتنی ہے",
+        "dono market safr ka nafa ya nuqsan kitna raha",
+        "دونوں مارکیٹ سفر کا نفع یا نقصان کتنا رہا",
+        "udhar rakam kitni baqi hai aur kitni wapsi ki tareekh guzar chuki",
+    ] {
+        let (u, local, _) = year_ask(w, question);
+        assert!(
+            u.parties
+                .iter()
+                .all(|p| !matches!(p.outcome, Outcome::NotFound)),
+            "{question}: a missing party in {:?}",
+            u.parties
+        );
+        assert!(
+            local
+                .as_ref()
+                .is_none_or(|c| c.outcome != AskOutcome::NotFound),
+            "{question}: a local not_found"
+        );
+    }
+    // What those words mean is read: the month, the figure, the advice.
+    let (u, ..) = year_ask(w, "septmber ka comision kitna tha");
+    assert!(
+        u.periods.iter().any(|p| p.kind
+            == mandi_assistant::understand::PeriodKind::Month {
+                year: 2026,
+                month: 9
+            }),
+        "{:?}",
+        u.periods
+    );
+    let (u, ..) = year_ask(w, "aj ki bikri kitny ki hui");
+    assert!(u.sure && u.figures.value == [mandi_assistant::understand::FigureKind::Sale]);
+    let (u, ..) = year_ask(w, "پہلے کس سے وصولی کروں");
+    assert_eq!(u.intent.value, mandi_assistant::understand::Intent::Advice);
+    let (u, ..) = year_ask(w, "teeno partnron ka abhi tak ka kul raqam kitna he");
+    assert_eq!(
+        u.figures.value,
+        [mandi_assistant::understand::FigureKind::PartnerTotal]
+    );
+    // A made-up name that stands where a name stands is still missing, said locally.
+    let (_, local, _) = year_ask(w, "zubair ka bakaya kitna hai");
+    assert!(local.is_some_and(|c| c.outcome == AskOutcome::NotFound));
+}
+
+/// Group 2. "what is each partner's total now" is a figure, and how to make the sales bigger is
+/// advice, never help: "kaise ziyada / barhayen / behtar" is advice (Umar's own "apni sale ko ziyada
+/// kaise karain").
+#[test]
+fn a_figure_or_advice_is_never_answered_with_help() {
+    use mandi_assistant::understand::Intent;
+    let y = year::seed::build();
+    let w = &y.w;
+    let (u, _, reads) = year_ask(w, "what is each partner's total now");
+    assert_eq!(u.intent.value, Intent::List);
+    assert!(u.sure && reads.is_some(), "{u:?}");
+    for question in [
+        "apni sale ko ziyada kaise karain ?",
+        "اپنی بکری کو زیادہ کیسے کریں؟",
+        "ہم اپنی بکری کو کیسے بڑھا سکتے ہیں؟",
+        "bikri zyada kaise karen",
+    ] {
+        let (u, local, _) = year_ask(w, question);
+        assert_eq!(u.intent.value, Intent::Advice, "{question}");
+        assert!(local.is_none(), "{question}: a local answer");
+    }
+    // A word that is only explained is still help.
+    let (u, ..) = year_ask(w, "wasooli kya hota hai");
+    assert_eq!(u.intent.value, Intent::HowTo);
+}
+
+/// Group 3. A party's day or his items are read where the lines are: a buyer's day sheet (R35), a
+/// seller's lots (R6), a buyer's items over a period (view A with the buyer). The answer then gives
+/// each item with its qty and amount.
+#[test]
+fn a_partys_day_or_items_are_read_where_the_lines_are() {
+    let y = year::seed::build();
+    let w = &y.w;
+    let planned = |question: &str| -> Vec<String> {
+        let (_, _, reads) = year_ask(w, question);
+        reads
+            .unwrap_or_default()
+            .iter()
+            .filter(|r| r.tool == "report" || r.tool == "analytics")
+            .map(|r| {
+                let id = r.input["id"].as_str().or(r.input["view"].as_str());
+                format!("{}:{}", r.tool, id.unwrap_or(""))
+            })
+            .collect()
+    };
+    for question in [
+        "Imran Fruit ne 18 September ko kya aur kitna khareeda",
+        "عمران فروٹ نے 18 ستمبر کو کیا اور کتنا خریدا",
+        "what and how much did Imran Fruit buy on 18 September",
+    ] {
+        assert_eq!(planned(question), ["report:R35"], "{question}");
+    }
+    for question in [
+        "کریم نے کل کیا اور کتنا بیچا",
+        "Rahim ne 25 April ko kya kya becha aur kitna",
+    ] {
+        assert_eq!(planned(question), ["report:R6"], "{question}");
+    }
+    for question in [
+        "Faisal ne kitne ka saman khareeda, kya kya khareeda, konsi item",
+        "faisl ne kitne ka maal kharida kya kya kharida konsi item",
+        "فیصل نے کتنے کا سامان خریدا، کیا کیا خریدا، کون سی آئٹم",
+        "how much did Faisal buy, what all did he buy, which items",
+    ] {
+        assert_eq!(planned(question), ["analytics:A"], "{question}");
+    }
+    // Their figures are not an instant answer: the model writes the items from the tables.
+    let reader = Reader {
+        ctx: &w.env.ctx,
+        actor: &w.owner,
+        language: Language::En,
+        today: BusinessDate::from_ymd(2026, 11, 5).expect("a date"),
+        partner_locked: false,
+    };
+    let u = understand(&reader, "Rahim ne 25 April ko kya kya becha aur kitna");
+    assert!(plan_reads(&u).is_some());
+}
+
+/// Group 4. A seller asked as a buyer is "not found, he is a seller"; a name with a word dropped a
+/// double letter ("tol" for "toll") is the one buyer, not two; "bag" is a garden; two Akrams are
+/// asked which one.
+#[test]
+fn roles_and_spellings_of_names_are_read_as_they_are() {
+    use mandi_assistant::understand::{Outcome, PartyRole};
+    let y = year::seed::build();
+    let w = &y.w;
+    let (u, local, _) = year_ask(w, "Karim ne kal kya khareeda aur kitna");
+    assert!(
+        matches!(&u.parties[..], [p] if matches!(&p.outcome, Outcome::FoundAs(h) if h.role == PartyRole::Seller)),
+        "{:?}",
+        u.parties
+    );
+    let local = local.expect("a local answer");
+    assert_eq!(local.outcome, AskOutcome::NotFound);
+    assert_eq!(local.asked_role, Some(AskedRole::Buyer));
+    assert!(local.found_as.is_some_and(|f| f.role == AskedRole::Seller));
+    // "tol" is "toll": one buyer, found, not "akram" (two) and "tol" (one).
+    let (u, ..) = year_ask(w, "akram tol tax ka khata dikhao");
+    assert!(
+        matches!(&u.parties[..], [p] if matches!(&p.outcome, Outcome::Found(h) if h.name_en == "Akram Toll Tax")),
+        "{:?}",
+        u.parties
+    );
+    // "bag" is a garden.
+    let (u, ..) = year_ask(w, "shahpur bag ka abhi kitna balance he");
+    assert!(
+        matches!(&u.parties[..], [p] if matches!(&p.outcome, Outcome::Found(h) if h.role == PartyRole::Garden)),
+        "{:?}",
+        u.parties
+    );
+    // Two Akrams in a print: which one, never the printing guide, never a button.
+    let (u, local, _) = year_ask(w, "print the bill of Akram");
+    assert!(
+        u.parties
+            .iter()
+            .any(|p| matches!(p.outcome, Outcome::Several(_))),
+        "{:?}",
+        u.parties
+    );
+    assert!(!u.sure && u.report.is_none() && local.is_none());
+}
+
+/// The entry of a garden, a trip, or a saved بکری (the lead's order of 05-11-2026): the screen is the
+/// new one, the garden is the party of a garden entry, and a trip word with no trip named opens the
+/// trip screen with no party.
+#[test]
+fn a_garden_a_trip_or_a_saved_bikri_request_opens_its_own_screen_with_the_right_party() {
+    let y = year::seed::build();
+    let words = Words::new().expect("words");
+    let route = |question: &str| {
+        let u = ask(&y.w, question, false);
+        compose(&u, Language::En, &words, READ_AT)
+            .and_then(|c| c.entry_route)
+            .unwrap_or_else(|| panic!("{question}: no route: {u:?}"))
+    };
+    for (question, screen) in [
+        (
+            "shahpur bagh ki qist likh do",
+            EntryScreen::GardenInstallment,
+        ),
+        ("shahpur bagh ka kharcha likh do", EntryScreen::GardenCost),
+        ("shahpur bagh band karo", EntryScreen::GardenClose),
+    ] {
+        let r = route(question);
+        assert_eq!(r.screen, screen, "{question}");
+        assert_eq!(
+            r.party.as_ref().map(|p| p.name_en.as_str()),
+            Some("Shahpur Garden"),
+            "{question}"
+        );
+    }
+    for (question, screen) in [
+        ("safar ki khareedari likh do", EntryScreen::TripPurchase),
+        ("safar ka kharcha likh do", EntryScreen::TripCost),
+        (
+            "safar ki doosri dukan mein bikri likh do",
+            EntryScreen::TripSale,
+        ),
+        ("bikri 5 edit karo", EntryScreen::BikriEdit),
+        ("baad mein bikri likh do", EntryScreen::BikriLaterSale),
+    ] {
+        let r = route(question);
+        assert_eq!((r.screen, r.party), (screen, None), "{question}");
+    }
+}
+
+/// An item the books do not hold is "no such item" (not_found, asked role item), as a party that does
+/// not exist is; an item that is in the books with no sales has its own figure, 0, which is another
+/// answer (tests/understand_figure.rs has that one). Names of two words, synonyms and Urdu letters all
+/// say it.
+#[test]
+fn an_item_that_is_not_in_the_books_is_no_such_item() {
+    use mandi_assistant::ask::AskedRole;
+    let w = books();
+    let words = Words::new().expect("words");
+    for question in [
+        "shimla mirch ki is mahine ki sale batao",
+        "simla mirch ki is mahine ki sale batao",
+        "capsicum ki is mahine ki sale batao",
+        "شملہ مرچ کی اس مہینے کی بکری بتاؤ",
+        "tamatar ka commission is mahine",
+        "ٹماٹر کا کمیشن اس مہینے",
+    ] {
+        for language in [Language::En, Language::Ur] {
+            let u = understand(
+                &Reader {
+                    ctx: &w.env.ctx,
+                    actor: &w.owner,
+                    language,
+                    today: BusinessDate::from_ymd(2026, 10, 10).expect("a date"),
+                    partner_locked: false,
+                },
+                question,
+            );
+            let composed = compose(&u, language, &words, READ_AT)
+                .unwrap_or_else(|| panic!("{question}: no local answer, {u:?}"));
+            assert_eq!(composed.outcome, AskOutcome::NotFound, "{question}");
+            assert_eq!(composed.asked_role, Some(AskedRole::Item), "{question}");
+        }
+    }
 }

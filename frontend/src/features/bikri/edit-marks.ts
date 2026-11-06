@@ -30,6 +30,7 @@ const SALE_PATHS: Readonly<Record<string, readonly string[]>> = {
   [SALE.buyer]: ['buyer_account_id'],
   [SALE.qty]: ['qty'],
   [SALE.rate]: ['seller_rate_paisa'],
+  [SALE.grade]: ['grade'],
   [SALE.payment]: ['payment_type'],
 };
 

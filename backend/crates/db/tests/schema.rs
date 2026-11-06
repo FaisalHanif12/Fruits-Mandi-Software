@@ -348,6 +348,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "ended",
                 // Migration 0006 (plan 16b): the cost of the own goods this line sold (C21).
                 "cost_paisa",
+                // Migration 0019 (plan 58, PRD FR-12.42): the quality of the line.
+                "grade",
             ],
         ),
         (

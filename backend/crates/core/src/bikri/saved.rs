@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use super::grade::SaleGrade;
 use super::input::{BikriDraft, FreightPaidBy, LotChargeMethod, PaymentType, StoredMethod};
 use super::preview::BikriPreview;
 use crate::accounts::RecordRef;
@@ -223,6 +224,11 @@ pub struct SavedSale {
     /// In force, replaced or removed by an edit, or cancelled with its بکری. A cancelled بکری
     /// shows the lines in state `cancelled`; a saved one shows the lines `in_force`.
     pub state: SaleState,
+    /// The quality of the goods of this line (PRD FR-12.42). Left out of the JSON when the line
+    /// has none, so every older answer reads exactly as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub grade: Option<SaleGrade>,
     /// A note.
     pub note: Option<String>,
 }

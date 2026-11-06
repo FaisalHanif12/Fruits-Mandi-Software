@@ -4,6 +4,7 @@
 // (`gardens_summary`) stays for a screen that wants only the open gardens.
 export { useGardensSummary } from './hooks';
 export type { GardenRow, GardensSummary } from './types';
+export type { GardenOpenType } from './screen-type';
 export { arrivalNumberText } from './list-columns';
 export { useOpenArrival } from './open-arrival';
 export { GardenFilterSelect } from './components/GardenFilterSelect';

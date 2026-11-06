@@ -26,7 +26,7 @@ use super::super::PageSpec;
 use super::register::conds;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    IN_CHUNK, add, col, count_of, load_parties, paisa, party_of_line, pukhta_party,
+    IN_CHUNK, add, col, count_of, grade_of, load_parties, paisa, party_of_line, pukhta_party,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -111,7 +111,7 @@ fn lines_of(
         let sql = format!(
             "SELECT s.buyer_account_id, s.pukhta_person_key, b.number, i.name_ur, i.name_en,
                     pk.name_ur, pk.name_en, s.qty, s.buyer_rate_paisa, s.buyer_value_paisa,
-                    s.buyer_comm_paisa, s.laga_paisa, s.buyer_total_paisa
+                    s.buyer_comm_paisa, s.laga_paisa, s.buyer_total_paisa, s.grade
              FROM journal_entries je
              JOIN bikri_sales s ON s.journal_entry_id = je.id
              JOIN bikri_lots l ON l.id = s.lot_id
@@ -146,16 +146,18 @@ fn lines_of(
                             r.get::<_, i64>(11)?,
                             r.get::<_, i64>(12)?,
                         ],
+                        r.get::<_, Option<String>>(13)?,
                     ),
                 ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
-        for (key, (bikri_number, item, packing, qty, money)) in rows {
+        for (key, (bikri_number, item, packing, qty, money, grade)) in rows {
             out.entry(key).or_default().push(BillLine {
                 part: DetailPart::Sale {
                     bikri_number,
                     item,
                     packing,
+                    grade: grade_of(grade.as_deref())?,
                     qty,
                     rate_paisa: paisa(money[0])?,
                     value_paisa: paisa(money[1])?,

@@ -14,7 +14,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { TriangleAlert } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import {
@@ -48,6 +48,11 @@ interface CloseGardenCardProps {
   garden: GardenRow;
   /** Today, `YYYY-MM-DD`. */
   today: string;
+  /**
+   * The address asked for the closing (PRD FR-7.79): the card is scrolled into view and its button takes
+   * the focus once the preview has made it ready. Pressing it still opens the confirm box (FR-7.8).
+   */
+  focusOnOpen?: boolean | undefined;
 }
 
 function asUiError(items: readonly UiError['errors'][number][]): UiError | null {
@@ -60,7 +65,7 @@ function asUiError(items: readonly UiError['errors'][number][]): UiError | null 
       };
 }
 
-export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
+export function CloseGardenCard({ garden, today, focusOnOpen = false }: CloseGardenCardProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
   const grouping = useGrouping();
@@ -83,6 +88,17 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
   const previewError = useMemo(() => asUiError(preview?.errors ?? []), [preview?.errors]);
   const error = shownRefusal ?? previewError;
   const canClose = view.current && numbers !== null && previewError === null;
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!focusOnOpen || arrived.current) return;
+    // The card comes into view at once; the focus waits until the button can take it.
+    closeButton.current?.scrollIntoView({ block: 'nearest' });
+    if (canClose) {
+      closeButton.current?.focus();
+      arrived.current = true;
+    }
+  }, [focusOnOpen, canClose]);
   const loss = numbers !== null && isNegativePaisa(numbers.result_paisa);
 
   const confirm = () => {
@@ -210,6 +226,7 @@ export function CloseGardenCard({ garden, today }: CloseGardenCardProps) {
       ) : null}
       <div className="flex justify-end">
         <Button
+          ref={closeButton}
           variant="danger"
           busy={close.isPending}
           disabled={!canClose}

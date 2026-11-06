@@ -297,8 +297,9 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
         .filter(|c| !allowed.contains(&c.as_str()))
         .collect();
     // 34 business columns of Architecture 15.6 (the 37 listed minus is_active,
-    // replaced_by_sale_id and note), the id, and `cost_paisa` of migration 6 (plan 16b).
-    assert_eq!(frozen.len(), 36, "{frozen:?}");
+    // replaced_by_sale_id and note), the id, `cost_paisa` of migration 6 (plan 16b) and `grade` of
+    // migration 19 (plan 58): the quality of a saved line is frozen like the rest of it.
+    assert_eq!(frozen.len(), 37, "{frozen:?}");
     for column in frozen {
         // Any change is refused by the trigger, which runs before the checks.
         // A different value for every column (the id gets a free number: it cannot be NULL).

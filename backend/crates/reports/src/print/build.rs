@@ -7,7 +7,7 @@
 
 use chrono::{DateTime, Utc};
 use mandi_core::auth::Language;
-use mandi_core::bikri::{BikriDetail, BikriStatus};
+use mandi_core::bikri::{BikriDetail, BikriStatus, SaleGrade};
 use mandi_core::english_words::english_words;
 use mandi_core::money::{Grouping, Paisa};
 use mandi_core::printing::{PrintDoc, PrintSetup};
@@ -49,6 +49,11 @@ pub struct BuildOptions {
 /// `ReportsError::Money` if a sum does not fit, `ReportsError::Words` if an amount cannot be
 /// written in words, `ReportsError::Data` for a stored date that is not a date.
 pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, ReportsError> {
+    // The words of the qualities (PRD FR-12.42) are read only when a line has one.
+    let graded = detail
+        .lots
+        .iter()
+        .any(|lot| lot.sales.iter().any(|s| s.is_active && s.grade.is_some()));
     let ctx = Ctx {
         language: options.language,
         grouping: options.grouping,
@@ -57,6 +62,11 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
             options.grouping,
             options.setup.urdu_digits,
         ),
+        grade_words: if graded {
+            Some(grade_words(options.language)?)
+        } else {
+            None
+        },
     };
     let (title_id, pages) = match options.doc {
         PrintDoc::SellerBill => (TITLE_SELLER_BILL, seller_pages(&ctx, detail)?),
@@ -96,9 +106,36 @@ pub(super) struct Ctx {
     pub(super) language: Language,
     pub(super) grouping: Grouping,
     pub(super) style: NumberStyle,
+    /// The words اول, دوم, سوم in the print language, in that order. `None` while no line of the
+    /// بکری has a quality.
+    grade_words: Option<[String; 3]>,
+}
+
+/// The three words of the qualities, from the same Fluent messages as the screens (NFR-URD-1).
+fn grade_words(language: Language) -> Result<[String; 3], ReportsError> {
+    let l10n = crate::export::l10n::L10n::new(language)?;
+    let word = |grade: SaleGrade| l10n.text(crate::reports::ids::grade_id(grade));
+    Ok([
+        word(SaleGrade::First),
+        word(SaleGrade::Second),
+        word(SaleGrade::Third),
+    ])
 }
 
 impl Ctx {
+    /// The word of a quality in the print language (PRD FR-12.42).
+    pub(super) fn grade_word(&self, grade: SaleGrade) -> Option<&str> {
+        let index = match grade {
+            SaleGrade::First => 0,
+            SaleGrade::Second => 1,
+            SaleGrade::Third => 2,
+        };
+        self.grade_words
+            .as_ref()
+            .and_then(|words| words.get(index))
+            .map(String::as_str)
+    }
+
     pub(super) fn money(&self, amount: Paisa) -> Result<String, ReportsError> {
         self.style.money(amount)
     }

@@ -66,6 +66,7 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
     ...(filters.item === null ? {} : { item: picked(filters.item) }),
     ...(filters.city === null ? {} : { city: picked(filters.city) }),
     ...(filters.adda === null ? {} : { adda: picked(filters.adda) }),
+    ...(filters.collector == null ? {} : { collector: picked(filters.collector) }),
     ...(filters.partner === null ? {} : { partner: filters.partner.id }),
     ...(filters.garden === null ? {} : { garden: filters.garden.id }),
     ...(filters.bikri === null ? {} : { bikri: filters.bikri }),
@@ -76,6 +77,7 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
     ...(filters.trip_view === null ? {} : { trip_view: filters.trip_view }),
     ...(filters.garden_view === null ? {} : { garden_view: filters.garden_view }),
     ...(filters.guests_only ? { guests: true } : {}),
+    ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
   };
 }
 
@@ -100,6 +102,7 @@ export function analyticsSearchFromFilters(filters: SourceAnalyticsFilters): Ana
     ...(filters.partner === null ? {} : { partner: filters.partner.id }),
     ...(filters.trip === null ? {} : { trip: filters.trip.id }),
     ...(filters.garden === null ? {} : { garden: filters.garden.id }),
+    ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
   };
 }
 
@@ -130,6 +133,8 @@ export function reportFiltersOf(filters: SourceReportFilters): ReportFilters {
     ...(filters.trip_view === null ? {} : { trip_view: filters.trip_view }),
     ...(filters.garden_view === null ? {} : { garden_view: filters.garden_view }),
     ...(filters.guests_only ? { guests_only: true } : {}),
+    ...(filters.collector == null ? {} : { collector_id: filters.collector.id }),
+    ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
   };
 }
 
@@ -155,5 +160,6 @@ export function analyticsFiltersOf(filters: SourceAnalyticsFilters): AnalyticsFi
     garden_id: filters.garden?.id ?? null,
     goods: filters.goods,
     trip_view: filters.trip_view,
+    ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
   };
 }

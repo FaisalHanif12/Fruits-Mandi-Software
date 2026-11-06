@@ -25,6 +25,7 @@ import {
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
 import { isGardenLot, isOwnLot, isPukhtaSeller } from '../draft';
+import { lotLabelVars, useLotWho } from '../lot-name';
 import { LOT, ON, type LotPreview } from '../types';
 import { PukhtaFields } from './PukhtaFields';
 
@@ -64,6 +65,8 @@ function methodOf(text: string | undefined): Method {
 export function LotMoreToggle({ lotIndex, forced }: { lotIndex: number; forced: boolean }) {
   const stores = useBikriDraft();
   const open = stores.view((state) => state.moreOpen);
+  const lotWho = useLotWho();
+  const lotRow = stores.lots((state) => state.rows)[lotIndex];
   return (
     <Button
       disabled={forced}
@@ -76,7 +79,7 @@ export function LotMoreToggle({ lotIndex, forced }: { lotIndex: number; forced: 
       ) : (
         <ChevronDown aria-hidden="true" className="size-icon-md" />
       )}
-      <Localized id="bikri-more-toggle" vars={{ lot: String(lotIndex + 1) }} />
+      <Localized id="bikri-more-toggle" vars={{ ...lotLabelVars(lotIndex + 1, lotWho(lotRow)) }} />
     </Button>
   );
 }

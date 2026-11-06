@@ -235,6 +235,18 @@ impl Words {
         }
     }
 
+    /// A Fluent message with arguments, in a language (the arguments are text, already formatted).
+    /// A message that does not exist comes back as its own id, which the caller treats as "no
+    /// sentence" (the instant figure sentences of PRD FR-7.90 return nothing then).
+    ///
+    /// Example: `text_with(Language::En, "assistant-figure-balance", &[("name", "Akram")])`.
+    pub fn text_with(&self, language: Language, id: &str, args: &[(&str, &str)]) -> String {
+        match language {
+            Language::Ur => self.ur.text_with(id, args),
+            Language::En => self.en.text_with(id, args),
+        }
+    }
+
     /// The side word in Urdu: بنام or جمع. Zero has none.
     pub fn side(&self, side: Side) -> Option<String> {
         match side {

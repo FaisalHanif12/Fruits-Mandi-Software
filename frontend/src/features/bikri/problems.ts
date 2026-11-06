@@ -101,5 +101,6 @@ export const LINE_GRID_FIELD: Readonly<Record<string, string>> = {
   buyer_account_id: 'buyer',
   qty: 'qty',
   seller_rate: 'rate',
-  payment_type: 'payment',
+  // The quality is a grid cell too (PRD FR-12.42); the payment type is in the details of the line.
+  grade: 'grade',
 };

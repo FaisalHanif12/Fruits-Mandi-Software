@@ -23,7 +23,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 18;
+const LATEST: usize = 19;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -592,10 +592,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 19).unwrap();
+    conn.pragma_update(None, "user_version", 20).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 19);
+    assert_eq!(user_version(&conn), 20);
     assert!(!backups.exists());
 }
 
@@ -3537,16 +3537,29 @@ fn migration_18_widens_the_outcomes_of_the_question_log_and_keeps_every_question
     );
     let before = all_rows_without(&conn, &[]);
     let indexes_before = schema(&conn, "index");
-    let triggers_before = schema(&conn, "trigger");
-    let tables_before: Vec<String> = schema(&conn, "table")
-        .into_iter()
-        .filter(|t| !t.starts_with("assistant_questions:"))
-        .collect();
+    // The upgrade goes on to the latest migration (19, plan 58), which adds `bikri_sales.grade` and
+    // makes the snapshot trigger of that table again with it. Those two are left out of the
+    // comparison: migration 18 itself changes nothing else.
+    let triggers_of = |conn: &Connection| -> Vec<String> {
+        schema(conn, "trigger")
+            .into_iter()
+            .filter(|t| !t.starts_with("bikri_sales_snapshot_is_final:"))
+            .collect()
+    };
+    let tables_of = |conn: &Connection| -> Vec<String> {
+        schema(conn, "table")
+            .into_iter()
+            .filter(|t| !t.starts_with("assistant_questions:") && !t.starts_with("bikri_sales:"))
+            .collect()
+    };
+    let triggers_before = triggers_of(&conn);
+    let tables_before = tables_of(&conn);
 
     let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    assert_eq!((outcome.from, outcome.to), (17, 18));
+    // The upgrade goes on to the latest migration (19, plan 58), through migration 18.
+    assert_eq!((outcome.from, outcome.to), (17, 19));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
-    assert_eq!(user_version(&conn), 18);
+    assert_eq!(user_version(&conn), 19);
     // Every row, id, value and link is as it was.
     assert_eq!(
         all_rows_without(&conn, &[]),
@@ -3568,17 +3581,9 @@ fn migration_18_widens_the_outcomes_of_the_question_log_and_keeps_every_question
         .count();
     assert_eq!(broken, 0, "no link is broken");
     // No other table, no index and no trigger changed (the same names and the same rules).
-    let tables_after: Vec<String> = schema(&conn, "table")
-        .into_iter()
-        .filter(|t| !t.starts_with("assistant_questions:"))
-        .collect();
-    assert_eq!(tables_after, tables_before, "no other table changed");
+    assert_eq!(tables_of(&conn), tables_before, "no other table changed");
     assert_eq!(schema(&conn, "index"), indexes_before, "no index changed");
-    assert_eq!(
-        schema(&conn, "trigger"),
-        triggers_before,
-        "no trigger changed"
-    );
+    assert_eq!(triggers_of(&conn), triggers_before, "no trigger changed");
     // The new outcome is accepted and the others still are; a word that is not one is not.
     conn.execute(
         "INSERT INTO assistant_questions (asked_at, asked_day, question, language, \

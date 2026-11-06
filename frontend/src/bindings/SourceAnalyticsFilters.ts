@@ -6,6 +6,7 @@ import type { AnalyticsPeriod } from './AnalyticsPeriod';
 import type { AnalyticsSide } from './AnalyticsSide';
 import type { AnalyticsTripView } from './AnalyticsTripView';
 import type { AnswerRecord } from './AnswerRecord';
+import type { ItemGroup } from './ItemGroup';
 import type { SourceParty } from './SourceParty';
 
 /**
@@ -32,6 +33,11 @@ export type SourceAnalyticsFilters = {
    * An item.
    */
   item: AnswerRecord | null;
+  /**
+   * All the items of a group, پھل or سبزی (views A, B, C, D, G and H). Left out of the wire form when
+   * none.
+   */
+  item_group?: ItemGroup;
   /**
    * A seller.
    */

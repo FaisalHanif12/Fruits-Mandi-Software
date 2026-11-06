@@ -154,6 +154,28 @@ fn rs(v: &Value) -> i64 {
     v["rs"].as_i64().unwrap()
 }
 
+// ---- R6 and the فون charge ---------------------------------------------------------------------
+
+/// Lead ruling (plan 53 Section 9): the فون charge of R6 is money and is read; a phone NUMBER is
+/// never read (PRD FR-7.83).
+#[test]
+fn r6_gives_the_phone_charge_and_never_a_phone_number() {
+    let w = day();
+    let mut s = Session::new(&w);
+    let id = s.run("report", report("R6", json!({}))).unwrap();
+    let j = s.json(&id);
+    let text = j.to_string();
+    assert!(text.contains("phone_charge"), "{text}");
+    assert!(!text.contains("phone1"), "{text}");
+    assert!(!text.contains("phone2"), "{text}");
+    // Both lots of the worked day carry the 20 rupees of the فون charge (PRD 4.4, 4.5).
+    let rows = j["rows"].as_array().expect("rows");
+    assert!(!rows.is_empty(), "{j}");
+    for row in rows {
+        assert_eq!(rs(&row["phone_charge"]), 20, "{row}");
+    }
+}
+
 // ---- find -------------------------------------------------------------------------------------
 
 #[test]
@@ -769,10 +791,13 @@ fn estimate_months_ahead_must_be_a_number_of_the_question() {
     let id = s.run("estimate", args(3)).unwrap();
     assert_eq!(s.json(&id)["ahead_count"]["n"], 3);
     assert_eq!(s.error("estimate", args(6)).code, "ERR_OUT_OF_RANGE");
-    // A measure the books give no monthly series of is refused, not guessed.
+    // Every measure has a monthly series now (plan 55 F1): لاگا is worked out like the others. A
+    // measure with a filter that does not belong to it is refused, not guessed.
     let mut s = Session::new(&w);
     let laga = json!({"measure": "laga", "item": null, "seller": null, "buyer": null, "garden": null, "trip": null, "ahead": 6, "target": null});
-    assert_eq!(s.error("estimate", laga).code, "ERR_OUT_OF_RANGE");
+    assert!(s.run("estimate", laga).is_ok());
+    let receipts_item = json!({"measure": "receipts", "item": "i1", "seller": null, "buyer": null, "garden": null, "trip": null, "ahead": 6, "target": null});
+    assert_eq!(s.error("estimate", receipts_item).code, "ERR_OUT_OF_RANGE");
     // Seller commission only is a different series from all commission.
     let seller = json!({"measure": "commission_seller", "item": null, "seller": null, "buyer": null, "garden": null, "trip": null, "ahead": 6, "target": null});
     let id = s.run("estimate", seller).unwrap();

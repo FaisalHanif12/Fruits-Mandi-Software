@@ -772,6 +772,22 @@ fn source_from(r: &Row<'_>) -> rusqlite::Result<SearchSource> {
     })
 }
 
+/// The active staff whose job is `collector`, as the search index sees them (the `collector` list
+/// of the pickers, PRD FR-15.2). The columns are those of [`search_sources`] for the staff.
+///
+/// Example: a munshi, a labourer and an inactive collector are not in it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn collector_sources(conn: &Connection) -> rusqlite::Result<Vec<SearchSource>> {
+    let mut statement = conn.prepare(
+        "SELECT m.id, m.code, m.name_ur, m.name_en, m.phone, m.phone, NULL, m.search_ur, m.search_en, m.search_phonetic, m.is_active, 0
+         FROM staff m WHERE m.role = 'collector' AND m.is_active = 1",
+    )?;
+    let rows = statement.query_map([], source_from)?;
+    rows.collect()
+}
+
 /// The records of one kind as the search index sees them: the columns are code, both names, the
 /// two second lines, extra keys, the three search columns, the active flag and "sold by weight". `only_id` limits
 /// it to one record (after a save).

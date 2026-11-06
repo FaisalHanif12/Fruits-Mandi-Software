@@ -7,7 +7,7 @@ import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import { pickedOrNull } from '../../shared/screen-state';
-import type { PickerValue } from '../../shared/ui';
+import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
 import type {
   PeriodChoice,
   ReportBikri,
@@ -53,8 +53,12 @@ export interface ReportSearch {
   city?: PickerValue;
   /** An اڈا. */
   adda?: PickerValue;
+  /** One collector, a staff member (R22, R23, R35). */
+  collector?: PickerValue;
   /** One kind of voucher (R15); `all` is the same as leaving it out. */
   voucher_type?: VoucherChoice;
+  /** The group of the items, fruit or vegetables; `all` is the same as leaving it out. */
+  item_group?: ItemGroupChoice;
   /** How the trip profit or loss (R33) is laid out. */
   trip_view?: ReportTripView;
   /** One garden (R36), by its id. */
@@ -147,8 +151,10 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const zamindar = readPicked(search['zamindar']);
   const city = readPicked(search['city']);
   const adda = readPicked(search['adda']);
+  const collector = readPicked(search['collector']);
   // `all` is the same as leaving the kind out, so it is not carried.
   const voucherType = oneOf(VOUCHER_CHOICES, search['voucher_type']);
+  const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
   const garden = positiveId(search['garden']);
   const gardenView = oneOf(GARDEN_VIEW_CHOICES, search['garden_view']);
@@ -170,7 +176,9 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(zamindar === undefined ? {} : { zamindar }),
     ...(city === undefined ? {} : { city }),
     ...(adda === undefined ? {} : { adda }),
+    ...(collector === undefined ? {} : { collector }),
     ...(voucherType === undefined || voucherType === 'all' ? {} : { voucher_type: voucherType }),
+    ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
     ...(garden === undefined ? {} : { garden }),
     ...(gardenView === undefined ? {} : { garden_view: gardenView }),
@@ -202,7 +210,9 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
     zamindar: search.zamindar ?? null,
     city: search.city ?? null,
     adda: search.adda ?? null,
+    collector: search.collector ?? null,
     voucherType: search.voucher_type ?? 'all',
+    itemGroup: search.item_group ?? 'all',
     tripView: search.trip_view ?? 'trip',
     garden: search.garden ?? null,
     gardenView: search.garden_view ?? 'garden',

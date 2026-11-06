@@ -185,3 +185,36 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
   `bikri-own-real-shapes.test.ts` (canned data has the real shape; every working the backend can
   send has words in both languages). The development page shows it all with `?own`
   (`/dev/bikri?own`, `&id=1`, `&id=1&edit=4`, `&stock`). The Windows spec is `23-trip-goods-in-bikri`.
+
+## A line over the lot, and the name of a lot (plan 57, PRD FR-12.6)
+
+- **A line that sells more than the lot has left is not worked out.** The backend answers it with
+  `calc: null` and `ERR_QTY_EXCEEDS_LOT` (with `available`) at `lots[i].sales[j].qty`; the lot's
+  `totals` is null when no line is worked out. The screen shows what the backend sent and nothing
+  else: the figure cells of that line stay empty (never 0), the cell is red, and the words are
+  written in plain view under the sale lines (`QtyNotes`, data from `grid-views.ts` `qtyNotes`). The
+  list of problems above the grids leaves a quantity problem out when the note under the grid says
+  it (`ProblemList`). The summary and the strip say "the totals wait" while no line is worked out,
+  and "N lines are left out" beside figures of the lines that are (`leftOut`, counted from the
+  problems; a presence check, never a sum).
+- **Every lot label names its seller and item** (`lot-name.ts`): the sales title, the lot / whole
+  switch of the lines area and of the summary, the strip, the "more" button, the whole-sale lot
+  column, and in the saved view the lot switch and the lot title. The name goes through
+  `displayName` (with the tag); a one-time seller is named by the name typed for him. The comma is
+  in Fluent (`bikri-lot-who`). The isolation marks Fluent puts round the inner names are taken off:
+  nested isolates read left to right in Urdu and showed the item before the seller.
+- **Tests**: `bikri-over-qty.test.tsx` (Umar's case on the screen, the summary and the strip),
+  `bikri-lot-labels.test.tsx`. Photographs: `#/dev/bikri?over` opens Umar's case (type 70 in the
+  quantity).
+
+## The quality of a sale line (plan 58, PRD FR-12.42)
+
+- Each sale line can carry a quality (`درجہ`: اول, دوم, سوم), optional and never a change of any
+  figure. It is `typed[SALE.grade]` (`first`, `second`, `third` or empty), sent to the backend as
+  `grade` only when there is one (`draft.ts`), and loaded back for an edit (`draft-load.ts`).
+- In the sale lines grid it is a `select` cell (`columns.ts`, `shared/grid/SelectCellEditor.tsx`),
+  not an Enter stop: a line is still buyer, qty, rate.
+- The saved view shows a quality column in a lot only when one of its lines has a quality, and the
+  edit list "what you changed" names it (`edit-fields.ts`).
+- Prints and reports write the word after the item through `gradedItem` (`shared/format/grade.ts`):
+  "سیب اول" / "Apple First". A line with no quality is written exactly as before.

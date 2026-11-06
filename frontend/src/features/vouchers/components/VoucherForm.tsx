@@ -297,7 +297,7 @@ export function VoucherForm({
           {(props) => (
             <Picker
               {...props}
-              scope="staff"
+              scope="collector"
               value={draft.collector}
               onChange={(hit) => {
                 onChange({

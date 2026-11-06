@@ -726,7 +726,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                   {(props) => (
                     <Picker
                       {...props}
-                      scope="staff"
+                      scope="collector"
                       value={values.collector}
                       onChange={ref('collector')}
                     />

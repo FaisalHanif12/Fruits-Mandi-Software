@@ -37,6 +37,7 @@ pub fn tool_field(engine_field: &str) -> String {
         "trip_id" => "trip",
         "garden_id" | "garden_account_id" => "garden",
         "partner_id" => "partner",
+        "collector_id" => "collector",
         "bikri_id" => "bikri",
         "person_key" => "party",
         other => other,
@@ -108,15 +109,31 @@ pub fn report_fields(filters: &[FilterKind]) -> Vec<String> {
         match kind {
             FilterKind::DateRange => out.extend(["from", "to"]),
             FilterKind::AsOf => out.push("as_of"),
-            FilterKind::Party | FilterKind::Seller | FilterKind::Zamindar => out.push("party"),
+            FilterKind::Party => out.push("party"),
+            // A report with a seller but no buyer takes the seller as `party` too.
+            FilterKind::Seller => {
+                if !filters.contains(&FilterKind::Party) {
+                    out.push("party");
+                }
+                out.push("seller");
+            }
+            FilterKind::Zamindar => out.push("zamindar"),
+            FilterKind::Collector => out.push("collector"),
+            FilterKind::Status => out.push("status"),
+            FilterKind::VoucherType => out.push("voucher_type"),
+            FilterKind::Detail | FilterKind::TripView | FilterKind::GardenView => {
+                out.push("layout");
+            }
+            // The shop's guests are `partner: "guests"`.
+            FilterKind::Guests => out.push("partner"),
             FilterKind::Item => out.push("item"),
+            FilterKind::ItemGroup => out.push("item_group"),
             FilterKind::City => out.push("city"),
             FilterKind::Adda => out.push("adda"),
             FilterKind::GroupBy => out.push("group_by"),
             FilterKind::Partner => out.push("partner"),
             FilterKind::Garden => out.push("garden"),
             FilterKind::Bikri => out.push("bikri"),
-            _ => {}
         }
     }
     out.dedup();

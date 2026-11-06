@@ -49,6 +49,7 @@ use crate::client::{CallError, ModelClient, Reply, ToolCall};
 use crate::conversation::{CallTiming, Conversation, Timing, ToolTiming, Turn, Wait, Waiting};
 use crate::echo;
 use crate::fill;
+use crate::hedge::{Attempt, End, Side};
 use crate::help_guard;
 use crate::limits::{
     DAILY_LIMIT, FIRST_BYTE_SECS, MAX_CALL_OUTPUT_TOKENS, MAX_INPUT_TOKENS, MAX_MODEL_CALLS,
@@ -720,6 +721,10 @@ impl<'a> Run<'a> {
         let read_at = self.read_at();
         let composed =
             crate::understand::compose(understood, self.language, &self.words, &read_at)?;
+        // The question log shows what the answer used (the guide topic, the report and its
+        // filters), marked `local`: no tool was run for it.
+        let logged = local_log(understood, &composed);
+        turn.tool_log.extend(logged);
         let local = |mut finished: Finished| {
             finished.finish_reason = Some("local".to_owned());
             Some(finished)
@@ -759,6 +764,73 @@ impl<'a> Run<'a> {
         finished.found_as = composed.found_as;
         finished.entry_route = composed.entry_route;
         finished
+    }
+
+    /// The instant answer of a simple figure (PRD FR-7.90, plan 55 Section 10): the planned reads
+    /// are run, `understand::compose_figure` writes the answer from them in the app's own reviewed
+    /// sentences (the figures are references into the reads), and the same checks as for the
+    /// model's answer run on it (FR-7.76: the figure in its two places, the side words, the words
+    /// around each reference). Nothing is added or rounded here.
+    ///
+    /// `None` when the question has no planned read, when the reads gave nothing, when no sentence
+    /// can be written, or when a check refuses the answer. After the reads, `turn.read_first` is
+    /// true, so the model path does not read again. Each read is logged with `"local": true` and
+    /// still replays on a re-read; the question is logged as local, with no model call.
+    fn instant_answer(
+        &self,
+        conv: &mut Conversation,
+        turn: &mut Turn,
+        understood: &crate::understand::Understanding,
+    ) -> Option<Finished> {
+        let start = turn.tool_log.len();
+        if !self.read_first(conv, turn, understood) {
+            return None;
+        }
+        turn.read_first = true;
+        let index = u32::try_from(conv.turns.len()).unwrap_or(u32::MAX);
+        let read: Vec<ToolResult> = conv
+            .results
+            .iter()
+            .filter(|r| r.turn == index)
+            .cloned()
+            .collect();
+        let figure =
+            crate::understand::compose_figure(understood, &read, self.language, &self.words)?;
+        let numbers = figures::question_numbers(&turn.question);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
+        let state = State {
+            results: conv.results.clone(),
+            turn: index,
+        };
+        let exempt = assistant::exempt_names(&self.snap).unwrap_or_default();
+        let names = NameSet::with_book(&state, &exempt, self.name_book(&exempt));
+        let verdict = Check {
+            env: &env,
+            state: &state,
+            names: &names,
+        }
+        .run(&figure.answer);
+        if !matches!(verdict, Verdict::Ok) {
+            return None;
+        }
+        for entry in turn.tool_log.iter_mut().skip(start) {
+            if let Some(map) = entry.as_object_mut() {
+                map.insert("local".to_owned(), json!(true));
+            }
+        }
+        let content = json!({
+            "kind": "answer", "text": figure.answer.text, "show": [], "next": [],
+            "choose": null, "entry": null, "nearest": null
+        })
+        .to_string();
+        turn.messages
+            .push(json!({"role": "assistant", "content": content}));
+        turn.referenced = referenced_rows(&figure.answer);
+        let mut f = self.conclude_answer(&env, &state, &figure.answer, &self.read_at());
+        f.model_text = Some(json_text(&content));
+        f.finish_reason = Some("local".to_owned());
+        Some(f)
     }
 
     /// What was read for this question, to show when time runs out (plan 55 Section 3): the
@@ -878,10 +950,23 @@ impl<'a> Run<'a> {
             let first_try = Duration::from_secs(FIRST_BYTE_SECS).min(left);
             let timeout = if retried { left } else { first_try };
             let sent = Instant::now();
-            let result = self.d.client.call(&key, &body, timeout);
+            let (result, hedge) = self.d.client.call_noted(&key, &body, timeout);
             let model_millis = millis_since(sent);
             match result {
                 Ok(reply) => {
+                    // A call that was sent twice: the request that lost goes to the log first, and
+                    // the one whose reply was used last (the tools of the call attach to it).
+                    let winner = hedge.as_ref().and_then(|h| {
+                        h.attempts
+                            .iter()
+                            .find(|a| a.end == End::Won)
+                            .map(|a| side_word(a.side))
+                    });
+                    if let Some(h) = &hedge {
+                        for lost in h.attempts.iter().filter(|a| a.end != End::Won) {
+                            turn.timing.calls.push(hedge_entry(lost, rewrite, true));
+                        }
+                    }
                     turn.timing.calls.push(CallTiming {
                         model_millis,
                         tokens_in: reply.usage.prompt_tokens,
@@ -896,11 +981,15 @@ impl<'a> Run<'a> {
                         repaired: Vec::new(),
                         check_paths: Vec::new(),
                         check_at: Vec::new(),
+                        hedged: winner,
+                        hedge_extra: false,
                     });
                     break reply;
                 }
                 Err(e) => {
                     // The time of a call that failed is the most useful one: a timeout shows here.
+                    // When the copy was sent too, the first request carries the time the question
+                    // waited and the copy is a second entry (left out of the sums).
                     turn.timing.calls.push(CallTiming {
                         model_millis,
                         tokens_in: 0,
@@ -915,7 +1004,14 @@ impl<'a> Run<'a> {
                         repaired: Vec::new(),
                         check_paths: Vec::new(),
                         check_at: Vec::new(),
+                        hedged: hedge.as_ref().map(|_| "first"),
+                        hedge_extra: false,
                     });
+                    if let Some(h) = &hedge {
+                        for copy in h.attempts.iter().filter(|a| a.side == Side::Copy) {
+                            turn.timing.calls.push(hedge_entry(copy, rewrite, true));
+                        }
+                    }
                     let left = total.saturating_sub(self.started.elapsed());
                     if !retried && e.retryable() && left >= Duration::from_secs(RETRY_MIN_LEFT_SECS)
                     {
@@ -1029,7 +1125,13 @@ impl<'a> Run<'a> {
             results: old.iter().filter(|r| r.turn != index).cloned().collect(),
             turn: index,
         };
-        for entry in &turn.tool_log {
+        // A local entry that has an id is a read of an instant answer: it is read again. One
+        // without an id only says what a local answer used, and nothing is run for it.
+        for entry in turn
+            .tool_log
+            .iter()
+            .filter(|e| e.get("local").is_none() || e.get("id").is_some())
+        {
             let (Some(id), Some(tool), Some(input)) = (
                 entry.get("id").and_then(Value::as_str),
                 entry.get("tool").and_then(Value::as_str),
@@ -1265,6 +1367,36 @@ impl<'a> Run<'a> {
         f
     }
 
+    /// The role and the typed name of a click on a name found in another role: `Some(("buyer",
+    /// "faisal"))` when `key` is the one party the widened `find` found, and he is a buyer or a
+    /// seller. `None` for any other click.
+    fn found_in_other_role(
+        &self,
+        conv: &Conversation,
+        find_id: &str,
+        key: &str,
+    ) -> Option<(&'static str, String)> {
+        let state = State {
+            results: conv.results.clone(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        if !route::is_widened(&state, find_id) {
+            return None;
+        }
+        let asked = route::asked_role_of_find(&state, find_id);
+        let found = route::found_as_of(&state, find_id, asked)?;
+        if found.key != key {
+            return None;
+        }
+        let word = match found.role {
+            AskedRole::Buyer => "buyer",
+            AskedRole::Seller => "seller",
+            _ => return None,
+        };
+        let text = state.find(find_id)?.input.get("text")?.as_str()?.to_owned();
+        Some((word, text))
+    }
+
     /// Ends the question as "not found" for a name that exists in the other role than the question's
     /// verb gives ("Faisal ne kya becha", and he is a buyer): no model call, `asked_role` the role
     /// of the verb, `found_as` the party, and his name offered, so that "show his purchases" is one
@@ -1412,7 +1544,7 @@ impl<'a> Run<'a> {
             if let Some(input) = prefetch::canonical(tool, arguments) {
                 turn.prefetched.push((tool.to_owned(), input, id.clone()));
             }
-            let call_id = format!("pre_{tool}");
+            let call_id = format!("pre_{tool}_{}", turn.messages.len());
             turn.messages.push(json!({
                 "role": "assistant", "content": null,
                 "tool_calls": [{"id": call_id, "type": "function",
@@ -1843,6 +1975,102 @@ fn help_repaired_content(
 /// True when the next call must answer and may call no tool (plan 52 item 1, PRD E96): it is the
 /// last model call the question may make, or the tool calls are used up, or it is the rewrite
 /// (which may not read anything new, D6-system-prompt 5.3).
+/// The log entries of a local answer (one the app wrote itself, with no tool and no model): what
+/// it used, so the Owner's question log and the scorer can see it. Each entry is marked
+/// `"local": true`, because nothing was run: [`Run::refresh`] and [`rerun`] skip such entries.
+///
+/// - the guide topic of a how-to or a screen: `{tool: "app_help", local: true, input: {topic}}`;
+/// - each report button, one entry in the order of the buttons: `{tool: "report", local: true,
+///   input: {id, ...the filters of the button}}`, only the filters that are set; a tiles button:
+///   `{tool: "tiles", local: true, input: {}}`;
+/// - a name no record has: `{tool: "find", local: true, input: {text, role}}`.
+///
+/// Example: "akram ki aaj ki bikri ka print" logs `{tool: "report", local: true, input: {id:
+/// "R35", as_of: "2026-10-10", party: {...}}}`.
+fn local_log(
+    understood: &crate::understand::Understanding,
+    composed: &crate::understand::Composed,
+) -> Vec<Value> {
+    use crate::understand::{Outcome, PartyRole};
+    let mut entries: Vec<(&str, Value)> = Vec::new();
+    if let Some(topic) = &understood.topic
+        && composed.outcome == AskOutcome::Answered
+    {
+        entries.push(("app_help", json!({"topic": topic.value})));
+    }
+    if let Some(answer) = &composed.answer {
+        for source in &answer.sources {
+            match source {
+                AnswerSource::Report { id, filters, .. } => {
+                    let mut input = serde_json::Map::new();
+                    input.insert(
+                        "id".to_owned(),
+                        serde_json::to_value(id).unwrap_or(Value::Null),
+                    );
+                    if let Value::Object(set) =
+                        compact_json(serde_json::to_value(filters).unwrap_or(Value::Null))
+                    {
+                        input.extend(set);
+                    }
+                    entries.push(("report", Value::Object(input)));
+                }
+                AnswerSource::Tiles { .. } => entries.push(("tiles", json!({}))),
+                AnswerSource::Screen { route, .. } => {
+                    entries.push(("screen", json!({"route": route})));
+                }
+                AnswerSource::PartyCard { .. } | AnswerSource::Analytics { .. } => {}
+            }
+        }
+    }
+    if composed.outcome == AskOutcome::NotFound && composed.found_as.is_none() {
+        for party in &understood.parties {
+            if matches!(party.outcome, Outcome::NotFound) {
+                let role = match party.asked_role {
+                    Some(PartyRole::Seller) => "seller",
+                    Some(PartyRole::Buyer) => "buyer",
+                    _ => "any",
+                };
+                entries.push(("find", json!({"text": party.text, "role": role})));
+            }
+        }
+    }
+    entries
+        .into_iter()
+        .map(|(tool, input)| json!({"tool": tool, "local": true, "input": input}))
+        .collect()
+}
+
+/// A JSON value without its empty parts: no null, no empty text, no `false`, no empty list or
+/// object. For the filters of a button in the log, where only the ones that were set matter.
+fn compact_json(value: Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.into_iter()
+                .map(|(k, v)| (k, compact_json(v)))
+                .filter(|(_, v)| !is_empty_json(v))
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(
+            items
+                .into_iter()
+                .map(compact_json)
+                .filter(|v| !is_empty_json(v))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+fn is_empty_json(value: &Value) -> bool {
+    match value {
+        Value::Null | Value::Bool(false) => true,
+        Value::String(text) => text.is_empty(),
+        Value::Array(items) => items.is_empty(),
+        Value::Object(map) => map.is_empty(),
+        _ => false,
+    }
+}
+
 /// True when a question that reads the books takes something from the questions before it, so the
 /// app, which reads only the new words, would read the wrong thing (money review R-c).
 ///
@@ -1905,6 +2133,41 @@ fn tools_off(turn: &Turn, rewrite: bool) -> bool {
 }
 
 /// The word of a failure kind for the log (`offline`, `timeout`, `busy` ...).
+/// The word the log uses for a side of a hedged call.
+fn side_word(side: Side) -> &'static str {
+    match side {
+        Side::First => "first",
+        Side::Copy => "copy",
+    }
+}
+
+/// The log entry of one request of a hedged call: its own time, no tokens (a reply that was not
+/// used is not counted), and how it ended: `hedge_lost` when the other answered first, or its own
+/// failure (`timeout` ...). `extra` leaves it out of the time sums.
+fn hedge_entry(attempt: &Attempt, rewrite: bool, extra: bool) -> CallTiming {
+    let error = match attempt.end {
+        End::Failed(kind) => failure_word(kind),
+        End::Cancelled | End::Won => Some("hedge_lost".to_owned()),
+    };
+    CallTiming {
+        model_millis: attempt.millis,
+        tokens_in: 0,
+        tokens_cached: 0,
+        tokens_out: 0,
+        tokens_reasoning: 0,
+        rewrite,
+        failed: true,
+        tools: Vec::new(),
+        error,
+        check_failed: Vec::new(),
+        repaired: Vec::new(),
+        check_paths: Vec::new(),
+        check_at: Vec::new(),
+        hedged: Some(side_word(attempt.side)),
+        hedge_extra: extra,
+    }
+}
+
 fn failure_word(kind: FailureKind) -> Option<String> {
     serde_json::to_value(kind)
         .ok()
@@ -1943,14 +2206,22 @@ fn paused(rest: Vec<ToolCall>) -> Finished {
 
 /// The key prefix of the record a screen takes as its party: a partner (`s`) on the screens of
 /// partner money, an account (`a`) on every other (see [`EntryRoute::party`]).
-/// True when a tool that reads the books (a report, a view, a card, the tiles, an estimate or a
-/// calculation) ran without an error since this point of the question's log.
+/// True when a tool that reads the books (a report, a view, a card, the tiles, an estimate, a
+/// calculation or the state of the app: rules, attention, closed days) ran without an error since this point of the question's log.
 fn read_data_since(turn: &Turn, start: usize) -> bool {
     turn.tool_log.iter().skip(start).any(|entry| {
         entry.get("error").is_none()
             && matches!(
                 entry.get("tool").and_then(Value::as_str),
-                Some("analytics" | "report" | "party_card" | "tiles" | "estimate" | "calculate")
+                Some(
+                    "analytics"
+                        | "report"
+                        | "party_card"
+                        | "tiles"
+                        | "estimate"
+                        | "calculate"
+                        | "app_state"
+                )
             )
     })
 }
@@ -1958,6 +2229,11 @@ fn read_data_since(turn: &Turn, start: usize) -> bool {
 fn party_prefix(screen: EntryScreen) -> &'static str {
     match screen {
         EntryScreen::Kharcha | EntryScreen::Sarmaya | EntryScreen::Phal => "s",
+        EntryScreen::GardenInstallment
+        | EntryScreen::GardenCost
+        | EntryScreen::GardenSale
+        | EntryScreen::GardenClose => "g",
+        EntryScreen::TripPurchase | EntryScreen::TripCost | EntryScreen::TripSale => "t",
         _ => "a",
     }
 }
@@ -1994,6 +2270,27 @@ fn entry_screen(screen: EntryScreenName) -> EntryScreen {
         EntryScreenName::DeadAmount => EntryScreen::DeadAmount,
         EntryScreenName::Analytics => EntryScreen::Analytics,
         EntryScreenName::Backup => EntryScreen::Backup,
+        EntryScreenName::GardenInstallment => EntryScreen::GardenInstallment,
+        EntryScreenName::GardenCost => EntryScreen::GardenCost,
+        EntryScreenName::GardenSale => EntryScreen::GardenSale,
+        EntryScreenName::GardenClose => EntryScreen::GardenClose,
+        EntryScreenName::TripPurchase => EntryScreen::TripPurchase,
+        EntryScreenName::TripCost => EntryScreen::TripCost,
+        EntryScreenName::TripSale => EntryScreen::TripSale,
+        EntryScreenName::BikriLaterSale => EntryScreen::BikriLaterSale,
+        EntryScreenName::BikriEdit => EntryScreen::BikriEdit,
+        EntryScreenName::BikriCancel => EntryScreen::BikriCancel,
+    }
+}
+
+/// Where the record `key` is among the matches of the `find` result `find_id`.
+fn match_position(results: &[ToolResult], find_id: &str, key: &str) -> Option<usize> {
+    let result = results.iter().find(|r| r.id == find_id)?;
+    match result.node.get(&["matches"]) {
+        Some(Node::List(items)) => items
+            .iter()
+            .position(|m| matches!(m.get(&["key"]), Some(Node::Str(k)) if k == key)),
+        _ => None,
     }
 }
 
@@ -2130,6 +2427,19 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     {
         return run.conclude(conv, turn, finished, Source::Model, None);
     }
+    let numbers = figures::question_numbers(text);
+    turn.messages
+        .push(user_message(&run.today_iso, run.language, text, &numbers));
+    // A simple figure whose reads already hold it is written by the app (PRD FR-7.90, plan 55
+    // Section 10). It costs no model call, so it is not counted and the daily limit does not stop
+    // it, like the other local answers. When it cannot be written or a check refuses it, the
+    // reads stay and the question goes on to the model, which only has to write.
+    if d.runtime.instant()
+        && let Some(u) = &understood
+        && let Some(finished) = run.instant_answer(&mut conv, &mut turn, u)
+    {
+        return run.conclude(conv, turn, finished, Source::Model, None);
+    }
     if assistant::count_today(d.ctx)? >= DAILY_LIMIT {
         return run.conclude(
             conv,
@@ -2139,9 +2449,6 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
             None,
         );
     }
-    let numbers = figures::question_numbers(text);
-    turn.messages
-        .push(user_message(&run.today_iso, run.language, text, &numbers));
     // A how-to question about one screen: the guide of that topic is read for the model before
     // its first call, so help takes one call (plan 52 item 7).
     if help_guard::general_advice_asked(text, &numbers) && conv.turns.is_empty() {
@@ -2150,6 +2457,8 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     } else if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
         run.preread_help(&mut conv, &mut turn, topic);
         turn.read_first = true;
+    } else if turn.read_first {
+        // The instant attempt already read the books for this question: the call only writes.
     } else if d.runtime.read_first()
         && let Some(u) = &understood
         && run.read_first(&mut conv, &mut turn, u)
@@ -2216,27 +2525,47 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
     };
     let outcome = match (&waiting.wait, &input.choice) {
         (Wait::Which { find_id }, PickChoice::Match { key }) => {
-            let at = conv
-                .results
-                .iter()
-                .find(|r| &r.id == find_id)
-                .and_then(|r| {
-                    match r.node.get(&["matches"]) {
-                    Some(crate::results::Node::List(items)) => items.iter().position(|m| {
-                        matches!(m.get(&["key"]), Some(crate::results::Node::Str(k)) if k == key)
-                    }),
-                    _ => None,
+            if match_position(&conv.results, find_id, key).is_none() {
+                Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "key"))
+            } else {
+                // A name found in another role ("Faisal ne kya becha", and he is a buyer): the
+                // Owner chose to see him as what he is. The find the model has in front of it was
+                // made as the other role and ended the question as "not found" twice in the live
+                // run (Q427 to Q429, Q431), so the app finds him again in his real role, and the
+                // click points at that find.
+                let other = run.found_in_other_role(&conv, find_id, key);
+                let (use_id, as_role) = match other {
+                    Some((word, text)) => {
+                        let input = json!({"text": text, "role": word});
+                        match run.preread_tool(&mut conv, &mut turn, "find", &input.to_string()) {
+                            Some(new_id)
+                                if match_position(&conv.results, &new_id, key).is_some() =>
+                            {
+                                (new_id, Some(word))
+                            }
+                            _ => (find_id.clone(), None),
+                        }
+                    }
+                    None => (find_id.clone(), None),
+                };
+                let at = match_position(&conv.results, &use_id, key).unwrap_or(0);
+                let mut picked = json!({"picked": format!("{use_id}.matches.{at}")});
+                if let (Some(word), Some(map)) = (as_role, picked.as_object_mut()) {
+                    map.insert("as".to_owned(), json!(word));
+                    map.insert(
+                        "note".to_owned(),
+                        json!(if word == "buyer" {
+                            "the Owner chose to see him as a buyer: answer for what he bought, not for sales"
+                        } else {
+                            "the Owner chose to see him as a seller: answer for what he sold, not for purchases"
+                        }),
+                    );
                 }
-                });
-            match at {
-                Some(i) => {
-                    turn.messages.push(json!({
-                        "role": "user",
-                        "content": json!({"picked": format!("{find_id}.matches.{i}")}).to_string(),
-                    }));
-                    Ok(Vec::new())
-                }
-                None => Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "key")),
+                turn.messages.push(json!({
+                    "role": "user",
+                    "content": picked.to_string(),
+                }));
+                Ok(Vec::new())
             }
         }
         (Wait::Partner { pending }, PickChoice::PartnerCode) => {
@@ -2284,7 +2613,11 @@ pub fn rerun(d: &Deps<'_>, input: &AssistantRerunInput) -> Result<AskReply, Serv
         question: row.question.clone(),
         ..Turn::default()
     };
-    for call in calls.iter().filter(|c| c.get("error").is_none()) {
+    // An entry marked `local` says what a local answer used; nothing was run, so nothing is read.
+    for call in calls
+        .iter()
+        .filter(|c| c.get("error").is_none() && (c.get("local").is_none() || c.get("id").is_some()))
+    {
         let (Some(tool), Some(input)) =
             (call.get("tool").and_then(Value::as_str), call.get("input"))
         else {

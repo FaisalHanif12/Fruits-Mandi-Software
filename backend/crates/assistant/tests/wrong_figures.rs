@@ -134,7 +134,7 @@ fn q029_a_view_filtered_to_one_item_gives_no_share_and_the_unfiltered_view_gives
     assert!(filtered["totals"].get("share").is_none(), "{filtered}");
     assert!(filtered["rows"][0].get("share").is_none(), "{filtered}");
     assert!(note_of(&filtered).contains("view H"), "{filtered}");
-    assert!(note_of(&filtered).contains("without the item filter"));
+    assert!(note_of(&filtered).contains("without the item or group filter"));
     assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
     let figs = figures(answer_of(&reply));
     assert_eq!(percent(figs[0].0), 7_210, "72.10%");
@@ -1437,7 +1437,9 @@ fn q203_a_partners_capital_is_read_from_his_statement_report() {
     assert_eq!(harness::money(figs[0].0), 500_000);
     assert!(figs[0].1, "checked");
 
-    // The statement of a month that ended before today carries no capital: it is today's balance.
+    // The statement of a month that ended before today carries no capital figure: it is today's
+    // balance. A capital question gets a note saying so (money review of 05-11-2026), so the
+    // closing of the statement, his کل رقم, is not cited as his capital.
     let h = capital_world();
     let (_, requests) = h.ask(
         "be ka sarmaya pichle mahine",
@@ -1459,7 +1461,8 @@ fn q203_a_partners_capital_is_read_from_his_statement_report() {
         .filter_map(|m| serde_json::from_str::<Value>(m["content"].as_str()?).ok())
         .find(|v| v["source"] == "R31")
         .expect("the statement");
-    assert!(result.get("capital").is_none(), "{result}");
+    assert!(result["capital"].get("balance").is_none(), "{result}");
+    assert!(result["capital"]["note"].is_string(), "{result}");
 }
 
 #[test]

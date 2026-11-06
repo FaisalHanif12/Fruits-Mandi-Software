@@ -420,7 +420,7 @@ fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value
                 .iter()
                 .enumerate()
                 .map(|(index, s)| {
-                    json!({
+                    let mut line = json!({
                         "line": index + 1,
                         "buyer_account_id": s.buyer.id,
                         "pukhta_name_ur": s.pukhta.as_ref().map(|p| p.name_ur.clone()),
@@ -438,7 +438,13 @@ fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value
                         "rate_diff_paisa": s.rate_diff.as_paisa(),
                         "payment_type": s.payment_type.as_str(),
                         "note": s.note,
-                    })
+                    });
+                    // The quality of the line (PRD FR-12.42): a quality-only edit shows in the
+                    // audit log. A line with none has no key, so older entries read as before.
+                    if let (Value::Object(map), Some(grade)) = (&mut line, s.grade) {
+                        map.insert("grade".to_owned(), Value::from(grade.as_str()));
+                    }
+                    line
                 })
                 .collect();
             json!({

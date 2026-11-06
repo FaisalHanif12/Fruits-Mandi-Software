@@ -414,6 +414,17 @@ The volume used is the plain NFR-SCL-1 volume plus the matching rows of every bu
 
 A whole question is two rounds of tools plus the checks, so holding the whole question under 300 ms holds each round under 300 ms. The threshold is the target times the runner factor (Section 2), like every other row.
 
-Not measured, and why: the estimate and analytics tools. The volume of Section 7.2 has no sale lines and no analytics facts (its header says so), so those tools would read empty tables and give a number that means nothing. They are measured when the D3 volume with 1.2 million sale lines exists.
+Not measured, and why: the analytics tool and the estimate tool for sales, commission and expenses. The volume of Section 7.2 has no sale lines and no analytics facts (its header says so), so those would read empty tables and give a number that means nothing. They are measured when the D3 volume with 1.2 million sale lines exists.
+
+Measured (06-11-2026, the lead's K8, PRD FR-7.86): the estimate tool for a BALANCE, called directly through `tools::call` with no model. A balance reads journal lines, which the volume has. Mac, release build, 10 samples (`assistant/estimate_party_balance`, `assistant/estimate_buyers_dues`, target 1,000 ms for the tool so a figure stays under 2 s and a model answer under 8 s):
+
+| Bench | Median | p95 | Target | Result |
+|---|---|---|---|---|
+| `estimate_party_balance` (busiest buyer, 55,658 lines) | 64.5 ms | 72.1 ms | 1,000 ms | OK |
+| `estimate_buyers_dues` (all buyers, one level for each owner at 13 month ends) | 7,966 ms | 9,623 ms | 1,000 ms | OVER (a finding for backend3) |
+
+The dues estimate on this volume also ends refused with `ERR_OVERFLOW` after those 8 seconds: the generated buyers owe 3,432 crore in all, more than the largest allowed amount (1,000 crore), so the refusal is right for this data. The time is the series, not the arithmetic, and it does not depend on the size of the amounts, only on the 3.5 million lines it scans 13 times. A likely cure: one pass that groups the lines by owner and month, then running balances in Rust. (A single `GROUP BY` over all buyer lines takes about 0.9 s on this file with the sqlite3 shell.)
+
+**K8 is fixed (backend, 06-11-2026).** The dues estimate reads its series in one pass now: about 0.45 s on this volume (measured once with a throwaway example that bypasses the refusal), down from about 11.6 s, with identical numbers (12 months equal on this volume; equal to the oracle's `est_balance.dues.*` facts on the rich year). **What the bench `assistant/estimate_buyers_dues` measures today is the REFUSAL, not the series.** The generated buyers owe 3,432 crore, over the 1,000 crore limit, so the tool refuses with `ERR_OVERFLOW` at once, before it reads the series: median 131.6 ms (126 to 137 ms), of which the tile's R20 total (`now`) is about 100 ms. That is the lead's wish (a refusal must be quick), and it is a real number, but it is not the cost of the series. To time the series itself the synthetic dues must stay under 1,000 crore (cap the generated opening or the sale rates in `scripts/perf/`); until then the 0.45 s above is the figure for the series. The old 7,966 ms row above is kept as the record of the finding.
 
 To run only these benchmarks: `cd backend && cargo bench -p mandi-assistant --bench assistant`. The whole `pnpm perf` runs them with the others (`cargo bench --workspace --bench '*'`).

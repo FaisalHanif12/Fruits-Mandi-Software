@@ -6,8 +6,9 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
-import { LANGUAGES } from '../../src/i18n';
+import { LANGUAGES, type Language } from '../../src/i18n';
 import * as draftsApi from '../../src/shared/drafts/api';
+import { displayName } from '../../src/shared/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
 import { listRow, savedEvent1, savedTwoLots } from '../helpers/bikri-saved';
@@ -53,6 +54,20 @@ afterEach(() => {
 });
 
 const pageText = () => visible(document.body.textContent);
+
+/** The values of the label of lot `number` of the two-lot saved بکری: its seller and its item (PRD FR-12.6). */
+function savedLotNamed(language: Language, number: number) {
+  const lot = savedTwoLots().lots[number - 1];
+  if (lot === undefined) throw new Error('no such lot');
+  return {
+    lot: number,
+    who: message(language, 'bikri-lot-who', {
+      seller: displayName(lot.pukhta ?? lot.seller, language),
+      item: displayName(lot.item, language),
+    }),
+    named: 'yes',
+  };
+}
 
 describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
   beforeEach(() => {
@@ -138,7 +153,7 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     const user = userEvent.setup();
     await user.click(
       screen.getByRole('button', {
-        name: named(message(language, 'bikri-summary-lot', { lot: 1 })),
+        name: named(message(language, 'bikri-summary-lot', savedLotNamed(language, 1))),
       }),
     );
     await waitFor(() => {
@@ -151,7 +166,7 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     );
     await user.click(
       await screen.findByRole('option', {
-        name: named(message(language, 'bikri-summary-lot', { lot: 2 })),
+        name: named(message(language, 'bikri-summary-lot', savedLotNamed(language, 2))),
       }),
     );
     await waitFor(() => {
@@ -397,6 +412,23 @@ describe.each(LANGUAGES)('moving between بکری and find (%s)', (language) => 
       }
       expect(visible(dialog.textContent)).toContain(message(language, 'bikri-find-hint'));
       expect(bikriApi.bikriFind).not.toHaveBeenCalled();
+    });
+
+    it('?find=true (an answer sends the Owner here to edit or cancel a بکری): the box is open at once, and the request leaves the address', async () => {
+      const { router } = await renderApp('/bikri/book?find=true');
+      const dialog = await screen.findByRole('dialog');
+      expect(visible(dialog.textContent)).toContain(message(language, 'bikri-find-hint'));
+      expect(bikriApi.bikriFind).not.toHaveBeenCalled();
+      // A reload or a save does not open it again.
+      await waitFor(() => {
+        expect(router.state.location.search).toEqual({});
+      });
+    });
+
+    it('a saved بکری in the address is not asked to open its find box: ?id=41&find=true has no box', async () => {
+      await renderApp('/bikri/book?id=41&find=true');
+      await arrow('bikri-nav-next');
+      expect(screen.queryByRole('dialog')).toBeNull();
     });
 
     it('a number finds the بکری; Enter on the result opens it', async () => {

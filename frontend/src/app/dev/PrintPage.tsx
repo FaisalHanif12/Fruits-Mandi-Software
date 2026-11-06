@@ -2,7 +2,8 @@
 // PRD worked day, so they can be opened in a plain browser tab and photographed in both languages
 // on A4, A5 and the 80 mm roll, with the print style on (browser "emulate print media"). The flags in
 // the hash choose the document: `?doc=seller_bill|buyer_slips|pukhta_slip|collection_list&language=
-// ur|en&paper=a4|a5|mm80&window&digits&cancelled&long=15&lines=60&contacts&mark=RH`. `contacts` and
+// ur|en&paper=a4|a5|mm80&window&digits&cancelled&long=15&lines=60&contacts&mark=RH&grade`. `grade`
+// puts a quality on the lines, First, Second, Third in turn (plan 58). `contacts` and
 // `mark` set the firm's contact persons and trade mark in the header. Never shipped: the route
 // exists only when import.meta.env.DEV is true (app/router.tsx).
 
@@ -55,5 +56,19 @@ export function PrintPage() {
   // `?window` shows the page as the hidden print window makes it: no ground and no frame, the html
   // language and direction of the print, and the page footer. Without it the sheets are shown on
   // a grey ground, as in the in-app preview.
-  return <BikriPrintDocument data={data} applyRoot={search.has('window')} />;
+  // `?grade` puts a quality on the lines, one after the other: First, Second, Third (plan 58).
+  const GRADES = ['first', 'second', 'third'] as const;
+  const shown = search.has('grade')
+    ? {
+        ...data,
+        pages: data.pages.map((page) => ({
+          ...page,
+          lines: page.lines.map((line, index) => ({
+            ...line,
+            grade: GRADES[index % 3] ?? 'first',
+          })),
+        })),
+      }
+    : data;
+  return <BikriPrintDocument data={shown} applyRoot={search.has('window')} />;
 }

@@ -1,0 +1,160 @@
+{
+  "doc": "buyer_slips",
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a5",
+  "urdu_digits": false,
+  "header": {
+    "firm": {
+      "name": "ماہر عدنان اینڈ برادرز",
+      "mandi": "نئی سبزی منڈی کوٹ رادھا کشن",
+      "address": "Kot Radha Kishan",
+      "phone": "0300-1234567"
+    },
+    "contacts": [],
+    "trade_mark": null,
+    "title_id": "print-buyer-slip-title",
+    "facts": [
+      {
+        "label_id": "print-fact-number",
+        "value": "1"
+      },
+      {
+        "label_id": "print-fact-date",
+        "value": "10-10-2026"
+      },
+      {
+        "label_id": "print-fact-truck",
+        "value": "LES-1234"
+      }
+    ]
+  },
+  "footer": {
+    "printed_label_id": "print-printed-at",
+    "printed_at": "10-10-2026 14:00",
+    "page_label_id": "print-page-label",
+    "of_label_id": "print-page-of"
+  },
+  "number": "1",
+  "cancelled": false,
+  "revised_on": null,
+  "pages": [
+    {
+      "serial": "1",
+      "party": {
+        "role_id": "print-party-buyer",
+        "code": "0020",
+        "short_code": "0",
+        "name": "اکرم ٹول ٹیکس",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": null,
+          "item": "سیب",
+          "packing": "پیٹی",
+          "grade": "first",
+          "qty": "10",
+          "weight_kg": null,
+          "rate": "1,200",
+          "amount": "12,000",
+          "detail": "(سیب اول 10 . 1,200)",
+          "note": null
+        },
+        {
+          "date": "10-10-2026",
+          "name": null,
+          "item": "سیب",
+          "packing": "پیٹی",
+          "grade": "second",
+          "qty": "6",
+          "weight_kg": null,
+          "rate": "800",
+          "amount": "4,800",
+          "detail": "(سیب دوم 6 . 800)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-items-value",
+          "amount": "16,800",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-buyer-commission",
+          "amount": "1,008",
+          "role": "line"
+        },
+        {
+          "label_id": "print-laga",
+          "amount": "128",
+          "role": "line"
+        },
+        {
+          "label_id": "print-buyer-pays",
+          "amount": "17,936",
+          "role": "total"
+        }
+      ],
+      "payment_id": "print-payment-credit",
+      "words": {
+        "label_id": "print-in-words",
+        "text": "سترہ ہزار نو سو چھتیس روپے"
+      }
+    },
+    {
+      "serial": "2",
+      "party": {
+        "role_id": "print-party-buyer",
+        "code": "0021",
+        "short_code": "1",
+        "name": "ارشد ملتانی",
+        "phone": null
+      },
+      "lines": [
+        {
+          "date": "10-10-2026",
+          "name": null,
+          "item": "سیب",
+          "packing": "پیٹی",
+          "grade": "third",
+          "qty": "4",
+          "weight_kg": null,
+          "rate": "500",
+          "amount": "2,000",
+          "detail": "(سیب سوم 4 . 500)",
+          "note": null
+        }
+      ],
+      "amounts": [
+        {
+          "label_id": "print-items-value",
+          "amount": "2,000",
+          "role": "subtotal"
+        },
+        {
+          "label_id": "print-buyer-commission",
+          "amount": "120",
+          "role": "line"
+        },
+        {
+          "label_id": "print-laga",
+          "amount": "32",
+          "role": "line"
+        },
+        {
+          "label_id": "print-buyer-pays",
+          "amount": "2,152",
+          "role": "total"
+        }
+      ],
+      "payment_id": "print-payment-credit",
+      "words": {
+        "label_id": "print-in-words",
+        "text": "دو ہزار ایک سو باون روپے"
+      }
+    }
+  ]
+}

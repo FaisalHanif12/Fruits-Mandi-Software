@@ -242,6 +242,10 @@ struct CallRecord {
     /// When the call began, in milliseconds from the start of the question (plan 54: the time
     /// before the first call, between calls and after the last one).
     at_ms: u128,
+    /// What the tools gave the model so far: the `tool` messages of the request, one after another.
+    /// Kept in a result row only for a privacy question (`privacy=1`), so a leak into what the model
+    /// saw can be found.
+    tool_text: String,
 }
 
 /// The real client, with a note of every call: time, tokens, how many tools it asked for.
@@ -262,6 +266,17 @@ impl ModelClient for Recorder {
             .map_or(0, |begin| begin.elapsed().as_millis());
         let result = self.inner.call(key, body, timeout);
         let millis = started.elapsed().as_millis();
+        let tool_text = body["messages"]
+            .as_array()
+            .map(|messages| {
+                messages
+                    .iter()
+                    .filter(|m| m["role"] == "tool")
+                    .filter_map(|m| m["content"].as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .unwrap_or_default();
         if let Ok(reply) = &result {
             self.calls.lock().expect("the notes").push(CallRecord {
                 at_ms,
@@ -273,6 +288,7 @@ impl ModelClient for Recorder {
                 tool_calls: reply.tool_calls.len(),
                 finish: reply.finish_reason.clone(),
                 model: reply.model.clone(),
+                tool_text,
             });
         }
         result
@@ -548,6 +564,18 @@ fn run_one(
         })
         .collect();
     let buttons = open_buttons(&w, &reply);
+    // What the tools gave the model, the last request having all of it; only for a privacy question.
+    let tool_results = if q.filters.contains("privacy=1") {
+        client
+            .calls
+            .lock()
+            .expect("notes")
+            .last()
+            .map(|c| c.tool_text.clone())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
     eprintln!(
         "{} {} {:?} ({} ms){}",
         q.id,
@@ -571,6 +599,8 @@ fn run_one(
         "millis": millis,
         // The log row of this very question (lead's item 0b): what the app itself wrote down.
         "calls_json": calls_json,
+        // What the model was shown by the tools (privacy questions only, empty otherwise).
+        "tool_results": tool_results,
         "answer_json": row.answer_json,
         "finish_reason": row.finish_reason,
         "total_millis": sum(&|r| r.total_millis),
@@ -753,6 +783,11 @@ fn open_buttons(w: &world::World, reply: &mandi_assistant::ask::AskReply) -> Vec
             }
             AnswerSource::Tiles { .. } => {
                 json!({"kind": "tiles", "label": "tiles", "skipped": true})
+            }
+            // A screen button (the commission rules, the day close, the audit log, the dashboard)
+            // opens a screen as it is: it holds no figures to compare.
+            AnswerSource::Screen { route, .. } => {
+                json!({"kind": "screen", "label": format!("screen {route:?}"), "skipped": true})
             }
         })
         .collect()
@@ -940,6 +975,14 @@ fn live_100_questions() {
         // The find before the first call is the app's own setting (off by default): the run uses
         // the real runtime, so it asks as the app asks.
         "prefind": Runtime::real().prefind(),
+        // The values the assistant must never give (PRD FR-7.83), read from the books of this run for the
+        // privacy checks of the scorer (`privacy=1;never=mark_text|narration_words|phone|address`). They are
+        // written to the results file only, never to the oracle dump that goes to the hidden tester.
+        "secrets": masters
+            .year
+            .as_ref()
+            .or(masters.thin.as_ref())
+            .map_or(Value::Null, |m| secrets_of(&m.snapshot)),
     });
     let mut facts = std::collections::BTreeMap::new();
     for m in [masters.year.as_ref(), masters.thin.as_ref()]
@@ -1158,6 +1201,153 @@ fn the_thin_books_have_a_cash_balance_and_nothing_else() {
         .expect("cash")
         .rupees();
     assert_eq!(cash, 2_500_000);
+}
+
+#[test]
+fn the_vegetables_are_sold_across_the_year_and_carry_no_laga() {
+    // Not live. Umar, 06-11-2026: the assistant must handle vegetables as well as fruit, so the books sell
+    // mooli, aloo, tamatar, piyaz and saag over the year, and a vegetable line carries no لاگا (PRD 4.2:
+    // the لاگا rule is for the fruit group).
+    let y = year::seed::build();
+    let facts = year::oracle::compute(&y).facts;
+    let number = |key: &str| -> i64 {
+        facts
+            .get(key)
+            .unwrap_or_else(|| panic!("no fact {key}"))
+            .parse()
+            .unwrap_or_else(|_| panic!("{key} is not a number"))
+    };
+    for item in ["radish", "potato", "tomato", "onion", "saag"] {
+        assert!(
+            number(&format!("sale_lines.{item}")) >= 8,
+            "{item} has too few sale lines"
+        );
+        assert!(
+            number(&format!("sale_months.{item}")) >= 4,
+            "{item} is sold in too few months"
+        );
+    }
+    assert_eq!(number("veg.laga_lines"), 0, "a vegetable line has a laga");
+    assert_eq!(number("group.vegetable.all.laga"), 0);
+    assert!(number("group.fruit.all.laga") > 0, "the fruit has a laga");
+    assert!(number("group.vegetable.all.gross") > 0);
+}
+
+#[test]
+fn a_quality_changes_no_amount_and_follows_the_rate_inside_a_lot() {
+    // Not live. Plan 58 T4 (PRD FR-12.42): the books are built twice from the same random numbers, once with
+    // a quality on the lines of the last days and once with none. The quality is shown on prints and ledgers
+    // and changes no figure, so every fact of the oracle but the quality facts must be the same. And inside
+    // one lot the quality follows the rate: the highest rate is first, the next second, the rest third, a tie
+    // by line order ("awwal costs more than doyam").
+    use std::collections::BTreeMap;
+    let graded = year::seed::build();
+    let plain = year::seed::build_without_grades();
+    let with = year::oracle::compute(&graded).facts;
+    let without = year::oracle::compute(&plain).facts;
+    let keep = |facts: &BTreeMap<String, String>| -> BTreeMap<String, String> {
+        facts
+            .iter()
+            .filter(|(k, _)| !k.starts_with("ixq."))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    };
+    let (a, b) = (keep(&with), keep(&without));
+    let differ: Vec<String> = a
+        .iter()
+        .filter(|(k, v)| b.get(*k) != Some(*v))
+        .map(|(k, v)| format!("{k}: {v} against {:?}", b.get(k)))
+        .chain(
+            b.keys()
+                .filter(|k| !a.contains_key(*k))
+                .map(|k| format!("{k}: only without a quality")),
+        )
+        .take(20)
+        .collect();
+    assert!(
+        differ.is_empty(),
+        "a quality changed a figure of the books ({} of {} facts differ), first: {differ:#?}",
+        differ.len(),
+        a.len()
+    );
+    // The graded books carry all three qualities; the plain books carry none.
+    let count = |facts: &BTreeMap<String, String>, key: &str| -> i64 {
+        facts
+            .get(key)
+            .unwrap_or_else(|| panic!("no fact {key}"))
+            .parse()
+            .unwrap_or_else(|_| panic!("{key} is not a number"))
+    };
+    for quality in ["first", "second", "third"] {
+        let key = format!("ixq.up_to_now.all.{quality}.lines");
+        assert!(count(&with, &key) >= 10, "too few {quality} lines");
+        assert_eq!(
+            count(&without, &key),
+            0,
+            "the plain books have a {quality} line"
+        );
+    }
+    // Inside a lot the quality follows the rate.
+    let rows: Vec<(i64, i64, i64, String)> = graded
+        .w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            let mut st = c.prepare(
+                "SELECT lot_id, line_no, seller_rate_paisa, grade FROM bikri_sales \
+                 WHERE is_active = 1 AND grade IS NOT NULL ORDER BY lot_id, line_no",
+            )?;
+            let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?;
+            rows.collect::<Result<Vec<_>, _>>()
+        })
+        .expect("the graded lines");
+    let mut lots: BTreeMap<i64, Vec<(i64, i64, String)>> = BTreeMap::new();
+    for (lot, line, rate, grade) in rows {
+        lots.entry(lot).or_default().push((line, rate, grade));
+    }
+    assert!(lots.len() >= 20, "only {} graded lots", lots.len());
+    for (lot, lines) in &lots {
+        let mut order: Vec<&(i64, i64, String)> = lines.iter().collect();
+        order.sort_by(|x, y| y.1.cmp(&x.1).then(x.0.cmp(&y.0)));
+        for (rank, entry) in order.iter().enumerate() {
+            let want = ["first", "second", "third"]
+                .get(rank)
+                .copied()
+                .unwrap_or("third");
+            assert_eq!(
+                entry.2, want,
+                "lot {lot} line {}: the quality does not follow the rate",
+                entry.0
+            );
+        }
+    }
+}
+
+#[test]
+fn the_print_data_of_r5_and_r1_carries_the_quality() {
+    // Not live. Plan 58 T4 (PRD FR-12.42): R5 (every buyer's slip) and R1 (one بکری) are printed from the app's own
+    // report code, in English and in Urdu. A line with a quality names it after the item; a day or a بکری with
+    // no quality prints as before (no quality word at all).
+    let y = year::seed::build();
+    let problems = year::oracle::quality_print_problems(&y);
+    assert!(
+        problems.is_empty(),
+        "the quality is not on the print data: {problems:#?}"
+    );
+}
+
+#[test]
+fn dump_the_oracle_without_grades() {
+    // Not live. With MANDI_ORACLE_UNGRADED_JSON=<file> it writes the facts of the same books built with no quality
+    // on any line (plan 58 T4), to be compared with the dump of the graded books: only the `ixq.` facts may differ.
+    let Ok(out) = std::env::var("MANDI_ORACLE_UNGRADED_JSON") else {
+        return;
+    };
+    let y = year::seed::build_without_grades();
+    let facts = year::oracle::compute(&y).facts;
+    let text = serde_json::to_string(&json!({ "facts": facts })).expect("the json");
+    std::fs::write(out, text).expect("the dump");
 }
 
 #[test]
@@ -1863,6 +2053,30 @@ fn rows_as_json(conn: &mandi_services::db::rusqlite::Connection, sql: &str) -> V
         .expect("the dump rows")
         .map(|r| r.expect("a dump row"))
         .collect()
+}
+
+/// The values of the books that the assistant must never give (PRD FR-7.83), by kind: the text of a mark, the
+/// words of a standard narration, a phone and an address. Read from the database file, for the privacy checks.
+fn secrets_of(path: &std::path::Path) -> Value {
+    use mandi_services::db::rusqlite::{Connection, OpenFlags};
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("open the books to read the secrets");
+    let column = |sql: &str| -> Vec<String> {
+        rows_as_json(&conn, sql)
+            .iter()
+            .filter_map(|row| row["v"].as_str().map(str::to_owned))
+            .filter(|v| !v.trim().is_empty())
+            .collect()
+    };
+    json!({
+        "mark_text": column("SELECT mark_text AS v FROM markas"),
+        "narration_words": column(
+            "SELECT text_ur AS v FROM narrations UNION SELECT text_en AS v FROM narrations"),
+        "phone": column(
+            "SELECT phone1 AS v FROM accounts UNION SELECT phone2 AS v FROM accounts \
+             UNION SELECT phone AS v FROM staff"),
+        "address": column("SELECT address AS v FROM accounts"),
+    })
 }
 
 /// Who and what is in the books of one database: the names a question may use.

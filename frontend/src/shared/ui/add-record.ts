@@ -19,15 +19,17 @@ import type { PickerValue } from './PickerBase';
 /**
  * The master lists a picker can add to: the nine masters of the Index. A trip and a garden are
  * found by a picker too (plan 34: the open ones for an entry, `trip_all` and `garden_all` for a
- * filter that also wants the closed ones) but are made on their own screens, never from a picker.
+ * filter that also wants the closed ones) but are made on their own screens, never from a picker. So
+ * is a collector (plan 55 Section 11.1): the active staff whose job is collector, found by a report's
+ * collector box; a person is added in the staff list, with his job.
  */
 export type MasterAddKind = Exclude<
   SearchScope,
-  'seller' | 'buyer' | 'any_account' | 'trip' | 'garden' | 'trip_all' | 'garden_all'
+  'seller' | 'buyer' | 'any_account' | 'trip' | 'garden' | 'trip_all' | 'garden_all' | 'collector'
 >;
 
-/** The scopes of the trips and gardens: found by a picker, never added from one. */
-export type VentureScope = 'trip' | 'garden' | 'trip_all' | 'garden_all';
+/** The scopes a picker only finds in: the trips and gardens, and the collectors. Never added from one. */
+export type VentureScope = 'trip' | 'garden' | 'trip_all' | 'garden_all' | 'collector';
 
 /**
  * What the form is for: a new seller, a new buyer, a new account of a type the user chooses in

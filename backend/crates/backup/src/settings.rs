@@ -130,6 +130,43 @@ pub(crate) fn endpoint_problem(endpoint: &str) -> Option<&'static str> {
     (!(after.is_empty() || after == "/")).then_some(PATH)
 }
 
+/// The one word a path names when it is only a bucket name: `/mandidemo` or `/mandidemo/` gives
+/// `mandidemo`. Nothing for a longer path, a query or a word that is not a bucket name.
+fn bucket_in_path(path: &str) -> Option<&str> {
+    let word = path.strip_prefix('/')?.trim_end_matches('/');
+    (is_bucket_name(word) && !word.contains('/')).then_some(word)
+}
+
+/// A bucket name: 3 to 63 lower-case letters, digits, dashes and dots (the rule of the bucket
+/// field).
+fn is_bucket_name(name: &str) -> bool {
+    name.len() >= 3
+        && name.len() <= 63
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.')
+}
+
+/// The error for a cloud address with a path: its code, its field, and what the screen needs to
+/// offer "remove the path": the address cut off at the host, the part cut off, and the bucket
+/// name when that part is just one. Call it only for an address `endpoint_problem` calls `path`.
+/// Example: `https://acct.r2.cloudflarestorage.com/mandidemo` gives address
+/// `https://acct.r2.cloudflarestorage.com`, path `/mandidemo`, bucket `mandidemo`.
+fn path_error(endpoint: &str) -> BackupError {
+    // `endpoint_problem` has checked the scheme and the host; `?` and `#` end the host like `/`.
+    let rest = endpoint.strip_prefix("https://").unwrap_or(endpoint);
+    let host_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (host, path) = rest.split_at(host_end);
+    let mut error = BackupError::new(BackupCode::ErrBackupCloudAddressPath, "endpoint has a path")
+        .on_field("cloud_endpoint")
+        .with("address", ErrorValue::Text(format!("https://{host}")))
+        .with("path", ErrorValue::Text(path.to_owned()));
+    if let Some(bucket) = bucket_in_path(path) {
+        error = error.with("bucket", ErrorValue::Text(bucket.to_owned()));
+    }
+    error
+}
+
 fn is_full_path(text: &str) -> bool {
     std::path::Path::new(text).is_absolute()
 }
@@ -164,23 +201,22 @@ impl BackupSettings {
             if endpoint.is_empty() {
                 problems.push(required("cloud_endpoint"));
             } else if let Some(reason) = endpoint_problem(endpoint) {
-                // The message says what is wrong: `https` (the address must start with https://
-                // and be one word) or `path` (something follows the host, for example the bucket
-                // name, which belongs in its own field).
-                problems.push(
-                    out_of_range("cloud_endpoint", "endpoint form")
-                        .with("reason", ErrorValue::Text(reason.to_owned())),
-                );
+                if reason == "path" {
+                    // Something follows the host, for example the bucket name, which belongs in
+                    // its own box. Its own code, with the address to use (plan 53 section 10).
+                    problems.push(path_error(endpoint));
+                } else {
+                    // `https`: the address must start with https:// and be one word.
+                    problems.push(
+                        out_of_range("cloud_endpoint", "endpoint form")
+                            .with("reason", ErrorValue::Text(reason.to_owned())),
+                    );
+                }
             }
             let bucket = self.cloud_bucket.trim();
             if bucket.is_empty() {
                 problems.push(required("cloud_bucket"));
-            } else if bucket.len() < 3
-                || bucket.len() > 63
-                || !bucket
-                    .chars()
-                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.')
-            {
+            } else if !is_bucket_name(bucket) {
                 problems.push(out_of_range("cloud_bucket", "bucket name"));
             }
             let region = self.cloud_region.trim();
@@ -311,10 +347,10 @@ mod tests {
         ] {
             assert_eq!(endpoint_problem(bad), Some(reason), "{bad}");
         }
-        // And it travels with the error, on the field of the address.
+        // A form problem travels with the error, on the field of the address.
         let settings = BackupSettings {
             cloud_enabled: true,
-            cloud_endpoint: "https://acct.r2.cloudflarestorage.com/mandi-backup".into(),
+            cloud_endpoint: "http://acct.r2.cloudflarestorage.com".into(),
             cloud_bucket: "mandi-backup".into(),
             ..BackupSettings::default()
         };
@@ -325,7 +361,117 @@ mod tests {
         assert_eq!(item.code, BackupCode::ErrOutOfRange);
         assert_eq!(
             item.values.get("reason"),
-            Some(&ErrorValue::Text("path".into()))
+            Some(&ErrorValue::Text("https".into()))
+        );
+    }
+
+    fn text(error: &BackupError, name: &str) -> Option<String> {
+        match error.values.get(name) {
+            Some(ErrorValue::Text(text)) => Some(text.clone()),
+            _ => None,
+        }
+    }
+
+    /// Plan 53 section 10: Umar typed the bucket at the end of the address. The save is refused
+    /// with its own code on the address field, and the error carries the address to use.
+    #[test]
+    fn a_cloud_address_with_a_path_has_its_own_code_and_the_address_without_it() {
+        let check = |typed: &str| {
+            let settings = BackupSettings {
+                cloud_enabled: true,
+                cloud_endpoint: format!("  {typed} "),
+                cloud_bucket: "mandidemo".into(),
+                ..BackupSettings::default()
+            };
+            let items = settings.validate().unwrap_err().all();
+            assert_eq!(items.len(), 1, "{typed}");
+            items.into_iter().next().unwrap()
+        };
+        // Cloudflare's address with the bucket at its end: the case of the plan.
+        let item = check("https://acct.r2.cloudflarestorage.com/mandidemo");
+        assert_eq!(item.code, BackupCode::ErrBackupCloudAddressPath);
+        assert_eq!(item.field.as_deref(), Some("cloud_endpoint"));
+        assert_eq!(
+            text(&item, "address").as_deref(),
+            Some("https://acct.r2.cloudflarestorage.com")
+        );
+        assert_eq!(text(&item, "path").as_deref(), Some("/mandidemo"));
+        assert_eq!(text(&item, "bucket").as_deref(), Some("mandidemo"));
+        // The address to use is itself fine.
+        assert_eq!(
+            endpoint_problem("https://acct.r2.cloudflarestorage.com"),
+            None
+        );
+        // A slash after the bucket, a port, a longer path, a query and a fragment.
+        for (typed, address, path, bucket) in [
+            (
+                "https://acct.r2.cloudflarestorage.com/mandidemo/",
+                "https://acct.r2.cloudflarestorage.com",
+                "/mandidemo/",
+                Some("mandidemo"),
+            ),
+            (
+                "https://localhost:9000/mandi-backup",
+                "https://localhost:9000",
+                "/mandi-backup",
+                Some("mandi-backup"),
+            ),
+            (
+                "https://acct.com/mandidemo/mandi",
+                "https://acct.com",
+                "/mandidemo/mandi",
+                None,
+            ),
+            ("https://acct.com//", "https://acct.com", "//", None),
+            ("https://acct.com?x=1", "https://acct.com", "?x=1", None),
+            ("https://acct.com#top", "https://acct.com", "#top", None),
+            // Not a bucket name (capital letters, too short): the path is cut, no bucket offered.
+            (
+                "https://acct.com/MyBucket",
+                "https://acct.com",
+                "/MyBucket",
+                None,
+            ),
+            ("https://acct.com/ab", "https://acct.com", "/ab", None),
+        ] {
+            let item = check(typed);
+            assert_eq!(item.code, BackupCode::ErrBackupCloudAddressPath, "{typed}");
+            assert_eq!(text(&item, "address").as_deref(), Some(address), "{typed}");
+            assert_eq!(text(&item, "path").as_deref(), Some(path), "{typed}");
+            assert_eq!(text(&item, "bucket").as_deref(), bucket, "{typed}");
+            assert_eq!(endpoint_problem(address), None, "{address}");
+        }
+        // Without the cloud switched on the address is not looked at, as before.
+        let off = BackupSettings {
+            cloud_endpoint: "https://acct.com/mandidemo".into(),
+            ..BackupSettings::default()
+        };
+        off.validate().unwrap();
+        // The other problems of the same save still come with it.
+        let both = BackupSettings {
+            cloud_enabled: true,
+            cloud_endpoint: "https://acct.com/mandidemo".into(),
+            cloud_bucket: String::new(),
+            ..BackupSettings::default()
+        };
+        let fields: std::collections::BTreeSet<(String, BackupCode)> = both
+            .validate()
+            .unwrap_err()
+            .all()
+            .into_iter()
+            .map(|e| (e.field.unwrap_or_default(), e.code))
+            .collect();
+        assert_eq!(
+            fields,
+            [
+                (
+                    "cloud_endpoint".to_owned(),
+                    BackupCode::ErrBackupCloudAddressPath
+                ),
+                ("cloud_bucket".to_owned(), BackupCode::ErrRequired),
+            ]
+            .into_iter()
+            .collect()
         );
     }
 

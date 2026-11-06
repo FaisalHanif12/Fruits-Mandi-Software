@@ -1,0 +1,1767 @@
+measure	subject	period	status	owner	note	group	lang	thing
+gross	fruit	today	A			IT-gross-fruit-today	roman	Banana
+gross	fruit	yesterday	A			IT-gross-fruit-yesterday	urdu	Apple
+gross	fruit	d2026_11_03	A			IT-gross-fruit-d2026_11_03	en	Apple
+gross	fruit	d2026_10_14	A			IT-gross-fruit-d2026_10_14	roman	Apple
+gross	fruit	week	A			IT-gross-fruit-week	urdu	Banana
+gross	fruit	last_week	A			IT-gross-fruit-last_week	roman	Apple
+gross	fruit	month	A			IT-gross-fruit-month	urdu	Banana
+gross	fruit	last_month	A			IT-gross-fruit-last_month	en	Grapes
+gross	fruit	m2026_09	A			IT-gross-fruit-m2026_09	roman	Grapes
+gross	fruit	m2026_08	A			IT-gross-fruit-m2026_08	urdu	Grapes
+gross	fruit	year	A			IT-gross-fruit-year	roman	Banana
+gross	fruit	last_year	A			IT-gross-fruit-last_year	urdu	Mosambi
+gross	fruit	r2026_10_01_2026_10_15	A			IT-gross-fruit-r2026_10_01_2026_10_15	en	Banana
+gross	fruit	up_to_now	A			IT-gross-fruit-up_to_now	roman	Mango
+gross	veg	today	A			IT-gross-veg-today	urdu	Potato
+gross	veg	yesterday	A			IT-gross-veg-yesterday	roman	Radish
+gross	veg	d2026_11_03	A			IT-gross-veg-d2026_11_03	urdu	Potato
+gross	veg	d2026_10_14	A			IT-gross-veg-d2026_10_14	en	Potato
+gross	veg	week	A			IT-gross-veg-week	roman	Potato
+gross	veg	last_week	A			IT-gross-veg-last_week	urdu	Potato
+gross	veg	month	A			IT-gross-veg-month	roman	Potato
+gross	veg	last_month	A			IT-gross-veg-last_month	urdu	Onion
+gross	veg	m2026_09	A			IT-gross-veg-m2026_09	en	Onion
+gross	veg	m2026_08	A			IT-gross-veg-m2026_08	roman	Potato
+gross	veg	year	A			IT-gross-veg-year	urdu	Potato
+gross	veg	last_year	A			IT-gross-veg-last_year	roman	Radish
+gross	veg	r2026_10_01_2026_10_15	A			IT-gross-veg-r2026_10_01_2026_10_15	urdu	Potato
+gross	veg	up_to_now	A			IT-gross-veg-up_to_now	en	Onion
+gross	g_fruit	today	A			IT-gross-g_fruit-today	roman	
+gross	g_fruit	yesterday	A			IT-gross-g_fruit-yesterday	urdu	
+gross	g_fruit	d2026_11_03	A			IT-gross-g_fruit-d2026_11_03	roman	
+gross	g_fruit	d2026_10_14	A			IT-gross-g_fruit-d2026_10_14	urdu	
+gross	g_fruit	week	A			IT-gross-g_fruit-week	en	
+gross	g_fruit	last_week	A			IT-gross-g_fruit-last_week	roman	
+gross	g_fruit	month	A			IT-gross-g_fruit-month	urdu	
+gross	g_fruit	last_month	A			IT-gross-g_fruit-last_month	roman	
+gross	g_fruit	m2026_09	A			IT-gross-g_fruit-m2026_09	urdu	
+gross	g_fruit	m2026_08	A			IT-gross-g_fruit-m2026_08	en	
+gross	g_fruit	year	A			IT-gross-g_fruit-year	roman	
+gross	g_fruit	last_year	A			IT-gross-g_fruit-last_year	urdu	
+gross	g_fruit	r2026_10_01_2026_10_15	A			IT-gross-g_fruit-r2026_10_01_2026_10_15	roman	
+gross	g_fruit	up_to_now	A			IT-gross-g_fruit-up_to_now	urdu	
+gross	g_veg	today	A			IT-gross-g_veg-today	en	
+gross	g_veg	yesterday	A			IT-gross-g_veg-yesterday	roman	
+gross	g_veg	d2026_11_03	A			IT-gross-g_veg-d2026_11_03	urdu	
+gross	g_veg	d2026_10_14	A			IT-gross-g_veg-d2026_10_14	roman	
+gross	g_veg	week	A			IT-gross-g_veg-week	urdu	
+gross	g_veg	last_week	A			IT-gross-g_veg-last_week	en	
+gross	g_veg	month	A			IT-gross-g_veg-month	roman	
+gross	g_veg	last_month	A			IT-gross-g_veg-last_month	urdu	
+gross	g_veg	m2026_09	A			IT-gross-g_veg-m2026_09	roman	
+gross	g_veg	m2026_08	A			IT-gross-g_veg-m2026_08	urdu	
+gross	g_veg	year	A			IT-gross-g_veg-year	en	
+gross	g_veg	last_year	A			IT-gross-g_veg-last_year	roman	
+gross	g_veg	r2026_10_01_2026_10_15	A			IT-gross-g_veg-r2026_10_01_2026_10_15	urdu	
+gross	g_veg	up_to_now	A			IT-gross-g_veg-up_to_now	roman	
+gross	all	today	A			IT-gross-all-today	urdu	
+gross	all	yesterday	A			IT-gross-all-yesterday	en	
+gross	all	d2026_11_03	A			IT-gross-all-d2026_11_03	roman	
+gross	all	d2026_10_14	A			IT-gross-all-d2026_10_14	urdu	
+gross	all	week	A			IT-gross-all-week	roman	
+gross	all	last_week	A			IT-gross-all-last_week	urdu	
+gross	all	month	A			IT-gross-all-month	en	
+gross	all	last_month	A			IT-gross-all-last_month	roman	
+gross	all	m2026_09	A			IT-gross-all-m2026_09	urdu	
+gross	all	m2026_08	A			IT-gross-all-m2026_08	roman	
+gross	all	year	A			IT-gross-all-year	urdu	
+gross	all	last_year	A			IT-gross-all-last_year	en	
+gross	all	r2026_10_01_2026_10_15	A			IT-gross-all-r2026_10_01_2026_10_15	roman	
+gross	all	up_to_now	A			IT-gross-all-up_to_now	urdu	
+gross	party	today	A			IT-gross-party-today	roman	Banana
+gross	party	yesterday	A			IT-gross-party-yesterday	urdu	Potato
+gross	party	d2026_11_03	A			IT-gross-party-d2026_11_03	en	Banana
+gross	party	d2026_10_14	A			IT-gross-party-d2026_10_14	roman	Potato
+gross	party	week	A			IT-gross-party-week	urdu	Banana
+gross	party	last_week	A			IT-gross-party-last_week	roman	Potato
+gross	party	month	A			IT-gross-party-month	urdu	Banana
+gross	party	last_month	A			IT-gross-party-last_month	en	Potato
+gross	party	m2026_09	A			IT-gross-party-m2026_09	roman	Banana
+gross	party	m2026_08	A			IT-gross-party-m2026_08	urdu	Potato
+gross	party	year	A			IT-gross-party-year	roman	Banana
+gross	party	last_year	A			IT-gross-party-last_year	urdu	Potato
+gross	party	r2026_10_01_2026_10_15	A			IT-gross-party-r2026_10_01_2026_10_15	en	Banana
+gross	party	up_to_now	A			IT-gross-party-up_to_now	roman	Potato
+gross	quality	today	A			IT-gross-quality-today	urdu	Banana
+gross	quality	yesterday	A			IT-gross-quality-yesterday	roman	Apple
+gross	quality	d2026_11_03	A			IT-gross-quality-d2026_11_03	urdu	Apple
+gross	quality	d2026_10_14	X		no sale line has a quality in this period			
+gross	quality	week	A			IT-gross-quality-week	en	Apple
+gross	quality	last_week	A			IT-gross-quality-last_week	roman	Apple
+gross	quality	month	A			IT-gross-quality-month	urdu	Potato
+gross	quality	last_month	A			IT-gross-quality-last_month	roman	Potato
+gross	quality	m2026_09	A			IT-gross-quality-m2026_09	urdu	Grapes
+gross	quality	m2026_08	A			IT-gross-quality-m2026_08	en	Potato
+gross	quality	year	A			IT-gross-quality-year	roman	Mango
+gross	quality	last_year	A			IT-gross-quality-last_year	urdu	Potato
+gross	quality	r2026_10_01_2026_10_15	A			IT-gross-quality-r2026_10_01_2026_10_15	roman	Banana
+gross	quality	up_to_now	A			IT-gross-quality-up_to_now	urdu	Grapes
+gross	unknown	today	A			IT-gross-unknown-today	en	Capsicum
+gross	unknown	yesterday	A			IT-gross-unknown-yesterday	roman	Capsicum
+gross	unknown	d2026_11_03	A			IT-gross-unknown-d2026_11_03	urdu	Capsicum
+gross	unknown	d2026_10_14	A			IT-gross-unknown-d2026_10_14	roman	Capsicum
+gross	unknown	week	A			IT-gross-unknown-week	urdu	Capsicum
+gross	unknown	last_week	A			IT-gross-unknown-last_week	en	Capsicum
+gross	unknown	month	A			IT-gross-unknown-month	roman	Capsicum
+gross	unknown	last_month	A			IT-gross-unknown-last_month	urdu	Capsicum
+gross	unknown	m2026_09	A			IT-gross-unknown-m2026_09	roman	Capsicum
+gross	unknown	m2026_08	A			IT-gross-unknown-m2026_08	urdu	Capsicum
+gross	unknown	year	A			IT-gross-unknown-year	en	Capsicum
+gross	unknown	last_year	A			IT-gross-unknown-last_year	roman	Capsicum
+gross	unknown	r2026_10_01_2026_10_15	A			IT-gross-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+gross	unknown	up_to_now	A			IT-gross-unknown-up_to_now	roman	Capsicum
+gross	zero	today	A			IT-gross-zero-today	urdu	Apple
+gross	zero	yesterday	A			IT-gross-zero-yesterday	en	Mosambi
+gross	zero	d2026_11_03	A			IT-gross-zero-d2026_11_03	roman	Mango
+gross	zero	d2026_10_14	A			IT-gross-zero-d2026_10_14	urdu	Radish
+gross	zero	week	A			IT-gross-zero-week	roman	Tomato
+gross	zero	last_week	A			IT-gross-zero-last_week	urdu	Radish
+gross	zero	month	A			IT-gross-zero-month	en	Saag
+gross	zero	last_month	A			IT-gross-zero-last_month	roman	Saag
+gross	zero	m2026_09	A			IT-gross-zero-m2026_09	urdu	Mosambi
+gross	zero	m2026_08	A			IT-gross-zero-m2026_08	roman	Saag
+gross	zero	year	X		every item sold in this period			
+gross	zero	last_year	A			IT-gross-zero-last_year	urdu	Grapes
+gross	zero	r2026_10_01_2026_10_15	A			IT-gross-zero-r2026_10_01_2026_10_15	en	Mango
+gross	zero	up_to_now	X		every item sold in this period			
+qty	fruit	today	A			IT-qty-fruit-today	urdu	Banana
+qty	fruit	yesterday	A			IT-qty-fruit-yesterday	en	Apple
+qty	fruit	d2026_11_03	A			IT-qty-fruit-d2026_11_03	roman	Apple
+qty	fruit	d2026_10_14	A			IT-qty-fruit-d2026_10_14	urdu	Banana
+qty	fruit	week	A			IT-qty-fruit-week	roman	Apple
+qty	fruit	last_week	A			IT-qty-fruit-last_week	urdu	Apple
+qty	fruit	month	A			IT-qty-fruit-month	en	Apple
+qty	fruit	last_month	A			IT-qty-fruit-last_month	roman	Banana
+qty	fruit	m2026_09	A			IT-qty-fruit-m2026_09	urdu	Banana
+qty	fruit	m2026_08	A			IT-qty-fruit-m2026_08	roman	Banana
+qty	fruit	year	A			IT-qty-fruit-year	urdu	Apple
+qty	fruit	last_year	A			IT-qty-fruit-last_year	en	Banana
+qty	fruit	r2026_10_01_2026_10_15	A			IT-qty-fruit-r2026_10_01_2026_10_15	roman	Apple
+qty	fruit	up_to_now	A			IT-qty-fruit-up_to_now	urdu	Grapes
+qty	veg	today	A			IT-qty-veg-today	roman	Radish
+qty	veg	yesterday	A			IT-qty-veg-yesterday	urdu	Tomato
+qty	veg	d2026_11_03	A			IT-qty-veg-d2026_11_03	en	Potato
+qty	veg	d2026_10_14	A			IT-qty-veg-d2026_10_14	roman	Potato
+qty	veg	week	A			IT-qty-veg-week	urdu	Potato
+qty	veg	last_week	A			IT-qty-veg-last_week	roman	Radish
+qty	veg	month	A			IT-qty-veg-month	urdu	Potato
+qty	veg	last_month	A			IT-qty-veg-last_month	en	Potato
+qty	veg	m2026_09	A			IT-qty-veg-m2026_09	roman	Potato
+qty	veg	m2026_08	A			IT-qty-veg-m2026_08	urdu	Tomato
+qty	veg	year	A			IT-qty-veg-year	roman	Radish
+qty	veg	last_year	A			IT-qty-veg-last_year	urdu	Tomato
+qty	veg	r2026_10_01_2026_10_15	A			IT-qty-veg-r2026_10_01_2026_10_15	en	Radish
+qty	veg	up_to_now	A			IT-qty-veg-up_to_now	roman	Saag
+qty	g_fruit	today	A			IT-qty-g_fruit-today	urdu	
+qty	g_fruit	yesterday	A			IT-qty-g_fruit-yesterday	roman	
+qty	g_fruit	d2026_11_03	A			IT-qty-g_fruit-d2026_11_03	urdu	
+qty	g_fruit	d2026_10_14	A			IT-qty-g_fruit-d2026_10_14	en	
+qty	g_fruit	week	A			IT-qty-g_fruit-week	roman	
+qty	g_fruit	last_week	A			IT-qty-g_fruit-last_week	urdu	
+qty	g_fruit	month	A			IT-qty-g_fruit-month	roman	
+qty	g_fruit	last_month	A			IT-qty-g_fruit-last_month	urdu	
+qty	g_fruit	m2026_09	A			IT-qty-g_fruit-m2026_09	en	
+qty	g_fruit	m2026_08	A			IT-qty-g_fruit-m2026_08	roman	
+qty	g_fruit	year	A			IT-qty-g_fruit-year	urdu	
+qty	g_fruit	last_year	A			IT-qty-g_fruit-last_year	roman	
+qty	g_fruit	r2026_10_01_2026_10_15	A			IT-qty-g_fruit-r2026_10_01_2026_10_15	urdu	
+qty	g_fruit	up_to_now	A			IT-qty-g_fruit-up_to_now	en	
+qty	g_veg	today	A			IT-qty-g_veg-today	roman	
+qty	g_veg	yesterday	A			IT-qty-g_veg-yesterday	urdu	
+qty	g_veg	d2026_11_03	A			IT-qty-g_veg-d2026_11_03	roman	
+qty	g_veg	d2026_10_14	A			IT-qty-g_veg-d2026_10_14	urdu	
+qty	g_veg	week	A			IT-qty-g_veg-week	en	
+qty	g_veg	last_week	A			IT-qty-g_veg-last_week	roman	
+qty	g_veg	month	A			IT-qty-g_veg-month	urdu	
+qty	g_veg	last_month	A			IT-qty-g_veg-last_month	roman	
+qty	g_veg	m2026_09	A			IT-qty-g_veg-m2026_09	urdu	
+qty	g_veg	m2026_08	A			IT-qty-g_veg-m2026_08	en	
+qty	g_veg	year	A			IT-qty-g_veg-year	roman	
+qty	g_veg	last_year	A			IT-qty-g_veg-last_year	urdu	
+qty	g_veg	r2026_10_01_2026_10_15	A			IT-qty-g_veg-r2026_10_01_2026_10_15	roman	
+qty	g_veg	up_to_now	A			IT-qty-g_veg-up_to_now	urdu	
+qty	all	today	A			IT-qty-all-today	en	
+qty	all	yesterday	A			IT-qty-all-yesterday	roman	
+qty	all	d2026_11_03	A			IT-qty-all-d2026_11_03	urdu	
+qty	all	d2026_10_14	A			IT-qty-all-d2026_10_14	roman	
+qty	all	week	A			IT-qty-all-week	urdu	
+qty	all	last_week	A			IT-qty-all-last_week	en	
+qty	all	month	A			IT-qty-all-month	roman	
+qty	all	last_month	A			IT-qty-all-last_month	urdu	
+qty	all	m2026_09	A			IT-qty-all-m2026_09	roman	
+qty	all	m2026_08	A			IT-qty-all-m2026_08	urdu	
+qty	all	year	A			IT-qty-all-year	en	
+qty	all	last_year	A			IT-qty-all-last_year	roman	
+qty	all	r2026_10_01_2026_10_15	A			IT-qty-all-r2026_10_01_2026_10_15	urdu	
+qty	all	up_to_now	A			IT-qty-all-up_to_now	roman	
+qty	party	today	A			IT-qty-party-today	urdu	Potato
+qty	party	yesterday	A			IT-qty-party-yesterday	en	Banana
+qty	party	d2026_11_03	A			IT-qty-party-d2026_11_03	roman	Potato
+qty	party	d2026_10_14	A			IT-qty-party-d2026_10_14	urdu	Banana
+qty	party	week	A			IT-qty-party-week	roman	Potato
+qty	party	last_week	A			IT-qty-party-last_week	urdu	Banana
+qty	party	month	A			IT-qty-party-month	en	Potato
+qty	party	last_month	A			IT-qty-party-last_month	roman	Banana
+qty	party	m2026_09	A			IT-qty-party-m2026_09	urdu	Potato
+qty	party	m2026_08	A			IT-qty-party-m2026_08	roman	Banana
+qty	party	year	A			IT-qty-party-year	urdu	Potato
+qty	party	last_year	A			IT-qty-party-last_year	en	Banana
+qty	party	r2026_10_01_2026_10_15	A			IT-qty-party-r2026_10_01_2026_10_15	roman	Potato
+qty	party	up_to_now	A			IT-qty-party-up_to_now	urdu	Banana
+qty	quality	today	A			IT-qty-quality-today	roman	Banana
+qty	quality	yesterday	A			IT-qty-quality-yesterday	urdu	Apple
+qty	quality	d2026_11_03	A			IT-qty-quality-d2026_11_03	en	Potato
+qty	quality	d2026_10_14	X		no sale line has a quality in this period			
+qty	quality	week	A			IT-qty-quality-week	roman	Apple
+qty	quality	last_week	A			IT-qty-quality-last_week	urdu	Apple
+qty	quality	month	A			IT-qty-quality-month	roman	Potato
+qty	quality	last_month	A			IT-qty-quality-last_month	urdu	Radish
+qty	quality	m2026_09	A			IT-qty-quality-m2026_09	en	Potato
+qty	quality	m2026_08	A			IT-qty-quality-m2026_08	roman	Potato
+qty	quality	year	A			IT-qty-quality-year	urdu	Mango
+qty	quality	last_year	A			IT-qty-quality-last_year	roman	Radish
+qty	quality	r2026_10_01_2026_10_15	A			IT-qty-quality-r2026_10_01_2026_10_15	urdu	Banana
+qty	quality	up_to_now	A			IT-qty-quality-up_to_now	en	Grapes
+qty	unknown	today	A			IT-qty-unknown-today	roman	Capsicum
+qty	unknown	yesterday	A			IT-qty-unknown-yesterday	urdu	Capsicum
+qty	unknown	d2026_11_03	A			IT-qty-unknown-d2026_11_03	roman	Capsicum
+qty	unknown	d2026_10_14	A			IT-qty-unknown-d2026_10_14	urdu	Capsicum
+qty	unknown	week	A			IT-qty-unknown-week	en	Capsicum
+qty	unknown	last_week	A			IT-qty-unknown-last_week	roman	Capsicum
+qty	unknown	month	A			IT-qty-unknown-month	urdu	Capsicum
+qty	unknown	last_month	A			IT-qty-unknown-last_month	roman	Capsicum
+qty	unknown	m2026_09	A			IT-qty-unknown-m2026_09	urdu	Capsicum
+qty	unknown	m2026_08	A			IT-qty-unknown-m2026_08	en	Capsicum
+qty	unknown	year	A			IT-qty-unknown-year	roman	Capsicum
+qty	unknown	last_year	A			IT-qty-unknown-last_year	urdu	Capsicum
+qty	unknown	r2026_10_01_2026_10_15	A			IT-qty-unknown-r2026_10_01_2026_10_15	roman	Capsicum
+qty	unknown	up_to_now	A			IT-qty-unknown-up_to_now	urdu	Capsicum
+qty	zero	today	A			IT-qty-zero-today	en	Mosambi
+qty	zero	yesterday	A			IT-qty-zero-yesterday	roman	Mango
+qty	zero	d2026_11_03	A			IT-qty-zero-d2026_11_03	urdu	Grapes
+qty	zero	d2026_10_14	A			IT-qty-zero-d2026_10_14	roman	Tomato
+qty	zero	week	A			IT-qty-zero-week	urdu	Onion
+qty	zero	last_week	A			IT-qty-zero-last_week	en	Tomato
+qty	zero	month	A			IT-qty-zero-month	roman	Mosambi
+qty	zero	last_month	A			IT-qty-zero-last_month	urdu	Mango
+qty	zero	m2026_09	A			IT-qty-zero-m2026_09	roman	Mango
+qty	zero	m2026_08	A			IT-qty-zero-m2026_08	urdu	Radish
+qty	zero	year	X		every item sold in this period			
+qty	zero	last_year	A			IT-qty-zero-last_year	en	Mango
+qty	zero	r2026_10_01_2026_10_15	A			IT-qty-zero-r2026_10_01_2026_10_15	roman	Saag
+qty	zero	up_to_now	X		every item sold in this period			
+comm_seller	fruit	today	A			IT-comm_seller-fruit-today	en	Banana
+comm_seller	fruit	yesterday	A			IT-comm_seller-fruit-yesterday	roman	Apple
+comm_seller	fruit	d2026_11_03	A			IT-comm_seller-fruit-d2026_11_03	urdu	Apple
+comm_seller	fruit	d2026_10_14	A			IT-comm_seller-fruit-d2026_10_14	roman	Apple
+comm_seller	fruit	week	A			IT-comm_seller-fruit-week	urdu	Banana
+comm_seller	fruit	last_week	A			IT-comm_seller-fruit-last_week	en	Apple
+comm_seller	fruit	month	A			IT-comm_seller-fruit-month	roman	Banana
+comm_seller	fruit	last_month	A			IT-comm_seller-fruit-last_month	urdu	Apple
+comm_seller	fruit	m2026_09	A			IT-comm_seller-fruit-m2026_09	roman	Apple
+comm_seller	fruit	m2026_08	A			IT-comm_seller-fruit-m2026_08	urdu	Apple
+comm_seller	fruit	year	A			IT-comm_seller-fruit-year	en	Mosambi
+comm_seller	fruit	last_year	A			IT-comm_seller-fruit-last_year	roman	Apple
+comm_seller	fruit	r2026_10_01_2026_10_15	A			IT-comm_seller-fruit-r2026_10_01_2026_10_15	urdu	Mosambi
+comm_seller	fruit	up_to_now	A			IT-comm_seller-fruit-up_to_now	roman	Banana
+comm_seller	veg	today	A			IT-comm_seller-veg-today	urdu	Tomato
+comm_seller	veg	yesterday	A			IT-comm_seller-veg-yesterday	en	Onion
+comm_seller	veg	d2026_11_03	A			IT-comm_seller-veg-d2026_11_03	roman	Potato
+comm_seller	veg	d2026_10_14	A			IT-comm_seller-veg-d2026_10_14	urdu	Potato
+comm_seller	veg	week	A			IT-comm_seller-veg-week	roman	Potato
+comm_seller	veg	last_week	A			IT-comm_seller-veg-last_week	urdu	Tomato
+comm_seller	veg	month	A			IT-comm_seller-veg-month	en	Potato
+comm_seller	veg	last_month	A			IT-comm_seller-veg-last_month	roman	Radish
+comm_seller	veg	m2026_09	A			IT-comm_seller-veg-m2026_09	urdu	Tomato
+comm_seller	veg	m2026_08	A			IT-comm_seller-veg-m2026_08	roman	Onion
+comm_seller	veg	year	A			IT-comm_seller-veg-year	urdu	Tomato
+comm_seller	veg	last_year	A			IT-comm_seller-veg-last_year	en	Onion
+comm_seller	veg	r2026_10_01_2026_10_15	A			IT-comm_seller-veg-r2026_10_01_2026_10_15	roman	Tomato
+comm_seller	veg	up_to_now	A			IT-comm_seller-veg-up_to_now	urdu	Potato
+comm_seller	g_fruit	today	A			IT-comm_seller-g_fruit-today	roman	
+comm_seller	g_fruit	yesterday	A			IT-comm_seller-g_fruit-yesterday	urdu	
+comm_seller	g_fruit	d2026_11_03	A			IT-comm_seller-g_fruit-d2026_11_03	en	
+comm_seller	g_fruit	d2026_10_14	A			IT-comm_seller-g_fruit-d2026_10_14	roman	
+comm_seller	g_fruit	week	A			IT-comm_seller-g_fruit-week	urdu	
+comm_seller	g_fruit	last_week	A			IT-comm_seller-g_fruit-last_week	roman	
+comm_seller	g_fruit	month	A			IT-comm_seller-g_fruit-month	urdu	
+comm_seller	g_fruit	last_month	A			IT-comm_seller-g_fruit-last_month	en	
+comm_seller	g_fruit	m2026_09	A			IT-comm_seller-g_fruit-m2026_09	roman	
+comm_seller	g_fruit	m2026_08	A			IT-comm_seller-g_fruit-m2026_08	urdu	
+comm_seller	g_fruit	year	A			IT-comm_seller-g_fruit-year	roman	
+comm_seller	g_fruit	last_year	A			IT-comm_seller-g_fruit-last_year	urdu	
+comm_seller	g_fruit	r2026_10_01_2026_10_15	A			IT-comm_seller-g_fruit-r2026_10_01_2026_10_15	en	
+comm_seller	g_fruit	up_to_now	A			IT-comm_seller-g_fruit-up_to_now	roman	
+comm_seller	g_veg	today	A			IT-comm_seller-g_veg-today	urdu	
+comm_seller	g_veg	yesterday	A			IT-comm_seller-g_veg-yesterday	roman	
+comm_seller	g_veg	d2026_11_03	A			IT-comm_seller-g_veg-d2026_11_03	urdu	
+comm_seller	g_veg	d2026_10_14	A			IT-comm_seller-g_veg-d2026_10_14	en	
+comm_seller	g_veg	week	A			IT-comm_seller-g_veg-week	roman	
+comm_seller	g_veg	last_week	A			IT-comm_seller-g_veg-last_week	urdu	
+comm_seller	g_veg	month	A			IT-comm_seller-g_veg-month	roman	
+comm_seller	g_veg	last_month	A			IT-comm_seller-g_veg-last_month	urdu	
+comm_seller	g_veg	m2026_09	A			IT-comm_seller-g_veg-m2026_09	en	
+comm_seller	g_veg	m2026_08	A			IT-comm_seller-g_veg-m2026_08	roman	
+comm_seller	g_veg	year	A			IT-comm_seller-g_veg-year	urdu	
+comm_seller	g_veg	last_year	A			IT-comm_seller-g_veg-last_year	roman	
+comm_seller	g_veg	r2026_10_01_2026_10_15	A			IT-comm_seller-g_veg-r2026_10_01_2026_10_15	urdu	
+comm_seller	g_veg	up_to_now	A			IT-comm_seller-g_veg-up_to_now	en	
+comm_seller	all	today	A			IT-comm_seller-all-today	roman	
+comm_seller	all	yesterday	A			IT-comm_seller-all-yesterday	urdu	
+comm_seller	all	d2026_11_03	A			IT-comm_seller-all-d2026_11_03	roman	
+comm_seller	all	d2026_10_14	A			IT-comm_seller-all-d2026_10_14	urdu	
+comm_seller	all	week	A			IT-comm_seller-all-week	en	
+comm_seller	all	last_week	A			IT-comm_seller-all-last_week	roman	
+comm_seller	all	month	A			IT-comm_seller-all-month	urdu	
+comm_seller	all	last_month	A			IT-comm_seller-all-last_month	roman	
+comm_seller	all	m2026_09	A			IT-comm_seller-all-m2026_09	urdu	
+comm_seller	all	m2026_08	A			IT-comm_seller-all-m2026_08	en	
+comm_seller	all	year	A			IT-comm_seller-all-year	roman	
+comm_seller	all	last_year	A			IT-comm_seller-all-last_year	urdu	
+comm_seller	all	r2026_10_01_2026_10_15	A			IT-comm_seller-all-r2026_10_01_2026_10_15	roman	
+comm_seller	all	up_to_now	A			IT-comm_seller-all-up_to_now	urdu	
+comm_seller	party	today	A			IT-comm_seller-party-today	en	Banana
+comm_seller	party	yesterday	A			IT-comm_seller-party-yesterday	roman	Potato
+comm_seller	party	d2026_11_03	A			IT-comm_seller-party-d2026_11_03	urdu	Banana
+comm_seller	party	d2026_10_14	A			IT-comm_seller-party-d2026_10_14	roman	Potato
+comm_seller	party	week	A			IT-comm_seller-party-week	urdu	Banana
+comm_seller	party	last_week	A			IT-comm_seller-party-last_week	en	Potato
+comm_seller	party	month	A			IT-comm_seller-party-month	roman	Banana
+comm_seller	party	last_month	A			IT-comm_seller-party-last_month	urdu	Potato
+comm_seller	party	m2026_09	A			IT-comm_seller-party-m2026_09	roman	Banana
+comm_seller	party	m2026_08	A			IT-comm_seller-party-m2026_08	urdu	Potato
+comm_seller	party	year	A			IT-comm_seller-party-year	en	Banana
+comm_seller	party	last_year	A			IT-comm_seller-party-last_year	roman	Potato
+comm_seller	party	r2026_10_01_2026_10_15	A			IT-comm_seller-party-r2026_10_01_2026_10_15	urdu	Banana
+comm_seller	party	up_to_now	A			IT-comm_seller-party-up_to_now	roman	Potato
+comm_seller	quality	today	A			IT-comm_seller-quality-today	urdu	Banana
+comm_seller	quality	yesterday	A			IT-comm_seller-quality-yesterday	en	Apple
+comm_seller	quality	d2026_11_03	A			IT-comm_seller-quality-d2026_11_03	roman	Potato
+comm_seller	quality	d2026_10_14	X		no sale line has a quality in this period			
+comm_seller	quality	week	A			IT-comm_seller-quality-week	urdu	Potato
+comm_seller	quality	last_week	A			IT-comm_seller-quality-last_week	roman	Apple
+comm_seller	quality	month	A			IT-comm_seller-quality-month	urdu	Potato
+comm_seller	quality	last_month	A			IT-comm_seller-quality-last_month	en	Radish
+comm_seller	quality	m2026_09	A			IT-comm_seller-quality-m2026_09	roman	Potato
+comm_seller	quality	m2026_08	A			IT-comm_seller-quality-m2026_08	urdu	Potato
+comm_seller	quality	year	A			IT-comm_seller-quality-year	roman	Grapes
+comm_seller	quality	last_year	A			IT-comm_seller-quality-last_year	urdu	Radish
+comm_seller	quality	r2026_10_01_2026_10_15	A			IT-comm_seller-quality-r2026_10_01_2026_10_15	en	Apple
+comm_seller	quality	up_to_now	A			IT-comm_seller-quality-up_to_now	roman	Potato
+comm_seller	unknown	today	A			IT-comm_seller-unknown-today	urdu	Capsicum
+comm_seller	unknown	yesterday	A			IT-comm_seller-unknown-yesterday	roman	Capsicum
+comm_seller	unknown	d2026_11_03	A			IT-comm_seller-unknown-d2026_11_03	urdu	Capsicum
+comm_seller	unknown	d2026_10_14	A			IT-comm_seller-unknown-d2026_10_14	en	Capsicum
+comm_seller	unknown	week	A			IT-comm_seller-unknown-week	roman	Capsicum
+comm_seller	unknown	last_week	A			IT-comm_seller-unknown-last_week	urdu	Capsicum
+comm_seller	unknown	month	A			IT-comm_seller-unknown-month	roman	Capsicum
+comm_seller	unknown	last_month	A			IT-comm_seller-unknown-last_month	urdu	Capsicum
+comm_seller	unknown	m2026_09	A			IT-comm_seller-unknown-m2026_09	en	Capsicum
+comm_seller	unknown	m2026_08	A			IT-comm_seller-unknown-m2026_08	roman	Capsicum
+comm_seller	unknown	year	A			IT-comm_seller-unknown-year	urdu	Capsicum
+comm_seller	unknown	last_year	A			IT-comm_seller-unknown-last_year	roman	Capsicum
+comm_seller	unknown	r2026_10_01_2026_10_15	A			IT-comm_seller-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+comm_seller	unknown	up_to_now	A			IT-comm_seller-unknown-up_to_now	en	Capsicum
+comm_seller	zero	today	A			IT-comm_seller-zero-today	roman	Mango
+comm_seller	zero	yesterday	A			IT-comm_seller-zero-yesterday	urdu	Grapes
+comm_seller	zero	d2026_11_03	A			IT-comm_seller-zero-d2026_11_03	roman	Radish
+comm_seller	zero	d2026_10_14	A			IT-comm_seller-zero-d2026_10_14	urdu	Onion
+comm_seller	zero	week	A			IT-comm_seller-zero-week	en	Saag
+comm_seller	zero	last_week	A			IT-comm_seller-zero-last_week	roman	Onion
+comm_seller	zero	month	A			IT-comm_seller-zero-month	urdu	Mango
+comm_seller	zero	last_month	A			IT-comm_seller-zero-last_month	roman	Saag
+comm_seller	zero	m2026_09	A			IT-comm_seller-zero-m2026_09	urdu	Radish
+comm_seller	zero	m2026_08	A			IT-comm_seller-zero-m2026_08	en	Saag
+comm_seller	zero	year	X		every item sold in this period			
+comm_seller	zero	last_year	A			IT-comm_seller-zero-last_year	roman	Grapes
+comm_seller	zero	r2026_10_01_2026_10_15	A			IT-comm_seller-zero-r2026_10_01_2026_10_15	urdu	Mango
+comm_seller	zero	up_to_now	X		every item sold in this period			
+comm_buyer	fruit	today	A			IT-comm_buyer-fruit-today	roman	Banana
+comm_buyer	fruit	yesterday	A			IT-comm_buyer-fruit-yesterday	urdu	Apple
+comm_buyer	fruit	d2026_11_03	A			IT-comm_buyer-fruit-d2026_11_03	roman	Apple
+comm_buyer	fruit	d2026_10_14	A			IT-comm_buyer-fruit-d2026_10_14	urdu	Banana
+comm_buyer	fruit	week	A			IT-comm_buyer-fruit-week	en	Apple
+comm_buyer	fruit	last_week	A			IT-comm_buyer-fruit-last_week	roman	Apple
+comm_buyer	fruit	month	A			IT-comm_buyer-fruit-month	urdu	Apple
+comm_buyer	fruit	last_month	A			IT-comm_buyer-fruit-last_month	roman	Mosambi
+comm_buyer	fruit	m2026_09	A			IT-comm_buyer-fruit-m2026_09	urdu	Grapes
+comm_buyer	fruit	m2026_08	A			IT-comm_buyer-fruit-m2026_08	en	Mosambi
+comm_buyer	fruit	year	A			IT-comm_buyer-fruit-year	roman	Mango
+comm_buyer	fruit	last_year	A			IT-comm_buyer-fruit-last_year	urdu	Mosambi
+comm_buyer	fruit	r2026_10_01_2026_10_15	A			IT-comm_buyer-fruit-r2026_10_01_2026_10_15	roman	Grapes
+comm_buyer	fruit	up_to_now	A			IT-comm_buyer-fruit-up_to_now	urdu	Apple
+comm_buyer	veg	today	A			IT-comm_buyer-veg-today	en	Onion
+comm_buyer	veg	yesterday	A			IT-comm_buyer-veg-yesterday	roman	Saag
+comm_buyer	veg	d2026_11_03	A			IT-comm_buyer-veg-d2026_11_03	urdu	Potato
+comm_buyer	veg	d2026_10_14	A			IT-comm_buyer-veg-d2026_10_14	roman	Potato
+comm_buyer	veg	week	A			IT-comm_buyer-veg-week	urdu	Potato
+comm_buyer	veg	last_week	A			IT-comm_buyer-veg-last_week	en	Onion
+comm_buyer	veg	month	A			IT-comm_buyer-veg-month	roman	Potato
+comm_buyer	veg	last_month	A			IT-comm_buyer-veg-last_month	urdu	Tomato
+comm_buyer	veg	m2026_09	A			IT-comm_buyer-veg-m2026_09	roman	Onion
+comm_buyer	veg	m2026_08	A			IT-comm_buyer-veg-m2026_08	urdu	Potato
+comm_buyer	veg	year	A			IT-comm_buyer-veg-year	en	Onion
+comm_buyer	veg	last_year	A			IT-comm_buyer-veg-last_year	roman	Saag
+comm_buyer	veg	r2026_10_01_2026_10_15	A			IT-comm_buyer-veg-r2026_10_01_2026_10_15	urdu	Onion
+comm_buyer	veg	up_to_now	A			IT-comm_buyer-veg-up_to_now	roman	Radish
+comm_buyer	g_fruit	today	A			IT-comm_buyer-g_fruit-today	urdu	
+comm_buyer	g_fruit	yesterday	A			IT-comm_buyer-g_fruit-yesterday	en	
+comm_buyer	g_fruit	d2026_11_03	A			IT-comm_buyer-g_fruit-d2026_11_03	roman	
+comm_buyer	g_fruit	d2026_10_14	A			IT-comm_buyer-g_fruit-d2026_10_14	urdu	
+comm_buyer	g_fruit	week	A			IT-comm_buyer-g_fruit-week	roman	
+comm_buyer	g_fruit	last_week	A			IT-comm_buyer-g_fruit-last_week	urdu	
+comm_buyer	g_fruit	month	A			IT-comm_buyer-g_fruit-month	en	
+comm_buyer	g_fruit	last_month	A			IT-comm_buyer-g_fruit-last_month	roman	
+comm_buyer	g_fruit	m2026_09	A			IT-comm_buyer-g_fruit-m2026_09	urdu	
+comm_buyer	g_fruit	m2026_08	A			IT-comm_buyer-g_fruit-m2026_08	roman	
+comm_buyer	g_fruit	year	A			IT-comm_buyer-g_fruit-year	urdu	
+comm_buyer	g_fruit	last_year	A			IT-comm_buyer-g_fruit-last_year	en	
+comm_buyer	g_fruit	r2026_10_01_2026_10_15	A			IT-comm_buyer-g_fruit-r2026_10_01_2026_10_15	roman	
+comm_buyer	g_fruit	up_to_now	A			IT-comm_buyer-g_fruit-up_to_now	urdu	
+comm_buyer	g_veg	today	A			IT-comm_buyer-g_veg-today	roman	
+comm_buyer	g_veg	yesterday	A			IT-comm_buyer-g_veg-yesterday	urdu	
+comm_buyer	g_veg	d2026_11_03	A			IT-comm_buyer-g_veg-d2026_11_03	en	
+comm_buyer	g_veg	d2026_10_14	A			IT-comm_buyer-g_veg-d2026_10_14	roman	
+comm_buyer	g_veg	week	A			IT-comm_buyer-g_veg-week	urdu	
+comm_buyer	g_veg	last_week	A			IT-comm_buyer-g_veg-last_week	roman	
+comm_buyer	g_veg	month	A			IT-comm_buyer-g_veg-month	urdu	
+comm_buyer	g_veg	last_month	A			IT-comm_buyer-g_veg-last_month	en	
+comm_buyer	g_veg	m2026_09	A			IT-comm_buyer-g_veg-m2026_09	roman	
+comm_buyer	g_veg	m2026_08	A			IT-comm_buyer-g_veg-m2026_08	urdu	
+comm_buyer	g_veg	year	A			IT-comm_buyer-g_veg-year	roman	
+comm_buyer	g_veg	last_year	A			IT-comm_buyer-g_veg-last_year	urdu	
+comm_buyer	g_veg	r2026_10_01_2026_10_15	A			IT-comm_buyer-g_veg-r2026_10_01_2026_10_15	en	
+comm_buyer	g_veg	up_to_now	A			IT-comm_buyer-g_veg-up_to_now	roman	
+comm_buyer	all	today	A			IT-comm_buyer-all-today	urdu	
+comm_buyer	all	yesterday	A			IT-comm_buyer-all-yesterday	roman	
+comm_buyer	all	d2026_11_03	A			IT-comm_buyer-all-d2026_11_03	urdu	
+comm_buyer	all	d2026_10_14	A			IT-comm_buyer-all-d2026_10_14	en	
+comm_buyer	all	week	A			IT-comm_buyer-all-week	roman	
+comm_buyer	all	last_week	A			IT-comm_buyer-all-last_week	urdu	
+comm_buyer	all	month	A			IT-comm_buyer-all-month	roman	
+comm_buyer	all	last_month	A			IT-comm_buyer-all-last_month	urdu	
+comm_buyer	all	m2026_09	A			IT-comm_buyer-all-m2026_09	en	
+comm_buyer	all	m2026_08	A			IT-comm_buyer-all-m2026_08	roman	
+comm_buyer	all	year	A			IT-comm_buyer-all-year	urdu	
+comm_buyer	all	last_year	A			IT-comm_buyer-all-last_year	roman	
+comm_buyer	all	r2026_10_01_2026_10_15	A			IT-comm_buyer-all-r2026_10_01_2026_10_15	urdu	
+comm_buyer	all	up_to_now	A			IT-comm_buyer-all-up_to_now	en	
+comm_buyer	party	today	A			IT-comm_buyer-party-today	roman	Potato
+comm_buyer	party	yesterday	A			IT-comm_buyer-party-yesterday	urdu	Banana
+comm_buyer	party	d2026_11_03	A			IT-comm_buyer-party-d2026_11_03	roman	Potato
+comm_buyer	party	d2026_10_14	A			IT-comm_buyer-party-d2026_10_14	urdu	Banana
+comm_buyer	party	week	A			IT-comm_buyer-party-week	en	Potato
+comm_buyer	party	last_week	A			IT-comm_buyer-party-last_week	roman	Banana
+comm_buyer	party	month	A			IT-comm_buyer-party-month	urdu	Potato
+comm_buyer	party	last_month	A			IT-comm_buyer-party-last_month	roman	Banana
+comm_buyer	party	m2026_09	A			IT-comm_buyer-party-m2026_09	urdu	Potato
+comm_buyer	party	m2026_08	A			IT-comm_buyer-party-m2026_08	en	Banana
+comm_buyer	party	year	A			IT-comm_buyer-party-year	roman	Potato
+comm_buyer	party	last_year	A			IT-comm_buyer-party-last_year	urdu	Banana
+comm_buyer	party	r2026_10_01_2026_10_15	A			IT-comm_buyer-party-r2026_10_01_2026_10_15	roman	Potato
+comm_buyer	party	up_to_now	A			IT-comm_buyer-party-up_to_now	urdu	Banana
+comm_buyer	quality	today	A			IT-comm_buyer-quality-today	en	Banana
+comm_buyer	quality	yesterday	A			IT-comm_buyer-quality-yesterday	roman	Apple
+comm_buyer	quality	d2026_11_03	A			IT-comm_buyer-quality-d2026_11_03	urdu	Potato
+comm_buyer	quality	d2026_10_14	X		no sale line has a quality in this period			
+comm_buyer	quality	week	A			IT-comm_buyer-quality-week	roman	Potato
+comm_buyer	quality	last_week	A			IT-comm_buyer-quality-last_week	urdu	Apple
+comm_buyer	quality	month	A			IT-comm_buyer-quality-month	en	Banana
+comm_buyer	quality	last_month	A			IT-comm_buyer-quality-last_month	roman	Onion
+comm_buyer	quality	m2026_09	A			IT-comm_buyer-quality-m2026_09	urdu	Potato
+comm_buyer	quality	m2026_08	A			IT-comm_buyer-quality-m2026_08	roman	Tomato
+comm_buyer	quality	year	A			IT-comm_buyer-quality-year	urdu	Grapes
+comm_buyer	quality	last_year	A			IT-comm_buyer-quality-last_year	en	Radish
+comm_buyer	quality	r2026_10_01_2026_10_15	A			IT-comm_buyer-quality-r2026_10_01_2026_10_15	roman	Apple
+comm_buyer	quality	up_to_now	A			IT-comm_buyer-quality-up_to_now	urdu	Potato
+comm_buyer	unknown	today	A			IT-comm_buyer-unknown-today	roman	Capsicum
+comm_buyer	unknown	yesterday	A			IT-comm_buyer-unknown-yesterday	urdu	Capsicum
+comm_buyer	unknown	d2026_11_03	A			IT-comm_buyer-unknown-d2026_11_03	en	Capsicum
+comm_buyer	unknown	d2026_10_14	A			IT-comm_buyer-unknown-d2026_10_14	roman	Capsicum
+comm_buyer	unknown	week	A			IT-comm_buyer-unknown-week	urdu	Capsicum
+comm_buyer	unknown	last_week	A			IT-comm_buyer-unknown-last_week	roman	Capsicum
+comm_buyer	unknown	month	A			IT-comm_buyer-unknown-month	urdu	Capsicum
+comm_buyer	unknown	last_month	A			IT-comm_buyer-unknown-last_month	en	Capsicum
+comm_buyer	unknown	m2026_09	A			IT-comm_buyer-unknown-m2026_09	roman	Capsicum
+comm_buyer	unknown	m2026_08	A			IT-comm_buyer-unknown-m2026_08	urdu	Capsicum
+comm_buyer	unknown	year	A			IT-comm_buyer-unknown-year	roman	Capsicum
+comm_buyer	unknown	last_year	A			IT-comm_buyer-unknown-last_year	urdu	Capsicum
+comm_buyer	unknown	r2026_10_01_2026_10_15	A			IT-comm_buyer-unknown-r2026_10_01_2026_10_15	en	Capsicum
+comm_buyer	unknown	up_to_now	A			IT-comm_buyer-unknown-up_to_now	roman	Capsicum
+comm_buyer	zero	today	A			IT-comm_buyer-zero-today	urdu	Grapes
+comm_buyer	zero	yesterday	A			IT-comm_buyer-zero-yesterday	roman	Potato
+comm_buyer	zero	d2026_11_03	A			IT-comm_buyer-zero-d2026_11_03	urdu	Tomato
+comm_buyer	zero	d2026_10_14	A			IT-comm_buyer-zero-d2026_10_14	en	Saag
+comm_buyer	zero	week	A			IT-comm_buyer-zero-week	roman	Mosambi
+comm_buyer	zero	last_week	A			IT-comm_buyer-zero-last_week	urdu	Saag
+comm_buyer	zero	month	A			IT-comm_buyer-zero-month	roman	Grapes
+comm_buyer	zero	last_month	A			IT-comm_buyer-zero-last_month	urdu	Mango
+comm_buyer	zero	m2026_09	A			IT-comm_buyer-zero-m2026_09	en	Saag
+comm_buyer	zero	m2026_08	A			IT-comm_buyer-zero-m2026_08	roman	Radish
+comm_buyer	zero	year	X		every item sold in this period			
+comm_buyer	zero	last_year	A			IT-comm_buyer-zero-last_year	urdu	Mango
+comm_buyer	zero	r2026_10_01_2026_10_15	A			IT-comm_buyer-zero-r2026_10_01_2026_10_15	roman	Saag
+comm_buyer	zero	up_to_now	X		every item sold in this period			
+laga	fruit	today	A			IT-laga-fruit-today	urdu	Banana
+laga	fruit	yesterday	A			IT-laga-fruit-yesterday	roman	Apple
+laga	fruit	d2026_11_03	A			IT-laga-fruit-d2026_11_03	urdu	Apple
+laga	fruit	d2026_10_14	A			IT-laga-fruit-d2026_10_14	en	Apple
+laga	fruit	week	A			IT-laga-fruit-week	roman	Banana
+laga	fruit	last_week	A			IT-laga-fruit-last_week	urdu	Apple
+laga	fruit	month	A			IT-laga-fruit-month	roman	Banana
+laga	fruit	last_month	A			IT-laga-fruit-last_month	urdu	Grapes
+laga	fruit	m2026_09	A			IT-laga-fruit-m2026_09	en	Banana
+laga	fruit	m2026_08	A			IT-laga-fruit-m2026_08	roman	Mango
+laga	fruit	year	A			IT-laga-fruit-year	urdu	Grapes
+laga	fruit	last_year	A			IT-laga-fruit-last_year	roman	Banana
+laga	fruit	r2026_10_01_2026_10_15	A			IT-laga-fruit-r2026_10_01_2026_10_15	urdu	Banana
+laga	fruit	up_to_now	A			IT-laga-fruit-up_to_now	en	Mosambi
+laga	veg	today	A			IT-laga-veg-today	roman	Saag
+laga	veg	yesterday	A			IT-laga-veg-yesterday	urdu	Potato
+laga	veg	d2026_11_03	A			IT-laga-veg-d2026_11_03	roman	Potato
+laga	veg	d2026_10_14	A			IT-laga-veg-d2026_10_14	urdu	Potato
+laga	veg	week	A			IT-laga-veg-week	en	Potato
+laga	veg	last_week	A			IT-laga-veg-last_week	roman	Saag
+laga	veg	month	A			IT-laga-veg-month	urdu	Potato
+laga	veg	last_month	A			IT-laga-veg-last_month	roman	Onion
+laga	veg	m2026_09	A			IT-laga-veg-m2026_09	urdu	Potato
+laga	veg	m2026_08	A			IT-laga-veg-m2026_08	en	Tomato
+laga	veg	year	A			IT-laga-veg-year	roman	Saag
+laga	veg	last_year	A			IT-laga-veg-last_year	urdu	Potato
+laga	veg	r2026_10_01_2026_10_15	A			IT-laga-veg-r2026_10_01_2026_10_15	roman	Potato
+laga	veg	up_to_now	A			IT-laga-veg-up_to_now	urdu	Tomato
+laga	g_fruit	today	A			IT-laga-g_fruit-today	en	
+laga	g_fruit	yesterday	A			IT-laga-g_fruit-yesterday	roman	
+laga	g_fruit	d2026_11_03	A			IT-laga-g_fruit-d2026_11_03	urdu	
+laga	g_fruit	d2026_10_14	A			IT-laga-g_fruit-d2026_10_14	roman	
+laga	g_fruit	week	A			IT-laga-g_fruit-week	urdu	
+laga	g_fruit	last_week	A			IT-laga-g_fruit-last_week	en	
+laga	g_fruit	month	A			IT-laga-g_fruit-month	roman	
+laga	g_fruit	last_month	A			IT-laga-g_fruit-last_month	urdu	
+laga	g_fruit	m2026_09	A			IT-laga-g_fruit-m2026_09	roman	
+laga	g_fruit	m2026_08	A			IT-laga-g_fruit-m2026_08	urdu	
+laga	g_fruit	year	A			IT-laga-g_fruit-year	en	
+laga	g_fruit	last_year	A			IT-laga-g_fruit-last_year	roman	
+laga	g_fruit	r2026_10_01_2026_10_15	A			IT-laga-g_fruit-r2026_10_01_2026_10_15	urdu	
+laga	g_fruit	up_to_now	A			IT-laga-g_fruit-up_to_now	roman	
+laga	g_veg	today	A			IT-laga-g_veg-today	urdu	
+laga	g_veg	yesterday	A			IT-laga-g_veg-yesterday	en	
+laga	g_veg	d2026_11_03	A			IT-laga-g_veg-d2026_11_03	roman	
+laga	g_veg	d2026_10_14	A			IT-laga-g_veg-d2026_10_14	urdu	
+laga	g_veg	week	A			IT-laga-g_veg-week	roman	
+laga	g_veg	last_week	A			IT-laga-g_veg-last_week	urdu	
+laga	g_veg	month	A			IT-laga-g_veg-month	en	
+laga	g_veg	last_month	A			IT-laga-g_veg-last_month	roman	
+laga	g_veg	m2026_09	A			IT-laga-g_veg-m2026_09	urdu	
+laga	g_veg	m2026_08	A			IT-laga-g_veg-m2026_08	roman	
+laga	g_veg	year	A			IT-laga-g_veg-year	urdu	
+laga	g_veg	last_year	A			IT-laga-g_veg-last_year	en	
+laga	g_veg	r2026_10_01_2026_10_15	A			IT-laga-g_veg-r2026_10_01_2026_10_15	roman	
+laga	g_veg	up_to_now	A			IT-laga-g_veg-up_to_now	urdu	
+laga	all	today	A			IT-laga-all-today	roman	
+laga	all	yesterday	A			IT-laga-all-yesterday	urdu	
+laga	all	d2026_11_03	A			IT-laga-all-d2026_11_03	en	
+laga	all	d2026_10_14	A			IT-laga-all-d2026_10_14	roman	
+laga	all	week	A			IT-laga-all-week	urdu	
+laga	all	last_week	A			IT-laga-all-last_week	roman	
+laga	all	month	A			IT-laga-all-month	urdu	
+laga	all	last_month	A			IT-laga-all-last_month	en	
+laga	all	m2026_09	A			IT-laga-all-m2026_09	roman	
+laga	all	m2026_08	A			IT-laga-all-m2026_08	urdu	
+laga	all	year	A			IT-laga-all-year	roman	
+laga	all	last_year	A			IT-laga-all-last_year	urdu	
+laga	all	r2026_10_01_2026_10_15	A			IT-laga-all-r2026_10_01_2026_10_15	en	
+laga	all	up_to_now	A			IT-laga-all-up_to_now	roman	
+laga	party	today	A			IT-laga-party-today	urdu	Banana
+laga	party	yesterday	A			IT-laga-party-yesterday	roman	Potato
+laga	party	d2026_11_03	A			IT-laga-party-d2026_11_03	urdu	Banana
+laga	party	d2026_10_14	A			IT-laga-party-d2026_10_14	en	Potato
+laga	party	week	A			IT-laga-party-week	roman	Banana
+laga	party	last_week	A			IT-laga-party-last_week	urdu	Potato
+laga	party	month	A			IT-laga-party-month	roman	Banana
+laga	party	last_month	A			IT-laga-party-last_month	urdu	Potato
+laga	party	m2026_09	A			IT-laga-party-m2026_09	en	Banana
+laga	party	m2026_08	A			IT-laga-party-m2026_08	roman	Potato
+laga	party	year	A			IT-laga-party-year	urdu	Banana
+laga	party	last_year	A			IT-laga-party-last_year	roman	Potato
+laga	party	r2026_10_01_2026_10_15	A			IT-laga-party-r2026_10_01_2026_10_15	urdu	Banana
+laga	party	up_to_now	A			IT-laga-party-up_to_now	en	Potato
+laga	quality	today	A			IT-laga-quality-today	roman	Banana
+laga	quality	yesterday	A			IT-laga-quality-yesterday	urdu	Apple
+laga	quality	d2026_11_03	A			IT-laga-quality-d2026_11_03	roman	Apple
+laga	quality	d2026_10_14	X		no sale line has a quality in this period			
+laga	quality	week	A			IT-laga-quality-week	urdu	Potato
+laga	quality	last_week	A			IT-laga-quality-last_week	en	Apple
+laga	quality	month	A			IT-laga-quality-month	roman	Banana
+laga	quality	last_month	A			IT-laga-quality-last_month	urdu	Onion
+laga	quality	m2026_09	A			IT-laga-quality-m2026_09	roman	Onion
+laga	quality	m2026_08	A			IT-laga-quality-m2026_08	urdu	Tomato
+laga	quality	year	A			IT-laga-quality-year	en	Grapes
+laga	quality	last_year	A			IT-laga-quality-last_year	roman	Tomato
+laga	quality	r2026_10_01_2026_10_15	A			IT-laga-quality-r2026_10_01_2026_10_15	urdu	Apple
+laga	quality	up_to_now	A			IT-laga-quality-up_to_now	roman	Potato
+laga	unknown	today	A			IT-laga-unknown-today	urdu	Capsicum
+laga	unknown	yesterday	A			IT-laga-unknown-yesterday	en	Capsicum
+laga	unknown	d2026_11_03	A			IT-laga-unknown-d2026_11_03	roman	Capsicum
+laga	unknown	d2026_10_14	A			IT-laga-unknown-d2026_10_14	urdu	Capsicum
+laga	unknown	week	A			IT-laga-unknown-week	roman	Capsicum
+laga	unknown	last_week	A			IT-laga-unknown-last_week	urdu	Capsicum
+laga	unknown	month	A			IT-laga-unknown-month	en	Capsicum
+laga	unknown	last_month	A			IT-laga-unknown-last_month	roman	Capsicum
+laga	unknown	m2026_09	A			IT-laga-unknown-m2026_09	urdu	Capsicum
+laga	unknown	m2026_08	A			IT-laga-unknown-m2026_08	roman	Capsicum
+laga	unknown	year	A			IT-laga-unknown-year	urdu	Capsicum
+laga	unknown	last_year	A			IT-laga-unknown-last_year	en	Capsicum
+laga	unknown	r2026_10_01_2026_10_15	A			IT-laga-unknown-r2026_10_01_2026_10_15	roman	Capsicum
+laga	unknown	up_to_now	A			IT-laga-unknown-up_to_now	urdu	Capsicum
+laga	zero	today	A			IT-laga-zero-today	roman	Potato
+laga	zero	yesterday	A			IT-laga-zero-yesterday	urdu	Radish
+laga	zero	d2026_11_03	A			IT-laga-zero-d2026_11_03	en	Onion
+laga	zero	d2026_10_14	A			IT-laga-zero-d2026_10_14	roman	Mosambi
+laga	zero	week	A			IT-laga-zero-week	urdu	Mango
+laga	zero	last_week	A			IT-laga-zero-last_week	roman	Banana
+laga	zero	month	A			IT-laga-zero-month	urdu	Radish
+laga	zero	last_month	A			IT-laga-zero-last_month	en	Saag
+laga	zero	m2026_09	A			IT-laga-zero-m2026_09	roman	Mosambi
+laga	zero	m2026_08	A			IT-laga-zero-m2026_08	urdu	Saag
+laga	zero	year	X		every item sold in this period			
+laga	zero	last_year	A			IT-laga-zero-last_year	roman	Grapes
+laga	zero	r2026_10_01_2026_10_15	A			IT-laga-zero-r2026_10_01_2026_10_15	urdu	Mango
+laga	zero	up_to_now	X		every item sold in this period			
+comm_total	fruit	today	A			IT-comm_total-fruit-today	roman	Banana
+comm_total	fruit	yesterday	A			IT-comm_total-fruit-yesterday	urdu	Apple
+comm_total	fruit	d2026_11_03	A			IT-comm_total-fruit-d2026_11_03	en	Apple
+comm_total	fruit	d2026_10_14	A			IT-comm_total-fruit-d2026_10_14	roman	Banana
+comm_total	fruit	week	A			IT-comm_total-fruit-week	urdu	Apple
+comm_total	fruit	last_week	A			IT-comm_total-fruit-last_week	roman	Apple
+comm_total	fruit	month	A			IT-comm_total-fruit-month	urdu	Apple
+comm_total	fruit	last_month	A			IT-comm_total-fruit-last_month	en	Banana
+comm_total	fruit	m2026_09	A			IT-comm_total-fruit-m2026_09	roman	Apple
+comm_total	fruit	m2026_08	A			IT-comm_total-fruit-m2026_08	urdu	Grapes
+comm_total	fruit	year	A			IT-comm_total-fruit-year	roman	Banana
+comm_total	fruit	last_year	A			IT-comm_total-fruit-last_year	urdu	Apple
+comm_total	fruit	r2026_10_01_2026_10_15	A			IT-comm_total-fruit-r2026_10_01_2026_10_15	en	Apple
+comm_total	fruit	up_to_now	A			IT-comm_total-fruit-up_to_now	roman	Mango
+comm_total	veg	today	A			IT-comm_total-veg-today	urdu	Potato
+comm_total	veg	yesterday	A			IT-comm_total-veg-yesterday	roman	Radish
+comm_total	veg	d2026_11_03	A			IT-comm_total-veg-d2026_11_03	urdu	Potato
+comm_total	veg	d2026_10_14	A			IT-comm_total-veg-d2026_10_14	en	Potato
+comm_total	veg	week	A			IT-comm_total-veg-week	roman	Potato
+comm_total	veg	last_week	A			IT-comm_total-veg-last_week	urdu	Potato
+comm_total	veg	month	A			IT-comm_total-veg-month	roman	Potato
+comm_total	veg	last_month	A			IT-comm_total-veg-last_month	urdu	Potato
+comm_total	veg	m2026_09	A			IT-comm_total-veg-m2026_09	en	Tomato
+comm_total	veg	m2026_08	A			IT-comm_total-veg-m2026_08	roman	Onion
+comm_total	veg	year	A			IT-comm_total-veg-year	urdu	Potato
+comm_total	veg	last_year	A			IT-comm_total-veg-last_year	roman	Radish
+comm_total	veg	r2026_10_01_2026_10_15	A			IT-comm_total-veg-r2026_10_01_2026_10_15	urdu	Radish
+comm_total	veg	up_to_now	A			IT-comm_total-veg-up_to_now	en	Onion
+comm_total	g_fruit	today	A			IT-comm_total-g_fruit-today	roman	
+comm_total	g_fruit	yesterday	A			IT-comm_total-g_fruit-yesterday	urdu	
+comm_total	g_fruit	d2026_11_03	A			IT-comm_total-g_fruit-d2026_11_03	roman	
+comm_total	g_fruit	d2026_10_14	A			IT-comm_total-g_fruit-d2026_10_14	urdu	
+comm_total	g_fruit	week	A			IT-comm_total-g_fruit-week	en	
+comm_total	g_fruit	last_week	A			IT-comm_total-g_fruit-last_week	roman	
+comm_total	g_fruit	month	A			IT-comm_total-g_fruit-month	urdu	
+comm_total	g_fruit	last_month	A			IT-comm_total-g_fruit-last_month	roman	
+comm_total	g_fruit	m2026_09	A			IT-comm_total-g_fruit-m2026_09	urdu	
+comm_total	g_fruit	m2026_08	A			IT-comm_total-g_fruit-m2026_08	en	
+comm_total	g_fruit	year	A			IT-comm_total-g_fruit-year	roman	
+comm_total	g_fruit	last_year	A			IT-comm_total-g_fruit-last_year	urdu	
+comm_total	g_fruit	r2026_10_01_2026_10_15	A			IT-comm_total-g_fruit-r2026_10_01_2026_10_15	roman	
+comm_total	g_fruit	up_to_now	A			IT-comm_total-g_fruit-up_to_now	urdu	
+comm_total	g_veg	today	A			IT-comm_total-g_veg-today	en	
+comm_total	g_veg	yesterday	A			IT-comm_total-g_veg-yesterday	roman	
+comm_total	g_veg	d2026_11_03	A			IT-comm_total-g_veg-d2026_11_03	urdu	
+comm_total	g_veg	d2026_10_14	A			IT-comm_total-g_veg-d2026_10_14	roman	
+comm_total	g_veg	week	A			IT-comm_total-g_veg-week	urdu	
+comm_total	g_veg	last_week	A			IT-comm_total-g_veg-last_week	en	
+comm_total	g_veg	month	A			IT-comm_total-g_veg-month	roman	
+comm_total	g_veg	last_month	A			IT-comm_total-g_veg-last_month	urdu	
+comm_total	g_veg	m2026_09	A			IT-comm_total-g_veg-m2026_09	roman	
+comm_total	g_veg	m2026_08	A			IT-comm_total-g_veg-m2026_08	urdu	
+comm_total	g_veg	year	A			IT-comm_total-g_veg-year	en	
+comm_total	g_veg	last_year	A			IT-comm_total-g_veg-last_year	roman	
+comm_total	g_veg	r2026_10_01_2026_10_15	A			IT-comm_total-g_veg-r2026_10_01_2026_10_15	urdu	
+comm_total	g_veg	up_to_now	A			IT-comm_total-g_veg-up_to_now	roman	
+comm_total	all	today	A			IT-comm_total-all-today	urdu	
+comm_total	all	yesterday	A			IT-comm_total-all-yesterday	en	
+comm_total	all	d2026_11_03	A			IT-comm_total-all-d2026_11_03	roman	
+comm_total	all	d2026_10_14	A			IT-comm_total-all-d2026_10_14	urdu	
+comm_total	all	week	A			IT-comm_total-all-week	roman	
+comm_total	all	last_week	A			IT-comm_total-all-last_week	urdu	
+comm_total	all	month	A			IT-comm_total-all-month	en	
+comm_total	all	last_month	A			IT-comm_total-all-last_month	roman	
+comm_total	all	m2026_09	A			IT-comm_total-all-m2026_09	urdu	
+comm_total	all	m2026_08	A			IT-comm_total-all-m2026_08	roman	
+comm_total	all	year	A			IT-comm_total-all-year	urdu	
+comm_total	all	last_year	A			IT-comm_total-all-last_year	en	
+comm_total	all	r2026_10_01_2026_10_15	A			IT-comm_total-all-r2026_10_01_2026_10_15	roman	
+comm_total	all	up_to_now	A			IT-comm_total-all-up_to_now	urdu	
+comm_total	party	today	A			IT-comm_total-party-today	roman	Potato
+comm_total	party	yesterday	A			IT-comm_total-party-yesterday	urdu	Banana
+comm_total	party	d2026_11_03	A			IT-comm_total-party-d2026_11_03	en	Potato
+comm_total	party	d2026_10_14	A			IT-comm_total-party-d2026_10_14	roman	Banana
+comm_total	party	week	A			IT-comm_total-party-week	urdu	Potato
+comm_total	party	last_week	A			IT-comm_total-party-last_week	roman	Banana
+comm_total	party	month	A			IT-comm_total-party-month	urdu	Potato
+comm_total	party	last_month	A			IT-comm_total-party-last_month	en	Banana
+comm_total	party	m2026_09	A			IT-comm_total-party-m2026_09	roman	Potato
+comm_total	party	m2026_08	A			IT-comm_total-party-m2026_08	urdu	Banana
+comm_total	party	year	A			IT-comm_total-party-year	roman	Potato
+comm_total	party	last_year	A			IT-comm_total-party-last_year	urdu	Banana
+comm_total	party	r2026_10_01_2026_10_15	A			IT-comm_total-party-r2026_10_01_2026_10_15	en	Potato
+comm_total	party	up_to_now	A			IT-comm_total-party-up_to_now	roman	Banana
+comm_total	quality	today	A			IT-comm_total-quality-today	urdu	Banana
+comm_total	quality	yesterday	A			IT-comm_total-quality-yesterday	roman	Apple
+comm_total	quality	d2026_11_03	A			IT-comm_total-quality-d2026_11_03	urdu	Apple
+comm_total	quality	d2026_10_14	X		no sale line has a quality in this period			
+comm_total	quality	week	A			IT-comm_total-quality-week	en	Banana
+comm_total	quality	last_week	A			IT-comm_total-quality-last_week	roman	Apple
+comm_total	quality	month	A			IT-comm_total-quality-month	urdu	Banana
+comm_total	quality	last_month	A			IT-comm_total-quality-last_month	roman	Onion
+comm_total	quality	m2026_09	A			IT-comm_total-quality-m2026_09	urdu	Onion
+comm_total	quality	m2026_08	A			IT-comm_total-quality-m2026_08	en	Tomato
+comm_total	quality	year	A			IT-comm_total-quality-year	roman	Potato
+comm_total	quality	last_year	A			IT-comm_total-quality-last_year	urdu	Tomato
+comm_total	quality	r2026_10_01_2026_10_15	A			IT-comm_total-quality-r2026_10_01_2026_10_15	roman	Potato
+comm_total	quality	up_to_now	A			IT-comm_total-quality-up_to_now	urdu	Radish
+comm_total	unknown	today	A			IT-comm_total-unknown-today	en	Capsicum
+comm_total	unknown	yesterday	A			IT-comm_total-unknown-yesterday	roman	Capsicum
+comm_total	unknown	d2026_11_03	A			IT-comm_total-unknown-d2026_11_03	urdu	Capsicum
+comm_total	unknown	d2026_10_14	A			IT-comm_total-unknown-d2026_10_14	roman	Capsicum
+comm_total	unknown	week	A			IT-comm_total-unknown-week	urdu	Capsicum
+comm_total	unknown	last_week	A			IT-comm_total-unknown-last_week	en	Capsicum
+comm_total	unknown	month	A			IT-comm_total-unknown-month	roman	Capsicum
+comm_total	unknown	last_month	A			IT-comm_total-unknown-last_month	urdu	Capsicum
+comm_total	unknown	m2026_09	A			IT-comm_total-unknown-m2026_09	roman	Capsicum
+comm_total	unknown	m2026_08	A			IT-comm_total-unknown-m2026_08	urdu	Capsicum
+comm_total	unknown	year	A			IT-comm_total-unknown-year	en	Capsicum
+comm_total	unknown	last_year	A			IT-comm_total-unknown-last_year	roman	Capsicum
+comm_total	unknown	r2026_10_01_2026_10_15	A			IT-comm_total-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+comm_total	unknown	up_to_now	A			IT-comm_total-unknown-up_to_now	roman	Capsicum
+comm_total	zero	today	A			IT-comm_total-zero-today	urdu	Radish
+comm_total	zero	yesterday	A			IT-comm_total-zero-yesterday	en	Tomato
+comm_total	zero	d2026_11_03	A			IT-comm_total-zero-d2026_11_03	roman	Saag
+comm_total	zero	d2026_10_14	A			IT-comm_total-zero-d2026_10_14	urdu	Mango
+comm_total	zero	week	A			IT-comm_total-zero-week	roman	Grapes
+comm_total	zero	last_week	A			IT-comm_total-zero-last_week	urdu	Mosambi
+comm_total	zero	month	A			IT-comm_total-zero-month	en	Tomato
+comm_total	zero	last_month	A			IT-comm_total-zero-last_month	roman	Mango
+comm_total	zero	m2026_09	A			IT-comm_total-zero-m2026_09	urdu	Mango
+comm_total	zero	m2026_08	A			IT-comm_total-zero-m2026_08	roman	Radish
+comm_total	zero	year	X		every item sold in this period			
+comm_total	zero	last_year	A			IT-comm_total-zero-last_year	urdu	Mango
+comm_total	zero	r2026_10_01_2026_10_15	A			IT-comm_total-zero-r2026_10_01_2026_10_15	en	Saag
+comm_total	zero	up_to_now	X		every item sold in this period			
+avg_rate	fruit	today	A			IT-avg_rate-fruit-today	urdu	Banana
+avg_rate	fruit	yesterday	A			IT-avg_rate-fruit-yesterday	en	Apple
+avg_rate	fruit	d2026_11_03	A			IT-avg_rate-fruit-d2026_11_03	roman	Apple
+avg_rate	fruit	d2026_10_14	A			IT-avg_rate-fruit-d2026_10_14	urdu	Apple
+avg_rate	fruit	week	A			IT-avg_rate-fruit-week	roman	Banana
+avg_rate	fruit	last_week	A			IT-avg_rate-fruit-last_week	urdu	Apple
+avg_rate	fruit	month	A			IT-avg_rate-fruit-month	en	Banana
+avg_rate	fruit	last_month	A			IT-avg_rate-fruit-last_month	roman	Apple
+avg_rate	fruit	m2026_09	A			IT-avg_rate-fruit-m2026_09	urdu	Grapes
+avg_rate	fruit	m2026_08	A			IT-avg_rate-fruit-m2026_08	roman	Banana
+avg_rate	fruit	year	A			IT-avg_rate-fruit-year	urdu	Apple
+avg_rate	fruit	last_year	A			IT-avg_rate-fruit-last_year	en	Mosambi
+avg_rate	fruit	r2026_10_01_2026_10_15	A			IT-avg_rate-fruit-r2026_10_01_2026_10_15	roman	Mosambi
+avg_rate	fruit	up_to_now	A			IT-avg_rate-fruit-up_to_now	urdu	Grapes
+avg_rate	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+avg_rate	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+avg_rate	veg	d2026_11_03	A			IT-avg_rate-veg-d2026_11_03	roman	Potato
+avg_rate	veg	d2026_10_14	A			IT-avg_rate-veg-d2026_10_14	urdu	Potato
+avg_rate	veg	week	A			IT-avg_rate-veg-week	en	Potato
+avg_rate	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+avg_rate	veg	month	A			IT-avg_rate-veg-month	roman	Potato
+avg_rate	veg	last_month	A			IT-avg_rate-veg-last_month	urdu	Radish
+avg_rate	veg	m2026_09	A			IT-avg_rate-veg-m2026_09	roman	Onion
+avg_rate	veg	m2026_08	A			IT-avg_rate-veg-m2026_08	urdu	Potato
+avg_rate	veg	year	A			IT-avg_rate-veg-year	en	Radish
+avg_rate	veg	last_year	A			IT-avg_rate-veg-last_year	roman	Tomato
+avg_rate	veg	r2026_10_01_2026_10_15	A			IT-avg_rate-veg-r2026_10_01_2026_10_15	urdu	Tomato
+avg_rate	veg	up_to_now	A			IT-avg_rate-veg-up_to_now	roman	Saag
+avg_rate	g_fruit	*	N		an average rate of mixed packings is not a figure of any screen (view A leaves it empty in a total row)			
+avg_rate	g_veg	*	N		an average rate of mixed packings is not a figure of any screen (view A leaves it empty in a total row)			
+avg_rate	all	*	N		an average rate of mixed packings is not a figure of any screen (view A leaves it empty in a total row)			
+avg_rate	party	today	A			IT-avg_rate-party-today	urdu	Banana
+avg_rate	party	yesterday	A			IT-avg_rate-party-yesterday	en	Potato
+avg_rate	party	d2026_11_03	A			IT-avg_rate-party-d2026_11_03	roman	Banana
+avg_rate	party	d2026_10_14	A			IT-avg_rate-party-d2026_10_14	urdu	Potato
+avg_rate	party	week	A			IT-avg_rate-party-week	roman	Banana
+avg_rate	party	last_week	A			IT-avg_rate-party-last_week	urdu	Potato
+avg_rate	party	month	A			IT-avg_rate-party-month	en	Banana
+avg_rate	party	last_month	A			IT-avg_rate-party-last_month	roman	Potato
+avg_rate	party	m2026_09	A			IT-avg_rate-party-m2026_09	urdu	Banana
+avg_rate	party	m2026_08	A			IT-avg_rate-party-m2026_08	roman	Potato
+avg_rate	party	year	A			IT-avg_rate-party-year	urdu	Banana
+avg_rate	party	last_year	A			IT-avg_rate-party-last_year	en	Potato
+avg_rate	party	r2026_10_01_2026_10_15	A			IT-avg_rate-party-r2026_10_01_2026_10_15	roman	Banana
+avg_rate	party	up_to_now	A			IT-avg_rate-party-up_to_now	urdu	Potato
+avg_rate	quality	today	A			IT-avg_rate-quality-today	roman	Banana
+avg_rate	quality	yesterday	A			IT-avg_rate-quality-yesterday	urdu	Apple
+avg_rate	quality	d2026_11_03	A			IT-avg_rate-quality-d2026_11_03	en	Apple
+avg_rate	quality	d2026_10_14	X		no sale line has a quality in this period			
+avg_rate	quality	week	A			IT-avg_rate-quality-week	roman	Banana
+avg_rate	quality	last_week	A			IT-avg_rate-quality-last_week	urdu	Apple
+avg_rate	quality	month	A			IT-avg_rate-quality-month	roman	Apple
+avg_rate	quality	last_month	A			IT-avg_rate-quality-last_month	urdu	Banana
+avg_rate	quality	m2026_09	A			IT-avg_rate-quality-m2026_09	en	Onion
+avg_rate	quality	m2026_08	A			IT-avg_rate-quality-m2026_08	roman	Onion
+avg_rate	quality	year	A			IT-avg_rate-quality-year	urdu	Potato
+avg_rate	quality	last_year	A			IT-avg_rate-quality-last_year	roman	Tomato
+avg_rate	quality	r2026_10_01_2026_10_15	A			IT-avg_rate-quality-r2026_10_01_2026_10_15	urdu	Potato
+avg_rate	quality	up_to_now	A			IT-avg_rate-quality-up_to_now	en	Radish
+avg_rate	unknown	today	A			IT-avg_rate-unknown-today	roman	Capsicum
+avg_rate	unknown	yesterday	A			IT-avg_rate-unknown-yesterday	urdu	Capsicum
+avg_rate	unknown	d2026_11_03	A			IT-avg_rate-unknown-d2026_11_03	roman	Capsicum
+avg_rate	unknown	d2026_10_14	A			IT-avg_rate-unknown-d2026_10_14	urdu	Capsicum
+avg_rate	unknown	week	A			IT-avg_rate-unknown-week	en	Capsicum
+avg_rate	unknown	last_week	A			IT-avg_rate-unknown-last_week	roman	Capsicum
+avg_rate	unknown	month	A			IT-avg_rate-unknown-month	urdu	Capsicum
+avg_rate	unknown	last_month	A			IT-avg_rate-unknown-last_month	roman	Capsicum
+avg_rate	unknown	m2026_09	A			IT-avg_rate-unknown-m2026_09	urdu	Capsicum
+avg_rate	unknown	m2026_08	A			IT-avg_rate-unknown-m2026_08	en	Capsicum
+avg_rate	unknown	year	A			IT-avg_rate-unknown-year	roman	Capsicum
+avg_rate	unknown	last_year	A			IT-avg_rate-unknown-last_year	urdu	Capsicum
+avg_rate	unknown	r2026_10_01_2026_10_15	A			IT-avg_rate-unknown-r2026_10_01_2026_10_15	roman	Capsicum
+avg_rate	unknown	up_to_now	A			IT-avg_rate-unknown-up_to_now	urdu	Capsicum
+avg_rate	zero	today	A			IT-avg_rate-zero-today	en	Tomato
+avg_rate	zero	yesterday	A			IT-avg_rate-zero-yesterday	roman	Onion
+avg_rate	zero	d2026_11_03	A			IT-avg_rate-zero-d2026_11_03	urdu	Banana
+avg_rate	zero	d2026_10_14	A			IT-avg_rate-zero-d2026_10_14	roman	Grapes
+avg_rate	zero	week	A			IT-avg_rate-zero-week	urdu	Radish
+avg_rate	zero	last_week	A			IT-avg_rate-zero-last_week	en	Mango
+avg_rate	zero	month	A			IT-avg_rate-zero-month	roman	Onion
+avg_rate	zero	last_month	A			IT-avg_rate-zero-last_month	urdu	Saag
+avg_rate	zero	m2026_09	A			IT-avg_rate-zero-m2026_09	roman	Radish
+avg_rate	zero	m2026_08	A			IT-avg_rate-zero-m2026_08	urdu	Saag
+avg_rate	zero	year	X		every item sold in this period			
+avg_rate	zero	last_year	A			IT-avg_rate-zero-last_year	en	Grapes
+avg_rate	zero	r2026_10_01_2026_10_15	A			IT-avg_rate-zero-r2026_10_01_2026_10_15	roman	Mango
+avg_rate	zero	up_to_now	X		every item sold in this period			
+last_rate	fruit	today	A			IT-last_rate-fruit-today	en	Banana
+last_rate	fruit	yesterday	A			IT-last_rate-fruit-yesterday	roman	Apple
+last_rate	fruit	d2026_11_03	A			IT-last_rate-fruit-d2026_11_03	urdu	Apple
+last_rate	fruit	d2026_10_14	A			IT-last_rate-fruit-d2026_10_14	roman	Banana
+last_rate	fruit	week	A			IT-last_rate-fruit-week	urdu	Apple
+last_rate	fruit	last_week	A			IT-last_rate-fruit-last_week	en	Apple
+last_rate	fruit	month	A			IT-last_rate-fruit-month	roman	Apple
+last_rate	fruit	last_month	A			IT-last_rate-fruit-last_month	urdu	Mosambi
+last_rate	fruit	m2026_09	A			IT-last_rate-fruit-m2026_09	roman	Banana
+last_rate	fruit	m2026_08	A			IT-last_rate-fruit-m2026_08	urdu	Apple
+last_rate	fruit	year	A			IT-last_rate-fruit-year	en	Mosambi
+last_rate	fruit	last_year	A			IT-last_rate-fruit-last_year	roman	Banana
+last_rate	fruit	r2026_10_01_2026_10_15	A			IT-last_rate-fruit-r2026_10_01_2026_10_15	urdu	Grapes
+last_rate	fruit	up_to_now	A			IT-last_rate-fruit-up_to_now	roman	Banana
+last_rate	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+last_rate	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+last_rate	veg	d2026_11_03	A			IT-last_rate-veg-d2026_11_03	urdu	Potato
+last_rate	veg	d2026_10_14	A			IT-last_rate-veg-d2026_10_14	en	Potato
+last_rate	veg	week	A			IT-last_rate-veg-week	roman	Potato
+last_rate	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+last_rate	veg	month	A			IT-last_rate-veg-month	urdu	Potato
+last_rate	veg	last_month	A			IT-last_rate-veg-last_month	roman	Tomato
+last_rate	veg	m2026_09	A			IT-last_rate-veg-m2026_09	urdu	Potato
+last_rate	veg	m2026_08	A			IT-last_rate-veg-m2026_08	en	Tomato
+last_rate	veg	year	A			IT-last_rate-veg-year	roman	Tomato
+last_rate	veg	last_year	A			IT-last_rate-veg-last_year	urdu	Onion
+last_rate	veg	r2026_10_01_2026_10_15	A			IT-last_rate-veg-r2026_10_01_2026_10_15	roman	Onion
+last_rate	veg	up_to_now	A			IT-last_rate-veg-up_to_now	urdu	Potato
+last_rate	g_fruit	*	N		a group has no single rate			
+last_rate	g_veg	*	N		a group has no single rate			
+last_rate	all	*	N		the shop has no single rate			
+last_rate	party	today	A			IT-last_rate-party-today	en	Potato
+last_rate	party	yesterday	A			IT-last_rate-party-yesterday	roman	Banana
+last_rate	party	d2026_11_03	A			IT-last_rate-party-d2026_11_03	urdu	Potato
+last_rate	party	d2026_10_14	A			IT-last_rate-party-d2026_10_14	roman	Banana
+last_rate	party	week	A			IT-last_rate-party-week	urdu	Potato
+last_rate	party	last_week	A			IT-last_rate-party-last_week	en	Banana
+last_rate	party	month	A			IT-last_rate-party-month	roman	Potato
+last_rate	party	last_month	A			IT-last_rate-party-last_month	urdu	Banana
+last_rate	party	m2026_09	A			IT-last_rate-party-m2026_09	roman	Potato
+last_rate	party	m2026_08	A			IT-last_rate-party-m2026_08	urdu	Banana
+last_rate	party	year	A			IT-last_rate-party-year	en	Potato
+last_rate	party	last_year	A			IT-last_rate-party-last_year	roman	Banana
+last_rate	party	r2026_10_01_2026_10_15	A			IT-last_rate-party-r2026_10_01_2026_10_15	urdu	Potato
+last_rate	party	up_to_now	A			IT-last_rate-party-up_to_now	roman	Banana
+last_rate	quality	today	A			IT-last_rate-quality-today	urdu	Banana
+last_rate	quality	yesterday	A			IT-last_rate-quality-yesterday	en	Apple
+last_rate	quality	d2026_11_03	A			IT-last_rate-quality-d2026_11_03	roman	Potato
+last_rate	quality	d2026_10_14	X		no sale line has a quality in this period			
+last_rate	quality	week	A			IT-last_rate-quality-week	urdu	Banana
+last_rate	quality	last_week	A			IT-last_rate-quality-last_week	roman	Apple
+last_rate	quality	month	A			IT-last_rate-quality-month	urdu	Apple
+last_rate	quality	last_month	A			IT-last_rate-quality-last_month	en	Banana
+last_rate	quality	m2026_09	A			IT-last_rate-quality-m2026_09	roman	Banana
+last_rate	quality	m2026_08	A			IT-last_rate-quality-m2026_08	urdu	Onion
+last_rate	quality	year	A			IT-last_rate-quality-year	roman	Potato
+last_rate	quality	last_year	A			IT-last_rate-quality-last_year	urdu	Onion
+last_rate	quality	r2026_10_01_2026_10_15	A			IT-last_rate-quality-r2026_10_01_2026_10_15	en	Onion
+last_rate	quality	up_to_now	A			IT-last_rate-quality-up_to_now	roman	Radish
+last_rate	unknown	today	A			IT-last_rate-unknown-today	urdu	Capsicum
+last_rate	unknown	yesterday	A			IT-last_rate-unknown-yesterday	roman	Capsicum
+last_rate	unknown	d2026_11_03	A			IT-last_rate-unknown-d2026_11_03	urdu	Capsicum
+last_rate	unknown	d2026_10_14	A			IT-last_rate-unknown-d2026_10_14	en	Capsicum
+last_rate	unknown	week	A			IT-last_rate-unknown-week	roman	Capsicum
+last_rate	unknown	last_week	A			IT-last_rate-unknown-last_week	urdu	Capsicum
+last_rate	unknown	month	A			IT-last_rate-unknown-month	roman	Capsicum
+last_rate	unknown	last_month	A			IT-last_rate-unknown-last_month	urdu	Capsicum
+last_rate	unknown	m2026_09	A			IT-last_rate-unknown-m2026_09	en	Capsicum
+last_rate	unknown	m2026_08	A			IT-last_rate-unknown-m2026_08	roman	Capsicum
+last_rate	unknown	year	A			IT-last_rate-unknown-year	urdu	Capsicum
+last_rate	unknown	last_year	A			IT-last_rate-unknown-last_year	roman	Capsicum
+last_rate	unknown	r2026_10_01_2026_10_15	A			IT-last_rate-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+last_rate	unknown	up_to_now	A			IT-last_rate-unknown-up_to_now	en	Capsicum
+last_rate	zero	today	A			IT-last_rate-zero-today	roman	Onion
+last_rate	zero	yesterday	A			IT-last_rate-zero-yesterday	urdu	Saag
+last_rate	zero	d2026_11_03	A			IT-last_rate-zero-d2026_11_03	roman	Mosambi
+last_rate	zero	d2026_10_14	A			IT-last_rate-zero-d2026_10_14	urdu	Radish
+last_rate	zero	week	A			IT-last_rate-zero-week	en	Tomato
+last_rate	zero	last_week	A			IT-last_rate-zero-last_week	roman	Grapes
+last_rate	zero	month	A			IT-last_rate-zero-month	urdu	Saag
+last_rate	zero	last_month	A			IT-last_rate-zero-last_month	roman	Mango
+last_rate	zero	m2026_09	A			IT-last_rate-zero-m2026_09	urdu	Saag
+last_rate	zero	m2026_08	A			IT-last_rate-zero-m2026_08	en	Radish
+last_rate	zero	year	X		every item sold in this period			
+last_rate	zero	last_year	A			IT-last_rate-zero-last_year	roman	Mango
+last_rate	zero	r2026_10_01_2026_10_15	A			IT-last_rate-zero-r2026_10_01_2026_10_15	urdu	Saag
+last_rate	zero	up_to_now	X		every item sold in this period			
+buyers_n	fruit	today	A			IT-buyers_n-fruit-today	roman	Banana
+buyers_n	fruit	yesterday	A			IT-buyers_n-fruit-yesterday	urdu	Apple
+buyers_n	fruit	d2026_11_03	A			IT-buyers_n-fruit-d2026_11_03	roman	Apple
+buyers_n	fruit	d2026_10_14	A			IT-buyers_n-fruit-d2026_10_14	urdu	Apple
+buyers_n	fruit	week	A			IT-buyers_n-fruit-week	en	Banana
+buyers_n	fruit	last_week	A			IT-buyers_n-fruit-last_week	roman	Apple
+buyers_n	fruit	month	A			IT-buyers_n-fruit-month	urdu	Banana
+buyers_n	fruit	last_month	A			IT-buyers_n-fruit-last_month	roman	Grapes
+buyers_n	fruit	m2026_09	A			IT-buyers_n-fruit-m2026_09	urdu	Apple
+buyers_n	fruit	m2026_08	A			IT-buyers_n-fruit-m2026_08	en	Mosambi
+buyers_n	fruit	year	A			IT-buyers_n-fruit-year	roman	Mango
+buyers_n	fruit	last_year	A			IT-buyers_n-fruit-last_year	urdu	Apple
+buyers_n	fruit	r2026_10_01_2026_10_15	A			IT-buyers_n-fruit-r2026_10_01_2026_10_15	roman	Banana
+buyers_n	fruit	up_to_now	A			IT-buyers_n-fruit-up_to_now	urdu	Apple
+buyers_n	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+buyers_n	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+buyers_n	veg	d2026_11_03	A			IT-buyers_n-veg-d2026_11_03	en	Potato
+buyers_n	veg	d2026_10_14	A			IT-buyers_n-veg-d2026_10_14	roman	Potato
+buyers_n	veg	week	A			IT-buyers_n-veg-week	urdu	Potato
+buyers_n	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+buyers_n	veg	month	A			IT-buyers_n-veg-month	roman	Potato
+buyers_n	veg	last_month	A			IT-buyers_n-veg-last_month	urdu	Onion
+buyers_n	veg	m2026_09	A			IT-buyers_n-veg-m2026_09	en	Tomato
+buyers_n	veg	m2026_08	A			IT-buyers_n-veg-m2026_08	roman	Onion
+buyers_n	veg	year	A			IT-buyers_n-veg-year	urdu	Onion
+buyers_n	veg	last_year	A			IT-buyers_n-veg-last_year	roman	Saag
+buyers_n	veg	r2026_10_01_2026_10_15	A			IT-buyers_n-veg-r2026_10_01_2026_10_15	urdu	Potato
+buyers_n	veg	up_to_now	A			IT-buyers_n-veg-up_to_now	en	Radish
+buyers_n	g_fruit	today	A			IT-buyers_n-g_fruit-today	roman	
+buyers_n	g_fruit	yesterday	A			IT-buyers_n-g_fruit-yesterday	urdu	
+buyers_n	g_fruit	d2026_11_03	A			IT-buyers_n-g_fruit-d2026_11_03	roman	
+buyers_n	g_fruit	d2026_10_14	A			IT-buyers_n-g_fruit-d2026_10_14	urdu	
+buyers_n	g_fruit	week	A			IT-buyers_n-g_fruit-week	en	
+buyers_n	g_fruit	last_week	A			IT-buyers_n-g_fruit-last_week	roman	
+buyers_n	g_fruit	month	A			IT-buyers_n-g_fruit-month	urdu	
+buyers_n	g_fruit	last_month	A			IT-buyers_n-g_fruit-last_month	roman	
+buyers_n	g_fruit	m2026_09	A			IT-buyers_n-g_fruit-m2026_09	urdu	
+buyers_n	g_fruit	m2026_08	A			IT-buyers_n-g_fruit-m2026_08	en	
+buyers_n	g_fruit	year	A			IT-buyers_n-g_fruit-year	roman	
+buyers_n	g_fruit	last_year	A			IT-buyers_n-g_fruit-last_year	urdu	
+buyers_n	g_fruit	r2026_10_01_2026_10_15	A			IT-buyers_n-g_fruit-r2026_10_01_2026_10_15	roman	
+buyers_n	g_fruit	up_to_now	A			IT-buyers_n-g_fruit-up_to_now	urdu	
+buyers_n	g_veg	today	X		nothing of vegetable sold in this period			
+buyers_n	g_veg	yesterday	X		nothing of vegetable sold in this period			
+buyers_n	g_veg	d2026_11_03	A			IT-buyers_n-g_veg-d2026_11_03	en	
+buyers_n	g_veg	d2026_10_14	A			IT-buyers_n-g_veg-d2026_10_14	roman	
+buyers_n	g_veg	week	A			IT-buyers_n-g_veg-week	urdu	
+buyers_n	g_veg	last_week	X		nothing of vegetable sold in this period			
+buyers_n	g_veg	month	A			IT-buyers_n-g_veg-month	roman	
+buyers_n	g_veg	last_month	A			IT-buyers_n-g_veg-last_month	urdu	
+buyers_n	g_veg	m2026_09	A			IT-buyers_n-g_veg-m2026_09	en	
+buyers_n	g_veg	m2026_08	A			IT-buyers_n-g_veg-m2026_08	roman	
+buyers_n	g_veg	year	A			IT-buyers_n-g_veg-year	urdu	
+buyers_n	g_veg	last_year	A			IT-buyers_n-g_veg-last_year	roman	
+buyers_n	g_veg	r2026_10_01_2026_10_15	A			IT-buyers_n-g_veg-r2026_10_01_2026_10_15	urdu	
+buyers_n	g_veg	up_to_now	A			IT-buyers_n-g_veg-up_to_now	en	
+buyers_n	all	today	A			IT-buyers_n-all-today	roman	
+buyers_n	all	yesterday	A			IT-buyers_n-all-yesterday	urdu	
+buyers_n	all	d2026_11_03	A			IT-buyers_n-all-d2026_11_03	roman	
+buyers_n	all	d2026_10_14	A			IT-buyers_n-all-d2026_10_14	urdu	
+buyers_n	all	week	A			IT-buyers_n-all-week	en	
+buyers_n	all	last_week	A			IT-buyers_n-all-last_week	roman	
+buyers_n	all	month	A			IT-buyers_n-all-month	urdu	
+buyers_n	all	last_month	A			IT-buyers_n-all-last_month	roman	
+buyers_n	all	m2026_09	A			IT-buyers_n-all-m2026_09	urdu	
+buyers_n	all	m2026_08	A			IT-buyers_n-all-m2026_08	en	
+buyers_n	all	year	A			IT-buyers_n-all-year	roman	
+buyers_n	all	last_year	A			IT-buyers_n-all-last_year	urdu	
+buyers_n	all	r2026_10_01_2026_10_15	A			IT-buyers_n-all-r2026_10_01_2026_10_15	roman	
+buyers_n	all	up_to_now	A			IT-buyers_n-all-up_to_now	urdu	
+buyers_n	party	*	X		the buyer is the party			
+buyers_n	quality	today	A			IT-buyers_n-quality-today	en	Banana
+buyers_n	quality	yesterday	A			IT-buyers_n-quality-yesterday	roman	Apple
+buyers_n	quality	d2026_11_03	A			IT-buyers_n-quality-d2026_11_03	urdu	Potato
+buyers_n	quality	d2026_10_14	X		no sale line has a quality in this period			
+buyers_n	quality	week	A			IT-buyers_n-quality-week	roman	Apple
+buyers_n	quality	last_week	A			IT-buyers_n-quality-last_week	urdu	Apple
+buyers_n	quality	month	A			IT-buyers_n-quality-month	en	Apple
+buyers_n	quality	last_month	A			IT-buyers_n-quality-last_month	roman	Banana
+buyers_n	quality	m2026_09	A			IT-buyers_n-quality-m2026_09	urdu	Banana
+buyers_n	quality	m2026_08	A			IT-buyers_n-quality-m2026_08	roman	Onion
+buyers_n	quality	year	A			IT-buyers_n-quality-year	urdu	Radish
+buyers_n	quality	last_year	A			IT-buyers_n-quality-last_year	en	Onion
+buyers_n	quality	r2026_10_01_2026_10_15	A			IT-buyers_n-quality-r2026_10_01_2026_10_15	roman	Onion
+buyers_n	quality	up_to_now	A			IT-buyers_n-quality-up_to_now	urdu	Tomato
+buyers_n	unknown	today	A			IT-buyers_n-unknown-today	roman	Capsicum
+buyers_n	unknown	yesterday	A			IT-buyers_n-unknown-yesterday	urdu	Capsicum
+buyers_n	unknown	d2026_11_03	A			IT-buyers_n-unknown-d2026_11_03	en	Capsicum
+buyers_n	unknown	d2026_10_14	A			IT-buyers_n-unknown-d2026_10_14	roman	Capsicum
+buyers_n	unknown	week	A			IT-buyers_n-unknown-week	urdu	Capsicum
+buyers_n	unknown	last_week	A			IT-buyers_n-unknown-last_week	roman	Capsicum
+buyers_n	unknown	month	A			IT-buyers_n-unknown-month	urdu	Capsicum
+buyers_n	unknown	last_month	A			IT-buyers_n-unknown-last_month	en	Capsicum
+buyers_n	unknown	m2026_09	A			IT-buyers_n-unknown-m2026_09	roman	Capsicum
+buyers_n	unknown	m2026_08	A			IT-buyers_n-unknown-m2026_08	urdu	Capsicum
+buyers_n	unknown	year	A			IT-buyers_n-unknown-year	roman	Capsicum
+buyers_n	unknown	last_year	A			IT-buyers_n-unknown-last_year	urdu	Capsicum
+buyers_n	unknown	r2026_10_01_2026_10_15	A			IT-buyers_n-unknown-r2026_10_01_2026_10_15	en	Capsicum
+buyers_n	unknown	up_to_now	A			IT-buyers_n-unknown-up_to_now	roman	Capsicum
+buyers_n	zero	today	A			IT-buyers_n-zero-today	urdu	Saag
+buyers_n	zero	yesterday	A			IT-buyers_n-zero-yesterday	roman	Banana
+buyers_n	zero	d2026_11_03	A			IT-buyers_n-zero-d2026_11_03	urdu	Mango
+buyers_n	zero	d2026_10_14	A			IT-buyers_n-zero-d2026_10_14	en	Tomato
+buyers_n	zero	week	A			IT-buyers_n-zero-week	roman	Onion
+buyers_n	zero	last_week	A			IT-buyers_n-zero-last_week	urdu	Potato
+buyers_n	zero	month	A			IT-buyers_n-zero-month	roman	Mosambi
+buyers_n	zero	last_month	A			IT-buyers_n-zero-last_month	urdu	Saag
+buyers_n	zero	m2026_09	A			IT-buyers_n-zero-m2026_09	en	Mosambi
+buyers_n	zero	m2026_08	A			IT-buyers_n-zero-m2026_08	roman	Saag
+buyers_n	zero	year	X		every item sold in this period			
+buyers_n	zero	last_year	A			IT-buyers_n-zero-last_year	urdu	Grapes
+buyers_n	zero	r2026_10_01_2026_10_15	A			IT-buyers_n-zero-r2026_10_01_2026_10_15	roman	Mango
+buyers_n	zero	up_to_now	X		every item sold in this period			
+sellers_n	fruit	today	A			IT-sellers_n-fruit-today	urdu	Banana
+sellers_n	fruit	yesterday	A			IT-sellers_n-fruit-yesterday	roman	Apple
+sellers_n	fruit	d2026_11_03	A			IT-sellers_n-fruit-d2026_11_03	urdu	Apple
+sellers_n	fruit	d2026_10_14	A			IT-sellers_n-fruit-d2026_10_14	en	Banana
+sellers_n	fruit	week	A			IT-sellers_n-fruit-week	roman	Apple
+sellers_n	fruit	last_week	A			IT-sellers_n-fruit-last_week	urdu	Apple
+sellers_n	fruit	month	A			IT-sellers_n-fruit-month	roman	Apple
+sellers_n	fruit	last_month	A			IT-sellers_n-fruit-last_month	urdu	Banana
+sellers_n	fruit	m2026_09	A			IT-sellers_n-fruit-m2026_09	en	Grapes
+sellers_n	fruit	m2026_08	A			IT-sellers_n-fruit-m2026_08	roman	Mango
+sellers_n	fruit	year	A			IT-sellers_n-fruit-year	urdu	Grapes
+sellers_n	fruit	last_year	A			IT-sellers_n-fruit-last_year	roman	Mosambi
+sellers_n	fruit	r2026_10_01_2026_10_15	A			IT-sellers_n-fruit-r2026_10_01_2026_10_15	urdu	Apple
+sellers_n	fruit	up_to_now	A			IT-sellers_n-fruit-up_to_now	en	Mosambi
+sellers_n	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+sellers_n	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+sellers_n	veg	d2026_11_03	A			IT-sellers_n-veg-d2026_11_03	roman	Potato
+sellers_n	veg	d2026_10_14	A			IT-sellers_n-veg-d2026_10_14	urdu	Potato
+sellers_n	veg	week	A			IT-sellers_n-veg-week	roman	Potato
+sellers_n	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+sellers_n	veg	month	A			IT-sellers_n-veg-month	urdu	Potato
+sellers_n	veg	last_month	A			IT-sellers_n-veg-last_month	en	Potato
+sellers_n	veg	m2026_09	A			IT-sellers_n-veg-m2026_09	roman	Onion
+sellers_n	veg	m2026_08	A			IT-sellers_n-veg-m2026_08	urdu	Potato
+sellers_n	veg	year	A			IT-sellers_n-veg-year	roman	Saag
+sellers_n	veg	last_year	A			IT-sellers_n-veg-last_year	urdu	Potato
+sellers_n	veg	r2026_10_01_2026_10_15	A			IT-sellers_n-veg-r2026_10_01_2026_10_15	en	Radish
+sellers_n	veg	up_to_now	A			IT-sellers_n-veg-up_to_now	roman	Tomato
+sellers_n	g_fruit	today	A			IT-sellers_n-g_fruit-today	urdu	
+sellers_n	g_fruit	yesterday	A			IT-sellers_n-g_fruit-yesterday	roman	
+sellers_n	g_fruit	d2026_11_03	A			IT-sellers_n-g_fruit-d2026_11_03	urdu	
+sellers_n	g_fruit	d2026_10_14	A			IT-sellers_n-g_fruit-d2026_10_14	en	
+sellers_n	g_fruit	week	A			IT-sellers_n-g_fruit-week	roman	
+sellers_n	g_fruit	last_week	A			IT-sellers_n-g_fruit-last_week	urdu	
+sellers_n	g_fruit	month	A			IT-sellers_n-g_fruit-month	roman	
+sellers_n	g_fruit	last_month	A			IT-sellers_n-g_fruit-last_month	urdu	
+sellers_n	g_fruit	m2026_09	A			IT-sellers_n-g_fruit-m2026_09	en	
+sellers_n	g_fruit	m2026_08	A			IT-sellers_n-g_fruit-m2026_08	roman	
+sellers_n	g_fruit	year	A			IT-sellers_n-g_fruit-year	urdu	
+sellers_n	g_fruit	last_year	A			IT-sellers_n-g_fruit-last_year	roman	
+sellers_n	g_fruit	r2026_10_01_2026_10_15	A			IT-sellers_n-g_fruit-r2026_10_01_2026_10_15	urdu	
+sellers_n	g_fruit	up_to_now	A			IT-sellers_n-g_fruit-up_to_now	en	
+sellers_n	g_veg	today	X		nothing of vegetable sold in this period			
+sellers_n	g_veg	yesterday	X		nothing of vegetable sold in this period			
+sellers_n	g_veg	d2026_11_03	A			IT-sellers_n-g_veg-d2026_11_03	roman	
+sellers_n	g_veg	d2026_10_14	A			IT-sellers_n-g_veg-d2026_10_14	urdu	
+sellers_n	g_veg	week	A			IT-sellers_n-g_veg-week	roman	
+sellers_n	g_veg	last_week	X		nothing of vegetable sold in this period			
+sellers_n	g_veg	month	A			IT-sellers_n-g_veg-month	urdu	
+sellers_n	g_veg	last_month	A			IT-sellers_n-g_veg-last_month	en	
+sellers_n	g_veg	m2026_09	A			IT-sellers_n-g_veg-m2026_09	roman	
+sellers_n	g_veg	m2026_08	A			IT-sellers_n-g_veg-m2026_08	urdu	
+sellers_n	g_veg	year	A			IT-sellers_n-g_veg-year	roman	
+sellers_n	g_veg	last_year	A			IT-sellers_n-g_veg-last_year	urdu	
+sellers_n	g_veg	r2026_10_01_2026_10_15	A			IT-sellers_n-g_veg-r2026_10_01_2026_10_15	en	
+sellers_n	g_veg	up_to_now	A			IT-sellers_n-g_veg-up_to_now	roman	
+sellers_n	all	today	A			IT-sellers_n-all-today	urdu	
+sellers_n	all	yesterday	A			IT-sellers_n-all-yesterday	roman	
+sellers_n	all	d2026_11_03	A			IT-sellers_n-all-d2026_11_03	urdu	
+sellers_n	all	d2026_10_14	A			IT-sellers_n-all-d2026_10_14	en	
+sellers_n	all	week	A			IT-sellers_n-all-week	roman	
+sellers_n	all	last_week	A			IT-sellers_n-all-last_week	urdu	
+sellers_n	all	month	A			IT-sellers_n-all-month	roman	
+sellers_n	all	last_month	A			IT-sellers_n-all-last_month	urdu	
+sellers_n	all	m2026_09	A			IT-sellers_n-all-m2026_09	en	
+sellers_n	all	m2026_08	A			IT-sellers_n-all-m2026_08	roman	
+sellers_n	all	year	A			IT-sellers_n-all-year	urdu	
+sellers_n	all	last_year	A			IT-sellers_n-all-last_year	roman	
+sellers_n	all	r2026_10_01_2026_10_15	A			IT-sellers_n-all-r2026_10_01_2026_10_15	urdu	
+sellers_n	all	up_to_now	A			IT-sellers_n-all-up_to_now	en	
+sellers_n	party	today	A			IT-sellers_n-party-today	roman	Potato
+sellers_n	party	yesterday	A			IT-sellers_n-party-yesterday	urdu	Banana
+sellers_n	party	d2026_11_03	A			IT-sellers_n-party-d2026_11_03	roman	Potato
+sellers_n	party	d2026_10_14	A			IT-sellers_n-party-d2026_10_14	urdu	Banana
+sellers_n	party	week	A			IT-sellers_n-party-week	en	Potato
+sellers_n	party	last_week	A			IT-sellers_n-party-last_week	roman	Banana
+sellers_n	party	month	A			IT-sellers_n-party-month	urdu	Potato
+sellers_n	party	last_month	A			IT-sellers_n-party-last_month	roman	Banana
+sellers_n	party	m2026_09	A			IT-sellers_n-party-m2026_09	urdu	Potato
+sellers_n	party	m2026_08	A			IT-sellers_n-party-m2026_08	en	Banana
+sellers_n	party	year	A			IT-sellers_n-party-year	roman	Potato
+sellers_n	party	last_year	A			IT-sellers_n-party-last_year	urdu	Banana
+sellers_n	party	r2026_10_01_2026_10_15	A			IT-sellers_n-party-r2026_10_01_2026_10_15	roman	Potato
+sellers_n	party	up_to_now	A			IT-sellers_n-party-up_to_now	urdu	Banana
+sellers_n	quality	today	A			IT-sellers_n-quality-today	en	Banana
+sellers_n	quality	yesterday	A			IT-sellers_n-quality-yesterday	roman	Apple
+sellers_n	quality	d2026_11_03	A			IT-sellers_n-quality-d2026_11_03	urdu	Potato
+sellers_n	quality	d2026_10_14	X		no sale line has a quality in this period			
+sellers_n	quality	week	A			IT-sellers_n-quality-week	roman	Apple
+sellers_n	quality	last_week	A			IT-sellers_n-quality-last_week	urdu	Apple
+sellers_n	quality	month	A			IT-sellers_n-quality-month	en	Potato
+sellers_n	quality	last_month	A			IT-sellers_n-quality-last_month	roman	Apple
+sellers_n	quality	m2026_09	A			IT-sellers_n-quality-m2026_09	urdu	Banana
+sellers_n	quality	m2026_08	A			IT-sellers_n-quality-m2026_08	roman	Banana
+sellers_n	quality	year	A			IT-sellers_n-quality-year	urdu	Radish
+sellers_n	quality	last_year	A			IT-sellers_n-quality-last_year	en	Onion
+sellers_n	quality	r2026_10_01_2026_10_15	A			IT-sellers_n-quality-r2026_10_01_2026_10_15	roman	Onion
+sellers_n	quality	up_to_now	A			IT-sellers_n-quality-up_to_now	urdu	Tomato
+sellers_n	unknown	today	A			IT-sellers_n-unknown-today	roman	Capsicum
+sellers_n	unknown	yesterday	A			IT-sellers_n-unknown-yesterday	urdu	Capsicum
+sellers_n	unknown	d2026_11_03	A			IT-sellers_n-unknown-d2026_11_03	en	Capsicum
+sellers_n	unknown	d2026_10_14	A			IT-sellers_n-unknown-d2026_10_14	roman	Capsicum
+sellers_n	unknown	week	A			IT-sellers_n-unknown-week	urdu	Capsicum
+sellers_n	unknown	last_week	A			IT-sellers_n-unknown-last_week	roman	Capsicum
+sellers_n	unknown	month	A			IT-sellers_n-unknown-month	urdu	Capsicum
+sellers_n	unknown	last_month	A			IT-sellers_n-unknown-last_month	en	Capsicum
+sellers_n	unknown	m2026_09	A			IT-sellers_n-unknown-m2026_09	roman	Capsicum
+sellers_n	unknown	m2026_08	A			IT-sellers_n-unknown-m2026_08	urdu	Capsicum
+sellers_n	unknown	year	A			IT-sellers_n-unknown-year	roman	Capsicum
+sellers_n	unknown	last_year	A			IT-sellers_n-unknown-last_year	urdu	Capsicum
+sellers_n	unknown	r2026_10_01_2026_10_15	A			IT-sellers_n-unknown-r2026_10_01_2026_10_15	en	Capsicum
+sellers_n	unknown	up_to_now	A			IT-sellers_n-unknown-up_to_now	roman	Capsicum
+sellers_n	zero	today	A			IT-sellers_n-zero-today	urdu	Apple
+sellers_n	zero	yesterday	A			IT-sellers_n-zero-yesterday	roman	Mosambi
+sellers_n	zero	d2026_11_03	A			IT-sellers_n-zero-d2026_11_03	urdu	Grapes
+sellers_n	zero	d2026_10_14	A			IT-sellers_n-zero-d2026_10_14	en	Onion
+sellers_n	zero	week	A			IT-sellers_n-zero-week	roman	Saag
+sellers_n	zero	last_week	A			IT-sellers_n-zero-last_week	urdu	Radish
+sellers_n	zero	month	A			IT-sellers_n-zero-month	roman	Mango
+sellers_n	zero	last_month	A			IT-sellers_n-zero-last_month	urdu	Mango
+sellers_n	zero	m2026_09	A			IT-sellers_n-zero-m2026_09	en	Mango
+sellers_n	zero	m2026_08	A			IT-sellers_n-zero-m2026_08	roman	Radish
+sellers_n	zero	year	X		every item sold in this period			
+sellers_n	zero	last_year	A			IT-sellers_n-zero-last_year	urdu	Mango
+sellers_n	zero	r2026_10_01_2026_10_15	A			IT-sellers_n-zero-r2026_10_01_2026_10_15	roman	Saag
+sellers_n	zero	up_to_now	X		every item sold in this period			
+top_buyer	fruit	today	A			IT-top_buyer-fruit-today	roman	Banana
+top_buyer	fruit	yesterday	A			IT-top_buyer-fruit-yesterday	urdu	Apple
+top_buyer	fruit	d2026_11_03	A			IT-top_buyer-fruit-d2026_11_03	en	Apple
+top_buyer	fruit	d2026_10_14	A			IT-top_buyer-fruit-d2026_10_14	roman	Apple
+top_buyer	fruit	week	A			IT-top_buyer-fruit-week	urdu	Banana
+top_buyer	fruit	last_week	A			IT-top_buyer-fruit-last_week	roman	Apple
+top_buyer	fruit	month	A			IT-top_buyer-fruit-month	urdu	Banana
+top_buyer	fruit	last_month	A			IT-top_buyer-fruit-last_month	en	Apple
+top_buyer	fruit	m2026_09	A			IT-top_buyer-fruit-m2026_09	roman	Banana
+top_buyer	fruit	m2026_08	A			IT-top_buyer-fruit-m2026_08	urdu	Grapes
+top_buyer	fruit	year	A			IT-top_buyer-fruit-year	roman	Banana
+top_buyer	fruit	last_year	A			IT-top_buyer-fruit-last_year	urdu	Banana
+top_buyer	fruit	r2026_10_01_2026_10_15	A			IT-top_buyer-fruit-r2026_10_01_2026_10_15	en	Mosambi
+top_buyer	fruit	up_to_now	A			IT-top_buyer-fruit-up_to_now	roman	Mango
+top_buyer	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+top_buyer	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+top_buyer	veg	d2026_11_03	A			IT-top_buyer-veg-d2026_11_03	urdu	Potato
+top_buyer	veg	d2026_10_14	A			IT-top_buyer-veg-d2026_10_14	roman	Potato
+top_buyer	veg	week	A			IT-top_buyer-veg-week	urdu	Potato
+top_buyer	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+top_buyer	veg	month	A			IT-top_buyer-veg-month	en	Potato
+top_buyer	veg	last_month	A			IT-top_buyer-veg-last_month	roman	Radish
+top_buyer	veg	m2026_09	A			IT-top_buyer-veg-m2026_09	urdu	Potato
+top_buyer	veg	m2026_08	A			IT-top_buyer-veg-m2026_08	roman	Tomato
+top_buyer	veg	year	A			IT-top_buyer-veg-year	urdu	Potato
+top_buyer	veg	last_year	A			IT-top_buyer-veg-last_year	en	Radish
+top_buyer	veg	r2026_10_01_2026_10_15	A			IT-top_buyer-veg-r2026_10_01_2026_10_15	roman	Tomato
+top_buyer	veg	up_to_now	A			IT-top_buyer-veg-up_to_now	urdu	Onion
+top_buyer	g_fruit	today	A			IT-top_buyer-g_fruit-today	roman	
+top_buyer	g_fruit	yesterday	A			IT-top_buyer-g_fruit-yesterday	urdu	
+top_buyer	g_fruit	d2026_11_03	A			IT-top_buyer-g_fruit-d2026_11_03	en	
+top_buyer	g_fruit	d2026_10_14	A			IT-top_buyer-g_fruit-d2026_10_14	roman	
+top_buyer	g_fruit	week	A			IT-top_buyer-g_fruit-week	urdu	
+top_buyer	g_fruit	last_week	A			IT-top_buyer-g_fruit-last_week	roman	
+top_buyer	g_fruit	month	A			IT-top_buyer-g_fruit-month	urdu	
+top_buyer	g_fruit	last_month	A			IT-top_buyer-g_fruit-last_month	en	
+top_buyer	g_fruit	m2026_09	A			IT-top_buyer-g_fruit-m2026_09	roman	
+top_buyer	g_fruit	m2026_08	A			IT-top_buyer-g_fruit-m2026_08	urdu	
+top_buyer	g_fruit	year	A			IT-top_buyer-g_fruit-year	roman	
+top_buyer	g_fruit	last_year	A			IT-top_buyer-g_fruit-last_year	urdu	
+top_buyer	g_fruit	r2026_10_01_2026_10_15	A			IT-top_buyer-g_fruit-r2026_10_01_2026_10_15	en	
+top_buyer	g_fruit	up_to_now	A			IT-top_buyer-g_fruit-up_to_now	roman	
+top_buyer	g_veg	today	X		nothing of vegetable sold in this period			
+top_buyer	g_veg	yesterday	X		nothing of vegetable sold in this period			
+top_buyer	g_veg	d2026_11_03	A			IT-top_buyer-g_veg-d2026_11_03	urdu	
+top_buyer	g_veg	d2026_10_14	A			IT-top_buyer-g_veg-d2026_10_14	roman	
+top_buyer	g_veg	week	A			IT-top_buyer-g_veg-week	urdu	
+top_buyer	g_veg	last_week	X		nothing of vegetable sold in this period			
+top_buyer	g_veg	month	A			IT-top_buyer-g_veg-month	en	
+top_buyer	g_veg	last_month	A			IT-top_buyer-g_veg-last_month	roman	
+top_buyer	g_veg	m2026_09	A			IT-top_buyer-g_veg-m2026_09	urdu	
+top_buyer	g_veg	m2026_08	A			IT-top_buyer-g_veg-m2026_08	roman	
+top_buyer	g_veg	year	A			IT-top_buyer-g_veg-year	urdu	
+top_buyer	g_veg	last_year	A			IT-top_buyer-g_veg-last_year	en	
+top_buyer	g_veg	r2026_10_01_2026_10_15	A			IT-top_buyer-g_veg-r2026_10_01_2026_10_15	roman	
+top_buyer	g_veg	up_to_now	A			IT-top_buyer-g_veg-up_to_now	urdu	
+top_buyer	all	today	A			IT-top_buyer-all-today	roman	
+top_buyer	all	yesterday	A			IT-top_buyer-all-yesterday	urdu	
+top_buyer	all	d2026_11_03	A			IT-top_buyer-all-d2026_11_03	en	
+top_buyer	all	d2026_10_14	A			IT-top_buyer-all-d2026_10_14	roman	
+top_buyer	all	week	A			IT-top_buyer-all-week	urdu	
+top_buyer	all	last_week	A			IT-top_buyer-all-last_week	roman	
+top_buyer	all	month	A			IT-top_buyer-all-month	urdu	
+top_buyer	all	last_month	A			IT-top_buyer-all-last_month	en	
+top_buyer	all	m2026_09	A			IT-top_buyer-all-m2026_09	roman	
+top_buyer	all	m2026_08	A			IT-top_buyer-all-m2026_08	urdu	
+top_buyer	all	year	A			IT-top_buyer-all-year	roman	
+top_buyer	all	last_year	A			IT-top_buyer-all-last_year	urdu	
+top_buyer	all	r2026_10_01_2026_10_15	A			IT-top_buyer-all-r2026_10_01_2026_10_15	en	
+top_buyer	all	up_to_now	A			IT-top_buyer-all-up_to_now	roman	
+top_buyer	party	*	X		the buyer is the party			
+top_buyer	quality	today	A			IT-top_buyer-quality-today	urdu	Banana
+top_buyer	quality	yesterday	A			IT-top_buyer-quality-yesterday	roman	Apple
+top_buyer	quality	d2026_11_03	A			IT-top_buyer-quality-d2026_11_03	urdu	Apple
+top_buyer	quality	d2026_10_14	X		no sale line has a quality in this period			
+top_buyer	quality	week	A			IT-top_buyer-quality-week	en	Apple
+top_buyer	quality	last_week	A			IT-top_buyer-quality-last_week	roman	Apple
+top_buyer	quality	month	A			IT-top_buyer-quality-month	urdu	Potato
+top_buyer	quality	last_month	A			IT-top_buyer-quality-last_month	roman	Apple
+top_buyer	quality	m2026_09	A			IT-top_buyer-quality-m2026_09	urdu	Apple
+top_buyer	quality	m2026_08	A			IT-top_buyer-quality-m2026_08	en	Banana
+top_buyer	quality	year	A			IT-top_buyer-quality-year	roman	Radish
+top_buyer	quality	last_year	A			IT-top_buyer-quality-last_year	urdu	Saag
+top_buyer	quality	r2026_10_01_2026_10_15	A			IT-top_buyer-quality-r2026_10_01_2026_10_15	roman	Banana
+top_buyer	quality	up_to_now	A			IT-top_buyer-quality-up_to_now	urdu	Tomato
+top_buyer	unknown	today	A			IT-top_buyer-unknown-today	en	Capsicum
+top_buyer	unknown	yesterday	A			IT-top_buyer-unknown-yesterday	roman	Capsicum
+top_buyer	unknown	d2026_11_03	A			IT-top_buyer-unknown-d2026_11_03	urdu	Capsicum
+top_buyer	unknown	d2026_10_14	A			IT-top_buyer-unknown-d2026_10_14	roman	Capsicum
+top_buyer	unknown	week	A			IT-top_buyer-unknown-week	urdu	Capsicum
+top_buyer	unknown	last_week	A			IT-top_buyer-unknown-last_week	en	Capsicum
+top_buyer	unknown	month	A			IT-top_buyer-unknown-month	roman	Capsicum
+top_buyer	unknown	last_month	A			IT-top_buyer-unknown-last_month	urdu	Capsicum
+top_buyer	unknown	m2026_09	A			IT-top_buyer-unknown-m2026_09	roman	Capsicum
+top_buyer	unknown	m2026_08	A			IT-top_buyer-unknown-m2026_08	urdu	Capsicum
+top_buyer	unknown	year	A			IT-top_buyer-unknown-year	en	Capsicum
+top_buyer	unknown	last_year	A			IT-top_buyer-unknown-last_year	roman	Capsicum
+top_buyer	unknown	r2026_10_01_2026_10_15	A			IT-top_buyer-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+top_buyer	unknown	up_to_now	A			IT-top_buyer-unknown-up_to_now	roman	Capsicum
+top_buyer	zero	today	A			IT-top_buyer-zero-today	urdu	Mosambi
+top_buyer	zero	yesterday	A			IT-top_buyer-zero-yesterday	en	Mango
+top_buyer	zero	d2026_11_03	A			IT-top_buyer-zero-d2026_11_03	roman	Radish
+top_buyer	zero	d2026_10_14	A			IT-top_buyer-zero-d2026_10_14	urdu	Saag
+top_buyer	zero	week	A			IT-top_buyer-zero-week	roman	Mosambi
+top_buyer	zero	last_week	A			IT-top_buyer-zero-last_week	urdu	Tomato
+top_buyer	zero	month	A			IT-top_buyer-zero-month	en	Grapes
+top_buyer	zero	last_month	A			IT-top_buyer-zero-last_month	roman	Saag
+top_buyer	zero	m2026_09	A			IT-top_buyer-zero-m2026_09	urdu	Radish
+top_buyer	zero	m2026_08	A			IT-top_buyer-zero-m2026_08	roman	Saag
+top_buyer	zero	year	X		every item sold in this period			
+top_buyer	zero	last_year	A			IT-top_buyer-zero-last_year	urdu	Grapes
+top_buyer	zero	r2026_10_01_2026_10_15	A			IT-top_buyer-zero-r2026_10_01_2026_10_15	en	Mango
+top_buyer	zero	up_to_now	X		every item sold in this period			
+top_seller	fruit	today	A			IT-top_seller-fruit-today	urdu	Banana
+top_seller	fruit	yesterday	A			IT-top_seller-fruit-yesterday	en	Apple
+top_seller	fruit	d2026_11_03	A			IT-top_seller-fruit-d2026_11_03	roman	Apple
+top_seller	fruit	d2026_10_14	A			IT-top_seller-fruit-d2026_10_14	urdu	Banana
+top_seller	fruit	week	A			IT-top_seller-fruit-week	roman	Apple
+top_seller	fruit	last_week	A			IT-top_seller-fruit-last_week	urdu	Apple
+top_seller	fruit	month	A			IT-top_seller-fruit-month	en	Apple
+top_seller	fruit	last_month	A			IT-top_seller-fruit-last_month	roman	Mosambi
+top_seller	fruit	m2026_09	A			IT-top_seller-fruit-m2026_09	urdu	Apple
+top_seller	fruit	m2026_08	A			IT-top_seller-fruit-m2026_08	roman	Banana
+top_seller	fruit	year	A			IT-top_seller-fruit-year	urdu	Apple
+top_seller	fruit	last_year	A			IT-top_seller-fruit-last_year	en	Apple
+top_seller	fruit	r2026_10_01_2026_10_15	A			IT-top_seller-fruit-r2026_10_01_2026_10_15	roman	Grapes
+top_seller	fruit	up_to_now	A			IT-top_seller-fruit-up_to_now	urdu	Grapes
+top_seller	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+top_seller	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+top_seller	veg	d2026_11_03	A			IT-top_seller-veg-d2026_11_03	roman	Potato
+top_seller	veg	d2026_10_14	A			IT-top_seller-veg-d2026_10_14	urdu	Potato
+top_seller	veg	week	A			IT-top_seller-veg-week	en	Potato
+top_seller	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+top_seller	veg	month	A			IT-top_seller-veg-month	roman	Potato
+top_seller	veg	last_month	A			IT-top_seller-veg-last_month	urdu	Tomato
+top_seller	veg	m2026_09	A			IT-top_seller-veg-m2026_09	roman	Tomato
+top_seller	veg	m2026_08	A			IT-top_seller-veg-m2026_08	urdu	Onion
+top_seller	veg	year	A			IT-top_seller-veg-year	en	Radish
+top_seller	veg	last_year	A			IT-top_seller-veg-last_year	roman	Tomato
+top_seller	veg	r2026_10_01_2026_10_15	A			IT-top_seller-veg-r2026_10_01_2026_10_15	urdu	Onion
+top_seller	veg	up_to_now	A			IT-top_seller-veg-up_to_now	roman	Saag
+top_seller	g_fruit	today	A			IT-top_seller-g_fruit-today	urdu	
+top_seller	g_fruit	yesterday	A			IT-top_seller-g_fruit-yesterday	en	
+top_seller	g_fruit	d2026_11_03	A			IT-top_seller-g_fruit-d2026_11_03	roman	
+top_seller	g_fruit	d2026_10_14	A			IT-top_seller-g_fruit-d2026_10_14	urdu	
+top_seller	g_fruit	week	A			IT-top_seller-g_fruit-week	roman	
+top_seller	g_fruit	last_week	A			IT-top_seller-g_fruit-last_week	urdu	
+top_seller	g_fruit	month	A			IT-top_seller-g_fruit-month	en	
+top_seller	g_fruit	last_month	A			IT-top_seller-g_fruit-last_month	roman	
+top_seller	g_fruit	m2026_09	A			IT-top_seller-g_fruit-m2026_09	urdu	
+top_seller	g_fruit	m2026_08	A			IT-top_seller-g_fruit-m2026_08	roman	
+top_seller	g_fruit	year	A			IT-top_seller-g_fruit-year	urdu	
+top_seller	g_fruit	last_year	A			IT-top_seller-g_fruit-last_year	en	
+top_seller	g_fruit	r2026_10_01_2026_10_15	A			IT-top_seller-g_fruit-r2026_10_01_2026_10_15	roman	
+top_seller	g_fruit	up_to_now	A			IT-top_seller-g_fruit-up_to_now	urdu	
+top_seller	g_veg	today	X		nothing of vegetable sold in this period			
+top_seller	g_veg	yesterday	X		nothing of vegetable sold in this period			
+top_seller	g_veg	d2026_11_03	A			IT-top_seller-g_veg-d2026_11_03	roman	
+top_seller	g_veg	d2026_10_14	A			IT-top_seller-g_veg-d2026_10_14	urdu	
+top_seller	g_veg	week	A			IT-top_seller-g_veg-week	en	
+top_seller	g_veg	last_week	X		nothing of vegetable sold in this period			
+top_seller	g_veg	month	A			IT-top_seller-g_veg-month	roman	
+top_seller	g_veg	last_month	A			IT-top_seller-g_veg-last_month	urdu	
+top_seller	g_veg	m2026_09	A			IT-top_seller-g_veg-m2026_09	roman	
+top_seller	g_veg	m2026_08	A			IT-top_seller-g_veg-m2026_08	urdu	
+top_seller	g_veg	year	A			IT-top_seller-g_veg-year	en	
+top_seller	g_veg	last_year	A			IT-top_seller-g_veg-last_year	roman	
+top_seller	g_veg	r2026_10_01_2026_10_15	A			IT-top_seller-g_veg-r2026_10_01_2026_10_15	urdu	
+top_seller	g_veg	up_to_now	A			IT-top_seller-g_veg-up_to_now	roman	
+top_seller	all	today	A			IT-top_seller-all-today	urdu	
+top_seller	all	yesterday	A			IT-top_seller-all-yesterday	en	
+top_seller	all	d2026_11_03	A			IT-top_seller-all-d2026_11_03	roman	
+top_seller	all	d2026_10_14	A			IT-top_seller-all-d2026_10_14	urdu	
+top_seller	all	week	A			IT-top_seller-all-week	roman	
+top_seller	all	last_week	A			IT-top_seller-all-last_week	urdu	
+top_seller	all	month	A			IT-top_seller-all-month	en	
+top_seller	all	last_month	A			IT-top_seller-all-last_month	roman	
+top_seller	all	m2026_09	A			IT-top_seller-all-m2026_09	urdu	
+top_seller	all	m2026_08	A			IT-top_seller-all-m2026_08	roman	
+top_seller	all	year	A			IT-top_seller-all-year	urdu	
+top_seller	all	last_year	A			IT-top_seller-all-last_year	en	
+top_seller	all	r2026_10_01_2026_10_15	A			IT-top_seller-all-r2026_10_01_2026_10_15	roman	
+top_seller	all	up_to_now	A			IT-top_seller-all-up_to_now	urdu	
+top_seller	party	today	A			IT-top_seller-party-today	roman	Potato
+top_seller	party	yesterday	A			IT-top_seller-party-yesterday	urdu	Banana
+top_seller	party	d2026_11_03	A			IT-top_seller-party-d2026_11_03	en	Potato
+top_seller	party	d2026_10_14	A			IT-top_seller-party-d2026_10_14	roman	Banana
+top_seller	party	week	A			IT-top_seller-party-week	urdu	Potato
+top_seller	party	last_week	A			IT-top_seller-party-last_week	roman	Banana
+top_seller	party	month	A			IT-top_seller-party-month	urdu	Potato
+top_seller	party	last_month	A			IT-top_seller-party-last_month	en	Banana
+top_seller	party	m2026_09	A			IT-top_seller-party-m2026_09	roman	Potato
+top_seller	party	m2026_08	A			IT-top_seller-party-m2026_08	urdu	Banana
+top_seller	party	year	A			IT-top_seller-party-year	roman	Potato
+top_seller	party	last_year	A			IT-top_seller-party-last_year	urdu	Banana
+top_seller	party	r2026_10_01_2026_10_15	A			IT-top_seller-party-r2026_10_01_2026_10_15	en	Potato
+top_seller	party	up_to_now	A			IT-top_seller-party-up_to_now	roman	Banana
+top_seller	quality	today	A			IT-top_seller-quality-today	urdu	Banana
+top_seller	quality	yesterday	A			IT-top_seller-quality-yesterday	roman	Apple
+top_seller	quality	d2026_11_03	A			IT-top_seller-quality-d2026_11_03	urdu	Apple
+top_seller	quality	d2026_10_14	X		no sale line has a quality in this period			
+top_seller	quality	week	A			IT-top_seller-quality-week	en	Potato
+top_seller	quality	last_week	A			IT-top_seller-quality-last_week	roman	Apple
+top_seller	quality	month	A			IT-top_seller-quality-month	urdu	Potato
+top_seller	quality	last_month	A			IT-top_seller-quality-last_month	roman	Apple
+top_seller	quality	m2026_09	A			IT-top_seller-quality-m2026_09	urdu	Apple
+top_seller	quality	m2026_08	A			IT-top_seller-quality-m2026_08	en	Banana
+top_seller	quality	year	A			IT-top_seller-quality-year	roman	Tomato
+top_seller	quality	last_year	A			IT-top_seller-quality-last_year	urdu	Saag
+top_seller	quality	r2026_10_01_2026_10_15	A			IT-top_seller-quality-r2026_10_01_2026_10_15	roman	Banana
+top_seller	quality	up_to_now	A			IT-top_seller-quality-up_to_now	urdu	Onion
+top_seller	unknown	today	A			IT-top_seller-unknown-today	en	Capsicum
+top_seller	unknown	yesterday	A			IT-top_seller-unknown-yesterday	roman	Capsicum
+top_seller	unknown	d2026_11_03	A			IT-top_seller-unknown-d2026_11_03	urdu	Capsicum
+top_seller	unknown	d2026_10_14	A			IT-top_seller-unknown-d2026_10_14	roman	Capsicum
+top_seller	unknown	week	A			IT-top_seller-unknown-week	urdu	Capsicum
+top_seller	unknown	last_week	A			IT-top_seller-unknown-last_week	en	Capsicum
+top_seller	unknown	month	A			IT-top_seller-unknown-month	roman	Capsicum
+top_seller	unknown	last_month	A			IT-top_seller-unknown-last_month	urdu	Capsicum
+top_seller	unknown	m2026_09	A			IT-top_seller-unknown-m2026_09	roman	Capsicum
+top_seller	unknown	m2026_08	A			IT-top_seller-unknown-m2026_08	urdu	Capsicum
+top_seller	unknown	year	A			IT-top_seller-unknown-year	en	Capsicum
+top_seller	unknown	last_year	A			IT-top_seller-unknown-last_year	roman	Capsicum
+top_seller	unknown	r2026_10_01_2026_10_15	A			IT-top_seller-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+top_seller	unknown	up_to_now	A			IT-top_seller-unknown-up_to_now	roman	Capsicum
+top_seller	zero	today	A			IT-top_seller-zero-today	urdu	Mango
+top_seller	zero	yesterday	A			IT-top_seller-zero-yesterday	en	Grapes
+top_seller	zero	d2026_11_03	A			IT-top_seller-zero-d2026_11_03	roman	Tomato
+top_seller	zero	d2026_10_14	A			IT-top_seller-zero-d2026_10_14	urdu	Mosambi
+top_seller	zero	week	A			IT-top_seller-zero-week	roman	Mango
+top_seller	zero	last_week	A			IT-top_seller-zero-last_week	urdu	Onion
+top_seller	zero	month	A			IT-top_seller-zero-month	en	Radish
+top_seller	zero	last_month	A			IT-top_seller-zero-last_month	roman	Mango
+top_seller	zero	m2026_09	A			IT-top_seller-zero-m2026_09	urdu	Saag
+top_seller	zero	m2026_08	A			IT-top_seller-zero-m2026_08	roman	Radish
+top_seller	zero	year	X		every item sold in this period			
+top_seller	zero	last_year	A			IT-top_seller-zero-last_year	urdu	Mango
+top_seller	zero	r2026_10_01_2026_10_15	A			IT-top_seller-zero-r2026_10_01_2026_10_15	en	Saag
+top_seller	zero	up_to_now	X		every item sold in this period			
+rank	fruit	today	A			IT-rank-fruit-today	en	Banana
+rank	fruit	yesterday	A			IT-rank-fruit-yesterday	roman	Apple
+rank	fruit	d2026_11_03	A			IT-rank-fruit-d2026_11_03	urdu	Apple
+rank	fruit	d2026_10_14	A			IT-rank-fruit-d2026_10_14	roman	Apple
+rank	fruit	week	A			IT-rank-fruit-week	urdu	Banana
+rank	fruit	last_week	A			IT-rank-fruit-last_week	en	Apple
+rank	fruit	month	A			IT-rank-fruit-month	roman	Banana
+rank	fruit	last_month	A			IT-rank-fruit-last_month	urdu	Grapes
+rank	fruit	m2026_09	A			IT-rank-fruit-m2026_09	roman	Grapes
+rank	fruit	m2026_08	A			IT-rank-fruit-m2026_08	urdu	Apple
+rank	fruit	year	A			IT-rank-fruit-year	en	Mosambi
+rank	fruit	last_year	A			IT-rank-fruit-last_year	roman	Mosambi
+rank	fruit	r2026_10_01_2026_10_15	A			IT-rank-fruit-r2026_10_01_2026_10_15	urdu	Banana
+rank	fruit	up_to_now	A			IT-rank-fruit-up_to_now	roman	Banana
+rank	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+rank	veg	yesterday	X		no vegetable item sold in this period (the zero subject holds it)			
+rank	veg	d2026_11_03	A			IT-rank-veg-d2026_11_03	urdu	Potato
+rank	veg	d2026_10_14	A			IT-rank-veg-d2026_10_14	en	Potato
+rank	veg	week	A			IT-rank-veg-week	roman	Potato
+rank	veg	last_week	X		no vegetable item sold in this period (the zero subject holds it)			
+rank	veg	month	A			IT-rank-veg-month	urdu	Potato
+rank	veg	last_month	A			IT-rank-veg-last_month	roman	Onion
+rank	veg	m2026_09	A			IT-rank-veg-m2026_09	urdu	Onion
+rank	veg	m2026_08	A			IT-rank-veg-m2026_08	en	Potato
+rank	veg	year	A			IT-rank-veg-year	roman	Tomato
+rank	veg	last_year	A			IT-rank-veg-last_year	urdu	Onion
+rank	veg	r2026_10_01_2026_10_15	A			IT-rank-veg-r2026_10_01_2026_10_15	roman	Potato
+rank	veg	up_to_now	A			IT-rank-veg-up_to_now	urdu	Potato
+rank	g_fruit	*	N		a group is not an item (the best item of a group is top_item)			
+rank	g_veg	*	N		a group is not an item (the best item of a group is top_item)			
+rank	all	*	X		the shop has no rank among items			
+rank	party	*	X		a rank among items is of the shop, not of one buyer			
+rank	quality	*	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+rank	unknown	today	A			IT-rank-unknown-today	en	Capsicum
+rank	unknown	yesterday	A			IT-rank-unknown-yesterday	roman	Capsicum
+rank	unknown	d2026_11_03	A			IT-rank-unknown-d2026_11_03	urdu	Capsicum
+rank	unknown	d2026_10_14	A			IT-rank-unknown-d2026_10_14	roman	Capsicum
+rank	unknown	week	A			IT-rank-unknown-week	urdu	Capsicum
+rank	unknown	last_week	A			IT-rank-unknown-last_week	en	Capsicum
+rank	unknown	month	A			IT-rank-unknown-month	roman	Capsicum
+rank	unknown	last_month	A			IT-rank-unknown-last_month	urdu	Capsicum
+rank	unknown	m2026_09	A			IT-rank-unknown-m2026_09	roman	Capsicum
+rank	unknown	m2026_08	A			IT-rank-unknown-m2026_08	urdu	Capsicum
+rank	unknown	year	A			IT-rank-unknown-year	en	Capsicum
+rank	unknown	last_year	A			IT-rank-unknown-last_year	roman	Capsicum
+rank	unknown	r2026_10_01_2026_10_15	A			IT-rank-unknown-r2026_10_01_2026_10_15	urdu	Capsicum
+rank	unknown	up_to_now	A			IT-rank-unknown-up_to_now	roman	Capsicum
+rank	zero	today	A			IT-rank-zero-today	urdu	Grapes
+rank	zero	yesterday	A			IT-rank-zero-yesterday	en	Potato
+rank	zero	d2026_11_03	A			IT-rank-zero-d2026_11_03	roman	Onion
+rank	zero	d2026_10_14	A			IT-rank-zero-d2026_10_14	urdu	Mango
+rank	zero	week	A			IT-rank-zero-week	roman	Grapes
+rank	zero	last_week	A			IT-rank-zero-last_week	urdu	Saag
+rank	zero	month	A			IT-rank-zero-month	en	Tomato
+rank	zero	last_month	A			IT-rank-zero-last_month	roman	Saag
+rank	zero	m2026_09	A			IT-rank-zero-m2026_09	urdu	Mosambi
+rank	zero	m2026_08	A			IT-rank-zero-m2026_08	roman	Saag
+rank	zero	year	X		every item sold in this period			
+rank	zero	last_year	A			IT-rank-zero-last_year	urdu	Grapes
+rank	zero	r2026_10_01_2026_10_15	A			IT-rank-zero-r2026_10_01_2026_10_15	en	Mango
+rank	zero	up_to_now	X		every item sold in this period			
+top_item	fruit	*	X		one item has no top item			
+top_item	veg	*	X		one item has no top item			
+top_item	g_fruit	today	A			IT-top_item-g_fruit-today	roman	
+top_item	g_fruit	yesterday	A			IT-top_item-g_fruit-yesterday	urdu	
+top_item	g_fruit	d2026_11_03	A			IT-top_item-g_fruit-d2026_11_03	roman	
+top_item	g_fruit	d2026_10_14	A			IT-top_item-g_fruit-d2026_10_14	urdu	
+top_item	g_fruit	week	A			IT-top_item-g_fruit-week	en	
+top_item	g_fruit	last_week	A			IT-top_item-g_fruit-last_week	roman	
+top_item	g_fruit	month	A			IT-top_item-g_fruit-month	urdu	
+top_item	g_fruit	last_month	A			IT-top_item-g_fruit-last_month	roman	
+top_item	g_fruit	m2026_09	A			IT-top_item-g_fruit-m2026_09	urdu	
+top_item	g_fruit	m2026_08	A			IT-top_item-g_fruit-m2026_08	en	
+top_item	g_fruit	year	A			IT-top_item-g_fruit-year	roman	
+top_item	g_fruit	last_year	A			IT-top_item-g_fruit-last_year	urdu	
+top_item	g_fruit	r2026_10_01_2026_10_15	A			IT-top_item-g_fruit-r2026_10_01_2026_10_15	roman	
+top_item	g_fruit	up_to_now	A			IT-top_item-g_fruit-up_to_now	urdu	
+top_item	g_veg	today	X		nothing of vegetable sold in this period			
+top_item	g_veg	yesterday	X		nothing of vegetable sold in this period			
+top_item	g_veg	d2026_11_03	A			IT-top_item-g_veg-d2026_11_03	en	
+top_item	g_veg	d2026_10_14	A			IT-top_item-g_veg-d2026_10_14	roman	
+top_item	g_veg	week	A			IT-top_item-g_veg-week	urdu	
+top_item	g_veg	last_week	X		nothing of vegetable sold in this period			
+top_item	g_veg	month	A			IT-top_item-g_veg-month	roman	
+top_item	g_veg	last_month	A			IT-top_item-g_veg-last_month	urdu	
+top_item	g_veg	m2026_09	A			IT-top_item-g_veg-m2026_09	en	
+top_item	g_veg	m2026_08	A			IT-top_item-g_veg-m2026_08	roman	
+top_item	g_veg	year	A			IT-top_item-g_veg-year	urdu	
+top_item	g_veg	last_year	A			IT-top_item-g_veg-last_year	roman	
+top_item	g_veg	r2026_10_01_2026_10_15	A			IT-top_item-g_veg-r2026_10_01_2026_10_15	urdu	
+top_item	g_veg	up_to_now	A			IT-top_item-g_veg-up_to_now	en	
+top_item	all	today	A			IT-top_item-all-today	roman	
+top_item	all	yesterday	A			IT-top_item-all-yesterday	urdu	
+top_item	all	d2026_11_03	A			IT-top_item-all-d2026_11_03	roman	
+top_item	all	d2026_10_14	A			IT-top_item-all-d2026_10_14	urdu	
+top_item	all	week	A			IT-top_item-all-week	en	
+top_item	all	last_week	A			IT-top_item-all-last_week	roman	
+top_item	all	month	A			IT-top_item-all-month	urdu	
+top_item	all	last_month	A			IT-top_item-all-last_month	roman	
+top_item	all	m2026_09	A			IT-top_item-all-m2026_09	urdu	
+top_item	all	m2026_08	A			IT-top_item-all-m2026_08	en	
+top_item	all	year	A			IT-top_item-all-year	roman	
+top_item	all	last_year	A			IT-top_item-all-last_year	urdu	
+top_item	all	r2026_10_01_2026_10_15	A			IT-top_item-all-r2026_10_01_2026_10_15	roman	
+top_item	all	up_to_now	A			IT-top_item-all-up_to_now	urdu	
+top_item	party	*	X		one item has no top item			
+top_item	quality	*	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+top_item	unknown	*	X		a group question			
+top_item	zero	*	X		a group question			
+vs	fruit	today	A			IT-vs-fruit-today	urdu	Banana
+vs	fruit	yesterday	A			IT-vs-fruit-yesterday	roman	Apple
+vs	fruit	d2026_10_14	A			IT-vs-fruit-d2026_10_14	urdu	Banana
+vs	fruit	week	A			IT-vs-fruit-week	en	Apple
+vs	fruit	last_week	A			IT-vs-fruit-last_week	roman	Banana
+vs	fruit	month	A			IT-vs-fruit-month	urdu	Grapes
+vs	fruit	last_month	A			IT-vs-fruit-last_month	roman	Banana
+vs	fruit	m2026_09	A			IT-vs-fruit-m2026_09	urdu	Apple
+vs	fruit	year	A			IT-vs-fruit-year	en	Mosambi
+vs	fruit	last_year	A			IT-vs-fruit-last_year	roman	Mosambi
+vs	fruit	r2026_10_01_2026_10_15	A			IT-vs-fruit-r2026_10_01_2026_10_15	urdu	Banana
+vs	veg	today	X		no vegetable item sold in this period (the zero subject holds it)			
+vs	veg	yesterday	A			IT-vs-veg-yesterday	roman	Potato
+vs	veg	d2026_10_14	A			IT-vs-veg-d2026_10_14	urdu	Potato
+vs	veg	week	A			IT-vs-veg-week	en	Potato
+vs	veg	last_week	A			IT-vs-veg-last_week	roman	Tomato
+vs	veg	month	A			IT-vs-veg-month	urdu	Onion
+vs	veg	last_month	A			IT-vs-veg-last_month	roman	Potato
+vs	veg	m2026_09	A			IT-vs-veg-m2026_09	urdu	Potato
+vs	veg	year	A			IT-vs-veg-year	en	Tomato
+vs	veg	last_year	A			IT-vs-veg-last_year	roman	Onion
+vs	veg	r2026_10_01_2026_10_15	A			IT-vs-veg-r2026_10_01_2026_10_15	urdu	Potato
+vs	g_fruit	today	A			IT-vs-g_fruit-today	roman	
+vs	g_fruit	yesterday	A			IT-vs-g_fruit-yesterday	urdu	
+vs	g_fruit	d2026_10_14	A			IT-vs-g_fruit-d2026_10_14	en	
+vs	g_fruit	week	A			IT-vs-g_fruit-week	roman	
+vs	g_fruit	last_week	A			IT-vs-g_fruit-last_week	urdu	
+vs	g_fruit	month	A			IT-vs-g_fruit-month	roman	
+vs	g_fruit	last_month	A			IT-vs-g_fruit-last_month	urdu	
+vs	g_fruit	m2026_09	A			IT-vs-g_fruit-m2026_09	en	
+vs	g_fruit	year	A			IT-vs-g_fruit-year	roman	
+vs	g_fruit	last_year	A			IT-vs-g_fruit-last_year	urdu	
+vs	g_fruit	r2026_10_01_2026_10_15	A			IT-vs-g_fruit-r2026_10_01_2026_10_15	roman	
+vs	g_veg	today	X		nothing of vegetable sold in this period			
+vs	g_veg	yesterday	A			IT-vs-g_veg-yesterday	urdu	
+vs	g_veg	d2026_10_14	A			IT-vs-g_veg-d2026_10_14	en	
+vs	g_veg	week	A			IT-vs-g_veg-week	roman	
+vs	g_veg	last_week	A			IT-vs-g_veg-last_week	urdu	
+vs	g_veg	month	A			IT-vs-g_veg-month	roman	
+vs	g_veg	last_month	A			IT-vs-g_veg-last_month	urdu	
+vs	g_veg	m2026_09	A			IT-vs-g_veg-m2026_09	en	
+vs	g_veg	year	A			IT-vs-g_veg-year	roman	
+vs	g_veg	last_year	A			IT-vs-g_veg-last_year	urdu	
+vs	g_veg	r2026_10_01_2026_10_15	A			IT-vs-g_veg-r2026_10_01_2026_10_15	roman	
+vs	all	today	A			IT-vs-all-today	urdu	
+vs	all	yesterday	A			IT-vs-all-yesterday	en	
+vs	all	d2026_10_14	A			IT-vs-all-d2026_10_14	roman	
+vs	all	week	A			IT-vs-all-week	urdu	
+vs	all	last_week	A			IT-vs-all-last_week	roman	
+vs	all	month	A			IT-vs-all-month	urdu	
+vs	all	last_month	A			IT-vs-all-last_month	en	
+vs	all	m2026_09	A			IT-vs-all-m2026_09	roman	
+vs	all	year	A			IT-vs-all-year	urdu	
+vs	all	last_year	A			IT-vs-all-last_year	roman	
+vs	all	r2026_10_01_2026_10_15	A			IT-vs-all-r2026_10_01_2026_10_15	urdu	
+vs	party	today	A			IT-vs-party-today	en	Banana
+vs	party	yesterday	A			IT-vs-party-yesterday	roman	Potato
+vs	party	d2026_10_14	A			IT-vs-party-d2026_10_14	urdu	Banana
+vs	party	week	A			IT-vs-party-week	roman	Potato
+vs	party	last_week	A			IT-vs-party-last_week	urdu	Banana
+vs	party	month	A			IT-vs-party-month	en	Potato
+vs	party	last_month	A			IT-vs-party-last_month	roman	Banana
+vs	party	m2026_09	A			IT-vs-party-m2026_09	urdu	Potato
+vs	party	year	A			IT-vs-party-year	roman	Banana
+vs	party	last_year	A			IT-vs-party-last_year	urdu	Potato
+vs	party	r2026_10_01_2026_10_15	A			IT-vs-party-r2026_10_01_2026_10_15	en	Banana
+vs	quality	*	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+vs	unknown	today	A			IT-vs-unknown-today	roman	Capsicum
+vs	unknown	yesterday	A			IT-vs-unknown-yesterday	urdu	Capsicum
+vs	unknown	d2026_10_14	A			IT-vs-unknown-d2026_10_14	roman	Capsicum
+vs	unknown	week	A			IT-vs-unknown-week	urdu	Capsicum
+vs	unknown	last_week	A			IT-vs-unknown-last_week	en	Capsicum
+vs	unknown	month	A			IT-vs-unknown-month	roman	Capsicum
+vs	unknown	last_month	A			IT-vs-unknown-last_month	urdu	Capsicum
+vs	unknown	m2026_09	A			IT-vs-unknown-m2026_09	roman	Capsicum
+vs	unknown	year	A			IT-vs-unknown-year	urdu	Capsicum
+vs	unknown	last_year	A			IT-vs-unknown-last_year	en	Capsicum
+vs	unknown	r2026_10_01_2026_10_15	A			IT-vs-unknown-r2026_10_01_2026_10_15	roman	Capsicum
+vs	zero	today	A			IT-vs-zero-today	urdu	Radish
+vs	zero	yesterday	A			IT-vs-zero-yesterday	roman	Tomato
+vs	zero	d2026_10_14	A			IT-vs-zero-d2026_10_14	urdu	Grapes
+vs	zero	week	A			IT-vs-zero-week	en	Radish
+vs	zero	last_week	A			IT-vs-zero-last_week	roman	Banana
+vs	zero	month	A			IT-vs-zero-month	urdu	Onion
+vs	zero	last_month	A			IT-vs-zero-last_month	roman	Mango
+vs	zero	m2026_09	A			IT-vs-zero-m2026_09	urdu	Mango
+vs	zero	year	X		every item sold in this period			
+vs	zero	last_year	A			IT-vs-zero-last_year	en	Grapes
+vs	zero	r2026_10_01_2026_10_15	A			IT-vs-zero-r2026_10_01_2026_10_15	roman	Mango
+best_month	fruit	year	A			IT-best_month-fruit-year	roman	Banana
+best_month	fruit	last_year	A			IT-best_month-fruit-last_year	urdu	Apple
+best_month	fruit	up_to_now	A			IT-best_month-fruit-up_to_now	en	Mosambi
+best_month	veg	year	A			IT-best_month-veg-year	roman	Potato
+best_month	veg	last_year	A			IT-best_month-veg-last_year	urdu	Radish
+best_month	veg	up_to_now	A			IT-best_month-veg-up_to_now	roman	Tomato
+best_month	g_fruit	year	A			IT-best_month-g_fruit-year	urdu	
+best_month	g_fruit	last_year	A			IT-best_month-g_fruit-last_year	en	
+best_month	g_fruit	up_to_now	A			IT-best_month-g_fruit-up_to_now	roman	
+best_month	g_veg	year	A			IT-best_month-g_veg-year	urdu	
+best_month	g_veg	last_year	A			IT-best_month-g_veg-last_year	roman	
+best_month	g_veg	up_to_now	A			IT-best_month-g_veg-up_to_now	urdu	
+best_month	all	year	A			IT-best_month-all-year	en	
+best_month	all	last_year	A			IT-best_month-all-last_year	roman	
+best_month	all	up_to_now	A			IT-best_month-all-up_to_now	urdu	
+best_month	party	*	N		the month table of one buyer and one item (view D) keeps no oracle fact; rare			
+best_month	quality	*	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+best_month	unknown	year	A			IT-best_month-unknown-year	roman	Capsicum
+best_month	unknown	last_year	A			IT-best_month-unknown-last_year	urdu	Capsicum
+best_month	unknown	up_to_now	A			IT-best_month-unknown-up_to_now	en	Capsicum
+best_month	zero	year	X		every item sold in this period			
+best_month	zero	last_year	A			IT-best_month-zero-last_year	roman	Mango
+best_month	zero	up_to_now	X		every item sold in this period			
+trend	fruit	year	A			IT-trend-fruit-year	urdu	Apple
+trend	fruit	last_year	A			IT-trend-fruit-last_year	en	Mosambi
+trend	fruit	up_to_now	A			IT-trend-fruit-up_to_now	roman	Mango
+trend	veg	year	A			IT-trend-veg-year	urdu	Radish
+trend	veg	last_year	A			IT-trend-veg-last_year	roman	Tomato
+trend	veg	up_to_now	A			IT-trend-veg-up_to_now	urdu	Onion
+trend	g_fruit	year	A			IT-trend-g_fruit-year	en	
+trend	g_fruit	last_year	A			IT-trend-g_fruit-last_year	roman	
+trend	g_fruit	up_to_now	A			IT-trend-g_fruit-up_to_now	urdu	
+trend	g_veg	year	A			IT-trend-g_veg-year	roman	
+trend	g_veg	last_year	A			IT-trend-g_veg-last_year	urdu	
+trend	g_veg	up_to_now	A			IT-trend-g_veg-up_to_now	en	
+trend	all	year	A			IT-trend-all-year	roman	
+trend	all	last_year	A			IT-trend-all-last_year	urdu	
+trend	all	up_to_now	A			IT-trend-all-up_to_now	roman	
+trend	party	*	N		the month table of one buyer and one item (view D) keeps no oracle fact; rare			
+trend	quality	*	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+trend	unknown	year	A			IT-trend-unknown-year	urdu	Capsicum
+trend	unknown	last_year	A			IT-trend-unknown-last_year	en	Capsicum
+trend	unknown	up_to_now	A			IT-trend-unknown-up_to_now	roman	Capsicum
+trend	zero	year	X		every item sold in this period			
+trend	zero	last_year	A			IT-trend-zero-last_year	urdu	Grapes
+trend	zero	up_to_now	X		every item sold in this period			
+stock	fruit	-	A			IT-stock-fruit-now	en	Mosambi
+stock	veg	-	A			IT-stock-veg-now	roman	Tomato
+stock	g_fruit	-	A			IT-stock-g_fruit-now	urdu	
+stock	g_veg	-	A			IT-stock-g_veg-now	roman	
+stock	all	-	A			IT-stock-all-now	urdu	
+stock	party	-	X		stock has no buyer			
+stock	quality	-	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+stock	unknown	-	A			IT-stock-unknown-now	en	Capsicum
+stock	zero	-	A			IT-stock-zero-now	roman	Radish
+forecast	fruit	-	A			IT-forecast-fruit-now	roman	Mango
+forecast	veg	-	A			IT-forecast-veg-now	urdu	Onion
+forecast	g_fruit	-	N		for now (the prompt is at its token limit; the estimate tool has no item group argument): on the follow-up list			
+forecast	g_veg	-	N		for now (the prompt is at its token limit; the estimate tool has no item group argument): on the follow-up list			
+forecast	all	-	A			IT-forecast-all-now	roman	
+forecast	party	-	X		a forecast has no buyer and item together			
+forecast	quality	-	N		no view groups by quality and plan 58 adds none (the lines carry it): a rank, a comparison, a month table, stock and a forecast by quality are not asked			
+forecast	unknown	-	A			IT-forecast-unknown-now	urdu	Capsicum
+forecast	zero	-	X		a forecast does not depend on a period			
+print	fruit	today	A			IT-print-fruit-today	urdu	Banana
+print	fruit	yesterday	A			IT-print-fruit-yesterday	roman	Apple
+print	fruit	d2026_11_03	A			IT-print-fruit-d2026_11_03	urdu	Apple
+print	fruit	d2026_10_14	A			IT-print-fruit-d2026_10_14	en	Banana
+print	fruit	week	A			IT-print-fruit-week	roman	Apple
+print	fruit	last_week	A			IT-print-fruit-last_week	urdu	Apple
+print	fruit	month	A			IT-print-fruit-month	roman	Apple
+print	fruit	last_month	A			IT-print-fruit-last_month	urdu	Mosambi
+print	fruit	m2026_09	A			IT-print-fruit-m2026_09	en	Banana
+print	fruit	m2026_08	A			IT-print-fruit-m2026_08	roman	Mango
+print	fruit	year	A			IT-print-fruit-year	urdu	Grapes
+print	fruit	last_year	A			IT-print-fruit-last_year	roman	Banana
+print	fruit	r2026_10_01_2026_10_15	A			IT-print-fruit-r2026_10_01_2026_10_15	urdu	Grapes
+print	fruit	up_to_now	A			IT-print-fruit-up_to_now	en	Mosambi
+print	veg	today	A			IT-print-veg-today	roman	Saag
+print	veg	yesterday	A			IT-print-veg-yesterday	urdu	Potato
+print	veg	d2026_11_03	A			IT-print-veg-d2026_11_03	roman	Potato
+print	veg	d2026_10_14	A			IT-print-veg-d2026_10_14	urdu	Potato
+print	veg	week	A			IT-print-veg-week	en	Potato
+print	veg	last_week	A			IT-print-veg-last_week	roman	Saag
+print	veg	month	A			IT-print-veg-month	urdu	Potato
+print	veg	last_month	A			IT-print-veg-last_month	roman	Tomato
+print	veg	m2026_09	A			IT-print-veg-m2026_09	urdu	Potato
+print	veg	m2026_08	A			IT-print-veg-m2026_08	en	Tomato
+print	veg	year	A			IT-print-veg-year	roman	Saag
+print	veg	last_year	A			IT-print-veg-last_year	urdu	Potato
+print	veg	r2026_10_01_2026_10_15	A			IT-print-veg-r2026_10_01_2026_10_15	roman	Onion
+print	veg	up_to_now	A			IT-print-veg-up_to_now	urdu	Tomato
+print	g_fruit	*	G	backend2	understand/plan.rs: "a group of items has no filter on a report link yet: the model answers" (waits for backend4's item_group on the links)			
+print	g_veg	*	G	backend2	understand/plan.rs: "a group of items has no filter on a report link yet: the model answers" (waits for backend4's item_group on the links)			
+print	all	today	A			IT-print-all-today	en	
+print	all	yesterday	A			IT-print-all-yesterday	roman	
+print	all	d2026_11_03	A			IT-print-all-d2026_11_03	urdu	
+print	all	d2026_10_14	A			IT-print-all-d2026_10_14	roman	
+print	all	week	A			IT-print-all-week	urdu	
+print	all	last_week	A			IT-print-all-last_week	en	
+print	all	month	A			IT-print-all-month	roman	
+print	all	last_month	A			IT-print-all-last_month	urdu	
+print	all	m2026_09	A			IT-print-all-m2026_09	roman	
+print	all	m2026_08	A			IT-print-all-m2026_08	urdu	
+print	all	year	A			IT-print-all-year	en	
+print	all	last_year	A			IT-print-all-last_year	roman	
+print	all	r2026_10_01_2026_10_15	A			IT-print-all-r2026_10_01_2026_10_15	urdu	
+print	all	up_to_now	A			IT-print-all-up_to_now	roman	
+print	party	today	A			IT-print-party-today	urdu	Potato
+print	party	yesterday	A			IT-print-party-yesterday	en	Banana
+print	party	d2026_11_03	A			IT-print-party-d2026_11_03	roman	Potato
+print	party	d2026_10_14	A			IT-print-party-d2026_10_14	urdu	Banana
+print	party	week	A			IT-print-party-week	roman	Potato
+print	party	last_week	A			IT-print-party-last_week	urdu	Banana
+print	party	month	A			IT-print-party-month	en	Potato
+print	party	last_month	A			IT-print-party-last_month	roman	Banana
+print	party	m2026_09	A			IT-print-party-m2026_09	urdu	Potato
+print	party	m2026_08	A			IT-print-party-m2026_08	roman	Banana
+print	party	year	A			IT-print-party-year	urdu	Potato
+print	party	last_year	A			IT-print-party-last_year	en	Banana
+print	party	r2026_10_01_2026_10_15	A			IT-print-party-r2026_10_01_2026_10_15	roman	Potato
+print	party	up_to_now	A			IT-print-party-up_to_now	urdu	Banana
+print	quality	*	N		Umar (06-11-2026, "rest ignore"): the quality is shown on the prints, a print is not filtered by quality			
+print	unknown	today	A			IT-print-unknown-today	roman	Capsicum
+print	unknown	yesterday	A			IT-print-unknown-yesterday	urdu	Capsicum
+print	unknown	d2026_11_03	A			IT-print-unknown-d2026_11_03	en	Capsicum
+print	unknown	d2026_10_14	A			IT-print-unknown-d2026_10_14	roman	Capsicum
+print	unknown	week	A			IT-print-unknown-week	urdu	Capsicum
+print	unknown	last_week	A			IT-print-unknown-last_week	roman	Capsicum
+print	unknown	month	A			IT-print-unknown-month	urdu	Capsicum
+print	unknown	last_month	A			IT-print-unknown-last_month	en	Capsicum
+print	unknown	m2026_09	A			IT-print-unknown-m2026_09	roman	Capsicum
+print	unknown	m2026_08	A			IT-print-unknown-m2026_08	urdu	Capsicum
+print	unknown	year	A			IT-print-unknown-year	roman	Capsicum
+print	unknown	last_year	A			IT-print-unknown-last_year	urdu	Capsicum
+print	unknown	r2026_10_01_2026_10_15	A			IT-print-unknown-r2026_10_01_2026_10_15	en	Capsicum
+print	unknown	up_to_now	A			IT-print-unknown-up_to_now	roman	Capsicum
+print	zero	today	A			IT-print-zero-today	urdu	Mosambi
+print	zero	yesterday	A			IT-print-zero-yesterday	roman	Mango
+print	zero	d2026_11_03	A			IT-print-zero-d2026_11_03	urdu	Tomato
+print	zero	d2026_10_14	A			IT-print-zero-d2026_10_14	en	Mango
+print	zero	week	A			IT-print-zero-week	roman	Grapes
+print	zero	last_week	A			IT-print-zero-last_week	urdu	Tomato
+print	zero	month	A			IT-print-zero-month	roman	Tomato
+print	zero	last_month	A			IT-print-zero-last_month	urdu	Mango
+print	zero	m2026_09	A			IT-print-zero-m2026_09	en	Saag
+print	zero	m2026_08	A			IT-print-zero-m2026_08	roman	Radish
+print	zero	year	X		every item sold in this period			
+print	zero	last_year	A			IT-print-zero-last_year	urdu	Mango
+print	zero	r2026_10_01_2026_10_15	A			IT-print-zero-r2026_10_01_2026_10_15	roman	Saag
+print	zero	up_to_now	X		every item sold in this period			
+open	fruit	-	A			IT-open-fruit-now	roman	Banana
+open	veg	-	A			IT-open-veg-now	urdu	Potato
+open	g_fruit	-	G	backend2	understand/plan.rs: "a group of items has no filter on a report link yet: the model answers" (waits for backend4's item_group on the links)			
+open	g_veg	-	G	backend2	understand/plan.rs: "a group of items has no filter on a report link yet: the model answers" (waits for backend4's item_group on the links)			
+open	all	-	A			IT-open-all-now	en	
+open	party	-	A			IT-open-party-now	roman	Banana
+open	quality	-	N		Umar (06-11-2026, "rest ignore"): the quality is shown on the prints, a print is not filtered by quality			
+open	unknown	-	A			IT-open-unknown-now	urdu	Capsicum
+open	zero	-	X		an open screen does not depend on a period			

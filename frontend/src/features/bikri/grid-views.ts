@@ -11,16 +11,33 @@ import type { BikriPreview } from './types';
 
 type PerRow<T> = Record<string, Record<string, T>>;
 
+/**
+ * A problem of the quantity of a line, written in plain view under the sale lines (PRD FR-12.6):
+ * the line sells more than the lot has left, or the quantity is not a number. The cell turns red as
+ * always, but a tooltip is not enough to learn why a line shows no figures.
+ */
+export interface QtyNote {
+  /** The row of the line, for a key. */
+  rowId: string;
+  /** The lot and the line it is about, from 0 (the screen counts from 1). */
+  lot: number;
+  line: number;
+  /** The problem as words in the app language. */
+  words: string;
+}
+
 /** What one grid takes from the preview: calculated text, workings, and problems per cell. */
 export interface GridView {
   calc: PerRow<string>;
   workings: PerRow<Working>;
   errors: PerRow<string>;
   warnings: PerRow<string>;
+  /** The quantity problems of the lines this grid shows, in line order. */
+  qtyNotes: QtyNote[];
 }
 
 function emptyView(): GridView {
-  return { calc: {}, workings: {}, errors: {}, warnings: {} };
+  return { calc: {}, workings: {}, errors: {}, warnings: {}, qtyNotes: [] };
 }
 
 /** Puts the words on a cell. The first problem of a cell stays; the list shows them all. */
@@ -85,6 +102,14 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
       const column = LINE_GRID_FIELD[where.sub];
       const key = lineKeysByLot[where.lot]?.[where.line];
       if (column !== undefined && key !== undefined) put(sales[into], key, column, words(problem));
+      if (column === SALE.qty && key !== undefined && problem.severity === 'error') {
+        sales.qtyNotes.push({
+          rowId: key,
+          lot: where.lot,
+          line: where.line,
+          words: words(problem),
+        });
+      }
     }
   }
   return { lots, sales };

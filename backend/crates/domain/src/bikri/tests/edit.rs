@@ -192,6 +192,33 @@ fn an_unchanged_line_keeps_its_stored_rate_and_a_changed_line_looks_the_rules_up
 }
 
 #[test]
+fn a_quality_only_change_leaves_the_line_unchanged_and_keeps_its_stored_rules() {
+    // PRD FR-12.42, FR-12.20: the quality is not in the comparison of `unchanged_stored`. With the
+    // default buyer commission now 7%, a line whose only change is its quality keeps its stored
+    // 6% and every stored amount, and the totals are those of event 1.
+    let mut d = event1_with_ids();
+    d.lots[0].sales[0].grade = Some("first".into());
+    d.lots[0].sales[1].grade = Some("second".into());
+    let calc = edit_with(&d, rules_with_buyer_7(), &stored_event1());
+    assert_no_errors(&calc);
+    assert_eq!(r(line(&calc, 0, 0).buyer_comm.amount), 720);
+    assert_eq!(r(line(&calc, 0, 0).buyer_total), 12_880);
+    assert_eq!(r(line(&calc, 0, 1).buyer_comm.amount), 1_044);
+    assert_eq!(r(line(&calc, 0, 1).buyer_total), 18_684);
+    assert_eq!(r(single_lot_totals(&calc).shared_income), 3_948);
+    // A word that is not a quality is refused at its field and the row is not worked out.
+    let mut bad = event1_with_ids();
+    bad.lots[0].sales[0].grade = Some("fourth".into());
+    let calc = edit_with(&bad, rules_with_buyer_7(), &stored_event1());
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrOutOfRange,
+        "lots[0].sales[0].grade"
+    ));
+    assert!(calc.lots[0].lines[0].calc.is_none());
+}
+
+#[test]
 fn a_line_without_its_stored_id_is_a_new_line() {
     // The same draft without line ids: both lines look the rules up again, so both take 7%.
     let mut d = event1();

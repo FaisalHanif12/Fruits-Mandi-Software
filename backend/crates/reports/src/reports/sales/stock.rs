@@ -55,6 +55,17 @@ fn shop_cell(name: Option<&str>) -> Cell {
     }
 }
 
+/// The ids of the items of a group (PRD v1.29): R10 keeps only the goods of these items. The three
+/// sources of R10 (lots, trip purchases, garden arrivals) are each cut to them.
+fn items_of_group(
+    conn: &Connection,
+    group: Option<mandi_core::rules::ItemGroup>,
+) -> Result<Option<std::collections::HashSet<i64>>, ReportsError> {
+    group
+        .map(|group| crate::reports::common::item_ids_of_group(conn, group))
+        .transpose()
+}
+
 /// Builds R10.
 ///
 /// # Errors
@@ -74,7 +85,13 @@ pub(crate) fn run(
     let own_account = account_repo::id_by_code(conn, OWN_GOODS_CODE)?
         .ok_or_else(|| ReportsError::Data("the own goods account is missing".to_owned()))?;
 
-    let lots = stock_lots(
+    let group_items = items_of_group(conn, typed.item_group)?;
+    let in_group = |item_id: i64| {
+        group_items
+            .as_ref()
+            .is_none_or(|ids| ids.contains(&item_id))
+    };
+    let mut lots = stock_lots(
         conn,
         &StockFilter {
             from: typed.from.clone(),
@@ -85,9 +102,10 @@ pub(crate) fn run(
             include_written_off: false,
         },
     )?;
+    lots.retain(|lot| in_group(lot.item.id));
     // The purchases of trips with goods left. A seller filter keeps them only if it picks the
     // own-goods account itself.
-    let purchases = if typed.seller_id.is_none_or(|id| id == own_account) {
+    let mut purchases = if typed.seller_id.is_none_or(|id| id == own_account) {
         mandi_db::purchases::list(
             conn,
             &ListFilter {
@@ -107,15 +125,18 @@ pub(crate) fn run(
         Vec::new()
     };
 
+    purchases.retain(|purchase| in_group(purchase.item.id));
+
     // The garden arrivals with goods left. A seller filter keeps the arrivals whose garden account
     // is that seller.
-    let arrivals = mandi_db::arrivals::with_stock(
+    let mut arrivals = mandi_db::arrivals::with_stock(
         conn,
         typed.from.as_deref(),
         typed.to.as_deref(),
         typed.item_id,
         typed.seller_id,
     )?;
+    arrivals.retain(|arrival| in_group(arrival.item.id));
 
     let mut ids_to_load: Vec<i64> = lots.iter().map(|l| l.seller.id).collect();
     ids_to_load.push(own_account);

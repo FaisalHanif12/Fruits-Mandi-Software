@@ -26,6 +26,7 @@ use crate::reports::ids;
 use crate::reports::model::{
     Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind, SummaryLine,
 };
+use mandi_core::money::Paisa;
 
 /// Which voucher list is built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,8 +67,43 @@ fn conditions(layout: Layout, typed: &Typed) -> Conds {
     c.text("v.entry_date >= ?", typed.from.as_deref())
         .text("v.entry_date <= ?", typed.to.as_deref())
         .id("v.account_id = ?", typed.party_id)
-        .text("v.pukhta_person_key = ?", typed.person_key.as_deref());
+        .text("v.pukhta_person_key = ?", typed.person_key.as_deref())
+        // R23 only (the other lists do not take it): the receipts one collector took.
+        .id("v.collector_staff_id = ?", typed.collector_id);
     c
+}
+
+/// The money of the SAVED receipts of each month in the filter, oldest first, as
+/// `("YYYY-MM", amount)`: R23's own conditions (kind, dates, account) with a month bucket, so the
+/// months add up to the total row of R23 for the same filter (plan 55 F1). A month with no saved
+/// receipt has no row. A seller's وصولی that returns advance money is a receipt too (FR-15.12).
+///
+/// Example (the forecast fixture B): April 10,000, May 12,000, June 14,000 ...
+///
+/// # Errors
+/// A database error; `ReportsError::Money` if a stored amount is not whole rupees or a sum does
+/// not fit.
+pub(crate) fn receipts_by_month(
+    conn: &Connection,
+    typed: &Typed,
+) -> Result<Vec<(String, Paisa)>, ReportsError> {
+    let c = conditions(Layout::Receipts, typed);
+    let sql = format!(
+        "SELECT substr(v.entry_date, 1, 7), COALESCE(SUM(v.amount_paisa), 0)
+         FROM vouchers v WHERE {} AND v.status = 'saved' GROUP BY 1 ORDER BY 1",
+        c.sql()
+    );
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement
+        .query_map(params_from_iter(c.args().iter()), |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut out = Vec::new();
+    for (month, amount) in rows {
+        out.push((month, paisa(amount)?));
+    }
+    Ok(out)
 }
 
 /// For each kind of voucher in the filter: how many vouchers there are and the money of the saved

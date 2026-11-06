@@ -3,3 +3,4 @@
 // exported here. The dashboard tile مارکیٹ سفر (D5) reads `useTripsSummary`.
 export { useAllTrips, useTripsList, useTripsSummary } from './hooks';
 export type { TripRow, TripsSummary } from './types';
+export type { TripOpenType } from './screen-type';

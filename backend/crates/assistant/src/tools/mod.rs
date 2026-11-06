@@ -31,12 +31,18 @@ pub mod calc;
 pub mod cells;
 pub mod cues;
 pub mod find;
+pub mod find_lists;
+pub mod find_masters;
 pub mod help;
 pub mod party;
 pub mod period;
 pub mod records;
 pub mod report;
+pub mod report_extra;
 pub mod scope;
+pub mod state;
+pub mod state_audit;
+pub mod state_rules;
 pub mod teach;
 pub mod tiles;
 pub mod typed;
@@ -531,6 +537,7 @@ pub fn call(env: &Env<'_>, state: &State, name: &str, arguments: &str) -> Result
         "calculate" => calc::run_calculate(env, state, &args),
         "estimate" => calc::run_estimate(env, state, &args),
         "app_help" => help::run(env, state, &args),
+        "app_state" => state::run(env, state, &args),
         _ => Err(Stop::Error(ToolError::new(
             "ERR_UNKNOWN_TOOL",
             "name",

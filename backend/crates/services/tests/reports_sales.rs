@@ -135,6 +135,8 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             FilterKind::Seller,
             FilterKind::Zamindar,
             FilterKind::Item,
+            // PRD v1.29: all the items of a group.
+            FilterKind::ItemGroup,
             FilterKind::City,
             FilterKind::Adda
         ]

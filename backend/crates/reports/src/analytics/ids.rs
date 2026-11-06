@@ -120,6 +120,9 @@ pub(crate) const COL_GARDENS_RESULT: &str = "analytics-col-gardens-result";
 pub(crate) const FILTER_GOODS_CONSIGNED: &str = "analytics-filter-goods-consigned";
 pub(crate) const FILTER_GOODS_TRIP: &str = "analytics-filter-goods-trip";
 pub(crate) const FILTER_GOODS_GARDEN: &str = "analytics-filter-goods-garden";
+/// The two item groups, as whole header facts (PRD v1.29); the words are the masters' own.
+pub(crate) const FILTER_GROUP_FRUIT: &str = "masters-item-group-fruit";
+pub(crate) const FILTER_GROUP_VEGETABLE: &str = "masters-item-group-vegetable";
 pub(crate) const FILTER_TRIP_BY_TRIP: &str = "report-filter-trip-by-trip";
 pub(crate) const FILTER_TRIP_BY_PURCHASE: &str = "analytics-filter-trip-by-purchase";
 pub(crate) const FILTER_TRIP_BY_ITEM: &str = "report-filter-trip-by-item";

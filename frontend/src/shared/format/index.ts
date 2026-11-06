@@ -13,6 +13,7 @@ export {
   type Paisa,
 } from './money';
 export { formatBps } from './percent';
+export { GRADE_WORD_ID, gradedItem } from './grade';
 export { formatGrams } from './weight';
 export { DEFAULT_PRINT_DIGITS, printDigits, toUrduDigits, type PrintDigits } from './digits';
 export { DEFAULT_GROUPING, useGrouping, useGroupingStore } from './grouping';

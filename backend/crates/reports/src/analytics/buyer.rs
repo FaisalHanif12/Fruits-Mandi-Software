@@ -337,12 +337,17 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     };
     let page_keys: Vec<BuyerKey> = page_entries.iter().map(|e| e.key.clone()).collect();
     let dues = balances(conn, &page_keys)?;
-    let paid_in_period =
-        if typed.item_id.is_none() && typed.seller_id.is_none() && typed.adda_id.is_none() {
-            Some(days_to_pay(conn, typed, &page_keys)?)
-        } else {
-            None
-        };
+    // The days to pay are of whole bills, so no filter of the goods narrows them (PRD v1.29: a group
+    // is one of those filters, as an item is).
+    let paid_in_period = if typed.item_id.is_none()
+        && typed.item_group.is_none()
+        && typed.seller_id.is_none()
+        && typed.adda_id.is_none()
+    {
+        Some(days_to_pay(conn, typed, &page_keys)?)
+    } else {
+        None
+    };
 
     let with_compare = typed.compare.is_some();
     let mut columns = vec![

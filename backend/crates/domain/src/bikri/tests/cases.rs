@@ -1483,3 +1483,199 @@ fn a_separate_khata_can_sell_its_goods_with_seller_defaults_of_zero() {
         "lots[0].sales[0].buyer_account_id"
     ));
 }
+
+// ---- A line over the lot is refused and not worked out (PRD FR-12.6 v1.28, plan 57) ----
+
+/// The quantity the lot still has, as the error of `field` says it.
+fn refused_available(calc: &PostingCalc, field: &str) -> Option<i64> {
+    calc.errors
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrQtyExceedsLot && e.field == field)
+        .and_then(|e| match e.values.get("available") {
+            Some(ErrorValue::Number(n)) => Some(*n),
+            _ => None,
+        })
+}
+
+#[test]
+fn a_line_over_the_lot_has_no_figures_and_the_lot_waits_for_the_quantity() {
+    // Plan 57 section 2: the lot holds 50 apples and line 1 is 70 at 1,200. Before the change the
+    // screen showed 84,000 / 5,040 / 89,600 for it.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "70", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[0].calc.is_none(), "no figures for the refused line");
+    assert_eq!(l.lines[0].remaining_qty, 50);
+    assert!(l.totals.is_none(), "the lot waits for the quantity");
+    assert_eq!((l.sold_qty, l.balance_qty), (0, Some(50)));
+    // The whole بکری and its journal leave the line out.
+    assert_eq!(r(calc.summary.gross), 0);
+    assert_eq!(r(calc.summary.buyer_total), 0);
+    assert_eq!(r(calc.summary.shared_income), 0);
+    assert!(calc.journal.lots.is_empty());
+    // The save refuses with the same error: it is the same function (Code Standards B5).
+    assert!(!calc.errors.is_empty());
+}
+
+#[test]
+fn the_figures_come_back_when_the_quantity_is_fixed() {
+    // 70 -> 50 on the same lot: 50 x 1,200 = 60,000; seller and buyer commission 6% = 3,600 each;
+    // لاگا 50 x 8 = 400; the buyer pays 60,000 + 3,600 + 400 = 64,000.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200")],
+    )]));
+    assert!(
+        !calc
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "{:?}",
+        calc.errors
+    );
+    let l = line(&calc, 0, 0);
+    assert_eq!(r(l.seller_amount), 60_000);
+    assert_eq!(r(l.seller_comm.amount), 3_600);
+    assert_eq!(r(l.buyer_comm.amount), 3_600);
+    assert_eq!(r(l.laga.amount), 400);
+    assert_eq!(r(l.buyer_total), 64_000);
+    assert_eq!(r(single_lot_totals(&calc).gross), 60_000);
+    assert_eq!(lot_of(&calc, 0).sold_qty, 50);
+}
+
+#[test]
+fn two_lines_on_a_lot_the_one_that_crosses_is_refused_and_the_totals_hold_the_other() {
+    // 50 apples; lines of 30 and 30. Line 1 is worked out: 30 x 1,200 = 36,000; commissions
+    // 2,160 each; لاگا 240; the buyer pays 38,400. Line 2 takes the lot over by 10: refused, with
+    // 20 available, and no figures. The lot and the whole بکری hold line 1 only.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "30", "1200"), sale(ARSHAD, "30", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(20));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), None);
+    let first = line(&calc, 0, 0);
+    assert_eq!(r(first.seller_amount), 36_000);
+    assert_eq!(r(first.seller_comm.amount), 2_160);
+    assert_eq!(r(first.buyer_comm.amount), 2_160);
+    assert_eq!(r(first.laga.amount), 240);
+    assert_eq!(r(first.buyer_total), 38_400);
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[1].calc.is_none());
+    assert_eq!((l.sold_qty, l.balance_qty), (30, Some(20)));
+    let t = single_lot_totals(&calc);
+    assert_eq!(r(t.gross), 36_000);
+    assert_eq!(r(t.seller_comm), 2_160);
+    assert_eq!(r(t.buyer_total), 38_400);
+    assert_eq!(r(calc.summary.gross), 36_000);
+    assert_eq!(r(calc.summary.buyer_total), 38_400);
+    // 2,160 + 2,160 + 240 = 4,560, and the lot's phone charge of 20 (a lot charge of this fixture).
+    assert_eq!(r(calc.summary.shared_income), 2_160 + 2_160 + 240 + 20);
+    assert_eq!(
+        calc.journal.lots[0].sales.len(),
+        1,
+        "one sale in the journal"
+    );
+}
+
+#[test]
+fn a_refused_line_takes_no_quantity_so_the_line_after_it_is_worked_out() {
+    // 50 apples; lines of 70 and 20. Line 1 is refused (50 available); line 2 starts from the full
+    // 50 and is worked out: 20 x 1,200 = 24,000.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "70", "1200"), sale(ARSHAD, "20", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), None);
+    let l = lot_of(&calc, 0);
+    assert!(l.lines[0].calc.is_none());
+    assert_eq!(l.lines[1].remaining_qty, 50);
+    assert_eq!(r(line(&calc, 0, 1).seller_amount), 24_000);
+    assert_eq!((l.sold_qty, l.balance_qty), (20, Some(30)));
+    // Line 1 is fixed to 50: now it fits, and line 2 is the one that crosses (nothing left).
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200"), sale(ARSHAD, "20", "1200")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), None);
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(0));
+    assert_eq!(r(line(&calc, 0, 0).buyer_total), 64_000);
+    assert!(lot_of(&calc, 0).lines[1].calc.is_none());
+    assert_eq!(r(calc.summary.gross), 60_000);
+}
+
+#[test]
+fn the_per_lot_commission_lands_once_on_the_line_that_stands() {
+    // PRD FR-11.9: a per-lot commission of 500 is charged on the first worked line of the lot.
+    // Line 1 is refused (over the lot), so line 2 carries it, once.
+    let calc = run_per_lot(&draft(vec![with(
+        lot(RAHIM, BANANA, "50"),
+        vec![sale(AKRAM, "70", "600"), sale(ARSHAD, "30", "580")],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[0].qty"), Some(50));
+    assert!(lot_of(&calc, 0).lines[0].calc.is_none());
+    let second = line(&calc, 0, 1);
+    assert_eq!(r(second.seller_comm.amount), 500);
+    assert_eq!(second.seller_comm.working.message_id, "working-per-lot");
+    assert_eq!(r(single_lot_totals(&calc).seller_comm), 500);
+}
+
+#[test]
+fn a_blank_row_or_a_row_with_no_quantity_is_never_refused() {
+    // A row with no buyer and no rate is blank and ignored; a row with a bad quantity has its own
+    // error, not this one.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "50", "1200"), blank("99")],
+    )]));
+    assert!(
+        !calc
+            .errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrQtyExceedsLot),
+        "{:?}",
+        calc.errors
+    );
+}
+
+#[test]
+fn a_third_line_that_fits_after_a_refused_one_is_worked_out_and_no_unsold_note_shows() {
+    // 50 apples; lines 30, 30, 10. Line 2 is refused (20 available); line 3 (10) fits in what the
+    // standing lines leave (30 + 10 <= 50) and is worked out: 10 x 1,200 = 12,000. The lot gives no
+    // "left unsold" warning while a line is refused (the refusal already says what is left).
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![
+            sale(AKRAM, "30", "1200"),
+            sale(ARSHAD, "30", "1200"),
+            sale(AKRAM, "10", "1200"),
+        ],
+    )]));
+    assert_eq!(refused_available(&calc, "lots[0].sales[1].qty"), Some(20));
+    assert_eq!(refused_available(&calc, "lots[0].sales[2].qty"), None);
+    assert_eq!(r(line(&calc, 0, 2).seller_amount), 12_000);
+    let l = lot_of(&calc, 0);
+    assert_eq!((l.sold_qty, l.balance_qty), (40, Some(10)));
+    assert_eq!(r(single_lot_totals(&calc).gross), 48_000);
+    assert!(
+        !calc
+            .warnings
+            .iter()
+            .any(|w| w.code == ErrorCode::ErrQtyLeftUnsold),
+        "{:?}",
+        calc.warnings
+    );
+    // With no line refused the note is back: lines 30 and 10 leave 10 unsold.
+    let calc = run(&draft(vec![with(
+        lot(RAHIM, APPLE, "50"),
+        vec![sale(AKRAM, "30", "1200"), sale(AKRAM, "10", "1200")],
+    )]));
+    assert_eq!(
+        number(&calc.warnings, ErrorCode::ErrQtyLeftUnsold, "left"),
+        Some(10)
+    );
+}

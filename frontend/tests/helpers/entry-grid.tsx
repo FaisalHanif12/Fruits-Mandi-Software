@@ -40,6 +40,29 @@ export const COLUMNS: readonly EntryColumn[] = [
   { field: 'line', type: 'calc', headerId: 'glossary-meezan' },
 ];
 
+/**
+ * The quality of a sale line (PRD FR-12.42): a list of fixed words that is optional, reached with the
+ * arrow keys or a click, never an Enter stop. A test asks for it with `withSelect`; it sits after the
+ * rate, where the sale-lines grid puts it.
+ */
+export const SELECT_COLUMN: EntryColumn = {
+  field: 'grade',
+  type: 'select',
+  headerId: 'glossary-darja',
+  enterStop: false,
+  choices: [
+    { value: '', labelId: 'bikri-grade-none' },
+    { value: 'first', labelId: 'glossary-darja-awwal' },
+    { value: 'second', labelId: 'glossary-darja-doyam' },
+    { value: 'third', labelId: 'glossary-darja-soyam' },
+  ],
+};
+
+function withSelectColumn(columns: readonly EntryColumn[]): readonly EntryColumn[] {
+  const at = columns.findIndex((column) => column.field === 'rate');
+  return [...columns.slice(0, at + 1), SELECT_COLUMN, ...columns.slice(at + 1)];
+}
+
 /** A read-only words column, added to the grid when a test asks for it. */
 const LABEL_COLUMN: EntryColumn = { field: 'name', type: 'label', headerId: 'glossary-bikri' };
 
@@ -50,10 +73,12 @@ function Harness({
   fixedRows,
   cellErrors,
   withLabel,
+  withSelect,
   canRemoveRow,
   removeQuestion,
 }: {
   withLabel?: boolean;
+  withSelect?: boolean;
   canRemoveRow?: (row: EntryRow) => boolean;
   removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
   store: EntryStore;
@@ -76,7 +101,10 @@ function Harness({
   );
   return (
     <EntryGrid
-      columns={withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS}
+      columns={(() => {
+        const base = withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS;
+        return withSelect === true ? withSelectColumn(base) : base;
+      })()}
       store={store}
       labelId="glossary-bikri"
       calc={calc}
@@ -112,6 +140,8 @@ export async function renderGrid(
     fixedRows?: boolean;
     /** Adds a read-only words column called `name`, which shows the typed `buyer`. */
     withLabel?: boolean;
+    /** Adds the quality list column `grade` after the rate (PRD FR-12.42). */
+    withSelect?: boolean;
     /** Built from the rows that exist: row index, then field, then the words. */
     cellErrors?: (rowIds: readonly string[]) => Record<string, Record<string, string>>;
     /** Which rows the remove key and the remove button may take away (plan 43). */
@@ -131,6 +161,7 @@ export async function renderGrid(
       store={store}
       {...(options.fixedRows === undefined ? {} : { fixedRows: options.fixedRows })}
       {...(options.withLabel === undefined ? {} : { withLabel: options.withLabel })}
+      {...(options.withSelect === undefined ? {} : { withSelect: options.withSelect })}
       {...(cellErrors === undefined ? {} : { cellErrors })}
       {...(options.canRemoveRow === undefined ? {} : { canRemoveRow: options.canRemoveRow })}
       {...(options.removeQuestion === undefined ? {} : { removeQuestion: options.removeQuestion })}

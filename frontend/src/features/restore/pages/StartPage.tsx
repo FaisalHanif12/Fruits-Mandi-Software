@@ -51,7 +51,7 @@ export function StartPage() {
           </Notice>
         )}
         {/* Arrow keys move between the two cards in the direction the user sees (PRD FR-7.13). */}
-        <div ref={choices} {...formNavigationProps} className="flex flex-col gap-4 normal:flex-row">
+        <div ref={choices} {...formNavigationProps} className="flex gap-4">
           <ChoiceCard
             icon={Store}
             title={<Localized id="restore-start-new-title" />}

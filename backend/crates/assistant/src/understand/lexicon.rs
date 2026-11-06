@@ -143,6 +143,8 @@ pub(super) enum Cue {
     FruitTaken,
     /// phal, fruit (the word only).
     FruitWord,
+    /// sabzi, vegetables (the word only): the group of the vegetable items.
+    VegetableWord,
     /// udhar raqam, money lent, qarz.
     MoneyLent,
     /// doobi raqam, dead amount.
@@ -163,6 +165,19 @@ pub(super) enum Cue {
     Statement,
     /// result, natija.
     ResultWord,
+    /// li hui raqam, zaati kharcha, drawings: the money the partners took.
+    PartnerTaken,
+    /// The title of a report that no figure names (R3, R4, R7, R8, R9, R15 ...): see [`REPORT_NAMES`].
+    ReportName,
+    /// A question about the app's own state or lists (the rules, the attention list, the closed days,
+    /// how many staff): see [`ASK_NAMES`].
+    AskName,
+    /// The quality of a sale line: awwal, doyam, soyam, first quality, A grade, darja (PRD FR-12.42).
+    Quality,
+    /// The word "number" before a number ("bikri number 5"): see `reads::bikri_number`.
+    NumberWord,
+    /// A truck number written as the trucks are (LES-1234, LHR 0077): see `scan::truck_number`.
+    TruckNo,
     // ---- outside the app -------------------------------------------------------------------
     /// news, cricket, a joke: things the app does not keep.
     External,
@@ -259,7 +274,8 @@ const INTENT: &[Entry] = &[
         &[
             "jama karo", "jama kar do", "jama kardo", "jama kar", "jamaa karo", "add karo",
             "add kar do", "add kardo", "add kar", "add", "de do", "dedo", "de dein", "dijiye",
-            "kar do", "kardo", "change karo", "change kar do", "update karo", "update kar do",
+            "kar do", "kardo", "band karo", "band kijiye", "close karo", "close kar do", "بند کرو",
+            "بند کر دو", "change karo", "change kar do", "update karo", "update kar do",
             "edit karo", "edit kar do", "badal do", "badlo", "change", "update", "edit", "pay",
             "transfer", "جمع کرو", "جمع کر دو", "شامل کرو", "شامل کر دو", "بدل دو", "بدلو", "دے دو",
             "کر دو",
@@ -313,7 +329,7 @@ const INTENT: &[Entry] = &[
             "barhen", "barhein", "barhta", "bherane", "bherana", "bheraon", "bherayen", "bhera",
             "badhayen", "badhana", "badhao", "badhane", "badhaon", "increase", "raise", "improve",
             "grow", "boost", "faster", "jaldi", "tez", "fast", "quickly", "behtar", "better",
-            "reduce", "zyada kaise", "kam kaise", "بڑھائیں", "بڑھانے", "بڑھاؤں", "بڑھاو", "بڑھاؤ",
+            "reduce", "zyada kaise", "ziyada kaise", "ziada kaise", "kam kaise", "زیادہ کیسے", "بڑھا سکتے", "بڑھا سکتا", "barha sakte", "barha sakta", "badha sakte", "بڑھائیں", "بڑھانے", "بڑھاؤں", "بڑھاو", "بڑھاؤ",
             "بڑھے", "بہتر", "جلدی", "تیز",
         ],
     ),
@@ -332,7 +348,7 @@ const INTENT: &[Entry] = &[
             "kis ko udhar", "udhar na dun", "udhar na doon", "udhar na dein", "udhar na du",
             "udhar nahi dena", "udhar band", "kya karun", "kya karoon", "kya karna chahiye",
             "kya karen", "kya karein", "should i", "what should i", "who should", "kis par bharosa",
-            "kis se wasooli", "kisko wasooli", "pehle kis", "کس سے پہلے", "کسے پہلے", "کس کو پہلے",
+            "kis se wasooli", "kisko wasooli", "pehle kis", "کس سے پہلے", "کسے پہلے", "پہلے کس", "کس سے وصولی", "کس کو وصولی", "کس سے وصول", "کس کو پہلے",
             "کس کو ادھار", "ادھار نہ دوں", "کیا کروں", "کیا کرنا چاہیے",
         ],
     ),
@@ -354,7 +370,7 @@ const INTENT: &[Entry] = &[
     (
         Cue::HowMuch,
         &[
-            "kitna", "kitni", "kitne", "kitnay", "kitnaa", "kitnee", "kitnaah", "kitnon", "kitana",
+            "kitna", "kitni", "kitny", "kitne", "kitnay", "kitnaa", "kitnee", "kitnaah", "kitnon", "kitana",
             "kitani", "kitane", "kitnay", "kitno", "how much", "how many", "kitna hai", "کتنا",
             "کتنی", "کتنے", "کتنوں", "کتنیں",
         ],
@@ -375,15 +391,18 @@ const INTENT: &[Entry] = &[
             "sab se zyada", "sab se ziada", "sab se ziyada", "sab say zyada", "sabse zyada",
             "sabse ziada", "zyada se zyada", "top", "highest", "biggest", "largest", "most",
             "maximum", "max", "best", "sabse purana", "sab se purana", "oldest", "sab se bara", "sab se barhi", "sab se bada", "number one",
-            "سب سے زیادہ", "سب سے بڑا", "سب سے بڑی", "زیادہ سے زیادہ", "ٹاپ",
+            "sabse bara", "sabse bada", "sabse barhi", "sabse badi", "sabse bade", "sab se badi",
+            "sab se bade", "sab se barhe", "sabse barhe",
+            "سب سے زیادہ", "سب سے بڑا", "سب سے بڑی", "سب سے بڑے", "زیادہ سے زیادہ", "ٹاپ",
         ],
     ),
     (
         Cue::Least,
         &[
             "sab se kam", "sabse kam", "sab say kam", "kam se kam", "lowest", "smallest", "least",
-            "minimum", "min", "worst", "sab se chota", "sab se choti", "سب سے کم", "کم سے کم",
-            "سب سے چھوٹا",
+            "minimum", "min", "worst", "sab se chota", "sab se choti", "sab se chote", "sabse chota",
+            "sabse choti", "sabse chote", "سب سے کم", "کم سے کم", "سب سے چھوٹا", "سب سے چھوٹی",
+            "سب سے چھوٹے",
         ],
     ),
     (
@@ -424,7 +443,9 @@ const ROLES: &[Entry] = &[
         &[
             "partner", "partners", "shareek", "shareekdar", "shirakat dar", "shirkat dar", "shirakat daar",
             "shirkat daar", "shirakatdar", "shirkatdar", "sharik",
-            "شراکت دار", "شریک", "پارٹنر",
+            "partnron", "partneron", "partnaron", "partnarz", "shirakat daron", "shirkat daron",
+            "shirakatdaron", "shirkatdaron",
+            "شراکت دار", "شراکت داروں", "شریک", "شریکوں", "پارٹنر", "پارٹنروں", "پارٹنرز",
         ],
     ),
     (
@@ -436,7 +457,8 @@ const ROLES: &[Entry] = &[
     (
         Cue::RoleTrip,
         &[
-            "trip", "trips", "safar", "market safar", "market trip", "سفر", "مارکیٹ سفر",
+            "trip", "trips", "safar", "safr", "safer", "market safar", "market safr", "market safer",
+            "market trip", "market trips", "trips report", "trip report", "سفر", "مارکیٹ سفر",
         ],
     ),
     (
@@ -449,6 +471,17 @@ const ROLES: &[Entry] = &[
         Cue::RoleKhata,
         &[
             "alag khata", "alag khate", "separate khata", "الگ کھاتہ", "الگ کھاتے",
+        ],
+    ),
+    (
+        Cue::Quality,
+        &[
+            "awwal", "awal", "aval", "avval", "doyam", "doem", "doum", "doyum", "dom", "soyam",
+            "soem", "soum", "soyum", "som", "first quality", "first grade", "second quality",
+            "second grade", "third quality", "third grade", "a grade", "b grade", "c grade",
+            "grade a", "grade b", "grade c", "a quality", "b quality", "c quality", "quality",
+            "qualities", "grade", "grades", "darja", "darje", "darjay", "darjon", "darjey",
+            "اول", "دوم", "سوم", "درجہ", "درجے", "درجات", "درجوں", "کوالٹی", "گریڈ",
         ],
     ),
     (
@@ -488,8 +521,8 @@ const ROLES: &[Entry] = &[
         &[
             "becha", "beche", "bechi", "bechna", "bechta", "bechte", "bechti", "bechay", "bheja", "bheje", "bheji", "bhejna", "maal bheja", "mal bheja",
             "supplied", "sent", "بھیجا", "بھیجے", "بھیجی", "مال بھیجا",
-            "beecha", "beeche", "bika", "bike", "biki", "bikta", "sold", "sell", "sells", "selling",
-            "بیچا", "بیچے", "بیچی", "بیچنا", "بیچتا", "بیچتے", "بکا", "بکے", "بکی",
+            "beecha", "beeche", "bika", "bike", "biki", "bikta", "bikti", "bikte", "biktay", "bikay", "sold", "sell", "sells", "selling",
+            "بیچا", "بیچے", "بیچی", "بیچنا", "بیچتا", "بیچتے", "بکا", "بکے", "بکی", "بکتا", "بکتی", "بکتے",
         ],
     ),
     (
@@ -517,7 +550,7 @@ const FIGURES: &[Entry] = &[
             "dene hai", "dene he", "dene hen", "lene hain", "lene hai", "lene he", "lene hen",
             "dena hain", "lena hain", "denge", "dengi", "lenge", "lengi", "دینے ہیں", "لینے ہیں",
             "دینا ہے", "لینا ہے",
-            "bakaye", "بقایا", "بکایا", "لینا", "دینا", "کتنا دے گا", "دے گا",
+            "bakaye", "بقایا", "بیلنس", "بکایا", "لینا", "دینا", "کتنا دے گا", "دے گا",
             "zimme", "zimmay", "zimay", "zimma", "ذمے", "ذمہ",
         ],
     ),
@@ -553,7 +586,7 @@ const FIGURES: &[Entry] = &[
     (Cue::Laga, &["laga", "lagga", "لاگا"]),
     (
         Cue::Dues,
-        &["dues", "receivable", "receivables", "ادھاری بقایا"],
+        &["dues", "receivable", "receivables", "ادھاری بقایا", "کل اگراہی"],
     ),
     (
         Cue::Collection,
@@ -626,13 +659,13 @@ const FIGURES: &[Entry] = &[
         Cue::Capital,
         &[
             "sarmaya", "sarmayah", "sarmaiya", "capital", "investment", "invest", "invested",
-            "سرمایہ", "سرمایہ کاری",
+            "سرمایہ", "سرمائے", "سرمایہ کاری",
         ],
     ),
     (
         Cue::PartnerTotal,
         &[
-            "kul raqam", "kul rakam", "total raqam", "partner total", "khalis", "khalees",
+            "kul raqam", "kul rakam", "total raqam", "partner total", "partner s total", "partners total", "khalis", "khalees",
             "khaalis", "khalis raqam", "net worth", "net", "کل رقم", "ٹوٹل رقم", "خالص",
         ],
     ),
@@ -648,7 +681,7 @@ const FIGURES: &[Entry] = &[
         &[
             "munafa", "munafah", "munafe", "nafa", "profit", "profits", "faida", "fayda", "loss",
             "nuqsan", "nuksan", "kamai", "kamayi", "earning", "earnings", "منافع", "فائدہ", "نقصان",
-            "کمائی",
+            "کمائی", "نفع",
         ],
     ),
     (
@@ -669,7 +702,15 @@ const FIGURES: &[Entry] = &[
     ),
     (
         Cue::FruitWord,
-        &["phal", "phalon", "fruit", "fruits", "پھل", "پھلوں"],
+        &["phal", "phalon", "phalo", "fruit", "fruits", "پھل", "پھلوں"],
+    ),
+    (
+        Cue::VegetableWord,
+        &[
+            "sabzi", "sabzian", "sabziyan", "sabziyon", "sabzion", "sabzee", "sabji", "sabjiyan",
+            "sabjiyon", "sabzi", "vegetable", "vegetables", "veggies", "veggie", "سبزی", "سبزیاں",
+            "سبزیوں", "سبزیات",
+        ],
     ),
     (
         Cue::MoneyLent,
@@ -701,7 +742,7 @@ const FIGURES: &[Entry] = &[
     ),
     (
         Cue::DayBook,
-        &["roznamcha", "roznamchah", "roznama", "day book", "daybook", "روزنامچہ", "روزنامہ"],
+        &["roznamcha", "roznamchah", "roznamchay", "roznamche", "roznama", "day book", "daybook", "روزنامچہ", "روزنامچے", "روزنامہ"],
     ),
     (
         Cue::TrialBalance,
@@ -711,7 +752,8 @@ const FIGURES: &[Entry] = &[
         Cue::ByCity,
         &[
             "city wise", "shehar wise", "shahar wise", "sheher wise", "bahisab shehar",
-            "shehar ke hisab se", "city ke hisab se", "بحساب شہر", "شہر وار", "شہر کے حساب سے",
+            "shehar ke hisab se", "city ke hisab se", "by city", "per city", "city by city",
+            "by shehar", "بحساب شہر", "شہر وار", "شہر کے حساب سے", "شہر کے لحاظ سے",
         ],
     ),
     (
@@ -729,7 +771,17 @@ const FIGURES: &[Entry] = &[
     ),
     (
         Cue::ResultWord,
-        &["result", "natija", "nateeja", "nataij", "نتیجہ", "نتائج"],
+        &["result", "natija", "nateeja", "nataij", "نتیجہ", "نتیجے", "نتائج"],
+    ),
+    (Cue::NumberWord, &["number", "numbar", "nmbr", "num", "نمبر"]),
+    (
+        Cue::PartnerTaken,
+        &[
+            "li hui raqam", "li hui rakam", "lee hui raqam", "liye hue paise", "partner drawings",
+            "partners drawings", "drawings", "partners took", "partner took", "money taken by partners",
+            "money taken by the partners", "taken by the partners", "partner has taken", "zaati kharcha", "zaati kharch", "zati kharcha",
+            "zaati kharche", "ذاتی خرچہ", "ذاتی خرچ", "لی ہوئی رقم", "لیے ہوئے پیسے",
+        ],
     ),
 ];
 
@@ -797,6 +849,7 @@ pub(super) const STOP: &[&str] = &[
     "sahab", "sahib", "saheb", "bhai", "bhaiya", "bhaijaan", "ji", "miyan", "mr", "mrs", "ms", "sir",
     "madam", "uncle", "chacha", "shop", "dukan", "dukaan", "business", "karobar", "firm", "صاحب",
     "بھائی", "بھیا", "جی", "میاں", "چچا", "دکان", "کاروبار",
+    "bana", "bani", "bane", "banay", "بنا", "بنی", "بنے",
     "purana", "purani", "purane", "puranay", "naya", "nayi", "naye", "aakhri", "akhri", "pehla", "pehli",
     "oldest", "newest", "latest", "first", "sabse", "report", "reports", "رپورٹ", "saari", "saara", "sara", "saray", "سارا", "whole",
     "entire", "karni", "karne", "kijiye", "کرنی", "کرنے", "hazar", "hazaar", "lakh", "lac", "crore", "karor",
@@ -825,7 +878,9 @@ pub(super) const STOP: &[&str] = &[
     "jin", "ke", "kaha", "kehna", "bolo", "boliye", "suna", "suniye", "dekho", "dekhna", "dekh",
     "dekhen", "dekhein", "sakta", "sakte", "sakti", "chahta", "chahte", "chahti", "chahiye", "raha",
     "rahi", "rahe", "rha", "rhi", "rhe", "gaya", "bohat", "bahut", "bahot", "zyada", "ziada",
-    "ziyada", "kam", "thora", "thoda", "kitni", "kitne", "ka", "ke", "ko", "اور", "کا", "کی", "کے",
+    "ziyada", "kam", "thora", "thoda", "kitni", "kitne", "ka", "ke", "ko", "wapsi", "wapis", "now", "far", "till", "upto", "currently", "current", "muqable", "muqabla",
+    "muqabale", "mawazna", "compare", "compared", "comparison", "versus", "vs", "with", "مقابلے",
+    "مقابلہ", "موازنہ", "زیادہ", "کم", "کتنا", "up", "time", "bar", "baar", "dafa", "dafah", "martaba", "بار", "دفعہ", "اور", "کس", "کسے", "کسی", "پہلے", "پہلا", "واپسی", "واپس", "کا", "کی", "کے",
     "کو", "سے", "نے", "میں", "پر", "تک", "ہے", "ہیں", "تھا", "تھی", "تھے", "ہو", "ہوا", "ہوئی",
     "ہوئے", "ہوگا", "ہوگی", "گیا", "گئی", "گئے", "کیا", "کیے", "دیا", "دی", "دیے", "لیا", "لی",
     "لیے", "کر", "کرو", "کریں", "کروں", "کرنا", "کرے", "بتاؤ", "بتائیں", "بتا", "کیوں", "کب", "کون",
@@ -847,6 +902,110 @@ pub(super) const NAMEISH: &[&str] = &[
     "پھل", "باغ", "ٹریڈرز", "برادرز", "ٹیکس", "ٹول", "سٹور", "جنرل", "کیش", "منڈی", "کمپنی", "اینڈ",
     "سنز", "فارم", "فارمز", "اڈا", "مارکیٹ", "حاجی", "ملک",
 ];
+
+/// The titles of the reports that no figure names, by report: the words a print or an open request
+/// uses for it (PRD 19.2). The words are in the table as [`Cue::ReportName`]; [`report_named`] gives
+/// the report of the words of one hit.
+///
+/// Example: "udhari bikri ka print" is R4; "adda report" is R8.
+#[rustfmt::skip]
+pub(super) const REPORT_NAMES: &[(&str, &[&str])] = &[
+    ("R3", &["naqdi bikri", "naqdi sales", "naqdi sale", "cash sales", "cash sale", "نقدی بکری"]),
+    ("R4", &["udhari bikri", "udhari sales", "udhari sale", "udhaari bikri", "credit sales", "credit sale", "ادھاری بکری"]),
+    ("R7", &["item wise bikri", "item wise sale", "item wise sales", "itemwise bikri", "qisam war bikri", "qisam wise bikri", "item wise", "قسم وار بکری", "قسم وار"]),
+    ("R8", &["adda report", "adda rapat", "adda wise", "truck stand report", "truck adda report", "اڈا رپورٹ", "اڈا وار"]),
+    ("R9", &["pukhta khata register", "pukhta khata report", "pukhta register", "pakka khata register", "پختہ کھاتہ رجسٹر", "پختہ کھاتہ رپورٹ"]),
+    ("R15", &["voucher list", "vouchers list", "voucher register", "vouchers register", "ووچر لسٹ", "واؤچر لسٹ", "واؤچر رجسٹر"]),
+    ("R16", &["account index", "accounts index", "index report", "index print", "accounts list", "list of accounts", "khaton ki list", "کھاتوں کی فہرست", "انڈکس رپورٹ"]),
+    ("R17", &["head balances", "head balance", "heads balance", "madon ka balance", "mad wise balance", "مدوں بیلنس", "مدوں کا بیلنس"]),
+    ("R19", &["opening trial", "open trial", "opening trial balance", "اوپن ٹرائل", "ابتدائی ٹرائل"]),
+    ("R22", &["collector wise", "collector report", "ugrahi wala wise", "agrahi wala wise", "ugrahi wale wise", "اگراہی والا وار", "اگراہی والے وار", "اگراہی والا", "اگراہی والے"]),
+    ("R23", &["wasooli register", "wasuli register", "receipts register", "receipt register", "receipts list", "وصولی رجسٹر"]),
+    ("R25", &["adaigi register", "payments register", "payment register", "payments list", "ادائیگی رجسٹر"]),
+    ("R27", &["bijak series", "bijag series", "bejak series", "baijak series", "bill series", "بیجک سیریز", "بجک سیریز"]),
+    ("R28", &["amdan report", "aamdan report", "amdani report", "income report", "income ka report", "آمدن رپورٹ", "آمدنی رپورٹ"]),
+    ("R30", &["munafa taqseem", "munafa o taqseem", "profit and partner split", "profit split", "partner profit split", "منافع و تقسیم", "منافع تقسیم"]),
+    ("R32", &["udhar raqam report", "udhar raqam ka report", "money lent report", "loans report", "ادھار رقم رپورٹ"]),
+    ("A", &["item wise tajziya", "item wise tajziyat", "item wise analytics", "qisam war tajziya", "analytics by item", "commission by item", "قسم وار تجزیہ"]),
+    ("B", &["seller wise tajziya", "byopari wise tajziya", "analytics by seller", "commission by seller", "بیوپاری وار تجزیہ"]),
+    ("C", &["buyer wise tajziya", "gahak wise tajziya", "analytics by buyer", "commission by buyer", "گاہک وار تجزیہ"]),
+    ("D", &["item month wise", "month wise commission", "mahine wise commission", "item aur mahina wise", "ماہانہ کمیشن", "قسم مال مہینہ وار"]),
+    ("E", &["seller item wise", "byopari item wise", "seller by item", "بیوپاری قسم مال وار"]),
+    ("F", &["partner wise tajziya", "shirakat daar wise tajziya", "partner analytics", "شراکت دار وار تجزیہ"]),
+    ("G", &["commission trend", "bikri ka rujhan", "bikri trend", "sales trend", "rujhan", "رجحان"]),
+    ("H", &["top 10 tajziya", "top 10 analytics", "top 10 view", "top 10 report", "top ten report", "top ten view", "sarfehrist", "sarfarist", "sar farist", "سرفہرست"]),
+    ("I", &["gardens analytics", "garden analytics", "bagh tajziya", "باغات تجزیہ", "باغ تجزیہ"]),
+    ("J", &["trips analytics", "trip analytics", "safar tajziya", "سفر تجزیہ", "مارکیٹ سفر تجزیہ"]),
+    ("K", &["fruit analytics", "phal tajziya", "fruit taken analytics", "پھل تجزیہ"]),
+    ("R38", &["doobi raqam report", "dubi raqam report", "dead amount report", "bad debt report", "ڈوبی رقم رپورٹ"]),
+];
+
+/// The report a hit of [`Cue::ReportName`] names, from the normalised words it covers.
+pub(super) fn report_named(words: &[String]) -> Option<&'static str> {
+    REPORT_NAMES.iter().find_map(|(id, names)| {
+        names
+            .iter()
+            .any(|name| words_of(name) == words)
+            .then_some(*id)
+    })
+}
+
+/// Questions about the app's own state, by the read they need (plan 55 §11.1, `app_state` and the
+/// staff and expense-head lists of `find`): `rules` (which commission or laga rule applies),
+/// `attention` (the list "آج کے کام"), `days` (the days closed), `staff_munshi`, `staff_collector`,
+/// `staff_labour`, `staff_all` (how many of the staff), `heads` (how many expense heads),
+/// `vouchers_receipt`, `vouchers_payment`, `vouchers_advance` (the vouchers of one type only: R15),
+/// `audit` (who changed what: the newest rows of the audit log, or those of one party or one بکری).
+///
+/// Example: "rahim par commission kitna lagta hai" is `rules`; "kitne munshi hain" is `staff_munshi`.
+#[rustfmt::skip]
+pub(super) const ASK_NAMES: &[(&str, &[&str])] = &[
+    ("rules", &[
+        "commission kitna lagta hai", "laga kitna lagta hai", "kitna commission lagta hai", "kitna laga lagta hai",
+        "commission kitna lagta", "laga kitna lagta", "commission lagta hai", "commission rate", "commission rates",
+        "commission ka rate", "laga rate", "laga ka rate", "commission rule", "commission rules", "laga rule",
+        "charge rule", "commission kitne percent lagta hai", "کمیشن کتنا لگتا ہے", "لاگا کتنا لگتا ہے",
+        "کمیشن ریٹ", "لاگا ریٹ", "کمیشن کا ریٹ", "لاگا کا ریٹ",
+    ]),
+    ("attention", &[
+        "aaj ke kaam", "aaj ka kaam", "aaj kya kaam hai", "kya baqi hai", "kya kya baqi hai", "kya pending hai",
+        "kya zaroori hai", "attention list", "needs attention", "what needs attention", "what is pending",
+        "توجہ طلب", "آج کے کام", "آج کا کام", "کیا باقی ہے",
+    ]),
+    ("days", &[
+        "kaunse din band hain", "kaun se din band hain", "kon se din band hain", "kaunse din band",
+        "din band hain", "din band hue", "mahina band hua", "mahina band ho gaya", "month closed",
+        "closed days", "days closed", "which days are closed", "کون سے دن بند ہیں", "کونسے دن بند ہیں",
+        "دن بند ہیں", "مہینہ بند ہوا", "مہینہ بند ہو گیا",
+    ]),
+    ("audit", &[
+        "kisne kya badla", "kisne kya badal", "kis ne kya badla", "kisne badla", "kis ne badla",
+        "aakhri changes", "aakhri tabdeeliyan", "recent changes", "latest changes", "kya changes hue",
+        "who changed what", "who changed", "کس نے کیا بدلا", "آخری تبدیلیاں",
+    ]),
+    ("staff_munshi", &["kitne munshi", "munshi kitne", "how many munshi", "how many munshis", "کتنے منشی", "منشی کتنے"]),
+    ("staff_collector", &["kitne collector", "collector kitne", "how many collectors", "کتنے اگراہی والے"]),
+    ("staff_labour", &["kitne mazdoor", "mazdoor kitne", "kitne labour", "how many labourers", "کتنے مزدور"]),
+    ("staff_all", &["kitne staff", "staff kitne", "kitne log kaam", "how many staff", "کتنا عملہ", "کتنے ملازم"]),
+    ("vouchers_receipt", &["sirf wasooli ki list", "sirf wasooli", "sirf wasooli ke voucher", "wasooli ke voucher", "receipt vouchers", "only receipts", "only receipt vouchers", "صرف وصولی"]),
+    ("vouchers_payment", &["sirf adaigi ki list", "sirf adaigi", "sirf adaigi ke voucher", "adaigi ke voucher", "payment vouchers", "only payments", "صرف ادائیگی"]),
+    ("vouchers_advance", &["sirf peshgi ki list", "sirf peshgi", "sirf peshgi ke voucher", "peshgi ke voucher", "advance vouchers", "only advances", "صرف پیشگی"]),
+    ("packings", &["kitni packing", "packing kitni", "how many packings", "how many packing", "کتنی پیکنگ"]),
+    ("markas", &["kitne marka", "marka kitne", "how many markas", "how many marka", "کتنے مارکہ"]),
+    ("stores", &["kitne store", "store kitne", "kitne godam", "how many stores", "کتنے سٹور"]),
+    ("narrations", &["kitni narration", "narration kitni", "how many narrations", "how many narration"]),
+    ("heads", &["kitne expense head", "kitne expense heads", "expense heads kitne", "how many expense heads", "kharche ke kitne head", "کتنی خرچہ مد", "خرچہ مد کتنی"]),
+];
+
+/// The ask a hit of [`Cue::AskName`] names, from the normalised words it covers.
+pub(super) fn ask_named(words: &[String]) -> Option<&'static str> {
+    ASK_NAMES.iter().find_map(|(id, names)| {
+        names
+            .iter()
+            .any(|name| words_of(name) == words)
+            .then_some(*id)
+    })
+}
 
 /// The compiled table.
 pub(super) struct Table {
@@ -875,7 +1034,20 @@ impl Table {
     fn build() -> Self {
         let mut singles: HashMap<String, Vec<Cue>> = HashMap::new();
         let mut phrases: Vec<(Vec<String>, Cue)> = Vec::new();
-        for table in [INTENT, ROLES, FIGURES, OUTSIDE] {
+        let leak = |tables: &[(&str, &[&'static str])]| -> &'static [&'static str] {
+            Box::leak(
+                tables
+                    .iter()
+                    .flat_map(|(_, names)| names.iter().copied())
+                    .collect::<Vec<&'static str>>()
+                    .into_boxed_slice(),
+            )
+        };
+        let report_entries: Vec<Entry> = vec![
+            (Cue::ReportName, leak(REPORT_NAMES)),
+            (Cue::AskName, leak(ASK_NAMES)),
+        ];
+        for table in [INTENT, ROLES, FIGURES, OUTSIDE, report_entries.as_slice()] {
             for (cue, entries) in table {
                 for entry in *entries {
                     let words = words_of(entry);
@@ -929,6 +1101,27 @@ impl Table {
     /// True when the word is in the table or a function word: it starts no name.
     pub(super) fn is_known(&self, word: &str) -> bool {
         self.singles.contains_key(word) || self.stop.contains(word)
+    }
+
+    /// True when the word is known, or one letter off a word of the table or a function word (two
+    /// letters from nine): a common word spelt wrong ("kitny", "gaahkon"). Such a word is never a name
+    /// that is missing from the books (money review of run 1: "aj ki bikri kitny ki hui" is not a
+    /// question about a party called kitny).
+    pub(super) fn is_near_known(&self, word: &str) -> bool {
+        if self.is_known(word) {
+            return true;
+        }
+        let length = word.chars().count();
+        if length < 4 || !word.chars().all(|c| c.is_ascii_lowercase()) {
+            return false;
+        }
+        let allowed = if length >= 9 { 2 } else { 1 };
+        let near = |candidate: &str| {
+            candidate.chars().count().abs_diff(length) <= allowed
+                && super::scan::edit_distance(word, candidate, allowed) <= allowed
+        };
+        self.pool.iter().any(|(candidate, _)| near(candidate))
+            || self.stop.iter().any(|candidate| near(candidate))
     }
 
     /// All the hits of a list of normalised words: phrases first, then single words, then soft hits

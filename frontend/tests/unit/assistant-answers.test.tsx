@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnswerEstimate } from '../../src/bindings/AnswerEstimate';
 import type { AnswerWorking } from '../../src/bindings/AnswerWorking';
 import type { AskReply } from '../../src/bindings/AskReply';
+import type { EntryScreen } from '../../src/bindings/EntryScreen';
+import type { ScreenRoute } from '../../src/bindings/ScreenRoute';
 import type { EstimateMethod } from '../../src/bindings/EstimateMethod';
 import type { AssistantStep } from '../../src/bindings/AssistantStep';
 import * as assistantApi from '../../src/features/assistant/api';
@@ -840,6 +842,215 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     });
   });
 
+  describe('an analytics source opens each of the eleven views A to K with its filters (plan 55 W2)', () => {
+    it.each(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'] as const)(
+      'view %s: the button opens it, and the print is offered',
+      async (view) => {
+        const base = real.REPLY_ANSWERED_CHART;
+        const source = base.answer?.sources.find((candidate) => candidate.kind === 'analytics');
+        if (base.answer === null || source?.kind !== 'analytics') {
+          throw new Error('the fixture has no analytics source to build from');
+        }
+        await renderShellRouted();
+        const user = await ask(language, {
+          ...base,
+          answer: {
+            ...base.answer,
+            sources: [
+              {
+                ...source,
+                view,
+                label_id: `analytics-view-${view.toLowerCase()}-title`,
+                filters: { ...source.filters, period: 'this_month', compare: 'off' },
+              },
+            ],
+          },
+        });
+        const panel = panelOf(language);
+        expect(
+          within(panel).getByRole('button', {
+            name: new RegExp(message(language, 'assistant-print')),
+          }),
+        ).toBeInTheDocument();
+        await user.click(
+          within(panel).getByRole('button', {
+            name: new RegExp(message(language, 'assistant-open-report')),
+          }),
+        );
+        expect(routeNow().path).toBe('/analytics/$view');
+        expect(routeNow().params).toEqual({ view });
+        expect(routeNow().search).toMatchObject({ period: 'this_month' });
+      },
+    );
+  });
+
+  describe('a screen as the source of an answer (plan 55 Section 13): it is named, and one button opens it', () => {
+    const answerFrom = (route: ScreenRoute): AskReply => {
+      const base = real.REPLY_ANSWERED;
+      if (base.answer === null) throw new Error('the fixture has no answer');
+      return {
+        ...base,
+        answer: { ...base.answer, sources: [{ kind: 'screen', result_id: 'r9', route }] },
+      };
+    };
+
+    it.each([
+      ['dashboard', 'layout-nav-dashboard', '/', {}],
+      ['commission_rules', 'masters-rules-title', '/index/rules', {}],
+      ['day_close', 'day-title', '/day', {}],
+      ['audit', 'settings-tab-audit', '/settings', { tab: 'audit' }],
+    ] as const)(
+      '%s: named by the screen title, opened by "open the screen"',
+      async (route, titleId, path, search) => {
+        await renderShellRouted();
+        const user = await ask(language, answerFrom(route), 'kya hua');
+        // The source line names it, and the one button says it opens the screen, never a report.
+        expect(text(language)).toContain(message(language, titleId));
+        const panel = panelOf(language);
+        expect(
+          within(panel).queryByRole('button', {
+            name: new RegExp(message(language, 'assistant-open-report')),
+          }),
+        ).toBeNull();
+        // A screen has no print.
+        expect(
+          within(panel).queryByRole('button', {
+            name: new RegExp(message(language, 'assistant-print')),
+          }),
+        ).toBeNull();
+        await user.click(
+          within(panel).getByRole('button', { name: message(language, 'assistant-open-screen') }),
+        );
+        expect(routeNow().path).toBe(path);
+        expect(routeNow().search).toEqual(search);
+        // The panel stays open over the next screen.
+        expect(panelOf(language)).not.toHaveAttribute('inert');
+      },
+    );
+
+    it.each([
+      ['dashboard', real.REPLY_SCREEN_SOURCE, real.REPLY_SCREEN_SOURCE_REQUEST, '/', {}],
+      [
+        'audit',
+        real.REPLY_SCREEN_SOURCE_AUDIT,
+        real.REPLY_SCREEN_SOURCE_AUDIT_REQUEST,
+        '/settings',
+        { tab: 'audit' },
+      ],
+    ] as const)(
+      "the backend's own %s answer: its figure is drawn, and the button opens the screen",
+      async (route, reply, request, path, search) => {
+        expect(reply.answer?.sources).toEqual([expect.objectContaining({ kind: 'screen', route })]);
+        await renderShellRouted();
+        const user = await ask(language, reply, request.text);
+        const panel = panelOf(language);
+        // The answer is drawn like any answer: its figure is a number, and the source line names the screen.
+        const answer = within(panel).getByLabelText(message(language, 'assistant-answer-label'));
+        expect(answer.querySelectorAll('bdi.number-run').length).toBeGreaterThan(0);
+        await user.click(
+          within(panel).getByRole('button', { name: message(language, 'assistant-open-screen') }),
+        );
+        expect(routeNow().path).toBe(path);
+        expect(routeNow().search).toEqual(search);
+      },
+    );
+
+    it('with a report and a screen, each button says which one it opens', async () => {
+      const base = answerFrom('audit');
+      const report = real.REPLY_ANSWERED.answer?.sources.find((source) => source.kind === 'report');
+      if (base.answer === null || report === undefined) throw new Error('no source to build from');
+      await renderShellRouted();
+      await ask(
+        language,
+        { ...base, answer: { ...base.answer, sources: [report, ...base.answer.sources] } },
+        'kya hua',
+      );
+      const panel = panelOf(language);
+      const screenLabel = message(language, 'settings-tab-audit');
+      expect(
+        within(panel).getByRole('button', {
+          name: named(language, 'assistant-open-screen-of', { source: screenLabel }),
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('the entries of a garden, a trip and a بکری (plan 55 Section 11.1)', () => {
+    const GARDEN = {
+      id: 5,
+      code: null,
+      name_ur: 'شاہ پور باغ',
+      name_en: 'Shahpur Garden',
+      tag: null,
+    };
+    const TRIP = { id: 7, code: null, name_ur: 'سفر 0070', name_en: 'Trip 0070', tag: null };
+    const entryButton = () =>
+      within(panelOf(language)).getByRole('button', {
+        name: new RegExp(language === 'ur' ? 'اندراج' : 'entry screen'),
+      });
+    const openRoute = async (screen: EntryScreen, party: typeof GARDEN | null) => {
+      await renderShellRouted();
+      const user = await ask(language, {
+        ...real.REPLY_ANSWERED_ROUTE,
+        entry_route: { screen, party },
+      });
+      await user.click(entryButton());
+      return routeNow();
+    };
+
+    it.each([
+      ['garden_installment', 'installment'],
+      ['garden_cost', 'cost'],
+      ['garden_sale', 'other_sale'],
+      ['garden_close', 'close'],
+    ] as const)('%s opens the garden on its %s', async (screen, type) => {
+      const now = await openRoute(screen, GARDEN);
+      expect(now.path).toBe('/gardens/$id');
+      expect(now.params).toEqual({ id: '5' });
+      expect(now.search).toEqual({ type });
+    });
+
+    it.each([
+      ['trip_purchase', 'purchase'],
+      ['trip_cost', 'cost'],
+      ['trip_sale', 'other_sale'],
+    ] as const)('%s opens the trip on its %s', async (screen, type) => {
+      const now = await openRoute(screen, TRIP);
+      expect(now.path).toBe('/trips/$id');
+      expect(now.params).toEqual({ id: '7' });
+      expect(now.search).toEqual({ type });
+    });
+
+    it.each([
+      ['garden_installment', '/gardens'],
+      ['garden_close', '/gardens'],
+      ['trip_purchase', '/trips'],
+      ['trip_sale', '/trips'],
+    ] as const)(
+      '%s with no record opens the list, and the Owner picks one',
+      async (screen, path) => {
+        const now = await openRoute(screen, null);
+        expect(now.path).toBe(path);
+        expect(now.search).toEqual({});
+      },
+    );
+
+    it('a later sale opens the unsold stock, where each lot has its own button', async () => {
+      const now = await openRoute('bikri_later_sale', null);
+      expect(now.path).toBe('/bikri/stock');
+      expect(now.search).toEqual({});
+    });
+
+    it.each(['bikri_edit', 'bikri_cancel'] as const)(
+      '%s opens the بکری book with its find box (F3) asked for',
+      async (screen) => {
+        const now = await openRoute(screen, null);
+        expect(now.path).toBe('/bikri/book');
+        expect(now.search).toEqual({ find: true });
+      },
+    );
+  });
+
   describe('a question that a limit stopped (plan 51 B2, PRD E96)', () => {
     it('after the calls: says it could not finish reading and to ask in smaller parts', async () => {
       await renderShellRouted();
@@ -1058,6 +1269,38 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
         name: new RegExp(message(language, 'assistant-open-report')),
       }),
     ).toBeInTheDocument();
+  });
+
+  it('an instant answer of two sentences: each "•" line is on its own line, with its own figure', async () => {
+    const base = real.REPLY_ANSWERED;
+    const money = base.answer?.parts[6];
+    if (base.answer === null || money?.type !== 'figure') {
+      throw new Error('the fixture answer has no money figure to build from');
+    }
+    const period = message(language, 'assistant-instant-period', { shape: 'today' });
+    const lineOf = (id: string, role: string) =>
+      message(language, id, { role, period, figure: 'FIGUREMARK' })
+        .split(/(FIGUREMARK)/)
+        .filter((piece) => piece !== '')
+        .map((piece) => (piece === 'FIGUREMARK' ? money : { type: 'text' as const, text: piece }));
+    // The backend joins the sentences with a new line and "• " itself.
+    const parts = [
+      { type: 'text' as const, text: '• ' },
+      ...lineOf('assistant-instant-sale', 'shop'),
+      { type: 'text' as const, text: '\n• ' },
+      ...lineOf('assistant-instant-commission', 'shop'),
+    ];
+    const reply: AskReply = { ...base, answer: { ...base.answer, parts, tables: [] } };
+    await renderShellRouted();
+    await ask(language, reply, 'aaj ki sale aur commission');
+    const answer = within(panelOf(language)).getByLabelText(
+      message(language, 'assistant-answer-label'),
+    );
+    // The line break is kept (CSS keeps it on screen: pre-line), so the second "•" starts a new line.
+    expect(answer).toHaveClass('whitespace-pre-line');
+    expect(answer.textContent).toContain('\n• ');
+    expect(answer.textContent.split('\n')).toHaveLength(2);
+    expect(answer.querySelectorAll('bdi.number-run')).toHaveLength(2);
   });
 
   it('out of time, a party card that was read gives his name and his checked balance above the tables (plan 55)', async () => {

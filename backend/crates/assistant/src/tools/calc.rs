@@ -22,15 +22,18 @@
 use chrono::{Datelike, NaiveDate};
 use mandi_reports::analytics::{
     AnalyticsFilters, AnalyticsGroupBy, AnalyticsRunInput, AnalyticsSide, AnalyticsView,
-    run as engine_run,
+    MonthAmount, SalePart, expense_head_months, garden_sales_months, receipts_months,
+    run as engine_run, sale_part_months, trip_sales_months,
 };
-use mandi_reports::reports::{Cell, PartyFilter};
+use mandi_reports::reports::{Cell, PartyFilter, ReportId};
 use mandi_services::core::accounts::{AccountType, BalanceSide};
 use mandi_services::core::money::Paisa;
 use mandi_services::domain::figures::{
     Calc, CalcOp, Dir, NumberUnit, Op, QuestionNumber, Step, Value,
 };
-use mandi_services::domain::forecast::{Method, MethodEstimate, MonthValue, PaceFactor, YearMonth};
+use mandi_services::domain::forecast::{
+    BalanceKind, Method, MethodEstimate, MonthValue, PaceFactor, YearMonth,
+};
 use mandi_services::{figures, forecast};
 use serde::Deserialize;
 use serde_json::Value as Json;
@@ -39,14 +42,18 @@ use super::cells::{is_total_line, magnitude};
 use super::cues;
 use super::records::{named, require_type};
 use super::report::reports_stop;
-use super::{Draft, Env, State, Stop, ToolError, input, lookup, service_stop};
+use super::{
+    Draft, Env, PartnerRule, State, Stop, ToolError, input, lookup, service_stop, view_rule,
+};
 use crate::answer::{
     AnswerChart, AnswerEstimate, AnswerMonth, AnswerSource, AnswerWorking, ChartSeries,
     ChartSeriesKind, EstimateMethod, EstimateMethodKind, EstimateYear, FigureDirection, WorkingOp,
     WorkingStep,
 };
 use crate::results::{Money, Node, Shown, Side, Val};
-use crate::source::SourceAnalyticsFilters;
+use crate::source::{SourceAnalyticsFilters, SourceParty, SourceReportFilters};
+
+mod pace;
 
 fn bad(code: &str, field: &str, detail: &str) -> ToolError {
     ToolError::new(code, field, detail)
@@ -295,6 +302,15 @@ fn expand(
 ) -> Result<Vec<Pending>, ToolError> {
     if let Some(number) = question_number(env, path) {
         return Ok(vec![pending_of_question(number, field)?]);
+    }
+    // PRD FR-7.76 point 4: an estimated figure is never an input of a calculation, so it can
+    // never come back as a book figure with a check mark.
+    if crate::check::is_estimate_path(state, path) {
+        return Err(bad(
+            "ERR_OUT_OF_RANGE",
+            field,
+            "this path is an estimate, not a book figure; show it as an estimate",
+        ));
     }
     let parts: Vec<&str> = path.split('.').collect();
     let Some(star) = parts.iter().position(|p| *p == "*") else {
@@ -733,6 +749,31 @@ pub enum Measure {
     GardenSales,
     /// Trip sales.
     TripSales,
+    /// One party's balance, at the same pace (plan 55 F4).
+    PartyBalance,
+    /// The cash in hand, at the same pace (plan 55 F5).
+    CashInHand,
+    /// What the buyers owe (the total of R20), at the same pace (plan 55 F5).
+    BuyersDues,
+}
+
+/// How the monthly series of a measure is read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Series {
+    /// A column of analytics view G, read with a side.
+    ViewG(&'static str, AnalyticsSide),
+    /// The buyer commission or the لاگا, from the sale facts.
+    Facts(SalePart),
+    /// The saved receipts (R23).
+    Receipts,
+    /// The garden sales (view I).
+    GardenSales,
+    /// The trip sales (view J).
+    TripSales,
+    /// One shop expense head (R29).
+    Head,
+    /// A balance at the same pace: no monthly total, a net change each month.
+    Balance(BalanceKind),
 }
 
 impl Measure {
@@ -748,6 +789,9 @@ impl Measure {
             Measure::Receipts => "receipts",
             Measure::GardenSales => "garden_sales",
             Measure::TripSales => "trip_sales",
+            Measure::PartyBalance => "party_balance",
+            Measure::CashInHand => "cash_in_hand",
+            Measure::BuyersDues => "buyers_dues",
         }
     }
 
@@ -764,20 +808,31 @@ impl Measure {
             Measure::Receipts => "assistant-measure-receipts",
             Measure::GardenSales => "assistant-measure-garden-sales",
             Measure::TripSales => "assistant-measure-trip-sales",
+            Measure::PartyBalance => "assistant-measure-party-balance",
+            Measure::CashInHand => "assistant-measure-cash-balance",
+            Measure::BuyersDues => "assistant-measure-buyers-dues",
         }
         .to_owned()
     }
 
-    /// The column of view G and the side it is read with. `None` for a measure the books give no
-    /// monthly series of yet.
-    fn column(self) -> Option<(&'static str, AnalyticsSide)> {
+    /// How the monthly series is read. `with_head`: an expense head was named, so the shop
+    /// expenses are the head's own (R29), not the shop's total (view G).
+    fn series(self, with_head: bool) -> Series {
         match self {
-            Measure::Sales => Some(("gross", AnalyticsSide::Both)),
-            Measure::CommissionAll => Some(("commission", AnalyticsSide::Both)),
-            Measure::CommissionSeller => Some(("commission", AnalyticsSide::Seller)),
-            Measure::ShopExpenses => Some(("shop_expenses", AnalyticsSide::Both)),
-            Measure::Profit => Some(("profit", AnalyticsSide::Both)),
-            _ => None,
+            Measure::Sales => Series::ViewG("gross", AnalyticsSide::Both),
+            Measure::CommissionAll => Series::ViewG("commission", AnalyticsSide::Both),
+            Measure::CommissionSeller => Series::ViewG("commission", AnalyticsSide::Seller),
+            Measure::CommissionBuyer => Series::Facts(SalePart::BuyerCommission),
+            Measure::Laga => Series::Facts(SalePart::Laga),
+            Measure::ShopExpenses if with_head => Series::Head,
+            Measure::ShopExpenses => Series::ViewG("shop_expenses", AnalyticsSide::Both),
+            Measure::Profit => Series::ViewG("profit", AnalyticsSide::Both),
+            Measure::Receipts => Series::Receipts,
+            Measure::GardenSales => Series::GardenSales,
+            Measure::TripSales => Series::TripSales,
+            Measure::PartyBalance => Series::Balance(BalanceKind::Party),
+            Measure::CashInHand => Series::Balance(BalanceKind::Cash),
+            Measure::BuyersDues => Series::Balance(BalanceKind::Dues),
         }
     }
 }
@@ -798,6 +853,15 @@ pub struct EstimateInput {
     pub garden: Option<String>,
     /// A trip.
     pub trip: Option<String>,
+    /// One shop expense head (a key from `find` role `expense_head`). Only with `shop_expenses`.
+    #[serde(default)]
+    pub head: Option<String>,
+    /// One partner (a key from `find` role `partner`). Only with `profit`.
+    #[serde(default)]
+    pub partner: Option<String>,
+    /// One party (a key from `find`). Only with `party_balance`.
+    #[serde(default)]
+    pub party: Option<String>,
     /// Months ahead, 1 to 12. Null with `until`.
     pub ahead: Option<i64>,
     /// `year_end`: from the current month to December. Only when the question says so.
@@ -1069,10 +1133,6 @@ fn read_target(env: &Env<'_>, state: &State, path: &str) -> Result<Paisa, ToolEr
     }
 }
 
-fn year_month(year: i64, month: i64) -> Option<YearMonth> {
-    YearMonth::new(i32::try_from(year).ok()?, u32::try_from(month).ok()?)
-}
-
 fn answer_month(m: YearMonth) -> AnswerMonth {
     AnswerMonth {
         year: i64::from(m.year()),
@@ -1091,15 +1151,174 @@ fn key_of_month(m: YearMonth) -> String {
     format!("m{}{:02}", m.year(), m.month())
 }
 
-/// The full months before `today`, oldest first, from view G by month; a month with nothing is 0.
+/// Which filters a measure takes. A filter that does not belong to it is refused, never ignored:
+/// "the receipts of the apple" would otherwise answer the receipts of everything (plan 55 F1).
+fn check_filters(parsed: &EstimateInput, series: Series) -> Result<(), ToolError> {
+    const SALE: &[&str] = &["item", "seller", "buyer", "garden", "trip"];
+    let allowed: &[&str] = match series {
+        Series::ViewG(..) if parsed.measure == Measure::Profit => {
+            &["item", "seller", "buyer", "garden", "trip", "partner"]
+        }
+        Series::ViewG(..) | Series::Facts(_) => SALE,
+        Series::Receipts => &["buyer"],
+        Series::GardenSales => &["garden", "item"],
+        Series::TripSales => &["trip", "item"],
+        Series::Head => &["head"],
+        Series::Balance(BalanceKind::Party) => &["party"],
+        Series::Balance(_) => &[],
+    };
+    let set = [
+        ("item", parsed.item.is_some()),
+        ("seller", parsed.seller.is_some()),
+        ("buyer", parsed.buyer.is_some()),
+        ("garden", parsed.garden.is_some()),
+        ("trip", parsed.trip.is_some()),
+        ("head", parsed.head.is_some()),
+        ("partner", parsed.partner.is_some()),
+        ("party", parsed.party.is_some()),
+    ];
+    for (field, is_set) in set {
+        if is_set && !allowed.contains(&field) {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                field,
+                &format!(
+                    "this measure does not take {field}; {}",
+                    if allowed.is_empty() {
+                        "it takes no filter".to_owned()
+                    } else {
+                        format!("it takes {}", allowed.join(", "))
+                    }
+                ),
+            ));
+        }
+    }
+    if parsed.measure == Measure::PartyBalance && parsed.party.is_none() {
+        return Err(bad(
+            "ERR_REQUIRED",
+            "party",
+            "a party balance needs the party: find him first and pass his key",
+        ));
+    }
+    Ok(())
+}
+
+/// The months of a column of view G, from its rows (a month with no row is not in it).
+fn view_g_months(
+    env: &Env<'_>,
+    filters: &AnalyticsFilters,
+    column: &str,
+) -> Result<Vec<MonthAmount>, Stop> {
+    let page = engine_run(
+        env.ctx.db(),
+        &AnalyticsRunInput {
+            view: AnalyticsView::G,
+            filters: filters.clone(),
+            offset: 0,
+            limit: 1_000,
+            sort: None,
+        },
+    )
+    .map_err(reports_stop)?;
+    let at = page
+        .columns
+        .iter()
+        .position(|c| c.key == column)
+        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "measure", "no monthly series"))?;
+    let mut months = Vec::new();
+    for row in &page.rows {
+        let (Some(Cell::Month { year, month }), Some(cell)) =
+            (row.cells.first(), row.cells.get(at))
+        else {
+            continue;
+        };
+        let (Ok(year), Ok(month)) = (i32::try_from(*year), u32::try_from(*month)) else {
+            continue;
+        };
+        let amount = match cell {
+            Cell::Money { paisa } => *paisa,
+            // The column is empty when a sale filter narrows it (the share rows are kept for
+            // each posting, not for each lot).
+            _ => {
+                return Err(bad(
+                    "ERR_OUT_OF_RANGE",
+                    "measure",
+                    "this measure is not available with these filters",
+                )
+                .into());
+            }
+        };
+        months.push(MonthAmount {
+            year,
+            month,
+            amount,
+        });
+    }
+    Ok(months)
+}
+
+/// Every month from the first one of the series to the month before `current`, oldest first; a
+/// month with nothing in it is 0.
+fn fill_history(months: &[MonthAmount], current: YearMonth) -> Result<Vec<MonthValue>, ToolError> {
+    let mut series: Vec<(YearMonth, Paisa)> = Vec::new();
+    for m in months {
+        // A month outside the calendar is a bug of the series, never to be dropped without a word.
+        let month = YearMonth::new(m.year, m.month).ok_or_else(|| {
+            bad(
+                "ERR_INTERNAL",
+                "history",
+                "a month of the series is outside the calendar",
+            )
+        })?;
+        series.push((month, m.amount));
+    }
+    series.sort_by_key(|(m, _)| *m);
+    let mut history = Vec::new();
+    if let (Some((first, _)), Some(prev)) = (series.first().copied(), previous_month(current)) {
+        let mut month = first;
+        while month <= prev {
+            let value = series
+                .iter()
+                .find(|(m, _)| *m == month)
+                .map_or(Paisa::ZERO, |(_, v)| *v);
+            history.push(MonthValue { month, value });
+            match month.plus_months(1) {
+                Some(next) => month = next,
+                None => break,
+            }
+        }
+    }
+    Ok(history)
+}
+
+/// A series read, with the source its buttons open.
+struct Read {
+    /// The full months before the current one, oldest first.
+    history: Vec<MonthValue>,
+    /// The screen that shows the figures behind the series.
+    source: AnswerSource,
+    /// True when the series is a partner's (the answer holds a partner figure).
+    partner_data: bool,
+}
+
+/// The title of a report, as the screens name it.
+fn report_label(id: ReportId) -> String {
+    format!("report-{}-title", id.code().to_ascii_lowercase())
+}
+
+/// The full months before `current`, oldest first, read by the screen's own query with a month
+/// bucket (see `mandi_reports::analytics::series`); a month with nothing is 0.
 fn read_history(
     env: &Env<'_>,
     state: &State,
     parsed: &EstimateInput,
     current: YearMonth,
-    column: &str,
-    side: AnalyticsSide,
-) -> Result<(Vec<MonthValue>, AnalyticsFilters, SourceAnalyticsFilters), Stop> {
+    series: Series,
+) -> Result<Read, Stop> {
+    let side = match series {
+        Series::ViewG(_, side) => side,
+        _ => AnalyticsSide::Both,
+    };
     let mut filters = AnalyticsFilters {
         group_by: Some(AnalyticsGroupBy::Month),
         side,
@@ -1110,6 +1329,7 @@ fn read_history(
         side,
         ..SourceAnalyticsFilters::default()
     };
+    let mut buyer_record = None;
     if let Some(text) = &parsed.item {
         let (id, record) = named(env, state, text, "item", &["i"])?;
         filters.item_id = Some(id);
@@ -1128,7 +1348,8 @@ fn read_history(
             account_id: id,
             person_key: None,
         });
-        source.buyer = Some(crate::source::SourceParty {
+        buyer_record = Some((id, record.clone()));
+        source.buyer = Some(SourceParty {
             record,
             person_key: None,
         });
@@ -1143,72 +1364,129 @@ fn read_history(
         filters.trip_id = Some(id);
         source.trip = Some(record);
     }
+    // A partner's profit is a partner figure: a locked section pauses the question, as for view G
+    // with a partner (PRD FR-7.82, FR-17.11).
+    let mut partner_data = false;
+    if let Some(text) = &parsed.partner {
+        let (id, record) = named(env, state, text, "partner", &["s"])?;
+        filters.partner_id = Some(id);
+        source.partner = Some(record);
+        let rule = view_rule(AnalyticsView::G, &filters);
+        if rule == PartnerRule::Pause && env.partner_locked {
+            return Err(Stop::Locked);
+        }
+        partner_data = rule != PartnerRule::Free && !env.partner_locked;
+    }
+    let head_id = parsed
+        .head
+        .as_deref()
+        .map(|text| named(env, state, text, "head", &["eh"]))
+        .transpose()?
+        .map(|(id, _)| id);
     // The books up to the last day of the month before the current one.
     let first_of_current = NaiveDate::from_ymd_opt(current.year(), current.month(), 1);
     let last_full = first_of_current.and_then(|d| d.pred_opt());
-    if let Some(last) = last_full {
-        let iso = last.format("%Y-%m-%d").to_string();
-        filters.to = iso.clone();
-        source.to = iso;
+    let to = last_full.map(|last| last.format("%Y-%m-%d").to_string());
+    if let Some(iso) = &to {
+        filters.to.clone_from(iso);
+        source.to.clone_from(iso);
     }
-    let page = engine_run(
-        env.ctx.db(),
-        &AnalyticsRunInput {
-            view: AnalyticsView::G,
-            filters: filters.clone(),
-            offset: 0,
-            limit: 1_000,
-            sort: None,
-        },
-    )
-    .map_err(reports_stop)?;
-    let at = page
-        .columns
-        .iter()
-        .position(|c| c.key == column)
-        .ok_or_else(|| bad("ERR_OUT_OF_RANGE", "measure", "no monthly series"))?;
-    let mut series: Vec<(YearMonth, Paisa)> = Vec::new();
-    for row in &page.rows {
-        let (Some(Cell::Month { year, month }), Some(cell)) =
-            (row.cells.first(), row.cells.get(at))
-        else {
-            continue;
-        };
-        let Some(m) = year_month(*year, *month) else {
-            continue;
-        };
-        let paisa = match cell {
-            Cell::Money { paisa } => *paisa,
-            // The column is empty when a sale filter narrows it (the share rows are kept for
-            // each posting, not for each lot).
-            _ => {
-                return Err(bad(
-                    "ERR_OUT_OF_RANGE",
-                    "measure",
-                    "this measure is not available with these filters",
-                )
-                .into());
-            }
-        };
-        series.push((m, paisa));
-    }
-    series.sort_by_key(|(m, _)| *m);
-    let mut history = Vec::new();
-    if let (Some((first, _)), Some(prev)) = (series.first().copied(), previous_month(current)) {
-        let mut month = first;
-        while month <= prev {
-            let value = series
-                .iter()
-                .find(|(m, _)| *m == month)
-                .map_or(Paisa::ZERO, |(_, v)| *v);
-            history.push(MonthValue { month, value });
-            match month.plus_months(1) {
-                Some(next) => month = next,
-                None => break,
-            }
+    let db = env.ctx.db();
+    let months = match series {
+        Series::ViewG(column, _) => view_g_months(env, &filters, column)?,
+        Series::Facts(part) => sale_part_months(db, part, &filters).map_err(reports_stop)?,
+        Series::GardenSales => garden_sales_months(db, &filters).map_err(reports_stop)?,
+        Series::TripSales => trip_sales_months(db, &filters).map_err(reports_stop)?,
+        Series::Receipts => {
+            let account = buyer_record.as_ref().map(|(id, _)| *id);
+            receipts_months(db, account, to.as_deref()).map_err(reports_stop)?
         }
+        Series::Head => {
+            let id = head_id.ok_or_else(|| bad("ERR_REQUIRED", "head", "the expense head"))?;
+            expense_head_months(db, id, to.as_deref())
+                .map_err(reports_stop)?
+                .ok_or_else(|| bad("ERR_NOT_FOUND", "head", "no such expense head"))?
+        }
+        Series::Balance(_) => {
+            return Err(bad("ERR_INTERNAL", "measure", "a balance has no monthly series").into());
+        }
+    };
+    // The screen the buttons open: the one that shows these figures.
+    let analytics = |view: AnalyticsView, mut filters: SourceAnalyticsFilters| {
+        if view != AnalyticsView::G {
+            filters.group_by = None;
+        }
+        AnswerSource::Analytics {
+            result_id: String::new(),
+            label_id: format!("analytics-view-{}-title", view_letter(view)),
+            view,
+            filters,
+        }
+    };
+    let report = |id: ReportId, filters: SourceReportFilters| AnswerSource::Report {
+        result_id: String::new(),
+        label_id: report_label(id),
+        id,
+        filters,
+    };
+    let history = fill_history(&months, current)?;
+    // A report opens over the months the series covers: from the first day of its first month to
+    // the last day of the month before the current one.
+    let first_day = history
+        .first()
+        .map(|h| format!("{:04}-{:02}-01", h.month.year(), h.month.month()))
+        .unwrap_or_default();
+    let last_day = to.clone().unwrap_or_default();
+    let dated = |filters: SourceReportFilters| SourceReportFilters {
+        from: first_day.clone(),
+        to: last_day.clone(),
+        ..filters
+    };
+    let source = match series {
+        Series::ViewG(..) => analytics(AnalyticsView::G, source),
+        Series::Facts(_) => {
+            source.side = AnalyticsSide::Buyer;
+            analytics(AnalyticsView::A, source)
+        }
+        Series::GardenSales => analytics(AnalyticsView::I, source),
+        Series::TripSales => analytics(AnalyticsView::J, source),
+        Series::Receipts => report(
+            ReportId::R23,
+            dated(SourceReportFilters {
+                party: buyer_record.map(|(_, record)| SourceParty {
+                    record,
+                    person_key: None,
+                }),
+                ..SourceReportFilters::default()
+            }),
+        ),
+        // R29 has no filter for a head: the answer names it and the screen shows its row among the
+        // others, over the same dates as the series.
+        Series::Head => report(ReportId::R29, dated(SourceReportFilters::default())),
+        Series::Balance(_) => analytics(AnalyticsView::G, source),
+    };
+    Ok(Read {
+        history,
+        source,
+        partner_data,
+    })
+}
+
+/// The letter of an analytics view, for its title message (`analytics-view-g-title`).
+fn view_letter(view: AnalyticsView) -> char {
+    match view {
+        AnalyticsView::A => 'a',
+        AnalyticsView::B => 'b',
+        AnalyticsView::C => 'c',
+        AnalyticsView::D => 'd',
+        AnalyticsView::E => 'e',
+        AnalyticsView::F => 'f',
+        AnalyticsView::G => 'g',
+        AnalyticsView::H => 'h',
+        AnalyticsView::I => 'i',
+        AnalyticsView::J => 'j',
+        AnalyticsView::K => 'k',
     }
-    Ok((history, filters, source))
 }
 
 fn previous_month(m: YearMonth) -> Option<YearMonth> {
@@ -1319,17 +1597,16 @@ fn working_title(method: Method) -> &'static str {
 /// The tool `estimate`.
 pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: EstimateInput = input(args)?;
-    let (column, side) = parsed.measure.column().ok_or_else(|| {
-        bad(
-            "ERR_OUT_OF_RANGE",
-            "measure",
-            "the books give no monthly series of this measure yet",
-        )
-    })?;
+    let series = parsed.measure.series(parsed.head.is_some());
+    check_filters(&parsed, series)?;
     let today = NaiveDate::parse_from_str(&env.today.to_iso(), "%Y-%m-%d")
         .map_err(|_| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
     let current = YearMonth::new(today.year(), today.month())
         .ok_or_else(|| bad("ERR_INTERNAL", "today", "the date is wrong"))?;
+    // A balance is a level, not a flow: its own estimate (plan 55 F4, F5).
+    if let Series::Balance(kind) = series {
+        return pace::run(env, state, args, &parsed, kind, current);
+    }
     let ahead = months_ahead(env, &parsed, current)?;
     let what_if = pace_factor(env, &parsed)?;
     let target = parsed
@@ -1337,7 +1614,8 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
         .as_deref()
         .map(|t| read_target(env, state, t))
         .transpose()?;
-    let (history, filters, source) = read_history(env, state, &parsed, current, column, side)?;
+    let read = read_history(env, state, &parsed, current, series)?;
+    let history = read.history;
     let history_nodes: Vec<Node> = history
         .iter()
         .map(|h| {
@@ -1367,7 +1645,6 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             other => other,
         }
     })?;
-    let _ = filters;
     let mut fields = vec![
         ("measure", Node::Str(parsed.measure.word().to_owned())),
         ("history", Node::List(history_nodes)),
@@ -1481,7 +1758,11 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
                         .collect(),
                 });
             }
-            let measure_id = parsed.measure.measure_id();
+            let measure_id = if parsed.partner.is_some() {
+                "assistant-measure-partner-profit".to_owned()
+            } else {
+                parsed.measure.measure_id()
+            };
             let chart = AnswerChart {
                 result_id: String::new(),
                 measure_id: measure_id.clone(),
@@ -1511,12 +1792,8 @@ pub fn run_estimate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, 
             draft.shown = Some(Shown::Chart(Box::new(chart), Some(Box::new(estimate))));
         }
     }
-    draft.source = Some(AnswerSource::Analytics {
-        result_id: String::new(),
-        label_id: "analytics-view-g-title".to_owned(),
-        view: AnalyticsView::G,
-        filters: source,
-    });
+    draft.source = Some(read.source);
+    draft.partner_data = read.partner_data;
     Ok(draft)
 }
 

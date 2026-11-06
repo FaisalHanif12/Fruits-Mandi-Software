@@ -796,6 +796,7 @@ const EXPECTED_FILES: &[&str] = &[
     "AnswerPart.ts",
     "AnswerName.ts",
     "AnswerSource.ts",
+    "ScreenRoute.ts",
     "AnswerRow.ts",
     "AnswerTable.ts",
     "AnswerMonth.ts",

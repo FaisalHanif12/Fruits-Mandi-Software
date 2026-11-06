@@ -13,7 +13,7 @@
 // - Typed lines live in the store of the lot, so a language switch loses nothing (F39).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
@@ -21,11 +21,14 @@ import { SegmentedControl } from '../../../shared/ui';
 import { useOverrideSettings } from '../../settings';
 import { allLinesColumns, saleColumns } from '../columns';
 import { useBikriDraft } from '../draft-store';
+import { useKeepCardInView } from '../hooks/useKeepCardInView';
+import { lotLabelVars, useLotWho } from '../lot-name';
 import { focusPukhtaFieldsSoon } from './PukhtaFields';
 import { isPukhtaBuyer } from '../draft';
 import type { GridView } from '../grid-views';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
+import { QtyNotes } from './QtyNotes';
 
 /** A grid with more lines than this fills a fixed height and scrolls inside; shorter ones are as tall as their lines. */
 const SHORT_GRID_ROWS = 30;
@@ -67,7 +70,15 @@ export function SalesSection({
   const { l10n } = useLocalization();
   const stores = useBikriDraft();
   const step = useLayoutStep();
+  const lotWho = useLotWho();
+  // The lot is named by its seller and item, not by its number alone (PRD FR-12.6).
+  const lotRow = stores.lots((state) => state.rows).find((row) => row.rowId === lotKey);
+  const lotLabel = lotLabelVars(lotIndex + 1, lotWho(lotRow));
   const columns = useMemo(() => (whole ? allLinesColumns(step) : saleColumns(step)), [step, whole]);
+  // The party card under the grid is kept in view while the user types in the lines (PRD FR-7.38).
+  const cardBox = useRef<HTMLDivElement>(null);
+  const [region, setRegion] = useState<HTMLElement | null>(null);
+  useKeepCardInView(cardBox, region);
   // The lines of the selected lot, or the lines of every lot (shown from the stores of the lots).
   const store = whole ? stores.all : stores.salesFor(lotKey);
   const rows = store((state) => state.rows);
@@ -109,7 +120,7 @@ export function SalesSection({
   );
 
   return (
-    <section aria-labelledby="bikri-sales-heading" className="flex flex-col gap-3">
+    <section ref={setRegion} aria-labelledby="bikri-sales-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {single !== undefined ? (
           <h2 id="bikri-sales-heading" className="type-section text-ink">
@@ -120,7 +131,7 @@ export function SalesSection({
             <h2 id="bikri-sales-heading" className="type-section text-ink" />
           </Localized>
         ) : (
-          <Localized id="bikri-sales-title" vars={{ lot: String(lotIndex + 1) }}>
+          <Localized id="bikri-sales-title" vars={{ ...lotLabel }}>
             <h2 id="bikri-sales-heading" className="type-section text-ink" />
           </Localized>
         )}
@@ -134,7 +145,7 @@ export function SalesSection({
             options={[
               {
                 value: 'lot',
-                label: l10n.getString('bikri-summary-lot', { lot: String(lotIndex + 1) }),
+                label: l10n.getString('bikri-summary-lot', { ...lotLabel }),
               },
               { value: 'whole', label: l10n.getString('bikri-summary-whole') },
             ]}
@@ -161,7 +172,8 @@ export function SalesSection({
           heightMode={rows.length > SHORT_GRID_ROWS ? 'fill' : 'auto'}
         />
       </div>
-      {card}
+      <QtyNotes notes={view.qtyNotes} whole={whole} />
+      {card === null || card === undefined ? null : <div ref={cardBox}>{card}</div>}
     </section>
   );
 }

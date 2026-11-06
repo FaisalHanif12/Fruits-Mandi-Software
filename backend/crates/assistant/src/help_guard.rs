@@ -432,6 +432,19 @@ const TOPIC_CUES: &[(&str, &[&str])] = &[
     ("month_close", &["month close", "mahina band", "مہینہ بند"]),
     ("dashboard", &["dashboard", "ڈیش بورڈ"]),
     ("settings", &["settings", "tarteebat", "ترتیبات"]),
+    (
+        "audit",
+        &[
+            "audit",
+            "audit log",
+            "kisne badla",
+            "kisne badal",
+            "kis ne badla",
+            "کس نے بدلا",
+            "آڈٹ",
+            "آڈٹ لاگ",
+        ],
+    ),
     ("pukhta_khata", &["pukhta", "pakka khata", "پختہ"]),
     ("cash_book", &["rokar", "روکڑ", "cash book"]),
     ("dead_amount", &["doobi", "dobi", "ڈوبی", "dead amount"]),
@@ -629,6 +642,16 @@ pub fn topic_of(screen: EntryScreenName) -> &'static str {
         EntryScreenName::DeadAmount => "dead_amount",
         EntryScreenName::Analytics => "analytics",
         EntryScreenName::Backup => "backup",
+        EntryScreenName::GardenInstallment
+        | EntryScreenName::GardenCost
+        | EntryScreenName::GardenSale
+        | EntryScreenName::GardenClose => "gardens",
+        EntryScreenName::TripPurchase | EntryScreenName::TripCost | EntryScreenName::TripSale => {
+            "market_trips"
+        }
+        EntryScreenName::BikriLaterSale
+        | EntryScreenName::BikriEdit
+        | EntryScreenName::BikriCancel => "bikri_book",
     }
 }
 
@@ -763,6 +786,10 @@ mod tests {
                 "backup",
             ),
             ("where do I change the settings", "settings"),
+            ("how do I see the audit log", "audit"),
+            ("audit log kaise dekhun", "audit"),
+            ("kisne badla kaise dekhun", "audit"),
+            ("آڈٹ لاگ کیسے دیکھتے ہیں", "audit"),
             ("نیا آئٹم یا شہر کیسے بناتے ہیں", "masters"),
             (
                 "naya gahak ya byopari ka account kaise banate hain",

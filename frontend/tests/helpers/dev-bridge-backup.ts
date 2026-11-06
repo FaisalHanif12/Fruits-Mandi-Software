@@ -10,6 +10,7 @@
 //   empty   no copies at all              many    120 copies (page by page)
 //   bad     one copy failed its check     down    the cloud could not be reached
 //   lost    the restore would lose records
+//   big     a shop with thousands of records (the counts of the restore dialog carry the thousands sign)
 
 import type { BackupList } from '../../src/bindings/BackupList';
 import type { BackupRow } from '../../src/bindings/BackupRow';
@@ -93,6 +94,24 @@ const handlers: Record<string, (input: Input) => unknown> = {
     ...PREVIEW,
     backup: input['backup'],
     lost: devFlag('lost') ? { journal_entries: 12, bikri_entries: 2, vouchers: 3 } : PREVIEW.lost,
+    ...(devFlag('big')
+      ? {
+          totals: {
+            ...PREVIEW.totals,
+            accounts: 2413,
+            bikri_entries: 1204,
+            vouchers: 3100,
+            journal_entries: 9050,
+          },
+          current: {
+            ...PREVIEW.current,
+            accounts: 2400,
+            bikri_entries: 1190,
+            vouchers: 3080,
+            journal_entries: 9000,
+          },
+        }
+      : {}),
   }),
   backup_restore: () => RESTORE_DONE,
   backup_test_restore: () => TEST_RESULT,

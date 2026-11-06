@@ -439,6 +439,60 @@ fn writes_the_fixtures_the_frontend_copies() {
     );
     write_fixture("bikri_preview_e2e26", &e2e_26, &w);
 
+    // Plan 57 (PRD FR-12.6 v1.28): a line over the quantity of the lot. The lot holds 50. Typed 70
+    // at 1,200, the line is refused (`calc` null, `ERR_QTY_EXCEEDS_LOT` with `available` 50 on
+    // `lots[0].sales[0].qty`) and the lot totals are null.
+    let over = request_json(&w, vec![row_json("line-1", Some(w.akram), "70", "1200")]);
+    write_fixture("bikri_preview_over_qty", &over, &w);
+    // The same line fixed to 50: 60,000, commissions 3,600 and 3,600, لاگا 400, the buyer pays
+    // 64,000.
+    let fixed = request_json(&w, vec![row_json("line-1", Some(w.akram), "50", "1200")]);
+    write_fixture("bikri_preview_over_qty_fixed", &fixed, &w);
+    // Lines of 30 and 30: line 1 is worked out, line 2 takes the lot over by 10 and is refused with
+    // 20 available. The lot totals hold line 1 only.
+    let two = request_json(
+        &w,
+        vec![
+            row_json("line-1", Some(w.akram), "30", "600"),
+            row_json("line-2", Some(w.arshad), "30", "580"),
+        ],
+    );
+    write_fixture("bikri_preview_over_qty_two_lines", &two, &w);
+    let ask = |request: &serde_json::Value| {
+        let input: mandi_services::core::bikri::BikriPreviewInput =
+            serde_json::from_value(request.clone()).unwrap();
+        bikri::preview(&w.env.ctx, &input.draft).unwrap()
+    };
+    let p = ask(&over);
+    assert!(p.lots[0].lines[0].calc.is_none());
+    assert!(p.lots[0].totals.is_none());
+    assert!(has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[0].qty"
+    ));
+    let p = ask(&fixed);
+    let c = calc(&p.lots[0], 0);
+    assert_eq!(
+        (
+            r(c.seller_amount),
+            r(c.seller_comm.amount),
+            r(c.buyer_comm.amount),
+            r(c.laga.amount),
+            r(c.buyer_total)
+        ),
+        (60_000, 3_600, 3_600, 400, 64_000)
+    );
+    let p = ask(&two);
+    assert!(has(
+        &p.errors,
+        ErrorCode::ErrQtyExceedsLot,
+        "lots[0].sales[1].qty"
+    ));
+    assert!(p.lots[0].lines[1].calc.is_none());
+    assert_eq!(r(calc(&p.lots[0], 0).seller_amount), 18_000);
+    assert_eq!(r(p.lots[0].totals.as_ref().unwrap().gross), 18_000);
+
     // Spot checks on what was written.
     let input: mandi_services::core::bikri::BikriPreviewInput =
         serde_json::from_value(event1).unwrap();

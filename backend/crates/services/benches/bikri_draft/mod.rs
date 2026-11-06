@@ -124,6 +124,7 @@ pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
                 seller_comm: None,
                 buyer_comm: None,
                 laga: None,
+                grade: None,
                 note: None,
             })
             .collect(),

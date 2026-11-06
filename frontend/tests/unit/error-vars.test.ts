@@ -146,8 +146,8 @@ describe('messageVars', () => {
   });
   it('passes the reason the backend sends (the cloud address) as it is, and is empty with none', () => {
     expect(messageVarsWithReason({ reason: 'https' }, 'lakh')).toEqual({ reason: 'https' });
-    expect(messageVarsWithReason({ reason: 'path', max: 5 }, 'international')).toEqual({
-      reason: 'path',
+    expect(messageVarsWithReason({ reason: 'https', max: 5 }, 'international')).toEqual({
+      reason: 'https',
       max: '5',
     });
     expect(messageVarsWithReason({}, 'international')).toEqual({ reason: '' });

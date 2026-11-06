@@ -94,6 +94,10 @@ import assistantReplyOffline from '../fixtures/assistant_reply_offline.json';
 import assistantReplyOfflineRequest from '../fixtures/assistant_reply_offline_request.json';
 import assistantReplyOutsideBooks from '../fixtures/assistant_reply_outside_books.json';
 import assistantReplyOutsideBooksRequest from '../fixtures/assistant_reply_outside_books_request.json';
+import assistantReplyScreenSource from '../fixtures/assistant_reply_screen_source.json';
+import assistantReplyScreenSourceRequest from '../fixtures/assistant_reply_screen_source_request.json';
+import assistantReplyScreenSourceAudit from '../fixtures/assistant_reply_screen_source_audit.json';
+import assistantReplyScreenSourceAuditRequest from '../fixtures/assistant_reply_screen_source_audit_request.json';
 import assistantReplyOutsideTax from '../fixtures/assistant_reply_outside_tax.json';
 import assistantReplyOutsideTaxRequest from '../fixtures/assistant_reply_outside_tax_request.json';
 import assistantReplyRecordsDiffer from '../fixtures/assistant_reply_records_differ.json';
@@ -274,6 +278,13 @@ export const REPLY_OUTSIDE_BOOKS_REQUEST = readAssistantAskInput(assistantReplyO
 /** The backend's own answer to a tax question (plan 55 Section 7): the plain line in answer.parts, and R2. */
 export const REPLY_OUTSIDE_TAX = readAskReply(assistantReplyOutsideTax);
 export const REPLY_OUTSIDE_TAX_REQUEST = readAssistantAskInput(assistantReplyOutsideTaxRequest);
+/** The backend's own answers with a screen as their source (plan 55 Section 13): the dashboard, and the audit log. */
+export const REPLY_SCREEN_SOURCE = readAskReply(assistantReplyScreenSource);
+export const REPLY_SCREEN_SOURCE_REQUEST = readAssistantAskInput(assistantReplyScreenSourceRequest);
+export const REPLY_SCREEN_SOURCE_AUDIT = readAskReply(assistantReplyScreenSourceAudit);
+export const REPLY_SCREEN_SOURCE_AUDIT_REQUEST = readAssistantAskInput(
+  assistantReplyScreenSourceAuditRequest,
+);
 export const REPLY_RECORDS_DIFFER = readAskReply(assistantReplyRecordsDiffer);
 export const REPLY_RECORDS_DIFFER_REQUEST = readAssistantAskInput(
   assistantReplyRecordsDifferRequest,

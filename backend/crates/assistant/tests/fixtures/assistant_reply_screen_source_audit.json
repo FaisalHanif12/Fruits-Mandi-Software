@@ -1,0 +1,51 @@
+{
+  "question_id": 1,
+  "conversation_id": "c-20261010090000000-0",
+  "outcome": "answered",
+  "answer": {
+    "parts": [
+      {
+        "type": "text",
+        "text": "اس بکری کے ریکارڈ میں "
+      },
+      {
+        "type": "figure",
+        "cell": {
+          "type": "number",
+          "value": 1
+        },
+        "dir": null,
+        "checked": false,
+        "working": null
+      },
+      {
+        "type": "text",
+        "text": " اندراج ہیں"
+      }
+    ],
+    "tables": [],
+    "charts": [],
+    "estimate": null,
+    "advice": false,
+    "general_advice": false,
+    "sources": [
+      {
+        "kind": "screen",
+        "result_id": "r1",
+        "route": "audit"
+      }
+    ],
+    "how": [],
+    "differences": [],
+    "next": [],
+    "read_at": "2026-10-10T09:00:00Z"
+  },
+  "options": [],
+  "more_options": false,
+  "entry_route": null,
+  "locked": false,
+  "failure": null,
+  "stop_reason": null,
+  "count_today": 1,
+  "limit": 20
+}

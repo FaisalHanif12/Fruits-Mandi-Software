@@ -374,9 +374,14 @@ struct Rows {
     lines: Vec<LinePreview>,
     acc: Acc,
     sales: Vec<JournalSale>,
-    /// Quantity of the rows that have a valid quantity (blank rows left out).
+    /// Quantity of the rows that stand: blank rows and rows refused for being over the lot (PRD
+    /// FR-12.6) are left out.
     sold: i64,
     any_row: bool,
+    /// True when a row was refused for being over the lot or the purchase. The quantity the
+    /// standing rows leave is then no news (the refusal says it), so the lot gives no "left
+    /// unsold" note until the row is fixed.
+    any_refused: bool,
 }
 
 /// The buyer of a row, how he pays, and whether his one-time person is in order (PRD 12.4,
@@ -473,9 +478,20 @@ struct OwnTake {
     fresh: bool,
 }
 
+/// What the cost of a line of an own lot came to.
+enum OwnCost {
+    /// A line of any other lot: it has no cost.
+    NotOwn,
+    /// The cost of the line and how it came about.
+    Take(OwnTake),
+    /// The purchase cannot cover the line (`ERR_QTY_EXCEEDS_LOT` is on it): the line is refused and
+    /// takes nothing from the purchase.
+    Short,
+}
+
 /// C21 for a line of an own lot (PRD FR-12.26): the stored cost for a line an edit left with its
-/// quantity and purchase, else the cost out of what the purchase has left. `None` for a line of
-/// any other lot, and for a line the purchase cannot cover (then `ERR_QTY_EXCEEDS_LOT` is on it).
+/// quantity and purchase, else the cost out of what the purchase has left. [`OwnCost::Short`] for
+/// a line the purchase cannot cover (then `ERR_QTY_EXCEEDS_LOT` is on it, PRD FR-12.6).
 fn own_line_cost(
     ctx: &LotCtx<'_>,
     run: &mut Run,
@@ -483,14 +499,14 @@ fn own_line_cost(
     env: &Env<'_>,
     row: &PreparedSale,
     line_prefix: &str,
-) -> Result<Option<OwnTake>, CalcError> {
+) -> Result<OwnCost, CalcError> {
     let (Some(purchase_id), Some(qty)) = (ctx.facts.own_purchase, row.qty) else {
-        return Ok(None);
+        return Ok(OwnCost::NotOwn);
     };
     if let Some(stored) = kept_line(env, ctx.lot, row)
         && row.sale_id.is_some_and(|id| run.own.claim_kept(id))
     {
-        return Ok(Some(OwnTake {
+        return Ok(OwnCost::Take(OwnTake {
             purchase_id,
             qty: qty.get(),
             cost: stored.cost,
@@ -498,15 +514,15 @@ fn own_line_cost(
             fresh: false,
         }));
     }
-    let taken = run.own.take(purchase_id, qty.get())?;
-    if taken.is_none() {
+    let Some((cost, working)) = run.own.take(purchase_id, qty.get())? else {
         issues.error_with(
             ErrorCode::ErrQtyExceedsLot,
             &format!("{line_prefix}.qty"),
             &[("available", run.own.qty_left(purchase_id))],
         );
-    }
-    Ok(taken.map(|(cost, working)| OwnTake {
+        return Ok(OwnCost::Short);
+    };
+    Ok(OwnCost::Take(OwnTake {
         purchase_id,
         qty: qty.get(),
         cost,
@@ -542,6 +558,9 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             .map(|c| c.charge.clone()),
         _ => None,
     };
+    // Preview only: if the unchanged line that carries the per-lot commission is refused for being
+    // over the lot, no line carries it until that quantity is fixed. The save is refused, so
+    // nothing is stored with it (money review of plan 57).
     let own_charged = match (ctx.env, ctx.lot_ref.as_ref()) {
         (Some(env), Some(lot_ref)) if env.kind == PostingKind::First => {
             lot.sales.iter().any(|row| {
@@ -580,6 +599,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
         sales: Vec::new(),
         sold: 0,
         any_row: false,
+        any_refused: false,
     };
     for (j, row) in lot.sales.iter().enumerate() {
         let line_prefix = format!("{}.sales[{j}]", ctx.prefix);
@@ -598,6 +618,10 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             continue;
         }
         rows.any_row = true;
+        // PRD FR-12.6 (v1.28): a line that takes the lot over the quantity it has left is refused,
+        // in line order. It has its error and no figures, and it takes no quantity: the lines after
+        // it, the lot and the whole بکری are worked out from the lines that stand.
+        let mut refused = false;
         if let (Some(r), Some(q)) = (received, row.qty)
             && rows.sold.saturating_add(q.get()) > r
         {
@@ -606,37 +630,61 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                 &format!("{line_prefix}.qty"),
                 &[("available", remaining)],
             );
-        }
-        let parties = row_parties(ctx, issues, row, &line_prefix);
-        if let (Some(env), Some(lot_ref), Some((buyer, buyer_id, payment)), false) =
-            (ctx.env, ctx.lot_ref.as_ref(), parties, row.has_errors)
-        {
-            let own = own_line_cost(ctx, run, issues, env, row, &line_prefix)?;
-            let cost = own.as_ref().map(|t| (t.cost, t.working.clone()));
-            preview.calc = calc_line(
-                LineArgs {
-                    env,
-                    lot: lot_ref,
-                    per_lot_charged: &mut per_lot_charged,
-                    entry_spent,
-                    owed: &mut run.owed,
-                    row,
-                    buyer_id,
-                    buyer,
-                    payment,
-                    stored: unchanged_stored(env, lot_ref, row),
-                    pending_move: &mut pending_move,
-                    cost,
-                },
-                issues,
-                &line_prefix,
-            )?;
-            // A line with a mistake in it takes no stock: the lines after it are worked out
-            // against what the purchase really has left (money review of plan 16b).
-            if preview.calc.is_none()
-                && let Some(take) = own.filter(|t| t.fresh)
+            refused = true;
+            // A line an edit kept had its stock in the purchase reserved before any line was worked
+            // out (`reserve_kept` skips a row with a mistake in it, so the same test is made here).
+            // A refused line takes nothing, so the stock goes back for the lines after it.
+            if !row.has_errors
+                && let (Some(env), Some(purchase_id)) = (ctx.env, ctx.facts.own_purchase)
+                && let Some(stored) = kept_line(env, lot, row)
+                && row.sale_id.is_some_and(|id| run.own.claim_kept(id))
             {
-                run.own.put_back(take.purchase_id, take.qty, take.cost)?;
+                run.own.put_back(purchase_id, stored.qty, stored.cost)?;
+            }
+        }
+        // The buyer and the payment are checked on a refused row too, so every mistake of the row
+        // shows at once (Code Standards 4.3).
+        let parties = row_parties(ctx, issues, row, &line_prefix);
+        if !refused
+            && let (Some(env), Some(lot_ref), Some((buyer, buyer_id, payment)), false) =
+                (ctx.env, ctx.lot_ref.as_ref(), parties, row.has_errors)
+        {
+            let own = match own_line_cost(ctx, run, issues, env, row, &line_prefix)? {
+                OwnCost::NotOwn => None,
+                OwnCost::Take(take) => Some(take),
+                // The purchase has less than the line: refused like a line over the lot.
+                OwnCost::Short => {
+                    refused = true;
+                    None
+                }
+            };
+            if !refused {
+                let cost = own.as_ref().map(|t| (t.cost, t.working.clone()));
+                preview.calc = calc_line(
+                    LineArgs {
+                        env,
+                        lot: lot_ref,
+                        per_lot_charged: &mut per_lot_charged,
+                        entry_spent,
+                        owed: &mut run.owed,
+                        row,
+                        buyer_id,
+                        buyer,
+                        payment,
+                        stored: unchanged_stored(env, lot_ref, row),
+                        pending_move: &mut pending_move,
+                        cost,
+                    },
+                    issues,
+                    &line_prefix,
+                )?;
+                // A line with a mistake in it takes no stock: the lines after it are worked out
+                // against what the purchase really has left (money review of plan 16b).
+                if preview.calc.is_none()
+                    && let Some(take) = own.filter(|t| t.fresh)
+                {
+                    run.own.put_back(take.purchase_id, take.qty, take.cost)?;
+                }
             }
         }
         if let (Some(calc), Some((buyer, buyer_id, _))) = (&preview.calc, parties) {
@@ -645,9 +693,13 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             rows.sales
                 .push(journal_sale(buyer_id, person.as_ref(), calc));
         }
-        if let Some(q) = row.qty {
+        if let Some(q) = row.qty
+            && !refused
+        {
             rows.sold = rows.sold.saturating_add(q.get());
         }
+        rows.any_refused |= refused;
+        // The rate hint is what was typed, also on a refused row: it is a hint, not money.
         if let (Some(rate), Some(key)) = (row.seller_rate, hint_key) {
             run.last_rates.insert(key, rate);
         }
@@ -1064,6 +1116,7 @@ pub(super) fn process_lot(
     let balance_qty = available_qty(&ctx).map(|r| r.saturating_sub(rows.sold).max(0));
     if let Some(left) = balance_qty
         && left > 0
+        && !rows.any_refused
     {
         // A lot of own goods must be sold in full: what is not sold stays in the purchase (PRD
         // FR-12.26). Any other lot waits in باقی مال with a warning.

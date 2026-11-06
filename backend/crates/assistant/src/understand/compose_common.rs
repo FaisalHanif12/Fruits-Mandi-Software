@@ -9,16 +9,20 @@
 //! and those dates", and the steps: open R5, choose the buyer Faisal (0022), set the dates, press F9.
 
 use chrono::NaiveDate;
+use mandi_reports::analytics::AnalyticsView;
 use mandi_reports::reports::{ArgValue, MessageArg, Names, ReportId, TripView};
 use mandi_services::core::auth::Language;
+use mandi_services::core::rules::ItemGroup;
 
-use super::{PartyHit, PartyRole, RecordHit, RecordKind, ReportPlan};
+use super::{ItemHit, PartyHit, PartyRole, RecordHit, RecordKind, ReportPlan};
 use crate::answer::{
     Answer, AnswerName, AnswerPart, AnswerSource, EntryRoute, EntryScreen, HowStep,
 };
 use crate::ask::{AskOutcome, AskedRole, FoundAs};
 use crate::prompt::{GuideText, guide};
-use crate::source::{AnswerRecord, SourceParty, SourceReportFilters};
+use crate::source::{
+    AnswerRecord, SourceAnalyticsFilters, SourceBikri, SourceParty, SourceReportFilters,
+};
 
 /// What a local composer made. The caller turns it into the reply of the ask command: it adds the
 /// question number, the conversation and the counts, and it never calls a model for it.
@@ -121,6 +125,25 @@ pub(super) fn record_of_other(hit: &RecordHit) -> AnswerRecord {
     }
 }
 
+/// An item as a whole record of the answer (a picker value).
+pub(super) fn record_of_item(hit: &ItemHit) -> AnswerRecord {
+    AnswerRecord {
+        id: hit.id,
+        code: (!hit.code.is_empty()).then(|| hit.code.clone()),
+        name_ur: hit.name_ur.clone(),
+        name_en: hit.name_en.clone(),
+        tag: None,
+    }
+}
+
+/// The group of the tools for a group word of the question.
+fn item_group_of(group: super::GroupWord) -> ItemGroup {
+    match group {
+        super::GroupWord::Fruit => ItemGroup::Fruit,
+        super::GroupWord::Vegetable => ItemGroup::Vegetable,
+    }
+}
+
 /// A party's name for `displayName`.
 pub(super) fn name_of(hit: &PartyHit) -> AnswerName {
     AnswerName {
@@ -160,6 +183,9 @@ fn iso(day: Option<NaiveDate>) -> String {
 /// period only (and the trip layout for R33); the steps say which row to read (lead ruling of
 /// 04-11-2026). The button never claims a filter the screen does not apply.
 pub(super) fn source_of(plan: &ReportPlan) -> Option<AnswerSource> {
+    if super::plan::is_view(plan.id) {
+        return view_source_of(plan);
+    }
     let id = report_id(plan.id)?;
     let label_id = mandi_reports::reports::catalog()
         .into_iter()
@@ -179,6 +205,10 @@ pub(super) fn source_of(plan: &ReportPlan) -> Option<AnswerSource> {
         garden: f.garden.as_ref().map(record_of),
         city: f.city.as_ref().map(record_of_other),
         adda: f.adda.as_ref().map(record_of_other),
+        item: f.item.as_ref().map(record_of_item),
+        item_group: f.item_group.map(item_group_of),
+        guests_only: f.guests,
+        bikri: f.bikri.map(|(id, number)| SourceBikri { id, number }),
         trip_view: (plan.id == "R33").then_some(TripView::Trip),
         ..SourceReportFilters::default()
     };
@@ -186,6 +216,39 @@ pub(super) fn source_of(plan: &ReportPlan) -> Option<AnswerSource> {
         result_id: String::new(),
         label_id,
         id,
+        filters,
+    })
+}
+
+/// The button of an analytics view (A to K) with its filters set: the days, the item, the seller,
+/// the buyer, the partner, the garden or the trip.
+fn view_source_of(plan: &ReportPlan) -> Option<AnswerSource> {
+    let view: AnalyticsView =
+        serde_json::from_value(serde_json::Value::String(plan.id.to_owned())).ok()?;
+    let label_id = mandi_reports::analytics::catalog()
+        .into_iter()
+        .find(|entry| entry.id == view)
+        .map(|entry| entry.title_id)?;
+    let f = &plan.filters;
+    let filters = SourceAnalyticsFilters {
+        from: iso(f.from),
+        to: iso(f.to),
+        item: f.item.as_ref().map(record_of_item),
+        item_group: f.item_group.map(item_group_of),
+        seller: f.seller.as_ref().map(record_of),
+        buyer: f.party.as_ref().map(|hit| SourceParty {
+            record: record_of(hit),
+            person_key: None,
+        }),
+        partner: f.partner.as_ref().map(record_of),
+        garden: f.garden.as_ref().map(record_of),
+        trip: f.trip.as_ref().map(record_of),
+        ..SourceAnalyticsFilters::default()
+    };
+    Some(AnswerSource::Analytics {
+        result_id: String::new(),
+        label_id,
+        view,
         filters,
     })
 }
@@ -293,24 +356,64 @@ fn other_step(hit: &RecordHit) -> HowStep {
 /// dates, find the row of a trip or an expense head, and (for a print) press F9. They are made from the same plan as the button.
 pub(super) fn steps_of(plan: &ReportPlan, press_print: bool) -> Vec<HowStep> {
     let f = &plan.filters;
-    let mut steps = vec![step(
-        "assistant-how-open-report",
-        vec![text_arg("report", plan.id)],
-    )];
+    let mut steps = vec![if super::plan::is_view(plan.id) {
+        step(
+            "assistant-how-open-analytics",
+            vec![text_arg("view", plan.id)],
+        )
+    } else {
+        step(
+            "assistant-how-open-report",
+            vec![text_arg("report", plan.id)],
+        )
+    }];
     let who = [&f.party, &f.seller, &f.partner, &f.garden];
     for hit in who.into_iter().flatten() {
         steps.push(party_step(hit));
+    }
+    if let Some(item) = &f.item {
+        steps.push(record_step(
+            "item",
+            item.name_ur.clone(),
+            item.name_en.clone(),
+            &item.code,
+        ));
+    }
+    if let Some(group) = f.item_group {
+        steps.push(step(
+            "assistant-how-set-group",
+            vec![text_arg("group", group.tool_word())],
+        ));
+    }
+    if f.guests {
+        steps.push(step("assistant-how-set-guests", Vec::new()));
+    }
+    if let Some((_, number)) = f.bikri {
+        steps.push(step(
+            "assistant-how-set-bikri",
+            vec![text_arg("number", &number.to_string())],
+        ));
     }
     for hit in [&f.city, &f.adda].into_iter().flatten() {
         steps.push(other_step(hit));
     }
     let day = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    // No day was named: today was taken, and the date step says how to change it.
+    if plan.assumed_period
+        && let Some(taken) = f.as_of.or(f.from)
+    {
+        steps.push(step(
+            "assistant-how-assumed-day",
+            vec![text_arg("day", &day(taken))],
+        ));
+    }
     match (f.as_of, f.from, f.to) {
         (Some(d), _, _) => steps.push(step(
             "assistant-how-set-day",
             vec![text_arg("day", &day(d))],
         )),
-        (None, Some(from), Some(to)) if from == to => {
+        // A day that was assumed is shown as dates, so the Owner sees where to change both ends.
+        (None, Some(from), Some(to)) if from == to && !plan.assumed_period => {
             steps.push(step(
                 "assistant-how-set-day",
                 vec![text_arg("day", &day(from))],
@@ -374,6 +477,16 @@ pub(super) fn entry_screen(name: &str) -> Option<EntryScreen> {
         "dead_amount" => EntryScreen::DeadAmount,
         "analytics" => EntryScreen::Analytics,
         "backup" => EntryScreen::Backup,
+        "garden_installment" => EntryScreen::GardenInstallment,
+        "garden_cost" => EntryScreen::GardenCost,
+        "garden_sale" => EntryScreen::GardenSale,
+        "garden_close" => EntryScreen::GardenClose,
+        "trip_purchase" => EntryScreen::TripPurchase,
+        "trip_cost" => EntryScreen::TripCost,
+        "trip_sale" => EntryScreen::TripSale,
+        "bikri_later_sale" => EntryScreen::BikriLaterSale,
+        "bikri_edit" => EntryScreen::BikriEdit,
+        "bikri_cancel" => EntryScreen::BikriCancel,
         _ => return None,
     })
 }

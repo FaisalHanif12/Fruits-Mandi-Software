@@ -118,8 +118,8 @@ describe.each(LANGUAGES)('showing a backend error (%s)', (language) => {
     expect(shown).not.toContain('10-10-2026');
   });
 
-  it('a cloud address refusal says why: not https, or a path after the host (the bucket belongs in its own field)', () => {
-    for (const reason of ['https', 'path']) {
+  it('a cloud address refusal says why: not https (a path after the host is its own refusal, below)', () => {
+    for (const reason of ['https']) {
       const view = renderIn(
         language,
         <ErrorNotice
@@ -137,13 +137,40 @@ describe.each(LANGUAGES)('showing a backend error (%s)', (language) => {
       expect(shown).not.toContain('$');
       view.unmount();
     }
-    // The two reasons read differently, and the path one points to the bucket field.
+    // The reason reads differently from the plain range; the old path reason is gone (the backend sends
+    // ERR_BACKUP_CLOUD_ADDRESS_PATH now), and an unknown one falls back to the plain range words.
     expect(message(language, 'err-out-of-range', { reason: 'https' })).not.toBe(
-      message(language, 'err-out-of-range', { reason: 'path' }),
+      message(language, 'err-out-of-range', { reason: '', min: '1', max: '2' }),
     );
-    expect(message(language, 'err-out-of-range', { reason: 'path' })).toContain(
-      message(language, 'backup-set-bucket'),
+    expect(message(language, 'err-out-of-range', { reason: 'path', min: '1', max: '2' })).toBe(
+      message(language, 'err-out-of-range', { reason: '', min: '1', max: '2' }),
     );
+  });
+
+  it('a cloud address with a path after the host is its own refusal: the address to use, the part cut off, and the bucket field', () => {
+    renderIn(
+      language,
+      <ErrorNotice
+        error={refusal([
+          {
+            code: 'ERR_BACKUP_CLOUD_ADDRESS_PATH',
+            field: 'cloud_endpoint',
+            values: {
+              address: 'https://acct.r2.cloudflarestorage.com',
+              path: '/mandidemo',
+              bucket: 'mandidemo',
+            },
+          },
+        ])}
+      />,
+    );
+    const shown = visible(screen.getByRole('alert').textContent);
+    expect(shown).toContain('https://acct.r2.cloudflarestorage.com');
+    expect(shown).toContain('/mandidemo');
+    expect(shown).toContain(message(language, 'backup-set-bucket'));
+    // No hole where a value should be, and no code.
+    expect(shown).not.toContain('$');
+    expect(shown).not.toContain('ERR_BACKUP_CLOUD_ADDRESS_PATH');
   });
 
   it('a refusal with a range and no reason keeps the range words', () => {

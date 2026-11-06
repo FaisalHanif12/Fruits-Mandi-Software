@@ -19,7 +19,7 @@ use mandi_db::rusqlite::{Connection, params_from_iter};
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    Conds, col, load_parties, names_cell, paisa, party_of_line, pukhta_party,
+    Conds, col, grade_of, load_parties, names_cell, paisa, party_of_line, pukhta_party,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -71,6 +71,8 @@ pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
         .id("l.seller_account_id = ?", typed.seller_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
         .id("l.item_id = ?", typed.item_id)
+        // All the items of a group (PRD v1.29); never together with one item.
+        .item_group("l.item_id", typed.item_group)
         .id("ba.city_id = ?", typed.city_id)
         .id("b.adda_id = ?", typed.adda_id);
     c
@@ -89,7 +91,7 @@ pub(crate) fn page_query(
         "SELECT je.entry_date, je.posting_type, b.id, b.number,
            s.buyer_account_id, s.pukhta_person_key, s.pukhta_name_ur, s.pukhta_name_en,
            ci.name_ur, ci.name_en, i.name_ur, i.name_en,
-           s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa
+           s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -110,7 +112,7 @@ pub(crate) fn totals_query(typed: &Typed, payment: Option<&'static str>) -> (Str
     let c = conds(typed, payment);
     let sql = format!(
         "SELECT COUNT(*), COALESCE(SUM(s.qty), 0), COALESCE(SUM(s.buyer_value_paisa), 0),
-                COALESCE(SUM(s.buyer_total_paisa), 0)
+                COALESCE(SUM(s.buyer_total_paisa), 0), COALESCE(MAX(s.grade IS NOT NULL), 0)
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -139,6 +141,8 @@ struct Line {
     rate: i64,
     value: i64,
     total: i64,
+    /// The stored quality of the line, as text (PRD FR-12.42).
+    grade: Option<String>,
 }
 
 /// Builds R2, R3 or R4.
@@ -154,9 +158,12 @@ pub(crate) fn run(
 ) -> Result<ReportPage, ReportsError> {
     let payment = kind.payment_type();
     let (totals_sql, totals_args) = totals_query(typed, payment);
-    let (count, qty, value, total): (i64, i64, i64, i64) =
+    // `with_grade` is true when some line of the whole filter has a quality (PRD FR-12.42): then
+    // every page of the register has the quality column after the item, so the columns do not
+    // change from page to page. With no quality anywhere the register is exactly as it was.
+    let (count, qty, value, total, with_grade): (i64, i64, i64, i64, bool) =
         conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
         })?;
 
     let (page_sql, page_args) = page_query(typed, payment, spec.sql_limit(), spec.offset);
@@ -180,6 +187,7 @@ pub(crate) fn run(
                 rate: r.get(13)?,
                 value: r.get(14)?,
                 total: r.get(15)?,
+                grade: r.get(16)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -195,29 +203,41 @@ pub(crate) fn run(
             line.person_ur.as_deref(),
             line.person_en.as_deref(),
         );
+        let grade_cell = match grade_of(line.grade.as_deref())? {
+            Some(grade) => Cell::Label {
+                id: ids::grade_id(grade).to_owned(),
+            },
+            None => Cell::Empty,
+        };
+        let mut cells = vec![
+            Cell::Date {
+                iso: line.entry_date.clone(),
+            },
+            Cell::Doc {
+                type_id: ids::doc_id(&line.posting_type),
+                number: Some(line.bikri_number),
+            },
+            Cell::Party { party },
+            names_cell(line.city_ur, line.city_en),
+            names_cell(Some(line.item_ur), Some(line.item_en)),
+        ];
+        if with_grade {
+            cells.push(grade_cell);
+        }
+        cells.extend([
+            Cell::Number { value: line.qty },
+            Cell::Money {
+                paisa: paisa(line.rate)?,
+            },
+            Cell::Money {
+                paisa: paisa(line.value)?,
+            },
+            Cell::Money {
+                paisa: paisa(line.total)?,
+            },
+        ]);
         rows.push(Row {
-            cells: vec![
-                Cell::Date {
-                    iso: line.entry_date.clone(),
-                },
-                Cell::Doc {
-                    type_id: ids::doc_id(&line.posting_type),
-                    number: Some(line.bikri_number),
-                },
-                Cell::Party { party },
-                names_cell(line.city_ur, line.city_en),
-                names_cell(Some(line.item_ur), Some(line.item_en)),
-                Cell::Number { value: line.qty },
-                Cell::Money {
-                    paisa: paisa(line.rate)?,
-                },
-                Cell::Money {
-                    paisa: paisa(line.value)?,
-                },
-                Cell::Money {
-                    paisa: paisa(line.total)?,
-                },
-            ],
+            cells,
             source: Some(RowSource {
                 kind: SourceKind::Bikri,
                 id: line.bikri_id,
@@ -226,6 +246,35 @@ pub(crate) fn run(
         });
     }
 
+    let mut columns = vec![
+        col("date", ids::COL_DATE, ColumnKind::Date),
+        col("doc", ids::COL_DOC, ColumnKind::Doc),
+        col("buyer", ids::COL_BUYER, ColumnKind::Party),
+        col("city", ids::COL_CITY, ColumnKind::Names),
+        col("item", ids::COL_ITEM, ColumnKind::Names),
+    ];
+    let mut totals_cells = vec![Cell::Empty; 5];
+    if with_grade {
+        columns.push(col("grade", ids::COL_GRADE, ColumnKind::Label));
+        totals_cells.push(Cell::Empty);
+    }
+    columns.extend([
+        col("qty", ids::COL_QTY, ColumnKind::Number),
+        col("rate", ids::COL_RATE, ColumnKind::Money),
+        col("value", ids::COL_VALUE, ColumnKind::Money),
+        col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
+    ]);
+    totals_cells.extend([
+        Cell::Number { value: qty },
+        Cell::Empty,
+        Cell::Money {
+            paisa: paisa(value)?,
+        },
+        Cell::Money {
+            paisa: paisa(total)?,
+        },
+    ]);
+
     let id = kind.id();
     Ok(ReportPage {
         group_above: None,
@@ -233,37 +282,13 @@ pub(crate) fn run(
         id,
         title_id: ids::title_id(id.code()),
         filters: typed.resolved.clone(),
-        columns: vec![
-            col("date", ids::COL_DATE, ColumnKind::Date),
-            col("doc", ids::COL_DOC, ColumnKind::Doc),
-            col("buyer", ids::COL_BUYER, ColumnKind::Party),
-            col("city", ids::COL_CITY, ColumnKind::Names),
-            col("item", ids::COL_ITEM, ColumnKind::Names),
-            col("qty", ids::COL_QTY, ColumnKind::Number),
-            col("rate", ids::COL_RATE, ColumnKind::Money),
-            col("value", ids::COL_VALUE, ColumnKind::Money),
-            col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
-        ],
+        columns,
         rows,
         offset: spec.offset,
         limit: spec.reported_limit(),
         total_count: count,
         totals_label_id: ids::TOTAL.to_owned(),
-        totals: vec![
-            Cell::Empty,
-            Cell::Empty,
-            Cell::Empty,
-            Cell::Empty,
-            Cell::Empty,
-            Cell::Number { value: qty },
-            Cell::Empty,
-            Cell::Money {
-                paisa: paisa(value)?,
-            },
-            Cell::Money {
-                paisa: paisa(total)?,
-            },
-        ],
+        totals: totals_cells,
         summary: Vec::new(),
     })
 }

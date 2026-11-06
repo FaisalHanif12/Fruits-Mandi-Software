@@ -27,6 +27,7 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
+import { ChevronDown } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useGrouping, type Grouping } from '../format';
 import { useLatest } from '../hooks/useLatest';
@@ -41,6 +42,7 @@ import { isEditable } from './enterOrder';
 import type { EntryStore } from './entryStore';
 import { createGridKeyHandler } from './gridKeys';
 import { PickerCellEditor } from './PickerCellEditor';
+import { SelectCellEditor } from './SelectCellEditor';
 import { REMOVE_COLUMN_ID, removeColumnDef, useRemoveRow, type RemoveQuestion } from './removeRow';
 import {
   isReadOnlyType,
@@ -128,6 +130,16 @@ interface Live {
   cellWarnings: PerRow<string> | undefined;
   cellChanged: PerRow<string> | undefined;
   cellMarks: PerRow<string> | undefined;
+}
+
+/** What a select cell shows: its word, and a small arrow so the cell looks like a list (PRD FR-12.42). */
+function SelectCellFace(props: CustomCellRendererProps<EntryRow>) {
+  return (
+    <span className="flex items-center justify-center gap-1">
+      <span>{props.valueFormatted ?? ''}</span>
+      <ChevronDown aria-hidden="true" className="size-icon-sm shrink-0 text-ink-muted" />
+    </span>
+  );
 }
 
 /** The word of a choice column for a value, or undefined when it has no word. */
@@ -324,6 +336,43 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       onCellClicked: (event) => {
         if (event.data === undefined || !isEditable(column, event.data)) return;
         env.cycle({ rowId: event.data.rowId, field: column.field });
+      },
+    };
+  }
+
+  if (column.type === 'select') {
+    const options = (column.choices ?? []).map((choice) => ({
+      value: choice.value,
+      label: word(choice.labelId),
+    }));
+    return {
+      ...base,
+      editable: (params) => params.data !== undefined && isEditable(column, params.data),
+      valueGetter: (params: ValueGetterParams<EntryRow>) => params.data?.typed[column.field] ?? '',
+      // The cell shows the word of the value; the empty choice shows nothing but the arrow.
+      valueFormatter: (params: ValueFormatterParams<EntryRow>) =>
+        typeof params.value !== 'string' || params.value === ''
+          ? ''
+          : (choiceLabel(column, params.value, word) ?? ''),
+      // The editor writes the word to the store itself; the grid has nothing to set.
+      valueSetter: () => false,
+      cellRenderer: SelectCellFace,
+      cellEditor: SelectCellEditor,
+      cellEditorPopup: true,
+      cellEditorPopupPosition: 'under',
+      cellEditorParams: { options, store, field: column.field, getKeyHandler: env.getKeyHandler },
+      // A small column: its words and its heading are centred like a choice cell's (plan 39 R3).
+      cellClass: ['cell-choice', 'cell-center'],
+      headerClass: ['header-center'],
+      // A click opens the list, as a click on a picker cell opens its list.
+      onCellClicked: (event) => {
+        if (event.data === undefined || !isEditable(column, event.data)) return;
+        const { rowIndex } = event;
+        if (rowIndex === null) return;
+        const editing = event.api
+          .getEditingCells()
+          .some((cell) => cell.rowIndex === rowIndex && cell.colId === column.field);
+        if (!editing) event.api.startEditingCell({ rowIndex, colKey: column.field });
       },
     };
   }

@@ -1,6 +1,7 @@
 // The columns of the two grids (PRD 12.3, 12.4; plan 12). Enter stops are the cells of the PRD 7.2
 // example: a sale line takes buyer, qty and rate, three fields and three Enters (NFR-USE-6, D3-Q1).
-// The payment type is reached with the arrow keys, Space or a click.
+// The payment type (ادھاری / نقدی) is in the details of the line under the grid, so the table has the
+// same columns at every size (plan 58, option C).
 //
 // The windows are narrow: with the main menu and the side menu open, a 1024 px window leaves about
 // 680 px for the screen (NFR-USE-15). So the grids hold the cells typed on most lots and lines,
@@ -95,6 +96,20 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       hintIsNumber: true,
       hintTooltipField: `${SALE.rate}Tip`,
     },
+    {
+      field: SALE.grade,
+      type: 'select',
+      headerId: 'glossary-darja',
+      // Optional and never an Enter stop: a line stays buyer, qty, rate (PRD FR-12.42, NFR-USE-6). It is
+      // reached with the arrow keys or a click, and Space or Alt+↓ opens its list.
+      enterStop: false,
+      choices: [
+        { value: '', labelId: 'bikri-grade-none' },
+        { value: 'first', labelId: 'glossary-darja-awwal' },
+        { value: 'second', labelId: 'glossary-darja-doyam' },
+        { value: 'third', labelId: 'glossary-darja-soyam' },
+      ],
+    },
     { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
     ...(isFromStep(step, 'normal')
       ? ([
@@ -113,30 +128,17 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
         ] satisfies readonly EntryColumn[])
       : []),
     { field: SALE.buyerTotal, type: 'calc', headerId: 'bikri-col-buyer-total', explain: true },
-    {
-      field: SALE.payment,
-      type: 'choice',
-      headerId: 'bikri-col-payment',
-      // "ادھاری / نقدی" stays on one line, so the heading row of the grid is one line high. The
-      // wide window has the room for the commission and لاگا columns instead, and the height.
-      ...(isFromStep(step, 'wide') ? {} : { minWidth: FIT_MIN.choiceHeading }),
-      enterStop: false,
-      choices: [
-        { value: 'credit', labelId: 'glossary-udhari' },
-        { value: 'cash', labelId: 'glossary-naqdi' },
-      ],
-    },
   ];
 }
 
 /**
  * The columns of the whole-sale view (PRD FR-12.1): the lot of each line first, then the columns
  * of the grid of one lot that fit beside it. The grid has the width of the grid of one lot, so the
- * lot column takes the room of the columns of the next step up (the commissions, the لاگا) and,
- * in the narrowest window, of the payment column: nothing may scroll sideways, not even inside the
- * grid (NFR-USE-15). The commissions and the payment type of the line that has focus are in the
- * line details under the grid, and every figure is in the summary. A seller's name is cut in the
- * lot column and read in full in the tooltip.
+ * lot column takes the room of the columns of the next step up (the commissions, the لاگا) and, in the
+ * narrowest window, of the quality column: nothing
+ * may scroll sideways, not even inside the grid (NFR-USE-15). The commissions and the payment type
+ * of the line that has focus are in the line details under the grid, and every figure is in the
+ * summary. A seller's name is cut in the lot column and read in full in the tooltip.
  */
 export function allLinesColumns(step: LayoutStep): readonly EntryColumn[] {
   const lot: EntryColumn = {
@@ -146,8 +148,10 @@ export function allLinesColumns(step: LayoutStep): readonly EntryColumn[] {
     minWidth: isFromStep(step, 'wide') ? FIT_MIN.figure : FIT_MIN.name,
   };
   const beside = saleColumns(isFromStep(step, 'wide') ? 'normal' : 'compact');
+  // In the narrowest window the quality (درجہ) is left to the grid of one lot, as the room is short;
+  // the lot column and the buyer, qty and rate stops come first (plan 58, option C).
   return [
     lot,
-    ...(isFromStep(step, 'normal') ? beside : beside.filter((c) => c.field !== SALE.payment)),
+    ...(isFromStep(step, 'normal') ? beside : beside.filter((c) => c.field !== SALE.grade)),
   ];
 }

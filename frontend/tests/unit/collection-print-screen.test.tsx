@@ -23,7 +23,8 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
-import { fakeMasters, record } from '../helpers/masters';
+import { expectOnlyCollectors } from '../helpers/collector-box';
+import { STAFF_ROSTER, fakeMasters, record } from '../helpers/masters';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePrinting } from '../helpers/print';
 import { message, visible } from '../helpers/render';
@@ -56,7 +57,7 @@ beforeEach(() => {
   fakeAccounts([AKRAM, ARSHAD]);
   fakeAccountSearch([AKRAM, ARSHAD]);
   fakeMasters({
-    staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')],
+    staff: STAFF_ROSTER,
     city: [record('city', 91, '0001', 'کوٹ رادھا کشن', 'Kot Radha Kishan')],
   });
 });
@@ -145,6 +146,18 @@ describe.each(LANGUAGES)('printing the collection list from its screen (%s)', (l
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
+  });
+
+  it('the collector filter lists the collectors only: not the munshi, not a collector who left (plan 55)', async () => {
+    const { user } = await open();
+    await user.click(
+      await screen.findByRole('button', { name: named(message(language, 'common-filters-more')) }),
+    );
+    await expectOnlyCollectors(
+      user,
+      screen.getByRole('combobox', { name: named(message(language, 'vouchers-field-collector')) }),
+      language,
+    );
   });
 
   it('prints the filters of the screen: the collector and the city he picked', async () => {

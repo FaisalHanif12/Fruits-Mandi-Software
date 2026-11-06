@@ -9,7 +9,10 @@ import { useMemo } from 'react';
 import type { AnswerSource } from '../../bindings/AnswerSource';
 import type { EntryRoute } from '../../bindings/EntryRoute';
 import type { EntryScreen } from '../../bindings/EntryScreen';
+import type { ScreenRoute } from '../../bindings/ScreenRoute';
+import type { GardenOpenType } from '../gardens';
 import { useOpenReport } from '../reports';
+import type { TripOpenType } from '../trips';
 import { analyticsSearchFromFilters, entryPartyOf, reportSearchFromFilters } from './addresses';
 
 /**
@@ -46,6 +49,44 @@ export function isMainScreen(screen: EntryScreen): screen is MainScreen {
   return screen in MAIN_SCREEN_PATHS;
 }
 
+/**
+ * The screens of the entries on a garden or a trip (plan 55 Section 11.1): the screen of the one record
+ * the route names, opened on the type of entry the question asked for, or on the closing of the garden.
+ * With no record the list of gardens or of trips opens, and the Owner picks one.
+ */
+const GARDEN_ENTRY_TYPES: Readonly<Record<string, GardenOpenType>> = {
+  garden_installment: 'installment',
+  garden_cost: 'cost',
+  garden_sale: 'other_sale',
+  garden_close: 'close',
+};
+const TRIP_ENTRY_TYPES: Readonly<Record<string, TripOpenType>> = {
+  trip_purchase: 'purchase',
+  trip_cost: 'cost',
+  trip_sale: 'other_sale',
+};
+
+/**
+ * The screens an answer's own source can send the Owner to (plan 55 Section 13): the dashboard, the rules, the
+ * day close and the audit log, which is a tab of Settings. The words are the backend's `ScreenRoute`.
+ */
+function openScreenRoute(router: ReturnType<typeof useRouter>, route: ScreenRoute): void {
+  switch (route) {
+    case 'dashboard':
+      void router.navigate({ to: '/' });
+      return;
+    case 'commission_rules':
+      void router.navigate({ to: '/index/rules' });
+      return;
+    case 'day_close':
+      void router.navigate({ to: '/day' });
+      return;
+    case 'audit':
+      void router.navigate({ to: '/settings', search: { tab: 'audit' } });
+      return;
+  }
+}
+
 export interface AssistantNavigation {
   /** Opens the report or view a source was read from, with its filters. */
   openSource: (source: AnswerSource) => void;
@@ -76,6 +117,9 @@ export function useAssistantNavigation(): AssistantNavigation | null {
           case 'tiles':
             void router.navigate({ to: '/' });
             return;
+          case 'screen':
+            openScreenRoute(router, source.route);
+            return;
           case 'party_card':
             // A party card has no screen of its own; his ledger is the next source of the answer.
             return;
@@ -90,8 +134,39 @@ export function useAssistantNavigation(): AssistantNavigation | null {
           void router.navigate({ to: MAIN_SCREEN_PATHS[screen] });
           return;
         }
+        const gardenType = GARDEN_ENTRY_TYPES[screen];
+        if (gardenType !== undefined) {
+          if (route.party === null) void router.navigate({ to: '/gardens' });
+          else
+            void router.navigate({
+              to: '/gardens/$id',
+              params: { id: String(route.party.id) },
+              search: { type: gardenType },
+            });
+          return;
+        }
+        const tripType = TRIP_ENTRY_TYPES[screen];
+        if (tripType !== undefined) {
+          if (route.party === null) void router.navigate({ to: '/trips' });
+          else
+            void router.navigate({
+              to: '/trips/$id',
+              params: { id: String(route.party.id) },
+              search: { type: tripType },
+            });
+          return;
+        }
         const party = route.party === null ? {} : { party: entryPartyOf(route.party) };
         switch (screen) {
+          case 'bikri_later_sale':
+            // The unsold stock list: "فروخت کریں" on a row opens the later sale (FR-12.17).
+            void router.navigate({ to: '/bikri/stock' });
+            return;
+          case 'bikri_edit':
+          case 'bikri_cancel':
+            // The بکری book with its find box open: the Owner finds the بکری, then edits or cancels it.
+            void router.navigate({ to: '/bikri/book', search: { find: true } });
+            return;
           case 'bikri':
             void router.navigate({ to: '/bikri/book' });
             return;

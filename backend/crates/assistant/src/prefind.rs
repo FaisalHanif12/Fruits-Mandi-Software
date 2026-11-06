@@ -361,6 +361,7 @@ fn source_result(source: &AnswerSource) -> &str {
         AnswerSource::PartyCard { result_id, .. }
         | AnswerSource::Report { result_id, .. }
         | AnswerSource::Analytics { result_id, .. }
+        | AnswerSource::Screen { result_id, .. }
         | AnswerSource::Tiles { result_id } => result_id,
     }
 }
@@ -381,7 +382,7 @@ fn about_party(source: &AnswerSource, code: &Option<String>) -> Option<bool> {
                 (a, b) => Some(a.unwrap_or(false) || b.unwrap_or(false)),
             }
         }
-        AnswerSource::Tiles { .. } => None,
+        AnswerSource::Tiles { .. } | AnswerSource::Screen { .. } => None,
     }
 }
 

@@ -404,7 +404,7 @@ export function CollectionPage() {
                     <Picker
                       {...control}
                       canAdd={false}
-                      scope="staff"
+                      scope="collector"
                       value={collector}
                       onChange={(hit) => {
                         setCollector(hit === null ? null : pickedOf(hit));

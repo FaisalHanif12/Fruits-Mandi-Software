@@ -480,6 +480,10 @@ backup-set-endpoint = کلاؤڈ کا پتہ
 backup-set-endpoint-hint = مثلاً https://your-account.r2.cloudflarestorage.com
 
 # review: pending
+backup-fix-address-path = پتے سے فالتو حصہ ہٹائیں
+# review: pending
+backup-fix-address-bucket = بکٹ کا نام { $bucket } بکٹ کے خانے میں لکھا جائے گا۔
+# review: pending
 backup-set-bucket = بکٹ کا نام
 
 # review: pending

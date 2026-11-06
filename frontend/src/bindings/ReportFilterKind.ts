@@ -21,4 +21,6 @@ export type ReportFilterKind =
   | 'garden'
   | 'garden_view'
   | 'bikri'
-  | 'guests';
+  | 'guests'
+  | 'collector'
+  | 'item_group';

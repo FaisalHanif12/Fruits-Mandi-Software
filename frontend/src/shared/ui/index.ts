@@ -72,6 +72,7 @@ export { ScriptText } from './ScriptText';
 export { SegmentedControl, type SegmentedOption } from './SegmentedControl';
 export { ShareAmounts } from './ShareAmounts';
 export { Select, type SelectOption } from './Select';
+export { ITEM_GROUP_CHOICES, ItemGroupSelect, type ItemGroupChoice } from './ItemGroupSelect';
 export { Stepper, type Step } from './Stepper';
 export { SuggestInput, type Suggestion } from './SuggestInput';
 export { Table, type TableColumn, type TableColumnKind, type TableColumnSize } from './Table';

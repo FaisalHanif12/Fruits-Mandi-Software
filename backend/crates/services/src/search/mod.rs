@@ -58,7 +58,17 @@ fn current(ctx: &Context) -> Result<Arc<Index>, ServiceError> {
 
 /// The index a scope searches. The accounts and the masters are in the long-lived index; the open
 /// trips and gardens (plan 34) are few and change with every sale, so they are read for the call.
+/// So are the collectors (active staff whose job is `collector`): a change of a person's job shows
+/// in the next search, with nothing to keep in step.
 fn index_for(ctx: &Context, scope: SearchScope) -> Result<Arc<Index>, ServiceError> {
+    if scope == SearchScope::Collector {
+        let sources = ctx
+            .db
+            .read(|conn| mandi_db::masters::collector_sources(conn).map_err(ServiceError::from))?;
+        let mut index = Index::empty();
+        index.set_ventures(scope, sources);
+        return Ok(Arc::new(index));
+    }
     let (kind, include_closed) = match scope {
         SearchScope::Trip => ("trip", false),
         SearchScope::Garden => ("garden", false),

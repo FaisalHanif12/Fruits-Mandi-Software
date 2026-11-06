@@ -20,6 +20,7 @@
       "seller",
       "zamindar",
       "item",
+      "item_group",
       "city",
       "adda"
     ],
@@ -36,6 +37,7 @@
       "seller",
       "zamindar",
       "item",
+      "item_group",
       "city",
       "adda"
     ],
@@ -52,6 +54,7 @@
       "seller",
       "zamindar",
       "item",
+      "item_group",
       "city",
       "adda"
     ],
@@ -97,6 +100,7 @@
       "party",
       "seller",
       "item",
+      "item_group",
       "city",
       "adda"
     ],
@@ -133,7 +137,8 @@
     "filters": [
       "date_range",
       "seller",
-      "item"
+      "item",
+      "item_group"
     ],
     "party_required": false
   },
@@ -264,7 +269,8 @@
     "filters": [
       "as_of",
       "party",
-      "city"
+      "city",
+      "collector"
     ],
     "party_required": false
   },
@@ -275,7 +281,8 @@
     "title_id": "report-r23-title",
     "filters": [
       "date_range",
-      "party"
+      "party",
+      "collector"
     ],
     "party_required": false
   },
@@ -322,6 +329,7 @@
       "seller",
       "zamindar",
       "item",
+      "item_group",
       "adda"
     ],
     "party_required": false
@@ -410,7 +418,8 @@
     "title_id": "report-r35-title",
     "filters": [
       "as_of",
-      "party"
+      "party",
+      "collector"
     ],
     "party_required": false
   },

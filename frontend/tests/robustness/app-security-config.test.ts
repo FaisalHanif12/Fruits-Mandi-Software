@@ -138,6 +138,19 @@ describe('Capability file (NFR-SEC-10, Code Standards S4)', () => {
     ]);
   });
 
+  it('gives exactly the five dialog permissions the plans approved and no other', () => {
+    // message, ask and confirm (plan 04), save (the Excel export and the support file) and open (plan 56
+    // Section 8, Q4: the file and folder picker of "restore on a new computer", it only returns a path).
+    // `dialog:default` and every other dialog permission stay refused.
+    expect(ids.filter((id) => id.startsWith('dialog:'))).toEqual([
+      'dialog:allow-message',
+      'dialog:allow-ask',
+      'dialog:allow-confirm',
+      'dialog:allow-save',
+      'dialog:allow-open',
+    ]);
+  });
+
   it('gives no file system, shell, http or opener access', () => {
     expect(ids.filter((id) => /^(fs|shell|http|opener):/.test(id))).toEqual([]);
   });

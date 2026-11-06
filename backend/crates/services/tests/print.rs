@@ -258,6 +258,74 @@ fn a_buyer_with_a_tag_prints_with_it_and_every_party_has_its_short_code() {
     assert_eq!(ur.pages[0].lines[0].detail, "(کیلا 20 . 600)");
 }
 
+#[test]
+fn a_quality_prints_after_the_item_on_the_seller_bill_and_the_buyer_slips() {
+    // PRD FR-12.42, plan 58: Ehsan's 20 apples. اکرم takes 10 اول at 1,200 and 6 دوم at 800, ارشد
+    // takes 4 with no quality at 500. The line carries `grade`, and the R5 text `(item qty . rate)`
+    // has its word after the item, from the same Fluent message as the screens. A line with no
+    // quality is as it was. No printed amount moves.
+    use mandi_reports::export::l10n::L10n;
+    use mandi_services::core::bikri::SaleGrade;
+    let w = world();
+    let mut lines = vec![
+        sale("s-1", w.akram, "10", "1200"),
+        sale("s-2", w.akram, "6", "800"),
+        sale("s-3", w.arshad, "4", "500"),
+    ];
+    lines[0].grade = Some("first".into());
+    lines[1].grade = Some("second".into());
+    let id = save(
+        &w,
+        &draft(vec![with_sales(
+            bare_lot(&w, "lot-1", w.rahim, w.apple, "20"),
+            lines,
+        )]),
+    );
+    for language in [Language::En, Language::Ur] {
+        let l10n = L10n::new(language).unwrap();
+        let first = l10n.text("report-grade-first");
+        let second = l10n.text("report-grade-second");
+        let apple = match language {
+            Language::En => "Apple",
+            Language::Ur => "سیب",
+        };
+        let slips = data(&w, id, PrintDoc::BuyerSlips, language);
+        // اکرم's slip (0020) has the two lines with a quality, ارشد's the one without.
+        let akram = &slips.pages[0].lines;
+        assert_eq!(
+            akram.iter().map(|l| l.grade).collect::<Vec<_>>(),
+            vec![Some(SaleGrade::First), Some(SaleGrade::Second)]
+        );
+        assert_eq!(akram[0].detail, format!("({apple} {first} 10 . 1,200)"));
+        assert_eq!(akram[1].detail, format!("({apple} {second} 6 . 800)"));
+        // The item itself is still only the item.
+        assert_eq!(akram[0].item, apple);
+        let arshad = &slips.pages[1].lines;
+        assert_eq!(arshad[0].grade, None);
+        assert_eq!(arshad[0].detail, format!("({apple} 4 . 500)"));
+        assert_eq!(amount(&slips.pages[0], "print-items-value"), 16_800);
+        assert_eq!(amount(&slips.pages[0], "print-buyer-pays"), 17_936);
+        assert_eq!(amount(&slips.pages[1], "print-buyer-pays"), 2_152);
+        // The seller bill: the three lines with the same qualities and the seller's amounts.
+        let bill = data(&w, id, PrintDoc::SellerBill, language);
+        let lines = &bill.pages[0].lines;
+        assert_eq!(
+            lines.iter().map(|l| l.grade).collect::<Vec<_>>(),
+            vec![Some(SaleGrade::First), Some(SaleGrade::Second), None]
+        );
+        assert_eq!(
+            amount(&bill.pages[0], "print-gross-sale"),
+            18_800,
+            "no amount moved"
+        );
+    }
+    // The wire form: the key is there only for a line with a quality.
+    let json = serde_json::to_value(data(&w, id, PrintDoc::BuyerSlips, Language::En)).unwrap();
+    let line = |page: usize, line: usize| json["pages"][page]["lines"][line].clone();
+    assert_eq!(line(0, 0)["grade"], "first");
+    assert!(line(1, 0).get("grade").is_none());
+}
+
 // ---- Every printed total equals the screen and the journal ----
 
 #[test]

@@ -270,7 +270,7 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
     expect(pageText()).not.toContain(message(language, 'err-no-sale-lines'));
   });
 
-  it('credit that is not allowed turns the payment cell red and says why', async () => {
+  it('credit that is not allowed says why under the payment choice of the line', async () => {
     const { user } = await openBook(language, (draft) => ({
       ...previewFor(draft),
       errors: [
@@ -284,9 +284,8 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitFor(() => {
-      expect(cellOf(salesGrid(language), 0, 'payment')).toHaveClass('cell-error');
+      expect(pageText()).toContain(message(language, 'err-credit-not-allowed'));
     });
-    expect(pageText()).toContain(message(language, 'err-credit-not-allowed'));
     expect(pageText()).not.toContain('ERR_');
   });
 });

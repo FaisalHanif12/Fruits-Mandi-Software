@@ -5,21 +5,23 @@ or writes the key.
 
 ## Files
 
-| File | What it is |
-|---|---|
-| `run.mjs` | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--threads`, `--results`. |
-| `questions.tsv` | The bank (1,126 questions). Built, never edited by hand. |
-| `questions-110.tsv` | The first 110 questions, frozen. They keep the D6 mix. |
-| `bank-spec.mjs` | The new questions, one entry for each meaning, with its wordings. |
-| `bank-spec-a2.mjs` | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`. |
-| `bank-spec-mix.mjs` | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026). |
-| `bank-spec-cap.mjs` | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen. |
+| File                                                                                     | What it is                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `run.mjs`                                                                                | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--facet`, `--every`, `--threads`, `--results`.                                                                                                                    |
+| `questions.tsv`                                                                          | The bank (1,126 questions). Built, never edited by hand.                                                                                                                                                                             |
+| `questions-110.tsv`                                                                      | The first 110 questions, frozen. They keep the D6 mix.                                                                                                                                                                               |
+| `bank-spec.mjs`                                                                          | The new questions, one entry for each meaning, with its wordings.                                                                                                                                                                    |
+| `bank-spec-a2.mjs`                                                                       | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`.                                                                                                                                      |
+| `bank-spec-mix.mjs`                                                                      | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026).                                                                                                                                                        |
+| `bank-spec-cap.mjs`                                                                      | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen.                                                                                                             |
 | `bank-spec-cap-more.mjs`, `-registers.mjs`, `-nosuch.mjs`, `-print.mjs`, `-forecast.mjs` | The other parts of facet CAP: reports, views, tiles and records with oracle figures; the registers and lists; "no such record" for every row that names one; print and open of the mapped reports; the forecast and the mixed cells. |
-| `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv` | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code. |
-| `build-bank.mjs` | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date. |
-| `oracle-keys.txt` | The facts the oracle gives (the `@key` of a question). Checked by a Rust test. |
-| `urdu-review.tsv` | The sheet for the Urdu reviewer, written by every run. |
-| `check-modes.mjs` | A scripted check of `--bank` and `--threads` (no model, no key, no cargo). |
+| `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv`                          | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code.                                                                                                               |
+| `capability-items.mjs`, `build-capability-items.mjs`, `capability-items.tsv`, `item-axis-sold.json`                 | The ITEM AXIS of the matrix (Umar, 06-11-2026): every measure about an item against every kind of subject in every period (2,070 cells). One bank question for each answerable cell, facet `ITEM`. |
+| `capability-money.mjs`, `capability-money.tsv` | The PERIOD AXIS of the money and party subjects (lead, 06-11-2026): 950 cells, facet `MONEY`. Built by the same `build-capability-items.mjs`. |
+| `build-bank.mjs`                                                                         | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date.                                                                                                                                       |
+| `oracle-keys.txt`                                                                        | The facts the oracle gives (the `@key` of a question). Checked by a Rust test.                                                                                                                                                       |
+| `urdu-review.tsv`                                                                        | The sheet for the Urdu reviewer, written by every run.                                                                                                                                                                               |
+| `check-modes.mjs`                                                                        | A scripted check of `--bank` and `--threads` (no model, no key, no cargo).                                                                                                                                                           |
 
 The oracle itself is Rust: `backend/crates/assistant/tests/robustness_year/` (`seed.rs` builds the books
 through the app's own save functions, `oracle.rs` asks the app's own reports and analytics).
@@ -29,23 +31,23 @@ through the app's own save functions, `oracle.rs` asks the app's own reports and
 Five categories (plan 52 Section 2), each in Roman Urdu, Urdu and English, with misspellings and groups of
 the same meaning:
 
-| Cat | Questions | What |
-|---|---|---|
-| A | real-time data | every section: item, seller, buyer, partner, period, cash, dues, stock, garden, trip, fruit, expense, capital, day, month |
-| B | suggestions | with data (from the books, not marked general) and on thin books (general advice, one call, no figure) |
-| C | forecasts and what-ifs | year end, pace doubled, next months, targets, +10% |
-| D | help | every one of the 38 topics of the guide |
-| E | mixed and hard | follow-ups, misspellings, two parts, nonsense, injection, change requests, unknown names |
+| Cat | Questions              | What                                                                                                                      |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| A   | real-time data         | every section: item, seller, buyer, partner, period, cash, dues, stock, garden, trip, fruit, expense, capital, day, month |
+| B   | suggestions            | with data (from the books, not marked general) and on thin books (general advice, one call, no figure)                    |
+| C   | forecasts and what-ifs | year end, pace doubled, next months, targets, +10%                                                                        |
+| D   | help                   | every one of the 38 topics of the guide                                                                                   |
+| E   | mixed and hard         | follow-ups, misspellings, two parts, nonsense, injection, change requests, unknown names                                  |
 
 Three facets of Umar's request of 03-11-2026 (plan 52 Section 8.1) run through the categories. A question
 carries its facet in `filters` (`facet=M`, `facet=day`, `facet=nosuch`), and each one has its Roman Urdu,
 Urdu and English twins in a group:
 
-| Facet | Questions | What |
-|---|---|---|
-| M, mixed language | 36 | Roman Urdu with English words ("Rahim ne this month kitna sell kiya"), Urdu letters with English words ("رحیم کی sale this month کتنی رہی"), English with Urdu mandi words ("how much bakaya does Faisal have"). Every section of category A at least once: item, seller, buyer, partner, period, cash, dues, stock, garden, trip, fruit, expense, capital, day, month. |
-| day, a party's day | 15 | "X ne aaj / kal / 18 September ko kya aur kitna khareeda (becha)": a buyer today, a buyer yesterday, a buyer on a date with two items, a seller yesterday, a seller on a date with two items. Each item's qty and amount and the day's total, all from the oracle (`buyer_day.*`, `seller_day.*`). A buyer's amount is the value or the value with commission and laga (`with_charges`); both are true figures of the app. |
-| nosuch, no such party | 14 | A made-up seller and a made-up buyer end in `not_found` with `asked_role`. A buyer asked as a seller ends in `not_found` with `asked_role=seller` and `found_as=buyer`; a seller asked as a buyer the reverse. A misspelled real seller (Raheem for Rahim) is still found, with his figures (category A). |
+| Facet                 | Questions | What                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M, mixed language     | 36        | Roman Urdu with English words ("Rahim ne this month kitna sell kiya"), Urdu letters with English words ("رحیم کی sale this month کتنی رہی"), English with Urdu mandi words ("how much bakaya does Faisal have"). Every section of category A at least once: item, seller, buyer, partner, period, cash, dues, stock, garden, trip, fruit, expense, capital, day, month.                                                    |
+| day, a party's day    | 15        | "X ne aaj / kal / 18 September ko kya aur kitna khareeda (becha)": a buyer today, a buyer yesterday, a buyer on a date with two items, a seller yesterday, a seller on a date with two items. Each item's qty and amount and the day's total, all from the oracle (`buyer_day.*`, `seller_day.*`). A buyer's amount is the value or the value with commission and laga (`with_charges`); both are true figures of the app. |
+| nosuch, no such party | 14        | A made-up seller and a made-up buyer end in `not_found` with `asked_role`. A buyer asked as a seller ends in `not_found` with `asked_role=seller` and `found_as=buyer`; a seller asked as a buyer the reverse. A misspelled real seller (Raheem for Rahim) is still found, with his figures (category A).                                                                                                                  |
 
 A fourth facet, **print** (plan 54 Section 6, `facet=print`, 104 questions): "print X's sales for a period"
 for every row of the report map (a buyer, a seller, no party, a khata) and every period in words (aaj, kal,
@@ -58,6 +60,10 @@ this one, Monday to Sunday. The dates are not the bank's own rule: the oracle as
 (`mandi_assistant::tools::period::compute`, `Kind::LastWeek`, the one behind the `period` tool). The report
 date shortcuts (FR-19.2) and the analytics period filter have no "last week"; the helper is the app's rule.
 "1 se 15 tak" with no month is the latest month where the 15th has come (today 05-11-2026: 1 to 15 October).
+A print that names no period follows the app's rule (`understand/plan.rs`, `dated`): a report of a person or a
+thing (a partner's R31, a garden's R36, the trips' R33) opens on the whole books with no dates, written
+`print.dates=none` (the button's from and to must both be empty, and the steps set no dates); a report of a
+period with no person (R29, R12, R37, R30) takes today to today and says so, written `print.from=@cal.today;print.to=@cal.today`.
 
 Facet **U** (plan 55 gate 4, `facet=U`, 25 questions): Umar's own questions from his log, word for word with his
 spelling, each with its Urdu and English twin: "mujhay faisal ka khata batao?", "usman shirakat daar ka kitna
@@ -81,13 +87,94 @@ Facet **MIX** (`facet=MIX`, category C, 10 groups of 3): ONE question that asks 
 what-if ("pichle mahine electricity ka kitna kharcha hua aur agle 3 mahine ka estimate kitna hai"). The labels of
 `figures` split the two parts: `real_*` (a figure of the books) and `est_*` (an estimate, any of the three methods
 counts: the band). The scorer keeps them apart (PRD FR-7.76 point 4): a real figure shown as an estimate, or an
-estimate shown as a figure of the books, is a miss. A group whose estimate has no route yet (a head, cash, a
-party's balance: gaps F2, F5, F4) carries `pending=<reason>` in its filters: it is PENDING (neither a pass nor a
-miss) and the run cannot say "meets" while it waits.
+estimate shown as a figure of the books, is a miss. A group whose estimate has no route yet carries
+`pending=<reason>` in its filters: it is PENDING (neither a pass nor a miss) and the run cannot say "meets" while it
+waits. (The head, balance and cash estimates have landed: PRD FR-7.86 as approved by Umar; six questions wait for the
+commission rules, the attention list and the day state.)
+
+**The year books for the state and list questions (06-11-2026).** The rich year has a munshi (Sultan), a collector
+(Rasheed, who collects from Akram Toll Tax and Faisal) and a labourer (Naseem), and, added at the very end and dated
+today, four seller commission rules from PRD 11.3: Rahim + banana 5% (party and item), Rahim any item 3% (party),
+Karim any item 4% (party) and apple, any seller, 30 for each نگ (item). The oracle's `rules.<party>.<item>.<side>_<charge>`
+and `rules.<item>.<side>_<charge>` facts are its OWN reading of 11.3 from the rows of `charge_rules` (party + item,
+party, item, group, default; the newer rule wins a tie), never the tool's. The balance estimates
+(`est_balance.<subject>.*`) use the average of the LAST 3 full months (`BALANCE_MONTHS_MAX`), as the tool does.
+The other new facts: `staff.*`, `heads.count`, `truck.*`, `attention.*`, `days.*`, `audit.bikri<N>.count`, `r15_type.*`.
+Before and after the seed change the dump was diffed (`dumpdiff.py` in the session's scratchpad): only the rule facts,
+the balance estimates and the collector facts moved.
+
+Two scorer rules added on 05-11-2026 (lead's rulings):
+
+- **`noforecast=1`** (plan 55 Section 11.2, the stock and what is payable to sellers: forecasts the app does not
+  keep). The answer gives today's real figure and shows no forecast of any kind: an estimate block, a forecast
+  figure or a forecast chart is a miss. Saying "I do not forecast this" is the honest answer. One question for each
+  such cell of the matrix (status N).
+- **The log of a local or instant answer is its buttons** (PRD FR-7.90, `figureLogProblems`). For an answer whose
+  finish reason is `local`, every read of a report, a view, the tiles or a party card in the log has its button
+  (the same report or view), every such button has a read, and when a read and its button both carry dates they
+  are the same dates. A print answer keeps its own stricter check (`logButtonProblems`: the same entries in the
+  same order with the same filters). The total dues forecast is written against the buyers' dues: the tile total
+  is the real figure and the estimate is of the buyers' dues only.
 
 Facet **CAP** (`facet=CAP`): the questions that fill cells of `capability.tsv`. This file's first part holds the
 screens: 29 groups that OPEN a screen (answered, the guide topic and the screen route are both checked) and 11
 that ask to WRITE (change_refused with the entry screen). The reports and views with oracle figures follow.
+
+Facet **ITEM** (`facet=ITEM`, the item axis, Umar 06-11-2026: "thousands of question types on real-time item
+data"). A full cross product, written by `capability-items.mjs` and listed cell by cell in `capability-items.tsv`:
+
+- **21 measures**: sale (gross), quantity, seller commission, buyer commission, laga, total commission, average
+  rate, last rate, buyers (count and the top one), sellers (count and the top one), rank among the items, the top
+  item of a group, against the period before, best month, the monthly trend, stock left, a forecast, a print and
+  an open screen;
+- **9 subjects**: one fruit, one vegetable, the fruit group, the vegetable group, all the items, an item for one
+  party (Faisal: banana and potato), an item of one quality (plan 58), an item that is NOT in the books (Capsicum,
+  `not_found` with `asked_role=item`), and an item that IS in the books with no sale in the period (the answer
+  is 0, never `not_found`; for a rate, a buyer or a rank there is nothing to say, so any `safe` ending counts);
+- **14 periods**: today, yesterday, two named days (3 November, 14 October), this and last week, this and last
+  month, two named months (September, August), this and last year, a range (1 to 15 October) and "ab tak". The
+  period before each is the baseline of "against ...".
+
+Every cell ends as **A** (one question: one wording, rotating Roman Urdu, Urdu, English and two kinds of mixed
+wording, about a quarter misspelled), **X** (no meaning: "the top buyer of an item for one buyer"), **N** (not by
+design, with the reason, waiting for the lead's approval) or **G** (a gap, with its owner). A line of
+`capability-items.tsv` that is the same in every period of its measure is written once with period `*`.
+
+The figures are the oracle's `ix.<period>.<unit>.*` facts (`oracle.rs` `item_axis_facts`): view A, B and C, and SQL
+on the lines of the books, never the assistant's tools. A unit is an item, `fruit`, `vegetable` or `all`. For an item:
+`gross qty comm_seller comm_buyer laga comm_total avg_rate vs_gross vs_qty rank last_rate buyers_n sellers_n
+top_buyer top_seller`; for a group and all: the same, with `top_item`; for Faisal's banana and potato
+`ix.<period>.<item>.faisal.*` (with `with_charges`, `sellers_n`, `top_seller`); `ix.<period>.<unit>.{months,best_month,
+best_month_gross}` for a year, last year and so far; `ix.stock.<unit>`. The facts `a.<period>.<item>.{gross,qty,total_comm}`
+are 0 for an item with no sale. Which items sold in which period is the static table `item-axis-sold.json`, written
+from an oracle dump:
+
+    node scripts/ai-eval/build-capability-items.mjs --sold-from <oracle-dump.json>   write item-axis-sold.json
+    node scripts/ai-eval/build-capability-items.mjs                                  write capability-items.tsv
+    node scripts/ai-eval/build-capability-items.mjs --check                          is it up to date, is every cell A, X, N or G
+    node scripts/ai-eval/build-capability-items.mjs --summary                        the counts, and the N and G lists with owners
+
+Run the oracle again (`dump_the_oracle`), then `--sold-from` (and `prettier --write` on the json), then the builder, then
+`build-bank.mjs` and `build-capability.mjs`, when the seed or the oracle changes.
+
+Facet **MONEY** (`facet=MONEY`, the period axis of the money and party subjects, lead 06-11-2026): 30 subjects (receipts R23, payments R25,
+the cash book R12 in, out and closing, the shop expense R29 and one head of it, personal drawings taken and returned, the balance lists
+advances R26, money lent R32, buyers' dues R20 and sellers' payable R24, one buyer paid and bought, one seller paid and sold, a collector's
+receipts, a partner's profit share and drawings R30, capital in and out and one partner's, gardens R36, trips R33 and fruit taken R37)
+crossed with four questions (figure, list, compare against the period before, top) and the 14 periods of the item axis. A balance list has
+no range (FR-19.10): it is asked "as of" the last day of the period, and the periods whose last day is today collapse into "today" (X).
+Same A, X, N and G rules, `capability-money.tsv`, `capability-money.mjs`, facts `mx.<period>.*` and `mx.asof.<period>.*`
+(oracle.rs `money_axis_facts`, from the reports and views of the app). 801 questions, one wording each.
+
+**Quality of a sale line (plan 58 T4, PRD FR-12.42).** The lots of the last 10 days, and of every third day before them, carry a
+quality on their sale lines: inside a lot the highest rate is `first`, the next `second`, the rest `third`, a tie by line order
+(`seed.rs` `grade_lines`; no random number is used). The oracle's `ixq.<period>.<unit>.<first|second|third>.*` facts are SQL on those lines.
+Three offline tests keep it honest: `a_quality_changes_no_amount_and_follows_the_rate_inside_a_lot` (the books built twice, with and
+without a quality: every non-quality fact is equal, and inside each lot the quality follows the rate),
+`dump_the_oracle_without_grades` (`MANDI_ORACLE_UNGRADED_JSON=<file>` writes the facts of the books with no quality, to diff against the
+graded dump: only `ixq.*` differs) and `the_print_data_of_r5_and_r1_carries_the_quality` (R5 "Print All", the seller bill and the buyer
+slips of a بکری carry the quality, in English and in Urdu; one with none prints as before). The bank asks "awwal seb kal kitne ka bika",
+"doyam kele ka aaj ka rate" and three more in three languages (groups `IQ-*`) and the quality cells of the item axis. A group whose key is missing waits in `run.mjs --check` as for any facet.
 
 A group whose figures name an oracle fact that is not in `oracle-keys.txt` yet is left out of the bank and listed by
 `run.mjs --check` ("waiting for new oracle facts"); it comes in by itself when the oracle has been run again.
@@ -113,6 +200,8 @@ node scripts/ai-eval/run.mjs --category A   # the live run of one category (the 
 node scripts/ai-eval/run.mjs --misses       # ask again every miss and every question lost to the network,
                                             # and put the new rows in results.json (the score is of the whole bank)
 node scripts/ai-eval/run.mjs --only Q111,Q112 --merge   # the same for a list you give
+node scripts/ai-eval/run.mjs --facet ITEM                  # only the questions of one facet (ITEM, VEG, CAP, A2 ...)
+node scripts/ai-eval/run.mjs --facet ITEM --every 5       # every fifth question of the selection: a sample that still touches every measure, subject and period
 node scripts/ai-eval/run.mjs --results backend/target/ai-eval/results.json   # score a file again
 node scripts/ai-eval/run.mjs --threads 1    # the live run on one line (default 3; see below)
 node scripts/ai-eval/run.mjs --bank FILE --check   # another bank (a hidden one): the per-row rules only
@@ -224,7 +313,7 @@ Pending (plan 52 Section 8.2, lead, 03-11-2026):
     code; none for a report with no party), set-day or set-dates (the same day or dates) and press-print last.
     A print request answered as a change request is a miss.
 
-14. **Speed is part of "meets"** (plan 55 Section 3, lead 04-11-2026). "Meets" is plan 52 Section 2 and: the
+13. **Speed is part of "meets"** (plan 55 Section 3, lead 04-11-2026). "Meets" is plan 52 Section 2 and: the
     speed budget by kind on the time the Owner waits (how-to, print, navigation, no such party, not in the
     app: p50 1 s, p95 2 s; figures and lists: 5 s and 10 s; advice, forecasts and what-ifs: 10 s and 20 s; the
     mixed and hard questions keep 6 s and 12 s); the hard limits (no question over 25 s, how-to, print and
@@ -232,7 +321,7 @@ Pending (plan 52 Section 8.2, lead, 03-11-2026):
     `time_limit` (a slow line ended at the limit with the tables that were read) is a safe end, not an
     answer.
 
-13. **Every button against the data** (plan 55 gate 3). The harness opens each report or view an answer offers as
+14. **Every button against the data** (plan 55 gate 3). The harness opens each report or view an answer offers as
     a button, with the button's own filters, through the same backend command the screen uses (a party card
     opens his ledger R13), and writes the figures it holds into the row (`buttons`). A figure of the answer
     (or, for a calculated figure, the inputs of its working; a number of the question is left out) that is not

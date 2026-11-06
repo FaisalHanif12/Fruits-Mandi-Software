@@ -12,7 +12,7 @@ import * as authApi from '../../src/features/auth/api';
 import * as backupApi from '../../src/features/backup/api';
 import { useBackupKeyStore } from '../../src/features/backup/key-store';
 import { LANGUAGES, type Language } from '../../src/i18n';
-import { utcToLocalDisplay } from '../../src/shared/format';
+import { useGroupingStore, utcToLocalDisplay } from '../../src/shared/format';
 import { useLanguageStore } from '../../src/shared/i18n';
 import {
   KEY_CONFIRM_WRONG,
@@ -368,8 +368,10 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
   });
 
   describe('restore', () => {
-    async function startRestore(row: string) {
+    async function startRestore(row: string, preview: typeof PREVIEW | null = null) {
       const view = await open();
+      // After `open`, which sets the usual answers: this test's own books come back from the preview.
+      if (preview !== null) vi.mocked(backupApi.backupRestorePreview).mockResolvedValue(preview);
       await waitFor(() => {
         expect(cell(row, 'kind')).not.toBe('');
       });
@@ -397,6 +399,28 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
         within(dialog).getByText(named(message(language, 'backup-restore-lost-none'))),
       ).toBeInTheDocument();
       expect(backupApi.backupRestore).not.toHaveBeenCalled();
+    });
+
+    it('the counts of both books carry the thousands sign, as the lists do, and follow the grouping setting', async () => {
+      const { dialog } = await startRestore(CLOUD, {
+        ...PREVIEW,
+        totals: { ...PREVIEW.totals, accounts: 2413, journal_entries: 1316040 },
+        current: { ...PREVIEW.current, accounts: 2400, journal_entries: 1315000 },
+      });
+      const totals = within(dialog).getByRole('table', {
+        name: message(language, 'backup-restore-totals-label'),
+      });
+      expect(within(totals).getByText('2,413')).toBeInTheDocument();
+      expect(within(totals).getByText('1,316,040')).toBeInTheDocument();
+      expect(within(totals).getByText('2,400')).toBeInTheDocument();
+      expect(within(totals).getByText('1,315,000')).toBeInTheDocument();
+      expect(within(totals).queryByText('2413')).toBeNull();
+      // Lakh grouping (the Owner's setting) groups the same figures the Indian way.
+      act(() => {
+        useGroupingStore.setState({ grouping: 'lakh' });
+      });
+      expect(await within(totals).findByText('13,16,040')).toBeInTheDocument();
+      expect(within(totals).getByText('13,15,000')).toBeInTheDocument();
     });
 
     it('newer records are listed as lost, with their numbers from the backend', async () => {
@@ -937,6 +961,96 @@ describe.each(LANGUAGES)('the backup screen (%s)', (language) => {
       expect(visible(document.body.textContent)).toContain(
         message(language, 'err-out-of-range', { reason: 'https' }),
       );
+    });
+
+    describe('a cloud address with a path after the host (ERR_BACKUP_CLOUD_ADDRESS_PATH)', () => {
+      const ADDRESS = 'https://acct.r2.cloudflarestorage.com';
+      const refusedWith = (values: Record<string, string>) =>
+        refused({ code: 'ERR_BACKUP_CLOUD_ADDRESS_PATH', field: 'cloud_endpoint', values });
+
+      /** Cloud on, a typed address with a path, and a save that the backend refuses. */
+      const saveRefused = async (
+        values: Record<string, string>,
+        typedBucket: string | null,
+      ): Promise<ReturnType<typeof userEvent.setup>> => {
+        const { user } = await open();
+        vi.mocked(backupApi.backupSettingsSet).mockRejectedValueOnce(refusedWith(values));
+        await user.click(
+          await screen.findByRole('checkbox', {
+            name: named(message(language, 'backup-set-cloud-on')),
+          }),
+        );
+        await user.type(await label('backup-set-endpoint'), `${ADDRESS}/mandidemo`);
+        if (typedBucket !== null) await user.type(await label('backup-set-bucket'), typedBucket);
+        await user.click(
+          screen.getByRole('button', { name: named(message(language, 'layout-save-save')) }),
+        );
+        return user;
+      };
+      const fixButton = () =>
+        screen.findByRole('button', { name: named(message(language, 'backup-fix-address-path')) });
+
+      it('says what is wrong at the address, and one button writes the address right and the bucket name in its empty box', async () => {
+        const user = await saveRefused(
+          { address: ADDRESS, path: '/mandidemo', bucket: 'mandidemo' },
+          null,
+        );
+        const said = message(language, 'err-backup-cloud-address-path', {
+          address: ADDRESS,
+          path: '/mandidemo',
+        });
+        await waitFor(() => {
+          expect(visible(document.body.textContent)).toContain(said);
+        });
+        expect(visible(document.body.textContent)).toContain(
+          message(language, 'backup-fix-address-bucket', { bucket: 'mandidemo' }),
+        );
+        await user.click(await fixButton());
+        // Both boxes are filled and visible, the old refusal is gone, and nothing was saved by the press.
+        expect((await label('backup-set-endpoint')).value).toBe(ADDRESS);
+        expect((await label('backup-set-bucket')).value).toBe('mandidemo');
+        expect(visible(document.body.textContent)).not.toContain(said);
+        expect(
+          screen.queryByRole('button', {
+            name: named(message(language, 'backup-fix-address-path')),
+          }),
+        ).toBeNull();
+        expect(backupApi.backupSettingsSet).toHaveBeenCalledTimes(1);
+        // The Owner looks, then saves: the request carries the right address and the bucket.
+        await user.click(
+          screen.getByRole('button', { name: named(message(language, 'layout-save-save')) }),
+        );
+        await waitFor(() => {
+          expect(backupApi.backupSettingsSet).toHaveBeenCalledTimes(2);
+        });
+        expect(vi.mocked(backupApi.backupSettingsSet).mock.calls[1]?.[0].settings).toMatchObject({
+          cloud_endpoint: ADDRESS,
+          cloud_bucket: 'mandidemo',
+        });
+      });
+
+      it('a bucket box that is already filled is never overwritten, and no bucket note is made', async () => {
+        const user = await saveRefused(
+          { address: ADDRESS, path: '/mandidemo', bucket: 'mandidemo' },
+          'my-bucket',
+        );
+        await user.click(await fixButton());
+        expect((await label('backup-set-endpoint')).value).toBe(ADDRESS);
+        expect((await label('backup-set-bucket')).value).toBe('my-bucket');
+      });
+
+      it('with no bucket name in the refusal (a path that is not one word) only the address is written', async () => {
+        const user = await saveRefused({ address: ADDRESS, path: '/a/b/c' }, null);
+        await waitFor(() => {
+          expect(visible(document.body.textContent)).toContain('/a/b/c');
+        });
+        expect(visible(document.body.textContent)).not.toContain(
+          message(language, 'backup-fix-address-bucket', { bucket: '' }),
+        );
+        await user.click(await fixButton());
+        expect((await label('backup-set-endpoint')).value).toBe(ADDRESS);
+        expect((await label('backup-set-bucket')).value).toBe('');
+      });
     });
 
     it('the cloud address is written left to right, also in Urdu, so https:// keeps its place (NFR-URD-13)', async () => {

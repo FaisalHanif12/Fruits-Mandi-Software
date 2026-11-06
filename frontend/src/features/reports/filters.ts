@@ -12,7 +12,7 @@ import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
 import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import type { VoucherType } from '../../bindings/VoucherType';
-import type { PickerValue } from '../../shared/ui';
+import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 
 /** The period box: a shortcut of FR-19.2, or the two dates the user types. */
 export type PeriodChoice = ReportDateShortcut | 'custom';
@@ -146,6 +146,8 @@ export interface ReportFilterState {
   item: PickerValue | null;
   city: PickerValue | null;
   adda: PickerValue | null;
+  /** One collector, a staff member (R22, R23, R35); null is every collector. */
+  collector: PickerValue | null;
   detail: boolean;
   /** Paid or due lines only (R9). */
   paid: PaidChoice;
@@ -161,6 +163,8 @@ export interface ReportFilterState {
   guestsOnly: boolean;
   /** One kind of voucher in the vouchers list (R15); `all` is no filter. */
   voucherType: VoucherChoice;
+  /** The group of the items, fruit or vegetables (R2, R3, R4, R7, R10, R27); `all` is no filter. */
+  itemGroup: ItemGroupChoice;
   /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
   tripView: ReportTripView;
   /** One garden of the gardens report (R36); null is every garden. */
@@ -184,6 +188,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   item: null,
   city: null,
   adda: null,
+  collector: null,
   detail: false,
   paid: 'all',
   groupBy: 'month',
@@ -192,6 +197,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   partner: null,
   guestsOnly: false,
   voucherType: 'all',
+  itemGroup: 'all',
   tripView: 'trip',
   garden: null,
   gardenView: 'garden',
@@ -240,10 +246,14 @@ export function filtersToWire(
     ...(has('status') && state.paid !== 'all' ? { status: state.paid } : {}),
     // A kind of voucher is sent only when one is picked (the backend reads a missing key as every
     // kind). The trip layout is sent whenever the report takes it, the default included.
+    // One group of items is sent only when it is chosen (the backend reads a missing key as every item).
+    ...(has('item_group') && state.itemGroup !== 'all' ? { item_group: state.itemGroup } : {}),
     ...(has('voucher_type') && state.voucherType !== 'all'
       ? { voucher_type: state.voucherType }
       : {}),
     ...(has('trip_view') ? { trip_view: state.tripView } : {}),
+    // One collector is sent only when he is picked (the backend reads a missing key as every collector).
+    ...(has('collector') && state.collector !== null ? { collector_id: state.collector.id } : {}),
     // The guests choice of the fruit register is sent only when it is set (the backend reads a
     // missing key as every line) and never with a partner, which it refuses.
     ...(has('guests') && state.guestsOnly && state.partner === null ? { guests_only: true } : {}),
@@ -272,12 +282,14 @@ export function isUnfiltered(
     wire.item_id === null &&
     wire.city_id === null &&
     wire.adda_id === null &&
+    wire.collector_id === undefined &&
     wire.partner_id === null &&
     wire.garden_id === null &&
     wire.bikri_id === null &&
     !wire.detail &&
     wire.status === undefined &&
     wire.voucher_type === undefined &&
+    wire.item_group === undefined &&
     wire.guests_only === undefined
   );
 }

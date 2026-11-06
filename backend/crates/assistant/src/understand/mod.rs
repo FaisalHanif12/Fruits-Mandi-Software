@@ -42,6 +42,7 @@ mod compose_missing;
 mod compose_outside;
 mod compose_print;
 mod compose_route;
+mod figure;
 mod items;
 mod lexicon;
 mod plan;
@@ -58,6 +59,7 @@ pub use compose_missing::compose_missing;
 pub use compose_outside::{compose_outside, outside_message};
 pub use compose_print::compose_print;
 pub use compose_route::compose;
+pub use figure::{FigureAnswer, Sentence, compose_figure};
 pub use plan::{PlanFilters, ReportPlan};
 pub use reads::{PlannedRead, plan_reads};
 
@@ -457,6 +459,14 @@ pub enum FigureKind {
     TrialBalance,
     /// The result of a garden or a trip.
     Result,
+    /// The money the partners took for themselves, or gave back (ذاتی خرچہ, "li hui raqam").
+    PartnerTaken,
+    /// A report named by its title that no figure above names (PRD 19.2): the report code, for
+    /// example `R4` for "udhari bikri". Only a print or an open request uses it.
+    Report(&'static str),
+    /// A question about the app's own state or lists, by the read it needs: `rules`, `attention`,
+    /// `days`, `staff_munshi`, `staff_collector`, `staff_labour`, `staff_all`, `heads`.
+    Ask(&'static str),
 }
 
 /// What a list is over.
@@ -540,6 +550,39 @@ pub enum Doubt {
     TwoParts,
 }
 
+/// Whether a word of the question names another measure than the one the reads hold.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Measure {
+    /// The measure the reads hold, or none is named.
+    Same,
+    /// A quantity (nag): the same views hold it, so the reads are the same, but the amount is no answer.
+    Quantity,
+    /// A breakdown ("kis kis din kitna commission diya"): the same views hold it, so the reads are
+    /// the same, but one total is no answer to it.
+    Breakdown,
+    /// Another number altogether: the model's, with no reads made for it.
+    Other,
+}
+
+/// A group of items a word names: fruit (phal) or vegetables (sabzi).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupWord {
+    /// پھل, phal, fruit.
+    Fruit,
+    /// سبزی, sabzi, vegetables.
+    Vegetable,
+}
+
+impl GroupWord {
+    /// The word the tools take for the group (`fruit` or `vegetable`).
+    pub fn tool_word(self) -> &'static str {
+        match self {
+            GroupWord::Fruit => "fruit",
+            GroupWord::Vegetable => "vegetable",
+        }
+    }
+}
+
 /// What the app understood of one question.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Understanding {
@@ -583,10 +626,43 @@ pub struct Understanding {
     /// True when the question names a garden, a trip, own goods or the guests by word. The reads
     /// of [`plan_reads`] have no filter for them, so such a question is the model's.
     pub scoped: bool,
+    /// True when the question says plainly that the parts are to be added ("mila kar", "dono ka",
+    /// "combined"), not only a bare "kul" or "total".
+    pub sum_strong: bool,
+    /// True when the question holds an amount (a target: "5 lakh tak kab pohanchenge"). An estimate
+    /// with a target is the model's to set up.
+    pub amount_named: bool,
+    /// The group of items the question names with a word ("sabzi ki bikri", "phal ka commission"),
+    /// when no item is named. The views and reports of the app have no filter for a group yet, so
+    /// such a question is the model's, except the rules of a group (`app_state` takes the word).
+    pub item_group: Option<GroupWord>,
+    /// The بکری number the question names ("bikri 5 mein kisne kya badla").
+    pub bikri_number: Option<i64>,
+    /// A truck number the question holds, written `LES-1234`: the sales of that truck are found by
+    /// `find` with the role `truck`, then read with the `report` tool (R1 and its `bikri` number).
+    pub truck: Option<String>,
+    /// True when the question names the shop's guests (mehman): the fruit register has a read for
+    /// them (R37 with the partner `guests`).
+    pub guests: bool,
+    /// True when the question names the quality of a sale line (awwal, doyam, soyam, A grade, first
+    /// quality; PRD FR-12.42). The figure of an item or a party adds all its qualities, so it is no
+    /// answer for one of them: such a question has no instant figure, and its read is the lines of the
+    /// sales (R2), which carry the quality.
+    pub quality: bool,
+    /// True when the question asks for the last one ("aakhri", "last", "pichla") and names no period:
+    /// the last rate of an item sold to a buyer is the newest line of his sales (R2).
+    pub last_one: bool,
     /// True when the question asks what was given, paid or received (an event of a period), not what
     /// is open now ("rahim ko kitni peshgi di"). A party's card holds only what is open, so such a
     /// question is the model's.
     pub happened: bool,
+    /// Whether a word of the question names another measure than the reads hold (a nag count, a net
+    /// sale, a percent, a partner's خالص, "udhar" for credit): the plain figure would be a real
+    /// number for the wrong thing, so the question is the model's (money review, 05-11-2026).
+    pub other_measure: Measure,
+    /// True when the dues asked are the total dues ("kul ugrahi", "total dues": the tile کل اگراہی,
+    /// buyers' dues plus sellers' dues plus the dead amount), not the buyers' dues alone.
+    pub total_dues: bool,
     /// True when the app understood the whole question. The caller routes by intent.
     pub sure: bool,
     /// Why the app is not fully sure, or what it noted.

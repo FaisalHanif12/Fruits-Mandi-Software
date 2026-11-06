@@ -28,8 +28,8 @@ pub const WORDS_TSV: &str = include_str!("../prompt/words.tsv");
 /// languages. It is not sent with every request: only the topic the model asks for is given back.
 pub const GUIDE_JSON: &str = include_str!("../prompt/guide.json");
 
-/// The names of the 9 tools, in the order of `tools.json`.
-pub const TOOL_NAMES: [&str; 9] = [
+/// The names of the 10 tools, in the order of `tools.json`.
+pub const TOOL_NAMES: [&str; 10] = [
     "find",
     "party_card",
     "report",
@@ -39,6 +39,7 @@ pub const TOOL_NAMES: [&str; 9] = [
     "calculate",
     "estimate",
     "app_help",
+    "app_state",
 ];
 
 /// One kind of word list in `words.tsv`.

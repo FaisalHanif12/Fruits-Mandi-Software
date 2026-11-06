@@ -270,15 +270,27 @@ fn the_working_is_built_by_the_same_code() {
     assert_eq!(pace.steps[1].op, Op::Times);
     assert_eq!(pace.steps[1].inputs, vec![m(48_000), Value::Count(6)]);
     assert_eq!(pace.steps[1].result, m(288_000));
-    // Same growth: last minus first, divided by 5, then the sum of the months.
+    // Same growth: last minus first, divided by 5, then each month (the month before plus the
+    // change: 51,000 + 3,000 = 54,000 ...), then the sum of the months.
     let growth = method(&e, Method::SameGrowth);
     let ops: Vec<Op> = growth.steps.iter().map(|s| s.op).collect();
-    assert_eq!(ops, vec![Op::Difference, Op::DividedBy, Op::Sum]);
+    let mut expected = vec![Op::Difference, Op::DividedBy];
+    expected.extend(vec![Op::Sum; 7]);
+    assert_eq!(ops, expected);
     assert_eq!(growth.steps[0].inputs, vec![m(51_000), m(36_000)]);
     assert_eq!(growth.steps[0].result, m(15_000));
     assert_eq!(growth.steps[1].inputs, vec![m(15_000), Value::Count(5)]);
     assert_eq!(growth.steps[1].result, m(3_000));
-    assert_eq!(growth.steps[2].result, m(369_000));
+    // Each month has the step that produces it (PRD FR-7.43, B30).
+    for (k, month) in [54_000, 57_000, 60_000, 63_000, 66_000, 69_000]
+        .iter()
+        .enumerate()
+    {
+        let step = &growth.steps[k + 2];
+        assert_eq!(step.inputs, vec![m(month - 3_000), m(3_000)], "month {k}");
+        assert_eq!(step.result, m(*month), "month {k}");
+    }
+    assert_eq!(growth.steps[8].result, m(369_000));
 }
 
 // ---- E2E-61: the calculator ---------------------------------------------------------------------

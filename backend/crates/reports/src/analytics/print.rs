@@ -67,6 +67,13 @@ pub(crate) fn filter_facts(
     if let Some(item) = &filters.item {
         facts.push(fact(ids::FILTER_ITEM, fmt.names(item)));
     }
+    if let Some(group) = filters.item_group {
+        let label = match group {
+            mandi_core::rules::ItemGroup::Fruit => ids::FILTER_GROUP_FRUIT,
+            mandi_core::rules::ItemGroup::Vegetable => ids::FILTER_GROUP_VEGETABLE,
+        };
+        facts.push(fact(label, String::new()));
+    }
     if let Some(city) = &filters.city {
         facts.push(fact(ids::FILTER_CITY, fmt.names(city)));
     }

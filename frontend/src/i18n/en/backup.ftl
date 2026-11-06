@@ -481,6 +481,11 @@ backup-set-endpoint = Cloud address
 # review: pending
 backup-set-endpoint-hint = For example https://your-account.r2.cloudflarestorage.com
 
+# The fix under a cloud address that has a path after the host (ERR_BACKUP_CLOUD_ADDRESS_PATH).
+# review: pending
+backup-fix-address-path = Remove the path
+# review: pending
+backup-fix-address-bucket = The bucket name { $bucket } goes into the bucket box.
 # review: pending
 backup-set-bucket = Bucket name
 

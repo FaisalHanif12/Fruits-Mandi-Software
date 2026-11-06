@@ -1,0 +1,197 @@
+{
+  "id": "R5",
+  "title_id": "report-r5-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": null,
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "serial",
+      "title_id": "report-col-serial",
+      "kind": "number"
+    },
+    {
+      "key": "buyer",
+      "title_id": "report-col-buyer",
+      "kind": "party"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "value",
+      "title_id": "report-col-value",
+      "kind": "money"
+    },
+    {
+      "key": "buyer_total",
+      "title_id": "report-col-buyer-total",
+      "kind": "money"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 1
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 21,
+            "code": "0021",
+            "short_code": "1",
+            "name_ur": "ارشد ملتانی",
+            "name_en": "Arshad Multani",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": 1,
+              "item": {
+                "ur": "سیب",
+                "en": "Apple"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "grade": "third",
+              "qty": 4,
+              "rate_paisa": 50000,
+              "value_paisa": 200000,
+              "commission_paisa": 12000,
+              "laga_paisa": 3200
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 200000
+        },
+        {
+          "type": "money",
+          "paisa": 215200
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 2
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 20,
+            "code": "0020",
+            "short_code": "0",
+            "name_ur": "اکرم ٹول ٹیکس",
+            "name_en": "Akram Toll Tax",
+            "tag": null,
+            "person_key": null
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": 1,
+              "item": {
+                "ur": "سیب",
+                "en": "Apple"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "grade": "first",
+              "qty": 10,
+              "rate_paisa": 120000,
+              "value_paisa": 1200000,
+              "commission_paisa": 72000,
+              "laga_paisa": 8000
+            },
+            {
+              "kind": "sale",
+              "bikri_number": 1,
+              "item": {
+                "ur": "سیب",
+                "en": "Apple"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "grade": "second",
+              "qty": 6,
+              "rate_paisa": 80000,
+              "value_paisa": 480000,
+              "commission_paisa": 28800,
+              "laga_paisa": 4800
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 1680000
+        },
+        {
+          "type": "money",
+          "paisa": 1793600
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 1880000
+    },
+    {
+      "type": "money",
+      "paisa": 2008800
+    }
+  ],
+  "summary": [],
+  "tables": [],
+  "group_above": null
+}

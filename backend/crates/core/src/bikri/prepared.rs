@@ -1,5 +1,6 @@
 //! A typed draft after it has been read into numbers (Code Standards 4.1 layer 2).
 
+use super::grade::SaleGrade;
 use super::input::{FreightPaidBy, LotChargeMethod, PaymentType};
 use crate::dates::BusinessDate;
 use crate::error::FieldError;
@@ -95,6 +96,8 @@ pub struct PreparedSale {
     pub buyer_comm: Option<ChargeValue>,
     /// A لاگا typed on the line.
     pub laga: Option<ChargeValue>,
+    /// The quality of the goods of this line (PRD FR-12.42). Not used by the maths.
+    pub grade: Option<SaleGrade>,
     /// A note, trimmed. None if empty.
     pub note: Option<String>,
 }

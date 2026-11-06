@@ -89,3 +89,17 @@ screen writes no code for it.
 - The column is not one of the grid's own columns (`REMOVE_COLUMN_ID`), so Enter never stops on it and
   the store never keeps it as the focused cell. Tab reaches its cell; Enter, Space and `Ctrl+Delete` on
   that cell press the button (`gridKeys.ts`).
+
+## The select cell (plan 58, PRD FR-12.42)
+
+A `select` column holds one of a few fixed words, or nothing (the quality of a sale line: اول, دوم,
+سوم). It is the shared way to have an optional fixed list in a grid.
+
+- The column lists its words in `choices` (the one with the value `''` is the empty choice). The
+  words are Fluent messages. It is usually `enterStop: false`, so Enter does not stop on it.
+- The cell shows the word and a small arrow. A click, Space or Alt+↓ opens a list under the cell
+  (`SelectCellEditor`). ↑ ↓ and Home and End move in the list, Enter or Space choose and the focus stays on
+  the cell, Esc closes the list and keeps the old word, ← → and Tab leave the cell like in a picker
+  cell. Delete or Backspace on the cell take the word away. A letter or digit does nothing.
+- What is chosen goes to the row store at once (`updateTyped`), so a language switch loses nothing.
+- Test: `tests/unit/entry-grid-select.test.tsx`.

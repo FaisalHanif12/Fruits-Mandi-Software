@@ -10,9 +10,8 @@
 //
 // The scorer reads the prefixes real_ and est_ of the labels (run.mjs, mixSeparation).
 //
-// `pending=<reason>` in the filters: the question has no route yet (the expense-head estimate waits
-// for backend's head filter; a party's balance and the cash have no forecast measure at all, gaps
-// F2, F4 and F5 of capability.tsv). Such a question is PENDING in the report, neither a pass nor a
+// `pending=<reason>` in the filters: the question has no route yet. The expense-head, balance and cash
+// estimates have landed (PRD FR-7.86, Umar's approval). Such a question is PENDING in the report, neither a pass nor a
 // miss, and the run cannot say "meets" while it is. Remove the flag when the route is built.
 
 const r = (text) => ['roman', text];
@@ -45,8 +44,8 @@ const MIX = [
   mix(
     'MX01',
     'expense',
-    'head=Electricity;period=last month;ahead=3;pending=head_estimate',
-    'real_elec=@r29.last_month.electricity.expense',
+    'head=Electricity;period=last month;ahead=3',
+    `real_elec=@r29.last_month.electricity.expense;est_next=${three('est_head.electricity', 'shop_expenses', 'a3')}`,
     [
       r('pichle mahine electricity ka kitna kharcha hua aur agle 3 mahine ka estimate kitna hai'),
       u('پچھلے مہینے بجلی کا کتنا خرچہ ہوا اور اگلے 3 مہینوں کا اندازہ کتنا ہے'),
@@ -67,8 +66,8 @@ const MIX = [
   mix(
     'MX03',
     'dues',
-    'buyer=Faisal;ahead=2;pending=balance_forecast',
-    'real_bal=@buyer.faisal.balance',
+    'buyer=Faisal;ahead=2',
+    'real_bal=@buyer.faisal.balance;est_bal=@est_balance.faisal.after2',
     [
       r('faisal ka bakaya kitna hai aur isi raftar se 2 mahine baad kitna hoga'),
       u('فیصل کا بقایا کتنا ہے اور اسی رفتار سے 2 مہینے بعد کتنا ہو گا'),
@@ -108,11 +107,17 @@ const MIX = [
       e('commission this month so far, and the estimate for the whole month'),
     ],
   ),
-  mix('MX07', 'cash', 'view=tiles;ahead=1;pending=cash_forecast', 'real_cash=@tiles.cash', [
-    r('cash abhi kitna hai aur agle mahine kitna ho jayega'),
-    u('ابھی کیش کتنا ہے اور اگلے مہینے کتنا ہو جائے گا'),
-    e('how much cash do we have now and how much will we have next month'),
-  ]),
+  mix(
+    'MX07',
+    'cash',
+    'view=tiles;ahead=1',
+    'real_cash=@tiles.cash;est_cash=@est_balance.cash.after1',
+    [
+      r('cash abhi kitna hai aur agle mahine kitna ho jayega'),
+      u('ابھی کیش کتنا ہے اور اگلے مہینے کتنا ہو جائے گا'),
+      e('how much cash do we have now and how much will we have next month'),
+    ],
+  ),
   mix(
     'MX08',
     'seller',

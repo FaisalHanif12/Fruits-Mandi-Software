@@ -14,6 +14,12 @@
 //!   each round (NFR-AI-3). A question is two rounds of tools, so holding the whole question
 //!   under 300 ms holds each round under it.
 //!
+//! - `assistant/estimate_*`: the `estimate` tool for a balance (PRD FR-7.86) called directly on the volume,
+//!   without a model: `estimate_buyers_dues` (what all the buyers owe, month by month for the last
+//!   months, one level for each owner) and `estimate_party_balance` (the busiest buyer, about 55,000
+//!   lines). The lead's K8 target: well under 1 s for the tool, so that the figure of the question stays
+//!   under 2 s and the model answer under 8 s.
+//!
 //! The volume is the shared one of `services/benches/support` (20,000 accounts, 3.5 million journal
 //! lines). It has no sale lines and no analytics facts (that gap is in its own header), so the
 //! estimate and analytics tools are not measured here: on this data they would read empty tables.
@@ -35,8 +41,10 @@ use mandi_assistant::ask::{AskOutcome, AssistantAskInput, AssistantQuickInput, Q
 use mandi_assistant::client::RecordedClient;
 use mandi_assistant::keys::MemoryKeyStore;
 use mandi_assistant::quick::quick;
+use mandi_assistant::results::Words;
 use mandi_assistant::run::{self, Deps};
 use mandi_assistant::runtime::Runtime;
+use mandi_assistant::tools::{self, Env, State};
 use mandi_reports::dashboard::BackupFacts;
 use mandi_services::assistant;
 use mandi_services::auth::Actor;
@@ -564,5 +572,102 @@ fn dashboard_and_day_summary(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, quick_questions, rounds, dashboard_and_day_summary);
+/// The `estimate` tool for the balances (the buyers' dues, a party's balance) on the volume, called as the
+/// loop calls it, with no model. A recorded `find` gives the key of the busiest buyer.
+fn estimate_balances(c: &mut Criterion) {
+    let bed = bed();
+    let words = Words::new().unwrap_or_else(|e| fail(&format!("no words: {e:?}")));
+    // The months ahead must be a number of the question (PRD FR-7.86), so the question says 3 months.
+    let question = "agle 3 mahine ka andaza";
+    let numbers = mandi_services::figures::question_numbers(question);
+    let name: String = bed
+        .env
+        .ctx
+        .db()
+        .read(|conn| {
+            conn.query_row(
+                "SELECT name_en FROM accounts WHERE id = ?1",
+                [bed.buyer],
+                |r| r.get(0),
+            )
+        })
+        .unwrap_or_else(|e: mandi_services::db::rusqlite::Error| {
+            fail(&format!("no name for the busiest buyer: {e}"))
+        });
+    let env = Env {
+        ctx: &bed.env.ctx,
+        actor: &bed.actor,
+        words: &words,
+        language: mandi_services::core::auth::Language::En,
+        today: mandi_services::core::dates::BusinessDate::parse_iso("2026-10-10")
+            .unwrap_or_else(|| fail("today")),
+        partner_locked: false,
+        numbers: &numbers,
+        question,
+        backup: BackupFacts {
+            cloud_on: false,
+            cloud_age_hours: None,
+        },
+    };
+    let mut state = State {
+        results: Vec::new(),
+        turn: 0,
+    };
+    let found = tools::call(
+        &env,
+        &state,
+        "find",
+        &json!({"text": name, "role": "buyer"}).to_string(),
+    )
+    .unwrap_or_else(|_| fail("find did not give the busiest buyer"));
+    state.results.push(tools::stored(found, "r1".to_owned(), 0));
+    let party = format!("a{}", bed.buyer);
+    let mut group = flat(c, 10, 10);
+    for (name, args) in [
+        (
+            "estimate_buyers_dues",
+            json!({"measure": "buyers_dues", "ahead": 3}).to_string(),
+        ),
+        (
+            "estimate_party_balance",
+            json!({"measure": "party_balance", "party": party, "ahead": 3}).to_string(),
+        ),
+    ] {
+        // Once before the clock starts, so an answer that is an error is a stop, not a fast number.
+        // One exception, noted loudly (K8, after backend's fix of 06-11-2026): the synthetic volume's buyers owe
+        // 3,432 crore, more than the largest allowed amount (1,000 crore), so the dues estimate is refused with
+        // ERR_OVERFLOW at once, BEFORE the series is read. What this bench times for `estimate_buyers_dues` is
+        // that refusal (about 130 ms, of which the tile's R20 total is about 100 ms), not the series. The real
+        // series (one pass, about 0.45 s on this volume) needs dues under the limit; it was measured once with a
+        // throwaway example that bypasses the refusal. A refusal is timed all the same.
+        let started = std::time::Instant::now();
+        if let Err(stop) = tools::call(&env, &state, "estimate", &args) {
+            let size = matches!(&stop, tools::Stop::Error(e) if e.code == "ERR_OVERFLOW");
+            if !size {
+                support::note(&format!(
+                    "OVER: {name} was refused after {:?}: {stop:?}; not measured",
+                    started.elapsed()
+                ));
+                continue;
+            }
+            support::note(&format!(
+                "{name}: refused for size (ERR_OVERFLOW) after {:?}; timed as it is, the refusal is the cost",
+                started.elapsed()
+            ));
+        }
+        support::note(&format!("{name}: first call {:?}", started.elapsed()));
+        group.bench_function(name, |b| {
+            b.iter(|| black_box(tools::call(&env, &state, "estimate", &args).is_ok()))
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    quick_questions,
+    rounds,
+    dashboard_and_day_summary,
+    estimate_balances
+);
 criterion_main!(benches);

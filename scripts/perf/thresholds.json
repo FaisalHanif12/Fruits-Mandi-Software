@@ -648,6 +648,24 @@
       "stat": "p95",
       "target_ms": 1000,
       "$comment": "Any report for one day under 1 s. Found at 8.7 s (all dates) by the assistant benchmarks (D6 plan 50 R4). Passes since P48-S3: 0.63 s p95 without statistics, which is how the real app runs. Same volume as dashboard/get_full_volume, so it has no stock moves or sale lines yet and the queries that read them are not timed (plan 50 findings). Held at the NFR target."
+    },
+    {
+      "id": "assistant/estimate_buyers_dues",
+      "action": "Estimate tool: what the buyers owe at the same pace (one level for each owner, month by month)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "Lead's K8 (06-11-2026): the tool itself well under 1 s on the NFR-SCL-1 volume, so a figure answer stays under 2 s and a model answer under 8 s. Called directly through tools::call, no model. The volume has no sale lines; the dues series reads journal lines only, so it is measured here."
+    },
+    {
+      "id": "assistant/estimate_party_balance",
+      "action": "Estimate tool: a party's balance at the same pace (busiest buyer, about 55,000 lines)",
+      "kind": "nfr",
+      "nfr": "NFR-AI-3",
+      "stat": "p95",
+      "target_ms": 1000,
+      "$comment": "As estimate_buyers_dues, for the balance of the busiest buyer: the monthly change of one account from his journal lines."
     }
   ],
   "install": {

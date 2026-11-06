@@ -54,6 +54,21 @@ pub enum Role {
     Adda,
     /// A staff member who collects.
     Collector,
+    /// The staff: a name, or all of one job by its word (munshi, collector, labour), with a count
+    /// (plan 55 R5).
+    Staff,
+    /// An expense head, or all of them, with a count (plan 55 R5).
+    ExpenseHead,
+    /// The بکری of a truck number (plan 55 R6).
+    Truck,
+    /// The packings, with a count (plan 55 gap Q5).
+    Packing,
+    /// The marks, with a count: code and owner, never the mark text (plan 55 gap Q5).
+    Marka,
+    /// The stores, with a count (plan 55 gap Q5).
+    Store,
+    /// The standard narrations, with a count: never their text (plan 55 gap Q5).
+    Narration,
 }
 
 impl Role {
@@ -72,6 +87,13 @@ impl Role {
             Role::City => "city",
             Role::Adda => "adda",
             Role::Collector => "collector",
+            Role::Staff => "staff",
+            Role::ExpenseHead => "expense_head",
+            Role::Truck => "truck",
+            Role::Packing => "packing",
+            Role::Marka => "marka",
+            Role::Store => "store",
+            Role::Narration => "narration",
         }
     }
 }
@@ -288,6 +310,14 @@ fn matches_for(env: &Env<'_>, role: Role, query: &str) -> Result<(Vec<Node>, boo
             }
         }
         Role::Partner => partner_matches(env, query)?,
+        // The lists with a count are read by `find_lists`, before this function is reached.
+        Role::Staff
+        | Role::ExpenseHead
+        | Role::Truck
+        | Role::Packing
+        | Role::Marka
+        | Role::Store
+        | Role::Narration => (Vec::new(), false),
         Role::Item | Role::City | Role::Adda | Role::Collector | Role::Trip | Role::Garden => {
             let Some((scope, prefix)) = list_scope(role) else {
                 return Err(ToolError::new("ERR_OUT_OF_RANGE", "role", "unknown role").into());
@@ -472,6 +502,10 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
         return Err(ToolError::new("ERR_REQUIRED", "text", "nothing to find").into());
     }
     let role = parsed.role;
+    // Staff, expense heads and trucks are short lists with a count (plan 55 R5, R6).
+    if let Some(draft) = super::find_lists::run(env, role, query, args)? {
+        return Ok(draft);
+    }
     let mut found = search_role(env, role, query)?;
     let mut notes: Vec<String> = Vec::new();
     // "shahpur bag" / "safar 2": a garden or a trip is found by the rest of the words.

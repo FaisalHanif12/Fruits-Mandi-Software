@@ -1719,8 +1719,10 @@ fn plugin_and_unknown_commands_the_capability_file_does_not_name_are_refused() {
         "plugin:updater|download_and_install",
         "plugin:updater|install",
         "plugin:process|exec",
-        "plugin:dialog|open",
-        "plugin:dialog|save",
+        // `plugin:dialog|open` and `plugin:dialog|save` ARE named in the capability file (plan 56 Section 8 and the
+        // Excel export), so they are not listed here; the screens' own dialogs only return a path.
+        "plugin:dialog|confirm_everything",
+        "plugin:dialog|message_and_exec",
         "plugin:clipboard-manager|read_text",
         "plugin:event|emit",
         "plugin:event|listen_to_everything",

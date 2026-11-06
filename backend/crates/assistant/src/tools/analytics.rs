@@ -59,6 +59,9 @@ pub struct Input {
     pub group_by: Option<String>,
     /// An item.
     pub item: Option<String>,
+    /// `fruit` or `vegetable`: all the items of the group, never with `item` (views A, B, C, D, G and H).
+    #[serde(default)]
+    pub item_group: Option<String>,
     /// A seller.
     pub seller: Option<String>,
     /// A buyer.
@@ -165,6 +168,12 @@ fn build_filters(
         takes_or(takes, K::Item, "item")?;
         filters.item_id = Some(id);
         source.item = Some(record);
+    }
+    if let Some(word) = &parsed.item_group {
+        takes_or(takes, K::ItemGroup, "item_group")?;
+        let group = super::report_extra::parse_group(word, filters.item_id.is_some())?;
+        filters.item_group = Some(group);
+        source.item_group = Some(group);
     }
     if let Some((id, record)) = one("seller", &parsed.seller, "a")? {
         takes_or(takes, K::Seller, "seller")?;
@@ -789,6 +798,7 @@ const HOW_TO_COMPARE_ANYWAY: &str = "The Owner can still be answered: read the o
 /// the side and the grouping do not narrow).
 fn is_narrowed(filters: &AnalyticsFilters) -> bool {
     filters.item_id.is_some()
+        || filters.item_group.is_some()
         || filters.seller_id.is_some()
         || filters.buyer.is_some()
         || filters.city_id.is_some()
@@ -812,13 +822,13 @@ fn share_is_trivial(view: AnalyticsView, built: &Built, page: &AnalyticsPage) ->
 /// the filtered table, not of all commission. A view with a share column and a narrowing filter
 /// carries this note; views A and H have one.
 const NARROWED_SHARE_NOTE: &str = "the share column is each row's share of THIS filtered table, \
-    not of all commission; for an item's share of all commission read view A without the item \
-    filter, for a seller's or a buyer's read view H without that filter, and take the row's share";
+    not of all commission; for an item's or a group's share of all commission read view A without \
+    the item or group filter, for a seller's or a buyer's read view H without that filter, and take the row's share";
 
 /// What is said when the only row would have a share of 100%: where the real share is.
 const TRIVIAL_SHARE_NOTE: &str = "the share column is left out: with these filters the table has \
-    one row, so its share would be 100% of the filtered table. For an item's share of ALL \
-    commission read view A without the item filter; for a seller's or a buyer's share read view H \
+    one row, so its share would be 100% of the filtered table. For an item's or a group's share of \
+    ALL commission read view A without the item or group filter; for a seller's or a buyer's share read view H \
     without that filter; then take the share of its row";
 
 fn assemble(

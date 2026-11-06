@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.30 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.31 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 1 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.30 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.31 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.15 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.8 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.20 |
@@ -1907,7 +1907,7 @@ Umar: filter by month or year, and see how much commission we got by item (for e
 | Period | مدت | آج، یہ ہفتہ، یہ مہینہ، پچھلا مہینہ، یہ سال، پچھلا سال، custom from-to |
 | Group by | ترتیب | Day, month (ماہانہ), year (سالانہ) |
 | Item | قسم مال | All, or pick one or more |
-| Group | گروپ | All, پھل (fruit) or سبزی (vegetable): all the items of that group (v1.29, views A, B, C, D, G and H). Never together with Item. |
+| Group | گروپ | All, پھل (fruit) or سبزی (vegetable): all the items of that group (v1.29, views A, B, C, D, G and H). Never together with Item. Under a group, view G leaves its gardens column empty, because installments and costs have no item. The group is read from the item list, so changing an item's group moves its history too (Umar, 06-11-2026, v1.31). |
 | Seller | بیوپاری | All, or pick |
 | Buyer | گاہک | All, or pick (پختہ کھاتہ persons included) |
 | City | شہر | All, or pick |
@@ -2067,7 +2067,7 @@ Example: R29 for October prints "Maher Adnan and Brothers", the three contacts a
 | R24 | Seller payables | بیوپاریوں کو ادائیگی باقی | Seller, open payable (FR-7.59), open advance, ledger balance (open payable − open advance), last بکری date; separate list "بیوپاری کے ذمے" for what sellers owe beyond their open advances (FR-15.9), people in the dead amount left out | [C] |
 | R25 | Payments register | ادائیگی رجسٹر | Date, voucher, account, amount | [A] |
 | R26 | Advances | پیشگی کھاتہ | Seller, given, returned, adjusted, open, date; people in the dead amount left out | [C][S] |
-| R27 | Bill series | بیجک سیریز | Seller bills (بیجک) in number order for a date range: بکری no, date, seller, خام بکری, کل اخراجات, صافی بکری | [S] menu (shown as "بجک سیریز"), columns [A] |
+| R27 | Bill series | بیجک سیریز | Seller bills (بیجک) in number order for a date range: بکری no, date, seller, خام بکری, کل اخراجات, صافی بکری. Under a Group filter, each bill shows only that group's lots, and the print header says so (v1.31). | [S] menu (shown as "بجک سیریز"), columns [A] |
 
 **Business**
 
@@ -2649,3 +2649,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.28 | 06-11-2026 | Umar's change of 06-11-2026 from his test of the بکری screen: a line over the lot's quantity gets its error at once and no figures, and every lot label names its seller and item (FR-12.6). No money rule, posting or test number changed. |
 | 1.29 | 06-11-2026 | Approved by Umar: the shop sells vegetables as well as fruit; a Group filter (پھل / سبزی) on analytics views A, B, C, D, G and H and the sales reports R2 to R4, R7, R10 and R27, on screen, in print and in the assistant (18.1, FR-19.1). The assistant's fixed part may be 11,600 tokens (NFR v1.16). No money rule, posting or test number changed. |
 | 1.30 | 06-11-2026 | Umar's change of 06-11-2026: an optional quality (درجہ: اول, دوم, سوم) on each sale line, from a fixed dropdown, printed on the buyer's and the seller's prints and known to the assistant (12.4, FR-12.42, glossary). No money rule, posting or test number changed. |
+| 1.31 | 06-11-2026 | Umar's answers of 06-11-2026 on the Group filter: under a group, view G leaves its gardens column empty; an item's group stays changeable and its history moves with it; R27 under a group shows that group's lots of each bill, with a note in the print header (18.1, R27). No money rule, posting or test number changed. |

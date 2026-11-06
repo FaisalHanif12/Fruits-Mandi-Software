@@ -67,24 +67,36 @@ impl CellContext<'_> {
                 bikri_number,
                 item,
                 packing,
+                grade,
                 qty,
                 rate,
                 value,
                 commission,
                 laga,
-            } => self.l10n.text_with(
-                "report-detail-sale",
-                &[
-                    ("number", &bikri_number),
-                    ("item", &item),
-                    ("qty", &qty),
-                    ("packing", &packing),
-                    ("rate", &rate),
-                    ("value", &value),
-                    ("commission", &commission),
-                    ("laga", &laga),
-                ],
-            ),
+            } => {
+                // The quality is written after the item (PRD FR-12.42), in the language of the
+                // file; a line with none is written exactly as before.
+                let item = match grade {
+                    Some(grade) => format!(
+                        "{item} {}",
+                        self.l10n.text(crate::reports::ids::grade_id(grade))
+                    ),
+                    None => item,
+                };
+                self.l10n.text_with(
+                    "report-detail-sale",
+                    &[
+                        ("number", &bikri_number),
+                        ("item", &item),
+                        ("qty", &qty),
+                        ("packing", &packing),
+                        ("rate", &rate),
+                        ("value", &value),
+                        ("commission", &commission),
+                        ("laga", &laga),
+                    ],
+                )
+            }
             P::Lot {
                 bikri_number,
                 item,

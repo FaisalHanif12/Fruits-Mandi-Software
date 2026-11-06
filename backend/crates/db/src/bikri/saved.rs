@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
-    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleState, SavedCharge, SavedCredit,
-    SavedLot, SavedLotCharge, SavedOwnLot, SavedPosting, SavedPukhta, SavedPurchaseRef, SavedSale,
-    SavedSplit, SavedTotals, StoredMethod,
+    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleGrade, SaleState, SavedCharge,
+    SavedCredit, SavedLot, SavedLotCharge, SavedOwnLot, SavedPosting, SavedPukhta,
+    SavedPurchaseRef, SavedSale, SavedSplit, SavedTotals, StoredMethod,
 };
 use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
@@ -173,6 +173,8 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let ended: Option<String> = c.get()?;
     let note: Option<String> = c.get()?;
     let cost_paisa = c.paisa()?;
+    let grade_at = c.at;
+    let grade: Option<String> = c.get()?;
     Ok((
         lot_id,
         SavedSale {
@@ -198,6 +200,10 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
             is_active,
             state: SaleState::parse(ended.as_deref())
                 .ok_or_else(|| bad(ended_at, "a sale line state"))?,
+            grade: grade
+                .as_deref()
+                .map(|g| SaleGrade::parse(g).ok_or_else(|| bad(grade_at, "a sale line quality")))
+                .transpose()?,
             note,
         },
     ))
@@ -211,7 +217,8 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
     s.buyer_rate_paisa, s.buyer_value_paisa,
     s.buyer_comm_method, s.buyer_comm_value_bps, s.buyer_comm_value_paisa, s.buyer_comm_rule_id, s.buyer_comm_paisa,
     s.laga_method, s.laga_value_bps, s.laga_value_paisa, s.laga_rule_id, s.laga_paisa,
-    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note, s.cost_paisa";
+    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note, s.cost_paisa,
+    s.grade";
 
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;

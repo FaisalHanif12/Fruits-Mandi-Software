@@ -10,6 +10,7 @@
 //! |---|---|
 //! | `v:I`, `r:R36` | gardens, trips and fruit taken: a part of everything, not its total |
 //! | `i1`, `a18`, `ct2`, `ad3`, `s1`, `t4`, `g5` | a filter of the read: item, seller or party, city, adda, partner, trip, garden |
+//! | `group:fruit`, `group:vegetable` | all the items of a group (PRD v1.29): a part of everything, and the whole of each of its items |
 //! | `goods:trip`, `side:seller`, `bikri:7`, `voucher:receipt`, `status:paid`, `guests` | the other filters that cut the figures down |
 //! | `i2` | the row of a result (`rows.i2`): an unfiltered view's row is the same as a read filtered to item 2 |
 //! | `headings:h3`, `series:m202609`, `matched`, `peak`, `compare:earlier`, `by_for:s1` | a part of one result that is not its whole figure |
@@ -41,6 +42,8 @@ use crate::tools::cells::is_total_line;
 pub const TILE: &str = "*";
 /// The start of the scope of a figure whose origin is not known.
 pub const UNKNOWN: &str = "?";
+/// The start of the token of an item group.
+const GROUP_PREFIX: &str = "group:";
 /// How deep a chain of calculations is followed.
 const MAX_DEPTH: u8 = 4;
 /// The parts of one result that are not its whole figure, and so are scopes of their own.
@@ -156,6 +159,45 @@ fn measure_inside(part: &str, whole: &str) -> bool {
         .any(|(w, parts)| *w == whole && parts.contains(&part))
 }
 
+/// The token of an item group filter.
+fn group_token(group: mandi_services::core::rules::ItemGroup) -> String {
+    format!("{GROUP_PREFIX}{}", group.as_str())
+}
+
+/// True for the token of an item group.
+fn is_group(token: &str) -> bool {
+    token.starts_with(GROUP_PREFIX)
+}
+
+/// True for the token of one item (`i1`, `i24`; not `ad3` or `ct2`).
+fn is_item(token: &str) -> bool {
+    token
+        .strip_prefix('i')
+        .is_some_and(|rest| !rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// True when one scope reads one item and the other reads a group, and the rest of their tokens
+/// are the same. The scope does not know which group the item is in, so it takes the item as
+/// possibly one of the group: adding them could count the item twice.
+fn item_in_group(item_side: &[&str], group_side: &[&str]) -> bool {
+    let mut items = item_side.iter().filter(|t| is_item(t));
+    let mut groups = group_side.iter().filter(|t| is_group(t));
+    let (Some(_), None) = (items.next(), items.next()) else {
+        return false;
+    };
+    let (Some(_), None) = (groups.next(), groups.next()) else {
+        return false;
+    };
+    fn rest<'a>(side: &[&'a str], skip: fn(&str) -> bool) -> Vec<&'a str> {
+        let mut kept: Vec<&'a str> = side.iter().copied().filter(|t| !skip(t)).collect();
+        kept.sort_unstable();
+        kept
+    }
+    !group_side.iter().any(|t| is_item(t))
+        && !item_side.iter().any(|t| is_group(t))
+        && rest(item_side, is_item) == rest(group_side, is_group)
+}
+
 fn account(party: &SourceParty) -> String {
     match &party.person_key {
         Some(person) => format!("a{}~{person}", party.record.id),
@@ -178,6 +220,9 @@ fn analytics_tokens(f: &SourceAnalyticsFilters) -> Vec<String> {
     add("s", f.partner.as_ref().map(|r| r.id));
     add("t", f.trip.as_ref().map(|r| r.id));
     add("g", f.garden.as_ref().map(|r| r.id));
+    if let Some(group) = f.item_group {
+        keys.push(group_token(group));
+    }
     if let Some(buyer) = &f.buyer {
         keys.push(account(buyer));
     }
@@ -205,6 +250,9 @@ fn report_tokens(f: &SourceReportFilters) -> Vec<String> {
     add("ad", f.adda.as_ref().map(|r| r.id));
     add("s", f.partner.as_ref().map(|r| r.id));
     add("g", f.garden.as_ref().map(|r| r.id));
+    if let Some(group) = f.item_group {
+        keys.push(group_token(group));
+    }
     if let Some(party) = &f.party {
         keys.push(account(party));
     }
@@ -253,6 +301,8 @@ fn base_tokens(result: &ToolResult) -> Option<Vec<String>> {
         }
         AnswerSource::PartyCard { party, .. } => Some(vec![format!("a{}", party.id)]),
         AnswerSource::Tiles { .. } => Some(vec![TILE.to_owned()]),
+        // A screen holds no figure of its own.
+        AnswerSource::Screen { .. } => None,
     }
 }
 
@@ -582,6 +632,8 @@ pub fn mix_of(inputs: &[Input]) -> Mix {
                         }
                     } else if inside(&tokens_of(pa), &tokens_of(pb))
                         || inside(&tokens_of(pb), &tokens_of(pa))
+                        || item_in_group(&tokens_of(pa), &tokens_of(pb))
+                        || item_in_group(&tokens_of(pb), &tokens_of(pa))
                     {
                         mix.whole_and_part = true;
                     }
@@ -627,6 +679,58 @@ mod tests {
     fn span(mut input: Input, from: &str, to: &str) -> Input {
         input.window = Window::Span(from.to_owned(), to.to_owned());
         input
+    }
+
+    #[test]
+    fn a_group_is_a_part_of_the_whole_and_of_its_items_but_two_groups_are_apart() {
+        // The whole shop and a group: a part and its whole.
+        assert!(mix_of(&[input("*", "r1", "x"), input("group:fruit", "r2", "x")]).whole_and_part);
+        // A group and one item: the scope cannot know the item's group, so it is taken as nested.
+        assert!(mix_of(&[input("group:fruit", "r1", "x"), input("i1", "r2", "x")]).whole_and_part);
+        assert!(
+            mix_of(&[input("i1", "r2", "x"), input("group:vegetable", "r1", "x")]).whole_and_part
+        );
+        // The same, with another filter alongside.
+        assert!(
+            mix_of(&[
+                input("a3|group:fruit", "r1", "x"),
+                input("a3|i1", "r2", "x")
+            ])
+            .whole_and_part
+        );
+        // Fruit and vegetable are two separate parts that make the whole: they may be added.
+        let groups = mix_of(&[
+            input("group:fruit", "r1", "x"),
+            input("group:vegetable", "r2", "x"),
+        ]);
+        assert!(!groups.whole_and_part);
+        assert_eq!(groups.distinct, 2);
+        // A group of one seller and an item of another seller are not nested.
+        assert!(
+            !mix_of(&[
+                input("a3|group:fruit", "r1", "x"),
+                input("a4|i1", "r2", "x")
+            ])
+            .whole_and_part
+        );
+        // Tokens: `i1` is an item, `ad3` and `ct2` are not.
+        assert!(is_item("i1") && is_item("i24"));
+        assert!(!is_item("ad3") && !is_item("ct2") && !is_item("i") && !is_item("group:fruit"));
+    }
+
+    #[test]
+    fn the_filters_of_a_read_give_the_group_token() {
+        use mandi_services::core::rules::ItemGroup;
+        let analytics = SourceAnalyticsFilters {
+            item_group: Some(ItemGroup::Vegetable),
+            ..SourceAnalyticsFilters::default()
+        };
+        assert_eq!(analytics_tokens(&analytics), ["group:vegetable"]);
+        let report = SourceReportFilters {
+            item_group: Some(ItemGroup::Fruit),
+            ..SourceReportFilters::default()
+        };
+        assert_eq!(report_tokens(&report), ["group:fruit"]);
     }
 
     #[test]

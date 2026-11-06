@@ -154,6 +154,10 @@ common-period-from = از
 common-period-to = تا
 
 # review: pending
+common-item-group = { masters-item-group }
+# review: pending
+common-item-group-all = پھل اور سبزی
+# review: pending
 common-filters-more = مزید فلٹر
 
 # review: pending
@@ -198,3 +202,8 @@ common-remove-line-title = لائن ہٹائیں؟
 
 # review: pending
 common-remove-line-confirm = ہٹائیں
+
+# An item with its quality after it: "Apple First", "سیب اول" (PRD FR-12.42). $item: the item's name.
+# $grade: the quality word (glossary-darja-awwal, -doyam or -soyam).
+# review: pending
+common-item-grade = { $item } { $grade }

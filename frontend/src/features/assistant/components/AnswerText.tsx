@@ -62,7 +62,13 @@ export function AnswerText({ parts }: { parts: readonly AnswerPart[] }) {
   const { l10n } = useLocalization();
   if (parts.length === 0) return null;
   return (
-    <p aria-label={l10n.getString('assistant-answer-label')} className="type-lead text-ink">
+    // `whitespace-pre-line` keeps the line breaks the backend writes between the lines of an answer
+    // ("• Sale yesterday: ...", "• Commission yesterday: ...", and the lines of advice and help): each
+    // "•" line stands on its own line, and every other run of spaces is closed up as usual.
+    <p
+      aria-label={l10n.getString('assistant-answer-label')}
+      className="type-lead whitespace-pre-line text-ink"
+    >
       {parts.map((part, index) => (
         // The pieces of an answer have no id; their order is the answer.
         <PartView key={index} part={part} />

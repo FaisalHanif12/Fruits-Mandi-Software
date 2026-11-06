@@ -73,6 +73,26 @@ function stepsOf(
   id: ReportId,
   columns: readonly Pick<ReportColumn, 'key'>[],
 ): Readonly<Record<string, StepRange>> | undefined {
+  // The sales registers get a column for the quality of a line only when a line of the filter has one
+  // (PRD FR-12.42). That is one column more than the window holds at the compact step and at the
+  // normal one, so the day waits for the normal step and the value (before the commission) for the
+  // wide step. The print and the Excel file still have both.
+  if (
+    (id === 'R2' || id === 'R3' || id === 'R4') &&
+    columns.some((column) => column.key === 'grade')
+  ) {
+    return { ...COLUMN_STEPS[id], date: { from: 'normal' }, value: { from: 'wide' } };
+  }
+  // A party's day slip (R35) has its table beside the summary box at the normal step. Its quality
+  // column (a column only when a line of the slip has one) takes the room of the packing word, which
+  // the item line already carries; the print still has the packing.
+  if (
+    id === 'R35' &&
+    columns.some((column) => column.key === 'grade') &&
+    columns.some((column) => column.key === 'packing')
+  ) {
+    return { ...COLUMN_STEPS[id], packing: { from: 'wide' } };
+  }
   if (id !== 'R36') return COLUMN_STEPS[id];
   return columns.some((column) => column.key === 'partner')
     ? GARDEN_PARTNER_LAYOUT_STEPS
@@ -264,13 +284,18 @@ function resultTone(cell: ReportCell): 'due' | undefined {
   return cell.type === 'money' && isNegativePaisa(cell.paisa) ? 'due' : undefined;
 }
 
-/** The label columns that hold one short word (a state, a side, a mark, the kind of an entry). */
+/**
+ * The label columns that hold one short word (a state, a side, a mark, the kind of an entry, the
+ * quality of a line: First, Second or Third, PRD FR-12.42). A narrow column keeps the amount of the
+ * register in view at the compact step (R2 at 1024 px).
+ */
 const SHORT_LABEL_KEYS: ReadonlySet<string> = new Set([
   'status',
   'side',
   'staff',
   'heading',
   'source',
+  'grade',
 ]);
 
 /** True when the column of this report is shown at the step. */

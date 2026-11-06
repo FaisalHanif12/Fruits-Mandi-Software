@@ -32,10 +32,14 @@ fn phone_of(person: Option<&SavedPukhta>) -> Option<String> {
 }
 
 /// A line written the client's way for R5 and the buyer slips: `(item qty . rate)`, for example
-/// `(کیلا 20 . 600)` (PRD R5, plan 17e). Text only: the quantity and the rate are the formatted
-/// stored values, so nothing is worked out here.
-fn line_detail(item: &str, qty: &str, rate: &str) -> String {
-    format!("({item} {qty} . {rate})")
+/// `(کیلا 20 . 600)` (PRD R5, plan 17e). With a quality its word follows the item: `(سیب اول 10 .
+/// 1200)` (PRD FR-12.42). Text only: the quantity and the rate are the formatted stored values,
+/// so nothing is worked out here.
+fn line_detail(item: &str, grade_word: Option<&str>, qty: &str, rate: &str) -> String {
+    match grade_word {
+        Some(word) => format!("({item} {word} {qty} . {rate})"),
+        None => format!("({item} {qty} . {rate})"),
+    }
 }
 
 /// One goods line. `seller_side` picks the seller rate and amount (seller bill); otherwise the
@@ -63,9 +67,15 @@ fn line(
         } else {
             None
         },
-        detail: line_detail(&item, &qty, &rate_text),
+        detail: line_detail(
+            &item,
+            sale.grade.and_then(|grade| ctx.grade_word(grade)),
+            &qty,
+            &rate_text,
+        ),
         item,
         packing: ctx.name(&lot.packing.name_ur, &lot.packing.name_en),
+        grade: sale.grade,
         qty,
         weight_kg: sale.weight_grams.map(|grams| ctx.style.kilos(grams)),
         rate: rate_text,

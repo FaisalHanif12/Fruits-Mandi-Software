@@ -157,6 +157,20 @@ describe.each(LANGUAGES)('restore on a new computer (%s)', (language) => {
       expect(document.documentElement.dir).toBe(language === 'ur' ? 'rtl' : 'ltr');
     });
 
+    it('puts the two choices side by side at every window size, so both show without scrolling at 1024x600', async () => {
+      await start();
+      const cards = screen
+        .getAllByRole('button')
+        .filter((card) => card.hasAttribute('data-nav-field'));
+      expect(cards).toHaveLength(2);
+      const row = cards[0]?.parentElement;
+      // A row from the smallest window up: no column class, no class that waits for a wider window.
+      expect(row).toHaveClass('flex');
+      expect(row).not.toHaveClass('flex-col');
+      expect(row?.className).not.toMatch(/(^|\s)\w+:flex-/);
+      expect(cards[1]?.parentElement).toBe(row);
+    });
+
     it('a new shop opens the wizard as it was, and Back returns to the first screen', async () => {
       const user = await start();
       await user.keyboard('{Enter}');
@@ -325,9 +339,13 @@ describe.each(LANGUAGES)('restore on a new computer (%s)', (language) => {
         )
         .mockRejectedValueOnce(
           fail({
-            code: 'ERR_OUT_OF_RANGE',
+            code: 'ERR_BACKUP_CLOUD_ADDRESS_PATH',
             field: 'source.cloud.endpoint',
-            values: { reason: 'path' },
+            values: {
+              address: 'https://shop.r2.cloudflarestorage.com',
+              path: '/mandi-bucket',
+              bucket: 'mandi-bucket',
+            },
           }),
         );
       const user = await start();
@@ -350,7 +368,10 @@ describe.each(LANGUAGES)('restore on a new computer (%s)', (language) => {
 
       // The bucket name inside the address: the message names the field it belongs in.
       await user.click(button('restore-where-find'));
-      const pathMessage = say('err-out-of-range', { reason: 'path' });
+      const pathMessage = say('err-backup-cloud-address-path', {
+        address: 'https://shop.r2.cloudflarestorage.com',
+        path: '/mandi-bucket',
+      });
       // Fluent puts invisible isolation marks around the bucket field's name; `visible` drops them.
       expect(await screen.findByText((text) => visible(text) === pathMessage)).toBeVisible();
       expect(pathMessage).toContain(say('backup-set-bucket'));
@@ -496,7 +517,12 @@ describe.each(LANGUAGES)('restore on a new computer (%s)', (language) => {
         ),
       ).toBeInTheDocument();
       const table = screen.getByRole('table', { name: say('restore-totals-label') });
-      expect(within(table).getByText('2413')).toBeInTheDocument();
+      // Every count carries the thousands sign (2,413), as the lists and the backup screen do.
+      expect(within(table).getByText('2,413')).toBeInTheDocument();
+      expect(within(table).getByText('1,204')).toBeInTheDocument();
+      expect(within(table).getByText('3,100')).toBeInTheDocument();
+      expect(within(table).getByText('9,050')).toBeInTheDocument();
+      expect(within(table).queryByText('2413')).toBeNull();
       expect(restoreApi.backupFirstRunRestore).not.toHaveBeenCalled();
     });
 
@@ -718,6 +744,19 @@ describe.each(LANGUAGES)('after the first sign-in on a restored computer (%s)', 
     await waitFor(() => {
       expect(screen.queryByText(say('restore-after-title'))).toBeNull();
     });
+  });
+
+  it('floats above the status bar and leaves the corner of the assistant button free', async () => {
+    act(() => {
+      useAfterRestoreStore.getState().remember({ assistantWasOn: true, cloudNeedsKeys: true });
+    });
+    await renderApp('/');
+    const title = await screen.findByText(say('restore-after-title'));
+    const bar = title.closest('.fixed');
+    // Above the status bar, like the guide card, and with the corner's width kept free on the end
+    // side in the compact window (up to 1365 wide), where the card is as wide as the window.
+    expect(bar).toHaveClass('bottom-statusbar', 'pe-corner');
+    expect(bar).not.toHaveClass('bottom-0');
   });
 
   it('offers the cloud keys in Backup when a file or folder was used', async () => {

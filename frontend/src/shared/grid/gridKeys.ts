@@ -14,8 +14,10 @@
 //   Ctrl+D      copy the cell from the line above (opt in)
 //   Ctrl+I      explain a calculated cell (opt in)
 //   + and -     in a date cell: next and previous day (PRD FR-7.19)
-//   Space       in a choice cell (ادھاری / نقدی): the next word
-//   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16)
+//   Space       in a choice cell (ادھاری / نقدی): the next word; in a select cell (درجہ): the list opens
+//   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16); in a select
+//               cell: the list opens
+//   Delete      in a select cell that is not open: the word is taken away (blank)
 // Any other letter or digit starts typing in an editable cell, as AG Grid does.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -143,7 +145,10 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const { rows } = store.getState();
     const row = rows[rowIndex];
     if (row === undefined) return false;
-    if (params.editing && column.type === 'picker' && !fromEditor) return true;
+    // The editor of a picker or select cell answers its own keys; the grid leaves them alone.
+    if (params.editing && (column.type === 'picker' || column.type === 'select') && !fromEditor) {
+      return true;
+    }
 
     // F2 is "New", never "edit".
     if (event.key === 'F2') return true;
@@ -199,6 +204,14 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       return true;
     }
 
+    // Alt+↓ on a select cell: its short list opens.
+    if (column.type === 'select' && matchesShortcut(event, SHORTCUTS.openList)) {
+      if (params.editing) return false;
+      event.preventDefault();
+      if (isEditable(column, row)) params.api.startEditingCell({ rowIndex, colKey: field });
+      return true;
+    }
+
     // Alt+↓ on a picker cell: typing starts with the full list open (PRD FR-7.16).
     if (column.type === 'picker' && matchesShortcut(event, SHORTCUTS.openList)) {
       if (params.editing) return false;
@@ -209,6 +222,22 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     }
 
     if (!NO_MODIFIER(event)) return false;
+
+    // A select cell holds fixed words, so nothing is typed into it. Space opens its list, Delete or
+    // Backspace take the word away, and any other letter or digit is left alone (not a start of typing).
+    if (column.type === 'select' && !params.editing) {
+      if (event.key === ' ') {
+        event.preventDefault();
+        if (isEditable(column, row)) params.api.startEditingCell({ rowIndex, colKey: field });
+        return true;
+      }
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        if (isEditable(column, row)) store.getState().updateTyped(row.rowId, field, '');
+        return true;
+      }
+      if (event.key.length === 1) return true;
+    }
 
     // Space on a choice cell that is not being typed in: the next word.
     if (column.type === 'choice' && event.key === ' ' && !params.editing) {

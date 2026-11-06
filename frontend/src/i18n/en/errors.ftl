@@ -149,11 +149,11 @@ err-recovery-code-wrong = The user name or the recovery code is wrong. Check and
 # review: pending
 err-already-set-up = First-time setup is already done. Please sign in.
 # $min and $max: the allowed range. `$reason` (the cloud address, backup and first start): https means it
-# does not start with https:// or is not one word, path means something follows the host name.
+# does not start with https:// or is not one word. (An address with a path after the host is its own
+# refusal, ERR_BACKUP_CLOUD_ADDRESS_PATH.)
 # review: pending
 err-out-of-range = { $reason ->
     [https] The cloud address must start with https:// and be one word, for example https://your-account.r2.cloudflarestorage.com.
-    [path] Write only the cloud address, for example https://your-account.r2.cloudflarestorage.com. The bucket name goes in the field { backup-set-bucket }.
    *[other] This value must be between { $min } and { $max }.
 }
 # review: pending
@@ -241,7 +241,7 @@ err-date-range = The last date is before the first date. Enter a last date on or
 
 # PRD FR-12.6. A line sells more than the lot has left.
 # review: pending
-err-qty-exceeds-lot = The quantity is more than the lot has left. Only { $available } { -nag } are left.
+err-qty-exceeds-lot = That quantity is not available: only { $available } { -nag } are left.
 # PRD FR-11.10. The setting is off.
 # review: pending
 err-override-not-allowed = Changing the { -commission } or { -laga } on a line is switched off. The Owner can switch it on in Settings.
@@ -497,6 +497,10 @@ err-backup-newer-than-app = This copy is from a newer version of the app than th
 # review: pending
 err-backup-chain-key-missing = This copy has no key for the tamper checks, so it cannot be trusted on a new computer. Use another copy, or contact support.
 
+# The cloud address has a path after the host (plan 53 Section 10). $address: the address cut off at the host,
+# the one to use. $path: what was cut off, for example /mandidemo. Nothing was saved.
+# review: pending
+err-backup-cloud-address-path = The cloud address must be only the host, with nothing after it. The part { $path } does not belong in it. Use { $address }, and put the bucket name in the field { backup-set-bucket }.
 # review: pending
 err-backup-no-owner = The first-time setup was never finished on the computer that made this copy, so nobody could sign in after restoring it. Nothing was changed. Use another copy.
 

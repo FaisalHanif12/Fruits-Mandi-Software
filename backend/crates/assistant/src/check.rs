@@ -545,16 +545,28 @@ fn is_money_figure(node: &Node) -> bool {
     )
 }
 
-/// True when a path points at an estimate figure (D6-system-prompt Section 4, `kind`).
-fn is_estimate_figure(r: &Resolved) -> bool {
-    if r.root_tool != "estimate" {
-        return false;
-    }
-    let second = r.path.split('.').nth(1).unwrap_or("");
+/// The parts of an `estimate` result that are estimated figures. `now` and `history` are book
+/// figures and are not in the list.
+fn is_estimate_part(second: &str) -> bool {
     matches!(
         second,
         "same_pace" | "same_growth" | "same_season" | "what_if_pace" | "ahead" | "year"
     )
+}
+
+/// True when a path points at an estimate figure (D6-system-prompt Section 4, `kind`).
+fn is_estimate_figure(r: &Resolved) -> bool {
+    r.root_tool == "estimate" && is_estimate_part(r.path.split('.').nth(1).unwrap_or(""))
+}
+
+/// True when a path starts in an `estimate` result and goes into one of its estimated parts, also
+/// with a `*` row (`e1.ahead.*.same_pace`). `calculate` refuses such a path: an estimate must
+/// never come back as a book figure (PRD FR-7.76 point 4).
+pub(crate) fn is_estimate_path(state: &State, path: &str) -> bool {
+    let mut parts = path.split('.');
+    let first = parts.next().unwrap_or("");
+    state.find(first).is_some_and(|r| r.tool == "estimate")
+        && parts.next().is_some_and(is_estimate_part)
 }
 
 fn is_boundary(c: char) -> bool {

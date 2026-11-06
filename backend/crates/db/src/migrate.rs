@@ -121,6 +121,11 @@ pub const ASSISTANT_TIMING_SQL: &str = include_str!("../migrations/0017_assistan
 pub const ASSISTANT_TIME_LIMIT_SQL: &str =
     include_str!("../migrations/0018_assistant_time_limit.sql");
 
+/// The nineteenth migration (plan 58, PRD FR-12.42, Architecture 15.6): the quality of a sale line,
+/// one nullable column `bikri_sales.grade` (`first`, `second`, `third`). Every old line keeps NULL:
+/// no book, amount, id or chain hash changes.
+pub const SALE_GRADE_SQL: &str = include_str!("../migrations/0019_sale_grade.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -151,6 +156,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(SPEED_INDEXES_SQL),
         M::up(ASSISTANT_TIMING_SQL),
         M::up(ASSISTANT_TIME_LIMIT_SQL),
+        M::up(SALE_GRADE_SQL),
     ])
 }
 

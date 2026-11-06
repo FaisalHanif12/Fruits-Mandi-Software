@@ -59,6 +59,10 @@ pub(crate) struct Typed {
     pub(crate) adda_id: Option<i64>,
     /// The picked partner.
     pub(crate) partner_id: Option<i64>,
+    /// The picked collector, a staff member (R22, R23, R35).
+    pub(crate) collector_id: Option<i64>,
+    /// The picked item group (R2, R3, R4, R7, R10, R27): all its items.
+    pub(crate) item_group: Option<mandi_core::rules::ItemGroup>,
     /// The kind of voucher of R15.
     pub(crate) voucher_type: Option<mandi_core::vouchers::VoucherType>,
     /// The layout of R33. By trip when the screen sent nothing.
@@ -183,6 +187,16 @@ pub(crate) fn resolve(
         FilterKind::Partner,
         input.partner_id.is_some(),
         "filters.partner_id",
+    );
+    refuse_unless(
+        FilterKind::Collector,
+        input.collector_id.is_some(),
+        "filters.collector_id",
+    );
+    refuse_unless(
+        FilterKind::ItemGroup,
+        input.item_group.is_some(),
+        "filters.item_group",
     );
     refuse_unless(
         FilterKind::VoucherType,
@@ -390,6 +404,31 @@ pub(crate) fn resolve(
                 "filters.partner_id",
             ));
         }
+    }
+    if takes.has(FilterKind::Collector) {
+        typed.resolved.collector = picked_names(
+            conn,
+            MasterTable::Staff,
+            input.collector_id,
+            "filters.collector_id",
+            &mut problems,
+        )?;
+        if typed.resolved.collector.is_some() {
+            typed.collector_id = input.collector_id;
+        }
+    }
+    if takes.has(FilterKind::ItemGroup)
+        && let Some(group) = input.item_group
+    {
+        // A group means all its items, in place of one item: both together can only be a mistake.
+        if input.item_id.is_some() {
+            problems.push(FieldError::new(
+                ErrorCode::ErrOutOfRange,
+                "filters.item_group",
+            ));
+        }
+        typed.item_group = Some(group);
+        typed.resolved.item_group = Some(group);
     }
     if takes.has(FilterKind::VoucherType) {
         typed.voucher_type = input.voucher_type;

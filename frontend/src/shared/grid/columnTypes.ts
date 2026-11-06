@@ -32,6 +32,7 @@ export const COLUMN_WIDTHS: Record<EntryColumnType, number> = {
   label: 280,
   picker: 200,
   choice: 120,
+  select: 110,
 };
 
 /**
@@ -50,6 +51,7 @@ export const FIT_WEIGHTS: Record<EntryColumnType, number> = {
   label: 200,
   picker: 300,
   choice: 100,
+  select: 90,
 };
 
 /**
@@ -90,6 +92,8 @@ export const FIT_MIN_WIDTHS: Record<EntryColumnType, number> = {
   picker: 84,
   // One short word (ادھاری, Credit) with its padding; the heading may wrap to a second line.
   choice: 84,
+  // One short word (اول, First) with its padding and the arrow; the heading may wrap.
+  select: 80,
 };
 
 /** The types whose cells are numbers, codes or dates: Latin digits, left to right, tabular. */

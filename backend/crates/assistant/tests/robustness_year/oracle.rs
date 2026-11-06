@@ -74,6 +74,21 @@ fn calendar(o: &mut Oracle) {
         ("sep_end", last("month", Some(9))),
         ("last_week_start", first("last_week", None)),
         ("last_week_end", last("last_week", None)),
+        ("week_start", first("this_week", None)),
+        ("year_start", first("this_year", None)),
+        ("last_year_start", first("last_year", None)),
+        ("last_year_end", last("last_year", None)),
+        ("first_day", date(super::seed::START)),
+        ("aug_start", first("month", Some(8))),
+        ("aug_end", last("month", Some(8))),
+        (
+            "nov_03",
+            NaiveDate::from_ymd_opt(today.year(), 11, 3).unwrap_or(today),
+        ),
+        (
+            "oct_14",
+            NaiveDate::from_ymd_opt(today.year(), 10, 14).unwrap_or(today),
+        ),
         (
             "oct_01",
             NaiveDate::from_ymd_opt(today.year(), 10, 1).unwrap_or(today),
@@ -279,6 +294,40 @@ fn period_dates(name: &str) -> (Option<NaiveDate>, Option<NaiveDate>) {
         "week" => {
             let monday = today - Duration::days(i64::from(today.weekday().num_days_from_monday()));
             (Some(monday), Some(today))
+        }
+        "last_week" | "last_week2" => {
+            let monday = today - Duration::days(i64::from(today.weekday().num_days_from_monday()));
+            let back = if name == "last_week" { 7 } else { 14 };
+            (
+                Some(monday - Duration::days(back)),
+                Some(monday - Duration::days(back - 6)),
+            )
+        }
+        "last_year2" => (
+            NaiveDate::from_ymd_opt(today.year() - 2, 1, 1),
+            NaiveDate::from_ymd_opt(today.year() - 2, 12, 31),
+        ),
+        other if other.starts_with('r') && other[1..].split('_').count() == 6 => {
+            // r2026_10_01_2026_10_15: that range of days.
+            let n: Vec<i32> = other[1..]
+                .split('_')
+                .filter_map(|p| p.parse().ok())
+                .collect();
+            match n.as_slice() {
+                [y1, m1, d1, y2, m2, d2] => (
+                    NaiveDate::from_ymd_opt(
+                        *y1,
+                        u32::try_from(*m1).unwrap_or(0),
+                        u32::try_from(*d1).unwrap_or(0),
+                    ),
+                    NaiveDate::from_ymd_opt(
+                        *y2,
+                        u32::try_from(*m2).unwrap_or(0),
+                        u32::try_from(*d2).unwrap_or(0),
+                    ),
+                ),
+                _ => (None, None),
+            }
         }
         "month" => (Some(first_of_month), Some(today)),
         "last_month" => (last_of_prev.with_day(1), Some(last_of_prev)),
@@ -690,6 +739,13 @@ pub fn compute(y: &Year) -> Oracle {
     derived(&mut o);
     estimates(&mut o, y);
     item_estimates(&mut o, y);
+    screen_series_estimates(&mut o, y);
+    balance_estimates(&mut o, y);
+    state_and_list_facts(&mut o, y);
+    vegetable_facts(&mut o, y);
+    item_axis_facts(&mut o, y);
+    quality_facts(&mut o, y);
+    money_axis_facts(&mut o, y);
     o
 }
 
@@ -1169,7 +1225,7 @@ fn estimates(o: &mut Oracle, y: &Year) {
         let page = run_a(y, AnalyticsView::G, f);
         let at = page.columns.iter().position(|c| c.key == column);
         let Some(at) = at else { continue };
-        let history = history_of(&page, at);
+        let history = history_of(&page, at, current);
         let name = |m: Method| match m {
             Method::SamePace => "same_pace",
             Method::SameGrowth => "same_growth",
@@ -1306,7 +1362,7 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
                 put_series_estimates(
                     o,
                     &format!("est_item.{name}.{measure}"),
-                    &history_of(&page, at),
+                    &history_of(&page, at, current),
                     current,
                 );
             }
@@ -1327,7 +1383,7 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
             put_series_estimates(
                 o,
                 &format!("est_party.{key}.sales"),
-                &history_of(&page, at),
+                &history_of(&page, at, current),
                 current,
             );
         }
@@ -1348,7 +1404,7 @@ fn item_estimates(o: &mut Oracle, y: &Year) {
             put_series_estimates(
                 o,
                 &format!("est_party.{key}.sales"),
-                &history_of(&page, at),
+                &history_of(&page, at, current),
                 current,
             );
         }
@@ -1421,6 +1477,10 @@ fn item_name(key: &str) -> &'static str {
         "aam" | "mango" => "mango",
         "angoor" | "grapes" => "grapes",
         "aloo" | "potato" => "potato",
+        "mooli" => "radish",
+        "tamatar" => "tomato",
+        "piyaz" => "onion",
+        "saag" => "saag",
         _ => "other",
     }
 }
@@ -1455,13 +1515,19 @@ pub fn compute_thin(y: &Year) -> Oracle {
     o
 }
 
-/// The monthly series of a column of view G, as the estimator reads it.
+/// The monthly series of a column of view G, as the estimator reads it. View G has no row for a
+/// month with no sales, so the series is filled the way the tool's `fill_history` does it: from the
+/// first month with a row to the month before `current`, a quiet month is 0 (F6: a seasonal item, a
+/// seller or a buyer with gaps still has an estimate).
 fn history_of(
     page: &AnalyticsPage,
     at: usize,
+    current: mandi_services::domain::forecast::YearMonth,
 ) -> Vec<mandi_services::domain::forecast::MonthValue> {
+    use mandi_services::core::money::Paisa;
     use mandi_services::domain::forecast::{MonthValue, YearMonth};
-    page.rows
+    let mut rows: Vec<MonthValue> = page
+        .rows
         .iter()
         .filter_map(|row| {
             let (Some(Cell::Month { year, month }), Some(Cell::Money { paisa })) =
@@ -1475,5 +1541,1965 @@ fn history_of(
                 value: *paisa,
             })
         })
+        .collect();
+    rows.sort_by_key(|r| r.month);
+    let Some(first) = rows.first().map(|r| r.month) else {
+        return rows;
+    };
+    let mut filled = Vec::new();
+    let mut month = first;
+    while month < current {
+        let value = rows
+            .iter()
+            .find(|r| r.month == month)
+            .map_or(Paisa::ZERO, |r| r.value);
+        filled.push(MonthValue { month, value });
+        match month.plus_months(1) {
+            Some(next) => month = next,
+            None => break,
+        }
+    }
+    filled
+}
+
+/// The full months before `current`, from January 2025: the month, its first day and its last day.
+fn months_before(
+    current: mandi_services::domain::forecast::YearMonth,
+) -> Vec<(
+    mandi_services::domain::forecast::YearMonth,
+    NaiveDate,
+    NaiveDate,
+)> {
+    use mandi_services::domain::forecast::YearMonth;
+    let mut out = Vec::new();
+    let Some(mut month) = YearMonth::new(2025, 1) else {
+        return out;
+    };
+    while month < current {
+        let Some(next) = month.plus_months(1) else {
+            break;
+        };
+        let (Some(first), Some(next_first)) = (
+            NaiveDate::from_ymd_opt(month.year(), month.month(), 1),
+            NaiveDate::from_ymd_opt(next.year(), next.month(), 1),
+        ) else {
+            break;
+        };
+        out.push((month, first, next_first - Duration::days(1)));
+        month = next;
+    }
+    out
+}
+
+/// A series read month by month from a screen: the months before the first month with a figure are
+/// left out and a quiet month after it is 0 (the tool's `fill_history`).
+fn trimmed(
+    values: &[(
+        mandi_services::domain::forecast::YearMonth,
+        mandi_services::core::money::Paisa,
+    )],
+) -> Vec<mandi_services::domain::forecast::MonthValue> {
+    use mandi_services::core::money::Paisa;
+    use mandi_services::domain::forecast::MonthValue;
+    let Some(at) = values.iter().position(|(_, v)| *v != Paisa::ZERO) else {
+        return Vec::new();
+    };
+    values
+        .iter()
+        .skip(at)
+        .map(|(month, value)| MonthValue {
+            month: *month,
+            value: *value,
+        })
         .collect()
+}
+
+/// The balance estimates (plan 55 Section 11.1, F4 and F5; PRD FR-7.86, approved by Umar): the balance
+/// now plus the average net change of a month times the months ahead. Worked out here from the books
+/// by the definition in the notes of the estimate tool, never by its code:
+///
+/// - a party (`faisal`, `tariq`, `rahim`) and the cash (`cash`): the change of a month is the sum of
+///   (debit - credit) of the posted lines of the account dated in the month, entries of source type
+///   `account` (openings) left out; the balance now counts every posted line.
+/// - the buyers' dues (`dues`): the change of a month is R20's total as of the last day of the month
+///   less R20's total as of the last day of the month before.
+/// - the months run from the first month with a line (not an opening) to the month before today's; a
+///   quiet month is 0. The pace uses the LAST 3 of them; fewer than 3 is too short: `.n` only.
+/// - `per_month` is the sum over the window divided by its months, rounded once to a whole rupee, half
+///   away from zero.
+///
+/// Keys: `est_balance.<subject>.now`, `.n` (months in the window), `.per_month` (its size),
+/// `.direction` (`up` or `down`), `.after<j>` for j = 1, 2, 3, 6 and 12: the size of the balance after
+/// j months from today (now + j x per_month). Sizes are whole rupees without a sign. The dues are
+/// never below 0: a month that would take them below 0 has no fact.
+fn balance_estimates(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::{self, params};
+    use mandi_services::domain::forecast::YearMonth;
+    let today = date(TODAY);
+    let Some(current) = YearMonth::new(today.year(), today.month()) else {
+        return;
+    };
+    let months = months_before(current);
+    let db = y.w.env.ctx.db();
+    let iso = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    let cash_id: i64 = db
+        .read(|c| {
+            c.query_row("SELECT id FROM accounts WHERE code = '01010001'", [], |r| {
+                r.get(0)
+            })
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("the cash account: {e}"));
+    // One account: (count of lines, net debit less credit in rupees) of each month, openings left out;
+    // and the balance now.
+    // For the cash the money partners put in or take out (capital_in, capital_out, and their reversals) is not a
+    // change of the pace (backend3's note, PRD FR-7.86): it is left out of the months.
+    const NOT_CAPITAL: &str = "AND e.posting_type NOT IN ('capital_in', 'capital_out') \
+         AND NOT (e.posting_type = 'reversal' AND e.reverses_entry_id IN \
+                  (SELECT id FROM journal_entries WHERE posting_type IN ('capital_in', 'capital_out')))";
+    let account_series = |id: i64, skip_capital: bool| -> (Vec<(i64, i64)>, i64) {
+        let rows = months
+            .iter()
+            .map(|(_, first, last)| {
+                db.read(|c| {
+                    c.query_row(
+                        &format!(
+                            "SELECT COUNT(*), COALESCE(SUM(l.dr_paisa - l.cr_paisa), 0) \
+                             FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id \
+                             WHERE l.account_id = ?1 AND e.status = 'posted' AND e.source_type <> 'account' \
+                               AND e.entry_date >= ?2 AND e.entry_date <= ?3 {}",
+                            if skip_capital { NOT_CAPITAL } else { "" }
+                        ),
+                        params![id, iso(*first), iso(*last)],
+                        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)? / 100)),
+                    )
+                })
+                .unwrap_or_else(|e: rusqlite::Error| panic!("a month of the account: {e}"))
+            })
+            .collect();
+        let now = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COALESCE(SUM(l.dr_paisa - l.cr_paisa), 0) \
+                     FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id \
+                     WHERE l.account_id = ?1 AND e.status = 'posted'",
+                    params![id],
+                    |r| r.get::<_, i64>(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("the balance now: {e}"))
+            / 100;
+        (rows, now)
+    };
+    let put = |o: &mut Oracle, name: &str, rows: &[(i64, i64)], now: i64, floor_zero: bool| {
+        let Some(first) = rows.iter().position(|(count, _)| *count > 0) else {
+            return;
+        };
+        let window: Vec<i64> = rows[first..].iter().map(|(_, net)| *net).collect();
+        // The pace is the average of the LAST 3 full months, as for the other estimates (backend3,
+        // `domain::forecast::BALANCE_MONTHS_MAX`); fewer than 3 months in the books is too short.
+        let available = i64::try_from(window.len()).unwrap_or(0);
+        o.put(
+            format!("est_balance.{name}.n"),
+            available.min(3).to_string(),
+        );
+        o.put(format!("est_balance.{name}.now"), now.abs().to_string());
+        if available < 3 {
+            return;
+        }
+        let window = &window[window.len() - 3..];
+        let n = 3i64;
+        let total: i64 = window.iter().sum();
+        // Half away from zero, once.
+        let per_month = total.signum() * ((total.abs() * 2 + n) / (n * 2));
+        o.put(
+            format!("est_balance.{name}.per_month"),
+            per_month.abs().to_string(),
+        );
+        o.put(
+            format!("est_balance.{name}.direction"),
+            if per_month >= 0 { "up" } else { "down" }.into(),
+        );
+        for j in [1i64, 2, 3, 6, 12] {
+            let after = now + j * per_month;
+            if floor_zero && after < 0 {
+                continue;
+            }
+            o.put(
+                format!("est_balance.{name}.after{j}"),
+                after.abs().to_string(),
+            );
+        }
+    };
+    for (name, id) in y
+        .buyers
+        .iter()
+        .filter(|b| b.key == "faisal" || b.key == "tariq")
+        .map(|b| (b.key, b.id))
+        .chain(
+            y.sellers
+                .iter()
+                .filter(|s| s.key == "rahim")
+                .map(|s| (s.key, s.id)),
+        )
+    {
+        let (rows, now) = account_series(id, false);
+        put(o, name, &rows, now, false);
+    }
+    let (rows, now) = account_series(cash_id, true);
+    put(o, "cash", &rows, now, false);
+    // The buyers' dues (backend3, PRD FR-7.86): the sum over the owners (each buyer account, each پختہ کھاتہ
+    // person) of the balance when it is a debit, at the end of each month, with the opening lines applied first
+    // (an opening and a reversal of one count from the start) and a dead mark ignored. The change of a month is
+    // that sum at its end less the sum at the end of the month before. Worked here from the journal lines.
+    let dues_at = |day: NaiveDate| -> i64 {
+        db.read(|c| {
+            c.query_row(
+                "SELECT COALESCE(SUM(CASE WHEN bal > 0 THEN bal ELSE 0 END), 0) FROM ( \
+                   SELECT SUM(l.dr_paisa - l.cr_paisa) AS bal \
+                   FROM journal_lines l \
+                   JOIN journal_entries e ON e.id = l.entry_id \
+                   JOIN accounts a ON a.id = l.account_id \
+                   JOIN account_controls k ON k.id = a.control_id \
+                   WHERE k.code = '0304' AND e.status = 'posted' \
+                     AND (e.entry_date <= ?1 OR e.posting_type = 'opening' \
+                          OR (e.posting_type = 'reversal' AND e.reverses_entry_id IN \
+                              (SELECT id FROM journal_entries WHERE posting_type = 'opening'))) \
+                   GROUP BY l.account_id, COALESCE(l.pukhta_person_key, ''))",
+                params![iso(day)],
+                |r| r.get::<_, i64>(0),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("the dues at {day}: {e}"))
+            / 100
+    };
+    let dues_now = |day: NaiveDate| -> Option<i64> {
+        let page = try_r(
+            y,
+            ReportId::R20,
+            ReportFilters {
+                as_of: ddmmyyyy(day),
+                ..ReportFilters::default()
+            },
+        )?;
+        let at = page.columns.iter().position(|c| c.key == "balance")?;
+        match page.totals.get(at)? {
+            Cell::Balance { paisa, .. } | Cell::Money { paisa } => Some(paisa.rupees()),
+            _ => None,
+        }
+    };
+    let mut rows = Vec::new();
+    let mut before = months
+        .first()
+        .map_or(0, |(_, first, _)| dues_at(*first - Duration::days(1)));
+    for (_, first, last) in &months {
+        let count: i64 = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*) FROM journal_lines l \
+                     JOIN journal_entries e ON e.id = l.entry_id \
+                     JOIN accounts a ON a.id = l.account_id \
+                     JOIN account_controls k ON k.id = a.control_id \
+                     WHERE k.code = '0304' AND e.status = 'posted' AND e.source_type <> 'account' \
+                       AND e.entry_date >= ?1 AND e.entry_date <= ?2",
+                    params![iso(*first), iso(*last)],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("lines on buyer accounts: {e}"));
+        let end = dues_at(*last);
+        rows.push((count, end - before));
+        before = end;
+    }
+    // The balance now is the tile's, R20's total.
+    let now = dues_now(today).unwrap_or(0);
+    put(o, "dues", &rows, now, true);
+}
+
+/// The facts of the app's own state and short lists (plan 55 Section 11.1, R1 to R6; the capability
+/// matrix gaps Q1 to Q6 and P2), worked out here from the screens and the books, never from the
+/// assistant's tools:
+///
+/// - `r15_type.<receipt|payment|advance>.*`: R15 (the voucher list) of one voucher type, all time.
+/// - `staff.<munshi|collector|labour|all>` and `heads.count`: the active staff by job and the active
+///   expense heads (SQL on the masters).
+/// - `truck.<truck slug>.{count,last_number,last_gross,last_net}`: for the four trucks with the most
+///   بکری, the number of saved بکری, the newest one's number and its gross and net (sums of its lots).
+/// - `attention.total` and `attention.<kind>.{count,amount,qty,days}`: the bell and the dashboard list.
+/// - `days.{closed_up_to,months_to_close,last_month_close}`: the status bar and the day close screen.
+/// - `audit.bikri<N>.count`: the audit viewer's rows of one بکری, for the first three.
+/// - `rules.<item>.<side>_<charge>`: the rule that wins today for an item (and its group) with no
+///   party: the percent as `6.00%`, an amount in whole rupees, or `none`. PRD 11.3, worked here from
+///   the rows of `charge_rules` (the newer rule wins a tie, FR-11.5).
+fn state_and_list_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::core::vouchers::VoucherType;
+    use mandi_services::db::rusqlite::{self, params};
+    let db = y.w.env.ctx.db();
+    let today = date(TODAY);
+    // R15 by voucher type.
+    for (word, kind) in [
+        ("receipt", VoucherType::Receipt),
+        ("payment", VoucherType::Payment),
+        ("advance", VoucherType::Advance),
+    ] {
+        let filters = ReportFilters {
+            voucher_type: Some(kind),
+            ..rfilters("all")
+        };
+        if let Some(page) = try_r(y, ReportId::R15, filters) {
+            dump_report_rows(o, &format!("r15_type.{word}"), &page, false);
+        }
+    }
+    // The staff and the expense heads.
+    let jobs: Vec<(String, i64)> = db
+        .read(|c| {
+            let mut st = c.prepare(
+                "SELECT role, COUNT(*) FROM staff WHERE is_active = 1 GROUP BY role ORDER BY role",
+            )?;
+            let rows = st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?;
+            rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+        })
+        .unwrap_or_default();
+    let mut all = 0;
+    for job in ["munshi", "collector", "labour"] {
+        let n = jobs.iter().find(|(r, _)| r == job).map_or(0, |(_, n)| *n);
+        all += n;
+        o.put(format!("staff.{job}"), n.to_string());
+    }
+    o.put("staff.all".into(), all.to_string());
+    let heads: i64 = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COUNT(*) FROM expense_heads WHERE is_active = 1",
+                [],
+                |r| r.get(0),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("expense heads: {e}"));
+    o.put("heads.count".into(), heads.to_string());
+    // The short lists of the masters (plan 55 R5): packings, stores, marks and standard narrations. For each
+    // the active rows and the first by code; a mark is given by its owner (the mark text is never given to the
+    // model, FR-7.83) and a narration only by its count (its text is never given either).
+    let count_of = |sql: &str| -> i64 {
+        db.read(|c| c.query_row(sql, [], |r| r.get(0)))
+            .unwrap_or_else(|e: rusqlite::Error| panic!("count {sql}: {e}"))
+    };
+    let first_of =
+        |sql: &str| -> Option<String> { db.read(|c| c.query_row(sql, [], |r| r.get(0))).ok() };
+    o.put(
+        "packings.count".into(),
+        count_of("SELECT COUNT(*) FROM packings WHERE is_active = 1").to_string(),
+    );
+    if let Some(name) =
+        first_of("SELECT name_en FROM packings WHERE is_active = 1 ORDER BY code LIMIT 1")
+    {
+        o.put("packings.first".into(), name);
+    }
+    o.put(
+        "stores.count".into(),
+        count_of("SELECT COUNT(*) FROM stores WHERE is_active = 1").to_string(),
+    );
+    if let Some(name) =
+        first_of("SELECT name_en FROM stores WHERE is_active = 1 ORDER BY code LIMIT 1")
+    {
+        o.put("stores.first".into(), name);
+    }
+    o.put(
+        "markas.count".into(),
+        count_of("SELECT COUNT(*) FROM markas WHERE is_active = 1").to_string(),
+    );
+    if let Some(name) = first_of(
+        "SELECT a.name_en FROM markas m JOIN accounts a ON a.id = m.owner_account_id \
+         WHERE m.is_active = 1 ORDER BY m.code LIMIT 1",
+    ) {
+        o.put("markas.first_owner".into(), name);
+    }
+    o.put(
+        "narrations.count".into(),
+        count_of("SELECT COUNT(*) FROM narrations WHERE is_active = 1").to_string(),
+    );
+    // The trucks with the most بکری.
+    let trucks: Vec<(String, i64)> = db
+        .read(|c| {
+            let mut st = c.prepare(
+                "SELECT truck_no, COUNT(*) AS n FROM bikri_entries \
+                 WHERE status = 'saved' AND truck_no IS NOT NULL AND truck_no <> '' \
+                 GROUP BY truck_no ORDER BY n DESC, truck_no LIMIT 4",
+            )?;
+            let rows = st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?;
+            rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+        })
+        .unwrap_or_default();
+    for (truck, n) in &trucks {
+        let k = slug(truck);
+        let newest: Option<(i64, String, i64, i64)> = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT e.number, e.entry_date, COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0) \
+                     FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id \
+                     WHERE e.truck_no = ?1 AND e.status = 'saved' \
+                       AND e.id = (SELECT id FROM bikri_entries WHERE truck_no = ?1 AND status = 'saved' \
+                                   ORDER BY entry_date DESC, number DESC LIMIT 1) \
+                     GROUP BY e.id",
+                    params![truck],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                )
+            })
+            .ok();
+        o.put(format!("truck.{k}.count"), n.to_string());
+        if let Some((number, day, gross, net)) = newest {
+            o.put(format!("truck.{k}.last_number"), number.to_string());
+            o.put(format!("truck.{k}.last_date"), day);
+            o.put(format!("truck.{k}.last_gross"), (gross / 100).to_string());
+            o.put(format!("truck.{k}.last_net"), (net / 100).to_string());
+        }
+    }
+    // The attention list.
+    if let Ok(list) = dashboard::attention(
+        db,
+        BackupFacts {
+            cloud_on: false,
+            cloud_age_hours: None,
+        },
+    ) {
+        use mandi_reports::dashboard::AttentionKind;
+        o.put("attention.total".into(), list.total_count.to_string());
+        for item in &list.items {
+            let k = match item.kind {
+                AttentionKind::Drafts => "drafts",
+                AttentionKind::OpenDays => "open_days",
+                AttentionKind::StockWaiting => "stock_waiting",
+                AttentionKind::OverCreditLimit => "over_credit_limit",
+                AttentionKind::DuesOld => "dues_old",
+                AttentionKind::PayablesOld => "payables_old",
+                AttentionKind::BackupOld => "backup_old",
+                AttentionKind::LoansOverdue => "loans_overdue",
+                AttentionKind::TakesOverdue => "takes_overdue",
+                AttentionKind::NamesMissing => "names_missing",
+            };
+            o.put(format!("attention.{k}.count"), item.count.to_string());
+            if let Some(amount) = item.amount_paisa {
+                o.put(format!("attention.{k}.amount"), amount.rupees().to_string());
+            }
+            if let Some(qty) = item.qty {
+                o.put(format!("attention.{k}.qty"), qty.to_string());
+            }
+            if let Some(days) = item.days {
+                o.put(format!("attention.{k}.days"), days.to_string());
+            }
+        }
+    }
+    // The day state.
+    if let Ok(status) = mandi_services::day::status(&y.w.env.ctx) {
+        if let Some(closed) = status.closed_up_to {
+            o.put("days.closed_up_to".into(), closed);
+        }
+        o.put(
+            "days.today_open".into(),
+            if status.today_open { "yes" } else { "no" }.into(),
+        );
+    }
+    if let Ok(months) = mandi_services::month::list(&y.w.env.ctx) {
+        use mandi_services::month::MonthState;
+        let to_close = months
+            .rows
+            .iter()
+            .filter(|r| matches!(r.state, MonthState::Ready | MonthState::DaysOpen))
+            .count();
+        o.put("days.months_to_close".into(), to_close.to_string());
+        if let Some(last) = months.rows.iter().find(|r| r.state == MonthState::Closed) {
+            o.put("days.last_month_close".into(), last.month.clone());
+        }
+    }
+    // The audit rows of the first three بکری.
+    for number in 1..=3i64 {
+        let id: Option<i64> = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT id FROM bikri_entries WHERE number = ?1",
+                    params![number],
+                    |r| r.get(0),
+                )
+            })
+            .ok();
+        let Some(id) = id else { continue };
+        let page = mandi_reports::audit::list(
+            db,
+            &mandi_reports::audit::AuditListInput {
+                filters: mandi_reports::audit::AuditFilters {
+                    entity: "bikri".to_owned(),
+                    entity_id: Some(id),
+                    ..mandi_reports::audit::AuditFilters::default()
+                },
+                offset: 0,
+                limit: 100,
+                sort: None,
+                group_by_month: false,
+            },
+        );
+        if let Ok(page) = page {
+            o.put(
+                format!("audit.bikri{number}.count"),
+                page.total_count.to_string(),
+            );
+        }
+    }
+    // The rule that wins today for an item with no party (PRD 11.3): the item level, then the item
+    // group, then the default; the newer rule wins a tie.
+    struct Rule {
+        side: String,
+        charge: String,
+        account: Option<i64>,
+        item: Option<i64>,
+        group: Option<String>,
+        bps: Option<i64>,
+        paisa: Option<i64>,
+    }
+    let rules: Vec<Rule> = db
+        .read(|c| {
+            let mut st = c.prepare(
+                "SELECT side, charge_type, account_id, item_id, item_group, value_bps, value_paisa \
+                 FROM charge_rules \
+                 WHERE is_active = 1 AND from_date <= ?1 AND (to_date IS NULL OR to_date >= ?1) \
+                 ORDER BY from_date DESC, id DESC",
+            )?;
+            let rows = st.query_map(params![iso_date(today)], |r| {
+                Ok(Rule {
+                    side: r.get(0)?,
+                    charge: r.get(1)?,
+                    account: r.get(2)?,
+                    item: r.get(3)?,
+                    group: r.get(4)?,
+                    bps: r.get(5)?,
+                    paisa: r.get(6)?,
+                })
+            })?;
+            rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+        })
+        .unwrap_or_default();
+    // The seller parties asked (a seller's own rules apply to the seller side only), and none.
+    let sellers: Vec<(Option<(&'static str, i64)>, String)> =
+        std::iter::once((None, String::new()))
+            .chain(
+                y.sellers
+                    .iter()
+                    .filter(|s| s.key == "rahim" || s.key == "karim")
+                    .map(|s| (Some((s.key, s.id)), format!("{}.", s.key))),
+            )
+            .collect();
+    for item in &y.items {
+        let group: Option<String> = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT item_group FROM items WHERE id = ?1",
+                    params![item.id],
+                    |r| r.get(0),
+                )
+            })
+            .ok();
+        let name = item_name(item.key);
+        for (party, prefix) in &sellers {
+            for (side, charge) in [
+                ("seller", "commission"),
+                ("seller", "labour"),
+                ("seller", "munshiana"),
+                ("seller", "phone"),
+                ("buyer", "commission"),
+                ("buyer", "laga"),
+            ] {
+                let of = || {
+                    rules
+                        .iter()
+                        .filter(|r| r.side == side && r.charge == charge)
+                };
+                // PRD 11.3: party and item, party, item, item group, default; newest first, so the
+                // newer rule wins a tie (FR-11.5).
+                let party_id = if side == "seller" {
+                    party.map(|(_, id)| id)
+                } else {
+                    None
+                };
+                let winner = party_id
+                    .and_then(|p| {
+                        of().find(|r| {
+                            r.account == Some(p) && r.item == Some(item.id) && r.group.is_none()
+                        })
+                    })
+                    .or_else(|| {
+                        party_id.and_then(|p| {
+                            of().find(|r| {
+                                r.account == Some(p) && r.item.is_none() && r.group.is_none()
+                            })
+                        })
+                    })
+                    .or_else(|| {
+                        of().find(|r| {
+                            r.account.is_none() && r.item == Some(item.id) && r.group.is_none()
+                        })
+                    })
+                    .or_else(|| {
+                        of().find(|r| {
+                            r.account.is_none()
+                                && r.item.is_none()
+                                && r.group.is_some()
+                                && r.group == group
+                        })
+                    })
+                    .or_else(|| {
+                        of().find(|r| r.account.is_none() && r.item.is_none() && r.group.is_none())
+                    });
+                let text = match winner {
+                    Some(Rule { bps: Some(bps), .. }) => {
+                        format!("{}.{:02}%", bps / 100, bps % 100)
+                    }
+                    Some(Rule {
+                        paisa: Some(paisa), ..
+                    }) => (paisa / 100).to_string(),
+                    _ => "none".to_owned(),
+                };
+                o.put(format!("rules.{prefix}{name}.{side}_{charge}"), text);
+            }
+        }
+    }
+}
+
+fn iso_date(d: NaiveDate) -> String {
+    d.format("%Y-%m-%d").to_string()
+}
+
+/// The vegetables and the fruit, by item and as a group (Umar, 06-11-2026: the assistant must handle vegetables as
+/// well as fruit). All from the books and the screens:
+///
+/// - `sale_lines.<item>` and `sale_months.<item>`: the active sale lines of an item and the months they fall in (SQL).
+/// - `group.<fruit|vegetable>.<period>.{qty,gross,total_comm,laga}`: the sum of view A's item rows of the group,
+///   for `today`, `month`, `last_month`, `year` and `all`. A period with no row for an item counts 0.
+/// - `veg.laga_lines`: the sale lines of a vegetable that carry a لاگا. It must be 0 (PRD 4.2: the لاگا rule is for
+///   the fruit group), so no answer can honestly give a لاگا on a vegetable line.
+fn vegetable_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::{self, params};
+    let db = y.w.env.ctx.db();
+    let group_of = |id: i64| -> String {
+        db.read(|c| {
+            c.query_row(
+                "SELECT item_group FROM items WHERE id = ?1",
+                params![id],
+                |r| r.get(0),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("the group of item {id}: {e}"))
+    };
+    for item in &y.items {
+        let name = item_name(item.key);
+        let (lines, months): (i64, i64) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*), COUNT(DISTINCT substr(s.entry_date, 1, 7)) \
+                     FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                     WHERE s.is_active = 1 AND l.item_id = ?1",
+                    params![item.id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+            })
+            .unwrap_or((0, 0));
+        o.put(format!("sale_lines.{name}"), lines.to_string());
+        o.put(format!("sale_months.{name}"), months.to_string());
+    }
+    for group in ["fruit", "vegetable"] {
+        let names: Vec<&str> = y
+            .items
+            .iter()
+            .filter(|item| group_of(item.id) == group)
+            .map(|item| item_name(item.key))
+            .collect();
+        for period in ["today", "month", "last_month", "year", "all"] {
+            for column in ["qty", "gross", "total_comm", "laga"] {
+                let sum: i64 = names
+                    .iter()
+                    .filter_map(|n| o.facts.get(&format!("a.{period}.{n}.{column}")))
+                    .filter_map(|v| amount_of(v))
+                    .sum();
+                o.put(format!("group.{group}.{period}.{column}"), sum.to_string());
+            }
+        }
+    }
+    // The vegetable with the most commission in the year and in all time (its English name).
+    for period in ["year", "all"] {
+        let mut best: Option<(i64, i64)> = None;
+        for item in y
+            .items
+            .iter()
+            .filter(|item| group_of(item.id) == "vegetable")
+        {
+            let name = item_name(item.key);
+            let comm = o
+                .facts
+                .get(&format!("a.{period}.{name}.total_comm"))
+                .and_then(|v| amount_of(v))
+                .unwrap_or(0);
+            if best.is_none_or(|(top, _)| comm > top) {
+                best = Some((comm, item.id));
+            }
+        }
+        if let Some((_, id)) = best {
+            let english: Option<String> = db
+                .read(|c| {
+                    c.query_row(
+                        "SELECT name_en FROM items WHERE id = ?1",
+                        params![id],
+                        |r| r.get(0),
+                    )
+                })
+                .ok();
+            if let Some(english) = english {
+                o.put(format!("group_top.vegetable.{period}"), english);
+            }
+        }
+    }
+    // More about each vegetable (Umar, 06-11-2026): what is left, the month against the last month with the zeros
+    // written out, the last rate, the buyer and the seller who took the most, and the best seller of the group.
+    let mut stock_total = 0i64;
+    let mut best_gross: Option<(i64, String)> = None;
+    let mut best_qty: Option<(i64, String)> = None;
+    for item in y
+        .items
+        .iter()
+        .filter(|item| group_of(item.id) == "vegetable")
+    {
+        let name = item_name(item.key);
+        let fact =
+            |key: String| -> i64 { o.facts.get(&key).and_then(|v| amount_of(v)).unwrap_or(0) };
+        let stock = fact(format!("stock.{name}.qty"));
+        stock_total += stock;
+        let (month, last) = (
+            fact(format!("a.month.{name}.gross")),
+            fact(format!("a.last_month.{name}.gross")),
+        );
+        let (year_gross, year_qty) = (
+            fact(format!("a.year.{name}.gross")),
+            fact(format!("a.year.{name}.qty")),
+        );
+        o.put(format!("veg.stock.{name}"), stock.to_string());
+        o.put(format!("veg.month.{name}.gross"), month.to_string());
+        o.put(format!("veg.last_month.{name}.gross"), last.to_string());
+        o.put(format!("veg.month_vs_last.{name}"), difference(month, last));
+        if best_gross.as_ref().is_none_or(|(g, _)| year_gross > *g) {
+            best_gross = Some((year_gross, item.id.to_string()));
+        }
+        if best_qty.as_ref().is_none_or(|(q, _)| year_qty > *q) {
+            best_qty = Some((year_qty, item.id.to_string()));
+        }
+        // The last sale line of the item: its rate and its day.
+        let last_line: Option<(i64, String)> = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT s.seller_rate_paisa, s.entry_date FROM bikri_sales s \
+                     JOIN bikri_lots l ON l.id = s.lot_id \
+                     WHERE s.is_active = 1 AND l.item_id = ?1 \
+                     ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                    params![item.id],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+            })
+            .ok();
+        if let Some((rate, day)) = last_line {
+            o.put(format!("veg.last_rate.{name}"), (rate / 100).to_string());
+            o.put(format!("veg.last_rate_day.{name}"), day);
+        }
+        // The buyer and the seller with the most money on this item, in all the books (a system account such
+        // as the cash buyer is not a person).
+        let top = |sql: &str| -> Option<String> {
+            db.read(|c| c.query_row(sql, params![item.id], |r| r.get(0)))
+                .ok()
+        };
+        if let Some(buyer) = top(
+            "SELECT a.name_en FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+             JOIN accounts a ON a.id = s.buyer_account_id \
+             WHERE s.is_active = 1 AND l.item_id = ?1 AND a.is_system = 0 \
+             GROUP BY a.id ORDER BY SUM(s.buyer_value_paisa) DESC, a.id LIMIT 1",
+        ) {
+            o.put(format!("veg.top_buyer.{name}"), buyer);
+        }
+        if let Some(seller) = top(
+            "SELECT a.name_en FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+             JOIN accounts a ON a.id = l.seller_account_id \
+             WHERE s.is_active = 1 AND l.item_id = ?1 AND a.is_system = 0 \
+             GROUP BY a.id ORDER BY SUM(s.seller_amount_paisa) DESC, a.id LIMIT 1",
+        ) {
+            o.put(format!("veg.top_seller.{name}"), seller);
+        }
+    }
+    o.put("veg.stock.total".into(), stock_total.to_string());
+    for (what, best) in [("gross", best_gross), ("qty", best_qty)] {
+        if let Some((_, id)) = best {
+            let english: Option<String> = db
+                .read(|c| {
+                    c.query_row(
+                        "SELECT name_en FROM items WHERE id = ?1",
+                        params![id.parse::<i64>().unwrap_or(0)],
+                        |r| r.get(0),
+                    )
+                })
+                .ok();
+            if let Some(english) = english {
+                o.put(format!("group_best.vegetable.year.{what}"), english);
+            }
+        }
+    }
+    let laga_lines: i64 = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COUNT(*) FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                 JOIN items i ON i.id = l.item_id \
+                 WHERE s.is_active = 1 AND i.item_group = 'vegetable' AND s.laga_paisa <> 0",
+                [],
+                |r| r.get(0),
+            )
+        })
+        .unwrap_or(-1);
+    o.put("veg.laga_lines".into(), laga_lines.to_string());
+}
+
+/// The periods of the item axis of the capability matrix (`scripts/ai-eval/capability-items.tsv`): the ones a
+/// question names (today, yesterday, a named day, this and last week, this and last month, a named month, this
+/// and last year, a range, "so far"), and the period before each, for "against the last ...".
+const IX_PERIODS: [&str; 18] = [
+    "today",
+    "yesterday",
+    "d2026_11_03",
+    "d2026_10_14",
+    "d2026_10_13",
+    "week",
+    "last_week",
+    "last_week2",
+    "month",
+    "last_month",
+    "m2026_09",
+    "m2026_08",
+    "year",
+    "last_year",
+    "last_year2",
+    "r2026_10_01_2026_10_15",
+    "r2026_09_16_2026_09_30",
+    "up_to_now",
+];
+
+/// The period before one of the item axis.
+fn ix_prev(period: &str) -> Option<&'static str> {
+    Some(match period {
+        "today" => "yesterday",
+        "yesterday" => "d2026_11_03",
+        "d2026_10_14" => "d2026_10_13",
+        "week" => "last_week",
+        "last_week" => "last_week2",
+        "month" => "last_month",
+        "last_month" => "m2026_09",
+        "m2026_09" => "m2026_08",
+        "year" => "last_year",
+        "last_year" => "last_year2",
+        "r2026_10_01_2026_10_15" => "r2026_09_16_2026_09_30",
+        _ => return None,
+    })
+}
+
+/// The money and quantities of view A for one item (or one group, or all) in one period.
+#[derive(Clone, Copy, Default)]
+struct IxRow {
+    qty: i64,
+    gross: i64,
+    seller: i64,
+    buyer: i64,
+    laga: i64,
+    total: i64,
+}
+
+/// The item axis (Umar, 06-11-2026): for every item, the two groups and all items, in every period of
+/// [`IX_PERIODS`], from the screens (view A, B and C) and the books (SQL), never from the assistant's tools:
+/// `ix.<period>.<unit>.{gross,qty,comm_seller,comm_buyer,laga,comm_total,avg_rate,vs_gross,vs_qty}`, and for an
+/// item `{rank,last_rate,buyers_n,sellers_n,top_buyer,top_seller}`; for Banana and Potato with Faisal as the buyer
+/// `ix.<period>.<item>.faisal.*`; `ix.<period>.<unit>.{months,best_month,best_month_gross}` for a year, last year
+/// and so far; `ix.stock.<unit>`. A unit is an item (its English name in lower case), `fruit`, `vegetable` or
+/// `all`. An item with no sale in a period has the zero facts. The zero facts of `a.<period>.<item>` (gross, qty
+/// and total_comm) are written for every item too.
+fn item_axis_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::{self, params};
+    let db = y.w.env.ctx.db();
+    let items: Vec<(&'static str, i64, bool)> = y
+        .items
+        .iter()
+        .map(|it| {
+            let group: String = db
+                .read(|c| {
+                    c.query_row(
+                        "SELECT item_group FROM items WHERE id = ?1",
+                        params![it.id],
+                        |r| r.get(0),
+                    )
+                })
+                .unwrap_or_else(|e: rusqlite::Error| panic!("group of {}: {e}", it.key));
+            (item_name(it.key), it.id, group == "vegetable")
+        })
+        .collect();
+    let faisal = y.buyers.iter().find(|b| b.key == "faisal").map(|b| b.id);
+    let money = |cells: &[Cell], at: Option<usize>| -> i64 {
+        at.and_then(|i| cells.get(i))
+            .and_then(rupees_of)
+            .unwrap_or(0)
+    };
+    let number = |cells: &[Cell], at: Option<usize>| -> i64 {
+        match at.and_then(|i| cells.get(i)) {
+            Some(Cell::Number { value }) => *value,
+            _ => 0,
+        }
+    };
+    // View A for a period (with a buyer if given): the row of each item, and the total.
+    let view_a = |period: &str, buyer: Option<i64>| -> (BTreeMap<String, IxRow>, IxRow) {
+        let mut f = afilters(period);
+        f.buyer = buyer.map(|b| PartyFilter {
+            account_id: b,
+            person_key: None,
+        });
+        let page = run_a(y, AnalyticsView::A, f);
+        let at = |key: &str| page.columns.iter().position(|c| c.key == key);
+        let (qty, gross, seller, buyer_c, laga, total) = (
+            at("qty"),
+            at("gross"),
+            at("seller_comm"),
+            at("buyer_comm"),
+            at("laga"),
+            at("total_comm"),
+        );
+        let row_of = |cells: &[Cell]| IxRow {
+            qty: number(cells, qty),
+            gross: money(cells, gross),
+            seller: money(cells, seller),
+            buyer: money(cells, buyer_c),
+            laga: money(cells, laga),
+            total: money(cells, total),
+        };
+        let rows = page
+            .rows
+            .iter()
+            .filter_map(|r| row_slug(&r.cells).map(|(slug, _)| (slug, row_of(&r.cells))))
+            .collect();
+        (rows, row_of(&page.totals))
+    };
+    let avg = |r: &IxRow| -> i64 {
+        if r.qty <= 0 {
+            0
+        } else {
+            (r.gross * 2 + r.qty) / (r.qty * 2)
+        }
+    };
+    let put_row = |o: &mut Oracle, prefix: &str, r: &IxRow| {
+        o.put(format!("{prefix}.gross"), r.gross.to_string());
+        o.put(format!("{prefix}.qty"), r.qty.to_string());
+        o.put(format!("{prefix}.comm_seller"), r.seller.to_string());
+        o.put(format!("{prefix}.comm_buyer"), r.buyer.to_string());
+        o.put(format!("{prefix}.laga"), r.laga.to_string());
+        o.put(format!("{prefix}.comm_total"), r.total.to_string());
+        o.put(format!("{prefix}.avg_rate"), avg(r).to_string());
+    };
+    // Every period once: the rows of each unit.
+    let mut table: BTreeMap<&str, BTreeMap<String, IxRow>> = BTreeMap::new();
+    for p in IX_PERIODS {
+        let (rows, total) = view_a(p, None);
+        let mut units: BTreeMap<String, IxRow> = BTreeMap::new();
+        for (name, _, veg) in &items {
+            let r = rows.get(*name).copied().unwrap_or_default();
+            units.insert((*name).to_owned(), r);
+            let group = units
+                .entry(if *veg { "vegetable" } else { "fruit" }.to_owned())
+                .or_default();
+            group.qty += r.qty;
+            group.gross += r.gross;
+            group.seller += r.seller;
+            group.buyer += r.buyer;
+            group.laga += r.laga;
+            group.total += r.total;
+        }
+        units.insert("all".to_owned(), total);
+        table.insert(p, units);
+    }
+    for p in IX_PERIODS {
+        let units = &table[p];
+        // The rank of each item by its gross: 0 when it sold nothing.
+        let mut order: Vec<(&str, i64)> = items
+            .iter()
+            .map(|(n, _, _)| (*n, units[*n].gross))
+            .filter(|(_, g)| *g > 0)
+            .collect();
+        order.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+        let (from, to) = period_dates(p);
+        for (unit, row) in units {
+            put_row(o, &format!("ix.{p}.{unit}"), row);
+            if let Some(prev) = ix_prev(p) {
+                let before = table[prev][unit];
+                o.put(
+                    format!("ix.{p}.{unit}.vs_gross"),
+                    difference(row.gross, before.gross),
+                );
+                o.put(
+                    format!("ix.{p}.{unit}.vs_qty"),
+                    difference(row.qty, before.qty),
+                );
+            }
+        }
+        // The item with the most sales of a group, and of all the items (by gross; the first by name on a tie).
+        let capital = |name: &str| -> String {
+            let mut chars = name.chars();
+            chars
+                .next()
+                .map(|c| c.to_uppercase().collect::<String>() + chars.as_str())
+                .unwrap_or_default()
+        };
+        for (unit, only) in [
+            ("fruit", Some(false)),
+            ("vegetable", Some(true)),
+            ("all", None),
+        ] {
+            let top = order.iter().find(|(n, _)| {
+                only.is_none_or(|veg| {
+                    items
+                        .iter()
+                        .any(|(name, _, is_veg)| name == n && *is_veg == veg)
+                })
+            });
+            if let Some((name, _)) = top {
+                o.put(format!("ix.{p}.{unit}.top_item"), capital(name));
+            }
+        }
+        for (name, id, _) in &items {
+            let rank = order
+                .iter()
+                .position(|(n, _)| n == name)
+                .map_or(0, |i| i + 1);
+            o.put(format!("ix.{p}.{name}.rank"), rank.to_string());
+            // The last line of the item in the period: its rate.
+            let last: Option<i64> = db
+                .read(|c| {
+                    c.query_row(
+                        "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                         WHERE s.is_active = 1 AND l.item_id = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
+                         ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                        params![
+                            id,
+                            from.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default(),
+                            to.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default()
+                        ],
+                        |r| r.get(0),
+                    )
+                })
+                .ok();
+            o.put(
+                format!("ix.{p}.{name}.last_rate"),
+                (last.unwrap_or(0) / 100).to_string(),
+            );
+            // The buyers and the sellers of the item in the period (views C and B with the item).
+            let with_item = |view: AnalyticsView| {
+                let mut f = afilters(p);
+                f.item_id = Some(*id);
+                run_a(y, view, f)
+            };
+            for (view, key, count, value_col, top) in [
+                (
+                    AnalyticsView::C,
+                    "buyer",
+                    "buyers_n",
+                    "purchase_value",
+                    "top_buyer",
+                ),
+                (
+                    AnalyticsView::B,
+                    "seller",
+                    "sellers_n",
+                    "gross",
+                    "top_seller",
+                ),
+            ] {
+                let page = with_item(view);
+                let value_at = page.columns.iter().position(|c| c.key == value_col);
+                let _ = key;
+                let mut best: Option<(i64, String)> = None;
+                for r in &page.rows {
+                    let v = money(&r.cells, value_at);
+                    if let Some((_, name)) = r.cells.iter().find_map(name_of).map(|n| (v, n))
+                        && best.as_ref().is_none_or(|(b, _)| v > *b)
+                    {
+                        best = Some((v, name));
+                    }
+                }
+                o.put(
+                    format!("ix.{p}.{name}.{count}"),
+                    page.total_count.to_string(),
+                );
+                if let Some((_, who)) = best {
+                    o.put(format!("ix.{p}.{name}.{top}"), who);
+                }
+            }
+        }
+        // The buyers and the sellers of a group and of all the items, by SQL on the lines (a buyer is an account,
+        // or one person of a پختہ کھاتہ account, as the views count them).
+        let day = |d: Option<NaiveDate>| {
+            d.map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or_default()
+        };
+        for (unit, filter) in [
+            ("fruit", "AND i.item_group = 'fruit'"),
+            ("vegetable", "AND i.item_group = 'vegetable'"),
+            ("all", ""),
+        ] {
+            for (count_key, top_key, who, value) in [
+                (
+                    "buyers_n",
+                    "top_buyer",
+                    "COALESCE(NULLIF(s.pukhta_name_en, ''), a.name_en)",
+                    "s.buyer_value_paisa",
+                ),
+                (
+                    "sellers_n",
+                    "top_seller",
+                    "COALESCE(NULLIF(l.pukhta_name_en, ''), a.name_en)",
+                    "s.seller_amount_paisa",
+                ),
+            ] {
+                let party = if count_key == "buyers_n" {
+                    "s.buyer_account_id"
+                } else {
+                    "l.seller_account_id"
+                };
+                let person = if count_key == "buyers_n" {
+                    "s.pukhta_person_key"
+                } else {
+                    "l.pukhta_person_key"
+                };
+                let sql = format!(
+                    "SELECT {who}, SUM({value}) AS v FROM bikri_sales s \
+                     JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
+                     JOIN accounts a ON a.id = {party} \
+                     WHERE s.is_active = 1 AND s.entry_date >= ?1 AND s.entry_date <= ?2 {filter} \
+                     GROUP BY {party}, COALESCE({person}, '') ORDER BY v DESC, a.id"
+                );
+                let rows: Vec<(String, i64)> = db
+                    .read(|c| {
+                        let mut st = c.prepare(&sql)?;
+                        let rows = st.query_map(params![day(from), day(to)], |r| {
+                            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+                        })?;
+                        rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+                    })
+                    .unwrap_or_default();
+                o.put(format!("ix.{p}.{unit}.{count_key}"), rows.len().to_string());
+                if let Some((name, _)) = rows.first() {
+                    o.put(format!("ix.{p}.{unit}.{top_key}"), name.clone());
+                }
+            }
+        }
+        // Banana and Potato for one buyer (Faisal).
+        if let Some(f) = faisal {
+            let (rows, _) = view_a(p, Some(f));
+            let before = ix_prev(p).map(|prev| view_a(prev, Some(f)).0);
+            for name in ["banana", "potato"] {
+                let r = rows.get(name).copied().unwrap_or_default();
+                put_row(o, &format!("ix.{p}.{name}.faisal"), &r);
+                // The value with the buyer commission and the laga added (C5), the other true figure of
+                // "how much did he buy".
+                o.put(
+                    format!("ix.{p}.{name}.faisal.with_charges"),
+                    (r.gross + r.buyer + r.laga).to_string(),
+                );
+                // The sellers of that item to him (view B with the item and the buyer).
+                if let Some((_, id, _)) = items.iter().find(|(n, _, _)| n == &name) {
+                    let mut filters = afilters(p);
+                    filters.item_id = Some(*id);
+                    filters.buyer = Some(PartyFilter {
+                        account_id: f,
+                        person_key: None,
+                    });
+                    let page = run_a(y, AnalyticsView::B, filters);
+                    let value_at = page.columns.iter().position(|c| c.key == "gross");
+                    o.put(
+                        format!("ix.{p}.{name}.faisal.sellers_n"),
+                        page.total_count.to_string(),
+                    );
+                    let mut best: Option<(i64, String)> = None;
+                    for row in &page.rows {
+                        let v = money(&row.cells, value_at);
+                        if let Some(who) = row.cells.iter().find_map(name_of)
+                            && best.as_ref().is_none_or(|(b, _)| v > *b)
+                        {
+                            best = Some((v, who));
+                        }
+                    }
+                    if let Some((_, who)) = best {
+                        o.put(format!("ix.{p}.{name}.faisal.top_seller"), who);
+                    }
+                    // The last rate he paid for the item in the period (R13 with the item, "akram ko kela aakhri kis
+                    // rate par diya").
+                    let last: Option<i64> = db
+                        .read(|c| {
+                            c.query_row(
+                                "SELECT s.buyer_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                                 WHERE s.is_active = 1 AND s.buyer_account_id = ?1 AND l.item_id = ?2 \
+                                 AND s.entry_date >= ?3 AND s.entry_date <= ?4 \
+                                 ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                                params![f, id, day(from), day(to)],
+                                |r| r.get(0),
+                            )
+                        })
+                        .ok();
+                    if let Some(rate) = last {
+                        o.put(
+                            format!("ix.{p}.{name}.faisal.last_rate"),
+                            (rate / 100).to_string(),
+                        );
+                    }
+                }
+                if let Some(before) = &before {
+                    let b = before.get(name).copied().unwrap_or_default();
+                    o.put(
+                        format!("ix.{p}.{name}.faisal.vs_gross"),
+                        difference(r.gross, b.gross),
+                    );
+                }
+            }
+        }
+    }
+    // Months with sales and the best month, for a year, last year and so far, by SQL on the lines.
+    for p in ["year", "last_year", "up_to_now"] {
+        let (from, to) = period_dates(p);
+        let (from, to) = (
+            from.map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or_default(),
+            to.map(|d| d.format("%Y-%m-%d").to_string())
+                .unwrap_or_default(),
+        );
+        let mut units: Vec<(String, String)> = items
+            .iter()
+            .map(|(n, id, _)| ((*n).to_owned(), format!("AND l.item_id = {id}")))
+            .collect();
+        units.push(("fruit".into(), "AND i.item_group = 'fruit'".into()));
+        units.push(("vegetable".into(), "AND i.item_group = 'vegetable'".into()));
+        units.push(("all".into(), String::new()));
+        for (unit, filter) in units {
+            let sql = format!(
+                "SELECT substr(s.entry_date, 1, 7) AS m, SUM(s.seller_amount_paisa) \
+                 FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
+                 WHERE s.is_active = 1 AND s.entry_date >= ?1 AND s.entry_date <= ?2 {filter} \
+                 GROUP BY m ORDER BY SUM(s.seller_amount_paisa) DESC, m LIMIT 1"
+            );
+            let best: Option<(String, i64)> = db
+                .read(|c| c.query_row(&sql, params![from, to], |r| Ok((r.get(0)?, r.get(1)?))))
+                .ok();
+            let count_sql = format!(
+                "SELECT COUNT(DISTINCT substr(s.entry_date, 1, 7)) \
+                 FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
+                 WHERE s.is_active = 1 AND s.entry_date >= ?1 AND s.entry_date <= ?2 {filter}"
+            );
+            let months: i64 = db
+                .read(|c| c.query_row(&count_sql, params![from, to], |r| r.get(0)))
+                .unwrap_or(0);
+            o.put(format!("ix.{p}.{unit}.months"), months.to_string());
+            if let Some((month, paisa)) = best {
+                o.put(format!("ix.{p}.{unit}.best_month"), month);
+                o.put(
+                    format!("ix.{p}.{unit}.best_month_gross"),
+                    (paisa / 100).to_string(),
+                );
+            }
+        }
+    }
+    // What is left: R10 as the facts of `stock.*` hold it.
+    let (mut fruit, mut veg) = (0i64, 0i64);
+    for (name, _, is_veg) in &items {
+        let qty = o
+            .facts
+            .get(&format!("stock.{name}.qty"))
+            .and_then(|v| amount_of(v))
+            .unwrap_or(0);
+        o.put(format!("ix.stock.{name}"), qty.to_string());
+        if *is_veg {
+            veg += qty;
+        } else {
+            fruit += qty;
+        }
+    }
+    o.put("ix.stock.fruit".into(), fruit.to_string());
+    o.put("ix.stock.vegetable".into(), veg.to_string());
+    o.put("ix.stock.all".into(), (fruit + veg).to_string());
+    // The zero facts of view A: an item with no sale in a period has gross, qty and commission 0 (so that
+    // "0 sold" can be checked).
+    for p in PERIODS {
+        for (name, _, _) in &items {
+            for column in ["gross", "qty", "total_comm"] {
+                o.facts
+                    .entry(format!("a.{p}.{name}.{column}"))
+                    .or_insert_with(|| "0".to_owned());
+            }
+        }
+    }
+}
+
+/// The sale lines by quality (plan 58 T4, PRD FR-12.42): for every period of [`IX_PERIODS`], every item and all the
+/// items, and each quality (`first`, `second`, `third`), by SQL on the lines of the books (a quality is on the line,
+/// and no screen groups by it), never from the assistant's tools:
+/// `ixq.<period>.<unit>.<quality>.{lines,qty,gross,comm_seller,comm_buyer,laga,comm_total}` always (0 when no line),
+/// and `{avg_rate,last_rate,buyers_n,top_buyer,sellers_n,top_seller}` when there is a line. A unit is an item (its
+/// English name in lower case) or `all`. The quality changes no figure: every other fact of the oracle is the
+/// same with or without it (the offline test `a_quality_changes_no_amount`).
+fn quality_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::{self, params};
+    let db = y.w.env.ctx.db();
+    let day = |d: Option<NaiveDate>| {
+        d.map(|d| d.format("%Y-%m-%d").to_string())
+            .unwrap_or_default()
+    };
+    let units: Vec<(String, Option<i64>)> = y
+        .items
+        .iter()
+        .map(|it| (item_name(it.key).to_owned(), Some(it.id)))
+        .chain(std::iter::once(("all".to_owned(), None)))
+        .collect();
+    let rupees = |paisa: i64| (paisa / 100).to_string();
+    for p in IX_PERIODS {
+        let (from, to) = period_dates(p);
+        let (from_text, to_text) = (day(from), day(to));
+        for (unit, item) in &units {
+            for quality in ["first", "second", "third"] {
+                let prefix = format!("ixq.{p}.{unit}.{quality}");
+                let args = params![quality, from_text, to_text, item];
+                let (lines, qty, gross, seller, buyer, laga): (i64, i64, i64, i64, i64, i64) = db
+                    .read(|c| {
+                        c.query_row(
+                            "SELECT COUNT(*), COALESCE(SUM(s.qty), 0), COALESCE(SUM(s.seller_amount_paisa), 0), \
+                             COALESCE(SUM(s.seller_comm_paisa), 0), COALESCE(SUM(s.buyer_comm_paisa), 0), \
+                             COALESCE(SUM(s.laga_paisa), 0) \
+                             FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                             WHERE s.is_active = 1 AND s.grade = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
+                             AND (?4 IS NULL OR l.item_id = ?4)",
+                            args,
+                            |r| {
+                                Ok((
+                                    r.get(0)?,
+                                    r.get(1)?,
+                                    r.get(2)?,
+                                    r.get(3)?,
+                                    r.get(4)?,
+                                    r.get(5)?,
+                                ))
+                            },
+                        )
+                    })
+                    .unwrap_or_else(|e: rusqlite::Error| panic!("quality sums {prefix}: {e}"));
+                o.put(format!("{prefix}.lines"), lines.to_string());
+                o.put(format!("{prefix}.qty"), qty.to_string());
+                o.put(format!("{prefix}.gross"), rupees(gross));
+                o.put(format!("{prefix}.comm_seller"), rupees(seller));
+                o.put(format!("{prefix}.comm_buyer"), rupees(buyer));
+                o.put(format!("{prefix}.laga"), rupees(laga));
+                o.put(
+                    format!("{prefix}.comm_total"),
+                    rupees(seller + buyer + laga),
+                );
+                if lines == 0 {
+                    continue;
+                }
+                if qty > 0 {
+                    let rate = (gross / 100 * 2 + qty) / (qty * 2);
+                    o.put(format!("{prefix}.avg_rate"), rate.to_string());
+                }
+                let last: Option<i64> = db
+                    .read(|c| {
+                        c.query_row(
+                            "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                             WHERE s.is_active = 1 AND s.grade = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
+                             AND (?4 IS NULL OR l.item_id = ?4) ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                            params![quality, from_text, to_text, item],
+                            |r| r.get(0),
+                        )
+                    })
+                    .ok();
+                if let Some(rate) = last {
+                    o.put(format!("{prefix}.last_rate"), (rate / 100).to_string());
+                }
+                // The buyers and the sellers of those lines (a buyer is an account, or one person of a پختہ کھاتہ
+                // account, as the views count them).
+                for (count_key, top_key, who, value, party, person) in [
+                    (
+                        "buyers_n",
+                        "top_buyer",
+                        "COALESCE(NULLIF(s.pukhta_name_en, ''), a.name_en)",
+                        "s.buyer_value_paisa",
+                        "s.buyer_account_id",
+                        "s.pukhta_person_key",
+                    ),
+                    (
+                        "sellers_n",
+                        "top_seller",
+                        "COALESCE(NULLIF(l.pukhta_name_en, ''), a.name_en)",
+                        "s.seller_amount_paisa",
+                        "l.seller_account_id",
+                        "l.pukhta_person_key",
+                    ),
+                ] {
+                    let sql = format!(
+                        "SELECT {who}, SUM({value}) AS v FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                         JOIN accounts a ON a.id = {party} \
+                         WHERE s.is_active = 1 AND s.grade = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
+                         AND (?4 IS NULL OR l.item_id = ?4) \
+                         GROUP BY {party}, COALESCE({person}, '') ORDER BY v DESC, a.id"
+                    );
+                    let rows: Vec<(String, i64)> = db
+                        .read(|c| {
+                            let mut st = c.prepare(&sql)?;
+                            let rows = st
+                                .query_map(params![quality, from_text, to_text, item], |r| {
+                                    Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+                                })?;
+                            rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+                        })
+                        .unwrap_or_default();
+                    o.put(format!("{prefix}.{count_key}"), rows.len().to_string());
+                    if let Some((name, _)) = rows.first() {
+                        o.put(format!("{prefix}.{top_key}"), name.clone());
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The print data of R5 "Print All" (every buyer's slip of a day), and the seller bill (R1) and the buyer slips (R5)
+/// of one بکری, asked of the app's own print code in both print languages (plan 58 T4, PRD FR-12.42): a line with a
+/// quality names it after the item, and a day or a بکری with no quality prints exactly as before. Returns what is
+/// wrong, empty when all is right.
+pub fn quality_print_problems(y: &Year) -> Vec<String> {
+    use mandi_reports::reports::ReportPrintInput;
+    use mandi_services::core::auth::Language;
+    use mandi_services::db::rusqlite::params;
+    let db = y.w.env.ctx.db();
+    let today = ddmmyyyy(date(TODAY));
+    let mut problems = Vec::new();
+    // A بکری of today with qualities, and an old one with none.
+    let one = |sql: &str| -> Option<i64> {
+        db.read(|c| c.query_row(sql, params![], |r| r.get::<_, i64>(0)))
+            .ok()
+    };
+    let graded = one(
+        "SELECT bikri_id FROM bikri_sales WHERE is_active = 1 AND grade IS NOT NULL \
+         ORDER BY entry_date DESC, bikri_id DESC LIMIT 1",
+    );
+    let plain = one(
+        "SELECT bikri_id FROM bikri_sales WHERE is_active = 1 GROUP BY bikri_id \
+         HAVING MAX(grade IS NOT NULL) = 0 ORDER BY bikri_id LIMIT 1",
+    );
+    let (Some(graded), Some(plain)) = (graded, plain) else {
+        return vec!["the books have no بکری with a quality, or none without".to_owned()];
+    };
+    for language in [Language::En, Language::Ur] {
+        // The print data carries the quality as its key (`"grade":"first"`) or as the Fluent id of its word
+        // (`report-grade-first`); the template writes the word after the item in the print language.
+        let has_word = |text: &str| {
+            ["first", "second", "third"]
+                .iter()
+                .any(|g| text.contains(&format!("\"grade\":\"{g}\"")))
+                || text.contains("report-grade-")
+        };
+        let print = |id: ReportId, filters: ReportFilters| ReportPrintInput {
+            id,
+            filters,
+            language,
+            paper: None,
+            sort: None,
+            group_by_month: false,
+        };
+        let tag = format!("{language:?}");
+        // R5 on a day with qualities: some slip line names one. On a day with none: no slip does.
+        let day_of = |from: &str| ReportFilters {
+            from: from.to_owned(),
+            to: from.to_owned(),
+            ..ReportFilters::default()
+        };
+        match reports::buyer_bills_print_data(db, &print(ReportId::R5, day_of(&today))) {
+            Ok(data) => {
+                let text = serde_json::to_string(&data).unwrap_or_default();
+                if data.slips.is_empty() {
+                    problems.push(format!("R5 {tag} today: no slip, so nothing to check"));
+                } else if !has_word(&text) {
+                    problems.push(format!("R5 {tag} today: no slip line names a quality"));
+                }
+            }
+            Err(e) => problems.push(format!("R5 {tag} today: {e:?}")),
+        }
+        let old_day = ddmmyyyy(date((2026, 10, 14)));
+        match reports::buyer_bills_print_data(db, &print(ReportId::R5, day_of(&old_day))) {
+            Ok(data) => {
+                let text = serde_json::to_string(&data).unwrap_or_default();
+                if has_word(&text) {
+                    problems.push(format!(
+                        "R5 {tag} 14-10-2026: a quality word on a day with none"
+                    ));
+                }
+            }
+            Err(e) => problems.push(format!("R5 {tag} 14-10-2026: {e:?}")),
+        }
+        // The seller bill (R1) and the buyer slips (R5) of one بکری, from the app's print code: a بکری with a
+        // quality names it in the print language (the key `grade` and its word in `detail`); one with none has
+        // neither.
+        let words: [&str; 3] = if language == Language::En {
+            ["First", "Second", "Third"]
+        } else {
+            ["اول", "دوم", "سوم"]
+        };
+        for (bikri, wants_word) in [(graded, true), (plain, false)] {
+            for (doc, name) in [
+                (
+                    mandi_services::core::printing::PrintDoc::SellerBill,
+                    "R1 seller bill",
+                ),
+                (
+                    mandi_services::core::printing::PrintDoc::BuyerSlips,
+                    "R5 buyer slips",
+                ),
+            ] {
+                let input = mandi_reports::print::BikriPrintDataInput {
+                    bikri_id: bikri,
+                    doc,
+                    language,
+                    only_buyer_id: None,
+                };
+                match mandi_reports::print::bikri_print_data(db, &input) {
+                    Ok(data) => {
+                        let text = serde_json::to_string(&data).unwrap_or_default();
+                        let key = text.contains("\"grade\":\"");
+                        let word = words.iter().any(|w| text.contains(w));
+                        if wants_word && !(key && word) {
+                            // What the first graded line is written as, for whoever fixes it.
+                            let sample = serde_json::to_value(&data)
+                                .ok()
+                                .and_then(|v| {
+                                    v["pages"].as_array().and_then(|pages| {
+                                        pages.iter().find_map(|page| {
+                                            page["lines"].as_array().and_then(|lines| {
+                                                lines.iter().find_map(|line| {
+                                                    line.get("grade")?;
+                                                    line["detail"].as_str().map(str::to_owned)
+                                                })
+                                            })
+                                        })
+                                    })
+                                })
+                                .unwrap_or_default();
+                            problems.push(format!(
+                                "{name} {tag} bikri {bikri}: the quality is not on the print (key {key}, word {word}), a graded line reads {sample:?}"
+                            ));
+                        }
+                        if !wants_word && (key || word) {
+                            problems.push(format!(
+                                "{name} {tag} bikri {bikri}: a quality on a بکری with none (key {key}, word {word})"
+                            ));
+                        }
+                    }
+                    Err(e) => problems.push(format!("{name} {tag} bikri {bikri}: {e:?}")),
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// The period axis of the money and party subjects (lead, 06-11-2026): receipts (R23), payments (R25), the cash book
+/// (R12), the shop and personal expenses by head (R29), the partners (R30, view F), fruit taken (R37, view K), gardens
+/// and trips (R36, R33, views I and J), one buyer, one seller and one collector, capital in and out, and the balance
+/// lists as of the last day of the period (R20, R24, R26, R32), for every period of [`IX_PERIODS`], each from the
+/// screen the app has for it, never the assistant's tools:
+///
+/// - `mx.<period>.<r12|r23|r25|r37|r33|r36>.*` and `mx.<period>.<r29|r30>.<row>.*`: the totals, the count and the rows;
+/// - `mx.<period>.<f|i|j|k>.<row>.*`: the analytics views;
+/// - `mx.<period>.r23.<buyer>.*`, `mx.<period>.c.<buyer>.*` (what a buyer paid and bought), `mx.<period>.r25.<seller>.*`,
+///   `mx.<period>.b.<seller>.*` (what a seller was paid and sold), `mx.<period>.r23.rasheed.*` (a collector's receipts);
+/// - `mx.<period>.r23.top_party`, `.top_amount` (the biggest receipt), the same for `r25`, `mx.<period>.r29.top_head`,
+///   `mx.<period>.r30.top_partner`;
+/// - `mx.<period>.capital.{in,out}` and `mx.<period>.capital.b.{in,out}`: partner capital invested and taken back (SQL on
+///   the vouchers);
+/// - `mx.asof.<period>.<r20|r24|r26|r32>.*` and `.top_party`: the balance lists as of the last day of the period;
+/// - `mx.<period>.vs.<name>`: a figure against the same figure of the period before (`1200 up`, `300 down`, `0`).
+fn money_axis_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::params;
+    let db = y.w.env.ctx.db();
+    let collector: Option<i64> = db
+        .read(|c| {
+            c.query_row("SELECT id FROM staff WHERE name_en = 'Rasheed'", [], |r| {
+                r.get(0)
+            })
+        })
+        .ok();
+    let party_of = |id: i64| {
+        Some(PartyFilter {
+            account_id: id,
+            person_key: None,
+        })
+    };
+    let buyers: Vec<(String, i64)> = ["akram_toll_tax", "faisal"]
+        .iter()
+        .filter_map(|k| {
+            y.buyers
+                .iter()
+                .find(|b| b.key == *k)
+                .map(|b| ((*k).to_owned(), b.id))
+        })
+        .collect();
+    let sellers: Vec<(String, i64)> = ["rahim", "karim"]
+        .iter()
+        .filter_map(|k| {
+            y.sellers
+                .iter()
+                .find(|s| s.key == *k)
+                .map(|s| ((*k).to_owned(), s.id))
+        })
+        .collect();
+    let big = |id: ReportId, filters: ReportFilters| -> Option<ReportPage> {
+        reports::run(
+            db,
+            &ReportRunInput {
+                id,
+                filters,
+                offset: 0,
+                limit: 1_000,
+                sort: None,
+                group_by_month: false,
+            },
+        )
+        .ok()
+    };
+    let top_of = |page: &ReportPage, col: &str| -> Option<(String, i64)> {
+        let at = page.columns.iter().position(|c| c.key == col)?;
+        page.rows
+            .iter()
+            .filter_map(|r| {
+                let name = r.cells.iter().find_map(name_of)?;
+                let v = rupees_of(r.cells.get(at)?)?;
+                Some((name, v))
+            })
+            .filter(|(_, v)| *v > 0)
+            .max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0)))
+    };
+    let day = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    for p in IX_PERIODS {
+        let (from, to) = period_dates(p);
+        // The registers and lists of the period.
+        for (id, name, rows) in [
+            (ReportId::R12, "r12", false),
+            (ReportId::R23, "r23", false),
+            (ReportId::R25, "r25", false),
+            (ReportId::R29, "r29", true),
+            (ReportId::R30, "r30", true),
+            (ReportId::R37, "r37", false),
+            (ReportId::R33, "r33", false),
+            (ReportId::R36, "r36", false),
+        ] {
+            let Some(page) = big(id, rfilters(p)) else {
+                continue;
+            };
+            dump_report_rows(o, &format!("mx.{p}.{name}"), &page, rows);
+            let top = match id {
+                ReportId::R23 | ReportId::R25 => top_of(&page, "amount"),
+                ReportId::R29 => top_of(&page, "expense"),
+                ReportId::R30 => top_of(&page, "profit_share"),
+                _ => None,
+            };
+            if let Some((who, amount)) = top {
+                match id {
+                    ReportId::R29 => o.put(format!("mx.{p}.r29.top_head"), who),
+                    ReportId::R30 => o.put(format!("mx.{p}.r30.top_partner"), who),
+                    _ => {
+                        o.put(format!("mx.{p}.{name}.top_party"), who);
+                        o.put(format!("mx.{p}.{name}.top_amount"), amount.to_string());
+                    }
+                }
+            }
+        }
+        for (view, name) in [
+            (AnalyticsView::F, "f"),
+            (AnalyticsView::I, "i"),
+            (AnalyticsView::J, "j"),
+            (AnalyticsView::K, "k"),
+        ] {
+            dump_analytics(o, &format!("mx.{p}.{name}"), &run_a(y, view, afilters(p)));
+        }
+        // One buyer: what he paid (R23) and what he bought (view C).
+        for (key, id) in &buyers {
+            let paid = ReportFilters {
+                party: party_of(*id),
+                ..rfilters(p)
+            };
+            if let Some(page) = big(ReportId::R23, paid) {
+                dump_report_rows(o, &format!("mx.{p}.r23.{key}"), &page, false);
+            }
+            let mut f = afilters(p);
+            f.buyer = party_of(*id);
+            let page = run_a(y, AnalyticsView::C, f);
+            dump_analytics(o, &format!("mx.{p}.c.{key}"), &page);
+            let at = |col: &str| page.columns.iter().position(|c| c.key == col);
+            let sum = |col: &str| {
+                at(col)
+                    .and_then(|i| page.totals.get(i))
+                    .and_then(rupees_of)
+                    .unwrap_or(0)
+            };
+            o.put(
+                format!("mx.{p}.c.{key}.bought_with_charges"),
+                (sum("purchase_value") + sum("buyer_comm") + sum("laga")).to_string(),
+            );
+        }
+        // One seller: what was paid to him (R25) and what he sold (view B).
+        for (key, id) in &sellers {
+            let paid = ReportFilters {
+                party: party_of(*id),
+                ..rfilters(p)
+            };
+            if let Some(page) = big(ReportId::R25, paid) {
+                dump_report_rows(o, &format!("mx.{p}.r25.{key}"), &page, false);
+            }
+            let mut f = afilters(p);
+            f.seller_id = Some(*id);
+            dump_analytics(
+                o,
+                &format!("mx.{p}.b.{key}"),
+                &run_a(y, AnalyticsView::B, f),
+            );
+        }
+        // One collector's receipts.
+        if let Some(id) = collector {
+            let f = ReportFilters {
+                collector_id: Some(id),
+                ..rfilters(p)
+            };
+            if let Some(page) = big(ReportId::R23, f) {
+                dump_report_rows(o, &format!("mx.{p}.r23.rasheed"), &page, false);
+            }
+        }
+        // Partner capital invested and taken back, in all and for partner B.
+        let (from_text, to_text) = (
+            from.map(day).unwrap_or_default(),
+            to.map(day).unwrap_or_default(),
+        );
+        let partner_b = y.partner_ids[1];
+        for (kind, label) in [("capital_in", "in"), ("capital_out", "out")] {
+            for (suffix, partner) in [("", None), (".b", Some(partner_b))] {
+                let total: i64 = db
+                    .read(|c| {
+                        c.query_row(
+                            "SELECT COALESCE(SUM(amount_paisa), 0) FROM vouchers \
+                             WHERE status = 'saved' AND type = ?1 AND entry_date >= ?2 AND entry_date <= ?3 \
+                             AND (?4 IS NULL OR partner_id = ?4)",
+                            params![kind, from_text, to_text, partner],
+                            |r| r.get(0),
+                        )
+                    })
+                    .unwrap_or(0);
+                o.put(
+                    format!("mx.{p}.capital{suffix}.{label}"),
+                    (total / 100).to_string(),
+                );
+            }
+        }
+        // The balance lists as of the last day of the period.
+        let end = to.unwrap_or_else(|| date(TODAY));
+        let as_of = ReportFilters {
+            as_of: ddmmyyyy(end),
+            ..ReportFilters::default()
+        };
+        for (id, name, col) in [
+            (ReportId::R20, "r20", "balance"),
+            (ReportId::R24, "r24", "payable"),
+            (ReportId::R26, "r26", "open"),
+            (ReportId::R32, "r32", "open"),
+        ] {
+            let Some(page) = big(id, as_of.clone()) else {
+                continue;
+            };
+            dump_report_rows(o, &format!("mx.asof.{p}.{name}"), &page, true);
+            if let Some((who, _)) = top_of(&page, col) {
+                o.put(format!("mx.asof.{p}.{name}.top_party"), who);
+            }
+        }
+    }
+    // Each figure against the same figure of the period before.
+    let mut figures: Vec<(String, String)> = vec![
+        ("receipts".into(), "r23.total.amount".into()),
+        ("payments".into(), "r25.total.amount".into()),
+        ("cash_in".into(), "r12.total.cash_in".into()),
+        ("cash_out".into(), "r12.total.cash_out".into()),
+        ("expense".into(), "r29.total.expense".into()),
+        ("taken".into(), "r29.total.taken".into()),
+        ("returned".into(), "r29.total.returned".into()),
+        ("fruit".into(), "r37.total.value".into()),
+        ("collected".into(), "r23.rasheed.total.amount".into()),
+        ("capital_in".into(), "capital.in".into()),
+        ("capital_out".into(), "capital.out".into()),
+        ("capital_b_in".into(), "capital.b.in".into()),
+        ("electricity".into(), "r29.electricity.expense".into()),
+        ("shop_rent".into(), "r29.shop_rent.expense".into()),
+        ("tea".into(), "r29.tea.expense".into()),
+        ("salaries".into(), "r29.salaries.expense".into()),
+        ("profit_a".into(), "r30.partner_a.profit_share".into()),
+        ("profit_b".into(), "r30.partner_b.profit_share".into()),
+        ("taken_a".into(), "r30.partner_a.taken".into()),
+    ];
+    for (key, _) in &buyers {
+        figures.push((format!("paid_{key}"), format!("r23.{key}.total.amount")));
+        figures.push((
+            format!("bought_{key}"),
+            format!("c.{key}.total.purchase_value"),
+        ));
+    }
+    for (key, _) in &sellers {
+        figures.push((format!("paid_to_{key}"), format!("r25.{key}.total.amount")));
+        figures.push((format!("sold_{key}"), format!("b.{key}.total.gross")));
+    }
+    for p in IX_PERIODS {
+        let Some(prev) = ix_prev(p) else { continue };
+        for (name, key) in &figures {
+            let now = o
+                .facts
+                .get(&format!("mx.{p}.{key}"))
+                .and_then(|v| amount_of(v));
+            let before = o
+                .facts
+                .get(&format!("mx.{prev}.{key}"))
+                .and_then(|v| amount_of(v));
+            if let (Some(a), Some(b)) = (now, before) {
+                o.put(format!("mx.{p}.vs.{name}"), difference(a, b));
+            }
+        }
+    }
+}
+
+/// The keys of a page's columns as text slices.
+fn as_strs(keys: &[String]) -> Vec<&str> {
+    keys.iter().map(String::as_str).collect()
+}
+
+/// A money column of a total row, by the column's key (0 when the screen has no such column).
+fn money_total(columns: &[&str], totals: &[Cell], key: &str) -> mandi_services::core::money::Paisa {
+    columns
+        .iter()
+        .position(|c| *c == key)
+        .and_then(|at| totals.get(at))
+        .and_then(|cell| match cell {
+            Cell::Money { paisa } => Some(*paisa),
+            _ => None,
+        })
+        .unwrap_or(mandi_services::core::money::Paisa::ZERO)
+}
+
+/// The series the estimate tool reads beyond view G's four columns (plan 55 Section 11.1, F1 to F3),
+/// each worked out from the screen it adds up to, one run of the screen for each calendar month, never
+/// from the tool's own queries:
+///
+/// - `est.commission_buyer`, `est.laga`: view A, its total row (buyer_comm, laga).
+/// - `est.receipts`: R23, its total row (amount).
+/// - `est.garden_sales`: view I, sales_our_shop + sales_other_shops.
+/// - `est.trip_sales`: view J, sales_money.
+/// - `est_head.<head>`: R29, the head's row (expense).
+/// - `est_partner.<a|b|c>.profit`: view G with the partner, the profit column.
+///
+/// The keys under each prefix are those of [`put_series_estimates`].
+fn screen_series_estimates(o: &mut Oracle, y: &Year) {
+    use mandi_services::core::money::Paisa;
+    use mandi_services::domain::forecast::YearMonth;
+    let today = date(TODAY);
+    let Some(current) = YearMonth::new(today.year(), today.month()) else {
+        return;
+    };
+    let months = months_before(current);
+    let mut buyer_comm = Vec::new();
+    let mut laga = Vec::new();
+    let mut receipts = Vec::new();
+    let mut garden = Vec::new();
+    let mut trip = Vec::new();
+    let mut heads: BTreeMap<String, BTreeMap<YearMonth, Paisa>> = BTreeMap::new();
+    for (month, from, to) in &months {
+        let (from, to) = (ddmmyyyy(*from), ddmmyyyy(*to));
+        let a = |view| {
+            let page = run_a(
+                y,
+                view,
+                AnalyticsFilters {
+                    from: from.clone(),
+                    to: to.clone(),
+                    ..AnalyticsFilters::default()
+                },
+            );
+            let keys: Vec<String> = page.columns.iter().map(|c| c.key.clone()).collect();
+            (keys, page.totals)
+        };
+        let (keys, totals) = a(AnalyticsView::A);
+        buyer_comm.push((*month, money_total(&as_strs(&keys), &totals, "buyer_comm")));
+        laga.push((*month, money_total(&as_strs(&keys), &totals, "laga")));
+        let (keys, totals) = a(AnalyticsView::I);
+        let keys = as_strs(&keys);
+        let ours = money_total(&keys, &totals, "sales_our_shop");
+        let other = money_total(&keys, &totals, "sales_other_shops");
+        garden.push((*month, ours.checked_add(other).unwrap_or(ours)));
+        let (keys, totals) = a(AnalyticsView::J);
+        trip.push((*month, money_total(&as_strs(&keys), &totals, "sales_money")));
+        let r = |id| {
+            try_r(
+                y,
+                id,
+                ReportFilters {
+                    from: from.clone(),
+                    to: to.clone(),
+                    ..ReportFilters::default()
+                },
+            )
+        };
+        if let Some(page) = r(ReportId::R23) {
+            let keys: Vec<&str> = page.columns.iter().map(|c| c.key.as_str()).collect();
+            receipts.push((*month, money_total(&keys, &page.totals, "amount")));
+        }
+        if let Some(page) = r(ReportId::R29) {
+            let at = page.columns.iter().position(|c| c.key == "expense");
+            for row in &page.rows {
+                let (Some((slug, _)), Some(at)) = (row_slug(&row.cells), at) else {
+                    continue;
+                };
+                if let Some(Cell::Money { paisa }) = row.cells.get(at) {
+                    heads.entry(slug).or_default().insert(*month, *paisa);
+                }
+            }
+        }
+    }
+    for (prefix, series) in [
+        ("est.commission_buyer", &buyer_comm),
+        ("est.laga", &laga),
+        ("est.receipts", &receipts),
+        ("est.garden_sales", &garden),
+        ("est.trip_sales", &trip),
+    ] {
+        put_series_estimates(o, prefix, &trimmed(series), current);
+    }
+    for (head, by_month) in &heads {
+        let series: Vec<(YearMonth, Paisa)> = months
+            .iter()
+            .map(|(m, _, _)| (*m, by_month.get(m).copied().unwrap_or(Paisa::ZERO)))
+            .collect();
+        put_series_estimates(o, &format!("est_head.{head}"), &trimmed(&series), current);
+    }
+    let last_full = today.with_day(1).unwrap_or(today) - Duration::days(1);
+    for (name, id) in ["a", "b", "c"].iter().zip(y.partner_ids) {
+        let mut f = afilters("all");
+        f.to = ddmmyyyy(last_full);
+        f.group_by = Some(analytics::AnalyticsGroupBy::Month);
+        f.partner_id = Some(id);
+        let page = run_a(y, AnalyticsView::G, f);
+        if let Some(at) = page.columns.iter().position(|c| c.key == "profit") {
+            put_series_estimates(
+                o,
+                &format!("est_partner.{name}.profit"),
+                &history_of(&page, at, current),
+                current,
+            );
+        }
+    }
 }

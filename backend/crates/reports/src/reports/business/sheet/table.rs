@@ -89,8 +89,19 @@ pub(super) fn table(
             .iter()
             .find(|m| m.account_id == account && m.person_key.as_deref() == key)
     };
+    // One collector: only the parties whose account names him (plan 55 §11.1).
+    let of_collector = typed
+        .collector_id
+        .map(|collector| collector_accounts(conn, collector))
+        .transpose()?;
     let mut items = Vec::new();
     for item in activities(conn, day, None, None)? {
+        if of_collector
+            .as_ref()
+            .is_some_and(|accounts| !accounts.contains(&item.account_id))
+        {
+            continue;
+        }
         let is_dead = dead_of(item.account_id, item.person_key.as_deref()).is_some();
         let has_entry = item.day_dr > Paisa::ZERO || item.day_cr > Paisa::ZERO;
         if item.worth_a_row()? && (!is_dead || has_entry) {

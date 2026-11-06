@@ -407,6 +407,67 @@ mod lot {
         assert_eq!(r(calc.lots[0].own.as_ref().unwrap().cost_paisa), 10_400);
     }
 
+    /// A kept line that an edit makes too big for its lot is refused (PRD FR-12.6) and takes nothing:
+    /// the stock reserved for it goes back for the lines after it (plan 57, money review). Lot 1
+    /// keeps a (15 / 7,800) and b (5 / 2,600) but its quantity is cut to 10: a is refused, b still
+    /// fits and keeps its cost. A new lot 2 then takes 15 نگ, possible only because a gave its 15 back.
+    #[test]
+    fn a_refused_kept_line_gives_its_stock_back_to_the_lines_after_it() {
+        let mut d = edit_draft("15", "5", "10");
+        d.lots
+            .push(with(own_lot(BANANA, "15"), vec![sale(AKRAM, "15", "600")]));
+        let calc = edit_calc(&d, purchase(BANANA, 20, 10_400));
+        assert!(has(
+            &calc.errors,
+            ErrorCode::ErrQtyExceedsLot,
+            "lots[0].sales[0].qty"
+        ));
+        assert!(
+            !has(
+                &calc.errors,
+                ErrorCode::ErrQtyExceedsLot,
+                "lots[1].sales[0].qty"
+            ),
+            "{:?}",
+            calc.errors
+        );
+        assert!(calc.lots[0].lines[0].calc.is_none(), "no figures");
+        assert_eq!(
+            r(line(&calc, 0, 1).cost_of_goods),
+            2_600,
+            "b keeps its cost"
+        );
+        // The new lot takes all that is left: 15 نگ, the 7,800 that a gave back.
+        assert_eq!(r(line(&calc, 1, 0).cost_of_goods), 7_800);
+        assert_eq!(calc.lots[0].sold_qty, 5);
+    }
+
+    /// A kept line with a mistake in it (a bad rate) had no stock reserved, so when it is also over
+    /// its lot and refused, nothing is given back (money review of plan 57, second finding). Only b's
+    /// 5 / 2,600 was reserved, so 15 نگ are left and a new lot of 16 is refused.
+    #[test]
+    fn a_refused_kept_line_with_a_mistake_gives_back_nothing_it_never_took() {
+        let mut d = edit_draft("15", "5", "10");
+        d.lots[0].sales[0].seller_rate = "abc".into();
+        d.lots
+            .push(with(own_lot(BANANA, "16"), vec![sale(AKRAM, "16", "600")]));
+        let calc = edit_calc(&d, purchase(BANANA, 20, 10_400));
+        assert!(has(
+            &calc.errors,
+            ErrorCode::ErrQtyExceedsLot,
+            "lots[0].sales[0].qty"
+        ));
+        assert!(
+            has(
+                &calc.errors,
+                ErrorCode::ErrQtyExceedsLot,
+                "lots[1].sales[0].qty"
+            ),
+            "the purchase has 15 نگ left, not 31: {:?}",
+            calc.errors
+        );
+    }
+
     /// A line sent twice with the same id is a mistake the edit reports; the domain must not call it
     /// an internal error (money review, finding 4). The second copy takes no stock again.
     #[test]

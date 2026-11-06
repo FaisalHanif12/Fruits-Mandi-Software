@@ -51,6 +51,7 @@ impl Harness {
         // are switched on by the tests of that step with `runtime.set_local(true)`.
         runtime.set_local(false);
         runtime.set_read_first(false);
+        runtime.set_instant(false);
         runtime.set_low_effort(false);
         runtime.keys().set(TEST_KEY).unwrap();
         assistant::set_config(

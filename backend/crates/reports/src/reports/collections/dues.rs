@@ -88,13 +88,15 @@ pub(crate) struct Ages {
     pub(crate) bands: [Paisa; 4],
 }
 
-/// The buyer accounts. Parameters: city, account.
+/// The buyer accounts. Parameters: city, account, collector (R22 only: the buyers he collects
+/// from, by the collector on the account, plan 55 §11.1).
 fn buyers_sql() -> String {
     format!(
         "SELECT a.id, a.is_pukhta_khata, a.city_id, a.collector_staff_id,
         a.phone1
     FROM accounts a JOIN account_controls k ON k.id = a.control_id
     WHERE k.code = '0304' AND (?1 IS NULL OR a.city_id = ?1) AND (?2 IS NULL OR a.id = ?2)
+        AND (?3 IS NULL OR a.collector_staff_id = ?3)
     ORDER BY {}",
         mandi_db::codes::order_by_code("a.code")
     )
@@ -413,15 +415,18 @@ fn balances_owing(conn: &Connection, typed: &Typed) -> Result<Vec<Buyer>, Report
     let accounts = {
         let mut statement = conn.prepare(&buyers_sql())?;
         statement
-            .query_map(params![typed.city_id, typed.party_id], |r| {
-                Ok(Account {
-                    id: r.get(0)?,
-                    pukhta: r.get::<_, i64>(1)? == 1,
-                    city_id: r.get(2)?,
-                    collector_id: r.get(3)?,
-                    phone: r.get(4)?,
-                })
-            })?
+            .query_map(
+                params![typed.city_id, typed.party_id, typed.collector_id],
+                |r| {
+                    Ok(Account {
+                        id: r.get(0)?,
+                        pukhta: r.get::<_, i64>(1)? == 1,
+                        city_id: r.get(2)?,
+                        collector_id: r.get(3)?,
+                        phone: r.get(4)?,
+                    })
+                },
+            )?
             .collect::<Result<Vec<_>, _>>()?
     };
     let account_ids: Vec<i64> = accounts.iter().map(|a| a.id).collect();

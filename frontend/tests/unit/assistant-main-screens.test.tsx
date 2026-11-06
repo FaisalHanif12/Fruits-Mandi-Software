@@ -49,11 +49,28 @@ describe('the table of main screens', () => {
   it('has the 19 main screens the backend names, and no entry screen', () => {
     const generated = readFileSync(path.join(SRC, 'bindings/EntryScreen.ts'), 'utf8');
     const union = [...generated.matchAll(/\|\s*'(\w+)'/g)].map((m) => m[1] as EntryScreen);
-    expect(union.length).toBe(30);
+    // 19 main screens and 21 entry screens: the ten of plan 55 Section 11.1 (a garden's and a trip's
+    // entries, a later sale, edit and cancel of a بکری) came after the first thirty.
+    expect(union.length).toBe(40);
     const main = union.filter(isMainScreen);
     expect(main.sort()).toEqual([...SCREENS].sort());
     expect(main).toHaveLength(19);
-    for (const entry of ['bikri', 'wasooli', 'kharcha', 'account'] as const) {
+    for (const entry of [
+      'bikri',
+      'wasooli',
+      'kharcha',
+      'account',
+      'garden_installment',
+      'garden_cost',
+      'garden_sale',
+      'garden_close',
+      'trip_purchase',
+      'trip_cost',
+      'trip_sale',
+      'bikri_later_sale',
+      'bikri_edit',
+      'bikri_cancel',
+    ] as const) {
       expect(isMainScreen(entry)).toBe(false);
     }
   });

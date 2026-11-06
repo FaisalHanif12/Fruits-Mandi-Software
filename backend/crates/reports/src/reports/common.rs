@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, Utc};
 use mandi_core::accounts::{Balance, BalanceSide};
+use mandi_core::bikri::SaleGrade;
 use mandi_core::dates::BusinessDate;
 use mandi_core::money::{MoneyError, Paisa};
 use mandi_core::text::phone_display;
@@ -35,6 +36,16 @@ pub(crate) fn today(now_utc: DateTime<Utc>) -> Result<BusinessDate, ReportsError
 /// `?,?,?` for a list of `count` parameters.
 pub(crate) fn placeholders(count: usize) -> String {
     vec!["?"; count].join(",")
+}
+
+/// The quality of a stored sale line (PRD FR-12.42): nothing, or one of the three words. Any other
+/// text in the column is a data error (the column has a CHECK, so it cannot happen).
+pub(crate) fn grade_of(text: Option<&str>) -> Result<Option<SaleGrade>, ReportsError> {
+    text.map(|t| {
+        SaleGrade::parse(t)
+            .ok_or_else(|| ReportsError::Data(format!("a sale line has the quality {t:?}")))
+    })
+    .transpose()
 }
 
 /// A checked paisa from a stored integer. A stored amount is a multiple of 100 (a CHECK of every
@@ -188,6 +199,8 @@ pub(crate) enum MasterTable {
     Addas,
     /// `partners`.
     Partners,
+    /// `staff`.
+    Staff,
 }
 
 impl MasterTable {
@@ -197,6 +210,7 @@ impl MasterTable {
             MasterTable::Cities => "cities",
             MasterTable::Addas => "addas",
             MasterTable::Partners => "partners",
+            MasterTable::Staff => "staff",
         }
     }
 }
@@ -322,6 +336,22 @@ pub struct Conds {
     args: Vec<Value>,
 }
 
+/// The ids of the items of a group (PRD v1.29), for the places that cut a list in Rust and not in
+/// SQL (R10's three sources).
+///
+/// # Errors
+/// A database error.
+pub(crate) fn item_ids_of_group(
+    conn: &Connection,
+    group: mandi_core::rules::ItemGroup,
+) -> Result<std::collections::HashSet<i64>, ReportsError> {
+    let mut statement = conn.prepare("SELECT id FROM items WHERE item_group = ?1")?;
+    let ids = statement
+        .query_map([group.as_str()], |r| r.get::<_, i64>(0))?
+        .collect::<Result<std::collections::HashSet<_>, _>>()?;
+    Ok(ids)
+}
+
 impl Conds {
     /// An empty clause.
     pub fn new() -> Self {
@@ -364,6 +394,32 @@ impl Conds {
     pub fn id(&mut self, fragment: &'static str, value: Option<i64>) -> &mut Self {
         if let Some(value) = value {
             self.parts.push(Cow::Borrowed(fragment));
+            self.args.push(Value::Integer(value));
+        }
+        self
+    }
+
+    /// `column IN (SELECT id FROM items WHERE item_group = ?)`, only when a group is picked: all the
+    /// items of the group (PRD v1.29). The column is a constant of this crate, the group a bound value.
+    pub fn item_group(
+        &mut self,
+        column: &'static str,
+        group: Option<mandi_core::rules::ItemGroup>,
+    ) -> &mut Self {
+        if let Some(group) = group {
+            self.parts.push(Cow::Owned(format!(
+                "{column} IN (SELECT id FROM items WHERE item_group = ?)"
+            )));
+            self.args.push(Value::Text(group.as_str().to_owned()));
+        }
+        self
+    }
+
+    /// `column = ?` for an id, only when the filter is set. The column is a constant of this crate
+    /// and the id is a bound value (Code Standards B14).
+    pub fn eq_id(&mut self, column: &'static str, value: Option<i64>) -> &mut Self {
+        if let Some(value) = value {
+            self.parts.push(Cow::Owned(format!("{column} = ?")));
             self.args.push(Value::Integer(value));
         }
         self

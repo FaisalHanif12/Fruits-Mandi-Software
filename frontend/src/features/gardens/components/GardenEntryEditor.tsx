@@ -98,13 +98,17 @@ interface GardenEntryEditorProps {
   garden: GardenRow;
   /** Today, `YYYY-MM-DD`. */
   today: string;
+  /** The type the form starts on, when the address names one (PRD FR-7.79); else the first. */
+  initialType?: EntryType | undefined;
 }
 
-export function GardenEntryEditor({ garden, today }: GardenEntryEditorProps) {
+export function GardenEntryEditor({ garden, today, initialType }: GardenEntryEditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
   const errorText = useErrorText();
-  const [draft, setDraft] = useState<EntryDraft>(() => newEntryDraft('installment', today));
+  const [draft, setDraft] = useState<EntryDraft>(() =>
+    newEntryDraft(initialType ?? 'installment', today),
+  );
   // The item lines of a goods arrived entry, kept above the grid so a language switch loses
   // nothing.
   const [lines] = useState(() => createEntryStore());

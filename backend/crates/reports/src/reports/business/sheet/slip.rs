@@ -12,12 +12,16 @@ use super::figures::{BuyerDay, SellerDay, Who, load};
 use super::figures_load::Goods;
 use super::*;
 use crate::reports::model::{ArgValue, Column, MessageArg};
+use mandi_core::bikri::SaleGrade;
 
 /// The columns of a goods table: item, packing, qty, rate and amount, and after them, only when
-/// some line is of an item sold by weight, the weight in kilos (plan 42, PRD A73). The rate of a
+/// some line is of an item sold by weight, the weight in kilos (plan 42, PRD A73), and only when
+/// some line has a quality, the quality (plan 58, PRD FR-12.42). The rate of a
 /// weighed line is for one kilo and its amount is the stored value (weight × rate, C1), so the
-/// screen writes "12.345 kg @ 100 = 1,235" from the weight, rate and amount cells.
-pub(super) fn slip_columns(with_weight: bool) -> Vec<Column> {
+/// screen writes "12.345 kg @ 100 = 1,235" from the weight, rate and amount cells. The quality
+/// column is last, so no other column moves; the screen writes its word after the item. A slip
+/// with no quality has exactly the columns it had before.
+pub(super) fn slip_columns(with_weight: bool, with_grade: bool) -> Vec<Column> {
     let mut columns = vec![
         col("item", ids::COL_ITEM, ColumnKind::Names),
         col("packing", ids::COL_PACKING, ColumnKind::Names),
@@ -28,6 +32,9 @@ pub(super) fn slip_columns(with_weight: bool) -> Vec<Column> {
     if with_weight {
         columns.push(col("weight", ids::COL_WEIGHT, ColumnKind::Weight));
     }
+    if with_grade {
+        columns.push(col("grade", ids::COL_GRADE, ColumnKind::Label));
+    }
     columns
 }
 
@@ -37,8 +44,16 @@ struct GoodsLine<'a> {
     goods: &'a Goods,
     qty: i64,
     weight_grams: Option<i64>,
+    grade: Option<SaleGrade>,
     rate: Paisa,
     amount: Paisa,
+}
+
+/// The cell of the quality column: its word, or nothing.
+fn grade_cell(grade: Option<SaleGrade>) -> Cell {
+    grade.map_or(Cell::Empty, |grade| Cell::Label {
+        id: ids::grade_id(grade).to_owned(),
+    })
 }
 
 fn weight_cell(grams: Option<i64>) -> Cell {
@@ -48,8 +63,13 @@ fn weight_cell(grams: Option<i64>) -> Cell {
 /// The rows of a goods table: lines grouped by item (in the order the items first appear), inside
 /// an item by packing (in the order they first appear), inside a packing in the order they were
 /// saved. After an item that has more than one line, a total row with its qty and amount (and
-/// its weight, when it has weighed lines). With `with_weight` each row has the weight cell last.
-fn goods_rows(lines: &[GoodsLine<'_>], with_weight: bool) -> Result<Vec<Row>, ReportsError> {
+/// its weight, when it has weighed lines). With `with_weight` each row has the weight cell, and
+/// with `with_grade` the quality cell after it, last.
+fn goods_rows(
+    lines: &[GoodsLine<'_>],
+    with_weight: bool,
+    with_grade: bool,
+) -> Result<Vec<Row>, ReportsError> {
     let mut items: Vec<i64> = Vec::new();
     for line in lines {
         if !items.contains(&line.goods.item_id) {
@@ -100,6 +120,9 @@ fn goods_rows(lines: &[GoodsLine<'_>], with_weight: bool) -> Result<Vec<Row>, Re
                 if with_weight {
                     cells.push(weight_cell(line.weight_grams));
                 }
+                if with_grade {
+                    cells.push(grade_cell(line.grade));
+                }
                 rows.push(Row {
                     cells,
                     source: Some(RowSource {
@@ -128,6 +151,9 @@ fn goods_rows(lines: &[GoodsLine<'_>], with_weight: bool) -> Result<Vec<Row>, Re
             ];
             if with_weight {
                 cells.push(weight_cell(grams));
+            }
+            if with_grade {
+                cells.push(Cell::Empty);
             }
             rows.push(Row {
                 cells,
@@ -315,6 +341,18 @@ pub(super) fn slip(
             .get(&map_key)
             .is_some_and(|d| d.lines.iter().any(|l| l.weight_grams.is_some()))
     };
+    // The quality column is there only when some line of the slip has a quality.
+    let graded = if buyer {
+        figures
+            .buyers
+            .get(&map_key)
+            .is_some_and(|d| d.lines.iter().any(|l| l.grade.is_some()))
+    } else {
+        figures
+            .sellers
+            .get(&map_key)
+            .is_some_and(|d| d.lines.iter().any(|l| l.grade.is_some()))
+    };
     let (rows, summary) = if buyer {
         let d = figures.buyers.get(&map_key).ok_or_else(lacking)?;
         let lines: Vec<GoodsLine<'_>> = d
@@ -325,11 +363,12 @@ pub(super) fn slip(
                 goods: &l.goods,
                 qty: l.qty,
                 weight_grams: l.weight_grams,
+                grade: l.grade,
                 rate: l.rate,
                 amount: l.value,
             })
             .collect();
-        (goods_rows(&lines, weighed)?, buyer_summary(d)?)
+        (goods_rows(&lines, weighed, graded)?, buyer_summary(d)?)
     } else {
         let d = figures.sellers.get(&map_key).ok_or_else(lacking)?;
         let lines: Vec<GoodsLine<'_>> = d
@@ -340,11 +379,12 @@ pub(super) fn slip(
                 goods: &l.goods,
                 qty: l.qty,
                 weight_grams: l.weight_grams,
+                grade: l.grade,
                 rate: l.rate,
                 amount: l.amount,
             })
             .collect();
-        (goods_rows(&lines, weighed)?, seller_summary(d)?)
+        (goods_rows(&lines, weighed, graded)?, seller_summary(d)?)
     };
 
     let mut resolved = typed.resolved.clone();
@@ -355,7 +395,7 @@ pub(super) fn slip(
         id: ReportId::R35,
         title_id: ids::title_id("R35"),
         filters: resolved,
-        columns: slip_columns(weighed),
+        columns: slip_columns(weighed, graded),
         total_count: count_of(rows.len()),
         rows: spec.slice(&rows),
         offset: spec.offset,
@@ -363,7 +403,7 @@ pub(super) fn slip(
         totals_label_id: ids::TOTAL.to_owned(),
         // The summary lines hold the day's figures: the slip has no totals row (PRD FR-19.12), so
         // nothing is said twice.
-        totals: vec![Cell::Empty; if weighed { 6 } else { 5 }],
+        totals: vec![Cell::Empty; 5 + usize::from(weighed) + usize::from(graded)],
         summary,
     })
 }
@@ -403,6 +443,7 @@ mod tests {
                 goods: &banana_box,
                 qty: 20,
                 weight_grams: None,
+                grade: None,
                 rate: rupees(600),
                 amount: rupees(12_000),
             },
@@ -411,6 +452,7 @@ mod tests {
                 goods: &apple_box,
                 qty: 5,
                 weight_grams: None,
+                grade: None,
                 rate: rupees(1_000),
                 amount: rupees(5_000),
             },
@@ -419,6 +461,7 @@ mod tests {
                 goods: &banana_crate,
                 qty: 4,
                 weight_grams: None,
+                grade: None,
                 rate: rupees(900),
                 amount: rupees(3_600),
             },
@@ -427,11 +470,12 @@ mod tests {
                 goods: &banana_box,
                 qty: 30,
                 weight_grams: None,
+                grade: None,
                 rate: rupees(580),
                 amount: rupees(17_400),
             },
         ];
-        let rows = goods_rows(&lines, false).unwrap();
+        let rows = goods_rows(&lines, false, false).unwrap();
         // Banana: the two box lines, then the crate line, then the banana total; then apple alone
         // (one line, no total).
         let qty = |row: &Row| match &row.cells[2] {
@@ -466,10 +510,11 @@ mod tests {
             goods: &apple_box,
             qty: 20,
             weight_grams: Some(12_345),
+            grade: None,
             rate: rupees(100),
             amount: rupees(1_235),
         }];
-        let rows = goods_rows(&weight, false).unwrap();
+        let rows = goods_rows(&weight, false, false).unwrap();
         assert_eq!(
             rows[0].cells[4],
             Cell::Money {

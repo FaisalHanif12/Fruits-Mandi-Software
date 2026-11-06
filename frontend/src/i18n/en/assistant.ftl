@@ -292,6 +292,8 @@ assistant-open-entry = Open the entry screen
 # review: pending
 assistant-open-screen = Open the screen
 # review: pending
+assistant-open-screen-of = { $source }: open the screen
+# review: pending
 assistant-entry-neutral = The amount stays empty; you write it yourself
 # review: pending
 assistant-not-understood = I did not understand; please ask in other words
@@ -322,6 +324,7 @@ assistant-how-role = { $role ->
     [city] city
     [adda] { -adda }
     [head] expense head
+    [item] { -qism-maal }
    *[buyer] { -gahak }
 }
 # review: pending
@@ -330,6 +333,21 @@ assistant-how-set-party = Choose the { assistant-how-role }: { $party } ({ $code
 assistant-how-set-record = Choose the { assistant-how-role }: { $name }
 # review: pending
 assistant-how-find-row = Look at the row for { $name }
+# review: pending
+assistant-how-open-analytics = Open { -tajziat }, view { $view }
+# The item group of a report on the sales of fruit or of vegetables (plan 55): `fruit` or `vegetable`.
+# review: pending
+assistant-how-set-group = { $group ->
+    [vegetable] Choose the { masters-item-group }: { masters-item-group-vegetable }
+   *[fruit] Choose the { masters-item-group }: { masters-item-group-fruit }
+}
+# review: pending
+assistant-how-set-guests = Choose: only the shop's { -mehman }
+# review: pending
+assistant-how-set-bikri = Choose the { -bikri } number { $number }
+# No day was named for a report of one day, so today is taken; the step after this one says how to change it.
+# review: pending
+assistant-how-assumed-day = No day was named, so today ({ $day }) is taken
 # review: pending
 assistant-how-set-day = Set the date to { $day }
 # review: pending
@@ -560,6 +578,12 @@ assistant-working-what-if-pace = Same pace, changed by the factor
 # review: pending
 assistant-working-same-growth = Same growth: the average change each month, added for each month ahead
 # review: pending
+assistant-working-balance-pace = Same pace: the balance now, plus the average change of a month, times the months ahead
+# review: pending
+assistant-working-balance-pace-cash = Same pace: the cash in hand now, plus the average change of a month, times the months ahead
+# review: pending
+assistant-working-balance-pace-dues = Same pace: the buyers' dues now, plus the average change of a month, times the months ahead
+# review: pending
 assistant-working-same-season = Same season as last year: the same months of last year
 
 ## What an estimate is about, what a figure is, and where its two places are (FR-7.75, FR-7.76).
@@ -584,6 +608,18 @@ assistant-measure-receipts = { -wasooli }
 assistant-measure-garden-sales = { -bagh } sales
 # review: pending
 assistant-measure-trip-sales = { -safar } sales
+# review: pending
+assistant-measure-balance-change = Change in the { -baqaya } each month
+# What a balance estimate is about (PRD FR-7.86): a party's balance, the cash in hand, what the buyers owe;
+# and a partner's profit.
+# review: pending
+assistant-measure-party-balance = The party's { -baqaya }
+# review: pending
+assistant-measure-cash-balance = Cash in hand
+# review: pending
+assistant-measure-buyers-dues = Buyers' dues
+# review: pending
+assistant-measure-partner-profit = The { -shirakat-dar }'s profit
 # review: pending
 assistant-figure-party-balance = The party's balance
 # review: pending
@@ -683,14 +719,17 @@ assistant-instant-sale-count = { $role ->
     [seller] Number of { -bikri } entries of { -beopari } { $name } { $period }: { $figure }
    *[shop] Number of { -bikri } entries { $period }: { $figure }
 }
-# The total commission (the seller side, the buyer side and Laga) for the shop, an item or a seller; for a
-# buyer, the commission charged to him.
+# The total commission for the shop or an item is the seller side, the buyer side and Laga together (the
+# figure of the dashboard tile), and the sentence says so. For a buyer it is only the commission charged
+# to him, with no Laga. A seller's commission is two lines: `seller-own` is the commission charged to him
+# (the seller side, no Laga), `seller` the total on his goods (both sides and Laga).
 # review: pending
 assistant-instant-commission = { $role ->
-    [item] { -commission } on { $name } { $period }: { $figure }
-    [seller] { -commission } on the goods of { -beopari } { $name } { $period }: { $figure }
+    [item] { -commission } (with { -laga }) on { $name } { $period }: { $figure }
+    [seller-own] { -commission } charged to { -beopari } { $name } { $period }: { $figure }
+    [seller] Total { -commission } on the goods of { -beopari } { $name } { $period } (both sides and { -laga }, including the line above): { $figure }
     [buyer] { -commission } charged to { -gahak } { $name } { $period }: { $figure }
-   *[shop] { -commission } { $period }: { $figure }
+   *[shop] { -commission } (with { -laga }) { $period }: { $figure }
 }
 # review: pending
 assistant-instant-laga = { $role ->
@@ -724,3 +763,5 @@ assistant-instant-stock = { $role ->
 }
 # review: pending
 assistant-instant-partner-total = { $name }'s { -kul-raqam }: { $figure }
+# review: pending
+assistant-instant-partner-capital = { $name }'s { -sarmaya }: { $figure }

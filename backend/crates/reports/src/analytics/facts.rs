@@ -163,6 +163,8 @@ pub(crate) fn conds(
     c.text("f.entry_date >= ?", key.from.as_deref())
         .text("f.entry_date <= ?", key.to.as_deref())
         .id("f.item_id = ?", typed.item_id)
+        // All the items of a group (PRD v1.29; views A, B, C, D, G and H, and the lines behind them).
+        .item_group("f.item_id", typed.item_group)
         .id("f.item_id = ?", key.item_id)
         .not_in("f.item_id", &key.not_item_ids)
         .id("f.seller_account_id = ?", typed.seller_id)

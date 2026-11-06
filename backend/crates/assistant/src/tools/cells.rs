@@ -41,12 +41,19 @@ const LEFT_OUT_COLUMNS: [&str; 17] = [
     "taken_by",
 ];
 
-/// True for a column the model must not read.
+/// True for a column the model must not read. A phone NUMBER is never read (PRD FR-7.83); R6's
+/// `phone_charge` is the فون charge, money the Owner asks about, and is read (lead ruling, plan 53
+/// Section 9).
+///
+/// Example: `phone1` is left out; `phone_charge` is not.
 pub fn is_left_out(column: &Column) -> bool {
     LEFT_OUT_COLUMNS.contains(&column.key.as_str())
-        || column.key.contains("phone")
+        || (column.key.contains("phone") && column.key != PHONE_CHARGE)
         || column.key.starts_with("paid_to")
 }
+
+/// The key of the فون charge column of R6 and R1: money, not a phone number.
+const PHONE_CHARGE: &str = "phone_charge";
 
 fn money(paisa: Paisa) -> Node {
     Node::Val(Val::Money(Money::plain(paisa)))
@@ -87,22 +94,33 @@ fn detail_part(part: &DetailPart) -> Node {
             bikri_number,
             item,
             packing,
+            grade,
             qty,
             rate_paisa,
             value_paisa,
             commission_paisa,
             laga_paisa,
-        } => Node::obj(vec![
-            ("kind", Node::Str("sale".to_owned())),
-            ("bikri", count(*bikri_number)),
-            ("item", name_of(item)),
-            ("packing", name_of(packing)),
-            ("qty", count(*qty)),
-            ("rate", money(*rate_paisa)),
-            ("value", money(*value_paisa)),
-            ("commission", money(*commission_paisa)),
-            ("laga", money(*laga_paisa)),
-        ]),
+        } => {
+            let mut fields = vec![
+                ("kind", Node::Str("sale".to_owned())),
+                ("bikri", count(*bikri_number)),
+                ("item", name_of(item)),
+                ("packing", name_of(packing)),
+            ];
+            // The quality of the line (PRD FR-12.42), as its word `first`, `second` or `third`.
+            // A line with none has no `grade` field, so every older result reads as before.
+            if let Some(grade) = grade {
+                fields.push(("grade", Node::Str(grade.as_str().to_owned())));
+            }
+            fields.extend([
+                ("qty", count(*qty)),
+                ("rate", money(*rate_paisa)),
+                ("value", money(*value_paisa)),
+                ("commission", money(*commission_paisa)),
+                ("laga", money(*laga_paisa)),
+            ]);
+            Node::obj(fields)
+        }
         DetailPart::Lot {
             bikri_number,
             item,

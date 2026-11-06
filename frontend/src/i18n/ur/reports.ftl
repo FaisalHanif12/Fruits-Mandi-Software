@@ -169,6 +169,8 @@ report-filter-city = شہر
 
 # review: pending
 report-filter-adda = { -adda }
+# review: pending
+report-filter-collector = { -agrahi } والا
 
 # review: pending
 report-filter-detail = تفصیل کے ساتھ
@@ -470,6 +472,9 @@ report-r27-title = بیجک سیریز
 
 # review: pending
 report-r27-help = بیوپاریوں کے بل نمبر کی ترتیب میں، { -kham-bikri }، کل اخراجات اور { -safi-bikri } کے ساتھ۔
+
+# review: pending
+report-r27-group-note = ہر بل میں صرف اس { masters-item-group } کے { -lot } دکھائے گئے ہیں۔
 
 # review: pending
 report-r28-title = آمدن رپورٹ
@@ -1433,3 +1438,17 @@ report-col-new-balance = نیا بقایا
 # when some line is weighed.
 # review: pending
 report-col-weight = وزن (کلو)
+
+## The quality of a sale line (PRD FR-12.42): the column of the sales registers and of the party day slip, and its three words.
+
+# review: pending
+report-col-grade = { -darja }
+
+# review: pending
+report-grade-first = { -darja-awwal }
+
+# review: pending
+report-grade-second = { -darja-doyam }
+
+# review: pending
+report-grade-third = { -darja-soyam }

@@ -159,9 +159,10 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
   const names = (ur: string, en: string) => (language === 'ur' ? ur : en);
   const VIEW_IDS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'] as const;
 
-  async function openView(view: string, options: AnalyticsOptions = {}) {
+  async function openView(view: string, options: AnalyticsOptions = {}, query = '') {
     const fake = fakeAnalytics(options);
-    const path = view === '' ? '/analytics' : `/analytics/${view}`;
+    const path =
+      (view === '' ? '/analytics' : `/analytics/${view}`) + (query === '' ? '' : `?${query}`);
     const shown = view === '' ? 'a' : view.toLowerCase();
     const result = await renderApp(path);
     await screen.findByRole('heading', {
@@ -409,6 +410,45 @@ describe.each(LANGUAGES)('تجزیات (%s)', (language: Language) => {
         `${m('analytics-chart-h')} · ${m('analytics-top-sellers')}`,
         `${m('analytics-chart-h')} · ${m('analytics-top-buyers')}`,
       ]);
+    });
+  });
+
+  describe('the item group, fruit or vegetables (plan 55, views A, B, D and G)', () => {
+    it('the address chooses the group, the box shows it, and the request carries it', async () => {
+      await openView('A', {}, 'item_group=fruit');
+      await waitFor(() => {
+        expect(lastRun()?.filters).toMatchObject({ item_group: 'fruit' });
+      }, SLOW_MS);
+      const box = screen.getByRole('combobox', { name: named(m('common-item-group')) });
+      expect(visible(box.textContent)).toContain(m('masters-item-group-fruit'));
+    });
+
+    it.each(['item_group=all', 'item_group=meat', ''])(
+      'no group is sent for "%s"',
+      async (query) => {
+        await openView('A', {}, query);
+        await waitFor(() => {
+          expect(lastRun()?.view).toBe('A');
+        }, SLOW_MS);
+        expect(lastRun()?.filters).not.toHaveProperty('item_group');
+      },
+    );
+
+    it('an item and a group together: the item is sent, never the group (the backend refuses both)', async () => {
+      await openView('A', {}, 'item=5&item_group=fruit');
+      await waitFor(() => {
+        expect(lastRun()?.filters).toMatchObject({ item_id: 5 });
+      }, SLOW_MS);
+      expect(lastRun()?.filters).not.toHaveProperty('item_group');
+    });
+
+    it('a view with no group box (E) never sends one, even when the address names one', async () => {
+      await openView('E', {}, 'item_group=fruit');
+      await waitFor(() => {
+        expect(lastRun()?.view).toBe('E');
+      }, SLOW_MS);
+      expect(lastRun()?.filters).not.toHaveProperty('item_group');
+      expect(screen.queryByRole('combobox', { name: named(m('common-item-group')) })).toBeNull();
     });
   });
 

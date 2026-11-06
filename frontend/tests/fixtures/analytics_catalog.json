@@ -5,6 +5,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",
@@ -22,6 +23,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",
@@ -39,6 +41,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",
@@ -56,6 +59,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",
@@ -99,6 +103,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",
@@ -117,6 +122,7 @@
     "filters": [
       "period",
       "item",
+      "item_group",
       "seller",
       "buyer",
       "city",

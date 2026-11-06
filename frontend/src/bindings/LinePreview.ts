@@ -29,7 +29,9 @@ export type LinePreview = {
    */
   rate_hint: RateHint | null;
   /**
-   * The numbers, or null while the row is not complete.
+   * The numbers, or null while the row is not complete. Also null for a row refused because it
+   * takes the lot over the quantity it has left (`ERR_QTY_EXCEEDS_LOT` on its quantity, PRD
+   * FR-12.6): it has no amount, commission or total, and the lot and the whole بکری leave it out.
    */
   calc: LineCalc | null;
   /**

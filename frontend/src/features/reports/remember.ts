@@ -5,6 +5,7 @@
 // picked from what the account has now. Nothing about money is kept (CLAUDE.md rule 1).
 
 import type { ReportId } from '../../bindings/ReportId';
+import { ITEM_GROUP_CHOICES } from '../../shared/ui';
 import {
   choiceOr,
   flagOf,
@@ -44,7 +45,7 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.from !== '') kept['from'] = state.from;
   if (state.to !== '') kept['to'] = state.to;
   if (state.asOf !== '') kept['asOf'] = state.asOf;
-  for (const key of ['party', 'seller', 'zamindar', 'item', 'city', 'adda'] as const) {
+  for (const key of ['party', 'seller', 'zamindar', 'item', 'city', 'adda', 'collector'] as const) {
     const value = state[key];
     if (value !== null) kept[key] = pickedText(value);
   }
@@ -54,6 +55,7 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.partner !== null) kept['partner'] = state.partner;
   if (state.guestsOnly) kept['guestsOnly'] = true;
   if (state.voucherType !== base.voucherType) kept['voucherType'] = state.voucherType;
+  if (state.itemGroup !== base.itemGroup) kept['itemGroup'] = state.itemGroup;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   if (state.garden !== null) kept['garden'] = state.garden;
   if (state.gardenView !== base.gardenView) kept['gardenView'] = state.gardenView;
@@ -76,12 +78,14 @@ export function filtersFromRemembered(raw: unknown): ReportFilterState | null {
     item: pickedOrNull(raw['item']),
     city: pickedOrNull(raw['city']),
     adda: pickedOrNull(raw['adda']),
+    collector: pickedOrNull(raw['collector']),
     detail: flagOf(raw['detail']),
     paid: choiceOr(raw['paid'], PAID_CHOICES, base.paid),
     groupBy: choiceOr(raw['groupBy'], GROUP_BY_CHOICES, base.groupBy),
     partner: idOrNull(raw['partner']),
     guestsOnly: flagOf(raw['guestsOnly']),
     voucherType: choiceOr(raw['voucherType'], VOUCHER_CHOICES, base.voucherType),
+    itemGroup: choiceOr(raw['itemGroup'], ITEM_GROUP_CHOICES, base.itemGroup),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
     garden: idOrNull(raw['garden']),
     gardenView: choiceOr(raw['gardenView'], GARDEN_VIEW_CHOICES, base.gardenView),

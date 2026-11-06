@@ -12,6 +12,8 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as searchApi from '../../src/shared/search/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccounts, money } from '../helpers/accounts';
+import { expectOnlyCollectors } from '../helpers/collector-box';
+import { STAFF_ROSTER, fakeMasters } from '../helpers/masters';
 import {
   fail,
   healthyBackend,
@@ -99,6 +101,21 @@ describe.each(LANGUAGES)('the account form folds (%s)', (language) => {
       expect(screen.queryByText(day)).not.toBeInTheDocument();
     }
     expect(screen.queryByText(/Collection day|کا دن/)).not.toBeInTheDocument();
+  });
+
+  it('the collector of the account is chosen among the collectors only (plan 55)', async () => {
+    fakeAccounts([NASIR]);
+    fakeMasters({ staff: STAFF_ROSTER });
+    await renderApp('/index/accounts/23');
+    const user = userEvent.setup();
+    await user.click(await section(language, 'accounts-section-credit'));
+    await expectOnlyCollectors(
+      user,
+      await screen.findByRole('combobox', {
+        name: named(message(language, 'accounts-field-collector')),
+      }),
+      language,
+    );
   });
 
   it('a shut part says how many of its fields hold a value, and opens with Enter on its heading', async () => {

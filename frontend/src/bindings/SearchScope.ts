@@ -14,6 +14,7 @@ export type SearchScope =
   | 'narration'
   | 'expense_head'
   | 'staff'
+  | 'collector'
   | 'seller'
   | 'buyer'
   | 'any_account'

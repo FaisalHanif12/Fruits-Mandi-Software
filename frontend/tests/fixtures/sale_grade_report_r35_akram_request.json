@@ -1,0 +1,12 @@
+{
+  "filters": {
+    "as_of": "10-10-2026",
+    "party": {
+      "account_id": 20,
+      "person_key": null
+    }
+  },
+  "id": "R35",
+  "limit": 0,
+  "offset": 0
+}

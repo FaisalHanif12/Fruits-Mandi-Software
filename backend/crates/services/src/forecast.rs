@@ -10,7 +10,9 @@
 //! 288,000 and same growth 369,000 over 6 months.
 
 use mandi_domain::core::money::Paisa;
-use mandi_domain::forecast::{self, Estimate, ForecastError, MonthValue, PaceFactor, YearMonth};
+use mandi_domain::forecast::{
+    self, BalanceEstimate, BalanceKind, Estimate, ForecastError, MonthValue, PaceFactor, YearMonth,
+};
 
 use crate::error::ServiceError;
 
@@ -81,6 +83,48 @@ pub fn estimate_to_year_end(
         Err(ForecastError::TooLittleHistory { months }) => Ok(Forecast::TooShort {
             full_months: months,
         }),
+        Err(error) => Err(ServiceError::reject(error.code())),
+    }
+}
+
+/// What a balance estimate gives.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BalanceForecast {
+    /// The balance some months from today at the pace of the past months.
+    Estimate(BalanceEstimate),
+    /// Fewer than 3 months of change: no estimate. The answer says how many there are.
+    TooShort {
+        /// How many full months the books gave.
+        full_months: u32,
+    },
+    /// The buyers' dues would fall below 0 within the months asked, which dues cannot. It is a
+    /// result of its own, so no other refusal is ever read as this one.
+    FallsBelowZero,
+}
+
+/// A balance `1 .. ahead` months from today at the pace of its past months (see
+/// [`mandi_domain::forecast::balance_at_pace`]). Too little history is a result, not an error.
+///
+/// Example (PRD): Akram owes 2,880 and his net change in the last 3 full months was +3,000, -1,000
+/// and +4,000, an average of +2,000, so after 2 months he owes 6,880.
+///
+/// # Errors
+/// A rejection with the code of the refusal: `ERR_OUT_OF_RANGE` for months ahead outside 1 to 12,
+/// or a history that is not the full months before `current`; `ERR_OVERFLOW` for a figure above
+/// the largest allowed amount. Dues that would fall below 0 are the result `FallsBelowZero`.
+pub fn balance_at_pace(
+    kind: BalanceKind,
+    now: Paisa,
+    changes: &[MonthValue],
+    current: YearMonth,
+    ahead: u32,
+) -> Result<BalanceForecast, ServiceError> {
+    match forecast::balance_at_pace(kind, now, changes, current, ahead) {
+        Ok(found) => Ok(BalanceForecast::Estimate(found)),
+        Err(ForecastError::TooLittleHistory { months }) => Ok(BalanceForecast::TooShort {
+            full_months: months,
+        }),
+        Err(ForecastError::BelowZero) => Ok(BalanceForecast::FallsBelowZero),
         Err(error) => Err(ServiceError::reject(error.code())),
     }
 }

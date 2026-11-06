@@ -112,6 +112,7 @@ fn period_cell(group_by: AnalyticsGroupBy, bucket: &str) -> Result<Cell, Reports
 /// for each lot, so they cannot follow these filters.
 fn sale_filter_set(typed: &Typed) -> bool {
     typed.item_id.is_some()
+        || typed.item_group.is_some()
         || typed.seller_id.is_some()
         || typed.buyer_id.is_some()
         || typed.city_id.is_some()
@@ -122,7 +123,7 @@ fn sale_filter_set(typed: &Typed) -> bool {
 }
 
 /// The sums of two columns by bucket.
-type ByBucket = BTreeMap<String, Paisa>;
+pub(super) type ByBucket = BTreeMap<String, Paisa>;
 
 /// Runs a query that gives (bucket, amount) rows with `SUM()` of a stored `INTEGER` column.
 fn sums_by_bucket(conn: &Connection, sql: &str, args: &[Value]) -> Result<ByBucket, ReportsError> {
@@ -151,7 +152,8 @@ fn add_into(into: &mut ByBucket, from: &ByBucket, negate: bool) -> Result<(), Re
     Ok(())
 }
 
-/// The conditions on a date column and the item and trip of a trip purchase.
+/// The conditions on a date column and the item (or its group) and trip of a trip purchase. The
+/// item and the trip are bare column names, such as `p.item_id`.
 fn trip_conds(
     typed: &Typed,
     date: &'static str,
@@ -162,8 +164,10 @@ fn trip_conds(
     let mut c = Conds::new();
     c.text(date, typed.from.as_deref())
         .text(date_to, typed.to.as_deref())
-        .id(item, typed.item_id)
-        .id(trip, typed.trip_id);
+        .eq_id(item, typed.item_id)
+        // The item group: all the items of the group (PRD v1.29).
+        .item_group(item, typed.item_group)
+        .eq_id(trip, typed.trip_id);
     c
 }
 
@@ -239,8 +243,11 @@ fn gardens_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsE
     Ok(result)
 }
 
-/// The result of the trips for each period by the day each event happened (see the module doc).
-fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsError> {
+/// The money the sales of the trips brought, for each period by the day it came: the partners'
+/// credits of the own lots on the posting day, and the money of the sales in other shops on their
+/// day (view J's `sales_money`, summed by period). The result of the trips and the monthly series
+/// of an estimate both read it from here (Code Standards Q3).
+pub(super) fn trip_sales_money(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsError> {
     let group_by = typed.group_by;
     let mut result = ByBucket::new();
 
@@ -250,8 +257,8 @@ fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsErr
         typed,
         "e.entry_date >= ?",
         "e.entry_date <= ?",
-        "p.item_id = ?",
-        "p.venture_id = ?",
+        "p.item_id",
+        "p.venture_id",
     );
     let sql = format!(
         "SELECT {day}, COALESCE(SUM(c.amount_paisa), 0)
@@ -262,24 +269,47 @@ fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsErr
     );
     add_into(&mut result, &sums_by_bucket(conn, &sql, c.args())?, false)?;
 
-    // Money and cost of the sales in other shops, on their day.
+    // Money of the sales in other shops, on their day.
     let day = bucket_sql(group_by, "x.entry_date");
     let c = trip_conds(
         typed,
         "x.entry_date >= ?",
         "x.entry_date <= ?",
-        "p.item_id = ?",
-        "x.venture_id = ?",
+        "p.item_id",
+        "x.venture_id",
     );
-    for (column, negate) in [("x.amount_paisa", false), ("x.cost_paisa", true)] {
-        let sql = format!(
-            "SELECT {day}, COALESCE(SUM({column}), 0)
-             FROM venture_entries x JOIN purchases p ON p.id = x.purchase_id
-             WHERE x.kind = 'other_sale' AND x.status = 'saved' AND {} GROUP BY 1",
-            c.sql()
-        );
-        add_into(&mut result, &sums_by_bucket(conn, &sql, c.args())?, negate)?;
-    }
+    let sql = format!(
+        "SELECT {day}, COALESCE(SUM(x.amount_paisa), 0)
+         FROM venture_entries x JOIN purchases p ON p.id = x.purchase_id
+         WHERE x.kind = 'other_sale' AND x.status = 'saved' AND {} GROUP BY 1",
+        c.sql()
+    );
+    add_into(&mut result, &sums_by_bucket(conn, &sql, c.args())?, false)?;
+    Ok(result)
+}
+
+/// The result of the trips for each period by the day each event happened (see the module doc).
+fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsError> {
+    let group_by = typed.group_by;
+    // The money the sales brought.
+    let mut result = trip_sales_money(conn, typed)?;
+
+    // The cost of the goods sold in other shops, on their day.
+    let day = bucket_sql(group_by, "x.entry_date");
+    let c = trip_conds(
+        typed,
+        "x.entry_date >= ?",
+        "x.entry_date <= ?",
+        "p.item_id",
+        "x.venture_id",
+    );
+    let sql = format!(
+        "SELECT {day}, COALESCE(SUM(x.cost_paisa), 0)
+         FROM venture_entries x JOIN purchases p ON p.id = x.purchase_id
+         WHERE x.kind = 'other_sale' AND x.status = 'saved' AND {} GROUP BY 1",
+        c.sql()
+    );
+    add_into(&mut result, &sums_by_bucket(conn, &sql, c.args())?, true)?;
 
     // The cost of the goods sold in our shop, from the sale facts: the +1 rows less the -1 rows.
     let day = bucket_sql(group_by, "f.entry_date");
@@ -287,8 +317,8 @@ fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsErr
         typed,
         "f.entry_date >= ?",
         "f.entry_date <= ?",
-        "f.item_id = ?",
-        "f.venture_id = ?",
+        "f.item_id",
+        "f.venture_id",
     );
     for (sign, negate) in [("1", true), ("-1", false)] {
         let sql = format!(
@@ -306,8 +336,8 @@ fn trips_result(conn: &Connection, typed: &Typed) -> Result<ByBucket, ReportsErr
         typed,
         "m.move_date >= ?",
         "m.move_date <= ?",
-        "p.item_id = ?",
-        "p.venture_id = ?",
+        "p.item_id",
+        "p.venture_id",
     );
     let sql = format!(
         "SELECT {day}, COALESCE(SUM(m.cost_paisa), 0)
@@ -348,6 +378,24 @@ fn fact_dim(group_by: AnalyticsGroupBy) -> &'static str {
         AnalyticsGroupBy::Month => "substr(f.entry_date, 1, 7)",
         AnalyticsGroupBy::Year => "substr(f.entry_date, 1, 4)",
     }
+}
+
+/// The net sums of the sale facts for each period under the sale filters (view G's own reading of
+/// خام بکری and commission, FR-18.6), oldest first. The view and the monthly series of an estimate
+/// both read them from here (Code Standards Q3).
+pub(super) fn fact_sums_by_period(
+    conn: &Connection,
+    typed: &Typed,
+) -> Result<Vec<(String, facts::Sums)>, ReportsError> {
+    let none = AnalyticsKey::default();
+    let c = conds(typed, run_range(typed), &none);
+    let mut found = Vec::new();
+    for group in facts::groups(conn, &c, &[fact_dim(typed.group_by)])? {
+        if let Some(bucket) = group.text(0) {
+            found.push((bucket, group.sums));
+        }
+    }
+    Ok(found)
 }
 
 /// One period being built.
@@ -397,15 +445,10 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     let mut periods: BTreeMap<String, Period> = BTreeMap::new();
 
     // Sales and commission.
-    let none = AnalyticsKey::default();
-    let c = conds(typed, run_range(typed), &none);
-    for group in facts::groups(conn, &c, &[fact_dim(group_by)])? {
-        let Some(bucket) = group.text(0) else {
-            continue;
-        };
+    for (bucket, sums) in fact_sums_by_period(conn, typed)? {
         let slot = periods.entry(bucket).or_default();
-        slot.gross = group.sums.gross;
-        slot.commission = group.sums.total_comm(typed.side)?;
+        slot.gross = sums.gross;
+        slot.commission = sums.total_comm(typed.side)?;
     }
 
     // Shared income, expenses and profit: not when a sale filter is set.
@@ -463,8 +506,10 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     }
 
     // Gardens: the movement of the running balances in the period. Not when a sale filter or the
-    // goods or a trip leave the gardens out.
+    // goods or a trip leave the gardens out. Not under an item group either (PRD v1.31): a garden's
+    // installments and costs have no item, so no group owns them.
     let gardens_allowed = typed.buyer_id.is_none()
+        && typed.item_group.is_none()
         && typed.seller_id.is_none()
         && typed.city_id.is_none()
         && typed.adda_id.is_none()

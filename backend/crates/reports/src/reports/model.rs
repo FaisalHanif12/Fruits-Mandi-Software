@@ -8,9 +8,11 @@
 
 use mandi_core::accounts::BalanceSide;
 use mandi_core::auth::Language;
+use mandi_core::bikri::SaleGrade;
 use mandi_core::money::Paisa;
 use mandi_core::printing::Paper;
 pub use mandi_core::row_source::{RowSource, SourceKind};
+use mandi_core::rules::ItemGroup;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -239,6 +241,11 @@ pub enum FilterKind {
     Bikri,
     /// Only the fruit taken for the shop's guests (R37).
     Guests,
+    /// One collector (R22, R23, R35): the buyers he collects from, or the receipts he took.
+    Collector,
+    /// All the items of a group, پھل or سبزی (R2, R3, R4, R7, R10, R27), in place of one item
+    /// (PRD v1.29).
+    ItemGroup,
 }
 
 /// One report in the catalogue.
@@ -402,6 +409,17 @@ pub struct ReportFilters {
     /// true the partner filter must be empty.
     #[ts(optional)]
     pub guests_only: Option<bool>,
+    /// One collector, a staff member (R22, R23, R35). Missing means every collector. Optional in
+    /// the wire type, so a screen that does not send it keeps working.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null", optional)]
+    pub collector_id: Option<i64>,
+    /// All the items of a group, پھل (`fruit`) or سبزی (`vegetable`), in place of one item
+    /// (R2, R3, R4, R7, R10, R27; PRD v1.29). Never together with `item_id`. Missing means no
+    /// group.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner parts of
     /// this report are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -511,6 +529,14 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(type = "boolean | null", optional)]
     pub guests_only: Option<bool>,
+    /// The collector picked (R22, R23, R35).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub collector: Option<Names>,
+    /// The item group picked (R2, R3, R4, R7, R10, R27).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub item_group: Option<ItemGroup>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.
@@ -575,6 +601,11 @@ pub enum DetailPart {
         item: Names,
         /// The packing.
         packing: Names,
+        /// The quality of the goods of the line, written after the item (PRD FR-12.42). Left out
+        /// when the line has none, so every older answer reads exactly as before.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        grade: Option<SaleGrade>,
         /// The quantity, in نگ.
         #[ts(type = "number")]
         qty: i64,

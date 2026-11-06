@@ -46,7 +46,7 @@ use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Paisa;
 use mandi_core::text::UrduCollator;
 use mandi_db::rusqlite::{Connection, params};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 mod activity;
 mod day_tables;
@@ -77,6 +77,16 @@ fn blank_if_zero(amount: Paisa) -> Cell {
     }
 }
 
+/// The accounts whose collector is this staff member (the collector on the account form, PRD
+/// 10.2). A one-time person's account has none, so he is never in a collector's sheet.
+fn collector_accounts(conn: &Connection, collector: i64) -> Result<HashSet<i64>, ReportsError> {
+    let mut statement = conn.prepare("SELECT id FROM accounts WHERE collector_staff_id = ?1")?;
+    let ids = statement
+        .query_map([collector], |r| r.get::<_, i64>(0))?
+        .collect::<Result<HashSet<_>, _>>()?;
+    Ok(ids)
+}
+
 /// Builds R35.
 ///
 /// # Errors
@@ -94,7 +104,18 @@ pub(crate) fn run(
         .ok_or_else(|| ReportsError::Data("the report has no today".to_owned()))?;
     let day = typed.as_of.clone().unwrap_or_else(|| today.to_iso());
     match typed.party_id {
-        Some(account) => slip::slip(conn, typed, spec, &day, account),
+        Some(account) => {
+            // A collector and a party together: the party must be one of his.
+            if let Some(collector) = typed.collector_id
+                && !collector_accounts(conn, collector)?.contains(&account)
+            {
+                return Err(ReportsError::Rejected(vec![FieldError::new(
+                    ErrorCode::ErrOutOfRange,
+                    "filters.collector_id",
+                )]));
+            }
+            slip::slip(conn, typed, spec, &day, account)
+        }
         None => table::table(conn, typed, spec, &day),
     }
 }

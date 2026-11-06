@@ -289,7 +289,7 @@ fn a_click_on_the_name_found_in_the_other_role_gives_the_model_the_question_firs
             "prompt_tokens_details": {"cached_tokens": 7_000},
             "completion_tokens_details": {"reasoning_tokens": 20}},
     });
-    let (_picked, requests) = h.pick(reply.question_id, PickChoice::Match { key }, vec![answer]);
+    let (picked, requests) = h.pick(reply.question_id, PickChoice::Match { key }, vec![answer]);
     let messages = requests[0]["messages"].as_array().expect("messages");
     let question_at = messages
         .iter()
@@ -300,18 +300,56 @@ fn a_click_on_the_name_found_in_the_other_role_gives_the_model_the_question_firs
                     .is_some_and(|c| c.contains("arshad ne kya becha"))
         })
         .expect("the model gets the question");
-    let find_at = messages
+    // The finds the model has in front of it, in order: the one made as a seller (the local
+    // answer's), and the one the click made in his real role, a buyer (live run 1: Q427 to Q429
+    // and Q431 ended as "not found" again, because the model was left with the seller find only).
+    let finds: Vec<(usize, serde_json::Value)> = messages
         .iter()
-        .position(|m| m["role"] == "assistant" && m["tool_calls"].is_array())
-        .expect("the find the app ran");
-    assert!(question_at < find_at, "the question comes before the find");
-    let picked_at = messages
+        .enumerate()
+        .filter(|(_, m)| m["role"] == "assistant" && m["tool_calls"].is_array())
+        .map(|(at, m)| {
+            let args = m["tool_calls"][0]["function"]["arguments"]
+                .as_str()
+                .unwrap_or("{}");
+            (at, serde_json::from_str(args).unwrap_or_default())
+        })
+        .collect();
+    assert_eq!(finds.len(), 2, "{finds:?}");
+    assert!(
+        question_at < finds[0].0,
+        "the question comes before the finds"
+    );
+    assert_eq!(finds[0].1["role"], "seller");
+    assert_eq!(
+        finds[1].1["role"], "buyer",
+        "he is found again as what he is"
+    );
+    assert_eq!(finds[1].1["text"], finds[0].1["text"]);
+    // The click points at the new find, and says what he was chosen as.
+    let click = messages
         .iter()
-        .position(|m| {
-            m["role"] == "user" && m["content"].as_str().is_some_and(|c| c.contains("picked"))
+        .rev()
+        .find_map(|m| {
+            (m["role"] == "user")
+                .then(|| serde_json::from_str::<serde_json::Value>(m["content"].as_str()?).ok())
+                .flatten()
+                .filter(|v| v.get("picked").is_some())
         })
         .expect("the click");
-    assert!(find_at < picked_at);
+    assert_eq!(click["picked"], "r2.matches.0");
+    assert_eq!(click["as"], "buyer");
+    assert!(click["note"].as_str().is_some_and(|n| n.contains("bought")));
+    assert!(finds[1].0 < messages.len() - 1, "the click is last");
+    // The tool ids of the two finds differ, so every tool message has its own call.
+    let ids: Vec<&str> = messages
+        .iter()
+        .filter(|m| m["role"] == "assistant" && m["tool_calls"].is_array())
+        .filter_map(|m| m["tool_calls"][0]["id"].as_str())
+        .collect();
+    assert_eq!(ids.len(), 2);
+    assert_ne!(ids[0], ids[1]);
+    // The model answered in its one call: not "not found" again.
+    assert_ne!(picked.outcome, AskOutcome::NotFound, "{picked:#?}");
 }
 
 #[test]
@@ -344,6 +382,198 @@ fn a_question_about_tax_says_the_app_does_not_keep_it_and_opens_the_sales_regist
     assert_eq!(rows[0].model_calls, Some(0));
     assert!(!rows[0].counted);
     h.scan_requests();
+}
+
+/// A model reply that finishes with this text.
+fn answer_reply(text: &str) -> serde_json::Value {
+    serde_json::json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": serde_json::json!({
+            "kind": "answer", "text": text, "show": [], "next": [],
+            "choose": null, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": {
+            "prompt_tokens": 7_200, "completion_tokens": 60,
+            "prompt_tokens_details": {"cached_tokens": 7_000},
+            "completion_tokens_details": {"reasoning_tokens": 20}
+        },
+    })
+}
+
+#[test]
+fn a_question_about_the_attention_list_gets_a_screen_source_that_opens_the_dashboard() {
+    // The lead's request of 06-11-2026 for frontend2: a REAL reply with a `screen` source. "aaj ke
+    // kaam" is read before the first call (`app_state` `attention`); the model writes one sentence
+    // that cites the count. The source is the screen the list is on: the dashboard (plan 55 11.1).
+    let question = "aaj ke kaam";
+    let find = |client: &RecordedClient| -> String {
+        client.requests()[0]["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|m| m["role"] == "tool")
+            .filter_map(|m| serde_json::from_str::<serde_json::Value>(m["content"].as_str()?).ok())
+            .find(|v| v["tool"] == "app_state")
+            .and_then(|v| v["id"].as_str().map(str::to_owned))
+            .expect("the attention list was read before the first call")
+    };
+    // Pass one: what the first call already holds.
+    let h = Harness::day();
+    h.runtime.set_read_first(true);
+    let client = RecordedClient::new(vec![answer_reply("x")]);
+    h.ask_with(question, None, &client);
+    let id = find(&client);
+    // Pass two: the model cites the count of the list.
+    let h = Harness::day();
+    h.runtime.set_read_first(true);
+    let client = RecordedClient::new(vec![answer_reply(&format!(
+        "آج کے کام: {{{{{id}.total}}}}"
+    ))]);
+    let reply = h.ask_with(question, None, &client);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    assert_eq!(client.requests().len(), 1, "one model call");
+    let answer = reply.answer.as_ref().unwrap();
+    let screens: Vec<_> = answer
+        .sources
+        .iter()
+        .filter_map(|s| match s {
+            AnswerSource::Screen { result_id, route } => Some((result_id.as_str(), *route)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        screens,
+        [(id.as_str(), mandi_assistant::answer::ScreenRoute::Dashboard)],
+        "{answer:#?}"
+    );
+    fixture("assistant_reply_screen_source.json", &reply);
+    fixture(
+        "assistant_reply_screen_source_request.json",
+        &request(question),
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn a_question_about_who_changed_a_bikri_gets_a_screen_source_that_opens_the_audit_log() {
+    // The same for the audit log (the lead's request of 06-11-2026): the model asks `app_state`
+    // `audit` for بکری 1 in its own call, and the source is the audit log tab of Settings. The
+    // frontend copies this fixture next to the dashboard one.
+    let question = "bikri 1 mein kisne badla";
+    let ask_audit = serde_json::json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": null,
+            "tool_calls": [{"id": "call_0", "type": "function", "function": {
+                "name": "app_state",
+                "arguments": serde_json::json!(
+                    {"what": "audit", "party": null, "item": null, "bikri": 1}).to_string()}}]}}],
+        "usage": {
+            "prompt_tokens": 7_200, "completion_tokens": 60,
+            "prompt_tokens_details": {"cached_tokens": 7_000},
+            "completion_tokens_details": {"reasoning_tokens": 0}
+        },
+    });
+    let h = Harness::day();
+    let client = RecordedClient::new(vec![
+        ask_audit,
+        answer_reply("اس بکری کے ریکارڈ میں {{r1.count}} اندراج ہیں"),
+    ]);
+    let reply = h.ask_with(question, None, &client);
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let answer = reply.answer.as_ref().unwrap();
+    let screens: Vec<_> = answer
+        .sources
+        .iter()
+        .filter_map(|s| match s {
+            AnswerSource::Screen { result_id, route } => Some((result_id.as_str(), *route)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        screens,
+        [("r1", mandi_assistant::answer::ScreenRoute::Audit)],
+        "{answer:#?}"
+    );
+    fixture("assistant_reply_screen_source_audit.json", &reply);
+    fixture(
+        "assistant_reply_screen_source_audit_request.json",
+        &request(question),
+    );
+    h.scan_requests();
+}
+
+/// The tool entries of the log row of the last question, as the log keeps them.
+fn logged(h: &Harness) -> Vec<serde_json::Value> {
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    serde_json::from_str(&rows[0].tool_calls_json).unwrap()
+}
+
+#[test]
+fn a_local_answer_writes_what_it_used_into_the_question_log_marked_local() {
+    // The lead's request of 05-11-2026: the Owner's log and the scorer must see what a local answer
+    // used. Nothing was run, so each entry carries `"local": true` and `rerun` skips it.
+    // A how-to: the guide topic.
+    let (h, reply, _client) = ask("print kaise nikalte hain");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let entries = logged(&h);
+    assert_eq!(entries.len(), 1, "{entries:?}");
+    assert_eq!(entries[0]["tool"], "app_help");
+    assert_eq!(entries[0]["local"], true);
+    assert!(
+        entries[0]["input"]["topic"]
+            .as_str()
+            .is_some_and(|t| !t.is_empty()),
+        "{entries:?}"
+    );
+    // The log page names the topic as the source of the entry.
+    let page = mandi_assistant::service::log_list(
+        &h.world.env.ctx,
+        &mandi_assistant::log::AssistantLogListInput {
+            offset: 0,
+            limit: 0,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        page.rows[0].tools[0].source.as_deref(),
+        entries[0]["input"]["topic"].as_str()
+    );
+
+    // A print: the report id and the filters of the button, only the ones set.
+    let (h, reply, _client) = ask("akram ki aaj ki bikri ka print nikalna hai");
+    assert_eq!(reply.outcome, AskOutcome::Answered, "{reply:#?}");
+    let entries = logged(&h);
+    assert_eq!(entries.len(), 1, "{entries:?}");
+    assert_eq!(entries[0]["tool"], "report");
+    assert_eq!(entries[0]["local"], true);
+    assert_eq!(entries[0]["input"]["id"], "R35");
+    let filters = &entries[0]["input"];
+    assert_eq!(filters["as_of"], "2026-10-10");
+    assert_eq!(filters["party"]["record"]["name_en"], "Akram Toll Tax");
+    assert!(
+        filters.get("from").is_none() && filters.get("detail").is_none(),
+        "only the filters that are set: {filters}"
+    );
+
+    // A month: two buttons, two entries, in the order of the buttons.
+    let (h, _reply, _client) = ask("akram ki pichle mahine ki bikri ka print chahiye");
+    let entries = logged(&h);
+    let ids: Vec<&str> = entries
+        .iter()
+        .map(|e| e["input"]["id"].as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(ids, ["R5", "R13"], "{entries:?}");
+    assert!(entries.iter().all(|e| e["local"] == true));
+
+    // A name no record has: the find that came up empty.
+    let (h, reply, _client) = ask("zubair ki aaj ki bikri ka print nikalna hai");
+    assert_eq!(reply.outcome, AskOutcome::NotFound, "{reply:#?}");
+    let entries = logged(&h);
+    assert_eq!(entries.len(), 1, "{entries:?}");
+    assert_eq!(entries[0]["tool"], "find");
+    assert_eq!(entries[0]["local"], true);
+    assert_eq!(entries[0]["input"]["text"], "zubair");
 }
 
 #[test]

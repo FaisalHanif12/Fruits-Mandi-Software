@@ -16,6 +16,7 @@ import type { LotPreview } from '../../src/bindings/LotPreview';
 import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { SellerMemory } from '../../src/bindings/SellerMemory';
 import type { TruckMemory } from '../../src/bindings/TruckMemory';
+import { OVER_FIXED_PREVIEW, OVER_PREVIEW, withKeysOf } from './bikri-over-qty-real';
 
 /** The fixture files are the backend's own JSON; their text is read as the generated types. */
 function previewOf(value: unknown): BikriPreview {
@@ -102,6 +103,21 @@ export function previewFor(draft: BikriDraft): BikriPreview {
     return made;
   });
   return { ...base, lots };
+}
+
+/**
+ * Umar's case as the backend answers it (plan 57 Section 7), from its own files: the lot has 50 and
+ * the first line is typed as 70. That line has no `calc`, the lot has no totals (no line is worked
+ * out) and the error points at the quantity. The same line fixed to 50 gets the full answer. With
+ * any other draft it is the ordinary answer. A test double that holds the backend's real replies.
+ */
+export function previewWithOverLine(draft: BikriDraft): BikriPreview {
+  const qty = draft.lots[0]?.sales[0]?.qty ?? '';
+  if (qty === '70') return withKeysOf(OVER_PREVIEW, draft);
+  if (qty === '50' && draft.lots[0]?.sales.length === 1) {
+    return withKeysOf(OVER_FIXED_PREVIEW, draft);
+  }
+  return previewFor(draft);
 }
 
 /** What the backend remembers about the truck LES-1234 (PRD FR-7.49, FR-7.50). */

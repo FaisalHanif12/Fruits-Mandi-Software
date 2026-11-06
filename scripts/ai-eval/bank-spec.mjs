@@ -35,6 +35,9 @@ import PRINTS from './bank-spec-cap-print.mjs';
 import REST from './bank-spec-cap-rest.mjs';
 import REGISTERS from './bank-spec-cap-registers.mjs';
 import MIX from './bank-spec-mix.mjs';
+import VEG from './bank-spec-veg.mjs';
+import { itemEntries } from './capability-items.mjs';
+import { moneyEntries } from './capability-money.mjs';
 
 const r = (text) => ['roman', text];
 const rm = (text) => ['roman', text, 'mis'];
@@ -2622,6 +2625,12 @@ const ENTRIES = [
   ...gate(PRINTS, 'A'),
   ...gate(FORECASTS, 'C'),
   ...gate(REST, 'A'),
+  ...gate(VEG, 'A'),
+  // The item axis of the capability matrix (Umar, 06-11-2026): one question for each answerable cell of
+  // capability-items.tsv, a figure from the oracle's `ix.*` facts. Each entry sets its own category.
+  ...gate(itemEntries(), 'A'),
+  // The period axis of the money and party subjects (lead, 06-11-2026): capability-money.tsv, facet MONEY.
+  ...gate(moneyEntries(), 'A'),
 ];
 
 export default ENTRIES;

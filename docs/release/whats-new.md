@@ -19,6 +19,9 @@
 - تجزیات: قسم مال، بیوپاری، گاہک، شراکت دار، باغ، سفر اور پھل کے حساب سے، دن، مہینہ یا سال۔ ہر رقم کے پیچھے کی لائنیں کھل جاتی ہیں۔
 - ڈیش بورڈ، توجہ طلب فہرست (گھنٹی)، دن بند کرنا، مہینہ بند کرنا اور وجہ لکھ کر دوبارہ کھولنا۔
 - بیک اپ: ہر 15 منٹ پر مقامی کاپی، روزانہ خفیہ کلاؤڈ کاپی، بحالی اور ٹیسٹ بحالی۔ ترتیبات، آڈٹ لاگ، اپ ڈیٹ اور مدد کے لیے معلومات۔
+- بکری میں کسی لائن کی تعداد لاٹ کے باقی مال سے زیادہ ہو تو اسی خانے کے نیچے فوراً بتایا جاتا ہے اور اس لائن کا حساب نہیں بنتا۔ ہر لاٹ کے نام میں بیوپاری اور قسم مال، جیسے "لاٹ 1: احسان، سیب"۔
+- ہر خریدار کی لائن پر درجہ (اول، دوم، سوم) چن سکتے ہیں۔ یہ بیوپاری کے بل، گاہک کی پرچی اور رپورٹوں میں قسم مال کے بعد چھپتا ہے۔
+- تجزیات اور بکری کی رپورٹوں میں گروپ (پھل یا سبزی) کا انتخاب۔
 
 ## What's new
 
@@ -41,3 +44,6 @@
 - Analytics: by item, seller, buyer, partner, garden, trip and fruit, by day, month or year. Every figure opens the lines behind it.
 - Dashboard, the attention list (bell), closing a day, closing a month and reopening with a reason.
 - Backup: a local copy every 15 minutes, an encrypted cloud copy every day, restore and test restore. Settings, audit log, updates and support information.
+- In a sale, a line that sells more than the lot has left shows the message under its quantity at once and is not worked out. Each lot label names its seller and item, for example "Lot 1: Ehsan, Apple".
+- Each buyer line can carry a quality (First, Second, Third). It prints after the item on the seller bill, the buyer slips and the reports.
+- A Group choice (fruit or vegetable) in analytics and the sales reports.
