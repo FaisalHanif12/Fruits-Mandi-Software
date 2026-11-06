@@ -44,6 +44,7 @@ pub mod number_words;
 pub mod prefetch;
 pub mod prefind;
 pub mod prompt;
+pub mod provider_reason;
 pub mod quick;
 pub mod request;
 pub mod results;

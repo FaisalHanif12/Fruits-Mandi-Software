@@ -2773,7 +2773,7 @@ pub fn test_connection(d: &Deps<'_>) -> Result<AssistantTestResult, ServiceError
             (f, None)
         }
         Err(f) => {
-            let failure = f.failure;
+            let failure = f.failure.clone();
             (*f, failure)
         }
     };

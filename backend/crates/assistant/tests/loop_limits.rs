@@ -18,8 +18,8 @@ use std::time::Duration;
 
 use harness::{Harness, answer_of, balance, figures, money, transcript};
 use mandi_assistant::ask::{
-    AskOutcome, AssistantAskInput, AssistantQuickInput, AssistantRerunInput, FailureKind,
-    QuickChip, StopReason,
+    AskOutcome, AssistantAskInput, AssistantFailure, AssistantQuickInput, AssistantRerunInput,
+    FailureKind, QuickChip, StopReason,
 };
 use mandi_assistant::client::{CallError, ModelClient, RecordedClient, Reply};
 use mandi_assistant::run::{self, Deps};
@@ -180,6 +180,7 @@ fn a_reply_that_cannot_be_used_ends_as_not_understood_and_a_bad_call_as_an_error
         let error = CallError {
             kind,
             http_status: status,
+            reason: None,
         };
         // A busy or failed service is tried once more (plan 52 item 6), so it fails twice here.
         let tries = if error.retryable() { 2 } else { 1 };
@@ -382,6 +383,54 @@ fn an_old_answer_is_read_again_on_todays_books_as_plain_tables_and_costs_no_ques
 // ---- the connection test ----------------------------------------------------------------------
 
 #[test]
+fn what_the_provider_said_reaches_the_reply_the_json_and_the_connection_test() {
+    // Live run 2: a 403 came back as "other, 403" and nothing said why. The client now keeps the
+    // provider's message (scrubbed of keys); it must reach the panel on both paths.
+    let said = "403: Your key is not allowed to use this model";
+    let refused = || CallError {
+        kind: FailureKind::Other,
+        http_status: Some(403),
+        reason: Some(said.to_owned()),
+    };
+    let h = Harness::day();
+    let client = RecordedClient::with_results(vec![Err(refused())]);
+    let reply = h.ask_with("ikram", None, &client);
+    assert_eq!(reply.outcome, AskOutcome::Error);
+    let failure = reply.failure.expect("a failure");
+    assert_eq!(
+        (failure.kind, failure.http_status),
+        (FailureKind::Other, Some(403))
+    );
+    assert_eq!(failure.reason.as_deref(), Some(said));
+    let json = serde_json::to_value(&failure).unwrap();
+    assert_eq!(json["reason"], said);
+    // Without a reason the field is left out, so the shape the panel knew stays the same.
+    let none = AssistantFailure {
+        reason: None,
+        ..failure
+    };
+    assert!(serde_json::to_value(&none).unwrap().get("reason").is_none());
+
+    // The connection test says it too.
+    let emit = |_s| {};
+    let client = RecordedClient::with_results(vec![Err(refused())]);
+    let deps = Deps {
+        ctx: &h.world.env.ctx,
+        actor: &h.world.owner,
+        runtime: &h.runtime,
+        client: &client,
+        emit: &emit,
+        backup: mandi_reports::dashboard::BackupFacts {
+            cloud_on: false,
+            cloud_age_hours: None,
+        },
+    };
+    let tested = run::test_connection(&deps).unwrap();
+    assert!(!tested.worked);
+    assert_eq!(tested.failure.unwrap().reason.as_deref(), Some(said));
+}
+
+#[test]
 fn the_connection_test_counts_as_a_question_and_says_why_it_failed() {
     let h = Harness::day();
     let ok = RecordedClient::new(fixture!("limit-question").into_iter().skip(1).collect());
@@ -407,6 +456,7 @@ fn the_connection_test_counts_as_a_question_and_says_why_it_failed() {
     let missing = RecordedClient::with_results(vec![Err(CallError {
         kind: FailureKind::NoEndpoint,
         http_status: Some(404),
+        reason: None,
     })]);
     let failed = run_test(&missing);
     assert!(!failed.worked);

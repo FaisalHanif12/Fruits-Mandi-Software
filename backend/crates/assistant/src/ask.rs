@@ -96,13 +96,23 @@ pub enum FailureKind {
 }
 
 /// The failure behind outcome `error` or `offline`, and behind a failed connection test.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+///
+/// Example: a 403 whose body says `{"error":{"code":403,"message":"Key limit exceeded"}}` has
+/// `http_status` 403 and `reason` `403: Key limit exceeded`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct AssistantFailure {
     /// What kind of failure.
     pub kind: FailureKind,
     /// The HTTP status when there was a reply (401, 402, 404, 429, 500 ...). Null otherwise.
     #[ts(type = "number | null")]
     pub http_status: Option<i64>,
+    /// What the provider said when it refused the call: its error message and code, or the start of
+    /// its reply, on one line of at most 300 characters, with anything that looks like a key hidden
+    /// (`provider_reason`, NFR-OBS-2, NFR-SEC-7). Left out when the reply had no body or there was
+    /// no reply.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub reason: Option<String>,
 }
 
 /// Why a question was stopped before it was answered (plan 51 B2). Only with outcome

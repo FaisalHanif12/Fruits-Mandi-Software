@@ -1365,6 +1365,7 @@ fn offline() -> AskReply {
     r.failure = Some(AssistantFailure {
         kind: FailureKind::Offline,
         http_status: None,
+        reason: None,
     });
     r
 }
@@ -1375,6 +1376,7 @@ fn error_404() -> AskReply {
     r.failure = Some(AssistantFailure {
         kind: FailureKind::NoEndpoint,
         http_status: Some(404),
+        reason: None,
     });
     r
 }
@@ -1677,6 +1679,7 @@ fn contract_fixtures_are_the_contract() {
             failure: Some(AssistantFailure {
                 kind: FailureKind::NoEndpoint,
                 http_status: Some(404),
+                reason: None,
             }),
             count_today: 10,
             limit: DAILY_LIMIT,

@@ -2195,6 +2195,7 @@ fn attack_06_every_network_failure_gives_its_message_and_nothing_else_waits() {
         let error = CallError {
             kind,
             http_status: status,
+            reason: None,
         };
         // A network failure, 429 and a 5xx are tried once more (plan 52 item 6): both fail here.
         let tries = if error.retryable() { 2 } else { 1 };
@@ -2236,6 +2237,7 @@ fn attack_06_a_failure_in_the_middle_of_a_question_ends_it_once_and_counts_it_on
         let failure = CallError {
             kind,
             http_status: status,
+            reason: None,
         };
         // The call that failed is tried once more (plan 52 item 6), and fails again. The first
         // call found Akram, so the app read his party card by itself. A party card counts as read
@@ -2243,7 +2245,7 @@ fn attack_06_a_failure_in_the_middle_of_a_question_ends_it_once_and_counts_it_on
         // It is not an error.
         let client = RecordedClient::with_results(vec![
             Ok(tool_reply(&[find("ikram", "buyer")])),
-            Err(failure),
+            Err(failure.clone()),
             Err(failure),
         ]);
         let before = reply_count(&h);
@@ -3032,7 +3034,7 @@ impl ModelClient for KeySpy {
         self.bodies.lock().unwrap().push(body.to_string());
         match &self.result {
             Ok(value) => Reply::from_json(value),
-            Err(error) => Err(*error),
+            Err(error) => Err(error.clone()),
         }
     }
 }
@@ -3087,6 +3089,7 @@ fn attack_09_the_key_is_in_no_file_no_row_no_reply_and_no_debug_text() {
         let client = RecordedClient::with_results(vec![Err(CallError {
             kind,
             http_status: status,
+            reason: None,
         })]);
         let reply = ask_client(&h, "ikram ka hisab", &client);
         see(&reply, Some(serde_json::to_string(&reply).unwrap()));

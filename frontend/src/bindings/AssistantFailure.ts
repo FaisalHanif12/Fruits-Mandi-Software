@@ -3,6 +3,9 @@ import type { FailureKind } from './FailureKind';
 
 /**
  * The failure behind outcome `error` or `offline`, and behind a failed connection test.
+ *
+ * Example: a 403 whose body says `{"error":{"code":403,"message":"Key limit exceeded"}}` has
+ * `http_status` 403 and `reason` `403: Key limit exceeded`.
  */
 export type AssistantFailure = {
   /**
@@ -13,4 +16,11 @@ export type AssistantFailure = {
    * The HTTP status when there was a reply (401, 402, 404, 429, 500 ...). Null otherwise.
    */
   http_status: number | null;
+  /**
+   * What the provider said when it refused the call: its error message and code, or the start of
+   * its reply, on one line of at most 300 characters, with anything that looks like a key hidden
+   * (`provider_reason`, NFR-OBS-2, NFR-SEC-7). Left out when the reply had no body or there was
+   * no reply.
+   */
+  reason?: string;
 };

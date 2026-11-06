@@ -326,7 +326,7 @@ fn a_line_that_drops_after_only_a_find_ends_with_the_failure_and_not_with_a_gues
         "{reply:#?}"
     );
     assert_eq!(
-        reply.failure.map(|f| f.kind),
+        reply.failure.as_ref().map(|f| f.kind),
         Some(FailureKind::Dropped),
         "{reply:#?}"
     );

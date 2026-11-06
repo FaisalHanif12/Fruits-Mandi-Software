@@ -121,7 +121,7 @@ where
                 return (Ok(reply), hedge_note(Some(side), now, copy_at, &failed));
             }
             Ok((side, Err(error), took)) => {
-                failed.push((side, error, took));
+                failed.push((side, error.clone(), took));
                 if copy_at.is_none() {
                     // It failed before the copy was due: the caller's retry rule takes it.
                     return (Err(error), None);

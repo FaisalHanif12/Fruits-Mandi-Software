@@ -73,15 +73,17 @@ fn a_call_that_failed_on_the_network_is_tried_once_more_and_the_question_goes_on
         CallError {
             kind: FailureKind::Busy,
             http_status: Some(429),
+            reason: None,
         },
         CallError {
             kind: FailureKind::Server,
             http_status: Some(503),
+            reason: None,
         },
     ] {
         let h = Harness::day();
         let client = RecordedClient::with_results(vec![
-            Err(error),
+            Err(error.clone()),
             Ok(tool_call("tiles", &json!({}), "call_0")),
             Ok(good_commission()),
         ]);
@@ -133,23 +135,27 @@ fn what_one_more_try_cannot_cure_is_not_tried_again() {
         CallError {
             kind: FailureKind::BadKey,
             http_status: Some(401),
+            reason: None,
         },
         CallError {
             kind: FailureKind::NoCredit,
             http_status: Some(402),
+            reason: None,
         },
         CallError {
             kind: FailureKind::NoEndpoint,
             http_status: Some(404),
+            reason: None,
         },
         CallError::new(FailureKind::BadReply),
         CallError {
             kind: FailureKind::Other,
             http_status: Some(400),
+            reason: None,
         },
     ] {
         let h = Harness::day();
-        let client = RecordedClient::with_results(vec![Err(error), Ok(good_commission())]);
+        let client = RecordedClient::with_results(vec![Err(error.clone()), Ok(good_commission())]);
         let reply = h.ask_with("aaj ka commission", None, &client);
         assert_eq!(reply.outcome, AskOutcome::Error, "{error:?}");
         assert_eq!(client.requests().len(), 1, "{error:?}");

@@ -20,6 +20,7 @@
 //! with `content` set, no tool calls and 5,200 tokens in.
 
 use std::collections::VecDeque;
+use std::io::Read as _;
 use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
@@ -28,6 +29,7 @@ use serde_json::Value;
 use crate::ask::{AssistantFailure, FailureKind};
 use crate::hedge::{Hedge, hedged_with};
 use crate::limits::{HEDGE_AFTER_SECS, HEDGE_MIN_COPY_SECS, RETRY_WAIT_MILLIS};
+use crate::provider_reason::{MAX_ERROR_BODY_BYTES, reason_of};
 
 /// The only URL the app calls for a question (NFR-SEC-9).
 pub const API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
@@ -76,12 +78,15 @@ pub struct Reply {
 }
 
 /// Why a call failed (the reply has no body to use).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallError {
     /// What kind of failure.
     pub kind: FailureKind,
     /// The HTTP status when there was a reply.
     pub http_status: Option<i64>,
+    /// What the provider said, scrubbed of keys ([`crate::provider_reason`]). Only for a reply that
+    /// was not a success and had a body.
+    pub reason: Option<String>,
 }
 
 impl CallError {
@@ -90,6 +95,7 @@ impl CallError {
         Self {
             kind,
             http_status: None,
+            reason: None,
         }
     }
 
@@ -99,7 +105,7 @@ impl CallError {
     /// timeout. A wrong key, no credit, no Azure endpoint, a reply that cannot be read or any other
     /// status is not tried again. The retry is only made when `RETRY_MIN_LEFT_SECS` of the question
     /// are left, so a timeout late in a question is final.
-    pub fn retryable(self) -> bool {
+    pub fn retryable(&self) -> bool {
         matches!(
             self.kind,
             FailureKind::Offline
@@ -111,10 +117,11 @@ impl CallError {
     }
 
     /// The failure the panel is told.
-    pub fn failure(self) -> AssistantFailure {
+    pub fn failure(&self) -> AssistantFailure {
         AssistantFailure {
             kind: self.kind,
             http_status: self.http_status,
+            reason: self.reason.clone(),
         }
     }
 }
@@ -254,6 +261,17 @@ fn body_failure(is_timeout: bool) -> CallError {
     })
 }
 
+/// What the provider said in the body of an error reply (live run 2: a 403 told us nothing). At
+/// most [`MAX_ERROR_BODY_BYTES`] are read, and a body that fails to read leaves what came before the
+/// failure. The key is cut out of it and anything that looks like a key is hidden before it is kept
+/// (NFR-OBS-2, NFR-SEC-7); neither the key nor a header is ever logged.
+fn read_reason(response: reqwest::blocking::Response, key: &str) -> Option<String> {
+    let mut body = Vec::new();
+    // A read that fails half way is not a failure of its own: the status already says what happened.
+    let _ = response.take(MAX_ERROR_BODY_BYTES).read_to_end(&mut body);
+    reason_of(&body, key)
+}
+
 impl OpenRouterClient {
     /// One call to `url`. The app only ever calls [`API_URL`] over HTTPS (`call`); the tests call a
     /// local address over plain HTTP, so the timeouts of every stage can be tried for real.
@@ -282,6 +300,7 @@ impl OpenRouterClient {
             return Err(CallError {
                 kind: status_kind(status),
                 http_status: Some(i64::from(status)),
+                reason: read_reason(response, key),
             });
         }
         // The timeout covers the body too: a reply that stalls half way is a timeout (plan 51 B3).
@@ -492,6 +511,8 @@ mod tests {
         HeadersLateThenStall(Duration),
         /// Sends a whole reply.
         Replies(&'static str),
+        /// Sends a whole reply with this HTTP status.
+        Fails(u16, &'static str),
         /// Takes the request and closes the connection with no reply.
         HangsUp,
     }
@@ -533,6 +554,15 @@ mod tests {
                 Server::Replies(body) => {
                     let head = format!(
                         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    let _ = stream.write_all(head.as_bytes());
+                    let _ = stream.write_all(body.as_bytes());
+                    let _ = stream.flush();
+                }
+                Server::Fails(status, body) => {
+                    let head = format!(
+                        "HTTP/1.1 {status} Refused\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                         body.len()
                     );
                     let _ = stream.write_all(head.as_bytes());
@@ -696,11 +726,122 @@ mod tests {
         assert!(error.retryable());
     }
 
+    /// A key that looks like a real one, used only in these tests. The `zz` keeps it from being hex,
+    /// so the scan for real keys in the sources (attack 09) does not take it for one.
+    const TEST_KEY: &str = "sk-or-v1-zz0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    fn call_failing(status: u16, body: &'static str) -> CallError {
+        let url = serve(Server::Fails(status, body), Duration::ZERO);
+        let result =
+            OpenRouterClient::call_to(&url, false, TEST_KEY, &json!({}), Duration::from_secs(5));
+        result.unwrap_err()
+    }
+
+    #[test]
+    fn a_403_keeps_what_the_provider_said_next_to_its_status() {
+        // Live run 2: a 403 came back as "other, 403" and nothing said why.
+        let error = call_failing(
+            403,
+            r#"{"error":{"code":403,"message":"Your key is not allowed to use this model"}}"#,
+        );
+        assert_eq!(error.kind, FailureKind::Other);
+        assert_eq!(error.http_status, Some(403));
+        assert_eq!(
+            error.reason.as_deref(),
+            Some("403: Your key is not allowed to use this model")
+        );
+        assert!(!error.retryable());
+        // The failure the panel is told carries it, and its JSON names the field.
+        let failure = error.failure();
+        assert_eq!(failure.http_status, Some(403));
+        let json = serde_json::to_value(&failure).unwrap();
+        assert_eq!(
+            json["reason"],
+            "403: Your key is not allowed to use this model"
+        );
+        assert_eq!(json["http_status"], 403);
+    }
+
+    #[test]
+    fn a_403_body_that_echoes_the_key_or_a_header_is_scrubbed_before_it_is_kept() {
+        // The provider repeats the key, the header and a second key in its message.
+        let error = call_failing(
+            403,
+            r#"{"error":{"code":403,"message":"Rejected sk-or-v1-zz0123456789abcdef0123456789abcdef0123456789abcdef. Request had Authorization: Bearer sk-or-v1-zz0123456789abcdef0123456789abcdef0123456789abcdef and x-api-key: other-secret-value-1"}}"#,
+        );
+        let reason = error.reason.unwrap();
+        for secret in [TEST_KEY, "0123456789abcdef", "other-secret-value-1"] {
+            assert!(!reason.contains(secret), "{secret} stayed in {reason}");
+        }
+        assert!(reason.starts_with("403: Rejected [hidden]."), "{reason}");
+        assert!(
+            reason.contains("Authorization: Bearer [hidden]"),
+            "{reason}"
+        );
+    }
+
+    #[test]
+    fn a_web_address_in_a_403_is_cut_to_its_host() {
+        // Live probe: the message names the key's own page, with its id. The id is not the secret
+        // but it names the key, so only the host stays.
+        let error = call_failing(
+            403,
+            r#"{"error":{"code":403,"message":"Key limit exceeded (total limit). Manage it at https://openrouter.ai/workspaces/default/keys/k_ab12CD34. $1.01 of $1.00 used."}}"#,
+        );
+        assert_eq!(
+            error.reason.as_deref(),
+            Some(
+                "403: Key limit exceeded (total limit). Manage it at openrouter.ai/[hidden]. $1.01 of $1.00 used."
+            )
+        );
+    }
+
+    #[test]
+    fn a_403_with_a_body_that_is_not_json_gives_its_first_300_characters() {
+        let error = call_failing(
+            403,
+            "<html><body><h1>403 Forbidden</h1><p>This account is blocked in your region.</p></body></html>",
+        );
+        let reason = error.reason.unwrap();
+        assert!(
+            reason.starts_with("<html><body><h1>403 Forbidden</h1>"),
+            "{reason}"
+        );
+        assert!(reason.chars().count() <= 300);
+        // Other kinds of refusal keep theirs too, and a reply with no body has no reason.
+        let busy = call_failing(
+            429,
+            r#"{"error":{"message":"Rate limit exceeded","code":429}}"#,
+        );
+        assert_eq!(busy.kind, FailureKind::Busy);
+        assert_eq!(busy.reason.as_deref(), Some("429: Rate limit exceeded"));
+        assert!(busy.retryable());
+        let empty = call_failing(403, "");
+        assert_eq!(empty.http_status, Some(403));
+        assert_eq!(empty.reason, None);
+        assert!(
+            serde_json::to_value(empty.failure())
+                .unwrap()
+                .get("reason")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_body_far_past_the_cap_is_read_only_as_far_as_the_cap() {
+        // 100 KB of text: the call returns at once with a reason of at most 300 characters.
+        let body: &'static str = Box::leak("x ".repeat(50_000).into_boxed_str());
+        let error = call_failing(500, body);
+        assert_eq!(error.kind, FailureKind::Server);
+        assert!(error.reason.unwrap().chars().count() <= 300);
+    }
+
     #[test]
     fn which_failures_are_tried_again() {
         let status = |kind, code| CallError {
             kind,
             http_status: Some(code),
+            reason: None,
         };
         for kind in [
             FailureKind::Offline,
