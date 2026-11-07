@@ -72,6 +72,14 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         document_number: false,
         packing_filter: false,
         asks_count: false,
+        qty_asked: false,
+        average_asked: false,
+        pay_kind: None,
+        pay_asked: false,
+        unexplained: false,
+        role_word: false,
+        how_much_twice: false,
+        value_asked: false,
         total_dues: false,
         sure: false,
         doubts: vec![doubt],
@@ -1114,6 +1122,7 @@ pub(super) fn assemble(
     let grade = super::reads::grade_of(scan, has_item_found || item_group.is_some());
     // The side of the commission asked, read before the names move into the understanding (plan 59, F1).
     let commission_side = super::reads::commission_side(scan, &kinds_for_happened, &names.parties);
+    let unexplained_flag = unexplained_words(scan, &names, &periods);
     let names_have_garden = roles_found
         .iter()
         .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
@@ -1163,6 +1172,19 @@ pub(super) fn assemble(
         commission_side,
         buyer_rate: super::reads::buyer_rate(scan),
         asks_count: cues::asks_count(&scan.raw),
+        qty_asked: false,
+        average_asked: cues::average_asked(&scan.raw),
+        pay_kind: super::reads::pay_kind(scan),
+        pay_asked: super::reads::pay_asked(scan),
+        unexplained: unexplained_flag,
+        role_word: scan.has_any(&[
+            Cue::RoleBuyer,
+            Cue::ManyBuyers,
+            Cue::RoleSeller,
+            Cue::ManySellers,
+        ]),
+        how_much_twice: scan.hits.iter().filter(|h| h.cue == Cue::HowMuch).count() >= 2,
+        value_asked: super::reads::value_asked(scan),
         document_number: super::reads::document_number(scan),
         packing_filter: super::reads::packing_filter(scan),
         total_dues: kinds_for_happened.contains(&FigureKind::Dues)
@@ -1171,6 +1193,11 @@ pub(super) fn assemble(
         sure: false,
         doubts,
     };
+    understanding.qty_asked = super::reads::qty_asked(
+        scan,
+        &understanding.figures.value,
+        understanding.other_measure,
+    );
     if understanding.intent.value == Intent::NotInApp {
         understanding.outside = outside_kind(scan);
     }

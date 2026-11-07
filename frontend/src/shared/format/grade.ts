@@ -5,6 +5,12 @@
 
 import type { SaleGrade } from '../../bindings/SaleGrade';
 
+/** The quality box of a filter: one quality, or `all` for no filter (a line with no quality is only in `all`). */
+export type GradeChoice = SaleGrade | 'all';
+
+/** In the order of the qualities: اول, دوم, سوم. */
+export const GRADE_CHOICES: readonly GradeChoice[] = ['all', 'first', 'second', 'third'];
+
 /** The Fluent message of each grade: اول, دوم, سوم (First, Second, Third). */
 export const GRADE_WORD_ID: Readonly<Record<SaleGrade, string>> = {
   first: 'glossary-darja-awwal',

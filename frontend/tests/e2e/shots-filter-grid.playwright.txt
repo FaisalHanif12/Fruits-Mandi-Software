@@ -1,0 +1,87 @@
+// Screenshots and an overflow check of the filter bars of every analytics view (A to K) and every report (R1 to
+// R38) (plan 59, NFR-USE-16, NFR-USE-28): the shared `filter-grid` layout gives each box at least a filter's width,
+// so no select squeezes its text onto lines that overflow the box. Both languages, at 1024 x 600 and 1920 x 1080.
+// A developer tool: run it with the Vite dev server up (port 5188), as a snippet for `playwright-core` (kept as .txt
+// so the linter does not read it). The pages are /dev/analytics/<view> and /dev/reports/<id> of the dev bridge.
+// It returns only the problems and the counts; the pictures of the bars are in OUT.
+async (page) => {
+  const OUT =
+    '/Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Project/frontend/tests/e2e/output/screenshots/filter-grid';
+  const BASE = 'http://localhost:5188/#/dev/';
+  const LANG_BUTTON = { ur: 'اردو', en: 'English' };
+  const ROUTES = [
+    ...'ABCDEFGHIJK'.split('').map((v) => ({ kind: 'analytics', id: v })),
+    ...Array.from({ length: 38 }, (_, i) => ({ kind: 'reports', id: `R${i + 1}` })),
+  ];
+  const problems = [];
+  const counts = { shots: 0, noBar: 0 };
+  for (const [w, h] of [
+    [1024, 600],
+    [1920, 1080],
+  ]) {
+    await page.setViewportSize({ width: w, height: h });
+    for (const lang of ['ur', 'en']) {
+      await page.goto(BASE + 'analytics/A');
+      await page
+        .waitForFunction(
+          (label) => [...document.querySelectorAll('button')].some((b) => (b.textContent ?? '').trim() === label),
+          LANG_BUTTON[lang],
+          { timeout: 15000 },
+        )
+        .catch(() => undefined);
+      await page.evaluate((label) => {
+        const button = [...document.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === label);
+        if (button !== undefined) button.click();
+      }, LANG_BUTTON[lang]);
+      for (const route of ROUTES) {
+        const name = `${route.kind}-${route.id}-${lang}-${w}`;
+        try {
+          await page.evaluate((hash) => {
+            window.location.hash = hash;
+          }, `#/dev/${route.kind}/${route.id}`);
+          await page.waitForTimeout(700);
+          const found = await page
+            .waitForSelector('.filter-grid', { timeout: 2500 })
+            .then(() => true)
+            .catch(() => false);
+          if (!found) {
+            counts.noBar += 1;
+            continue;
+          }
+          const result = await page.evaluate(() => {
+            const bar = document.querySelector('.filter-grid');
+            const bad = [];
+            // A control (a select or a button) holds its text on one line: more than one line of text, or a
+            // text wider than its box, is a problem. A label may be tall (Nastaliq lines are), so labels are
+            // not judged by their height.
+            for (const el of bar.querySelectorAll('button, [role=combobox]')) {
+              const text = el.querySelector('span') ?? el;
+              const range = document.createRange();
+              range.selectNodeContents(text);
+              const tops = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top / 8)));
+              const wider = el.scrollWidth > el.clientWidth + 1;
+              if ((tops.size > 1 || wider) && el.clientWidth > 0) {
+                bad.push(`${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 30)}" lines ${tops.size} ${el.clientWidth}x${el.clientHeight} inside ${el.scrollWidth}x${el.scrollHeight}`);
+              }
+            }
+            const boxes = bar.getBoundingClientRect();
+            return {
+              bad: bad.slice(0, 4),
+              sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+              beyond: boxes.right > window.innerWidth + 1 || boxes.left < -1,
+              columns: getComputedStyle(bar).gridTemplateColumns.split(' ').length,
+            };
+          });
+          await (await page.$('.filter-grid')).screenshot({ path: `${OUT}/${name}.png` });
+          counts.shots += 1;
+          if (result.bad.length > 0 || result.sideways || result.beyond) {
+            problems.push({ name, ...result });
+          }
+        } catch (e) {
+          problems.push({ name, error: String(e).slice(0, 160) });
+        }
+      }
+    }
+  }
+  return { counts, problems };
+}

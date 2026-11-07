@@ -25,9 +25,11 @@ use mandi_services::core::auth::Language;
 use mandi_services::core::money::Paisa;
 use serde_json::Value;
 
+mod more;
+
 use super::reads::{Line, Planned, What, Who};
 use super::{FigureKind, PeriodKind, PeriodRef, Understanding, reads};
-use crate::model_answer::{AnswerKind, ModelAnswer};
+use crate::model_answer::{AnswerKind, ModelAnswer, Show, ShowAs};
 use crate::results::{Node, Side, ToolResult, Val, Words};
 
 /// The most partner rows one answer lists.
@@ -83,7 +85,11 @@ pub fn compose_figure(
     // "how many sellers and the total": an instant answer must answer EVERY part asked. A count asked and
     // no line that gives a count (only the number of بکری is one) leaves a part out, so the model answers
     // (D7 O3, O4).
-    if u.asks_count && !planned.lines.iter().any(|l| l.what == What::SaleCount) {
+    // "How many units" is answered by the quantity (D7, plan 59 S-A7), unless it asks two things.
+    let counted = |l: &Line| {
+        l.what == What::SaleCount || (l.what == What::Qty && u.qty_asked && !u.how_much_twice)
+    };
+    if u.asks_count && !planned.lines.iter().any(counted) {
         return None;
     }
     let results = results_of(&planned, reads)?;
@@ -117,11 +123,29 @@ pub fn compose_figure(
             .collect::<Vec<_>>()
             .join("\n")
     };
+    // "naseer ka hisab": the balance, and the newest rows of his ledger under it. Two ledgers asked at once
+    // are the model's.
+    let show = if u.figures.value.as_slice() == [FigureKind::Ledger] {
+        let ledgers: Vec<&&ToolResult> = results
+            .iter()
+            .filter(|r| r.tool == "report" && input_str(r, "id") == Some("R13"))
+            .collect();
+        match ledgers.as_slice() {
+            [one] => vec![Show {
+                result: one.id.clone(),
+                as_: ShowAs::Table,
+                rows: Some(i64::from(reads::LEDGER_ROWS)),
+            }],
+            _ => return None,
+        }
+    } else {
+        Vec::new()
+    };
     Some(FigureAnswer {
         answer: ModelAnswer {
             kind: AnswerKind::Answer,
             text,
-            show: Vec::new(),
+            show,
             next: Vec::new(),
             choose: None,
             entry: None,
@@ -152,8 +176,15 @@ fn write(words: &Words, language: Language, sentence: &mut Sentence) -> Option<S
         if let Some(slot) = probe.get_mut(at) {
             slot.1 = "no-such-role";
         }
+        // The role a message takes as its default branch is one it has: the shop's for most, the item's for
+        // the average rate.
+        let default_role = if sentence.id == "assistant-instant-rate-average" {
+            "item"
+        } else {
+            "shop"
+        };
         if words.text_with(language, sentence.id, &probe) == text
-            && args.get(at).map(|a| a.1) != Some("shop")
+            && args.get(at).map(|a| a.1) != Some(default_role)
         {
             return None;
         }
@@ -375,6 +406,26 @@ impl Cx<'_> {
             | (Who::Buyer(_), What::Sale | What::Commission | What::Laga) => {
                 self.flow(&line.who, line.what).map(|s| vec![s])
             }
+            // The figures read from the totals of a report or a view (D7, plan 59 F3).
+            (_, What::Qty) => self.qty(&line.who).map(|s| vec![s]),
+            (Who::Item(_) | Who::SellerItem(..), What::AvgRate) => {
+                self.avg_rate(&line.who).map(|s| vec![s])
+            }
+            (Who::Shop | Who::Head(_), What::Expense) => self.expense(&line.who).map(|s| vec![s]),
+            (Who::Shop | Who::Collector(_), What::Receipts) => {
+                self.receipts(&line.who).map(|s| vec![s])
+            }
+            (Who::Shop, What::CashClosing) => self.cash_closing().map(|s| vec![s]),
+            (Who::Shop, What::CashSales | What::CreditSales) => {
+                self.sale_kind(line.what).map(|s| vec![s])
+            }
+            (Who::Seller(key), What::NetSale) => self.sale_net(key).map(|s| vec![s]),
+            (Who::Shop | Who::Guests | Who::Partner(Some(_)), What::FruitValue) => {
+                self.fruit(&line.who).map(|s| vec![s])
+            }
+            (Who::Shop, What::CapitalIn | What::CapitalOut) => {
+                self.capital_flow(line.what).map(|s| vec![s])
+            }
             (Who::Shop, _) => self.shop(line.what).map(|s| vec![s]),
             _ => None,
         }
@@ -537,9 +588,12 @@ impl Cx<'_> {
         }
         let view = self.analytics("B", "seller", Some(key))?;
         let name = self.name_of(key)?;
+        // "kitna kamishan kata": the one taken off him, the seller side only (D7, plan 59 F3).
+        let only_own = self.u.commission_side == Some(super::CommissionSide::Seller);
         ["seller_comm", "total_comm"]
             .iter()
             .zip(["seller-own", "seller"])
+            .take(if only_own { 1 } else { 2 })
             .map(|(column, role)| {
                 Some(Sentence {
                     id: "assistant-instant-commission",

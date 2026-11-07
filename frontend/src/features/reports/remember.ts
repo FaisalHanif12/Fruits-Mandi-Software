@@ -17,6 +17,7 @@ import {
 import {
   EMPTY_FILTERS,
   GARDEN_VIEW_CHOICES,
+  GRADE_CHOICES,
   GROUP_BY_CHOICES,
   PAID_CHOICES,
   PERIOD_CHOICES,
@@ -57,6 +58,7 @@ export function rememberedFilters(state: ReportFilterState): Record<string, unkn
   if (state.guestsOnly) kept['guestsOnly'] = true;
   if (state.voucherType !== base.voucherType) kept['voucherType'] = state.voucherType;
   if (state.itemGroup !== base.itemGroup) kept['itemGroup'] = state.itemGroup;
+  if (state.grade !== base.grade) kept['grade'] = state.grade;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   if (state.stockView !== base.stockView) kept['stockView'] = state.stockView;
   if (state.garden !== null) kept['garden'] = state.garden;
@@ -88,6 +90,7 @@ export function filtersFromRemembered(raw: unknown): ReportFilterState | null {
     guestsOnly: flagOf(raw['guestsOnly']),
     voucherType: choiceOr(raw['voucherType'], VOUCHER_CHOICES, base.voucherType),
     itemGroup: choiceOr(raw['itemGroup'], ITEM_GROUP_CHOICES, base.itemGroup),
+    grade: choiceOr(raw['grade'], GRADE_CHOICES, base.grade),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
     stockView: choiceOr(raw['stockView'], STOCK_VIEW_CHOICES, base.stockView),
     garden: idOrNull(raw['garden']),

@@ -157,6 +157,11 @@ common-period-to = تا
 common-item-group = { masters-item-group }
 # review: pending
 common-item-group-all = پھل اور سبزی
+# The quality box of the sales registers R2, R3 and R4 and the analytics view A (PRD FR-12.42): one quality, or all.
+# review: pending
+common-grade = { -darja }
+# review: pending
+common-grade-all = تمام درجے
 # review: pending
 common-filters-more = مزید فلٹر
 

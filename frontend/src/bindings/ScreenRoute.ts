@@ -3,6 +3,9 @@
 /**
  * The screens a [`AnswerSource::Screen`] button opens. The words are those of the frontend's
  * `MAIN_SCREEN_PATHS` where it has them: `dashboard` is `/`, `commission_rules` is `/index/rules`,
- * `day_close` is `/day`; `audit` is the audit log tab of Settings (`/settings?tab=audit`).
+ * `day_close` is `/day`; `audit` is the audit log tab of Settings (`/settings?tab=audit`);
+ * `partner_overview` is the partner overview (`/partners`, PRD 17.3), behind the partner code like any
+ * partner screen (PRD FR-17.11).
  */
-export type ScreenRoute = 'dashboard' | 'commission_rules' | 'day_close' | 'audit';
+export type ScreenRoute =
+  'dashboard' | 'commission_rules' | 'day_close' | 'audit' | 'partner_overview';

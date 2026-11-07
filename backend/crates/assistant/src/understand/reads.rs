@@ -51,6 +51,10 @@
 //! banana as an item (by its own name, not by the words typed), and view A with `item` the key and
 //! 2026-09-01 to 2026-09-30.
 
+mod totals;
+
+pub(super) use totals::{pay_asked, pay_kind, qty_asked, value_asked};
+
 use mandi_reports::analytics::{AnalyticsCompare, compare_window};
 use serde_json::{Value, json};
 
@@ -59,7 +63,7 @@ use super::scan::Scan;
 use super::who::Names;
 use super::{
     CapitalFlow, Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver, Measure,
-    Outcome, PartyHit, PartyRole, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind,
+    Outcome, PartyHit, PartyRole, PayKind, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind,
     Understanding,
 };
 
@@ -764,6 +768,16 @@ pub(super) fn commission_side(
         [] => {}
         _ => return None,
     }
+    // "kitna kamishan kata", "commission deducted": taken off a seller, so the seller side (D7, plan 59 F3).
+    if scan.has_exact(Cue::Deducted) {
+        let found_sellers = parties
+            .iter()
+            .filter(|p| matches!(&p.outcome, Outcome::Found(hit) if hit.role == PartyRole::Seller))
+            .count();
+        if found_sellers >= 1 && !laga {
+            return Some(Side::Seller);
+        }
+    }
     // One buyer found by name, and the question does not ask for the whole.
     let text = scan.words.join(" ");
     let whole = scan
@@ -1039,6 +1053,12 @@ pub(super) enum Who {
     Party(String),
     /// A partner's row of R31; `None` for every partner's row.
     Partner(Option<String>),
+    /// A shop expense head, by its English name (the row of R29 that has it).
+    Head(String),
+    /// A collector (staff), by his key (`st5`): R23 read for him.
+    Collector(String),
+    /// The shop's guests (the fruit register for them).
+    Guests,
 }
 
 /// Which figure a line of the answer is.
@@ -1080,6 +1100,28 @@ pub(super) enum What {
     PartnerTotal,
     /// A partner's capital now (R31 for the partner, the `capital` part).
     PartnerCapital,
+    /// How many نگ were sold or bought: the `nag` column of view A, B or C (D7, plan 59 S-A7).
+    Qty,
+    /// An item's average rate: the `avg_rate` column of its row of view A, named as the average (S-A1).
+    AvgRate,
+    /// Shop expenses over a period (R29): the whole of them, or one head's row (S-A5).
+    Expense,
+    /// Money received over a period (R23): all of it, or one collector's (S-A5).
+    Receipts,
+    /// The cash book's closing balance at the end of the period (R12, S-A5).
+    CashClosing,
+    /// Sales paid in cash over a period (R3 total), S-A8.
+    CashSales,
+    /// Sales paid on credit over a period (R4 total), S-A8.
+    CreditSales,
+    /// A seller's net sale (view B `net`), S-A8.
+    NetSale,
+    /// The value of the fruit taken (R37 total), S-A5.
+    FruitValue,
+    /// Capital put into the shop over a period (R15 `capital_in` total), S-A5.
+    CapitalIn,
+    /// Capital taken back over a period (R15 `capital_out` total), S-A5.
+    CapitalOut,
 }
 
 /// One figure the answer gives: about whom, and which.
@@ -1099,6 +1141,8 @@ pub(super) struct Planned {
 
 /// The most things (parties or items) one question may name and still be read by the app.
 const MAX_THINGS: usize = 3;
+/// The newest ledger rows an answer to "his hisab" shows with his balance.
+pub(super) const LEDGER_ROWS: u32 = 7;
 /// The rows of a ranking asked with no number ("sab se zyada maal kis cheez ka para hai"): the top few.
 const RANKED_ROWS: u32 = 5;
 
@@ -1110,6 +1154,12 @@ struct Plan {
     lines: Vec<Line>,
     /// True when a read has the dates of the period (the `period` read is then added).
     dated: bool,
+    /// True when the question asks the quantity (نگ), so a sale figure is read as its `nag` column.
+    qty: bool,
+    /// True when the question asks the average rate.
+    average: bool,
+    /// True when a buyers or sellers word stands in the question.
+    role_word: bool,
 }
 
 impl Plan {
@@ -1165,6 +1215,19 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
             .any(|k| matches!(k, FigureKind::Ask(_)))
     {
         return None;
+    }
+    // "aaj udhaar me kitni bikri hui", "naqdi bikri": the sales of one payment type (R3 or R4).
+    if let Some(planned) = totals::pay_sale_plan(u) {
+        return Some(planned);
+    }
+    // A payment-type word that no plan above took ("sold for cash and on credit"): the plain figures are
+    // another thing. The model answers (D7, plan 59 F3, D159).
+    if u.pay_asked {
+        return None;
+    }
+    // "bashir ki khalis raqam" for a seller: his net sale (view B), not a partner's total.
+    if let Some(planned) = totals::net_sale_plan(u) {
+        return Some(planned);
     }
     // "اس سال شراکت داروں نے کتنا سرمایہ واپس لیا": the capital that came in or went back, the vouchers of
     // that type (R15), never the drawings.
@@ -1254,10 +1317,18 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     if period.is_some_and(|p| p.future) {
         return None;
     }
+    // "گاہکوں کے ذمے کل کتنا باقی ہے": a figure of NOW asked with a bare "کل" or "kal" that no verb makes
+    // yesterday is "total" (kul), not a day (D7, plan 59 F3). A past verb keeps it yesterday.
+    let period = period.filter(|p| !(is_bare_kal(p) && asks_now_or_trial(u)));
     // "ab tak" beside what is true now is the same question ("akram ka bakaya ab tak", "partners ki
     // kul raqam abhi tak").
     let period = period.filter(|p| !(p.kind == PeriodKind::UpToNow && asks_now(u)));
-    let mut plan = Plan::default();
+    let mut plan = Plan {
+        qty: u.qty_asked,
+        average: u.average_asked,
+        role_word: u.role_word,
+        ..Plan::default()
+    };
     match u.intent.value {
         Intent::Figure => figure(u, period, &mut plan)?,
         // "what is each partner's total": every partner's row of R31, which is the figure.
@@ -1275,12 +1346,16 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     }
     reads.extend(plan.finds);
     reads.extend(plan.reads);
-    // A quantity is read from the same views, but the figure of the amount is no answer to it.
-    let lines = if matches!(u.other_measure, Measure::Quantity | Measure::Breakdown) {
+    // A quantity is read from the same views, but the figure of the amount is no answer to it. A question
+    // that asks the quantity itself ("kitne nag bika") has its own line, the `nag` column (S-A7).
+    let lines = if u.qty_asked {
+        totals::qty_lines(plan.lines)
+    } else if matches!(u.other_measure, Measure::Quantity | Measure::Breakdown) {
         Vec::new()
     } else {
         plan.lines
     };
+    let lines = totals::keep_lines(u, lines);
     (!reads.is_empty()).then_some(Planned { reads, lines })
 }
 
@@ -1320,9 +1395,19 @@ fn capital_flow_plan(u: &Understanding) -> Option<Planned> {
             ..Rep::default()
         },
     ));
+    let what = match u.capital_flow? {
+        CapitalFlow::Out => What::CapitalOut,
+        CapitalFlow::In => What::CapitalIn,
+    };
     Some(Planned {
         reads,
-        lines: Vec::new(),
+        lines: totals::keep_lines(
+            u,
+            vec![Line {
+                who: Who::Shop,
+                what,
+            }],
+        ),
     })
 }
 
@@ -2100,6 +2185,18 @@ fn asks_now(u: &Understanding) -> bool {
     )
 }
 
+/// A "now" figure or the trial balance: a bare "kal" beside one is "total" (see `plan`).
+fn asks_now_or_trial(u: &Understanding) -> bool {
+    asks_now(u) || u.figures.value.as_slice() == [FigureKind::TrialBalance]
+}
+
+/// A period that is only the bare word "کل" or "kal" taken for yesterday with no past verb to settle it.
+fn is_bare_kal(p: &PeriodRef) -> bool {
+    p.kind == PeriodKind::Yesterday
+        && matches!(p.words.as_str(), "کل" | "kal")
+        && p.confidence != super::Confidence::High
+}
+
 /// "sab partners ki kul raqam", "each partner's total": a list question whose one figure is the
 /// partners' totals, with no name.
 fn all_partners_total(u: &Understanding) -> bool {
@@ -2232,6 +2329,10 @@ fn figure_of_kind(
         }
         (0, _, None) if !items.is_empty() => {
             for (text, hit) in items {
+                // An average rate is rupees per نگ; an item sold by weight has its rate per kg (money review).
+                if kind == FigureKind::Rate && plan.average && hit.sold_by_weight {
+                    return None;
+                }
                 item_figure(kind, text, &hit.key, period, plan)?;
             }
             Some(())
@@ -2239,6 +2340,9 @@ fn figure_of_kind(
         (1, 1, None) => {
             let (ptext, phit) = parties.first().copied()?;
             let (itext, ihit) = items.first().copied()?;
+            if kind == FigureKind::Rate && plan.average && ihit.sold_by_weight {
+                return None;
+            }
             party_item_figure(
                 kind,
                 (ptext, phit),
@@ -2407,6 +2511,22 @@ fn party_figure(
                 },
             ));
         }
+        // "naseer ka hisab kya he": his account as of now. The answer is his balance, read in two places on
+        // his card (D7, plan 59 F3), and the newest rows of his ledger (R13) with its totals, newest first.
+        FigureKind::Ledger if period.is_none() && !hit.pukhta => {
+            plan.find(text, word);
+            plan.read(party_card(&key));
+            plan.read(report(
+                "R13",
+                Rep {
+                    party: Some(key.clone()),
+                    sort: Some(json!([{"column": "date", "order": "desc"}])),
+                    rows: Some(LEDGER_ROWS),
+                    ..Rep::default()
+                },
+            ));
+            plan.line(Who::Party(key), What::Balance);
+        }
         FigureKind::Ledger | FigureKind::Statement => {
             plan.find(text, word);
             let id = if kind == FigureKind::Ledger {
@@ -2547,6 +2667,7 @@ fn partner_figure(
                 },
             ));
             plan.dated = period.is_some();
+            plan.line(Who::Partner(Some(hit.key.clone())), What::FruitValue);
         }
         FigureKind::PartnerTotal => {
             plan.read(report("R31", Rep::default()));
@@ -2597,6 +2718,9 @@ fn item_figure(
             plan.dated = period.is_some();
             if let Some(what) = what_of(kind).filter(|w| *w != What::SaleCount) {
                 plan.line(Who::Item(key.to_owned()), what);
+            } else if kind == FigureKind::Rate && plan.average {
+                // The question says "average": view A's average rate of the item, named as the average.
+                plan.line(Who::Item(key.to_owned()), What::AvgRate);
             }
         }
         // The goods of the item left (R10 has no dates to read for a stock now).
@@ -2645,10 +2769,12 @@ fn party_item_figure(
         plan.dated = period.is_some();
         return Some(());
     }
+    let average = kind == FigureKind::Rate && plan.average && phit.role == PartyRole::Seller;
     if !matches!(
         kind,
         FigureKind::Commission | FigureKind::Laga | FigureKind::Sale
-    ) {
+    ) && !average
+    {
         return None;
     }
     let word = role_word(phit.role).filter(|_| phit.role != PartyRole::Partner)?;
@@ -2674,6 +2800,10 @@ fn party_item_figure(
         // him; no side named is the two labelled lines; the buyer side asked of a seller is the model's.
         if kind == FigureKind::Commission && !phit.pukhta && side != Some(Side::Buyer) {
             plan.line(Who::SellerItem(key, item), What::Commission);
+        } else if average && !phit.pukhta {
+            plan.line(Who::SellerItem(key, item), What::AvgRate);
+        } else if kind == FigureKind::Sale && plan.qty && !phit.pukhta {
+            plan.line(Who::SellerItem(key, item), What::Qty);
         }
     } else {
         a.buyer = Some(key.clone());
@@ -2684,6 +2814,7 @@ fn party_item_figure(
                     plan.line(Who::BuyerItem(key, item), What::Commission);
                 }
                 FigureKind::Laga => plan.line(Who::BuyerItem(key, item), What::Laga),
+                FigureKind::Sale if plan.qty => plan.line(Who::BuyerItem(key, item), What::Qty),
                 _ => {}
             }
         }
@@ -2739,6 +2870,7 @@ fn record_figure(
                 },
             ));
             plan.dated = true;
+            plan.line(Who::Collector(hit.key.clone()), What::Receipts);
         }
         // The report has no expense-head filter: the period is read and the row is found in it. Every row
         // is read (up to 100), so a head outside the first 20 is not "not found" or 0 (D7 R12).
@@ -2753,6 +2885,7 @@ fn record_figure(
                 },
             ));
             plan.dated = true;
+            plan.line(Who::Head(hit.name_en.clone()), What::Expense);
         }
         _ => return None,
     }
@@ -2822,6 +2955,8 @@ fn shop_figure(
                 },
             ));
             plan.dated = true;
+            // The cash at the end of the period: "kal rat ko roknad kitni thi", "cash balance this month".
+            plan.line(Who::Shop, What::CashClosing);
         }
         // The shop's dues are a list: R20 holds the total over the whole filter and the real list, so
         // the button opens it (lead ruling of 04-11-2026). The tile is read too: its figure is checked
@@ -2894,6 +3029,10 @@ fn shop_figure(
                 },
             ));
             plan.dated = period.is_some();
+            plan.line(
+                if guests { Who::Guests } else { Who::Shop },
+                What::FruitValue,
+            );
         }
         FigureKind::Receipts => {
             period?;
@@ -2906,6 +3045,12 @@ fn shop_figure(
                 },
             ));
             plan.dated = true;
+            // R23 lists every receipt, a seller's return of advance money too (PRD FR-15.12): "gahakon se
+            // wasooli" is the buyers' part only, which the register cannot split, so a role word gives no
+            // instant line (money review of F3a).
+            if !plan.role_word {
+                plan.line(Who::Shop, What::Receipts);
+            }
         }
         // What the partners took: R29 holds it by partner (the partner section decides what it shows).
         FigureKind::PartnerTaken => {
@@ -2931,6 +3076,7 @@ fn shop_figure(
                 },
             ));
             plan.dated = true;
+            plan.line(Who::Shop, What::Expense);
         }
         FigureKind::DaySummary => {
             period?;

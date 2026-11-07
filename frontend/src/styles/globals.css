@@ -113,6 +113,17 @@ body {
   margin-block-end: calc(-1 * var(--chat-corner));
 }
 
+/* The boxes of a report or an analytics filter bar (plan 59, NFR-USE-16). As many columns as fit the
+   free width, none narrower than `--field-filter-grid-min-w`, so a select never squeezes its text onto
+   two lines that overflow the box, in Urdu or in English. The boxes that do not fit go to the next row.
+   It follows the width of its own box, not the window. */
+@utility filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--field-filter-grid-min-w), 1fr));
+  align-items: end;
+  gap: var(--space-3) var(--space-4);
+}
+
 /* Type roles (design system 3). One class, the right font and size for each script. */
 @utility type-title {
   font-family: var(--font-text);

@@ -6,6 +6,7 @@
 // A record (item, seller, buyer, city, اڈا) is its whole picker value or only its id; a bare id has no
 // names yet, and the view's first answer names it (the page already does that for a saved view).
 
+import { GRADE_CHOICES, type GradeChoice } from '../../shared/format';
 import { pickedOrNull } from '../../shared/screen-state';
 import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
 import {
@@ -44,6 +45,8 @@ export interface AnalyticsSearch {
   goods?: AnalyticsGoods;
   /** All the items of a group, fruit or vegetables; `all` is the same as leaving it out. */
   item_group?: ItemGroupChoice;
+  /** The quality of the sale lines (view A); `all` is the same as leaving it out. */
+  grade?: GradeChoice;
   trip_view?: AnalyticsTripView;
   /** A partner, a trip or a garden, by id. */
   partner?: number;
@@ -88,6 +91,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
   const compare = oneOf(COMPARE_CHOICES, search['compare']);
   const goods = oneOf(GOODS_CHOICES, search['goods']);
   const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
+  const grade = oneOf(GRADE_CHOICES, search['grade']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
   const partner = positiveId(search['partner']);
   const trip = positiveId(search['trip']);
@@ -106,6 +110,7 @@ export function parseAnalyticsSearch(search: Record<string, unknown>): Analytics
     ...(compare === undefined ? {} : { compare }),
     ...(goods === undefined ? {} : { goods }),
     ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
+    ...(grade === undefined || grade === 'all' ? {} : { grade }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
     ...(partner === undefined ? {} : { partner }),
     ...(trip === undefined ? {} : { trip }),
@@ -135,6 +140,7 @@ export function filtersFromSearch(search: AnalyticsSearch): AnalyticsFilterState
     compare: search.compare ?? 'off',
     goods: search.goods ?? 'all',
     itemGroup: search.item_group ?? 'all',
+    grade: search.grade ?? 'all',
     tripView: search.trip_view ?? 'trip',
     partner: search.partner ?? null,
     trip: search.trip ?? null,

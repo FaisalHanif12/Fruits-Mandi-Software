@@ -23,6 +23,8 @@ const SCREEN_LABEL_IDS: Readonly<Record<ScreenRoute, string>> = {
   commission_rules: 'masters-rules-title',
   day_close: 'day-title',
   audit: 'settings-tab-audit',
+  // The overview of the partners (PRD 17.3): the screen's own title, like the other routes.
+  partner_overview: 'partners-title',
 };
 
 /** The name of a source for the source line and for a button's accessible name. */

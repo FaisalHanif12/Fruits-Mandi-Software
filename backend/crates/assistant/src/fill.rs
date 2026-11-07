@@ -16,7 +16,7 @@ use mandi_services::domain::figures::Dir;
 
 use crate::answer::{
     Answer, AnswerChart, AnswerEstimate, AnswerName, AnswerOption, AnswerPart, AnswerSource,
-    AnswerTable, FigureDifference, FigureDirection, PlaceValue,
+    AnswerTable, FigureDifference, FigureDirection, PlaceValue, ScreenRoute,
 };
 use crate::limits::MAX_TABLE_ROWS;
 use crate::model_answer::{ModelAnswer, Piece, ShowAs, pieces};
@@ -220,6 +220,60 @@ fn sources_of(state: &State) -> Vec<AnswerSource> {
         .collect()
 }
 
+/// R31, with or without a partner.
+fn is_r31(source: &AnswerSource) -> bool {
+    matches!(
+        source,
+        AnswerSource::Report {
+            id: ReportId::R31,
+            ..
+        }
+    )
+}
+
+/// The button of a capital figure: the partner overview screen (PRD 17.3), which shows each partner's
+/// capital. The statement page of R31 holds no capital cell (D7 D331).
+fn partner_overview_screen(result_id: &str) -> AnswerSource {
+    AnswerSource::Screen {
+        result_id: result_id.to_owned(),
+        route: ScreenRoute::PartnerOverview,
+    }
+}
+
+/// The sources of the answer that shows differences: [`sources_of`], with the button of a capital
+/// figure that differs (a path with `capital` in it) being the partner overview screen, as in
+/// [`sources_cited`]. Without it the figure was shown with an R31 button that does not hold it, and
+/// called the partner's کل رقم (money review 15, M1).
+fn sources_of_differing(state: &State, paths: &[String]) -> Vec<AnswerSource> {
+    let text: String = paths.iter().map(|p| format!("{{{{{p}}}}} ")).collect();
+    let capital = capital_cited(&text);
+    state
+        .results
+        .iter()
+        .filter(|r| r.turn == state.turn)
+        .filter_map(|r| r.source.clone().map(|s| set_source_id(s, &r.id)))
+        .filter_map(|source| {
+            if is_r31(&source) && capital.contains(&source_result_id(&source)) {
+                Some(partner_overview_screen(&source_result_id(&source)))
+            } else if is_partner_overview(&source) {
+                None
+            } else {
+                Some(source)
+            }
+        })
+        .collect()
+}
+
+fn source_result_id(source: &AnswerSource) -> String {
+    match source {
+        AnswerSource::PartyCard { result_id, .. }
+        | AnswerSource::Report { result_id, .. }
+        | AnswerSource::Analytics { result_id, .. }
+        | AnswerSource::Screen { result_id, .. }
+        | AnswerSource::Tiles { result_id } => result_id.clone(),
+    }
+}
+
 /// R31 with no partner: the overview of every partner, which the report screen cannot open.
 fn is_partner_overview(source: &AnswerSource) -> bool {
     matches!(
@@ -295,11 +349,11 @@ fn partner_of_row(result: &ToolResult, area: &str, key: &str) -> Option<AnswerRe
 ///
 /// Anything else is as read.
 ///
-/// A figure of the `capital` part of an R31 result has no button (see [`capital_cited`]); the rest of
-/// the answer's buttons are as above.
+/// A figure of the `capital` part of an R31 result has the partner overview screen as its button, not
+/// R31 (see [`capital_cited`]); the rest of the answer's buttons are as above.
 ///
 /// Example: "ب کا کل {{r1.rows.s2.total}}" gives R31 with ب; "ب کا سرمایہ {{r1.rows.s2.capital.balance}}"
-/// gives none.
+/// gives the partner overview screen.
 fn sources_cited(state: &State, text: &str) -> Vec<AnswerSource> {
     let cited = cited_rows(text);
     let capital = capital_cited(text);
@@ -308,16 +362,10 @@ fn sources_cited(state: &State, text: &str) -> Vec<AnswerSource> {
         let Some(source) = result.source.clone().map(|s| set_source_id(s, &result.id)) else {
             continue;
         };
-        // A capital figure is not on the statement page: no button, never another page (D331).
-        if capital.contains(&result.id)
-            && matches!(
-                &source,
-                AnswerSource::Report {
-                    id: ReportId::R31,
-                    ..
-                }
-            )
-        {
+        // A capital figure is not on the statement page: its button opens the partner overview, which
+        // shows the capital, never the statement page (D331).
+        if capital.contains(&result.id) && is_r31(&source) {
+            out.push(partner_overview_screen(&result.id));
             continue;
         }
         let AnswerSource::Report {
@@ -580,6 +628,7 @@ fn place_id(place: &str, path: &str) -> String {
         "view_A" => "assistant-place-view-a-total",
         "partner_overview" => "assistant-place-partner-overview",
         "R31" => "assistant-place-r31-closing",
+        "capital_history" => "assistant-place-capital-history",
         _ if path.contains("cash_in_hand") => "assistant-place-tile-cash",
         _ if path.contains("buyers_dues") => "assistant-place-tile-buyers-dues",
         _ if path.contains("sellers_dues") => "assistant-place-tile-sellers-dues",
@@ -593,6 +642,9 @@ fn place_id(place: &str, path: &str) -> String {
 fn figure_id(path: &str, m: &Money) -> String {
     if m.places.iter().any(|(k, _)| *k == "party_card") {
         "assistant-figure-party-balance"
+    } else if m.places.iter().any(|(k, _)| *k == "capital_history") {
+        // A capital is read from the capital history and the overview; it is not his کل رقم (M1).
+        "assistant-figure-partner-capital"
     } else if m.places.iter().any(|(k, _)| *k == "partner_overview") {
         "assistant-figure-partner-total"
     } else if path.contains("cash_in_hand") {
@@ -664,7 +716,7 @@ pub fn differ_answer(env: &Env<'_>, state: &State, paths: &[String], read_at: &s
         estimate: None,
         advice: false,
         general_advice: false,
-        sources: sources_of(state),
+        sources: sources_of_differing(state, paths),
         how: Vec::new(),
         differences: differences(env, state, paths),
         next: Vec::new(),
@@ -723,6 +775,7 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
 mod tests {
     use super::*;
     use crate::source::SourceReportFilters;
+    use mandi_services::core::money::Paisa;
 
     #[test]
     fn a_direction_word_the_panel_already_prints_is_dropped_once() {
@@ -872,19 +925,86 @@ mod tests {
             1
         );
         // His capital is read from the capital history and the overview, not from the statement:
-        // R31 would open a page without the figure, so no button (D7 D331).
-        assert!(sources_cited(&state, "{{r2.rows.s2.capital.invested}}").is_empty());
-        assert!(
-            sources_cited(
+        // R31 would open a page without the figure, so the button is the partner overview, which
+        // shows both his capital and his کل رقم (D7 D331).
+        let overview = |sources: &[AnswerSource]| {
+            sources
+                .iter()
+                .map(|s| match s {
+                    AnswerSource::Screen {
+                        route: ScreenRoute::PartnerOverview,
+                        result_id,
+                    } => result_id.clone(),
+                    other => panic!("not the partner overview: {other:?}"),
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            overview(&sources_cited(&state, "{{r2.rows.s2.capital.invested}}")),
+            ["r2"]
+        );
+        assert_eq!(
+            overview(&sources_cited(
                 &state,
                 "{{r2.rows.s2.total}} {{r2.rows.s2.capital.balance}}"
-            )
-            .is_empty()
+            )),
+            ["r2"]
         );
+        // The same for one partner read alone (`{{r2.capital.balance}}`).
+        assert_eq!(
+            overview(&sources_cited(&state, "{{r2.capital.balance}}")),
+            ["r2"]
+        );
+        // The answer that shows differences gives the same button for a capital figure that differs,
+        // and none for the overview of everyone when no capital is cited (money review 15, M1).
+        assert_eq!(
+            overview(&sources_of_differing(
+                &state,
+                &["r2.rows.s2.capital.balance".to_owned()]
+            )),
+            ["r2"]
+        );
+        assert!(sources_of_differing(&state, &["r2.rows.s2.total".to_owned()]).is_empty());
         // Nothing cited: no button, because R31 cannot open without a partner. The plain tables
         // and the slow-line answer drop it too.
         assert!(sources_cited(&state, "no figures").is_empty());
         assert!(sources_of(&state).is_empty());
+    }
+
+    #[test]
+    fn a_capital_that_differs_is_called_the_capital_and_its_two_places_have_their_own_words() {
+        // Money review 15, M1: the capital's two places are the capital history and the partner
+        // overview. It was called "the partner's total", with the tile word for the history.
+        let capital = Money {
+            paisa: Paisa::ZERO,
+            side: None,
+            checked: Some(false),
+            places: vec![
+                ("capital_history", Paisa::ZERO),
+                ("partner_overview", Paisa::ZERO),
+            ],
+        };
+        assert_eq!(
+            figure_id("r1.capital.balance", &capital),
+            "assistant-figure-partner-capital"
+        );
+        assert_eq!(
+            place_id("capital_history", "r1.capital.balance"),
+            "assistant-place-capital-history"
+        );
+        assert_eq!(
+            place_id("partner_overview", "r1.capital.balance"),
+            "assistant-place-partner-overview"
+        );
+        // His کل رقم keeps its own words.
+        let total = Money {
+            places: vec![("partner_overview", Paisa::ZERO), ("R31", Paisa::ZERO)],
+            ..capital
+        };
+        assert_eq!(
+            figure_id("r1.total", &total),
+            "assistant-figure-partner-total"
+        );
     }
 
     #[test]

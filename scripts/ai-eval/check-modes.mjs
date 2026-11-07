@@ -167,6 +167,28 @@ try {
   );
   rmSync(bankOut, { recursive: true, force: true });
 
+  // 5b. --out-dir: the files of the run go to the folder named, and nothing goes to backend/target for that bank.
+  const privateOut = join(dir, 'private-out');
+  r = run(
+    '--bank',
+    scored,
+    '--results',
+    emptyResults,
+    '--review-out',
+    join(dir, 'review2.tsv'),
+    '--out-dir',
+    privateOut,
+  );
+  expect(
+    [0, 1].includes(r.status),
+    `scoring with --out-dir must give exit 0 or 1; exit ${r.status}: ${r.stderr}`,
+  );
+  expect(
+    existsSync(join(privateOut, 'summary.json')),
+    `--out-dir: the summary must be in ${privateOut}`,
+  );
+  expect(!existsSync(bankOut), `--out-dir: nothing may be written to ${bankOut} for the same bank`);
+
   // 6. --threads reaches the live test, which clamps it. Read the source, not a run: no key, no cargo here.
   const live = readFileSync(
     join(ROOT, 'backend', 'crates', 'assistant', 'tests', 'robustness_live.rs'),

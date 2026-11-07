@@ -194,7 +194,9 @@ pub enum AnswerSource {
 
 /// The screens a [`AnswerSource::Screen`] button opens. The words are those of the frontend's
 /// `MAIN_SCREEN_PATHS` where it has them: `dashboard` is `/`, `commission_rules` is `/index/rules`,
-/// `day_close` is `/day`; `audit` is the audit log tab of Settings (`/settings?tab=audit`).
+/// `day_close` is `/day`; `audit` is the audit log tab of Settings (`/settings?tab=audit`);
+/// `partner_overview` is the partner overview (`/partners`, PRD 17.3), behind the partner code like any
+/// partner screen (PRD FR-17.11).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum ScreenRoute {
@@ -206,6 +208,9 @@ pub enum ScreenRoute {
     DayClose,
     /// The audit log, in Settings.
     Audit,
+    /// The partner overview (PRD 17.3): each partner's capital and کل رقم. A capital figure is read
+    /// from the capital history and this overview, so this is the page that shows it (D7 D331).
+    PartnerOverview,
 }
 
 /// One row of an answer table: the report's own [`Row`] (cells, the record it opens, how it is

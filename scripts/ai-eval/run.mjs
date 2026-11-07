@@ -94,12 +94,16 @@ const OFFLINE = flag('--offline');
 const QUESTIONS = BANK ?? join(HERE, 'questions.tsv');
 const FROZEN = join(HERE, 'questions-110.tsv');
 const MANIFEST = join(HERE, 'oracle-keys.txt');
-const OUT_DIR = join(
-  BACKEND,
-  'target',
-  (BANK ? `ai-eval-${basename(BANK).replace(/\.[^.]*$/, '')}` : 'ai-eval') +
-    (OFFLINE ? '-offline' : ''),
-);
+// --out-dir DIR: put every file of the run (results, report, summary, parts) in DIR, outside the repository
+// (a private bank keeps its results private). Without it: backend/target/ai-eval[-<bank>][-offline].
+const OUT_DIR = option('--out-dir')
+  ? resolve(option('--out-dir'))
+  : join(
+      BACKEND,
+      'target',
+      (BANK ? `ai-eval-${basename(BANK).replace(/\.[^.]*$/, '')}` : 'ai-eval') +
+        (OFFLINE ? '-offline' : ''),
+    );
 const REVIEW = option('--review-out')
   ? resolve(option('--review-out'))
   : BANK
@@ -1046,7 +1050,10 @@ function figureLogProblems(result, reply) {
       !c.error &&
       ['report', 'analytics', 'tiles', 'party_card'].includes(c.tool),
   );
-  if (reads.length === 0) return [];
+  const hasOverviewButton = (reply?.answer?.sources ?? []).some(
+    (src) => src.kind === 'screen' && src.route === 'partner_overview',
+  );
+  if (reads.length === 0 && !hasOverviewButton) return [];
   const keyOfRead = (c) =>
     c.tool === 'report'
       ? `report:${c.input?.id ?? '?'}`
@@ -1070,7 +1077,33 @@ function figureLogProblems(result, reply) {
   const readCount = count(reads.map(keyOfRead));
   const buttonCount = count(buttons.map(keyOfButton));
   const problems = [];
-  for (const [key, n] of readCount)
+  // D331 (lead decision 12, plan 59): a capital figure is read through R31 but the R31 page holds no
+  // capital cell, so its button is the partner overview SCREEN (`partner_overview`). It stands in for
+  // an R31 read and for nothing else: the screen button must carry the result id of a log read of R31
+  // for one partner (`input.partner` set), and an R31 read it covers needs no R31 button. A
+  // partner_overview button with no such read is a button that opens something the figure was not read
+  // from, so it is a problem.
+  const overviewButtons = (reply?.answer?.sources ?? []).filter(
+    (src) => src.kind === 'screen' && src.route === 'partner_overview',
+  );
+  const r31Reads = reads.filter(
+    (c) => c.tool === 'report' && c.input?.id === 'R31' && c.input?.partner,
+  );
+  const coveredR31 = new Set();
+  for (const src of overviewButtons) {
+    const read = r31Reads.find((c) => c.id === src.result_id);
+    if (!read) {
+      problems.push(
+        `the answer has a partner_overview button (${src.result_id ?? '?'}) and the log has no R31 read of one partner with that result id`,
+      );
+      continue;
+    }
+    coveredR31.add(read.id);
+  }
+  // An R31 read covered by the overview screen is not asked to have an R31 button of its own (the
+  // reverse check, a button with no read, still uses every read).
+  const uncoveredCount = count(reads.filter((c) => !coveredR31.has(c.id)).map(keyOfRead));
+  for (const [key, n] of uncoveredCount)
     if ((buttonCount.get(key) ?? 0) < 1)
       problems.push(`the log has ${n} read(s) of ${key} and the answer has no such button`);
   for (const [key, n] of buttonCount)
@@ -4368,6 +4401,55 @@ function selfTest() {
       withSources(),
     ).length === 0,
     'a model read or a find read was compared with the buttons',
+  );
+  // D331 (plan 59 Section 11 item 12): the partner overview screen is the button of an R31 read of one
+  // partner, and of nothing wider.
+  const r31Read = (partner) => ({ ...readOf('report', { id: 'R31', partner }), id: 'r2' });
+  const overview = (resultId) => ({
+    kind: 'screen',
+    result_id: resultId,
+    route: 'partner_overview',
+  });
+  expect(
+    figureLogProblems({ tool_calls: [r31Read('s3')] }, withSources(overview('r2'))).length === 0,
+    'the partner overview button was not accepted for an R31 read of one partner',
+  );
+  expect(
+    figureLogProblems({ tool_calls: [r31Read('s3')] }, withSources()).length === 1,
+    'an R31 read with no button at all was accepted',
+  );
+  expect(
+    figureLogProblems(
+      { tool_calls: [r31Read('s3')] },
+      withSources({ kind: 'screen', result_id: 'r2', route: 'dashboard' }),
+    ).length === 1,
+    'another screen button was accepted for an R31 read',
+  );
+  expect(
+    figureLogProblems({ tool_calls: [r31Read('s3')] }, withSources(overview('r9'))).length >= 1,
+    'an overview button with the id of no R31 read was accepted',
+  );
+  expect(
+    figureLogProblems({ tool_calls: [r31Read(null)] }, withSources(overview('r2'))).length >= 1,
+    'an overview button was accepted for an R31 read of every partner',
+  );
+  expect(
+    figureLogProblems(
+      { tool_calls: [{ ...readOf('report', { id: 'R20', partner: 's3' }), id: 'r2' }] },
+      withSources(overview('r2')),
+    ).length >= 1,
+    'an overview button was accepted for a read that is not R31',
+  );
+  expect(
+    figureLogProblems({ tool_calls: [] }, withSources(overview('r2'))).length === 1,
+    'an overview button with no read at all was accepted',
+  );
+  expect(
+    figureLogProblems(
+      { tool_calls: [r31Read('s3'), { ...readOf('report', { id: 'R20' }), id: 'r3' }] },
+      withSources(overview('r2')),
+    ).length === 1,
+    'the overview button covered an R20 read as well',
   );
   const localQ = mk({ figures: 'balance=100' });
   const localReply = (read, button) => ({

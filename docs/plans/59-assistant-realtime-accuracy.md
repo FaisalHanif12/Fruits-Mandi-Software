@@ -390,3 +390,25 @@ Umar's answers (08-11-2026):
 - The `own_number` prompt line is approved. D6 prompt v1.7: step 7 names the rule with Umar's wording; a few lines
   are shortened with the same meaning. Fixed part 11,600 tokens (P1 passes); `golden_prompt`, `golden_questions`,
   `prompt_columns` and `state_prompt` pass.
+
+Umar (08-11-2026): "ok continue, make it 9 out of 10". Lead additions:
+- R1 to R3 for robustness: the runner accepts the partner overview button for a capital read (D331); a ranked gap list
+  of wordings that still go to the model, sent to backend; a held-out bank `realtime-d7-heldout.tsv` (about 120 new
+  questions, oracle keys), never shown to backend, run live with the main bank so the score shows the fixes
+  generalise.
+- Not possible in the Mac phase, listed for Umar: the Urdu reviewer's read of the new sentences (NFR-URD-4) and
+  the Windows check (LOCAL-ONLY).
+- Umar (08-11-2026): "when its totally become the 9 out of 10 then stop the working of all the agents and then wait
+  for my message for further working." The lead stops every teammate at 9 out of 10 (Section 13 list) and waits.
+
+### 13.1 Held-out bank 1 (robustness R3, 08-11-2026): FAIL
+
+153 new questions, offline: right alone 33 (21.6%), WRONG 2, refused unexpectedly 2; short right alone 31.9%
+(main bank 62.4%), picky 6.5%. The fixes do not generalise yet.
+- CRITICAL: a count question with a misspelt role word got the dues amount, not the count.
+- MAJOR: a three-figure question got one figure; an ordinary word (یکم, "anything") taken as a name.
+- Causes: one unknown everyday word turns off every report-total instant line; `happened` fires on plain balance
+  wordings; Urdu "کل" before a figure noun read as yesterday.
+Lead action: backend gets generic rules only (count vs amount guard, cue count guard, no names from ordinary words,
+a word-class rule for unknown words, `happened`, "کل"), never the held-out questions. The held-out files move out of
+the repository. Robustness writes held-out bank 2 for the final honest score, run once after F3.

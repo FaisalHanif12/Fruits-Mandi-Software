@@ -20,6 +20,7 @@ import {
   ControlAccountPicker,
   DateInput,
   Field,
+  GradeSelect,
   ItemGroupSelect,
   Picker,
   Select,
@@ -336,6 +337,18 @@ export function ReportFilterBar({
       />,
     );
   }
+  if (takes('grade')) {
+    boxes.push(
+      <GradeSelect
+        key="grade"
+        value={state.grade}
+        error={fieldError(error, 'filters.grade')}
+        onChange={(grade) => {
+          onChange({ grade });
+        }}
+      />,
+    );
+  }
   if (takes('voucher_type')) {
     boxes.push(
       <ReportVoucherTypeSelect
@@ -500,7 +513,7 @@ export function ReportFilterBar({
       role="group"
       aria-label={l10n.getString('report-filters-label')}
       {...formNavigationProps}
-      className="grid grid-cols-5 items-end gap-4"
+      className="filter-grid"
     >
       {visibleBoxes}
       {anyFolded && compact ? (

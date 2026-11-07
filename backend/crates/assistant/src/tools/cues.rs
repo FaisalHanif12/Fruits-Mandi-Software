@@ -1097,7 +1097,17 @@ mod year_ahead_tests {
 /// false.
 pub fn asks_count(question: &str) -> bool {
     // "number of", "count of", "how many": a count, unless money or months follow.
-    const ANY: [&str; 3] = ["number of", "count of", "how many"];
+    const ANY: [&str; 9] = [
+        "number of",
+        "count of",
+        "how many",
+        "how many times",
+        "kitni baar",
+        "kitni bar",
+        "kitni dafa",
+        "کتنی بار",
+        "کتنی دفعہ",
+    ];
     const MONEY: [&str; 11] = [
         "rupees", "rupee", "money", "paise", "paisa", "rs", "months", "month", "روپے", "پیسے",
         "رقم",
@@ -1105,7 +1115,7 @@ pub fn asks_count(question: &str) -> bool {
     // "kitne", "kitni": a count only before a word for things that are counted ("kitne bayopariyon",
     // "kitni bikriyan"); "kitni bikri" and "kitne paise" ask an amount.
     const HEADS: [&str; 5] = ["kitne", "kitni", "kitnay", "کتنے", "کتنی"];
-    const COUNTED: [&str; 34] = [
+    const COUNTED: [&str; 45] = [
         "bill",
         "bills",
         "bil",
@@ -1140,6 +1150,17 @@ pub fn asks_count(question: &str) -> bool {
         "گاہک",
         "گاہکوں",
         "بیوپاریوں",
+        "لوگوں",
+        "لوگ",
+        "logo",
+        "people",
+        "persons",
+        "person",
+        "accounts",
+        "کھاتے",
+        "کھاتوں",
+        "khate",
+        "khaton",
     ];
     let spaced = spaced(question);
     let words: Vec<&str> = spaced.split_whitespace().collect();

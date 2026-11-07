@@ -621,6 +621,16 @@ pub enum CommissionSide {
     Buyer,
 }
 
+/// How a sale was paid, when a question asks the sales of one payment type ("udhaar me kitni bikri",
+/// "naqdi bikri"): the cash sales (R3) or the credit sales (R4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PayKind {
+    /// نقدی: paid on the spot.
+    Cash,
+    /// ادھاری: paid later.
+    Credit,
+}
+
 /// The way capital moves in a question about it: put into the shop, or taken back out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapitalFlow {
@@ -740,6 +750,32 @@ pub struct Understanding {
     /// True when the question says it is the BUYER's rate ("gahak ka rate", "buyer rate"). A rate or a last
     /// rate is the seller's rate (ریٹ بیوپاری, the auction rate) unless it says this (lead ruling, D7).
     pub buyer_rate: bool,
+    /// True when the question asks the quantity of an item, a party or the shop in { نگ } ("kitne nag bika",
+    /// "how many units"): the sale figure is read as its `nag` column. Never set when a packing or a weight
+    /// word is beside it (D7, plan 59 S-A7).
+    pub qty_asked: bool,
+    /// True when the question says the AVERAGE ("ausat", "average"): an item's rate is then view A's average
+    /// rate, never the last rate (D7, plan 59 S-A1).
+    pub average_asked: bool,
+    /// The payment type of the sales asked ("udhaar", "naqdi"), when the question names ONE (D7, S-A8).
+    pub pay_kind: Option<PayKind>,
+    /// True when a payment-type word stands in the question (cash, credit, naqdi, udhari beside a sale),
+    /// even when it names both. The plain figures of the reads cannot answer such a question: only the
+    /// sales of one payment type can (`pay_kind`), else the model does.
+    pub pay_asked: bool,
+    /// True when a word of the question is explained by nothing: it is in no table, names no party, item or
+    /// record and is no function word. The figures that the reports hold as totals (an expense, a receipt)
+    /// are not given by the app alone then, because the word may be a filter the reads do not have ("chai"
+    /// of "chai ka kharcha").
+    pub unexplained: bool,
+    /// True when a word for buyers or sellers stands in the question ("gahakon se wasooli", "beopariyon
+    /// ko"): a report that lists every party cannot be split by it, so its total is no answer.
+    pub role_word: bool,
+    /// True when two "how much" words stand in the question ("kharcha kitna hua aur sharkat daron ne kitna
+    /// liya"): it asks two things, and the figures of a report's totals answer one.
+    pub how_much_twice: bool,
+    /// True when the question asks the VALUE of the fruit taken ("phal ki qeemat"), not its quantity.
+    pub value_asked: bool,
     /// True when the dues asked are the total dues ("kul ugrahi", "total dues": the tile کل اگراہی,
     /// buyers' dues plus sellers' dues plus the dead amount), not the buyers' dues alone.
     pub total_dues: bool,

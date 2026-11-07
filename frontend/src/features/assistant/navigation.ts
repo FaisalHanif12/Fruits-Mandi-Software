@@ -68,7 +68,10 @@ const TRIP_ENTRY_TYPES: Readonly<Record<string, TripOpenType>> = {
 
 /**
  * The screens an answer's own source can send the Owner to (plan 55 Section 13): the dashboard, the rules, the
- * day close and the audit log, which is a tab of Settings. The words are the backend's `ScreenRoute`.
+ * day close, the audit log, which is a tab of Settings, and the partner overview (plan 59 D331). The words are
+ * the backend's `ScreenRoute`. The partner overview is behind the partner code (PRD FR-17.11): the route is
+ * opened like any other way in, and the screen's own door asks for the code. Nothing of a partner's figures
+ * is passed along, so a locked section shows only the code box.
  */
 function openScreenRoute(router: ReturnType<typeof useRouter>, route: ScreenRoute): void {
   switch (route) {
@@ -83,6 +86,9 @@ function openScreenRoute(router: ReturnType<typeof useRouter>, route: ScreenRout
       return;
     case 'audit':
       void router.navigate({ to: '/settings', search: { tab: 'audit' } });
+      return;
+    case 'partner_overview':
+      void router.navigate({ to: MAIN_SCREEN_PATHS.partners });
       return;
   }
 }

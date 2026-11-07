@@ -1,0 +1,330 @@
+//! The instant sentences of the figures that a report or a view holds as a total (D7, plan 59 F3): the
+//! quantity of a sale, an item's average rate, the shop's expenses, receipts, the cash book's closing, the
+//! sales of one payment type, a seller's net sale, the value of fruit taken and capital in or out.
+//!
+//! Each sentence's figure is a REFERENCE to one cell of a result read for this question; nothing is added,
+//! subtracted or rounded here (Code Standards Q5). A result that holds partner figures while the partner
+//! section is locked gives no sentence.
+
+use super::{Cx, Sentence, What, Who, count_of, input_str, reference, row_or_total, whole};
+use crate::results::{Node, ToolResult, Val};
+
+impl Cx<'_> {
+    /// The result of a read of a report, when it exists and holds no hidden partner part.
+    fn open_report(&self, id: &str) -> Option<&ToolResult> {
+        let r = self.report(id)?;
+        (!r.partner_parts_locked).then_some(r)
+    }
+
+    /// How many { نگ } were sold or bought: the `nag` column of view A (the shop, an item, a seller's or a
+    /// buyer's item), B (a seller) or C (a buyer), read for the period the question named.
+    pub(super) fn qty(&self, who: &Who) -> Option<Sentence> {
+        // A record's figure needs the period the question named (see `flow`).
+        if self.u.periods.is_empty() {
+            return None;
+        }
+        let mut args: Vec<(&'static str, String)> = Vec::new();
+        let (role, figure) = match who {
+            Who::Shop => {
+                let view = self.analytics("A", "", None)?;
+                ("shop", reference(view, &["totals", "nag"])?)
+            }
+            Who::Item(key) => {
+                args.push(("name", self.name_of(key)?));
+                (
+                    "item",
+                    row_or_total(self.analytics("A", "item", Some(key))?, key, "nag")?,
+                )
+            }
+            Who::Seller(key) => {
+                args.push(("name", self.name_of(key)?));
+                (
+                    "seller",
+                    row_or_total(self.analytics("B", "seller", Some(key))?, key, "nag")?,
+                )
+            }
+            Who::Buyer(key) => {
+                args.push(("name", self.name_of(key)?));
+                (
+                    "buyer",
+                    row_or_total(self.analytics("C", "buyer", Some(key))?, key, "nag")?,
+                )
+            }
+            Who::SellerItem(party, item) | Who::BuyerItem(party, item) => {
+                let field = if matches!(who, Who::SellerItem(..)) {
+                    "seller"
+                } else {
+                    "buyer"
+                };
+                let view = self.result("analytics", |r| {
+                    input_str(r, "view") == Some("A")
+                        && input_str(r, field) == Some(party)
+                        && input_str(r, "item") == Some(item)
+                })?;
+                args.push(("name", self.name_of(party)?));
+                args.push(("item", self.name_of(item)?));
+                (
+                    if field == "seller" {
+                        "seller-item"
+                    } else {
+                        "buyer-item"
+                    },
+                    row_or_total(view, item, "nag")?,
+                )
+            }
+            _ => return None,
+        };
+        let mut all = vec![("role", role.to_owned())];
+        all.extend(args);
+        all.push(("figure", figure));
+        Some(Sentence {
+            id: "assistant-instant-qty",
+            args: all,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// An item's average rate (the `avg_rate` of its row of view A), or a seller's average rate of one
+    /// item, named as the average. It is the seller's (auction) rate: a question about the buyer's rate is
+    /// the model's. An item with no sale in the period has no row and no sentence.
+    pub(super) fn avg_rate(&self, who: &Who) -> Option<Sentence> {
+        if self.u.periods.is_empty() || self.u.buyer_rate {
+            return None;
+        }
+        let (view, role, item, seller) = match who {
+            Who::Item(item) => (
+                self.analytics("A", "item", Some(item))?,
+                "item",
+                item.as_str(),
+                None,
+            ),
+            Who::SellerItem(seller, item) => (
+                self.result("analytics", |r| {
+                    input_str(r, "view") == Some("A")
+                        && input_str(r, "seller") == Some(seller)
+                        && input_str(r, "item") == Some(item)
+                })?,
+                "seller-item",
+                item.as_str(),
+                Some(seller.as_str()),
+            ),
+            _ => return None,
+        };
+        // Only a real row holds an average: the totals of an empty view have none.
+        if count_of(view, &["count"])? != 1 {
+            return None;
+        }
+        let mut args = vec![("role", role.to_owned())];
+        if let Some(seller) = seller {
+            args.push(("name", self.name_of(seller)?));
+        }
+        args.push(("item", self.name_of(item)?));
+        args.push(("figure", reference(view, &["rows", item, "avg_rate"])?));
+        Some(Sentence {
+            id: "assistant-instant-rate-average",
+            args,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The shop's expenses over the period (`totals.expense` of R29), or those of one head: its row of R29
+    /// (a shop head row has an `expense`, a name and no section). A head with no row has no expense in the
+    /// period, which the model says.
+    pub(super) fn expense(&self, who: &Who) -> Option<Sentence> {
+        // R29 hides a partner's own rows while the partner section is locked; the shop's `expense` column and
+        // the heads are not partner parts, so a locked section does not stop this answer.
+        let r29 = self.report("R29")?;
+        let mut args: Vec<(&'static str, String)> = Vec::new();
+        let (kind, figure) = match who {
+            Who::Shop => ("shop", reference(r29, &["totals", "expense"])?),
+            Who::Head(name) => {
+                let Some(Node::Keyed(rows)) = r29.node.get(&["rows"]) else {
+                    return None;
+                };
+                let mut found = None;
+                for (key, row) in rows {
+                    let named = matches!(
+                        row.get(&["name"]),
+                        Some(Node::Val(Val::Name(n))) if n.name_en == *name
+                    );
+                    let shop_row = matches!(row.get(&["expense"]), Some(Node::Val(Val::Money(_))))
+                        && row
+                            .get(&["section"])
+                            .is_none_or(|s| matches!(s, Node::Null));
+                    if named && shop_row {
+                        // Two rows of one name are not told apart.
+                        if found.is_some() {
+                            return None;
+                        }
+                        found = Some(key.as_str());
+                    }
+                }
+                let key = found?;
+                args.push(("name", reference(r29, &["rows", key, "name"])?));
+                ("head", reference(r29, &["rows", key, "expense"])?)
+            }
+            _ => return None,
+        };
+        let mut all = vec![("kind", kind.to_owned())];
+        all.extend(args);
+        all.push(("figure", figure));
+        Some(Sentence {
+            id: "assistant-instant-expense",
+            args: all,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// Money received over the period: the total of the receipts register (R23), the whole shop's or one
+    /// collector's (the read was made for him).
+    pub(super) fn receipts(&self, who: &Who) -> Option<Sentence> {
+        let r23 = self.open_report("R23")?;
+        let mut args = Vec::new();
+        let role = match who {
+            Who::Shop => {
+                // A read for a collector is not the shop's.
+                if input_str(r23, "collector").is_some() {
+                    return None;
+                }
+                "shop"
+            }
+            Who::Collector(key) => {
+                if input_str(r23, "collector") != Some(key.as_str()) {
+                    return None;
+                }
+                args.push(("name", self.name_of(key)?));
+                "collector"
+            }
+            _ => return None,
+        };
+        let mut all = vec![("role", role.to_owned())];
+        all.extend(args);
+        all.push(("figure", reference(r23, &["totals", "amount"])?));
+        Some(Sentence {
+            id: "assistant-instant-receipts",
+            args: all,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The cash book's closing balance at the end of the period (`summary.closing` of R12).
+    pub(super) fn cash_closing(&self) -> Option<Sentence> {
+        let r12 = self.open_report("R12")?;
+        Some(Sentence {
+            id: "assistant-instant-cash-book",
+            args: vec![
+                ("kind", "closing".to_owned()),
+                ("figure", reference(r12, &["summary", "closing"])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The sales of one payment type over the period: the total `value` of the cash sales (R3) or of the
+    /// credit sales (R4).
+    pub(super) fn sale_kind(&self, what: What) -> Option<Sentence> {
+        let (id, kind) = match what {
+            What::CashSales => ("R3", "cash"),
+            What::CreditSales => ("R4", "credit"),
+            _ => return None,
+        };
+        let register = self.open_report(id)?;
+        // A line sold at a buyer rate that is not the seller's makes the register carry the seller rate: the
+        // `value` total is the buyer's goods value then, which is not what "sales" are in the tile (خام بکری),
+        // so the model words it (money review of F3a).
+        if matches!(
+            register.node.get(&["columns"]),
+            Some(Node::List(columns))
+                if columns.iter().any(|c| matches!(c, Node::Str(s) if s == "seller_rate"))
+        ) {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-sale-kind",
+            args: vec![
+                ("kind", kind.to_owned()),
+                ("figure", reference(register, &["totals", "value"])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// A seller's net sale: the `net` column of his row of view B.
+    pub(super) fn sale_net(&self, key: &str) -> Option<Sentence> {
+        if self.u.periods.is_empty() {
+            return None;
+        }
+        let view = self.analytics("B", "seller", Some(key))?;
+        // A negative net is the seller owing the shop (PRD FR-12.7): the model words it.
+        if whole(view, &["rows", key, "net"]).is_some_and(|n| n < 0) {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-sale-net",
+            args: vec![
+                ("name", self.name_of(key)?),
+                ("figure", row_or_total(view, key, "net")?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The value of the fruit taken: the total `value` of R37 for everyone, for the guests alone, or for
+    /// one partner.
+    pub(super) fn fruit(&self, who: &Who) -> Option<Sentence> {
+        let r37 = self.open_report("R37")?;
+        let mut args = Vec::new();
+        let role = match who {
+            Who::Shop => {
+                if input_str(r37, "partner").is_some() {
+                    return None;
+                }
+                "shop"
+            }
+            Who::Guests => {
+                if input_str(r37, "partner") != Some("guests") {
+                    return None;
+                }
+                "guests"
+            }
+            Who::Partner(Some(key)) => {
+                if input_str(r37, "partner") != Some(key.as_str()) {
+                    return None;
+                }
+                args.push(("name", self.name_of(key)?));
+                "partner"
+            }
+            _ => return None,
+        };
+        let mut all = vec![("role", role.to_owned())];
+        all.extend(args);
+        all.push(("figure", reference(r37, &["totals", "value"])?));
+        Some(Sentence {
+            id: "assistant-instant-fruit",
+            args: all,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// Capital put into the shop or taken back over the period: the total of the capital vouchers (R15
+    /// with that voucher type).
+    pub(super) fn capital_flow(&self, what: What) -> Option<Sentence> {
+        let (voucher_type, kind) = match what {
+            What::CapitalIn => ("capital_in", "in"),
+            What::CapitalOut => ("capital_out", "out"),
+            _ => return None,
+        };
+        let r15 = self.open_report("R15")?;
+        if input_str(r15, "voucher_type") != Some(voucher_type) {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-capital-flow",
+            args: vec![
+                ("kind", kind.to_owned()),
+                ("figure", reference(r15, &["totals", "amount"])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+}

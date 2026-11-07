@@ -3,6 +3,7 @@
 // one view to another, so one value is kept for all of them. A value that cannot be read any more is
 // left out and the box starts empty. The one-time person is not kept. Nothing about money is kept.
 
+import { GRADE_CHOICES } from '../../shared/format';
 import { choiceOr, idOrNull, isRecord, pickedOrNull, pickedText } from '../../shared/screen-state';
 import { ITEM_GROUP_CHOICES } from '../../shared/ui';
 import {
@@ -42,6 +43,7 @@ export function rememberedAnalytics(state: AnalyticsFilterState): Record<string,
   if (state.garden !== null) kept['garden'] = state.garden;
   if (state.goods !== base.goods) kept['goods'] = state.goods;
   if (state.itemGroup !== base.itemGroup) kept['itemGroup'] = state.itemGroup;
+  if (state.grade !== base.grade) kept['grade'] = state.grade;
   if (state.tripView !== base.tripView) kept['tripView'] = state.tripView;
   return Object.keys(kept).length === 0 ? null : kept;
 }
@@ -68,6 +70,7 @@ export function analyticsFromRemembered(raw: unknown): AnalyticsFilterState | nu
     garden: idOrNull(raw['garden']),
     goods: choiceOr(raw['goods'], GOODS_CHOICES, base.goods),
     itemGroup: choiceOr(raw['itemGroup'], ITEM_GROUP_CHOICES, base.itemGroup),
+    grade: choiceOr(raw['grade'], GRADE_CHOICES, base.grade),
     tripView: choiceOr(raw['tripView'], TRIP_VIEW_CHOICES, base.tripView),
   };
 }

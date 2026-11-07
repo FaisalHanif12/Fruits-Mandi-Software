@@ -638,6 +638,9 @@ assistant-figure-day-sales = The day's { -bikri }
 assistant-figure-day-commission = The day's { -commission }
 # review: pending
 assistant-figure-partner-total = The partner's { -kul-raqam }
+# A partner's capital, read from his capital history (plan 59 D331). It is not his { -kul-raqam }.
+# review: pending
+assistant-figure-partner-capital = The partner's { -sarmaya }
 # review: pending
 assistant-place-party-card = Party card
 # review: pending
@@ -668,6 +671,9 @@ assistant-place-r34 = R34 day summary
 assistant-place-view-a-total = Total of { -tajziat } A
 # review: pending
 assistant-place-partner-overview = Partner overview
+# The balance at the end of one partner's capital history (PRD 17.4), as the capital screen shows it.
+# review: pending
+assistant-place-capital-history = Closing balance of the { -sarmaya } history
 # review: pending
 assistant-place-r31-closing = Closing total of R31
 
@@ -777,3 +783,63 @@ assistant-instant-stock = { $role ->
 assistant-instant-partner-total = { $name }'s { -kul-raqam }: { $figure }
 # review: pending
 assistant-instant-partner-capital = { $name }'s { -sarmaya }: { $figure }
+
+# Instant answers, plan 59 F3 batch 1. The same arguments and rules as above: every argument arrives as text,
+# $name, $item, $date and $figure are references the app replaces, and each selector has a default branch.
+# How many { -nag } were sold or bought: $figure is a count of { -nag }.
+# review: pending
+assistant-instant-qty = { $role ->
+    [item] { -nag } of { $name } sold { $period }: { $figure }
+    [seller] { -nag } of { -beopari } { $name } sold { $period }: { $figure }
+    [buyer] { -nag } bought by { -gahak } { $name } { $period }: { $figure }
+    [seller-item] { -nag } of { $item } from { -beopari } { $name } sold { $period }: { $figure }
+    [buyer-item] { -nag } of { $item } bought by { -gahak } { $name } { $period }: { $figure }
+   *[shop] { -nag } sold { $period }: { $figure }
+}
+# The average rate, not the last one: the gross sale divided by the { -nag }, at the seller's rate.
+# review: pending
+assistant-instant-rate-average = { $role ->
+    [seller-item] Average rate of { $item } from { -beopari } { $name } { $period }: { $figure }
+   *[item] Average rate of { $item } { $period }: { $figure }
+}
+# Shop expenses only, never a partner's personal spending.
+# review: pending
+assistant-instant-expense = { $kind ->
+    [head] { -dukan-kharcha } on { $name } { $period }: { $figure }
+   *[shop] { -dukan-kharcha } { $period }: { $figure }
+}
+# Money received, as { -wasooli } vouchers.
+# review: pending
+assistant-instant-receipts = { $role ->
+    [collector] Money received ({ -wasooli }) through collector { $name } { $period }: { $figure }
+   *[shop] Money received ({ -wasooli }) { $period }: { $figure }
+}
+# The { -rokar } over the period: the balance at its end, the cash received and the cash paid out.
+# review: pending
+assistant-instant-cash-book = { $kind ->
+    [in] Cash received in the { -rokar } { $period }: { $figure }
+    [out] Cash paid out in the { -rokar } { $period }: { $figure }
+   *[closing] Closing balance of the { -rokar } { $period }: { $figure }
+}
+# Sales by the way they were paid for.
+# review: pending
+assistant-instant-sale-kind = { $kind ->
+    [credit] { -udhari } { -bikri } { $period }: { $figure }
+   *[cash] { -naqdi } { -bikri } { $period }: { $figure }
+}
+# What the shop owes the seller for his sales: his { -safi-bikri }.
+# review: pending
+assistant-instant-sale-net = { -safi-bikri } of { -beopari } { $name } { $period }: { $figure }
+# The value of { -phal }: for the shop, for one partner or for the shop's guests.
+# review: pending
+assistant-instant-fruit = { $role ->
+    [partner] { -phal } by { $name }, value { $period }: { $figure }
+    [guests] { -phal } for the shop's { -mehman }, value { $period }: { $figure }
+   *[shop] { -phal }, value { $period }: { $figure }
+}
+# Capital vouchers: money the partners put in and money they take back.
+# review: pending
+assistant-instant-capital-flow = { $kind ->
+    [out] { -sarmaya } taken back { $period }: { $figure }
+   *[in] { -sarmaya } put in { $period }: { $figure }
+}

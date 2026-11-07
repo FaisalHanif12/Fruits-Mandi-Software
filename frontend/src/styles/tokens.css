@@ -139,6 +139,11 @@
   /* A filter of a filter bar (a period, a side, a status): wide enough for "From the first date". */
   --field-filter-w: 192px;
 
+  /* The narrowest box of a report or analytics filter bar (`filter-grid`): a select must hold its longest
+     value on one line, "Fruit and vegetables" (152 px of text, 24 of padding, 8 of gap, 20 of arrow, 2 of
+     border). At 1024 px the bar has 4 columns of 212 px. */
+  --field-filter-grid-min-w: 208px;
+
   /* Toast and dialog sizes (UsersEn, FormEn boards). */
   --toast-max-w: 480px;
   --dialog-w: 520px;

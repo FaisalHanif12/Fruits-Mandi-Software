@@ -1446,11 +1446,10 @@ fn r5b_a_pair_of_one_name_never_hands_the_tie_to_a_third_account() {
 }
 
 #[test]
-fn d331_a_capital_answer_has_no_button_that_opens_a_page_without_the_figure() {
+fn d331_a_capital_answer_opens_the_partner_overview_never_the_statement_page() {
     // "usman ka sarmaya kitna hai": the capital 200,000 is read from his capital history and the partner
-    // overview. The R31 button opens his statement, which does not show 200,000 as a cell: a button opens
-    // only the page the figure was read from, so there is none (D7 D331, lead ruling). His کل رقم, which
-    // R31 does hold, keeps its button.
+    // overview. The R31 button opens his statement, which does not show 200,000 as a cell: the button of
+    // a capital figure is the partner overview screen (PRD 17.3), which does (D7 D331, plan 59 C1).
     let y = year::seed::build();
     let facts = year::oracle::compute(&y).facts;
     let capital = oracle_rupees(&facts, "partner.usman.capital");
@@ -1469,6 +1468,24 @@ fn d331_a_capital_answer_has_no_button_that_opens_a_page_without_the_figure() {
             }
         )),
         "an R31 button was offered for the capital: {:#?}",
+        answer.sources
+    );
+    let overview = answer
+        .sources
+        .iter()
+        .filter(|s| {
+            matches!(
+                s,
+                mandi_assistant::answer::AnswerSource::Screen {
+                    route: mandi_assistant::answer::ScreenRoute::PartnerOverview,
+                    ..
+                }
+            )
+        })
+        .count();
+    assert_eq!(
+        overview, 1,
+        "one partner overview button: {:#?}",
         answer.sources
     );
 }

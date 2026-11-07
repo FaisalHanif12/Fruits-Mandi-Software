@@ -13,6 +13,7 @@ import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
 import type { ReportStockView } from '../../bindings/ReportStockView';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import type { VoucherType } from '../../bindings/VoucherType';
+import { GRADE_CHOICES, type GradeChoice } from '../../shared/format';
 import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 
 /** The period box: a shortcut of FR-19.2, or the two dates the user types. */
@@ -92,6 +93,9 @@ export const GARDEN_VIEW_CHOICES: readonly ReportGardenView[] = ['garden', 'part
 export function gardenViewMessageId(view: ReportGardenView): string {
   return `report-filter-garden-by-${view}`;
 }
+
+/** The quality box of the sales registers (R2, R3, R4; PRD FR-12.42): the choices are shared with analytics. */
+export { GRADE_CHOICES, type GradeChoice };
 
 /** The income report groups its lines by month or by day (R28). */
 export const GROUP_BY_CHOICES: readonly ReportGroupBy[] = ['month', 'day'];
@@ -174,6 +178,8 @@ export interface ReportFilterState {
   voucherType: VoucherChoice;
   /** The group of the items, fruit or vegetables (R2, R3, R4, R7, R10, R27); `all` is no filter. */
   itemGroup: ItemGroupChoice;
+  /** The quality of the sale lines (R2, R3, R4); `all` is no filter. */
+  grade: GradeChoice;
   /** How the trip profit or loss is laid out (R33). It is a layout, not a filter to clear. */
   tripView: ReportTripView;
   /** How the stock report (R10) is laid out: by lot or by item. A layout, not a filter to clear. */
@@ -209,6 +215,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   guestsOnly: false,
   voucherType: 'all',
   itemGroup: 'all',
+  grade: 'all',
   tripView: 'trip',
   stockView: 'lot',
   garden: null,
@@ -260,6 +267,8 @@ export function filtersToWire(
     // kind). The trip layout is sent whenever the report takes it, the default included.
     // One group of items is sent only when it is chosen (the backend reads a missing key as every item).
     ...(has('item_group') && state.itemGroup !== 'all' ? { item_group: state.itemGroup } : {}),
+    // One quality is sent only when it is chosen (the backend reads a missing key as every line).
+    ...(has('grade') && state.grade !== 'all' ? { grade: state.grade } : {}),
     ...(has('voucher_type') && state.voucherType !== 'all'
       ? { voucher_type: state.voucherType }
       : {}),
@@ -304,6 +313,7 @@ export function isUnfiltered(
     wire.status === undefined &&
     wire.voucher_type === undefined &&
     wire.item_group === undefined &&
+    wire.grade === undefined &&
     wire.guests_only === undefined
   );
 }

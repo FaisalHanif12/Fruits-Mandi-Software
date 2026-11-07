@@ -22,6 +22,7 @@ import {
   Button,
   DateInput,
   Field,
+  GradeSelect,
   ItemGroupSelect,
   Num,
   Picker,
@@ -285,6 +286,20 @@ export function AnalyticsFilterBar({
       />,
     );
   }
+  if (has('grade')) {
+    // The quality of the sale lines (view A). It is in view, never behind "More filters": an answer's
+    // button can open the view with a quality set, and the Owner must see and be able to change it.
+    primary.push(
+      <GradeSelect
+        key="grade"
+        value={state.grade}
+        error={fieldError(error, 'filters.grade')}
+        onChange={(grade) => {
+          onChange({ grade });
+        }}
+      />,
+    );
+  }
   if (has('seller')) {
     primary.push(
       <Field
@@ -534,7 +549,7 @@ export function AnalyticsFilterBar({
       role="group"
       aria-label={l10n.getString('analytics-filters-label')}
       {...formNavigationProps}
-      className="grid grid-cols-6 items-end gap-3"
+      className="filter-grid"
     >
       {primary}
       {folded.length > 0 ? (

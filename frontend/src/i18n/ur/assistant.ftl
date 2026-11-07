@@ -631,6 +631,9 @@ assistant-figure-day-sales = دن کی { -bikri }
 assistant-figure-day-commission = دن کا { -commission }
 # review: pending
 assistant-figure-partner-total = شراکت دار کی { -kul-raqam }
+# A partner's capital, read from his capital history (plan 59 D331). It is not his { -kul-raqam }.
+# review: pending
+assistant-figure-partner-capital = شراکت دار کا { -sarmaya }
 # review: pending
 assistant-place-party-card = پارٹی کارڈ
 # review: pending
@@ -660,7 +663,10 @@ assistant-place-r34 = R34 دن کا خلاصہ
 # review: pending
 assistant-place-view-a-total = { -tajziat } A کا میزان
 # review: pending
-assistant-place-partner-overview = شراکت داروں کی فہرست
+assistant-place-partner-overview = شراکت داروں کا خلاصہ
+# The balance at the end of one partner's capital history (PRD 17.4), as the capital screen shows it.
+# review: pending
+assistant-place-capital-history = { -sarmaya } کے تاریخچے کا آخری بقایا
 # review: pending
 assistant-place-r31-closing = R31 کا آخری میزان
 
@@ -758,3 +764,53 @@ assistant-instant-stock = { $role ->
 assistant-instant-partner-total = { $name } کی { -kul-raqam }: { $figure }
 # review: pending
 assistant-instant-partner-capital = { $name } کا { -sarmaya }: { $figure }
+
+# Instant answers, plan 59 F3 batch 1. Same messages as the English file.
+# review: pending
+assistant-instant-qty = { $role ->
+    [item] { $name } کی { $period } کی { -bikri } کے { -nag }: { $figure }
+    [seller] { -beopari } { $name } کی { $period } کی { -bikri } کے { -nag }: { $figure }
+    [buyer] { $name } کی { $period } کی خریداری کے { -nag }: { $figure }
+    [seller-item] { -beopari } { $name } کی { $period } کی { -bikri }، { $item } کے { -nag }: { $figure }
+    [buyer-item] { $name } کی { $period } کی خریداری، { $item } کے { -nag }: { $figure }
+   *[shop] { $period } کی { -bikri } کے { -nag }: { $figure }
+}
+# review: pending
+assistant-instant-rate-average = { $role ->
+    [seller-item] { -beopari } { $name } کے { $item } کا { $period } کا اوسط ریٹ: { $figure }
+   *[item] { $item } کا { $period } کا اوسط ریٹ: { $figure }
+}
+# review: pending
+assistant-instant-expense = { $kind ->
+    [head] { $name } پر { $period } کا { -dukan-kharcha }: { $figure }
+   *[shop] { $period } کا { -dukan-kharcha }: { $figure }
+}
+# review: pending
+assistant-instant-receipts = { $role ->
+    [collector] { -agrahi } والے { $name } کی { $period } کی { -wasooli }: { $figure }
+   *[shop] { $period } کی { -wasooli }: { $figure }
+}
+# review: pending
+assistant-instant-cash-book = { $kind ->
+    [in] { $period } کی { -rokar } میں آنے والی رقم: { $figure }
+    [out] { $period } کی { -rokar } سے ادا کی گئی رقم: { $figure }
+   *[closing] { -rokar } کا { $period } کا آخری بقایا: { $figure }
+}
+# review: pending
+assistant-instant-sale-kind = { $kind ->
+    [credit] { $period } کی { -udhari } { -bikri }: { $figure }
+   *[cash] { $period } کی { -naqdi } { -bikri }: { $figure }
+}
+# review: pending
+assistant-instant-sale-net = { -beopari } { $name } کی { $period } کی { -safi-bikri }: { $figure }
+# review: pending
+assistant-instant-fruit = { $role ->
+    [partner] { $name } کا { $period } کا { -phal }، قیمت: { $figure }
+    [guests] دکان کے { -mehman } کے لیے { $period } کا { -phal }، قیمت: { $figure }
+   *[shop] { $period } کا { -phal }، قیمت: { $figure }
+}
+# review: pending
+assistant-instant-capital-flow = { $kind ->
+    [out] { $period } کا { -sarmaya } واپسی: { $figure }
+   *[in] { $period } کا { -sarmaya } جمع: { $figure }
+}

@@ -384,6 +384,12 @@ fn dump() {
 #[rustfmt::skip]
 const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("akram ka bakaya kitna hai", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
+    // A ledger question: his balance (two places) and the newest ledger rows, with the button of R13 (D7, plan 59 F3).
+    ("akram ka khata", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card R13"),
+    // Figures that a report or a view holds as a total (D7, plan 59 F3).
+    ("kal ki ugrahi", "receipts[role=shop,period=day]", "r1.from r2.totals.amount", "0", "R23"),
+    ("kharcha is mahine ka", "expense[kind=shop,period=range]", "r1.from r1.to r2.totals.expense", "3000", "R29"),
+    ("aaj kitne nag bike", "qty[role=shop,period=today]", "r2.totals.nag", "n60", "view A"),
     ("akram ka bakaya", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
     ("akram ke zimme kitne paise hain", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
     ("how much does akram owe", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card"),
@@ -440,10 +446,11 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "720 1520", "view B"),
     ("rahim aur karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r4.rows.a18.total_comm r3.matches.0.name r1.from r1.to r5.rows.a19.seller_comm r3.matches.0.name r1.from r1.to r5.rows.a19.total_comm", "1764 3928 720 1520", "view B view B"),
     ("rahim ki bikri aur commission is mahine", "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "29400 1764 3928", "view B"),
-    // A partner's capital now: R31 for him, read in two places (the worked day has none). No button: the
-    // capital is not on the statement page of R31, and a button opens only what holds the figure (D331).
-    ("partner b ka sarmaya", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", ""),
-    ("partner b ka sarmaya kitna laga hua hai", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", ""),
+    // A partner's capital now: R31 for him, read in two places (the worked day has none). The button is the
+    // partner overview: the capital is not on the statement page of R31, and a button opens only what holds
+    // the figure (D331, plan 59 C1).
+    ("partner b ka sarmaya", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "screen partneroverview"),
+    ("partner b ka sarmaya kitna laga hua hai", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "screen partneroverview"),
     // Several flows of the same record or of the shop, one line each.
     ("commission aur sale aaj ki", "commission[role=shop,period=today] + sale[role=shop,period=today]", "r1.today_commission.amount r1.today_sales.amount", "5448✓ 41400✓", "tiles"),
     ("aaj ki bikri aur commission", "sale[role=shop,period=today] + commission[role=shop,period=today]", "r1.today_sales.amount r1.today_commission.amount", "41400✓ 5448✓", "tiles"),
@@ -703,7 +710,16 @@ fn run_table(
                 {
                     wrong.push(format!("{question:?}: unclean words {bare:?}"));
                 }
-                if !answer.next.is_empty() || !answer.tables.is_empty() {
+                // Only a ledger question shows a table: the newest rows of his ledger, one table, at most 7
+                // rows (D7, plan 59 F3). No answer has a next question.
+                let ledger = question.contains("khata");
+                let tables_ok = if ledger {
+                    answer.tables.len() == 1
+                        && answer.tables.first().is_some_and(|t| t.rows.len() <= 7)
+                } else {
+                    answer.tables.is_empty()
+                };
+                if !answer.next.is_empty() || !tables_ok {
                     wrong.push(format!("{question:?}: a table or a next question"));
                 }
             }
@@ -802,7 +818,6 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "agle mahine ka commission",
         "mausam kaisa hai",
         "akram ka bakaya pichle mahine",
-        "akram ka khata",
         "akram ne kya kya khareeda",
         "top 5 buyers",
         "kis kis ke dues hain",
@@ -815,10 +830,8 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "kele ka bhao",
         "zubair ka bakaya",
         "akram ki peshgi kitni hai",
-        "kal ki ugrahi",
         "bikri kitni hui",
         "commission kitna hai",
-        "kharcha is mahine ka",
         "aaj ka khulasa",
         "hello",
         "akram aur kele ka commission",
@@ -835,7 +848,6 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "partner a ka khalis kitna hai",
         "partner a ka total raqam kitna hai",
         "خالص کتنا ہے الف کا",
-        "aaj kitne nag bike",
         "aaj kitna maal bika",
         "naqdi bikri aaj",
         "udhari bikri aaj",

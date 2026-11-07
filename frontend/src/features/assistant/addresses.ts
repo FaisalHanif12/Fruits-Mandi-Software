@@ -79,6 +79,7 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
     ...(filters.garden_view === null ? {} : { garden_view: filters.garden_view }),
     ...(filters.guests_only ? { guests: true } : {}),
     ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
+    ...(filters.grade == null ? {} : { grade: filters.grade }),
   };
 }
 
@@ -104,6 +105,7 @@ export function analyticsSearchFromFilters(filters: SourceAnalyticsFilters): Ana
     ...(filters.trip === null ? {} : { trip: filters.trip.id }),
     ...(filters.garden === null ? {} : { garden: filters.garden.id }),
     ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
+    ...(filters.grade == null ? {} : { grade: filters.grade }),
   };
 }
 
@@ -137,6 +139,7 @@ export function reportFiltersOf(filters: SourceReportFilters): ReportFilters {
     ...(filters.guests_only ? { guests_only: true } : {}),
     ...(filters.collector == null ? {} : { collector_id: filters.collector.id }),
     ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
+    ...(filters.grade == null ? {} : { grade: filters.grade }),
   };
 }
 
@@ -163,5 +166,6 @@ export function analyticsFiltersOf(filters: SourceAnalyticsFilters): AnalyticsFi
     goods: filters.goods,
     trip_view: filters.trip_view,
     ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
+    ...(filters.grade == null ? {} : { grade: filters.grade }),
   };
 }

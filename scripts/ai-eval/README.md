@@ -23,6 +23,7 @@ or writes the key.
 | `urdu-review.tsv`                                                                                   | The sheet for the Urdu reviewer, written by every run.                                                                                                                                                                               |
 | `check-modes.mjs`                                                                                   | A scripted check of `--bank`, `--threads` and `--offline` (no model, no key, no cargo).                                                                                                                                              |
 | `bank-spec-d7.mjs`, `build-bank-d7.mjs`, `realtime-d7.tsv`, `realtime-d7-coverage.md`               | The D7 bank (plan 59 B1): 455 real-time figure questions, picky on purpose, with the list of every kind of record and figure the app keeps and the question ids that cover it. See "The D7 bank" below.                              |
+| `realtime-d7-gaps.md`, `../../backend/crates/assistant/tests/robustness_gap.rs` | The gap list of the D7 bank (plan 59 R2): which wordings still go to the model, ranked by cause, with the instant plan each needs. The test dumps what `understand` and `plan_reads` made of every question of a bank. See "The gap dump" below. |
 
 The oracle itself is Rust: `backend/crates/assistant/tests/robustness_year/` (`seed.rs` builds the books
 through the app's own save functions, `oracle.rs` asks the app's own reports and analytics).
@@ -354,6 +355,26 @@ have no row yet, up to 8 times; every row of every try goes into `results.json`.
 The date and name parts of a reply are part of the scored text (a date part is `{type: 'date', iso}`; the runner
 read `date` and showed an empty date, "مورخہ ۔", until 07-11-2026), and a date figure of the bank is now a real check:
 the date must be shown, as a date part or as a date cell.
+
+## The gap dump (plan 59 R2)
+
+`backend/crates/assistant/tests/robustness_gap.rs` answers "why did this question need the model?" for any bank. It does
+nothing unless both variables are set, so a plain `cargo test` skips it:
+
+    MANDI_GAP_BANK=$PWD/scripts/ai-eval/realtime-d7.tsv MANDI_GAP_OUT=/some/gap.tsv \
+      cargo test -j 4 -p mandi-assistant --test robustness_gap -- --nocapture      # from backend/, about 4 minutes
+
+Each line of the output has the intent, whether the app was sure, the figures, the doubts, what each name led to, the period,
+the flags that switch the instant plan off, whether `plan_reads` planned any read, and the unknown word found by dropping
+words one or two at a time (a guide to the wording, not a proof). Join it with `offline-detail.tsv` on the id to rank the
+causes. `realtime-d7-gaps.md` is that ranking for the main D7 bank.
+
+## The partner overview button (plan 59 D331)
+
+A capital figure is read through R31, but the R31 page holds no capital cell, so its button is the partner overview SCREEN
+(`kind: screen`, `route: partner_overview`). The runner's log-against-buttons rule (`figureLogProblems`) accepts that screen
+button for a log read of R31 for ONE partner, with the same result id, and for nothing else: a `partner_overview` button
+with no such read is a problem, and so is another screen button on an R31 read.
 
 ## The speed report (plan 54)
 

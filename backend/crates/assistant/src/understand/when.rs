@@ -126,7 +126,7 @@ fn words() -> &'static Words {
             day: set(&["din", "dino", "day", "days", "دن", "دنوں"]),
             today: set(&["aaj", "aj", "today", "آج"]),
             kal: set(&["kal", "کل"]),
-            parson: set(&["parson", "parsoon", "پرسوں", "narson"]),
+            parson: set(&["parson", "parsoon", "parso", "parsun", "پرسوں", "narson"]),
             yesterday: set(&["yesterday"]),
             tomorrow: set(&["tomorrow"]),
             from: set(&["se", "say", "to", "till", "until", "from", "سے", "تا"]),
@@ -351,7 +351,9 @@ fn month_at(scan: &Scan, at: usize) -> Option<u32> {
     let word = scan.word(at)?;
     let w = words();
     let month = w.months.get(word).copied().or_else(|| near_month(word))?;
-    if month == 5 {
+    // The English "may" is also a verb: it is a month only beside the words of a month (`may_at`). The Urdu
+    // مئی and "mei" are only the month (D7 D253: "اکرم کا مئی کا کمیشن" read no period at all).
+    if month == 5 && matches!(word, "may" | "mei") {
         return None;
     }
     Some(month)
@@ -360,17 +362,24 @@ fn month_at(scan: &Scan, at: usize) -> Option<u32> {
 /// "may" is a month only beside the words that go with a month (in may, may ka, may 2026).
 fn may_at(scan: &Scan, at: usize) -> bool {
     let w = words();
-    if scan.word(at) != Some("may") {
+    let word = scan.word(at);
+    if !matches!(word, Some("may" | "mei")) {
         return false;
     }
-    let before = at
-        .checked_sub(1)
-        .and_then(|b| scan.word(b))
-        .is_some_and(|x| w.may_before.contains(x));
-    let after = scan
-        .word(next_index(at, 1))
-        .is_some_and(|x| w.may_after.contains(x))
-        || year_at(scan, next_index(at, 1)).is_some();
+    let previous = at.checked_sub(1).and_then(|b| scan.word(b));
+    let next = scan.word(next_index(at, 1));
+    if word == Some("mei") {
+        // "mei" is also the usual Roman spelling of میں ("in"): "maal mei kitna commission" is no month. It
+        // is May only after "of", "for", "during", "since" or "from", before ka or ke, or before a year.
+        // Not after "in" ("in mei se" is "among these") and not before "ki" ("mei ki gayi" is "done
+        // in") (D7, money review of F3a).
+        return previous.is_some_and(|x| matches!(x, "of" | "for" | "during" | "since" | "from"))
+            || next.is_some_and(|x| matches!(x, "ka" | "ke"))
+            || year_at(scan, next_index(at, 1)).is_some();
+    }
+    let before = previous.is_some_and(|x| w.may_before.contains(x));
+    let after =
+        next.is_some_and(|x| w.may_after.contains(x)) || year_at(scan, next_index(at, 1)).is_some();
     before || after
 }
 
@@ -1103,8 +1112,32 @@ fn up_to_now_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, 
     ))
 }
 
+/// "the day before yesterday": three words that are one day, the one before yesterday. Without this the
+/// last word alone read "yesterday" and the two before it were left over.
+fn day_before_yesterday_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usize)> {
+    if scan.word(at)? != "day"
+        || scan.word(next_index(at, 1))? != "before"
+        || scan.word(next_index(at, 2))? != "yesterday"
+    {
+        return None;
+    }
+    let day = today.checked_sub_signed(Duration::days(2))?;
+    Some((
+        period(
+            PeriodKind::DayBeforeYesterday,
+            Some(day),
+            day,
+            Confidence::High,
+            "day before yesterday".to_owned(),
+            today,
+        ),
+        next_index(at, 3),
+    ))
+}
+
 fn read_at(scan: &Scan, at: usize, today: NaiveDate, tense: Tense) -> Option<(PeriodRef, usize)> {
-    up_to_now_at(scan, at, today)
+    day_before_yesterday_at(scan, at, today)
+        .or_else(|| up_to_now_at(scan, at, today))
         .or_else(|| range_at(scan, at, today))
         .or_else(|| month_range_at(scan, at, today))
         .or_else(|| date_period_at(scan, at, today))
@@ -1423,6 +1456,79 @@ fn belongs_to_year_end(scan: &Scan, start: usize, end: usize) -> bool {
     matches!((before2, before), (Some("end"), Some("of"))) || before == Some("end")
 }
 
+/// "پچھلے مہینے کل کتنی وصولی ہوئی", "اب تک بجلی کے بل پر کل کتنا خرچ ہوا": a "کل" or "kal" straight before a
+/// "how much" word is "total" when the question names another period of its own (a month, a year, "so far",
+/// a range): it is not a second period, yesterday (D7, plan 59 F3). A day word beside it stays: "aaj aur
+/// kal kitna" names two days. With no other period, "kal kitni wasooli hui" is still yesterday.
+///
+/// Example: ["LastMonth", "Yesterday"] from "پچھلے مہینے کل کتنی وصولی ہوئی" becomes ["LastMonth"].
+fn drop_total_kal(scan: &Scan, out: &mut Vec<PeriodRef>) {
+    use super::lexicon::Cue;
+    const HOW_MUCH: [&str; 8] = [
+        "kitna",
+        "kitni",
+        "kitne",
+        "kitnay",
+        "کتنا",
+        "کتنی",
+        "کتنے",
+        "کتنیں",
+    ];
+    const FIGURE: [Cue; 14] = [
+        Cue::Sale,
+        Cue::SalePlural,
+        Cue::Commission,
+        Cue::Laga,
+        Cue::Dues,
+        Cue::Collection,
+        Cue::Payable,
+        Cue::Advance,
+        Cue::Balance,
+        Cue::Cash,
+        Cue::Stock,
+        Cue::Expense,
+        Cue::Profit,
+        Cue::FruitTaken,
+    ];
+    let kal_at = scan.words.iter().enumerate().find_map(|(at, w)| {
+        (matches!(w.as_str(), "کل" | "kal")
+            && (scan
+                .word(next_index(at, 1))
+                .is_some_and(|next| HOW_MUCH.contains(&next))
+                || scan
+                    .hits
+                    .iter()
+                    .any(|h| h.start == next_index(at, 1) && FIGURE.contains(&h.cue))))
+        .then_some(at)
+    });
+    // The other period stands BEFORE the "kal" and the question asks one thing ("kal kitni bikri hui aur
+    // pichle mahine kitni" asks two, and yesterday stays).
+    let one_ask = scan.hits.iter().filter(|h| h.cue == Cue::HowMuch).count() <= 1;
+    let other = kal_at.is_some_and(|kal_at| {
+        out.iter().any(|p| {
+            !matches!(
+                p.kind,
+                PeriodKind::Today
+                    | PeriodKind::Yesterday
+                    | PeriodKind::DayBeforeYesterday
+                    | PeriodKind::Tomorrow
+                    | PeriodKind::DayAfterTomorrow
+                    | PeriodKind::Date
+            ) && p
+                .words
+                .split_whitespace()
+                .next()
+                .and_then(|first| scan.words.iter().position(|w| w == first))
+                .is_some_and(|at| at < kal_at)
+        })
+    });
+    if one_ask && other {
+        out.retain(|p| {
+            !(p.kind == PeriodKind::Yesterday && matches!(p.words.as_str(), "کل" | "kal"))
+        });
+    }
+}
+
 /// The periods a question names and whether a time word was left that no period took.
 pub(super) struct PeriodsRead {
     /// Every period, in order, as exact dates.
@@ -1487,6 +1593,7 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
         }
     }
     merge_month_and_days(&mut out, &bare, today);
+    drop_total_kal(scan, &mut out);
     // "is mahine ab tak": the "so far" is the month up to today, not a second period.
     if out.len() > 1
         && out.iter().any(|p| p.kind == PeriodKind::UpToNow)

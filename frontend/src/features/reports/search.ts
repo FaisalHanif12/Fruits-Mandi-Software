@@ -10,6 +10,7 @@ import type { ReportTripView } from '../../bindings/ReportTripView';
 import { pickedOrNull } from '../../shared/screen-state';
 import { ITEM_GROUP_CHOICES, type ItemGroupChoice, type PickerValue } from '../../shared/ui';
 import type {
+  GradeChoice,
   PeriodChoice,
   ReportBikri,
   ReportFilterState,
@@ -19,6 +20,7 @@ import type {
 import {
   EMPTY_FILTERS,
   GARDEN_VIEW_CHOICES,
+  GRADE_CHOICES,
   GROUP_BY_CHOICES,
   PAID_CHOICES,
   PERIOD_CHOICES,
@@ -61,6 +63,8 @@ export interface ReportSearch {
   voucher_type?: VoucherChoice;
   /** The group of the items, fruit or vegetables; `all` is the same as leaving it out. */
   item_group?: ItemGroupChoice;
+  /** The quality of the sale lines (R2, R3, R4); `all` is the same as leaving it out. */
+  grade?: GradeChoice;
   /** How the trip profit or loss (R33) is laid out. */
   trip_view?: ReportTripView;
   /** How the stock report (R10) is laid out. */
@@ -159,6 +163,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   // `all` is the same as leaving the kind out, so it is not carried.
   const voucherType = oneOf(VOUCHER_CHOICES, search['voucher_type']);
   const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
+  const grade = oneOf(GRADE_CHOICES, search['grade']);
   const tripView = oneOf(TRIP_VIEW_CHOICES, search['trip_view']);
   const stockView = oneOf(STOCK_VIEW_CHOICES, search['stock_view']);
   const garden = positiveId(search['garden']);
@@ -184,6 +189,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(collector === undefined ? {} : { collector }),
     ...(voucherType === undefined || voucherType === 'all' ? {} : { voucher_type: voucherType }),
     ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
+    ...(grade === undefined || grade === 'all' ? {} : { grade }),
     ...(tripView === undefined ? {} : { trip_view: tripView }),
     ...(stockView === undefined ? {} : { stock_view: stockView }),
     ...(garden === undefined ? {} : { garden }),
@@ -219,6 +225,7 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
     collector: search.collector ?? null,
     voucherType: search.voucher_type ?? 'all',
     itemGroup: search.item_group ?? 'all',
+    grade: search.grade ?? 'all',
     tripView: search.trip_view ?? 'trip',
     stockView: search.stock_view ?? 'lot',
     garden: search.garden ?? null,

@@ -899,6 +899,8 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
       ['commission_rules', 'masters-rules-title', '/index/rules', {}],
       ['day_close', 'day-title', '/day', {}],
       ['audit', 'settings-tab-audit', '/settings', { tab: 'audit' }],
+      // Plan 59 D331: a partner's capital is read from the partner overview, which is behind the code.
+      ['partner_overview', 'partners-title', '/partners', {}],
     ] as const)(
       '%s: named by the screen title, opened by "open the screen"',
       async (route, titleId, path, search) => {

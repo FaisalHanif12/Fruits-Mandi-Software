@@ -4,6 +4,7 @@
 // (CLAUDE.md rule 1). Nothing is worked out here.
 
 import type { ReportPerson } from '../reports';
+import type { GradeChoice } from '../../shared/format';
 import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 import type {
   AnalyticsCompare,
@@ -82,6 +83,8 @@ export interface AnalyticsFilterState {
   goods: AnalyticsGoods;
   /** All the items of a group, fruit or vegetables (views A, D and G); never together with an item. */
   itemGroup: ItemGroupChoice;
+  /** The quality of the sale lines (view A; PRD FR-12.42). `all` is no filter. */
+  grade: GradeChoice;
   /** The layout of view J. */
   tripView: AnalyticsTripView;
 }
@@ -105,6 +108,7 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   garden: null,
   goods: 'all',
   itemGroup: 'all',
+  grade: 'all',
   tripView: 'trip',
 };
 
@@ -148,6 +152,8 @@ export function filtersToWire(
     ...(has('item_group') && state.itemGroup !== 'all' && state.item === null
       ? { item_group: state.itemGroup }
       : {}),
+    // One quality is sent only when it is chosen (the backend reads a missing key as every line).
+    ...(has('grade') && state.grade !== 'all' ? { grade: state.grade } : {}),
     // The first layout is the backend's default, so it is left null, like the month of group_by.
     trip_view: has('trip_view') && state.tripView !== 'trip' ? state.tripView : null,
   };
@@ -192,6 +198,7 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     garden: filters.garden_id,
     goods: filters.goods,
     itemGroup: filters.item_group ?? 'all',
+    grade: filters.grade ?? 'all',
     tripView: filters.trip_view ?? 'trip',
   };
 }
@@ -217,6 +224,7 @@ export function isUnfiltered(
     wire.trip_id === null &&
     wire.garden_id === null &&
     wire.goods === 'all' &&
-    wire.item_group === undefined
+    wire.item_group === undefined &&
+    wire.grade === undefined
   );
 }

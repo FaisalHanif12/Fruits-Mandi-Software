@@ -92,6 +92,13 @@ pub(super) enum Cue {
     ManyItems,
     /// becha, sold, bika: the one named is a seller.
     Sold,
+    /// kata, kati, deducted: a charge taken off a seller ("kitna kamishan kata"). It names no record;
+    /// beside a commission it says the seller side (D7, plan 59 F3).
+    Deducted,
+    /// udhari, credit: a sale paid later ("udhaar me kitni bikri"). It names no record.
+    PayCredit,
+    /// naqdi: a sale paid on the spot ("naqdi bikri"). "naqdi mandi" is a buyer's name, not this.
+    PayCash,
     /// khareeda, bought: the one named is a buyer.
     Bought,
     // ---- which figure ----------------------------------------------------------------------
@@ -554,10 +561,23 @@ const ROLES: &[Entry] = &[
         &[
             "becha", "beche", "bechi", "bechna", "bechta", "bechte", "bechti", "bechay", "bheja", "bheje", "bheji", "bhejna", "maal bheja", "mal bheja",
             "supplied", "sent", "بھیجا", "بھیجے", "بھیجی", "مال بھیجا",
-            "beecha", "beeche", "bika", "bike", "biki", "bikta", "bikti", "bikte", "biktay", "bikay", "bikega", "bikegi", "bikenge", "sold", "sell", "sells", "selling",
-            "بیچا", "بیچے", "بیچی", "بیچنا", "بیچتا", "بیچتے", "بکا", "بکے", "بکی", "بکتا", "بکتی", "بکتے",
+            "beecha", "beeche", "bika", "bike", "biki", "bikta", "bikti", "bikte", "biktay", "bikay", "bikega", "bikegi", "bikenge", "bik", "bikin", "bik gayi", "bik gaya", "bik gaye", "bik gai", "sold", "sell", "sells", "selling",
+            "بیچا", "بیچے", "بیچی", "بیچنا", "بیچتا", "بیچتے", "بکا", "بکے", "بکی", "بکتا", "بکتی", "بکتے", "بکیں", "بک گیا", "بک گئی", "بک گئے",
         ],
     ),
+    (
+        Cue::Deducted,
+        &[
+            "kata", "kati", "kate", "katta", "katti", "katte", "kat gaya", "kat gayi", "kat gaye",
+            "deducted", "deduct", "deducting", "deduction", "deductions", "کٹا", "کٹی", "کٹے", "کٹ گیا",
+            "کٹ گئی", "کٹ گئے", "کٹوتی",
+        ],
+    ),
+    (
+        Cue::PayCredit,
+        &["udhari", "udhaari", "udhri", "credit", "on credit", "ادھاری"],
+    ),
+    (Cue::PayCash, &["naqdi", "nakdi", "نقدی"]),
     (
         Cue::Bought,
         &[
@@ -582,7 +602,7 @@ const FIGURES: &[Entry] = &[
             "kitna dena hai", "kitna lena hai", "kitna deta", "kitna lete", "dega", "degi", "dene hain",
             "dene hai", "dene he", "dene hen", "lene hain", "lene hai", "lene he", "lene hen",
             "dena hain", "lena hain", "denge", "dengi", "lenge", "lengi", "دینے ہیں", "لینے ہیں",
-            "دینا ہے", "لینا ہے",
+            "دینا ہے", "لینا ہے", "دینی ہے", "لینی ہے", "دینی ہیں", "لینی ہیں", "deni hai", "deni he", "leni hai", "leni he", "due to pay", "has to pay", "have to pay", "to pay", "ow",
             "bakaye", "بقایا", "بیلنس", "بکایا", "لینا", "دینا", "کتنا دے گا", "دے گا",
             "zimme", "zimmay", "zimay", "zimma", "ذمے", "ذمہ",
         ],
@@ -591,7 +611,7 @@ const FIGURES: &[Entry] = &[
         Cue::Pending,
         &[
             "baqi", "baki", "baqee", "bakee", "pending", "remaining", "left", "bacha", "bachi",
-            "bache", "bachay", "باقی", "بچا", "بچی", "بچے", "پینڈنگ",
+            "bache", "bachay", "khuli", "khula", "khule", "khuli hui", "khula hua", "باقی", "بچا", "بچی", "بچے", "پینڈنگ", "کھلی", "کھلا", "کھلے",
         ],
     ),
     (
@@ -606,7 +626,8 @@ const FIGURES: &[Entry] = &[
         Cue::SalePlural,
         &[
             "bikriyan", "bikriyaan", "bikriyon", "bikrian", "bikriyan", "بکریاں", "بکریوں",
-            "how many sales", "number of sales", "count of sales", "sales count",
+            "how many sales", "number of sales", "count of sales", "sales count", "kitne bill",
+            "kitne bil", "kitne bills", "how many bills", "number of bills", "کتنے بل",
         ],
     ),
     (
@@ -635,7 +656,7 @@ const FIGURES: &[Entry] = &[
             "peti", "petiyan", "petiyon", "pati", "crate", "crates", "carton", "cartons", "box",
             "boxes", "bori", "boriyan", "boriyon", "nag", "dana", "kg", "kilo", "kilos", "ton",
             "پیٹی", "پیٹیاں", "پیٹیوں", "کریٹ", "کارٹن", "بوری", "بوریاں", "نگ", "دانہ", "کلو",
-            "quantity", "qty", "quantities", "کوانٹیٹی",
+            "quantity", "qty", "quantities", "units", "unit", "کوانٹیٹی",
         ],
     ),
     (
@@ -687,8 +708,8 @@ const FIGURES: &[Entry] = &[
     (
         Cue::Cash,
         &[
-            "cash", "cash book", "roqar book", "rokar book", "roqar bak", "rokar bak", "cash bak", "roqar", "rokar", "rokad", "roqad", "rokra", "rokkar", "gala", "galla", "gale",
-            "cash in hand", "hand mein", "naqad", "naqd", "روکڑ", "گلہ", "گلے", "نقد",
+            "cash", "cash book", "roqar book", "rokar book", "roqar bak", "rokar bak", "cash bak", "roqar", "rokar", "rokad", "roqad", "rokra", "rokkar", "roknad", "gala", "galla", "gale", "galle", "galay", "gallay",
+            "cash in hand", "hand mein", "naqad", "naqd", "nakad", "nakd", "روکڑ", "گلہ", "گلے", "نقد",
         ],
     ),
     (
@@ -724,7 +745,7 @@ const FIGURES: &[Entry] = &[
         Cue::Expense,
         &[
             "kharcha", "kharch", "kharche", "kharchay", "kharcho", "expense", "expenses",
-            "spending", "خرچہ", "خرچ", "خرچے", "خرچوں", "خرچات", "اخراجات",
+            "spending", "spent", "spend", "خرچہ", "خرچ", "خرچے", "خرچوں", "خرچات", "اخراجات",
         ],
     ),
     (
@@ -940,6 +961,9 @@ pub(super) const STOP: &[&str] = &[
     "banaam", "banam", "bnaam", "benaam", "بنام", "shuru", "shuruaat", "shuroo", "شروع", "record",
     "records", "ریکارڈ", "entries", "entry", "اندراج", "اندراجات", "line", "lines", "shehar",
     "sheher", "شہر", "city", "cities",
+    // D7 F3: small words of ordinary questions that were taken for the name of a party.
+    "before", "bna", "banti", "banta", "بنتی", "بنتا", "hoi", "hoa", "gye", "gya", "chuka", "chuki", "chuke", "چکا", "چکی",
+    "چکے", "value", "valew", "valu", "rat",
 ];
 
 /// Words that mean something else in a question but are also the usual parts of a firm's name
@@ -948,10 +972,10 @@ pub(super) const STOP: &[&str] = &[
 #[rustfmt::skip]
 pub(super) const NAMEISH: &[&str] = &[
     "fruit", "fruits", "garden", "bagh", "bag", "traders", "trader", "trading", "brothers", "bros",
-    "tax", "toll", "store", "stores", "general", "cash", "mandi", "khata", "company", "co",
+    "tax", "toll", "store", "stores", "general", "cash", "naqdi", "nakdi", "mandi", "khata", "company", "co",
     "enterprises", "enterprise", "sons", "son", "ltd", "mart", "centre", "center", "depot",
     "agency", "supplier", "suppliers", "farm", "farms", "adda", "market", "haji", "malik", "sheikh",
-    "پھل", "باغ", "ٹریڈرز", "برادرز", "ٹیکس", "ٹول", "سٹور", "جنرل", "کیش", "منڈی", "کمپنی", "اینڈ",
+    "پھل", "باغ", "ٹریڈرز", "برادرز", "ٹیکس", "ٹول", "سٹور", "جنرل", "کیش", "نقدی", "منڈی", "کمپنی", "اینڈ",
     "سنز", "فارم", "فارمز", "اڈا", "مارکیٹ", "حاجی", "ملک",
 ];
 
