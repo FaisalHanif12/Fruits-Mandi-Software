@@ -360,3 +360,33 @@ For Umar:
   the fixed part must stay within 11,600 tokens.
 - Before live run 1: run the key-limit check (`node scripts/ai-eval/run.mjs --key-limit`, not run yet). A whole-bank
   run is about 581 to 798 calls, $0.23 to $0.32. Ask Umar and wait for his yes.
+
+## 13. Continue (08-11-2026, Umar: "continue and complete the D7 task")
+
+Work restarts from Section 12. Umar's "continue" also lifts the hold on the reviewer and robustness gate, which
+runs once at the end over the whole of plan 59. Live runs still need his yes on the cost before each one.
+
+Contract change (agreed by the lead, both sides build it):
+- `ScreenRoute` (backend `src/answer.rs`) gets `PartnerOverview` (`partner_overview`). It opens the partner overview
+  (PRD 17.3), which is behind the partner code (FR-17.11) like any partner screen. A capital figure (`capital`,
+  `capital_history`) gets this button instead of R31 (D331, Section 12 item 1).
+- New Fluent IDs from backend, written by frontend in both languages: `assistant-figure-partner-capital`, the place
+  word for `capital_history`, the label of the partner overview button, and each new instant-answer sentence of F3.
+
+| # | Task | Owner | Blocked by |
+|---|---|---|---|
+| C1 | D331 backend: `PartnerOverview` route, capital figures get it; M1 words used; `pnpm gen:types` | backend | |
+| C2 | D331 frontend: route mapping in `features/assistant/navigation.ts`, button label; M1 words; the two contract tests of Section 11 item 10 | frontend | C1 (types) |
+| F3a | Speed batch 1: S-B1, S-A1, S-A2, S-A5, S-A6, S-A7, S-A8 | backend | C1 |
+| F3b | Speed batch 2: S-A3, S-A4, S-A9 to S-A12, S-B2 to S-B6, Roman and Urdu wording gaps, Section 12 item 4 gaps, guards on the `pick` continuation | backend | F3a |
+| F3w | Fluent words for every new instant sentence, in batches | frontend | F3a, F3b |
+| O1 | Whole bank offline until clean; runner accepts the partner overview button for a capital read | robustness | F3b |
+| L1, F4, L2, D1 | As Section 6 | lead, backend | O1 |
+| G | Reviewer and robustness gate over all of plan 59 | reviewer, robustness | L2 |
+
+Umar's answers (08-11-2026):
+- "aaj ka rate" on a day with no sale of the item: the answer says there was no sale today, then gives the last rate
+  with its date (Section 9 item 1 closed).
+- The `own_number` prompt line is approved. D6 prompt v1.7: step 7 names the rule with Umar's wording; a few lines
+  are shortened with the same meaning. Fixed part 11,600 tokens (P1 passes); `golden_prompt`, `golden_questions`,
+  `prompt_columns` and `state_prompt` pass.
