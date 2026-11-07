@@ -722,6 +722,18 @@ assistant-instant-laga = { $role ->
    *[shop] { $period } کا { -laga }: { $figure }
 }
 # review: pending
+assistant-instant-commission-buyer-item = { $name } سے { $item } پر لیا گیا { $period } کا { -commission }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item-own = { -beopari } { $name } سے { $item } پر لیا گیا { $period } کا { -commission }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item = { -beopari } { $name } کے { $item } پر { $period } کا کل { -commission } (دونوں طرف اور { -laga }، اوپر والی لائن سمیت): { $figure }
+# review: pending
+assistant-instant-laga-buyer-item = { $name } سے { $item } پر لیا گیا { $period } کا { -laga }: { $figure }
+# review: pending
+assistant-instant-last-rate-item = { $item } کا { $period } کا آخری ریٹ: { $figure }، مورخہ { $date }
+# review: pending
+assistant-instant-last-rate-buyer-item = { $name } کو { $item } کا { $period } کا آخری ریٹ: { $figure }، مورخہ { $date }
+# review: pending
 assistant-instant-party = { $kind ->
     [payable] { $name } کو { -adaigi } باقی: { $figure }
     [advance] { $name } کی { -peshgi } باقی: { $figure }

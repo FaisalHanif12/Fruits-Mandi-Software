@@ -205,9 +205,12 @@ pub(super) fn grade_words(typed: &[String], name: &[String]) -> Option<(u32, boo
     grade_fit(typed, name).map(|fit| (fit.total, fit.exact))
 }
 
-/// The score used to choose among hits: the grade first; a hit whose whole name was typed beats a
-/// hit that has more words ("faisal" is Faisal, not Faisal Traders). Two hits that both have more
-/// words than were typed are alike ("akram" is Akram Toll Tax and Akram Baloch).
+/// The score used to choose among hits: the grade first, then a small bonus for a hit whose whole name
+/// was typed. Records and items use the bonus ("kela" is Kela, not Kela Desi). ACCOUNTS do not: they
+/// pass a length that is never whole, so a typed name that is the whole name of one account and the
+/// first word of another ("faisal" with Faisal and Faisal Traders) ties and the app asks which one,
+/// as PRD FR-7.77 says for two to five matches (D7 R5). Two hits that both have more words than were
+/// typed are alike ("akram" is Akram Toll Tax and Akram Baloch).
 pub(super) fn score(total: u32, typed_len: usize, name_len: usize) -> u32 {
     let whole = u32::from(name_len <= typed_len).saturating_mul(4);
     total.saturating_mul(8).saturating_add(whole)
@@ -393,7 +396,9 @@ impl<'a> Lookup<'a> {
                 } else {
                     split_words(&text::search_en(&hit.name_en))
                 };
-                if !use_urdu && let Some(tag) = &hit.tag {
+                // The tag tells two accounts of one name apart in both scripts: "اکرم" is اکرم ٹول ٹیکس and
+                // اکرم K, so the app asks which one, as it does for "akram" (PRD FR-7.77, D7 R5).
+                if let Some(tag) = &hit.tag {
                     name.push(text::search_en(tag));
                 }
                 let fit = grade_fit(typed, &name)?;
@@ -403,7 +408,13 @@ impl<'a> Lookup<'a> {
                 }
                 Some((
                     self.party_hit(hit, role),
-                    score(fit.total, typed.len(), name.len()),
+                    // No account gets the whole-name bonus: a typed name that is the whole name of one
+                    // account and the first word of another ("faisal" with Faisal and Faisal Traders), or
+                    // that two accounts share and only the tag tells apart (اسلم and اسلم BA), is not
+                    // taken for the shorter one. The accounts tie, so the app asks which one (PRD
+                    // FR-7.77, FR-10.7, E38; D7 R5, lead ruling). The bonus only broke ties between equal
+                    // grades, so a better fit still wins.
+                    score(fit.total, typed.len(), typed.len().saturating_add(1)),
                     fit.exact,
                     fit.clear,
                 ))
@@ -689,6 +700,14 @@ pub(super) fn wanted_role(scan: &Scan, span: (usize, usize)) -> Option<Wanted> {
 
 // ---- turning a match into a PartyRef -----------------------------------------------------------------
 
+/// True when every hit has the very same Urdu and English name (the tag aside).
+fn same_name(hits: &[PartyHit]) -> bool {
+    hits.windows(2).all(|pair| match pair {
+        [a, b] => a.name_ur == b.name_ur && a.name_en == b.name_en,
+        _ => true,
+    })
+}
+
 fn party_ref(
     scan: &Scan,
     span: (usize, usize),
@@ -717,7 +736,10 @@ fn party_ref(
         // Two accounts with this name, a buyer's and a seller's: only a plain word of the question
         // (a noun, a verb) settles which. A soft hint (adaigi, dues) does not: a payment to a buyer
         // is cash lent (PRD FR-15.11), so the other one may be meant.
-        (_, Some(w)) if of_role.len() == 1 && w.hard => {
+        // Only when every tied account has the same name (a seller and a buyer of one person, E10):
+        // a tie of different names ("faisal" with a seller Faisal and a buyer Faisal Traders) is not
+        // settled by a role word, the app asks (PRD FR-7.77; money review 15, M2).
+        (_, Some(w)) if of_role.len() == 1 && w.hard && same_name(&best.hits) => {
             let kept = of_role.first().map(|h| (*h).clone());
             match kept {
                 Some(hit) => (Outcome::Found(hit), sure),

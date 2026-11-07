@@ -1003,7 +1003,9 @@ fn day_word_at(
                     )
             })
             .map_or(next_index(at, 1), |h| h.end);
-        let before_noun = word == "کل"
+        // Roman "kal" straight before a figure noun with no verb ("kal commission kitna hai") is as unsure as
+        // the Urdu one: "kul" (total) is often typed "kal" (D7 R13b). A verb settles it either way.
+        let before_noun = (word == "کل" || (word == "kal" && matches!(tense, Tense::None)))
             && scan.hits.iter().any(|h| {
                 h.start == noun_at
                     && matches!(

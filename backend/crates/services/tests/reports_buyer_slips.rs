@@ -86,10 +86,13 @@ fn assert_adds_up(w: &support::World, filters: &ReportFilters, data: &BuyerBills
     let r4 = report(w, ReportId::R4, filters.clone(), 0, 0);
     assert_eq!(text(&data.totals[2]), format_rupees(money(&r5.totals[3])));
     assert_eq!(text(&data.totals[3]), format_rupees(money(&r5.totals[4])));
-    // The quantity of all slips is the quantity total of R4, which sums `qty` in SQL.
-    assert_eq!(data.qty, number(&r4.totals[5]).to_string());
-    assert_eq!(money(&r4.totals[7]), money(&r5.totals[3]));
-    assert_eq!(money(&r4.totals[8]), money(&r5.totals[4]));
+    // The quantity of all slips is the quantity total of R4, which sums `qty` in SQL. The columns of R4
+    // are found by their key: a register gains a `seller_rate` column (and a `grade` or `packing` one)
+    // only when the filter has a line that needs it (D7, plan 59), which moves the ones after it.
+    let at = |key: &str| r4.columns.iter().position(|c| c.key == key).unwrap();
+    assert_eq!(data.qty, number(&r4.totals[at("qty")]).to_string());
+    assert_eq!(money(&r4.totals[at("value")]), money(&r5.totals[3]));
+    assert_eq!(money(&r4.totals[at("buyer_total")]), money(&r5.totals[4]));
     assert_eq!(data.slip_count, data.slips.len().to_string());
     // One slip for each row of R5, each with the sums of that row.
     assert_eq!(i64::try_from(data.slips.len()).unwrap(), r5.total_count);

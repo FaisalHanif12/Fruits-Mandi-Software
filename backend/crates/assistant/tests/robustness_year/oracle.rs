@@ -746,6 +746,7 @@ pub fn compute(y: &Year) -> Oracle {
     item_axis_facts(&mut o, y);
     quality_facts(&mut o, y);
     money_axis_facts(&mut o, y);
+    d7_facts(&mut o, y);
     o
 }
 
@@ -2292,9 +2293,9 @@ fn vegetable_facts(o: &mut Oracle, y: &Year) {
             .read(|c| {
                 c.query_row(
                     "SELECT s.seller_rate_paisa, s.entry_date FROM bikri_sales s \
-                     JOIN bikri_lots l ON l.id = s.lot_id \
+                     JOIN bikri_lots l ON l.id = s.lot_id JOIN bikri_entries e ON e.id = s.bikri_id \
                      WHERE s.is_active = 1 AND l.item_id = ?1 \
-                     ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                     ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1",
                     params![item.id],
                     |r| Ok((r.get(0)?, r.get(1)?)),
                 )
@@ -2578,8 +2579,9 @@ fn item_axis_facts(o: &mut Oracle, y: &Year) {
                 .read(|c| {
                     c.query_row(
                         "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                         JOIN bikri_entries e ON e.id = s.bikri_id \
                          WHERE s.is_active = 1 AND l.item_id = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
-                         ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                         ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1",
                         params![
                             id,
                             from.map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default(),
@@ -2737,10 +2739,11 @@ fn item_axis_facts(o: &mut Oracle, y: &Year) {
                     let last: Option<i64> = db
                         .read(|c| {
                             c.query_row(
-                                "SELECT s.buyer_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                                "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                                 JOIN bikri_entries e ON e.id = s.bikri_id \
                                  WHERE s.is_active = 1 AND s.buyer_account_id = ?1 AND l.item_id = ?2 \
                                  AND s.entry_date >= ?3 AND s.entry_date <= ?4 \
-                                 ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                                 ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1",
                                 params![f, id, day(from), day(to)],
                                 |r| r.get(0),
                             )
@@ -2910,8 +2913,10 @@ fn quality_facts(o: &mut Oracle, y: &Year) {
                     .read(|c| {
                         c.query_row(
                             "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                             JOIN bikri_entries e ON e.id = s.bikri_id \
                              WHERE s.is_active = 1 AND s.grade = ?1 AND s.entry_date >= ?2 AND s.entry_date <= ?3 \
-                             AND (?4 IS NULL OR l.item_id = ?4) ORDER BY s.entry_date DESC, s.id DESC LIMIT 1",
+                             AND (?4 IS NULL OR l.item_id = ?4) \
+                             ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1",
                             params![quality, from_text, to_text, item],
                             |r| r.get(0),
                         )
@@ -3502,4 +3507,1032 @@ fn screen_series_estimates(o: &mut Oracle, y: &Year) {
             );
         }
     }
+}
+
+// ---- D7: the picky real-time bank (plan 59, B1) ----------------------------------------------------------------
+//
+// Every fact below is SQL on the books (`bikri_sales`, `bikri_lots`, `vouchers`, `journal_lines`), never the
+// assistant's tools and never typed. A buyer's day is cross-checked against the app's own day sheet (R35) when the
+// oracle is built, so a mistake in this SQL stops the build instead of reaching the bank.
+
+/// One combination of filters for the D7 sale facts.
+struct D7Combo {
+    name: &'static str,
+    buyer: Option<&'static str>,
+    seller: Option<&'static str>,
+    item: Option<&'static str>,
+    group: Option<&'static str>,
+    pay: Option<&'static str>,
+    grade: Option<&'static str>,
+    period: &'static str,
+}
+
+/// A combination with no filter at all; each combination below names the filters it sets.
+const D7_NONE: D7Combo = D7Combo {
+    name: "",
+    buyer: None,
+    seller: None,
+    item: None,
+    group: None,
+    pay: None,
+    grade: None,
+    period: "year",
+};
+
+/// The combinations the D7 bank asks (several filters at once; some are empty on purpose).
+const D7_COMBOS: [D7Combo; 33] = [
+    D7Combo {
+        name: "faisal_rahim_last_month",
+        buyer: Some("faisal"),
+        seller: Some("rahim"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "faisal_karim_year",
+        buyer: Some("faisal"),
+        seller: Some("karim"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "rizwan_banana_year",
+        buyer: Some("rizwan"),
+        item: Some("kela"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "rahim_banana_year",
+        seller: Some("rahim"),
+        item: Some("kela"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "karim_apple_last_month",
+        seller: Some("karim"),
+        item: Some("saib"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "banana_cash_year",
+        item: Some("kela"),
+        pay: Some("cash"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "fruit_credit_last_month",
+        group: Some("fruit"),
+        pay: Some("credit"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "usman_apple_first_year",
+        buyer: Some("usman"),
+        item: Some("saib"),
+        grade: Some("first"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "usman_apple_first_last_month",
+        buyer: Some("usman"),
+        item: Some("saib"),
+        grade: Some("first"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "vegetable_cash_last_month",
+        group: Some("vegetable"),
+        pay: Some("cash"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "cash_today",
+        pay: Some("cash"),
+        period: "today",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "credit_today",
+        pay: Some("credit"),
+        period: "today",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "akram_baloch_mango_today",
+        buyer: Some("akram_baloch"),
+        item: Some("aam"),
+        period: "today",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "nadeem_potato_week",
+        buyer: Some("nadeem"),
+        item: Some("aloo"),
+        period: "week",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "sarfraz_grapes_year",
+        seller: Some("sarfraz"),
+        item: Some("angoor"),
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "akram_baloch_banana_second_last_month",
+        buyer: Some("akram_baloch"),
+        item: Some("kela"),
+        grade: Some("second"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "shahid_banana_sep",
+        buyer: Some("shahid"),
+        item: Some("kela"),
+        period: "m2026_09",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "tahir_grapes_last_month",
+        seller: Some("tahir"),
+        item: Some("angoor"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "mango_credit_month",
+        item: Some("aam"),
+        pay: Some("credit"),
+        period: "month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "rizwan_all_last_month",
+        buyer: Some("rizwan"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "apple_week",
+        item: Some("saib"),
+        period: "week",
+        ..D7_NONE
+    },
+    // The newest-line cases of `seed::d7_last_rate_cases` (grapes, 03 to 05-11-2026).
+    D7Combo {
+        name: "grapes_today",
+        item: Some("angoor"),
+        period: "today",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "grapes_week",
+        item: Some("angoor"),
+        period: "week",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "shahid_grapes_today",
+        buyer: Some("shahid"),
+        item: Some("angoor"),
+        period: "today",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "karim_grapes_today",
+        seller: Some("karim"),
+        item: Some("angoor"),
+        period: "today",
+        ..D7_NONE
+    },
+    // A seller and an item with the commission asked (R10), and uncommon period words (R9: may, septmber).
+    D7Combo {
+        name: "rahim_banana_last_month",
+        seller: Some("rahim"),
+        item: Some("kela"),
+        period: "last_month",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "akram_toll_tax_may",
+        buyer: Some("akram_toll_tax"),
+        period: "m2026_05",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "faisal_sep",
+        buyer: Some("faisal"),
+        period: "m2026_09",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "potato_week",
+        item: Some("aloo"),
+        period: "week",
+        ..D7_NONE
+    },
+    // The cases of `seed::d7_richer_cases`: a ریٹ مختلف line that is the newest apple line of its day, and a later sale
+    // of an older بکری on a day that also has a newer بکری of the same item.
+    D7Combo {
+        name: "apple_oct22",
+        item: Some("saib"),
+        period: "d2026_10_22",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "mosambi_oct19",
+        item: Some("mausami"),
+        period: "d2026_10_19",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "naveed_oct14",
+        buyer: Some("naveed"),
+        period: "d2026_10_14",
+        ..D7_NONE
+    },
+    D7Combo {
+        name: "naveed_cash_oct14",
+        buyer: Some("naveed"),
+        pay: Some("cash"),
+        period: "d2026_10_14",
+        ..D7_NONE
+    },
+];
+
+/// True for a fact that depends on the quality of a sale line: the `ixq.*` facts, and the D7 combinations that filter
+/// on a quality. Building the books with no quality changes exactly these facts and no other.
+pub fn is_quality_fact(key: &str) -> bool {
+    key.starts_with("ixq.")
+        || D7_COMBOS
+            .iter()
+            .any(|c| c.grade.is_some() && key.starts_with(&format!("d7.sale.{}.", c.name)))
+}
+
+/// The facts of the D7 bank: `d7.bd.*` (a buyer's day), `d7.sale.*` (filter combinations), `d7.recv.*` (goods that
+/// came in), `d7.stock.*` (stock by group), `d7.bikri.*` (counts), `d7.partner.*`, `d7.last_bill.*`, `d7.cmp.*`.
+fn d7_facts(o: &mut Oracle, y: &Year) {
+    use mandi_services::db::rusqlite::{self, params};
+    let db = y.w.env.ctx.db();
+    let iso = |d: Option<NaiveDate>| {
+        d.map(|d| d.format("%Y-%m-%d").to_string())
+            .unwrap_or_default()
+    };
+    let rupees = |paisa: i64| (paisa / 100).to_string();
+    let buyer_id = |key: &str| -> i64 {
+        y.buyers
+            .iter()
+            .find(|b| b.key == key)
+            .map(|b| b.id)
+            .unwrap_or_else(|| panic!("no buyer {key}"))
+    };
+    let seller_id = |key: &str| -> i64 {
+        y.sellers
+            .iter()
+            .find(|s| s.key == key)
+            .map(|s| s.id)
+            .unwrap_or_else(|| panic!("no seller {key}"))
+    };
+    let item_id = |key: &str| -> i64 {
+        y.items
+            .iter()
+            .find(|i| i.key == key)
+            .map(|i| i.id)
+            .unwrap_or_else(|| panic!("no item {key}"))
+    };
+    let side = |paisa: i64| -> String {
+        match paisa.cmp(&0) {
+            std::cmp::Ordering::Greater => format!("{} Dr", paisa / 100),
+            std::cmp::Ordering::Less => format!("{} Cr", -paisa / 100),
+            std::cmp::Ordering::Equal => "0".to_owned(),
+        }
+    };
+    let half_up = |gross: i64, qty: i64| -> i64 {
+        if qty <= 0 {
+            0
+        } else {
+            (gross * 2 + qty) / (qty * 2)
+        }
+    };
+
+    // 1. A buyer's day: each item with its qty and amount, the cash on the spot, the credit left, the balance.
+    for (buyer, day) in [
+        ("akram_toll_tax", "d2026_10_14"),
+        ("rizwan", "d2026_10_14"),
+        ("nadeem", "d2026_10_14"),
+        ("usman", "d2026_10_14"),
+        ("faisal", "today"),
+        ("faisal", "yesterday"),
+        ("naveed", "d2026_10_14"),
+        ("rafique", "d2026_10_14"),
+    ] {
+        let id = buyer_id(buyer);
+        let (from, _) = period_dates(day);
+        let date_text = iso(from);
+        let prefix = format!("d7.bd.{buyer}.{day}");
+        let items: Vec<(String, i64, i64, i64, i64)> = db
+            .read(|c| {
+                let mut st = c.prepare(
+                    "SELECT i.name_en, SUM(s.qty), SUM(s.buyer_value_paisa), COUNT(*), MAX(s.buyer_rate_paisa) \
+                     FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
+                     WHERE s.is_active = 1 AND s.buyer_account_id = ?1 AND s.entry_date = ?2 \
+                     GROUP BY l.item_id ORDER BY i.name_en",
+                )?;
+                let rows = st.query_map(params![id, date_text], |r| {
+                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+                })?;
+                rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 buyer day {prefix}: {e}"));
+        for (name, qty, value, lines, top_rate) in &items {
+            let slug = slug(name);
+            o.put(format!("{prefix}.{slug}.qty"), qty.to_string());
+            o.put(format!("{prefix}.{slug}.amount"), rupees(*value));
+            // One line: its own rate; more lines: the average rate of the item that day.
+            let rate = if *lines == 1 {
+                top_rate / 100
+            } else {
+                half_up(value / 100, *qty)
+            };
+            o.put(format!("{prefix}.{slug}.rate"), rate.to_string());
+        }
+        let (n, value, comm, laga, total, cash, credit): (i64, i64, i64, i64, i64, i64, i64) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*), COALESCE(SUM(buyer_value_paisa),0), COALESCE(SUM(buyer_comm_paisa),0), \
+                     COALESCE(SUM(laga_paisa),0), COALESCE(SUM(buyer_total_paisa),0), \
+                     COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN buyer_total_paisa ELSE 0 END),0), \
+                     COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN buyer_total_paisa ELSE 0 END),0) \
+                     FROM bikri_sales WHERE is_active = 1 AND buyer_account_id = ?1 AND entry_date = ?2",
+                    params![id, date_text],
+                    |r| {
+                        Ok((
+                            r.get(0)?,
+                            r.get(1)?,
+                            r.get(2)?,
+                            r.get(3)?,
+                            r.get(4)?,
+                            r.get(5)?,
+                            r.get(6)?,
+                        ))
+                    },
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 buyer day totals {prefix}: {e}"));
+        let paid: i64 = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COALESCE(SUM(amount_paisa),0) FROM vouchers WHERE type = 'receipt' AND status = 'saved' \
+                     AND account_id = ?1 AND entry_date = ?2",
+                    params![id, date_text],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 receipts {prefix}: {e}"));
+        let balance_end: i64 = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COALESCE(SUM(jl.dr_paisa),0) - COALESCE(SUM(jl.cr_paisa),0) FROM journal_lines jl \
+                     JOIN journal_entries je ON je.id = jl.entry_id \
+                     WHERE je.status = 'posted' AND jl.account_id = ?1 AND je.entry_date <= ?2",
+                    params![id, date_text],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 balance {prefix}: {e}"));
+        let balance_before: i64 = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COALESCE(SUM(jl.dr_paisa),0) - COALESCE(SUM(jl.cr_paisa),0) FROM journal_lines jl \
+                     JOIN journal_entries je ON je.id = jl.entry_id \
+                     WHERE je.status = 'posted' AND jl.account_id = ?1 AND je.entry_date < ?2",
+                    params![id, date_text],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 balance before {prefix}: {e}"));
+        o.put(format!("{prefix}.lines"), n.to_string());
+        o.put(format!("{prefix}.value"), rupees(value));
+        o.put(format!("{prefix}.comm_buyer"), rupees(comm));
+        o.put(format!("{prefix}.laga"), rupees(laga));
+        o.put(format!("{prefix}.charges"), rupees(total));
+        o.put(format!("{prefix}.cash"), rupees(cash));
+        o.put(format!("{prefix}.credit"), rupees(credit));
+        o.put(format!("{prefix}.paid"), rupees(paid));
+        // What stayed unpaid of the day's bill: the day's bill, less the cash on the spot and the receipts of the day.
+        let left = total - cash - paid;
+        o.put(format!("{prefix}.left"), rupees(left));
+        o.put(format!("{prefix}.balance_before"), side(balance_before));
+        o.put(format!("{prefix}.balance_end"), side(balance_end));
+        // The app's own day sheet (R35) must say the same: it is the check of the SQL above.
+        let sheet = ReportFilters {
+            as_of: ddmmyyyy(from.unwrap_or_else(|| date(TODAY))),
+            party: Some(PartyFilter {
+                account_id: id,
+                person_key: None,
+            }),
+            ..ReportFilters::default()
+        };
+        if let Some(page) = try_r(y, ReportId::R35, sheet) {
+            dump_report_rows(o, &format!("d7.r35.{buyer}.{day}"), &page, false);
+            let sheet_left =
+                amount_of(o.get(&format!("d7.r35.{buyer}.{day}.sum.report_r35_today_left")))
+                    .unwrap_or(0);
+            let sheet_previous =
+                amount_of(o.get(&format!("d7.r35.{buyer}.{day}.sum.report_r35_previous")))
+                    .unwrap_or(0);
+            assert_eq!(
+                sheet_left,
+                left / 100,
+                "{prefix}: the day sheet R35 says {sheet_left} is left, the books say {}",
+                left / 100
+            );
+            assert_eq!(
+                sheet_previous.abs(),
+                balance_before.abs() / 100,
+                "{prefix}: the day sheet R35 says the balance before was {sheet_previous}, the books say {}",
+                balance_before / 100
+            );
+        }
+        o.put(
+            format!("{prefix}.balance_now"),
+            o.get(&format!("buyer.{buyer}.balance")).to_owned(),
+        );
+    }
+
+    // 2. Filter combinations: several filters at once (every one must hold).
+    for c in &D7_COMBOS {
+        let (from, to) = period_dates(c.period);
+        let (from, to) = (iso(from), iso(to));
+        let buyer = c.buyer.map(buyer_id);
+        let seller = c.seller.map(seller_id);
+        let item = c.item.map(item_id);
+        let (group, pay, grade) = (c.group, c.pay, c.grade);
+        let args = params![from, to, buyer, seller, item, group, pay, grade];
+        let filter = "s.is_active = 1 AND s.entry_date >= ?1 AND s.entry_date <= ?2 \
+                      AND (?3 IS NULL OR s.buyer_account_id = ?3) AND (?4 IS NULL OR l.seller_account_id = ?4) \
+                      AND (?5 IS NULL OR l.item_id = ?5) AND (?6 IS NULL OR i.item_group = ?6) \
+                      AND (?7 IS NULL OR s.payment_type = ?7) AND (?8 IS NULL OR s.grade = ?8)";
+        let sql = format!(
+            "SELECT COUNT(*), COALESCE(SUM(s.qty),0), COALESCE(SUM(s.buyer_value_paisa),0), \
+             COALESCE(SUM(s.seller_amount_paisa),0), COALESCE(SUM(s.seller_comm_paisa),0), \
+             COALESCE(SUM(s.buyer_comm_paisa),0), COALESCE(SUM(s.laga_paisa),0), COALESCE(SUM(s.buyer_total_paisa),0), \
+             COALESCE(MAX(s.seller_rate_paisa),0), COALESCE(MIN(s.seller_rate_paisa),0), \
+             COUNT(DISTINCT s.buyer_account_id), COUNT(DISTINCT l.seller_account_id) \
+             FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id WHERE {filter}"
+        );
+        let row: (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) = db
+            .read(|conn| {
+                conn.query_row(&sql, args, |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                        r.get(7)?,
+                        r.get(8)?,
+                        r.get(9)?,
+                        r.get(10)?,
+                        r.get(11)?,
+                    ))
+                })
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 combo {}: {e}", c.name));
+        let (
+            lines,
+            qty,
+            gross,
+            seller_amount,
+            comm_seller,
+            comm_buyer,
+            laga,
+            charges,
+            max_rate,
+            min_rate,
+            buyers_n,
+            sellers_n,
+        ) = row;
+        let prefix = format!("d7.sale.{}", c.name);
+        o.put(format!("{prefix}.lines"), lines.to_string());
+        o.put(format!("{prefix}.qty"), qty.to_string());
+        o.put(format!("{prefix}.gross"), rupees(gross));
+        o.put(format!("{prefix}.seller_amount"), rupees(seller_amount));
+        o.put(format!("{prefix}.comm_seller"), rupees(comm_seller));
+        o.put(format!("{prefix}.comm_buyer"), rupees(comm_buyer));
+        o.put(format!("{prefix}.laga"), rupees(laga));
+        o.put(
+            format!("{prefix}.comm_total"),
+            rupees(comm_seller + comm_buyer + laga),
+        );
+        o.put(format!("{prefix}.charges"), rupees(charges));
+        o.put(format!("{prefix}.buyers_n"), buyers_n.to_string());
+        o.put(format!("{prefix}.sellers_n"), sellers_n.to_string());
+        if lines > 0 {
+            o.put(
+                format!("{prefix}.avg_rate"),
+                half_up(gross / 100, qty).to_string(),
+            );
+            o.put(format!("{prefix}.max_rate"), (max_rate / 100).to_string());
+            o.put(format!("{prefix}.min_rate"), (min_rate / 100).to_string());
+            let last_sql = format!(
+                "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                 JOIN items i ON i.id = l.item_id JOIN bikri_entries e ON e.id = s.bikri_id WHERE {filter} \
+                 ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1"
+            );
+            let last: i64 = db
+                .read(|conn| conn.query_row(&last_sql, args, |r| r.get(0)))
+                .unwrap_or_else(|e: rusqlite::Error| panic!("d7 combo last rate {}: {e}", c.name));
+            // The buyer's rate of that same newest line (it differs only on a ریٹ مختلف line).
+            let last_buyer_sql = last_sql.replace("s.seller_rate_paisa", "s.buyer_rate_paisa");
+            let last_buyer: i64 = db
+                .read(|conn| conn.query_row(&last_buyer_sql, args, |r| r.get(0)))
+                .unwrap_or_else(|e: rusqlite::Error| {
+                    panic!("d7 combo last buyer rate {}: {e}", c.name)
+                });
+            o.put(
+                format!("{prefix}.last_buyer_rate"),
+                (last_buyer / 100).to_string(),
+            );
+            o.put(format!("{prefix}.last_rate"), (last / 100).to_string());
+            let first_sql = format!(
+                "SELECT s.entry_date FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                 JOIN items i ON i.id = l.item_id JOIN bikri_entries e ON e.id = s.bikri_id WHERE {filter} \
+                 ORDER BY s.entry_date ASC, e.number ASC, s.lot_id ASC, s.line_no ASC, s.id ASC LIMIT 1"
+            );
+            let first: String = db
+                .read(|conn| conn.query_row(&first_sql, args, |r| r.get(0)))
+                .unwrap_or_else(|e: rusqlite::Error| panic!("d7 combo first date {}: {e}", c.name));
+            o.put(format!("{prefix}.first_date"), first);
+            let last_date_sql = format!(
+                "SELECT s.entry_date FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+                 JOIN items i ON i.id = l.item_id JOIN bikri_entries e ON e.id = s.bikri_id WHERE {filter} \
+                 ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC LIMIT 1"
+            );
+            let last_date: String = db
+                .read(|conn| conn.query_row(&last_date_sql, args, |r| r.get(0)))
+                .unwrap_or_else(|e: rusqlite::Error| panic!("d7 combo last date {}: {e}", c.name));
+            o.put(format!("{prefix}.last_date"), last_date);
+        }
+    }
+
+    // The newest-line rule (plan 59 Section 11): the line's own date, then the بکری number, then its line number,
+    // never the row id. The seed's cases are built so that the row id gives ANOTHER rate; both are checked here,
+    // so the cases keep telling the two rules apart.
+    let by_row_id = |extra: &str, args: &[&dyn mandi_services::db::rusqlite::ToSql]| -> i64 {
+        let sql = format!(
+            "SELECT s.seller_rate_paisa FROM bikri_sales s JOIN bikri_lots l ON l.id = s.lot_id \
+             WHERE s.is_active = 1 AND l.item_id = ?1 AND s.entry_date = ?2 {extra} \
+             ORDER BY s.entry_date DESC, s.id DESC LIMIT 1"
+        );
+        db.read(|conn| conn.query_row(&sql, args, |r| r.get(0)))
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 rate by row id: {e}"))
+    };
+    let grapes_id = item_id("angoor");
+    let today_text = iso(Some(date(TODAY)));
+    let shahid = buyer_id("shahid");
+    for (name, want, wrong, by_id) in [
+        (
+            "grapes_today",
+            "5000",
+            "5200",
+            by_row_id("", params![grapes_id, today_text]),
+        ),
+        (
+            "shahid_grapes_today",
+            "4900",
+            "5050",
+            by_row_id(
+                "AND s.buyer_account_id = ?3",
+                params![grapes_id, today_text, shahid],
+            ),
+        ),
+    ] {
+        assert_eq!(
+            o.get(&format!("d7.sale.{name}.last_rate")),
+            want,
+            "d7 facts: the newest {name} line must follow the rule (date, بکری number, line number)"
+        );
+        assert_eq!(
+            (by_id / 100).to_string(),
+            wrong,
+            "d7 facts: the case {name} must give another rate when sorted by the row id"
+        );
+        o.put(
+            format!("d7.sale.{name}.last_rate_by_row_id"),
+            wrong.to_owned(),
+        );
+    }
+
+    // 2b. A بکری by its number (the whole bill: lines, goods, the commission of both sides and laga).
+    for number in [100_i64, 466] {
+        let (lines, qty, gross, comm, day): (i64, i64, i64, i64, String) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*), COALESCE(SUM(s.qty),0), COALESCE(SUM(s.buyer_value_paisa),0), \
+                     COALESCE(SUM(s.seller_comm_paisa + s.buyer_comm_paisa + s.laga_paisa),0), MIN(e.entry_date) \
+                     FROM bikri_sales s JOIN bikri_entries e ON e.id = s.bikri_id \
+                     WHERE s.is_active = 1 AND e.number = ?1",
+                    params![number],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 bikri number {number}: {e}"));
+        o.put(format!("d7.bikri_no.{number}.lines"), lines.to_string());
+        o.put(format!("d7.bikri_no.{number}.qty"), qty.to_string());
+        o.put(format!("d7.bikri_no.{number}.gross"), rupees(gross));
+        o.put(format!("d7.bikri_no.{number}.comm_total"), rupees(comm));
+        o.put(format!("d7.bikri_no.{number}.date"), day);
+    }
+
+    // 2c. A voucher by its number (the receipt, the payment and the shop expense of that number).
+    for (kind, number) in [("receipt", 100_i64), ("payment", 50), ("shop_expense", 20)] {
+        let row: (i64, String, String) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT v.amount_paisa, v.entry_date, COALESCE(a.name_en, '') FROM vouchers v \
+                     LEFT JOIN accounts a ON a.id = v.account_id \
+                     WHERE v.type = ?1 AND v.number = ?2 AND v.status = 'saved'",
+                    params![kind, number],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 voucher {kind} {number}: {e}"));
+        o.put(format!("d7.voucher.{kind}_{number}.amount"), rupees(row.0));
+        o.put(format!("d7.voucher.{kind}_{number}.date"), row.1);
+        if !row.2.is_empty() {
+            o.put(format!("d7.voucher.{kind}_{number}.party"), row.2);
+        }
+    }
+
+    // 2d. An item in one packing (R6): potatoes come in bags only, so potatoes in boxes are 0.
+    for (item, packing, period) in [
+        ("aloo", "Box", "last_month"),
+        ("aloo", "Bag", "last_month"),
+        ("kela", "Box", "last_month"),
+    ] {
+        let (from, to) = period_dates(period);
+        let (from, to) = (iso(from), iso(to));
+        let item_id = item_id(item);
+        let (qty, gross): (i64, i64) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COALESCE(SUM(s.qty),0), COALESCE(SUM(s.buyer_value_paisa),0) FROM bikri_sales s \
+                     JOIN bikri_lots l ON l.id = s.lot_id JOIN packings p ON p.id = l.packing_id \
+                     WHERE s.is_active = 1 AND l.item_id = ?1 AND p.name_en = ?2 \
+                     AND s.entry_date >= ?3 AND s.entry_date <= ?4",
+                    params![item_id, packing, from, to],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 packing {item} {packing}: {e}"));
+        let name = format!(
+            "d7.pack.{}_{}_{period}",
+            item_name(item),
+            packing.to_lowercase()
+        );
+        o.put(format!("{name}.qty"), qty.to_string());
+        o.put(format!("{name}.gross"), rupees(gross));
+    }
+
+    // The cases of `seed::d7_richer_cases`, checked the same way (the rule against the row id).
+    let mosambi_id = item_id("mausami");
+    let by_id_mosambi = by_row_id("", params![mosambi_id, iso(period_dates("d2026_10_19").0)]);
+    assert_eq!(
+        o.get("d7.sale.mosambi_oct19.last_rate"),
+        "2550",
+        "d7 facts: the newest mosambi line of 19-10-2026 is the line of the newer بکری"
+    );
+    assert_eq!(
+        (by_id_mosambi / 100).to_string(),
+        "2400",
+        "d7 facts: the case mosambi_oct19 must give the later sale when sorted by the row id"
+    );
+    o.put(
+        "d7.sale.mosambi_oct19.last_rate_by_row_id".into(),
+        "2400".into(),
+    );
+    assert_eq!(
+        (
+            o.get("d7.sale.apple_oct22.last_rate"),
+            o.get("d7.sale.apple_oct22.last_buyer_rate")
+        ),
+        ("4300", "4350"),
+        "d7 facts: the newest apple line of 22-10-2026 is the ریٹ مختلف line: seller 4,300, buyer 4,350"
+    );
+
+    // 2e. The ریٹ مختلف line (buyer rate other than the seller rate): every such line of the books.
+    let (rd_n, rd_seller, rd_buyer, rd_qty, rd_value, rd_amount, rd_diff): (
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+    ) = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COUNT(*), COALESCE(MAX(seller_rate_paisa),0), COALESCE(MAX(buyer_rate_paisa),0), \
+                 COALESCE(SUM(qty),0), COALESCE(SUM(buyer_value_paisa),0), COALESCE(SUM(seller_amount_paisa),0), \
+                 COALESCE(SUM(rate_diff_paisa),0) FROM bikri_sales WHERE is_active = 1 AND rate_diff_paisa <> 0",
+                [],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                    ))
+                },
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 rate difference: {e}"));
+    assert_eq!(
+        rd_n, 1,
+        "d7 facts: the books hold exactly one ریٹ مختلف line"
+    );
+    o.put("d7.ratediff.lines".into(), rd_n.to_string());
+    o.put(
+        "d7.ratediff.seller_rate".into(),
+        (rd_seller / 100).to_string(),
+    );
+    o.put(
+        "d7.ratediff.buyer_rate".into(),
+        (rd_buyer / 100).to_string(),
+    );
+    o.put("d7.ratediff.qty".into(), rd_qty.to_string());
+    o.put("d7.ratediff.buyer_value".into(), rupees(rd_value));
+    o.put("d7.ratediff.seller_amount".into(), rupees(rd_amount));
+    o.put("d7.ratediff.diff".into(), rupees(rd_diff));
+
+    // 2f. A one-time person of the shared پختہ کھاتہ (Aamir): his lines and what he owes (no receipt was made).
+    let (pk_lines, pk_qty, pk_value, pk_total): (i64, i64, i64, i64) = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COUNT(*), COALESCE(SUM(qty),0), COALESCE(SUM(buyer_value_paisa),0), \
+                 COALESCE(SUM(buyer_total_paisa),0) FROM bikri_sales \
+                 WHERE is_active = 1 AND pukhta_name_en = 'Aamir'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 pukhta person: {e}"));
+    o.put("d7.pk.aamir.lines".into(), pk_lines.to_string());
+    o.put("d7.pk.aamir.qty".into(), pk_qty.to_string());
+    o.put("d7.pk.aamir.amount".into(), rupees(pk_value));
+    o.put("d7.pk.aamir.charges".into(), rupees(pk_total));
+    o.put("d7.pk.aamir.balance".into(), rupees(pk_total));
+
+    // 2g. A separate khata (الگ کھاتہ): paid out, received, the balance (minus: it took more than it brought).
+    let (out_n, out_sum, in_n, in_sum): (i64, i64, i64, i64) = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COALESCE(SUM(type = 'khata_out'),0), \
+                 COALESCE(SUM(CASE WHEN type = 'khata_out' THEN amount_paisa ELSE 0 END),0), \
+                 COALESCE(SUM(type = 'khata_in'),0), \
+                 COALESCE(SUM(CASE WHEN type = 'khata_in' THEN amount_paisa ELSE 0 END),0) \
+                 FROM vouchers WHERE type IN ('khata_out','khata_in') AND status = 'saved'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 khata: {e}"));
+    o.put("d7.khata.family.paid_out".into(), rupees(out_sum));
+    o.put("d7.khata.family.received".into(), rupees(in_sum));
+    o.put("d7.khata.family.entries".into(), (out_n + in_n).to_string());
+    o.put(
+        "d7.khata.family.balance".into(),
+        rupees((out_sum - in_sum).abs()),
+    );
+    o.put(
+        "d7.khata.family.balance_signed".into(),
+        (-(out_sum - in_sum) / 100).to_string(),
+    );
+
+    // 2h. A city: what the buyers of Kasur owe (R21 groups the dues by the buyer's city), and how many owe.
+    let (city_dues, city_buyers): (i64, i64) = db
+        .read(|c| {
+            c.query_row(
+                "SELECT COALESCE(SUM(b.bal),0), COALESCE(SUM(b.bal > 0),0) FROM ( \
+                   SELECT a.id, (SELECT COALESCE(SUM(jl.dr_paisa),0) - COALESCE(SUM(jl.cr_paisa),0) \
+                      FROM journal_lines jl JOIN journal_entries je ON je.id = jl.entry_id \
+                      WHERE je.status = 'posted' AND jl.account_id = a.id) AS bal \
+                   FROM accounts a JOIN cities ci ON ci.id = a.city_id WHERE ci.name_en = 'Kasur') b",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 city: {e}"));
+    o.put("d7.city.kasur.dues".into(), rupees(city_dues));
+    o.put("d7.city.kasur.buyers".into(), city_buyers.to_string());
+    // The collection list by city (R21) must say the same.
+    assert_eq!(
+        amount_of(o.get("r21.kasur.balance")),
+        Some(city_dues / 100),
+        "d7 facts: the buyers of Kasur owe {} in the books and {} in R21",
+        city_dues / 100,
+        o.get("r21.kasur.balance")
+    );
+
+    // 3. Goods that came in (the lots of the bikri entries of a period), by item and for all.
+    for (name, item, period) in [
+        ("banana_last_month", Some("kela"), "last_month"),
+        ("mango_year", Some("aam"), "year"),
+        ("all_today", None, "today"),
+        ("apple_month", Some("saib"), "month"),
+    ] {
+        let (from, to) = period_dates(period);
+        let (from, to) = (iso(from), iso(to));
+        let item = item.map(item_id);
+        let (lots, qty): (i64, i64) = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*), COALESCE(SUM(l.qty_received),0) FROM bikri_lots l \
+                     JOIN bikri_entries e ON e.id = l.bikri_id \
+                     WHERE e.status = 'saved' AND e.entry_date >= ?1 AND e.entry_date <= ?2 \
+                     AND (?3 IS NULL OR l.item_id = ?3)",
+                    params![from, to, item],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 received {name}: {e}"));
+        o.put(format!("d7.recv.{name}.lots"), lots.to_string());
+        o.put(format!("d7.recv.{name}.qty"), qty.to_string());
+    }
+
+    // 4. Stock by group, from the stock of each item.
+    let groups: Vec<(String, String)> = db
+        .read(|c| {
+            let mut st = c.prepare("SELECT name_en, item_group FROM items")?;
+            let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+            rows.collect::<Result<Vec<_>, rusqlite::Error>>()
+        })
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 item groups: {e}"));
+    for group in ["fruit", "vegetable"] {
+        let (mut qty, mut lots) = (0i64, 0i64);
+        for (name, g) in &groups {
+            if g == group {
+                let slug = slug(name);
+                qty += o
+                    .facts
+                    .get(&format!("stock.{slug}.qty"))
+                    .and_then(|v| v.parse::<i64>().ok())
+                    .unwrap_or(0);
+                lots += o
+                    .facts
+                    .get(&format!("stock.{slug}.lots"))
+                    .and_then(|v| v.parse::<i64>().ok())
+                    .unwrap_or(0);
+            }
+        }
+        o.put(format!("d7.stock.{group}.qty"), qty.to_string());
+        o.put(format!("d7.stock.{group}.lots"), lots.to_string());
+    }
+
+    // 5. How many bikri were made in a period (saved entries), and by one seller last month is view B's count.
+    for period in ["today", "yesterday", "week", "month", "last_month", "year"] {
+        let (from, to) = period_dates(period);
+        let (from, to) = (iso(from), iso(to));
+        let n: i64 = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT COUNT(*) FROM bikri_entries WHERE status = 'saved' AND entry_date >= ?1 AND entry_date <= ?2",
+                    params![from, to],
+                    |r| r.get(0),
+                )
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 bikri count {period}: {e}"));
+        o.put(format!("d7.bikri.{period}.count"), n.to_string());
+    }
+
+    // 6. A partner's share in percent (the app shows 40%, the books keep 4,000 basis points), and who took the most.
+    for k in ["partner_a", "partner_b", "usman"] {
+        let bps: i64 = o
+            .facts
+            .get(&format!("partner.{k}.share_bps"))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        o.put(
+            format!("d7.partner.{k}.share_pct"),
+            format!("{}.{:02}%", bps / 100, bps % 100),
+        );
+    }
+    let taken = |k: &str| amount_of(o.get(&format!("r29.all.{k}.taken"))).unwrap_or(0);
+    let mut best: Vec<(&str, &str, i64)> = vec![
+        ("partner_a", "Partner A", taken("partner_a")),
+        ("partner_b", "Partner B", taken("partner_b")),
+        ("usman", "Usman", taken("usman")),
+    ];
+    best.sort_by_key(|entry| std::cmp::Reverse(entry.2));
+    o.put("d7.top.drawings.name".into(), best[0].1.to_owned());
+    o.put("d7.top.drawings.amount".into(), best[0].2.to_string());
+    o.put("d7.top.drawings.least_amount".into(), best[2].2.to_string());
+
+    // 7. A seller's newest bill (date, number, gross and net of the bill).
+    for seller in ["karim", "rahim", "bashir"] {
+        let id = seller_id(seller);
+        let row: Option<(i64, String, i64, i64)> = db
+            .read(|c| {
+                c.query_row(
+                    "SELECT e.number, e.entry_date, SUM(l.gross_paisa), SUM(l.net_paisa) FROM bikri_lots l \
+                     JOIN bikri_entries e ON e.id = l.bikri_id WHERE l.seller_account_id = ?1 AND e.status = 'saved' \
+                     GROUP BY e.id ORDER BY e.entry_date DESC, e.id DESC LIMIT 1",
+                    params![id],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                )
+                .map(Some)
+                .or_else(|e| match e {
+                    rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                    other => Err(other),
+                })
+            })
+            .unwrap_or_else(|e: rusqlite::Error| panic!("d7 last bill {seller}: {e}"));
+        if let Some((number, day, gross, net)) = row {
+            o.put(format!("d7.last_bill.{seller}.number"), number.to_string());
+            o.put(format!("d7.last_bill.{seller}.date"), day);
+            o.put(format!("d7.last_bill.{seller}.gross"), rupees(gross));
+            o.put(format!("d7.last_bill.{seller}.net"), rupees(net));
+        }
+    }
+
+    // 8. Two items against each other in a period: who sold more (by gross), and by how much.
+    for (a, b, period) in [
+        ("banana", "apple", "month"),
+        ("mango", "grapes", "year"),
+        ("potato", "banana", "last_month"),
+    ] {
+        let ga = amount_of(o.get(&format!("ix.{period}.{a}.gross"))).unwrap_or(0);
+        let gb = amount_of(o.get(&format!("ix.{period}.{b}.gross"))).unwrap_or(0);
+        let cap = |s: &str| {
+            let mut chars = s.chars();
+            chars
+                .next()
+                .map(|c| c.to_uppercase().collect::<String>() + chars.as_str())
+                .unwrap_or_default()
+        };
+        let (more, less) = if ga >= gb { (a, b) } else { (b, a) };
+        o.put(format!("d7.cmp.{a}_{b}.{period}.more"), cap(more));
+        o.put(format!("d7.cmp.{a}_{b}.{period}.less"), cap(less));
+        o.put(
+            format!("d7.cmp.{a}_{b}.{period}.diff"),
+            (ga - gb).abs().to_string(),
+        );
+    }
+
+    // The SQL above must agree with the app's own analytics where they overlap (view A with a seller, the item
+    // axis): a mistake here stops the build instead of reaching the bank.
+    for (what, want, got) in [
+        (
+            "Rahim's banana gross",
+            "d7.sale.rahim_banana_year.gross",
+            "seller_items.rahim.year.banana.gross",
+        ),
+        (
+            "Rahim's banana qty",
+            "d7.sale.rahim_banana_year.qty",
+            "seller_items.rahim.year.banana.qty",
+        ),
+        (
+            "Rahim's banana seller commission",
+            "d7.sale.rahim_banana_year.comm_seller",
+            "seller_items.rahim.year.banana.seller_comm",
+        ),
+    ] {
+        assert_eq!(
+            amount_of(o.get(want)),
+            amount_of(o.get(got)),
+            "d7 fact {what}: the books say {}, the app's view says {}",
+            o.get(want),
+            o.get(got)
+        );
+    }
+    assert_eq!(
+        amount_of(o.get("d7.sale.apple_week.last_rate")),
+        amount_of(o.get("ix.week.apple.last_rate")),
+        "d7 facts: the newest apple rate of this week must be the one of the item axis"
+    );
+    let sold_today = amount_of(o.get("d7.sale.cash_today.gross")).unwrap_or(0)
+        + amount_of(o.get("d7.sale.credit_today.gross")).unwrap_or(0);
+    assert_eq!(
+        sold_today,
+        amount_of(o.get("ix.today.all.gross")).unwrap_or(-1),
+        "d7 facts: cash and credit sales of today must add up to the sales of today in view A"
+    );
+
+    // 9. Two expense heads together, from the expense report (R29) of all time.
+    let rent = amount_of(o.get("r29.all.shop_rent.expense")).unwrap_or(0);
+    let electricity = amount_of(o.get("r29.all.electricity.expense")).unwrap_or(0);
+    o.put(
+        "d7.exp.rent_plus_electricity".into(),
+        (rent + electricity).to_string(),
+    );
 }

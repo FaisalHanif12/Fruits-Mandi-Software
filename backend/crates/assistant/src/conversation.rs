@@ -225,6 +225,12 @@ pub struct Turn {
     /// True when the app read the books before the first call (plan 54 S3) or gave the guide
     /// (help): the data is in the call, so the model has only to write, and thinks less (S4).
     pub read_first: bool,
+    /// The side of the commission the question asks, when the app understood that (D7, plan 59 F1): a
+    /// commission figure of the other column is not shown (`measure_guard`).
+    pub commission_side: Option<crate::understand::CommissionSide>,
+    /// True when the question also asks a Laga (with a commission side): the total of both sides and
+    /// Laga is never rewritten to one side's figure.
+    pub commission_laga: bool,
 }
 
 /// What a waiting question waits for.

@@ -79,6 +79,15 @@ impl Failure {
         }
     }
 
+    /// A commission figure of the wrong side (`measure_guard`): `at` is the reference that was cited and
+    /// `right` the reference of the same row for the side the question asks.
+    pub fn measure(at: &str, right: Option<String>) -> Self {
+        Self {
+            figure: right,
+            ..Self::new("measure", at)
+        }
+    }
+
     /// The object of the `check_failed` message (D6-system-prompt 5.3).
     pub fn to_json(&self) -> serde_json::Value {
         let mut out = serde_json::Map::new();

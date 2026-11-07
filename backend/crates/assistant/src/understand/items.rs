@@ -446,6 +446,7 @@ fn search_items(look: &Lookup<'_>, typed: &[String]) -> Option<Best<ItemHit>> {
                     code: hit.code,
                     name_ur: hit.name_ur,
                     name_en: hit.name_en,
+                    sold_by_weight: hit.sold_by_weight,
                 },
                 score(total, typed.len(), name.len()),
                 exact,

@@ -23,6 +23,8 @@
 //   node scripts/ai-eval/run.mjs --world year         only the questions of one world
 //   node scripts/ai-eval/run.mjs --only Q001,Q016     only these ids
 //   node scripts/ai-eval/run.mjs --facet ITEM         only the questions of a facet (ITEM, VEG, CAP, A2 ...)
+//   node scripts/ai-eval/run.mjs --bank scripts/ai-eval/realtime-d7.tsv --mix short   only the common short questions
+//                                                     (one figure) of the D7 bank; --mix picky for the others
 //   node scripts/ai-eval/run.mjs --facet ITEM --every 5   every fifth question of the selection (a sample)
 //   node scripts/ai-eval/run.mjs --misses             ask again every miss and every question lost to
 //                                                     the network, put the new rows in results.json
@@ -33,6 +35,18 @@
 //   node scripts/ai-eval/run.mjs --check              check the bank, no model, no cargo
 //   node scripts/ai-eval/run.mjs --self-test          check the scorer on made-up replies, no model
 //   node scripts/ai-eval/run.mjs --results FILE       score a results file again, no model
+//   --offline           NO KEY, NO NETWORK (D7): the same path with a model that never answers. The app's own
+//                       understanding, plans, reads and instant answers run for real and are scored by the same
+//                       scorer; what needs the model ends as "offline". The report says, for every question,
+//                       answered by the app and right, answered by the app and WRONG (always loud), needs the
+//                       model (with the model calls it would need), or asked or refused. Results go to
+//                       backend/target/ai-eval-<bank>-offline/ (ai-eval-offline for the team bank). Never builds
+//                       the real OpenRouter client and never opens the key store.
+//   --key-limit         what is left on the saved key, BEFORE a live run (a 403 "Key limit exceeded" is the limit,
+//                       not a bug). One call of GET https://openrouter.ai/api/v1/key with the key of the app's own
+//                       store. It prints ONLY limit, usage, limit_remaining and is_free_tier, never the key, a
+//                       header or the label of the key. A 403 or 402 prints its reason and stops. Only the lead
+//                       runs it (exit 0 shown, 1 the call failed, 3 no key saved).
 //   --bank FILE         another bank file (for example a hidden one). Only the per-row rules apply (no
 //                       size or mix rules, no frozen 110, no spec rebuild). Run live or with --check, scored
 //                       the same way (speed budget and button checks too). The results go to
@@ -75,13 +89,16 @@ const ROOT = resolve(HERE, '..', '..');
 const BACKEND = join(ROOT, 'backend');
 // --bank FILE: another bank (a hidden one). Its results live in their own folder.
 const BANK = option('--bank') ? resolve(option('--bank')) : null;
+// --offline: no key, no network, a model that never answers (D7). Its results live in their own folder.
+const OFFLINE = flag('--offline');
 const QUESTIONS = BANK ?? join(HERE, 'questions.tsv');
 const FROZEN = join(HERE, 'questions-110.tsv');
 const MANIFEST = join(HERE, 'oracle-keys.txt');
 const OUT_DIR = join(
   BACKEND,
   'target',
-  BANK ? `ai-eval-${basename(BANK).replace(/\.[^.]*$/, '')}` : 'ai-eval',
+  (BANK ? `ai-eval-${basename(BANK).replace(/\.[^.]*$/, '')}` : 'ai-eval') +
+    (OFFLINE ? '-offline' : ''),
 );
 const REVIEW = option('--review-out')
   ? resolve(option('--review-out'))
@@ -682,7 +699,15 @@ function cellValues(cell) {
 
 /** Every number, month and name the reply shows: its figure parts, its tables and its estimate. */
 function collect(reply) {
-  const out = { parts: [], all: [], months: new Set(), names: new Set(), order: [], text: '' };
+  const out = {
+    parts: [],
+    all: [],
+    months: new Set(),
+    names: new Set(),
+    dates: new Set(),
+    order: [],
+    text: '',
+  };
   const answer = reply?.answer;
   if (!answer) return out;
   for (const part of answer.parts ?? []) {
@@ -693,8 +718,18 @@ function collect(reply) {
     } else if (part.type === 'name') {
       out.names.add(part.name.name_en.toLowerCase());
       out.order.push(part.name.name_en.toLowerCase());
+      // The scored text is what the Owner reads: the words, and the names, dates and months the app put in.
+      out.text += part.name.name_en;
     } else if (part.type === 'month') {
       out.months.add(`${part.year}-${String(part.month).padStart(2, '0')}`);
+      out.text += `${part.month}-${part.year}`;
+    } else if (part.type === 'date') {
+      // The date part of a reply is `{type: 'date', iso}` (answer.rs AnswerPart::Date).
+      const iso = part.iso ?? part.date ?? '';
+      if (iso) {
+        out.dates.add(iso);
+        out.text += iso.split('-').reverse().join('-');
+      }
     } else if (part.type === 'text') {
       out.text += part.text;
     }
@@ -704,6 +739,7 @@ function collect(reply) {
     for (const row of table.rows ?? []) cells.push(...(row.row?.cells ?? []));
     for (const cell of cells) {
       out.all.push(...cellValues(cell));
+      if (cell?.type === 'date' && (cell.iso ?? cell.date)) out.dates.add(cell.iso ?? cell.date);
       if (cell?.type === 'names') out.names.add(cell.names.en.toLowerCase());
       if (cell?.type === 'party') out.names.add(cell.party.name_en.toLowerCase());
     }
@@ -907,7 +943,9 @@ function altMet(alt, label, found, reply) {
       (m) => (word ? m.startsWith(`same_${word}:`) : true) && m.endsWith(alt.month),
     );
   }
-  if (alt.kind === 'date') return true; // a date is shown as a date part; the text is not checked further
+  // A date must be shown: as a date part of the answer or as a date cell of one of its tables (D7: it used to pass
+  // with no check at all, so an empty date went unseen).
+  if (alt.kind === 'date') return found.dates.has(alt.date);
   return hasNumber(found, alt);
 }
 
@@ -1901,7 +1939,10 @@ function answerAsShown(reply) {
     if (p.type === 'text') return p.text;
     if (p.type === 'figure') return showFigure(p);
     if (p.type === 'name') return `${p.name.name_ur}${p.name.tag ? ` ${p.name.tag}` : ''}`;
-    if (p.type === 'date') return p.date ? p.date.split('-').reverse().join('-') : '';
+    if (p.type === 'date') {
+      const iso = p.iso ?? p.date ?? '';
+      return iso ? iso.split('-').reverse().join('-') : '';
+    }
     if (p.type === 'month') return `${MONTHS_UR[p.month - 1] ?? p.month} ${p.year}`;
     return '';
   });
@@ -2599,7 +2640,7 @@ function writeDetail(list, data, verdicts) {
 // ---- running -------------------------------------------------------------------------------
 
 /** The ids a run asks about, from --only, --category, --world, --facet and --every. Empty: all of them. */
-function selectIds(list, { only, category, world, facet, every }) {
+function selectIds(list, { only, category, world, facet, every, mix }) {
   const wanted = new Set(
     (only ?? '')
       .split(',')
@@ -2626,8 +2667,11 @@ function selectIds(list, { only, category, world, facet, every }) {
   );
   const facetOfQ = (q) => (q.filters.match(/(?:^|;)facet=([A-Za-z0-9]+)/) ?? [])[1];
   const stride = Math.max(1, Number.parseInt(every ?? '1', 10) || 1);
+  // `--mix short|picky` (the D7 bank): the common short questions, or the picky multi-figure ones.
+  const mixOf = (q) => (q.filters.match(/(?:^|;)mix=([a-z]+)/) ?? [])[1];
   if (
     wanted.size === 0 &&
+    !mix &&
     cats.size === 0 &&
     worlds.size === 0 &&
     facets.size === 0 &&
@@ -2642,19 +2686,22 @@ function selectIds(list, { only, category, world, facet, every }) {
         (wanted.size === 0 || wanted.has(q.id)) &&
         (cats.size === 0 || cats.has(q.cat)) &&
         (worlds.size === 0 || worlds.has(q.world)) &&
-        (facets.size === 0 || facets.has(facetOfQ(q))),
+        (facets.size === 0 || facets.has(facetOfQ(q))) &&
+        (!mix || mixOf(q) === mix),
     )
     .filter((_, i) => i % stride === 0)
     .map((q) => q.id);
 }
 
 /** Runs the ignored live test through cargo. The key is not passed: the app reads its own store. */
-function runLive(ids, model, threads, outFile = RESULTS) {
+function runLive(ids, model, threads, outFile = RESULTS, soft = false) {
   mkdirSync(OUT_DIR, { recursive: true });
   const env = { ...process.env, MANDI_EVAL_QUESTIONS: QUESTIONS, MANDI_EVAL_OUT: outFile };
   if (ids.length) env.MANDI_EVAL_ONLY = ids.join(',');
-  if (model) env.MANDI_EVAL_MODEL = model;
+  if (model && !OFFLINE) env.MANDI_EVAL_MODEL = model;
   if (threads) env.MANDI_EVAL_THREADS = String(threads);
+  // --offline: the test `offline_questions`, not ignored, with a model that never answers. It reads no key.
+  if (OFFLINE) env.MANDI_EVAL_OFFLINE = '1';
   const cmd = [
     'test',
     '-j',
@@ -2664,18 +2711,70 @@ function runLive(ids, model, threads, outFile = RESULTS) {
     '--test',
     'robustness_live',
     '--',
-    '--ignored',
+    ...(OFFLINE ? [] : ['--ignored']),
     '--nocapture',
-    'live_100_questions',
+    ...(OFFLINE ? ['--exact', 'offline_questions'] : ['live_100_questions']),
   ];
-  console.log(`ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}`);
+  console.log(
+    `ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}${OFFLINE ? '   (OFFLINE: no key, no network)' : ''}`,
+  );
   const res = spawnSync('cargo', cmd, {
     cwd: BACKEND,
     env,
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   if (res.error) throw new Error(`cannot start cargo: ${res.error.message}`);
-  if (res.status !== 0) throw new Error(`the live test failed with exit code ${res.status}`);
+  // `soft` (an offline run that resumes): the caller reads what was written and asks again what is missing.
+  if (soft) return res.status;
+  if (res.status !== 0)
+    throw new Error(`the ${OFFLINE ? 'offline' : 'live'} test failed with exit code ${res.status}`);
+  return res.status;
+}
+
+/**
+ * An offline run that survives its process being stopped from outside (a signal: exit code null). The harness
+ * rewrites its results file after every question, so what was finished is kept; the questions that were not are
+ * asked again, up to 8 times in all. The rows of every try are put together in the results file, in the order of the
+ * bank. A question is never asked twice once it has a row.
+ */
+function runOffline(ids, threads, everyId) {
+  const want = ids.length ? ids : everyId;
+  const have = new Map();
+  let meta = null;
+  let oracle = null;
+  let tries = 0;
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    const todo = want.filter((id) => !have.has(id));
+    if (todo.length === 0) break;
+    tries = attempt;
+    const part = join(OUT_DIR, `results.part-${attempt}.json`);
+    const status = runLive(todo, undefined, threads, part, true);
+    try {
+      const data = JSON.parse(readFileSync(part, 'utf8'));
+      meta ??= data.meta;
+      oracle ??= data.oracle;
+      for (const row of data.results ?? []) have.set(row.id, row);
+    } catch {
+      // The file was being written when the process was stopped: this try gives nothing, the next one asks again.
+    }
+    if (status !== 0)
+      console.log(
+        `ai-eval: the offline test stopped (exit ${status}); ${want.filter((id) => !have.has(id)).length} of ${want.length} questions still have no answer, asking them again`,
+      );
+  }
+  const missing = want.filter((id) => !have.has(id));
+  if (missing.length)
+    throw new Error(
+      `the offline run could not finish ${missing.length} questions: ${missing.slice(0, 10).join(',')}`,
+    );
+  writeFileSync(
+    RESULTS,
+    JSON.stringify({
+      meta: { ...meta, questions: have.size, tries },
+      oracle,
+      results: want.map((id) => have.get(id)),
+    }),
+  );
 }
 
 /** The ids to ask again: every question that missed, was lost to the network, or was never asked. */
@@ -4962,8 +5061,181 @@ function selfTest() {
       sample[1] === itemIds[5],
     '--facet or --every chose wrongly',
   );
+  // The offline report (D7): what the app did by itself, and whether it was right.
+  {
+    const oq = (figures, outcome = 'answered') => ({
+      id: 'O1',
+      cat: 'A',
+      question: 'x',
+      outcome,
+      tools: '',
+      filters: '',
+      figures,
+      world: 'year',
+      group: '',
+      section: 'buyer',
+    });
+    const oracle = { 'f.a': '100', 'f.b': '200', 'f.c': '300' };
+    const local = (parts, extra = {}) => ({
+      reply: answered(parts),
+      finish_reason: 'local',
+      model_calls: 0,
+      tool_calls: [],
+      ...extra,
+    });
+    const classOf = (q, r) => offlineClass(q, r, score(q, r, oracle), oracle);
+    // Right: the figure asked for is there.
+    let c = classOf(oq('a=@f.a'), local([money(100)]));
+    expect(c.cls === 'LOCAL RIGHT' && c.calls === 0, 'a right local answer was not LOCAL RIGHT');
+    // Wrong figure: it answers with another figure.
+    c = classOf(oq('a=@f.a'), local([money(999)]));
+    expect(
+      c.cls === 'LOCAL WRONG' && c.sub === 'wrong figure',
+      `a wrong local figure was not flagged: ${JSON.stringify(c)}`,
+    );
+    // Incomplete: a right figure and an asked figure left out.
+    c = classOf(oq('a=@f.a;b=@f.b;c=@f.c'), local([money(100), money(200)]));
+    expect(
+      c.cls === 'LOCAL WRONG' && c.sub === 'incomplete',
+      `an incomplete local answer was not flagged: ${JSON.stringify(c)}`,
+    );
+    // Needs the model: the offline model ended the question as offline, after one read and after none.
+    const offline = (tools) => ({
+      reply: { outcome: 'offline', failure: { kind: 'offline' } },
+      finish_reason: null,
+      model_calls: 0,
+      tool_calls: tools,
+    });
+    c = classOf(oq('a=@f.a'), offline([{ tool: 'report', id: 'r1', input: {} }]));
+    expect(c.cls === 'NEEDS MODEL' && c.calls === 1, 'a question with a read first needs one call');
+    c = classOf(oq('a=@f.a'), offline([]));
+    expect(c.cls === 'NEEDS MODEL' && c.calls === 2, 'a question with no read needs two calls');
+    c = classOf(oq('a=@f.a'), offline([{ tool: 'find', id: 'r1', error: 'x', input: {} }]));
+    expect(c.cls === 'NEEDS MODEL' && c.calls === 3, 'a name to find first needs three calls');
+    // Asked or refused with no model: as expected when the question wanted it, unexpected when it wanted an answer.
+    const asks = {
+      reply: { outcome: 'not_found', asked_role: 'any' },
+      finish_reason: 'local',
+      model_calls: 0,
+      tool_calls: [],
+    };
+    c = classOf(oq('', 'safe'), asks);
+    expect(
+      c.cls === 'ASKED/REFUSED' && c.expected === true,
+      'a wanted refusal was not as expected',
+    );
+    c = classOf(oq('a=@f.a'), asks);
+    expect(
+      c.cls === 'ASKED/REFUSED' && c.expected === false,
+      'a refusal of a valid question was not flagged',
+    );
+    // A zero day said with the digit passes; "not found" on it does not.
+    c = classOf(oq('a=0'), local([money(0)]));
+    expect(c.cls === 'LOCAL RIGHT', 'a zero shown as 0 was not right');
+    c = classOf(oq('a=0'), asks);
+    expect(c.cls === 'ASKED/REFUSED' && !c.expected, '"not found" on a zero day was not flagged');
+    // The whole report reads these rows and says so loudly.
+    const rep = offlineReport(
+      [oq('a=@f.a'), { ...oq('a=@f.b'), id: 'O2' }, { ...oq('a=@f.c'), id: 'O3' }],
+      {
+        oracle,
+        meta: { threads: 1 },
+        results: [
+          { ...local([money(100)]), id: 'O1' },
+          { ...local([money(999)]), id: 'O2' },
+          { ...offline([]), id: 'O3' },
+        ],
+      },
+    );
+    expect(
+      rep.summary.localRight === 1 &&
+        rep.summary.localWrong === 1 &&
+        rep.summary.needsModel === 1 &&
+        !rep.clean &&
+        rep.text.includes('DEFECT'),
+      'the offline report did not count or flag the rows',
+    );
+    expect(
+      rep.text.includes('SPEED AND THE TARGETS') &&
+        rep.text.includes('PROJECTED wait') &&
+        rep.text.includes('vs 60%') &&
+        rep.summary.byMix['every question'].noCallRight === 1 &&
+        rep.summary.detailTsv.split('\n').length === 3,
+      'the offline report has no speed section against the targets',
+    );
+  }
+  // The date and name parts of a reply (D7, R14): a date figure is checked, and the shown text holds the date.
+  {
+    const dateQ = {
+      id: 'DT',
+      cat: 'A',
+      question: 'x',
+      outcome: 'answered',
+      tools: '',
+      filters: '',
+      figures: 'when=2026-10-14',
+      world: 'year',
+    };
+    const datePart = (iso) => ({ type: 'date', iso });
+    const shown = (parts, tables = []) => ({
+      reply: answered(parts, {}, { tables }),
+      finish_reason: 'local',
+      model_calls: 0,
+      tool_calls: [],
+    });
+    expect(
+      score(dateQ, shown([text('on '), datePart('2026-10-14')]), {}).pass,
+      'the right date part did not pass',
+    );
+    expect(
+      !score(dateQ, shown([text('on '), datePart('2026-10-15')]), {}).pass,
+      'a wrong date passed',
+    );
+    expect(
+      !score(dateQ, shown([text('on the day')]), {}).pass,
+      'an answer with no date passed a date figure',
+    );
+    expect(
+      score(
+        dateQ,
+        shown(
+          [text('rows')],
+          [
+            {
+              rows: [{ row: { cells: [{ type: 'date', iso: '2026-10-14' }] } }],
+              totals: [],
+              columns: [],
+            },
+          ],
+        ),
+        {},
+      ).pass,
+      'a date cell of a table did not pass',
+    );
+    // The shown text holds the date and the name (it used to drop them: "مورخہ ۔").
+    const reply = answered([
+      text('آخری ریٹ '),
+      money(3940),
+      text('، مورخہ '),
+      datePart('2026-11-05'),
+      text(' بنام '),
+      name('Faisal', 'فیصل'),
+    ]);
+    const asShown = answerAsShown(reply);
+    expect(
+      asShown.includes('05-11-2026') && asShown.includes('فیصل'),
+      `the answer as shown lost its date or name: ${asShown}`,
+    );
+    const scored = collect(reply);
+    expect(
+      scored.text.includes('05-11-2026') &&
+        scored.text.includes('Faisal') &&
+        scored.dates.has('2026-11-05'),
+      `the scored text lost its date or name: ${scored.text}`,
+    );
+  }
   console.log(
-    `self-test ok: the bank has ${list.length} questions in 5 categories and the scorer reads right, wrong, optional, zero, strict-name, general-advice and network cases`,
+    `self-test ok: the bank has ${list.length} questions in 5 categories and the scorer reads right, wrong, optional, zero, strict-name, general-advice, network, offline and date cases`,
   );
 }
 
@@ -5011,6 +5283,444 @@ function oracleDump(out) {
   );
 }
 
+// ---- the offline report (D7) ----------------------------------------------------------------
+
+/** A reply the app gives for itself without the model that is not a figure: it asked or it refused. */
+const ASKED_OR_REFUSED = new Set([
+  'which_one',
+  'need_dates',
+  'need_party',
+  'not_found',
+  'outside_books',
+  'change_refused',
+  'not_understood',
+  'time_limit',
+  'checks_failed',
+  'records_differ',
+]);
+
+/**
+ * What the offline run says about one question, from its row and the verdict of the same scorer as a live run.
+ *
+ * - LOCAL RIGHT: the app answered by itself (no model) and every expected figure is there.
+ * - LOCAL WRONG: the app answered by itself and the scorer says no (a figure missing or wrong, a wrong button, a log
+ *   that disagrees). ALWAYS a defect: a wrong figure with no model to blame.
+ * - NEEDS MODEL: the app could not answer alone; the model call ended "offline". `calls` is the best estimate of the
+ *   model calls a live run needs: 1 when the app read the books first (the call only writes the answer), else 2
+ *   (a call to choose the tools, one to write the answer), 3 when it asks for a name first.
+ * - ASKED/REFUSED: the app asked "which one", asked for dates or a party, said no such record or refused, with no model.
+ *   `expected` is true when that is what the question wanted.
+ */
+function offlineClass(q, r, v, oracle = {}) {
+  const outcome = r.reply?.outcome ?? 'none';
+  if (!r.reply) return { cls: 'HARNESS', calls: null, expected: false };
+  if (outcome === 'offline') {
+    const reads = (r.tool_calls ?? []).filter((c) => !c.error).length;
+    const mentionsFind = (r.tool_calls ?? []).some((c) => c.tool === 'find');
+    const calls = reads > 0 ? 1 : mentionsFind ? 3 : 2;
+    return { cls: 'NEEDS MODEL', calls, reads, expected: false };
+  }
+  if (['answered', 'estimate', 'advice'].includes(outcome)) {
+    if (v.pass) return { cls: 'LOCAL RIGHT', calls: 0, expected: true };
+    // Not right. A figure of the question is missing: when the answer still shows at least one figure the question
+    // asked for, it is INCOMPLETE (the right figure, an asked figure left out); when it shows none of them, WRONG
+    // (it answered with another figure). Anything else (a button, a log, a route) is "other".
+    const missing = v.reasons.filter((x) => /^(figure|name|month) /.test(x)).length;
+    let wanted = 0;
+    try {
+      wanted = expectedFigures(splitPrint(resolveFigures(q.figures, oracle)).rest).filter(
+        (w) => !w.optional,
+      ).length;
+    } catch {
+      /* the oracle error is the scorer's own miss */
+    }
+    const sub =
+      missing === 0 ? 'other' : missing >= wanted || wanted === 0 ? 'wrong figure' : 'incomplete';
+    return { cls: 'LOCAL WRONG', calls: 0, sub, expected: false };
+  }
+  if (ASKED_OR_REFUSED.has(outcome)) return { cls: 'ASKED/REFUSED', calls: 0, expected: v.pass };
+  return { cls: 'OTHER', calls: 0, expected: false };
+}
+
+/** The offline report: text, and the numbers for offline-summary.json. */
+function offlineReport(list, data) {
+  const oracle = data.oracle ?? {};
+  const results = new Map(data.results.map((r) => [r.id, r]));
+  const rows = list
+    .filter((q) => results.has(q.id))
+    .map((q) => {
+      const r = results.get(q.id);
+      const v = score(q, r, oracle, data.meta?.secrets ?? null);
+      return { q, r, v, c: offlineClass(q, r, v, oracle) };
+    });
+  const n = rows.length;
+  const by = (cls) => rows.filter((x) => x.c.cls === cls);
+  const right = by('LOCAL RIGHT');
+  const wrong = by('LOCAL WRONG');
+  const needs = by('NEEDS MODEL');
+  const asked = by('ASKED/REFUSED');
+  const askedOk = asked.filter((x) => x.c.expected);
+  const askedBad = asked.filter((x) => !x.c.expected);
+  const other = rows.filter(
+    (x) => !['LOCAL RIGHT', 'LOCAL WRONG', 'NEEDS MODEL', 'ASKED/REFUSED'].includes(x.c.cls),
+  );
+  const pct = (k, of = n) => (of ? `${((100 * k) / of).toFixed(1)}%` : '0.0%');
+  const lines = [];
+  const say = (t = '') => lines.push(t);
+  say(`AI EVAL OFFLINE  (no key, no network: a model that never answers)`);
+  say(
+    `bank ${basename(QUESTIONS)}   date ${new Date().toISOString().slice(0, 10)}   questions ${n} of ${list.length}   threads ${data.meta.threads ?? 1}`,
+  );
+  say(`oracle facts ${Object.keys(oracle).length}`);
+  say();
+  say('WHAT THE APP DID BY ITSELF');
+  say(
+    `  answered by the app, RIGHT      ${String(right.length).padStart(4)}  ${pct(right.length)}   (target for a live run: at least 60% right with no model call)`,
+  );
+  const nSub = (k) => wrong.filter((x) => x.c.sub === k).length;
+  say(
+    `  answered by the app, WRONG      ${String(wrong.length).padStart(4)}  ${pct(wrong.length)}   ${wrong.length ? `<<<<<<<< DEFECT, with no model to blame: ${nSub('wrong figure')} wrong figure, ${nSub('incomplete')} incomplete (a right figure, an asked figure left out), ${nSub('other')} other` : '(none)'}`,
+  );
+  say(
+    `  needs the model                 ${String(needs.length).padStart(4)}  ${pct(needs.length)}`,
+  );
+  say(
+    `  asked or refused, as expected   ${String(askedOk.length).padStart(4)}  ${pct(askedOk.length)}`,
+  );
+  say(
+    `  asked or refused, UNEXPECTED    ${String(askedBad.length).padStart(4)}  ${pct(askedBad.length)}   ${askedBad.length ? '<<<<<<<< the question wanted an answer, the app asked, said "no such record" or refused' : '(none)'}`,
+  );
+  if (other.length)
+    say(
+      `  other (harness or unknown)      ${String(other.length).padStart(4)}  ${other.map((x) => x.q.id).join(' ')}`,
+    );
+  say();
+  // Model calls a live run would need.
+  const c1 = needs.filter((x) => x.c.calls === 1);
+  const c2 = needs.filter((x) => x.c.calls === 2);
+  const c3 = needs.filter((x) => x.c.calls === 3);
+  const lowCalls = c1.length + 2 * c2.length + 3 * c3.length;
+  const highCalls = lowCalls + c2.length + c3.length; // one more call in the loop for the unsure ones
+  const price = 0.0004;
+  say(
+    'MODEL CALLS A LIVE RUN WOULD NEED (estimate from this offline run; the live run may differ)',
+  );
+  say(`  0 calls (the app alone)   ${right.length + wrong.length + asked.length}`);
+  say(`  1 call  (app reads the books first, the model writes)   ${c1.length}`);
+  say(`  2 calls (the model chooses the tools, then writes)      ${c2.length}`);
+  say(`  3 calls (a name first, then the books, then the answer)  ${c3.length}`);
+  say(
+    `  total about ${lowCalls} to ${highCalls} calls  = $${(lowCalls * price).toFixed(2)} to $${(highCalls * price).toFixed(2)} at $${price} a call`,
+  );
+  const oneOrNoneRight = right.length + c1.length;
+  say(
+    `  right with no call or one call, if every 1-call question is right: ${pct(oneOrNoneRight)} (target 85%)`,
+  );
+  say();
+  // Speed and the targets (plan 59 Section 2, plan 55 A2): no call at least 60%, no call or one at least 85%,
+  // wait p50 2 s, p95 8 s, nothing over 25 s. A model call is not made offline, so what is MEASURED is the app's own
+  // time (the question up to its end or up to the first model call); the wait with the model is PROJECTED from the
+  // estimated calls and an assumed time for one call, and is labelled so.
+  const mixOf = (x) => (x.q.filters.match(/(?:^|;)mix=([a-z]+)/) ?? [])[1] ?? 'all';
+  const speedRows = (xs) => ({
+    n: xs.length,
+    right: xs.filter((x) => x.c.cls === 'LOCAL RIGHT').length,
+    oneOrNone: xs.filter(
+      (x) => x.c.cls === 'LOCAL RIGHT' || (x.c.cls === 'NEEDS MODEL' && x.c.calls === 1),
+    ).length,
+    own: xs.map((x) => x.r.millis ?? 0),
+    local: xs
+      .filter((x) => x.c.cls === 'LOCAL RIGHT' || x.c.cls === 'LOCAL WRONG')
+      .map((x) => x.r.millis ?? 0),
+    calls: xs.map((x) => (x.c.cls === 'NEEDS MODEL' ? x.c.calls : 0)),
+  });
+  const groupsOfSpeed = [
+    ['every question', rows],
+    ['common short questions (one figure)', rows.filter((x) => mixOf(x) === 'short')],
+    ['picky questions (several figures or filters)', rows.filter((x) => mixOf(x) === 'picky')],
+  ].filter(([, xs]) => xs.length > 0);
+  const flagOf = (ok) => (ok ? 'OK   ' : 'UNDER');
+  const projected = (sp, callSecs) =>
+    sp.own.map((own, i) => own + (sp.calls[i] ?? 0) * callSecs * 1000);
+  say('SPEED AND THE TARGETS (offline: the app alone; a model call is not made)');
+  for (const [name, xs] of groupsOfSpeed) {
+    const sp = speedRows(xs);
+    const share = (k) => (sp.n ? k / sp.n : 0);
+    say(`  ${name}: ${sp.n} questions`);
+    say(
+      `    right with no model call:  ${sp.right} (${pct(sp.right, sp.n)})  ${flagOf(share(sp.right) >= 0.6)} vs 60%`,
+    );
+    say(
+      `    right with no call or one: up to ${sp.oneOrNone} (${pct(sp.oneOrNone, sp.n)}), if every 1-call answer is right  ${flagOf(share(sp.oneOrNone) >= 0.85)} vs 85%`,
+    );
+    say(
+      `    app's own time, answers it gives alone: p50 ${ms(percentile(sp.local, 0.5))}, p95 ${ms(percentile(sp.local, 0.95))}, slowest ${ms(Math.max(0, ...sp.local))}  (debug build, only a guide)`,
+    );
+    say(
+      `    app's own time before the first model call, every question: p50 ${ms(percentile(sp.own, 0.5))}, p95 ${ms(percentile(sp.own, 0.95))}, slowest ${ms(Math.max(0, ...sp.own))}`,
+    );
+    for (const secs of [1.5, 3, 6]) {
+      const w = projected(sp, secs);
+      const p50 = percentile(w, 0.5);
+      const p95 = percentile(w, 0.95);
+      const max = Math.max(0, ...w);
+      say(
+        `    PROJECTED wait if one model call takes ${secs} s (an assumption, not measured): p50 ${ms(p50)} ${flagOf(p50 <= 2000)} vs 2 s, p95 ${ms(p95)} ${flagOf(p95 <= 8000)} vs 8 s, slowest ${ms(max)} ${flagOf(max <= 25000)} vs 25 s`,
+      );
+    }
+  }
+  say(
+    '  The p50 target of 2 s can only be met if more than half the questions are answered with no model call, or one call takes under 2 s.',
+  );
+  say();
+  // One figure asked, or several: the app answers a plain one-figure question by itself (PRD FR-7.90).
+  const figuresAsked = (x) => {
+    try {
+      return expectedFigures(splitPrint(resolveFigures(x.q.figures, oracle)).rest).filter(
+        (w) => !w.optional,
+      ).length;
+    } catch {
+      return 0;
+    }
+  };
+  say(
+    'BY NUMBER OF FIGURES ASKED     n   right  WRONG  needs   asked   (the 60% target is for plain questions)',
+  );
+  for (const [label, test] of [
+    ['one figure', (k) => k === 1],
+    ['two figures', (k) => k === 2],
+    ['three or more', (k) => k >= 3],
+    ['no figure (a refusal wanted)', (k) => k === 0],
+  ]) {
+    const xs = rows.filter((x) => test(figuresAsked(x)));
+    const k = (cls) => xs.filter((x) => x.c.cls === cls).length;
+    say(
+      `  ${label.padEnd(28)} ${String(xs.length).padStart(4)}  ${String(k('LOCAL RIGHT')).padStart(5)}  ${String(k('LOCAL WRONG')).padStart(5)}  ${String(k('NEEDS MODEL')).padStart(5)}  ${String(k('ASKED/REFUSED')).padStart(5)}`,
+    );
+  }
+  say();
+  // By section.
+  const sections = [...new Set(rows.map((x) => x.q.section))].sort();
+  say('BY SECTION                    n   right  WRONG  needs   asked  unexpected');
+  for (const sec of sections) {
+    const xs = rows.filter((x) => x.q.section === sec);
+    const k = (cls) => xs.filter((x) => x.c.cls === cls).length;
+    const bad = xs.filter((x) => x.c.cls === 'ASKED/REFUSED' && !x.c.expected).length;
+    say(
+      `  ${sec.padEnd(24)} ${String(xs.length).padStart(4)}  ${String(k('LOCAL RIGHT')).padStart(5)}  ${String(k('LOCAL WRONG')).padStart(5)}  ${String(k('NEEDS MODEL')).padStart(5)}  ${String(k('ASKED/REFUSED')).padStart(5)}  ${String(bad).padStart(9)}`,
+    );
+  }
+  say();
+  const langs = ['roman', 'urdu', 'en'];
+  say('BY LANGUAGE                   n   right  WRONG  needs   asked');
+  for (const lang of langs) {
+    const xs = rows.filter((x) => x.q.lang === lang);
+    const k = (cls) => xs.filter((x) => x.c.cls === cls).length;
+    say(
+      `  ${lang.padEnd(24)} ${String(xs.length).padStart(4)}  ${String(k('LOCAL RIGHT')).padStart(5)}  ${String(k('LOCAL WRONG')).padStart(5)}  ${String(k('NEEDS MODEL')).padStart(5)}  ${String(k('ASKED/REFUSED')).padStart(5)}`,
+    );
+  }
+  const mis = rows.filter((x) => x.q.misspelled);
+  const kk = (cls) => mis.filter((x) => x.c.cls === cls).length;
+  say(
+    `  misspelled                ${String(mis.length).padStart(4)}  ${String(kk('LOCAL RIGHT')).padStart(5)}  ${String(kk('LOCAL WRONG')).padStart(5)}  ${String(kk('NEEDS MODEL')).padStart(5)}  ${String(kk('ASKED/REFUSED')).padStart(5)}`,
+  );
+  say();
+  // Wordings of one meaning that end differently: one answered by the app, one asks "not found", one needs the model.
+  const byGroup = new Map();
+  for (const x of rows)
+    if (x.q.group) byGroup.set(x.q.group, [...(byGroup.get(x.q.group) ?? []), x]);
+  const mixed = [...byGroup.entries()].filter(
+    ([, xs]) => new Set(xs.map((x) => `${x.c.cls}/${x.r.reply?.outcome}`)).size > 1,
+  );
+  say(
+    `WORDINGS OF ONE MEANING THAT END DIFFERENTLY: ${mixed.length} of ${byGroup.size} groups (same question, another wording, another route)`,
+  );
+  for (const [g, xs] of mixed)
+    say(
+      `  ${g} [${xs[0].q.section}] ` +
+        xs
+          .map(
+            (x) =>
+              `${x.q.lang}${x.q.misspelled ? '*' : ''}:${x.c.cls === 'NEEDS MODEL' ? `model(${x.c.calls})` : x.c.cls === 'LOCAL RIGHT' ? 'right' : x.c.cls === 'LOCAL WRONG' ? `WRONG-${x.c.sub}` : x.r.reply?.outcome}`,
+          )
+          .join('  '),
+    );
+  say();
+  const timesOf = (xs) => xs.map((x) => x.r.millis ?? 0);
+  const localTimes = timesOf([...right, ...wrong]);
+  say(
+    `SPEED of the app's own answers (debug build, this machine, so only a guide): p50 ${ms(percentile(localTimes, 0.5))}, p95 ${ms(percentile(localTimes, 0.95))}, slowest ${ms(Math.max(0, ...localTimes))}`,
+  );
+  say();
+  const show = (x) => {
+    let expected = x.q.figures;
+    try {
+      expected = resolveFigures(x.q.figures, oracle);
+    } catch {
+      /* keep the references */
+    }
+    return [
+      `  ${x.q.id} [${x.q.section}/${x.q.lang}${x.q.misspelled ? '/misspelt' : ''}] ${x.q.question}`,
+      `      expected  ${x.q.outcome}: ${expected || x.q.filters}`,
+      `      shown     ${x.r.reply?.outcome}${x.c.cls === 'NEEDS MODEL' ? '' : ': ' + answerAsShown(x.r.reply)}`,
+      `      why       ${x.v.reasons.join('; ') || '-'}`,
+    ];
+  };
+  say(
+    `LOCAL WRONG: ${wrong.length}  (every one is a defect to report. "wrong figure" = it shows none of the figures asked; "incomplete" = it shows a right figure and leaves an asked one out; "other" = a button, log or route problem)`,
+  );
+  if (wrong.length === 0) say('  none');
+  for (const x of wrong.sort(
+    (a, b) => (a.c.sub === 'wrong figure' ? 0 : 1) - (b.c.sub === 'wrong figure' ? 0 : 1),
+  )) {
+    say(`  >>> ${x.c.sub.toUpperCase()}`);
+    lines.push(...show(x));
+  }
+  say();
+  say(`ASKED OR REFUSED, NOT WHAT THE QUESTION WANTED: ${askedBad.length}`);
+  if (askedBad.length === 0) say('  none');
+  for (const x of askedBad) lines.push(...show(x));
+  say();
+  say(`NEEDS THE MODEL (estimated model calls): ${needs.length}`);
+  for (const x of needs)
+    say(`  ${x.q.id} [${x.q.section}] ${x.c.calls} call(s)  reads ${x.c.reads}  ${x.q.question}`);
+  say();
+  const summary = {
+    date: new Date().toISOString(),
+    bank: basename(QUESTIONS),
+    questions: n,
+    localRight: right.length,
+    localWrong: wrong.length,
+    needsModel: needs.length,
+    askedExpected: askedOk.length,
+    askedUnexpected: askedBad.length,
+    other: other.length,
+    modelCalls: {
+      zero: right.length + wrong.length + asked.length,
+      one: c1.length,
+      two: c2.length,
+      three: c3.length,
+      low: lowCalls,
+      high: highCalls,
+    },
+    localWrongIds: wrong.map((x) => x.q.id),
+    localWrongSplit: {
+      wrongFigure: nSub('wrong figure'),
+      incomplete: nSub('incomplete'),
+      other: nSub('other'),
+    },
+    askedUnexpectedIds: askedBad.map((x) => x.q.id),
+    perQuestion: rows.map((x) => ({
+      id: x.q.id,
+      group: x.q.group,
+      section: x.q.section,
+      mix: mixOf(x),
+      lang: x.q.lang,
+      misspelled: x.q.misspelled,
+      cls: x.c.cls,
+      outcome: x.r.reply?.outcome ?? 'none',
+      calls: x.c.calls,
+      expected: x.c.expected,
+      millis: x.r.millis ?? 0,
+      finish: x.r.finish_reason ?? null,
+    })),
+    byMix: Object.fromEntries(
+      groupsOfSpeed.map(([name, xs]) => {
+        const sp = speedRows(xs);
+        return [
+          name,
+          {
+            questions: sp.n,
+            noCallRight: sp.right,
+            noCallRightShare: sp.n ? sp.right / sp.n : 0,
+            noCallOrOneUpTo: sp.oneOrNone,
+            noCallOrOneShare: sp.n ? sp.oneOrNone / sp.n : 0,
+            ownP50: percentile(sp.own, 0.5),
+            ownP95: percentile(sp.own, 0.95),
+            ownMax: Math.max(0, ...sp.own),
+          },
+        ];
+      }),
+    ),
+    detailTsv: rows
+      .map((x) =>
+        [
+          x.q.id,
+          x.q.group,
+          x.q.section,
+          mixOf(x),
+          x.q.lang,
+          x.q.misspelled ? 1 : 0,
+          x.c.cls,
+          x.r.reply?.outcome ?? 'none',
+          x.c.calls ?? '',
+          x.r.millis ?? 0,
+          x.q.question.replace(/[\t\r\n]+/g, ' '),
+        ].join('\t'),
+      )
+      .join('\n'),
+  };
+  return { text: lines.join('\n'), summary, clean: wrong.length === 0 && other.length === 0 };
+}
+
+/**
+ * `--key-limit`: asks OpenRouter what is left on the key the app saved. The Rust test `key_limit_left` (ignored by
+ * default) does the one call and prints lines that start with `KEY-LIMIT`; this function shows those lines and
+ * nothing else of the run, and hides anything that looks like a key. No key, no header, no label is ever shown.
+ */
+function keyLimit() {
+  const cmd = [
+    'test',
+    '-j',
+    '4',
+    '-p',
+    'mandi-assistant',
+    '--test',
+    'robustness_live',
+    '--',
+    '--ignored',
+    '--nocapture',
+    '--exact',
+    'key_limit_left',
+  ];
+  console.log(
+    `ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}   (one call; only the limit fields are shown)`,
+  );
+  const res = spawnSync('cargo', cmd, {
+    cwd: BACKEND,
+    env: process.env,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (res.error) {
+    console.error(`ai-eval: cannot start cargo: ${res.error.message}`);
+    process.exit(2);
+  }
+  const hide = (line) => line.replace(/sk-[A-Za-z0-9_-]{8,}/g, '[hidden]');
+  const lines = (res.stdout ?? '')
+    .split('\n')
+    .filter((l) => l.startsWith('KEY-LIMIT'))
+    .map(hide);
+  if (lines.length === 0) {
+    // The test did not run (a build error, for example). Nothing of the key can be in cargo's own messages.
+    const tail = (res.stderr ?? '').split('\n').slice(-15).map(hide).join('\n');
+    console.error(
+      `ai-eval: the key limit check printed nothing (cargo exit ${res.status}):\n${tail}`,
+    );
+    process.exit(2);
+  }
+  console.log(lines.join('\n'));
+  if (lines.some((l) => /no key is saved/.test(l))) {
+    console.log('WAITING FOR KEY: no OpenRouter key is saved in the app.');
+    process.exit(3);
+  }
+  process.exit(
+    lines.some((l) => /HTTP \d+|could not|no connection|timeout|dropped/.test(l)) ? 1 : 0,
+  );
+}
+
 /** The columns a bank must have for the scorer and the live test to read it. */
 const BANK_COLUMNS = [
   'id',
@@ -5032,6 +5742,7 @@ const BANK_COLUMNS = [
 
 function main() {
   if (flag('--self-test')) return selfTest();
+  if (flag('--key-limit')) return keyLimit();
   if (option('--oracle-dump')) {
     try {
       return oracleDump(resolve(option('--oracle-dump')));
@@ -5088,6 +5799,7 @@ function main() {
     world: option('--world'),
     facet: option('--facet'),
     every: option('--every'),
+    mix: option('--mix'),
   });
   // --misses asks again what missed or was lost to the network; --merge puts a partial run into the
   // whole results file, so the score is always of the whole bank.
@@ -5099,12 +5811,20 @@ function main() {
         ids = idsToAskAgain(list);
         console.log(`ai-eval: asking ${ids.length} questions again: ${ids.join(',')}`);
       }
-      const part = merging ? join(OUT_DIR, 'results.part.json') : RESULTS;
-      runLive(ids, option('--model'), option('--threads') ?? THREADS_DEFAULT, part);
-      if (merging) {
-        const rows = JSON.parse(readFileSync(part, 'utf8'));
-        if (!rows.waiting_for_key) mergeResults(rows);
-        else writeFileSync(RESULTS, JSON.stringify(rows));
+      if (OFFLINE && !merging) {
+        runOffline(
+          ids,
+          option('--threads') ?? THREADS_DEFAULT,
+          list.map((q) => q.id),
+        );
+      } else {
+        const part = merging ? join(OUT_DIR, 'results.part.json') : RESULTS;
+        runLive(ids, option('--model'), option('--threads') ?? THREADS_DEFAULT, part);
+        if (merging) {
+          const rows = JSON.parse(readFileSync(part, 'utf8'));
+          if (!rows.waiting_for_key) mergeResults(rows);
+          else writeFileSync(RESULTS, JSON.stringify(rows));
+        }
       }
     } catch (error) {
       console.error(`ai-eval: ${error.message}`);
@@ -5117,6 +5837,29 @@ function main() {
     process.exit(2);
   }
   const data = JSON.parse(readFileSync(path, 'utf8'));
+  if (OFFLINE) {
+    // No key, no network: the offline report only. Nothing else (the Urdu sheet, the live summary) is written.
+    const shown = ids.length ? new Set(ids) : null;
+    const scoped = shown ? list.filter((q) => shown.has(q.id)) : list;
+    const { text, summary, clean } = offlineReport(scoped, data);
+    console.log(text);
+    mkdirSync(OUT_DIR, { recursive: true });
+    // One line for each question: its class, the model calls it would need and the time the app took offline.
+    writeFileSync(
+      join(OUT_DIR, 'offline-detail.tsv'),
+      `id\tgroup\tsection\tmix\tlang\tmisspelled\tclass\toutcome\tmodel_calls\toffline_ms\tquestion\n${summary.detailTsv}\n`,
+      'utf8',
+    );
+    delete summary.detailTsv;
+    writeFileSync(join(OUT_DIR, 'offline-report.txt'), text + '\n', 'utf8');
+    writeFileSync(
+      join(OUT_DIR, 'offline-summary.json'),
+      JSON.stringify(summary, null, 2) + '\n',
+      'utf8',
+    );
+    console.log(`OFFLINE report: ${join(OUT_DIR, 'offline-report.txt')}`);
+    process.exit(clean ? 0 : 1);
+  }
   if (data.waiting_for_key) {
     console.log(
       'WAITING FOR KEY: no OpenRouter key is saved in the app. Umar pastes it in Settings, in the question group, then run this again.',

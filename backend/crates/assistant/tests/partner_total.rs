@@ -200,15 +200,14 @@ fn the_button_of_a_partner_overview_answer_opens_the_partners_it_names_and_never
             ("R31".to_owned(), Some("Partner C".to_owned())),
         ]
     );
-    // Q400: one partner's capital, one button with him.
+    // Q400: one partner's capital. His capital is read from the capital history and the partner
+    // overview, and the R31 statement page does not hold it, so there is NO button (D7 D331, lead
+    // ruling: a button opens only the page the figure was read from). Before, one R31 button with him.
     let (reply, _) = ask_overview(
         "Partner B ka capital kitna laga hua hai",
         "{{r1.rows.s2.capital.invested}}",
     );
-    assert_eq!(
-        buttons(&reply),
-        [("R31".to_owned(), Some("Partner B".to_owned()))]
-    );
+    assert_eq!(buttons(&reply), []);
 }
 
 // ---- the money review of 05-11-2026: the closing is ticked, a dated read is dated, ب after E2E-35

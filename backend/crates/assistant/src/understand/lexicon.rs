@@ -934,6 +934,12 @@ pub(super) const STOP: &[&str] = &[
     "ہمارا", "ہماری", "ہم", "اپنا", "اپنی", "آپ", "براہ", "مہربانی", "بھی", "ہی", "تو", "صرف",
     "پھر", "ابھی", "اب", "نہیں", "نہ", "اگر", "مگر", "لیکن", "ایک", "ساتھ", "والا", "والی", "والے",
     "رہا", "رہی", "رہے", "سکتا", "سکتے", "سکتی", "چاہیے", "بہت", "تھوڑا",
+    // D7 F2: ordinary words that were taken for the name of a party that is not in the books and ended a
+    // valid question as "no such record": reflexives, the night, the start, a record, a line, a city.
+    "himself", "herself", "themselves", "itself", "myself", "ourselves", "yourself", "raat", "رات",
+    "banaam", "banam", "bnaam", "benaam", "بنام", "shuru", "shuruaat", "shuroo", "شروع", "record",
+    "records", "ریکارڈ", "entries", "entry", "اندراج", "اندراجات", "line", "lines", "shehar",
+    "sheher", "شہر", "city", "cities",
 ];
 
 /// Words that mean something else in a question but are also the usual parts of a firm's name
@@ -1204,7 +1210,13 @@ impl Table {
             singles,
             phrases,
             pool,
-            stop: STOP.iter().map(|w| key(w)).collect(),
+            // The Urdu number words are no names either ("اکتیس سے نوے دن"); the Roman ones (das, teen ...) can be
+            // names and are left out (money review 9).
+            stop: STOP
+                .iter()
+                .chain(crate::number_words::URDU.iter())
+                .map(|w| key(w))
+                .collect(),
             nameish: NAMEISH.iter().map(|w| key(w)).collect(),
         }
     }

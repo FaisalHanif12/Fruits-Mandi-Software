@@ -246,6 +246,8 @@ fn build_with(grades: bool) -> Year {
     let mut rng = Rng::new(20_261_105);
     run_days(&mut year, &mut rng);
     vegetable_sales(&mut year);
+    d7_last_rate_cases(&mut year);
+    d7_richer_cases(&mut year);
     end_of_year(&year);
     year
 }
@@ -1852,6 +1854,450 @@ fn fruit_guests(y: &Year, dd: &str) {
         },
     )
     .expect("fruit for the guests");
+}
+
+/// The newest sale line (plan 59 Section 11, lead ruling of 07-11-2026): a line is ordered by its own posting date,
+/// then the بکری number, then its line number, never by the row id (an edit keeps the line number and writes a new
+/// row; a later sale counts on its own date). Grapes are out of season in November, so these are the only grapes
+/// lines of the week, and the newest one is known. All the buyers of these lines are CASH buyers (Rizwan Butt, Shahid
+/// Raza and the cash buyer), so no buyer owes more and the dues of the books (R20, the tiles) are what they were
+/// without them:
+///
+/// - `OLD` is a بکری of 03-11-2026 (number first) with 8 box left. On 05-11-2026 a LATER SALE sells them at 4,600:
+///   a line of the oldest بکری with a newer row id than the others of that day.
+/// - `E` is a بکری of 05-11-2026 (a lower number than A) whose lines (5,000 and 5,200) are EDITED last: its rows
+///   have the newest ids of all.
+/// - `A` is a بکری of 05-11-2026, the highest number, with FOUR lines of grapes (5,100, 4,900, 5,300, 5,000), edited
+///   first (an edit gives every line a new row and a new, higher line number, in the same order). The newest line
+///   by the rule is the last line of A at 5,000.
+///
+/// The row id would say 5,200 (E's last line), so a read that sorts by id shows a wrong rate. It runs before the
+/// commission rules of [`end_of_year`], so these lines follow the default rates like every line of the year.
+fn d7_last_rate_cases(y: &mut Year) {
+    use mandi_services::core::bikri::{
+        EditOpenInput, EditSaveInput, LaterSaleSaveInput, StockListInput,
+    };
+    set_today(&y.w.env, TODAY.0, TODAY.1, TODAY.2);
+    let grapes = y
+        .items
+        .iter()
+        .find(|it| it.key == "angoor")
+        .map(|it| (it.id, it.packing))
+        .expect("the grapes");
+    let buyer = |key: &str| -> i64 {
+        y.buyers
+            .iter()
+            .find(|b| b.key == key)
+            .map(|b| b.id)
+            .unwrap_or_else(|| panic!("no buyer {key}"))
+    };
+    // Cash buyers only: no line of these cases adds to what any buyer owes, so the dues of the books (R20, the tiles)
+    // stay what they were without them.
+    let (rizwan, shahid, naqdi) = (buyer("rizwan"), buyer("shahid"), y.w.naqdi);
+    let karim = y.w.karim;
+    let draft = |day: (i32, u32, u32), truck: &str, qty: &str, lines: &[(i64, &str, &str)]| {
+        let mut lot = world::lot(&y.w, "lot-0", karim, grapes.0, qty);
+        lot.packing_id = Some(grapes.1);
+        lot.sales = lines
+            .iter()
+            .enumerate()
+            .map(|(i, (who, qty, rate))| world::sale(&format!("s{i}"), *who, qty, rate))
+            .collect();
+        BikriDraft {
+            header: header(date(day), truck),
+            lots: vec![lot],
+        }
+    };
+    let old_draft = draft(
+        (2026, 11, 3),
+        "LES-7001",
+        "30",
+        &[(rizwan, "12", "4800"), (shahid, "10", "4700")],
+    );
+    let e_draft = draft(
+        (2026, 11, 5),
+        "LES-7002",
+        "20",
+        &[(shahid, "8", "5000"), (rizwan, "12", "5200")],
+    );
+    let a_draft = draft(
+        (2026, 11, 5),
+        "LES-7003",
+        "24",
+        &[
+            (rizwan, "6", "5100"),
+            (shahid, "6", "4900"),
+            (naqdi, "6", "5300"),
+            (rizwan, "6", "5000"),
+        ],
+    );
+    let old = save_bikri(y, old_draft);
+    let e = save_bikri(y, e_draft);
+    let a = save_bikri(y, a_draft);
+    // An edit of a بکری of today: only the rate of its first line changes. It writes new rows for every line.
+    let edit_first_line = |saved: &BikriSaved, rate: i64| {
+        let opened = bikri::open_for_edit(
+            &y.w.env.ctx,
+            &EditOpenInput {
+                bikri_id: saved.bikri_id,
+                entry_id: saved.entry_id,
+            },
+        )
+        .expect("open the بکری for an edit");
+        let mut draft = opened.draft.clone();
+        draft.lots[0].sales[0].seller_rate = rate.to_string();
+        bikri::edit_save(
+            &y.w.env.ctx,
+            &y.w.owner,
+            &EditSaveInput {
+                entry_id: opened.entry_id,
+                version: opened.version,
+                draft,
+                reason: Some("ریٹ کی درستی".into()),
+                confirm_cash_below_zero: true,
+            },
+        )
+        .expect("the edit of the first line");
+    };
+    // 1. A, the highest number, is edited first.
+    edit_first_line(&a, 5_150);
+    // 2. The later sale of the older بکری, on its own day (05-11-2026).
+    let stock = bikri::stock_list(
+        &y.w.env.ctx,
+        &StockListInput {
+            date: Some(ddmmyyyy(date((2026, 11, 3)))),
+            item_id: Some(grapes.0),
+            ..StockListInput::default()
+        },
+    )
+    .expect("the stock of grapes");
+    let lot_id = stock
+        .rows
+        .iter()
+        .find(|r| r.bikri_id == old.bikri_id)
+        .map(|r| r.lot_id)
+        .expect("the grapes of the older بکری are left to sell");
+    let mut line = world::sale("later", rizwan, "8", "4600");
+    line.sale_id = None;
+    bikri::later_sale_save(
+        &y.w.env.ctx,
+        &y.w.owner,
+        &LaterSaleSaveInput {
+            lot_id,
+            date: ddmmyyyy(date(TODAY)),
+            sales: vec![line],
+            confirm_cash_below_zero: true,
+        },
+    )
+    .expect("the later sale of the older بکری");
+    // 3. E, a lower number, is edited LAST: its rows have the newest ids of the day.
+    edit_first_line(&e, 5_050);
+}
+
+/// More of the shop for the D7 bank (plan 59 B2, lead, 07-11-2026). Added at the very end, ADD ONLY (no saved row of the
+/// year is changed), through the app's own save functions, on days of the past that are still open:
+///
+/// - a city (Kasur) on three NEW accounts: two credit buyers (Naveed Traders, Rafique Brothers) and a پختہ party's own
+///   account (Nadir, FR-13.11), each with a balance, so the dues by city are not empty;
+/// - a day with cash AND credit lines of ONE buyer (14-10-2026): Naveed Traders takes 10 banana for cash and 12 apple on
+///   credit, so "how much on the spot and how much stayed on credit" has both parts;
+/// - a one-time person of the shared پختہ کھاتہ (Aamir, with his phone) who owes, on 21-10-2026;
+/// - a separate khata (الگ کھاتہ) with three entries;
+/// - a sale line with ریٹ مختلف (22-10-2026: the buyer pays 4,350, the seller gets 4,300, and it is the newest apple
+///   line of that day, so "the rate" must be the seller's 4,300);
+/// - a LATER SALE of an older بکری's leftover (mosambi, bikri of 16-10-2026) made on 19-10-2026, a day that also has a
+///   newer بکری of the same item saved before it: the newest mosambi line of 19-10 is the line of the newer بکری
+///   (2,550), while the row id says the later sale (2,400).
+///
+/// The sellers have no advance, so no advance is matched. The new buyers are put in `y.buyers` so the oracle reads them.
+fn d7_richer_cases(y: &mut Year) {
+    use mandi_services::core::bikri::{LaterSaleSaveInput, StockListInput};
+    use mandi_services::core::bikri::{PaymentType, PukhtaInput};
+    use mandi_services::core::khata::{KhataCreateInput, KhataOutInput};
+    use mandi_services::core::masters::{CityInput, MasterInput};
+    set_today(&y.w.env, TODAY.0, TODAY.1, TODAY.2);
+    let item = |key: &str| -> (i64, i64) {
+        y.items
+            .iter()
+            .find(|it| it.key == key)
+            .map(|it| (it.id, it.packing))
+            .unwrap_or_else(|| panic!("no item {key}"))
+    };
+    let seller = |key: &str| -> i64 {
+        y.sellers
+            .iter()
+            .find(|s| s.key == key)
+            .map(|s| s.id)
+            .unwrap_or_else(|| panic!("no seller {key}"))
+    };
+    let (banana, apple, mosambi) = (item("kela"), item("saib"), item("mausami"));
+    let (karim, bashir, saleem, jameel) = (
+        seller("karim"),
+        seller("bashir"),
+        seller("saleem"),
+        seller("jameel"),
+    );
+
+    // 1. A city and three new accounts in it.
+    let city = confirming(|words| {
+        mandi_services::masters::save(
+            &y.w.env.ctx,
+            &y.w.owner,
+            &MasterInput::City(CityInput {
+                id: None,
+                version: None,
+                code: String::new(),
+                name_ur: "قصور".into(),
+                name_en: "Kasur".into(),
+                confirmed_rules_words: words.to_vec(),
+            }),
+        )
+    })
+    .expect("the city of Kasur")
+    .id();
+    let new_account = |names: (&str, &str), pukhta_party: bool| -> i64 {
+        let mut input = mandi_services::core::accounts::AccountInput {
+            id: None,
+            version: None,
+            account_type: AccountType::Buyer,
+            is_pukhta_party: pukhta_party,
+            control_id: None,
+            code: String::new(),
+            name_ur: names.0.into(),
+            name_en: names.1.into(),
+            confirmed_rules_words: Vec::new(),
+            father_or_firm_ur: String::new(),
+            father_or_firm_en: String::new(),
+            city_id: Some(city),
+            adda_id: None,
+            phone1: String::new(),
+            phone2: String::new(),
+            address: String::new(),
+            linked_account_id: None,
+            opening_date: String::new(),
+            opening_dr: String::new(),
+            opening_cr: String::new(),
+            opening_is_advance: false,
+            credit_allowed: true,
+            credit_limit: String::new(),
+            default_marka_id: None,
+            collector_staff_id: None,
+            is_active: true,
+            note: String::new(),
+            tag: String::new(),
+        };
+        confirming(|words| {
+            input.confirmed_rules_words = words.to_vec();
+            mandi_services::accounts::save(&y.w.env.ctx, &y.w.owner, &input)
+        })
+        .unwrap_or_else(|e| panic!("the account {}: {e:?}", names.1))
+        .id
+    };
+    let naveed = new_account(("نوید ٹریڈرز", "Naveed Traders"), false);
+    let rafique = new_account(("رفیق برادرز", "Rafique Brothers"), false);
+    let nadir = new_account(("نادر", "Nadir"), true);
+    for (key, id) in [("naveed", naveed), ("rafique", rafique), ("nadir", nadir)] {
+        y.buyers.push(BuyerInfo {
+            key,
+            id,
+            credit: true,
+            from: date((2026, 10, 14)),
+            until: date(TODAY),
+            pay_after_days: None,
+            pay_percent: 0,
+            stops_paying: None,
+        });
+    }
+
+    // 2. A separate khata with three entries: 20,000 and 3,000 paid out, 5,000 received.
+    let khata = mandi_services::khata::create(
+        &y.w.env.ctx,
+        &y.w.owner,
+        &KhataCreateInput {
+            name_ur: "خاندانی کھاتہ".into(),
+            name_en: "Family Khata".into(),
+            note: None,
+            confirmed_rules_words: vec!["خاندانی".into(), "Family".into()],
+        },
+    )
+    .unwrap_or_else(|e| panic!("the khata: {e:?}"))
+    .account
+    .id;
+    let out = |date: &str, amount: &str, reason: &str| {
+        vouchers::save_khata_out(
+            &y.w.env.ctx,
+            &y.w.owner,
+            &KhataOutInput {
+                date: date.into(),
+                khata_account_id: Some(khata),
+                amount: amount.into(),
+                reason: reason.into(),
+                narration: None,
+                confirm_cash_below_zero: true,
+            },
+        )
+        .unwrap_or_else(|e| panic!("a khata entry: {e:?}"));
+    };
+    out("08-10-2026", "20,000", "خاندان کا خرچ");
+    vouchers::save_khata_in(
+        &y.w.env.ctx,
+        &y.w.owner,
+        &mandi_services::core::khata::KhataInInput {
+            date: "15-10-2026".into(),
+            khata_account_id: Some(khata),
+            amount: "5,000".into(),
+            reason: "رقم واپس آئی".into(),
+            narration: None,
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap_or_else(|e| panic!("a khata entry: {e:?}"));
+    out("27-10-2026", "3,000", "خاندان کا خرچ");
+
+    // 3. The drafts. A line to a cash buyer is cash by itself; a credit line says so.
+    let line = |key: &str, buyer: i64, qty: &str, rate: &str, pay: PaymentType| {
+        let mut s = world::sale(key, buyer, qty, rate);
+        s.payment_type = Some(pay);
+        s
+    };
+    let lot = |w: &world::World,
+               key: &str,
+               seller: i64,
+               it: (i64, i64),
+               qty: &str,
+               lines: Vec<SaleInput>| {
+        let mut lot = world::lot(w, key, seller, it.0, qty);
+        lot.packing_id = Some(it.1);
+        lot.sales = lines;
+        lot
+    };
+    let day14 = BikriDraft {
+        header: header(date((2026, 10, 14)), "LES-7101"),
+        lots: vec![
+            lot(
+                &y.w,
+                "lot-0",
+                karim,
+                banana,
+                "30",
+                vec![
+                    line("c0", naveed, "10", "1900", PaymentType::Cash),
+                    line("c1", rafique, "20", "1900", PaymentType::Credit),
+                ],
+            ),
+            lot(
+                &y.w,
+                "lot-1",
+                bashir,
+                apple,
+                "20",
+                vec![
+                    line("c2", naveed, "12", "4300", PaymentType::Credit),
+                    line("c3", rafique, "8", "4300", PaymentType::Credit),
+                ],
+            ),
+        ],
+    };
+    let mut aamir = line("p0", y.w.pukhta_buyer, "8", "4300", PaymentType::Credit);
+    aamir.pukhta = Some(PukhtaInput {
+        name_ur: "عامر".into(),
+        name_en: "Aamir".into(),
+        phone: "03001234567".into(),
+    });
+    let day21 = BikriDraft {
+        header: header(date((2026, 10, 21)), "LES-7102"),
+        lots: vec![lot(
+            &y.w,
+            "lot-0",
+            bashir,
+            apple,
+            "24",
+            vec![
+                aamir,
+                line("p1", nadir, "6", "4300", PaymentType::Credit),
+                line("p2", rafique, "10", "4300", PaymentType::Credit),
+            ],
+        )],
+    };
+    // The line with ریٹ مختلف is the LAST apple line of 22-10-2026.
+    let mut different = line("r1", rafique, "12", "4300", PaymentType::Credit);
+    different.rate_differs = true;
+    different.buyer_rate = Some("4350".into());
+    let day22 = BikriDraft {
+        header: header(date((2026, 10, 22)), "LES-7103"),
+        lots: vec![lot(
+            &y.w,
+            "lot-0",
+            karim,
+            apple,
+            "20",
+            vec![
+                line("r0", naveed, "8", "4250", PaymentType::Credit),
+                different,
+            ],
+        )],
+    };
+    let old16 = BikriDraft {
+        header: header(date((2026, 10, 16)), "LES-7104"),
+        lots: vec![lot(
+            &y.w,
+            "lot-0",
+            saleem,
+            mosambi,
+            "40",
+            vec![line("o0", naveed, "20", "2500", PaymentType::Credit)],
+        )],
+    };
+    let new19 = BikriDraft {
+        header: header(date((2026, 10, 19)), "LES-7105"),
+        lots: vec![lot(
+            &y.w,
+            "lot-0",
+            jameel,
+            mosambi,
+            "30",
+            vec![
+                line("n0", naveed, "10", "2600", PaymentType::Credit),
+                line("n1", rafique, "10", "2650", PaymentType::Credit),
+                line("n2", naveed, "10", "2550", PaymentType::Credit),
+            ],
+        )],
+    };
+    save_bikri(y, day14);
+    save_bikri(y, day21);
+    save_bikri(y, day22);
+    let old = save_bikri(y, old16);
+    save_bikri(y, new19);
+    // The later sale of the older بکری's 20 left, on the day of the newer one, saved AFTER it.
+    let stock = bikri::stock_list(
+        &y.w.env.ctx,
+        &StockListInput {
+            date: Some(ddmmyyyy(date((2026, 10, 16)))),
+            item_id: Some(mosambi.0),
+            ..StockListInput::default()
+        },
+    )
+    .expect("the stock of mosambi");
+    let lot_id = stock
+        .rows
+        .iter()
+        .find(|r| r.bikri_id == old.bikri_id)
+        .map(|r| r.lot_id)
+        .expect("the mosambi of the older بکری are left to sell");
+    let mut later = world::sale("later", rafique, "20", "2400");
+    later.sale_id = None;
+    later.payment_type = Some(PaymentType::Credit);
+    bikri::later_sale_save(
+        &y.w.env.ctx,
+        &y.w.owner,
+        &LaterSaleSaveInput {
+            lot_id,
+            date: ddmmyyyy(date((2026, 10, 19))),
+            sales: vec![later],
+            confirm_cash_below_zero: true,
+        },
+    )
+    .expect("the later sale of the older mosambi");
 }
 
 fn end_of_year(y: &Year) {

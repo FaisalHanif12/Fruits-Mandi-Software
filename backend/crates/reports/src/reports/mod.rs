@@ -112,6 +112,7 @@ pub use print_data::{
     build_print,
 };
 pub use statement::{StatementRequest, statement_page, statement_paging, statement_request};
+pub use view::newest_first_reverses;
 
 pub(crate) use accounts::PageSpec;
 use filters::{LineSort, Takes, Typed, resolve};
@@ -540,6 +541,10 @@ fn fast_sort_of(id: ReportId, sort: &mandi_core::paging::SortInput) -> Option<Op
     let desc = sort.direction == SortDirection::Desc;
     match (id, sort.column.as_str()) {
         (ReportId::R11 | ReportId::R12 | ReportId::R13 | ReportId::R14, "date") => {
+            Some(desc.then_some(LineSort::Newest))
+        }
+        // The sales registers: newest first is one SQL page too (D7, plan 59 F1).
+        (ReportId::R2 | ReportId::R3 | ReportId::R4, "date") => {
             Some(desc.then_some(LineSort::Newest))
         }
         (ReportId::R11 | ReportId::R13 | ReportId::R14, "debit") => Some(Some(LineSort::Amount {

@@ -737,6 +737,18 @@ assistant-instant-laga = { $role ->
     [buyer] { -laga } charged to { -gahak } { $name } { $period }: { $figure }
    *[shop] { -laga } { $period }: { $figure }
 }
+# review: pending
+assistant-instant-commission-buyer-item = { -commission } charged to { -gahak } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item-own = { -commission } charged to { -beopari } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-commission-seller-item = Total { -commission } on the goods of { -beopari } { $name } in { $item } { $period } (both sides and { -laga }, including the line above): { $figure }
+# review: pending
+assistant-instant-laga-buyer-item = { -laga } charged to { -gahak } { $name } on { $item } { $period }: { $figure }
+# review: pending
+assistant-instant-last-rate-item = Last rate of { $item } { $period }: { $figure }, on { $date }
+# review: pending
+assistant-instant-last-rate-buyer-item = Last rate of { $item } to { -gahak } { $name } { $period }: { $figure }, on { $date }
 # The figure carries its own side word and the tick, so no side word is written here.
 # review: pending
 assistant-instant-party = { $kind ->

@@ -10,7 +10,7 @@
 //!
 //! Example: "پچھلے چھ مہینوں میں" with the question number 6 becomes "پچھلے {{q.n1}} مہینوں میں".
 
-use mandi_services::domain::figures::QuestionNumber;
+use mandi_services::domain::figures::{NumberUnit, QuestionNumber};
 
 use crate::check::{padded, word_spans};
 use crate::model_answer::{Piece, pieces};
@@ -148,11 +148,28 @@ fn joins_digits(c: char) -> bool {
 /// A text with each standalone number written in digits that is exactly a number of the question put
 /// back as the reference to it, or `None` when no number is. The model wrote "3" for the Owner's own
 /// "agle 3 mahine"; it is his number, not a figure of the books (the number-word echo, for digits).
-/// A number that is part of a longer figure (`30,000`, `3.5`) is never touched.
+/// A number that is part of a longer figure (`30,000`, `3.5`) is never touched. A number that reads as an
+/// amount (a plain number of 100 or more, or one with lakh, hazar or crore) is never put back either:
+/// "kya akram ka bakaya 5000 hai" answered "ہاں، 5000" would confirm the Owner's own number as if the
+/// books had said it, with no read (D7 R13). The answer then fails the digit check and the rewrite
+/// has to cite the books.
 ///
 /// Example: "اگلے 3 مہینے" with the question number 3 becomes "اگلے {{q.n1}} مہینے".
 pub fn put_digits_back(text: &str, numbers: &[QuestionNumber]) -> Option<String> {
-    if numbers.is_empty() {
+    const COUNT_LIMIT: i64 = 100;
+    // Each number keeps its place in the question's list: `{{q.nK}}` points into the FULL list, so a
+    // number put back after an amount was left out must still be named by its own place (money review 11:
+    // "bakaya 5000 hai pichle 3 mahine" has n1 = 5000 and n2 = 3, and the 3 is `q.n2`).
+    let usable: Vec<(usize, &QuestionNumber)> = numbers
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| match n.unit {
+            NumberUnit::Months | NumberUnit::Days | NumberUnit::Years | NumberUnit::Percent => true,
+            NumberUnit::Plain => n.number < COUNT_LIMIT,
+            NumberUnit::Amount => false,
+        })
+        .collect();
+    if usable.is_empty() {
         return None;
     }
     let mut changed = false;
@@ -197,9 +214,10 @@ pub fn put_digits_back(text: &str, numbers: &[QuestionNumber]) -> Option<String>
                     let hit = value
                         .filter(|_| !before_joins && !after_joins)
                         .and_then(|v| {
-                            numbers
+                            usable
                                 .iter()
-                                .position(|n| u64::try_from(n.number).is_ok_and(|x| x == v))
+                                .find(|(_, n)| u64::try_from(n.number).is_ok_and(|x| x == v))
+                                .map(|(place, _)| *place)
                         });
                     if let Some(k) = hit {
                         out.push_str(w.get(at..start).unwrap_or(""));
@@ -508,6 +526,48 @@ mod tests {
             None
         );
         assert_eq!(back_digits("agle mahine ka andaza", "اگلے 3 مہینے"), None);
+    }
+
+    #[test]
+    fn a_bare_amount_of_the_owner_is_never_put_back_as_if_the_books_had_said_it() {
+        // D7 R13: "ہاں، 5000" for "kya akram ka bakaya 5000 hai" confirms his own number with no read.
+        assert_eq!(
+            back_digits("kya akram ka bakaya 5000 hai", "ہاں، 5000"),
+            None
+        );
+        assert_eq!(back_digits("khata 100 hai", "ہاں 100"), None);
+        assert_eq!(back_digits("3 lakh ka target", "300000"), None);
+        // A count, a month and a percent are still his number.
+        assert_eq!(
+            back_digits("top 5 buyers", "سرفہرست 5 گاہک").as_deref(),
+            Some("سرفہرست {{q.n1}} گاہک")
+        );
+        assert_eq!(
+            back_digits("10% zyada ho to", "10% زیادہ").as_deref(),
+            Some("{{q.n1}}% زیادہ")
+        );
+        // A number left out must not shift the place of the next one: the model's 3 is `q.n2`, never
+        // `q.n1` (which would show 5000), and the same for an amount in lakh (money review 11).
+        assert_eq!(
+            back_digits(
+                "kya akram ka bakaya 5000 hai pichle 3 mahine",
+                "پچھلے 3 مہینے"
+            )
+            .as_deref(),
+            Some("پچھلے {{q.n2}} مہینے")
+        );
+        assert_eq!(
+            back_digits("3 lakh ka target agle 6 mahine", "اگلے 6 مہینے").as_deref(),
+            Some("اگلے {{q.n2}} مہینے")
+        );
+    }
+
+    #[test]
+    fn the_place_of_a_number_put_back_is_the_place_in_the_questions_own_list() {
+        let q = question_numbers("kya akram ka bakaya 5000 hai pichle 3 mahine");
+        assert_eq!(q.len(), 2, "{q:?}");
+        assert_eq!(q.first().map(|n| n.number), Some(5000));
+        assert_eq!(q.get(1).map(|n| n.number), Some(3));
     }
 
     fn back_digits(question: &str, text: &str) -> Option<String> {

@@ -8,6 +8,7 @@
 // Flags in the hash, for example `#/dev/reports/R18?many`:
 //   empty   the report has no rows        many   230 rows (page by page)
 //   down    the backend fails             rahim  the ledger of a seller (party 18)
+//   grade   R2 with the quality column    threecols  R2 to R4 with the quality, packing and seller's rate
 //   R35 asks for the table of every party; a party picked (or Enter on a row) gives his slip.
 
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
@@ -52,6 +53,7 @@ import {
   R36_PARTNER,
 } from './reports-gardens-real';
 import { PRINT_R35_TABLE_EN, PRINT_R35_TABLE_UR, R35_TABLE } from './reports-party-real';
+import { R2_THREE_COLUMNS } from './register-three-columns';
 import { GRADE_R2, GRADE_R35_AKRAM } from './sale-grade-real';
 import {
   PRINT_R33_PARTNER_EN,
@@ -253,6 +255,10 @@ function page(input: Input): ReportPage {
   // `?grade` shows the real answers of plan 58: lines with a quality, a grade column in R2 and R35.
   if (devFlag('grade') && id === 'R2') base = GRADE_R2;
   if (devFlag('grade') && id === 'R35' && party?.account_id !== undefined) base = GRADE_R35_AKRAM;
+  // `?threecols` shows R2, R3 and R4 with the quality, the packing and the seller's rate together (plan 59).
+  if (devFlag('threecols') && (id === 'R2' || id === 'R3' || id === 'R4')) {
+    base = R2_THREE_COLUMNS;
+  }
   // The real fixtures written before plan 42 have no `tables`; the backend now always sends the field
   // (empty for every report but the day total sheet). Until the backend writes them again, say so here.
   base = { ...base, tables: (base as Partial<ReportPage>).tables ?? [] };

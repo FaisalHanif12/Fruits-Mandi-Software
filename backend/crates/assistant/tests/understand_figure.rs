@@ -440,9 +440,10 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "720 1520", "view B"),
     ("rahim aur karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r4.rows.a18.total_comm r3.matches.0.name r1.from r1.to r5.rows.a19.seller_comm r3.matches.0.name r1.from r1.to r5.rows.a19.total_comm", "1764 3928 720 1520", "view B view B"),
     ("rahim ki bikri aur commission is mahine", "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "29400 1764 3928", "view B"),
-    // A partner's capital now: R31 for him, read in two places (the worked day has none).
-    ("partner b ka sarmaya", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "R31"),
-    ("partner b ka sarmaya kitna laga hua hai", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "R31"),
+    // A partner's capital now: R31 for him, read in two places (the worked day has none). No button: the
+    // capital is not on the statement page of R31, and a button opens only what holds the figure (D331).
+    ("partner b ka sarmaya", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", ""),
+    ("partner b ka sarmaya kitna laga hua hai", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", ""),
     // Several flows of the same record or of the shop, one line each.
     ("commission aur sale aaj ki", "commission[role=shop,period=today] + sale[role=shop,period=today]", "r1.today_commission.amount r1.today_sales.amount", "5448✓ 41400✓", "tiles"),
     ("aaj ki bikri aur commission", "sale[role=shop,period=today] + commission[role=shop,period=today]", "r1.today_sales.amount r1.today_commission.amount", "41400✓ 5448✓", "tiles"),
@@ -512,9 +513,9 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("gala kitna hai", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
     ("how much cash do we have", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
     ("روکڑ کتنی ہے", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
-    ("kul ugrahi kitni hai", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
-    ("total dues", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
-    ("total dues kitne hain", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
+    ("kul ugrahi kitni hai", "shop[kind=total-dues]", "r1.total_dues.amount", "21564✓", "tiles R20"),
+    ("total dues", "shop[kind=total-dues]", "r1.total_dues.amount", "21564✓", "tiles R20"),
+    ("total dues kitne hain", "shop[kind=total-dues]", "r1.total_dues.amount", "21564✓", "tiles R20"),
     ("buyers ke dues kitne hain", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
     ("dues kitne hain", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
     ("gahakon ke kul bakaya", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
@@ -546,7 +547,7 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("اس مہینے کا کمیشن", "commission[role=shop,period=range]", "r1.from r1.to r2.totals.total_comm", "5448", "view A"),
     ("پچھلے مہینے کی بکری", "sale[role=shop,period=range]", "r1.from r1.to r2.totals.gross", "0", "view A"),
     ("روکڑ", "shop[kind=cash]", "r1.cash_in_hand.amount", "58484✓", "tiles"),
-    ("کل اگراہی", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "21564✓", "tiles R20"),
+    ("کل اگراہی", "shop[kind=total-dues]", "r1.total_dues.amount", "21564✓", "tiles R20"),
     ("باقی مال کتنا ہے", "stock[role=shop]", "r2.totals.balance r2.count", "n0 n0", "tiles R10"),
     ("الف کی کل رقم", "partner-total[]", "r1.rows.s1.name r1.rows.s1.total", "-1004✓", "R31"),
     ("کیلے کی بکری اس مہینے", "sale[role=item,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.i1.gross", "29400", "view A"),
@@ -595,9 +596,10 @@ const YEAR: &[(&str, &str, &str, &str, &str)] = &[
     ("kele ka stock", "stock[role=item]", "r1.matches.0.name r2.totals.balance r2.count", "n87 n9", "R10"),
     ("saib ka stock", "stock[role=item]", "r1.matches.0.name r2.totals.balance r2.count", "n40 n3", "R10"),
     ("cash kitna hai", "shop[kind=cash]", "r1.cash_in_hand.amount", "8272035✓", "tiles"),
-    ("kul ugrahi kitni hai", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "9670140✓", "tiles R20"),
-    // FR-19.9 (live run 2, Q1052, Q1054): "kul ugrahi" and "total dues", by collector or city too, are the
-    // buyers' dues of R20, never the tile that also holds the dead amount.
+    ("kul ugrahi kitni hai", "shop[kind=total-dues]", "r1.total_dues.amount", "9670140✓", "tiles R20"),
+    // "kul ugrahi" and "total dues" are the tile کل اگراہی (PRD 9.1, glossary, FR-19.9; D7 O1: PRD v1.31
+    // overrules the old ruling); by collector or city they stay the buyers' dues of R20 (live run 2, Q1052,
+    // Q1054), never the tile that also holds the dead amount.
     ("agrahi wale ke hisab se kul baqaya kitna hai", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "9670140✓", "tiles R20"),
     ("total dues by collector", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "9670140✓", "tiles R20"),
     ("buyers ke dues kitne hain", "shop[kind=buyers-dues]", "r1.buyers_dues.amount", "9670140✓", "tiles R20"),
@@ -784,7 +786,6 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "اول سیب کی آج کی بکری",
         "first quality apple sales today",
         "A grade banana sales this month",
-        "akram ko kela aakhri kis rate pe diya",
         "aaj commission bikri ka kitne fisad",
         "akram aur arshad ka jama kitna hua",
         "aaj kele ki kitni bikri hui",

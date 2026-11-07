@@ -186,6 +186,21 @@ pub fn comparing(question: &str) -> bool {
     let strong = has(
         question,
         &[
+            // "by how much", "kitna zyada": the size of a difference is asked (D7 O5).
+            "by how much",
+            "how much more",
+            "how much less",
+            "kitna zyada",
+            "kitne zyada",
+            "kitni zyada",
+            "kitna ziada",
+            "kitna kam",
+            "kitne kam",
+            "کتنا زیادہ",
+            "کتنے زیادہ",
+            "کتنی زیادہ",
+            "کتنا کم",
+            "کتنے کم",
             "farq",
             "fark",
             "difference",
@@ -1071,4 +1086,81 @@ mod year_ahead_tests {
             assert!(!year_ahead(q), "{q}");
         }
     }
+}
+
+/// True when the question asks HOW MANY of something, not how much money: "the number of bills", "how
+/// many sellers", "kitne bayopariyon ko", "کتنے بل". An instant answer that holds no count leaves such
+/// a part out, so the question goes to the model (D7 O3, O4). "Kitne paise", "kitne ka" and "how many
+/// rupees" ask an amount and are not a count.
+///
+/// Example: "today's sales, the number of bills and the commission" is true; "kitne paise dene hain" is
+/// false.
+pub fn asks_count(question: &str) -> bool {
+    // "number of", "count of", "how many": a count, unless money or months follow.
+    const ANY: [&str; 3] = ["number of", "count of", "how many"];
+    const MONEY: [&str; 11] = [
+        "rupees", "rupee", "money", "paise", "paisa", "rs", "months", "month", "روپے", "پیسے",
+        "رقم",
+    ];
+    // "kitne", "kitni": a count only before a word for things that are counted ("kitne bayopariyon",
+    // "kitni bikriyan"); "kitni bikri" and "kitne paise" ask an amount.
+    const HEADS: [&str; 5] = ["kitne", "kitni", "kitnay", "کتنے", "کتنی"];
+    const COUNTED: [&str; 34] = [
+        "bill",
+        "bills",
+        "bil",
+        "bikriyan",
+        "bikriyon",
+        "bikrian",
+        "بل",
+        "بلز",
+        "بکریاں",
+        "بکریوں",
+        "bayopari",
+        "bayopariyon",
+        "byopari",
+        "byopariyon",
+        "beopari",
+        "beopariyon",
+        "gahak",
+        "gahakon",
+        "buyers",
+        "sellers",
+        "customers",
+        "parties",
+        "party",
+        "log",
+        "logon",
+        "partners",
+        "items",
+        "lots",
+        "lot",
+        "trucks",
+        "entries",
+        "گاہک",
+        "گاہکوں",
+        "بیوپاریوں",
+    ];
+    let spaced = spaced(question);
+    let words: Vec<&str> = spaced.split_whitespace().collect();
+    let key = |w: &str| text::search_ur(&text::search_en(w));
+    let money: Vec<String> = MONEY.iter().map(|w| key(w)).collect();
+    let counted: Vec<String> = COUNTED.iter().map(|w| key(w)).collect();
+    let heads: Vec<String> = HEADS.iter().map(|w| key(w)).collect();
+    let any_head = ANY.iter().any(|head| {
+        let head: Vec<String> = head.split(' ').map(key).collect();
+        words.windows(head.len()).enumerate().any(|(at, window)| {
+            window.iter().zip(&head).all(|(w, h)| *w == h.as_str())
+                && words
+                    .get(at.saturating_add(head.len()))
+                    .is_some_and(|next| !money.iter().any(|m| m == next))
+        })
+    });
+    any_head
+        || words.iter().enumerate().any(|(at, word)| {
+            heads.iter().any(|h| h == word)
+                && words
+                    .get(at.saturating_add(1))
+                    .is_some_and(|next| counted.iter().any(|c| c == next))
+        })
 }

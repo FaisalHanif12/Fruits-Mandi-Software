@@ -5,23 +5,24 @@ or writes the key.
 
 ## Files
 
-| File                                                                                     | What it is                                                                                                                                                                                                                           |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `run.mjs`                                                                                | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--facet`, `--every`, `--threads`, `--results`.                                                                                                                    |
-| `questions.tsv`                                                                          | The bank (1,126 questions). Built, never edited by hand.                                                                                                                                                                             |
-| `questions-110.tsv`                                                                      | The first 110 questions, frozen. They keep the D6 mix.                                                                                                                                                                               |
-| `bank-spec.mjs`                                                                          | The new questions, one entry for each meaning, with its wordings.                                                                                                                                                                    |
-| `bank-spec-a2.mjs`                                                                       | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`.                                                                                                                                      |
-| `bank-spec-mix.mjs`                                                                      | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026).                                                                                                                                                        |
-| `bank-spec-cap.mjs`                                                                      | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen.                                                                                                             |
-| `bank-spec-cap-more.mjs`, `-registers.mjs`, `-nosuch.mjs`, `-print.mjs`, `-forecast.mjs` | The other parts of facet CAP: reports, views, tiles and records with oracle figures; the registers and lists; "no such record" for every row that names one; print and open of the mapped reports; the forecast and the mixed cells. |
-| `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv`                          | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code.                                                                                                               |
-| `capability-items.mjs`, `build-capability-items.mjs`, `capability-items.tsv`, `item-axis-sold.json`                 | The ITEM AXIS of the matrix (Umar, 06-11-2026): every measure about an item against every kind of subject in every period (2,070 cells). One bank question for each answerable cell, facet `ITEM`. |
-| `capability-money.mjs`, `capability-money.tsv` | The PERIOD AXIS of the money and party subjects (lead, 06-11-2026): 950 cells, facet `MONEY`. Built by the same `build-capability-items.mjs`. |
-| `build-bank.mjs`                                                                         | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date.                                                                                                                                       |
-| `oracle-keys.txt`                                                                        | The facts the oracle gives (the `@key` of a question). Checked by a Rust test.                                                                                                                                                       |
-| `urdu-review.tsv`                                                                        | The sheet for the Urdu reviewer, written by every run.                                                                                                                                                                               |
-| `check-modes.mjs`                                                                        | A scripted check of `--bank` and `--threads` (no model, no key, no cargo).                                                                                                                                                           |
+| File                                                                                                | What it is                                                                                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `run.mjs`                                                                                           | The runner and the scorer. `--check`, `--self-test`, `--category`, `--world`, `--only`, `--facet`, `--every`, `--threads`, `--results`.                                                                                              |
+| `questions.tsv`                                                                                     | The bank (1,126 questions). Built, never edited by hand.                                                                                                                                                                             |
+| `questions-110.tsv`                                                                                 | The first 110 questions, frozen. They keep the D6 mix.                                                                                                                                                                               |
+| `bank-spec.mjs`                                                                                     | The new questions, one entry for each meaning, with its wordings.                                                                                                                                                                    |
+| `bank-spec-a2.mjs`                                                                                  | Facet A2: the 120 real-time figure questions (plan 55 Section 10), imported by `bank-spec.mjs`.                                                                                                                                      |
+| `bank-spec-mix.mjs`                                                                                 | Facet MIX: one question with a real figure AND a forecast (Umar, 05-11-2026).                                                                                                                                                        |
+| `bank-spec-cap.mjs`                                                                                 | Facet CAP: the cells of the capability matrix that had no question (plan 55 Section 11): open and write to every screen.                                                                                                             |
+| `bank-spec-cap-more.mjs`, `-registers.mjs`, `-nosuch.mjs`, `-print.mjs`, `-forecast.mjs`            | The other parts of facet CAP: reports, views, tiles and records with oracle figures; the registers and lists; "no such record" for every row that names one; print and open of the mapped reports; the forecast and the mixed cells. |
+| `capability-rows.mjs`, `build-capability.mjs`, `capability.tsv`                                     | The capability matrix (plan 55 Section 11): every thing the app holds against every question type, read from the code.                                                                                                               |
+| `capability-items.mjs`, `build-capability-items.mjs`, `capability-items.tsv`, `item-axis-sold.json` | The ITEM AXIS of the matrix (Umar, 06-11-2026): every measure about an item against every kind of subject in every period (2,070 cells). One bank question for each answerable cell, facet `ITEM`.                                   |
+| `capability-money.mjs`, `capability-money.tsv`                                                      | The PERIOD AXIS of the money and party subjects (lead, 06-11-2026): 950 cells, facet `MONEY`. Built by the same `build-capability-items.mjs`.                                                                                        |
+| `build-bank.mjs`                                                                                    | Builds `questions.tsv` from the two files above. `run.mjs --check` fails if it is out of date.                                                                                                                                       |
+| `oracle-keys.txt`                                                                                   | The facts the oracle gives (the `@key` of a question). Checked by a Rust test.                                                                                                                                                       |
+| `urdu-review.tsv`                                                                                   | The sheet for the Urdu reviewer, written by every run.                                                                                                                                                                               |
+| `check-modes.mjs`                                                                                   | A scripted check of `--bank`, `--threads` and `--offline` (no model, no key, no cargo).                                                                                                                                              |
+| `bank-spec-d7.mjs`, `build-bank-d7.mjs`, `realtime-d7.tsv`, `realtime-d7-coverage.md`               | The D7 bank (plan 59 B1): 455 real-time figure questions, picky on purpose, with the list of every kind of record and figure the app keeps and the question ids that cover it. See "The D7 bank" below.                              |
 
 The oracle itself is Rust: `backend/crates/assistant/tests/robustness_year/` (`seed.rs` builds the books
 through the app's own save functions, `oracle.rs` asks the app's own reports and analytics).
@@ -172,7 +173,7 @@ quality on their sale lines: inside a lot the highest rate is `first`, the next 
 Three offline tests keep it honest: `a_quality_changes_no_amount_and_follows_the_rate_inside_a_lot` (the books built twice, with and
 without a quality: every non-quality fact is equal, and inside each lot the quality follows the rate),
 `dump_the_oracle_without_grades` (`MANDI_ORACLE_UNGRADED_JSON=<file>` writes the facts of the books with no quality, to diff against the
-graded dump: only `ixq.*` differs) and `the_print_data_of_r5_and_r1_carries_the_quality` (R5 "Print All", the seller bill and the buyer
+graded dump: only the quality facts differ, `ixq.*` and the `d7.sale.*` combinations that filter on a quality) and `the_print_data_of_r5_and_r1_carries_the_quality` (R5 "Print All", the seller bill and the buyer
 slips of a بکری carry the quality, in English and in Urdu; one with none prints as before). The bank asks "awwal seb kal kitne ka bika",
 "doyam kele ka aaj ka rate" and three more in three languages (groups `IQ-*`) and the quality cells of the item axis. A group whose key is missing waits in `run.mjs --check` as for any facet.
 
@@ -207,7 +208,10 @@ node scripts/ai-eval/run.mjs --threads 1    # the live run on one line (default 
 node scripts/ai-eval/run.mjs --bank FILE --check   # another bank (a hidden one): the per-row rules only
 node scripts/ai-eval/run.mjs --bank FILE    # ... run live and scored the same way
 node scripts/ai-eval/run.mjs --oracle-dump out.json   # the oracle facts with values, and the names
-node scripts/ai-eval/check-modes.mjs        # --bank and --threads behave as written (no model, no key)
+node scripts/ai-eval/check-modes.mjs        # --bank, --threads and --offline behave as written (no model, no key)
+node scripts/ai-eval/build-bank-d7.mjs      # rebuild realtime-d7.tsv and realtime-d7-coverage.md from bank-spec-d7.mjs
+node scripts/ai-eval/run.mjs --bank scripts/ai-eval/realtime-d7.tsv --check      # the D7 bank meets the per-row rules
+node scripts/ai-eval/run.mjs --bank scripts/ai-eval/realtime-d7.tsv --offline    # NO KEY, NO NETWORK: see "Offline" below
 node scripts/ai-eval/run.mjs --results F --summary-out S --detail-out D --review-out R   # score a file again, write elsewhere
 ```
 
@@ -241,6 +245,115 @@ MANDI_ORACLE_MANIFEST="$PWD/scripts/ai-eval/oracle-keys.txt" \
 ```
 
 Tests that need no key (from `backend/`): `cargo test -p mandi-assistant --test robustness_live`.
+
+## The D7 bank (plan 59 task B1)
+
+`realtime-d7.tsv` is a bank of its own (`--bank scripts/ai-eval/realtime-d7.tsv`), built by `build-bank-d7.mjs` from
+`bank-spec-d7.mjs`; never edited by hand. Its goal is to FIND flaws in real-time figures, not to pass:
+
+- category A only (a figure, a list or a count from the books); no help, advice, forecast or what-if;
+- 455 questions in 193 groups. Every question has `mix=short` (one figure asked, a plain wording: the common
+  questions of the shop, about half of the bank) or `mix=picky` (several figures or filters at once) in its
+  filters, so the share answered with no model call is honest for both. `--mix short` or `--mix picky` runs one
+  kind;
+- the rich year, every expected figure an oracle fact (`@key`), never typed;
+- simple questions (one figure, the plain wording the Owner uses) and complex ones (a buyer and a seller and an item
+  and a period, cash or credit, a quality: every filter must hold);
+- Roman Urdu, Urdu letters and English in even thirds, about 15% to 20% misspelt, new wordings (no question of
+  `questions.tsv` is repeated);
+- zero days and zero filters ("nothing happened") must say 0, never "not found";
+- Umar's own example is T01: "پچھلے مہینے 14 تاریخ کو اکرم نے کیا کیا خریدا، موقع پر کتنا نقد دیا اور کتنا ادھار
+  رہا". The rich year has two Akrams, so the app asks "which one" and the harness clicks Akram Toll Tax
+  (`click=1` in the filters; the answer after the click is scored).
+
+Group `N01` to `N25` are one question for each finding of the reviewer study (plan 59 Section 5.5, R1 to R13b: the
+newest line, a quality with the last rate, a بکری number, a voucher number, the same name in two accounts, a packing
+word, a cash or credit word, uncommon period words, a typed number that must not become the answer). `S01` to `S70` are
+the common short questions.
+
+The newest sale line and the last rate (plan 59 Section 11, the lead's rule): "rate" is the SELLER rate; the newest
+line has the latest posting date, then the highest بکری number, then the highest line number, never the row id. Every
+`last_rate` fact of the oracle (`ix.*`, `ixq.*`, `veg.*`, `d7.sale.*`) follows it. The rich year has three more بکری
+for it (`seed.rs`, `d7_last_rate_cases`, grapes, out of season in November, so they are the only grapes lines of the
+week): one of 03-11 with a LATER SALE on 05-11 (4,600), one of 05-11 whose lines are EDITED last (so they have the
+newest row ids, 5,200), and the highest بکری of 05-11 with four lines and an edit (its last line, 5,000). The newest
+grapes rate is 5,000; a sort by row id says 5,200 (for Shahid Raza: 4,900, against 5,050). All these lines are to cash
+buyers, so the dues of the books are what they were without them. The oracle checks both
+rates when it is built, so the cases keep telling the two rules apart. Note: an edit does NOT keep a line's number in
+this app; it writes every line again with the next numbers, in the same order.
+
+`realtime-d7-coverage.md` (written by the builder) lists every kind of record and figure the app keeps, with the
+question ids for each, and says why a kind has none (cities and addas, settings, working tables).
+
+The oracle facts of this bank are the `d7.*` family of `oracle.rs` (`d7_facts`): SQL on the books, never the
+assistant's tools. `d7.bd.<buyer>.<day>.*` is one buyer's day (each item with qty, rate and amount, the cash on the
+spot, the credit, receipts, what is left, the balance before and after), cross-checked against the app's own day
+sheet R35 when the oracle is built; `d7.sale.<combination>.*` are the filter combinations (lines, qty, gross,
+commissions, laga, charges, average, highest, lowest, last and first rate and date, how many buyers and sellers),
+cross-checked against view A where they overlap; and `d7.recv.*`, `d7.stock.*`, `d7.bikri.*`, `d7.partner.*`,
+`d7.last_bill.*`, `d7.cmp.*`, `d7.exp.*`. A mistake in the SQL stops the oracle from being built.
+
+The rich year holds what Umar's example needs (`seed.rs`, `d7_richer_cases`, added at the very end, add only, through the
+app's own saves, on past days that are still open): a buyer with BOTH a cash line and a credit line on one day
+(Naveed Traders, 14-10-2026: 10 banana for cash, 12 apple on credit), a city (Kasur) on three new accounts with a
+balance, a one-time person of the shared پختہ کھاتہ (Aamir) and a پختہ party's own account (Nadir), a separate khata
+(Family Khata, three entries), a line with ریٹ مختلف (22-10-2026, seller 4,300, buyer 4,350, the newest apple line of
+its day) and a later sale of an older بکری's leftover on a day with a newer بکری of the same item (mosambi,
+19-10-2026: the newest line is 2,550, the row id says 2,400). The oracle checks the rule against the row id for both
+cases, and the city and the cash and credit day against R21 and the day sheet R35, when it is built.
+
+To write a new copy of the books for reading with a SQL tool (the facts of this bank were written that way):
+
+    MANDI_YEAR_DB_OUT=/some/folder/year.db cargo test -p mandi-assistant --test robustness_live -- --nocapture --exact export_the_year_snapshot   # from backend/
+
+## Key limit (`--key-limit`): what is left on the key, before a live run
+
+    node scripts/ai-eval/run.mjs --key-limit
+
+Only the lead runs it. It reads the key from the app's own store the way the live run does, calls
+`GET https://openrouter.ai/api/v1/key` once and prints ONLY `limit`, `usage`, `limit_remaining` and `is_free_tier`
+(lines that start with `KEY-LIMIT`). It never prints the key, a header, the label of the key or the rest of the
+reply. A 403 or a 402 prints its reason (the provider's words, the key cut out) and stops (exit 1); no key saved is
+exit 3. The work is the ignored test `key_limit_left` in `robustness_live.rs`; `check-modes.mjs` checks from the
+source that none of its print lines names the key, a header, the label or the body.
+
+## Offline (`--offline`): no key, no network
+
+    node scripts/ai-eval/run.mjs --bank scripts/ai-eval/realtime-d7.tsv --offline
+
+It runs the same path as the live run (`run::ask` on the seeded books) with a model that never answers: every call ends
+the way a call ends when the computer has no internet, with no wait. So the app's own understanding, its plans, its
+reads before the first call and its instant answers (PRD FR-7.90) run for real on the rich year and are scored by the
+same scorer; only what needs the model ends as `offline`. Nothing here reads, opens or prints the key: the runtime has an
+in-memory placeholder that is not a key, the real client (`OpenRouterClient`) and the real key store are never built, and
+`robustness_live.rs` has a test that proves it (`offline_mode_never_builds_the_real_client_or_opens_the_key_store`).
+The test is `offline_questions`, not ignored but it does nothing unless `MANDI_EVAL_OFFLINE=1` (which `--offline` sets).
+Results go to `backend/target/ai-eval-<name of the bank>-offline/` (`ai-eval-offline/` for the team bank), never into
+the live folders, and no Urdu sheet is written.
+
+The report (`offline-report.txt`, `offline-summary.json`) puts every question in one class:
+
+| Class         | Meaning                                                                                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LOCAL RIGHT   | the app answered by itself (no model) and every expected figure is there                                                                                                                                                           |
+| LOCAL WRONG   | the app answered by itself and the scorer says no. Always a defect. Split in `wrong figure` (it shows none of the figures asked), `incomplete` (a right figure, an asked figure left out) and `other` (a button, a log or a route) |
+| NEEDS MODEL   | the app could not answer alone. The estimate of the model calls a live run needs: 1 when the app read the books before the call, else 2, 3 when a name is to be found first                                                        |
+| ASKED/REFUSED | the app asked or refused with no model ("which one", "need dates", "not found", "outside the books"); `expected` or UNEXPECTED (the question wanted an answer)                                                                     |
+
+It also gives the share by section, by language, by number of figures asked (the 60% target is for plain questions),
+the wordings of one meaning that end differently, the speed of the app's own answers (a debug build: only a guide),
+and the estimated cost of a live run. The exit code is 1 when any local answer is wrong. It also writes `offline-detail.tsv` (one line for each question: its
+class, the model calls it would need, the time the app took) and a SPEED AND THE TARGETS block for every question, the
+common short ones and the picky ones: the share answered right with no model call (target 60%), with no call or one
+(85%), the app's own time (measured), and the wait with the model PROJECTED for an assumed time of one call (1.5, 3 and
+6 s; an assumption, not a measurement) against p50 2 s, p95 8 s and nothing over 25 s.
+
+If the offline process is stopped from outside (a signal: exit code null) the runner asks again only the questions that
+have no row yet, up to 8 times; every row of every try goes into `results.json`.
+
+The date and name parts of a reply are part of the scored text (a date part is `{type: 'date', iso}`; the runner
+read `date` and showed an empty date, "مورخہ ۔", until 07-11-2026), and a date figure of the bank is now a real check:
+the date must be shown, as a date part or as a date cell.
 
 ## The speed report (plan 54)
 

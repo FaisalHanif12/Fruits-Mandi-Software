@@ -182,6 +182,8 @@ pub struct ItemHit {
     pub name_ur: String,
     /// English name.
     pub name_en: String,
+    /// True for an item sold by weight: its rate is per kg, not per نگ.
+    pub sold_by_weight: bool,
 }
 
 /// What a name led to.
@@ -607,6 +609,18 @@ impl GradeWord {
     }
 }
 
+/// Which side's commission a question asks (PRD 18.2: the seller side, `seller_comm`, or the buyer side,
+/// `buyer_comm`, of a line). A question that names no side, or both, has none and the total is its
+/// figure. D7 (plan 59): "Faisal se kele par kitna commission liya" is the buyer side, 7,586, and not
+/// the total of both sides and Laga, 15,716.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommissionSide {
+    /// The commission charged to the seller (`seller_comm`).
+    Seller,
+    /// The commission charged to the buyer (`buyer_comm`), without Laga.
+    Buyer,
+}
+
 /// The way capital moves in a question about it: put into the shop, or taken back out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CapitalFlow {
@@ -669,6 +683,12 @@ pub struct Understanding {
     /// when no item is named. The views and reports of the app have no filter for a group yet, so
     /// such a question is the model's, except the rules of a group (`app_state` takes the word).
     pub item_group: Option<GroupWord>,
+    /// True when a packing word stands as a filter of a flow ("kele ki peti ki bikri"): no read has a
+    /// packing filter, so such a question is the model's.
+    pub packing_filter: bool,
+    /// True when the question names a document by its number ("wasooli number 3"): no read of a figure has
+    /// a filter for it, so the question is the model's.
+    pub document_number: bool,
     /// The بکری number the question names ("bikri 5 mein kisne kya badla").
     pub bikri_number: Option<i64>,
     /// A truck number the question holds, written `LES-1234`: the sales of that truck are found by
@@ -710,6 +730,16 @@ pub struct Understanding {
     /// sale, a percent, a partner's خالص, "udhar" for credit): the plain figure would be a real
     /// number for the wrong thing, so the question is the model's (money review, 05-11-2026).
     pub other_measure: Measure,
+    /// The side of the commission the question asks, when it names one (a buyer or a seller word beside
+    /// the commission, "gahak se commission", or one named buyer): the figure is that side's column, never
+    /// the total. `None` when no side is named, both are, or the question holds a Laga too.
+    pub commission_side: Option<CommissionSide>,
+    /// True when the question asks how many of something ("the number of bills", "kitne bayopariyon ko"):
+    /// an instant figure that holds no count leaves that part out, so it goes to the model.
+    pub asks_count: bool,
+    /// True when the question says it is the BUYER's rate ("gahak ka rate", "buyer rate"). A rate or a last
+    /// rate is the seller's rate (ریٹ بیوپاری, the auction rate) unless it says this (lead ruling, D7).
+    pub buyer_rate: bool,
     /// True when the dues asked are the total dues ("kul ugrahi", "total dues": the tile کل اگراہی,
     /// buyers' dues plus sellers' dues plus the dead amount), not the buyers' dues alone.
     pub total_dues: bool,

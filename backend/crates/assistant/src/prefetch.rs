@@ -188,6 +188,26 @@ const PERIOD_WORDS: &[&str] = &[
     "oct",
     "nov",
     "dec",
+    // D7 R9: month, day and week words the list missed, with their usual misspellings.
+    "may",
+    "parso",
+    "mahiny",
+    "maheene",
+    "maheena",
+    "mahiney",
+    "sall",
+    "hafty",
+    "haftey",
+    "septmber",
+    "sepember",
+    "octobar",
+    "novmber",
+    "decmber",
+    "pichly",
+    "aglay",
+    "agly",
+    "مئی",
+    "پرسوں",
     "آج",
     "کل",
     "ہفتہ",
@@ -252,7 +272,10 @@ pub fn ledger_asked(question: &str) -> bool {
 
 /// True when the question names a period or holds a digit of any script.
 pub fn period_named(question: &str) -> bool {
-    question.chars().any(char::is_numeric) || has_any(&words_of(question), PERIOD_WORDS)
+    // The app's own period reader too: what it reads as a period is a period here (D7 R9).
+    question.chars().any(char::is_numeric)
+        || has_any(&words_of(question), PERIOD_WORDS)
+        || crate::tools::cues::period_kind(question).is_some()
 }
 
 /// The party of a find that matched exactly one buyer or seller, found as typed or by its Urdu
@@ -481,6 +504,23 @@ mod tests {
             "abhi tak ka hisab",
         ] {
             assert!(!period_named(q), "{q}");
+        }
+    }
+
+    #[test]
+    fn a_month_or_day_word_the_list_missed_is_a_period_and_keeps_the_extra_reads_for_the_model() {
+        // D7 R9: these named a period the list did not hold, so the party's whole history was read
+        // ahead for a question about one month or day. Now each is a period (only the card is read).
+        for q in [
+            "اکرم کا مئی کا کمیشن",
+            "akram ka may ka commission",
+            "akram ka parso ka khata",
+            "akram ka septmber ka hisab",
+            "اکرم کا پرسوں کا کھاتہ",
+            "akram ka pichly mahiny ka khata",
+        ] {
+            assert!(period_named(q), "{q}");
+            assert_eq!(tools_of(q, &buyer()), ["party_card"], "{q}");
         }
     }
 

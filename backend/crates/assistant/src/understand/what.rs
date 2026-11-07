@@ -67,6 +67,11 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         truck: None,
         happened: false,
         other_measure: Measure::Same,
+        commission_side: None,
+        buyer_rate: false,
+        document_number: false,
+        packing_filter: false,
+        asks_count: false,
         total_dues: false,
         sure: false,
         doubts: vec![doubt],
@@ -117,6 +122,15 @@ fn figure_of(hit: &Hit, scan: &Scan, named: &Named<'_>) -> Option<FigureKind> {
                     .iter()
                     .any(|x| key(x) == w)
             }) {
+                return None;
+            }
+            // "kitna commission laga": the verb straight after the commission (money review 9); the charge
+            // is asked with "aur", "ka" or a word of its own.
+            if scan
+                .hits
+                .iter()
+                .any(|h| h.cue == Cue::Commission && h.end == hit.start)
+            {
                 return None;
             }
             let next = scan.word(hit.end);
@@ -1098,6 +1112,8 @@ pub(super) fn assemble(
     let roles_found = roles.clone();
     let has_item_found = names.items.iter().any(|i| i.outcome.hit().is_some());
     let grade = super::reads::grade_of(scan, has_item_found || item_group.is_some());
+    // The side of the commission asked, read before the names move into the understanding (plan 59, F1).
+    let commission_side = super::reads::commission_side(scan, &kinds_for_happened, &names.parties);
     let names_have_garden = roles_found
         .iter()
         .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
@@ -1144,8 +1160,13 @@ pub(super) fn assemble(
             has_item_found,
             ranking,
         ),
+        commission_side,
+        buyer_rate: super::reads::buyer_rate(scan),
+        asks_count: cues::asks_count(&scan.raw),
+        document_number: super::reads::document_number(scan),
+        packing_filter: super::reads::packing_filter(scan),
         total_dues: kinds_for_happened.contains(&FigureKind::Dues)
-            && dead_amount_included(scan)
+            && (dead_amount_included(scan) || total_dues_asked(scan))
             && !scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]),
         sure: false,
         doubts,
@@ -1334,8 +1355,50 @@ fn group_word(scan: &Scan, names: &Names, cue: Cue) -> bool {
 }
 
 /// True when the dues asked include the dead amount: "doobi raqam samet", "sab milake jo lena hai",
-/// "with the dead amount". Only then is it the tile `total_dues`; "kul ugrahi" and "total dues" are the
-/// buyers' dues of R20 (PRD FR-19.9, live run 2: 20,324,367, not 21,751,319).
+/// "with the dead amount". Then it is the tile `total_dues` (کل اگراہی: the buyers' dues, what sellers owe
+/// the shop and the dead amount, PRD 9.1, FR-19.9, FR-7.76), as it is for "kul ugrahi" and "total dues"
+/// ([`total_dues_asked`], D7: PRD v1.31 overrules the ruling of plan 55 that those two are the buyers'
+/// dues of R20).
+/// True when the question says "kul ugrahi", "total dues", "کل اگراہی": the glossary's کل اگراہی (Total
+/// Dues, PRD Section 3), which is the tile of everything people owe the shop. Not when the dues are asked by
+/// collector or city (R21, R22 hold the buyers' dues: the figure of that list is the buyers' tile).
+///
+/// Example: "what is the total dues of the shop" is true; "total dues by collector" is false.
+fn total_dues_asked(scan: &Scan) -> bool {
+    let is = |w: &str, list: &[&str]| list.iter().any(|x| key(x) == w);
+    const WHOLE: [&str; 4] = ["kul", "total", "ٹوٹل", "کل"];
+    const DUES: [&str; 8] = [
+        "ugrahi",
+        "ugrai",
+        "ugrahee",
+        "agrahi",
+        "agrai",
+        "dues",
+        "اگراہی",
+        "اگرائی",
+    ];
+    const BY: [&str; 12] = [
+        "collector",
+        "collectors",
+        "wise",
+        "city",
+        "cities",
+        "shehar",
+        "wale",
+        "wala",
+        "wali",
+        "والا",
+        "والے",
+        "شہر",
+    ];
+    if scan.words.iter().any(|w| is(w, &BY)) || scan.has(Cue::ByCity) {
+        return false;
+    }
+    scan.words
+        .windows(2)
+        .any(|pair| matches!(pair, [a, b] if is(a, &WHOLE) && is(b, &DUES)))
+}
+
 fn dead_amount_included(scan: &Scan) -> bool {
     let text = format!(" {} ", scan.words.join(" "));
     let says = |phrase: &str| {
@@ -1447,10 +1510,16 @@ fn is_sure(u: &Understanding) -> bool {
                 && !u.doubts.contains(&Doubt::NoReport)
                 && locked_ok
         }
-        Intent::HowTo => u
-            .topic
-            .as_ref()
-            .is_some_and(|t| t.confidence >= Confidence::Medium),
+        // A how-to that stands only on "what is" (Medium) and has words the app does not know in it is
+        // not sure: "what is Partner As totel in the shop" asks a figure, and the guide of the partner
+        // screen is no answer to it (D7 O2).
+        Intent::HowTo => {
+            u.topic
+                .as_ref()
+                .is_some_and(|t| t.confidence >= Confidence::Medium)
+                && !(u.intent.confidence == Confidence::Medium
+                    && u.doubts.contains(&Doubt::UnknownWords))
+        }
         Intent::Forecast | Intent::WhatIf => !party_locked,
         Intent::Advice | Intent::ChangeRequest | Intent::NotInApp => true,
     }

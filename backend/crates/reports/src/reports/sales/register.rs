@@ -21,7 +21,7 @@ use crate::error::ReportsError;
 use crate::reports::common::{
     Conds, col, grade_of, load_parties, names_cell, paisa, party_of_line, pukhta_party,
 };
-use crate::reports::filters::Typed;
+use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
 use crate::reports::model::{
     Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
@@ -89,20 +89,35 @@ pub(crate) fn page_query(
     offset: i64,
 ) -> (String, Vec<Value>) {
     let c = conds(typed, payment);
+    // The order of the register, and its exact reverse for "newest first": the line's own posting date,
+    // then the بکری number, then the lot and the line number. So the first row of the newest-first page is
+    // the LAST line of the newest بکری of the newest day, and a later sale counts on its own date. The
+    // line number, not the row id, is the last key, so an edit (which writes its lines again with new
+    // ids, in the same order after the lot's last line) does not move a line over the others of its
+    // posting. Open: an edit of a first posting after a later sale of the same lot on the same day puts
+    // the first posting's lines after the later sale (a known edge, plan 59).
+    // PRD FR-7.90 (D7, plan 59 F1, Q2436, S-B1); one SQL page, never the whole register.
+    let order = if matches!(typed.line_sort, Some(LineSort::Newest)) {
+        "je.entry_date DESC, b.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC"
+    } else {
+        "je.entry_date, b.number, s.lot_id, s.line_no, s.id"
+    };
     let sql = format!(
         "SELECT je.entry_date, je.posting_type, b.id, b.number,
            s.buyer_account_id, s.pukhta_person_key, s.pukhta_name_ur, s.pukhta_name_en,
            ci.name_ur, ci.name_en, i.name_ur, i.name_en,
-           s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade
+           s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade,
+           s.seller_rate_paisa, pk.name_ur, pk.name_en
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
          JOIN bikri_entries b ON b.id = s.bikri_id
          JOIN items i ON i.id = l.item_id
+         JOIN packings pk ON pk.id = l.packing_id
          JOIN accounts ba ON ba.id = s.buyer_account_id
          LEFT JOIN cities ci ON ci.id = ba.city_id
          WHERE {}
-         ORDER BY je.entry_date, b.number, s.id
+         ORDER BY {order}
          LIMIT ? OFFSET ?",
         c.sql()
     );
@@ -114,7 +129,9 @@ pub(crate) fn totals_query(typed: &Typed, payment: Option<&'static str>) -> (Str
     let c = conds(typed, payment);
     let sql = format!(
         "SELECT COUNT(*), COALESCE(SUM(s.qty), 0), COALESCE(SUM(s.buyer_value_paisa), 0),
-                COALESCE(SUM(s.buyer_total_paisa), 0), COALESCE(MAX(s.grade IS NOT NULL), 0)
+                COALESCE(SUM(s.buyer_total_paisa), 0), COALESCE(MAX(s.grade IS NOT NULL), 0),
+                COALESCE(MAX(s.seller_rate_paisa <> s.buyer_rate_paisa), 0),
+                COUNT(DISTINCT l.packing_id) > 1
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -145,6 +162,11 @@ struct Line {
     total: i64,
     /// The stored quality of the line, as text (PRD FR-12.42).
     grade: Option<String>,
+    /// The seller's rate of the line (ریٹ بیوپاری), which is the buyer's `rate` unless the line has a
+    /// rate difference (PRD FR-12.3).
+    seller_rate: i64,
+    packing_ur: String,
+    packing_en: String,
 }
 
 /// Builds R2, R3 or R4.
@@ -163,10 +185,32 @@ pub(crate) fn run(
     // `with_grade` is true when some line of the whole filter has a quality (PRD FR-12.42): then
     // every page of the register has the quality column after the item, so the columns do not
     // change from page to page. With no quality anywhere the register is exactly as it was.
-    let (count, qty, value, total, with_grade): (i64, i64, i64, i64, bool) =
-        conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
-        })?;
+    // `with_rate_diff` is true when some line of the whole filter was sold at a seller rate that is not
+    // the buyer's (PRD FR-12.3): then every page has the seller's rate after the rate, so the last rate
+    // of the sellers (the auction rate) can be read from the row. With no such line the register is
+    // exactly as it was and the rate is both.
+    // `with_packing` is true when the lines of the whole filter were sold in more than one packing: then
+    // every page names the packing after the item, because the rate of an item in a peti is not the rate
+    // of the same item in a crate (PRD FR-7.53, which keeps the last rate per item and packing).
+    let (count, qty, value, total, with_grade, with_rate_diff, with_packing): (
+        i64,
+        i64,
+        i64,
+        i64,
+        bool,
+        bool,
+        bool,
+    ) = conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get(2)?,
+            r.get(3)?,
+            r.get(4)?,
+            r.get(5)?,
+            r.get(6)?,
+        ))
+    })?;
 
     let (page_sql, page_args) = page_query(typed, payment, spec.sql_limit(), spec.offset);
     let mut statement = conn.prepare(&page_sql)?;
@@ -190,6 +234,9 @@ pub(crate) fn run(
                 value: r.get(14)?,
                 total: r.get(15)?,
                 grade: r.get(16)?,
+                seller_rate: r.get(17)?,
+                packing_ur: r.get(18)?,
+                packing_en: r.get(19)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -223,6 +270,9 @@ pub(crate) fn run(
             names_cell(line.city_ur, line.city_en),
             names_cell(Some(line.item_ur), Some(line.item_en)),
         ];
+        if with_packing {
+            cells.push(names_cell(Some(line.packing_ur), Some(line.packing_en)));
+        }
         if with_grade {
             cells.push(grade_cell);
         }
@@ -231,6 +281,13 @@ pub(crate) fn run(
             Cell::Money {
                 paisa: paisa(line.rate)?,
             },
+        ]);
+        if with_rate_diff {
+            cells.push(Cell::Money {
+                paisa: paisa(line.seller_rate)?,
+            });
+        }
+        cells.extend([
             Cell::Money {
                 paisa: paisa(line.value)?,
             },
@@ -256,19 +313,39 @@ pub(crate) fn run(
         col("item", ids::COL_ITEM, ColumnKind::Names),
     ];
     let mut totals_cells = vec![Cell::Empty; 5];
+    if with_packing {
+        columns.push(col("packing", ids::COL_PACKING, ColumnKind::Names));
+        totals_cells.push(Cell::Empty);
+    }
     if with_grade {
         columns.push(col("grade", ids::COL_GRADE, ColumnKind::Label));
         totals_cells.push(Cell::Empty);
     }
     columns.extend([
         col("qty", ids::COL_QTY, ColumnKind::Number),
-        col("rate", ids::COL_RATE, ColumnKind::Money),
+        // With the seller's rate beside it, `rate` is told apart as the buyer's.
+        col(
+            "rate",
+            if with_rate_diff {
+                ids::COL_BUYER_RATE
+            } else {
+                ids::COL_RATE
+            },
+            ColumnKind::Money,
+        ),
+    ]);
+    if with_rate_diff {
+        columns.push(col("seller_rate", ids::COL_SELLER_RATE, ColumnKind::Money));
+    }
+    columns.extend([
         col("value", ids::COL_VALUE, ColumnKind::Money),
         col("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
     ]);
+    totals_cells.extend([Cell::Number { value: qty }, Cell::Empty]);
+    if with_rate_diff {
+        totals_cells.push(Cell::Empty);
+    }
     totals_cells.extend([
-        Cell::Number { value: qty },
-        Cell::Empty,
         Cell::Money {
             paisa: paisa(value)?,
         },

@@ -35,6 +35,12 @@ pub(crate) const GRADE_SECOND: &str = "report-grade-second";
 pub(crate) const GRADE_THIRD: &str = "report-grade-third";
 pub(crate) const COL_QTY: &str = "report-col-qty";
 pub(crate) const COL_RATE: &str = "report-col-rate";
+/// The seller's rate (ریٹ بیوپاری), a column of R2 to R4 only when a line of the filter has a rate
+/// difference (D7, plan 59).
+pub(crate) const COL_SELLER_RATE: &str = "report-col-seller-rate";
+/// The buyer's rate, the title of the `rate` column of R2 to R4 while the seller's rate is shown next to
+/// it (D7, plan 59), so the two columns are told apart.
+pub(crate) const COL_BUYER_RATE: &str = "report-col-buyer-rate";
 pub(crate) const COL_VALUE: &str = "report-col-value";
 pub(crate) const COL_BUYER_TOTAL: &str = "report-col-buyer-total";
 pub(crate) const COL_GROSS: &str = "report-col-gross";

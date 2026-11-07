@@ -80,6 +80,12 @@ pub fn compose_figure(
     if planned.lines.is_empty() {
         return None;
     }
+    // "how many sellers and the total": an instant answer must answer EVERY part asked. A count asked and
+    // no line that gives a count (only the number of بکری is one) leaves a part out, so the model answers
+    // (D7 O3, O4).
+    if u.asks_count && !planned.lines.iter().any(|l| l.what == What::SaleCount) {
+        return None;
+    }
     let results = results_of(&planned, reads)?;
     let cx = Cx {
         u,
@@ -337,6 +343,32 @@ impl Cx<'_> {
             // A seller's commission is two figures, each labelled (Umar's ruling of 05-11-2026): the
             // commission charged to him, and the total commission on his goods.
             (Who::Seller(key), What::Commission) => self.seller_commission(key),
+            // One named party and one item (D7, plan 59 S-A1, S-A2): the row of the item in view A read
+            // for him, and the newest line of the register for the last rate.
+            (Who::BuyerItem(buyer, item), What::Commission) => self
+                .party_item(
+                    "buyer",
+                    buyer,
+                    item,
+                    "assistant-instant-commission-buyer-item",
+                    "buyer_comm",
+                )
+                .map(|s| vec![s]),
+            (Who::BuyerItem(buyer, item), What::Laga) => self
+                .party_item(
+                    "buyer",
+                    buyer,
+                    item,
+                    "assistant-instant-laga-buyer-item",
+                    "laga",
+                )
+                .map(|s| vec![s]),
+            (Who::SellerItem(seller, item), What::Commission) => {
+                self.seller_item_commission(seller, item)
+            }
+            (Who::Item(_) | Who::BuyerItem(..), What::LastRate) => {
+                self.last_rate(&line.who).map(|s| vec![s])
+            }
             (Who::Shop, What::Sale | What::SaleCount | What::Commission | What::Laga)
             | (Who::Item(_), What::Sale | What::Commission | What::Laga)
             | (Who::Seller(_), What::Sale | What::SaleCount)
@@ -520,6 +552,120 @@ impl Cx<'_> {
                 })
             })
             .collect()
+    }
+
+    /// One figure of a named party's row for one item in view A (the view read with that party and that
+    /// item): `column` of the row of the item, or of the totals when the party sold none of it (the
+    /// figure is 0). The sentence names the party, the item and the period.
+    fn party_item(
+        &self,
+        field: &str,
+        party: &str,
+        item: &str,
+        id: &'static str,
+        column: &str,
+    ) -> Option<Sentence> {
+        // A figure of a record needs the period the question named (see `flow`).
+        if self.u.periods.is_empty() {
+            return None;
+        }
+        let view = self.result("analytics", |r| {
+            input_str(r, "view") == Some("A")
+                && input_str(r, field) == Some(party)
+                && input_str(r, "item") == Some(item)
+        })?;
+        Some(Sentence {
+            id,
+            args: vec![
+                ("name", self.name_of(party)?),
+                ("item", self.name_of(item)?),
+                ("figure", row_or_total(view, item, column)?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// A seller's commission on one item: the commission charged to him (`seller_comm`) and, when the
+    /// question names no side, the total on his goods of that item (`total_comm`), each labelled, from
+    /// the one row of view A (Umar's ruling of 05-11-2026, as `seller_commission` does for view B).
+    fn seller_item_commission(&self, seller: &str, item: &str) -> Option<Vec<Sentence>> {
+        let own = self.party_item(
+            "seller",
+            seller,
+            item,
+            "assistant-instant-commission-seller-item-own",
+            "seller_comm",
+        )?;
+        if self.u.commission_side == Some(super::CommissionSide::Seller) {
+            return Some(vec![own]);
+        }
+        let total = self.party_item(
+            "seller",
+            seller,
+            item,
+            "assistant-instant-commission-seller-item",
+            "total_comm",
+        )?;
+        Some(vec![own, total])
+    }
+
+    /// The last rate of an item (to a buyer, when one is named): the rate and the date of the one row of
+    /// the register read newest first. No sale in the period is no sentence (the model says so).
+    fn last_rate(&self, who: &Who) -> Option<Sentence> {
+        let (buyer, item) = match who {
+            Who::Item(item) => (None, item.as_str()),
+            Who::BuyerItem(buyer, item) => (Some(buyer.as_str()), item.as_str()),
+            _ => return None,
+        };
+        let r2 = self.result("report", |r| {
+            input_str(r, "id") == Some("R2")
+                && input_str(r, "item") == Some(item)
+                && input_str(r, "party") == buyer
+        })?;
+        if count_of(r2, &["count"])? < 1 {
+            return None;
+        }
+        let Some(Node::Keyed(rows)) = r2.node.get(&["rows"]) else {
+            return None;
+        };
+        let [(key, _)] = rows.as_slice() else {
+            return None;
+        };
+        // The register names the packing only when the lines of the filter were sold in more than one:
+        // the rate of an item in one packing is not that of another, and the sentence names none, so
+        // the model says which (PRD FR-7.53; money review).
+        if r2.node.get(&["rows", key, "packing"]).is_some() {
+            return None;
+        }
+        // The rate CHARGED TO a named buyer ("Akram ko kele ka last rate") is the buyer's rate, which is
+        // the register's `rate`. For an item alone, the shop or a seller it is the SELLER's rate (ریٹ
+        // بیوپاری, the auction rate), unless the question says the buyer's: when some line of the filter
+        // has a rate difference the register carries `seller_rate` too (D7, lead rulings). With no such
+        // line the two are the same number, so `rate` is exact.
+        let column = if buyer.is_none()
+            && !self.u.buyer_rate
+            && r2.node.get(&["rows", key, "seller_rate"]).is_some()
+        {
+            "seller_rate"
+        } else {
+            "rate"
+        };
+        let mut args = Vec::new();
+        if let Some(buyer) = buyer {
+            args.push(("name", self.name_of(buyer)?));
+        }
+        args.push(("item", self.name_of(item)?));
+        args.push(("figure", reference(r2, &["rows", key, column])?));
+        args.push(("date", reference(r2, &["rows", key, "date"])?));
+        Some(Sentence {
+            id: if buyer.is_some() {
+                "assistant-instant-last-rate-buyer-item"
+            } else {
+                "assistant-instant-last-rate-item"
+            },
+            args,
+            period: Some(Box::new(self.period()?)),
+        })
     }
 
     /// A sale, a count, a commission or a laga of the shop, an item, a seller or a buyer.

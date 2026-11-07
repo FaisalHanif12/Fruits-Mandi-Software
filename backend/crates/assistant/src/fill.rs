@@ -246,6 +246,29 @@ fn cited_rows(text: &str) -> Vec<(String, String, String)> {
     out
 }
 
+/// The results whose `capital` part the text cites: `r1.capital.balance` is `r1`, and
+/// `r2.rows.s2.capital.invested` is `r2`. A partner's capital is read from his capital history and the
+/// partner overview, not from the statement page of R31 (PRD 17.3), so the R31 button of such a result
+/// would open a page that does not hold the figure (D7 D331: 200,000 cited, R31 shows his statement).
+fn capital_cited(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for piece in pieces(text) {
+        if let Piece::Ref(r) = piece {
+            let parts: Vec<&str> = r.path.split('.').collect();
+            let capital = match parts.as_slice() {
+                [result, "capital", ..] | [result, "rows", _, "capital", ..] => Some(*result),
+                _ => None,
+            };
+            if let Some(result) = capital
+                && !out.iter().any(|x| x == result)
+            {
+                out.push(result.to_owned());
+            }
+        }
+    }
+    out
+}
+
 /// The partner of a row named `s<id>` in the keyed rows `area` of a result, as the record a picker
 /// holds. `None` when the row has no such key or no name.
 fn partner_of_row(result: &ToolResult, area: &str, key: &str) -> Option<AnswerRecord> {
@@ -272,14 +295,31 @@ fn partner_of_row(result: &ToolResult, area: &str, key: &str) -> Option<AnswerRe
 ///
 /// Anything else is as read.
 ///
-/// Example: "ب کا سرمایہ {{r1.rows.s2.capital.invested}}" gives R31 with ب.
+/// A figure of the `capital` part of an R31 result has no button (see [`capital_cited`]); the rest of
+/// the answer's buttons are as above.
+///
+/// Example: "ب کا کل {{r1.rows.s2.total}}" gives R31 with ب; "ب کا سرمایہ {{r1.rows.s2.capital.balance}}"
+/// gives none.
 fn sources_cited(state: &State, text: &str) -> Vec<AnswerSource> {
     let cited = cited_rows(text);
+    let capital = capital_cited(text);
     let mut out = Vec::new();
     for result in state.results.iter().filter(|r| r.turn == state.turn) {
         let Some(source) = result.source.clone().map(|s| set_source_id(s, &result.id)) else {
             continue;
         };
+        // A capital figure is not on the statement page: no button, never another page (D331).
+        if capital.contains(&result.id)
+            && matches!(
+                &source,
+                AnswerSource::Report {
+                    id: ReportId::R31,
+                    ..
+                }
+            )
+        {
+            continue;
+        }
         let AnswerSource::Report {
             result_id,
             label_id,
@@ -820,7 +860,7 @@ mod tests {
             .collect();
         assert_eq!(names, ["Partner A", "Partner B", "Partner C"]);
         // One cited: one button with him (Q400).
-        let one = sources_cited(&state, "{{r2.rows.s2.capital.invested}}");
+        let one = sources_cited(&state, "{{r2.rows.s2.total}}");
         assert_eq!(one.len(), 1);
         assert_eq!(
             report_filters(&one[0]).partner.as_ref().map(|p| p.id),
@@ -828,12 +868,18 @@ mod tests {
         );
         // The same row twice is one button.
         assert_eq!(
+            sources_cited(&state, "{{r2.rows.s2.total}} {{r2.rows.s2.total}}").len(),
+            1
+        );
+        // His capital is read from the capital history and the overview, not from the statement:
+        // R31 would open a page without the figure, so no button (D7 D331).
+        assert!(sources_cited(&state, "{{r2.rows.s2.capital.invested}}").is_empty());
+        assert!(
             sources_cited(
                 &state,
                 "{{r2.rows.s2.total}} {{r2.rows.s2.capital.balance}}"
             )
-            .len(),
-            1
+            .is_empty()
         );
         // Nothing cited: no button, because R31 cannot open without a partner. The plain tables
         // and the slow-line answer drop it too.

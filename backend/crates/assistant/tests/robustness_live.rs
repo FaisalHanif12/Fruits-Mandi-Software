@@ -47,7 +47,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use mandi_assistant::ask::{
-    AskOutcome, AskReply, AssistantAskInput, AssistantPickInput, PickChoice,
+    AskOutcome, AskReply, AssistantAskInput, AssistantPickInput, FailureKind, PickChoice,
 };
 use mandi_assistant::client::{CallError, ModelClient, OpenRouterClient, Reply};
 use mandi_assistant::run::{self, Deps};
@@ -80,6 +80,10 @@ struct Question {
     filters: String,
     /// True when the name is spelled badly on purpose.
     misspelled: bool,
+    /// True when the question is ambiguous on purpose (`click=1` in the filters, for example "اکرم" with two
+    /// Akrams): the app asks "which one" and the harness clicks the option that is the `buyer=` or `seller=` of the
+    /// question, as the panel's one click does, and the answer after the click is scored.
+    click: bool,
 }
 
 /// The one party a question is about, from its `filters` (`seller=Rahim`, `buyer=Faisal`). None when
@@ -112,6 +116,9 @@ fn questions(path: &str, only: &[String]) -> Vec<Question> {
                 text: cells[question].to_owned(),
                 filters: cells.get(filters).copied().unwrap_or("").to_owned(),
                 misspelled: cells.get(misspelled).copied() == Some("1"),
+                click: cells
+                    .get(filters)
+                    .is_some_and(|f| f.split(';').any(|piece| piece.trim() == "click=1")),
             }
         })
         .filter(|q| only.is_empty() || only.contains(&q.id))
@@ -292,6 +299,12 @@ impl ModelClient for Recorder {
             });
         }
         result
+    }
+
+    /// The wait before the one retry is the wait of the client behind the note-taker: the real client waits, the
+    /// offline client (D7) does not. Without this the note-taker would answer for it with the default wait.
+    fn retry_wait(&self) -> Duration {
+        self.inner.retry_wait()
     }
 }
 
@@ -492,7 +505,7 @@ fn run_one(
     let mut reply = reply;
     let mut clicked: Value = Value::Null;
     let mut first_reply: Value = Value::Null;
-    let target: Option<(String, String, &str)> = if q.misspelled
+    let target: Option<(String, String, &str)> = if (q.misspelled || q.click)
         && reply.outcome == AskOutcome::WhichOne
         && let Some(want) = party_of(&q.filters)
         && let Some(option) = reply
@@ -957,16 +970,7 @@ fn live_100_questions() {
         .map(|(i, q)| (q.id.clone(), i))
         .collect();
     // The rich year is built once, and only when a question of the run needs it.
-    let masters = Masters {
-        year: list
-            .iter()
-            .any(|q| q.world == "year")
-            .then(|| year_master(false)),
-        thin: list
-            .iter()
-            .any(|q| q.world == "thin")
-            .then(|| year_master(true)),
-    };
+    let masters = masters_for(&list);
     let meta = json!({
         "model": model,
         "endpoint": "azure (only: azure, allow_fallbacks: false, zdr: true, data_collection: deny)",
@@ -978,20 +982,9 @@ fn live_100_questions() {
         // The values the assistant must never give (PRD FR-7.83), read from the books of this run for the
         // privacy checks of the scorer (`privacy=1;never=mark_text|narration_words|phone|address`). They are
         // written to the results file only, never to the oracle dump that goes to the hidden tester.
-        "secrets": masters
-            .year
-            .as_ref()
-            .or(masters.thin.as_ref())
-            .map_or(Value::Null, |m| secrets_of(&m.snapshot)),
+        "secrets": secrets_for(&masters),
     });
-    let mut facts = std::collections::BTreeMap::new();
-    for m in [masters.year.as_ref(), masters.thin.as_ref()]
-        .into_iter()
-        .flatten()
-    {
-        facts.extend(m.oracle.iter().map(|(k, v)| (k.clone(), v.clone())));
-    }
-    let oracle = json!(facts);
+    let oracle = oracle_of(&masters);
     // The file is rewritten after every question, so a stopped run keeps what it has.
     let flush = |rows: &Vec<Value>| {
         std::fs::write(
@@ -1011,6 +1004,126 @@ fn live_100_questions() {
         &|| Box::new(OpenRouterClient),
         &|| internet_back(NET_WAIT_LIMIT),
         &flush,
+        false,
+    );
+    flush(&rows);
+}
+
+/// The rich year and the thin books, each built once, and only when a question of `list` needs it.
+fn masters_for(list: &[Question]) -> Masters {
+    Masters {
+        year: list
+            .iter()
+            .any(|q| q.world == "year")
+            .then(|| year_master(false)),
+        thin: list
+            .iter()
+            .any(|q| q.world == "thin")
+            .then(|| year_master(true)),
+    }
+}
+
+/// The values the assistant must never give, read from the books of the run (for the privacy checks).
+fn secrets_for(masters: &Masters) -> Value {
+    masters
+        .year
+        .as_ref()
+        .or(masters.thin.as_ref())
+        .map_or(Value::Null, |m| secrets_of(&m.snapshot))
+}
+
+/// The oracle facts of the books of the run, as one JSON object.
+fn oracle_of(masters: &Masters) -> Value {
+    let mut facts = std::collections::BTreeMap::new();
+    for m in [masters.year.as_ref(), masters.thin.as_ref()]
+        .into_iter()
+        .flatten()
+    {
+        facts.extend(m.oracle.iter().map(|(k, v)| (k.clone(), v.clone())));
+    }
+    json!(facts)
+}
+
+/// The model of an OFFLINE run (D7, `run.mjs --offline`): it never reaches the network. Every call ends the way a
+/// call ends when the computer has no internet, so the app's own understanding, plans, reads and instant answers
+/// run for real, and a question that needs the model ends as `offline`. It holds no key, opens no connection and
+/// sleeps for no retry.
+struct OfflineClient;
+
+impl ModelClient for OfflineClient {
+    fn call(&self, _key: &str, _body: &Value, _timeout: Duration) -> Result<Reply, CallError> {
+        Err(CallError::new(FailureKind::Offline))
+    }
+
+    fn retry_wait(&self) -> Duration {
+        Duration::ZERO
+    }
+}
+
+/// The runtime of an OFFLINE run: a key store in memory with a placeholder that is not a key (the loop wants a
+/// key before it builds a request, and the offline client throws the request away). The real store, the
+/// Credential Manager or the macOS keychain, is never opened.
+fn offline_runtime() -> Runtime {
+    Runtime::new(std::sync::Arc::new(
+        mandi_assistant::keys::MemoryKeyStore::with_key("offline-run-this-is-not-a-key"),
+    ))
+}
+
+#[test]
+fn offline_questions() {
+    // Not live: no key, no network, no model. It runs only with `MANDI_EVAL_OFFLINE=1` (`run.mjs --offline`);
+    // a plain `cargo test` does nothing. The same path as `live_100_questions`, with a model that never
+    // answers, so the questions the app answers by itself (PRD FR-7.90) are answered and scored, and the rest end
+    // as `offline` ("needs the model"). The rows have `offline: true`.
+    if std::env::var("MANDI_EVAL_OFFLINE").as_deref() != Ok("1") {
+        return;
+    }
+    let questions_path = std::env::var("MANDI_EVAL_QUESTIONS").expect("MANDI_EVAL_QUESTIONS");
+    let out_path = std::env::var("MANDI_EVAL_OUT").expect("MANDI_EVAL_OUT");
+    let only: Vec<String> = std::env::var("MANDI_EVAL_ONLY")
+        .map(|v| v.split(',').map(|s| s.trim().to_owned()).collect())
+        .unwrap_or_default();
+    let threads: usize = std::env::var("MANDI_EVAL_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_THREADS)
+        .clamp(1, 8);
+    let list = questions(&questions_path, &only);
+    let all = questions(&questions_path, &[]);
+    let by_id: std::collections::HashMap<String, usize> = all
+        .iter()
+        .enumerate()
+        .map(|(i, q)| (q.id.clone(), i))
+        .collect();
+    let masters = masters_for(&list);
+    let meta = json!({
+        "model": "offline (no model call is ever made)",
+        "offline": true,
+        "questions": list.len(),
+        "threads": threads,
+        "prefind": offline_runtime().prefind(),
+        "secrets": secrets_for(&masters),
+    });
+    let oracle = oracle_of(&masters);
+    let flush = |rows: &Vec<Value>| {
+        std::fs::write(
+            &out_path,
+            json!({"meta": meta, "oracle": oracle, "results": rows}).to_string(),
+        )
+        .expect("the results file");
+    };
+    let rows = run_rows(
+        &list,
+        &all,
+        &by_id,
+        &masters,
+        DEFAULT_MODEL,
+        threads,
+        &offline_runtime,
+        &|| Box::new(OfflineClient),
+        &|| false,
+        &flush,
+        true,
     );
     flush(&rows);
 }
@@ -1031,6 +1144,7 @@ fn run_rows(
     make_client: &(dyn Fn() -> Box<dyn ModelClient> + Sync),
     wait_for_internet: &(dyn Fn() -> bool + Sync),
     flush: &(dyn Fn(&Vec<Value>) + Sync),
+    offline: bool,
 ) -> Vec<Value> {
     let results: Mutex<Vec<Value>> = Mutex::new(Vec::new());
     let next = std::sync::atomic::AtomicUsize::new(0);
@@ -1043,11 +1157,20 @@ fn run_rows(
                     let Some(q) = list.get(at) else {
                         break;
                     };
-                    let row = run_until_online(
-                        || run_one(q, all, by_id, Some(masters), model, &runtime, make_client),
-                        wait_for_internet,
-                        NET_MAX_WAITS,
-                    );
+                    let row = if offline {
+                        // Offline on purpose: no wait for the internet, and a question that needs the model
+                        // ends as `offline` and stays so (it is a result, never "lost to the network").
+                        let mut row =
+                            run_one(q, all, by_id, Some(masters), model, &runtime, make_client);
+                        row["offline"] = json!(true);
+                        row
+                    } else {
+                        run_until_online(
+                            || run_one(q, all, by_id, Some(masters), model, &runtime, make_client),
+                            wait_for_internet,
+                            NET_MAX_WAITS,
+                        )
+                    };
                     let mut rows = results.lock().expect("the results");
                     rows.push(row);
                     flush(&rows);
@@ -1056,6 +1179,199 @@ fn run_rows(
         }
     });
     results.into_inner().expect("the results")
+}
+
+#[test]
+fn offline_mode_never_builds_the_real_client_or_opens_the_key_store() {
+    // D7: `run.mjs --offline` needs no key and no network. Proof 1, from this file's own text: the functions of
+    // the offline path never name the real client, the real key store, or anything that opens a connection. Proof 2:
+    // the offline model answers every call with "no internet", at once.
+    let source = include_str!("robustness_live.rs");
+    let body_of = |name: &str| -> &str {
+        let start = source
+            .find(&format!("\nfn {name}("))
+            .unwrap_or_else(|| panic!("no function {name}"));
+        let rest = &source[start + 1..];
+        let end = rest.find("\n}\n").map_or(rest.len(), |e| e + 3);
+        &rest[..end]
+    };
+    let forbidden = [
+        "OpenRouterClient",
+        "Runtime::real",
+        "KeyringStore",
+        "internet_back",
+        "can_reach_the_host",
+        "TcpStream",
+        "run_until_online",
+    ];
+    for name in [
+        "offline_questions",
+        "offline_runtime",
+        "masters_for",
+        "secrets_for",
+        "oracle_of",
+    ] {
+        let body = body_of(name);
+        assert!(!body.is_empty(), "{name} was not found");
+        for word in forbidden {
+            assert!(
+                !body.contains(word),
+                "the offline path ({name}) names {word}: it could reach the network or the real key"
+            );
+        }
+    }
+    // In `run_rows` the word `run_until_online` may appear only in the branch that is not offline.
+    let rows = body_of("run_rows");
+    let offline_branch = rows
+        .split("} else {")
+        .next()
+        .expect("the offline branch of run_rows");
+    assert!(
+        rows.contains("let row = if offline {") && !offline_branch.contains("run_until_online"),
+        "run_rows must take the offline branch before anything that waits for the internet"
+    );
+    let client = OfflineClient;
+    let started = Instant::now();
+    let error = client
+        .call(
+            "this-is-not-a-key",
+            &json!({"messages": []}),
+            Duration::from_secs(30),
+        )
+        .expect_err("an offline call never gives a reply");
+    assert_eq!(error.kind, FailureKind::Offline);
+    assert_eq!(client.retry_wait(), Duration::ZERO);
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "the offline model answers at once"
+    );
+}
+
+#[test]
+fn offline_a_question_the_app_answers_by_itself_is_answered_and_one_that_needs_the_model_ends_offline()
+ {
+    // The PRD worked day. "akram ka bakaya" is a plain balance: the app answers by itself (PRD FR-7.90). A forecast
+    // needs the model: with the offline model it ends as `offline`, and no model call is ever counted.
+    let all = Vec::new();
+    let by_id = std::collections::HashMap::new();
+    let ask = |text: &str| -> Value {
+        let q = Question {
+            id: "T".into(),
+            world: "day".into(),
+            after: String::new(),
+            text: text.into(),
+            filters: String::new(),
+            misspelled: false,
+            click: false,
+        };
+        run_one(
+            &q,
+            &all,
+            &by_id,
+            None,
+            DEFAULT_MODEL,
+            &offline_runtime(),
+            &|| Box::new(OfflineClient),
+        )
+    };
+    let instant = ask("akram ka bakaya kitna hai");
+    assert_eq!(instant["reply"]["outcome"], "answered", "{instant}");
+    assert_eq!(instant["finish_reason"], "local", "{instant}");
+    assert_eq!(instant["model_calls"], 0, "{instant}");
+    assert_eq!(
+        instant["calls"].as_array().map(Vec::len),
+        Some(0),
+        "no model call was ever made: {instant}"
+    );
+    let needs = ask("agar commission isi raftar se chalta raha to agle 6 mahine mein kitna hoga");
+    assert_eq!(needs["reply"]["outcome"], "offline", "{needs}");
+    assert_eq!(needs["reply"]["failure"]["kind"], "offline", "{needs}");
+    assert_eq!(needs["model_calls"], 0, "{needs}");
+    // No retry wait: the offline model never makes the app sleep (the note-taker passes its wait on).
+    assert!(
+        needs["millis"].as_u64().unwrap_or(u64::MAX) < 1_000,
+        "an offline question must not wait for a retry: {needs}"
+    );
+}
+
+/// The key limit check (`run.mjs --key-limit`): ONE call of `GET https://openrouter.ai/api/v1/key` with the key
+/// the app saved, to see what is left before a live run (a 403 "Key limit exceeded" is the limit, not a bug).
+/// It prints ONLY `limit`, `usage`, `limit_remaining` and `is_free_tier`, in lines that start with `KEY-LIMIT`.
+/// It never prints the key, a header, the label of the key or the rest of the reply. A failure prints its status and
+/// its reason (the provider's words with the key cut out) and stops; nothing is asked again.
+#[test]
+#[ignore = "live: reads the key saved in the app and calls the key endpoint of OpenRouter once; run it with scripts/ai-eval/run.mjs --key-limit"]
+fn key_limit_left() {
+    use std::io::Read;
+    let key = match Runtime::real().keys().get() {
+        Ok(Some(key)) => key,
+        Ok(None) => {
+            println!("KEY-LIMIT: no key is saved in the app");
+            return;
+        }
+        Err(_) => {
+            println!("KEY-LIMIT: the place of the key could not be read");
+            return;
+        }
+    };
+    let client = match reqwest::blocking::Client::builder()
+        .https_only(true)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(15))
+        .build()
+    {
+        Ok(client) => client,
+        Err(_) => {
+            println!("KEY-LIMIT: the HTTP client could not be built");
+            return;
+        }
+    };
+    let response = match client
+        .get("https://openrouter.ai/api/v1/key")
+        .bearer_auth(&key)
+        .send()
+    {
+        Ok(response) => response,
+        Err(error) => {
+            println!(
+                "KEY-LIMIT: the call could not be made ({})",
+                if error.is_timeout() {
+                    "timeout"
+                } else if error.is_connect() {
+                    "no connection"
+                } else {
+                    "dropped"
+                }
+            );
+            return;
+        }
+    };
+    let status = response.status();
+    let mut body = Vec::new();
+    // At most 64 KiB, so a strange reply cannot flood the output.
+    let _ = response.take(64 * 1024).read_to_end(&mut body);
+    if !status.is_success() {
+        let reason = mandi_assistant::provider_reason::reason_of(&body, &key);
+        println!(
+            "KEY-LIMIT: HTTP {}: {}",
+            status.as_u16(),
+            reason.as_deref().unwrap_or("no reason given")
+        );
+        return;
+    }
+    let value: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+    let data = &value["data"];
+    let shown = |name: &str| -> String {
+        match data.get(name) {
+            Some(Value::Number(n)) => n.to_string(),
+            Some(Value::Bool(b)) => b.to_string(),
+            Some(Value::Null) | None => "null".to_owned(),
+            Some(_) => "unreadable".to_owned(),
+        }
+    };
+    for name in ["limit", "usage", "limit_remaining", "is_free_tier"] {
+        println!("KEY-LIMIT {name}: {}", shown(name));
+    }
 }
 
 #[test]
@@ -1248,7 +1564,7 @@ fn a_quality_changes_no_amount_and_follows_the_rate_inside_a_lot() {
     let keep = |facts: &BTreeMap<String, String>| -> BTreeMap<String, String> {
         facts
             .iter()
-            .filter(|(k, _)| !k.starts_with("ixq."))
+            .filter(|(k, _)| !year::oracle::is_quality_fact(k))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     };
@@ -1340,7 +1656,7 @@ fn the_print_data_of_r5_and_r1_carries_the_quality() {
 #[test]
 fn dump_the_oracle_without_grades() {
     // Not live. With MANDI_ORACLE_UNGRADED_JSON=<file> it writes the facts of the same books built with no quality
-    // on any line (plan 58 T4), to be compared with the dump of the graded books: only the `ixq.` facts may differ.
+    // on any line (plan 58 T4), to be compared with the dump of the graded books: only the quality facts may differ (`year::oracle::is_quality_fact`).
     let Ok(out) = std::env::var("MANDI_ORACLE_UNGRADED_JSON") else {
         return;
     };
@@ -1587,6 +1903,7 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
         text: "a ka khata dikhao".into(),
         filters: "buyer=Akram Toll Tax".into(),
         misspelled: true,
+        click: false,
     };
     let row = run_one(
         &misspelled,
@@ -1613,6 +1930,7 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
     // The same question with a correct spelling is not clicked for.
     let plain = Question {
         misspelled: false,
+        click: false,
         id: "T2".into(),
         world: "day".into(),
         after: String::new(),
@@ -1655,6 +1973,7 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
         text: "Faisal ne aaj kya aur kitna becha".into(),
         filters: "asked_role=seller;found_as=buyer".into(),
         misspelled: false,
+        click: false,
     };
     let row = run_one(
         &wrong_role,
@@ -1709,6 +2028,7 @@ fn the_harness_writes_the_row_the_scorer_reads_for_a_question_and_its_follow_up(
         text: "gahakon ke kul bakaya".into(),
         filters: String::new(),
         misspelled: false,
+        click: false,
     };
     let row = run_one(
         &dues,
@@ -1976,6 +2296,7 @@ fn a_scripted_run_gives_the_same_rows_on_one_thread_and_on_three() {
             &|| Box::new(RecordedClient::new(script.clone())),
             &|| false,
             &|_| {},
+            false,
         );
         let took = started.elapsed();
         rows.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
@@ -2143,6 +2464,22 @@ fn the_button_r31_is_opened_through_the_statement_like_the_app_does() {
     let none = statement_button(&w, &ReportFilters::default());
     let error = none["error"].as_str().unwrap_or("");
     assert!(error.contains("partner_id"), "{none}");
+}
+
+#[test]
+fn export_the_year_snapshot() {
+    // Not live. With MANDI_YEAR_DB_OUT=<file> it copies the database of the rich year (built through the
+    // app's own saves) so the robustness tester can read the books with a SQL tool when it writes the oracle
+    // facts of the D7 bank. Without the variable it does nothing.
+    let Ok(out) = std::env::var("MANDI_YEAR_DB_OUT") else {
+        return;
+    };
+    let year = year_master(false);
+    if let Some(parent) = std::path::Path::new(&out).parent() {
+        std::fs::create_dir_all(parent).expect("the folder of the copy");
+    }
+    std::fs::copy(&year.snapshot, &out).expect("the copy of the year's database");
+    eprintln!("year database copied to {out}");
 }
 
 #[test]

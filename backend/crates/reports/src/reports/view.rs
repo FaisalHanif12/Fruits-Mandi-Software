@@ -53,6 +53,28 @@ fn date_column(columns: &[Column]) -> Option<usize> {
     columns.iter().position(|c| c.kind == ColumnKind::Date)
 }
 
+/// The reports whose rows are in the order the entries were made and whose newest-first order is the
+/// exact reverse of it: the cash book, the day book, the party ledger and statement (R11 to R14), and the
+/// sales registers (R2 to R4), where one بکری holds many lines. Equal days run newest line first, so
+/// "the last sale" of a day is the last line entered (D7, plan 59 F1, Q2436: line 1 of بکری 367 was
+/// taken for the last rate, 3,830, and the last line is 3,940). One list for the screens, the prints
+/// and the assistant (Code Standards G6).
+///
+/// Example: `newest_first_reverses(ReportId::R2)` is true; `ReportId::R20` is false (sorted by name).
+#[must_use]
+pub fn newest_first_reverses(id: ReportId) -> bool {
+    matches!(
+        id,
+        ReportId::R2
+            | ReportId::R3
+            | ReportId::R4
+            | ReportId::R11
+            | ReportId::R12
+            | ReportId::R13
+            | ReportId::R14
+    )
+}
+
 /// The reports whose last column is a running balance (the cash book, the party ledger and the
 /// party statement).
 fn has_running_balance(id: ReportId) -> bool {
@@ -217,10 +239,7 @@ pub(crate) fn sort_page(page: &mut ReportPage, sort: &SortInput) -> Result<(), R
     // rows of one day run newest line first, in the print and the Excel file too.
     let reverse = date_sort
         && sort.direction == mandi_core::paging::SortDirection::Desc
-        && matches!(
-            page.id,
-            ReportId::R11 | ReportId::R12 | ReportId::R13 | ReportId::R14
-        );
+        && newest_first_reverses(page.id);
     let mut sorted: Vec<Row> = Vec::with_capacity(page.rows.len());
     let mut segment: Vec<Row> = Vec::new();
     let flush = |segment: &mut Vec<Row>, sorted: &mut Vec<Row>| {

@@ -10,7 +10,12 @@ import type { ReportColumn } from '../../bindings/ReportColumn';
 import type { ReportId } from '../../bindings/ReportId';
 import type { ReportRow } from '../../bindings/ReportRow';
 import type { ReportRowKind } from '../../bindings/ReportRowKind';
-import type { ListColumn, ListContext } from '../../shared/grid';
+import {
+  LIST_COLUMN_WIDTHS,
+  LIST_GROW_MIN_WIDTH,
+  type ListColumn,
+  type ListContext,
+} from '../../shared/grid';
 import { isNegativePaisa, isPositivePaisa } from '../../shared/format';
 import { isFromStep, type LayoutStep } from '../../shared/hooks/useLayoutStep';
 import { cellText, emptyNameMessageId, sideText } from './cells';
@@ -68,21 +73,83 @@ const GARDEN_PARTNER_LAYOUT_STEPS: Readonly<Record<string, StepRange>> = {
   paid_pocket: { from: 'normal' },
 };
 
+/**
+ * The room a report's table has at each layout step, in px: the grid at 1024, 1366 and 1920 px wide
+ * with the menus open (NFR-USE-15, NFR-USE-17). The widths of the column types in `shared/grid` say
+ * what fits in it. A table never scrolls sideways (PRD FR-7.2).
+ */
+export const GRID_ROOM: Readonly<Record<LayoutStep, number>> = {
+  compact: 890,
+  normal: 1070,
+  wide: 1530,
+};
+
+const STEPS_UP: readonly LayoutStep[] = ['compact', 'normal', 'wide'];
+
+/**
+ * The columns of the sales registers (R2, R3, R4) that wait for room, the most needed first. The
+ * backend adds the quality (PRD FR-12.42), the packing (when the filter has more than one, PRD
+ * FR-7.53) and the seller's rate (when a line has a rate difference, PRD FR-12.3) only when the
+ * filter needs them, so a register can have up to 12 columns. The buyer, the item, the quantity, the
+ * rate and the buyer's total are always shown; then these come in this order, as many as the room of
+ * the step holds (the first that does not fit stops the list, so a column shown at one step is shown
+ * at every wider one). The print and the Excel file have every column.
+ */
+const REGISTER_WAITING: readonly string[] = [
+  'grade',
+  'packing',
+  'seller_rate',
+  'date',
+  'doc',
+  'value',
+  'city',
+];
+
+/** The least width a column takes in the grid: a growing column gives up room down to its least. */
+function leastWidth(column: ReportColumn, index: number): number {
+  const made = listColumnOf<ReportRowView>(column, index);
+  return made.grow === true ? LIST_GROW_MIN_WIDTH : LIST_COLUMN_WIDTHS[made.type];
+}
+
+/**
+ * The steps of the sales register columns for the columns the backend sent (PRD FR-7.2, F22). The
+ * room of a step minus the columns that always show is shared out in the order above, so any mix of
+ * the optional columns fits: nothing is hard-coded for one mix.
+ */
+function registerSteps(columns: readonly ReportColumn[]): Record<string, StepRange> {
+  const waiting = REGISTER_WAITING.flatMap((key) => {
+    const index = columns.findIndex((column) => column.key === key);
+    const column = columns[index];
+    return column === undefined ? [] : [{ key, width: leastWidth(column, index) }];
+  });
+  const waitingKeys = new Set(waiting.map((column) => column.key));
+  const always = columns.reduce(
+    (sum, column, index) => (waitingKeys.has(column.key) ? sum : sum + leastWidth(column, index)),
+    0,
+  );
+  const steps: Record<string, StepRange> = {};
+  for (const { key } of waiting) steps[key] = NEVER;
+  const placed = new Set<string>();
+  for (const step of STEPS_UP) {
+    let room = GRID_ROOM[step] - always;
+    for (const { key, width } of waiting) {
+      if (width > room) break;
+      room -= width;
+      if (!placed.has(key)) {
+        placed.add(key);
+        steps[key] = { from: step };
+      }
+    }
+  }
+  return steps;
+}
+
 /** The steps of a report's columns; most reports have one map, R36 has one for each layout. */
 function stepsOf(
   id: ReportId,
-  columns: readonly Pick<ReportColumn, 'key'>[],
+  columns: readonly ReportColumn[],
 ): Readonly<Record<string, StepRange>> | undefined {
-  // The sales registers get a column for the quality of a line only when a line of the filter has one
-  // (PRD FR-12.42). That is one column more than the window holds at the compact step and at the
-  // normal one, so the day waits for the normal step and the value (before the commission) for the
-  // wide step. The print and the Excel file still have both.
-  if (
-    (id === 'R2' || id === 'R3' || id === 'R4') &&
-    columns.some((column) => column.key === 'grade')
-  ) {
-    return { ...COLUMN_STEPS[id], date: { from: 'normal' }, value: { from: 'wide' } };
-  }
+  if (id === 'R2' || id === 'R3' || id === 'R4') return registerSteps(columns);
   // A party's day slip (R35) has its table beside the summary box at the normal step. Its quality
   // column (a column only when a line of the slip has one) takes the room of the packing word, which
   // the item line already carries; the print still has the packing.
@@ -116,10 +183,8 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     store_rent: NEVER,
     phone_charge: NEVER,
   },
-  // Sales register: date, buyer, item, quantity, rate and the buyer's total always; the rest follow.
-  R2: { doc: { from: 'normal' }, value: { from: 'normal' }, city: { from: 'wide' } },
-  R3: { doc: { from: 'normal' }, value: { from: 'normal' }, city: { from: 'wide' } },
-  R4: { doc: { from: 'normal' }, value: { from: 'normal' }, city: { from: 'wide' } },
+  // The sales registers (R2, R3, R4) have no fixed map: `registerSteps` shares out the room of each
+  // step over the columns the backend sent.
   // Lots (the PRD's columns): the charges that make up the deductions need the wide step, where
   // the quantity gives its room to them. The item and the store rent are in the print only.
   R6: {

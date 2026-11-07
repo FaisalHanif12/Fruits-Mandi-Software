@@ -370,6 +370,12 @@ fn build_filters(
     })
 }
 
+/// True for the reports whose newest-first order is the exact reverse of their order (see
+/// `mandi_reports::reports::newest_first_reverses`).
+fn id_is_newest_first_register(id: ReportId) -> bool {
+    mandi_reports::reports::newest_first_reverses(id)
+}
+
 /// The sort the report itself does: one key, or the newest first for a ledger.
 fn report_sort(id: ReportId, keys: &[SortKey], env: &Env<'_>) -> Option<SortInput> {
     let language = Some(env.language);
@@ -743,6 +749,18 @@ pub fn run_report(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, St
     if keys.len() > 2 {
         return Err(bad("ERR_OUT_OF_RANGE", "sort", "up to 2 keys").into());
     }
+    // "Newest first by date, then by entry" in a register of the entries in the order they were made:
+    // the register's own newest-first order already breaks a tie by entry and line, newest first, in
+    // one SQL page (D7, plan 59 S-B1). The second key would only force the whole report to be read.
+    if id_is_newest_first_register(id)
+        && let [first, second] = keys.as_slice()
+        && first.column == "date"
+        && matches!(first.order, OrderWord::Desc)
+        && matches!(second.column.as_str(), "entry" | "doc")
+        && matches!(second.order, OrderWord::Desc)
+    {
+        keys.truncate(1);
+    }
     let mut built = build_filters(env, state, &parsed, &entry.filters)?;
     if entry.party_required && id != ReportId::R1 && id != ReportId::R31 && built.party.is_none() {
         return Err(bad("ERR_REQUIRED", "party", "this report is one party's").into());
@@ -995,6 +1013,18 @@ fn filter_and_sort(
                 return Err(mixed_sides_error("sort.column"));
             }
             spec.push((index, key.order));
+        }
+        // "Newest first" by date: in a register of the entries in the order they were made, equal days
+        // run newest line first, so the first row is the last line entered (D7, plan 59 F1, Q2436). The
+        // sorts below are stable, so reversing the rows first reverses every tie.
+        if let Some((index, OrderWord::Desc)) = spec.first()
+            && page
+                .columns
+                .get(*index)
+                .is_some_and(|c| c.kind == mandi_reports::reports::ColumnKind::Date)
+            && mandi_reports::reports::newest_first_reverses(page.id)
+        {
+            kept.reverse();
         }
         // Stable: the second key first, then the first key decides.
         for (index, order) in spec.iter().rev() {

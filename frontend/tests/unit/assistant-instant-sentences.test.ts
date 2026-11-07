@@ -53,6 +53,43 @@ const SENTENCES: readonly Sentence[] = [
     uses: { shop: ['period', 'figure'] },
     common: ['name', 'period', 'figure'],
   },
+  // The sentences of a figure on one item for one party, and the last rate of an item (PRD FR-7.90).
+  {
+    id: 'assistant-instant-commission-buyer-item',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure'],
+  },
+  {
+    id: 'assistant-instant-commission-seller-item-own',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure'],
+  },
+  {
+    id: 'assistant-instant-commission-seller-item',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure'],
+  },
+  {
+    id: 'assistant-instant-laga-buyer-item',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure'],
+  },
+  {
+    id: 'assistant-instant-last-rate-item',
+    selector: '',
+    values: [''],
+    common: ['item', 'period', 'figure', 'date'],
+  },
+  {
+    id: 'assistant-instant-last-rate-buyer-item',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure', 'date'],
+  },
   {
     id: 'assistant-instant-party',
     selector: 'kind',
@@ -91,6 +128,8 @@ const MARKERS: Readonly<Record<string, string>> = {
   name: 'NAMEMARK',
   figure: 'FIGUREMARK',
   period: 'PERIODMARK',
+  item: 'ITEMMARK',
+  date: 'DATEMARK',
   day: 'DAYMARK',
   from: 'FROMMARK',
   to: 'TOMARK',
@@ -154,6 +193,41 @@ describe.each(LANGUAGES)('the instant answer sentences (%s)', (language) => {
       expect(text).toContain('PERIODMARK');
     }
     expect(own).not.toBe(total);
+  });
+
+  it('the item sentences place the item after the party, and only the seller total includes Laga', () => {
+    const laga = message(language, 'glossary-laga');
+    const args = { name: 'NAMEMARK', item: 'ITEMMARK', figure: 'FIGUREMARK', period: 'PERIODMARK' };
+    const buyer = message(language, 'assistant-instant-commission-buyer-item', args);
+    const own = message(language, 'assistant-instant-commission-seller-item-own', args);
+    const total = message(language, 'assistant-instant-commission-seller-item', args);
+    for (const text of [buyer, own, total]) {
+      expect(text.indexOf('NAMEMARK')).toBeLessThan(text.indexOf('ITEMMARK'));
+      expect(text.indexOf('ITEMMARK')).toBeLessThan(text.indexOf('FIGUREMARK'));
+    }
+    expect(total).toContain(laga);
+    expect(total).toContain(language === 'ur' ? 'اوپر والی لائن سمیت' : 'including the line above');
+    expect(buyer).not.toContain(laga);
+    expect(own).not.toContain(laga);
+    expect(own).not.toContain(language === 'ur' ? 'اوپر والی لائن' : 'line above');
+  });
+
+  it('the last rate sentences end with the figure, then the date', () => {
+    const args = {
+      name: 'NAMEMARK',
+      item: 'ITEMMARK',
+      figure: 'FIGUREMARK',
+      period: 'PERIODMARK',
+      date: 'DATEMARK',
+    };
+    for (const id of [
+      'assistant-instant-last-rate-item',
+      'assistant-instant-last-rate-buyer-item',
+    ]) {
+      const text = message(language, id, args);
+      expect(text.indexOf('FIGUREMARK'), id).toBeLessThan(text.indexOf('DATEMARK'));
+      expect(text.indexOf('ITEMMARK'), id).toBeLessThan(text.indexOf('FIGUREMARK'));
+    }
   });
 
   it('the capital sentence is the partner and his capital with the figure', () => {
@@ -223,6 +297,36 @@ describe('the word order of the period in the sentences', () => {
       expect(text).toContain('NAMEMARK سے لیا گیا');
     }
   });
+
+  it.each(PERIODS)(
+    'period %s is followed by کا in every new item and last-rate line (Urdu)',
+    (shape) => {
+      const period = message('ur', 'assistant-instant-period', {
+        shape,
+        day: 'DAYMARK',
+        from: 'FROMMARK',
+        to: 'TOMARK',
+      });
+      const ids = [
+        'assistant-instant-commission-buyer-item',
+        'assistant-instant-commission-seller-item-own',
+        'assistant-instant-commission-seller-item',
+        'assistant-instant-laga-buyer-item',
+        'assistant-instant-last-rate-item',
+        'assistant-instant-last-rate-buyer-item',
+      ];
+      for (const id of ids) {
+        const text = message('ur', id, {
+          name: 'NAMEMARK',
+          item: 'ITEMMARK',
+          figure: 'FIGUREMARK',
+          period,
+          date: 'DATEMARK',
+        });
+        expect(text, id).toMatch(new RegExp(`${period} کا `));
+      }
+    },
+  );
 
   it.each(PERIODS)('in English the period comes after the noun, for period %s', (shape) => {
     const period = message('en', 'assistant-instant-period', {

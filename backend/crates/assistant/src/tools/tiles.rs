@@ -233,10 +233,11 @@ fn total_dues_node(t: &DuesParts, d: &Dues) -> Node {
     }
 }
 
-/// The tile of the total dues as the model reads it: its amount and what it holds. It is NOT the
-/// shop's total اگراہی of PRD FR-19.9 (that is R20's total, the tile `buyers_dues`): it adds the
-/// sellers who owe the firm and the dead amount (live run 2: 21,751,319 = 20,324,367 + 0 + 1,426,952,
-/// quoted for a question about the collectors' dues, whose answer is 20,324,367).
+/// The tile of the total dues as the model reads it: its amount and what it holds. It IS the shop's
+/// کل اگراہی ("kul ugrahi", "total dues": PRD Section 3, 9.1, FR-19.9, FR-7.76): the buyers' dues, what
+/// the sellers owe the firm and the dead amount. The buyers' dues alone (the tile `buyers_dues`) are the
+/// total of R20 to R22, the lists by collector and by city: a question about those is NOT answered with
+/// this tile (live run 2: 21,751,319 = 20,324,367 + 0 + 1,426,952, quoted for the collectors' dues).
 fn total_dues_tile(amount: Node) -> Node {
     Node::obj(vec![
         ("amount", amount),
@@ -252,8 +253,9 @@ fn total_dues_tile(amount: Node) -> Node {
         (
             "note",
             Node::Str(
-                "total_dues is buyers_dues plus sellers_dues plus dead_amount. The shop's \
-                 ugrahi (dues of the buyers, by collector, by city, R20 to R23) is buyers_dues."
+                "total_dues is the shop's total ugrahi (kul ugrahi, total dues, کل اگراہی): \
+                 buyers_dues plus sellers_dues plus dead_amount. buyers_dues alone is the dues of \
+                 the buyers, the total of the lists by collector and by city (R20 to R22)."
                     .to_owned(),
             ),
         ),

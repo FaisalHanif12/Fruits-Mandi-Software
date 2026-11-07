@@ -13,6 +13,15 @@
 //  5. The results of another bank are scored into backend/target/ai-eval-<name>/, and the team's
 //     folder is left alone.
 //  6. --threads is passed to the live test as MANDI_EVAL_THREADS, and the live test clamps it to 1..8.
+//  7. --offline (D7): no key and no network. The runner starts the test `offline_questions` (not the live one, no
+//     --ignored) with MANDI_EVAL_OFFLINE=1; that test never names the real client or the real key store; the
+//     report is written to ai-eval-<name>-offline/ and the team folder and the Urdu sheet are left alone; a
+//     question the app answered itself with a wrong figure ends the run with exit 1 and says DEFECT, a question
+//     that needs the model does not.
+//
+//  8. --key-limit (D7): the runner starts only the ignored test `key_limit_left`, shows only its KEY-LIMIT lines and
+//     hides anything that looks like a key; the test prints only limit, usage, limit_remaining and is_free_tier, and
+//     none of its print lines names the key or a header. Read from the source: the check is never run here.
 //
 // Everything is made in a temporary folder. The hidden bank is never read.
 
@@ -174,6 +183,158 @@ try {
     /MANDI_EVAL_QUESTIONS: QUESTIONS/.test(runner),
     '--bank must reach the live test as MANDI_EVAL_QUESTIONS',
   );
+
+  // 7. --offline. The source first: the runner, then the test it starts.
+  expect(
+    /MANDI_EVAL_OFFLINE = '1'/.test(runner) &&
+      /\['--exact', 'offline_questions'\]/.test(runner) &&
+      /OFFLINE \? \[\] : \['--ignored'\]/.test(runner),
+    '--offline must start the test offline_questions with MANDI_EVAL_OFFLINE=1 and without --ignored',
+  );
+  expect(
+    /fn offline_questions\(\)/.test(live) && /MANDI_EVAL_OFFLINE/.test(live),
+    'the offline test must exist and wait for MANDI_EVAL_OFFLINE=1',
+  );
+  const offlineBody = (live.split('\nfn offline_questions()')[1] ?? '').split('\n}\n')[0];
+  expect(
+    offlineBody.length > 200 &&
+      !/OpenRouterClient|Runtime::real|KeyringStore|internet_back|can_reach_the_host/.test(
+        offlineBody,
+      ),
+    'the offline test must not name the real client, the real key store or the network check',
+  );
+  // The report of an offline results file: made-up rows, so the numbers are not a result of the app.
+  const offName = `check-modes-offline-${process.pid}`;
+  const offBank = write(`${offName}.tsv`, good);
+  const offOut = join(ROOT, 'backend', 'target', `ai-eval-${offName}-offline`);
+  const answeredRow = (id, paisa) => ({
+    id,
+    question: 'x',
+    world: 'day',
+    reply: {
+      outcome: 'answered',
+      answer: {
+        parts: [{ type: 'figure', cell: { type: 'money', paisa }, dir: null, checked: true }],
+        tables: [],
+        charts: [],
+        estimate: null,
+        advice: false,
+        sources: [],
+        differences: [],
+        next: [],
+      },
+    },
+    finish_reason: 'local',
+    model_calls: 0,
+    tool_calls: [],
+    millis: 40,
+  });
+  const needsRow = (id) => ({
+    id,
+    question: 'x',
+    world: 'day',
+    reply: { outcome: 'offline', failure: { kind: 'offline' } },
+    finish_reason: null,
+    model_calls: 0,
+    tool_calls: [],
+    millis: 5,
+  });
+  const offResults = (rowsOf) => {
+    const path = join(dir, `offline-results-${rowsOf.length}-${Math.random()}.json`);
+    writeFileSync(
+      path,
+      JSON.stringify({ meta: { model: 'offline', threads: 1 }, oracle: {}, results: rowsOf }),
+    );
+    return path;
+  };
+  const figureQuestion = good.find((x) => x[id] === first[id]);
+  const reviewBefore = mtime(join(HERE, 'urdu-review.tsv'));
+  r = run(
+    '--bank',
+    offBank,
+    '--offline',
+    '--results',
+    offResults(good.map((x) => needsRow(x[id]))),
+  );
+  expect(
+    r.status === 0 && /needs the model/.test(r.stdout) && /AI EVAL OFFLINE/.test(r.stdout),
+    `an offline report of rows that need the model must exit 0; exit ${r.status}: ${r.stderr}`,
+  );
+  expect(
+    existsSync(join(offOut, 'offline-report.txt')) &&
+      existsSync(join(offOut, 'offline-summary.json')) &&
+      existsSync(join(offOut, 'offline-detail.tsv')),
+    `the offline report must be written to ${offOut}`,
+  );
+  r = run(
+    '--bank',
+    offBank,
+    '--offline',
+    '--results',
+    offResults(
+      good.map((x) => (x[id] === figureQuestion[id] ? answeredRow(x[id], 99900) : needsRow(x[id]))),
+    ),
+  );
+  expect(
+    r.status === 1 && /DEFECT/.test(r.stdout) && /LOCAL WRONG: 1/.test(r.stdout),
+    `a wrong answer the app gave by itself must end the offline run with exit 1 and say DEFECT; exit ${r.status}: ${r.stdout.slice(0, 400)}`,
+  );
+  expect(
+    mtime(join(HERE, 'urdu-review.tsv')) === reviewBefore,
+    'an offline report must not write the Urdu review sheet',
+  );
+  expect(
+    mtime(join(TEAM_OUT, 'summary.json')) === teamBefore,
+    'the team summary was touched by an offline report',
+  );
+  rmSync(offOut, { recursive: true, force: true });
+
+  // 8. --key-limit, from the source (it must never be run by this check: it would call the network).
+  expect(
+    /--exact',\s*'key_limit_left'/.test(runner) && /--ignored/.test(runner),
+    '--key-limit must start only the ignored test key_limit_left',
+  );
+  expect(
+    /startsWith\('KEY-LIMIT'\)/.test(runner) && /sk-\[A-Za-z0-9_-\]/.test(runner),
+    '--key-limit must show only the KEY-LIMIT lines and hide anything that looks like a key',
+  );
+  const limitBody = (live.split('\nfn key_limit_left()')[1] ?? '').split('\n}\n')[0];
+  expect(limitBody.length > 400, 'the key limit test must exist');
+  expect(
+    /#\[ignore/.test(live.split('\nfn key_limit_left()')[0].slice(-400)),
+    'the key limit test must be ignored (it is run by the lead only)',
+  );
+  expect(
+    /api\/v1\/key"/.test(limitBody) && !/chat\/completions/.test(limitBody),
+    'the key limit test must call the key endpoint and only that',
+  );
+  // A print line may not name the key, a header, the label or the body: neither as an argument nor inline in
+  // the text (`{key}`).
+  const printLines = limitBody.split('\n').filter((l) => /(println|eprintln|panic|dbg)!/.test(l));
+  const argLines = [];
+  // A call can spread over lines: keep every line from a print macro to its closing `);`.
+  const lines = limitBody.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!/(println|eprintln|panic|dbg)!\(/.test(lines[i])) continue;
+    let j = i;
+    while (j < lines.length && !/\);\s*$/.test(lines[j])) j += 1;
+    argLines.push(lines.slice(i, j + 1).join(' '));
+  }
+  expect(printLines.length > 0, 'the key limit test must print its result');
+  expect(
+    !argLines.some(
+      (l) =>
+        /\{(key|headers?|label|body|value)\b/.test(l) ||
+        /,\s*&?(key|headers?|label|body|value)\b/.test(l.replace(/"[^"]*"/g, '""')),
+    ),
+    'a print line of the key limit test names the key, a header, the label or the body',
+  );
+  expect(
+    ['limit', 'usage', 'limit_remaining', 'is_free_tier'].every((n) =>
+      limitBody.includes(`"${n}"`),
+    ),
+    'the key limit test must print limit, usage, limit_remaining and is_free_tier',
+  );
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
@@ -183,5 +344,5 @@ if (problems.length) {
   process.exit(2);
 }
 console.log(
-  'check-modes ok: --bank (check, refusals, own output folder, team folder untouched) and --threads (default 3, clamp 1 to 8, passed to the live test)',
+  'check-modes ok: --bank (check, refusals, own output folder, team folder untouched), --threads (default 3, clamp 1 to 8, passed to the live test), --offline (own test, no real client, own folder, a wrong local answer fails the run) and --key-limit (the ignored test, only the limit fields, no key)',
 );

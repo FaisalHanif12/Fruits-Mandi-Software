@@ -23,6 +23,7 @@ export {
   FIT_MIN_WIDTHS,
   FIT_WEIGHTS,
   LIST_COLUMN_WIDTHS,
+  LIST_GROW_MIN_WIDTH,
   isListNumberLike,
   isNumberLike,
   type ListColumnType,

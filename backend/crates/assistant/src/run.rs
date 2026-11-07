@@ -56,6 +56,7 @@ use crate::limits::{
     MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_REWRITES, MAX_TOOL_CALLS, QUESTION_TIMEOUT_SECS,
     RETRY_MIN_LEFT_SECS, TOOLS_OFF_AT_SECS,
 };
+use crate::measure_guard::{self, Measure};
 use crate::model_answer::{AnswerKind, EntryScreenName, ModelAnswer, Nearest};
 use crate::prefetch;
 use crate::prefind;
@@ -643,11 +644,15 @@ impl<'a> Run<'a> {
     ///
     /// In a follow-up (`follow_up`), a question that leans on the earlier ones is left to the model,
     /// which sees them (money review R-c): see [`leans_on_earlier_questions`].
+    ///
+    /// The second value is true when the question names a filter a dashboard tile does not take,
+    /// whether or not the app understood all of it: a tile read ahead for such a question would be a
+    /// real figure of something wider, and the model could quote it (D7 R8, money review 10).
     fn understand_question(
         &self,
         text: &str,
         follow_up: bool,
-    ) -> Option<crate::understand::Understanding> {
+    ) -> (Option<crate::understand::Understanding>, bool) {
         use crate::understand::{self, Intent};
         let reader = understand::Reader {
             ctx: &self.snap,
@@ -657,8 +662,9 @@ impl<'a> Run<'a> {
             partner_locked: self.partner_locked,
         };
         let understood = understand::understand(&reader, text);
+        let narrows = narrows_the_tiles(&understood);
         if !understood.sure || (follow_up && leans_on_earlier_questions(&understood)) {
-            return None;
+            return (None, narrows);
         }
         let kind = match understood.intent.value {
             Intent::Print => "print",
@@ -676,7 +682,7 @@ impl<'a> Run<'a> {
                 },
             }],
         });
-        Some(understood)
+        (Some(understood), narrows)
     }
 
     /// Reads, before the first call, what the model would have chosen to read (plan 54 S3, plan 55
@@ -1179,6 +1185,7 @@ impl<'a> Run<'a> {
         let mut refs_fixed = false;
         let mut kind_set = false;
         let mut months_fixed = false;
+        let mut measure_fixed = false;
         // What the model wrote before the app put a name back: the log keeps the model's own words
         // (the call marks `repaired`), so the next live run shows what it typed.
         let mut written_by_model: Option<String> = None;
@@ -1235,6 +1242,69 @@ impl<'a> Run<'a> {
                 } else {
                     Verdict::Retry(wrong)
                 }
+            } else {
+                verdict
+            };
+            // A commission figure of the other column than the side the question asks (D7, plan 59
+            // F1, Q2062: the total 15,716 for the buyer's 7,586): rewritten to the right cell of the
+            // same row when that is certain, else refused. It also joins the failures of another
+            // rule, so the one rewrite is told about it too; a repair is made once, and a total
+            // that comes back after it is refused, never shown (money review).
+            let verdict = match (turn.commission_side, swapped, &verdict) {
+                (Some(side), false, Verdict::Ok | Verdict::Retry(_)) => {
+                    match measure_guard::plan(&parsed.text, &state, side, turn.commission_laga) {
+                        Measure::Fine => verdict,
+                        Measure::Repair(repairs) => {
+                            let fixed = (matches!(verdict, Verdict::Ok) && !measure_fixed)
+                                .then(|| {
+                                    map_texts(&content, &|text| {
+                                        measure_guard::rewrite(text, &repairs)
+                                    })
+                                })
+                                .flatten();
+                            if let Some(fixed) = fixed {
+                                measure_fixed = true;
+                                if let Some(last) = turn.timing.calls.last_mut() {
+                                    last.repaired.push("measure".to_owned());
+                                }
+                                written_by_model.get_or_insert_with(|| content.clone());
+                                content = fixed;
+                                continue;
+                            }
+                            with_failures(verdict, measure_guard::repair_failures(&repairs))
+                        }
+                        Measure::Refuse(failures) => with_failures(verdict, failures),
+                    }
+                }
+                _ => verdict,
+            };
+            // An answer that cites nothing of the books and only the Owner's own amount is refused: it
+            // would give his number back as a confirmation (D7 R13, money review 11).
+            // General advice and a how-to answer carry no figure of the books by design.
+            // It reads only the kinds whose text is shown (a which-one or a change-refused answer keeps
+            // its buttons), never a general-advice answer, and never a help answer.
+            let helped = state
+                .results
+                .iter()
+                .any(|r| r.turn == state.turn && r.tool == "app_help");
+            let verdict = if matches!(verdict, Verdict::Ok | Verdict::Retry(_))
+                && parsed.kind.has_text()
+                && !turn.general_advice
+                && !help_guard::is_how_to(&turn.question, &numbers)
+            {
+                let read: Vec<String> = state
+                    .results
+                    .iter()
+                    .filter(|r| r.turn == state.turn)
+                    .map(|r| r.id.clone())
+                    .collect();
+                // A general-advice or help answer may hold no figure: a bare yes passes there, an
+                // amount of the Owner given back alone does not.
+                let confirm_check = parsed.kind != AnswerKind::GeneralAdvice && !helped;
+                with_failures(
+                    verdict,
+                    crate::own_number_guard::failures(&parsed.text, &numbers, &read, confirm_check),
+                )
             } else {
                 verdict
             };
@@ -2190,6 +2260,37 @@ fn is_empty_json(value: &Value) -> bool {
     }
 }
 
+/// True when the question names a filter that a dashboard tile does not take (a party, an item, a group,
+/// a quality, a side, a cash or credit word, a بکری number ...): a tile put in front of the model for it
+/// would be a real figure of something wider, and nothing guards a figure the model finds ready (D7 R8).
+fn narrows_the_tiles(u: &crate::understand::Understanding) -> bool {
+    !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || u.quality
+        || u.grade.is_some()
+        || u.commission_side.is_some()
+        || u.bikri_number.is_some()
+        || u.document_number
+        || u.packing_filter
+        || u.truck.is_some()
+        || u.scoped
+        || u.other_measure != crate::understand::Measure::Same
+}
+
+/// The verdict with more failures: an `Ok` becomes a `Retry` of them, a `Retry` takes them too.
+fn with_failures(verdict: Verdict, more: Vec<crate::check::Failure>) -> Verdict {
+    match verdict {
+        Verdict::Retry(mut failures) => {
+            failures.extend(more);
+            Verdict::Retry(failures)
+        }
+        _ if more.is_empty() => verdict,
+        _ => Verdict::Retry(more),
+    }
+}
+
 /// True when a question that reads the books takes something from the questions before it, so the
 /// app, which reads only the new words, would read the wrong thing (money review R-c).
 ///
@@ -2535,11 +2636,19 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
     // The app writes the answer itself when it understood the whole question and the answer is
     // already in the app. It costs no model call, so it is not counted and the daily limit does
     // not stop it (FR-7.81).
-    let understood = if d.runtime.local() || d.runtime.read_first() {
+    let (understood, narrows_tiles) = if d.runtime.local() || d.runtime.read_first() {
         run.understand_question(text, !conv.turns.is_empty())
     } else {
-        None
+        (None, false)
     };
+    // The side of the commission the question asks (D7, plan 59 F1): the guard keeps the answer on that
+    // column.
+    turn.commission_side = understood.as_ref().and_then(|u| u.commission_side);
+    turn.commission_laga = understood.as_ref().is_some_and(|u| {
+        u.figures
+            .value
+            .contains(&crate::understand::FigureKind::Laga)
+    });
     turn.planned = understood
         .as_ref()
         .and_then(crate::understand::plan_reads)
@@ -2615,7 +2724,7 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
             });
             run.preread_tool(&mut conv, &mut turn, "analytics", &view.to_string());
         }
-    } else if cues::tile_question(text) {
+    } else if cues::tile_question(text) && !narrows_tiles {
         run.preread_tool(&mut conv, &mut turn, "tiles", "{}");
     } else if d.runtime.prefind() {
         // A plain question about one party the app can name without a doubt (item 10).

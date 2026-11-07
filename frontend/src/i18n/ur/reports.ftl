@@ -506,6 +506,12 @@ report-col-qty = تعداد
 report-col-rate = ریٹ
 
 # review: pending
+report-col-seller-rate = ریٹ { -beopari }
+
+# review: pending
+report-col-buyer-rate = ریٹ { -gahak }
+
+# review: pending
 report-col-value = قیمت
 
 # review: pending

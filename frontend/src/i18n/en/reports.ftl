@@ -506,6 +506,12 @@ report-col-qty = Quantity
 report-col-rate = Rate
 
 # review: pending
+report-col-seller-rate = Rate, { -beopari }
+
+# review: pending
+report-col-buyer-rate = Rate, { -gahak }
+
+# review: pending
 report-col-value = Value
 
 # review: pending

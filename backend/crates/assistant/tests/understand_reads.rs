@@ -412,7 +412,7 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("kharcha is mahine ka", "period{kind:this_month} | report{from:2026-10-01,id:R29,to:2026-10-10}"),
     ("pichle mahine ka kharcha", "period{kind:last_month} | report{from:2026-09-01,id:R29,to:2026-09-30}"),
     ("aaj ka kharcha", "period{kind:today} | report{from:2026-10-10,id:R29,to:2026-10-10}"),
-    ("bijli ka kharcha pichle mahine", "period{kind:last_month} | report{from:2026-09-01,id:R29,to:2026-09-30}"),
+    ("bijli ka kharcha pichle mahine", "period{kind:last_month} | report{from:2026-09-01,id:R29,rows:100,to:2026-09-30}"),
     ("aaj ka khulasa", "period{kind:today} | report{from:2026-10-10,id:R34,to:2026-10-10}"),
     ("kal ka khulasa", "period{kind:yesterday} | report{from:2026-10-09,id:R34,to:2026-10-09}"),
     ("trial balance", "report{id:R18}"),
@@ -563,7 +563,7 @@ const NEW_INPUTS: &[(&str, &str)] = &[
     ("sirf wasooli ki list", "report{id:R15,voucher_type:receipt}"),
     ("sirf adaigi ki list is mahine", "period{kind:this_month} | report{from:2026-10-01,id:R15,to:2026-10-10,voucher_type:payment}"),
     // A real figure and a forecast: both parts planned, so the model writes both from what is read.
-    ("pichly mahine bijli ka kitna kharcha, aur agle 3 mahine ka estimate", "period{kind:last_month} | find{role:expense_head,text:Electricity} | report{from:2026-09-01,id:R29,to:2026-09-30} | estimate{ahead:3,head:eh1,measure:shop_expenses}"),
+    ("pichly mahine bijli ka kitna kharcha, aur agle 3 mahine ka estimate", "period{kind:last_month} | find{role:expense_head,text:Electricity} | report{from:2026-09-01,id:R29,rows:100,to:2026-09-30} | estimate{ahead:3,head:eh1,measure:shop_expenses}"),
     ("agle 3 mahine ka commission", "estimate{ahead:3,measure:commission_all}"),
     ("agle 3 mahine ka nuqsan", "estimate{ahead:3,measure:profit}"),
     ("is saal ke aakhir tak sale ka andaza", "estimate{measure:sales,until:year_end}"),
@@ -1404,18 +1404,18 @@ fn one_figure_over_two_periods_reads_both_periods_before_the_model_starts() {
 /// It needs a "last" word, one buyer, one item and no period. No instant answer.
 #[rustfmt::skip]
 const LAST_RATE: &[(&str, &str)] = &[
-    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
-    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
-    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
-    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
-    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc+entry:desc}"),
+    ("akram ko kela aakhri kis rate pe diya", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
+    ("akram ko kele ka aakhri rate kya tha", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
+    ("last rate of banana to akram", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
+    ("akram ne kela kis rate pe liya last time", "find{role:buyer,text:akram} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
+    ("اکرم کو کیلا آخری بار کس ریٹ پر دیا", "find{role:buyer,text:اکرم} | find{role:item,text:Banana} | report{id:R2,item:i1,party:a20,rows:1,sort:date:desc}"),
     // No "last" word, a period, no buyer, or "last sale" (not a rate): the model's.
     ("akram ko kela kis rate pe diya", "NONE"),
     ("akram ko kela pichle mahine kis rate pe diya", "NONE"),
     // An item with no buyer, with or without a period: the newest line of its sales, ONE row (live run 2, C8).
-    ("kele ka last rate", "find{role:item,text:Banana} | report{id:R2,item:i1,rows:1,sort:date:desc+entry:desc}"),
-    ("what was the last rate of banana today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:1,sort:date:desc+entry:desc,to:2026-10-10}"),
-    ("last rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | report{from:2026-09-28,id:R2,item:i2,rows:1,sort:date:desc+entry:desc,to:2026-10-04}"),
+    ("kele ka last rate", "find{role:item,text:Banana} | report{id:R2,item:i1,rows:1,sort:date:desc}"),
+    ("what was the last rate of banana today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:1,sort:date:desc,to:2026-10-10}"),
+    ("last rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | report{from:2026-09-28,id:R2,item:i2,rows:1,sort:date:desc,to:2026-10-04}"),
     // "last week" is a period, not the last one: the average of the week, as ever.
     ("rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | analytics{from:2026-09-28,item:i2,to:2026-10-04,view:A}"),
     ("kele ki last sale", "NONE"),
@@ -1946,7 +1946,10 @@ fn a_balance_list_named_by_its_title_is_read_as_that_list() {
             .find(|r| r.tool == "report")
             .map(|r| mandi_assistant::results::tool_result_json(r, &words).to_string())
             .expect("the list");
-        assert!(list.contains("20324367"), "{question}: the total");
+        // The total of R22 is the buyers' dues of the tile (the rich year is read from the oracle, so a
+        // change of the year's days never leaves this test with a stale number).
+        let buyers = year::oracle::compute(&y).facts["tiles.buyers_dues"].clone();
+        assert!(list.contains(&buyers), "{question}: the total {buyers}");
         assert!(list.contains("2605353"), "{question}: a collector's row");
     }
 }

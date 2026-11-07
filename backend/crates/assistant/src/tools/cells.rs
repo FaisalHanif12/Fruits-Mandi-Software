@@ -355,6 +355,12 @@ pub fn order_of(cell: &Cell, language_ur: bool) -> Order {
                 .saturating_add(i128::from(*month)),
         ),
         Cell::Text { text } => Order::Text(text.to_lowercase()),
+        // An entry (`doc`) is ordered by its number, so "newest first by date, then by entry" has a
+        // second key that compares something (D7, plan 59 R1). An entry with no number sorts first.
+        Cell::Doc {
+            number: Some(number),
+            ..
+        } => Order::Num(i128::from(*number)),
         Cell::Party { party } => Order::Text(if language_ur {
             party.name_ur.clone()
         } else {
