@@ -301,3 +301,24 @@ To do on "continue":
     - the compare plans;
     - "up to now".
 13. **frontend3's HANDOFF arrived at the pause:** the party card fix, and plan 58 T2 (option C, which fits 692 of 692 and 874 of 874). After backend4's gen:types, check that the bindings carry SaleGrade and every grade field. Then run typecheck and lint once over the whole frontend, and run frontend2's analytics group box tests.
+
+## 15. Hand-over for a fresh session, 07-11-2026
+
+Code: branch `feature/assistant`, last commits daafeca (fixes) and 2330408 (agents on Opus). Everything is committed and pushed. All teammates are stopped. Start the next lead session from this worktree (or from the main folder once it is on `feature/assistant`).
+
+### What this round fixed (all with tests)
+Scope guard (period, item, group, party, grade, goods, garden, trip, buyer, seller); `grade` filter on R2, R3, R4 and view A; find exact name, one clear account, partner widening; misspelt period, group, item and quality words; "کل" with a past verb is yesterday; "agle mahine" is one month; kul ugrahi is R20; estimate figures carry their working; R10 by item; calculate refuses debit + credit of one report; pukhta khata dues go to the model; months of an item over all the books; the provider's error reason is kept (key scrubbed).
+
+### Small check after the fixes (139 questions, 07-11-2026, tree 2330408)
+Score 58 of 140. Output: `docs/reviews/run-data/55-small-check-07-11.txt`. Per fixed problem (pass / asked): quality 9/12, کل 2/12, garden and buyer filter 2/12, buyer-side commission 7/14, Alif 3/12, aloo 5/12, day book 1/5, last rate 3/12, capital 7/12, zero not not_found 5/12, Karim 3/8, never-asked money tail 12/20. 12 network timeouts.
+
+### Open, CRITICAL first (for the next session)
+1. **Buyer-side commission (CRITICAL):** Q2062 "pichle mahine Faisal se kele par kitna commission liya" answered 15,716 (seller + buyer); expected 7,586 (buyer side). The model takes the total; the plan must read buyer_comm, or the answer must be refused when the question names the buyer as payer.
+2. **Last rate on a day with two rates (CRITICAL):** Q2436 apple this week answered 3,830, the books' last line is 3,940; the answer also printed an empty date ("مورخہ ۔"). R2's "newest first" order must be date desc then entry desc (check the sort and the row the model cites).
+3. Many questions end `safe end` (time_limit 25 s or not_found): کل 5, Alif 6, garden filter 3, day book 3, Karim 4. No wrong figure in those, but no answer.
+4. Speed: one model call or none 45.5% of category A (target 70%); wait p50 10.4 s.
+5. "aaj ka rate" on a day with no sale says "not available"; the bank expects the last rate (Q1598): decide with Umar.
+6. Follow-ups kept from before: group forecast, plan 56 R4-3 and R4-9, the restore reusing the preview copy.
+
+### Usage notes (Umar, 07-11-2026)
+Keep the docs in `.claude/rules/`. Save usage with fresh sessions, one HANDOFF per teammate (no progress messages), two or three teammates per task, and turning off unused plugins. The OpenRouter key has its own total limit that does not reset; check it before a demo or a live run.

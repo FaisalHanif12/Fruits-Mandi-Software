@@ -1,0 +1,494 @@
+ai-eval: bank /Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/scripts/ai-eval/questions.tsv
+  4076 questions: A 3288, B 114, C 154, D 152, E 368; Roman Urdu 1608, Urdu letters 1485, English 983; 727 misspelled; 340 groups (277 of 3 or more)
+  facets: M (mixed language) 36, a party's day 15, no such party 14, print 108, Umar's own (U) 25, real-time figures (A2) 120, real figure plus forecast (MIX) 30, capability cells (CAP) 817, vegetables (VEG) 81, the item axis (ITEM) 1660, the money axis (MONEY) 801
+ai-eval: cargo test -j 4 -p mandi-assistant --test robustness_live -- --ignored --nocapture live_100_questions in /Users/faisalhanif/MyProfile/My Projects /Fruit Mandi Parallel/d5/backend
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.44s
+     Running tests/robustness_live.rs (target/debug/deps/robustness_live-3ce9c7c9058bdff8)
+
+running 1 test
+world year: 463 بکری, 22649 oracle facts, built in 9 s
+Q1024 year Answered (8371 ms)
+Q1040 year NotFound (46 ms)
+Q1041 year NotFound (39 ms)
+Q1021 year Answered (14962 ms)
+Q1159 year Answered (5101 ms)
+Q1171 year Answered (4765 ms)
+Q1009 year TimeLimit (25074 ms)
+Q431 year TimeLimit (25184 ms) [clicked]
+Q1187 year NotFound (12854 ms)
+Q1190 year Answered (22710 ms)
+test live_100_questions has been running for over 60 seconds
+Q1234 year TimeLimit (25055 ms)
+Q1236 year TimeLimit (25047 ms)
+Q1254 year Answered (42 ms)
+Q1296 year NotFound (54 ms)
+Q1237 year TimeLimit (25045 ms)
+Q1256 year Estimate (13383 ms)
+Q1301 year Estimate (12963 ms)
+Q1329 year Estimate (10809 ms)
+Q1239 year TimeLimit (25079 ms)
+Q1421 year Answered (22034 ms)
+Q1382 year TimeLimit (25082 ms)
+Q1461 year Error (25063 ms)
+Q1472 year Estimate (22101 ms)
+Q1598 year Answered (3497 ms)
+Q1600 year Answered (4053 ms)
+Q1523 year Answered (7340 ms)
+Q1602 year Answered (3355 ms)
+Q1700 year Answered (2678 ms)
+Q1702 year Answered (5625 ms)
+Q1704 year Answered (4801 ms)
+Q1479 year Estimate (19590 ms)
+Q1832 year Answered (9118 ms)
+Q1932 year Answered (2485 ms)
+Q1853 year Answered (7952 ms)
+Q1880 year NotFound (11263 ms)
+Q1941 year Answered (7882 ms)
+Q1958 year Answered (7115 ms)
+Q1992 year WhichOne (2580 ms)
+Q1974 year Answered (11099 ms)
+Q1996 year WhichOne (7262 ms)
+Q1995 year Answered (9768 ms)
+Q2000 year WhichOne (5919 ms)
+Q2028 year NotFound (4566 ms)
+Q2004 year Answered (6337 ms)
+Q2057 year Answered (7322 ms)
+Q2062 year Answered (4082 ms)
+Q1980 year TimeLimit (25075 ms)
+Q2063 year Answered (4151 ms)
+Q2069 year Answered (3455 ms)
+Q2077 year Answered (3755 ms)
+Q2061 year ChecksFailed (14990 ms)
+Q2104 year Answered (6718 ms)
+Q2073 year Answered (10968 ms)
+Q2198 year Answered (3264 ms)
+Q2186 year Answered (10447 ms)
+Q2313 year Answered (3501 ms)
+Q2321 year Answered (5431 ms)
+Q2403 year Answered (3996 ms)
+Q2194 year Answered (21347 ms)
+Q2302 year Answered (20363 ms) [clicked]
+Q2436 year Answered (3074 ms)
+Q2439 year Answered (2453 ms)
+Q2444 year Answered (3472 ms)
+Q2442 year Answered (6119 ms)
+Q2433 year ChecksFailed (14108 ms)
+Q2449 year Answered (4173 ms)
+Q2452 year Answered (6171 ms)
+Q2392 year Error (35637 ms) [clicked]
+Q2451 year Answered (11953 ms)
+Q2455 year Answered (4137 ms)
+Q2447 year Answered (16370 ms)
+Q2628 year Answered (18166 ms)
+Q2580 year TimeLimit (25052 ms)
+Q2678 year TimeLimit (25058 ms)
+Q2701 year TimeLimit (25054 ms)
+Q2751 year TimeLimit (25071 ms)
+Q2970 year Answered (55 ms)
+Q2904 year TimeLimit (25101 ms) [clicked]
+Q2909 year Error (25137 ms) [clicked]
+Q2916 year Error (25053 ms)
+Q3261 year Answered (16710 ms)
+Q3051 year TimeLimit (25046 ms)
+Q3052 year TimeLimit (25058 ms)
+Q3412 year TimeLimit (25069 ms)
+Q3491 year Answered (13449 ms)
+Q3653 year Error (23788 ms)
+Q3675 year Error (25081 ms)
+Q3715 year TimeLimit (25085 ms)
+Q3733 year Answered (11583 ms)
+Q3717 year TimeLimit (25053 ms)
+Q3753 year Answered (4353 ms)
+Q3745 year Answered (7174 ms)
+Q3735 year Answered (22545 ms)
+Q3739 year TimeLimit (27287 ms) [clicked]
+Q3796 year Answered (21639 ms)
+Q3781 year Error (25072 ms)
+Q3832 year Answered (3501 ms)
+Q3827 year Answered (7222 ms)
+Q3802 year Error (21619 ms)
+Q3810 year TimeLimit (25068 ms)
+Q3847 year NotFound (15650 ms)
+Q3851 year Answered (6122 ms)
+Q3850 year Error (19897 ms)
+Q3858 year Answered (3356 ms)
+Q3856 year Answered (6423 ms)
+Q3841 year TimeLimit (25063 ms)
+Q3860 year Answered (3251 ms)
+Q3864 year Answered (4408 ms)
+Q3885 year Answered (4989 ms)
+Q3889 year Answered (9970 ms)
+Q3868 year Error (25074 ms)
+Q3869 year TimeLimit (25061 ms)
+Q3872 year TimeLimit (25075 ms)
+Q3892 year TimeLimit (25031 ms)
+Q3908 year Answered (3501 ms)
+Q3894 year Error (25058 ms)
+Q3898 year TimeLimit (25072 ms)
+Q3903 year TimeLimit (25052 ms)
+Q3912 year Answered (17266 ms)
+Q3927 year Answered (20514 ms)
+Q3916 year Error (23113 ms)
+Q3920 year TimeLimit (25084 ms)
+Q3951 year Answered (10106 ms)
+Q3943 year Answered (16307 ms)
+Q3935 year TimeLimit (25074 ms)
+Q3959 year Answered (15947 ms)
+Q3967 year Answered (12435 ms)
+Q3998 year NotFound (42 ms)
+Q3974 year Answered (11763 ms)
+Q4006 year Answered (9632 ms)
+Q3990 year Answered (16909 ms)
+Q3982 year Answered (19502 ms)
+Q4029 year Answered (6349 ms)
+Q4014 year Answered (15512 ms)
+Q4037 year Answered (16677 ms)
+Q4022 year TimeLimit (25060 ms)
+Q4069 year Answered (4025 ms)
+Q4045 year Answered (22547 ms)
+Q4053 year TimeLimit (25050 ms)
+Q4061 year TimeLimit (25103 ms)
+test live_100_questions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 542.36s
+
+AI EVAL  model openai/gpt-6-luna
+endpoint azure (only: azure, allow_fallbacks: false, zdr: true, data_collection: deny)
+date 2026-11-07   questions run 140 of 140   threads 4
+oracle facts 22649   prefind off (as the app)
+
+SCORE 58 of 140 scored
+
+CATEGORY                 pass      wrong  answered  model time p50 / p95 (target)           network  rule
+A real-time data         58/132   21     59.8%     10.4 s / 25.1 s (6.0 s / 12.0 s) OVER   11      NOT YET  [no wrong figure, at least 98% answered]
+B suggestions            0/1      0      0.0%      25.1 s / 25.1 s (6.0 s / 12.0 s) OVER   0       NOT YET  [at least 95% good]
+C forecasts and what-ifs 0/6      5      83.3%     13.4 s / 22.1 s (15.0 s / 25.0 s) OK    1       NOT YET  [no wrong figure, at least 98% answered]
+E mixed and hard         0/1      0      0.0%      25.2 s / 25.2 s (6.0 s / 12.0 s) OVER   0       MEETS  [safe ends only, never a wrong figure]
+
+SPEED (plan 54): how many model calls a question needed, and where its time went (model time apart from the app's own work)
+  A  121 questions   model calls 0 / 1 / 2 / 3+: 7 / 48 / 35 / 31   one call or none 45.5%  UNDER (target 70%)
+      time p50 / p95:  before call 1 47 ms / 68 ms   call 1 4.9 s / 11.3 s   call 2 5.6 s / 10.6 s   call 3+ 5.5 s / 9.6 s   between calls 11 ms / 26 ms   after last call 17 ms / 10.2 s   app tools 0 ms / 18 ms   no model call 46 ms / 25.1 s
+      reasoning tokens a call:  call 1 p50 0, p95 193, mean 39   call 2 p50 35, p95 174, mean 59   call 3+ p50 83, p95 288, mean 108
+  B  1 questions   model calls 0 / 1 / 2 / 3+: 0 / 0 / 0 / 1   one call or none 0.0%
+      time p50 / p95:  before call 1 48 ms / 48 ms   call 1 10.9 s / 10.9 s   call 2 4.2 s / 4.2 s   call 3+ 6.9 s / 6.9 s   between calls 7 ms / 31 ms   after last call 3.0 s / 3.0 s   app tools 18 ms / 18 ms   no model call -
+      reasoning tokens a call:  call 1 p50 254, p95 254, mean 254   call 2 p50 0, p95 0, mean 0   call 3+ p50 88, p95 88, mean 88
+  C  5 questions   model calls 0 / 1 / 2 / 3+: 0 / 0 / 4 / 1   one call or none 0.0%
+      time p50 / p95:  before call 1 48 ms / 63 ms   call 1 6.7 s / 11.7 s   call 2 7.0 s / 10.3 s   call 3+ 5.8 s / 5.8 s   between calls 9 ms / 16 ms   after last call 10 ms / 13 ms   app tools 1 ms / 4 ms   no model call -
+      reasoning tokens a call:  call 1 p50 0, p95 307, mean 74   call 2 p50 119, p95 287, mean 134   call 3+ p50 188, p95 188, mean 188
+  E  1 questions   model calls 0 / 1 / 2 / 3+: 0 / 0 / 1 / 0   one call or none 0.0%
+      time p50 / p95:  before call 1 -   call 1 6.7 s / 6.7 s   call 2 10.4 s / 10.4 s   call 3+ -   between calls -   after last call -   app tools 2 ms / 2 ms   no model call -
+      reasoning tokens a call:  call 1 p50 0, p95 0, mean 0   call 2 p50 180, p95 180, mean 180   call 3+ -
+  BUTTONS (plan 55 gate 3): 112 answers with a report or view button were opened with the button's filters and their figures looked for in it; 0 answers have only the dashboard tiles (not checked); wrong place or wrong filters: Q1256 Q1301 Q1329 Q1472 Q1479
+  SPEED BUDGET (plan 55 Section 3), the time the Owner waits, p50 / p95 against the budget, and the hard limit:
+    how-to, print, navigation, no such party, not in the app: 1 questions   25.2 s / 25.2 s (budget 1.0 s / 2.0 s) OVER   hard limit 3.0 s: 1 OVER: Q431
+    figures and lists (A): 121 questions   10.4 s / 25.1 s (budget 5.0 s / 10.0 s) OVER   hard limit 25.0 s: 29 OVER: Q1009 Q1234 Q1236 Q1237 Q1382 Q1980 Q2580 Q2678 Q2701 Q2751 Q2904 Q3051 Q3052 Q3412 Q3715 Q3717 Q3739 Q3810 Q3841 Q3869 Q3872 Q3892 Q3898 Q3903 Q3920 Q3935 Q4022 Q4053 Q4061
+    advice, forecasts, what-ifs (B, C): 6 questions   13.4 s / 25.1 s (budget 10.0 s / 20.0 s) OVER   hard limit 25.0 s: 1 OVER: Q1239
+
+  REAL-TIME FIGURES (plan 55 Section 10): a right answer with no model call ("instant"), and in no call or one; the wait of each. Target for A2: instant at least 60%, instant or one call at least 85%, p50 2 s, p95 8 s:
+    A2 (the 120 simple figures): no question ran
+    A  (all of category A, not gated): 121 questions   no model call at all 7 (5.8%), of them right 0
+      instant (right, no model call): 0 (0.0%) UNDER vs 60%   wait p50 / p95 -
+      instant or one call (right): 30 (24.8%) UNDER vs 85%   wait p50 / p95 4.8 s / 12.0 s
+      every question: wait p50 10.4 s UNDER vs 2 s, p95 25.1 s UNDER vs 8 s   not right: 63
+  HARD LIMITS: no question over 25 s: 30 over: Q1009 Q1234 Q1236 Q1237 Q1382 Q1980 Q2580 Q2678 Q2701 Q2751 Q2904 Q3051 Q3052 Q3412 Q3715 Q3717 Q3739 Q3810 Q3841 Q3869 Q3872 Q3892 Q3898 Q3903 Q3920 Q3935 Q4022 Q4053 Q4061 Q1239   how-to, print, navigation under 3 s: 1 over: Q431   category A in one call or none, at least 70%: 45.5% UNDER
+  (time is the model's: 12 questions that ended on a network failure or a timeout are counted apart, their time p95 35.6 s)
+
+MISSES 82: wrong or missing figures to review 26, safe ends 44, network 12, harness 0, oracle 0, other 0
+  Q431 [E] [MISS (safe end)] what did buyer Karim buy yesterday
+      expected not_found: apple_qty=@seller_day.karim.yesterday.apple.qty;apple_amount=@seller_day.karim.yesterday.apple.gross;total=@seller_day.karim.yesterday.total.gross
+      got time_limit; figure apple_qty=87 missing; figure apple_amount=335850 missing; figure total=335850 missing; after the click: outcome time_limit, wanted answered (his figures)
+  Q1009 [A] [MISS (safe end)] faisal ke udhari bills dikhao
+      expected answered: bill=@r5.faisal.year.total.buyer_total|@r5.faisal.year.total.value
+      got time_limit; outcome time_limit, wanted answered; figure bill=6035551 or 5682950 missing
+  Q1021 [A] [MISS (REVIEW: figure, party, period or source)] kal kitne trak aaye
+      expected answered: trucks=@r8.yesterday.total.trucks;gross=@r8.yesterday.total.gross
+      got answered; figure gross=335850 missing
+  Q1040 [A] [MISS (safe end)] madon ke balance ka total kitna hai
+      expected answered: total=@r17.total.debit
+      got not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  Q1041 [A] [MISS (safe end)] مدوں کے بیلنس کا ٹوٹل کتنا ہے
+      expected answered: total=@r17.total.debit
+      got not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  Q1159 [A] [MISS (REVIEW: figure, party, period or source)] pukhta khata register mein kya kya hai, list do
+      expected answered: count=@r9.all.count
+      got answered; figure count=0 missing
+  Q1171 [A] [MISS (REVIEW: figure, party, period or source)] فیصل کا کھاتہ کل کا کیا رہا
+      expected answered: balance=@r13.faisal.total.balance
+      got answered; figure balance=1597371 Dr missing
+  Q1187 [A] [MISS (safe end)] madon ka balance kal ka kya raha
+      expected answered: total=@r17.total.debit
+      got not_found; outcome not_found, wanted answered; figure total=15835918 missing
+  Q1190 [A] [MISS (REVIEW: figure, party, period or source)] trial balace: show only yesterday's
+      expected answered: total=@r18.total.debit
+      got answered; figure total=36227231 missing
+  Q1234 [A] [MISS (safe end)] منافع اور شراکت دار حصہ، صرف کل کا دکھائیں
+      expected answered: profit=@r30.yesterday.total.profit_share
+      got time_limit; outcome time_limit, wanted answered; figure profit=41018 missing
+  Q1236 [A] [MISS (safe end)] who is the biggest in the Partner A's statement
+      expected answered: facet=CAP
+      got time_limit; outcome time_limit, wanted answered
+  Q1237 [A] [MISS (safe end)] Partner A ka statement kal ka kya raha
+      expected answered: a=@partner.partner_a.total
+      got time_limit; outcome time_limit, wanted answered; figure a=3205867 missing
+  Q1239 [B] [MISS (safe end)] Partner A ka statement ke hisab se agla qadam kya ho
+      expected advice: facet=CAP
+      got time_limit; outcome time_limit, wanted advice
+  Q1254 [A] [MISS (REVIEW: figure, party, period or source)] باغات کی رپورٹ، صرف کل کا دکھائیں
+      expected answered: balance=@r36.total.balance
+      got answered; figure balance=1737824 missing
+  Q1256 [C] [MISS (REVIEW: figure, party, period or source)] estimate the gardens sales for the next 3 months
+      expected estimate: est=@est.garden_sales.a3.same_pace|@est.garden_sales.a3.same_growth
+      got estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  Q1296 [A] [MISS (safe end)] gardens analysis: show the full list for this year
+      expected answered: facet=CAP
+      got not_found; outcome not_found, wanted answered
+  Q1301 [C] [MISS (REVIEW: figure, party, period or source)] تجزیات کے باغات والے حساب میں اگلے 3 مہینوں کی بکری کا اندازہ
+      expected estimate: est=@est.garden_sales.a3.same_pace|@est.garden_sales.a3.same_growth
+      got estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  Q1329 [C] [MISS (REVIEW: figure, party, period or source)] baghat ki agle 3 mahine ki aamdan ka andaza
+      expected estimate: est=@est.garden_sales.a3.same_pace|@est.garden_sales.a3.same_growth
+      got estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  Q1382 [A] [MISS (safe end)] Partner A ka hissa is saal picle saal se kitna zyada hai
+      expected answered: facet=CAP
+      got time_limit; outcome time_limit, wanted answered
+  Q1461 [C] [MISS (network)] Partner A ka aaj ka hissa kitna hai aur agle 3 mahne ka andaza
+      expected estimate: real_share=@partner.partner_a.today_share;est=@est_partner.a.profit.a3.same_pace|@est_partner.a.profit.a3.same_growth
+      got error (timeout); outcome error, wanted estimate; figure real_share=9148 missing; figure est=916938 or 1136178 missing
+  Q1472 [C] [MISS (REVIEW: figure, party, period or source)] estimate the garden's takings for the next 3 months so I can see the balance
+      expected estimate: est=@est.garden_sales.a3.same_pace|@est.garden_sales.a3.same_growth
+      got estimate; button: 1 figure(s) of the answer are not in what the button opens (view I): 214508
+  Q1479 [C] [MISS (REVIEW: figure, party, period or source)] what is the garden's commission so far and the sales estimate for the next 3 months
+      expected estimate: real_comm=@r36.total.commission;est=@est.garden_sales.a3.same_pace|@est.garden_sales.a3.same_growth
+      got estimate; button: 1 figure(s) of the answer are not in what the button opens (view I, R36): 214508
+  Q1523 [A] [MISS (REVIEW: figure, party, period or source)] what commission does Karim pay on banana
+      expected answered: rate=@rules.karim.banana.seller_commission
+      got answered; figure rate=400 missing
+  Q1598 [A] [MISS (REVIEW: figure, party, period or source)] tamatar ka aaj ka rate kya hai
+      expected answered: last=@veg.last_rate.tomato
+      got answered; figure last=1490 missing
+  Q1600 [A] [MISS (REVIEW: figure, party, period or source)] what is today's rate of tomato
+      expected answered: last=@veg.last_rate.tomato
+      got answered; figure last=1490 missing
+  Q1602 [A] [MISS (REVIEW: figure, party, period or source)] پیاز کا آخری ریٹ کتنا تھا
+      expected answered: rate=@veg.last_rate.onion
+      got answered; figure rate=1880 missing
+  Q1880 [A] [MISS (safe end)] is hafte aloo par bepari ka commission kitna bana
+      expected answered: comm=@ix.week.potato.comm_seller#seller
+      got not_found; outcome not_found, wanted answered; figure comm=6663 missing
+  Q1980 [A] [MISS (safe end)] pichle mahine saag par bepari ka commission kitna bana
+      expected answered: comm=@ix.last_month.saag.comm_seller#seller
+      got time_limit; outcome time_limit, wanted answered; figure comm=0 missing
+  Q1992 [A] [MISS (safe end)] pichle mahine musami par gahak se kitna commission mila
+      expected answered: comm=@ix.last_month.mosambi.comm_buyer
+      got which_one; outcome which_one, wanted answered; figure comm=36101 missing
+  Q1996 [A] [MISS (safe end)] مسمی پر پچھلے سال buyer سے کتنا کمیشن ملا
+      expected answered: comm=@ix.last_year.mosambi.comm_buyer
+      got which_one; outcome which_one, wanted answered; figure comm=135757 missing
+  Q2000 [A] [MISS (safe end)] kal sag par buyer se kitna commission mila
+      expected answered: comm=@ix.yesterday.saag.comm_buyer
+      got which_one; outcome which_one, wanted answered; figure comm=0 missing
+  Q2028 [A] [MISS (safe end)] سبجی کا کل بائر کمیشن کتنا ہے
+      expected answered: comm=@ix.yesterday.vegetable.comm_buyer
+      got not_found; outcome not_found, wanted answered; figure comm=0 missing
+  Q2061 [A] [MISS (safe end)] فیصل سے اس مہینے آلو پر buyer کمیشن کتنا لگا
+      expected answered: comm=@ix.month.potato.faisal.comm_buyer
+      got checks_failed; outcome checks_failed, wanted answered
+  Q2062 [A] [MISS (REVIEW: figure, party, period or source)] pichle mahine Faisal se kele par kitna commission liya
+      expected answered: comm=@ix.last_month.banana.faisal.comm_buyer
+      got answered; figure comm=7586 missing
+  Q2063 [A] [MISS (REVIEW: figure, party, period or source)] ستمبر میں فیصل سے آلو پر کتنا کمیشن لیا
+      expected answered: comm=@ix.m2026_09.potato.faisal.comm_buyer
+      got answered; figure comm=2527 missing
+  Q2302 [A] [MISS (REVIEW: figure, party, period or source)] کل فیصل کے کیلہ سے کل کمیشن کتنا بنا
+      expected answered: comm=@ix.yesterday.banana.faisal.comm_total
+      got answered; outcome not_found, wanted answered
+  Q2392 [A] [MISS (network)] فیصل کو اب تک آلو کا average ریٹ کیا لگا
+      expected answered: rate=@ix.up_to_now.potato.faisal.avg_rate
+      got error (timeout); outcome not_found, wanted answered; figure rate=1143 missing
+  Q2433 [A] [MISS (safe end)] kal seb ka last rate kya tha
+      expected answered: last=@ix.yesterday.apple.last_rate
+      got checks_failed; outcome checks_failed, wanted answered; figure last=3940 missing
+  Q2436 [A] [MISS (REVIEW: figure, party, period or source)] سیب کا اس ہفتے کا آخری ریٹ کیا تھا
+      expected answered: last=@ix.week.apple.last_rate
+      got answered; figure last=3940 missing
+  Q2444 [A] [MISS (REVIEW: figure, party, period or source)] انگور کا 1 سے 15 اکتوبر تک last ریٹ کیا تھا
+      expected answered: last=@ix.r2026_10_01_2026_10_15.grapes.last_rate
+      got answered; figure last=3340 missing
+  Q2447 [A] [MISS (REVIEW: figure, party, period or source)] last rate of potatoe on 14 October
+      expected answered: last=@ix.d2026_10_14.potato.last_rate
+      got answered; figure last=1060 missing
+  Q2449 [A] [MISS (REVIEW: figure, party, period or source)] آلو کا اس مہینے last ریٹ کیا تھا
+      expected answered: last=@ix.month.potato.last_rate
+      got answered; figure last=1100 missing
+  Q2455 [A] [MISS (REVIEW: figure, party, period or source)] pyaz ka 1 se 15 October tak ka aakhri rate kya tha
+      expected answered: last=@ix.r2026_10_01_2026_10_15.onion.last_rate
+      got answered; figure last=1830 missing
+  Q2580 [A] [MISS (safe end)] pichle mahine soyam kele kitne buyers ne khareeda
+      expected answered: count=@ixq.last_month.banana.third.buyers_n
+      got time_limit; outcome time_limit, wanted answered; figure count=7 missing
+  Q2678 [A] [MISS (safe end)] فیصل نے کل کیلا کتنے sellers سے لیا
+      expected answered: count=@ix.yesterday.banana.faisal.sellers_n
+      got time_limit; outcome time_limit, wanted answered
+  Q2701 [A] [MISS (safe end)] number of sellers of third quality onion last year
+      expected answered: count=@ixq.last_year.onion.third.sellers_n
+      got time_limit; outcome time_limit, wanted answered; figure count=1 missing
+  Q2751 [A] [MISS (safe end)] اس سال آلو سب سے زیادہ کس گاہک نے خریدا
+      expected answered: top!=@ix.year.potato.top_buyer
+      got time_limit; outcome time_limit, wanted answered; name rizwan butt (top) missing
+  Q2904 [A] [MISS (safe end)] which seller gave Faisal the most bananna last month
+      expected answered: top!=@ix.last_month.banana.faisal.top_seller
+      got time_limit; outcome not_found, wanted answered
+  Q2909 [A] [MISS (network)] which seller gave Faisal the most potato from 1 to 15 October
+      expected safe: facet=ITEM;measure=top_seller;subject=party;when=r2026_10_01_2026_10_15;zero=1;thing=Potato
+      got error (timeout); outcome error
+  Q2916 [A] [MISS (network)] اس مہینے سووم الو سب سے زیادہ کس seller کا آیا
+      expected answered: top!=@ixq.month.potato.third.top_seller
+      got error (timeout); outcome error, wanted answered; name saleem (top) missing
+  Q2970 [A] [MISS (REVIEW: figure, party, period or source)] where did potato rank among the items by sales in August
+      expected answered: rank=@ix.m2026_08.potato.rank
+      got answered; figure rank=2 missing
+  Q3051 [A] [MISS (safe end)] kal alu ki bikri parson se kitni zyada ya kam rahi
+      expected answered: diff=@ix.yesterday.potato.vs_gross
+      got time_limit; outcome time_limit, wanted answered
+  Q3052 [A] [MISS (safe end)] 14 اکتوبر کو آلو کی بکری 13 اکتوبر سے کتنی زیادہ یا کم رہی
+      expected answered: diff=@ix.d2026_10_14.potato.vs_gross
+      got time_limit; outcome time_limit, wanted answered
+  Q3412 [A] [MISS (safe end)] کل روکڑ سے نکلی رقم پرسوں سے کتنی زیادہ یا کم رہی
+      expected answered: diff=@mx.yesterday.vs.cash_out
+      got time_limit; outcome time_limit, wanted answered; figure diff=32200 down missing
+  Q3491 [A] [MISS (REVIEW: figure, party, period or source)] 14 October ko shirakat daaron ne zati kharcha ke liye kitna liya
+      expected answered: amt=@mx.d2026_10_14.r29.total.taken
+      got answered; figure amt=0 missing
+  Q3653 [A] [MISS (network)] payments received from Faisal last week against the week before
+      expected answered: diff=@mx.last_week.vs.paid_faisal
+      got error (timeout); outcome error, wanted answered; figure diff=61669 up missing
+  Q3675 [A] [MISS (network)] Faisal ki khareedari kal parson se kitni zyada ya kam rahi
+      expected answered: diff=@mx.yesterday.vs.bought_faisal
+      got error (timeout); outcome error, wanted answered; figure diff=51240 down missing
+  Q3715 [A] [MISS (safe end)] payments to Karim on 14 October against 13 October
+      expected answered: diff=@mx.d2026_10_14.vs.paid_to_karim
+      got time_limit; outcome time_limit, wanted answered
+  Q3717 [A] [MISS (safe end)] کریم کو ادائیگی پچھلے ہفتے اس سے پچھلے ہفتے سے کتنی زیادہ یا کم رہی
+      expected answered: diff=@mx.last_week.vs.paid_to_karim
+      got time_limit; outcome time_limit, wanted answered; figure diff=95766 down missing
+  Q3739 [A] [MISS (safe end)] the sales of Karim yesterday against the day before
+      expected answered: diff=@mx.yesterday.vs.sold_karim
+      got time_limit; outcome not_found, wanted answered
+  Q3781 [A] [MISS (network)] رشید کی اگراہی پچھلے ہفتے اس سے پچھلے ہفتے سے کتنی زیادہ یا کم رہی
+      expected answered: diff=@mx.last_week.vs.collected
+      got error (timeout); outcome error, wanted answered; figure diff=0 missing
+  Q3802 [A] [MISS (network)] Alif ka munafa hissa aaj kal se kitna zyada ya kam raha
+      expected answered: diff=@mx.today.vs.profit_a
+      got error (timeout); outcome error, wanted answered; figure diff=7260 down missing
+  Q3810 [A] [MISS (safe end)] الف کا منافع حصہ اس سال پچھلے سال سے کتنا زیادہ یا کم رہا
+      expected answered: diff=@mx.year.vs.profit_a
+      got time_limit; outcome time_limit, wanted answered; figure diff=2411508 up missing
+  Q3841 [A] [MISS (safe end)] Alif ka liya hua kal parson se kitna zyada ya kam raha
+      expected answered: diff=@mx.yesterday.vs.taken_a
+      got time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  Q3847 [A] [MISS (safe end)] الفف کا لیا ہوا ستمبر میں اگست سے کتنا زیادہ یا کم رہا
+      expected answered: diff=@mx.m2026_09.vs.taken_a
+      got not_found; outcome not_found, wanted answered; figure diff=0 missing
+  Q3850 [A] [MISS (network)] الف کا لیا ہوا 1 سے 15 اکتوبر تک 16 سے 30 ستمبر سے کتنا زیادہ یا کم رہا
+      expected answered: diff=@mx.r2026_10_01_2026_10_15.vs.taken_a
+      got error (timeout); outcome error, wanted answered; figure diff=25000 up missing
+  Q3868 [A] [MISS (network)] is hafte lagaya hua capitl invested pichle hafte se kitna zyada ya kam raha
+      expected answered: diff=@mx.week.vs.capital_in
+      got error (timeout); outcome error, wanted answered; figure diff=0 missing
+  Q3869 [A] [MISS (safe end)] پچھلے ہفتے لگایا ہوا capital invested اس سے پچھلے ہفتے سے کتنا زیادہ یا کم رہا
+      expected answered: diff=@mx.last_week.vs.capital_in
+      got time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  Q3872 [A] [MISS (safe end)] capitl invested in September against August
+      expected answered: diff=@mx.m2026_09.vs.capital_in
+      got time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  Q3892 [A] [MISS (safe end)] 14 October ko capital taken back 13 October se kitni zyada ya kam rahi
+      expected answered: diff=@mx.d2026_10_14.vs.capital_out
+      got time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  Q3894 [A] [MISS (network)] pichle hafte sarmaya wapsi us se pichle hafte se kitni zyada ya kam rahi
+      expected answered: diff=@mx.last_week.vs.capital_out
+      got error (timeout); outcome error, wanted answered; figure diff=0 missing
+  Q3898 [A] [MISS (safe end)] اس سال capital taken back پچھلے سال سے کتنی زیادہ یا کم رہی
+      expected answered: diff=@mx.year.vs.capital_out
+      got time_limit; outcome time_limit, wanted answered; figure diff=100000 up missing
+  Q3903 [A] [MISS (safe end)] ب نے 3 نومبر کو کتنا سرمایہ لگایا
+      expected answered: amt=@mx.d2026_11_03.capital.b.in
+      got time_limit; outcome time_limit, wanted answered; figure amt=0 missing
+  Q3916 [A] [MISS (network)] Be ka sarmaya kal parson se kitna zyada ya kam raha
+      expected answered: diff=@mx.yesterday.vs.capital_b_in
+      got error (timeout); outcome error, wanted answered; figure diff=0 missing
+  Q3920 [A] [MISS (safe end)] Partner B's capital this month against last month
+      expected answered: diff=@mx.month.vs.capital_b_in
+      got time_limit; outcome time_limit, wanted answered; figure diff=0 missing
+  Q3935 [A] [MISS (safe end)] how much money came in from the gardens in August
+      expected answered: amt=@mx.m2026_08.r36.total.money_in
+      got time_limit; outcome time_limit, wanted answered
+  Q3998 [A] [MISS (safe end)] 3 November ko market trips ke maal ki kitni sale hui
+      expected answered: amt=@mx.d2026_11_03.r33.total.sales_money
+      got not_found; outcome not_found, wanted answered; figure amt=0 missing
+  Q4006 [A] [MISS (REVIEW: figure, party, period or source)] اس سال مارکیٹ سفر کے مال کی کتنی بکری ہوئی
+      expected answered: amt=@mx.year.r33.total.sales_money
+      got answered; figure amt=339450 missing
+  Q4022 [A] [MISS (safe end)] 1 سے 15 اکتوبر تک market trips کا کتنا profit یا loss رہا
+      expected answered: amt=@mx.r2026_10_01_2026_10_15.r33.total.result
+      got time_limit; outcome time_limit, wanted answered
+  Q4053 [A] [MISS (safe end)] کل fruit taken پرسوں سے کتنا زیادہ یا کم رہا
+      expected answered: diff=@mx.yesterday.vs.fruit
+      got time_limit; outcome time_limit, wanted answered
+  Q4061 [A] [MISS (safe end)] the fruit taken last year against the year before
+      expected answered: diff=@mx.last_year.vs.fruit
+      got time_limit; outcome time_limit, wanted answered
+  Q4069 [A] [MISS (REVIEW: figure, party, period or source)] is mahine kitne nag phal ka nag gaya
+      expected answered: qty=@mx.month.r37.total.qty
+      got answered; figure qty=0 missing
+
+notes (not misses): 29 questions used another tool route, said a zero in words, or showed no name
+  Q431: clicked after not_found: Karim
+  Q1040: tool report:R17 not used
+  Q1041: tool report:R17 not used
+  Q1159: tool report:R9 not used
+  Q1171: tool report:R13 not used
+  Q1187: tool report:R17 not used
+  Q1296: tool analytics:I not used
+  Q1382: tool analytics:F not used
+  Q1421: tool report:R22 not used
+  Q1461: tool estimate not used
+  Q1523: tool app_state not used
+  Q2057: comm=0 said in words
+  Q2104: comm=0 said in words
+  Q2302: clicked after not_found: Faisal
+  Q2313: comm=0 said in words
+  Q2392: clicked after not_found: Faisal
+  Q2904: clicked after not_found: Faisal
+  Q2909: clicked after not_found: Faisal
+  Q3733: amt=0 said in words
+  Q3739: clicked after not_found: Karim
+  Q3753: amt=0 said in words
+  Q3827: amt=0 said in words
+  Q3832: amt=0 said in words
+  Q3851: amt=0 said in words
+  Q3856: amt=0 said in words
+  Q3858: amt=0 said in words
+  Q3860: amt=0 said in words
+  Q3908: amt=0 said in words
+  Q3912: amt=0 said in words
+
+NOT UNDERSTOOD AFTER READING: 0 (none, as plan 52 wants)
+CLICKED  6 questions waited for a click (a misspelled name asked "which one", or a name found in another role) and the matching button was clicked, as on the panel (both times counted): Q431 Karim, Q2302 Faisal, Q2392 Faisal, Q2904 Faisal, Q2909 Faisal, Q3739 Karim
+NETWORK FAILURES: 12 {"timeout":12}
+
+GROUPS of the same question (required figures only): every group reaches the same figures
+
+TOOL CALLS 397 (2.8 a question)   MODEL CALLS 248 (1.8 a question)
+TOKENS  input 3057315  cached 2957439  output 36874  reasoning 16302
+  per question: input 21838, cached 21125, output 263
+  FIXED PART (system, tools, answer schema), first call of 48 fresh questions with nothing read ahead, as the model counts it: min 11838, p50 11838, max 11900 OK (limit about 12000); about 11509 by o200k OK (D6-A19, NFR v1.13: at most 11600)
+  READ AHEAD by the app before the first call (NOT fixed: per question): 84 questions, +0 to +1299 tokens, p50 +473
+PARALLEL tool calls that arrived with a bad input: 8 (in 22 questions that asked for tools together)
+LIMITS  0 questions stopped at a limit (calls or tokens)
+TIME  total 1968.9 s   one model call: p50 5.6 s, p95 10.8 s, max 11.9 s   a follow-up counts its own time only
+
+URDU REVIEW SHEET /private/tmp/claude-501/-Users-faisalhanif-MyProfile-My-Projects--Fruit-Mandi-Project/8604e465-da3b-412e-ac64-d40b707fbcad/scratchpad/small/s-review.tsv (140 answers; the reviewer marks good or not, and for advice answers inside FR-7.88 or not; at least 95 of 100 advice answers must be good)
+  advice answers to read for FR-7.88: Q1239
+
+RESULT: does NOT yet meet plan 52 Section 2 and plan 55 Section 3 (A score, B score, C score, A time, B time, E time; and the speed budget or a hard limit; and category A under 70% in one call)
+DETAIL of every miss: /private/tmp/claude-501/-Users-faisalhanif-MyProfile-My-Projects--Fruit-Mandi-Project/8604e465-da3b-412e-ac64-d40b707fbcad/scratchpad/small/s-detail.txt
