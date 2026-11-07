@@ -208,6 +208,7 @@ node scripts/ai-eval/run.mjs --results backend/target/ai-eval/results.json   # s
 node scripts/ai-eval/run.mjs --threads 1    # the live run on one line (default 3; see below)
 node scripts/ai-eval/run.mjs --bank FILE --check   # another bank (a hidden one): the per-row rules only
 node scripts/ai-eval/run.mjs --bank FILE    # ... run live and scored the same way
+node scripts/ai-eval/run.mjs --bank FILE --out-dir DIR   # put every file of the run in DIR (outside the repository), not in backend/target
 node scripts/ai-eval/run.mjs --oracle-dump out.json   # the oracle facts with values, and the names
 node scripts/ai-eval/check-modes.mjs        # --bank, --threads and --offline behave as written (no model, no key)
 node scripts/ai-eval/build-bank-d7.mjs      # rebuild realtime-d7.tsv and realtime-d7-coverage.md from bank-spec-d7.mjs

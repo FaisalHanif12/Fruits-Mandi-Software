@@ -827,7 +827,7 @@ assistant-instant-sale-kind = { $kind ->
     [credit] { -udhari } { -bikri } { $period }: { $figure }
    *[cash] { -naqdi } { -bikri } { $period }: { $figure }
 }
-# What the shop owes the seller for his sales: his { -safi-bikri }.
+# The seller's { -safi-bikri } for the period: his gross sale less his deductions. It is not what the shop still owes him.
 # review: pending
 assistant-instant-sale-net = { -safi-bikri } of { -beopari } { $name } { $period }: { $figure }
 # The value of { -phal }: for the shop, for one partner or for the shop's guests.

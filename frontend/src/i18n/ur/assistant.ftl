@@ -801,6 +801,7 @@ assistant-instant-sale-kind = { $kind ->
     [credit] { $period } کی { -udhari } { -bikri }: { $figure }
    *[cash] { $period } کی { -naqdi } { -bikri }: { $figure }
 }
+# The seller's { -safi-bikri } for the period: his gross sale less his deductions. It is not what the shop still owes him.
 # review: pending
 assistant-instant-sale-net = { -beopari } { $name } کی { $period } کی { -safi-bikri }: { $figure }
 # review: pending
