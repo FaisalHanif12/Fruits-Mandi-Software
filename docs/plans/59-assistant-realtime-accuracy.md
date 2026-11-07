@@ -69,6 +69,42 @@ credit, side, and the others).
 
 5.4 Plan 55 Section 15 open items, CRITICAL first, each with its cause.
 
+### 5.0 Backend study S1 and F1 (HANDOFF 07-11-2026)
+
+**5.1 Paths.** `ask()` run.rs:2551. `understand_question` :647; `plan_reads` (reads.rs:1072). LOCAL, no call:
+`local_answer` :733 → `understand::compose` (compose_route.rs:24): how-to, print, navigate, not in app, change
+request, name not found; never a figure. INSTANT, no call: `instant_answer` :798 runs the planned reads, then
+`compose_figure` (figure.rs:64, needs plan lines) and `Check::run`. PRE-READ + 1 call: help topic, planned reads,
+period pre-read, tiles, prefind (off). MODEL LOOP: `drive` :1062 → `call_model` :908 → `run_calls` :372 →
+`finish` :1172 (checks, scope guard, measure guard :1250, repairs, one rewrite, plain tables). `pick` :2688 (the
+continuation after "کون سا؟") has no understanding and no planned reads, so no scope or measure guard (F2).
+
+**5.2 Filters dropped or guessed (backend, checked in code).** The scope guard acts only when exactly one view or
+report is planned (scope_guard.rs:81-90), so model-loop, comparison, list and not-sure questions have no filter
+check. AskScope has no side, city, adda, collector, status, bikri, voucher type, packing, marka, store, truck. The
+guard never checked a column (cause of Q2062; now done for the commission side). "naqdi/udhari" is
+Measure::Other with no read. party_item_figure Sale: view A `gross` is the seller's amount, not what the buyer
+paid. Voucher and truck numbers are not used for a figure. Plus the reviewer's R5 to R13b.
+
+**5.3 Still needing the model, ranked by instant coverage gained:** (1) a party's ledger, statement, purchases,
+day sheet: needs an instant answer with a table; biggest; (2) period totals from one report (S-A5); (3) quantity
+(S-A7); (4) "happened" questions (S-A6); (5) Measure::Other (S-A8); (6) group and graded figures; (7) comparisons;
+(8) past-day balance, card warnings, truck.
+
+**5.4 Causes.** Q2062: party_item_figure planned view A with no side and no line; the model cited `total_comm` =
+seller 7,586 + buyer 7,586 + Laga 544 = 15,716. Q2436: the second sort key (entry) gave Order::None for a Doc cell,
+so ties kept the register's ascending order; line 1 of بکری 367 (3,830) came first, the last line is 3,940.
+
+**F1 done (accepted 07-11-2026).** Q2062 15,716 → 7,586, Q2063 5,054 → 2,527, Q2436 3,830 → 3,940 (also Q2444,
+Q2447, Q2449), all instant now; seller + item commission two labelled lines; buyer + item Laga instant; last rate
+instant (seller rate; buyer rate for a named buyer) with gates (no sale, several packings, sold by weight, a
+quality named: no instant line); newest line in one SQL page (date, بکری number, lot, line_no); R3 and R4 fixed;
+`measure_guard.rs` on the model path. R2 to R4 gain `seller_rate` and `packing` columns only when needed. 16 tests
+in `tests/d7_realtime.rs`. Money review: eighth pass PASS WITH MINOR (the minor, buyer_comm + laga in a calculate,
+is F1b item 1). Run 9: 895 passed, 2 failed (backend's own, fixed and re-run green); golden_day 94, assist 23,
+report tests green. Offline after F1 on the 412-question bank: 84 right with no call (20.4%), 6 wrong, 10 refused.
+No prompt change: the check_failed reply names the reference to cite, and the prompt does not list rules one by one.
+
 ### 5.5 Reviewer study S2 (07-11-2026), findings as reported (paths under `backend/crates/assistant/src`)
 
 CRITICAL (a wrong figure is shown)
@@ -128,6 +164,38 @@ Reviewer's suggested order: S-B1 with R1, then S-A1 (carries Q2062), S-A5, S-A6,
 
 Checked and right: today, this and last week, month and year, a named month, up to now; zero-day answers in the instant path; shop dues against R20 and the tile; stock against the tile; group_plan and its guard; the capital plan; the ranking lists; "kul ugrahi" as total dues; one-day shop figures against R34.
 
+### 5.7 First offline run of the D7 bank (robustness B1, 07-11-2026; code mid-F1)
+
+Bank `scripts/ai-eval/realtime-d7.tsv`: 239 questions, 103 groups (Roman 82, Urdu 74, English 83; 45 misspelt);
+coverage of 50 kinds of record and figure in `realtime-d7-coverage.md`. Offline:
+`node scripts/ai-eval/run.mjs --bank scripts/ai-eval/realtime-d7.tsv --offline` (no key, no network).
+
+| Result | Count |
+|---|---|
+| Right with no model call | 17 (7.1%; target 60%) |
+| WRONG with no model call | 6 |
+| Needs the model | 208 |
+| Asked or refused, not wanted | 8 |
+| Estimated right in 0 or 1 call, if every 1-call answer is right | 43.5% (target 85%) |
+
+Local wrong (all CRITICAL until shown otherwise):
+- **O1 D084** "what is the total dues of the shop" (and Roman "kul ugrahi kitni banti hai"): shows buyers' dues
+  20,324,367; right 21,751,319 = tile کل اگراہی = buyers' + sellers' dues + dead amount (PRD glossary, FR-19.9).
+  Plan 55's ruling "kul ugrahi is R20" is out of date against PRD v1.31.
+- **O2 D213** "what is Partner As totel in the shop": shows the partner screen help text, not 3,205,867.
+- **O3 D045** "kitne bayopariyon ko abhi paise dene hain aur kul kitne": count 11 left out (total 17,560,964 shown).
+- **O4 D121** "today's sales, the number of bills and the commission": bill count 2 left out.
+- **O5 D144** "this month which sold more, banana or apple, and by how much": no difference or winner (apple by
+  645,860); the row text "کیلا کی سے تک کی بکری" has empty from and to dates.
+- **O6 D215** "usman ka sarmaya kitna hai": 200,000 right, the R31 button does not hold it (app or harness: robustness
+  checks).
+
+Refused as not found on a valid question (an ordinary word taken as a name): D062 "himself", D066 "themselves", D098
+"raat", D105 and D106 "banaam", D111 "shuru", D119 "ریکارڈ"; D088 the collector رشید not found as a collector.
+
+Wording gaps: Roman and Urdu forms go to the model where English is instant (Roman 5, Urdu 2, English 10 right);
+53 of 74 one-figure questions need the model.
+
 ## 6. Tasks
 
 | # | Task | Owner | Blocked by |
@@ -172,6 +240,27 @@ Umar's "continue").
 1. Plan 55 item 5: "aaj ka rate" on a day with no sale says "not available"; the old bank expected the last
    rate (Q1598). Default for D7: the answer says there was no sale today and gives the last rate with its
    date. Needs Umar's yes.
+
+## 11. Lead decisions
+
+1. (07-11-2026) "Rate" and "last rate" mean the seller rate (ریٹ بیوپاری), the auction rate typed by the munshi
+   and shown by the rate hint (FR-7.53). The buyer rate only when the question names the buyer's rate.
+2. (07-11-2026) The newest sale line is ordered by its own posting date desc, then the بکری number desc, then
+   line_no desc. Not the row id: an edit keeps line_no, a later sale counts on its own date. The app and the
+   oracle use the same rule.
+3. (07-11-2026) Q2062 reading: commission taken from a named buyer is the buyer side; from a named seller, the
+   seller side; a seller with no side word follows Umar's ruling of 05-11-2026.
+4. (07-11-2026) The R2 to R4 screen order of lines on the same day may change with item 2 (a fix). No golden or
+   services report number may change.
+6. (07-11-2026, refines 1) When a buyer is named as the one who was sold to ("akram ko kele ka last rate", "akram
+   ko kis rate pe diya"), the rate is the buyer rate, the rate charged to him. The seller rate is for an item
+   alone, a seller, or the shop.
+7. (07-11-2026) A money review that ends FAIL never closes a task. Items that over-refuse (no wrong figure) may be
+   listed as MEDIUM follow-ups.
+8. (07-11-2026) LOW follow-up, not in D7: an edit of a first posting after a later sale of the same lot on the
+   same day puts the first posting's lines after the later sale in the newest-first order.
+5. New instant-answer words go to the Fluent files through a frontend teammate in one batch; prompt edits by
+   the lead only.
 
 ## 10. Live runs (cost written before each run, Umar's yes recorded here)
 
