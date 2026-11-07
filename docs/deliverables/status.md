@@ -4,6 +4,12 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Current
 
+- **D7 (real-time accuracy and speed of the assistant) is PART-BUILT and PAUSED (08-11-2026). Waiting for Umar's "continue".** Branch `feature/assistant-realtime`. Plan `docs/plans/59-assistant-realtime-accuracy.md`; the hand-over is its Section 12. All agents are stopped.
+  - Built and committed: F1, F1b and F2 (wrong figures, dropped filters, same-name asking, the own-number check), the D7 bank of 455 questions, and the offline runner. Money review 15: PASS WITH MINOR.
+  - Offline: right with no model call 90 of 455 (19.8%, target 60%); right with no call or one at most 51.6% (target 85%); 1 left (D331, a missing button, not a wrong figure).
+  - Not started: F3 speed, the live runs (about $0.23 to $0.32 each; $0 spent), the D7 REPORT.
+  - For Umar: the "aaj ka rate" default; a prompt line for the new `own_number` rule; a yes on the cost before live run 1.
+
 - **D6 (ask the app) is BUILT and WAITS FOR THE GATE (02-11-2026).** Branch `feature/assistant`, from `feature/d5-early` at `ad3d813`. Plans 48, 49 and 50 are committed and pushed. The reviewer and robustness gate runs only after Umar says "continue". No pull request, merge or release: Mac phase.
   - What was built: the assistant crate (8 read-only tools, every FR-7.76 check, the loop, one snapshot per question); the question panel; the proof (100 questions, attacks 1 to 15, the key scan, benches). The four prompt files are verbatim. The money agent passed domain::figures and domain::forecast, and every money file of T3, P48-S1 and P48-S2.
   - D6-A16 is WAITING FOR KEY. Umar saves his OpenRouter key in Settings; the lead then runs `node scripts/ai-eval/run.mjs`. If the Azure endpoint returns HTTP 404: D6 BLOCKED.

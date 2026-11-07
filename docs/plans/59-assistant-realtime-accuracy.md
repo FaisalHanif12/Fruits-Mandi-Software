@@ -196,6 +196,44 @@ Refused as not found on a valid question (an ordinary word taken as a name): D06
 Wording gaps: Roman and Urdu forms go to the model where English is instant (Roman 5, Urdu 2, English 10 right);
 53 of 74 one-figure questions need the model.
 
+### 5.8 robustness B2 (HANDOFF 07-11-2026, accepted)
+
+- Seed additions at the end of the rich year (`d7_richer_cases`, add-only, past-dated, through the app's saves):
+  city Kasur; Naveed Traders with cash 20,220 and credit 54,792 on 14-10 (Umar's T01); Rafique Brothers; Aamir
+  (پختہ کھاتہ person) and Nadir; Family Khata; a ریٹ مختلف line on 22-10; mosambi old بکری 16-10, new 19-10 and a
+  later sale of the old leftover on 19-10. Moved: buyers' dues 20,844,363, total dues 22,271,315, cash 11,965,977.
+- Oracle last_rate facts follow Section 11 item 2 (12 facts changed value). The oracle asserts that an edited line
+  last by id is not last by the rule.
+- Bank: 455 questions, 193 groups (Roman 156, Urdu 145, English 154; 55 misspelt; 221 short, 234 picky); N01 to
+  N25 cover R1 to R13b; runner shows date and name parts (R14).
+- Key-limit check built and not run: `node scripts/ai-eval/run.mjs --key-limit` (prints only limit, usage,
+  limit_remaining, is_free_tier).
+- Offline on the tree of B2 (before backend's F1b ended): right alone 90 (19.8%), wrong alone 1 (D331, the R31
+  button: an APP problem, backend), needs the model 364, refused unexpectedly 0. A live run of the whole bank: about
+  581 to 798 calls, $0.23 to $0.32. 25 of 193 groups end differently by wording.
+
+### 5.9 backend F1b and F2 (HANDOFF 08-11-2026, accepted)
+
+- F1b: the laga verb after a commission word; O1 total dues is the tile (buyers + sellers + dead amount); O2 to O5
+  an answer the app writes never leaves out a part of the question.
+- F2: R5 (the tag joins the name in Urdu typing; two accounts of one base name switch off the whole-name bonus), R6
+  (a packing filter goes to the model), R7 (voucher number without the word "number"), R8 (tile read ahead also
+  when not sure), R10, R11 (a) (the quality plan reads only its measures), R12 (R29 rows 100), R13 (digit echo only
+  for months, days, years, percent or a plain number below 100; new `own_number_guard.rs`: an answer that cites
+  only the Owner's own amount, or nothing while the question holds an amount, fails with rule `own_number`), R13b.
+  R9 is code only (no test is possible). Tests: `tests/d7_realtime.rs`, 28 tests, each red before its fix except
+  r5b_ (a regression guard).
+- Offline on 455 questions: right alone 90 (19.8%), WRONG 1 (D331 only), refused unexpectedly 0; model calls
+  0: 91, 1: 145, 2: 219; right with no call or one at most 51.6%.
+- Money reviews 10 to 14 on F1b and F2: 10 PASS WITH MINOR, 11 to 13 FAIL (each fixed), 14 PASS WITH MINOR. Two
+  small edits after review 14 were not reviewed again: the skip conditions of the own-number guard (they only skip
+  it in more cases) and Purchases back in the R11 list (it re-admits what the plan read before F2).
+- Addendum (08-11-2026): D331, a capital figure no longer gets an R31 button (the R31 page has no cell that holds
+  it; `sources_cited` in fill.rs). R5, no account gets the whole-name bonus; "faisal" with Faisal and Faisal
+  Traders, "اکرم" with اکرم ٹول ٹیکس and اکرم K, and "اسلم" with اسلم BA ask (tests r5_, r5b_, r5c_, r5d_,
+  d331_). Money review 15: PASS WITH MINOR; its M2 to M4 fixed as proposed, not reviewed again; M1 open (Section 12).
+  Offline unchanged: right alone 90, WRONG 1 (D331, now the runner's rule "every read source gets a button").
+
 ## 6. Tasks
 
 | # | Task | Owner | Blocked by |
@@ -259,6 +297,18 @@ Umar's "continue").
    listed as MEDIUM follow-ups.
 8. (07-11-2026) LOW follow-up, not in D7: an edit of a first posting after a later sale of the same lot on the
    same day puts the first posting's lines after the later sale in the newest-first order.
+9. (07-11-2026) Registers R2 to R4 at the compact step (1024): with grade, packing and seller_rate all present,
+   grade is shown first; packing and seller_rate wait for the wider steps (still in print and Excel).
+   `REGISTER_WAITING` in `frontend/src/features/reports/columns.ts` holds the order.
+10. Follow-up for the next plan (found 07-11-2026, already failing at the start of D7): two frontend contract tests
+   in `tests/unit/reports-api-contract.test.ts` fail because the backend catalogue fixture lists a `grade` filter
+   on R2 to R4 and the frontend copy does not; the frontend has no quality filter box on R2 to R4 yet.
+11. Windows check LOCAL-ONLY: the new Urdu heading "ریٹ گاہک" and the register steps were checked in headless Chrome
+   on the Mac only.
+12. (08-11-2026) R6, R11, R13 and the R9 code stay in D7: they only ask, refuse or skip a read-ahead, and they
+   are tested and money-reviewed. A typed name that is the whole name of one account and the first word of another
+   ("faisal" with Faisal and Faisal Traders) asks "کون سا؟" (PRD FR-7.77: two to five matches ask). D331: a
+   button opens only the report or screen the figure was read from.
 5. New instant-answer words go to the Fluent files through a frontend teammate in one batch; prompt edits by
    the lead only.
 
@@ -266,3 +316,47 @@ Umar's "continue").
 
 | Run | Questions | Expected model calls | Estimated cost | Umar's yes | Actual |
 |---|---|---|---|---|---|
+
+## 12. Hand-over (08-11-2026, all agents stopped, waiting for Umar's "continue")
+
+**State: D7 is NOT done.** F1, F1b and F2 are built and committed. F3 (speed), O1 (clean offline), the live runs
+L1 and L2 and the D7 REPORT are not started. Live money spent on D7: $0.
+
+Offline, 455 questions, no model: right alone 90 (19.8%, target 60%); right with no call or one at most 51.6%
+(target 85%); WRONG 1 (D331, see item 1); refused unexpectedly 0.
+
+Acceptance: D7-6 and D7-7 met. D7-5 met for every fix built (28 and more tests in `tests/d7_realtime.rs`).
+D7-10 met: last money review 15, PASS WITH MINOR. D7-9 met on 08-11-2026 (lead run, see the commit). D7-1 to
+D7-4 and D7-8 wait for F3 and the live runs.
+
+Open, in the order to take them on "continue":
+1. D331 ("usman ka sarmaya"): the figure is right and checked. The answer has no R31 button, because the R31 page
+   holds no capital cell, but the runner wants a button for every read source. Lead's choice for the next step:
+   a new `PartnerOverview` screen route with its Fluent label, so the answer opens the partner overview, which
+   shows the capital (backend and frontend, and `pnpm gen:types`).
+2. F3 speed: more instant answers and pre-reads (reviewer S-A1 to S-A12, S-B1 to S-B6 in Section 5.6). The biggest
+   gap is in Roman and Urdu wordings (Section 5.7).
+3. Review 15 M1: in the differences answer a capital figure keeps the R31 button and is called the partner's کل رقم.
+   It needs Fluent words `assistant-figure-partner-capital` and a place word for `capital_history`.
+4. Known gaps (no wrong figure; they ask or read more):
+   - R6: a packing word further than two words from the sales word reads all packings. Design: a real packing filter
+     on view A and R2.
+   - R11 (b): rows listed one by one from a cut R2.
+   - R13: a model-written `{{q.n1}}` next to a decorative book reference.
+   - Review 14 item 1a (one tied hit with the role asked).
+   - A party named like a STOP word.
+   - "tadaad" and "kitni baar" are not count words.
+   - "kitne bill aur kitne gahak" counts only the first.
+5. MEDIUM: estimate and R33 over-refusals. LOW: the edit order of item 8 of Section 11. The `pick` continuation runs
+   no guards.
+6. Section 11 item 10: two frontend contract tests in `reports-api-contract.test.ts` (the grade filter on R2 to R4).
+7. Section 11 item 11: Windows LOCAL-ONLY check of the new Urdu headings and the register steps.
+8. 25 of 193 bank groups end differently by wording.
+
+For Umar:
+- The "aaj ka rate" default (Section 9, item 1).
+- A prompt line for the new check rule `own_number`. Suggested: "own_number: you cited only the Owner's own amount,
+  or nothing; read the books for this question and cite the figure." It needs his approval (D6 prompt Section 8);
+  the fixed part must stay within 11,600 tokens.
+- Before live run 1: run the key-limit check (`node scripts/ai-eval/run.mjs --key-limit`, not run yet). A whole-bank
+  run is about 581 to 798 calls, $0.23 to $0.32. Ask Umar and wait for his yes.
