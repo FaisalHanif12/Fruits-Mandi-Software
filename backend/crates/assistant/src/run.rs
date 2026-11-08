@@ -695,7 +695,9 @@ impl<'a> Run<'a> {
         turn: &mut Turn,
         understood: &crate::understand::Understanding,
     ) -> bool {
-        let Some(reads) = crate::understand::plan_reads(understood) else {
+        // The reads of the plan, or the reads of each figure it can plan (D7, plan 59 D): they only fill the
+        // first request, nothing answers from them but the model.
+        let Some(reads) = crate::understand::plan_pre_reads(understood) else {
             return false;
         };
         let mut read_any = false;

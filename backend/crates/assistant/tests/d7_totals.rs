@@ -714,31 +714,24 @@ fn the_cash_a_period_took_in_and_paid_out_are_the_totals_of_the_cash_book() {
     let y = year::seed::build();
     let f = facts_of(&y);
     let h = production_harness(y);
-    instant(
-        &h,
-        "how much cash came in today",
-        &[oracle(&f, "r12.today.total.cash_in")],
-    );
-    instant(
-        &h,
-        "aaj galle se kitna cash nikala",
-        &[oracle(&f, "r12.today.total.cash_out")],
-    );
+    // Yesterday of the rich year has one entry and no reversal: given alone. Today has reversals (the
+    // year's edits and cancels are on its last day, lead ruling of 08-11-2026), so the totals of the cash
+    // book would hold some entries twice: the model answers, and so for a month that holds today.
     instant(
         &h,
         "how much cash went out yesterday",
         &[oracle(&f, "r12.yesterday.total.cash_out")],
     );
-    instant(
-        &h,
+    for question in [
+        "how much cash came in today",
+        "aaj galle se kitna cash nikala",
         "is mahine kitna cash aya",
-        &[oracle(&f, "r12.month.total.cash_in")],
-    );
-    instant(
-        &h,
         "pichle mahine kitna cash gaya",
-        &[oracle(&f, "r12.last_month.total.cash_out")],
-    );
+        "aaj kitna cash aya",
+        "aaj ka cash in kitna hai",
+    ] {
+        not_instant(&h, question);
+    }
     // Two and three parts: one sentence for each, in the order asked.
     instant(
         &h,
@@ -757,9 +750,6 @@ fn the_cash_a_period_took_in_and_paid_out_are_the_totals_of_the_cash_book() {
             oracle_balance(&f, "r12.yesterday.sum.report_closing_balance"),
         ],
     );
-    for question in ["aaj kitna cash aya", "aaj ka cash in kitna hai"] {
-        instant(&h, question, &[oracle(&f, "r12.today.total.cash_in")]);
-    }
     // The cash in hand, a party's cash and a head's cash are other questions.
     instant(&h, "cash in hand", &[oracle(&f, "tiles.cash")]);
     for question in [
@@ -782,6 +772,182 @@ fn the_cash_a_period_took_in_and_paid_out_are_the_totals_of_the_cash_book() {
         "how much cash in my galla today",
         // Another action beside the direction word.
         "aaj kitna cash diya gaya",
+    ] {
+        not_instant(&h, question);
+    }
+    h.scan_requests();
+}
+
+/// The worked day (PRD 4.9: cash in 22,800, cash out 14,316, closing 58,484), as the shop runs it.
+fn production_over(w: world::World) -> Harness {
+    let h = Harness::over(w);
+    h.runtime.set_read_first(true);
+    h.runtime.set_local(true);
+    h.runtime.set_instant(true);
+    h.runtime.set_low_effort(true);
+    h
+}
+
+#[test]
+fn the_cash_book_totals_are_given_alone_only_on_a_day_with_no_reversal() {
+    // Lead ruling of 08-11-2026 (the cash book totals hold a cancelled or edited entry twice): on E2E-8's day
+    // the cash in is 12,800 + 10,000 = 22,800 and the cash out 5,000 + 4,316 + 3,000 + 2,000 = 14,316, given
+    // alone. After بکری 2 is cancelled the same day (E2E-15) its reversal is a row of the day: cash in and
+    // cash out go to the model, while the closing balance (45,684 = 58,484 - 12,800) is still given alone.
+    let w = worked::worked_day();
+    worked::events_1_to_5(&w);
+    let h = production_over(w);
+    instant(&h, "aaj kitna cash aya", &[22_800]);
+    instant(&h, "aaj kitna cash gaya", &[14_316]);
+    instant(&h, "aaj ki roknad ka closing kitna hai", &[58_484]);
+    h.scan_requests();
+
+    let w = worked::worked_day();
+    worked::events_1_to_5(&w);
+    let second: i64 = w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            c.query_row(
+                "SELECT id FROM bikri_entries ORDER BY id LIMIT 1 OFFSET 1",
+                [],
+                |r| r.get(0),
+            )
+        })
+        .expect("the second بکری");
+    let detail = mandi_services::bikri::get(&w.env.ctx, second).expect("its detail");
+    mandi_services::bikri::cancel(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::CancelInput {
+            id: second,
+            version: detail.version,
+            reason: "غلط".into(),
+            confirm_cash_below_zero: true,
+        },
+    )
+    .expect("the cancel");
+    let h = production_over(w);
+    not_instant(&h, "aaj kitna cash aya");
+    not_instant(&h, "aaj kitna cash gaya");
+    not_instant(&h, "aaj kitna cash aya aur kitna cash gaya");
+    instant(&h, "aaj ki roknad ka closing kitna hai", &[45_684]);
+    h.scan_requests();
+
+    // E2E-13: a same-day edit (اکرم's rate 600 to 610) reverses the first posting and posts it again.
+    use mandi_services::core::bikri::{EditOpenInput, EditSaveInput};
+    let w = worked::worked_day();
+    worked::events_1_to_5(&w);
+    let one: i64 = w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            c.query_row(
+                "SELECT id FROM bikri_entries ORDER BY id LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+        })
+        .expect("the first بکری");
+    let entry: i64 = w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            c.query_row(
+                "SELECT id FROM journal_entries WHERE source_type = 'bikri' AND source_id = ?1 \
+                 AND posting_type = 'bikri_first' ORDER BY id LIMIT 1",
+                [one],
+                |r| r.get(0),
+            )
+        })
+        .expect("its first posting");
+    let opened = mandi_services::bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one,
+            entry_id: entry,
+        },
+    )
+    .expect("opened for edit");
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].seller_rate = "610".into();
+    mandi_services::bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft,
+            reason: Some("rate".into()),
+            confirm_cash_below_zero: false,
+        },
+    )
+    .expect("the edit");
+    let h = production_over(w);
+    not_instant(&h, "aaj kitna cash aya");
+    not_instant(&h, "aaj kitna cash gaya");
+    h.scan_requests();
+}
+
+#[test]
+fn the_trial_balance_total_debit_and_credit_are_the_totals_of_r18() {
+    // D440, D441: the total debit (بنام) of the trial balance as of now; the credit (جمع) the same; both
+    // sides one line each, in the order asked. The difference, and the trial balance at the start (R19), are
+    // other figures: the model's.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    let debit = oracle(&f, "r18.total.debit");
+    let credit = oracle(&f, "r18.total.credit");
+    for question in [
+        "ٹرائل بیلنس کا بنام کل کتنا ہے",
+        "what is the total debit of the trial balance",
+    ] {
+        instant(&h, question, &[debit]);
+    }
+    for question in [
+        "ٹرائل بیلنس کا جمع کل کتنا ہے",
+        "what is the total credit of the trial balance",
+    ] {
+        instant(&h, question, &[credit]);
+    }
+    instant(
+        &h,
+        "trial balance me banaam aur jama kitna hai",
+        &[debit, credit],
+    );
+    for question in [
+        "is there any difference in the trial balance, how much",
+        "shuru ke trial balance me kitna banaam aur jama tha",
+    ] {
+        not_instant(&h, question);
+    }
+    h.scan_requests();
+}
+
+#[test]
+fn what_the_buyers_of_a_city_owe_is_the_city_row_of_r21_and_a_part_of_it_is_never_dropped() {
+    // D292 to D294: the dues of the buyers of Kasur, the city's own row of R21 (`d7.city.kasur.dues`). The
+    // number of its buyers and its dues of one age are other figures: the model's.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    let dues = oracle(&f, "d7.city.kasur.dues");
+    for question in [
+        "kasur ke gahakon ke zimme kul kitna baqi hai",
+        "قصور کے گاہکوں کے ذمے کل کتنا باقی ہے",
+        "how much do the buyers of Kasur owe in all",
+    ] {
+        instant(&h, question, &[dues]);
+    }
+    for question in [
+        "kasur shehar ke kitne gahakon ka bakaya hai",
+        "قصور شہر کے کتنے گاہکوں کا بقایا ہے",
+        "shehar kasur ka bakaya aur usme se 8 se 30 din purana kitna hai",
+        "the dues of the city Kasur and how much of it is 8 to 30 days old",
     ] {
         not_instant(&h, question);
     }

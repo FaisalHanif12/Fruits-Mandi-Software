@@ -369,3 +369,164 @@ fn money_review_a_word_that_changes_a_figure_is_never_explained_away() {
         instant(&h, question, &[oracle(&f, "partner.partner_b.total")]);
     }
 }
+
+/// The number of rows of every table of the database, by table name.
+fn row_counts(dir: &tempfile::TempDir) -> Vec<(String, i64)> {
+    let conn = common::raw(dir);
+    let mut names: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    names.sort();
+    names
+        .into_iter()
+        .map(|name| {
+            let n: i64 = conn
+                .query_row(&format!("SELECT COUNT(*) FROM \"{name}\""), [], |r| {
+                    r.get(0)
+                })
+                .unwrap();
+            (name, n)
+        })
+        .collect()
+}
+
+#[test]
+fn pre_reads_fill_the_first_request_and_keep_the_privacy_and_read_only_rules() {
+    // Plan 59 D, Q7 and NFR-AI-6: the reads the app makes ahead of the model's first call for a question it
+    // cannot answer whole are the tools themselves (`tool_result_json`, one read snapshot). On the worked day,
+    // رحیم has a phone, an address and a note, and a one-time buyer has a phone: none of them is in a request,
+    // the first request holds tool results (the pre-reads), and nothing is written but the question log.
+    let w = worked::worked_day();
+    worked::events_1_to_5(&w);
+    let h = Harness::over(w);
+    h.runtime.set_read_first(true);
+    h.runtime.set_local(true);
+    h.runtime.set_instant(true);
+    h.runtime.set_low_effort(true);
+    let before = row_counts(&h.world.dir);
+    let questions = [
+        // A seller and one day: his day sheet is read ahead.
+        "rahim ne aaj kitna nakad liya aur kitna baqi hai",
+        // A buyer and one day.
+        "akram ne aaj kitna nakad diya aur kitna udhaar raha",
+        // Cash sales of an item, by name of the register.
+        "aaj kele ki naqdi bikri kitni hui, kitne lines aur kitne ki",
+    ];
+    let mut with_reads = 0;
+    for question in questions {
+        let (_, requests) = h.ask(question, None, Vec::new());
+        assert!(!requests.is_empty(), "{question}: the model was not asked");
+        let tools = requests
+            .first()
+            .and_then(|r| r["messages"].as_array())
+            .map_or(0, |m| m.iter().filter(|x| x["role"] == "tool").count());
+        if tools > 0 {
+            with_reads += 1;
+        }
+    }
+    assert!(
+        with_reads >= 2,
+        "the first request of at least two of them holds the pre-reads, got {with_reads}"
+    );
+    let after = row_counts(&h.world.dir);
+    for ((name, was), (_, now)) in before.iter().zip(after.iter()) {
+        let expected = if name == "assistant_questions" {
+            was + i64::try_from(questions.len()).unwrap()
+        } else {
+            *was
+        };
+        assert_eq!(*now, expected, "table {name}");
+    }
+    h.scan_requests();
+}
+
+/// The tools whose results the first request of a question carries (the pre-reads the app made).
+fn first_request_tools(requests: &[serde_json::Value]) -> Vec<String> {
+    requests
+        .first()
+        .and_then(|r| r["messages"].as_array())
+        .map(|messages| {
+            messages
+                .iter()
+                .filter(|m| m["role"] == "tool")
+                .filter_map(|m| {
+                    let body: serde_json::Value =
+                        serde_json::from_str(m["content"].as_str()?).ok()?;
+                    body["tool"].as_str().map(str::to_owned)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[test]
+fn money_review_pass_two_a_pre_read_never_puts_another_questions_figure_before_the_model() {
+    // The scope guard does not see the pre-reads, so they stop wherever the plan stops. Each of these
+    // questions would have had a whole-shop tile or a party's card read ahead for a question with a filter,
+    // a payment type, an event or a capital flow the read lacks.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    let tools_of = |question: &str| {
+        let (_, requests) = h.ask(question, None, Vec::new());
+        assert!(!requests.is_empty(), "{question}: the model was not asked");
+        first_request_tools(&requests)
+    };
+    for question in [
+        "aaj sabzi ki udhaar bikri aur commission kitna hua",
+        "aaj kele ki naqdi bikri aur commission kitna hua",
+        "is saal kitna sarmaya lagaya aur kitni bikri hui",
+    ] {
+        assert!(
+            !tools_of(question).iter().any(|t| t == "tiles"),
+            "{question}: the shop's tile was read ahead"
+        );
+    }
+    // An unknown word that could be a filter, and an event ("li"), read no whole figure.
+    // (A head word the books do not have is read by the plan itself, and the scope guard watches that read.)
+    let unknown = tools_of("aaj commission aur kharcha zzqxv kitna hua");
+    assert!(
+        !unknown
+            .iter()
+            .any(|t| matches!(t.as_str(), "report" | "analytics" | "tiles" | "party_card")),
+        "an unknown word: no figure is read ahead, got {unknown:?}"
+    );
+    assert!(
+        !tools_of("rahim ne is mahine kitni peshgi li")
+            .iter()
+            .any(|t| t == "party_card"),
+        "an event: his open advance is not read ahead"
+    );
+    // A buyers, sellers or partner word inside a trial balance question: the whole trial balance is not it.
+    for question in [
+        "trial balance me gahakon ka banaam kitna hai",
+        "trial balance me byopariyon ka jama kitna hai",
+        "ٹرائل بیلنس میں گاہکوں کا بنام کتنا ہے",
+        // "kal" before the trial balance is yesterday's (or "kul" mistyped): the model's.
+        "kal trial balance ka banaam kitna hai",
+        "کل ٹرائل بیلنس کا بنام کتنا ہے",
+    ] {
+        never_shows(
+            &h,
+            question,
+            &[
+                oracle(&f, "r18.total.debit"),
+                oracle(&f, "r18.total.credit"),
+            ],
+        );
+        goes_to_the_model(&h, question);
+    }
+    // The dues of the buyers of a city are no seller's figure.
+    for question in [
+        "kasur ke byopari ka kul bakaya kitna hai",
+        "قصور کے بیوپاری کا کل بقایا کتنا ہے",
+    ] {
+        never_shows(&h, question, &[oracle(&f, "d7.city.kasur.dues")]);
+        goes_to_the_model(&h, question);
+    }
+    h.scan_requests();
+}

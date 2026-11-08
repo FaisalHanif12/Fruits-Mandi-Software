@@ -851,3 +851,12 @@ assistant-instant-seller-advance = { $kind ->
 assistant-instant-last-rate-item-no-sale = { $item } کی { $period } کی کوئی { -bikri } نہیں ہوئی۔ اس سے پہلے آخری ریٹ { $figure } تھا، مورخہ { $date }۔
 # review: pending
 assistant-instant-last-rate-buyer-item-no-sale = { $name } کو { $item } کی { $period } کی کوئی { -bikri } نہیں ہوئی۔ اس سے پہلے آخری ریٹ { $figure } تھا، مورخہ { $date }۔
+
+# Instant answers, plan 59 F3b. Same messages as the English file.
+# review: pending
+assistant-instant-trial-total = { $kind ->
+    [debit] { -trial-balance }، { -banaam } کا { -meezan }: { $figure }
+   *[credit] { -trial-balance }، { -jama } کا { -meezan }: { $figure }
+}
+# review: pending
+assistant-instant-city-dues = { $name } کے گاہکوں کے ذمے: { $figure }

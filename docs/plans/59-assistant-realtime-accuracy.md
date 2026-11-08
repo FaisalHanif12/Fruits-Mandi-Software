@@ -433,3 +433,22 @@ the repository. Robustness writes held-out bank 2 for the final honest score, ru
 - **Open question for Umar:** should "cash in / out today" mean the cash book totals with reversals (as the R12
   screen shows them), or a new figure that leaves the reversed entries out (a new report column)?
 - Offline main bank after part 3: right with no call 155 of 455 (34.1%), WRONG 0; short questions 64.3%.
+
+### 13.3 Round 3: rule (b), R18, R21, pre-reads (backend, 08-11-2026)
+
+- Rule (b) of D332 is built: the app answers cash in or out alone only when the asked period has no reversal entry
+  and every cash book row was read. Otherwise the model answers.
+- Trial balance: "trial balance ka banaam / jama kitna hai" is answered from the R18 totals
+  (assistant-instant-trial-total). The opening trial balance, a past-tense wording, a buyers, sellers or partner
+  word, or "kal" before the trial word go to the model.
+- A city's dues: answered from that city's R21 row (assistant-instant-city-dues). A sellers word, a count of its
+  buyers or an age bucket go to the model.
+- Pre-reads: a second set of reads fills the model's first request, in the same read snapshot and through the same
+  Q7 filter, so more questions take one call instead of two. The app never gives an instant answer from them. A
+  question with an unknown word, an event word, a capital flow, an item group, a pay type or a doubt gets no
+  pre-read. Proof: `pre_reads_fill_the_first_request_and_keep_the_privacy_and_read_only_rules` and
+  `money_review_pass_two_a_pre_read_never_puts_another_questions_figure_before_the_model` (d7_guards.rs).
+- Second money review: four findings (three high, one medium), all fixed with red-before-fix tests.
+- Offline main bank: right with no call 160 of 455 (35.2%), WRONG 0; no call or one at most 66.8%; short questions
+  66.5% no call, 82.8% no call or one. The gap is the multi-figure questions (two figures 12 of 103, three or more
+  1 of 128): item C, then families J, G, B, D, H.

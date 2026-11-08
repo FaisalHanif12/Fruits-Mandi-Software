@@ -56,6 +56,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         grade: None,
         capital_flow: None,
         cash_dirs: Vec::new(),
+        trial_sides: Vec::new(),
+        sale_number: None,
         garden_goods: false,
         last_one: false,
         months_asked: false,
@@ -81,6 +83,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         pay_asked: false,
         unexplained: false,
         role_word: false,
+        seller_word: false,
         how_much_twice: false,
         value_asked: false,
         total_dues: false,
@@ -1215,6 +1218,10 @@ pub(super) fn assemble(
     // The side of the commission asked, read before the names move into the understanding (plan 59, F1).
     let commission_side = super::reads::commission_side(scan, &kinds_for_happened, &names.parties);
     let unexplained_flag = unexplained_words(scan, &names, &periods);
+    // The same, not counting the side words of the trial balance ("debit", "credit", "banaam", "jama").
+    let unexplained_but_trial_words = unexplained_except(scan, &names, &periods, &|w| {
+        super::reads::is_trial_side_word(w)
+    });
     // The same, not counting the direction words of the cash book ("came", "went", "out", "gaya").
     let unexplained_but_cash_words = unexplained_except(scan, &names, &periods, &|w| {
         super::reads::is_cash_direction_word(w)
@@ -1249,6 +1256,10 @@ pub(super) fn assemble(
         grade,
         capital_flow: super::reads::capital_flow(scan),
         cash_dirs: super::reads::cash_directions(scan),
+        trial_sides: super::reads::trial_sides(scan),
+        sale_number: super::reads::document_number(scan)
+            .then(|| super::reads::bikri_number(scan))
+            .flatten(),
         garden_goods: super::reads::garden_goods(scan, &names_have_garden),
         last_one: super::reads::last_one(scan),
         months_asked: scan.has_exact(Cue::HowManyMonths),
@@ -1286,7 +1297,9 @@ pub(super) fn assemble(
             Cue::RoleSeller,
             Cue::ManySellers,
         ]),
-        how_much_twice: scan.hits.iter().filter(|h| h.cue == Cue::HowMuch).count() >= 2,
+        seller_word: scan.has_any(&[Cue::RoleSeller, Cue::ManySellers]),
+        // Two asks, not two hits on one word: "kitna hai" is a phrase and a word that start at the same place.
+        how_much_twice: how_much_cues(scan) >= 2,
         value_asked: super::reads::value_asked(scan),
         document_number: super::reads::document_number(scan),
         packing_filter: super::reads::packing_filter(scan),
@@ -1375,6 +1388,14 @@ pub(super) fn assemble(
     {
         understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
         understanding.happened = false;
+        understanding.unexplained = false;
+    }
+    // "what is the total debit of the trial balance": the side words are read by the plan, so they raise no doubt.
+    if !understanding.trial_sides.is_empty()
+        && understanding.figures.value == [FigureKind::TrialBalance]
+        && !unexplained_but_trial_words
+    {
+        understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
         understanding.unexplained = false;
     }
     understanding.sure = is_sure(&understanding);

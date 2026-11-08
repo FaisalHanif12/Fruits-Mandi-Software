@@ -371,6 +371,9 @@ impl Scan {
             || t.is_stop(word)
             || is_first_day_word(word)
             || when::is_time_word(word)
+            // "jama" beside the trial balance is its credit side, not a name.
+            || (super::reads::is_trial_side_word(word)
+                && self.hits.iter().any(|h| h.cue == Cue::TrialBalance))
         {
             return false;
         }

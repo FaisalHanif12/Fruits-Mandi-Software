@@ -164,6 +164,9 @@ fn is_total_line(what: What) -> bool {
             | What::CapitalOut
             | What::CashIn
             | What::CashOut
+            | What::TrialDebit
+            | What::TrialCredit
+            | What::CityDues
     )
 }
 

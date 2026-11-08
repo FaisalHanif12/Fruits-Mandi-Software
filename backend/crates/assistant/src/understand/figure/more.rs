@@ -254,6 +254,11 @@ impl Cx<'_> {
             _ => return None,
         };
         let r12 = self.open_report("R12")?;
+        // The totals hold a cancelled or edited entry twice (its posting and its reversal): with one in the
+        // period, or with rows the app did not read, the figure is not what came in or went out.
+        if cash_book_has_reversal_or_unread_rows(r12) {
+            return None;
+        }
         Some(Sentence {
             id: "assistant-instant-cash-book",
             args: vec![
@@ -261,6 +266,53 @@ impl Cx<'_> {
                 ("figure", reference(r12, &["totals", column])?),
             ],
             period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// What the buyers of one city owe: the `balance` of the city's own row of R21, the row that names no buyer.
+    pub(super) fn city_dues(&self, city: &str) -> Option<Sentence> {
+        let r21 = self.result("report", |r| {
+            input_str(r, "id") == Some("R21") && input_str(r, "city") == Some(city)
+        })?;
+        let Some(Node::Keyed(rows)) = r21.node.get(&["rows"]) else {
+            return None;
+        };
+        // The city's row is the one with no buyer; there is exactly one.
+        let mut group = rows.iter().filter(|(key, _)| {
+            matches!(
+                r21.node.get(&["rows", key, "buyer"]),
+                None | Some(Node::Null)
+            )
+        });
+        let (key, _) = group.next()?;
+        if group.next().is_some() {
+            return None;
+        }
+        Some(Sentence {
+            id: "assistant-instant-city-dues",
+            args: vec![
+                ("name", self.name_of(city)?),
+                ("figure", reference(r21, &["rows", key, "balance"])?),
+            ],
+            period: None,
+        })
+    }
+
+    /// The total debit or credit of the trial balance (R18), as of now.
+    pub(super) fn trial_total(&self, what: What) -> Option<Sentence> {
+        let (kind, column) = match what {
+            What::TrialDebit => ("debit", "debit"),
+            What::TrialCredit => ("credit", "credit"),
+            _ => return None,
+        };
+        let r18 = self.open_report("R18")?;
+        Some(Sentence {
+            id: "assistant-instant-trial-total",
+            args: vec![
+                ("kind", kind.to_owned()),
+                ("figure", reference(r18, &["totals", column])?),
+            ],
+            period: None,
         })
     }
 
@@ -371,4 +423,30 @@ impl Cx<'_> {
             period: Some(Box::new(self.period()?)),
         })
     }
+}
+
+/// True when the cash book read has a reversal entry among its rows, or has more entries than rows read, or
+/// its rows or count are missing: the cash in and out totals then hold an entry twice or cannot be vouched
+/// for.
+///
+/// Example: after بکری 2 is cancelled the same day, its reversal is a row of the day, so this is true.
+fn cash_book_has_reversal_or_unread_rows(r12: &ToolResult) -> bool {
+    let Some(count) = count_of(r12, &["count"]) else {
+        return true;
+    };
+    if count == 0 {
+        return false;
+    }
+    let Some(Node::Keyed(rows)) = r12.node.get(&["rows"]) else {
+        return true;
+    };
+    if !i64::try_from(rows.len()).is_ok_and(|n| n == count) {
+        return true;
+    }
+    rows.iter().any(|(key, _)| {
+        matches!(
+            r12.node.get(&["rows", key, "entry"]).and_then(Node::as_val),
+            Some(Val::Doc { type_id, .. }) if type_id.ends_with("reversal")
+        )
+    })
 }

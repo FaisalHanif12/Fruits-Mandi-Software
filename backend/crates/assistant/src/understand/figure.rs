@@ -431,6 +431,10 @@ impl Cx<'_> {
             }
             (Who::Shop, What::CashClosing) => self.cash_closing().map(|s| vec![s]),
             (Who::Shop, What::CashIn | What::CashOut) => self.cash_flow(line.what).map(|s| vec![s]),
+            (Who::Shop, What::TrialDebit | What::TrialCredit) => {
+                self.trial_total(line.what).map(|s| vec![s])
+            }
+            (Who::City(key), What::CityDues) => self.city_dues(key).map(|s| vec![s]),
             (Who::Shop, What::CashSales | What::CreditSales) => {
                 self.sale_kind(line.what).map(|s| vec![s])
             }

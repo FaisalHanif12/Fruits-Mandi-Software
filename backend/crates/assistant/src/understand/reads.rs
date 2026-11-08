@@ -64,7 +64,7 @@ use super::who::Names;
 use super::{
     CapitalFlow, CashDir, Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver,
     Measure, Outcome, PartyHit, PartyRole, PayKind, PeriodKind, PeriodRef, Rank, RecordHit,
-    RecordKind, Understanding,
+    RecordKind, TrialSide, Understanding,
 };
 
 /// One read to do before the first call: a tool and its input, as the model would send it.
@@ -884,6 +884,14 @@ fn find(text: &str, role: &str) -> PlannedRead {
     }
 }
 
+/// A planned read with one more field of its input set (a filter the plan structs do not carry yet).
+fn with_field(mut read: PlannedRead, name: &str, value: Value) -> PlannedRead {
+    if let Some(map) = read.input.as_object_mut() {
+        map.insert(name.to_owned(), value);
+    }
+    read
+}
+
 fn party_card(key: &str) -> PlannedRead {
     PlannedRead {
         tool: "party_card",
@@ -1129,6 +1137,8 @@ pub(super) enum Who {
     BuyerItem(String, String),
     /// A seller and an item: the row of the item in view A read for him (seller key, item key).
     SellerItem(String, String),
+    /// A city, by its key (`ct1`): the row of that city in R21.
+    City(String),
     /// A buyer or a seller whose party card is read.
     Party(String),
     /// A partner's row of R31; `None` for every partner's row.
@@ -1208,6 +1218,12 @@ pub(super) enum What {
     CashIn,
     /// The cash paid out over a period: the `cash_out` total of the cash book (R12).
     CashOut,
+    /// The total debit of the trial balance (R18 `totals.debit`).
+    TrialDebit,
+    /// The total credit of the trial balance (R18 `totals.credit`).
+    TrialCredit,
+    /// What the buyers of one city owe: the city's row of R21 (`balance`).
+    CityDues,
 }
 
 /// One figure the answer gives: about whom, and which.
@@ -1246,6 +1262,8 @@ struct Plan {
     average: bool,
     /// True when a buyers or sellers word stands in the question.
     role_word: bool,
+    /// True when a SELLERS word stands in the question.
+    seller_word: bool,
 }
 
 impl Plan {
@@ -1284,6 +1302,257 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
     plan(u).map(|p| p.reads)
 }
 
+/// The reads to make before the first model call: the reads of the plan when the app has one, else the reads
+/// of each figure it can plan for a question it understood but cannot answer whole ("today's sales, the number
+/// of bills and the commission": three figures that need two reads). They are only reads: the app gives no
+/// instant line from them and the scope guard does not use them, so a read that turns out useless costs a
+/// few milliseconds and never a wrong figure. The model then writes the answer in ONE call instead of
+/// choosing the tools first (D7, plan 59 D).
+pub fn plan_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    plan_reads(u).or_else(|| pre_reads(u))
+}
+
+/// The union of the reads of each figure of the question; see [`plan_pre_reads`].
+fn pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
+    let kinds = u.figures.value.as_slice();
+    if !u.sure
+        || u.intent.value != Intent::Figure
+        || kinds.is_empty()
+        || kinds.len() > MAX_PRE_FIGURES
+        || kinds.iter().any(|k| matches!(k, FigureKind::Ask(_)))
+        || u.periods.len() > 1
+        || u.periods.iter().any(|p| p.future)
+        || u.parties.len() > MAX_THINGS
+        || u.items.len() > MAX_THINGS
+        || (u.parties.len() > 1 && !u.items.is_empty())
+        || (u.items.len() > 1 && !u.parties.is_empty())
+        || u.records.len() > 1
+        || u.packing_filter
+        || u.quality
+        || u.truck.is_some()
+        || (u.bikri_number.is_some() && u.sale_number.is_none())
+        || (u.document_number && u.sale_number.is_none())
+        || (u.item_group.is_some()
+            && u.pay_kind.is_none()
+            && !u
+                .figures
+                .value
+                .iter()
+                .any(|k| matches!(k, FigureKind::Report("R3" | "R4"))))
+        || !names_found(u)
+    {
+        return None;
+    }
+    let period = u.periods.first();
+    let period = period.filter(|p| !(is_bare_kal(p) && asks_now_or_trial(u)));
+    let period = period.filter(|p| !(p.kind == PeriodKind::UpToNow && asks_now(u)));
+    let mut finds: Vec<PlannedRead> = Vec::new();
+    let mut reads: Vec<PlannedRead> = Vec::new();
+    let mut dated = false;
+    // One named person, garden, trip, khata or partner: the report that holds its figures (a day sheet, a
+    // garden's or a trip's report, a khata's ledger, a partner's row of view F).
+    if let Some(extra) =
+        pre_reads_of_one_record(u, period).or_else(|| pre_reads_of_sales(u, period))
+    {
+        dated = extra.dated;
+        finds = extra.finds;
+        reads = extra.reads;
+    }
+    // The figure of each kind is read from its own tile, view or report only for a question that names no
+    // other measure: a buyer-side commission, a quantity, a number of a بکری or a role word has its own
+    // guard, and a tile of the wrong measure must not be put in front of the model (money review).
+    // It stops wherever the plan stops: a word nothing explains, a doubt the plan does not carry, an event, a
+    // capital moved, a group, a payment type. The scope guard does not see these reads, so a read of the whole
+    // shop for a question with a filter the read lacks would put another question's figure in front of the model
+    // (money review of 08-11-2026, second pass).
+    let generic = u.sale_number.is_none()
+        && u.commission_side.is_none()
+        && u.other_measure == Measure::Same
+        && !u.role_word
+        && !u.scoped
+        && !u.compare
+        && !u.last_one
+        && !u.oldest
+        && !u.months_asked
+        && !u.guests
+        && !u.amount_named
+        && u.list.is_none()
+        && !u.unexplained
+        && !u.happened
+        && u.capital_flow.is_none()
+        && u.item_group.is_none()
+        && u.pay_kind.is_none()
+        && !u.doubts.iter().any(|d| NOT_CARRIED.contains(d));
+    for kind in kinds.iter().filter(|_| generic) {
+        let mut one = Plan {
+            qty: u.qty_asked,
+            average: u.average_asked,
+            role_word: u.role_word,
+            seller_word: u.seller_word,
+            ..Plan::default()
+        };
+        if figure_of_kind(u, *kind, period, &mut one).is_none() {
+            continue;
+        }
+        dated |= one.dated;
+        for f in one.finds {
+            if !finds.contains(&f) {
+                finds.push(f);
+            }
+        }
+        for r in one.reads {
+            if !reads.contains(&r) {
+                reads.push(r);
+            }
+        }
+    }
+    if reads.is_empty() {
+        return None;
+    }
+    let mut all = Vec::new();
+    if dated && let Some(p) = period {
+        all.push(period_read(p)?);
+    }
+    all.extend(finds);
+    all.extend(reads);
+    Some(all)
+}
+
+/// The most figures of one question the pre-reads are made for.
+const MAX_PRE_FIGURES: usize = 4;
+
+/// The reads of a question about one بکری by its number (R1 of it) or about the sales of one payment type
+/// (the cash sales R3, the credit sales R4) with an item or a group, for the model's first call only.
+fn pre_reads_of_sales(u: &Understanding, period: Option<&PeriodRef>) -> Option<Plan> {
+    let mut plan = Plan::default();
+    if let Some(number) = u.sale_number {
+        plan.read(with_field(
+            report("R1", Rep::default()),
+            "bikri",
+            json!(number),
+        ));
+        return Some(plan);
+    }
+    // The register the question names ("naqdi bikri", "udhari bikri": R3, R4) or the payment type it says.
+    let named = u.figures.value.iter().find_map(|k| match k {
+        FigureKind::Report(id) if matches!(*id, "R3" | "R4") => Some(*id),
+        _ => None,
+    });
+    let register = match (named, u.pay_kind) {
+        (Some(id), _) => id,
+        (None, Some(PayKind::Cash)) => "R3",
+        (None, Some(PayKind::Credit)) => "R4",
+        (None, None) => return None,
+    };
+    let (from, to) = dates(period);
+    let item = match u.items.as_slice() {
+        [item] => match &item.outcome {
+            Outcome::Found(goods) => {
+                plan.find(&goods.name_en, "item");
+                Some(goods.key.clone())
+            }
+            _ => return None,
+        },
+        [] => None,
+        _ => return None,
+    };
+    plan.read(report(
+        register,
+        Rep {
+            from,
+            to,
+            item,
+            item_group: u.item_group.map(GroupWord::tool_word),
+            ..Rep::default()
+        },
+    ));
+    plan.dated = period.is_some();
+    Some(plan)
+}
+
+/// The reads that hold the figures of ONE named record, for the model's first call only (D7, plan 59 D):
+/// - a buyer or seller and one day: his day sheet (R35), which has his items, rates, cash, credit and balances;
+/// - a garden: its report (R36); a trip: its report (R33); a khata (or a person who borrowed): his ledger (R13);
+/// - a partner and a period: his row of view F (income share, expense share, profit, gardens, trips, fruit).
+fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Option<Plan> {
+    let [party] = u.parties.as_slice() else {
+        return None;
+    };
+    let Outcome::Found(hit) = &party.outcome else {
+        return None;
+    };
+    let text = party.text.as_str();
+    let mut plan = Plan::default();
+    match hit.role {
+        PartyRole::Buyer | PartyRole::Seller if is_one_day(period) && !hit.pukhta => {
+            let (_, to) = dates(period);
+            plan.find(text, role_word(hit.role)?);
+            plan.read(report(
+                "R35",
+                Rep {
+                    party: Some(hit.key.clone()),
+                    as_of: to,
+                    ..Rep::default()
+                },
+            ));
+        }
+        PartyRole::Garden => {
+            plan.find(text, "garden");
+            plan.read(with_field(
+                report("R36", Rep::default()),
+                "garden",
+                json!(hit.key),
+            ));
+        }
+        PartyRole::Trip => {
+            plan.find(text, "trip");
+            plan.read(with_field(
+                report("R33", Rep::default()),
+                "trip",
+                json!(hit.key),
+            ));
+        }
+        PartyRole::Khata | PartyRole::Staff => {
+            plan.find(
+                text,
+                if hit.role == PartyRole::Khata {
+                    "khata"
+                } else {
+                    "staff"
+                },
+            );
+            plan.read(report(
+                "R13",
+                Rep {
+                    party: Some(hit.key.clone()),
+                    sort: Some(json!([{"column": "date", "order": "desc"}])),
+                    rows: Some(LEDGER_ROWS),
+                    ..Rep::default()
+                },
+            ));
+        }
+        PartyRole::Partner => {
+            let (from, to) = dates(period);
+            plan.find(text, "partner");
+            plan.read(with_field(
+                analytics(
+                    "F",
+                    An {
+                        from,
+                        to,
+                        ..An::default()
+                    },
+                ),
+                "partner",
+                json!(hit.key),
+            ));
+            plan.dated = period.is_some();
+        }
+        _ => return None,
+    }
+    Some(plan)
+}
+
 /// The reads of a question and the figures an instant answer gives from them.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     // A بکری number named ("kal bikri number 5 ka commission kitna tha"): no read of a figure has a filter
@@ -1308,7 +1577,8 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     }
     // A payment-type word that no plan above took ("sold for cash and on credit"): the plain figures are
     // another thing. The model answers (D7, plan 59 F3, D159).
-    if u.pay_asked {
+    // ("credit" beside the trial balance is its side, not a payment type.)
+    if u.pay_asked && u.trial_sides.is_empty() {
         return None;
     }
     // "bashir ki khalis raqam" for a seller: his net sale (view B), not a partner's total.
@@ -1417,6 +1687,7 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
         qty: u.qty_asked,
         average: u.average_asked,
         role_word: u.role_word,
+        seller_word: u.seller_word,
         ..Plan::default()
     };
     match u.intent.value {
@@ -1822,6 +2093,24 @@ pub(super) fn is_cash_direction_word(word: &str) -> bool {
         || matches!(word, "in" | "out")
 }
 
+/// True when the question names a buyer, a seller, a group of them, a partner, the staff, the guests, a
+/// garden, a trip or an item: the figure is then theirs, not the whole book's or the whole shop's.
+fn has_entity_cue(scan: &Scan) -> bool {
+    const ENTITY: [Cue; 10] = [
+        Cue::RoleBuyer,
+        Cue::RoleSeller,
+        Cue::RolePartner,
+        Cue::RoleGarden,
+        Cue::RoleTrip,
+        Cue::RoleStaff,
+        Cue::Guests,
+        Cue::ManyBuyers,
+        Cue::ManySellers,
+        Cue::RoleItem,
+    ];
+    scan.hits.iter().any(|h| ENTITY.contains(&h.cue))
+}
+
 /// The parts of the cash book a question names, in the order it names them.
 ///
 /// Each direction word must stand right after the cash word or a "how much" word ("kitna cash aya",
@@ -1901,6 +2190,10 @@ pub(super) fn cash_directions(scan: &Scan) -> Vec<CashDir> {
     out
 }
 
+/// The most rows of the cash book the app reads to see whether the period has a reversal (the most the tool
+/// gives, PRD FR-19.11).
+const CASH_ROWS_READ: u32 = 100;
+
 /// The cash book of a period for a question that names its parts ("cash came in yesterday", "cash went out
 /// and what was left"): the `cash_in` and `cash_out` totals and the closing balance of R12, each its own
 /// line, in the order asked. The opening is not answered here.
@@ -1929,11 +2222,20 @@ fn cash_flow_plan(u: &Understanding) -> Option<Planned> {
     }
     let (from, to) = dates(Some(period));
     let mut plan = Plan::default();
+    // The cash that came in or went out is answered only when the period has no reversal entry (the totals
+    // of the cash book hold a cancelled or edited entry twice: its posting and its reversal), which the rows
+    // tell: so they are read, up to the most the tool gives. A period with more entries than that, or with
+    // a reversal, is the model's (lead ruling of 08-11-2026).
+    let flows = u
+        .cash_dirs
+        .iter()
+        .any(|d| matches!(d, CashDir::In | CashDir::Out));
     plan.read(report(
         "R12",
         Rep {
             from,
             to,
+            rows: flows.then_some(CASH_ROWS_READ),
             ..Rep::default()
         },
     ));
@@ -1956,6 +2258,90 @@ fn cash_flow_plan(u: &Understanding) -> Option<Planned> {
         reads,
         lines: plan.lines,
     })
+}
+
+/// The sides of the trial balance a question names, in the order it names them: بنام / debit, جمع / credit. Only
+/// beside the trial balance itself ("jama" alone is a sum: "akram aur arshad ka jama").
+///
+/// Example: "ٹرائل بیلنس کا بنام کل کتنا ہے" is Debit; "trial balance mein banaam aur jama" is Debit, Credit.
+/// The side words of the trial balance: بنام / debit, جمع / credit, and their spellings.
+const TRIAL_DEBIT_WORDS: [&str; 7] = ["banaam", "benaam", "bnaam", "banam", "بنام", "debit", "dr"];
+const TRIAL_CREDIT_WORDS: [&str; 6] = ["jama", "jamaa", "جمع", "credit", "cr", "jam"];
+
+/// True for a side word of the trial balance.
+pub(super) fn is_trial_side_word(word: &str) -> bool {
+    TRIAL_DEBIT_WORDS
+        .iter()
+        .chain(TRIAL_CREDIT_WORDS.iter())
+        .any(|x| key(x) == word)
+}
+
+pub(super) fn trial_sides(scan: &Scan) -> Vec<TrialSide> {
+    if !scan.has(Cue::TrialBalance) {
+        return Vec::new();
+    }
+    // The trial balance asked is the one of now. "At the start" and "opening" are R19; a past verb ("kitna
+    // tha") names a time the app does not read: neither is answered here, the model is.
+    const OPENING: [&str; 10] = [
+        "shuru",
+        "shuruaat",
+        "opening",
+        "start",
+        "started",
+        "initial",
+        "ابتدائی",
+        "شروع",
+        "pehle",
+        "beginning",
+    ];
+    // A buyers, sellers or partner word, a garden or a trip: the debit of THEM is another figure than the whole
+    // trial balance's. And a "kal" before the trial balance names yesterday's (or is "kul" mistyped): the
+    // model's. ("بنام کل" after the side word is "total": it stands after the cue and is fine.)
+    if has_entity_cue(scan) {
+        return Vec::new();
+    }
+    let trial_at = scan
+        .hits
+        .iter()
+        .find(|h| h.cue == Cue::TrialBalance)
+        .map_or(0, |h| h.start);
+    if scan
+        .words
+        .iter()
+        .take(trial_at)
+        .any(|w| matches!(w.as_str(), "kal" | "کل"))
+    {
+        return Vec::new();
+    }
+    // (Not the shared tense check: it reads the English article "the" as the Roman Urdu "the", were.)
+    const PAST: [&str; 12] = [
+        "tha", "thi", "thay", "was", "were", "did", "had", "kiya", "kia", "تھا", "تھی", "تھے",
+    ];
+    if scan.words.iter().any(|w| {
+        OPENING
+            .iter()
+            .chain(PAST.iter())
+            .any(|x| key(x) == w.as_str())
+    }) {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    for w in &scan.words {
+        let is = |list: &[&str]| list.iter().any(|x| key(x) == w.as_str());
+        let side = if is(&TRIAL_DEBIT_WORDS) {
+            Some(TrialSide::Debit)
+        } else if is(&TRIAL_CREDIT_WORDS) {
+            Some(TrialSide::Credit)
+        } else {
+            None
+        };
+        if let Some(side) = side
+            && !out.contains(&side)
+        {
+            out.push(side);
+        }
+    }
+    out
 }
 
 /// The direction of a question about capital: taken back ("wapas", "واپس", "withdrew", "taken back") or
@@ -2646,6 +3032,7 @@ fn figure_of_kind(
             u.total_dues,
             u.other_measure == Measure::Quantity,
             u.guests,
+            &u.trial_sides,
             period,
             plan,
         ),
@@ -3170,6 +3557,10 @@ fn record_figure(
     let (from, to) = dates(period);
     match (hit.kind, kind) {
         (RecordKind::City, FigureKind::Dues | FigureKind::Balance) if period.is_none() => {
+            // R21 holds the BUYERS' dues of the city: a sellers word asks another figure.
+            if plan.seller_word {
+                return None;
+            }
             plan.find(text, "city");
             plan.read(report(
                 "R21",
@@ -3178,6 +3569,7 @@ fn record_figure(
                     ..Rep::default()
                 },
             ));
+            plan.line(Who::City(hit.key.clone()), What::CityDues);
         }
         (RecordKind::Adda, FigureKind::Sale | FigureKind::SaleCount) => {
             plan.find(text, "adda");
@@ -3233,6 +3625,7 @@ fn shop_figure(
     total_dues: bool,
     quantity: bool,
     guests: bool,
+    trial_sides: &[TrialSide],
     period: Option<&PeriodRef>,
     plan: &mut Plan,
 ) -> Option<()> {
@@ -3445,6 +3838,19 @@ fn shop_figure(
                 },
             ));
             plan.dated = period.is_some();
+            // The side or sides of the trial balance as of now: one line each, in the order asked. With a
+            // period ("at the start") it is another trial balance (R19): no line.
+            if period.is_none() {
+                for side in trial_sides {
+                    plan.line(
+                        Who::Shop,
+                        match side {
+                            TrialSide::Debit => What::TrialDebit,
+                            TrialSide::Credit => What::TrialCredit,
+                        },
+                    );
+                }
+            }
         }
         // All the partners' totals (the app asks for the code while the section is locked).
         FigureKind::PartnerTotal => {

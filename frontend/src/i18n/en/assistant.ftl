@@ -887,3 +887,13 @@ assistant-instant-seller-advance = { $kind ->
 assistant-instant-last-rate-item-no-sale = No { -bikri } of { $item } { $period }. The last rate before that was { $figure }, on { $date }.
 # review: pending
 assistant-instant-last-rate-buyer-item-no-sale = No { -bikri } of { $item } to { -gahak } { $name } { $period }. The last rate before that was { $figure }, on { $date }.
+
+# Instant answers, plan 59 F3b: the trial balance read as of now (so no period), and the dues of the buyers of one city
+# (report R21 for the city, as of now, leaving out anyone in the dead amount). The figures carry no side word of their own.
+# review: pending
+assistant-instant-trial-total = { $kind ->
+    [debit] { -trial-balance }, { -meezan } { -banaam }: { $figure }
+   *[credit] { -trial-balance }, { -meezan } { -jama }: { $figure }
+}
+# review: pending
+assistant-instant-city-dues = Buyers' dues of { $name }: { $figure }

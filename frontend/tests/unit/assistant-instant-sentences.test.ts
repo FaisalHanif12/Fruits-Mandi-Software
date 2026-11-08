@@ -216,6 +216,19 @@ const SENTENCES: readonly Sentence[] = [
     values: [''],
     common: ['name', 'item', 'period', 'figure', 'date'],
   },
+  // Plan 59 F3b: the trial balance total and the dues of the buyers of one city.
+  {
+    id: 'assistant-instant-trial-total',
+    selector: 'kind',
+    values: ['credit', 'debit'],
+    common: ['figure'],
+  },
+  {
+    id: 'assistant-instant-city-dues',
+    selector: '',
+    values: [''],
+    common: ['name', 'figure'],
+  },
   // Plan 59 F3 batch 3: a seller with an open advance.
   {
     id: 'assistant-instant-seller-advance',
@@ -719,6 +732,44 @@ describe.each(LANGUAGES)('the no-sale sentences with the last rate (%s)', (langu
         expect(text, `${id}/${shape}`).toMatch(new RegExp(`${period} کی کوئی `));
       }
     }
+  });
+});
+
+describe.each(LANGUAGES)('the trial balance total and the dues of a city (%s)', (language) => {
+  it('the trial balance total names the Trial Balance, the Total and the side, and no period', () => {
+    for (const [kind, side] of [
+      ['debit', 'glossary-banaam'],
+      ['credit', 'glossary-jama'],
+    ] as const) {
+      const text = message(language, 'assistant-instant-trial-total', {
+        kind,
+        figure: 'FIGUREMARK',
+      });
+      expect(text, kind).toContain(message(language, 'glossary-trial-balance'));
+      expect(text, kind).toContain(message(language, 'glossary-meezan'));
+      expect(text, kind).toContain(message(language, side));
+      expect(text, kind).toContain('FIGUREMARK');
+      // The other side's word is not in it.
+      const other = message(language, kind === 'debit' ? 'glossary-jama' : 'glossary-banaam');
+      expect(text, kind).not.toContain(other);
+    }
+  });
+
+  it('an unknown side reads the credit total, the default branch', () => {
+    expect(
+      message(language, 'assistant-instant-trial-total', { kind: 'other', figure: 'FIGUREMARK' }),
+    ).toBe(
+      message(language, 'assistant-instant-trial-total', { kind: 'credit', figure: 'FIGUREMARK' }),
+    );
+  });
+
+  it('the dues of a city say the buyers and the city, with the figure last', () => {
+    const text = message(language, 'assistant-instant-city-dues', {
+      name: 'NAMEMARK',
+      figure: 'FIGUREMARK',
+    });
+    expect(text).toContain(language === 'ur' ? 'گاہکوں' : 'Buyers');
+    expect(text.indexOf('NAMEMARK')).toBeLessThan(text.indexOf('FIGUREMARK'));
   });
 });
 

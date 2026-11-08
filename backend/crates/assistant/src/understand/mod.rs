@@ -62,7 +62,7 @@ pub use compose_print::compose_print;
 pub use compose_route::compose;
 pub use figure::{FigureAnswer, Sentence, compose_figure};
 pub use plan::{PlanFilters, ReportPlan};
-pub use reads::{PlannedRead, plan_reads};
+pub use reads::{PlannedRead, plan_pre_reads, plan_reads};
 
 /// How sure the app is of one part of the understanding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -641,6 +641,15 @@ pub enum CapitalFlow {
     Out,
 }
 
+/// A side of the trial balance a question asks for (D7, plan 59 F3b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrialSide {
+    /// بنام: the total debit of R18.
+    Debit,
+    /// جمع: the total credit of R18.
+    Credit,
+}
+
 /// One part of the cash book a question asks for: what came in, what went out, what was left (D7, plan 59).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CashDir {
@@ -734,6 +743,12 @@ pub struct Understanding {
     /// The parts of the cash book the question names, in the order it names them ("cash came in, went out
     /// and was left": In, Out, Closing). Empty when it names none.
     pub cash_dirs: Vec<CashDir>,
+    /// The number of the بکری the question names ("bikri number 100 me kitna maal bika"): the model reads R1 of
+    /// it; the app reads it ahead (D7, plan 59 D). No figure is given from it by the app.
+    pub sale_number: Option<i64>,
+    /// The sides of the trial balance the question names, in the order it names them ("trial balance ka banaam
+    /// total": Debit). Empty when it names none.
+    pub trial_sides: Vec<TrialSide>,
     /// True when the question names the gardens' goods with no garden named ("baghat ki bikri"): the
     /// goods filter `garden` of view A reads them.
     pub garden_goods: bool,
@@ -795,6 +810,8 @@ pub struct Understanding {
     /// True when a word for buyers or sellers stands in the question ("gahakon se wasooli", "beopariyon
     /// ko"): a report that lists every party cannot be split by it, so its total is no answer.
     pub role_word: bool,
+    /// True when a SELLERS word stands in it (بیوپاری, byopari, seller): the buyers of a city are not his figure.
+    pub seller_word: bool,
     /// True when two "how much" words stand in the question ("kharcha kitna hua aur sharkat daron ne kitna
     /// liya"): it asks two things, and the figures of a report's totals answer one.
     pub how_much_twice: bool,
