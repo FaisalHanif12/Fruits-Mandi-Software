@@ -412,3 +412,24 @@ Umar (08-11-2026): "ok continue, make it 9 out of 10". Lead additions:
 Lead action: backend gets generic rules only (count vs amount guard, cue count guard, no names from ordinary words,
 a word-class rule for unknown words, `happened`, "کل"), never the held-out questions. The held-out files move out of
 the repository. Robustness writes held-out bank 2 for the final honest score, run once after F3.
+
+### 13.2 F3b parts 2 and 3 (backend, 08-11-2026)
+
+- The six held-out-bank guards are built as rules over word classes (`understand/function_words.rs`,
+  `tests/d7_guards.rs`): a count is never given an amount; fewer figures than "how much" cues means no instant answer;
+  یکم, pehli and "the first" are day 1, and a day that no period took makes the time unsure; everyday function words
+  no longer switch off a total; `happened` does not fire on balance wordings; "کل" before a figure noun of now means
+  total.
+- Words that move money (took, paid, came, nikala, chukaya) and words that exclude, place or limit (alawa, siwa,
+  bahar, upar) stay unknown, so the question goes to the model. Lead ruling: keep it that way. A per-plan direction
+  rule is a separate item.
+- "aaj ka rate" on a day with no sale: "No sale of X today. The last rate before that was R, on D" (Umar's answer).
+- Cash book parts: "aaj kitna cash aya / gaya" is answered from R12 `totals.cash_in` and `cash_out`; the closing
+  balance comes from `summary.closing`.
+- **Lead decision D332 (08-11-2026):** R12's in and out totals include reversal lines. After a same-day cancel,
+  "aaj kitna cash gaya" would show 27,116 (14,316 + 12,800) when 14,316 went out. So when the asked period has any
+  reversal entry, a cash in or out question is not answered by the app alone and goes to the model. The closing
+  balance is not affected.
+- **Open question for Umar:** should "cash in / out today" mean the cash book totals with reversals (as the R12
+  screen shows them), or a new figure that leaves the reversed entries out (a new report column)?
+- Offline main bank after part 3: right with no call 155 of 455 (34.1%), WRONG 0; short questions 64.3%.

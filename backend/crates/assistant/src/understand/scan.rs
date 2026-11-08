@@ -17,7 +17,12 @@ pub(super) const MAX_WORDS: usize = 80;
 pub(super) const MAX_CHARS: usize = 600;
 
 /// The prefix of the word that stands for a date written in digits.
-const DATE_WORD: &str = "zzdate";
+pub(super) const DATE_WORD: &str = "zzdate";
+
+/// "یکم" and its Roman spellings: the first day of a month.
+pub(super) fn is_first_day_word(word: &str) -> bool {
+    matches!(word, "یکم" | "yakum" | "yekum" | "ekam")
+}
 
 /// A date written in digits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -306,6 +311,28 @@ impl Scan {
     /// The number a word is, if it is plain digits.
     pub(super) fn digits_at(&self, at: usize) -> Option<i64> {
         let word = self.words.get(at)?;
+        // The Urdu word for the first day of a month is the number 1 wherever a day is read ("یکم نومبر",
+        // "یکم سے 15 تک"): a date word is a date, never the name of a party (D7, plan 59 F3b, guard 3).
+        if is_first_day_word(word) {
+            return Some(1);
+        }
+        // "pehli tarikh" ("the first date") and "from the first till today": the first day of a month.
+        if matches!(word.as_str(), "pehli" | "pehla" | "پہلی" | "پہلا" | "first") {
+            let next = self.words.get(at.saturating_add(1)).map(String::as_str);
+            let before = at
+                .checked_sub(1)
+                .and_then(|b| self.words.get(b))
+                .map(String::as_str);
+            let before2 = at
+                .checked_sub(2)
+                .and_then(|b| self.words.get(b))
+                .map(String::as_str);
+            let after_from = matches!(before, Some("from" | "since"))
+                || (before == Some("the") && matches!(before2, Some("from" | "since")));
+            if matches!(next, Some("tarikh" | "tareekh" | "تاریخ" | "date")) || after_from {
+                return Some(1);
+            }
+        }
         if word.is_empty() || !word.chars().all(|c| c.is_ascii_digit()) || word.len() > 9 {
             return None;
         }
@@ -342,6 +369,7 @@ impl Scan {
             || word.starts_with(DATE_WORD)
             || word.chars().any(|c| c.is_ascii_digit())
             || t.is_stop(word)
+            || is_first_day_word(word)
             || when::is_time_word(word)
         {
             return false;

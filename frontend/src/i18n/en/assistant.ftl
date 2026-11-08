@@ -879,3 +879,11 @@ assistant-instant-seller-advance = { $kind ->
     [payable] { -beopari } { $name }: payable now { $payable }; open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi })
    *[none] { -beopari } { $name }: open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi }); nothing payable now
 }
+
+# Instant answers, plan 59 F3b: the item had no sale in the period, so the answer says so first and then gives the last
+# rate before it, with its date. The rate is the seller rate for an item and the rate charged for a named buyer, as in
+# assistant-instant-last-rate-item and assistant-instant-last-rate-buyer-item.
+# review: pending
+assistant-instant-last-rate-item-no-sale = No { -bikri } of { $item } { $period }. The last rate before that was { $figure }, on { $date }.
+# review: pending
+assistant-instant-last-rate-buyer-item-no-sale = No { -bikri } of { $item } to { -gahak } { $name } { $period }. The last rate before that was { $figure }, on { $date }.

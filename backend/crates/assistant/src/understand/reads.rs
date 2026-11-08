@@ -62,9 +62,9 @@ use super::lexicon::{Cue, key};
 use super::scan::Scan;
 use super::who::Names;
 use super::{
-    CapitalFlow, Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver, Measure,
-    Outcome, PartyHit, PartyRole, PayKind, PeriodKind, PeriodRef, Rank, RecordHit, RecordKind,
-    Understanding,
+    CapitalFlow, CashDir, Doubt, FigureKind, GradeWord, GroupWord, Intent, ItemHit, ListOver,
+    Measure, Outcome, PartyHit, PartyRole, PayKind, PeriodKind, PeriodRef, Rank, RecordHit,
+    RecordKind, Understanding,
 };
 
 /// One read to do before the first call: a tool and its input, as the model would send it.
@@ -324,21 +324,92 @@ pub(super) fn trip_word(scan: &Scan, names: &Names) -> bool {
 /// review R-e). A balance is asked with a "give" verb only ("akram ko kitne paise diye"); "kitna
 /// hua" is a way to ask a balance.
 pub(super) fn happened(scan: &Scan, kinds: &[FigureKind]) -> bool {
-    // "tahir ne kitni peshgi li hui hai": the state "has taken", which is the advance still open.
-    if kinds == [FigureKind::Advance] {
+    // A STATE, not an event: "tahir ne kitni peshgi li hui hai" (the advance still open), "kitna ho gaya hai"
+    // (what it has come to), "have to pay", "needs to pay", "is left", "is open", "bachi hui hai",
+    // "کھلی ہوئی", "put into the business" (D7, plan 59 F3b). These words say what is open now, even
+    // though they hold a past participle. Only a word that gives something BACK keeps it an event.
+    {
         let text = format!(" {} ", scan.words.join(" "));
-        const STATE: [&str; 7] = [
+        const STATE: [&str; 29] = [
             "li hui hai",
             "li hui he",
             "liya hua hai",
             "liya hua he",
             "li hui hain",
+            "bachi hui",
+            "bacha hua",
+            "bache hue",
+            "khuli hui",
+            "khula hua",
+            "lagi hui",
+            "laga hua",
+            "lagaya hua",
+            "lagayi hui",
+            "have to pay",
+            "has to pay",
+            "need to pay",
+            "needs to pay",
+            "due to pay",
+            "is left",
+            "are left",
+            "is open",
+            "are open",
+            "is pending",
+            "is still",
             "لی ہوئی ہے",
             "لیا ہوا ہے",
+            "بچی ہوئی",
+            "کھلی ہوئی",
         ];
-        if STATE
+        // "ho gaya hai" ("kitna ho gaya hai": what it has come to) is a state only beside a word for what is
+        // still owed. Beside a collection or a payment ("wasooli ho gayi", "adaigi ho gayi") it is an event.
+        const HO_GAYA: [&str; 8] = [
+            "ho gaya",
+            "ho gayi",
+            "ho gaye",
+            "ho gya",
+            "ہو گیا",
+            "ہو گئی",
+            "ہو گئے",
+            "ہو گی",
+        ];
+        const OWED: [&str; 12] = [
+            "baqi",
+            "baaqi",
+            "bakaya",
+            "bkaya",
+            "bqaya",
+            "udhar",
+            "udhaar",
+            "peshgi",
+            "بقایا",
+            "باقی",
+            "ادھار",
+            "پیشگی",
+        ];
+        const GIVES_BACK: [&str; 8] = [
+            "wapas", "wapsi", "wapis", "lautaya", "nikala", "withdrew", "returned", "واپس",
+        ];
+        let gives_back = scan
+            .words
             .iter()
-            .any(|p| text.contains(&format!(" {} ", key(p))))
+            .any(|w| GIVES_BACK.iter().any(|x| key(x) == *w));
+        let state_kinds = kinds.iter().all(|k| {
+            matches!(
+                k,
+                FigureKind::Advance
+                    | FigureKind::Balance
+                    | FigureKind::Dues
+                    | FigureKind::Payable
+                    | FigureKind::MoneyLent
+                    | FigureKind::Capital
+            )
+        });
+        let says_phrase =
+            |list: &[&str]| list.iter().any(|p| text.contains(&format!(" {} ", key(p))));
+        let ho_gaya_state =
+            says_phrase(&HO_GAYA) && scan.words.iter().any(|w| OWED.iter().any(|x| key(x) == *w));
+        if state_kinds && !kinds.is_empty() && !gives_back && (says_phrase(&STATE) || ho_gaya_state)
         {
             return false;
         }
@@ -463,7 +534,16 @@ pub(super) fn happened(scan: &Scan, kinds: &[FigureKind]) -> bool {
                     .any(|x| key(x) == w)
             })
     });
+    // A verb that says money or goods MOVED ("nikala", "came", "paid", "chukaya"): a state figure is not what
+    // was asked beside one (D7, plan 59 F3b, money review).
+    let moved = scan
+        .words
+        .iter()
+        .any(|w| super::function_words::is_event_word(w));
+    let state_figure =
+        open_figure || balance_figure || cash_figure || kinds.contains(&FigureKind::Capital);
     capital_event
+        || (state_figure && moved)
         || ((open_figure || balance_figure) && (has(FIRM) || done))
         || (open_figure && (has(&SOFT) || scan.has(Cue::Received)))
         || (cash_figure && (has(FIRM) || has(&SOFT) || scan.has(Cue::Received) || cash_flow))
@@ -1124,6 +1204,10 @@ pub(super) enum What {
     CapitalIn,
     /// Capital taken back over a period (R15 `capital_out` total), S-A5.
     CapitalOut,
+    /// The cash received over a period: the `cash_in` total of the cash book (R12).
+    CashIn,
+    /// The cash paid out over a period: the `cash_out` total of the cash book (R12).
+    CashOut,
 }
 
 /// One figure the answer gives: about whom, and which.
@@ -1266,6 +1350,10 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     // guards that want a sure period.
     if u.months_asked {
         return months_plan(u);
+    }
+    // "how much cash came in yesterday": the cash book names its parts, which are events of the period.
+    if !u.cash_dirs.is_empty() {
+        return cash_flow_plan(u);
     }
     let forecast = u.intent.value == Intent::Forecast;
     if !u.sure
@@ -1702,6 +1790,174 @@ fn months_plan(u: &Understanding) -> Option<Planned> {
     })
 }
 
+/// Words that say a part of the cash book: "kitna cash aya" (in), "cash gaya" (out), "kitna bacha" (left).
+/// "in" and "out" count only as the words after the cash word, and not in "cash in hand", "cash in the
+/// drawer".
+const CASH_IN_WORDS: [&str; 10] = [
+    "aya", "aaya", "ayi", "aayi", "aamad", "came", "received", "آیا", "آئی", "آمد",
+];
+const CASH_OUT_WORDS: [&str; 11] = [
+    "gaya",
+    "gya",
+    "gayi",
+    "nikla",
+    "nikli",
+    "went",
+    "گیا",
+    "گئی",
+    "نکلا",
+    "nikala",
+    "نکالا",
+];
+const CASH_LEFT_WORDS: [&str; 6] = ["left", "bacha", "bachi", "closing", "بچا", "بچی"];
+const CASH_OPEN_WORDS: [&str; 5] = ["shuru", "opening", "started", "شروع", "starting"];
+
+/// True for a word of the direction sets above, or "in" and "out".
+pub(super) fn is_cash_direction_word(word: &str) -> bool {
+    let is = |list: &[&str]| list.iter().any(|x| key(x) == word);
+    is(&CASH_IN_WORDS)
+        || is(&CASH_OUT_WORDS)
+        || is(&CASH_LEFT_WORDS)
+        || is(&CASH_OPEN_WORDS)
+        || matches!(word, "in" | "out")
+}
+
+/// The parts of the cash book a question names, in the order it names them.
+///
+/// Each direction word must stand right after the cash word or a "how much" word ("kitna cash aya",
+/// "cash gaya", "kitna gaya"): "aa gaya" and "ho gaya" are not "went out". A question that names a party, a
+/// group of parties, a partner, the staff, the guests, a garden or a trip, or has an action verb besides the
+/// direction word ("diya", "le", "liya"), is about the cash of THAT, not the whole book: no direction (D7,
+/// plan 59 F3b, money review of the cash book).
+///
+/// Example: "yesterday how much cash came in, how much went out and how much was left" is In, Out, Closing;
+/// "kal byopariyon ko kitna cash gaya" is none.
+pub(super) fn cash_directions(scan: &Scan) -> Vec<CashDir> {
+    // A cash word must stand in the question.
+    if !scan.has(Cue::Cash) {
+        return Vec::new();
+    }
+    const ENTITY: [Cue; 10] = [
+        Cue::RoleBuyer,
+        Cue::RoleSeller,
+        Cue::RolePartner,
+        Cue::RoleGarden,
+        Cue::RoleTrip,
+        Cue::RoleStaff,
+        Cue::Guests,
+        Cue::ManyBuyers,
+        Cue::ManySellers,
+        Cue::RoleItem,
+    ];
+    if scan.hits.iter().any(|h| ENTITY.contains(&h.cue)) {
+        return Vec::new();
+    }
+    let direction_word = |w: &str| is_cash_direction_word(w);
+    if scan.words.iter().any(|w| {
+        !direction_word(w)
+            && (super::function_words::is_event_word(w) || super::function_words::is_action_verb(w))
+    }) {
+        return Vec::new();
+    }
+    // "in", "out" and the drawer: only straight after the cash word, and followed by nothing or a time word
+    // ("cash in hand", "cash in the drawer", "cash in gala" are the cash in hand).
+    let after_cash = |at: usize| scan.hits.iter().any(|h| h.cue == Cue::Cash && h.end == at);
+    // The words just before a direction verb that make it a verb of the cash: the cash word itself, or a
+    // "how much" word.
+    let how_much = |w: &str| {
+        matches!(
+            w,
+            "kitna" | "kitni" | "kitne" | "کتنا" | "کتنی" | "کتنے" | "much"
+        )
+    };
+    let mut out = Vec::new();
+    for (at, w) in scan.words.iter().enumerate() {
+        let next = scan.word(at.saturating_add(1));
+        let before = at.checked_sub(1).and_then(|b| scan.word(b));
+        let is = |list: &[&str]| list.iter().any(|x| key(x) == w.as_str());
+        let verb_ok = after_cash(at) || before.is_some_and(how_much);
+        let tail_ok = next.is_none_or(|x| super::when::is_time_word(x) || how_much(x));
+        let dir = if is(&CASH_IN_WORDS) && (after_cash(at) || verb_ok) {
+            Some(CashDir::In)
+        } else if is(&CASH_OUT_WORDS) && verb_ok {
+            Some(CashDir::Out)
+        } else if is(&CASH_LEFT_WORDS) {
+            Some(CashDir::Closing)
+        } else if is(&CASH_OPEN_WORDS) {
+            Some(CashDir::Opening)
+        } else if w == "in" && after_cash(at) && tail_ok {
+            Some(CashDir::In)
+        } else if w == "out" && after_cash(at) && tail_ok {
+            Some(CashDir::Out)
+        } else {
+            None
+        };
+        if let Some(d) = dir
+            && !out.contains(&d)
+        {
+            out.push(d);
+        }
+    }
+    out
+}
+
+/// The cash book of a period for a question that names its parts ("cash came in yesterday", "cash went out
+/// and what was left"): the `cash_in` and `cash_out` totals and the closing balance of R12, each its own
+/// line, in the order asked. The opening is not answered here.
+fn cash_flow_plan(u: &Understanding) -> Option<Planned> {
+    if u.cash_dirs.is_empty()
+        || u.cash_dirs.contains(&CashDir::Opening)
+        || !u.sure
+        || u.intent.value != Intent::Figure
+        || u.figures.value.as_slice() != [FigureKind::Cash]
+        || u.periods.len() != 1
+        || !u.parties.is_empty()
+        || !u.items.is_empty()
+        || !u.records.is_empty()
+        || u.item_group.is_some()
+        || u.compare
+        || u.scoped
+        || u.sum_asked
+        || u.other_measure != Measure::Same
+        || u.doubts.iter().any(|d| NOT_CARRIED.contains(d))
+    {
+        return None;
+    }
+    let period = u.periods.first()?;
+    if period.future {
+        return None;
+    }
+    let (from, to) = dates(Some(period));
+    let mut plan = Plan::default();
+    plan.read(report(
+        "R12",
+        Rep {
+            from,
+            to,
+            ..Rep::default()
+        },
+    ));
+    plan.dated = true;
+    for dir in &u.cash_dirs {
+        plan.line(
+            Who::Shop,
+            match dir {
+                CashDir::In => What::CashIn,
+                CashDir::Out => What::CashOut,
+                _ => What::CashClosing,
+            },
+        );
+    }
+    let mut reads = Vec::new();
+    reads.push(period_read(period)?);
+    reads.extend(plan.finds);
+    reads.extend(plan.reads);
+    Some(Planned {
+        reads,
+        lines: plan.lines,
+    })
+}
+
 /// The direction of a question about capital: taken back ("wapas", "واپس", "withdrew", "taken back") or
 /// put in ("lagaya", "dala", "invested", "put in"); `None` when it says neither or both.
 pub(super) fn capital_flow(scan: &Scan) -> Option<CapitalFlow> {
@@ -1853,6 +2109,26 @@ fn last_rate_plan(u: &Understanding) -> Option<Planned> {
             ..Rep::default()
         },
     ));
+    // No sale in the period ("aaj angoor ka rate" on a day with none): the newest sale BEFORE the period is
+    // read too, so the answer can say there was no sale and give the last rate with its date (Umar,
+    // 08-11-2026). It is read for every period that has a first day; the sentence uses it only when the
+    // period's own read has no row.
+    if let Some(first) = period.and_then(|p| p.from)
+        && let Some(before) = first.pred_opt()
+    {
+        plan.read(report(
+            "R2",
+            Rep {
+                to: Some(iso(before)),
+                party: buyer_key.clone(),
+                item: Some(goods.key.clone()),
+                sort: Some(json!([{"column": "date", "order": "desc"}])),
+                rows: Some(1),
+                grade,
+                ..Rep::default()
+            },
+        ));
+    }
     // The instant line (D7, plan 59 S-A2): the rate and the date of the one row. With a quality named the
     // sentence would not say which, and the rate of an item sold by weight is per kg, which the sentence
     // does not say either (lead ruling): those questions keep the model.
@@ -2215,6 +2491,38 @@ fn asks_now(u: &Understanding) -> bool {
 /// A "now" figure or the trial balance: a bare "kal" beside one is "total" (see `plan`).
 fn asks_now_or_trial(u: &Understanding) -> bool {
     asks_now(u) || u.figures.value.as_slice() == [FigureKind::TrialBalance]
+}
+
+/// Drops a "kal" that no verb settles when the question asks a figure of NOW: Urdu "کل" before a figure noun
+/// ("کل ادائیگی کتنی ہے", "ادھار رقم میں کل کتنی واپس آنی ہے") is "total" (kul), and "total" is no period.
+/// A past verb keeps it yesterday (it is then of High confidence and stays), a time word or "ka / ki / ke"
+/// makes it a day, and with neither clear the question keeps its doubt and goes to the model (D7, plan 59
+/// F3b, guard 6).
+pub(super) fn drop_total_kal(
+    periods: Vec<PeriodRef>,
+    kinds: &[FigureKind],
+    no_tense_word: bool,
+) -> Vec<PeriodRef> {
+    let now = matches!(
+        kinds,
+        [FigureKind::Balance
+            | FigureKind::Dues
+            | FigureKind::Payable
+            | FigureKind::Advance
+            | FigureKind::Cash
+            | FigureKind::Stock
+            | FigureKind::PartnerTotal
+            | FigureKind::DeadAmount
+            | FigureKind::MoneyLent
+            | FigureKind::Capital
+            | FigureKind::TrialBalance]
+    );
+    // A past or a future word settles "کل" as a day ("کل روکڑ کتنی تھی" is yesterday's): the period and its
+    // doubt stay, and the model answers.
+    if !now || !no_tense_word {
+        return periods;
+    }
+    periods.into_iter().filter(|p| !is_bare_kal(p)).collect()
 }
 
 /// A period that is only the bare word "کل" or "kal" taken for yesterday with no past verb to settle it.

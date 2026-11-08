@@ -43,6 +43,7 @@ mod compose_outside;
 mod compose_print;
 mod compose_route;
 mod figure;
+mod function_words;
 mod items;
 mod lexicon;
 mod plan;
@@ -640,6 +641,19 @@ pub enum CapitalFlow {
     Out,
 }
 
+/// One part of the cash book a question asks for: what came in, what went out, what was left (D7, plan 59).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CashDir {
+    /// The cash received over the period (R12 `cash_in`).
+    In,
+    /// The cash paid out over the period (R12 `cash_out`).
+    Out,
+    /// The cash left at the end of the period (R12 closing).
+    Closing,
+    /// The cash the period started with. Not answered by the app alone yet.
+    Opening,
+}
+
 /// What the app understood of one question.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Understanding {
@@ -717,6 +731,9 @@ pub struct Understanding {
     pub grade: Option<GradeWord>,
     /// For a question about capital: whether it asks what came in or what was taken back.
     pub capital_flow: Option<CapitalFlow>,
+    /// The parts of the cash book the question names, in the order it names them ("cash came in, went out
+    /// and was left": In, Out, Closing). Empty when it names none.
+    pub cash_dirs: Vec<CashDir>,
     /// True when the question names the gardens' goods with no garden named ("baghat ki bikri"): the
     /// goods filter `garden` of view A reads them.
     pub garden_goods: bool,
@@ -750,6 +767,10 @@ pub struct Understanding {
     /// True when the question says it is the BUYER's rate ("gahak ka rate", "buyer rate"). A rate or a last
     /// rate is the seller's rate (ریٹ بیوپاری, the auction rate) unless it says this (lead ruling, D7).
     pub buyer_rate: bool,
+    /// How many "how much" and "how many" cues stand in the question, each place once ("kitna maal liya,
+    /// kitne ka, aur kitna commission" is 3). An instant answer with fewer figures than cues leaves a part
+    /// out, so it goes to the model (D7, plan 59 F3b, the independent check).
+    pub how_much_cues: usize,
     /// How many counts the question asks ("kitne bill aur kitne gahak" is 2). An instant answer that holds
     /// fewer count lines leaves a part out.
     pub count_asks: usize,

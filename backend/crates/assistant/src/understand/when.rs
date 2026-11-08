@@ -256,6 +256,12 @@ fn tense_of(scan: &Scan) -> Tense {
     }
 }
 
+/// True when the question has a past or a future word: then a bare "کل" is not "total" (a verb settles it:
+/// yesterday after a past verb, tomorrow after a future one), and the app keeps its doubt.
+pub(super) fn has_tense_word(scan: &Scan) -> bool {
+    tense_of(scan) != Tense::None
+}
+
 // ---- date arithmetic (checked) ---------------------------------------------------------------------
 
 fn first_of_month(date: NaiveDate) -> Option<NaiveDate> {
@@ -270,6 +276,154 @@ fn last_of_month(year: i32, month: u32) -> Option<NaiveDate> {
 fn monday_of(date: NaiveDate) -> Option<NaiveDate> {
     let back = i64::from(date.weekday().num_days_from_monday());
     date.checked_sub_signed(Duration::days(back))
+}
+
+/// "1 se aaj tak", "یکم سے آج تک", "5 tarikh se ab tak": a day number and "se" before "so far" or "today
+/// too". The period is that day of this month (of last month when the day has not come) up to today. The
+/// first word of the phrase is returned with the period.
+fn day_to_now(
+    found: &PeriodRef,
+    at: usize,
+    scan: &Scan,
+    today: NaiveDate,
+) -> Option<(PeriodRef, usize)> {
+    if found.kind != PeriodKind::UpToNow && found.kind != PeriodKind::Today {
+        return None;
+    }
+    // Urdu and Roman order: the day, "se", the phrase ("1 se aaj tak"). English order: "from", the day, the
+    // phrase ("from the 1st till today", "from 1 till now").
+    let mut before = at.checked_sub(1)?;
+    let se_form = matches!(scan.word(before)?, "se" | "سے" | "say");
+    // "from the 1st till today": the phrase starts at "today", with "till" before it.
+    if !se_form && matches!(scan.word(before)?, "till" | "until" | "to" | "upto") {
+        before = before.checked_sub(1)?;
+        // "from the 1st of the month to today": step back over "of the month" / "of this month".
+        if scan.word(before) == Some("month") {
+            before = before.checked_sub(1)?;
+            if matches!(scan.word(before), Some("the" | "this")) {
+                before = before.checked_sub(1)?;
+            }
+            if scan.word(before) != Some("of") {
+                return None;
+            }
+            before = before.checked_sub(1)?;
+        }
+    }
+    let mut day_at = if se_form {
+        before.checked_sub(1)?
+    } else {
+        before
+    };
+    // The day may be followed by "tarikh" ("5 tarikh se aaj tak").
+    if se_form && matches!(scan.word(day_at)?, "tarikh" | "tareekh" | "تاریخ" | "date") {
+        day_at = day_at.checked_sub(1)?;
+    }
+    if !se_form {
+        let from_before = |i: Option<usize>| {
+            i.and_then(|b| scan.word(b))
+                .is_some_and(|x| matches!(x, "from" | "since"))
+        };
+        let the_before = day_at
+            .checked_sub(1)
+            .and_then(|b| scan.word(b))
+            .is_some_and(|x| x == "the");
+        if !(from_before(day_at.checked_sub(1))
+            || (the_before && from_before(day_at.checked_sub(2))))
+        {
+            return None;
+        }
+    }
+    let day = u32::try_from(scan.digits_at(day_at)?).ok()?;
+    if !(1..=31).contains(&day) {
+        return None;
+    }
+    // A month word before the day ("november 1 se") is another phrase, read by the day-and-month parser.
+    if day_at
+        .checked_sub(1)
+        .is_some_and(|b| any_month_at(scan, b).is_some())
+    {
+        return None;
+    }
+    let this = NaiveDate::from_ymd_opt(today.year(), today.month(), day);
+    let from = match this {
+        Some(d) if d <= today => d,
+        _ => {
+            let (year, month) = if today.month() == 1 {
+                (today.year().checked_sub(1)?, 12)
+            } else {
+                (today.year(), today.month().checked_sub(1)?)
+            };
+            NaiveDate::from_ymd_opt(year, month, day)?
+        }
+    };
+    Some((
+        period(
+            PeriodKind::Range,
+            Some(from),
+            today,
+            Confidence::High,
+            scan.phrase(day_at, next_index(at, 1)),
+            today,
+        ),
+        day_at,
+    ))
+}
+
+/// True when a day number (1 to 31) stands before a date particle ("se", "ko", "tak", "tarikh") and no
+/// period took it: "اس مہینے کی 1 کو بکری" is the first of this month, which the app does not read, so it is
+/// not sure of the time and the model answers (a wrong period is a wrong figure).
+fn bare_day_unplaced(scan: &Scan, used: &[(usize, usize)]) -> bool {
+    scan.words.iter().enumerate().any(|(at, _)| {
+        let Some(n) = scan.digits_at(at) else {
+            return false;
+        };
+        // "bikri number 1 ka print": the number of a document is no day.
+        let is_document_number = at
+            .checked_sub(1)
+            .and_then(|b| scan.word(b))
+            .is_some_and(|x| {
+                matches!(
+                    x,
+                    "number"
+                        | "no"
+                        | "nambar"
+                        | "numbar"
+                        | "nmbr"
+                        | "نمبر"
+                        | "bill"
+                        | "bil"
+                        | "voucher"
+                )
+            });
+        (1..=31).contains(&n)
+            && !is_document_number
+            && !used.iter().any(|(s, e)| *s <= at && at < *e)
+            && (scan.word(next_index(at, 1)).is_some_and(|x| {
+                matches!(
+                    x,
+                    "se" | "سے"
+                        | "ko"
+                        | "کو"
+                        | "tak"
+                        | "تک"
+                        | "tarikh"
+                        | "tareekh"
+                        | "تاریخ"
+                        | "date"
+                        | "ka"
+                        | "ki"
+                        | "ke"
+                        | "کا"
+                        | "کی"
+                        | "کے"
+                        | "of"
+                        | "on"
+                )
+            }) || at
+                .checked_sub(1)
+                .and_then(|b| scan.word(b))
+                .is_some_and(|x| matches!(x, "on" | "the" | "from" | "since" | "تاریخ" | "tarikh")))
+    })
 }
 
 fn period(
@@ -525,7 +679,8 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
         (None, _) => {
             // Bare days: this month, or last month when the last day has not come yet.
             let this = (today.year(), today.month());
-            let candidate = NaiveDate::from_ymd_opt(this.0, this.1, second.day)?;
+            // "1 se 31 tak" in a month of 30 days ends on its last day, as in `merge_month_and_days`.
+            let candidate = clamped_day(this.0, this.1, second.day)?;
             if candidate > today && first.literal.is_none() && second.literal.is_none() {
                 let back = first_of_month(today)?.checked_sub_months(Months::new(1))?;
                 (back.year(), back.month())
@@ -544,6 +699,10 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
     };
     let to = match second.literal {
         Some(d) => d,
+        // A bare second day past the month's end ("1 se 31 tak" in a month of 30 days) is the last day.
+        None if second.month.is_none() => {
+            clamped_day(second.year.unwrap_or(year), month, second.day)?
+        }
         None => NaiveDate::from_ymd_opt(
             second.year.unwrap_or(year),
             second.month.unwrap_or(month),
@@ -571,6 +730,11 @@ fn range_at(scan: &Scan, at: usize, today: NaiveDate) -> Option<(PeriodRef, usiz
         ),
         end,
     ))
+}
+
+/// A day of a month; a day past its end ("31" in a month of 30 days) is the month's last day.
+fn clamped_day(year: i32, month: u32, day: u32) -> Option<NaiveDate> {
+    NaiveDate::from_ymd_opt(year, month, day).or_else(|| last_of_month(year, month))
 }
 
 /// "12 october", "october 12", "12-10-2026".
@@ -1042,6 +1206,14 @@ fn day_word_at(
         {
             return None;
         }
+        // "kal ka cash", "کل کا کمیشن": the genitive makes it a day, whatever the tense (D7, plan 59 F3b).
+        let genitive = matches!(
+            scan.word(next_index(at, 1)),
+            Some("ka" | "ki" | "ke" | "کا" | "کی" | "کے")
+        );
+        if genitive && matches!(tense, Tense::None | Tense::Mixed) {
+            return one(PeriodKind::Yesterday, today.pred_opt(), Confidence::High);
+        }
         return match tense {
             // Only "کل کا / کی / کے" makes it a day: straight before a figure noun it is "total".
             _ if before_noun => one(PeriodKind::Yesterday, today.pred_opt(), Confidence::Low),
@@ -1279,6 +1451,11 @@ fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], t
         .unwrap_or(last)
         .min(month.to);
     if from > to {
+        return;
+    }
+    // "pichle mahine ki 1 se 31 tak" is the whole month: the month stays as it was read, with its own name.
+    if Some(from) == month.from && to == month.to && *d2 >= last.day() {
+        out.remove(range_at);
         return;
     }
     let merged = period(
@@ -1578,6 +1755,13 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
                     bare.push(None);
                     used.push((at, upto_end));
                     at = upto_end;
+                } else if let Some((from_day, from_at)) = day_to_now(&found, at, scan, today) {
+                    // "1 se aaj tak", "یکم سے آج تک": from that day of this month up to today (D7, plan 59
+                    // F3b: the "1" was dropped and the whole book was answered).
+                    out.push(from_day);
+                    bare.push(None);
+                    used.push((from_at, end));
+                    at = end;
                 } else {
                     bare.push(if found.kind == PeriodKind::Range {
                         bare_days(scan, at)
@@ -1605,7 +1789,8 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     }
     // A question that has a period already ("whole day's bikri for this month") is not unsure of its
     // time for a stray word: only a question with none reads the stray word as its period.
-    let stray = !year_end && out.is_empty() && stray_time_words(scan, &used, today, &mut out);
+    let stray = (!year_end && out.is_empty() && stray_time_words(scan, &used, today, &mut out))
+        || bare_day_unplaced(scan, &used);
     if year_end {
         // A lone "saal" is the year of the phrase; "is saal" before it stays (a period of its own).
         out.retain(|p| !(p.kind == PeriodKind::ThisYear && p.words.split_whitespace().count() < 2));

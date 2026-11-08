@@ -1413,9 +1413,11 @@ const LAST_RATE: &[(&str, &str)] = &[
     ("akram ko kela kis rate pe diya", "NONE"),
     ("akram ko kela pichle mahine kis rate pe diya", "NONE"),
     // An item with no buyer, with or without a period: the newest line of its sales, ONE row (live run 2, C8).
+    // With a period, a second read of the newest line BEFORE it: with no sale in the period the answer says so and
+    // gives that last rate with its date (Umar, 08-11-2026).
     ("kele ka last rate", "find{role:item,text:Banana} | report{id:R2,item:i1,rows:1,sort:date:desc}"),
-    ("what was the last rate of banana today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:1,sort:date:desc,to:2026-10-10}"),
-    ("last rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | report{from:2026-09-28,id:R2,item:i2,rows:1,sort:date:desc,to:2026-10-04}"),
+    ("what was the last rate of banana today", "period{kind:today} | find{role:item,text:Banana} | report{from:2026-10-10,id:R2,item:i1,rows:1,sort:date:desc,to:2026-10-10} | report{id:R2,item:i1,rows:1,sort:date:desc,to:2026-10-09}"),
+    ("last rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | report{from:2026-09-28,id:R2,item:i2,rows:1,sort:date:desc,to:2026-10-04} | report{id:R2,item:i2,rows:1,sort:date:desc,to:2026-09-27}"),
     // "last week" is a period, not the last one: the average of the week, as ever.
     ("rate of apple last week", "period{kind:last_week} | find{role:item,text:Apple} | analytics{from:2026-09-28,item:i2,to:2026-10-04,view:A}"),
     ("kele ki last sale", "NONE"),

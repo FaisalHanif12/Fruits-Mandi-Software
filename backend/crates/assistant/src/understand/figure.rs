@@ -110,6 +110,12 @@ pub fn compose_figure(
     if sentences.is_empty() {
         return None;
     }
+    // Fewer figures than "how much" and "how many" cues leave a part of the question out ("kitna maal liya,
+    // kitne ka, aur kitna commission" asks three). Every instant answer holds as many sentences as cues, or
+    // the model answers (D7, plan 59 F3b).
+    if u.how_much_cues > sentences.len() {
+        return None;
+    }
     // "mila kar", "dono ka": the sum is asked, and a list of the parts has no total.
     if u.sum_strong && sentences.len() > 1 {
         return None;
@@ -424,6 +430,7 @@ impl Cx<'_> {
                 self.receipts(&line.who).map(|s| vec![s])
             }
             (Who::Shop, What::CashClosing) => self.cash_closing().map(|s| vec![s]),
+            (Who::Shop, What::CashIn | What::CashOut) => self.cash_flow(line.what).map(|s| vec![s]),
             (Who::Shop, What::CashSales | What::CreditSales) => {
                 self.sale_kind(line.what).map(|s| vec![s])
             }
@@ -693,21 +700,78 @@ impl Cx<'_> {
     }
 
     /// The last rate of an item (to a buyer, when one is named): the rate and the date of the one row of
-    /// the register read newest first. No sale in the period is no sentence (the model says so).
+    /// the register read newest first. With no sale in the period, the newest sale BEFORE it (the second
+    /// read of the plan) gives a sentence that says there was none and then the last rate with its date
+    /// (Umar, 08-11-2026). With no sale before either, no sentence (the model says so).
     fn last_rate(&self, who: &Who) -> Option<Sentence> {
         let (buyer, item) = match who {
             Who::Item(item) => (None, item.as_str()),
             Who::BuyerItem(buyer, item) => (Some(buyer.as_str()), item.as_str()),
             _ => return None,
         };
-        let r2 = self.result("report", |r| {
+        let first_day = self
+            .u
+            .periods
+            .first()
+            .and_then(|p| p.from)
+            .map(|d| d.format("%Y-%m-%d").to_string());
+        let own = |r: &ToolResult| {
             input_str(r, "id") == Some("R2")
                 && input_str(r, "item") == Some(item)
                 && input_str(r, "party") == buyer
+        };
+        // The read of the period itself: its `from` is the period's first day (or none, with no period).
+        let primary = self.result("report", |r| {
+            own(r) && input_str(r, "from") == first_day.as_deref()
         })?;
-        if count_of(r2, &["count"])? < 1 {
+        if count_of(primary, &["count"])? >= 1 {
+            let args = self.last_rate_args(primary, buyer, item)?;
+            return Some(Sentence {
+                id: if buyer.is_some() {
+                    "assistant-instant-last-rate-buyer-item"
+                } else {
+                    "assistant-instant-last-rate-item"
+                },
+                args,
+                period: Some(Box::new(self.period()?)),
+            });
+        }
+        // No sale in the period: the read before its first day.
+        let day_before = self
+            .u
+            .periods
+            .first()
+            .and_then(|p| p.from)
+            .and_then(|d| d.pred_opt())
+            .map(|d| d.format("%Y-%m-%d").to_string())?;
+        let before = self.result("report", |r| {
+            own(r)
+                && input_str(r, "from").is_none()
+                && input_str(r, "to") == Some(day_before.as_str())
+        })?;
+        if count_of(before, &["count"])? < 1 {
             return None;
         }
+        let args = self.last_rate_args(before, buyer, item)?;
+        Some(Sentence {
+            id: if buyer.is_some() {
+                "assistant-instant-last-rate-buyer-item-no-sale"
+            } else {
+                "assistant-instant-last-rate-item-no-sale"
+            },
+            args,
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
+    /// The arguments of a last-rate sentence from the one row of a register read: the buyer's name when one
+    /// is named, the item, the rate and the date, each a reference to its cell.
+    fn last_rate_args(
+        &self,
+        r2: &ToolResult,
+        buyer: Option<&str>,
+        item: &str,
+    ) -> Option<Vec<(&'static str, String)>> {
         let Some(Node::Keyed(rows)) = r2.node.get(&["rows"]) else {
             return None;
         };
@@ -740,15 +804,7 @@ impl Cx<'_> {
         args.push(("item", self.name_of(item)?));
         args.push(("figure", reference(r2, &["rows", key, column])?));
         args.push(("date", reference(r2, &["rows", key, "date"])?));
-        Some(Sentence {
-            id: if buyer.is_some() {
-                "assistant-instant-last-rate-buyer-item"
-            } else {
-                "assistant-instant-last-rate-item"
-            },
-            args,
-            period: Some(Box::new(self.period()?)),
-        })
+        Some(args)
     }
 
     /// A sale, a count, a commission or a laga of the shop, an item, a seller or a buyer.

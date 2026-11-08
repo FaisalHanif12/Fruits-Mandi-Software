@@ -162,6 +162,8 @@ fn is_total_line(what: What) -> bool {
             | What::FruitValue
             | What::CapitalIn
             | What::CapitalOut
+            | What::CashIn
+            | What::CashOut
     )
 }
 

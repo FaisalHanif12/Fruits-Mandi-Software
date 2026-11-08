@@ -449,6 +449,100 @@ fn a_buyer_item_commission_laga_seller_item_and_the_last_rate_are_instant_and_ex
     h.scan_requests();
 }
 
+// ---- the last rate on a day with no sale (Umar, 08-11-2026) ---------------------------------------------
+
+/// A buyer with a name of his own and an item he bought before today but NOT today, in one packing, with the
+/// newest line he had before today: (buyer name, item name, the rate charged, the day). Worked out from the
+/// books by SQL, never from the app's own reads.
+fn buyer_item_with_no_sale_today(w: &world::World) -> (String, String, i64, String) {
+    let (buyer, item, buyer_id, item_id): (String, String, i64, i64) = w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            c.query_row(
+                "SELECT a.name_en, i.name_en, a.id, i.id FROM bikri_sales s \
+                 JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
+                 JOIN accounts a ON a.id = s.buyer_account_id \
+                 WHERE s.is_active = 1 AND s.entry_date < '2026-11-05' AND a.is_system = 0 \
+                   AND a.is_pukhta_khata = 0 AND a.is_pukhta_party = 0 \
+                   AND (SELECT COUNT(*) FROM accounts b WHERE b.name_en LIKE \
+                        substr(a.name_en, 1, instr(a.name_en || ' ', ' ') - 1) || '%') = 1 \
+                   AND NOT EXISTS (SELECT 1 FROM bikri_sales t JOIN bikri_lots m ON m.id = t.lot_id \
+                        WHERE t.is_active = 1 AND t.entry_date = '2026-11-05' \
+                          AND t.buyer_account_id = s.buyer_account_id AND m.item_id = l.item_id) \
+                   AND (SELECT COUNT(DISTINCT m.packing_id) FROM bikri_sales t \
+                        JOIN bikri_lots m ON m.id = t.lot_id WHERE t.is_active = 1 \
+                          AND t.buyer_account_id = s.buyer_account_id AND m.item_id = l.item_id) = 1 \
+                 ORDER BY a.id, i.id LIMIT 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+        })
+        .expect("a buyer and an item with no sale today");
+    let (rate, day): (i64, String) = w
+        .env
+        .ctx
+        .db()
+        .read(|c| {
+            c.query_row(
+                "SELECT s.buyer_rate_paisa, s.entry_date FROM bikri_sales s \
+                 JOIN bikri_lots l ON l.id = s.lot_id JOIN bikri_entries e ON e.id = s.bikri_id \
+                 WHERE s.is_active = 1 AND s.entry_date < '2026-11-05' AND s.buyer_account_id = ?1 \
+                   AND l.item_id = ?2 \
+                 ORDER BY s.entry_date DESC, e.number DESC, s.lot_id DESC, s.line_no DESC, s.id DESC \
+                 LIMIT 1",
+                [buyer_id, item_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+        })
+        .expect("the newest line before today");
+    (buyer, item, rate / 100, day)
+}
+
+#[test]
+fn a_last_rate_on_a_day_with_no_sale_says_so_and_gives_the_last_rate_with_its_date() {
+    let y = year::seed::build();
+    let (buyer, item, rate, day) = buyer_item_with_no_sale_today(&y.w);
+    let h = production_harness(y);
+    // The buyer and the item had no sale today: one answer, in no model call, that says there was none and then
+    // the last rate before today with the day of that line.
+    let question = format!("what was the last rate of {item} to {buyer} today");
+    let reply = instant(&h, &question, &[rate]);
+    assert_eq!(
+        dates(&reply).last().map(String::as_str),
+        Some(day.as_str()),
+        "{question}: the day of the last line ends the sentence"
+    );
+    // The sentence is the one of "no sale" (its words say so), not the plain last-rate one.
+    let said = |reply: &mandi_assistant::ask::AskReply| -> String {
+        answer_of(reply)
+            .parts
+            .iter()
+            .filter_map(|p| match p {
+                AnswerPart::Text { text } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    let words = said(&reply);
+    assert!(
+        words.contains("نہیں ہوئی") || words.contains("No sale"),
+        "{question}: {words}"
+    );
+    // On a day the pair did sell, the plain sentence is still the answer (no "no sale" words).
+    let reply = h
+        .ask("last rate of potatoe on 14 October", None, Vec::new())
+        .0;
+    let words = said(&reply);
+    assert!(
+        !(words.contains("نہیں ہوئی") || words.contains("No sale")),
+        "{words}"
+    );
+    h.scan_requests();
+}
+
 // ---- R3, R4: a number of a بکری and a quality are never dropped -------------------------------------
 
 #[test]

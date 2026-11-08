@@ -632,3 +632,158 @@ fn a_seller_with_an_open_advance_gets_one_sentence_with_payable_advance_and_bala
     assert_eq!(figures(answer_of(&reply)).len(), 3);
     h.scan_requests();
 }
+
+#[test]
+fn an_average_rate_of_an_item_sold_by_weight_is_the_models_never_a_per_nag_rate() {
+    // An item sold by weight: the average rate of a view is gross over nag, a rate per nag, which is not the
+    // rate per kg the Owner means. The model, with the weights, answers (money review minor 1). The year's
+    // own items are all sold by nag, so a pear sold by weight is added to the books for this test.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    world::add_item(&y.w.env, &y.w.owner, "ناشپاتی", "Pear", "fruit", "weight");
+    let h = production_harness(y);
+    for question in [
+        "what is the average pear rate this month",
+        "اس مہینے ناشپاتی کا اوسط ریٹ کیا ہے",
+        "is mahine pear ka ausat rate kya hai",
+    ] {
+        not_instant(&h, question);
+    }
+    // The same question of an item sold by nag is the view's average (the other side of the rule).
+    instant(
+        &h,
+        "what is the average banana rate this month",
+        &[oracle(&f, "ix.month.banana.avg_rate")],
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn the_shop_expense_is_given_with_the_partner_section_locked_and_shows_no_partner_figure() {
+    // R29 holds partner parts behind the partner code (PRD FR-17.11, FR-7.82). The shop's expense total
+    // is not one of them: with the section locked the app still answers it, from the total, and no
+    // partner figure is in the answer or in a request (money review minor 2).
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    // The shop sets its partner code and the section locks, as it does at the end of every visit.
+    let ctx = &h.world.env.ctx;
+    mandi_services::partner_code::set(
+        ctx,
+        &h.world.owner,
+        &mandi_services::core::partner_code::PartnerCodeSetInput {
+            password: common::OWNER_PASSWORD.to_owned(),
+            code: "4826".to_owned(),
+            code_again: "4826".to_owned(),
+        },
+    )
+    .expect("the code is set");
+    mandi_services::partner_code::lock(ctx).expect("the section locks");
+    assert!(
+        mandi_services::assistant::partner_locked(ctx).expect("the lock state"),
+        "the section is locked"
+    );
+    let expense = oracle(&f, "r29.year.total.expense");
+    for question in [
+        "is saal dukaan ka kul kharcha kitna hua",
+        "how much was the shop's expense this year",
+    ] {
+        let reply = instant(&h, question, &[expense]);
+        assert_eq!(
+            shown(&reply),
+            [expense],
+            "{question}: one figure, the shop's total"
+        );
+    }
+    // What the partners took out of it is behind the code: the model is asked, and the section stays
+    // locked (the app pauses for the code, it never reads the partner parts).
+    let (reply, _) = h.ask(
+        "pichle mahine dukan ka kharcha kitna hua aur sharkat daron ne kitna liya",
+        None,
+        Vec::new(),
+    );
+    assert_ne!(reply.outcome, AskOutcome::Answered);
+    h.scan_requests();
+}
+
+#[test]
+fn the_cash_a_period_took_in_and_paid_out_are_the_totals_of_the_cash_book() {
+    // "how much cash came in today", "kal kitna cash gya": the `cash_in` and `cash_out` totals of R12 for the
+    // period, one sentence each, in the order asked (D7 D447, D100, plan 59 F3b). The cash in hand now is
+    // another figure and keeps its own question.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    instant(
+        &h,
+        "how much cash came in today",
+        &[oracle(&f, "r12.today.total.cash_in")],
+    );
+    instant(
+        &h,
+        "aaj galle se kitna cash nikala",
+        &[oracle(&f, "r12.today.total.cash_out")],
+    );
+    instant(
+        &h,
+        "how much cash went out yesterday",
+        &[oracle(&f, "r12.yesterday.total.cash_out")],
+    );
+    instant(
+        &h,
+        "is mahine kitna cash aya",
+        &[oracle(&f, "r12.month.total.cash_in")],
+    );
+    instant(
+        &h,
+        "pichle mahine kitna cash gaya",
+        &[oracle(&f, "r12.last_month.total.cash_out")],
+    );
+    // Two and three parts: one sentence for each, in the order asked.
+    instant(
+        &h,
+        "kal kitna cash aya aur kitna cash gaya",
+        &[
+            oracle(&f, "r12.yesterday.total.cash_in"),
+            oracle(&f, "r12.yesterday.total.cash_out"),
+        ],
+    );
+    instant(
+        &h,
+        "yesterday how much cash came in, how much went out and how much was left",
+        &[
+            oracle(&f, "r12.yesterday.total.cash_in"),
+            oracle(&f, "r12.yesterday.total.cash_out"),
+            oracle_balance(&f, "r12.yesterday.sum.report_closing_balance"),
+        ],
+    );
+    for question in ["aaj kitna cash aya", "aaj ka cash in kitna hai"] {
+        instant(&h, question, &[oracle(&f, "r12.today.total.cash_in")]);
+    }
+    // The cash in hand, a party's cash and a head's cash are other questions.
+    instant(&h, "cash in hand", &[oracle(&f, "tiles.cash")]);
+    for question in [
+        "how much cash in the drawer today",
+        "akram se kitna cash aya",
+        "cash went out for chai yesterday",
+        "how much cash came in this month and last month",
+        // "aa gaya" and "ho gaya" are not "went out" (money review of the cash book).
+        "aaj kitna cash aa gaya",
+        "aaj galle mein kitna cash ho gaya",
+        // A group of parties, a partner or the staff: the cash of THEM, not of the whole book.
+        "kal byopariyon ko kitna cash gaya",
+        "aaj byopari ko kitna naqd gaya",
+        "aaj gahakon se kitna cash aya",
+        "how much cash received from buyers today",
+        "aaj partner ne galle se kitna cash nikala",
+        "aaj munshi ko kitna cash gaya",
+        // The drawer, in any of its words.
+        "how much cash in gala today",
+        "how much cash in my galla today",
+        // Another action beside the direction word.
+        "aaj kitna cash diya gaya",
+    ] {
+        not_instant(&h, question);
+    }
+    h.scan_requests();
+}

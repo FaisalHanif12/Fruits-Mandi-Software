@@ -203,6 +203,19 @@ const SENTENCES: readonly Sentence[] = [
     values: [''],
     common: ['name', 'date', 'figure'],
   },
+  // Plan 59 F3b: no sale in the period, then the last rate before it.
+  {
+    id: 'assistant-instant-last-rate-item-no-sale',
+    selector: '',
+    values: [''],
+    common: ['item', 'period', 'figure', 'date'],
+  },
+  {
+    id: 'assistant-instant-last-rate-buyer-item-no-sale',
+    selector: '',
+    values: [''],
+    common: ['name', 'item', 'period', 'figure', 'date'],
+  },
   // Plan 59 F3 batch 3: a seller with an open advance.
   {
     id: 'assistant-instant-seller-advance',
@@ -649,6 +662,65 @@ describe.each(LANGUAGES)(
     });
   },
 );
+
+describe.each(LANGUAGES)('the no-sale sentences with the last rate (%s)', (language) => {
+  const ARGS = {
+    name: 'NAMEMARK',
+    item: 'ITEMMARK',
+    figure: 'FIGUREMARK',
+    period: 'PERIODMARK',
+    date: 'DATEMARK',
+  };
+  const IDS = [
+    'assistant-instant-last-rate-item-no-sale',
+    'assistant-instant-last-rate-buyer-item-no-sale',
+  ];
+
+  it('says there was no sale in the period first, then the last rate, then its date', () => {
+    for (const id of IDS) {
+      const text = message(language, id, ARGS);
+      expect(text, id).toContain(message(language, 'glossary-bikri'));
+      const at = ['PERIODMARK', 'FIGUREMARK', 'DATEMARK'].map((mark) => text.indexOf(mark));
+      expect(
+        at.every((position) => position >= 0),
+        id,
+      ).toBe(true);
+      expect(at, id).toEqual([...at].sort((a, b) => a - b));
+      expect(text.indexOf('ITEMMARK'), id).toBeLessThan(text.indexOf('PERIODMARK'));
+    }
+  });
+
+  it('the buyer sentence names the buyer and the item sentence does not', () => {
+    expect(message(language, IDS[1] ?? '', ARGS)).toContain('NAMEMARK');
+    expect(message(language, IDS[0] ?? '', ARGS)).not.toContain('NAMEMARK');
+  });
+
+  it('is two sentences: the no-sale one ends, and the last rate follows', () => {
+    for (const id of IDS) {
+      const text = message(language, id, ARGS);
+      expect(text, id).toContain(
+        language === 'ur' ? '۔ اس سے پہلے' : '. The last rate before that',
+      );
+      expect(text, id).toMatch(language === 'ur' ? /۔$/ : /\.$/);
+    }
+  });
+
+  it('in Urdu the period is followed by کی in both sentences, for every period shape', () => {
+    if (language !== 'ur') return;
+    for (const shape of ['today', 'day', 'range', 'all']) {
+      const period = message('ur', 'assistant-instant-period', {
+        shape,
+        day: 'DAYMARK',
+        from: 'FROMMARK',
+        to: 'TOMARK',
+      });
+      for (const id of IDS) {
+        const text = message('ur', id, { ...ARGS, period });
+        expect(text, `${id}/${shape}`).toMatch(new RegExp(`${period} کی کوئی `));
+      }
+    }
+  });
+});
 
 describe('the period in the new Urdu sentences', () => {
   const PERIODS = ['today', 'day', 'range', 'all'] as const;

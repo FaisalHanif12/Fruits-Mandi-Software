@@ -245,6 +245,25 @@ impl Cx<'_> {
         })
     }
 
+    /// The cash received or paid out over the period: the `cash_in` or `cash_out` total of the cash book
+    /// (R12), worded as the cash book's own sentence.
+    pub(super) fn cash_flow(&self, what: What) -> Option<Sentence> {
+        let (kind, column) = match what {
+            What::CashIn => ("in", "cash_in"),
+            What::CashOut => ("out", "cash_out"),
+            _ => return None,
+        };
+        let r12 = self.open_report("R12")?;
+        Some(Sentence {
+            id: "assistant-instant-cash-book",
+            args: vec![
+                ("kind", kind.to_owned()),
+                ("figure", reference(r12, &["totals", column])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
     /// The sales of one payment type over the period: the total `value` of the cash sales (R3) or of the
     /// credit sales (R4).
     pub(super) fn sale_kind(&self, what: What) -> Option<Sentence> {

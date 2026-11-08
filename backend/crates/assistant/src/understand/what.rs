@@ -55,6 +55,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         quality: false,
         grade: None,
         capital_flow: None,
+        cash_dirs: Vec::new(),
         garden_goods: false,
         last_one: false,
         months_asked: false,
@@ -73,6 +74,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         packing_filter: false,
         asks_count: false,
         count_asks: 0,
+        how_much_cues: 0,
         qty_asked: false,
         average_asked: false,
         pay_kind: None,
@@ -85,6 +87,51 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         sure: false,
         doubts: vec![doubt],
     }
+}
+
+/// The "how much" and "how many" cues of the question, each place once.
+fn how_much_cues(scan: &Scan) -> usize {
+    let mut starts: Vec<usize> = scan
+        .hits
+        .iter()
+        .filter(|h| h.cue == Cue::HowMuch)
+        .map(|h| h.start)
+        .collect();
+    starts.sort_unstable();
+    starts.dedup();
+    starts.len()
+}
+
+/// The counts a question asks, read from the lexicon: a "how many" head (kitne, kitni, how many) with a
+/// buyer, seller or item word right after it, or after one word ("kitne purane gahak"). A misspelling the
+/// lexicon takes for the word counts too.
+fn scan_count_asks(scan: &Scan) -> usize {
+    const HEADS: [&str; 6] = ["kitne", "kitnay", "kitni", "kitny", "کتنے", "کتنی"];
+    const THINGS: [Cue; 6] = [
+        Cue::RoleBuyer,
+        Cue::ManyBuyers,
+        Cue::RoleSeller,
+        Cue::ManySellers,
+        Cue::ManyItems,
+        Cue::RoleItem,
+    ];
+    let mut starts: Vec<usize> = Vec::new();
+    for hit in scan.hits.iter().filter(|h| h.cue == Cue::HowMuch) {
+        let word = scan.word(hit.start).unwrap_or_default();
+        let many = word == "how" && scan.word(hit.start.saturating_add(1)) == Some("many");
+        if !(HEADS.contains(&word) || many) {
+            continue;
+        }
+        let after = hit.end;
+        if scan.hits.iter().any(|t| {
+            THINGS.contains(&t.cue) && t.start >= after && t.start <= after.saturating_add(1)
+        }) {
+            starts.push(hit.start);
+        }
+    }
+    starts.sort_unstable();
+    starts.dedup();
+    starts.len()
 }
 
 fn part<T>(value: T, confidence: Confidence) -> Part<T> {
@@ -325,6 +372,12 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
             )
         })
         && !named.has_unexplained_words
+        // A verb of action ("nikala", "liya", "took", "paid", "earn", "milta", "le gaya") asks what he TOOK, PUT or
+        // EARNED, not what he has: never his total. Only the verbs of being and having leave it alone.
+        && !scan
+            .words
+            .iter()
+            .any(|w| super::function_words::is_action_verb(w))
     {
         found.push((0, FigureKind::PartnerTotal));
     }
@@ -881,6 +934,16 @@ fn plan_days(
 ///
 /// Example: in "how much fruit did partner A take home", "home" is such a word.
 fn unexplained_words(scan: &Scan, names: &Names, periods: &[PeriodRef]) -> bool {
+    unexplained_except(scan, names, periods, &|_| false)
+}
+
+/// As [`unexplained_words`], not counting the words `skip` explains.
+fn unexplained_except(
+    scan: &Scan,
+    names: &Names,
+    periods: &[PeriodRef],
+    skip: &dyn Fn(&str) -> bool,
+) -> bool {
     let table = super::lexicon::table();
     let mut name_words: Vec<String> = Vec::new();
     // The words of a period ("so far", "ab tak") are explained by the period.
@@ -896,8 +959,24 @@ fn unexplained_words(scan: &Scan, names: &Names, periods: &[PeriodRef]) -> bool 
     for text in texts {
         name_words.extend(text.split_whitespace().map(key));
     }
+    // "after", "since" and "until" relate a figure to a period: a plain connective only when the question
+    // has no period and no digit ("buyers still owe how much after paying").
+    let plain_connective_ok = periods.is_empty()
+        && !scan.words.iter().any(|w| {
+            w.chars().any(|c| c.is_ascii_digit()) || w.starts_with(super::scan::DATE_WORD)
+        });
+    // A word that limits, excludes, places or gives a habit is read by no plan: never explained.
+    if scan
+        .words
+        .iter()
+        .any(|w| super::function_words::is_unread_filter(w))
+    {
+        return true;
+    }
     scan.words.iter().enumerate().any(|(at, w)| {
         !table.is_known(w)
+            && !skip(w)
+            && !(plain_connective_ok && super::function_words::conditional(w))
             && !name_words.contains(w)
             && !super::when::is_time_word(w)
             && !scan.hits.iter().any(|h| h.start <= at && at < h.end)
@@ -996,6 +1075,8 @@ pub(super) fn assemble(
     } else {
         None
     };
+    // "کل ادائیگی کتنی ہے": a bare "kal" beside a figure of NOW is "total", not yesterday (guard 6).
+    let periods = super::reads::drop_total_kal(periods, &kinds, !super::when::has_tense_word(scan));
     let signs = Signs {
         how: scan.has(Cue::How),
         how_much: scan.has(Cue::HowMuch) || how_it_went(scan, !kinds.is_empty()),
@@ -1017,6 +1098,16 @@ pub(super) fn assemble(
     };
     let Chosen { intent, mut doubts } = intent_of(scan, &signs, &periods);
     doubts.extend(names.doubts.iter().copied());
+    // A word no plan reads (an exclusion, a place, a limit, a habit) is as good as an unknown word: the model
+    // answers, whatever near spelling the lexicon finds for it.
+    if scan
+        .words
+        .iter()
+        .any(|w| super::function_words::is_unread_filter(w))
+        && !doubts.contains(&Doubt::UnknownWords)
+    {
+        doubts.push(Doubt::UnknownWords);
+    }
     // A time word that no period took ("pichli", "hafte mein"): for a figure, a list or a printout the
     // period is part of the question, so the app is not sure of it. Help and the rest read no period.
     if time_word && matches!(intent.value, Intent::Figure | Intent::List | Intent::Print) {
@@ -1124,6 +1215,14 @@ pub(super) fn assemble(
     // The side of the commission asked, read before the names move into the understanding (plan 59, F1).
     let commission_side = super::reads::commission_side(scan, &kinds_for_happened, &names.parties);
     let unexplained_flag = unexplained_words(scan, &names, &periods);
+    // The same, not counting the direction words of the cash book ("came", "went", "out", "gaya").
+    let unexplained_but_cash_words = unexplained_except(scan, &names, &periods, &|w| {
+        super::reads::is_cash_direction_word(w)
+    });
+    // A "how many" before any word the lexicon takes for buyers, sellers or items, in any spelling it
+    // accepts, asks a count; the text rule has its own list of nouns. The larger of the two counts stands
+    // (D7, plan 59 F3b: "kitne gahkon ke zimme paise baqi hain" asks the number of buyers).
+    let count_asks = cues::count_asks(&scan.raw).max(scan_count_asks(scan));
     let names_have_garden = roles_found
         .iter()
         .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
@@ -1149,6 +1248,7 @@ pub(super) fn assemble(
         quality: scan.has_exact(Cue::Quality) || grade.is_some(),
         grade,
         capital_flow: super::reads::capital_flow(scan),
+        cash_dirs: super::reads::cash_directions(scan),
         garden_goods: super::reads::garden_goods(scan, &names_have_garden),
         last_one: super::reads::last_one(scan),
         months_asked: scan.has_exact(Cue::HowManyMonths),
@@ -1172,8 +1272,9 @@ pub(super) fn assemble(
         ),
         commission_side,
         buyer_rate: super::reads::buyer_rate(scan),
-        asks_count: cues::asks_count(&scan.raw),
-        count_asks: cues::count_asks(&scan.raw),
+        asks_count: count_asks > 0,
+        count_asks,
+        how_much_cues: how_much_cues(scan),
         qty_asked: false,
         average_asked: cues::average_asked(&scan.raw),
         pay_kind: super::reads::pay_kind(scan),
@@ -1264,6 +1365,17 @@ pub(super) fn assemble(
         };
     if no_measure {
         understanding.doubts.push(Doubt::NoFigure);
+    }
+    // "how much cash came in today", "cash went out yesterday": the question names a part of the cash book,
+    // and its direction words are the only words nothing else explains. They are read, so they raise no
+    // doubt and the question is not an event of a state figure (D7, plan 59 F3b, cash in and out).
+    if !understanding.cash_dirs.is_empty()
+        && understanding.figures.value == [FigureKind::Cash]
+        && !unexplained_but_cash_words
+    {
+        understanding.doubts.retain(|d| *d != Doubt::UnknownWords);
+        understanding.happened = false;
+        understanding.unexplained = false;
     }
     understanding.sure = is_sure(&understanding);
     // Two or more periods of one figure ("august, september and october", "this month and last month")

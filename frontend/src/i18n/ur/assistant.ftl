@@ -845,3 +845,9 @@ assistant-instant-seller-advance = { $kind ->
     [payable] { -beopari } { $name }: اب { -adaigi } باقی { $payable }، { -peshgi } باقی { $advance }، { -khata } کا { -baqaya } { $balance } (اس میں { -peshgi } شامل ہے)
    *[none] { -beopari } { $name }: { -peshgi } باقی { $advance }، { -khata } کا { -baqaya } { $balance } (اس میں { -peshgi } شامل ہے)، اب { -adaigi } کے لیے کچھ باقی نہیں
 }
+
+# Instant answers, plan 59 F3b. Same messages as the English file.
+# review: pending
+assistant-instant-last-rate-item-no-sale = { $item } کی { $period } کی کوئی { -bikri } نہیں ہوئی۔ اس سے پہلے آخری ریٹ { $figure } تھا، مورخہ { $date }۔
+# review: pending
+assistant-instant-last-rate-buyer-item-no-sale = { $name } کو { $item } کی { $period } کی کوئی { -bikri } نہیں ہوئی۔ اس سے پہلے آخری ریٹ { $figure } تھا، مورخہ { $date }۔

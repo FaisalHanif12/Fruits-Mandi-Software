@@ -1158,6 +1158,7 @@ pub(super) struct Table {
     /// Long Latin words of the table, for the soft match.
     pool: Vec<(String, Vec<Cue>)>,
     stop: HashSet<String>,
+    function: HashSet<String>,
     nameish: HashSet<String>,
 }
 
@@ -1241,6 +1242,9 @@ impl Table {
                 .chain(crate::number_words::URDU.iter())
                 .map(|w| key(w))
                 .collect(),
+            // The closed classes of everyday words (D7, plan 59 F3b). Looked up exactly: they are kept out
+            // of `stop`, which `is_near_known` scans word by word.
+            function: super::function_words::all().clone(),
             nameish: NAMEISH.iter().map(|w| key(w)).collect(),
         }
     }
@@ -1252,7 +1256,7 @@ impl Table {
 
     /// True for a function word.
     pub(super) fn is_stop(&self, word: &str) -> bool {
-        self.stop.contains(word)
+        self.stop.contains(word) || self.function.contains(word)
     }
 
     /// True for a word that may be a part of a name though it has a cue.
@@ -1263,7 +1267,7 @@ impl Table {
 
     /// True when the word is in the table or a function word: it starts no name.
     pub(super) fn is_known(&self, word: &str) -> bool {
-        self.singles.contains_key(word) || self.stop.contains(word)
+        self.singles.contains_key(word) || self.is_stop(word)
     }
 
     /// True when the word is known, or one letter off a word of the table or a function word (two
