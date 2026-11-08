@@ -815,3 +815,33 @@ assistant-instant-capital-flow = { $kind ->
     [out] { $period } کا { -sarmaya } واپسی: { $figure }
    *[in] { $period } کا { -sarmaya } جمع: { $figure }
 }
+
+# Instant answers, plan 59 F3 batch 2. Same messages as the English file.
+# review: pending
+assistant-instant-group = { $kind ->
+    [commission] { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } پر { $period } کا { -commission } ({ -laga } سمیت): { $figure }
+    [laga] { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } پر { $period } کا { -laga }: { $figure }
+    [qty] { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } کی { $period } کی { -bikri } کے { -nag }: { $figure }
+   *[sale] { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } کی { $period } کی { -bikri }: { $figure }
+}
+# review: pending
+assistant-instant-party-asof = { $name } کا { $date } تک کا { -baqaya }: { $figure }
+
+# Instant answers, plan 59 F3 batch 3. Same message as the English file.
+# review: pending
+assistant-instant-seller-advance = { $kind ->
+    [payable] { -beopari } { $name }: اب { -adaigi } باقی { $payable }، { -peshgi } باقی { $advance }، { -khata } کا { -baqaya } { $balance } (اس میں { -peshgi } شامل ہے)
+   *[none] { -beopari } { $name }: { -peshgi } باقی { $advance }، { -khata } کا { -baqaya } { $balance } (اس میں { -peshgi } شامل ہے)، اب { -adaigi } کے لیے کچھ باقی نہیں
+}

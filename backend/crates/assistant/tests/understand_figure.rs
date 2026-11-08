@@ -387,6 +387,7 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     // A ledger question: his balance (two places) and the newest ledger rows, with the button of R13 (D7, plan 59 F3).
     ("akram ka khata", "party[kind=balance]", "r2.party.name r2.balance", "2880dr✓", "party_card R13"),
     // Figures that a report or a view holds as a total (D7, plan 59 F3).
+    ("how much was sold of vegitables last week", "group[kind=sale,group=vegetable,period=range]", "r1.from r1.to r2.totals.gross", "0", "view A"),
     ("kal ki ugrahi", "receipts[role=shop,period=day]", "r1.from r2.totals.amount", "0", "R23"),
     ("kharcha is mahine ka", "expense[kind=shop,period=range]", "r1.from r1.to r2.totals.expense", "3000", "R29"),
     ("aaj kitne nag bike", "qty[role=shop,period=today]", "r2.totals.nag", "n60", "view A"),
@@ -806,7 +807,6 @@ fn what_is_not_a_simple_figure_goes_to_the_model() {
         "akram aur arshad ka jama kitna hua",
         "aaj kele ki kitni bikri hui",
         "kis se pehle wasooli karon",
-        "how much was sold of vegitables last week",
         "is mahine ka commission pichle mahine se kitna zyada hai",
         "akram ka bakaya aur commission",
         "aaj aur kal ki bikri",
@@ -1131,13 +1131,15 @@ fn a_day_whose_two_readings_differ_gives_no_answer() {
 /// and his advance are fields of their own and are answered. Mutation check: with the guard removed
 /// from `Cx::party`, the first assert fails.
 #[test]
-fn a_seller_with_an_open_advance_has_no_instant_balance() {
+fn a_seller_with_an_open_advance_gets_one_sentence_with_payable_advance_and_balance() {
     use mandi_assistant::results::Node;
     let w = books();
     worked::events_1_to_5(&w);
     let today = on(2026, 10, 10);
     let words = Words::new().expect("the words");
-    let with_advance = |question: &str| {
+    // `nothing_payable`: his payable is taken to 0 as well (the advance is as large as his credit and nothing
+    // is payable now, the second shape of the sentence).
+    let with_advance_of = |question: &str, nothing_payable: bool| {
         let (u, mut state) = read_state(&w, today, Language::En, question).expect("reads");
         let card = state
             .results
@@ -1146,16 +1148,51 @@ fn a_seller_with_an_open_advance_has_no_instant_balance() {
             .expect("the card");
         // Karim has 10,160 payable and no advance: give him an advance of that size.
         let payable = card.node.get(&["payable"]).cloned().expect("payable");
-        if let Node::Obj(fields) = &mut card.node
-            && let Some((_, slot)) = fields.iter_mut().find(|(k, _)| k == "open_advance")
-        {
-            *slot = payable;
+        let zero = Node::Val(mandi_assistant::results::Val::Money(
+            mandi_assistant::results::Money::plain(mandi_services::core::money::Paisa::ZERO),
+        ));
+        if let Node::Obj(fields) = &mut card.node {
+            for (key, slot) in fields.iter_mut() {
+                if key == "open_advance" {
+                    *slot = payable.clone();
+                } else if key == "payable" && nothing_payable {
+                    *slot = zero.clone();
+                }
+            }
         } else {
-            panic!("the open_advance field");
+            panic!("the card");
         }
         compose_figure(&u, &state.results, Language::En, &words)
     };
-    assert!(with_advance("karim ka bakaya kitna hai").is_none());
+    let with_advance = |question: &str| with_advance_of(question, false);
+    // Nothing payable now: the sentence leaves the payable out and says so.
+    let none = with_advance_of("karim ka bakaya kitna hai", true).expect("one sentence");
+    assert_eq!(none.sentences[0].id, "assistant-instant-seller-advance");
+    let refs: Vec<&str> = none.sentences[0]
+        .args
+        .iter()
+        .filter(|(_, v)| v.starts_with("{{"))
+        .map(|(k, _)| *k)
+        .collect();
+    assert_eq!(refs, ["name", "advance", "balance"]);
+    assert!(
+        none.sentences[0]
+            .args
+            .iter()
+            .any(|(k, v)| *k == "kind" && v == "none")
+    );
+    // His ledger balance is not what he is owed, so the answer is ONE sentence that says how the payable, the
+    // open advance and the ledger balance relate (D7, plan 59 S-A10), never the balance alone.
+    let both = with_advance("karim ka bakaya kitna hai").expect("one sentence");
+    let ids: Vec<&str> = both.sentences.iter().map(|s| s.id).collect();
+    assert_eq!(ids, ["assistant-instant-seller-advance"]);
+    let refs: Vec<&str> = both.sentences[0]
+        .args
+        .iter()
+        .filter(|(_, v)| v.starts_with("{{"))
+        .map(|(k, _)| *k)
+        .collect();
+    assert_eq!(refs, ["name", "payable", "advance", "balance"]);
     assert!(with_advance("karim ka payable kitna hai").is_some());
     assert!(with_advance("karim ki peshgi kitni hai").is_some());
 }

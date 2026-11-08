@@ -84,6 +84,31 @@ impl Cx<'_> {
         })
     }
 
+    /// A figure of a whole group of items over the period: the totals of view A read for the group
+    /// (`gross`, `total_comm` with Laga, `laga`, `nag`).
+    pub(super) fn group(&self, group: &str, what: What) -> Option<Sentence> {
+        if self.u.periods.is_empty() {
+            return None;
+        }
+        let (kind, column) = match what {
+            What::Sale => ("sale", "gross"),
+            What::Commission => ("commission", "total_comm"),
+            What::Laga => ("laga", "laga"),
+            What::Qty => ("qty", "nag"),
+            _ => return None,
+        };
+        let view = self.analytics("A", "item_group", Some(group))?;
+        Some(Sentence {
+            id: "assistant-instant-group",
+            args: vec![
+                ("kind", kind.to_owned()),
+                ("group", group.to_owned()),
+                ("figure", reference(view, &["totals", column])?),
+            ],
+            period: Some(Box::new(self.period()?)),
+        })
+    }
+
     /// An item's average rate (the `avg_rate` of its row of view A), or a seller's average rate of one
     /// item, named as the average. It is the seller's (auction) rate: a question about the buyer's rate is
     /// the model's. An item with no sale in the period has no row and no sentence.

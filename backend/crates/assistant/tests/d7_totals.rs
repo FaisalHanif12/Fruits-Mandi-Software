@@ -27,6 +27,7 @@ mod year;
 use harness::{Harness, answer_of, count, figures, money};
 use mandi_assistant::ask::{AskOutcome, AskReply};
 use mandi_reports::reports::Cell;
+use serde_json::{Value, json};
 use std::collections::BTreeMap;
 
 /// The books as the shop runs them: the app's own reads, answers and speed-ups on.
@@ -334,6 +335,8 @@ fn bills_are_bikri_entries_the_day_before_yesterday_is_one_day_and_kata_is_the_s
     for question in ["aaj kitne bill bane", "آج کتنے بل بنے"] {
         instant(&h, question, &[oracle(&f, "tiles.count_today")]);
     }
+    // Two counts asked, one answered: the model gives both ("kitne bill aur kitne gahak").
+    not_instant(&h, "aaj kitne bill bane aur kitne gahak aaye");
     // D259, D261: the day before yesterday is 03-11-26, never yesterday.
     for question in [
         "parso ki bikri kitni thi",
@@ -475,4 +478,157 @@ fn the_cash_book_closing_is_a_debit_balance() {
         [Some(mandi_services::core::accounts::BalanceSide::Dr)],
         "cash in hand is a debit balance"
     );
+}
+
+// ---- the continuation after "which one?" runs the same guards as any answer (F3b) --------------------
+
+fn usage() -> Value {
+    json!({
+        "prompt_tokens": 7_200, "completion_tokens": 60,
+        "prompt_tokens_details": {"cached_tokens": 7_000},
+        "completion_tokens_details": {"reasoning_tokens": 20}
+    })
+}
+
+fn tool_reply(name: &str, args: &Value) -> Value {
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": null,
+            "tool_calls": [{"id": "call_0", "type": "function",
+                            "function": {"name": name, "arguments": args.to_string()}}]}}],
+        "usage": usage(),
+    })
+}
+
+/// One reply with several tool calls (the find and the read of its first match, as the model sends them).
+fn tool_replies(calls: &[(&str, Value)]) -> Value {
+    let calls: Vec<Value> = calls
+        .iter()
+        .enumerate()
+        .map(|(i, (name, args))| {
+            json!({"id": format!("call_{i}"), "type": "function",
+                   "function": {"name": name, "arguments": args.to_string()}})
+        })
+        .collect();
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "tool_calls", "message": {
+            "role": "assistant", "content": null, "tool_calls": calls}}],
+        "usage": usage(),
+    })
+}
+
+fn answer(text: &str) -> Value {
+    json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": "answer", "text": text, "show": [], "next": [],
+            "choose": null, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": usage(),
+    })
+}
+
+fn view_c(from: Option<&str>, to: Option<&str>) -> Value {
+    json!({
+        "view": "C", "from": from, "to": to, "group_by": null, "item": null, "item_group": null,
+        "seller": null, "buyer": "r2.matches.0", "city": null, "adda": null, "garden": null,
+        "trip": null, "goods": null, "partner": null, "side": null, "compare": null, "sort": null,
+        "rows": null, "grade": null
+    })
+}
+
+#[test]
+fn an_answer_after_which_one_is_kept_to_the_period_of_the_question() {
+    // "akram" is two buyers: the app asks which one. The Owner picks one, and the model reads his view C
+    // for ALL time and cites its commission. The question said last month, so the scope guard refuses it
+    // (before, the continuation had no understanding of the question and showed the figure).
+    let y = year::seed::build();
+    // The loop as the recorded transcripts run it: no read ahead, the model chooses its tools.
+    let h = Harness::over(y.w);
+    let question = "akram ka pichle mahine ka commission";
+    let (reply, _) = h.ask(
+        question,
+        None,
+        vec![
+            tool_replies(&[
+                ("find", json!({"text": "akram", "role": "buyer"})),
+                ("analytics", view_c(Some("2026-10-01"), Some("2026-10-31"))),
+            ]),
+            answer("x"),
+        ],
+    );
+    assert_eq!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    assert!(reply.options.len() >= 2);
+    let key = reply.options[0].key.clone();
+    let (picked, requests) = h.pick(
+        reply.question_id,
+        mandi_assistant::ask::PickChoice::Match { key },
+        vec![
+            tool_reply("analytics", &view_c(None, None)),
+            answer("پچھلے مہینے کمیشن {{r3.totals.buyer_comm}} رہا۔"),
+            answer("x"),
+        ],
+    );
+    assert!(
+        requests.len() >= 3,
+        "the all-time figure was refused and the model was asked again: {} requests, {picked:#?}",
+        requests.len()
+    );
+    h.scan_requests();
+}
+
+// ---- F3b: a group of items, a seller with an open advance -------------------------------------------
+
+#[test]
+fn a_group_of_items_is_the_totals_of_view_a_for_the_group() {
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    // The vegetables and the fruit, last month: the sale, the commission with Laga, the Laga, the nag.
+    instant(
+        &h,
+        "pichle mahine sabzi ki bikri kitni hui",
+        &[oracle(&f, "ix.last_month.vegetable.gross")],
+    );
+    instant(
+        &h,
+        "pichle mahine phal ka commission kitna bana",
+        &[oracle(&f, "ix.last_month.fruit.comm_total")],
+    );
+    instant(
+        &h,
+        "is mahine sabzi ka laga kitna laga",
+        &[oracle(&f, "ix.month.vegetable.laga")],
+    );
+    instant(
+        &h,
+        "is mahine phal ki kitni qty bika",
+        &[oracle(&f, "ix.month.fruit.qty")],
+    );
+    // A truck, or "kitna maal" (nag or amount?), is no filter or figure the group read has.
+    not_instant(&h, "LES-1234 ki pichle mahine sabzi ki bikri kitni hui");
+    not_instant(&h, "is mahine sabzi ka kitna maal bika");
+    h.scan_requests();
+}
+
+#[test]
+fn a_seller_with_an_open_advance_gets_one_sentence_with_payable_advance_and_balance() {
+    // Tahir has 30,000 of advance open (R26). His ledger balance already includes it and is not what he is
+    // owed now, so the answer is ONE sentence: what is payable now, the open advance, the ledger balance.
+    let y = year::seed::build();
+    let f = facts_of(&y);
+    let h = production_harness(y);
+    let reply = instant(
+        &h,
+        "tahir ka bakaya kitna hai",
+        &[
+            oracle(&f, "r24.tahir.payable"),
+            oracle(&f, "r26.tahir.open"),
+            oracle_balance(&f, "seller.tahir.balance"),
+        ],
+    );
+    assert_eq!(figures(answer_of(&reply)).len(), 3);
+    h.scan_requests();
 }

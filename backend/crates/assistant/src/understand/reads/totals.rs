@@ -177,7 +177,7 @@ pub(super) fn keep_lines(u: &Understanding, lines: Vec<Line>) -> Vec<Line> {
                 || u.how_much_twice
                 || u.compare
                 || u.doubts.iter().any(|d| NOT_CARRIED.contains(d)))
-                && is_total_line(l.what))
+                && (is_total_line(l.what) || matches!(l.who, Who::Group(_))))
         })
         .filter(|l| !(l.what == What::FruitValue && !u.value_asked))
         .collect()

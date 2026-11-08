@@ -857,6 +857,64 @@ impl<'a> Run<'a> {
         Some(f)
     }
 
+    /// The guards of a continuation after "کون سا؟" (D7, plan 59 F3b): the question had several matches, so
+    /// it was not understood as sure and carried no scope or side. With the record the Owner picked as the
+    /// name, the question is read again; when nothing else stands in doubt, its planned reads and its
+    /// commission side are kept on the turn, so the scope and measure guards run on the answer like on any
+    /// other. When it still is not sure, nothing is set, as before.
+    ///
+    /// Example: "akram ka pichle mahine ka commission", Akram Toll Tax picked: an answer that cites his
+    /// commission of all time is refused for its period.
+    fn guards_for_pick(&self, turn: &mut Turn, key: &str) {
+        use crate::understand::{self, Doubt, Outcome};
+        let reader = understand::Reader {
+            ctx: &self.snap,
+            actor: self.d.actor,
+            language: self.language,
+            today: self.today,
+            partner_locked: self.partner_locked,
+        };
+        let mut u = understand::understand(&reader, &turn.question);
+        let mut chosen = false;
+        for party in &mut u.parties {
+            if let Outcome::Several(hits) = &party.outcome
+                && let Some(hit) = hits.iter().find(|h| h.key == key)
+            {
+                party.outcome = Outcome::Found(hit.clone());
+                chosen = true;
+            }
+        }
+        if !chosen {
+            return;
+        }
+        // Only when no other name of the question is still one of several.
+        if u.parties
+            .iter()
+            .any(|p| matches!(p.outcome, Outcome::Several(_)))
+        {
+            return;
+        }
+        u.doubts
+            .retain(|d| !matches!(d, Doubt::SeveralMatches | Doubt::CloseSpelling));
+        if !u.doubts.is_empty() {
+            return;
+        }
+        u.sure = true;
+        turn.commission_side = u.commission_side;
+        turn.commission_laga = u
+            .figures
+            .value
+            .contains(&crate::understand::FigureKind::Laga);
+        turn.planned = understand::plan_reads(&u)
+            .map(|reads| {
+                reads
+                    .into_iter()
+                    .map(|r| (r.tool.to_owned(), r.input))
+                    .collect()
+            })
+            .unwrap_or_default();
+    }
+
     /// What was read for this question, to show when time runs out (plan 55 Section 3): the
     /// tables, and a party card's name and checked balance. `None` if nothing that shows was read.
     fn read_so_far(&self, conv: &Conversation, question: &str) -> Option<Answer> {
@@ -2787,6 +2845,7 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
                     None => (find_id.clone(), None),
                 };
                 let at = match_position(&conv.results, &use_id, key).unwrap_or(0);
+                run.guards_for_pick(&mut turn, key);
                 let mut picked = json!({"picked": format!("{use_id}.matches.{at}")});
                 if let (Some(word), Some(map)) = (as_role, picked.as_object_mut()) {
                     map.insert("as".to_owned(), json!(word));

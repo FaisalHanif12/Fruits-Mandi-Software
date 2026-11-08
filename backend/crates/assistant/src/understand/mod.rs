@@ -750,6 +750,9 @@ pub struct Understanding {
     /// True when the question says it is the BUYER's rate ("gahak ka rate", "buyer rate"). A rate or a last
     /// rate is the seller's rate (ریٹ بیوپاری, the auction rate) unless it says this (lead ruling, D7).
     pub buyer_rate: bool,
+    /// How many counts the question asks ("kitne bill aur kitne gahak" is 2). An instant answer that holds
+    /// fewer count lines leaves a part out.
+    pub count_asks: usize,
     /// True when the question asks the quantity of an item, a party or the shop in { نگ } ("kitne nag bika",
     /// "how many units"): the sale figure is read as its `nag` column. Never set when a packing or a weight
     /// word is beside it (D7, plan 59 S-A7).

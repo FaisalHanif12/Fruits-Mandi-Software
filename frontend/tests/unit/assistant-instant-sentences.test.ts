@@ -15,6 +15,8 @@ interface Sentence {
   /** The arguments each value needs, by value; a value not listed here needs only `common`. */
   uses?: Readonly<Record<string, readonly string[]>>;
   common: readonly string[];
+  /** An argument given the same text every time, besides the selector (the item group of a group sentence). */
+  fixed?: Readonly<Record<string, string>>;
 }
 
 const SENTENCES: readonly Sentence[] = [
@@ -187,6 +189,28 @@ const SENTENCES: readonly Sentence[] = [
     values: ['in', 'out'],
     common: ['period', 'figure'],
   },
+  // Plan 59 F3 batch 2: a whole group of items, and a party's balance on a past day.
+  {
+    id: 'assistant-instant-group',
+    selector: 'kind',
+    values: ['sale', 'commission', 'laga', 'qty'],
+    common: ['period', 'figure'],
+    fixed: { group: 'fruit' },
+  },
+  {
+    id: 'assistant-instant-party-asof',
+    selector: '',
+    values: [''],
+    common: ['name', 'date', 'figure'],
+  },
+  // Plan 59 F3 batch 3: a seller with an open advance.
+  {
+    id: 'assistant-instant-seller-advance',
+    selector: 'kind',
+    values: ['payable', 'none'],
+    uses: { none: ['name', 'advance', 'balance'] },
+    common: ['name', 'payable', 'advance', 'balance'],
+  },
 ];
 
 /** A marker for each argument: letters only, so a digit in the text can only come from the message. */
@@ -201,12 +225,17 @@ const MARKERS: Readonly<Record<string, string>> = {
   to: 'TOMARK',
   qty: 'QTYMARK',
   lots: 'LOTSMARK',
+  payable: 'PAYABLEMARK',
+  advance: 'ADVANCEMARK',
+  balance: 'BALANCEMARK',
 };
 
 describe.each(LANGUAGES)('the instant answer sentences (%s)', (language) => {
   const textOf = (sentence: Sentence, value: string): string => {
     const args: Record<string, string> =
-      sentence.selector === '' ? {} : { [sentence.selector]: value };
+      sentence.selector === ''
+        ? { ...sentence.fixed }
+        : { ...sentence.fixed, [sentence.selector]: value };
     for (const name of sentence.common) args[name] = MARKERS[name] ?? name;
     args['day'] = MARKERS['day'] ?? '';
     args['from'] = MARKERS['from'] ?? '';
@@ -513,6 +542,114 @@ describe.each(LANGUAGES)('the instant sentences of plan 59 batch 1 (%s)', (langu
   });
 });
 
+describe.each(LANGUAGES)('the instant sentences of plan 59 batch 2 (%s)', (language) => {
+  const ARGS = { name: 'NAMEMARK', figure: 'FIGUREMARK', period: 'PERIODMARK', date: 'DATEMARK' };
+  const say = (id: string, selected: Record<string, string> = {}) =>
+    message(language, id, { ...ARGS, ...selected });
+
+  it('a group sentence names the group with the item group words, never the Fruit Taken word', () => {
+    const fruit = message(language, 'masters-item-group-fruit');
+    const vegetable = message(language, 'masters-item-group-vegetable');
+    const taken = message(language, 'glossary-phal');
+    for (const kind of ['sale', 'commission', 'laga', 'qty']) {
+      const fruitText = say('assistant-instant-group', { kind, group: 'fruit' });
+      const vegetableText = say('assistant-instant-group', { kind, group: 'vegetable' });
+      expect(fruitText, `${kind}/fruit`).toContain(fruit);
+      expect(fruitText, `${kind}/fruit`).not.toContain(vegetable);
+      expect(vegetableText, `${kind}/vegetable`).toContain(vegetable);
+      expect(vegetableText, `${kind}/vegetable`).not.toContain(fruit);
+      // The Fruit Taken term (a partner taking fruit home) is a different thing.
+      if (taken !== fruit) {
+        expect(fruitText, `${kind}/fruit`).not.toContain(taken);
+        expect(vegetableText, `${kind}/vegetable`).not.toContain(taken);
+      }
+    }
+  });
+
+  it('an unknown group reads the fruit group and an unknown kind reads the sale, the default branches', () => {
+    expect(say('assistant-instant-group', { kind: 'sale', group: 'meat' })).toBe(
+      say('assistant-instant-group', { kind: 'sale', group: 'fruit' }),
+    );
+    expect(say('assistant-instant-group', { kind: 'other', group: 'fruit' })).toBe(
+      say('assistant-instant-group', { kind: 'sale', group: 'fruit' }),
+    );
+  });
+
+  it('the group commission says it includes Laga, the Laga line and the sale line do not', () => {
+    const laga = message(language, 'glossary-laga');
+    expect(say('assistant-instant-group', { kind: 'commission', group: 'fruit' })).toContain(laga);
+    expect(say('assistant-instant-group', { kind: 'sale', group: 'fruit' })).not.toContain(laga);
+    // The Laga line names Laga once, as the thing counted.
+    expect(say('assistant-instant-group', { kind: 'laga', group: 'fruit' })).toContain(laga);
+  });
+
+  it('the group Nag line uses the glossary Nag and the group sale line the glossary Sale', () => {
+    expect(say('assistant-instant-group', { kind: 'qty', group: 'fruit' })).toContain(
+      message(language, 'glossary-nag'),
+    );
+    expect(say('assistant-instant-group', { kind: 'sale', group: 'vegetable' })).toContain(
+      message(language, 'glossary-bikri'),
+    );
+  });
+
+  it('the balance on a past day names the party, the Balance, the day and the figure, in that order', () => {
+    const text = say('assistant-instant-party-asof');
+    expect(text).toContain(message(language, 'glossary-baqaya'));
+    const order = ['NAMEMARK', 'DATEMARK', 'FIGUREMARK'].map((mark) => text.indexOf(mark));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(order.every((position) => position >= 0)).toBe(true);
+  });
+});
+
+describe.each(LANGUAGES)(
+  'the instant sentence of a seller with an open advance (%s)',
+  (language) => {
+    const ARGS = {
+      name: 'NAMEMARK',
+      payable: 'PAYABLEMARK',
+      advance: 'ADVANCEMARK',
+      balance: 'BALANCEMARK',
+    };
+    const say = (kind: string) =>
+      message(language, 'assistant-instant-seller-advance', { kind, ...ARGS });
+
+    it('puts the figures in the order payable, open advance, ledger balance, and says the balance includes the advance', () => {
+      const text = say('payable');
+      const at = ['PAYABLEMARK', 'ADVANCEMARK', 'BALANCEMARK'].map((mark) => text.indexOf(mark));
+      expect(at.every((position) => position >= 0)).toBe(true);
+      expect(at).toEqual([...at].sort((a, b) => a - b));
+      expect(text).toContain(language === 'ur' ? 'اس میں' : 'it includes');
+      expect(text).toContain(message(language, 'glossary-peshgi'));
+    });
+
+    it('with nothing payable it needs no payable figure, orders advance then balance, and says nothing is payable', () => {
+      // The `none` branch is read with no `payable` at all, as the backend sends it.
+      const text = message(language, 'assistant-instant-seller-advance', {
+        kind: 'none',
+        name: 'NAMEMARK',
+        advance: 'ADVANCEMARK',
+        balance: 'BALANCEMARK',
+      });
+      expect(text).not.toContain('PAYABLEMARK');
+      expect(text.indexOf('ADVANCEMARK')).toBeLessThan(text.indexOf('BALANCEMARK'));
+      expect(text).toContain(language === 'ur' ? 'کچھ باقی نہیں' : 'nothing payable');
+    });
+
+    it('names the seller and the ledger balance, and writes no side word: the balance carries its own', () => {
+      for (const kind of ['payable', 'none']) {
+        const text = say(kind);
+        expect(text).toContain('NAMEMARK');
+        expect(text).toContain(message(language, 'glossary-khata'));
+        expect(text).toContain(message(language, 'glossary-baqaya'));
+        expect(text).not.toMatch(/\b(debit|credit|owes?)\b/i);
+        expect(text).not.toContain('بنام');
+        expect(text).not.toContain('جمع');
+        expect(text).not.toContain('کے ذمے');
+      }
+    });
+  },
+);
+
 describe('the period in the new Urdu sentences', () => {
   const PERIODS = ['today', 'day', 'range', 'all'] as const;
   const NEW_SENTENCES = [
@@ -528,6 +665,7 @@ describe('the period in the new Urdu sentences', () => {
     ['assistant-instant-sale-kind', 'kind', ['cash', 'credit']],
     ['assistant-instant-fruit', 'role', ['shop', 'partner', 'guests']],
     ['assistant-instant-capital-flow', 'kind', ['in', 'out']],
+    ['assistant-instant-group', 'kind', ['sale', 'commission', 'laga', 'qty']],
   ] as const;
 
   it.each(PERIODS)('period %s is followed by کی or کا in every new line', (shape) => {
@@ -541,6 +679,7 @@ describe('the period in the new Urdu sentences', () => {
       for (const value of values) {
         const text = message('ur', id, {
           [selector]: value,
+          group: 'fruit',
           name: 'NAMEMARK',
           item: 'ITEMMARK',
           figure: 'FIGUREMARK',

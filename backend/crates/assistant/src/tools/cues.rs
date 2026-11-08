@@ -1096,6 +1096,14 @@ mod year_ahead_tests {
 /// Example: "today's sales, the number of bills and the commission" is true; "kitne paise dene hain" is
 /// false.
 pub fn asks_count(question: &str) -> bool {
+    count_asks(question) > 0
+}
+
+/// How many counts the question asks: "kitne bill aur kitne gahak" asks two, "the number of bills and the
+/// commission" one. An instant answer that holds fewer counts than that leaves a part out (D7, plan 59 F3b).
+///
+/// Example: "aaj kitne bill bane aur kitne gahak aaye" is 2; "kitne paise dene hain" is 0.
+pub fn count_asks(question: &str) -> usize {
     // "number of", "count of", "how many": a count, unless money or months follow.
     const ANY: [&str; 9] = [
         "number of",
@@ -1115,7 +1123,7 @@ pub fn asks_count(question: &str) -> bool {
     // "kitne", "kitni": a count only before a word for things that are counted ("kitne bayopariyon",
     // "kitni bikriyan"); "kitni bikri" and "kitne paise" ask an amount.
     const HEADS: [&str; 5] = ["kitne", "kitni", "kitnay", "کتنے", "کتنی"];
-    const COUNTED: [&str; 45] = [
+    const COUNTED: [&str; 52] = [
         "bill",
         "bills",
         "bil",
@@ -1161,6 +1169,13 @@ pub fn asks_count(question: &str) -> bool {
         "کھاتوں",
         "khate",
         "khaton",
+        "buyer",
+        "seller",
+        "customer",
+        "item",
+        "truck",
+        "entry",
+        "account",
     ];
     let spaced = spaced(question);
     let words: Vec<&str> = spaced.split_whitespace().collect();
@@ -1168,20 +1183,29 @@ pub fn asks_count(question: &str) -> bool {
     let money: Vec<String> = MONEY.iter().map(|w| key(w)).collect();
     let counted: Vec<String> = COUNTED.iter().map(|w| key(w)).collect();
     let heads: Vec<String> = HEADS.iter().map(|w| key(w)).collect();
-    let any_head = ANY.iter().any(|head| {
+    // Each place where a "how many" phrase starts counts once ("how many times" holds "how many").
+    let mut starts: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    for head in ANY {
         let head: Vec<String> = head.split(' ').map(key).collect();
-        words.windows(head.len()).enumerate().any(|(at, window)| {
-            window.iter().zip(&head).all(|(w, h)| *w == h.as_str())
+        for (at, window) in words.windows(head.len()).enumerate() {
+            if window.iter().zip(&head).all(|(w, h)| *w == h.as_str())
                 && words
                     .get(at.saturating_add(head.len()))
                     .is_some_and(|next| !money.iter().any(|m| m == next))
-        })
-    });
-    any_head
-        || words.iter().enumerate().any(|(at, word)| {
-            heads.iter().any(|h| h == word)
+            {
+                starts.insert(at);
+            }
+        }
+    }
+    let pairs = words
+        .iter()
+        .enumerate()
+        .filter(|(at, word)| {
+            heads.iter().any(|h| h == *word)
                 && words
                     .get(at.saturating_add(1))
                     .is_some_and(|next| counted.iter().any(|c| c == next))
         })
+        .count();
+    starts.len().saturating_add(pairs)
 }

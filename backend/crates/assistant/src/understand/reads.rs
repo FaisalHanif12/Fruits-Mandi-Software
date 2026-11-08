@@ -1059,6 +1059,8 @@ pub(super) enum Who {
     Collector(String),
     /// The shop's guests (the fruit register for them).
     Guests,
+    /// A group of items, by the word the tools take (`fruit` or `vegetable`): view A with the group.
+    Group(String),
 }
 
 /// Which figure a line of the answer is.
@@ -1993,6 +1995,13 @@ fn group_plan(u: &Understanding, group: GroupWord) -> Option<Planned> {
     if !group_filter_ready() || !u.parties.is_empty() || !u.records.is_empty() {
         return None;
     }
+    // The views have no truck filter, and a quantity that was not asked as a quantity ("kitna maal bika")
+    // is no sale figure (money review of F3b).
+    if u.truck.is_some()
+        || (matches!(u.other_measure, Measure::Quantity | Measure::Breakdown) && !u.qty_asked)
+    {
+        return None;
+    }
     let word = Some(group.tool_word());
     match (u.figures.value.as_slice(), u.periods.as_slice()) {
         ([FigureKind::Stock], []) => Some(Planned {
@@ -2011,6 +2020,24 @@ fn group_plan(u: &Understanding, group: GroupWord) -> Option<Planned> {
                 return None;
             }
             let (from, to) = dates(Some(period));
+            // The figure of the whole group over the period: the sale, the commission with Laga, the Laga, or
+            // the quantity asked (D7, plan 59 S-A3). Each is a cell of the totals of view A for the group.
+            let what = match (u.figures.value.as_slice(), u.qty_asked) {
+                ([FigureKind::Sale], true) => Some(What::Qty),
+                (kinds, false) => kinds.first().and_then(|k| what_of(*k)),
+                _ => None,
+            };
+            let lines = what
+                .map(|what| {
+                    totals::keep_lines(
+                        u,
+                        vec![Line {
+                            who: Who::Group(group.tool_word().to_owned()),
+                            what,
+                        }],
+                    )
+                })
+                .unwrap_or_default();
             Some(Planned {
                 reads: vec![
                     period_read(period)?,
@@ -2024,7 +2051,7 @@ fn group_plan(u: &Understanding, group: GroupWord) -> Option<Planned> {
                         },
                     ),
                 ],
-                lines: Vec::new(),
+                lines,
             })
         }
         _ => None,

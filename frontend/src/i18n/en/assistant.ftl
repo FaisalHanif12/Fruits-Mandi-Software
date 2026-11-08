@@ -843,3 +843,39 @@ assistant-instant-capital-flow = { $kind ->
     [out] { -sarmaya } taken back { $period }: { $figure }
    *[in] { -sarmaya } put in { $period }: { $figure }
 }
+
+# Instant answers, plan 59 F3 batch 2. The same arguments and rules as above. $group is `fruit` or `vegetable`, written
+# with the item group words of the item list (masters-item-group-*): the glossary word { -phal } is Fruit Taken, which
+# is something else. `commission` is the total with { -laga }, like the shop's; `qty` is a count of { -nag }.
+# review: pending
+assistant-instant-group = { $kind ->
+    [commission] { -commission } (with { -laga }) on { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+    [laga] { -laga } on { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+    [qty] { -nag } of { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items sold { $period }: { $figure }
+   *[sale] { -bikri } of { $group ->
+        [vegetable] { masters-item-group-vegetable }
+       *[fruit] { masters-item-group-fruit }
+    } items { $period }: { $figure }
+}
+# A party's { -baqaya } at the end of a past day. The figure carries its own side word.
+# review: pending
+assistant-instant-party-asof = { $name }'s { -baqaya } as of { $date }: { $figure }
+
+# Instant answers, plan 59 F3 batch 3: a seller with an open { -peshgi }. The { -khata } { -baqaya } already includes the
+# open { -peshgi }, so two bare lines would read as two debts: one sentence says how they relate. The figures come in
+# this order: payable (only for `payable`, where $payable is given), the open { -peshgi }, the { -khata } { -baqaya }.
+# The { -baqaya } carries its own side word, so no side word is written here.
+# review: pending
+assistant-instant-seller-advance = { $kind ->
+    [payable] { -beopari } { $name }: payable now { $payable }; open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi })
+   *[none] { -beopari } { $name }: open { -peshgi } { $advance }; { -khata } { -baqaya } { $balance } (it includes the open { -peshgi }); nothing payable now
+}

@@ -92,6 +92,11 @@ pub fn compose_figure(
     if u.asks_count && !planned.lines.iter().any(counted) {
         return None;
     }
+    // "kitne bill aur kitne gahak": two counts asked and one line that counts (the number of بکری) leaves a
+    // part out (D7, plan 59 F3b).
+    if u.count_asks > planned.lines.iter().filter(|l| counted(l)).count() {
+        return None;
+    }
     let results = results_of(&planned, reads)?;
     let cx = Cx {
         u,
@@ -366,7 +371,7 @@ impl Cx<'_> {
     fn sentences_of(&self, line: &Line) -> Option<Vec<Sentence>> {
         match (&line.who, line.what) {
             (Who::Party(key), What::Balance | What::Payable | What::Advance) => {
-                self.party(key, line.what).map(|s| vec![s])
+                self.party(key, line.what)
             }
             (Who::Shop | Who::Item(_), What::Stock) => self.stock(&line.who).map(|s| vec![s]),
             (Who::Partner(key), What::PartnerTotal) => self.partners(key.as_deref()),
@@ -407,6 +412,9 @@ impl Cx<'_> {
                 self.flow(&line.who, line.what).map(|s| vec![s])
             }
             // The figures read from the totals of a report or a view (D7, plan 59 F3).
+            (Who::Group(group), What::Sale | What::Commission | What::Laga | What::Qty) => {
+                self.group(group, line.what).map(|s| vec![s])
+            }
             (_, What::Qty) => self.qty(&line.who).map(|s| vec![s]),
             (Who::Item(_) | Who::SellerItem(..), What::AvgRate) => {
                 self.avg_rate(&line.who).map(|s| vec![s])
@@ -431,8 +439,9 @@ impl Cx<'_> {
         }
     }
 
-    /// A party's balance, payable or open advance, from his card.
-    fn party(&self, key: &str, what: What) -> Option<Sentence> {
+    /// A party's balance, payable or open advance, from his card. A seller with an open advance has two
+    /// lines for his balance, each labelled: the ledger balance and the open advance (D7, plan 59 S-A10).
+    fn party(&self, key: &str, what: What) -> Option<Vec<Sentence>> {
         let card = self.result("party_card", |r| str_at(r, &["party", "key"]) == Some(key))?;
         // An inactive party, one in the dead amount or one with a warning (over his limit ...) has
         // words of his own in the answer: the model writes it.
@@ -441,16 +450,12 @@ impl Cx<'_> {
             return None;
         }
         // A seller with an open advance has a ledger balance that is not what he is owed (his advance
-        // is taken off it, and not at all when it was not deducted, E2E-28): "his balance" is the
-        // model's, and it says which of the two it means.
-        if what == What::Balance
-            && matches!(
-                card.node.get(&["open_advance"]),
-                Some(Node::Val(Val::Money(m))) if m.paisa != Paisa::ZERO
-            )
-        {
-            return None;
-        }
+        // is taken off it, and not at all when it was not deducted, E2E-28): the answer gives his ledger
+        // balance and his open advance as two labelled lines, and the Owner reads which he means.
+        let advance_open = matches!(
+            card.node.get(&["open_advance"]),
+            Some(Node::Val(Val::Money(m))) if m.paisa != Paisa::ZERO
+        );
         // A seller's payable that is his whole credit balance is shown as the balance, so the answer
         // carries the side word (جمع, Cr) as the ledger does (live run 2, Q600).
         let credit_balance = matches!(
@@ -464,14 +469,38 @@ impl Cx<'_> {
             What::Advance => ("advance", &["open_advance"]),
             _ => ("balance", &["balance"]),
         };
-        Some(plain(
+        let name = reference(card, &["party", "name"])?;
+        // His balance question with an advance open: ONE sentence that says how the three figures relate (the
+        // ledger balance already includes the advance, so two bare lines would read as two debts): what is
+        // payable now (left out when 0), the open advance, and the ledger balance (D7, plan 59 S-A10, money
+        // review: the figures are cells of his card, nothing is computed).
+        if what == What::Balance && advance_open {
+            let payable_open = matches!(
+                card.node.get(&["payable"]),
+                Some(Node::Val(Val::Money(m))) if m.paisa != Paisa::ZERO
+            );
+            let mut args = vec![
+                (
+                    "kind",
+                    if payable_open { "payable" } else { "none" }.to_owned(),
+                ),
+                ("name", name),
+            ];
+            if payable_open {
+                args.push(("payable", reference(card, &["payable"])?));
+            }
+            args.push(("advance", reference(card, &["open_advance"])?));
+            args.push(("balance", reference(card, &["balance"])?));
+            return Some(vec![plain("assistant-instant-seller-advance", args)]);
+        }
+        Some(vec![plain(
             "assistant-instant-party",
             vec![
                 ("kind", kind.to_owned()),
-                ("name", reference(card, &["party", "name"])?),
+                ("name", name),
                 ("figure", reference(card, path)?),
             ],
-        ))
+        )])
     }
 
     /// The shop's figures of the tiles and of R24.
