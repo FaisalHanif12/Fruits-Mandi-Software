@@ -1628,7 +1628,7 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     let forecast = u.intent.value == Intent::Forecast;
     if !u.sure
         || u.compare
-        || (u.two_figures && !flow_figures(u))
+        || (u.two_figures && !(flow_figures(u) || (u.multi_measure && combinable_figures(u))))
         || u.scoped
         || u.happened
         || u.other_measure == Measure::Other
@@ -1716,7 +1716,20 @@ pub(super) fn plan(u: &Understanding) -> Option<Planned> {
     } else {
         plan.lines
     };
+    let asked = lines.len();
     let lines = totals::keep_lines(u, lines);
+    // The gate: with several measures and the gate OFF the reads stay and no line is given.
+    let lines = if u.figures.value.len() > 1 && !u.multi_measure {
+        Vec::new()
+    } else {
+        lines
+    };
+    let asked = if u.multi_measure { asked } else { 0 };
+    // Several figures asked and a line dropped (a total that a doubt keeps back, a fruit value nobody asked):
+    // the answer would leave a part of the question out, so the model answers (D7, plan 59 C).
+    if u.figures.value.len() > 1 && lines.len() < asked {
+        return None;
+    }
     (!reads.is_empty()).then_some(Planned { reads, lines })
 }
 
@@ -2963,16 +2976,127 @@ fn figure(u: &Understanding, period: Option<&PeriodRef>, plan: &mut Plan) -> Opt
     if let Some(ask) = kinds.iter().find(|k| matches!(k, FigureKind::Ask(_))) {
         return figure_of_kind(u, *ask, period, plan);
     }
-    if kinds.len() > 1 && !flow_figures(u) {
+    // Several different measures in one question are never an instant answer until Umar says otherwise (lead
+    // decision D333: PRD FR-7.90 sends two-part questions to the model). The reads of the flows of one scope are
+    // still planned, as before item C, so that the model's first call has them; the new combination of other
+    // figures, its safety checks and every line of an answer exist only behind the gate.
+    if kinds.len() > 1 && !(flow_figures(u) || (u.multi_measure && combinable_figures(u))) {
+        return None;
+    }
+    if kinds.len() > 1 && u.multi_measure && !several_figures_are_safe(u, period) {
         return None;
     }
     if kinds.is_empty() {
         return None;
     }
     for kind in kinds {
+        let before = plan.lines.len();
         figure_of_kind(u, *kind, period, plan)?;
+        // Several figures asked: every one must give a line of its own, or the answer would leave a part of
+        // the question out.
+        if kinds.len() > 1 && plan.lines.len() == before {
+            return None;
+        }
+    }
+    // The same line twice (a city's dues asked as dues and as balance) would show one figure as two.
+    if kinds.len() > 1
+        && plan
+            .lines
+            .iter()
+            .enumerate()
+            .any(|(at, l)| plan.lines.iter().skip(at.saturating_add(1)).any(|m| m == l))
+    {
+        return None;
     }
     Some(())
+}
+
+/// The checks that several figures asked in one question need beyond the plan of each (money review of
+/// 08-11-2026, D7 plan 59 C): true when the figures may be answered together.
+/// - "fruit so far and today's sales": the "so far" was folded into the day, and which period belongs to
+///   which figure is not known;
+/// - a period that the plan dropped (a bare "kal" or a "so far" beside now-figures) is no period for all of them;
+/// - a figure of NOW (cash in hand) beside a period other than today would be read as the closing balance of
+///   that period: "pichle hafte ki bikri aur cash kitna hai" asks the cash now;
+/// - a word for the shop or a total ("kul", "dukan", "sab") beside a named party or item points at a figure of
+///   the shop, and the named scope would answer it for the party;
+/// - a party's balance beside his payable or advance, or the total dues beside the dead amount: the second
+///   is already inside the first, and two lines would read as two sums of money.
+fn several_figures_are_safe(u: &Understanding, period: Option<&PeriodRef>) -> bool {
+    let kinds = u.figures.value.as_slice();
+    let named = !(u.parties.is_empty() && u.items.is_empty() && u.records.is_empty());
+    !(u.period_merged
+        || (!u.periods.is_empty() && period.is_none())
+        || (kinds.contains(&FigureKind::Cash)
+            && period.is_some_and(|p| p.kind != PeriodKind::Today))
+        || (named && u.shop_word)
+        // "aaj ki bikri aur kele ka commission": a name between two figures belongs to the second only.
+        || named_between_figures(u)
+        // "kul bikri aur aaj ka commission": the period stands between the figures and may be the second's only.
+        || (u.period_between
+            && kinds.first().is_some_and(|k| {
+                matches!(
+                    k,
+                    FigureKind::Sale
+                        | FigureKind::SaleCount
+                        | FigureKind::Commission
+                        | FigureKind::Laga
+                        | FigureKind::Expense
+                        | FigureKind::Receipts
+                        | FigureKind::FruitTaken
+                )
+            }))
+        || (kinds.contains(&FigureKind::Balance)
+            && kinds
+                .iter()
+                .any(|k| matches!(k, FigureKind::Payable | FigureKind::Advance)))
+        || (u.total_dues && kinds.contains(&FigureKind::DeadAmount)))
+}
+
+/// True when a found name stands between the first and the last figure asked: it belongs to the figures after it
+/// only, and the one scope the plan reads would be given to all of them.
+fn named_between_figures(u: &Understanding) -> bool {
+    match (u.figure_at.iter().min(), u.figure_at.iter().max()) {
+        (Some(first), Some(last)) => u.name_spans.iter().any(|(s, _)| s > first && s < last),
+        _ => false,
+    }
+}
+
+/// True when two to four DIFFERENT figures were asked of the same scope (the shop, one party, one item, or
+/// one party with one item) and every one is a figure that has a single-figure plan with a line of its own.
+/// Each figure is then planned exactly as when asked alone, and the answer holds one line for each, in the
+/// order asked (item C of D7, plan 59).
+///
+/// Example: "aaj ki bikri, kitne bil bane aur kamishan kitna hua" is Sale, SaleCount, Commission of the shop
+/// for today: three lines. A commission and a laga together are left to the model (the commission holds the
+/// laga).
+fn combinable_figures(u: &Understanding) -> bool {
+    let kinds = u.figures.value.as_slice();
+    (2..=4).contains(&kinds.len())
+        && kinds.iter().all(|k| {
+            matches!(
+                k,
+                FigureKind::Sale
+                    | FigureKind::SaleCount
+                    | FigureKind::Commission
+                    | FigureKind::Laga
+                    | FigureKind::Balance
+                    | FigureKind::Dues
+                    | FigureKind::Payable
+                    | FigureKind::Advance
+                    | FigureKind::Stock
+                    | FigureKind::Cash
+                    | FigureKind::DeadAmount
+                    | FigureKind::MoneyLent
+                    | FigureKind::Expense
+                    | FigureKind::Receipts
+                    | FigureKind::FruitTaken
+            )
+        })
+        && !(kinds.contains(&FigureKind::Commission) && kinds.contains(&FigureKind::Laga))
+        && u.parties.len() <= 1
+        && u.items.len() <= 1
+        && u.records.len() <= 1
 }
 
 /// True when two or three figures were asked and every one is a flow that the same read holds: the

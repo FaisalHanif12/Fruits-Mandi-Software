@@ -1409,7 +1409,11 @@ fn bare_days(scan: &Scan, at: usize) -> Option<(u32, u32)> {
 /// range the question is a comparison and is left as it is.
 ///
 /// Example (today 05-11-2026): "pichle mahine ki 1 se 15 tak" is 01-10-2026 to 15-10-2026.
-fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], today: NaiveDate) {
+fn merge_month_and_days(
+    out: &mut Vec<PeriodRef>,
+    bare: &[Option<(u32, u32)>],
+    today: NaiveDate,
+) -> bool {
     let is_month = |p: &PeriodRef| {
         matches!(
             p.kind,
@@ -1432,18 +1436,20 @@ fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], t
         .map(|(i, _)| i)
         .collect();
     let (&[month_at], &[range_at]) = (months.as_slice(), ranges.as_slice()) else {
-        return;
+        return false;
     };
     let (Some(month), Some(Some((d1, d2)))) = (out.get(month_at), bare.get(range_at)) else {
-        return;
+        return false;
     };
-    let Some(first) = month.from else { return };
+    let Some(first) = month.from else {
+        return false;
+    };
     let (year, m) = (first.year(), first.month());
     let Some(last) = last_of_month(year, m) else {
-        return;
+        return false;
     };
     let Some(from) = NaiveDate::from_ymd_opt(year, m, *d1) else {
-        return;
+        return false;
     };
     // "1 se 31" in a month of 30 days ends on the last day; never after the month's own end (this
     // month stops at today).
@@ -1451,12 +1457,12 @@ fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], t
         .unwrap_or(last)
         .min(month.to);
     if from > to {
-        return;
+        return false;
     }
     // "pichle mahine ki 1 se 31 tak" is the whole month: the month stays as it was read, with its own name.
     if Some(from) == month.from && to == month.to && *d2 >= last.day() {
         out.remove(range_at);
-        return;
+        return false;
     }
     let merged = period(
         PeriodKind::Range,
@@ -1479,6 +1485,7 @@ fn merge_month_and_days(out: &mut Vec<PeriodRef>, bare: &[Option<(u32, u32)>], t
         *slot = merged;
     }
     out.remove(drop);
+    true
 }
 
 /// "kal tak", "30 september tak": from the first day of the books up to and including that day, not
@@ -1639,7 +1646,7 @@ fn belongs_to_year_end(scan: &Scan, start: usize, end: usize) -> bool {
 /// kal kitna" names two days. With no other period, "kal kitni wasooli hui" is still yesterday.
 ///
 /// Example: ["LastMonth", "Yesterday"] from "پچھلے مہینے کل کتنی وصولی ہوئی" becomes ["LastMonth"].
-fn drop_total_kal(scan: &Scan, out: &mut Vec<PeriodRef>) {
+fn drop_total_kal(scan: &Scan, out: &mut Vec<PeriodRef>) -> bool {
     use super::lexicon::Cue;
     const HOW_MUCH: [&str; 8] = [
         "kitna",
@@ -1700,10 +1707,13 @@ fn drop_total_kal(scan: &Scan, out: &mut Vec<PeriodRef>) {
         })
     });
     if one_ask && other {
+        let before = out.len();
         out.retain(|p| {
             !(p.kind == PeriodKind::Yesterday && matches!(p.words.as_str(), "کل" | "kal"))
         });
+        return out.len() < before;
     }
+    false
 }
 
 /// The periods a question names and whether a time word was left that no period took.
@@ -1712,6 +1722,10 @@ pub(super) struct PeriodsRead {
     pub periods: Vec<PeriodRef>,
     /// True when a time word stands that the app cannot place.
     pub stray: bool,
+    /// True when a period was folded into another or dropped ("fruit so far and today's sales": the "so far" may
+    /// belong to the first figure and the "today" to the second; a "kal" read as total; a month and a range of
+    /// days made one): the one period left may not be the one each figure meant.
+    pub so_far_merged: bool,
 }
 
 /// Every period the question names, in order, as exact dates.
@@ -1776,16 +1790,49 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
             None => at = next_index(at, 1),
         }
     }
-    merge_month_and_days(&mut out, &bare, today);
-    drop_total_kal(scan, &mut out);
+    // A period folded away (two periods made one, a "kal" read as total) may be the one a figure beside it meant.
+    let folded = merge_month_and_days(&mut out, &bare, today);
+    let folded = drop_total_kal(scan, &mut out) || folded;
     // "is mahine ab tak": the "so far" is the month up to today, not a second period.
+    let mut so_far_merged = folded;
     if out.len() > 1
         && out.iter().any(|p| p.kind == PeriodKind::UpToNow)
         && out
             .iter()
             .any(|p| p.kind != PeriodKind::UpToNow && p.from.is_some() && p.to == today)
     {
+        // "is mahine ab tak": the two phrases are one when they touch. A "so far" apart from the other period
+        // ("fruit so far and today's sales") may belong to another figure.
+        let run_of = |p: &PeriodRef| -> Option<(usize, usize)> {
+            let tokens: Vec<String> = p
+                .words
+                .split_whitespace()
+                .map(super::lexicon::key)
+                .collect();
+            (0..scan.words.len())
+                .find(|at| {
+                    !tokens.is_empty()
+                        && tokens
+                            .iter()
+                            .enumerate()
+                            .all(|(i, t)| scan.words.get(at.saturating_add(i)) == Some(t))
+                })
+                .map(|at| (at, at.saturating_add(tokens.len())))
+        };
+        let up = out
+            .iter()
+            .find(|p| p.kind == PeriodKind::UpToNow)
+            .and_then(run_of);
+        let other = out
+            .iter()
+            .find(|p| p.kind != PeriodKind::UpToNow && p.from.is_some() && p.to == today)
+            .and_then(run_of);
+        let touching = match (up, other) {
+            (Some(a), Some(b)) => a.1 == b.0 || b.1 == a.0,
+            _ => false,
+        };
         out.retain(|p| p.kind != PeriodKind::UpToNow);
+        so_far_merged = so_far_merged || !touching;
     }
     // A question that has a period already ("whole day's bikri for this month") is not unsure of its
     // time for a stray word: only a question with none reads the stray word as its period.
@@ -1808,5 +1855,6 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
     PeriodsRead {
         periods: out,
         stray,
+        so_far_merged,
     }
 }

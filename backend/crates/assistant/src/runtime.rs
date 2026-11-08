@@ -41,6 +41,9 @@ pub struct Runtime {
     /// Whether a call whose data is already read, and help, think "low" (plan 54 S4). ON in the
     /// app until the bank shows a quality drop; the tests of the recorded requests switch it off.
     low_effort: AtomicBool,
+    /// Whether a question that asks several different measures is answered by the app alone (lead decision
+    /// D333): [`crate::understand::MULTI_MEASURE_INSTANT`] in the app, switched by the tests of both paths.
+    multi_measure: AtomicBool,
 }
 
 /// Held while a question runs: only one question runs at a time (`ERR_ASSISTANT_BUSY`). Dropping it
@@ -75,6 +78,7 @@ impl Runtime {
             read_first: AtomicBool::new(true),
             instant: AtomicBool::new(true),
             low_effort: AtomicBool::new(true),
+            multi_measure: AtomicBool::new(crate::understand::MULTI_MEASURE_INSTANT),
         }
     }
 
@@ -116,6 +120,17 @@ impl Runtime {
     /// Switches the instant figure answers on or off (a test switch; they are on in the app).
     pub fn set_instant(&self, on: bool) {
         self.instant.store(on, Ordering::Relaxed);
+    }
+
+    /// True while the app may answer a question that asks several different measures by itself.
+    pub fn multi_measure(&self) -> bool {
+        self.multi_measure.load(Ordering::Relaxed)
+    }
+
+    /// Switches the several-measure instant answers on or off (a test switch; the app uses the gate
+    /// `MULTI_MEASURE_INSTANT`).
+    pub fn set_multi_measure(&self, on: bool) {
+        self.multi_measure.store(on, Ordering::Relaxed);
     }
 
     /// True while a call with its data already read thinks "low".

@@ -278,6 +278,10 @@ Umar's "continue").
 1. Plan 55 item 5: "aaj ka rate" on a day with no sale says "not available"; the old bank expected the last
    rate (Q1598). Default for D7: the answer says there was no sale today and gives the last rate with its
    date. Needs Umar's yes.
+2. (08-11-2026) FR-7.90 sends two-part questions to the model. The whole-bank target of 60% right with no model
+   call cannot be met while it does: 231 of the 455 questions ask for two or more figures. Should FR-7.90 also let
+   the app answer two or more different figures in one question ("aaj ki bikri aur commission"), each from its own
+   checked read, as labelled lines with no comparison? It needs a PRD change (v1.32).
 
 ## 11. Lead decisions
 
@@ -309,6 +313,11 @@ Umar's "continue").
    are tested and money-reviewed. A typed name that is the whole name of one account and the first word of another
    ("faisal" with Faisal and Faisal Traders) asks "کون سا؟" (PRD FR-7.77: two to five matches ask). D331: a
    button opens only the report or screen the figure was read from.
+13. (08-11-2026) D333: FR-7.90 allows one figure, or one figure per named party, item or period, from one read.
+   So the multi-figure item C answers one measure across several named parties, items or periods, as labelled
+   lines with no difference word. Two or more different measures in one question, comparisons, sums, differences
+   and ratios still go to the model. The two-measure code sits behind `MULTI_MEASURE_INSTANT = false` until Umar
+   changes FR-7.90 (open question 2).
 5. New instant-answer words go to the Fluent files through a frontend teammate in one batch; prompt edits by
    the lead only.
 
@@ -316,6 +325,10 @@ Umar's "continue").
 
 | Run | Questions | Expected model calls | Estimated cost | Umar's yes | Actual |
 |---|---|---|---|---|---|
+| L1 (main bank, after item C is committed) | 455 | about 446 now (144 × 1 + 151 × 2), up to about 490 with rewrites | about $0.20 to $0.22 | yes, 08-11-2026 ("yes run both live runs"; credits are limited, so a small picked run goes first) | |
+| L2 (held-out bank 2, once, at the end) | 131 | about 130 to 150 | about $0.06 | yes, 08-11-2026 | |
+
+Key check 08-11-2026: limit $4.00, used $3.09, left $0.91. Two runs fit; a third full run may not.
 
 ## 12. Hand-over (08-11-2026, all agents stopped, waiting for Umar's "continue")
 
@@ -452,3 +465,22 @@ the repository. Robustness writes held-out bank 2 for the final honest score, ru
 - Offline main bank: right with no call 160 of 455 (35.2%), WRONG 0; no call or one at most 66.8%; short questions
   66.5% no call, 82.8% no call or one. The gap is the multi-figure questions (two figures 12 of 103, three or more
   1 of 128): item C, then families J, G, B, D, H.
+
+### 13.4 Item C, guards and the gated several-measure answer (backend, 08-11-2026)
+
+- Two design reviews found ways the app could leave an asked part out. The fixes cover single figures too: question
+  words, durations, negation, a repeated figure, a word that is only part of a screen name, both sides named,
+  buying and selling verbs, and folded periods. Proof: `tests/d7_multi.rs`, `d7_guards.rs`, `understand_figure.rs`.
+- D333 is built: `MULTI_MEASURE_INSTANT = false` (`understand/mod.rs`). The runtime switch `set_multi_measure` is
+  used by tests only; the app never calls it. With the gate off, two different measures in one question get no
+  instant line. Their reads still fill the model's first call.
+- The older sale-and-commission answer ("aaj ki bikri aur commission") is behind the same gate. Lead ruling: that is
+  right under D333, and the bank loses nothing.
+- Parts of one read (cash in, out and closing; trial balance debit and credit; seller commission as two labelled
+  lines; a seller's balance with payable and advance; stock nag with its lots) stay as they are. They join Umar's
+  FR-7.90 question (open question 2).
+- Money review before and after: all critical and high findings fixed, with red-before-fix tests. A third money
+  review pass of the after-fixes is still owed. It runs when work resumes, before the live run L1.
+- Offline main bank, gate off: 160 of 455 right with no call (35.2%), WRONG 0, LOCAL WRONG 0. Gate on: 162 (35.6%),
+  WRONG 0. Most multi-figure questions ask several columns of one read (families J, G, B, D, H, not started).
+- Paused 08-11-2026 on Umar's word ("first I will run test it my self"): no live run, no new edits.

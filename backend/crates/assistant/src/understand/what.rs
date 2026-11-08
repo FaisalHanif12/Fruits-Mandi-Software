@@ -43,6 +43,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
             confidence: Confidence::Low,
         },
         two_figures: false,
+        lower_ask: false,
+        period_merged: false,
         sum_asked: false,
         compare: false,
         list: None,
@@ -84,12 +86,108 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         unexplained: false,
         role_word: false,
         seller_word: false,
+        buyer_word: false,
+        open_ask: false,
+        figure_at: Vec::new(),
+        name_spans: Vec::new(),
+        period_between: false,
+        shop_after_and: false,
+        multi_measure: super::MULTI_MEASURE_INSTANT,
+        stray_screen_word: false,
+        shop_word: false,
         how_much_twice: false,
         value_asked: false,
         total_dues: false,
         sure: false,
         doubts: vec![doubt],
     }
+}
+
+/// Words that name the whole shop or a total ("kul", "total", "dukan", "sab", "poori", "saara", "tamam", "all"):
+/// beside a named party or item they point at a figure of the shop, which the named scope would answer wrongly.
+/// The words that only sum a few things ("dono", "mila kar") are not here.
+const SHOP_WORDS: [&str; 38] = [
+    "kul",
+    "total",
+    "dukan",
+    "dukaan",
+    "shop",
+    "sab",
+    "sabhi",
+    "poori",
+    "poora",
+    "pura",
+    "puri",
+    "whole",
+    "overall",
+    "all",
+    "entire",
+    "saara",
+    "saari",
+    "sara",
+    "sari",
+    "saare",
+    "sare",
+    "saray",
+    "saaray",
+    "tamam",
+    "tamaam",
+    "mukammal",
+    "کل",
+    "دکان",
+    "سب",
+    "پوری",
+    "پورا",
+    "سارا",
+    "ساری",
+    "سارے",
+    "تمام",
+    "ٹوٹل",
+    "مجموعی",
+    "میزان",
+];
+
+/// The first word of `tokens` as a run in `words`: where a period's words stand in the question.
+fn find_run(words: &[String], tokens: &[String]) -> Option<usize> {
+    if tokens.is_empty() {
+        return None;
+    }
+    (0..words.len()).find(|at| {
+        tokens
+            .iter()
+            .enumerate()
+            .all(|(i, t)| words.get(at.saturating_add(i)) == Some(t))
+    })
+}
+
+/// True when a word of the question is known only as a part of a screen's name ("agrahi" of "agrahi list"): no cue
+/// of a figure covers it, it is no function word, no time word, no movement verb or its particle, no word of a
+/// period and no part of a name that was found. A figure answered beside it would leave it out.
+fn stray_screen_word(scan: &Scan, spans: &[(usize, usize)], periods: &[PeriodRef]) -> bool {
+    let table = super::lexicon::table();
+    let period_words: Vec<String> = periods
+        .iter()
+        .flat_map(|p| p.words.split_whitespace().map(key))
+        .collect();
+    scan.words.iter().enumerate().any(|(at, w)| {
+        table.is_screen_word_only(w)
+            && !table.is_stop(w)
+            && !super::when::is_time_word(w)
+            // The verbs that say which way money moved are the business of `happened`, not of this rule.
+            && !super::function_words::is_action_verb(w)
+            && !super::function_words::is_event_word(w)
+            // The particle of a phrasal verb ("come back", "paid back"): the verb is read by `happened`.
+            && !at
+                .checked_sub(1)
+                .and_then(|b| scan.word(b))
+                .is_some_and(super::function_words::is_action_verb)
+            && !period_words.contains(w)
+            && !spans.iter().any(|(s, e)| *s <= at && at < *e)
+            && !scan
+                .hits
+                .iter()
+                .any(|h| h.cue != Cue::ScreenName && h.start <= at && at < h.end)
+    })
 }
 
 /// The "how much" and "how many" cues of the question, each place once.
@@ -145,6 +243,8 @@ fn part<T>(value: T, confidence: Confidence) -> Part<T> {
 
 /// What the figures depend on besides the cue: who and what is named, and whether a day is.
 struct Named<'a> {
+    /// The word spans of the names that were found (a party, an item, a record).
+    spans: &'a [(usize, usize)],
     roles: &'a [PartyRole],
     has_item: bool,
     has_period: bool,
@@ -314,27 +414,179 @@ fn tier(cue: Cue) -> u8 {
     }
 }
 
+/// Words of buying. `Cue::Bought` also holds the bare "li" of "peshgi li hui hai", which is no buying.
+const BUY_WORDS: [&str; 20] = [
+    "khareed",
+    "khareeda",
+    "khareedi",
+    "khareede",
+    "khareedna",
+    "khareedta",
+    "kharid",
+    "kharida",
+    "kharidi",
+    "buy",
+    "bought",
+    "buys",
+    "buying",
+    "purchase",
+    "purchased",
+    "purchases",
+    "خرید",
+    "خریدا",
+    "خریدی",
+    "خریدے",
+];
+
+/// "Jo" and "jis" ("aaj jo maal bika us par kitna commission bana"): a verb after one qualifies the figure.
+const RELATIVE_WORDS: [&str; 6] = ["jo", "jis", "jin", "جو", "جس", "جن"];
+
+/// True when an asked figure is dropped before the plan sees it, so that the answer would leave a part of the
+/// question out (money reviews of 08-11-2026, D7 plan 59 C):
+/// - a cue of tier 1 (collecting, money) names ANOTHER figure than the plainest tier found ("kharcha aur wasooli"),
+///   or stands after an "and" that follows a plain figure ("bakaya kitna hai aur wasooli kitni");
+/// - a tier-2 "baqi" with goods is the stock, dropped beside a plain figure ("bikri aur maal kitna baqi");
+/// - the same figure is named twice (`repeated`);
+/// - collected and still to collect stand together;
+/// - a verb of buying or selling stands and no figure of buying or selling was found beside another one, unless the
+///   verb is in a relative clause with no "and" after it.
+///
+/// Tier 2 words ("khata", "hisab") only qualify a figure and are no second ask.
+fn dropped_ask(
+    scan: &Scan,
+    named: &Named<'_>,
+    found: &[(usize, FigureKind)],
+    best: Option<u8>,
+    repeated: bool,
+) -> bool {
+    let kind_found = |kind: FigureKind| found.iter().any(|(_, k)| *k == kind);
+    let outstanding = [FigureKind::Balance, FigureKind::Dues, FigureKind::Payable];
+    let family_found = |kind: FigureKind| {
+        if outstanding.contains(&kind) {
+            found.iter().any(|(_, k)| outstanding.contains(k))
+        } else {
+            kind_found(kind)
+        }
+    };
+    let ands: Vec<usize> = scan
+        .hits
+        .iter()
+        .filter(|h| h.cue == Cue::And)
+        .map(|h| h.start)
+        .collect();
+    let plain_before = |at: usize| {
+        scan.hits
+            .iter()
+            .any(|h| tier(h.cue) == 0 && h.end <= at && figure_of(h, scan, named).is_some())
+    };
+    let and_after_plain = |at: usize| ands.iter().any(|a| *a < at && plain_before(*a));
+    let tier1 = best == Some(0)
+        && scan.hits.iter().filter(|h| tier(h.cue) == 1).any(|h| {
+            match figure_of(h, scan, named) {
+                // "agrahi wale ke hisab se kul baqaya": the collecting word names the outstanding balance, which is the
+                // figure found (balance, dues and payable are one family here).
+                Some(kind) => !family_found(kind) || and_after_plain(h.start),
+                None => false,
+            }
+        });
+    let tier2_stock = best != Some(2)
+        && scan.hits.iter().filter(|h| tier(h.cue) == 2).any(|h| {
+            figure_of(h, scan, named) == Some(FigureKind::Stock) && !kind_found(FigureKind::Stock)
+        });
+    let word_at = |list: &[&str]| {
+        scan.words
+            .iter()
+            .position(|w| list.iter().any(|x| key(x) == *w))
+    };
+    let relative_at = word_at(&RELATIVE_WORDS);
+    // A verb in a relative clause qualifies the figure; with an "and" after it, it is an ask of its own.
+    let own_ask = |verb_at: usize| {
+        !(relative_at.is_some_and(|r| r < verb_at) && !ands.iter().any(|a| *a > verb_at))
+    };
+    let buy_ask = !found.is_empty()
+        && !(kind_found(FigureKind::Purchases) || kind_found(FigureKind::Sale))
+        && word_at(&BUY_WORDS).is_some_and(own_ask);
+    // "kele ka aakhri rate kis par bika": the rate it sold at is the rate asked.
+    let sold_ask = !found.is_empty()
+        && scan.has_exact(Cue::Sold)
+        && !(kind_found(FigureKind::Sale)
+            || kind_found(FigureKind::SaleCount)
+            || kind_found(FigureKind::Purchases)
+            || kind_found(FigureKind::Rate))
+        && scan
+            .hits
+            .iter()
+            .find(|h| h.cue == Cue::Sold)
+            .is_some_and(|h| own_ask(h.start));
+    tier1
+        || tier2_stock
+        || repeated
+        || buy_ask
+        || sold_ask
+        || (scan.has(Cue::Collection)
+            && scan.has(Cue::Received)
+            && scan.has_any(&[Cue::Pending, Cue::Balance, Cue::Dues]))
+}
+
 /// The figures asked for, in the order of the question, and whether two were asked in one breath.
-fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
+fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, Vec<usize>, bool, bool) {
     let roles = named.roles;
     let has_party = !roles.is_empty();
     let mut found: Vec<(usize, FigureKind)> = Vec::new();
+    // Where each found figure's word ends, to tell a figure named again from its own phrase and word.
+    let mut ends: Vec<usize> = Vec::new();
+    let mut repeated = false;
     let best = scan
         .hits
         .iter()
         .filter(|h| figure_of(h, scan, named).is_some())
         .map(|h| tier(h.cue))
         .min();
+    // A name found between two hits of one figure makes them two scopes ("akram ka bakaya aur arshad ka bakaya").
+    let name_between = |a: usize, b: usize| named.spans.iter().any(|(s, _)| *s > a && *s < b);
     for hit in &scan.hits {
         if Some(tier(hit.cue)) != best {
             continue;
         }
-        if let Some(kind) = figure_of(hit, scan, named)
-            && !found.iter().any(|(_, k)| *k == kind)
-        {
-            found.push((hit.start, kind));
+        if let Some(kind) = figure_of(hit, scan, named) {
+            match found.iter().position(|(_, k)| *k == kind) {
+                None => {
+                    found.push((hit.start, kind));
+                    ends.push(hit.end);
+                }
+                // The same figure named twice with no name between ("akram ka bakaya aur kul bakaya", "akram ka
+                // bakaya, kul bakaya"): two asks of one kind, merged into one here, so the question is no one
+                // figure's.
+                Some(at) => {
+                    let first = found.get(at).map_or(0, |f| f.0);
+                    let first_end = ends.get(at).copied().unwrap_or(0);
+                    // Two words of one noun phrase are no second ask ("galle me kitna cash hai", "cash balance of the
+                    // cash book"): an "and" between them, or a word for the whole shop right before the second one.
+                    let and_between = scan
+                        .hits
+                        .iter()
+                        .any(|h| h.cue == Cue::And && h.start > first && h.start < hit.start);
+                    let shop_before = hit
+                        .start
+                        .checked_sub(1)
+                        .and_then(|b| scan.word(b))
+                        .is_some_and(|w| SHOP_WORDS.iter().any(|x| key(x) == w));
+                    // "kal kitna cash aya aur kitna cash gaya": the cash that came in and went out are two parts of
+                    // the cash book, which its own plan answers.
+                    let cash_parts =
+                        kind == FigureKind::Cash && super::reads::cash_directions(scan).len() >= 2;
+                    if hit.start >= first_end
+                        && !name_between(first, hit.start)
+                        && (and_between || shop_before)
+                        && !cash_parts
+                    {
+                        repeated = true;
+                    }
+                }
+            }
         }
     }
+    let mut lower_ask = dropped_ask(scan, named, &found, best, repeated);
     // What a buyer bought or a seller sold, from the verb, when no figure word is there.
     if found.is_empty() {
         if scan.has_exact(Cue::Bought) && !scan.has_exact(Cue::Sold) {
@@ -396,24 +648,46 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
         let takes = says(&[
             "lena", "lene", "lenge", "lengi", "leta", "lete", "لینا", "لینے", "لے",
         ]);
+        let mut rewrote = false;
         for (_, kind) in &mut found {
             if *kind == FigureKind::Balance {
                 if scan.has(Cue::ManySellers) {
                     if !takes {
                         *kind = FigureKind::Payable;
+                        rewrote = true;
                     }
                 } else if scan.has_any(&[Cue::ManyBuyers, Cue::Total]) && !gives {
                     *kind = FigureKind::Dues;
                 }
             }
         }
+        // "gahakon ka bakaya aur byopariyon ki peshgi": the one word "bakaya" became the sellers' payable for both
+        // sides, and the buyers' dues that were asked are gone.
+        if rewrote
+            && scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer])
+            && scan.has_any(&[Cue::ManySellers, Cue::RoleSeller])
+        {
+            lower_ask = true;
+        }
     }
-    // "cash balance": the cash, not a party's balance.
+    // "cash balance": the cash, not a party's balance. A balance asked apart from the cash word ("roqar kitni hai aur
+    // kitna lena hai") is a second ask that this would drop.
     if !has_party && found.iter().any(|(_, k)| *k == FigureKind::Cash) {
+        let cash_at = found
+            .iter()
+            .find(|(_, k)| *k == FigureKind::Cash)
+            .map_or(0, |f| f.0);
+        if found
+            .iter()
+            .any(|(at, k)| *k == FigureKind::Balance && at.abs_diff(cash_at) > 2)
+        {
+            lower_ask = true;
+        }
         found.retain(|(_, k)| *k != FigureKind::Balance);
     }
     found.sort_by_key(|(at, _)| *at);
     let kinds: Vec<FigureKind> = found.iter().map(|(_, k)| *k).collect();
+    let positions: Vec<usize> = found.iter().map(|(at, _)| *at).collect();
     let two = match found.as_slice() {
         [(first, _), (second, _)] => {
             let between = |cue: Cue| {
@@ -426,7 +700,7 @@ fn figures(scan: &Scan, named: &Named<'_>) -> (Vec<FigureKind>, bool) {
         }
         _ => false,
     };
-    (kinds, two)
+    (kinds, positions, two, lower_ask)
 }
 
 // ---- intent -------------------------------------------------------------------------------------------
@@ -1010,19 +1284,39 @@ pub(super) fn assemble(
     mut names: Names,
     periods: Vec<PeriodRef>,
     time_word: bool,
+    period_merged: bool,
 ) -> Understanding {
+    let spans: Vec<(usize, usize)> = names.spans.clone();
+    // Where each period's words stand: they hold no ask of their own ("14 tareekh ko"), and a period that stands
+    // between two figures may be the second one's only.
+    let period_runs: Vec<(usize, usize)> = periods
+        .iter()
+        .filter_map(|p| {
+            let tokens: Vec<String> = p.words.split_whitespace().map(key).collect();
+            find_run(&scan.words, &tokens).map(|at| (at, at.saturating_add(tokens.len())))
+        })
+        .collect();
+    let skip: Vec<(usize, usize)> = spans.iter().chain(period_runs.iter()).copied().collect();
+    let stray_screen = stray_screen_word(scan, &spans, &periods);
+    let ands: Vec<usize> = scan
+        .hits
+        .iter()
+        .filter(|h| h.cue == Cue::And)
+        .map(|h| h.start)
+        .collect();
     let roles: Vec<PartyRole> = names
         .parties
         .iter()
         .filter_map(|p| p.outcome.hit().map(|h| h.role))
         .collect();
     let named = Named {
+        spans: &spans,
         roles: &roles,
         has_item: names.items.iter().any(|i| i.outcome.hit().is_some()),
         has_period: !periods.is_empty(),
         has_unexplained_words: unexplained_words(scan, &names, &periods),
     };
-    let (kinds, two_figures) = figures(scan, &named);
+    let (kinds, figure_at, two_figures, lower_ask) = figures(scan, &named);
     // An advance and a payable belong to a seller: a name found only as a seller is the seller asked
     // for, though "ne ... li" reads like a buyer ("tahir ne kitni peshgi li hui hai", live run 2, Q610).
     if kinds
@@ -1243,6 +1537,8 @@ pub(super) fn assemble(
         outside: None,
         figures: part(kinds, figure_confidence),
         two_figures,
+        lower_ask,
+        period_merged,
         sum_asked,
         compare,
         list,
@@ -1298,6 +1594,27 @@ pub(super) fn assemble(
             Cue::ManySellers,
         ]),
         seller_word: scan.has_any(&[Cue::RoleSeller, Cue::ManySellers]),
+        buyer_word: scan.has_any(&[Cue::RoleBuyer, Cue::ManyBuyers]),
+        open_ask: super::function_words::asks_beyond_a_figure(&scan.words, &skip),
+        multi_measure: super::MULTI_MEASURE_INSTANT,
+        figure_at: figure_at.clone(),
+        name_spans: spans.clone(),
+        period_between: match (figure_at.iter().min(), figure_at.iter().max()) {
+            (Some(first), Some(last)) => period_runs.iter().any(|(s, _)| s > first && s < last),
+            _ => false,
+        },
+        shop_after_and: spans.iter().map(|s| s.1).max().is_some_and(|last_end| {
+            scan.words.iter().enumerate().any(|(w, word)| {
+                w >= last_end
+                    && SHOP_WORDS.iter().any(|x| key(x) == *word)
+                    && ands.iter().any(|a| *a >= last_end && *a < w)
+            })
+        }),
+        stray_screen_word: screen.is_none() && stray_screen,
+        shop_word: scan
+            .words
+            .iter()
+            .any(|w| SHOP_WORDS.iter().any(|x| key(x) == *w)),
         // Two asks, not two hits on one word: "kitna hai" is a phrase and a word that start at the same place.
         how_much_twice: how_much_cues(scan) >= 2,
         value_asked: super::reads::value_asked(scan),

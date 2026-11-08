@@ -661,7 +661,8 @@ impl<'a> Run<'a> {
             today: self.today,
             partner_locked: self.partner_locked,
         };
-        let understood = understand::understand(&reader, text);
+        let mut understood = understand::understand(&reader, text);
+        understood.multi_measure = self.d.runtime.multi_measure();
         let narrows = narrows_the_tiles(&understood);
         if !understood.sure || (follow_up && leans_on_earlier_questions(&understood)) {
             return (None, narrows);

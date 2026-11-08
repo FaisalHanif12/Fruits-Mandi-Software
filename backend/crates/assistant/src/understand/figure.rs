@@ -78,6 +78,16 @@ pub fn compose_figure(
     {
         return None;
     }
+    // "kab se", "kis kis ka", "kahan se": a question word asks a date, a person or a place, and a figure alone
+    // would leave it out. The model answers (D7, plan 59 C).
+    if u.open_ask || u.lower_ask || u.stray_screen_word || u.shop_after_and {
+        return None;
+    }
+    // "gahakon ka bakaya aur byopariyon ko kitna dena hai": both sides are named and one figure would answer
+    // for one side only.
+    if u.buyer_word && u.seller_word && u.figures.value.len() < 2 {
+        return None;
+    }
     let planned = reads::plan(u)?;
     if planned.lines.is_empty() {
         return None;
@@ -111,9 +121,10 @@ pub fn compose_figure(
         return None;
     }
     // Fewer figures than "how much" and "how many" cues leave a part of the question out ("kitna maal liya,
-    // kitne ka, aur kitna commission" asks three). Every instant answer holds as many sentences as cues, or
-    // the model answers (D7, plan 59 F3b).
-    if u.how_much_cues > sentences.len() {
+    // kitne ka, aur kitna commission" asks three). Every instant answer holds one planned line for each cue,
+    // or the model answers: the lines are the asked figures, and a line may write more than one sentence (a
+    // seller's commission is two), so the sentences are no count of what was asked (D7, plan 59 F3b, C).
+    if u.how_much_cues > planned.lines.len() {
         return None;
     }
     // "mila kar", "dono ka": the sum is asked, and a list of the parts has no total.

@@ -685,6 +685,17 @@ pub struct Understanding {
     pub outside: Option<OutsideKind>,
     /// True when two figures were asked in one breath ("commission aur sale").
     pub two_figures: bool,
+    /// True when a figure asked is dropped before the plan sees it: a cue of tier 1 that names ANOTHER figure
+    /// than the plainest cue ("dukan ka kharcha aur wasooli"), the same figure named twice with an "and"
+    /// ("akram ka bakaya aur kul bakaya"), or collected and still to collect together. The app gives no instant
+    /// answer and the model answers (D7, plan 59 C).
+    pub lower_ask: bool,
+    /// True when a "so far" was folded into another period that ends today ("fruit so far and today's sales"):
+    /// with several figures asked, which period belongs to which figure is not known, so the model answers.
+    pub period_merged: bool,
+    /// True when a word for the whole shop or a total stands in it ("kul", "total", "dukan", "sab"): beside a
+    /// named party or item and several figures, it would be read as that party's figure.
+    pub shop_word: bool,
     /// True when ONE figure for several things was asked ("dono ka mila kar").
     pub sum_asked: bool,
     /// True when the question compares, or asks for a share or a change.
@@ -812,6 +823,30 @@ pub struct Understanding {
     pub role_word: bool,
     /// True when a SELLERS word stands in it (بیوپاری, byopari, seller): the buyers of a city are not his figure.
     pub seller_word: bool,
+    /// True when a BUYERS word stands in it (گاہک, gahak, buyer). With a sellers word too and one figure, the
+    /// app would answer for one side and leave the other out.
+    pub buyer_word: bool,
+    /// True when a question word that asks a date, a person, a place, a reason or a way stands in the question
+    /// ("kab se", "kis kis ka", "kahan se", "since when", "who"): a figure alone leaves that ask out, so the app
+    /// gives no instant answer and the model answers (D7, plan 59 C).
+    pub open_ask: bool,
+    /// True when a word stands in the question that is known only as a part of a screen's name ("agrahi" of
+    /// "agrahi list") and no screen is named: the word names no figure, so a figure answered beside it would
+    /// leave it out ("kul agrahi aur doobi raqam"). The app gives no instant answer then.
+    pub stray_screen_word: bool,
+    /// The word position of each figure of `figures`, in the same order.
+    pub figure_at: Vec<usize>,
+    /// The word spans of the names that were found (parties, items, records).
+    pub name_spans: Vec<(usize, usize)>,
+    /// True when a period's words stand between the first and the last figure asked ("kul bikri aur aaj ka
+    /// commission"): the period may be the second figure's only.
+    pub period_between: bool,
+    /// True when a word for the shop or a total stands after the last found name and after an "and" ("akram ka
+    /// aur kul bakaya"): the figure asked is the shop's, not the named party's.
+    pub shop_after_and: bool,
+    /// True when several different measures asked in one question may be answered by the app alone: the gate
+    /// [`MULTI_MEASURE_INSTANT`], which the caller may override (a test switch).
+    pub multi_measure: bool,
     /// True when two "how much" words stand in the question ("kharcha kitna hua aur sharkat daron ne kitna
     /// liya"): it asks two things, and the figures of a report's totals answer one.
     pub how_much_twice: bool,
@@ -850,6 +885,14 @@ impl Understanding {
     }
 }
 
+/// Whether a question that asks two or more DIFFERENT measures ("aaj ki bikri aur commission", "bakaya aur last
+/// bikri") is answered by the app alone, one labelled line for each (plan 59, item C).
+///
+/// OFF by lead decision D333: PRD FR-7.90 sends two-part questions to the model. The code stays, behind this
+/// gate, so that Umar's yes is a change of this one line. One measure for several named parties, items or
+/// periods ("akram aur arshad ka bakaya") is not a two-measure question and is not gated.
+pub const MULTI_MEASURE_INSTANT: bool = false;
+
 /// What the understanding reads: the books through the services, in the Owner's session.
 pub struct Reader<'a> {
     /// The services context (the database, the search index).
@@ -887,7 +930,14 @@ pub fn understand(reader: &Reader<'_>, question: &str) -> Understanding {
     let names = who::resolve(reader, &scan, &periods);
     // A cue inside a name that was found ("Imran Fruit", "Akram Toll Tax") is part of the name.
     let scan = scan.without_spans(&names.spans);
-    what::assemble(reader, &scan, names, periods, read.stray)
+    what::assemble(
+        reader,
+        &scan,
+        names,
+        periods,
+        read.stray,
+        read.so_far_merged,
+    )
 }
 
 /// Builds the word table and the typing word list now, so the first question of the Owner is not

@@ -109,7 +109,20 @@ fn read_state(
     language: Language,
     question: &str,
 ) -> Option<(mandi_assistant::understand::Understanding, State)> {
-    let u = understand(&reader(w, today, language), question);
+    read_state_with(w, today, language, question, false)
+}
+
+/// As [`read_state`], with the gate of the several-measure answers (`MULTI_MEASURE_INSTANT`, lead decision
+/// D333) set as asked.
+fn read_state_with(
+    w: &world::World,
+    today: BusinessDate,
+    language: Language,
+    question: &str,
+    multi: bool,
+) -> Option<(mandi_assistant::understand::Understanding, State)> {
+    let mut u = understand(&reader(w, today, language), question);
+    u.multi_measure = multi;
     let reads = plan_reads(&u)?;
     let words = Words::new().expect("the words");
     let numbers = question_numbers(question);
@@ -227,7 +240,17 @@ fn instant(
     language: Language,
     question: &str,
 ) -> Result<Option<(FigureAnswer, Answer)>, String> {
-    let Some((u, state)) = read_state(w, today, language, question) else {
+    instant_with(w, today, language, question, false)
+}
+
+fn instant_with(
+    w: &world::World,
+    today: BusinessDate,
+    language: Language,
+    question: &str,
+    multi: bool,
+) -> Result<Option<(FigureAnswer, Answer)>, String> {
+    let Some((u, state)) = read_state_with(w, today, language, question, multi) else {
         return Ok(None);
     };
     let words = Words::new().expect("the words");
@@ -446,22 +469,13 @@ const WORKED_DAY: &[(&str, &str, &str, &str, &str)] = &[
     ("rahim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "1764 3928", "view B"),
     ("karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a19.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a19.total_comm", "720 1520", "view B"),
     ("rahim aur karim ka commission is mahine", "commission[role=seller-own,period=range] + commission[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r4.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r4.rows.a18.total_comm r3.matches.0.name r1.from r1.to r5.rows.a19.seller_comm r3.matches.0.name r1.from r1.to r5.rows.a19.total_comm", "1764 3928 720 1520", "view B view B"),
-    ("rahim ki bikri aur commission is mahine", "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.a18.gross r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm", "29400 1764 3928", "view B"),
     // A partner's capital now: R31 for him, read in two places (the worked day has none). The button is the
     // partner overview: the capital is not on the statement page of R31, and a button opens only what holds
     // the figure (D331, plan 59 C1).
     ("partner b ka sarmaya", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "screen partneroverview"),
     ("partner b ka sarmaya kitna laga hua hai", "partner-capital[]", "r1.matches.0.name r2.capital.balance", "0✓", "screen partneroverview"),
     // Several flows of the same record or of the shop, one line each.
-    ("commission aur sale aaj ki", "commission[role=shop,period=today] + sale[role=shop,period=today]", "r1.today_commission.amount r1.today_sales.amount", "5448✓ 41400✓", "tiles"),
-    ("aaj ki bikri aur commission", "sale[role=shop,period=today] + commission[role=shop,period=today]", "r1.today_sales.amount r1.today_commission.amount", "41400✓ 5448✓", "tiles"),
-    ("sales and commission of today", "sale[role=shop,period=today] + commission[role=shop,period=today]", "r1.today_sales.amount r1.today_commission.amount", "41400✓ 5448✓", "tiles"),
-    ("آج کی بکری اور کمیشن", "sale[role=shop,period=today] + commission[role=shop,period=today]", "r1.today_sales.amount r1.today_commission.amount", "41400✓ 5448✓", "tiles"),
-    ("kal ki bikri aur commission kitna tha", "sale[role=shop,period=day] + commission[role=shop,period=day]", "r1.from r2.totals.gross r1.from r2.totals.total_comm", "0 0", "view A R34"),
-    ("is mahine ab tak kitni bikri aur commission hua", "sale[role=shop,period=range] + commission[role=shop,period=range]", "r1.from r1.to r2.totals.gross r1.from r1.to r2.totals.total_comm", "41400 5448", "view A"),
     ("اس سال کی کل بکری کتنی ہے", "sale[role=shop,period=range]", "r1.from r1.to r2.totals.gross", "41400", "view A"),
-    ("kele ka commission aur bikri aaj", "commission[role=item,period=today] + sale[role=item,period=today]", "r2.matches.0.name r3.rows.i1.total_comm r2.matches.0.name r3.rows.i1.gross", "3928 29400", "view A"),
-    ("kele ka commission aur bikri is mahine", "commission[role=item,period=range] + sale[role=item,period=range]", "r2.matches.0.name r1.from r1.to r3.rows.i1.total_comm r2.matches.0.name r1.from r1.to r3.rows.i1.gross", "3928 29400", "view A"),
     ("is mahine ki bikri", "sale[role=shop,period=range]", "r1.from r1.to r2.totals.gross", "41400", "view A"),
     ("is mahine ka commission", "commission[role=shop,period=range]", "r1.from r1.to r2.totals.total_comm", "5448", "view A"),
     ("is mahine ka laga", "laga[role=shop,period=range]", "r1.from r1.to r2.totals.laga", "480", "view A"),
@@ -649,6 +663,75 @@ const YEAR: &[(&str, &str, &str, &str, &str)] = &[
     ("tahir ne kitni peshgi li hui hai", "party[kind=advance]", "r2.party.name r2.open_advance", "30000", "party_card"),
 ];
 
+/// The rows that ask two different measures in one question (the sale and the commission, of one scope). They are
+/// instant answers only behind the gate `MULTI_MEASURE_INSTANT` (lead decision D333: PRD FR-7.90 sends two-part
+/// questions to the model), so they are checked with the gate ON, and the next test checks them with it OFF.
+const TWO_MEASURES: &[(&str, &str, &str, &str, &str)] = &[
+    (
+        "rahim ki bikri aur commission is mahine",
+        "sale[role=seller,period=range] + commission[role=seller-own,period=range] + commission[role=seller,period=range]",
+        "r2.matches.0.name r1.from r1.to r3.rows.a18.gross r2.matches.0.name r1.from r1.to r3.rows.a18.seller_comm r2.matches.0.name r1.from r1.to r3.rows.a18.total_comm",
+        "29400 1764 3928",
+        "view B",
+    ),
+    (
+        "commission aur sale aaj ki",
+        "commission[role=shop,period=today] + sale[role=shop,period=today]",
+        "r1.today_commission.amount r1.today_sales.amount",
+        "5448✓ 41400✓",
+        "tiles",
+    ),
+    (
+        "aaj ki bikri aur commission",
+        "sale[role=shop,period=today] + commission[role=shop,period=today]",
+        "r1.today_sales.amount r1.today_commission.amount",
+        "41400✓ 5448✓",
+        "tiles",
+    ),
+    (
+        "sales and commission of today",
+        "sale[role=shop,period=today] + commission[role=shop,period=today]",
+        "r1.today_sales.amount r1.today_commission.amount",
+        "41400✓ 5448✓",
+        "tiles",
+    ),
+    (
+        "آج کی بکری اور کمیشن",
+        "sale[role=shop,period=today] + commission[role=shop,period=today]",
+        "r1.today_sales.amount r1.today_commission.amount",
+        "41400✓ 5448✓",
+        "tiles",
+    ),
+    (
+        "kal ki bikri aur commission kitna tha",
+        "sale[role=shop,period=day] + commission[role=shop,period=day]",
+        "r1.from r2.totals.gross r1.from r2.totals.total_comm",
+        "0 0",
+        "view A R34",
+    ),
+    (
+        "is mahine ab tak kitni bikri aur commission hua",
+        "sale[role=shop,period=range] + commission[role=shop,period=range]",
+        "r1.from r1.to r2.totals.gross r1.from r1.to r2.totals.total_comm",
+        "41400 5448",
+        "view A",
+    ),
+    (
+        "kele ka commission aur bikri aaj",
+        "commission[role=item,period=today] + sale[role=item,period=today]",
+        "r2.matches.0.name r3.rows.i1.total_comm r2.matches.0.name r3.rows.i1.gross",
+        "3928 29400",
+        "view A",
+    ),
+    (
+        "kele ka commission aur bikri is mahine",
+        "commission[role=item,period=range] + sale[role=item,period=range]",
+        "r2.matches.0.name r1.from r1.to r3.rows.i1.total_comm r2.matches.0.name r1.from r1.to r3.rows.i1.gross",
+        "3928 29400",
+        "view A",
+    ),
+];
+
 // ---- the checks ----------------------------------------------------------------------------------------
 
 type Case = (
@@ -667,6 +750,7 @@ fn run_table(
     language: Language,
     cases: &[Case],
     pinned: bool,
+    multi: bool,
 ) -> Vec<String> {
     let strip = |text: &str| -> String {
         if pinned {
@@ -677,7 +761,7 @@ fn run_table(
     };
     let mut wrong = Vec::new();
     for (question, sentences, refs, figures, buttons) in cases {
-        match instant(w, today, language, question) {
+        match instant_with(w, today, language, question, multi) {
             Err(e) => wrong.push(e),
             Ok(None) => wrong.push(format!("{question}: no instant answer")),
             Ok(Some((figure, answer))) => {
@@ -749,7 +833,7 @@ fn the_worked_day_answers_by_itself_in_both_languages() {
     let today = on(2026, 10, 10);
     assert!(WORKED_DAY.len() >= 150, "{}", WORKED_DAY.len());
     for language in [Language::En, Language::Ur] {
-        let wrong = run_table(&w, today, language, WORKED_DAY, true);
+        let wrong = run_table(&w, today, language, WORKED_DAY, true, false);
         report(&wrong, WORKED_DAY.len());
     }
 }
@@ -761,7 +845,7 @@ fn the_rich_year_answers_by_itself() {
     let y = year::seed::build();
     let today = on(2026, 11, 5);
     for language in [Language::En, Language::Ur] {
-        let wrong = run_table(&y.w, today, language, YEAR, false);
+        let wrong = run_table(&y.w, today, language, YEAR, false, false);
         report(&wrong, YEAR.len());
     }
 }
@@ -1271,5 +1355,31 @@ fn an_item_in_the_books_with_no_sales_gives_zero() {
         let seen = seen_of(&figure, &answer);
         assert_eq!(seen.figures, "0", "{question}: {seen:?}");
         assert!(seen.sentences.contains("role=item"), "{question}: {seen:?}");
+    }
+}
+
+/// With the gate ON the rows of two measures answer by themselves, each line as before.
+#[test]
+fn the_two_measure_rows_answer_by_themselves_with_the_gate_on() {
+    let w = books();
+    worked::events_1_to_5(&w);
+    let today = on(2026, 10, 10);
+    for language in [Language::En, Language::Ur] {
+        let wrong = run_table(&w, today, language, TWO_MEASURES, true, true);
+        report(&wrong, TWO_MEASURES.len());
+    }
+}
+
+/// With the gate OFF (the app, until Umar says otherwise) the same rows go to the model, whatever the reads.
+#[test]
+fn the_two_measure_rows_go_to_the_model_with_the_gate_off() {
+    let w = books();
+    worked::events_1_to_5(&w);
+    let today = on(2026, 10, 10);
+    for language in [Language::En, Language::Ur] {
+        for (question, ..) in TWO_MEASURES {
+            let got = instant_with(&w, today, language, question, false).expect("no check failed");
+            assert!(got.is_none(), "{question}: answered by the app alone");
+        }
     }
 }

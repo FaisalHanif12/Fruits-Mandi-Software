@@ -142,7 +142,10 @@ fn guard_2_an_answer_never_leaves_out_a_part_of_what_was_asked() {
     ] {
         goes_to_the_model(&h, question);
     }
-    // The same cues with a figure for each are answered together, each figure its own sentence.
+    // Two measures in one question go to the model (lead decision D333: PRD FR-7.90 sends two-part questions to
+    // the model); with the gate ON they are answered together, each figure its own sentence.
+    goes_to_the_model(&h, "aaj kitni bikri hui aur kitna commission bana");
+    h.runtime.set_multi_measure(true);
     let (reply, requests) = h.ask(
         "aaj kitni bikri hui aur kitna commission bana",
         None,

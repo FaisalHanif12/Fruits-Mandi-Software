@@ -645,7 +645,8 @@ const FIGURES: &[Entry] = &[
     (
         Cue::Collection,
         &[
-            "ugrahi", "ugrai", "ugrahee", "ugrahy", "wasooli", "wasuli", "wasoli", "wasoolee",
+            "ugrahi", "ugrai", "ugrahee", "ugrahy", "agrahi", "agraahi", "agrai", "agrahee", "wasooli", "wasuli",
+            "wasoli", "wasoolee",
             "wusooli", "collection", "wasooliyan", "wasuliyan", "wasooliyaan", "ugrahiyan", "ugrahian", "collections",
             "اگراہی", "اگرائی", "وصولی", "وصولیاں", "وصولیوں", "اگراہیاں",
         ],
@@ -1263,6 +1264,15 @@ impl Table {
     pub(super) fn is_nameish(&self, word: &str) -> bool {
         // The name of a place (Lahore) can be the name of a city or an اڈا of the books.
         self.nameish.contains(word) || self.cues_of(word).contains(&Cue::ExternalPlace)
+    }
+
+    /// True when the only thing the table knows of the word is that it belongs to the name of a screen
+    /// ("agrahi" of "agrahi list"): the word alone names no figure and no filter.
+    pub(super) fn is_screen_word_only(&self, word: &str) -> bool {
+        matches!(
+            self.singles.get(word).map(Vec::as_slice),
+            Some([Cue::ScreenName])
+        )
     }
 
     /// True when the word is in the table or a function word: it starts no name.
