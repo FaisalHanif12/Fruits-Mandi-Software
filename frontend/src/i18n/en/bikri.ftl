@@ -146,6 +146,11 @@ bikri-rate-hint-today = Today's last rate: { $rate }
 # review: pending
 bikri-rate-hint-last-day = Last rate on { $date }: { $rate }
 
+# The words in the empty rate cell (D8 Bug 1, PRD FR-7.53): they say it is the last rate and not a value
+# that was typed. $rate: the rate.
+# review: pending
+bikri-rate-hint-cell = Last { $rate }
+
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending
@@ -274,6 +279,18 @@ bikri-left-out = { $count ->
 # The line a quantity problem written under the sale lines is about. $line: the line number.
 # review: pending
 bikri-qty-note-line = Line { $line }:
+
+# A line with something typed on it that is not complete says what it still needs, under the sale lines
+# (D8 Bug 1). A blank row says nothing. The words come after "Line 3:".
+# review: pending
+bikri-line-missing-buyer = Choose the buyer.
+
+# review: pending
+bikri-line-missing-qty = Enter the quantity.
+
+# The grey figure is only the last rate (PRD FR-7.53). It is not a rate that was typed and it is not saved.
+# review: pending
+bikri-line-missing-rate = Enter the rate. The grey figure is only the last rate; it is not saved.
 
 # review: pending
 bikri-summary-seller-side = Seller side

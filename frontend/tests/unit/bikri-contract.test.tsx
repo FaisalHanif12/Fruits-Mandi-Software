@@ -152,7 +152,7 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:buyer');
     });
-    // The blank second line: 30 in the quantity, the rate empty, the last rate as grey text.
+    // The blank second line: 30 in the quantity, the rate empty, the last rate as grey words ("Last 600", D8 Bug 1).
     await waitFor(() => {
       expect(textOf(sales, 1, 'qty')).toBe('30');
     });
@@ -160,7 +160,9 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
     await waitFor(() => {
       expect(rate).toHaveClass('cell-hint');
     });
-    expect(visible(rate.textContent).trim()).toBe('600');
+    expect(visible(rate.textContent).trim()).toBe(
+      message(language, 'bikri-rate-hint-cell', { rate: '600' }),
+    );
     // 30 of the 50 are not sold yet: the backend says so, and the lot's quantity cell shows it.
     await waitFor(() => {
       expect(cellOf(lotsGrid(language), 0, 'qty')).toHaveClass('cell-warn');

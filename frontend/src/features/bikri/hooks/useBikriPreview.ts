@@ -20,13 +20,35 @@ export const PREVIEW_DELAY_MS = 50;
 /** The draft of each screen, built once for each version of what is typed. */
 const built = new WeakMap<BikriDraftStores, { version: number; draft: BikriDraft }>();
 
+/** The version of what is typed that each draft was built from, and a number for each screen. */
+const versions = new WeakMap<BikriDraft, number>();
+const screens = new WeakMap<BikriDraftStores, number>();
+let screenCount = 0;
+
 export function draftOf(stores: BikriDraftStores): BikriDraft {
   const version = stores.version.getState().value;
   const known = built.get(stores);
   if (known?.version === version) return known.draft;
   const draft = buildDraft(stores);
   built.set(stores, { version, draft });
+  versions.set(draft, version);
   return draft;
+}
+
+/**
+ * What names an answer of the preview: the screen and the version of what was typed, never the draft
+ * itself. A draft of 1,000 lines is 200 KB, and hashing it for the query key on every render cost more
+ * than the rest of the key press (D8 plan 61, NFR-SCL-3). The version goes up only when a row or the
+ * header changes, not when the cursor moves, so the same typing is the same key.
+ */
+function answerKey(stores: BikriDraftStores, draft: BikriDraft): string {
+  let screen = screens.get(stores);
+  if (screen === undefined) {
+    screenCount += 1;
+    screen = screenCount;
+    screens.set(stores, screen);
+  }
+  return `${String(screen)}:${String(versions.get(draft) ?? -1)}`;
 }
 
 /**
@@ -52,8 +74,8 @@ export function useBikriPreview(stores: BikriDraftStores, source?: PreviewSource
   const query = useQuery({
     queryKey:
       source === undefined
-        ? ['bikri', 'preview', settled]
-        : ['bikri', 'preview', source.name, settled],
+        ? ['bikri', 'preview', answerKey(stores, settled)]
+        : ['bikri', 'preview', source.name, answerKey(stores, settled)],
     queryFn: () => run(settled),
     enabled: ready(settled),
     placeholderData: keepPreviousData,

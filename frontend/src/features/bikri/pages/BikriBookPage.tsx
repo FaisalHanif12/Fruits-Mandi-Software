@@ -100,8 +100,8 @@ import {
   type BikriDraftStores,
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot, isPukhtaSeller } from '../draft';
+import { useGridViews } from '../hooks/useGridViews';
 import { useLotWho } from '../lot-name';
-import { buildGridViews } from '../grid-views';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
 import { useReadyLots } from '../hooks/useReadyLots';
@@ -110,14 +110,6 @@ import { LOT, SALE } from '../types';
 
 /** The parts of the screen the keyboard or the mouse can be in, for the party card. */
 type Region = 'header' | 'lots' | 'sales';
-
-/** The keys of the lines of one lot, in order. */
-function linesOf(stores: BikriDraftStores, lotKey: string): string[] {
-  return stores
-    .salesFor(lotKey)
-    .getState()
-    .rows.map((row) => row.rowId);
-}
 
 /** A refusal made of the problems that are errors, so each field can show the words of its own. */
 function errorOf(problems: readonly Problem[]): UiError | null {
@@ -381,24 +373,20 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
   // The lot of a line in the whole-sale view, and the name every label of a lot shows: its number
   // and its seller and item (PRD FR-12.1, FR-12.6).
   const lotWho = useLotWho();
-  const lotLabel = (index: number) => {
-    const who = lotWho(lotRows[index]);
-    return who === ''
-      ? say('bikri-all-lot-no-seller', { lot: String(index + 1) })
-      : say('bikri-all-lot', { lot: String(index + 1), who });
-  };
-  const views = buildGridViews({
+  // What the grids show from the answer, and the keys of the lines of every lot. Worked out again only
+  // when the answer, the problems, the lines or the language change, not on every move of the cursor.
+  const { views, lineKeysByLot } = useGridViews({
+    stores,
     preview,
     problems,
-    lotKeys: lotRows.map((row) => row.rowId),
-    selectedLot: lotKey,
-    // Read again whenever any line of any lot changes (`allRows` changed).
-    lineKeysByLot: allRows.length === 0 ? [] : lotRows.map((row) => linesOf(stores, row.rowId)),
-    showAll: whole,
-    lotLabel,
+    lotRows,
+    allRows,
+    lotKey,
+    whole,
     grouping,
     say,
-    words: (problem) => errorText(problem.item),
+    lotWho,
+    errorText,
   });
 
   // What the user changed in a posting open for edit: marked in the grids and listed (plan 16).
@@ -420,10 +408,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     lotRows.map((row) => row.rowId),
   );
   // Read again whenever any line of any lot changes (`allRows` changed).
-  const saleMarks = saleMarkCells(
-    entryMarks,
-    allRows.length === 0 ? [] : lotRows.map((row) => linesOf(stores, row.rowId)),
-  );
+  const saleMarks = saleMarkCells(entryMarks, lineKeysByLot);
 
   // A problem on a field of the "more" panel keeps the panel open; the weight field shows for a
   // lot or line that asks for weight (PRD E23).

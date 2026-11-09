@@ -290,12 +290,14 @@ describe.each(LANGUAGES)(
       await waitFor(() => {
         expect(textOf(sales, 1, 'qty')).toBe('30');
       });
-      // The rate stays empty. The last rate is grey text in the cell and never part of the draft.
+      // The rate stays empty. The last rate is grey words ("Last 600") in the cell and never part of the draft.
       const rate = cellOf(sales, 1, 'rate');
       await waitFor(() => {
         expect(rate).toHaveClass('cell-hint');
       });
-      expect(visible(rate.textContent).trim()).toBe('600');
+      expect(visible(rate.textContent).trim()).toBe(
+        message(language, 'bikri-rate-hint-cell', { rate: '600' }),
+      );
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:rate');

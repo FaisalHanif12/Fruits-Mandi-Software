@@ -5,8 +5,8 @@
 // One line of words for each problem, in line order; in the whole-sale view each says its lot.
 
 import { Localized } from '@fluent/react';
-import { CircleAlert } from 'lucide-react';
-import type { QtyNote } from '../grid-views';
+import { CircleAlert, TriangleAlert } from 'lucide-react';
+import type { MissingNote, QtyNote } from '../grid-views';
 
 interface QtyNotesProps {
   notes: readonly QtyNote[];
@@ -25,6 +25,48 @@ export function QtyNotes({ notes, whole }: QtyNotesProps) {
           className="flex items-start gap-2 type-body text-due"
         >
           <CircleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
+          <span>
+            {whole ? (
+              <Localized
+                id="bikri-where-line"
+                vars={{ lot: String(note.lot + 1), line: String(note.line + 1) }}
+              >
+                <span className="type-label" />
+              </Localized>
+            ) : (
+              <Localized id="bikri-qty-note-line" vars={{ line: String(note.line + 1) }}>
+                <span className="type-label" />
+              </Localized>
+            )}{' '}
+            {note.words}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface MissingNotesProps {
+  notes: readonly MissingNote[];
+  whole: boolean;
+}
+
+/**
+ * What a line with something typed on it still needs, under the sale lines (D8 Bug 1): "Line 3:
+ * Enter the rate." It is not a refusal, so the look is the amber of a warning; the words name the
+ * line, and in the whole-sale view its lot too. A blank row has no note.
+ */
+export function MissingNotes({ notes, whole }: MissingNotesProps) {
+  if (notes.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-1">
+      {notes.map((note) => (
+        <li
+          key={`${note.rowId}-${note.words}`}
+          role="alert"
+          className="flex items-start gap-2 type-body text-warn"
+        >
+          <TriangleAlert aria-hidden="true" className="mt-1 size-icon-sm shrink-0" />
           <span>
             {whole ? (
               <Localized

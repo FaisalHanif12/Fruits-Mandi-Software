@@ -17,7 +17,8 @@
 //   Space       in a choice cell (ادھاری / نقدی): the next word; in a select cell (درجہ): the list opens
 //   Alt+↓       in a picker cell: start typing with the full list open (PRD FR-7.16); in a select
 //               cell: the list opens
-//   Delete      in a select cell that is not open: the word is taken away (blank)
+//   Backspace and Delete  on a cell that is not being typed in: the cell is cleared (an editable one),
+//               and the key never leaves the screen (PRD FR-7.91); in a select cell the word is taken away
 // Any other letter or digit starts typing in an editable cell, as AG Grid does.
 
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -191,8 +192,15 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       // Ctrl+Enter is the screen's "save and next": the grid leaves it alone.
       if (!NO_MODIFIER(event)) return false;
       event.preventDefault();
+      const before = row.typed[field] ?? '';
       params.api.stopEditing();
-      if (env.interceptors?.onEnter?.({ rowId: row.rowId, field }) === true) return true;
+      // The screen is told whether this Enter changed the text of the cell: a verdict the backend gave
+      // on the old text says nothing about the new one (D8 Bug 1, B2).
+      const after = store.getState().rows[rowIndex]?.typed[field] ?? '';
+      const changed = after !== before;
+      if (env.interceptors?.onEnter?.({ rowId: row.rowId, field }, { changed }) === true) {
+        return true;
+      }
       const step = nextEnterStop(columns, store.getState().rows, { rowIndex, field });
       if (step === null) return true;
       if (step.kind === 'cell') {
@@ -223,20 +231,27 @@ export function createGridKeyHandler(env: GridKeyEnv) {
 
     if (!NO_MODIFIER(event)) return false;
 
-    // A select cell holds fixed words, so nothing is typed into it. Space opens its list, Delete or
-    // Backspace take the word away, and any other letter or digit is left alone (not a start of typing).
+    // A select cell holds fixed words, so nothing is typed into it. Space opens its list, and any other
+    // letter or digit is left alone (not a start of typing). Delete and Backspace clear it, below.
     if (column.type === 'select' && !params.editing) {
       if (event.key === ' ') {
         event.preventDefault();
         if (isEditable(column, row)) params.api.startEditingCell({ rowIndex, colKey: field });
         return true;
       }
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault();
-        if (isEditable(column, row)) store.getState().updateTyped(row.rowId, field, '');
-        return true;
-      }
       if (event.key.length === 1) return true;
+    }
+
+    // Backspace and Delete on a cell that is not being typed in clear it, like a spreadsheet; on a cell
+    // that cannot be typed in (a calculated cell, a choice) they do nothing. They never leave the
+    // screen (PRD FR-7.91, D8 Bug 2): the key is answered here and not left to the web view.
+    if (!params.editing && (event.key === 'Backspace' || event.key === 'Delete')) {
+      event.preventDefault();
+      if (isEditable(column, row)) {
+        if (column.type === 'picker') store.getState().updatePicked(row.rowId, field, null);
+        else store.getState().updateTyped(row.rowId, field, '');
+      }
+      return true;
     }
 
     // Space on a choice cell that is not being typed in: the next word.

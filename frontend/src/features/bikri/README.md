@@ -20,8 +20,10 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
   the اڈا, زمیندار and driver from the truck, and the quantity of a new line are put in the cell
   like typed text and are Enter stops (`useDraftFills`, `HeaderCard`). The quantity of a new line
   is filled at once, before the buyer: a line with no buyer and no rate is blank and ignored. The
-  rate is never filled: the last rate is grey text only, and `Ctrl+D` copies the rate of the line
-  above. A one-time seller's نقد (PRD FR-13.10) is shown in its cell while empty, from the
+  rate is never filled: the last rate is grey italic words ("Last 900") in the empty cell, never a bare
+  figure, and `Ctrl+D` copies the rate of the line above. A line with something typed on it that is
+  not complete says what it still needs under the lines ("Line 3: Enter the rate.", `MissingNotes`);
+  a blank row says nothing (D8 Bug 1). A one-time seller's نقد (PRD FR-13.10) is shown in its cell while empty, from the
   backend's `totals.cash_paid`, with its working; a typed value is kept as typed.
 - **The whole-sale view has no second copy.** The switch on the lines area (the same as the
   summary's) shows the lines of all lots in one grid with a lot column. `stores.all`

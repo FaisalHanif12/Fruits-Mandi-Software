@@ -98,12 +98,11 @@ export interface EntryColumn {
   readonly minWidth?: number;
   /** Grey hint inside an empty cell, for example the last rate. Never saved (PRD FR-7.53). */
   readonly placeholder?: (row: EntryRow) => string | undefined;
-  /** The hint is a number: it is centred like the figures (NFR-USE-19, plan 39 R1). */
-  readonly hintIsNumber?: boolean;
   /**
-   * The grey hint of an empty cell is the text the backend sent for this field (the grid's
-   * `calc`), for example the last rate. It is never typed into the cell and never sent (PRD
-   * FR-7.53, Code Standards F43).
+   * The grey hint of an empty cell is the text the screen made from what the backend sent for this
+   * field (the grid's `calc`), for example "Last 900" for the last rate. It is words in grey italic,
+   * laid out as text and never as a figure, so it is not taken for a typed value. It is never typed
+   * into the cell and never sent (PRD FR-7.53, Code Standards F43, D8 Bug 1).
    */
   readonly hintFromCalc?: boolean;
   /** The `calc` field that holds the words of the hint, shown as a tooltip when the cell is narrow. */
@@ -139,13 +138,19 @@ export interface PendingFocus {
   readonly field: string;
 }
 
+/** What the grid tells the screen about an Enter. */
+export interface EnterInfo {
+  /** The Enter finished a cell and changed its text (the typed text differs from what it was). */
+  readonly changed: boolean;
+}
+
 /** What a screen can add to the keys of a grid (Code Standards F27). */
 export interface GridInterceptors {
   /**
    * Enter was pressed on this cell. Return true if the screen took it (it moved focus somewhere
    * else, for example from the last lot cell into the sale lines); the grid then does nothing.
    */
-  readonly onEnter?: (cell: CellRef) => boolean;
+  readonly onEnter?: (cell: CellRef, enter?: EnterInfo) => boolean;
   /** ↑ was pressed on the first row. Return true if the screen took it. */
   readonly onAboveFirst?: (cell: CellRef) => boolean;
 }

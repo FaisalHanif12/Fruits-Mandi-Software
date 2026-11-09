@@ -101,15 +101,20 @@ export function createBikriDraft(today: string): BikriDraftStores {
   }));
   header.subscribe(bump);
 
+  // The version goes up when typed text or a chosen record changed (the rows), not when only the cursor
+  // moved. A move of the cursor builds no draft, asks no preview and saves no draft (D8 plan 61).
+  const bumpOnRows = (state: { rows: unknown }, previous: { rows: unknown }) => {
+    if (state.rows !== previous.rows) bump();
+  };
   const lots = createEntryStore();
-  lots.subscribe(bump);
+  lots.subscribe(bumpOnRows);
 
   const sales = new Map<string, EntryStore>();
   const salesFor = (lotKey: string): EntryStore => {
     const known = sales.get(lotKey);
     if (known !== undefined) return known;
     const made = createEntryStore();
-    made.subscribe(bump);
+    made.subscribe(bumpOnRows);
     sales.set(lotKey, made);
     return made;
   };

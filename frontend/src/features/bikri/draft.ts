@@ -219,6 +219,21 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
   };
 }
 
+/**
+ * The draft as text, for telling whether two drafts are the same to the backend. A blank row (no buyer
+ * and no rate) is left out: the preview and the save ignore it (PRD FR-7.52), and the app fills its
+ * quantity by itself a moment after the row appears, so that fill is not a change the user made.
+ */
+export function draftKey(draft: BikriDraft): string {
+  return JSON.stringify({
+    ...draft,
+    lots: draft.lots.map((lot) => ({
+      ...lot,
+      sales: lot.sales.filter((sale) => sale.buyer_account_id !== null || sale.seller_rate !== ''),
+    })),
+  });
+}
+
 /** Has anything been typed in the header? */
 function headerFilled(header: BikriDraft['header']): boolean {
   return (

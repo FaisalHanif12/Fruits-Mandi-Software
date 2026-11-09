@@ -8,6 +8,7 @@ export {
   type ShortcutKey,
   type ShortcutScope,
 } from './shortcuts';
+export { guardBackspace, takesTyping, useBackspaceGuard } from './backspace';
 export { keepKeyForApp } from './downshiftKeys';
 export { useShortcut } from './useShortcut';
 export {

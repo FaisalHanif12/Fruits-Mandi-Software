@@ -33,4 +33,12 @@ Buyer totals 21,360 / 48,100 / 125,060 = 194,520. خام بکری 182,000. کل 
 
 ## 6. Real cause (written by the lead after proof)
 
-To be filled.
+The exact trigger was NOT reproduced. This is stated plainly for Umar (D8-A2 is only partly met).
+
+What is proved. The screen of image 1 is exactly the backend's answer for line 3 with a buyer, qty 130 and NO rate: calc null, hint 900, `ERR_REQUIRED` at `seller_rate`, net 50,100 (`bikri_preview_d8_line3_rate_empty.json`). So line 3 reached the backend without a rate. The frontend then drew the hint as a bare grey 900 that looked typed, and on purpose held back the "rate missing" error until save. So the user saw a typed-looking line with no figures and no reason.
+
+What is not proved. Why the rate was empty in the store. `frontend` typed Umar's case on the real grid and store, in jsdom, Chromium and WebKit, with the rate equal to the hint, in many sequences (human speed, answer landing mid-typing, mouse leave, Tab, re-pick the buyer, Enter to row 4 then ↑, removing row 4, retyping). Typed 900 always reached the store and line 3 got 125,060. The lead's first reading (same as the hint means no change) is therefore wrong. The real Tauri window could not be driven in this run.
+
+What was done. The hint now reads "پچھلا 900" in grey italic text and cannot be taken for a value. An incomplete line says what is missing under the grid. Every end of a cell edit now writes the editor's text to the store, even when AG Grid sees no change (`shared/grid/editEnd.ts`). Umar is asked to retry the same typing on the new build; if it happens again the screen now says which field is empty.
+
+Real findings of the 1,000-line work: a grid of more than 30 lines drew 4 px high (fixed); cursor moves rebuilt the draft (fixed); the backend cut a draft at 500 lines (fixed); the save fell from 378 ms to 120 ms. Timings in the run report.

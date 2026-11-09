@@ -77,11 +77,18 @@ export function createEntryStore(initial: readonly Record<string, string>[] = []
       return row.rowId;
     },
     updateTyped: (rowId, field, text) => {
-      set((state) => ({
-        rows: state.rows.map((row) =>
-          row.rowId === rowId ? { ...row, typed: { ...row.typed, [field]: text } } : row,
-        ),
-      }));
+      set((state) => {
+        const at = state.rows.findIndex((row) => row.rowId === rowId);
+        const row = state.rows[at];
+        // The same text again changes nothing: no new rows, so no draft is built, no preview asked and
+        // nothing is saved again (D8 plan 61).
+        if (row === undefined || row.typed[field] === text) return state;
+        return {
+          rows: state.rows.map((candidate, index) =>
+            index === at ? { ...row, typed: { ...row.typed, [field]: text } } : candidate,
+          ),
+        };
+      });
     },
     updatePicked: (rowId, field, record) => {
       set((state) => ({

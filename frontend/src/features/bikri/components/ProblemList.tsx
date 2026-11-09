@@ -7,7 +7,14 @@ import { Localized } from '@fluent/react';
 import { useNavigate } from '@tanstack/react-router';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { ErrorMessage, LinkButton } from '../../../shared/ui';
-import { LINE_GRID_FIELD, LOT_GRID_FIELD, SUB_WITHOUT_FIELD, type Problem } from '../problems';
+import {
+  LINE_GRID_FIELD,
+  LINE_NEEDS,
+  LOT_GRID_FIELD,
+  SUB_WITHOUT_FIELD,
+  saysEmpty,
+  type Problem,
+} from '../problems';
 
 interface ProblemListProps {
   problems: readonly Problem[];
@@ -44,6 +51,15 @@ function shownByField(
     if (
       where.sub === 'qty' &&
       problem.severity === 'error' &&
+      (whole || where.lot === selectedLot)
+    ) {
+      return true;
+    }
+    // What an incomplete line still needs (the buyer, the rate) is written under the lines grid as
+    // soon as it is known, for the lines that grid shows (D8 Bug 1).
+    if (
+      saysEmpty(problem.item.code) &&
+      LINE_NEEDS[where.sub] !== undefined &&
       (whole || where.lot === selectedLot)
     ) {
       return true;

@@ -25,4 +25,4 @@ The test of T3 passes, and failed before the fix on at least the بکری screen
 
 ## 5. Real cause
 
-To be filled.
+Proved in WebKit, the Mac's engine. Nothing in `shared/keyboard` handled Backspace outside a text field. With focus on a grid cell, a button or the page, WebKit takes Backspace as "go back", and `LeaveGuard` (`useBlocker`) opens the box. Before the fix, Backspace on the rate cell emptied `location.hash`. After it the route stays, the cell clears, and no box opens. The fix is one window listener in `shared/keyboard/backspace.ts`, and `gridKeys.ts` clears an editable cell on Backspace and Delete.

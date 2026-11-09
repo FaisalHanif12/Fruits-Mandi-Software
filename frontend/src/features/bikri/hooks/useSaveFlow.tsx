@@ -24,7 +24,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { showToast, type ToastOptions } from '../../../shared/ui';
 import { bikriPreview } from '../api';
-import { buildDraft } from '../draft';
+import { buildDraft, draftKey } from '../draft';
 import type { BikriDraftStores } from '../draft-store';
 import { LOT, type BikriDraft, type BikriPreview } from '../types';
 import type { SaveBikriInput } from './useSaveBikri';
@@ -120,7 +120,7 @@ export function useSaveFlow<R extends { number: number }>({
             return false;
           }
         }
-        setRefusal({ error: refused, draftText: JSON.stringify(draft) });
+        setRefusal({ error: refused, draftText: draftKey(draft) });
         return false;
       }
     }, false);
@@ -166,7 +166,7 @@ export function useSaveFlow<R extends { number: number }>({
     if (!confirmed.current) event.preventDefault();
   };
 
-  const typedText = useMemo(() => JSON.stringify(typed), [typed]);
+  const typedText = useMemo(() => draftKey(typed), [typed]);
   const shown = refusal !== null && refusal.draftText === typedText ? refusal.error : null;
 
   return {

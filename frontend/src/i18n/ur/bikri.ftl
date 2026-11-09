@@ -146,6 +146,11 @@ bikri-rate-hint-today = آج کا آخری ریٹ { $rate }
 # review: pending
 bikri-rate-hint-last-day = { $date } کا آخری ریٹ { $rate }
 
+# The words in the empty rate cell (D8 Bug 1, PRD FR-7.53): they say it is the last rate and not a value
+# that was typed. $rate: the rate.
+# review: pending
+bikri-rate-hint-cell = پچھلا { $rate }
+
 ## The rest of a lot, behind "more" (PRD FR-12.2, 12.3).
 
 # review: pending
@@ -274,6 +279,18 @@ bikri-left-out = { $count ->
 # وہ لائن جس کا تعداد کا مسئلہ بکری کی لائنوں کے نیچے لکھا ہے۔ $line: لائن نمبر۔
 # review: pending
 bikri-qty-note-line = لائن { $line }:
+
+# جس لائن پر کچھ لکھا ہو مگر مکمل نہ ہو، اس کے نیچے بتایا جاتا ہے کہ کیا باقی ہے (D8، مسئلہ 1)۔
+# خالی لائن کے بارے میں کچھ نہیں کہا جاتا۔ ان الفاظ سے پہلے بکری کی لائنوں کے نیچے "لائن 3:" آتا ہے۔
+# review: pending
+bikri-line-missing-buyer = { -gahak } چنیں۔
+
+# review: pending
+bikri-line-missing-qty = تعداد لکھیں۔
+
+# سرمئی عدد صرف پچھلا ریٹ ہے (PRD FR-7.53)۔ وہ لکھا ہوا ریٹ نہیں اور محفوظ نہیں ہوتا۔
+# review: pending
+bikri-line-missing-rate = ریٹ لکھیں۔ سرمئی عدد صرف پچھلا ریٹ ہے، یہ محفوظ نہیں ہوتا۔
 
 # review: pending
 bikri-summary-seller-side = { -beopari } کی طرف

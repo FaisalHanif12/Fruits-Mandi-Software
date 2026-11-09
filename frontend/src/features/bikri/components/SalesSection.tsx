@@ -16,7 +16,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
-import { useLayoutStep } from '../../../shared/hooks';
+import { useLatest, useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
 import { useOverrideSettings } from '../../settings';
 import { allLinesColumns, saleColumns } from '../columns';
@@ -28,7 +28,7 @@ import { isPukhtaBuyer } from '../draft';
 import type { GridView } from '../grid-views';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
-import { QtyNotes } from './QtyNotes';
+import { MissingNotes, QtyNotes } from './QtyNotes';
 
 /** A grid with more lines than this fills a fixed height and scrolls inside; shorter ones are as tall as their lines. */
 const SHORT_GRID_ROWS = 30;
@@ -100,6 +100,8 @@ export function SalesSection({
     }
   };
 
+  // What the backend refused, read when Enter is pressed, so a new answer never rebuilds the keys.
+  const errorsNow = useLatest(view.errors);
   const interceptors = useMemo<GridInterceptors>(
     () => ({
       // ↑ on the first line goes back up to its lot.
@@ -109,14 +111,24 @@ export function SalesSection({
         return true;
       },
       // A one-time buyer: Enter goes on to his name and phone first (PRD FR-13.2).
-      onEnter: (cell) => {
+      onEnter: (cell, enter) => {
+        // A quantity the backend refused (more than the lot has left, FR-12.6) is not left with Enter
+        // until it is fixed: the cursor stays on it. Only when the text was not just changed, because
+        // the refusal on view belongs to the old text (D8 Bug 1, B2).
+        if (
+          cell.field === SALE.qty &&
+          enter?.changed !== true &&
+          errorsNow()[cell.rowId]?.[SALE.qty] !== undefined
+        ) {
+          return true;
+        }
         const row = stores.all.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
         if (cell.field !== SALE.buyer || row === undefined || !isPukhtaBuyer(row)) return false;
         focusPukhtaFieldsSoon(cell.rowId);
         return true;
       },
     }),
-    [stores, lotKey],
+    [stores, lotKey, errorsNow],
   );
 
   return (
@@ -173,6 +185,7 @@ export function SalesSection({
         />
       </div>
       <QtyNotes notes={view.qtyNotes} whole={whole} />
+      <MissingNotes notes={view.missingNotes} whole={whole} />
       {card === null || card === undefined ? null : <div ref={cardBox}>{card}</div>}
     </section>
   );

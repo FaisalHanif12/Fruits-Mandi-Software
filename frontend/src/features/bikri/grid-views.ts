@@ -6,7 +6,14 @@ import type { Working } from '../../bindings/Working';
 import type { Grouping } from '../../shared/format';
 import { lineView, lotView, type Say } from './preview-view';
 import { SALE } from './types';
-import { LINE_GRID_FIELD, LOT_GRID_FIELD, type Problem } from './problems';
+import {
+  LINE_GRID_FIELD,
+  LINE_NEEDS,
+  LOT_GRID_FIELD,
+  saysEmpty,
+  whereOf,
+  type Problem,
+} from './problems';
 import type { BikriPreview } from './types';
 
 type PerRow<T> = Record<string, Record<string, T>>;
@@ -26,6 +33,19 @@ export interface QtyNote {
   words: string;
 }
 
+/**
+ * What a line that has something typed on it still needs (D8 Bug 1): the buyer, the quantity or the
+ * rate. It is told in words under the sale lines at once, so a line with no figures is never left
+ * without a reason. A blank row (nothing typed) has none.
+ */
+export interface MissingNote {
+  rowId: string;
+  lot: number;
+  line: number;
+  /** What is missing, as words in the app language. */
+  words: string;
+}
+
 /** What one grid takes from the preview: calculated text, workings, and problems per cell. */
 export interface GridView {
   calc: PerRow<string>;
@@ -34,10 +54,12 @@ export interface GridView {
   warnings: PerRow<string>;
   /** The quantity problems of the lines this grid shows, in line order. */
   qtyNotes: QtyNote[];
+  /** What the incomplete lines this grid shows still need, in line order. */
+  missingNotes: MissingNote[];
 }
 
 function emptyView(): GridView {
-  return { calc: {}, workings: {}, errors: {}, warnings: {}, qtyNotes: [] };
+  return { calc: {}, workings: {}, errors: {}, warnings: {}, qtyNotes: [], missingNotes: [] };
 }
 
 /** Puts the words on a cell. The first problem of a cell stays; the list shows them all. */
@@ -112,5 +134,22 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
       }
     }
   }
+  // A line the backend could not work out because something is empty says what, at once. These are the
+  // backend's own "this is empty" answers (they only wait for the save in the list of problems), and
+  // the backend gives them only for a row that is not blank, so a blank row stays silent.
+  for (const item of preview?.errors ?? []) {
+    if (!saysEmpty(item.code)) continue;
+    const where = whereOf(item.field);
+    if (where.kind !== 'line') continue;
+    const need = LINE_NEEDS[where.sub];
+    const column = LINE_GRID_FIELD[where.sub];
+    const key = lineKeysByLot[where.lot]?.[where.line];
+    if (need === undefined || column === undefined || key === undefined) continue;
+    if (!showAll && where.lot !== selectedIndex) continue;
+    const words = say(`bikri-line-missing-${need}`);
+    sales.missingNotes.push({ rowId: key, lot: where.lot, line: where.line, words });
+    put(sales.warnings, key, column, words);
+  }
+  sales.missingNotes.sort((a, b) => a.lot - b.lot || a.line - b.line);
   return { lots, sales };
 }

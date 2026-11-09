@@ -21,6 +21,8 @@ import {
   stockRow,
   undoResult,
 } from './bikri-plan16-data';
+import { fillThousandLines, thousandAnswer } from './bikri-thousand';
+import { fillUmarsLot, umarAnswer } from './bikri-umar-data';
 import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
 import { account as accountRow } from './accounts';
 import { paisaForTest } from './paisa';
@@ -612,6 +614,10 @@ const handlers: Record<string, Handler> = {
     if (devFlag('own')) return fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input));
     // `#/dev/bikri?offer&over` is Umar's case (plan 57): 50 in the lot and 70 typed on the line.
     if (devFlag('over')) return previewWithOverLine(draftOf(input));
+    // `#/dev/bikri?offer&umar` is Umar's case of D8 (plan 61): 200 in the lot and three lines.
+    if (devFlag('umar')) return umarAnswer(draftOf(input));
+    // `#/dev/bikri?thousand` is 1,000 sale lines in one lot (D8 plan 61, NFR-SCL-3).
+    if (devFlag('thousand')) return thousandAnswer(draftOf(input));
     const preview = previewFor(draftOf(input));
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
@@ -673,6 +679,8 @@ const handlers: Record<string, Handler> = {
     if (!devFlag('offer')) return null;
     const stores = createBikriDraft('10-10-2026');
     if (devFlag('over')) seedOver(stores);
+    else if (devFlag('umar')) fillUmarsLot(stores);
+    else if (devFlag('thousand')) fillThousandLines(stores);
     else seedEvent1(stores);
     return { payload_json: serialiseDraft(stores), saved_at: '2026-10-10T07:30:00Z' };
   },

@@ -69,15 +69,19 @@ function hintWords(hint: NonNullable<LinePreview['rate_hint']>, say: Say, groupi
 }
 
 /**
- * The cells of a sale line. The rate hint is grey text in the empty rate cell and its words are
- * the tooltip; it is never typed into the cell (PRD FR-7.53, Code Standards F43).
+ * The cells of a sale line. The rate hint is grey, italic words in the empty rate cell ("Last 900") and
+ * where it came from is the tooltip; it is never typed into the cell (PRD FR-7.53, Code Standards F43).
  */
 export function lineView(line: LinePreview | undefined, grouping: Grouping, say: Say): RowView {
   if (line === undefined) return NOTHING;
   const calc: Cells = {};
   const workings: Workings = {};
   if (line.rate_hint !== null) {
-    calc[SALE.rate] = formatPaisa(line.rate_hint.rate_paisa, { grouping });
+    // The cell says "Last 900", not a bare 900, so it is never taken for a rate that was typed
+    // (D8 Bug 1, PRD FR-7.53). The tooltip tells where the rate came from.
+    calc[SALE.rate] = say('bikri-rate-hint-cell', {
+      rate: formatPaisa(line.rate_hint.rate_paisa, { grouping }),
+    });
     calc[`${SALE.rate}Tip`] = hintWords(line.rate_hint, say, grouping);
   }
   const done = line.calc;

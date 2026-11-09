@@ -100,6 +100,22 @@ A `select` column holds one of a few fixed words, or nothing (the quality of a s
 - The cell shows the word and a small arrow. A click, Space or Alt+↓ opens a list under the cell
   (`SelectCellEditor`). ↑ ↓ and Home and End move in the list, Enter or Space choose and the focus stays on
   the cell, Esc closes the list and keeps the old word, ← → and Tab leave the cell like in a picker
-  cell. Delete or Backspace on the cell take the word away. A letter or digit does nothing.
+  cell. A letter or digit does nothing. Delete and Backspace clear a cell that is not being typed in, in every
+  grid (below).
 - What is chosen goes to the row store at once (`updateTyped`), so a language switch loses nothing.
 - Test: `tests/unit/entry-grid-select.test.tsx`.
+
+## Backspace and Delete (PRD FR-7.91, D8 Bug 2)
+
+They only delete. In a text field, and in a cell being typed in, they delete text. On an editable cell that
+is not being typed in they clear it (a chosen record of a picker cell is taken away), like a spreadsheet; a
+calculated cell does nothing. The grid answers the key itself (`gridKeys.ts`), and the one listener of the
+shell (`shared/keyboard/backspace.ts`, mounted with the Esc dispatcher) cancels any other Backspace that is
+not in a text field. Without it WebKit, the web view of the Mac app, took Backspace on a cell, a button or the
+page as "go back", and the leave guard asked "Save changes?".
+
+## The end of an edit (`editEnd.ts`)
+
+The store is the one truth of what was typed. When an edit ends with text, `syncEditedText` makes the store
+hold that text, even if AG Grid decided the value had not changed. A cancelled edit has no text and is left
+alone.

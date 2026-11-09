@@ -91,9 +91,9 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.rate,
       type: 'rate',
       headerId: 'bikri-col-rate',
-      // The last rate is grey text only; it is never typed into the cell (PRD FR-7.53).
+      // The last rate is grey, italic words ("Last 900"), laid out as text and not as a figure, so it
+      // is never taken for a typed rate. It is never typed into the cell (PRD FR-7.53, D8 Bug 1).
       hintFromCalc: true,
-      hintIsNumber: true,
       hintTooltipField: `${SALE.rate}Tip`,
     },
     {

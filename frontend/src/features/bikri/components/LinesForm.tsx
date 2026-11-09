@@ -218,18 +218,22 @@ export function LinesForm<R extends { number: number }>({
     () => (id: string, vars?: Record<string, string>) => l10n.getString(id, vars),
     [l10n],
   );
-  const views = buildGridViews({
-    preview,
-    problems,
-    lotKeys: [lotKey],
-    selectedLot: lotKey,
-    lineKeysByLot: [salesRows.map((row) => row.rowId)],
-    showAll: false,
-    lotLabel: () => '',
-    grouping,
-    say,
-    words: (problem) => errorText(problem.item),
-  });
+  const views = useMemo(
+    () =>
+      buildGridViews({
+        preview,
+        problems,
+        lotKeys: [lotKey],
+        selectedLot: lotKey,
+        lineKeysByLot: [salesRows.map((row) => row.rowId)],
+        showAll: false,
+        lotLabel: () => '',
+        grouping,
+        say,
+        words: (problem) => errorText(problem.item),
+      }),
+    [preview, problems, lotKey, salesRows, grouping, say, errorText],
+  );
 
   // The party card follows the line the cursor is on.
   const [editorCard, setEditorCard] = useState<number | null>(null);

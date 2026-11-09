@@ -7,6 +7,7 @@
 // level the one registered last, so a list opened inside a dialog closes before the dialog.
 
 import { useEffect, useRef } from 'react';
+import { useBackspaceGuard } from './backspace';
 import { topLayer, useOwnLayer } from './modalLayer';
 
 export type EscapeLevel = 'overlay' | 'edit' | 'leave';
@@ -102,8 +103,13 @@ export function useEscape(
   );
 }
 
-/** Mount once in the shell: sends the Esc key to the handler chosen by the order above. */
+/**
+ * Mount once in the shell: sends the Esc key to the handler chosen by the order above. It also keeps
+ * Backspace outside a text field from going back in the web view (backspace.ts, PRD FR-7.91), so the
+ * one place every screen already has serves both keys.
+ */
 export function useEscapeDispatcher(): void {
+  useBackspaceGuard();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.altKey || event.ctrlKey || event.shiftKey) return;

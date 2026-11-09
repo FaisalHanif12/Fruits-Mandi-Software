@@ -24,6 +24,22 @@ const INCOMPLETE: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   'ERR_NO_SALE_LINES',
 ]);
 
+/** Does this code only say that a field is empty? */
+export function saysEmpty(code: ErrorCode): boolean {
+  return INCOMPLETE.has(code);
+}
+
+/**
+ * The three cells a sale line needs before it can be worked out, by the end of the field path the
+ * backend gives, and the words that name what is missing (`bikri-line-missing-<word>`). The buyer, the
+ * quantity and the rate: the line shows no figures until all three are in (D8 Bug 1).
+ */
+export const LINE_NEEDS: Readonly<Record<string, 'buyer' | 'qty' | 'rate'>> = {
+  buyer_account_id: 'buyer',
+  qty: 'qty',
+  seller_rate: 'rate',
+};
+
 /** Where a field path points. */
 export type Where =
   | { kind: 'header'; sub: string }

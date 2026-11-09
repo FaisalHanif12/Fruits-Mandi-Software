@@ -40,6 +40,7 @@ import './agGridSetup';
 import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
 import { isEditable } from './enterOrder';
 import type { EntryStore } from './entryStore';
+import { syncEditedText } from './editEnd';
 import { createGridKeyHandler } from './gridKeys';
 import { PickerCellEditor } from './PickerCellEditor';
 import { SelectCellEditor } from './SelectCellEditor';
@@ -262,7 +263,6 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
         params.data !== undefined &&
         (params.value === '' || params.value === undefined) &&
         hintOf(params.data) !== undefined,
-      'cell-hint-number': () => column.hintIsNumber === true,
     },
   };
 
@@ -695,7 +695,7 @@ function GridInner({
   return (
     <div
       ref={setRoot}
-      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''} ${minRows === 4 ? 'entry-grid-min4' : ''}`}
+      className={`entry-grid ag-theme-quartz ${fit ? 'entry-grid-fit' : ''} ${minRows === 4 ? 'entry-grid-min4' : ''} ${heightMode === 'fill' ? 'entry-grid-fill' : ''}`}
       role="group"
       aria-label={l10n.getString(labelId)}
       dir={direction}
@@ -729,6 +729,10 @@ function GridInner({
         popupParent={document.body}
         onGridReady={onGridReady}
         onCellFocused={onCellFocused}
+        // The store holds what the user typed whatever the grid saw as a change (editEnd.ts).
+        onCellEditingStopped={(event) => {
+          syncEditedText(store, columns, event);
+        }}
       />
       {removing.dialog}
       {explaining !== null && explainedWorking !== undefined ? (

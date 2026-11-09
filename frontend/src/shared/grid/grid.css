@@ -169,22 +169,16 @@
   clip-path: polygon(0 0, 0 100%, 100% 0);
 }
 
-/* The rate hint, for example the last rate. Never saved (PRD FR-7.53). It is words with a
-   number in them, so it reads in the direction of the language, not like a number cell. */
+/* The rate hint, for example "Last 900". Never saved (PRD FR-7.53). It is words with a number in
+   them, in smaller grey italic type, and it reads in the direction of the language, not like a
+   figure, so it is never taken for a typed rate (D8 Bug 1). */
 .entry-grid .cell-num.cell-hint {
   direction: inherit;
   text-align: start;
   font-family: var(--font-text);
   font-size: var(--text-1);
+  font-style: italic;
   color: var(--color-ink-placeholder);
-}
-
-/* A hint that is a number (the last rate) is centred like the figures (plan 39 R1). */
-.entry-grid .cell-num.cell-hint.cell-hint-number {
-  direction: ltr;
-  text-align: center;
-  font-family: var(--font-latin);
-  font-size: var(--text-latin-1);
 }
 
 /* A choice cell (ادھاری / نقدی) changes with Space or a click. */
@@ -241,6 +235,13 @@
   font-family: var(--font-text);
   font-size: var(--text-1);
   line-height: var(--leading-text);
+}
+
+/* A grid in 'fill' mode takes the height its parent gives it and draws only the rows in view. Without
+   this the grid is only as tall as its heading, so a sale book of more than 30 lines showed an empty
+   strip (D8 plan 61, NFR-SCL-3: 1,000 sale lines). */
+.entry-grid.entry-grid-fill {
+  block-size: 100%;
 }
 
 /* A list fills the height its parent gives it, with room for a few rows at least. */

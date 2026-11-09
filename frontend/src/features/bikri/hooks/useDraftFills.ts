@@ -141,17 +141,27 @@ export function useDraftFills(
 
   // A new sale line starts with the quantity the lot has left (PRD FR-7.52). A line with no buyer
   // and no rate is a blank row, so filling its quantity does not make it a sale.
+  // The rows are read once and the lines of the answer are looked up by key, so an answer of 1,000
+  // lines costs 1,000 steps and not a million (D8 plan 61, NFR-SCL-3).
   useEffect(() => {
     if (preview === undefined || stale) return;
     for (const lot of preview.lots) {
       const store = stores.salesFor(lot.key);
+      const wanted = new Map<string, number>();
+      for (const row of store.getState().rows) {
+        if ((row.typed[SALE.qty] ?? '') === '' && row.typed[SALE.qtyFilled] !== ON) {
+          wanted.set(row.rowId, 0);
+        }
+      }
+      if (wanted.size === 0) continue;
       for (const line of lot.lines) {
-        const row = store.getState().rows.find((candidate) => candidate.rowId === line.key);
-        if (row === undefined) continue;
-        const empty = (row.typed[SALE.qty] ?? '') === '';
-        if (!empty || row.typed[SALE.qtyFilled] === ON || line.remaining_qty <= 0) continue;
-        store.getState().patchRow(row.rowId, {
-          typed: { [SALE.qty]: String(line.remaining_qty), [SALE.qtyFilled]: ON },
+        if (wanted.has(line.key) && line.remaining_qty > 0)
+          wanted.set(line.key, line.remaining_qty);
+      }
+      for (const [rowId, remaining] of wanted) {
+        if (remaining <= 0) continue;
+        store.getState().patchRow(rowId, {
+          typed: { [SALE.qty]: String(remaining), [SALE.qtyFilled]: ON },
         });
       }
     }
