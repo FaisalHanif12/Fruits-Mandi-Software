@@ -80,9 +80,6 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     expect(visible((await paper('print-doc-buyer-slips')).textContent)).toContain(
       message(language, 'print-paper-a5'),
     );
-    expect(visible((await paper('print-doc-pukhta-slip')).textContent)).toContain(
-      message(language, 'print-paper-a5'),
-    );
     expect(copiesField()).toHaveValue('1');
     // The only ticks are the documents of "print after save": there is no Urdu digits setting.
     expect(screen.getAllByRole('checkbox')).toHaveLength(AFTER_SAVE_DOCS.length);
@@ -110,11 +107,21 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     ]);
   });
 
-  it('says so when the computer has no list of printers (empty state), and the default is used', async () => {
+  it('does not show the printer choice when the computer has no list of printers (a Mac, plan 69); the copies stay', async () => {
     fakePrinting({ printers: [] });
     await open();
+    await waitFor(() => {
+      expect(reportsApi.reportsListPrinters).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('combobox', { name: named(language, 'print-settings-printer') }),
+      ).not.toBeInTheDocument();
+    });
+    expect(copiesField()).toBeInTheDocument();
+    // The paper of each document is still there.
     expect(
-      await screen.findByText(message(language, 'print-settings-printer-none')),
+      await screen.findByRole('combobox', { name: named(language, 'print-doc-seller-bill') }),
     ).toBeInTheDocument();
   });
 
@@ -154,12 +161,12 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     await user.click(await screen.findByRole('option', { name: 'HP LaserJet' }));
     await user.clear(copiesField());
     await user.type(copiesField(), '2');
-    // "Print after save": the پختہ slip is not wanted.
+    // "Print after save": the buyer slips are not wanted.
     const after = screen.getByRole('region', {
       name: named(language, 'print-settings-after-save'),
     });
     await user.click(
-      within(after).getByRole('checkbox', { name: named(language, 'print-doc-pukhta-slip') }),
+      within(after).getByRole('checkbox', { name: named(language, 'print-doc-buyer-slips') }),
     );
     expect(saveButton()).toBeEnabled();
     press('F10');
@@ -169,12 +176,11 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     expect(printing.saves[0]).toEqual({
       paper_seller_bill: 'a4',
       paper_buyer_slips: 'mm80',
-      paper_pukhta_slip: 'a5',
       paper_receipt_slip: 'a5',
       paper_collection_list: 'a4',
       printer: 'HP LaserJet',
       copies: '2',
-      print_after_save: ['seller_bill', 'buyer_slips'],
+      print_after_save: ['seller_bill'],
     });
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(message(language, 'settings-saved'));
@@ -207,7 +213,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     expect(printing.saves[0]).toMatchObject({
       paper_receipt_slip: 'mm80',
       paper_seller_bill: 'a4',
-      print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip', 'receipt_slip'],
+      print_after_save: ['seller_bill', 'buyer_slips', 'receipt_slip'],
     });
   });
 
@@ -235,7 +241,7 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     expect(printing.saves[0]).toMatchObject({
       paper_collection_list: 'mm80',
       paper_seller_bill: 'a4',
-      print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip'],
+      print_after_save: ['seller_bill', 'buyer_slips'],
     });
   });
 
@@ -314,7 +320,6 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
             resolve({
               paper_seller_bill: 'a4',
               paper_buyer_slips: 'a5',
-              paper_pukhta_slip: 'a5',
               paper_receipt_slip: 'a5',
               paper_collection_list: 'a4',
               printer: '',

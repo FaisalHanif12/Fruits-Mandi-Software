@@ -55,12 +55,6 @@ export interface AccountDraft {
   id: number | null;
   version: number | null;
   account_type: AccountType;
-  /**
-   * True for a پختہ کھاتہ گاہک or بیوپاری (plan 47, PRD FR-13.11): the account is of the side in
-   * `account_type` and has a code in the پختہ series. Missing means false. It is fixed when the
-   * account is made; the backend refuses a change.
-   */
-  is_pukhta_party?: boolean;
   control_id: number | null;
   code: string;
   names: { urdu: string; english: string };

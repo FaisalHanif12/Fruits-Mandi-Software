@@ -8,7 +8,7 @@ import type { ReportParty } from './ReportParty';
  */
 export type DashboardDue = {
   /**
-   * The buyer (and the one-time person inside a پختہ کھاتہ account).
+   * The buyer (and the چکتا buyer inside a چکتا کھاتہ account).
    */
   party: ReportParty;
   /**

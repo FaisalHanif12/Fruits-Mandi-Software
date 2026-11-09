@@ -32,6 +32,8 @@ interface PickerProps extends FieldControlProps {
   /** The list opens above the field instead of under it (see PickerBase). */
   listAbove?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
+  /** The text in the field after each key (see PickerBase). */
+  onTyped?: ((text: string) => void) | undefined;
 }
 
 /**

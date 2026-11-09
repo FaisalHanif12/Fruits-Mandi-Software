@@ -4,7 +4,7 @@
 //! paths. Whether a code is free, whether a record exists and whether the spelling is
 //! confirmed are checked by `services::accounts` with these results.
 
-use super::{AccountInput, AccountType, FIRST_SERIAL, LAST_SERIAL, code_type_for};
+use super::{AccountInput, AccountType, FIRST_SERIAL, LAST_SERIAL};
 use crate::dates::BusinessDate;
 use crate::error::{ErrorCode, FieldError};
 use crate::masters::{ColValue, NameTexts, Reference};
@@ -47,10 +47,8 @@ pub struct PreparedAccount {
     pub id: Option<i64>,
     /// The version the edit was made on.
     pub version: Option<i64>,
-    /// The kind of account (his side, for a پختہ party).
+    /// The kind of account.
     pub account_type: AccountType,
-    /// A پختہ party's own account (plan 47, PRD FR-13.11). Only a seller or a buyer can be one.
-    pub is_pukhta_party: bool,
     /// The control, for type `other`.
     pub control_id: Option<i64>,
     /// The full code the user typed (digits), or `None` for "give me the next one".
@@ -318,10 +316,6 @@ pub fn prepare_account(
         (Some(_), Some(v)) => Some(v),
         (None, _) => None,
     };
-    // Only a seller or a buyer can be a پختہ party (plan 47, PRD FR-13.11).
-    if input.is_pukhta_party && code_type_for(input.account_type, true).is_none() {
-        errors.push(error(ErrorCode::ErrFormatInvalid, "is_pukhta_party"));
-    }
     // The control is only typed for `other`.
     let control_id = if input.account_type == AccountType::Other {
         if input.control_id.is_none() {
@@ -337,11 +331,10 @@ pub fn prepare_account(
             None
         } else if digits.bytes().all(|b| b.is_ascii_digit()) && digits.len() <= 12 {
             // A new seller's or buyer's code must be a full code of its own type (plan 32 R2):
-            // `0013` on a seller form, never `0023` or `0013` padded; a پختہ party's is `003` and a
-            // running number (plan 47). An edit never changes the code; the service compares it with
-            // the saved one.
+            // `0013` on a seller form, never `0023` or `0013` padded. An edit never changes the code; the
+            // service compares it with the saved one.
             if input.id.is_none()
-                && let Some(code_type) = code_type_for(input.account_type, input.is_pukhta_party)
+                && let Some(code_type) = input.account_type.code_type()
             {
                 errors.take(crate::codes::check_typed_code("code", digits, code_type));
             }
@@ -498,7 +491,6 @@ pub fn prepare_account(
         id: input.id,
         version,
         account_type: input.account_type,
-        is_pukhta_party: input.is_pukhta_party,
         control_id,
         typed_code,
         fields,

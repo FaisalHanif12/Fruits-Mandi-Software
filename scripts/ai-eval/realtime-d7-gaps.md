@@ -48,15 +48,15 @@ that come back, with the questions they hold:
 
 | Cause | Questions | What to do |
 |---|---|---|
-| "laga" / لگا / "got" as the VERB after a rate ("kya laga", "کیا لگا", "what rate did X get") is read as the Laga charge: Roman reads two figures [Rate, Laga], Urdu leaves لگا unknown, English "got" is unknown. Also "lagaya / لگایا" (invested) | D137 D200 D310 (Roman, 2 figures), D138 D201 D204 D311 (Urdu), D205 (English "got"), D052 D053 D330 (lagaya, capital), D033 | A verb reading after "rate / ریٹ / bhao" and after "sarmaya"; the English group of these three questions is already right |
-| A misspelt name with ONE close match makes `sure` false, so the model is asked ("nadeem trader", "tarik mehmod") | D316, D320 (also D009, D016, D030) | Answer with the matched name shown, when one account is close and no other is |
-| Expense head words in Roman or English that are not the head's own name ("chai", "chae", "kiraye", "rent", "shop rent") | D265 D332 D420 D421 D069 D071 | Roman and English aliases for the heads (the head list is small) |
-| Urdu "کل" meaning TOTAL is read as yesterday, so the question names two periods and is not sure | D334 ("کل کتنی واپس آنی ہے"), D436 ("اب تک پھل کی کل قیمت") | "کل" before a figure word, or beside "اب تک", is total |
-| `happened` fires on "due to pay" and on an Urdu yes-or-no with an amount | D371 ("how much is Zahid Mehmood due to pay"), D269 ("کیا فیصل کا بقایا 5000 ہے") | "due to pay / ke zimme" is the balance, not an event |
-| Urdu forms: وقت ("اس وقت"), آنی, تعداد (count), صافی (net), گزر (passed), چالو (open trip) | D095 D079, D334, D010 D131 D152 D031 D149 D227, D023 D038 D193, D077 D428 D076, D172 D435 D171 D434 | Add the forms |
-| Words for a part of a figure: "debit / credit", "lot(s) / لاٹ", "old / older / purane", "farq / فرق / difference", "mehnga / sasta", "times / baar", "spot / موقع" | D107 D113 D441, D122-D129, D013 D089 D093 D300 D443, D108 D109 D142 D143 D307 D309 D348 D349, D035 D206 D207 D313, D147 D164 D194, D001 D003 D273 D274 D275 | Add as measure or filter words where a plan can use them |
-| English misspelling inside a normal question ("Partner As totel") makes it a how-to | D329 | Spelling distance for "total / kul" |
-| Two to five accounts match a name ("Akram", "Basheer"): the app could ask "کون سا؟" itself from `find` | D001 D002 D003 D030 D235 D236 D237 | Compose the which-one answer with no model call |
+| "laga" / لگا / "got" as the VERB after a rate ("kya laga", "کیا لگا", "what rate did X get") is read as the Laga charge: Roman reads two figures [Rate, Laga], Urdu leaves لگا unknown, English "got" is unknown. Also "lagaya / لگایا" (invested) | D137 D198 D305 (Roman, 2 figures), D138 D199 D202 D306 (Urdu), D203 (English "got"), D052 D053 D325 (lagaya, capital), D033 | A verb reading after "rate / ریٹ / bhao" and after "sarmaya"; the English group of these three questions is already right |
+| A misspelt name with ONE close match makes `sure` false, so the model is asked ("nadeem trader", "tarik mehmod") | D311, D315 (also D009, D016, D030) | Answer with the matched name shown, when one account is close and no other is |
+| Expense head words in Roman or English that are not the head's own name ("chai", "chae", "kiraye", "rent", "shop rent") | D263 D327 D415 D416 D069 D071 | Roman and English aliases for the heads (the head list is small) |
+| Urdu "کل" meaning TOTAL is read as yesterday, so the question names two periods and is not sure | D329 ("کل کتنی واپس آنی ہے"), D431 ("اب تک پھل کی کل قیمت") | "کل" before a figure word, or beside "اب تک", is total |
+| `happened` fires on "due to pay" and on an Urdu yes-or-no with an amount | D366 ("how much is Zahid Mehmood due to pay"), D267 ("کیا فیصل کا بقایا 5000 ہے") | "due to pay / ke zimme" is the balance, not an event |
+| Urdu forms: وقت ("اس وقت"), آنی, تعداد (count), صافی (net), گزر (passed), چالو (open trip) | D095 D079, D329, D010 D131 D152 D031 D149 D225, D023 D038 D191, D077 D423 D076, D172 D430 D171 D429 | Add the forms |
+| Words for a part of a figure: "debit / credit", "lot(s) / لاٹ", "old / older / purane", "farq / فرق / difference", "mehnga / sasta", "times / baar", "spot / موقع" | D107 D113 D436, D122-D129, D013 D089 D093 D295 D438, D108 D109 D142 D143 D302 D304 D343 D344, D035 D204 D205 D308, D147 D164 D192, D001 D003 D271 D272 D273 | Add as measure or filter words where a plan can use them |
+| English misspelling inside a normal question ("Partner As totel") makes it a how-to | D324 | Spelling distance for "total / kul" |
+| Two to five accounts match a name ("Akram", "Basheer"): the app could ask "کون سا؟" itself from `find` | D001 D002 D003 D030 D233 D234 D235 | Compose the which-one answer with no model call |
 
 ## J. Trip, garden, fruit taken, pukhta, khata, money lent, advance (one record, its own report row)
 
@@ -85,26 +85,24 @@ Plan: R33 / R36 / R37 / R9 / R13 (khata) / R32 / R26 rows as labelled instant li
 | D180 | roman | 2 | [FruitTaken, Rate] | alif ne ghar ke liye kitna phal liya aur uski kul qeemat kitni | not sure; flags sum_asked,how_much_twice; doubts TwoParts, NoParty; no read planned |
 | D181 | urdu | 2 | [FruitTaken, Rate] | الف نے گھر کے لیے کتنا پھل لیا اور اس کی کل قیمت کتنی | not sure; flags how_much_twice; doubts TwoParts, NoParty; no read planned |
 | D182 | en | 1 | [FruitTaken] | how much fruit did Partner A take for home and what is its total value | flags sum_asked,unexplained; unknown word: home; planned find,report:R37 |
-| D186 | urdu | 2 | [Sale] | پختہ کھاتہ میں اب تک کتنی بکری ہوئی اور کتنا باقی ہے | flags scoped,how_much_twice; no read planned |
-| D187 | en | 2 | [Sale] | how much has been sold through pukhta khata so far and how much is still due | flags scoped,unexplained,how_much_twice; doubts UnknownWords; no read planned |
-| D290 | urdu | 2 | [Ledger] | خاندانی کھاتے میں کتنا ہے | no read planned |
-| D291 | en | 2 | [] | how much is in the family khata | not sure; doubts NoFigure; no read planned |
-| D334 | urdu | 2 | [MoneyLent] | ادھار رقم میں کل کتنی واپس آنی ہے | flags capital_flow,happened,unexplained; doubts UnknownWords; unknown word: آنی; no read planned |
-| D344 | roman* | 2 | [Ledger] | shahpur bag ka abhi hisab kitna he | flags scoped; no read planned |
-| D345 | urdu | 2 | [Ledger] | شاہ پور باغ کا اب تک کا حساب کتنا ہے | flags scoped; no read planned |
-| D346 | roman | 2 | [FruitTaken, Rate] | alif ke liye phal ki kul qeemat kitni bani | not sure; flags sum_asked,value_asked; doubts NoParty; no read planned |
-| D347 | en* | 1 | [FruitTaken] | what is the valew of the frut Partner A took | flags unexplained,value_asked; unknown word: A took; planned find,report:R37 |
-| D426 | roman | 2 | [Advance] | bayopariyon ko ab tak kul kitni peshgi di | flags sum_asked,happened,role_word; no read planned |
-| D427 | en | 2 | [Advance] | how much advance has been given to sellers in all | flags sum_asked,happened,unexplained,role_word; unknown word: given; no read planned |
-| D428 | urdu | 2 | [MoneyLent] | ادھار رقم میں سے کتنی کی تاریخ گزر چکی | flags unexplained; doubts UnknownWords; unknown word: گزر; no read planned |
-| D429 | en | 2 | [MoneyLent] | how much of the money lent is past its return date | flags unexplained; doubts UnknownWords; unknown word: past+return; no read planned |
-| D430 | roman | 2 | [Balance] | shahpur baagh ka thekah abhi kitna baqi hai | flags scoped,unexplained; doubts UnknownWords; unknown word: ka thekah; no read planned |
-| D431 | en | 2 | [] | how much rent is still due for Shahpur garden | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; no read planned |
-| D432 | urdu | 2 | [] | شاہ پور باغ کی کل کتنی قسطیں دی گئیں | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; unknown word: قسطیں+گئیں; no read planned |
-| D433 | en | 2 | [] | how much has been paid in installments for Shahpur garden | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; unknown word: paid+installments; no read planned |
-| D434 | roman | 2 | [Profit] | chalu safar ka ab tak nafa nuqsan kitna hai | flags scoped,unexplained,how_much_twice; doubts UnknownWords; unknown word: chalu safar; no read planned |
-| D435 | urdu | 2 | [Profit] | چالو سفر کا اب تک نفع نقصان کتنا ہے | flags scoped,unexplained; doubts UnknownWords; unknown word: چالو سفر; no read planned |
-| D436 | urdu | 2 | [Rate] | اب تک پھل کی کل قیمت کتنی بنی | not sure; flags item_group,value_asked; doubts SeveralPeriods, NoParty; no read planned |
+| D285 | urdu | 2 | [Ledger] | خاندانی کھاتے میں کتنا ہے | no read planned |
+| D286 | en | 2 | [] | how much is in the family khata | not sure; doubts NoFigure; no read planned |
+| D329 | urdu | 2 | [MoneyLent] | ادھار رقم میں کل کتنی واپس آنی ہے | flags capital_flow,happened,unexplained; doubts UnknownWords; unknown word: آنی; no read planned |
+| D339 | roman* | 2 | [Ledger] | shahpur bag ka abhi hisab kitna he | flags scoped; no read planned |
+| D340 | urdu | 2 | [Ledger] | شاہ پور باغ کا اب تک کا حساب کتنا ہے | flags scoped; no read planned |
+| D341 | roman | 2 | [FruitTaken, Rate] | alif ke liye phal ki kul qeemat kitni bani | not sure; flags sum_asked,value_asked; doubts NoParty; no read planned |
+| D342 | en* | 1 | [FruitTaken] | what is the valew of the frut Partner A took | flags unexplained,value_asked; unknown word: A took; planned find,report:R37 |
+| D421 | roman | 2 | [Advance] | bayopariyon ko ab tak kul kitni peshgi di | flags sum_asked,happened,role_word; no read planned |
+| D422 | en | 2 | [Advance] | how much advance has been given to sellers in all | flags sum_asked,happened,unexplained,role_word; unknown word: given; no read planned |
+| D423 | urdu | 2 | [MoneyLent] | ادھار رقم میں سے کتنی کی تاریخ گزر چکی | flags unexplained; doubts UnknownWords; unknown word: گزر; no read planned |
+| D424 | en | 2 | [MoneyLent] | how much of the money lent is past its return date | flags unexplained; doubts UnknownWords; unknown word: past+return; no read planned |
+| D425 | roman | 2 | [Balance] | shahpur baagh ka thekah abhi kitna baqi hai | flags scoped,unexplained; doubts UnknownWords; unknown word: ka thekah; no read planned |
+| D426 | en | 2 | [] | how much rent is still due for Shahpur garden | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; no read planned |
+| D427 | urdu | 2 | [] | شاہ پور باغ کی کل کتنی قسطیں دی گئیں | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; unknown word: قسطیں+گئیں; no read planned |
+| D428 | en | 2 | [] | how much has been paid in installments for Shahpur garden | not sure; flags scoped,unexplained; doubts UnknownWords, NoFigure; unknown word: paid+installments; no read planned |
+| D429 | roman | 2 | [Profit] | chalu safar ka ab tak nafa nuqsan kitna hai | flags scoped,unexplained,how_much_twice; doubts UnknownWords; unknown word: chalu safar; no read planned |
+| D430 | urdu | 2 | [Profit] | چالو سفر کا اب تک نفع نقصان کتنا ہے | flags scoped,unexplained; doubts UnknownWords; unknown word: چالو سفر; no read planned |
+| D431 | urdu | 2 | [Rate] | اب تک پھل کی کل قیمت کتنی بنی | not sure; flags item_group,value_asked; doubts SeveralPeriods, NoParty; no read planned |
 
 ## C. Party or item or group, more than one figure from one row of view A/B/C (qty, amount, commission, rate, lines, count)
 
@@ -146,12 +144,12 @@ Plan: Instant lines for several labelled columns of one view row (view A item/gr
 | D165 | roman | 1 | [Commission] | shahid raza ne september me kele ka kitna maal aur kitne ka liya, commission mila kar kitna diya | flags sum_asked,sum_strong,how_much_twice,measure_quantity; planned period,find,find,analytics:A |
 | D166 | urdu | 1 | [Commission] | شاہد رضا نے ستمبر میں کیلے کا کتنا مال اور کتنے کا لیا، کمیشن ملا کر کتنا دیا | flags sum_asked,sum_strong,how_much_twice,measure_quantity; planned period,find,find,analytics:A |
 | D167 | en | 2 | [Commission] | how much banana did Shahid Raza take in September, for how much, and how much did he pay with commission added | flags unexplained,how_much_twice,commission_side; doubts UnknownWords; unknown word: added; no read planned |
-| D209 | roman | 1 | [Sale] | aaj angoor kitne lines me, kitna maal aur kitne ka bika | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
-| D210 | urdu | 2 | [Sale] | آج انگور کتنی لائنوں میں، کتنا مال اور کتنے کا بکا | flags unexplained,how_much_twice,measure_quantity; doubts UnknownWords; unknown word: لائنوں; no read planned |
-| D211 | en | 1 | [Sale] | how much grapes were sold today, in how many lines and for how much | flags asks_count,how_much_twice; planned period,find,analytics:A |
-| D212 | roman | 2 | [Rate] | karim ka aaj angoor kitna bika, kitne ka aur akhri rate kya tha | flags last_one,how_much_twice,list; no read planned |
-| D213 | urdu | 2 | [Rate] | کریم کا آج انگور کتنا بکا، کتنے کا اور آخری ریٹ کیا تھا | flags last_one,how_much_twice,list; no read planned |
-| D214 | en | 2 | [Rate] | how much of Karim's grapes were sold today, for how much, and what was the last rate | flags last_one,how_much_twice,list; no read planned |
+| D207 | roman | 1 | [Sale] | aaj angoor kitne lines me, kitna maal aur kitne ka bika | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
+| D208 | urdu | 2 | [Sale] | آج انگور کتنی لائنوں میں، کتنا مال اور کتنے کا بکا | flags unexplained,how_much_twice,measure_quantity; doubts UnknownWords; unknown word: لائنوں; no read planned |
+| D209 | en | 1 | [Sale] | how much grapes were sold today, in how many lines and for how much | flags asks_count,how_much_twice; planned period,find,analytics:A |
+| D210 | roman | 2 | [Rate] | karim ka aaj angoor kitna bika, kitne ka aur akhri rate kya tha | flags last_one,how_much_twice,list; no read planned |
+| D211 | urdu | 2 | [Rate] | کریم کا آج انگور کتنا بکا، کتنے کا اور آخری ریٹ کیا تھا | flags last_one,how_much_twice,list; no read planned |
+| D212 | en | 2 | [Rate] | how much of Karim's grapes were sold today, for how much, and what was the last rate | flags last_one,how_much_twice,list; no read planned |
 
 ## G. Dues with an age bucket, a collector, a city, or a count of buyers (R20, R21, R22)
 
@@ -176,17 +174,17 @@ Plan: R20 age buckets, R22 collector total, R21 city total, and the row count, a
 | D091 | en | 1 | [DeadAmount] | how much is in the dead amount and for how many people | flags asks_count,unexplained,how_much_twice; doubts UnknownWords; unknown word: people; no read planned |
 | D092 | roman | 2 | [Dues] | kitne gahakon ka bakaya 30 din se purana ho gaya aur kitna | flags happened,asks_count,role_word,how_much_twice; no read planned |
 | D093 | en | 2 | [Dues] | how many buyers owe a bill older than 30 days and how much in all | not sure; flags sum_asked,asks_count,unexplained,role_word,how_much_twice; doubts UnknownWords, TimeWord; unknown word: older; no read planned |
-| D292 | roman | 1 | [Dues] | kasur ke gahakon ke zimme kul kitna baqi hai | flags sum_asked,role_word; planned find,report:R21 |
-| D293 | urdu | 1 | [Dues] | قصور کے گاہکوں کے ذمے کل کتنا باقی ہے | flags role_word; planned find,report:R21 |
-| D294 | en | 1 | [Dues] | how much do the buyers of Kasur owe in all | flags sum_asked,role_word; planned find,report:R21 |
-| D295 | roman | 1 | [Dues] | kasur shehar ke kitne gahakon ka bakaya hai | flags asks_count,role_word; planned find,report:R21 |
-| D296 | urdu | 1 | [Dues] | قصور شہر کے کتنے گاہکوں کا بقایا ہے | flags asks_count,role_word; planned find,report:R21 |
-| D297 | en | 2 | [Dues] | how many buyers of Kasur have something to pay | flags happened,asks_count,unexplained,role_word; doubts UnknownWords; unknown word: have something; no read planned |
-| D298 | roman* | 2 | [Balance] | shehar kasur ka bakaya aur usme se 8 se 30 din purana kitna hai | not sure; flags unexplained,how_much_twice; doubts NoParty; unknown word: usme; no read planned |
-| D299 | urdu | 2 | [Balance] | شہر قصور کا بقایا اور اس میں سے آٹھ سے تیس دن پرانا کتنا ہے | not sure; doubts NoParty; no read planned |
-| D300 | en | 2 | [Dues] | the dues of the city Kasur and how much of it is 8 to 30 days old | not sure; flags unexplained; doubts UnknownWords, TimeWord; unknown word: old; no read planned |
-| D442 | roman | 2 | [Balance] | aath se tees din purane bakaye kitne hain | not sure; flags unexplained; doubts UnknownWords, NoParty; unknown word: aath+tees; no read planned |
-| D443 | en | 2 | [Dues] | how much of the dues is 8 to 30 days old | not sure; flags unexplained; doubts UnknownWords, TimeWord; unknown word: old; no read planned |
+| D287 | roman | 1 | [Dues] | kasur ke gahakon ke zimme kul kitna baqi hai | flags sum_asked,role_word; planned find,report:R21 |
+| D288 | urdu | 1 | [Dues] | قصور کے گاہکوں کے ذمے کل کتنا باقی ہے | flags role_word; planned find,report:R21 |
+| D289 | en | 1 | [Dues] | how much do the buyers of Kasur owe in all | flags sum_asked,role_word; planned find,report:R21 |
+| D290 | roman | 1 | [Dues] | kasur shehar ke kitne gahakon ka bakaya hai | flags asks_count,role_word; planned find,report:R21 |
+| D291 | urdu | 1 | [Dues] | قصور شہر کے کتنے گاہکوں کا بقایا ہے | flags asks_count,role_word; planned find,report:R21 |
+| D292 | en | 2 | [Dues] | how many buyers of Kasur have something to pay | flags happened,asks_count,unexplained,role_word; doubts UnknownWords; unknown word: have something; no read planned |
+| D293 | roman* | 2 | [Balance] | shehar kasur ka bakaya aur usme se 8 se 30 din purana kitna hai | not sure; flags unexplained,how_much_twice; doubts NoParty; unknown word: usme; no read planned |
+| D294 | urdu | 2 | [Balance] | شہر قصور کا بقایا اور اس میں سے آٹھ سے تیس دن پرانا کتنا ہے | not sure; doubts NoParty; no read planned |
+| D295 | en | 2 | [Dues] | the dues of the city Kasur and how much of it is 8 to 30 days old | not sure; flags unexplained; doubts UnknownWords, TimeWord; unknown word: old; no read planned |
+| D437 | roman | 2 | [Balance] | aath se tees din purane bakaye kitne hain | not sure; flags unexplained; doubts UnknownWords, NoParty; unknown word: aath+tees; no read planned |
+| D438 | en | 2 | [Dues] | how much of the dues is 8 to 30 days old | not sure; flags unexplained; doubts UnknownWords, TimeWord; unknown word: old; no read planned |
 
 ## B. One party on one day: items, qty, rate, amount, cash on the spot, credit, balance before/after
 
@@ -206,21 +204,18 @@ Plan: R35 party day sheet (buyer or seller, as_of) or R2/R3/R4 filtered by party
 | D030 | roman* | 2 | [Rate] | 14 oct ko basheer ka kya kya bika, kitni qty, kis rate pr aur kitne ka | not sure; flags unexplained,how_much_twice,list; doubts CloseSpelling, UnknownWords, SeveralMatches; unknown word: pr; no read planned |
 | D031 | urdu | 2 | [Rate] | بشیر کا 14 اکتوبر کو کیا کیا بکا، کتنی تعداد، کس ریٹ پر اور کتنے کا | flags unexplained,how_much_twice,list; doubts UnknownWords; unknown word: تعداد،; no read planned |
 | D032 | en | 2 | [Rate] | what did Bashir sell on 14 October, how many, at what rate and for how much | flags asks_count,how_much_twice,list; no read planned |
-| D273 | urdu | 2 | [Cash, Balance] | پچھلے مہینے 14 تاریخ کو نوید ٹریڈرز نے کیا کیا خریدا، موقع پر کتنا نقد دیا اور کتنا ادھار رہا | not sure; flags happened,unexplained,how_much_twice,list; doubts UnknownWords, SeveralPeriods; unknown word: موقع; no read planned |
-| D274 | roman | 2 | [Cash, Balance] | pichle mahine 14 tarikh ko naveed traders ne kya kya khareeda, moqe par kitna naqad diya aur kitna udhaar raha | not sure; flags happened,unexplained,how_much_twice,list; doubts UnknownWords, SeveralPeriods; unknown word: moqe; no read planned |
-| D275 | en | 2 | [Cash] | what did Naveed Traders buy on the 14th of last month, how much cash did he pay on the spot and how much stayed on credit | flags happened,pay_asked,pay_kind,unexplained,how_much_twice,list; doubts UnknownWords; unknown word: spot+stayed; no read planned |
-| D276 | roman | 2 | [Cash] | naveed traders ne 14 october ko nakad kitna diya | flags happened; no read planned |
-| D277 | urdu | 2 | [Cash] | نوید ٹریڈرز نے 14 اکتوبر کو نقد کتنا دیا | flags happened; no read planned |
-| D278 | en | 2 | [Cash] | how much did Naveed Traders pay in cash on 14 October | flags happened; no read planned |
-| D279 | roman* | 2 | [Balance] | naveed traders ka 14 october ka udhar kitna raha | no read planned |
-| D280 | urdu | 2 | [Balance] | نوید ٹریڈرز کا 14 اکتوبر کا ادھار کتنا رہا | no read planned |
-| D281 | en | 2 | [] | how much stayed on credit for Naveed Traders on 14 October | not sure; flags pay_asked,pay_kind,unexplained; doubts UnknownWords, NoFigure; unknown word: stayed; no read planned |
-| D282 | roman | 2 | [Cash, Rate] | naveed traders ne 14 october ko nakad me kela kitna, kitne ka aur kis rate par liya | flags happened,how_much_twice; no read planned |
-| D283 | urdu | 2 | [Cash, Rate] | نوید ٹریڈرز نے 14 اکتوبر کو نقد میں کیلا کتنا، کتنے کا اور کس ریٹ پر لیا | flags happened,how_much_twice; no read planned |
-| D284 | en | 2 | [Cash, Rate] | how much banana did Naveed Traders buy for cash on 14 October, for how much and at what rate | flags how_much_twice,list; no read planned |
-| D285 | roman | 2 | [Balance] | pukhta khata ke aamir ne kitna maal liya, kitne ka aur ab kitna baqi hai | not sure; flags scoped,happened,unexplained,how_much_twice; doubts UnknownWords, NoParty; unknown word: ke aamir; no read planned |
-| D286 | urdu | 2 | [Balance] | پختہ کھاتہ کے عامر نے کتنا مال لیا، کتنے کا اور اب کتنا باقی ہے | not sure; flags scoped,happened,unexplained,how_much_twice; doubts UnknownWords, NoParty; unknown word: عامر; no read planned |
-| D287 | en | 2 | [Balance] | how much did Aamir of pukhta khata take, for how much and how much does he owe now | not sure; flags scoped,happened,unexplained,how_much_twice; doubts UnknownWords, NoParty; unknown word: Aamir; no read planned |
+| D271 | urdu | 2 | [Cash, Balance] | پچھلے مہینے 14 تاریخ کو نوید ٹریڈرز نے کیا کیا خریدا، موقع پر کتنا نقد دیا اور کتنا ادھار رہا | not sure; flags happened,unexplained,how_much_twice,list; doubts UnknownWords, SeveralPeriods; unknown word: موقع; no read planned |
+| D272 | roman | 2 | [Cash, Balance] | pichle mahine 14 tarikh ko naveed traders ne kya kya khareeda, moqe par kitna naqad diya aur kitna udhaar raha | not sure; flags happened,unexplained,how_much_twice,list; doubts UnknownWords, SeveralPeriods; unknown word: moqe; no read planned |
+| D273 | en | 2 | [Cash] | what did Naveed Traders buy on the 14th of last month, how much cash did he pay on the spot and how much stayed on credit | flags happened,pay_asked,pay_kind,unexplained,how_much_twice,list; doubts UnknownWords; unknown word: spot+stayed; no read planned |
+| D274 | roman | 2 | [Cash] | naveed traders ne 14 october ko nakad kitna diya | flags happened; no read planned |
+| D275 | urdu | 2 | [Cash] | نوید ٹریڈرز نے 14 اکتوبر کو نقد کتنا دیا | flags happened; no read planned |
+| D276 | en | 2 | [Cash] | how much did Naveed Traders pay in cash on 14 October | flags happened; no read planned |
+| D277 | roman* | 2 | [Balance] | naveed traders ka 14 october ka udhar kitna raha | no read planned |
+| D278 | urdu | 2 | [Balance] | نوید ٹریڈرز کا 14 اکتوبر کا ادھار کتنا رہا | no read planned |
+| D279 | en | 2 | [] | how much stayed on credit for Naveed Traders on 14 October | not sure; flags pay_asked,pay_kind,unexplained; doubts UnknownWords, NoFigure; unknown word: stayed; no read planned |
+| D280 | roman | 2 | [Cash, Rate] | naveed traders ne 14 october ko nakad me kela kitna, kitne ka aur kis rate par liya | flags happened,how_much_twice; no read planned |
+| D281 | urdu | 2 | [Cash, Rate] | نوید ٹریڈرز نے 14 اکتوبر کو نقد میں کیلا کتنا، کتنے کا اور کس ریٹ پر لیا | flags happened,how_much_twice; no read planned |
+| D282 | en | 2 | [Cash, Rate] | how much banana did Naveed Traders buy for cash on 14 October, for how much and at what rate | flags how_much_twice,list; no read planned |
 
 ## D. Rate questions: last rate with "laga" as a verb, highest and lowest, rate of a party
 
@@ -235,24 +230,24 @@ Plan: "kya laga / لگا / got" after rate is a verb (not the Laga charge); R2 r
 | D183 | roman* | 2 | [FruitTaken, Rate] | haji nazir ki dukaan se mehmano ke liye kitna phal liya, kis rate par, kitne ka aur kis tarikh ko | not sure; flags guests,how_much_twice; doubts NoParty; no read planned |
 | D184 | urdu | 2 | [FruitTaken, Rate] | حاجی نذیر کی دکان سے مہمانوں کے لیے کتنا پھل لیا، کس ریٹ پر، کتنے کا اور کس تاریخ کو | not sure; flags guests,how_much_twice; doubts NoParty; no read planned |
 | D185 | en | 2 | [FruitTaken, Rate] | how much fruit did we take for guests from Haji Nazeer's shop, at what rate, for how much and on which date | not sure; flags guests,how_much_twice; doubts NoParty; no read planned |
-| D200 | roman | 2 | [Rate, Laga] | aaj angoor ka aakhri rate kya laga | flags last_one; no read planned |
-| D201 | urdu | 2 | [Rate] | آج انگور کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
-| D204 | urdu | 2 | [Rate] | شاہد رضا کو آج انگور کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
-| D205 | en | 2 | [Rate] | what was the last rate of grapes that Shahid Raza got today | flags last_one,unexplained; doubts UnknownWords; unknown word: got; no read planned |
-| D206 | roman | 2 | [Rate] | is hafte angoor ka sab se mehnga aur sab se sasta rate kya raha | flags unexplained,list; doubts UnknownWords; unknown word: mehnga+sasta; no read planned |
-| D207 | urdu | 2 | [Rate] | اس ہفتے انگور کا سب سے مہنگا اور سب سے سستا ریٹ کیا رہا | flags unexplained,list; doubts UnknownWords; unknown word: مہنگا+سستا; no read planned |
-| D208 | en | 2 | [Rate] | this week what was the highest and the lowest rate of grapes | flags list; no read planned |
-| D304 | roman | 2 | [Rate] | rafique brothers ne 22 october ko seb gahak ke rate par kitne ka liya, kis rate par aur kitna | flags buyer_rate,role_word,how_much_twice; no read planned |
-| D305 | urdu | 2 | [Rate] | رفیق برادرز نے 22 اکتوبر کو سیب گاہک کے ریٹ پر کتنے کا لیا، کس ریٹ پر اور کتنا | flags buyer_rate,role_word,how_much_twice; no read planned |
-| D306 | en | 2 | [Rate] | at the buyer's rate, what rate and how much apple did Rafique Brothers take on 22 October, and for how much | flags role_word,how_much_twice; no read planned |
-| D307 | roman | 2 | [Rate] | jis line me gahak ka rate alag tha uska farq kitna bana, bayopari ka rate aur gahak ka rate kya tha | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison, NoParty; unknown word: alag+farq; no read planned |
-| D308 | urdu | 2 | [Rate] | جس لائن میں گاہک کا ریٹ الگ تھا اس کا فرق کتنا بنا، بیوپاری کا ریٹ اور گاہک کا ریٹ کیا تھا | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison, NoParty; no read planned |
-| D309 | en | 2 | [Rate] | on the line where the buyer rate differed: what was the difference, the seller rate and the buyer rate | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison; unknown word: rate+difference, differed:+difference,; no read planned |
-| D310 | roman | 2 | [Rate, Laga] | 19 october ko moosami ka aakhri rate kya laga | flags last_one; no read planned |
-| D311 | urdu | 2 | [Rate] | 19 اکتوبر کو موسمی کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
-| D313 | roman | 2 | [Rate] | 19 october ko moosami kitne lines me, kitna aur kitne ka bika, sab se mehnga aur sab se sasta rate | flags unexplained,how_much_twice; doubts UnknownWords; unknown word: mehnga+sasta; no read planned |
-| D314 | urdu | 2 | [Rate] | 19 اکتوبر کو موسمی کتنی لائنوں میں، کتنا اور کتنے کا بکا، سب سے مہنگا اور سب سے سستا ریٹ | flags unexplained,how_much_twice; doubts UnknownWords; no read planned |
-| D315 | en | 2 | [Rate] | on 19 October how much mosambi sold, in how many lines and for how much, and the highest and lowest rate | flags asks_count,how_much_twice,list; no read planned |
+| D198 | roman | 2 | [Rate, Laga] | aaj angoor ka aakhri rate kya laga | flags last_one; no read planned |
+| D199 | urdu | 2 | [Rate] | آج انگور کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
+| D202 | urdu | 2 | [Rate] | شاہد رضا کو آج انگور کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
+| D203 | en | 2 | [Rate] | what was the last rate of grapes that Shahid Raza got today | flags last_one,unexplained; doubts UnknownWords; unknown word: got; no read planned |
+| D204 | roman | 2 | [Rate] | is hafte angoor ka sab se mehnga aur sab se sasta rate kya raha | flags unexplained,list; doubts UnknownWords; unknown word: mehnga+sasta; no read planned |
+| D205 | urdu | 2 | [Rate] | اس ہفتے انگور کا سب سے مہنگا اور سب سے سستا ریٹ کیا رہا | flags unexplained,list; doubts UnknownWords; unknown word: مہنگا+سستا; no read planned |
+| D206 | en | 2 | [Rate] | this week what was the highest and the lowest rate of grapes | flags list; no read planned |
+| D299 | roman | 2 | [Rate] | rafique brothers ne 22 october ko seb gahak ke rate par kitne ka liya, kis rate par aur kitna | flags buyer_rate,role_word,how_much_twice; no read planned |
+| D300 | urdu | 2 | [Rate] | رفیق برادرز نے 22 اکتوبر کو سیب گاہک کے ریٹ پر کتنے کا لیا، کس ریٹ پر اور کتنا | flags buyer_rate,role_word,how_much_twice; no read planned |
+| D301 | en | 2 | [Rate] | at the buyer's rate, what rate and how much apple did Rafique Brothers take on 22 October, and for how much | flags role_word,how_much_twice; no read planned |
+| D302 | roman | 2 | [Rate] | jis line me gahak ka rate alag tha uska farq kitna bana, bayopari ka rate aur gahak ka rate kya tha | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison, NoParty; unknown word: alag+farq; no read planned |
+| D303 | urdu | 2 | [Rate] | جس لائن میں گاہک کا ریٹ الگ تھا اس کا فرق کتنا بنا، بیوپاری کا ریٹ اور گاہک کا ریٹ کیا تھا | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison, NoParty; no read planned |
+| D304 | en | 2 | [Rate] | on the line where the buyer rate differed: what was the difference, the seller rate and the buyer rate | not sure; flags compare,buyer_rate,unexplained,role_word; doubts UnknownWords, Comparison; unknown word: rate+difference, differed:+difference,; no read planned |
+| D305 | roman | 2 | [Rate, Laga] | 19 october ko moosami ka aakhri rate kya laga | flags last_one; no read planned |
+| D306 | urdu | 2 | [Rate] | 19 اکتوبر کو موسمی کا آخری ریٹ کیا لگا | flags last_one,unexplained; doubts UnknownWords; unknown word: لگا; no read planned |
+| D308 | roman | 2 | [Rate] | 19 october ko moosami kitne lines me, kitna aur kitne ka bika, sab se mehnga aur sab se sasta rate | flags unexplained,how_much_twice; doubts UnknownWords; unknown word: mehnga+sasta; no read planned |
+| D309 | urdu | 2 | [Rate] | 19 اکتوبر کو موسمی کتنی لائنوں میں، کتنا اور کتنے کا بکا، سب سے مہنگا اور سب سے سستا ریٹ | flags unexplained,how_much_twice; doubts UnknownWords; no read planned |
+| D310 | en | 2 | [Rate] | on 19 October how much mosambi sold, in how many lines and for how much, and the highest and lowest rate | flags asks_count,how_much_twice,list; no read planned |
 
 ## H. Partner figures: share, capital, taken and returned, gardens/trips/fruit, ranking
 
@@ -277,12 +272,12 @@ Plan: View F row and R29 partner lines as labelled instant lines (income share, 
 | D062 | en | 2 | [PartnerTaken] | which partner has taken the most money for himself and how much | flags list; no read planned |
 | D065 | roman* | 1 | [Expense] | pichle mahine dukan ka kharcha kitna hua aur sharkat daron ne kitna liya | flags how_much_twice; planned period,report:R29 |
 | D066 | en | 1 | [Expense, PartnerTaken] | last month's shop expenses and the money the partners took for themselves | no read planned |
-| D329 | en* | 1 | [] | what is Partner As totel in the shop | not sure; flags unexplained; doubts UnknownWords; unknown word: As+totel; no read planned |
-| D330 | urdu | 2 | [Capital] | عثمان نے کتنا سرمایہ لگایا ہے | flags capital_flow,happened,unexplained; doubts UnknownWords; unknown word: لگایا; no read planned |
-| D416 | urdu | 1 | [PartnerShare] | عثمان کا اس سال کا حصہ کتنا بنا | no read planned |
-| D417 | en | 1 | [PartnerShare, Profit] | what is Usman's share of profit this year | no read planned |
-| D418 | roman* | 1 | [PartnerShare] | b ka is mahine ka hisa kitna bana | no read planned |
-| D419 | urdu | 1 | [PartnerShare] | ب کا اس مہینے کا حصہ کتنا ہے | no read planned |
+| D324 | en* | 1 | [] | what is Partner As totel in the shop | not sure; flags unexplained; doubts UnknownWords; unknown word: As+totel; no read planned |
+| D325 | urdu | 2 | [Capital] | عثمان نے کتنا سرمایہ لگایا ہے | flags capital_flow,happened,unexplained; doubts UnknownWords; unknown word: لگایا; no read planned |
+| D411 | urdu | 1 | [PartnerShare] | عثمان کا اس سال کا حصہ کتنا بنا | no read planned |
+| D412 | en | 1 | [PartnerShare, Profit] | what is Usman's share of profit this year | no read planned |
+| D413 | roman* | 1 | [PartnerShare] | b ka is mahine ka hisa kitna bana | no read planned |
+| D414 | urdu | 1 | [PartnerShare] | ب کا اس مہینے کا حصہ کتنا ہے | no read planned |
 
 ## K. Counts and states: accounts, staff, heads, packings, day book entries, trial balance, closed days
 
@@ -303,15 +298,14 @@ Plan: Count of rows and the totals of R11, R18, R19, the day state, the master l
 | D115 | en | 2 | [] | how many accounts are there in all | not sure; flags sum_asked,asks_count; doubts NoFigure; no read planned |
 | D116 | roman | 2 | [Balance] | din kis tarikh tak band ho chuka hai aur kitne din abhi khule hain | not sure; flags happened; doubts NoParty; no read planned |
 | D117 | en | 1 | [Ask("days")] | up to which date are the days closed and how many days are still open | flags asks_count,unexplained; unknown word: still; planned app_state |
-| D195 | roman | 1 | [Ask("staff_munshi")] | dukaan me kitne munshi, kitne ugrahi wale aur kul kitne mulazim hain | flags sum_asked,how_much_twice; planned find |
-| D196 | urdu | 1 | [Ask("staff_munshi"), Ask("staff_collector"), Ask("staff_all")] | دکان میں کتنے منشی، کتنے اگراہی والے اور کل کتنے ملازم ہیں | flags how_much_twice; planned find |
-| D197 | en | 1 | [Ask("staff_munshi"), Ask("staff_collector"), Ask("staff_all")] | how many munshis, how many collectors and how many staff in all | flags sum_asked,asks_count,how_much_twice; planned find |
-| D198 | urdu | 2 | [Expense, Ask("packings"), Ask("stores")] | کتنی خرچہ مدیں، کتنی پیکنگ، کتنے سٹور اور کتنے مارکے بنے ہوئے ہیں | not sure; flags unexplained,how_much_twice; doubts UnknownWords, OtherRecord, UnknownWords; unknown word: مدیں،+مارکے; no read planned |
-| D199 | en | 2 | [Ask("heads")] | how many expense heads, packings, stores and marks are set up | flags asks_count,unexplained; doubts UnknownWords; no read planned |
-| D348 | urdu | 2 | [TrialBalance] | ٹرائل بیلنس میں فرق کتنا ہے | not sure; flags compare,unexplained; doubts UnknownWords, Comparison; unknown word: فرق; no read planned |
-| D349 | en | 2 | [TrialBalance] | is there any difference in the trial balance, how much | not sure; flags compare,unexplained; doubts UnknownWords, Comparison; unknown word: difference; no read planned |
-| D440 | urdu | 1 | [TrialBalance] | ٹرائل بیلنس کا بنام کل کتنا ہے | planned report:R18 |
-| D441 | en | 2 | [TrialBalance] | what is the total debit of the trial balance | flags sum_asked,unexplained; doubts UnknownWords; unknown word: debit; no read planned |
+| D193 | roman | 1 | [Ask("staff_munshi")] | dukaan me kitne munshi, kitne ugrahi wale aur kul kitne mulazim hain | flags sum_asked,how_much_twice; planned find |
+| D194 | urdu | 1 | [Ask("staff_munshi"), Ask("staff_collector"), Ask("staff_all")] | دکان میں کتنے منشی، کتنے اگراہی والے اور کل کتنے ملازم ہیں | flags how_much_twice; planned find |
+| D195 | en | 1 | [Ask("staff_munshi"), Ask("staff_collector"), Ask("staff_all")] | how many munshis, how many collectors and how many staff in all | flags sum_asked,asks_count,how_much_twice; planned find |
+| D197 | urdu | 2 | [Expense, Ask("packings"), Ask("stores")] | کتنی خرچہ مدیں، کتنی پیکنگ، کتنے سٹور اور کتنے مارکے بنے ہوئے ہیں | not sure; flags unexplained,how_much_twice; doubts UnknownWords, OtherRecord, UnknownWords; unknown word: مدیں،+مارکے; no read planned |
+| D343 | urdu | 2 | [TrialBalance] | ٹرائل بیلنس میں فرق کتنا ہے | not sure; flags compare,unexplained; doubts UnknownWords, Comparison; unknown word: فرق; no read planned |
+| D344 | en | 2 | [TrialBalance] | is there any difference in the trial balance, how much | not sure; flags compare,unexplained; doubts UnknownWords, Comparison; unknown word: difference; no read planned |
+| D435 | urdu | 1 | [TrialBalance] | ٹرائل بیلنس کا بنام کل کتنا ہے | planned report:R18 |
+| D436 | en | 2 | [TrialBalance] | what is the total debit of the trial balance | flags sum_asked,unexplained; doubts UnknownWords; unknown word: debit; no read planned |
 
 ## M. A document number: sale number, voucher number, truck, audit
 
@@ -321,23 +315,23 @@ Plan: R1 with the bikri filter (gross, lines, date, commission); R15 / R23 / R25
 |---|---|---|---|---|---|
 | D118 | roman | 2 | [Sale] | bikri number 1 ka record kitni baar likha gaya | flags document_number,bikri_number,asks_count,unexplained; doubts UnknownWords; unknown word: likha; no read planned |
 | D119 | urdu | 2 | [Sale] | بکری نمبر 1 کا ریکارڈ کتنی بار لکھا گیا ہے | flags document_number,bikri_number,asks_count,unexplained; doubts UnknownWords; unknown word: لکھا; no read planned |
-| D192 | roman | 2 | [Sale, PartnerTotal] | LES-1057 truck kitni baar aya, akhri baar kab, khaam bikri aur khalis raqam kya thi | flags two_figures,amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts UnknownWords; unknown word: truck; no read planned |
-| D193 | urdu | 2 | [Sale] | ٹرک LES-1057 کتنی بار آیا، آخری بار کب، خام بکری اور صافی بکری کیا تھی | flags amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts UnknownWords; unknown word: ٹرک+صافی; no read planned |
-| D194 | en | 2 | [Sale, PartnerTotal] | how many times did truck LES-1057 come, when was the last time and what were the gross and the net | not sure; flags two_figures,amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts TimeWord; unknown word: times+come,; no read planned |
-| D221 | roman | 2 | [Sale] | bikri number 100 me kitna maal bika, kitne ka, kitne lines aur kis tarikh ko | flags amount_named,document_number,bikri_number,how_much_twice,measure_quantity; no read planned |
-| D222 | urdu | 2 | [Sale] | بکری نمبر 100 میں کتنا مال بکا، کتنے کا، کتنی لائنیں اور کس تاریخ کو | flags amount_named,document_number,bikri_number,unexplained,how_much_twice,measure_quantity; doubts UnknownWords; unknown word: کتنی لائنیں; no read planned |
-| D223 | en | 2 | [Sale] | in sale number 100 how much was sold, for how much, how many lines and on which date | flags amount_named,document_number,bikri_number,asks_count,how_much_twice; no read planned |
-| D224 | roman | 2 | [Sale, Commission] | bikri number 100 ka total commission kitna tha | flags sum_asked,amount_named,document_number,bikri_number; no read planned |
-| D225 | urdu | 2 | [Sale, Commission] | بکری نمبر 100 کا کل کمیشن کتنا تھا | not sure; flags amount_named,document_number,bikri_number; doubts TenseUnclear; no read planned |
-| D226 | roman | 2 | [Sale] | bikri number 466 ki kul bikri, qty aur lines batao | flags sum_asked,amount_named,document_number,bikri_number,measure_other; no read planned |
-| D227 | urdu | 2 | [Sale] | بکری نمبر 466 کی کل بکری، تعداد اور لائنیں بتائیں | not sure; flags amount_named,document_number,bikri_number,unexplained,measure_other; doubts UnknownWords, TenseUnclear; unknown word: تعداد+لائنیں; no read planned |
-| D228 | en | 2 | [Sale] | the total sale, quantity and number of lines of sale number 466 | flags sum_asked,amount_named,document_number,bikri_number,asks_count,measure_other; no read planned |
-| D244 | roman | 2 | [Dues] | wasooli number 100 kitne ki thi, kis ki aur kab | flags amount_named,document_number,happened; no read planned |
-| D245 | urdu | 2 | [Dues] | وصولی نمبر 100 کتنے کی تھی، کس کی اور کب | flags amount_named,document_number,happened; no read planned |
-| D246 | en | 2 | [] | how much was receipt number 100, from whom and when | not sure; flags amount_named,document_number; doubts NoFigure; no read planned |
-| D247 | roman | 2 | [Payable] | adaigi number 50 kitne ki thi, kis ko aur kab | flags document_number,happened; no read planned |
-| D248 | urdu | 2 | [Payable] | ادائیگی نمبر 50 کتنے کی تھی، کس کو اور کب | flags document_number,happened; no read planned |
-| D249 | en | 2 | [] | how much was payment number 50, to whom and when | not sure; flags document_number; doubts NoFigure; no read planned |
+| D190 | roman | 2 | [Sale, PartnerTotal] | LES-1057 truck kitni baar aya, akhri baar kab, khaam bikri aur khalis raqam kya thi | flags two_figures,amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts UnknownWords; unknown word: truck; no read planned |
+| D191 | urdu | 2 | [Sale] | ٹرک LES-1057 کتنی بار آیا، آخری بار کب، خام بکری اور صافی بکری کیا تھی | flags amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts UnknownWords; unknown word: ٹرک+صافی; no read planned |
+| D192 | en | 2 | [Sale, PartnerTotal] | how many times did truck LES-1057 come, when was the last time and what were the gross and the net | not sure; flags two_figures,amount_named,truck,last_one,asks_count,unexplained,measure_other; doubts TimeWord; unknown word: times+come,; no read planned |
+| D219 | roman | 2 | [Sale] | bikri number 100 me kitna maal bika, kitne ka, kitne lines aur kis tarikh ko | flags amount_named,document_number,bikri_number,how_much_twice,measure_quantity; no read planned |
+| D220 | urdu | 2 | [Sale] | بکری نمبر 100 میں کتنا مال بکا، کتنے کا، کتنی لائنیں اور کس تاریخ کو | flags amount_named,document_number,bikri_number,unexplained,how_much_twice,measure_quantity; doubts UnknownWords; unknown word: کتنی لائنیں; no read planned |
+| D221 | en | 2 | [Sale] | in sale number 100 how much was sold, for how much, how many lines and on which date | flags amount_named,document_number,bikri_number,asks_count,how_much_twice; no read planned |
+| D222 | roman | 2 | [Sale, Commission] | bikri number 100 ka total commission kitna tha | flags sum_asked,amount_named,document_number,bikri_number; no read planned |
+| D223 | urdu | 2 | [Sale, Commission] | بکری نمبر 100 کا کل کمیشن کتنا تھا | not sure; flags amount_named,document_number,bikri_number; doubts TenseUnclear; no read planned |
+| D224 | roman | 2 | [Sale] | bikri number 466 ki kul bikri, qty aur lines batao | flags sum_asked,amount_named,document_number,bikri_number,measure_other; no read planned |
+| D225 | urdu | 2 | [Sale] | بکری نمبر 466 کی کل بکری، تعداد اور لائنیں بتائیں | not sure; flags amount_named,document_number,bikri_number,unexplained,measure_other; doubts UnknownWords, TenseUnclear; unknown word: تعداد+لائنیں; no read planned |
+| D226 | en | 2 | [Sale] | the total sale, quantity and number of lines of sale number 466 | flags sum_asked,amount_named,document_number,bikri_number,asks_count,measure_other; no read planned |
+| D242 | roman | 2 | [Dues] | wasooli number 100 kitne ki thi, kis ki aur kab | flags amount_named,document_number,happened; no read planned |
+| D243 | urdu | 2 | [Dues] | وصولی نمبر 100 کتنے کی تھی، کس کی اور کب | flags amount_named,document_number,happened; no read planned |
+| D244 | en | 2 | [] | how much was receipt number 100, from whom and when | not sure; flags amount_named,document_number; doubts NoFigure; no read planned |
+| D245 | roman | 2 | [Payable] | adaigi number 50 kitne ki thi, kis ko aur kab | flags document_number,happened; no read planned |
+| D246 | urdu | 2 | [Payable] | ادائیگی نمبر 50 کتنے کی تھی، کس کو اور کب | flags document_number,happened; no read planned |
+| D247 | en | 2 | [] | how much was payment number 50, to whom and when | not sure; flags document_number; doubts NoFigure; no read planned |
 
 ## F. Cash book, receipts and payments totals (R12, R23, R25), with counts
 
@@ -357,12 +351,12 @@ Plan: Whole-filter totals of R12 (opening, in, out, closing), R23 (receipts, cou
 | D102 | en | 2 | [] | how much was received from buyers today and how much was paid to sellers | not sure; flags unexplained,role_word,how_much_twice; doubts NoFigure; unknown word: paid; no read planned |
 | D103 | roman | 1 | [Receipts] | pichle mahine kitni wasooli hui, kitni rasidein bani aur bayopariyon ko kitna diya, kitni baar | flags unexplained,role_word,how_much_twice; doubts UnknownWords; unknown word: rasidein; no read planned |
 | D104 | urdu | 1 | [Receipts] | پچھلے مہینے کتنی وصولی ہوئی، کتنی رسیدیں بنیں اور بیوپاریوں کو کتنا دیا، کتنی بار | flags unexplained,role_word,how_much_twice; doubts UnknownWords; unknown word: رسیدیں+بنیں اور+بیوپاریوں; no read planned |
-| D446 | urdu | 2 | [Cash] | کل روکڑ میں سے کتنا گیا | not sure; flags happened; doubts TenseUnclear; no read planned |
-| D447 | en | 1 | [Cash] | how much cash went out yesterday | flags unexplained; doubts UnknownWords; unknown word: out; no read planned |
-| D448 | roman | 1 | [] | pichle mahine bayopariyon ko kul kitna diya | not sure; flags sum_asked,role_word; doubts NoFigure; no read planned |
-| D449 | en | 1 | [] | how much was paid to sellers last month | not sure; flags unexplained,role_word; doubts NoFigure; unknown word: paid; no read planned |
-| D450 | roman | 1 | [Receipts] | is hafte gahakon se kitni wasooli hui | flags role_word; planned period,report:R23 |
-| D451 | urdu | 1 | [Receipts] | اس ہفتے گاہکوں سے کتنی وصولی ہوئی | flags role_word; planned period,report:R23 |
+| D441 | urdu | 2 | [Cash] | کل روکڑ میں سے کتنا گیا | not sure; flags happened; doubts TenseUnclear; no read planned |
+| D442 | en | 1 | [Cash] | how much cash went out yesterday | flags unexplained; doubts UnknownWords; unknown word: out; no read planned |
+| D443 | roman | 1 | [] | pichle mahine bayopariyon ko kul kitna diya | not sure; flags sum_asked,role_word; doubts NoFigure; no read planned |
+| D444 | en | 1 | [] | how much was paid to sellers last month | not sure; flags unexplained,role_word; doubts NoFigure; unknown word: paid; no read planned |
+| D445 | roman | 1 | [Receipts] | is hafte gahakon se kitni wasooli hui | flags role_word; planned period,report:R23 |
+| D446 | urdu | 1 | [Receipts] | اس ہفتے گاہکوں سے کتنی وصولی ہوئی | flags role_word; planned period,report:R23 |
 
 ## E. Quality (awwal / doyam / soyam)
 
@@ -379,12 +373,12 @@ Plan: View A grouped by grade (or R2 with the grade filter) as instant lines; la
 | D162 | roman | 1 | [Purchases] | akram baloch ne pichle mahine doyam darje ka kela kitni baar, kitna aur kitne ka liya | flags quality,asks_count,how_much_twice; planned period,find,find,analytics:A |
 | D163 | urdu | 1 | [] | اکرم بلوچ نے پچھلے مہینے دوم درجے کا کیلا کتنی بار، کتنا اور کتنے کا لیا | not sure; flags quality,asks_count,how_much_twice; doubts NoFigure; no read planned |
 | D164 | en | 1 | [Purchases] | how many times did Akram Baloch buy second quality banana last month, how much and for how much | flags quality,asks_count,unexplained,how_much_twice; unknown word: times; planned period,find,find,analytics:A |
-| D229 | roman | 1 | [Rate] | pichle mahine awwal darje ke seb ka aakhri rate kya tha | flags quality,last_one; planned period,find,report:R2 |
-| D230 | urdu | 1 | [Rate] | پچھلے مہینے اول درجے کے سیب کا آخری ریٹ کیا تھا | flags quality,last_one; planned period,find,report:R2 |
-| D231 | en | 1 | [Rate] | what was the last rate of first quality apple last month | flags quality,last_one; planned period,find,report:R2 |
-| D232 | roman | 1 | [Sale] | pichle mahine seb awwal, doyam aur soyam darje ka alag alag kitna bika | flags quality,unexplained; doubts UnknownWords; unknown word: kitna; no read planned |
-| D233 | urdu | 1 | [Sale] | پچھلے مہینے سیب اول، دوم اور سوم درجے کا الگ الگ کتنا بکا | flags quality,unexplained; doubts UnknownWords; unknown word: الگ+الگ; no read planned |
-| D234 | en | 1 | [Sale] | last month how much apple sold in first, second and third quality, each | flags quality,measure_breakdown; planned period,find,report:R2 |
+| D227 | roman | 1 | [Rate] | pichle mahine awwal darje ke seb ka aakhri rate kya tha | flags quality,last_one; planned period,find,report:R2 |
+| D228 | urdu | 1 | [Rate] | پچھلے مہینے اول درجے کے سیب کا آخری ریٹ کیا تھا | flags quality,last_one; planned period,find,report:R2 |
+| D229 | en | 1 | [Rate] | what was the last rate of first quality apple last month | flags quality,last_one; planned period,find,report:R2 |
+| D230 | roman | 1 | [Sale] | pichle mahine seb awwal, doyam aur soyam darje ka alag alag kitna bika | flags quality,unexplained; doubts UnknownWords; unknown word: kitna; no read planned |
+| D231 | urdu | 1 | [Sale] | پچھلے مہینے سیب اول، دوم اور سوم درجے کا الگ الگ کتنا بکا | flags quality,unexplained; doubts UnknownWords; unknown word: الگ+الگ; no read planned |
+| D232 | en | 1 | [Sale] | last month how much apple sold in first, second and third quality, each | flags quality,measure_breakdown; planned period,find,report:R2 |
 
 ## I. Expense heads, one or two together, and a head ranking
 
@@ -397,10 +391,10 @@ Plan: R29 row of a head (head names in Roman: chai, kiraya, bijli); two heads ad
 | D071 | en* | 2 | [] | shop rent and electricity together, how much so far | not sure; flags sum_asked,sum_strong,unexplained; doubts UnknownWords, NoFigure; unknown word: rent+together,; no read planned |
 | D072 | urdu | 1 | [Expense] | اس سال سب سے زیادہ خرچہ کس مد میں ہوا اور کتنا | flags unexplained,list; doubts UnknownWords; unknown word: مد; no read planned |
 | D073 | en | 1 | [Expense] | which expense head has the most spending this year and how much | flags unexplained,list; unknown word: head; no read planned |
-| D265 | roman | 1 | [Expense] | is saal chai ka kharcha kitna hua | flags unexplained; unknown word: chai; planned period,report:R29 |
-| D332 | roman* | 2 | [Expense] | ab tk chae par kitna kharcha hua | flags unexplained; doubts UnknownWords; unknown word: chae; no read planned |
-| D420 | roman | 2 | [Expense] | ab tak dukaan ke kiraye par kitna kharcha hua | flags unexplained; doubts UnknownWords; unknown word: kiraye; no read planned |
-| D421 | en | 1 | [Expense] | how much has been spent on shop rent so far | flags unexplained; unknown word: rent; planned period,report:R29 |
+| D263 | roman | 1 | [Expense] | is saal chai ka kharcha kitna hua | flags unexplained; unknown word: chai; planned period,report:R29 |
+| D327 | roman* | 2 | [Expense] | ab tk chae par kitna kharcha hua | flags unexplained; doubts UnknownWords; unknown word: chae; no read planned |
+| D415 | roman | 2 | [Expense] | ab tak dukaan ke kiraye par kitna kharcha hua | flags unexplained; doubts UnknownWords; unknown word: kiraye; no read planned |
+| D416 | en | 1 | [Expense] | how much has been spent on shop rent so far | flags unexplained; unknown word: rent; planned period,report:R29 |
 
 ## L. Stock: quantity and lots, oldest waiting, goods received
 
@@ -438,12 +432,10 @@ Plan: The charge rule of a party and item (app_state rules) as an instant answer
 
 | id | lang | calls | figures asked | question | what the app made of it |
 |---|---|---|---|---|---|
-| D188 | roman | 2 | [Commission] | rahim ke kele par hum kitna kamishan lete hain | flags unexplained; doubts UnknownWords; unknown word: kamishan lete; no read planned |
-| D189 | en | 2 | [Commission] | what percent commission do we charge on Rahim's banana | flags measure_other; no read planned |
-| D190 | roman | 1 | [Ask("rules")] | seb par gahak se laga kitna lagta hai | flags role_word; planned find,app_state |
-| D191 | urdu | 1 | [Ask("rules")] | سیب پر گاہک سے لاگا کتنا لگتا ہے | flags role_word; planned find,app_state |
-| D271 | roman | 2 | [Commission] | kal commission kitna hai | not sure; flags how_much_twice; doubts TenseUnclear; no read planned |
-| D272 | urdu | 2 | [Commission] | کل کمیشن کتنا ہے | not sure; doubts TenseUnclear; no read planned |
+| D187 | en | 2 | [Commission] | what percent commission do we charge on Rahim's banana | flags measure_other; no read planned |
+| D188 | roman | 1 | [Ask("rules")] | seb par gahak se laga kitna lagta hai | flags role_word; planned find,app_state |
+| D269 | roman | 2 | [Commission] | kal commission kitna hai | not sure; flags how_much_twice; doubts TenseUnclear; no read planned |
+| D270 | urdu | 2 | [Commission] | کل کمیشن کتنا ہے | not sure; doubts TenseUnclear; no read planned |
 
 ## N. A packing word (peti, boriyan, box, bag)
 
@@ -451,12 +443,12 @@ Plan: A packing filter on view A and R2 (known gap R6).
 
 | id | lang | calls | figures asked | question | what the app made of it |
 |---|---|---|---|---|---|
-| D238 | roman | 1 | [Sale] | pichle mahine aloo ki peti me kitni bikri hui | flags measure_quantity; planned period,find,analytics:A |
-| D239 | urdu | 1 | [Sale] | پچھلے مہینے آلو کی پیٹی میں کتنی بکری ہوئی | flags measure_quantity; planned period,find,analytics:A |
-| D240 | en | 1 | [Sale] | how many potatoes were sold in boxes last month | flags asks_count,measure_quantity; planned period,find,analytics:A |
-| D241 | roman | 1 | [Sale] | pichle mahine aloo ki boriyan kitni bikin aur kitne ki | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
-| D242 | urdu | 1 | [Sale] | پچھلے مہینے آلو کی بوریاں کتنی بکیں اور کتنے کی | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
-| D243 | en | 1 | [Sale] | how many bags of potato were sold last month and for how much | flags asks_count,unexplained,how_much_twice; doubts UnknownWords; unknown word: bags; no read planned |
+| D236 | roman | 1 | [Sale] | pichle mahine aloo ki peti me kitni bikri hui | flags measure_quantity; planned period,find,analytics:A |
+| D237 | urdu | 1 | [Sale] | پچھلے مہینے آلو کی پیٹی میں کتنی بکری ہوئی | flags measure_quantity; planned period,find,analytics:A |
+| D238 | en | 1 | [Sale] | how many potatoes were sold in boxes last month | flags asks_count,measure_quantity; planned period,find,analytics:A |
+| D239 | roman | 1 | [Sale] | pichle mahine aloo ki boriyan kitni bikin aur kitne ki | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
+| D240 | urdu | 1 | [Sale] | پچھلے مہینے آلو کی بوریاں کتنی بکیں اور کتنے کی | flags how_much_twice,measure_quantity; planned period,find,analytics:A |
+| D241 | en | 1 | [Sale] | how many bags of potato were sold last month and for how much | flags asks_count,unexplained,how_much_twice; doubts UnknownWords; unknown word: bags; no read planned |
 
 ## R. Wording of one figure: Urdu or Roman forms the app does not know (no new plan, a wording fix)
 
@@ -464,11 +456,11 @@ Plan: Words: "نام + ٹوٹل رقم", "aap hi ka hisab", Roman or misspelt na
 
 | id | lang | calls | figures asked | question | what the app made of it |
 |---|---|---|---|---|---|
-| D269 | urdu | 2 | [Balance] | کیا فیصل کا بقایا 5000 ہے | flags amount_named,happened; no read planned |
-| D316 | roman* | 2 | [Balance] | nadeem trader ka kitna bkaya hai | not sure; doubts CloseSpelling; no read planned |
-| D320 | roman* | 2 | [] | tarik mehmod ke zime kitna he | not sure; flags unexplained; doubts CloseSpelling, NoFigure; unknown word: zime; no read planned |
-| D371 | en | 2 | [Balance] | how much is Zahid Mehmood due to pay | flags happened; no read planned |
-| D452 | urdu | 1 | [Sale] | کریم نے پچھلے مہینے کتنا مال بیچا | flags measure_quantity; planned period,find,analytics:B |
+| D267 | urdu | 2 | [Balance] | کیا فیصل کا بقایا 5000 ہے | flags amount_named,happened; no read planned |
+| D311 | roman* | 2 | [Balance] | nadeem trader ka kitna bkaya hai | not sure; doubts CloseSpelling; no read planned |
+| D315 | roman* | 2 | [] | tarik mehmod ke zime kitna he | not sure; flags unexplained; doubts CloseSpelling, NoFigure; unknown word: zime; no read planned |
+| D366 | en | 2 | [Balance] | how much is Zahid Mehmood due to pay | flags happened; no read planned |
+| D447 | urdu | 1 | [Sale] | کریم نے پچھلے مہینے کتنا مال بیچا | flags measure_quantity; planned period,find,analytics:B |
 
 ## P. Zero or thin-day questions with no figure word ("kitne ke liye", "how much potato did X take")
 
@@ -487,7 +479,7 @@ Plan: Several matches -> compose the "کون سا؟" answer from the find result
 
 | id | lang | calls | figures asked | question | what the app made of it |
 |---|---|---|---|---|---|
-| D235 | urdu | 2 | [Balance] | اکرم کا بقایا کتنا ہے | not sure; doubts SeveralMatches; no read planned |
-| D236 | roman | 2 | [Balance] | akram ka bakaya kitna hai | not sure; flags how_much_twice; doubts SeveralMatches; no read planned |
-| D237 | en | 2 | [Balance] | how much does Akram owe | not sure; doubts SeveralMatches; no read planned |
+| D233 | urdu | 2 | [Balance] | اکرم کا بقایا کتنا ہے | not sure; doubts SeveralMatches; no read planned |
+| D234 | roman | 2 | [Balance] | akram ka bakaya kitna hai | not sure; flags how_much_twice; doubts SeveralMatches; no read planned |
+| D235 | en | 2 | [Balance] | how much does Akram owe | not sure; doubts SeveralMatches; no read planned |
 

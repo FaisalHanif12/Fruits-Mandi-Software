@@ -6,14 +6,16 @@
 //
 // "Print" sends the page to the printer and "Save as PDF" writes a file, both through the backend's
 // print job (`reports_print_report`, `analytics_print_view`) with the language and paper chosen here.
-// Off Windows the backend says printing works on Windows only, and the preview stays the way to see
-// the page. The Excel button (D5-Q1) saves every row of the report as a file.
+// On a Mac both buttons open the system print window (plan 69) and a hint says how to get a PDF there.
+// On a computer that is neither Windows nor a Mac the backend says printing is not available, and the
+// preview stays the way to see the page. The Excel button (D5-Q1) saves every row of the report as a file.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { FileDown, Printer } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Language } from '../../../bindings/Language';
 import type { Paper } from '../../../bindings/Paper';
+import { PrintDialogHint, opensSystemPrintWindow } from '../../../shared/print';
 import { Code } from '../../../shared/ui/Code';
 import {
   Button,
@@ -117,7 +119,9 @@ export function PrintPreviewFrame({
       {job.error === null ? null : <ErrorNotice error={job.error} />}
       {job.outcome === null ? null : (
         <div role="status" className="type-body flex flex-col gap-1 text-money-in">
-          {job.outcome.pdf_paths === null ? (
+          {opensSystemPrintWindow() ? (
+            <Localized id="report-print-dialog-opened" />
+          ) : job.outcome.pdf_paths === null ? (
             <Localized id="report-print-sent" />
           ) : (
             <>
@@ -129,6 +133,7 @@ export function PrintPreviewFrame({
           )}
         </div>
       )}
+      <PrintDialogHint />
       <div className="flex flex-wrap justify-end gap-2">
         <Button onClick={onBack}>
           <Localized id="common-back" />

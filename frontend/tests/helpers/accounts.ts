@@ -4,6 +4,7 @@
 
 import { vi } from 'vitest';
 import type { AccountNode } from '../../src/bindings/AccountNode';
+import type { ChuktaBuyer } from '../../src/bindings/ChuktaBuyer';
 import * as accountApi from '../../src/shared/accounts/api';
 import type {
   AccountHit,
@@ -48,13 +49,11 @@ const CONTROL_OF: Record<AccountType, AccountRef> = {
 /**
  * The running number of a seller or a buyer: the code without its 3-digit type number and without
  * padding (plan 32, R2), so `0010` is 0 and `00110` is 10. Null for every other account, and for
- * the two پختہ کھاتہ accounts (`0030`, `0031`), which have no short code (R5).
+ * the account چکتا کھاتہ (`0030`), which has no short code (R5).
  */
-export function runningOf(type: AccountType, code: string, isPukhtaParty = false): number | null {
+export function runningOf(type: AccountType, code: string): number | null {
   if (type !== 'seller' && type !== 'buyer') return null;
-  // A پختہ party's own account is of his side but in the series 003, buyers and sellers together
-  // (plan 47): `0032` is 2, `0033` is 3. The shared 0030 and 0031 have no short code.
-  const prefix = isPukhtaParty ? '003' : type === 'seller' ? '001' : '002';
+  const prefix = type === 'seller' ? '001' : '002';
   if (!code.startsWith(prefix) || code.length > 10) return null;
   const rest = code.slice(prefix.length);
   return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
@@ -73,7 +72,7 @@ export function account(
     id,
     version: 1,
     code,
-    serial: runningOf(type, code, extra.is_pukhta_party === true) ?? Number(code.slice(-4)),
+    serial: runningOf(type, code) ?? Number(code.slice(-4)),
     account_type: type,
     control,
     name_ur: ur,
@@ -96,7 +95,7 @@ export function account(
     collector: null,
     is_system: false,
     can_take_opening: true,
-    is_pukhta_khata: false,
+    is_chukta_khata: false,
     is_active: true,
     note: '',
     balance: ZERO,
@@ -105,19 +104,16 @@ export function account(
 }
 
 /**
- * Which accounts the Accounts list shows for a kind (plan 32, R6): "all" is the sellers, the
- * buyers and the two پختہ کھاتہ accounts; cash, payables, capital, نقدی منڈی, اپنا مال, people who
- * borrow, khatas and gardens are never in it. "every" is for the openings grid only.
+ * Which accounts the Accounts list shows for a kind (plan 32, R6, plan 64): "all" is the sellers
+ * and the buyers; cash, payables, capital, نقدی منڈی, اپنا مال, چکتا کھاتہ, people who borrow, khatas
+ * and gardens are never in it. "every" is for the openings grid only.
  */
 export function inListKind(row: AccountRow, kind: string): boolean {
   if (kind === 'every') return true;
   const party = (row.account_type === 'seller' || row.account_type === 'buyer') && !row.is_system;
-  // The پختہ filter has the two shared accounts and every party's own account (plan 47).
-  const own = row.is_pukhta_party === true;
-  if (kind === 'pukhta') return row.is_pukhta_khata || own;
-  if (kind === 'seller') return party && !own && row.account_type === 'seller';
-  if (kind === 'buyer') return party && !own && row.account_type === 'buyer';
-  return party || row.is_pukhta_khata;
+  if (kind === 'seller') return party && row.account_type === 'seller';
+  if (kind === 'buyer') return party && row.account_type === 'buyer';
+  return party;
 }
 
 export interface FakeAccounts {
@@ -296,18 +292,11 @@ export function fakeAccounts(
     const found = store.rows.find((row) => row.id === id);
     return found === undefined ? Promise.reject(new Error('not found')) : Promise.resolve(found);
   });
-  vi.mocked(accountApi.accountsNextCode).mockImplementation((type, _controlId, isPukhtaParty) => {
-    // One counter for both sides of the پختہ series, from 0032 (plan 47).
-    if (isPukhtaParty === true) {
-      const used = store.rows
-        .filter((row) => row.is_pukhta_party === true)
-        .map((row) => runningOf(row.account_type, row.code, true) ?? -1);
-      return Promise.resolve(`003${String(Math.max(1, ...used) + 1)}`);
-    }
+  vi.mocked(accountApi.accountsNextCode).mockImplementation((type) => {
     if (type === 'seller' || type === 'buyer') {
       const prefix = type === 'seller' ? '001' : '002';
       const used = store.rows
-        .filter((row) => row.account_type === type && row.is_pukhta_party !== true)
+        .filter((row) => row.account_type === type)
         .map((row) => runningOf(type, row.code) ?? -1);
       return Promise.resolve(`${prefix}${String(Math.max(-1, ...used) + 1)}`);
     }
@@ -333,7 +322,6 @@ export function fakeAccounts(
         city: draft.city,
         phone1: draft.phone1,
         credit_allowed: draft.credit_allowed,
-        ...(draft.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
         // The backend makes the tag capital and keeps none when it is empty (PRD 10.2).
         ...(draft.tag.trim() === '' ? {} : { tag: draft.tag.trim().toUpperCase() }),
       },
@@ -359,7 +347,9 @@ function hitOf(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
-    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
+    kind: 'account',
+    chukta_id: null,
+    phone: null,
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
@@ -406,6 +396,24 @@ function phoneticKey(text: string): string {
 }
 
 /**
+ * The row of a چکتا buyer in the buyer box, as the backend lists him (PRD FR-7.29): the account
+ * چکتا کھاتہ's id and code, his own names and record, his phone as the second line, no balance.
+ */
+function chuktaRowOf(khata: AccountRow, person: ChuktaBuyer): AccountHit {
+  return {
+    ...hitOf(khata),
+    name_ur: person.name_ur,
+    name_en: person.name_en,
+    extra_ur: person.phone ?? '',
+    extra_en: person.phone ?? '',
+    kind: 'chukta',
+    chukta_id: person.id,
+    phone: person.phone,
+    balance: null,
+  };
+}
+
+/**
  * Search, short codes and the party card as the backend answers them (plan 32): an exact full code
  * first, then the running number (a short code) within the scope, then the code or the names with
  * the text in them. Empty text is every account of the scope, a page at a time.
@@ -413,20 +421,23 @@ function phoneticKey(text: string): string {
 export function fakeAccountSearch(
   rows: AccountRow[],
   cards: Partial<Record<number, PartyCardData>> = {},
+  chuktaBuyers: readonly ChuktaBuyer[] = [],
 ) {
   const find = (scope: AccountScope, text: string, withInactive = false): AccountRow[] => {
     const wanted = text.trim().toLowerCase();
     const digits = /^\d+$/.test(wanted);
     // Only active accounts are offered; resolving a code also sees the inactive ones.
-    const scoped = rows.filter((row) => inScope(row, scope) && (withInactive || row.is_active));
+    // The account چکتا کھاتہ is never a hit: his buyers are (PRD FR-13.4).
+    const scoped = rows.filter(
+      (row) => inScope(row, scope) && (withInactive || row.is_active) && !row.is_chukta_khata,
+    );
     if (digits) {
       const exact = scoped.filter((row) => row.code === wanted);
       if (exact.length > 0) return exact;
       if (SHORT_CODE.test(wanted)) {
-        // A khata, a garden and a پختہ کھاتہ account have no short code: their full code works.
+        // A khata, a garden and the account چکتا کھاتہ have no short code: their full code works.
         const byRunning = scoped.filter(
-          (row) =>
-            runningOf(row.account_type, row.code, row.is_pukhta_party === true) === Number(wanted),
+          (row) => runningOf(row.account_type, row.code) === Number(wanted),
         );
         if (byRunning.length > 0) return byRunning;
       }
@@ -444,15 +455,39 @@ export function fakeAccountSearch(
       ? []
       : scoped.filter((row) => phoneticKey(row.name_en).includes(wantedKey));
   };
-  vi.mocked(accountApi.searchAccounts).mockImplementation(({ scope, text, offset = 0, limit }) =>
-    Promise.resolve(
-      find(scope, text)
-        .slice(offset, offset + limit)
-        .map(hitOf),
-    ),
+  // The چکتا buyers of the buyer box of a بکری line: each hit is the account چکتا کھاتہ with his own
+  // names and phone, marked `chukta` (PRD FR-7.29). The backend lists them only when the box asks
+  // (`withChukta`); no other buyer box gets them.
+  const chuktaHits = (scope: AccountScope, text: string, withChukta = false): AccountHit[] => {
+    const khata = rows.find((row) => row.is_chukta_khata);
+    if (!withChukta || scope !== 'buyer' || khata === undefined || /^\d+$/.test(text.trim())) {
+      return [];
+    }
+    const wanted = text.trim().toLowerCase();
+    return chuktaBuyers
+      .filter((person) =>
+        [person.name_ur, person.name_en, person.phone ?? ''].some((part) =>
+          part.toLowerCase().includes(wanted),
+        ),
+      )
+      .map((person) => chuktaRowOf(khata, person));
+  };
+  vi.mocked(accountApi.searchAccounts).mockImplementation(
+    ({ scope, text, offset = 0, limit, withChukta }) => {
+      const accounts = find(scope, text).map(hitOf);
+      const people = chuktaHits(scope, text, withChukta);
+      // Typed text: a چکتا buyer whose name has it in is a literal match, listed before the near
+      // spellings of accounts, as the backend ranks them. The full list (no text) is by code.
+      const ordered = text.trim() === '' ? [...accounts, ...people] : [...people, ...accounts];
+      return Promise.resolve(ordered.slice(offset, offset + limit));
+    },
   );
-  vi.mocked(accountApi.searchAccountsRecent).mockImplementation((scope) =>
-    Promise.resolve(rows.filter((row) => inScope(row, scope)).map(hitOf)),
+  vi.mocked(accountApi.searchAccountsRecent).mockImplementation(
+    (scope, _controlId, _includeDead, withChukta) =>
+      Promise.resolve([
+        ...rows.filter((row) => inScope(row, scope) && !row.is_chukta_khata).map(hitOf),
+        ...chuktaHits(scope, '', withChukta),
+      ]),
   );
   vi.mocked(accountApi.searchAccountsTouch).mockResolvedValue(null);
   vi.mocked(accountApi.accountsResolveCode).mockImplementation((scope, _controlId, text) => {
@@ -461,7 +496,7 @@ export function fakeAccountSearch(
     const first = found[0];
     const type = scope === 'buyer' ? 'buyer' : 'seller';
     const used = rows
-      .filter((row) => row.account_type === type && row.is_pukhta_party !== true)
+      .filter((row) => row.account_type === type)
       .map((row) => runningOf(type, row.code) ?? -1);
     const next = `${type === 'buyer' ? '002' : '001'}${String(Math.max(-1, ...used) + 1)}`;
     const result: ResolvedCode =
@@ -483,7 +518,21 @@ export function fakeAccountSearch(
             };
     return Promise.resolve(result);
   });
-  vi.mocked(accountApi.assistPartyCard).mockImplementation((id) => {
+  vi.mocked(accountApi.assistPartyCard).mockImplementation((id, chuktaId = null) => {
+    const person = chuktaId === null ? undefined : chuktaBuyers.find((one) => one.id === chuktaId);
+    const khata = rows.find((candidate) => candidate.id === id);
+    if (person !== undefined && khata !== undefined) {
+      // A چکتا buyer's own card: his names and phone, no balance (PRD FR-13.6).
+      return Promise.resolve(
+        cardOf(khata, {
+          is_chukta: true,
+          name_ur: person.name_ur,
+          name_en: person.name_en,
+          phone: person.phone ?? '',
+          last_entry_date: null,
+        }),
+      );
+    }
     const card = cards[id];
     if (card !== undefined) return Promise.resolve(card);
     const row = rows.find((candidate) => candidate.id === id);
@@ -498,7 +547,6 @@ export function cardOf(row: AccountRow, extra: Partial<PartyCardData> = {}): Par
     id: row.id,
     code: row.code,
     account_type: row.account_type,
-    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     is_active: row.is_active,
     name_ur: row.name_ur,
     name_en: row.name_en,

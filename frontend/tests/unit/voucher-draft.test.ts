@@ -12,10 +12,8 @@ import {
   helperTarget,
   isCashLent,
   isFilled,
-  needsPerson,
   newDraft,
   nextDraft,
-  personSide,
 } from '../../src/features/vouchers/draft';
 import type { VoucherDraft } from '../../src/features/vouchers/types';
 import { asScreenType, parseVoucherSearch } from '../../src/features/vouchers/screen-type';
@@ -24,19 +22,6 @@ import { voucherRow } from '../helpers/vouchers';
 
 const AKRAM = { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
 const RAHIM = { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
-const PUKHTA_BUYER = {
-  id: 23,
-  code: '0030',
-  name_ur: 'پختہ کھاتہ (خریدار)',
-  name_en: 'Pukhta Khata (Buyer)',
-};
-const PUKHTA_SELLER = {
-  id: 24,
-  code: '0031',
-  name_ur: 'پختہ کھاتہ (بیوپاری)',
-  name_en: 'Pukhta Khata (Seller)',
-};
-const SHAHID = { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'k-shahid' };
 const COLLECTOR = { id: 61, code: '', name_ur: 'اسلم', name_en: 'Aslam' };
 
 const TODAY = '2026-10-10';
@@ -78,8 +63,6 @@ describe('changeType (PRD FR-7.67)', () => {
       narration: 'season',
       reason: 'cash for rent',
       collector: COLLECTOR,
-      person: SHAHID,
-      personText: 'Shahid',
     });
     const after = changeType(before, 'receipt');
     expect(after).toMatchObject({
@@ -89,8 +72,6 @@ describe('changeType (PRD FR-7.67)', () => {
       narration: 'season',
       account: null,
       accountType: null,
-      person: null,
-      personText: '',
       reason: '',
       collector: null,
       from: 'buyer',
@@ -130,14 +111,6 @@ describe('what the account field takes', () => {
     expect(accountScope(draft('payment'))).toBe('any');
   });
 
-  it('needs a person only for the two one-time accounts, on their own side', () => {
-    expect(needsPerson(draft('receipt', { account: AKRAM }))).toBe(false);
-    expect(needsPerson(draft('receipt', { account: PUKHTA_BUYER }))).toBe(true);
-    expect(personSide(draft('receipt', { account: PUKHTA_BUYER }))).toBe('buyer');
-    expect(needsPerson(draft('payment', { account: PUKHTA_SELLER }))).toBe(true);
-    expect(personSide(draft('payment', { account: PUKHTA_SELLER }))).toBe('seller');
-  });
-
   it('calls a payment to a buyer cash lent (PRD FR-15.11)', () => {
     expect(isCashLent(draft('payment', { accountType: 'buyer' }))).toBe(true);
     expect(isCashLent(draft('payment', { accountType: 'seller' }))).toBe(false);
@@ -174,7 +147,6 @@ describe('build', () => {
         amount: '10,000',
         narration: 'part',
         account_id: 21,
-        person_key: null,
         collector_staff_id: 61,
       },
     });
@@ -190,19 +162,6 @@ describe('build', () => {
         expect(built?.input, `${type} ${gone}`).not.toHaveProperty(gone);
       }
     }
-  });
-
-  it('sends the person key only for a one-time account', () => {
-    const one = build(
-      draft('receipt', { account: PUKHTA_BUYER, accountType: 'buyer', person: SHAHID }),
-      false,
-    );
-    expect(one?.input).toMatchObject({ person_key: 'k-shahid' });
-    const regular = build(
-      draft('receipt', { account: AKRAM, accountType: 'buyer', person: SHAHID }),
-      false,
-    );
-    expect(regular?.input).toMatchObject({ person_key: null });
   });
 
   it('sends the reason only for cash lent, and always sends the cash answer', () => {
@@ -257,12 +216,10 @@ describe('helperTarget (PRD FR-7.58 to FR-7.60)', () => {
     expect(helperTarget(draft('receipt', { account: AKRAM, accountType: 'buyer' }))).toEqual({
       kind: 'bills',
       accountId: 21,
-      personKey: null,
     });
     expect(helperTarget(draft('payment', { account: AKRAM, accountType: 'buyer' }))).toEqual({
       kind: 'bills',
       accountId: 21,
-      personKey: null,
     });
   });
 
@@ -270,7 +227,6 @@ describe('helperTarget (PRD FR-7.58 to FR-7.60)', () => {
     expect(helperTarget(draft('payment', { account: RAHIM, accountType: 'seller' }))).toEqual({
       kind: 'payables',
       accountId: 31,
-      personKey: null,
     });
   });
 
@@ -282,16 +238,6 @@ describe('helperTarget (PRD FR-7.58 to FR-7.60)', () => {
     expect(
       helperTarget(draft('receipt', { account: RAHIM, accountType: 'seller', from: 'seller' })),
     ).toEqual({ kind: 'advances', accountId: 31 });
-  });
-
-  it('waits for the person on a one-time account, then keys the bills by him', () => {
-    const waiting = draft('receipt', { account: PUKHTA_BUYER, accountType: 'buyer' });
-    expect(helperTarget(waiting)).toEqual({ kind: 'none' });
-    expect(helperTarget({ ...waiting, person: SHAHID })).toEqual({
-      kind: 'bills',
-      accountId: 23,
-      personKey: 'k-shahid',
-    });
   });
 
   it('shows nothing for a payment to another kind of account', () => {
@@ -307,7 +253,6 @@ describe('draftOfRow (PRD FR-15.3)', () => {
       voucher_type: 'receipt',
       entry_date: '2026-10-09',
       narration: 'part',
-      person: SHAHID,
       reason: '',
     });
     const loaded = draftOfRow(
@@ -315,31 +260,28 @@ describe('draftOfRow (PRD FR-15.3)', () => {
       'receipt',
       { accountType: 'buyer', collector: COLLECTOR },
       'international',
-      'en',
     );
     expect(loaded).toMatchObject({
       type: 'receipt',
       date: '09-10-2026',
       amount: '10,000',
       narration: 'part',
-      person: SHAHID,
-      personText: 'Shahid',
       collector: COLLECTOR,
       from: 'buyer',
     });
   });
+});
 
-  it('shows a receipt from a seller as from a seller and uses the Urdu name in Urdu', () => {
-    const row = voucherRow({ voucher_type: 'receipt', person: SHAHID });
+describe('draftOfRow from a seller (PRD FR-15.12)', () => {
+  it('shows a receipt from a seller as from a seller', () => {
+    const row = voucherRow({ voucher_type: 'receipt' });
     const loaded = draftOfRow(
       row,
       'receipt',
       { accountType: 'seller', collector: null },
       'international',
-      'ur',
     );
     expect(loaded.from).toBe('seller');
-    expect(loaded.personText).toBe('شاہد');
   });
 });
 

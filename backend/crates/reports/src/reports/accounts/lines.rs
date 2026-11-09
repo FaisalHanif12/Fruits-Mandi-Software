@@ -37,12 +37,12 @@ const WALK_LINES: i64 = 2_000;
 /// few thousand, fewer than the lines of the account.
 const NARROW_DAYS: i64 = 62;
 
-/// Which lines: an account (or all), one person of a پختہ کھاتہ account, and a range of days.
+/// Which lines: an account (or all), one person of a چکتا کھاتہ account, and a range of days.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct LineFilter {
     /// Only this account.
     pub(crate) account: Option<i64>,
-    /// Only this one-time person.
+    /// Only this چکتا buyer.
     pub(crate) person: Option<String>,
     /// First day, `YYYY-MM-DD`, included.
     pub(crate) from: Option<String>,
@@ -60,7 +60,7 @@ impl LineFilter {
             binds.push(Value::Integer(account));
         }
         if let Some(person) = &self.person {
-            sql.push_str(" AND l.pukhta_person_key = ?");
+            sql.push_str(" AND l.chukta_person_key = ?");
             binds.push(Value::Text(person.clone()));
         }
         if let Some(from) = &self.from {
@@ -104,7 +104,7 @@ fn is_large(conn: &Connection, f: &LineFilter) -> Result<bool, ReportsError> {
     let counted: i64 = match f.person.as_deref() {
         Some(person) => conn.query_row(
             "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines
-               WHERE account_id = ?1 AND pukhta_person_key = ?2 LIMIT ?3)",
+               WHERE account_id = ?1 AND chukta_person_key = ?2 LIMIT ?3)",
             params![account, person, LARGE_ACCOUNT.saturating_add(1)],
             |r| r.get(0),
         )?,
@@ -284,7 +284,7 @@ pub(crate) fn page_query(
     let sql = format!(
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, e.source_type, e.source_id,
                 e.reverses_entry_id, l.account_id, COALESCE(l.narration, e.narration),
-                l.pukhta_person_key, l.dr_paisa, l.cr_paisa,
+                l.chukta_person_key, l.dr_paisa, l.cr_paisa,
                 COALESCE(b.number, v.number), v.type, v.reason, {venture_kind}, {venture_id}
          FROM {by} LEFT JOIN bikri_entries b ON e.source_type = 'bikri' AND b.id = e.source_id
          LEFT JOIN vouchers v ON e.source_type = 'voucher' AND v.id = e.source_id

@@ -223,7 +223,7 @@ fn first_node(first: &mandi_reports::dashboard::AttentionFirst) -> Node {
         })),
         _ => Node::Null,
     };
-    // One person of a پختہ کھاتہ account shares the account with others: the account key would
+    // One person of a چکتا کھاتہ account shares the account with others: the account key would
     // open all of them, so he is given by name only.
     let key = if first.person_key.is_some() {
         Node::Null

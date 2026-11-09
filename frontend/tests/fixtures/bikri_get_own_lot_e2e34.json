@@ -75,7 +75,6 @@
         ]
       },
       "arrival": null,
-      "pukhta": null,
       "item": {
         "id": 5,
         "code": "0044",
@@ -136,7 +135,7 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "pukhta": null,
+          "chukta": null,
           "qty": 15,
           "weight_grams": null,
           "seller_rate": 60000,

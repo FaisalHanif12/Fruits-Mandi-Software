@@ -47,10 +47,10 @@ use super::load::{
     detail_of, draft_of, later_header, later_lot_input, posting_lots, stored_posting,
 };
 use super::rows::{
-    LotCharges, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_person,
-    lot_running_totals, pin_cash_sales, posting_sums, shape, stored_line_ids,
+    LotCharges, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_running_totals,
+    pin_cash_sales, posting_sums, shape, stored_line_ids,
 };
-use super::shared::{Basis, Replaced, Worked, data, switches, work_out};
+use super::shared::{Basis, Replaced, Worked, data, refresh_chukta_index, switches, work_out};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::cash;
@@ -135,7 +135,7 @@ pub fn open_for_edit(ctx: &Context, input: &EditOpenInput) -> Result<EditableBik
         let kind = kind_of(&posting);
         let date = BusinessDate::parse_iso(&posting.entry_date)
             .ok_or_else(|| data("the date of a posting is not a date"))?;
-        let draft = draft_of(conn, &detail, posting.entry_id, date, kind, true)?;
+        let draft = draft_of(&detail, posting.entry_id, date, kind, true);
         let stored = posting_lots(&detail, posting.entry_id, kind);
         let mut shown = detail.clone();
         super::read::mark_editable(&mut shown, closed_up_to);
@@ -213,22 +213,6 @@ fn check_first(
                         &format!("lots[{index}].seller_account_id"),
                         "lot_seller_locked",
                     ));
-                }
-                // The one-time seller of a lot that other postings, a write-off or fruit rest on keeps
-                // his name and phone: their credits and debits rest on his person key (plan 17d; plan
-                // 42, money agent: a later posting under the old key and the lot under a new one can
-                // never be reconciled).
-                if others && let Some(stored_person) = found.pukhta.as_ref() {
-                    // The key is made the way the save makes it (names and phone cleaned first); a
-                    // person who cannot be cleaned is left to the normal name checks.
-                    let same = mandi_domain::bikri::clean_person(&lot.pukhta)
-                        .is_none_or(|clean| clean.key == stored_person.person_key);
-                    if !same {
-                        errors.push(not_allowed(
-                            &format!("lots[{index}].pukhta"),
-                            "lot_seller_locked",
-                        ));
-                    }
                 }
                 // The purchase of an own lot never changes: its stock and cost rest on it.
                 if lot.purchase_id != found.purchase.as_ref().map(|p| p.id) {
@@ -423,8 +407,8 @@ fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value
                     let mut line = json!({
                         "line": index + 1,
                         "buyer_account_id": s.buyer.id,
-                        "pukhta_name_ur": s.pukhta.as_ref().map(|p| p.name_ur.clone()),
-                        "pukhta_name_en": s.pukhta.as_ref().map(|p| p.name_en.clone()),
+                        "chukta_name_ur": s.chukta.as_ref().map(|p| p.name_ur.clone()),
+                        "chukta_name_en": s.chukta.as_ref().map(|p| p.name_en.clone()),
                         "qty": s.qty,
                         "weight_grams": s.weight_grams,
                         "seller_rate_paisa": s.seller_rate.as_paisa(),
@@ -511,8 +495,11 @@ pub fn edit_save(
     let rule_set = rules::rule_set(ctx)?;
     let settings = rules::overrides(ctx)?;
     let switches = switches(&settings);
-    ctx.db
-        .write(|tx| edit_in(ctx, actor, tx, window, &rule_set, switches, input))
+    let saved = ctx
+        .db
+        .write(|tx| edit_in(ctx, actor, tx, window, &rule_set, switches, input))?;
+    refresh_chukta_index(ctx, &input.draft);
+    Ok(saved)
 }
 
 /// The edit inside the transaction of the caller: the save and the rehearsal of the preview
@@ -664,19 +651,11 @@ fn write_edit(
         match shaped.lot.lot_id {
             Some(id) => lot_ids.push(id),
             None => {
-                let person = lot_person(shaped)?;
                 let running = lot_running_totals(
                     &LotCharges::of_totals(shaped.totals),
                     posting_sums(shaped)?,
                 )?;
-                let columns = lot_columns(
-                    tx,
-                    detail.id,
-                    next_lot_no,
-                    shaped,
-                    person.as_ref(),
-                    &running,
-                )?;
+                let columns = lot_columns(tx, detail.id, next_lot_no, shaped, &running)?;
                 lot_ids.push(repo::insert_lot(tx, &columns, user, &now)?);
                 next_lot_no = next_lot_no
                     .checked_add(1)
@@ -730,15 +709,13 @@ fn write_edit(
         if first {
             let running = lot_running_totals(&LotCharges::of_totals(shaped.totals), sums)?;
             if shaped.lot.lot_id.is_some() {
-                let person = lot_person(shaped)?;
                 let lot_no = detail
                     .lots
                     .iter()
                     .find(|l| Some(l.id) == shaped.lot.lot_id)
                     .map(|l| l.lot_no)
                     .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
-                let columns =
-                    lot_columns(tx, detail.id, lot_no, shaped, person.as_ref(), &running)?;
+                let columns = lot_columns(tx, detail.id, lot_no, shaped, &running)?;
                 edit_repo::update_lot(tx, *lot_id, &columns, user, &now)?;
             }
             repo::set_lot_first_entry(tx, *lot_id, new_entry_id, user, &now)?;
@@ -781,16 +758,8 @@ fn write_edit(
     let new_stored = ledger_repo::get_entry(tx, new_entry_id)?
         .ok_or_else(|| data("the new posting cannot be read back"))?;
     for (account_id, person_key) in touched_keys(&old_entry, &new_stored) {
-        if let Some((role, is_pukhta)) = role_of_account(tx, account_id)? {
-            rematch_party(
-                tx,
-                user,
-                &now,
-                account_id,
-                person_key.as_deref(),
-                role,
-                is_pukhta,
-            )?;
+        if let Some(role) = role_of_account(tx, account_id)? {
+            rematch_party(tx, user, &now, account_id, person_key.as_deref(), role)?;
         }
     }
     check_shares(tx, new_entry_id, worked.calc.summary.shared_income)?;

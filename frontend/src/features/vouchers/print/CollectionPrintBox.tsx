@@ -3,7 +3,8 @@
 // and the copies. The filters are the screen's own, so the paper is exactly the list the user sees
 // (every buyer who owes, by collector and city; the list has no day, plan 53). The paper size comes from the Printing settings.
 //
-// Printing works on Windows only (plan 14 contract 8). Elsewhere the backend answers
+// Printing works on Windows and on a Mac (plan 14 contract 8, plan 69; on a Mac the system print
+// window opens). On any other computer the backend answers
 // `ERR_PRINT_WINDOWS_ONLY` and the "Preview" shows the same list in the app, laid out exactly as it
 // would print. The language switch of the box changes only the print, never the app.
 
@@ -17,7 +18,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useSingleFlight } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
 import { useFormNavigation } from '../../../shared/keyboard';
-import { PrintLanguageTo, PrintOutcomeNotice } from '../../../shared/print';
+import { PrintDialogHint, PrintLanguageTo, PrintOutcomeNotice } from '../../../shared/print';
 import { Button, ErrorNotice, Field, FormDialog, QtyInput, fieldError } from '../../../shared/ui';
 import { usePrintCollection } from '../../reports';
 import { usePrintingSettings } from '../../settings';
@@ -129,6 +130,7 @@ function PrintBoxForm({ target, onClose }: { target: CollectionPrintTarget; onCl
         to={to}
         onTo={setTo}
       />
+      <PrintDialogHint />
       <Field
         label={<Localized id="print-box-copies" />}
         hint={<Localized id="print-box-copies-hint" />}

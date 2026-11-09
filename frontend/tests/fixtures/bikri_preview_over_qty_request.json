@@ -35,18 +35,17 @@
           "method": "manual",
           "value": "20"
         },
-        "pukhta": null,
         "qty_received": "50",
         "sales": [
           {
             "buyer_account_id": 20,
             "buyer_comm": null,
             "buyer_rate": null,
+            "chukta": null,
             "key": "line-1",
             "laga": null,
             "note": null,
             "payment_type": null,
-            "pukhta": null,
             "qty": "70",
             "rate_differs": false,
             "seller_comm": null,

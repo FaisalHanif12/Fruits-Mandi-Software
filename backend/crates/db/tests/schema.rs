@@ -150,13 +150,14 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "collector_staff_id",
                 "collection_weekday",
                 "is_system",
-                "is_pukhta_khata",
+                "is_chukta_khata",
                 "is_active",
                 "note",
                 // Migration 0006 (PRD v1.7): the tag after a name (null for none).
                 "tag",
-                // Migration 0013 (plan 47, PRD v1.15): a پختہ party's own account.
-                "is_pukhta_party",
+                // Migration 0013 (plan 47) made it; migration 0020 (plan 64) renamed it: the mark of an
+                // old one-time party account, never read again (PRD FR-13.9).
+                "was_one_time_party",
             ]);
             v
         }),
@@ -262,10 +263,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "bikri_id",
                 "lot_no",
                 "seller_account_id",
-                "pukhta_name_ur",
-                "pukhta_name_en",
-                "pukhta_phone",
-                "pukhta_person_key",
+                "chukta_name_ur",
+                "chukta_name_en",
+                "chukta_phone",
+                "chukta_person_key",
                 "item_id",
                 "packing_id",
                 "marka_id",
@@ -313,10 +314,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "journal_entry_id",
                 "entry_date",
                 "buyer_account_id",
-                "pukhta_name_ur",
-                "pukhta_name_en",
-                "pukhta_phone",
-                "pukhta_person_key",
+                "chukta_name_ur",
+                "chukta_name_en",
+                "chukta_phone",
+                "chukta_person_key",
                 "qty",
                 "weight_grams",
                 "seller_rate_paisa",
@@ -514,7 +515,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "source",
                 "lot_id",
                 "credit_account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "item_id",
                 "packing_id",
                 "qty",
@@ -541,7 +542,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "item_id",
                 "seller_account_id",
                 "buyer_account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "city_id",
                 "adda_id",
                 "qty",
@@ -556,6 +557,11 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "cost_paisa",
                 "sign",
             ],
+        ),
+        // 15.4 (v1.20, migration 0020, plan 64): the list of چکتا buyers (PRD FR-13.2).
+        (
+            "chukta_buyers",
+            named(&["person_key"], &["phone", "is_active"]),
         ),
         // 15.3 (v1.12, migration 0012): the edit window of one trip or garden entry (plan 44).
         ("edit_windows", vec!["entity", "entity_id"]),
@@ -596,7 +602,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             "dead_marks",
             vec![
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "entry_date",
                 "reason",
                 "note",
@@ -618,7 +624,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "number",
                 "entry_date",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "mode",
                 "bank_account_id",
@@ -659,7 +665,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "entry_id",
                 "line_no",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "dr_paisa",
                 "cr_paisa",
                 "is_advance",
@@ -672,7 +678,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "bill_line_id",
                 "payment_line_id",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "is_active",
                 "undone_at",
@@ -685,7 +691,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "advance_line_id",
                 "credit_line_id",
                 "account_id",
-                "pukhta_person_key",
+                "chukta_person_key",
                 "amount_paisa",
                 "is_active",
                 "undone_at",
@@ -723,9 +729,9 @@ fn table_list_equals_architecture_15() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
-    // 46 tables of migrations 1 to 10, `dead_marks` of migration 11, `edit_windows` of 12 and
-    // `assistant_questions` of 15.
-    assert_eq!(want.len(), 49);
+    // 46 tables of migrations 1 to 10, `dead_marks` of migration 11, `edit_windows` of 12,
+    // `assistant_questions` of 15 and `chukta_buyers` of 20.
+    assert_eq!(want.len(), 50);
     assert_eq!(tables(&conn), want);
 }
 
@@ -758,7 +764,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 49);
+    assert_eq!(rows.len(), 50);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -853,7 +859,7 @@ fn every_date_column_has_the_date_check() {
 fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
     let mut v = vec![
         ("journal_lines", vec!["account_id", "entry_id"]),
-        ("journal_lines", vec!["account_id", "pukhta_person_key"]),
+        ("journal_lines", vec!["account_id", "chukta_person_key"]),
         ("journal_entries", vec!["entry_date"]),
         ("journal_entries", vec!["source_type", "source_id"]),
         ("bikri_sales", vec!["lot_id"]),
@@ -873,11 +879,11 @@ fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
         ("partner_share_rows", vec!["partner_id", "entry_date"]),
         (
             "bill_allocations",
-            vec!["account_id", "pukhta_person_key", "is_active"],
+            vec!["account_id", "chukta_person_key", "is_active"],
         ),
         (
             "advance_allocations",
-            vec!["account_id", "pukhta_person_key", "is_active"],
+            vec!["account_id", "chukta_person_key", "is_active"],
         ),
         ("bikri_entries", vec!["truck_no", "entry_date"]),
         ("accounts", vec!["party_type", "serial"]),
@@ -936,7 +942,7 @@ fn index_columns(conn: &Connection, table: &str) -> Vec<Vec<String>> {
     names
         .iter()
         .map(|name| {
-            // An expression column (migration 11, `COALESCE(pukhta_person_key, '')`) has no name.
+            // An expression column (migration 11, `COALESCE(chukta_person_key, '')`) has no name.
             conn.prepare("SELECT name FROM pragma_index_info(?1) ORDER BY seqno")
                 .unwrap()
                 .query_map([name], |row| {

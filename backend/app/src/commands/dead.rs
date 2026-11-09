@@ -14,9 +14,8 @@ use crate::error::UiError;
 
 /// What moving a person to the dead amount would do: what he owes now, whether he can be moved
 /// (and the code that says why not), the day of his last posting and his linked account with its
-/// balance. Read only. Errors: `ERR_NOT_FOUND` on `account_id`; `ERR_PERSON_REQUIRED` and
-/// `ERR_NOT_FOUND` on `pukhta_person_key`. A person who cannot be moved is not an error: `allowed`
-/// is false and `reason_not_allowed` is the code.
+/// balance. Read only. Errors: `ERR_NOT_FOUND` on `account_id`. A person who cannot be moved is not
+/// an error: `allowed` is false and `reason_not_allowed` is the code.
 #[tauri::command]
 pub async fn masters_dead_preview<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -30,11 +29,10 @@ pub async fn masters_dead_preview<R: tauri::Runtime>(
 }
 
 /// Moves a person to the dead amount (PRD FR-10.10). One transaction: the account is made inactive
-/// (a پختہ کھاتہ person only gets his key marked), the move is written with what he owes that day,
-/// and the audit row. Nothing posts. Errors: `ERR_NOT_FOUND` (`account_id`); `ERR_NOTHING_OWED`,
-/// `ERR_DEAD_NOT_ALLOWED`, `ERR_ALREADY_DEAD` (`account_id`); `ERR_PERSON_REQUIRED` and
-/// `ERR_PERSON_IN_DEAD_AMOUNT` (`pukhta_person_key`); `ERR_NOTE_REQUIRED` (`note`); the date codes
-/// on `entry_date` and `ERR_DATE_BEFORE_LAST_POSTING`.
+/// the move is written with what he owes that day, and the audit row. Nothing posts. Only an account
+/// can be moved: a چکتا buyer has no balance (PRD FR-13.6). Errors: `ERR_NOT_FOUND` (`account_id`);
+/// `ERR_NOTHING_OWED`, `ERR_DEAD_NOT_ALLOWED`, `ERR_ALREADY_DEAD` (`account_id`); `ERR_NOTE_REQUIRED`
+/// (`note`); the date codes on `entry_date` and `ERR_DATE_BEFORE_LAST_POSTING`.
 #[tauri::command]
 pub async fn masters_dead_mark<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -48,7 +46,7 @@ pub async fn masters_dead_mark<R: tauri::Runtime>(
 }
 
 /// Makes a person active again, with a reason ("دوبارہ فعال کریں"). One transaction: the move ends,
-/// the account (or the person key) is active, and the audit row. Errors: `ERR_NOT_FOUND`
+/// the account is active, and the audit row. Errors: `ERR_NOT_FOUND`
 /// (`mark_id`); `ERR_REASON_REQUIRED` (`reason`).
 #[tauri::command]
 pub async fn masters_dead_undo<R: tauri::Runtime>(

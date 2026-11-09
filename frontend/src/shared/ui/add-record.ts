@@ -57,9 +57,8 @@ export interface AddRecordRequest {
    */
   form?: 'quick' | 'full' | undefined;
   /**
-   * The kind of account the short form was set to when the user went on to the full form (plan 47):
-   * a seller, a buyer, or a پختہ کھاتہ گاہک or بیوپاری. The full form starts as that kind. Without
-   * it, the form starts from `kind` as before.
+   * The kind of account the short form was set to when the user went on to the full form: a seller
+   * or a buyer. The full form starts as that kind. Without it, the form starts from `kind`.
    */
   accountKind?: AccountKind | undefined;
   /** A مارکہ added from a lot: the lot's seller is its owner. */

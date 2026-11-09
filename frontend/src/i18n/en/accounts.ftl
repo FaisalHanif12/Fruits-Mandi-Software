@@ -6,7 +6,7 @@
 accounts-title = Accounts
 
 # review: pending
-accounts-help = Sellers, buyers and { -pukhta-khata }. Open an account to see or change it, or make a new one.
+accounts-help = Sellers and buyers. Open an account to see or change it, or make a new one.
 
 # review: pending
 accounts-new = New account
@@ -96,15 +96,9 @@ accounts-type-seller = { -beopari }
 # review: pending
 accounts-type-buyer = { -gahak }
 
+# The mark of a walk-in buyer in the buyer list of a sale line and on his card (PRD FR-7.29, FR-13.6).
 # review: pending
-accounts-type-pukhta = { -pukhta-khata }
-
-# PRD FR-13.11, plan 47: a پختہ party's own account, by his side.
-# review: pending
-accounts-type-pukhta_buyer = { -pukhta-khata } { -gahak }
-
-# review: pending
-accounts-type-pukhta_seller = { -pukhta-khata } { -beopari }
+accounts-type-chukta = { -chukta }
 
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
@@ -175,7 +169,7 @@ accounts-field-type = Account type
 
 # PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
 # review: pending
-accounts-field-type-hint = A one-time buyer or seller is typed on the sale line under { -pukhta-khata }, with name and phone. Make an account here for one who comes again.
+accounts-field-type-hint = Make an account here for a seller or buyer who keeps an account. A walk-in buyer who pays the whole bill on the spot is added from the buyer box of a sale line, as { -chukta-khata }.
 
 # review: pending
 accounts-field-control = Control
@@ -290,7 +284,7 @@ chart-load-failed = The chart of accounts could not be opened
 masters-accounts-title = Accounts
 
 # review: pending
-masters-accounts-help = Sellers, buyers and { -pukhta-khata }.
+masters-accounts-help = Sellers and buyers.
 
 # review: pending
 masters-chart-title = Chart of accounts

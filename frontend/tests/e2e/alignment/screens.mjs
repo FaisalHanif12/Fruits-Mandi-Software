@@ -35,7 +35,6 @@ const REPORTS = [
   'R6',
   'R7',
   'R8',
-  'R9',
   'R10',
   'R11',
   'R12',
@@ -76,7 +75,6 @@ export const SCREENS = [
   ['bikri-saved', '/dev/bikri?id=41'],
   ['edit-action-edit', '/dev/bikri?id=41&edit=7'],
   ['bikri-today', '/dev/bikri?today'],
-  ['bikri-pukhta', '/dev/bikri?pukhta'],
   ['bikri-stock', '/dev/bikri?stock'],
   ['bikri-later', '/dev/bikri?later&lot=40'],
   ['bikri-own', '/dev/bikri?own'],
@@ -136,7 +134,6 @@ export const SCREENS = [
 export const PRINTS = [
   ['print-seller-bill', '/dev/print?doc=seller_bill&window', { noShell: true, wait: '.print-doc' }],
   ['print-buyer-slips', '/dev/print?doc=buyer_slips&window', { noShell: true, wait: '.print-doc' }],
-  ['print-pukhta-slip', '/dev/print?doc=pukhta_slip&window', { noShell: true, wait: '.print-doc' }],
   [
     'print-collection-list',
     '/dev/print?doc=collection_list&window',

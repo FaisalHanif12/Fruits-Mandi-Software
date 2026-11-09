@@ -21,11 +21,9 @@
 //! His balance (credit less debit) is always `P − A − E`. When `P` is above 0 then `E` is 0, so
 //! the balance is `P − A`.
 //!
-//! The پختہ کھاتہ register (R9, `services::bikri::pukhta`) nets each lot's نقد inside its own lot,
-//! which is how a one-time seller is paid on the spot (PRD FR-13.10). This working applies every
-//! payment to the oldest credit first (PRD FR-7.59), so the open amount and the age of one
-//! posting can differ between the two screens for such a seller. Their totals agree, and a test
-//! checks it.
+//! (The old register of the one-time sellers, R9, netted each lot's نقد inside its own lot. It was
+//! removed in plan 64; this working is the only one now: it applies every payment to the oldest
+//! credit first, PRD FR-7.59.)
 //!
 //! ```
 //! use mandi_domain::core::money::Paisa;

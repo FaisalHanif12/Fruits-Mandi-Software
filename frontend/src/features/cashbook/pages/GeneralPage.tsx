@@ -1,9 +1,9 @@
-// The جنرل screen (route /rokar/general; PRD 16.4, FR-6.5, FR-13.5, FR-6.7, FR-7.67): a journal entry
+// The جنرل screen (route /rokar/general; PRD 16.4, FR-6.5, FR-6.7, FR-7.67): a journal entry
 // of lines with the account, بنام and جمع, for corrections, transfers and goods returns. It saves
 // only when the two sides are equal; the backend says so (`general_preview`, the same function as
 // the save, Code Standards B5) and the Save button stays off until it does. Lines on income or shop
-// expense accounts are split between the partners by the backend; a line on a پختہ کھاتہ account
-// names the one-time person; a line that credits روکڑ asks the cash question.
+// expense accounts are split between the partners by the backend; a line that credits روکڑ asks
+// the cash question.
 //
 // - What is typed lives in the grid's store and in this screen's state, never only in the grid, so
 //   a language switch loses nothing (F39).
@@ -15,17 +15,14 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
-import type { UiError } from '../../../bindings/UiError';
-import type { UiErrorItem } from '../../../bindings/UiErrorItem';
 import { uiErrorOf } from '../../../shared/api';
 import { OpenOnItsScreen, finishFixSession } from '../../../shared/edit';
 import { pickedOf } from '../../../shared/accounts';
 import { createEntryStore } from '../../../shared/grid';
 import { useEntrySaveFlow, useFocusFirstField } from '../../../shared/hooks';
 import { isoToDisplayDate } from '../../../shared/format';
-import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   DateInput,
   ErrorState,
@@ -42,7 +39,6 @@ import {
 import { useVoucherEditable, vouchersPreview } from '../../vouchers';
 import { GeneralLinesSection } from '../components/GeneralLinesSection';
 import { GeneralListSection } from '../components/GeneralListSection';
-import { GeneralPeople } from '../components/GeneralPeople';
 import { GeneralSummary } from '../components/GeneralSummary';
 import { EntryFrame } from '../components/EntryFrame';
 import { EntryNotes } from '../components/EntryNotes';
@@ -60,15 +56,12 @@ import {
   GENERAL_ACCOUNT,
   GENERAL_FIELD_PATHS,
   GENERAL_KIND,
-  GENERAL_PERSON,
   GENERAL_START_LINES,
   buildGeneral,
   buildGeneralPreview,
   generalIsFilled,
   lineProblems,
   sentLines,
-  type PeopleMap,
-  type PersonChoice,
 } from '../general-draft';
 import { generalPreview } from '../api';
 import { useGeneralPreview, useSaveGeneral } from '../hooks';
@@ -110,11 +103,6 @@ function seededStore(seed: GeneralSeed) {
   return store;
 }
 
-/** A refusal made of the problems at one line's field, for the field under the grid. */
-function refusalOf(items: readonly UiErrorItem[]): UiError | null {
-  return items.length === 0 ? null : { ok: false, errors: [...items], ref: '' };
-}
-
 interface EditorProps {
   initialDate: string;
   /** Today, `YYYY-MM-DD`, for the list of saved entries. */
@@ -139,7 +127,6 @@ function GeneralEditor({
 }: EditorProps) {
   const { l10n } = useLocalization();
   const navigate = useNavigate();
-  const language = useLanguage();
   const errorText = useErrorText();
   const formRef = useFocusFirstField<HTMLFormElement>();
   const [store] = useState(() => (seed === null ? newStore(party) : seededStore(seed)));
@@ -147,21 +134,10 @@ function GeneralEditor({
   const focus = store((state) => state.focus);
   const [date, setDate] = useState(initialDate);
   const [narration, setNarration] = useState(seed?.narration ?? '');
-  const [people, setPeople] = useState<PeopleMap>(() => {
-    // The one-time person of each saved line is chosen again, as when it was typed.
-    const chosen: Record<string, PersonChoice> = {};
-    seed?.lines.forEach((line, index) => {
-      const row = store.getState().rows[index];
-      if (row !== undefined && line.person !== null) {
-        chosen[row.rowId] = { text: displayName(line.person, language), person: line.person };
-      }
-    });
-    return chosen;
-  });
   const [tried, setTried] = useState(false);
   const [editorCard, setEditorCard] = useState<number | null>(null);
 
-  const sent = useMemo(() => sentLines(rows, people), [rows, people]);
+  const sent = useMemo(() => sentLines(rows), [rows]);
   const filled = generalIsFilled(narration, rows);
   const ask = useMemo(
     () =>
@@ -243,29 +219,6 @@ function GeneralEditor({
     }
     return byRow;
   }, [problems, errorText]);
-  const personErrorOf = useCallback(
-    (rowId: string): UiError | null =>
-      refusalOf(
-        problems.onCells
-          .filter((problem) => problem.rowId === rowId && problem.cell === GENERAL_PERSON)
-          .map((problem) => ({ ...problem.item, field: 'person_key' })),
-      ),
-    [problems],
-  );
-
-  const calc = useMemo(() => {
-    const byRow: Record<string, Record<string, string>> = {};
-    for (const row of rows) {
-      const person = people[row.rowId]?.person;
-      if (person !== null && person !== undefined) {
-        byRow[row.rowId] = {
-          [GENERAL_PERSON]: [displayName(person, language), person.phone].join(' ').trim(),
-        };
-      }
-    }
-    return byRow;
-  }, [rows, people, language]);
-
   // The cells of the lines that an earlier edit changed (PRD FR-7.71). The lines of the entry are the
   // lines sent, in order: line i of the history is the i-th row that was not blank.
   const cellMarks = journalMarkCells(edit?.marks, sent.rowIds, rows);
@@ -294,10 +247,6 @@ function GeneralEditor({
       return;
     }
     onFinished(date);
-  };
-  const setPerson = (rowId: string, choice: PersonChoice) => {
-    setPeople((previous) => ({ ...previous, [rowId]: choice }));
-    setTried(false);
   };
 
   const summary =
@@ -339,8 +288,6 @@ function GeneralEditor({
       between={
         <GeneralLinesSection
           store={store}
-          people={people}
-          calc={calc}
           cellErrors={cellErrors}
           cellMarks={cellMarks}
           cardAccount={cardAccount}
@@ -362,16 +309,6 @@ function GeneralEditor({
               )}
               {summary}
               <EntryNotes warnings={preview?.warnings ?? []} cash={undefined} />
-              <GeneralPeople
-                rows={rows}
-                people={people}
-                onChange={setPerson}
-                onPicked={(rowId) => {
-                  const index = rows.findIndex((row) => row.rowId === rowId);
-                  store.getState().setPendingFocus({ rowIndex: Math.max(index, 0), field: 'dr' });
-                }}
-                errorOf={personErrorOf}
-              />
             </>
           }
         />

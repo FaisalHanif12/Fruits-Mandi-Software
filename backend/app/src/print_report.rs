@@ -11,7 +11,7 @@
 //!
 //! 1. Check the request, and build the print data once, so a request that cannot be built (a bad
 //!    date, a missing party) stops before any paper is used.
-//! 2. On any system but Windows, stop with `ERR_PRINT_WINDOWS_ONLY`. The screen then offers the
+//! 2. On any system but Windows and a Mac, stop with `ERR_PRINT_WINDOWS_ONLY`. The screen then offers the
 //!    preview inside the app.
 //! 3. On Windows, print or save through the same hidden window as the other documents. The print
 //!    route reads `report=<id>` or `analytics=<view>` with the language, the paper and the filters
@@ -41,9 +41,9 @@ use ts_rs::TS;
 
 use crate::commands::reports_engine::{engine_error, statement_all};
 use crate::error::UiError;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 use crate::print_job::job_error;
-use crate::print_types::{Job, JobTarget};
+use crate::print_types::{Job, JobTarget, opens_system_print_window, prints_here};
 use crate::runner::run_blocking;
 use crate::state::AppState;
 
@@ -324,7 +324,17 @@ async fn execute<R: tauri::Runtime>(app: &tauri::AppHandle<R>, job: &Job) -> Res
         .map_err(|error| job_error(&error, job))
 }
 
-#[cfg(not(windows))]
+/// Opens the system print window (Mac phase, plan 69). The windows of the last request are closed
+/// first; no file is written.
+#[cfg(target_os = "macos")]
+async fn execute<R: tauri::Runtime>(app: &tauri::AppHandle<R>, job: &Job) -> Result<(), UiError> {
+    crate::print_mac::close_old_windows(app);
+    crate::print_mac::run_job(app, job)
+        .await
+        .map_err(|error| job_error(&error, job))
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 async fn execute<R: tauri::Runtime>(_app: &tauri::AppHandle<R>, _job: &Job) -> Result<(), UiError> {
     Ok(())
 }
@@ -336,7 +346,7 @@ async fn run_prepared<R: tauri::Runtime>(
     name: &'static str,
     prepared: Prepared,
 ) -> Result<PrintOutcome, UiError> {
-    if !cfg!(windows) {
+    if !prints_here() {
         return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
     }
     execute(app, &prepared.job).await?;
@@ -366,6 +376,8 @@ async fn run_prepared<R: tauri::Runtime>(
     Ok(PrintOutcome {
         printed: Vec::new(),
         pdf_paths: match prepared.job.target {
+            // The system print window of a Mac saves the PDF itself: no path to tell.
+            JobTarget::Pdf(_) if opens_system_print_window() => Some(Vec::new()),
             JobTarget::Pdf(path) => Some(vec![path.to_string_lossy().into_owned()]),
             JobTarget::Printer { .. } => None,
         },

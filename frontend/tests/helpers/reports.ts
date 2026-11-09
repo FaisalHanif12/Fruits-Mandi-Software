@@ -6,7 +6,6 @@
 
 import { vi } from 'vitest';
 import type { BuyerBillsPrintData } from '../../src/bindings/BuyerBillsPrintData';
-import type { PukhtaPersonHit } from '../../src/bindings/PukhtaPersonHit';
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportId } from '../../src/bindings/ReportId';
 import type { ReportPage } from '../../src/bindings/ReportPage';
@@ -44,9 +43,6 @@ import {
   R6_LOTS,
   R7_ITEMS,
   R8_ADDA,
-  R9_ALL,
-  R9_DUE,
-  PEOPLE_SHAHID,
 } from './reports-real';
 import {
   PRINT_R31_BAY_EN,
@@ -114,8 +110,6 @@ export interface ReportsOptions {
   slips?: BuyerBillsPrintData;
   /** Called for every `reports_print_report`; return a refusal to refuse that print job. */
   printJob?: (input: Parameters<typeof reportsApi.reportsPrintReport>[0]) => UiError | null;
-  /** What the people search answers; the default is the backend's own answer for "shahid". */
-  people?: readonly PukhtaPersonHit[];
 }
 
 const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
@@ -132,7 +126,6 @@ const DEFAULT_PAGES: Partial<Record<ReportId, ReportPage>> = {
   R6: R6_LOTS,
   R7: R7_ITEMS,
   R8: R8_ADDA,
-  R9: R9_ALL,
   R20: R20_DUES,
   R21: R21_BY_CITY,
   R22: R22_BY_COLLECTOR,
@@ -219,8 +212,7 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     const base = input.id === 'R18' && input.filters.as_of !== '' ? R18_AS_OF : page;
     // R14 answers with its lines only when the detail box is ticked.
     let answer = input.id === 'R14' && input.filters.detail ? R14_DETAIL : base;
-    // R9 answers with the due lines only when asked for them, and R28 by day when asked by day.
-    if (input.id === 'R9' && input.filters.status === 'due') answer = R9_DUE;
+    // R28 answers by day when asked by day.
     if (input.id === 'R28' && input.filters.group_by === 'day') answer = R28_BY_DAY;
     // R29 for one partner answers with his lines only.
     if (input.id === 'R29' && input.filters.partner_id !== null) answer = R29_ALIF;
@@ -265,9 +257,6 @@ export function fakeReports(options: ReportsOptions = {}): FakeReports {
     }
     return Promise.resolve(slice(answer, input.offset, input.limit));
   });
-  vi.mocked(reportsApi.reportsFindPeople).mockImplementation(() =>
-    Promise.resolve([...(options.people ?? PEOPLE_SHAHID)]),
-  );
   vi.mocked(reportsApi.reportsPrintData).mockImplementation((input) =>
     Promise.resolve(options.print ?? printOf(input.id)),
   );

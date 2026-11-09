@@ -10,8 +10,8 @@
 //! use mandi_domain::ledger::Side;
 //! let p = |rupees| Paisa::from_rupees(rupees).unwrap();
 //! let lines = vec![
-//!     GeneralLine { account_id: 1, person_key: None, side: Side::Dr, amount: p(1_000), narration: None },
-//!     GeneralLine { account_id: 2, person_key: None, side: Side::Cr, amount: p(900), narration: None },
+//!     GeneralLine { account_id: 1, side: Side::Dr, amount: p(1_000), narration: None },
+//!     GeneralLine { account_id: 2, side: Side::Cr, amount: p(900), narration: None },
 //! ];
 //! let (dr, cr) = totals(&lines).unwrap();
 //! assert_eq!((dr, cr), (p(1_000), p(900)));
@@ -30,8 +30,6 @@ pub const MIN_LINES: usize = 2;
 pub struct GeneralLine {
     /// The account.
     pub account_id: i64,
-    /// The one-time person of a پختہ کھاتہ account (PRD FR-13.5).
-    pub person_key: Option<String>,
     /// The side.
     pub side: Side,
     /// More than 0.
@@ -67,7 +65,6 @@ pub fn general_entry(lines: &[GeneralLine]) -> Result<BalancedEntry, LedgerError
             .map(|line| {
                 let mut built =
                     LedgerLine::new(AccountId::new(line.account_id), line.side, line.amount);
-                built.person_key.clone_from(&line.person_key);
                 built.narration.clone_from(&line.narration);
                 built
             })
@@ -86,7 +83,6 @@ mod tests {
     fn line(account: i64, side: Side, amount: i64) -> GeneralLine {
         GeneralLine {
             account_id: account,
-            person_key: None,
             side,
             amount: p(amount),
             narration: None,
@@ -121,12 +117,10 @@ mod tests {
     }
 
     #[test]
-    fn a_person_key_and_a_note_travel_with_the_line() {
+    fn a_note_travels_with_the_line() {
         let mut one = line(5, Side::Dr, 100);
-        one.person_key = Some("shahid|0300".to_owned());
         one.narration = Some("correction".to_owned());
         let entry = general_entry(&[one, line(6, Side::Cr, 100)]).unwrap();
-        assert_eq!(entry.lines()[0].person_key.as_deref(), Some("shahid|0300"));
         assert_eq!(entry.lines()[0].narration.as_deref(), Some("correction"));
     }
 }

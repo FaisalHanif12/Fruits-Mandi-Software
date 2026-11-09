@@ -26,16 +26,9 @@ export type AccountRow = {
    */
   serial: number;
   /**
-   * The kind of account (an account under another control is `other`). For a پختہ party this is his
-   * side, `seller` or `buyer`.
+   * The kind of account (an account under another control is `other`).
    */
   account_type: AccountType;
-  /**
-   * True for a پختہ party's own account (plan 47, PRD FR-13.11): a full buyer or seller account
-   * with a code from `0032`, who is NOT the shared `is_pukhta_khata` account and has no person key.
-   * Left out of the JSON when false; the TypeScript field is optional and missing means false.
-   */
-  is_pukhta_party?: boolean;
   /**
    * The control it is under.
    */
@@ -126,10 +119,10 @@ export type AccountRow = {
    */
   can_take_opening: boolean;
   /**
-   * The shared پختہ کھاتہ account of one-time people, whose person is typed on the line (PRD Section
-   * 13, accounts `0030` and `0031`). A پختہ party's own account is NOT this: see `is_pukhta_party`.
+   * The چکتا کھاتہ account of walk-in buyers, whose person is typed on the line (PRD Section 13,
+   * account `0030`), and the old closed account `0031`.
    */
-  is_pukhta_khata: boolean;
+  is_chukta_khata: boolean;
   /**
    * False when hidden from pickers.
    */

@@ -19,13 +19,13 @@ use crate::reports::common::{IN_CHUNK, paisa, placeholders};
 /// person).
 type FirstSellers = HashMap<i64, (Names, Option<String>)>;
 
-/// The seller of the first lot of each of these بکری; a one-time seller shows his own name.
+/// The seller of the first lot of each of these بکری; an old one-time seller shows his own name.
 fn first_sellers(conn: &Connection, ids: &[i64]) -> Result<FirstSellers, ReportsError> {
     let mut out = HashMap::new();
     for chunk in ids.chunks(IN_CHUNK) {
         let sql = format!(
-            "SELECT l.bikri_id, COALESCE(l.pukhta_name_ur, a.name_ur), COALESCE(l.pukhta_name_en, a.name_en),
-                    CASE WHEN l.pukhta_name_ur IS NULL THEN a.tag END
+            "SELECT l.bikri_id, COALESCE(l.chukta_name_ur, a.name_ur), COALESCE(l.chukta_name_en, a.name_en),
+                    CASE WHEN l.chukta_name_ur IS NULL THEN a.tag END
              FROM bikri_lots l JOIN accounts a ON a.id = l.seller_account_id
              WHERE l.bikri_id IN ({}) AND l.lot_no = (SELECT MIN(m.lot_no) FROM bikri_lots m
                                                       WHERE m.bikri_id = l.bikri_id)",
@@ -69,7 +69,7 @@ pub(crate) fn bikri_today(
     let mut statement = conn.prepare(
         "SELECT b.id, b.number, b.truck_no, b.status = 'cancelled',
                 COALESCE(SUM(l.gross_paisa), 0), COALESCE(SUM(l.net_paisa), 0),
-                COUNT(DISTINCT l.seller_account_id || '|' || COALESCE(l.pukhta_person_key, ''))
+                COUNT(DISTINCT l.seller_account_id || '|' || COALESCE(l.chukta_person_key, ''))
          FROM bikri_entries b LEFT JOIN bikri_lots l ON l.bikri_id = b.id
          WHERE b.entry_date = ?1
          GROUP BY b.id ORDER BY b.number, b.id LIMIT ?2",

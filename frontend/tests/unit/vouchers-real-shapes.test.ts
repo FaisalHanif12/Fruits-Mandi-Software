@@ -57,7 +57,6 @@ const RECEIPT_ENTRY = (accountId: number, amount: string) => ({
   type: 'receipt' as const,
   date: '10-10-2026',
   account_id: accountId,
-  person_key: null,
   amount,
   collector_staff_id: null,
   narration: '',
@@ -81,7 +80,6 @@ describe('the canned data of the component tests has the real shape', () => {
       type: 'payment' as const,
       date: '10-10-2026',
       account_id: accountId,
-      person_key: null,
       amount: '4316',
       reason: accountId === 21 ? 'x' : '',
       narration: '',
@@ -154,7 +152,6 @@ describe('the canned data of the component tests has the real shape', () => {
       from: '',
       to: '',
       account_id: null,
-      person_key: null,
       offset: 0,
       limit: 0,
       show_finished: false,
@@ -182,15 +179,6 @@ describe('the canned data of the component tests has the real shape', () => {
     expect(saved?.saved).not.toBeNull();
     expect(skipped).toMatchObject({ saved: null, skipped: true, errors: [] });
     expect(refused?.errors[0]?.field).toBe('rows[2].amount');
-  });
-
-  it('a one-time person made regular', () => {
-    const canned = {
-      account: { id: 24, code: '0022', name_ur: 'شاہد', name_en: 'Shahid' },
-      moved: { amount_paisa: 0, side: 'zero' },
-      entry_id: null,
-    };
-    expect(same(real.MADE_REGULAR, canned)).toBeNull();
   });
 
   it('the receipt slip: a receipt, a payment, an advance', () => {

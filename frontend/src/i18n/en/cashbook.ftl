@@ -568,9 +568,6 @@ cashbook-general-add-line = Add line
 cashbook-general-col-account = Account
 
 # review: pending
-cashbook-general-col-person = Person
-
-# review: pending
 cashbook-general-totals-title = { -meezan }
 
 # review: pending
@@ -596,16 +593,6 @@ cashbook-general-split-title = Each { -shirakat-dar }'s part
 
 # review: pending
 cashbook-general-split-help = Lines on income and { -dukan-kharcha } accounts are split between the partners by their shares.
-
-# review: pending
-cashbook-general-people-title = One-time people
-
-# review: pending
-cashbook-general-people-help = Money under a { -pukhta-khata } account is kept for each person. Choose the person for each of these lines.
-
-# $line: the number of the line; $account: the name of its account.
-# review: pending
-cashbook-general-person-of = Person for line { $line }: { $account }
 
 # review: pending
 cashbook-type-capital-in = { -sarmaya } put in

@@ -114,14 +114,14 @@ fn summary_of(page: &ReportPage, label: &str) -> Option<Cell> {
         .map(|l| l.cell.clone())
 }
 
-/// The key of a one-time person, by his English name.
+/// The key of a چکتا buyer, by his English name.
 fn person_key(w: &World, name_en: &str) -> String {
     w.env
         .ctx
         .db()
         .read(|conn| {
             conn.query_row(
-                "SELECT pukhta_person_key FROM bikri_sales WHERE pukhta_name_en = ?1 LIMIT 1",
+                "SELECT chukta_person_key FROM bikri_sales WHERE chukta_name_en = ?1 LIMIT 1",
                 [name_en],
                 |r| r.get(0),
             )
@@ -291,7 +291,7 @@ fn a_one_time_buyer_who_paid_on_the_spot_has_nothing_to_collect() {
         sheet(
             "10-10-2026",
             Some(PartyFilter {
-                account_id: w.pukhta_buyer,
+                account_id: w.chukta_khata,
                 person_key: Some(key),
             }),
         ),
@@ -468,7 +468,7 @@ fn a_party_that_is_not_a_buyer_or_a_seller_and_a_one_time_account_without_his_pe
         rejected(
             &w,
             ReportId::R35,
-            sheet("10-10-2026", account(w.pukhta_buyer)),
+            sheet("10-10-2026", account(w.chukta_khata)),
             0,
             0
         ),
@@ -842,7 +842,6 @@ fn a_credit_that_is_not_a_receipt_is_not_paid_that_day() {
     let w = full_day();
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,
@@ -1207,7 +1206,7 @@ fn a_same_day_cancel_leaves_the_cancelled_bill_out_of_r34_and_the_slips() {
         sheet(
             "10-10-2026",
             Some(PartyFilter {
-                account_id: w.pukhta_buyer,
+                account_id: w.chukta_khata,
                 person_key: Some(key),
             }),
         ),

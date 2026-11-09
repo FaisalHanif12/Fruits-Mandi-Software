@@ -49,4 +49,4 @@ Deletions: only tracked files that belong to the removed feature, which git can 
 
 ## 6. Notes
 
-To be filled by the lead: the contract as finally agreed, the list of golden tests changed.
+Contract as built (lead's record, 09-11-2026): `chukta_search { text }` returns `ChuktaBuyer[]` with `{ id, name_ur, name_en, phone, last_date }`. `chukta_add { name_ur, name_en, phone }` returns the existing row for the same name and phone. `search_accounts` gains `with_chukta` (default false, sent only by the بکری line buyer picker); its hits gain `kind`, `chukta_id`, `phone`; a چکتا hit has the id of account 0030. `assist_party_card` takes an optional `chukta_id`. `SaleInput.chukta`; lots lose the person; `reports_find_people` removed. Account 0031 stays as an inactive old closed account in every database (PRD FR-10.4), because the old seed still runs.

@@ -412,7 +412,7 @@ pub struct FigureDifference {
 /// may point to any main screen instead: the screen opens as it is, and `party` is null. The routes
 /// of the main screens: `dashboard` `/`, `settings` `/settings`, `masters` `/index`, `accounts`
 /// `/index/accounts`, `commission_rules` `/index/rules`, `today_sales` `/bikri/today`,
-/// `unsold_stock` `/bikri/stock`, `pukhta_khata` `/bikri/pukhta`, `collection_list`
+/// `unsold_stock` `/bikri/stock`, `chukta_khata` `/bikri`, `collection_list`
 /// `/bikri/collection`, `cash_book` `/rokar`, `gardens` `/gardens`, `market_trips` `/trips`,
 /// `partners` `/partners`, `month_close` `/month`, `day_close` `/day`, `reports` `/reports`,
 /// `dead_amount` `/reports/dead-amount`, `analytics` `/analytics`, `backup` `/backup`.
@@ -455,8 +455,8 @@ pub enum EntryScreen {
     TodaySales,
     /// باقی مال.
     UnsoldStock,
-    /// پختہ کھاتہ.
-    PukhtaKhata,
+    /// چکتا کھاتہ: it opens the sale book, where he is picked on a sale line (PRD FR-13.3).
+    ChuktaKhata,
     /// اگراہی فہرست.
     CollectionList,
     /// روکڑ بک.

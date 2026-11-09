@@ -353,15 +353,21 @@ describe.each(LANGUAGES)("the buyer slip in the client's layout, R5 (%s)", (lang
     expect(text).toContain(message(language, 'print-r5-col-total'));
   });
 
-  it('the پختہ slip keeps its goods layout, with no R5 table', () => {
-    const { root } = show(printDataFor('pukhta_slip', { language }));
-    expect(root.querySelector('table.print-r5')).toBeNull();
-    expect(root.querySelector('table.print-table')).not.toBeNull();
+  it('the slip of a چکتا buyer is in the same R5 layout, with his phone under his name', () => {
+    const { root } = show(printDataFor('buyer_slips', { language, chukta: true }));
+    expect(root.querySelector('table.print-r5')).not.toBeNull();
+    expect(root.querySelector('.print-r5-phone')?.textContent).toBe('0300-0000000');
+  });
+
+  it('the slip of an ordinary buyer shows no phone: the client’s layout has the name and tag only', () => {
+    const { root } = show(printDataFor('buyer_slips', { language }));
+    expect(root.querySelector('table.print-r5')).not.toBeNull();
+    expect(root.querySelector('.print-r5-phone')).toBeNull();
   });
 });
 
 describe.each(LANGUAGES)('the party of a print shows the short code (%s)', (language: Language) => {
-  it('a seller or buyer shows the short code the backend sent, an account without one its full code, a one-time person none', () => {
+  it('a seller or buyer shows the short code the backend sent, an account without one its full code, a چکتا buyer none', () => {
     const data = printDataFor('seller_bill', { language });
     const page = must(data.pages[0]);
     const withShort = show(data);
@@ -375,7 +381,8 @@ describe.each(LANGUAGES)('the party of a print shows the short code (%s)', (lang
     const full = show({ ...data, pages: [{ ...page, party: bare }] });
     expect(textOf(must(full.root.querySelector<HTMLElement>('.print-party')))).toContain('0010');
     full.unmount();
-    const oneTime = show(printDataFor('pukhta_slip', { language }));
-    expect(oneTime.root.querySelector('.print-party-extra')?.textContent).not.toContain('0304');
+    const walkIn = show(printDataFor('buyer_slips', { language, chukta: true }));
+    expect(textOf(walkIn.root)).not.toContain('0030');
+    expect(textOf(walkIn.root)).toContain('0300-0000000');
   });
 });

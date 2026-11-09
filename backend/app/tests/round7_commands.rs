@@ -274,9 +274,11 @@ fn code_and_field(error: &Value) -> (String, String) {
     )
 }
 
-/// A valid request is built and checked first, and on a system without WebView2 printing it then
-/// answers `ERR_PRINT_WINDOWS_ONLY` (the screen offers the preview in the app).
-#[cfg(not(windows))]
+/// A valid request is built and checked first, and on a system that cannot print (not Windows and not
+/// a Mac, plan 69) it then answers `ERR_PRINT_WINDOWS_ONLY` (the screen offers the preview in the
+/// app). On a Mac the same request opens the system print window, which needs a real page: the
+/// driver is tested in `print_mac.rs`.
+#[cfg(not(any(windows, target_os = "macos")))]
 #[test]
 fn a_report_or_view_print_is_checked_and_then_needs_windows() {
     let h = Harness::new();

@@ -84,7 +84,7 @@ pub fn history(w: &World) -> Vec<(String, Vec<String>)> {
     let conn = raw(&w.dir);
     [
         ("journal_entries", "id, entry_date, posting_type, source_id, reverses_entry_id, status, total_paisa, chain_hash, order_key"),
-        ("journal_lines", "id, entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa, is_advance"),
+        ("journal_lines", "id, entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa, is_advance"),
         ("partner_share_rows", "id, journal_entry_id, partner_id, kind, base_paisa, share_bps, amount_paisa"),
         ("stock_moves", "id, lot_id, journal_entry_id, kind, qty, reverses_move_id"),
         ("analytics_facts", "id, journal_entry_id, sale_id, qty, seller_amount_paisa, sign"),
@@ -207,7 +207,6 @@ pub fn receipt_on(w: &World, account: i64, amount: &str, date: &str) {
         &mandi_services::core::vouchers::ReceiptInput {
             date: date.into(),
             account_id: account,
-            person_key: None,
             amount: amount.into(),
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             collector_staff_id: None,
@@ -228,7 +227,6 @@ pub fn open_bills(w: &World, account: i64) -> (i64, i64) {
         &w.env.ctx,
         &mandi_services::core::vouchers::OpenBillsInput {
             account_id: account,
-            person_key: None,
         },
     )
     .unwrap();

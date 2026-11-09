@@ -42,6 +42,8 @@ fn build(conn: &Connection) -> Result<Index, ServiceError> {
         index.set_scope(kind, repo::search_sources(conn, kind, None)?);
     }
     index.set_accounts(mandi_db::accounts::search_sources(conn, None)?);
+    // The چکتا buyers are listed beside the buyers of a بکری line (plan 64, PRD FR-7.29).
+    index.set_chukta(mandi_db::chukta::search_sources(conn, None)?);
     Ok(index)
 }
 
@@ -140,6 +142,38 @@ pub fn refresh_account(ctx: &Context, id: i64) {
         .read(|conn| mandi_db::accounts::search_sources(conn, Some(id)));
     match source {
         Ok(mut found) => Arc::make_mut(index).put_account(id, found.pop()),
+        Err(_) => *slot = None,
+    }
+}
+
+/// Updates the index for one چکتا buyer after the save that added him has committed (plan 64).
+/// Like [`refresh_account`], any failure throws the index away so it is built again on the next use.
+pub fn refresh_chukta(ctx: &Context, chukta_id: i64) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    let source = ctx
+        .db
+        .read(|conn| mandi_db::chukta::search_sources(conn, Some(chukta_id)));
+    match source {
+        Ok(mut found) => Arc::make_mut(index).put_chukta(chukta_id, found.pop()),
+        Err(_) => *slot = None,
+    }
+}
+
+/// Updates the chukta part of the index after a بکری save that named a چکتا buyer on a line (plan
+/// 64): the list is small, so all of it is read again. Any failure throws the index away.
+pub fn refresh_chukta_all(ctx: &Context) {
+    let mut slot = ctx.search_lock();
+    let Some(index) = slot.as_mut() else {
+        return;
+    };
+    match ctx
+        .db
+        .read(|conn| mandi_db::chukta::search_sources(conn, None))
+    {
+        Ok(sources) => Arc::make_mut(index).set_chukta(sources),
         Err(_) => *slot = None,
     }
 }
@@ -370,6 +404,7 @@ pub fn recent_accounts(
         input.control_id,
         &usage,
         input.include_dead.unwrap_or(false),
+        input.with_chukta.unwrap_or(false),
         hidden.as_ref(),
     ))
 }
@@ -413,7 +448,7 @@ pub fn touch_account(
 /// [`resolve_code`] (PRD FR-7.38).
 ///
 /// The lot seller scope lists only what a lot can use now (PRD 12.3, FR-12.26, plan 46 B1): the
-/// sellers and the پختہ کھاتہ بیوپاری always, the separate khatas that exist, اپنا مال only while an
+/// sellers always, the separate khatas that exist, اپنا مال only while an
 /// open trip has a purchase with goods left, and a garden only while it is open. That is read from
 /// the database for each call. A full code typed in the field is still taken by [`resolve_code`]
 /// as before; the preview and the save then refuse an account that cannot be used.
@@ -445,6 +480,7 @@ pub fn search_accounts(
             offset,
             limit,
             include_dead: input.include_dead.unwrap_or(false),
+            with_chukta: input.with_chukta.unwrap_or(false),
             hidden: hidden.as_ref(),
         },
         &usage,
@@ -708,6 +744,7 @@ pub fn global(
             limit: u32::try_from(account_limit).unwrap_or(input.limit),
             offset: 0,
             include_dead: None,
+            with_chukta: None,
         },
     )?;
     let mut out: Vec<GlobalHit> = hits

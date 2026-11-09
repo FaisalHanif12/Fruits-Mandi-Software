@@ -8,6 +8,7 @@
 // Cells the app keeps for itself (the "filled once" marks and the ids of saved rows) are not the
 // user's: they never count as a change.
 
+import { samePick } from '../../shared/accounts';
 import type { EntryRow, PickedRecord } from '../../shared/grid';
 import type { BikriDraftStores } from './draft-store';
 import { LOT, SALE } from './types';
@@ -147,7 +148,7 @@ function compareRow(
     const nowText = row.typed[field] ?? '';
     const changed =
       wasRecord !== null || nowRecord !== null
-        ? wasRecord?.id !== nowRecord?.id
+        ? !samePick(wasRecord, nowRecord)
         : !SAME(wasText, nowText);
     if (!changed) continue;
     (into.cells[row.rowId] ??= {})[field] = { text: wasText, record: wasRecord };

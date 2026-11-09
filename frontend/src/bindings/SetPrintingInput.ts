@@ -16,10 +16,6 @@ export type SetPrintingInput = {
    */
   paper_buyer_slips: Paper;
   /**
-   * Paper of the پختہ slip.
-   */
-  paper_pukhta_slip: Paper;
-  /**
    * Paper of the voucher slip. Missing means A5.
    */
   paper_receipt_slip: Paper;

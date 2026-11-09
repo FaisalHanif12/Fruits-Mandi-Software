@@ -12,7 +12,7 @@ export type BuyerBillSlip = {
    */
   serial: string;
   /**
-   * The buyer: short code, name with tag. A one-time person has his person key.
+   * The buyer: short code, name with tag. A چکتا buyer has his person key.
    */
   party: PrintReportParty;
   /**

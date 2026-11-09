@@ -353,7 +353,6 @@ fn a_page_of_every_list_is_fast_on_ten_years_of_data() {
                 from: String::new(),
                 to: String::new(),
                 account_id: None,
-                person_key: None,
                 offset,
                 limit: PAGE,
                 show_finished: false,

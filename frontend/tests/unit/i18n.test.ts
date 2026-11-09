@@ -127,7 +127,7 @@ const PRD_GLOSSARY: readonly (readonly [id: string, ur: string, en: string])[] =
   ['buzgar', 'بزگر', 'Grower'],
   ['gahak', 'گاہک', 'Buyer'],
   ['kharidar', 'خریدار', 'Buyer'],
-  ['pukhta-khata', 'پختہ کھاتہ', 'Pukhta Khata'],
+  ['chukta-khata', 'چکتا کھاتہ', 'Chukta Khata'],
   ['nag', 'نگ', 'Nag'],
   ['bikri', 'بکری', 'Sale'],
   ['bikri-book', 'بکری بک', 'Sale Book'],

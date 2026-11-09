@@ -51,7 +51,6 @@ export function fakePrinting(options: FakePrintingOptions = {}): FakePrinting {
     current = {
       paper_seller_bill: input.paper_seller_bill,
       paper_buyer_slips: input.paper_buyer_slips,
-      paper_pukhta_slip: input.paper_pukhta_slip,
       paper_receipt_slip: input.paper_receipt_slip,
       paper_collection_list: input.paper_collection_list,
       printer: input.printer,
@@ -87,9 +86,7 @@ function paperKey(doc: BikriPrintDataInput['doc']) {
     ? 'paper_seller_bill'
     : doc === 'buyer_slips'
       ? 'paper_buyer_slips'
-      : doc === 'pukhta_slip'
-        ? 'paper_pukhta_slip'
-        : 'paper_receipt_slip';
+      : 'paper_receipt_slip';
 }
 
 /** A promise that fails with `value` as it is, the way Tauri's invoke fails (with the raw error). */

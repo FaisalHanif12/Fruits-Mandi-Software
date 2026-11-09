@@ -92,7 +92,6 @@ describe.each(LANGUAGES)('the dead amount on the party card (%s)', (language: La
     await user.click(await screen.findByRole('button', { name: named(m('dead-move-button')) }));
     expect(host.move).toHaveBeenCalledWith({
       accountId: 21,
-      personKey: null,
       names: { name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', tag: null },
     });
     expect(screen.queryByRole('button', { name: named(m('dead-undo-button')) })).toBeNull();
@@ -229,6 +228,9 @@ describe.each(LANGUAGES)(
       id: 22,
       code: '03040002',
       account_type: 'buyer' as const,
+      kind: 'account' as const,
+      chukta_id: null,
+      phone: null,
       control_id: 4,
       name_ur: 'ارشد ملتانی',
       name_en: 'Arshad Multani',

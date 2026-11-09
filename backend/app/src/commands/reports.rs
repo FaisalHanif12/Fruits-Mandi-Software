@@ -22,7 +22,7 @@ use crate::print_job;
 /// The print data of one document of a saved بکری: the firm header in the print language, the
 /// title and every label as a Fluent message ID, the lines and totals as stored and already
 /// formatted for print, the amount in words, the paper class, `dir` and `lang`. One page per
-/// seller (seller bill), per buyer (buyer slips) or per one-time buyer (پختہ slip). Read only.
+/// seller (seller bill), or per buyer (buyer slips, a چکتا buyer included). Read only.
 /// Errors: `ERR_NOT_FOUND` on `bikri_id`.
 #[tauri::command]
 pub async fn reports_bikri_print_data<R: tauri::Runtime>(

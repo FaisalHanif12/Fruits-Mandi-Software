@@ -1,7 +1,7 @@
 //! R20 وصولی / اگراہی رپورٹ (buyer dues), R21 اگراہی بحساب شہر (by city) and R22 اگراہی بحساب
 //! اگراہی والا (by collector) (PRD 19.2, FR-15.6, FR-19.9, FR-19.10).
 //!
-//! One row for each buyer who owes the firm (and each one-time person inside the پختہ کھاتہ
+//! One row for each buyer who owes the firm (and each چکتا buyer inside the چکتا کھاتہ
 //! account, PRD FR-13.5): his balance, his phone, the date and age of his oldest open bill and
 //! his open bills in four age bands (0 to 7, 8 to 30, 31 to 90, 91 and more days).
 //!
@@ -32,10 +32,9 @@ use mandi_db::ledger::{Totals, account_totals_in_controls, totals_of};
 use mandi_db::rusqlite::{Connection, params};
 
 use super::super::PageSpec;
-use super::grouped::pukhta_names;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    add, amount_or_empty, col, count_of, date_cell, load_parties, paisa, pukhta_party, text_cell,
+    add, amount_or_empty, col, count_of, date_cell, load_parties, paisa, text_cell,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -68,7 +67,7 @@ impl Layout {
 /// The age bands of the open bills, in days (PRD R20): 0 to 7, 8 to 30, 31 to 90, 91 and more.
 const BAND_ENDS: [i64; 3] = [7, 30, 90];
 
-/// One buyer (or one one-time person) who owes.
+/// One buyer (or one چکتا buyer) who owes.
 pub(crate) struct Buyer {
     pub(crate) party: PartyRef,
     pub(crate) city_id: Option<i64>,
@@ -92,26 +91,19 @@ pub(crate) struct Ages {
 /// from, by the collector on the account, plan 55 §11.1).
 fn buyers_sql() -> String {
     format!(
-        "SELECT a.id, a.is_pukhta_khata, a.city_id, a.collector_staff_id,
-        a.phone1
+        "SELECT a.id, a.city_id, a.collector_staff_id, a.phone1
     FROM accounts a JOIN account_controls k ON k.id = a.control_id
-    WHERE k.code = '0304' AND (?1 IS NULL OR a.city_id = ?1) AND (?2 IS NULL OR a.id = ?2)
+    -- چکتا کھاتہ has no ledger and no dues (PRD FR-13.6); an old open amount on it stays in the
+    -- books and does not show here (PRD FR-13.9).
+    WHERE k.code = '0304' AND a.is_chukta_khata = 0 AND (?1 IS NULL OR a.city_id = ?1) AND (?2 IS NULL OR a.id = ?2)
         AND (?3 IS NULL OR a.collector_staff_id = ?3)
     ORDER BY {}",
         mandi_db::codes::order_by_code("a.code")
     )
 }
 
-/// The balances of the persons of a پختہ کھاتہ account. Parameters: account, as-of day.
-const PERSONS_SQL: &str = "SELECT l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0),
-        COALESCE(SUM(l.cr_paisa), 0)
-    FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-    WHERE l.account_id = ?1 AND e.status = 'posted' AND (?2 IS NULL OR e.entry_date <= ?2)
-    GROUP BY l.pukhta_person_key ORDER BY l.pukhta_person_key";
-
 struct Account {
     id: i64,
-    pukhta: bool,
     city_id: Option<i64>,
     collector_id: Option<i64>,
     phone: Option<String>,
@@ -121,7 +113,7 @@ fn totals_pair(totals: Totals) -> Result<(Paisa, Paisa), ReportsError> {
     Ok((paisa(totals.dr_paisa)?, paisa(totals.cr_paisa)?))
 }
 
-/// The buyers with a debit balance, in code order, one-time persons after their account.
+/// The buyers with a debit balance, in code order, چکتا buyers after their account.
 fn owing(
     conn: &Connection,
     typed: &Typed,
@@ -140,79 +132,35 @@ fn owing(
             .into_iter()
             .collect()
     };
-    // The names of the one-time people, from one query and not one for each person (B22).
-    let pukhta_ids: Vec<i64> = accounts.iter().filter(|a| a.pukhta).map(|a| a.id).collect();
-    let names = pukhta_names(conn, &pukhta_ids)?;
     let mut found = Vec::new();
     for account in accounts {
         let party = parties.get(&account.id).cloned().ok_or_else(|| {
             ReportsError::Data(format!("buyer account {} is missing", account.id))
         })?;
-        if account.pukhta {
-            let mut statement = conn.prepare(PERSONS_SQL)?;
-            let persons = statement
-                .query_map(params![account.id, as_of], |r| {
-                    Ok((
-                        r.get::<_, Option<String>>(0)?,
-                        r.get::<_, i64>(1)?,
-                        r.get::<_, i64>(2)?,
-                    ))
-                })?
-                .collect::<Result<Vec<_>, _>>()?;
-            for (key, dr, cr) in persons {
-                if typed.person_key.is_some() && typed.person_key != key {
-                    continue;
-                }
-                if dead.has(account.id, key.as_deref()) {
-                    continue;
-                }
-                let balance = paisa(dr)?.checked_sub(paisa(cr)?)?;
-                if balance <= Paisa::ZERO {
-                    continue;
-                }
-                let (name_ur, name_en, phone) = match key.as_ref().and_then(|k| names.get(k)) {
-                    Some(p) => (
-                        Some(p.name_ur.clone()),
-                        Some(p.name_en.clone()),
-                        Some(p.phone.clone()),
-                    ),
-                    None => (None, None, None),
-                };
-                found.push(Buyer {
-                    party: pukhta_party(party.clone(), key, name_ur.as_deref(), name_en.as_deref()),
-                    city_id: None,
-                    collector_id: None,
-                    phone,
-                    balance,
-                    ages: None,
-                });
-            }
-        } else {
-            if dead.has_account(account.id) {
-                continue;
-            }
-            let totals = if typed.party_id.is_some() {
-                totals_of(conn, account.id, None, as_of)?
-            } else {
-                all.get(&account.id).copied().unwrap_or(Totals {
-                    dr_paisa: 0,
-                    cr_paisa: 0,
-                })
-            };
-            let (dr, cr) = totals_pair(totals)?;
-            let balance = dr.checked_sub(cr)?;
-            if balance <= Paisa::ZERO {
-                continue;
-            }
-            found.push(Buyer {
-                party,
-                city_id: account.city_id,
-                collector_id: account.collector_id,
-                phone: account.phone.clone(),
-                balance,
-                ages: None,
-            });
+        if dead.has_account(account.id) {
+            continue;
         }
+        let totals = if typed.party_id.is_some() {
+            totals_of(conn, account.id, None, as_of)?
+        } else {
+            all.get(&account.id).copied().unwrap_or(Totals {
+                dr_paisa: 0,
+                cr_paisa: 0,
+            })
+        };
+        let (dr, cr) = totals_pair(totals)?;
+        let balance = dr.checked_sub(cr)?;
+        if balance <= Paisa::ZERO {
+            continue;
+        }
+        found.push(Buyer {
+            party,
+            city_id: account.city_id,
+            collector_id: account.collector_id,
+            phone: account.phone.clone(),
+            balance,
+            ages: None,
+        });
     }
     Ok(found)
 }
@@ -420,10 +368,9 @@ fn balances_owing(conn: &Connection, typed: &Typed) -> Result<Vec<Buyer>, Report
                 |r| {
                     Ok(Account {
                         id: r.get(0)?,
-                        pukhta: r.get::<_, i64>(1)? == 1,
-                        city_id: r.get(2)?,
-                        collector_id: r.get(3)?,
-                        phone: r.get(4)?,
+                        city_id: r.get(1)?,
+                        collector_id: r.get(2)?,
+                        phone: r.get(3)?,
                     })
                 },
             )?

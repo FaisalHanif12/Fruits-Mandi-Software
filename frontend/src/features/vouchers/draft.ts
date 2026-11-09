@@ -2,14 +2,10 @@
 // the input the backend takes, and a saved voucher loaded back for an edit. Nothing here works
 // out money: the amount is the text the user typed (or the text of an amount the backend sent).
 
-import type { Language } from '../../i18n';
 import type { UiError } from '../../bindings/UiError';
 import { formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
-import { displayName } from '../../shared/i18n';
 import { pickedOf, type AccountHit, type AccountType } from '../../shared/accounts';
 import type { PickerValue } from '../../shared/ui';
-import { isPukhtaCode, PUKHTA_BUYER_CODE } from '../pukhta_khata';
-import type { PukhtaSide } from '../../bindings/PukhtaSide';
 import type { ScreenType } from './screen-type';
 import type {
   AdvanceInput,
@@ -30,8 +26,6 @@ export function newDraft(type: ScreenType, today: string): VoucherDraft {
     account: null,
     accountType: null,
     from: 'buyer',
-    person: null,
-    personText: '',
     amount: '',
     collector: null,
     reason: '',
@@ -42,7 +36,7 @@ export function newDraft(type: ScreenType, today: string): VoucherDraft {
 
 /**
  * The same screen with another type (PRD FR-7.67): what the types share stays (date, amount and
- * narration), the rest is cleared, because an account, a person or a reason of one type means
+ * narration), the rest is cleared, because an account or a reason of one type means
  * nothing to another. Example: 3,000 typed as a payment to Rahim, then the type list changed to
  * receipt: 3,000 stays, Rahim goes.
  */
@@ -77,16 +71,6 @@ export function accountScope(draft: VoucherDraft): 'buyer' | 'seller' | 'any' {
   if (draft.type === 'advance') return 'seller';
   if (draft.type === 'receipt') return draft.from;
   return 'any';
-}
-
-/** True when the account is one of the two one-time accounts: it needs a person (FR-13.5). */
-export function needsPerson(draft: VoucherDraft): boolean {
-  return isPukhtaCode(draft.account?.code);
-}
-
-/** Which side's one-time people the person field lists: the buyer account's or the seller's. */
-export function personSide(draft: VoucherDraft): PukhtaSide {
-  return draft.account?.code === PUKHTA_BUYER_CODE ? 'buyer' : 'seller';
 }
 
 /** A payment to a buyer is cash lent to him and needs a reason (PRD FR-15.11). */
@@ -125,7 +109,6 @@ export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher |
         input: {
           ...common,
           account_id: account.id,
-          person_key: needsPerson(draft) ? (draft.person?.person_key ?? null) : null,
           collector_staff_id: draft.collector?.id ?? null,
         },
       };
@@ -135,7 +118,6 @@ export function build(draft: VoucherDraft, confirmCash: boolean): BuiltVoucher |
         input: {
           ...common,
           account_id: account.id,
-          person_key: needsPerson(draft) ? (draft.person?.person_key ?? null) : null,
           reason: isCashLent(draft) ? draft.reason : '',
           confirm_cash_below_zero: confirmCash,
         },
@@ -180,17 +162,13 @@ export function draftOfRow(
   type: ScreenType,
   extras: RowExtras,
   grouping: Grouping,
-  language: Language,
 ): VoucherDraft {
-  const person = row.person;
   return {
     type,
     date: isoToDisplayDate(row.entry_date),
     account: row.account === null ? null : { ...row.account },
     accountType: extras.accountType,
     from: type === 'receipt' && extras.accountType === 'seller' ? 'seller' : 'buyer',
-    person,
-    personText: person === null ? '' : displayName(person, language),
     amount: formatPaisa(row.amount_paisa, { grouping }),
     collector: extras.collector,
     reason: row.reason,
@@ -206,33 +184,27 @@ export function fromSideOf(accountType: AccountType | null): FromSide {
 
 /** Which helper panel the screen shows under the form, and for which account (PRD FR-7.58 to FR-7.60). */
 export type HelperTarget =
-  | { kind: 'bills'; accountId: number; personKey: string | null }
-  | { kind: 'payables'; accountId: number; personKey: string | null }
+  | { kind: 'bills'; accountId: number }
+  | { kind: 'payables'; accountId: number }
   | { kind: 'advances'; accountId: number }
   | { kind: 'none' };
 
 /**
  * The panel that fits the entry: a receipt from a buyer shows his open bills (the amount settles
  * the oldest first); a receipt from a seller and an advance show his advances; a payment to a
- * seller shows what is payable; a payment to a buyer is cash lent and shows his bills. A
- * one-time account shows nothing until the person is chosen, because its money is kept per person.
+ * seller shows what is payable; a payment to a buyer is cash lent and shows his bills.
  */
 export function helperTarget(draft: VoucherDraft): HelperTarget {
   const { account } = draft;
   if (account === null) return { kind: 'none' };
-  const person = needsPerson(draft);
-  if (person && draft.person === null) return { kind: 'none' };
-  const personKey = person ? (draft.person?.person_key ?? null) : null;
   if (draft.type === 'advance') return { kind: 'advances', accountId: account.id };
   if (draft.type === 'receipt') {
     return draft.from === 'seller'
-      ? person
-        ? { kind: 'none' }
-        : { kind: 'advances', accountId: account.id }
-      : { kind: 'bills', accountId: account.id, personKey };
+      ? { kind: 'advances', accountId: account.id }
+      : { kind: 'bills', accountId: account.id };
   }
-  if (draft.accountType === 'seller') return { kind: 'payables', accountId: account.id, personKey };
-  if (draft.accountType === 'buyer') return { kind: 'bills', accountId: account.id, personKey };
+  if (draft.accountType === 'seller') return { kind: 'payables', accountId: account.id };
+  if (draft.accountType === 'buyer') return { kind: 'bills', accountId: account.id };
   return { kind: 'none' };
 }
 

@@ -1,0 +1,20 @@
+{
+  "status": "found",
+  "account": {
+    "id": 20,
+    "code": "0020",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax",
+    "extra_ur": "",
+    "extra_en": "",
+    "account_type": "buyer",
+    "kind": "account",
+    "chukta_id": null,
+    "phone": null,
+    "control_id": 6,
+    "is_active": true,
+    "is_dead": false
+  },
+  "candidates": [],
+  "suggested_code": null
+}

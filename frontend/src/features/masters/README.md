@@ -40,8 +40,8 @@ The duplicate check (PRD FR-10.7, E38): the form sends the typed names, phone AN
 frontend never decides it. It only warns, and the save is never blocked. A contact person of the firm
 (`features/settings/components/FirmTab`) has the same spelling check as the firm's names.
 
-The accounts list and the codes (plan 32, R1 to R6): the list shows only sellers, buyers and the
-two پختہ کھاتہ accounts, with the filter All, Seller, Buyer, Pukhta (`AccountListKind`); the
+The accounts list and the codes (plan 32, R1 to R6): the list shows only sellers and buyers,
+with the filter All, Seller, Buyer (`AccountListKind`); the
 chart still shows every account. A code has no fixed length: `0010`, `00110`, `0020`. The screens
 read it as text and never count its digits, and the new-account form offers only Seller and Buyer.
 Staff have a code of their own now (`0060`, `0061`).

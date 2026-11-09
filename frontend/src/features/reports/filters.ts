@@ -5,7 +5,6 @@
 
 import type { ReportDateShortcut } from '../../bindings/ReportDateShortcut';
 import type { ReportFilterKind } from '../../bindings/ReportFilterKind';
-import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ReportFilters } from '../../bindings/ReportFilters';
 import type { ReportGardenView } from '../../bindings/ReportGardenView';
 import type { ReportGroupBy } from '../../bindings/ReportGroupBy';
@@ -33,7 +32,7 @@ export function periodMessageId(choice: PeriodChoice): string {
   return `report-period-${choice.replaceAll('_', '-')}`;
 }
 
-/** The paid or due box of the one-time people register (R9): `all` is no filter. */
+/** The paid or due box of the dead amount report (R38): `all` is no filter. */
 export type PaidChoice = ReportPaidFilter | 'all';
 
 export const PAID_CHOICES: readonly PaidChoice[] = ['all', 'paid', 'due'];
@@ -101,44 +100,6 @@ export { GRADE_CHOICES, type GradeChoice };
 export const GROUP_BY_CHOICES: readonly ReportGroupBy[] = ['month', 'day'];
 
 /**
- * One known one-time person, picked in the person box (PRD FR-13.5, FR-13.9). He is a person inside
- * a پختہ کھاتہ account, so the backend wants the account and his key together. Both names are kept,
- * so a language switch only changes which one is shown.
- */
-export interface ReportPerson {
-  /** The پختہ کھاتہ account he has lines on. */
-  accountId: number;
-  /** The key that ties his lines together (name and phone, the backend's). */
-  personKey: string;
-  name_ur: string;
-  name_en: string;
-  phone: string;
-  /** The day of his last line, `YYYY-MM-DD`, as the backend sent it. */
-  last_date: string;
-}
-
-/**
- * A person the backend found, as the screen keeps him, with the account the report will ask for.
- * `accountId` is the one-time account the report is already on; null (R9, the global search) takes
- * his first account, the way the contract says. Null when he has no lines on the account asked for.
- */
-export function personFromHit(hit: PukhtaPersonHit, accountId: number | null): ReportPerson | null {
-  const account =
-    accountId === null
-      ? hit.accounts[0]
-      : hit.accounts.find((candidate) => candidate.account_id === accountId);
-  if (account === undefined) return null;
-  return {
-    accountId: account.account_id,
-    personKey: hit.person_key,
-    name_ur: hit.name_ur,
-    name_en: hit.name_en,
-    phone: hit.phone,
-    last_date: hit.last_date,
-  };
-}
-
-/**
  * The بکری picked for the sale book report (R1): its row id for the request, its number to show.
  */
 export interface ReportBikri {
@@ -154,6 +115,12 @@ export interface ReportFilterState {
   to: string;
   asOf: string;
   party: PickerValue | null;
+  /**
+   * One چکتا buyer inside the account چکتا کھاتہ, when the day sheet (R35) opened his row (PRD
+   * FR-13.7): his key, as the backend sent it. Null for any party picked in the box. It is only ever
+   * set from a row, never typed, and is let go with the party.
+   */
+  partyPersonKey: string | null;
   seller: PickerValue | null;
   zamindar: PickerValue | null;
   item: PickerValue | null;
@@ -162,14 +129,10 @@ export interface ReportFilterState {
   /** One collector, a staff member (R22, R23, R35); null is every collector. */
   collector: PickerValue | null;
   detail: boolean;
-  /** Paid or due lines only (R9). */
+  /** Paid or due lines only (R38). */
   paid: PaidChoice;
   /** The income report by month or by day (R28). */
   groupBy: ReportGroupBy;
-  /** One person inside a one-time account, when one is picked (R9 and any report on such an account). */
-  person: ReportPerson | null;
-  /** What is typed in the person box, kept here so a language switch loses nothing. */
-  personText: string;
   /** The partner of a partner statement (R31, required) or of the expense report (R29, optional). */
   partner: number | null;
   /** The fruit register (R37) for the shop's guests only; never together with a partner. */
@@ -200,6 +163,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   to: '',
   asOf: '',
   party: null,
+  partyPersonKey: null,
   seller: null,
   zamindar: null,
   item: null,
@@ -209,8 +173,6 @@ export const EMPTY_FILTERS: ReportFilterState = {
   detail: false,
   paid: 'all',
   groupBy: 'month',
-  person: null,
-  personText: '',
   partner: null,
   guestsOnly: false,
   voucherType: 'all',
@@ -236,15 +198,11 @@ export function filtersToWire(
   const has = (kind: ReportFilterKind) => takes.includes(kind);
   const dates = has('date_range');
   const shortcut = dates && state.period !== 'custom' ? state.period : null;
-  // A person inside a one-time account narrows the party to him; without one the party is the account.
-  let party: ReportFilters['party'] = null;
-  if (has('party')) {
-    if (state.person !== null) {
-      party = { account_id: state.person.accountId, person_key: state.person.personKey };
-    } else if (state.party !== null) {
-      party = { account_id: state.party.id, person_key: null };
-    }
-  }
+  // The party is an account, and for a row of a چکتا buyer on the day sheet also his key (PRD FR-13.7).
+  const party: ReportFilters['party'] =
+    has('party') && state.party !== null
+      ? { account_id: state.party.id, person_key: state.partyPersonKey }
+      : null;
   return {
     shortcut,
     from: dates && shortcut === null ? state.from.trim() : '',

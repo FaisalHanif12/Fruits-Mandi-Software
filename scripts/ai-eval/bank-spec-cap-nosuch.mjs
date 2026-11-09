@@ -11,7 +11,6 @@ const NOSUCH = [
   // [row, asked role, [language, text, 'mis'?]]
   ['R6', 'seller', ['roman', 'Hamid Kareem ke maal ki bikri ka khulasa dikhao']],
   ['R8', 'any', ['urdu', 'نارنیا اڈا کی رپورٹ دکھائیں']],
-  ['R9', 'any', ['en', 'show Babar Awan in the pukhta khata register']],
   ['R13', 'any', ['roman', 'Sultan Mirza ka khata dikhao']],
   ['R14', 'any', ['urdu', 'سلطان مرزا کا فرد حساب دکھائیں']],
   ['R21', 'any', ['en', 'what do buyers from Narnia owe']],
@@ -29,7 +28,7 @@ const NOSUCH = [
   ['view-I', 'garden', ['en', 'show the report of the Gulabi garden']],
   ['view-J', 'trip', ['roman', 'safar 99 ki report dikhao']],
   ['view-K', 'partner', ['urdu', 'پارٹنر ظفر نے پھل کتنا لیا']],
-  ['record-pukhta', 'any', ['en', 'who is Babar Awan in pukhta khata']],
+  ['record-chukta', 'any', ['en', 'who is Babar Awan in chukta khata']],
   ['record-money_lent', 'any', ['roman', 'Irfan Qasim ko udhar raqam kitni di thi']],
   ['record-separate_khata', 'any', ['urdu', 'راحت بی بی کے الگ کھاتے میں کتنا ہے']],
   ['record-partner', 'partner', ['roman', 'partner Zafar ka sarmaya kitna hai']],

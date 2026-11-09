@@ -3,7 +3,7 @@
 //! must stay with the model's own `find`, or a hostile question that must not widen what is read.
 //!
 //! The worked day: اکرم ٹول ٹیکس (buyer, owes 2,880), ارشد ملتانی (buyer, 18,684), رحیم and کریم
-//! (sellers), and شاہد, a one-time buyer of پختہ کھاتہ who paid cash.
+//! (sellers), and شاہد, a چکتا buyer who paid in full on the spot.
 #![cfg(test)]
 
 #[path = "../../services/tests/common/mod.rs"]
@@ -159,7 +159,7 @@ fn the_role_the_question_implies_decides_and_a_wrong_role_is_not_found() {
 }
 
 #[test]
-fn a_one_time_buyer_of_pukhta_khata_is_never_found_as_an_account() {
+fn a_chukta_buyer_is_never_found_as_an_account() {
     // شاہد bought for cash on the worked day and has no account of his own: the word finds no
     // single account, so nothing is read ahead and no account is named in his place.
     let h = harness();
@@ -167,7 +167,7 @@ fn a_one_time_buyer_of_pukhta_khata_is_never_found_as_an_account() {
         "shahid ka bakaya kitna hai",
         None,
         vec![
-            tool_reply(&[find("shahid", "pukhta")]),
+            tool_reply(&[find("shahid", "chukta")]),
             final_reply("answer", "{{r1.matches.0.name}}", Value::Null),
             final_reply("answer", "{{r1.matches.0.name}}", Value::Null),
         ],

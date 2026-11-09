@@ -43,7 +43,6 @@ function ShopDay({ day }: { day: string }) {
     from: day,
     to: day,
     account_id: null,
-    person_key: null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
     group_by_month: false,

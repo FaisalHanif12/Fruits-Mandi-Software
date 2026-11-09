@@ -2,7 +2,7 @@
 import type { AnswerRecord } from './AnswerRecord';
 
 /**
- * A party filter: the account as a whole record and, for a پختہ کھاتہ account, the person
+ * A party filter: the account as a whole record and, for a چکتا کھاتہ account, the person
  * (PRD FR-13.5).
  */
 export type SourceParty = {
@@ -11,7 +11,7 @@ export type SourceParty = {
    */
   record: AnswerRecord;
   /**
-   * The person key inside a پختہ کھاتہ account. Null for the whole account.
+   * The person key inside a چکتا کھاتہ account. Null for the whole account.
    */
   person_key: string | null;
 };

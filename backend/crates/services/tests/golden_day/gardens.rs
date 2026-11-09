@@ -808,6 +808,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
             text: "shahpur".into(),
             limit: 10,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();
@@ -843,6 +844,7 @@ fn a_closed_garden_takes_no_entry_no_cancel_no_lot_and_no_cancel_of_its_bikri() 
             text: "shahpur".into(),
             limit: 10,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();
@@ -1020,7 +1022,6 @@ fn a_garden_account_takes_no_opening_no_jaanral_line_and_keeps_its_partners_tied
     // A جنرل line on a garden's account is refused: it moves only by its own entries and closing.
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,

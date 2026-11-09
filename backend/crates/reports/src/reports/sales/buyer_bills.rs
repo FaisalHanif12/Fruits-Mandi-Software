@@ -8,7 +8,7 @@
 //!
 //! The lines are the credit lines in force of بکری postings dated in the period, the same lines
 //! R4 lists, so the total of R5 is the total of R4 (value and buyer total). Every figure is a value
-//! stored on the line when it was saved (Code Standards B20). A one-time buyer (پختہ کھاتہ) is a
+//! stored on the line when it was saved (Code Standards B20). A چکتا buyer (چکتا کھاتہ) is a
 //! row for each person (PRD FR-13.5). The rows are in the Urdu order of the party names; the
 //! totals are over the whole filter and the page only cuts the rows (Code Standards B31).
 //!
@@ -26,7 +26,7 @@ use super::super::PageSpec;
 use super::register::conds;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    IN_CHUNK, add, col, count_of, grade_of, load_parties, paisa, party_of_line, pukhta_party,
+    IN_CHUNK, add, chukta_party, col, count_of, grade_of, load_parties, paisa, party_of_line,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -34,7 +34,7 @@ use crate::reports::model::{
     Cell, ColumnKind, DetailPart, Names, PartyRef, ReportId, ReportPage, Row, RowKind,
 };
 
-/// A buyer and, for a one-time account, his person key.
+/// A buyer and, for a چکتا کھاتہ account, his person key.
 type BuyerKey = (i64, Option<String>);
 
 /// One buyer with his sums over the whole filter.
@@ -61,7 +61,7 @@ pub(crate) struct BillLine {
 fn buyers(conn: &Connection, typed: &Typed) -> Result<Vec<Buyer>, ReportsError> {
     let c = conds(typed, Some("credit"));
     let sql = format!(
-        "SELECT s.buyer_account_id, s.pukhta_person_key, MAX(s.pukhta_name_ur), MAX(s.pukhta_name_en),
+        "SELECT s.buyer_account_id, s.chukta_person_key, MAX(s.chukta_name_ur), MAX(s.chukta_name_en),
                 COALESCE(SUM(s.buyer_value_paisa), 0), COALESCE(SUM(s.buyer_total_paisa), 0)
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
@@ -69,7 +69,7 @@ fn buyers(conn: &Connection, typed: &Typed) -> Result<Vec<Buyer>, ReportsError> 
          JOIN bikri_entries b ON b.id = s.bikri_id
          JOIN accounts ba ON ba.id = s.buyer_account_id
          WHERE {}
-         GROUP BY s.buyer_account_id, s.pukhta_person_key",
+         GROUP BY s.buyer_account_id, s.chukta_person_key",
         c.sql()
     );
     let mut statement = conn.prepare(&sql)?;
@@ -109,7 +109,7 @@ fn lines_of(
         let mut c = conds(typed, Some("credit"));
         c.in_list("s.buyer_account_id", chunk);
         let sql = format!(
-            "SELECT s.buyer_account_id, s.pukhta_person_key, b.number, i.name_ur, i.name_en,
+            "SELECT s.buyer_account_id, s.chukta_person_key, b.number, i.name_ur, i.name_en,
                     pk.name_ur, pk.name_en, s.qty, s.buyer_rate_paisa, s.buyer_value_paisa,
                     s.buyer_comm_paisa, s.laga_paisa, s.buyer_total_paisa, s.grade
              FROM journal_entries je
@@ -199,7 +199,7 @@ fn ordered(conn: &Connection, typed: &Typed) -> Result<Ordered, ReportsError> {
     };
     let mut keyed: Vec<(Vec<u8>, PartyRef, Buyer)> = Vec::with_capacity(all.len());
     for buyer in all {
-        let party = pukhta_party(
+        let party = chukta_party(
             party_of_line(&parties, buyer.key.0, None)?,
             buyer.key.1.clone(),
             buyer.person_ur.as_deref(),
@@ -219,7 +219,7 @@ fn ordered(conn: &Connection, typed: &Typed) -> Result<Ordered, ReportsError> {
     })
 }
 
-/// The accounts of these buyers, once each: a one-time account has a row for each person, and an
+/// The accounts of these buyers, once each: a چکتا کھاتہ account has a row for each person, and an
 /// account in two chunks of the IN list would give its lines twice (money agent, round 12).
 fn accounts_of<'a>(buyers: impl Iterator<Item = &'a Buyer>) -> Vec<i64> {
     let mut accounts: Vec<i64> = buyers.map(|b| b.key.0).collect();
@@ -311,7 +311,7 @@ pub(crate) fn run(
 
 /// One buyer's slip: his credit lines of the filter, oldest first, and their sums.
 pub(crate) struct Slip {
-    /// The buyer. A one-time person has his person key and his own names.
+    /// The buyer. A چکتا buyer has his person key and his own names.
     pub(crate) party: PartyRef,
     /// His lines, in the order of the bills (date, بکری number, line).
     pub(crate) lines: Vec<BillLine>,

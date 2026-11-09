@@ -26,7 +26,7 @@ pub enum SortDirection {
 
 impl SortDirection {
     /// Turns an ordering round for `Desc`. Used by the lists that are built in memory (reports,
-    /// analytics, the one-time register): `rows.sort_by(|a, b| direction.apply(a.cmp(b)))`. The
+    /// analytics, the old register): `rows.sort_by(|a, b| direction.apply(a.cmp(b)))`. The
     /// sort is stable, so rows that are equal keep the natural order of the list.
     pub const fn apply(self, ordering: std::cmp::Ordering) -> std::cmp::Ordering {
         match self {

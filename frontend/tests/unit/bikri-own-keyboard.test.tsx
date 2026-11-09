@@ -17,7 +17,7 @@ import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
 import * as own from '../helpers/bikri-own-real';
-import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, PUKHTA_SELLER, RAHIM } from '../helpers/bikri';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM } from '../helpers/bikri';
 import {
   cellOf,
   focusedIn,
@@ -48,7 +48,6 @@ vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/trips/api');
 vi.mock('../../src/features/purchases/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -103,7 +102,7 @@ describe.each(LANGUAGES)('a lot of trip goods typed with the keyboard (%s)', (la
 
   async function openWithOwnGoods() {
     const view = await openBook(language, fitted);
-    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER, OWN_GOODS];
+    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, OWN_GOODS];
     fakeAccounts(everyone);
     fakeAccountSearch(everyone);
     return view;

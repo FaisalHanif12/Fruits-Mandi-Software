@@ -78,7 +78,7 @@ pub(super) fn plan_advance(
     )?;
     let expected_goods = optional_text(&mut errors, "expected_goods", &input.expected_goods);
 
-    // The seller: a seller account that is not the پختہ کھاتہ one, and active.
+    // The seller: a seller account that is not the چکتا کھاتہ one, and active.
     let mut account = None;
     let mut seller = None;
     match account_repo::facts(conn, input.seller_account_id)? {
@@ -96,7 +96,7 @@ pub(super) fn plan_advance(
                     ErrorCode::ErrOwnGoodsAccountRestricted,
                     "seller_account_id",
                 ));
-            } else if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
+            } else if facts.control_code != SELLER_CONTROL || facts.is_chukta_khata {
                 errors.push(FieldError::new(
                     ErrorCode::ErrNotASeller,
                     "seller_account_id",
@@ -271,7 +271,6 @@ pub(super) fn advance_row(
         cheque_date: None,
         expected_goods: planned.expected_goods.clone(),
         narration: planned.narration.clone(),
-        person_key: None,
         collector_staff_id: None,
         reason: None,
         extra: VoucherExtra::default(),

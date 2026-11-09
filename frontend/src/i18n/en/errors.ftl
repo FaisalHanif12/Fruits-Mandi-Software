@@ -69,6 +69,9 @@ err-name-ur-script = Write the Urdu name in Urdu letters.
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = Write the English name in English letters.
+# PRD FR-7.24, FR-13.2. A walk-in buyer needs both names; the phone is optional.
+# review: pending
+err-chukta-name-required = Write the name of the { -chukta } { -gahak } in both Urdu and English.
 # PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
 # review: pending
 err-tag-invalid = The tag must be 1 to 4 English capital letters or dots, with at least one letter. For example K, BA or D.P.
@@ -197,15 +200,15 @@ err-advance-not-seller = An opening Advance can only be set on the opening Debit
 # review: pending
 err-field-not-allowed = This field is no longer used. Leave it out.
 
-# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Chukta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
-err-opening-not-allowed = This account cannot take this opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -pukhta-khata } and Opening Difference cannot take one. A partner's { -zati-kharcha } account and a { -adhar-raqam } account can take an opening debit only.
+err-opening-not-allowed = This account cannot take this opening balance. Income and { -dukan-kharcha } accounts, { -naqdi-mandi }, { -chukta-khata } and Opening Difference cannot take one. A partner's { -zati-kharcha } account and a { -adhar-raqam } account can take an opening debit only.
 
 ## Advances and closing days (plan 10).
 
-# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# PRD FR-15.4. An advance goes to a seller, never to Chukta Khata.
 # review: pending
-err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only be given to a { -beopari }, not to { -pukhta-khata }.
+err-not-a-seller = This is not a { -beopari } account. An { -peshgi } can only be given to a { -beopari }, not to { -chukta-khata }.
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
 err-account-inactive = This account is inactive and cannot be used in a new entry. Choose another account.
@@ -252,12 +255,6 @@ err-credit-limit-exceeded = This sale takes the buyer's balance to { $would_owe 
 err-seller-required = Choose the seller of this lot.
 # review: pending
 err-buyer-required = Choose the buyer of this line.
-# PRD FR-13.2.
-# review: pending
-err-pukhta-name-required = A name is required for { -pukhta-khata }.
-# PRD FR-13.2.
-# review: pending
-err-pukhta-phone-required = A phone number is required for this { -pukhta-khata } person.
 # PRD FR-12.8.
 # review: pending
 err-no-lots = Add at least one lot.
@@ -281,11 +278,6 @@ err-qty-left-unsold = { $left } { -nag } are left. They will stay in { -baqi-maa
 # A warning (PRD FR-12.7): the save is allowed. $net is in rupees.
 # review: pending
 err-lot-net-negative = The { -safi-bikri } of this lot is below zero ({ $net }). The seller owes this amount.
-# A warning (PRD FR-13.11, plan 47): the save is allowed. This { -bikri } comes before a later one of
-# the same { -pukhta-khata } seller that holds part of his { -peshgi }, and takes $taken of it. $taken is
-# in rupees.
-# review: pending
-err-advance-taken-from-later = This { -bikri } takes { $taken } of his { -peshgi } from a later { -bikri }. Check { -naqd }: his { -baqaya } will not be 0.
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = This rate is more than { $percent }% away from the average of the last 7 days ({ $average }). Check it.
@@ -298,9 +290,10 @@ err-draft-invalid = Your unfinished work could not be kept for now. Save the ent
 
 ## Printing (plan 14).
 
-# PRD FR-12.12. Printing needs Windows; on other computers the preview shows how it will print.
+# PRD FR-12.12. Printing works on Windows and on a Mac (plan 69); on any other computer the preview
+# shows how it will print.
 # review: pending
-err-print-windows-only = Printing works only on Windows. On this computer, use the preview to see how the document will print.
+err-print-windows-only = Printing works only on Windows and on a Mac. On this computer, use the preview to see how the document will print.
 
 # $printer is the printer name in Settings.
 # review: pending
@@ -322,10 +315,6 @@ err-return-exceeds-open = This is more than can be returned. The most that can b
 # PRD FR-15.3.
 # review: pending
 err-voucher-cancelled = This voucher is cancelled and cannot be changed.
-
-# PRD FR-13.5, FR-13.7.
-# review: pending
-err-person-required = For { -pukhta-khata }, type the name or phone of the person and pick him from the list.
 
 # A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
 # amount is more than it, both in rupees.
@@ -643,10 +632,6 @@ err-already-dead = He is already in { -doobi-raqam }. To make him active, use "M
 # PRD FR-10.10, plan 40. The reason Other needs a note.
 # review: pending
 err-note-required = Write a note when the reason is Other.
-
-# PRD FR-10.10, E72, plan 40. A line, a lot or an entry for a person who is in the dead amount.
-# review: pending
-err-person-in-dead-amount = This person is in { -doobi-raqam }. Only a { -wasooli } or a { -wapsi } of { -adhar-raqam } can be entered for him.
 
 # PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
 # review: pending

@@ -10,6 +10,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 6,
       "is_active": true,
       "is_dead": false

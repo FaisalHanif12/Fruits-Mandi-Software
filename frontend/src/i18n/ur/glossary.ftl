@@ -1,7 +1,7 @@
 ### Locked business words (PRD Section 3, NFR-URD-2). The only source of these words.
 ### Other files use the terms ({ -bikri }); the app shows a single word with glossary-<id>.
 ### .gender drives agreement in Urdu (style guide). It follows the style guide list, or the
-### head noun of a compound (پختہ کھاتہ follows کھاتہ). Words with no .gender wait for the
+### head noun of a compound (چکتا کھاتہ follows کھاتہ). Words with no .gender wait for the
 ### Urdu reviewer.
 ### Changing a word here needs a PRD change (CLAUDE.md, Source of truth).
 
@@ -39,10 +39,14 @@
 -kharidar = خریدار
     .gender = masculine
 
-# Shared account for one-time or rare parties
+# Walk-in buyers who pay the whole bill on the spot and leave (PRD Section 13)
 # review: pending
--pukhta-khata = پختہ کھاتہ
+-chukta-khata = چکتا کھاتہ
     .gender = masculine
+
+# The short mark of a walk-in buyer in a list and on his card (PRD FR-7.29)
+# review: pending
+-chukta = چکتا
 
 # One unit or package (پیٹی، کریٹ، بوری، دانہ)
 # review: pending
@@ -411,7 +415,7 @@ glossary-zamindar = { -zamindar }
 glossary-buzgar = { -buzgar }
 glossary-gahak = { -gahak }
 glossary-kharidar = { -kharidar }
-glossary-pukhta-khata = { -pukhta-khata }
+glossary-chukta-khata = { -chukta-khata }
 glossary-nag = { -nag }
 glossary-bikri = { -bikri }
 glossary-bikri-book = { -bikri-book }

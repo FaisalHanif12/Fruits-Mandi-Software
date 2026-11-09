@@ -34,7 +34,6 @@ export function GeneralListSection({ today }: { today: string }) {
       from: period.range.from,
       to: period.range.to,
       account_id: null,
-      person_key: null,
       show_finished: showFinished,
       search: searchText === '' ? null : searchText,
       group_by_month: period.state.kind !== 'today',

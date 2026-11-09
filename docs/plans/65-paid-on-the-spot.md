@@ -45,4 +45,8 @@ The numbers of Section 2 in tests, on screen and in the journal. Old data keeps 
 
 ## 6. Notes
 
-To be filled by the lead.
+The money agent's note is `docs/plans/65a-money-note.md`: follow it.
+
+Lead's decision on its point 10a (adds to P3 and P11): in an edit, a line of a must-pay-in-full buyer that the user did not change keeps its stored paid. A changed or new line follows P3 and gets paid = buyer total. Without this, an edit would turn an old credit line, whose buyer has since lost credit, into full cash with no action by the user.
+
+Also in T2: `books_of` in `services/src/bikri/shared.rs` must give a preview with `ErrNoSaleLines`, not `ErrJournalUnbalanced`, for a lot with no complete line and no charges (plan 61 Section 6).

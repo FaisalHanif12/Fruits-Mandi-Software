@@ -1,0 +1,115 @@
+{
+  "report": "R38",
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "dead-report-title",
+  "filters": [
+    {
+      "label_id": "report-filter-due",
+      "value": ""
+    }
+  ],
+  "columns": [
+    {
+      "key": "party",
+      "title_id": "dead-col-party",
+      "kind": "party"
+    },
+    {
+      "key": "type",
+      "title_id": "dead-col-type",
+      "kind": "label"
+    },
+    {
+      "key": "reason",
+      "title_id": "dead-col-reason",
+      "kind": "label"
+    },
+    {
+      "key": "note",
+      "title_id": "dead-col-note",
+      "kind": "text"
+    },
+    {
+      "key": "date",
+      "title_id": "dead-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "owed_then",
+      "title_id": "dead-col-owed-then",
+      "kind": "money"
+    },
+    {
+      "key": "recovered",
+      "title_id": "dead-col-recovered",
+      "kind": "money"
+    },
+    {
+      "key": "corrections",
+      "title_id": "dead-col-corrections",
+      "kind": "money"
+    },
+    {
+      "key": "still_owed",
+      "title_id": "dead-col-still-owed",
+      "kind": "money"
+    },
+    {
+      "key": "last_recovery",
+      "title_id": "dead-col-last-recovery",
+      "kind": "date"
+    },
+    {
+      "key": "status",
+      "title_id": "dead-col-status",
+      "kind": "label"
+    }
+  ],
+  "summary": [],
+  "rows": [],
+  "tables": [],
+  "row_count": "0",
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "text": "0"
+    },
+    {
+      "type": "money",
+      "text": "0"
+    },
+    {
+      "type": "money",
+      "text": "0"
+    },
+    {
+      "type": "money",
+      "text": "0"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    }
+  ],
+  "words": null
+}

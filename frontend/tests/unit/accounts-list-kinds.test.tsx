@@ -1,7 +1,7 @@
-// Plan 32, R6: Index → Accounts shows only sellers, buyers and the پختہ کھاتہ accounts. The type
-// filter is exactly All, Seller, Buyer, Pukhta; cash, payables, capital and the other system
-// accounts never show here (the chart of accounts still has them). The new-account form offers
-// Seller, Buyer and the two پختہ kinds (plan 47). Both languages, against a fake backend.
+// Plan 32, R6 and plan 64: Index → Accounts shows only sellers and buyers. The type filter is
+// exactly All, Seller, Buyer; cash, payables, capital, چکتا کھاتہ and the other system accounts
+// never show here (the chart of accounts still has them). The new-account form offers Seller and
+// Buyer only. Both languages, against a fake backend.
 
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -35,25 +35,17 @@ vi.mock('../../src/shared/urdu/api');
 
 const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim');
 const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'Akram Toll Tax');
-const PUKHTA_BUYER = account(23, 'buyer', '0030', 'پختہ کھاتہ (خریدار)', 'Pukhta Khata (Buyer)', {
+const CHUKTA_KHATA = account(23, 'buyer', '0030', 'چکتا کھاتہ', 'Chukta Khata', {
   is_system: true,
-  is_pukhta_khata: true,
+  is_chukta_khata: true,
 });
-const PUKHTA_SELLER = account(
-  33,
-  'seller',
-  '0031',
-  'پختہ کھاتہ (بیوپاری)',
-  'Pukhta Khata (Seller)',
-  { is_system: true, is_pukhta_khata: true },
-);
 const NAQDI = account(24, 'buyer', '03040000', 'نقدی منڈی', 'Naqdi Mandi', { is_system: true });
 const CASH = account(51, 'other', '01010001', 'روکڑ', 'Cash in Hand', { is_system: true });
 const FREIGHT = account(52, 'other', '02010002', 'کرایہ کھاتہ', 'Freight Payable', {
   is_system: true,
 });
 const LENT = account(53, 'money_lent', '01030001', 'اسلم', 'Aslam');
-const ALL_ROWS = [RAHIM, AKRAM, PUKHTA_BUYER, PUKHTA_SELLER, NAQDI, CASH, FREIGHT, LENT];
+const ALL_ROWS = [RAHIM, AKRAM, CHUKTA_KHATA, NAQDI, CASH, FREIGHT, LENT];
 
 const named = (text: string) => (name: string) => visible(name) === text;
 const rowIds = () =>
@@ -91,11 +83,11 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     return user;
   }
 
-  it('shows only sellers, buyers and the two پختہ کھاتہ accounts: no cash, payable, نقدی منڈی or lent person', async () => {
+  it('shows only sellers and buyers: no cash, payable, نقدی منڈی, چکتا کھاتہ or lent person', async () => {
     fakeAccounts(ALL_ROWS);
     await renderApp('/index/accounts');
     await waitFor(() => {
-      expect(rowIds()).toEqual(['31', '21', '23', '33']);
+      expect(rowIds()).toEqual(['31', '21']);
     });
     expect(accountApi.accountsList).toHaveBeenLastCalledWith(
       { kind: 'all', text: '', include_inactive: false, has_opening: null },
@@ -104,7 +96,7 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     );
   });
 
-  it('the type filter has exactly All, Seller, Buyer, Pukhta', async () => {
+  it('the type filter has exactly All, Seller, Buyer', async () => {
     fakeAccounts(ALL_ROWS);
     await renderApp('/index/accounts');
     await openFilter();
@@ -115,28 +107,10 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
       message(language, 'accounts-type-all'),
       message(language, 'accounts-type-seller'),
       message(language, 'accounts-type-buyer'),
-      message(language, 'accounts-type-pukhta'),
     ]);
   });
 
-  it('Pukhta sends that kind to the backend and lists the two accounts', async () => {
-    fakeAccounts(ALL_ROWS);
-    await renderApp('/index/accounts');
-    const user = await openFilter();
-    await user.click(
-      await screen.findByRole('option', { name: named(message(language, 'accounts-type-pukhta')) }),
-    );
-    await waitFor(() => {
-      expect(rowIds()).toEqual(['23', '33']);
-    });
-    expect(accountApi.accountsList).toHaveBeenLastCalledWith(
-      { kind: 'pukhta', text: '', include_inactive: false, has_opening: null },
-      0,
-      PAGE_ROWS,
-    );
-  });
-
-  it('Seller lists the sellers only, not the پختہ کھاتہ seller', async () => {
+  it('Seller lists the sellers only', async () => {
     fakeAccounts(ALL_ROWS);
     await renderApp('/index/accounts');
     const user = await openFilter();
@@ -151,10 +125,10 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
   it('a kind kept from an earlier version (money lent, other) is not read: the list starts at All', () => {
     expect(accountChoicesFrom({ type: 'money_lent' }).type).toBe('all');
     expect(accountChoicesFrom({ type: 'other' }).type).toBe('all');
-    expect(accountChoicesFrom({ type: 'pukhta' }).type).toBe('pukhta');
+    expect(accountChoicesFrom({ type: 'buyer' }).type).toBe('buyer');
   });
 
-  it('the new-account form offers Seller, Buyer and the two پختہ kinds (plan 47)', async () => {
+  it('the new-account form offers Seller and Buyer only', async () => {
     fakeAccounts([RAHIM, AKRAM]);
     fakeMasters();
     await renderApp('/index/accounts/new');
@@ -170,8 +144,6 @@ describe.each(LANGUAGES)('the Accounts list (%s)', (language: Language) => {
     expect(shown).toEqual([
       message(language, 'accounts-type-seller'),
       message(language, 'accounts-type-buyer'),
-      message(language, 'accounts-type-pukhta_buyer'),
-      message(language, 'accounts-type-pukhta_seller'),
     ]);
   });
 

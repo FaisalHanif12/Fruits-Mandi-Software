@@ -26,7 +26,7 @@
 //! let parts = guest_parts(value, &partners).unwrap();
 //! let rupees: Vec<i64> = parts.parts.iter().map(|p| p.amount.rupees()).collect();
 //! assert_eq!(rupees, vec![334, 333, 333]);
-//! let entry = fruit_entry(&parts.parts, AccountId::new(99), None).unwrap();
+//! let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
 //! assert_eq!(entry.total(), value);
 //! ```
 
@@ -189,8 +189,7 @@ pub fn guest_parts(
 }
 
 /// The journal entry of the entry: each partner's 0604 account بنام his part, the source account
-/// جمع the value. `person_key` is the one-time seller of a پختہ کھاتہ lot. A part of 0 makes no
-/// line. The entry balances because the parts add up to the value.
+/// جمع the value. A part of 0 makes no line. The entry balances because the parts add up to the value.
 ///
 /// # Errors
 /// `LedgerError::Empty` if every part is 0; the other errors of building an entry
@@ -198,7 +197,6 @@ pub fn guest_parts(
 pub fn fruit_entry(
     parts: &[FruitPartAmount],
     credit: AccountId,
-    person_key: Option<&str>,
 ) -> Result<BalancedEntry, LedgerError> {
     let total = parts
         .iter()
@@ -208,11 +206,7 @@ pub fn fruit_entry(
         .filter(|part| part.amount > Paisa::ZERO)
         .map(|part| LedgerLine::new(part.account_id, Side::Dr, part.amount))
         .collect();
-    let mut credit_line = LedgerLine::new(credit, Side::Cr, total);
-    if let Some(key) = person_key {
-        credit_line = credit_line.with_person(key);
-    }
-    lines.push(credit_line);
+    lines.push(LedgerLine::new(credit, Side::Cr, total));
     build_entry(lines)
 }
 
@@ -247,7 +241,7 @@ mod tests {
         assert_eq!(rupees(&parts), vec![1_160]);
         assert!(parts.working.is_none());
         // His 0604 account Dr 1,160, the lot's seller Cr 1,160.
-        let entry = fruit_entry(&parts.parts, AccountId::new(99), None).unwrap();
+        let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
         assert_eq!(entry.total(), p(1_160));
         assert_eq!(entry.lines().len(), 2);
     }
@@ -258,7 +252,7 @@ mod tests {
         assert_eq!(value.value, p(3_000));
         let parts = guest_parts(value.value, &three()).unwrap();
         assert_eq!(rupees(&parts), vec![1_000, 1_000, 1_000]);
-        let entry = fruit_entry(&parts.parts, AccountId::new(99), None).unwrap();
+        let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
         assert_eq!(entry.total(), p(3_000));
         assert_eq!(entry.lines().len(), 4);
     }
@@ -287,18 +281,10 @@ mod tests {
     #[test]
     fn a_part_of_zero_makes_no_journal_line() {
         let parts = guest_parts(p(1), &three()).unwrap();
-        let entry = fruit_entry(&parts.parts, AccountId::new(99), None).unwrap();
+        let entry = fruit_entry(&parts.parts, AccountId::new(99)).unwrap();
         // One partner line and the credit.
         assert_eq!(entry.lines().len(), 2);
         assert_eq!(entry.total(), p(1));
-    }
-
-    #[test]
-    fn the_credit_of_a_pukhta_seller_carries_his_person_key() {
-        let parts = partner_part((PartnerId::new(1), AccountId::new(11)), p(500));
-        let entry = fruit_entry(&parts.parts, AccountId::new(99), Some("shahid|0300")).unwrap();
-        let credit = entry.lines().iter().find(|l| l.side == Side::Cr).unwrap();
-        assert_eq!(credit.person_key.as_deref(), Some("shahid|0300"));
     }
 
     #[test]
@@ -358,7 +344,7 @@ mod tests {
             }
             let first = parts.parts.first().unwrap().amount.rupees();
             prop_assert_eq!(first, value - floor * (i64::try_from(count).unwrap() - 1));
-            let entry = fruit_entry(&parts.parts, AccountId::new(9_999), None).unwrap();
+            let entry = fruit_entry(&parts.parts, AccountId::new(9_999)).unwrap();
             prop_assert_eq!(entry.total(), p(value));
         }
     }

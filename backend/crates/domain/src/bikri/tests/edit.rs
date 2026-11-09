@@ -422,74 +422,6 @@ fn a_later_posting_refuses_a_typed_cash_and_charges_nothing_else_of_the_lot() {
 }
 
 #[test]
-fn one_time_seller_cash_is_not_defaulted_in_a_later_posting() {
-    // PRD FR-13.10 pays a one-time seller his whole net on the spot at the FIRST posting only.
-    let mut l = bare_lot(PUKHTA_SELLER, BANANA, "10");
-    l.lot_id = Some(1);
-    l.pukhta = Some(mandi_core::bikri::PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: "0301-1111111".into(),
-    });
-    l.sales = vec![sale(AKRAM, "5", "600")];
-    let prepared = prepare_draft(&draft(vec![l]), today(), None);
-    let stored = StoredPosting {
-        kind: PostingKind::Later,
-        lots: HashMap::from([(
-            1,
-            StoredLot {
-                elsewhere_qty: 5,
-                ..StoredLot::default()
-            },
-        )]),
-        sales: HashMap::new(),
-    };
-    let calc = calc_posting(
-        PostingTarget::LaterSale { lot_id: 1 },
-        &prepared,
-        &lookups(),
-        &RuleSet::build(default_rules()),
-        switches(),
-        &stored,
-    )
-    .unwrap();
-    assert_no_errors(&calc);
-    assert_eq!(r(single_lot_totals(&calc).cash_paid), 0);
-}
-
-#[test]
-fn a_party_sellers_cash_is_not_defaulted_in_a_later_posting() {
-    // PRD FR-13.11 pays a پختہ بیوپاری with his own account like the one-time seller: his whole net on
-    // the spot at the FIRST posting only (FR-12.17).
-    let mut l = bare_lot(PARTY_SELLER, BANANA, "10");
-    l.lot_id = Some(1);
-    l.sales = vec![sale(AKRAM, "5", "600")];
-    let prepared = prepare_draft(&draft(vec![l]), today(), None);
-    let stored = StoredPosting {
-        kind: PostingKind::Later,
-        lots: HashMap::from([(
-            1,
-            StoredLot {
-                elsewhere_qty: 5,
-                ..StoredLot::default()
-            },
-        )]),
-        sales: HashMap::new(),
-    };
-    let calc = calc_posting(
-        PostingTarget::LaterSale { lot_id: 1 },
-        &prepared,
-        &lookups(),
-        &RuleSet::build(default_rules()),
-        switches(),
-        &stored,
-    )
-    .unwrap();
-    assert_no_errors(&calc);
-    assert_eq!(r(single_lot_totals(&calc).cash_paid), 0);
-}
-
-#[test]
 fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
     // Money agent review of plan 16. The lines were saved with a seller commission of 5% (rule 7);
     // the default now says 6%. With the same seller the lines keep 5%; with another seller or
@@ -507,7 +439,6 @@ fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
                 arrival_id: None,
                 seller_account_id: RAHIM,
                 item_id: BANANA,
-                person_key: None,
                 purchase_id: None,
             }),
             ..StoredLot::default()
@@ -528,34 +459,4 @@ fn a_lot_whose_seller_or_item_changed_keeps_nothing_stored_for_the_old_one() {
     let calc = edit_with(&d, default_rules(), &stored);
     assert_no_errors(&calc);
     assert_eq!(r(single_lot_totals(&calc).laga), 0);
-}
-
-#[test]
-fn leftover_one_time_name_text_on_an_ordinary_sellers_lot_is_not_a_change() {
-    // Money agent second pass, MINOR-2: only a one-time seller has a person key to compare.
-    let mut stored = stored_event1();
-    stored.lots.insert(
-        1,
-        StoredLot {
-            identity: Some(StoredIdentity {
-                arrival_id: None,
-                seller_account_id: RAHIM,
-                item_id: BANANA,
-                person_key: None,
-                purchase_id: None,
-            }),
-            ..StoredLot::default()
-        },
-    );
-    let mut d = event1_with_ids();
-    d.lots[0].pukhta = Some(mandi_core::bikri::PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: "0301-1111111".into(),
-    });
-    // The default buyer commission is 7% now, but the unchanged lines keep their stored 6%.
-    let calc = edit_with(&d, rules_with_buyer_7(), &stored);
-    assert_no_errors(&calc);
-    assert_eq!(r(line(&calc, 0, 0).buyer_comm.amount), 720);
-    assert_eq!(r(line(&calc, 0, 1).buyer_comm.amount), 1_044);
 }

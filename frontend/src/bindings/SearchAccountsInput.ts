@@ -34,4 +34,10 @@ export type SearchAccountsInput = {
    * Missing or false leaves him out, like any inactive account.
    */
   include_dead?: boolean;
+  /**
+   * True only in the buyer field of a بکری line: scope `buyer` then lists the چکتا buyers beside the
+   * buyers (PRD FR-7.29, decision C4 of plan 60). Missing or false leaves them out, so every other
+   * buyer picker, filter and list pages exactly as before.
+   */
+  with_chukta?: boolean;
 };

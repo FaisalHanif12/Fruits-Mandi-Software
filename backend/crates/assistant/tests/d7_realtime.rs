@@ -465,7 +465,7 @@ fn buyer_item_with_no_sale_today(w: &world::World) -> (String, String, i64, Stri
                  JOIN bikri_lots l ON l.id = s.lot_id JOIN items i ON i.id = l.item_id \
                  JOIN accounts a ON a.id = s.buyer_account_id \
                  WHERE s.is_active = 1 AND s.entry_date < '2026-11-05' AND a.is_system = 0 \
-                   AND a.is_pukhta_khata = 0 AND a.is_pukhta_party = 0 \
+                   AND a.is_chukta_khata = 0 \
                    AND (SELECT COUNT(*) FROM accounts b WHERE b.name_en LIKE \
                         substr(a.name_en, 1, instr(a.name_en || ' ', ' ') - 1) || '%') = 1 \
                    AND NOT EXISTS (SELECT 1 FROM bikri_sales t JOIN bikri_lots m ON m.id = t.lot_id \
@@ -975,7 +975,7 @@ fn a_figure_made_of_a_total_commission_source_is_refused_for_a_side_and_not_for_
 }
 
 #[test]
-fn an_estimate_of_another_commission_and_the_register_r9_are_refused_for_a_side_question() {
+fn an_estimate_of_another_commission_is_refused_for_a_side_question() {
     let y = year::seed::build();
     let facts = year::oracle::compute(&y).facts;
     let buyer_side = oracle_rupees(&facts, "ix.last_month.banana.faisal.comm_buyer");
@@ -994,27 +994,6 @@ fn an_estimate_of_another_commission_and_the_register_r9_are_refused_for_a_side_
         vec![
             tool_reply("estimate", &estimate),
             answer("اس خریدار سے کمیشن {{e1.same_pace.total}} لیا گیا۔"),
-            good.clone(),
-        ],
-    );
-    assert_eq!(requests.len(), 3, "one rewrite");
-    assert!(told_rules(&requests[2]).contains(&"measure".to_owned()));
-    assert_eq!(first_money(&reply), buyer_side);
-
-    // R9 holds each row's commission on that row's side, which is not known here: refused.
-    let r9 = json!({
-        "id": "R9", "from": "2026-10-01", "to": "2026-10-31", "as_of": null, "party": null,
-        "item": null, "city": null, "adda": null, "collector": null, "partner": null,
-        "trip": null, "garden": null, "bikri": null, "seller": null, "zamindar": null,
-        "status": null, "voucher_type": null, "layout": null, "group_by": null, "where": null,
-        "sort": null, "rows": null, "item_group": null
-    });
-    let (reply, requests) = h.ask(
-        question,
-        None,
-        vec![
-            tool_reply("report", &r9),
-            answer("اس خریدار سے کمیشن {{r5.totals.commission}} لیا گیا۔"),
             good,
         ],
     );

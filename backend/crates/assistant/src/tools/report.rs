@@ -144,7 +144,7 @@ pub struct Input {
     /// A زمیندار (R2 to R5, R6, R27).
     #[serde(default)]
     pub zamindar: Option<String>,
-    /// `paid` or `due` (R9, R38).
+    /// `paid` or `due` (R38).
     #[serde(default)]
     pub status: Option<String>,
     /// One kind of voucher, in its stored word (R15).
@@ -1672,7 +1672,7 @@ fn partner_overview(
 }
 
 /// A party's balance on a row of the dues and payables lists (R20 to R22, R24): with its side and
-/// read against his party card and the closing of his ledger (PRD FR-7.76). A one-time person
+/// read against his party card and the closing of his ledger (PRD FR-7.76). A چکتا buyer
 /// shares one account with others, so his row is not checked against the account's card.
 fn row_balance(
     env: &Env<'_>,
@@ -1697,7 +1697,7 @@ fn row_balance(
         Cell::Balance { paisa, side } => (*paisa, super::party::side_of(*side)),
         _ => return None,
     };
-    // A one-time person, or a list as of an earlier day: no second place (money review R2).
+    // A چکتا buyer, or a list as of an earlier day: no second place (money review R2).
     if party.person_key.is_some() || past {
         return Some(Node::Val(Val::Money(Money::balance(paisa, side))));
     }

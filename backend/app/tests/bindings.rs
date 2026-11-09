@@ -18,9 +18,9 @@ use mandi_app_lib::error::{ErrorCode, UiError, UiErrorItem};
 use mandi_app_lib::state::DataStatus;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::{
-    accounts, arrivals, bikri, capital, cash, cashbook, dead, drafts, expenses, fruit, gardens,
-    general, khata, lent, masters, paging, partners, printing, purchases, rules, search, split,
-    statement, trips, ventures, vouchers,
+    accounts, arrivals, bikri, capital, cash, cashbook, chukta, dead, drafts, expenses, fruit,
+    gardens, general, khata, lent, masters, paging, partners, party_ledgers, printing, purchases,
+    rules, search, split, statement, trips, ventures, vouchers,
 };
 use ts_rs::{Config, TS};
 
@@ -216,8 +216,6 @@ const EXPECTED_FILES: &[&str] = &[
     "ReceiptsInput.ts",
     "ReceiptRowResult.ts",
     "ReceiptsSaved.ts",
-    "MakeRegularInput.ts",
-    "MadeRegular.ts",
     "VoucherHit.ts",
     "DayClosePreviewInput.ts",
     "DayClosePreview.ts",
@@ -273,7 +271,21 @@ const EXPECTED_FILES: &[&str] = &[
     "HeaderInput.ts",
     "LotInput.ts",
     "SaleInput.ts",
-    "PukhtaInput.ts",
+    "ChuktaInput.ts",
+    // Plan 64: the چکتا buyers.
+    "ChuktaBuyer.ts",
+    "ChuktaSearchInput.ts",
+    "ChuktaAddInput.ts",
+    // Plan 66: the party ledgers.
+    "LedgerSide.ts",
+    "PartyLedgersListInput.ts",
+    "PartyLedgerRow.ts",
+    "PartyLedgersList.ts",
+    "PartyLedgerStatementInput.ts",
+    "PartyLedgerHead.ts",
+    "PartyLedgerDay.ts",
+    "PartyLedgerStatement.ts",
+    "HitKind.ts",
     "ChargeInput.ts",
     "LineChargeInput.ts",
     "FreightPaidBy.ts",
@@ -312,7 +324,7 @@ const EXPECTED_FILES: &[&str] = &[
     "BikriSaved.ts",
     "BikriStatus.ts",
     "BikriGetInput.ts",
-    "SavedPukhta.ts",
+    "SavedChukta.ts",
     "SavedCharge.ts",
     "SavedLotCharge.ts",
     "SavedSale.ts",
@@ -332,14 +344,6 @@ const EXPECTED_FILES: &[&str] = &[
     "BikriFindInput.ts",
     "NavigateTo.ts",
     "BikriNavigateInput.ts",
-    "PukhtaSide.ts",
-    "PukhtaPeopleInput.ts",
-    "PukhtaPerson.ts",
-    "PaidState.ts",
-    "PukhtaRegisterInput.ts",
-    "PukhtaRegisterRow.ts",
-    "PukhtaRegister.ts",
-    "PukhtaRegisterTotals.ts",
     "BikriMatch.ts",
     "BikriHit.ts",
     "StockListInput.ts",
@@ -648,9 +652,6 @@ const EXPECTED_FILES: &[&str] = &[
     // Run B, plan 20, step B3 (append-only block).
     "ReportGroupBy.ts",
     "ReportPaidFilter.ts",
-    "FindPeopleInput.ts",
-    "PukhtaPersonAccount.ts",
-    "PukhtaPersonHit.ts",
     // Run B, plan 21 (append-only block).
     "AnalyticsView.ts",
     "AnalyticsPeriod.ts",
@@ -912,6 +913,14 @@ fn export_bindings() {
     accounts::AccountBalance::export_all(&cfg).unwrap();
     accounts::PartyCardInput::export_all(&cfg).unwrap();
     accounts::PartyCard::export_all(&cfg).unwrap();
+    accounts::HitKind::export_all(&cfg).unwrap();
+    chukta::ChuktaBuyer::export_all(&cfg).unwrap();
+    chukta::ChuktaSearchInput::export_all(&cfg).unwrap();
+    chukta::ChuktaAddInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgersListInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgersList::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerStatementInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerStatement::export_all(&cfg).unwrap();
     accounts::SearchGlobalInput::export_all(&cfg).unwrap();
     accounts::AccountsRecentInput::export_all(&cfg).unwrap();
     accounts::AccountsTouchInput::export_all(&cfg).unwrap();
@@ -969,8 +978,6 @@ fn export_bindings() {
     vouchers::ReceiptsInput::export_all(&cfg).unwrap();
     vouchers::ReceiptRowResult::export_all(&cfg).unwrap();
     vouchers::ReceiptsSaved::export_all(&cfg).unwrap();
-    vouchers::MakeRegularInput::export_all(&cfg).unwrap();
-    vouchers::MadeRegular::export_all(&cfg).unwrap();
     vouchers::VoucherHit::export_all(&cfg).unwrap();
     vouchers::DayClosePreviewInput::export_all(&cfg).unwrap();
     vouchers::DayClosePreview::export_all(&cfg).unwrap();
@@ -1075,12 +1082,6 @@ fn export_bindings() {
     bikri::BikriListTotals::export_all(&cfg).unwrap();
     bikri::BikriFindInput::export_all(&cfg).unwrap();
     bikri::BikriNavigateInput::export_all(&cfg).unwrap();
-    bikri::PukhtaPeopleInput::export_all(&cfg).unwrap();
-    bikri::PukhtaPerson::export_all(&cfg).unwrap();
-    bikri::PukhtaRegisterInput::export_all(&cfg).unwrap();
-    bikri::PukhtaRegisterRow::export_all(&cfg).unwrap();
-    bikri::PukhtaRegister::export_all(&cfg).unwrap();
-    bikri::PukhtaRegisterTotals::export_all(&cfg).unwrap();
     bikri::BikriHit::export_all(&cfg).unwrap();
     bikri::StockListInput::export_all(&cfg).unwrap();
     bikri::StockList::export_all(&cfg).unwrap();
@@ -1322,8 +1323,6 @@ fn export_bindings() {
     mandi_reports::reports::ReportPage::export_all(&cfg).unwrap();
     mandi_reports::reports::ReportPrintData::export_all(&cfg).unwrap();
     // Run B, plan 20, step B3 (append-only block).
-    mandi_reports::people::FindPeopleInput::export_all(&cfg).unwrap();
-    mandi_reports::people::PersonHit::export_all(&cfg).unwrap();
     // Run B, plan 21 (append-only block).
     mandi_reports::analytics::AnalyticsCatalogEntry::export_all(&cfg).unwrap();
     mandi_reports::analytics::AnalyticsRunInput::export_all(&cfg).unwrap();

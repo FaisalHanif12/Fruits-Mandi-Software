@@ -13,8 +13,6 @@ import openBillsTruncated from '../fixtures/assist_open_bills_truncated.json';
 import openPayablesRahim from '../fixtures/assist_open_payables_rahim.json';
 import openPayablesRahimRequest from '../fixtures/assist_open_payables_rahim_request.json';
 import openPayablesTruncated from '../fixtures/assist_open_payables_truncated.json';
-import makeRegular from '../fixtures/pukhta_make_regular_shahid.json';
-import makeRegularRequest from '../fixtures/pukhta_make_regular_shahid_request.json';
 import slipAdvanceUr from '../fixtures/reports_voucher_print_data_advance_ur.json';
 import slipPaymentEn from '../fixtures/reports_voucher_print_data_payment_en.json';
 import slipReceiptEn from '../fixtures/reports_voucher_print_data_receipt_en.json';
@@ -62,8 +60,6 @@ import type { AdvancesInfo } from '../../src/bindings/AdvancesInfo';
 import type { CollectionList } from '../../src/bindings/CollectionList';
 import type { CollectionListInput } from '../../src/bindings/CollectionListInput';
 import type { GlobalHit } from '../../src/bindings/GlobalHit';
-import type { MadeRegular } from '../../src/bindings/MadeRegular';
-import type { MakeRegularInput } from '../../src/bindings/MakeRegularInput';
 import type { OpenBills } from '../../src/bindings/OpenBills';
 import type { OpenBillsInput } from '../../src/bindings/OpenBillsInput';
 import type { OpenPayables } from '../../src/bindings/OpenPayables';
@@ -116,9 +112,6 @@ function readCollectionList(value: unknown): CollectionList {
 function readReceiptsSaved(value: unknown): ReceiptsSaved {
   return value as ReceiptsSaved;
 }
-function readMadeRegular(value: unknown): MadeRegular {
-  return value as MadeRegular;
-}
 function readPrintData(value: unknown): PrintData {
   return value as PrintData;
 }
@@ -148,9 +141,6 @@ function readOpenBillsInput(value: unknown): OpenBillsInput {
 }
 function readReceiptsInput(value: unknown): ReceiptsInput {
   return value as ReceiptsInput;
-}
-function readMakeRegularInput(value: unknown): MakeRegularInput {
-  return value as MakeRegularInput;
 }
 
 function readVoucherPreviewInput(value: unknown): VoucherPreviewInput {
@@ -199,7 +189,6 @@ export const OPEN_PAYABLES_TRUNCATED: OpenPayables = readOpenPayables(openPayabl
 export const ADVANCES_KARIM: AdvancesInfo = readAdvancesInfo(advancesKarim);
 export const COLLECTION_LIST: CollectionList = readCollectionList(collectionList);
 export const RECEIPTS_BATCH: ReceiptsSaved = readReceiptsSaved(saveReceiptsBatch);
-export const MADE_REGULAR: MadeRegular = readMadeRegular(makeRegular);
 export const SLIP_RECEIPT_UR: PrintData = readPrintData(slipReceiptUr);
 export const SLIP_PAYMENT_EN: PrintData = readPrintData(slipPaymentEn);
 export const SLIP_RECEIPT_EN: PrintData = readPrintData(slipReceiptEn);
@@ -240,4 +229,3 @@ export const REQUEST_OPEN_PAYABLES_RAHIM: OpenPayablesInput =
 export const REQUEST_COLLECTION_LIST: CollectionListInput =
   readCollectionListInput(collectionListRequest);
 export const REQUEST_RECEIPTS_BATCH: ReceiptsInput = readReceiptsInput(saveReceiptsBatchRequest);
-export const REQUEST_MAKE_REGULAR: MakeRegularInput = readMakeRegularInput(makeRegularRequest);

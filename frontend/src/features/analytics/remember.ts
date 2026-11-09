@@ -1,7 +1,7 @@
 // What the analytics area remembers for the Owner (PRD FR-7.45): the filters he last used, under the
 // screen name `analytics.filters`. The area has one set of filters that stays while he moves from
 // one view to another, so one value is kept for all of them. A value that cannot be read any more is
-// left out and the box starts empty. The one-time person is not kept. Nothing about money is kept.
+// left out and the box starts empty. Nothing about money is kept.
 
 import { GRADE_CHOICES } from '../../shared/format';
 import { choiceOr, idOrNull, isRecord, pickedOrNull, pickedText } from '../../shared/screen-state';

@@ -18,7 +18,6 @@ export function DeadMoveButton({ party }: { party: ReportParty | null }) {
         if (party === null) return;
         actions.move({
           accountId: party.account_id,
-          personKey: party.person_key,
           names: { name_ur: party.name_ur, name_en: party.name_en, tag: party.tag },
         });
       }}

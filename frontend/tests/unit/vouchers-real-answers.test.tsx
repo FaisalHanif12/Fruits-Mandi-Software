@@ -9,7 +9,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as reportsApi from '../../src/features/reports/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
 import { ReceiptSlipTemplate } from '../../src/features/vouchers/print/ReceiptSlipTemplate';
@@ -28,7 +27,7 @@ import {
 } from '../helpers/app';
 import { fakeMasters, record } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
-import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, RAHIM, fakeVouchers } from '../helpers/vouchers';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM, fakeVouchers } from '../helpers/vouchers';
 import * as real from '../helpers/vouchers-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
 
@@ -36,7 +35,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -77,9 +75,8 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
-  const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
+  const rows = [AKRAM, ARSHAD, CHUKTA_KHATA, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
   fakeMasters({
@@ -377,66 +374,6 @@ describe.each(LANGUAGES)(
           )
         ).length,
       ).toBeGreaterThan(0);
-    });
-
-    it('make regular: the backend’s account takes the person’s place, and no opening was sent', async () => {
-      const user = userEvent.setup();
-      vi.mocked(vouchersApi.vouchersPreview).mockResolvedValue(real.PREVIEW_RECEIPT_BUYER);
-      vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([
-        {
-          name_ur: 'شاہد',
-          name_en: 'Shahid',
-          phone: '03000000000',
-          last_date: '2026-10-10',
-          person_key: real.REQUEST_MAKE_REGULAR.person_key,
-          is_dead: false,
-        },
-      ]);
-      vi.mocked(pukhtaApi.pukhtaMakeRegular).mockResolvedValue(real.MADE_REGULAR);
-      await renderApp('/bikri/voucher?type=receipt');
-      await screen.findByRole('heading', {
-        level: 1,
-        name: message(language, 'vouchers-receipt-title'),
-      });
-      await pick(user, language, 'vouchers-field-buyer', '0030');
-      const person = await labelled(language, 'vouchers-field-person');
-      await user.click(person);
-      await user.keyboard('shah');
-      await screen.findByRole('option');
-      await user.keyboard('{Enter}');
-      await user.click(
-        await screen.findByRole('button', {
-          name: named(message(language, 'vouchers-make-regular')),
-        }),
-      );
-      const dialog = await screen.findByRole('dialog');
-      await user.click(
-        within(dialog).getByRole('button', {
-          name: new RegExp(message(language, 'layout-save-save')),
-        }),
-      );
-      await waitFor(() => {
-        expect(pukhtaApi.pukhtaMakeRegular).toHaveBeenCalledTimes(1);
-      });
-      const sent = vi.mocked(pukhtaApi.pukhtaMakeRegular).mock.calls[0]?.[0];
-      expect(sent).toMatchObject({
-        person_key: real.REQUEST_MAKE_REGULAR.person_key,
-        side: 'buyer',
-        account_input: {
-          account_type: 'buyer',
-          name_ur: real.REQUEST_MAKE_REGULAR.account_input.name_ur,
-          name_en: real.REQUEST_MAKE_REGULAR.account_input.name_en,
-          phone1: real.REQUEST_MAKE_REGULAR.account_input.phone1,
-          opening_dr: '',
-          opening_cr: '',
-          opening_is_advance: false,
-          id: null,
-          version: null,
-        },
-      });
-      expect(await dropdown(language, 'vouchers-field-buyer')).toHaveValue(
-        language === 'ur' ? real.MADE_REGULAR.account.name_ur : real.MADE_REGULAR.account.name_en,
-      );
     });
   },
 );

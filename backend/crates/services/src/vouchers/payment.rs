@@ -88,7 +88,6 @@ pub(super) fn plan_payment(
         conn,
         &mut errors,
         input.account_id,
-        input.person_key.as_deref(),
         Accepts {
             buyer: true,
             seller: true,
@@ -119,8 +118,7 @@ pub(super) fn plan_payment(
 /// `ServiceError::Data` if the plan has a mistake; the ledger errors of the entry.
 pub(super) fn payment_entry(planned: &PlannedPayment) -> Result<BalancedEntry, ServiceError> {
     let (party, _, amount, pay_account) = planned.parts()?;
-    let mut debit = LedgerLine::new(AccountId::new(party.record.id), Side::Dr, amount);
-    debit.person_key.clone_from(&party.person_key);
+    let debit = LedgerLine::new(AccountId::new(party.record.id), Side::Dr, amount);
     build_entry(vec![
         debit,
         LedgerLine::new(AccountId::new(pay_account), Side::Cr, amount),
@@ -147,7 +145,6 @@ pub(super) fn payment_row(
         cheque_date: None,
         expected_goods: None,
         narration: planned.money.narration.clone(),
-        person_key: party.person_key.clone(),
         collector_staff_id: None,
         reason: planned.reason.clone(),
         extra: VoucherExtra::default(),
@@ -176,7 +173,7 @@ pub(super) fn payment_match(
             user_id,
             now,
             party.record.id,
-            party.person_key.as_deref(),
+            None,
             &date.to_iso(),
             &[NewLine {
                 line_id: debit_line,
@@ -193,8 +190,8 @@ pub(super) fn payment_match(
 ///
 /// # Errors
 /// The field errors of the date, amount, bank and cheque fields; `ERR_NOT_FOUND`,
-/// `ERR_FORMAT_INVALID`, `ERR_ACCOUNT_INACTIVE` on `account_id`; `ERR_PERSON_REQUIRED` and
-/// `ERR_NOT_FOUND` on `person_key`; `ERR_PAYMENT_TO_BUYER_NEEDS_REASON` on `reason`;
+/// `ERR_FORMAT_INVALID`, `ERR_ACCOUNT_INACTIVE` on `account_id`;
+/// `ERR_PAYMENT_TO_BUYER_NEEDS_REASON` on `reason`;
 /// `ERR_CASH_BELOW_ZERO_NOT_CONFIRMED` (value `cash_after_paisa`); `ERR_DATE_CLOSED` and
 /// `ERR_DATE_IN_FUTURE` on `date`. Nothing is written when any of them is returned.
 pub fn save_payment(
@@ -215,7 +212,7 @@ pub fn save_payment(
             &cash_check(tx, cash_change(tx, &entry)?)?,
             input.confirm_cash_below_zero,
         )?;
-        let hint = hint_for(tx, party.role, party.record.id, party.person_key.as_deref())?;
+        let hint = hint_for(tx, party.role, party.record.id)?;
         let now = ctx.now_text();
         let number = repo::next_number(tx, VoucherType::Payment)?;
         let row = payment_row(&planned, number)?;
@@ -244,12 +241,7 @@ pub fn save_payment(
             voucher_type: VoucherType::Payment,
             number,
             entry_id: posted.entry_id,
-            new_balance: ledger::balance_in(
-                tx,
-                party.record.id,
-                party.person_key.as_deref(),
-                None,
-            )?,
+            new_balance: ledger::balance_in(tx, party.record.id, None, None)?,
         })
     })
 }

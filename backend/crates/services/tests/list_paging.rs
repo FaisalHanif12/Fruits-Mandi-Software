@@ -20,8 +20,8 @@ mod support;
 use std::path::{Path, PathBuf};
 
 use mandi_services::core::bikri::{
-    BikriDraft, BikriListInput, BikriSaveInput, BikriSaved, BikriStatus, CancelInput, PaymentType,
-    PukhtaInput, PukhtaRegisterInput, PukhtaSide, StockListInput,
+    BikriDraft, BikriListInput, BikriSaveInput, BikriSaved, BikriStatus, CancelInput,
+    StockListInput,
 };
 use mandi_services::core::masters::{MasterKind, MastersListInput};
 use mandi_services::core::money::Paisa;
@@ -429,7 +429,6 @@ fn voucher_page(
             from: String::new(),
             to: String::new(),
             account_id: None,
-            person_key: None,
             offset,
             limit,
         },
@@ -493,102 +492,6 @@ fn the_list_of_vouchers_pages_with_the_total_over_the_whole_filter() {
     let past = voucher_page(&w, kind, 99, 2);
     assert!(past.rows.is_empty());
     assert_eq!((past.total_count, past.totals), (5, whole.totals.clone()));
-}
-
-// ---- پختہ کھاتہ register ----
-
-fn pukhta_bikri(w: &World, n: i64, name_ur: &str, name_en: &str, phone: &str) {
-    let mut line = support::sale("s-1", w.pukhta_buyer, "2", &format!("{}", 1_000 + n));
-    line.pukhta = Some(PukhtaInput {
-        name_ur: name_ur.into(),
-        name_en: name_en.into(),
-        phone: phone.into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    let lot = support::with_sales(
-        support::bare_lot(w, "lot-1", w.karim, w.apple, "2"),
-        vec![line],
-    );
-    let mut draft = support::draft(vec![lot]);
-    draft.header.truck_no = Some(format!("PK-{n}"));
-    save_bikri(w, draft);
-}
-
-#[test]
-fn the_pukhta_register_pages_with_totals_over_every_line() {
-    let w = support::world();
-    pukhta_bikri(&w, 1, "شاہد", "Shahid", "0300-0000001");
-    pukhta_bikri(&w, 2, "ناصر", "Nasir", "0300-0000002");
-    pukhta_bikri(&w, 3, "بشیر", "Bashir", "0300-0000003");
-    let page = |side: Option<PukhtaSide>, offset: u32, limit: u32| {
-        bikri::register(
-            &w.env.ctx,
-            &PukhtaRegisterInput {
-                side,
-                offset,
-                limit,
-                ..Default::default()
-            },
-        )
-        .unwrap()
-    };
-    // All three people are buyers on credit. With one side chosen the totals are given, over
-    // every line of the filter.
-    let buyers = Some(PukhtaSide::Buyer);
-    let whole = page(buyers, 0, 0);
-    assert_eq!((whole.total_count, whole.rows.len()), (3, 3));
-    assert_eq!(whole.totals.qty, Some(6));
-    assert_eq!(
-        whole.totals.amount,
-        Some(sum(whole.rows.iter().map(|r| r.amount)))
-    );
-    assert_eq!(
-        whole.totals.commission,
-        Some(sum(whole.rows.iter().map(|r| r.commission)))
-    );
-    assert_eq!(
-        whole.totals.open,
-        Some(sum(whole.rows.iter().map(|r| r.open)))
-    );
-    assert!(
-        whole.totals.open > Some(Paisa::ZERO),
-        "three credit buyers owe"
-    );
-    let paged = all_pages(2, |offset, limit| {
-        let p = page(buyers, offset, limit);
-        assert_eq!(p.totals, whole.totals, "offset {offset}");
-        (p.rows, p.total_count)
-    });
-    assert_eq!(paged.len(), 3);
-    assert_eq!(
-        paged.iter().map(|r| r.bikri_number).collect::<Vec<_>>(),
-        whole
-            .rows
-            .iter()
-            .map(|r| r.bikri_number)
-            .collect::<Vec<_>>()
-    );
-    let past = page(buyers, 30, 2);
-    assert!(past.rows.is_empty());
-    assert_eq!((past.total_count, past.totals), (3, whole.totals.clone()));
-    // The other side has none of these lines: its count and its totals are 0, not null.
-    let sellers = page(Some(PukhtaSide::Seller), 0, 0);
-    assert_eq!(sellers.total_count, 0);
-    assert_eq!(sellers.totals.qty, Some(0));
-    assert_eq!(sellers.totals.open, Some(Paisa::ZERO));
-    // No side chosen: the lines of buyers and sellers would be added together, so no total is
-    // given at all; the rows and their count still page.
-    let mixed = page(None, 0, 2);
-    assert_eq!((mixed.total_count, mixed.rows.len()), (3, 2));
-    assert_eq!(
-        (
-            mixed.totals.qty,
-            mixed.totals.amount,
-            mixed.totals.commission,
-            mixed.totals.open
-        ),
-        (None, None, None, None)
-    );
 }
 
 // ---- Masters, rules, learned pairs ----

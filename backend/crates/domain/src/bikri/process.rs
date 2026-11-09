@@ -45,10 +45,6 @@ pub(super) struct Run {
     /// worked out yet, the real result for the lots already done (PRD FR-12.40, plan 37). A later
     /// lot of the same entry takes a charge only if no other lot carries it.
     pub carried: Vec<ArrivalCarried>,
-    /// What is left, for each پختہ بیوپاری with his own account, of the advance a new credit of his
-    /// could adjust (PRD FR-13.11, FR-15.8): the first lot of the draft takes from
-    /// `AccountFacts::advance_available`, the next lot of the same seller from what is left.
-    pub advance_left: HashMap<i64, Paisa>,
 }
 
 impl Run {
@@ -153,13 +149,8 @@ fn lot_facts<'a>(
         &format!("{prefix}.seller_account_id"),
         Some(ErrorCode::ErrSellerRequired),
     );
-    match seller {
-        Some(facts) if facts.is_pukhta => {
-            // A one-time seller needs his name and phone (PRD FR-13.2).
-            complete &= checks::pukhta(issues, prefix, &lot.pukhta, true);
-        }
-        Some(_) => {}
-        None => complete = false,
+    if seller.is_none() {
+        complete = false;
     }
     let own_purchase = own_purchase_checks(issues, lookups, prefix, date_iso, lot, seller);
     complete &= seller.is_none_or(|s| !s.is_own_goods) || own_purchase.is_some();
@@ -384,7 +375,7 @@ struct Rows {
     any_refused: bool,
 }
 
-/// The buyer of a row, how he pays, and whether his one-time person is in order (PRD 12.4,
+/// The buyer of a row, how he pays, and whether his چکتا buyer is in order (PRD 12.4,
 /// FR-13.2). `None` if the row cannot be worked out.
 fn row_parties<'a>(
     ctx: &LotCtx<'a>,
@@ -409,12 +400,7 @@ fn row_parties<'a>(
         )
     });
     let person_ok = match buyer {
-        Some(b) if b.is_pukhta => checks::pukhta(
-            issues,
-            line_prefix,
-            &row.pukhta,
-            payment == Some(PaymentType::Credit),
-        ),
+        Some(b) if b.is_chukta => checks::chukta(issues, line_prefix, &row.chukta),
         _ => true,
     };
     match (buyer, row.buyer_account_id, payment, person_ok) {
@@ -423,24 +409,24 @@ fn row_parties<'a>(
     }
 }
 
-/// The one-time person of a row or a lot of a پختہ کھاتہ account, cleaned. Its checks passed
-/// before the row was worked out, so a person that cannot be cleaned now is a bug.
+/// The چکتا buyer of a row on the چکتا کھاتہ account, cleaned. Its checks passed before the row was
+/// worked out, so a person that cannot be cleaned now is a bug.
 fn person_of(
     account: &AccountFacts,
-    person: &mandi_core::bikri::PreparedPukhta,
+    person: &mandi_core::bikri::PreparedChukta,
 ) -> Result<Option<CleanPerson>, CalcError> {
-    if !account.is_pukhta {
+    if !account.is_chukta {
         return Ok(None);
     }
     clean_person(person)
         .map(Some)
         .ok_or(CalcError::Inconsistent(
-            "a one-time person passed the checks but could not be cleaned",
+            "a چکتا buyer passed the checks but could not be cleaned",
         ))
 }
 
-/// The money of a worked row as the journal needs it. A person of a پختہ کھاتہ account puts his
-/// key on every line of the row (PRD FR-13.5).
+/// The money of a worked row as the journal needs it. A چکتا buyer puts his key on every line of the
+/// row (PRD FR-13.5).
 fn journal_sale(
     buyer_id: i64,
     person: Option<&CleanPerson>,
@@ -689,7 +675,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
         }
         if let (Some(calc), Some((buyer, buyer_id, _))) = (&preview.calc, parties) {
             rows.acc.add_line(calc)?;
-            let person = person_of(buyer, &row.pukhta)?;
+            let person = person_of(buyer, &row.chukta)?;
             rows.sales
                 .push(journal_sale(buyer_id, person.as_ref(), calc));
         }
@@ -786,12 +772,7 @@ fn own_money(
 }
 
 /// The lot charges, then (if a row was worked out) the totals C6 to C9 and the journal lot.
-fn lot_money(
-    ctx: &LotCtx<'_>,
-    rows: &mut Rows,
-    issues: &mut Issues,
-    advance_left: &mut HashMap<i64, Paisa>,
-) -> Result<Money, CalcError> {
+fn lot_money(ctx: &LotCtx<'_>, rows: &mut Rows, issues: &mut Issues) -> Result<Money, CalcError> {
     let mut money = Money {
         labour: None,
         munshiana: None,
@@ -910,46 +891,14 @@ fn lot_money(
         acc.munshiana = munshiana.amount;
         acc.phone = phone.amount;
         acc.store_rent = if first { lot.store_rent } else { Paisa::ZERO };
-        // نقد: as typed; a one-time seller is paid his whole net on the spot (PRD FR-13.10), and so
-        // is a پختہ بیوپاری with his own account (PRD FR-13.11, cash first, A79). That is the first
-        // posting only: a later sale gives no نقد (it is paid later by an ادائیگی, PRD FR-13.7), so
-        // a typed نقد is refused there (money agent review of plan 16).
-        let pays_on_the_spot = first
-            && lot.cash_paid.is_none()
-            && ctx
-                .facts
-                .seller
-                .is_some_and(|s| s.is_pukhta || s.is_pukhta_party);
-        let credit = acc.seller_credit()?;
+        // نقد: as typed, in the first posting only. A later sale gives no نقد (it is paid later by an
+        // ادائیگی), so a typed نقد is refused there (money agent review of plan 16).
         // A later sale, an own lot and a garden's lot give no نقد (PRD FR-12.26, FR-12.36).
         let garden = ctx
             .facts
             .seller
             .is_some_and(|s| s.kind == super::lookups::PartyKind::Garden);
         let no_cash = !first || own || garden;
-        // A پختہ بیوپاری with his own account can have an open advance. With the tick "پیشگی سے
-        // کاٹیں" on, his credit adjusts it (PRD FR-12.23, FR-15.8), so the cash first default is
-        // the credit LESS that advance, and his balance is 0 after the save (PRD FR-13.11, A79,
-        // Umar 01-11-2026). With the tick off the advance stays open and the default is the whole
-        // credit. The advance is counted for every ticked lot of the seller, typed نقد or not, so a
-        // second lot of the same seller sees what the first one took.
-        let advance_taken = match (ctx.facts.seller, ctx.lot.seller_account_id) {
-            (Some(seller), Some(seller_id))
-                if first
-                    && !no_cash
-                    && seller.is_pukhta_party
-                    && lot.adjust_advance
-                    && credit > Paisa::ZERO =>
-            {
-                let left = advance_left
-                    .entry(seller_id)
-                    .or_insert(seller.advance_available);
-                let taken = credit.min(*left);
-                *left = left.checked_sub(taken)?;
-                taken
-            }
-            _ => Paisa::ZERO,
-        };
         if no_cash && lot.cash_paid.is_some_and(|cash| cash != Paisa::ZERO) {
             issues.error(
                 ErrorCode::ErrFormatInvalid,
@@ -959,20 +908,12 @@ fn lot_money(
         acc.cash_paid = if no_cash {
             Paisa::ZERO
         } else {
-            match lot.cash_paid {
-                Some(cash) => cash,
-                None if pays_on_the_spot && credit > Paisa::ZERO => {
-                    credit.checked_sub(advance_taken)?
-                }
-                None => Paisa::ZERO,
-            }
+            lot.cash_paid.unwrap_or(Paisa::ZERO)
         };
         let totals = acc.totals(&Scope::Lot {
             labour: &labour.working,
             munshiana: &munshiana.working,
             phone: &phone.working,
-            cash_is_default: pays_on_the_spot,
-            cash_advance: advance_taken,
         })?;
         let too_big = [totals.gross, totals.buyer_total, totals.seller_credit]
             .iter()
@@ -987,10 +928,6 @@ fn lot_money(
                     &[("net_paisa", totals.net.as_paisa())],
                 );
             }
-            let person = match ctx.facts.seller {
-                Some(seller) => person_of(seller, &lot.pukhta)?,
-                None => None,
-            };
             // A lot of trip goods: the seller credit goes to the trip's partners (C25), and the
             // cost and the result are shown (C21, FR-12.27). The cost is never posted.
             let own_purchase = ctx
@@ -1009,7 +946,6 @@ fn lot_money(
             money.journal = Some(JournalLot {
                 seller_account_id: AccountId::new(lot_ref.seller_id),
                 partner_credits,
-                person_key: person.map(|p| p.key),
                 seller_credit: totals.seller_credit,
                 cash_paid: totals.cash_paid,
                 freight_deducted: totals.freight,
@@ -1051,7 +987,7 @@ pub(super) fn process_lot(
     let found = lot
         .lot_id
         .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
-    // A lot whose seller, item or one-time seller was changed is worked out as new: the rules of
+    // A lot whose seller or item was changed is worked out as new: the rules of
     // the old seller or item must not stay on it. Only the quantity taken elsewhere is kept.
     let identity_changed = found
         .and_then(|s| s.identity.as_ref())
@@ -1060,10 +996,6 @@ pub(super) fn process_lot(
                 || Some(stored.item_id) != lot.item_id
                 || stored.purchase_id != lot.purchase_id
                 || stored.arrival_id != lot.arrival_id
-                // The one-time seller's key counts only for a one-time seller: leftover name text
-                // on an ordinary seller's lot is not a change.
-                || (facts.seller.is_some_and(|s| s.is_pukhta)
-                    && stored.person_key != clean_person(&lot.pukhta).map(|p| p.key))
         });
     let stripped = found.map(|s| StoredLot {
         elsewhere_qty: s.elsewhere_qty,
@@ -1142,7 +1074,7 @@ pub(super) fn process_lot(
             );
         }
     }
-    let money = lot_money(&ctx, &mut rows, issues, &mut run.advance_left)?;
+    let money = lot_money(&ctx, &mut rows, issues)?;
     // What this lot really carries of its entry's per-lot rule charges now (plan 37).
     if let Some(slot) = run.carried.get_mut(index) {
         // A per-lot rule amount or an amount typed on the lot (not a per-نگ charge) is a charge

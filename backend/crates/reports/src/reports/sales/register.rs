@@ -19,7 +19,7 @@ use mandi_db::rusqlite::{Connection, params_from_iter};
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    Conds, col, grade_of, load_parties, names_cell, paisa, party_of_line, pukhta_party,
+    Conds, chukta_party, col, grade_of, load_parties, names_cell, paisa, party_of_line,
 };
 use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
@@ -69,7 +69,7 @@ pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
         // The quality of the line (PRD FR-12.42): only the lines of one quality.
         .text("s.grade = ?", typed.grade.map(|g| g.as_str()))
         .id("s.buyer_account_id = ?", typed.party_id)
-        .text("s.pukhta_person_key = ?", typed.person_key.as_deref())
+        .text("s.chukta_person_key = ?", typed.person_key.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
         .id("l.item_id = ?", typed.item_id)
@@ -104,7 +104,7 @@ pub(crate) fn page_query(
     };
     let sql = format!(
         "SELECT je.entry_date, je.posting_type, b.id, b.number,
-           s.buyer_account_id, s.pukhta_person_key, s.pukhta_name_ur, s.pukhta_name_en,
+           s.buyer_account_id, s.chukta_person_key, s.chukta_name_ur, s.chukta_name_en,
            ci.name_ur, ci.name_en, i.name_ur, i.name_en,
            s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade,
            s.seller_rate_paisa, pk.name_ur, pk.name_en
@@ -246,7 +246,7 @@ pub(crate) fn run(
     let mut rows = Vec::with_capacity(lines.len());
     for line in lines {
         let base = party_of_line(&parties, line.buyer_id, None)?;
-        let party = pukhta_party(
+        let party = chukta_party(
             base,
             line.person_key.clone(),
             line.person_ur.as_deref(),

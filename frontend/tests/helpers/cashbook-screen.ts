@@ -4,14 +4,13 @@
 //   vi.mock('../../src/app/api'); vi.mock('../../src/features/auth/api');
 //   vi.mock('../../src/features/settings/api'); vi.mock('../../src/features/cashbook/api');
 //   vi.mock('../../src/features/vouchers/api'); vi.mock('../../src/features/partners/api');
-//   vi.mock('../../src/features/pukhta_khata/api'); vi.mock('../../src/features/reports/api');
+//   vi.mock('../../src/features/reports/api');
 //   vi.mock('../../src/features/masters/api'); vi.mock('../../src/shared/accounts/api');
 //   vi.mock('../../src/shared/search/api'); vi.mock('../../src/shared/urdu/api');
 
 import { screen, waitFor } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
 import { expect, vi } from 'vitest';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as reportsApi from '../../src/features/reports/api';
 import type { Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -38,7 +37,6 @@ export function prepareCashbook(
   signedIn(sessionUser({ language }));
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
   fakeAccounts(rows, cashbookTree());
   fakeAccountSearch(rows);

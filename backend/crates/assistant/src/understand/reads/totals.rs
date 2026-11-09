@@ -298,7 +298,7 @@ pub(super) fn net_sale_plan(u: &Understanding) -> Option<Planned> {
     let Outcome::Found(hit) = &party.outcome else {
         return None;
     };
-    if hit.role != PartyRole::Seller || hit.pukhta {
+    if hit.role != PartyRole::Seller {
         return None;
     }
     let period = u.periods.first()?;

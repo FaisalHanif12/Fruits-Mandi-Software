@@ -570,7 +570,7 @@ describe.each(LANGUAGES)('the round 7 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(30)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(29)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R31');
       }, SLOW_MS);

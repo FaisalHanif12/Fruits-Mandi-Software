@@ -27,7 +27,7 @@ use mandi_reports::analytics::{BalanceSubject, balance_series};
 use mandi_reports::dashboard::BackupFacts;
 use mandi_services::core::accounts::{OpeningLineInput, OpeningsInput};
 use mandi_services::core::auth::Language;
-use mandi_services::core::bikri::{BikriSaveInput, LineChargeMethod, PaymentType, PukhtaInput};
+use mandi_services::core::bikri::BikriSaveInput;
 use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::dead::{DeadMarkInput, DeadReason};
 use mandi_services::core::vouchers::{ReceiptInput, RemovedPaymentFields};
@@ -161,14 +161,14 @@ fn a_balance_over_the_largest_amount_is_refused_before_the_series_and_the_larges
 
 #[test]
 fn a_person_key_on_a_normal_buyer_account_is_refused_not_folded_in() {
-    // Only the shared پختہ کھاتہ account holds many people (PRD FR-13.5), so a normal buyer account
+    // Only the shared چکتا کھاتہ account holds many people (PRD FR-13.5), so a normal buyer account
     // is one owner. The database does not enforce it; the series checks it and stops with an error
     // rather than group the balance differently from R20.
     let w = worked::months_world(&[(8, true, 100, 100), (9, true, 100, 200)]);
     assert_eq!(series(&w).1.len(), 2);
     let sql = format!(
         "DROP TRIGGER journal_lines_no_update;
-         UPDATE journal_lines SET pukhta_person_key = 'x' WHERE account_id = {};",
+         UPDATE journal_lines SET chukta_person_key = 'x' WHERE account_id = {};",
         w.akram
     );
     w.env
@@ -183,82 +183,6 @@ fn a_person_key_on_a_normal_buyer_account_is_refused_not_folded_in() {
     assert!(format!("{refused:?}").contains("person key"), "{refused:?}");
 }
 
-/// A one-time buyer (a person of the shared پختہ کھاتہ account) buys `qty` of Rahim's banana at
-/// `rate` on credit, with no charges, on `date`.
-fn one_time_buys(w: &world::World, person: (&str, &str, &str), qty: &str, rate: &str, date: &str) {
-    let mut line = world::sale("s-1", w.pukhta_buyer, qty, rate);
-    line.pukhta = Some(PukhtaInput {
-        name_ur: person.0.into(),
-        name_en: person.1.into(),
-        phone: person.2.into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    line.buyer_comm = world::typed(LineChargeMethod::Percent, "0");
-    line.seller_comm = world::typed(LineChargeMethod::Percent, "0");
-    line.laga = world::typed(LineChargeMethod::PerUnit, "0");
-    let lot = world::with_sales(
-        world::bare_lot(w, "lot-1", w.rahim, w.banana, qty),
-        vec![line],
-    );
-    let mut draft = world::draft(vec![lot]);
-    draft.header.entry_date = date.into();
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft,
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
-}
-
-#[test]
-fn one_one_time_person_in_the_dead_amount_leaves_the_others_of_the_shared_account_alone() {
-    // Shahid and Nasir are two persons of the one shared پختہ کھاتہ account: each is an owner of
-    // his own. Akram buys 11,400 in August and 22,000 in September. Shahid buys 2,000 and Nasir
-    // 3,000 on credit in August; Shahid is moved to the dead amount on 01-09 and pays 1,000 on
-    // 16-09, a recovery after his move, which is a one-off and left out. The dues now (the tile)
-    // have Akram's 33,400 and Nasir's 3,000 and no Shahid. August grows by 11,400 + 2,000 + 3,000;
-    // September by Akram's 22,000 alone: Nasir does not move, and Shahid's payment does not count.
-    let w = worked::months_world(&[(8, true, 100, 100), (9, true, 100, 200)]);
-    let shahid = ("شاہد", "Shahid", "0300-0000000");
-    let nasir = ("ناصر", "Nasir", "0300-1111111");
-    one_time_buys(&w, shahid, "2", "1000", "16-08-2026");
-    one_time_buys(&w, nasir, "3", "1000", "17-08-2026");
-    let key = mandi_services::core::text::person_key(shahid.0, shahid.2);
-    dead::mark(
-        &w.env.ctx,
-        &w.owner,
-        &DeadMarkInput {
-            account_id: w.pukhta_buyer,
-            pukhta_person_key: Some(key.clone()),
-            entry_date: "01-09-2026".into(),
-            reason: DeadReason::Left,
-            note: String::new(),
-        },
-    )
-    .unwrap();
-    vouchers::save_receipt(
-        &w.env.ctx,
-        &w.owner,
-        &ReceiptInput {
-            date: "16-09-2026".into(),
-            account_id: w.pukhta_buyer,
-            person_key: Some(key),
-            amount: "1,000".into(),
-            removed: RemovedPaymentFields::default(),
-            collector_staff_id: None,
-            narration: String::new(),
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        series(&w),
-        (36_400, vec![(2026, 8, 16_400), (2026, 9, 22_000)])
-    );
-}
-
 /// A receipt from a normal buyer (or from one person of the shared account).
 fn receipt(w: &world::World, account_id: i64, date: &str, amount: &str) {
     vouchers::save_receipt(
@@ -267,7 +191,6 @@ fn receipt(w: &world::World, account_id: i64, date: &str, amount: &str) {
         &ReceiptInput {
             date: date.into(),
             account_id,
-            person_key: None,
             amount: amount.into(),
             removed: RemovedPaymentFields::default(),
             collector_staff_id: None,
@@ -303,7 +226,6 @@ fn mark_dead(w: &world::World, account_id: i64, date: &str) {
         &w.owner,
         &DeadMarkInput {
             account_id,
-            pukhta_person_key: None,
             entry_date: date.into(),
             reason: DeadReason::Left,
             note: String::new(),

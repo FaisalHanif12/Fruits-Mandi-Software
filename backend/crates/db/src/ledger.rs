@@ -41,7 +41,7 @@ pub struct NewLine<'a> {
     pub line_no: i64,
     /// The account.
     pub account_id: i64,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub person_key: Option<&'a str>,
     /// Debit in paisa.
     pub dr_paisa: i64,
@@ -160,7 +160,7 @@ pub fn lines_with_order_key(
     order_key: i64,
 ) -> rusqlite::Result<Vec<(i64, Option<String>)>> {
     let mut statement = conn.prepare(
-        "SELECT DISTINCT l.account_id, l.pukhta_person_key
+        "SELECT DISTINCT l.account_id, l.chukta_person_key
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE COALESCE(e.order_key, e.id) = ?1",
     )?;
@@ -195,7 +195,7 @@ pub fn insert_line(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO journal_lines (created_at, created_by, updated_at, updated_by, entry_id, line_no, account_id,
-             pukhta_person_key, dr_paisa, cr_paisa, is_advance, narration)
+             chukta_person_key, dr_paisa, cr_paisa, is_advance, narration)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             now,
@@ -246,7 +246,7 @@ pub fn get_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Option<St
         return Ok(None);
     };
     let mut statement = conn.prepare(
-        "SELECT id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa, is_advance, narration
+        "SELECT id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa, is_advance, narration
          FROM journal_lines WHERE entry_id = ?1 ORDER BY line_no",
     )?;
     let lines = statement.query_map([entry_id], |r| {
@@ -883,7 +883,7 @@ pub fn advance_adjusted(conn: &Connection, account_id: i64) -> rusqlite::Result<
 #[doc(hidden)]
 pub fn totals_of_sql(with_person: bool, with_date: bool) -> String {
     let person = if with_person {
-        " AND pukhta_person_key = :person"
+        " AND chukta_person_key = :person"
     } else {
         ""
     };
@@ -899,7 +899,7 @@ pub fn totals_of_sql(with_person: bool, with_date: bool) -> String {
 #[doc(hidden)]
 pub fn totals_of_per_line_sql(with_person: bool) -> String {
     let person = if with_person {
-        " AND l.pukhta_person_key = :person"
+        " AND l.chukta_person_key = :person"
     } else {
         ""
     };
@@ -945,7 +945,7 @@ fn has_more_lines_than(
     let counted: i64 = match person {
         Some(person) => conn.query_row(
             "SELECT COUNT(*) FROM (SELECT 1 FROM journal_lines
-               WHERE account_id = ?1 AND pukhta_person_key = ?2 LIMIT ?3)",
+               WHERE account_id = ?1 AND chukta_person_key = ?2 LIMIT ?3)",
             params![account_id, person, limit.saturating_add(1)],
             |r| r.get(0),
         )?,
@@ -992,7 +992,7 @@ pub fn day_method_with(
 }
 
 /// The posted totals of one account. `person` is `None` for the whole account (all persons of a
-/// پختہ کھاتہ account together), `Some(key)` for one person. [`day_method`] picks the way of
+/// چکتا کھاتہ account together), `Some(key)` for one person. [`day_method`] picks the way of
 /// working it out; the answer is the same either way.
 ///
 /// # Errors
@@ -1114,9 +1114,9 @@ pub fn ledger_rows(
 ) -> rusqlite::Result<Vec<LedgerRow>> {
     let mut statement = conn.prepare(
         "SELECT e.id, e.entry_date, l.line_no, e.posting_type, COALESCE(l.narration, e.narration),
-                l.pukhta_person_key, l.dr_paisa, l.cr_paisa
+                l.chukta_person_key, l.dr_paisa, l.cr_paisa
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.pukhta_person_key = ?2)
+         WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.chukta_person_key = ?2)
            AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)
          ORDER BY e.entry_date, e.id, l.line_no",
     )?;
@@ -1135,13 +1135,13 @@ pub fn ledger_rows(
     rows.collect()
 }
 
-/// The ids of the پختہ کھاتہ accounts, whose lines carry a person key (PRD FR-13.5). There are
+/// The ids of the چکتا کھاتہ accounts, whose lines carry a person key (PRD FR-13.5). There are
 /// only the two system accounts, so this is one small query.
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn pukhta_khata_ids(conn: &Connection) -> rusqlite::Result<std::collections::HashSet<i64>> {
-    let mut statement = conn.prepare("SELECT id FROM accounts WHERE is_pukhta_khata = 1")?;
+pub fn chukta_khata_ids(conn: &Connection) -> rusqlite::Result<std::collections::HashSet<i64>> {
+    let mut statement = conn.prepare("SELECT id FROM accounts WHERE is_chukta_khata = 1")?;
     let rows = statement.query_map([], |r| r.get(0))?;
     rows.collect()
 }

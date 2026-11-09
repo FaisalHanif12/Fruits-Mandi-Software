@@ -1,9 +1,8 @@
 // The name of a lot as words, for every label that points at a lot (PRD FR-12.6): the seller and
 // the item, for example "Ehsan, Apple" or "احسان، سیب". One seller can own two lots on a truck, so the
 // number alone does not say which lot a label means. The seller comes through `displayName` (with
-// his tag, Code Standards F38); a one-time seller (پختہ کھاتہ) is named by the name typed for him,
-// in the app language when it was typed in both scripts. The words that join the two (the comma) are
-// in Fluent (`bikri-lot-who`), so Urdu and English each use their own.
+// his tag, Code Standards F38). The words that join the two (the comma) are in Fluent
+// (`bikri-lot-who`), so Urdu and English each use their own.
 
 import { useLocalization } from '@fluent/react';
 import { useCallback } from 'react';
@@ -11,7 +10,6 @@ import type { SavedLot } from '../../bindings/SavedLot';
 import type { EntryRow } from '../../shared/grid';
 import { displayName, useLanguage } from '../../shared/i18n';
 import type { Language } from '../../i18n';
-import { isPukhtaSeller } from './draft';
 import { LOT } from './types';
 
 /**
@@ -33,19 +31,10 @@ export interface LotLabelVars {
   named: 'yes' | 'no';
 }
 
-/** The seller of a lot as a name: the typed name of a one-time seller, else his account's name. */
+/** The seller of a lot as a name: his account's name, or null while none is chosen. */
 function sellerName(row: EntryRow, language: Language): string | null {
   const seller = row.picked?.[LOT.seller];
-  if (seller === undefined) return null;
-  if (isPukhtaSeller(row)) {
-    const ur = (row.typed[LOT.pukhtaUr] ?? '').trim();
-    const en = (row.typed[LOT.pukhtaEn] ?? '').trim();
-    // Typed in one script only: that name is shown in both languages until the other is filled.
-    if (ur !== '' || en !== '') {
-      return displayName({ name_ur: ur === '' ? en : ur, name_en: en === '' ? ur : en }, language);
-    }
-  }
-  return displayName(seller, language);
+  return seller === undefined ? null : displayName(seller, language);
 }
 
 /** The item of a lot as a name, or null while none is chosen. */
@@ -82,8 +71,8 @@ export function lotLabelVars(number: number, who: string): LotLabelVars {
 }
 
 /**
- * The same words for a saved lot: its seller (the typed name of a one-time seller) and its item.
- * It is the empty text only when the lot has neither, which a saved lot never has.
+ * The same words for a saved lot: its seller and its item. It is the empty text only when the lot
+ * has neither, which a saved lot never has.
  */
 export function useSavedLotWho(): (lot: SavedLot) => string {
   const { l10n } = useLocalization();
@@ -92,7 +81,7 @@ export function useSavedLotWho(): (lot: SavedLot) => string {
     (lot) =>
       withoutIsolation(
         l10n.getString('bikri-lot-who', {
-          seller: displayName(lot.pukhta ?? lot.seller, language),
+          seller: displayName(lot.seller, language),
           item: displayName(lot.item, language),
         }),
       ),

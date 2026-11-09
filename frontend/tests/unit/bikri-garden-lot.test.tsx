@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
-import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, PUKHTA_SELLER, RAHIM } from '../helpers/bikri';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM } from '../helpers/bikri';
 import {
   cellOf,
   focusedIn,
@@ -34,7 +34,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -63,7 +62,7 @@ describe.each(LANGUAGES)('a garden as the seller of a lot (%s)', (language) => {
 
   async function open() {
     const view = await openBook(language);
-    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER, SHAHPUR];
+    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, SHAHPUR];
     fakeAccounts(everyone);
     fakeAccountSearch(everyone);
     return view;

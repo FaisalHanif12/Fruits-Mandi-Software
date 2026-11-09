@@ -96,7 +96,6 @@ fn confirming<T>(mut attempt: impl FnMut(&[String]) -> Result<T, ServiceError>) 
 fn credit_seller(w: &World, seller: i64, amount: &str, date: &str) {
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,
@@ -728,56 +727,6 @@ fn w9_an_old_opening_left_behind_a_recent_credit_is_old() {
     set_today(&w.env, 2026, 10, 20);
     assert_eq!(rupees(dash(&w).tiles.sellers_payable_paisa), 11_160);
     assert_eq!(payables_old_amount(&w), Some(6_160));
-}
-
-#[test]
-fn w10_a_one_time_seller_is_a_key_of_his_own() {
-    use mandi_services::core::bikri::PukhtaInput;
-    // Two one-time sellers on the پختہ کھاتہ account, each with a lot of 10 نگ sold at 1,000
-    // (net 10,000 − 600 commission = 9,400). Nazir is paid 4,000 on the spot and is owed 5,400;
-    // Bashir is paid the whole 9,400 and is owed nothing. Only Nazir is old on 18-10, and not on
-    // 17-10.
-    let w = worked_day();
-    let lot = |key: &str, name_ur: &str, name_en: &str, phone: &str, cash: &str, sale: &str| {
-        let mut lot = support::bare_lot(&w, key, w.pukhta_seller, w.banana, "10");
-        lot.pukhta = Some(PukhtaInput {
-            name_ur: name_ur.into(),
-            name_en: name_en.into(),
-            phone: phone.into(),
-        });
-        lot.cash_paid = Some(cash.into());
-        lot.sales = vec![support::sale(sale, w.akram, "10", "1000")];
-        lot
-    };
-    save(
-        &w,
-        &support::draft(vec![
-            lot("lot-1", "نذیر", "Nazir", "0300-2222222", "4,000", "s-1"),
-            lot("lot-2", "بشیر", "Bashir", "0300-3333333", "9,400", "s-2"),
-        ]),
-    );
-    assert_eq!(rupees(dash(&w).tiles.sellers_payable_paisa), 5_400);
-    set_today(&w.env, 2026, 10, 17);
-    assert_eq!(payables_old_amount(&w), None);
-    set_today(&w.env, 2026, 10, 18);
-    let list = bell(&w, off());
-    let old = item(&list, AttentionKind::PayablesOld);
-    assert_eq!((old.count, old.amount_paisa.map(rupees)), (1, Some(5_400)));
-    let first = old.first.as_ref().unwrap();
-    assert_eq!(first.id, w.pukhta_seller);
-    let key: String = w
-        .env
-        .ctx
-        .db()
-        .read(|conn| {
-            conn.query_row(
-                "SELECT pukhta_person_key FROM bikri_lots WHERE pukhta_name_en = 'Nazir'",
-                [],
-                |r| r.get(0),
-            )
-        })
-        .unwrap();
-    assert_eq!(first.person_key.as_deref(), Some(key.as_str()));
 }
 
 fn w11_world() -> World {

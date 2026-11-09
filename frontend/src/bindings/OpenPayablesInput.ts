@@ -9,10 +9,6 @@ export type OpenPayablesInput = {
    */
   seller_id: number;
   /**
-   * The one-time person, for the پختہ کھاتہ بیوپاری account.
-   */
-  person_key: string | null;
-  /**
    * True lists the postings with nothing left to pay too (for a report). Missing means false.
    */
   include_settled: boolean;

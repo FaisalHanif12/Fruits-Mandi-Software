@@ -1,6 +1,6 @@
 // Every lot label names its seller and item (PRD FR-12.6, plan 57): the heading of the sale lines,
 // the lot switch of the lines area, the lot switch of the summary and the "more" button, in Urdu and
-// in English. The name of a one-time seller (پختہ کھاتہ) is the name typed for him. A lot with nothing
+// in English. A lot with nothing
 // chosen yet keeps its number alone. A language switch changes the words and loses nothing.
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -25,7 +25,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -105,26 +104,6 @@ describe.each(LANGUAGES)('the labels of a lot (%s)', (language) => {
     seedBikriDraft({ lot: 'karim' });
     await openBook(language);
     await namedSoon(language, who(language, NAMES.karim[language], NAMES.apple[language]));
-  });
-
-  it('name a one-time seller by the name typed for him, not by the shared account', async () => {
-    seedBikriDraft({ lot: 'pukhta-seller', pukhtaSeller: { ur: 'شاہد', en: 'Shahid' } });
-    await openBook(language);
-    const shahid = language === 'ur' ? 'شاہد' : 'Shahid';
-    await namedSoon(language, who(language, shahid, NAMES.banana[language]));
-    // Not the account's own name.
-    const heading = screen.getByRole('heading', {
-      name: (text) => visible(text).includes(shahid),
-    });
-    expect(visible(heading.textContent)).not.toContain(
-      language === 'ur' ? 'پختہ کھاتہ' : 'Pukhta Khata',
-    );
-  });
-
-  it('use the one name that was typed for a one-time seller, in either language, until the other is filled', async () => {
-    seedBikriDraft({ lot: 'pukhta-seller', pukhtaSeller: { ur: 'شاہد' } });
-    await openBook(language);
-    await namedSoon(language, who(language, 'شاہد', NAMES.banana[language]));
   });
 
   it('hold the name in one isolate, so a right-to-left reader sees the seller before the item', async () => {

@@ -917,7 +917,7 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(32)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(31)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R33');
       }, SLOW_MS);

@@ -132,7 +132,7 @@ pub struct StoredSale {
     pub lot_id: i64,
     /// The buyer account.
     pub buyer_account_id: i64,
-    /// The one-time person's key, for a پختہ کھاتہ buyer.
+    /// The person's key, for a چکتا buyer.
     pub person_key: Option<String>,
     /// Quantity in نگ.
     pub qty: i64,
@@ -208,8 +208,8 @@ pub struct StoredCarrier {
     pub charge: StoredCharge,
 }
 
-/// Who the lot belongs to and what it holds, as stored: the seller, the item and, for a one-time
-/// seller, his person key. When an edit changes any of them, the lot is worked out as new:
+/// Who the lot belongs to and what it holds, as stored: the seller and the item. When an edit
+/// changes any of them, the lot is worked out as new:
 /// nothing stored for the old seller or item is kept (money agent review of plan 16).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredIdentity {
@@ -217,8 +217,6 @@ pub struct StoredIdentity {
     pub seller_account_id: i64,
     /// The item.
     pub item_id: i64,
-    /// The person key of a one-time seller, `None` for any other seller.
-    pub person_key: Option<String>,
     /// The purchase an own lot takes its goods from, `None` for any other lot.
     pub purchase_id: Option<i64>,
     /// The garden arrival a garden lot takes its goods from, `None` for any other lot.

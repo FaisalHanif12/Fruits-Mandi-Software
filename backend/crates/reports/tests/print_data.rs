@@ -93,13 +93,13 @@ fn snapshot_buyer_slips_event1_english() {
 }
 
 #[test]
-fn snapshot_pukhta_slip_event2_urdu() {
-    insta::assert_json_snapshot!(print(EVENT2, PrintDoc::PukhtaSlip, Language::Ur));
+fn snapshot_buyer_slips_event2_urdu() {
+    insta::assert_json_snapshot!(print(EVENT2, PrintDoc::BuyerSlips, Language::Ur));
 }
 
 #[test]
-fn snapshot_pukhta_slip_event2_english() {
-    insta::assert_json_snapshot!(print(EVENT2, PrintDoc::PukhtaSlip, Language::En));
+fn snapshot_buyer_slips_event2_english() {
+    insta::assert_json_snapshot!(print(EVENT2, PrintDoc::BuyerSlips, Language::En));
 }
 
 #[test]
@@ -312,12 +312,12 @@ fn only_one_buyer_gives_only_his_slip() {
     assert!(build(&detail, &opts).unwrap().pages.is_empty());
 }
 
-// ---- The worked numbers of PRD 4.5: the one-time buyer ----
+// ---- The worked numbers of PRD 4.5: the چکتا buyer (plan 64, decision C9a) ----
 
 #[test]
-fn pukhta_slip_of_event2_shows_12800_paid_and_its_words() {
+fn the_buyer_slip_of_a_chukta_buyer_in_event2_shows_12800_paid_his_name_and_its_words() {
     for language in [Language::Ur, Language::En] {
-        let data = print(EVENT2, PrintDoc::PukhtaSlip, language);
+        let data = print(EVENT2, PrintDoc::BuyerSlips, language);
         assert_eq!(data.pages.len(), 1);
         let page = data.pages.first().unwrap();
         assert_eq!(
@@ -330,7 +330,7 @@ fn pukhta_slip_of_event2_shows_12800_paid_and_its_words() {
             ]
         );
         assert_eq!(page.payment_id.as_deref(), Some("print-payment-cash"));
-        assert_eq!(page.party.role_id, "print-party-onetime-buyer");
+        assert_eq!(page.party.role_id, "print-party-buyer");
         assert_eq!(page.party.code, None);
         assert_eq!(page.party.phone.as_deref(), Some("0300-0000000"));
         let words = &page.words.as_ref().unwrap().text;
@@ -349,25 +349,25 @@ fn pukhta_slip_of_event2_shows_12800_paid_and_its_words() {
             (line.qty.as_str(), line.rate.as_str(), line.amount.as_str()),
             ("10", "1,200", "12,000")
         );
-        assert_eq!(data.header.title_id, "print-pukhta-slip-title");
+        assert_eq!(data.header.title_id, "print-buyer-slip-title");
     }
 }
 
 #[test]
-fn the_other_documents_leave_the_one_time_buyer_out_and_the_reverse() {
-    // Event 2 has only a one-time buyer: no buyer slip, one پختہ slip.
-    assert!(
-        print(EVENT2, PrintDoc::BuyerSlips, Language::En)
+fn a_chukta_buyer_has_a_buyer_slip_of_his_own_and_the_seller_bill_names_him() {
+    // Event 2 has only a چکتا buyer: one buyer slip, with his name and no code (decision C9a).
+    let slips = print(EVENT2, PrintDoc::BuyerSlips, Language::En);
+    assert_eq!(slips.pages.len(), 1);
+    assert_eq!(slips.pages[0].party.name, "Shahid");
+    assert_eq!(slips.pages[0].party.code, None);
+    // Event 1 has two ordinary buyers: two slips.
+    assert_eq!(
+        print(EVENT1, PrintDoc::BuyerSlips, Language::En)
             .pages
-            .is_empty()
+            .len(),
+        2
     );
-    // Event 1 has no one-time buyer: nothing to print for the پختہ slip.
-    assert!(
-        print(EVENT1, PrintDoc::PukhtaSlip, Language::En)
-            .pages
-            .is_empty()
-    );
-    // The seller bill of Event 2 lists the one-time buyer by his own name.
+    // The seller bill of Event 2 lists the چکتا buyer by his own name.
     let bill = print(EVENT2, PrintDoc::SellerBill, Language::En);
     let page = bill.pages.first().unwrap();
     assert_eq!(page.lines.first().unwrap().name.as_deref(), Some("Shahid"));
@@ -486,7 +486,7 @@ fn an_urdu_print_has_only_plain_digits_everywhere() {
     for (json, doc) in [
         (EVENT1, PrintDoc::SellerBill),
         (EVENT1, PrintDoc::BuyerSlips),
-        (EVENT2, PrintDoc::PukhtaSlip),
+        (EVENT2, PrintDoc::BuyerSlips),
     ] {
         for language in [Language::Ur, Language::En] {
             let data = print(json, doc, language);
@@ -517,7 +517,7 @@ fn an_urdu_print_has_only_plain_digits_everywhere() {
 fn a_phone_and_a_code_are_plain_digits_on_every_print_type() {
     for (json, doc) in [
         (EVENT1, PrintDoc::BuyerSlips),
-        (EVENT2, PrintDoc::PukhtaSlip),
+        (EVENT2, PrintDoc::BuyerSlips),
     ] {
         let data = print(json, doc, Language::Ur);
         let page = data.pages.first().unwrap();

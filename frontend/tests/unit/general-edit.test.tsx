@@ -25,7 +25,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/cashbook/api');
 vi.mock('../../src/features/vouchers/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/accounts/api');
@@ -59,8 +58,8 @@ function journal(overrides: Parameters<typeof voucherRow>[0] = {}) {
       date: '10-10-2026',
       narration: 'electricity fix',
       lines: [
-        { account_id: 501, person_key: null, dr: '3000', cr: '', narration: null },
-        { account_id: 1, person_key: null, dr: '', cr: '3000', narration: null },
+        { account_id: 501, dr: '3000', cr: '', narration: null },
+        { account_id: 1, dr: '', cr: '3000', narration: null },
       ],
       confirm_cash_below_zero: false,
     },
@@ -154,8 +153,8 @@ describe.each(LANGUAGES)('a journal entry open for edit (%s)', (language) => {
         date: '10-10-2026',
         narration: 'wrong head',
         lines: [
-          { account_id: 501, dr: '3000', cr: '', person_key: null },
-          { account_id: 1, dr: '', cr: '3000', person_key: null },
+          { account_id: 501, dr: '3000', cr: '' },
+          { account_id: 1, dr: '', cr: '3000' },
         ],
       },
     });

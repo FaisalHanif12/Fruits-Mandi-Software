@@ -13,6 +13,7 @@ use mandi_domain::core::edit::{EditEntity, EntryFlags};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::paging::MonthSubtotal;
+use mandi_domain::core::text;
 use mandi_domain::core::validate::{self, FieldErrors};
 
 use crate::context::Context;
@@ -161,6 +162,8 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
         order_by,
         limit: crate::page::limit_of(input.limit),
         offset: i64::from(input.offset),
+        // The list has no buyer filter; the find has (plan 67).
+        ..ListFilter::default()
     };
     // One page and the totals over the whole filter, each from indexed queries (PRD FR-19.11, B31).
     ctx.db.read(|conn| {
@@ -203,8 +206,9 @@ pub fn list(ctx: &Context, input: &BikriListInput) -> Result<BikriList, ServiceE
     })
 }
 
-/// Finds بکری by number, the start of the truck number, seller, day or item (PRD FR-12.13,
-/// FR-7.50). Every filter given must match. Newest first, at most 50 rows.
+/// Finds بکری by number, the start of the truck number, seller, buyer, a چکتا buyer's name, day or
+/// item (PRD FR-12.13, FR-7.50, plan 67). Every filter given must match. Newest first, at most 50
+/// rows.
 ///
 /// # Errors
 /// The date codes on `date`.
@@ -219,11 +223,21 @@ pub fn find(ctx: &Context, input: &BikriFindInput) -> Result<Vec<BikriListRow>, 
         .map(str::trim)
         .filter(|t| !t.is_empty())
         .map(str::to_owned);
+    let buyer_text = input
+        .buyer_text
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned);
     let filter = ListFilter {
         from: date.clone(),
         to: date,
         seller_id: input.seller_id,
         item_id: input.item_id,
+        buyer_id: input.buyer_account_id,
+        // The typed name of a چکتا buyer, as the search keys of his record are built (PRD FR-12.13).
+        chukta_name_ur: buyer_text.as_deref().map(text::search_ur),
+        chukta_name_en: buyer_text.as_deref().map(text::search_en),
         status: None,
         number: input.number,
         truck_prefix,

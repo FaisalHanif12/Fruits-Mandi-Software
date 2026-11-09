@@ -5,7 +5,7 @@
         "title": "Accounts and Codes",
         "summary": "Every seller, buyer and other party has an account with a code. Typing the code anywhere shows his card: name, city, phone, balance and warnings.",
         "steps": [
-          "Open Index, then Accounts, and press New account. Choose the type: seller, buyer, Pukhta Khata or other.",
+          "Open Index, then Accounts, and press New account. Choose the type: seller or buyer.",
           "Type the Urdu or the English name, the city, phone and, if needed, a short tag in capital letters to tell two people with the same name apart.",
           "The code is made from the type number and a running number. A short code is the running number alone: in a buyer field, type just that.",
           "Opening balances are entered on the account form or in the Opening balances list."
@@ -17,7 +17,7 @@
         "title": "کھاتے اور کوڈ",
         "summary": "ہر بیوپاری، گاہک اور دوسری پارٹی کا ایک کھاتہ اور ایک کوڈ ہے۔ کہیں بھی کوڈ لکھیں تو اس کا کارڈ آ جاتا ہے: نام، شہر، فون، بقایا اور تنبیہات۔",
         "steps": [
-          "انڈکس میں کھاتے کھولیں اور نیا کھاتہ دبائیں۔ قسم چنیں: بیوپاری، گاہک، پختہ کھاتہ یا دیگر۔",
+          "انڈکس میں کھاتے کھولیں اور نیا کھاتہ دبائیں۔ قسم چنیں: بیوپاری یا گاہک۔",
           "اردو یا انگریزی نام، شہر، فون اور ضرورت ہو تو ایک ہی نام والے دو لوگوں میں فرق کے لیے بڑے حروف میں چھوٹا نشان لکھیں۔",
           "کوڈ قسم کے نمبر اور ایک چلتے نمبر سے بنتا ہے۔ مختصر کوڈ صرف وہ چلتا نمبر ہے: گاہک کے خانے میں بس وہی لکھیں۔",
           "ابتدائی بقایا کھاتے کے فارم میں یا ابتدائی بقایا کی فہرست میں لکھے جاتے ہیں۔"
@@ -137,7 +137,7 @@
         "steps": [
           "Open Sale, then Sale Book, or press Alt+B. Type the truck number: the Adda, seller and driver fill from its last sale.",
           "Add a lot for each seller and item: seller, item, packing and quantity received. Freight, labour and the like are under More.",
-          "On each sale line type the buyer code, the quantity and the rate, pressing Enter after each. Commission and Laga fill by the rules.",
+          "On each sale line type the buyer code, the quantity, the rate and what he paid on the spot, pressing Enter after each. Commission and Laga fill by the rules.",
           "Check the summary and the partners' share on the screen, then save."
         ],
         "keys": "F10 or Ctrl+S saves. Ctrl+Enter saves, prints the ticked slips and opens a new sale. Ctrl+Delete removes a row.",
@@ -149,7 +149,7 @@
         "steps": [
           "بکری میں بکری بک کھولیں، یا Alt+B دبائیں۔ ٹرک نمبر لکھیں: اڈا، زمیندار اور ڈرائیور اس کی پچھلی بکری سے بھر جاتے ہیں۔",
           "ہر بیوپاری اور قسم مال کا لاٹ بنائیں: بیوپاری، قسم مال، پیکنگ اور آنے والی تعداد۔ کرایہ، مزدوری وغیرہ مزید کے نیچے ہیں۔",
-          "ہر بکری لائن میں گاہک کا کوڈ، تعداد اور ریٹ لکھیں، ہر ایک کے بعد Enter دبائیں۔ کمیشن اور لاگا اصولوں سے خود بھر جاتے ہیں۔",
+          "ہر بکری لائن میں گاہک کا کوڈ، تعداد، ریٹ اور موقع پر جمع لکھیں، ہر ایک کے بعد Enter دبائیں۔ کمیشن اور لاگا اصولوں سے خود بھر جاتے ہیں۔",
           "خلاصہ اور شراکت داروں کا حصہ دیکھیں، پھر محفوظ کریں۔"
         ],
         "keys": "F10 یا Ctrl+S محفوظ کرتا ہے۔ Ctrl+Enter محفوظ کر کے نشان زدہ پرچیاں چھاپتا ہے اور نئی بکری کھولتا ہے۔ Ctrl+Delete لائن ہٹاتا ہے۔",
@@ -726,30 +726,30 @@
         "example": "ایپ انگریزی میں ہو اور گاہک کی دن کی پرچی اردو میں چھپے۔"
       }
     },
-    "pukhta_khata": {
+    "chukta_khata": {
       "en": {
-        "title": "Pukhta Khata",
-        "summary": "Pukhta Khata is for a buyer or seller who comes once or rarely and has no account. He is charged like anyone else, and his lines are kept under his own name and phone.",
+        "title": "Chukta Khata",
+        "summary": "Chukta Khata is for a walk-in buyer who pays the whole bill on the spot and leaves. He is charged like anyone else, is kept by name, and has no ledger or balance.",
         "steps": [
-          "On a sale line pick Pukhta Khata as the buyer, or as the seller of a lot.",
-          "Type his name and phone. A credit buyer and every seller need the phone. Names already used are offered first.",
-          "Save the sale as usual. A one-time seller is paid on the spot by default.",
-          "Open Sale, then Pukhta Khata, to see every such line by name and phone, paid or due. A person who keeps coming can be made a regular account."
+          "On a sale line open the buyer list and pick the chukta buyer, or press New chukta buyer.",
+          "Type his name, and his phone if you have it. Names already used are in the list, so the spelling stays the same.",
+          "Save the sale as usual. The paid on the spot cell fills with the whole bill and cannot be changed.",
+          "He shows by name in the day's sale book, the sales reports and analytics. He is never in dues or ledgers."
         ],
-        "keys": "Type in the name box: the list shows people already recorded, then Urdu spellings of what you typed.",
-        "example": "Shahid buys 10 boxes of apple at 1,200 and pays 12,800 cash with his charges. The register shows one line, paid."
+        "keys": "Type in the buyer box: the list shows buyers and chukta buyers, each chukta buyer marked.",
+        "example": "Shahid buys 10 boxes of apple at 1,200 and pays all 12,800 on the spot. He is in the day's sale book, and he has no balance."
       },
       "ur": {
-        "title": "پختہ کھاتہ",
-        "summary": "پختہ کھاتہ اس گاہک یا بیوپاری کے لیے ہے جو ایک بار یا کبھی کبھار آتا ہے اور جس کا اپنا کھاتہ نہیں۔ اس پر باقی سب جیسے ہی خرچ لگتے ہیں اور اس کی لائنیں اس کے نام اور فون سے رکھی جاتی ہیں۔",
+        "title": "چکتا کھاتہ",
+        "summary": "چکتا کھاتہ اس گاہک کے لیے ہے جو پورا بل موقع پر دے کر چلا جاتا ہے۔ اس پر باقی سب جیسے ہی خرچ لگتے ہیں، وہ نام سے رکھا جاتا ہے اور اس کا کوئی کھاتہ یا بقایا نہیں ہوتا۔",
         "steps": [
-          "بکری لائن میں گاہک کے طور پر، یا لاٹ کے بیوپاری کے طور پر، پختہ کھاتہ چنیں۔",
-          "اس کا نام اور فون لکھیں۔ ادھاری گاہک اور ہر بیوپاری کا فون ضروری ہے۔ پہلے سے لکھے نام پہلے دکھتے ہیں۔",
-          "بکری عام طرح محفوظ کریں۔ ایک بار والے بیوپاری کو عام طور پر موقع پر ہی ادائیگی ہو جاتی ہے۔",
-          "بکری میں پختہ کھاتہ کھول کر ایسی ہر لائن نام اور فون سے دیکھیں، ادا یا باقی۔ جو شخص بار بار آنے لگے اسے مستقل کھاتہ بنایا جا سکتا ہے۔"
+          "بکری لائن میں گاہک کی فہرست کھولیں اور چکتا گاہک چنیں، یا نیا چکتا گاہک دبائیں۔",
+          "اس کا نام لکھیں، اور فون ہو تو فون بھی۔ پہلے سے لکھے نام فہرست میں ہوتے ہیں، اس لیے ہجے ایک ہی رہتے ہیں۔",
+          "بکری عام طرح محفوظ کریں۔ موقع پر جمع کا خانہ پورے بل سے بھر جاتا ہے اور بدلا نہیں جا سکتا۔",
+          "وہ دن کی بکری بک، بکری کی رپورٹوں اور تجزیات میں نام سے دکھتا ہے۔ ذمے کی رقم یا کھاتوں میں کبھی نہیں آتا۔"
         ],
-        "keys": "نام کے خانے میں لکھیں: فہرست پہلے لکھے ہوئے لوگ دکھاتی ہے، پھر آپ کے لکھے کے اردو ہجے۔",
-        "example": "شاہد 10 پیٹی سیب 1,200 پر لیتا ہے اور اپنے خرچوں سمیت 12,800 نقد دیتا ہے۔ رجسٹر میں ایک لائن آتی ہے، ادا شدہ۔"
+        "keys": "گاہک کے خانے میں لکھیں: فہرست میں گاہک اور چکتا گاہک دونوں آتے ہیں، چکتا پر نشان ہوتا ہے۔",
+        "example": "شاہد 10 پیٹی سیب 1,200 پر لیتا ہے اور پورے 12,800 موقع پر دیتا ہے۔ وہ دن کی بکری بک میں آتا ہے اور اس کا کوئی بقایا نہیں۔"
       }
     },
     "receipt": {

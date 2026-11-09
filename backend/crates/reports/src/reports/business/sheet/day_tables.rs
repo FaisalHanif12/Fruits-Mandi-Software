@@ -362,9 +362,9 @@ fn build_table(
     let (mut sums, mut with_dead) = (Sums::default(), Sums::default());
     let mut any_dead = false;
     for row in &rows {
-        let mark = marks.iter().find(|m| {
-            m.account_id == row.account_id && m.person_key.as_deref().unwrap_or("") == row.person
-        });
+        let mark = marks
+            .iter()
+            .find(|m| m.account_id == row.account_id && row.person.is_empty());
         let mut party = parties
             .get(&row.key())
             .ok_or_else(|| data_error("a party of the day sheet is missing"))?

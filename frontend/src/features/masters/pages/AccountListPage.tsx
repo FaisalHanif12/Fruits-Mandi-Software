@@ -39,8 +39,8 @@ import { ACCOUNTS_SCREEN, accountChoicesFrom, accountChoicesText } from '../reme
 import { useMasterFocus } from '../store';
 
 const ALL = 'all';
-/** The kinds the list can show besides "all": sellers, buyers and the پختہ کھاتہ accounts (plan 32, R6). */
-const KINDS: readonly AccountListKind[] = ['seller', 'buyer', 'pukhta'];
+/** The kinds the list can show besides "all": sellers and buyers (plan 32, R6, plan 64). */
+const KINDS: readonly AccountListKind[] = ['seller', 'buyer'];
 
 /** The account list starts as the Owner left it: the kind and the inactive tick (PRD FR-7.45). */
 export function AccountListPage() {

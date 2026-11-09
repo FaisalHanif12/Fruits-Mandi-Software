@@ -31,23 +31,18 @@ use mandi_assistant::tools::{Env, State, Stop, ToolError, call};
 use mandi_reports::dashboard::BackupFacts;
 use mandi_services::core::accounts::{OpeningLineInput, OpeningsInput};
 use mandi_services::core::auth::Language;
-use mandi_services::core::bikri::{
-    BikriSaveInput, LineChargeMethod, LotInput, PaymentType, PukhtaInput,
-};
+use mandi_services::core::bikri::{BikriSaveInput, LotInput};
 use mandi_services::core::capital::CapitalInput;
 use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::dead::{DeadMarkInput, DeadReason};
-use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::expenses::ShopExpenseInput;
 use mandi_services::core::gardens::{GardenEntryInput, GardenInput};
 use mandi_services::core::purchases::PurchaseInput;
 use mandi_services::core::trips::{OtherSaleInput, TripInput};
 use mandi_services::core::ventures::{MoneySource, VenturePartnerInput};
-use mandi_services::core::vouchers::{
-    MakeRegularInput, ReceiptInput, RemovedPaymentFields, VoucherCancelInput,
-};
+use mandi_services::core::vouchers::{ReceiptInput, RemovedPaymentFields, VoucherCancelInput};
 use mandi_services::domain::figures::{QuestionNumber, question_numbers};
-use mandi_services::{ServiceError, accounts, bikri, dead, gardens, purchases, trips, vouchers};
+use mandi_services::{accounts, bikri, dead, gardens, purchases, trips, vouchers};
 use serde_json::{Value, json};
 
 /// The sales of fixture B: (month, quantity, rate). Banana, one sale to Akram on the 15th.
@@ -84,7 +79,6 @@ fn books() -> Books {
             &ReceiptInput {
                 date: format!("20-{month:02}-2026"),
                 account_id: w.akram,
-                person_key: None,
                 amount: RECEIPTS[i].to_string(),
                 removed: RemovedPaymentFields::default(),
                 collector_staff_id: None,
@@ -182,7 +176,6 @@ fn arshad_pays(w: &world::World, date: &str, amount: &str) {
         &ReceiptInput {
             date: date.into(),
             account_id: w.arshad,
-            person_key: None,
             amount: amount.into(),
             removed: RemovedPaymentFields::default(),
             collector_staff_id: None,
@@ -747,11 +740,11 @@ fn a_party_balance_needs_a_real_party() {
     // No party.
     let none = s.estimate(json!({"measure": "party_balance"})).unwrap_err();
     assert_eq!(none.code, "ERR_REQUIRED");
-    // The پختہ کھاتہ account holds many people, so its one balance is not a person's.
-    let pukhta = format!("a{}", b.world.pukhta_buyer);
-    s.show_key(&pukhta, "03049999", "Pukhta");
+    // The چکتا کھاتہ account holds walk-in buyers and no balance, so there is nothing to estimate.
+    let chukta = format!("a{}", b.world.chukta_khata);
+    s.show_key(&chukta, "0030", "Chukta");
     let refused = s
-        .estimate(json!({"measure": "party_balance", "party": pukhta}))
+        .estimate(json!({"measure": "party_balance", "party": chukta}))
         .unwrap_err();
     assert_eq!(refused.code, "ERR_OUT_OF_RANGE");
     assert_eq!(refused.field.as_deref(), Some("party"));
@@ -1329,7 +1322,6 @@ fn a_move_to_the_dead_amount_is_a_one_off_and_not_a_pace() {
         &w.owner,
         &DeadMarkInput {
             account_id: w.arshad,
-            pukhta_person_key: None,
             entry_date: "15-07-2026".into(),
             reason: DeadReason::Left,
             note: String::new(),
@@ -1499,7 +1491,6 @@ fn a_recovery_from_a_dead_buyer_is_a_one_off_too() {
         &w.owner,
         &DeadMarkInput {
             account_id: w.arshad,
-            pukhta_person_key: None,
             entry_date: "15-07-2026".into(),
             reason: DeadReason::Left,
             note: String::new(),
@@ -1513,108 +1504,6 @@ fn a_recovery_from_a_dead_buyer_is_a_one_off_too() {
     let after = s.estimate(json!({"measure": "buyers_dues"})).unwrap();
     assert_eq!(history(&after), history(&before));
     assert_eq!(rs(&after["now"]), rs(&before["now"]));
-}
-
-/// A one-time buyer, Shahid, buys 2 of Rahim's banana at 1,000 on credit, with no charges, on a day.
-fn shahid_buys(w: &world::World, date: &str) {
-    let mut line = world::sale("s-1", w.pukhta_buyer, "2", "1000");
-    line.pukhta = Some(PukhtaInput {
-        name_ur: "شاہد".into(),
-        name_en: "Shahid".into(),
-        phone: "0300-0000000".into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    line.buyer_comm = world::typed(LineChargeMethod::Percent, "0");
-    line.seller_comm = world::typed(LineChargeMethod::Percent, "0");
-    line.laga = world::typed(LineChargeMethod::PerUnit, "0");
-    let lot = world::with_sales(
-        world::bare_lot(w, "lot-1", w.rahim, w.banana, "2"),
-        vec![line],
-    );
-    let mut draft = world::draft(vec![lot]);
-    draft.header.entry_date = date.into();
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft,
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
-}
-
-/// Shahid is made a regular buyer today (FR-13.8): his 2,000 moves to a new account of his own.
-fn make_shahid_regular(w: &world::World) {
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let mut words: Vec<String> = Vec::new();
-    for _ in 0..5 {
-        let input: MakeRegularInput = serde_json::from_value(json!({
-            "person_key": key,
-            "side": "buyer",
-            "account_input": {
-                "id": null, "version": null, "account_type": "buyer", "control_id": null,
-                "code": "", "name_ur": "شاہد", "name_en": "Shahid",
-                "confirmed_rules_words": words,
-                "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null,
-                "adda_id": null, "phone1": "03000000000", "phone2": "", "address": "",
-                "linked_account_id": null, "opening_date": "", "opening_dr": "",
-                "opening_cr": "", "opening_is_advance": false, "credit_allowed": true,
-                "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
-                "is_active": true, "note": ""
-            }
-        }))
-        .unwrap();
-        match vouchers::make_regular(&w.env.ctx, &w.owner, &input) {
-            Ok(done) => {
-                assert_eq!(done.moved.amount_paisa.rupees(), 2_000);
-                return;
-            }
-            Err(ServiceError::Rejected(items))
-                if items
-                    .iter()
-                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
-            {
-                for item in items {
-                    if let Some(ErrorValue::Text(t)) = item.values.get("words") {
-                        words.extend(t.split(' ').map(str::to_owned));
-                    }
-                }
-            }
-            Err(other) => panic!("{other:?}"),
-        }
-    }
-    panic!("the spelling question did not end");
-}
-
-#[test]
-fn a_one_time_buyer_made_regular_moves_no_dues_and_only_what_he_bought_counts() {
-    // Money review K1'. Shahid buys 2,000 on credit on 16-09. On 20-09 he is made regular: his
-    // 2,000 moves from the one-time account to an account of his own, a "General" entry from an
-    // account. That is trading, not an opening, so September's change is what R20 says: Akram's
-    // 64,400 - 20,000 plus Shahid's 2,000, and the move itself adds nothing.
-    let b = books();
-    let w = &b.world;
-    shahid_buys(w, "16-09-2026");
-    common::set_today(&w.env, 2026, 9, 20);
-    make_shahid_regular(w);
-    common::set_today(&w.env, 2026, 10, 10);
-    let mut s = Session::new(w, &six("gahakon ke zimme"));
-    let v = s.estimate(json!({"measure": "buyers_dues"})).unwrap();
-    let ends = [
-        "2026-03-31",
-        "2026-04-30",
-        "2026-05-31",
-        "2026-06-30",
-        "2026-07-31",
-        "2026-08-31",
-        "2026-09-30",
-    ];
-    let levels: Vec<i64> = ends.iter().map(|d| r20_as_of(w, d)).collect();
-    let by_r20: Vec<i64> = levels.windows(2).map(|p| p[1] - p[0]).collect();
-    assert_eq!(history(&v), by_r20);
-    assert_eq!(history(&v).last().copied(), Some(46_400));
-    assert_eq!(rs(&v["now"]), 139_400);
 }
 
 #[test]

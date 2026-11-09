@@ -8,8 +8,6 @@ import type { BikriList } from '../../src/bindings/BikriList';
 import type { BikriListRow } from '../../src/bindings/BikriListRow';
 import type { PairRow } from '../../src/bindings/PairRow';
 import type { PairsList } from '../../src/bindings/PairsList';
-import type { PukhtaRegister } from '../../src/bindings/PukhtaRegister';
-import type { PukhtaRegisterRow } from '../../src/bindings/PukhtaRegisterRow';
 import type { RuleRow } from '../../src/bindings/RuleRow';
 import type { RulesList } from '../../src/bindings/RulesList';
 import type { MasterPage, MasterRecord } from '../../src/features/masters/types';
@@ -53,22 +51,6 @@ export function bikriListOf(
       buyer_total: paisaForTest(0),
       ...totals,
     },
-    months: [],
-  };
-}
-
-export function pukhtaRegisterOf(
-  all: readonly PukhtaRegisterRow[],
-  offset = 0,
-  limit = 0,
-  totals: Partial<PukhtaRegister['totals']> = {},
-): PukhtaRegister {
-  return {
-    rows: sliceOf(all, offset, limit),
-    total_count: all.length,
-    // As the backend: with no side chosen the totals are null (buyers and sellers would be added
-    // together); a test that chooses a side gives the totals it wants to see.
-    totals: { qty: null, amount: null, commission: null, open: null, ...totals },
     months: [],
   };
 }

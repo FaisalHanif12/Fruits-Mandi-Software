@@ -33,10 +33,8 @@ pub struct World {
     pub arshad: i64,
     /// نقدی منڈی, 03040000.
     pub naqdi: i64,
-    /// پختہ کھاتہ (خریدار), 0030.
-    pub pukhta_buyer: i64,
-    /// پختہ کھاتہ (بیوپاری), 0031.
-    pub pukhta_seller: i64,
+    /// چکتا کھاتہ, 0030.
+    pub chukta_khata: i64,
     /// کیلا, fruit.
     pub banana: i64,
     /// سیب, fruit.
@@ -113,7 +111,6 @@ pub fn add_account_tagged(
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -296,8 +293,7 @@ pub fn finish_world(dir: TempDir, env: TestEnv, owner: Actor, rahim: i64, shares
         .unwrap();
     }
     let naqdi = id_of(&env, "03040000");
-    let pukhta_buyer = id_of(&env, "0030");
-    let pukhta_seller = id_of(&env, "0031");
+    let chukta_khata = id_of(&env, "0030");
     World {
         dir,
         env,
@@ -307,8 +303,7 @@ pub fn finish_world(dir: TempDir, env: TestEnv, owner: Actor, rahim: i64, shares
         akram,
         arshad,
         naqdi,
-        pukhta_buyer,
-        pukhta_seller,
+        chukta_khata,
         banana,
         apple,
         mooli,
@@ -382,7 +377,6 @@ pub fn lot(w: &World, key: &str, seller: i64, item: i64, qty_received: &str) -> 
         lot_id: None,
         seller_account_id: Some(seller),
         purchase_id: None,
-        pukhta: None,
         item_id: Some(item),
         packing_id: Some(w.box_),
         marka_id: None,
@@ -419,7 +413,7 @@ pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
         key: key.into(),
         sale_id: None,
         buyer_account_id: Some(buyer),
-        pukhta: None,
+        chukta: None,
         qty: qty.into(),
         weight: None,
         seller_rate: rate.into(),

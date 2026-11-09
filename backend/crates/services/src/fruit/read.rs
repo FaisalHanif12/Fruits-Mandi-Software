@@ -3,7 +3,6 @@
 
 use mandi_db::fruit::{self as frepo, FruitRec, ListFilter};
 use mandi_db::rusqlite::Connection;
-use mandi_domain::core::bikri::SavedPukhta;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::edit::{EditEntity, EntryFlags, LockedReason};
 use mandi_domain::core::error::ErrorCode;
@@ -29,15 +28,6 @@ fn data(message: &str) -> ServiceError {
 
 fn paisa(value: i64) -> Result<Paisa, ServiceError> {
     Paisa::try_from_paisa(value).map_err(money_error)
-}
-
-fn saved_pukhta(tuple: Option<&(String, String, String, String)>) -> Option<SavedPukhta> {
-    tuple.map(|(name_ur, name_en, phone, key)| SavedPukhta {
-        name_ur: name_ur.clone(),
-        name_en: name_en.clone(),
-        phone: phone.clone(),
-        person_key: key.clone(),
-    })
 }
 
 /// One row as stored. The flags say what the entry itself allows; the day rules and the edit stamp
@@ -84,7 +74,6 @@ pub(super) fn row_of(conn: &Connection, rec: &FruitRec) -> Result<FruitRow, Serv
                 bikri_number,
             }),
         credit_account: rec.credit.clone(),
-        pukhta: saved_pukhta(rec.pukhta.as_ref()),
         item: rec.item.clone(),
         packing: rec.packing.clone(),
         qty: rec.qty,
@@ -243,7 +232,6 @@ pub(super) fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, S
                     bikri_number: rec.bikri_number,
                     received_date: rec.received_date,
                     seller: rec.seller,
-                    pukhta: saved_pukhta(rec.pukhta.as_ref()),
                     item: rec.item,
                     packing: rec.packing,
                     sold_by_weight: rec.sold_by_weight,

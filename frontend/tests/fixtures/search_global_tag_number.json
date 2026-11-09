@@ -9,6 +9,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 6,
       "is_active": true,
       "is_dead": false
@@ -24,6 +27,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "seller",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 5,
       "is_active": true,
       "is_dead": false
@@ -40,6 +46,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "buyer",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 6,
       "is_active": true,
       "is_dead": false
@@ -55,6 +64,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 14,
       "is_active": true,
       "is_dead": false
@@ -70,6 +82,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 14,
       "is_active": true,
       "is_dead": false
@@ -85,6 +100,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 14,
       "is_active": true,
       "is_dead": false
@@ -100,6 +118,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 11,
       "is_active": true,
       "is_dead": false
@@ -115,6 +136,9 @@
       "extra_ur": "",
       "extra_en": "",
       "account_type": "other",
+      "kind": "account",
+      "chukta_id": null,
+      "phone": null,
       "control_id": 11,
       "is_active": true,
       "is_dead": false

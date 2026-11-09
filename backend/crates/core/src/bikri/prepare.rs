@@ -108,8 +108,8 @@ fn optional_note(
     }
 }
 
-fn pukhta_of(input: Option<&PukhtaInput>) -> PreparedPukhta {
-    input.map_or_else(PreparedPukhta::default, |p| PreparedPukhta {
+fn chukta_of(input: Option<&ChuktaInput>) -> PreparedChukta {
+    input.map_or_else(PreparedChukta::default, |p| PreparedChukta {
         name_ur: p.name_ur.trim().to_owned(),
         name_en: p.name_en.trim().to_owned(),
         phone: p.phone.trim().to_owned(),
@@ -168,7 +168,7 @@ fn typed_line_charge(
 /// quantity the screen filled in, so nothing else in it is read.
 fn is_blank_sale(input: &SaleInput) -> bool {
     input.buyer_account_id.is_none()
-        && input.pukhta.as_ref().is_none_or(|p| {
+        && input.chukta.as_ref().is_none_or(|p| {
             p.name_ur.trim().is_empty() && p.name_en.trim().is_empty() && p.phone.trim().is_empty()
         })
         && is_blank(&input.seller_rate)
@@ -180,7 +180,7 @@ fn prepare_sale(
     index: usize,
     input: &SaleInput,
 ) -> PreparedSale {
-    let pukhta = pukhta_of(input.pukhta.as_ref());
+    let chukta = chukta_of(input.chukta.as_ref());
     let is_blank_row = is_blank_sale(input);
     let mut sale = PreparedSale {
         key: input.key.clone(),
@@ -188,7 +188,7 @@ fn prepare_sale(
         is_blank: is_blank_row,
         has_errors: false,
         buyer_account_id: input.buyer_account_id,
-        pukhta,
+        chukta,
         qty: None,
         weight: None,
         seller_rate: None,
@@ -295,8 +295,7 @@ fn prepare_lot(
         None => None,
     };
     let freight = optional_money(issues, &lot_field(index, "freight"), input.freight.as_ref());
-    // Empty نقد is "not typed" (None), not 0: a one-time seller's نقد then starts as his net
-    // (PRD FR-13.10).
+    // Empty نقد is "not typed" (None), which is 0 (PRD 12.3).
     let cash_paid = match input.cash_paid.as_ref().filter(|t| !is_blank(t)) {
         Some(text) => {
             let value = take(
@@ -355,7 +354,6 @@ fn prepare_lot(
         seller_account_id: input.seller_account_id,
         purchase_id: input.purchase_id,
         arrival_id: input.arrival_id,
-        pukhta: pukhta_of(input.pukhta.as_ref()),
         item_id: input.item_id,
         packing_id: input.packing_id,
         marka_id: input.marka_id,

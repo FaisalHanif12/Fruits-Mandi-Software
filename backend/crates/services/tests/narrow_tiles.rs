@@ -6,7 +6,7 @@
 //!
 //! The expected numbers are the PRD's (4.9, E2E-8, E2E-15, E2E-21, E2E-28, E2E-32, E2E-34, E2E-40)
 //! and the cases of the money review of P48-S1 (a buyer who paid in advance, a dead mark and its
-//! undo, a one-time person, cash below zero, a seller with an advance and a zero balance).
+//! undo, a چکتا buyer, cash below zero, a seller with an advance and a zero balance).
 #![cfg(test)]
 
 mod common;
@@ -21,7 +21,7 @@ use mandi_reports::reports::{
     Cell, ReportFilters, ReportId, ReportPage, ReportRunInput, run_dues_without_ages,
 };
 use mandi_services::core::accounts::BalanceSide;
-use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
+use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod};
 use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::dead::{DeadMarkInput, DeadUndoInput};
 use mandi_services::core::money::Paisa;
@@ -380,7 +380,7 @@ fn a_regular_buyer_in_the_dead_amount_leaves_the_dues_and_comes_back_with_the_un
     let w = full_day();
     set_today(&w.env, 2026, 10, 11);
     let mark: DeadMarkInput = serde_json::from_value(json!({
-        "account_id": w.arshad, "pukhta_person_key": null,
+        "account_id": w.arshad,
         "entry_date": "11-10-2026", "reason": "died", "note": "فوت ہو گئے"
     }))
     .unwrap();
@@ -405,18 +405,17 @@ fn a_regular_buyer_in_the_dead_amount_leaves_the_dues_and_comes_back_with_the_un
     assert_eq!((rs(parts.buyers_paisa), rs(parts.dead_paisa)), (21_564, 0));
 }
 
-/// E2E-21 on credit: شاہد 1 × 1,000 and ناصر 2 × 1,000, both under the one-time account. No
-/// commission and no لاگا, so the dues are the PRD's 1,000 and 2,000.
-fn two_one_time_credit_buyers() -> World {
+/// E2E-21 (v1.32): شاہد 1 × 1,000 and ناصر 2 × 1,000, both چکتا buyers, each paying in full on the
+/// spot. No commission and no لاگا.
+fn two_chukta_buyers() -> World {
     let w = worked_day();
     let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
+        let mut l = support::sale(key, w.chukta_khata, qty, "1000");
+        l.chukta = Some(ChuktaInput {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.into(),
         });
-        l.payment_type = Some(PaymentType::Credit);
         l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
         l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
         l.laga = support::typed(LineChargeMethod::PerUnit, "0");
@@ -431,45 +430,12 @@ fn two_one_time_credit_buyers() -> World {
     w
 }
 
-fn person_key(w: &World, name_en: &str) -> Option<String> {
-    let page = report(w, ReportId::R20, ReportFilters::default(), 0, 1_000);
-    page.rows
-        .iter()
-        .find_map(|row| match &row.cells[column(&page, "buyer")] {
-            Cell::Party { party } if party.name_en == name_en => party.person_key.clone(),
-            _ => None,
-        })
-}
-
 #[test]
-fn one_time_persons_are_counted_person_by_person_and_a_dead_one_leaves_alone() {
-    let w = two_one_time_credit_buyers();
+fn chukta_buyers_are_in_no_dues_and_the_narrow_tiles_still_equal_the_dashboard() {
+    let w = two_chukta_buyers();
     narrow_is_the_dashboard(&w);
-    // شاہد 1,000 and ناصر 2,000.
-    assert_eq!(
-        rs(dashboard::buyers_dues(db(&w), today_of(&w)).unwrap()),
-        3_000
-    );
-    // E2E-21: a receipt of 1,000 for شاہد leaves ناصر's 2,000 alone.
-    let shahid = person_key(&w, "Shahid").expect("his key");
-    let mut paid = receipt(w.pukhta_buyer, "1,000");
-    paid.person_key = Some(shahid);
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &paid).unwrap();
-    narrow_is_the_dashboard(&w);
-    assert_eq!(
-        rs(dashboard::buyers_dues(db(&w), today_of(&w)).unwrap()),
-        2_000
-    );
-    // ناصر dies: he is out of the dues and in the dead amount.
-    let nasir = person_key(&w, "Nasir").expect("his key");
-    set_today(&w.env, 2026, 10, 11);
-    let mark: DeadMarkInput = serde_json::from_value(json!({
-        "account_id": w.pukhta_buyer, "pukhta_person_key": nasir,
-        "entry_date": "11-10-2026", "reason": "died", "note": "فوت ہو گئے"
-    }))
-    .unwrap();
-    dead::mark(&w.env.ctx, &w.owner, &mark).unwrap();
-    narrow_is_the_dashboard(&w);
+    // They paid in full, so nobody owes (PRD FR-13.6).
+    assert_eq!(rs(dashboard::buyers_dues(db(&w), today_of(&w)).unwrap()), 0);
     let parts = dashboard::total_dues(db(&w), today_of(&w)).unwrap();
     assert_eq!(
         (
@@ -477,7 +443,7 @@ fn one_time_persons_are_counted_person_by_person_and_a_dead_one_leaves_alone() {
             rs(parts.dead_paisa),
             rs(parts.total_paisa)
         ),
-        (0, 2_000, 2_000)
+        (0, 0, 0)
     );
 }
 

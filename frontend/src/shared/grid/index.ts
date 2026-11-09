@@ -30,6 +30,7 @@ export {
 } from './columnTypes';
 export { isEditable, isEnterStop, nextEnterStop, type EnterStep } from './enterOrder';
 export { syncEditedText } from './editEnd';
+export { leftTextKey } from './leftText';
 export {
   isReadOnlyType,
   type CellRef,

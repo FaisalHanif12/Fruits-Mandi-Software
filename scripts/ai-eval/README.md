@@ -298,7 +298,7 @@ cross-checked against view A where they overlap; and `d7.recv.*`, `d7.stock.*`, 
 The rich year holds what Umar's example needs (`seed.rs`, `d7_richer_cases`, added at the very end, add only, through the
 app's own saves, on past days that are still open): a buyer with BOTH a cash line and a credit line on one day
 (Naveed Traders, 14-10-2026: 10 banana for cash, 12 apple on credit), a city (Kasur) on three new accounts with a
-balance, a one-time person of the shared پختہ کھاتہ (Aamir) and a پختہ party's own account (Nadir), a separate khata
+balance, a چکتا buyer of the shared چکتا کھاتہ who pays in full on the spot (Aamir) and a buyer with a balance (Nadir), a separate khata
 (Family Khata, three entries), a line with ریٹ مختلف (22-10-2026, seller 4,300, buyer 4,350, the newest apple line of
 its day) and a later sale of an older بکری's leftover on a day with a newer بکری of the same item (mosambi,
 19-10-2026: the newest line is 2,550, the row id says 2,400). The oracle checks the rule against the row id for both

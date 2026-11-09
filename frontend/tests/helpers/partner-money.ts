@@ -10,7 +10,6 @@
 import { vi } from 'vitest';
 import * as cashbookApi from '../../src/features/cashbook/api';
 import * as partnersApi from '../../src/features/partners/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
 import type { Language } from '../../src/i18n';
 import { account, balance, type account as AccountFn } from './accounts';
@@ -19,12 +18,11 @@ import { prepareCashbook } from './cashbook-screen';
 import type { FakeCashbook } from './cashbook';
 import {
   GENERAL_ACCOUNTS,
-  SHAHID,
   createPartnerMoneyBooks,
   type PartnerMoneyBooks,
 } from './partner-money-books';
 import { fakePartners, overviewRow, THREE_PARTNERS } from './partners';
-import { AKRAM, PUKHTA_BUYER, RAHIM } from './vouchers';
+import { AKRAM, CHUKTA_KHATA, RAHIM } from './vouchers';
 import { money } from './accounts';
 
 type AccountRow = ReturnType<typeof AccountFn>;
@@ -34,7 +32,7 @@ export const GENERAL_ROWS: AccountRow[] = [
   account(1, 'other', '01010001', 'روکڑ', 'Cash', { balance: balance(53484, 'dr') }),
   AKRAM,
   RAHIM,
-  PUKHTA_BUYER,
+  CHUKTA_KHATA,
   account(501, 'other', '05010001', 'بجلی', 'Electricity'),
   account(401, 'other', '04010001', 'کمیشن آمدن', 'Commission Income'),
 ];
@@ -83,7 +81,6 @@ export function preparePartnerMoney(
     if (previous === undefined) throw new Error('no voucher preview fake');
     return previous(entry, replacing);
   });
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([SHAHID]);
   const partners = fakePartners(THREE_PARTNERS);
   fakeOverview(partners);
   return { cash, money: books, partners };

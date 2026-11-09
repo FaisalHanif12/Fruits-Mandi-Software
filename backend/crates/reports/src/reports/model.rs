@@ -43,9 +43,6 @@ pub enum ReportId {
     /// Truck stand report, اڈا رپورٹ.
     #[serde(rename = "R8")]
     R8,
-    /// One-time parties register, پختہ کھاتہ رپورٹ.
-    #[serde(rename = "R9")]
-    R9,
     /// Stock, مکمل سٹاک / باقی مال.
     #[serde(rename = "R10")]
     R10,
@@ -147,7 +144,6 @@ impl ReportId {
             ReportId::R6 => "R6",
             ReportId::R7 => "R7",
             ReportId::R8 => "R8",
-            ReportId::R9 => "R9",
             ReportId::R10 => "R10",
             ReportId::R11 => "R11",
             ReportId::R12 => "R12",
@@ -209,7 +205,7 @@ pub enum FilterKind {
     DateRange,
     /// One "as of" date, for a balance list (FR-19.10).
     AsOf,
-    /// One account, and for a پختہ کھاتہ account one person. Required when the entry says so.
+    /// One account, and for a چکتا کھاتہ account one person. Required when the entry says so.
     Party,
     /// A seller.
     Seller,
@@ -223,7 +219,7 @@ pub enum FilterKind {
     Adda,
     /// The "with detail" switch of the statement (R14): off shows balances only.
     Detail,
-    /// Paid or due lines only (R9).
+    /// Paid or due lines only (R38).
     Status,
     /// Group by day or by month (R28).
     GroupBy,
@@ -287,14 +283,14 @@ pub enum DateShortcut {
     LastMonth,
 }
 
-/// The party filter: one account, and for a پختہ کھاتہ account one person (PRD FR-13.5).
+/// The party filter: one account, and for a چکتا کھاتہ account one person (PRD FR-13.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(rename = "ReportPartyFilter")]
 pub struct PartyFilter {
     /// The account the user picked.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The person key inside a پختہ کھاتہ account. Missing means the whole account.
+    /// The person key inside a چکتا کھاتہ account. Missing means the whole account.
     #[serde(default)]
     pub person_key: Option<String>,
 }
@@ -356,7 +352,7 @@ pub enum GardenView {
     Partner,
 }
 
-/// The paid or due filter of the one-time parties register (R9, PRD FR-13.6).
+/// The paid or due filter (R38, PRD FR-10.10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(rename = "ReportPaidFilter")]
@@ -402,7 +398,7 @@ pub struct ReportFilters {
     /// The income report by day or by month (R28). Missing means month.
     #[ts(optional)]
     pub group_by: Option<GroupBy>,
-    /// Paid or due lines only (R9). Missing means all lines.
+    /// Paid or due lines only (R38). Missing means all lines.
     #[ts(optional)]
     pub status: Option<PaidFilter>,
     /// The partner of a partner statement (R31), or of the expense report (R29).
@@ -482,7 +478,7 @@ pub struct PartyRef {
     pub name_en: String,
     /// The tag after the name (PRD 10.2). Null for none.
     pub tag: Option<String>,
-    /// The person inside a پختہ کھاتہ account, as stored. Null for any other line.
+    /// The person inside a چکتا کھاتہ account, as stored. Null for any other line.
     pub person_key: Option<String>,
     /// The phone of that person in the dash form `03XX-XXXXXXX` (English digits), so two people
     /// with the same name are two different rows (PRD FR-13.5). Missing for any other line and for
@@ -490,7 +486,7 @@ pub struct PartyRef {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub phone: Option<String>,
-    /// The move to the dead amount, when this party (this person of a پختہ کھاتہ account) is in it
+    /// The move to the dead amount, when this party (this person of a چکتا کھاتہ account) is in it
     /// (PRD FR-10.10): the ledger heading says ڈوبی رقم with its date and reason. Missing otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -529,7 +525,7 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub group_by: Option<GroupBy>,
-    /// The paid or due filter of R9. Missing for all lines.
+    /// The paid or due filter of R38. Missing for all lines.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub status: Option<PaidFilter>,

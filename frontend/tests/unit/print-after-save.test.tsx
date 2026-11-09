@@ -36,7 +36,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -87,7 +86,7 @@ describe.each(LANGUAGES)('Ctrl+Enter prints after the save (%s)', (language) => 
     });
     expect(printing.prints[0]).toEqual({
       bikri_id: 41,
-      docs: ['seller_bill', 'buyer_slips', 'pukhta_slip'],
+      docs: ['seller_bill', 'buyer_slips'],
       language,
       copies: null,
       to: 'printer',
@@ -97,6 +96,23 @@ describe.each(LANGUAGES)('Ctrl+Enter prints after the save (%s)', (language) => 
       expect(pageText()).toContain(message(language, 'print-toast-printed'));
     });
     expect(await combo(language, 'bikri-header-truck')).toHaveValue('');
+  });
+
+  it('on a Mac the message says the print window is open, not that it was sent to the printer (plan 69)', async () => {
+    const agent = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)',
+      );
+    try {
+      await saveAndPrint();
+      await waitFor(() => {
+        expect(pageText()).toContain(message(language, 'print-toast-dialog'));
+      });
+      expect(pageText()).not.toContain(message(language, 'print-toast-printed'));
+    } finally {
+      agent.mockRestore();
+    }
   });
 
   it('prints only the documents of the remembered list', async () => {

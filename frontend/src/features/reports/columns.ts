@@ -199,13 +199,6 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     phone_charge: { from: 'wide' },
   },
   R7: { avg_rate: { from: 'normal' } },
-  R9: {
-    doc: { from: 'normal' },
-    qty: { from: 'normal' },
-    side: { from: 'wide' },
-    phone: { from: 'wide' },
-    commission: { from: 'wide' },
-  },
   R20: {
     age_0_7: { from: 'normal' },
     age_8_30: { from: 'normal' },

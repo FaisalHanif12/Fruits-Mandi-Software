@@ -400,22 +400,6 @@ fn load_lookups(
         }
         _ => HashMap::new(),
     };
-    // A پختہ بیوپاری with his own account: the advance a new credit of his could adjust (plan 47,
-    // PRD FR-13.11), read with the working the save uses, with the posting being replaced taken out.
-    // Nobody else needs it, so nobody else is read.
-    let post_date = prepared.header.entry_date.map(BusinessDate::to_iso);
-    let mut advances: HashMap<i64, Paisa> = HashMap::new();
-    for a in found
-        .iter()
-        .filter(|a| a.is_pukhta_party && a.control_code == SELLER_CONTROL)
-    {
-        if let Some(date) = post_date.as_deref() {
-            advances.insert(
-                a.id,
-                crate::matching::advance_available(conn, a.id, date, replaces)?,
-            );
-        }
-    }
     let mut accounts = HashMap::with_capacity(found.len());
     for a in found {
         let balance = match totals.get(&a.id) {
@@ -446,9 +430,7 @@ fn load_lookups(
             a.id,
             AccountFacts {
                 kind,
-                is_pukhta: a.is_pukhta_khata,
-                is_pukhta_party: a.is_pukhta_party,
-                advance_available: advances.get(&a.id).copied().unwrap_or(Paisa::ZERO),
+                is_chukta: a.is_chukta_khata,
                 is_naqdi_mandi: a.code == NAQDI_MANDI_CODE,
                 is_own_goods: a.code == OWN_GOODS_CODE,
                 garden_closed,
@@ -706,59 +688,24 @@ impl Basis {
     }
 }
 
-/// Warns when the credit of a پختہ بیوپاری's lot would take part of his advance away from a LATER
-/// posting of his (PRD FR-13.11, FR-15.8, A79, Umar 01-11-2026). The cash default of the lot is
-/// the same; only his balance will not be 0 afterwards, and the Owner is told how much (`taken_paisa`)
-/// on the نقد of the first lot of that seller. It is part of the one calculation preview and save
-/// share, so both show it (Code Standards B5). Only reads.
-fn advance_warnings(
-    conn: &Connection,
-    prepared: &PreparedDraft,
-    lookups: &Lookups,
-    calc: &mut mandi_domain::bikri::PostingCalc,
-    replaces: Option<i64>,
-) -> Result<(), ServiceError> {
-    let Some(date) = prepared.header.entry_date.map(BusinessDate::to_iso) else {
-        return Ok(());
-    };
-    // Per seller: the first lot and the credit of all his lots that adjust his advance. His lots
-    // sit side by side in the entry, so one credit of their sum takes the same advance.
-    let mut sellers: Vec<(i64, usize, Paisa)> = Vec::new();
-    for (index, lot) in prepared.lots.iter().enumerate() {
-        let Some(seller_id) = lot.seller_account_id else {
-            continue;
-        };
-        let is_party = lookups
-            .accounts
-            .get(&seller_id)
-            .is_some_and(|facts| facts.is_pukhta_party);
-        let credit = calc
-            .lots
-            .get(index)
-            .and_then(|l| l.totals.as_ref())
-            .map(|t| t.seller_credit);
-        let Some(credit) = credit.filter(|c| is_party && lot.adjust_advance && *c > Paisa::ZERO)
-        else {
-            continue;
-        };
-        match sellers.iter_mut().find(|s| s.0 == seller_id) {
-            Some(known) => known.2 = known.2.checked_add(credit).map_err(money_error)?,
-            None => sellers.push((seller_id, index, credit)),
-        }
+/// True if a draft names a چکتا buyer on any sale line.
+pub(super) fn has_chukta(draft: &mandi_domain::core::bikri::BikriDraft) -> bool {
+    draft
+        .lots
+        .iter()
+        .flat_map(|l| l.sales.iter())
+        .any(|s| s.chukta.is_some())
+}
+
+/// Lets the search index learn the چکتا buyers a save has added (PRD FR-7.29). Called after the
+/// commit, only when the draft named one.
+pub(super) fn refresh_chukta_index(
+    ctx: &crate::context::Context,
+    draft: &mandi_domain::core::bikri::BikriDraft,
+) {
+    if has_chukta(draft) {
+        crate::search::refresh_chukta_all(ctx);
     }
-    for (seller_id, index, credit) in sellers {
-        let taken = crate::matching::advance_displaced(conn, seller_id, &date, replaces, credit)?;
-        if taken > Paisa::ZERO {
-            calc.warnings.push(
-                FieldError::new(
-                    ErrorCode::ErrAdvanceTakenFromLater,
-                    &format!("lots[{index}].cash_paid"),
-                )
-                .with("taken_paisa", ErrorValue::Number(taken.as_paisa())),
-            );
-        }
-    }
-    Ok(())
 }
 
 /// Works out a typed draft against the database: reads what it names, calls `calc_posting`,
@@ -794,7 +741,7 @@ pub(crate) fn work_out(
     )?;
     lookups.purchases = purchases;
     lookups.arrivals = arrivals;
-    let mut calc = calc_posting(
+    let calc = calc_posting(
         basis.target,
         &prepared,
         &lookups,
@@ -803,15 +750,6 @@ pub(crate) fn work_out(
         &basis.stored,
     )
     .map_err(calc_error)?;
-    if basis.stored.kind == mandi_domain::bikri::PostingKind::First {
-        advance_warnings(
-            conn,
-            &prepared,
-            &lookups,
-            &mut calc,
-            basis.replaces.map(|r| r.entry_id),
-        )?;
-    }
     let mut errors = calc.errors.clone();
     let accounts = system_accounts(conn)?;
     let (split, change, entry) = books_of(conn, &prepared, &calc, &accounts, &mut errors)?;

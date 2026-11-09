@@ -3,7 +3,7 @@
 /**
  * One line of a جنرل entry as typed.
  *
- * Field paths in errors: `lines[i].account_id`, `lines[i].person_key`, `lines[i].dr`,
+ * Field paths in errors: `lines[i].account_id`, `lines[i].dr`,
  * `lines[i].cr`, `lines[i].narration`.
  */
 export type GeneralLineInput = {
@@ -11,10 +11,6 @@ export type GeneralLineInput = {
    * The account. Null gives `ERR_REQUIRED`.
    */
   account_id: number | null;
-  /**
-   * The one-time person, for a پختہ کھاتہ account (PRD FR-13.5). Null for any other account.
-   */
-  person_key: string | null;
   /**
    * بنام, whole rupees. Empty for none.
    */

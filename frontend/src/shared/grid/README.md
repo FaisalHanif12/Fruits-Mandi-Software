@@ -66,7 +66,7 @@ rowsIn, totalOf }`. `data.pages` holds the one page on screen, and `pager` says 
   read every page, for a choice list or a screen that needs all rows (the opening balances).
 - Used by: the cash book, partner takes, ادھار رقم, الگ کھاتہ, capital and the partner statement,
   آج کی بکری, باقی مال (the lots, then the firm's own goods, counted together), the voucher lists,
-  the پختہ کھاتہ register, the rules, the accounts, the trips and gardens (and the history inside
+  the rules, the accounts, the trips and gardens (and the history inside
   one), the audit log, the backup list, the learned words, the reports and the analytics views.
 - In tests, `tests/setup.ts` forgets the pages after each test (`resetPagerMemory`).
 

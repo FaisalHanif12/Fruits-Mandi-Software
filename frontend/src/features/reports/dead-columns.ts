@@ -9,22 +9,13 @@ import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
 
-/** The name of the person: a one-time person by the name saved on his lines, any other by his account. */
-function personName(row: DeadRow, language: 'ur' | 'en'): string {
-  if (row.pukhta_person_key === null) return displayName(row, language);
-  return displayName(
-    { name_ur: row.pukhta_name_ur ?? row.name_ur, name_en: row.pukhta_name_en ?? row.name_en },
-    language,
-  );
-}
-
 export const DEAD_COLUMNS: readonly ListColumn<DeadRow>[] = [
   {
     field: 'party',
     type: 'name',
     headerId: 'dead-col-party',
     grow: true,
-    value: (row, { language }) => personName(row, language),
+    value: (row, { language }) => displayName(row, language),
   },
   {
     field: 'code',

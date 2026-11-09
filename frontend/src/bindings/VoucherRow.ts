@@ -3,7 +3,6 @@ import type { Paisa } from '../shared/format/money';
 import type { EditStamp } from './EditStamp';
 import type { LockedReason } from './LockedReason';
 import type { RecordRef } from './RecordRef';
-import type { SavedPukhta } from './SavedPukhta';
 import type { VoucherMode } from './VoucherMode';
 import type { VoucherType } from './VoucherType';
 
@@ -67,10 +66,6 @@ export type VoucherRow = {
    * The `version` of the row, to send back with an edit or a cancel.
    */
   version: number;
-  /**
-   * The one-time person, for a voucher on a پختہ کھاتہ account.
-   */
-  person: SavedPukhta | null;
   /**
    * The collector of a وصولی (a staff member), if any.
    */

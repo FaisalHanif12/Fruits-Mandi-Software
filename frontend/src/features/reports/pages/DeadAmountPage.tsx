@@ -121,16 +121,7 @@ export function DeadAmountPage() {
     [open],
   );
   const makeActive = (row: DeadRow) => {
-    actions?.undo({
-      markId: row.mark_id,
-      names:
-        row.pukhta_person_key === null
-          ? row
-          : {
-              name_ur: row.pukhta_name_ur ?? row.name_ur,
-              name_en: row.pukhta_name_en ?? row.name_en,
-            },
-    });
+    actions?.undo({ markId: row.mark_id, names: row });
   };
 
   // The totals row is the backend's, over every move of the filter and not over the rows loaded.

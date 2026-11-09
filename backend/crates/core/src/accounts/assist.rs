@@ -13,16 +13,15 @@ use crate::money::Paisa;
 #[serde(rename_all = "snake_case")]
 pub enum AccountScope {
     /// A seller field (control 03011). A short code is the running number of a seller's code
-    /// (`0` finds `0010`), and of a پختہ بیوپاری's code (`2` finds `0032`, plan 47). The اپنا مال
-    /// account is not offered here (PRD FR-12.26).
+    /// (`0` finds `0010`). The اپنا مال account is not offered here (PRD FR-12.26).
     Seller,
     /// The seller field of a lot: the same as `seller`, and also the اپنا مال account (030119998),
     /// which is offered only here (PRD FR-12.26, FR-10.4). Picking it asks for a purchase.
     LotSeller,
-    /// A buyer field (control 0304), including نقدی منڈی and پختہ کھاتہ. A short code is the running
-    /// number of a buyer's code (`1` finds `0021`), and of a پختہ گاہک's code (`2` finds `0032`, plan
-    /// 47). When a buyer and a پختہ گاہک have the same running number, `resolve_code` answers
-    /// `several` with both.
+    /// A buyer field (control 0304), including نقدی منڈی and the چکتا buyers (each hit marked with
+    /// `kind` `chukta`, PRD FR-7.29, FR-13.4). The account چکتا کھاتہ itself is never offered. A short
+    /// code is the running number of a buyer's code (`1` finds `0021`); a چکتا buyer has no short
+    /// code.
     Buyer,
     /// A field that takes any account. A short code lists the seller and the buyer with that
     /// running number, each with its type (PRD 1.8 R5): `1` lists `0011` and `0021`.
@@ -57,6 +56,12 @@ pub struct SearchAccountsInput {
     #[serde(default)]
     #[ts(optional)]
     pub include_dead: Option<bool>,
+    /// True only in the buyer field of a بکری line: scope `buyer` then lists the چکتا buyers beside the
+    /// buyers (PRD FR-7.29, decision C4 of plan 60). Missing or false leaves them out, so every other
+    /// buyer picker, filter and list pages exactly as before.
+    #[serde(default)]
+    #[ts(optional)]
+    pub with_chukta: Option<bool>,
 }
 
 /// The last accounts used in a field, then the rest (`Alt+Down`, PRD FR-7.41).
@@ -72,6 +77,10 @@ pub struct AccountsRecentInput {
     #[serde(default)]
     #[ts(optional)]
     pub include_dead: Option<bool>,
+    /// As on `SearchAccountsInput`: true only in the buyer field of a بکری line.
+    #[serde(default)]
+    #[ts(optional)]
+    pub with_chukta: Option<bool>,
 }
 
 /// Tell the app that an account was chosen in a field, so it comes first next time (PRD
@@ -87,6 +96,16 @@ pub struct AccountsTouchInput {
     /// The account chosen.
     #[ts(type = "number")]
     pub id: i64,
+}
+
+/// What a picker hit is: an account, or a چکتا buyer (plan 64, PRD FR-7.29).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum HitKind {
+    /// An account of the books.
+    Account,
+    /// A چکتا buyer: a walk-in buyer who pays the whole bill on the spot.
+    Chukta,
 }
 
 /// One account a picker offers (PRD FR-7.40). The balance is not here: it is read from the
@@ -110,14 +129,17 @@ pub struct AccountHit {
     pub extra_ur: String,
     /// Second line in English.
     pub extra_en: String,
-    /// The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک". For a پختہ party
-    /// this is his side.
+    /// The kind of account, so a list of seller and buyer shows "بیوپاری" or "گاہک".
     pub account_type: AccountType,
-    /// True for a پختہ party's own account (plan 47, PRD FR-13.11): the picker row marks it "پختہ" next
-    /// to his side. Left out of the JSON when false; the TypeScript field is optional.
-    #[serde(default, skip_serializing_if = "super::is_false")]
-    #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
+    /// `account` for a normal account; `chukta` for a چکتا buyer (plan 64, PRD FR-7.29): the row is
+    /// marked "چکتا". A `chukta` hit has the id of the account چکتا کھاتہ (`0030`) in `id`, which a
+    /// sale line takes as its `buyer_account_id`, and his own record in `chukta_id`.
+    pub kind: HitKind,
+    /// The record of a چکتا buyer in `chukta_buyers`. Null for an account.
+    #[ts(type = "number | null")]
+    pub chukta_id: Option<i64>,
+    /// His phone, for a `chukta` hit that has one, so the line can carry it. Null otherwise.
+    pub phone: Option<String>,
     /// The control it is under.
     #[ts(type = "number")]
     pub control_id: i64,
@@ -152,9 +174,7 @@ pub enum ResolveStatus {
     /// Exactly one active account. It is in `account`.
     Found,
     /// More than one active account has this running number: in a field that takes any account, a
-    /// seller and a buyer (and a پختہ party); in a buyer or seller field (plan 47), the buyer and the
-    /// پختہ گاہک (or the seller and the پختہ بیوپاری) with it. They are in `candidates`, the ordinary
-    /// account first, then the پختہ party, so the user picks.
+    /// seller and a buyer. They are in `candidates`, so the user picks.
     Several,
     /// No account has this code. `suggested_code` is the full code an `F4` add would use, if
     /// the field has one series.
@@ -162,7 +182,7 @@ pub enum ResolveStatus {
     /// Only for the field of one control (other accounts keep the control code plus a 4-digit
     /// serial): the serial belongs to the system (0000 and 9000 to 9999), so such a code cannot
     /// be added (PRD FR-10.3). Never returned for sellers and buyers from plan 32: every running
-    /// number from 0 is a normal short code, and the two پختہ کھاتہ accounts have no short code.
+    /// number from 0 is a normal short code, and the چکتا کھاتہ accounts have no short code.
     Reserved,
     /// The account exists but is hidden from pickers; a new posting cannot use it. It is in
     /// `account`.
@@ -206,6 +226,11 @@ pub struct PartyCardInput {
     /// The account.
     #[ts(type = "number")]
     pub account_id: i64,
+    /// A چکتا buyer (plan 64): with the account چکتا کھاتہ in `account_id` the card is his own, his
+    /// name and phone with no balance (PRD FR-7.38). Missing means none.
+    #[serde(default)]
+    #[ts(type = "number | null", optional)]
+    pub chukta_id: Option<i64>,
 }
 
 /// Why a card shows a warning. The screen shows a word as well as a colour (NFR-USE-12).
@@ -240,13 +265,14 @@ pub struct PartyCard {
     pub id: i64,
     /// The full code.
     pub code: String,
-    /// The kind of account. For a پختہ party this is his side.
+    /// The kind of account.
     pub account_type: AccountType,
-    /// True for a پختہ party's own account (plan 47): the card shows "پختہ" next to his side. Left out
-    /// when false; the TypeScript field is optional.
+    /// True for a چکتا buyer's card (PRD FR-7.38, v1.32): only his name and phone, no balance, and
+    /// the screen adds the words "چکتا: پورا نقد". Left out when false; the TypeScript field is
+    /// optional.
     #[serde(default, skip_serializing_if = "super::is_false")]
     #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
+    pub is_chukta: bool,
     /// Urdu name.
     pub name_ur: String,
     /// English name.

@@ -288,7 +288,7 @@ fn row_json(row: &RuleRow) -> Value {
 }
 
 /// A party must be on the rule's side (PRD 11.3): a seller on the seller side, a buyer on the
-/// buyer side. The پختہ کھاتہ accounts count (PRD FR-11.7). A separate khata can be the party of a
+/// buyer side. The چکتا کھاتہ accounts count (PRD FR-11.7). A separate khata can be the party of a
 /// seller-side rule, because it can be the seller of a lot (PRD FR-16.7).
 fn check_party(conn: &Connection, side: ChargeSide, account_id: i64) -> Result<(), ServiceError> {
     let facts = account_repo::facts(conn, account_id)?

@@ -9,7 +9,7 @@ import { isFromStep, type LayoutStep } from '../../shared/hooks';
 import { displayName, otherScriptName } from '../../shared/i18n';
 import type { ListColumn } from '../../shared/grid';
 import { sideMessageId } from '../../shared/ui';
-import { typeMessageId, type AccountRow } from '../../shared/accounts';
+import type { AccountRow } from '../../shared/accounts';
 
 export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
   {
@@ -26,14 +26,10 @@ export const ACCOUNT_COLUMNS: readonly ListColumn<AccountRow>[] = [
     sortKey: (language) => (language === 'ur' ? 'name_ur' : 'name_en'),
     grow: true,
     // An inactive account is dimmed and says so in words, because colour is never the only signal
-    // (NFR-USE-12). The word comes with the name, so it takes no column of its own. A پختہ party's
-    // own account says his kind the same way, with his side (plan 47, PRD FR-10.5, FR-13.11): the
-    // list has no room for a column of its own (list-widths.test.ts).
+    // (NFR-USE-12). The word comes with the name, so it takes no column of its own: the list has
+    // no room for one (list-widths.test.ts).
     value: (row, { language, text }) => {
-      const named =
-        row.is_pukhta_party === true
-          ? `${displayName(row, language)} (${text(typeMessageId(row.account_type, true))})`
-          : displayName(row, language);
+      const named = displayName(row, language);
       return row.is_active ? named : `${named} (${text('masters-status-inactive')})`;
     },
   },

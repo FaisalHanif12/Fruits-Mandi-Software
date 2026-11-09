@@ -166,8 +166,6 @@ pub struct PartyHit {
     pub name_en: String,
     /// The tag after the name, if any.
     pub tag: Option<String>,
-    /// True for a پختہ کھاتہ party.
-    pub pukhta: bool,
 }
 
 /// An item found in the books.

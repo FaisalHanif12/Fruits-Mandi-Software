@@ -12,7 +12,6 @@ import { OWN_STOCK_COLUMNS } from '../../src/features/bikri/own-stock-columns';
 import { STOCK_COLUMNS } from '../../src/features/bikri/stock-columns';
 import { TRIP_PURCHASE_COLUMNS } from '../../src/features/purchases/list-columns';
 import { ENTRY_COLUMNS, TRIP_COLUMNS } from '../../src/features/trips/list-columns';
-import { PUKHTA_COLUMNS, pukhtaColumns } from '../../src/features/pukhta_khata/columns';
 import { VOUCHER_COLUMNS } from '../../src/features/vouchers/list-columns';
 import { RULE_COLUMNS } from '../../src/features/rules/columns';
 import type { ListColumn } from '../../src/shared/grid';
@@ -78,14 +77,11 @@ describe('lists fit the content area', () => {
   });
 
   // The بکری area has its 200 px side menu beside the screen (design system 6), which the lists of
-  // انڈکس do not (plan 13): the lists of بکری and of the پختہ کھاتہ accounts have that much less.
+  // انڈکس do not (plan 13): the list of بکری has that much less.
   describe('lists beside the side menu of the بکری area', () => {
     const SIDE_MENU = 200;
     it.each(STEPS)('list of بکری at the %s step', (step) => {
       expect(leastWidth(BIKRI_LIST_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
-    });
-    it.each(STEPS)('register of the پختہ کھاتہ accounts at the %s step', (step) => {
-      expect(leastWidth(PUKHTA_COLUMNS, step)).toBeLessThanOrEqual(ROOM[step] - SIDE_MENU);
     });
 
     it.each(STEPS)('list of goods left (باقی مال) at the %s step', (step) => {
@@ -107,22 +103,16 @@ describe('lists fit the content area', () => {
         ROOM[step] - SIDE_MENU,
       );
     });
-    it.each(STEPS)('register with More columns at the %s step', (step) => {
-      expect(leastWidth(pukhtaColumns(step, true), step)).toBeLessThanOrEqual(
-        ROOM[step] - SIDE_MENU,
-      );
-    });
 
     it('the نگ column is in neither list without the tick, at any step', () => {
       for (const step of STEPS) {
         expect(bikriListColumns(step, false).map((column) => column.field)).not.toContain('qty');
-        expect(pukhtaColumns(step, false).map((column) => column.field)).not.toContain('qty');
       }
     });
 
-    it('with the tick the نگ column is shown at every step, in both lists', () => {
+    it('with the tick the نگ column is shown at every step', () => {
       for (const step of STEPS) {
-        for (const columns of [bikriListColumns(step, true), pukhtaColumns(step, true)]) {
+        for (const columns of [bikriListColumns(step, true)]) {
           const shown = columns
             .filter((column) => isFromStep(step, column.from ?? 'compact'))
             .map((column) => column.field);

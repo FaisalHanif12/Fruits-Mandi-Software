@@ -39,7 +39,7 @@ struct Account {
     name_ur: &'static str,
     name_en: &'static str,
     party_type: &'static str,
-    is_pukhta_khata: bool,
+    is_shared_khata: bool,
     credit_allowed: bool,
 }
 
@@ -175,7 +175,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "روکڑ",
         name_en: "Cash in Hand",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -184,7 +184,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "بینک",
         name_en: "Bank",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -193,7 +193,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "مزدوری کھاتہ",
         name_en: "Labour Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -202,7 +202,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کرایہ کھاتہ",
         name_en: "Freight Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -211,7 +211,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کرایہ سٹور کھاتہ",
         name_en: "Store Rent Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -220,16 +220,18 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "منشیانہ کھاتہ",
         name_en: "Munshiana Payable",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
+    // The two shared accounts as migration 1 made them. Migration 20 (plan 64) gives 0030 its new
+    // name چکتا کھاتہ and closes 0031 as the old closed account; this seed is history and stays.
     Account {
         control_code: "03011",
         serial: 9999,
         name_ur: "پختہ کھاتہ (بیوپاری)",
         name_en: "Pukhta Khata (Seller)",
         party_type: "seller",
-        is_pukhta_khata: true,
+        is_shared_khata: true,
         credit_allowed: true,
     },
     // The cash buyer with no name always pays at once (PRD 12.4).
@@ -239,7 +241,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "نقدی منڈی",
         name_en: "Naqdi Mandi (Cash Buyer)",
         party_type: "buyer",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: false,
     },
     Account {
@@ -248,7 +250,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "پختہ کھاتہ (خریدار)",
         name_en: "Pukhta Khata (Buyer)",
         party_type: "buyer",
-        is_pukhta_khata: true,
+        is_shared_khata: true,
         credit_allowed: true,
     },
     Account {
@@ -257,7 +259,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کمیشن آمدن (بیوپاری)",
         name_en: "Commission Income (Seller)",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -266,7 +268,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "کمیشن آمدن (گاہک)",
         name_en: "Commission Income (Buyer)",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -275,7 +277,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "لاگا آمدن",
         name_en: "Laga Income",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -284,7 +286,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "فون آمدن",
         name_en: "Phone Charge Income",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -293,7 +295,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ریٹ فرق",
         name_en: "Rate Difference",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -302,7 +304,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ابتدائی سرمایہ",
         name_en: "Opening Capital",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
     Account {
@@ -311,7 +313,7 @@ const ACCOUNTS: [Account; 16] = [
         name_ur: "ابتدائی فرق",
         name_en: "Opening Difference",
         party_type: "other",
-        is_pukhta_khata: false,
+        is_shared_khata: false,
         credit_allowed: true,
     },
 ];
@@ -323,6 +325,7 @@ const ACCOUNTS: [Account; 16] = [
 /// # Errors
 /// Any SQLite error, for example a UNIQUE clash with a hand-made account of the same code.
 pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
+    let khata = khata_column(conn)?;
     let mut added = 0;
     for head in &HEADS {
         added += conn.execute(
@@ -349,15 +352,17 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
         // PRD FR-10.2: the code is the control code plus the 4-digit serial.
         let code = format!("{}{:04}", account.control_code, account.serial);
         added += conn.execute(
-            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
-                 search_ur, search_en, search_phonetic, is_system, is_pukhta_khata, credit_allowed)
-             SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
-             FROM account_controls WHERE code = ?1
-               -- Migration 7 renumbers the two پختہ کھاتہ accounts (0030, 0031), so a second run must
-               -- find them by what they are, not by their old code (plan 32).
-               AND NOT (?10 = 1 AND EXISTS (SELECT 1 FROM accounts x
-                                            WHERE x.is_pukhta_khata = 1 AND x.party_type = ?4))
-             ON CONFLICT(code) DO NOTHING",
+            &format!(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
+                     search_ur, search_en, search_phonetic, is_system, {khata}, credit_allowed)
+                 SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
+                 FROM account_controls WHERE code = ?1
+                   -- Migration 7 renumbers the two shared accounts (0030, 0031), so a second run must
+                   -- find them by what they are, not by their old code (plan 32).
+                   AND NOT (?10 = 1 AND EXISTS (SELECT 1 FROM accounts x
+                                                WHERE x.{khata} = 1 AND x.party_type = ?4))
+                 ON CONFLICT(code) DO NOTHING"
+            ),
             params![
                 account.control_code,
                 code,
@@ -368,7 +373,7 @@ pub fn system_accounts(conn: &Connection) -> rusqlite::Result<usize> {
                 text::search_ur(account.name_ur),
                 text::search_en(account.name_en),
                 text::search_phonetic(account.name_en),
-                account.is_pukhta_khata,
+                account.is_shared_khata,
                 account.credit_allowed,
             ],
         )?;
@@ -413,7 +418,7 @@ const TRIP_ACCOUNTS: [Account; 1] = [Account {
     name_ur: "اپنا مال",
     name_en: "Own Goods (Trips)",
     party_type: "seller",
-    is_pukhta_khata: false,
+    is_shared_khata: false,
     credit_allowed: true,
 }];
 
@@ -443,17 +448,37 @@ fn insert_controls(conn: &Connection, controls: &[Control]) -> rusqlite::Result<
     Ok(added)
 }
 
+/// The name of the column that marks the shared accounts: `is_pukhta_khata` in the schema of
+/// migrations 1 to 19, `is_chukta_khata` from migration 20 (plan 64). Migration 1 and migration 6 run
+/// this seed on the old schema; a second run on the latest schema must change nothing, so the seed
+/// reads the name from the table. The two words are constants, never typed input (Code Standards B14).
+fn khata_column(conn: &Connection) -> rusqlite::Result<&'static str> {
+    let renamed: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('accounts') WHERE name = 'is_chukta_khata'",
+        [],
+        |r| r.get(0),
+    )?;
+    Ok(if renamed == 1 {
+        "is_chukta_khata"
+    } else {
+        "is_pukhta_khata"
+    })
+}
+
 fn insert_accounts(conn: &Connection, accounts: &[Account]) -> rusqlite::Result<usize> {
+    let khata = khata_column(conn)?;
     let mut added = 0;
     for account in accounts {
         // PRD FR-10.2: the code is the control code plus the 4-digit serial.
         let code = format!("{}{:04}", account.control_code, account.serial);
         added += conn.execute(
-            "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
-                 search_ur, search_en, search_phonetic, is_system, is_pukhta_khata, credit_allowed)
-             SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
-             FROM account_controls WHERE code = ?1
-             ON CONFLICT(code) DO NOTHING",
+            &format!(
+                "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en,
+                     search_ur, search_en, search_phonetic, is_system, {khata}, credit_allowed)
+                 SELECT id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11
+                 FROM account_controls WHERE code = ?1
+                 ON CONFLICT(code) DO NOTHING"
+            ),
             params![
                 account.control_code,
                 code,
@@ -464,7 +489,7 @@ fn insert_accounts(conn: &Connection, accounts: &[Account]) -> rusqlite::Result<
                 text::search_ur(account.name_ur),
                 text::search_en(account.name_en),
                 text::search_phonetic(account.name_en),
-                account.is_pukhta_khata,
+                account.is_shared_khata,
                 account.credit_allowed,
             ],
         )?;

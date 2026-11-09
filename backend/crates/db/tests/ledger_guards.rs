@@ -446,13 +446,13 @@ fn an_advance_matching_row_never_passes_the_advance() {
 #[test]
 fn a_person_key_must_match_on_both_lines() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "0030");
+    let chukta = common::account_id(&conn, "0030");
     let entry_a = draft_entry(&conn, 100_000);
     let entry_b = draft_entry(&conn, 100_000);
     let make = |entry: i64, dr: i64, cr: i64, key: &str| {
         conn.execute(
-            "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
-            params![entry, pukhta, key, dr, cr],
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
+            params![entry, chukta, key, dr, cr],
         )
         .unwrap();
         conn.last_insert_rowid()
@@ -466,8 +466,8 @@ fn a_person_key_must_match_on_both_lines() {
     };
     let alloc = |bill: i64, pay: i64, key: &str| {
         conn.execute(
-            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, pukhta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, 100000)",
-            params![bill, pay, pukhta, key],
+            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, chukta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, 100000)",
+            params![bill, pay, chukta, key],
         )
     };
     assert!(alloc(shahid_bill, nasir_pay, "shahid|03000000000").is_err());
@@ -485,8 +485,8 @@ fn mirror(conn: &Connection, original: i64) -> i64 {
     .unwrap();
     let reversal = conn.last_insert_rowid();
     conn.execute(
-        "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa)
-         SELECT ?1, line_no, account_id, pukhta_person_key, cr_paisa, dr_paisa FROM journal_lines WHERE entry_id = ?2",
+        "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa)
+         SELECT ?1, line_no, account_id, chukta_person_key, cr_paisa, dr_paisa FROM journal_lines WHERE entry_id = ?2",
         params![reversal, original],
     )
     .unwrap();
@@ -534,9 +534,9 @@ fn a_reversal_must_mirror_a_posted_entry() {
 #[test]
 fn a_reversal_must_mirror_the_person_key_too() {
     let (_dir, conn) = setup();
-    let pukhta = common::account_id(&conn, "0030");
+    let chukta = common::account_id(&conn, "0030");
     let cash = common::account_id(&conn, "01010001");
-    // Shahid, a one-time buyer, owes 1,000 (PRD E2E-21).
+    // Shahid, a چکتا buyer, owes 1,000 (PRD E2E-21).
     let entry_with = |reverses: Option<i64>, key: &str, first_debit: bool| {
         conn.execute(
             "INSERT INTO journal_entries (entry_date, posting_type, source_type, source_id, reverses_entry_id, total_paisa)
@@ -551,8 +551,8 @@ fn a_reversal_must_mirror_the_person_key_too() {
             (0, 100_000)
         };
         conn.execute(
-            "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
-            params![id, pukhta, key, dr, cr],
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa) VALUES (?1, 1, ?2, ?3, ?4, ?5)",
+            params![id, chukta, key, dr, cr],
         )
         .unwrap();
         conn.execute(

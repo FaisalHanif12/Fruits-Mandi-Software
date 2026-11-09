@@ -328,8 +328,8 @@ fn the_partner_money_fixtures_are_the_real_answers() {
     // جنرل: a correction between a buyer and a seller; one that does not balance.
     let cash_id = support::id_of(&w.env, "01010001");
     let ok_lines = json!([
-        { "account_id": w.akram, "person_key": null, "dr": "1,000", "cr": "", "narration": "fix" },
-        { "account_id": w.rahim, "person_key": null, "dr": "", "cr": "1,000", "narration": null }
+        { "account_id": w.akram, "dr": "1,000", "cr": "", "narration": "fix" },
+        { "account_id": w.rahim, "dr": "", "cr": "1,000", "narration": null }
     ]);
     let preview_ok = json!({ "date": "11-10-2026", "lines": ok_lines });
     pair(
@@ -338,8 +338,8 @@ fn the_partner_money_fixtures_are_the_real_answers() {
         &vouchers::general_preview(&w.env.ctx, &typed::<GeneralPreviewInput>(&preview_ok)).unwrap(),
     );
     let preview_bad = json!({ "date": null, "lines": [
-        { "account_id": w.akram, "person_key": null, "dr": "1,000", "cr": "", "narration": null },
-        { "account_id": cash_id, "person_key": null, "dr": "", "cr": "900", "narration": null }
+        { "account_id": w.akram, "dr": "1,000", "cr": "", "narration": null },
+        { "account_id": cash_id, "dr": "", "cr": "900", "narration": null }
     ] });
     pair(
         "general_preview_unbalanced",

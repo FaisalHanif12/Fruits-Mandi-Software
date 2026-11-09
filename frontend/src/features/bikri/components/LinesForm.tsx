@@ -36,7 +36,9 @@ import {
   useErrorText,
   InfoHint,
 } from '../../../shared/ui';
+import { cardChuktaOf } from '../../../shared/accounts';
 import { useBikriDraft } from '../draft-store';
+import { useEditorCard } from '../hooks/useEditorCard';
 import { buildGridViews } from '../grid-views';
 import { useBikriPreview, type PreviewSource } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
@@ -231,14 +233,17 @@ export function LinesForm<R extends { number: number }>({
         grouping,
         say,
         words: (problem) => errorText(problem.item),
+        current: preview !== undefined && !stale,
       }),
-    [preview, problems, lotKey, salesRows, grouping, say, errorText],
+    [preview, problems, lotKey, salesRows, grouping, say, errorText, stale],
   );
 
   // The party card follows the line the cursor is on.
-  const [editorCard, setEditorCard] = useState<number | null>(null);
+  const [editorCard, setEditorCard] = useEditorCard();
   const focusedLine = salesRows.find((row) => row.rowId === salesFocus?.rowId);
-  const cardAccount = editorCard ?? focusedLine?.picked?.[SALE.buyer]?.id ?? null;
+  const focusedBuyer = focusedLine?.picked?.[SALE.buyer];
+  const cardAccount = editorCard?.accountId ?? focusedBuyer?.id ?? null;
+  const cardChukta = editorCard === null ? cardChuktaOf(focusedBuyer) : editorCard.chukta;
 
   const lotPreview = preview?.lots.find((lot) => lot.key === lotKey) ?? preview?.lots[0];
   const usesWeight =
@@ -351,7 +356,7 @@ export function LinesForm<R extends { number: number }>({
           {below?.(lotPreview?.totals ?? null)}
         </div>
         <div className="flex min-w-0 flex-col gap-3">
-          <PartyCard accountId={cardAccount} />
+          <PartyCard accountId={cardAccount} chukta={cardChukta} />
           {numbersBody}
         </div>
       </div>

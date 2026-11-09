@@ -8,9 +8,6 @@ use crate::money::Paisa;
 use crate::paging::SortInput;
 
 /// The four kinds of account a user can make (PRD 10.2 "قسم کھاتہ"). This is the SIDE of a party.
-/// A پختہ کھاتہ گاہک or بیوپاری (plan 47, PRD FR-13.11, v1.15) is a `buyer` or a `seller` with the flag
-/// `is_pukhta_party`; he is a full account of his side, so everything that works on a buyer or a
-/// seller works on him.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountType {
@@ -57,34 +54,11 @@ impl AccountType {
     }
 }
 
-/// Serde helper: leave a `false` flag out of the JSON, so a flag that was added later (like
-/// `is_pukhta_party`) does not change any existing answer. The TypeScript field is optional and a
-/// missing field means `false` (the same way a missing `tag` means no tag).
+/// Serde helper: leave a `false` flag out of the JSON, so a flag that was added later does not change
+/// any existing answer. The TypeScript field is optional and a missing field means `false` (the same
+/// way a missing `tag` means no tag).
 pub fn is_false(value: &bool) -> bool {
     !*value
-}
-
-/// The code type of an account of this kind: for a پختہ party (plan 47, PRD FR-13.11) the پختہ series
-/// `003`, whatever his side; else the code type of the kind. `None` for kinds that keep the control
-/// code plus a 4-digit serial.
-///
-/// ```
-/// use mandi_core::accounts::{AccountType, code_type_for};
-/// use mandi_core::codes::CodeType;
-/// assert_eq!(code_type_for(AccountType::Buyer, false), Some(CodeType::Buyer));
-/// assert_eq!(code_type_for(AccountType::Buyer, true), Some(CodeType::Pukhta));
-/// assert_eq!(code_type_for(AccountType::Seller, true), Some(CodeType::Pukhta));
-/// assert_eq!(code_type_for(AccountType::Other, false), None);
-/// ```
-pub const fn code_type_for(
-    account_type: AccountType,
-    is_pukhta_party: bool,
-) -> Option<crate::codes::CodeType> {
-    if is_pukhta_party && matches!(account_type, AccountType::Seller | AccountType::Buyer) {
-        Some(crate::codes::CodeType::Pukhta)
-    } else {
-        account_type.code_type()
-    }
 }
 
 /// The control of sellers (PRD FR-10.2).
@@ -124,7 +98,7 @@ pub const BANK_ACCOUNT_CODE: &str = "01020001";
 ///   share rows (PRD FR-6.5);
 /// - ابتدائی فرق itself, which is the other side of every opening;
 /// - نقدی منڈی, who pays at once and never holds a balance (PRD FR-12.4);
-/// - the پختہ کھاتہ accounts, which hold many people, each with his own balance (PRD FR-13.5).
+/// - the چکتا کھاتہ accounts, which hold no balance: every line on them is paid in full (PRD FR-13.1).
 ///
 /// ```
 /// use mandi_core::accounts::can_take_opening;
@@ -133,14 +107,14 @@ pub const BANK_ACCOUNT_CODE: &str = "01020001";
 /// assert!(!can_take_opening("04", "0401", "04010001", false)); // income
 /// assert!(!can_take_opening("06", "0601", "06019999", false)); // ابتدائی فرق
 /// assert!(!can_take_opening("03", "0304", "03040000", false)); // نقدی منڈی
-/// assert!(!can_take_opening("03", "0304", "0030", true)); // پختہ کھاتہ
+/// assert!(!can_take_opening("03", "0304", "0030", true)); // چکتا کھاتہ
 /// assert!(!can_take_opening("03", "0306", "0080", false)); // a garden (code 0080, control 0306)
 /// ```
 pub fn can_take_opening(
     head_code: &str,
     control_code: &str,
     code: &str,
-    is_pukhta_khata: bool,
+    is_chukta_khata: bool,
 ) -> bool {
     head_code != INCOME_HEAD
         && head_code != EXPENSE_HEAD
@@ -154,7 +128,7 @@ pub fn can_take_opening(
         // A garden's account has the code of its garden (0080), so it is told by its control.
         && control_code != VENTURE_CONTROL_CODE
         && control_code != GARDEN_CONTROL_CODE
-        && !is_pukhta_khata
+        && !is_chukta_khata
 }
 
 /// Which controls an account of type `other` may go under.
@@ -171,14 +145,14 @@ impl ControlRule {
 
 /// The short code of a seller or buyer account (PRD 1.8 R5): the running number of its code, which
 /// is the code without its 3-digit type number and without padding. `None` for every other account
-/// (other accounts have no short code), and for the two پختہ کھاتہ accounts.
+/// (other accounts have no short code), and for the چکتا کھاتہ accounts.
 ///
 /// ```
 /// use mandi_core::accounts::short_code_of;
 /// assert_eq!(short_code_of("0021").as_deref(), Some("1"));
 /// assert_eq!(short_code_of("00112").as_deref(), Some("12"));
 /// assert_eq!(short_code_of("0010").as_deref(), Some("0"));
-/// assert_eq!(short_code_of("0030"), None); // پختہ کھاتہ
+/// assert_eq!(short_code_of("0030"), None); // چکتا کھاتہ
 /// assert_eq!(short_code_of("01010001"), None); // cash: not a seller or a buyer
 /// ```
 pub fn short_code_of(code: &str) -> Option<String> {
@@ -202,23 +176,14 @@ pub struct AccountInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub version: Option<i64>,
-    /// The kind of account. For a پختہ party this is his side, `seller` or `buyer`.
+    /// The kind of account.
     pub account_type: AccountType,
-    /// True for a پختہ کھاتہ گاہک (`account_type` `buyer`) or بیوپاری (`account_type` `seller`): the
-    /// party's own account in the پختہ series (plan 47, PRD FR-13.11). Missing means false. Only a
-    /// seller or a buyer can be one (`ERR_FORMAT_INVALID` on `is_pukhta_party` otherwise), and it
-    /// cannot be changed on an edit (the same error). The credit box of a پختہ buyer starts unticked
-    /// on the form (cash first, PRD A79); the backend saves what is sent.
-    #[serde(default)]
-    #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
     /// The control, for type `other`. Ignored for the other types.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub control_id: Option<i64>,
     /// The full code. A seller: `001` plus a running number (`0010`, `00110`); a buyer: `002` plus a
-    /// running number; a پختہ party: `003` plus a running number from 2 (`0032`); any other account:
-    /// the control code plus 4 digits. Empty gives the next free code. A code of the wrong type is
+    /// running number; any other account: the control code plus 4 digits. Empty gives the next free code. A code of the wrong type is
     /// `ERR_CODE_INVALID` on `code`; a used one (`0030` and `0031` too) `ERR_CODE_TAKEN`.
     pub code: String,
     /// Urdu name (PRD FR-7.28).
@@ -383,15 +348,8 @@ pub struct AccountRow {
     /// The serial as a number: the running number of a seller's or buyer's code (`0` for `0010`),
     /// the 4-digit serial of every other account.
     pub serial: u32,
-    /// The kind of account (an account under another control is `other`). For a پختہ party this is his
-    /// side, `seller` or `buyer`.
+    /// The kind of account (an account under another control is `other`).
     pub account_type: AccountType,
-    /// True for a پختہ party's own account (plan 47, PRD FR-13.11): a full buyer or seller account
-    /// with a code from `0032`, who is NOT the shared `is_pukhta_khata` account and has no person key.
-    /// Left out of the JSON when false; the TypeScript field is optional and missing means false.
-    #[serde(default, skip_serializing_if = "is_false")]
-    #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
     /// The control it is under.
     pub control: RecordRef,
     /// Urdu name.
@@ -442,9 +400,9 @@ pub struct AccountRow {
     /// False for the accounts that cannot take an opening balance (see `can_take_opening`), so
     /// the openings grid can leave them out.
     pub can_take_opening: bool,
-    /// The shared پختہ کھاتہ account of one-time people, whose person is typed on the line (PRD Section
-    /// 13, accounts `0030` and `0031`). A پختہ party's own account is NOT this: see `is_pukhta_party`.
-    pub is_pukhta_khata: bool,
+    /// The چکتا کھاتہ account of walk-in buyers, whose person is typed on the line (PRD Section 13,
+    /// account `0030`), and the old closed account `0031`.
+    pub is_chukta_khata: bool,
     /// False when hidden from pickers.
     pub is_active: bool,
     /// The note. Empty if none.
@@ -453,26 +411,21 @@ pub struct AccountRow {
     pub balance: Balance,
 }
 
-/// Which accounts the Accounts list shows (plan 32 R6). `all` shows only sellers, buyers, the two
-/// shared پختہ کھاتہ accounts and the پختہ parties' own accounts; cash, bank, payables, income, capital, نقدی منڈی, اپنا مال, money-lent
+/// Which accounts the Accounts list shows (plan 32 R6, PRD FR-10.5 v1.32). `all` shows only sellers
+/// and buyers; cash, bank, payables, income, capital, نقدی منڈی, چکتا کھاتہ, اپنا مال, money-lent
 /// people, khatas and gardens are not in it (the chart of accounts still shows every account, and
 /// so does `every`, for the Opening balances screen).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AccountListKind {
-    /// Sellers, buyers, the two shared پختہ کھاتہ accounts and the پختہ parties' own accounts.
+    /// Sellers and buyers.
     #[default]
     All,
-    /// بیوپاری: the accounts under control 03011 that are not system accounts (not the پختہ کھاتہ
-    /// seller, not اپنا مال) and are not a پختہ party (he is under `pukhta`).
+    /// بیوپاری: the accounts under control 03011 that are not system accounts (not اپنا مال).
     Seller,
-    /// گاہک: the accounts under control 0304 that are not system accounts (not نقدی منڈی, not the
-    /// پختہ کھاتہ buyer) and are not a پختہ party (he is under `pukhta`).
+    /// گاہک: the accounts under control 0304 that are not system accounts (not نقدی منڈی, not چکتا
+    /// کھاتہ).
     Buyer,
-    /// پختہ کھاتہ: the two shared system accounts `0030` (buyer) and `0031` (seller), and the own
-    /// accounts of پختہ parties (`0032` on, buyers and sellers, plan 47, PRD FR-10.5). A row's
-    /// `account_type` and `is_pukhta_party` tell which side he is.
-    Pukhta,
     /// Every account, as the list showed before plan 32 (decision D4): cash, bank, payables, income,
     /// capital, drawings, money-lent people, khatas, gardens and all the others as well. Only the
     /// Index → Opening balances screen asks for it, because cash and the capital accounts take
@@ -555,15 +508,8 @@ pub struct AccountsSetActiveInput {
 /// running number (`0010` for the first seller), never a code used before (plan 32 R2).
 #[derive(Debug, Clone, Deserialize, TS)]
 pub struct AccountsNextCodeInput {
-    /// The kind. For a پختہ party this is his side, `seller` or `buyer`.
+    /// The kind.
     pub account_type: AccountType,
-    /// True for a پختہ کھاتہ گاہک or بیوپاری (plan 47): the next code is then the next running number of
-    /// the پختہ series `003`, from `0032`, whatever his side; never `0030` or `0031`, never a code used
-    /// before. Missing means false. `ERR_FORMAT_INVALID` on `is_pukhta_party` for a kind that is not a
-    /// seller or a buyer.
-    #[serde(default)]
-    #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
     /// The control, for type `other`.
     #[serde(default)]
     #[ts(type = "number | null")]
@@ -617,10 +563,6 @@ pub struct SimilarAccount {
     pub phone1: String,
     /// The kind of account.
     pub account_type: AccountType,
-    /// True for a پختہ party's own account (plan 47). Left out when false.
-    #[serde(default, skip_serializing_if = "is_false")]
-    #[ts(optional = nullable)]
-    pub is_pukhta_party: bool,
     /// True when its name, its tag and its phone all equal what was typed: the duplicate warning
     /// of PRD FR-10.7. The same name and phone with another tag is not a duplicate (PRD E38).
     pub is_duplicate: bool,

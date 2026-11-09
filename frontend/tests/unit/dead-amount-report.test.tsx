@@ -27,7 +27,7 @@ import {
   ARSHAD_ROW,
   PAGE_ARSHAD,
   PAGE_BOTH,
-  SHAHID_ROW,
+  NASIR_ROW,
   deadPage,
 } from '../helpers/dead';
 import { PAGE_ROWS } from '../helpers/pager';
@@ -116,7 +116,7 @@ describe.each(LANGUAGES)('R38, the dead amount (%s)', (language: Language) => {
     expect(pinned('still_owed')).toBe('14,684');
   });
 
-  it('the filter "all" also lists a person fully recovered, a one-time person by the name on his lines', async () => {
+  it('the filter "all" also lists a person who has fully recovered', async () => {
     vi.mocked(reportsApi.reportsDeadAmount).mockImplementation((input) =>
       Promise.resolve(input.filter === 'all' ? PAGE_BOTH : PAGE_ARSHAD),
     );
@@ -129,7 +129,7 @@ describe.each(LANGUAGES)('R38, the dead amount (%s)', (language: Language) => {
     await user.click(await screen.findByRole('combobox', { name: named(m('dead-report-filter')) }));
     await user.click(await screen.findByRole('option', { name: named(m('dead-filter-all')) }));
     await waitFor(() => {
-      expect(cell(2, 'party')).toBe(language === 'ur' ? 'شاہد' : 'Shahid');
+      expect(cell(2, 'party')).toBe(language === 'ur' ? 'ناصر' : 'Nasir');
     }, SLOW_MS);
     expect(cell(2, 'status')).toBe(m('dead-status-recovered'));
     expect(cell(2, 'still_owed')).toBe('0');
@@ -360,12 +360,11 @@ describe.each(LANGUAGES)('the columns of R38 (%s)', (language: Language) => {
     expect(value('reason', ARSHAD_ROW)).toBe(message(language, 'dead-reason-died'));
     expect(value('last_recovery', ARSHAD_ROW)).toBe('12-10-2026');
     expect(value('status', ARSHAD_ROW)).toBe(message(language, 'dead-status-owing'));
-    expect(value('type', SHAHID_ROW)).toBe(message(language, 'dead-type-pukhta'));
-    expect(value('status', SHAHID_ROW)).toBe(message(language, 'dead-status-recovered'));
+    expect(value('status', NASIR_ROW)).toBe(message(language, 'dead-status-recovered'));
   });
 
-  it('a one-time person is named by the name saved on his lines, not by the shared account', () => {
-    expect(value('party', SHAHID_ROW)).toBe(language === 'ur' ? 'شاہد' : 'Shahid');
+  it('names a person by his account in the app language', () => {
+    expect(value('party', NASIR_ROW)).toBe(language === 'ur' ? 'ناصر' : 'Nasir');
     expect(value('party', ARSHAD_ROW)).toBe(language === 'ur' ? 'ارشد ملتانی' : 'Arshad Multani');
   });
 

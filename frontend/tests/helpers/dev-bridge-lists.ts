@@ -88,31 +88,8 @@ function accounts(count: number) {
   });
 }
 
-/**
- * The two shared پختہ کھاتہ accounts and two parties' own accounts in the پختہ series (plan 47): a
- * buyer from 0032 and a seller from 0033, so the list, its filter and the name cell can be seen.
- */
-function pukhtaAccounts() {
-  const shared = { is_system: true, is_pukhta_khata: true, can_take_opening: false };
-  return [
-    account(9, 'buyer', '0030', 'پختہ کھاتہ (خریدار)', 'Pukhta Khata (Buyer)', shared),
-    account(7, 'seller', '0031', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)', shared),
-    account(32, 'buyer', '0032', 'نذیر', 'Nazir', {
-      is_pukhta_party: true,
-      credit_allowed: false,
-      phone1: '03001111111',
-      opening_date: '2026-09-01',
-    }),
-    account(33, 'seller', '0033', 'کمال', 'Kamal', {
-      is_pukhta_party: true,
-      phone1: '03002222222',
-      opening_date: '2026-09-01',
-    }),
-  ];
-}
-
 function allAccounts() {
-  return flag('empty') ? [] : [...accounts(flag('many') ? MANY : 9), ...pukhtaAccounts()];
+  return flag('empty') ? [] : accounts(flag('many') ? MANY : 9);
 }
 
 const CITIES = Array.from({ length: MANY }, (_, index) => ({
@@ -337,9 +314,7 @@ export const listsHandlers: Record<string, Handler> = {
         (filter.kind === undefined ||
           filter.kind === 'all' ||
           filter.kind === 'every' ||
-          (filter.kind === 'pukhta'
-            ? row.is_pukhta_khata || row.is_pukhta_party === true
-            : row.account_type === filter.kind && row.is_pukhta_party !== true)) &&
+          row.account_type === filter.kind) &&
         (text === '' ||
           row.name_en.toLowerCase().includes(text) ||
           row.name_ur.includes(text) ||

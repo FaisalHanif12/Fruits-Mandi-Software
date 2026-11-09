@@ -22,7 +22,6 @@ mod posting_type;
 mod preview;
 mod reads;
 mod receipt;
-mod regular;
 
 use mandi_db::vouchers as repo;
 use mandi_domain::core::dates::BusinessDate;
@@ -48,7 +47,6 @@ pub use payment::save_payment;
 pub use preview::preview;
 pub use reads::{advances_report, collection_list, open_bills, open_payables};
 pub use receipt::{save_receipt, save_receipts_batch};
-pub use regular::make_regular;
 
 use crate::context::Context;
 use crate::day;
@@ -94,7 +92,6 @@ pub fn list(ctx: &Context, input: &VouchersListInput) -> Result<VouchersList, Se
         from: from.as_deref(),
         to: to.as_deref(),
         account_id: input.account_id,
-        person_key: input.person_key.as_deref(),
         search: input.search.as_deref(),
         order_by: order_by.as_deref(),
         hide_cancelled: !input.show_finished,

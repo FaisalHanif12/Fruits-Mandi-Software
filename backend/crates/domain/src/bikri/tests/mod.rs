@@ -35,15 +35,10 @@ pub const KARIM: i64 = 2;
 pub const AKRAM: i64 = 3;
 pub const ARSHAD: i64 = 4;
 pub const NAQDI: i64 = 5;
-pub const PUKHTA_BUYER: i64 = 6;
-pub const PUKHTA_SELLER: i64 = 7;
+pub const CHUKTA_BUYER: i64 = 6;
 pub const OWN_GOODS: i64 = 8;
 pub const CASH_ONLY_BUYER: i64 = 9;
 pub const KHATA: i64 = 10;
-/// A پختہ party's own accounts (plan 47): a seller, a buyer with credit off, a buyer with credit on.
-pub const PARTY_SELLER: i64 = 11;
-pub const PARTY_BUYER: i64 = 12;
-pub const PARTY_BUYER_CREDIT: i64 = 13;
 pub const BANANA: i64 = 1;
 pub const APPLE: i64 = 2;
 pub const MOOLI: i64 = 3;
@@ -94,9 +89,7 @@ pub fn default_rules() -> Vec<Rule> {
 fn account(kind: PartyKind) -> AccountFacts {
     AccountFacts {
         kind,
-        is_pukhta: false,
-        is_pukhta_party: false,
-        advance_available: Paisa::ZERO,
+        is_chukta: false,
         is_naqdi_mandi: false,
         is_own_goods: false,
         garden_closed: false,
@@ -123,17 +116,10 @@ pub fn lookups() -> Lookups {
             },
         ),
         (
-            PUKHTA_BUYER,
+            CHUKTA_BUYER,
             AccountFacts {
-                is_pukhta: true,
+                is_chukta: true,
                 ..buyer()
-            },
-        ),
-        (
-            PUKHTA_SELLER,
-            AccountFacts {
-                is_pukhta: true,
-                ..seller()
             },
         ),
         (
@@ -155,30 +141,6 @@ pub fn lookups() -> Lookups {
             CASH_ONLY_BUYER,
             AccountFacts {
                 credit_allowed: false,
-                ..buyer()
-            },
-        ),
-        // A پختہ party's own account is a full account of his side: no person key, so `is_pukhta`
-        // stays false. A buyer starts cash only (his account form starts with credit off).
-        (
-            PARTY_SELLER,
-            AccountFacts {
-                is_pukhta_party: true,
-                ..seller()
-            },
-        ),
-        (
-            PARTY_BUYER,
-            AccountFacts {
-                is_pukhta_party: true,
-                credit_allowed: false,
-                ..buyer()
-            },
-        ),
-        (
-            PARTY_BUYER_CREDIT,
-            AccountFacts {
-                is_pukhta_party: true,
                 ..buyer()
             },
         ),
@@ -249,7 +211,6 @@ pub fn lot(seller: i64, item: i64, qty_received: &str) -> LotInput {
         lot_id: None,
         seller_account_id: Some(seller),
         purchase_id: None,
-        pukhta: None,
         item_id: Some(item),
         packing_id: Some(BOX),
         marka_id: None,
@@ -286,7 +247,7 @@ pub fn sale(buyer: i64, qty: &str, rate: &str) -> SaleInput {
         key: format!("s-{buyer}-{qty}-{rate}"),
         sale_id: None,
         buyer_account_id: Some(buyer),
-        pukhta: None,
+        chukta: None,
         qty: qty.into(),
         weight: None,
         seller_rate: rate.into(),

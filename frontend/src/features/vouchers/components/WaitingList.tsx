@@ -37,12 +37,12 @@ export function WaitingList({ vouchers, previews, onRemove, disabled }: WaitingL
       id: 'account',
       header: <Localized id="vouchers-col-account" />,
       cell: ({ draft }) => {
-        const { account, person } = draft;
+        const { account } = draft;
         if (account === null) return null;
         return (
           <span className="flex flex-wrap items-baseline gap-x-2">
             <Code>{account.code}</Code>
-            <span>{displayName(person ?? account, language)}</span>
+            <span>{displayName(account, language)}</span>
           </span>
         );
       },

@@ -740,12 +740,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("fruit_lots", json!({ "input": {} }), true),
         (
             "masters_dead_preview",
-            json!({ "input": { "account_id": 1, "pukhta_person_key": null } }),
+            json!({ "input": { "account_id": 1 } }),
             true,
         ),
         (
             "masters_dead_mark",
-            json!({ "input": { "account_id": 1, "pukhta_person_key": null, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
+            json!({ "input": { "account_id": 1, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
             true,
         ),
         (
@@ -785,24 +785,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_receipt",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
             true,
         ),
         (
             "vouchers_save_payment",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "reason": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "4,316", "reason": "", "narration": "" } }),
             true,
         ),
         (
             "vouchers_preview",
-            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "person_key": null,
-                "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
             true,
         ),
         (
             "vouchers_edit",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (
@@ -828,12 +827,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "assist_open_bills",
-            json!({ "input": { "account_id": 1, "person_key": null } }),
+            json!({ "input": { "account_id": 1 } }),
             true,
         ),
         (
             "assist_open_payables",
-            json!({ "input": { "seller_id": 1, "person_key": null, "include_settled": false } }),
+            json!({ "input": { "seller_id": 1, "include_settled": false } }),
             true,
         ),
         (
@@ -982,12 +981,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "general_preview",
-            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }] } }),
+            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }] } }),
             true,
         ),
         (
             "general_save",
-            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
+            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
             true,
         ),
         (
@@ -1101,14 +1100,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
-            "search_pukhta_people",
-            json!({ "input": { "text": "shahid", "side": "buyer" } }),
+            "chukta_search",
+            json!({ "input": { "text": "shahid" } }),
             true,
         ),
         (
-            "pukhta_register",
-            json!({ "input": { "from": "", "to": "", "side": null, "name": null,
-                "phone": null, "state": null } }),
+            "chukta_add",
+            json!({ "input": { "name_ur": "شاہد", "name_en": "Shahid", "phone": null } }),
+            true,
+        ),
+        (
+            "party_ledgers_list",
+            json!({ "input": { "side": "buyer", "text": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement",
+            json!({ "input": { "account_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
             true,
         ),
         (
@@ -1195,23 +1203,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "copies": null, "to": "pdf" } }),
             true,
         ),
-        (
-            "pukhta_make_regular",
-            json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
-                "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",
-                "confirmed_rules_words": [], "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null,
-                "adda_id": null, "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
-                "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
-                "credit_allowed": true, "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
-                "is_active": true, "note": "" } } }),
-            true,
-        ),
         ("reports_list_printers", json!({}), true),
         ("settings_get_printing", json!({}), true),
         (
             "settings_set_printing",
-            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
             true,
         ),
         // Run B, plan 18 (append-only block).
@@ -1284,12 +1280,6 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_print_data",
             json!({ "input": { "id": "R18", "filters": {}, "language": "en" } }),
-            true,
-        ),
-        // Run B, plan 20, step B3 (append-only block).
-        (
-            "reports_find_people",
-            json!({ "input": { "text": "shahid", "limit": 10 } }),
             true,
         ),
         // Run B, plan 21 (append-only block).
@@ -1411,7 +1401,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "vouchers_edit_preview",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (
@@ -2055,8 +2045,7 @@ fn there_is_no_command_that_deletes_a_master() {
             &"masters_dead_preview",
             &"masters_dead_mark",
             &"masters_dead_undo",
-            &"masters_expense_heads",
-            &"search_pukhta_people"
+            &"masters_expense_heads"
         ]
     );
     for name in &names {
@@ -2323,12 +2312,9 @@ fn the_voucher_commands_work_through_the_ipc() {
     };
     let rahim = account("seller", "رحیم", "Rahim");
     let akram = account("buyer", "اکرم ٹول ٹیکس", "Akram Toll Tax");
-    let payment = |account_id: i64, amount: &str, reason: &str, confirm: bool| {
-        json!({ "input": { "date": "10-10-2026", "account_id": account_id, "person_key": null,
-            "amount": amount, "reason": reason, "narration": "", "confirm_cash_below_zero": confirm } })
-    };
+    let payment = |account_id: i64, amount: &str, reason: &str, confirm: bool| json!({ "input": { "date": "10-10-2026", "account_id": account_id, "amount": amount, "reason": reason, "narration": "", "confirm_cash_below_zero": confirm } });
     let receipt = |account_id: i64, amount: &str| {
-        json!({ "date": "10-10-2026", "account_id": account_id, "person_key": null, "amount": amount,
+        json!({ "date": "10-10-2026", "account_id": account_id, "amount": amount,
             "collector_staff_id": null, "narration": "" })
     };
 
@@ -2362,7 +2348,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     // The bill, the preview of a receipt, and the save.
     let bills = h.ok(
         "assist_open_bills",
-        json!({ "input": { "account_id": akram, "person_key": null } }),
+        json!({ "input": { "account_id": akram } }),
     );
     assert_eq!(bills["open_paisa"], 300_000);
     assert_eq!(bills["bills"][0]["source"], "cash_lent");
@@ -2370,7 +2356,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     let preview = h.ok(
         "vouchers_preview",
         json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram,
-            "person_key": null, "amount": "1,000", "collector_staff_id": null, "narration": "" },
+            "amount": "1,000", "collector_staff_id": null, "narration": "" },
             "replacing_voucher_id": null } }),
     );
     assert_eq!(preview["errors"], json!([]), "{preview}");
@@ -2401,8 +2387,7 @@ fn the_voucher_commands_work_through_the_ipc() {
         h.call(
             "vouchers_edit",
             json!({ "input": { "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
-                "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "person_key": null,
-                    "amount": amount, "collector_staff_id": null, "narration": "" } } }),
+                "entry": { "type": "receipt", "date": "10-10-2026", "account_id": akram, "amount": amount, "collector_staff_id": null, "narration": "" } } }),
         )
     };
     assert_eq!(
@@ -2486,7 +2471,7 @@ fn the_voucher_commands_work_through_the_ipc() {
     assert!(list.get("weekday").is_none());
     let payables = h.ok(
         "assist_open_payables",
-        json!({ "input": { "seller_id": rahim, "person_key": null, "include_settled": false } }),
+        json!({ "input": { "seller_id": rahim, "include_settled": false } }),
     );
     assert_eq!(payables["postings"], json!([]));
     let report = h.ok(
@@ -2514,11 +2499,11 @@ fn the_voucher_commands_work_through_the_ipc() {
     );
     let listed = h.ok(
         "vouchers_list",
-        json!({ "input": { "voucher_type": "receipt", "from": "", "to": "", "account_id": akram, "person_key": null, "show_finished": true } }),
+        json!({ "input": { "voucher_type": "receipt", "from": "", "to": "", "account_id": akram, "show_finished": true } }),
     );
     assert_eq!(listed["rows"].as_array().unwrap().len(), 2);
-    // Printing needs Windows.
-    if !cfg!(windows) {
+    // Printing needs Windows or a Mac (plan 69).
+    if !cfg!(any(windows, target_os = "macos")) {
         let id2 = listed["rows"][1]["id"].as_i64().unwrap();
         assert_eq!(
             h.call(
@@ -2589,7 +2574,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     );
 
     let sale = |key: &str, buyer: i64, qty: &str, rate: &str| {
-        json!({ "key": key, "buyer_account_id": buyer, "pukhta": null, "qty": qty, "weight": null,
+        json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
             "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
             "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
     };
@@ -2597,7 +2582,7 @@ fn the_bikri_commands_work_through_the_ipc() {
         "header": { "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
             "zamindar_account_id": rahim, "adda_id": null, "driver_name": null, "driver_phone": null,
             "total_freight": null, "store_id": null, "note": null },
-        "lots": [{ "key": "lot-1", "seller_account_id": rahim, "pukhta": null, "item_id": banana,
+        "lots": [{ "key": "lot-1", "seller_account_id": rahim, "item_id": banana,
             "packing_id": packing, "marka_id": null, "store_id": null, "qty_received": "50",
             "weight_received": null, "freight": "3,000", "freight_paid_by": "firm",
             "labour": { "method": "per_unit", "value": "5" },
@@ -2761,15 +2746,27 @@ fn the_bikri_commands_work_through_the_ipc() {
         h.code("bikri_get", json!({ "input": { "id": 99 } })),
         "ERR_NOT_FOUND"
     );
-    let register = h.ok("pukhta_register", json!({ "input": {} }));
-    assert_eq!(register["rows"], json!([]));
-    assert_eq!(register["total_count"], 0);
+    // Plan 64: the چکتا buyers are added and found through the IPC; no ledger, no balance.
     assert_eq!(
-        h.ok(
-            "search_pukhta_people",
-            json!({ "input": { "text": "", "side": "buyer" } })
-        ),
+        h.ok("chukta_search", json!({ "input": { "text": "" } })),
         json!([])
+    );
+    let added = h.ok(
+        "chukta_add",
+        json!({ "input": { "name_ur": "شاہد", "name_en": "Shahid", "phone": "0300-0000000" } }),
+    );
+    assert_eq!(added["name_en"], "Shahid");
+    assert_eq!(added["phone"], "03000000000");
+    assert_eq!(
+        h.ok("chukta_search", json!({ "input": { "text": "shahid" } }))[0]["id"],
+        added["id"]
+    );
+    assert_eq!(
+        h.code(
+            "chukta_add",
+            json!({ "input": { "name_ur": "", "name_en": "X", "phone": null } })
+        ),
+        "ERR_CHUKTA_NAME_REQUIRED"
     );
     let hits = h.ok(
         "search_global",
@@ -2804,7 +2801,6 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(slips["paper"], "a5");
     assert_eq!(slips["pages"].as_array().unwrap().len(), 2);
     assert_eq!(slips["pages"][1]["amounts"][3]["amount"], "18,684");
-    assert_eq!(print_data("pukhta_slip", "ur")["pages"], json!([]));
     assert_eq!(
         h.code(
             "reports_bikri_print_data",
@@ -2816,15 +2812,13 @@ fn the_bikri_commands_work_through_the_ipc() {
     let printing = h.ok("settings_get_printing", json!({}));
     assert_eq!(
         printing,
-        json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-            "paper_receipt_slip": "a5", "paper_collection_list": "a4", "printer": "", "copies": 1,
-            "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
+        json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_receipt_slip": "a5", "paper_collection_list": "a4", "printer": "", "copies": 1,
+            "print_after_save": ["seller_bill", "buyer_slips"] })
     );
     let bad = h
         .call(
             "settings_set_printing",
-            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "0", "print_after_save": ["seller_bill"] } }),
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "printer": "", "copies": "0", "print_after_save": ["seller_bill"] } }),
         )
         .unwrap_err();
     assert_eq!(bad["errors"][0]["code"], "ERR_OUT_OF_RANGE");
@@ -2832,8 +2826,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(bad["errors"][0]["values"]["max"], 99);
     let saved_printing = h.ok(
         "settings_set_printing",
-        json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
-            "printer": "Office Laser", "copies": "2", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
+        json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "printer": "Office Laser", "copies": "2", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
     );
     // An old screen may still send the field of the gone Urdu digits setting: it is ignored, and
     // the settings never hold it (plan 63).
@@ -2867,11 +2860,14 @@ fn the_bikri_commands_work_through_the_ipc() {
         "ERR_NOT_FOUND"
     );
     if cfg!(not(windows)) {
+        // The printer list is empty on a Mac too: its system print window has its own.
+        assert_eq!(h.ok("reports_list_printers", json!({})), json!([]));
+    }
+    if cfg!(not(any(windows, target_os = "macos"))) {
         assert_eq!(
             code_of(print(json!(["seller_bill", "buyer_slips"]), Value::Null, 1)),
             "ERR_PRINT_WINDOWS_ONLY"
         );
-        assert_eq!(h.ok("reports_list_printers", json!({})), json!([]));
         assert_eq!(
             h.sql::<i64>("SELECT print_count FROM bikri_entries WHERE id = 1"),
             0
@@ -3122,7 +3118,7 @@ fn plan_17e_the_tag_the_firm_contacts_and_the_shared_header_through_the_ipc() {
         ),
         "ERR_NOT_FOUND"
     );
-    if !cfg!(windows) {
+    if !cfg!(any(windows, target_os = "macos")) {
         assert_eq!(
             h.code(
                 "reports_print_collection",

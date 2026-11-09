@@ -512,50 +512,18 @@ fn a_rate_difference_posts_to_the_rate_difference_account_on_either_side() {
     assert_eq!(split, [1_496, 1_120, 1_120]);
 }
 
-// ---- The one-time person (PRD FR-13) ----
+// ---- The چکتا buyer (PRD Section 13) ----
 
 #[test]
-fn a_one_time_seller_is_paid_on_the_spot() {
-    // PRD FR-13.10: gross 12,000, deductions before نقد 1,840: نقد starts at 10,160, net 0.
+fn two_chukta_buyers_keep_separate_keys_and_pairs() {
     let w = world();
-    let mut line = sale("s-1", w.akram, "10", "1200");
-    line.payment_type = None;
-    let mut l = lot(&w, "lot-1", w.pukhta_seller, w.apple, "10");
-    l.pukhta = person("ناصر", "Nasir", "0300-1111111");
-    l.freight = Some("1,000".into());
-    l.cash_paid = None;
-    l.sales = vec![line];
-    let saved = save_ok(&w, &draft(vec![l]));
-    let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
-    let lot = &detail.lots[0];
-    assert_eq!((lot.cash_paid.rupees(), lot.net.rupees()), (10_160, 0));
-    assert_totals_equal(&detail.totals, &saved.preview.summary, "one-time seller");
-    assert_eq!(lot.pukhta.as_ref().unwrap().person_key, "ناصر|03001111111");
-    let key = Some("ناصر|03001111111".to_owned());
-    let lines = entry_lines(&w, saved.entry_id);
-    assert!(
-        lines.contains(&("0031".to_owned(), 0, 10_160, key.clone())),
-        "{lines:?}"
-    );
-    assert!(
-        lines.contains(&("0031".to_owned(), 10_160, 0, key.clone())),
-        "{lines:?}"
-    );
-    // His own balance is 0.
-    let balance = ledger::person_balance(&w.env.ctx, w.pukhta_seller, "ناصر|03001111111").unwrap();
-    assert_eq!(balance.side, BalanceSide::Zero);
-}
-
-#[test]
-fn two_one_time_buyers_keep_separate_keys_and_pairs() {
-    let w = world();
-    let mut a = sale("s-1", w.pukhta_buyer, "10", "1000");
-    a.pukhta = person("شاہد", "Shahid", "0300-0000000");
-    let mut b = sale("s-2", w.pukhta_buyer, "10", "1000");
-    b.pukhta = person("ناصر", "Nasir", "0300-1111111");
-    let mut c = sale("s-3", w.pukhta_buyer, "10", "1000");
+    let mut a = sale("s-1", w.chukta_khata, "10", "1000");
+    a.chukta = person("شاہد", "Shahid", "0300-0000000");
+    let mut b = sale("s-2", w.chukta_khata, "10", "1000");
+    b.chukta = person("ناصر", "Nasir", "0300-1111111");
+    let mut c = sale("s-3", w.chukta_khata, "10", "1000");
     // The same name with the Arabic heh (U+0647) and the same phone is the same person as شاہد.
-    c.pukhta = person("\u{0634}\u{0627}\u{0647}\u{062F}", "Shahid", "03000000000");
+    c.chukta = person("\u{0634}\u{0627}\u{0647}\u{062F}", "Shahid", "03000000000");
     let l = with_sales(
         bare_lot(&w, "lot-1", w.rahim, w.banana, "30"),
         vec![a, b, c],
@@ -564,47 +532,44 @@ fn two_one_time_buyers_keep_separate_keys_and_pairs() {
     let keys: Vec<String> = bikri::get(&w.env.ctx, saved.bikri_id).unwrap().lots[0]
         .sales
         .iter()
-        .map(|s| s.pukhta.as_ref().unwrap().person_key.clone())
+        .map(|s| s.chukta.as_ref().unwrap().person_key.clone())
         .collect();
     assert_eq!(
         keys,
         ["شاہد|03000000000", "ناصر|03001111111", "شاہد|03000000000"]
     );
-    let by_key = |key: &str| ledger::person_balance(&w.env.ctx, w.pukhta_buyer, key).unwrap();
+    let by_key = |key: &str| ledger::person_balance(&w.env.ctx, w.chukta_khata, key).unwrap();
     assert_eq!(by_key("شاہد|03000000000").side, BalanceSide::Zero);
     // Each cash sale is pinned to its own cash line: three pairs of 10,000 + comm + laga.
     assert_eq!(rows(&w, "bill_allocations").len(), 3);
 }
 
 #[test]
-fn a_one_time_person_without_a_name_or_a_credit_buyer_without_a_phone_is_refused() {
+fn a_chukta_buyer_needs_a_name_and_his_phone_is_optional() {
     let w = world();
-    let mut a = sale("s-1", w.pukhta_buyer, "10", "1000");
-    a.pukhta = person("", "", "");
+    let mut a = sale("s-1", w.chukta_khata, "10", "1000");
+    a.chukta = person("", "", "");
     let l = with_sales(bare_lot(&w, "lot-1", w.rahim, w.banana, "10"), vec![a]);
     let error = save(&w, &draft(vec![l])).unwrap_err();
     assert!(
         rejects(
             &error,
-            ErrorCode::ErrPukhtaNameRequired,
-            "lots[0].sales[0].pukhta.name_ur"
-        ),
-        "{error:?}"
-    );
-    let mut b = sale("s-1", w.pukhta_buyer, "10", "1000");
-    b.pukhta = person("شاہد", "Shahid", "");
-    b.payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
-    let l = with_sales(bare_lot(&w, "lot-1", w.rahim, w.banana, "10"), vec![b]);
-    let error = save(&w, &draft(vec![l])).unwrap_err();
-    assert!(
-        rejects(
-            &error,
-            ErrorCode::ErrPukhtaPhoneRequired,
-            "lots[0].sales[0].pukhta.phone"
+            ErrorCode::ErrChuktaNameRequired,
+            "lots[0].sales[0].chukta.name_ur"
         ),
         "{error:?}"
     );
     assert_eq!(scalar(&w, "SELECT COUNT(*) FROM bikri_entries"), 0);
+    // No phone is fine (PRD FR-13.2, v1.32): the key is the name alone.
+    let mut b = sale("s-1", w.chukta_khata, "10", "1000");
+    b.chukta = person("شاہد", "Shahid", "");
+    let l = with_sales(bare_lot(&w, "lot-1", w.rahim, w.banana, "10"), vec![b]);
+    let saved = save_ok(&w, &draft(vec![l]));
+    let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
+    assert_eq!(
+        detail.lots[0].sales[0].chukta.as_ref().unwrap().person_key,
+        "شاہد|"
+    );
 }
 
 // ---- The saved header, the audit row ----

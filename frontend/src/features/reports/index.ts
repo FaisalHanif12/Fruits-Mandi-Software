@@ -25,18 +25,10 @@ export { useOpenRowSource } from './open-source';
 
 // ---- Plan 20: the report engine. ----
 export { reportsCatalog, reportsPrintData, reportsRun } from './api';
-export {
-  PEOPLE_RESULT_LIMIT,
-  useReportCatalog,
-  useReportPages,
-  useReportPrintData,
-  usePeopleSearch,
-} from './hooks';
-export { reportsFindPeople } from './api';
+export { useReportCatalog, useReportPages, useReportPrintData } from './hooks';
 export { PartyReportLinks } from './components/PartyReportLinks';
 export { useOpenReport, partyReportSearch, type OpenReport } from './open-report';
 export { parseReportSearch, type ReportSearch } from './search';
-export { personFromHit, type ReportPerson } from './filters';
 
 // ---- Plan 21: what the analytics module borrows (cells of a report are cells of a view). ----
 export { cellText, monthText, nameWithTag, partyText, sideText } from './cells';
@@ -45,7 +37,6 @@ export { cellText, monthText, nameWithTag, partyText, sideText } from './cells';
 export { emptyNameMessageId, messageText, percentText } from './cells';
 // The print of a report with the filters an answer read it with (plan 49).
 export { reportsPrintReport } from './api';
-export { ReportPersonPicker } from './components/ReportPersonPicker';
 export { ReportPartnerSelect } from './components/ReportPartnerSelect';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';
 export { usePrintJob } from './components/usePrintJob';

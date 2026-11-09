@@ -1,7 +1,7 @@
 // The print commands as hooks (Code Standards F6).
 
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
-import { useDebouncedValue, usePagedQuery } from '../../shared/hooks';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { usePagedQuery } from '../../shared/hooks';
 import type { BikriPrintDataInput } from '../../bindings/BikriPrintDataInput';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
@@ -19,7 +19,6 @@ import {
   reportsBikriPrintData,
   reportsBuyerBillsPrintData,
   reportsCatalog,
-  reportsFindPeople,
   reportsListPrinters,
   reportsPrint,
   reportsPrintData,
@@ -46,7 +45,7 @@ export function useBikriPrintData(input: BikriPrintDataInput | null) {
   });
 }
 
-/** The printers of this computer (Windows). An empty list is an answer, not an error. */
+/** The printers of this computer (Windows). An empty list is an answer, not an error: a Mac has none. */
 export function usePrinters() {
   return useQuery({ queryKey: ['reports', 'printers'], queryFn: reportsListPrinters });
 }
@@ -239,27 +238,4 @@ export function usePrintFrameOf(
   return usePrintFrame(
     source === undefined ? null : { language, title_id: source.title_id, facts: source.filters },
   );
-}
-
-/** How long the text of a person search rests before the backend is asked (Code Standards F35). */
-export const PEOPLE_SEARCH_DELAY_MS = 120;
-
-/** How many one-time people a search lists. The list is short on purpose: type more to narrow. */
-export const PEOPLE_RESULT_LIMIT = 10;
-
-/**
- * The one-time people that match the typed text (PRD FR-5.4, FR-13.9). Nothing is asked for empty
- * text, and the list stays on screen while the next answer is on its way, so it never flashes empty.
- * The text is sent as typed; a search never converts it to Urdu (Code Standards F41).
- */
-export function usePeopleSearch(text: string, enabled = true) {
-  const settled = useDebouncedValue(text.trim(), PEOPLE_SEARCH_DELAY_MS);
-  return useQuery({
-    queryKey: ['reports_find_people', settled],
-    queryFn: () => reportsFindPeople({ text: settled, limit: PEOPLE_RESULT_LIMIT }),
-    enabled: enabled && settled !== '',
-    placeholderData: keepPreviousData,
-    staleTime: 0,
-    gcTime: 0,
-  });
 }

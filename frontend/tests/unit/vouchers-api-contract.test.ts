@@ -5,10 +5,8 @@
 // files in vouchers-real-answers.test.tsx.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AccountInput } from '../../src/bindings/AccountInput';
 import type { AdvanceInput } from '../../src/bindings/AdvanceInput';
 import type { CollectionListInput } from '../../src/bindings/CollectionListInput';
-import type { MakeRegularInput } from '../../src/bindings/MakeRegularInput';
 import type { OpenBillsInput } from '../../src/bindings/OpenBillsInput';
 import type { OpenPayablesInput } from '../../src/bindings/OpenPayablesInput';
 import type { PaymentInput } from '../../src/bindings/PaymentInput';
@@ -19,7 +17,6 @@ import type { VoucherEditInput } from '../../src/bindings/VoucherEditInput';
 import type { VoucherPreviewInput } from '../../src/bindings/VoucherPreviewInput';
 import type { VoucherPrintDataInput } from '../../src/bindings/VoucherPrintDataInput';
 import type { VouchersListInput } from '../../src/bindings/VouchersListInput';
-import { pukhtaMakeRegular } from '../../src/features/pukhta_khata/api';
 import { reportsPrintVoucher, reportsVoucherPrintData } from '../../src/features/reports/api';
 import * as api from '../../src/features/vouchers/api';
 import { searchGlobal } from '../../src/shared/accounts/api';
@@ -33,7 +30,6 @@ const call = vi.mocked(invoke.callCommand);
 const RECEIPT: ReceiptInput = {
   date: '10-10-2026',
   account_id: 21,
-  person_key: null,
   amount: '10000',
   collector_staff_id: null,
   narration: '',
@@ -41,7 +37,6 @@ const RECEIPT: ReceiptInput = {
 const PAYMENT: PaymentInput = {
   date: '10-10-2026',
   account_id: 31,
-  person_key: null,
   amount: '4316',
   reason: '',
   narration: 'x',
@@ -123,7 +118,6 @@ describe('each wrapper sends the command and the input of the backend', () => {
       from: '10-10-2026',
       to: '10-10-2026',
       account_id: null,
-      person_key: null,
       offset: 0,
       limit: 0,
       show_finished: false,
@@ -136,14 +130,10 @@ describe('each wrapper sends the command and the input of the backend', () => {
   });
 
   it('assist_open_bills, assist_open_payables, assist_advances', async () => {
-    const bills: OpenBillsInput = { account_id: 21, person_key: null };
+    const bills: OpenBillsInput = { account_id: 21 };
     await api.assistOpenBills(bills);
     expect(call).toHaveBeenLastCalledWith('assist_open_bills', { input: bills });
-    const payables: OpenPayablesInput = {
-      seller_id: 31,
-      person_key: 'shahid|03000000000',
-      include_settled: false,
-    };
+    const payables: OpenPayablesInput = { seller_id: 31, include_settled: false };
     await api.assistOpenPayables(payables);
     expect(call).toHaveBeenLastCalledWith('assist_open_payables', { input: payables });
     await api.assistAdvances(31);
@@ -166,43 +156,7 @@ describe('each wrapper sends the command and the input of the backend', () => {
     });
   });
 
-  it('pukhta_make_regular and the slip: the person key, the account form, the voucher id and the language', async () => {
-    const account: AccountInput = {
-      id: null,
-      version: null,
-      account_type: 'buyer',
-      control_id: null,
-      code: '',
-      tag: '',
-      name_ur: 'شاہد',
-      name_en: 'Shahid',
-      confirmed_rules_words: [],
-      father_or_firm_ur: '',
-      father_or_firm_en: '',
-      city_id: null,
-      adda_id: null,
-      phone1: '03000000000',
-      phone2: '',
-      address: '',
-      linked_account_id: null,
-      opening_date: '10-10-2026',
-      opening_dr: '',
-      opening_cr: '',
-      opening_is_advance: false,
-      credit_allowed: true,
-      credit_limit: '',
-      default_marka_id: null,
-      collector_staff_id: null,
-      is_active: true,
-      note: '',
-    };
-    const regular: MakeRegularInput = {
-      person_key: 'shahid|03000000000',
-      side: 'buyer',
-      account_input: account,
-    };
-    await pukhtaMakeRegular(regular);
-    expect(call).toHaveBeenLastCalledWith('pukhta_make_regular', { input: regular });
+  it('the voucher slip: the voucher id and the language', async () => {
     const data: VoucherPrintDataInput = { voucher_id: 501, language: 'ur' };
     await reportsVoucherPrintData(data);
     expect(call).toHaveBeenLastCalledWith('reports_voucher_print_data', { input: data });
@@ -268,10 +222,6 @@ describe('each wrapper sends exactly the request the backend’s own test sent',
     await api.vouchersSaveReceiptsBatch(real.REQUEST_RECEIPTS_BATCH.rows);
     expect(call).toHaveBeenLastCalledWith('vouchers_save_receipts_batch', {
       input: real.REQUEST_RECEIPTS_BATCH,
-    });
-    await pukhtaMakeRegular(real.REQUEST_MAKE_REGULAR);
-    expect(call).toHaveBeenLastCalledWith('pukhta_make_regular', {
-      input: real.REQUEST_MAKE_REGULAR,
     });
   });
 });

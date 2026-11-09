@@ -3,7 +3,7 @@
 //! This file reads for the entry screen: the facts of the accounts, items and masters a draft
 //! names, the saved rates behind the rate hint and the rate check, and the memories of trucks
 //! and sellers. Everything here only reads (Code Standards B29). `write` adds the rows of a
-//! save (plan 13), `saved` reads saved بکری back, and the پختہ کھاتہ lists.
+//! save (plan 13), and `saved` reads saved بکری back.
 //!
 //! Every statement uses parameters (Code Standards B14). A list of ids is read with one
 //! statement that has one `?` for each id (Code Standards B22).
@@ -21,11 +21,8 @@ pub struct PreviewAccount {
     pub id: i64,
     /// The control code, for example `03011` (seller) or `0304` (buyer).
     pub control_code: String,
-    /// True for the two shared پختہ کھاتہ accounts (person typed on the line).
-    pub is_pukhta_khata: bool,
-    /// True for a پختہ party's own account (plan 47, PRD FR-13.11): a full account of his side, with
-    /// no person typed on the line. A seller of this kind is paid on the spot (PRD FR-13.10).
-    pub is_pukhta_party: bool,
+    /// True for the چکتا کھاتہ account and the old closed one (person typed on the line).
+    pub is_chukta_khata: bool,
     /// True for a system account such as نقدی منڈی.
     pub is_system: bool,
     /// The account code, for example `03040000`.
@@ -90,8 +87,8 @@ pub fn accounts(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<PreviewA
         return Ok(Vec::new());
     }
     let mut statement = conn.prepare(&format!(
-        "SELECT a.id, c.code, a.is_pukhta_khata, a.is_system, a.code, a.is_active,
-                a.credit_allowed, a.credit_limit_paisa, a.is_pukhta_party
+        "SELECT a.id, c.code, a.is_chukta_khata, a.is_system, a.code, a.is_active,
+                a.credit_allowed, a.credit_limit_paisa
          FROM accounts a JOIN account_controls c ON c.id = a.control_id
          WHERE a.id IN ({})",
         marks(ids.len())
@@ -100,13 +97,12 @@ pub fn accounts(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<PreviewA
         Ok(PreviewAccount {
             id: r.get(0)?,
             control_code: r.get(1)?,
-            is_pukhta_khata: r.get(2)?,
+            is_chukta_khata: r.get(2)?,
             is_system: r.get(3)?,
             code: r.get(4)?,
             is_active: r.get(5)?,
             credit_allowed: r.get(6)?,
             credit_limit_paisa: r.get(7)?,
-            is_pukhta_party: r.get(8)?,
         })
     })?;
     rows.collect()

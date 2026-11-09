@@ -31,7 +31,6 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "person_key": null,
           "before": {
             "amount_paisa": 288000,
             "side": "dr"

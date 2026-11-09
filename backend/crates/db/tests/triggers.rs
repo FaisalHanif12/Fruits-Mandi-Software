@@ -415,14 +415,27 @@ fn system_accounts_cannot_be_deleted_or_recoded() {
     }
     let changed: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND (is_active = 0 OR note IS NOT NULL)",
+            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND code <> '0031'
+               AND (is_active = 0 OR note IS NOT NULL)",
             [],
             |r| r.get(0),
         )
         .unwrap();
     assert_eq!(changed, 0);
-    conn.execute("UPDATE accounts SET is_active = 1 WHERE is_system = 1", [])
+    // The old closed account 0031 is the one system account that is inactive (migration 0020).
+    let closed: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND is_active = 0",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
+    assert_eq!(closed, 1);
+    conn.execute(
+        "UPDATE accounts SET is_active = 1 WHERE is_system = 1 AND code <> '0031'",
+        [],
+    )
+    .unwrap();
     // An ordinary account is not affected.
     conn.execute(
         "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
@@ -709,7 +722,7 @@ fn a_bill_matching_row_needs_a_debit_bill_and_a_credit_payment_on_its_account() 
                   key: Option<&str>,
                   amount: i64| {
         conn.execute(
-            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, pukhta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO bill_allocations (bill_line_id, payment_line_id, account_id, chukta_person_key, amount_paisa) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![bill_line, payment_line, account, key, amount],
         )
     };

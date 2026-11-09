@@ -4,7 +4,7 @@
 // Urdu digits setting that once existed is removed (plan 60 D1, plan 63), so there is nothing to turn
 // on. See also print-ascii-digits.test.tsx, which draws the Urdu seller bill, R5 and R35.
 //
-// Every template is drawn here: the seller bill, the buyer slips, the پختہ slip, the receipt slip
+// Every template is drawn here: the seller bill, the buyer slips, the receipt slip
 // (receipt, payment, advance), the collection list, with the shared header (contacts and phones
 // included) and footer, in Urdu and in English on A4, A5 and the 80 mm roll, and the backend's own
 // real answers. The text of the sheet and the footer must hold no digit outside 0-9.
@@ -50,7 +50,7 @@ interface Template {
 
 /** Each template with the canned data of the PRD worked day, header contacts and trade mark set. */
 const TEMPLATES: readonly Template[] = [
-  ...(['seller_bill', 'buyer_slips', 'pukhta_slip'] as const).map((doc) => ({
+  ...(['seller_bill', 'buyer_slips'] as const).map((doc) => ({
     name: doc,
     draw: (options: CannedOptions) => (
       <BikriPrintDocument

@@ -6,8 +6,6 @@
 //   2. The three dues reports (R20, R21, R22) end in the same total: the shop's total اگراہی
 //      (FR-19.9). The table does not scroll sideways.
 //   3. The sales register (R2) shows the sale lines and the backend's total under its columns.
-//   4. The register of one-time people (R9): the person box finds شاہد by the English letters
-//      typed, and Enter opens his lines.
 //   5. The income report (R28) names the month, and the group box turns it to days.
 //   6. Ctrl+K finds a report by its number, and Enter opens it.
 //   7. The party card on the receipt screen has the کھاتہ and فرد حساب buttons, which open the
@@ -24,7 +22,6 @@ import { t } from '../support/messages.mjs';
 import {
   Key,
   choose,
-  focusField,
   pageText,
   pick,
   press,
@@ -80,7 +77,7 @@ describe('sales, collections and business reports (Urdu)', () => {
     for (const group of ['sales', 'accounts', 'collections', 'business']) {
       await waitForText(t('ur', `report-group-${group}`));
     }
-    for (const id of ['r2', 'r6', 'r9', 'r20', 'r24', 'r28', 'r30']) {
+    for (const id of ['r2', 'r6', 'r20', 'r24', 'r28', 'r30']) {
       expect(await pageText()).toContain(t('ur', `report-${id}-title`));
     }
     await shootScreen('reports-catalogue-all', 'ur');
@@ -108,23 +105,6 @@ describe('sales, collections and business reports (Urdu)', () => {
     expect(await totalsCell('buyer_total')).not.toBe('');
     expect(await noSidewaysScroll()).toBe(true);
     await shootScreen('reports-r2', 'ur');
-  });
-
-  it('4. the person box of R9 finds شاہد by the English letters typed, and Enter opens his lines', async () => {
-    await openReport('R9');
-    await waitForHeading('ur', 'report-r9-title');
-    const box = await focusField('ur', 'report-filter-person');
-    await box.setValue('shahid');
-    const option = await $('[role="option"]');
-    await option.waitForDisplayed({ timeout: WAIT_MS });
-    await type(Key.Enter);
-    await browser.waitUntil(async () => (await box.getValue()).includes('شاہد'), {
-      timeout: WAIT_MS,
-      timeoutMsg: 'The person box never showed his name.',
-    });
-    expect(await rowCount()).toBeGreaterThan(0);
-    // The letters typed were searched as typed, never turned into Urdu by the box itself.
-    await shootScreen('reports-r9-person', 'ur');
   });
 
   it('5. R28 names the month, and the group box turns the report to days', async () => {

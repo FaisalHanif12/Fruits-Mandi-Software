@@ -991,7 +991,7 @@ const ALL = [
     ],
   ),
 
-  // ================================ trips, gardens, fruit taken, pukhta ==========================================
+  // ================================ trips, gardens, fruit taken ==========================================
   z(
     'T77',
     'trip',
@@ -1083,19 +1083,6 @@ const ALL = [
       e(
         "how much fruit did we take for guests from Haji Nazeer's shop, at what rate, for how much and on which date",
       ),
-    ],
-  ),
-  // The pukhta (one-time) parties: Aamir (shared account, typed) and Nadir (his own account) owe something.
-  z(
-    'T84',
-    'pukhta',
-    'person',
-    'period=all',
-    'amount=@r9.all.total.amount;open=@r9.all.total.open',
-    [
-      r('pukhta khata me ab tak kitni bikri hui aur kitna baqi hai'),
-      u('پختہ کھاتہ میں اب تک کتنی بکری ہوئی اور کتنا باقی ہے'),
-      e('how much has been sold through pukhta khata so far and how much is still due'),
     ],
   ),
 
@@ -1494,20 +1481,8 @@ const FINDINGS = [
       ),
     ],
   ),
-  // The one-time person of the shared پختہ کھاتہ, and a پختہ party's own account.
-  z(
-    'N30',
-    'pukhta',
-    'person',
-    'person=Aamir',
-    'balance=@d7.pk.aamir.balance;qty=@d7.pk.aamir.qty;amount=@d7.pk.aamir.amount',
-    [
-      r('pukhta khata ke aamir ne kitna maal liya, kitne ka aur ab kitna baqi hai'),
-      u('پختہ کھاتہ کے عامر نے کتنا مال لیا، کتنے کا اور اب کتنا باقی ہے'),
-      e('how much did Aamir of pukhta khata take, for how much and how much does he owe now'),
-    ],
-  ),
-  z('N31', 'pukhta', 'short', 'buyer=Nadir', 'balance=@buyer.nadir.balance', [
+  // A buyer with his own account (Nadir) owes something (he was a پختہ party's own account before v1.32).
+  z('N31', 'buyer', 'short', 'buyer=Nadir', 'balance=@buyer.nadir.balance', [
     r('nadir ka bakaya kitna hai'),
     u('نادر کے ذمے کتنا ہے'),
   ]),
@@ -1962,7 +1937,6 @@ const TWO_WORDINGS = [
   'T71',
   'T72',
   'T73',
-  'T84',
   'T85',
   'T86',
   'T89',
@@ -2079,12 +2053,6 @@ export const COVERAGE = [
     kind: 'The dead amount (ڈوبی رقم): who, owed then, still owed',
     from: 'PRD FR-10.10, R38; dead_marks',
     groups: ['T09', 'T40'],
-  },
-  {
-    kind: 'پختہ کھاتہ persons and the shared accounts',
-    from: 'PRD 13, R9; accounts, bikri_sales.pukhta_*',
-    groups: ['T84'],
-    note: 'The rich year has one typed one-time person (Aamir) and one own پختہ account (Nadir), both with a balance.',
   },
   {
     kind: 'Collectors and the collection list (اگراہی)',
@@ -2304,9 +2272,9 @@ export const COVERAGE = [
     groups: ['N26', 'N27', 'N28', 'N29'],
   },
   {
-    kind: 'The one-time person of the shared پختہ کھاتہ and a پختہ party account, with a balance',
-    from: 'PRD 13, FR-13.5, FR-13.11, R9, R20; accounts.is_pukhta_party, bikri_sales.pukhta_*',
-    groups: ['N30', 'N31', 'T84'],
+    kind: 'A buyer with his own account and a balance (Nadir)',
+    from: 'PRD FR-10.5, R20; accounts',
+    groups: ['N31'],
   },
   {
     kind: 'A separate khata (الگ کھاتہ) with entries: paid out, received, the balance',
@@ -2332,7 +2300,7 @@ export const COVERAGE = [
   {
     kind: 'Zero: nothing happened (a day, a filter, an item) is 0, never "not found"',
     from: 'PRD 23 (E24 family), plan 59 Section 1',
-    groups: ['T19', 'T30', 'T46', 'T70', 'T71', 'T72', 'T73', 'T84', 'T45'],
+    groups: ['T19', 'T30', 'T46', 'T70', 'T71', 'T72', 'T73', 'T45'],
   },
   // ---- not asked, with the reason -----------------------------------------------------------------------------------
   {

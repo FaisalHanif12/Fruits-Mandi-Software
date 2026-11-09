@@ -204,15 +204,14 @@ describe.each(LANGUAGES)('the buyer slips, print all (%s)', (language: Language)
   });
 });
 
-describe.each(LANGUAGES)('the پختہ slip (%s)', (language: Language) => {
-  it('shows the one-time buyer with his phone, the total 12,800, paid, and its words', () => {
-    const data = printDataFor('pukhta_slip', { language });
+describe.each(LANGUAGES)('the buyer slip of a چکتا buyer (%s)', (language: Language) => {
+  it('shows him with his phone and no code, the total 12,800, paid, and its words', () => {
+    const data = printDataFor('buyer_slips', { language, chukta: true });
     const { root } = show(data);
     expect(sheets(root)).toHaveLength(1);
     const text = textOf(root);
     expect(text).toContain(language === 'ur' ? 'شاہد' : 'Shahid');
     expect(text).toContain('0300-0000000');
-    expect(text).toContain(message(language, 'print-party-onetime-buyer'));
     expect(text).toContain('12,000');
     expect(text).toContain('720');
     expect(text).toContain('80');
@@ -221,8 +220,9 @@ describe.each(LANGUAGES)('the پختہ slip (%s)', (language: Language) => {
     expect(text).toContain(
       language === 'ur' ? 'بارہ ہزار آٹھ سو روپے' : 'Twelve thousand eight hundred rupees only',
     );
-    // A one-time buyer has no code.
-    expect(root.querySelector('.print-party-extra')?.textContent).not.toContain('0304');
+    // A چکتا buyer has no code, and his phone is set apart from the text round it.
+    expect(text).not.toContain('0030');
+    expect(root.querySelector('table.print-r5')).not.toBeNull();
     expect(isolated(root, '0300-0000000')).toBe(true);
   });
 });
@@ -239,11 +239,10 @@ describe('paper classes', () => {
     expect(DEFAULT_PAPER).toEqual({
       seller_bill: 'a4',
       buyer_slips: 'a5',
-      pukhta_slip: 'a5',
       receipt_slip: 'a5',
       collection_list: 'a4',
     });
-    for (const doc of ['seller_bill', 'buyer_slips', 'pukhta_slip'] as const) {
+    for (const doc of ['seller_bill', 'buyer_slips'] as const) {
       const { root, unmount } = show(printDataFor(doc));
       expect(root.dataset['paper']).toBe(DEFAULT_PAPER[doc]);
       unmount();
@@ -367,7 +366,7 @@ describe('what the backend sends is what is shown', () => {
   });
 
   it('says so when there is nothing to print', () => {
-    const data = printDataFor('pukhta_slip', { language: 'en' });
+    const data = printDataFor('buyer_slips', { language: 'en' });
     const { root } = show({ ...data, pages: [] });
     expect(textOf(root)).toContain(message('en', 'print-preview-empty'));
     expect(sheets(root)).toHaveLength(0);

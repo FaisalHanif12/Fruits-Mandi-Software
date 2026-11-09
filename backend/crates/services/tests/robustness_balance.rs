@@ -173,7 +173,6 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -415,7 +414,11 @@ fn fingerprint_in(dir: &TempDir, skip: &[&str], shape: Option<&Shape>) -> u64 {
             })
             .cloned()
             .collect();
-        let filter = if table == "account_controls" {
+        // Migration 0020 (plan 64) gives 0030 its new name and closes 0031 on purpose; every other
+        // account is a row that must not change.
+        let filter = if table == "accounts" {
+            "WHERE code NOT IN ('0030', '0031')".to_owned()
+        } else if table == "account_controls" {
             format!(
                 "WHERE code NOT IN ({})",
                 CONTROLS_OF_0006
@@ -1396,8 +1399,10 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
             "{}: a refusal wrote an audit row",
             row.code
         );
-        assert!(
+        // 0031 is the one system account that is inactive since migration 0020 (PRD FR-13.9).
+        assert_eq!(
             accounts::get(&w.env.ctx, row.id).unwrap().is_active,
+            row.code != "0031",
             "{}",
             row.code
         );

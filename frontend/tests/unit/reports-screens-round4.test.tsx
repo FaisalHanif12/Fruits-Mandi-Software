@@ -1,9 +1,9 @@
 // The Sales, Collections and Business reports on the ONE report screen (plan 20, step F3, PRD 19.2,
-// FR-13.9, FR-19.1 to FR-19.5, FR-19.11, FR-19.13): R2, R3, R4, R6, R7, R8, R9, R20, R21, R22, R24,
+// FR-19.1 to FR-19.5, FR-19.11, FR-19.13): R2, R3, R4, R6, R7, R8, R20, R21, R22, R24,
 // R26, R27, R28 and R30, in the Urdu and in the English app, against a fake backend that answers
 // with the backend's own fixtures. Each report asks for exactly what the filters hold and shows the
 // backend's totals; the headings of R21, R22 and R24, the month names of R28, the minus sign of
-// R30, the person box of R9 (one-time people, FR-13.9), the fold of the filter boxes, the print
+// R30, the fold of the filter boxes, the print
 // preview, a language switch in the middle of a filter and the keyboard-only path are each proved.
 // The screen adds up nothing: every figure is one the backend sent. The layout step in a test with
 // no layout is the middle one (normal), so the columns of the wide step are not drawn here; the
@@ -30,7 +30,6 @@ import { printFirmName } from '../helpers/print-frame';
 import { message, paragraph, visible } from '../helpers/render';
 import {
   CATALOG,
-  PEOPLE_SHAHID,
   PRINT_R28_MONTH_EN,
   R2_ALL,
   R2_ALL_REQUEST,
@@ -48,8 +47,6 @@ import {
   R6_LOTS_REQUEST,
   R7_ITEMS_REQUEST,
   R8_ADDA_REQUEST,
-  R9_ALL_REQUEST,
-  R9_DUE_REQUEST,
   fakeReports,
 } from '../helpers/reports';
 import { PAGE_ROWS } from '../helpers/pager';
@@ -170,7 +167,6 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       ['R6', R6_LOTS_REQUEST, 'net', '29,476'],
       ['R7', R7_ITEMS_REQUEST, 'total_comm', '5,448'],
       ['R8', R8_ADDA_REQUEST, 'gross', '41,400'],
-      ['R9', R9_ALL_REQUEST, 'amount', '12,800'],
       ['R20', R20_DUES_REQUEST, 'balance', '21,564'],
       ['R21', R21_BY_CITY_REQUEST, 'balance', '21,564'],
       ['R22', R22_BY_COLLECTOR_REQUEST, 'balance', '21,564'],
@@ -319,181 +315,6 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         expect(cell('1', 'adda')).toBe(m('report-adda-none'));
       }, SLOW_MS);
       expect(cell('0', 'adda')).toBe(names('سوات اڈا', 'Swat Adda'));
-    });
-  });
-
-  describe('R9 the register of one-time people', () => {
-    it('has a person box and a paid-or-due box, and no account box', async () => {
-      await openReport('R9');
-      expect(screen.getByLabelText(m('report-filter-person'))).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: m('report-filter-status') })).toBeInTheDocument();
-      expect(screen.queryByLabelText(m('report-filter-party'))).toBeNull();
-    });
-
-    it('draws the line of شاہد as paid', async () => {
-      await openReport('R9');
-      await waitFor(() => {
-        expect(cell('0', 'status')).toBe(m('report-status-paid'));
-      }, SLOW_MS);
-      expect(cell('0', 'amount')).toBe('12,800');
-      // The side word, the phone and the commission wait for the wide step (the print has them).
-      expect(drawnColumns()).toEqual([
-        'date',
-        'doc',
-        'person',
-        'item',
-        'qty',
-        'amount',
-        'status',
-        'open',
-      ]);
-    });
-
-    it('asks only for the due lines when the box says so, and says so when there are none', async () => {
-      const { user } = await openReport('R9');
-      await waitFor(() => {
-        expect(drawnRows()).toEqual(['0']);
-      }, SLOW_MS);
-      await user.click(screen.getByRole('combobox', { name: m('report-filter-status') }));
-      await user.click(await screen.findByRole('option', { name: m('report-status-due') }));
-      await waitFor(() => {
-        expect(lastRun()?.filters).toEqual(sentLike(R9_DUE_REQUEST));
-      }, SLOW_MS);
-      // The backend has no due line: the empty state offers to clear the filter.
-      expect(await screen.findByText(named(m('report-empty')), undefined, SLOW_MS)).toBeVisible();
-      await user.click(screen.getByRole('button', { name: named(m('report-clear-filters')) }));
-      await waitFor(() => {
-        expect(lastRun()?.filters).toEqual(sentLike(R9_ALL_REQUEST));
-      }, SLOW_MS);
-    });
-
-    it('finds a person by what is typed, as typed, and asks for his lines with his key', async () => {
-      const { user } = await openReport('R9');
-      const box = screen.getByLabelText(m('report-filter-person'));
-      await user.type(box, 'shahid');
-      await waitFor(() => {
-        expect(reportsApi.reportsFindPeople).toHaveBeenCalledWith({ text: 'shahid', limit: 10 });
-      }, SLOW_MS);
-      // The list shows his name in this script, his phone and his last day.
-      const option = await screen.findByRole('option', undefined, SLOW_MS);
-      expect(visible(option.textContent)).toContain(names('شاہد', 'Shahid'));
-      expect(visible(option.textContent)).toContain('03000000000');
-      await user.keyboard('{Enter}');
-      await waitFor(() => {
-        expect(lastRun()?.filters.party).toEqual({
-          account_id: 9,
-          person_key: 'شاہد|03000000000',
-        });
-      }, SLOW_MS);
-      expect(box).toHaveValue(names('شاہد', 'Shahid'));
-    });
-
-    it('never converts the English letters typed in the person box to Urdu', async () => {
-      const { user } = await openReport('R9');
-      const box = screen.getByLabelText(m('report-filter-person'));
-      await user.type(box, 'shahid');
-      expect(box).toHaveValue('shahid');
-    });
-
-    it('shows the person in the other language after a switch, and asks nothing again', async () => {
-      const { user } = await openReport('R9');
-      const box = screen.getByLabelText(m('report-filter-person'));
-      await user.type(box, 'shahid');
-      await screen.findByRole('option', undefined, SLOW_MS);
-      await user.keyboard('{Enter}');
-      await waitFor(() => {
-        expect(lastRun()?.filters.party?.person_key).toBe('شاہد|03000000000');
-      }, SLOW_MS);
-      const before = vi.mocked(reportsApi.reportsRun).mock.calls.length;
-      const other: Language = language === 'ur' ? 'en' : 'ur';
-      act(() => {
-        useLanguageStore.getState().setLanguage(other);
-      });
-      await waitFor(() => {
-        expect(screen.getByLabelText(message(other, 'report-filter-person'))).toHaveValue(
-          other === 'ur' ? 'شاہد' : 'Shahid',
-        );
-      }, SLOW_MS);
-      expect(vi.mocked(reportsApi.reportsRun).mock.calls.length).toBe(before);
-    });
-
-    it('opens on the person of the address, whole', async () => {
-      const hit = PEOPLE_SHAHID[0];
-      if (hit === undefined) throw new Error('no person');
-      const person = {
-        accountId: 9,
-        personKey: hit.person_key,
-        name_ur: hit.name_ur,
-        name_en: hit.name_en,
-        phone: hit.phone,
-        last_date: hit.last_date,
-      };
-      fakeReports();
-      await renderApp(`/reports/R9?person=${encodeURIComponent(JSON.stringify(person))}`);
-      await screen.findByRole('heading', { level: 1, name: named(m('report-r9-title')) });
-      await waitFor(() => {
-        expect(lastRun()?.filters.party).toEqual({
-          account_id: 9,
-          person_key: 'شاہد|03000000000',
-        });
-      }, SLOW_MS);
-      expect(screen.getByLabelText(m('report-filter-person'))).toHaveValue(names('شاہد', 'Shahid'));
-    });
-  });
-
-  describe('a report on a one-time account narrows to one person', () => {
-    it('shows the person box once the party is a پختہ account, and only his lines', async () => {
-      const party = {
-        account_id: 9,
-        code: '0030',
-        short_code: null,
-        name_ur: 'پختہ کھاتہ (خریدار)',
-        name_en: 'Pukhta Khata (Buyer)',
-        tag: null,
-        person_key: null,
-      };
-      const page = { ...R2_ALL, filters: { ...R2_ALL.filters, party } };
-      fakeReports({ pages: { R2: page } });
-      const { user } = {
-        ...(await renderApp('/reports/R2?party=9')),
-        user: userEvent.setup(),
-      };
-      await screen.findByRole('heading', { level: 1, name: named(m('report-r2-title')) });
-      const box = await screen.findByLabelText(m('report-filter-person'), undefined, SLOW_MS);
-      await user.type(box, 'shah');
-      await screen.findByRole('option', undefined, SLOW_MS);
-      await user.keyboard('{Enter}');
-      await waitFor(() => {
-        expect(lastRun()?.filters.party).toEqual({
-          account_id: 9,
-          person_key: 'شاہد|03000000000',
-        });
-      }, SLOW_MS);
-    });
-
-    it('lists nobody for an account the person has no lines on', async () => {
-      const party = {
-        account_id: 30,
-        code: '0030',
-        short_code: null,
-        name_ur: 'پختہ کھاتہ (خریدار)',
-        name_en: 'Pukhta Khata (Buyer)',
-        tag: null,
-        person_key: null,
-      };
-      const page = { ...R2_ALL, filters: { ...R2_ALL.filters, party } };
-      fakeReports({ pages: { R2: page } });
-      const { user } = {
-        ...(await renderApp('/reports/R2?party=30')),
-        user: userEvent.setup(),
-      };
-      await screen.findByRole('heading', { level: 1, name: named(m('report-r2-title')) });
-      const box = await screen.findByLabelText(m('report-filter-person'), undefined, SLOW_MS);
-      await user.type(box, 'shah');
-      await waitFor(() => {
-        expect(reportsApi.reportsFindPeople).toHaveBeenCalled();
-      }, SLOW_MS);
-      expect(screen.queryByRole('option')).toBeNull();
     });
   });
 
@@ -719,35 +540,6 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
   });
 
   describe('keyboard only', () => {
-    it('the person box, the list, Enter, the table and a row open, without the mouse', async () => {
-      const { router, user } = await openReport('R9');
-      // The first filter box has focus; ← → ↑ ↓ and Tab move between the boxes. Go to the person box.
-      const box = screen.getByLabelText(m('report-filter-person'));
-      await act(async () => {
-        box.focus();
-        await Promise.resolve();
-      });
-      await user.keyboard('shahid');
-      await screen.findByRole('option', undefined, SLOW_MS);
-      await user.keyboard('{Enter}');
-      await waitFor(() => {
-        expect(lastRun()?.filters.party?.person_key).toBe('شاہد|03000000000');
-      }, SLOW_MS);
-      await waitFor(() => {
-        expect(drawnRows()).toEqual(['0']);
-      }, SLOW_MS);
-      // The table is reached with Tab, a row with ↓, and Enter opens the بکری behind it.
-      for (let tabs = 0; tabs < 8; tabs += 1) {
-        if (document.activeElement?.closest('.ag-root-wrapper') != null) break;
-        await user.tab();
-      }
-      expect(document.activeElement?.closest('.ag-root-wrapper')).not.toBeNull();
-      await user.keyboard('{ArrowDown}{Enter}');
-      await waitFor(() => {
-        expect(router.state.location.pathname).toBe('/bikri/book');
-      }, SLOW_MS);
-    });
-
     it('opens R20 from the list with ↓ and Enter, types the day, and Esc leaves it', async () => {
       fakeReports();
       const { router } = await renderApp('/reports');
@@ -758,7 +550,7 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(19)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(18)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R20');
       }, SLOW_MS);

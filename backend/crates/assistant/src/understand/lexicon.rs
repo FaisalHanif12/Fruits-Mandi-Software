@@ -132,8 +132,8 @@ pub(super) enum Cue {
     Unit,
     /// paise, raqam, rupay: money.
     Money,
-    /// pukhta khata: the one-time parties' account.
-    Pukhta,
+    /// chukta khata: the walk-in buyers' account.
+    Chukta,
     /// cash, roqar, gala.
     Cash,
     /// sarmaya, capital.
@@ -174,7 +174,7 @@ pub(super) enum Cue {
     ResultWord,
     /// li hui raqam, zaati kharcha, drawings: the money the partners took.
     PartnerTaken,
-    /// The title of a report that no figure names (R3, R4, R7, R8, R9, R15 ...): see [`REPORT_NAMES`].
+    /// The title of a report that no figure names (R3, R4, R7, R8, R15 ...): see [`REPORT_NAMES`].
     ReportName,
     /// A question about the app's own state or lists (the rules, the attention list, the closed days,
     /// how many staff): see [`ASK_NAMES`].
@@ -668,10 +668,8 @@ const FIGURES: &[Entry] = &[
         ],
     ),
     (
-        Cue::Pukhta,
-        &[
-            "pukhta khata", "pakka khata", "pukhta", "pakka", "پختہ کھاتہ", "پکا کھاتہ", "پختہ",
-        ],
+        Cue::Chukta,
+        &["chukta khata", "chukta", "چکتا کھاتہ", "چکتا"],
     ),
     (
         Cue::Received,
@@ -991,7 +989,6 @@ pub(super) const REPORT_NAMES: &[(&str, &[&str])] = &[
     ("R4", &["udhari bikri", "udhari sales", "udhari sale", "udhaari bikri", "credit sales", "credit sale", "ادھاری بکری"]),
     ("R7", &["item wise bikri", "item wise sale", "item wise sales", "itemwise bikri", "qisam war bikri", "qisam wise bikri", "item wise", "قسم وار بکری", "قسم وار"]),
     ("R8", &["adda report", "adda rapat", "adda wise", "truck stand report", "truck adda report", "اڈا رپورٹ", "اڈا وار"]),
-    ("R9", &["pukhta khata register", "pukhta khata report", "pukhta register", "pakka khata register", "پختہ کھاتہ رجسٹر", "پختہ کھاتہ رپورٹ"]),
     ("R15", &["voucher list", "vouchers list", "voucher register", "vouchers register", "ووچر لسٹ", "واؤچر لسٹ", "واؤچر رجسٹر"]),
     ("R16", &["account index", "accounts index", "index report", "index print", "accounts list", "list of accounts", "khaton ki list", "کھاتوں کی فہرست", "انڈکس رپورٹ"]),
     ("R17", &["head balances", "head balance", "heads balance", "madon ka balance", "mad wise balance", "مدوں بیلنس", "مدوں کا بیلنس"]),
@@ -1039,7 +1036,7 @@ pub(super) const SCREEN_NAMES: &[(&str, &[&str])] = &[
     ("commission_rules", &["commission rules", "commission rule", "rules screen", "commission usool", "کمیشن اصول"]),
     ("today_sales", &["todays sales list", "today s sales list", "today s sales", "today sales list", "todays sales", "today sales", "aaj ki bikri list", "آج کی بکری فہرست"]),
     ("unsold_stock", &["unsold stock", "unsold goods", "baqi maal", "baqi maal screen", "باقی مال"]),
-    ("pukhta_khata", &["pukhta khata", "pakka khata", "pukhta khata screen", "پختہ کھاتہ"]),
+    ("chukta_khata", &["chukta khata", "chukta khata screen", "walk in buyer", "چکتا کھاتہ"]),
     ("collection_list", &["collection list", "agrahi list", "agraahi list", "ugrahi list", "اگراہی فہرست", "اگراہی لسٹ"]),
     ("cash_book", &["cash book", "cashbook", "roknad book", "rokar book", "روکڑ بک", "کیش بک"]),
     ("gardens", &["gardens", "baghat", "bagh", "باغات", "باغ"]),

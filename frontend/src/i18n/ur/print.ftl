@@ -1,5 +1,5 @@
 ### Prints (plan 14, PRD FR-12.12, FR-7.36, FR-19.3 to FR-19.7): the seller bill, the buyer slips,
-### the پختہ slip, the print box and the Printing settings. The backend sends the ids of titles,
+### the print box and the Printing settings. The backend sends the ids of titles,
 ### facts, roles and amounts (plan 14 contract 6) and the template resolves them in the PRINT
 ### language, which can differ from the app language.
 
@@ -10,9 +10,6 @@ print-seller-bill-title = { -beopari } کا بل
 
 # review: pending
 print-buyer-slip-title = { -gahak } کی پرچی
-
-# review: pending
-print-pukhta-slip-title = { -pukhta-khata } کی پرچی
 
 ## Facts under the title
 
@@ -35,9 +32,6 @@ print-party-seller = { -beopari }
 
 # review: pending
 print-party-buyer = { -gahak }
-
-# review: pending
-print-party-onetime-buyer = { -pukhta-khata } ({ -kharidar })
 
 # review: pending
 print-party-code = کوڈ
@@ -155,9 +149,6 @@ print-doc-seller-bill = { -beopari } کا بل
 # review: pending
 print-doc-buyer-slips = { -gahak } کی پرچیاں
 
-# review: pending
-print-doc-pukhta-slip = { -pukhta-khata } کی پرچی
-
 ## The print box (opened with F9 on the sale book)
 
 # review: pending
@@ -216,6 +207,14 @@ print-box-done-printed = پرنٹر کو بھیج دیا گیا: { $docs }
 # review: pending
 print-box-done-pdf = PDF فائلیں محفوظ ہو گئیں:
 
+# $docs are the printed documents. On a Mac Print and Save PDF both open the system print window.
+# review: pending
+print-box-done-dialog = پرنٹ کی کھڑکی کھل گئی: { $docs }
+
+# Shown on a Mac under the print choices (plan 69). The words PDF and Save as PDF are the Mac's own.
+# review: pending
+print-dialog-hint = میک پر پرنٹ کی کھڑکی کھلتی ہے۔ PDF بنانے کے لیے اس میں PDF چنیں، پھر Save as PDF چنیں۔
+
 # review: pending
 print-box-nothing-printed = پرنٹ کرنے کے لیے کچھ نہیں تھا۔
 
@@ -225,6 +224,10 @@ print-save-first = پرنٹ کرنے کے لیے پہلے { -bikri } محفوظ 
 # Shown after Ctrl+Enter when the documents went to the printer.
 # review: pending
 print-toast-printed = پرنٹر کو بھیج دیا گیا
+
+# Shown after Ctrl+Enter on a Mac, where the system print window opens instead (plan 69).
+# review: pending
+print-toast-dialog = پرنٹ کی کھڑکی کھل گئی
 
 ## The preview
 
@@ -259,9 +262,6 @@ print-settings-printer = پرنٹر
 
 # review: pending
 print-settings-printer-default = طے شدہ پرنٹر
-
-# review: pending
-print-settings-printer-none = اس کمپیوٹر پر پرنٹروں کی فہرست نہیں ملی۔ طے شدہ پرنٹر استعمال ہوگا۔
 
 # review: pending
 print-settings-printers-failed = پرنٹروں کی فہرست نہیں کھل سکی
@@ -304,9 +304,6 @@ print-fact-collector = اگراہی والا
 
 # review: pending
 print-fact-narration = تفصیل
-
-# review: pending
-print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
 
 # review: pending
 print-party-account = کھاتہ
@@ -385,7 +382,6 @@ print-collection-col-code = کوڈ
 
 # review: pending
 print-collection-col-party = پارٹی
-
 
 # review: pending
 print-collection-col-dues = ذمے

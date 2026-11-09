@@ -14,7 +14,7 @@ use mandi_core::bikri::SaleGrade;
 use mandi_db::rusqlite::params_from_iter;
 use mandi_db::rusqlite::types::Value;
 
-/// The party a query is for. `person` is only for a پختہ کھاتہ account.
+/// The party a query is for. `person` is only for a چکتا کھاتہ account.
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct Filter<'a> {
     pub(super) account: Option<i64>,
@@ -113,7 +113,7 @@ pub(super) fn ledger_rows_in(
     entries_first: bool,
 ) -> Result<Vec<LedgerRow>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
-    let filter = who.sql("l.account_id", "l.pukhta_person_key", &mut args);
+    let filter = who.sql("l.account_id", "l.chukta_person_key", &mut args);
     let from_lines = lines_of_days(entries_first);
     // The pair test is worked out once for each line, in the inner query.
     let sql = format!(
@@ -124,7 +124,7 @@ pub(super) fn ledger_rows_in(
                 SUM(CASE WHEN paired OR posting_type <> 'receipt' THEN 0 ELSE cr END),
                 SUM(CASE WHEN paired OR posting_type <> 'payment' THEN 0 ELSE dr END)
          FROM (
-           SELECT l.account_id AS account_id, COALESCE(l.pukhta_person_key, '') AS person,
+           SELECT l.account_id AS account_id, COALESCE(l.chukta_person_key, '') AS person,
                   k.code AS code, e.entry_date AS entry_date, l.dr_paisa AS dr, l.cr_paisa AS cr,
                   ({SAME_DAY_PAIR}) AS paired, e.posting_type AS posting_type,
                   (e.source_type = 'bikri' AND e.posting_type IN ('bikri_first', 'bikri_later'))
@@ -274,9 +274,9 @@ pub(super) fn buyer_lines(
     who: Filter<'_>,
 ) -> Result<Vec<BuyerLine>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
-    let filter = who.sql("s.buyer_account_id", "s.pukhta_person_key", &mut args);
+    let filter = who.sql("s.buyer_account_id", "s.chukta_person_key", &mut args);
     let sql = format!(
-        "SELECT e.entry_date, s.buyer_account_id, COALESCE(s.pukhta_person_key, ''), s.bikri_id,
+        "SELECT e.entry_date, s.buyer_account_id, COALESCE(s.chukta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa,
                 s.laga_paisa, s.buyer_total_paisa, s.payment_type = 'cash', s.weight_grams, s.grade
@@ -394,10 +394,10 @@ pub(super) fn seller_lines_in(
     entries_first: bool,
 ) -> Result<Vec<SellerLine>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
-    let filter = who.sql("l.seller_account_id", "l.pukhta_person_key", &mut args);
+    let filter = who.sql("l.seller_account_id", "l.chukta_person_key", &mut args);
     let from_sales = sales_of_days(entries_first);
     let sql = format!(
-        "SELECT e.entry_date, l.seller_account_id, COALESCE(l.pukhta_person_key, ''), s.bikri_id,
+        "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.seller_rate_paisa, s.seller_amount_paisa, s.seller_comm_paisa,
                 s.weight_grams, s.grade
@@ -508,7 +508,7 @@ pub(super) fn lot_charges_in(
     entries_first: bool,
 ) -> Result<Vec<LotCharges>, ReportsError> {
     let mut args = vec![Value::Text(from.to_owned()), Value::Text(to.to_owned())];
-    let filter = who.sql("l.seller_account_id", "l.pukhta_person_key", &mut args);
+    let filter = who.sql("l.seller_account_id", "l.chukta_person_key", &mut args);
     let from_lots = if !entries_first {
         "FROM bikri_lots l
          JOIN journal_entries e ON e.id = l.first_entry_id"
@@ -518,7 +518,7 @@ pub(super) fn lot_charges_in(
          CROSS JOIN bikri_lots l ON l.first_entry_id = e.id"
     };
     let sql = format!(
-        "SELECT e.entry_date, l.seller_account_id, COALESCE(l.pukhta_person_key, ''),
+        "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''),
                 l.freight_paisa, l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa,
                 l.phone_paisa, l.store_rent_paisa, l.cash_paid_paisa
          {from_lots}

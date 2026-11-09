@@ -185,7 +185,6 @@ fn e2e_8_9_10_12_event_5_on_the_khercha_screen_completes_the_day() {
             from: String::new(),
             to: String::new(),
             account_id: None,
-            person_key: None,
             offset: 0,
             limit: 0,
         },

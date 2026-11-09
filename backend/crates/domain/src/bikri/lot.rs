@@ -278,16 +278,11 @@ pub(super) fn lot_charge(
 
 /// How the workings of a total are worded.
 pub(super) enum Scope<'a> {
-    /// One lot: lot charges have their own working; `cash_is_default` for a one-time seller's
-    /// نقد (PRD FR-13.10).
+    /// One lot: lot charges have their own working.
     Lot {
         labour: &'a Working,
         munshiana: &'a Working,
         phone: &'a Working,
-        cash_is_default: bool,
-        /// The advance the lot's credit adjusts and the default نقد leaves out (PRD FR-13.11).
-        /// 0 for every other lot.
-        cash_advance: Paisa,
     },
     /// The whole بکری: every row is a sum of lots.
     Whole,
@@ -426,20 +421,7 @@ impl Acc {
                 working::sum(self.count, self.phone),
             ),
         };
-        let cash = match scope {
-            Scope::Lot {
-                cash_is_default: true,
-                cash_advance,
-                ..
-            } if *cash_advance > Paisa::ZERO => {
-                working::pukhta_cash_after_advance(credit, *cash_advance, self.cash_paid)
-            }
-            Scope::Lot {
-                cash_is_default: true,
-                ..
-            } => working::pukhta_cash(self.cash_paid),
-            _ => typed(self.cash_paid),
-        };
+        let cash = typed(self.cash_paid);
         Ok(SummaryTotals {
             gross: self.gross,
             freight: self.freight,

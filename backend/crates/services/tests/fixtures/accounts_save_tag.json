@@ -23,7 +23,7 @@
   "father_or_firm_ur": "",
   "id": 18,
   "is_active": true,
-  "is_pukhta_khata": false,
+  "is_chukta_khata": false,
   "is_system": false,
   "linked_account": null,
   "name_en": "Akram Toll Tax",

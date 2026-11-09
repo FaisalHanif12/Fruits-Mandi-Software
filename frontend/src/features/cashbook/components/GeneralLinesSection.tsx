@@ -1,38 +1,20 @@
-// The lines of the جنرل entry (PRD 16.4, entry-grid skill): a grid with the account, the one-time
-// person (for a پختہ کھاتہ line), بنام, جمع and a note. The party card follows the line the cursor
+// The lines of the جنرل entry (PRD 16.4, entry-grid skill): a grid with the account, بنام, جمع and
+// a note. The party card follows the line the cursor
 // is on, and the totals, the split and the cash note beside it are the backend's. A line has one
 // side only; the backend says what is wrong with a line and the grid puts it on the cell.
 //
 // - What is typed lives in the entry store, never only in the grid, so a language switch rebuilds
 //   the grid and loses nothing (Code Standards F39).
-// - Keys come from shared/grid. The one thing added here: Enter on the account of a line on a
-//   پختہ کھاتہ account goes on to the person's field below the grid, and a person taken from the
-//   list goes back to the بنام cell of that line (PRD FR-13.5).
+// - Keys come from shared/grid. This screen adds none of its own.
 // - Four states: the grid is always there (empty lines are blank rows); the totals say what is
 //   missing (waiting, failed with a retry, or the answer).
 
 import { Localized } from '@fluent/react';
 import { Plus } from 'lucide-react';
-import { useMemo, type ReactNode } from 'react';
-import {
-  EntryGrid,
-  FIT_MIN,
-  type EntryColumn,
-  type EntryRow,
-  type EntryStore,
-  type GridInterceptors,
-} from '../../../shared/grid';
+import type { ReactNode } from 'react';
+import { EntryGrid, FIT_MIN, type EntryColumn, type EntryStore } from '../../../shared/grid';
 import { Button, PartyCard } from '../../../shared/ui';
-import { isPukhtaCode } from '../../pukhta_khata';
-import {
-  GENERAL_ACCOUNT,
-  GENERAL_CR,
-  GENERAL_DR,
-  GENERAL_NARRATION,
-  GENERAL_PERSON,
-  type PeopleMap,
-} from '../general-draft';
-import { PERSON_ROW_ATTRIBUTE } from './GeneralPeople';
+import { GENERAL_ACCOUNT, GENERAL_CR, GENERAL_DR, GENERAL_NARRATION } from '../general-draft';
 
 export const GENERAL_COLUMNS: readonly EntryColumn[] = [
   {
@@ -42,69 +24,31 @@ export const GENERAL_COLUMNS: readonly EntryColumn[] = [
     headerId: 'cashbook-general-col-account',
     minWidth: FIT_MIN.longName,
   },
-  // Read only: the one-time person chosen below the grid for a line on a پختہ کھاتہ account.
-  {
-    field: GENERAL_PERSON,
-    type: 'label',
-    headerId: 'cashbook-general-col-person',
-  },
   { field: GENERAL_DR, type: 'money', headerId: 'glossary-banaam', minWidth: FIT_MIN.heading },
   { field: GENERAL_CR, type: 'money', headerId: 'glossary-jama', minWidth: FIT_MIN.heading },
   { field: GENERAL_NARRATION, type: 'text', headerId: 'cashbook-field-narration' },
 ];
 
-/** Moves the cursor to the person field of a row, once the row is drawn. */
-function focusPersonSoon(rowId: string): void {
-  window.requestAnimationFrame(() => {
-    document
-      .querySelector<HTMLElement>(`[${PERSON_ROW_ATTRIBUTE}="${CSS.escape(rowId)}"] input`)
-      ?.focus();
-  });
-}
-
 interface GeneralLinesSectionProps {
   store: EntryStore;
-  people: PeopleMap;
-  /** What the grid's `label` cells show: the person's name per row. */
-  calc: Readonly<Record<string, Readonly<Record<string, string>>>>;
   cellErrors: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** The cells an earlier edit changed, with the words of that edit as their tip (plan 44). */
   cellMarks?: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined;
   /** The id of the account the party card shows now (the focused line, or a list being browsed). */
   cardAccount: number | null;
   onCardAccount: (accountId: number | null) => void;
-  /** The totals, the split and the notes (the backend's), and the person panel. */
+  /** The totals, the split and the notes (the backend's). */
   side: ReactNode;
 }
 
 export function GeneralLinesSection({
   store,
-  people,
-  calc,
   cellErrors,
   cellMarks,
   cardAccount,
   onCardAccount,
   side,
 }: GeneralLinesSectionProps) {
-  const interceptors = useMemo<GridInterceptors>(
-    () => ({
-      onEnter: (cell) => {
-        if (cell.field !== GENERAL_ACCOUNT) return false;
-        const row: EntryRow | undefined = store
-          .getState()
-          .rows.find((candidate) => candidate.rowId === cell.rowId);
-        const code = row?.picked?.[GENERAL_ACCOUNT]?.code;
-        // A line on a پختہ کھاتہ account needs a person before the amounts (PRD FR-13.5).
-        if (row === undefined || !isPukhtaCode(code)) return false;
-        if ((people[row.rowId]?.person ?? null) !== null) return false;
-        focusPersonSoon(row.rowId);
-        return true;
-      },
-    }),
-    [store, people],
-  );
-
   const addLine = () => {
     store.getState().addRow();
     store.getState().setPendingFocus({ rowIndex: 'last', field: GENERAL_ACCOUNT });
@@ -129,10 +73,8 @@ export function GeneralLinesSection({
           columns={GENERAL_COLUMNS}
           store={store}
           labelId="cashbook-general-grid-label"
-          calc={calc}
           cellErrors={cellErrors}
           {...(cellMarks === undefined ? {} : { cellMarks })}
-          interceptors={interceptors}
           onCardAccount={onCardAccount}
           fit
           heightMode="auto"

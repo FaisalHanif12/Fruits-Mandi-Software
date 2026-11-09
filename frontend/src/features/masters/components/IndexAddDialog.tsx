@@ -25,7 +25,6 @@ import {
   type AddRecordRequest,
 } from '../../../shared/ui';
 import { useDayStatus } from '../../../app/use-day-status';
-import { isPukhtaKind, sideOfKind } from '../../../shared/accounts';
 import { configOfKind } from '../configs';
 import { useNextCode } from '../hooks';
 import type { MasterKind } from '../types';
@@ -41,12 +40,10 @@ interface IndexAddDialogProps {
 
 function NewAccount({
   type,
-  pukhtaParty,
   text,
   onDone,
 }: {
   type: 'seller' | 'buyer';
-  pukhtaParty: boolean;
   text: string;
   onDone: (added: AddedRecord | null) => void;
 }) {
@@ -63,13 +60,7 @@ function NewAccount({
       />
     );
   }
-  return (
-    <AccountForm
-      account={null}
-      today={day.data.today}
-      embedded={{ type, pukhtaParty, text, onDone }}
-    />
-  );
+  return <AccountForm account={null} today={day.data.today} embedded={{ type, text, onDone }} />;
 }
 
 function NewMaster({
@@ -106,25 +97,21 @@ function NewMaster({
 }
 
 /** Which Index form a request opens: a new account of a type, or a new record of a master. */
-type Target = { account: 'seller' | 'buyer'; pukhtaParty: boolean } | { master: MasterKind };
+type Target = { account: 'seller' | 'buyer' } | { master: MasterKind };
 
 function targetOf(request: AddRecordRequest): Target {
-  // The short form already had a kind chosen (a seller, a buyer, or one of the two پختہ kinds): the
-  // full form starts as that (plan 47).
-  if (request.accountKind !== undefined) {
-    const side = sideOfKind(request.accountKind);
-    if (side === 'seller' || side === 'buyer') {
-      return { account: side, pukhtaParty: isPukhtaKind(request.accountKind) };
-    }
+  // The short form already had a side chosen (a seller or a buyer): the full form starts as that.
+  if (request.accountKind === 'seller' || request.accountKind === 'buyer') {
+    return { account: request.accountKind };
   }
   const kind: AddRecordKind = request.kind;
   switch (kind) {
     case 'seller':
-      return { account: 'seller', pukhtaParty: false };
+      return { account: 'seller' };
     // A field that takes any account starts as a buyer; the form's type list can change it.
     case 'buyer':
     case 'any':
-      return { account: 'buyer', pukhtaParty: false };
+      return { account: 'buyer' };
     default:
       return { master: kind };
   }
@@ -165,12 +152,7 @@ export function IndexAddDialog({ request, onClose }: IndexAddDialogProps) {
         <>
           <EscapeToClose onClose={onClose} />
           {'account' in target ? (
-            <NewAccount
-              type={target.account}
-              pukhtaParty={target.pukhtaParty}
-              text={request.text}
-              onDone={onClose}
-            />
+            <NewAccount type={target.account} text={request.text} onDone={onClose} />
           ) : (
             <NewMaster kind={target.master} text={request.text} onDone={onClose} />
           )}

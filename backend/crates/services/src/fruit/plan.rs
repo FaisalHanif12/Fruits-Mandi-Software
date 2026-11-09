@@ -8,7 +8,7 @@ use mandi_db::gardens as garden_repo;
 use mandi_db::partners::{self as prepo, PartnerRecord};
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{OWN_GOODS_CODE, RecordRef, SELLER_CONTROL};
-use mandi_domain::core::bikri::{RateHint, SavedPukhta};
+use mandi_domain::core::bikri::RateHint;
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::fruit::{
@@ -47,7 +47,6 @@ pub(super) struct Ready {
     pub source: FruitSource,
     pub lot_id: Option<i64>,
     pub credit_account_id: i64,
-    pub person_key: Option<String>,
     pub item_id: i64,
     pub packing_id: i64,
     pub qty: i64,
@@ -78,28 +77,14 @@ impl Planned {
     }
 }
 
-/// Where the credit goes: the account, the person of a پختہ کھاتہ lot, and the references the
-/// preview shows.
+/// Where the credit goes: the account and the references the preview shows.
 struct Source {
     account: RecordRef,
-    person_key: Option<String>,
-    pukhta: Option<SavedPukhta>,
     item: RecordRef,
     packing: RecordRef,
     by_weight: bool,
     /// نگ the lot can give: its balance, with the quantity of the entry being edited given back.
     lot: Option<(i64, i64)>,
-}
-
-fn pukhta_of(tuple: &Option<(String, String, String, String)>) -> Option<SavedPukhta> {
-    tuple
-        .as_ref()
-        .map(|(name_ur, name_en, phone, key)| SavedPukhta {
-            name_ur: name_ur.clone(),
-            name_en: name_en.clone(),
-            phone: phone.clone(),
-            person_key: key.clone(),
-        })
 }
 
 /// The lot of a fruit entry, if it is one that fruit can be taken from.
@@ -150,8 +135,6 @@ fn lot_source(
         .ok_or_else(|| data("the quantity of a lot does not fit"))?;
     let source = Source {
         account: rec.seller.clone(),
-        person_key: rec.pukhta.as_ref().map(|p| p.3.clone()),
-        pukhta: pukhta_of(&rec.pukhta),
         item: rec.item.clone(),
         packing: rec.packing.clone(),
         by_weight: rec.sold_by_weight,
@@ -172,10 +155,10 @@ fn agent_source(
         Some(id) => match account_repo::facts(conn, id)? {
             None => errors.push(FieldError::new(ErrorCode::ErrNotFound, "agent_account_id")),
             Some(facts) => {
-                // An ordinary seller: not the one-time seller, not اپنا مال, not a khata or garden.
+                // An ordinary seller: not the old one-time seller, not اپنا مال, not a khata or garden.
                 if facts.control_code != SELLER_CONTROL
                     || facts.code == OWN_GOODS_CODE
-                    || facts.is_pukhta_khata
+                    || facts.is_chukta_khata
                 {
                     errors.push(FieldError::new(
                         ErrorCode::ErrFormatInvalid,
@@ -211,8 +194,6 @@ fn agent_source(
     Ok(match (account, item, packing) {
         (Some(account), Some((item, by_weight)), Some(packing)) => Some(Source {
             account,
-            person_key: None,
-            pukhta: None,
             item,
             packing,
             by_weight,
@@ -469,12 +450,8 @@ fn finish(
             value.value,
         )
     };
-    let entry = fruit_entry(
-        &parts.parts,
-        AccountId::new(source.account.id),
-        source.person_key.as_deref(),
-    )
-    .map_err(|e| data(&format!("the journal entry of a fruit entry: {e}")))?;
+    let entry = fruit_entry(&parts.parts, AccountId::new(source.account.id))
+        .map_err(|e| data(&format!("the journal entry of a fruit entry: {e}")))?;
     // The credit is the sum of the parts. It must be the value that is stored with the entry.
     if entry.total() != value.value {
         return Err(data(
@@ -526,7 +503,6 @@ fn finish(
         parts_working: parts.working,
         credit: FruitCredit {
             account: source.account.clone(),
-            pukhta: source.pukhta.clone(),
         },
         lot,
     };
@@ -536,7 +512,6 @@ fn finish(
         source: input.source,
         lot_id: source.lot.map(|(id, _)| id),
         credit_account_id: source.account.id,
-        person_key: source.person_key,
         item_id: source.item.id,
         packing_id: source.packing.id,
         qty: qty.get(),

@@ -5,7 +5,7 @@ import type { RecordRef } from './RecordRef';
 import type { SaleGrade } from './SaleGrade';
 import type { SaleState } from './SaleState';
 import type { SavedCharge } from './SavedCharge';
-import type { SavedPukhta } from './SavedPukhta';
+import type { SavedChukta } from './SavedChukta';
 
 /**
  * One saved sale line with its stored values (PRD FR-11.6, Code Standards B20).
@@ -28,13 +28,13 @@ export type SavedSale = {
    */
   entry_date: string;
   /**
-   * The buyer account (own account, نقدی منڈی or پختہ کھاتہ).
+   * The buyer account (own account, نقدی منڈی or چکتا کھاتہ).
    */
   buyer: RecordRef;
   /**
-   * The one-time buyer, for the پختہ کھاتہ account.
+   * The چکتا buyer, for the چکتا کھاتہ account.
    */
-  pukhta: SavedPukhta | null;
+  chukta: SavedChukta | null;
   /**
    * Quantity in نگ.
    */

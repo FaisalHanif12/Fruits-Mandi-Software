@@ -1,7 +1,6 @@
-//! Reads of saved بکری (PRD FR-12.7, FR-12.13, FR-13.6, FR-7.29, FR-5.4, plan 13): one بکری with
-//! its stored values, the list and the find, first / previous / next / last, the one-time people
-//! and the lines of the پختہ کھاتہ register. Everything here only reads (Code Standards B29), and
-//! every number is a stored value: nothing is worked out again (Code Standards B20).
+//! Reads of saved بکری (PRD FR-12.7, FR-12.13, FR-5.4, plan 13): one بکری with its stored values, the
+//! list and the find, first / previous / next / last. Everything here only reads (Code Standards
+//! B29), and every number is a stored value: nothing is worked out again (Code Standards B20).
 //!
 //! A sum of money is a `SUM()` on `INTEGER` columns only (money agent Section 9).
 
@@ -10,9 +9,9 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
-    NavigateTo, PaymentType, PukhtaPerson, PukhtaSide, SaleGrade, SaleState, SavedCharge,
-    SavedCredit, SavedLot, SavedLotCharge, SavedOwnLot, SavedPosting, SavedPukhta,
-    SavedPurchaseRef, SavedSale, SavedSplit, SavedTotals, StoredMethod,
+    NavigateTo, PaymentType, SaleGrade, SaleState, SavedCharge, SavedChukta, SavedCredit, SavedLot,
+    SavedLotCharge, SavedOwnLot, SavedPosting, SavedPurchaseRef, SavedSale, SavedSplit,
+    SavedTotals, StoredMethod,
 };
 use mandi_core::edit::EntryFlags;
 use mandi_core::money::Paisa;
@@ -96,13 +95,13 @@ impl<'a> Cols<'a> {
         }))
     }
 
-    /// The four columns of a one-time person; `None` when there is no person key.
-    fn pukhta(&mut self) -> rusqlite::Result<Option<SavedPukhta>> {
+    /// The four columns of a چکتا buyer; `None` when there is no person key.
+    fn chukta(&mut self) -> rusqlite::Result<Option<SavedChukta>> {
         let name_ur: Option<String> = self.get()?;
         let name_en: Option<String> = self.get()?;
         let phone: Option<String> = self.get()?;
         let key: Option<String> = self.get()?;
-        Ok(key.map(|person_key| SavedPukhta {
+        Ok(key.map(|person_key| SavedChukta {
             name_ur: name_ur.unwrap_or_default(),
             name_en: name_en.unwrap_or_default(),
             phone: phone.unwrap_or_default(),
@@ -154,7 +153,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let journal_entry_id: i64 = c.get()?;
     let entry_date: String = c.get()?;
     let buyer = c.account()?;
-    let pukhta = c.pukhta()?;
+    let chukta = c.chukta()?;
     let qty: i64 = c.get()?;
     let weight_grams: Option<i64> = c.get()?;
     let seller_rate = c.paisa()?;
@@ -183,7 +182,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
             journal_entry_id,
             entry_date,
             buyer,
-            pukhta,
+            chukta,
             qty,
             weight_grams,
             seller_rate,
@@ -211,7 +210,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
 
 const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.entry_date,
     ba.id, ba.code, ba.name_ur, ba.name_en, ba.tag,
-    s.pukhta_name_ur, s.pukhta_name_en, s.pukhta_phone, s.pukhta_person_key,
+    s.chukta_name_ur, s.chukta_name_en, s.chukta_phone, s.chukta_person_key,
     s.qty, s.weight_grams, s.seller_rate_paisa, s.seller_amount_paisa,
     s.seller_comm_method, s.seller_comm_value_bps, s.seller_comm_value_paisa, s.seller_comm_rule_id, s.seller_comm_paisa,
     s.buyer_rate_paisa, s.buyer_value_paisa,
@@ -224,7 +223,6 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;
     let lot_no: i64 = c.get()?;
     let seller = c.account()?;
-    let pukhta = c.pukhta()?;
     let item = c.record()?;
     let packing = c.record()?;
     let marka_id: Option<i64> = c.get()?;
@@ -291,7 +289,6 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
             }
             _ => None,
         },
-        pukhta,
         item,
         packing,
         marka_id,
@@ -425,7 +422,6 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
 
     let mut statement = conn.prepare(
         "SELECT l.id, l.lot_no, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
-                l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 l.marka_id, mk.mark_text, l.store_id, l.qty_received, l.qty_sold, l.qty_written_off,
                 l.qty_taken, l.weight_received_grams, l.freight_paisa, l.freight_paid_by,
@@ -525,6 +521,14 @@ pub struct ListFilter {
     pub seller_id: Option<i64>,
     /// An item of one of its lots.
     pub item_id: Option<i64>,
+    /// A buyer (an account) on one of its live sale lines (plan 67).
+    pub buyer_id: Option<i64>,
+    /// Part of the normalised Urdu name (`core::text::search_ur`) of a چکتا buyer on one of its live
+    /// sale lines (plan 67). Matches anywhere in the name.
+    pub chukta_name_ur: Option<String>,
+    /// The same, for the lower-case English name (`core::text::search_en`). A line matches when
+    /// either name matches.
+    pub chukta_name_en: Option<String>,
     /// `saved` or `cancelled`.
     pub status: Option<BikriStatus>,
     /// The بکری number.
@@ -544,6 +548,20 @@ pub struct ListFilter {
 /// Escapes `%`, `_` and `\` so typed text is taken as plain characters in a `LIKE`.
 fn like_prefix(text: &str) -> String {
     let mut out = String::with_capacity(text.len().saturating_add(1));
+    for c in text.chars() {
+        if matches!(c, '%' | '_' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('%');
+    out
+}
+
+/// Escapes `%`, `_` and `\` and puts `%` on both sides, so typed text is found anywhere in a name.
+fn like_contains(text: &str) -> String {
+    let mut out = String::with_capacity(text.len().saturating_add(2));
+    out.push('%');
     for c in text.chars() {
         if matches!(c, '%' | '_' | '\\') {
             out.push('\\');
@@ -579,6 +597,36 @@ fn list_where(filter: &ListFilter) -> (String, Vec<Value>) {
             "EXISTS (SELECT 1 FROM bikri_lots l2 WHERE l2.bikri_id = e.id AND l2.item_id = ?)",
         );
         binds.push(Value::Integer(item));
+    }
+    if let Some(buyer) = filter.buyer_id {
+        // One search on `idx_bikri_sales_buyer_date`, not a look at every بکری (B18, plan 67).
+        conditions.push(
+            "e.id IN (SELECT s2.bikri_id FROM bikri_sales s2 WHERE s2.buyer_account_id = ? AND s2.is_active = 1)",
+        );
+        binds.push(Value::Integer(buyer));
+    }
+    // A چکتا buyer has no account: his name is on the line and in the list of چکتا buyers, whose
+    // search keys are the ones that are searched. Either name may match; a name that was not given
+    // is a NULL pattern, which matches nothing. Only the lines of the shared account 0030 are looked
+    // at (its buyer index), not every line (B18); the small list of چکتا buyers is read whole.
+    let name_pattern = |key: &Option<String>| match key.as_deref().filter(|t| !t.is_empty()) {
+        Some(text) => Value::Text(like_contains(text)),
+        None => Value::Null,
+    };
+    let (ur, en) = (
+        name_pattern(&filter.chukta_name_ur),
+        name_pattern(&filter.chukta_name_en),
+    );
+    if ur != Value::Null || en != Value::Null {
+        conditions.push(
+            "e.id IN (SELECT s2.bikri_id FROM bikri_sales s2
+                WHERE s2.buyer_account_id = (SELECT id FROM accounts WHERE code = '0030')
+                  AND s2.is_active = 1
+                  AND s2.chukta_person_key IN (SELECT b.person_key FROM chukta_buyers b
+                       WHERE b.search_ur LIKE ? ESCAPE '\\' OR b.search_en LIKE ? ESCAPE '\\'))",
+        );
+        binds.push(ur);
+        binds.push(en);
     }
     if let Some(status) = filter.status {
         conditions.push("e.status = ?");
@@ -690,7 +738,6 @@ pub fn list(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<Bikr
             net: c.paisa()?,
             buyer_total: c.paisa()?,
             sellers: Vec::new(),
-            pukhta_sellers: Vec::new(),
             items: Vec::new(),
             // Set by the service, which knows the closed-up-to day and the audit stamp.
             flags: EntryFlags::unmarked(),
@@ -891,7 +938,6 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
     let marks = vec!["?"; ids.len()].join(", ");
     let mut statement = conn.prepare(&format!(
         "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
-                l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en
          FROM bikri_lots l JOIN accounts sa ON sa.id = l.seller_account_id JOIN items it ON it.id = l.item_id
          WHERE l.bikri_id IN ({marks}) ORDER BY l.bikri_id, l.lot_no"
@@ -899,24 +945,19 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
     let lots = statement.query_map(rusqlite::params_from_iter(&ids), |row| {
         let mut c = Cols::new(row);
         let bikri_id: i64 = c.get()?;
-        Ok((bikri_id, c.account()?, c.pukhta()?, c.record()?))
+        Ok((bikri_id, c.account()?, c.record()?))
     })?;
     let mut by_id: HashMap<i64, usize> = HashMap::with_capacity(rows.len());
     for (index, row) in rows.iter().enumerate() {
         by_id.insert(row.id, index);
     }
     for lot in lots {
-        let (bikri_id, seller, pukhta, item) = lot?;
+        let (bikri_id, seller, item) = lot?;
         let Some(row) = by_id.get(&bikri_id).and_then(|i| rows.get_mut(*i)) else {
             continue;
         };
-        match pukhta {
-            Some(person) => row.pukhta_sellers.push(person),
-            None => {
-                if !row.sellers.iter().any(|s| s.id == seller.id) {
-                    row.sellers.push(seller);
-                }
-            }
+        if !row.sellers.iter().any(|s| s.id == seller.id) {
+            row.sellers.push(seller);
         }
         if !row.items.iter().any(|i| i.id == item.id) {
             row.items.push(item);
@@ -1013,285 +1054,6 @@ pub fn hits_by_truck(
     )?;
     let rows = statement.query_map(params![like_prefix(prefix), limit], |r| {
         hit(r, BikriMatch::Truck)
-    })?;
-    rows.collect()
-}
-
-/// Every one-time person of a side, newest first, with the names and phone as he was last
-/// typed (PRD FR-7.29). The services keep the ones that match the typed text.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn pukhta_people(conn: &Connection, side: PukhtaSide) -> rusqlite::Result<Vec<PukhtaPerson>> {
-    // The names and phone of his latest line: the row numbered 1 in each person's own order.
-    let sql = match side {
-        PukhtaSide::Buyer => {
-            "SELECT person_key, name_ur, name_en, phone, entry_date FROM (
-                 SELECT s.pukhta_person_key AS person_key, s.pukhta_name_ur AS name_ur,
-                        s.pukhta_name_en AS name_en, s.pukhta_phone AS phone, s.entry_date AS entry_date,
-                        s.id AS row_id,
-                        ROW_NUMBER() OVER (PARTITION BY s.pukhta_person_key
-                                           ORDER BY s.entry_date DESC, s.id DESC) AS position
-                 FROM bikri_sales s WHERE s.pukhta_person_key IS NOT NULL)
-             WHERE position = 1 ORDER BY entry_date DESC, row_id DESC"
-        }
-        PukhtaSide::Seller => {
-            "SELECT person_key, name_ur, name_en, phone, entry_date FROM (
-                 SELECT l.pukhta_person_key AS person_key, l.pukhta_name_ur AS name_ur,
-                        l.pukhta_name_en AS name_en, l.pukhta_phone AS phone, e.entry_date AS entry_date,
-                        l.id AS row_id,
-                        ROW_NUMBER() OVER (PARTITION BY l.pukhta_person_key
-                                           ORDER BY e.entry_date DESC, l.id DESC) AS position
-                 FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-                 WHERE l.pukhta_person_key IS NOT NULL)
-             WHERE position = 1 ORDER BY entry_date DESC, row_id DESC"
-        }
-    };
-    let mut statement = conn.prepare(sql)?;
-    let rows = statement.query_map([], |row| {
-        let mut c = Cols::new(row);
-        let person_key: String = c.get()?;
-        let name_ur: Option<String> = c.get()?;
-        let name_en: Option<String> = c.get()?;
-        let phone: Option<String> = c.get()?;
-        let last_date: String = c.get()?;
-        Ok(PukhtaPerson {
-            name_ur: name_ur.unwrap_or_default(),
-            name_en: name_en.unwrap_or_default(),
-            phone: phone.unwrap_or_default(),
-            last_date,
-            person_key,
-            // The service marks the people in the dead amount (it knows the account of the side).
-            is_dead: false,
-        })
-    })?;
-    rows.collect()
-}
-
-/// A line of the پختہ کھاتہ register before paid or due is known.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RegisterLine {
-    /// Row id of the sale line (a buyer) or the lot (a seller).
-    pub row_id: i64,
-    /// The day of the posting, `YYYY-MM-DD`.
-    pub entry_date: String,
-    /// The بکری.
-    pub bikri_id: i64,
-    /// Its number.
-    pub bikri_number: i64,
-    /// Seller or buyer.
-    pub side: PukhtaSide,
-    /// Urdu name.
-    pub name_ur: String,
-    /// English name.
-    pub name_en: String,
-    /// Phone, 11 digits or empty.
-    pub phone: String,
-    /// The person key.
-    pub person_key: String,
-    /// The item.
-    pub item: RecordRef,
-    /// نگ.
-    pub qty: i64,
-    /// A buyer line: the buyer total. A seller lot: خام بکری.
-    pub amount: Paisa,
-    /// A buyer line: the buyer commission. A seller lot: the seller commission.
-    pub commission: Paisa,
-    /// A seller lot: its صافی بکری, which is what is left to pay him after the نقد (C7). Zero for
-    /// a buyer line.
-    pub seller_net_paisa: i64,
-    /// The posting of this line.
-    pub journal_entry_id: i64,
-    /// The account of this line: the shared پختہ کھاتہ account, or a پختہ party's own account.
-    pub account_id: i64,
-    /// True if the بکری was cancelled.
-    pub cancelled: bool,
-    /// True when the line is on a پختہ party's own account (plan 47, PRD FR-13.11). He has no person
-    /// key (`person_key` is empty) and his names and phone are the account's.
-    pub is_party: bool,
-}
-
-/// The lines of a one-time buyer, oldest first. A line replaced by an edit does not show.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn register_buyer_lines(
-    conn: &Connection,
-    from: Option<&str>,
-    to: Option<&str>,
-) -> rusqlite::Result<Vec<RegisterLine>> {
-    let mut statement = conn.prepare(
-        "SELECT s.id, s.entry_date, e.id, e.number,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_ur ELSE s.pukhta_name_ur END,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_en ELSE s.pukhta_name_en END,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.phone1 ELSE s.pukhta_phone END,
-                COALESCE(s.pukhta_person_key, ''), it.id, it.code, it.name_ur, it.name_en, s.qty,
-                s.buyer_total_paisa, s.buyer_comm_paisa, s.journal_entry_id, s.buyer_account_id, e.status,
-                acc.is_pukhta_party
-         FROM bikri_sales s
-         JOIN bikri_entries e ON e.id = s.bikri_id
-         JOIN bikri_lots l ON l.id = s.lot_id
-         JOIN items it ON it.id = l.item_id
-         JOIN accounts acc ON acc.id = s.buyer_account_id
-         WHERE (s.pukhta_person_key IS NOT NULL OR acc.is_pukhta_party = 1)
-           AND s.replaced_by_sale_id IS NULL
-           AND (?1 IS NULL OR s.entry_date >= ?1) AND (?2 IS NULL OR s.entry_date <= ?2)
-         ORDER BY s.entry_date, s.id",
-    )?;
-    let rows = statement.query_map(params![from, to], |row| {
-        let mut c = Cols::new(row);
-        let row_id: i64 = c.get()?;
-        let entry_date: String = c.get()?;
-        let bikri_id: i64 = c.get()?;
-        let bikri_number: i64 = c.get()?;
-        let name_ur: Option<String> = c.get()?;
-        let name_en: Option<String> = c.get()?;
-        let phone: Option<String> = c.get()?;
-        let person_key: String = c.get()?;
-        let item = c.record()?;
-        let qty: i64 = c.get()?;
-        let amount = c.paisa()?;
-        let commission = c.paisa()?;
-        let journal_entry_id: i64 = c.get()?;
-        let account_id: i64 = c.get()?;
-        let status = c.status()?;
-        let is_party: bool = c.get()?;
-        Ok(RegisterLine {
-            row_id,
-            entry_date,
-            bikri_id,
-            bikri_number,
-            side: PukhtaSide::Buyer,
-            name_ur: name_ur.unwrap_or_default(),
-            name_en: name_en.unwrap_or_default(),
-            phone: phone.unwrap_or_default(),
-            person_key,
-            item,
-            qty,
-            amount,
-            commission,
-            seller_net_paisa: 0,
-            journal_entry_id,
-            account_id,
-            cancelled: status == BikriStatus::Cancelled,
-            is_party,
-        })
-    })?;
-    rows.collect()
-}
-
-/// The lots of a one-time seller, oldest first, with what each posting credits him.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn register_seller_lines(
-    conn: &Connection,
-    from: Option<&str>,
-    to: Option<&str>,
-) -> rusqlite::Result<Vec<RegisterLine>> {
-    let mut statement = conn.prepare(
-        "SELECT l.id, e.entry_date, e.id, e.number,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_ur ELSE l.pukhta_name_ur END,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.name_en ELSE l.pukhta_name_en END,
-                CASE WHEN acc.is_pukhta_party = 1 THEN acc.phone1 ELSE l.pukhta_phone END,
-                COALESCE(l.pukhta_person_key, ''), it.id, it.code, it.name_ur, it.name_en, l.qty_received,
-                l.gross_paisa, l.seller_comm_paisa, l.net_paisa, l.first_entry_id, l.seller_account_id,
-                e.status, acc.is_pukhta_party
-         FROM bikri_lots l
-         JOIN bikri_entries e ON e.id = l.bikri_id
-         JOIN items it ON it.id = l.item_id
-         JOIN accounts acc ON acc.id = l.seller_account_id
-         WHERE (l.pukhta_person_key IS NOT NULL OR acc.is_pukhta_party = 1)
-           AND (?1 IS NULL OR e.entry_date >= ?1) AND (?2 IS NULL OR e.entry_date <= ?2)
-         ORDER BY e.entry_date, l.id",
-    )?;
-    let rows = statement.query_map(params![from, to], |row| {
-        let mut c = Cols::new(row);
-        let row_id: i64 = c.get()?;
-        let entry_date: String = c.get()?;
-        let bikri_id: i64 = c.get()?;
-        let bikri_number: i64 = c.get()?;
-        let name_ur: Option<String> = c.get()?;
-        let name_en: Option<String> = c.get()?;
-        let phone: Option<String> = c.get()?;
-        let person_key: String = c.get()?;
-        let item = c.record()?;
-        let qty: i64 = c.get()?;
-        let amount = c.paisa()?;
-        let commission = c.paisa()?;
-        let net: i64 = c.get()?;
-        let first_entry_id: Option<i64> = c.get()?;
-        let account_id: i64 = c.get()?;
-        let status = c.status()?;
-        let is_party: bool = c.get()?;
-        Ok(RegisterLine {
-            row_id,
-            entry_date,
-            bikri_id,
-            bikri_number,
-            side: PukhtaSide::Seller,
-            name_ur: name_ur.unwrap_or_default(),
-            name_en: name_en.unwrap_or_default(),
-            phone: phone.unwrap_or_default(),
-            person_key,
-            item,
-            qty,
-            amount,
-            commission,
-            seller_net_paisa: net,
-            journal_entry_id: first_entry_id.unwrap_or_default(),
-            account_id,
-            cancelled: status == BikriStatus::Cancelled,
-            is_party,
-        })
-    })?;
-    rows.collect()
-}
-
-/// A debit line of the one-time buyer account with the part of it that is settled.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BillLine {
-    /// The journal line.
-    pub line_id: i64,
-    /// Its entry.
-    pub entry_id: i64,
-    /// The account.
-    pub account_id: i64,
-    /// The person key.
-    pub person_key: String,
-    /// Its amount, paisa.
-    pub amount_paisa: i64,
-    /// The sum of its active matching rows, paisa.
-    pub matched_paisa: i64,
-}
-
-/// Every debit line of the one-time buyer account with a person key, and of a پختہ گاہک's own
-/// account (no person key, so `person_key` is empty, plan 47), in entry and line order, with the
-/// part of each that the active bill matching rows settle (PRD FR-13.6).
-///
-/// # Errors
-/// Any SQLite error.
-pub fn pukhta_bill_lines(conn: &Connection) -> rusqlite::Result<Vec<BillLine>> {
-    let mut statement = conn.prepare(
-        "SELECT l.id, l.entry_id, l.account_id, COALESCE(l.pukhta_person_key, ''), l.dr_paisa,
-                COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
-                          WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)
-         FROM journal_lines l JOIN accounts acc ON acc.id = l.account_id
-         WHERE acc.party_type = 'buyer' AND l.dr_paisa > 0
-           AND ((acc.is_pukhta_khata = 1 AND l.pukhta_person_key IS NOT NULL)
-                OR acc.is_pukhta_party = 1)
-         ORDER BY l.entry_id, l.line_no",
-    )?;
-    let rows = statement.query_map([], |row| {
-        let mut c = Cols::new(row);
-        Ok(BillLine {
-            line_id: c.get()?,
-            entry_id: c.get()?,
-            account_id: c.get()?,
-            person_key: c.get()?,
-            amount_paisa: c.get()?,
-            matched_paisa: c.get()?,
-        })
     })?;
     rows.collect()
 }

@@ -36,7 +36,7 @@ export function sellerBillColumns(page: PrintPage, data: PrintData): PrintColumn
   return withDateAndWeight(page, data, ['buyer', 'item', 'packing']);
 }
 
-/** A buyer slip (R5) and the پختہ slip: the goods of one buyer. */
+/** A buyer slip (R5): the goods of one buyer. */
 export function slipColumns(page: PrintPage, data: PrintData): PrintColumn[] {
   return withDateAndWeight(page, data, ['item', 'packing']);
 }

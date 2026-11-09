@@ -49,7 +49,6 @@ const CASES = [];
 for (const language of ['ur', 'en']) {
   CASES.push([`seller-bill-${language}-a4`, `doc=seller_bill&language=${language}`]);
   CASES.push([`buyer-slips-${language}-a5`, `doc=buyer_slips&language=${language}`]);
-  CASES.push([`pukhta-slip-${language}-a5`, `doc=pukhta_slip&language=${language}`]);
   CASES.push([`buyer-slips-${language}-mm80`, `doc=buyer_slips&language=${language}&paper=mm80`]);
   // A table that runs over several sheets, and the second sheet alone: the header row must repeat
   // and no row may be cut.

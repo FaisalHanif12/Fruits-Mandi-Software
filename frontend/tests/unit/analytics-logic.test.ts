@@ -125,20 +125,11 @@ describe('the boxes become the request the backend wrote', () => {
     expect(wire.to).toBe('');
   });
 
-  it('sends a buyer, and a person inside a one-time buyer account with his key', () => {
-    const buyer = { id: 9, name_ur: 'پختہ', name_en: 'Pukhta', code: '0030' };
+  it('sends a buyer as his account, with no person key (a چکتا buyer is not in the buyer box)', () => {
+    const buyer = { id: 9, name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', code: '0020' };
     const plain = filtersToWire({ ...EMPTY_ANALYTICS_FILTERS, buyer }, takesOf('C'));
     expect(plain.buyer).toEqual({ account_id: 9, person_key: null });
-    const person = {
-      accountId: 9,
-      personKey: 'شاہد|03000000000',
-      name_ur: 'شاہد',
-      name_en: 'Shahid',
-      phone: '03000000000',
-      last_date: '2026-10-10',
-    };
-    const narrowed = filtersToWire({ ...EMPTY_ANALYTICS_FILTERS, buyer, person }, takesOf('C'));
-    expect(narrowed.buyer).toEqual({ account_id: 9, person_key: 'شاہد|03000000000' });
+    expect(filtersToWire(EMPTY_ANALYTICS_FILTERS, takesOf('C')).buyer).toBeNull();
   });
 
   it('knows when nothing is filled, so “clear the filters” is offered only when it helps', () => {

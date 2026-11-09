@@ -1,0 +1,27 @@
+{
+  "rows": [
+    {
+      "account_id": 18,
+      "code": "0010",
+      "name_ur": "رحیم",
+      "name_en": "Rahim",
+      "balance_paisa": 0,
+      "side": "zero",
+      "is_active": true,
+      "is_dead": false
+    },
+    {
+      "account_id": 19,
+      "code": "0011",
+      "name_ur": "کریم",
+      "name_en": "Karim",
+      "balance_paisa": 1016000,
+      "side": "cr",
+      "is_active": true,
+      "is_dead": false
+    }
+  ],
+  "count": 2,
+  "total_dr_paisa": 0,
+  "total_cr_paisa": 1016000
+}

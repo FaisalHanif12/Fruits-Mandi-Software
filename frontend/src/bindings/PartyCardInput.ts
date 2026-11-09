@@ -8,4 +8,9 @@ export type PartyCardInput = {
    * The account.
    */
   account_id: number;
+  /**
+   * A چکتا buyer (plan 64): with the account چکتا کھاتہ in `account_id` the card is his own, his
+   * name and phone with no balance (PRD FR-7.38). Missing means none.
+   */
+  chukta_id?: number | null;
 };

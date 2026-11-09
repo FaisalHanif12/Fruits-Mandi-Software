@@ -13,7 +13,6 @@ use mandi_core::english_words::english_words;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_core::money::Grouping;
 use mandi_core::printing::{PrintDoc, PrintSetup};
-use mandi_core::text;
 use mandi_core::urdu_words::urdu_words;
 use mandi_core::vouchers::{VoucherRow, VoucherType};
 use mandi_db::Db;
@@ -64,8 +63,8 @@ pub fn voucher_print_data(
 /// What the slip is about, besides the voucher itself.
 struct Loaded {
     row: VoucherRow,
-    /// `buyer`, `seller` or `other`, with whether the account is a پختہ کھاتہ one.
-    party_kind: (PartyKind, bool),
+    /// `buyer`, `seller` or `other`.
+    party_kind: PartyKind,
     collector: Option<(String, String)>,
     firm: FirmNames,
     grouping: Grouping,
@@ -79,9 +78,9 @@ enum PartyKind {
     Other,
 }
 
-fn party_kind(conn: &Connection, row: &VoucherRow) -> Result<(PartyKind, bool), ReportsError> {
+fn party_kind(conn: &Connection, row: &VoucherRow) -> Result<PartyKind, ReportsError> {
     let Some(account) = &row.account else {
-        return Ok((PartyKind::Other, false));
+        return Ok(PartyKind::Other);
     };
     let facts = account_repo::facts(conn, account.id)?
         .ok_or_else(|| ReportsError::Data("a voucher names no account".to_owned()))?;
@@ -90,7 +89,7 @@ fn party_kind(conn: &Connection, row: &VoucherRow) -> Result<(PartyKind, bool), 
         mandi_core::accounts::SELLER_CONTROL => PartyKind::Seller,
         _ => PartyKind::Other,
     };
-    Ok((kind, facts.is_pukhta_khata))
+    Ok(kind)
 }
 
 fn build_slip(
@@ -114,40 +113,26 @@ fn build_slip(
             )]));
         }
     };
-    // The party: the one-time person by his own names, else the account (PRD FR-13.2).
-    let (kind, is_pukhta) = loaded.party_kind;
+    // The party: the account.
+    let kind = loaded.party_kind;
     let account = row.account.as_ref().ok_or_else(|| {
         ReportsError::Rejected(vec![FieldError::new(
             ErrorCode::ErrOutOfRange,
             "voucher_id",
         )])
     })?;
-    let party = match (&row.person, is_pukhta) {
-        (Some(person), true) => PrintParty {
-            role_id: match kind {
-                PartyKind::Seller => PARTY_ONETIME_SELLER,
-                _ => PARTY_ONETIME_BUYER,
-            }
-            .to_owned(),
-            code: None,
-            short_code: None,
-            name: pick(language, &person.name_ur, &person.name_en),
-            tag: None,
-            phone: Some(text::phone_display(&person.phone)).filter(|p| !p.is_empty()),
-        },
-        _ => PrintParty {
-            role_id: match kind {
-                PartyKind::Buyer => PARTY_BUYER,
-                PartyKind::Seller => PARTY_SELLER,
-                PartyKind::Other => PARTY_ACCOUNT,
-            }
-            .to_owned(),
-            code: Some(account.code.clone()),
-            short_code: short_code_of(&account.code),
-            name: pick(language, &account.name_ur, &account.name_en),
-            tag: account.tag.clone(),
-            phone: None,
-        },
+    let party = PrintParty {
+        role_id: match kind {
+            PartyKind::Buyer => PARTY_BUYER,
+            PartyKind::Seller => PARTY_SELLER,
+            PartyKind::Other => PARTY_ACCOUNT,
+        }
+        .to_owned(),
+        code: Some(account.code.clone()),
+        short_code: short_code_of(&account.code),
+        name: pick(language, &account.name_ur, &account.name_en),
+        tag: account.tag.clone(),
+        phone: None,
     };
 
     let mut facts = vec![

@@ -27,7 +27,7 @@ pub enum LockedReason {
     /// The goods it touched were sold or written off (a trip purchase, trip cost, sale in another
     /// shop, garden entry or arrival).
     GoodsMoved,
-    /// A later posting, a write-off or fruit rests on a lot, so its seller (or one-time person)
+    /// A later posting, a write-off or fruit rests on a lot, so its seller
     /// cannot change (A74).
     LotSellerLocked,
     /// The garden of the entry is closed (PRD FR-12.38).
@@ -274,8 +274,6 @@ pub struct EditChange {
 pub struct EffectParty {
     /// The account.
     pub account: RecordRef,
-    /// The person inside a پختہ کھاتہ account, as stored. Null for a plain account.
-    pub person_key: Option<String>,
     /// His balance now.
     pub before: Balance,
     /// His balance after the edit.

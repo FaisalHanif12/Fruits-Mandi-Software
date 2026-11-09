@@ -2,11 +2,11 @@
 //! files. The golden numbers of Event 1 and Event 2 are in `golden_day.rs`.
 //!
 //! - `save`: what a save writes and refuses: numbering, errors together, charges, freight, the
-//!   one-time person, advances, a lot with no sale.
+//!   چکتا buyer, advances, a lot with no sale.
 //! - `all_or_nothing`: a failure forced after each step leaves no row (NFR-REL-1).
 //! - `matching`: bill matching and advance matching on real data, and the canonical re-match.
 //! - `reads`: a saved بکری, the list, find, first / previous / next / last, global search, the
-//!   one-time people and the register.
+//!   چکتا buyers and the register.
 //! - `drafts`: the unsaved work of a screen (NFR-REL-2).
 //! - `properties`: random بکری through the real database.
 //! - `fixtures`: the real answers of the commands as JSON files for the frontend; fails when a

@@ -64,6 +64,7 @@ export { PickerBase, type PickerBaseProps, type PickerHit } from './PickerBase';
 export { QtyInput } from './QtyInput';
 export { ReasonDialog } from './ReasonDialog';
 export { QuickAddAccount } from './QuickAddAccount';
+export { QuickAddChukta } from './QuickAddChukta';
 export { SimilarAccounts } from './SimilarAccounts';
 export { RomanUrduInput, type ConvertedWord, type ListExtra } from './RomanUrduInput';
 export { FreeTextInput } from './FreeTextInput';

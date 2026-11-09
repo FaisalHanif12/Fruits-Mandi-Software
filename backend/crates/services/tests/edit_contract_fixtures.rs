@@ -216,7 +216,6 @@ fn the_edit_reviews_of_the_old_edits_are_the_contract() {
         effect: EditEffect {
             parties: vec![EffectParty {
                 account: rahim(),
-                person_key: None,
                 before: cr(2_750),
                 after: cr(3_330),
             }],

@@ -39,7 +39,6 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -242,7 +241,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
         count(&f.dir, "SELECT COUNT(*) FROM journal_entries"),
         audit_total(&f.dir),
     );
-    let pukhta = id_of(&f.env, "0031");
+    let old_closed = id_of(&f.env, "0031");
     let buyer = accounts::save(
         &f.env.ctx,
         &f.owner,
@@ -304,7 +303,7 @@ fn every_mistake_names_its_field_and_nothing_is_written() {
             "seller_account_id",
         ),
         (
-            advance(pukhta, "100"),
+            advance(old_closed, "100"),
             ErrorCode::ErrNotASeller,
             "seller_account_id",
         ),
@@ -945,7 +944,6 @@ fn the_voucher_list_filters_by_kind_and_date() {
                 search: None,
                 show_finished: true,
                 account_id: None,
-                person_key: None,
                 voucher_type: kind,
                 from: from.into(),
                 to: to.into(),
@@ -981,7 +979,6 @@ fn the_voucher_list_filters_by_kind_and_date() {
                     search: None,
                     show_finished: true,
                     account_id: None,
-                    person_key: None,
                     voucher_type: None,
                     from: "99-99-2026".into(),
                     to: String::new(),

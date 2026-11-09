@@ -52,9 +52,8 @@ export function DeadMarkDialog({ request, onClose }: DeadMarkDialogProps) {
   const client = useQueryClient();
   const day = useDayStatus();
   const preview = useQuery({
-    queryKey: ['dead', 'preview', request.accountId, request.personKey],
-    queryFn: () =>
-      deadPreview({ account_id: request.accountId, pukhta_person_key: request.personKey }),
+    queryKey: ['dead', 'preview', request.accountId],
+    queryFn: () => deadPreview({ account_id: request.accountId }),
     staleTime: 0,
     gcTime: 0,
   });
@@ -70,7 +69,6 @@ export function DeadMarkDialog({ request, onClose }: DeadMarkDialogProps) {
     mutationFn: () =>
       deadMark({
         account_id: request.accountId,
-        pukhta_person_key: request.personKey,
         entry_date: date.trim(),
         reason,
         note: note.trim(),

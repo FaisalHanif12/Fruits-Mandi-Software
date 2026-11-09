@@ -286,7 +286,6 @@ fn account_of(
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -827,8 +826,7 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
     )
     .expect("partner shares");
     let naqdi = world::id_of(&env, "03040000");
-    let pukhta_buyer = world::id_of(&env, "0030");
-    let pukhta_seller = world::id_of(&env, "0031");
+    let chukta_khata = world::id_of(&env, "0030");
     let own_goods = world::id_of(&env, "030119998");
     let w = world::World {
         dir,
@@ -839,8 +837,7 @@ fn people_and_things(dir: TempDir, env: TestEnv, owner: auth::Actor) -> Year {
         akram: buyers[0].id,
         arshad: buyers[2].id,
         naqdi,
-        pukhta_buyer,
-        pukhta_seller,
+        chukta_khata,
         banana: kela,
         apple: saib,
         mooli: aloo,
@@ -1397,14 +1394,8 @@ fn collect(y: &Year, day: NaiveDate) {
         if b.stops_paying.is_some_and(|s| day > s) {
             continue;
         }
-        let bills = vouchers::open_bills(
-            &y.w.env.ctx,
-            &OpenBillsInput {
-                account_id: b.id,
-                person_key: None,
-            },
-        )
-        .expect("open bills");
+        let bills = vouchers::open_bills(&y.w.env.ctx, &OpenBillsInput { account_id: b.id })
+            .expect("open bills");
         let due: i64 = bills
             .bills
             .iter()
@@ -1421,7 +1412,6 @@ fn collect(y: &Year, day: NaiveDate) {
             &ReceiptInput {
                 date: ddmmyyyy(day),
                 account_id: b.id,
-                person_key: None,
                 amount: amount.to_string(),
                 removed: RemovedPaymentFields::default(),
                 collector_staff_id: None,
@@ -1439,7 +1429,6 @@ fn pay_sellers(y: &Year, day: NaiveDate) {
             &y.w.env.ctx,
             &OpenPayablesInput {
                 seller_id: s.id,
-                person_key: None,
                 include_settled: false,
             },
         )
@@ -1459,7 +1448,6 @@ fn pay_sellers(y: &Year, day: NaiveDate) {
             &PaymentInput {
                 date: ddmmyyyy(day),
                 account_id: s.id,
-                person_key: None,
                 amount: due.to_string(),
                 removed: RemovedPaymentFields::default(),
                 reason: String::new(),
@@ -1523,7 +1511,6 @@ fn special_events(y: &mut Year, rng: &mut Rng, day: NaiveDate, garden_days: &[Na
                     &y.w.owner,
                     &DeadMarkInput {
                         account_id,
-                        pukhta_person_key: None,
                         entry_date: dd.clone(),
                         reason: DeadReason::Left,
                         note: "left the market".into(),
@@ -1997,11 +1984,11 @@ fn d7_last_rate_cases(y: &mut Year) {
 /// More of the shop for the D7 bank (plan 59 B2, lead, 07-11-2026). Added at the very end, ADD ONLY (no saved row of the
 /// year is changed), through the app's own save functions, on days of the past that are still open:
 ///
-/// - a city (Kasur) on three NEW accounts: two credit buyers (Naveed Traders, Rafique Brothers) and a پختہ party's own
+/// - a city (Kasur) on three NEW accounts: two credit buyers (Naveed Traders, Rafique Brothers) and a چکتا party's own
 ///   account (Nadir, FR-13.11), each with a balance, so the dues by city are not empty;
 /// - a day with cash AND credit lines of ONE buyer (14-10-2026): Naveed Traders takes 10 banana for cash and 12 apple on
 ///   credit, so "how much on the spot and how much stayed on credit" has both parts;
-/// - a one-time person of the shared پختہ کھاتہ (Aamir, with his phone) who owes, on 21-10-2026;
+/// - a چکتا buyer of the shared چکتا کھاتہ (Aamir, with his phone) who pays in full on the spot, on 21-10-2026;
 /// - a separate khata (الگ کھاتہ) with three entries;
 /// - a sale line with ریٹ مختلف (22-10-2026: the buyer pays 4,350, the seller gets 4,300, and it is the newest apple
 ///   line of that day, so "the rate" must be the seller's 4,300);
@@ -2011,8 +1998,8 @@ fn d7_last_rate_cases(y: &mut Year) {
 ///
 /// The sellers have no advance, so no advance is matched. The new buyers are put in `y.buyers` so the oracle reads them.
 fn d7_richer_cases(y: &mut Year) {
+    use mandi_services::core::bikri::{ChuktaInput, PaymentType};
     use mandi_services::core::bikri::{LaterSaleSaveInput, StockListInput};
-    use mandi_services::core::bikri::{PaymentType, PukhtaInput};
     use mandi_services::core::khata::{KhataCreateInput, KhataOutInput};
     use mandi_services::core::masters::{CityInput, MasterInput};
     set_today(&y.w.env, TODAY.0, TODAY.1, TODAY.2);
@@ -2055,12 +2042,11 @@ fn d7_richer_cases(y: &mut Year) {
     })
     .expect("the city of Kasur")
     .id();
-    let new_account = |names: (&str, &str), pukhta_party: bool| -> i64 {
+    let new_account = |names: (&str, &str)| -> i64 {
         let mut input = mandi_services::core::accounts::AccountInput {
             id: None,
             version: None,
             account_type: AccountType::Buyer,
-            is_pukhta_party: pukhta_party,
             control_id: None,
             code: String::new(),
             name_ur: names.0.into(),
@@ -2093,9 +2079,9 @@ fn d7_richer_cases(y: &mut Year) {
         .unwrap_or_else(|e| panic!("the account {}: {e:?}", names.1))
         .id
     };
-    let naveed = new_account(("نوید ٹریڈرز", "Naveed Traders"), false);
-    let rafique = new_account(("رفیق برادرز", "Rafique Brothers"), false);
-    let nadir = new_account(("نادر", "Nadir"), true);
+    let naveed = new_account(("نوید ٹریڈرز", "Naveed Traders"));
+    let rafique = new_account(("رفیق برادرز", "Rafique Brothers"));
+    let nadir = new_account(("نادر", "Nadir"));
     for (key, id) in [("naveed", naveed), ("rafique", rafique), ("nadir", nadir)] {
         y.buyers.push(BuyerInfo {
             key,
@@ -2198,8 +2184,9 @@ fn d7_richer_cases(y: &mut Year) {
             ),
         ],
     };
-    let mut aamir = line("p0", y.w.pukhta_buyer, "8", "4300", PaymentType::Credit);
-    aamir.pukhta = Some(PukhtaInput {
+    // A چکتا buyer always pays the whole bill on the spot (PRD FR-13.5), so his line is cash.
+    let mut aamir = line("p0", y.w.chukta_khata, "8", "4300", PaymentType::Cash);
+    aamir.chukta = Some(ChuktaInput {
         name_ur: "عامر".into(),
         name_en: "Aamir".into(),
         phone: "03001234567".into(),

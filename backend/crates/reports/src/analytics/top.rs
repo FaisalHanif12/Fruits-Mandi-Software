@@ -2,7 +2,7 @@
 //! most total commission (seller commission + buyer commission + لاگا of their sale lines, or
 //! the side asked for), each list under its own heading row.
 //!
-//! A one-time buyer of the پختہ کھاتہ account is one row for each person (FR-13.9). A row with
+//! A چکتا buyer of the چکتا کھاتہ account is one row for each person (FR-13.9). A row with
 //! no commission left is not listed. The share is the row's part of ALL the commission of the
 //! filter, not of the top ten.
 //!
@@ -23,8 +23,8 @@ use super::table::{
 };
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
-use crate::reports::common::{add, load_parties, pukhta_party};
-use crate::reports::grouped_sums::pukhta_names;
+use crate::reports::common::{add, chukta_party, load_parties};
+use crate::reports::grouped_sums::chukta_names;
 use crate::reports::{Cell, ColumnKind, RowKind};
 
 /// Rows in each list.
@@ -93,7 +93,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
     let by_buyer = facts::groups(
         conn,
         &facts::conds(typed, run_range(typed), &none),
-        &["f.buyer_account_id", "f.pukhta_person_key"],
+        &["f.buyer_account_id", "f.chukta_person_key"],
     )?;
     let (mut items, grand) = candidates(&by_item, typed, false)?;
     let (mut sellers, _) = candidates(&by_seller, typed, false)?;
@@ -157,7 +157,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         for group in facts::groups(
             conn,
             &facts::conds(typed, range, &none),
-            &["f.buyer_account_id", "f.pukhta_person_key"],
+            &["f.buyer_account_id", "f.chukta_person_key"],
         )? {
             if let Some(id) = group.int(0) {
                 compare_buyer.insert((id, group.text(1)), group.sums.total_comm(typed.side)?);
@@ -165,7 +165,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         }
     }
 
-    let pukhta_ids: Vec<i64> = {
+    let chukta_ids: Vec<i64> = {
         let mut ids: Vec<i64> = buyers
             .iter()
             .filter(|c| c.person.is_some())
@@ -175,7 +175,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         ids.dedup();
         ids
     };
-    let names = pukhta_names(conn, &pukhta_ids)?;
+    let names = chukta_names(conn, &chukta_ids)?;
 
     let mut columns = vec![
         col("rank", ids::COL_RANK, ColumnKind::Number),
@@ -260,7 +260,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             let party = match &candidate.person {
                 Some(person) => {
                     let saved = names.get(person);
-                    pukhta_party(
+                    chukta_party(
                         base.clone(),
                         Some(person.clone()),
                         saved.map(|p| p.name_ur.as_str()),

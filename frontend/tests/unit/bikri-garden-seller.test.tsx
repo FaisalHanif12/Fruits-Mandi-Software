@@ -12,7 +12,7 @@ import { LANGUAGES } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
-import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, PUKHTA_SELLER, RAHIM } from '../helpers/bikri';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM } from '../helpers/bikri';
 import { cellOf, lotsGrid, openBook, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
   healthyBackend,
@@ -29,7 +29,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -60,7 +59,7 @@ describe.each(LANGUAGES)('an open garden as the seller of a lot (%s)', (language
 
   async function open() {
     const view = await openBook(language);
-    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER, SHAHPUR];
+    const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, SHAHPUR];
     fakeAccounts(everyone);
     fakeAccountSearch(everyone);
     return view;
@@ -118,7 +117,7 @@ describe.each(LANGUAGES)('an open garden as the seller of a lot (%s)', (language
   it('a closed garden is not in the backend’s answer, so the seller cell does not offer it', async () => {
     const { user } = await open();
     // The backend leaves a closed garden out of the accounts it answers with.
-    const open_ones = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER];
+    const open_ones = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA];
     fakeAccounts(open_ones);
     fakeAccountSearch(open_ones);
     await user.click(await waitFor(() => cellOf(lotsGrid(language), 0, 'seller')));

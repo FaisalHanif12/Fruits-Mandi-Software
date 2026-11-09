@@ -31,7 +31,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -106,23 +105,17 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     expect(cell(41, 'status')).toBe(message(language, 'bikri-status-saved'));
   });
 
-  it('two sellers of one truck are in one cell, and a one-time seller is shown by his own name', async () => {
+  it('two sellers of one truck are in one cell', async () => {
     vi.mocked(bikriApi.bikriList).mockResolvedValue(
       bikriListOf([
         listRow({
-          sellers: [
-            ref(17, '0010', 'رحیم', 'Rahim'),
-            ref(22, '0031', 'پختہ کھاتہ (بیوپاری)', 'Pukhta Khata (Seller)'),
-          ],
-          pukhta_sellers: [
-            { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000', person_key: 'shahid|0300' },
-          ],
+          sellers: [ref(17, '0010', 'رحیم', 'Rahim'), ref(18, '0011', 'کریم', 'Karim')],
         }),
       ]),
     );
     await open();
     await waitFor(() => {
-      expect(cell(41, 'sellers')).toBe(language === 'ur' ? 'رحیم، شاہد' : 'Rahim, Shahid');
+      expect(cell(41, 'sellers')).toBe(language === 'ur' ? 'رحیم، کریم' : 'Rahim, Karim');
     });
   });
 

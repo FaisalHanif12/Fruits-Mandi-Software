@@ -154,10 +154,10 @@ pub struct DashboardBikri {
     pub number: i64,
     /// The truck number as typed. Null for none.
     pub truck_no: Option<String>,
-    /// The seller of its first lot (the one-time person's name for a پختہ کھاتہ lot).
+    /// The seller of its first lot (the چکتا buyer's name for a چکتا کھاتہ lot).
     pub seller: Option<Names>,
     /// The tag (نشان) of that seller's account, shown after his name. Missing when he has none and
-    /// for a one-time person.
+    /// for a چکتا buyer.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub seller_tag: Option<String>,
@@ -177,7 +177,7 @@ pub struct DashboardBikri {
 /// One of the oldest buyer dues (PRD 9.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct DashboardDue {
-    /// The buyer (and the one-time person inside a پختہ کھاتہ account).
+    /// The buyer (and the چکتا buyer inside a چکتا کھاتہ account).
     pub party: PartyRef,
     /// His city.
     pub city: Option<Names>,
@@ -265,7 +265,7 @@ impl AttentionKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum AttentionTarget {
-    /// An account (a buyer or a seller): its ledger. With a person key for a one-time person.
+    /// An account (a buyer or a seller): its ledger. With a person key for a چکتا buyer.
     Account,
     /// A partner.
     Partner,
@@ -285,7 +285,7 @@ pub struct AttentionFirst {
     /// Its id.
     #[ts(type = "number")]
     pub id: i64,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub person_key: Option<String>,
     /// Urdu name.
     pub name_ur: Option<String>,

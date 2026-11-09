@@ -294,7 +294,6 @@ mod lot {
             arrival_id: None,
             seller_account_id: OWN_GOODS,
             item_id: BANANA,
-            person_key: None,
             purchase_id: Some(1),
         }
     }

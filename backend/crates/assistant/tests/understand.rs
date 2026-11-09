@@ -1530,8 +1530,8 @@ fn the_worked_day_figures_periods_and_names() {
             e(Intent::HowTo).sure().topic("printing"),
         ),
         (
-            "what is pukhta khata",
-            e(Intent::HowTo).sure().topic("pukhta_khata"),
+            "what is chukta khata",
+            e(Intent::HowTo).sure().topic("chukta_khata"),
         ),
         (
             "cash book kholo",

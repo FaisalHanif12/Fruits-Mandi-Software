@@ -1,9 +1,9 @@
-//! The pages of the three documents (plan 14, PRD FR-12.12, R1, R5, FR-13.1 to FR-13.3): the
-//! seller bill, the buyer slips and the slip of a one-time buyer. Every number is a stored value
-//! or a checked sum of stored values.
+//! The pages of the two documents of a بکری (plan 14, PRD FR-12.12, R1, R5, FR-7.57, FR-13.5): the
+//! seller bill and the buyer slips, with one slip for each چکتا buyer (plan 60 C9a). Every number is
+//! a stored value or a checked sum of stored values.
 
 use mandi_core::accounts::short_code_of;
-use mandi_core::bikri::{BikriDetail, PaymentType, SavedLot, SavedPukhta, SavedSale, SavedTotals};
+use mandi_core::bikri::{BikriDetail, PaymentType, SavedChukta, SavedLot, SavedSale, SavedTotals};
 use mandi_core::money::Paisa;
 use mandi_core::text;
 
@@ -15,16 +15,16 @@ use crate::error::ReportsError;
 /// A sale line with the lot it belongs to (the lot gives the item and the packing).
 type SaleRef<'a> = (&'a SavedLot, &'a SavedSale);
 
-/// The buyer's name on a line: the one-time person's name if he has one, else the account.
+/// The buyer's name on a line: the چکتا buyer's name if he has one, else the account.
 fn buyer_name(ctx: &Ctx, sale: &SavedSale) -> String {
-    match &sale.pukhta {
+    match &sale.chukta {
         Some(person) => ctx.name(&person.name_ur, &person.name_en),
         None => ctx.name(&sale.buyer.name_ur, &sale.buyer.name_en),
     }
 }
 
-/// A one-time person's phone as the print shows it (`03XX-XXXXXXX`), or `None` when empty.
-fn phone_of(person: Option<&SavedPukhta>) -> Option<String> {
+/// A چکتا buyer's phone as the print shows it (`03XX-XXXXXXX`), or `None` when empty.
+fn phone_of(person: Option<&SavedChukta>) -> Option<String> {
     person
         .map(|p| p.phone.trim())
         .filter(|p| !p.is_empty())
@@ -61,8 +61,8 @@ fn line(
     Ok(PrintLine {
         date: ctx.style.date(&sale.entry_date)?,
         name: seller_side.then(|| buyer_name(ctx, sale)),
-        // A one-time buyer is a person, not an account: he has no tag (PRD 10.2).
-        name_tag: if seller_side && sale.pukhta.is_none() {
+        // A چکتا buyer is a person, not an account: he has no tag (PRD 10.2).
+        name_tag: if seller_side && sale.chukta.is_none() {
             sale.buyer.tag.clone()
         } else {
             None
@@ -95,19 +95,12 @@ pub(super) fn seller_pages(
     ctx: &Ctx,
     detail: &BikriDetail,
 ) -> Result<Vec<PrintPage>, ReportsError> {
-    // A seller is the account, and for the پختہ کھاتہ the one-time person too (PRD FR-13.5).
-    let key = |lot: &SavedLot| {
-        (
-            lot.seller.id,
-            lot.pukhta.as_ref().map(|p| p.person_key.clone()),
-        )
-    };
-    let mut groups: Vec<(_, Vec<&SavedLot>)> = Vec::new();
+    // A seller is the account.
+    let mut groups: Vec<(i64, Vec<&SavedLot>)> = Vec::new();
     for lot in &detail.lots {
-        let lot_key = key(lot);
-        match groups.iter_mut().find(|(k, _)| *k == lot_key) {
+        match groups.iter_mut().find(|(k, _)| *k == lot.seller.id) {
             Some((_, lots)) => lots.push(lot),
-            None => groups.push((lot_key, vec![lot])),
+            None => groups.push((lot.seller.id, vec![lot])),
         }
     }
     groups
@@ -137,23 +130,13 @@ fn seller_page(ctx: &Ctx, serial: String, lots: &[&SavedLot]) -> Result<PrintPag
             lines.push(line(ctx, lot, sale, true)?);
         }
     }
-    let party = match &first.pukhta {
-        Some(person) => PrintParty {
-            role_id: PARTY_SELLER.to_owned(),
-            code: None,
-            short_code: None,
-            name: ctx.name(&person.name_ur, &person.name_en),
-            tag: None,
-            phone: phone_of(Some(person)),
-        },
-        None => PrintParty {
-            role_id: PARTY_SELLER.to_owned(),
-            code: Some(first.seller.code.clone()),
-            short_code: short_code_of(&first.seller.code),
-            name: ctx.name(&first.seller.name_ur, &first.seller.name_en),
-            tag: first.seller.tag.clone(),
-            phone: None,
-        },
+    let party = PrintParty {
+        role_id: PARTY_SELLER.to_owned(),
+        code: Some(first.seller.code.clone()),
+        short_code: short_code_of(&first.seller.code),
+        name: ctx.name(&first.seller.name_ur, &first.seller.name_en),
+        tag: first.seller.tag.clone(),
+        phone: None,
     };
     // PRD 4.4: gross, the seven deductions, their total, the net sale. All seven are always
     // printed, also when 0 (store rent 0 is on the worked bill).
@@ -211,26 +194,27 @@ fn check_seller_totals(t: &SavedTotals) -> Result<(), ReportsError> {
     Ok(())
 }
 
-/// The buyer slips, R5: one page per buyer account, in the order the buyers first appear.
-/// One-time buyers have their own slip (`pukhta_pages`).
+/// The buyer slips, R5: one page per buyer, in the order the buyers first appear. A چکتا buyer has a
+/// slip of his own, told by his person key (PRD FR-13.5), so شاہد's lines never join ناصر's.
 pub(super) fn buyer_pages(
     ctx: &Ctx,
     detail: &BikriDetail,
     only_buyer_id: Option<i64>,
 ) -> Result<Vec<PrintPage>, ReportsError> {
-    let mut groups: Vec<(i64, Vec<SaleRef<'_>>)> = Vec::new();
+    type Group<'a> = ((i64, Option<&'a str>), Vec<SaleRef<'a>>);
+    let mut groups: Vec<Group<'_>> = Vec::new();
     for lot in &detail.lots {
-        for sale in lot
-            .sales
-            .iter()
-            .filter(|s| s.is_active && s.pukhta.is_none())
-        {
+        for sale in lot.sales.iter().filter(|s| s.is_active) {
             if only_buyer_id.is_some_and(|id| id != sale.buyer.id) {
                 continue;
             }
-            match groups.iter_mut().find(|(id, _)| *id == sale.buyer.id) {
+            let key = (
+                sale.buyer.id,
+                sale.chukta.as_ref().map(|p| p.person_key.as_str()),
+            );
+            match groups.iter_mut().find(|(k, _)| *k == key) {
                 Some((_, sales)) => sales.push((lot, sale)),
-                None => groups.push((sale.buyer.id, vec![(lot, sale)])),
+                None => groups.push((key, vec![(lot, sale)])),
             }
         }
     }
@@ -238,53 +222,29 @@ pub(super) fn buyer_pages(
         .into_iter()
         .enumerate()
         .map(|(index, (_, sales))| {
-            let buyer = sales
+            let first = sales
                 .first()
-                .map(|(_, sale)| &sale.buyer)
+                .map(|(_, sale)| *sale)
                 .ok_or_else(|| ReportsError::Data("a buyer without a line".to_owned()))?;
-            let party = PrintParty {
-                role_id: PARTY_BUYER.to_owned(),
-                code: Some(buyer.code.clone()),
-                short_code: short_code_of(&buyer.code),
-                name: ctx.name(&buyer.name_ur, &buyer.name_en),
-                tag: buyer.tag.clone(),
-                phone: None,
-            };
-            slip_page(ctx, serial(ctx, index), party, &sales)
-        })
-        .collect()
-}
-
-/// The slip of each one-time buyer of the پختہ کھاتہ: one page per person, by his person key
-/// (PRD FR-13.5, so شاہد's lines never join ناصر's).
-pub(super) fn pukhta_pages(
-    ctx: &Ctx,
-    detail: &BikriDetail,
-) -> Result<Vec<PrintPage>, ReportsError> {
-    let mut groups: Vec<(&str, &SavedPukhta, Vec<SaleRef<'_>>)> = Vec::new();
-    for lot in &detail.lots {
-        for sale in lot.sales.iter().filter(|s| s.is_active) {
-            let Some(person) = sale.pukhta.as_ref() else {
-                continue;
-            };
-            let key = person.person_key.as_str();
-            match groups.iter_mut().find(|(k, _, _)| *k == key) {
-                Some((_, _, sales)) => sales.push((lot, sale)),
-                None => groups.push((key, person, vec![(lot, sale)])),
-            }
-        }
-    }
-    groups
-        .into_iter()
-        .enumerate()
-        .map(|(index, (_, person, sales))| {
-            let party = PrintParty {
-                role_id: PARTY_ONETIME_BUYER.to_owned(),
-                code: None,
-                short_code: None,
-                name: ctx.name(&person.name_ur, &person.name_en),
-                tag: None,
-                phone: phone_of(Some(person)),
+            let buyer = &first.buyer;
+            let party = match &first.chukta {
+                // A چکتا buyer is a person, not an account: his name and phone, no code and no tag.
+                Some(person) => PrintParty {
+                    role_id: PARTY_BUYER.to_owned(),
+                    code: None,
+                    short_code: None,
+                    name: ctx.name(&person.name_ur, &person.name_en),
+                    tag: None,
+                    phone: phone_of(Some(person)),
+                },
+                None => PrintParty {
+                    role_id: PARTY_BUYER.to_owned(),
+                    code: Some(buyer.code.clone()),
+                    short_code: short_code_of(&buyer.code),
+                    name: ctx.name(&buyer.name_ur, &buyer.name_en),
+                    tag: buyer.tag.clone(),
+                    phone: None,
+                },
             };
             slip_page(ctx, serial(ctx, index), party, &sales)
         })

@@ -3,11 +3,13 @@
 //! Steps:
 //!
 //! 1. Check the request and read the settings (`services::printing::plan`), then ask the print
-//!    data of each document whether it has any page. A document with nothing to print (no
-//!    one-time buyer for the پختہ slip) is left out.
-//! 2. On any system but Windows, stop with `ERR_PRINT_WINDOWS_ONLY`. The screen then offers the
-//!    PDF preview inside the app.
-//! 3. On Windows, print or save each document through a hidden window (`print_windows`).
+//!    data of each document whether it has any page. A document with nothing to print is
+//!    left out.
+//! 2. On any system but Windows and a Mac, stop with `ERR_PRINT_WINDOWS_ONLY`. The screen then
+//!    offers the PDF preview inside the app.
+//! 3. On Windows, print or save each document through a hidden window (`print_windows`). On a Mac
+//!    (Mac phase, plan 69), open the system print window over the document (`print_mac`): the user
+//!    picks the printer or "Save as PDF" there, and the app writes no file.
 //! 4. If anything was printed, raise the print count of the بکری and write the audit row in one
 //!    transaction (`services::printing::record`). A print that failed before printing anything
 //!    changes nothing. If a later document fails after an earlier one was printed, the earlier
@@ -32,7 +34,7 @@ use mandi_services::core::printing::{
 use mandi_services::printing::{self, CollectionPrintPlan, PrintPlan, VoucherPrintPlan};
 
 use crate::error::{UiError, UiErrorItem};
-use crate::print_types::{Job, JobError, JobTarget};
+use crate::print_types::{Job, JobError, JobTarget, prints_here};
 use crate::runner::run_blocking;
 use crate::state::AppState;
 
@@ -69,7 +71,7 @@ pub async fn run<R: tauri::Runtime>(
         })
         .await?
     };
-    if !cfg!(windows) {
+    if !prints_here() {
         return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
     }
     let executed = execute(&app, &prepared.jobs).await;
@@ -116,7 +118,7 @@ pub async fn run_voucher<R: tauri::Runtime>(
         })
         .await?
     };
-    if !cfg!(windows) {
+    if !prints_here() {
         return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
     }
     let executed = execute(&app, std::slice::from_ref(&job)).await;
@@ -162,7 +164,7 @@ pub async fn run_collection<R: tauri::Runtime>(
         })
         .await?
     };
-    if !cfg!(windows) {
+    if !prints_here() {
         return Err(UiError::single(ErrorCode::ErrPrintWindowsOnly, None));
     }
     let Some(job) = job else {
@@ -420,9 +422,33 @@ async fn execute<R: tauri::Runtime>(app: &tauri::AppHandle<R>, jobs: &[Job]) -> 
     executed
 }
 
-/// Does nothing on a system without WebView2 printing. The caller has already answered
+/// Opens the system print window for each job, one after the other (Mac phase, plan 69). The print
+/// windows of the last request are closed first. A document counts as printed when its print window
+/// opened: the app cannot tell Print from Cancel. No PDF file is written, so `pdf_paths` stays empty
+/// and the screen tells the user to save the PDF from the print window.
+#[cfg(target_os = "macos")]
+async fn execute<R: tauri::Runtime>(app: &tauri::AppHandle<R>, jobs: &[Job]) -> Executed {
+    let mut executed = Executed::default();
+    crate::print_mac::close_old_windows(app);
+    for job in jobs {
+        match crate::print_mac::run_job(app, job).await {
+            Ok(()) => {
+                if let Some(doc) = job.doc {
+                    executed.printed.push(doc);
+                }
+            }
+            Err(error) => {
+                executed.error = Some(job_error(&error, job));
+                break;
+            }
+        }
+    }
+    executed
+}
+
+/// Does nothing on a system that cannot print. The caller has already answered
 /// `ERR_PRINT_WINDOWS_ONLY` before it gets here.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 async fn execute<R: tauri::Runtime>(_app: &tauri::AppHandle<R>, _jobs: &[Job]) -> Executed {
     Executed::default()
 }
@@ -446,7 +472,8 @@ pub fn job_error(error: &JobError, job: &Job) -> UiError {
     }
 }
 
-/// The printers installed on this computer. Empty on any system but Windows.
+/// The printers installed on this computer. Empty on any system but Windows: on a Mac the system
+/// print window has its own printer list.
 ///
 /// # Errors
 /// The cause, as text, if Windows refuses the list.

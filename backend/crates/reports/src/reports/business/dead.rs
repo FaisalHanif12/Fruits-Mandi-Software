@@ -15,8 +15,7 @@ use mandi_db::rusqlite::Connection;
 
 use super::super::PageSpec;
 use crate::error::ReportsError;
-use crate::reports::collections::pukhta_names;
-use crate::reports::common::{count_of, load_parties, party_of_line, pukhta_party};
+use crate::reports::common::{count_of, load_parties, party_of_line};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
@@ -35,7 +34,6 @@ fn type_label(kind: DeadPartyType) -> &'static str {
     match kind {
         DeadPartyType::Buyer => ids::R38_TYPE_BUYER,
         DeadPartyType::Seller => ids::R38_TYPE_SELLER,
-        DeadPartyType::Pukhta => ids::R38_TYPE_PUKHTA,
         DeadPartyType::MoneyLent => ids::R38_TYPE_MONEY_LENT,
     }
 }
@@ -90,20 +88,10 @@ pub(crate) fn run(
     let (dead_rows, totals) = crate::dead::filtered(conn, filter, "")?;
     let account_ids: Vec<i64> = dead_rows.iter().map(|r| r.account_id).collect();
     let parties = load_parties(conn, &account_ids)?;
-    let names = pukhta_names(conn, &account_ids)?;
 
     let mut all_rows = Vec::with_capacity(dead_rows.len());
     for row in &dead_rows {
-        let mut party = party_of_line(&parties, row.account_id, None)?;
-        if let Some(key) = &row.pukhta_person_key {
-            let known = names.get(key);
-            party = pukhta_party(
-                party,
-                Some(key.clone()),
-                known.map(|n| n.name_ur.as_str()),
-                known.map(|n| n.name_en.as_str()),
-            );
-        }
+        let party = party_of_line(&parties, row.account_id, None)?;
         all_rows.push(row_of(row, party)?);
     }
 

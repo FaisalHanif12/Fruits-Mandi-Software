@@ -87,7 +87,7 @@ pub(super) fn table(
     let dead_of = |account: i64, key: Option<&str>| {
         marks
             .iter()
-            .find(|m| m.account_id == account && m.person_key.as_deref() == key)
+            .find(|m| m.account_id == account && key.is_none())
     };
     // One collector: only the parties whose account names him (plan 55 §11.1).
     let of_collector = typed

@@ -148,7 +148,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       name: (name) => visible(name) === message(language, 'layout-module-label'),
     });
     const items = within(side).getAllByRole('button');
-    expect(items).toHaveLength(7);
+    expect(items).toHaveLength(6);
     expect(items[0]).toHaveAttribute('aria-current', 'page');
     // The advance item is a real screen now (plan 10).
     await user.click(at(items, 3));
@@ -159,17 +159,9 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[3]).toHaveAttribute('aria-current', 'page');
-    // The پختہ کھاتہ register and today's بکری are real screens since plan 13.
+    // Today's بکری is a real screen since plan 13.
     await user.click(at(items, 4));
     // (The first open of a screen loads its code, which can take a moment on a busy machine.)
-    expect(
-      await screen.findByRole(
-        'heading',
-        { level: 1, name: message(language, 'glossary-pukhta-khata') },
-        { timeout: 8_000 },
-      ),
-    ).toBeInTheDocument();
-    await user.click(at(items, 5));
     expect(
       await screen.findByRole(
         'heading',
@@ -200,7 +192,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
     expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
     // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
     // item of the area is built now (own goods, خریداری, joins in plan 16b).
-    await user.click(at(items, 6));
+    await user.click(at(items, 5));
     expect(
       await screen.findByRole(
         'heading',
@@ -211,7 +203,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getAllByRole('button')[5]).toHaveAttribute('aria-current', 'page');
     // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     await user.click(

@@ -316,28 +316,25 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
     expect(screen.queryByText(message(language, 'accountpicker-several'))).not.toBeInTheDocument();
   });
 
-  it('a پختہ کھاتہ account has no short code, but its full code works; the backend never says "reserved"', async () => {
-    const pukhta = account(23, 'buyer', '0030', 'پختہ کھاتہ (خریدار)', 'Pukhta Khata (Buyer)', {
+  it('the account چکتا کھاتہ is never offered, by its code or by its name (PRD FR-13.4)', async () => {
+    const khata = account(23, 'buyer', '0030', 'چکتا کھاتہ', 'Chukta Khata', {
       is_system: true,
-      is_pukhta_khata: true,
+      is_chukta_khata: true,
     });
-    fakeAccountSearch([...ROWS, pukhta]);
-    const onValue = vi.fn();
-    const { input, user } = setup(language, 'buyer', { onValue });
+    fakeAccountSearch([...ROWS, khata]);
+    const { input, user } = setup(language, 'buyer');
     await user.click(input);
-    // `0` is the running number of the first buyer, not the پختہ کھاتہ account.
+    // `0` is the running number of the first buyer, not the account چکتا کھاتہ.
     await user.keyboard('0');
     await waitFor(() => {
       expect(options()).toHaveLength(1);
     });
     expect(visible(options()[0]?.textContent)).toContain('0020');
     await user.clear(input);
-    await user.keyboard('0030');
+    await user.keyboard('chukta');
     await waitFor(() => {
-      expect(options()).toHaveLength(1);
+      expect(screen.getByText(message(language, 'search-no-match'))).toBeInTheDocument();
     });
-    await user.keyboard('{Enter}');
-    expect(onValue).toHaveBeenCalledWith(expect.objectContaining({ id: 23, code: '0030' }));
   });
 
   it('a number no buyer has says so and offers to add one; there is no "reserved" answer', async () => {
@@ -451,6 +448,9 @@ describe.each(LANGUAGES)('AccountPicker, short codes (%s)', (language) => {
         id: AKRAM.id,
         code: AKRAM.code,
         account_type: 'buyer',
+        kind: 'account',
+        chukta_id: null,
+        phone: null,
         control_id: 4,
         name_ur: AKRAM.name_ur,
         name_en: AKRAM.name_en,

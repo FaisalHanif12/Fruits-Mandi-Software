@@ -81,7 +81,8 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
     {
       field: SALE.buyer,
       type: 'picker',
-      picker: { kind: 'account', scope: 'buyer' },
+      // The buyer box lists چکتا buyers and adds a new one (PRD FR-7.29, FR-13.3).
+      picker: { kind: 'account', scope: 'buyer', withChukta: true },
       headerId: 'glossary-gahak',
       // A buyer's name needs room: a name cut short does not tell two buyers apart.
       minWidth: FIT_MIN.longName,

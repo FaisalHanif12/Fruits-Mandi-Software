@@ -21,7 +21,7 @@ use mandi_services::core::arrivals::{
 };
 use mandi_services::core::bikri::{
     BikriDraft, BikriListInput, BikriListRow, BikriSaveInput, BikriSaved, BikriStatus, CancelInput,
-    PaymentType, PukhtaInput, PukhtaRegister, PukhtaRegisterInput, PukhtaSide, StockListInput,
+    StockListInput,
 };
 use mandi_services::core::capital::{CapitalHistoryInput, CapitalInput};
 use mandi_services::core::cashbook::{Cashbook, CashbookInput};
@@ -298,7 +298,6 @@ fn voucher_input(kind: Option<VoucherType>) -> VouchersListInput {
         from: String::new(),
         to: String::new(),
         account_id: None,
-        person_key: None,
         offset: 0,
         limit: 0,
         show_finished: false,
@@ -347,7 +346,6 @@ fn the_list_of_vouchers_hides_the_cancelled_sorts_searches_and_gives_month_subto
         &ReceiptInput {
             date: "05-11-2026".into(),
             account_id: w.akram,
-            person_key: None,
             amount: "700".into(),
             removed: RemovedPaymentFields::default(),
             collector_staff_id: None,
@@ -1167,161 +1165,7 @@ fn the_list_of_fruit_hides_the_cancelled_sorts_searches_and_gives_month_subtotal
     assert!(list.months.is_empty());
 }
 
-// ---- The one-time register (پختہ کھاتہ) ----
-
-fn pukhta_on(
-    w: &World,
-    n: i64,
-    date: &str,
-    name_ur: &str,
-    name_en: &str,
-    phone: &str,
-) -> BikriSaved {
-    let mut line = support::sale("s-1", w.pukhta_buyer, "2", &format!("{}", 1_000 + n));
-    line.pukhta = Some(PukhtaInput {
-        name_ur: name_ur.into(),
-        name_en: name_en.into(),
-        phone: phone.into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    let lot = support::with_sales(
-        support::bare_lot(w, "lot-1", w.karim, w.apple, "2"),
-        vec![line],
-    );
-    let mut draft = support::draft(vec![lot]);
-    draft.header.entry_date = date.into();
-    draft.header.truck_no = Some(format!("PK-{n}"));
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft,
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap()
-}
-
-fn register_numbers(list: &PukhtaRegister) -> Vec<i64> {
-    list.rows.iter().map(|r| r.bikri_number).collect()
-}
-
-#[test]
-fn the_pukhta_register_hides_the_cancelled_sorts_searches_and_gives_month_subtotals() {
-    let w = support::world();
-    pukhta_on(&w, 1, "10-10-2026", "شاہد", "Shahid", "0300-0000001");
-    pukhta_on(&w, 2, "10-10-2026", "ناصر", "Nasir", "0300-0000002");
-    set_today(&w.env, 2026, 11, 5);
-    pukhta_on(&w, 3, "05-11-2026", "بشیر", "Bashir", "0300-0000003");
-    let fourth = pukhta_on(&w, 4, "05-11-2026", "زاہد", "Zahid", "0300-0000004");
-    cancel(&w, &fourth);
-    let buyers = PukhtaRegisterInput {
-        side: Some(PukhtaSide::Buyer),
-        ..PukhtaRegisterInput::default()
-    };
-    let shown = PukhtaRegisterInput {
-        show_finished: true,
-        ..buyers.clone()
-    };
-    let read = |input: &PukhtaRegisterInput| bikri::register(&w.env.ctx, input).unwrap();
-
-    // The lines of the cancelled بکری step aside from the rows and the count, unless asked for.
-    let hidden = read(&buyers);
-    assert_eq!(register_numbers(&hidden), [1, 2, 3]);
-    assert_eq!(hidden.total_count, 3);
-    let with = read(&shown);
-    assert_eq!(register_numbers(&with), [1, 2, 3, 4]);
-    assert_eq!(with.total_count, 4);
-    assert_eq!(with.totals, hidden.totals);
-
-    // Sorts of the whole filter.
-    let sorted = |column: &str, direction| {
-        register_numbers(&read(&PukhtaRegisterInput {
-            sort: sort(column, direction),
-            ..buyers.clone()
-        }))
-    };
-    assert_eq!(sorted("amount", SortDirection::Desc), [3, 2, 1]);
-    assert_eq!(sorted("amount", SortDirection::Asc), [1, 2, 3]);
-    assert_eq!(sorted("name_en", SortDirection::Asc), [3, 2, 1]);
-    assert_eq!(sorted("entry_date", SortDirection::Desc), [3, 2, 1]);
-    assert_eq!(sorted("entry_date", SortDirection::Asc), [1, 2, 3]);
-    let bad = bikri::register(
-        &w.env.ctx,
-        &PukhtaRegisterInput {
-            sort: sort("person_key", SortDirection::Asc),
-            ..buyers.clone()
-        },
-    )
-    .unwrap_err();
-    assert!(rejected_column(&bad));
-    // A page of a sorted register is a slice of the whole sorted list.
-    let second = read(&PukhtaRegisterInput {
-        sort: sort("amount", SortDirection::Desc),
-        offset: 1,
-        limit: 1,
-        ..buyers.clone()
-    });
-    assert_eq!(register_numbers(&second), [2]);
-
-    // Search: the name, the phone, the item.
-    let found = |text: &str, input: &PukhtaRegisterInput| {
-        register_numbers(&read(&PukhtaRegisterInput {
-            search: Some(text.into()),
-            ..input.clone()
-        }))
-    };
-    assert_eq!(found("nasir", &buyers), [2]);
-    assert_eq!(found("0300-0000003", &buyers), [3]);
-    assert_eq!(found("Apple", &buyers), [1, 2, 3]);
-    assert_eq!(found("zahid", &buyers), Vec::<i64>::new());
-    assert_eq!(found("zahid", &shown), [4]);
-
-    // Months over the whole filter, oldest first; they add up to the totals.
-    let monthly = |input: &PukhtaRegisterInput| {
-        read(&PukhtaRegisterInput {
-            group_by_month: true,
-            ..input.clone()
-        })
-    };
-    let list = monthly(&buyers);
-    let months: Vec<(&str, i64)> = list
-        .months
-        .iter()
-        .map(|m| (m.month.as_str(), m.count))
-        .collect();
-    assert_eq!(months, [("2026-10", 2), ("2026-11", 1)]);
-    let sum_of = |key: &str| -> i64 { list.months.iter().map(|m| month_figure(m, key)).sum() };
-    assert_eq!(Some(sum_of("qty")), list.totals.qty);
-    assert_eq!(
-        Some(sum_of("amount")),
-        list.totals.amount.map(|p| p.as_paisa())
-    );
-    assert_eq!(Some(sum_of("open")), list.totals.open.map(|p| p.as_paisa()));
-    // With the cancelled shown, November counts it and its money still leaves it out.
-    let list = monthly(&shown);
-    assert_eq!(list.months[1].count, 2);
-    let november_hidden = monthly(&buyers).months[1].clone();
-    assert_eq!(
-        month_figure(&list.months[1], "amount"),
-        month_figure(&november_hidden, "amount")
-    );
-    // No side chosen: the lines are mixed, so a month has its count and no money figure.
-    let list = monthly(&PukhtaRegisterInput::default());
-    assert_eq!(list.months.len(), 2);
-    assert!(list.months.iter().all(|m| m.figures.is_empty()));
-    // Newest first when sorted by the day, descending; none for another sort.
-    let list = monthly(&PukhtaRegisterInput {
-        sort: sort("entry_date", SortDirection::Desc),
-        ..buyers.clone()
-    });
-    assert_eq!(list.months[0].month, "2026-11");
-    let list = monthly(&PukhtaRegisterInput {
-        sort: sort("qty", SortDirection::Asc),
-        ..buyers.clone()
-    });
-    assert!(list.months.is_empty());
-}
+// ---- The old register (چکتا کھاتہ) ----
 
 // ---- Accounts ----
 

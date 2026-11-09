@@ -17,8 +17,6 @@ export interface DeadPartyNames {
 
 export interface DeadMoveRequest {
   accountId: number;
-  /** The person inside a پختہ کھاتہ account, as stored. Null for any other account. */
-  personKey: string | null;
   names: DeadPartyNames;
   /** The dialog closed; `moved` is true when the person was moved. */
   onClosed?: ((moved: boolean) => void) | undefined;

@@ -15,15 +15,13 @@ import { SourceLabel } from './SourceLabel';
 
 interface BillsPanelProps {
   accountId: number;
-  /** The one-time person, for a پختہ کھاتہ account. */
-  personKey: string | null;
   /** What the amount typed settles, from the preview; null while there is none. */
   effects: readonly BillEffect[] | null;
 }
 
-export function BillsPanel({ accountId, personKey, effects }: BillsPanelProps) {
+export function BillsPanel({ accountId, effects }: BillsPanelProps) {
   const { l10n } = useLocalization();
-  const query = useOpenBills(accountId, personKey);
+  const query = useOpenBills(accountId);
   return (
     <PanelShell
       query={query}

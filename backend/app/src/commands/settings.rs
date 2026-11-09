@@ -281,7 +281,7 @@ pub async fn settings_set_overrides<R: tauri::Runtime>(
 }
 
 /// The Printing settings of PRD Section 21: paper per document (starts: seller bill A4, buyer
-/// slips A5, پختہ slip A5), printer (empty = the default printer), copies (1), Urdu digits on
+/// slips A5, buyer slip A5), printer (empty = the default printer), copies (1), Urdu digits on
 /// Urdu prints (off), and the list "print after save" of the signed-in user (PRD FR-7.57).
 #[tauri::command]
 pub async fn settings_get_printing<R: tauri::Runtime>(

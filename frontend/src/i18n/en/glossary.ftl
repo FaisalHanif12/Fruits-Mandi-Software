@@ -29,9 +29,13 @@
 # review: pending
 -kharidar = Buyer
 
-# Shared account for one-time or rare parties
+# Walk-in buyers who pay the whole bill on the spot and leave (PRD Section 13)
 # review: pending
--pukhta-khata = Pukhta Khata
+-chukta-khata = Chukta Khata
+
+# The short mark of a walk-in buyer in a list and on his card (PRD FR-7.29)
+# review: pending
+-chukta = Chukta
 
 # One unit or package (پیٹی، کریٹ، بوری، دانہ)
 # review: pending
@@ -364,7 +368,7 @@ glossary-zamindar = { -zamindar }
 glossary-buzgar = { -buzgar }
 glossary-gahak = { -gahak }
 glossary-kharidar = { -kharidar }
-glossary-pukhta-khata = { -pukhta-khata }
+glossary-chukta-khata = { -chukta-khata }
 glossary-nag = { -nag }
 glossary-bikri = { -bikri }
 glossary-bikri-book = { -bikri-book }

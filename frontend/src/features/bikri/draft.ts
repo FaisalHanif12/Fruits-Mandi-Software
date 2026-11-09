@@ -4,28 +4,20 @@
 // it and works out every number (PRD 22).
 
 import type { ChargeInput } from '../../bindings/ChargeInput';
+import type { ChuktaInput } from '../../bindings/ChuktaInput';
 import type { HeaderInput } from '../../bindings/HeaderInput';
 import type { LineChargeInput } from '../../bindings/LineChargeInput';
 import type { LineChargeMethod } from '../../bindings/LineChargeMethod';
 import type { LotChargeMethod } from '../../bindings/LotChargeMethod';
 import type { LotInput } from '../../bindings/LotInput';
 import type { PaymentType } from '../../bindings/PaymentType';
-import type { PukhtaInput } from '../../bindings/PukhtaInput';
 import type { SaleGrade } from '../../bindings/SaleGrade';
 import type { SaleInput } from '../../bindings/SaleInput';
-import { isGardenAccount } from '../../shared/accounts';
+import { isChuktaPick, isGardenAccount } from '../../shared/accounts';
 import { formatPaisa, type Paisa } from '../../shared/format';
 import type { EntryRow } from '../../shared/grid';
 import type { BikriDraftStores, HeaderState } from './draft-store';
-import {
-  LOT,
-  ON,
-  OWN_GOODS_CODE,
-  PUKHTA_BUYER_CODE,
-  PUKHTA_SELLER_CODE,
-  SALE,
-  type BikriDraft,
-} from './types';
+import { LOT, ON, OWN_GOODS_CODE, SALE, type BikriDraft } from './types';
 
 /** Text or null: an empty field is sent as nothing, so the backend treats it as not typed. */
 function textOrNull(text: string | undefined): string | null {
@@ -50,11 +42,6 @@ export function headerInput(header: HeaderState): HeaderInput {
   };
 }
 
-/** Is this the one-time seller account (PRD FR-13.1)? */
-export function isPukhtaSeller(row: EntryRow): boolean {
-  return row.picked?.[LOT.seller]?.code === PUKHTA_SELLER_CODE;
-}
-
 /** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
 export function isOwnLot(row: EntryRow): boolean {
   return row.picked?.[LOT.seller]?.code === OWN_GOODS_CODE;
@@ -76,16 +63,23 @@ export function isArrivalLot(row: EntryRow): boolean {
   return isGardenLot(row) && (row.typed[LOT.arrival] ?? '') !== '';
 }
 
-/** Is this the one-time buyer account (PRD FR-13.1)? */
-export function isPukhtaBuyer(row: EntryRow): boolean {
-  return row.picked?.[SALE.buyer]?.code === PUKHTA_BUYER_CODE;
+/** Is this line's buyer a چکتا buyer, who pays the whole bill on the spot (PRD FR-13.1, FR-13.5)? */
+export function isChuktaBuyer(row: EntryRow): boolean {
+  return isChuktaPick(row.picked?.[SALE.buyer]);
 }
 
-function pukhtaInput(row: EntryRow, ur: string, en: string, phone: string): PukhtaInput {
+/**
+ * The چکتا buyer of a line, as the backend takes him (PRD FR-13.5): the names and phone of the
+ * buyer chosen in the picker. The line's `buyer_account_id` is the account چکتا کھاتہ, which is the
+ * id of the chosen record. Null for any other buyer, so a normal line is sent as before.
+ */
+function chuktaInput(row: EntryRow): ChuktaInput | null {
+  const buyer = row.picked?.[SALE.buyer];
+  if (buyer?.chukta === undefined) return null;
   return {
-    name_ur: (row.typed[ur] ?? '').trim(),
-    name_en: (row.typed[en] ?? '').trim(),
-    phone: (row.typed[phone] ?? '').trim(),
+    name_ur: buyer.name_ur.trim(),
+    name_en: buyer.name_en.trim(),
+    phone: buyer.chukta.phone.trim(),
   };
 }
 
@@ -136,9 +130,7 @@ export function saleInput(row: EntryRow): SaleInput {
     // A saved line carries its id, so the backend can tell it is unchanged (PRD FR-12.20).
     ...(saleId === null ? {} : { sale_id: saleId }),
     buyer_account_id: buyer?.id ?? null,
-    pukhta: isPukhtaBuyer(row)
-      ? pukhtaInput(row, SALE.pukhtaUr, SALE.pukhtaEn, SALE.pukhtaPhone)
-      : null,
+    chukta: chuktaInput(row),
     qty: (row.typed[SALE.qty] ?? '').trim(),
     weight: textOrNull(row.typed[SALE.weight]),
     seller_rate: (row.typed[SALE.rate] ?? '').trim(),
@@ -196,9 +188,6 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
         ? { arrival_id: null }
         : {}),
     seller_account_id: row.picked?.[LOT.seller]?.id ?? null,
-    pukhta: isPukhtaSeller(row)
-      ? pukhtaInput(row, LOT.pukhtaUr, LOT.pukhtaEn, LOT.pukhtaPhone)
-      : null,
     item_id: row.picked?.[LOT.item]?.id ?? null,
     packing_id: row.picked?.[LOT.packing]?.id ?? null,
     marka_id: row.picked?.[LOT.marka]?.id ?? null,

@@ -9,7 +9,6 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vouchersApi from '../../src/features/vouchers/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -31,7 +30,7 @@ import {
   AKRAM,
   ARSHAD,
   KARIM,
-  PUKHTA_BUYER,
+  CHUKTA_KHATA,
   RAHIM,
   fakeVouchers,
   type FakeVouchers,
@@ -42,7 +41,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -112,8 +110,7 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
-  const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
+  const rows = [AKRAM, ARSHAD, CHUKTA_KHATA, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
   fakeMasters({});
@@ -429,7 +426,6 @@ describe.each(LANGUAGES)('the waiting list of vouchers (%s)', (language) => {
       narration: '',
       status: 'saved',
       version: 1,
-      person: null,
       collector_staff_id: null,
       reason: '',
       cancel_reason: '',

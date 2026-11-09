@@ -80,7 +80,6 @@ export function lotRow(over: Partial<FruitLotRow> = {}): FruitLotRow {
     bikri_number: 1,
     received_date: '2026-10-09',
     seller: RAHIM_REF,
-    pukhta: null,
     item: BANANA_REF,
     packing: BOX_REF,
     sold_by_weight: false,
@@ -219,7 +218,6 @@ export function createFruitBooks(options: FruitOptions = {}) {
         : null,
       credit: {
         account: lot === null ? HAJI_NAZIR : lot.seller,
-        pukhta: null,
       },
       lot:
         lot === null
@@ -254,7 +252,6 @@ export function createFruitBooks(options: FruitOptions = {}) {
               bikri_number: lot.bikri_number,
             },
       credit_account: numbers.credit.account,
-      pukhta: null,
       item: numbers.item,
       packing: numbers.packing,
       qty: numbers.qty,

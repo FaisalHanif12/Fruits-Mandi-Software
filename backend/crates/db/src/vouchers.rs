@@ -86,8 +86,6 @@ pub struct NewVoucher {
     pub expected_goods: Option<String>,
     /// The note.
     pub narration: Option<String>,
-    /// The one-time person, for a voucher on a پختہ کھاتہ account (PRD FR-13.5).
-    pub person_key: Option<String>,
     /// The collector of a وصولی, a staff member.
     pub collector_staff_id: Option<i64>,
     /// Why, for a payment to a buyer (PRD FR-15.11).
@@ -123,10 +121,10 @@ pub fn insert(
     conn.execute(
         "INSERT INTO vouchers (created_at, created_by, updated_at, updated_by, type, number, entry_date,
              account_id, amount_paisa, mode, bank_account_id, cheque_no, cheque_date, expected_goods, narration,
-             pukhta_person_key, collector_staff_id, reason, partner_id, expense_head_id, return_by_date,
+             collector_staff_id, reason, partner_id, expense_head_id, return_by_date,
              taken_by)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-                 ?17, ?18, ?19, ?20)",
+                 ?17, ?18, ?19)",
         params![
             now,
             user_id,
@@ -141,7 +139,6 @@ pub fn insert(
             voucher.cheque_date,
             voucher.expected_goods,
             voucher.narration,
-            voucher.person_key,
             voucher.collector_staff_id,
             voucher.reason,
             voucher.extra.partner_id,
@@ -184,14 +181,12 @@ fn bad(column: usize, what: &str) -> rusqlite::Error {
 const ROW_COLUMNS: &str =
     "v.id, v.type, v.number, v.entry_date, v.account_id, a.code, a.name_ur, a.name_en,
                 v.amount_paisa, v.mode, v.bank_account_id, v.cheque_no, v.cheque_date,
-                v.expected_goods, v.narration, v.status, v.version, v.pukhta_person_key,
+                v.expected_goods, v.narration, v.status, v.version,
                 v.collector_staff_id, v.reason, v.cancel_reason, v.current_entry_id, a.tag";
 
-/// A voucher row and the person key it names. The person's names are filled in by
-/// [`fill_people`], because they come from the بکری lines, not from the voucher.
-fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<String>)> {
+/// A voucher row.
+fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<VoucherRow> {
     let account_id: Option<i64> = r.get(4)?;
-    let person_key: Option<String> = r.get(17)?;
     let row = VoucherRow {
         id: r.get(0)?,
         voucher_type: VoucherType::parse(&r.get::<_, String>(1)?).ok_or_else(|| bad(1, "type"))?,
@@ -214,7 +209,7 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
                 .ok()
                 .flatten()
                 .unwrap_or_default(),
-            tag: r.get::<_, Option<String>>(22).ok().flatten(),
+            tag: r.get::<_, Option<String>>(21).ok().flatten(),
         }),
         amount_paisa: Paisa::try_from_paisa(r.get(8)?).map_err(|_| bad(8, "amount"))?,
         // A salary deduction (plan 17) is stored as `salary`; as a row it reads as cash because it
@@ -230,75 +225,14 @@ fn read_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<(VoucherRow, Option<Strin
         narration: r.get::<_, Option<String>>(14)?.unwrap_or_default(),
         status: r.get(15)?,
         version: r.get(16)?,
-        person: None,
-        collector_staff_id: r.get(18)?,
-        reason: r.get::<_, Option<String>>(19)?.unwrap_or_default(),
-        cancel_reason: r.get::<_, Option<String>>(20)?.unwrap_or_default(),
-        entry_id: r.get(21)?,
+        collector_staff_id: r.get(17)?,
+        reason: r.get::<_, Option<String>>(18)?.unwrap_or_default(),
+        cancel_reason: r.get::<_, Option<String>>(19)?.unwrap_or_default(),
+        entry_id: r.get(20)?,
         // The service decides this from the day state (the repository does not know it).
         flags: EntryFlags::unmarked(),
     };
-    Ok((row, person_key))
-}
-
-/// The names and phone of a one-time person as he was last typed, from his latest بکری line
-/// (a buyer line or a seller lot). `None` if no line carries the key.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn pukhta_person(
-    conn: &Connection,
-    person_key: &str,
-) -> rusqlite::Result<Option<mandi_core::bikri::SavedPukhta>> {
-    conn.query_row(
-        "SELECT name_ur, name_en, phone FROM (
-             SELECT s.pukhta_name_ur AS name_ur, s.pukhta_name_en AS name_en, s.pukhta_phone AS phone,
-                    s.entry_date AS entry_date, s.id AS row_id
-             FROM bikri_sales s WHERE s.pukhta_person_key = ?1
-             UNION ALL
-             SELECT l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, e.entry_date, l.id
-             FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-             WHERE l.pukhta_person_key = ?1)
-         ORDER BY entry_date DESC, row_id DESC LIMIT 1",
-        [person_key],
-        |r| {
-            Ok(mandi_core::bikri::SavedPukhta {
-                name_ur: r.get::<_, Option<String>>(0)?.unwrap_or_default(),
-                name_en: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
-                phone: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
-                person_key: person_key.to_owned(),
-            })
-        },
-    )
-    .optional()
-}
-
-/// Puts the one-time person's names on every row that names one.
-fn fill_people(
-    conn: &Connection,
-    rows: Vec<(VoucherRow, Option<String>)>,
-) -> rusqlite::Result<Vec<VoucherRow>> {
-    let mut known: std::collections::HashMap<String, Option<mandi_core::bikri::SavedPukhta>> =
-        std::collections::HashMap::new();
-    let mut out = Vec::with_capacity(rows.len());
-    for (mut row, key) in rows {
-        if let Some(key) = key {
-            if !known.contains_key(&key) {
-                known.insert(key.clone(), pukhta_person(conn, &key)?);
-            }
-            row.person = known.get(&key).cloned().flatten().or_else(|| {
-                // A person whose lines are gone still keeps his key on the voucher.
-                Some(mandi_core::bikri::SavedPukhta {
-                    name_ur: String::new(),
-                    name_en: String::new(),
-                    phone: String::new(),
-                    person_key: key.clone(),
-                })
-            });
-        }
-        out.push(row);
-    }
-    Ok(out)
+    Ok(row)
 }
 
 /// A filter of [`list`].
@@ -312,8 +246,6 @@ pub struct ListFilter<'a> {
     pub to: Option<&'a str>,
     /// Only this account.
     pub account_id: Option<i64>,
-    /// Only this one-time person.
-    pub person_key: Option<&'a str>,
     /// Only vouchers whose number, narration, reason or account (code or name) holds this text.
     pub search: Option<&'a str>,
     /// The `ORDER BY` expressions chosen by a sort, from [`SORT_COLUMNS`]. `None` is by day and
@@ -344,7 +276,6 @@ pub fn list(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<
          FROM vouchers v LEFT JOIN accounts a ON a.id = v.account_id
          WHERE (?1 IS NULL OR v.type = ?1) AND (?2 IS NULL OR v.entry_date >= ?2)
            AND (?3 IS NULL OR v.entry_date <= ?3) AND (?4 IS NULL OR v.account_id = ?4)
-           AND (?5 IS NULL OR v.pukhta_person_key = ?5)
          ORDER BY v.entry_date, v.number, v.id"
     ))?;
     let rows = statement
@@ -353,13 +284,12 @@ pub fn list(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Result<Vec<
                 filter.voucher_type.map(VoucherType::as_str),
                 filter.from,
                 filter.to,
-                filter.account_id,
-                filter.person_key
+                filter.account_id
             ],
             read_row,
         )?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    fill_people(conn, rows)
+    Ok(rows)
 }
 
 /// The counts and the total over every voucher a filter matches (PRD FR-19.11, B31).
@@ -396,10 +326,6 @@ fn list_where(filter: &ListFilter<'_>, hide: bool) -> (String, Vec<Value>) {
     if let Some(account) = filter.account_id {
         conditions.push("v.account_id = ?".to_owned());
         binds.push(Value::Integer(account));
-    }
-    if let Some(key) = filter.person_key {
-        conditions.push("v.pukhta_person_key = ?".to_owned());
-        binds.push(Value::Text(key.to_owned()));
     }
     if let Some(text) = filter.search.map(str::trim).filter(|t| !t.is_empty()) {
         let mut parts = String::new();
@@ -529,7 +455,7 @@ pub fn list_page(
     let rows = statement
         .query_map(params_from_iter(binds.iter()), read_row)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
-    fill_people(conn, rows)
+    Ok(rows)
 }
 
 /// The count of each month of the filter, with the sum of the cancelled ones (1 for each) and of
@@ -567,20 +493,16 @@ pub fn list_months(conn: &Connection, filter: &ListFilter<'_>) -> rusqlite::Resu
 /// # Errors
 /// Any SQLite error.
 pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<VoucherRow>> {
-    let found = conn
-        .query_row(
-            &format!(
-                "SELECT {ROW_COLUMNS}
-                 FROM vouchers v LEFT JOIN accounts a ON a.id = v.account_id
-                 WHERE v.id = ?1"
-            ),
-            [id],
-            read_row,
-        )
-        .optional()?;
-    Ok(fill_people(conn, found.into_iter().collect())?
-        .into_iter()
-        .next())
+    conn.query_row(
+        &format!(
+            "SELECT {ROW_COLUMNS}
+             FROM vouchers v LEFT JOIN accounts a ON a.id = v.account_id
+             WHERE v.id = ?1"
+        ),
+        [id],
+        read_row,
+    )
+    .optional()
 }
 
 /// The last پیشگی voucher of a seller that is still in force.
@@ -669,8 +591,6 @@ pub struct EditedVoucher {
     pub entry_date: String,
     /// The account.
     pub account_id: Option<i64>,
-    /// The one-time person.
-    pub person_key: Option<String>,
     /// The amount in paisa.
     pub amount_paisa: i64,
     /// How the money moves.
@@ -708,17 +628,16 @@ pub fn update_for_edit(
     now: &str,
 ) -> rusqlite::Result<bool> {
     let changed = conn.execute(
-        "UPDATE vouchers SET entry_date = ?2, account_id = ?3, pukhta_person_key = ?4, amount_paisa = ?5,
-             mode = ?6, bank_account_id = ?7, cheque_no = ?8, cheque_date = ?9, collector_staff_id = ?10,
-             reason = ?11, expected_goods = ?12, narration = ?13, current_entry_id = ?14,
-             updated_at = ?15, updated_by = ?16, partner_id = ?17, expense_head_id = ?18,
-             return_by_date = ?19, taken_by = ?20, version = version + 1
+        "UPDATE vouchers SET entry_date = ?2, account_id = ?3, amount_paisa = ?4,
+             mode = ?5, bank_account_id = ?6, cheque_no = ?7, cheque_date = ?8, collector_staff_id = ?9,
+             reason = ?10, expected_goods = ?11, narration = ?12, current_entry_id = ?13,
+             updated_at = ?14, updated_by = ?15, partner_id = ?16, expense_head_id = ?17,
+             return_by_date = ?18, taken_by = ?19, version = version + 1
          WHERE id = ?1 AND status = 'saved'",
         params![
             id,
             edited.entry_date,
             edited.account_id,
-            edited.person_key,
             edited.amount_paisa,
             edited.extra.mode_text(edited.mode),
             edited.bank_account_id,
@@ -840,24 +759,6 @@ pub fn staff_names(conn: &Connection, id: i64) -> rusqlite::Result<Option<(Strin
     .optional()
 }
 
-/// True if some posted line of this key exists, so the person is known on the account (PRD
-/// FR-13.5).
-///
-/// # Errors
-/// Any SQLite error.
-pub fn person_has_lines(
-    conn: &Connection,
-    account_id: i64,
-    person_key: &str,
-) -> rusqlite::Result<bool> {
-    conn.query_row(
-        "SELECT EXISTS (SELECT 1 FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-                        WHERE l.account_id = ?1 AND l.pukhta_person_key = ?2 AND e.status = 'posted')",
-        params![account_id, person_key],
-        |r| r.get(0),
-    )
-}
-
 /// An open bill of a buyer key with where it came from (PRD FR-7.58).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BillRow {
@@ -890,7 +791,7 @@ pub fn open_bill_rows(
     let matched = "COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
                              WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)";
     let person = if person_key.is_some() {
-        "AND l.pukhta_person_key = ?2"
+        "AND l.chukta_person_key = ?2"
     } else {
         "AND ?2 IS NULL"
     };
@@ -1022,7 +923,7 @@ fn live_sums_of_key(
                     COALESCE(SUM(CASE WHEN l.dr_paisa > 0 AND l.is_advance = 0 THEN l.dr_paisa END), 0),
                     COALESCE(SUM(CASE WHEN l.is_advance = 1 THEN l.dr_paisa END), 0)
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND {live}",
+             WHERE l.account_id = ?1 AND l.chukta_person_key IS ?2 AND {live}",
             live = crate::matching::LIVE
         ),
         params![account_id, person_key],
@@ -1054,7 +955,7 @@ fn live_sums_without_key(conn: &Connection, account_id: i64) -> rusqlite::Result
                     COALESCE(SUM(CASE WHEN dr_paisa > 0 AND is_advance = 0 THEN dr_paisa END), 0),
                     COALESCE(SUM(CASE WHEN is_advance = 1 THEN dr_paisa END), 0)
              FROM (SELECT id, cr_paisa, dr_paisa, is_advance FROM journal_lines
-                   WHERE account_id = ?1 AND pukhta_person_key IS NOT NULL
+                   WHERE account_id = ?1 AND chukta_person_key IS NOT NULL
                    UNION
                    SELECT id, cr_paisa, dr_paisa, is_advance FROM journal_lines
                    WHERE account_id = ?1 AND entry_id IN (SELECT id FROM nonlive))",
@@ -1072,7 +973,7 @@ fn live_sums_without_key(conn: &Connection, account_id: i64) -> rusqlite::Result
     ))
 }
 
-/// The totals of a seller key (an ordinary seller, or one person of the پختہ کھاتہ seller
+/// The totals of a seller key (an ordinary seller, or one person of the چکتا کھاتہ seller
 /// account). Sums are `SUM()` on `INTEGER` columns; the working in Rust uses checked maths.
 ///
 /// # Errors
@@ -1083,7 +984,7 @@ pub fn payable_totals(
     person_key: Option<&str>,
 ) -> rusqlite::Result<PayableTotals> {
     let (credit, payments, given) = match person_key {
-        // One person of the پختہ کھاتہ account: his few lines are read with their entries.
+        // One person of the چکتا کھاتہ account: his few lines are read with their entries.
         Some(_) => live_sums_of_key(conn, account_id, person_key)?,
         // An ordinary seller: his lines are many (tens of thousands for the busiest), so the sums
         // come from the index and the few lines that are not live are taken off.
@@ -1096,7 +997,7 @@ pub fn payable_totals(
                  FROM advance_allocations a
                  JOIN journal_lines l ON l.id = a.{end}
                  JOIN journal_entries e ON e.id = l.entry_id
-                 WHERE a.account_id = ?1 AND a.is_active = 1 AND l.pukhta_person_key IS ?2 AND {live}",
+                 WHERE a.account_id = ?1 AND a.is_active = 1 AND l.chukta_person_key IS ?2 AND {live}",
                 live = crate::matching::LIVE
             ),
             params![account_id, person_key],
@@ -1149,7 +1050,7 @@ pub struct PayableCredit {
 /// dates of the entries, not line by line: the busiest seller of the volume of NFR-SCL-1 has
 /// about 37,000 credit lines. The order of lines of one entry is then read for the few entries
 /// that hold more than one credit line of his. The result is exactly the one of the slow reading
-/// that a one-time person's key uses. [`credit_row`] reads the details of the few lines a caller
+/// that a چکتا buyer's key uses. [`credit_row`] reads the details of the few lines a caller
 /// keeps.
 ///
 /// # Errors
@@ -1161,7 +1062,7 @@ pub fn payable_credits_oldest_first(
 ) -> rusqlite::Result<Vec<PayableCredit>> {
     let keyed: bool = conn.query_row(
         "SELECT EXISTS (SELECT 1 FROM journal_lines
-                        WHERE account_id = ?1 AND pukhta_person_key IS NOT NULL)",
+                        WHERE account_id = ?1 AND chukta_person_key IS NOT NULL)",
         [account_id],
         |r| r.get(0),
     )?;
@@ -1223,7 +1124,7 @@ pub fn payable_credits_oldest_first(
 }
 
 /// [`payable_credits_oldest_first`] for a key whose lines are read with their entries: one person
-/// of the پختہ کھاتہ seller account.
+/// of the چکتا کھاتہ seller account.
 fn payable_credits_of_key(
     conn: &Connection,
     account_id: i64,
@@ -1233,7 +1134,7 @@ fn payable_credits_of_key(
         "SELECT l.id, l.cr_paisa, e.posting_type <> 'opening', e.entry_date, COALESCE(e.order_key, e.id),
                 l.entry_id, l.line_no
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND l.cr_paisa > 0 AND {live}",
+         WHERE l.account_id = ?1 AND l.chukta_person_key IS ?2 AND l.cr_paisa > 0 AND {live}",
         live = crate::matching::LIVE
     ))?;
     // (not an opening, day, order key, entry, line), credit line, credit.
@@ -1460,7 +1361,7 @@ pub struct CollectionCandidate {
     pub city: Option<RecordRef>,
 }
 
-/// The active buyers (not the cash buyer and not the پختہ کھاتہ account), by code, filtered by
+/// The active buyers (not the cash buyer and not the چکتا کھاتہ account), by code, filtered by
 /// collector and city. A collection weekday is not used: a buyer is collected any day (plan 53 T2).
 ///
 /// # Errors
@@ -1477,7 +1378,7 @@ pub fn collection_candidates(
          JOIN account_controls k ON k.id = a.control_id
          LEFT JOIN staff s ON s.id = a.collector_staff_id
          LEFT JOIN cities c ON c.id = a.city_id
-         WHERE k.code = '0304' AND a.is_active = 1 AND a.is_pukhta_khata = 0 AND a.code <> '03040000'
+         WHERE k.code = '0304' AND a.is_active = 1 AND a.is_chukta_khata = 0 AND a.code <> '03040000'
            AND (?1 IS NULL OR a.collector_staff_id = ?1) AND (?2 IS NULL OR a.city_id = ?2)
          ORDER BY {}",
         crate::codes::order_by_code("a.code")

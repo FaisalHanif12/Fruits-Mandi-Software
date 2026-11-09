@@ -287,13 +287,13 @@ pub(super) fn slip(
 ) -> Result<ReportPage, ReportsError> {
     let control: Option<(String, String, bool)> = conn
         .query_row(
-            "SELECT k.code, a.code, a.is_pukhta_khata FROM accounts a
+            "SELECT k.code, a.code, a.is_chukta_khata FROM accounts a
              JOIN account_controls k ON k.id = a.control_id WHERE a.id = ?1",
             [account],
             |r| Ok((r.get(0)?, r.get(1)?, r.get::<_, i64>(2)? == 1)),
         )
         .ok();
-    let Some((control, code, pukhta)) = control else {
+    let Some((control, code, shared)) = control else {
         return Err(ReportsError::Rejected(vec![FieldError::new(
             ErrorCode::ErrNotFound,
             "filters.party.account_id",
@@ -309,13 +309,13 @@ pub(super) fn slip(
         )]));
     }
     let key = typed.person_key.as_deref();
-    if !pukhta && key.is_some() {
+    if !shared && key.is_some() {
         return Err(ReportsError::Rejected(vec![FieldError::new(
             ErrorCode::ErrOutOfRange,
             "filters.party.person_key",
         )]));
     }
-    if pukhta && key.is_none() {
+    if shared && key.is_none() {
         return Err(ReportsError::Rejected(vec![FieldError::new(
             ErrorCode::ErrRequired,
             "filters.party.person_key",

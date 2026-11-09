@@ -74,7 +74,7 @@ export type SourceReportFilters = {
    */
   group_by: ReportGroupBy | null;
   /**
-   * Paid or due lines only (R9).
+   * Paid or due lines only (R38).
    */
   status: ReportPaidFilter | null;
   /**

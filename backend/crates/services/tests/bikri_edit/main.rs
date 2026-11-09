@@ -3,7 +3,7 @@
 //! `golden_day.rs`.
 //!
 //! - `edit`: what an edit writes and refuses: no posted row changes, closed days, versions, lots
-//!   and lines that are not the posting's, cash, a one-time seller.
+//!   and lines that are not the posting's, cash, an old one-time seller.
 //! - `per_lot`: the per-lot seller commission moves when its line is removed (PRD FR-11.9).
 //! - `matching`: bills and advances after an edit, a cancel and a later sale.
 //! - `cancel`: cancel, undo and the later sale of a cancelled or part-sold بکری.

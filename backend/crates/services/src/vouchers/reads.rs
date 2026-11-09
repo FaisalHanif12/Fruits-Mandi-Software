@@ -58,7 +58,6 @@ pub(super) fn line_source(posting_type: &str, source_type: &str) -> LineSource {
 fn party_for_read(
     conn: &Connection,
     account_id: i64,
-    person_key: Option<&str>,
     field: &str,
     buyer: bool,
 ) -> Result<Party, ServiceError> {
@@ -67,7 +66,6 @@ fn party_for_read(
         conn,
         &mut errors,
         account_id,
-        person_key,
         Accepts {
             buyer,
             seller: !buyer,
@@ -101,19 +99,12 @@ fn party_for_read(
 /// of 10-10-26, 12,880 less 10,000 = 2,880, 0 days old.
 ///
 /// # Errors
-/// `ERR_NOT_FOUND`, `ERR_NOT_A_BUYER` on `account_id`; `ERR_PERSON_REQUIRED` and `ERR_NOT_FOUND`
-/// on `person_key`.
+/// `ERR_NOT_FOUND`, `ERR_NOT_A_BUYER` on `account_id`.
 pub fn open_bills(ctx: &Context, input: &OpenBillsInput) -> Result<OpenBills, ServiceError> {
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| {
-        let party = party_for_read(
-            conn,
-            input.account_id,
-            input.person_key.as_deref(),
-            "account_id",
-            true,
-        )?;
-        let key = party.person_key.as_deref();
+        let party = party_for_read(conn, input.account_id, "account_id", true)?;
+        let key = None;
         let mut bills = Vec::new();
         // The oldest bills only (PRD FR-7.58); the count and the open total are of all of them.
         let found = repo::open_bill_rows_fast(conn, party.record.id, key, MAX_OPEN_ROWS)?;
@@ -163,22 +154,15 @@ pub fn open_bills(ctx: &Context, input: &OpenBillsInput) -> Result<OpenBills, Se
 /// oldest posting; a جنرل credit on him is a posting too (PRD 16.4).
 ///
 /// # Errors
-/// `ERR_NOT_FOUND`, `ERR_NOT_A_SELLER` on `seller_id`; `ERR_PERSON_REQUIRED` and `ERR_NOT_FOUND`
-/// on `person_key`.
+/// `ERR_NOT_FOUND`, `ERR_NOT_A_SELLER` on `seller_id`.
 pub fn open_payables(
     ctx: &Context,
     input: &OpenPayablesInput,
 ) -> Result<OpenPayables, ServiceError> {
     let (_, today) = day::window(ctx)?;
     ctx.db.read(|conn| {
-        let party = party_for_read(
-            conn,
-            input.seller_id,
-            input.person_key.as_deref(),
-            "seller_id",
-            false,
-        )?;
-        let key = party.person_key.as_deref();
+        let party = party_for_read(conn, input.seller_id, "seller_id", false)?;
+        let key = None;
         if !input.include_settled {
             return open_payables_fast(conn, today, party);
         }
@@ -284,7 +268,7 @@ fn open_payables_fast(
     today: BusinessDate,
     party: Party,
 ) -> Result<OpenPayables, ServiceError> {
-    let key = party.person_key.as_deref();
+    let key = None;
     let totals = seller_totals(conn, party.record.id, key, Paisa::ZERO)?;
     let mut postings = Vec::new();
     let mut total_count = 0_usize;
@@ -366,7 +350,7 @@ pub fn advances_report(
             let facts = account_repo::facts(conn, id)?
                 .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_id"))?;
             if facts.control_code != mandi_domain::core::accounts::SELLER_CONTROL
-                || facts.is_pukhta_khata
+                || facts.is_chukta_khata
             {
                 return Err(ServiceError::reject_field(
                     ErrorCode::ErrNotASeller,
@@ -453,7 +437,7 @@ pub fn advances_report(
 
 /// The اگراہی فہرست (PRD FR-15.6, FR-7.61, plan 53 T2): every active buyer who owes something, with
 /// his dues and the age of his oldest open bill, grouped by collector and city. There is no
-/// collection day: a buyer is collected any day. The cash buyer, the پختہ کھاتہ account and a
+/// collection day: a buyer is collected any day. The cash buyer, the چکتا کھاتہ account and a
 /// person in the dead amount (inactive) are not on it. The totals are over the whole filter
 /// (Code Standards B31). Only reads.
 ///

@@ -1,5 +1,5 @@
 //! Reads and writes of the matching rows (PRD FR-15.4, FR-15.5, FR-15.8, plan 13): which bills
-//! and credits of an account (or one person of a پختہ کھاتہ account) are still open, and the
+//! and credits of an account (or one person of a چکتا کھاتہ account) are still open, and the
 //! rows `bill_allocations` and `advance_allocations`. SQL only: the oldest-first working is the
 //! pure `mandi_domain::matching::match_bills`, and the services decide what to match.
 //!
@@ -85,7 +85,7 @@ fn read_key_line(r: &rusqlite::Row<'_>) -> rusqlite::Result<KeyLine> {
     })
 }
 
-/// Every live line of an account (or one person of a پختہ کھاتہ account), oldest first by
+/// Every live line of an account (or one person of a چکتا کھاتہ account), oldest first by
 /// `(entry_date, opening first, order key, entry id, line_no)`: the bills (debits) and the credits the canonical matching
 /// works from (PRD FR-15.4).
 ///
@@ -100,7 +100,7 @@ pub fn live_key_lines(
         "SELECT l.id, l.dr_paisa, l.cr_paisa, e.id, e.entry_date, e.posting_type = 'opening',
                 COALESCE(e.order_key, e.id)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND {LIVE}
+         WHERE l.account_id = ?1 AND l.chukta_person_key IS ?2 AND {LIVE}
          ORDER BY {ORDER}"
     ))?;
     let rows = statement.query_map(params![account_id, person_key], read_key_line)?;
@@ -141,7 +141,7 @@ pub fn active_bill_rows(
                         WHERE b.id = a.bill_line_id AND p.id = a.payment_line_id
                           AND e.posting_type IN ('bikri_first', 'bikri_later'))
          FROM bill_allocations a
-         WHERE a.account_id = ?1 AND a.pukhta_person_key IS ?2 AND a.is_active = 1
+         WHERE a.account_id = ?1 AND a.chukta_person_key IS ?2 AND a.is_active = 1
          ORDER BY a.id",
     )?;
     let rows = statement.query_map(params![account_id, person_key], |r| {
@@ -214,9 +214,9 @@ fn open_lines(
     link: &str,
 ) -> rusqlite::Result<Vec<LineMatch>> {
     // A line of an ordinary account has no person key, so the condition is only needed for a
-    // person of a پختہ کھاتہ account.
+    // person of a چکتا کھاتہ account.
     let person = if person_key.is_some() {
-        "AND l.pukhta_person_key = ?2"
+        "AND l.chukta_person_key = ?2"
     } else {
         "AND ?2 IS NULL"
     };
@@ -347,7 +347,7 @@ fn open_lines_walk(
         return Ok(Vec::new());
     }
     let person = if person_key.is_some() {
-        "AND l.pukhta_person_key = ?2"
+        "AND l.chukta_person_key = ?2"
     } else {
         "AND ?2 IS NULL"
     };
@@ -431,7 +431,7 @@ pub fn has_later_entry(
                         WHERE e.entry_date > ?1 AND e.status = 'posted'
                           AND EXISTS (SELECT 1 FROM journal_lines l
                                       WHERE l.entry_id = e.id AND l.account_id = ?2
-                                        AND l.pukhta_person_key IS ?3))",
+                                        AND l.chukta_person_key IS ?3))",
         params![date, account_id, person_key],
         |r| r.get(0),
     )
@@ -665,7 +665,7 @@ impl LiveLine {
 pub struct LiveLine {
     /// The journal line.
     pub line_id: i64,
-    /// The person key, for a پختہ کھاتہ account.
+    /// The person key, for a چکتا کھاتہ account.
     pub person_key: Option<String>,
     /// Its entry.
     pub entry_id: i64,
@@ -697,7 +697,7 @@ impl LiveLine {
     }
 }
 
-/// Every live line of an account (all persons of a پختہ کھاتہ account), oldest first, with the
+/// Every live line of an account (all persons of a چکتا کھاتہ account), oldest first, with the
 /// part of each line that advance rows take (as the advance or as the credit). Used by the
 /// read-time working of what a seller is still owed (PRD FR-7.59). Only reads.
 ///
@@ -705,7 +705,7 @@ impl LiveLine {
 /// Any SQLite error.
 pub fn live_lines(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<LiveLine>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT l.id, l.pukhta_person_key, e.id, e.entry_date, l.dr_paisa, l.cr_paisa, e.posting_type, l.is_advance,
+        "SELECT l.id, l.chukta_person_key, e.id, e.entry_date, l.dr_paisa, l.cr_paisa, e.posting_type, l.is_advance,
                 COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a
                           WHERE a.is_active = 1 AND (a.advance_line_id = l.id OR a.credit_line_id = l.id)), 0),
                 e.source_type,
@@ -771,7 +771,7 @@ pub struct NewBillAllocation<'a> {
     pub payment_line_id: i64,
     /// The account of both.
     pub account_id: i64,
-    /// The person key of both, for a پختہ کھاتہ account.
+    /// The person key of both, for a چکتا کھاتہ account.
     pub person_key: Option<&'a str>,
     /// The amount, paisa.
     pub amount_paisa: i64,
@@ -789,7 +789,7 @@ pub fn insert_bill_allocation(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO bill_allocations (created_at, created_by, updated_at, updated_by, bill_line_id, payment_line_id,
-             account_id, pukhta_person_key, amount_paisa)
+             account_id, chukta_person_key, amount_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             now,
@@ -813,7 +813,7 @@ pub struct NewAdvanceAllocation<'a> {
     pub credit_line_id: i64,
     /// The seller account.
     pub account_id: i64,
-    /// The person key, for a پختہ کھاتہ account (never for an advance in practice).
+    /// The person key, for a چکتا کھاتہ account (never for an advance in practice).
     pub person_key: Option<&'a str>,
     /// The amount, paisa.
     pub amount_paisa: i64,
@@ -831,7 +831,7 @@ pub fn insert_advance_allocation(
 ) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO advance_allocations (created_at, created_by, updated_at, updated_by, advance_line_id,
-             credit_line_id, account_id, pukhta_person_key, amount_paisa)
+             credit_line_id, account_id, chukta_person_key, amount_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![
             now,

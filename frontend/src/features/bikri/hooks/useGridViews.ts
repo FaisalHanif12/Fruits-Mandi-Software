@@ -4,12 +4,12 @@
 // answer is the same object until the preview, the problems, the lines or the language change.
 
 import { useMemo } from 'react';
-import type { EntryRow } from '../../../shared/grid';
+import { leftTextKey, type EntryRow } from '../../../shared/grid';
 import type { Grouping } from '../../../shared/format';
 import type { BikriDraftStores } from '../draft-store';
 import { buildGridViews } from '../grid-views';
 import type { Problem } from '../problems';
-import type { BikriPreview } from '../types';
+import { SALE, type BikriPreview } from '../types';
 
 interface GridViewsInput {
   stores: BikriDraftStores;
@@ -26,11 +26,13 @@ interface GridViewsInput {
   /** The name of a lot's seller and item, for the lot column of the whole-sale view. */
   lotWho: (row: EntryRow | undefined) => string;
   errorText: (item: Problem['item']) => string;
+  /** The answer is for the draft on screen now, not an older one still shown (D8 Bug 1, B2). */
+  current: boolean;
 }
 
 export function useGridViews(input: GridViewsInput) {
   const { stores, preview, problems, lotRows, allRows, lotKey, whole, grouping } = input;
-  const { say, lotWho, errorText } = input;
+  const { say, lotWho, errorText, current } = input;
   // The keys of the lines of each lot. `allRows` is a new list whenever a line of any lot changed.
   const lineKeysByLot = useMemo(() => {
     const counts = lotRows.map((row) => stores.salesFor(row.rowId).getState().rows.length);
@@ -39,6 +41,17 @@ export function useGridViews(input: GridViewsInput) {
       return allRows.slice(start, start + count).map((line) => line.rowId);
     });
   }, [allRows, lotRows, stores]);
+  // Buyer text typed in a cell and never chosen, by row: the line says so in words (D8 Bug 1). Only
+  // rows with no buyer chosen, so a buyer picked afterwards makes the note go.
+  const buyerLeft = useMemo(() => {
+    const left: Record<string, string> = {};
+    const key = leftTextKey(SALE.buyer);
+    for (const row of allRows) {
+      const text = (row.typed[key] ?? '').trim();
+      if (text !== '' && row.picked?.[SALE.buyer] === undefined) left[row.rowId] = text;
+    }
+    return left;
+  }, [allRows]);
   const views = useMemo(
     () =>
       buildGridViews({
@@ -57,8 +70,23 @@ export function useGridViews(input: GridViewsInput) {
         grouping,
         say,
         words: (problem) => errorText(problem.item),
+        current,
+        buyerLeft,
       }),
-    [preview, problems, lotRows, lotKey, lineKeysByLot, whole, grouping, say, lotWho, errorText],
+    [
+      preview,
+      problems,
+      lotRows,
+      lotKey,
+      lineKeysByLot,
+      whole,
+      grouping,
+      say,
+      lotWho,
+      errorText,
+      current,
+      buyerLeft,
+    ],
   );
   return { views, lineKeysByLot };
 }

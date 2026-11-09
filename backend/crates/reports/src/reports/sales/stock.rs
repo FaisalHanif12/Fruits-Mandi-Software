@@ -30,7 +30,7 @@ use mandi_db::rusqlite::Connection;
 
 use super::super::PageSpec;
 use crate::error::ReportsError;
-use crate::reports::common::{col, count_of, load_parties, names_cell, pukhta_party};
+use crate::reports::common::{col, count_of, load_parties, names_cell};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
@@ -271,13 +271,10 @@ pub(crate) fn run(
                 0,
             ],
         });
-        let mut seller = parties
+        let seller = parties
             .get(&lot.seller.id)
             .cloned()
             .ok_or_else(|| ReportsError::Data("a lot has an unknown seller".to_owned()))?;
-        if let Some((name_ur, name_en, _phone, key)) = &lot.pukhta {
-            seller = pukhta_party(seller, Some(key.clone()), Some(name_ur), Some(name_en));
-        }
         pending.push(Pending {
             key: (lot.received_date.clone(), 0, lot.bikri_number, lot.lot_no),
             cells: vec![

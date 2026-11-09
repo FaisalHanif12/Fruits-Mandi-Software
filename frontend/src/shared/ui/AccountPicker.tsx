@@ -19,7 +19,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   accountSource,
   accountsResolveCode,
+  cardChuktaOf,
+  chuktaHitOf,
   typeMessageId,
+  type CardChukta,
   type AccountHit,
   type AccountKind,
   type AccountRow,
@@ -35,6 +38,7 @@ import type { FieldControlProps } from './Field';
 import { PartyCard } from './PartyCard';
 import { PickerBase, type PickerValue } from './PickerBase';
 import { QuickAddAccount } from './QuickAddAccount';
+import { QuickAddChukta } from './QuickAddChukta';
 
 interface AccountPickerProps extends FieldControlProps {
   /** Which accounts the field takes: sellers, buyers, or every account. */
@@ -52,7 +56,7 @@ interface AccountPickerProps extends FieldControlProps {
    * one. A screen that draws the card itself (the sale lines grid, where the picker is a cell)
    * turns `showCard` off and reads this.
    */
-  onCardAccount?: ((accountId: number | null) => void) | undefined;
+  onCardAccount?: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
   /** False where adding an account from the field would not make sense, for example a filter. */
   canAdd?: boolean | undefined;
   /** For a picker in a grid cell (see PickerBase). */
@@ -61,11 +65,19 @@ interface AccountPickerProps extends FieldControlProps {
   /** The list opens above the field instead of under it (see PickerBase). */
   listAbove?: boolean | undefined;
   onEnterPicked?: (() => void) | undefined;
+  /** The text in the field after each key (see PickerBase). */
+  onTyped?: ((text: string) => void) | undefined;
   /**
    * A person in the dead amount may be offered and picked (PRD FR-10.10): only the receipt field and
    * the ادھار رقم واپسی field say yes. He shows with the tag "ڈوبی".
    */
   includeDead?: boolean | undefined;
+  /**
+   * The buyer box of a بکری line (PRD FR-7.29, FR-13.3): it lists چکتا buyers beside ordinary
+   * buyers, each marked چکتا with his phone, and its list ends with two add rows, a new buyer and
+   * a new چکتا buyer. Only scope `buyer` can say yes; no other box lists a چکتا buyer.
+   */
+  withChukta?: boolean | undefined;
 }
 
 /** What the screen says about a code that did not give one account. */
@@ -80,7 +92,9 @@ function hitOfRow(row: AccountRow): AccountHit {
     id: row.id,
     code: row.code,
     account_type: row.account_type,
-    ...(row.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
+    kind: 'account',
+    chukta_id: null,
+    phone: null,
     control_id: row.control.id,
     name_ur: row.name_ur,
     name_en: row.name_en,
@@ -127,14 +141,17 @@ export function AccountPicker({
   controlId,
   onCardAccount,
   onEnterPicked,
+  onTyped,
   canAdd = true,
   includeDead = false,
+  withChukta: withChuktaProp = false,
   ...field
 }: AccountPickerProps) {
   const language = useLanguage();
+  const withChukta = withChuktaProp && scope === 'buyer';
   const source = useMemo(
-    () => accountSource(scope, controlId ?? null, includeDead),
-    [scope, controlId, includeDead],
+    () => accountSource(scope, controlId ?? null, includeDead, withChukta),
+    [scope, controlId, includeDead, withChukta],
   );
   const [note, setNote] = useState<CodeNote | null>(null);
   const [highlight, setHighlight] = useState<AccountHit | null>(null);
@@ -142,6 +159,9 @@ export function AccountPicker({
   // in a ref, so the form closing after a save calls it once.
   const [adding, setAdding] = useState<string | null>(null);
   const waiting = useRef<((added: AccountHit | null) => void) | null>(null);
+  // The short form of a new چکتا buyer (the second add row): the text it starts with, and who waits.
+  const [addingChukta, setAddingChukta] = useState<string | null>(null);
+  const chuktaWaiting = useRef<((added: AccountHit | null) => void) | null>(null);
   const addRecord = useAddRecord();
   const add = ADD[scope];
   // True while a code that Enter sent to the backend is being answered: when it is found, the
@@ -238,14 +258,41 @@ export function AccountPicker({
     { enabled: unknown && adding === null },
   );
 
+  // The party card follows the row the list highlights, else the chosen record. A چکتا buyer has
+  // the shared account's id, so his own names and phone say who the card is for (PRD FR-13.6).
   const cardId = highlight?.id ?? value?.id ?? null;
+  const chuktaCard: CardChukta | null =
+    highlight !== null
+      ? highlight.kind === 'chukta'
+        ? {
+            id: highlight.chukta_id,
+            name_ur: highlight.name_ur,
+            name_en: highlight.name_en,
+            phone: highlight.phone ?? '',
+          }
+        : null
+      : cardChuktaOf(value);
+  // The screen is told when who the card is for changes, not on every render.
+  const chuktaKey =
+    chuktaCard === null
+      ? ''
+      : `${String(chuktaCard.id)}|${chuktaCard.name_ur}|${chuktaCard.name_en}|${chuktaCard.phone}`;
+  const chuktaRef = useRef(chuktaCard);
   const cardRef = useRef(onCardAccount);
   useEffect(() => {
+    chuktaRef.current = chuktaCard;
     cardRef.current = onCardAccount;
   });
   useEffect(() => {
-    cardRef.current?.(cardId);
-  }, [cardId]);
+    cardRef.current?.(cardId, chuktaRef.current);
+  }, [cardId, chuktaKey]);
+
+  // The second add row: a new چکتا buyer. The short form saves him through `chukta_add`; the box
+  // takes his row (the account چکتا کھاتہ with his own record) when the form closes.
+  function openChuktaAdd(text: string, done: (added: AccountHit | null) => void) {
+    chuktaWaiting.current = done;
+    setAddingChukta(text);
+  }
   return (
     <div className="flex flex-col gap-2">
       <PickerBase<AccountHit>
@@ -273,16 +320,17 @@ export function AccountPicker({
         onTyping={() => {
           setNote(null);
         }}
+        onTyped={onTyped}
         addNoun={canAdd ? add.noun : undefined}
         onAddRecord={(text, done) => {
           openQuickAdd(text, done);
         }}
-        // A پختہ party is marked next to his code in every field, so he is told apart from an ordinary
-        // one of his side; his side is the field's, or the chip below where the field takes any
-        // account (plan 47).
+        extraAdd={canAdd && withChukta ? { noun: 'chukta', onAdd: openChuktaAdd } : undefined}
+        // A چکتا buyer is marked next to his name in the buyer box, so he is told apart from an
+        // ordinary buyer; his phone is the second line of his row (PRD FR-7.29).
         renderMark={(hit) =>
-          hit.is_pukhta_party === true ? (
-            <Localized id="accounts-type-pukhta">
+          hit.kind === 'chukta' ? (
+            <Localized id="accounts-type-chukta">
               <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
             </Localized>
           ) : null
@@ -314,9 +362,7 @@ export function AccountPicker({
                         onChange(candidate);
                       }}
                     >
-                      <Localized
-                        id={typeMessageId(candidate.account_type, candidate.is_pukhta_party)}
-                      />
+                      <Localized id={typeMessageId(candidate.account_type)} />
                       <bdi dir="ltr">{candidate.code}</bdi>
                       {displayName(candidate, language)}
                     </Button>
@@ -357,7 +403,29 @@ export function AccountPicker({
           )}
         </div>
       )}
-      {showCard ? <PartyCard accountId={cardId} /> : null}
+      {showCard ? <PartyCard accountId={cardId} chukta={chuktaCard} /> : null}
+      {withChukta ? (
+        <QuickAddChukta
+          open={addingChukta !== null}
+          onOpenChange={(open) => {
+            if (open) return;
+            // The form closed without a save (Esc, Back): the box is as it was.
+            const done = chuktaWaiting.current;
+            chuktaWaiting.current = null;
+            setAddingChukta(null);
+            done?.(null);
+          }}
+          typed={addingChukta ?? ''}
+          onSaved={(buyer) => {
+            // Saved: the box takes him at once, and the form closes (PRD FR-7.69).
+            const done = chuktaWaiting.current;
+            chuktaWaiting.current = null;
+            setAddingChukta(null);
+            setNote(null);
+            done?.(chuktaHitOf(buyer));
+          }}
+        />
+      ) : null}
       <QuickAddAccount
         open={adding !== null}
         onOpenChange={(open) => {

@@ -34,7 +34,7 @@ pub(crate) struct Typed {
     pub(crate) seller_id: Option<i64>,
     /// The picked buyer account.
     pub(crate) buyer_id: Option<i64>,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub(crate) person_key: Option<String>,
     /// The picked city (the buyer's).
     pub(crate) city_id: Option<i64>,
@@ -177,10 +177,10 @@ pub fn compare_window(compare: AnalyticsCompare, from: &str, to: &str) -> Option
     compared(compare, from, to).map(|(a, b)| (a.to_iso(), b.to_iso()))
 }
 
-/// True if the account is one of the two پختہ کھاتہ accounts (PRD FR-13.1).
-fn is_pukhta(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
+/// True if the account is چکتا کھاتہ (0030) or the old closed account 0031 (PRD FR-13.1, FR-13.9).
+fn is_chukta_khata(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
     Ok(conn.query_row(
-        "SELECT is_pukhta_khata FROM accounts WHERE id = ?1",
+        "SELECT is_chukta_khata FROM accounts WHERE id = ?1",
         [account_id],
         |r| r.get::<_, i64>(0),
     )? == 1)
@@ -460,7 +460,7 @@ pub(crate) fn resolve(
                     .as_deref()
                     .map(str::trim)
                     .filter(|k| !k.is_empty());
-                if key.is_some() && !is_pukhta(conn, party.account_id)? {
+                if key.is_some() && !is_chukta_khata(conn, party.account_id)? {
                     problems.push(FieldError::new(
                         ErrorCode::ErrOutOfRange,
                         "filters.buyer.person_key",

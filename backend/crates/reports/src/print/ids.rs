@@ -3,7 +3,6 @@
 
 pub(super) const TITLE_SELLER_BILL: &str = "print-seller-bill-title";
 pub(super) const TITLE_BUYER_SLIP: &str = "print-buyer-slip-title";
-pub(super) const TITLE_PUKHTA_SLIP: &str = "print-pukhta-slip-title";
 pub(super) const FACT_NUMBER: &str = "print-fact-number";
 /// The number of a voucher slip. The sale documents use [`FACT_NUMBER`], which reads "Sale No.".
 pub(super) const FACT_VOUCHER_NUMBER: &str = "print-fact-voucher-number";
@@ -12,7 +11,6 @@ pub(super) const FACT_BILL_DATE: &str = "print-fact-bill-date";
 pub(super) const FACT_TRUCK: &str = "print-fact-truck";
 pub(super) const PARTY_SELLER: &str = "print-party-seller";
 pub(super) const PARTY_BUYER: &str = "print-party-buyer";
-pub(super) const PARTY_ONETIME_BUYER: &str = "print-party-onetime-buyer";
 pub(super) const GROSS_SALE: &str = "print-gross-sale";
 pub(super) const FREIGHT: &str = "print-freight";
 pub(super) const COMMISSION: &str = "print-commission";
@@ -39,7 +37,6 @@ pub(super) const TITLE_ADVANCE_SLIP: &str = "print-advance-slip-title";
 pub(super) const FACT_REASON: &str = "print-fact-reason";
 pub(super) const FACT_COLLECTOR: &str = "print-fact-collector";
 pub(super) const FACT_NARRATION: &str = "print-fact-narration";
-pub(super) const PARTY_ONETIME_SELLER: &str = "print-party-onetime-seller";
 pub(super) const PARTY_ACCOUNT: &str = "print-party-account";
 pub(super) const SLIP_AMOUNT_RECEIVED: &str = "print-slip-amount-received";
 pub(super) const SLIP_AMOUNT_PAID: &str = "print-slip-amount-paid";

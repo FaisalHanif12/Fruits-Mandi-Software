@@ -1174,7 +1174,6 @@ fn r34_shows_a_trip_bought_and_sold() {
 fn general_of_1000(w: &World) {
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,

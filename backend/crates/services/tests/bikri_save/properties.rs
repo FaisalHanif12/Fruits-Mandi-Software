@@ -15,7 +15,7 @@ use crate::support::*;
 
 #[derive(Debug, Clone)]
 struct SaleSpec {
-    /// 0 اکرم, 1 ارشد, 2 نقدی منڈی, 3 a one-time buyer.
+    /// 0 اکرم, 1 ارشد, 2 نقدی منڈی, 3 a چکتا buyer.
     buyer: u8,
     /// How much of what is left of the lot this line takes, in percent.
     take_percent: u8,
@@ -106,7 +106,7 @@ fn build(w: &World, specs: &[LotSpec]) -> BikriDraft {
             }
             let qty = (left * i64::from(s.take_percent) / 100).max(1);
             left -= qty;
-            let buyer = [w.akram, w.arshad, w.naqdi, w.pukhta_buyer][usize::from(s.buyer)];
+            let buyer = [w.akram, w.arshad, w.naqdi, w.chukta_khata][usize::from(s.buyer)];
             let mut line: SaleInput = sale(
                 &format!("s-{index}-{j}"),
                 buyer,
@@ -114,7 +114,7 @@ fn build(w: &World, specs: &[LotSpec]) -> BikriDraft {
                 &s.rate.to_string(),
             );
             if s.buyer == 3 {
-                line.pukhta = person(people[j % 2].0, people[j % 2].1, people[j % 2].2);
+                line.chukta = person(people[j % 2].0, people[j % 2].1, people[j % 2].2);
             }
             if s.buyer < 2 && s.cash {
                 line.payment_type = Some(PaymentType::Cash);

@@ -15,7 +15,7 @@ export interface PrintParams {
   input: BikriPrintDataInput;
 }
 
-const DOCS: readonly PrintDoc[] = ['seller_bill', 'buyer_slips', 'pukhta_slip'];
+const DOCS: readonly PrintDoc[] = ['seller_bill', 'buyer_slips'];
 const LANGUAGE_VALUES: readonly Language[] = ['ur', 'en'];
 
 /** The parameters of the print window, or null when the address is not a valid print address. */

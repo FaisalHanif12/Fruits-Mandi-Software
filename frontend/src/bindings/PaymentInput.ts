@@ -14,10 +14,6 @@ export type PaymentInput = {
    */
   account_id: number;
   /**
-   * The one-time person, for a پختہ کھاتہ account (PRD FR-13.5). Null for any other account.
-   */
-  person_key: string | null;
-  /**
    * Whole rupees, more than 0.
    */
   amount: string;

@@ -67,7 +67,7 @@ fn conditions(layout: Layout, typed: &Typed) -> Conds {
     c.text("v.entry_date >= ?", typed.from.as_deref())
         .text("v.entry_date <= ?", typed.to.as_deref())
         .id("v.account_id = ?", typed.party_id)
-        .text("v.pukhta_person_key = ?", typed.person_key.as_deref())
+        .text("v.chukta_person_key = ?", typed.person_key.as_deref())
         // R23 only (the other lists do not take it): the receipts one collector took.
         .id("v.collector_staff_id = ?", typed.collector_id);
     c
@@ -145,7 +145,7 @@ struct Stored {
 
 fn page_rows(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Vec<Stored>, ReportsError> {
     let sql = format!(
-        "SELECT v.id, v.type, v.number, v.entry_date, v.account_id, v.pukhta_person_key,
+        "SELECT v.id, v.type, v.number, v.entry_date, v.account_id, v.chukta_person_key,
                 v.amount_paisa, p.name_ur, p.name_en, eh.name_ur, eh.name_en, st.name_ur, st.name_en,
                 v.reason, v.narration, v.status = 'cancelled'
          FROM vouchers v
@@ -217,7 +217,7 @@ pub(crate) fn run(
 
     let mut rows = Vec::with_capacity(stored.len());
     for v in stored {
-        // The party of the voucher: an account (and the person inside a پختہ کھاتہ account), else
+        // The party of the voucher: an account (and the person inside a چکتا کھاتہ account), else
         // the partner it is for, else its expense head.
         let account = match v.account_id {
             Some(id) => Cell::Party {

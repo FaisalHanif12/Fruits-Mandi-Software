@@ -7,9 +7,11 @@
 //      new empty بکری is ready with the cursor on the truck number.
 //   3. Opens the saved بکری 1 from the "last saved" link: the stored numbers of E2E-1 to E2E-4 and
 //      nothing can be typed in it.
-//   4. Event 2: a lot from کریم sold to شاہد, a one-time buyer with his name and phone, 10 at 1,200;
-//      F10. The message names بکری 2.
-//   5. آج کی بکری lists both. The پختہ کھاتہ register shows شاہد, paid. اکرم's balance shows his
+//   4. Event 2: a lot from کریم sold to شاہد, a چکتا buyer. He is added from the buyer box with the
+//      second add row (new چکتا buyer): his name and phone in the short form, F10, and he is chosen
+//      at once. Then 10 at 1,200; the paid cell is skipped, because he pays the whole bill (PRD
+//      FR-13.5). F10. The message names بکری 2.
+//   5. آج کی بکری lists both. شاہد is not an account (PRD FR-13.6), and اکرم's balance shows his
 //      12,880 on the accounts list (PRD 6.2).
 // The numbers themselves are proved by the Rust test `golden_day` (E2E-1 to E2E-5); this spec proves
 // the screens send what was typed and show what is stored. It runs on Windows only (LOCAL-ONLY in
@@ -25,6 +27,7 @@ import {
   focusField,
   openRoute,
   pageText,
+  press,
   startSignedIn,
   type,
   waitForHeading,
@@ -185,7 +188,7 @@ describe('saving the worked day, Events 1 and 2 (Urdu)', () => {
     await shootScreen('bikri-saved-event1', 'ur');
   });
 
-  it('5. Event 2: a lot from کریم sold to شاہد, a one-time buyer, saved with F10', async () => {
+  it('5. Event 2: a lot from کریم sold to شاہد, a چکتا buyer, saved with F10', async () => {
     await openRoute('/bikri/book');
     await waitForHeading('ur', 'glossary-bikri-book');
     await focusField('ur', 'bikri-header-truck');
@@ -198,12 +201,22 @@ describe('saving the worked day, Events 1 and 2 (Urdu)', () => {
     await typeAndPick('box');
     await type(`10${Key.Enter}1000${Key.Enter}50${Key.Enter}50${Key.Enter}${Key.Enter}`);
     await typePhoneCharge(1, '20');
-    // The one-time buyer account: Enter goes to his name, then the other name, then his phone.
-    await type(`0030${Key.Enter}`);
-    await type(`shahid${Key.Enter}`);
+    // The چکتا buyer: his name in the buyer box matches nobody, so the list ends with two add rows,
+    // a new buyer and a new چکتا buyer. Down twice and Enter opens the short form of the second,
+    // with the name already in it (PRD FR-7.69, FR-13.3). The phone is typed and F10 saves him.
+    await type('shahid');
+    const addRow = await $('[role="option"]');
+    await addRow.waitForDisplayed({ timeout: LIST_WAIT_MS });
+    await press(Key.ArrowDown, Key.ArrowDown, Key.Enter);
+    const dialog = await $('[role="dialog"]');
+    await dialog.waitForDisplayed({ timeout: LIST_WAIT_MS });
+    await focusField('ur', 'accounts-field-phone1');
+    await type('0300-0000000');
+    await type(Key.F10);
     await confirmSpellingIfAsked();
-    await type(`${Key.Enter}0300-0000000${Key.Enter}`);
-    await type(`10${Key.Enter}1200${Key.Enter}`);
+    await dialog.waitForDisplayed({ timeout: LIST_WAIT_MS, reverse: true });
+    // He is chosen, so the cursor goes to the quantity: no name or phone cells on the line.
+    await type(`${Key.Enter}10${Key.Enter}1200${Key.Enter}`);
     await waitForNumbers('12,800', '10,160', '1,540', '616', '462');
     await shootScreen('bikri-save-event2-typed', 'ur');
     await type(Key.F10);
@@ -217,14 +230,12 @@ describe('saving the worked day, Events 1 and 2 (Urdu)', () => {
     await shootScreen('bikri-today-list', 'ur');
   });
 
-  it('7. the پختہ کھاتہ register shows شاہد, paid', async () => {
-    await openRoute('/bikri/pukhta');
-    await waitForHeading('ur', 'glossary-pukhta-khata');
-    await waitForText('شاہد');
+  it('7. شاہد, a چکتا buyer, is not an account: the accounts list does not hold him', async () => {
+    await openRoute('/index/accounts');
+    await waitForText('اکرم ٹول ٹیکس');
     const text = await pageText();
-    expect(text).toContain('12,800');
-    expect(text).toContain(t('ur', 'pukhta-state-paid'));
-    await shootScreen('bikri-pukhta-register', 'ur');
+    expect(text).not.toContain('شاہد');
+    await shootScreen('bikri-chukta-not-an-account', 'ur');
   });
 
   it('8. اکرم’s balance on the accounts list is the 12,880 of his bill (PRD 6.2)', async () => {

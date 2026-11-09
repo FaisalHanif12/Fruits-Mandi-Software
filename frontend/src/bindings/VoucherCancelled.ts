@@ -23,7 +23,7 @@ export type VoucherCancelled = {
    */
   reversal_entry_id: number;
   /**
-   * The account's balance (or the person's) after the cancel.
+   * The account's balance after the cancel.
    */
   new_balance: Balance;
 };

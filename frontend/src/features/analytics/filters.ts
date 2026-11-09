@@ -3,7 +3,6 @@
 // picked) and sends them as they are: the backend reads the dates, the shortcuts and the party
 // (CLAUDE.md rule 1). Nothing is worked out here.
 
-import type { ReportPerson } from '../reports';
 import type { GradeChoice } from '../../shared/format';
 import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 import type {
@@ -66,10 +65,6 @@ export interface AnalyticsFilterState {
   item: PickerValue | null;
   seller: PickerValue | null;
   buyer: PickerValue | null;
-  /** One person inside a one-time buyer account (PRD FR-13.5). */
-  person: ReportPerson | null;
-  /** What is typed in the person box, kept here so a language switch loses nothing. */
-  personText: string;
   city: PickerValue | null;
   adda: PickerValue | null;
   side: AnalyticsSide;
@@ -97,8 +92,6 @@ export const EMPTY_ANALYTICS_FILTERS: AnalyticsFilterState = {
   item: null,
   seller: null,
   buyer: null,
-  person: null,
-  personText: '',
   city: null,
   adda: null,
   side: 'both',
@@ -124,14 +117,9 @@ export function filtersToWire(
 ): AnalyticsFilters {
   const has = (kind: AnalyticsFilterKind) => takes.includes(kind);
   const period = has('period') && state.period !== 'custom' ? state.period : null;
-  let buyer: AnalyticsFilters['buyer'] = null;
-  if (has('buyer')) {
-    if (state.person !== null) {
-      buyer = { account_id: state.person.accountId, person_key: state.person.personKey };
-    } else if (state.buyer !== null) {
-      buyer = { account_id: state.buyer.id, person_key: null };
-    }
-  }
+  // A چکتا buyer has no ledger and is not in the buyer box (PRD FR-13.4), so a buyer is an account.
+  const buyer: AnalyticsFilters['buyer'] =
+    has('buyer') && state.buyer !== null ? { account_id: state.buyer.id, person_key: null } : null;
   return {
     period,
     from: has('period') && period === null ? state.from.trim() : '',
@@ -167,8 +155,6 @@ function bare(id: number | null): PickerValue | null {
 /** The boxes a saved view starts with: ids only; the names are filled by the answer's echo. */
 export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
   const buyerId = filters.buyer?.account_id ?? null;
-  const personKey = filters.buyer?.person_key ?? null;
-  const personName = personKey === null ? '' : (personKey.split('|')[0] ?? '');
   return {
     period: filters.period ?? 'custom',
     from: filters.from,
@@ -177,18 +163,6 @@ export function stateFromWire(filters: AnalyticsFilters): AnalyticsFilterState {
     item: bare(filters.item_id),
     seller: bare(filters.seller_id),
     buyer: bare(buyerId),
-    person:
-      buyerId === null || personKey === null
-        ? null
-        : {
-            accountId: buyerId,
-            personKey,
-            name_ur: personName,
-            name_en: personName,
-            phone: '',
-            last_date: '',
-          },
-    personText: '',
     city: bare(filters.city_id),
     adda: bare(filters.adda_id),
     side: filters.side,

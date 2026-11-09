@@ -7,15 +7,18 @@
 //! left out. No match gives an empty list; the search already includes the close spellings, so an
 //! empty list means nothing is close.
 //!
-//! Roles: buyer, seller, any_party, pukhta, money_lent, separate_khata (accounts); item, city, adda,
+//! Roles: buyer, seller, any_party, chukta, money_lent, separate_khata (accounts); item, city, adda,
 //! collector, trip, garden (lists); partner (the partner section, so a locked section pauses the
 //! question, PRD FR-7.82).
 
 use mandi_services::assist;
-use mandi_services::core::accounts::{AccountHit, AccountScope, AccountType, SearchAccountsInput};
+use mandi_services::core::accounts::{
+    AccountHit, AccountScope, AccountType, HitKind, SearchAccountsInput,
+};
+use mandi_services::core::chukta::ChuktaSearchInput;
 use mandi_services::core::search::SearchScope;
 use mandi_services::core::text;
-use mandi_services::{coa, partners, search};
+use mandi_services::{chukta, coa, partners, search};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -34,8 +37,8 @@ pub enum Role {
     Seller,
     /// Any account of a seller or a buyer.
     AnyParty,
-    /// A پختہ کھاتہ person.
-    Pukhta,
+    /// A walk-in buyer of the چکتا کھاتہ (PRD FR-7.29, Section 13). He has no ledger and no balance.
+    Chukta,
     /// An ادھار رقم person.
     MoneyLent,
     /// An الگ کھاتہ.
@@ -77,7 +80,7 @@ impl Role {
             Role::Buyer => "buyer",
             Role::Seller => "seller",
             Role::AnyParty => "any_party",
-            Role::Pukhta => "pukhta",
+            Role::Chukta => "chukta",
             Role::MoneyLent => "money_lent",
             Role::SeparateKhata => "separate_khata",
             Role::Partner => "partner",
@@ -129,10 +132,12 @@ fn list_scope(role: Role) -> Option<(SearchScope, &'static str)> {
 
 fn keep(role: Role, hit: &AccountHit) -> bool {
     match role {
+        // A چکتا buyer rides in the buyer list of the pickers, but he is no account and has no
+        // balance: he is found only by the role `chukta` (PRD FR-13.6).
+        _ if hit.kind == HitKind::Chukta => false,
         Role::Buyer => hit.account_type == AccountType::Buyer,
         Role::Seller => hit.account_type == AccountType::Seller,
         Role::AnyParty => matches!(hit.account_type, AccountType::Buyer | AccountType::Seller),
-        Role::Pukhta => hit.is_pukhta_party,
         Role::MoneyLent => hit.account_type == AccountType::MoneyLent,
         _ => true,
     }
@@ -155,6 +160,7 @@ fn account_matches(
             limit: ASK_ACCOUNTS,
             offset: 0,
             include_dead: Some(true),
+            with_chukta: None,
         },
     )
     .map_err(service_stop)?;
@@ -191,6 +197,42 @@ fn account_matches(
             ("balance", Node::Val(Val::Money(balance))),
         ]));
     }
+    Ok((matches, more))
+}
+
+/// The walk-in buyers whose name or phone hold the typed text, newest first. A match is his key
+/// (`c` and his row), his type `chukta` and his name; he has no code, no city and no balance, and his
+/// phone is never sent (PRD FR-7.83, FR-13.6).
+fn chukta_matches(env: &Env<'_>, query: &str) -> Result<(Vec<Node>, bool), Stop> {
+    let found = chukta::search(
+        env.ctx,
+        &ChuktaSearchInput {
+            text: query.to_owned(),
+        },
+    )
+    .map_err(service_stop)?;
+    let more = found.len() > MAX_OPTIONS;
+    let matches = found
+        .into_iter()
+        .take(MAX_OPTIONS)
+        .map(|b| {
+            Node::obj(vec![
+                ("key", Node::Str(format!("c{}", b.id))),
+                ("code", Node::Str(String::new())),
+                ("type", Node::Str("chukta".to_owned())),
+                (
+                    "name",
+                    Node::Val(Val::Name(NameVal {
+                        name_ur: b.name_ur,
+                        name_en: b.name_en,
+                        tag: None,
+                        code: None,
+                    })),
+                ),
+                ("active", Node::Bool(true)),
+            ])
+        })
+        .collect();
     Ok((matches, more))
 }
 
@@ -434,9 +476,8 @@ fn matches_for(env: &Env<'_>, role: Role, query: &str) -> Result<(Vec<Node>, boo
             buyers.truncate(MAX_OPTIONS);
             (buyers, more)
         }
-        Role::Pukhta | Role::MoneyLent => {
-            account_matches(env, role, AccountScope::Any, None, query)?
-        }
+        Role::Chukta => chukta_matches(env, query)?,
+        Role::MoneyLent => account_matches(env, role, AccountScope::Any, None, query)?,
         Role::SeparateKhata => {
             let control = coa::controls(env.ctx)
                 .map_err(service_stop)?

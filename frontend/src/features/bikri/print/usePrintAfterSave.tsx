@@ -14,7 +14,7 @@ import type { BikriSaved } from '../../../bindings/BikriSaved';
 import { FALLBACK_ERROR_MESSAGE_ID, uiErrorOf } from '../../../shared/api';
 import { useLatest } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
-import { BIKRI_PRINT_DOCS } from '../../../shared/print';
+import { BIKRI_PRINT_DOCS, opensSystemPrintWindow } from '../../../shared/print';
 import { showToast, useErrorText } from '../../../shared/ui';
 import { reportsPrint } from '../../reports';
 import { PRINTING_KEY, settingsGetPrinting } from '../../settings';
@@ -54,7 +54,9 @@ export function usePrintAfterSave(): void {
             if (outcome.printed.length === 0) return;
             showToast(
               'success',
-              <Localized id="print-toast-printed">
+              <Localized
+                id={opensSystemPrintWindow() ? 'print-toast-dialog' : 'print-toast-printed'}
+              >
                 <span />
               </Localized>,
             );

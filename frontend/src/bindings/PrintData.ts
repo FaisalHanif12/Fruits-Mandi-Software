@@ -53,7 +53,7 @@ export type PrintData = {
    */
   revised_on: string | null;
   /**
-   * The pages. Empty when there is nothing to print (no one-time buyer for the پختہ slip).
+   * The pages. Empty when there is nothing to print (no چکتا buyer for the buyer slip).
    */
   pages: Array<PrintPage>;
 };

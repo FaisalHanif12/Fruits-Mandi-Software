@@ -154,8 +154,8 @@ fn cash_already_below_zero_does_not_ask_for_an_entry_that_puts_cash_in() {
     let mut karim = lot(&w, "lot-1", w.karim, w.apple, "10");
     karim.freight = Some("1,000".into());
     karim.cash_paid = None;
-    let mut shahid = sale("s-1", w.pukhta_buyer, "10", "1,200");
-    shahid.pukhta = Some(mandi_services::core::bikri::PukhtaInput {
+    let mut shahid = sale("s-1", w.chukta_khata, "10", "1,200");
+    shahid.chukta = Some(mandi_services::core::bikri::ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: String::new(),

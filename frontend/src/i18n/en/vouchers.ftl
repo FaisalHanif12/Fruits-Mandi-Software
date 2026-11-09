@@ -118,15 +118,6 @@ vouchers-field-seller = { -beopari }
 vouchers-field-paid-to = Pay to
 
 # review: pending
-vouchers-field-person = Name or phone
-
-# review: pending
-vouchers-person-hint = Type the name or phone of a person already recorded under { -pukhta-khata } and pick him from the list.
-
-# review: pending
-vouchers-make-regular = Make a regular account
-
-# review: pending
 vouchers-field-amount = Amount
 
 # review: pending

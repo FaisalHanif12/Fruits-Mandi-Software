@@ -20,7 +20,7 @@ fn add(conn: &mandi_db::rusqlite::Connection, control: &str, code: &str, serial:
 #[test]
 fn the_next_code_of_a_type_goes_on_from_the_highest_running_number() {
     let (_dir, conn) = setup();
-    // A fresh file has the two پختہ کھاتہ accounts (type 003) and old-style codes only: no seller
+    // A fresh file has the two چکتا کھاتہ accounts (type 003) and old-style codes only: no seller
     // and no buyer yet.
     assert_eq!(
         largest_running(&conn, CodeTable::Accounts, CodeType::Seller).unwrap(),
@@ -31,7 +31,7 @@ fn the_next_code_of_a_type_goes_on_from_the_highest_running_number() {
         Some((0, "0010".to_owned()))
     );
     assert_eq!(
-        largest_running(&conn, CodeTable::Accounts, CodeType::Pukhta).unwrap(),
+        largest_running(&conn, CodeTable::Accounts, CodeType::Chukta).unwrap(),
         Some(1),
         "0030 and 0031 are the type 003"
     );

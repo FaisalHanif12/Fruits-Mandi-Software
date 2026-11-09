@@ -48,8 +48,8 @@ pub async fn bikri_split_freight<R: tauri::Runtime>(
 
 /// Saves a بکری (PRD FR-12.8) in one transaction: the بکری with its lots and lines and their
 /// stored values, one balanced journal entry (sale part and cash part), the partner share rows,
-/// stock moves, analytics facts, bill matching, advance matching, the پختہ کھاتہ person lines
-/// and the audit row; the draft of the screen is removed. All or nothing. It works the draft out
+/// stock moves, analytics facts, bill matching, advance matching, the line of a چکتا buyer with
+/// his person key and the audit row; the draft of the screen is removed. All or nothing. It works the draft out
 /// with the same function as `bikri_preview`, so the saved numbers are the previewed ones.
 /// Errors: every error and code of the preview, each at its field (`lots[i].sales[j].qty`, ...);
 /// `ERR_NO_LOTS` and `ERR_NO_SALE_LINES` on `lots`; `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` on

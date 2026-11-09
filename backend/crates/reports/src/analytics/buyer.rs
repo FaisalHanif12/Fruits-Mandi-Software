@@ -1,6 +1,6 @@
 //! View C, by buyer, گاہک وار (PRD 18.2, FR-18.6, FR-18.7, FR-13.9).
 //!
-//! One row for each buyer (and each one-time person inside the پختہ کھاتہ account) with
+//! One row for each buyer (and each چکتا buyer inside the چکتا کھاتہ account) with
 //! purchases in the filter: نگ, the purchase value, the buyer commission, لاگا, the dues now,
 //! and the average days to pay.
 //!
@@ -16,7 +16,7 @@
 //!   اڈا filter is set (a bill cannot be split by item).
 //!
 //! Example (PRD 18.4): ارشد 30 نگ, 17,400, 1,044, 240, dues 18,684, no average; اکرم 20, 12,000,
-//! 720, 160, dues 2,880; the one-time buyer شاہد 10, 12,000, 720, 80, dues 0, average 0 days.
+//! 720, 160, dues 2,880; the چکتا buyer شاہد 10, 12,000, 720, 80, dues 0, average 0 days.
 
 use std::collections::HashMap;
 
@@ -38,12 +38,12 @@ use super::table::{Part, Table, col, compare_cells, compare_columns, count_of, p
 use crate::error::ReportsError;
 use crate::reports::PageSpec;
 use crate::reports::common::{
-    IN_CHUNK, LIVE, add, balance_cell, load_parties, paisa, placeholders, pukhta_party,
+    IN_CHUNK, LIVE, add, balance_cell, chukta_party, load_parties, paisa, placeholders,
 };
-use crate::reports::grouped_sums::pukhta_names;
+use crate::reports::grouped_sums::chukta_names;
 use crate::reports::{Cell, ColumnKind, PartyRef};
 
-/// The key of a row: the buyer account and, for a پختہ کھاتہ person, his key.
+/// The key of a row: the buyer account and, for a چکتا کھاتہ person, his key.
 type BuyerKey = (i64, Option<String>);
 
 struct Entry {
@@ -64,11 +64,11 @@ fn balances(
     let mut found = HashMap::new();
     for chunk in accounts.chunks(IN_CHUNK) {
         let sql = format!(
-            "SELECT l.account_id, l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0),
+            "SELECT l.account_id, l.chukta_person_key, COALESCE(SUM(l.dr_paisa), 0),
                     COALESCE(SUM(l.cr_paisa), 0)
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
              WHERE e.status = 'posted' AND l.account_id IN ({})
-             GROUP BY l.account_id, l.pukhta_person_key",
+             GROUP BY l.account_id, l.chukta_person_key",
             placeholders(chunk.len())
         );
         let mut statement = conn.prepare(&sql)?;
@@ -119,7 +119,7 @@ fn days_to_pay(
             "SELECT t.account_id, t.person_key, COUNT(*),
                     COALESCE(SUM(MAX(0, CAST(julianday(t.paid) - julianday(t.bill) AS INTEGER))), 0)
              FROM (
-                 SELECT l.account_id AS account_id, l.pukhta_person_key AS person_key,
+                 SELECT l.account_id AS account_id, l.chukta_person_key AS person_key,
                         e.entry_date AS bill, l.dr_paisa AS amount,
                         (SELECT SUM(a.amount_paisa) FROM bill_allocations a
                            JOIN journal_lines pl ON pl.id = a.payment_line_id
@@ -161,7 +161,7 @@ fn days_to_pay(
 /// A database error; `ReportsError::Data` for a fact net below 0; `ReportsError::Money`.
 pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Table, ReportsError> {
     let none = AnalyticsKey::default();
-    let dims = ["f.buyer_account_id", "f.pukhta_person_key"];
+    let dims = ["f.buyer_account_id", "f.chukta_person_key"];
     let current = facts::groups(conn, &facts::conds(typed, run_range(typed), &none), &dims)?;
     let mut compared: HashMap<BuyerKey, Paisa> = HashMap::new();
     if typed.compare.is_some() {
@@ -198,7 +198,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
 
     let account_ids: Vec<i64> = entries.iter().map(|e| e.key.0).collect();
     let parties = load_parties(conn, &account_ids)?;
-    let pukhta_ids: Vec<i64> = {
+    let chukta_ids: Vec<i64> = {
         let mut ids: Vec<i64> = entries
             .iter()
             .filter(|e| e.key.1.is_some())
@@ -208,13 +208,13 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
         ids.dedup();
         ids
     };
-    let names = pukhta_names(conn, &pukhta_ids)?;
+    let names = chukta_names(conn, &chukta_ids)?;
     let party_of = |key: &BuyerKey| -> Option<PartyRef> {
         let base = parties.get(&key.0)?.clone();
         Some(match &key.1 {
             Some(person) => {
                 let saved = names.get(person);
-                pukhta_party(
+                chukta_party(
                     base,
                     Some(person.clone()),
                     saved.map(|p| p.name_ur.as_str()),
@@ -372,7 +372,7 @@ pub(crate) fn run(conn: &Connection, typed: &Typed, spec: PageSpec) -> Result<Ta
             .map(|mut party| {
                 party.dead = marks
                     .iter()
-                    .find(|m| m.account_id == entry.key.0 && m.person_key == entry.key.1)
+                    .find(|m| m.account_id == entry.key.0 && entry.key.1.is_none())
                     .map(|m| m.info());
                 Cell::Party { party }
             })

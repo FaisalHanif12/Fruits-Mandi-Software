@@ -153,25 +153,17 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
         let clean = errors.is_empty();
 
         let account = planned.account().cloned();
-        let key = planned.person_key().map(str::to_owned);
         let amount = planned.amount().unwrap_or(Paisa::ZERO);
         let date = planned.date();
 
-        // The balance of the account (the person, for a پختہ کھاتہ) without the voucher being
-        // replaced, then with the new one.
+        // The balance of the account without the voucher being replaced, then with the new one.
         let (current_balance, new_balance) = match &account {
             Some(account) => {
-                let now =
-                    ledger::signed(ledger::balance_in(conn, account.id, key.as_deref(), None)?)?;
+                let now = ledger::signed(ledger::balance_in(conn, account.id, None, None)?)?;
                 let base = match &replacing {
-                    Some(old)
-                        if old.row.account.as_ref().map(|a| a.id) == Some(account.id)
-                            && old.row.person.as_ref().map(|p| p.person_key.as_str())
-                                == key.as_deref() =>
-                    {
-                        now.checked_sub(old_effect(&old.row)?)
-                            .map_err(money_error)?
-                    }
+                    Some(old) if old.row.account.as_ref().map(|a| a.id) == Some(account.id) => now
+                        .checked_sub(old_effect(&old.row)?)
+                        .map_err(money_error)?,
                     _ => now,
                 };
                 let after = if clean && amount != Paisa::ZERO {
@@ -200,7 +192,7 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
             let day = date.to_iso();
             match (&planned, planned.role()) {
                 // PRD FR-7.58: the bills the amount settles, from the canonical working.
-                (Planned::Receipt(_), Some((Role::Buyer, _))) => {
+                (Planned::Receipt(_), Some(Role::Buyer)) => {
                     let credit = [matching::NewLine {
                         line_id: matching::WHAT_IF_LINE,
                         amount,
@@ -211,7 +203,7 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                         matching::plan_new_credits(
                             conn,
                             account.id,
-                            key.as_deref(),
+                            None,
                             &day,
                             &credit,
                             planned.hint(conn)?.open_bills,
@@ -243,7 +235,7 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                             changed
                         }
                         None => {
-                            let inputs = matching::load_key(conn, account.id, key.as_deref())?;
+                            let inputs = matching::load_key(conn, account.id, None)?;
                             let before = matching::key_view(
                                 &inputs,
                                 &KeyChange {
@@ -297,7 +289,7 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                     }
                 }
                 // PRD FR-15.12: the advances before the credit, then what he owes.
-                (Planned::Receipt(_), Some((Role::Seller, _))) => {
+                (Planned::Receipt(_), Some(Role::Seller)) => {
                     let check = seller_receipt(
                         conn,
                         &seller_party(&planned)?,
@@ -355,25 +347,16 @@ pub fn preview(ctx: &Context, input: &VoucherPreviewInput) -> Result<VoucherPrev
                     }
                 }
                 // PRD FR-7.59, FR-15.7, FR-7.68: what is payable, and the warning above it.
-                (Planned::Payment(_), Some((Role::Seller, is_pukhta))) => {
+                (Planned::Payment(_), Some(Role::Seller)) => {
                     // The totals come from sums, so a seller with years of postings costs a few
                     // milliseconds. An edit takes the old payment out first.
                     let minus = match &replacing {
-                        Some(old)
-                            if old.row.account.as_ref().map(|a| a.id) == Some(account.id)
-                                && old.row.person.as_ref().map(|p| p.person_key.as_str())
-                                    == key.as_deref() =>
-                        {
+                        Some(old) if old.row.account.as_ref().map(|a| a.id) == Some(account.id) => {
                             old.row.amount_paisa
                         }
                         _ => Paisa::ZERO,
                     };
-                    let totals = super::reads::seller_totals(
-                        conn,
-                        account.id,
-                        if is_pukhta { key.as_deref() } else { None },
-                        minus,
-                    )?;
+                    let totals = super::reads::seller_totals(conn, account.id, None, minus)?;
                     let open = totals.open;
                     payable_open = Some(open);
                     payable_is_zero = open == Paisa::ZERO;

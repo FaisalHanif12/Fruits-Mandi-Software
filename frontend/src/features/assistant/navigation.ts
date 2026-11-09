@@ -28,7 +28,6 @@ export const MAIN_SCREEN_PATHS = {
   commission_rules: '/index/rules',
   today_sales: '/bikri/today',
   unsold_stock: '/bikri/stock',
-  pukhta_khata: '/bikri/pukhta',
   collection_list: '/bikri/collection',
   cash_book: '/rokar',
   gardens: '/gardens',

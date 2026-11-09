@@ -9,8 +9,9 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::{Arc, OnceLock};
 
+use mandi_db::chukta::ChuktaSource;
 use mandi_db::masters::SearchSource;
-use mandi_domain::core::accounts::{AccountHit, AccountScope, AccountType};
+use mandi_domain::core::accounts::{AccountHit, AccountScope, AccountType, HitKind};
 use mandi_domain::core::codes::{self, CodeType};
 use mandi_domain::core::masters::MasterKind;
 use mandi_domain::core::search::{SearchHit, SearchScope};
@@ -46,7 +47,7 @@ pub struct Entry {
     name_key: Vec<u8>,
     /// For a seller, a buyer, an item, a packing or a staff member with a code of the scheme of
     /// plan 32: the running number of his code, which a short code names (PRD 1.8 R5). `None` for
-    /// every other record, and for the two پختہ کھاتہ accounts.
+    /// every other record, and for the چکتا کھاتہ accounts and a چکتا buyer.
     running: Option<u64>,
     /// True if the code is a full code of that scheme (including `0030` and `0031`). Such a code
     /// is only ever equal to the same text: `10` is not `0010` (plan 32 R5).
@@ -60,6 +61,21 @@ pub struct Entry {
     /// be listed, but only a field that asks for it (`include_dead`) sees it; the hit it makes says
     /// `is_active: false` and `is_dead: true`.
     dead: bool,
+    /// For a چکتا buyer (plan 64, PRD FR-7.29): his record and the account his sale line goes on.
+    /// `None` for every other entry. His entry has a negative `id` (minus his row id in
+    /// `chukta_buyers`), so it can never be taken for an account.
+    chukta: Option<ChuktaRef>,
+}
+
+/// What the entry of a چکتا buyer knows besides its search keys.
+#[derive(Debug, Clone)]
+struct ChuktaRef {
+    /// Row id in `chukta_buyers`.
+    chukta_id: i64,
+    /// The id of the account چکتا کھاتہ (`0030`).
+    account_id: i64,
+    /// His phone, if he gave one.
+    phone: Option<String>,
 }
 
 /// What an account entry knows besides its search keys.
@@ -67,8 +83,6 @@ pub struct Entry {
 struct AccountFacts {
     account_type: AccountType,
     control_id: i64,
-    /// A پختہ party's own account (plan 47): a seller or a buyer of the پختہ series.
-    is_pukhta_party: bool,
 }
 
 /// True for the account of a separate khata: under control 0305, of type "other" (PRD 16.6).
@@ -130,18 +144,11 @@ impl Entry {
             (Some(account_type), Some(control_id)) => Some(AccountFacts {
                 account_type,
                 control_id,
-                is_pukhta_party: source.is_pukhta_party,
             }),
             _ => None,
         };
-        // A پختہ party's short code is his running number in the پختہ series (`2` for `0032`, plan 47);
-        // he is found in the buyer or the seller field of his side only, because he is listed there.
-        let running = if source.is_pukhta_party {
-            codes::pukhta_party_running(&source.code)
-        } else {
-            code_type_of(kind, source.account_type)
-                .and_then(|code_type| codes::running_of(&source.code, code_type))
-        };
+        let running = code_type_of(kind, source.account_type)
+            .and_then(|code_type| codes::running_of(&source.code, code_type));
         let scheme = codes::parse_code(&source.code).is_some();
         let order = codes::code_sort_key(&source.code);
         Entry {
@@ -153,6 +160,7 @@ impl Entry {
             order,
             account,
             dead: source.is_dead,
+            chukta: None,
             code: source.code.to_lowercase(),
             words_ur: words(&key_ur),
             words_en: words(&key_en),
@@ -169,6 +177,67 @@ impl Entry {
                 extra_en: source.extra_en,
                 is_active: source.is_active || source.is_dead,
                 sold_by_weight: source.sold_by_weight,
+            },
+        }
+    }
+}
+
+impl Entry {
+    /// The entry of a چکتا buyer in the buyer list (plan 64, PRD FR-7.29). He has no code and no
+    /// short code. His phone is one more word of the keys, so a phone finds him. His id is minus his
+    /// row id: no account has a negative id, so the two kinds never meet in `usage` or in `hidden`.
+    fn from_chukta(source: ChuktaSource) -> Entry {
+        let phone_key = source.phone.clone().unwrap_or_default();
+        let words = |key: &str| -> Vec<String> {
+            key.split(' ')
+                .filter(|w| !w.is_empty())
+                .map(str::to_owned)
+                .collect()
+        };
+        let key_ur = format!("{} {}", source.search_ur, phone_key)
+            .trim()
+            .to_owned();
+        let key_en = format!("{} {}", source.search_en, phone_key)
+            .trim()
+            .to_owned();
+        let name_key = match collator() {
+            Some(c) => c.sort_key(&source.name_ur),
+            None => source.name_ur.as_bytes().to_vec(),
+        };
+        let id = -source.id;
+        Entry {
+            id,
+            tag: None,
+            name_key,
+            running: None,
+            scheme: false,
+            order: codes::code_sort_key(""),
+            account: Some(AccountFacts {
+                account_type: AccountType::Buyer,
+                control_id: source.control_id,
+            }),
+            dead: false,
+            chukta: Some(ChuktaRef {
+                chukta_id: source.id,
+                account_id: source.account_id,
+                phone: source.phone.clone(),
+            }),
+            code: String::new(),
+            words_ur: words(&key_ur),
+            words_en: words(&key_en),
+            key_ur,
+            key_en,
+            key_ph: source.search_phonetic.clone(),
+            hit: SearchHit {
+                id,
+                kind: SearchScope::Buyer,
+                code: String::new(),
+                name_ur: source.name_ur,
+                name_en: source.name_en,
+                extra_ur: phone_key.clone(),
+                extra_en: phone_key,
+                is_active: source.is_active,
+                sold_by_weight: false,
             },
         }
     }
@@ -234,6 +303,28 @@ impl Index {
             list.sort_by_key(|e| e.id);
         }
         self.lot_sellers.sort_by_key(|e| e.id);
+    }
+
+    /// Puts the چکتا buyers in the buyer list, beside the buyers (plan 64, PRD FR-7.29). Call it after
+    /// [`Index::set_accounts`], which makes the buyer list again.
+    pub fn set_chukta(&mut self, sources: Vec<ChuktaSource>) {
+        let list = self.scopes.entry(SearchScope::Buyer).or_default();
+        list.retain(|e| e.chukta.is_none());
+        list.extend(sources.into_iter().map(|s| Arc::new(Entry::from_chukta(s))));
+        list.sort_by_key(|e| e.id);
+    }
+
+    /// Puts one چکتا buyer in (new or changed). `None` takes him out.
+    pub fn put_chukta(&mut self, chukta_id: i64, source: Option<ChuktaSource>) {
+        let list = self.scopes.entry(SearchScope::Buyer).or_default();
+        let id = -chukta_id;
+        if let Ok(at) = list.binary_search_by_key(&id, |e| e.id) {
+            list.remove(at);
+        }
+        if let Some(source) = source {
+            list.push(Arc::new(Entry::from_chukta(source)));
+            list.sort_by_key(|e| e.id);
+        }
     }
 
     fn add_account(&mut self, source: SearchSource) {
@@ -579,15 +670,33 @@ fn by_name(a: &Entry, b: &Entry) -> Ordering {
 /// An account entry as a picker row; `None` for an entry that is not an account.
 fn account_hit(entry: &Entry) -> Option<AccountHit> {
     let facts = entry.account?;
+    // A چکتا buyer's hit has the id of the account چکتا کھاتہ, which a sale line takes as its buyer
+    // account, and his own record in `chukta_id`; the code is that account's (plan 64).
+    let (id, kind, chukta_id, phone) = match &entry.chukta {
+        Some(c) => (
+            c.account_id,
+            HitKind::Chukta,
+            Some(c.chukta_id),
+            c.phone.clone(),
+        ),
+        None => (entry.id, HitKind::Account, None, None),
+    };
+    let code = if entry.chukta.is_some() {
+        mandi_domain::core::codes::CHUKTA_KHATA_CODE.to_owned()
+    } else {
+        entry.hit.code.clone()
+    };
     Some(AccountHit {
-        id: entry.id,
-        code: entry.hit.code.clone(),
+        id,
+        code,
         name_ur: entry.hit.name_ur.clone(),
         name_en: entry.hit.name_en.clone(),
         extra_ur: entry.hit.extra_ur.clone(),
         extra_en: entry.hit.extra_en.clone(),
         account_type: facts.account_type,
-        is_pukhta_party: facts.is_pukhta_party,
+        kind,
+        chukta_id,
+        phone,
         control_id: facts.control_id,
         is_active: entry.hit.is_active && !entry.dead,
         is_dead: entry.dead,
@@ -640,6 +749,8 @@ pub struct AccountPage<'a> {
     pub limit: usize,
     /// True to list the people in the dead amount (marked `is_dead`).
     pub include_dead: bool,
+    /// True to list the چکتا buyers in scope `buyer` (the buyer field of a بکری line only).
+    pub with_chukta: bool,
     /// Accounts the field leaves out for now, read from the database by the caller at query time
     /// (plan 46 B1: the lot seller list). `None` leaves nothing out.
     pub hidden: Option<&'a HashSet<i64>>,
@@ -703,10 +814,12 @@ impl Index {
             offset,
             limit,
             include_dead,
+            with_chukta,
             hidden,
         } = page;
         let limit = limit.clamp(1, MAX_HITS);
-        let (list, in_control) = self.account_list(scope, control_id, include_dead, hidden);
+        let (list, in_control) =
+            self.account_list(scope, control_id, include_dead, with_chukta, hidden);
         if typed.trim().is_empty() {
             return full_list(list, in_control, usage, offset, limit)
                 .into_iter()
@@ -733,6 +846,7 @@ impl Index {
             offset: 0,
             limit,
             include_dead: false,
+            with_chukta: false,
             hidden: None,
         };
         self.search_accounts_page(scope, control_id, typed, page, usage)
@@ -747,9 +861,11 @@ impl Index {
         control_id: Option<i64>,
         usage: &Usage,
         include_dead: bool,
+        with_chukta: bool,
         hidden: Option<&HashSet<i64>>,
     ) -> Vec<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id, include_dead, hidden);
+        let (list, in_control) =
+            self.account_list(scope, control_id, include_dead, with_chukta, hidden);
         full_list(list, in_control, usage, 0, MAX_FULL_LIST)
             .into_iter()
             .filter_map(|e| account_hit(e))
@@ -763,7 +879,7 @@ impl Index {
         control_id: Option<i64>,
         id: i64,
     ) -> bool {
-        let (list, in_control) = self.account_list(scope, control_id, false, None);
+        let (list, in_control) = self.account_list(scope, control_id, false, false, None);
         list.binary_search_by_key(&id, |e| e.id)
             .ok()
             .and_then(|at| list.get(at))
@@ -772,20 +888,17 @@ impl Index {
 
     /// The accounts of a field with this running number, active or not (PRD 1.8 R5). Used when a
     /// code is taken on `Enter`. In a field that takes any account this is the seller and the buyer
-    /// with that number. A پختہ party's running number is his own in the پختہ series (plan 47), so
-    /// in a buyer field `2` finds the buyer `0022` and the پختہ گاہک `0032`: the ordinary account
-    /// comes first, then the پختہ party, each group in the order of the list.
+    /// with that number. A چکتا buyer has no running number.
     pub fn accounts_with_running(&self, scope: AccountScope, running: u64) -> Vec<AccountHit> {
         if scope == AccountScope::Control {
             return Vec::new();
         }
-        let (list, _) = self.account_list(scope, None, true, None);
-        let mut found: Vec<AccountHit> = list
+        let (list, _) = self.account_list(scope, None, true, false, None);
+        let found: Vec<AccountHit> = list
             .iter()
             .filter(|e| e.running == Some(running))
             .filter_map(|e| account_hit(e))
             .collect();
-        found.sort_by_key(|hit| hit.is_pukhta_party);
         found
     }
 
@@ -796,7 +909,7 @@ impl Index {
         control_id: Option<i64>,
         code: &str,
     ) -> Option<AccountHit> {
-        let (list, in_control) = self.account_list(scope, control_id, true, None);
+        let (list, in_control) = self.account_list(scope, control_id, true, false, None);
         list.iter()
             .filter(|e| in_control(e))
             .find(|e| e.code == code.to_lowercase())
@@ -813,11 +926,16 @@ impl Index {
     /// `hidden` holds accounts the caller read from the database as not usable right now (plan 46
     /// B1, the lot seller list). The test leaves them out, so a page, a rank and a count all see
     /// the same list.
+    ///
+    /// A چکتا buyer (a row of the buyer list that is no account, PRD FR-7.29) is in the test only when
+    /// `with_chukta` is true: the buyer field of a بکری line asks for it, every other picker leaves it
+    /// out, so their pages and counts are those of the buyers alone.
     fn account_list<'a>(
         &'a self,
         scope: AccountScope,
         control_id: Option<i64>,
         include_dead: bool,
+        with_chukta: bool,
         hidden: Option<&'a HashSet<i64>>,
     ) -> (&'a [Arc<Entry>], impl Fn(&Entry) -> bool + 'a) {
         let list = match scope {
@@ -835,6 +953,7 @@ impl Index {
             (!narrow || e.account.map(|a| a.control_id) == control_id)
                 && (with_own || e.code != mandi_domain::core::accounts::OWN_GOODS_CODE)
                 && (include_dead || !e.dead)
+                && (with_chukta || e.chukta.is_none())
                 && !hidden.is_some_and(|ids| ids.contains(&e.id))
         })
     }

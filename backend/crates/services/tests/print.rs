@@ -15,7 +15,7 @@ mod support;
 use mandi_reports::print::{BikriPrintDataInput, PrintData, bikri_print_data};
 use mandi_services::bikri;
 use mandi_services::core::auth::Language;
-use mandi_services::core::bikri::{BikriDetail, BikriSaveInput, PukhtaInput};
+use mandi_services::core::bikri::{BikriDetail, BikriSaveInput, ChuktaInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::printing::{Paper, PrintDoc, PrintInput, PrintTo, SetPrintingInput};
 use mandi_services::printing;
@@ -28,10 +28,10 @@ fn save_event1(w: &World) -> i64 {
     save(w, &event1(w))
 }
 
-/// Saves Event 2: کریم's 10 سیب sold to the one-time buyer شاہد in cash, freight 1,000, no نقد.
+/// Saves Event 2: کریم's 10 سیب sold to the چکتا buyer شاہد in cash, freight 1,000, no نقد.
 fn save_event2(w: &World) -> i64 {
-    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -151,12 +151,12 @@ fn has_urdu_digit(value: &serde_json::Value) -> bool {
 #[test]
 fn an_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone_typed_in_urdu_digits() {
     // Umar, 26-10-2026 and 09-11-2026 (plan 63): the digits of every print are 0-9; there is no
-    // Urdu digits option. A one-time buyer's phone typed with Urdu digits is saved, and printed,
+    // Urdu digits option. A چکتا buyer's phone typed with Urdu digits is saved, and printed,
     // as 0-9.
     let w = world();
     let id1 = save_event1(&w);
-    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "۰۳۰۰۰۰۰۰۰۰۰".into(),
@@ -169,12 +169,12 @@ fn an_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone_typed_
     for (id, doc) in [
         (id1, PrintDoc::SellerBill),
         (id1, PrintDoc::BuyerSlips),
-        (id2, PrintDoc::PukhtaSlip),
+        (id2, PrintDoc::BuyerSlips),
     ] {
         let value = serde_json::to_value(data(&w, id, doc, Language::Ur)).unwrap();
         assert!(!has_urdu_digit(&value), "{doc:?}: {value}");
     }
-    let slip = data(&w, id2, PrintDoc::PukhtaSlip, Language::Ur);
+    let slip = data(&w, id2, PrintDoc::BuyerSlips, Language::Ur);
     assert_eq!(slip.pages[0].party.phone.as_deref(), Some("0300-0000000"));
 }
 
@@ -187,7 +187,7 @@ fn the_contacts_and_the_trade_mark_print_in_the_header_of_every_bikri_document()
     let docs = [
         (id1, PrintDoc::SellerBill),
         (id1, PrintDoc::BuyerSlips),
-        (id2, PrintDoc::PukhtaSlip),
+        (id2, PrintDoc::BuyerSlips),
     ];
     for (id, doc) in docs {
         for language in [Language::Ur, Language::En] {
@@ -406,12 +406,6 @@ fn event1_printed_totals_equal_bikri_get_and_the_journal() {
             amount(akram, "print-laga") + amount(arshad, "print-laga"),
             cr(&w, id, "04010003")
         );
-        // Nothing for the one-time slip.
-        assert!(
-            data(&w, id, PrintDoc::PukhtaSlip, language)
-                .pages
-                .is_empty()
-        );
     }
 }
 
@@ -422,10 +416,10 @@ fn event2_printed_totals_equal_bikri_get_and_the_journal() {
     let detail = bikri::get(&w.env.ctx, id).unwrap();
 
     for language in [Language::Ur, Language::En] {
-        let slip = data(&w, id, PrintDoc::PukhtaSlip, language);
+        let slip = data(&w, id, PrintDoc::BuyerSlips, language);
         assert_eq!(slip.pages.len(), 1);
         let page = slip.pages.first().unwrap();
-        // 12,800: the debit on the پختہ کھاتہ buyer account, paid at once (a credit of the same
+        // 12,800: the debit on the چکتا کھاتہ account, paid at once (a credit of the same
         // amount in the cash part).
         assert_eq!(amount(page, "print-buyer-pays"), 12_800);
         assert_eq!(amount(page, "print-buyer-pays"), dr(&w, id, "0030"));
@@ -453,12 +447,6 @@ fn event2_printed_totals_equal_bikri_get_and_the_journal() {
         assert_eq!(
             amount(page, "print-net-sale"),
             cr(&w, id, "0011") - dr(&w, id, "0011")
-        );
-        // The buyer slips leave the one-time buyer to his own slip.
-        assert!(
-            data(&w, id, PrintDoc::BuyerSlips, language)
-                .pages
-                .is_empty()
         );
     }
 }
@@ -497,7 +485,6 @@ fn set_input() -> SetPrintingInput {
     SetPrintingInput {
         paper_seller_bill: Paper::A4,
         paper_buyer_slips: Paper::Mm80,
-        paper_pukhta_slip: Paper::A5,
         paper_receipt_slip: Paper::A5,
         paper_collection_list: Paper::A4,
         printer: "  Office Laser  ".into(),
@@ -526,7 +513,6 @@ fn printing_settings_start_with_a21_and_are_saved_with_an_audit_row() {
     let start = printing::get_settings(&w.env.ctx, &w.owner).unwrap();
     assert_eq!(start.paper_seller_bill, Paper::A4);
     assert_eq!(start.paper_buyer_slips, Paper::A5);
-    assert_eq!(start.paper_pukhta_slip, Paper::A5);
     assert_eq!(start.copies, 1);
     assert!(start.printer.is_empty());
     assert_eq!(start.paper_receipt_slip, Paper::A5);

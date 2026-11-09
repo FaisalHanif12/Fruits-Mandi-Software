@@ -49,11 +49,8 @@ pub struct AccountFacts {
     pub head_code: String,
     /// A system account.
     pub is_system: bool,
-    /// One of the two shared پختہ کھاتہ accounts (person typed on the line).
-    pub is_pukhta_khata: bool,
-    /// A پختہ party's own account (plan 47, PRD FR-13.11): a full buyer or seller account, not the
-    /// shared one.
-    pub is_pukhta_party: bool,
+    /// The چکتا کھاتہ account or the old closed one (person typed on the line).
+    pub is_chukta_khata: bool,
     /// Active.
     pub is_active: bool,
     /// The opening entry now in force.
@@ -127,32 +124,14 @@ pub fn inactive_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i6
     rows.collect()
 }
 
-/// Which of these accounts are a پختہ party's own account (plan 47, PRD FR-13.11), in id order. One
-/// query for the whole list.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn pukhta_parties_among(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<i64>> {
-    if ids.is_empty() {
-        return Ok(Vec::new());
-    }
-    let marks = vec!["?"; ids.len()].join(", ");
-    let mut statement = conn.prepare(&format!(
-        "SELECT id FROM accounts WHERE is_pukhta_party = 1 AND id IN ({marks}) ORDER BY id"
-    ))?;
-    let rows = statement.query_map(rusqlite::params_from_iter(ids), |r| r.get(0))?;
-    rows.collect()
-}
-
 /// The facts a rule needs about one account.
 ///
 /// # Errors
 /// Any SQLite error.
 pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts>> {
     conn.query_row(
-        "SELECT a.id, a.version, a.code, c.code, h.code, a.is_system, a.is_pukhta_khata, a.is_active,
-                a.opening_entry_id, a.opening_date, a.opening_dr_paisa, a.opening_cr_paisa, a.opening_is_advance,
-                a.is_pukhta_party
+        "SELECT a.id, a.version, a.code, c.code, h.code, a.is_system, a.is_chukta_khata, a.is_active,
+                a.opening_entry_id, a.opening_date, a.opening_dr_paisa, a.opening_cr_paisa, a.opening_is_advance
          FROM accounts a JOIN account_controls c ON c.id = a.control_id JOIN account_heads h ON h.id = c.head_id
          WHERE a.id = ?1",
         [id],
@@ -164,14 +143,13 @@ pub fn facts(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountFacts
                 control_code: r.get(3)?,
                 head_code: r.get(4)?,
                 is_system: r.get(5)?,
-                is_pukhta_khata: r.get(6)?,
+                is_chukta_khata: r.get(6)?,
                 is_active: r.get(7)?,
                 opening_entry_id: r.get(8)?,
                 opening_date: r.get(9)?,
                 opening_dr_paisa: r.get(10)?,
                 opening_cr_paisa: r.get(11)?,
                 opening_is_advance: r.get(12)?,
-                is_pukhta_party: r.get(13)?,
             })
         },
     )
@@ -237,8 +215,7 @@ const ROW_SELECT: &str = "SELECT a.id, a.version, a.code, a.serial,
         a.credit_allowed, a.credit_limit_paisa,
         mk.id, mk.code, mk.mark_text,
         st.id, st.name_ur, st.name_en,
-        a.is_system, a.is_pukhta_khata, a.is_active, a.note, h.code, a.tag, l.tag,
-        a.is_pukhta_party
+        a.is_system, a.is_chukta_khata, a.is_active, a.note, h.code, a.tag, l.tag
      FROM accounts a
      JOIN account_controls c ON c.id = a.control_id
      JOIN account_heads h ON h.id = c.head_id
@@ -337,8 +314,7 @@ fn row_from(r: &Row<'_>) -> rusqlite::Result<AccountRow> {
             &r.get::<_, String>(2)?,
             r.get(40)?,
         ),
-        is_pukhta_khata: r.get(40)?,
-        is_pukhta_party: r.get(46)?,
+        is_chukta_khata: r.get(40)?,
         is_active: r.get(41)?,
         note: r.get::<_, Option<String>>(42)?.unwrap_or_default(),
         balance: Balance::ZERO,
@@ -377,19 +353,14 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<AccountRow>> {
 fn kind_condition(kind: AccountListKind) -> Option<String> {
     match kind {
         AccountListKind::Every => None,
+        // Sellers and buyers only (PRD FR-10.5, v1.32): چکتا کھاتہ is not an account of a person.
         AccountListKind::All => Some(format!(
-            "((c.code IN ('{SELLER_CONTROL}', '{BUYER_CONTROL}') AND a.is_system = 0) OR a.is_pukhta_khata = 1)"
+            "(c.code IN ('{SELLER_CONTROL}', '{BUYER_CONTROL}') AND a.is_system = 0)"
         )),
-        // A پختہ party (plan 47) is listed under پختہ کھاتہ, not under his side.
-        AccountListKind::Seller => Some(format!(
-            "(c.code = '{SELLER_CONTROL}' AND a.is_system = 0 AND a.is_pukhta_party = 0)"
-        )),
-        AccountListKind::Buyer => Some(format!(
-            "(c.code = '{BUYER_CONTROL}' AND a.is_system = 0 AND a.is_pukhta_party = 0)"
-        )),
-        AccountListKind::Pukhta => {
-            Some("(a.is_pukhta_khata = 1 OR a.is_pukhta_party = 1)".to_owned())
+        AccountListKind::Seller => {
+            Some(format!("(c.code = '{SELLER_CONTROL}' AND a.is_system = 0)"))
         }
+        AccountListKind::Buyer => Some(format!("(c.code = '{BUYER_CONTROL}' AND a.is_system = 0)")),
     }
 }
 
@@ -401,7 +372,7 @@ fn opening_condition(has_opening: Option<bool>) -> Option<String> {
         None => None,
         Some(true) => Some("(a.opening_dr_paisa > 0 OR a.opening_cr_paisa > 0)".to_owned()),
         Some(false) => Some(format!(
-            "(a.opening_dr_paisa = 0 AND a.opening_cr_paisa = 0 AND a.is_pukhta_khata = 0 \
+            "(a.opening_dr_paisa = 0 AND a.opening_cr_paisa = 0 AND a.is_chukta_khata = 0 \
              AND c.head_id NOT IN (SELECT id FROM account_heads WHERE code IN ('{INCOME_HEAD}', '{EXPENSE_HEAD}')) \
              AND a.code NOT IN ('{OPENING_DIFFERENCE_CODE}', '{NAQDI_MANDI_CODE}', '{OWN_GOODS_CODE}', '{BANK_ACCOUNT_CODE}') \
              AND c.code NOT IN ('{VENTURE_CONTROL_CODE}', '{GARDEN_CONTROL_CODE}'))"
@@ -417,10 +388,10 @@ fn filter_sql(filter: &AccountFilter, text_ur: &str, text_en: &str) -> (String, 
     if !filter.include_inactive {
         conditions.push("a.is_active = 1".to_owned());
     }
-    // Plan 32 R6: the list shows only sellers, buyers and the two پختہ کھاتہ accounts. A regular
-    // seller or buyer is an account under its control that is not a system account (which leaves
-    // out اپنا مال, نقدی منڈی and the two پختہ کھاتہ accounts); everything else (cash, payables,
-    // income, capital, money-lent people, khatas, gardens) is under another control.
+    // Plan 32 R6, PRD FR-10.5 v1.32: the list shows only sellers and buyers. A regular seller or buyer
+    // is an account under its control that is not a system account (which leaves out اپنا مال,
+    // نقدی منڈی and چکتا کھاتہ); everything else (cash, payables, income, capital, money-lent people,
+    // khatas, gardens) is under another control.
     if let Some(condition) = kind_condition(filter.kind) {
         conditions.push(condition);
     }
@@ -536,7 +507,6 @@ pub fn insert(
     code: &str,
     serial: u32,
     party_type: &str,
-    is_pukhta_party: bool,
     fields: &[(&'static str, ColValue)],
     user_id: i64,
     now: &str,
@@ -550,7 +520,6 @@ pub fn insert(
         "code",
         "serial",
         "party_type",
-        "is_pukhta_party",
     ];
     let mut values: Vec<Value> = vec![
         Value::Text(now.to_owned()),
@@ -561,7 +530,6 @@ pub fn insert(
         Value::Text(code.to_owned()),
         Value::Integer(i64::from(serial)),
         Value::Text(party_type.to_owned()),
-        Value::Integer(i64::from(is_pukhta_party)),
     ];
     for (name, v) in fields {
         columns.push(name);
@@ -718,7 +686,6 @@ pub fn similar_by_ids(conn: &Connection, ids: &[i64]) -> rusqlite::Result<Vec<Si
                     .unwrap_or_default(),
                 phone1: row.phone1,
                 account_type: row.account_type,
-                is_pukhta_party: row.is_pukhta_party,
                 tag: row.tag,
                 is_duplicate: false,
             });
@@ -899,18 +866,16 @@ pub fn search_sources(
                 (a.is_active = 1 AND NOT EXISTS (SELECT 1 FROM ventures g WHERE g.account_id = a.id
                                                  AND g.kind = 'garden' AND g.status = 'closed')),
                 {TYPE_SQL}, a.control_id, a.tag, c.code,
-                -- A person moved to the dead amount (PRD FR-10.10); a one-time person's account stays
-                -- active, so only a plain account can be dead here.
-                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1
-                        AND d.pukhta_person_key IS NULL),
-                a.is_pukhta_party
+                -- A person moved to the dead amount (PRD FR-10.10).
+                EXISTS (SELECT 1 FROM dead_marks d WHERE d.account_id = a.id AND d.is_active = 1)
          FROM accounts a
          JOIN account_controls c ON c.id = a.control_id
          LEFT JOIN cities ci ON ci.id = a.city_id
-         WHERE (?1 IS NULL OR a.id = ?1) AND a.code <> ?2"
+         WHERE (?1 IS NULL OR a.id = ?1) AND a.code <> ?2 AND a.is_chukta_khata = 0"
     );
     let mut statement = conn.prepare(&sql)?;
-    // بینک is never offered in a picker or a search: all money is روکڑ (PRD FR-10.4, v1.6).
+    // بینک is never offered in a picker or a search: all money is روکڑ (PRD FR-10.4, v1.6). Nor is
+    // چکتا کھاتہ or the old closed account: a چکتا buyer is offered by name (plan 64, PRD FR-13.4).
     let rows = statement.query_map(
         params![only_id, mandi_core::accounts::BANK_ACCOUNT_CODE],
         |r| {
@@ -936,7 +901,6 @@ pub fn search_sources(
                 control_id: Some(r.get(12)?),
                 tag: r.get(13)?,
                 control_code: Some(r.get(14)?),
-                is_pukhta_party: r.get(16)?,
                 sold_by_weight: false,
                 is_dead: r.get(15)?,
             })
@@ -956,7 +920,7 @@ pub fn search_sources(
 ///   qty_written_off > 0`.
 /// - The account of a garden that is not open (closed) is left out.
 ///
-/// The sellers, the پختہ کھاتہ بیوپاری and the separate khatas are never in the answer.
+/// The sellers and the separate khatas are never in the answer.
 ///
 /// # Errors
 /// Any SQLite error.

@@ -25,7 +25,6 @@ import { Ban, FileText, Plus, Printer } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import type { UiError } from '../../../bindings/UiError';
-import { pickedOf } from '../../../shared/accounts';
 import { SHORTCUTS, useEscape, useFormNavigation, useShortcut } from '../../../shared/keyboard';
 import { useFocusFirstField } from '../../../shared/hooks';
 import {
@@ -64,7 +63,6 @@ import {
   listed,
   newDraft,
   nextDraft,
-  personSide,
   type ListedOutcome,
   type ListedVoucher,
 } from '../draft';
@@ -82,7 +80,6 @@ const FIELD_PATHS = [
   'date',
   'account_id',
   'seller_account_id',
-  'person_key',
   'amount',
   'collector_staff_id',
   'reason',
@@ -499,15 +496,6 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
             marks={marks}
             editReason={editReason}
             onEditReason={setEditReason}
-            onMadeRegular={(made) => {
-              // The account of the one-time person now exists: it takes his place in the form.
-              change({
-                account: pickedOf(made.account),
-                accountType: personSide(draft),
-                person: null,
-                personText: '',
-              });
-            }}
           />
           {preview === undefined ? null : (
             <VoucherNotes draft={draft} preview={preview} onMakeAdvance={makeAdvance} />
@@ -538,11 +526,10 @@ export function VoucherEditor({ today, initial, editing, urlType }: VoucherEdito
       {target.kind === 'bills' ? (
         <BillsPanel
           accountId={target.accountId}
-          personKey={target.personKey}
           effects={draft.type === 'receipt' ? (live?.bill_effects ?? null) : null}
         />
       ) : target.kind === 'payables' ? (
-        <PayablesPanel sellerId={target.accountId} personKey={target.personKey} />
+        <PayablesPanel sellerId={target.accountId} />
       ) : target.kind === 'advances' ? (
         <AdvanceHistory
           sellerId={target.accountId}

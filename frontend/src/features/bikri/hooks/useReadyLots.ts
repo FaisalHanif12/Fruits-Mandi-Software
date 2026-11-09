@@ -66,17 +66,13 @@ function isEmptyLotRow(row: EntryRow): boolean {
   );
 }
 
-/** Has a line been typed on the lot: a buyer or a rate, or a one-time buyer's name? */
+/** Has a line been typed on the lot: a buyer or a rate? */
 function hasLines(stores: BikriDraftStores, lotKey: string): boolean {
   return stores
     .salesFor(lotKey)
     .getState()
     .rows.some(
-      (sale) =>
-        sale.picked?.[SALE.buyer] !== undefined ||
-        (sale.typed[SALE.rate] ?? '') !== '' ||
-        (sale.typed[SALE.pukhtaUr] ?? '') !== '' ||
-        (sale.typed[SALE.pukhtaEn] ?? '') !== '',
+      (sale) => sale.picked?.[SALE.buyer] !== undefined || (sale.typed[SALE.rate] ?? '') !== '',
     );
 }
 

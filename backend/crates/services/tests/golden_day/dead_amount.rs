@@ -35,7 +35,6 @@ fn dues(w: &support::World) -> (i64, i64, i64, i64, i64) {
 fn mark_input(account: i64, date: &str, reason: DeadReason, note: &str) -> DeadMarkInput {
     DeadMarkInput {
         account_id: account,
-        pukhta_person_key: None,
         entry_date: date.into(),
         reason,
         note: note.into(),
@@ -106,7 +105,6 @@ fn e2e_44_the_move_the_recovery_the_tiles_and_the_refusals() {
         &w.env.ctx,
         &DeadPreviewInput {
             account_id: w.arshad,
-            pukhta_person_key: None,
         },
     )
     .unwrap();
@@ -333,28 +331,16 @@ fn every_refusal_of_a_move_has_its_code_and_its_field() {
         code(&mark_input(w.arshad, "11-10-2026", DeadReason::Other, "  ")),
         (ErrorCode::ErrNoteRequired, Some("note".into()))
     );
-    // A پختہ کھاتہ account needs its person.
+    // The account چکتا کھاتہ is a system account with no ledger: it is never moved (PRD FR-13.6).
     assert_eq!(
         code(&mark_input(
-            w.pukhta_buyer,
+            w.chukta_khata,
             "11-10-2026",
             DeadReason::Died,
             ""
-        )),
-        (
-            ErrorCode::ErrPersonRequired,
-            Some("pukhta_person_key".into())
-        )
-    );
-    // A plain account refuses a person key.
-    let mut with_key = mark_input(w.arshad, "11-10-2026", DeadReason::Died, "");
-    with_key.pukhta_person_key = Some("x|1".into());
-    assert_eq!(
-        code(&with_key),
-        (
-            ErrorCode::ErrFormatInvalid,
-            Some("pukhta_person_key".into())
-        )
+        ))
+        .0,
+        ErrorCode::ErrDeadNotAllowed
     );
     // Unknown account.
     assert_eq!(
@@ -397,7 +383,6 @@ fn every_refusal_of_a_move_has_its_code_and_its_field() {
         &w.env.ctx,
         &DeadPreviewInput {
             account_id: w.arshad,
-            pukhta_person_key: None,
         },
     )
     .unwrap();
@@ -455,7 +440,6 @@ fn a_dead_seller_is_netted_and_the_money_agent_invariant_holds() {
         &w.env.ctx,
         &DeadPreviewInput {
             account_id: w.rahim,
-            pukhta_person_key: None,
         },
     )
     .unwrap();
@@ -486,97 +470,6 @@ fn a_dead_seller_is_netted_and_the_money_agent_invariant_holds() {
     .unwrap();
     assert_eq!(invariant(&w), before);
     assert_eq!(tiles(&w).advances_open_paisa.rupees(), 15_000);
-}
-
-#[test]
-fn a_one_time_person_is_marked_by_his_key_and_the_account_stays_active() {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType};
-    let w = worked_day();
-    let line = |key: &str, qty: &str, name_ur: &str, name_en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: name_ur.into(),
-            name_en: name_en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        l
-    };
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
-    lot.sales = vec![
-        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
-        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
-    ];
-    save_ok(&w, &support::draft(vec![lot]), false);
-    let shahid = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    assert_eq!(dues(&w), (3_000, 0, 0, 0, 3_000));
-
-    day_at(&w, 11);
-    let mut input = mark_input(w.pukhta_buyer, "11-10-2026", DeadReason::Died, "");
-    input.pukhta_person_key = Some("نامعلوم|03000000000".into());
-    assert_eq!(
-        dead::mark(&w.env.ctx, &w.owner, &input).unwrap_err().code(),
-        ErrorCode::ErrNotFound
-    );
-    input.pukhta_person_key = Some(nasir.clone());
-    let preview = dead::preview(
-        &w.env.ctx,
-        &DeadPreviewInput {
-            account_id: w.pukhta_buyer,
-            pukhta_person_key: Some(nasir.clone()),
-        },
-    )
-    .unwrap();
-    assert_eq!(preview.owed_paisa.rupees(), 2_000);
-    mark_ok(&w, &input);
-
-    // Only ناصر's key is marked: the account stays active, شاہد is still in the dues.
-    assert!(is_active(&w, w.pukhta_buyer));
-    assert_eq!(dues(&w), (1_000, 0, 2_000, 1, 3_000));
-    // Marking him again names the person.
-    let again = dead::mark(&w.env.ctx, &w.owner, &input).unwrap_err();
-    assert_eq!(
-        (again.code(), first_field(&again).as_deref()),
-        (ErrorCode::ErrPersonInDeadAmount, Some("pukhta_person_key"))
-    );
-    // A new line with his key is refused; a line for شاہد is not.
-    let mut lot = support::bare_lot(&w, "lot-2", w.rahim, w.banana, "2");
-    lot.sales = vec![line("s-3", "1", "ناصر", "Nasir", "0300-1111111")];
-    let refused = bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &mandi_services::core::bikri::BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrPersonInDeadAmount);
-    let mut lot = support::bare_lot(&w, "lot-3", w.rahim, w.banana, "1");
-    lot.sales = vec![line("s-4", "1", "شاہد", "Shahid", "0300-0000000")];
-    save_ok(&w, &support::draft(vec![lot]), false);
-    assert_eq!(dues(&w), (2_000, 0, 2_000, 1, 4_000));
-
-    // A receipt for ناصر is a recovery: allowed, capped at 2,000; one for شاہد is a normal one.
-    let mut over = input_at("11-10-2026", receipt_input(w.pukhta_buyer, "2,001"));
-    over.person_key = Some(nasir.clone());
-    assert_eq!(
-        vouchers::save_receipt(&w.env.ctx, &w.owner, &over)
-            .unwrap_err()
-            .code(),
-        ErrorCode::ErrReturnExceedsOpen
-    );
-    over.amount = "500".into();
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &over).unwrap();
-    assert_eq!(dues(&w), (2_000, 0, 1_500, 1, 3_500));
-    let mut other = input_at("11-10-2026", receipt_input(w.pukhta_buyer, "1,000"));
-    other.person_key = Some(shahid);
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &other).unwrap();
-    assert_eq!(dues(&w), (1_000, 0, 1_500, 1, 2_500));
 }
 
 #[test]

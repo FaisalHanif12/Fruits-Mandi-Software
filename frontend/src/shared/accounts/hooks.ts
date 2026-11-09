@@ -25,6 +25,7 @@ import {
   accountsSave,
   accountsSetActive,
   accountsSimilar,
+  chuktaAdd,
   coaControlAccounts,
   coaControlsList,
   coaTree,
@@ -100,17 +101,15 @@ export function useCoaControls() {
 
 /**
  * The code the next new account of a type gets. Asked again each time the form for a new one opens.
- * A پختہ party's account (plan 47) gets the next code of the پختہ series instead.
  */
 export function useAccountNextCode(
   accountType: AccountType,
   controlId: number | null,
   enabled: boolean,
-  isPukhtaParty = false,
 ) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'next-code', accountType, controlId, isPukhtaParty],
-    queryFn: () => accountsNextCode(accountType, controlId, isPukhtaParty),
+    queryKey: [...ACCOUNTS_KEY, 'next-code', accountType, controlId],
+    queryFn: () => accountsNextCode(accountType, controlId),
     enabled,
     staleTime: 0,
     gcTime: 0,
@@ -188,6 +187,18 @@ export function useSaveAccount() {
   });
 }
 
+/**
+ * Adds a چکتا buyer from the picker (PRD FR-7.69, FR-13.3). The list of the picker is read again,
+ * so he is found by name from now on. Nothing is kept about him but his names and phone.
+ */
+export function useChuktaAdd() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: chuktaAdd,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['search'] }),
+  });
+}
+
 export function useSetAccountActive() {
   const refresh = useRefreshAfterChange();
   return useMutation({
@@ -202,16 +213,25 @@ export function accountSource(
   scope: AccountScope,
   controlId: number | null = null,
   includeDead = false,
+  withChukta = false,
 ): PickerSource<AccountHit> {
+  // `includeDead` and `withChukta` are passed only where they are true: the receipt and ادھار رقم
+  // واپسی fields take the dead; the buyer box of a بکری line takes the چکتا buyers (PRD FR-7.29).
+  const flags = {
+    ...(includeDead ? { includeDead } : {}),
+    ...(withChukta ? { withChukta } : {}),
+  };
   return {
-    key: ['search', 'accounts', scope, String(controlId), ...(includeDead ? ['dead'] : [])],
-    // `includeDead` is passed only where it is true (the receipt and ادھار رقم واپسی fields).
-    search: (text, limit) =>
-      searchAccounts({ scope, controlId, text, limit, ...(includeDead ? { includeDead } : {}) }),
-    recent: () =>
-      includeDead
-        ? searchAccountsRecent(scope, controlId, true)
-        : searchAccountsRecent(scope, controlId),
+    key: [
+      'search',
+      'accounts',
+      scope,
+      String(controlId),
+      ...(includeDead ? ['dead'] : []),
+      ...(withChukta ? ['chukta'] : []),
+    ],
+    search: (text, limit) => searchAccounts({ scope, controlId, text, limit, ...flags }),
+    recent: () => searchAccountsRecent(scope, controlId, includeDead, withChukta),
     // The click-open list and every typed search are read a page at a time (plan 32, R7).
     page: (text, offset, limit) =>
       searchAccounts({
@@ -220,17 +240,29 @@ export function accountSource(
         text,
         offset,
         limit,
-        ...(includeDead ? { includeDead } : {}),
+        ...flags,
       }),
     touch: (id) => searchAccountsTouch(scope, controlId, id),
   };
 }
 
-/** The party card of an account (PRD FR-7.38). Nothing is asked while there is no account. */
-export function usePartyCard(accountId: number | null) {
+/**
+ * The party card of an account (PRD FR-7.38). Nothing is asked while there is no account. With
+ * `chuktaId` the card is a چکتا buyer's own (PRD FR-13.6): the same account id, a different card.
+ */
+export function usePartyCard(accountId: number | null, chuktaId: number | null = null) {
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'card', accountId],
-    queryFn: () => assistPartyCard(accountId ?? 0),
+    queryKey: [
+      ...ACCOUNTS_KEY,
+      'card',
+      accountId,
+      ...(chuktaId === null ? [] : ['chukta', chuktaId]),
+    ],
+    // An ordinary account is asked as it always was, with the account only.
+    queryFn: () =>
+      chuktaId === null
+        ? assistPartyCard(accountId ?? 0)
+        : assistPartyCard(accountId ?? 0, chuktaId),
     enabled: accountId !== null,
     // A balance changes with every posting, so a card is never reused from the cache.
     staleTime: 0,

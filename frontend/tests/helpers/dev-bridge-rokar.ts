@@ -42,7 +42,7 @@ import type { GeneralInput } from '../../src/bindings/GeneralInput';
 import type { GeneralPreviewInput } from '../../src/bindings/GeneralPreviewInput';
 import type { PartnersStatementInput } from '../../src/bindings/PartnersStatementInput';
 import { createFruitBooks, HAJI_NAZIR } from './fruit-data';
-import { GENERAL_ACCOUNTS, SHAHID, createPartnerMoneyBooks } from './partner-money-books';
+import { GENERAL_ACCOUNTS, createPartnerMoneyBooks } from './partner-money-books';
 import { paisaForTest } from './paisa';
 import { overviewRow, partnerRow, THREE_PARTNERS } from './partners';
 
@@ -231,7 +231,6 @@ export const rokarHandlers: Record<string, Handler> = {
   capital_history: (input) => moneyBooks.capitalHistory(input as unknown as CapitalHistoryInput),
   partners_statement: (input) => moneyBooks.statement(input as unknown as PartnersStatementInput),
   partners_overview: () => OVERVIEW,
-  search_pukhta_people: () => [SHAHID],
   day_close_preview: () => ({
     from_date: '2026-10-10',
     up_to: '2026-10-10',
@@ -309,7 +308,7 @@ export const rokarHandlers: Record<string, Handler> = {
         name_en: one.name_en,
         extra_ur: '',
         extra_en: '',
-        account_type: one.kind === 'buyer' || one.kind === 'pukhta' ? 'buyer' : 'other',
+        account_type: one.kind === 'buyer' ? 'buyer' : 'other',
         control_id: 1,
         is_active: true,
       }));
@@ -351,7 +350,7 @@ export const rokarHandlers: Record<string, Handler> = {
             code: general.code,
             name_ur: general.name_ur,
             name_en: general.name_en,
-            type: general.kind === 'buyer' || general.kind === 'pukhta' ? 'buyer' : 'other',
+            type: general.kind === 'buyer' ? 'buyer' : 'other',
           });
     // The real command always answers for an account that exists; a stand-in has none to give.
     if (person === undefined) throw new Error('no such account');

@@ -17,4 +17,8 @@ export type AccountsRecentInput = {
    * As on `SearchAccountsInput`: true in the field of a وصولی and of an ادھار رقم واپسی.
    */
   include_dead?: boolean;
+  /**
+   * As on `SearchAccountsInput`: true only in the buyer field of a بکری line.
+   */
+  with_chukta?: boolean;
 };

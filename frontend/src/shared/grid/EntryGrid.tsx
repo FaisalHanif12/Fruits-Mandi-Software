@@ -29,6 +29,7 @@ import type {
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CardChukta } from '../accounts';
 import { useGrouping, type Grouping } from '../format';
 import { useLatest } from '../hooks/useLatest';
 import { directionOf, displayName, useLanguage } from '../i18n';
@@ -119,8 +120,11 @@ interface EntryGridProps {
   workings?: PerRow<Working>;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
-  /** The account the screen's party card would show now, while a picker cell is open. */
-  onCardAccount?: (accountId: number | null) => void;
+  /**
+   * The account the screen's party card would show now, while a picker cell is open; for a چکتا
+   * buyer also who he is (his names and phone, PRD FR-13.6).
+   */
+  onCardAccount?: (accountId: number | null, chukta?: CardChukta | null) => void;
 }
 
 /** What the backend sent, read by the cells when they draw. Kept apart from the column setup. */
@@ -162,7 +166,7 @@ interface ColumnEnv {
   live: () => Live;
   fit: boolean;
   getKeyHandler: () => KeyHandler;
-  onCardAccount: ((accountId: number | null) => void) | undefined;
+  onCardAccount: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
   cycle: (cell: CellRef) => void;
   /** The cell a mouse press has just put the focus on, read by the click that follows it. */
   mouseFocus: MouseFocus;
@@ -627,6 +631,8 @@ function GridInner({
         : Math.min(pendingFocus.rowIndex, rows.length - 1);
     api.setFocusedCell(rowIndex, pendingFocus.field);
     api.ensureIndexVisible(rowIndex);
+    // The screen asked for typing to start with the text selected (a cell that must be fixed).
+    if (pendingFocus.edit === true) api.startEditingCell({ rowIndex, colKey: pendingFocus.field });
   }, [pendingFocus, rows, store, ready]);
 
   const onGridReady = (event: GridReadyEvent<EntryRow>) => {
@@ -673,6 +679,17 @@ function GridInner({
     );
     const row = store.getState().rows[event.rowIndex];
     const colId = event.column.getColId();
+    // A row the screen holds on one cell (a refused quantity) gives the focus back to that cell when a
+    // click puts it on another cell of the row.
+    const held = row === undefined ? null : (interceptors?.heldField?.(row.rowId) ?? null);
+    if (row !== undefined && held !== null && held !== colId) {
+      const { rowIndex } = event;
+      window.setTimeout(() => {
+        const api = apiRef.current;
+        if (api !== null && !api.isDestroyed()) api.setFocusedCell(rowIndex, held);
+      }, 0);
+      return;
+    }
     if (row !== undefined) store.getState().setFocus({ rowId: row.rowId, field: colId });
     const previous = lastFocus.current;
     lastFocus.current = { rowIndex: event.rowIndex, colId };

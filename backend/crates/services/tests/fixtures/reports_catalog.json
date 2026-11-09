@@ -121,18 +121,6 @@
     "party_required": false
   },
   {
-    "id": "R9",
-    "group": "sales",
-    "group_title_id": "report-group-sales",
-    "title_id": "report-r9-title",
-    "filters": [
-      "date_range",
-      "party",
-      "status"
-    ],
-    "party_required": false
-  },
-  {
     "id": "R10",
     "group": "sales",
     "group_title_id": "report-group-sales",

@@ -72,7 +72,7 @@ fn random_save(w: &World, rng: &mut Rng, step: usize) -> BikriDraft {
         let qty = (1 + i64::try_from(rng.below(6)).unwrap_or(1)).min(left);
         left -= qty;
         let which = rng.index(4);
-        let buyer = [w.akram, w.arshad, w.naqdi, w.pukhta_buyer][which];
+        let buyer = [w.akram, w.arshad, w.naqdi, w.chukta_khata][which];
         let mut line = sale(
             &format!("s-{step}-{j}"),
             buyer,
@@ -85,7 +85,7 @@ fn random_save(w: &World, rng: &mut Rng, step: usize) -> BikriDraft {
             } else {
                 ("ناصر", "Nasir", "0300-1111111")
             };
-            line.pukhta = person(ur, en, phone);
+            line.chukta = person(ur, en, phone);
         }
         if which < 2 && rng.below(3) == 0 {
             line.payment_type = Some(PaymentType::Cash);
@@ -254,8 +254,8 @@ fn keys(w: &World) -> [(i64, Option<&'static str>); 4] {
     [
         (w.akram, None),
         (w.arshad, None),
-        (w.pukhta_buyer, Some(SHAHID)),
-        (w.pukhta_buyer, Some(NASIR)),
+        (w.chukta_khata, Some(SHAHID)),
+        (w.chukta_khata, Some(NASIR)),
     ]
 }
 
@@ -271,7 +271,7 @@ fn check_books(w: &World, seed: u64, step: usize) {
                SELECT l.account_id FROM journal_entries r
                JOIN journal_lines l ON l.entry_id IN (r.id, r.reverses_entry_id)
                WHERE r.reverses_entry_id IS NOT NULL
-               GROUP BY r.id, l.account_id, COALESCE(l.pukhta_person_key, '')
+               GROUP BY r.id, l.account_id, COALESCE(l.chukta_person_key, '')
                HAVING SUM(l.dr_paisa) - SUM(l.cr_paisa) <> 0)"
         ),
         0,
@@ -470,7 +470,6 @@ fn check_seller_balances(w: &World, at: &str) {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: seller,
-                person_key: None,
                 include_settled: false,
             },
         )
@@ -532,13 +531,13 @@ fn key_state(w: &World, account: i64, key: Option<&str>) -> (i64, i64, i64) {
     };
     // Lines in force: an entry that was taken back and its reversal are both left out.
     let live = "FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-                WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2
+                WHERE l.account_id = ?1 AND l.chukta_person_key IS ?2
                   AND e.reverses_entry_id IS NULL
                   AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id)";
     let dr = sums(&format!("SELECT COALESCE(SUM(l.dr_paisa), 0) {live}"));
     let cr = sums(&format!("SELECT COALESCE(SUM(l.cr_paisa), 0) {live}"));
     let matched = sums(
-        "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE account_id = ?1 AND pukhta_person_key IS ?2 AND is_active = 1",
+        "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE account_id = ?1 AND chukta_person_key IS ?2 AND is_active = 1",
     );
     (dr - matched, cr - matched, dr - cr)
 }

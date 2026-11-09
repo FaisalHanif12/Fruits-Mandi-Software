@@ -213,8 +213,8 @@ const LINKS: readonly {
     filters: { adda_id: 9, ...MONTH },
   },
   // Plan 55 Section 11.1: the assistant opens every report of the catalogue with what the question named.
-  // A period, and a buyer or a seller named (R3, R4, R7, R9, R15, R23, R25, R28 take `party`).
-  ...(['R3', 'R4', 'R7', 'R9', 'R15', 'R23', 'R25', 'R28'] as const).flatMap((id) => [
+  // A period, and a buyer or a seller named (R3, R4, R7, R15, R23, R25, R28 take `party`).
+  ...(['R3', 'R4', 'R7', 'R15', 'R23', 'R25', 'R28'] as const).flatMap((id) => [
     {
       id,
       asked: 'the period only',
@@ -357,7 +357,7 @@ describe('the address of a report reads every filter the print questions need', 
   it('knows the boxes of the reports of plan 55 Section 11.1: each takes what its link carries', () => {
     const boxes = (id: ReportId) => CATALOG.find((entry) => entry.id === id)?.filters ?? [];
     // A period, and `party` for a buyer or a seller who was named.
-    for (const id of ['R3', 'R4', 'R7', 'R9', 'R15', 'R23', 'R25', 'R28'] as const) {
+    for (const id of ['R3', 'R4', 'R7', 'R15', 'R23', 'R25', 'R28'] as const) {
       expect(boxes(id), id).toEqual(expect.arrayContaining(['date_range', 'party']));
     }
     for (const id of ['R27', 'R30'] as const) expect(boxes(id), id).toContain('date_range');

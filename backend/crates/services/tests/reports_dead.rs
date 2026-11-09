@@ -45,7 +45,6 @@ fn mark(w: &World, account: i64, date: &str, reason: DeadReason) -> i64 {
         &w.owner,
         &DeadMarkInput {
             account_id: account,
-            pukhta_person_key: None,
             entry_date: date.into(),
             reason,
             note: String::new(),
@@ -622,6 +621,7 @@ fn the_party_card_the_ledger_heading_and_the_pickers_say_dead() {
                 text: "arshad".into(),
                 limit: 10,
                 offset: 0,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -641,6 +641,7 @@ fn the_party_card_the_ledger_heading_and_the_pickers_say_dead() {
                 include_dead,
                 scope: AccountScope::Buyer,
                 control_id: None,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -772,10 +773,7 @@ fn a_dead_person_with_a_loan_leaves_the_lent_lists_and_can_still_return() {
     set_today(&w.env, 2026, 10, 11);
     let preview = dead::preview(
         &w.env.ctx,
-        &mandi_services::core::dead::DeadPreviewInput {
-            account_id: person,
-            pukhta_person_key: None,
-        },
+        &mandi_services::core::dead::DeadPreviewInput { account_id: person },
     )
     .unwrap();
     assert_eq!(preview.owed_paisa.rupees(), 5_000);
@@ -838,8 +836,7 @@ fn a_dead_person_with_a_loan_leaves_the_lent_lists_and_can_still_return() {
 }
 
 #[test]
-fn a_dead_seller_leaves_r24_and_r26_and_a_dead_one_time_person_is_not_made_regular() {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType};
+fn a_dead_seller_leaves_r24_and_r26() {
     // E2E-28: the advance tick is off; رحیم is paid 19,316, so his ledger is 15,000 بنام and his
     // advance of 15,000 is open. Before the move he is a row of R26.
     let w = worked_day();
@@ -880,62 +877,6 @@ fn a_dead_seller_leaves_r24_and_r26_and_a_dead_one_time_person_is_not_made_regul
         100,
     );
     assert_eq!(before.rows.len(), 1);
-
-    // A one-time buyer who owes is moved by his key and is not made regular (FR-13.8).
-    let w = worked_day();
-    let mut line = support::sale("s-1", w.pukhta_buyer, "2", "1000");
-    line.pukhta = Some(mandi_services::core::bikri::PukhtaInput {
-        name_ur: "شاہد".into(),
-        name_en: "Shahid".into(),
-        phone: "0300-0000000".into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    line.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.laga = support::typed(LineChargeMethod::PerUnit, "0");
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "2");
-    lot.sales = vec![line];
-    save(&w, &support::draft(vec![lot]));
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    set_today(&w.env, 2026, 10, 11);
-    dead::mark(
-        &w.env.ctx,
-        &w.owner,
-        &DeadMarkInput {
-            account_id: w.pukhta_buyer,
-            pukhta_person_key: Some(key.clone()),
-            entry_date: "11-10-2026".into(),
-            reason: DeadReason::Died,
-            note: String::new(),
-        },
-    )
-    .unwrap();
-    let request = serde_json::json!({
-        "person_key": key,
-        "side": "buyer",
-        "account_input": {
-            "id": null, "version": null, "account_type": "buyer", "control_id": null,
-            "code": "", "name_ur": "شاہد", "name_en": "Shahid", "confirmed_rules_words": [],
-            "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
-            "phone1": "03000000000", "phone2": "", "address": "", "linked_account_id": null,
-            "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
-            "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-            "collector_staff_id": null, "is_active": true, "note": ""
-        }
-    });
-    let input: mandi_services::core::vouchers::MakeRegularInput =
-        serde_json::from_value(request).unwrap();
-    let refused = vouchers::make_regular(&w.env.ctx, &w.owner, &input).unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrPersonInDeadAmount);
-    // The party card of the one-time account is not a person card: no dead mark on it.
-    assert!(
-        assist::party_card(&w.env.ctx, w.pukhta_buyer)
-            .unwrap()
-            .dead
-            .is_none()
-    );
-    assert_eq!(tiles(&w).dead_count, 1);
-    let _ = BalanceSide::Dr;
 }
 
 #[test]
@@ -1036,89 +977,6 @@ fn an_edit_of_a_recovery_is_checked_against_what_he_owes_with_its_own_reversal_t
 }
 
 #[test]
-fn an_edit_cannot_add_a_dead_one_time_person_who_was_not_in_the_posting() {
-    use mandi_services::core::bikri::{
-        BikriSaveInput, EditOpenInput, EditSaveInput, LineChargeMethod, PaymentType, PukhtaInput,
-    };
-    let w = worked_day();
-    let line = |key: &str, qty: &str, name_ur: &str, name_en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: name_ur.into(),
-            name_en: name_en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        l
-    };
-    // بکری 1 has شاہد; بکری 2 has ناصر, who then dies.
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
-    lot.sales = vec![line("s-1", "1", "شاہد", "Shahid", "0300-0000000")];
-    let first = mandi_services::bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
-    save(&w, &{
-        let mut lot = support::bare_lot(&w, "lot-2", w.rahim, w.banana, "2");
-        lot.sales = vec![line("s-2", "2", "ناصر", "Nasir", "0300-1111111")];
-        support::draft(vec![lot])
-    });
-    let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    set_today(&w.env, 2026, 10, 11);
-    dead::mark(
-        &w.env.ctx,
-        &w.owner,
-        &DeadMarkInput {
-            account_id: w.pukhta_buyer,
-            pukhta_person_key: Some(nasir),
-            entry_date: "11-10-2026".into(),
-            reason: DeadReason::Died,
-            note: String::new(),
-        },
-    )
-    .unwrap();
-
-    // Editing بکری 1 to add a NEW line for ناصر is refused: he was not in that posting.
-    let opened = mandi_services::bikri::open_for_edit(
-        &w.env.ctx,
-        &EditOpenInput {
-            bikri_id: first.bikri_id,
-            entry_id: first.entry_id,
-        },
-    )
-    .unwrap();
-    let mut draft = opened.draft.clone();
-    draft.lots[0]
-        .sales
-        .push(line("s-3", "2", "ناصر", "Nasir", "0300-1111111"));
-    let refused = mandi_services::bikri::edit_save(
-        &w.env.ctx,
-        &w.owner,
-        &EditSaveInput {
-            entry_id: opened.entry_id,
-            version: opened.version,
-            draft,
-            reason: Some("x".into()),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrPersonInDeadAmount);
-    // The books are as they were: ناصر still owes his 2,000 and the dead amount is that.
-    assert_eq!(tiles(&w).dead_amount_paisa.rupees(), 2_000);
-    let trial = mandi_services::ledger::trial_balance(&w.env.ctx, None).unwrap();
-    assert_eq!(trial.total_dr, trial.total_cr);
-}
-
-#[test]
 fn an_edited_recovery_counts_its_new_amount_and_one_saved_before_the_move_is_a_correction() {
     use mandi_services::core::vouchers::{VoucherCancelInput, VoucherEditInput, VoucherEntry};
     let w = full_day();
@@ -1181,105 +1039,4 @@ fn an_edited_recovery_counts_its_new_amount_and_one_saved_before_the_move_is_a_c
         (3_000, 500, 15_684)
     );
     assert_eq!(tiles(&w).dead_amount_paisa.rupees(), 15_684);
-}
-
-#[test]
-fn a_dead_one_time_person_is_found_only_when_dead_people_are_asked_for_and_can_be_recovered() {
-    use mandi_services::core::bikri::{
-        LineChargeMethod, PaymentType, PukhtaInput, PukhtaPeopleInput, PukhtaSide,
-    };
-    let w = worked_day();
-    let line = |key: &str, qty: &str, name_ur: &str, name_en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: name_ur.into(),
-            name_en: name_en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        l
-    };
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
-    lot.sales = vec![
-        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
-        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
-    ];
-    save(&w, &support::draft(vec![lot]));
-    let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    set_today(&w.env, 2026, 10, 11);
-    dead::mark(
-        &w.env.ctx,
-        &w.owner,
-        &DeadMarkInput {
-            account_id: w.pukhta_buyer,
-            pukhta_person_key: Some(nasir.clone()),
-            entry_date: "11-10-2026".into(),
-            reason: DeadReason::Died,
-            note: String::new(),
-        },
-    )
-    .unwrap();
-
-    let find = |text: &str, include_dead: Option<bool>| -> Vec<(String, bool)> {
-        mandi_services::bikri::search_people(
-            &w.env.ctx,
-            &PukhtaPeopleInput {
-                text: text.into(),
-                side: PukhtaSide::Buyer,
-                include_dead,
-            },
-        )
-        .unwrap()
-        .into_iter()
-        .map(|p| (p.name_en, p.is_dead))
-        .collect()
-    };
-    // Hidden unless the field asks for dead people.
-    assert!(find("nasir", None).is_empty());
-    assert!(find("nasir", Some(false)).is_empty());
-    assert_eq!(find("nasir", Some(true)), vec![("Nasir".to_owned(), true)]);
-    // Shahid is found either way, and is not dead; the whole list marks only Nasir.
-    assert_eq!(find("shahid", None), vec![("Shahid".to_owned(), false)]);
-    assert_eq!(
-        find("shahid", Some(true)),
-        vec![("Shahid".to_owned(), false)]
-    );
-    let mut all = find("", Some(true));
-    all.sort();
-    assert_eq!(
-        all,
-        vec![("Nasir".to_owned(), true), ("Shahid".to_owned(), false)]
-    );
-    assert_eq!(find("", None), vec![("Shahid".to_owned(), false)]);
-
-    // A receipt on him (the recovery) is allowed within what he owes (2,000) and refused above.
-    let mut input = receipt(w.pukhta_buyer, "2,001");
-    input.date = "11-10-2026".into();
-    input.person_key = Some(nasir.clone());
-    assert_eq!(
-        vouchers::save_receipt(&w.env.ctx, &w.owner, &input)
-            .unwrap_err()
-            .code(),
-        ErrorCode::ErrReturnExceedsOpen
-    );
-    input.amount = "500".into();
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
-    assert_eq!(tiles(&w).dead_amount_paisa.rupees(), 1_500);
-    // The seller side has its own account: nobody is dead there.
-    assert!(
-        mandi_services::bikri::search_people(
-            &w.env.ctx,
-            &PukhtaPeopleInput {
-                text: String::new(),
-                side: PukhtaSide::Seller,
-                include_dead: Some(true),
-            },
-        )
-        .unwrap()
-        .iter()
-        .all(|p| !p.is_dead)
-    );
 }

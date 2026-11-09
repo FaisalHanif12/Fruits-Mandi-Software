@@ -1,6 +1,6 @@
 //! The Collections group of the report engine on the PRD worked day (plan 20 step B3, PRD 19.2,
 //! FR-7.59, FR-15.4, FR-15.8, FR-19.9, FR-19.10): R20, R21, R22, R24 and R26, and the search
-//! for one-time people (PRD FR-5.4).
+//! for چکتا buyers (PRD FR-5.4).
 //!
 //! The expected numbers are the PRD's: R20 closes at 21,564 after Events 1 to 5 and at 24,564
 //! after E2E-32, R24 shows کریم with 10,160 and, after E2E-28, رحیم with 19,316 payable and
@@ -16,9 +16,8 @@ mod reports_world;
 mod support;
 
 use common::*;
-use mandi_reports::people::{FindPeopleInput, find_people};
 use mandi_reports::reports::{
-    Cell, PartyFilter, PrintCell, ReportFilters, ReportId, ReportPage, ReportPrintInput, print_data,
+    Cell, PrintCell, ReportFilters, ReportId, ReportPage, ReportPrintInput, print_data,
 };
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::auth::Language;
@@ -51,13 +50,6 @@ fn date_of(cell: &Cell) -> Option<String> {
     }
 }
 
-fn person_name(cell: &Cell) -> String {
-    match cell {
-        Cell::Party { party } => party.name_en.clone(),
-        other => panic!("not a party: {other:?}"),
-    }
-}
-
 fn as_of(text: &str) -> ReportFilters {
     ReportFilters {
         as_of: text.into(),
@@ -73,7 +65,7 @@ fn buyers_debit_total(w: &support::World) -> i64 {
         let mut statement = conn
             .prepare(
                 "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
-                 WHERE k.code = '0304' AND a.is_pukhta_khata = 0",
+                 WHERE k.code = '0304' AND a.is_chukta_khata = 0",
             )
             .unwrap();
         statement
@@ -89,23 +81,23 @@ fn buyers_debit_total(w: &support::World) -> i64 {
             total += b.amount_paisa.rupees();
         }
     }
-    // The one-time buyers by person.
+    // The چکتا buyers by person.
     let keys: Vec<String> = {
         let conn = raw(&w.dir);
         let mut statement = conn
             .prepare(
-                "SELECT DISTINCT pukhta_person_key FROM journal_lines
-                 WHERE account_id = ?1 AND pukhta_person_key IS NOT NULL",
+                "SELECT DISTINCT chukta_person_key FROM journal_lines
+                 WHERE account_id = ?1 AND chukta_person_key IS NOT NULL",
             )
             .unwrap();
         statement
-            .query_map([w.pukhta_buyer], |r| r.get(0))
+            .query_map([w.chukta_khata], |r| r.get(0))
             .unwrap()
             .map(Result::unwrap)
             .collect()
     };
     for key in keys {
-        let b = ledger::person_balance(&w.env.ctx, w.pukhta_buyer, &key).unwrap();
+        let b = ledger::person_balance(&w.env.ctx, w.chukta_khata, &key).unwrap();
         if b.side == BalanceSide::Dr {
             total += b.amount_paisa.rupees();
         }
@@ -215,17 +207,18 @@ fn r20_ages_the_open_bills_in_four_bands_and_leaves_the_ages_empty_for_a_past_da
 }
 
 #[test]
-fn r20_keeps_one_time_buyers_apart_by_person_e2e_21() {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
+fn r20_has_no_row_for_a_chukta_buyer_e2e_21() {
+    use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod};
+    // E2E-21 (v1.32): two چکتا buyers pay in full on the spot, so nobody owes and R20 stays empty
+    // (PRD FR-13.6). The shop's dues are the ordinary buyers' alone.
     let w = worked_day();
     let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
+        let mut l = support::sale(key, w.chukta_khata, qty, "1000");
+        l.chukta = Some(ChuktaInput {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.into(),
         });
-        l.payment_type = Some(PaymentType::Credit);
         l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
         l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
         l.laga = support::typed(LineChargeMethod::PerUnit, "0");
@@ -237,62 +230,10 @@ fn r20_keeps_one_time_buyers_apart_by_person_e2e_21() {
         line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
     ];
     save(&w, &support::draft(vec![lot]));
-    let before = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
-    assert_eq!(before.total_count, 2);
-    let by_name = |page: &ReportPage, name: &str| -> Option<Vec<Cell>> {
-        page.rows
-            .iter()
-            .find(|r| person_name(&r.cells[0]) == name)
-            .map(|r| r.cells.clone())
-    };
-    // Each person has his own row, his own phone and his own balance.
-    let shahid = by_name(&before, "Shahid").unwrap();
-    assert_eq!(money(&shahid[3]), 1_000);
-    assert_eq!(
-        shahid[2],
-        Cell::Text {
-            // The dash form of every report phone (commit 63be6df).
-            text: "0300-0000000".into()
-        }
-    );
-    let nasir = by_name(&before, "Nasir").unwrap();
-    assert_eq!(money(&nasir[3]), 2_000);
-    match &nasir[0] {
-        Cell::Party { party } => {
-            assert_eq!(party.code, "0030");
-            assert!(party.person_key.is_some());
-            assert_eq!(party.short_code, None);
-        }
-        other => panic!("{other:?}"),
-    }
-    assert_eq!(before.totals.get(3).map(money), Some(3_000));
-
-    // The receipt of 1,000 for شاہد: شاہد 0 (no row), ناصر 2,000 still due.
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let mut input = receipt(w.pukhta_buyer, "1,000");
-    input.person_key = Some(key);
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
-    let after = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
-    assert_eq!(after.total_count, 1);
-    assert_eq!(person_name(&after.rows.first().unwrap().cells[0]), "Nasir");
-    assert_eq!(after.totals.get(3).map(money), Some(2_000));
-    assert_eq!(buyers_debit_total(&w), 2_000);
-    // The party filter takes one person.
-    let nasir_key = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    let one = report(
-        &w,
-        ReportId::R20,
-        ReportFilters {
-            party: Some(PartyFilter {
-                account_id: w.pukhta_buyer,
-                person_key: Some(nasir_key),
-            }),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!(one.total_count, 1);
+    let page = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
+    assert_eq!(page.total_count, 0);
+    assert_eq!(page.totals.get(3).map(money), Some(0));
+    assert_eq!(buyers_debit_total(&w), 0);
 }
 
 // --- R21 and R22 ---------------------------------------------------------------------------------
@@ -442,7 +383,6 @@ fn r24_lists_karim_with_10160_and_not_rahim_who_is_paid_up() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.karim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -571,7 +511,6 @@ fn r24_after_e2e_28_shows_the_payable_and_the_advance_that_stays_open() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -693,99 +632,7 @@ fn r26_after_a_cash_return_shows_given_returned_adjusted_open_e2e_31() {
     );
 }
 
-// --- Search for one-time people ----------------------------------------------------------------
-
-#[test]
-fn find_people_finds_a_one_time_person_by_either_name_a_close_spelling_or_phone() {
-    let w = full_day();
-    let find = |text: &str| {
-        find_people(
-            w.env.ctx.db(),
-            &FindPeopleInput {
-                text: text.into(),
-                limit: 0,
-            },
-        )
-        .unwrap()
-    };
-    for text in ["shahid", "SHAHID", "شاہد", "shahd", "0300", "03-00-000"] {
-        let hits = find(text);
-        assert_eq!(hits.len(), 1, "{text}");
-        let hit = &hits[0];
-        assert_eq!(
-            (
-                hit.name_en.as_str(),
-                hit.phone.as_str(),
-                hit.last_date.as_str()
-            ),
-            ("Shahid", "03000000000", "2026-10-10")
-        );
-        // He is a one-time buyer: the account to open his ledger with.
-        assert_eq!(hit.accounts.len(), 1);
-        assert_eq!(hit.accounts[0].account_id, w.pukhta_buyer);
-        assert!(hit.person_key.contains("03000000000"));
-    }
-    assert!(find("nasir").is_empty());
-    // Empty text lists the newest people; the limit cuts the list.
-    assert_eq!(find("").len(), 1);
-    // The person key and the account open his ledger R13 as a party.
-    let hit = find("shahid").remove(0);
-    let page = report(
-        &w,
-        ReportId::R13,
-        ReportFilters {
-            party: Some(PartyFilter {
-                account_id: hit.accounts[0].account_id,
-                person_key: Some(hit.person_key.clone()),
-            }),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!(page.total_count, 2);
-}
-
-#[test]
-fn find_people_checks_its_input_and_writes_nothing() {
-    let w = full_day();
-    let refuse = |text: &str, limit: u32| -> Vec<(ErrorCode, String)> {
-        match find_people(
-            w.env.ctx.db(),
-            &FindPeopleInput {
-                text: text.into(),
-                limit,
-            },
-        ) {
-            Err(mandi_reports::ReportsError::Rejected(items)) => {
-                items.into_iter().map(|e| (e.code, e.field)).collect()
-            }
-            other => panic!("expected a rejection, got {other:?}"),
-        }
-    };
-    assert_eq!(
-        refuse("a\u{0}b", 51),
-        vec![
-            (ErrorCode::ErrOutOfRange, "text".to_owned()),
-            (ErrorCode::ErrOutOfRange, "limit".to_owned())
-        ]
-    );
-    assert_eq!(
-        refuse(&"x".repeat(101), 10),
-        vec![(ErrorCode::ErrOutOfRange, "text".to_owned())]
-    );
-    let count = |sql: &str| -> i64 { raw(&w.dir).query_row(sql, [], |r| r.get(0)).unwrap() };
-    let before = count("SELECT COUNT(*) FROM audit_log");
-    find_people(
-        w.env.ctx.db(),
-        &FindPeopleInput {
-            text: "shahid".into(),
-            limit: 5,
-        },
-    )
-    .unwrap();
-    assert_eq!(count("SELECT COUNT(*) FROM audit_log"), before);
-}
+// --- Search for چکتا buyers ----------------------------------------------------------------
 
 // --- Writes, print data ----------------------------------------------------------------------
 

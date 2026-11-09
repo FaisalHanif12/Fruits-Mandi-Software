@@ -24,7 +24,7 @@ use mandi_core::money::Paisa;
 
 use crate::print::format::kilos_text;
 use crate::reports::common::{
-    Conds, col, load_parties, names_cell, paisa, party_of_line, pukhta_party,
+    Conds, chukta_party, col, load_parties, names_cell, paisa, party_of_line,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -107,7 +107,7 @@ struct Raw {
     source: String,
     credit_account: i64,
     person_key: Option<String>,
-    pukhta: Option<(String, String)>,
+    chukta: Option<(String, String)>,
     item: Names,
     packing: Names,
     weight_grams: Option<i64>,
@@ -182,7 +182,7 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
 
     let sql = format!(
         "SELECT ft.id, ft.number, ft.entry_date, p.name_ur, p.name_en, ft.source,
-                ft.credit_account_id, ft.pukhta_person_key, l.pukhta_name_ur, l.pukhta_name_en,
+                ft.credit_account_id, ft.chukta_person_key, l.chukta_name_ur, l.chukta_name_en,
                 i.name_ur, i.name_en, pk.name_ur, pk.name_en, ft.weight_grams, ft.qty, ft.rate_paisa,
                 ft.value_paisa
          FROM fruit_takes ft
@@ -199,8 +199,8 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
         .query_map(params_from_iter(args.iter()), |r| {
             let partner_ur: Option<String> = r.get(3)?;
             let partner_en: Option<String> = r.get(4)?;
-            let pukhta_ur: Option<String> = r.get(8)?;
-            let pukhta_en: Option<String> = r.get(9)?;
+            let chukta_ur: Option<String> = r.get(8)?;
+            let chukta_en: Option<String> = r.get(9)?;
             Ok(Raw {
                 id: r.get(0)?,
                 number: r.get(1)?,
@@ -209,7 +209,7 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
                 source: r.get(5)?,
                 credit_account: r.get(6)?,
                 person_key: r.get(7)?,
-                pukhta: pukhta_ur.zip(pukhta_en),
+                chukta: chukta_ur.zip(chukta_en),
                 item: Names {
                     ur: r.get(10)?,
                     en: r.get(11)?,
@@ -232,9 +232,9 @@ pub(crate) fn read(conn: &Connection, c: &Conds, spec: PageSpec) -> Result<Entri
     for raw in raws {
         let mut credited = party_of_line(&parties, raw.credit_account, None)?;
         if let Some(key) = raw.person_key {
-            // A one-time seller of the lot keeps his own names (PRD FR-13.5).
-            let (ur, en) = raw.pukhta.clone().unwrap_or_default();
-            credited = pukhta_party(credited, Some(key), Some(ur.as_str()), Some(en.as_str()));
+            // A old one-time seller of the lot keeps his own names (PRD FR-13.5).
+            let (ur, en) = raw.chukta.clone().unwrap_or_default();
+            credited = chukta_party(credited, Some(key), Some(ur.as_str()), Some(en.as_str()));
         }
         let for_whom = match raw.partner {
             Some(names) => Cell::Names { names },

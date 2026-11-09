@@ -334,8 +334,6 @@ pub struct LotState {
     pub adjust_advance: bool,
     /// The truck stand of the بکری.
     pub adda_id: Option<i64>,
-    /// The one-time seller's names, phone and key.
-    pub pukhta: Option<(String, String, String, String)>,
     /// The first posting of the lot.
     pub first_entry_id: Option<i64>,
     /// The freight typed on the lot, paisa.
@@ -366,8 +364,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
     conn.query_row(
         "SELECT l.id, l.bikri_id, l.lot_no, e.status, e.number, e.entry_date, l.seller_account_id,
                 l.item_id, l.packing_id, l.marka_id, l.store_id, l.qty_received, l.qty_sold,
-                l.qty_written_off, l.adjust_advance, l.pukhta_name_ur, l.pukhta_name_en,
-                l.pukhta_phone, l.pukhta_person_key, l.first_entry_id, l.freight_paisa,
+                l.qty_written_off, l.adjust_advance, l.first_entry_id, l.freight_paisa,
                 l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa, l.phone_paisa,
                 l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id,
                 l.qty_taken, l.arrival_id
@@ -375,10 +372,6 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
          WHERE l.id = ?1",
         [lot_id],
         |r| {
-            let key: Option<String> = r.get(18)?;
-            let ur: Option<String> = r.get(15)?;
-            let en: Option<String> = r.get(16)?;
-            let phone: Option<String> = r.get(17)?;
             Ok(LotState {
                 id: r.get(0)?,
                 bikri_id: r.get(1)?,
@@ -395,27 +388,19 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 qty_sold: r.get(12)?,
                 qty_written_off: r.get(13)?,
                 adjust_advance: r.get(14)?,
-                pukhta: key.map(|key| {
-                    (
-                        ur.unwrap_or_default(),
-                        en.unwrap_or_default(),
-                        phone.unwrap_or_default(),
-                        key,
-                    )
-                }),
-                first_entry_id: r.get(19)?,
-                freight_paisa: r.get(20)?,
-                freight_by_firm: r.get(21)?,
-                labour_paisa: r.get(22)?,
-                munshiana_paisa: r.get(23)?,
-                phone_paisa: r.get(24)?,
-                cash_paid_paisa: r.get(25)?,
-                store_rent_paisa: r.get(26)?,
-                weight_received_grams: r.get(27)?,
-                adda_id: r.get(28)?,
-                purchase_id: r.get(29)?,
-                qty_taken: r.get(30)?,
-                arrival_id: r.get(31)?,
+                first_entry_id: r.get(15)?,
+                freight_paisa: r.get(16)?,
+                freight_by_firm: r.get(17)?,
+                labour_paisa: r.get(18)?,
+                munshiana_paisa: r.get(19)?,
+                phone_paisa: r.get(20)?,
+                cash_paid_paisa: r.get(21)?,
+                store_rent_paisa: r.get(22)?,
+                weight_received_grams: r.get(23)?,
+                adda_id: r.get(24)?,
+                purchase_id: r.get(25)?,
+                qty_taken: r.get(26)?,
+                arrival_id: r.get(27)?,
             })
         },
     )
@@ -481,24 +466,19 @@ pub fn update_lot(
     now: &str,
 ) -> rusqlite::Result<()> {
     conn.execute(
-        "UPDATE bikri_lots SET seller_account_id = ?2, pukhta_name_ur = ?3, pukhta_name_en = ?4,
-             pukhta_phone = ?5, pukhta_person_key = ?6, item_id = ?7, packing_id = ?8, marka_id = ?9,
-             store_id = ?10, qty_received = ?11, weight_received_grams = ?12, freight_paisa = ?13,
-             freight_paid_by = ?14, labour_paisa = ?15, labour_method = ?16, labour_value_paisa = ?17,
-             labour_rule_id = ?18, munshiana_paisa = ?19, munshiana_method = ?20,
-             munshiana_value_paisa = ?21, munshiana_rule_id = ?22, phone_paisa = ?23,
-             phone_method = ?24, phone_value_paisa = ?25, phone_rule_id = ?26, cash_paid_paisa = ?27,
-             store_rent_paisa = ?28, adjust_advance = ?29, qty_sold = ?30, gross_paisa = ?31,
-             seller_comm_paisa = ?32, deductions_paisa = ?33, net_paisa = ?34, updated_at = ?35,
-             updated_by = ?36, version = version + 1
+        "UPDATE bikri_lots SET seller_account_id = ?2, item_id = ?3, packing_id = ?4, marka_id = ?5,
+             store_id = ?6, qty_received = ?7, weight_received_grams = ?8, freight_paisa = ?9,
+             freight_paid_by = ?10, labour_paisa = ?11, labour_method = ?12, labour_value_paisa = ?13,
+             labour_rule_id = ?14, munshiana_paisa = ?15, munshiana_method = ?16,
+             munshiana_value_paisa = ?17, munshiana_rule_id = ?18, phone_paisa = ?19,
+             phone_method = ?20, phone_value_paisa = ?21, phone_rule_id = ?22, cash_paid_paisa = ?23,
+             store_rent_paisa = ?24, adjust_advance = ?25, qty_sold = ?26, gross_paisa = ?27,
+             seller_comm_paisa = ?28, deductions_paisa = ?29, net_paisa = ?30, updated_at = ?31,
+             updated_by = ?32, version = version + 1
          WHERE id = ?1",
         params![
             lot_id,
             lot.seller_account_id,
-            lot.pukhta.map(|p| p.name_ur),
-            lot.pukhta.map(|p| p.name_en),
-            lot.pukhta.map(|p| p.phone),
-            lot.pukhta.map(|p| p.person_key),
             lot.item_id,
             lot.packing_id,
             lot.marka_id,
@@ -813,10 +793,10 @@ pub fn reverse_facts(
     conn.execute(
         "INSERT INTO analytics_facts (created_at, created_by, updated_at, updated_by, journal_entry_id,
              entry_date, year, month, bikri_id, lot_id, sale_id, item_id, seller_account_id,
-             buyer_account_id, pukhta_person_key, city_id, adda_id, qty, seller_amount_paisa,
+             buyer_account_id, chukta_person_key, city_id, adda_id, qty, seller_amount_paisa,
              seller_comm_paisa, buyer_value_paisa, buyer_comm_paisa, laga_paisa, sign, purchase_id, venture_id, cost_paisa)
          SELECT ?3, ?4, ?3, ?4, ?2, f.entry_date, f.year, f.month, f.bikri_id, f.lot_id, f.sale_id,
-             f.item_id, f.seller_account_id, f.buyer_account_id, f.pukhta_person_key, f.city_id,
+             f.item_id, f.seller_account_id, f.buyer_account_id, f.chukta_person_key, f.city_id,
              f.adda_id, f.qty, f.seller_amount_paisa, f.seller_comm_paisa, f.buyer_value_paisa,
              f.buyer_comm_paisa, f.laga_paisa, -f.sign, f.purchase_id, f.venture_id, f.cost_paisa
          FROM analytics_facts f
@@ -964,8 +944,6 @@ pub struct StockLot {
     pub received_date: String,
     /// The seller account.
     pub seller: RecordRef,
-    /// The one-time seller (Urdu name, English name, phone, key).
-    pub pukhta: Option<(String, String, String, String)>,
     /// The item.
     pub item: RecordRef,
     /// The packing.
@@ -987,7 +965,6 @@ pub struct StockLot {
 pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<Vec<StockLot>> {
     let mut statement = conn.prepare(
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date, sa.id, sa.code, sa.name_ur, sa.name_en,
-                l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag
          FROM bikri_lots l
@@ -1025,10 +1002,6 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                     tag: None,
                 })
             };
-            let ur: Option<String> = r.get(9)?;
-            let en: Option<String> = r.get(10)?;
-            let phone: Option<String> = r.get(11)?;
-            let key: Option<String> = r.get(12)?;
             Ok(StockLot {
                 lot_id: r.get(0)?,
                 lot_no: r.get(1)?,
@@ -1037,23 +1010,15 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
                 received_date: r.get(4)?,
                 seller: {
                     let mut seller = record(5)?;
-                    seller.tag = r.get(25)?;
+                    seller.tag = r.get(21)?;
                     seller
                 },
-                pukhta: key.map(|key| {
-                    (
-                        ur.unwrap_or_default(),
-                        en.unwrap_or_default(),
-                        phone.unwrap_or_default(),
-                        key,
-                    )
-                }),
-                item: record(13)?,
-                packing: record(17)?,
-                qty_received: r.get(21)?,
-                qty_sold: r.get(22)?,
-                qty_written_off: r.get(23)?,
-                qty_taken: r.get(24)?,
+                item: record(9)?,
+                packing: record(13)?,
+                qty_received: r.get(17)?,
+                qty_sold: r.get(18)?,
+                qty_written_off: r.get(19)?,
+                qty_taken: r.get(20)?,
             })
         },
     )?;

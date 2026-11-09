@@ -248,16 +248,8 @@ fn cancel_in(
     // Receipts matched to its bills are credit again, matched to the next oldest bills; advances
     // it adjusted are open again (PRD FR-12.22).
     for (account_id, person_key) in touched {
-        if let Some((role, is_pukhta)) = role_of_account(tx, account_id)? {
-            rematch_party(
-                tx,
-                user,
-                &now,
-                account_id,
-                person_key.as_deref(),
-                role,
-                is_pukhta,
-            )?;
+        if let Some(role) = role_of_account(tx, account_id)? {
+            rematch_party(tx, user, &now, account_id, person_key.as_deref(), role)?;
         }
     }
     ctx.db.auditor().write(
@@ -351,7 +343,7 @@ pub fn undo(ctx: &Context, actor: &Actor, input: &UndoInput) -> Result<UndoResul
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrBikriCancelled, "id"))?;
         let date = BusinessDate::parse_iso(&first.entry_date)
             .ok_or_else(|| data("the date of a posting is not a date"))?;
-        let draft = draft_of(tx, &detail, first.entry_id, date, PostingKind::First, false)?;
+        let draft = draft_of(&detail, first.entry_id, date, PostingKind::First, false);
         let reversals = cancel_in(
             ctx,
             tx,

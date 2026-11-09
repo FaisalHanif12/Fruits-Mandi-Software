@@ -74,11 +74,7 @@ import {
 } from '../../../shared/accounts';
 import {
   NEW_ACCOUNT_KINDS,
-  creditStartsAllowed,
-  isPukhtaKind,
   kindMessageId,
-  kindOfAccount,
-  sideOfKind,
   type AccountKind,
   type AccountRef,
   type AccountRow,
@@ -95,8 +91,6 @@ import { OpeningDateOffer, closedOpeningDate } from './OpeningDateOffer';
 export interface EmbeddedAccount {
   /** The side to start with. */
   type: 'seller' | 'buyer';
-  /** True to start as a پختہ کھاتہ گاہک or بیوپاری of that side (plan 47, PRD FR-13.11). */
-  pukhtaParty?: boolean | undefined;
   /** What was typed in the picker. */
   text: string;
   /** The form closed: with the account that was saved, or null if it was left. */
@@ -160,33 +154,18 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
   const isNew = account === null;
   const controls = useCoaControls();
   const [type, setType] = useState<AccountType>(account?.account_type ?? embedded?.type ?? 'buyer');
-  // A پختہ کھاتہ گاہک or بیوپاری is a buyer or a seller with this mark (plan 47, PRD FR-13.11). The
-  // user sees one list of four kinds; the backend gets the side and the mark.
-  const [pukhtaParty, setPukhtaParty] = useState(
-    account?.is_pukhta_party === true || embedded?.pukhtaParty === true,
-  );
-  const kind = kindOfAccount(type, pukhtaParty);
-  // True once the Owner has ticked or unticked "credit allowed" himself: then a change of the kind
-  // no longer sets it (cash first is only where the form starts, PRD A79).
-  const [creditTouched, setCreditTouched] = useState(false);
+  const kind: AccountKind = type;
   const [controlId, setControlId] = useState<number | null>(account?.control.id ?? null);
   const nextCode = useAccountNextCode(
     type,
     controlId,
     isNew && (type !== 'other' || controlId !== null),
-    pukhtaParty,
   );
 
   // The form starts from the account that was read, once.
   const [initial] = useState(() => {
     if (account !== null) return accountValuesOf(account, grouping);
-    const fresh = newAccountValues(
-      embedded?.type ?? 'buyer',
-      null,
-      '',
-      today,
-      embedded?.pukhtaParty === true,
-    );
+    const fresh = newAccountValues(embedded?.type ?? 'buyer', null, '', today);
     return embedded === undefined ? fresh : { ...fresh, names: namesOfText(embedded.text) };
   });
   const [values, setValues] = useState<AccountFormValues>(initial);
@@ -279,7 +258,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
               ...values,
               code: codeShown,
               account_type: type,
-              is_pukhta_party: pukhtaParty,
               control_id: controlId,
             },
             confirmedWords: [...new Set([...confirmedNames, ...confirmedFather])],
@@ -446,22 +424,9 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                     {...props}
                     value={kind}
                     onChange={(next: AccountKind) => {
-                      const side = sideOfKind(next);
-                      const pukhta = isPukhtaKind(next);
-                      setType(side);
-                      setPukhtaParty(pukhta);
+                      setType(next);
                       setCodeTyped(false);
-                      setValues((current) => ({
-                        ...current,
-                        account_type: side,
-                        is_pukhta_party: pukhta,
-                        code: '',
-                        // Cash first for a پختہ buyer (PRD A79): the tick follows the kind, unless
-                        // the Owner has already changed it.
-                        credit_allowed: creditTouched
-                          ? current.credit_allowed
-                          : creditStartsAllowed(next),
-                      }));
+                      setValues((current) => ({ ...current, account_type: next, code: '' }));
                     }}
                     options={(isNew ? NEW_ACCOUNT_KINDS : [kind]).map((option) => ({
                       value: option,
@@ -702,7 +667,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                 <Checkbox
                   checked={values.credit_allowed}
                   onChange={(checked) => {
-                    setCreditTouched(true);
                     setValues((current) => ({ ...current, credit_allowed: checked }));
                   }}
                   label={<Localized id="accounts-field-credit-allowed" />}
@@ -822,7 +786,6 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
                   onClick={() => {
                     deadActions.move({
                       accountId: account.id,
-                      personKey: null,
                       names: {
                         name_ur: account.name_ur,
                         name_en: account.name_en,

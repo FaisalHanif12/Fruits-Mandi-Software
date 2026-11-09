@@ -35,7 +35,6 @@
       "purchase": null,
       "own": null,
       "arrival": null,
-      "pukhta": null,
       "item": {
         "id": 2,
         "code": "0041",
@@ -93,10 +92,10 @@
           "buyer": {
             "id": 9,
             "code": "0030",
-            "name_ur": "پختہ کھاتہ (خریدار)",
-            "name_en": "Pukhta Khata (Buyer)"
+            "name_ur": "چکتا کھاتہ",
+            "name_en": "Chukta Khata"
           },
-          "pukhta": {
+          "chukta": {
             "name_ur": "شاہد",
             "name_en": "Shahid",
             "phone": "03000000000",

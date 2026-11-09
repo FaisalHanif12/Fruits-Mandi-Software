@@ -50,7 +50,7 @@ export function FruitPreviewCard({ preview, guests }: FruitPreviewCardProps) {
       </Card>
     );
   }
-  const credited = numbers.credit.pukhta ?? numbers.credit.account;
+  const credited = numbers.credit.account;
   // Each partner's part with his total now and after (plan 39: the shared table, figures centred).
   const locked = preview.partners_locked;
   const allColumns: TableColumn<Part>[] = [

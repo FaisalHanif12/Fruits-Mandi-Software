@@ -110,7 +110,7 @@ fn receipt_edit(
 ) -> VoucherEditInput {
     serde_json::from_value(json!({
         "id": id, "version": version, "reason": reason, "confirm_cash_below_zero": false,
-        "entry": { "type": "receipt", "date": date, "account_id": w.akram, "person_key": null,
+        "entry": { "type": "receipt", "date": date, "account_id": w.akram,
                    "amount": amount, "collector_staff_id": null, "narration": "" }
     }))
     .unwrap()
@@ -166,7 +166,7 @@ fn a_voucher_review_is_the_save_without_the_save() {
         &json!({
             "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
             "entry": { "type": "receipt", "date": "10-10-2026", "account_id": w.akram,
-                       "person_key": null, "amount": "4,000", "collector_staff_id": null,
+                       "amount": "4,000", "collector_staff_id": null,
                        "narration": "" }
         }),
         &preview,
@@ -235,7 +235,7 @@ fn payment_edit(
     serde_json::from_value(json!({
         "id": id, "version": version, "reason": "", "confirm_cash_below_zero": false,
         "entry": { "type": "payment", "date": "10-10-2026", "account_id": w.rahim,
-                   "person_key": null, "amount": amount, "reason": "", "narration": "",
+                   "amount": amount, "reason": "", "narration": "",
                    "confirm_cash_below_zero": confirm }
     }))
     .unwrap()

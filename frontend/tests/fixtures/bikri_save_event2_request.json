@@ -36,22 +36,21 @@
           "method": "manual",
           "value": "20"
         },
-        "pukhta": null,
         "qty_received": "10",
         "sales": [
           {
             "buyer_account_id": 9,
             "buyer_comm": null,
             "buyer_rate": null,
-            "key": "line-1",
-            "laga": null,
-            "note": null,
-            "payment_type": null,
-            "pukhta": {
+            "chukta": {
               "name_en": "Shahid",
               "name_ur": "شاہد",
               "phone": "0300-0000000"
             },
+            "key": "line-1",
+            "laga": null,
+            "note": null,
+            "payment_type": null,
             "qty": "10",
             "rate_differs": false,
             "seller_comm": null,

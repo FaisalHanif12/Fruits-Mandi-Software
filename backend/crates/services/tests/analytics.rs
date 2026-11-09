@@ -391,7 +391,7 @@ fn view_c_is_the_prd_table_of_section_18_4_with_the_one_time_buyer() {
         (mandi_services::core::accounts::BalanceSide::Dr, 2_880)
     );
     assert_eq!(rows[1].cells[6], Cell::Empty);
-    // شاہد, the one-time buyer: 10, 12,000, 720, 80, dues 0, paid on the day: 0 days.
+    // شاہد, the چکتا buyer: 10, 12,000, 720, 80, dues 0, paid on the day: 0 days.
     assert_eq!(name(&rows[2].cells[0]), "Shahid");
     assert_eq!(rupees_of(&rows[2].cells, 1..5), [10, 12_000, 720, 80]);
     assert_eq!(
@@ -400,7 +400,7 @@ fn view_c_is_the_prd_table_of_section_18_4_with_the_one_time_buyer() {
     );
     assert_eq!(rows[2].cells[6], Cell::Number { value: 0 });
     let key = rows[2].key.as_ref().unwrap();
-    assert_eq!(key.buyer_id, Some(w.pukhta_buyer));
+    assert_eq!(key.buyer_id, Some(w.chukta_khata));
     assert!(key.person_key.is_some());
     // The total row.
     assert_eq!(rupees_of(&page.totals, 1..5), [60, 41_400, 2_484, 480]);
@@ -531,7 +531,7 @@ fn a_cancel_leaves_nothing_of_the_bikri_e2e_15() {
     assert_eq!(name(&rows[0].cells[0]), "Banana");
     assert_eq!(pct(&rows[0].cells[8]), Some(10_000));
     assert_eq!(money(&a.totals[7]), 3_928);
-    // B has only رحیم, C has no one-time buyer, H lists nobody from بکری 2.
+    // B has only رحیم, C has no چکتا buyer, H lists nobody from بکری 2.
     let b = view(w, AnalyticsView::B, filters());
     assert_eq!(data_rows(&b).len(), 1);
     assert_eq!(rupees_of(&b.totals, 1..2), [1]);
@@ -641,7 +641,7 @@ fn the_lines_behind_every_number_add_up_to_the_number_after_an_edit() {
     assert_eq!(banana.total_count, 6);
     let signs: Vec<bool> = banana.rows.iter().map(|r| money(&r.cells[6]) < 0).collect();
     assert_eq!(signs.iter().filter(|negative| **negative).count(), 2);
-    // View B by seller, view C by buyer (including the one-time person).
+    // View B by seller, view C by buyer (including the چکتا buyer).
     let b = view(w, AnalyticsView::B, filters());
     for row in data_rows(&b) {
         let page = lines_for(
@@ -770,7 +770,7 @@ fn lines_page_with_totals_over_the_whole_filter() {
         joined.extend(part.rows);
     }
     assert_eq!(joined, whole.rows);
-    // A one-time buyer's line carries his own name.
+    // A چکتا buyer's line carries his own name.
     let shahid = whole
         .rows
         .iter()
@@ -1107,11 +1107,11 @@ fn filters_combine_freely_and_the_side_leaves_one_commission_out() {
     );
     assert_eq!(rupees_of(&by_buyer.totals, 1..3), [20, 12_000]);
     assert_eq!(money(&by_buyer.totals[7]), 1_600);
-    // The one-time buyer by his person key.
+    // The چکتا buyer by his person key.
     let person: String = raw(&w.dir)
         .query_row(
-            "SELECT pukhta_person_key FROM analytics_facts WHERE buyer_account_id = ?1",
-            [w.pukhta_buyer],
+            "SELECT chukta_person_key FROM analytics_facts WHERE buyer_account_id = ?1",
+            [w.chukta_khata],
             |r| r.get(0),
         )
         .unwrap();
@@ -1120,7 +1120,7 @@ fn filters_combine_freely_and_the_side_leaves_one_commission_out() {
         AnalyticsView::C,
         AnalyticsFilters {
             buyer: Some(PartyFilter {
-                account_id: w.pukhta_buyer,
+                account_id: w.chukta_khata,
                 person_key: Some(person),
             }),
             ..filters()
@@ -1840,12 +1840,12 @@ fn copy_fact(w: &support::World, item: i64, date: &str) {
         .execute(
             "INSERT INTO analytics_facts (created_at, created_by, updated_at, updated_by,
                  journal_entry_id, entry_date, year, month, bikri_id, lot_id, sale_id, item_id,
-                 seller_account_id, buyer_account_id, pukhta_person_key, city_id, adda_id, qty,
+                 seller_account_id, buyer_account_id, chukta_person_key, city_id, adda_id, qty,
                  seller_amount_paisa, seller_comm_paisa, buyer_value_paisa, buyer_comm_paisa,
                  laga_paisa, sign, purchase_id, venture_id, cost_paisa)
              SELECT created_at, created_by, updated_at, updated_by, journal_entry_id, ?2,
                  CAST(substr(?2, 1, 4) AS INTEGER), CAST(substr(?2, 6, 2) AS INTEGER), bikri_id,
-                 lot_id, sale_id, ?1, seller_account_id, buyer_account_id, pukhta_person_key,
+                 lot_id, sale_id, ?1, seller_account_id, buyer_account_id, chukta_person_key,
                  city_id, adda_id, qty, seller_amount_paisa, seller_comm_paisa, buyer_value_paisa,
                  buyer_comm_paisa, laga_paisa, sign, purchase_id, venture_id, cost_paisa
              FROM analytics_facts ORDER BY id LIMIT 1",

@@ -36,7 +36,6 @@
         "garden_number": 1,
         "garden_code": "0080"
       },
-      "pukhta": null,
       "item": {
         "id": 1,
         "code": "0040",
@@ -97,7 +96,7 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "pukhta": null,
+          "chukta": null,
           "qty": 60,
           "weight_grams": null,
           "seller_rate": 60000,

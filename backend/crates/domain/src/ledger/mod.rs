@@ -215,13 +215,13 @@ impl Side {
     }
 }
 
-/// One line of an entry: an account (and for a پختہ کھاتہ account, the person), a side and a
+/// One line of an entry: an account (and for the چکتا کھاتہ account, the person), a side and a
 /// positive amount.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LedgerLine {
     /// The account.
     pub account_id: AccountId,
-    /// The person inside a پختہ کھاتہ account (PRD FR-13.5), if any.
+    /// The person inside the چکتا کھاتہ account (PRD FR-13.5), if any.
     pub person_key: Option<String>,
     /// The side.
     pub side: Side,
@@ -246,7 +246,7 @@ impl LedgerLine {
         }
     }
 
-    /// The same line for a person of a پختہ کھاتہ account.
+    /// The same line for a person of the چکتا کھاتہ account.
     #[must_use]
     pub fn with_person(mut self, person_key: &str) -> Self {
         self.person_key = Some(person_key.to_owned());

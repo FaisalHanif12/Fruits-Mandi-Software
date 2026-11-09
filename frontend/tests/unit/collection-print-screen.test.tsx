@@ -35,7 +35,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');

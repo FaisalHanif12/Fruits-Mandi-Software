@@ -25,7 +25,7 @@ function OpenAtOnce() {
   const actions = useDeadAmountActions();
   useEffect(() => {
     if (actions === null) return;
-    if (devFlag('move')) actions.move({ accountId: 22, personKey: null, names: NAMES });
+    if (devFlag('move')) actions.move({ accountId: 22, names: NAMES });
     else if (devFlag('undo')) actions.undo({ markId: ARSHAD_DEAD.mark_id, names: NAMES });
   }, [actions]);
   return null;

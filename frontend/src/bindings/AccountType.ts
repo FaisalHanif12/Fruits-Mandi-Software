@@ -2,8 +2,5 @@
 
 /**
  * The four kinds of account a user can make (PRD 10.2 "قسم کھاتہ"). This is the SIDE of a party.
- * A پختہ کھاتہ گاہک or بیوپاری (plan 47, PRD FR-13.11, v1.15) is a `buyer` or a `seller` with the flag
- * `is_pukhta_party`; he is a full account of his side, so everything that works on a buyer or a
- * seller works on him.
  */
 export type AccountType = 'seller' | 'buyer' | 'money_lent' | 'other';

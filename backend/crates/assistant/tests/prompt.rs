@@ -133,8 +133,9 @@ fn p2_the_catalogue_is_named_both_ways() {
         EntryScreenName::ALL,
         "the entry.screen enum of the schema and EntryScreenName::ALL, in the same order"
     );
-    // The report ids of the `report` tool description are R1 to R38 as well.
-    assert_eq!(known.len(), 38);
+    // The report ids of the `report` tool description are R1 to R38 as well, without the retired R9
+    // (PRD v1.32, FR-13.8): 37 reports.
+    assert_eq!(known.len(), 37);
 }
 
 // ---- P3 ---------------------------------------------------------------------------------------

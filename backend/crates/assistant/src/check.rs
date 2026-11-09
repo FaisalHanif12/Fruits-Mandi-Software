@@ -405,14 +405,14 @@ pub(crate) fn word_spans(text: &str) -> Vec<(usize, usize, String)> {
         .collect()
 }
 
-/// The account codes that stand for many people: the two shared پختہ کھاتہ accounts, buyers' 0030
-/// and sellers' 0031 since migration 0007 (PRD FR-13.1). A name carrying one of them says no
-/// record, so a typed name is never put back as a reference to the shared account.
-const PUKHTA_CODES: [&str; 2] = ["0030", "0031"];
+/// The account codes that stand for many people: the چکتا کھاتہ 0030 and the old closed account 0031
+/// (PRD FR-13.1, FR-13.9). A name carrying one of them says no record, so a typed name is never
+/// put back as a reference to the shared account.
+const SHARED_CODES: [&str; 2] = ["0030", "0031"];
 
 /// Which record a name in the results is, or `None` when it does not say (see [`NameSet::put_back`]).
 ///
-/// - An account: its code (`code:0020`). The two پختہ کھاتہ codes are many people: `None`.
+/// - An account: its code (`code:0020`). The two shared codes are many people: `None`.
 /// - An item or a partner in a list of rows keyed `i2` or `s1`, or an item or packing column of a
 ///   row: the record's own names (`item:سیب|Apple`, `partner:الف|Partner A`), because an item and a
 ///   partner have one name each in the books.
@@ -436,7 +436,7 @@ fn identity_of(entry: &NamePath) -> Option<String> {
         _ => {}
     }
     if let Some(code) = entry.name.code.as_deref() {
-        return (!PUKHTA_CODES.contains(&code)).then(|| format!("code:{code}"));
+        return (!SHARED_CODES.contains(&code)).then(|| format!("code:{code}"));
     }
     match last {
         Some("item" | "packing") => Some(format!("item:{names}")),
@@ -478,7 +478,7 @@ impl NameSet {
             };
             // Which record a name is: an account by its code, an item or a partner by its row key
             // (`rows.i2.name`, `rows.s1.name`) or by the item column it stands in. A name that
-            // says none (a person built from a report cell, the code of a پختہ کھاتہ account,
+            // says none (a person built from a report cell, the code of the چکتا کھاتہ account,
             // which stands for many people told apart by phone) is left to the rewrite.
             let Some(who) = identity_of(first) else {
                 continue;

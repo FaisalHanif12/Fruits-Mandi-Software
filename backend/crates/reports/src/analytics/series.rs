@@ -19,7 +19,7 @@
 //! * A party: debits less credits of his one account.
 //! * The cash in hand: debits less credits of the cash account, without the capital the partners put
 //!   in or take out (PRD FR-17.7): one-off owner movements are not the shop's trading pace.
-//! * The buyers' dues: for each owner (a buyer, or a person of the پختہ کھاتہ account) how much the
+//! * The buyers' dues: for each owner (a buyer, or a person of the چکتا کھاتہ account) how much the
 //!   debit part of his whole balance moves by his lines of the month other than an opening, added
 //!   up. See [`dues_changes`].
 //!
@@ -467,15 +467,13 @@ fn window_months(
     Ok(months)
 }
 
-/// A buyer, or one person of the پختہ کھاتہ account: the group whose balance counts as owed when it
+/// A buyer, or one person of the چکتا کھاتہ account: the group whose balance counts as owed when it
 /// is a debit.
 type Owner = (i64, Option<String>);
 
 /// The lines of an opening balance and of the reversal of a changed one (`e` is `journal_entries`).
-/// "Make regular" is NOT one: it moves a balance from a one-time person to his new account, which
-/// is a transfer between two owners, so for the dues it is a trading line on both and the dues
-/// move exactly as R20 moves for it (PRD FR-7.86 v1.27 leaves it out of a party's and the cash's
-/// pace, where the moved-in balance is a carried-in one).
+/// (The old "make regular" move of plan 13 was a transfer between two owners and counted as trading;
+/// it was removed in plan 64.)
 const IS_OPENING: &str = "(e.posting_type = 'opening' OR (e.reverses_entry_id IS NOT NULL
         AND EXISTS (SELECT 1 FROM journal_entries c
                     WHERE c.id = e.reverses_entry_id AND c.posting_type = 'opening')))";
@@ -500,7 +498,7 @@ const IS_AFTER_HIS_MOVE: &str = "CASE WHEN l.account_id IN
           (SELECT d.account_id FROM dead_marks d WHERE d.is_active = 1)
         AND EXISTS (SELECT 1 FROM dead_marks d
           WHERE d.is_active = 1 AND d.account_id = l.account_id
-            AND d.pukhta_person_key IS l.pukhta_person_key AND e.entry_date >= d.entry_date)
+            AND d.chukta_person_key IS l.chukta_person_key AND e.entry_date >= d.entry_date)
         THEN 1 ELSE 0 END";
 
 /// The two sides (debits, credits) of every owner of the buyers' accounts, in paisa.
@@ -527,7 +525,7 @@ fn first_dues_month(
         .optional()?)
 }
 
-/// True when a line of a normal buyer account carries a person key. Only the shared پختہ کھاتہ
+/// True when a line of a normal buyer account carries a person key. Only the shared چکتا کھاتہ
 /// account holds many people (PRD FR-13.5), so the balance of a normal account is one owner's.
 /// The database does not enforce it, so the series checks it and refuses if it does not hold (one
 /// index seek for each account).
@@ -535,9 +533,9 @@ fn normal_account_has_a_person_key(conn: &Connection) -> Result<bool, ReportsErr
     let found: i64 = conn.query_row(
         "SELECT EXISTS(SELECT 1 FROM accounts a
             WHERE a.control_id = (SELECT k.id FROM account_controls k WHERE k.code = ?1)
-              AND a.is_pukhta_khata = 0
+              AND a.is_chukta_khata = 0
               AND EXISTS (SELECT 1 FROM journal_lines l
-                          WHERE l.account_id = a.id AND l.pukhta_person_key IS NOT NULL))",
+                          WHERE l.account_id = a.id AND l.chukta_person_key IS NOT NULL))",
         [BUYERS_CONTROL],
         |r| r.get(0),
     )?;
@@ -545,14 +543,14 @@ fn normal_account_has_a_person_key(conn: &Connection) -> Result<bool, ReportsErr
 }
 
 /// The two sides of every owner of the buyers' accounts over all posted lines: a normal account is
-/// one owner, a person of the shared پختہ کھاتہ account (and its lines with no person) is one
+/// one owner, a person of the shared چکتا کھاتہ account (and its lines with no person) is one
 /// each. R20 reads them in the same way (`owing()`).
 fn buyer_sides(conn: &Connection) -> Result<Sides, ReportsError> {
     let mut sides: Sides = HashMap::new();
     let mut shared: Vec<i64> = Vec::new();
     let mut statement = conn.prepare(
         "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
-         WHERE k.code = ?1 AND a.is_pukhta_khata = 1",
+         WHERE k.code = ?1 AND a.is_chukta_khata = 1",
     )?;
     for id in statement.query_map([BUYERS_CONTROL], |r| r.get::<_, i64>(0))? {
         shared.push(id?);
@@ -563,9 +561,9 @@ fn buyer_sides(conn: &Connection) -> Result<Sides, ReportsError> {
         }
     }
     let mut persons = conn.prepare(
-        "SELECT l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
+        "SELECT l.chukta_person_key, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND e.status = 'posted' GROUP BY l.pukhta_person_key",
+         WHERE l.account_id = ?1 AND e.status = 'posted' GROUP BY l.chukta_person_key",
     )?;
     for account_id in shared {
         let rows = persons
@@ -635,7 +633,7 @@ fn dues_changes(conn: &Connection, months: &[i64]) -> Result<Vec<MonthAmount>, R
     // taken off the totals below): for each owner and month, the opening lines and the other lines
     // apart, and the lines after the owner's move to the dead amount apart.
     let window_sql = format!(
-        "SELECT l.account_id, l.pukhta_person_key, substr(e.entry_date, 1, 7),
+        "SELECT l.account_id, l.chukta_person_key, substr(e.entry_date, 1, 7),
                 CASE WHEN {IS_OPENING} THEN 1 ELSE 0 END, {IS_AFTER_HIS_MOVE},
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_entries e CROSS JOIN journal_lines l ON l.entry_id = e.id {BUYER_LINES}

@@ -27,7 +27,6 @@
         "seller_account_id": 17,
         "purchase_id": 1,
         "arrival_id": null,
-        "pukhta": null,
         "item_id": 5,
         "packing_id": 1,
         "marka_id": null,
@@ -47,7 +46,7 @@
             "key": "sale:1",
             "sale_id": 1,
             "buyer_account_id": 20,
-            "pukhta": null,
+            "chukta": null,
             "qty": "15",
             "weight": null,
             "seller_rate": "600",
@@ -121,7 +120,6 @@
         ]
       },
       "arrival": null,
-      "pukhta": null,
       "item": {
         "id": 5,
         "code": "0044",
@@ -182,7 +180,7 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "pukhta": null,
+          "chukta": null,
           "qty": 15,
           "weight_grams": null,
           "seller_rate": 60000,

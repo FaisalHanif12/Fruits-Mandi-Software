@@ -7,7 +7,6 @@ import type { AttentionFirst } from '../../bindings/AttentionFirst';
 import type { AttentionKind } from '../../bindings/AttentionKind';
 import type { ReportId } from '../../bindings/ReportId';
 import { useOpenArrival } from '../gardens';
-import type { ReportPerson } from '../reports';
 
 export type Destination =
   | { kind: 'day' }
@@ -33,7 +32,7 @@ export type Destination =
   | { kind: 'receipt' }
   | { kind: 'payment' }
   | { kind: 'advance' }
-  | { kind: 'report'; id: ReportId; party?: number; partner?: number; person?: ReportPerson };
+  | { kind: 'report'; id: ReportId; party?: number; partner?: number };
 
 /** The screen behind each kind of the attention list (PRD FR-7.44). */
 export function destinationOfKind(kind: AttentionKind): Destination {
@@ -60,29 +59,9 @@ export function destinationOfKind(kind: AttentionKind): Destination {
   }
 }
 
-/**
- * The ledger of an account (R13). A one-time person inside a پختہ کھاتہ account has his own lines,
- * so his key goes with it; the names are only for the person box to show (PRD FR-13.5).
- */
-export function ledgerOf(
-  accountId: number,
-  personKey: string | null,
-  names: { name_ur: string | null; name_en: string | null },
-): Destination {
-  if (personKey === null) return { kind: 'report', id: 'R13', party: accountId };
-  return {
-    kind: 'report',
-    id: 'R13',
-    party: accountId,
-    person: {
-      accountId,
-      personKey,
-      name_ur: names.name_ur ?? '',
-      name_en: names.name_en ?? '',
-      phone: '',
-      last_date: '',
-    },
-  };
+/** The ledger of an account (R13). A چکتا buyer has none (PRD FR-13.6), so this is always an account. */
+export function ledgerOf(accountId: number): Destination {
+  return { kind: 'report', id: 'R13', party: accountId };
 }
 
 /**
@@ -93,7 +72,7 @@ export function ledgerOf(
 export function destinationOfFirst(first: AttentionFirst): Destination {
   switch (first.target) {
     case 'account':
-      return ledgerOf(first.id, first.person_key, first);
+      return ledgerOf(first.id);
     case 'partner':
       return { kind: 'report', id: 'R31', partner: first.id };
     case 'bikri':
@@ -188,7 +167,6 @@ export function useOpenDestination(): (destination: Destination) => void {
           search: {
             ...(destination.party === undefined ? {} : { party: destination.party }),
             ...(destination.partner === undefined ? {} : { partner: destination.partner }),
-            ...(destination.person === undefined ? {} : { person: destination.person }),
           },
         });
         return;

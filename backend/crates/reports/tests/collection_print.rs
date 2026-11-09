@@ -48,7 +48,7 @@ fn buyer(
     }
 }
 
-/// After Events 1 to 5: اکرم 2,880 and ارشد 18,684 (شاہد, a one-time buyer, owes nothing and is not
+/// After Events 1 to 5: اکرم 2,880 and ارشد 18,684 (شاہد, a چکتا buyer, owes nothing and is not
 /// on the list). No collector and no city.
 fn golden_list() -> CollectionList {
     let buyers = vec![

@@ -247,9 +247,39 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     }, SLOW_MS);
   });
 
-  it('Enter does not leave a quantity that is over what the lot has left, until it is fixed (B2)', async () => {
+  /**
+   * A quantity over the lot (D8 Bug 1, B2): the answers for a draft whose first line is over 200 wait until
+   * the test lets them go, as a slow backend does, so the cursor has already moved on when the refusal lands.
+   */
+  function slowOver() {
+    const held = { open: false, waiting: [] as (() => void)[] };
+    const answer = (draft: Parameters<typeof umarAnswer>[0]) => {
+      const over = Number(draft.lots[0]?.sales[0]?.qty ?? '0') > 200;
+      const reply = umarAnswer(draft);
+      return over && !held.open
+        ? new Promise<typeof reply>((resolve) => {
+            held.waiting.push(() => {
+              resolve(reply);
+            });
+          })
+        : reply;
+    };
+    const release = () => {
+      held.open = true;
+      held.waiting.splice(0).forEach((go) => {
+        go();
+      });
+    };
+    const hold = () => {
+      held.open = false;
+    };
+    return { answer, release, hold };
+  }
+
+  /** The lot of Umar, line 1 with its buyer, the cursor on its quantity. */
+  async function onFirstQty(answer: Parameters<typeof openUmarsBook>[1]) {
     seedUmarsLot();
-    const view = await openUmarsBook(language);
+    const view = await openUmarsBook(language, answer);
     const sales = salesGrid(language);
     await waitFor(() => {
       expect(cellOf(sales, 0, 'buyer')).toBeInTheDocument();
@@ -262,22 +292,116 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('0:qty');
     }, SLOW_MS);
-    // 250 on a lot of 200: the value is taken, and the answer then refuses the line.
-    await view.user.keyboard('250{Enter}');
-    const refusal = say('err-qty-exceeds-lot', { available: '200' });
+    return { ...view, sales };
+  }
+
+  const refusal = () => say('err-qty-exceeds-lot', { available: '200' });
+  const qtyInput = () => {
+    const field = document.activeElement;
+    if (!(field instanceof HTMLInputElement)) throw new Error('the cursor is not in a field');
+    return field;
+  };
+
+  it('a quantity over the lot sends the cursor back to it, selected, when the refusal lands, and keeps it there until fixed (B2)', async () => {
+    const { answer, release } = slowOver();
+    const { user, sales } = await onFirstQty(answer);
+    // 250 on a lot of 200: the value is taken and Enter goes on to the rate, as the refusal is not here yet.
+    await user.keyboard('250{Enter}');
     await waitFor(() => {
-      expect(notesWith(refusal)).toHaveLength(1);
-      expect(cellOf(sales, 0, 'qty')).toHaveClass('cell-error');
+      expect(focusedIn(sales)).toBe('0:rate');
     }, SLOW_MS);
-    // Back on the quantity, Enter stays: the cursor does not move on while the quantity is wrong.
-    await view.user.click(cellOf(sales, 0, 'qty'));
+    // The refusal lands. Whatever cell the cursor is on, it goes back to the quantity, typing, 250 selected.
+    release();
+    await waitFor(() => {
+      expect(notesWith(refusal())).toHaveLength(1);
+      expect(focusedIn(sales)).toBe('0:qty');
+      expect(qtyInput().value).toBe('250');
+    }, SLOW_MS);
+    expect([qtyInput().selectionStart, qtyInput().selectionEnd]).toEqual([0, 3]);
+    expect(cellOf(sales, 0, 'qty')).toHaveClass('cell-error');
+    // No key takes the cursor off it while the refusal stands: the arrows, Tab and Enter all stay.
+    await user.keyboard('{ArrowDown}{ArrowUp}{ArrowRight}{ArrowLeft}{Tab}{Enter}');
+    expect(focusedIn(sales)).toBe('0:qty');
+    expect(textOf(sales, 0, 'qty')).toBe('250');
+    // Another cell of the line takes no input: a click gives the cursor back to the quantity.
+    await user.click(cellOf(sales, 0, 'rate'));
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('0:qty');
     }, SLOW_MS);
-    await view.user.keyboard('{Enter}');
+    expect(cellOf(sales, 0, 'rate').querySelector('input')).toBeNull();
+    // A fixed quantity goes on to the rate as usual, and the hold is gone.
+    await user.keyboard('20{Enter}');
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:rate');
+    }, SLOW_MS);
+    await waitFor(() => {
+      expect(notesWith(refusal())).toHaveLength(0);
+      expect(cellOf(sales, 0, 'qty')).not.toHaveClass('cell-error');
+    }, SLOW_MS);
+    // The hold is gone: the arrow that goes back (← in English, → in Urdu) leaves the rate for the quantity.
+    await user.keyboard(language === 'ur' ? '{ArrowRight}' : '{ArrowLeft}');
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:qty');
+    }, SLOW_MS);
+  });
+
+  it('typing in the rate when the refusal lands: the cursor still goes back, and what was typed is kept (B2)', async () => {
+    const { answer, release } = slowOver();
+    const { user, sales } = await onFirstQty(answer);
+    await user.keyboard('250{Enter}');
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:rate');
+    }, SLOW_MS);
+    await user.keyboard('1000');
+    expect(document.activeElement?.tagName).toBe('INPUT');
+    release();
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:qty');
+      expect(qtyInput().value).toBe('250');
+    }, SLOW_MS);
+    expect(textOf(sales, 0, 'rate')).toBe('1,000');
+    // Fixed: 20 at 1,000 has its figures.
+    await user.keyboard('20{Enter}');
+    await waitFor(() => {
+      expect(textOf(sales, 0, 'buyerTotal')).toBe('21,360');
+    }, SLOW_MS);
+  });
+
+  it('a second wrong quantity sends the cursor back again; the same wrong one only once (B2)', async () => {
+    const { answer, release } = slowOver();
+    const { user, sales } = await onFirstQty(answer);
+    await user.keyboard('250{Enter}');
+    release();
+    await waitFor(() => {
+      expect(focusedIn(sales)).toBe('0:qty');
+      expect(qtyInput().value).toBe('250');
+    }, SLOW_MS);
+    // 260 is also over: Enter goes on (the text changed), the answer lands, and the cursor comes back.
+    await user.keyboard('260{Enter}');
+    await waitFor(() => {
+      expect(qtyInput().value).toBe('260');
+      expect(focusedIn(sales)).toBe('0:qty');
+    }, SLOW_MS);
+    expect(notesWith(refusal())).toHaveLength(1);
+    // Esc cancels the typing and the cursor stays on the cell, as always (PRD FR-7.18).
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(document.querySelector('.ag-cell-inline-editing')).toBeNull();
+    }, SLOW_MS);
     expect(focusedIn(sales)).toBe('0:qty');
-    // A fixed quantity moves on as usual.
-    await view.user.keyboard('20{Enter}');
+  });
+
+  it('Enter on the quantity that is over stays, and a fixed quantity goes on (B2)', async () => {
+    const { user, sales } = await onFirstQty(umarAnswer);
+    await user.keyboard('250{Enter}');
+    const sentBack = say('err-qty-exceeds-lot', { available: '200' });
+    await waitFor(() => {
+      expect(notesWith(sentBack)).toHaveLength(1);
+      expect(focusedIn(sales)).toBe('0:qty');
+    }, SLOW_MS);
+    await user.keyboard('{Enter}');
+    expect(focusedIn(sales)).toBe('0:qty');
+    await user.keyboard('20{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('0:rate');
     }, SLOW_MS);

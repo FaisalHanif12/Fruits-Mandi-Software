@@ -557,20 +557,19 @@ fn a_print_has_english_digits_in_both_languages_and_an_old_urdu_digits_setting_c
     assert!(!has_urdu_digit(&slips(Language::En)));
 }
 
-// ---- Phones in the dash form, and a one-time person's phone in his party cell -----------------
+// ---- Phones in the dash form, and a چکتا buyer's phone in his party cell --------------------
 
-/// Two one-time people with the same name and different phones, and a third, all on credit.
+/// Two چکتا buyers with the same name and different phones, and a third, all paid in full.
 fn two_shahids() -> World {
-    use mandi_services::core::bikri::{PaymentType, PukhtaInput};
+    use mandi_services::core::bikri::ChuktaInput;
     let w = worked_day();
     let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "200");
-        l.pukhta = Some(PukhtaInput {
+        let mut l = support::sale(key, w.chukta_khata, qty, "200");
+        l.chukta = Some(ChuktaInput {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.into(),
         });
-        l.payment_type = Some(PaymentType::Credit);
         l
     };
     let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "17");
@@ -581,16 +580,6 @@ fn two_shahids() -> World {
     ];
     save(&w, &support::draft(vec![lot]));
     w
-}
-
-fn texts(page: &ReportPage, column: usize) -> Vec<String> {
-    page.rows
-        .iter()
-        .filter_map(|r| match r.cells.get(column) {
-            Some(Cell::Text { text }) => Some(text.clone()),
-            _ => None,
-        })
-        .collect()
 }
 
 fn person_phones(page: &ReportPage, name: &str) -> Vec<Option<String>> {
@@ -608,58 +597,31 @@ fn person_phones(page: &ReportPage, name: &str) -> Vec<Option<String>> {
 }
 
 #[test]
-fn a_one_time_person_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_the_phone_columns() {
+fn a_chukta_buyer_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_the_day_sheet() {
     let w = two_shahids();
     let wanted = vec![
         Some("0300-0000000".to_owned()),
         Some("0301-2222222".to_owned()),
     ];
-    // R20 (dues), R35 (the day sheet) and R9 (the register of one-time people): two people with
-    // the same name are two rows told apart by the phone, whatever way the phone was typed.
-    let r20 = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
-    assert_eq!(person_phones(&r20, "Shahid"), wanted);
-    let table = report(
-        &w,
-        ReportId::R35,
-        ReportFilters {
-            as_of: "10-10-2026".into(),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
+    // R35 (the day sheet): two people with the same name are two rows told apart by the phone,
+    // whatever way the phone was typed.
+    let filters = ReportFilters {
+        as_of: "10-10-2026".into(),
+        ..ReportFilters::default()
+    };
+    let table = report(&w, ReportId::R35, filters.clone(), 0, 0);
     assert_eq!(person_phones(&table, "Shahid"), wanted);
-    // The phone column of R20 is the dash form too (columns: group, buyer, phone, ...: find it).
-    let phone_column = r20
-        .columns
-        .iter()
-        .position(|c| c.key == "phone")
-        .expect("R20 has a phone column");
-    let mut phones = texts(&r20, phone_column);
-    phones.sort();
-    assert_eq!(
-        phones,
-        ["0300-0000000", "0300-1111111", "0301-2222222"],
-        "{phones:?}"
-    );
-    let r9 = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    let r9_column = r9.columns.iter().position(|c| c.key == "phone").unwrap();
-    let mut r9_phones = texts(&r9, r9_column);
-    r9_phones.sort();
-    r9_phones.dedup();
-    assert_eq!(r9_phones, ["0300-0000000", "0300-1111111", "0301-2222222"]);
-    // A regular account has no phone in his party cell (only a one-time person has).
-    assert!(person_phones(&r20, "Rahim").is_empty());
-
-    // The print: the party of the row carries the phone, and the header fact of a person's filter
-    // names him with it. Digits are 0-9 in an Urdu print too.
+    // They paid in full, so nobody owes: R20 has no row for any of them (PRD FR-13.6).
+    let r20 = report(&w, ReportId::R20, ReportFilters::default(), 0, 0);
+    assert_eq!(r20.total_count, 0);
+    // The print: the party of the row carries the phone. Digits are 0-9 in an Urdu print too.
     let data = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
             group_by_month: false,
             sort: None,
-            id: ReportId::R20,
-            filters: ReportFilters::default(),
+            id: ReportId::R35,
+            filters,
             language: Language::Ur,
             paper: None,
         },
@@ -668,39 +630,4 @@ fn a_one_time_person_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_t
     let json = serde_json::to_string(&data).unwrap();
     assert!(json.contains("0300-0000000") && json.contains("0301-2222222"));
     assert!(!has_urdu_digit(&json));
-    let person = r20
-        .rows
-        .iter()
-        .flat_map(|r| r.cells.iter())
-        .find_map(|c| match c {
-            Cell::Party { party } if party.phone.as_deref() == Some("0300-0000000") => {
-                Some(party.clone())
-            }
-            _ => None,
-        })
-        .unwrap();
-    let ledger = print_data(
-        w.env.ctx.db(),
-        &ReportPrintInput {
-            group_by_month: false,
-            sort: None,
-            id: ReportId::R13,
-            filters: ReportFilters {
-                party: Some(PartyFilter {
-                    account_id: person.account_id,
-                    person_key: person.person_key.clone(),
-                }),
-                ..ReportFilters::default()
-            },
-            language: Language::En,
-            paper: None,
-        },
-    )
-    .unwrap();
-    let fact = ledger
-        .filters
-        .iter()
-        .find(|f| f.label_id == "report-filter-party")
-        .unwrap();
-    assert!(fact.value.ends_with("(0300-0000000)"), "{}", fact.value);
 }

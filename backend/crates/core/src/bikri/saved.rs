@@ -1,5 +1,4 @@
-//! A saved بکری: what the save sends back, what the reads send back, and the پختہ کھاتہ lists
-//! (plan 13 contract). Money is paisa. Names are `RecordRef` with both scripts, so the screen
+//! A saved بکری: what the save sends back and what the reads send back (plan 13 contract). Money is paisa. Names are `RecordRef` with both scripts, so the screen
 //! shows them through `displayName` (Code Standards F38).
 
 use serde::{Deserialize, Serialize};
@@ -78,9 +77,9 @@ pub struct BikriGetInput {
     pub id: i64,
 }
 
-/// The one-time person kept on a line or a lot of the پختہ کھاتہ accounts (PRD FR-13.2).
+/// The چکتا buyer kept on a line of the چکتا کھاتہ account (PRD FR-13.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-pub struct SavedPukhta {
+pub struct SavedChukta {
     /// Urdu name.
     pub name_ur: String,
     /// English name.
@@ -178,10 +177,10 @@ pub struct SavedSale {
     pub journal_entry_id: i64,
     /// The day of that posting, `YYYY-MM-DD`.
     pub entry_date: String,
-    /// The buyer account (own account, نقدی منڈی or پختہ کھاتہ).
+    /// The buyer account (own account, نقدی منڈی or چکتا کھاتہ).
     pub buyer: RecordRef,
-    /// The one-time buyer, for the پختہ کھاتہ account.
-    pub pukhta: Option<SavedPukhta>,
+    /// The چکتا buyer, for the چکتا کھاتہ account.
+    pub chukta: Option<SavedChukta>,
     /// Quantity in نگ.
     #[ts(type = "number")]
     pub qty: i64,
@@ -489,8 +488,6 @@ pub struct SavedLot {
     /// The garden arrival a garden lot took its goods from (PRD FR-12.40). `null` for any other lot.
     #[serde(default)]
     pub arrival: Option<SavedArrivalRef>,
-    /// The one-time seller, for the پختہ کھاتہ account.
-    pub pukhta: Option<SavedPukhta>,
     /// The item.
     pub item: RecordRef,
     /// The packing.
@@ -759,11 +756,8 @@ pub struct BikriListRow {
     pub created_at: String,
     /// The truck number.
     pub truck_no: Option<String>,
-    /// The sellers of its lots, each once, in lot order. A one-time seller is the پختہ کھاتہ
-    /// account; his name is in `pukhta_sellers`.
+    /// The sellers of its lots, each once, in lot order.
     pub sellers: Vec<RecordRef>,
-    /// The names of one-time sellers, in lot order.
-    pub pukhta_sellers: Vec<SavedPukhta>,
     /// The items of its lots, each once.
     pub items: Vec<RecordRef>,
     /// نگ received over all its lots.
@@ -813,6 +807,15 @@ pub struct BikriFindInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub item_id: Option<i64>,
+    /// A buyer (an account) on one of its live sale lines (PRD FR-12.13, plan 67, decision E1).
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub buyer_account_id: Option<i64>,
+    /// A چکتا buyer (a walk-in, who has no account) on one of its live sale lines, found by any part
+    /// of his Urdu or English name, spelling variants of Urdu letters ignored (PRD FR-12.13). Not
+    /// the name of an account: an account is found with `buyer_account_id`.
+    #[serde(default)]
+    pub buyer_text: Option<String>,
 }
 
 /// Where `bikri_navigate` goes (PRD FR-12.13).
@@ -839,183 +842,6 @@ pub struct BikriNavigateInput {
     pub current_id: Option<i64>,
     /// Where to go.
     pub to: NavigateTo,
-}
-
-/// Which side of the پختہ کھاتہ accounts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(rename_all = "snake_case")]
-pub enum PukhtaSide {
-    /// A one-time seller (the پختہ کھاتہ بیوپاری account).
-    Seller,
-    /// A one-time buyer (the پختہ کھاتہ خریدار account).
-    Buyer,
-}
-
-/// Input of `search_pukhta_people` (PRD FR-7.29).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct PukhtaPeopleInput {
-    /// What was typed, raw. Matches either name or the phone. Empty lists the newest people.
-    pub text: String,
-    /// Which account the field belongs to.
-    pub side: PukhtaSide,
-    /// True only on the receipt screen: a one-time person in the dead amount is listed too (marked
-    /// `is_dead`), because a recovery from him is still allowed (PRD FR-10.10). Missing or false
-    /// leaves him out, as every other field does.
-    #[serde(default)]
-    #[ts(optional)]
-    pub include_dead: Option<bool>,
-}
-
-/// A one-time person already recorded, for the one merged list of PRD FR-7.29.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct PukhtaPerson {
-    /// Urdu name, as last typed.
-    pub name_ur: String,
-    /// English name, as last typed.
-    pub name_en: String,
-    /// Phone as 11 digits. Empty if none.
-    pub phone: String,
-    /// The day of his last line, `YYYY-MM-DD`.
-    pub last_date: String,
-    /// The key that ties his lines together (PRD FR-13.5).
-    pub person_key: String,
-    /// True when he is in the dead amount (PRD FR-10.10). He is listed only when the input asked
-    /// for dead people (`include_dead`).
-    pub is_dead: bool,
-}
-
-/// Paid or still due (PRD FR-13.6).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(rename_all = "snake_case")]
-pub enum PaidState {
-    /// Nothing is open.
-    Paid,
-    /// Something is open.
-    Due,
-}
-
-/// Input of `pukhta_register` (PRD FR-13.6, R9). Dates are `DD-MM-YYYY` or a shortcut; empty
-/// means no limit.
-#[derive(Debug, Clone, Default, Deserialize, TS)]
-pub struct PukhtaRegisterInput {
-    /// First day.
-    #[serde(default)]
-    pub from: String,
-    /// Last day.
-    #[serde(default)]
-    pub to: String,
-    /// Only one side.
-    #[serde(default)]
-    pub side: Option<PukhtaSide>,
-    /// Part of either name.
-    #[serde(default)]
-    pub name: Option<String>,
-    /// Part of the phone.
-    #[serde(default)]
-    pub phone: Option<String>,
-    /// Only paid or only due lines.
-    #[serde(default)]
-    pub state: Option<PaidState>,
-    /// How many rows to skip. 0 for the first page (PRD FR-19.11).
-    #[serde(default)]
-    pub offset: u32,
-    /// How many rows to return. 0 gives a page of 100 (Code Standards B31).
-    #[serde(default)]
-    pub limit: u32,
-    /// True to list the lines of cancelled بکری too. False (the default) leaves them out of the
-    /// rows and the count (plan 38 R5). They were never in the totals.
-    #[serde(default)]
-    pub show_finished: bool,
-    /// Only lines whose person (name or phone), item (code or name) or بکری number holds this
-    /// text.
-    #[serde(default)]
-    pub search: Option<String>,
-    /// The column to sort the whole filter by: `entry_date`, `bikri_number`, `side`, `name_ur`,
-    /// `name_en`, `phone`, `item`, `qty`, `amount`, `commission`, `paid` or `open`. Null is by day
-    /// and number (plan 38 R4).
-    #[serde(default)]
-    pub sort: Option<SortInput>,
-    /// True to give the subtotal of each month in `months`. Used only in date order.
-    #[serde(default)]
-    pub group_by_month: bool,
-}
-
-/// One page of the پختہ کھاتہ register with the totals over the whole filter (PRD FR-19.11).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct PukhtaRegister {
-    /// This page, by day and number.
-    pub rows: Vec<PukhtaRegisterRow>,
-    /// How many lines match the filter, cancelled ones too.
-    #[ts(type = "number")]
-    pub total_count: i64,
-    /// The sums over every matching line that is not cancelled, never over the page.
-    pub totals: PukhtaRegisterTotals,
-    /// The count and subtotals of each month of the whole filter, in the order of the list, when
-    /// asked with `group_by_month` and the list is in date order. Figures: `qty`, `amount`,
-    /// `commission` and `open`, only when one side is chosen (the same rule as `totals`).
-    pub months: Vec<MonthSubtotal>,
-}
-
-/// The totals of the register over the whole filter. They are given only when one side is chosen:
-/// the buyers' lines (what they owe the firm) and the sellers' lines (what the firm owes them)
-/// are different things, so a sum over both means nothing and every total is null (the same rule
-/// as the voucher list, which has no total for all types together).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct PukhtaRegisterTotals {
-    /// نگ, or null when no side is chosen.
-    #[ts(type = "number | null")]
-    pub qty: Option<i64>,
-    /// Σ amount, or null when no side is chosen.
-    #[ts(type = "Paisa | null")]
-    pub amount: Option<Paisa>,
-    /// Σ commission, or null when no side is chosen.
-    #[ts(type = "Paisa | null")]
-    pub commission: Option<Paisa>,
-    /// Σ still open (due), or null when no side is chosen.
-    #[ts(type = "Paisa | null")]
-    pub open: Option<Paisa>,
-}
-
-/// One line of the پختہ کھاتہ register (PRD FR-13.6).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct PukhtaRegisterRow {
-    /// The day of the posting, `YYYY-MM-DD`.
-    pub entry_date: String,
-    /// The بکری.
-    #[ts(type = "number")]
-    pub bikri_id: i64,
-    /// Its number.
-    #[ts(type = "number")]
-    pub bikri_number: i64,
-    /// Seller or buyer.
-    pub side: PukhtaSide,
-    /// Urdu name.
-    pub name_ur: String,
-    /// English name.
-    pub name_en: String,
-    /// Phone as 11 digits. Empty if none.
-    pub phone: String,
-    /// The person key.
-    pub person_key: String,
-    /// The item.
-    pub item: RecordRef,
-    /// نگ.
-    #[ts(type = "number")]
-    pub qty: i64,
-    /// A buyer line: what he pays (value, commission and لاگا). A seller lot: خام بکری.
-    #[ts(type = "Paisa")]
-    pub amount: Paisa,
-    /// A buyer line: his commission. A seller lot: the seller commission.
-    #[ts(type = "Paisa")]
-    pub commission: Paisa,
-    /// True when nothing is open on this line.
-    pub paid: bool,
-    /// What is still open on this line: the part of the bill not settled (buyer), or the part of
-    /// his credit not yet paid out (seller). 0 when paid.
-    #[ts(type = "Paisa")]
-    pub open: Paisa,
-    /// True if the بکری was cancelled. A cancelled line is neither paid nor due.
-    pub cancelled: bool,
 }
 
 /// How a بکری was found by the global search (PRD FR-5.4).

@@ -18,7 +18,6 @@ import {
   PRINT_R20_UR,
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
-  PRINT_R9_DUE_EN,
 } from '../helpers/reports-real';
 
 afterEach(() => {
@@ -236,13 +235,6 @@ describe('the reports of round 4 in print (R7, R9, R20, R28)', () => {
       `${message('en', 'report-month-10')} 2026`,
     );
     expect(isolated(root, '2026')).toBe(true);
-  });
-
-  it('R9 for the due lines only: the filter is named in the header', () => {
-    const { root } = show(PRINT_R9_DUE_EN);
-    expect(textOf(root.querySelector('.print-facts'))).toContain(
-      message('en', 'report-filter-due'),
-    );
   });
 
   it('names the heading of the buyers with no city, and the sales with no اڈا, in words', () => {

@@ -109,13 +109,15 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
     ctx.db.read(|conn| {
         let row = account_repo::get(conn, account_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "account_id"))?;
+        // چکتا کھاتہ has no ledger (PRD FR-13.6): the card of the account is a چکتا card with no
+        // balance, no credit and no warning. The card of one چکتا buyer is [`chukta_card`].
+        if row.is_chukta_khata {
+            return Ok(chukta_card_of(&row, None));
+        }
         let balance = ledger::balance_in(conn, account_id, None, None)?;
         let last_entry_date = ledger_repo::last_entry_date(conn, account_id)?;
-        // The پختہ کھاتہ accounts hold many people, each with his own balance (PRD FR-13.5): the
-        // card shows the account's balance, but no credit or advance figure that would net one
-        // person against another. A per-person card comes with the person picker.
-        let is_buyer = row.account_type == AccountType::Buyer && !row.is_pukhta_khata;
-        let is_seller = row.account_type == AccountType::Seller && !row.is_pukhta_khata;
+        let is_buyer = row.account_type == AccountType::Buyer;
+        let is_seller = row.account_type == AccountType::Seller;
         let credit_used = is_buyer.then(|| owed(balance));
         let advance_open = if is_seller {
             Some(open_advance(conn, account_id)?)
@@ -132,7 +134,7 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
             id: row.id,
             code: row.code.clone(),
             account_type: row.account_type,
-            is_pukhta_party: row.is_pukhta_party,
+            is_chukta: false,
             name_ur: row.name_ur.clone(),
             name_en: row.name_en.clone(),
             tag: row.tag.clone(),
@@ -158,6 +160,55 @@ pub fn party_card(ctx: &Context, account_id: i64) -> Result<PartyCard, ServiceEr
     })
 }
 
+/// The card of one چکتا buyer (PRD FR-7.38, v1.32): his name and phone, no balance, no credit, no
+/// warning. The screen adds the words "چکتا: پورا نقد". Only reads.
+///
+/// # Errors
+/// `ERR_NOT_FOUND` on `chukta_id`; `ServiceError::Db`.
+pub fn chukta_card(ctx: &Context, chukta_id: i64) -> Result<PartyCard, ServiceError> {
+    ctx.db.read(|conn| {
+        let buyer = mandi_db::chukta::get(conn, chukta_id)?
+            .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "chukta_id"))?;
+        let account_id =
+            account_repo::id_by_code(conn, mandi_domain::core::codes::CHUKTA_KHATA_CODE)?
+                .ok_or_else(|| {
+                    ServiceError::Data("the account چکتا کھاتہ is missing".to_owned())
+                })?;
+        let row = account_repo::get(conn, account_id)?
+            .ok_or_else(|| ServiceError::Data("the account چکتا کھاتہ is missing".to_owned()))?;
+        Ok(chukta_card_of(&row, Some(&buyer)))
+    })
+}
+
+/// The card of چکتا کھاتہ: the account's own names, or the names of one buyer of the list.
+fn chukta_card_of(
+    row: &AccountRow,
+    buyer: Option<&mandi_domain::core::chukta::ChuktaBuyer>,
+) -> PartyCard {
+    PartyCard {
+        id: row.id,
+        code: row.code.clone(),
+        account_type: AccountType::Buyer,
+        is_chukta: true,
+        name_ur: buyer.map_or_else(|| row.name_ur.clone(), |b| b.name_ur.clone()),
+        name_en: buyer.map_or_else(|| row.name_en.clone(), |b| b.name_en.clone()),
+        tag: None,
+        father_or_firm_ur: String::new(),
+        father_or_firm_en: String::new(),
+        city_ur: String::new(),
+        city_en: String::new(),
+        phone: buyer.and_then(|b| b.phone.clone()).unwrap_or_default(),
+        is_active: row.is_active,
+        dead: None,
+        balance: Balance::ZERO,
+        last_entry_date: buyer.and_then(|b| b.last_date.clone()),
+        credit_limit: None,
+        credit_used: None,
+        advance_open: None,
+        warnings: Vec::new(),
+    }
+}
+
 /// A seller's open advances and his last پیشگی voucher, for the card in the پیشگی screen (PRD
 /// FR-7.60). Each open advance is a posted advance line (a پیشگی voucher or an opening debit
 /// marked as an advance) with what has been adjusted against it; only lines with something left
@@ -172,7 +223,7 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
     ctx.db.read(|conn| {
         let facts = account_repo::facts(conn, seller_id)?
             .ok_or_else(|| ServiceError::reject_field(ErrorCode::ErrNotFound, "seller_id"))?;
-        if facts.control_code != SELLER_CONTROL || facts.is_pukhta_khata {
+        if facts.control_code != SELLER_CONTROL || facts.is_chukta_khata {
             return Err(ServiceError::reject_field(
                 ErrorCode::ErrNotASeller,
                 "seller_id",
@@ -271,7 +322,7 @@ pub fn truck_memory(ctx: &Context, input: &TruckMemoryInput) -> Result<TruckMemo
 }
 
 /// What the app remembers about a seller: the item and packing of his last lot, and his default
-/// مارکہ, else the مارکہ of his last lot (PRD FR-7.51). The one-time seller account has no
+/// مارکہ, else the مارکہ of his last lot (PRD FR-7.51). The old one-time seller account has no
 /// memory (it holds many people). Only reads.
 ///
 /// # Errors
@@ -287,7 +338,7 @@ pub fn seller_memory(ctx: &Context, seller_account_id: i64) -> Result<SellerMemo
                 "seller_account_id",
             ));
         }
-        if facts.is_pukhta_khata {
+        if facts.is_chukta_khata {
             return Ok(SellerMemory {
                 item_id: None,
                 packing_id: None,

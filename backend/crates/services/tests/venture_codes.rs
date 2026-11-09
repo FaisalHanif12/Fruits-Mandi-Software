@@ -206,6 +206,7 @@ fn the_first_garden_is_0080_and_its_account_has_the_same_code() {
             text: String::new(),
             limit: 50,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();
@@ -225,6 +226,7 @@ fn the_first_garden_is_0080_and_its_account_has_the_same_code() {
             text: String::new(),
             limit: 50,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();

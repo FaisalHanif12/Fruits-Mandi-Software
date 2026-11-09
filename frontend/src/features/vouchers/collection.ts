@@ -62,7 +62,6 @@ export function receiptsOf(
     receipts: sent.map((row) => ({
       date,
       account_id: row.accountId,
-      person_key: null,
       amount: typed.get(row.accountId) ?? '',
       collector_staff_id: row.group.collector?.id ?? null,
       narration: '',

@@ -7,11 +7,11 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
+import * as accountApi from '../../src/shared/accounts/api';
 import * as draftsApi from '../../src/shared/drafts/api';
 import * as invoke from '../../src/shared/api/invoke';
 import { searchGlobal } from '../../src/shared/accounts/api';
-import { listRow, registerRow, savedEvent1, SHAHID } from '../helpers/bikri-saved';
+import { listRow, savedEvent1, SHAHID } from '../helpers/bikri-saved';
 import {
   DRAFT_ROW,
   GET_EVENT1,
@@ -19,9 +19,15 @@ import {
   GLOBAL_TRUCK,
   LIST_DAY,
   LIST_DAY_REQUEST,
-  PEOPLE_SHAHID,
-  REGISTER_DAY,
-  REGISTER_DAY_REQUEST,
+  CARD_CHUKTA_BUYER,
+  CARD_CHUKTA_BUYER_REQUEST,
+  CHUKTA_ADD_NASIR,
+  CHUKTA_ADD_NASIR_REQUEST,
+  CHUKTA_ADD_REFUSED,
+  CHUKTA_SEARCH_SHAHID,
+  CHUKTA_SEARCH_SHAHID_REQUEST,
+  SEARCH_CHUKTA_BUYER,
+  SEARCH_CHUKTA_BUYER_REQUEST,
   SAVED_EVENT1,
   SAVED_EVENT2,
   SAVE_EVENT1_REQUEST,
@@ -32,7 +38,6 @@ import draftsGetRequest from '../fixtures/drafts_get_bikri_request.json';
 import draftsSaveRequest from '../fixtures/drafts_save_bikri_request.json';
 import draftsSaved from '../fixtures/drafts_save_bikri.json';
 import globalTruckRequest from '../fixtures/search_global_bikri_truck_request.json';
-import peopleRequest from '../fixtures/search_pukhta_people_shahid_request.json';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -57,13 +62,13 @@ describe('each wrapper sends the command and the input of the backend’s file',
     expect(call).toHaveBeenCalledWith('bikri_save', { input: SAVE_EVENT1_REQUEST });
     expect(SAVE_EVENT1_REQUEST.confirm_cash_below_zero).toBe(false);
     expect(saved).toEqual(SAVED_EVENT1);
-    // Event 2 carries the one-time person on the line.
+    // Event 2 carries the چکتا buyer on the line, and no payment type (plan 64).
     answers(SAVED_EVENT2);
     await bikriApi.bikriSave(SAVE_EVENT2_REQUEST.draft, true);
     expect(call).toHaveBeenLastCalledWith('bikri_save', {
       input: { draft: SAVE_EVENT2_REQUEST.draft, confirm_cash_below_zero: true },
     });
-    expect(SAVE_EVENT2_REQUEST.draft.lots[0]?.sales[0]?.pukhta).toEqual({
+    expect(SAVE_EVENT2_REQUEST.draft.lots[0]?.sales[0]?.chukta).toEqual({
       name_ur: 'شاہد',
       name_en: 'Shahid',
       phone: '0300-0000000',
@@ -97,27 +102,37 @@ describe('each wrapper sends the command and the input of the backend’s file',
     expect(call.mock.calls[0]?.[1]).toMatchObject({ input: LIST_DAY_REQUEST });
   });
 
-  it('search_pukhta_people and pukhta_register', async () => {
-    answers(PEOPLE_SHAHID);
-    await pukhtaApi.searchPukhtaPeople(peopleRequest.text, peopleRequest.side as 'buyer');
-    expect(call).toHaveBeenCalledWith('search_pukhta_people', { input: peopleRequest });
-    answers(REGISTER_DAY);
-    await pukhtaApi.pukhtaRegister({
-      from: '10-10-2026',
-      to: '10-10-2026',
-      side: null,
-      name: null,
-      phone: null,
-      state: null,
-      offset: 0,
-      limit: 0,
-      show_finished: false,
-      search: null,
-      sort: null,
-      group_by_month: false,
+  it('chukta_search, chukta_add and the buyer search with a چکتا hit', async () => {
+    answers(CHUKTA_SEARCH_SHAHID);
+    await accountApi.chuktaSearch(String(CHUKTA_SEARCH_SHAHID_REQUEST['text']));
+    expect(call).toHaveBeenLastCalledWith('chukta_search', { input: CHUKTA_SEARCH_SHAHID_REQUEST });
+    answers(CHUKTA_ADD_NASIR);
+    await accountApi.chuktaAdd({
+      name_ur: String(CHUKTA_ADD_NASIR_REQUEST['name_ur']),
+      name_en: String(CHUKTA_ADD_NASIR_REQUEST['name_en']),
+      phone: String(CHUKTA_ADD_NASIR_REQUEST['phone']),
     });
-    expect(call.mock.calls.at(-1)?.[0]).toBe('pukhta_register');
-    expect(call.mock.calls.at(-1)?.[1]).toMatchObject({ input: REGISTER_DAY_REQUEST });
+    expect(call).toHaveBeenLastCalledWith('chukta_add', { input: CHUKTA_ADD_NASIR_REQUEST });
+    // The picker's search goes to search_accounts, and the card of a چکتا buyer asks with his id.
+    answers(SEARCH_CHUKTA_BUYER);
+    await accountApi.searchAccounts({
+      scope: 'buyer',
+      controlId: null,
+      text: String(SEARCH_CHUKTA_BUYER_REQUEST['text']),
+      limit: 10,
+    });
+    const sent = call.mock.calls.find(([name]) => name === 'search_accounts');
+    expect(sent?.[1]).toMatchObject({ input: { scope: 'buyer' } });
+    // His hit carries the id of the account چکتا کھاتہ, whose balance is not his: none is asked.
+    expect(call.mock.calls.some(([name]) => name === 'accounts_balances')).toBe(false);
+    answers(CARD_CHUKTA_BUYER);
+    await accountApi.assistPartyCard(
+      Number(CARD_CHUKTA_BUYER_REQUEST['account_id']),
+      Number(CARD_CHUKTA_BUYER_REQUEST['chukta_id']),
+    );
+    expect(call).toHaveBeenLastCalledWith('assist_party_card', {
+      input: CARD_CHUKTA_BUYER_REQUEST,
+    });
   });
 
   it('drafts_save, drafts_get: the screen key is "bikri" and the payload is sent as text', async () => {
@@ -202,9 +217,9 @@ describe('the canned data of the component tests has the real shape', () => {
     expect(firstDifference(shapeOf(GET_EVENT1), shapeOf(savedEvent1()))).toBeNull();
   });
 
-  it('a saved بکری (Event 2) has the same shape as Event 1, with the one-time buyer on the line', () => {
+  it('a saved بکری (Event 2) has the same shape as Event 1, with the چکتا buyer on the line', () => {
     expect(firstDifference(shapeOf(GET_EVENT2), shapeOf(GET_EVENT1))).toBeNull();
-    expect(GET_EVENT2.lots[0]?.sales[0]?.pukhta).toMatchObject({ name_en: 'Shahid' });
+    expect(GET_EVENT2.lots[0]?.sales[0]?.chukta).toMatchObject({ name_en: 'Shahid' });
   });
 
   it('a list row', () => {
@@ -220,15 +235,18 @@ describe('the canned data of the component tests has the real shape', () => {
     ]);
   });
 
-  it('a register row and a one-time person', () => {
-    expect(firstDifference(shapeOf(REGISTER_DAY.rows[0]), shapeOf(registerRow()))).toBeNull();
-    expect(Object.keys(REGISTER_DAY.totals).sort()).toEqual([
-      'amount',
-      'commission',
-      'open',
-      'qty',
-    ]);
-    expect(firstDifference(shapeOf(PEOPLE_SHAHID[0]), shapeOf(SHAHID))).toBeNull();
+  it('a چکتا buyer, his hit in the buyer search, his card and the refusal of the add', () => {
+    expect(firstDifference(shapeOf(CHUKTA_SEARCH_SHAHID[0]), shapeOf(SHAHID))).toBeNull();
+    expect(
+      firstDifference(shapeOf(CHUKTA_ADD_NASIR), shapeOf({ ...SHAHID, last_date: null })),
+    ).toBeNull();
+    // A hit is marked chukta, has the id of the account چکتا کھاتہ and his record id and phone.
+    expect(SEARCH_CHUKTA_BUYER[0]).toMatchObject({ kind: 'chukta', code: '0030', chukta_id: 1 });
+    expect(SEARCH_CHUKTA_BUYER_REQUEST).toMatchObject({ scope: 'buyer' });
+    // His own card has no balance and is marked.
+    expect(CARD_CHUKTA_BUYER).toMatchObject({ is_chukta: true, balance: { side: 'zero' } });
+    // Both errors of the add come together, each on its field.
+    expect(CHUKTA_ADD_REFUSED.errors.map((error) => error.field)).toEqual(['name_ur', 'phone']);
   });
 
   it('the result of a save has the same keys, and the preview inside it has the preview’s keys', () => {

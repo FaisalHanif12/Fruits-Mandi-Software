@@ -7,9 +7,8 @@
 //! - [`audit`]: the audit viewer, a read-only paged list of the audit log (plan 22, PRD FR-21.3).
 //! - [`dashboard`]: the dashboard tiles, lists, charts and the attention list (plan 19, PRD 9,
 //!   FR-7.44).
-//! - [`people`]: the one-time people of the global search (PRD FR-5.4).
-//! - [`print`]: the print data of a saved بکری: the seller bill, the buyer slips and the
-//!   پختہ slip (plan 14, PRD FR-12.12, FR-19.3 to FR-19.7). Read only; every number is a stored
+//! - [`print`]: the print data of a saved بکری: the seller bill, the buyer slips, a
+//!   چکتا buyer's slip included (plan 14, plan 64, PRD FR-12.12, FR-19.3 to FR-19.7). Read only; every number is a stored
 //!   value, never worked out again (Code Standards B20).
 
 pub mod analytics;
@@ -21,7 +20,6 @@ pub mod export;
 mod gardens;
 pub mod pack;
 pub mod partner_guard;
-pub mod people;
 pub mod print;
 pub mod reports;
 

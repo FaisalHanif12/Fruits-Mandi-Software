@@ -27,17 +27,16 @@ pub const MAX_COPIES: u32 = 99;
 /// limit of what the Settings screen accepts).
 pub const MAX_PRINTER_CHARS: usize = 259;
 
-/// The documents the app prints: three of a saved بکری (PRD FR-12.12), the slip of a voucher
+/// The documents the app prints: two of a saved بکری (PRD FR-12.12), the slip of a voucher
 /// (PRD FR-15.2) and the collection list (PRD FR-15.6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum PrintDoc {
     /// The seller bill (R1): one bill per seller.
     SellerBill,
-    /// The buyer slips (R5): one slip per buyer, each on a new page.
+    /// The buyer slips (R5): one slip per buyer, each on a new page. A چکتا buyer has a slip like any
+    /// other buyer (plan 60 C9a, PRD FR-7.57, FR-12.12).
     BuyerSlips,
-    /// The slip of a one-time buyer of the پختہ کھاتہ (FR-13.1 to FR-13.3).
-    PukhtaSlip,
     /// The slip of a voucher: a وصولی, an ادائیگی or a پیشگی, with the amount in words (PRD
     /// FR-15.2). One page.
     ReceiptSlip,
@@ -48,27 +47,21 @@ pub enum PrintDoc {
 
 impl PrintDoc {
     /// Every document, in the order the Settings screen lists them.
-    pub const ALL: [PrintDoc; 5] = [
+    pub const ALL: [PrintDoc; 4] = [
         PrintDoc::SellerBill,
         PrintDoc::BuyerSlips,
-        PrintDoc::PukhtaSlip,
         PrintDoc::ReceiptSlip,
         PrintDoc::CollectionList,
     ];
 
     /// The documents of a saved بکری. "Print after save" (PRD FR-7.57) chooses among these.
-    pub const BIKRI_DOCS: [PrintDoc; 3] = [
-        PrintDoc::SellerBill,
-        PrintDoc::BuyerSlips,
-        PrintDoc::PukhtaSlip,
-    ];
+    pub const BIKRI_DOCS: [PrintDoc; 2] = [PrintDoc::SellerBill, PrintDoc::BuyerSlips];
 
-    /// The storage form: `seller_bill`, `buyer_slips` or `pukhta_slip`.
+    /// The storage form: `seller_bill`, `buyer_slips`, `receipt_slip` or `collection_list`.
     pub const fn as_str(self) -> &'static str {
         match self {
             PrintDoc::SellerBill => "seller_bill",
             PrintDoc::BuyerSlips => "buyer_slips",
-            PrintDoc::PukhtaSlip => "pukhta_slip",
             PrintDoc::ReceiptSlip => "receipt_slip",
             PrintDoc::CollectionList => "collection_list",
         }
@@ -79,7 +72,6 @@ impl PrintDoc {
         match self {
             PrintDoc::SellerBill => "seller-bill",
             PrintDoc::BuyerSlips => "buyer-slips",
-            PrintDoc::PukhtaSlip => "pukhta-slip",
             PrintDoc::ReceiptSlip => "receipt-slip",
             PrintDoc::CollectionList => "collection-list",
         }
@@ -153,8 +145,6 @@ pub struct PrintSetup {
     pub paper_seller_bill: Paper,
     /// Paper of the buyer slips.
     pub paper_buyer_slips: Paper,
-    /// Paper of the پختہ slip.
-    pub paper_pukhta_slip: Paper,
     /// Paper of the voucher slip (PRD FR-15.2).
     pub paper_receipt_slip: Paper,
     /// Paper of the collection list (PRD FR-15.6).
@@ -171,7 +161,6 @@ impl Default for PrintSetup {
         Self {
             paper_seller_bill: Paper::A4,
             paper_buyer_slips: Paper::A5,
-            paper_pukhta_slip: Paper::A5,
             paper_receipt_slip: Paper::A5,
             paper_collection_list: Paper::A4,
             printer: String::new(),
@@ -186,15 +175,14 @@ impl PrintSetup {
         match doc {
             PrintDoc::SellerBill => self.paper_seller_bill,
             PrintDoc::BuyerSlips => self.paper_buyer_slips,
-            PrintDoc::PukhtaSlip => self.paper_pukhta_slip,
             PrintDoc::ReceiptSlip => self.paper_receipt_slip,
             PrintDoc::CollectionList => self.paper_collection_list,
         }
     }
 }
 
-/// The documents ticked in "print after save" until the Owner changes the list: the three of a
-/// بکری. A document with nothing to print (no one-time buyer) is skipped without an error.
+/// The documents ticked in "print after save" until the Owner changes the list: the two of a
+/// بکری.
 pub fn default_print_after_save() -> Vec<PrintDoc> {
     PrintDoc::BIKRI_DOCS.to_vec()
 }
@@ -208,8 +196,6 @@ pub struct PrintingSettings {
     pub paper_seller_bill: Paper,
     /// Paper of the buyer slips (starts as A5).
     pub paper_buyer_slips: Paper,
-    /// Paper of the پختہ slip (starts as A5).
-    pub paper_pukhta_slip: Paper,
     /// Paper of the voucher slip (starts as A5).
     pub paper_receipt_slip: Paper,
     /// Paper of the collection list (starts as A4: it is a list of rows, PRD FR-15.6).
@@ -229,7 +215,6 @@ impl PrintingSettings {
         Self {
             paper_seller_bill: setup.paper_seller_bill,
             paper_buyer_slips: setup.paper_buyer_slips,
-            paper_pukhta_slip: setup.paper_pukhta_slip,
             paper_receipt_slip: setup.paper_receipt_slip,
             paper_collection_list: setup.paper_collection_list,
             printer: setup.printer,
@@ -243,7 +228,6 @@ impl PrintingSettings {
         PrintSetup {
             paper_seller_bill: self.paper_seller_bill,
             paper_buyer_slips: self.paper_buyer_slips,
-            paper_pukhta_slip: self.paper_pukhta_slip,
             paper_receipt_slip: self.paper_receipt_slip,
             paper_collection_list: self.paper_collection_list,
             printer: self.printer.clone(),
@@ -260,8 +244,6 @@ pub struct SetPrintingInput {
     pub paper_seller_bill: Paper,
     /// Paper of the buyer slips.
     pub paper_buyer_slips: Paper,
-    /// Paper of the پختہ slip.
-    pub paper_pukhta_slip: Paper,
     /// Paper of the voucher slip. Missing means A5.
     #[serde(default = "default_receipt_paper")]
     pub paper_receipt_slip: Paper,
@@ -308,8 +290,8 @@ pub struct PrintInput {
 /// What `reports_print` gives back.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintOutcome {
-    /// The documents that were printed or saved, in order. A document with nothing to print
-    /// (no one-time buyer for the پختہ slip) is left out.
+    /// The documents that were printed or saved, in order. A document with nothing to print is left
+    /// out.
     pub printed: Vec<PrintDoc>,
     /// The PDF files written, one per document, when the print went to a PDF. Null for a
     /// printer.
@@ -407,7 +389,7 @@ pub fn parse_copies(field: &str, text: &str) -> Result<u32, FieldError> {
 /// use mandi_core::auth::Language;
 /// use mandi_core::printing::{PrintDoc, pdf_file_name};
 /// assert_eq!(pdf_file_name(PrintDoc::SellerBill, 1, Language::Ur), "seller-bill-1-ur.pdf");
-/// assert_eq!(pdf_file_name(PrintDoc::PukhtaSlip, 12, Language::En), "pukhta-slip-12-en.pdf");
+/// assert_eq!(pdf_file_name(PrintDoc::BuyerSlips, 12, Language::En), "buyer-slips-12-en.pdf");
 /// ```
 pub fn pdf_file_name(doc: PrintDoc, number: i64, language: Language) -> String {
     format!("{}-{number}-{}.pdf", doc.file_stem(), language.as_str())
@@ -433,7 +415,6 @@ mod tests {
         let setup = PrintSetup::default();
         assert_eq!(setup.paper_of(PrintDoc::SellerBill), Paper::A4);
         assert_eq!(setup.paper_of(PrintDoc::BuyerSlips), Paper::A5);
-        assert_eq!(setup.paper_of(PrintDoc::PukhtaSlip), Paper::A5);
         assert_eq!(setup.paper_of(PrintDoc::ReceiptSlip), Paper::A5);
         // Plan 17e: the collection list is a list of rows, so it starts on A4.
         assert_eq!(setup.paper_of(PrintDoc::CollectionList), Paper::A4);
@@ -449,7 +430,7 @@ mod tests {
             serde_json::from_str(r#"{ "copies": 2, "urdu_digits": true }"#).unwrap();
         assert_eq!(setup.copies, 2);
         let input: SetPrintingInput = serde_json::from_str(
-            r#"{ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
+            r#"{ "paper_seller_bill": "a4", "paper_buyer_slips": "a5",
                  "printer": "", "copies": "1", "urdu_digits": true, "print_after_save": [] }"#,
         )
         .unwrap();
@@ -473,13 +454,13 @@ mod tests {
             serde_json::to_string(&PrintDoc::BuyerSlips).unwrap(),
             "\"buyer_slips\""
         );
-        assert_eq!(PrintDoc::PukhtaSlip.as_str(), "pukhta_slip");
+        assert_eq!(PrintDoc::BuyerSlips.as_str(), "buyer_slips");
         assert_eq!(
             serde_json::to_string(&PrintDoc::CollectionList).unwrap(),
             "\"collection_list\""
         );
         assert_eq!(PrintDoc::CollectionList.file_stem(), "collection-list");
-        assert_eq!(PrintDoc::ALL.len(), 5);
+        assert_eq!(PrintDoc::ALL.len(), 4);
         assert_eq!(serde_json::to_string(&PrintTo::Pdf).unwrap(), "\"pdf\"");
     }
 
@@ -547,7 +528,7 @@ mod tests {
     fn the_screen_form_round_trips_its_parts() {
         let settings = PrintingSettings::from_parts(
             PrintSetup::default(),
-            vec![PrintDoc::SellerBill, PrintDoc::PukhtaSlip],
+            vec![PrintDoc::SellerBill, PrintDoc::BuyerSlips],
         );
         assert_eq!(settings.setup(), PrintSetup::default());
         assert_eq!(settings.print_after_save.len(), 2);

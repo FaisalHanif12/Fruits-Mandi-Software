@@ -235,17 +235,6 @@ bikri-tag-percent = { $value }%
 # review: pending
 bikri-tag-per-unit = { $value } فی { -nag }
 
-## A one-time person of the { -pukhta-khata } accounts (PRD FR-13.2).
-
-# review: pending
-bikri-pukhta-name-ur = اردو نام
-
-# review: pending
-bikri-pukhta-name-en = انگریزی نام
-
-# review: pending
-bikri-pukhta-phone = فون نمبر
-
 ## The summary (PRD 12.5), the partner split (PRD FR-17.4) and the cash note (PRD FR-6.7).
 
 # review: pending
@@ -291,6 +280,15 @@ bikri-line-missing-qty = تعداد لکھیں۔
 # سرمئی عدد صرف پچھلا ریٹ ہے (PRD FR-7.53)۔ وہ لکھا ہوا ریٹ نہیں اور محفوظ نہیں ہوتا۔
 # review: pending
 bikri-line-missing-rate = ریٹ لکھیں۔ سرمئی عدد صرف پچھلا ریٹ ہے، یہ محفوظ نہیں ہوتا۔
+
+# خانے میں جو لکھا گیا وہ فہرست سے چنا نہیں گیا (D8، مسئلہ 1)۔ $text: جو لکھا گیا۔
+# review: pending
+bikri-line-buyer-left = «{ $text }» لکھا گیا، مگر { -gahak } نہیں چنا گیا۔ فہرست سے { -gahak } چنیں۔
+
+# جس لائن پر کچھ لکھا ہو اس کی رقم نہ بنے اور بیک اینڈ نے کوئی اور وجہ نہ بتائی ہو، تب بھی لائن بغیر لفظ کے
+# نہیں چھوڑی جاتی (D8، مسئلہ 1)۔
+# review: pending
+bikri-line-no-figures = ابھی رقم نہیں بنی۔ اس لائن اور اس کے { -lot } کو دیکھیں۔
 
 # review: pending
 bikri-summary-seller-side = { -beopari } کی طرف

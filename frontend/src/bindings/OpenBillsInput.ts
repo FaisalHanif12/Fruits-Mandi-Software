@@ -8,8 +8,4 @@ export type OpenBillsInput = {
    * The buyer.
    */
   account_id: number;
-  /**
-   * The one-time person, for the پختہ کھاتہ buyer account.
-   */
-  person_key: string | null;
 };

@@ -1,7 +1,7 @@
 //! The وصولی voucher (PRD 15.2, FR-15.4, FR-15.5, FR-15.12, FR-13.7, plan 15): money received
 //! from a buyer, or an advance returned by a seller.
 //!
-//! - **Buyer** (also a one-time buyer, by his person key): روکڑ بنام, the buyer جمع. The
+//! - **Buyer** (also a چکتا buyer, by his person key): روکڑ بنام, the buyer جمع. The
 //!   credit settles his oldest open bills first; what is more than all his bills stays as credit
 //!   and settles his next bill (PRD FR-15.5).
 //! - **Seller** (PRD FR-15.12): the same posting. The credit adjusts his open advances, oldest
@@ -90,14 +90,12 @@ pub(super) fn plan_receipt(
         },
     )?;
     // A person in the dead amount has an inactive account; a وصولی from him is the recovery that
-    // is still allowed (PRD FR-10.10). The ledger caps it at what he still owes. A one-time
-    // person's account stays active, so only a plain account needs this.
-    let dead = crate::dead::is_dead(conn, input.account_id, None)?;
+    // is still allowed (PRD FR-10.10). The ledger caps it at what he still owes.
+    let dead = crate::dead::is_dead(conn, input.account_id)?;
     let party = resolve_party(
         conn,
         &mut errors,
         input.account_id,
-        input.person_key.as_deref(),
         Accepts {
             buyer: true,
             seller: true,
@@ -121,8 +119,7 @@ pub(super) fn plan_receipt(
 /// `ServiceError::Data` if the plan has a mistake; the ledger errors of the entry.
 pub(super) fn receipt_entry(planned: &PlannedReceipt) -> Result<BalancedEntry, ServiceError> {
     let (party, _, amount, pay_account) = planned.parts()?;
-    let mut credit = LedgerLine::new(AccountId::new(party.record.id), Side::Cr, amount);
-    credit.person_key.clone_from(&party.person_key);
+    let credit = LedgerLine::new(AccountId::new(party.record.id), Side::Cr, amount);
     build_entry(vec![
         LedgerLine::new(AccountId::new(pay_account), Side::Dr, amount),
         credit,
@@ -149,7 +146,6 @@ pub(super) fn receipt_row(
         cheque_date: None,
         expected_goods: None,
         narration: planned.money.narration.clone(),
-        person_key: party.person_key.clone(),
         collector_staff_id: planned.collector,
         reason: None,
         extra: VoucherExtra::default(),
@@ -199,7 +195,7 @@ pub(super) fn seller_receipt(
 ) -> Result<SellerReceipt, ServiceError> {
     let inputs = matching::load_adv(conn, party.record.id)?;
     let day = date.to_iso();
-    let key = party.person_key.as_deref();
+    let key: Option<&str> = None;
     // An edited receipt keeps the place of the one it replaces among the entries of its day
     // (migration 0005), so the preview puts it where the save will.
     let add_order_key = place_like
@@ -329,8 +325,8 @@ pub(super) fn check_seller_limit(
 ///
 /// # Errors
 /// The field errors of the date, amount, bank, cheque and collector fields; `ERR_NOT_FOUND`,
-/// `ERR_NOT_A_BUYER`, `ERR_ACCOUNT_INACTIVE` on `account_id`; `ERR_PERSON_REQUIRED` and
-/// `ERR_NOT_FOUND` on `person_key`; `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`) on `amount`
+/// `ERR_NOT_A_BUYER`, `ERR_ACCOUNT_INACTIVE` on `account_id`;
+/// `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`) on `amount`
 /// for a seller; `ERR_DATE_CLOSED` and `ERR_DATE_IN_FUTURE` on `date`. Nothing is written when
 /// any of them is returned.
 pub fn save_receipt(
@@ -359,7 +355,7 @@ fn post_receipt(
     let (party, date, _, _) = planned.parts()?;
     check_seller_limit(tx, planned, None, None)?;
     let entry = receipt_entry(planned)?;
-    let hint = hint_for(tx, party.role, party.record.id, party.person_key.as_deref())?;
+    let hint = hint_for(tx, party.role, party.record.id)?;
     let now = ctx.now_text();
     let number = repo::next_number(tx, VoucherType::Receipt)?;
     let row = receipt_row(planned, number)?;
@@ -388,7 +384,7 @@ fn post_receipt(
         voucher_type: VoucherType::Receipt,
         number,
         entry_id: posted.entry_id,
-        new_balance: ledger::balance_in(tx, party.record.id, party.person_key.as_deref(), None)?,
+        new_balance: ledger::balance_in(tx, party.record.id, None, None)?,
     })
 }
 
@@ -417,7 +413,7 @@ pub(super) fn receipt_match(
                 user_id,
                 now,
                 party.record.id,
-                party.person_key.as_deref(),
+                None,
                 &day,
                 &[NewLine {
                     line_id: credit_line,
@@ -426,9 +422,8 @@ pub(super) fn receipt_match(
                 hint.open_bills,
             )?;
         }
-        // PRD FR-15.12: the advances before the credit, oldest first. A one-time seller never
-        // has an advance (PRD FR-15.4).
-        Role::Seller if !party.is_pukhta => {
+        // PRD FR-15.12: the advances before the credit, oldest first.
+        Role::Seller => {
             matching::adjust_advances(
                 tx,
                 user_id,
@@ -439,7 +434,7 @@ pub(super) fn receipt_match(
                 &day,
             )?;
         }
-        Role::Seller | Role::Payable => {}
+        Role::Payable => {}
     }
     Ok(())
 }

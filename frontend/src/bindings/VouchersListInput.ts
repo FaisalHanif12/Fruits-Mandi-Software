@@ -19,13 +19,9 @@ export type VouchersListInput = {
    */
   to: string;
   /**
-   * Only this account (for a پختہ کھاتہ account, all its people unless `person_key` is set).
+   * Only this account.
    */
   account_id: number | null;
-  /**
-   * Only this one-time person.
-   */
-  person_key: string | null;
   /**
    * How many rows to skip. 0 for the first page (PRD FR-19.11).
    */

@@ -94,7 +94,6 @@ describe.each(LANGUAGES)('the dead amount on the reports (%s)', (language: Langu
     const party = partyOf(R20_DUES, 0);
     expect(mastersApi.deadPreview).toHaveBeenCalledWith({
       account_id: party.account_id,
-      pukhta_person_key: party.person_key,
     });
     expect(visible(dialog.textContent)).toContain(
       language === 'ur' ? party.name_ur : party.name_en,

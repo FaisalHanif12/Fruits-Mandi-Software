@@ -33,7 +33,6 @@ fn seller(ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: AccountType::Seller,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),

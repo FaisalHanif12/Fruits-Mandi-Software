@@ -19,14 +19,15 @@ export type PartyCard = {
    */
   code: string;
   /**
-   * The kind of account. For a پختہ party this is his side.
+   * The kind of account.
    */
   account_type: AccountType;
   /**
-   * True for a پختہ party's own account (plan 47): the card shows "پختہ" next to his side. Left out
-   * when false; the TypeScript field is optional.
+   * True for a چکتا buyer's card (PRD FR-7.38, v1.32): only his name and phone, no balance, and
+   * the screen adds the words "چکتا: پورا نقد". Left out when false; the TypeScript field is
+   * optional.
    */
-  is_pukhta_party?: boolean;
+  is_chukta?: boolean;
   /**
    * Urdu name.
    */

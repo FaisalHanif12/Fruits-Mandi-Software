@@ -141,7 +141,7 @@ fn assert_books_balance(dir: &TempDir, note: &str) {
                 SELECT r.id FROM journal_entries r
                 JOIN journal_lines l ON l.entry_id IN (r.id, r.reverses_entry_id)
                 WHERE r.reverses_entry_id IS NOT NULL
-                GROUP BY r.id, l.account_id, COALESCE(l.pukhta_person_key, '')
+                GROUP BY r.id, l.account_id, COALESCE(l.chukta_person_key, '')
                 HAVING SUM(l.dr_paisa) <> SUM(l.cr_paisa))"
         ),
         0,
@@ -174,7 +174,6 @@ fn account_input(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),

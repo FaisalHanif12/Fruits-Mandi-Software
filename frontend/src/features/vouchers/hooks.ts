@@ -32,10 +32,8 @@ import {
   vouchersSave,
   vouchersSaveReceiptsBatch,
 } from './api';
-import { pukhtaMakeRegular } from '../pukhta_khata';
 import type { BuiltVoucher } from './draft';
 import type { CollectionListInput } from '../../bindings/CollectionListInput';
-import type { MakeRegularInput } from '../../bindings/MakeRegularInput';
 import type { VouchersListInput } from '../../bindings/VouchersListInput';
 import type { ReceiptInput, VoucherEntry, VoucherPreview } from './types';
 
@@ -50,7 +48,6 @@ const READ_AGAIN: readonly (readonly string[])[] = [
   ['coa'],
   ['partners'],
   ['search'],
-  ['pukhta'],
   ['bikri'],
   ['day_status'],
 ];
@@ -65,26 +62,21 @@ export function useAdvances(sellerId: number | null) {
   });
 }
 
-/** The open bills of a buyer or of a one-time person, oldest first (PRD FR-7.58). */
-export function useOpenBills(accountId: number | null, personKey: string | null) {
+/** The open bills of a buyer, oldest first (PRD FR-7.58). */
+export function useOpenBills(accountId: number | null) {
   return useQuery({
-    queryKey: [...VOUCHERS_KEY, 'open-bills', accountId, personKey],
-    queryFn: () => assistOpenBills({ account_id: accountId ?? 0, person_key: personKey }),
+    queryKey: [...VOUCHERS_KEY, 'open-bills', accountId],
+    queryFn: () => assistOpenBills({ account_id: accountId ?? 0 }),
     enabled: accountId !== null,
     staleTime: 0,
   });
 }
 
-/** The payable postings of a seller or of a one-time seller, oldest first (PRD FR-7.59). */
-export function useOpenPayables(sellerId: number | null, personKey: string | null) {
+/** The payable postings of a seller, oldest first (PRD FR-7.59). */
+export function useOpenPayables(sellerId: number | null) {
   return useQuery({
-    queryKey: [...VOUCHERS_KEY, 'open-payables', sellerId, personKey],
-    queryFn: () =>
-      assistOpenPayables({
-        seller_id: sellerId ?? 0,
-        person_key: personKey,
-        include_settled: false,
-      }),
+    queryKey: [...VOUCHERS_KEY, 'open-payables', sellerId],
+    queryFn: () => assistOpenPayables({ seller_id: sellerId ?? 0, include_settled: false }),
     enabled: sellerId !== null,
     staleTime: 0,
   });
@@ -253,19 +245,6 @@ export function useSaveReceiptsBatch() {
   const readAgain = useReadAgain();
   return useMutation({
     mutationFn: (rows: readonly ReceiptInput[]) => vouchersSaveReceiptsBatch(rows),
-    onSuccess: readAgain,
-  });
-}
-
-/**
- * Makes a one-time person a regular account (PRD FR-13.8). The backend makes the account and moves
- * his balance in one action, so every list that shows accounts, balances, bills or the people of the
- * پختہ کھاتہ is read again.
- */
-export function useMakeRegular() {
-  const readAgain = useReadAgain();
-  return useMutation({
-    mutationFn: (input: MakeRegularInput) => pukhtaMakeRegular(input),
     onSuccess: readAgain,
   });
 }

@@ -1,7 +1,7 @@
 // What a screen tells the shared grid (entry-grid skill, Code Standards F27). A screen declares
 // its columns and keeps its rows in a store. It never writes key handlers.
 
-import type { AccountScope } from '../accounts';
+import type { AccountScope, PickedChukta } from '../accounts';
 import type { SearchScope } from '../search';
 
 /** The column types of the shared setup. Each has one fixed width (Code Standards F18). */
@@ -48,11 +48,24 @@ export interface PickedRecord {
    * record. The item lines of an entry stop Enter at the weight of such a row (plan 35, D3).
    */
   readonly soldByWeight?: boolean | undefined;
+  /**
+   * Present only for a چکتا buyer (PRD FR-7.29, FR-13.5): the line is on the account چکتا کھاتہ, and
+   * this holds his phone and his own record when the picker knew it. Names are his own.
+   */
+  readonly chukta?: PickedChukta | undefined;
 }
 
 /** Which records a picker column offers. */
 export type PickerSpec =
-  | { readonly kind: 'account'; readonly scope: AccountScope }
+  | {
+      readonly kind: 'account';
+      readonly scope: AccountScope;
+      /**
+       * The buyer box of a بکری line: it lists چکتا buyers beside ordinary buyers and ends its list
+       * with the second add row, a new چکتا buyer (PRD FR-7.29, FR-7.69, FR-13.3). No other box does.
+       */
+      readonly withChukta?: boolean;
+    }
   | { readonly kind: 'master'; readonly scope: SearchScope };
 
 /** One of the words of a `choice` column. `value` is what is kept; the words come from Fluent. */
@@ -136,6 +149,11 @@ export interface PendingFocus {
   /** A row index, or 'last' for the row just added. Clamped to the rows that exist. */
   readonly rowIndex: number | 'last';
   readonly field: string;
+  /**
+   * Start typing in the cell once it has the focus, with its text selected, so the next key replaces it
+   * (a screen that sends the cursor back to a cell that must be fixed, D8 Bug 1).
+   */
+  readonly edit?: boolean;
 }
 
 /** What the grid tells the screen about an Enter. */
@@ -153,4 +171,11 @@ export interface GridInterceptors {
   readonly onEnter?: (cell: CellRef, enter?: EnterInfo) => boolean;
   /** ↑ was pressed on the first row. Return true if the screen took it. */
   readonly onAboveFirst?: (cell: CellRef) => boolean;
+  /**
+   * The cell this row is held on, or null. While a row is held (the backend refused its quantity), the
+   * cursor stays on that cell: arrows, Tab and Enter do not leave it, and no other cell of the row can
+   * be typed in. Esc and Ctrl+Delete keep their meaning (PRD FR-7.18). The screen only reads what the
+   * backend said; it judges nothing (D8 Bug 1, B2).
+   */
+  readonly heldField?: (rowId: string) => string | null;
 }

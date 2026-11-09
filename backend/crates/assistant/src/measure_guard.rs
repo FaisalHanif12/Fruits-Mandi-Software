@@ -192,8 +192,6 @@ fn calc_of_wrong_column(
 /// - the views D, E, G, H, I and J (matrix cells, series, peak and lowest, top lists, gardens, trips);
 /// - the reports R33, R34 and R36 (trips, the day total sheet, gardens);
 /// - for a buyer-side question, the seller's `commission` column of R1 and R6;
-/// - R9 (the one-time parties' register): its `commission` is of the side of each row, which is not
-///   known here;
 /// - an `estimate` of another commission than the side's (`commission_all`, `laga`, the other side).
 ///
 /// The model re-reads what it needs (view A with the party and item) and writes again, once.
@@ -232,7 +230,6 @@ fn not_a_side_source(state: &State, path: &str, side: CommissionSide, laga_asked
         }
         "report" => match input("id") {
             Some("R33" | "R34" | "R36") => true,
-            Some("R9") => rest.rsplit('.').next() == Some("commission"),
             Some("R1" | "R6") => {
                 side == CommissionSide::Buyer && rest.rsplit('.').next() == Some("commission")
             }

@@ -15,9 +15,9 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::masters::{MasterInput, StaffInput};
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
-    AdvanceInput, CollectionListInput, LineSource, MakeRegularInput, OpenBillsInput,
-    OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput, VoucherCancelInput,
-    VoucherEditInput, VoucherEntry, VoucherMode, VoucherPreviewInput, VoucherType,
+    AdvanceInput, CollectionListInput, LineSource, OpenBillsInput, OpenPayablesInput, PaymentInput,
+    ReceiptInput, ReceiptsInput, VoucherCancelInput, VoucherEditInput, VoucherEntry, VoucherMode,
+    VoucherPreviewInput, VoucherType,
 };
 use mandi_services::{ServiceError, bikri, ledger, vouchers};
 use support::World;
@@ -30,7 +30,6 @@ fn receipt(account: i64, amount: &str) -> ReceiptInput {
     ReceiptInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
@@ -42,7 +41,6 @@ fn payment(account: i64, amount: &str, reason: &str) -> PaymentInput {
     PaymentInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
@@ -205,7 +203,6 @@ fn edit_of_a_buyer_receipt_reverses_it_and_works_the_matching_out_again() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -303,7 +300,6 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -341,7 +337,6 @@ fn cancel_gives_the_bill_back_keeps_the_number_and_refuses_a_second_change() {
             from: String::new(),
             to: String::new(),
             account_id: Some(w.akram),
-            person_key: None,
             offset: 0,
             limit: 0,
         },
@@ -389,7 +384,6 @@ fn an_older_receipt_cancelled_hands_its_bill_to_the_next_receipt() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -482,7 +476,6 @@ fn cancel_of_an_advance_frees_the_credit_it_was_adjusted_by() {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: w.rahim,
-                person_key: None,
                 include_settled: false
             }
         )
@@ -506,7 +499,6 @@ fn cancel_of_an_advance_frees_the_credit_it_was_adjusted_by() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -815,7 +807,6 @@ fn d4_a29_an_opening_credit_and_a_general_credit_are_payable() {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: seller,
-                person_key: None,
                 include_settled: true,
             },
         )
@@ -965,7 +956,6 @@ fn a_sellers_opening_credit_is_his_oldest_payable_whatever_its_date() {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: w.karim,
-                person_key: None,
                 include_settled,
             },
         )
@@ -1027,7 +1017,6 @@ fn open_bills_give_the_oldest_200_and_say_how_many_there_are() {
             &w.env.ctx,
             &OpenBillsInput {
                 account_id: w.akram,
-                person_key: None,
             },
         )
         .unwrap()
@@ -1105,7 +1094,6 @@ fn open_payables_give_the_oldest_200_and_say_how_many_there_are() {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: w.karim,
-                person_key: None,
                 include_settled,
             },
         )
@@ -1226,7 +1214,6 @@ fn a_seller_returns_what_he_owes_beyond_his_advances() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -1618,7 +1605,6 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         id: Some(id),
         version: Some(row.version),
         account_type: AccountType::Buyer,
-        is_pukhta_party: false,
         control_id: None,
         code: row.code.clone(),
         name_ur: row.name_ur.clone(),
@@ -1644,326 +1630,6 @@ fn account_form(w: &World, id: i64) -> AccountInput {
         note: String::new(),
         tag: String::new(),
     }
-}
-
-/// Saves a بکری whose one buyer is the one-time person `name` on credit, at no commission.
-fn one_time_buyer_owes(w: &World, name: (&str, &str), phone: &str, qty: &str, rate: &str) {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
-    let mut line = support::sale("s-1", w.pukhta_buyer, qty, rate);
-    line.pukhta = Some(PukhtaInput {
-        name_ur: name.0.into(),
-        name_en: name.1.into(),
-        phone: phone.into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    line.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.laga = support::typed(LineChargeMethod::PerUnit, "0");
-    let mut lot = support::bare_lot(w, "lot-1", w.rahim, w.banana, qty);
-    lot.sales = vec![line];
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &mandi_services::core::bikri::BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
-}
-
-/// Makes the person a regular account, confirming the rule-made spellings the form asks about.
-fn make_regular_confirmed(
-    w: &World,
-    key: &str,
-    side: mandi_services::core::bikri::PukhtaSide,
-    mut input: AccountInput,
-) -> mandi_services::core::vouchers::MadeRegular {
-    let mut words: Vec<String> = Vec::new();
-    loop {
-        input.confirmed_rules_words = words.clone();
-        match vouchers::make_regular(
-            &w.env.ctx,
-            &w.owner,
-            &MakeRegularInput {
-                person_key: key.to_owned(),
-                side,
-                account_input: input.clone(),
-            },
-        ) {
-            Ok(made) => return made,
-            Err(ServiceError::Rejected(items))
-                if items
-                    .iter()
-                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
-            {
-                for item in items {
-                    if let Some(mandi_services::core::error::ErrorValue::Text(t)) =
-                        item.values.get("words")
-                    {
-                        words.extend(t.split(' ').map(str::to_owned));
-                    }
-                }
-            }
-            Err(other) => panic!("{other:?}"),
-        }
-    }
-}
-
-/// The form of a new account for a person, with no id and no code.
-fn new_account_form(w: &World, like: i64, ty: AccountType, names: (&str, &str)) -> AccountInput {
-    let mut input = account_form(w, like);
-    input.id = None;
-    input.version = None;
-    input.code = String::new();
-    input.account_type = ty;
-    input.name_ur = names.0.into();
-    input.name_en = names.1.into();
-    input.phone1 = "03000000000".into();
-    input.city_id = None;
-    input
-}
-
-#[test]
-fn make_regular_moves_the_balance_of_a_one_time_buyer_to_a_new_account() {
-    use mandi_services::core::bikri::PukhtaSide;
-    let w = support::world();
-    one_time_buyer_owes(&w, ("شاہد", "Shahid"), "0300-0000000", "2", "1000");
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let input = new_account_form(&w, w.akram, AccountType::Buyer, ("شاہد", "Shahid"));
-    let made = make_regular_confirmed(&w, &key, PukhtaSide::Buyer, input.clone());
-    // The new account is a buyer and holds his 2,000; the person has none left.
-    assert_eq!(
-        (made.moved.side, made.moved.amount_paisa),
-        (BalanceSide::Dr, rupees(2_000))
-    );
-    assert!(made.entry_id.is_some());
-    assert_eq!(made.account.code, "0022");
-    assert_eq!(balance(&w, made.account.id), (BalanceSide::Dr, 2_000));
-    assert_eq!(
-        ledger::person_balance(&w.env.ctx, w.pukhta_buyer, &key)
-            .unwrap()
-            .side,
-        BalanceSide::Zero
-    );
-    // His old bill is settled by the move (no open bill on the person), the new account has one.
-    let person_bills = vouchers::open_bills(
-        &w.env.ctx,
-        &OpenBillsInput {
-            account_id: w.pukhta_buyer,
-            person_key: Some(key.clone()),
-        },
-    )
-    .unwrap();
-    assert!(person_bills.bills.is_empty());
-    assert_eq!(rematch_changes(&w, w.pukhta_buyer, Some(&key)), (0, 0));
-    let new_bills = vouchers::open_bills(
-        &w.env.ctx,
-        &OpenBillsInput {
-            account_id: made.account.id,
-            person_key: None,
-        },
-    )
-    .unwrap();
-    assert_eq!(new_bills.open_paisa.rupees(), 2_000);
-    assert_eq!(audit_count(&w.dir, "make_regular"), 1);
-    // The move touches no income or expense: no partner share rows for it.
-    assert_eq!(
-        scalar(
-            &w,
-            &format!(
-                "SELECT COUNT(*) FROM partner_share_rows WHERE journal_entry_id = {}",
-                made.entry_id.unwrap()
-            )
-        ),
-        0
-    );
-    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
-    assert_eq!(trial.total_dr, trial.total_cr);
-    // A person not on the books, a side that does not fit the account and an account with an id
-    // are refused.
-    let unknown = vouchers::make_regular(
-        &w.env.ctx,
-        &w.owner,
-        &MakeRegularInput {
-            person_key: "نامعلوم|0".into(),
-            side: PukhtaSide::Buyer,
-            account_input: input.clone(),
-        },
-    )
-    .unwrap_err();
-    assert_eq!(unknown.code(), ErrorCode::ErrNotFound);
-    let wrong_side = vouchers::make_regular(
-        &w.env.ctx,
-        &w.owner,
-        &MakeRegularInput {
-            person_key: key,
-            side: PukhtaSide::Seller,
-            account_input: input,
-        },
-    )
-    .unwrap_err();
-    assert_eq!(wrong_side.code(), ErrorCode::ErrFormatInvalid);
-}
-
-#[test]
-fn make_regular_refuses_an_opening_on_the_form_so_the_balance_is_not_counted_twice() {
-    use mandi_services::core::bikri::PukhtaSide;
-    let w = support::world();
-    one_time_buyer_owes(&w, ("شاہد", "Shahid"), "0300-0000000", "2", "1000");
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let base = new_account_form(&w, w.akram, AccountType::Buyer, ("شاہد", "Shahid"));
-    let accounts_before = scalar(&w, "SELECT COUNT(*) FROM accounts");
-    let entries_before = scalar(&w, "SELECT COUNT(*) FROM journal_entries");
-    let mut dr = base.clone();
-    dr.opening_dr = "2,000".into();
-    let mut cr = base.clone();
-    cr.opening_cr = "2,000".into();
-    let mut advance = base;
-    advance.opening_is_advance = true;
-    for (form, field) in [
-        (dr, "account_input.opening_dr"),
-        (cr, "account_input.opening_cr"),
-        (advance, "account_input.opening_is_advance"),
-    ] {
-        let error = vouchers::make_regular(
-            &w.env.ctx,
-            &w.owner,
-            &MakeRegularInput {
-                person_key: key.clone(),
-                side: PukhtaSide::Buyer,
-                account_input: form,
-            },
-        )
-        .unwrap_err();
-        match error {
-            ServiceError::Rejected(items) => {
-                assert_eq!(items.len(), 1);
-                assert_eq!(items[0].code, ErrorCode::ErrFormatInvalid);
-                assert_eq!(items[0].field.as_deref(), Some(field));
-            }
-            other => panic!("{other:?}"),
-        }
-    }
-    // Nothing was written: no account, no entry, and the person still owes his 2,000.
-    assert_eq!(scalar(&w, "SELECT COUNT(*) FROM accounts"), accounts_before);
-    assert_eq!(
-        scalar(&w, "SELECT COUNT(*) FROM journal_entries"),
-        entries_before
-    );
-    assert_eq!(
-        ledger::person_balance(&w.env.ctx, w.pukhta_buyer, &key)
-            .unwrap()
-            .amount_paisa,
-        rupees(2_000)
-    );
-}
-
-#[test]
-fn make_regular_moves_a_credit_for_an_overpaid_buyer_and_for_a_one_time_seller() {
-    use mandi_services::core::bikri::{LineChargeMethod, PukhtaInput, PukhtaSide};
-    let w = support::world();
-    // A one-time buyer owes 2,000, then pays 5,000: the firm holds 3,000 of his.
-    one_time_buyer_owes(&w, ("شاہد", "Shahid"), "0300-0000000", "2", "1000");
-    let buyer_key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let mut pay = receipt(w.pukhta_buyer, "5,000");
-    pay.person_key = Some(buyer_key.clone());
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &pay).unwrap();
-    // A form that sends "0" for its empty openings is accepted like an empty one.
-    let mut form = new_account_form(&w, w.akram, AccountType::Buyer, ("شاہد", "Shahid"));
-    form.opening_dr = "0".into();
-    form.opening_cr = "0".into();
-    let made = make_regular_confirmed(&w, &buyer_key, PukhtaSide::Buyer, form);
-    assert_eq!(
-        (made.moved.side, made.moved.amount_paisa),
-        (BalanceSide::Cr, rupees(3_000))
-    );
-    assert_eq!(balance(&w, made.account.id), (BalanceSide::Cr, 3_000));
-    assert_eq!(
-        ledger::person_balance(&w.env.ctx, w.pukhta_buyer, &buyer_key)
-            .unwrap()
-            .side,
-        BalanceSide::Zero
-    );
-    // His 3,000 is a credit of the new account, to meet his next bill (FR-15.5): no open bill.
-    let bills = vouchers::open_bills(
-        &w.env.ctx,
-        &OpenBillsInput {
-            account_id: made.account.id,
-            person_key: None,
-        },
-    )
-    .unwrap();
-    assert!(bills.bills.is_empty());
-    assert_eq!(rematch_changes(&w, made.account.id, None), (0, 0));
-    assert_eq!(
-        rematch_changes(&w, w.pukhta_buyer, Some(&buyer_key)),
-        (0, 0)
-    );
-
-    // A one-time seller is owed 10,000 (his lot is left open: a typed 0 stops FR-13.10).
-    let mut lot = support::bare_lot(&w, "lot-1", w.pukhta_seller, w.banana, "1");
-    lot.pukhta = Some(PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: "0300-1111111".into(),
-    });
-    lot.cash_paid = Some("0".into());
-    let mut line = support::sale("s-1", w.akram, "1", "10000");
-    line.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.laga = support::typed(LineChargeMethod::PerUnit, "0");
-    lot.sales = vec![line];
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &mandi_services::core::bikri::BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: true,
-        },
-    )
-    .unwrap();
-    let seller_key = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    let made = make_regular_confirmed(
-        &w,
-        &seller_key,
-        PukhtaSide::Seller,
-        new_account_form(&w, w.rahim, AccountType::Seller, ("ناصر", "Nasir")),
-    );
-    assert_eq!(
-        (made.moved.side, made.moved.amount_paisa),
-        (BalanceSide::Cr, rupees(10_000))
-    );
-    assert_eq!(balance(&w, made.account.id), (BalanceSide::Cr, 10_000));
-    assert_eq!(
-        ledger::person_balance(&w.env.ctx, w.pukhta_seller, &seller_key)
-            .unwrap()
-            .side,
-        BalanceSide::Zero
-    );
-    // He is now a normal seller with 10,000 payable, and the person has nothing payable.
-    let payable = vouchers::open_payables(
-        &w.env.ctx,
-        &OpenPayablesInput {
-            seller_id: made.account.id,
-            person_key: None,
-            include_settled: false,
-        },
-    )
-    .unwrap();
-    assert_eq!(payable.open_paisa, rupees(10_000));
-    let old = vouchers::open_payables(
-        &w.env.ctx,
-        &OpenPayablesInput {
-            seller_id: w.pukhta_seller,
-            person_key: Some(seller_key),
-            include_settled: false,
-        },
-    )
-    .unwrap();
-    assert_eq!(old.open_paisa, Paisa::ZERO);
-    let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
-    assert_eq!(trial.total_dr, trial.total_cr);
 }
 
 #[test]
@@ -2162,12 +1828,12 @@ fn the_slip_has_the_party_the_amount_and_the_words_in_both_languages() {
 #[test]
 fn a_payment_to_an_account_the_picker_does_not_offer_is_refused() {
     let w = support::world();
-    // Cash, the نقدی منڈی, an income account and the پختہ کھاتہ without a person.
+    // Cash, the نقدی منڈی, an income account and چکتا کھاتہ, which has no ledger (PRD FR-13.6).
     for (code, expect) in [
         ("01010001", ErrorCode::ErrFormatInvalid),
         ("03040000", ErrorCode::ErrFormatInvalid),
         ("04010001", ErrorCode::ErrFormatInvalid),
-        ("0030", ErrorCode::ErrPersonRequired),
+        ("0030", ErrorCode::ErrFormatInvalid),
     ] {
         let id = support::id_of(&w.env, code);
         let refused =
@@ -2193,106 +1859,4 @@ fn a_payment_to_an_account_the_picker_does_not_offer_is_refused() {
     let refused =
         vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.arshad, "100")).unwrap_err();
     assert_eq!(refused.code(), ErrorCode::ErrAccountInactive);
-}
-
-#[test]
-fn a_one_time_seller_is_paid_by_his_person_and_the_register_agrees_in_total() {
-    use mandi_services::core::bikri::{LineChargeMethod, PukhtaInput};
-    let w = support::world();
-    let person = || PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: "0300-1111111".into(),
-    };
-    // Two lots of the same one-time seller: 10,000 left open (a typed 0 stops the default of
-    // PRD FR-13.10, which pays his whole net on the spot), then 8,000 paid on the spot. No
-    // commission, so the nets are 10,000 and 8,000.
-    let mut lots = Vec::new();
-    for (key, rate, cash) in [
-        ("lot-1", "10000", Some("0")),
-        ("lot-2", "8000", Some("8,000")),
-    ] {
-        let mut lot = support::bare_lot(&w, key, w.pukhta_seller, w.banana, "1");
-        lot.pukhta = Some(person());
-        lot.cash_paid = cash.map(str::to_owned);
-        let mut line = support::sale("s-1", w.akram, "1", rate);
-        line.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        line.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-        line.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        lot.sales = vec![line];
-        lots.push(lot);
-    }
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &mandi_services::core::bikri::BikriSaveInput {
-            draft: support::draft(lots),
-            confirm_cash_below_zero: true,
-        },
-    )
-    .unwrap();
-    let key = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    let payables = |include_settled| {
-        vouchers::open_payables(
-            &w.env.ctx,
-            &OpenPayablesInput {
-                seller_id: w.pukhta_seller,
-                person_key: Some(key.clone()),
-                include_settled,
-            },
-        )
-        .unwrap()
-    };
-    // Payments settle the oldest credit first: lot 1 (10,000) is paid 8,000 by the second lot's
-    // نقد, so 2,000 of lot 1 and all of lot 2's 8,000 are open.
-    let p = payables(false);
-    assert_eq!(p.open_paisa, rupees(10_000));
-    assert_eq!(
-        p.postings
-            .iter()
-            .map(|x| x.still_open_paisa.rupees())
-            .collect::<Vec<_>>(),
-        [2_000, 8_000]
-    );
-    // The register nets each lot inside itself: lot 1 open 10,000, lot 2 paid. The totals agree.
-    let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
-    let register_open: i64 = register
-        .rows
-        .iter()
-        .filter(|row| row.person_key == key)
-        .map(|row| row.open.rupees())
-        .sum();
-    assert_eq!(register_open, 10_000);
-    // Paying him needs his person key; 10,000 clears him in both views.
-    let mut pay = payment(w.pukhta_seller, "10,000", "");
-    assert_eq!(
-        vouchers::save_payment(&w.env.ctx, &w.owner, &pay)
-            .unwrap_err()
-            .code(),
-        ErrorCode::ErrPersonRequired
-    );
-    pay.person_key = Some(key.clone());
-    pay.confirm_cash_below_zero = true;
-    let saved = vouchers::save_payment(&w.env.ctx, &w.owner, &pay).unwrap();
-    assert_eq!(saved.new_balance.side, BalanceSide::Zero);
-    assert_eq!(payables(false).open_paisa, Paisa::ZERO);
-    let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
-    assert_eq!(
-        register
-            .rows
-            .iter()
-            .filter(|row| row.person_key == key)
-            .map(|row| row.open.rupees())
-            .sum::<i64>(),
-        0
-    );
-    // A return by the one-time seller is limited by what he owes: nothing.
-    let mut back = receipt(w.pukhta_seller, "100");
-    back.person_key = Some(key);
-    assert_eq!(
-        vouchers::save_receipt(&w.env.ctx, &w.owner, &back)
-            .unwrap_err()
-            .code(),
-        ErrorCode::ErrReturnExceedsOpen
-    );
 }

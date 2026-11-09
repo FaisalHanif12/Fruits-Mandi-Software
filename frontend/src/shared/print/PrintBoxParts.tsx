@@ -14,6 +14,7 @@ import { Field } from '../ui/Field';
 import { SegmentedControl, type SegmentedOption } from '../ui/SegmentedControl';
 import { DOC_NAME_ID } from './docs';
 import { stripIsolates } from './footer';
+import { opensSystemPrintWindow } from './platform';
 
 const LANGUAGE_OPTIONS: readonly SegmentedOption<Language>[] = [
   { value: 'ur', lang: 'ur', label: <Localized id="common-language-ur" /> },
@@ -74,18 +75,39 @@ export function useDocNames(): (docs: readonly PrintDoc[], language: Language) =
     );
 }
 
+/**
+ * On a Mac, Print and Save PDF open the system print window: this says how to get a PDF there (plan
+ * 69, PRD FR-19.3). It draws nothing on Windows, where the backend prints or writes the file itself.
+ */
+export function PrintDialogHint(): ReactNode {
+  if (!opensSystemPrintWindow()) return null;
+  return (
+    <Localized id="print-dialog-hint">
+      <p className="type-body text-ink-muted" />
+    </Localized>
+  );
+}
+
 interface PrintOutcomeNoticeProps {
   outcome: PrintOutcome;
   language: Language;
 }
 
-/** What the last print did: nothing to print, sent to the printer, or the PDF files written. */
+/**
+ * What the last print did: nothing to print, sent to the printer, the PDF files written, or (on a
+ * Mac) the system print window opened, which is the same for a printer and for a PDF.
+ */
 export function PrintOutcomeNotice({ outcome, language }: PrintOutcomeNoticeProps): ReactNode {
   const docNames = useDocNames();
   return (
     <div role="status" className="type-body flex flex-col gap-1 text-money-in">
       {outcome.printed.length === 0 ? (
         <Localized id="print-box-nothing-printed" />
+      ) : opensSystemPrintWindow() ? (
+        <Localized
+          id="print-box-done-dialog"
+          vars={{ docs: docNames(outcome.printed, language) }}
+        />
       ) : outcome.pdf_paths === null ? (
         <Localized
           id="print-box-done-printed"

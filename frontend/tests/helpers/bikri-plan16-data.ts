@@ -50,7 +50,6 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
     bikri_number: 1,
     received_date: '2026-10-09',
     seller: RAHIM_REF,
-    pukhta: null,
     item: BANANA_REF,
     packing: BOX_REF,
     qty_received: 50,

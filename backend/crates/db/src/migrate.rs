@@ -49,7 +49,7 @@ pub const STABLE_POSTING_ORDER_SQL: &str =
 pub const TRIPS_GARDENS_FRUIT_KHATA_SQL: &str =
     include_str!("../migrations/0006_trips_gardens_fruit_khata.sql");
 
-/// The seventh migration (plan 32, PRD 1.8): simple codes. Sellers, buyers, the two پختہ کھاتہ accounts,
+/// The seventh migration (plan 32, PRD 1.8): simple codes. Sellers, buyers, the two shared one-time accounts,
 /// items, packings and staff are renumbered to the type number plus a running number from 0
 /// (`0010`, `0020`, `0030`, `0040`, `0050`, `0060`), staff get a `code` column, and the upper limit of
 /// `accounts.serial` is lifted by [`codes_hook`]. No amount, journal line or id changes.
@@ -83,11 +83,11 @@ pub const DEAD_MARKS_SQL: &str = include_str!("../migrations/0011_dead_marks.sql
 /// existing row, amount, id or chain hash changes.
 pub const EDIT_WINDOWS_SQL: &str = include_str!("../migrations/0012_edit_windows.sql");
 
-/// The thirteenth migration (plan 47, PRD FR-13.11, Architecture 15.4): `accounts.is_pukhta_party`, the
-/// mark of a پختہ party's own account (پختہ کھاتہ گاہک or بیوپاری, code 0032 on), kept apart from the
-/// `is_pukhta_khata` mark of the two shared accounts. One column with its checks, a trigger and a
-/// partial index; every existing row gets 0 and no amount, id or chain hash changes.
-pub const PUKHTA_PARTY_ACCOUNTS_SQL: &str =
+/// The thirteenth migration (plan 47, Architecture 15.4): one column with its checks, a trigger and a
+/// partial index that marked an own account of a one-time party. Migration 20 renames the column to
+/// `was_one_time_party` and no code reads it again. Every existing row got 0 and no amount, id or
+/// chain hash changed.
+pub const ONE_TIME_PARTY_MARK_SQL: &str =
     include_str!("../migrations/0013_pukhta_party_accounts.sql");
 
 /// The fourteenth migration (CLAUDE.md rule 4, PRD FR-7.70): `venture_entry_parts` and
@@ -126,6 +126,13 @@ pub const ASSISTANT_TIME_LIMIT_SQL: &str =
 /// no book, amount, id or chain hash changes.
 pub const SALE_GRADE_SQL: &str = include_str!("../migrations/0019_sale_grade.sql");
 
+/// The twentieth migration (plan 64, PRD v1.32 Section 13, FR-13.9, Architecture 15.2 and 15.4): چکتا
+/// کھاتہ takes the place of the one-time accounts. Every `pukhta_*` column is renamed to `chukta_*`,
+/// the old party mark becomes `was_one_time_party`, the account 0031 is made inactive, the dead-amount
+/// marks on one-time people are ended, and `chukta_buyers` is made. The Rust hook [`chukta_hook`]
+/// then names the accounts and fills the list. No journal line, amount, id or chain hash changes.
+pub const CHUKTA_KHATA_SQL: &str = include_str!("../migrations/0020_chukta_khata.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -150,13 +157,14 @@ pub fn migrations() -> Migrations<'static> {
         M::up(SHOP_SPLIT_SQL),
         M::up(DEAD_MARKS_SQL),
         M::up(EDIT_WINDOWS_SQL),
-        M::up(PUKHTA_PARTY_ACCOUNTS_SQL),
+        M::up(ONE_TIME_PARTY_MARK_SQL),
         M::up(PARTS_ARE_SOFT_STATE_SQL),
         M::up(ASSISTANT_QUESTIONS_SQL),
         M::up(SPEED_INDEXES_SQL),
         M::up(ASSISTANT_TIMING_SQL),
         M::up(ASSISTANT_TIME_LIMIT_SQL),
         M::up(SALE_GRADE_SQL),
+        M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook),
     ])
 }
 
@@ -274,6 +282,87 @@ const WIDEN_SERIAL: [Widen; 1] = [Widen {
 /// Public so the tests of migration 8 can build the file as it was released at version 7.
 pub fn codes_hook(tx: &Transaction) -> Result<(), HookError> {
     edit_table_text(tx, &WIDEN_SERIAL, "migration 7")
+}
+
+/// The English name of the account 0030 from migration 20 (PRD FR-10.4).
+const CHUKTA_KHATA_NAME_EN: &str = "Chukta Khata";
+/// The Urdu name of the account 0030 from migration 20 (PRD FR-10.4).
+const CHUKTA_KHATA_NAME_UR: &str = "چکتا کھاتہ";
+/// The names of the old closed account 0031 from migration 20 (PRD FR-10.4).
+const OLD_CLOSED_NAME_UR: &str = "پرانا بند کھاتہ";
+const OLD_CLOSED_NAME_EN: &str = "Old Closed Account";
+
+/// After the SQL of migration 20 (plan 64, PRD FR-13.9): gives the accounts 0030 and 0031 their new
+/// names with their search keys (built only by `mandi_core::text`, Code Standards B26), and fills
+/// `chukta_buyers` from the distinct people of the old lines on 0030, each as he was last typed. A
+/// person with no Urdu or English name is left out, because the list has no row for a nameless
+/// person. Public so the tests of migration 20 can build the file as it was released at version 19.
+pub fn chukta_hook(tx: &Transaction) -> Result<(), HookError> {
+    for (code, name_ur, name_en) in [
+        ("0030", CHUKTA_KHATA_NAME_UR, CHUKTA_KHATA_NAME_EN),
+        ("0031", OLD_CLOSED_NAME_UR, OLD_CLOSED_NAME_EN),
+    ] {
+        tx.execute(
+            "UPDATE accounts SET name_ur = ?1, name_en = ?2, search_ur = ?3, search_en = ?4,
+                 search_phonetic = ?5
+             WHERE code = ?6 AND is_chukta_khata = 1",
+            rusqlite::params![
+                name_ur,
+                name_en,
+                mandi_core::text::search_ur(name_ur),
+                mandi_core::text::search_en(name_en),
+                mandi_core::text::search_phonetic(name_en),
+                code
+            ],
+        )?;
+    }
+    // The lines are read in id order, so a later line of the same person wins: his names and phone
+    // are as he was last typed.
+    let lines: Vec<(String, String, String, Option<String>)> = {
+        let mut statement = tx.prepare(
+            "SELECT s.chukta_person_key, s.chukta_name_ur, s.chukta_name_en, s.chukta_phone
+             FROM bikri_sales s JOIN accounts a ON a.id = s.buyer_account_id
+             WHERE a.code = '0030' AND s.chukta_person_key IS NOT NULL
+             ORDER BY s.id",
+        )?;
+        statement
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let mut order: Vec<String> = Vec::new();
+    let mut last: std::collections::HashMap<String, (String, String, Option<String>)> =
+        std::collections::HashMap::new();
+    for (key, name_ur, name_en, phone) in lines {
+        if !last.contains_key(&key) {
+            order.push(key.clone());
+        }
+        last.insert(key, (name_ur, name_en, phone));
+    }
+    for key in order {
+        let Some((name_ur, name_en, phone)) = last.get(&key) else {
+            continue;
+        };
+        if name_ur.trim().is_empty() || name_en.trim().is_empty() {
+            continue;
+        }
+        let phone = phone.as_deref().map(str::trim).filter(|p| !p.is_empty());
+        tx.execute(
+            "INSERT INTO chukta_buyers (person_key, name_ur, name_en, search_ur, search_en,
+                 search_phonetic, phone)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(person_key) DO NOTHING",
+            rusqlite::params![
+                key,
+                name_ur.trim(),
+                name_en.trim(),
+                mandi_core::text::search_ur(name_ur),
+                mandi_core::text::search_en(name_en),
+                mandi_core::text::search_phonetic(name_en),
+                phone
+            ],
+        )?;
+    }
+    Ok(())
 }
 
 /// After the SQL of migration 8: every trip is named by its code and its day, in both scripts

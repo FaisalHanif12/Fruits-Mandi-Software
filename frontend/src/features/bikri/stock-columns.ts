@@ -12,16 +12,13 @@ import type { StockRow } from '../../bindings/StockRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
 import { displayName } from '../../shared/i18n';
-import { PUKHTA_SELLER_CODE } from './types';
 
-/** The seller of a lot. A one-time seller is shown by his own name (PRD FR-13.2). */
+/** The seller of a lot, by his name and tag (Code Standards F38). */
 export function stockSellerName(
   row: StockRow,
   language: Parameters<typeof displayName>[1],
 ): string {
-  return row.seller.code === PUKHTA_SELLER_CODE && row.pukhta !== null
-    ? displayName(row.pukhta, language)
-    : displayName(row.seller, language);
+  return displayName(row.seller, language);
 }
 
 export const STOCK_COLUMNS: readonly ListColumn<StockRow>[] = [

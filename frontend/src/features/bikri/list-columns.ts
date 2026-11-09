@@ -13,19 +13,14 @@ import { columnsWithMore, type ListColumn, type MoreColumnsPlan } from '../../sh
 import type { LayoutStep } from '../../shared/hooks';
 import { displayName } from '../../shared/i18n';
 import type { BikriListRow } from '../../bindings/BikriListRow';
-import { PUKHTA_SELLER_CODE } from './types';
 
-/** The sellers of a بکری in lot order. A one-time seller is shown by his own name (FR-13.2). */
+/** The sellers of a بکری in lot order. */
 export function sellerNames(
   row: BikriListRow,
   language: Parameters<typeof displayName>[1],
   separator: string,
 ): string {
-  const named = row.sellers
-    .filter((seller) => seller.code !== PUKHTA_SELLER_CODE)
-    .map((seller) => displayName(seller, language));
-  const oneTime = row.pukhta_sellers.map((person) => displayName(person, language));
-  return [...named, ...oneTime].join(separator);
+  return row.sellers.map((seller) => displayName(seller, language)).join(separator);
 }
 
 export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [

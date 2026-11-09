@@ -50,10 +50,6 @@ export type SimilarAccount = {
    */
   account_type: AccountType;
   /**
-   * True for a پختہ party's own account (plan 47). Left out when false.
-   */
-  is_pukhta_party?: boolean;
-  /**
    * True when its name, its tag and its phone all equal what was typed: the duplicate warning
    * of PRD FR-10.7. The same name and phone with another tag is not a duplicate (PRD E38).
    */

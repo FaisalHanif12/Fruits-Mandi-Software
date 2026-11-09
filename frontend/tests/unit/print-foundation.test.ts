@@ -130,6 +130,12 @@ describe('the print stylesheet', () => {
     );
   });
 
+  it('gives a sheet that starts a new page a little room at the top, so the tall letters of an Urdu title are not painted at the foot of the page before', () => {
+    expect(PRINT_CSS).toMatch(
+      /\.print-doc\[data-window\]:not\(\[data-paper='mm80'\]\) \.print-sheet \+ \.print-sheet \{\s*padding-block-start: var\(--print-gap-2\);/,
+    );
+  });
+
   it('reads fonts and sizes from tokens only, and has no physical direction', () => {
     expect(PRINT_CSS).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(PRINT_CSS).not.toMatch(/\d(px|pt|rem|em)\b/);
@@ -197,14 +203,12 @@ describe.each(LANGUAGES)('the words the backend sends (%s)', (language) => {
   const IDS = [
     'print-seller-bill-title',
     'print-buyer-slip-title',
-    'print-pukhta-slip-title',
     'print-fact-number',
     'print-fact-date',
     'print-fact-bill-date',
     'print-fact-truck',
     'print-party-seller',
     'print-party-buyer',
-    'print-party-onetime-buyer',
     'print-gross-sale',
     'print-freight',
     'print-commission',
@@ -258,7 +262,7 @@ describe.each(LANGUAGES)('the words the backend sends (%s)', (language) => {
   });
 
   it('every id the canned print data uses exists', () => {
-    for (const doc of ['seller_bill', 'buyer_slips', 'pukhta_slip'] as const) {
+    for (const doc of ['seller_bill', 'buyer_slips'] as const) {
       const data = printDataFor(doc, { language });
       const ids = [
         data.header.title_id,

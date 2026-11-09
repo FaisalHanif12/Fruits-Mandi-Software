@@ -30,6 +30,7 @@ import type { BikriSaved } from '../../../bindings/BikriSaved';
 import type { EditableBikri } from '../../../bindings/EditableBikri';
 import type { FieldError } from '../../../bindings/FieldError';
 import type { UiError } from '../../../bindings/UiError';
+import { cardChuktaOf } from '../../../shared/accounts';
 import { uiErrorOf } from '../../../shared/api';
 import { draftsDiscard } from '../../../shared/drafts';
 import { isoToDisplayDate, useGrouping } from '../../../shared/format';
@@ -70,6 +71,7 @@ import { useBikriDetail } from '../hooks/useBikriReads';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useEditDiff } from '../hooks/useEditDiff';
 import { useEditReason, type EditReason } from '../hooks/useEditReason';
+import { useEditorCard } from '../hooks/useEditorCard';
 import { useEditSession } from '../hooks/useEditSession';
 import { useSaveFlow, type SaveMutation } from '../hooks/useSaveFlow';
 import { useSaveBikri, useSaveEdit } from '../hooks/useSaveBikri';
@@ -99,7 +101,7 @@ import {
   useBikriDraft,
   type BikriDraftStores,
 } from '../draft-store';
-import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot, isPukhtaSeller } from '../draft';
+import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
 import { useLotWho } from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
@@ -387,6 +389,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     say,
     lotWho,
     errorText,
+    current: preview !== undefined && !stale,
   });
 
   // What the user changed in a posting open for edit: marked in the grids and listed (plan 16).
@@ -432,11 +435,11 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
 
   // Which part of the screen the user is in decides which party the card shows.
   const [region, setRegion] = useState<Region | null>(null);
-  const [editorCard, setEditorCard] = useState<number | null>(null);
+  const [editorCard, setEditorCard] = useEditorCard();
   const focusedSales = salesRows.find((row) => row.rowId === salesFocus?.rowId);
   const focusedLot = lotRows.find((row) => row.rowId === lotsFocus?.rowId);
   const cardAccount =
-    editorCard ??
+    editorCard?.accountId ??
     (region === 'sales'
       ? (focusedSales?.picked?.[SALE.buyer]?.id ?? null)
       : region === 'lots'
@@ -472,8 +475,15 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
 
   const step = useLayoutStep();
   const wide = isFromStep(step, 'wide');
-  const lotMoreForced = lotProblems.length > 0 || (lotRow !== undefined && isPukhtaSeller(lotRow));
-  const card = <PartyCard accountId={cardAccount} />;
+  const lotMoreForced = lotProblems.length > 0;
+  // A چکتا buyer's card is his own: his names and phone, no balance (PRD FR-13.6).
+  const cardChukta =
+    editorCard !== null
+      ? editorCard.chukta
+      : region === 'sales'
+        ? cardChuktaOf(focusedSales?.picked?.[SALE.buyer])
+        : null;
+  const card = <PartyCard accountId={cardAccount} chukta={cardChukta} />;
 
   // The cash note, the summary and the partner split: the numbers the munshi watches. They go to a
   // column of their own in a wide window, and under the sale lines in the others (F22).

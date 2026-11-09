@@ -1,0 +1,29 @@
+{
+  "head": {
+    "account_id": 20,
+    "code": "0020",
+    "name_ur": "اکرم ٹول ٹیکس",
+    "name_en": "Akram Toll Tax",
+    "kind": "buyer",
+    "is_active": true,
+    "is_dead": false
+  },
+  "rows": [
+    {
+      "date": "2026-10-10",
+      "previous_paisa": 0,
+      "previous_side": "zero",
+      "charged_paisa": 1288000,
+      "paid_paisa": 1000000,
+      "balance_paisa": 288000,
+      "balance_side": "dr"
+    }
+  ],
+  "count": 1,
+  "charged_total_paisa": 1288000,
+  "paid_total_paisa": 1000000,
+  "opening_paisa": 0,
+  "opening_side": "zero",
+  "closing_paisa": 288000,
+  "closing_side": "dr"
+}

@@ -40,7 +40,6 @@ const ROUTES = [
   '#/bikri/book',
   '#/bikri/today',
   '#/bikri/stock',
-  '#/bikri/pukhta',
   '#/bikri/receipt',
   '#/bikri/collection',
   '#/rokar/book',

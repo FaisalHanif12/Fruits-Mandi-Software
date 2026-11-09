@@ -8,6 +8,7 @@ pub mod auth;
 pub mod bikri;
 pub mod capital;
 pub mod cashbook;
+pub mod chukta;
 pub mod day;
 pub mod dead;
 pub mod drafts;
@@ -19,7 +20,7 @@ pub mod khata;
 pub mod lent;
 pub mod masters;
 pub mod partners;
-pub mod pukhta;
+pub mod party_ledgers;
 pub mod purchases;
 pub mod reports;
 pub mod rules;
@@ -33,7 +34,6 @@ pub mod backup;
 // Run B, plan 20 (append-only block).
 pub mod reports_engine;
 // Run B, plan 20, step B3 (append-only block).
-pub mod reports_people;
 // Run B, plan 21 (append-only block).
 pub mod analytics;
 // Run B, plan 22 (append-only block).

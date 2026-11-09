@@ -24,10 +24,9 @@ import {
   fieldError,
 } from '../../../shared/ui';
 import { useBikriDraft } from '../draft-store';
-import { isGardenLot, isOwnLot, isPukhtaSeller } from '../draft';
+import { isGardenLot, isOwnLot } from '../draft';
 import { lotLabelVars, useLotWho } from '../lot-name';
 import { LOT, ON, type LotPreview } from '../types';
-import { PukhtaFields } from './PukhtaFields';
 
 interface LotMoreProps {
   row: EntryRow;
@@ -88,8 +87,7 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
   const { l10n } = useLocalization();
   const grouping = useGrouping();
   const stores = useBikriDraft();
-  // A one-time seller needs his name and phone, so the panel opens for him by itself.
-  const open = stores.view((state) => state.moreOpen) || hasProblem || isPukhtaSeller(row);
+  const open = stores.view((state) => state.moreOpen) || hasProblem;
   const seller = row.picked?.[LOT.seller];
   const card = usePartyCard(seller?.id ?? null);
   const advance = card.data?.advance_open ?? null;
@@ -263,29 +261,6 @@ export function LotMore({ row, lotIndex, lot, error, hasProblem }: LotMoreProps)
               })}
             </div>
           </div>
-          {isPukhtaSeller(row) ? (
-            <PukhtaFields
-              store={stores.lots}
-              row={row}
-              side="seller"
-              keys={{
-                ur: LOT.pukhtaUr,
-                en: LOT.pukhtaEn,
-                phone: LOT.pukhtaPhone,
-                marks: `${LOT.pukhtaUr}Marks`,
-              }}
-              paths={{
-                ur: path('pukhta.name_ur'),
-                en: path('pukhta.name_en'),
-                phone: path('pukhta.phone'),
-              }}
-              error={error}
-              onDone={() => {
-                const index = stores.lots.getState().rows.findIndex((r) => r.rowId === row.rowId);
-                stores.lots.getState().setPendingFocus({ rowIndex: index, field: LOT.item });
-              }}
-            />
-          ) : null}
         </Card>
       ) : null}
     </div>

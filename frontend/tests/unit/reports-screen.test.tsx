@@ -120,7 +120,7 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('lists the reports of each group, as the backend sent them, with a line about each', async () => {
       await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      expect(CATALOG).toHaveLength(38);
+      expect(CATALOG).toHaveLength(37);
       for (const entry of CATALOG) {
         const group = await groupRegion(entry.group_title_id);
         const link = within(group)
@@ -160,7 +160,6 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
         'R6',
         'R7',
         'R8',
-        'R9',
         'R10',
       ]);
       expect(await idsOf('report-group-accounts')).toEqual([
@@ -738,12 +737,12 @@ describe.each(LANGUAGES)('رپورٹ (%s)', (language: Language) => {
     it('the list, a report, a filter, the grid and a row open, then Esc back, without the mouse', async () => {
       const { router, user } = await open('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
-      // The first report (R1, the first of Sales) has focus. ↓ seventeen times is R18: the ten
-      // Sales reports, then R11, R12, R13, R14, R15, R16, R17 and R18.
+      // The first report (R1, the first of Sales) has focus. ↓ sixteen times is R18: the nine
+      // Sales reports left (R9 is retired), then R11, R12, R13, R14, R15, R16, R17 and R18.
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(17)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(16)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R18');
       }, SLOW_MS);

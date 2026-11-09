@@ -8,7 +8,6 @@
 //! - `preview` (here): read only (Code Standards B29).
 //! - `save`: one transaction (Code Standards B3).
 //! - `read`: a saved بکری, the list, the find and first / previous / next / last.
-//! - `pukhta`: the one-time people and the register of the پختہ کھاتہ accounts.
 //!
 //! The read connection is not re-entrant, so the rules and switches are fetched before the one
 //! read of the call (see the services README).
@@ -17,7 +16,6 @@ mod cancel;
 pub(crate) mod edit;
 mod later;
 mod load;
-mod pukhta;
 mod read;
 mod rows;
 mod save;
@@ -27,7 +25,6 @@ mod stock;
 pub use cancel::{cancel, preview as cancel_preview, undo};
 pub use edit::{edit_preview, edit_save, open_for_edit};
 pub use later::{preview as later_sale_preview, save as later_sale_save};
-pub use pukhta::{register, search_people};
 pub use read::{find, get, list, navigate};
 pub use save::save;
 pub use stock::{list as stock_list, ready_goods, write_off, write_off_undo};

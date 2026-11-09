@@ -31,7 +31,6 @@ fn form(ur: &str, en: &str, owes: &str, tag: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -308,7 +307,7 @@ fn the_print_job_and_the_print_data_have_the_list_the_screen_shows_for_the_same_
 #[test]
 fn every_active_buyer_who_owes_is_listed_on_any_day_and_nobody_else() {
     // Plan 53 T2: no collection day. A buyer who owes and is active is listed; one who owes
-    // nothing, one who is owed, and an inactive one are not. The cash buyer and the پختہ کھاتہ
+    // nothing, one who is owed, and an inactive one are not. The cash buyer and the چکتا کھاتہ
     // account are never on it.
     let (_dir, env, owner) = ready();
     let (akram, arshad, nasir) = buyers(&env, &owner);

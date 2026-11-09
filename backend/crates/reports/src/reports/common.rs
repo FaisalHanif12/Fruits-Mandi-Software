@@ -119,7 +119,7 @@ pub(crate) fn load_parties(
         let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
             let code: String = r.get(1)?;
             // A short code is the running number of a seller's or buyer's code (`0` for 0010,
-            // `11` for 00111, PRD 1.8 R5). The system accounts (نقدی منڈی, the two پختہ کھاتہ) have
+            // `11` for 00111, PRD 1.8 R5). The system accounts (نقدی منڈی, the two چکتا کھاتہ) have
             // none and are known by their full code.
             let short_code = mandi_core::accounts::short_code_of(&code);
             Ok(PartyRef {
@@ -150,7 +150,7 @@ pub(crate) fn load_party(conn: &Connection, id: i64) -> Result<Option<PartyRef>,
     Ok(load_parties(conn, &[id])?.remove(&id))
 }
 
-/// The party of a line: the account and, for a پختہ کھاتہ line, the person key.
+/// The party of a line: the account and, for a چکتا کھاتہ line, the person key.
 pub(crate) fn party_of_line(
     parties: &HashMap<i64, PartyRef>,
     account_id: i64,
@@ -289,10 +289,10 @@ pub(crate) fn date_cell(iso: Option<String>) -> Cell {
     iso.map_or(Cell::Empty, |iso| Cell::Date { iso })
 }
 
-/// A one-time person inside a پختہ کھاتہ account shows with his own names, the account's code,
+/// A چکتا buyer inside a چکتا کھاتہ account shows with his own names, the account's code,
 /// no short code (the account has none) and his person key (PRD FR-13.5, FR-19.13). A
 /// line that names nobody keeps the account's names.
-pub(crate) fn pukhta_party(
+pub(crate) fn chukta_party(
     mut party: PartyRef,
     person_key: Option<String>,
     name_ur: Option<&str>,

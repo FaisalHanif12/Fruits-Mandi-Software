@@ -197,7 +197,6 @@ fn extras(
                 env.ctx,
                 &OpenBillsInput {
                     account_id: card.id,
-                    person_key: None,
                 },
             )
             .map_err(service_stop)?;
@@ -221,7 +220,6 @@ fn extras(
                 env.ctx,
                 &OpenPayablesInput {
                     seller_id: card.id,
-                    person_key: None,
                     include_settled: false,
                 },
             )

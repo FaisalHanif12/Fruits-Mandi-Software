@@ -7,7 +7,6 @@ import type { FruitSource } from './FruitSource';
 import type { FruitStatus } from './FruitStatus';
 import type { LockedReason } from './LockedReason';
 import type { RecordRef } from './RecordRef';
-import type { SavedPukhta } from './SavedPukhta';
 
 /**
  * One saved entry, in the list and in `fruit_get`. It holds everything the edit form needs.
@@ -45,10 +44,6 @@ export type FruitRow = {
    * Who is credited: the lot's seller or the other agent.
    */
   credit_account: RecordRef;
-  /**
-   * The one-time seller of a پختہ کھاتہ lot, if any.
-   */
-  pukhta: SavedPukhta | null;
   /**
    * The item.
    */

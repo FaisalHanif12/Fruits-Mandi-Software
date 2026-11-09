@@ -28,7 +28,6 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { GardenFilterSelect } from '../../gardens';
-import { isPukhtaCode } from '../../pukhta_khata';
 import { partyBoxOf } from '../catalog';
 import {
   GROUP_BY_CHOICES,
@@ -40,7 +39,6 @@ import {
   type ReportFilterState,
 } from '../filters';
 import { ReportPartnerSelect } from './ReportPartnerSelect';
-import { ReportPersonPicker } from './ReportPersonPicker';
 import { ReportBikriBox } from './ReportBikriBox';
 import { ReportGardenViewSelect } from './ReportGardenViewSelect';
 import { ReportStockViewSelect } from './ReportStockViewSelect';
@@ -167,79 +165,39 @@ export function ReportFilterBar({
   }
   if (takes('party')) {
     const box = partyBoxOf(entry.id);
-    const personBox = (accountId: number | null) => (
+    boxes.push(
       <Field
-        key="person"
-        label={<Localized id="report-filter-person" />}
-        error={
-          fieldError(error, 'filters.party.person_key') ??
-          fieldError(error, 'filters.party.account_id') ??
-          fieldError(error, 'filters.party')
-        }
+        key="party"
+        label={<Localized id={box === 'lent' ? 'report-filter-borrower' : 'report-filter-party'} />}
+        error={fieldError(error, 'filters.party') ?? fieldError(error, 'filters.party.account_id')}
       >
-        {(control) => (
-          <ReportPersonPicker
-            {...control}
-            person={state.person}
-            text={state.personText}
-            accountId={accountId}
-            onTextChange={(personText) => {
-              onChange({ person: null, personText });
-            }}
-            onPick={(person) => {
-              onChange({ person, personText: '' });
-            }}
-          />
-        )}
-      </Field>
+        {(control) =>
+          box === 'lent' ? (
+            // The people who can borrow are the accounts of control 0103 (PRD 16.5, R32).
+            <ControlAccountPicker
+              {...control}
+              controlCode={LENT_CONTROL_CODE}
+              showCard={false}
+              value={state.party}
+              onChange={(hit) => {
+                onChange({ party: valueOf(hit), partyPersonKey: null });
+              }}
+            />
+          ) : (
+            <AccountPicker
+              {...control}
+              canAdd={false}
+              scope={box}
+              showCard={false}
+              value={state.party}
+              onChange={(hit) => {
+                onChange({ party: valueOf(hit), partyPersonKey: null });
+              }}
+            />
+          )
+        }
+      </Field>,
     );
-    if (box === 'one_time') {
-      // The register of one-time people takes no other account: the box is the person himself.
-      boxes.push(personBox(null));
-    } else {
-      boxes.push(
-        <Field
-          key="party"
-          label={
-            <Localized id={box === 'lent' ? 'report-filter-borrower' : 'report-filter-party'} />
-          }
-          error={
-            fieldError(error, 'filters.party') ?? fieldError(error, 'filters.party.account_id')
-          }
-        >
-          {(control) =>
-            box === 'lent' ? (
-              // The people who can borrow are the accounts of control 0103 (PRD 16.5, R32).
-              <ControlAccountPicker
-                {...control}
-                controlCode={LENT_CONTROL_CODE}
-                showCard={false}
-                value={state.party}
-                onChange={(hit) => {
-                  onChange({ party: valueOf(hit), person: null, personText: '' });
-                }}
-              />
-            ) : (
-              <AccountPicker
-                {...control}
-                canAdd={false}
-                scope={box}
-                showCard={false}
-                value={state.party}
-                onChange={(hit) => {
-                  // Another account has other people, so the person of the last one is let go.
-                  onChange({ party: valueOf(hit), person: null, personText: '' });
-                }}
-              />
-            )
-          }
-        </Field>,
-      );
-      // A one-time account keeps its lines per person: one of them can be picked (FR-13.5).
-      if (state.party !== null && isPukhtaCode(state.party.code)) {
-        boxes.push(personBox(state.party.id));
-      }
-    }
   }
   for (const kind of ['seller', 'zamindar'] as const) {
     if (!takes(kind)) continue;

@@ -35,7 +35,6 @@ fn columns<'a>(ready: &'a Ready, date_iso: &'a str) -> NewFruit<'a> {
         source: ready.source.as_str(),
         lot_id: ready.lot_id,
         credit_account_id: ready.credit_account_id,
-        pukhta_person_key: ready.person_key.as_deref(),
         item_id: ready.item_id,
         packing_id: ready.packing_id,
         qty: ready.qty,

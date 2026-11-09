@@ -15,6 +15,6 @@ screen he left the app on. The backend keeps the JSON text a screen wrote and re
 - Nothing about money is kept. A screen keeps choices, never amounts.
 
 Used by: every report (`report.<id>`), analytics (`analytics.filters`), today's بکری, باقی مال, the
-پختہ کھاتہ register, the partner statement, the last screen (`app.last-screen`) and the first-run
+the partner statement, the last screen (`app.last-screen`) and the first-run
 guide's seen mark (`app.guide`). In tests the commands are answered by `tests/setup.ts`: nothing is
 kept, and the guide counts as seen.

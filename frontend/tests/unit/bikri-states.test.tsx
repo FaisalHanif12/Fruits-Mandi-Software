@@ -24,9 +24,7 @@ import {
   salesGrid,
   textOf,
   typeHeaderAndLot,
-  typeCodeAndEnter,
   typeTwoLines,
-  waitForLineFill,
 } from '../helpers/bikri-screen';
 import {
   DAY,
@@ -489,23 +487,6 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
       await waitFor(() => {
         expect(buttonsOf(lotsGrid(language))).toHaveLength(1);
       });
-    });
-  });
-
-  it('the one-time buyer account sends Enter to the name fields of the line', async () => {
-    const { user } = await openBook(language);
-    await typeHeaderAndLot(user, language);
-    // The quantity the screen fills in is awaited first, and the code is typed step by step (the
-    // helper waits for the editor and for the list). This test used to fail on a busy computer:
-    // jsdom has no layout, and AG Grid closes the popup editor of a cell whose rectangle is all
-    // zeros, 200 ms after it opens. tests/setup.ts now gives every element a rectangle, so the
-    // editor stays open as it does in a real window. bikri-fill-while-typing.test.tsx proves a
-    // fill that lands in the middle of the code does not close it either.
-    await waitForLineFill(language);
-    await typeCodeAndEnter(user, '0030');
-    await waitFor(() => {
-      const active = document.activeElement;
-      expect(active?.closest('[data-pukhta-for]')).not.toBeNull();
     });
   });
 

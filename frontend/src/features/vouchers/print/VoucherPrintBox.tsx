@@ -4,7 +4,8 @@
 // after save" choice for vouchers that `Ctrl+Enter` follows, so it is remembered
 // (`settings_set_printing`), together with the sale book's documents it does not touch.
 //
-// Printing works on Windows only (plan 14 contract 8). Elsewhere the backend answers
+// Printing works on Windows and on a Mac (plan 14 contract 8, plan 69; on a Mac the system print
+// window opens). On any other computer the backend answers
 // `ERR_PRINT_WINDOWS_ONLY` and the "Preview" shows the same slip in the app, laid out exactly as it
 // would print. The language switch of the box changes only the print, never the app.
 
@@ -21,6 +22,7 @@ import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useFormNavigation } from '../../../shared/keyboard';
 import {
   DOC_NAME_ID,
+  PrintDialogHint,
   PrintLanguageTo,
   PrintOutcomeNotice,
   printingInputOf,
@@ -158,6 +160,7 @@ function PrintBoxForm({
         to={to}
         onTo={setTo}
       />
+      <PrintDialogHint />
       <fieldset className="flex flex-col">
         <Localized id="print-box-docs">
           <legend className="type-label" />

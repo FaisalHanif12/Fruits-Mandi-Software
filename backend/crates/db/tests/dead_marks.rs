@@ -30,7 +30,7 @@ fn insert(
     note: &str,
 ) -> Result<usize, mandi_db::rusqlite::Error> {
     conn.execute(
-        "INSERT INTO dead_marks (account_id, pukhta_person_key, entry_date, reason, note, owed_paisa, after_entry_id)
+        "INSERT INTO dead_marks (account_id, chukta_person_key, entry_date, reason, note, owed_paisa, after_entry_id)
          VALUES (?1, ?2, '2026-10-11', ?3, ?4, 1868400, 7)",
         params![account, key, reason, note],
     )
@@ -51,7 +51,7 @@ fn only_one_active_move_for_an_account_or_a_person_key() {
     conn.execute(
         "UPDATE dead_marks SET is_active = 0, undone_at = '2026-10-12T00:00:00Z', undo_reason = 'x',
                 undone_after_entry_id = 9, undone_date = '2026-10-12'
-         WHERE account_id = ?1 AND pukhta_person_key IS NULL",
+         WHERE account_id = ?1 AND chukta_person_key IS NULL",
         [id],
     )
     .unwrap();

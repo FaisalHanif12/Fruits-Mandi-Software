@@ -28,9 +28,6 @@ pub struct ReceiptInput {
     /// The buyer or the seller.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The one-time person, for a پختہ کھاتہ account (PRD FR-13.5). Null for any other account.
-    #[serde(default)]
-    pub person_key: Option<String>,
     /// Whole rupees, more than 0.
     pub amount: String,
     /// The payment mode, bank and cheque fields were taken out in v1.6: all money is روکڑ
@@ -56,9 +53,6 @@ pub struct PaymentInput {
     /// The account paid.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The one-time person, for a پختہ کھاتہ account (PRD FR-13.5). Null for any other account.
-    #[serde(default)]
-    pub person_key: Option<String>,
     /// Whole rupees, more than 0.
     pub amount: String,
     /// The payment mode, bank and cheque fields were taken out in v1.6: all money is روکڑ
@@ -246,7 +240,7 @@ pub struct VoucherPreview {
     /// The amount, 0 if it could not be read.
     #[ts(type = "Paisa")]
     pub amount_paisa: Paisa,
-    /// The account's balance (or the person's, for a پختہ کھاتہ) before this voucher.
+    /// The account's balance before this voucher.
     pub current_balance: Balance,
     /// The same balance after it.
     pub new_balance: Balance,
@@ -359,7 +353,7 @@ pub struct VoucherCancelled {
     /// The reversal entry.
     #[ts(type = "number")]
     pub reversal_entry_id: i64,
-    /// The account's balance (or the person's) after the cancel.
+    /// The account's balance after the cancel.
     pub new_balance: Balance,
 }
 
@@ -371,9 +365,6 @@ pub struct OpenBillsInput {
     /// The buyer.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The one-time person, for the پختہ کھاتہ buyer account.
-    #[serde(default)]
-    pub person_key: Option<String>,
 }
 
 /// The most open bills or payable postings a read gives (PRD FR-7.58, FR-7.59). A party can have
@@ -415,9 +406,6 @@ pub struct OpenPayablesInput {
     /// The seller.
     #[ts(type = "number")]
     pub seller_id: i64,
-    /// The one-time person, for the پختہ کھاتہ بیوپاری account.
-    #[serde(default)]
-    pub person_key: Option<String>,
     /// True lists the postings with nothing left to pay too (for a report). Missing means false.
     #[serde(default)]
     pub include_settled: bool,
@@ -675,33 +663,6 @@ pub struct ReceiptsSaved {
     /// The total of the rows that were saved.
     #[ts(type = "Paisa")]
     pub saved_paisa: Paisa,
-}
-
-// ---- Make a one-time person a regular account (PRD FR-13.8) ----
-
-/// Input of `pukhta_make_regular`.
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct MakeRegularInput {
-    /// The one-time person.
-    pub person_key: String,
-    /// His side: a one-time buyer or seller. The account must be of the same side.
-    pub side: crate::bikri::PukhtaSide,
-    /// The new account, filled as in the account form (a quick add with `F4`, PRD FR-10.8). The
-    /// id and version must be null.
-    pub account_input: crate::accounts::AccountInput,
-}
-
-/// A one-time person made regular.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct MadeRegular {
-    /// The new account.
-    pub account: RecordRef,
-    /// The balance that was moved to it with a جنرل entry. Zero if he owed nothing and was owed
-    /// nothing.
-    pub moved: Balance,
-    /// The جنرل entry. Null if nothing was moved.
-    #[ts(type = "number | null")]
-    pub entry_id: Option<i64>,
 }
 
 // ---- Global search (PRD FR-5.4) ----

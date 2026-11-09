@@ -95,14 +95,6 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
                 bikri_number: lot.bikri_number,
                 received_date: lot.received_date,
                 seller: lot.seller,
-                pukhta: lot.pukhta.map(|(name_ur, name_en, phone, person_key)| {
-                    mandi_domain::core::bikri::SavedPukhta {
-                        name_ur,
-                        name_en,
-                        phone,
-                        person_key,
-                    }
-                }),
                 item: lot.item,
                 packing: lot.packing,
                 qty_received: lot.qty_received,
@@ -537,10 +529,6 @@ fn lot_matches(row: &StockRow, text: &str) -> bool {
         &row.seller.name_ur,
         &row.seller.name_en,
     ) || named(text, &row.item.code, &row.item.name_ur, &row.item.name_en)
-        || row
-            .pukhta
-            .as_ref()
-            .is_some_and(|p| named(text, "", &p.name_ur, &p.name_en) || p.phone.contains(text))
         || text.parse::<i64>().is_ok_and(|n| n == row.bikri_number)
 }
 

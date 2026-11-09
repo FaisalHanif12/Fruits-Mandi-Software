@@ -41,7 +41,6 @@ fn form(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -163,9 +162,9 @@ fn a_typed_code_that_is_not_a_full_code_of_the_type_is_refused_every_way_it_is_w
     let audit_before = audit_total(&dir);
     let bad_buyer_codes = [
         "03040000", // نقدی منڈی
-        "03049999", // the old code of پختہ کھاتہ
-        "0030",     // پختہ کھاتہ (buyer)
-        "0031",     // پختہ کھاتہ (seller)
+        "03049999", // the old code of چکتا کھاتہ
+        "0030",     // چکتا کھاتہ (buyer)
+        "0031",     // چکتا کھاتہ (seller)
         "0020",     // taken
         "0010",     // a seller's code
         "0040",     // an item's code
@@ -764,6 +763,7 @@ fn hostile_names_are_kept_as_plain_text_cleaned_or_refused_and_never_run() {
                     text: text.chars().take(60).collect(),
                     limit: 50,
                     offset: 0,
+                    with_chukta: None,
                 },
             )
             .unwrap();
@@ -1027,6 +1027,7 @@ fn the_search_index_rebuilt_from_the_database_gives_the_same_answers() {
                         text: (*q).into(),
                         limit: 50,
                         offset: 0,
+                        with_chukta: None,
                     },
                 )
                 .unwrap()

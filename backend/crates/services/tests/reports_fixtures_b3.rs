@@ -1,5 +1,5 @@
 //! The request and answer pairs of the Sales, Collections and Business reports and of the search
-//! for one-time people, for the frontend (plan 20 step B3).
+//! for چکتا buyers, for the frontend (plan 20 step B3).
 //!
 //! Each fixture is a pair: `<name>_request.json` is exactly the `input` the command takes (it is
 //! read back into the real input type before it is used) and `<name>.json` is the answer the real
@@ -18,7 +18,6 @@ mod reports_world;
 mod support;
 
 use common::*;
-use mandi_reports::people::{FindPeopleInput, find_people};
 use mandi_reports::reports::{ReportPrintInput, ReportRunInput, print_data, run};
 use mandi_services::core::error::ErrorCode;
 use reports_world::*;
@@ -160,25 +159,6 @@ fn world() -> support::World {
     w
 }
 
-/// A refusal of the search for people, as a command returns it.
-fn people_refusal_pair(w: &support::World, name: &str, request: Value, code: ErrorCode) {
-    let input: FindPeopleInput = typed(&request);
-    let error = find_people(w.env.ctx.db(), &input).unwrap_err();
-    let mandi_reports::ReportsError::Rejected(items) = error else {
-        panic!("not a refusal of the user's entry: {error:?}");
-    };
-    assert_eq!(items.first().map(|i| i.code), Some(code), "{name}");
-    let wire = json!({
-        "ok": false,
-        "errors": items
-            .iter()
-            .map(|i| json!({ "code": i.code, "field": i.field, "values": i.values }))
-            .collect::<Vec<_>>(),
-        "ref": "E-20261010-0001"
-    });
-    pair(name, &request, &wire);
-}
-
 #[test]
 fn fixtures_are_the_real_answers() {
     let w = world();
@@ -218,19 +198,7 @@ fn fixtures_are_the_real_answers() {
         all("R7", json!({ "from": "10-10-2026", "to": "10-10-2026" })),
     );
     run_pair(&w, "reports_run_r8_adda", all("R8", json!({})));
-    run_pair(&w, "reports_run_r9_all", all("R9", json!({})));
-    run_pair(
-        &w,
-        "reports_run_r9_due",
-        all("R9", json!({ "status": "due" })),
-    );
     run_pair(&w, "reports_run_r27_series", all("R27", json!({})));
-    refusal_pair(
-        &w,
-        "reports_run_r9_not_a_one_time_account",
-        all("R9", json!({ "party": party(w.akram) })),
-        ErrorCode::ErrOutOfRange,
-    );
     refusal_pair(
         &w,
         "reports_run_r2_unknown_seller",
@@ -277,21 +245,7 @@ fn fixtures_are_the_real_answers() {
     );
     print_pair(
         &w,
-        "reports_print_data_r9_due_en",
-        json!({ "id": "R9", "filters": filters(json!({ "status": "due" })), "language": "en", "paper": null }),
-    );
-
-    // The search for one-time people.
-    let request = json!({ "text": "shahid", "limit": 10 });
-    let hits = find_people(w.env.ctx.db(), &typed::<FindPeopleInput>(&request)).unwrap();
-    pair("reports_find_people_shahid", &request, &hits);
-    let request = json!({ "text": "nasir", "limit": 0 });
-    let hits = find_people(w.env.ctx.db(), &typed::<FindPeopleInput>(&request)).unwrap();
-    pair("reports_find_people_none", &request, &hits);
-    people_refusal_pair(
-        &w,
-        "reports_find_people_limit_too_big",
-        json!({ "text": "shahid", "limit": 51 }),
-        ErrorCode::ErrOutOfRange,
+        "reports_print_data_r38_due_en",
+        json!({ "id": "R38", "filters": filters(json!({ "status": "due" })), "language": "en", "paper": null }),
     );
 }

@@ -36,7 +36,6 @@ fn input(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: code.into(),
         name_ur: ur.into(),
@@ -260,6 +259,7 @@ fn ashiq_k_finds_the_tagged_account_in_both_scripts_and_the_hit_carries_the_tag(
                 text: text.into(),
                 limit: 20,
                 offset: 0,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -369,6 +369,7 @@ fn an_edit_changes_the_tag_and_the_keys_and_the_search_follows() {
                 text: text.into(),
                 limit: 5,
                 offset: 0,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -442,7 +443,7 @@ fn the_tag_shows_in_the_row_the_party_card_and_the_chart() {
 #[test]
 fn codes_are_the_type_number_and_a_running_number_from_zero() {
     // Plan 32 R1, R2 (PRD 1.8): seller 001, buyer 002, then the running number from 0 with no
-    // padding. The two پختہ کھاتہ accounts are 0030 and 0031 and نقدی منڈی keeps 03040000, so
+    // padding. The two چکتا کھاتہ accounts are 0030 and 0031 and نقدی منڈی keeps 03040000, so
     // none of them is in the way: the first buyer is 0020.
     let (_dir, env, owner) = ready();
     let rahim = seller(&env, &owner, "رحیم", "Rahim");
@@ -756,7 +757,7 @@ fn an_account_is_made_inactive_never_deleted() {
 #[test]
 fn a_system_account_cannot_be_made_inactive() {
     // PRD FR-10.4: the app posts to these by itself (cash, opening difference, the income
-    // accounts, نقدی منڈی, the two پختہ کھاتہ accounts ...), so a picker must always offer them.
+    // accounts, نقدی منڈی, the two چکتا کھاتہ accounts ...), so a picker must always offer them.
     // The lead decided on 13-10-2026: refused with a code on `id`; the screen shows the Active
     // box ticked and cannot be changed.
     let (dir, env, owner) = ready();
@@ -780,7 +781,7 @@ fn a_system_account_cannot_be_made_inactive() {
         );
     }
     let audit_before = audit_total(&dir);
-    for (id, code) in &system {
+    for (id, code) in system.iter().filter(|(_, c)| c != "0031") {
         let (error_code, field) =
             first_error(accounts::set_active(&env.ctx, &owner, *id, false).unwrap_err());
         assert_eq!(
@@ -796,6 +797,12 @@ fn a_system_account_cannot_be_made_inactive() {
                 .is_active
         );
     }
+    // The old closed account 0031 is inactive since migration 20 and stays closed (PRD FR-13.9).
+    let closed = system.iter().find(|(_, c)| c == "0031").unwrap().0;
+    assert!(!accounts::get(&env.ctx, closed).unwrap().is_active);
+    let (error_code, _) =
+        first_error(accounts::set_active(&env.ctx, &owner, closed, true).unwrap_err());
+    assert_eq!(error_code, ErrorCode::ErrSystemAccount);
     assert_eq!(audit_total(&dir), audit_before, "a refusal writes nothing");
     // The Active box of the account form is held to the same rule.
     let cash = accounts::get(&env.ctx, account_id(&env, "01010001")).unwrap();
@@ -1332,13 +1339,13 @@ fn the_grid_saves_all_lines_or_none_and_points_at_each_bad_line() {
     )
     .unwrap_err();
     assert_eq!(first_error(error).0, ErrorCode::ErrOpeningNotAllowed);
-    // A پختہ کھاتہ account has no person to hold a balance (FR-13.5).
-    let pukhta = account_id(&env, "0030");
+    // A چکتا کھاتہ account has no person to hold a balance (FR-13.5).
+    let chukta = account_id(&env, "0030");
     let error = accounts::openings_save(
         &env.ctx,
         &owner,
         &OpeningsInput {
-            lines: vec![line(&env, pukhta, "31-08-2026", "100", "", false)],
+            lines: vec![line(&env, chukta, "31-08-2026", "100", "", false)],
         },
     )
     .unwrap_err();
@@ -1454,7 +1461,7 @@ fn a_control_gives_its_accounts_a_page_at_a_time_with_the_count_and_balance_of_a
         .flat_map(|h| &h.controls)
         .find(|c| c.code == "0304")
         .unwrap();
-    // The two seeded buyers (نقدی منڈی, پختہ کھاتہ) and the seven.
+    // The two seeded buyers (نقدی منڈی, چکتا کھاتہ) and the seven.
     assert_eq!(buyers.account_count, 9);
     let page = |offset: u32, limit: u32| {
         coa::control_accounts(
@@ -1679,7 +1686,7 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
             )
             .unwrap();
         // Plan 32: sellers 001n and buyers 002n, the running number n from 0, no padding. The list
-        // shows only sellers, buyers and the two پختہ کھاتہ accounts, so 10,000 of each make more
+        // shows only sellers, buyers and the two چکتا کھاتہ accounts, so 10,000 of each make more
         // than 20,000 listed accounts.
         for n in 0..10_000_i64 {
             statement
@@ -1751,9 +1758,9 @@ fn twenty_thousand_accounts_are_listed_whole_with_their_balances() {
         all.rows.len()
     );
     assert!(took.as_millis() < BOUND_MS, "{took:?}");
-    // Every listed account is there: no cap. 2 x 10,000 made here and the 2 پختہ کھاتہ accounts.
-    assert_eq!(all.rows.len(), 2 * 10_000 + 2);
-    assert!(all.rows.len() > 20_000);
+    // Every listed account is there: no cap. 2 x 10,000 made here; چکتا کھاتہ is no seller or buyer of the
+    // list (PRD FR-10.5).
+    assert_eq!(all.rows.len(), 2 * 10_000);
     assert_eq!(all.count, u32::try_from(all.rows.len()).unwrap());
     let codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();
     let mut sorted = codes.clone();
@@ -1808,7 +1815,7 @@ fn the_account_rows_say_whether_they_can_take_an_opening() {
     // uses (ERR_OPENING_NOT_ALLOWED).
     let (_dir, env, owner) = ready();
     let rahim = seller(&env, &owner, "رحیم", "Rahim");
-    // The list shows only sellers, buyers and the two پختہ کھاتہ accounts (plan 32 R6); the other
+    // The list shows only sellers, buyers and the two چکتا کھاتہ accounts (plan 32 R6); the other
     // accounts are read one by one.
     let by_code = |code: &str| accounts::get(&env.ctx, account_id(&env, code)).unwrap();
     let flag = |code: &str| by_code(code).can_take_opening;
@@ -1818,8 +1825,8 @@ fn the_account_rows_say_whether_they_can_take_an_opening() {
     assert!(!flag("04010001"), "income");
     assert!(!flag("06019999"), "ابتدائی فرق");
     assert!(!flag("03040000"), "نقدی منڈی");
-    assert!(!flag("0030"), "پختہ کھاتہ (buyer)");
-    assert!(!flag("0031"), "پختہ کھاتہ (seller)");
+    assert!(!flag("0030"), "چکتا کھاتہ (buyer)");
+    assert!(!flag("0031"), "چکتا کھاتہ (seller)");
     // The flag and the save agree for these accounts.
     let mut codes = vec![
         "01010001",
@@ -2225,7 +2232,6 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
         "03040000",
         "030119998",
         "0030",
-        "0031",
         "0010",
         "0020",
         "01030001",
@@ -2261,10 +2267,11 @@ fn the_list_with_every_is_the_full_list_the_opening_balances_screen_needs() {
     };
     assert!(flag("01010001") && flag("06010001") && flag("01030001") && flag("0010"));
     assert!(!flag("06019999") && !flag("04010001") && !flag("03040000"));
-    // `all` is the Accounts list: no cash, no capital, no money-lent person.
+    // `all` is the Accounts list: sellers and buyers only (PRD FR-10.5). No cash, no capital, no
+    // money-lent person, and neither چکتا کھاتہ (0030) nor the old closed account (0031).
     let all = list(AccountListKind::All);
     let all_codes: Vec<&str> = all.rows.iter().map(|r| r.code.as_str()).collect();
-    assert_eq!(all_codes, ["0010", "0020", "0030", "0031"]);
+    assert_eq!(all_codes, ["0010", "0020"]);
     assert_eq!(all.total_dr_paisa, rupees(4_000));
     assert_eq!(all.total_cr_paisa, rupees(4_000));
     // A text filter works inside `every` too.
@@ -2377,7 +2384,7 @@ fn the_opening_filter_lists_the_accounts_that_can_take_an_opening_and_have_none(
     for code in ["01010001", "06010001", "0010", "0020", "0021"] {
         assert!(names.contains(&code.to_owned()), "{code} is missing");
     }
-    // Income, ابتدائی فرق, نقدی منڈی and the two پختہ کھاتہ accounts never can.
+    // Income, ابتدائی فرق, نقدی منڈی and the two چکتا کھاتہ accounts never can.
     for code in ["04010001", "06019999", "03040000", "0030", "0031"] {
         assert!(!names.contains(&code.to_owned()), "{code} cannot take one");
     }

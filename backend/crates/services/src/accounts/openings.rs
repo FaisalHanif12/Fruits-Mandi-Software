@@ -209,7 +209,7 @@ pub(crate) fn apply(
     // An opening is a line of the buyer's key (a bill or a prepayment) or a seller's advance, so
     // the matching rows are made right again: they stay the canonical ones (plan 13). A one-time
     // person has no opening (PRD FR-10.9).
-    if !facts.is_pukhta_khata {
+    if !facts.is_chukta_khata {
         if facts.control_code == BUYER_CONTROL {
             matching::rematch(tx, user_id, now, facts.id, None)?;
         } else if facts.control_code == SELLER_CONTROL {

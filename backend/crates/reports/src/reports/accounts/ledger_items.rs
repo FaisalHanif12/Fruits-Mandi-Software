@@ -124,7 +124,7 @@ fn load_base_lines(
     let mut by_entry: HashMap<i64, Vec<BaseLine>> = HashMap::new();
     for chunk in base_ids.chunks(IN_CHUNK) {
         let sql = format!(
-            "SELECT entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa
+            "SELECT entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa
              FROM journal_lines WHERE entry_id IN ({}) ORDER BY entry_id, line_no",
             placeholders(chunk.len())
         );
@@ -158,10 +158,10 @@ fn load_sales(
         // Rows replaced by an edit still belong to the entry they were posted in, so the old
         // entry and its reversal keep their items (the order is the one of the entry builder).
         let sql = format!(
-            "SELECT s.journal_entry_id, s.lot_id, s.buyer_account_id, s.pukhta_person_key, s.qty,
+            "SELECT s.journal_entry_id, s.lot_id, s.buyer_account_id, s.chukta_person_key, s.qty,
                     s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa, s.laga_paisa,
                     s.buyer_total_paisa, s.seller_amount_paisa, l.seller_account_id,
-                    l.pukhta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number,
+                    l.chukta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number,
                     s.grade
              FROM bikri_sales s
              JOIN bikri_lots l ON l.id = s.lot_id

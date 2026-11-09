@@ -32,10 +32,10 @@
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    add, balance_cell, col, count_of, load_parties, paisa, pukhta_party, text_cell,
+    add, balance_cell, chukta_party, col, count_of, load_parties, paisa, text_cell,
 };
 use crate::reports::filters::Typed;
-use crate::reports::grouped_sums::pukhta_names;
+use crate::reports::grouped_sums::chukta_names;
 use crate::reports::ids;
 use crate::reports::model::{
     Cell, ColumnKind, Names, PartyRef, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
@@ -78,7 +78,7 @@ fn blank_if_zero(amount: Paisa) -> Cell {
 }
 
 /// The accounts whose collector is this staff member (the collector on the account form, PRD
-/// 10.2). A one-time person's account has none, so he is never in a collector's sheet.
+/// 10.2). A چکتا buyer's account has none, so he is never in a collector's sheet.
 fn collector_accounts(conn: &Connection, collector: i64) -> Result<HashSet<i64>, ReportsError> {
     let mut statement = conn.prepare("SELECT id FROM accounts WHERE collector_staff_id = ?1")?;
     let ids = statement

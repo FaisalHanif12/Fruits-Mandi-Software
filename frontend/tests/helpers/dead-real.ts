@@ -13,7 +13,6 @@ import type { DeadMarked } from '../../src/bindings/DeadMarked';
 import type { DeadMarkInput } from '../../src/bindings/DeadMarkInput';
 import type { DeadPreview } from '../../src/bindings/DeadPreview';
 import type { PartyCard } from '../../src/bindings/PartyCard';
-import type { PukhtaPerson } from '../../src/bindings/PukhtaPerson';
 import cardArshad from '../fixtures/dead_party_card_arshad.json';
 import tilesMove from '../fixtures/dead_tiles_after_the_move.json';
 import tilesRecovery from '../fixtures/dead_tiles_after_the_recovery.json';
@@ -27,10 +26,6 @@ import pageAfterMove from '../fixtures/reports_dead_amount_after_the_move.json';
 import pageAfterRecovery from '../fixtures/reports_dead_amount_after_the_recovery.json';
 import pageAllAfterUndo from '../fixtures/reports_dead_amount_all_after_the_undo.json';
 import searchIncludeDead from '../fixtures/search_accounts_include_dead.json';
-import pukhtaDeadHidden from '../fixtures/search_pukhta_people_dead_hidden.json';
-import pukhtaDeadHiddenRequest from '../fixtures/search_pukhta_people_dead_hidden_request.json';
-import pukhtaIncludeDead from '../fixtures/search_pukhta_people_include_dead.json';
-import pukhtaIncludeDeadRequest from '../fixtures/search_pukhta_people_include_dead_request.json';
 
 function readPreview(value: unknown): DeadPreview {
   return value as DeadPreview;
@@ -52,9 +47,6 @@ function readPage(value: unknown): DeadAmountPage {
 }
 function readHits(value: unknown): AccountHit[] {
   return value as AccountHit[];
-}
-function readPeople(value: unknown): PukhtaPerson[] {
-  return value as PukhtaPerson[];
 }
 function readRequest(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
@@ -83,10 +75,3 @@ export const SEARCH_INCLUDE_DEAD = readHits(searchIncludeDead);
 export const MARK_ARSHAD_REQUEST = readMarkInput(markArshadRequest);
 /** The request of the picker search of the receipt field: dead people asked for. */
 export const SEARCH_INCLUDE_DEAD_REQUEST = readRequest(searchIncludeDeadRequest);
-
-/** The one-time people the receipt screen gets for "nasir": Nasir, in the dead amount (`is_dead`). */
-export const PEOPLE_INCLUDE_DEAD = readPeople(pukhtaIncludeDead);
-export const PEOPLE_INCLUDE_DEAD_REQUEST = readRequest(pukhtaIncludeDeadRequest);
-/** The same search for any other field: no dead people, so nothing is found. */
-export const PEOPLE_DEAD_HIDDEN = readPeople(pukhtaDeadHidden);
-export const PEOPLE_DEAD_HIDDEN_REQUEST = readRequest(pukhtaDeadHiddenRequest);

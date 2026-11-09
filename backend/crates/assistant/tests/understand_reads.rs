@@ -2287,10 +2287,10 @@ fn partners_drawings_a_collector_and_a_misspelt_item_are_read_not_missing() {
     );
     assert!(!u.has_not_found());
     assert!(!u.sure, "عام is not sure");
-    // The one-time people have no figure of their own: the shop's dues are not theirs.
+    // The چکتا buyers have no figure of their own: the shop's dues are not theirs.
     for question in [
-        "pukhta khata ka kul baqaya kitna hai",
-        "pukhta khata ke logon ka kul baqaya kitna hai",
+        "chukta khata ka kul baqaya kitna hai",
+        "chukta khata ke logon ka kul baqaya kitna hai",
     ] {
         let u = understand(&reader(&y.w, today), question);
         assert!(!u.has_not_found(), "{question}");

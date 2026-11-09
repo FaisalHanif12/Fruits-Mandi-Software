@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "code": "ERR_CHUKTA_NAME_REQUIRED",
+      "field": "name_ur",
+      "values": {}
+    },
+    {
+      "code": "ERR_PHONE_INVALID",
+      "field": "phone",
+      "values": {}
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261010-0001"
+}

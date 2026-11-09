@@ -19,7 +19,7 @@ use common::*;
 use mandi_services::core::accounts::{
     AccountInput, AccountType, BalanceSide, OpeningLineInput, OpeningsInput,
 };
-use mandi_services::core::bikri::{BikriDraft, BikriSaved, HeaderInput, PukhtaInput};
+use mandi_services::core::bikri::{BikriDraft, BikriSaved, ChuktaInput, HeaderInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{
@@ -63,7 +63,6 @@ fn seller_rahim(env: &TestEnv, owner: &auth::Actor) -> i64 {
         id: None,
         version: None,
         account_type: AccountType::Seller,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: "رحیم".into(),
@@ -292,7 +291,6 @@ fn e2e_19_the_opening_position() {
             search: None,
             show_finished: true,
             account_id: None,
-            person_key: None,
             voucher_type: Some(VoucherType::Advance),
             from: String::new(),
             to: String::new(),
@@ -367,7 +365,7 @@ fn entry_lines(w: &support::World, entry_id: i64) -> Vec<(String, i64, i64, Opti
     let conn = raw(&w.dir);
     let mut statement = conn
         .prepare(
-            "SELECT a.code, l.dr_paisa, l.cr_paisa, l.pukhta_person_key
+            "SELECT a.code, l.dr_paisa, l.cr_paisa, l.chukta_person_key
              FROM journal_lines l JOIN accounts a ON a.id = l.account_id
              WHERE l.entry_id = ?1 ORDER BY l.line_no",
         )
@@ -429,10 +427,10 @@ fn balance(w: &support::World, id: i64) -> (BalanceSide, i64) {
     (b.side, b.amount_paisa.rupees())
 }
 
-/// Event 2 of PRD 4.5: کریم's 10 سیب, sold to the one-time buyer شاہد for cash.
+/// Event 2 of PRD 4.5: کریم's 10 سیب, sold to the چکتا buyer شاہد, paid in full on the spot.
 fn event2(w: &support::World) -> BikriDraft {
-    let mut line = support::sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = support::sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -558,7 +556,7 @@ fn e2e_1_to_4_event_1_is_saved_with_its_journal_split_and_matching() {
 }
 
 #[test]
-fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
+fn e2e_5_event_2_with_the_chukta_buyer_is_saved_and_paid() {
     let w = worked_day();
     save_ok(&w, &support::event1(&w), false);
     let draft = event2(&w);
@@ -579,8 +577,8 @@ fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
         ),
         (12_800, 0)
     );
-    // The one-time person is kept on the line with his key (PRD FR-13.5).
-    let person = lot.sales[0].pukhta.as_ref().unwrap();
+    // The چکتا buyer is kept on the line with his names, phone and key (PRD FR-13.5).
+    let person = lot.sales[0].chukta.as_ref().unwrap();
     assert_eq!(
         (
             person.name_ur.as_str(),
@@ -628,21 +626,26 @@ fn e2e_5_event_2_with_the_one_time_buyer_is_saved_and_paid() {
         ),
         1
     );
-    let register = bikri::register(&w.env.ctx, &Default::default()).unwrap();
-    assert_eq!(register.rows.len(), 1);
-    let row = &register.rows[0];
+    // He is a row of the list of چکتا buyers, with his names, his phone and the day of his line, and
+    // the account چکتا کھاتہ holds nothing (PRD FR-13.1, FR-13.2).
+    let found = mandi_services::chukta::search(
+        &w.env.ctx,
+        &mandi_services::core::chukta::ChuktaSearchInput {
+            text: "shahid".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(found.len(), 1);
     assert_eq!(
         (
-            row.name_en.as_str(),
-            row.phone.as_str(),
-            row.amount.rupees(),
-            row.commission.rupees(),
-            row.paid,
-            row.open.rupees(),
-            row.bikri_number
+            found[0].name_ur.as_str(),
+            found[0].name_en.as_str(),
+            found[0].phone.as_deref(),
+            found[0].last_date.as_deref()
         ),
-        ("Shahid", "03000000000", 12_800, 720, true, 0, 2)
+        ("شاہد", "Shahid", Some("03000000000"), Some("2026-10-10"))
     );
+    assert_eq!(balance(&w, w.chukta_khata), (BalanceSide::Zero, 0));
     // Both postings together: the books balance.
     let trial = ledger::trial_balance(&w.env.ctx, None).unwrap();
     assert_eq!(trial.total_dr, trial.total_cr);
@@ -704,7 +707,6 @@ fn receipt_input(account: i64, amount: &str) -> ReceiptInput {
     ReceiptInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
@@ -716,7 +718,6 @@ fn payment_input(account: i64, amount: &str, reason: &str) -> PaymentInput {
     PaymentInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
@@ -741,7 +742,6 @@ fn open_bills_of(w: &support::World, account: i64) -> mandi_services::core::vouc
         &w.env.ctx,
         &OpenBillsInput {
             account_id: account,
-            person_key: None,
         },
     )
     .unwrap()
@@ -752,7 +752,6 @@ fn payables_of(w: &support::World, seller: i64) -> mandi_services::core::voucher
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: seller,
-            person_key: None,
             include_settled: true,
         },
     )
@@ -939,7 +938,6 @@ fn e2e_7_event_4_rahim_is_paid_4316() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -1099,18 +1097,19 @@ fn fr_15_5_a_receipt_above_the_bill_stays_as_credit_for_the_next_bill() {
 }
 
 #[test]
-fn e2e_21_two_one_time_buyers_are_matched_per_person() {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType};
+fn e2e_21_two_chukta_buyers_paid_in_full_have_no_balance_and_0030_ends_at_zero() {
+    use mandi_reports::reports::{ReportFilters, ReportId, ReportRunInput, run};
+    use mandi_services::core::bikri::LineChargeMethod;
+    // PRD v1.32 E2E-21 (replaced): two چکتا buyers, شاہد 1 × 1,000 and ناصر 2 × 1,000, each pays the
+    // whole bill on the spot, with no commission or لاگا, so the entry is 3,000 = 3,000 plus the cash.
     let w = worked_day();
-    // شاہد buys 1 × 1,000 and ناصر 2 × 1,000, both on credit, with no commission or لاگا.
     let line = |key: &str, qty: &str, name_ur: &str, name_en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
+        let mut l = support::sale(key, w.chukta_khata, qty, "1000");
+        l.chukta = Some(ChuktaInput {
             name_ur: name_ur.into(),
             name_en: name_en.into(),
             phone: phone.into(),
         });
-        l.payment_type = Some(PaymentType::Credit);
         l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
         l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
         l.laga = support::typed(LineChargeMethod::PerUnit, "0");
@@ -1121,69 +1120,95 @@ fn e2e_21_two_one_time_buyers_are_matched_per_person() {
         line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
         line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
     ];
-    save_ok(&w, &support::draft(vec![lot]), false);
+    let saved = save_ok(&w, &support::draft(vec![lot]), false);
     let shahid = mandi_services::core::text::person_key("شاہد", "0300-0000000");
     let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    let person_balance = |key: &str| {
-        let b = ledger::person_balance(&w.env.ctx, w.pukhta_buyer, key).unwrap();
-        (b.side, b.amount_paisa.rupees())
+
+    // Neither has a balance, and the account چکتا کھاتہ holds nothing (PRD FR-13.1, FR-13.6).
+    for key in [&shahid, &nasir] {
+        let b = ledger::person_balance(&w.env.ctx, w.chukta_khata, key).unwrap();
+        assert_eq!(b.side, BalanceSide::Zero, "{key}");
+    }
+    assert_eq!(balance(&w, w.chukta_khata), (BalanceSide::Zero, 0));
+    // Each paid in full: 1,000 and 2,000 came into cash with the sale (50,000 + 3,000).
+    assert_eq!(
+        balance(&w, support::id_of(&w.env, "01010001")),
+        (BalanceSide::Dr, 53_000)
+    );
+    // The whole entry balances: 3,000 on the sale part and 3,000 on the cash part, so 6,000 a side.
+    let journal = entry_lines(&w, saved.entry_id);
+    assert_eq!(journal.iter().map(|l| l.1).sum::<i64>(), 6_000);
+    assert_eq!(journal.iter().map(|l| l.2).sum::<i64>(), 6_000);
+    // The lines on 0030 carry the person: his bill on the debit side, and the same amount paid on the
+    // spot on the credit side, one pair for each person (PRD FR-13.5, FR-12.44).
+    let on_0030 = |debit: bool| {
+        let mut lines: Vec<(String, i64)> = journal
+            .iter()
+            .filter(|l| l.0 == "0030")
+            .filter_map(|l| {
+                let amount = if debit { l.1 } else { l.2 };
+                (amount > 0).then(|| (l.3.clone().unwrap_or_default(), amount))
+            })
+            .collect();
+        lines.sort();
+        lines
     };
-    assert_eq!(person_balance(&shahid), (BalanceSide::Dr, 1_000));
-    assert_eq!(person_balance(&nasir), (BalanceSide::Dr, 2_000));
-
-    // A receipt needs the person (PRD FR-13.5, FR-13.7) and he must be on the books.
-    let mut input = receipt_input(w.pukhta_buyer, "1,000");
-    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrPersonRequired);
-    input.person_key = Some("نامعلوم|03000000000".into());
-    let refused = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap_err();
-    assert_eq!(refused.code(), ErrorCode::ErrNotFound);
-
-    // The bills of one person are his alone.
-    let bills = vouchers::open_bills(
+    let mut expected = vec![(shahid.clone(), 1_000), (nasir.clone(), 2_000)];
+    expected.sort();
+    assert_eq!(on_0030(true), expected, "the bills on 0030");
+    assert_eq!(
+        on_0030(false),
+        expected,
+        "the money paid on the spot on 0030"
+    );
+    // Both are in the day's sale book (R2), each by his own name, and neither is in the buyers' dues
+    // (R20) (PRD FR-13.6, FR-13.7).
+    let page = |id: ReportId| {
+        run(
+            w.env.ctx.db(),
+            &ReportRunInput {
+                group_by_month: false,
+                sort: None,
+                id,
+                filters: ReportFilters::default(),
+                offset: 0,
+                limit: 0,
+            },
+        )
+        .unwrap()
+    };
+    let register = page(ReportId::R2);
+    let names: Vec<String> = register
+        .rows
+        .iter()
+        .filter_map(|r| match &r.cells[2] {
+            mandi_reports::reports::Cell::Party { party } => Some(party.name_en.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(names.contains(&"Shahid".to_owned()), "{names:?}");
+    assert!(names.contains(&"Nasir".to_owned()), "{names:?}");
+    assert_eq!(
+        page(ReportId::R20).total_count,
+        0,
+        "no one owes: no row in R20"
+    );
+    // Both are in the list of چکتا buyers.
+    let list = mandi_services::chukta::search(
         &w.env.ctx,
-        &OpenBillsInput {
-            account_id: w.pukhta_buyer,
-            person_key: Some(shahid.clone()),
+        &mandi_services::core::chukta::ChuktaSearchInput {
+            text: String::new(),
         },
     )
     .unwrap();
-    assert_eq!(bills.open_paisa.rupees(), 1_000);
-    assert_eq!(bills.bills.len(), 1);
-
-    // E2E-21: the receipt of 1,000 for شاہد: شاہد 0, ناصر 2,000 still due.
-    input.person_key = Some(shahid.clone());
-    let preview = preview_of(&w, VoucherEntry::Receipt(input.clone()));
-    assert_eq!(preview.bill_effects.len(), 1);
-    assert_eq!(preview.bill_effects[0].settled_paisa.rupees(), 1_000);
-    assert_eq!(preview.new_balance.side, BalanceSide::Zero);
-    let saved = vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
-    assert_eq!(saved.new_balance.side, BalanceSide::Zero);
-    assert_eq!(person_balance(&shahid).0, BalanceSide::Zero);
-    assert_eq!(person_balance(&nasir), (BalanceSide::Dr, 2_000));
-    let nasir_bills = vouchers::open_bills(
+    assert_eq!(list.len(), 2);
+    // A receipt on 0030 is refused: he has no ledger (PRD FR-13.6).
+    let refused = vouchers::save_receipt(
         &w.env.ctx,
-        &OpenBillsInput {
-            account_id: w.pukhta_buyer,
-            person_key: Some(nasir),
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        (nasir_bills.open_paisa.rupees(), nasir_bills.bills.len()),
-        (2_000, 1),
-        "شاہد's payment never settles ناصر's bill"
+        &w.owner,
+        &receipt_input(w.chukta_khata, "1,000"),
     );
-    // The voucher keeps the person key, and the list shows him.
-    let row = vouchers::get(&w.env.ctx, saved.voucher_id).unwrap();
-    assert_eq!(
-        row.person.as_ref().map(|p| p.person_key.as_str()),
-        Some(shahid.as_str())
-    );
-    assert_eq!(
-        row.person.as_ref().map(|p| p.name_en.as_str()),
-        Some("Shahid")
-    );
+    assert!(refused.is_err());
 }
 
 #[test]

@@ -1,7 +1,7 @@
 /*
  * The shared print layout (plan 14, PRD FR-19.3 to FR-19.7, NFR-URD-11 to NFR-URD-16). Every
  * printed document of the app is laid out with these classes: the seller bill, the buyer slips,
- * the پختہ slip, later the receipt slip and the reports.
+ * the receipt slip and the reports.
  *
  * Rules kept here:
  *  - ONE literal @page rule per paper class (var() does not work inside @page). It holds the
@@ -122,6 +122,13 @@ html:has(.print-doc[data-paper='mm80']) {
   margin-block-start: var(--print-gap-5);
   padding-block-start: var(--print-gap-5);
   border-block-start: var(--print-rule) dashed var(--color-ink);
+}
+
+/* The tall letters of an Urdu title reach above their box. On the first page the page margin hides
+   it, but on a sheet that starts a new page the ink would be painted at the foot of the page before
+   (a stray mark above the footer). A little room at the top of the sheet keeps it on its own page. */
+.print-doc[data-window]:not([data-paper='mm80']) .print-sheet + .print-sheet {
+  padding-block-start: var(--print-gap-2);
 }
 
 /* The header: the firm at the start, the title of the document at the end. */
@@ -354,6 +361,15 @@ html:has(.print-doc[data-paper='mm80']) {
    under the other, and never wrap inside a line, so "(سیب 8 . 2600)" stays in one piece. */
 .print-r5 td {
   vertical-align: middle;
+}
+
+/* The phone of a چکتا buyer, under his name (he has no code). */
+.print-r5-phone {
+  --print-num-size: var(--print-latin-2);
+
+  display: block;
+  font-size: var(--print-text-2);
+  color: var(--color-ink-muted);
 }
 
 .print-r5-details {

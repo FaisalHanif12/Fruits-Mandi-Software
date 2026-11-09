@@ -6,7 +6,7 @@
 accounts-title = کھاتے
 
 # review: pending
-accounts-help = { -beopari }، { -gahak } اور { -pukhta-khata }۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
+accounts-help = { -beopari } اور { -gahak }۔ کھاتہ کھول کر دیکھیں یا بدلیں، یا نیا بنائیں۔
 
 # review: pending
 accounts-new = نیا کھاتہ
@@ -96,15 +96,9 @@ accounts-type-seller = { -beopari }
 # review: pending
 accounts-type-buyer = { -gahak }
 
+# The mark of a walk-in buyer in the buyer list of a sale line and on his card (PRD FR-7.29, FR-13.6).
 # review: pending
-accounts-type-pukhta = { -pukhta-khata }
-
-# PRD FR-13.11, plan 47: a پختہ party's own account, by his side.
-# review: pending
-accounts-type-pukhta_buyer = { -pukhta-khata } { -gahak }
-
-# review: pending
-accounts-type-pukhta_seller = { -pukhta-khata } { -beopari }
+accounts-type-chukta = { -chukta }
 
 # review: pending
 accounts-type-money_lent = { -adhar-raqam }
@@ -175,7 +169,7 @@ accounts-field-type = کھاتے کی قسم
 
 # PRD 13, FR-13.5, FR-7.29, FR-13.11. Shown on the new account form only (plans 45 and 47).
 # review: pending
-accounts-field-type-hint = ایک بار آنے والا { -gahak } یا { -beopari } { -bikri } کی لائن پر { -pukhta-khata } چن کر نام اور فون سے لکھا جاتا ہے۔ جو بار بار آئے اس کا یہاں { -pukhta-khata } بنائیں۔
+accounts-field-type-hint = جس { -beopari } یا { -gahak } کا کھاتہ چلتا ہے اس کا کھاتہ یہاں بنائیں۔ پوری رقم اسی وقت دے کر جانے والا { -gahak } { -bikri } کی لائن کے { -gahak } خانے سے { -chukta-khata } میں شامل کیا جاتا ہے۔
 
 # review: pending
 accounts-field-control = کنٹرول
@@ -290,7 +284,7 @@ chart-load-failed = کھاتوں کی ترتیب نہیں کھل سکی
 masters-accounts-title = کھاتے
 
 # review: pending
-masters-accounts-help = { -beopari }، { -gahak } اور { -pukhta-khata }۔
+masters-accounts-help = { -beopari } اور { -gahak }۔
 
 # review: pending
 masters-chart-title = کھاتوں کی ترتیب

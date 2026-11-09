@@ -360,7 +360,6 @@ fn the_cash_book_button_of_the_cash_estimate_opens_on_the_months_of_the_working(
             &ReceiptInput {
                 date: format!("20-{month:02}-2026"),
                 account_id: w.akram,
-                person_key: None,
                 amount: amount.into(),
                 removed: RemovedPaymentFields::default(),
                 collector_staff_id: None,
@@ -984,7 +983,6 @@ fn the_figure_of_one_month_ahead_carries_the_working_of_its_method_and_the_real_
             &ReceiptInput {
                 date: format!("20-{month:02}-2026"),
                 account_id: w.akram,
-                person_key: None,
                 amount: amount.into(),
                 removed: RemovedPaymentFields::default(),
                 collector_staff_id: None,

@@ -47,7 +47,7 @@ interface GlobalSearchProps {
 
 /** The text a result is known by in the box. */
 function hitText(hit: SearchRow, language: Language): string {
-  if (hit.kind === 'person' || hit.kind === 'screen') return extraText(hit, language); // Run B
+  if (hit.kind === 'screen') return extraText(hit, language); // Run B
   if (hit.kind === 'account') return displayName(hit, language);
   return String(hit.number);
 }
@@ -180,7 +180,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
     },
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem === null) return;
-      if (selectedItem.kind === 'person' || selectedItem.kind === 'screen') {
+      if (selectedItem.kind === 'screen') {
         openExtra?.(selectedItem); // Run B
       } else if (selectedItem.kind === 'bikri') onOpenBikri(selectedItem.id);
       else if (selectedItem.kind === 'voucher') onOpenVoucher(selectedItem);
@@ -236,7 +236,7 @@ export function GlobalSearch({ onOpenAccount, onOpenBikri, onOpenVoucher }: Glob
                   {...getItemProps({ item: hit, index })}
                   className={`flex min-h-control cursor-pointer flex-col justify-center rounded-1 px-3 ${index === highlightedIndex ? 'bg-primary-soft text-primary' : 'text-ink'}`}
                 >
-                  {hit.kind === 'person' || hit.kind === 'screen' ? (
+                  {hit.kind === 'screen' ? (
                     <ExtraResult row={hit} />
                   ) : hit.kind === 'bikri' ? (
                     <BikriResult hit={hit} />

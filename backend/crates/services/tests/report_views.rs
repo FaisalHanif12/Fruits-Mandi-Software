@@ -47,7 +47,6 @@ fn two_months() -> support::World {
         &ReceiptInput {
             date: "05-11-2026".into(),
             account_id: w.akram,
-            person_key: None,
             amount: "700".into(),
             removed: Default::default(),
             collector_staff_id: None,
@@ -761,7 +760,6 @@ fn a_cancelled_voucher_adds_nothing_to_its_month_heading() {
         &ReceiptInput {
             date: "05-11-2026".into(),
             account_id: w.akram,
-            person_key: None,
             amount: "5,000".into(),
             removed: Default::default(),
             collector_staff_id: None,

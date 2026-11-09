@@ -64,7 +64,7 @@ export type ReportFilters = {
    */
   group_by?: ReportGroupBy;
   /**
-   * Paid or due lines only (R9). Missing means all lines.
+   * Paid or due lines only (R38). Missing means all lines.
    */
   status?: ReportPaidFilter;
   /**

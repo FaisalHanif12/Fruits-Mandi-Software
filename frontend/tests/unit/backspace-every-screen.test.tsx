@@ -23,7 +23,6 @@ import * as gardensApi from '../../src/features/gardens/api';
 import * as mastersApi from '../../src/features/masters/api';
 import * as monthApi from '../../src/features/month/api';
 import * as partnersApi from '../../src/features/partners/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as purchasesApi from '../../src/features/purchases/api';
 import * as reportsApi from '../../src/features/reports/api';
 import * as restoreApi from '../../src/features/restore/api';
@@ -61,7 +60,6 @@ vi.mock('../../src/features/gardens/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/features/month/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/purchases/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/restore/api');
@@ -117,7 +115,6 @@ const FEATURE_APIS: readonly Record<string, unknown>[] = [
   mastersApi,
   monthApi,
   partnersApi,
-  pukhtaApi,
   purchasesApi,
   reportsApi,
   restoreApi,

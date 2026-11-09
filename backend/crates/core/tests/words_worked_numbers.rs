@@ -64,7 +64,7 @@ fn words_1_316_040() {
 // ---- The printed documents of plan 14 (PRD 4.4, 4.5) ----
 
 #[test]
-fn words_12_800_the_pukhta_slip() {
+fn words_12_800_the_chukta_buyer_slip() {
     assert_eq!(ur(12_800), "بارہ ہزار آٹھ سو روپے");
     assert_eq!(intl(12_800), "Twelve thousand eight hundred rupees only");
     assert_eq!(lakh(12_800), "Twelve thousand eight hundred rupees only");

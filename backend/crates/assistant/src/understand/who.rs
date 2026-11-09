@@ -12,12 +12,12 @@ use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
 
 use mandi_services::core::accounts::{AccountHit, AccountScope, AccountType, SearchAccountsInput};
-use mandi_services::core::bikri::{PukhtaPeopleInput, PukhtaSide};
+use mandi_services::core::chukta::ChuktaSearchInput;
 use mandi_services::core::partners::PartnerRow;
 use mandi_services::core::search::SearchScope;
 use mandi_services::core::text;
 use mandi_services::core::translit::Direction;
-use mandi_services::{bikri, coa, partners, search, translit};
+use mandi_services::{chukta, coa, partners, search, translit};
 
 use super::lexicon::{Cue, Hit, table};
 use super::scan::{Scan, edit_distance};
@@ -318,6 +318,7 @@ impl<'a> Lookup<'a> {
             limit: ASK,
             offset: 0,
             include_dead: Some(true),
+            with_chukta: None,
         };
         search::search_accounts(self.reader.ctx, self.reader.actor, &input).unwrap_or_else(|_| {
             self.failed.set(true);
@@ -356,7 +357,6 @@ impl<'a> Lookup<'a> {
             name_ur: hit.name_ur.clone(),
             name_en: hit.name_en.clone(),
             tag: hit.tag.clone(),
-            pukhta: hit.is_pukhta_party,
         }
     }
 
@@ -460,7 +460,6 @@ impl<'a> Lookup<'a> {
                         name_ur: hit.name_ur.clone(),
                         name_en: hit.name_en.clone(),
                         tag: None,
-                        pukhta: false,
                     },
                     score(fit.total, typed.len(), name.len()),
                     fit.exact,
@@ -472,9 +471,10 @@ impl<'a> Lookup<'a> {
     }
 
     /// True when the typed words are the name of an account the search does not list (an inactive
-    /// one), or of a one-time person of the پختہ کھاتہ (who is no account at all). Such a name is
-    /// not missing from the books, so the question is not answered as "no such party" without the
-    /// model (PRD FR-13.5, FR-10.10). A failed read counts as known: the safe side.
+    /// one), or of a walk-in buyer of the چکتا کھاتہ (who is no account at all and so is never an
+    /// account hit, PRD FR-13.6). Such a name is not missing from the books, so the question is not
+    /// answered as "no such party" without the model (PRD FR-13.2, FR-10.10). A failed read counts
+    /// as known: the safe side.
     pub(super) fn known_elsewhere(&self, typed: &[String]) -> bool {
         let names = self.all_names.get_or_init(|| {
             search::account_names(self.reader.ctx)
@@ -500,23 +500,16 @@ impl<'a> Lookup<'a> {
         {
             return true;
         }
-        let joined = typed.join(" ");
-        [PukhtaSide::Buyer, PukhtaSide::Seller]
-            .into_iter()
-            .any(|side| {
-                let input = PukhtaPeopleInput {
-                    text: joined.clone(),
-                    side,
-                    include_dead: Some(true),
-                };
-                bikri::search_people(self.reader.ctx, &input).map_or_else(
-                    |_| {
-                        self.failed.set(true);
-                        true
-                    },
-                    |people| !people.is_empty(),
-                )
-            })
+        let input = ChuktaSearchInput {
+            text: typed.join(" "),
+        };
+        chukta::search(self.reader.ctx, &input).map_or_else(
+            |_| {
+                self.failed.set(true);
+                true
+            },
+            |people| !people.is_empty(),
+        )
     }
 
     fn partner_rows(&self) -> &[PartnerRow] {
@@ -563,7 +556,6 @@ impl<'a> Lookup<'a> {
                 name_ur: row.name_ur.clone(),
                 name_en: row.name_en.clone(),
                 tag: None,
-                pukhta: false,
             })
     }
 }
@@ -1127,7 +1119,7 @@ pub(super) fn resolve(reader: &Reader<'_>, scan: &Scan, periods: &[PeriodRef]) -
             .iter()
             .all(|w| table().cues_of(w).contains(&Cue::ExternalPlace));
         // "No such party" is said without the model only when the name is in no account at all
-        // (inactive ones too), is no known one-time person, and the partner section is open: while it
+        // (inactive ones too), is no known چکتا buyer, and the partner section is open: while it
         // is locked a partner's name cannot be looked up (PRD FR-7.82).
         let missing = !place_only && !reader.partner_locked && !look.known_elsewhere(typed);
         match not_found_confidence(scan, span).filter(|_| missing) {
@@ -1369,7 +1361,6 @@ fn trip_names(look: &Lookup<'_>, scan: &Scan, periods: &[PeriodRef], names: &mut
                 name_ur: h.name_ur,
                 name_en: h.name_en,
                 tag: None,
-                pukhta: false,
             })
             .collect();
         let start = number.map_or(hit.start, |(at, _)| at.min(hit.start));

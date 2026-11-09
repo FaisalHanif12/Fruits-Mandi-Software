@@ -50,7 +50,7 @@ export type AnalyticsFilters = {
    */
   seller_id: number | null;
   /**
-   * A buyer, and for a پختہ کھاتہ account the person.
+   * A buyer, and for a چکتا کھاتہ account the person.
    */
   buyer: ReportPartyFilter | null;
   /**

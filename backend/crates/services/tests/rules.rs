@@ -44,7 +44,6 @@ fn add_account(env: &TestEnv, owner: &auth::Actor, kind: AccountType, ur: &str, 
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -813,8 +812,8 @@ fn the_rule_form_refuses_what_prd_11_2_and_11_3_do_not_allow() {
             "0",
         ),
     );
-    // The پختہ کھاتہ accounts take rules like any party (PRD FR-11.7).
-    let pukhta_buyer = f
+    // The چکتا کھاتہ accounts take rules like any party (PRD FR-11.7).
+    let chukta_khata = f
         .env
         .ctx
         .db()
@@ -824,7 +823,7 @@ fn the_rule_form_refuses_what_prd_11_2_and_11_3_do_not_allow() {
     save(
         &f,
         &RuleInput {
-            account_id: Some(pukhta_buyer),
+            account_id: Some(chukta_khata),
             ..form(
                 ChargeSide::Buyer,
                 ChargeType::Commission,

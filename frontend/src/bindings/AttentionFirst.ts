@@ -14,7 +14,7 @@ export type AttentionFirst = {
    */
   id: number;
   /**
-   * The person inside a پختہ کھاتہ account.
+   * The person inside a چکتا کھاتہ account.
    */
   person_key: string | null;
   /**

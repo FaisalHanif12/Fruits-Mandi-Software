@@ -28,7 +28,6 @@ const BACKEND_IDS = [
   'dead-col-status',
   'dead-type-buyer',
   'dead-type-seller',
-  'dead-type-pukhta',
   'dead-type-money_lent',
   'dead-reason-died',
   'dead-reason-left',

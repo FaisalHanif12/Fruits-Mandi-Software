@@ -10,12 +10,7 @@ import { deadMark, deadPreview, deadUndo } from '../../src/features/masters/api'
 import { reportsDeadAmount } from '../../src/features/reports/api';
 import { searchAccounts, searchAccountsRecent } from '../../src/shared/accounts/api';
 import * as invoke from '../../src/shared/api/invoke';
-import { searchPukhtaPeople } from '../../src/features/pukhta_khata/api';
-import {
-  PEOPLE_DEAD_HIDDEN_REQUEST,
-  PEOPLE_INCLUDE_DEAD_REQUEST,
-  SEARCH_INCLUDE_DEAD_REQUEST,
-} from '../helpers/dead-real';
+import { SEARCH_INCLUDE_DEAD_REQUEST } from '../helpers/dead-real';
 
 vi.mock('../../src/shared/api/invoke');
 
@@ -49,13 +44,9 @@ describe('the copies of the backend fixtures are the bytes the backend wrote', (
   const names = readdirSync(SOURCE).filter(
     (name) =>
       name.endsWith('.json') &&
-      [
-        'dead_',
-        'masters_dead_',
-        'reports_dead_',
-        'search_accounts_include_dead',
-        'search_pukhta_people_',
-      ].some((prefix) => name.startsWith(prefix)),
+      ['dead_', 'masters_dead_', 'reports_dead_', 'search_accounts_include_dead'].some((prefix) =>
+        name.startsWith(prefix),
+      ),
   );
 
   it('there are fixtures for the four commands', () => {
@@ -70,17 +61,14 @@ describe('the copies of the backend fixtures are the bytes the backend wrote', (
 });
 
 describe('the wrappers send what the backend reads', () => {
-  it('the preview sends the account and, for a one-time person, his key', async () => {
-    await deadPreview({ account_id: 22, pukhta_person_key: null });
-    expect(call).toHaveBeenCalledWith('masters_dead_preview', {
-      input: { account_id: 22, pukhta_person_key: null },
-    });
+  it('the preview sends the account', async () => {
+    await deadPreview({ account_id: 22 });
+    expect(call).toHaveBeenCalledWith('masters_dead_preview', { input: { account_id: 22 } });
   });
 
   it('the move sends the date as typed, the reason and the note', async () => {
     await deadMark({
       account_id: 22,
-      pukhta_person_key: null,
       entry_date: '11-10-2026',
       reason: 'died',
       note: '',
@@ -88,7 +76,6 @@ describe('the wrappers send what the backend reads', () => {
     expect(call).toHaveBeenCalledWith('masters_dead_mark', {
       input: {
         account_id: 22,
-        pukhta_person_key: null,
         entry_date: '11-10-2026',
         reason: 'died',
         note: '',
@@ -143,19 +130,5 @@ describe('the picker search asks for dead people only when its field says so', (
     const recent = call.mock.calls[1]?.[1] as { input: Record<string, unknown> };
     expect(search.input['include_dead']).toBe(true);
     expect(recent.input['include_dead']).toBe(true);
-  });
-});
-
-describe('the one-time people search asks for dead people only on the receipt screen', () => {
-  it('the receipt sends exactly the request the backend sent in its own test', async () => {
-    await searchPukhtaPeople('nasir', 'buyer', true);
-    const sent = call.mock.calls[0]?.[1] as { input: Record<string, unknown> };
-    expect(sent.input).toEqual(PEOPLE_INCLUDE_DEAD_REQUEST);
-  });
-
-  it('every other field sends no include_dead, like the backend test of the hidden case', async () => {
-    await searchPukhtaPeople('nasir', 'buyer');
-    const sent = call.mock.calls[0]?.[1] as { input: Record<string, unknown> };
-    expect(sent.input).toEqual(PEOPLE_DEAD_HIDDEN_REQUEST);
   });
 });

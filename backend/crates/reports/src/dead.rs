@@ -32,7 +32,6 @@ use mandi_db::{Db, rusqlite};
 
 use crate::error::ReportsError;
 use crate::reports::PartyRef;
-use crate::reports::collections::pukhta_names;
 use crate::reports::common::{add, in_snapshot, load_parties, paisa};
 
 /// The most rows of one page (Code Standards B31).
@@ -48,36 +47,24 @@ fn reason_of(text: &str) -> DeadReason {
 
 /// The control code of each account of these moves, to say whether a person is a buyer, a seller
 /// or a person with ادھار رقم.
-fn controls(
-    conn: &Connection,
-    ids: &[i64],
-) -> Result<HashMap<i64, (String, bool)>, rusqlite::Error> {
+fn controls(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, String>, rusqlite::Error> {
     let mut found = HashMap::new();
     let mut statement = conn.prepare(
-        "SELECT a.id, k.code, a.is_pukhta_khata FROM accounts a
-         JOIN account_controls k ON k.id = a.control_id",
+        "SELECT a.id, k.code FROM accounts a JOIN account_controls k ON k.id = a.control_id",
     )?;
     let wanted: std::collections::HashSet<i64> = ids.iter().copied().collect();
-    let rows = statement.query_map([], |r| {
-        Ok((
-            r.get::<_, i64>(0)?,
-            r.get::<_, String>(1)?,
-            r.get::<_, i64>(2)? == 1,
-        ))
-    })?;
+    let rows = statement.query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?;
     for row in rows {
-        let (id, code, pukhta) = row?;
+        let (id, code) = row?;
         if wanted.contains(&id) {
-            found.insert(id, (code, pukhta));
+            found.insert(id, code);
         }
     }
     Ok(found)
 }
 
-fn party_type(control: &str, pukhta: bool) -> DeadPartyType {
-    if pukhta {
-        DeadPartyType::Pukhta
-    } else if control == SELLER_CONTROL {
+fn party_type(control: &str) -> DeadPartyType {
+    if control == SELLER_CONTROL {
         DeadPartyType::Seller
     } else if control == MONEY_LENT_CONTROL {
         DeadPartyType::MoneyLent
@@ -104,22 +91,16 @@ fn build(conn: &Connection, marks: &[MarkRow]) -> Result<Vec<DeadRow>, ReportsEr
     let account_ids: Vec<i64> = marks.iter().map(|m| m.account_id).collect();
     let parties: HashMap<i64, PartyRef> = load_parties(conn, &account_ids)?;
     let kinds = controls(conn, &account_ids)?;
-    let pukhta_ids: Vec<i64> = marks
-        .iter()
-        .filter(|m| m.person_key.is_some())
-        .map(|m| m.account_id)
-        .collect();
-    let names = pukhta_names(conn, &pukhta_ids)?;
 
     let mut out = Vec::with_capacity(marks.len());
     for mark in marks {
         let party = parties
             .get(&mark.account_id)
             .ok_or_else(|| ReportsError::Data(format!("account {} is missing", mark.account_id)))?;
-        let (control, pukhta) = kinds
+        let control = kinds
             .get(&mark.account_id)
             .cloned()
-            .unwrap_or_else(|| (BUYER_CONTROL.to_owned(), false));
+            .unwrap_or_else(|| BUYER_CONTROL.to_owned());
         let f = figures.get(&mark.id).copied().unwrap_or_default();
         let money = figures_money(mark, &f)?;
         let status = dead_status(mark.is_active, &money);
@@ -130,7 +111,6 @@ fn build(conn: &Connection, marks: &[MarkRow]) -> Result<Vec<DeadRow>, ReportsEr
         } else {
             money.still_owed
         };
-        let person = mark.person_key.as_deref().and_then(|k| names.get(k));
         out.push(DeadRow {
             mark_id: mark.id,
             account_id: mark.account_id,
@@ -138,10 +118,7 @@ fn build(conn: &Connection, marks: &[MarkRow]) -> Result<Vec<DeadRow>, ReportsEr
             name_ur: party.name_ur.clone(),
             name_en: party.name_en.clone(),
             tag: party.tag.clone(),
-            party_type: party_type(&control, pukhta),
-            pukhta_person_key: mark.person_key.clone(),
-            pukhta_name_ur: person.map(|p| p.name_ur.clone()),
-            pukhta_name_en: person.map(|p| p.name_en.clone()),
+            party_type: party_type(&control),
             reason: reason_of(&mark.reason),
             note: mark.note.clone(),
             entry_date: mark.entry_date.clone(),
@@ -156,8 +133,8 @@ fn build(conn: &Connection, marks: &[MarkRow]) -> Result<Vec<DeadRow>, ReportsEr
     Ok(out)
 }
 
-/// True when the row matches the text the user typed: code, tag, either name, the names of a
-/// one-time person, or his phone (PRD FR-19.11 search).
+/// True when the row matches the text the user typed: code, tag or either name (PRD FR-19.11
+/// search).
 fn matches(row: &DeadRow, search: &str) -> bool {
     let needle = search.trim();
     if needle.is_empty() {
@@ -167,13 +144,7 @@ fn matches(row: &DeadRow, search: &str) -> bool {
     let urdu = normalize_urdu(needle);
     let en = |text: &str| text.to_lowercase().contains(&lower);
     let ur = |text: &str| !urdu.is_empty() && normalize_urdu(text).contains(&urdu);
-    en(&row.code)
-        || row.tag.as_deref().is_some_and(en)
-        || en(&row.name_en)
-        || ur(&row.name_ur)
-        || row.pukhta_name_en.as_deref().is_some_and(en)
-        || row.pukhta_name_ur.as_deref().is_some_and(ur)
-        || row.pukhta_person_key.as_deref().is_some_and(en)
+    en(&row.code) || row.tag.as_deref().is_some_and(en) || en(&row.name_en) || ur(&row.name_ur)
 }
 
 /// One page of R38 with the totals over the whole filter (never a sum of the page, Code Standards

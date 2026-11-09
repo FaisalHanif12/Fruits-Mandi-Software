@@ -2,7 +2,7 @@
 
 use mandi_services::bikri;
 use mandi_services::core::accounts::BalanceSide;
-use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, BikriSaved, PukhtaInput};
+use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, BikriSaved, ChuktaInput};
 use mandi_services::ledger;
 use mandi_services::{ServiceError, db::rusqlite::Connection};
 
@@ -26,9 +26,9 @@ pub fn save_ok(w: &World, draft: &BikriDraft) -> BikriSaved {
     save(w, draft).unwrap_or_else(|e| panic!("the save failed: {e:?}"))
 }
 
-/// A one-time person.
-pub fn person(name_ur: &str, name_en: &str, phone: &str) -> Option<PukhtaInput> {
-    Some(PukhtaInput {
+/// A چکتا buyer.
+pub fn person(name_ur: &str, name_en: &str, phone: &str) -> Option<ChuktaInput> {
+    Some(ChuktaInput {
         name_ur: name_ur.into(),
         name_en: name_en.into(),
         phone: phone.into(),
@@ -72,7 +72,7 @@ pub fn entry_lines(w: &World, entry_id: i64) -> Vec<(String, i64, i64, Option<St
     let conn = raw(&w.dir);
     let mut statement = conn
         .prepare(
-            "SELECT a.code, l.dr_paisa, l.cr_paisa, l.pukhta_person_key
+            "SELECT a.code, l.dr_paisa, l.cr_paisa, l.chukta_person_key
              FROM journal_lines l JOIN accounts a ON a.id = l.account_id
              WHERE l.entry_id = ?1 ORDER BY l.line_no",
         )

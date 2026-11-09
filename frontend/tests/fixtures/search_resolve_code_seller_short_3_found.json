@@ -1,14 +1,16 @@
 {
   "status": "found",
   "account": {
-    "id": 33,
-    "code": "0033",
+    "id": 32,
+    "code": "0013",
     "name_ur": "کمال",
     "name_en": "Kamal",
     "extra_ur": "",
     "extra_en": "",
     "account_type": "seller",
-    "is_pukhta_party": true,
+    "kind": "account",
+    "chukta_id": null,
+    "phone": null,
     "control_id": 5,
     "is_active": true,
     "is_dead": false

@@ -1,6 +1,6 @@
 // A stand-in for the Tauri bridge for the development pages /dev/reports (plan 20) only. In a plain
 // browser tab there is no backend, so the report screens cannot be looked at. This answers the
-// report commands (and the people search) with the backend's own fixtures (reports-real.ts), so the screens can be
+// report commands with the backend's own fixtures (reports-real.ts), so the screens can be
 // opened in a browser and photographed in both languages and at every window size. It answers
 // nothing else: any other command is refused with ERR_NOT_IMPLEMENTED. Never part of a build: only
 // the development route imports it.
@@ -90,11 +90,9 @@ import {
   R18_AS_OF,
   R18_FULL,
   R19,
-  PEOPLE_SHAHID,
   PRINT_R20_UR,
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
-  PRINT_R9_DUE_EN,
   R2_ALL,
   R20_DUES,
   R21_BY_CITY,
@@ -110,8 +108,6 @@ import {
   R6_LOTS,
   R7_ITEMS,
   R8_ADDA,
-  R9_ALL,
-  R9_DUE,
 } from './reports-real';
 
 type Input = Record<string, unknown>;
@@ -133,7 +129,6 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R6: R6_LOTS,
   R7: R7_ITEMS,
   R8: R8_ADDA,
-  R9: R9_ALL,
   R20: R20_DUES,
   R21: R21_BY_CITY,
   R22: R22_BY_COLLECTOR,
@@ -163,7 +158,6 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
 
 const PRINTS: Partial<Record<ReportId, ReportPrintData>> = {
   R7: PRINT_R7_EN,
-  R9: PRINT_R9_DUE_EN,
   R13: PRINT_R13_AKRAM_UR,
   R20: PRINT_R20_UR,
   R28: PRINT_R28_MONTH_EN,
@@ -216,7 +210,6 @@ function page(input: Input): ReportPage {
   if (id === 'R13' && party?.account_id === 18) base = R13_RAHIM;
   if (id === 'R14' && filters['detail'] === true) base = R14_DETAIL;
   if (id === 'R18' && filters['as_of'] !== '') base = R18_AS_OF;
-  if (id === 'R9' && filters['status'] === 'due') base = R9_DUE;
   if (id === 'R28' && filters['group_by'] === 'day') base = R28_BY_DAY;
   // The partner statement cannot run without a partner, as the backend refuses it.
   if (id === 'R31' && (filters['partner_id'] ?? null) === null) {
@@ -292,7 +285,6 @@ const handlers: Record<string, (input: Input) => unknown> = {
   reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
   reports_buyer_bills_print_data: (input) =>
     input['language'] === 'ur' ? BUYER_BILLS_UR : BUYER_BILLS_EN,
-  reports_find_people: () => PEOPLE_SHAHID,
   // The partner box (R29, R31) and the person box of R32 (the people who can borrow) read these
   // from the cash book stand-in, so the filter boxes of the new reports work in the browser.
   partners_list: (input) => rokarHandlers['partners_list']?.(input),

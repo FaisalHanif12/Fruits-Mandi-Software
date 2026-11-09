@@ -35,7 +35,6 @@
       "purchase": null,
       "own": null,
       "arrival": null,
-      "pukhta": null,
       "item": {
         "id": 1,
         "code": "0040",
@@ -96,7 +95,7 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "pukhta": null,
+          "chukta": null,
           "qty": 20,
           "weight_grams": null,
           "seller_rate": 60000,
@@ -143,7 +142,7 @@
             "name_ur": "ارشد ملتانی",
             "name_en": "Arshad Multani"
           },
-          "pukhta": null,
+          "chukta": null,
           "qty": 30,
           "weight_grams": null,
           "seller_rate": 58000,

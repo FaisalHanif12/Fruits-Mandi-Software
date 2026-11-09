@@ -6,7 +6,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as reportsApi from '../../src/features/reports/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
 import { LANGUAGES } from '../../src/i18n';
@@ -40,7 +39,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -68,7 +66,6 @@ describe.each(LANGUAGES)('printing a voucher from the screen (%s)', (language) =
     signedIn(sessionUser({ language }));
     vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
     vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-    vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
     const rows = [AKRAM, RAHIM, KARIM];
     fakeAccounts(rows);
     fakeAccountSearch(rows);
@@ -214,7 +211,6 @@ describe.each(LANGUAGES)('printing a voucher from the screen (%s)', (language) =
     expect(printing.saves[0]?.print_after_save).toEqual([
       'seller_bill',
       'buyer_slips',
-      'pukhta_slip',
       'receipt_slip',
     ]);
   });
@@ -237,6 +233,32 @@ describe.each(LANGUAGES)('printing a voucher from the screen (%s)', (language) =
     expect(
       (await screen.findAllByText(named(message(language, 'print-toast-printed')))).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('on a Mac Ctrl+Enter says the print window is open, not that it was sent to the printer (plan 69)', async () => {
+    const agent = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)',
+      );
+    try {
+      printing = fakePrinting({
+        settings: { print_after_save: ['receipt_slip'] },
+      });
+      const user = await open();
+      await saveOne(user, true);
+      await waitFor(() => {
+        expect(reportsApi.reportsPrintVoucher).toHaveBeenCalledTimes(1);
+      });
+      expect(
+        (await screen.findAllByText(named(message(language, 'print-toast-dialog')))).length,
+      ).toBeGreaterThan(0);
+      expect(screen.queryAllByText(named(message(language, 'print-toast-printed')))).toHaveLength(
+        0,
+      );
+    } finally {
+      agent.mockRestore();
+    }
   });
 
   it('Ctrl+Enter prints nothing when the slip is not ticked, and the voucher is saved all the same', async () => {

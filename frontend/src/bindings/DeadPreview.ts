@@ -16,8 +16,8 @@ export type DeadPreview = {
    */
   allowed: boolean;
   /**
-   * The code that says why not: `ERR_NOTHING_OWED`, `ERR_DEAD_NOT_ALLOWED`, `ERR_ALREADY_DEAD`
-   * or `ERR_PERSON_IN_DEAD_AMOUNT`. Null when he can be moved. A code, never text (the plan
+   * The code that says why not: `ERR_NOTHING_OWED`, `ERR_DEAD_NOT_ALLOWED` or `ERR_ALREADY_DEAD`.
+   * Null when he can be moved. A code, never text (the plan
    * listed a string; a code lets the screen show it in the app language).
    */
   reason_not_allowed: ErrorCode | null;

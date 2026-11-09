@@ -45,7 +45,7 @@ import {
   AKRAM,
   ARSHAD,
   KARIM,
-  PUKHTA_BUYER,
+  CHUKTA_KHATA,
   RAHIM,
   TRANSPORT,
   fakeVouchers,
@@ -57,7 +57,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/cashbook/api');
 vi.mock('../../src/features/vouchers/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/features/fruit/api');
@@ -283,7 +282,7 @@ describe.each(LANGUAGES)('the entry screens opened with a party (%s)', (language
       signedIn(sessionUser({ language }));
       vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
       vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-      const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM, TRANSPORT];
+      const rows = [AKRAM, ARSHAD, CHUKTA_KHATA, RAHIM, KARIM, TRANSPORT];
       fakeAccounts(rows);
       fakeAccountSearch(rows);
       fakeMasters({ staff: [record('staff', 81, '0001', 'اسلم', 'Aslam')] });

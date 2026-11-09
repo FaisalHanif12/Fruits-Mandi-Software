@@ -193,7 +193,6 @@
             "name_ur": "رحیم",
             "name_en": "Rahim"
           },
-          "person_key": null,
           "before": {
             "amount_paisa": 431600,
             "side": "cr"
@@ -210,7 +209,6 @@
             "name_ur": "اکرم ٹول ٹیکس",
             "name_en": "Akram Toll Tax"
           },
-          "person_key": null,
           "before": {
             "amount_paisa": 1288000,
             "side": "dr"

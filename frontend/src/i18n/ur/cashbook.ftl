@@ -568,9 +568,6 @@ cashbook-general-add-line = سطر شامل کریں
 cashbook-general-col-account = کھاتہ
 
 # review: pending
-cashbook-general-col-person = شخص
-
-# review: pending
 cashbook-general-totals-title = { -meezan }
 
 # review: pending
@@ -596,16 +593,6 @@ cashbook-general-split-title = ہر { -shirakat-dar } کا حصہ
 
 # review: pending
 cashbook-general-split-help = آمدن اور { -dukan-kharcha } کے کھاتوں کی سطریں شراکت داروں میں ان کے { -hissa } کے مطابق بٹتی ہیں۔
-
-# review: pending
-cashbook-general-people-title = ایک بار آنے والے لوگ
-
-# review: pending
-cashbook-general-people-help = { -pukhta-khata } کھاتے کی رقم ہر شخص کے الگ حساب سے رکھی جاتی ہے۔ ان میں سے ہر سطر کے لیے شخص چنیں۔
-
-# $line: the number of the line; $account: the name of its account.
-# review: pending
-cashbook-general-person-of = سطر { $line } کا شخص: { $account }
 
 # review: pending
 cashbook-type-capital-in = { -sarmaya } جمع

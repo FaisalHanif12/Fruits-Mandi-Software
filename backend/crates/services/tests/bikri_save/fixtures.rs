@@ -13,12 +13,11 @@
 use std::path::{Path, PathBuf};
 
 use mandi_services::bikri;
-use mandi_services::core::accounts::SearchGlobalInput;
-use mandi_services::core::bikri::{
-    BikriListInput, BikriSaveInput, PukhtaPeopleInput, PukhtaRegisterInput,
-};
+use mandi_services::core::accounts::{PartyCardInput, SearchAccountsInput, SearchGlobalInput};
+use mandi_services::core::bikri::{BikriListInput, BikriSaveInput};
+use mandi_services::core::chukta::{ChuktaAddInput, ChuktaSearchInput};
 use mandi_services::core::drafts::{DraftGetInput, DraftSaveInput};
-use mandi_services::{drafts, search};
+use mandi_services::{assist, drafts, search};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -64,7 +63,7 @@ fn pair<A: Serialize>(name: &str, request: &Value, answer: &A) {
 
 /// The JSON of one sale row as the screen sends it.
 fn row(key: &str, buyer: i64, qty: &str, rate: &str) -> Value {
-    json!({ "key": key, "buyer_account_id": buyer, "pukhta": null, "qty": qty, "weight": null,
+    json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
         "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
         "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
@@ -79,8 +78,7 @@ fn event1_request(w: &World) -> Value {
                 "driver_phone": null, "total_freight": null, "store_id": null, "note": null
             },
             "lots": [{
-                "key": "lot-1", "seller_account_id": w.rahim, "pukhta": null,
-                "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
+                "key": "lot-1", "seller_account_id": w.rahim, "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "50", "weight_received": null, "freight": "3,000",
                 "freight_paid_by": "firm",
                 "labour": { "method": "per_unit", "value": "5" },
@@ -97,10 +95,10 @@ fn event1_request(w: &World) -> Value {
     })
 }
 
-/// Event 2: Karim's 10 apple, sold to the one-time buyer Shahid in cash (PRD 4.5).
+/// Event 2: Karim's 10 apple, sold to the چکتا buyer Shahid in cash (PRD 4.5).
 fn event2_request(w: &World) -> Value {
-    let mut line = row("line-1", w.pukhta_buyer, "10", "1200");
-    line["pukhta"] = json!({ "name_ur": "شاہد", "name_en": "Shahid", "phone": "0300-0000000" });
+    let mut line = row("line-1", w.chukta_khata, "10", "1200");
+    line["chukta"] = json!({ "name_ur": "شاہد", "name_en": "Shahid", "phone": "0300-0000000" });
     json!({
         "draft": {
             "header": {
@@ -109,8 +107,7 @@ fn event2_request(w: &World) -> Value {
                 "driver_phone": null, "total_freight": null, "store_id": null, "note": null
             },
             "lots": [{
-                "key": "lot-1", "seller_account_id": w.karim, "pukhta": null,
-                "item_id": w.apple, "packing_id": w.box_, "marka_id": null, "store_id": null,
+                "key": "lot-1", "seller_account_id": w.karim, "item_id": w.apple, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "10", "weight_received": null, "freight": "1,000",
                 "freight_paid_by": "firm",
                 "labour": { "method": "per_unit", "value": "5" },
@@ -161,32 +158,53 @@ fn the_real_answers_of_the_plan_13_commands_are_the_fixtures() {
     );
     pair("bikri_list_day", &list_request, &rows);
 
-    // pukhta_register and search_pukhta_people: Shahid, paid.
-    let register_request =
-        json!({ "from": "10-10-2026", "to": "10-10-2026", "offset": 0, "limit": 0 });
-    let register =
-        bikri::register(&w.env.ctx, &typed::<PukhtaRegisterInput>(&register_request)).unwrap();
-    assert_eq!(
-        register.rows.len(),
-        1,
-        "only Shahid's line is a one-time person"
-    );
-    // No side chosen: the rows of buyers and sellers are mixed, so the totals are all null.
-    assert!(register.totals.open.is_none() && register.totals.qty.is_none());
-    pair("pukhta_register_day", &register_request, &register);
-    // The buyers alone: the totals are given, over every line of the filter.
-    let buyers_request = json!({ "from": "10-10-2026", "to": "10-10-2026", "side": "buyer",
-        "offset": 0, "limit": 0 });
-    let buyers =
-        bikri::register(&w.env.ctx, &typed::<PukhtaRegisterInput>(&buyers_request)).unwrap();
-    assert_eq!(buyers.total_count, 1);
-    assert!(buyers.totals.open.is_some() && buyers.totals.qty == Some(10));
-    pair("pukhta_register_day_buyers", &buyers_request, &buyers);
-    let people_request = json!({ "text": "shahid", "side": "buyer" });
-    let people =
-        bikri::search_people(&w.env.ctx, &typed::<PukhtaPeopleInput>(&people_request)).unwrap();
-    assert_eq!(people.len(), 1);
-    pair("search_pukhta_people_shahid", &people_request, &people);
+    // chukta_search and chukta_add (plan 64): Shahid is in the list after his line.
+    let search_request = json!({ "text": "shahid" });
+    let found =
+        mandi_services::chukta::search(&w.env.ctx, &typed::<ChuktaSearchInput>(&search_request))
+            .unwrap();
+    assert_eq!(found.len(), 1);
+    pair("chukta_search_shahid", &search_request, &found);
+    // The buyer picker lists him beside ordinary buyers (`kind` chukta, id of 0030, his own id), and
+    // his card has his name and phone and no balance.
+    let hits_request = json!({ "scope": "buyer", "control_id": null, "text": "shahid", "limit": 10, "offset": 0, "include_dead": null, "with_chukta": true });
+    let hits = search::search_accounts(
+        &w.env.ctx,
+        &w.owner,
+        &typed::<SearchAccountsInput>(&hits_request),
+    )
+    .unwrap();
+    assert_eq!(hits.len(), 1);
+    pair("search_accounts_chukta_buyer", &hits_request, &hits);
+    let card_request = json!({ "account_id": w.chukta_khata, "chukta_id": found[0].id });
+    let card_input: PartyCardInput = typed(&card_request);
+    let card = assist::chukta_card(&w.env.ctx, card_input.chukta_id.unwrap()).unwrap();
+    pair("assist_party_card_chukta_buyer", &card_request, &card);
+    let add_request = json!({ "name_ur": "ناصر", "name_en": "Nasir", "phone": "0300-1111111" });
+    let added =
+        mandi_services::chukta::add(&w.env.ctx, &w.owner, &typed::<ChuktaAddInput>(&add_request))
+            .unwrap();
+    pair("chukta_add_nasir", &add_request, &added);
+    let again =
+        mandi_services::chukta::add(&w.env.ctx, &w.owner, &typed::<ChuktaAddInput>(&add_request))
+            .unwrap();
+    assert_eq!(added, again, "the same person is returned, not made twice");
+    let bad_request = json!({ "name_ur": "", "name_en": "Nasir", "phone": "12" });
+    let error =
+        mandi_services::chukta::add(&w.env.ctx, &w.owner, &typed::<ChuktaAddInput>(&bad_request))
+            .unwrap_err();
+    let mandi_services::ServiceError::Rejected(items) = &error else {
+        panic!("not a refusal of the user's entry: {error:?}");
+    };
+    let wire = json!({
+        "ok": false,
+        "errors": items
+            .iter()
+            .map(|i| json!({ "code": i.code, "field": i.field, "values": i.values }))
+            .collect::<Vec<_>>(),
+        "ref": "E-20261010-0001"
+    });
+    pair("chukta_add_refused", &bad_request, &wire);
 
     // drafts_save and drafts_get: the unsaved work of the screen (a save removes the draft, so
     // this comes after the saves).

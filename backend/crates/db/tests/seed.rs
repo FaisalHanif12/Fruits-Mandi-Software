@@ -11,27 +11,38 @@ use mandi_core::text;
 use mandi_db::seed;
 use tempfile::tempdir;
 
-/// (code, Urdu name, English name, party type, is Pukhta Khata), FR-10.4 table order.
-const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
-    ("01010001", "روکڑ", "Cash", "other", 0),
-    ("01020001", "بینک", "Bank", "other", 0),
-    ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0),
-    ("02010002", "کرایہ کھاتہ", "Freight Payable", "other", 0),
+/// (code, Urdu name, English name, party type, is a shared khata, active), FR-10.4 table order, as the
+/// latest schema holds them: migration 20 (plan 64) named 0030 چکتا کھاتہ and closed 0031 as the old
+/// closed account.
+const ACCOUNTS: [(&str, &str, &str, &str, i64, i64); 17] = [
+    ("01010001", "روکڑ", "Cash", "other", 0, 1),
+    ("01020001", "بینک", "Bank", "other", 0, 1),
+    ("02010001", "مزدوری کھاتہ", "Labour Payable", "other", 0, 1),
+    ("02010002", "کرایہ کھاتہ", "Freight Payable", "other", 0, 1),
     (
         "02010003",
         "کرایہ سٹور کھاتہ",
         "Store Rent Payable",
         "other",
         0,
+        1,
     ),
-    ("02010004", "منشیانہ کھاتہ", "Munshiana Payable", "other", 0),
-    ("030119998", "اپنا مال", "Own Goods (Trips)", "seller", 0),
+    (
+        "02010004",
+        "منشیانہ کھاتہ",
+        "Munshiana Payable",
+        "other",
+        0,
+        1,
+    ),
+    ("030119998", "اپنا مال", "Own Goods (Trips)", "seller", 0, 1),
     (
         "0031",
-        "پختہ کھاتہ (بیوپاری)",
-        "Pukhta Khata (Seller)",
+        "پرانا بند کھاتہ",
+        "Old Closed Account",
         "seller",
         1,
+        0,
     ),
     (
         "03040000",
@@ -39,20 +50,16 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
         "Naqdi Mandi (Cash Buyer)",
         "buyer",
         0,
-    ),
-    (
-        "0030",
-        "پختہ کھاتہ (خریدار)",
-        "Pukhta Khata (Buyer)",
-        "buyer",
         1,
     ),
+    ("0030", "چکتا کھاتہ", "Chukta Khata", "buyer", 1, 1),
     (
         "04010001",
         "کمیشن آمدن (بیوپاری)",
         "Commission Income (Seller)",
         "other",
         0,
+        1,
     ),
     (
         "04010002",
@@ -60,12 +67,27 @@ const ACCOUNTS: [(&str, &str, &str, &str, i64); 17] = [
         "Commission Income (Buyer)",
         "other",
         0,
+        1,
     ),
-    ("04010003", "لاگا آمدن", "Laga Income", "other", 0),
-    ("04010004", "فون آمدن", "Phone Charge Income", "other", 0),
-    ("04010005", "ریٹ فرق", "Rate Difference", "other", 0),
-    ("06010001", "ابتدائی سرمایہ", "Opening Capital", "other", 0),
-    ("06019999", "ابتدائی فرق", "Opening Difference", "other", 0),
+    ("04010003", "لاگا آمدن", "Laga Income", "other", 0, 1),
+    ("04010004", "فون آمدن", "Phone Charge Income", "other", 0, 1),
+    ("04010005", "ریٹ فرق", "Rate Difference", "other", 0, 1),
+    (
+        "06010001",
+        "ابتدائی سرمایہ",
+        "Opening Capital",
+        "other",
+        0,
+        1,
+    ),
+    (
+        "06019999",
+        "ابتدائی فرق",
+        "Opening Difference",
+        "other",
+        0,
+        1,
+    ),
 ];
 
 /// One row of `accounts` as the test reads it.
@@ -74,7 +96,7 @@ struct Row {
     name_ur: String,
     name_en: String,
     party_type: String,
-    pukhta: i64,
+    shared: i64, // the shared-khata mark (is_chukta_khata)
     system: i64,
     active: i64,
     serial: i64,
@@ -89,7 +111,7 @@ fn the_fixed_accounts_match_fr_10_4() {
     drop(common::open(dir.path()));
     let conn = common::raw(dir.path());
     let mut statement = conn
-        .prepare("SELECT code, name_ur, name_en, party_type, is_pukhta_khata, is_system, is_active, serial, search_ur, search_en, search_phonetic FROM accounts ORDER BY code")
+        .prepare("SELECT code, name_ur, name_en, party_type, is_chukta_khata, is_system, is_active, serial, search_ur, search_en, search_phonetic FROM accounts ORDER BY code")
         .unwrap();
     let rows: Vec<Row> = statement
         .query_map([], |r| {
@@ -98,7 +120,7 @@ fn the_fixed_accounts_match_fr_10_4() {
                 name_ur: r.get(1)?,
                 name_en: r.get(2)?,
                 party_type: r.get(3)?,
-                pukhta: r.get(4)?,
+                shared: r.get(4)?,
                 system: r.get(5)?,
                 active: r.get(6)?,
                 serial: r.get(7)?,
@@ -113,25 +135,25 @@ fn the_fixed_accounts_match_fr_10_4() {
     let mut want = ACCOUNTS.to_vec();
     want.sort_by_key(|row| row.0);
     assert_eq!(rows.len(), 17);
-    for (row, (code, ur, en, party, pukhta)) in rows.iter().zip(want) {
+    for (row, (code, ur, en, party, shared, active)) in rows.iter().zip(want) {
         assert_eq!(
             (
                 row.code.as_str(),
                 row.name_ur.as_str(),
                 row.name_en.as_str(),
                 row.party_type.as_str(),
-                row.pukhta
+                row.shared
             ),
-            (code, ur, en, party, pukhta)
+            (code, ur, en, party, shared)
         );
         assert_eq!(
             (row.system, row.active),
-            (1, 1),
-            "{code} is a system account and active"
+            (1, active),
+            "{code} is a system account; 0031 is the one closed since migration 20"
         );
-        // The code is the control code plus the 4-digit serial (FR-10.2). The two پختہ کھاتہ accounts
+        // The code is the control code plus the 4-digit serial (FR-10.2). The two shared accounts
         // are the exception since migration 7: the type number 003 plus the running number (plan 32).
-        if row.pukhta == 1 {
+        if row.shared == 1 {
             assert_eq!(code, format!("003{}", row.serial), "{code}");
         } else {
             assert!(
@@ -206,12 +228,12 @@ fn heads_and_controls_are_the_ones_fr_10_4_implies() {
             want
         );
     }
-    // Every account sits under the control its code starts with, except the two پختہ کھاتہ accounts,
+    // Every account sits under the control its code starts with, except the two shared accounts (0030, 0031),
     // whose code is the type number and a running number (plan 32).
     let misplaced: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM accounts a JOIN account_controls c ON c.id = a.control_id
-             WHERE a.is_pukhta_khata = 0
+             WHERE a.is_chukta_khata = 0
                AND (substr(a.code, 1, length(c.code)) <> c.code OR length(a.code) <> length(c.code) + 4)",
             [],
             |r| r.get(0),

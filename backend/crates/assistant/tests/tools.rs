@@ -226,7 +226,7 @@ fn find_reads_every_role_and_gives_a_checked_balance_for_accounts() {
         "garden",
         "money_lent",
         "separate_khata",
-        "pukhta",
+        "chukta",
     ] {
         let id = s.run("find", json!({"text": "zzz", "role": role})).unwrap();
         assert!(

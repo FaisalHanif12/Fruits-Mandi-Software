@@ -4,11 +4,9 @@
 // here works out money (CLAUDE.md rule 1).
 
 import { useQuery } from '@tanstack/react-query';
-import type { PukhtaPerson } from '../../bindings/PukhtaPerson';
 import { accountsGet, pickedOf, type PickedAccount } from '../../shared/accounts';
 import { findMaster } from '../../shared/search';
 import type { PickerValue } from '../../shared/ui';
-import { PUKHTA_BUYER_CODE, isPukhtaCode, searchPukhtaPeople } from '../pukhta_khata';
 import type { ExpenseDraft } from './expense-draft';
 import { newExpenseDraft } from './expense-draft';
 import { GENERAL_CR, GENERAL_DR, GENERAL_NARRATION } from './general-draft';
@@ -114,11 +112,10 @@ export function khataDraftOf(editable: VoucherEditable): KhataDraft {
   throw new Error('not a khata entry');
 }
 
-/** One line of a saved جنرل entry as the grid's store holds it, with its account and person. */
+/** One line of a saved جنرل entry as the grid's store holds it, with its account. */
 export interface GeneralSeedLine {
   typed: Record<string, string>;
   account: PickedAccount | null;
-  person: PukhtaPerson | null;
 }
 
 /** A saved جنرل entry as the screen holds it. */
@@ -129,30 +126,7 @@ export interface GeneralSeed {
   lines: GeneralSeedLine[];
 }
 
-/**
- * The one-time person of a line, by his key (name and phone, PRD FR-13.5). The merged list finds
- * him again with his phone; a person the list no longer has is kept by his key alone, so the line
- * still names him and the save sends the same key.
- */
-async function personOf(key: string, code: string): Promise<PukhtaPerson> {
-  const [name = '', phone = ''] = key.split('|');
-  const side = code === PUKHTA_BUYER_CODE ? 'buyer' : 'seller';
-  const found = await searchPukhtaPeople(phone === '' ? name : phone, side, true).catch(
-    (): PukhtaPerson[] => [],
-  );
-  return (
-    found.find((person) => person.person_key === key) ?? {
-      name_ur: name,
-      name_en: '',
-      phone,
-      last_date: '',
-      person_key: key,
-      is_dead: false,
-    }
-  );
-}
-
-/** The lines of a saved جنرل entry, with each account and one-time person looked up by id or key. */
+/** The lines of a saved جنرل entry, with each account looked up by id. */
 export async function generalSeedOf(editable: VoucherEditable): Promise<GeneralSeed> {
   const entry = editable.entry;
   if (entry.type !== 'general') throw new Error('not a journal entry');
@@ -162,24 +136,17 @@ export async function generalSeedOf(editable: VoucherEditable): Promise<GeneralS
   const accounts = new Map(
     await Promise.all(ids.map(async (id) => [id, pickedOf(await accountsGet(id))] as const)),
   );
-  const lines = await Promise.all(
-    entry.lines.map(async (line): Promise<GeneralSeedLine> => {
-      const account = line.account_id === null ? null : (accounts.get(line.account_id) ?? null);
-      const person =
-        line.person_key !== null && account !== null && isPukhtaCode(account.code)
-          ? await personOf(line.person_key, account.code)
-          : null;
-      return {
-        typed: {
-          [GENERAL_DR]: line.dr,
-          [GENERAL_CR]: line.cr,
-          [GENERAL_NARRATION]: textOf(line.narration),
-        },
-        account,
-        person,
-      };
-    }),
-  );
+  const lines = entry.lines.map((line): GeneralSeedLine => {
+    const account = line.account_id === null ? null : (accounts.get(line.account_id) ?? null);
+    return {
+      typed: {
+        [GENERAL_DR]: line.dr,
+        [GENERAL_CR]: line.cr,
+        [GENERAL_NARRATION]: textOf(line.narration),
+      },
+      account,
+    };
+  });
   return { date: entry.date, narration: textOf(entry.narration), lines };
 }
 

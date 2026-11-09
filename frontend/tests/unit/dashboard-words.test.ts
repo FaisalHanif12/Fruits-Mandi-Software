@@ -135,7 +135,7 @@ describe('where a line leads', () => {
     expect(destinationOfKind('takes_overdue')).toEqual({ kind: 'personal-drawings' });
   });
 
-  it('the most urgent record opens itself: a ledger, a one-time person, a statement, a بکری', () => {
+  it('the most urgent record opens itself: a ledger, a statement, a بکری', () => {
     expect(
       destinationOfFirst({
         target: 'account',
@@ -145,19 +145,17 @@ describe('where a line leads', () => {
         name_en: 'Karim',
       }),
     ).toEqual({ kind: 'report', id: 'R13', party: 19 });
-    const person = destinationOfFirst({
-      target: 'account',
-      id: 40,
-      person_key: 'shahid|0300',
-      name_ur: 'شاہد',
-      name_en: 'Shahid',
-    });
-    expect(person).toMatchObject({
-      kind: 'report',
-      id: 'R13',
-      party: 40,
-      person: { accountId: 40, personKey: 'shahid|0300', name_en: 'Shahid' },
-    });
+    // A چکتا buyer has no ledger and no dues, so an item never leads to one by a person key; a
+    // key left in the answer is ignored and the account's own ledger opens (PRD FR-13.6).
+    expect(
+      destinationOfFirst({
+        target: 'account',
+        id: 40,
+        person_key: 'shahid|0300',
+        name_ur: 'شاہد',
+        name_en: 'Shahid',
+      }),
+    ).toEqual({ kind: 'report', id: 'R13', party: 40 });
     expect(
       destinationOfFirst({
         target: 'partner',

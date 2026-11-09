@@ -224,7 +224,7 @@ pub async fn reports_print_data<R: tauri::Runtime>(
 
 /// The print data of R5 "Print All" (PRD 19.2 R5, FR-19.10, FR-19.11): one slip for each credit
 /// buyer of the filter, with every line of his, his sums, and the sums of all slips, in the print
-/// language. A one-time person has his own slip; a buyer who paid cash on the spot has none. Read
+/// language. A چکتا buyer has his own slip, like any buyer; a buyer who paid cash on the spot has none. Read
 /// only. The input is that of `reports_print_data` with `id` R5. Errors: as `reports_run`;
 /// `ERR_OUT_OF_RANGE` on `id` if the report is not R5.
 #[tauri::command]

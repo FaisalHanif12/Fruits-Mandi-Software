@@ -13,19 +13,26 @@ import listDay from '../fixtures/bikri_list_day.json';
 import listDayRequest from '../fixtures/bikri_list_day_request.json';
 import draftsGet from '../fixtures/drafts_get_bikri.json';
 import searchGlobalTruck from '../fixtures/search_global_bikri_truck.json';
-import registerDay from '../fixtures/pukhta_register_day.json';
-import registerDayBuyers from '../fixtures/pukhta_register_day_buyers.json';
-import registerDayBuyersRequest from '../fixtures/pukhta_register_day_buyers_request.json';
-import registerDayRequest from '../fixtures/pukhta_register_day_request.json';
-import peopleShahid from '../fixtures/search_pukhta_people_shahid.json';
+import chuktaSearchShahid from '../fixtures/chukta_search_shahid.json';
+import chuktaSearchShahidRequest from '../fixtures/chukta_search_shahid_request.json';
+import chuktaAddNasir from '../fixtures/chukta_add_nasir.json';
+import chuktaAddNasirRequest from '../fixtures/chukta_add_nasir_request.json';
+import chuktaAddRefused from '../fixtures/chukta_add_refused.json';
+import chuktaAddRefusedRequest from '../fixtures/chukta_add_refused_request.json';
+import searchChuktaBuyer from '../fixtures/search_accounts_chukta_buyer.json';
+import searchChuktaBuyerRequest from '../fixtures/search_accounts_chukta_buyer_request.json';
+import cardChuktaBuyer from '../fixtures/assist_party_card_chukta_buyer.json';
+import cardChuktaBuyerRequest from '../fixtures/assist_party_card_chukta_buyer_request.json';
 import type { BikriDetail } from '../../src/bindings/BikriDetail';
 import type { BikriList } from '../../src/bindings/BikriList';
 import type { BikriSaveInput } from '../../src/bindings/BikriSaveInput';
 import type { BikriSaved } from '../../src/bindings/BikriSaved';
 import type { DraftRow } from '../../src/bindings/DraftRow';
 import type { GlobalHit } from '../../src/bindings/GlobalHit';
-import type { PukhtaPerson } from '../../src/bindings/PukhtaPerson';
-import type { PukhtaRegister } from '../../src/bindings/PukhtaRegister';
+import type { AccountHit } from '../../src/bindings/AccountHit';
+import type { ChuktaBuyer } from '../../src/bindings/ChuktaBuyer';
+import type { PartyCard } from '../../src/bindings/PartyCard';
+import type { UiError } from '../../src/bindings/UiError';
 
 /** The fixture files are the backend's own JSON; their text is read as the generated types. */
 function savedOf(value: unknown): BikriSaved {
@@ -46,11 +53,20 @@ function draftOf(value: unknown): DraftRow {
 function hitsOf(value: unknown): GlobalHit[] {
   return value as GlobalHit[];
 }
-function registerOf(value: unknown): PukhtaRegister {
-  return value as PukhtaRegister;
+function chuktaListOf(value: unknown): ChuktaBuyer[] {
+  return value as ChuktaBuyer[];
 }
-function peopleOf(value: unknown): PukhtaPerson[] {
-  return value as PukhtaPerson[];
+function chuktaOf(value: unknown): ChuktaBuyer {
+  return value as ChuktaBuyer;
+}
+function hitListOf(value: unknown): AccountHit[] {
+  return value as AccountHit[];
+}
+function cardOf(value: unknown): PartyCard {
+  return value as PartyCard;
+}
+function refusalOf(value: unknown): UiError {
+  return value as UiError;
 }
 
 export const SAVED_EVENT1: BikriSaved = savedOf(saveEvent1);
@@ -66,9 +82,17 @@ export const LIST_DAY: BikriList = listOf(listDay);
 export const LIST_DAY_REQUEST: Record<string, unknown> = listDayRequest;
 export const DRAFT_ROW: DraftRow = draftOf(draftsGet);
 export const GLOBAL_TRUCK: GlobalHit[] = hitsOf(searchGlobalTruck);
-export const REGISTER_DAY: PukhtaRegister = registerOf(registerDay);
-export const REGISTER_DAY_REQUEST: Record<string, unknown> = registerDayRequest;
-/** The register of the buyers only: with a side chosen the totals are given (PRD FR-19.11). */
-export const REGISTER_DAY_BUYERS: PukhtaRegister = registerOf(registerDayBuyers);
-export const REGISTER_DAY_BUYERS_REQUEST: Record<string, unknown> = registerDayBuyersRequest;
-export const PEOPLE_SHAHID: PukhtaPerson[] = peopleOf(peopleShahid);
+/** The چکتا buyers the buyer picker finds for "shahid" (plan 64), and what it sent. */
+export const CHUKTA_SEARCH_SHAHID: ChuktaBuyer[] = chuktaListOf(chuktaSearchShahid);
+export const CHUKTA_SEARCH_SHAHID_REQUEST: Record<string, unknown> = chuktaSearchShahidRequest;
+/** A new چکتا buyer added from the picker, and the refusal with both errors together. */
+export const CHUKTA_ADD_NASIR: ChuktaBuyer = chuktaOf(chuktaAddNasir);
+export const CHUKTA_ADD_NASIR_REQUEST: Record<string, unknown> = chuktaAddNasirRequest;
+export const CHUKTA_ADD_REFUSED: UiError = refusalOf(chuktaAddRefused);
+export const CHUKTA_ADD_REFUSED_REQUEST: Record<string, unknown> = chuktaAddRefusedRequest;
+/** The buyer search: a چکتا buyer is a hit marked `chukta` with the id of the account چکتا کھاتہ. */
+export const SEARCH_CHUKTA_BUYER: AccountHit[] = hitListOf(searchChuktaBuyer);
+export const SEARCH_CHUKTA_BUYER_REQUEST: Record<string, unknown> = searchChuktaBuyerRequest;
+/** His own party card: name and phone, no balance. */
+export const CARD_CHUKTA_BUYER: PartyCard = cardOf(cardChuktaBuyer);
+export const CARD_CHUKTA_BUYER_REQUEST: Record<string, unknown> = cardChuktaBuyerRequest;

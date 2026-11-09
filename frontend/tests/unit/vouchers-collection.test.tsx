@@ -31,7 +31,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -224,7 +223,6 @@ describe.each(LANGUAGES)('the collection round (%s)', (language) => {
       {
         date: '10-10-2026',
         account_id: 21,
-        person_key: null,
         amount: '2880',
         collector_staff_id: 81,
         narration: '',

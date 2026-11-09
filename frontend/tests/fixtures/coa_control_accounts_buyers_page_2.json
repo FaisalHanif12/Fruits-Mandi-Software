@@ -4,8 +4,8 @@
     {
       "id": 9,
       "code": "0030",
-      "name_ur": "پختہ کھاتہ (خریدار)",
-      "name_en": "Pukhta Khata (Buyer)",
+      "name_ur": "چکتا کھاتہ",
+      "name_en": "Chukta Khata",
       "balance": {
         "amount_paisa": 0,
         "side": "zero"

@@ -22,8 +22,7 @@ use mandi_reports::reports::{
 use mandi_services::bikri;
 use mandi_services::core::auth::Language;
 use mandi_services::core::bikri::{
-    CancelInput, EditOpenInput, EditSaveInput, LaterSaleSaveInput, PaymentType, PukhtaInput,
-    StockListInput,
+    CancelInput, EditOpenInput, EditSaveInput, LaterSaleSaveInput, PaymentType, StockListInput,
 };
 use mandi_services::core::error::ErrorCode;
 
@@ -341,63 +340,6 @@ fn a_cash_line_of_a_credit_buyer_is_not_on_his_slip_and_not_in_his_totals() {
     assert_eq!(money(&r3.totals[8]), 3_220);
 }
 
-// ---- One-time persons (FR-13.5) ---------------------------------------------------------------
-
-/// Three credit lines under the one-time account: شاہد with two phones, and ناصر (each person has
-/// his own slip). The default 6% buyer commission and 8 per نگ لاگا on fruit.
-fn one_time_world() -> support::World {
-    let w = worked_day();
-    let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "200");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: ur.into(),
-            name_en: en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l
-    };
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "17");
-    lot.sales = vec![
-        line("s-1", "5", "شاہد", "Shahid", "0300-0000000"),
-        line("s-2", "2", "شاہد", "Shahid", "0301-2222222"),
-        line("s-3", "10", "ناصر", "Nasir", "0300-1111111"),
-    ];
-    save(&w, &support::draft(vec![lot]));
-    w
-}
-
-#[test]
-fn each_one_time_person_has_a_slip_of_his_own_even_with_the_same_name() {
-    let w = one_time_world();
-    let filters = ReportFilters::default();
-    let data = slips_of(&w, filters.clone());
-    // Same name, two phones: two slips, in a fixed order. ناصر after شاہد in the Urdu order.
-    assert_eq!(
-        overview(&data),
-        vec![
-            row("Shahid", "1,000", "1,100", "5"),
-            row("Shahid", "400", "440", "2"),
-            row("Nasir", "2,000", "2,200", "10"),
-        ]
-    );
-    // The two شاہد slips are told apart by their person keys, in a fixed order.
-    let keys: Vec<&str> = data
-        .slips
-        .iter()
-        .map(|s| s.party.person_key.as_deref().unwrap())
-        .collect();
-    assert!(keys[0] < keys[1], "{keys:?}");
-    assert!(data.slips.iter().all(|s| s.party.code == "0030"));
-    // 17 نگ, 3,400 and 3,740 in all.
-    assert_eq!(data.qty, "17");
-    assert_eq!(
-        (text(&data.totals[2]), text(&data.totals[3])),
-        ("3,400".into(), "3,740".into())
-    );
-    assert_adds_up(&w, &filters, &data);
-}
-
 // ---- Edit and cancel --------------------------------------------------------------------------
 
 fn edit_akram_rate(w: &support::World, bikri_id: i64, from_entry: i64, rate: &str) -> i64 {
@@ -563,12 +505,12 @@ fn a_later_sale_is_a_second_line_on_the_slip_dated_by_its_posting() {
 
 // ---- Many buyers (the chunks of the IN list) --------------------------------------------------
 
-/// 501 regular credit buyers, each with 1 at 100 (100 + 6 + 8 = 114), and the three one-time
-/// persons of `one_time_world`: more buyers than one chunk of the IN list holds (500).
+/// 501 regular credit buyers, each with 1 at 100 (100 + 6 + 8 = 114): more buyers than one chunk of
+/// the IN list holds (500).
 #[test]
 fn more_buyers_than_one_chunk_each_have_their_slip_with_every_line_once() {
     use mandi_services::core::accounts::AccountType;
-    let w = one_time_world();
+    let w = worked_day();
     let buyers: Vec<i64> = (1..=501)
         .map(|n| {
             support::add_account(
@@ -598,15 +540,14 @@ fn more_buyers_than_one_chunk_each_have_their_slip_with_every_line_once() {
     }
     let filters = ReportFilters::default();
     let data = slips_of(&w, filters.clone());
-    assert_eq!(data.slips.len(), 504);
-    assert_eq!(data.slip_count, "504");
-    // Values: 501 × 100 = 50,100 and 3,400, so 53,500. After commission and لاگا: 501 × 114 =
-    // 57,114 and 3,740, so 60,854.
+    assert_eq!(data.slips.len(), 501);
+    assert_eq!(data.slip_count, "501");
+    // Values: 501 × 100 = 50,100. After commission and لاگا: 501 × 114 = 57,114.
     assert_eq!(
         (text(&data.totals[2]), text(&data.totals[3])),
-        ("53,500".into(), "60,854".into())
+        ("50,100".into(), "57,114".into())
     );
-    assert_eq!(data.qty, (501 + 17).to_string());
+    assert_eq!(data.qty, "501");
     // Every line once: each of the 501 buyers has one line of 100 and 114.
     let regular: Vec<_> = data
         .slips
@@ -618,52 +559,6 @@ fn more_buyers_than_one_chunk_each_have_their_slip_with_every_line_once() {
         && text(&s.rows[0].cells[2]) == "100"
         && text(&s.rows[0].cells[3]) == "114"));
     assert_adds_up(&w, &filters, &data);
-}
-
-/// More one-time persons than one chunk of the IN list holds (500): they all sit under ONE
-/// account, so the account must be asked for once. Without that, its lines would be read twice
-/// and printed twice (money agent, round 12).
-#[test]
-fn more_one_time_persons_than_one_chunk_have_their_lines_once() {
-    let w = worked_day();
-    // Two بکری of 251 and 250 persons (at most 500 lines each, NFR-SCL-3).
-    for (part, range) in [(0, 1..=251), (1, 252..=501)] {
-        let mut lot = support::bare_lot(
-            &w,
-            "lot-1",
-            w.rahim,
-            w.banana,
-            &range.clone().count().to_string(),
-        );
-        lot.sales = range
-            .map(|n| {
-                let mut s = support::sale(&format!("s-{part}-{n}"), w.pukhta_buyer, "1", "100");
-                s.pukhta = Some(PukhtaInput {
-                    name_ur: format!("مہمان {n}"),
-                    name_en: format!("Guest {n}"),
-                    phone: format!("0300-{n:07}"),
-                });
-                s.payment_type = Some(PaymentType::Credit);
-                s
-            })
-            .collect();
-        save(&w, &support::draft(vec![lot]));
-    }
-    let filters = ReportFilters::default();
-    let data = slips_of(&w, filters.clone());
-    assert_eq!(data.slips.len(), 501);
-    // 501 persons, each with one line of 100 and 114 (6 + 8).
-    assert!(data.slips.iter().all(|s| s.rows.len() == 1
-        && text(&s.rows[0].cells[2]) == "100"
-        && text(&s.rows[0].cells[3]) == "114"));
-    assert_eq!(data.qty, "501");
-    assert_eq!(
-        (text(&data.totals[2]), text(&data.totals[3])),
-        ("50,100".into(), "57,114".into())
-    );
-    assert_adds_up(&w, &filters, &data);
-    // The plain R5 print reads every row too; its details must not be doubled.
-    assert_same_as_plain_print(&w, &filters, &data);
 }
 
 // ---- Weight lines and a buyer rate that differs -----------------------------------------------

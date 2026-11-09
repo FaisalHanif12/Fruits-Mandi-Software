@@ -2,7 +2,8 @@
 // pieces and never styles a printed page itself.
 export { AFTER_SAVE_DOCS, BIKRI_PRINT_DOCS, DOC_NAME_ID, PRINT_DOCS } from './docs';
 export { printingInputOf } from './printing-input';
-export { PrintLanguageTo, PrintOutcomeNotice, useDocNames } from './PrintBoxParts';
+export { PrintDialogHint, PrintLanguageTo, PrintOutcomeNotice, useDocNames } from './PrintBoxParts';
+export { opensSystemPrintWindow } from './platform';
 export { PrintDocument, type PrintDocumentProps } from './PrintDocument';
 export { PrintProvider } from './PrintProvider';
 export { PrintRoot, type PrintRootProps } from './PrintRoot';

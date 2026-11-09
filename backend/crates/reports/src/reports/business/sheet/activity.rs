@@ -10,7 +10,7 @@ pub(super) const SAME_DAY_PAIR: &str = "(e.reverses_entry_id IS NOT NULL AND EXI
     OR EXISTS (SELECT 1 FROM journal_entries r
         WHERE r.reverses_entry_id = e.id AND r.status = 'posted' AND r.entry_date = e.entry_date)";
 
-/// What one party (a buyer or seller account, or a person inside a پختہ کھاتہ account) has on the
+/// What one party (a buyer or seller account, or a person inside a چکتا کھاتہ account) has on the
 /// day.
 #[derive(Debug, Clone)]
 pub(super) struct Activity {
@@ -70,7 +70,7 @@ pub(super) fn activities(
     person_key: Option<&str>,
 ) -> Result<Vec<Activity>, ReportsError> {
     let sql = format!(
-        "SELECT l.account_id, l.pukhta_person_key, k.code,
+        "SELECT l.account_id, l.chukta_person_key, k.code,
                 COALESCE(SUM(CASE WHEN e.entry_date < ?1 THEN l.dr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN e.entry_date < ?1 THEN l.cr_paisa END), 0),
                 COALESCE(SUM(CASE WHEN e.entry_date = ?1 AND NOT ({SAME_DAY_PAIR})
@@ -85,9 +85,9 @@ pub(super) fn activities(
          WHERE k.code IN ('{BUYER_CONTROL}', '{SELLER_CONTROL}') AND e.status = 'posted'
            AND e.entry_date <= ?1
            AND (?2 IS NULL OR l.account_id = ?2)
-           AND (?3 IS NULL OR l.pukhta_person_key = ?3)
-         GROUP BY l.account_id, l.pukhta_person_key, k.code
-         ORDER BY l.account_id, l.pukhta_person_key"
+           AND (?3 IS NULL OR l.chukta_person_key = ?3)
+         GROUP BY l.account_id, l.chukta_person_key, k.code
+         ORDER BY l.account_id, l.chukta_person_key"
     );
     let mut statement = conn.prepare(&sql)?;
     let rows = statement
@@ -126,7 +126,7 @@ pub(super) fn activities(
 }
 
 /// The parties of the activities as the report names them: the account's names with its tag, and
-/// a one-time person with his own names and key.
+/// a چکتا buyer with his own names and key.
 pub(super) fn parties_of(
     conn: &Connection,
     items: &[Activity],
@@ -139,15 +139,15 @@ pub(super) fn parties_of(
 }
 
 /// The parties of some (account, person) keys as the report names them: the account's names with
-/// its tag, and a one-time person with his own names, phone and key.
+/// its tag, and a چکتا buyer with his own names, phone and key.
 pub(super) fn parties_for(
     conn: &Connection,
     keys: &[(i64, Option<String>)],
 ) -> Result<HashMap<(i64, Option<String>), PartyRef>, ReportsError> {
     let ids: Vec<i64> = keys.iter().map(|k| k.0).collect();
     let accounts = load_parties(conn, &ids)?;
-    let pukhta_ids: Vec<i64> = keys.iter().filter(|k| k.1.is_some()).map(|k| k.0).collect();
-    let people = pukhta_names(conn, &pukhta_ids)?;
+    let chukta_ids: Vec<i64> = keys.iter().filter(|k| k.1.is_some()).map(|k| k.0).collect();
+    let people = chukta_names(conn, &chukta_ids)?;
     let mut out = HashMap::new();
     for (account_id, person_key) in keys {
         let base = accounts
@@ -157,7 +157,7 @@ pub(super) fn parties_for(
         let party = match person_key {
             Some(key) => {
                 let person = people.get(key);
-                pukhta_party(
+                chukta_party(
                     base,
                     Some(key.clone()),
                     person.map(|p| p.name_ur.as_str()),

@@ -13,7 +13,7 @@ export type DeadRow = {
    */
   mark_id: number;
   /**
-   * The account. For a پختہ کھاتہ person it is the پختہ account.
+   * The account.
    */
   account_id: number;
   /**
@@ -36,18 +36,6 @@ export type DeadRow = {
    * What kind of person.
    */
   party_type: DeadPartyType;
-  /**
-   * The person key, for a پختہ کھاتہ person. Null for any other.
-   */
-  pukhta_person_key: string | null;
-  /**
-   * His Urdu name as saved on his lines, for a پختہ کھاتہ person. Null for any other.
-   */
-  pukhta_name_ur: string | null;
-  /**
-   * His English name, for a پختہ کھاتہ person. Null for any other.
-   */
-  pukhta_name_en: string | null;
   /**
    * Why he was moved.
    */

@@ -82,7 +82,7 @@ function Saved({
   const language = useLanguage();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   const cancelled = row.status === 'cancelled';
-  const credited = row.pukhta ?? row.credit_account;
+  const credited = row.credit_account;
   return (
     <Card
       compact

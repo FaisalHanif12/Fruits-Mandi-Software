@@ -14,7 +14,6 @@ import {
   gardenViewMessageId,
   isUnfiltered,
   periodMessageId,
-  personFromHit,
   tripViewMessageId,
   voucherMessageId,
   TRIP_VIEW_CHOICES,
@@ -30,7 +29,6 @@ import {
 import { parseReportSearch, stateFromSearch } from '../../src/features/reports/search';
 import {
   CATALOG,
-  PEOPLE_SHAHID,
   R11_TODAY_REQUEST,
   R13_AKRAM_REQUEST,
   R18_AS_OF_REQUEST,
@@ -45,9 +43,6 @@ import {
   R3_CASH_REQUEST,
   R4_CREDIT_REQUEST,
   R7_ITEMS_REQUEST,
-  R9_ALL_REQUEST,
-  R9_DUE_REQUEST,
-  R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST,
 } from '../helpers/reports-real';
 import { R36_PARTNER_REQUEST } from '../helpers/reports-gardens-real';
 import { R1_BIKRI_1_REQUEST } from '../helpers/reports-sales-real';
@@ -274,7 +269,7 @@ describe('the catalogue', () => {
     ]);
   });
 
-  it('puts R9 before R11 inside a group (a number, not a text, order)', () => {
+  it('puts R2 before R11 inside a group (a number, not a text, order)', () => {
     const nine = { ...entryOf('R11'), id: 'R2' as never };
     const ids = groupCatalog([entryOf('R18'), entryOf('R11'), nine])[0]?.entries.map(
       (entry) => entry.id,
@@ -340,8 +335,6 @@ describe('the requests the screen builds are the ones the backend wrote (round 4
     ['R3 for today', R3_CASH_REQUEST, { period: 'today' }],
     ['R4 for one item', R4_CREDIT_REQUEST, { item: ITEM }],
     ['R7 for one day, typed', R7_ITEMS_REQUEST, { from: '10-10-2026', to: '10-10-2026' }],
-    ['R9 with nothing filled', R9_ALL_REQUEST, {}],
-    ['R9 with the due lines only', R9_DUE_REQUEST, { paid: 'due' }],
     ['R20 with nothing filled', R20_DUES_REQUEST, {}],
     ['R20 as of one day', R20_AS_OF_10_10_REQUEST, { asOf: '10-10-2026' }],
     ['R24 with nothing filled', R24_PAYABLES_REQUEST, {}],
@@ -351,15 +344,6 @@ describe('the requests the screen builds are the ones the backend wrote (round 4
   it.each(cases)('%s', (_name, request, part) => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, ...part };
     expect(filtersToWire(state, entryOf(request.id).filters)).toEqual(wireOf(request));
-  });
-
-  it('sends the one-time account the backend refuses for R9 only if the address put it there', () => {
-    // The R9 screen has no account box, only a person box, so a left-over account cannot be typed.
-    // An address such as /reports/R9?party=20 does carry one; the backend then refuses it.
-    const state = stateFromSearch({ party: 20 });
-    expect(filtersToWire(state, entryOf('R9').filters)).toEqual(
-      wireOf(R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST),
-    );
   });
 
   it('never sends a partner to a report that has no partner box', () => {
@@ -474,54 +458,43 @@ describe('the requests the screen builds are the ones the backend wrote (round 8
   });
 });
 
-describe('a one-time person in the party filter (PRD FR-13.5, FR-13.9)', () => {
-  const hit = PEOPLE_SHAHID[0];
-  if (hit === undefined) throw new Error('no person in the fixture');
+describe('a چکتا buyer in the party filter (PRD FR-13.5, FR-13.7)', () => {
+  const khata = { id: 9, name_ur: 'شاہد', name_en: 'Shahid', code: '0030' };
 
-  it('is the person key with his account, as the contract says', () => {
-    const person = personFromHit(hit, null);
-    expect(person).toEqual({
-      accountId: 9,
-      personKey: 'شاہد|03000000000',
-      name_ur: 'شاہد',
-      name_en: 'Shahid',
-      phone: '03000000000',
-      last_date: '2026-10-10',
-    });
-    const state: ReportFilterState = { ...EMPTY_FILTERS, person };
-    expect(filtersToWire(state, entryOf('R9').filters).party).toEqual({
+  it('goes with his account as the person key, as the contract says', () => {
+    const state: ReportFilterState = {
+      ...EMPTY_FILTERS,
+      party: khata,
+      partyPersonKey: 'شاہد|03000000000',
+    };
+    expect(filtersToWire(state, entryOf('R35').filters).party).toEqual({
       account_id: 9,
       person_key: 'شاہد|03000000000',
     });
   });
 
-  it('is left out when he has no lines on the account the report is on', () => {
-    expect(personFromHit(hit, 9)).not.toBeNull();
-    expect(personFromHit(hit, 20)).toBeNull();
+  it('is an account only when no person key was set, and nothing without a party', () => {
+    expect(filtersToWire({ ...EMPTY_FILTERS, party: khata }, entryOf('R35').filters).party).toEqual(
+      {
+        account_id: 9,
+        person_key: null,
+      },
+    );
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R35').filters).party).toBeNull();
   });
 
   it('is not sent to a report that takes no party', () => {
-    const state: ReportFilterState = { ...EMPTY_FILTERS, person: personFromHit(hit, null) };
+    const state: ReportFilterState = { ...EMPTY_FILTERS, party: khata, partyPersonKey: 'k' };
     expect(filtersToWire(state, entryOf('R30').filters).party).toBeNull();
   });
 
-  it('counts as a filled box, so “clear the filters” is offered', () => {
-    const state: ReportFilterState = { ...EMPTY_FILTERS, person: personFromHit(hit, null) };
-    expect(isUnfiltered(state, entryOf('R9').filters)).toBe(false);
-    expect(isUnfiltered({ ...EMPTY_FILTERS, paid: 'paid' }, entryOf('R9').filters)).toBe(false);
-    expect(isUnfiltered({ ...EMPTY_FILTERS, groupBy: 'day' }, entryOf('R28').filters)).toBe(true);
-  });
-
-  it('comes from the address whole or not at all', () => {
-    const person = personFromHit(hit, null);
-    expect(person).not.toBeNull();
-    const search = parseReportSearch({ person });
-    expect(search.person).toEqual(person);
-    expect(stateFromSearch(search).person).toEqual(person);
-    // A half-read person would ask for the wrong lines, so any missing piece drops him.
-    expect(parseReportSearch({ person: { ...person, personKey: '' } }).person).toBeUndefined();
-    expect(parseReportSearch({ person: { accountId: 9 } }).person).toBeUndefined();
-    expect(parseReportSearch({ person: 'x' }).person).toBeUndefined();
+  it('comes from the address with his party, and from nowhere else', () => {
+    const search = parseReportSearch({ party: 9, person_key: 'شاہد|03000000000' });
+    expect(search).toMatchObject({ party: 9, person_key: 'شاہد|03000000000' });
+    expect(stateFromSearch(search).partyPersonKey).toBe('شاہد|03000000000');
+    // A key with no party asks for nothing, and an empty key is dropped.
+    expect(stateFromSearch(parseReportSearch({ person_key: 'x' })).partyPersonKey).toBeNull();
+    expect(parseReportSearch({ party: 9, person_key: '' }).person_key).toBeUndefined();
   });
 });
 
@@ -535,7 +508,6 @@ describe('which accounts the party box of a report takes', () => {
     ['R21', 'buyer'],
     ['R22', 'buyer'],
     ['R24', 'seller'],
-    ['R9', 'one_time'],
     ['R11', 'any'],
     ['R13', 'any'],
     ['R14', 'any'],

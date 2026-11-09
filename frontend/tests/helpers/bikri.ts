@@ -5,7 +5,6 @@
 
 import { vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as draftsApi from '../../src/shared/drafts/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
@@ -14,10 +13,10 @@ import * as searchApi from '../../src/shared/search/api';
 import { account, balance, fakeAccountSearch, fakeAccounts, ref } from './accounts';
 import { IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
 import { CommandError } from '../../src/shared/api';
-import { listRow, savedEvent1 } from './bikri-saved';
+import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
-import { bikriListOf, pukhtaRegisterOf } from './paged';
+import { bikriListOf } from './paged';
 
 export const RAHIM = account(IDS.rahim, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
@@ -30,19 +29,17 @@ export const AKRAM = account(IDS.akram, 'buyer', '0020', 'اکرم ٹول ٹیک
 export const ARSHAD = account(IDS.arshad, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
-export const PUKHTA_BUYER = account(
-  IDS.pukhtaBuyer,
+/** The account چکتا کھاتہ (0030): no picker offers it; the buyer picker offers his buyers (PRD FR-13.4). */
+export const CHUKTA_KHATA = account(
+  IDS.chuktaKhata,
   'buyer',
   '0030',
-  'پختہ کھاتہ (خریدار)',
-  'Pukhta Khata (Buyer)',
-);
-export const PUKHTA_SELLER = account(
-  IDS.pukhtaSeller,
-  'seller',
-  '0031',
-  'پختہ کھاتہ (بیوپاری)',
-  'Pukhta Khata (Seller)',
+  'چکتا کھاتہ',
+  'Chukta Khata',
+  {
+    is_system: true,
+    is_chukta_khata: true,
+  },
 );
 
 export const BANANA = record('item', IDS.banana, '0001', 'کیلا', 'Banana');
@@ -78,8 +75,8 @@ export function fakeBikri(
       return last;
     },
   };
-  fakeAccounts([RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER]);
-  fakeAccountSearch([RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER]);
+  fakeAccounts([RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA]);
+  fakeAccountSearch([RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA], {}, [SHAHID, NASIR]);
   const masters = fakeMasters({ item: [BANANA, APPLE], packing: [BOX], adda: [SWAT] });
   vi.mocked(searchApi.findMaster).mockImplementation((scope, id) => {
     const found = masters.rows[scope as MasterKind].find((row) => row.id === id);
@@ -148,10 +145,6 @@ export function fakeBikri(
     });
     vi.mocked(draftsApi.draftsGet).mockResolvedValue(null);
     vi.mocked(draftsApi.draftsDiscard).mockResolvedValue(null);
-  }
-  if (vi.isMockFunction(pukhtaApi.searchPukhtaPeople)) {
-    vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(pukhtaRegisterOf([]));
   }
   return store;
 }

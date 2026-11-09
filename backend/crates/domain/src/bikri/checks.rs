@@ -1,9 +1,9 @@
 //! The checks of a بکری draft that need the world outside it (PRD FR-12.4 to FR-12.7, FR-13.2,
-//! FR-7.55): accounts, one-time people, payment type, credit limit and the rate check.
+//! FR-7.55): accounts, چکتا buyers, payment type, credit limit and the rate check.
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{PaymentType, PreparedPukhta};
+use mandi_core::bikri::{PaymentType, PreparedChukta};
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::money::{MoneyError, Paisa, Qty, avg_rate};
 use mandi_core::validate;
@@ -120,39 +120,31 @@ pub(super) fn master_exists(
     }
 }
 
-/// The one-time person of a پختہ کھاتہ account (PRD FR-13.2): both names, each in its own
-/// script (PRD FR-7.28), and a phone when `need_phone`. A phone that is typed must be valid.
-/// `prefix` is the path of the lot or line, for example `lots[0].sales[1]`.
-pub(super) fn pukhta(
-    issues: &mut Issues,
-    prefix: &str,
-    person: &PreparedPukhta,
-    need_phone: bool,
-) -> bool {
+/// The چکتا buyer of a line on the چکتا کھاتہ account (PRD FR-13.2): both names, each in its own
+/// script (PRD FR-7.28). His phone is optional, but a typed one must be valid. `prefix` is the path
+/// of the line, for example `lots[0].sales[1]`.
+pub(super) fn chukta(issues: &mut Issues, prefix: &str, person: &PreparedChukta) -> bool {
     let mut ok = true;
-    let name_ur = format!("{prefix}.pukhta.name_ur");
-    let name_en = format!("{prefix}.pukhta.name_en");
-    let phone = format!("{prefix}.pukhta.phone");
+    let name_ur = format!("{prefix}.chukta.name_ur");
+    let name_en = format!("{prefix}.chukta.name_en");
+    let phone = format!("{prefix}.chukta.phone");
     if person.name_ur.is_empty() {
-        issues.error(ErrorCode::ErrPukhtaNameRequired, &name_ur);
+        issues.error(ErrorCode::ErrChuktaNameRequired, &name_ur);
         ok = false;
     } else if let Err(e) = validate::name_ur(&name_ur, &person.name_ur) {
         issues.errors.push(e);
         ok = false;
     }
     if person.name_en.is_empty() {
-        issues.error(ErrorCode::ErrPukhtaNameRequired, &name_en);
+        issues.error(ErrorCode::ErrChuktaNameRequired, &name_en);
         ok = false;
     } else if let Err(e) = validate::name_en(&name_en, &person.name_en) {
         issues.errors.push(e);
         ok = false;
     }
-    if person.phone.is_empty() {
-        if need_phone {
-            issues.error(ErrorCode::ErrPukhtaPhoneRequired, &phone);
-            ok = false;
-        }
-    } else if let Err(e) = validate::phone(&phone, &person.phone) {
+    if !person.phone.is_empty()
+        && let Err(e) = validate::phone(&phone, &person.phone)
+    {
         issues.errors.push(e);
         ok = false;
     }
@@ -161,8 +153,8 @@ pub(super) fn pukhta(
 
 /// How the buyer of a line pays (PRD 12.4, FR-13.4). Typed credit is refused for the نقدی منڈی
 /// account (always cash) and for a buyer whose "ادھار کی اجازت" is off (PRD 10.2: cash only).
-/// With nothing chosen: credit if the buyer may have credit, else cash; the one-time buyer
-/// defaults to cash. A one-time buyer may take credit (with a phone, checked by [`pukhta`]).
+/// With nothing chosen: credit if the buyer may have credit, else cash. A چکتا buyer always pays in
+/// full, so he is cash only like نقدی منڈی (PRD FR-13.5; plan 65 replaces this with the paid amount).
 pub(super) fn payment_type(
     issues: &mut Issues,
     buyer: &AccountFacts,
@@ -182,11 +174,11 @@ pub(super) fn resolve_payment(
     buyer: &AccountFacts,
     chosen: Option<PaymentType>,
 ) -> Option<PaymentType> {
-    let may_credit = !buyer.is_naqdi_mandi && (buyer.is_pukhta || buyer.credit_allowed);
+    let may_credit = !buyer.is_naqdi_mandi && !buyer.is_chukta && buyer.credit_allowed;
     match chosen {
         Some(PaymentType::Credit) if !may_credit => None,
         Some(kind) => Some(kind),
-        None if buyer.is_pukhta || !may_credit => Some(PaymentType::Cash),
+        None if !may_credit => Some(PaymentType::Cash),
         None => Some(PaymentType::Credit),
     }
 }
@@ -210,7 +202,7 @@ pub(super) fn credit_limit(
     let Some(limit) = buyer.credit_limit else {
         return Ok(());
     };
-    if buyer.is_pukhta || buyer.is_naqdi_mandi {
+    if buyer.is_chukta || buyer.is_naqdi_mandi {
         return Ok(());
     }
     let before = *owed.entry(buyer_id).or_insert(buyer.balance);

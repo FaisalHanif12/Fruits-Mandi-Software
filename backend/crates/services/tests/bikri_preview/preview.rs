@@ -5,7 +5,7 @@ use std::path::Path;
 
 use mandi_services::bikri;
 use mandi_services::core::bikri::{
-    ChargeSource, LineChargeMethod, PaymentType, PukhtaInput, RateHintSource, StoredMethod,
+    ChargeSource, ChuktaInput, LineChargeMethod, PaymentType, RateHintSource, StoredMethod,
 };
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::rules::{CreditLimitMode, OverridesSettings, WorkingValue};
@@ -149,14 +149,14 @@ fn e2e_26_the_next_row_starts_at_30_with_the_hint_600_and_the_working_of_720() {
 }
 
 #[test]
-fn event_2_one_time_buyer_through_the_pukhta_account() {
-    // PRD 4.5.
+fn event_2_chukta_buyer_pays_in_full_on_the_spot() {
+    // PRD 4.5 (v1.32): شاہد is a چکتا buyer; he pays the whole bill on the spot.
     let w = world();
     let mut karim = lot(&w, "lot-1", w.karim, w.apple, "10");
     karim.freight = Some("1,000".into());
     karim.cash_paid = None;
-    let mut shahid = sale("s-1", w.pukhta_buyer, "10", "1,200");
-    shahid.pukhta = Some(PukhtaInput {
+    let mut shahid = sale("s-1", w.chukta_khata, "10", "1,200");
+    shahid.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -364,7 +364,7 @@ fn a_draft_with_no_lot_says_so_and_returns_zero_totals() {
 
 /// The JSON of one sale row as the screen sends it.
 fn row_json(key: &str, buyer: Option<i64>, qty: &str, rate: &str) -> serde_json::Value {
-    json!({ "key": key, "buyer_account_id": buyer, "pukhta": null, "qty": qty, "weight": null,
+    json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
         "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
         "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
@@ -379,8 +379,7 @@ fn request_json(w: &World, rows: Vec<serde_json::Value>) -> serde_json::Value {
                 "driver_phone": null, "total_freight": null, "store_id": null, "note": null
             },
             "lots": [{
-                "key": "lot-1", "seller_account_id": w.rahim, "pukhta": null,
-                "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
+                "key": "lot-1", "seller_account_id": w.rahim, "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "50", "weight_received": null, "freight": "3,000",
                 "freight_paid_by": "firm",
                 "labour": { "method": "per_unit", "value": "5" },

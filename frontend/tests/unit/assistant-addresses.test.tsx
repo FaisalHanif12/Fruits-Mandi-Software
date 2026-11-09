@@ -359,12 +359,11 @@ describe('the filters of an answer’s source', () => {
     expect(reportFiltersOf(reportSource({})).from).toBe('');
   });
 
-  it('a one-time person is one person of his account', () => {
+  it('a چکتا buyer is his account and his key', () => {
     const search = reportSearchFromFilters(
       reportSource({ party: { record: RAHIM, person_key: 'shahid|0300' } }),
     );
-    expect(search.person).toMatchObject({ accountId: 3, personKey: 'shahid|0300' });
-    expect(search.party).toBeUndefined();
+    expect(search).toMatchObject({ party: 3, person_key: 'shahid|0300' });
   });
 
   it('every address the answer fixtures carry reads back as the same filters it came from', () => {

@@ -15,7 +15,7 @@ use mandi_backup::secrets::MemorySecretStore;
 use mandi_backup::service::{BackupConfig, BackupParts, BackupService};
 use mandi_backup::settings::BackupSettings;
 use mandi_db::disk::DiskProbe;
-use mandi_services::core::bikri::{BikriDraft, HeaderInput, PukhtaInput};
+use mandi_services::core::bikri::{BikriDraft, ChuktaInput, HeaderInput};
 use mandi_services::core::vouchers::{PaymentInput, ReceiptInput};
 use mandi_services::db::rusqlite::Connection;
 use mandi_services::{bikri, vouchers};
@@ -173,7 +173,6 @@ pub fn rupees_input(account: i64, amount: &str) -> ReceiptInput {
     ReceiptInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: Default::default(),
         collector_staff_id: None,
@@ -182,8 +181,8 @@ pub fn rupees_input(account: i64, amount: &str) -> ReceiptInput {
 }
 
 fn event2(w: &support::World) -> BikriDraft {
-    let mut line = support::sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = support::sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -230,7 +229,6 @@ pub fn worked_day_with(w: support::World) -> Rig {
         &PaymentInput {
             date: "10-10-2026".into(),
             account_id: w.rahim,
-            person_key: None,
             amount: "4,316".into(),
             removed: Default::default(),
             reason: String::new(),

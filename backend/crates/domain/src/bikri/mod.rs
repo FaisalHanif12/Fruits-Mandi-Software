@@ -13,7 +13,7 @@
 //! | no lot / no sale line in the whole بکری | `ERR_NO_LOTS`, `ERR_NO_SALE_LINES` | `lots` |
 //! | seller / buyer missing, wrong kind, inactive | `ERR_SELLER_REQUIRED`, `ERR_BUYER_REQUIRED`, `ERR_NOT_A_SELLER`, `ERR_NOT_A_BUYER`, `ERR_ACCOUNT_INACTIVE` | the account field |
 //! | sold more than received | `ERR_QTY_EXCEEDS_LOT` (`available`) | `lots[i].sales[j].qty` |
-//! | one-time person | `ERR_PUKHTA_NAME_REQUIRED`, `ERR_PUKHTA_PHONE_REQUIRED` | `...pukhta.*` |
+//! | چکتا buyer | `ERR_CHUKTA_NAME_REQUIRED` | `...chukta.*` |
 //! | credit on a cash-only buyer | `ERR_CREDIT_NOT_ALLOWED` | `...payment_type` |
 //! | typed commission or لاگا while off | `ERR_OVERRIDE_NOT_ALLOWED` | `...seller_comm` etc. |
 //! | credit limit | `ERR_CREDIT_LIMIT_EXCEEDED` (warning, or error when blocking) | `...buyer_account_id` |
@@ -299,7 +299,6 @@ fn calc_pass(
             .collect(),
         lot_arrivals: draft.lots.iter().map(|lot| lot.arrival_id).collect(),
         carried: guess.to_vec(),
-        advance_left: HashMap::new(),
     };
     // The lines of an edit that keep their stored cost are taken out of the purchases first.
     if let Some(env) = &env {

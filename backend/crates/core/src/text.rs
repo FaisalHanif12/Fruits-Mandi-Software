@@ -223,7 +223,7 @@ fn with_tag_word(key: String, tag: Option<&str>) -> String {
     }
 }
 
-/// The key of a one-time person of the پختہ کھاتہ accounts (PRD FR-13.5): the Urdu name after
+/// The key of a چکتا buyer (PRD FR-13.5): the Urdu name after
 /// Urdu normalisation, a `|`, and the phone digits (empty if there is none). Balances, matching
 /// and aging are kept per key, so one person's payment never settles another's bill.
 ///

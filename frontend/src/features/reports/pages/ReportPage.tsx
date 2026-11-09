@@ -239,8 +239,8 @@ function ReportBody({
     setState((now) => ({ ...now, ...part }));
   };
   // The party day sheet (R35): Enter on a party of the table opens his slip, the same sheet for one
-  // party (PRD FR-19.12), where every other report opens the record behind a row. A one-time person
-  // is picked with his key, so the slip is his and not the whole account's (FR-13.5).
+  // party (PRD FR-19.12), where every other report opens the record behind a row. A چکتا buyer is
+  // picked with his key, so the slip is his and not the whole account's (FR-13.5, FR-13.7).
   const open = (view: ReportRowView) => {
     const cell = view.row.cells.find((candidate) => candidate.type === 'party');
     if (entry.id === 'R35' && state.party === null && cell?.type === 'party') {
@@ -252,18 +252,7 @@ function ReportBody({
           name_en: picked.name_en,
           code: picked.code,
         },
-        person:
-          picked.person_key === null
-            ? null
-            : {
-                accountId: picked.account_id,
-                personKey: picked.person_key,
-                name_ur: picked.name_ur,
-                name_en: picked.name_en,
-                phone: '',
-                last_date: '',
-              },
-        personText: '',
+        partyPersonKey: picked.person_key,
       });
       return;
     }
@@ -400,7 +389,7 @@ function ReportBody({
             <div>
               <Button
                 onClick={() => {
-                  change({ party: null, person: null, personText: '' });
+                  change({ party: null, partyPersonKey: null });
                 }}
               >
                 <ArrowLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />

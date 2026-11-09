@@ -18,8 +18,8 @@ const INCOMPLETE: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   'ERR_REQUIRED',
   'ERR_SELLER_REQUIRED',
   'ERR_BUYER_REQUIRED',
-  'ERR_PUKHTA_NAME_REQUIRED',
-  'ERR_PUKHTA_PHONE_REQUIRED',
+  // A چکتا buyer's name that is still empty (PRD FR-13.5); his phone is optional.
+  'ERR_CHUKTA_NAME_REQUIRED',
   'ERR_NO_LOTS',
   'ERR_NO_SALE_LINES',
 ]);
@@ -115,6 +115,11 @@ export const LOT_OWN_FIELD: ReadonlySet<string> = new Set(['purchase_id', 'arriv
 /** The column of the sale lines grid a line field belongs to. Others are in the line details. */
 export const LINE_GRID_FIELD: Readonly<Record<string, string>> = {
   buyer_account_id: 'buyer',
+  // A چکتا buyer is one chosen record of the buyer cell, so a refusal about his names or phone is
+  // shown on that cell (PRD FR-13.5): the line has no other cells for them.
+  'chukta.name_ur': 'buyer',
+  'chukta.name_en': 'buyer',
+  'chukta.phone': 'buyer',
   qty: 'qty',
   seller_rate: 'rate',
   // The quality is a grid cell too (PRD FR-12.42); the payment type is in the details of the line.

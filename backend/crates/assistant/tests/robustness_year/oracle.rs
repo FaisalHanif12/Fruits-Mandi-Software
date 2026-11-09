@@ -789,7 +789,6 @@ fn capability_reports(o: &mut Oracle, y: &Year) {
             (ReportId::R6, "r6"),
             (ReportId::R7, "r7"),
             (ReportId::R8, "r8"),
-            (ReportId::R9, "r9"),
             (ReportId::R11, "r11"),
             (ReportId::R15, "r15"),
             (ReportId::R27, "r27"),
@@ -1748,7 +1747,7 @@ fn balance_estimates(o: &mut Oracle, y: &Year) {
     }
     let (rows, now) = account_series(cash_id, true);
     put(o, "cash", &rows, now, false);
-    // The buyers' dues (backend3, PRD FR-7.86): the sum over the owners (each buyer account, each پختہ کھاتہ
+    // The buyers' dues (backend3, PRD FR-7.86): the sum over the owners (each buyer account, each چکتا کھاتہ
     // person) of the balance when it is a debit, at the end of each month, with the opening lines applied first
     // (an opening and a reversal of one count from the start) and a dead mark ignored. The change of a month is
     // that sum at its end less the sum at the end of the month before. Worked here from the journal lines.
@@ -1765,7 +1764,7 @@ fn balance_estimates(o: &mut Oracle, y: &Year) {
                      AND (e.entry_date <= ?1 OR e.posting_type = 'opening' \
                           OR (e.posting_type = 'reversal' AND e.reverses_entry_id IN \
                               (SELECT id FROM journal_entries WHERE posting_type = 'opening'))) \
-                   GROUP BY l.account_id, COALESCE(l.pukhta_person_key, ''))",
+                   GROUP BY l.account_id, COALESCE(l.chukta_person_key, ''))",
                 params![iso(day)],
                 |r| r.get::<_, i64>(0),
             )
@@ -2639,7 +2638,7 @@ fn item_axis_facts(o: &mut Oracle, y: &Year) {
             }
         }
         // The buyers and the sellers of a group and of all the items, by SQL on the lines (a buyer is an account,
-        // or one person of a پختہ کھاتہ account, as the views count them).
+        // or one person of a چکتا کھاتہ account, as the views count them).
         let day = |d: Option<NaiveDate>| {
             d.map(|d| d.format("%Y-%m-%d").to_string())
                 .unwrap_or_default()
@@ -2653,13 +2652,13 @@ fn item_axis_facts(o: &mut Oracle, y: &Year) {
                 (
                     "buyers_n",
                     "top_buyer",
-                    "COALESCE(NULLIF(s.pukhta_name_en, ''), a.name_en)",
+                    "COALESCE(NULLIF(s.chukta_name_en, ''), a.name_en)",
                     "s.buyer_value_paisa",
                 ),
                 (
                     "sellers_n",
                     "top_seller",
-                    "COALESCE(NULLIF(l.pukhta_name_en, ''), a.name_en)",
+                    "COALESCE(NULLIF(l.chukta_name_en, ''), a.name_en)",
                     "s.seller_amount_paisa",
                 ),
             ] {
@@ -2669,9 +2668,9 @@ fn item_axis_facts(o: &mut Oracle, y: &Year) {
                     "l.seller_account_id"
                 };
                 let person = if count_key == "buyers_n" {
-                    "s.pukhta_person_key"
+                    "s.chukta_person_key"
                 } else {
-                    "l.pukhta_person_key"
+                    "l.chukta_person_key"
                 };
                 let sql = format!(
                     "SELECT {who}, SUM({value}) AS v FROM bikri_sales s \
@@ -2925,24 +2924,24 @@ fn quality_facts(o: &mut Oracle, y: &Year) {
                 if let Some(rate) = last {
                     o.put(format!("{prefix}.last_rate"), (rate / 100).to_string());
                 }
-                // The buyers and the sellers of those lines (a buyer is an account, or one person of a پختہ کھاتہ
+                // The buyers and the sellers of those lines (a buyer is an account, or one person of a چکتا کھاتہ
                 // account, as the views count them).
                 for (count_key, top_key, who, value, party, person) in [
                     (
                         "buyers_n",
                         "top_buyer",
-                        "COALESCE(NULLIF(s.pukhta_name_en, ''), a.name_en)",
+                        "COALESCE(NULLIF(s.chukta_name_en, ''), a.name_en)",
                         "s.buyer_value_paisa",
                         "s.buyer_account_id",
-                        "s.pukhta_person_key",
+                        "s.chukta_person_key",
                     ),
                     (
                         "sellers_n",
                         "top_seller",
-                        "COALESCE(NULLIF(l.pukhta_name_en, ''), a.name_en)",
+                        "COALESCE(NULLIF(l.chukta_name_en, ''), a.name_en)",
                         "s.seller_amount_paisa",
                         "l.seller_account_id",
-                        "l.pukhta_person_key",
+                        "l.chukta_person_key",
                     ),
                 ] {
                     let sql = format!(
@@ -4274,23 +4273,23 @@ fn d7_facts(o: &mut Oracle, y: &Year) {
     o.put("d7.ratediff.seller_amount".into(), rupees(rd_amount));
     o.put("d7.ratediff.diff".into(), rupees(rd_diff));
 
-    // 2f. A one-time person of the shared پختہ کھاتہ (Aamir): his lines and what he owes (no receipt was made).
+    // 2f. A چکتا buyer of the shared چکتا کھاتہ (Aamir): his lines. He paid in full on the spot, so he owes nothing.
     let (pk_lines, pk_qty, pk_value, pk_total): (i64, i64, i64, i64) = db
         .read(|c| {
             c.query_row(
                 "SELECT COUNT(*), COALESCE(SUM(qty),0), COALESCE(SUM(buyer_value_paisa),0), \
                  COALESCE(SUM(buyer_total_paisa),0) FROM bikri_sales \
-                 WHERE is_active = 1 AND pukhta_name_en = 'Aamir'",
+                 WHERE is_active = 1 AND chukta_name_en = 'Aamir'",
                 [],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
             )
         })
-        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 pukhta person: {e}"));
+        .unwrap_or_else(|e: rusqlite::Error| panic!("d7 chukta person: {e}"));
     o.put("d7.pk.aamir.lines".into(), pk_lines.to_string());
     o.put("d7.pk.aamir.qty".into(), pk_qty.to_string());
     o.put("d7.pk.aamir.amount".into(), rupees(pk_value));
     o.put("d7.pk.aamir.charges".into(), rupees(pk_total));
-    o.put("d7.pk.aamir.balance".into(), rupees(pk_total));
+    o.put("d7.pk.aamir.balance".into(), rupees(0));
 
     // 2g. A separate khata (الگ کھاتہ): paid out, received, the balance (minus: it took more than it brought).
     let (out_n, out_sum, in_n, in_sum): (i64, i64, i64, i64) = db

@@ -10,6 +10,9 @@ assist-card-balance = بقایا
 assist-card-last-entry = آخری اندراج
 # review: pending
 assist-card-never = ابھی کوئی اندراج نہیں
+# The card of a walk-in buyer (PRD FR-7.38, FR-13.6): he has no balance, he pays the whole bill on the spot.
+# review: pending
+assist-card-chukta-cash = { -chukta }: پورا نقد
 # review: pending
 assist-card-credit-limit = ادھار کی حد
 # review: pending
@@ -43,6 +46,13 @@ accountpicker-add = نیا کھاتہ شامل کریں
 accountpicker-add-title = نیا کھاتہ
 # review: pending
 accountpicker-add-help = صرف وہ باتیں لکھیں جن سے یہ کھاتہ پہچانا جائے۔ باقی تفصیل بعد میں { -index } سے بھر سکتے ہیں۔
+# The short form of a new walk-in buyer, from the buyer box of a sale line (PRD FR-7.69, FR-13.3).
+# review: pending
+chukta-add-title = نیا { -chukta } { -gahak }
+# review: pending
+chukta-add-help = اس کا نام لکھیں اور فون ہو تو وہ بھی۔ وہ پورا بل اسی وقت دیتا ہے اور اس کا کوئی کھاتہ نہیں ہوتا۔
+# review: pending
+chukta-saved = { -chukta } { -gahak } شامل ہو گیا
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -132,14 +142,6 @@ working-general-share = اس اندراج کی آمدن اور { -dukan-kharcha 
 # A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
 # review: pending
 working-none-line = اس لائن پر کوئی اصول نہیں لگا، اس لیے رقم <num>{ $result }</num> ہے۔
-# A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
-# review: pending
-working-cash-pukhta = { -pukhta-khata } کے بیوپاری کو اس کی پوری { -safi-bikri } اسی وقت دی جاتی ہے: <num>{ $result }</num>
-
-# A { -pukhta-khata } seller with an open { -peshgi } gets his { -safi-bikri } less the advance the lot
-# adjusts, at once (PRD FR-13.11, plan 47). The backend gives the three amounts.
-# review: pending
-working-cash-pukhta-advance = { -pukhta-khata } کے بیوپاری کو اس کی { -safi-bikri } میں سے { -peshgi } کاٹ کر رقم اسی وقت دی جاتی ہے: <num>{ $credit }</num> − <num>{ $advance }</num> = <num>{ $result }</num>
 
 ## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
 ## The backend names the message and gives its values.

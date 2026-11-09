@@ -43,7 +43,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -64,6 +63,22 @@ afterEach(() => {
 });
 
 const other = (language: Language): Language => (language === 'ur' ? 'en' : 'ur');
+
+/** What WebKit says on a Mac (the Tauri web view there): the print window is the system one. */
+const MAC_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)';
+
+/** The two documents of the box as the print language joins them in a list. */
+const DOC_NAMES: Record<Language, string> = {
+  ur: new Intl.ListFormat('ur', { style: 'long', type: 'conjunction' }).format([
+    message('ur', 'print-doc-seller-bill'),
+    message('ur', 'print-doc-buyer-slips'),
+  ]),
+  en: new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format([
+    message('en', 'print-doc-seller-bill'),
+    message('en', 'print-doc-buyer-slips'),
+  ]),
+};
 const pageText = () => visible(document.body.textContent);
 
 /** Opens the saved بکری 1 and the print box with F9. */
@@ -102,7 +117,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     expect(visible(within(box).getByRole('heading').textContent)).toBe(
       message(language, 'print-box-title', { number: 1 }),
     );
-    for (const id of ['print-doc-seller-bill', 'print-doc-buyer-slips', 'print-doc-pukhta-slip']) {
+    for (const id of ['print-doc-seller-bill', 'print-doc-buyer-slips']) {
       expect(
         within(box).getByRole('checkbox', { name: named(message(language, id)) }),
       ).toBeChecked();
@@ -123,7 +138,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     });
     expect(printing.prints[0]).toEqual({
       bikri_id: 41,
-      docs: ['seller_bill', 'buyer_slips', 'pukhta_slip'],
+      docs: ['seller_bill', 'buyer_slips'],
       language,
       copies: null,
       to: 'printer',
@@ -135,7 +150,6 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
           docs: new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format([
             message(language, 'print-doc-seller-bill'),
             message(language, 'print-doc-buyer-slips'),
-            message(language, 'print-doc-pukhta-slip'),
           ]),
         }),
       );
@@ -192,20 +206,19 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     await waitFor(() => {
       expect(printing.prints).toHaveLength(1);
     });
-    expect(printing.prints[0]?.docs).toEqual(['seller_bill', 'pukhta_slip']);
+    expect(printing.prints[0]?.docs).toEqual(['seller_bill']);
     expect(printing.saves).toEqual([
       {
         paper_seller_bill: 'a4',
         paper_buyer_slips: 'a5',
-        paper_pukhta_slip: 'a5',
         paper_receipt_slip: 'a5',
         paper_collection_list: 'a4',
         printer: '',
         copies: '1',
-        print_after_save: ['seller_bill', 'pukhta_slip'],
+        print_after_save: ['seller_bill'],
       },
     ]);
-    expect(printing.settings().print_after_save).toEqual(['seller_bill', 'pukhta_slip']);
+    expect(printing.settings().print_after_save).toEqual(['seller_bill']);
   });
 
   it('does not save the settings when the documents are the same ones', async () => {
@@ -251,6 +264,49 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     expect(visible(box.textContent)).toContain(`prints/seller_bill-1-${language}.pdf`);
   });
 
+  it('on Windows there is no Mac hint, and Print says it was sent to the printer', async () => {
+    const { box, user } = await openBox(language);
+    expect(visible(box.textContent)).not.toContain(message(language, 'print-dialog-hint'));
+    await user.click(button(box, 'print-box-print'));
+    await waitFor(() => {
+      expect(visible(box.textContent)).toContain(
+        message(language, 'print-box-done-printed', { docs: DOC_NAMES[language] }),
+      );
+    });
+  });
+
+  it('on a Mac the box says how to get a PDF, and Print and Save PDF both say the print window is open (plan 69)', async () => {
+    const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC_USER_AGENT);
+    try {
+      const { box, user, printing } = await openBox(language);
+      expect(visible(box.textContent)).toContain(message(language, 'print-dialog-hint'));
+      const opened = message(language, 'print-box-done-dialog', { docs: DOC_NAMES[language] });
+      await user.click(button(box, 'print-box-print'));
+      await waitFor(() => {
+        expect(visible(box.textContent)).toContain(opened);
+      });
+      expect(visible(box.textContent)).not.toContain(
+        message(language, 'print-box-done-printed', { docs: DOC_NAMES[language] }),
+      );
+      // A PDF is made in the system window, so the box does not list files it did not write.
+      await user.click(
+        within(box).getByRole('button', { name: named(message(language, 'print-box-to-pdf')) }),
+      );
+      await user.click(button(box, 'print-box-save-pdf'));
+      await waitFor(() => {
+        expect(printing.prints).toHaveLength(2);
+      });
+      expect(printing.prints[1]?.to).toBe('pdf');
+      await waitFor(() => {
+        expect(visible(box.textContent)).toContain(opened);
+      });
+      expect(visible(box.textContent)).not.toContain(message(language, 'print-box-done-pdf'));
+      expect(visible(box.textContent)).not.toContain('.pdf');
+    } finally {
+      agent.mockRestore();
+    }
+  });
+
   it('explains a computer that is not Windows, and the preview shows the same documents in the print language', async () => {
     const reports = await import('../../src/features/reports/api');
     const { box, user, printing } = await openBox(language);
@@ -258,20 +314,19 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     await user.click(button(box, 'print-box-print'));
     const alert = await within(box).findByRole('alert');
     expect(visible(alert.textContent)).toContain(message(language, 'err-print-windows-only'));
-    // The preview is one click away and shows the three documents as they would print.
+    // The preview is one click away and shows the two documents as they would print.
     await user.click(button(box, 'print-box-preview'));
     await waitFor(() => {
       expect(printing.dataRequests.map((request) => request.doc)).toEqual([
         'seller_bill',
         'buyer_slips',
-        'pukhta_slip',
       ]);
     });
     expect(printing.dataRequests.every((request) => request.language === language)).toBe(true);
     await waitFor(() => {
       expect(visible(box.textContent)).toContain('19,316');
     });
-    expect(box.querySelectorAll('.print-doc')).toHaveLength(3);
+    expect(box.querySelectorAll('.print-doc')).toHaveLength(2);
     // The app itself keeps its language.
     expect(document.documentElement.lang).toBe(language);
     await user.click(
@@ -291,7 +346,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
     );
     await user.click(button(box, 'print-box-preview'));
     await waitFor(() => {
-      expect(printing.dataRequests).toHaveLength(3);
+      expect(printing.dataRequests).toHaveLength(2);
     });
     expect(printing.dataRequests.every((request) => request.language === other(language))).toBe(
       true,
@@ -327,7 +382,7 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
 
   it('with no document ticked, Print and Preview cannot be pressed and the box says why', async () => {
     const { box, user } = await openBox(language);
-    for (const id of ['print-doc-seller-bill', 'print-doc-buyer-slips', 'print-doc-pukhta-slip']) {
+    for (const id of ['print-doc-seller-bill', 'print-doc-buyer-slips']) {
       await user.click(within(box).getByRole('checkbox', { name: named(message(language, id)) }));
     }
     expect(visible(box.textContent)).toContain(message(language, 'print-box-none-ticked'));

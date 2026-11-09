@@ -43,6 +43,10 @@ vi.mock('../../src/shared/search/api');
 
 const SLOW_MS = { timeout: 8_000 };
 
+/** What WebKit says on a Mac (the Tauri web view there): the print window is the system one. */
+const MAC_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)';
+
 beforeEach(() => {
   vi.resetAllMocks();
   healthyBackend();
@@ -119,6 +123,27 @@ describe.each(LANGUAGES)('print and PDF from a preview (%s)', (language: Languag
       }, SLOW_MS);
       const notice = await screen.findByRole('status', undefined, SLOW_MS);
       expect(visible(notice.textContent)).toBe(m('report-print-sent'));
+    });
+
+    it('on a Mac the frame says how to get a PDF, and Print and Save as PDF both say the print window is open (plan 69)', async () => {
+      const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(MAC_USER_AGENT);
+      try {
+        fakeReports();
+        const user = await openPreview('/reports/R5');
+        expect(visible(document.body.textContent)).toContain(m('print-dialog-hint'));
+        await user.click(screen.getByRole('button', { name: named(m('report-print-pdf')) }));
+        const notice = await screen.findByRole('status', undefined, SLOW_MS);
+        expect(visible(notice.textContent)).toBe(m('report-print-dialog-opened'));
+        expect(visible(notice.textContent)).not.toContain('.pdf');
+      } finally {
+        agent.mockRestore();
+      }
+    });
+
+    it('on Windows there is no Mac hint in the frame', async () => {
+      fakeReports();
+      await openPreview('/reports/R18');
+      expect(visible(document.body.textContent)).not.toContain(m('print-dialog-hint'));
     });
 
     it('asks for the paper and the language chosen in the frame, and forgets the last job when they change', async () => {

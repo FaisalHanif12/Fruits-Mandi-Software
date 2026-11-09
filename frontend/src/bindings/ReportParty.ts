@@ -30,7 +30,7 @@ export type ReportParty = {
    */
   tag: string | null;
   /**
-   * The person inside a پختہ کھاتہ account, as stored. Null for any other line.
+   * The person inside a چکتا کھاتہ account, as stored. Null for any other line.
    */
   person_key: string | null;
   /**
@@ -40,7 +40,7 @@ export type ReportParty = {
    */
   phone?: string;
   /**
-   * The move to the dead amount, when this party (this person of a پختہ کھاتہ account) is in it
+   * The move to the dead amount, when this party (this person of a چکتا کھاتہ account) is in it
    * (PRD FR-10.10): the ledger heading says ڈوبی رقم with its date and reason. Missing otherwise.
    */
   dead?: DeadInfo;

@@ -28,7 +28,7 @@
 //!
 //! A report is never built wider than the question (money review BUG-1, BUG-2): none for a question
 //! that names an item (no link has an item filter), a garden, a trip, own goods or the guests that
-//! no report of its own covers, or a name the app cannot place (a one-time person, an inactive
+//! no report of its own covers, or a name the app cannot place (a چکتا buyer, an inactive
 //! account, a partner while the section is locked). The model answers those.
 //!
 //! Example (today 10-10-2026): "faisal ki aaj ki bikri ka print", Faisal a buyer: R35 with
@@ -159,7 +159,7 @@ pub(super) struct Input<'a> {
     pub first_day: Option<NaiveDate>,
     /// The days of the trip that is named (R33): its day to the day it closed, or to today.
     pub trip_days: Option<(NaiveDate, NaiveDate)>,
-    /// Words stand where a name should be and no record has them: a one-time person, an inactive
+    /// Words stand where a name should be and no record has them: a چکتا buyer, an inactive
     /// account, a partner while the section is locked. The report would be the whole shop's.
     pub unknown_words: bool,
     /// The question names a garden, a trip, own goods or the guests, and no record of it was found
@@ -241,7 +241,7 @@ pub(super) fn is_view(id: &str) -> bool {
 /// How a report named by its title takes its filters (the specs of the report engine, PRD 19.2).
 fn report_shape(id: &'static str) -> Option<Shape> {
     Some(match id {
-        "R3" | "R4" | "R7" | "R8" | "R9" | "R15" | "R23" | "R25" | "R27" | "R28" | "R30" => {
+        "R3" | "R4" | "R7" | "R8" | "R15" | "R23" | "R25" | "R27" | "R28" | "R30" => {
             Shape::Range(id)
         }
         "R16" | "R17" | "R22" | "R26" | "R32" => Shape::AsOf(id),
@@ -525,7 +525,7 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                 && matches!(hit.role, PartyRole::Buyer | PartyRole::Seller)
             {
                 return match (*id, hit.role) {
-                    ("R3" | "R4" | "R7" | "R9" | "R15" | "R23" | "R25" | "R28", _) => {
+                    ("R3" | "R4" | "R7" | "R15" | "R23" | "R25" | "R28", _) => {
                         note(dated(id, with_party(), false))
                     }
                     // The views of one buyer (C) and of one seller (B, E).
@@ -857,7 +857,6 @@ mod tests {
             name_ur: "سفر 0070".into(),
             name_en: "0070 14-08-2026".into(),
             tag: None,
-            pukhta: false,
         };
         Names {
             parties: vec![PartyRef {

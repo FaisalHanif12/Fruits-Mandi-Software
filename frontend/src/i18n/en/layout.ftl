@@ -39,8 +39,6 @@ layout-module-payment = { -adaigi }
 # review: pending
 layout-module-advance = { -peshgi-khata }
 # review: pending
-layout-module-pukhta = { -pukhta-khata }
-# review: pending
 layout-module-today = Today's { -bikri }
 # review: pending
 layout-module-stock = { -baqi-maal }

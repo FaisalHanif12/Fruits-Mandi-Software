@@ -15,7 +15,7 @@ export type PrintLine = {
   name: string | null;
   /**
    * The tag (نشان) of that buyer, printed after his name. Absent if none, on a slip, and for
-   * a one-time buyer (PRD 10.2).
+   * a چکتا buyer (PRD 10.2).
    */
   name_tag?: string;
   /**

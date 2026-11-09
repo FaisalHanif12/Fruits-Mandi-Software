@@ -82,7 +82,7 @@ export const GAPS = {
   P2: [
     'm',
     'backend',
-    'report tool has no voucher_type (R15), status (R9, R38), detail (R14), trip_view (R33), garden_view (R36)',
+    'report tool has no voucher_type (R15), status (R38), detail (R14), trip_view (R33), garden_view (R36)',
   ],
   P3: [
     'm',
@@ -142,7 +142,6 @@ const PLANNED = new Set([
   'R3',
   'R4',
   'R7',
-  'R9',
   'R15',
   'R16',
   'R17',
@@ -227,12 +226,6 @@ const REPORTS = [
   report('R8', 'Truck stand report', 'from,to,adda', {
     forecast: N('the app has no forecast per adda'),
     nosuch: A('find adda: not_found'),
-  }),
-  report('R9', 'Pukhta Khata register', 'from,to,party,status', {
-    figure: A('report R9; paid/due only: G P2'),
-    compare: X('rare'),
-    advice: X('one-time people'),
-    nosuch: A('find pukhta: not_found'),
   }),
   report('R10', 'Unsold stock', 'from,to,seller,item', {
     compare: X('stock is read as of now'),
@@ -729,12 +722,12 @@ const RECORDS = [
     mixed: mixedOf(forecastOf('sales', ' seller=X')),
     change: A('local: adaigi or peshgi screen with the seller'),
   }),
-  record('pukhta', 'A one-time person (پختہ کھاتہ)', 'find.rs Role::Pukhta', {
-    figure: A('report R9 + find pukhta; party_card'),
-    list: A('report R9 rows'),
-    day: A('report R9 from=to'),
-    print: A('local plan R9 (button + steps)'),
-    change: A('local: pukhta_khata screen'),
+  record('chukta', 'A walk-in buyer (چکتا کھاتہ)', 'find.rs Role::Chukta', {
+    figure: N('a چکتا buyer pays in full and has no balance; find gives his name and phone'),
+    list: N('the register of one-time parties is gone (PRD v1.32)'),
+    day: N('a چکتا buyer is in the day sales (R2) like any buyer, with no ledger'),
+    print: N('there is no report of چکتا buyers'),
+    change: A('local: chukta_khata screen'),
   }),
   record('money_lent', 'A person lent money (ادھار رقم)', 'find.rs Role::MoneyLent', {
     figure: A('report R32 + find money_lent'),
@@ -1006,7 +999,7 @@ const TOPICS = [
   ['collection_list', 'collection_list'],
   ['payment', 'adaigi'],
   ['advance', 'peshgi'],
-  ['pukhta_khata', 'pukhta_khata'],
+  ['chukta_khata', 'chukta_khata'],
   ['edit_and_cancel', null, 'S1'],
   ['cash_book', 'cash_book'],
   ['shop_expense', 'kharcha'],

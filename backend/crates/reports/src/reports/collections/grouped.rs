@@ -1,4 +1,4 @@
-//! The sums of R20 and R24 for every seller (or one-time person) at once (Code Standards B22:
+//! The sums of R20 and R24 for every seller (or چکتا buyer) at once (Code Standards B22:
 //! no database query inside a loop over rows).
 //!
 //! `mandi_db::vouchers::payable_totals` gives the five sums of the payable working
@@ -10,7 +10,7 @@
 //!   covering index of the amounts and the partial index of the advances, less the few lines that
 //!   carry a person key or sit in an entry that is not live (a draft, a reversal, a reversed
 //!   entry). The same method and the same SQL fragments as `live_sums_without_key`.
-//! - **One person of the پختہ کھاتہ account.** His live lines, grouped by account and key.
+//! - **One person of the چکتا کھاتہ account.** His live lines, grouped by account and key.
 //! - **Adjusted sums.** The active rows of `advance_allocations` whose line is live, grouped by
 //!   account and key, once for the credit end and once for the advance end.
 //!
@@ -18,14 +18,14 @@
 //! test `services/tests/reports_grouped.rs` compares every key with `payable_totals` on 500
 //! sellers and checks that the number of queries does not grow with the number of sellers.
 //!
-//! The names of the one-time people come from one query too ([`pukhta_names`]).
+//! The names of the چکتا buyers come from one query too ([`chukta_names`]).
 //!
 //! Example (after Event 2, PRD 4.9): the map has `(کریم, None) -> credit 10,160`; the payable
 //! working turns that into 10,160 open.
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::SavedPukhta;
+use mandi_core::bikri::SavedChukta;
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
@@ -174,7 +174,7 @@ pub fn payable_sums(conn: &Connection, account: Option<i64>) -> Result<SellerSum
                     COALESCE(SUM(CASE WHEN dr_paisa > 0 AND is_advance = 0 THEN dr_paisa END), 0),
                     COALESCE(SUM(CASE WHEN is_advance = 1 THEN dr_paisa END), 0)
              FROM (SELECT id, account_id, cr_paisa, dr_paisa, is_advance FROM journal_lines
-                   WHERE {in_scope_a} AND pukhta_person_key IS NOT NULL
+                   WHERE {in_scope_a} AND chukta_person_key IS NOT NULL
                    UNION
                    SELECT id, account_id, cr_paisa, dr_paisa, is_advance FROM journal_lines
                    WHERE {in_scope_b} AND entry_id IN (SELECT id FROM nonlive))
@@ -206,19 +206,19 @@ pub fn payable_sums(conn: &Connection, account: Option<i64>) -> Result<SellerSum
         sums.advances_given = minus(all_given, out_given)?;
     }
 
-    // 4. The live lines of each person key of a پختہ کھاتہ account.
+    // 4. The live lines of each person key of a چکتا کھاتہ account.
     let (in_scope_l, args_l) = scope("l.account_id", account);
     let keyed = rows(
         conn,
         &mut queries,
         &format!(
-            "SELECT l.account_id, l.pukhta_person_key,
+            "SELECT l.account_id, l.chukta_person_key,
                     COALESCE(SUM(CASE WHEN l.cr_paisa > 0 THEN l.cr_paisa END), 0),
                     COALESCE(SUM(CASE WHEN l.dr_paisa > 0 AND l.is_advance = 0 THEN l.dr_paisa END), 0),
                     COALESCE(SUM(CASE WHEN l.is_advance = 1 THEN l.dr_paisa END), 0)
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-             WHERE {in_scope_l} AND l.pukhta_person_key IS NOT NULL AND {LIVE}
-             GROUP BY l.account_id, l.pukhta_person_key"
+             WHERE {in_scope_l} AND l.chukta_person_key IS NOT NULL AND {LIVE}
+             GROUP BY l.account_id, l.chukta_person_key"
         ),
         &args_l,
         |r| {
@@ -244,12 +244,12 @@ pub fn payable_sums(conn: &Connection, account: Option<i64>) -> Result<SellerSum
             conn,
             &mut queries,
             &format!(
-                "SELECT a.account_id, l.pukhta_person_key, COALESCE(SUM(a.amount_paisa), 0)
+                "SELECT a.account_id, l.chukta_person_key, COALESCE(SUM(a.amount_paisa), 0)
                  FROM advance_allocations a
                  JOIN journal_lines l ON l.id = a.{end}
                  JOIN journal_entries e ON e.id = l.entry_id
                  WHERE {in_scope_r} AND a.is_active = 1 AND {LIVE}
-                 GROUP BY a.account_id, l.pukhta_person_key"
+                 GROUP BY a.account_id, l.chukta_person_key"
             ),
             &args_r,
             |r| {
@@ -274,16 +274,15 @@ pub fn payable_sums(conn: &Connection, account: Option<i64>) -> Result<SellerSum
     Ok(loaded)
 }
 
-/// The names and phone of the one-time people of some پختہ کھاتہ accounts, as each was last
-/// typed (the same answer as `mandi_db::vouchers::pukhta_person` for each key), from ONE query:
-/// the latest line of every key that has a line on these accounts.
+/// The names and phone of the چکتا buyers on some accounts (the چکتا کھاتہ account), as each was last
+/// typed, from ONE query: the latest sale line of every key that has a line on these accounts.
 ///
 /// # Errors
 /// A database error.
-pub fn pukhta_names(
+pub fn chukta_names(
     conn: &Connection,
     account_ids: &[i64],
-) -> Result<HashMap<String, SavedPukhta>, ReportsError> {
+) -> Result<HashMap<String, SavedChukta>, ReportsError> {
     if account_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -293,32 +292,22 @@ pub fn pukhta_names(
                     ROW_NUMBER() OVER (PARTITION BY person_key
                                        ORDER BY entry_date DESC, row_id DESC) AS rn
              FROM (
-                 SELECT s.pukhta_person_key AS person_key, s.pukhta_name_ur AS name_ur,
-                        s.pukhta_name_en AS name_en, s.pukhta_phone AS phone,
+                 SELECT s.chukta_person_key AS person_key, s.chukta_name_ur AS name_ur,
+                        s.chukta_name_en AS name_en, s.chukta_phone AS phone,
                         s.entry_date AS entry_date, s.id AS row_id
-                 FROM bikri_sales s WHERE s.pukhta_person_key IN (SELECT DISTINCT pukhta_person_key
-                     FROM journal_lines WHERE account_id IN ({marks}) AND pukhta_person_key IS NOT NULL)
-                 UNION ALL
-                 SELECT l.pukhta_person_key, l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone,
-                        e.entry_date, l.id
-                 FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
-                 WHERE l.pukhta_person_key IN (SELECT DISTINCT pukhta_person_key
-                     FROM journal_lines WHERE account_id IN ({marks}) AND pukhta_person_key IS NOT NULL)))
+                 FROM bikri_sales s WHERE s.chukta_person_key IN (SELECT DISTINCT chukta_person_key
+                     FROM journal_lines WHERE account_id IN ({marks}) AND chukta_person_key IS NOT NULL)))
          WHERE rn = 1",
         marks = placeholders(account_ids.len())
     );
-    let args: Vec<Value> = account_ids
-        .iter()
-        .chain(account_ids.iter())
-        .map(|id| Value::Integer(*id))
-        .collect();
+    let args: Vec<Value> = account_ids.iter().map(|id| Value::Integer(*id)).collect();
     let mut statement = conn.prepare(&sql)?;
     let found = statement
         .query_map(params_from_iter(args.iter()), |r| {
             let key: String = r.get(0)?;
             Ok((
                 key.clone(),
-                SavedPukhta {
+                SavedChukta {
                     name_ur: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
                     name_en: r.get::<_, Option<String>>(2)?.unwrap_or_default(),
                     phone: r.get::<_, Option<String>>(3)?.unwrap_or_default(),

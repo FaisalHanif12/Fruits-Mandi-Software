@@ -636,12 +636,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ("fruit_lots", json!({ "input": {} }), true),
         (
             "masters_dead_preview",
-            json!({ "input": { "account_id": 1, "pukhta_person_key": null } }),
+            json!({ "input": { "account_id": 1 } }),
             true,
         ),
         (
             "masters_dead_mark",
-            json!({ "input": { "account_id": 1, "pukhta_person_key": null, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
+            json!({ "input": { "account_id": 1, "entry_date": "11-10-2026", "reason": "died", "note": "" } }),
             true,
         ),
         (
@@ -681,24 +681,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "vouchers_save_receipt",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } }),
             true,
         ),
         (
             "vouchers_save_payment",
-            json!({ "input": { "date": "10-10-2026", "account_id": 1, "person_key": null, "amount": "4,316", "reason": "", "narration": "" } }),
+            json!({ "input": { "date": "10-10-2026", "account_id": 1, "amount": "4,316", "reason": "", "narration": "" } }),
             true,
         ),
         (
             "vouchers_preview",
-            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "person_key": null,
-                "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
+            json!({ "input": { "entry": { "type": "receipt", "date": "10-10-2026", "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" }, "replacing_voucher_id": null } }),
             true,
         ),
         (
             "vouchers_edit",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (
@@ -724,12 +723,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "assist_open_bills",
-            json!({ "input": { "account_id": 1, "person_key": null } }),
+            json!({ "input": { "account_id": 1 } }),
             true,
         ),
         (
             "assist_open_payables",
-            json!({ "input": { "seller_id": 1, "person_key": null, "include_settled": false } }),
+            json!({ "input": { "seller_id": 1, "include_settled": false } }),
             true,
         ),
         (
@@ -878,12 +877,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "general_preview",
-            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }] } }),
+            json!({ "input": { "date": "10-10-2026", "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }] } }),
             true,
         ),
         (
             "general_save",
-            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "person_key": null, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "person_key": null, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
+            json!({ "input": { "date": "10-10-2026", "narration": null, "lines": [{ "account_id": 1, "dr": "100", "cr": "", "narration": null }, { "account_id": 2, "dr": "", "cr": "100", "narration": null }], "confirm_cash_below_zero": false } }),
             true,
         ),
         (
@@ -997,14 +996,23 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
-            "search_pukhta_people",
-            json!({ "input": { "text": "shahid", "side": "buyer" } }),
+            "chukta_search",
+            json!({ "input": { "text": "shahid" } }),
             true,
         ),
         (
-            "pukhta_register",
-            json!({ "input": { "from": "", "to": "", "side": null, "name": null,
-                "phone": null, "state": null } }),
+            "chukta_add",
+            json!({ "input": { "name_ur": "شاہد", "name_en": "Shahid", "phone": null } }),
+            true,
+        ),
+        (
+            "party_ledgers_list",
+            json!({ "input": { "side": "buyer", "text": null, "offset": 0, "limit": 0 } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement",
+            json!({ "input": { "account_id": 1, "from": null, "to": null, "offset": 0, "limit": 0 } }),
             true,
         ),
         (
@@ -1091,23 +1099,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
                 "copies": null, "to": "pdf" } }),
             true,
         ),
-        (
-            "pukhta_make_regular",
-            json!({ "input": { "person_key": "x|", "side": "buyer", "account_input": { "id": null, "version": null,
-                "account_type": "buyer", "control_id": null, "code": "", "name_ur": "شاہد", "name_en": "Shahid",
-                "confirmed_rules_words": [], "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null,
-                "adda_id": null, "phone1": "", "phone2": "", "address": "", "linked_account_id": null,
-                "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
-                "credit_allowed": true, "credit_limit": "", "default_marka_id": null, "collector_staff_id": null,
-                "is_active": true, "note": "" } } }),
-            true,
-        ),
         ("reports_list_printers", json!({}), true),
         ("settings_get_printing", json!({}), true),
         (
             "settings_set_printing",
-            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
+            json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
             true,
         ),
         // Run B, plan 18 (append-only block).
@@ -1180,12 +1176,6 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_print_data",
             json!({ "input": { "id": "R18", "filters": {}, "language": "en" } }),
-            true,
-        ),
-        // Run B, plan 20, step B3 (append-only block).
-        (
-            "reports_find_people",
-            json!({ "input": { "text": "shahid", "limit": 10 } }),
             true,
         ),
         // Run B, plan 21 (append-only block).
@@ -1307,7 +1297,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "vouchers_edit_preview",
             json!({ "input": { "id": 1, "version": 1, "reason": "", "entry": { "type": "receipt", "date": "10-10-2026",
-                "account_id": 1, "person_key": null, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
+                "account_id": 1, "amount": "10,000", "collector_staff_id": null, "narration": "" } } }),
             true,
         ),
         (

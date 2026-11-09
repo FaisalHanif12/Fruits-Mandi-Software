@@ -1,7 +1,7 @@
 //! R13 کھاتہ, the party ledger, and R14 فرد حساب, the party statement (PRD 19.2, FR-19.8,
 //! FR-19.10, FR-19.11, C13).
 //!
-//! Both read the posted lines of one account (or one person of a پختہ کھاتہ account). The
+//! Both read the posted lines of one account (or one person of a چکتا کھاتہ account). The
 //! opening balance is everything dated before the first day; each line carries the balance after
 //! it. A balance is `Σ debit − Σ credit` of stored paisa, worked out in Rust with checked maths.
 //! The balance of a page's first row is the sum of the lines before it, read from the nearer end of
@@ -81,7 +81,7 @@ fn live_totals_sql() -> String {
         "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
          WHERE {LIVE} AND l.account_id = ?1
-           AND (?2 IS NULL OR l.pukhta_person_key = ?2)
+           AND (?2 IS NULL OR l.chukta_person_key = ?2)
            AND (?3 IS NULL OR e.entry_date >= ?3) AND (?4 IS NULL OR e.entry_date <= ?4)"
     )
 }
@@ -280,7 +280,7 @@ fn page_rows(
         let mut parts = details
             .remove(&(raw.entry_id, raw.line_no))
             .unwrap_or_default();
-        // On the whole of a پختہ کھاتہ account, a line says which person it belongs to (PRD
+        // On the whole of a چکتا کھاتہ account, a line says which person it belongs to (PRD
         // FR-13.5). The key is the name and phone as stored.
         if typed.person_key.is_none()
             && let Some(key) = raw.person_key.as_deref().filter(|k| !k.is_empty())

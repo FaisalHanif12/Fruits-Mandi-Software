@@ -4,8 +4,8 @@ The sale book, `/bikri/book` (PRD 12.1 to 12.6, E2E-26): the truck details, the 
 lines of the selected lot, the live summary (per lot and for the whole sale), the live partner
 split, the cash note and the party card of the party the cursor is on. Plan 13 adds saving (F10),
 the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "آج کی بکری"
-(`/bikri/today`), first / previous / next / last, find, and the one-time people (see
-`../pukhta_khata`). Later sales, edit, cancel and undo are plan 16 (see the section below); printing is plan 14.
+(`/bikri/today`), first / previous / next / last, find, and the چکتا buyers of the buyer box (plan 64, PRD
+Section 13). Later sales, edit, cancel and undo are plan 16 (see the section below); printing is plan 14.
 
 ## Rules this module keeps
 
@@ -23,8 +23,9 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
   rate is never filled: the last rate is grey italic words ("Last 900") in the empty cell, never a bare
   figure, and `Ctrl+D` copies the rate of the line above. A line with something typed on it that is
   not complete says what it still needs under the lines ("Line 3: Enter the rate.", `MissingNotes`);
-  a blank row says nothing (D8 Bug 1). A one-time seller's نقد (PRD FR-13.10) is shown in its cell while empty, from the
-  backend's `totals.cash_paid`, with its working; a typed value is kept as typed.
+  a blank row says nothing (D8 Bug 1).
+  A چکتا buyer pays the whole bill on the spot: his line carries the account چکتا کھاتہ and his own names and
+  phone (`SaleInput.chukta`), chosen in the buyer box, with no cell and no Enter stop of its own.
 - **The whole-sale view has no second copy.** The switch on the lines area (the same as the
   summary's) shows the lines of all lots in one grid with a lot column. `stores.all`
   (`union-store.ts`) lists the rows of the lots' stores and hands each change to the lot that owns
@@ -73,48 +74,48 @@ the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "
 
 ## Files
 
-| File                                                                                  | What it holds                                                                                                                                       |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pages/BikriBookPage.tsx`                                                             | The screen: four states, layout at the three window sizes, which party the card shows                                                               |
-| `components/`                                                                         | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `PukhtaFields`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
-| `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate)                                                             |
-| `draft-store.ts`, `draft.ts`, `union-store.ts`                                        | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it                        |
-| `preview-view.ts`, `grid-views.ts`, `problems.ts`                                     | What the answer shows in each cell, and where each problem goes                                                                                     |
-| `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight`                                                                             |
-| `api.ts`                                                                              | The only file that knows the command shapes                                                                                                         |
-| `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts`                               | The draft as text, the start-up offer, the printing hook                                                                                            |
-| `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads                                                                        |
-| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/`             | The arrows and find, and the saved view                                                                                                             |
-| `pages/TodayBikriPage.tsx`, `list-columns.ts`                                         | The list of بکری                                                                                                                                    |
+| File                                                                                  | What it holds                                                                                                                       |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pages/BikriBookPage.tsx`                                                             | The screen: four states, layout at the three window sizes, which party the card shows                                               |
+| `components/`                                                                         | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
+| `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate)                                             |
+| `draft-store.ts`, `draft.ts`, `union-store.ts`                                        | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it        |
+| `preview-view.ts`, `grid-views.ts`, `problems.ts`                                     | What the answer shows in each cell, and where each problem goes                                                                     |
+| `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight`                                                             |
+| `api.ts`                                                                              | The only file that knows the command shapes                                                                                         |
+| `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts`                               | The draft as text, the start-up offer, the printing hook                                                                            |
+| `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads                                                        |
+| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/`             | The arrows and find, and the saved view                                                                                             |
+| `pages/TodayBikriPage.tsx`, `list-columns.ts`                                         | The list of بکری                                                                                                                    |
 
 ## Prints (plan 14)
 
-The seller bill (A4), the buyer slips (A5 or the 80 mm roll, one for each buyer) and the پختہ slip,
+The seller bill (A4), the buyer slips (A5 or the 80 mm roll, one for each buyer) (a چکتا buyer has a slip of his own, with his name and phone),
 in Urdu or English (PRD FR-12.12). Layout and styles are in `shared/print`; this folder only picks
 the columns.
 
-| File                                                                                                                      | What it is                                                                                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `print/SellerBillTemplate.tsx`, `BuyerSlipTemplate.tsx`, `PukhtaSlipTemplate.tsx`, `BikriPrintDocument.tsx`, `columns.ts` | The three templates and which goods columns each has. They calculate nothing                                                                                                                                                                                                                    |
-| `print/BikriPrintPage.tsx`, `params.ts`                                                                                   | The hidden print window's route `#/print?bikri=..&doc=..&language=..&job=..[&buyer=..]`. It reads `reports_bikri_print_data` (the only command it may call), draws the document, waits for the fonts, and says `print-ready-<job>` with `{ height_px }` or `print-error-<job>` with `{ codes }` |
-| `print/BikriPrintView.tsx`, `PrintPreview.tsx`                                                                            | One document on screen (the window, and the in-app preview where printing is not available)                                                                                                                                                                                                     |
-| `print/PrintBox.tsx`, `PrintAction.tsx`                                                                                   | The print box (F9 and the "Print" button of the toolbar): language, documents, one buyer, copies, printer or PDF                                                                                                                                                                                |
-| `print/usePrintAfterSave.tsx`, `after-save.ts`                                                                            | `Ctrl+Enter`: save, print the ticked documents, open a new بکری. A failed print never undoes the save                                                                                                                                                                                           |
+| File                                                                                            | What it is                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print/SellerBillTemplate.tsx`, `BuyerSlipTemplate.tsx`, `BikriPrintDocument.tsx`, `columns.ts` | The two templates and which goods columns each has. They calculate nothing                                                                                                                                                                                                                      |
+| `print/BikriPrintPage.tsx`, `params.ts`                                                         | The hidden print window's route `#/print?bikri=..&doc=..&language=..&job=..[&buyer=..]`. It reads `reports_bikri_print_data` (the only command it may call), draws the document, waits for the fonts, and says `print-ready-<job>` with `{ height_px }` or `print-error-<job>` with `{ codes }` |
+| `print/BikriPrintView.tsx`, `PrintPreview.tsx`                                                  | One document on screen (the window, and the in-app preview where printing is not available)                                                                                                                                                                                                     |
+| `print/PrintBox.tsx`, `PrintAction.tsx`                                                         | The print box (F9 and the "Print" button of the toolbar): language, documents, one buyer, copies, printer or PDF                                                                                                                                                                                |
+| `print/usePrintAfterSave.tsx`, `after-save.ts`                                                  | `Ctrl+Enter`: save, print the ticked documents, open a new بکری. A failed print never undoes the save                                                                                                                                                                                           |
 
 ## Tests
 
 `tests/unit/bikri-contract.test.tsx` (the draft the screen sends equals the backend's request
 files for Event 1 and E2E-26, and the screen shows the backend's answer),
 `bikri-whole-view.test.tsx` and `bikri-union-store.test.ts` (the whole-sale view and its store),
-`bikri-strip.test.tsx` (the numbers strip), `bikri-backend-cases.test.tsx` (a one-time seller's نقد, shares not 100%, weight items, no sale
+`bikri-strip.test.tsx` (the numbers strip), `bikri-backend-cases.test.tsx` (shares not 100%, weight items, no sale
 lines, credit not allowed), `bikri.test.tsx` (Event 1 by keyboard, the numbers, ⓘ, E2E-26),
 `bikri-save.test.tsx` (the save flow, cash box both ways, refusals, the leave guard, Event 1 to F10),
 `bikri-event2.test.tsx` (Event 2 by keyboard to F10), `bikri-autosave.test.tsx` and
 `bikri-draft-snapshot.test.ts` and `bikri-draft-offer.test.tsx` (the draft), `bikri-saved.test.tsx`
-(the saved view, arrows, find), `bikri-list.test.tsx` (the list), `pukhta.test.tsx` and
-`list-extras.test.tsx` (the one merged list and the register),
+(the saved view, arrows, find), `bikri-list.test.tsx` (the list), `chukta.test.tsx` (the چکتا buyer in the buyer box)
+and `list-extras.test.tsx` (the merged list of a name field),
 `bikri-states.test.tsx` (four states, a late answer, the override of a commission, the cash note,
-problems at their cells, the one-time buyer, the freight split, a language switch in the middle of
+problems at their cells, the freight split, a language switch in the middle of
 an entry), `bikri-preview-hook.test.tsx` (the 50 ms), `entry-grid-pieces.test.tsx`,
 `cash-confirm-dialog.test.tsx`, `suggest-input.test.tsx`. The fake backend is
 `tests/helpers/bikri.ts`, with the files the backend wrote: `tests/fixtures/bikri_preview_event1`
@@ -202,7 +203,7 @@ languages); `tests/e2e/print-shots.mjs` makes the Chrome PDFs and pictures.
 - **Every lot label names its seller and item** (`lot-name.ts`): the sales title, the lot / whole
   switch of the lines area and of the summary, the strip, the "more" button, the whole-sale lot
   column, and in the saved view the lot switch and the lot title. The name goes through
-  `displayName` (with the tag); a one-time seller is named by the name typed for him. The comma is
+  `displayName` (with the tag). The comma is
   in Fluent (`bikri-lot-who`). The isolation marks Fluent puts round the inner names are taken off:
   nested isolates read left to right in Urdu and showed the item before the seller.
 - **Tests**: `bikri-over-qty.test.tsx` (Umar's case on the screen, the summary and the strip),

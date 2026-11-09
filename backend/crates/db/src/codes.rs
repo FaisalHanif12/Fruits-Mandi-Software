@@ -8,7 +8,7 @@ use rusqlite::Connection;
 /// The tables that hold codes of this scheme. A fixed list, never built from input.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeTable {
-    /// Sellers, buyers and the two پختہ کھاتہ accounts.
+    /// Sellers, buyers and the two چکتا کھاتہ accounts.
     Accounts,
     /// قسم مال.
     Items,

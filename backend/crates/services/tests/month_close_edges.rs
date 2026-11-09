@@ -243,7 +243,6 @@ fn an_income_account_with_a_debit_net_is_closed_from_the_credit_side() {
     let w = full_day();
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,

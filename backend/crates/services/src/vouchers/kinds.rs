@@ -216,21 +216,12 @@ impl Planned {
         }
     }
 
-    /// The one-time person, if any.
-    pub fn person_key(&self) -> Option<&str> {
+    /// The role of the account.
+    pub fn role(&self) -> Option<Role> {
         match self {
-            Planned::Receipt(p) => p.party.as_ref().and_then(|p| p.person_key.as_deref()),
-            Planned::Payment(p) => p.party.as_ref().and_then(|p| p.person_key.as_deref()),
-            Planned::Advance(_) | cash_kinds!(_) | Planned::General(_) => None,
-        }
-    }
-
-    /// The role of the account and whether it is a پختہ کھاتہ account.
-    pub fn role(&self) -> Option<(Role, bool)> {
-        match self {
-            Planned::Receipt(p) => p.party.as_ref().map(|p| (p.role, p.is_pukhta)),
-            Planned::Payment(p) => p.party.as_ref().map(|p| (p.role, p.is_pukhta)),
-            Planned::Advance(p) => p.account.as_ref().map(|_| (Role::Seller, false)),
+            Planned::Receipt(p) => p.party.as_ref().map(|p| p.role),
+            Planned::Payment(p) => p.party.as_ref().map(|p| p.role),
+            Planned::Advance(p) => p.account.as_ref().map(|_| Role::Seller),
             cash_kinds!(_) | Planned::General(_) => None,
         }
     }
@@ -241,7 +232,7 @@ impl Planned {
     /// `ServiceError::Db`.
     pub fn hint(&self, conn: &Connection) -> Result<Hint, ServiceError> {
         match (self.account(), self.role()) {
-            (Some(account), Some((role, _))) => hint_for(conn, role, account.id, self.person_key()),
+            (Some(account), Some(role)) => hint_for(conn, role, account.id),
             _ => Ok(Hint::default()),
         }
     }

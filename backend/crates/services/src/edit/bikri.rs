@@ -131,8 +131,8 @@ fn line_fields(s: &SavedSale) -> Fields {
     vec![
         ("buyer", names(&s.buyer)),
         (
-            "pukhta",
-            s.pukhta
+            "chukta",
+            s.chukta
                 .as_ref()
                 .map_or(ChangeValue::Empty, |p| ChangeValue::Names {
                     ur: p.name_ur.clone(),

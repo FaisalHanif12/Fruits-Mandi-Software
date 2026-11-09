@@ -26,12 +26,12 @@ mod support;
 use std::path::{Path, PathBuf};
 
 use mandi_services::core::accounts::SearchGlobalInput;
-use mandi_services::core::bikri::{BikriSaveInput, LineChargeMethod, PaymentType, PukhtaInput};
-use mandi_services::core::error::{ErrorCode, ErrorValue};
+use mandi_services::core::bikri::BikriSaveInput;
+use mandi_services::core::error::ErrorCode;
 use mandi_services::core::vouchers::{
-    AdvanceInput, AdvancesReportInput, AssistAdvancesInput, CollectionListInput, MakeRegularInput,
-    OpenBillsInput, OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput,
-    VoucherCancelInput, VoucherEditInput, VoucherGetInput, VoucherPreviewInput, VouchersListInput,
+    AdvanceInput, AdvancesReportInput, AssistAdvancesInput, CollectionListInput, OpenBillsInput,
+    OpenPayablesInput, PaymentInput, ReceiptInput, ReceiptsInput, VoucherCancelInput,
+    VoucherEditInput, VoucherGetInput, VoucherPreviewInput, VouchersListInput,
 };
 use mandi_services::{ServiceError, bikri, search, vouchers};
 use serde::Serialize;
@@ -102,44 +102,18 @@ fn typed<T: serde::de::DeserializeOwned>(request: &Value) -> T {
     serde_json::from_value(request.clone()).unwrap()
 }
 
-/// Repeats a save that asks the user to confirm rule-made spellings (PRD FR-7.66), confirming
-/// what it asks, and gives back the answer and the words that were confirmed.
-fn confirming<T>(
-    mut attempt: impl FnMut(&[String]) -> Result<T, ServiceError>,
-) -> (T, Vec<String>) {
-    let mut words: Vec<String> = Vec::new();
-    for _ in 0..5 {
-        match attempt(&words) {
-            Ok(done) => return (done, words),
-            Err(ServiceError::Rejected(items))
-                if items
-                    .iter()
-                    .all(|i| i.code == ErrorCode::ErrSpellingUnconfirmed) =>
-            {
-                for item in items {
-                    if let Some(ErrorValue::Text(t)) = item.values.get("words") {
-                        words.extend(t.split(' ').map(str::to_owned));
-                    }
-                }
-            }
-            Err(other) => panic!("{other:?}"),
-        }
-    }
-    panic!("the spelling question did not end");
-}
-
 // ---- The JSON of the entries, as the screen sends them ----
 
 fn receipt_json(account: i64, amount: &str) -> Value {
     json!({
-        "date": "10-10-2026", "account_id": account, "person_key": null, "amount": amount,
+        "date": "10-10-2026", "account_id": account, "amount": amount,
         "collector_staff_id": null, "narration": ""
     })
 }
 
 fn payment_json(account: i64, amount: &str, reason: &str) -> Value {
     json!({
-        "date": "10-10-2026", "account_id": account, "person_key": null, "amount": amount,
+        "date": "10-10-2026", "account_id": account, "amount": amount,
         "reason": reason, "narration": "", "confirm_cash_below_zero": false
     })
 }
@@ -160,47 +134,6 @@ fn entry(kind: &str, fields: &Value) -> Value {
 
 fn preview_request(kind: &str, fields: &Value, replacing: Option<i64>) -> Value {
     json!({ "entry": entry(kind, fields), "replacing_voucher_id": replacing })
-}
-
-fn make_regular_request(key: &str, words: &[String]) -> Value {
-    json!({
-        "person_key": key,
-        "side": "buyer",
-        "account_input": {
-            "id": null, "version": null, "account_type": "buyer", "control_id": null,
-            "code": "", "name_ur": "شاہد", "name_en": "Shahid", "confirmed_rules_words": words,
-            "father_or_firm_ur": "", "father_or_firm_en": "", "city_id": null, "adda_id": null,
-            "phone1": "03000000000", "phone2": "", "address": "", "linked_account_id": null,
-            "opening_date": "", "opening_dr": "", "opening_cr": "", "opening_is_advance": false,
-            "credit_allowed": true, "credit_limit": "", "default_marka_id": null,
-            "collector_staff_id": null, "is_active": true, "note": ""
-        }
-    })
-}
-
-/// A بکری whose one buyer is the one-time person Shahid on credit, at no commission.
-fn one_time_buyer_owes(w: &World) {
-    let mut line = support::sale("s-1", w.pukhta_buyer, "2", "1000");
-    line.pukhta = Some(PukhtaInput {
-        name_ur: "شاہد".into(),
-        name_en: "Shahid".into(),
-        phone: "0300-0000000".into(),
-    });
-    line.payment_type = Some(PaymentType::Credit);
-    line.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-    line.laga = support::typed(LineChargeMethod::PerUnit, "0");
-    let mut lot = support::bare_lot(w, "lot-1", w.rahim, w.banana, "2");
-    lot.sales = vec![line];
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
 }
 
 #[test]
@@ -232,12 +165,11 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
         },
     )
     .unwrap();
-    let bills_request = json!({ "account_id": w.akram, "person_key": null });
+    let bills_request = json!({ "account_id": w.akram });
     let bills = vouchers::open_bills(ctx, &typed::<OpenBillsInput>(&bills_request)).unwrap();
     assert_eq!(bills.open_paisa.rupees(), 12_880);
     pair("assist_open_bills_akram", &bills_request, &bills);
-    let payables_request =
-        json!({ "seller_id": w.rahim, "person_key": null, "include_settled": false });
+    let payables_request = json!({ "seller_id": w.rahim, "include_settled": false });
     let payables =
         vouchers::open_payables(ctx, &typed::<OpenPayablesInput>(&payables_request)).unwrap();
     assert_eq!(payables.open_paisa.rupees(), 4_316);
@@ -416,8 +348,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
 
     // 11. The lists: payments (one cancelled, so the total leaves it out), and all types (no total).
     let list_request = json!({
-        "voucher_type": "payment", "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 0, "limit": 0, "show_finished": true
+        "voucher_type": "payment", "from": "", "to": "", "account_id": null, "offset": 0, "limit": 0, "show_finished": true
     });
     let list = vouchers::list(ctx, &typed::<VouchersListInput>(&list_request)).unwrap();
     assert_eq!(list.rows.len(), 2);
@@ -426,16 +357,14 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     assert_eq!(list.totals.total_paisa.map(|t| t.rupees()), Some(4_316));
     pair("vouchers_list_payments", &list_request, &list);
     let all_request = json!({
-        "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 0, "limit": 0, "show_finished": true
+        "voucher_type": null, "from": "", "to": "", "account_id": null, "offset": 0, "limit": 0, "show_finished": true
     });
     let all = vouchers::list(ctx, &typed::<VouchersListInput>(&all_request)).unwrap();
     assert_eq!(all.totals.total_paisa, None);
     pair("vouchers_list_all", &all_request, &all);
     // The second page of two rows: the count and the totals are still over the whole filter.
     let page_request = json!({
-        "voucher_type": null, "from": "", "to": "", "account_id": null, "person_key": null,
-        "offset": 2, "limit": 2, "show_finished": true
+        "voucher_type": null, "from": "", "to": "", "account_id": null, "offset": 2, "limit": 2, "show_finished": true
     });
     let page = vouchers::list(ctx, &typed::<VouchersListInput>(&page_request)).unwrap();
     assert_eq!(page.rows.len(), 2);
@@ -474,24 +403,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     );
     pair("vouchers_save_receipts_batch_round", &batch_request, &batch);
 
-    // 14. Make a one-time buyer regular (PRD FR-13.8): Shahid owes 2,000.
-    one_time_buyer_owes(&w);
-    let key = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let (made, words) = confirming(|words| {
-        vouchers::make_regular(
-            ctx,
-            owner,
-            &typed::<MakeRegularInput>(&make_regular_request(&key, words)),
-        )
-    });
-    assert_eq!(made.moved.amount_paisa.rupees(), 2_000);
-    pair(
-        "pukhta_make_regular_shahid",
-        &make_regular_request(&key, &words),
-        &made,
-    );
-
-    // 15. The global search finds vouchers by their number.
+    // 14. The global search finds vouchers by their number.
     let search_request = json!({ "text": "1", "limit": 20 });
     let hits = search::global(ctx, owner, &typed::<SearchGlobalInput>(&search_request)).unwrap();
     assert!(
@@ -503,7 +415,7 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
     );
     pair("search_global_voucher_number", &search_request, &hits);
 
-    // 16. Past 200 open rows the reads give the oldest 200 and say how many there are: ارشد with
+    // 15. Past 200 open rows the reads give the oldest 200 and say how many there are: ارشد with
     // 205 loans of 100, کریم with 205 جنرل credits of 1,000.
     for _ in 0..205 {
         let loan = payment_json(w.arshad, "100", "نقد ادھار");
@@ -511,12 +423,12 @@ fn the_real_answers_of_the_plan_15_commands_are_the_fixtures() {
         input.confirm_cash_below_zero = true;
         vouchers::save_payment(ctx, owner, &input).unwrap();
     }
-    let request = json!({ "account_id": w.arshad, "person_key": null });
+    let request = json!({ "account_id": w.arshad });
     let truncated = vouchers::open_bills(ctx, &typed::<OpenBillsInput>(&request)).unwrap();
     assert_eq!((truncated.bills.len(), truncated.truncated), (200, true));
     pair("assist_open_bills_truncated", &request, &truncated);
     post_general_credits(&w, 205);
-    let request = json!({ "seller_id": w.karim, "person_key": null, "include_settled": false });
+    let request = json!({ "seller_id": w.karim, "include_settled": false });
     let truncated = vouchers::open_payables(ctx, &typed::<OpenPayablesInput>(&request)).unwrap();
     assert_eq!((truncated.postings.len(), truncated.truncated), (200, true));
     pair("assist_open_payables_truncated", &request, &truncated);

@@ -77,16 +77,16 @@ fn change_node(paisa: Paisa) -> Node {
 }
 
 /// The party of a balance estimate: his key must be a party the books can read, not the whole
-/// پختہ کھاتہ account (it holds many people, each with his own balance, PRD FR-13.5).
+/// چکتا کھاتہ account (it holds many people and no balance, PRD FR-13.6).
 fn party_of(env: &Env<'_>, state: &State, text: &str) -> Result<(i64, AnswerRecord), ToolError> {
     let (id, record) = named(env, state, text, "party", &["a"])?;
     let account = accounts::get(env.ctx, id)
         .map_err(|_| ToolError::new("ERR_NOT_FOUND", "party", "the account could not be read"))?;
-    if account.is_pukhta_khata {
+    if account.is_chukta_khata {
         return Err(bad(
             "ERR_OUT_OF_RANGE",
             "party",
-            "a پختہ کھاتہ account holds many people, each with his own balance; pick the person",
+            "the چکتا کھاتہ account holds walk-in buyers and no balance; it has nothing to estimate",
         ));
     }
     // The card is read as the party card tool reads it, so the base is the figure the Owner sees.

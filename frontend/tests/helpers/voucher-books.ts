@@ -58,13 +58,7 @@ export interface Party extends RecordRef {
 export const PARTIES: readonly Party[] = [
   { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', type: 'buyer' },
   { id: 22, code: '0021', name_ur: 'ارشد ملتانی', name_en: 'Arshad Multani', type: 'buyer' },
-  {
-    id: 23,
-    code: '0030',
-    name_ur: 'پختہ کھاتہ (خریدار)',
-    name_en: 'Pukhta Khata (Buyer)',
-    type: 'buyer',
-  },
+  { id: 23, code: '0030', name_ur: 'چکتا کھاتہ', name_en: 'Chukta Khata', type: 'buyer' },
   { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim', type: 'seller' },
   { id: 32, code: '0011', name_ur: 'کریم', name_en: 'Karim', type: 'seller' },
   { id: 41, code: '02010002', name_ur: 'کرایہ کھاتہ', name_en: 'Freight Payable', type: 'other' },
@@ -177,9 +171,6 @@ export function createBooks(options: BooksOptions = {}) {
     const errors: FieldError[] = [];
     const warnings: FieldError[] = [];
     if (decimals) errors.push({ code: 'ERR_DECIMALS_NOT_ALLOWED', field: 'amount', values: {} });
-    if (entry.type !== 'advance' && party?.code === '0030' && (entry.person_key ?? null) === null) {
-      errors.push({ code: 'ERR_PERSON_REQUIRED', field: 'person_key', values: {} });
-    }
     if (entry.type === 'payment' && party?.type === 'buyer' && entry.reason.trim() === '') {
       errors.push({ code: 'ERR_PAYMENT_TO_BUYER_NEEDS_REASON', field: 'reason', values: {} });
     }
@@ -287,7 +278,6 @@ export function createBooks(options: BooksOptions = {}) {
       narration: input.narration,
       status: 'saved',
       version: 1,
-      person: null,
       collector_staff_id: built.type === 'receipt' ? built.input.collector_staff_id : null,
       reason: built.type === 'payment' ? built.input.reason : '',
       cancel_reason: '',
@@ -526,7 +516,6 @@ export function voucherRow(overrides: Partial<VoucherRow> = {}): VoucherRow {
     narration: '',
     status: 'saved',
     version: 1,
-    person: null,
     collector_staff_id: null,
     reason: '',
     cancel_reason: '',

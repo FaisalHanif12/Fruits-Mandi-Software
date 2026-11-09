@@ -14,7 +14,6 @@ import type {
   PeriodChoice,
   ReportBikri,
   ReportFilterState,
-  ReportPerson,
   VoucherChoice,
 } from './filters';
 import {
@@ -37,8 +36,8 @@ export interface ReportSearch {
   party?: number;
   /** A partner (R29, R31): the partner screens open his statement this way. */
   partner?: number;
-  /** A one-time person (PRD FR-13.5): the global search opens his register this way. */
-  person?: ReportPerson;
+  /** One چکتا buyer inside the party account چکتا کھاتہ (PRD FR-13.5): his key, as the backend sent it. */
+  person_key?: string;
   /** The fruit register (R37) for the shop's guests only: the fruit screen's "Print" opens it this way. */
   guests?: boolean;
   /**
@@ -77,7 +76,7 @@ export interface ReportSearch {
   bikri?: ReportBikri;
   /** The income report (R28) by month or by day. */
   group_by?: ReportGroupBy;
-  /** Paid or due lines only (R9); `all` is the same as leaving it out. */
+  /** Paid or due lines only (R38); `all` is the same as leaving it out. */
   status?: ReportPaidFilter;
   /** The statement with its detail lines (R14). */
   detail?: boolean;
@@ -118,32 +117,6 @@ function readBikri(id: unknown, number: unknown): ReportBikri | undefined {
     : { id: bikriId, number: bikriNumber };
 }
 
-/** A person in the address, whole or not at all: a half-read person would ask for the wrong lines. */
-function readPerson(value: unknown): ReportPerson | undefined {
-  if (typeof value !== 'object' || value === null) return undefined;
-  const found = value as Record<string, unknown>;
-  const accountId = found['accountId'];
-  const personKey = found['personKey'];
-  const nameUr = found['name_ur'];
-  const nameEn = found['name_en'];
-  const phone = found['phone'];
-  const lastDate = found['last_date'];
-  if (
-    typeof accountId !== 'number' ||
-    !Number.isSafeInteger(accountId) ||
-    accountId <= 0 ||
-    typeof personKey !== 'string' ||
-    personKey === '' ||
-    typeof nameUr !== 'string' ||
-    typeof nameEn !== 'string' ||
-    typeof phone !== 'string' ||
-    typeof lastDate !== 'string'
-  ) {
-    return undefined;
-  }
-  return { accountId, personKey, name_ur: nameUr, name_en: nameEn, phone, last_date: lastDate };
-}
-
 /** Reads the address. A period must be one the screen knows; a party must be a positive whole number. */
 export function parseReportSearch(search: Record<string, unknown>): ReportSearch {
   const period = PERIOD_CHOICES.find((choice) => choice === search['period']);
@@ -152,7 +125,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const asOf = text(search['as_of']);
   const party = Number(search['party']);
   const partner = Number(search['partner']);
-  const person = readPerson(search['person']);
+  const personKey = text(search['person_key']);
   const guests = search['guests'] === true || search['guests'] === 'true';
   const item = readPicked(search['item']);
   const seller = readPicked(search['seller']);
@@ -179,7 +152,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(asOf === undefined ? {} : { as_of: asOf }),
     ...(Number.isSafeInteger(party) && party > 0 ? { party } : {}),
     ...(Number.isSafeInteger(partner) && partner > 0 ? { partner } : {}),
-    ...(person === undefined ? {} : { person }),
+    ...(personKey === undefined || personKey === '' ? {} : { person_key: personKey }),
     ...(guests ? { guests: true } : {}),
     ...(item === undefined ? {} : { item }),
     ...(seller === undefined ? {} : { seller }),
@@ -213,7 +186,7 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
       search.party === undefined
         ? null
         : { id: search.party, name_ur: '', name_en: '', code: undefined },
-    person: search.person ?? null,
+    partyPersonKey: search.party === undefined ? null : (search.person_key ?? null),
     partner: search.partner ?? null,
     guestsOnly: search.guests === true && search.partner === undefined,
     item: search.item ?? null,

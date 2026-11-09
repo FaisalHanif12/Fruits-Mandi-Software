@@ -170,7 +170,7 @@ const bikriBookRoute = createRoute({
   ),
 });
 
-// آج کی بکری: the list of بکری (PRD FR-12.7). The پختہ کھاتہ register (PRD FR-13.6).
+// آج کی بکری: the list of بکری (PRD FR-12.7).
 const todayRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/today',
@@ -251,15 +251,6 @@ const laterSaleRoute = createRoute({
   component: lazyRouteComponent(
     () => import('../features/bikri/pages/LaterSalePage'),
     'LaterSalePage',
-  ),
-});
-
-const pukhtaRoute = createRoute({
-  getParentRoute: () => appRoute,
-  path: '/bikri/pukhta',
-  component: lazyRouteComponent(
-    () => import('../features/pukhta_khata/pages/PukhtaRegisterPage'),
-    'PukhtaRegisterPage',
   ),
 });
 
@@ -572,7 +563,6 @@ const appRoutes = [
   advanceRoute,
   collectionRoute,
   dayRoute,
-  pukhtaRoute,
   todayRoute,
   stockRoute,
   laterSaleRoute,

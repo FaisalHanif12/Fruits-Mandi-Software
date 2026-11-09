@@ -5,10 +5,19 @@
 // as well as a colour (NFR-USE-12). Every figure is read from the books by the backend; nothing is
 // worked out here, and a card is never reused from an earlier look (balances change with every
 // posting).
+//
+// A چکتا buyer (PRD FR-13.6) has no balance, no dues and no ledger: his card is his name, his
+// phone and the words "چکتا: پورا نقد", and it has no ledger buttons.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { CircleAlert, TriangleAlert } from 'lucide-react';
-import { typeMessageId, usePartyCard, type CardWarningKind, type PartyCardData } from '../accounts';
+import {
+  typeMessageId,
+  usePartyCard,
+  type CardChukta,
+  type CardWarningKind,
+  type PartyCardData,
+} from '../accounts';
 import { uiErrorOf } from '../api';
 import { isoToDisplayDate } from '../format';
 import { displayName, useLanguage } from '../i18n';
@@ -24,6 +33,8 @@ import { usePartyCardLinks } from './party-card-links';
 interface PartyCardProps {
   /** The account to show, or null for nothing. */
   accountId: number | null;
+  /** The چکتا buyer chosen on the account چکتا کھاتہ: his own card, with no balance. */
+  chukta?: CardChukta | null | undefined;
 }
 
 /** An inactive account is a warning (amber); the others are about money (red). */
@@ -113,12 +124,31 @@ function DeadButtons({ card }: { card: PartyCardData }) {
     <div className="flex flex-wrap items-center gap-x-5">
       <LinkButton
         onClick={() => {
-          actions.move({ accountId: card.id, personKey: null, names });
+          actions.move({ accountId: card.id, names });
         }}
       >
         <Localized id="dead-move-button" />
       </LinkButton>
     </div>
+  );
+}
+
+/** A چکتا buyer's card: his name and phone, and that he pays the whole bill on the spot. */
+function ChuktaBody({ person }: { person: { name_ur: string; name_en: string; phone: string } }) {
+  const language = useLanguage();
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="type-section text-ink">{displayName(person, language)}</span>
+        <Localized id="accounts-type-chukta">
+          <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
+        </Localized>
+        {person.phone === '' ? null : <Code>{person.phone}</Code>}
+      </div>
+      <Localized id="assist-card-chukta-cash">
+        <p className="type-body text-ink" />
+      </Localized>
+    </>
   );
 }
 
@@ -134,7 +164,7 @@ function CardBody({ card }: { card: PartyCardData }) {
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="type-section text-ink">{displayName(card, language)}</span>
         <Code>{card.code}</Code>
-        <Localized id={typeMessageId(card.account_type, card.is_pukhta_party)}>
+        <Localized id={typeMessageId(card.account_type)}>
           <span className="type-chip rounded-1 bg-surface-sunken px-2 text-ink-muted" />
         </Localized>
       </div>
@@ -195,8 +225,11 @@ function CardBody({ card }: { card: PartyCardData }) {
   );
 }
 
-export function PartyCard({ accountId }: PartyCardProps) {
-  const query = usePartyCard(accountId);
+export function PartyCard({ accountId, chukta = null }: PartyCardProps) {
+  // A چکتا buyer with his record id is asked of the backend; one read back from a saved line has
+  // no id, so his card is drawn from the names and phone the line holds.
+  const local = chukta !== null && chukta.id === null;
+  const query = usePartyCard(local ? null : accountId, chukta?.id ?? null);
   if (accountId === null) return null;
   return (
     <section
@@ -204,7 +237,9 @@ export function PartyCard({ accountId }: PartyCardProps) {
       aria-busy={query.isPending}
       className="flex flex-col gap-2 rounded-2 border border-border bg-surface p-3"
     >
-      {query.isPending ? (
+      {local ? (
+        <ChuktaBody person={chukta} />
+      ) : query.isPending ? (
         <Localized id="assist-card-loading">
           <p className="type-body text-ink-muted" />
         </Localized>
@@ -219,6 +254,8 @@ export function PartyCard({ accountId }: PartyCardProps) {
             </ErrorMessage>
           ))}
         </div>
+      ) : query.data.is_chukta === true ? (
+        <ChuktaBody person={query.data} />
       ) : (
         <CardBody card={query.data} />
       )}

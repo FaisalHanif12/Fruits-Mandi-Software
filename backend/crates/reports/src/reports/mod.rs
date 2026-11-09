@@ -14,7 +14,7 @@
 //!
 //! Built so far (plan 20): the Accounts group R11 روزنامچہ, R13 کھاتہ, R14 فرد حساب, R16 انڈکس,
 //! R17 مدوں بیلنس, R18 ٹرائل بیلنس and R19 اوپن ٹرائل; the Sales group R2 مکمل بکری, R3 نقدی, R4
-//! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری, R8 اڈا رپورٹ and R9 پختہ کھاتہ رپورٹ; the Collections
+//! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری, R8 اڈا رپورٹ; the Collections
 //! group R20 وصولی / اگراہی, R21 بحساب شہر, R22 بحساب اگراہی والا, R24 ادائیگی باقی, R26 پیشگی کھاتہ
 //! and R27 بیجک سیریز; the Business group R28 آمدن رپورٹ, R29 خرچہ رپورٹ, R30 منافع و تقسیم, R31
 //! شراکت دار کھاتہ and R32 ادھار رقم رپورٹ; the Accounts group also has R12 روکڑ. R31 is built from the
@@ -87,7 +87,7 @@ pub mod plans {
 /// The grouped payable sums of R24, for the parity and query count tests (Code Standards B22).
 #[doc(hidden)]
 pub mod grouped_sums {
-    pub use super::collections::{KeySums, SellerSums, payable_sums, pukhta_names};
+    pub use super::collections::{KeySums, SellerSums, chukta_names, payable_sums};
 }
 
 /// Both forms of the day queries of R34, for the equality test of plan 48 P48-S3 only.
@@ -252,12 +252,6 @@ const SPECS: &[Spec] = &[
         ReportId::R8,
         ReportGroup::Sales,
         &[FilterKind::DateRange, FilterKind::Adda],
-        false,
-    ),
-    spec(
-        ReportId::R9,
-        ReportGroup::Sales,
-        &[FilterKind::DateRange, FilterKind::Party, FilterKind::Status],
         false,
     ),
     spec(
@@ -614,7 +608,6 @@ fn build_in_with(
         ReportId::R6 => sales::run_r6(conn, &typed, spec),
         ReportId::R7 => sales::run_r7(conn, &typed, spec),
         ReportId::R8 => sales::run_r8(conn, &typed, spec),
-        ReportId::R9 => sales::run_r9(conn, &typed, spec),
         ReportId::R20 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::Flat),
         ReportId::R21 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::ByCity),
         ReportId::R22 => {

@@ -4,7 +4,7 @@
 //!
 //! * **Buyers over their credit limit.** A named buyer with a credit limit set (0 is a limit) whose
 //!   debit balance is above it: the rule of the party card. The amount is Σ (balance − limit).
-//! * **Buyer dues older than 30 days.** The buyers (and one-time people) whose OLDEST open bill,
+//! * **Buyer dues older than 30 days.** The buyers (and چکتا buyers) whose OLDEST open bill,
 //!   as R20 works it out, is more than 30 days old. The amount is their open bills in the bands
 //!   of 31 days and more.
 //! * **Seller payables older than 7 days.** The open payable of a seller key is made of his
@@ -62,7 +62,7 @@ fn over_credit_limit(conn: &Connection) -> Result<Option<AttentionItem>, Reports
     let mut statement = conn.prepare(&format!(
         "SELECT a.id, a.name_ur, a.name_en, a.credit_limit_paisa, a.tag
          FROM accounts a JOIN account_controls k ON k.id = a.control_id
-         WHERE k.code = '0304' AND a.is_pukhta_khata = 0 AND a.credit_limit_paisa IS NOT NULL
+         WHERE k.code = '0304' AND a.is_chukta_khata = 0 AND a.credit_limit_paisa IS NOT NULL
          ORDER BY {}",
         mandi_db::codes::order_by_code("a.code")
     ))?;

@@ -8,7 +8,6 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vouchersApi from '../../src/features/vouchers/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
@@ -33,7 +32,7 @@ import {
   AKRAM,
   ARSHAD,
   KARIM,
-  PUKHTA_BUYER,
+  CHUKTA_KHATA,
   RAHIM,
   fakeVouchers,
   voucherRow,
@@ -45,7 +44,6 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -81,9 +79,8 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
-  const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
+  const rows = [AKRAM, ARSHAD, CHUKTA_KHATA, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
   fakeMasters({});
@@ -132,7 +129,6 @@ describe.each(LANGUAGES)('editing and cancelling a voucher (%s)', (language) => 
       from: '10-10-2026',
       to: '10-10-2026',
       account_id: null,
-      person_key: null,
       offset: 0,
       limit: PAGE_ROWS,
       // Cancelled vouchers step aside until the tick is on; today needs no month heading (plan 38).

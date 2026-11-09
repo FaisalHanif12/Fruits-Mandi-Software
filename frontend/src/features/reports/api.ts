@@ -11,7 +11,6 @@ import type { CollectionPrintData } from '../../bindings/CollectionPrintData';
 import type { CollectionPrintDataInput } from '../../bindings/CollectionPrintDataInput';
 import type { DeadAmountInput } from '../../bindings/DeadAmountInput';
 import type { DeadAmountPage } from '../../bindings/DeadAmountPage';
-import type { FindPeopleInput } from '../../bindings/FindPeopleInput';
 import type { PrintCollectionInput } from '../../bindings/PrintCollectionInput';
 import type { PrintData } from '../../bindings/PrintData';
 import type { PrintFrame } from '../../bindings/PrintFrame';
@@ -20,7 +19,6 @@ import type { PrintInput } from '../../bindings/PrintInput';
 import type { PrintOutcome } from '../../bindings/PrintOutcome';
 import type { PrintReportInput } from '../../bindings/PrintReportInput';
 import type { PrintVoucherInput } from '../../bindings/PrintVoucherInput';
-import type { PukhtaPersonHit } from '../../bindings/PukhtaPersonHit';
 import type { ExcelExported } from '../../bindings/ExcelExported';
 import type { ReportCatalogEntry } from '../../bindings/ReportCatalogEntry';
 import type { ReportPage } from '../../bindings/ReportPage';
@@ -47,14 +45,15 @@ export function reportsVoucherPrintData(input: VoucherPrintDataInput): Promise<P
   return callCommand<PrintData>('reports_voucher_print_data', { input });
 }
 
-/** Prints the receipt slip of a saved voucher on the printer, or saves it as a PDF. Windows only. */
+/** Prints the receipt slip of a saved voucher on the printer, or saves it as a PDF. Windows and Mac (a Mac opens the system print window). */
 export function reportsPrintVoucher(input: PrintVoucherInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_print_voucher', { input });
 }
 
 /**
- * Prints the documents on the printer or saves them as PDF files. Windows only: elsewhere the
- * backend answers `ERR_PRINT_WINDOWS_ONLY` and the screen offers the preview instead.
+ * Prints the documents on the printer or saves them as PDF files. Windows and Mac (plan 69: a Mac
+ * opens the system print window). On any other computer the backend answers
+ * `ERR_PRINT_WINDOWS_ONLY` and the screen offers the preview instead.
  */
 export function reportsPrint(input: PrintInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_print', { input });
@@ -96,19 +95,10 @@ export function reportsBuyerBillsPrintData(input: ReportPrintInput): Promise<Buy
 /**
  * Sends a report to the printer or saves it as a PDF (PRD FR-19.3): the request is checked first, so a
  * bad filter is refused at its own field before any paper is used. `slips` is R5 "Print All", one
- * slip for each credit buyer. Off Windows a valid request answers `ERR_PRINT_WINDOWS_ONLY`.
+ * slip for each credit buyer. On a computer that is neither Windows nor a Mac a valid request answers `ERR_PRINT_WINDOWS_ONLY`.
  */
 export function reportsPrintReport(input: PrintReportInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_print_report', { input });
-}
-
-/**
- * The one-time (پختہ کھاتہ) people whose name or phone matches the text, newest first (PRD FR-5.4,
- * FR-13.9). The report filters of R9, R20 and the global search use it. The text is sent as typed.
- * `limit` 0 means 10.
- */
-export function reportsFindPeople(input: FindPeopleInput): Promise<PukhtaPersonHit[]> {
-  return callCommand<PukhtaPersonHit[]>('reports_find_people', { input });
 }
 
 /**
@@ -130,7 +120,7 @@ export function reportsCollectionPrintData(
   return callCommand<CollectionPrintData>('reports_collection_print_data', { input });
 }
 
-/** Prints the collection list of one day on the printer, or saves it as a PDF. Windows only. */
+/** Prints the collection list of one day on the printer, or saves it as a PDF. Windows and Mac. */
 export function reportsPrintCollection(input: PrintCollectionInput): Promise<PrintOutcome> {
   return callCommand<PrintOutcome>('reports_print_collection', { input });
 }

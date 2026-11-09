@@ -19,7 +19,6 @@ import type { PaymentInput } from '../../bindings/PaymentInput';
 import type { ReceiptInput } from '../../bindings/ReceiptInput';
 import type { ReceiptRowResult } from '../../bindings/ReceiptRowResult';
 import type { ReceiptsSaved } from '../../bindings/ReceiptsSaved';
-import type { SavedPukhta } from '../../bindings/SavedPukhta';
 import type { VoucherCancelled } from '../../bindings/VoucherCancelled';
 import type { VoucherEntry } from '../../bindings/VoucherEntry';
 import type { VoucherPreview } from '../../bindings/VoucherPreview';
@@ -49,7 +48,6 @@ export type {
   ReceiptInput,
   ReceiptRowResult,
   ReceiptsSaved,
-  SavedPukhta,
   VoucherCancelled,
   VoucherEntry,
   VoucherPreview,
@@ -73,10 +71,6 @@ export interface VoucherDraft {
   accountType: AccountType | null;
   /** Receipt only. */
   from: FromSide;
-  /** The one-time person, for a پختہ کھاتہ account (PRD FR-13.5); null for any other account. */
-  person: SavedPukhta | null;
-  /** The text in the person field: what the user typed to search, or the name he picked. */
-  personText: string;
   /** Whole rupees as typed. A simple sum such as `5000+2000` is read by the backend (FR-7.48). */
   amount: string;
   /** Receipt only: the collector (اگراہی والا), a staff member. */

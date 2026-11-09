@@ -6,6 +6,8 @@ pub mod day_auto;
 pub mod error;
 pub mod logging;
 pub mod print_job;
+#[cfg(target_os = "macos")]
+mod print_mac;
 pub mod print_report;
 pub mod print_types;
 #[cfg(windows)]
@@ -135,6 +137,10 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::accounts::coa_heads_list,
         commands::accounts::coa_controls_list,
         commands::search::search_accounts,
+        commands::chukta::chukta_search,
+        commands::chukta::chukta_add,
+        commands::party_ledgers::party_ledgers_list,
+        commands::party_ledgers::party_ledgers_statement,
         commands::search::search_global,
         commands::search::search_accounts_recent,
         commands::search::search_accounts_touch,
@@ -224,7 +230,6 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::assist::assist_open_bills,
         commands::assist::assist_open_payables,
         commands::assist::assist_collection_list,
-        commands::pukhta::pukhta_make_regular,
         commands::day::day_close_preview,
         commands::day::day_close,
         commands::day::day_reopen,
@@ -281,8 +286,6 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::bikri::bikri_undo,
         commands::bikri::bikri_write_off,
         commands::bikri::bikri_write_off_undo,
-        commands::pukhta::search_pukhta_people,
-        commands::pukhta::pukhta_register,
         commands::drafts::drafts_save,
         commands::drafts::drafts_get,
         commands::drafts::drafts_discard,
@@ -316,7 +319,6 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::reports_engine::reports_run,
         commands::reports_engine::reports_print_data,
         // Run B, plan 20, step B3 (append-only block).
-        commands::reports_people::reports_find_people,
         // Run B, plan 21 (append-only block).
         commands::analytics::analytics_catalog,
         commands::analytics::analytics_run,

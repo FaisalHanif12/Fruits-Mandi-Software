@@ -91,7 +91,6 @@ fn entry_of(
     let amount = rupees_text(row.amount_paisa);
     let narration = optional(&row.narration);
     let account_id = row.account.as_ref().map(|a| a.id);
-    let person_key = row.person.as_ref().map(|p| p.person_key.clone());
     let return_by = extra.return_by_date.as_deref().map(day_text).transpose()?;
     let need_account = || {
         account_id.ok_or_else(|| ServiceError::Data(format!("voucher {} has no account", row.id)))
@@ -100,7 +99,6 @@ fn entry_of(
         VoucherType::Receipt => VoucherEntry::Receipt(ReceiptInput {
             date,
             account_id: need_account()?,
-            person_key,
             amount,
             removed: RemovedPaymentFields::default(),
             collector_staff_id: row.collector_staff_id,
@@ -109,7 +107,6 @@ fn entry_of(
         VoucherType::Payment => VoucherEntry::Payment(PaymentInput {
             date,
             account_id: need_account()?,
-            person_key,
             amount,
             removed: RemovedPaymentFields::default(),
             reason: row.reason.clone(),
@@ -211,7 +208,6 @@ fn entry_of(
                 .map(|l| {
                     Ok(GeneralLineInput {
                         account_id: Some(l.account_id),
-                        person_key: l.person_key.clone(),
                         dr: line_text(l.dr_paisa)?,
                         cr: line_text(l.cr_paisa)?,
                         narration: l.narration.clone(),

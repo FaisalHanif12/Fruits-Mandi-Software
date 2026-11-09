@@ -1,5 +1,5 @@
 //! Plan 46 (B1): the seller list of a lot offers only what a lot can use (PRD 12.3 "Seller code",
-//! FR-12.26, FR-12.36, FR-16.7). The sellers and the پختہ کھاتہ بیوپاری are always in it, a separate
+//! FR-12.26, FR-12.36, FR-16.7). The sellers and the چکتا کھاتہ بیوپاری are always in it, a separate
 //! khata is in it, اپنا مال only while an open trip has a purchase with goods left for our shop, and
 //! a garden only while it is open. "Goods left" and "open" are read from the database at query time
 //! (the in-memory index is a speed aid, Code Standards B27). Nothing about money changes here, and
@@ -172,6 +172,7 @@ fn list(w: &World, text: &str) -> Vec<String> {
             text: text.into(),
             limit: 50,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap()
@@ -189,6 +190,7 @@ fn recent(w: &World) -> Vec<String> {
             include_dead: None,
             scope: AccountScope::LotSeller,
             control_id: None,
+            with_chukta: None,
         },
     )
     .unwrap()
@@ -256,33 +258,35 @@ fn is_rejected(error: &ServiceError, code: ErrorCode, field: &str) -> bool {
     }
 }
 
-// ---- Sellers, پختہ کھاتہ and khatas are always in the list ----
+// ---- Sellers and khatas are always in the list ----
 
 #[test]
-fn sellers_and_the_pukhta_seller_are_always_offered_and_buyers_never() {
+fn sellers_are_always_offered_and_buyers_and_the_chukta_khata_never() {
     let w = world();
     day(&w, 11);
     let codes = list(&w, "");
-    // رحیم (0010) and کریم (0011) are sellers; the پختہ کھاتہ (بیوپاری) is one of the sellers of a
-    // lot too (0031).
-    for seller in ["0010", "0011", "0031"] {
+    // رحیم (0010) and کریم (0011) are sellers.
+    for seller in ["0010", "0011"] {
         assert!(codes.iter().any(|c| c == seller), "{seller} in {codes:?}");
     }
-    // A buyer, the cash buyer and the پختہ کھاتہ buyer are not sellers.
+    // A buyer, the cash buyer, چکتا کھاتہ and the old closed account 0031 are not sellers of a lot
+    // (PRD FR-13.8, FR-13.9).
     assert!(
-        !codes.iter().any(|c| c == "0030" || c == "03040000"),
+        !codes
+            .iter()
+            .any(|c| c == "0030" || c == "0031" || c == "03040000"),
         "{codes:?}"
     );
     // Typed, the seller is found, and the recent list has the same sellers.
     assert_eq!(list(&w, "rahim"), ["0010"]);
-    assert!(recent(&w).iter().any(|c| c == "0031"));
+    assert!(recent(&w).iter().any(|c| c == "0010"));
     // A trip, a purchase and a garden coming and going change none of this.
     let t = trip(&w);
     buy(&w, t, "20");
     let g = garden(&w);
     close_garden(&w, g.id);
     let after = list(&w, "");
-    for seller in ["0010", "0011", "0031"] {
+    for seller in ["0010", "0011"] {
         assert!(after.iter().any(|c| c == seller), "{seller} in {after:?}");
     }
 }
@@ -331,6 +335,7 @@ fn a_separate_khata_that_exists_is_offered() {
             text: String::new(),
             limit: 50,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();

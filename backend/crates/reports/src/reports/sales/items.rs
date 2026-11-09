@@ -36,7 +36,7 @@ fn conds(typed: &Typed) -> Conds {
         // All the items of a group (PRD v1.29).
         .item_group("f.item_id", typed.item_group)
         .id("f.buyer_account_id = ?", typed.party_id)
-        .text("f.pukhta_person_key = ?", typed.person_key.as_deref())
+        .text("f.chukta_person_key = ?", typed.person_key.as_deref())
         .id("f.city_id = ?", typed.city_id)
         .id("f.adda_id = ?", typed.adda_id);
     c

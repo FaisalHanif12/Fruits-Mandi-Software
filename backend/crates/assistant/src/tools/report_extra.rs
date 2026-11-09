@@ -9,7 +9,7 @@
 //! |---|---|---|
 //! | `seller` | R2 R3 R4 R5 R7 R10 R6 R27 R26 | `seller_id` |
 //! | `zamindar` | R2 R3 R4 R5 R6 R27 | `zamindar_id` |
-//! | `status` `paid` or `due` | R9 R38 | `status` |
+//! | `status` `paid` or `due` | R38 | `status` |
 //! | `voucher_type` | R15 | `voucher_type` |
 //! | `layout` | R14 `detail`; R33 `item` `day` `month` `partner`; R36 `partner`; R10 `item` | `detail`, `trip_view`, `garden_view`, `stock_view` |
 //! | `partner: "guests"` | R37 | `guests_only` |
@@ -19,8 +19,8 @@
 //! The `collector` input (R22, R23, R35) is read in `report.rs` with the other records; the
 //! reports crate has the filter in each of those three specs.
 //!
-//! Example (worked day): `report{id:"R9", status:"due"}` keeps the one-time people who still owe;
-//! `report{id:"R37", partner:"guests"}` reads only the fruit taken for the shop's guests.
+//! Example (worked day): `report{id:"R38", status:"due"}` keeps the people of the dead amount who still
+//! owe; `report{id:"R37", partner:"guests"}` reads only the fruit taken for the shop's guests.
 
 use mandi_reports::reports::{
     FilterKind, GardenView, PaidFilter, ReportFilters, StockView, TripView,

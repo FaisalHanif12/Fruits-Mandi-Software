@@ -173,9 +173,6 @@ dead-type-buyer = { -gahak }
 dead-type-seller = { -beopari }
 
 # review: pending
-dead-type-pukhta = { -pukhta-khata }
-
-# review: pending
 dead-type-money_lent = { -adhar-raqam }
 
 # review: pending

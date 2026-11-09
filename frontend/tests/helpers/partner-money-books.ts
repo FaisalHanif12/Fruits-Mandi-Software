@@ -46,7 +46,7 @@ const balanceOf = (rupees: number): Balance =>
 
 /** An account the جنرل screen can pick. `kind` tells the books how to treat its line. */
 export interface GeneralAccount extends RecordRef {
-  kind: 'cash' | 'buyer' | 'seller' | 'pukhta' | 'expense' | 'income' | 'other';
+  kind: 'cash' | 'buyer' | 'seller' | 'expense' | 'income' | 'other';
 }
 
 /** The accounts of the worked day that a جنرل correction would touch. */
@@ -54,13 +54,6 @@ export const GENERAL_ACCOUNTS: readonly GeneralAccount[] = [
   { id: 1, code: '01010001', name_ur: 'روکڑ', name_en: 'Cash', kind: 'cash' },
   { id: 21, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax', kind: 'buyer' },
   { id: 31, code: '0010', name_ur: 'رحیم', name_en: 'Rahim', kind: 'seller' },
-  {
-    id: 23,
-    code: '0030',
-    name_ur: 'پختہ کھاتہ (خریدار)',
-    name_en: 'Pukhta Khata (Buyer)',
-    kind: 'pukhta',
-  },
   { id: 501, code: '05010001', name_ur: 'بجلی', name_en: 'Electricity', kind: 'expense' },
   {
     id: 401,
@@ -70,16 +63,6 @@ export const GENERAL_ACCOUNTS: readonly GeneralAccount[] = [
     kind: 'income',
   },
 ];
-
-/** The one-time person of the books, for the پختہ کھاتہ line. */
-export const SHAHID = {
-  name_ur: 'شاہد',
-  name_en: 'Shahid',
-  phone: '03000000000',
-  last_date: '2026-10-10',
-  person_key: 'shahid|03000000000',
-  is_dead: false,
-};
 
 function refused(code: string, field: string | null, values: Record<string, string | number> = {}) {
   return new CommandError(refusal([{ code, field, values }]));
@@ -417,8 +400,6 @@ export function createPartnerMoneyBooks(
       errors.push({ code: 'ERR_REQUIRED', field: path('account_id'), values: {} });
     } else if (account === null) {
       errors.push({ code: 'ERR_NOT_FOUND', field: path('account_id'), values: {} });
-    } else if (account.kind === 'pukhta' && input.person_key === null) {
-      errors.push({ code: 'ERR_REQUIRED', field: path('person_key'), values: {} });
     }
     const dr = rupeesOf(input.dr);
     const cr = rupeesOf(input.cr);

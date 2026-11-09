@@ -92,14 +92,14 @@ fn fits(screen: EntryScreen, role: PartyRole) -> bool {
 }
 
 /// The one party the question names that the screen can take, as a whole record. `None` when none
-/// fits, when two fit (the Owner chooses), or when the name is a one-time person.
+/// fits, when two fit (the Owner chooses), or when the name is a چکتا buyer.
 fn party_for(u: &Understanding, screen: EntryScreen) -> Option<AnswerRecord> {
     if !takes_party(screen) {
         return None;
     }
     let mut fitting: Vec<&PartyHit> = Vec::new();
     for hit in u.parties.iter().filter_map(|p| p.outcome.hit()) {
-        if hit.pukhta || !fits(screen, hit.role) {
+        if !fits(screen, hit.role) {
             continue;
         }
         if !fitting.iter().any(|f| f.id == hit.id && f.role == hit.role) {

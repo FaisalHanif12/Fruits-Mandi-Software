@@ -179,9 +179,6 @@ fn a_seller_with_no_lot_and_the_wrong_kinds_of_account() {
         ),
         (None, None, None, false)
     );
-    // The one-time seller account holds many people, so it has no memory.
-    let pukhta = assist::seller_memory(&w.env.ctx, w.pukhta_seller).unwrap();
-    assert!(!pukhta.from_last_lot && pukhta.item_id.is_none());
     assert!(
         assist::seller_memory(&w.env.ctx, w.akram)
             .unwrap_err()

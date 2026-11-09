@@ -1,14 +1,13 @@
 // The screens of plan 13 against the real answers of the backend (T4). The backend wrote, in its
-// own golden test, what bikri_save, bikri_get, bikri_list, pukhta_register and drafts_get answer
+// own golden test, what bikri_save, bikri_get, bikri_list and drafts_get answer
 // for Event 1 and Event 2 of PRD 4.4 and 4.5 (tests/fixtures/*.json, copied, never edited). Each
 // screen here shows those numbers, in the Urdu and in the English app, and the save screen sends
 // the draft of the backend's file. Money in the files is paisa; the screen shows whole rupees.
 
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import * as bikriApi from '../../src/features/bikri/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as draftsApi from '../../src/shared/drafts/api';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -18,8 +17,6 @@ import {
   GET_EVENT1,
   GET_EVENT2,
   LIST_DAY,
-  REGISTER_DAY,
-  REGISTER_DAY_BUYERS,
   SAVED_EVENT1,
   SAVE_EVENT1_REQUEST,
 } from '../helpers/bikri-real';
@@ -42,7 +39,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -136,73 +132,37 @@ describe.each(LANGUAGES)('a saved بکری from the backend’s answers (%s)', (
   });
 });
 
-describe.each(LANGUAGES)(
-  'the list and the register from the backend’s answers (%s)',
-  (language) => {
-    beforeEach(() => {
-      resetClientState(language);
-      signedIn(sessionUser({ language }));
-      fakeBikri();
-    });
+describe.each(LANGUAGES)('the list from the backend’s answers (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+    fakeBikri();
+  });
 
-    const cell = (rowId: string, colId: string) =>
-      visible(
-        document.querySelector(`.ag-row[row-id="${rowId}"]`)?.querySelector(`[col-id="${colId}"]`)
-          ?.textContent,
-      );
+  const cell = (rowId: string, colId: string) =>
+    visible(
+      document.querySelector(`.ag-row[row-id="${rowId}"]`)?.querySelector(`[col-id="${colId}"]`)
+        ?.textContent,
+    );
 
-    it('today’s list is newest first, with the stored gross and net of both events', async () => {
-      vi.mocked(bikriApi.bikriList).mockResolvedValue(LIST_DAY);
-      await renderApp('/bikri/today');
-      await waitFor(() => {
-        expect(cell('1', 'number')).toBe('1');
-      });
-      const order = Array.from(
-        document.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)'),
-      ).map((row) => row.getAttribute('row-id'));
-      expect(order).toEqual(['2', '1']);
-      expect(cell('1', 'gross')).toBe('29,400');
-      expect(cell('1', 'net')).toBe('19,316');
-      expect(cell('2', 'gross')).toBe('12,000');
-      expect(cell('2', 'net')).toBe('10,160');
-      expect(cell('2', 'sellers')).toBe(language === 'ur' ? 'کریم' : 'Karim');
-      expect(cell('1', 'status')).toBe(message(language, 'bikri-status-saved'));
+  it('today’s list is newest first, with the stored gross and net of both events', async () => {
+    vi.mocked(bikriApi.bikriList).mockResolvedValue(LIST_DAY);
+    await renderApp('/bikri/today');
+    await waitFor(() => {
+      expect(cell('1', 'number')).toBe('1');
     });
-
-    it('the register of the buyers shows the backend’s totals; with no side there is no totals row', async () => {
-      vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY);
-      await renderApp('/bikri/pukhta');
-      await waitFor(() => {
-        expect(cell('0', 'bikri')).toBe('2');
-      });
-      // No side: every sum is null, so there is no totals row.
-      const pinned = () => document.querySelector('.ag-row-pinned');
-      expect(pinned()).toBeNull();
-      cleanup();
-      vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY_BUYERS);
-      await renderApp('/bikri/pukhta');
-      await waitFor(() => {
-        expect(
-          visible(document.querySelector('.ag-row-pinned [col-id="amount"]')?.textContent),
-        ).toBe('12,800');
-      });
-      expect(visible(pinned()?.querySelector('[col-id="state"]')?.textContent)).toBe(
-        message(language, 'pukhta-state-due', { amount: '0' }),
-      );
-    });
-
-    it('the register shows Shahid’s line as paid, 12,800', async () => {
-      vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(REGISTER_DAY);
-      await renderApp('/bikri/pukhta');
-      await waitFor(() => {
-        expect(cell('0', 'bikri')).toBe('2');
-      });
-      expect(cell('0', 'amount')).toBe('12,800');
-      expect(cell('0', 'name')).toBe(language === 'ur' ? 'شاہد' : 'Shahid');
-      expect(cell('0', 'state')).toBe(message(language, 'pukhta-state-paid'));
-    });
-  },
-);
+    const order = Array.from(document.querySelectorAll('.ag-row[row-id]:not(.ag-row-pinned)')).map(
+      (row) => row.getAttribute('row-id'),
+    );
+    expect(order).toEqual(['2', '1']);
+    expect(cell('1', 'gross')).toBe('29,400');
+    expect(cell('1', 'net')).toBe('19,316');
+    expect(cell('2', 'gross')).toBe('12,000');
+    expect(cell('2', 'net')).toBe('10,160');
+    expect(cell('2', 'sellers')).toBe(language === 'ur' ? 'کریم' : 'Karim');
+    expect(cell('1', 'status')).toBe(message(language, 'bikri-status-saved'));
+  });
+});
 
 describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (language) => {
   beforeEach(() => {

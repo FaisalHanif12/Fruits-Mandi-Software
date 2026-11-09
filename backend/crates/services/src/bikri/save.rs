@@ -31,10 +31,10 @@ use mandi_domain::ledger::{PostingType, SourceType};
 use serde_json::json;
 
 use super::rows::{
-    LotCharges, LotShape, Posting, check_shares, insert_sales_and_facts, lot_columns, lot_person,
+    LotCharges, LotShape, Posting, check_shares, insert_sales_and_facts, lot_columns,
     lot_running_totals, match_posting, one_based, posting_sums, shape, stored_line_ids,
 };
-use super::shared::{Basis, data, switches, work_out};
+use super::shared::{Basis, data, refresh_chukta_index, switches, work_out};
 use crate::audit::Event;
 use crate::auth::Actor;
 use crate::cash;
@@ -66,7 +66,7 @@ pub fn save(
     let settings = rules::overrides(ctx)?;
     let switches = switches(&settings);
     let now = ctx.now_text();
-    ctx.db.write(|tx| {
+    let saved = ctx.db.write(|tx| {
         let worked = work_out(tx, prepared, &rule_set, switches, &Basis::new_bikri())?;
         if !worked.errors.is_empty() {
             return Err(ServiceError::from(worked.errors.clone()));
@@ -199,7 +199,9 @@ pub fn save(
             entry_id: posted.entry_id,
             preview: worked.preview(),
         })
-    })
+    })?;
+    refresh_chukta_index(ctx, &input.draft);
+    Ok(saved)
 }
 
 /// Adds one lot with the totals `calc_posting` worked out (PRD FR-11.6, B20). The running totals
@@ -213,7 +215,6 @@ fn insert_lot(
     index: usize,
     shaped: &LotShape<'_>,
 ) -> Result<i64, ServiceError> {
-    let person = lot_person(shaped)?;
     let running = lot_running_totals(&LotCharges::of_totals(shaped.totals), posting_sums(shaped)?)?;
     let totals = shaped.totals;
     if running.gross_paisa != totals.gross.as_paisa()
@@ -223,13 +224,6 @@ fn insert_lot(
     {
         return Err(data("the stored totals of a lot differ from its preview"));
     }
-    let columns = lot_columns(
-        tx,
-        bikri_id,
-        one_based(index)?,
-        shaped,
-        person.as_ref(),
-        &running,
-    )?;
+    let columns = lot_columns(tx, bikri_id, one_based(index)?, shaped, &running)?;
     Ok(repo::insert_lot(tx, &columns, user_id, now)?)
 }

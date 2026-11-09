@@ -34,20 +34,12 @@ export function entryPartyOf(record: AnswerRecord) {
   return picked(record);
 }
 
-/** The party of a report: an account, or one person inside a one-time account (PRD FR-13.5). */
-function partyOf(party: SourceParty | null): Pick<ReportSearch, 'party' | 'person'> {
+/** The party of a report: an account, and for a چکتا buyer his key too (PRD FR-13.5, FR-13.7). */
+function partyOf(party: SourceParty | null): Pick<ReportSearch, 'party' | 'person_key'> {
   if (party === null) return {};
-  if (party.person_key === null) return { party: party.record.id };
-  return {
-    person: {
-      accountId: party.record.id,
-      personKey: party.person_key,
-      name_ur: party.record.name_ur,
-      name_en: party.record.name_en,
-      phone: '',
-      last_date: '',
-    },
-  };
+  return party.person_key === null
+    ? { party: party.record.id }
+    : { party: party.record.id, person_key: party.person_key };
 }
 
 /** The address of a report for the filters its tool was read with. */

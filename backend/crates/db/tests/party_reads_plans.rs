@@ -173,7 +173,7 @@ fn the_method_before_a_day_is_picked_by_the_entries_before_it_and_the_party_aske
     // A person key on an ordinary account: line by line again.
     let stray = common::draft_entry(&conn, 100);
     conn.execute(
-        "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa)
+        "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa)
          VALUES (?1, 1, ?2, 'stray', 100, 0)",
         mandi_db::rusqlite::params![stray, buyer],
     )

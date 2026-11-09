@@ -49,7 +49,6 @@ fn buyer_akram(env: &TestEnv, owner: &auth::Actor) -> i64 {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: "اکرم ٹول ٹیکس".into(),
@@ -409,16 +408,16 @@ fn the_newest_entry_cannot_be_removed_without_a_trace() {
 }
 
 #[test]
-fn a_line_on_a_pukhta_khata_account_needs_its_person_and_others_must_not_have_one() {
+fn a_line_on_a_chukta_khata_account_needs_its_person_and_others_must_not_have_one() {
     // PRD FR-13.5: balances there are kept per person.
     let (dir, env, owner) = ready();
     let cash = id_of(&env, "01010001");
-    let pukhta = id_of(&env, "0030");
-    let build = |person: Option<&str>, on_pukhta: bool, other_person: Option<&str>| {
+    let chukta = id_of(&env, "0030");
+    let build = |person: Option<&str>, on_chukta: bool, other_person: Option<&str>| {
         let mut a = LedgerLine::new(AccountId::new(cash), Side::Dr, rupees(100));
         a.person_key = other_person.map(str::to_owned);
         let mut b = LedgerLine::new(
-            AccountId::new(if on_pukhta { pukhta } else { cash }),
+            AccountId::new(if on_chukta { chukta } else { cash }),
             Side::Cr,
             rupees(100),
         );
@@ -443,7 +442,7 @@ fn a_line_on_a_pukhta_khata_account_needs_its_person_and_others_must_not_have_on
             )
         })
     };
-    // No person on a پختہ کھاتہ line, an empty person, and a person on a normal account.
+    // No person on a چکتا کھاتہ line, an empty person, and a person on a normal account.
     assert!(matches!(
         try_post(build(None, true, None)),
         Err(ServiceError::Data(_))
@@ -463,13 +462,13 @@ fn a_line_on_a_pukhta_khata_account_needs_its_person_and_others_must_not_have_on
     );
     // The right way works, and the person is kept on the line.
     try_post(build(Some("shahid|0300"), true, None)).unwrap();
-    let person = ledger::person_balance(&env.ctx, pukhta, "shahid|0300").unwrap();
+    let person = ledger::person_balance(&env.ctx, chukta, "shahid|0300").unwrap();
     assert_eq!(
         (person.side, person.amount_paisa),
         (BalanceSide::Cr, rupees(100))
     );
     assert_eq!(
-        ledger::person_balance(&env.ctx, pukhta, "naseer|0301")
+        ledger::person_balance(&env.ctx, chukta, "naseer|0301")
             .unwrap()
             .side,
         BalanceSide::Zero

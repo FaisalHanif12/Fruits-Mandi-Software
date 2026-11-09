@@ -1,7 +1,6 @@
 // The oldest buyer dues on the dashboard (PRD 9.3): the ten buyers whose oldest unpaid bill is the
 // oldest, with his city, what he owes and how many days old the bill is. The buyer's name opens his
-// ledger (a one-time person inside a پختہ کھاتہ account, his own lines). The figures and the days
-// are the backend's. With nothing owed it says so (PRD FR-7.46).
+// ledger. The figures and the days are the backend's. With nothing owed it says so (PRD FR-7.46).
 
 import { Localized, useLocalization } from '@fluent/react';
 import { WalletCards } from 'lucide-react';
@@ -45,12 +44,7 @@ export function OldestDues({ rows }: { rows: readonly DashboardDue[] }) {
           type="button"
           data-nav-item
           onClick={() => {
-            open(
-              ledgerOf(row.party.account_id, row.party.person_key, {
-                name_ur: row.party.name_ur,
-                name_en: row.party.name_en,
-              }),
-            );
+            open(ledgerOf(row.party.account_id));
           }}
           className="flex min-h-target items-center gap-2 rounded-1 text-start text-primary underline"
         >

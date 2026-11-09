@@ -25,7 +25,7 @@
 //! - **`shop`**: a lot of our shop with a balance. The backend takes the item and packing from the
 //!   lot (what is sent in `item_id` and `packing_id` is ignored, and the preview answers them). The
 //!   lot's `qty_taken` goes up, a stock move of kind `taken` is written, and the lot's seller (an
-//!   account, a پختہ کھاتہ person, or a garden's account) is credited the value with no commission.
+//!   account, or a garden's account) is credited the value with no commission.
 //!   That credit is a payable posting (FR-7.59) and never adjusts an advance. More than the lot's
 //!   balance is `ERR_QTY_EXCEEDS_LOT` on `qty`. Trip goods are not offered, and a lot of a closed
 //!   garden is refused with `ERR_GARDEN_CLOSED` on `lot_id`.
@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::accounts::RecordRef;
-use crate::bikri::{RateHint, SavedPukhta};
+use crate::bikri::RateHint;
 use crate::error::FieldError;
 use crate::money::Paisa;
 use crate::paging::{MonthSubtotal, SortInput};
@@ -202,8 +202,6 @@ pub struct FruitPart {
 pub struct FruitCredit {
     /// The lot's seller, or the other agent. A garden's account when the lot is a garden's.
     pub account: RecordRef,
-    /// The one-time seller of a پختہ کھاتہ lot. Null for any other account.
-    pub pukhta: Option<SavedPukhta>,
 }
 
 /// What the lot looks like before and after this entry (C16). Null for `other_shop`.
@@ -422,8 +420,6 @@ pub struct FruitRow {
     pub lot: Option<FruitLotRef>,
     /// Who is credited: the lot's seller or the other agent.
     pub credit_account: RecordRef,
-    /// The one-time seller of a پختہ کھاتہ lot, if any.
-    pub pukhta: Option<SavedPukhta>,
     /// The item.
     pub item: RecordRef,
     /// The packing.
@@ -581,8 +577,6 @@ pub struct FruitLotRow {
     pub received_date: String,
     /// The seller account (a garden's account for a garden's lot).
     pub seller: RecordRef,
-    /// The one-time seller of a پختہ کھاتہ lot, if any.
-    pub pukhta: Option<SavedPukhta>,
     /// The item.
     pub item: RecordRef,
     /// The packing.

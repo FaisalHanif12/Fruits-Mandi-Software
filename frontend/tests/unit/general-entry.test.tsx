@@ -1,7 +1,7 @@
-// The جنرل screen (plan 17 F2, PRD 16.4, FR-6.5, FR-13.5, FR-6.7, entry-grid skill), in the Urdu and
+// The جنرل screen (plan 17 F2, PRD 16.4, FR-6.5, FR-6.7, entry-grid skill), in the Urdu and
 // in the English app, by keyboard, against a fake backend: a grid of lines (account, بنام, جمع,
 // note), the totals, the difference and the split from the backend, Save off until the backend says
-// the entry is balanced, the person of a پختہ کھاتہ line, problems on the right cell, the cash box,
+// the entry is balanced, problems on the right cell, the cash box,
 // and the language switch in the middle of an entry.
 
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -23,7 +23,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/cashbook/api');
 vi.mock('../../src/features/vouchers/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/accounts/api');
@@ -34,7 +33,6 @@ const nameOf = (language: Language, ur: string, en: string) => (language === 'ur
 
 const ELECTRICITY = '05010001';
 const CASH = '01010001';
-const PUKHTA = '0030';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -128,8 +126,8 @@ describe.each(LANGUAGES)('the جنرل screen (%s)', (language) => {
     expect(vi.mocked(cashbookApi.generalSave).mock.calls[0]?.[0]).toMatchObject({
       date: '10-10-2026',
       lines: [
-        { account_id: 501, dr: '3000', cr: '', person_key: null },
-        { account_id: 1, dr: '', cr: '3000', person_key: null },
+        { account_id: 501, dr: '3000', cr: '' },
+        { account_id: 1, dr: '', cr: '3000' },
       ],
       confirm_cash_below_zero: false,
     });
@@ -207,38 +205,6 @@ describe.each(LANGUAGES)('the جنرل screen (%s)', (language) => {
     // The grid and its totals are still there; the entry cannot be saved.
     expect(cellOf(grid(), 1, 'cr')).toBeInTheDocument();
     expect(saveButton()).toBeDisabled();
-  });
-
-  it('a line on a پختہ کھاتہ account asks for the person, then goes on to its بنام cell (FR-13.5)', async () => {
-    const { user } = await open();
-    await user.click(cellOf(grid(), 0, 'account'));
-    await typeCodeAndEnter(user, PUKHTA);
-    // Enter went to the person field below the grid, not to the amount.
-    const person = await screen.findByRole('combobox', {
-      name: (name) =>
-        visible(name).includes(message(language, 'cashbook-general-people-title')) ||
-        visible(name).startsWith(nameOf(language, 'سطر', 'Person for line')),
-    });
-    await waitFor(() => {
-      expect(person).toHaveFocus();
-    });
-    await user.keyboard('sha');
-    await screen.findAllByRole('option');
-    await user.keyboard('{Enter}');
-    await waitFor(() => {
-      expect(focusedIn(grid())).toBe('0:dr');
-    });
-    expect(textOf(grid(), 0, 'person')).toContain('03000000000');
-    await user.keyboard('1000{Enter}');
-    // The preview is asked with the person's key and the amount as typed.
-    await waitFor(() => {
-      const lastCall = vi.mocked(cashbookApi.generalPreview).mock.calls.at(-1)?.[0];
-      expect(lastCall?.lines[0]).toMatchObject({
-        account_id: 23,
-        person_key: 'shahid|03000000000',
-        dr: '1000',
-      });
-    });
   });
 
   it('cash below zero asks before a line credits روکڑ, and No saves nothing', async () => {

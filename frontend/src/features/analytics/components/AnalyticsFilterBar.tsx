@@ -1,6 +1,6 @@
 // The filter boxes of an analytics view (PRD 18.1, FR-18.1): the period with its shortcuts and the two
 // dates, the grouping of views D and G, the partner (F, G, I, J), the garden (I and others), the layout of the trips (J), the item,
-// seller, buyer (and one person inside a one-time buyer account), city, اڈا, the side (both, seller,
+// seller, buyer, city, اڈا, the side (both, seller,
 // buyer), the trip, the goods (all, consigned, trip, garden) and the comparison. They combine freely. Each
 // view shows the boxes the catalogue says it takes. The boxes are plain fields of the shared kit:
 // arrows move between them, a picker searches both scripts and never converts English letters
@@ -31,8 +31,7 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { GardenFilterSelect } from '../../gardens';
-import { isPukhtaCode } from '../../pukhta_khata';
-import { ReportPartnerSelect, ReportPersonPicker } from '../../reports';
+import { ReportPartnerSelect } from '../../reports';
 import {
   COMPARE_CHOICES,
   GOODS_CHOICES,
@@ -337,39 +336,12 @@ export function AnalyticsFilterBar({
             showCard={false}
             value={state.buyer}
             onChange={(hit) => {
-              // Another buyer has other people, so the person of the last one is let go.
-              onChange({ buyer: valueOf(hit), person: null, personText: '' });
+              onChange({ buyer: valueOf(hit) });
             }}
           />
         )}
       </Field>,
     );
-    // A one-time buyer account keeps its lines per person: one of them can be picked (FR-13.5).
-    if (state.buyer !== null && isPukhtaCode(state.buyer.code)) {
-      const accountId = state.buyer.id;
-      folded.push(
-        <Field
-          key="person"
-          label={<Localized id="report-filter-person" />}
-          error={fieldError(error, 'filters.buyer.person_key')}
-        >
-          {(control) => (
-            <ReportPersonPicker
-              {...control}
-              person={state.person}
-              text={state.personText}
-              accountId={accountId}
-              onTextChange={(personText) => {
-                onChange({ person: null, personText });
-              }}
-              onPick={(person) => {
-                onChange({ person, personText: '' });
-              }}
-            />
-          )}
-        </Field>,
-      );
-    }
   }
   if (has('city')) {
     folded.push(

@@ -68,7 +68,7 @@ export type ReportResolvedFilters = {
    */
   group_by?: ReportGroupBy;
   /**
-   * The paid or due filter of R9. Missing for all lines.
+   * The paid or due filter of R38. Missing for all lines.
    */
   status?: ReportPaidFilter;
   /**

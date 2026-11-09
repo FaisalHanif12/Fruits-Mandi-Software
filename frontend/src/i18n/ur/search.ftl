@@ -45,6 +45,7 @@ search-add-row = { $noun ->
    [staff] عملے کا نیا فرد شامل کریں
    [lent-person] نیا شخص شامل کریں
    [khata] نیا { -alag-khata } شامل کریں
+   [chukta] نیا { -chukta } { -gahak } شامل کریں
 }
 # review: pending
 search-add-row-named = { $noun ->
@@ -62,6 +63,7 @@ search-add-row-named = { $noun ->
    [staff] «{ $text }» کو عملے کا نیا فرد بنائیں
    [lent-person] «{ $text }» کو نیا شخص بنائیں
    [khata] «{ $text }» کو نیا { -alag-khata } بنائیں
+   [chukta] «{ $text }» کو نیا { -chukta } { -gahak } بنائیں
 }
 
 ### The short form of "add it here" (plan 41, PRD FR-7.69).

@@ -35,19 +35,9 @@ pub enum PartyKind {
 pub struct AccountFacts {
     /// What kind of party it is.
     pub kind: PartyKind,
-    /// True for the two shared پختہ کھاتہ accounts (one-time people typed on the line, PRD Section 13).
-    pub is_pukhta: bool,
-    /// True for a پختہ party's own account (plan 47, PRD FR-13.11). He is a full account of his side:
-    /// no name is typed on his lines and he has no person key, so `is_pukhta` is false. Cash first: as
-    /// a seller his lot's نقد starts as its صافی بکری (PRD FR-13.10). As a buyer his payment type
-    /// follows `credit_allowed`, which starts off on his account form.
-    pub is_pukhta_party: bool,
-    /// Only for a پختہ party who is a seller (plan 47, PRD FR-13.11, A79): his open advances that a
-    /// NEW seller credit of his in this posting could adjust, oldest first (PRD FR-15.8): the
-    /// advances before the credit, less what the credits before it already take. Read from the
-    /// database with the same working the save uses, with the posting being edited taken out. 0 for
-    /// every other account. The cash default of his lot is the credit less what the credit adjusts.
-    pub advance_available: Paisa,
+    /// True for the چکتا کھاتہ account (walk-in buyers typed on the line, PRD Section 13). It is a
+    /// buyer only and always pays in full (PRD FR-13.5).
+    pub is_chukta: bool,
     /// True for the nameless cash buyer نقدی منڈی (PRD 10.4): always cash.
     pub is_naqdi_mandi: bool,
     /// True for the اپنا مال account (PRD FR-12.26). It is accepted only as the seller of a lot

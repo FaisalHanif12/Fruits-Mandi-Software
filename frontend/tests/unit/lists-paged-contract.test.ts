@@ -7,7 +7,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import * as mastersApi from '../../src/features/masters/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import * as rulesApi from '../../src/features/rules/api';
 import * as vouchersApi from '../../src/features/vouchers/api';
 import * as invoke from '../../src/shared/api/invoke';
@@ -36,7 +35,7 @@ beforeEach(() => {
 });
 
 describe('each paged wrapper sends exactly the request the backend’s own test sent', () => {
-  it('bikri_list, bikri_stock_list, pukhta_register', async () => {
+  it('bikri_list, bikri_stock_list', async () => {
     call.mockResolvedValue(bikriReal.LIST_DAY);
     await bikriApi.bikriList(bikriReal.LIST_DAY_REQUEST as never);
     expect(call).toHaveBeenLastCalledWith('bikri_list', { input: bikriReal.LIST_DAY_REQUEST });
@@ -45,11 +44,6 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
     expect(call).toHaveBeenLastCalledWith('bikri_stock_list', { input: stockRequest });
     await bikriApi.bikriStockList(stockOwnRequest as never);
     expect(call).toHaveBeenLastCalledWith('bikri_stock_list', { input: stockOwnRequest });
-    call.mockResolvedValue(bikriReal.REGISTER_DAY);
-    await pukhtaApi.pukhtaRegister(bikriReal.REGISTER_DAY_REQUEST as never);
-    expect(call).toHaveBeenLastCalledWith('pukhta_register', {
-      input: bikriReal.REGISTER_DAY_REQUEST,
-    });
   });
 
   it('vouchers_list, two pages', async () => {
@@ -106,15 +100,9 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
 });
 
 describe('the real answers are pages: rows, the count and the totals of the whole filter', () => {
-  it('the list of بکری, the register and the stock list have the keys of a page', () => {
+  it('the list of بکری and the stock list have the keys of a page', () => {
     // `months`: the subtotals of each month, empty unless the list asked for them (plan 38 R4).
     expect(Object.keys(bikriReal.LIST_DAY).sort()).toEqual([
-      'months',
-      'rows',
-      'total_count',
-      'totals',
-    ]);
-    expect(Object.keys(bikriReal.REGISTER_DAY).sort()).toEqual([
       'months',
       'rows',
       'total_count',
@@ -127,18 +115,6 @@ describe('the real answers are pages: rows, the count and the totals of the whol
     }
     // The own rows come after the lots and are counted with them (backend, plan 17b T1).
     expect(stockOwn.total_count).toBe(stockOwn.rows.length + stockOwn.own_rows.length);
-  });
-
-  it('the register has sums only when a side is chosen; with none they are all null', () => {
-    expect(bikriReal.REGISTER_DAY_REQUEST).not.toHaveProperty('side');
-    const none = bikriReal.REGISTER_DAY.totals;
-    expect([none.qty, none.amount, none.commission, none.open]).toEqual([null, null, null, null]);
-    expect(bikriReal.REGISTER_DAY_BUYERS_REQUEST).toMatchObject({ side: 'buyer' });
-    const given = bikriReal.REGISTER_DAY_BUYERS.totals;
-    expect(given.qty).not.toBeNull();
-    expect(given.amount).not.toBeNull();
-    expect(given.commission).not.toBeNull();
-    expect(given.open).not.toBeNull();
   });
 
   it('the second page has other rows and the same count and totals as the first', () => {
@@ -162,7 +138,6 @@ describe('the real answers are pages: rows, the count and the totals of the whol
   it('every request carries an explicit offset and limit', () => {
     for (const request of [
       bikriReal.LIST_DAY_REQUEST,
-      bikriReal.REGISTER_DAY_REQUEST,
       stockRequest,
       stockOwnRequest,
       vouchersReal.REQUEST_LIST_ALL,

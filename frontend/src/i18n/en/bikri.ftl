@@ -235,17 +235,6 @@ bikri-tag-percent = { $value }%
 # review: pending
 bikri-tag-per-unit = { $value } per { -nag }
 
-## A one-time person of the { -pukhta-khata } accounts (PRD FR-13.2).
-
-# review: pending
-bikri-pukhta-name-ur = Urdu name
-
-# review: pending
-bikri-pukhta-name-en = English name
-
-# review: pending
-bikri-pukhta-phone = Phone number
-
 ## The summary (PRD 12.5), the partner split (PRD FR-17.4) and the cash note (PRD FR-6.7).
 
 # review: pending
@@ -291,6 +280,15 @@ bikri-line-missing-qty = Enter the quantity.
 # The grey figure is only the last rate (PRD FR-7.53). It is not a rate that was typed and it is not saved.
 # review: pending
 bikri-line-missing-rate = Enter the rate. The grey figure is only the last rate; it is not saved.
+
+# The text typed in the buyer cell was never chosen from the list (D8 Bug 1). $text: what was typed.
+# review: pending
+bikri-line-buyer-left = “{ $text }” was typed, but no buyer was chosen. Pick the buyer from the list.
+
+# A line with something typed on it shows no figures and the backend gave no other reason. It is
+# never left without a word (D8 Bug 1).
+# review: pending
+bikri-line-no-figures = No figures yet. Check this line and its lot.
 
 # review: pending
 bikri-summary-seller-side = Seller side

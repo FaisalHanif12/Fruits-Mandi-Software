@@ -10,7 +10,7 @@ only).
 ## What the screen does
 
 - **Form** (`components/VoucherForm.tsx`): type list, date, account (`AccountPicker` with
-  `PartyCard`), the one-time person (the merged list of PRD FR-7.29), amount, collector (receipt),
+  `PartyCard`), amount, collector (receipt),
   reason (payment to a buyer is cash lent), expected goods
   (advance), narration. Current and new balance come from the preview.
 - **Waiting list** (PRD FR-15.1, `components/WaitingList.tsx`, `useSaveList.ts`): `F2` puts the form in

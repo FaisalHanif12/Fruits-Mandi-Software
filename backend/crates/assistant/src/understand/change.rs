@@ -164,13 +164,13 @@ pub(super) fn asks_to_read(scan: &Scan) -> bool {
 }
 
 /// The accounts the question names, found for sure, with their roles: the only ones a route can
-/// carry. A one-time person (پختہ کھاتہ) is not an account to choose.
+/// carry. A walk-in buyer (چکتا کھاتہ) is not an account to choose, and the search of names
+/// never gives him as an account hit.
 fn named(names: &Names) -> Vec<&PartyHit> {
     names
         .parties
         .iter()
         .filter_map(|p| p.outcome.hit())
-        .filter(|hit| !hit.pukhta)
         .collect()
 }
 

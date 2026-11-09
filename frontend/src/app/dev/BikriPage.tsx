@@ -2,7 +2,7 @@
 // answered by a stand-in for the backend with the numbers of Event 1 (PRD 4.4), so they can be
 // opened in a plain browser tab and photographed in both languages and at every window size. The
 // flags in the hash choose the screen: none is the sale book; `?id=41` a saved بکری; `?id=41&edit=7`
-// its first entry open for edit; `?today` the list; `?pukhta` the register; `?stock` the goods left;
+// its first entry open for edit; `?today` the list; `?stock` the goods left;
 // `?over` Umar's case of plan 57 (50 in the lot, one line; type 70 over its quantity); `?umar` Umar's case of D8 plan 61 (a lot of 200, type three lines, the third with the rate 900); `?thousand` 1,000 sale lines in one lot, to time typing, moving and the summary; `?later&lot=40` a later sale; `?closed` a closed day; `?offer` adds the start-up offer; `?own` the
 // lot of trip goods of E2E-34 (with `?stock`, `?id=1` and `?id=1&edit=4` the same lot saved, in
 // the goods left list and open for edit), answered with the backend's real files; `?tripday` a new
@@ -27,7 +27,6 @@ import { LaterSalePage } from '../../features/bikri/pages/LaterSalePage';
 import { StockPage } from '../../features/bikri/pages/StockPage';
 import { TodayBikriPage } from '../../features/bikri/pages/TodayBikriPage';
 import { PrintingTab } from '../../features/settings/components/PrintingTab';
-import { PukhtaRegisterPage } from '../../features/pukhta_khata/pages/PukhtaRegisterPage';
 import { useLanguage } from '../../shared/i18n';
 import { useEscapeDispatcher } from '../../shared/keyboard';
 import { Button, CashConfirmDialog } from '../../shared/ui';
@@ -59,11 +58,9 @@ export function BikriPage() {
           current={
             devFlag('today')
               ? 'today'
-              : devFlag('pukhta')
-                ? 'pukhta'
-                : devFlag('stock') || devFlag('later')
-                  ? 'stock'
-                  : 'bikri-book'
+              : devFlag('stock') || devFlag('later')
+                ? 'stock'
+                : 'bikri-book'
           }
           onSelect={() => undefined}
         />
@@ -104,8 +101,6 @@ export function BikriPage() {
         <PrintingTab />
       ) : devFlag('today') ? (
         <TodayBikriPage />
-      ) : devFlag('pukhta') ? (
-        <PukhtaRegisterPage />
       ) : devFlag('stock') ? (
         <StockPage />
       ) : devFlag('later') ? (

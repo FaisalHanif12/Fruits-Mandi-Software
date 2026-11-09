@@ -29,6 +29,16 @@ fn scans_a_whole_table(text: &str) -> bool {
         .any(|line| line.starts_with("SCAN ") && !line.contains("USING"))
 }
 
+/// True if the plan reads a whole journal table: a `SCAN` of one of the aliases the party ledger
+/// queries give them, with no index. (`SCAN days` is the party's own daily sums.)
+fn scans_a_journal_table(text: &str) -> bool {
+    text.lines().any(|line| {
+        ["SCAN l", "SCAN e", "SCAN o", "SCAN r", "SCAN journal"]
+            .iter()
+            .any(|start| line.starts_with(start) && !line.contains("USING"))
+    })
+}
+
 fn voucher_filter<'a>(
     voucher_type: Option<mandi_core::vouchers::VoucherType>,
     day: Option<&'a str>,
@@ -42,7 +52,6 @@ fn voucher_filter<'a>(
         from: day,
         to: day,
         account_id: account,
-        person_key: None,
     }
 }
 
@@ -59,6 +68,8 @@ fn bikri_filter(day: Option<&str>) -> BikriFilter {
         truck_prefix: None,
         limit: 100,
         offset: 0,
+        // The buyer filters of the find (plan 67) are not paged lists' business.
+        ..BikriFilter::default()
     }
 }
 
@@ -161,4 +172,53 @@ fn a_page_of_bikri_and_its_totals_search_an_index() {
         page.contains("SCAN e USING INDEX idx_bikri_entries_date"),
         "{page}"
     );
+}
+
+#[test]
+fn the_party_ledgers_queries_search_an_index() {
+    use mandi_db::party_ledgers::{list_page_sql, statement_days_sql, statement_totals_sql};
+    let (_dir, conn) = setup();
+    let none = Value::Null;
+    // A statement reads the party's own lines through the covering index of the balances, never
+    // every journal line (3,500,000 of them, NFR-SCL-1). The entry of each line is found by its key.
+    let days = plan(
+        &conn,
+        &statement_days_sql(),
+        &[
+            Value::Integer(7),
+            none.clone(),
+            none.clone(),
+            Value::Integer(100),
+            Value::Integer(0),
+        ],
+    );
+    assert!(
+        days.contains("USING COVERING INDEX idx_journal_lines_account_amounts (account_id=?)"),
+        "{days}"
+    );
+    // `SCAN days` reads the party's own daily sums, not a table.
+    assert!(!scans_a_journal_table(&days), "{days}");
+    let totals = plan(
+        &conn,
+        &statement_totals_sql(),
+        &[Value::Integer(7), none.clone(), none.clone()],
+    );
+    assert!(
+        totals.contains("USING COVERING INDEX idx_journal_lines_account_amounts (account_id=?)"),
+        "{totals}"
+    );
+    assert!(!scans_a_journal_table(&totals), "{totals}");
+    // The list of parties reads the accounts of one control and nothing else.
+    let page = plan(
+        &conn,
+        &list_page_sql(),
+        &[
+            Value::Text("0304".into()),
+            Value::Text(String::new()),
+            Value::Text(String::new()),
+            Value::Integer(100),
+            Value::Integer(0),
+        ],
+    );
+    assert!(!page.contains("journal_lines"), "{page}");
 }

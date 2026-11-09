@@ -401,7 +401,7 @@ fn row_counts(dir: &tempfile::TempDir) -> Vec<(String, i64)> {
 fn pre_reads_fill_the_first_request_and_keep_the_privacy_and_read_only_rules() {
     // Plan 59 D, Q7 and NFR-AI-6: the reads the app makes ahead of the model's first call for a question it
     // cannot answer whole are the tools themselves (`tool_result_json`, one read snapshot). On the worked day,
-    // رحیم has a phone, an address and a note, and a one-time buyer has a phone: none of them is in a request,
+    // رحیم has a phone, an address and a note, and a چکتا buyer has a phone: none of them is in a request,
     // the first request holds tool results (the pre-reads), and nothing is written but the question log.
     let w = worked::worked_day();
     worked::events_1_to_5(&w);

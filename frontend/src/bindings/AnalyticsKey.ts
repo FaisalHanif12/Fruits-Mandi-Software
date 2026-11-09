@@ -20,7 +20,7 @@ export type AnalyticsKey = {
    */
   buyer_id: number | null;
   /**
-   * One person of a پختہ کھاتہ account.
+   * One person of a چکتا کھاتہ account.
    */
   person_key: string | null;
   /**

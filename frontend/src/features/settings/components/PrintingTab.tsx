@@ -3,7 +3,8 @@
 // print is written with 0-9 (PRD FR-7.32, Umar 09-11-2026).
 // Copies are typed text: the backend checks 1 to 99 and names the field `copies` when it is wrong.
 // The four states: the settings load, they fail with a retry, the printer list is empty (it is
-// only known on Windows, and the default printer is then used) or failed, and the data.
+// only known on Windows: on a Mac the system print window lets the user choose, so the printer choice
+// is not shown, plan 69) or failed, and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useState } from 'react';
@@ -39,7 +40,6 @@ const FIELDS = ['copies', 'printer', 'print_after_save'];
 interface FormValues {
   paper_seller_bill: Paper;
   paper_buyer_slips: Paper;
-  paper_pukhta_slip: Paper;
   paper_receipt_slip: Paper;
   paper_collection_list: Paper;
   printer: string;
@@ -51,7 +51,6 @@ function valuesOf(saved: PrintingSettings): FormValues {
   return {
     paper_seller_bill: saved.paper_seller_bill,
     paper_buyer_slips: saved.paper_buyer_slips,
-    paper_pukhta_slip: saved.paper_pukhta_slip,
     paper_receipt_slip: saved.paper_receipt_slip,
     paper_collection_list: saved.paper_collection_list,
     printer: saved.printer,
@@ -64,7 +63,6 @@ function sameValues(a: FormValues, b: FormValues): boolean {
   return (
     a.paper_seller_bill === b.paper_seller_bill &&
     a.paper_buyer_slips === b.paper_buyer_slips &&
-    a.paper_pukhta_slip === b.paper_pukhta_slip &&
     a.paper_receipt_slip === b.paper_receipt_slip &&
     a.paper_collection_list === b.paper_collection_list &&
     a.printer === b.printer &&
@@ -76,7 +74,6 @@ function sameValues(a: FormValues, b: FormValues): boolean {
 const PAPER_FIELDS = [
   { field: 'paper_seller_bill', doc: 'seller_bill' },
   { field: 'paper_buyer_slips', doc: 'buyer_slips' },
-  { field: 'paper_pukhta_slip', doc: 'pukhta_slip' },
   { field: 'paper_receipt_slip', doc: 'receipt_slip' },
   { field: 'paper_collection_list', doc: 'collection_list' },
 ] as const;
@@ -116,6 +113,9 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
   // computer). It stays in the list, so opening this tab never changes it by itself.
   const names = printers.data ?? [];
   const known = values.printer === '' || names.includes(values.printer);
+  // A computer with no list of printers (a Mac, plan 69) has nothing to choose: the control is not
+  // drawn. A printer that was saved earlier stays in view, so it can be set back to the default.
+  const noPrinterChoice = printers.isSuccess && names.length === 0 && savedValues.printer === '';
   const printerOptions = [
     {
       value: DEFAULT_PRINTER,
@@ -172,41 +172,41 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
       </section>
 
       <section className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <Field
-            label={<Localized id="print-settings-printer" />}
-            error={fieldError(error, 'printer')}
-            hint={
-              printers.isPending ? (
-                <Localized id="common-loading" />
-              ) : printers.isError ? (
-                <span className="flex flex-wrap items-center gap-2">
-                  <Localized id="print-settings-printers-failed" />
-                  <LinkButton
-                    onClick={() => {
-                      void printers.refetch();
-                    }}
-                  >
-                    <Localized id="common-retry" />
-                  </LinkButton>
-                </span>
-              ) : names.length === 0 ? (
-                <Localized id="print-settings-printer-none" />
-              ) : undefined
-            }
-          >
-            {(control) => (
-              <Select<string>
-                {...control}
-                value={values.printer === '' ? DEFAULT_PRINTER : values.printer}
-                onChange={(next) => {
-                  setField('printer')(next === DEFAULT_PRINTER ? '' : next);
-                }}
-                options={printerOptions}
-              />
-            )}
-          </Field>
-        </div>
+        {noPrinterChoice ? null : (
+          <div className="col-span-2">
+            <Field
+              label={<Localized id="print-settings-printer" />}
+              error={fieldError(error, 'printer')}
+              hint={
+                printers.isPending ? (
+                  <Localized id="common-loading" />
+                ) : printers.isError ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Localized id="print-settings-printers-failed" />
+                    <LinkButton
+                      onClick={() => {
+                        void printers.refetch();
+                      }}
+                    >
+                      <Localized id="common-retry" />
+                    </LinkButton>
+                  </span>
+                ) : undefined
+              }
+            >
+              {(control) => (
+                <Select<string>
+                  {...control}
+                  value={values.printer === '' ? DEFAULT_PRINTER : values.printer}
+                  onChange={(next) => {
+                    setField('printer')(next === DEFAULT_PRINTER ? '' : next);
+                  }}
+                  options={printerOptions}
+                />
+              )}
+            </Field>
+          </div>
+        )}
         <Field
           label={<Localized id="print-settings-copies" />}
           hint={<Localized id="print-settings-copies-hint" />}

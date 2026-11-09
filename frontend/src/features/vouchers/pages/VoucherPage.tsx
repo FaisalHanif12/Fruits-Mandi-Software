@@ -14,7 +14,6 @@ import { useMemo, useState } from 'react';
 import { useDayStatus } from '../../../app/use-day-status';
 import { uiErrorOf } from '../../../shared/api';
 import { useGrouping } from '../../../shared/format';
-import { useLanguage } from '../../../shared/i18n';
 import { SHORTCUTS, useEscape } from '../../../shared/keyboard';
 import { OpenOnItsScreen, useFixDayFlow } from '../../../shared/edit';
 import { useAccount } from '../../../shared/accounts';
@@ -83,16 +82,13 @@ function ClosedEntryActions({ row }: { row: VoucherRow }) {
 /** A saved voucher: the form for an edit, or the read-only view. */
 function SavedVoucher({ row, today }: { row: VoucherRow; today: string }) {
   const navigate = useNavigate();
-  const language = useLanguage();
   const grouping = useGrouping();
   const type = screenTypeOf(row.voucher_type);
   const seed = useEditSeed(row.can_edit && !row.needs_reopen ? row : null);
   const initial = useMemo(
     () =>
-      type === null || seed.data === undefined
-        ? null
-        : draftOfRow(row, type, seed.data, grouping, language),
-    [row, type, seed.data, grouping, language],
+      type === null || seed.data === undefined ? null : draftOfRow(row, type, seed.data, grouping),
+    [row, type, seed.data, grouping],
   );
   useEscape('leave', () => {
     void navigate({ to: '/bikri/voucher', search: type === null ? {} : { type } });

@@ -32,7 +32,7 @@ pub(super) struct LotRef {
     pub item_id: i64,
     /// The item's facts.
     pub item: ItemFacts,
-    /// True if an edit changed the seller, the item or the one-time seller of this lot: nothing
+    /// True if an edit changed the seller, the item or the old one-time seller of this lot: nothing
     /// stored for the old lot is kept (money agent review of plan 16).
     pub identity_changed: bool,
 }
@@ -64,7 +64,7 @@ pub(super) struct LineArgs<'a> {
 }
 
 /// The stored line of a row, if the user did not change it (PRD FR-12.20): the buyer, the
-/// one-time person, the quantity, the weight, both rates, how the buyer pays and the commissions
+/// چکتا buyer, the quantity, the weight, both rates, how the buyer pays and the commissions
 /// and لاگا typed on the line are all what was stored. A row with no `sale_id`, or whose
 /// `sale_id` is not stored in this posting, is a new line.
 pub(super) fn unchanged_stored<'a>(
@@ -84,8 +84,8 @@ pub(super) fn unchanged_stored<'a>(
     if checks::resolve_payment(buyer, row.payment_type)? != stored.payment_type {
         return None;
     }
-    let person_key = if buyer.is_pukhta {
-        Some(clean_person(&row.pukhta)?.key)
+    let person_key = if buyer.is_chukta {
+        Some(clean_person(&row.chukta)?.key)
     } else {
         None
     };
@@ -326,7 +326,7 @@ fn line_charge_of(
 }
 
 /// Works out one line: the amounts C1, the three charges, C5 and C19, and the payment type. The
-/// caller has checked the buyer, the payment type and the one-time person. Returns `None` (with
+/// caller has checked the buyer, the payment type and the چکتا buyer. Returns `None` (with
 /// the error pushed) when a number cannot be worked out.
 ///
 /// Example (PRD 4.4): 20 × 600 for Akram gives value 12,000, seller commission 720, buyer

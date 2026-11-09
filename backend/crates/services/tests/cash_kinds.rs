@@ -1789,7 +1789,6 @@ fn an_overdrawn_history_blocks_only_the_changes_that_make_it_worse() {
     let drawings = support::id_of(&w.env, "06030001");
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,
@@ -1941,7 +1940,6 @@ fn a_deep_hole_on_an_earlier_day_does_not_hide_a_new_one_on_a_later_day() {
     let drawings = support::id_of(&w.env, "06030001");
     let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,
@@ -2059,7 +2057,6 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             &ReceiptInput {
                 date: date.into(),
                 account_id: w.akram,
-                person_key: None,
                 amount: "1,000".into(),
                 removed: RemovedPaymentFields::default(),
                 collector_staff_id: None,
@@ -2075,7 +2072,6 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             &PaymentInput {
                 date: date.into(),
                 account_id: w.rahim,
-                person_key: None,
                 amount: "500".into(),
                 removed: RemovedPaymentFields::default(),
                 reason: String::new(),
@@ -2192,7 +2188,6 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
     );
     let line = |account: i64, dr: &str, cr: &str, note: Option<&str>| GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: note.map(str::to_owned),
@@ -2285,7 +2280,6 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
                 from: String::new(),
                 to: String::new(),
                 account_id: None,
-                person_key: None,
                 offset: 0,
                 limit: 0,
                 show_finished: false,
@@ -2395,7 +2389,6 @@ fn every_voucher_type_opens_for_edit_and_comes_back_unchanged() {
             search: None,
             show_finished: true,
             account_id: None,
-            person_key: None,
             voucher_type: Some(VoucherType::Receipt),
             from: String::new(),
             to: String::new(),
@@ -2430,7 +2423,6 @@ fn ids_by_type(ctx: &mandi_services::context::Context, kind: VoucherType) -> i64
             search: None,
             show_finished: true,
             account_id: None,
-            person_key: None,
             voucher_type: Some(kind),
             from: String::new(),
             to: String::new(),

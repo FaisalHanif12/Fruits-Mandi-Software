@@ -43,7 +43,6 @@ fn buyer_form(code: &str, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: AccountType::Buyer,
-        is_pukhta_party: false,
         control_id: None,
         code: code.into(),
         name_ur: ur.into(),
@@ -136,7 +135,6 @@ fn e2e_23_a_new_buyer_typed_in_english_letters_becomes_urdu_and_is_found_in_both
 fn form(kind: AccountType, code: &str, ur: &str, en: &str) -> AccountInput {
     AccountInput {
         account_type: kind,
-        is_pukhta_party: false,
         ..buyer_form(code, ur, en)
     }
 }
@@ -181,6 +179,7 @@ fn find(
             text: text.into(),
             limit: 20,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap()
@@ -324,7 +323,7 @@ fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_running_numb
         .map(|h| h.id)
         .collect();
     assert!(ids.contains(&arshad.id) && ids.contains(&karim.id));
-    // A number nobody has is unknown; the pukhta accounts (0030, 0031) have no short code.
+    // A number nobody has is unknown; the chukta accounts (0030, 0031) have no short code.
     assert_eq!(
         resolve(&env, AccountScope::Any, "2").status,
         ResolveStatus::Unknown,
@@ -356,8 +355,8 @@ fn a_field_for_any_account_lists_the_seller_and_the_buyer_with_that_running_numb
 }
 
 #[test]
-fn the_pukhta_accounts_have_no_short_code_and_no_serial_is_reserved() {
-    // Plan 32 R3, R5: the two پختہ کھاتہ accounts are found by their full code (0030, 0031) or
+fn the_chukta_accounts_have_no_short_code_and_no_serial_is_reserved() {
+    // Plan 32 R3, R5: the two چکتا کھاتہ accounts are found by their full code (0030, 0031) or
     // their name, never by a short code. No running number is the system's, so nothing is
     // `reserved` in a seller or buyer field.
     let (_dir, env, owner) = ready();
@@ -374,30 +373,31 @@ fn the_pukhta_accounts_have_no_short_code_and_no_serial_is_reserved() {
             .as_deref(),
         Some("0029999")
     );
-    // `0` and `1` are the first buyers, not the پختہ کھاتہ buyer (0030).
+    // `0` and `1` are the first buyers, not the چکتا کھاتہ buyer (0030).
     assert_eq!(
         resolve(&env, AccountScope::Buyer, "0")
             .account
             .map(|a| a.code),
         Some("0020".to_owned())
     );
-    let pukhta = resolve(&env, AccountScope::Buyer, "0030");
-    assert_eq!(pukhta.status, ResolveStatus::Found);
+    // چکتا کھاتہ is not an account a field offers (a چکتا buyer is picked by his name, PRD FR-13.4),
+    // and the old closed account 0031 is never offered.
     assert_eq!(
-        pukhta.account.map(|a| (a.code, a.account_type)),
-        (Some(("0030".to_owned(), AccountType::Buyer)))
+        resolve(&env, AccountScope::Buyer, "0030").status,
+        ResolveStatus::Unknown
     );
     assert_eq!(
         resolve(&env, AccountScope::Seller, "0031").status,
-        ResolveStatus::Found
+        ResolveStatus::Unknown
     );
     assert_eq!(
         resolve(&env, AccountScope::Buyer, "03040000").status,
         ResolveStatus::Found
     );
-    // The buyer list holds them too: a click on the buyer box shows them (plan 32 R7).
+    // The buyer list does not hold them: a چکتا buyer is listed only when the line buyer box asks for
+    // him (`with_chukta`, plan 64 decision C4), and 0031 is never listed.
     let all = find(&env, &owner, AccountScope::Buyer, "");
-    assert!(all.iter().any(|h| h.code == "0030"));
+    assert!(all.iter().all(|h| h.code != "0030" && h.code != "0031"));
     // And a short code never brings them.
     for short in ["0", "1"] {
         assert!(
@@ -522,6 +522,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
             text: "nasir".into(),
             limit: 10,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();
@@ -539,6 +540,7 @@ fn a_field_for_one_control_has_no_short_codes_but_finds_by_full_code_and_name() 
             text: "x".into(),
             limit: 5,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap_err();
@@ -559,6 +561,7 @@ fn text_limits_and_empty_codes_are_refused() {
             text: long.clone(),
             limit: 5,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap_err();
@@ -1095,17 +1098,17 @@ fn the_card_of_an_account_with_ten_years_of_entries_is_fast() {
 }
 
 #[test]
-fn the_card_of_the_pukhta_khata_account_does_not_net_one_person_against_another() {
+fn the_card_of_the_chukta_khata_account_does_not_net_one_person_against_another() {
     // PRD FR-13.5: balances there are per person, so the account's card shows its balance and
     // no credit or advance figure.
     let (_dir, env, _owner) = ready();
-    let pukhta = env
+    let chukta = env
         .ctx
         .db()
         .read(|c| mandi_services::db::accounts::id_by_code(c, "0030"))
         .unwrap()
         .unwrap();
-    let card = assist::party_card(&env.ctx, pukhta).unwrap();
+    let card = assist::party_card(&env.ctx, chukta).unwrap();
     assert_eq!(card.account_type, AccountType::Buyer);
     assert_eq!(
         (card.credit_limit, card.credit_used, card.advance_open),
@@ -1225,6 +1228,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
                 include_dead: None,
                 scope,
                 control_id,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -1245,7 +1249,11 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
     };
     // Nothing chosen yet: Urdu alphabetical order of the buyers, with their type.
     let before = recent(AccountScope::Buyer, None);
-    assert_eq!(before.len(), 4, "Akram, Arshad, نقدی منڈی and پختہ کھاتہ");
+    assert_eq!(
+        before.len(),
+        3,
+        "Akram, Arshad and نقدی منڈی: no چکتا buyer has bought yet"
+    );
     assert!(before.iter().all(|(_, t)| *t == AccountType::Buyer));
     // Choose Arshad then Akram: the latest first.
     touch(AccountScope::Buyer, None, arshad.id).unwrap();
@@ -1293,6 +1301,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
             text: "nas".into(),
             limit: 5,
             offset: 0,
+            with_chukta: None,
         },
     )
     .unwrap();
@@ -1314,6 +1323,7 @@ fn recent_accounts_come_first_in_every_field_and_each_control_has_its_own_list()
             include_dead: None,
             scope: AccountScope::Control,
             control_id: None,
+            with_chukta: None,
         },
     )
     .unwrap_err();
@@ -1555,7 +1565,7 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
     // open 10,160, and "پورا بقایا" gives 10,160. رحیم has his posting of بکری 1 beside it
     // (PRD FR-7.59, money agent 8.2a).
     use bikri_support::*;
-    use mandi_services::core::bikri::{PaymentType, PukhtaInput};
+    use mandi_services::core::bikri::{ChuktaInput, PaymentType};
     use mandi_services::core::vouchers::{LineSource, OpenPayablesInput, PaymentInput};
     let w = world();
     mandi_services::bikri::save(
@@ -1567,8 +1577,8 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         },
     )
     .unwrap();
-    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -1592,7 +1602,6 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.karim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -1629,7 +1638,6 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
     let pay = PaymentInput {
         date: "10-10-2026".into(),
         account_id: w.karim,
-        person_key: None,
         amount: "10,160".into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: String::new(),
@@ -1641,7 +1649,6 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.karim,
-            person_key: None,
             include_settled: true,
         },
     )
@@ -1656,7 +1663,6 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
             &w.env.ctx,
             &OpenPayablesInput {
                 seller_id: w.akram,
-                person_key: None,
                 include_settled: false
             }
         )
@@ -1691,7 +1697,6 @@ fn e2e_24_after_the_worked_day_the_short_code_0_brings_akram_his_card_and_his_op
         &ReceiptInput {
             date: "10-10-2026".into(),
             account_id: w.akram,
-            person_key: None,
             amount: "10,000".into(),
             removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
             collector_staff_id: None,
@@ -1722,7 +1727,6 @@ fn e2e_24_after_the_worked_day_the_short_code_0_brings_akram_his_card_and_his_op
         &w.env.ctx,
         &OpenBillsInput {
             account_id: account.id,
-            person_key: None,
         },
     )
     .unwrap();

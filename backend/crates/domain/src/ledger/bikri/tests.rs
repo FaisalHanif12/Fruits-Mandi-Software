@@ -21,7 +21,7 @@ const RAHIM: i64 = 20;
 const KARIM: i64 = 21;
 const AKRAM: i64 = 30;
 const ARSHAD: i64 = 31;
-const PUKHTA_BUYER: i64 = 32;
+const CHUKTA_BUYER: i64 = 32;
 
 fn accounts() -> SystemAccounts {
     let id = AccountId::new;
@@ -75,7 +75,6 @@ fn event1_lot() -> JournalLot {
     JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(24_316),
         cash_paid: p(5_000),
         freight_deducted: p(3_000),
@@ -121,12 +120,11 @@ fn event_1_whole_entry_is_36_564() {
 }
 
 #[test]
-fn event_2_cash_line_of_a_pukhta_buyer_is_25_600() {
-    // PRD 4.5: Karim's 10 apples; the one-time buyer pays 12,800 in cash.
+fn event_2_cash_line_of_a_chukta_buyer_is_25_600() {
+    // PRD 4.5: Karim's 10 apples; the چکتا buyer pays 12,800 in cash.
     let lot = JournalLot {
         seller_account_id: AccountId::new(KARIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
         freight_deducted: p(1_000),
@@ -135,7 +133,7 @@ fn event_2_cash_line_of_a_pukhta_buyer_is_25_600() {
         store_rent: Paisa::ZERO,
         phone: p(20),
         sales: vec![sale(
-            PUKHTA_BUYER,
+            CHUKTA_BUYER,
             12_800,
             PaymentType::Cash,
             720,
@@ -147,8 +145,8 @@ fn event_2_cash_line_of_a_pukhta_buyer_is_25_600() {
     let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
     assert_eq!(entry.total(), p(25_600));
     // The buyer is debited in the sale part and credited in the cash part, so he nets to 0.
-    assert_eq!(side_sum(&entry, PUKHTA_BUYER, Dr), 12_800);
-    assert_eq!(side_sum(&entry, PUKHTA_BUYER, Cr), 12_800);
+    assert_eq!(side_sum(&entry, CHUKTA_BUYER, Dr), 12_800);
+    assert_eq!(side_sum(&entry, CHUKTA_BUYER, Cr), 12_800);
     assert_eq!(side_sum(&entry, CASH, Dr), 12_800);
     // Cash change of the entry is +12,800 (nothing was paid to the seller).
     let change = crate::cash::net_change(&entry, AccountId::new(CASH)).unwrap();
@@ -178,7 +176,6 @@ fn a_negative_seller_credit_is_a_debit_on_the_seller() {
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(-2_436),
         cash_paid: p(5_000),
         freight_deducted: p(3_000),
@@ -202,7 +199,6 @@ fn a_seller_credit_of_exactly_zero_makes_no_seller_line() {
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: Paisa::ZERO,
         cash_paid: Paisa::ZERO,
         freight_deducted: p(940),
@@ -229,7 +225,6 @@ fn a_negative_rate_difference_is_a_debit_on_rate_diff() {
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         // 12,000 + 17,400 - 1,764 = 27,636
         seller_credit: p(27_636),
         cash_paid: Paisa::ZERO,
@@ -283,7 +278,6 @@ fn nothing_to_post_is_an_error_and_a_huge_entry_is_too_large() {
     let lot = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(huge),
         cash_paid: Paisa::ZERO,
         freight_deducted: Paisa::ZERO,
@@ -339,11 +333,10 @@ fn the_layout_says_where_the_matching_lines_are() {
 
 #[test]
 fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
-    // Event 2: the one-time buyer's debit at 0, his cash settlement credit is the last line.
+    // Event 2: the چکتا buyer's debit at 0, his cash settlement credit is the last line.
     let lot = JournalLot {
         seller_account_id: AccountId::new(KARIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(10_160),
         cash_paid: Paisa::ZERO,
         freight_deducted: p(1_000),
@@ -353,7 +346,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         phone: p(20),
         sales: vec![JournalSale {
             person_key: Some("شاہد|03000000000".into()),
-            ..sale(PUKHTA_BUYER, 12_800, PaymentType::Cash, 720, 720, 80, 0)
+            ..sale(CHUKTA_BUYER, 12_800, PaymentType::Cash, 720, 720, 80, 0)
         }],
     };
     let (entry, layout) =
@@ -376,7 +369,6 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
     let negative = JournalLot {
         seller_account_id: AccountId::new(RAHIM),
         partner_credits: Vec::new(),
-        person_key: None,
         seller_credit: p(-2_436),
         cash_paid: Paisa::ZERO,
         freight_deducted: p(3_000),
@@ -402,7 +394,6 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
             lots: vec![JournalLot {
                 seller_account_id: AccountId::new(RAHIM),
                 partner_credits: Vec::new(),
-                person_key: None,
                 seller_credit: p(-2_436),
                 cash_paid: Paisa::ZERO,
                 freight_deducted: p(3_000),
@@ -436,7 +427,6 @@ fn trip_lot(credit: i64, parts: [i64; 3], total: i64, comm: i64, laga: i64) -> J
             (AccountId::new(TRIP_B), p(parts[1])),
             (AccountId::new(TRIP_C), p(parts[2])),
         ],
-        person_key: None,
         seller_credit: p(credit),
         cash_paid: Paisa::ZERO,
         freight_deducted: Paisa::ZERO,

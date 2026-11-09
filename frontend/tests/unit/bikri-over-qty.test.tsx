@@ -16,7 +16,7 @@ import * as urduApi from '../../src/shared/urdu/api';
 import { EVENT1, previewWithOverLine } from '../helpers/bikri-data';
 import { OVER_TWO_LINES_PREVIEW } from '../helpers/bikri-over-qty-real';
 import { seedBikriDraft } from '../helpers/bikri-seed';
-import { cellOf, openBook, salesGrid, textOf } from '../helpers/bikri-screen';
+import { cellOf, focusedIn, openBook, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -33,7 +33,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -78,7 +77,7 @@ describe.each(LANGUAGES)('a line over the lot (%s)', (language) => {
    * with Tab: both show the note at once, with no other key (plan 57).
    */
   async function openUmarsCase(leave: '{Enter}' | '{Tab}' = '{Enter}') {
-    seedBikriDraft({ lot: 'rahim', pukhtaBuyer: true, line: { qty: '50', rate: '1200' } });
+    seedBikriDraft({ lot: 'rahim', chuktaBuyer: true, line: { qty: '50', rate: '1200' } });
     const view = await openBook(language, previewWithOverLine);
     await waitFor(() => {
       expect(textOf(salesGrid(language), 0, 'qty')).toBe('50');
@@ -134,7 +133,12 @@ describe.each(LANGUAGES)('a line over the lot (%s)', (language) => {
 
   it('brings the figures back, with no reload, when the quantity is fixed', async () => {
     const { user } = await openUmarsCase();
-    await user.click(cellOf(salesGrid(language), 0, 'qty'));
+    // The cursor was sent back to the quantity when the refusal landed, typing, with 70 selected (D8
+    // Bug 1, B2): the next key replaces it, with no click.
+    await waitFor(() => {
+      expect(focusedIn(salesGrid(language))).toBe('0:qty');
+      expect(document.activeElement).toBeInstanceOf(HTMLInputElement);
+    }, SLOW_MS);
     await user.keyboard('50{Enter}');
     await waitFor(() => {
       expect(notesWith(words)).toHaveLength(0);

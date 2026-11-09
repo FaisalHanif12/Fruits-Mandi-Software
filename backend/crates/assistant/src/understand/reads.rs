@@ -144,14 +144,14 @@ fn own_goods(scan: &Scan) -> bool {
     })
 }
 
-/// True when the question names a garden, a trip, own goods, the guests or the one-time people (پختہ
+/// True when the question names a garden, a trip, own goods, the guests or the walk-in buyers (چکتا
 /// کھاتہ), by word. The guests are no scope for the fruit taken: the fruit register has a read for them
-/// (R37, partner `guests`). The one-time people have no read of their own for a figure: the shop's
-/// dues are not theirs ("pukhta khata ka kul baqaya").
+/// (R37, partner `guests`). The walk-in buyers have no read of their own for a figure: they have no
+/// balance and are no part of the shop's dues ("chukta khata ka kul baqaya", PRD FR-13.6).
 pub(super) fn scoped(scan: &Scan, kinds: &[FigureKind]) -> bool {
     let guests_fruit = kinds.contains(&FigureKind::FruitTaken);
     own_goods(scan)
-        || scan.has_exact(Cue::Pukhta)
+        || scan.has_exact(Cue::Chukta)
         || scan.words.iter().any(|w| {
             SCOPE_WORDS
                 .iter()
@@ -943,7 +943,7 @@ struct Rep {
     /// D6 v1.5.
     seller: Option<String>,
     zamindar: Option<String>,
-    /// `paid` or `due` (R9, R38).
+    /// `paid` or `due` (R38).
     status: Option<&'static str>,
     /// One kind of voucher, in its stored word (R15).
     voucher_type: Option<&'static str>,
@@ -1484,7 +1484,7 @@ fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Opt
     let text = party.text.as_str();
     let mut plan = Plan::default();
     match hit.role {
-        PartyRole::Buyer | PartyRole::Seller if is_one_day(period) && !hit.pukhta => {
+        PartyRole::Buyer | PartyRole::Seller if is_one_day(period) => {
             let (_, to) = dates(period);
             plan.find(text, role_word(hit.role)?);
             plan.read(report(
@@ -2472,7 +2472,7 @@ fn last_rate_plan(u: &Understanding) -> Option<Planned> {
     let buyer = match u.parties.as_slice() {
         [] => None,
         [party] => match &party.outcome {
-            Outcome::Found(hit) if hit.role == PartyRole::Buyer && !hit.pukhta => {
+            Outcome::Found(hit) if hit.role == PartyRole::Buyer => {
                 Some((party.text.clone(), hit.key.clone()))
             }
             _ => return None,
@@ -2593,9 +2593,7 @@ fn quality_plan(u: &Understanding) -> Option<Planned> {
     let party = match u.parties.as_slice() {
         [] => None,
         [one] => match &one.outcome {
-            Outcome::Found(hit)
-                if !hit.pukhta && matches!(hit.role, PartyRole::Buyer | PartyRole::Seller) =>
-            {
+            Outcome::Found(hit) if matches!(hit.role, PartyRole::Buyer | PartyRole::Seller) => {
                 Some((one.text.clone(), hit.role, hit.key.clone()))
             }
             _ => return None,
@@ -2821,8 +2819,8 @@ fn forecast_plan(u: &Understanding) -> Option<Planned> {
                 plan.find(&p.text, "partner");
                 partner = key;
             }
-            // One party's balance: his key goes in `party`; a pukhta person has none.
-            (PartyRole::Seller | PartyRole::Buyer, "party_balance") if !hit.pukhta => {
+            // One party's balance: his key goes in `party`.
+            (PartyRole::Seller | PartyRole::Buyer, "party_balance") => {
                 plan.find(&p.text, role_word(hit.role)?);
                 party = key;
             }
@@ -3359,7 +3357,7 @@ fn party_figure(
         }
         // "naseer ka hisab kya he": his account as of now. The answer is his balance, read in two places on
         // his card (D7, plan 59 F3), and the newest rows of his ledger (R13) with its totals, newest first.
-        FigureKind::Ledger if period.is_none() && !hit.pukhta => {
+        FigureKind::Ledger if period.is_none() => {
             plan.find(text, word);
             plan.read(party_card(&key));
             plan.read(report(
@@ -3598,7 +3596,7 @@ fn party_item_figure(
     use super::CommissionSide as Side;
     // What a buyer bought of an item ("how much tomato did Faisal buy this year"): the register of his
     // lines (R2), whose totals hold the value and the bill total over the whole filter.
-    if kind == FigureKind::Purchases && phit.role == PartyRole::Buyer && !phit.pukhta {
+    if kind == FigureKind::Purchases && phit.role == PartyRole::Buyer {
         let (from, to) = dates(period);
         plan.find(ptext, "buyer");
         plan.find(itext, "item");
@@ -3644,25 +3642,23 @@ fn party_item_figure(
         a.seller = Some(key.clone());
         // The seller side asked ("seller commission on Rahim's banana") is the one figure charged to
         // him; no side named is the two labelled lines; the buyer side asked of a seller is the model's.
-        if kind == FigureKind::Commission && !phit.pukhta && side != Some(Side::Buyer) {
+        if kind == FigureKind::Commission && side != Some(Side::Buyer) {
             plan.line(Who::SellerItem(key, item), What::Commission);
-        } else if average && !phit.pukhta {
+        } else if average {
             plan.line(Who::SellerItem(key, item), What::AvgRate);
-        } else if kind == FigureKind::Sale && plan.qty && !phit.pukhta {
+        } else if kind == FigureKind::Sale && plan.qty {
             plan.line(Who::SellerItem(key, item), What::Qty);
         }
     } else {
         a.buyer = Some(key.clone());
-        if !phit.pukhta {
-            match kind {
-                FigureKind::Commission if side == Some(Side::Buyer) => {
-                    a.side = Some("buyer");
-                    plan.line(Who::BuyerItem(key, item), What::Commission);
-                }
-                FigureKind::Laga => plan.line(Who::BuyerItem(key, item), What::Laga),
-                FigureKind::Sale if plan.qty => plan.line(Who::BuyerItem(key, item), What::Qty),
-                _ => {}
+        match kind {
+            FigureKind::Commission if side == Some(Side::Buyer) => {
+                a.side = Some("buyer");
+                plan.line(Who::BuyerItem(key, item), What::Commission);
             }
+            FigureKind::Laga => plan.line(Who::BuyerItem(key, item), What::Laga),
+            FigureKind::Sale if plan.qty => plan.line(Who::BuyerItem(key, item), What::Qty),
+            _ => {}
         }
     }
     plan.read(analytics("A", a));

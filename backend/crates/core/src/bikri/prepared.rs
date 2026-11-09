@@ -7,10 +7,10 @@ use crate::error::FieldError;
 use crate::money::{Grams, Paisa, Qty};
 use crate::rules::ChargeValue;
 
-/// A person of the پختہ کھاتہ accounts, trimmed. Checked by the domain, which knows whether the
-/// account is a پختہ کھاتہ account.
+/// A چکتا buyer, trimmed. Checked by the domain, which knows whether the account is the چکتا کھاتہ
+/// account.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct PreparedPukhta {
+pub struct PreparedChukta {
     /// Urdu name, trimmed.
     pub name_ur: String,
     /// English name, trimmed.
@@ -19,7 +19,7 @@ pub struct PreparedPukhta {
     pub phone: String,
 }
 
-impl PreparedPukhta {
+impl PreparedChukta {
     /// True if nothing was typed.
     pub fn is_empty(&self) -> bool {
         self.name_ur.is_empty() && self.name_en.is_empty() && self.phone.is_empty()
@@ -76,8 +76,8 @@ pub struct PreparedSale {
     pub has_errors: bool,
     /// The buyer.
     pub buyer_account_id: Option<i64>,
-    /// The one-time buyer.
-    pub pukhta: PreparedPukhta,
+    /// The چکتا buyer.
+    pub chukta: PreparedChukta,
     /// Quantity in نگ.
     pub qty: Option<Qty>,
     /// Weight sold, if typed.
@@ -117,8 +117,6 @@ pub struct PreparedLot {
     pub purchase_id: Option<i64>,
     /// The garden arrival a garden lot takes its goods from (PRD FR-12.40).
     pub arrival_id: Option<i64>,
-    /// The one-time seller.
-    pub pukhta: PreparedPukhta,
     /// The item.
     pub item_id: Option<i64>,
     /// The packing.
@@ -141,8 +139,7 @@ pub struct PreparedLot {
     pub munshiana: Option<TypedLotCharge>,
     /// فون typed by hand, if any.
     pub phone: Option<TypedLotCharge>,
-    /// نقد as typed. `None` if empty: 0 for an ordinary seller, and the seller credit for a one-time
-    /// seller (PRD FR-13.10).
+    /// نقد as typed. `None` if empty, which is 0.
     pub cash_paid: Option<Paisa>,
     /// کرایہ سٹور, 0 if empty.
     pub store_rent: Paisa,

@@ -1,6 +1,6 @@
 // The in-app preview of the printed documents (plan 14): the same page the hidden print window
 // draws, inside the app, one document after another. It keeps the app's own language: only the
-// document is in the print language. Used where printing is not available (not Windows), and
+// document is in the print language. Used where printing is not available (not Windows or a Mac), and
 // whenever the user wants to see a bill before it prints.
 
 import type { Language } from '../../../bindings/Language';

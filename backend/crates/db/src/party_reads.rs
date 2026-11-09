@@ -59,16 +59,16 @@ impl Binds {
 pub struct PartyScope<'a> {
     /// Only this account.
     pub account_id: Option<i64>,
-    /// Only this person of a پختہ کھاتہ account.
+    /// Only this person of a چکتا کھاتہ account.
     pub person_key: Option<&'a str>,
 }
 
-/// What one party (an account, or a person of a shared پختہ کھاتہ account) has on each side.
+/// What one party (an account, or a person of a shared چکتا کھاتہ account) has on each side.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartyTotals {
     /// The account.
     pub account_id: i64,
-    /// The person key of a shared پختہ کھاتہ account; empty for every other account.
+    /// The person key of a shared چکتا کھاتہ account; empty for every other account.
     pub person_key: String,
     /// The control code of the account (`0304` or `03011`).
     pub control_code: String,
@@ -78,14 +78,14 @@ pub struct PartyTotals {
     pub cr_paisa: i64,
 }
 
-/// The accounts of these controls as a sub-query of ids, with `shared` = the shared پختہ کھاتہ
-/// accounts (`is_pukhta_khata = 1`) or all the others. A subquery and not a list of ids: there
+/// The accounts of these controls as a sub-query of ids, with `shared` = the shared چکتا کھاتہ
+/// accounts (`is_chukta_khata = 1`) or all the others. A subquery and not a list of ids: there
 /// can be 9,000 buyers and more (money agent, plan 48 P48-S3, item 6).
 fn accounts_of(binds: &mut Binds, controls: &[&str], shared: bool) -> String {
     let codes = binds.add_texts(controls);
     format!(
         "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
-         WHERE k.code IN ({codes}) AND a.is_pukhta_khata = {}",
+         WHERE k.code IN ({codes}) AND a.is_chukta_khata = {}",
         i32::from(shared)
     )
 }
@@ -129,7 +129,7 @@ fn more_entries_before(conn: &Connection, day: &str, limit: i64) -> rusqlite::Re
     Ok(counted > limit)
 }
 
-/// True if no ordinary account of these controls (`is_pukhta_khata = 0`) has a line that carries a
+/// True if no ordinary account of these controls (`is_chukta_khata = 0`) has a line that carries a
 /// person key. Nothing in the schema forbids such a line, but no writer makes one (money agent,
 /// plan 48 P48-S3, item 1). The fast reads add the lines of an ordinary account into one sum, so
 /// they check this first and fall back to the line-by-line read if it is false: a result is never
@@ -156,8 +156,8 @@ pub fn stray_keys_sql(controls: &[&str]) -> (String, Vec<Value>) {
         "SELECT EXISTS (SELECT 1 FROM accounts a
                         JOIN account_controls k ON k.id = a.control_id
                         JOIN journal_lines l ON l.account_id = a.id
-                                            AND l.pukhta_person_key IS NOT NULL
-                        WHERE k.code IN ({codes}) AND a.is_pukhta_khata = 0)"
+                                            AND l.chukta_person_key IS NOT NULL
+                        WHERE k.code IN ({codes}) AND a.is_chukta_khata = 0)"
     );
     (sql, binds.values)
 }
@@ -202,11 +202,11 @@ pub fn before_method_with(
 }
 
 /// What each buyer and seller (the accounts of `controls`) had before `before` (`YYYY-MM-DD`):
-/// every posted line dated earlier, by account and, for the two shared پختہ کھاتہ accounts, by
+/// every posted line dated earlier, by account and, for the two shared چکتا کھاتہ accounts, by
 /// person. An account with no such line is not in the answer. The rows are sorted by account and
 /// person. [`before_method`] picks the way of finding them; the answer is the same either way.
 ///
-/// The person key exists only on the shared accounts (`is_pukhta_khata = 1`): every other account
+/// The person key exists only on the shared accounts (`is_chukta_khata = 1`): every other account
 /// has no key, so its person is empty and one sum covers it.
 ///
 /// # Errors
@@ -266,12 +266,12 @@ fn totals_before_per_line(
     }
     if let Some(person) = scope.person_key {
         filter.push_str(&format!(
-            " AND l.pukhta_person_key = {}",
+            " AND l.chukta_person_key = {}",
             binds.add(Value::Text(person.to_owned()))
         ));
     }
     let sql = format!(
-        "SELECT l.account_id, COALESCE(l.pukhta_person_key, ''), k.code,
+        "SELECT l.account_id, COALESCE(l.chukta_person_key, ''), k.code,
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l
          JOIN journal_entries e ON e.id = l.entry_id
@@ -279,7 +279,7 @@ fn totals_before_per_line(
          JOIN account_controls k ON k.id = a.control_id
          WHERE k.code IN ({codes}) AND e.status = 'posted'
            AND e.entry_date < {day}{filter}
-         GROUP BY l.account_id, l.pukhta_person_key, k.code"
+         GROUP BY l.account_id, l.chukta_person_key, k.code"
     );
     let mut statement = conn.prepare(&sql)?;
     let rows = statement.query_map(params_from_iter(binds.values.iter()), |r| {
@@ -357,18 +357,18 @@ fn totals_before_left_out(
             });
         }
     }
-    // The shared پختہ کھاتہ accounts: person by person (grouped by the stored key, so a line with
+    // The shared چکتا کھاتہ accounts: person by person (grouped by the stored key, so a line with
     // no key is its own group, as the line-by-line read has it).
     {
         let mut binds = Binds::default();
         let accounts = accounts_of(&mut binds, controls, true);
         let left_out = left_out_from(&mut binds, before);
         let sql = format!(
-            "SELECT account_id, COALESCE(pukhta_person_key, ''), COALESCE(SUM(dr_paisa), 0),
+            "SELECT account_id, COALESCE(chukta_person_key, ''), COALESCE(SUM(dr_paisa), 0),
                     COALESCE(SUM(cr_paisa), 0)
              FROM journal_lines
              WHERE account_id IN ({accounts}) AND entry_id NOT IN ({left_out})
-             GROUP BY account_id, pukhta_person_key"
+             GROUP BY account_id, chukta_person_key"
         );
         let mut statement = conn.prepare(&sql)?;
         let rows = statement.query_map(params_from_iter(binds.values.iter()), |r| {
@@ -398,7 +398,7 @@ fn totals_before_left_out(
 pub struct HeldCredit {
     /// The seller's account.
     pub account_id: i64,
-    /// The person key of a one-time seller.
+    /// The person key of an old one-time seller.
     pub person_key: Option<String>,
     /// True for an opening balance.
     pub is_opening: bool,
@@ -419,7 +419,7 @@ pub struct HeldCredit {
 /// 4 milliseconds).
 #[doc(hidden)]
 pub const HELD_CREDITS_SQL: &str =
-    "SELECT l.account_id, l.pukhta_person_key, e.posting_type = 'opening', e.entry_date,
+    "SELECT l.account_id, l.chukta_person_key, e.posting_type = 'opening', e.entry_date,
                 l.cr_paisa,
                 COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a
                           WHERE a.credit_line_id = l.id AND a.is_active = 1), 0)
@@ -471,7 +471,7 @@ pub struct OpenBill {
     pub line_id: i64,
     /// The buyer's account.
     pub account_id: i64,
-    /// The person key of a one-time buyer.
+    /// The person key of a چکتا buyer.
     pub person_key: Option<String>,
     /// The entry of the line.
     pub entry_id: i64,
@@ -554,7 +554,7 @@ pub enum OpenMethod {
 /// very set of rows the line-by-line SQL gives ([`open_bills_per_line`]); only the way of finding
 /// them differs:
 ///
-/// - the shared پختہ کھاتہ accounts and any account that is not an ordinary buyer are read line by
+/// - the shared چکتا کھاتہ accounts and any account that is not an ordinary buyer are read line by
 ///   line (they carry the person key);
 /// - ordinary buyers are read line by line when they are few or have few debit lines
 ///   ([`BULK_FROM_ACCOUNTS`], [`BULK_FROM_DEBIT_LINES`]);
@@ -647,7 +647,7 @@ pub fn choose_open_method(
     }
 }
 
-/// Which of these accounts are ordinary buyers: control 0304 and not a shared پختہ کھاتہ account.
+/// Which of these accounts are ordinary buyers: control 0304 and not a shared چکتا کھاتہ account.
 fn ordinary_buyers(
     conn: &Connection,
     ids: &[i64],
@@ -656,7 +656,7 @@ fn ordinary_buyers(
     for chunk in ids.chunks(IN_CHUNK) {
         let sql = format!(
             "SELECT a.id FROM accounts a JOIN account_controls k ON k.id = a.control_id
-             WHERE k.code = '0304' AND a.is_pukhta_khata = 0 AND a.id IN ({})",
+             WHERE k.code = '0304' AND a.is_chukta_khata = 0 AND a.id IN ({})",
             placeholders(chunk.len())
         );
         let mut statement = conn.prepare(&sql)?;
@@ -702,7 +702,7 @@ pub fn open_bills_per_line(conn: &Connection, ids: &[i64]) -> rusqlite::Result<V
         let matched = "COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
                                 WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)";
         let sql = format!(
-            "SELECT l.id, l.account_id, l.pukhta_person_key, e.id, e.entry_date, l.dr_paisa, {matched}
+            "SELECT l.id, l.account_id, l.chukta_person_key, e.id, e.entry_date, l.dr_paisa, {matched}
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
              WHERE l.account_id IN ({marks}) AND l.dr_paisa > 0 AND {LIVE}
                AND l.dr_paisa > {matched}
@@ -751,7 +751,7 @@ pub const BUYER_DEBIT_LINES_SQL: &str =
     "SELECT l.account_id, l.entry_id, l.id, l.dr_paisa FROM journal_lines l
      WHERE l.account_id IN (SELECT a.id FROM accounts a
                             JOIN account_controls k ON k.id = a.control_id
-                            WHERE k.code = '0304' AND a.is_pukhta_khata = 0)
+                            WHERE k.code = '0304' AND a.is_chukta_khata = 0)
        AND l.dr_paisa > 0";
 
 /// The bulk read of the open bills of ordinary buyers (see [`open_buyer_bills`]).

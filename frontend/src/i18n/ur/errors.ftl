@@ -64,6 +64,9 @@ err-name-ur-script = اردو نام اردو حروف میں لکھیں۔
 # PRD FR-7.28.
 # review: pending
 err-name-en-script = انگریزی نام انگریزی حروف میں لکھیں۔
+# PRD FR-7.24, FR-13.2. A walk-in buyer needs both names; the phone is optional.
+# review: pending
+err-chukta-name-required = { -chukta } { -gahak } کا نام اردو اور انگریزی دونوں میں لکھیں۔
 # PRD 10.2, Code Standards 4.2 (Tag). The code name is the backend's (plan 17e T1).
 # review: pending
 err-tag-invalid = نشان 1 سے 4 انگریزی بڑے حروف یا نقطوں کا ہونا چاہیے، جن میں کم از کم ایک حرف ہو۔ مثلاً K، BA یا D.P۔
@@ -192,15 +195,15 @@ err-advance-not-seller = ابتدائی { -peshgi } صرف { -beopari } کے ا�
 # review: pending
 err-field-not-allowed = یہ خانہ اب استعمال نہیں ہوتا۔ اسے چھوڑ دیں۔
 
-# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Pukhta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
+# PRD FR-10.9, FR-6.5, FR-13.5, C20. Income and shop expense accounts, Opening Difference and Chukta Khata cannot take one. A partner's drawings account and a person's money lent account take an opening debit only.
 # review: pending
-err-opening-not-allowed = اس کھاتے میں یہ ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -pukhta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔ { -shirakat-dar } کے { -zati-kharcha } کھاتے اور { -adhar-raqam } کے کھاتے میں صرف ابتدائی { -banaam } لگ سکتا ہے۔
+err-opening-not-allowed = اس کھاتے میں یہ ابتدائی بقایا نہیں لکھا جا سکتا۔ آمدن اور { -dukan-kharcha } کے کھاتوں، { -naqdi-mandi }، { -chukta-khata } اور ابتدائی فرق میں ابتدائی بقایا نہیں لگتا۔ { -shirakat-dar } کے { -zati-kharcha } کھاتے اور { -adhar-raqam } کے کھاتے میں صرف ابتدائی { -banaam } لگ سکتا ہے۔
 
 ## Advances and closing days (plan 10).
 
-# PRD FR-15.4. An advance goes to a seller, never to Pukhta Khata.
+# PRD FR-15.4. An advance goes to a seller, never to Chukta Khata.
 # review: pending
-err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -pukhta-khata } کو نہیں۔
+err-not-a-seller = یہ { -beopari } کا کھاتہ نہیں۔ { -peshgi } صرف { -beopari } کو دی جا سکتی ہے، { -chukta-khata } کو نہیں۔
 # PRD FR-10.2. Hidden from pickers.
 # review: pending
 err-account-inactive = یہ کھاتہ غیر فعال ہے اور نئے اندراج میں استعمال نہیں ہو سکتا۔ کوئی دوسرا کھاتہ چنیں۔
@@ -247,12 +250,6 @@ err-credit-limit-exceeded = اس { -bikri } سے { -gahak } کا بقایا { $w
 err-seller-required = اس { -lot } کا { -beopari } چنیں۔
 # review: pending
 err-buyer-required = اس لائن کا { -gahak } چنیں۔
-# PRD FR-13.2.
-# review: pending
-err-pukhta-name-required = { -pukhta-khata } میں نام لکھنا ضروری ہے۔
-# PRD FR-13.2.
-# review: pending
-err-pukhta-phone-required = اس { -pukhta-khata } والے کا فون نمبر لکھنا ضروری ہے۔
 # PRD FR-12.8.
 # review: pending
 err-no-lots = کم از کم ایک { -lot } لکھیں۔
@@ -276,11 +273,6 @@ err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } �
 # A warning (PRD FR-12.7): the save is allowed. $net is in rupees.
 # review: pending
 err-lot-net-negative = اس { -lot } کی { -safi-bikri } صفر سے کم ({ $net }) ہے۔ یہ رقم { -beopari } کے ذمے ہے۔
-# A warning (PRD FR-13.11, plan 47): the save is allowed. This { -bikri } comes before a later one of
-# the same { -pukhta-khata } seller that holds part of his { -peshgi }, and takes $taken of it. $taken is
-# in rupees.
-# review: pending
-err-advance-taken-from-later = یہ { -bikri } اس کی { -peshgi } میں سے { $taken } بعد کی { -bikri } سے لے لیتی ہے۔ { -naqd } دیکھ لیں: اس کا { -baqaya } صفر نہیں رہے گا۔
 # A warning (PRD FR-7.55). $average is in rupees, $percent is the setting.
 # review: pending
 err-rate-far-from-average = یہ ریٹ پچھلے 7 دن کی اوسط ({ $average }) سے { $percent } فیصد سے زیادہ مختلف ہے۔ اسے دیکھ لیں۔
@@ -293,9 +285,10 @@ err-draft-invalid = لکھا ہوا کام عارضی طور پر محفوظ ن�
 
 ## Printing (plan 14).
 
-# PRD FR-12.12. Printing needs Windows; on other computers the preview shows how it will print.
+# PRD FR-12.12. Printing works on Windows and on a Mac (plan 69); on any other computer the preview
+# shows how it will print.
 # review: pending
-err-print-windows-only = پرنٹنگ صرف ونڈوز پر ہو سکتی ہے۔ اس کمپیوٹر پر پیش منظر میں دیکھ لیں کہ دستاویز کیسے چھپے گی۔
+err-print-windows-only = پرنٹنگ صرف ونڈوز اور میک پر ہو سکتی ہے۔ اس کمپیوٹر پر پیش منظر میں دیکھ لیں کہ دستاویز کیسے چھپے گی۔
 
 # $printer is the printer name in Settings.
 # review: pending
@@ -317,10 +310,6 @@ err-return-exceeds-open = یہ رقم واپس ہونے والی رقم سے ز�
 # PRD FR-15.3.
 # review: pending
 err-voucher-cancelled = یہ واؤچر منسوخ ہو چکا ہے، اس میں تبدیلی نہیں ہو سکتی۔
-
-# PRD FR-13.5, FR-13.7.
-# review: pending
-err-person-required = { -pukhta-khata } کے لیے اس شخص کا نام یا فون لکھ کر اسے فہرست سے چنیں۔
 
 # A warning (PRD FR-15.7): the save is allowed. $payable is what is payable, $over how much the
 # amount is more than it, both in rupees.
@@ -636,10 +625,6 @@ err-already-dead = وہ پہلے ہی { -doobi-raqam } میں ہے۔ اسے فع
 # PRD FR-10.10, plan 40. The reason Other needs a note.
 # review: pending
 err-note-required = وجہ دیگر ہو تو نوٹ لکھنا ضروری ہے۔
-
-# PRD FR-10.10, E72, plan 40. A line, a lot or an entry for a person who is in the dead amount.
-# review: pending
-err-person-in-dead-amount = یہ شخص { -doobi-raqam } میں ہے۔ اس کے لیے صرف { -wasooli } یا { -adhar-raqam } کی { -wapsi } لکھی جا سکتی ہے۔
 
 # PRD FR-10.10, plan 40. $last_posting_date: the day of his last entry, DD-MM-YYYY.
 # review: pending

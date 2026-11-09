@@ -188,17 +188,23 @@ function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
     typed[valueField] = charge.value;
     typed[methodField] = charge.method;
   }
-  if (sale.pukhta !== null) {
-    put(typed, SALE.pukhtaUr, sale.pukhta.name_ur);
-    put(typed, SALE.pukhtaEn, sale.pukhta.name_en);
-    put(typed, SALE.pukhtaPhone, sale.pukhta.phone);
-  }
   if (sale.sale_id !== undefined && sale.sale_id !== null) {
     typed[SALE.saleId] = String(sale.sale_id);
   }
   // The quantity is the loaded one: the app must not fill it again from what the lot has left.
   typed[SALE.qtyFilled] = ON;
-  const buyer = records.account(sale.buyer_account_id);
+  const account = records.account(sale.buyer_account_id);
+  // A چکتا buyer is kept as the chosen record: the account چکتا کھاتہ with his own names and phone
+  // (PRD FR-13.5). A saved line has no record id of his, so the card is drawn from what it has.
+  const buyer =
+    account === null || sale.chukta === null
+      ? account
+      : {
+          ...account,
+          name_ur: sale.chukta.name_ur,
+          name_en: sale.chukta.name_en,
+          chukta: { id: null, phone: sale.chukta.phone },
+        };
   return buyer === null
     ? { rowId: sale.key, typed }
     : { rowId: sale.key, typed, picked: { [SALE.buyer]: buyer } };
@@ -224,11 +230,6 @@ function lotRow(lot: LotInput, header: HeaderState, records: DraftRecords): Entr
   put(typed, LOT.cash, lot.cash_paid);
   put(typed, LOT.storeRent, lot.store_rent);
   typed[LOT.adjustAdvance] = lot.adjust_advance ? ON : '0';
-  if (lot.pukhta !== null) {
-    put(typed, LOT.pukhtaUr, lot.pukhta.name_ur);
-    put(typed, LOT.pukhtaEn, lot.pukhta.name_en);
-    put(typed, LOT.pukhtaPhone, lot.pukhta.phone);
-  }
   if (lot.lot_id !== undefined && lot.lot_id !== null) typed[LOT.lotId] = String(lot.lot_id);
   // A lot of own goods keeps its purchase (PRD FR-12.26).
   if (lot.purchase_id !== undefined && lot.purchase_id !== null) {

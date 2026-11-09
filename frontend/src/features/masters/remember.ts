@@ -8,10 +8,10 @@ import { choiceOr, flagOf, isRecord } from '../../shared/screen-state';
 
 export const ACCOUNTS_SCREEN = 'list.accounts';
 
-// The list shows sellers, buyers and the پختہ کھاتہ accounts only (plan 32, R6). A kind kept from
+// The list shows sellers and buyers only (plan 32, R6, plan 64). A kind kept from
 // an earlier version that is not in this list ("money_lent", "other") cannot be read any more and
 // the list starts at "all".
-const TYPE_CHOICES: readonly AccountListKind[] = ['all', 'seller', 'buyer', 'pukhta'];
+const TYPE_CHOICES: readonly AccountListKind[] = ['all', 'seller', 'buyer'];
 
 export interface AccountChoices {
   type: AccountListKind;

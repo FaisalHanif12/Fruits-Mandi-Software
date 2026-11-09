@@ -286,7 +286,7 @@ fn resolve_person(
         errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, field));
         return Ok(None);
     }
-    if !facts.is_active && !(allow_dead && crate::dead::is_dead(conn, id, None)?) {
+    if !facts.is_active && !(allow_dead && crate::dead::is_dead(conn, id)?) {
         errors.push(FieldError::new(ErrorCode::ErrAccountInactive, field));
         return Ok(None);
     }
@@ -315,7 +315,6 @@ pub(super) fn template(
         cheque_date: None,
         expected_goods: None,
         narration,
-        person_key: None,
         collector_staff_id: None,
         reason,
         extra,

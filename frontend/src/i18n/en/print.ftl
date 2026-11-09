@@ -1,5 +1,5 @@
 ### Prints (plan 14, PRD FR-12.12, FR-7.36, FR-19.3 to FR-19.7): the seller bill, the buyer slips,
-### the Pukhta Khata slip, the print box and the Printing settings. The backend sends the ids of
+### the print box and the Printing settings. The backend sends the ids of
 ### titles, facts, roles and amounts (plan 14 contract 6) and the template resolves them in the
 ### PRINT language, which can differ from the app language.
 
@@ -10,9 +10,6 @@ print-seller-bill-title = { -beopari } Bill
 
 # review: pending
 print-buyer-slip-title = { -gahak } Slip
-
-# review: pending
-print-pukhta-slip-title = { -pukhta-khata } Slip
 
 ## Facts under the title
 
@@ -35,9 +32,6 @@ print-party-seller = { -beopari }
 
 # review: pending
 print-party-buyer = { -gahak }
-
-# review: pending
-print-party-onetime-buyer = { -pukhta-khata } ({ -kharidar })
 
 # review: pending
 print-party-code = Code
@@ -155,9 +149,6 @@ print-doc-seller-bill = { -beopari } bill
 # review: pending
 print-doc-buyer-slips = { -gahak } slips
 
-# review: pending
-print-doc-pukhta-slip = { -pukhta-khata } slip
-
 ## The print box (opened with F9 on the sale book)
 
 # review: pending
@@ -216,6 +207,14 @@ print-box-done-printed = Sent to the printer: { $docs }
 # review: pending
 print-box-done-pdf = PDF files saved:
 
+# $docs are the printed documents. On a Mac Print and Save PDF both open the system print window.
+# review: pending
+print-box-done-dialog = The print window is open: { $docs }
+
+# Shown on a Mac under the print choices (plan 69). The words PDF and Save as PDF are the Mac's own.
+# review: pending
+print-dialog-hint = On a Mac the system print window opens. To make a PDF, choose PDF in it, then Save as PDF.
+
 # review: pending
 print-box-nothing-printed = There was nothing to print.
 
@@ -225,6 +224,10 @@ print-save-first = Save the { -bikri } first, then print it.
 # Shown after Ctrl+Enter when the documents went to the printer.
 # review: pending
 print-toast-printed = Sent to the printer
+
+# Shown after Ctrl+Enter on a Mac, where the system print window opens instead (plan 69).
+# review: pending
+print-toast-dialog = The print window is open
 
 ## The preview
 
@@ -259,9 +262,6 @@ print-settings-printer = Printer
 
 # review: pending
 print-settings-printer-default = Default printer
-
-# review: pending
-print-settings-printer-none = No list of printers is available on this computer. The default printer will be used.
 
 # review: pending
 print-settings-printers-failed = The list of printers could not be read
@@ -304,9 +304,6 @@ print-fact-collector = Collector
 
 # review: pending
 print-fact-narration = Narration
-
-# review: pending
-print-party-onetime-seller = { -pukhta-khata } ({ -beopari })
 
 # review: pending
 print-party-account = Account
@@ -385,7 +382,6 @@ print-collection-col-code = Code
 
 # review: pending
 print-collection-col-party = Party
-
 
 # review: pending
 print-collection-col-dues = Dues

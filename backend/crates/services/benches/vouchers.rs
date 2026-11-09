@@ -43,7 +43,6 @@ fn receipt(account: i64) -> ReceiptInput {
     ReceiptInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: "1,000".into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
@@ -55,7 +54,6 @@ fn payment(account: i64, reason: &str) -> PaymentInput {
     PaymentInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: "1,000".into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
@@ -188,13 +186,9 @@ fn save_speed(c: &mut Criterion) {
     });
     group.finish();
     let mut group = flat(c, "assist", 50, 6);
-    let bills = OpenBillsInput {
-        account_id: buyer,
-        person_key: None,
-    };
+    let bills = OpenBillsInput { account_id: buyer };
     let payables = OpenPayablesInput {
         seller_id: seller,
-        person_key: None,
         include_settled: false,
     };
     group.bench_function("open_bills_busiest_buyer", |b| {
@@ -205,7 +199,6 @@ fn save_speed(c: &mut Criterion) {
     });
     let ordinary_bills = OpenBillsInput {
         account_id: ordinary,
-        person_key: None,
     };
     group.bench_function("open_bills_ordinary_buyer", |b| {
         b.iter(

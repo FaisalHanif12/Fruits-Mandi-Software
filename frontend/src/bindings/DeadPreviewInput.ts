@@ -8,9 +8,4 @@ export type DeadPreviewInput = {
    * The account.
    */
   account_id: number;
-  /**
-   * The person inside a پختہ کھاتہ account, as stored. Required for a پختہ کھاتہ account and
-   * refused for any other.
-   */
-  pukhta_person_key: string | null;
 };

@@ -5,14 +5,14 @@ Report queries, print data and Excel export (PRD 19).
 - May depend on: `mandi-db` and `mandi-core`.
 - Reads stored values only. Never recalculates money for a report (Code Standards B20, B23).
 
-## `print`: the seller bill, the buyer slips and the پختہ slip (plan 14)
+## `print`: the seller bill, the buyer slips and the buyer slip (plan 14)
 
 `print::bikri_print_data(db, input)` reads a saved بکری and the settings (Firm, number grouping, Printing) and calls `print::build`, which is pure and is tested with snapshots.
 
 - Every number is a stored value of the saved بکری (`BikriDetail`). A sum is a checked sum of stored amounts, the same sums `bikri_get` sends. Nothing is rounded or worked out again.
 - Values are text, already formatted: grouping by the number grouping setting, English digits unless the Urdu digits setting is on and the print language is Urdu (`print::format`). Dates are `DD-MM-YYYY`. Codes, phones and truck numbers stay as typed.
 - Titles and labels are Fluent message IDs (`print-seller-bill-title`, `print-net-sale`, ...). The frontend defines them in `print.ftl`. The only sentences built here are the amounts in words (`core::urdu_words`, `core::english_words`).
-- One generic shape for all documents: `PrintData` has a list of `PrintPage`. The seller bill has one page per seller (a seller with two lots gets one page), the buyer slips one page per buyer account (the one-time buyer is left out), the پختہ slip one page per one-time person (by his person key). An empty page list means nothing to print.
+- One generic shape for all documents: `PrintData` has a list of `PrintPage`. The seller bill has one page per seller (a seller with two lots gets one page), the buyer slips one page per buyer account (the چکتا buyer is left out), the buyer slip one page per چکتا buyer (by his person key). An empty page list means nothing to print.
 - A net below 0 (the seller owes the firm, PRD FR-12.7) prints as a positive amount under `print-seller-owes`; its words are the words of that amount.
 - Lines with `is_active = false` are not printed. A cancelled بکری is flagged `cancelled`.
 
@@ -20,7 +20,7 @@ Tests: `tests/print_data.rs` (snapshots in `tests/snapshots`, written with `INST
 
 ## `print::voucher_print_data`: the slip of a voucher (plan 15, PRD FR-15.2)
 
-`voucher_print_data(db, input)` reads a saved وصولی, ادائیگی or پیشگی and builds the same generic `PrintData` with doc `receipt_slip`: one page, the party (the one-time person by his own names), no lines, one `Total` amount (`print-slip-amount-received`, `-paid` or `-advance`), the amount in words, the way the money moved in `payment_id` (`print-mode-cash`, `-bank`, `-cheque`), and facts for the number, the day, the bank, the cheque, the reason, the collector and the note. The title is `print-receipt-slip-title`, `print-payment-slip-title` or `print-advance-slip-title`. A cancelled voucher is flagged `cancelled`. Paper: `paper_receipt_slip` of the Printing settings (starts as A5).
+`voucher_print_data(db, input)` reads a saved وصولی, ادائیگی or پیشگی and builds the same generic `PrintData` with doc `receipt_slip`: one page, the party (the چکتا buyer by his own names), no lines, one `Total` amount (`print-slip-amount-received`, `-paid` or `-advance`), the amount in words, the way the money moved in `payment_id` (`print-mode-cash`, `-bank`, `-cheque`), and facts for the number, the day, the bank, the cheque, the reason, the collector and the note. The title is `print-receipt-slip-title`, `print-payment-slip-title` or `print-advance-slip-title`. A cancelled voucher is flagged `cancelled`. Paper: `paper_receipt_slip` of the Printing settings (starts as A5).
 
 ## `reports`: the report engine and the Accounts group (plan 20, PRD 19)
 
@@ -34,7 +34,7 @@ One engine serves every report, so one screen can show them all (`reports::catal
 | Report | Rows | Total row |
 |---|---|---|
 | R11 روزنامچہ | posted journal lines in the range, in the order `(entry_date, entry id, line no)` | Σ بنام, Σ جمع |
-| R13 کھاتہ | the lines of one account (or one person of a پختہ کھاتہ account) with their items (FR-19.8) and the balance after each | Σ بنام, Σ جمع, closing balance; opening balance above |
+| R13 کھاتہ | the lines of one account (or one person of a چکتا کھاتہ account) with their items (FR-19.8) and the balance after each | Σ بنام, Σ جمع, closing balance; opening balance above |
 | R14 فرد حساب | balance only: no lines; with `detail`: the lines of R13 | as R13; above: opening, bought or sold, paid, closing |
 | R16 انڈکس | every account with its city and balance, by code | Σ of the debit balances, Σ of the credit balances |
 | R17 مدوں بیلنس | each head with its controls, net of all their lines | Σ of the heads on each side |
@@ -59,6 +59,6 @@ Tests: `crates/services/tests/reports_accounts.rs` on the PRD worked day (R18 is
 
 Tests: `crates/services/tests/analytics.rs` (PRD 18.4, E2E-11, E2E-13, E2E-15, E2E-16b, the journal reconciliation, random sequences), `analytics_fixtures.rs` (the fixtures `analytics_*.json`; `MANDI_WRITE_FIXTURES=1` writes them again), `reports_grouped.rs`.
 
-`voucher_print_data(db, input)` reads a saved وصولی, ادائیگی or پیشگی and builds the same generic `PrintData` with doc `receipt_slip`: one page, the party (the one-time person by his own names), no lines, one `Total` amount (`print-slip-amount-received`, `-paid` or `-advance`), the amount in words (no line about how the money moved: all money is روکڑ, PRD 15.1, v1.6, so `payment_id` is null, also for a voucher saved before v1.6 as a bank or cheque one), and facts for the number, the day, the reason, the collector and the note. The title is `print-receipt-slip-title`, `print-payment-slip-title` or `print-advance-slip-title`. A cancelled voucher is flagged `cancelled`. Paper: `paper_receipt_slip` of the Printing settings (starts as A5).
+`voucher_print_data(db, input)` reads a saved وصولی, ادائیگی or پیشگی and builds the same generic `PrintData` with doc `receipt_slip`: one page, the party (the چکتا buyer by his own names), no lines, one `Total` amount (`print-slip-amount-received`, `-paid` or `-advance`), the amount in words (no line about how the money moved: all money is روکڑ, PRD 15.1, v1.6, so `payment_id` is null, also for a voucher saved before v1.6 as a bank or cheque one), and facts for the number, the day, the reason, the collector and the note. The title is `print-receipt-slip-title`, `print-payment-slip-title` or `print-advance-slip-title`. A cancelled voucher is flagged `cancelled`. Paper: `paper_receipt_slip` of the Printing settings (starts as A5).
 
 **Speed (plan 48 P48-S3, NFR-SPD-2, NFR-SPD-10).** The day summary R34, the dashboard and the buyers' dues R20 read through `mandi_db::party_reads` (balance before a day, held credits, open bills) and `ledger::account_totals_in_controls`; the figures are the same as the SQL they replaced and `services/tests/speed_rewrites_equal.rs` compares them row by row. The queries for one day start from the entries of that day (`INDEXED BY idx_journal_entries_entry_date`, `CROSS JOIN`) because the app's file has no table statistics.

@@ -5,7 +5,7 @@ import type { PrintParty } from './PrintParty';
 import type { PrintWords } from './PrintWords';
 
 /**
- * One page of a document: one seller, one buyer or one one-time buyer.
+ * One page of a document: one seller, one buyer or one چکتا buyer.
  */
 export type PrintPage = {
   /**

@@ -7,8 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use mandi_db::bikri::edit::{self as edit_repo, LotSums};
 use mandi_db::bikri::write::{
-    self as repo, LotChargeColumns, NewCreditPart, NewFact, NewLot, NewSale, NewStockMove,
-    PukhtaColumns, SaleChargeColumns, StockKind,
+    self as repo, ChuktaColumns, LotChargeColumns, NewCreditPart, NewFact, NewLot, NewSale,
+    NewStockMove, SaleChargeColumns, StockKind,
 };
 use mandi_db::ledger as ledger_repo;
 use mandi_db::rusqlite::Connection;
@@ -108,8 +108,8 @@ pub(super) fn shape(worked: &Worked) -> Result<Vec<LotShape<'_>>, ServiceError> 
     Ok(out)
 }
 
-pub(super) fn person_columns(person: Option<&CleanPerson>) -> Option<PukhtaColumns<'_>> {
-    person.map(|p| PukhtaColumns {
+pub(super) fn person_columns(person: Option<&CleanPerson>) -> Option<ChuktaColumns<'_>> {
+    person.map(|p| ChuktaColumns {
         name_ur: &p.name_ur,
         name_en: &p.name_en,
         phone: &p.phone,
@@ -180,18 +180,6 @@ pub(super) struct Posting<'a> {
     pub adda_id: Option<i64>,
 }
 
-/// The one-time seller of a lot, cleaned, if the lot has one.
-pub(super) fn lot_person(shaped: &LotShape<'_>) -> Result<Option<CleanPerson>, ServiceError> {
-    match &shaped.journal.person_key {
-        Some(key) => Ok(Some(
-            clean_person(&shaped.lot.pukhta)
-                .filter(|p| &p.key == key)
-                .ok_or_else(|| data("a one-time seller could not be cleaned to his key"))?,
-        )),
-        None => Ok(None),
-    }
-}
-
 /// The charges of a lot that come off its seller once, in its first posting (PRD C6): the freight
 /// the firm paid, مزدوری, منشیانہ, نقد, کرایہ سٹور and فون.
 #[derive(Debug, Clone, Copy)]
@@ -260,14 +248,12 @@ pub(super) fn is_garden_lot(
     Ok(mandi_db::gardens::of_account(conn, shaped.journal.seller_account_id.get())?.is_some())
 }
 
-/// The columns of a lot of the first posting, with its running totals. `person` is the lot's
-/// one-time seller (see [`lot_person`]).
+/// The columns of a lot of the first posting, with its running totals.
 pub(super) fn lot_columns<'a>(
     conn: &Connection,
     bikri_id: i64,
     lot_no: i64,
     shaped: &'a LotShape<'a>,
-    person: Option<&'a CleanPerson>,
     running: &edit_repo::LotTotals,
 ) -> Result<NewLot<'a>, ServiceError> {
     let lot = shaped.lot;
@@ -285,7 +271,6 @@ pub(super) fn lot_columns<'a>(
         purchase_id: lot.purchase_id,
         // A garden lot may name the arrival it takes its goods from (PRD FR-12.40).
         arrival_id: lot.arrival_id,
-        pukhta: person_columns(person),
         item_id: lot
             .item_id
             .ok_or_else(|| data("a lot without errors has no item"))?,
@@ -425,7 +410,7 @@ pub(super) fn insert_sales_and_facts(
                         .ok_or_else(|| data("a lot without errors has no item"))?,
                     seller_account_id: shaped.journal.seller_account_id.get(),
                     buyer_account_id: buyer_id,
-                    pukhta_person_key: shaped_row.journal.person_key.as_deref(),
+                    chukta_person_key: shaped_row.journal.person_key.as_deref(),
                     // A snapshot of the buyer's city on the day of the sale (PRD FR-18.6).
                     city_id: cities.get(&buyer_id).copied(),
                     adda_id: posting.adda_id,
@@ -506,9 +491,9 @@ fn insert_sale(
     let calc = shaped.calc;
     let person = match &shaped.journal.person_key {
         Some(key) => Some(
-            clean_person(&shaped.row.pukhta)
+            clean_person(&shaped.row.chukta)
                 .filter(|p| &p.key == key)
-                .ok_or_else(|| data("a one-time buyer could not be cleaned to his key"))?,
+                .ok_or_else(|| data("a چکتا buyer could not be cleaned to his key"))?,
         ),
         None => None,
     };
@@ -521,7 +506,7 @@ fn insert_sale(
             journal_entry_id: posting.entry_id,
             entry_date: posting.date_iso,
             buyer_account_id: shaped.journal.buyer_account_id.get(),
-            pukhta: person_columns(person.as_ref()),
+            chukta: person_columns(person.as_ref()),
             qty: calc.qty,
             weight_grams: calc.weight_grams,
             seller_rate_paisa: calc.seller_rate.as_paisa(),
@@ -541,6 +526,21 @@ fn insert_sale(
         posting.user_id,
         posting.now,
     )?;
+    // A چکتا buyer named on a line is in the list for next time (PRD FR-13.2, FR-7.29). The index
+    // learns him after the commit (see `refresh_chukta_after`).
+    if let Some(p) = &person {
+        crate::chukta::ensure_in_save(
+            tx,
+            &mandi_domain::core::chukta::CleanChukta {
+                name_ur: p.name_ur.clone(),
+                name_en: p.name_en.clone(),
+                phone: (!p.phone.is_empty()).then(|| p.phone.clone()),
+                key: p.key.clone(),
+            },
+            posting.user_id,
+            posting.now,
+        )?;
+    }
     Ok(id)
 }
 
@@ -624,13 +624,12 @@ pub(super) fn match_posting(
         )?;
     }
     // Advances: only a seller credit LINE (C8) of an ordinary seller, with the tick on. A
-    // negative credit is a debit line and a one-time seller has no advances.
+    // negative credit is a debit line.
     for (shaped, laid) in lots.iter().zip(&layout.lots) {
         let Some(position) = laid.seller_credit else {
             continue;
         };
         if shaped.lot.adjust_advance
-            && shaped.journal.person_key.is_none()
             && shaped.lot.purchase_id.is_none()
             && !is_garden_lot(tx, shaped)?
         {

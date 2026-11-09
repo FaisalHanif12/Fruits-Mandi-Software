@@ -21,7 +21,7 @@ export type PrintReportParty = {
    */
   tag: string | null;
   /**
-   * The person inside a پختہ کھاتہ account, as stored. Null for any other line.
+   * The person inside a چکتا کھاتہ account, as stored. Null for any other line.
    */
   person_key: string | null;
   /**

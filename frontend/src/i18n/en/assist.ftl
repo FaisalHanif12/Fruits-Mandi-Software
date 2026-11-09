@@ -10,6 +10,9 @@ assist-card-balance = Balance
 assist-card-last-entry = Last entry
 # review: pending
 assist-card-never = No entry yet
+# The card of a walk-in buyer (PRD FR-7.38, FR-13.6): he has no balance, he pays the whole bill on the spot.
+# review: pending
+assist-card-chukta-cash = { -chukta }: pays everything in cash
 # review: pending
 assist-card-credit-limit = Credit limit
 # review: pending
@@ -43,6 +46,13 @@ accountpicker-add = Add a new account
 accountpicker-add-title = New account
 # review: pending
 accountpicker-add-help = Write only what tells this account apart. You can fill in the rest later from the { -index }.
+# The short form of a new walk-in buyer, from the buyer box of a sale line (PRD FR-7.69, FR-13.3).
+# review: pending
+chukta-add-title = New { -chukta } { -gahak }
+# review: pending
+chukta-add-help = Write his name and, if you have it, his phone. He pays the whole bill on the spot and has no account.
+# review: pending
+chukta-saved = { -chukta } { -gahak } added
 
 ## How was this worked out? (PRD FR-7.43). The backend names the message and gives its values.
 
@@ -132,14 +142,6 @@ working-general-share = Net of the income and { -dukan-kharcha } lines of this e
 # A charge of a line that no rule applies to, for example { -laga } on a vegetable (PRD 11.3).
 # review: pending
 working-none-line = No rule applies to this line, so the amount is <num>{ $result }</num>.
-# A one-time seller is paid his whole net at once while { -naqd } is empty (PRD FR-13.10).
-# review: pending
-working-cash-pukhta = A { -pukhta-khata } seller is paid his whole { -safi-bikri } on the spot: <num>{ $result }</num>.
-
-# A { -pukhta-khata } seller with an open { -peshgi } gets his { -safi-bikri } less the advance the lot
-# adjusts, at once (PRD FR-13.11, plan 47). The backend gives the three amounts.
-# review: pending
-working-cash-pukhta-advance = A { -pukhta-khata } seller is paid his { -safi-bikri } less his { -peshgi } on the spot: <num>{ $credit }</num> − <num>{ $advance }</num> = <num>{ $result }</num>.
 
 ## The workings of trip goods and trips (plan 16b, PRD C21, C23, C24, C25, FR-12.24, FR-12.26, FR-12.27).
 ## The backend names the message and gives its values.

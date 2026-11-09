@@ -24,6 +24,11 @@
 //   ↓ on the last match moves to the add row, and Enter there adds. Enter on text that matches
 //   nothing (and is not a code) adds it too. With the list closed ↑ ↓ move between fields like in
 //   any other field. Alt+↓ opens the full list again, the recent records first.
+// - Enter never picks from a list that does not belong to the text in the field (plan 61, D8 bug
+//   1). With text typed, it picks the first row of the answer to THAT text: it waits for the
+//   answer when the list is older, and asks for it when the list is closed (Esc). With nothing
+//   typed, it picks only a row the user pointed at (↓ ↑ or the mouse); the first row of the full
+//   list is never taken for him. Text that matches nothing stays in the field and says so.
 // - Esc order (FR-7.18): close the list, else bring back the chosen name, else leave the screen.
 // - The chosen record belongs to the screen (`value`). The field shows its name for the current
 //   language, so a language switch keeps the value and changes only the words (FR-7.33).
@@ -45,6 +50,7 @@ import {
   type ReactNode,
   type UIEvent,
 } from 'react';
+import { hitKey, isHitValue, type PickedChukta } from '../accounts';
 import { uiErrorOf } from '../api';
 import { tokenPx } from '../hooks/tokenPx';
 import { displayName, otherScriptLang, otherScriptName, useLanguage, type Named } from '../i18n';
@@ -74,6 +80,8 @@ import type { FieldControlProps } from './Field';
 export interface PickerValue extends Named {
   id: number;
   code?: string | undefined;
+  /** Present only for a چکتا buyer (PRD FR-7.29): all of them share the id of the account چکتا کھاتہ. */
+  chukta?: PickedChukta | undefined;
 }
 
 /** What a picker row needs of a record: both names, a code, a line to tell two records apart. */
@@ -88,6 +96,13 @@ export interface PickerHit extends Named {
    * ادھار رقم واپسی picker still offer him, marked "ڈوبی". Only an account hit has it.
    */
   is_dead?: boolean | undefined;
+  /**
+   * `chukta` for a walk-in buyer of the buyer box of a بکری line (PRD FR-7.29). His `id` is the
+   * account چکتا کھاتہ's, the same for all of them, so `chukta_id` tells him apart.
+   */
+  kind?: string | undefined;
+  chukta_id?: number | null | undefined;
+  phone?: string | null | undefined;
 }
 
 /** A row the picker may offer: an active record, or a person in the dead amount. */
@@ -119,10 +134,22 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
    * only where `onAddRecord` is not given.
    */
   onAddNew?: ((text: string) => void) | undefined;
+  /**
+   * A second add row under the first (PRD FR-7.69, FR-13.3): the buyer box of a بکری line adds an
+   * ordinary buyer with the first row and a new چکتا buyer with this one. `noun` is the key of its
+   * Fluent words (`search-add-row`), `onAdd` opens its short form like `onAddRecord` does. ↓ from
+   * the first add row moves to it; `F4` and Enter on text that matches nothing add the first kind.
+   */
+  extraAdd?:
+    | {
+        noun: string;
+        onAdd: (text: string, done: (added: H | null) => void) => void;
+      }
+    | undefined;
   /** Something at the end of each row, for example a balance. */
   renderEnd?: ((hit: H) => ReactNode) | undefined;
   /**
-   * A small mark in the first line of a row, next to the code, for example "پختہ کھاتہ" (plan 47).
+   * A small mark in the first line of a row, next to the code, for example "چکتا" on a walk-in buyer (plan 64).
    * It sits there, not at the end of the second line, so it never pushes the balance out of a
    * narrow list.
    */
@@ -142,6 +169,12 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
   resolveOnEnter?: ((typed: string) => boolean) | undefined;
   /** The user typed in the field: a message about an earlier try can go. */
   onTyping?: (() => void) | undefined;
+  /**
+   * The text in the field after each key (also when it is emptied). A grid cell keeps the last of
+   * it, so a buyer typed and never chosen is told on the line and not dropped without a word
+   * (plan 61, D8 bug 1).
+   */
+  onTyped?: ((text: string) => void) | undefined;
   /** Shown under the list's rows, inside the popup. */
   footer?: ReactNode;
   /**
@@ -168,6 +201,8 @@ export interface PickerBaseProps<H extends PickerHit> extends FieldControlProps 
 const CODE_TEXT = /^\d+$/;
 const FALLBACK_ROW_PX = 72;
 const FALLBACK_LIST_PX = 360;
+/** Keys that move the highlight of an open list: the user pointing at a row. */
+const POINTING_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End', 'PageUp', 'PageDown']);
 /** Rows drawn above and below the view, so scrolling never shows a gap. */
 const OVERSCAN_ROWS = 3;
 
@@ -191,6 +226,7 @@ export function PickerBase<H extends PickerHit>({
   addNoun,
   onAddRecord,
   onAddNew,
+  extraAdd,
   renderEnd,
   renderMark,
   onHighlight,
@@ -198,6 +234,7 @@ export function PickerBase<H extends PickerHit>({
   onEnterNoMatch,
   resolveOnEnter,
   onTyping,
+  onTyped,
   footer,
   initialText,
   startOpen,
@@ -236,10 +273,16 @@ export function PickerBase<H extends PickerHit>({
   const justPicked = usePickerFlag();
   // The list has been given its first highlight since it opened (see the effect below).
   const highlightSet = usePickerFlag();
+  // The user has pointed at a row (↑ ↓, Home, End, the mouse) since the list opened or the text
+  // changed. With nothing typed, only a row he pointed at can be picked by Enter (plan 61).
+  const pointed = usePickerFlag();
   // The add row is the last stop of the list: ↓ on the last match moves to it (plan 41, R1). It is
   // not one of the matches, so Downshift does not know it and the matches keep their old meaning.
   const [addActive, setAddActive] = useState(false);
+  // The second add row is the stop after the first (a new چکتا buyer, PRD FR-13.3).
+  const [extraActive, setExtraActive] = useState(false);
   const addRowId = `${listId}-add`;
+  const extraRowId = `${listId}-add-extra`;
   const canAdd =
     addNoun !== undefined &&
     readOnly !== true &&
@@ -247,20 +290,24 @@ export function PickerBase<H extends PickerHit>({
   // The add row ends the open list. It waits for the first answer, so an empty list is known to
   // be empty, and for the last page, so it is the end of the list (plan 41, R1).
   const addShown = open && canAdd && !isPending && !isError && !hasMore;
+  const extraShown = addShown && extraAdd !== undefined;
 
   const shown = typed ?? (value === null ? '' : displayName(value, language));
 
   const closeList = () => {
     setOpen(false);
     highlightSet.set(false);
+    pointed.set(false);
     setAddActive(false);
+    setExtraActive(false);
     // A closed list forgets how far it was scrolled; the next one opens at the top.
     setScrollTop(0);
   };
 
   const pick = (hit: H) => {
     onChange(hit);
-    touch.mutate(hit.id);
+    // A چکتا buyer is not remembered as a recent account: his id is the shared account's.
+    if (hit.kind !== 'chukta') touch.mutate(hit.id);
     setTypedNow(null);
     justPicked.set(true);
     closeList();
@@ -285,7 +332,17 @@ export function PickerBase<H extends PickerHit>({
     defaultHighlightedIndex: 0,
     // The list scrolls itself (windowed rows), so Downshift's own scrolling is off.
     scrollIntoView: () => undefined,
-    stateReducer: (state, { type, changes }) => {
+    stateReducer: (state, actionAndChanges) => {
+      const { type, changes } = actionAndChanges;
+      // Text emptied: the list is the full list again and nothing in it is pointed at. Downshift
+      // would highlight the first row, and a stray Enter would pick a record the user never chose
+      // (plan 61, D8 bug 1: the first row of the full list was 0030).
+      if (
+        actionAndChanges.type === useCombobox.stateChangeTypes.InputChange &&
+        (actionAndChanges.inputValue ?? '').trim() === ''
+      ) {
+        return { ...changes, highlightedIndex: -1 };
+      }
       // Leaving the field never picks the highlighted record by itself.
       if (type === useCombobox.stateChangeTypes.InputBlur) {
         return { ...changes, selectedItem: state.selectedItem, inputValue: state.inputValue };
@@ -328,12 +385,11 @@ export function PickerBase<H extends PickerHit>({
   // at: an optional field (the اڈا of a بکری) stays empty, and a record is never swapped for the
   // first row by a stray Enter. ↓ starts the walk down the rows. Typing sets its own highlight (the
   // best match, at once), so this runs only while nothing is typed.
-  const valueId = value?.id ?? null;
   useEffect(() => {
     if (!open || isPending || typed !== null || highlightSet.get()) return;
     highlightSet.set(true);
-    setHighlightedIndex(valueId === null ? -1 : hits.findIndex((hit) => hit.id === valueId));
-  }, [open, isPending, typed, valueId, hits, setHighlightedIndex, highlightSet]);
+    setHighlightedIndex(value === null ? -1 : hits.findIndex((hit) => isHitValue(hit, value)));
+  }, [open, isPending, typed, value, hits, setHighlightedIndex, highlightSet]);
 
   // Esc closes the list first, then brings back the chosen name (FR-7.18). Downshift answers the
   // key in the field itself; this entry lets a dialog around the field know a list is open, so
@@ -395,6 +451,17 @@ export function PickerBase<H extends PickerHit>({
       return;
     }
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    // A key that moves the highlight is the user pointing at a row (plan 61).
+    if (open && POINTING_KEYS.has(event.key)) pointed.set(true);
+    if (open && extraShown && event.key === 'ArrowDown' && (addActive || extraActive)) {
+      // ↓ from the add row moves to the second add row, and stays there (PRD FR-13.3).
+      event.preventDefault();
+      keepKeyForApp(event);
+      setHighlightedIndex(-1);
+      setAddActive(false);
+      setExtraActive(true);
+      return;
+    }
     if (open && addShown && event.key === 'ArrowDown') {
       // ↓ on the last match (or on an empty list) moves to the add row, and stays there.
       if (addActive || hits.length === 0 || highlightedIndex >= hits.length - 1) {
@@ -404,6 +471,19 @@ export function PickerBase<H extends PickerHit>({
         setAddActive(true);
         return;
       }
+    }
+    if (open && extraActive && event.key === 'ArrowUp') {
+      event.preventDefault();
+      keepKeyForApp(event);
+      setExtraActive(false);
+      setAddActive(true);
+      return;
+    }
+    if (open && extraActive && event.key === 'Enter' && extraAdd !== undefined) {
+      event.preventDefault();
+      keepKeyForApp(event);
+      startAdd(typed ?? '', event.currentTarget, extraAdd.onAdd);
+      return;
     }
     if (open && addActive && event.key === 'ArrowUp') {
       event.preventDefault();
@@ -428,21 +508,17 @@ export function PickerBase<H extends PickerHit>({
       keepKeyForApp(event);
       return;
     }
-    if (event.key === 'Enter' && open) {
+    // The text as the last key left it (state is one render behind inside an event).
+    const text = (readTyped() ?? '').trim();
+    if (event.key === 'Enter' && (open || text !== '')) {
       keepKeyForApp(event);
       event.preventDefault();
-      if (!current) {
-        // The list is an older answer than the text in the field: never pick a row from it. The
-        // whole text goes on from here, or its own answer is asked for and picked when it comes
-        // (PRD FR-7.14, FR-7.39). If he types more, or leaves, in the meantime, nothing is picked.
-        const text = (readTyped() ?? '').trim();
-        if (text === '') {
-          // Nothing is typed and the list has not answered yet: nothing is highlighted, so Enter
-          // keeps what the field has and moves on. It never picks a record the user has not seen.
-          closeList();
-          advance(event.currentTarget, event);
-          return;
-        }
+      // The whole text goes on from here, or its own answer is asked for and picked when it
+      // comes, when the list is not the answer to the text in the field: an older answer (a fast
+      // typist, a slow backend) or no list at all (Esc closed it). The list of the empty text is
+      // never picked from for typed text (PRD FR-7.14, FR-7.39, plan 61). If he types more, or
+      // leaves, in the meantime, nothing is picked.
+      if (text !== '' && (!open || !current)) {
         if (resolveOnEnter?.(text) === true) {
           closeList();
           return;
@@ -453,7 +529,6 @@ export function PickerBase<H extends PickerHit>({
             if ((readTyped() ?? '').trim() !== text) return;
             const best = answer.find(isOffered);
             if (best === undefined) {
-              closeList();
               enterNoMatch(text, field);
               return;
             }
@@ -463,19 +538,30 @@ export function PickerBase<H extends PickerHit>({
           .catch(() => undefined);
         return;
       }
-      const hit = hits[highlightedIndex];
-      if (hit === undefined) {
+      if (!current) {
+        // Nothing is typed and the list has not answered yet: nothing is highlighted, so Enter
+        // keeps what the field has and moves on. It never picks a record the user has not seen.
         closeList();
-        if ((typed ?? '').trim() === '') {
-          // Nothing typed and nothing highlighted: the record that is there stays, and Enter
+        advance(event.currentTarget, event);
+        return;
+      }
+      const row = hits[highlightedIndex] ?? (text === '' ? undefined : hits[0]);
+      // With nothing typed only a row he pointed at, or the record the field already has, counts:
+      // the first row of the full list is never taken for him (plan 61, D8 bug 1).
+      const holdsRow = row !== undefined && value !== null && isHitValue(row, value);
+      const hit = text === '' && !pointed.get() && !holdsRow ? undefined : row;
+      if (hit === undefined) {
+        if (text === '') {
+          // Nothing typed and nothing pointed at: the record that is there stays, and Enter
           // moves on like in any other field (FR-7.14, plan 46).
+          closeList();
           advance(event.currentTarget, event);
           return;
         }
-        enterNoMatch(typed ?? '', event.currentTarget);
+        enterNoMatch(text, event.currentTarget);
         return;
       }
-      if (value !== null && hit.id === value.id) {
+      if (value !== null && isHitValue(hit, value)) {
         // The highlighted row is the record the field has: nothing changes, so the screen is not
         // told (a seller picked again would ask for his memory again). Enter only moves on.
         setTypedNow(null);
@@ -493,14 +579,18 @@ export function PickerBase<H extends PickerHit>({
   // Adds a record from the list: the short form over the screen, or the screen's own form. When
   // the form closes with a saved record, the field takes it and the cursor stays in the field, with
   // the name selected, so Enter carries on (plan 41, R4). Without one, the field is as it was.
-  function startAdd(text: string, field: HTMLInputElement | null | undefined) {
+  function startAdd(
+    text: string,
+    field: HTMLInputElement | null | undefined,
+    form: typeof onAddRecord = onAddRecord,
+  ) {
     closeList();
-    if (onAddRecord === undefined) {
+    if (form === undefined) {
       onAddNew?.(text);
       return;
     }
     adding.set(true);
-    onAddRecord(text, (added) => {
+    form(text, (added) => {
       // Radix gives the focus back to the field after the form has closed; take it from there.
       window.setTimeout(() => {
         adding.set(false);
@@ -522,10 +612,20 @@ export function PickerBase<H extends PickerHit>({
   }
 
   // Enter on text that matches nothing. A code is the account picker's to resolve (FR-7.39); other
-  // text is a new record, and the add form opens with it (plan 41, R1).
+  // text is a new record, and the add form opens with it (plan 41, R1). A box that cannot add (a
+  // filter) keeps its list open, which says "no match" under the text: the text stays and the
+  // field says so, and Enter goes nowhere (plan 61).
   function enterNoMatch(text: string, field: HTMLInputElement) {
-    if (canAdd && text.trim() !== '' && !CODE_TEXT.test(text.trim())) startAdd(text, field);
-    else onEnterNoMatch?.(text);
+    if (canAdd && text.trim() !== '' && !CODE_TEXT.test(text.trim())) {
+      startAdd(text, field);
+      return;
+    }
+    if (onEnterNoMatch !== undefined) {
+      closeList();
+      onEnterNoMatch(text);
+      return;
+    }
+    setOpen(true);
   }
 
   // The list opens as soon as the field has the focus, by a click or by a key (PRD FR-7.16). A
@@ -587,8 +687,11 @@ export function PickerBase<H extends PickerHit>({
     onChange: (event: { currentTarget: HTMLInputElement }) => {
       if (readOnly !== true) {
         setTypedNow(event.currentTarget.value);
+        pointed.set(false);
         setAddActive(false);
+        setExtraActive(false);
         onTyping?.();
+        onTyped?.(event.currentTarget.value);
       }
     },
   });
@@ -600,7 +703,11 @@ export function PickerBase<H extends PickerHit>({
         {...inputProps}
         // Form navigation lets ← and → leave this field while its list is open (plan 46).
         data-picker-field=""
-        {...(addActive ? { 'aria-activedescendant': addRowId } : {})}
+        {...(addActive
+          ? { 'aria-activedescendant': addRowId }
+          : extraActive
+            ? { 'aria-activedescendant': extraRowId }
+            : {})}
         title={typeof inputProps.value === 'string' ? inputProps.value : undefined}
         className={`${controlClasses({ invalid, readOnly })} type-field pe-control text-ellipsis`}
       />
@@ -646,13 +753,15 @@ export function PickerBase<H extends PickerHit>({
                 );
                 return (
                   <li
-                    key={hit.id}
+                    key={hitKey(hit)}
                     {...getItemProps({
                       item: hit,
                       index,
                       // The mouse over a match takes the highlight from the add row.
                       onMouseMove: () => {
+                        pointed.set(true);
                         setAddActive(false);
+                        setExtraActive(false);
                       },
                     })}
                     aria-setsize={hits.length}
@@ -668,7 +777,8 @@ export function PickerBase<H extends PickerHit>({
                           </Localized>
                         ) : null}
                         {renderMark === undefined ? null : renderMark(hit)}
-                        <Code>{hit.code}</Code>
+                        {/* A چکتا buyer has no code of his own: the shared account's is not shown. */}
+                        {hit.kind === 'chukta' ? null : <Code>{hit.code}</Code>}
                       </span>
                     </span>
                     <span className="flex items-baseline gap-2 truncate type-body text-ink-muted">
@@ -747,6 +857,7 @@ export function PickerBase<H extends PickerHit>({
               onMouseMove={() => {
                 if (addActive) return;
                 setHighlightedIndex(-1);
+                setExtraActive(false);
                 setAddActive(true);
               }}
               className={`flex min-h-control w-full items-center gap-2 rounded-1 px-3 py-1 text-start type-field text-primary ${addActive ? 'bg-primary-soft' : ''}`}
@@ -760,6 +871,32 @@ export function PickerBase<H extends PickerHit>({
               </Localized>
               <KeyChip shortcut={SHORTCUTS.addAccount} tone="on-light" />
             </button>
+            {extraShown ? (
+              <button
+                type="button"
+                id={extraRowId}
+                tabIndex={-1}
+                aria-current={extraActive}
+                onClick={() => {
+                  startAdd(typed ?? '', boxRef.current?.querySelector('input'), extraAdd.onAdd);
+                }}
+                onMouseMove={() => {
+                  if (extraActive) return;
+                  setHighlightedIndex(-1);
+                  setAddActive(false);
+                  setExtraActive(true);
+                }}
+                className={`flex min-h-control w-full items-center gap-2 rounded-1 px-3 py-1 text-start type-field text-primary ${extraActive ? 'bg-primary-soft' : ''}`}
+              >
+                <Plus aria-hidden="true" className="size-icon-md shrink-0" />
+                <Localized
+                  id={addTyped === '' ? 'search-add-row' : 'search-add-row-named'}
+                  vars={{ noun: extraAdd.noun, text: addTyped }}
+                >
+                  <span className="min-w-0 flex-1 text-balance break-words" />
+                </Localized>
+              </button>
+            ) : null}
           </div>
         ) : null}
         {footer}

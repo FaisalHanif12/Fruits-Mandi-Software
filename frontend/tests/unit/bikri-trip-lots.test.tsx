@@ -22,15 +22,7 @@ import * as draftsApi from '../../src/shared/drafts/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { account, fakeAccountSearch, fakeAccounts } from '../helpers/accounts';
-import {
-  AKRAM,
-  ARSHAD,
-  KARIM,
-  PUKHTA_BUYER,
-  PUKHTA_SELLER,
-  RAHIM,
-  fakeBikri,
-} from '../helpers/bikri';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM, fakeBikri } from '../helpers/bikri';
 import * as arrivals from '../helpers/arrivals-real';
 import * as own from '../helpers/bikri-own-real';
 import { fakePlan16 } from '../helpers/bikri-plan16';
@@ -57,7 +49,6 @@ vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/trips/api');
 vi.mock('../../src/features/purchases/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -168,7 +159,7 @@ function fitted(draft: BikriDraft): BikriPreview {
  */
 async function openWithOwnGoods(language: Language, answer?: (draft: BikriDraft) => BikriPreview) {
   const backend = fakeBikri(answer);
-  const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER, OWN_GOODS];
+  const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, OWN_GOODS];
   fakeAccounts(everyone);
   fakeAccountSearch(everyone);
   const app = await renderApp('/bikri/book');
@@ -663,7 +654,7 @@ describe.each(LANGUAGES)(
       resetClientState(language);
       signedIn(sessionUser({ language }));
       fakeTrips();
-      const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, PUKHTA_BUYER, PUKHTA_SELLER, OWN_GOODS];
+      const everyone = [RAHIM, KARIM, AKRAM, ARSHAD, CHUKTA_KHATA, OWN_GOODS];
       fakeAccounts(everyone);
       fakeAccountSearch(everyone);
       stock = [purchase(1, 1)];

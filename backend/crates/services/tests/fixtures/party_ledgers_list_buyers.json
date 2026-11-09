@@ -1,0 +1,27 @@
+{
+  "rows": [
+    {
+      "account_id": 20,
+      "code": "0020",
+      "name_ur": "اکرم ٹول ٹیکس",
+      "name_en": "Akram Toll Tax",
+      "balance_paisa": 288000,
+      "side": "dr",
+      "is_active": true,
+      "is_dead": false
+    },
+    {
+      "account_id": 21,
+      "code": "0021",
+      "name_ur": "ارشد ملتانی",
+      "name_en": "Arshad Multani",
+      "balance_paisa": 1868400,
+      "side": "dr",
+      "is_active": true,
+      "is_dead": false
+    }
+  ],
+  "count": 2,
+  "total_dr_paisa": 2156400,
+  "total_cr_paisa": 0
+}

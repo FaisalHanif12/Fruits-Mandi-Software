@@ -74,13 +74,13 @@ pub async fn vouchers_list<R: tauri::Runtime>(
 }
 
 /// Receives money (PRD 15.2): روکڑ بنام, the account جمع. From a buyer it settles his
-/// oldest open bills first and the extra stays as his credit (FR-15.4, FR-15.5); for a
-/// پختہ کھاتہ buyer it names the one-time person (FR-13.7). From a seller it is an advance
+/// oldest open bills first and the extra stays as his credit (FR-15.4, FR-15.5); the account
+/// چکتا کھاتہ takes no receipt, he has no ledger (FR-13.6). From a seller it is an advance
 /// returned (FR-15.12): it adjusts his open advances, oldest first, then settles what he owes.
 /// One transaction: the voucher, its journal entry, the matching rows and the audit row. Errors:
 /// the validate codes (`date`, `amount`), `ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE` (`date`),
 /// `ERR_NOT_FOUND`, `ERR_ACCOUNT_INACTIVE`, `ERR_NOT_A_BUYER` (`account_id`),
-/// `ERR_PERSON_REQUIRED` (`person_key`), `ERR_FIELD_NOT_ALLOWED` (a removed field was sent),
+/// `ERR_FIELD_NOT_ALLOWED` (a removed field was sent),
 /// `ERR_RETURN_EXCEEDS_OPEN` (value `open_paisa`, field `amount`, a seller only).
 #[tauri::command]
 pub async fn vouchers_save_receipt<R: tauri::Runtime>(

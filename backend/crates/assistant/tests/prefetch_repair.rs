@@ -593,8 +593,8 @@ mod put_back {
     }
 
     #[test]
-    fn a_name_with_no_code_or_a_pukhta_account_code_is_not_put_back() {
-        // An item has no code; a پختہ کھاتہ account stands for many people (name and phone).
+    fn a_name_with_no_code_or_a_shared_account_code_is_not_put_back() {
+        // An item has no code; چکتا کھاتہ stands for many people (name and phone).
         let item = Node::Val(Val::Name(NameVal {
             name_ur: "کیلا".to_owned(),
             name_en: "Banana".to_owned(),
@@ -685,8 +685,8 @@ mod put_back {
     }
 
     #[test]
-    fn the_two_shared_pukhta_accounts_are_never_a_record_to_put_a_name_back_to() {
-        // 0030 (buyers) and 0031 (sellers) hold many people: a typed name that is the account's
+    fn the_two_shared_accounts_are_never_a_record_to_put_a_name_back_to() {
+        // 0030 (چکتا کھاتہ) and 0031 (the old closed account) hold many people: a typed name that is the account's
         // own name says no one person (migration 0007 changed their codes from 03049999 and
         // 030119999; the old codes no longer exist).
         for code in ["0030", "0031"] {

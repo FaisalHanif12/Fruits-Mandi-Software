@@ -32,13 +32,10 @@ export const AKRAM = account(21, 'buyer', '0020', 'اکرم ٹول ٹیکس', 'A
 export const ARSHAD = account(22, 'buyer', '0021', 'ارشد ملتانی', 'Arshad Multani', {
   balance: balance(18684, 'dr'),
 });
-export const PUKHTA_BUYER = account(
-  23,
-  'buyer',
-  '0030',
-  'پختہ کھاتہ (خریدار)',
-  'Pukhta Khata (Buyer)',
-);
+export const CHUKTA_KHATA = account(23, 'buyer', '0030', 'چکتا کھاتہ', 'Chukta Khata', {
+  is_system: true,
+  is_chukta_khata: true,
+});
 export const RAHIM = account(31, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
 });

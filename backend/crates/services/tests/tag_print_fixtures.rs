@@ -99,7 +99,7 @@ fn the_real_answers_of_the_plan_17e_commands_are_the_fixtures() {
         },
     )
     .unwrap();
-    let receipt = json!({ "date": "10-10-2026", "account_id": w.akram, "person_key": null,
+    let receipt = json!({ "date": "10-10-2026", "account_id": w.akram,
         "amount": "10,000", "collector_staff_id": null, "narration": "" });
     vouchers::save_receipt(ctx, &w.owner, &typed::<ReceiptInput>(&receipt)).unwrap();
     // Both buyers go on the Saturday round (weekday 5, 0 is Monday), and اکرم gets the tag K: two

@@ -15,6 +15,7 @@
 
 import { useLocalization } from '@fluent/react';
 import { gradedItem } from '../format';
+import { Code } from '../ui/Code';
 import { Num } from '../ui/Num';
 import { PrintName } from './PrintName';
 import { R5_AMOUNT_IDS, type Paper, type PrintLine, type PrintPage } from './types';
@@ -53,7 +54,18 @@ export function PrintR5({ page, paper }: PrintR5Props) {
   const { l10n } = useLocalization();
   const value = amountOf(page, R5_AMOUNT_IDS.value);
   const total = amountOf(page, R5_AMOUNT_IDS.total);
-  const party = <PrintName name={page.party.name} tag={page.party.tag} />;
+  // A چکتا buyer has no code, so his phone tells him apart (PRD FR-7.38, FR-13.2); the others show
+  // the name and tag only, as the client's layout does.
+  const party = (
+    <>
+      <PrintName name={page.party.name} tag={page.party.tag} />
+      {page.party.code === null && page.party.phone !== null ? (
+        <span className="print-r5-phone">
+          <Code>{page.party.phone}</Code>
+        </span>
+      ) : null}
+    </>
+  );
   if (paper === 'mm80') {
     return (
       <div className="print-r5-compact">

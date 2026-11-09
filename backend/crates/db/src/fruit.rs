@@ -30,10 +30,6 @@ pub struct FruitRec {
     pub lot: Option<(i64, i64, i64, i64)>,
     /// The account credited.
     pub credit: RecordRef,
-    /// The person key of a پختہ کھاتہ credit.
-    pub pukhta_person_key: Option<String>,
-    /// The one-time seller of the lot (Urdu name, English name, phone, key), if any.
-    pub pukhta: Option<(String, String, String, String)>,
     /// The item.
     pub item: RecordRef,
     /// The packing.
@@ -61,8 +57,7 @@ pub struct FruitRec {
 const SELECT: &str = "SELECT f.id, f.version, f.number, f.entry_date,
         f.partner_id, pa.name_ur, pa.name_en,
         f.source, f.lot_id, l.lot_no, l.bikri_id, b.number,
-        ca.id, ca.code, ca.name_ur, ca.name_en, f.pukhta_person_key,
-        l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone,
+        ca.id, ca.code, ca.name_ur, ca.name_en,
         it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
         f.qty, f.weight_grams, f.rate_paisa, f.value_paisa, f.note, f.journal_entry_id,
         f.status, f.cancel_reason, f.current_entry_id, ca.tag
@@ -91,21 +86,6 @@ fn read(r: &Row<'_>) -> rusqlite::Result<FruitRec> {
         Some(id) => Some((id, r.get(9)?, r.get(10)?, r.get(11)?)),
         None => None,
     };
-    let key: Option<String> = r.get(16)?;
-    let pukhta = match &key {
-        Some(key) => {
-            let ur: Option<String> = r.get(17)?;
-            let en: Option<String> = r.get(18)?;
-            let phone: Option<String> = r.get(19)?;
-            Some((
-                ur.unwrap_or_default(),
-                en.unwrap_or_default(),
-                phone.unwrap_or_default(),
-                key.clone(),
-            ))
-        }
-        None => None,
-    };
     Ok(FruitRec {
         id: r.get(0)?,
         version: r.get(1)?,
@@ -119,33 +99,31 @@ fn read(r: &Row<'_>) -> rusqlite::Result<FruitRec> {
             code: r.get(13)?,
             name_ur: r.get(14)?,
             name_en: r.get(15)?,
-            tag: r.get(37)?,
+            tag: r.get(33)?,
         },
-        pukhta_person_key: key,
-        pukhta,
         item: RecordRef {
+            id: r.get(16)?,
+            code: r.get(17)?,
+            name_ur: r.get(18)?,
+            name_en: r.get(19)?,
+            tag: None,
+        },
+        packing: RecordRef {
             id: r.get(20)?,
             code: r.get(21)?,
             name_ur: r.get(22)?,
             name_en: r.get(23)?,
             tag: None,
         },
-        packing: RecordRef {
-            id: r.get(24)?,
-            code: r.get(25)?,
-            name_ur: r.get(26)?,
-            name_en: r.get(27)?,
-            tag: None,
-        },
-        qty: r.get(28)?,
-        weight_grams: r.get(29)?,
-        rate_paisa: r.get(30)?,
-        value_paisa: r.get(31)?,
-        note: r.get(32)?,
-        journal_entry_id: r.get(33)?,
-        status: r.get(34)?,
-        cancel_reason: r.get(35)?,
-        current_entry_id: r.get(36)?,
+        qty: r.get(24)?,
+        weight_grams: r.get(25)?,
+        rate_paisa: r.get(26)?,
+        value_paisa: r.get(27)?,
+        note: r.get(28)?,
+        journal_entry_id: r.get(29)?,
+        status: r.get(30)?,
+        cancel_reason: r.get(31)?,
+        current_entry_id: r.get(32)?,
     })
 }
 
@@ -196,8 +174,6 @@ pub struct NewFruit<'a> {
     pub lot_id: Option<i64>,
     /// The account credited.
     pub credit_account_id: i64,
-    /// The person key of a پختہ کھاتہ credit.
-    pub pukhta_person_key: Option<&'a str>,
     /// The item.
     pub item_id: i64,
     /// The packing.
@@ -227,9 +203,9 @@ pub fn insert(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO fruit_takes (created_at, created_by, updated_at, updated_by, number, entry_date,
-             partner_id, source, lot_id, credit_account_id, pukhta_person_key, item_id, packing_id,
+             partner_id, source, lot_id, credit_account_id, item_id, packing_id,
              qty, weight_grams, rate_paisa, value_paisa, note)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         params![
             now,
             user_id,
@@ -239,7 +215,6 @@ pub fn insert(
             fruit.source,
             fruit.lot_id,
             fruit.credit_account_id,
-            fruit.pukhta_person_key,
             fruit.item_id,
             fruit.packing_id,
             fruit.qty,
@@ -266,8 +241,8 @@ pub fn update(
     conn.execute(
         "UPDATE fruit_takes SET updated_at = ?2, updated_by = ?3, version = version + 1,
              entry_date = ?4, partner_id = ?5, source = ?6, lot_id = ?7, credit_account_id = ?8,
-             pukhta_person_key = ?9, item_id = ?10, packing_id = ?11, qty = ?12, weight_grams = ?13,
-             rate_paisa = ?14, value_paisa = ?15, note = ?16
+             item_id = ?9, packing_id = ?10, qty = ?11, weight_grams = ?12,
+             rate_paisa = ?13, value_paisa = ?14, note = ?15
          WHERE id = ?1",
         params![
             id,
@@ -278,7 +253,6 @@ pub fn update(
             fruit.source,
             fruit.lot_id,
             fruit.credit_account_id,
-            fruit.pukhta_person_key,
             fruit.item_id,
             fruit.packing_id,
             fruit.qty,
@@ -557,10 +531,6 @@ pub fn parts_of_entry(conn: &Connection, entry_id: i64) -> rusqlite::Result<Vec<
 // ---- The lot picker ----
 
 fn read_lot(r: &Row<'_>) -> rusqlite::Result<LotRec> {
-    let ur: Option<String> = r.get(9)?;
-    let en: Option<String> = r.get(10)?;
-    let phone: Option<String> = r.get(11)?;
-    let key: Option<String> = r.get(12)?;
     Ok(LotRec {
         lot_id: r.get(0)?,
         lot_no: r.get(1)?,
@@ -572,32 +542,24 @@ fn read_lot(r: &Row<'_>) -> rusqlite::Result<LotRec> {
             code: r.get(6)?,
             name_ur: r.get(7)?,
             name_en: r.get(8)?,
-            tag: r.get(23)?,
+            tag: r.get(19)?,
         },
-        pukhta: key.map(|key| {
-            (
-                ur.unwrap_or_default(),
-                en.unwrap_or_default(),
-                phone.unwrap_or_default(),
-                key,
-            )
-        }),
         item: RecordRef {
+            id: r.get(9)?,
+            code: r.get(10)?,
+            name_ur: r.get(11)?,
+            name_en: r.get(12)?,
+            tag: None,
+        },
+        packing: RecordRef {
             id: r.get(13)?,
             code: r.get(14)?,
             name_ur: r.get(15)?,
             name_en: r.get(16)?,
             tag: None,
         },
-        packing: RecordRef {
-            id: r.get(17)?,
-            code: r.get(18)?,
-            name_ur: r.get(19)?,
-            name_en: r.get(20)?,
-            tag: None,
-        },
-        sold_by_weight: r.get(21)?,
-        balance: r.get(22)?,
+        sold_by_weight: r.get(17)?,
+        balance: r.get(18)?,
     })
 }
 
@@ -616,8 +578,6 @@ pub struct LotRec {
     pub received_date: String,
     /// The seller account.
     pub seller: RecordRef,
-    /// The one-time seller (Urdu name, English name, phone, key).
-    pub pukhta: Option<(String, String, String, String)>,
     /// The item.
     pub item: RecordRef,
     /// The packing.
@@ -662,7 +622,6 @@ pub fn lots(
     let mut statement = conn.prepare(&format!(
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date,
                 sa.id, sa.code, sa.name_ur, sa.name_en,
-                l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 it.sold_by = 'weight',
                 l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
@@ -682,7 +641,6 @@ pub fn lot_one(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotRec
         &format!(
             "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date,
                     sa.id, sa.code, sa.name_ur, sa.name_en,
-                    l.pukhta_name_ur, l.pukhta_name_en, l.pukhta_phone, l.pukhta_person_key,
                     it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                     it.sold_by = 'weight',
                     l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag

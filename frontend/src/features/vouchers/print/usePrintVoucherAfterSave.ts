@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { FALLBACK_ERROR_MESSAGE_ID, uiErrorOf } from '../../../shared/api';
 import { useLatest } from '../../../shared/hooks';
 import { useLanguage } from '../../../shared/i18n';
+import { opensSystemPrintWindow } from '../../../shared/print';
 import { showToast, useErrorText } from '../../../shared/ui';
 import { reportsPrintVoucher } from '../../reports';
 import { PRINTING_KEY, settingsGetPrinting } from '../../settings';
@@ -38,7 +39,10 @@ export function usePrintVoucherAfterSave(): (voucherId: number) => void {
         });
         // Nothing to print: nothing to say.
         if (outcome.printed.length === 0) return;
-        showToast('success', words.getString('print-toast-printed'));
+        showToast(
+          'success',
+          words.getString(opensSystemPrintWindow() ? 'print-toast-dialog' : 'print-toast-printed'),
+        );
       } catch (failure: unknown) {
         const first = uiErrorOf(failure).errors[0];
         showToast(

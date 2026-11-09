@@ -407,7 +407,7 @@ fn the_refusals_come_back_at_their_fields() {
         preview_codes(&w, &both)
             .contains(&(ErrorCode::ErrFormatInvalid, Some("partner_id".into())))
     );
-    // The source: no lot, an unknown lot, no agent, a one-time seller as the agent.
+    // The source: no lot, an unknown lot, no agent, an old one-time seller as the agent.
     let mut no_lot = home(&w, "2", "580");
     no_lot.lot_id = None;
     assert!(preview_codes(&w, &no_lot).contains(&(ErrorCode::ErrRequired, Some("lot_id".into()))));
@@ -422,12 +422,14 @@ fn the_refusals_come_back_at_their_fields() {
         preview_codes(&w, &no_agent)
             .contains(&(ErrorCode::ErrRequired, Some("agent_account_id".into())))
     );
-    let pukhta_seller = support::id_of(&w.env, "0031");
-    let mut one_time = guests(&w, pukhta_seller, "1", "1,000");
-    one_time.agent_account_id = Some(pukhta_seller);
+    // The old closed account 0031 is no agent any more (PRD FR-13.9).
+    let old_closed = support::id_of(&w.env, "0031");
+    let mut closed = guests(&w, old_closed, "1", "1,000");
+    closed.agent_account_id = Some(old_closed);
     assert!(
-        preview_codes(&w, &one_time)
-            .contains(&(ErrorCode::ErrFormatInvalid, Some("agent_account_id".into())))
+        preview_codes(&w, &closed)
+            .iter()
+            .any(|(_, field)| field.as_deref() == Some("agent_account_id"))
     );
     // A weight on an item sold by نگ.
     let mut weighed = guests(&w, agent, "1", "1,000");
@@ -848,75 +850,6 @@ fn an_edit_that_changes_nothing_that_decides_the_split_keeps_the_saved_split() {
         [(a, 500), (b, 500), (c, 500), (fourth, 500)]
     );
     trial(&w);
-}
-
-#[test]
-fn the_one_time_seller_of_a_lot_with_fruit_taken_keeps_his_name_and_phone() {
-    // The fruit credit rests on his person key, so an edit of the بکری cannot rename him.
-    use mandi_services::core::bikri::{EditOpenInput, EditPreviewInput, PukhtaInput};
-    let w = worked_day();
-    let person = |name_ur: &str, name_en: &str| PukhtaInput {
-        name_ur: name_ur.into(),
-        name_en: name_en.into(),
-        phone: "0301-1111111".into(),
-    };
-    let mut lot = support::with_sales(
-        support::bare_lot(&w, "lot-1", w.pukhta_seller, w.banana, "10"),
-        vec![support::sale("s-1", w.akram, "5", "600")],
-    );
-    lot.pukhta = Some(person("ناصر", "Nasir"));
-    let saved = save_ok(&w, &support::draft(vec![lot]), false);
-    let lot_id = bikri::get(&w.env.ctx, saved.bikri_id).unwrap().lots[0].id;
-    let mut take = home(&w, "2", "580");
-    take.lot_id = Some(lot_id);
-    let taken = fruit::save(&w.env.ctx, &w.owner, &take).unwrap();
-    // The credit is on the one-time seller's account, with his person key.
-    let credit = taken.preview.numbers.unwrap().credit;
-    assert_eq!(credit.account.id, w.pukhta_seller);
-    assert_eq!(credit.pukhta.unwrap().name_en, "Nasir");
-    assert_eq!(
-        scalar(
-            &w,
-            &format!(
-                "SELECT COUNT(*) FROM journal_lines WHERE entry_id = {} AND pukhta_person_key IS NOT NULL",
-                taken.journal_entry_id
-            )
-        ),
-        1
-    );
-    let opened = bikri::open_for_edit(
-        &w.env.ctx,
-        &EditOpenInput {
-            bikri_id: saved.bikri_id,
-            entry_id: saved.entry_id,
-        },
-    )
-    .unwrap();
-    let preview_with = |pukhta: PukhtaInput| {
-        let mut draft = opened.draft.clone();
-        draft.lots[0].pukhta = Some(pukhta);
-        bikri::edit_preview(
-            &w.env.ctx,
-            &EditPreviewInput {
-                entry_id: saved.entry_id,
-                draft,
-            },
-        )
-        .unwrap()
-    };
-    // Another name is refused at the lot's pukhta; the same person is fine.
-    let renamed = preview_with(person("شاہد", "Shahid"));
-    assert!(
-        renamed.errors.iter().any(|e| e.field == "lots[0].pukhta"),
-        "{:?}",
-        renamed.errors
-    );
-    let same = preview_with(person("ناصر", "Nasir"));
-    assert!(
-        same.errors.iter().all(|e| e.field != "lots[0].pukhta"),
-        "{:?}",
-        same.errors
-    );
 }
 
 #[test]

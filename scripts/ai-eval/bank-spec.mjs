@@ -1530,7 +1530,7 @@ const D = [
     e('how do I pay a seller'),
   ),
   help('H06', 'advance', u('بیوپاری کو پیشگی کیسے دیتے ہیں')),
-  help('H07', 'pukhta_khata', r('pukhta khata kya hota hai')),
+  help('H07', 'chukta_khata', r('chukta khata kya hota hai')),
   help(
     'H08',
     'edit_and_cancel',

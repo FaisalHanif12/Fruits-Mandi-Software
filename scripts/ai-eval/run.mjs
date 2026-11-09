@@ -201,7 +201,7 @@ const HELP_TOPICS = [
   'collection_list',
   'payment',
   'advance',
-  'pukhta_khata',
+  'chukta_khata',
   'edit_and_cancel',
   'cash_book',
   'shop_expense',

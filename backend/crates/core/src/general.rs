@@ -25,7 +25,7 @@ use crate::money::Paisa;
 
 /// One line of a جنرل entry as typed.
 ///
-/// Field paths in errors: `lines[i].account_id`, `lines[i].person_key`, `lines[i].dr`,
+/// Field paths in errors: `lines[i].account_id`, `lines[i].dr`,
 /// `lines[i].cr`, `lines[i].narration`.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct GeneralLineInput {
@@ -33,9 +33,6 @@ pub struct GeneralLineInput {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub account_id: Option<i64>,
-    /// The one-time person, for a پختہ کھاتہ account (PRD FR-13.5). Null for any other account.
-    #[serde(default)]
-    pub person_key: Option<String>,
     /// بنام, whole rupees. Empty for none.
     #[serde(default)]
     pub dr: String,

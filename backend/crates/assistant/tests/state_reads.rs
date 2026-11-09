@@ -312,38 +312,24 @@ fn button_filters(s: &Session<'_>, id: &str) -> mandi_assistant::source::SourceR
 }
 
 #[test]
-fn status_keeps_the_paid_or_the_due_lines_of_r9_and_r38_and_the_button_says_so() {
+fn status_keeps_the_paid_or_the_due_lines_of_r38_and_the_button_says_so() {
     let w = day();
     let mut s = Session::new(&w);
-    // Event 2: شاہد paid cash on the spot, so his line is paid and nothing is due.
-    let paid = s.ok("report", report("R9", json!({"status": "paid"})));
-    let due = s.ok("report", report("R9", json!({"status": "due"})));
-    let all = s.ok("report", report("R9", json!({})));
+    // Nobody is in the dead amount in the worked day: both lists are empty, and the button keeps the word.
+    let due = s.ok("report", report("R38", json!({"status": "due"})));
+    let all = s.ok("report", report("R38", json!({})));
     let count = |id: &str| s.json(id)["count"]["n"].as_i64().unwrap();
-    assert_eq!(
-        count(&paid),
-        engine_count(
-            &w,
-            ReportId::R9,
-            ReportFilters {
-                status: Some(PaidFilter::Paid),
-                ..ReportFilters::default()
-            }
-        )
-    );
     assert_eq!(count(&due), 0);
-    assert_eq!(count(&paid), count(&all));
-    assert!(count(&paid) >= 1);
+    assert_eq!(count(&all), 0);
     assert_eq!(button_filters(&s, &due).status, Some(PaidFilter::Due));
     assert_eq!(button_filters(&s, &all).status, None);
-    // R38 takes it too; R2 does not.
-    let dead = s.ok("report", report("R38", json!({"status": "due"})));
-    assert_eq!(s.json(&dead)["source"], "R38");
+    assert_eq!(s.json(&due)["source"], "R38");
+    // R2 does not take it.
     let refused = s.error("report", report("R2", json!({"status": "due"})));
     assert_eq!(refused.code, "ERR_OUT_OF_RANGE");
     assert_eq!(refused.field.as_deref(), Some("status"));
     // A word the input does not take lists the words.
-    let wrong = s.error("report", report("R9", json!({"status": "open"})));
+    let wrong = s.error("report", report("R38", json!({"status": "open"})));
     assert_eq!(wrong.allowed, ["paid", "due"]);
 }
 
@@ -588,7 +574,6 @@ fn buyer_of_collector(
                 id: None,
                 version: None,
                 account_type: mandi_services::core::accounts::AccountType::Buyer,
-                is_pukhta_party: false,
                 control_id: None,
                 code: String::new(),
                 name_ur: ur.into(),
@@ -2097,23 +2082,20 @@ fn on_the_rich_year_every_read_agrees_with_the_screens() {
             "{kind}"
         );
     }
-    for (report_name, word, filter) in [
-        ("R9", "paid", PaidFilter::Paid),
-        ("R9", "due", PaidFilter::Due),
-        ("R38", "due", PaidFilter::Due),
-    ] {
-        let id = s.ok("report", report(report_name, json!({"status": word})));
+    // R38 takes a status: only the people who still owe (R9, which took paid and due too, is retired).
+    {
+        let id = s.ok("report", report("R38", json!({"status": "due"})));
         assert_eq!(
             s.json(&id)["count"]["n"].as_i64().unwrap(),
             engine_count(
                 w,
-                report_id(report_name),
+                report_id("R38"),
                 ReportFilters {
-                    status: Some(filter),
+                    status: Some(PaidFilter::Due),
                     ..ReportFilters::default()
                 }
             ),
-            "{report_name} {word}"
+            "R38 due"
         );
     }
     for (word, view) in [

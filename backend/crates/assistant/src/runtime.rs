@@ -20,8 +20,8 @@ pub struct Runtime {
     busy: AtomicBool,
     /// Whether the app finds the party of a plain lookup question before the first call (plan 52
     /// P52-S1, item 10). OFF in the app until the findings of the money agent's identity review
-    /// are fixed (a role-only search can pre-find a near name in the wrong role, the shared پختہ
-    /// accounts can be found, one ambiguous word does not stop it). The tests of this step switch
+    /// are fixed (a role-only search can pre-find a near name in the wrong role, the shared چکتا
+    /// account can be found, one ambiguous word does not stop it). The tests of this step switch
     /// it on.
     prefind: AtomicBool,
     /// Whether the app answers by itself, with no model call, a question it understood completely

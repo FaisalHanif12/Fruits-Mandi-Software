@@ -118,15 +118,6 @@ vouchers-field-seller = { -beopari }
 vouchers-field-paid-to = کس کو ادائیگی
 
 # review: pending
-vouchers-field-person = نام یا فون نمبر
-
-# review: pending
-vouchers-person-hint = { -pukhta-khata } میں پہلے سے درج شخص کا نام یا فون لکھیں اور فہرست سے اسے چن لیں۔
-
-# review: pending
-vouchers-make-regular = باقاعدہ کھاتہ بنائیں
-
-# review: pending
 vouchers-field-amount = رقم
 
 # review: pending

@@ -11,10 +11,6 @@ export type EffectParty = {
    */
   account: RecordRef;
   /**
-   * The person inside a پختہ کھاتہ account, as stored. Null for a plain account.
-   */
-  person_key: string | null;
-  /**
    * His balance now.
    */
   before: Balance;

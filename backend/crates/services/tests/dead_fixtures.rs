@@ -25,12 +25,9 @@ use std::path::{Path, PathBuf};
 use common::set_today;
 use mandi_reports::dashboard::{self, BackupFacts};
 use mandi_services::core::accounts::{AccountScope, SearchAccountsInput};
-use mandi_services::core::bikri::{
-    BikriSaveInput, LineChargeMethod, PaymentType, PukhtaInput, PukhtaPeopleInput,
-};
 use mandi_services::core::dead::{DeadAmountInput, DeadMarkInput, DeadPreviewInput, DeadUndoInput};
 use mandi_services::core::vouchers::ReceiptInput;
-use mandi_services::{assist, bikri, dead, search, vouchers};
+use mandi_services::{assist, dead, search, vouchers};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -120,12 +117,12 @@ fn the_real_answers_of_the_plan_40_commands_are_the_fixtures() {
 
     // 11-10-26: the preview, the move and the card.
     set_today(&w.env, 2026, 10, 11);
-    let preview_request = json!({ "account_id": w.arshad, "pukhta_person_key": null });
+    let preview_request = json!({ "account_id": w.arshad });
     let preview = dead::preview(ctx, &typed::<DeadPreviewInput>(&preview_request)).unwrap();
     assert_eq!(preview.owed_paisa.rupees(), 18_684);
     pair("masters_dead_preview_arshad", &preview_request, &preview);
 
-    let nothing_owed = json!({ "account_id": w.rahim, "pukhta_person_key": null });
+    let nothing_owed = json!({ "account_id": w.rahim });
     pair(
         "masters_dead_preview_nothing_owed",
         &nothing_owed,
@@ -139,16 +136,16 @@ fn the_real_answers_of_the_plan_40_commands_are_the_fixtures() {
     };
     refuse(
         "masters_dead_mark_nothing_owed",
-        json!({ "account_id": w.rahim, "pukhta_person_key": null, "entry_date": "11-10-2026",
+        json!({ "account_id": w.rahim, "entry_date": "11-10-2026",
                 "reason": "died", "note": "" }),
     );
     refuse(
         "masters_dead_mark_note_required",
-        json!({ "account_id": w.arshad, "pukhta_person_key": null, "entry_date": "11-10-2026",
+        json!({ "account_id": w.arshad, "entry_date": "11-10-2026",
                 "reason": "other", "note": "" }),
     );
 
-    let mark_request = json!({ "account_id": w.arshad, "pukhta_person_key": null,
+    let mark_request = json!({ "account_id": w.arshad,
         "entry_date": "11-10-2026", "reason": "died", "note": "فوت ہو گئے" });
     let marked = dead::mark(ctx, &w.owner, &typed::<DeadMarkInput>(&mark_request)).unwrap();
     pair("masters_dead_mark_arshad", &mark_request, &marked);
@@ -175,7 +172,7 @@ fn the_real_answers_of_the_plan_40_commands_are_the_fixtures() {
 
     // 12-10-26: his son pays 4,000; and a recovery over what he owes is refused.
     set_today(&w.env, 2026, 10, 12);
-    let over = json!({ "date": "12-10-2026", "account_id": w.arshad, "person_key": null,
+    let over = json!({ "date": "12-10-2026", "account_id": w.arshad,
         "amount": "18,685", "collector_staff_id": null, "narration": "" });
     let error = vouchers::save_receipt(ctx, &w.owner, &typed::<ReceiptInput>(&over)).unwrap_err();
     pair(
@@ -183,7 +180,7 @@ fn the_real_answers_of_the_plan_40_commands_are_the_fixtures() {
         &over,
         &wire_error(&error),
     );
-    let receipt = json!({ "date": "12-10-2026", "account_id": w.arshad, "person_key": null,
+    let receipt = json!({ "date": "12-10-2026", "account_id": w.arshad,
         "amount": "4,000", "collector_staff_id": null, "narration": "" });
     vouchers::save_receipt(ctx, &w.owner, &typed::<ReceiptInput>(&receipt)).unwrap();
     pair("dead_tiles_after_the_recovery", &json!({}), &tiles(&w));
@@ -205,44 +202,5 @@ fn the_real_answers_of_the_plan_40_commands_are_the_fixtures() {
         "reports_dead_amount_all_after_the_undo",
         &all,
         &mandi_reports::dead::page(ctx.db(), &typed::<DeadAmountInput>(&all)).unwrap(),
-    );
-
-    // A one-time buyer (ناصر) owes 2,000 and dies: the receipt screen finds him with the flag.
-    let mut lot = support::bare_lot(&w, "lot-n", w.rahim, w.banana, "2");
-    let mut sale = support::sale("s-n", w.pukhta_buyer, "2", "1000");
-    sale.pukhta = Some(PukhtaInput {
-        name_ur: "ناصر".into(),
-        name_en: "Nasir".into(),
-        phone: "0300-1111111".into(),
-    });
-    sale.payment_type = Some(PaymentType::Credit);
-    sale.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-    sale.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-    sale.laga = support::typed(LineChargeMethod::PerUnit, "0");
-    lot.sales = vec![sale];
-    bikri::save(
-        ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft: support::draft(vec![lot]),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap();
-    let key = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-    let person_mark = json!({ "account_id": w.pukhta_buyer, "pukhta_person_key": key,
-        "entry_date": "12-10-2026", "reason": "left", "note": "" });
-    dead::mark(ctx, &w.owner, &typed::<DeadMarkInput>(&person_mark)).unwrap();
-    let people = json!({ "text": "nasir", "side": "buyer", "include_dead": true });
-    pair(
-        "search_pukhta_people_include_dead",
-        &people,
-        &bikri::search_people(ctx, &typed::<PukhtaPeopleInput>(&people)).unwrap(),
-    );
-    let hidden = json!({ "text": "nasir", "side": "buyer" });
-    pair(
-        "search_pukhta_people_dead_hidden",
-        &hidden,
-        &bikri::search_people(ctx, &typed::<PukhtaPeopleInput>(&hidden)).unwrap(),
     );
 }

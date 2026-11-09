@@ -3,9 +3,10 @@
 // buyers, the copies, and printer or PDF. The documents ticked here are the list that Ctrl+Enter
 // prints after a save, so they are remembered (`settings_set_printing`).
 //
-// Printing works on Windows only (plan 14 contract 8). Elsewhere the backend answers
-// `ERR_PRINT_WINDOWS_ONLY` and the "Preview" shows the same documents in the app, laid out exactly
-// as they would print. The preview is always there, because a bill is worth a look before it is
+// Printing works on Windows and on a Mac (plan 14 contract 8, plan 69). On a Mac, Print and Save PDF
+// open the system print window and a hint says how to get a PDF there. On any other computer the
+// backend answers `ERR_PRINT_WINDOWS_ONLY` and the "Preview" shows the same documents in the app,
+// laid out exactly as they would print. The preview is always there, because a bill is worth a look before it is
 // printed. The language switch of the box changes only the print, never the app (PRD FR-7.36).
 
 import { Localized } from '@fluent/react';
@@ -24,6 +25,7 @@ import {
   BIKRI_PRINT_DOCS,
   printingInputOf,
   DOC_NAME_ID,
+  PrintDialogHint,
   PrintLanguageTo,
   PrintOutcomeNotice,
 } from '../../../shared/print';
@@ -184,6 +186,7 @@ function PrintBoxForm({
         to={to}
         onTo={setTo}
       />
+      <PrintDialogHint />
       <fieldset className="flex flex-col">
         <Localized id="print-box-docs">
           <legend className="type-label" />

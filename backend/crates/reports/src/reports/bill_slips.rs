@@ -4,7 +4,7 @@
 //! The client's print of 18-10-26 (ادھاری تفصیل) has one row for each buyer; "Print All" gives each
 //! buyer his own slip, with a page break between buyers. A slip holds the buyer, his credit lines
 //! of the filter (the serial inside the slip, the line written "(item qty . rate)", its value and
-//! its value after commission and لاگا, C5) and his sums. A one-time person (پختہ کھاتہ, FR-13.5)
+//! its value after commission and لاگا, C5) and his sums. A چکتا buyer (چکتا کھاتہ, FR-13.5)
 //! has a slip of his own. A buyer who paid cash on the spot has no slip: his lines are نقدی.
 //!
 //! Every figure is a value stored on the line when the بکری was saved (Code Standards B20). This
@@ -42,7 +42,7 @@ use crate::print::{PrintFact, TextDir};
 pub struct BuyerBillSlip {
     /// The number of the slip in this print, 1 for the first.
     pub serial: String,
-    /// The buyer: short code, name with tag. A one-time person has his person key.
+    /// The buyer: short code, name with tag. A چکتا buyer has his person key.
     pub party: PrintReportParty,
     /// His lines, one cell for each column of the print: serial, detail, value, total.
     pub rows: Vec<PrintReportRow>,

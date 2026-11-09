@@ -680,7 +680,6 @@ fn run(case: &Case) {
             Step::General { amount } => {
                 let line = |account: i64, dr: &str, cr: &str| GeneralLineInput {
                     account_id: Some(account),
-                    person_key: None,
                     dr: dr.into(),
                     cr: cr.into(),
                     narration: None,

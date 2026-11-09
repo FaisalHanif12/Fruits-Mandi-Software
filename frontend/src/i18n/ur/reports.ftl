@@ -388,6 +388,10 @@ report-print-pdf = PDF محفوظ کریں
 # review: pending
 report-print-sent = پرنٹر کو بھیج دیا گیا۔
 
+# On a Mac the system print window opens for Print and Save PDF (plan 69).
+# review: pending
+report-print-dialog-opened = پرنٹ کی کھڑکی کھل گئی۔
+
 # review: pending
 report-print-close = بند کریں
 
@@ -430,12 +434,6 @@ report-r8-title = { -adda } رپورٹ
 
 # review: pending
 report-r8-help = ہر { -adda } کے ٹرک، لاٹ، تعداد اور { -kham-bikri }۔
-
-# review: pending
-report-r9-title = { -pukhta-khata } رپورٹ
-
-# review: pending
-report-r9-help = { -pukhta-khata } کے ایک بار آنے والے لوگوں کی ہر لائن، ادا اور باقی کے ساتھ۔
 
 # review: pending
 report-r20-title = گاہکوں کے ذمے
@@ -709,12 +707,6 @@ report-filter-by-month = مہینے کے حساب سے
 ## The new filter boxes.
 
 # review: pending
-report-filter-person = ایک بار آنے والا فرد
-
-# review: pending
-report-filter-person-hint = نام یا فون نمبر لکھیں
-
-# review: pending
 report-filter-status = دکھائیں
 
 # review: pending
@@ -782,12 +774,6 @@ report-card-open-statement = اس کھاتے کا { -fard-hisab } کھولیں
 report-card-reports-label = اس کھاتے کی رپورٹیں
 
 ## Global search: one-time people and screens (PRD FR-5.4).
-
-# review: pending
-report-search-person = ایک بار آنے والا فرد
-
-# review: pending
-report-search-person-last = آخری { $date }
 
 # review: pending
 report-search-screen = اسکرین

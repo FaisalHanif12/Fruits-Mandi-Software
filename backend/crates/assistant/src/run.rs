@@ -2539,7 +2539,7 @@ fn entry_screen(screen: EntryScreenName) -> EntryScreen {
         EntryScreenName::CommissionRules => EntryScreen::CommissionRules,
         EntryScreenName::TodaySales => EntryScreen::TodaySales,
         EntryScreenName::UnsoldStock => EntryScreen::UnsoldStock,
-        EntryScreenName::PukhtaKhata => EntryScreen::PukhtaKhata,
+        EntryScreenName::ChuktaKhata => EntryScreen::ChuktaKhata,
         EntryScreenName::CollectionList => EntryScreen::CollectionList,
         EntryScreenName::CashBook => EntryScreen::CashBook,
         EntryScreenName::Gardens => EntryScreen::Gardens,

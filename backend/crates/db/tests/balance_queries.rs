@@ -2,7 +2,7 @@
 //! (migration 0002; PRD FR-6.1; NFR-SPD-2, NFR-SPD-3, NFR-SPD-9, NFR-SPD-13, NFR-SPD-21).
 //!
 //! The old queries are kept here as text, as the reference. A generated journal (back-dated
-//! entries, reversals, a پختہ کھاتہ with persons, advances, a draft that is not posted, and an
+//! entries, reversals, a چکتا کھاتہ with persons, advances, a draft that is not posted, and an
 //! account with more lines than the first step of `last_entry_date` reads) is summed both ways,
 //! for every account, with and without a person and a day.
 #![cfg(test)]
@@ -22,7 +22,7 @@ use mandi_db::rusqlite::{Connection, params};
 
 const OLD_TOTALS_OF: &str = "SELECT COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
      FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-     WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.pukhta_person_key = ?2)
+     WHERE e.status = 'posted' AND l.account_id = ?1 AND (?2 IS NULL OR l.chukta_person_key = ?2)
        AND (?3 IS NULL OR e.entry_date <= ?3)";
 
 const OLD_ACCOUNT_TOTALS: &str =
@@ -123,7 +123,7 @@ fn draft(conn: &Connection, date: &str, lines: &[Line], reverses: Option<i64>) -
     let entry = conn.last_insert_rowid();
     for (index, l) in lines.iter().enumerate() {
         conn.execute(
-            "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key, dr_paisa, cr_paisa, is_advance)
+            "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key, dr_paisa, cr_paisa, is_advance)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 entry,
@@ -153,7 +153,7 @@ fn posted(conn: &Connection, date: &str, lines: &[Line], reverses: Option<i64>) 
 struct Book {
     accounts: Vec<i64>,
     cash: i64,
-    pukhta: i64,
+    chukta: i64,
     seller: i64,
 }
 
@@ -165,7 +165,7 @@ fn generate(conn: &Connection, entries: usize) -> Book {
     ];
     let accounts: Vec<i64> = codes.iter().map(|c| account_id(conn, c)).collect();
     let cash = account_id(conn, "01010001");
-    let pukhta = account_id(conn, "0030");
+    let chukta = account_id(conn, "0030");
     let seller = account_id(conn, "0031");
     let persons = [Some("ali|0300"), Some("bilal|0301"), Some("chand|0302")];
     let mut rng = Rng(0x00D2_C0DE_1234_5678);
@@ -206,7 +206,7 @@ fn generate(conn: &Connection, entries: usize) -> Book {
             credit = accounts[1];
         }
         let person_of = |account: i64, rng: &mut Rng| -> Option<&'static str> {
-            if account == pukhta || account == seller {
+            if account == chukta || account == seller {
                 persons[usize::try_from(rng.below(3)).unwrap()]
             } else {
                 None
@@ -266,7 +266,7 @@ fn generate(conn: &Connection, entries: usize) -> Book {
     Book {
         accounts,
         cash,
-        pukhta,
+        chukta,
         seller,
     }
 }
@@ -306,7 +306,7 @@ fn original_rows(conn: &Connection, entry: i64) -> (String, Vec<Line>) {
         )
         .unwrap();
     let mut statement = conn
-        .prepare("SELECT account_id, pukhta_person_key, dr_paisa, cr_paisa FROM journal_lines WHERE entry_id = ?1 ORDER BY line_no")
+        .prepare("SELECT account_id, chukta_person_key, dr_paisa, cr_paisa FROM journal_lines WHERE entry_id = ?1 ORDER BY line_no")
         .unwrap();
     let persons = ["ali|0300", "bilal|0301", "chand|0302"];
     let rows = statement
@@ -439,7 +439,7 @@ fn check_against_the_old_join(conn: &Connection, book: &Book, drafts: i64) {
         last_entry_date(conn, book.cash).unwrap().as_deref(),
         Some("2026-12-31")
     );
-    // The seller and the پختہ کھاتہ account both have persons and advances in the data.
+    // The seller and the چکتا کھاتہ account both have persons and advances in the data.
     let advances: i64 = conn
         .query_row(
             "SELECT COUNT(*) FROM journal_lines WHERE is_advance = 1 AND account_id = ?1",
@@ -450,8 +450,8 @@ fn check_against_the_old_join(conn: &Connection, book: &Book, drafts: i64) {
     assert!(advances > 0);
     let persons_seen: i64 = conn
         .query_row(
-            "SELECT COUNT(DISTINCT pukhta_person_key) FROM journal_lines WHERE account_id = ?1",
-            [book.pukhta],
+            "SELECT COUNT(DISTINCT chukta_person_key) FROM journal_lines WHERE account_id = ?1",
+            [book.chukta],
             |r| r.get(0),
         )
         .unwrap();
@@ -735,19 +735,19 @@ fn a_day_on_a_small_account_checks_each_line_and_on_a_busy_one_leaves_out_the_la
         day_method_with(&conn, ordinary, None, None, between).unwrap(),
         DayMethod::LeftOut
     );
-    // One person of a پختہ کھاتہ account is counted on his own lines.
+    // One person of a چکتا کھاتہ account is counted on his own lines.
     let person_lines: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM journal_lines WHERE account_id = ?1 AND pukhta_person_key = 'ali|0300'",
-            [book.pukhta],
+            "SELECT COUNT(*) FROM journal_lines WHERE account_id = ?1 AND chukta_person_key = 'ali|0300'",
+            [book.chukta],
             |r| r.get(0),
         )
         .unwrap();
-    assert!(person_lines > 0 && person_lines < lines(book.pukhta));
+    assert!(person_lines > 0 && person_lines < lines(book.chukta));
     assert_eq!(
         day_method_with(
             &conn,
-            book.pukhta,
+            book.chukta,
             Some("ali|0300"),
             Some("2026-05-15"),
             person_lines
@@ -758,7 +758,7 @@ fn a_day_on_a_small_account_checks_each_line_and_on_a_busy_one_leaves_out_the_la
     assert_eq!(
         day_method_with(
             &conn,
-            book.pukhta,
+            book.chukta,
             Some("ali|0300"),
             Some("2026-05-15"),
             person_lines - 1

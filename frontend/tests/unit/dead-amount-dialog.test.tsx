@@ -63,11 +63,8 @@ describe.each(LANGUAGES)('moving a person to the dead amount (%s)', (language: L
     });
   });
 
-  function open(personKey: string | null = null, onClose = vi.fn()) {
-    shown(
-      <DeadMarkDialog request={{ accountId: 22, personKey, names: NAMES }} onClose={onClose} />,
-      language,
-    );
+  function open(onClose = vi.fn()) {
+    shown(<DeadMarkDialog request={{ accountId: 22, names: NAMES }} onClose={onClose} />, language);
     return onClose;
   }
 
@@ -76,10 +73,7 @@ describe.each(LANGUAGES)('moving a person to the dead amount (%s)', (language: L
     const dialog = await screen.findByRole('dialog');
     expect(visible(dialog.textContent)).toContain(nameOf);
     await within(dialog).findByText('18,684');
-    expect(mastersApi.deadPreview).toHaveBeenCalledWith({
-      account_id: 22,
-      pukhta_person_key: null,
-    });
+    expect(mastersApi.deadPreview).toHaveBeenCalledWith({ account_id: 22 });
     const date = within(dialog).getByRole<HTMLInputElement>('textbox', {
       name: named(m('dead-move-date')),
     });
@@ -95,7 +89,6 @@ describe.each(LANGUAGES)('moving a person to the dead amount (%s)', (language: L
     await waitFor(() => {
       expect(mastersApi.deadMark).toHaveBeenCalledWith({
         account_id: 22,
-        pukhta_person_key: null,
         entry_date: '11-10-2026',
         reason: 'died',
         note: '',
@@ -115,7 +108,7 @@ describe.each(LANGUAGES)('moving a person to the dead amount (%s)', (language: L
     const onClose = vi.fn();
     shown(
       <DeadMarkDialog
-        request={{ accountId: MARK_ARSHAD_REQUEST.account_id, personKey: null, names: NAMES }}
+        request={{ accountId: MARK_ARSHAD_REQUEST.account_id, names: NAMES }}
         onClose={onClose}
       />,
       language,
@@ -149,25 +142,6 @@ describe.each(LANGUAGES)('moving a person to the dead amount (%s)', (language: L
       expect(onClose).toHaveBeenCalledWith(true);
     });
     expect(mastersApi.deadMark).toHaveBeenCalledTimes(1);
-  });
-
-  it('sends the person key of a one-time person to both commands', async () => {
-    const onClose = open('shahid|03000000000');
-    const dialog = await screen.findByRole('dialog');
-    await within(dialog).findByText('18,684');
-    expect(mastersApi.deadPreview).toHaveBeenCalledWith({
-      account_id: 22,
-      pukhta_person_key: 'shahid|03000000000',
-    });
-    await userEvent
-      .setup()
-      .click(within(dialog).getByRole('button', { name: named(m('dead-move-confirm')) }));
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledWith(true);
-    });
-    expect(mastersApi.deadMark).toHaveBeenCalledWith(
-      expect.objectContaining({ pukhta_person_key: 'shahid|03000000000' }),
-    );
   });
 
   it('a refusal stays in the box, under its field, and what was typed is kept', async () => {

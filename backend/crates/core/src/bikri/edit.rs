@@ -26,7 +26,7 @@ use ts_rs::TS;
 
 use super::input::{BikriDraft, SaleInput};
 use super::preview::BikriPreview;
-use super::saved::{BikriStatus, SavedLot, SavedPosting, SavedPukhta};
+use super::saved::{BikriStatus, SavedLot, SavedPosting};
 use crate::accounts::RecordRef;
 use crate::cash::CashCheck;
 use crate::money::Paisa;
@@ -129,8 +129,6 @@ pub struct StockRow {
     pub received_date: String,
     /// The seller account.
     pub seller: RecordRef,
-    /// The one-time seller, for the پختہ کھاتہ account.
-    pub pukhta: Option<SavedPukhta>,
     /// The item.
     pub item: RecordRef,
     /// The packing.

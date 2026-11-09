@@ -23,11 +23,11 @@ use super::model::{AnalyticsKey, AnalyticsLinesInput, AnalyticsLinesPage};
 use super::table::{Part, part_cell};
 use crate::error::ReportsError;
 use crate::reports::common::{load_parties, paisa, party_of_line};
-use crate::reports::grouped_sums::pukhta_names;
+use crate::reports::grouped_sums::chukta_names;
 use crate::reports::{
     Cell, Column, ColumnKind, Names, PartyRef, Row, RowKind, RowSource, SourceKind,
 };
-use crate::reports::{PageSpec, common::pukhta_party};
+use crate::reports::{PageSpec, common::chukta_party};
 
 /// Most items a key may leave out (the "other items" column of view E has fewer than 24).
 const MAX_EXCLUDED_ITEMS: usize = 50;
@@ -287,7 +287,7 @@ pub(crate) fn run(
 
     let sql = format!(
         "SELECT f.entry_date, f.sign, f.bikri_id, b.number, je.posting_type, f.seller_account_id,
-                f.buyer_account_id, f.pukhta_person_key, i.name_ur, i.name_en, f.qty,
+                f.buyer_account_id, f.chukta_person_key, i.name_ur, i.name_en, f.qty,
                 f.seller_amount_paisa, f.seller_comm_paisa, f.buyer_value_paisa,
                 f.buyer_comm_paisa, f.laga_paisa
          FROM analytics_facts f
@@ -355,21 +355,21 @@ pub(crate) fn run(
     account_ids.sort_unstable();
     account_ids.dedup();
     let parties = load_parties(conn, &account_ids)?;
-    let pukhta_ids: Vec<i64> = lines
+    let chukta_ids: Vec<i64> = lines
         .iter()
         .filter(|l| l.person_key.is_some())
         .map(|l| l.buyer)
         .collect();
-    let mut pukhta_ids = pukhta_ids;
-    pukhta_ids.sort_unstable();
-    pukhta_ids.dedup();
-    let names = pukhta_names(conn, &pukhta_ids)?;
+    let mut chukta_ids = chukta_ids;
+    chukta_ids.sort_unstable();
+    chukta_ids.dedup();
+    let names = chukta_names(conn, &chukta_ids)?;
     let buyer_party = |l: &Raw| -> Result<PartyRef, ReportsError> {
         let party = party_of_line(&parties, l.buyer, l.person_key.clone())?;
         Ok(match &l.person_key {
             Some(person) => {
                 let saved = names.get(person);
-                pukhta_party(
+                chukta_party(
                     party,
                     Some(person.clone()),
                     saved.map(|p| p.name_ur.as_str()),

@@ -17,8 +17,7 @@
 //! | Document | Pages | One page |
 //! |---|---|---|
 //! | `seller_bill` (R1) | one per seller | his lines, the deductions, the net sale and its words |
-//! | `buyer_slips` (R5) | one per buyer account | his lines, commission, لاگا, the total and its words |
-//! | `pukhta_slip` | one per one-time buyer | the same as a buyer slip, with his name and phone |
+//! | `buyer_slips` (R5) | one per buyer (a چکتا buyer has his own slip) | his lines, commission, لاگا, the total and its words |
 //!
 //! Example (بکری 1, seller bill, Urdu): the page of رحیم has the amounts gross 29,400,
 //! freight 3,000, commission 1,764, labour 250, munshiana 50, cash paid 5,000, store rent 0,
@@ -119,23 +118,23 @@ pub struct PrintFact {
     pub value: String,
 }
 
-/// The party a page is for: the seller, a buyer or a one-time buyer.
+/// The party a page is for: the seller, a buyer or a چکتا buyer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintParty {
-    /// Fluent message ID of the role label (seller, buyer, one-time buyer).
+    /// Fluent message ID of the role label (seller, buyer, چکتا buyer).
     pub role_id: String,
-    /// The account code. Null for a one-time person.
+    /// The account code. Null for a چکتا buyer.
     pub code: Option<String>,
     /// The short code of a seller or buyer (PRD 1.8 R5, FR-19.13): the running number of his code,
-    /// for example `0` for 0020 and `11` for 00111. Absent for a one-time person and for an
-    /// account that has no short code (پختہ کھاتہ).
+    /// for example `0` for 0020 and `11` for 00111. Absent for a چکتا buyer and for an
+    /// account that has no short code (چکتا کھاتہ).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub short_code: Option<String>,
     /// The name in the print language.
     pub name: String,
     /// The tag (نشان) of the account, printed after the name. Absent if none, and always absent
-    /// for a one-time person (PRD 10.2).
+    /// for a چکتا buyer (PRD 10.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub tag: Option<String>,
@@ -151,7 +150,7 @@ pub struct PrintLine {
     /// The buyer's name, on the seller bill. Null on a slip (the page is the buyer).
     pub name: Option<String>,
     /// The tag (نشان) of that buyer, printed after his name. Absent if none, on a slip, and for
-    /// a one-time buyer (PRD 10.2).
+    /// a چکتا buyer (PRD 10.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub name_tag: Option<String>,
@@ -214,7 +213,7 @@ pub struct PrintWords {
     pub text: String,
 }
 
-/// One page of a document: one seller, one buyer or one one-time buyer.
+/// One page of a document: one seller, one buyer or one چکتا buyer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintPage {
     /// The row number of this page's party in the document: 1, 2, 3 ... (the serial column of
@@ -260,6 +259,6 @@ pub struct PrintData {
     /// FR-7.71). Null if the entry was never edited. The template prints "نظر ثانی شدہ" with it in
     /// the header, so a reprint after a correction cannot be mistaken for the first print.
     pub revised_on: Option<String>,
-    /// The pages. Empty when there is nothing to print (no one-time buyer for the پختہ slip).
+    /// The pages. Empty when there is nothing to print (no چکتا buyer for the buyer slip).
     pub pages: Vec<PrintPage>,
 }

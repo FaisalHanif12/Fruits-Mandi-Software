@@ -48,10 +48,6 @@ import {
 import {
   BACKEND_CATALOG,
   CATALOG,
-  PEOPLE_LIMIT_TOO_BIG,
-  PEOPLE_NONE,
-  PEOPLE_SHAHID,
-  PEOPLE_SHAHID_REQUEST,
   PRINT_R13_AKRAM_UR,
   PRINT_R13_AKRAM_UR_REQUEST,
   PRINT_R18_EN,
@@ -81,12 +77,9 @@ import {
   R6_LOTS,
   R7_ITEMS,
   R8_ADDA,
-  R9_ALL,
-  R9_DUE,
   PRINT_R20_UR,
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
-  PRINT_R9_DUE_EN,
   PENDING_REPORTS,
 } from '../helpers/reports-real';
 import {
@@ -142,10 +135,6 @@ beforeEach(() => {
 });
 
 const BACKEND_FILE = path.resolve(__dirname, '../../../backend/app/src/commands/reports_engine.rs');
-const BACKEND_PEOPLE_FILE = path.resolve(
-  __dirname,
-  '../../../backend/app/src/commands/reports_people.rs',
-);
 const BACKEND_FIXTURES = path.resolve(__dirname, '../../../backend/crates/services/tests/fixtures');
 const FRONTEND_FIXTURES = path.resolve(__dirname, '../fixtures');
 
@@ -154,7 +143,6 @@ const isEngineFixture = (name: string) =>
   name.endsWith('.json') &&
   (name === 'reports_catalog.json' ||
     name.startsWith('reports_run_') ||
-    name.startsWith('reports_find_people_') ||
     name.startsWith('reports_print_data_r'));
 
 describe('the commands the screens call are the ones the backend declares', () => {
@@ -164,12 +152,6 @@ describe('the commands the screens call are the ones the backend declares', () =
     for (const name of ['reports_catalog', 'reports_run', 'reports_print_data']) {
       expect(declared).toContain(name);
     }
-  });
-
-  it('the people search used in api.ts exists in the backend’s people file', () => {
-    const text = readFileSync(BACKEND_PEOPLE_FILE, 'utf8');
-    const declared = [...text.matchAll(/pub async fn (\w+)</g)].map((match) => match[1] ?? '');
-    expect(declared).toContain('reports_find_people');
   });
 });
 
@@ -184,20 +166,18 @@ describe('each wrapper sends the command and `{ input }`', () => {
     await api.reportsRun(R13_AKRAM_REQUEST);
     await api.reportsPrintData(PRINT_R18_EN_REQUEST);
     await api.reportsPrintData(PRINT_R13_AKRAM_UR_REQUEST);
-    await api.reportsFindPeople(PEOPLE_SHAHID_REQUEST);
     expect(call.mock.calls).toEqual([
       ['reports_run', { input: R18_PAGE1_REQUEST }],
       ['reports_run', { input: R13_AKRAM_REQUEST }],
       ['reports_print_data', { input: PRINT_R18_EN_REQUEST }],
       ['reports_print_data', { input: PRINT_R13_AKRAM_UR_REQUEST }],
-      ['reports_find_people', { input: PEOPLE_SHAHID_REQUEST }],
     ]);
   });
 });
 
 describe('the fixtures are the backend’s own', () => {
   it('every report engine fixture is the same text as the backend’s file', () => {
-    // The catalogue too: it holds all 38 reports now, as the backend lists them.
+    // The catalogue too: it holds 37 reports now (R9 is retired, v1.32), as the backend lists them.
     const names = readdirSync(FRONTEND_FIXTURES).filter(isEngineFixture);
     expect(names.length).toBeGreaterThan(100);
     for (const name of names) {
@@ -270,8 +250,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
       R6_LOTS,
       R7_ITEMS,
       R8_ADDA,
-      R9_ALL,
-      R9_DUE,
       R20_DUES,
       R21_BY_CITY,
       R22_BY_COLLECTOR,
@@ -354,22 +332,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
     ]);
   });
 
-  it('PukhtaPersonHit', () => {
-    for (const hit of PEOPLE_SHAHID) {
-      expect(keysOf(hit)).toEqual([
-        'accounts',
-        'last_date',
-        'name_en',
-        'name_ur',
-        'person_key',
-        'phone',
-      ]);
-      for (const account of hit.accounts) expect(keysOf(account)).toEqual(['account_id', 'side']);
-    }
-    expect(PEOPLE_NONE).toEqual([]);
-    expect(PEOPLE_LIMIT_TOO_BIG).toMatchObject({ ok: false });
-  });
-
   it('ReportPrintData', () => {
     for (const data of [
       PRINT_R18_EN,
@@ -377,7 +339,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
       PRINT_R7_EN,
       PRINT_R20_UR,
       PRINT_R28_MONTH_EN,
-      PRINT_R9_DUE_EN,
       PRINT_R31_BAY_EN,
       PRINT_R33_PARTNER_EN,
       PRINT_R34_EN,
@@ -409,8 +370,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 38 reports, with the boxes the backend says for the newer ones', () => {
-    expect(CATALOG).toHaveLength(38);
+  it('the catalogue lists 37 reports (R9 is retired), with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(37);
     // The dead amount (plan 40): in the business group, with the one status box (still owing or all).
     expect(entryOf('R38')).toMatchObject({
       group: 'business',

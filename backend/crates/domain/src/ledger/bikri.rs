@@ -31,9 +31,9 @@ use super::{BalancedEntry, LedgerError, LedgerLine, Side, build_entry};
 /// One sale line as the journal needs it. Every amount is the value stored for the line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JournalSale {
-    /// The buyer's account (own account, نقدی منڈی, or a پختہ کھاتہ account).
+    /// The buyer's account (own account, نقدی منڈی, or the چکتا کھاتہ account).
     pub buyer_account_id: AccountId,
-    /// The person of a پختہ کھاتہ account (PRD FR-13.5).
+    /// The person of the چکتا کھاتہ account (PRD FR-13.5).
     pub person_key: Option<String>,
     /// What the buyer pays: value + commission + لاگا.
     pub buyer_total: Paisa,
@@ -60,8 +60,6 @@ pub struct JournalLot {
     /// other lot. The parts add up to `seller_credit`; the credit is then not posted to
     /// `seller_account_id`. The cost of the goods (C21) is never in the journal.
     pub partner_credits: Vec<(AccountId, Paisa)>,
-    /// The person of a پختہ کھاتہ seller account.
-    pub person_key: Option<String>,
     /// What the posting credits the seller (C8). Can be negative.
     pub seller_credit: Paisa,
     /// نقد given to the seller in this posting.
@@ -248,7 +246,7 @@ pub fn build_bikri_entry_with_layout(
             let at = push_signed(
                 &mut lines,
                 lot.seller_account_id,
-                lot.person_key.as_deref(),
+                None,
                 Side::Cr,
                 lot.seller_credit,
             )?;
@@ -293,7 +291,7 @@ pub fn build_bikri_entry_with_layout(
             let at = push_signed(
                 &mut lines,
                 lot.seller_account_id,
-                lot.person_key.as_deref(),
+                None,
                 Side::Dr,
                 lot.cash_paid,
             )?;

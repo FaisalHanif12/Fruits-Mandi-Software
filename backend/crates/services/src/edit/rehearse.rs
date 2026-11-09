@@ -204,14 +204,14 @@ fn collect(
     // The party accounts (sellers, buyers, separate khatas, gardens and money lent) and the cash
     // account that the lines of the edit's own entries touched, with what those lines add up to.
     let mut statement = tx.prepare(
-        "SELECT a.id, a.code, a.name_ur, a.name_en, a.tag, k.code, l.pukhta_person_key,
-                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0), a.is_pukhta_khata
+        "SELECT a.id, a.code, a.name_ur, a.name_en, a.tag, k.code, l.chukta_person_key,
+                COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0), a.is_chukta_khata
          FROM journal_lines l
          JOIN journal_entries e ON e.id = l.entry_id
          JOIN accounts a ON a.id = l.account_id
          JOIN account_controls k ON k.id = a.control_id
          WHERE e.id > ?1 AND e.status = 'posted'
-         GROUP BY a.id, l.pukhta_person_key ORDER BY a.id, l.pukhta_person_key",
+         GROUP BY a.id, l.chukta_person_key ORDER BY a.id, l.chukta_person_key",
     )?;
     let rows = statement
         .query_map([max_before], |r| {
@@ -234,7 +234,7 @@ fn collect(
 
     let mut facts = Facts::default();
     let mut cash_change = 0_i64;
-    for (account, control, person, dr, cr, is_pukhta) in rows {
+    for (account, control, person, dr, cr, is_chukta) in rows {
         if account.code == CASH_ACCOUNT_CODE {
             cash_change = cash_change
                 .checked_add(dr.checked_sub(cr).ok_or_else(|| data("a cash change"))?)
@@ -248,9 +248,8 @@ fn collect(
         ) {
             continue;
         }
-        // A line of a پختہ کھاتہ account with no person would stand for every person at once: leave
-        // it out rather than show a balance that is not one person's.
-        if is_pukhta && person.is_none() {
+        // چکتا کھاتہ has no ledger and no balance (PRD FR-13.6): its lines are not an effect on a party.
+        if is_chukta {
             continue;
         }
         let totals = ledger_repo::totals_of(tx, account.id, person.as_deref(), None)?;
@@ -268,7 +267,6 @@ fn collect(
         if before != after {
             facts.parties.push(EffectParty {
                 account,
-                person_key: person,
                 before,
                 after,
             });

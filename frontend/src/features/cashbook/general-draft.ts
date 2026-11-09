@@ -1,17 +1,14 @@
-// The text side of the جنرل screen (Code Standards F39, PRD 16.4, FR-13.5): the lines as the grid's
-// store holds them, the one-time person chosen for a پختہ کھاتہ line, the entry the backend takes,
+// The text side of the جنرل screen (Code Standards F39, PRD 16.4): the lines as the grid's
+// store holds them, the entry the backend takes,
 // and the way a problem at `lines[2].dr` finds its row and cell again. Nothing here works out money
 // (CLAUDE.md rule 1): the totals, the balance check and the split are the backend's.
 
 import type { UiErrorItem } from '../../bindings/UiErrorItem';
-import type { PukhtaPerson } from '../../bindings/PukhtaPerson';
 import type { EntryRow } from '../../shared/grid';
-import { isPukhtaCode } from '../pukhta_khata';
 import type { GeneralInput, GeneralLineInput, GeneralPreviewInput } from './types';
 
-/** The cells of a line. `person` is read only: it shows the one-time person chosen below the grid. */
+/** The cells of a line. */
 export const GENERAL_ACCOUNT = 'account';
-export const GENERAL_PERSON = 'person';
 export const GENERAL_DR = 'dr';
 export const GENERAL_CR = 'cr';
 export const GENERAL_NARRATION = 'narration';
@@ -21,17 +18,6 @@ export const GENERAL_KIND = 'general';
 
 /** The lines a new entry starts with: a جنرل entry needs two. */
 export const GENERAL_START_LINES = 2;
-
-/**
- * The one-time person of a line on a پختہ کھاتہ account, by row. `text` is what is typed in his
- * field; `person` is the one taken from the list (PRD FR-7.29). Kept above the grid, so a language
- * switch loses nothing (F39).
- */
-export interface PersonChoice {
-  text: string;
-  person: PukhtaPerson | null;
-}
-export type PeopleMap = Readonly<Record<string, PersonChoice>>;
 
 /** The paths the form itself shows next to its fields, so no problem is told twice. */
 export const GENERAL_FIELD_PATHS: readonly string[] = ['date', 'narration'];
@@ -59,19 +45,14 @@ export interface SentLines {
   rowIds: string[];
 }
 
-export function sentLines(rows: readonly EntryRow[], people: PeopleMap): SentLines {
+export function sentLines(rows: readonly EntryRow[]): SentLines {
   const lines: GeneralLineInput[] = [];
   const rowIds: string[] = [];
   for (const row of rows) {
     if (isBlankLine(row)) continue;
     const note = typedOf(row, GENERAL_NARRATION);
-    // A person goes with a line only while the line is on a پختہ کھاتہ account (PRD FR-13.5).
-    const account = row.picked?.[GENERAL_ACCOUNT];
     lines.push({
-      account_id: account?.id ?? null,
-      person_key: isPukhtaCode(account?.code)
-        ? (people[row.rowId]?.person?.person_key ?? null)
-        : null,
+      account_id: row.picked?.[GENERAL_ACCOUNT]?.id ?? null,
       dr: typedOf(row, GENERAL_DR),
       cr: typedOf(row, GENERAL_CR),
       narration: note === '' ? null : note,
@@ -115,7 +96,6 @@ export function buildGeneral(
 /** The cell a field of a line is shown in. */
 const CELL_OF_FIELD: Readonly<Record<string, string>> = {
   account_id: GENERAL_ACCOUNT,
-  person_key: GENERAL_PERSON,
   dr: GENERAL_DR,
   cr: GENERAL_CR,
   narration: GENERAL_NARRATION,

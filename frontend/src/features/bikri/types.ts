@@ -61,10 +61,6 @@ export const LOT = {
   purchase: 'purchase',
   // The goods arrived entry of a garden's lot (the seller is the garden, PRD FR-12.40): its id.
   arrival: 'arrival',
-  // A one-time seller (the پختہ کھاتہ account).
-  pukhtaUr: 'pukhtaUr',
-  pukhtaEn: 'pukhtaEn',
-  pukhtaPhone: 'pukhtaPhone',
   // Set once the app has filled the cell itself, so it never fills it again (PRD FR-7.51).
   sellerFilled: 'sellerFilled',
   memoryFilledFor: 'memoryFilledFor',
@@ -98,17 +94,11 @@ export const SALE = {
   lagaValue: 'lagaValue',
   lagaMethod: 'lagaMethod',
   note: 'note',
-  pukhtaUr: 'pukhtaUr',
-  pukhtaEn: 'pukhtaEn',
-  pukhtaPhone: 'pukhtaPhone',
   // Set once the app has filled the quantity itself (PRD FR-7.52).
   qtyFilled: 'qtyFilled',
   // The saved line this row is, when a posting is open for edit (plan 16). An id, never shown.
   saleId: 'saleId',
 } as const;
-
-/** The codes of the two one-time accounts (PRD FR-13.1) are kept by their own module. */
-export { PUKHTA_BUYER_CODE, PUKHTA_SELLER_CODE } from '../pukhta_khata/codes';
 
 /** The اپنا مال account: the seller of a lot of the firm's own goods (PRD FR-10.4, FR-12.26). */
 export { OWN_GOODS_CODE } from '../../shared/accounts';

@@ -13,8 +13,9 @@
 // - Typed lines live in the store of the lot, so a language switch loses nothing (F39).
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
+import type { CardChukta } from '../../../shared/accounts';
 import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
 import { useLatest, useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
@@ -23,8 +24,6 @@ import { allLinesColumns, saleColumns } from '../columns';
 import { useBikriDraft } from '../draft-store';
 import { useKeepCardInView } from '../hooks/useKeepCardInView';
 import { lotLabelVars, useLotWho } from '../lot-name';
-import { focusPukhtaFieldsSoon } from './PukhtaFields';
-import { isPukhtaBuyer } from '../draft';
 import type { GridView } from '../grid-views';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
@@ -39,7 +38,7 @@ interface SalesSectionProps {
   /** The whole-sale view: the lines of every lot in one grid. */
   whole: boolean;
   view: GridView;
-  onCardAccount: (accountId: number | null) => void;
+  onCardAccount: (accountId: number | null, chukta?: CardChukta | null) => void;
   /** The party card drawn under the grid (compact and normal windows). Null: it is drawn elsewhere. */
   card?: ReactNode;
   /**
@@ -74,7 +73,10 @@ export function SalesSection({
   // The lot is named by its seller and item, not by its number alone (PRD FR-12.6).
   const lotRow = stores.lots((state) => state.rows).find((row) => row.rowId === lotKey);
   const lotLabel = lotLabelVars(lotIndex + 1, lotWho(lotRow));
-  const columns = useMemo(() => (whole ? allLinesColumns(step) : saleColumns(step)), [step, whole]);
+  const baseColumns = useMemo(
+    () => (whole ? allLinesColumns(step) : saleColumns(step)),
+    [step, whole],
+  );
   // The party card under the grid is kept in view while the user types in the lines (PRD FR-7.38).
   const cardBox = useRef<HTMLDivElement>(null);
   const [region, setRegion] = useState<HTMLElement | null>(null);
@@ -100,17 +102,53 @@ export function SalesSection({
     }
   };
 
+  // The lines the backend refused for a quantity over the lot, read when a key is pressed or a cell is
+  // asked to be typed in.
+  const holdsNow = useLatest(view.holds);
+  // The quantity text each hold was sent back for. A hold is for that text: the moment the text changes the
+  // line is free again (its cells take input and Enter goes on), until the next answer says again.
+  const sentBack = useRef(new Map<string, string>());
+  const heldFieldOf = useMemo(
+    () =>
+      (rowId: string): string | null => {
+        const held = holdsNow()[rowId];
+        if (held === undefined) return null;
+        const text =
+          store.getState().rows.find((row) => row.rowId === rowId)?.typed[SALE.qty] ?? '';
+        const known = sentBack.current.get(rowId);
+        return known === undefined || known === text ? held : null;
+      },
+    [holdsNow, store],
+  );
+  // On a line the backend refused for its quantity only the quantity takes input until it is fixed: the
+  // other cells of the line do not start typing (D8 Bug 1, B2). Read from the newest answer when asked.
+  const columns = useMemo(
+    () =>
+      baseColumns.map((column) => ({
+        ...column,
+        editable: (row: EntryRow) => {
+          const held = heldFieldOf(row.rowId);
+          return (held === null || held === column.field) && (column.editable?.(row) ?? true);
+        },
+      })),
+    [baseColumns, heldFieldOf],
+  );
+
   // What the backend refused, read when Enter is pressed, so a new answer never rebuilds the keys.
   const errorsNow = useLatest(view.errors);
   const interceptors = useMemo<GridInterceptors>(
     () => ({
+      // A refused line keeps the cursor on its quantity until it is fixed (D8 Bug 1, B2).
+      heldField: heldFieldOf,
       // ↑ on the first line goes back up to its lot.
       onAboveFirst: () => {
         const index = stores.lots.getState().rows.findIndex((row) => row.rowId === lotKey);
         stores.lots.getState().setPendingFocus({ rowIndex: Math.max(index, 0), field: LOT.seller });
         return true;
       },
-      // A one-time buyer: Enter goes on to his name and phone first (PRD FR-13.2).
+      // A line with something refused keeps the cursor until it is fixed. A چکتا buyer needs no
+      // stop of his own: he is one chosen record of the buyer box, so Enter goes on as usual
+      // (PRD FR-12.5, FR-13.5).
       onEnter: (cell, enter) => {
         // A quantity the backend refused (more than the lot has left, FR-12.6) is not left with Enter
         // until it is fixed: the cursor stays on it. Only when the text was not just changed, because
@@ -122,14 +160,40 @@ export function SalesSection({
         ) {
           return true;
         }
-        const row = stores.all.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
-        if (cell.field !== SALE.buyer || row === undefined || !isPukhtaBuyer(row)) return false;
-        focusPukhtaFieldsSoon(cell.rowId);
-        return true;
+        return false;
       },
     }),
-    [stores, lotKey, errorsNow],
+    [stores, lotKey, errorsNow, heldFieldOf],
   );
+
+  // A quantity the backend refused (more than the lot has left): once for each text it refused, the cursor
+  // goes back to that line's quantity with the text selected, whatever cell it had moved to, if it is in
+  // the lines here. The screen only reacts to the backend's error; it judges nothing (D8 Bug 1, B2).
+  useEffect(() => {
+    const holds = view.holds;
+    // A text the cursor was sent back for is remembered while the text stays the same, also while the
+    // answer for a later change (the rate, say) is on its way and the hold blinks off. Once the text is
+    // another, the memory goes, so the same wrong text typed again later sends the cursor back again.
+    for (const [rowId, known] of sentBack.current) {
+      const now = store.getState().rows.find((row) => row.rowId === rowId)?.typed[SALE.qty];
+      if (now !== known) sentBack.current.delete(rowId);
+    }
+    for (const rowId of Object.keys(holds)) {
+      const index = store.getState().rows.findIndex((row) => row.rowId === rowId);
+      const row = store.getState().rows[index];
+      if (row === undefined) continue;
+      const text = row.typed[SALE.qty] ?? '';
+      if (sentBack.current.get(rowId) === text) continue;
+      sentBack.current.set(rowId, text);
+      const active = document.activeElement;
+      const here =
+        region !== null &&
+        active instanceof Element &&
+        (region.contains(active) || active.closest('.ag-custom-component-popup') !== null);
+      if (!here) continue;
+      store.getState().setPendingFocus({ rowIndex: index, field: SALE.qty, edit: true });
+    }
+  }, [view.holds, store, region]);
 
   return (
     <section ref={setRegion} aria-labelledby="bikri-sales-heading" className="flex flex-col gap-3">

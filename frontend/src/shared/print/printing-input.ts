@@ -14,7 +14,6 @@ export function printingInputOf(
   return {
     paper_seller_bill: saved.paper_seller_bill,
     paper_buyer_slips: saved.paper_buyer_slips,
-    paper_pukhta_slip: saved.paper_pukhta_slip,
     paper_receipt_slip: saved.paper_receipt_slip,
     paper_collection_list: saved.paper_collection_list,
     printer: saved.printer,

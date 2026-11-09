@@ -203,7 +203,7 @@ pub fn save(
     let settings = rules::overrides(ctx)?;
     let switches = switches(&settings);
     let now = ctx.now_text();
-    ctx.db.write(|tx| {
+    let saved = ctx.db.write(|tx| {
         let plan = plan_later(tx, input.lot_id, &input.date, &input.sales, window)?;
         let LaterPlan {
             state,
@@ -310,5 +310,9 @@ pub fn save(
                 preview
             },
         })
-    })
+    })?;
+    if input.sales.iter().any(|s| s.chukta.is_some()) {
+        crate::search::refresh_chukta_all(ctx);
+    }
+    Ok(saved)
 }

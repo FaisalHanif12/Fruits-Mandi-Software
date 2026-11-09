@@ -20,7 +20,6 @@ fn seller_return(date: &str, seller: i64, amount: &str) -> ReceiptInput {
     ReceiptInput {
         date: date.into(),
         account_id: seller,
-        person_key: None,
         amount: amount.into(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,

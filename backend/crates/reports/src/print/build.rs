@@ -17,7 +17,7 @@ use super::format::NumberStyle;
 use super::header::{footer, header, pick};
 use super::ids::*;
 use super::load::FirmNames;
-use super::pages::{buyer_pages, pukhta_pages, seller_pages};
+use super::pages::{buyer_pages, seller_pages};
 use super::{AmountRole, PrintAmount, PrintData, PrintFact, PrintWords, TextDir};
 use crate::error::ReportsError;
 
@@ -70,7 +70,6 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
             TITLE_BUYER_SLIP,
             buyer_pages(&ctx, detail, options.only_buyer_id)?,
         ),
-        PrintDoc::PukhtaSlip => (TITLE_PUKHTA_SLIP, pukhta_pages(&ctx, detail)?),
         // The voucher slip is built from a voucher (plan 15) and the collection list from a
         // day (plan 17e), not from a بکری.
         PrintDoc::ReceiptSlip | PrintDoc::CollectionList => {

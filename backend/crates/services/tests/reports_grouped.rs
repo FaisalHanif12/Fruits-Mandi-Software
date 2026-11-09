@@ -1,7 +1,6 @@
 //! The grouped sums of R24 and R20 against the per-seller functions they replace (money review
 //! finding 7, Code Standards B22). 500 sellers with credits, payments, advances, a reversed
-//! entry, matching rows (active and undone) and one-time people on the پختہ کھاتہ seller account:
-//! for every key the grouped answer must equal `mandi_db::vouchers::payable_totals`, the number
+//! entry and matching rows (active and undone): for every key the grouped answer must equal `mandi_db::vouchers::payable_totals`, the number
 //! of queries must not depend on the number of sellers, and the R24 totals must equal the sum of
 //! the old per-seller workings. No expected number of any other test changes.
 #![cfg(test)]
@@ -13,22 +12,21 @@ mod reports_world;
 mod support;
 
 use common::*;
-use mandi_reports::reports::grouped_sums::{payable_sums, pukhta_names};
+use mandi_reports::reports::grouped_sums::{chukta_names, payable_sums};
 use mandi_reports::reports::{ReportFilters, ReportId};
 use mandi_services::core::accounts::AccountType;
 use mandi_services::core::dates::BusinessDate;
 use mandi_services::core::ids::AccountId;
 use mandi_services::core::money::Paisa;
-use mandi_services::db::vouchers::{payable_totals, pukhta_person};
+use mandi_services::db::vouchers::payable_totals;
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
 use mandi_services::domain::payables::from_totals;
 use mandi_services::ledger::PostingEvent;
 use reports_world::*;
 
-/// The sellers made for the test, and the keys of the one-time people.
+/// The sellers made for the test.
 struct Many {
     sellers: Vec<i64>,
-    pukhta_keys: Vec<String>,
 }
 
 fn post(
@@ -84,8 +82,6 @@ fn add_sellers(w: &support::World, count: i64) -> Many {
             "",
         ));
     }
-    let pukhta_keys: Vec<String> = (0..6).map(|n| format!("person-{n}")).collect();
-    let pukhta = w.pukhta_seller;
     let p = |rupees: i64| rupees_paisa(rupees);
     w.env
         .ctx
@@ -142,56 +138,18 @@ fn add_sellers(w: &support::World, count: i64) -> Many {
                         .unwrap();
                 }
             }
-            // One-time sellers on the پختہ کھاتہ seller account.
-            let pukhta_id = AccountId::new(pukhta);
-            let cash = AccountId::new(cash);
-            for (n, key) in pukhta_keys.iter().enumerate() {
-                let n = i64::try_from(n).unwrap();
-                post_as(
-                    w,
-                    tx,
-                    PostingType::BikriFirst,
-                    vec![
-                        LedgerLine::new(cash, Side::Dr, p(3_000 + 100 * n)),
-                        LedgerLine::new(pukhta_id, Side::Cr, p(3_000 + 100 * n)).with_person(key),
-                    ],
-                );
-                if n % 2 == 0 {
-                    post(
-                        w,
-                        tx,
-                        vec![
-                            LedgerLine::new(pukhta_id, Side::Dr, p(4_000)).with_person(key),
-                            LedgerLine::new(cash, Side::Cr, p(4_000)),
-                        ],
-                    );
-                }
-                if n % 3 == 0 {
-                    post_as(
-                        w,
-                        tx,
-                        PostingType::Advance,
-                        vec![
-                            LedgerLine::new(pukhta_id, Side::Dr, p(1_500))
-                                .with_person(key)
-                                .as_advance(),
-                            LedgerLine::new(cash, Side::Cr, p(1_500)),
-                        ],
-                    );
-                }
-            }
             Ok::<(), mandi_services::db::DbError>(())
         })
         .unwrap();
 
     // Matching rows: an active row for every seller who has an advance and a credit, an undone
-    // row for every tenth, and rows for the one-time people.
+    // row for every tenth.
     let conn = raw(&w.dir);
     let line_of = |account: i64, key: Option<&str>, column: &str| -> Option<i64> {
         conn.query_row(
             &format!(
                 "SELECT l.id FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-                 WHERE l.account_id = ?1 AND l.pukhta_person_key IS ?2 AND {column}
+                 WHERE l.account_id = ?1 AND l.chukta_person_key IS ?2 AND {column}
                    AND e.reverses_entry_id IS NULL
                    AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id)
                  ORDER BY l.id LIMIT 1"
@@ -204,7 +162,7 @@ fn add_sellers(w: &support::World, count: i64) -> Many {
     let insert = |advance: i64, credit: i64, account: i64, key: Option<&str>, active: bool| {
         conn.execute(
             "INSERT INTO advance_allocations (advance_line_id, credit_line_id, account_id,
-                 pukhta_person_key, amount_paisa, is_active, undone_at, undone_by)
+                 chukta_person_key, amount_paisa, is_active, undone_at, undone_by)
              VALUES (?1, ?2, ?3, ?4, 100000, ?5, ?6, ?7)",
             mandi_services::db::rusqlite::params![
                 advance,
@@ -229,18 +187,7 @@ fn add_sellers(w: &support::World, count: i64) -> Many {
             insert(advance, credit, *seller, None, i % 10 != 0);
         }
     }
-    for key in pukhta_keys.iter().step_by(3) {
-        if let (Some(advance), Some(credit)) = (
-            line_of(pukhta, Some(key), "l.is_advance = 1"),
-            line_of(pukhta, Some(key), "l.cr_paisa > 0"),
-        ) {
-            insert(advance, credit, pukhta, Some(key), true);
-        }
-    }
-    Many {
-        sellers,
-        pukhta_keys,
-    }
+    Many { sellers }
 }
 
 fn rupees_paisa(value: i64) -> Paisa {
@@ -288,16 +235,11 @@ fn grouped_sums_equal_payable_totals_and_the_query_count_does_not_grow() {
         .db()
         .read(|conn| {
             let sums = payable_sums(conn, None).unwrap();
-            // Every seller, every one-time person and the keyless line of the پختہ account, and
-            // the worked day's sellers: each equals the per-seller function.
+            // Every seller and the worked day's sellers: each equals the per-seller function.
             let mut keys: Vec<(i64, Option<String>)> =
                 many.sellers.iter().map(|id| (*id, None)).collect();
             keys.push((w.rahim, None));
             keys.push((w.karim, None));
-            keys.push((w.pukhta_seller, None));
-            for key in &many.pukhta_keys {
-                keys.push((w.pukhta_seller, Some(key.clone())));
-            }
             let mut checked = 0_usize;
             for (account, key) in &keys {
                 let old = payable_totals(conn, *account, key.as_deref()).unwrap();
@@ -324,25 +266,10 @@ fn grouped_sums_equal_payable_totals_and_the_query_count_does_not_grow() {
             Ok::<_, mandi_services::db::DbError>((sums, checked))
         })
         .unwrap();
-    assert!(conn_check >= 509, "{conn_check} keys compared");
+    assert!(conn_check >= 502, "{conn_check} keys compared");
     // The same number of queries for 3 sellers and for 500 (B22).
     assert_eq!(sums.queries, few);
     assert_eq!(sums.queries, 6);
-
-    // The single-account path gives the same sums for the one-time people of the پختہ account.
-    let pukhta_alone = w
-        .env
-        .ctx
-        .db()
-        .read(|conn| payable_sums(conn, Some(w.pukhta_seller)))
-        .unwrap();
-    for key in &many.pukhta_keys {
-        assert_eq!(
-            pukhta_alone.of(w.pukhta_seller, Some(key)),
-            sums.of(w.pukhta_seller, Some(key)),
-            "{key}"
-        );
-    }
 
     // One seller asked for alone gives the same sums as the all-sellers load.
     let one = many.sellers[5];
@@ -364,10 +291,6 @@ fn grouped_sums_equal_payable_totals_and_the_query_count_does_not_grow() {
                 many.sellers.iter().map(|id| (*id, None)).collect();
             keys.push((w.rahim, None));
             keys.push((w.karim, None));
-            keys.push((w.pukhta_seller, None));
-            for key in &many.pukhta_keys {
-                keys.push((w.pukhta_seller, Some(key.clone())));
-            }
             for (account, key) in keys {
                 let t = payable_totals(conn, account, key.as_deref()).unwrap();
                 let p = |v: i64| Paisa::try_from_paisa(v).unwrap();
@@ -394,27 +317,20 @@ fn grouped_sums_equal_payable_totals_and_the_query_count_does_not_grow() {
 }
 
 #[test]
-fn the_names_of_the_one_time_people_come_from_one_query_and_equal_the_old_lookup() {
+fn the_names_of_the_chukta_buyers_come_from_one_query() {
     let w = full_day();
     let conn = raw(&w.dir);
-    let keys: Vec<String> = {
-        let mut statement = conn
-            .prepare(
-                "SELECT DISTINCT pukhta_person_key FROM journal_lines
-                 WHERE account_id = ?1 AND pukhta_person_key IS NOT NULL",
-            )
-            .unwrap();
-        statement
-            .query_map([w.pukhta_buyer], |r| r.get(0))
-            .unwrap()
-            .collect::<Result<_, _>>()
-            .unwrap()
-    };
-    assert!(!keys.is_empty(), "شاہد has a key");
-    let names = pukhta_names(&conn, &[w.pukhta_buyer]).unwrap();
-    for key in &keys {
-        let old = pukhta_person(&conn, key).unwrap().unwrap();
-        assert_eq!(names.get(key), Some(&old));
-    }
-    assert!(pukhta_names(&conn, &[]).unwrap().is_empty());
+    let names = chukta_names(&conn, &[w.chukta_khata]).unwrap();
+    assert_eq!(
+        names.len(),
+        1,
+        "شاہد is the one چکتا buyer of the worked day"
+    );
+    let (key, name) = names.iter().next().unwrap();
+    assert_eq!(key, "شاہد|03000000000");
+    assert_eq!(
+        (name.name_ur.as_str(), name.name_en.as_str()),
+        ("شاہد", "Shahid")
+    );
+    assert!(chukta_names(&conn, &[]).unwrap().is_empty());
 }

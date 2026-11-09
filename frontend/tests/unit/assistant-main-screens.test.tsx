@@ -1,5 +1,5 @@
-// The help button for every main screen (PRD FR-7.89, plan 52 item 4). The backend names 19 main
-// screens in `EntryScreen`; each one must open its own route, empty, with no party. The routes in
+// The help button for every main screen (PRD FR-7.89, plan 52 item 4). The backend names 18 main
+// screens in `EntryScreen` (the one-time buyers screen is gone, v1.32); each one must open its own route, empty, with no party. The routes in
 // the table are read against two things that can drift: the doc comment of the generated type (the
 // backend's own list) and the real router.
 
@@ -46,15 +46,15 @@ const SRC = path.resolve(__dirname, '../../src');
 const SCREENS = Object.keys(MAIN_SCREEN_PATHS) as MainScreen[];
 
 describe('the table of main screens', () => {
-  it('has the 19 main screens the backend names, and no entry screen', () => {
+  it('has the 18 main screens the backend names, and no entry screen', () => {
     const generated = readFileSync(path.join(SRC, 'bindings/EntryScreen.ts'), 'utf8');
     const union = [...generated.matchAll(/\|\s*'(\w+)'/g)].map((m) => m[1] as EntryScreen);
-    // 19 main screens and 21 entry screens: the ten of plan 55 Section 11.1 (a garden's and a trip's
+    // 18 main screens and 22 entry screens: the ten of plan 55 Section 11.1 (a garden's and a trip's
     // entries, a later sale, edit and cancel of a بکری) came after the first thirty.
     expect(union.length).toBe(40);
     const main = union.filter(isMainScreen);
     expect(main.sort()).toEqual([...SCREENS].sort());
-    expect(main).toHaveLength(19);
+    expect(main).toHaveLength(18);
     for (const entry of [
       'bikri',
       'wasooli',

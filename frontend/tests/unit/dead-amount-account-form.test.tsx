@@ -88,7 +88,6 @@ describe.each(LANGUAGES)('the dead amount on the account form (%s)', (language: 
     const dialog = await screen.findByRole('dialog');
     expect(mastersApi.deadPreview).toHaveBeenCalledWith({
       account_id: 22,
-      pukhta_person_key: null,
     });
     expect(visible(dialog.textContent)).toContain(
       language === 'ur' ? 'ارشد ملتانی' : 'Arshad Multani',

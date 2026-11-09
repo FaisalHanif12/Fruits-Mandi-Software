@@ -6,8 +6,7 @@ import type { DeadReason } from './DeadReason';
  *
  * Errors: `ERR_NOT_FOUND` (`account_id`); `ERR_NOTHING_OWED` (`account_id`); `ERR_DEAD_NOT_ALLOWED`
  * (`account_id`: a partner, a الگ کھاتہ, a garden or a system account); `ERR_ALREADY_DEAD`
- * (`account_id`); `ERR_PERSON_IN_DEAD_AMOUNT` (`pukhta_person_key`, when already marked);
- * `ERR_PERSON_REQUIRED` (`pukhta_person_key`); `ERR_NOTE_REQUIRED` (`note`, when the reason is
+ * (`account_id`); `ERR_NOTE_REQUIRED` (`note`, when the reason is
  * `other`); the open-day codes on `entry_date` (`ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE`) and
  * `ERR_DATE_BEFORE_LAST_POSTING` (value `last_posting_date`).
  */
@@ -16,10 +15,6 @@ export type DeadMarkInput = {
    * The account.
    */
   account_id: number;
-  /**
-   * The person inside a پختہ کھاتہ account. Required for a پختہ کھاتہ account.
-   */
-  pukhta_person_key: string | null;
   /**
    * The day of the move, as typed (`DD-MM-YYYY` or a shortcut). An open date.
    */

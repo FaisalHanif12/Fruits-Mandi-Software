@@ -9,7 +9,8 @@
 //   then closes the cell without a second save (`stopEditing(true)`, which cancels the grid's own
 //   value step).
 // - Enter in the open list picks and goes on to the next Enter stop, the same step as Enter on a
-//   cell (FR-7.14). While the list is open ↑ ↓ choose in it, ← → and Tab leave the cell, and
+//   cell (FR-7.14). Enter with text typed and the list closed (Esc) is the picker's too: it picks
+//   the first row of the answer to that text, and the cell goes on after it (plan 61). While the list is open ↑ ↓ choose in it, ← → and Tab leave the cell, and
 //   Ctrl shortcuts (copy from above, remove the row) reach the grid. With the list closed, Enter,
 //   the arrows and the other grid keys are answered by the grid's own key handler, so the keys are
 //   the same in every cell (F27).
@@ -18,11 +19,12 @@
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
 import type { CustomCellEditorProps } from 'ag-grid-react';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { pickedOf } from '../accounts';
+import { pickedOf, type CardChukta, type PickedSource } from '../accounts';
 import { AccountPicker } from '../ui/AccountPicker';
 import { Picker } from '../ui/Picker';
 import type { EntryStore } from './entryStore';
-import type { EntryRow, PickedRecord, PickerSpec } from './types';
+import { leftTextKey } from './leftText';
+import type { EntryRow, PickerSpec } from './types';
 
 type KeyParams = SuppressKeyboardEventParams<EntryRow>;
 
@@ -33,8 +35,11 @@ export interface PickerEditorParams {
   field: string;
   /** The grid's key handler. Asked when a key arrives, because the grid may have a new one. */
   getKeyHandler: () => (params: KeyParams, fromEditor?: boolean) => boolean;
-  /** The account the screen's party card would show now (null for none). */
-  onCardAccount?: ((accountId: number | null) => void) | undefined;
+  /**
+   * The account the screen's party card would show now (null for none), and for a چکتا buyer who
+   * he is: his names and phone (PRD FR-13.6).
+   */
+  onCardAccount?: ((accountId: number | null, chukta?: CardChukta | null) => void) | undefined;
 }
 
 type EditorProps = CustomCellEditorProps<EntryRow, unknown, unknown> & PickerEditorParams;
@@ -50,6 +55,9 @@ export function PickerCellEditor(props: EditorProps) {
   const { context, eventKey } = props;
   const rowId = data.rowId;
   const wrapper = useRef<HTMLDivElement>(null);
+  // The text in the field as the last key left it, until a record is picked or the edit is cancelled.
+  // When the cell is left with text in it and nothing picked, it is kept on the row (leftText.ts).
+  const typedNow = useRef('');
   const value = store((state) => state.rows.find((row) => row.rowId === rowId)?.picked?.[field]);
   // A key that opened the cell is the first letter; Alt+↓ opened it for the full list.
   const [start] = useState(() => ({
@@ -58,6 +66,8 @@ export function PickerCellEditor(props: EditorProps) {
   }));
 
   useEffect(() => {
+    // A key that opened the cell is the first letter of the text.
+    typedNow.current = start.text ?? '';
     store.getState().setEditHint(null);
     const input = wrapper.current?.querySelector('input');
     if (input === null || input === undefined) return;
@@ -91,9 +101,28 @@ export function PickerCellEditor(props: EditorProps) {
     colDef,
   });
 
-  const commit = (hit: PickedRecord | null) => {
-    store.getState().updatePicked(rowId, field, hit === null ? null : pickedOf(hit));
+  const commit = (hit: PickedSource | null) => {
+    typedNow.current = '';
+    const state = store.getState();
+    state.updatePicked(rowId, field, hit === null ? null : pickedOf(hit));
+    // A record is chosen, so the text that was left before is no longer waiting for one.
+    const key = leftTextKey(field);
+    if ((state.rows.find((row) => row.rowId === rowId)?.typed[key] ?? '') !== '') {
+      state.updateTyped(rowId, key, '');
+    }
   };
+
+  // The cell closes with text typed and nothing picked: keep the text, so the line can say so.
+  useEffect(
+    () => () => {
+      const text = typedNow.current.trim();
+      if (text === '') return;
+      const state = store.getState();
+      if (state.rows.find((row) => row.rowId === rowId)?.picked?.[field] !== undefined) return;
+      state.updateTyped(rowId, leftTextKey(field), text);
+    },
+    [store, rowId, field],
+  );
 
   // Enter has picked: close the cell, then take the step Enter takes on any cell.
   const goOn = () => {
@@ -126,7 +155,16 @@ export function PickerCellEditor(props: EditorProps) {
     ) {
       return;
     }
-    if (event.key === 'Escape' || isTypingKey(event)) return;
+    if (event.key === 'Escape') {
+      // Esc cancels the typing in the cell: nothing is kept (PRD FR-7.18).
+      typedNow.current = '';
+      return;
+    }
+    if (isTypingKey(event)) return;
+    // An Enter the picker has taken is not the grid's: it is resolving the text in the field (the
+    // list was closed, or is an older answer), and the cell goes on only after it has picked
+    // (plan 61, PRD FR-7.14). Without this the cell would end with the text and nothing picked.
+    if (event.key === 'Enter' && event.defaultPrevented) return;
     if (event.key === 'Tab') {
       event.preventDefault();
       goOn();
@@ -148,6 +186,7 @@ export function PickerCellEditor(props: EditorProps) {
       {spec.kind === 'account' ? (
         <AccountPicker
           scope={spec.scope}
+          withChukta={spec.withChukta === true}
           value={value ?? null}
           showCard={false}
           initialText={start.text}
@@ -155,6 +194,9 @@ export function PickerCellEditor(props: EditorProps) {
           onChange={commit}
           onEnterPicked={goOn}
           onCardAccount={onCardAccount}
+          onTyped={(text) => {
+            typedNow.current = text;
+          }}
         />
       ) : (
         <Picker
@@ -164,6 +206,9 @@ export function PickerCellEditor(props: EditorProps) {
           startOpen={start.open}
           onChange={commit}
           onEnterPicked={goOn}
+          onTyped={(text) => {
+            typedNow.current = text;
+          }}
         />
       )}
     </div>

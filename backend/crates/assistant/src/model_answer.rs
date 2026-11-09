@@ -121,8 +121,8 @@ pub enum EntryScreenName {
     TodaySales,
     /// باقی مال.
     UnsoldStock,
-    /// پختہ کھاتہ.
-    PukhtaKhata,
+    /// چکتا کھاتہ.
+    ChuktaKhata,
     /// اگراہی فہرست.
     CollectionList,
     /// روکڑ بک.
@@ -191,7 +191,7 @@ impl EntryScreenName {
         "commission_rules",
         "today_sales",
         "unsold_stock",
-        "pukhta_khata",
+        "chukta_khata",
         "collection_list",
         "cash_book",
         "gardens",

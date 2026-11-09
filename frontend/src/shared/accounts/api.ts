@@ -25,6 +25,9 @@ import type {
 } from './types';
 import type { AccountBalance } from '../../bindings/AccountBalance';
 import type { AccountHit as AccountHitBinding } from '../../bindings/AccountHit';
+import type { ChuktaAddInput } from '../../bindings/ChuktaAddInput';
+import type { ChuktaBuyer } from '../../bindings/ChuktaBuyer';
+import type { ChuktaSearchInput } from '../../bindings/ChuktaSearchInput';
 import type { CoaControlAccounts } from '../../bindings/CoaControlAccounts';
 import type { CoaTree } from '../../bindings/CoaTree';
 import type { GlobalHit as GlobalHitBinding } from '../../bindings/GlobalHit';
@@ -82,15 +85,9 @@ export function accountsList(
 export function accountsNextCode(
   accountType: AccountType,
   controlId: number | null,
-  isPukhtaParty = false,
 ): Promise<string> {
-  // A پختہ party's code is the next of the پختہ series, from 0032 (plan 47, PRD FR-13.11).
   return callCommand<string>('accounts_next_code', {
-    input: {
-      account_type: accountType,
-      control_id: controlId,
-      ...(isPukhtaParty ? { is_pukhta_party: true } : {}),
-    },
+    input: { account_type: accountType, control_id: controlId },
   });
 }
 
@@ -147,15 +144,23 @@ export function accountsBalances(ids: readonly number[]): Promise<AccountBalance
  */
 async function withBalances(hits: readonly AccountHitBinding[]): Promise<AccountHit[]> {
   if (hits.length === 0) return [];
+  // A چکتا buyer has no balance (PRD FR-13.6): his hit carries the id of the account چکتا کھاتہ, and
+  // that account's balance is not his, so it is never asked for.
+  const accounts = hits.filter((hit) => hit.kind !== 'chukta');
   const balances = new Map<number, AccountBalance['balance']>();
-  try {
-    for (const row of await accountsBalances(hits.map((hit) => hit.id))) {
-      balances.set(row.id, row.balance);
+  if (accounts.length > 0) {
+    try {
+      for (const row of await accountsBalances(accounts.map((hit) => hit.id))) {
+        balances.set(row.id, row.balance);
+      }
+    } catch {
+      // The picker works without balances.
     }
-  } catch {
-    // The picker works without balances.
   }
-  return hits.map((hit) => ({ ...hit, balance: balances.get(hit.id) ?? null }));
+  return hits.map((hit) => ({
+    ...hit,
+    balance: hit.kind === 'chukta' ? null : (balances.get(hit.id) ?? null),
+  }));
 }
 
 /**
@@ -172,6 +177,8 @@ export async function searchAccounts(input: {
   limit: number;
   /** A person in the dead amount may be offered (PRD FR-10.10): the receipt and ادھار رقم واپسی fields only. */
   includeDead?: boolean;
+  /** The buyer box of a بکری line lists چکتا buyers too (PRD FR-7.29). Every other box leaves it out. */
+  withChukta?: boolean;
 }): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts', {
     input: {
@@ -182,6 +189,8 @@ export async function searchAccounts(input: {
       limit: input.limit,
       // Sent only when it is true: a missing key is "no dead people" (plan 40).
       ...(input.includeDead === true ? { include_dead: true } : {}),
+      // Sent only when it is true: a missing key is "no چکتا buyers" (plan 64).
+      ...(input.withChukta === true ? { with_chukta: true } : {}),
     },
   });
   return withBalances(hits);
@@ -195,9 +204,15 @@ export async function searchAccountsRecent(
   scope: AccountScope,
   controlId: number | null,
   includeDead = false,
+  withChukta = false,
 ): Promise<AccountHit[]> {
   const hits = await callCommand<AccountHitBinding[]>('search_accounts_recent', {
-    input: { scope, control_id: controlId, ...(includeDead ? { include_dead: true } : {}) },
+    input: {
+      scope,
+      control_id: controlId,
+      ...(includeDead ? { include_dead: true } : {}),
+      ...(withChukta ? { with_chukta: true } : {}),
+    },
   });
   return withBalances(hits);
 }
@@ -231,9 +246,38 @@ export async function accountsResolveCode(
   };
 }
 
-/** The party card of an account, read from the books (PRD FR-7.38). */
-export function assistPartyCard(accountId: number): Promise<PartyCardData> {
-  return callCommand<PartyCardData>('assist_party_card', { input: { account_id: accountId } });
+/**
+ * The party card of an account, read from the books (PRD FR-7.38). With `chuktaId` the account is
+ * چکتا کھاتہ and the card is that walk-in buyer's own: his name and phone, no balance (PRD FR-13.6).
+ */
+export function assistPartyCard(
+  accountId: number,
+  chuktaId: number | null = null,
+): Promise<PartyCardData> {
+  return callCommand<PartyCardData>('assist_party_card', {
+    // A missing key is "not a چکتا buyer", as the backend leaves it out when it is none.
+    input: { account_id: accountId, ...(chuktaId === null ? {} : { chukta_id: chuktaId }) },
+  });
+}
+
+// ---- چکتا buyers (PRD Section 13, plan 64).
+
+/**
+ * The چکتا buyers already recorded, newest first, matched by the text in either name or the phone
+ * (PRD FR-7.29). The text is searched as typed and never converted (F41). Empty text lists the
+ * newest ten.
+ */
+export function chuktaSearch(text: string): Promise<ChuktaBuyer[]> {
+  const input: ChuktaSearchInput = { text };
+  return callCommand<ChuktaBuyer[]>('chukta_search', { input });
+}
+
+/**
+ * Adds a چکتا buyer from the picker (PRD FR-7.69, FR-13.3). A person with the same names and phone
+ * is returned, not doubled. Both names are required (PRD FR-7.24); the phone is optional.
+ */
+export function chuktaAdd(input: ChuktaAddInput): Promise<ChuktaBuyer> {
+  return callCommand<ChuktaBuyer>('chukta_add', { input });
 }
 
 /** The most results of the global search the box shows. */

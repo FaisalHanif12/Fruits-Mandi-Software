@@ -1,5 +1,5 @@
 // The quality of a sale line (درجہ, PRD FR-12.42, plan 58) on the prints of a بکری: the seller bill and
-// the پختہ slip write its word after the item, in the print's own language, and a line with no
+// the buyer slip write its word after the item (the slip's words are the backend's own, so only the bill is drawn here), in the print's own language, and a line with no
 // quality is written exactly as before. The data is the backend's own answer of the worked day
 // with the quality put on its lines (the backend sends `grade` on a line only when there is one).
 
@@ -41,8 +41,8 @@ function itemCells(data: PrintData): string[] {
 }
 
 // The buyer slips (R5) are lines of words the backend writes itself, with the quality already in them
-// (its own tests); the seller bill and the پختہ slip have a goods table the screen draws.
-describe.each(['seller_bill', 'pukhta_slip'] as const)('the %s', (doc) => {
+// (its own tests); the seller bill has a goods table the screen draws.
+describe.each(['seller_bill'] as const)('the %s', (doc) => {
   describe.each(['ur', 'en'] as const)('in %s', (language) => {
     const data = realFor(doc, language);
 

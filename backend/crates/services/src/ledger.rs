@@ -98,18 +98,18 @@ pub fn check_posting_date(ctx: &Context, date: BusinessDate) -> Result<(), Servi
     Ok(())
 }
 
-/// A line on a پختہ کھاتہ account must name its person, and a line on any other account must
+/// A line on a چکتا کھاتہ account must name its person, and a line on any other account must
 /// not (PRD FR-13.5): balances, matching and aging are kept per person there. The checks are
 /// bug signals, so they are `ServiceError::Data`, not user errors.
 fn check_person_keys(tx: &Connection, entry: &BalancedEntry) -> Result<(), ServiceError> {
-    let pukhta = repo::pukhta_khata_ids(tx)?;
+    let chukta = repo::chukta_khata_ids(tx)?;
     for (index, line) in entry.lines().iter().enumerate() {
-        let is_pukhta = pukhta.contains(&line.account_id.get());
+        let is_chukta = chukta.contains(&line.account_id.get());
         let key = line.person_key.as_deref().map(str::trim);
         let wrong = match key {
             Some("") => true,
-            Some(_) => !is_pukhta,
-            None => is_pukhta,
+            Some(_) => !is_chukta,
+            None => is_chukta,
         };
         if wrong {
             return Err(ServiceError::Data(format!(
@@ -176,11 +176,8 @@ fn check_accounts_active(
     }
 }
 
-/// The people in the dead amount inside a new posting (PRD FR-10.10, plan 40 D1 and D2).
+/// The people in the dead amount inside a new posting (PRD FR-10.10, plan 40 D2).
 ///
-/// * A line with a one-time person's key that is in the dead amount is refused with
-///   `ERR_PERSON_IN_DEAD_AMOUNT` (the account stays active, so only the key is checked), unless the
-///   posting is a recovery or an edit of a posting that person is already in.
 /// * A recovery (`receipt`, `money_lent_return`) may not put more credit on a person in the dead
 ///   amount than he still owes: `ERR_RETURN_EXCEEDS_OPEN`, value `open_paisa`, field `amount`. The
 ///   balance is read inside the transaction, so the second of two receipts in one batch sees the
@@ -194,33 +191,21 @@ fn check_dead_people(
     if dead.is_empty() {
         return Ok(());
     }
-    let mut credits: Vec<((i64, Option<String>), Paisa)> = Vec::new();
+    let mut credits: Vec<(i64, Paisa)> = Vec::new();
     for line in entry.lines() {
         let account = line.account_id.get();
-        let key = line.person_key.as_deref().map(str::trim);
-        if !dead.has(account, key) {
+        if !dead.has_account(account) {
             continue;
         }
-        if key.is_some() && !rules.allows(account, key) {
-            return Err(ServiceError::Rejected(vec![Rejection {
-                code: ErrorCode::ErrPersonInDeadAmount,
-                field: None,
-                values: std::collections::BTreeMap::from([(
-                    "account_id".to_owned(),
-                    ErrorValue::Number(account),
-                )]),
-            }]));
-        }
         if rules.recovery && line.side == Side::Cr {
-            let slot = (account, key.map(str::to_owned));
-            match credits.iter_mut().find(|(k, _)| *k == slot) {
+            match credits.iter_mut().find(|(k, _)| *k == account) {
                 Some((_, total)) => *total = total.checked_add(line.amount).map_err(money_error)?,
-                None => credits.push((slot, line.amount)),
+                None => credits.push((account, line.amount)),
             }
         }
     }
-    for ((account, key), credit) in credits {
-        let still = crate::dead::still_owed(tx, account, key.as_deref())?;
+    for (account, credit) in credits {
+        let still = crate::dead::still_owed(tx, account)?;
         if credit > still {
             return Err(ServiceError::Rejected(vec![Rejection {
                 code: ErrorCode::ErrReturnExceedsOpen,
@@ -515,7 +500,7 @@ pub fn balance_of(totals: repo::Totals) -> Result<Balance, ServiceError> {
     Balance::from_totals(paisa(totals.dr_paisa)?, paisa(totals.cr_paisa)?).map_err(money_error)
 }
 
-/// The balance of one account now, from the posted journal, all persons of a پختہ کھاتہ account
+/// The balance of one account now, from the posted journal, all persons of a چکتا کھاتہ account
 /// together (PRD FR-6.1).
 ///
 /// # Errors
@@ -524,7 +509,7 @@ pub fn account_balance(ctx: &Context, account_id: i64) -> Result<Balance, Servic
     ctx.db.read(|conn| balance_in(conn, account_id, None, None))
 }
 
-/// The balance of one person of a پختہ کھاتہ account (PRD FR-13.5).
+/// The balance of one person of a چکتا کھاتہ account (PRD FR-13.5).
 ///
 /// # Errors
 /// `ServiceError::Db`.
@@ -708,7 +693,7 @@ pub struct LedgerEntry {
     pub posting_type: String,
     /// The note.
     pub narration: Option<String>,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub person_key: Option<String>,
     /// Debit.
     pub dr: Paisa,

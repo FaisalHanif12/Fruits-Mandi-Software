@@ -67,8 +67,6 @@ pub(super) struct ReadLine {
     pub cr: Paisa,
     /// What is wrong with this line, at `lines[i].<field>`.
     pub errors: Vec<FieldError>,
-    /// The person key, as sent.
-    pub person_key: Option<String>,
     /// The line as the entry takes it, only when the line has no mistake.
     line: Option<GeneralLine>,
 }
@@ -111,12 +109,12 @@ impl PlannedGeneral {
         Ok(row)
     }
 
-    /// The accounts and people the entry touches, for matching.
+    /// The accounts the entry touches, for matching (no line carries a person key).
     pub(super) fn touched(&self) -> Vec<(i64, Option<String>)> {
         self.lines
             .iter()
             .filter_map(|l| l.line.as_ref())
-            .map(|l| (l.account_id, l.person_key.clone()))
+            .map(|l| (l.account_id, None))
             .collect()
     }
 
@@ -129,7 +127,6 @@ impl PlannedGeneral {
                 .map(|l| {
                     json!({
                         "account_id": l.account_id,
-                        "person_key": l.person_key,
                         "side": if l.side == Side::Dr { "dr" } else { "cr" },
                         "amount_paisa": l.amount.as_paisa(),
                         "narration": l.narration,
@@ -140,8 +137,8 @@ impl PlannedGeneral {
     }
 }
 
-/// Reads one line (PRD 16.4): the account (exists, active, one a جنرل may use), the person of a
-/// پختہ کھاتہ account, one side with an amount above 0, and the note.
+/// Reads one line (PRD 16.4): the account (exists, active, one a جنرل may use), one side with an
+/// amount above 0, and the note.
 fn read_line(
     conn: &Connection,
     index: usize,
@@ -150,7 +147,6 @@ fn read_line(
     let path = |field: &str| format!("lines[{index}].{field}");
     let mut errors = FieldErrors::default();
     let mut account = None;
-    let mut is_pukhta = false;
     match input.account_id {
         None => errors.push(FieldError::new(ErrorCode::ErrRequired, &path("account_id"))),
         Some(id) => match account_repo::facts(conn, id)? {
@@ -164,6 +160,8 @@ fn read_line(
                     ));
                 } else if facts.code == NAQDI_MANDI_CODE
                     || facts.code == BANK_CODE
+                    // چکتا کھاتہ has no ledger (PRD FR-13.6).
+                    || facts.is_chukta_khata
                     // A garden's money moves only by its own entries and its closing (PRD FR-12.34 to
                     // FR-12.38), never by a جنرل line.
                     || facts.control_code == mandi_domain::core::accounts::GARDEN_CONTROL_CODE
@@ -172,38 +170,10 @@ fn read_line(
                 } else if !facts.is_active {
                     errors.push(FieldError::new(ErrorCode::ErrAccountInactive, &field));
                 } else {
-                    is_pukhta = facts.is_pukhta_khata;
                     account = super::cash_kinds::record_of_account(conn, id)?;
                 }
             }
         },
-    }
-    // The person: needed for a پختہ کھاتہ account and known there, refused for any other.
-    let key = input
-        .person_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|k| !k.is_empty());
-    let mut person_key = None;
-    if let Some(account) = &account {
-        match (is_pukhta, key) {
-            (true, None) => errors.push(FieldError::new(
-                ErrorCode::ErrPersonRequired,
-                &path("person_key"),
-            )),
-            (true, Some(key)) => {
-                if repo::person_has_lines(conn, account.id, key)? {
-                    person_key = Some(key.to_owned());
-                } else {
-                    errors.push(FieldError::new(ErrorCode::ErrNotFound, &path("person_key")));
-                }
-            }
-            (false, Some(_)) => errors.push(FieldError::new(
-                ErrorCode::ErrFormatInvalid,
-                &path("person_key"),
-            )),
-            (false, None) => {}
-        }
     }
     let dr = errors.take(validate::money_optional(&path("dr"), &input.dr));
     let cr = errors.take(validate::money_optional(&path("cr"), &input.cr));
@@ -231,7 +201,6 @@ fn read_line(
             };
             Some(GeneralLine {
                 account_id: account.id,
-                person_key: person_key.clone(),
                 side,
                 amount,
                 narration,
@@ -244,7 +213,6 @@ fn read_line(
         dr: dr_amount,
         cr: cr_amount,
         errors,
-        person_key,
         line,
     })
 }
@@ -318,7 +286,6 @@ pub(super) fn plan_general(
                         cheque_date: None,
                         expected_goods: None,
                         narration: narration.clone(),
-                        person_key: None,
                         collector_staff_id: None,
                         reason: None,
                         extra: VoucherExtra::default(),
@@ -384,16 +351,8 @@ pub(crate) fn rematch_buyers(
             continue;
         }
         seen.push(key);
-        if let Some((Role::Buyer, is_pukhta)) = role_of_account(tx, key.0)? {
-            rematch_party(
-                tx,
-                user_id,
-                now,
-                key.0,
-                key.1.as_deref(),
-                Role::Buyer,
-                is_pukhta,
-            )?;
+        if let Some(Role::Buyer) = role_of_account(tx, key.0)? {
+            rematch_party(tx, user_id, now, key.0, key.1.as_deref(), Role::Buyer)?;
         }
     }
     Ok(())
@@ -524,9 +483,7 @@ pub fn general_preview(
         let mut nets: HashMap<(i64, Option<String>), Paisa> = HashMap::new();
         for line in &planned.lines {
             if let Some(account) = &line.account {
-                let slot = nets
-                    .entry((account.id, line.person_key.clone()))
-                    .or_insert(Paisa::ZERO);
+                let slot = nets.entry((account.id, None)).or_insert(Paisa::ZERO);
                 *slot = slot
                     .checked_add(line.dr)
                     .and_then(|v| v.checked_sub(line.cr))
@@ -538,14 +495,9 @@ pub fn general_preview(
         for line in &planned.lines {
             let balance_after = match (&line.account, line.errors.is_empty()) {
                 (Some(account), true) => {
-                    let now = ledger::signed(ledger::balance_in(
-                        conn,
-                        account.id,
-                        line.person_key.as_deref(),
-                        None,
-                    )?)?;
+                    let now = ledger::signed(ledger::balance_in(conn, account.id, None, None)?)?;
                     let net = nets
-                        .get(&(account.id, line.person_key.clone()))
+                        .get(&(account.id, None))
                         .copied()
                         .unwrap_or(Paisa::ZERO);
                     Some(

@@ -154,7 +154,7 @@ export function EditReviewCard({ review, pending = false, error = null }: EditRe
               <EffectList
                 label={l10n.getString('edit-review-effect-account')}
                 items={effect.parties.map((row) => ({
-                  key: `${String(row.account.id)}-${row.person_key ?? ''}`,
+                  key: String(row.account.id),
                   name: displayName(row.account, language),
                   before: <Balance balance={row.before} />,
                   after: <Balance balance={row.after} />,

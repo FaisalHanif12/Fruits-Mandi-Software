@@ -10,6 +10,9 @@ import { focusFirstEmptyField } from '../hooks';
 import { useUiLanguage } from '../i18n';
 import { ModalLayerContext, runEscape, useModalLayer } from '../keyboard';
 
+/** The class AG Grid treats as part of an open cell editor, so a click in it does not end the edit. */
+const GRID_POPUP_CLASS = 'ag-custom-component-popup';
+
 interface FormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -103,10 +106,14 @@ export function FormDialog({
             if (top !== undefined && !top.contains(target)) return;
             target.focus();
           }}
+          // A form a picker in a grid cell opens (the short form of "add it here", plan 41, plan 64)
+          // is drawn outside the cell. AG Grid ends the cell's edit when a click lands outside it,
+          // and the form would go with it; it leaves a click on an element of this class alone. So
+          // the mouse works in the form as the keyboard does (NFR-USE-8). Harmless anywhere else.
           className={
             asScreen
-              ? `pointer-events-auto inset-0 z-40 flex flex-col gap-5 overflow-auto bg-bg p-6 text-ink ${container == null ? 'fixed' : 'absolute'}`
-              : 'fixed inset-0 z-50 m-auto flex h-fit max-h-screen w-full max-w-form flex-col gap-3 overflow-y-auto rounded-3 bg-surface p-6 text-ink shadow-overlay'
+              ? `${GRID_POPUP_CLASS} pointer-events-auto inset-0 z-40 flex flex-col gap-5 overflow-auto bg-bg p-6 text-ink ${container == null ? 'fixed' : 'absolute'}`
+              : `${GRID_POPUP_CLASS} fixed inset-0 z-50 m-auto flex h-fit max-h-screen w-full max-w-form flex-col gap-3 overflow-y-auto rounded-3 bg-surface p-6 text-ink shadow-overlay`
           }
         >
           {asScreen ? (

@@ -20,9 +20,9 @@ import { GRADE_WORD_ID } from '../../grade';
 import { useSavedLotWho } from '../../lot-name';
 import { useLocalization } from '@fluent/react';
 
-/** The buyer of a line: the one-time person by his own name, else the account (PRD FR-13.2). */
+/** The buyer of a line: a چکتا buyer by his own name, else the account (PRD FR-13.2, FR-13.5). */
 function buyerName(sale: SavedSale, language: Parameters<typeof displayName>[1]): string {
-  return displayName(sale.pukhta ?? sale.buyer, language);
+  return displayName(sale.chukta ?? sale.buyer, language);
 }
 
 function lineColumns(

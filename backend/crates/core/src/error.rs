@@ -125,11 +125,10 @@ pub enum ErrorCode {
     /// debit (PRD FR-15.8).
     ErrAdvanceNotSeller,
     /// This account cannot take an opening balance: an income or shop expense account (it would
-    /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a پختہ کھاتہ account (it has
-    /// no person to hold it). Waiting for Umar's decision.
+    /// need partner share rows, PRD FR-6.5), ابتدائی فرق itself, or a چکتا کھاتہ account (it holds
+    /// no balance). Waiting for Umar's decision.
     ErrOpeningNotAllowed,
-    /// The account is not a seller (a پیشگی goes to a seller only), or is the پختہ کھاتہ account,
-    /// which has no person to hold the advance.
+    /// The account is not a seller (a پیشگی goes to a seller only), or is the old closed account.
     ErrNotASeller,
     /// The account is hidden from pickers, so a new posting cannot use it (PRD FR-10.2).
     ErrAccountInactive,
@@ -162,7 +161,7 @@ pub enum ErrorCode {
     /// (10^12 rupees). A single typed amount is held to a lower limit by `ErrAmountTooLarge`, so
     /// this means the amounts of several lines add up past the limit. Values: `max` (rupees).
     ErrEntryTooLarge,
-    /// A system account (روکڑ, ابتدائی فرق, commission income, نقدی منڈی, the two پختہ کھاتہ
+    /// A system account (روکڑ, ابتدائی فرق, commission income, نقدی منڈی, the چکتا کھاتہ
     /// accounts ...) cannot be made inactive: the app posts to it by itself (PRD FR-10.4).
     /// Field `id`. The Active box of such an account is shown ticked and cannot be changed.
     ErrSystemAccount,
@@ -187,12 +186,10 @@ pub enum ErrorCode {
     ErrSellerRequired,
     /// A sale line has no buyer (PRD FR-12.4). Field `lots[i].sales[j].buyer_account_id`.
     ErrBuyerRequired,
-    /// A پختہ کھاتہ line or lot needs the one-time person's name (PRD FR-13.2, FR-12.5). Field
-    /// `...pukhta.name_ur` or `...pukhta.name_en`.
-    ErrPukhtaNameRequired,
-    /// A پختہ کھاتہ credit buyer or a پختہ کھاتہ seller needs a phone (PRD FR-13.2). Field
-    /// `...pukhta.phone`.
-    ErrPukhtaPhoneRequired,
+    /// A چکتا line needs the buyer's name (PRD FR-13.2, FR-12.5). His phone is optional. Field
+    /// `lots[i].sales[j].chukta.name_ur` or `...chukta.name_en`; also `name_ur` or `name_en` of
+    /// `chukta_add`.
+    ErrChuktaNameRequired,
     /// A بکری with no lot (PRD FR-12.8 check 1). Field `lots`.
     ErrNoLots,
     /// A بکری with no sale line (PRD FR-12.8 check 1). Field `lots`.
@@ -204,7 +201,7 @@ pub enum ErrorCode {
     /// Shared by every cash-out save. Values: `cash_after_paisa`.
     ErrCashBelowZeroNotConfirmed,
     /// The account is not a buyer (a sale line goes to a buyer, the نقدی منڈی or the
-    /// پختہ کھاتہ buyer account). Field `lots[i].sales[j].buyer_account_id`.
+    /// چکتا کھاتہ account). Field `lots[i].sales[j].buyer_account_id`.
     ErrNotABuyer,
     /// A credit sale to a buyer who may only pay cash: the نقدی منڈی account, or a buyer whose
     /// "ادھار کی اجازت" is off (PRD 12.4, 10.2). Field `lots[i].sales[j].payment_type`.
@@ -237,9 +234,6 @@ pub enum ErrorCode {
     ErrReturnExceedsOpen,
     /// The voucher was cancelled, so it cannot be edited or cancelled again (PRD FR-15.3).
     ErrVoucherCancelled,
-    /// A voucher on a پختہ کھاتہ account must name the one-time person (PRD FR-13.5, FR-13.7).
-    /// Field `person_key`.
-    ErrPersonRequired,
     /// Warning only: a payment is more than the seller's open payable, so the extra shows as the
     /// seller owing the firm (PRD FR-15.7). Values: `payable_paisa`, `over_paisa`. Field `amount`.
     ErrPaymentAbovePayable,
@@ -402,9 +396,6 @@ pub enum ErrorCode {
     ErrAlreadyDead,
     /// A note is needed (the reason دیگر of a move to the dead amount, PRD FR-10.10). Field `note`.
     ErrNoteRequired,
-    /// A new line or lot names a پختہ کھاتہ person who is in the dead amount (PRD FR-10.10, D1 of
-    /// plan 40). Field `person_key` or `pukhta_person_key`. The account itself stays active.
-    ErrPersonInDeadAmount,
     /// The move to the dead amount is dated before the person's last posting (PRD FR-10.10, plan 40
     /// D6). Field `entry_date`. Value `last_posting_date` (`YYYY-MM-DD`).
     ErrDateBeforeLastPosting,
@@ -436,12 +427,6 @@ pub enum ErrorCode {
     /// The token of `day_fix_close` is not the one `day_fix_open` gave, or the days were closed or
     /// opened some other way since (PRD FR-21.4; plan 44). Field `token`.
     ErrFixTokenInvalid,
-    /// Warning only: the credit of a پختہ بیوپاری's lot takes part of his advance away from a LATER
-    /// posting of his, because advances go to the oldest credit first (PRD FR-13.11, FR-15.8, A79).
-    /// The lot's نقد default is not changed, but his balance will not be 0 afterwards. Values:
-    /// `taken_paisa` (what the later postings lose). Field `lots[i].cash_paid` (the first lot of
-    /// that seller).
-    ErrAdvanceTakenFromLater,
     /// Ask the app (PRD FR-7.81, plan 48): the assistant is switched off, so a question to the
     /// model and a continuation are refused. The quick questions, reading an answer again and the
     /// connection test still work. No field.
@@ -467,7 +452,7 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 161] = [
+    pub const ALL: [ErrorCode; 157] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -541,8 +526,7 @@ impl ErrorCode {
         ErrorCode::ErrCreditLimitExceeded,
         ErrorCode::ErrSellerRequired,
         ErrorCode::ErrBuyerRequired,
-        ErrorCode::ErrPukhtaNameRequired,
-        ErrorCode::ErrPukhtaPhoneRequired,
+        ErrorCode::ErrChuktaNameRequired,
         ErrorCode::ErrNoLots,
         ErrorCode::ErrNoSaleLines,
         ErrorCode::ErrWeightRequired,
@@ -559,7 +543,6 @@ impl ErrorCode {
         ErrorCode::ErrPaymentToBuyerNeedsReason,
         ErrorCode::ErrReturnExceedsOpen,
         ErrorCode::ErrVoucherCancelled,
-        ErrorCode::ErrPersonRequired,
         ErrorCode::ErrPaymentAbovePayable,
         ErrorCode::ErrBikriCancelled,
         ErrorCode::ErrLotNotFound,
@@ -611,7 +594,6 @@ impl ErrorCode {
         ErrorCode::ErrDeadNotAllowed,
         ErrorCode::ErrAlreadyDead,
         ErrorCode::ErrNoteRequired,
-        ErrorCode::ErrPersonInDeadAmount,
         ErrorCode::ErrDateBeforeLastPosting,
         ErrorCode::ErrEditDateFixed,
         ErrorCode::ErrRuleUsed,
@@ -622,7 +604,6 @@ impl ErrorCode {
         ErrorCode::ErrPartnerCodeInvalid,
         ErrorCode::ErrPartnerCodesDiffer,
         ErrorCode::ErrFixTokenInvalid,
-        ErrorCode::ErrAdvanceTakenFromLater,
         ErrorCode::ErrAssistantOff,
         ErrorCode::ErrAssistantKeyMissing,
         ErrorCode::ErrAssistantBusy,

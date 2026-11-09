@@ -188,6 +188,18 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       return true;
     }
 
+    // A row the screen holds on one cell: no other cell of the row takes any key, and the cursor does not
+    // leave the cell it is held on by Tab or the up and down arrows (D8 Bug 1, B2). Enter and the side
+    // arrows are decided below, because a text that was just changed is free to go on.
+    const heldField = env.interceptors?.heldField?.(row.rowId) ?? null;
+    if (heldField !== null && NO_MODIFIER(event)) {
+      const leaves = event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown';
+      if (field !== heldField || leaves) {
+        event.preventDefault();
+        return true;
+      }
+    }
+
     if (event.key === 'Enter') {
       // Ctrl+Enter is the screen's "save and next": the grid leaves it alone.
       if (!NO_MODIFIER(event)) return false;
@@ -284,6 +296,11 @@ export function createGridKeyHandler(env: GridKeyEnv) {
         // Number cells are always written left to right, even in the Urdu layout (NFR-USE-19).
         const inputDirection = isNumberLike(column.type) ? 'ltr' : elementDirection(target);
         if (!shouldLeaveField(target, side, inputDirection)) return true;
+      }
+      // The cell the row is held on is not left by a side arrow either.
+      if (heldField !== null) {
+        event.preventDefault();
+        return true;
       }
       const neighbour = neighbourField(columns, field, side, direction);
       event.preventDefault();

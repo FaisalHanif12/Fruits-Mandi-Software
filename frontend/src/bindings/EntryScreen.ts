@@ -6,7 +6,7 @@
  * may point to any main screen instead: the screen opens as it is, and `party` is null. The routes
  * of the main screens: `dashboard` `/`, `settings` `/settings`, `masters` `/index`, `accounts`
  * `/index/accounts`, `commission_rules` `/index/rules`, `today_sales` `/bikri/today`,
- * `unsold_stock` `/bikri/stock`, `pukhta_khata` `/bikri/pukhta`, `collection_list`
+ * `unsold_stock` `/bikri/stock`, `chukta_khata` `/bikri`, `collection_list`
  * `/bikri/collection`, `cash_book` `/rokar`, `gardens` `/gardens`, `market_trips` `/trips`,
  * `partners` `/partners`, `month_close` `/month`, `day_close` `/day`, `reports` `/reports`,
  * `dead_amount` `/reports/dead-amount`, `analytics` `/analytics`, `backup` `/backup`.
@@ -30,7 +30,7 @@ export type EntryScreen =
   | 'commission_rules'
   | 'today_sales'
   | 'unsold_stock'
-  | 'pukhta_khata'
+  | 'chukta_khata'
   | 'collection_list'
   | 'cash_book'
   | 'gardens'

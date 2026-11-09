@@ -153,7 +153,6 @@ fn k_in(khata: i64, amount: &str) -> KhataInInput {
 fn gl(account: i64, dr: &str, cr: &str) -> GeneralLineInput {
     GeneralLineInput {
         account_id: Some(account),
-        person_key: None,
         dr: dr.into(),
         cr: cr.into(),
         narration: None,
@@ -472,7 +471,6 @@ fn the_overview_has_returned_net_and_total_and_a_return_adds_back() {
             from: String::new(),
             to: String::new(),
             account_id: None,
-            person_key: None,
             offset: 0,
             limit: 0,
         },
@@ -644,7 +642,6 @@ fn a_khata_statement_has_a_range_an_opening_pages_and_edits_leave_no_trace() {
             from: String::new(),
             to: String::new(),
             account_id: None,
-            person_key: None,
             offset: 0,
             limit: 0,
         },
@@ -774,7 +771,7 @@ fn a_general_line_with_mistakes_is_refused_at_its_own_path() {
     let w = support::world();
     let own = support::id_of(&w.env, "030119998");
     let naqdi = support::id_of(&w.env, "03040000");
-    let pukhta = support::id_of(&w.env, "0030");
+    let chukta = support::id_of(&w.env, "0030");
     let lines = vec![
         gl(own, "100", ""),
         gl(naqdi, "", "100"),
@@ -784,11 +781,7 @@ fn a_general_line_with_mistakes_is_refused_at_its_own_path() {
         },
         gl(w.akram, "100", "100"),
         gl(w.akram, "", ""),
-        gl(pukhta, "100", ""),
-        GeneralLineInput {
-            person_key: Some("someone".into()),
-            ..gl(w.rahim, "", "100")
-        },
+        gl(chukta, "100", ""),
         gl(w.rahim, "10.5", ""),
     ];
     let error = vouchers::general_save(&w.env.ctx, &w.owner, &general(lines)).unwrap_err();
@@ -802,9 +795,9 @@ fn a_general_line_with_mistakes_is_refused_at_its_own_path() {
         (ErrorCode::ErrRequired, "lines[2].account_id"),
         (ErrorCode::ErrFormatInvalid, "lines[3].cr"),
         (ErrorCode::ErrRequired, "lines[4].dr"),
-        (ErrorCode::ErrPersonRequired, "lines[5].person_key"),
-        (ErrorCode::ErrFormatInvalid, "lines[6].person_key"),
-        (ErrorCode::ErrDecimalsNotAllowed, "lines[7].dr"),
+        // چکتا کھاتہ has no ledger, so a جنرل line on it is refused (PRD FR-13.6).
+        (ErrorCode::ErrFormatInvalid, "lines[5].account_id"),
+        (ErrorCode::ErrDecimalsNotAllowed, "lines[6].dr"),
     ] {
         assert!(
             fields.contains(&(expected.0, expected.1.to_owned())),
@@ -978,7 +971,6 @@ fn a_general_on_a_buyer_is_a_bill_and_a_seller_advance_is_never_adjusted() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -1004,7 +996,6 @@ fn a_general_on_a_buyer_is_a_bill_and_a_seller_advance_is_never_adjusted() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -1036,7 +1027,6 @@ fn a_general_is_edited_and_cancelled_and_the_buyer_is_matched_again() {
             &w.env.ctx,
             &OpenBillsInput {
                 account_id: w.akram,
-                person_key: None,
             },
         )
         .unwrap()

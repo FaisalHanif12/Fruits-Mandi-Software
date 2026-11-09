@@ -28,11 +28,6 @@ import {
   statementChoicesText,
 } from '../../src/features/partners/remember';
 import {
-  NO_REGISTER_CHOICES,
-  registerChoicesFrom,
-  registerChoicesText,
-} from '../../src/features/pukhta_khata/remember';
-import {
   NO_ACCOUNT_CHOICES,
   accountChoicesFrom,
   accountChoicesText,
@@ -78,7 +73,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -222,22 +216,6 @@ describe('what the list screens keep', () => {
     };
     expect(stockChoicesFrom(stockChoicesText(choices))).toEqual(choices);
     expect(stockChoicesFrom({ from: 5, includeWrittenOff: 'yes' })).toEqual(NO_STOCK_CHOICES);
-  });
-
-  it('the پختہ کھاتہ register: days, side, name, phone and paid or due', () => {
-    expect(registerChoicesText(NO_REGISTER_CHOICES)).toBeNull();
-    const choices = {
-      from: '',
-      to: '31-10-2026',
-      side: 'buyer' as const,
-      name: 'شاہد',
-      phone: '0300',
-      state: 'due' as const,
-    };
-    expect(registerChoicesFrom(registerChoicesText(choices))).toEqual(choices);
-    expect(registerChoicesFrom({ side: 'both', state: 'late', name: 7 })).toEqual(
-      NO_REGISTER_CHOICES,
-    );
   });
 
   it('the trips: days, status and search', () => {

@@ -6,8 +6,8 @@ import type { PrintDoc } from './PrintDoc';
  */
 export type PrintOutcome = {
   /**
-   * The documents that were printed or saved, in order. A document with nothing to print
-   * (no one-time buyer for the پختہ slip) is left out.
+   * The documents that were printed or saved, in order. A document with nothing to print is left
+   * out.
    */
   printed: Array<PrintDoc>;
   /**

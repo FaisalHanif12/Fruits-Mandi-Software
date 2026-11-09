@@ -5,8 +5,7 @@
 import { useLocalization } from '@fluent/react';
 import { useFocusRegion, useRovingKeys } from '../../shared/keyboard';
 
-export type ModuleMenuId =
-  'bikri-book' | 'receipt' | 'payment' | 'advance' | 'pukhta' | 'today' | 'stock';
+export type ModuleMenuId = 'bikri-book' | 'receipt' | 'payment' | 'advance' | 'today' | 'stock';
 
 interface ModuleEntry {
   id: ModuleMenuId;
@@ -19,7 +18,6 @@ export const BIKRI_MENU: readonly ModuleEntry[] = [
   { id: 'receipt', labelId: 'layout-module-receipt' },
   { id: 'payment', labelId: 'layout-module-payment' },
   { id: 'advance', labelId: 'layout-module-advance' },
-  { id: 'pukhta', labelId: 'layout-module-pukhta' },
   { id: 'today', labelId: 'layout-module-today' },
   { id: 'stock', labelId: 'layout-module-stock' },
 ];

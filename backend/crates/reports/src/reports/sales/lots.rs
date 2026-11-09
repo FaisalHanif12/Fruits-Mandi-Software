@@ -19,7 +19,7 @@ use mandi_db::rusqlite::{Connection, params_from_iter};
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    Conds, col, load_parties, names_cell, paisa, party_of_line, pukhta_party,
+    Conds, chukta_party, col, load_parties, names_cell, paisa, party_of_line,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -47,8 +47,8 @@ fn conds(typed: &Typed) -> Conds {
 pub(crate) fn r6_page_query(typed: &Typed, limit: i64, offset: i64) -> (String, Vec<Value>) {
     let c = conds(typed);
     let sql = format!(
-        "SELECT b.id, b.number, b.entry_date, l.seller_account_id, l.pukhta_person_key,
-            l.pukhta_name_ur, l.pukhta_name_en, i.name_ur, i.name_en, l.qty_sold, l.gross_paisa,
+        "SELECT b.id, b.number, b.entry_date, l.seller_account_id, l.chukta_person_key,
+            l.chukta_name_ur, l.chukta_name_en, i.name_ur, i.name_en, l.qty_sold, l.gross_paisa,
             CASE WHEN l.freight_paid_by = 'firm' THEN l.freight_paisa ELSE 0 END,
             l.seller_comm_paisa, l.labour_paisa, l.munshiana_paisa, l.cash_paid_paisa,
             l.store_rent_paisa, l.phone_paisa, l.deductions_paisa, l.net_paisa
@@ -86,13 +86,13 @@ fn r27_page_query(typed: &Typed, limit: i64, offset: i64) -> (String, Vec<Value>
     let c = conds(typed);
     let sql = format!(
         "SELECT b.id, b.number, b.entry_date, b.bill_date, l.seller_account_id,
-            l.pukhta_person_key, MAX(l.pukhta_name_ur), MAX(l.pukhta_name_en),
+            l.chukta_person_key, MAX(l.chukta_name_ur), MAX(l.chukta_name_en),
             SUM(l.gross_paisa), SUM(l.deductions_paisa), SUM(l.net_paisa)
          FROM bikri_entries b
          JOIN bikri_lots l ON l.bikri_id = b.id
          WHERE {}
-         GROUP BY b.id, l.seller_account_id, l.pukhta_person_key
-         ORDER BY b.number, l.seller_account_id, l.pukhta_person_key
+         GROUP BY b.id, l.seller_account_id, l.chukta_person_key
+         ORDER BY b.number, l.seller_account_id, l.chukta_person_key
          LIMIT ? OFFSET ?",
         c.sql()
     );
@@ -106,7 +106,7 @@ fn r27_count_query(typed: &Typed) -> (String, Vec<Value>) {
         "SELECT COUNT(*) FROM (SELECT 1 FROM bikri_entries b
          JOIN bikri_lots l ON l.bikri_id = b.id
          WHERE {}
-         GROUP BY b.id, l.seller_account_id, l.pukhta_person_key)",
+         GROUP BY b.id, l.seller_account_id, l.chukta_person_key)",
         c.sql()
     );
     (sql, c.args().to_vec())
@@ -210,7 +210,7 @@ fn run_lots(
     let parties = load_parties(conn, &seller_ids)?;
     let mut rows = Vec::with_capacity(lots.len());
     for lot in lots {
-        let party = pukhta_party(
+        let party = chukta_party(
             party_of_line(&parties, lot.seller_id, None)?,
             lot.person_key.clone(),
             lot.person_ur.as_deref(),
@@ -345,7 +345,7 @@ pub(crate) fn run_r27(
     let parties = load_parties(conn, &seller_ids)?;
     let mut rows = Vec::with_capacity(bills.len());
     for bill in bills {
-        let party = pukhta_party(
+        let party = chukta_party(
             party_of_line(&parties, bill.seller_id, None)?,
             bill.person_key.clone(),
             bill.person_ur.as_deref(),

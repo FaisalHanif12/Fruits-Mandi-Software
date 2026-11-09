@@ -1,12 +1,11 @@
-// Test data for the saved بکری, the list and the پختہ کھاتہ register (plan 13): the answers of
-// `bikri_get`, `bikri_list`, `bikri_find` and `pukhta_register` for Event 1 of PRD 4.4, in the
+// Test data for the saved بکری and the list (plan 13): the answers of `bikri_get`, `bikri_list` and
+// `bikri_find` for Event 1 of PRD 4.4, and the چکتا buyers of Event 2 (plan 64), in the
 // exact shapes of the generated types. The numbers are the PRD's worked numbers (E2E-1 to E2E-5):
 // they are canned answers of a fake backend, and the screens only show them.
 
 import type { BikriDetail } from '../../src/bindings/BikriDetail';
 import type { BikriListRow } from '../../src/bindings/BikriListRow';
-import type { PukhtaPerson } from '../../src/bindings/PukhtaPerson';
-import type { PukhtaRegisterRow } from '../../src/bindings/PukhtaRegisterRow';
+import type { ChuktaBuyer } from '../../src/bindings/ChuktaBuyer';
 import type { RecordRef } from '../../src/bindings/RecordRef';
 import type { SavedCharge } from '../../src/bindings/SavedCharge';
 import type { SavedLotCharge } from '../../src/bindings/SavedLotCharge';
@@ -63,7 +62,7 @@ export const AKRAM_LINE: SavedSale = {
   journal_entry_id: 7,
   entry_date: '2026-10-10',
   buyer: AKRAM,
-  pukhta: null,
+  chukta: null,
   qty: 20,
   weight_grams: null,
   seller_rate: money(600),
@@ -151,7 +150,6 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
         purchase: null,
         arrival: null,
         own: null,
-        pukhta: null,
         item: BANANA,
         packing: BOX,
         marka_id: null,
@@ -224,7 +222,6 @@ export function listRow(overrides: Partial<BikriListRow> = {}): BikriListRow {
     created_at: '2026-10-10T07:30:00Z',
     truck_no: 'LES-1234',
     sellers: [RAHIM],
-    pukhta_sellers: [],
     items: [BANANA],
     qty_received: 50,
     qty_sold: 50,
@@ -236,46 +233,24 @@ export function listRow(overrides: Partial<BikriListRow> = {}): BikriListRow {
   };
 }
 
-/** Shahid, the one-time buyer of Event 2 (PRD 4.5). */
-export const SHAHID: PukhtaPerson = {
+/** Shahid, the چکتا buyer of Event 2 (PRD 4.5): the buyer picker lists him, marked چکتا. */
+export const SHAHID: ChuktaBuyer = {
+  id: 1,
+  account_id: IDS.chuktaKhata,
   name_ur: 'شاہد',
   name_en: 'Shahid',
   phone: '03000000000',
   last_date: '2026-10-10',
-  person_key: 'shahid|03000000000',
-  is_dead: false,
 };
 
-export const NASIR: PukhtaPerson = {
+export const NASIR: ChuktaBuyer = {
+  id: 2,
+  account_id: IDS.chuktaKhata,
   name_ur: 'ناصر',
   name_en: 'Nasir',
   phone: '03111111111',
   last_date: '2026-10-08',
-  person_key: 'nasir|03111111111',
-  is_dead: false,
 };
-
-/** The register line of Event 2: Shahid bought 10 boxes of apples at 1,200 and paid (E2E-5). */
-export function registerRow(overrides: Partial<PukhtaRegisterRow> = {}): PukhtaRegisterRow {
-  return {
-    entry_date: '2026-10-10',
-    bikri_id: 42,
-    bikri_number: 2,
-    side: 'buyer',
-    name_ur: SHAHID.name_ur,
-    name_en: SHAHID.name_en,
-    phone: SHAHID.phone,
-    person_key: SHAHID.person_key,
-    item: ref(IDS.apple, '0002', 'سیب', 'Apple'),
-    qty: 10,
-    amount: money(12_800),
-    commission: money(720),
-    paid: true,
-    open: money(0),
-    cancelled: false,
-    ...overrides,
-  };
-}
 
 /** Event 2's lot (PRD 4.5): 10 boxes of apples from Karim, sold to Shahid for 12,800. */
 export const EVENT2_TOTALS: SavedTotals = {

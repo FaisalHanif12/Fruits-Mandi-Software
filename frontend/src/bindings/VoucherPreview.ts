@@ -20,7 +20,7 @@ export type VoucherPreview = {
    */
   amount_paisa: Paisa;
   /**
-   * The account's balance (or the person's, for a پختہ کھاتہ) before this voucher.
+   * The account's balance before this voucher.
    */
   current_balance: Balance;
   /**

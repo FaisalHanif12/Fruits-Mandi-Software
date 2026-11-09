@@ -215,48 +215,6 @@ fn a_receipt_settles_the_oldest_bill_first_and_a_cancel_gives_the_age_back() {
 }
 
 #[test]
-fn a_receipt_of_one_one_time_person_never_pays_another_persons_bill() {
-    // PRD FR-13.5: شاہد and ناصر buy on credit through the same پختہ account.
-    let w = world();
-    let mut a = sale("s-1", w.pukhta_buyer, "10", "1000");
-    a.pukhta = person("شاہد", "Shahid", "0300-0000000");
-    a.payment_type = Some(PaymentType::Credit);
-    let mut b = sale("s-2", w.pukhta_buyer, "10", "1000");
-    b.pukhta = person("ناصر", "Nasir", "0300-1111111");
-    b.payment_type = Some(PaymentType::Credit);
-    let saved = save_ok(
-        &w,
-        &draft(vec![with_sales(
-            bare_lot(&w, "lot-1", w.rahim, w.banana, "20"),
-            vec![a, b],
-        )]),
-    );
-    // Each owes 10,000 + 600 + 80 = 10,680.
-    let shahid = "شاہد|03000000000";
-    let nasir = "ناصر|03001111111";
-    let balance_of = |key: &str| ledger::person_balance(&w.env.ctx, w.pukhta_buyer, key).unwrap();
-    assert_eq!(balance_of(shahid).amount_paisa.rupees(), 10_680);
-    receipt(&w, w.pukhta_buyer, Some(shahid), "10,680");
-    assert_eq!(balance_of(shahid).side, BalanceSide::Zero);
-    assert_eq!(balance_of(nasir).amount_paisa.rupees(), 10_680);
-    // The matching row points at شاہد's bill only.
-    let lines = entry_lines(&w, saved.entry_id);
-    assert_eq!(lines[0].3.as_deref(), Some(shahid));
-    assert_eq!(lines[1].3.as_deref(), Some(nasir));
-    let matched = rows(&w, "bill_allocations");
-    assert_eq!(matched.len(), 1);
-    assert_eq!(matched[0].2, 10_680);
-    let bill_key: Option<String> = raw(&w.dir)
-        .query_row(
-            "SELECT pukhta_person_key FROM journal_lines WHERE id = ?1",
-            [matched[0].0],
-            |r| r.get(0),
-        )
-        .unwrap();
-    assert_eq!(bill_key.as_deref(), Some(shahid));
-}
-
-#[test]
 fn a_back_dated_bikri_falls_back_to_the_full_working() {
     // Today is 11-10. بکری X (11-10) is a bill of 12,880 and the receipt R (11-10) of 5,000 pays
     // it in part. Then a بکری Y dated 10-10 is saved: its bill is older than X, so it is not
@@ -313,13 +271,13 @@ fn key_state(w: &World, account: i64, key: Option<&str>) -> (i64, i64, i64) {
             .unwrap()
     };
     let dr = sums(
-        "SELECT COALESCE(SUM(dr_paisa), 0) FROM journal_lines WHERE account_id = ?1 AND pukhta_person_key IS ?2",
+        "SELECT COALESCE(SUM(dr_paisa), 0) FROM journal_lines WHERE account_id = ?1 AND chukta_person_key IS ?2",
     );
     let cr = sums(
-        "SELECT COALESCE(SUM(cr_paisa), 0) FROM journal_lines WHERE account_id = ?1 AND pukhta_person_key IS ?2",
+        "SELECT COALESCE(SUM(cr_paisa), 0) FROM journal_lines WHERE account_id = ?1 AND chukta_person_key IS ?2",
     );
     let matched = sums(
-        "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE account_id = ?1 AND pukhta_person_key IS ?2 AND is_active = 1",
+        "SELECT COALESCE(SUM(amount_paisa), 0) FROM bill_allocations WHERE account_id = ?1 AND chukta_person_key IS ?2 AND is_active = 1",
     );
     (dr - matched, cr - matched, dr - cr)
 }
@@ -332,15 +290,15 @@ fn rusqlite_params(account: i64, key: Option<&str>) -> (i64, Option<String>) {
 fn after_any_sequence_of_sales_and_receipts_the_rows_are_the_canonical_ones() {
     // Money agent property (g): the save and the receipt use the fast paths; running the full
     // working after each step must change nothing. The sequence has cash and credit lines of
-    // one buyer in one بکری, two one-time persons, back-dated postings (dates 10, 11 and 12-10
+    // one buyer in one بکری, two چکتا buyers, back-dated postings (dates 10, 11 and 12-10
     // with today 12-10) and receipts on their own days.
     let w = world();
     crate::common::set_today(&w.env, 2026, 10, 12);
     let keys: [(i64, Option<&str>); 4] = [
         (w.akram, None),
         (w.arshad, None),
-        (w.pukhta_buyer, Some(SHAHID)),
-        (w.pukhta_buyer, Some(NASIR)),
+        (w.chukta_khata, Some(SHAHID)),
+        (w.chukta_khata, Some(NASIR)),
     ];
     for seed in [
         0x9E37_79B9_7F4A_7C15_u64,
@@ -364,7 +322,7 @@ fn after_any_sequence_of_sales_and_receipts_the_rows_are_the_canonical_ones() {
                     let rate = (100 + rng.below(900)).to_string();
                     let mut line = sale(
                         &format!("s-{j}"),
-                        [w.akram, w.arshad, w.pukhta_buyer, w.pukhta_buyer]
+                        [w.akram, w.arshad, w.chukta_khata, w.chukta_khata]
                             [usize::try_from(which).unwrap()],
                         &qty_each.to_string(),
                         &rate,
@@ -375,9 +333,10 @@ fn after_any_sequence_of_sales_and_receipts_the_rows_are_the_canonical_ones() {
                         } else {
                             ("ناصر", "Nasir", "0300-1111111")
                         };
-                        line.pukhta = person(ur, en, phone);
+                        line.chukta = person(ur, en, phone);
                     }
-                    line.payment_type = Some(if rng.below(2) == 0 {
+                    // A چکتا buyer always pays in full (PRD FR-13.5).
+                    line.payment_type = Some(if which >= 2 || rng.below(2) == 0 {
                         PaymentType::Cash
                     } else {
                         PaymentType::Credit

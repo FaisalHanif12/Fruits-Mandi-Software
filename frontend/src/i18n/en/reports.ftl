@@ -388,6 +388,10 @@ report-print-pdf = Save as PDF
 # review: pending
 report-print-sent = Sent to the printer.
 
+# On a Mac the system print window opens for Print and Save PDF (plan 69).
+# review: pending
+report-print-dialog-opened = The print window is open.
+
 # review: pending
 report-print-close = Close
 
@@ -430,12 +434,6 @@ report-r8-title = { -adda } Report
 
 # review: pending
 report-r8-help = Trucks, lots, quantity and { -kham-bikri } for each { -adda }.
-
-# review: pending
-report-r9-title = { -pukhta-khata } Register
-
-# review: pending
-report-r9-help = Every line of the one-time people of { -pukhta-khata }, with what is paid and what is due.
 
 # review: pending
 report-r20-title = { -gahak } Dues
@@ -708,12 +706,6 @@ report-filter-by-month = By month
 ## The new filter boxes.
 
 # review: pending
-report-filter-person = One-time person
-
-# review: pending
-report-filter-person-hint = Type a name or a phone number
-
-# review: pending
 report-filter-status = Show
 
 # review: pending
@@ -781,12 +773,6 @@ report-card-open-statement = Open the { -fard-hisab } of this account
 report-card-reports-label = Reports of this account
 
 ## Global search: one-time people and screens (PRD FR-5.4).
-
-# review: pending
-report-search-person = One-time person
-
-# review: pending
-report-search-person-last = Last { $date }
 
 # review: pending
 report-search-screen = Screen

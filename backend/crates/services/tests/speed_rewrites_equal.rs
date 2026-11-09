@@ -31,7 +31,7 @@ use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 use mandi_reports::reports::{Cell, ReportFilters, ReportId, day_query_forms};
 use mandi_services::core::accounts::AccountType;
-use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
+use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod, PaymentType};
 use mandi_services::{bikri, vouchers};
 use reports_world::*;
 use support::World;
@@ -49,7 +49,7 @@ fn read<T>(w: &World, action: impl FnOnce(&Connection) -> mandi_db::rusqlite::Re
 /// `figures_load::base_rows`, with the party filter of `Filter::sql` appended by the caller.
 fn old_base_sql(filter: &str) -> String {
     format!(
-        "SELECT l.account_id, COALESCE(l.pukhta_person_key, ''), k.code,
+        "SELECT l.account_id, COALESCE(l.chukta_person_key, ''), k.code,
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM journal_lines l
          JOIN journal_entries e ON e.id = l.entry_id
@@ -57,20 +57,20 @@ fn old_base_sql(filter: &str) -> String {
          JOIN account_controls k ON k.id = a.control_id
          WHERE k.code IN ('0304', '03011') AND e.status = 'posted'
            AND e.entry_date < ?1{filter}
-         GROUP BY l.account_id, l.pukhta_person_key, k.code"
+         GROUP BY l.account_id, l.chukta_person_key, k.code"
     )
 }
 
 /// `day::buyer_moves`, the balances before `from`.
-const OLD_BUYER_BEFORE: &str = "SELECT ?1, l.account_id, COALESCE(l.pukhta_person_key, ''),
+const OLD_BUYER_BEFORE: &str = "SELECT ?1, l.account_id, COALESCE(l.chukta_person_key, ''),
                        COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
                 FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
                 JOIN accounts a ON a.id = l.account_id
                 JOIN account_controls k ON k.id = a.control_id
-                WHERE e.status = 'posted' AND k.code = '0304' AND e.entry_date < ?1 GROUP BY l.account_id, l.pukhta_person_key";
+                WHERE e.status = 'posted' AND k.code = '0304' AND e.entry_date < ?1 GROUP BY l.account_id, l.chukta_person_key";
 
 /// `attention::held_by_key`, with the `LIVE` text of `reports::common`.
-const OLD_HELD: &str = "SELECT l.account_id, l.pukhta_person_key, e.posting_type = 'opening', e.entry_date,
+const OLD_HELD: &str = "SELECT l.account_id, l.chukta_person_key, e.posting_type = 'opening', e.entry_date,
                 l.cr_paisa,
                 COALESCE((SELECT SUM(a.amount_paisa) FROM advance_allocations a
                           WHERE a.credit_line_id = l.id AND a.is_active = 1), 0)
@@ -86,7 +86,7 @@ fn old_open_sql(count: usize) -> String {
     let matched = "COALESCE((SELECT SUM(a.amount_paisa) FROM bill_allocations a
                                 WHERE a.bill_line_id = l.id AND a.is_active = 1), 0)";
     format!(
-        "SELECT l.id, l.account_id, l.pukhta_person_key, e.id, e.entry_date, l.dr_paisa, {matched}
+        "SELECT l.id, l.account_id, l.chukta_person_key, e.id, e.entry_date, l.dr_paisa, {matched}
              FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
              WHERE l.account_id IN ({marks}) AND l.dr_paisa > 0 AND e.status = 'posted' AND e.reverses_entry_id IS NULL
     AND NOT EXISTS (SELECT 1 FROM journal_entries r WHERE r.reverses_entry_id = e.id AND r.status = 'posted')
@@ -115,7 +115,7 @@ fn old_base(
     }
     if let Some(p) = person {
         args.push(Value::Text(p.to_owned()));
-        filter.push_str(&format!(" AND l.pukhta_person_key = ?{}", args.len()));
+        filter.push_str(&format!(" AND l.chukta_person_key = ?{}", args.len()));
     }
     let mut statement = conn.prepare(&old_base_sql(&filter)).unwrap();
     let mut rows: Vec<BaseRow> = statement
@@ -226,7 +226,7 @@ fn a1_on(
         }
         // A slip: one account, and one person of a shared account.
         let mut statement = conn.prepare(
-            "SELECT DISTINCT l.account_id, l.pukhta_person_key FROM journal_lines l
+            "SELECT DISTINCT l.account_id, l.chukta_person_key FROM journal_lines l
              JOIN accounts a ON a.id = l.account_id JOIN account_controls k ON k.id = a.control_id
              WHERE k.code IN ('0304', '03011')",
         )?;
@@ -801,17 +801,16 @@ fn e2e_15_a_cancelled_bikri_with_a_one_time_buyer() {
     check_all(&w, "e2e-15");
 }
 
-/// E2E-21 on credit: two one-time buyers under the shared account, one pays.
-fn two_one_time_credit_buyers() -> World {
+/// E2E-21 (v1.32): two چکتا buyers under the account چکتا کھاتہ, each paid in full on the spot.
+fn two_chukta_buyers() -> World {
     let w = worked_day();
     let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
+        let mut l = support::sale(key, w.chukta_khata, qty, "1000");
+        l.chukta = Some(ChuktaInput {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.into(),
         });
-        l.payment_type = Some(PaymentType::Credit);
         l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
         l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
         l.laga = support::typed(LineChargeMethod::PerUnit, "0");
@@ -827,35 +826,9 @@ fn two_one_time_credit_buyers() -> World {
 }
 
 #[test]
-fn e2e_21_two_persons_on_the_shared_buyer_account() {
-    let w = two_one_time_credit_buyers();
-    check_all(&w, "two one-time buyers");
-    // One of them pays; the person keys stay apart.
-    let page = report(&w, ReportId::R20, ReportFilters::default(), 0, 1_000);
-    let shahid = page
-        .rows
-        .iter()
-        .find_map(|row| match &row.cells[0] {
-            Cell::Party { party } if party.name_en == "Shahid" => party.person_key.clone(),
-            _ => None,
-        })
-        .unwrap();
-    let mut paid = receipt(w.pukhta_buyer, "1,000");
-    paid.person_key = Some(shahid);
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &paid).unwrap();
-    check_all(&w, "a one-time buyer paid");
-    // The base shows the two persons apart, with the shared account's own keys.
-    read(&w, |conn| {
-        let rows = totals_before(conn, &BUYERS, "2030-01-01", PartyScope::default())?;
-        let persons: Vec<&str> = rows
-            .iter()
-            .filter(|t| t.account_id == w.pukhta_buyer)
-            .map(|t| t.person_key.as_str())
-            .collect();
-        assert_eq!(persons.len(), 2);
-        assert!(persons.iter().all(|p| !p.is_empty()));
-        Ok(())
-    });
+fn e2e_21_two_chukta_buyers_paid_in_full() {
+    let w = two_chukta_buyers();
+    check_all(&w, "two chukta buyers");
 }
 
 #[test]
@@ -931,7 +904,7 @@ fn raw_entry(
             let mut total = 0_i64;
             for (n, (account, person, dr, cr)) in lines.iter().enumerate() {
                 tx.execute(
-                    "INSERT INTO journal_lines (entry_id, line_no, account_id, pukhta_person_key,
+                    "INSERT INTO journal_lines (entry_id, line_no, account_id, chukta_person_key,
                                                 dr_paisa, cr_paisa)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                     mandi_db::rusqlite::params![id, n as i64 + 1, account, person, dr, cr],
@@ -955,7 +928,7 @@ fn raw_entry(
 fn a_draft_with_lines_and_a_draft_reversal_leave_the_originals_live() {
     let w = full_day();
     let cash = support::id_of(&w.env, "01010001");
-    // A committed draft with lines on a buyer, a seller and a one-time person: left out everywhere.
+    // A committed draft with lines on a buyer, a seller and a چکتا buyer: left out everywhere.
     raw_entry(
         &w,
         "2026-10-10",
@@ -965,7 +938,7 @@ fn a_draft_with_lines_and_a_draft_reversal_leave_the_originals_live() {
         &[
             (w.akram, None, 7_700, 0),
             (w.rahim, None, 0, 7_700),
-            (w.pukhta_buyer, Some("draft-person"), 5_500, 0),
+            (w.chukta_khata, Some("draft-person"), 5_500, 0),
             (cash, None, 0, 5_500),
         ],
     );
@@ -1062,7 +1035,7 @@ fn a_line_without_a_key_on_a_shared_account_is_its_own_group() {
         "general",
         None,
         true,
-        &[(w.pukhta_buyer, None, 2_200, 0), (cash, None, 0, 2_200)],
+        &[(w.chukta_khata, None, 2_200, 0), (cash, None, 0, 2_200)],
     );
     raw_entry(
         &w,
@@ -1071,7 +1044,7 @@ fn a_line_without_a_key_on_a_shared_account_is_its_own_group() {
         None,
         true,
         &[
-            (w.pukhta_buyer, Some("Z"), 1_100, 0),
+            (w.chukta_khata, Some("Z"), 1_100, 0),
             (cash, None, 0, 1_100),
         ],
     );
@@ -1190,7 +1163,7 @@ fn a_random_book_over_several_days() {
                 lot.sales = (0..lines)
                     .map(|i| {
                         let buyer = if rng.below(6) == 0 {
-                            w.pukhta_buyer
+                            w.chukta_khata
                         } else {
                             buyers[rng.below(buyers.len() as u64) as usize]
                         };
@@ -1200,18 +1173,19 @@ fn a_random_book_over_several_days() {
                             "10",
                             &format!("{}", 400 + rng.below(300)),
                         );
-                        if buyer == w.pukhta_buyer {
+                        if buyer == w.chukta_khata {
                             let (ur, en, phone) = if rng.below(2) == 0 {
                                 ("شاہد", "Shahid", "0300-0000000")
                             } else {
                                 ("ناصر", "Nasir", "0300-1111111")
                             };
-                            line.pukhta = Some(PukhtaInput {
+                            line.chukta = Some(ChuktaInput {
                                 name_ur: ur.into(),
                                 name_en: en.into(),
                                 phone: phone.into(),
                             });
-                            line.payment_type = Some(PaymentType::Credit);
+                            // A چکتا buyer pays in full on the spot (PRD FR-13.5).
+                            line.payment_type = Some(PaymentType::Cash);
                         }
                         line
                     })

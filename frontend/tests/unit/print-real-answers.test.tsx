@@ -36,7 +36,6 @@ vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -75,11 +74,6 @@ const EXPECTED: Record<string, { figures: string[]; words: string[]; sheets: num
     figures: ['12,880', '720', '160', '18,684', '1,044', '240', '17,400'],
     words: [],
     sheets: 2,
-  },
-  'pukhta_slip-event2': {
-    figures: ['12,800', '12,000', '720', '80', '0300-0000000'],
-    words: ['بارہ ہزار آٹھ سو روپے', 'Twelve thousand eight hundred rupees only'],
-    sheets: 1,
   },
   'seller_bill-event2': {
     figures: ['12,000', '720', '1,000', '10,160', '1,840'],
@@ -169,7 +163,7 @@ describe.each(['ur', 'en'] as const)('the real documents in the print preview (%
     leaveAppWindow();
   });
 
-  it('shows the real bill, slips and پختہ slip of بکری 1 in the box', async () => {
+  it('shows the real bill and slips of بکری 1 in the box', async () => {
     fakePrinting({ data: (input) => realFor(input.doc, input.language) });
     fakeBikri();
     await renderApp('/bikri/book?id=41');
@@ -187,12 +181,12 @@ describe.each(['ur', 'en'] as const)('the real documents in the print preview (%
       within(box).getByRole('button', { name: named(message(language, 'print-box-preview')) }),
     );
     await waitFor(() => {
-      expect(box.querySelectorAll('.print-doc')).toHaveLength(3);
+      expect(box.querySelectorAll('.print-doc')).toHaveLength(2);
     });
     const text = visible(box.textContent);
-    for (const figure of ['29,400', '10,084', '19,316', '12,880', '18,684', '12,800']) {
+    for (const figure of ['29,400', '10,084', '19,316', '12,880', '18,684']) {
       expect(text, figure).toContain(figure);
     }
-    expect(box.querySelectorAll('.print-sheet').length).toBe(4);
+    expect(box.querySelectorAll('.print-sheet').length).toBe(3);
   });
 });

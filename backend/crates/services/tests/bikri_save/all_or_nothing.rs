@@ -16,10 +16,10 @@ use crate::helpers::*;
 use crate::support::*;
 
 /// A بکری that touches every table: Event 1 (advance adjusted) and Event 2's lot (a cash sale
-/// of a one-time buyer, pinned).
+/// of a چکتا buyer, pinned).
 fn big_draft(w: &World) -> BikriDraft {
-    let mut line = sale("s-9", w.pukhta_buyer, "10", "1200");
-    line.pukhta = person("شاہد", "Shahid", "0300-0000000");
+    let mut line = sale("s-9", w.chukta_khata, "10", "1200");
+    line.chukta = person("شاہد", "Shahid", "0300-0000000");
     let mut second = lot(w, "lot-2", w.karim, w.apple, "10");
     second.freight = Some("1,000".into());
     second.cash_paid = None;

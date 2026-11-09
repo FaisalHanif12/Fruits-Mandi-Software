@@ -1,5 +1,4 @@
-// The "More columns" tick of the list of بکری and of the پختہ کھاتہ register (plan 13, PRD FR-12.7,
-// FR-13.6, Code Standards F22). The نگ column fits beside the others at no layout step, so the tick
+// The "More columns" tick of the list of بکری (plan 13, PRD FR-12.7, Code Standards F22). The نگ column fits beside the others at no layout step, so the tick
 // adds it, a less needed column steps aside where the room is short, the choice is kept for next
 // time, and the tick is reached and changed with the keyboard. In the Urdu and the English app.
 // The widths are added up in list-widths.test.ts.
@@ -8,11 +7,10 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri } from '../helpers/bikri';
-import { listRow, registerRow } from '../helpers/bikri-saved';
+import { listRow } from '../helpers/bikri-saved';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -23,14 +21,13 @@ import {
 } from '../helpers/app';
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
-import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from '../helpers/paged';
+import { EMPTY_PAIRS, bikriListOf } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -38,7 +35,6 @@ vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
 const LIST_KEY = 'mandi.filters.bikri.list_more_columns';
-const REGISTER_KEY = 'mandi.filters.pukhta.more_columns';
 
 /** The width of the window as the three steps see it: media queries that match up to a step. */
 function stubStep(step: 'compact' | 'normal' | 'wide') {
@@ -71,7 +67,6 @@ beforeEach(() => {
   // Reset, not only clear: a rejection queued by a test that failed early must not reach the next.
   vi.resetAllMocks();
   window.localStorage.removeItem(LIST_KEY);
-  window.localStorage.removeItem(REGISTER_KEY);
   healthyBackend();
   fakePartners();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
@@ -83,7 +78,6 @@ afterEach(() => {
   document.documentElement.style.removeProperty('--breakpoint-normal');
   document.documentElement.style.removeProperty('--breakpoint-wide');
   window.localStorage.removeItem(LIST_KEY);
-  window.localStorage.removeItem(REGISTER_KEY);
   leaveAppWindow();
 });
 
@@ -178,87 +172,6 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
     first.unmount();
 
     await renderApp('/bikri/today');
-    await waitFor(() => {
-      expect(hasColumn('qty')).toBe(true);
-    });
-    expect(tickOf(language)).toBeChecked();
-  });
-});
-
-describe.each(LANGUAGES)('the پختہ کھاتہ register, More columns (%s)', (language) => {
-  beforeEach(() => {
-    resetClientState(language);
-    signedIn(sessionUser({ language }));
-    fakeBikri();
-    vi.mocked(pukhtaApi.pukhtaRegister).mockResolvedValue(
-      pukhtaRegisterOf([registerRow({ qty: 10 })]),
-    );
-    vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
-  });
-
-  const open = async (step: 'compact' | 'normal' | 'wide') => {
-    stubStep(step);
-    await renderApp('/bikri/pukhta');
-    await waitFor(() => {
-      expect(cell('0', 'bikri')).toBe('2');
-    });
-  };
-
-  it('has no نگ column until the tick is on; then it shows the نگ of the line', async () => {
-    await open('normal');
-    expect(hasColumn('qty')).toBe(false);
-    expect(hasColumn('phone')).toBe(true);
-    await userEvent.setup().click(tickOf(language));
-    await waitFor(() => {
-      expect(hasColumn('qty')).toBe(true);
-    });
-    expect(cell('0', 'qty')).toBe('10');
-    // The phone steps aside at the normal step; the name, the amount and paid or due stay.
-    expect(hasColumn('phone')).toBe(false);
-    for (const field of ['date', 'bikri', 'name', 'amount', 'state']) {
-      expect(hasColumn(field), field).toBe(true);
-    }
-  });
-
-  it('at the compact step the date steps aside', async () => {
-    await open('compact');
-    await userEvent.setup().click(tickOf(language));
-    await waitFor(() => {
-      expect(hasColumn('qty')).toBe(true);
-    });
-    expect(hasColumn('date')).toBe(false);
-    for (const field of ['bikri', 'name', 'amount', 'state']) {
-      expect(hasColumn(field), field).toBe(true);
-    }
-  });
-
-  it('at the wide step only the commission steps aside', async () => {
-    await open('wide');
-    expect(hasColumn('commission')).toBe(true);
-    await userEvent.setup().click(tickOf(language));
-    await waitFor(() => {
-      expect(hasColumn('qty')).toBe(true);
-    });
-    expect(hasColumn('commission')).toBe(false);
-    for (const field of ['date', 'bikri', 'side', 'name', 'phone', 'item', 'amount', 'state']) {
-      expect(hasColumn(field), field).toBe(true);
-    }
-  });
-
-  it('is remembered for the next time the register is opened', async () => {
-    stubStep('normal');
-    const first = await renderApp('/bikri/pukhta');
-    await waitFor(() => {
-      expect(cell('0', 'bikri')).toBe('2');
-    });
-    await userEvent.setup().click(tickOf(language));
-    await waitFor(() => {
-      expect(hasColumn('qty')).toBe(true);
-    });
-    expect(window.localStorage.getItem(REGISTER_KEY)).toBe('1');
-    first.unmount();
-
-    await renderApp('/bikri/pukhta');
     await waitFor(() => {
       expect(hasColumn('qty')).toBe(true);
     });

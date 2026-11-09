@@ -32,7 +32,6 @@ vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/bikri/api');
 vi.mock('../../src/features/partners/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
 vi.mock('../../src/features/masters/api');
@@ -62,7 +61,7 @@ function savedLotNamed(language: Language, number: number) {
   return {
     lot: number,
     who: message(language, 'bikri-lot-who', {
-      seller: displayName(lot.pukhta ?? lot.seller, language),
+      seller: displayName(lot.seller, language),
       item: displayName(lot.item, language),
     }),
     named: 'yes',
@@ -215,7 +214,7 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     expect(screen.queryByText(named(message(language, 'bikri-saved-qty-taken')))).toBeNull();
   });
 
-  it('a one-time buyer is shown by his own name', async () => {
+  it('a چکتا buyer is shown by his own name', async () => {
     const base = savedEvent1();
     const lot = base.lots[0];
     const line = lot?.sales[0];
@@ -228,7 +227,7 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
           sales: [
             {
               ...line,
-              pukhta: {
+              chukta: {
                 name_ur: 'شاہد',
                 name_en: 'Shahid',
                 phone: '03000000000',

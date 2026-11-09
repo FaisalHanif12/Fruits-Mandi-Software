@@ -44,12 +44,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   no sideways scroll and no cut cell. A name or a code with a name wraps instead of being cut.
 - Filter boxes (`components/ReportFilterBar.tsx`): a report with more than five boxes folds its
   record pickers behind "More filters" in a compact window; from the normal width every box shows.
-  New boxes: paid or due (R9), by month or by day (R28), and the person box.
-- The person box (`ReportPersonPicker`, `reports_find_people`, PRD FR-13.9): R9 is for one-time
-  people only, so its party box IS the person box. On any other report it appears when the party
-  picked is a پختہ کھاتہ account, and narrows the report to one person inside it (`party.person_key`).
-  The text is searched as typed and never turned into Urdu. A person can come in the address
-  (`?person={...}`), whole or not at all.
+  New boxes: paid or due (R38), and by month or by day (R28).
 - Money cells use the grid type `figure` (120 px) and counts the type `count`; a phone is `short`.
 - R28 names the month from Fluent (`report-month-1` ... `12`, `monthText`). R21, R22 and R8 name the
   rows the backend leaves with an empty name (no city, no collector, no اڈا, `emptyNameMessageId`).
@@ -57,7 +52,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - Party card buttons (FR-7.65): `PartyReportLinks` (in `AppShell`) gives the shared `PartyCard` a
   function that opens R13 or R14 for the account on the card (`open-report.ts`, `partyReportSearch`).
   The range is the whole history: an empty `from` is the first day of data. Change it in one place.
-- Global search (FR-5.4): `app/layout/global-search-extras.tsx` adds the one-time people and the
+- Global search (FR-5.4): `app/layout/global-search-extras.tsx` adds the
   screens and reports (found by their name in either language, or a report by its number) to the
   backend's accounts, بکری and vouchers. `GlobalSearch.tsx` has a few lines marked "Run B".
 
@@ -108,8 +103,8 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 ## Remembered filters (round 9, PRD FR-7.45)
 
 - Each report keeps the filters the Owner last used, under the screen name `report.<id>` (for example
-  `report.r20`), through `shared/screen-state`. `remember.ts` says what is kept (never the one-time
-  person or any money) and reads it back, leaving out what can no longer be read. An address with
+  `report.r20`), through `shared/screen-state`. `remember.ts` says what is kept (never a
+  چکتا buyer's key or any money) and reads it back, leaving out what can no longer be read. An address with
   filters in it (the party card's buttons, the dashboard's partner card) wins over what was kept.
   Clearing the filters forgets them. Tests: `remembered-filters.test.tsx`.
 
@@ -122,7 +117,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   sends all its totals empty, like R34): a row under both sections would read as the total of all of
   them. The buyers' total is in their group row and in the line under the table. With a party it is his slip: the lines of his day
   and, right under them, the footer lines in the order the backend sends.
-- Enter on a party of the table opens his slip (a one-time person with his key, so the slip is his and
+- Enter on a party of the table opens his slip (a چکتا buyer with his key, so the slip is his and
   not the whole account's); "All parties" goes back with the day still typed. The day box is called
   "Day" and the line under the boxes says "Sheet for 10-10-2026" (not "Balances as of").
 - The footer is under the lines, like the client's own slip, on screen (`ReportResults`) and in the
@@ -135,7 +130,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   موقع پر ادا, وصولی and the others only when the backend sends them, ٹوٹل رقم; seller: ends with
   `report-r35-balance`). The all-parties table prints its short code in its own column (never wrapped,
   `print-nowrap`) and the party as his name with tag and phone only (`Cell nameOnly`), so the code is
-  not written twice. A one-time person has his phone after his name in the dash form, English digits.
+  not written twice. A چکتا buyer has his phone after his name in the dash form, English digits.
   The header names the day with the word "Day" (the backend sends `report-filter-day` for R35).
 - Tests: `reports-screens-round11.test.tsx`, `reports-print-r35.test.tsx` (the print data of the table
   and both slips, in both languages, A4 and A5), the round 11 block of `reports-api-contract.test.ts`.

@@ -1,7 +1,7 @@
 // Development page /dev/print (plans 14 and 17e): the printed documents with the canned numbers of the
 // PRD worked day, so they can be opened in a plain browser tab and photographed in both languages
 // on A4, A5 and the 80 mm roll, with the print style on (browser "emulate print media"). The flags in
-// the hash choose the document: `?doc=seller_bill|buyer_slips|pukhta_slip|collection_list&language=
+// the hash choose the document: `?doc=seller_bill|buyer_slips|collection_list&language=
 // ur|en&paper=a4|a5|mm80&window&cancelled&long=15&lines=60&contacts&mark=RH&grade`. `grade`
 // puts a quality on the lines, First, Second, Third in turn (plan 58). `contacts` and
 // `mark` set the firm's contact persons and trade mark in the header. Never shipped: the route
@@ -19,7 +19,7 @@ import { CollectionListTemplate } from '../../features/vouchers/print/Collection
 import type { PrintDoc } from '../../bindings/PrintDoc';
 import type { Paper } from '../../bindings/Paper';
 
-const DOCS: readonly PrintDoc[] = ['seller_bill', 'buyer_slips', 'pukhta_slip', 'collection_list'];
+const DOCS: readonly PrintDoc[] = ['seller_bill', 'buyer_slips', 'collection_list'];
 const PAPER_VALUES: readonly Paper[] = ['a4', 'a5', 'mm80'];
 
 export function PrintPage() {

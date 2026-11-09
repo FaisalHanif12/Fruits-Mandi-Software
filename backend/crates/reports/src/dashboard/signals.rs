@@ -90,15 +90,15 @@ pub(crate) fn stock_waiting(
     // the goods-not-sold tile and the day close (C16): a fruit take is a `taken` move, so a lot
     // that fruit emptied is not listed. The day a lot was received is its بکری's day.
     let mut statement = conn.prepare(
-        "SELECT e.id, e.entry_date, COALESCE(l.pukhta_name_ur, a.name_ur),
-                COALESCE(l.pukhta_name_en, a.name_en), SUM(m.qty),
-                CASE WHEN l.pukhta_name_ur IS NULL THEN a.tag END
+        "SELECT e.id, e.entry_date, COALESCE(l.chukta_name_ur, a.name_ur),
+                COALESCE(l.chukta_name_en, a.name_en), SUM(m.qty),
+                CASE WHEN l.chukta_name_ur IS NULL THEN a.tag END
          FROM stock_moves m
          JOIN bikri_lots l ON l.id = m.lot_id
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts a ON a.id = l.seller_account_id
          WHERE m.move_date <= ?1 AND e.status = 'saved'
-         GROUP BY m.lot_id, e.id, e.entry_date, l.pukhta_name_ur, l.pukhta_name_en, a.name_ur,
+         GROUP BY m.lot_id, e.id, e.entry_date, l.chukta_name_ur, l.chukta_name_en, a.name_ur,
                   a.name_en, a.tag
          HAVING SUM(m.qty) > 0",
     )?;

@@ -55,7 +55,6 @@ fn receipt(account: i64, date: &str, amount: i64) -> ReceiptInput {
     ReceiptInput {
         date: date.into(),
         account_id: account,
-        person_key: None,
         amount: amount.to_string(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         collector_staff_id: None,
@@ -67,7 +66,6 @@ fn payment(account: i64, date: &str, amount: i64, reason: &str) -> PaymentInput 
     PaymentInput {
         date: date.into(),
         account_id: account,
-        person_key: None,
         amount: amount.to_string(),
         removed: mandi_services::core::vouchers::RemovedPaymentFields::default(),
         reason: reason.into(),
@@ -131,7 +129,6 @@ fn live_vouchers(w: &World, kinds: &[VoucherType]) -> Vec<(i64, VoucherType)> {
             from: String::new(),
             to: String::new(),
             account_id: None,
-            person_key: None,
             offset: 0,
             limit: 0,
         },
@@ -150,7 +147,6 @@ fn check_buyer(w: &World) {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();
@@ -182,7 +178,6 @@ fn check_seller(w: &World) {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: true,
         },
     )
@@ -200,7 +195,6 @@ fn check_seller(w: &World) {
         &w.env.ctx,
         &OpenPayablesInput {
             seller_id: w.rahim,
-            person_key: None,
             include_settled: false,
         },
     )
@@ -312,9 +306,9 @@ proptest! {
                         replacing_voucher_id: None,
                     }).unwrap();
                     prop_assert!(preview.errors.is_empty());
-                    let before = vouchers::open_bills(&w.env.ctx, &OpenBillsInput { account_id: w.akram, person_key: None }).unwrap();
+                    let before = vouchers::open_bills(&w.env.ctx, &OpenBillsInput { account_id: w.akram }).unwrap();
                     vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
-                    let after = vouchers::open_bills(&w.env.ctx, &OpenBillsInput { account_id: w.akram, person_key: None }).unwrap();
+                    let after = vouchers::open_bills(&w.env.ctx, &OpenBillsInput { account_id: w.akram }).unwrap();
                     // Every bill the preview named is as shown; every other bill is unchanged.
                     for bill in &before.bills {
                         let now = after.bills.iter().find(|b| b.line_id == bill.line_id).map_or(Paisa::ZERO, |b| b.open_paisa);
@@ -404,7 +398,7 @@ proptest! {
                         replacing_voucher_id: None,
                     }).unwrap();
                     let payable = |w: &World| vouchers::open_payables(&w.env.ctx, &OpenPayablesInput {
-                        seller_id: w.rahim, person_key: None, include_settled: false,
+                        seller_id: w.rahim, include_settled: false,
                     }).unwrap().open_paisa;
                     let before = payable(&w);
                     match vouchers::save_receipt(&w.env.ctx, &w.owner, &input) {
@@ -506,7 +500,6 @@ fn the_amounts_of_a_receipt_run_stay_whole_rupees() {
         &w.env.ctx,
         &OpenBillsInput {
             account_id: w.akram,
-            person_key: None,
         },
     )
     .unwrap();

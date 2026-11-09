@@ -36,7 +36,7 @@ const SCREENS = {
   commission_rules: ['commission_rules', 'commission rules', 'کمیشن اصول', 'commission rules'],
   today_sales: ['today_sales', 'aaj ki bikri ki list', 'آج کی بکری', "today's sales list"],
   unsold_stock: ['unsold_stock', 'baqi maal', 'باقی مال', 'unsold stock'],
-  pukhta_khata: ['pukhta_khata', 'pukhta khata', 'پختہ کھاتہ', 'pukhta khata'],
+  chukta_khata: ['chukta_khata', 'chukta khata', 'چکتا کھاتہ', 'chukta khata'],
   collection_list: ['collection_list', 'agrahi list', 'اگراہی فہرست', 'the collection list'],
   cash_book: ['cash_book', 'rokar book', 'روکڑ بک', 'the cash book'],
   gardens: ['gardens', 'baghat', 'باغات', 'gardens'],

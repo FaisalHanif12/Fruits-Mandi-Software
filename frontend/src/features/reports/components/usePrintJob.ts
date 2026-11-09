@@ -1,6 +1,6 @@
 // The state of one print or PDF job started from a preview (PRD FR-19.3): it runs the job once at a
 // time, keeps what it did (the PDF files, or "sent to the printer") or what the backend refused (a bad
-// filter at its field, or `ERR_PRINT_WINDOWS_ONLY` off Windows, where the preview stays the way to see
+// filter at its field, or `ERR_PRINT_WINDOWS_ONLY` on a computer that is neither Windows nor a Mac, where the preview stays the way to see
 // the page), and forgets both when the print language or the paper changes, because they were about the
 // page before. The preview screens of a report, of its slips and of an analytics view share it.
 

@@ -37,7 +37,6 @@ fn form(kind: AccountType, ur: &str, en: &str) -> AccountInput {
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -166,6 +165,7 @@ fn find(
             text: text.to_owned(),
             limit: 20,
             offset: 0,
+            with_chukta: None,
         },
     )
 }
@@ -249,16 +249,18 @@ fn leading_zeros_and_odd_digits_get_a_clean_answer() {
     let too_long = resolve(&w, AccountScope::Buyer, "89999999").unwrap();
     assert_eq!(too_long.status, ResolveStatus::Unknown);
     assert!(too_long.account.is_none() && too_long.suggested_code.is_none());
-    // The system accounts are found by their full code, which is how they are reached.
+    // The cash buyer is found by its full code. چکتا کھاتہ (0030) and the old closed account (0031)
+    // are no account a field offers (PRD FR-13.4, FR-13.9): their codes find nobody.
+    let found = resolve(&w, AccountScope::Buyer, "03040000").unwrap();
+    assert_eq!(found.status, ResolveStatus::Found, "03040000");
     for (scope, code) in [
-        (AccountScope::Buyer, "03040000"),
         (AccountScope::Buyer, "0030"),
         (AccountScope::Seller, "0031"),
     ] {
         let found = resolve(&w, scope, code).unwrap();
-        assert_eq!(found.status, ResolveStatus::Found, "{code}");
+        assert_eq!(found.status, ResolveStatus::Unknown, "{code}");
     }
-    // The pukhta accounts have no short code: `0` and `1` are the first buyers, not 0030.
+    // The shared accounts have no short code: `0` and `1` are the first buyers, not 0030.
     assert_eq!(
         resolve(&w, AccountScope::Buyer, "0")
             .unwrap()

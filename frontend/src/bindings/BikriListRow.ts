@@ -4,7 +4,6 @@ import type { BikriStatus } from './BikriStatus';
 import type { EditStamp } from './EditStamp';
 import type { LockedReason } from './LockedReason';
 import type { RecordRef } from './RecordRef';
-import type { SavedPukhta } from './SavedPukhta';
 
 /**
  * One row of the list of بکری (PRD FR-12.7: number, time, truck, sellers, items, نگ, خام, صافی,
@@ -32,14 +31,9 @@ export type BikriListRow = {
    */
   truck_no: string | null;
   /**
-   * The sellers of its lots, each once, in lot order. A one-time seller is the پختہ کھاتہ
-   * account; his name is in `pukhta_sellers`.
+   * The sellers of its lots, each once, in lot order.
    */
   sellers: Array<RecordRef>;
-  /**
-   * The names of one-time sellers, in lot order.
-   */
-  pukhta_sellers: Array<SavedPukhta>;
   /**
    * The items of its lots, each once.
    */

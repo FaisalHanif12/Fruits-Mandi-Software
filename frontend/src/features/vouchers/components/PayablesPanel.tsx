@@ -13,12 +13,11 @@ import { SourceLabel } from './SourceLabel';
 
 interface PayablesPanelProps {
   sellerId: number;
-  personKey: string | null;
 }
 
-export function PayablesPanel({ sellerId, personKey }: PayablesPanelProps) {
+export function PayablesPanel({ sellerId }: PayablesPanelProps) {
   const { l10n } = useLocalization();
-  const query = useOpenPayables(sellerId, personKey);
+  const query = useOpenPayables(sellerId);
   return (
     <PanelShell
       query={query}

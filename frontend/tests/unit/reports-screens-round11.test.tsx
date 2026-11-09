@@ -389,7 +389,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
       expect(document.querySelector('.ag-row[row-id="2"]')?.className).toContain('row-group');
     });
 
-    it('a one-time buyer is asked for with his own key, so his slip is his and not the whole account’s', async () => {
+    it('a چکتا buyer is asked for with his own key, so his slip is his and not the whole account’s', async () => {
       const { user } = await openSheet();
       await openSlip(user, '3');
       await waitFor(() => {
@@ -398,12 +398,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
           person_key: 'شاہد|03000000000',
         });
       }, SLOW_MS);
-      // His person box shows him by name, under the account box.
-      await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: m('report-filter-person') })).toHaveValue(
-          names('شاہد', 'Shahid'),
-        );
-      }, SLOW_MS);
+      // There is no person box: the key goes with the row, and no filter offers a person (D8).
     });
 
     it('Enter on a line of the slip opens the بکری behind it', async () => {

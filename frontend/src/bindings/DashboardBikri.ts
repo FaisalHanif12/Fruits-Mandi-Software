@@ -19,12 +19,12 @@ export type DashboardBikri = {
    */
   truck_no: string | null;
   /**
-   * The seller of its first lot (the one-time person's name for a پختہ کھاتہ lot).
+   * The seller of its first lot (the چکتا buyer's name for a چکتا کھاتہ lot).
    */
   seller: ReportNames | null;
   /**
    * The tag (نشان) of that seller's account, shown after his name. Missing when he has none and
-   * for a one-time person.
+   * for a چکتا buyer.
    */
   seller_tag?: string;
   /**

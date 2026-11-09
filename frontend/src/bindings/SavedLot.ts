@@ -5,7 +5,6 @@ import type { RecordRef } from './RecordRef';
 import type { SavedArrivalRef } from './SavedArrivalRef';
 import type { SavedLotCharge } from './SavedLotCharge';
 import type { SavedOwnLot } from './SavedOwnLot';
-import type { SavedPukhta } from './SavedPukhta';
 import type { SavedPurchaseRef } from './SavedPurchaseRef';
 import type { SavedSale } from './SavedSale';
 import type { SavedTotals } from './SavedTotals';
@@ -38,10 +37,6 @@ export type SavedLot = {
    * The garden arrival a garden lot took its goods from (PRD FR-12.40). `null` for any other lot.
    */
   arrival: SavedArrivalRef | null;
-  /**
-   * The one-time seller, for the پختہ کھاتہ account.
-   */
-  pukhta: SavedPukhta | null;
   /**
    * The item.
    */

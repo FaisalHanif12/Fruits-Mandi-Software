@@ -3,7 +3,6 @@
   "from": "",
   "limit": 2,
   "offset": 2,
-  "person_key": null,
   "show_finished": true,
   "to": "",
   "voucher_type": null

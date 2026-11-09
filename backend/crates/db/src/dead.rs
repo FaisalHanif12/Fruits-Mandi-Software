@@ -53,10 +53,8 @@ const IS_RECOVERY: &str = "(e.posting_type IN ('receipt', 'money_lent_return')
 pub struct MarkRow {
     /// Row id.
     pub id: i64,
-    /// The account. For a پختہ کھاتہ person it is the پختہ account.
+    /// The account.
     pub account_id: i64,
-    /// The person inside a پختہ کھاتہ account, else `None`.
-    pub person_key: Option<String>,
     /// The day of the move, `YYYY-MM-DD`.
     pub entry_date: String,
     /// `died`, `left` or `other`.
@@ -91,23 +89,25 @@ impl MarkRow {
     }
 }
 
-const MARK_COLUMNS: &str =
-    "m.id, m.account_id, m.pukhta_person_key, m.entry_date, m.reason, m.note,
+const MARK_COLUMNS: &str = "m.id, m.account_id, m.entry_date, m.reason, m.note,
     m.owed_paisa, m.after_entry_id, m.is_active, m.undone_after_entry_id, m.undone_date";
+
+/// The SQL test that leaves out the old moves on چکتا buyers. Migration 20 ended every one of
+/// them and nothing makes one any more, so no list or figure shows them (plan 64, PRD FR-13.9).
+const NOT_OLD_PERSON_MARK: &str = "m.chukta_person_key IS NULL";
 
 fn mark_from(r: &rusqlite::Row<'_>) -> rusqlite::Result<MarkRow> {
     Ok(MarkRow {
         id: r.get(0)?,
         account_id: r.get(1)?,
-        person_key: r.get(2)?,
-        entry_date: r.get(3)?,
-        reason: r.get(4)?,
-        note: r.get(5)?,
-        owed_paisa: r.get(6)?,
-        after_entry_id: r.get(7)?,
-        is_active: r.get::<_, i64>(8)? == 1,
-        undone_after_entry_id: r.get(9)?,
-        undone_date: r.get(10)?,
+        entry_date: r.get(2)?,
+        reason: r.get(3)?,
+        note: r.get(4)?,
+        owed_paisa: r.get(5)?,
+        after_entry_id: r.get(6)?,
+        is_active: r.get::<_, i64>(7)? == 1,
+        undone_after_entry_id: r.get(8)?,
+        undone_date: r.get(9)?,
     })
 }
 
@@ -116,8 +116,6 @@ fn mark_from(r: &rusqlite::Row<'_>) -> rusqlite::Result<MarkRow> {
 pub struct NewMark<'a> {
     /// The account.
     pub account_id: i64,
-    /// The person key, for a پختہ کھاتہ person.
-    pub person_key: Option<&'a str>,
     /// The day of the move, `YYYY-MM-DD`.
     pub entry_date: &'a str,
     /// `died`, `left` or `other`.
@@ -143,10 +141,10 @@ pub fn max_entry_id(conn: &Connection) -> rusqlite::Result<i64> {
 }
 
 /// Writes a move and returns its id. The caller makes the account inactive in the same transaction
-/// (not for a پختہ person) and writes the audit row.
+/// and writes the audit row.
 ///
 /// # Errors
-/// Any SQLite error, including the unique index: a second active move for one account or person.
+/// Any SQLite error, including the unique index: a second active move for one account.
 pub fn insert(
     conn: &Connection,
     new: &NewMark<'_>,
@@ -156,13 +154,12 @@ pub fn insert(
     let after = max_entry_id(conn)?;
     conn.execute(
         "INSERT INTO dead_marks (created_at, created_by, updated_at, updated_by, account_id,
-                pukhta_person_key, entry_date, reason, note, owed_paisa, after_entry_id)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                entry_date, reason, note, owed_paisa, after_entry_id)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
             now,
             user_id,
             new.account_id,
-            new.person_key,
             new.entry_date,
             new.reason,
             new.note,
@@ -186,29 +183,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<MarkRow>> {
     .optional()
 }
 
-/// The active move of an account (or of one person of a پختہ کھاتہ account), if any.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn active_for(
-    conn: &Connection,
-    account_id: i64,
-    person_key: Option<&str>,
-) -> rusqlite::Result<Option<MarkRow>> {
-    conn.query_row(
-        &format!(
-            "SELECT {MARK_COLUMNS} FROM dead_marks m
-             WHERE m.account_id = ?1 AND COALESCE(m.pukhta_person_key, '') = COALESCE(?2, '')
-               AND m.is_active = 1"
-        ),
-        params![account_id, person_key],
-        mark_from,
-    )
-    .optional()
-}
-
-/// The active move of any person of an account (used for the party card: an account that is moved
-/// has a move without a key; a پختہ account has one move for each person).
+/// The active move of an account, if any (the party card, the guards of a posting).
 ///
 /// # Errors
 /// Any SQLite error.
@@ -216,7 +191,7 @@ pub fn active_for_account(conn: &Connection, account_id: i64) -> rusqlite::Resul
     conn.query_row(
         &format!(
             "SELECT {MARK_COLUMNS} FROM dead_marks m
-             WHERE m.account_id = ?1 AND m.pukhta_person_key IS NULL AND m.is_active = 1"
+             WHERE m.account_id = ?1 AND {NOT_OLD_PERSON_MARK} AND m.is_active = 1"
         ),
         [account_id],
         mark_from,
@@ -254,7 +229,7 @@ pub fn undo(
 /// Any SQLite error.
 pub fn active_marks(conn: &Connection) -> rusqlite::Result<Vec<MarkRow>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT {MARK_COLUMNS} FROM dead_marks m WHERE m.is_active = 1
+        "SELECT {MARK_COLUMNS} FROM dead_marks m WHERE m.is_active = 1 AND {NOT_OLD_PERSON_MARK}
          ORDER BY m.entry_date, m.id"
     ))?;
     let rows = statement.query_map([], mark_from)?;
@@ -267,38 +242,29 @@ pub fn active_marks(conn: &Connection) -> rusqlite::Result<Vec<MarkRow>> {
 /// Any SQLite error.
 pub fn all_marks(conn: &Connection) -> rusqlite::Result<Vec<MarkRow>> {
     let mut statement = conn.prepare(&format!(
-        "SELECT {MARK_COLUMNS} FROM dead_marks m ORDER BY m.entry_date, m.id"
+        "SELECT {MARK_COLUMNS} FROM dead_marks m WHERE {NOT_OLD_PERSON_MARK}
+         ORDER BY m.entry_date, m.id"
     ))?;
     let rows = statement.query_map([], mark_from)?;
     rows.collect()
 }
 
-/// The people in the dead amount, to leave them out of a list (PRD FR-10.10): the plain accounts
-/// that are moved, and the one-time people (account and person key) that are moved.
+/// The people in the dead amount, to leave them out of a list (PRD FR-10.10): the accounts that are
+/// moved.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct DeadSet {
     accounts: HashSet<i64>,
-    persons: HashSet<(i64, String)>,
 }
 
 impl DeadSet {
     /// True when there is nobody in the dead amount. The lists skip their filter then.
     pub fn is_empty(&self) -> bool {
-        self.accounts.is_empty() && self.persons.is_empty()
+        self.accounts.is_empty()
     }
 
-    /// True if this account is moved (a plain account).
+    /// True if this account is moved.
     pub fn has_account(&self, account_id: i64) -> bool {
         self.accounts.contains(&account_id)
-    }
-
-    /// True if this key is moved: the account when `person_key` is `None`, the person when it is
-    /// given. A line of a پختہ کھاتہ account with no key is never dead.
-    pub fn has(&self, account_id: i64, person_key: Option<&str>) -> bool {
-        match person_key {
-            None => self.accounts.contains(&account_id),
-            Some(key) => self.persons.contains(&(account_id, key.to_owned())),
-        }
     }
 }
 
@@ -311,9 +277,10 @@ impl DeadSet {
 pub fn marks_on(conn: &Connection, as_of: Option<&str>) -> rusqlite::Result<Vec<MarkRow>> {
     let mut statement = conn.prepare(&format!(
         "SELECT {MARK_COLUMNS} FROM dead_marks m
-         WHERE (?1 IS NULL AND m.is_active = 1)
-            OR (?1 IS NOT NULL AND m.entry_date <= ?1
-                AND (m.is_active = 1 OR m.undone_date > ?1))
+         WHERE {NOT_OLD_PERSON_MARK}
+           AND ((?1 IS NULL AND m.is_active = 1)
+             OR (?1 IS NOT NULL AND m.entry_date <= ?1
+                 AND (m.is_active = 1 OR m.undone_date > ?1)))
          ORDER BY m.entry_date, m.id"
     ))?;
     let rows = statement.query_map([as_of], mark_from)?;
@@ -327,33 +294,21 @@ pub fn marks_on(conn: &Connection, as_of: Option<&str>) -> rusqlite::Result<Vec<
 pub fn dead_set(conn: &Connection, as_of: Option<&str>) -> rusqlite::Result<DeadSet> {
     let mut set = DeadSet::default();
     for mark in marks_on(conn, as_of)? {
-        match mark.person_key {
-            None => {
-                set.accounts.insert(mark.account_id);
-            }
-            Some(key) => {
-                set.persons.insert((mark.account_id, key));
-            }
-        }
+        set.accounts.insert(mark.account_id);
     }
     Ok(set)
 }
 
-/// The day of the last posted line of an account (or one person of it), `YYYY-MM-DD`. The move to
-/// the dead amount may not be dated before it (plan 40 D6).
+/// The day of the last posted line of an account, `YYYY-MM-DD`. The move to the dead amount may
+/// not be dated before it (plan 40 D6).
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn last_posting_date(
-    conn: &Connection,
-    account_id: i64,
-    person_key: Option<&str>,
-) -> rusqlite::Result<Option<String>> {
+pub fn last_posting_date(conn: &Connection, account_id: i64) -> rusqlite::Result<Option<String>> {
     conn.query_row(
         "SELECT MAX(e.entry_date) FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-         WHERE l.account_id = ?1 AND (?2 IS NULL OR l.pukhta_person_key = ?2)
-           AND e.status = 'posted'",
-        params![account_id, person_key],
+         WHERE l.account_id = ?1 AND e.status = 'posted'",
+        params![account_id],
         |r| r.get(0),
     )
 }
@@ -362,9 +317,9 @@ pub fn last_posting_date(
 /// subtracted by the caller with checked maths (the money agent: no `SUM(dr - cr)` in SQL).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Figures {
-    /// Σ debit of the posted lines of the account (or person), up to the undo for an undone move.
+    /// Σ debit of the posted lines of the account, up to the undo for an undone move.
     pub balance_dr: i64,
-    /// Σ credit of the posted lines of the account (or person), up to the undo for an undone move.
+    /// Σ credit of the posted lines of the account, up to the undo for an undone move.
     pub balance_cr: i64,
     /// Σ debit of the recovery entries since the move, with the reversals of recoveries.
     pub recovery_dr: i64,
@@ -383,16 +338,15 @@ pub struct Figures {
 /// Any SQLite error.
 pub fn figures(conn: &Connection) -> rusqlite::Result<HashMap<i64, Figures>> {
     let mut out: HashMap<i64, Figures> = HashMap::new();
-    // The balance of each moved account or person now.
+    // The balance of each moved account now.
     let mut statement = conn.prepare(
         "SELECT m.id, COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          FROM dead_marks m
          JOIN journal_lines l ON l.account_id = m.account_id
-          AND l.pukhta_person_key IS m.pukhta_person_key
          JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
          -- A move that was undone stops at the undo: what is posted after he is active again is
          -- ordinary business and must not move the figures of the old move.
-         WHERE m.is_active = 1 OR e.id <= m.undone_after_entry_id
+         WHERE m.chukta_person_key IS NULL AND (m.is_active = 1 OR e.id <= m.undone_after_entry_id)
          GROUP BY m.id",
     )?;
     let rows = statement.query_map([], |r| {
@@ -417,9 +371,8 @@ pub fn figures(conn: &Connection) -> rusqlite::Result<HashMap<i64, Figures>> {
                 COALESCE(SUM(CASE WHEN {IS_RECOVERY} THEN 0 ELSE l.cr_paisa END), 0)
          FROM dead_marks m
          JOIN journal_lines l ON l.account_id = m.account_id
-          AND l.pukhta_person_key IS m.pukhta_person_key
          JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
-         WHERE e.id > m.after_entry_id
+         WHERE m.chukta_person_key IS NULL AND e.id > m.after_entry_id
            AND (m.is_active = 1 OR e.id <= m.undone_after_entry_id)
          GROUP BY m.id"
     ))?;
@@ -452,10 +405,9 @@ pub fn last_recovery_dates(conn: &Connection) -> rusqlite::Result<HashMap<i64, S
     let mut statement = conn.prepare(
         "SELECT m.id, MAX(e.entry_date)
          FROM dead_marks m
-         JOIN journal_lines l ON l.account_id = m.account_id
-          AND l.pukhta_person_key IS m.pukhta_person_key AND l.cr_paisa > 0
+         JOIN journal_lines l ON l.account_id = m.account_id AND l.cr_paisa > 0
          JOIN journal_entries e ON e.id = l.entry_id AND e.status = 'posted'
-         WHERE e.id > m.after_entry_id
+         WHERE m.chukta_person_key IS NULL AND e.id > m.after_entry_id
            AND (m.is_active = 1 OR e.id <= m.undone_after_entry_id)
            AND e.posting_type IN ('receipt', 'money_lent_return')
            AND NOT EXISTS (SELECT 1 FROM journal_entries r

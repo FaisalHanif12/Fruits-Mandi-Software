@@ -43,14 +43,6 @@ export function SavedVoucherView({ row }: { row: VoucherRow }) {
           <Fact label={<Localized id="vouchers-col-account" />}>
             {row.account === null ? null : displayName(row.account, language)}
           </Fact>
-          {row.person === null ? null : (
-            <Fact label={<Localized id="vouchers-field-person" />}>
-              <span className="flex flex-wrap items-baseline gap-x-3">
-                {displayName(row.person, language)}
-                {row.person.phone === '' ? null : <Code>{row.person.phone}</Code>}
-              </span>
-            </Fact>
-          )}
           <Fact label={<Localized id="vouchers-field-amount" />}>
             <Num paisa={row.amount_paisa} />
           </Fact>

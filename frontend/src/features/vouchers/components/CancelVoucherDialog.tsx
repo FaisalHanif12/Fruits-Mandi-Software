@@ -86,12 +86,7 @@ export function CancelVoucherDialog({ row, onClose, onCancelled }: CancelVoucher
             vars={{
               number: voucherNumberText(row, (id, vars) => l10n.getString(id, vars)),
               amount: formatPaisa(row.amount_paisa, { grouping }),
-              name:
-                row.person !== null
-                  ? displayName(row.person, language)
-                  : row.account === null
-                    ? ''
-                    : displayName(row.account, language),
+              name: row.account === null ? '' : displayName(row.account, language),
             }}
             elems={{ num: <Num /> }}
           >

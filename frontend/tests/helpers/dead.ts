@@ -41,18 +41,15 @@ export const LINKED_PREVIEW: DeadPreview = {
 /** The row of R38 after the recovery of 12-10-26: owed then 18,684, recovered 4,000, still 14,684. */
 export const ARSHAD_ROW: DeadRow = must(R38_AFTER_RECOVERY.rows[0]);
 
-/** A one-time person (پختہ کھاتہ) who left the business and was fully recovered. */
-export const SHAHID_ROW: DeadRow = {
+/** A buyer who left the business and was fully recovered. */
+export const NASIR_ROW: DeadRow = {
   mark_id: 2,
   account_id: 41,
-  code: '03049999',
-  name_ur: 'پختہ کھاتہ',
-  name_en: 'Pukhta Khata',
+  code: '0022',
+  name_ur: 'ناصر',
+  name_en: 'Nasir',
   tag: null,
-  party_type: 'pukhta',
-  pukhta_person_key: 'shahid|03000000000',
-  pukhta_name_ur: 'شاہد',
-  pukhta_name_en: 'Shahid',
+  party_type: 'buyer',
   reason: 'left',
   note: '',
   entry_date: '2026-10-11',
@@ -85,7 +82,7 @@ export function deadPage(
 export const PAGE_ARSHAD = R38_AFTER_RECOVERY;
 
 /** Both rows, as the filter "all" shows them. */
-export const PAGE_BOTH = deadPage([ARSHAD_ROW, SHAHID_ROW], {
+export const PAGE_BOTH = deadPage([ARSHAD_ROW, NASIR_ROW], {
   owed: 19684,
   recovered: 5000,
   still: 14684,

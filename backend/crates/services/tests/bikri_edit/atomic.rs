@@ -74,13 +74,13 @@ const WRITE_OFF_STEPS: &[(&str, &str)] = &[
 ];
 
 /// A بکری that touches every table: Event 1 with 45 of 50 sold (advance adjusted) and a second
-/// lot with a cash sale to a one-time buyer (pinned), then receipts from اکرم and ارشد.
+/// lot with a cash sale to a چکتا buyer (pinned), then receipts from اکرم and ارشد.
 fn big_world() -> (World, mandi_services::core::bikri::BikriSaved) {
     let w = world();
     // More advance than the first posting uses (21,590), so a later sale adjusts some too.
     give_advance(&w, w.rahim, "30,000");
-    let mut line = sale("s-9", w.pukhta_buyer, "10", "1200");
-    line.pukhta = person("شاہد", "Shahid", "0300-0000000");
+    let mut line = sale("s-9", w.chukta_khata, "10", "1200");
+    line.chukta = person("شاہد", "Shahid", "0300-0000000");
     let mut second = lot(&w, "lot-2", w.karim, w.apple, "12");
     second.freight = Some("1,000".into());
     second.cash_paid = None;

@@ -69,7 +69,6 @@ export function VoucherListSection({
     from: period.range.from,
     to: period.range.to,
     account_id: account?.id ?? null,
-    person_key: null,
     show_finished: showFinished,
     search: searchText === '' ? null : searchText,
     // A month heading is worth its row only when the list covers more than one day.

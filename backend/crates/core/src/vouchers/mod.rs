@@ -10,11 +10,10 @@ mod entry;
 pub use entry::{
     AdvanceEffect, AdvancesReport, AdvancesReportInput, AdvancesReportRow, BillEffect,
     CollectionBuyer, CollectionGroup, CollectionGroupTotal, CollectionList, CollectionListInput,
-    LineSource, MAX_OPEN_ROWS, MadeRegular, MakeRegularInput, OpenBill, OpenBills, OpenBillsInput,
-    OpenPayables, OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult,
-    ReceiptsInput, ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput,
-    VoucherEditable, VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview,
-    VoucherPreviewInput,
+    LineSource, MAX_OPEN_ROWS, OpenBill, OpenBills, OpenBillsInput, OpenPayables,
+    OpenPayablesInput, PayablePosting, PaymentInput, ReceiptInput, ReceiptRowResult, ReceiptsInput,
+    ReceiptsSaved, VoucherCancelInput, VoucherCancelled, VoucherEditInput, VoucherEditable,
+    VoucherEntry, VoucherGetInput, VoucherHit, VoucherPreview, VoucherPreviewInput,
 };
 
 use serde::{Deserialize, Serialize};
@@ -295,13 +294,10 @@ pub struct VouchersListInput {
     pub from: String,
     /// To this day, `DD-MM-YYYY`, or empty for no end.
     pub to: String,
-    /// Only this account (for a پختہ کھاتہ account, all its people unless `person_key` is set).
+    /// Only this account.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub account_id: Option<i64>,
-    /// Only this one-time person.
-    #[serde(default)]
-    pub person_key: Option<String>,
     /// How many rows to skip. 0 for the first page (PRD FR-19.11).
     #[serde(default)]
     pub offset: u32,
@@ -391,8 +387,6 @@ pub struct VoucherRow {
     /// The `version` of the row, to send back with an edit or a cancel.
     #[ts(type = "number")]
     pub version: i64,
-    /// The one-time person, for a voucher on a پختہ کھاتہ account.
-    pub person: Option<crate::bikri::SavedPukhta>,
     /// The collector of a وصولی (a staff member), if any.
     #[ts(type = "number | null")]
     pub collector_staff_id: Option<i64>,

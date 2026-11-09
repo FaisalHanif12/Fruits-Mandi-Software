@@ -510,6 +510,7 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
                 text: text.into(),
                 limit: 10,
                 offset: 0,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -588,6 +589,7 @@ fn a_separate_khata_is_offered_as_the_seller_of_a_lot_and_in_no_other_party_fiel
                 include_dead: None,
                 scope,
                 control_id: None,
+                with_chukta: None,
             },
         )
         .unwrap()
@@ -642,6 +644,7 @@ fn the_bank_account_is_offered_in_no_picker_and_no_search() {
                 text: text.into(),
                 limit: 10,
                 offset: 0,
+                with_chukta: None,
             },
         )
         .unwrap()

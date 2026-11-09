@@ -14,9 +14,9 @@ use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{
     AccountInput, AccountRow, AccountType, AccountsList, AccountsListInput, AccountsSimilarInput,
     ControlRule, OpeningDay, OpeningRequest, SimilarAccount, account_code_for, can_take_opening,
-    code_type_for, prepare_account,
+    prepare_account,
 };
-use mandi_domain::core::codes::{FIRST_PUKHTA_PARTY_RUNNING, build_code, check_typed_code};
+use mandi_domain::core::codes::{build_code, check_typed_code};
 use mandi_domain::core::error::{ErrorCode, ErrorValue};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::text;
@@ -162,29 +162,18 @@ fn resolve_control(
     }
 }
 
-/// The next free running number of a code type for an account. The پختہ series starts at
-/// `FIRST_PUKHTA_PARTY_RUNNING` (`0032`), because `0030` and `0031` are the two shared accounts
-/// (plan 47, PRD FR-13.11): a database that somehow lost them would still never hand out their codes.
+/// The next free running number of a code type for an account.
 fn next_running_for(
     conn: &Connection,
     code_type: mandi_domain::core::codes::CodeType,
 ) -> Result<(u64, String), ServiceError> {
-    let (running, code) = mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
-        .ok_or_else(|| series_full(code_type.number()))?;
-    if code_type == mandi_domain::core::codes::CodeType::Pukhta
-        && running < FIRST_PUKHTA_PARTY_RUNNING
-    {
-        let code = build_code(code_type, FIRST_PUKHTA_PARTY_RUNNING)
-            .ok_or_else(|| series_full(code_type.number()))?;
-        return Ok((FIRST_PUKHTA_PARTY_RUNNING, code));
-    }
-    Ok((running, code))
+    mandi_db::codes::next_code(conn, CodeTable::Accounts, code_type)?
+        .ok_or_else(|| series_full(code_type.number()))
 }
 
 /// The next free code for a kind of account. A seller gets `001` plus the next running number, a
 /// buyer `002` plus the next running number (`0010`, `0011` ...; plan 32 R2, never a code used
-/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3). For a
-/// پختہ party use [`next_code_for`].
+/// before). Every other kind keeps the control code plus the next free serial (PRD FR-10.3).
 ///
 /// # Errors
 /// `ERR_REQUIRED` or `ERR_NOT_FOUND` on `control_id`; `ERR_SERIES_FULL` when the numbers are used up.
@@ -193,30 +182,8 @@ pub fn next_code(
     account_type: AccountType,
     control_id: Option<i64>,
 ) -> Result<String, ServiceError> {
-    next_code_for(ctx, account_type, false, control_id)
-}
-
-/// The next free code, as [`next_code`], and for a پختہ party (a seller or a buyer with
-/// `is_pukhta_party`, plan 47, PRD FR-13.11) `003` plus the next running number from 2 (`0032`,
-/// `0033` ...), whatever his side. Never `0030` or `0031`, never a code used before.
-///
-/// # Errors
-/// As [`next_code`]; `ERR_FORMAT_INVALID` on `is_pukhta_party` for a kind that is not a seller or a
-/// buyer.
-pub fn next_code_for(
-    ctx: &Context,
-    account_type: AccountType,
-    is_pukhta_party: bool,
-    control_id: Option<i64>,
-) -> Result<String, ServiceError> {
-    if is_pukhta_party && code_type_for(account_type, true).is_none() {
-        return Err(ServiceError::reject_field(
-            ErrorCode::ErrFormatInvalid,
-            "is_pukhta_party",
-        ));
-    }
     ctx.db.read(|conn| {
-        if let Some(code_type) = code_type_for(account_type, is_pukhta_party) {
+        if let Some(code_type) = account_type.code_type() {
             let (_, code) = next_running_for(conn, code_type)?;
             return Ok(code);
         }
@@ -292,14 +259,14 @@ fn mark_duplicates(found: &mut [SimilarAccount], input: &AccountsSimilarInput) {
 
 /// Why an opening cannot be put on an account (PRD FR-6.5, FR-10.9, FR-13.5, FR-12.4): income and
 /// shop expense accounts would need partner share rows, ابتدائی فرق would be posted against
-/// itself, a پختہ کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
+/// itself, a چکتا کھاتہ account has no person to hold the balance, and نقدی منڈی pays at once.
 /// The documents do not say what to do about these; they are refused until Umar decides.
 pub(crate) fn opening_allowed(facts: &repo::AccountFacts) -> bool {
     can_take_opening(
         &facts.head_code,
         &facts.control_code,
         &facts.code,
-        facts.is_pukhta_khata,
+        facts.is_chukta_khata,
     )
 }
 
@@ -393,7 +360,7 @@ pub fn save(
     if input.is_active
         && stored.as_ref().is_some_and(|facts| !facts.is_active)
         && let Some(id) = input.id
-        && ctx.db.read(|conn| crate::dead::is_dead(conn, id, None))?
+        && ctx.db.read(|conn| crate::dead::is_dead(conn, id))?
     {
         return Err(ServiceError::reject_field(
             ErrorCode::ErrAlreadyDead,
@@ -413,10 +380,9 @@ pub fn save(
     get(ctx, id)
 }
 
-/// Makes a new account inside the caller's transaction, with the same checks as [`save`] (plan
-/// 15, PRD FR-13.8: a one-time person becomes a regular account in the same action that moves his
-/// balance). The caller refreshes the search index and runs the returned learning steps after the
-/// commit.
+/// Makes a new account inside the caller's transaction, with the same checks as [`save`] (used by
+/// the staff loan person of plan 22). The caller refreshes the search index and runs the returned
+/// learning steps after the commit.
 ///
 /// # Errors
 /// As [`save`] for a new account.
@@ -435,15 +401,15 @@ pub(crate) fn create_in(
     write(ctx, actor, tx, &prepared, &checks)
 }
 
-/// The code and the serial of a new account. A seller, a buyer or a پختہ party: the typed code, which
-/// must be a full code of its type, or the next running number; the serial is the running number (plan
-/// 32 R2, plan 47). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
+/// The code and the serial of a new account. A seller or a buyer: the typed code, which must be a
+/// full code of its type, or the next running number; the serial is the running number (plan 32
+/// R2). Any other account: the control code plus a 4-digit serial (PRD FR-10.3).
 fn new_code(
     tx: &Connection,
     prepared: &mandi_domain::core::accounts::PreparedAccount,
     control: &repo::ControlRow,
 ) -> Result<(String, u32), ServiceError> {
-    if let Some(code_type) = code_type_for(prepared.account_type, prepared.is_pukhta_party) {
+    if let Some(code_type) = prepared.account_type.code_type() {
         let running = match &prepared.typed_code {
             Some(typed) => check_typed_code("code", typed, code_type)?,
             None => next_running_for(tx, code_type)?.0,
@@ -490,14 +456,6 @@ fn write(
                     "account_type",
                 ));
             }
-            // A party stays a party and an ordinary account stays ordinary (plan 47): his code is in
-            // the پختہ series and his lines never carry a person key.
-            if prepared.is_pukhta_party != row.is_pukhta_party {
-                return Err(ServiceError::reject_field(
-                    ErrorCode::ErrFormatInvalid,
-                    "is_pukhta_party",
-                ));
-            }
             Some(row)
         }
         None => None,
@@ -516,7 +474,6 @@ fn write(
                 &code,
                 serial,
                 &control.party_type,
-                prepared.is_pukhta_party,
                 &prepared.fields,
                 actor.user_id,
                 &now,
@@ -587,10 +544,10 @@ fn write(
 /// Makes an account active or inactive (an account is never deleted, PRD FR-10.6). Asking for
 /// the state it already has changes nothing.
 ///
-/// A system account (PRD FR-10.4: روکڑ, ابتدائی فرق, the income accounts, نقدی منڈی, the two
-/// پختہ کھاتہ accounts ...) cannot be made inactive, because the app posts to it by itself and a
-/// picker would no longer offer it. Making one active again is allowed, so a file where the
-/// state was changed some other way can be put right.
+/// A system account (PRD FR-10.4: روکڑ, ابتدائی فرق, the income accounts, نقدی منڈی, چکتا کھاتہ ...)
+/// cannot be made inactive, because the app posts to it by itself and a picker would no longer offer
+/// it. Making one active again is allowed, so a file where the state was changed some other way can
+/// be put right. The one exception is the old closed account 0031 (PRD FR-13.9): it stays closed.
 ///
 /// # Errors
 /// `ERR_NOT_FOUND` on `id`; `ERR_SYSTEM_ACCOUNT` on `id` when a system account is made inactive.
@@ -609,12 +566,19 @@ pub fn set_active(
                 "id",
             ));
         }
+        // The old closed account stays closed: nothing posts to it any more (PRD FR-13.9).
+        if is_active && old.code == mandi_domain::core::codes::OLD_CLOSED_ACCOUNT_CODE {
+            return Err(ServiceError::reject_field(
+                ErrorCode::ErrSystemAccount,
+                "id",
+            ));
+        }
         if old.is_active == is_active {
             return Ok::<_, ServiceError>(false);
         }
         // A person in the dead amount is made active again only by "دوبارہ فعال کریں" (PRD
         // FR-10.10).
-        if is_active && crate::dead::is_dead(tx, id, None)? {
+        if is_active && crate::dead::is_dead(tx, id)? {
             return Err(ServiceError::reject_field(ErrorCode::ErrAlreadyDead, "id"));
         }
         repo::set_active(tx, id, is_active, actor.user_id, &ctx.now_text())?;

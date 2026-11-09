@@ -1,5 +1,5 @@
 // The columns of the list of vouchers under the form (PRD 15.1): the number in the series of its
-// type, the day, who it is with (the one-time person's name for a پختہ کھاتہ account), the amount,
+// type, the day, who it is with, the amount,
 // how the money moved and whether it stands or was cancelled. Amounts are the stored sums the
 // backend sends, shown with `money` and never worked out. Less used columns come with the wider
 // layout steps, so the list never scrolls sideways (NFR-USE-15, Code Standards F22). The room is
@@ -46,12 +46,7 @@ export const VOUCHER_COLUMNS: readonly ListColumn<VoucherRow>[] = [
     headerId: 'vouchers-col-account',
     sortKey: 'account',
     grow: true,
-    value: (row, { language }) =>
-      row.person !== null
-        ? displayName(row.person, language)
-        : row.account === null
-          ? ''
-          : displayName(row.account, language),
+    value: (row, { language }) => (row.account === null ? '' : displayName(row.account, language)),
   },
   {
     field: 'amount',

@@ -1,11 +1,11 @@
-//! The one-time person of a lot or a line as it is saved (PRD FR-13.2, FR-13.5): both names and
-//! the phone cleaned, and the key that ties his lines together.
+//! The چکتا buyer of a line as it is saved (PRD FR-13.2, FR-13.5): both names and the phone
+//! cleaned, and the key that ties his lines together.
 
-use mandi_core::bikri::PreparedPukhta;
+use mandi_core::bikri::PreparedChukta;
 use mandi_core::text;
 use mandi_core::validate;
 
-/// A one-time person, cleaned for saving.
+/// A چکتا buyer, cleaned for saving.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CleanPerson {
     /// Urdu name, cleaned (NFC, no invisible marks, single spaces).
@@ -18,13 +18,13 @@ pub struct CleanPerson {
     pub key: String,
 }
 
-/// Cleans a one-time person and makes his key. `None` if a name or the phone does not pass the
-/// checks of PRD FR-7.28 and FR-13.2; `calc_posting` has already reported those, so a row that
+/// Cleans a چکتا buyer and makes his key. `None` if a name or the phone does not pass the checks of
+/// PRD FR-7.28 and FR-13.2; `calc_posting` has already reported those, so a row that
 /// is worked out always has a person that passes.
 ///
 /// Example: `شاہد` with phone `0300-0000000` is saved with phone `03000000000` and key
 /// `شاہد|03000000000`.
-pub fn clean_person(person: &PreparedPukhta) -> Option<CleanPerson> {
+pub fn clean_person(person: &PreparedChukta) -> Option<CleanPerson> {
     let name_ur = validate::name_ur("name_ur", &person.name_ur).ok()?;
     let name_en = validate::name_en("name_en", &person.name_en).ok()?;
     let phone = if person.phone.is_empty() {
@@ -45,8 +45,8 @@ pub fn clean_person(person: &PreparedPukhta) -> Option<CleanPerson> {
 mod tests {
     use super::*;
 
-    fn person(ur: &str, en: &str, phone: &str) -> PreparedPukhta {
-        PreparedPukhta {
+    fn person(ur: &str, en: &str, phone: &str) -> PreparedChukta {
+        PreparedChukta {
             name_ur: ur.into(),
             name_en: en.into(),
             phone: phone.into(),

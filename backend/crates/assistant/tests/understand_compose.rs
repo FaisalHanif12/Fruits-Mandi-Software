@@ -540,7 +540,7 @@ fn a_help_answer_is_the_guides_own_words_in_the_app_language() {
         "market safar kya hai",
         "backup kaise lun",
         "print kaise nikalte hain",
-        "what is pukhta khata",
+        "what is chukta khata",
     ] {
         assert!(
             compose_for(&w, question, Language::En).is_some(),
@@ -911,13 +911,13 @@ fn compose_locked(w: &world::World, question: &str, locked: bool) -> Option<Comp
 }
 
 /// Backend's review R3: "no such party" is said without the model only when the name is in no account
-/// at all (an inactive one is a real account with dues), is no known one-time person of the پختہ
-/// کھاتہ (شاہد, Event 2), and the partner section is open (a locked section hides the partners'
+/// at all (an inactive one is a real account with dues), is no known چکتا buyer
+/// (شاہد, Event 2), and the partner section is open (a locked section hides the partners'
 /// names). Otherwise the model looks further.
 #[test]
 fn no_such_party_is_said_only_when_the_name_is_in_no_account_person_or_partner() {
     let w = books();
-    // Event 2 of the worked day: the one-time buyer شاہد is recorded on the پختہ کھاتہ.
+    // Event 2 of the worked day: the چکتا buyer شاہد is recorded in the list of چکتا buyers.
     worked::events_1_to_5(&w);
     let zafar = world::add_account(
         &w.env,
@@ -935,7 +935,7 @@ fn no_such_party_is_said_only_when_the_name_is_in_no_account_person_or_partner()
     };
     // Really missing: still answered locally.
     assert!(not_found(&compose_locked(&w, "zubair ka bakaya", false)));
-    // An inactive buyer, a one-time person: not missing.
+    // An inactive buyer, a چکتا buyer: not missing.
     for question in ["zafar ka bakaya", "shahid ka bakaya"] {
         let c = compose_locked(&w, question, false);
         assert!(!not_found(&c), "{question}: {c:?}");
@@ -1072,13 +1072,13 @@ fn assert_model_path(u: &Understanding, question: &str) {
     assert!(plan_reads(u).is_none(), "{question}");
 }
 
-/// BUG-1. A print for a name the app cannot place (a one-time person of the پختہ کھاتہ, an inactive
+/// BUG-1. A print for a name the app cannot place (a چکتا buyer, an inactive
 /// account, a partner while the section is locked) must never become a print of the whole shop.
 /// "shahid ki aaj ki bikri ka print" was R34 for the whole day.
 #[test]
 fn a_print_for_a_name_the_app_cannot_place_never_opens_a_report_of_the_whole_shop() {
     let w = books();
-    // Event 2 of the worked day: the one-time buyer شاہد is recorded on the پختہ کھاتہ.
+    // Event 2 of the worked day: the چکتا buyer شاہد is recorded in the list of چکتا buyers.
     worked::events_1_to_5(&w);
     let zafar = world::add_account(
         &w.env,
@@ -1771,9 +1771,9 @@ fn a_request_to_open_a_screen_is_answered_with_its_topic_and_route() {
             EntryScreen::UnsoldStock,
         ),
         (
-            "مجھے پختہ کھاتہ پر لے چلیں",
-            "pukhta_khata",
-            EntryScreen::PukhtaKhata,
+            "مجھے چکتا کھاتہ پر لے چلیں",
+            "chukta_khata",
+            EntryScreen::ChuktaKhata,
         ),
         (
             "mujhe agrahi list par le chalo",
@@ -1879,7 +1879,7 @@ fn a_word_a_collector_a_partner_and_a_misspelt_item_are_never_not_found() {
         "kal shirakat daaron ne personal drawings ke liye kitna liya",
         "14 October ko shirakat daaron ne zati kharcha ke liye kitna liya",
         "is mahine shirakat daaron ne personal drawings ke liye kitna liya",
-        "pukhta khata ke logon ka kul baqaya kitna hai",
+        "chukta khata ke logon ka kul baqaya kitna hai",
         "رشید نے 3 نومبر کو کتنا collection کیا",
         "Rasheeed ne 14 October ko kitni ugrahi ki",
         "رشید نے اس ہفتے کتنی اگراہی کی",

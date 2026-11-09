@@ -1,10 +1,10 @@
 //! The Sales group of the report engine on the PRD worked day (plan 20 step B3, PRD 19.2,
-//! FR-13.6, FR-19.10, FR-19.11): R2, R3, R4, R6, R7, R8, R9 and R27.
+//! FR-13.6, FR-19.10, FR-19.11): R2, R3, R4, R6, R7, R8 and R27.
 //!
 //! The data is made the way `golden_day.rs` makes it (Events 1 to 5 of PRD Section 4, through the
 //! real services; `reports_world`). The expected numbers are the PRD's: the three registers add
-//! up to 41,400 and 44,364, R6 is the seller summary of E2E-1, R7 is view A of PRD 18.4, R9 is
-//! the register of the one-time screen. A report total is also checked against the stored lots
+//! up to 41,400 and 44,364, R6 is the seller summary of E2E-1, R7 is view A of PRD 18.4. (R9, the
+//! register of the چکتا کھاتہ, was retired in plan 64.) A report total is also checked against the stored lots
 //! and facts, so a report can never disagree with the bills (money agent Section 9).
 #![cfg(test)]
 
@@ -19,10 +19,10 @@ use mandi_reports::reports::{
     Cell, DateShortcut, FilterKind, PaidFilter, PartyFilter, PrintCell, ReportFilters, ReportGroup,
     ReportId, ReportPage, ReportPrintInput, catalog, print_data,
 };
+use mandi_services::bikri;
 use mandi_services::core::auth::Language;
-use mandi_services::core::bikri::{CancelInput, PukhtaRegisterInput};
+use mandi_services::core::bikri::CancelInput;
 use mandi_services::core::error::ErrorCode;
-use mandi_services::{bikri, vouchers};
 
 use reports_world::*;
 
@@ -39,13 +39,6 @@ fn names_en(cell: &Cell) -> String {
         Cell::Names { names } => names.en.clone(),
         Cell::Empty => String::new(),
         other => panic!("not names: {other:?}"),
-    }
-}
-
-fn label(cell: &Cell) -> String {
-    match cell {
-        Cell::Label { id } => id.clone(),
-        other => panic!("not a label: {other:?}"),
     }
 }
 
@@ -92,7 +85,6 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R6,
             ReportId::R7,
             ReportId::R8,
-            ReportId::R9,
             ReportId::R10
         ]
     );
@@ -146,11 +138,8 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
     assert_eq!(r2.group_title_id, "report-group-sales");
     assert_eq!(r2.title_id, "report-r2-title");
     assert!(!r2.party_required);
-    let r9 = entries.iter().find(|e| e.id == ReportId::R9).unwrap();
-    assert_eq!(
-        r9.filters,
-        vec![FilterKind::DateRange, FilterKind::Party, FilterKind::Status]
-    );
+    // R9 (the register of the چکتا کھاتہ) is retired: no other report number moved (plan 64).
+    assert!(entries.iter().all(|e| e.id.code() != "R9"));
 }
 
 // --- R2, R3, R4 ----------------------------------------------------------------------------------
@@ -189,7 +178,7 @@ fn r2_lists_every_sale_line_and_its_totals_are_the_bills_of_the_day() {
     );
     assert_eq!(moneys(&page, 0, &[7, 8]), vec![12_000, 12_880]);
     assert_eq!(moneys(&page, 1, &[6, 7, 8]), vec![580, 17_400, 18_684]);
-    // Event 2: a one-time buyer, shown by his own name and person key under the پختہ account.
+    // Event 2: a چکتا buyer, shown by his own name and person key under the account چکتا کھاتہ.
     let (code, name, key) = party_name(page.rows.get(2).unwrap().cells.get(2).unwrap());
     assert_eq!((code.as_str(), name.as_str()), ("0030", "Shahid"));
     assert!(key.is_some_and(|k| k.contains("03000000000")));
@@ -280,14 +269,14 @@ fn the_registers_filter_by_date_party_seller_item_and_page_by_page() {
     // One-time buyer by his person key.
     let key: String = raw(&w.dir)
         .query_row(
-            "SELECT pukhta_person_key FROM bikri_sales WHERE pukhta_person_key IS NOT NULL LIMIT 1",
+            "SELECT chukta_person_key FROM bikri_sales WHERE chukta_person_key IS NOT NULL LIMIT 1",
             [],
             |r| r.get(0),
         )
         .unwrap();
     let one = run(ReportFilters {
         party: Some(PartyFilter {
-            account_id: w.pukhta_buyer,
+            account_id: w.chukta_khata,
             person_key: Some(key),
         }),
         ..ReportFilters::default()
@@ -341,14 +330,6 @@ fn a_cancelled_bikri_leaves_the_registers_and_an_edit_shows_only_the_new_line() 
         "Banana"
     );
     assert_eq!(r7.totals.get(7).map(money), Some(3_928));
-    // R9 still lists the cancelled one-time line, marked cancelled and left out of the totals.
-    let r9 = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(r9.total_count, 1);
-    assert_eq!(
-        label(r9.rows.first().unwrap().cells.get(9).unwrap()),
-        "report-status-cancelled"
-    );
-    assert_eq!(r9.totals.get(7).map(money), Some(0));
 }
 
 // --- R6 and R27 ----------------------------------------------------------------------------------
@@ -687,211 +668,6 @@ fn r8_counts_the_trucks_lots_and_goods_of_each_adda() {
     assert_eq!(only.totals.get(4).map(money), Some(29_400));
 }
 
-// --- R9 ------------------------------------------------------------------------------------------
-
-#[test]
-fn r9_lists_the_one_time_line_as_paid_with_the_numbers_of_prd_4_5() {
-    let w = full_day();
-    let page = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(page.total_count, 1);
-    let row = &page.rows.first().unwrap().cells;
-    // date, doc, side, person, phone, item, qty, amount, commission, status, open.
-    assert_eq!(label(&row[2]), "report-side-buyer");
-    let (code, name, key) = party_name(&row[3]);
-    assert_eq!((code.as_str(), name.as_str()), ("0030", "Shahid"));
-    assert!(key.is_some());
-    assert_eq!(
-        row[4],
-        Cell::Text {
-            // The phone is stored as 11 digits and printed in the dash form (Umar, 26-10-2026).
-            text: "0300-0000000".into()
-        }
-    );
-    assert_eq!(names_en(&row[5]), "Apple");
-    assert_eq!(number(&row[6]), 10);
-    // He pays 12,800; his commission is 720; paid, nothing open (PRD 4.5, E2E-5).
-    assert_eq!((money(&row[7]), money(&row[8])), (12_800, 720));
-    assert_eq!(label(&row[9]), "report-status-paid");
-    assert_eq!(row[10], Cell::Empty);
-    assert_eq!(
-        [6_usize, 7, 8, 10]
-            .iter()
-            .map(|c| match page.totals.get(*c).unwrap() {
-                Cell::Number { value } => *value,
-                other => money(other),
-            })
-            .collect::<Vec<_>>(),
-        vec![10, 12_800, 720, 0]
-    );
-    // Paid and due filters.
-    let paid = report(
-        &w,
-        ReportId::R9,
-        ReportFilters {
-            status: Some(PaidFilter::Paid),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    let due = report(
-        &w,
-        ReportId::R9,
-        ReportFilters {
-            status: Some(PaidFilter::Due),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!((paid.total_count, due.total_count), (1, 0));
-    // Only a پختہ کھاتہ account can be the party.
-    assert_eq!(
-        rejected(&w, ReportId::R9, party(w.akram), 0, 0),
-        vec![(ErrorCode::ErrOutOfRange, "filters.party".to_owned())]
-    );
-}
-
-/// The one-time register agrees with the register of the one-time screen, line by line: paid or
-/// open, amount, commission and qty (the report works the open amount out the same way).
-fn assert_r9_equals_the_screen(w: &support::World) {
-    let screen = bikri::register(&w.env.ctx, &PukhtaRegisterInput::default()).unwrap();
-    let page = report(w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(page.rows.len(), screen.rows.len());
-    assert_eq!(i64::try_from(page.rows.len()).unwrap(), screen.total_count);
-    for (row, line) in page.rows.iter().zip(&screen.rows) {
-        let cells = &row.cells;
-        assert_eq!(number(&cells[6]), line.qty);
-        assert_eq!(money(&cells[7]), line.amount.rupees());
-        assert_eq!(money(&cells[8]), line.commission.rupees());
-        assert_eq!(money(&cells[10]), line.open.rupees());
-        let state = label(&cells[9]);
-        let expected = if line.cancelled {
-            "report-status-cancelled"
-        } else if line.paid {
-            "report-status-paid"
-        } else {
-            "report-status-due"
-        };
-        assert_eq!(state, expected);
-        let (_, _, key) = party_name(&cells[3]);
-        assert_eq!(key.as_deref(), Some(line.person_key.as_str()));
-    }
-}
-
-#[test]
-fn r9_works_per_person_on_credit_and_agrees_with_the_one_time_screen() {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
-    // E2E-21: شاہد 1 × 1,000 and ناصر 2 × 1,000 on credit, then a receipt of 1,000 for شاہد.
-    let w = worked_day();
-    let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: ur.into(),
-            name_en: en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l.buyer_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        l
-    };
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
-    lot.sales = vec![
-        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
-        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
-    ];
-    save(&w, &support::draft(vec![lot]));
-    let shahid = mandi_services::core::text::person_key("شاہد", "0300-0000000");
-    let nasir = mandi_services::core::text::person_key("ناصر", "0300-1111111");
-
-    let before = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(before.total_count, 2);
-    assert_eq!(before.totals.get(10).map(money), Some(3_000));
-    assert_r9_equals_the_screen(&w);
-
-    let mut input = receipt(w.pukhta_buyer, "1,000");
-    input.person_key = Some(shahid.clone());
-    vouchers::save_receipt(&w.env.ctx, &w.owner, &input).unwrap();
-
-    let page = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    assert_eq!(page.total_count, 2);
-    let by_person = |key: &str| -> (String, i64) {
-        let row = page
-            .rows
-            .iter()
-            .find(|r| party_name(&r.cells[3]).2.as_deref() == Some(key))
-            .unwrap();
-        (label(&row.cells[9]), money(&row.cells[10]))
-    };
-    // شاہد 0 and ناصر 2,000 still due: the payment never settles the other person's bill.
-    assert_eq!(by_person(&shahid), ("report-status-paid".to_owned(), 0));
-    assert_eq!(by_person(&nasir), ("report-status-due".to_owned(), 2_000));
-    assert_eq!(page.totals.get(10).map(money), Some(2_000));
-    assert_r9_equals_the_screen(&w);
-
-    // The filters: due only; one person.
-    let due = report(
-        &w,
-        ReportId::R9,
-        ReportFilters {
-            status: Some(PaidFilter::Due),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!(due.total_count, 1);
-    let one = report(
-        &w,
-        ReportId::R9,
-        ReportFilters {
-            party: Some(PartyFilter {
-                account_id: w.pukhta_buyer,
-                person_key: Some(nasir),
-            }),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!(one.total_count, 1);
-    assert_eq!(one.totals.get(10).map(money), Some(2_000));
-}
-
-#[test]
-fn r9_lists_a_one_time_seller_with_what_is_still_to_pay_him() {
-    use mandi_services::core::bikri::PukhtaInput;
-    // A one-time seller's lot is paid on the spot when the net is paid as نقد (PRD FR-13.10); a
-    // part left unpaid is open until a payment settles it.
-    let w = worked_day();
-    let mut lot = support::bare_lot(&w, "lot-1", w.pukhta_seller, w.banana, "10");
-    lot.pukhta = Some(PukhtaInput {
-        name_ur: "نذیر".into(),
-        name_en: "Nazir".into(),
-        phone: "0300-2222222".into(),
-    });
-    lot.cash_paid = Some("4,000".into());
-    lot.sales = vec![support::sale("s-1", w.akram, "10", "1000")];
-    save(&w, &support::draft(vec![lot]));
-    let page = report(&w, ReportId::R9, ReportFilters::default(), 0, 0);
-    // Lines: the lot of the one-time seller. Gross 10,000; the seller's commission is 6%.
-    let seller_rows: Vec<_> = page
-        .rows
-        .iter()
-        .filter(|r| label(&r.cells[2]) == "report-side-seller")
-        .collect();
-    assert_eq!(seller_rows.len(), 1);
-    let cells = &seller_rows[0].cells;
-    assert_eq!(money(&cells[7]), 10_000);
-    assert_eq!(money(&cells[8]), 600);
-    // Net after 600 commission, 4,000 نقد and the lot's other charges is still to pay.
-    assert_eq!(label(&cells[9]), "report-status-due");
-    assert!(money(&cells[10]) > 0);
-    assert_r9_equals_the_screen(&w);
-}
-
 // --- Page, query plans and writes ----------------------------------------------------------------
 
 #[test]
@@ -961,7 +737,6 @@ fn a_sales_report_writes_nothing() {
         ReportId::R6,
         ReportId::R7,
         ReportId::R8,
-        ReportId::R9,
         ReportId::R27,
     ] {
         report(&w, id, ReportFilters::default(), 0, 0);
@@ -981,7 +756,6 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
         ReportId::R6,
         ReportId::R7,
         ReportId::R8,
-        ReportId::R9,
         ReportId::R27,
     ] {
         let page = report(&w, id, ReportFilters::default(), 0, 0);
@@ -1066,13 +840,13 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
             ("report-filter-to".to_owned(), "10-10-2026".to_owned())
         ]
     );
-    // R9 says which state it was asked for.
+    // R38 says which state it was asked for.
     let due = print_data(
         w.env.ctx.db(),
         &ReportPrintInput {
             group_by_month: false,
             sort: None,
-            id: ReportId::R9,
+            id: ReportId::R38,
             filters: ReportFilters {
                 status: Some(PaidFilter::Due),
                 ..ReportFilters::default()
@@ -1471,70 +1245,6 @@ fn r1_of_a_cancelled_bikri_is_refused_with_its_reason() {
         ),
         vec![(ErrorCode::ErrBikriCancelled, "filters.bikri_id".to_owned())]
     );
-}
-
-/// E2E-21 on credit: شاہد 1 × 1,000 and ناصر 2 × 1,000, both under the one-time account.
-fn two_one_time_credit_buyers() -> support::World {
-    use mandi_services::core::bikri::{LineChargeMethod, PaymentType, PukhtaInput};
-    let w = worked_day();
-    let line = |key: &str, qty: &str, ur: &str, en: &str, phone: &str| {
-        let mut l = support::sale(key, w.pukhta_buyer, qty, "1000");
-        l.pukhta = Some(PukhtaInput {
-            name_ur: ur.into(),
-            name_en: en.into(),
-            phone: phone.into(),
-        });
-        l.payment_type = Some(PaymentType::Credit);
-        l.buyer_comm = support::typed(LineChargeMethod::Percent, "6");
-        l.seller_comm = support::typed(LineChargeMethod::Percent, "0");
-        l.laga = support::typed(LineChargeMethod::PerUnit, "0");
-        l
-    };
-    let mut lot = support::bare_lot(&w, "lot-1", w.rahim, w.banana, "3");
-    lot.sales = vec![
-        line("s-1", "1", "شاہد", "Shahid", "0300-0000000"),
-        line("s-2", "2", "ناصر", "Nasir", "0300-1111111"),
-    ];
-    save(&w, &support::draft(vec![lot]));
-    w
-}
-
-#[test]
-fn r5_has_a_row_for_each_one_time_person_and_his_lines_add_up_to_his_row() {
-    let w = two_one_time_credit_buyers();
-    let page = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
-    assert_eq!(page.rows.len(), 2);
-    for row in &page.rows {
-        let Cell::Detail { parts } = &row.cells[2] else {
-            panic!("not a detail");
-        };
-        // The parts of the row add up to the row: value and value after commission (C5).
-        let (mut value, mut total) = (0_i64, 0_i64);
-        for part in parts {
-            let mandi_reports::reports::DetailPart::Sale {
-                value_paisa,
-                commission_paisa,
-                laga_paisa,
-                ..
-            } = part
-            else {
-                panic!("not a sale");
-            };
-            value += value_paisa.rupees();
-            total += value_paisa.rupees() + commission_paisa.rupees() + laga_paisa.rupees();
-        }
-        assert_eq!(value, money(&row.cells[3]));
-        assert_eq!(total, money(&row.cells[4]));
-    }
-    // شاہد 1,000 + 60 = 1,060; ناصر 2,000 + 120 = 2,120; each person has his own row.
-    let mut totals: Vec<(i64, i64)> = page
-        .rows
-        .iter()
-        .map(|r| (money(&r.cells[3]), money(&r.cells[4])))
-        .collect();
-    totals.sort_unstable();
-    assert_eq!(totals, [(1_000, 1_060), (2_000, 2_120)]);
-    assert_eq!(money(&page.totals[4]), 3_180);
 }
 
 #[test]

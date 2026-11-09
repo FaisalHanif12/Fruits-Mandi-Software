@@ -87,9 +87,9 @@ pub fn insert_entry(
     Ok(conn.last_insert_rowid())
 }
 
-/// A one-time person kept on a lot or a line.
+/// A چکتا buyer kept on a line.
 #[derive(Debug, Clone, Copy)]
-pub struct PukhtaColumns<'a> {
+pub struct ChuktaColumns<'a> {
     /// Urdu name.
     pub name_ur: &'a str,
     /// English name.
@@ -128,8 +128,6 @@ pub struct NewLot<'a> {
     pub purchase_id: Option<i64>,
     /// The garden arrival a garden lot takes its goods from (PRD FR-12.40).
     pub arrival_id: Option<i64>,
-    /// The one-time seller.
-    pub pukhta: Option<PukhtaColumns<'a>>,
     /// The item.
     pub item_id: i64,
     /// The packing.
@@ -182,25 +180,21 @@ pub fn insert_lot(
 ) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO bikri_lots (created_at, created_by, updated_at, updated_by, bikri_id, lot_no, seller_account_id,
-             pukhta_name_ur, pukhta_name_en, pukhta_phone, pukhta_person_key, item_id, packing_id, marka_id, store_id,
+             item_id, packing_id, marka_id, store_id,
              qty_received, weight_received_grams, freight_paisa, freight_paid_by,
              labour_paisa, labour_method, labour_value_paisa, labour_rule_id,
              munshiana_paisa, munshiana_method, munshiana_value_paisa, munshiana_rule_id,
              phone_paisa, phone_method, phone_value_paisa, phone_rule_id,
              cash_paid_paisa, store_rent_paisa, adjust_advance, qty_sold, gross_paisa, seller_comm_paisa,
              deductions_paisa, net_paisa, purchase_id, arrival_id)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17,
-             ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
+             ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35)",
         params![
             now,
             user_id,
             lot.bikri_id,
             lot.lot_no,
             lot.seller_account_id,
-            lot.pukhta.map(|p| p.name_ur),
-            lot.pukhta.map(|p| p.name_en),
-            lot.pukhta.map(|p| p.phone),
-            lot.pukhta.map(|p| p.person_key),
             lot.item_id,
             lot.packing_id,
             lot.marka_id,
@@ -285,8 +279,8 @@ pub struct NewSale<'a> {
     pub entry_date: &'a str,
     /// The buyer account.
     pub buyer_account_id: i64,
-    /// The one-time buyer.
-    pub pukhta: Option<PukhtaColumns<'a>>,
+    /// The چکتا buyer.
+    pub chukta: Option<ChuktaColumns<'a>>,
     /// Quantity.
     pub qty: i64,
     /// Weight, grams.
@@ -336,8 +330,8 @@ pub fn insert_sale(
 ) -> rusqlite::Result<i64> {
     conn.prepare_cached(
         "INSERT INTO bikri_sales (created_at, created_by, updated_at, updated_by, bikri_id, lot_id, line_no,
-             journal_entry_id, entry_date, buyer_account_id, pukhta_name_ur, pukhta_name_en, pukhta_phone,
-             pukhta_person_key, qty, weight_grams, seller_rate_paisa, seller_amount_paisa,
+             journal_entry_id, entry_date, buyer_account_id, chukta_name_ur, chukta_name_en, chukta_phone,
+             chukta_person_key, qty, weight_grams, seller_rate_paisa, seller_amount_paisa,
              seller_comm_method, seller_comm_value_bps, seller_comm_value_paisa, seller_comm_rule_id, seller_comm_paisa,
              buyer_rate_paisa, buyer_value_paisa,
              buyer_comm_method, buyer_comm_value_bps, buyer_comm_value_paisa, buyer_comm_rule_id, buyer_comm_paisa,
@@ -355,10 +349,10 @@ pub fn insert_sale(
             sale.journal_entry_id,
             sale.entry_date,
             sale.buyer_account_id,
-            sale.pukhta.map(|p| p.name_ur),
-            sale.pukhta.map(|p| p.name_en),
-            sale.pukhta.map(|p| p.phone),
-            sale.pukhta.map(|p| p.person_key),
+            sale.chukta.map(|p| p.name_ur),
+            sale.chukta.map(|p| p.name_en),
+            sale.chukta.map(|p| p.phone),
+            sale.chukta.map(|p| p.person_key),
             sale.qty,
             sale.weight_grams,
             sale.seller_rate_paisa,
@@ -481,8 +475,8 @@ pub struct NewFact<'a> {
     pub seller_account_id: i64,
     /// The buyer account.
     pub buyer_account_id: i64,
-    /// The one-time buyer's key.
-    pub pukhta_person_key: Option<&'a str>,
+    /// The چکتا buyer's key.
+    pub chukta_person_key: Option<&'a str>,
     /// The buyer's city.
     pub city_id: Option<i64>,
     /// The truck stand.
@@ -522,7 +516,7 @@ pub fn insert_fact(
     conn.prepare_cached(
         "INSERT INTO analytics_facts (created_at, created_by, updated_at, updated_by, journal_entry_id, entry_date,
              year, month, bikri_id, lot_id, sale_id, item_id, seller_account_id, buyer_account_id,
-             pukhta_person_key, city_id, adda_id, qty, seller_amount_paisa, seller_comm_paisa, buyer_value_paisa,
+             chukta_person_key, city_id, adda_id, qty, seller_amount_paisa, seller_comm_paisa, buyer_value_paisa,
              buyer_comm_paisa, laga_paisa, sign, purchase_id, venture_id, cost_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
              ?21, ?22, ?23, ?24, ?25)",
@@ -540,7 +534,7 @@ pub fn insert_fact(
             fact.item_id,
             fact.seller_account_id,
             fact.buyer_account_id,
-            fact.pukhta_person_key,
+            fact.chukta_person_key,
             fact.city_id,
             fact.adda_id,
             fact.qty,

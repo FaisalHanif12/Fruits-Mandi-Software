@@ -6,8 +6,8 @@ import type { AccountDraft } from './types';
 
 /**
  * What the backend takes for one account, from the account form's text. Money and the date go as
- * typed; the backend parses them and checks every field again. The quick add, the account form and
- * "make regular" (PRD FR-13.8) all send the account this way.
+ * typed; the backend parses them and checks every field again. The quick add and the account form
+ * both send the account this way.
  */
 export function accountInputOf(
   draft: AccountDraft,
@@ -17,8 +17,6 @@ export function accountInputOf(
     id: draft.id,
     version: draft.version,
     account_type: draft.account_type,
-    // Left out when false, as the backend leaves it out of what it sends (plan 47).
-    ...(draft.is_pukhta_party === true ? { is_pukhta_party: true } : {}),
     control_id: draft.control_id,
     code: draft.code,
     name_ur: draft.names.urdu,

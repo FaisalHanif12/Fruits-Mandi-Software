@@ -23,7 +23,7 @@ import {
 } from './bikri-plan16-data';
 import { fillThousandLines, thousandAnswer } from './bikri-thousand';
 import { fillUmarsLot, umarAnswer } from './bikri-umar-data';
-import { NASIR, SHAHID, listRow, registerRow, savedEvent1 } from './bikri-saved';
+import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { account as accountRow } from './accounts';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
@@ -48,7 +48,7 @@ import { suggestionsFor } from './translit';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
-import { EMPTY_PAIRS, bikriListOf, pukhtaRegisterOf } from './paged';
+import { EMPTY_PAIRS, bikriListOf } from './paged';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
 import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
@@ -78,8 +78,6 @@ interface Party {
   /** Balance in paisa and its side, as the backend sends it. */
   paisa: number;
   side: 'dr' | 'cr' | 'zero';
-  /** A پختہ party's own account (plan 47): his code is in the series 003, from 0032. */
-  pukhtaParty?: true;
 }
 
 const OWN_ID = 17;
@@ -101,15 +99,6 @@ const BIKRI_PARTIES: readonly Party[] = [
     type: 'seller',
     ur: 'کریم',
     en: 'Karim',
-    paisa: 0,
-    side: 'zero',
-  },
-  {
-    id: IDS.pukhtaSeller,
-    code: '0031',
-    type: 'seller',
-    ur: 'پختہ کھاتہ (بیوپاری)',
-    en: 'Pukhta Khata (Seller)',
     paisa: 0,
     side: 'zero',
   },
@@ -142,11 +131,11 @@ const BIKRI_PARTIES: readonly Party[] = [
     side: 'dr',
   },
   {
-    id: IDS.pukhtaBuyer,
+    id: IDS.chuktaKhata,
     code: '0030',
     type: 'buyer',
-    ur: 'پختہ کھاتہ (خریدار)',
-    en: 'Pukhta Khata (Buyer)',
+    ur: 'چکتا کھاتہ',
+    en: 'Chukta Khata',
     paisa: 0,
     side: 'zero',
   },
@@ -175,44 +164,8 @@ const VOUCHER_PARTIES: readonly Party[] = BOOK_PARTIES.filter(
 /** The parties the pickers offer: the worked day's books on the voucher pages, else the sale book's. */
 function parties(): readonly Party[] {
   const base = window.location.hash.startsWith('#/dev/vouchers') ? VOUCHER_PARTIES : BIKRI_PARTIES;
-  return [...base, ...(devFlag('pukhtaown') ? PUKHTA_PARTIES : []), ...ADDED_PARTIES];
+  return [...base, ...ADDED_PARTIES];
 }
-
-/**
- * `?pukhtaown` (plan 47): an ordinary buyer and a پختہ buyer who share the running number 2, and a
- * پختہ seller, so the picker rows, the question "which one?" and the party card can be photographed.
- */
-const PUKHTA_PARTIES: readonly Party[] = [
-  {
-    id: 41,
-    code: '0022',
-    type: 'buyer',
-    ur: 'طارق محمود',
-    en: 'Tariq Mehmood',
-    paisa: 0,
-    side: 'zero',
-  },
-  {
-    id: 42,
-    code: '0032',
-    type: 'buyer',
-    ur: 'نذیر',
-    en: 'Nazir',
-    paisa: 50000,
-    side: 'dr',
-    pukhtaParty: true,
-  },
-  {
-    id: 43,
-    code: '0033',
-    type: 'seller',
-    ur: 'کمال',
-    en: 'Kamal',
-    paisa: 0,
-    side: 'zero',
-    pukhtaParty: true,
-  },
-];
 
 /** Accounts made in the Index form that a picker's "add" button opens (plan 32, R8). */
 const ADDED_PARTIES: Party[] = [];
@@ -251,7 +204,9 @@ function accountHit(party: Party) {
     extra_ur: '',
     extra_en: '',
     account_type: party.type,
-    ...(party.pukhtaParty === true ? { is_pukhta_party: true } : {}),
+    kind: 'account' as const,
+    chukta_id: null,
+    phone: null,
     control_id: party.type === 'seller' ? 11 : 4,
     is_active: true,
   };
@@ -259,12 +214,45 @@ function accountHit(party: Party) {
 
 /** The running number of a seller or a buyer: his code without the 3-digit type number. */
 function runningOfParty(party: Party): number | null {
-  const prefix = party.pukhtaParty === true ? '003' : party.type === 'seller' ? '001' : '002';
+  const prefix = party.type === 'seller' ? '001' : '002';
   const rest = party.code.startsWith(prefix) ? party.code.slice(prefix.length) : '';
   return /^(0|[1-9]\d*)$/.test(rest) ? Number(rest) : null;
 }
 
+/**
+ * The چکتا buyers the buyer picker lists beside the buyers (PRD FR-7.29): each is the account چکتا
+ * کھاتہ with his own names and phone, marked `chukta`. Only the buyer field has them; digits are a
+ * code, and a code finds an account.
+ */
+function chuktaHits(scope: string, text: string, withChukta: boolean) {
+  const khata = BIKRI_PARTIES.find((party) => party.id === IDS.chuktaKhata);
+  const wanted = text.trim().toLowerCase();
+  if (!withChukta || scope !== 'buyer' || khata === undefined || /^\d+$/.test(wanted)) return [];
+  return [SHAHID, NASIR, ...ADDED_CHUKTA]
+    .filter((person) =>
+      [person.name_ur, person.name_en, person.phone ?? ''].some((part) =>
+        part.toLowerCase().includes(wanted),
+      ),
+    )
+    .map((person) => ({
+      ...accountHit(khata),
+      name_ur: person.name_ur,
+      name_en: person.name_en,
+      extra_ur: person.phone ?? '',
+      extra_en: person.phone ?? '',
+      balance: undefined,
+      kind: 'chukta' as const,
+      chukta_id: person.id,
+      phone: person.phone,
+    }));
+}
+
+/** The چکتا buyers added on the dev page with the second add row (PRD FR-13.3), kept until reload. */
+const ADDED_CHUKTA: (typeof SHAHID)[] = [];
+
 function partyMatches(party: Party, scope: string, text: string): boolean {
+  // The account چکتا کھاتہ is never offered; his buyers are (PRD FR-13.4).
+  if (party.id === IDS.chuktaKhata) return false;
   // The seller of a lot may be any seller and اپنا مال; every other seller field leaves it out.
   if (scope === 'lot_seller') {
     if (party.type !== 'seller') return false;
@@ -330,7 +318,6 @@ if (!new URLSearchParams(window.location.hash.split('?')[1] ?? '').has('empty'))
         type: 'payment',
         date: '10-10-2026',
         account_id: 31,
-        person_key: null,
         amount: '1',
         reason: '',
         narration: '',
@@ -479,14 +466,18 @@ const handlers: Record<string, Handler> = {
     });
     return accountRow(NEXT_ID.value, type, asText(input['code']), ur, en);
   },
-  search_accounts: (input) =>
-    parties()
+  search_accounts: (input) => [
+    ...parties()
       .filter((party) => partyMatches(party, asText(input['scope']), asText(input['text'])))
       .map(accountHit),
-  search_accounts_recent: (input) =>
-    parties()
+    ...chuktaHits(asText(input['scope']), asText(input['text']), input['with_chukta'] === true),
+  ],
+  search_accounts_recent: (input) => [
+    ...parties()
       .filter((party) => partyMatches(party, asText(input['scope']), ''))
       .map(accountHit),
+    ...chuktaHits(asText(input['scope']), '', input['with_chukta'] === true),
+  ],
   search_accounts_touch: () => null,
   accounts_balances: (input) => {
     const ids = Array.isArray(input['ids']) ? input['ids'] : [];
@@ -504,7 +495,7 @@ const handlers: Record<string, Handler> = {
         /^\d+$/.test(asText(input['text']).trim()),
     );
     const only = found[0];
-    // A running number two buyers share (an ordinary one and a پختہ one) is "several" (plan 47).
+    // A running number that two accounts share (a seller and a buyer) is "several" (PRD FR-7.39).
     if (found.length > 1) {
       return {
         status: 'several',
@@ -524,6 +515,34 @@ const handlers: Record<string, Handler> = {
       : { id: party.id, code: party.code, name_ur: party.ur, name_en: party.en };
   },
   assist_party_card: (input) => {
+    // A چکتا buyer's own card (PRD FR-13.6): his names and phone, no balance, "pays in cash".
+    const chuktaId = input['chukta_id'];
+    if (typeof chuktaId === 'number') {
+      const person = [SHAHID, NASIR, ...ADDED_CHUKTA].find((one) => one.id === chuktaId);
+      const khata = parties().find((candidate) => candidate.id === asNumber(input['account_id']));
+      if (person === undefined || khata === undefined) return null;
+      return {
+        id: khata.id,
+        code: khata.code,
+        account_type: 'buyer',
+        is_chukta: true,
+        name_ur: person.name_ur,
+        name_en: person.name_en,
+        father_or_firm_ur: '',
+        father_or_firm_en: '',
+        city_ur: '',
+        city_en: '',
+        phone: person.phone ?? '',
+        is_active: true,
+        dead: null,
+        balance: { amount_paisa: 0, side: 'zero' },
+        last_entry_date: null,
+        credit_limit: null,
+        credit_used: null,
+        advance_open: null,
+        warnings: [],
+      };
+    }
     // A garden's account (0080, plan 34): the card of an account that is neither a seller nor a buyer.
     if (asNumber(input['account_id']) === 31) {
       return {
@@ -554,7 +573,6 @@ const handlers: Record<string, Handler> = {
       id: party.id,
       code: party.code,
       account_type: party.type,
-      ...(party.pukhtaParty === true ? { is_pukhta_party: true } : {}),
       name_ur: party.ur,
       name_en: party.en,
       father_or_firm_ur: '',
@@ -686,7 +704,22 @@ const handlers: Record<string, Handler> = {
   },
   drafts_save: () => ({ saved_at: '2026-10-10T07:30:00Z' }),
   drafts_discard: () => null,
-  search_pukhta_people: () => [SHAHID, NASIR],
+  // Plan 64: the چکتا buyers of the buyer picker (the dev page has two: Shahid and Nasir).
+  chukta_search: () => [SHAHID, NASIR, ...ADDED_CHUKTA],
+  // The short form of a new چکتا buyer saves him at once (PRD FR-13.3); the phone comes back as 11 digits.
+  chukta_add: (input) => {
+    const phone = asText(input['phone']).replace(/\D/g, '');
+    const person = {
+      id: 10 + ADDED_CHUKTA.length,
+      account_id: IDS.chuktaKhata,
+      name_ur: asText(input['name_ur']),
+      name_en: asText(input['name_en']),
+      phone: phone === '' ? null : phone,
+      last_date: null,
+    };
+    ADDED_CHUKTA.push(person);
+    return person;
+  },
   // Plan 14: the print box, the preview and the Printing settings. `#/dev/bikri?id=41&windows`
   // pretends the computer is Windows (the print goes through); without it the answer is the one a
   // Mac gives, ERR_PRINT_WINDOWS_ONLY, so the preview offer can be photographed.
@@ -825,36 +858,6 @@ const handlers: Record<string, Handler> = {
   },
   reports_voucher_print_data: (input) =>
     voucherPrintData('receipt', { language: input['language'] === 'en' ? 'en' : 'ur' }),
-  pukhta_register: (input) =>
-    pukhtaRegisterOf(
-      devFlag('empty')
-        ? []
-        : [
-            registerRow(),
-            registerRow({
-              bikri_id: 43,
-              bikri_number: 3,
-              name_ur: NASIR.name_ur,
-              name_en: NASIR.name_en,
-              phone: NASIR.phone,
-              amount: paisaForTest(200_000),
-              paid: false,
-              open: paisaForTest(200_000),
-            }),
-            registerRow({ bikri_id: 44, bikri_number: 4, cancelled: true, paid: false }),
-          ],
-      0,
-      0,
-      // As the backend: the sums are given only when a side is chosen (they are null otherwise).
-      devFlag('empty') || input['side'] === null || input['side'] === undefined
-        ? {}
-        : {
-            qty: 20,
-            amount: paisaForTest(1_480_000),
-            commission: paisaForTest(144_000),
-            open: paisaForTest(200_000),
-          },
-    ),
 };
 
 const hasFlag = (name: string): boolean =>

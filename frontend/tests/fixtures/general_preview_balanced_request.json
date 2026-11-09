@@ -5,15 +5,13 @@
       "account_id": 20,
       "cr": "",
       "dr": "1,000",
-      "narration": "fix",
-      "person_key": null
+      "narration": "fix"
     },
     {
       "account_id": 18,
       "cr": "1,000",
       "dr": "",
-      "narration": null,
-      "person_key": null
+      "narration": null
     }
   ]
 }

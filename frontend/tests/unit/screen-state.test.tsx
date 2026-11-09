@@ -193,18 +193,18 @@ function label(saved: unknown): string {
 }
 
 /** The names of the screens under test. */
-const PUKHTA_SCREEN = 'list.pukhta-register';
+const LIST_SCREEN = 'list.accounts';
 const REPORT_SCREEN = 'report.r20';
 
 describe('Remembered', () => {
   it('shows nothing of the screen until the saved text has arrived, then gives it to the screen', async () => {
-    get.mockResolvedValue({ screen: PUKHTA_SCREEN, value: '{"state":"due"}' });
+    get.mockResolvedValue({ screen: LIST_SCREEN, value: '{"state":"due"}' });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderIn(
       'en',
       <QueryClientProvider client={client}>
         {createElement(Remembered, {
-          screen: PUKHTA_SCREEN,
+          screen: LIST_SCREEN,
           children: ({ saved }) => <p>{JSON.stringify(saved)}</p>,
         })}
       </QueryClientProvider>,

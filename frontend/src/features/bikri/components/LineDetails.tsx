@@ -29,10 +29,8 @@ import {
   SegmentedControl,
   fieldError,
 } from '../../../shared/ui';
-import { isPukhtaBuyer } from '../draft';
 import { chargeNumber, ruleTag, type Say } from '../preview-view';
 import { ON, SALE, type LinePreview } from '../types';
-import { PukhtaFields } from './PukhtaFields';
 
 type Method = 'percent' | 'per_unit';
 
@@ -286,26 +284,6 @@ export function LineDetails({
           )}
         </Field>
       </div>
-      {isPukhtaBuyer(row) ? (
-        <PukhtaFields
-          store={store}
-          row={row}
-          side="buyer"
-          keys={{
-            ur: SALE.pukhtaUr,
-            en: SALE.pukhtaEn,
-            phone: SALE.pukhtaPhone,
-            marks: `${SALE.pukhtaUr}Marks`,
-          }}
-          paths={{
-            ur: path('pukhta.name_ur'),
-            en: path('pukhta.name_en'),
-            phone: path('pukhta.phone'),
-          }}
-          error={error}
-          onDone={onDone}
-        />
-      ) : null}
     </section>
   );
 }

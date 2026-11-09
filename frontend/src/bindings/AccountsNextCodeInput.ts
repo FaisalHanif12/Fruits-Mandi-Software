@@ -7,16 +7,9 @@ import type { AccountType } from './AccountType';
  */
 export type AccountsNextCodeInput = {
   /**
-   * The kind. For a پختہ party this is his side, `seller` or `buyer`.
+   * The kind.
    */
   account_type: AccountType;
-  /**
-   * True for a پختہ کھاتہ گاہک or بیوپاری (plan 47): the next code is then the next running number of
-   * the پختہ series `003`, from `0032`, whatever his side; never `0030` or `0031`, never a code used
-   * before. Missing means false. `ERR_FORMAT_INVALID` on `is_pukhta_party` for a kind that is not a
-   * seller or a buyer.
-   */
-  is_pukhta_party?: boolean;
   /**
    * The control, for type `other`.
    */

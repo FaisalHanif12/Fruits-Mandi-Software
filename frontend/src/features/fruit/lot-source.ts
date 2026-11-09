@@ -18,8 +18,7 @@ export function lotCode(row: Pick<FruitLotRow, 'bikri_number' | 'lot_no'>): stri
 }
 
 function hitOf(row: FruitLotRow): LotHit {
-  // The one-time seller of a پختہ کھاتہ lot is told by his own name.
-  const seller = row.pukhta ?? row.seller;
+  const seller = row.seller;
   return {
     id: row.lot_id,
     code: lotCode(row),

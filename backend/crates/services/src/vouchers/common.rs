@@ -1,5 +1,5 @@
 //! What the three voucher types share (plan 15, PRD 15.1): the date, the amount, the way the
-//! money moves (always روکڑ, PRD 15.1 v1.6), the note, the party and its person key, and the cash check.
+//! money moves (always روکڑ, PRD 15.1 v1.6), the note, the party, and the cash check.
 //!
 //! Every function here is a check or a read. The writes are in `receipt`, `payment` and
 //! `advance`, each one transaction (Code Standards B3). The preview and the save call the same
@@ -46,7 +46,7 @@ pub(super) struct Hint {
     pub unmatched_credit: Option<i64>,
 }
 
-/// The hint for a buyer key (none for any other party).
+/// The hint for a buyer (none for any other party).
 ///
 /// # Errors
 /// `ServiceError::Db`.
@@ -54,13 +54,11 @@ pub(super) fn hint_for(
     conn: &Connection,
     role: Role,
     account_id: i64,
-    person_key: Option<&str>,
 ) -> Result<Hint, ServiceError> {
     if role != Role::Buyer {
         return Ok(Hint::default());
     }
-    let (open_bills, unmatched_credit) =
-        mandi_db::matching::expected_pair(conn, account_id, person_key)?;
+    let (open_bills, unmatched_credit) = mandi_db::matching::expected_pair(conn, account_id, None)?;
     Ok(Hint {
         open_bills: Some(open_bills),
         unmatched_credit: Some(unmatched_credit),
@@ -160,10 +158,6 @@ pub(crate) enum Role {
 pub(super) struct Party {
     pub record: RecordRef,
     pub role: Role,
-    /// True for the two پختہ کھاتہ accounts.
-    pub is_pukhta: bool,
-    /// The one-time person, for a پختہ کھاتہ account.
-    pub person_key: Option<String>,
 }
 
 /// Which roles a voucher type accepts, and the code it uses for an account of any other kind.
@@ -180,8 +174,8 @@ pub(super) struct Accepts {
 }
 
 /// Finds the account of a receipt or a payment and checks it: it exists, it is active, its kind
-/// is one the voucher type takes, and a پختہ کھاتہ account names its person who is on the books
-/// (PRD FR-13.5, FR-13.7). A mistake goes to `errors` at `account_id` or `person_key`.
+/// is one the voucher type takes. The چکتا کھاتہ accounts have no ledger and take no voucher (PRD
+/// FR-13.6). A mistake goes to `errors` at `account_id`.
 ///
 /// # Errors
 /// `ServiceError::Db` only.
@@ -189,7 +183,6 @@ pub(super) fn resolve_party(
     conn: &Connection,
     errors: &mut FieldErrors,
     account_id: i64,
-    person_key: Option<&str>,
     accepts: Accepts,
 ) -> Result<Option<Party>, ServiceError> {
     let Some(facts) = account_repo::facts(conn, account_id)? else {
@@ -207,6 +200,12 @@ pub(super) fn resolve_party(
         errors.push(FieldError::new(ErrorCode::ErrNotFound, "account_id"));
         return Ok(None);
     };
+    // چکتا کھاتہ (and the old closed account) has no ledger: nothing is received from it or paid to
+    // it (PRD FR-13.6).
+    if facts.is_chukta_khata {
+        errors.push(FieldError::new(accepts.refusal, "account_id"));
+        return Ok(None);
+    }
     // اپنا مال is offered only as the seller of a lot (PRD FR-12.26).
     if facts.code == OWN_GOODS_CODE {
         errors.push(FieldError::new(
@@ -236,32 +235,7 @@ pub(super) fn resolve_party(
         errors.push(FieldError::new(ErrorCode::ErrAccountInactive, "account_id"));
         return Ok(None);
     }
-    // The person: needed for a پختہ کھاتہ account, refused for any other (PRD FR-13.5).
-    let key = person_key.map(str::trim).filter(|k| !k.is_empty());
-    let person_key = match (facts.is_pukhta_khata, key) {
-        (true, None) => {
-            errors.push(FieldError::new(ErrorCode::ErrPersonRequired, "person_key"));
-            return Ok(None);
-        }
-        (true, Some(key)) => {
-            if !repo::person_has_lines(conn, facts.id, key)? {
-                errors.push(FieldError::new(ErrorCode::ErrNotFound, "person_key"));
-                return Ok(None);
-            }
-            Some(key.to_owned())
-        }
-        (false, Some(_)) => {
-            errors.push(FieldError::new(ErrorCode::ErrFormatInvalid, "person_key"));
-            return Ok(None);
-        }
-        (false, None) => None,
-    };
-    Ok(Some(Party {
-        record,
-        role,
-        is_pukhta: facts.is_pukhta_khata,
-        person_key,
-    }))
+    Ok(Some(Party { record, role }))
 }
 
 /// What an entry does to cash in hand: Σ debit − Σ credit of its lines on the cash account.
@@ -330,7 +304,6 @@ pub(super) fn voucher_json(number: i64, voucher_type: &str, v: &NewVoucher) -> V
         "number": number,
         "entry_date": v.entry_date,
         "account_id": v.account_id,
-        "person_key": v.person_key,
         "amount_paisa": v.amount_paisa,
         "mode": v.mode.as_str(),
         "bank_account_id": v.bank_account_id,
@@ -465,38 +438,40 @@ pub(crate) fn rematch_party(
     account_id: i64,
     person_key: Option<&str>,
     role: Role,
-    is_pukhta: bool,
 ) -> Result<(), ServiceError> {
     match role {
         Role::Buyer => {
             matching::rematch(tx, user_id, now, account_id, person_key)?;
         }
-        // A one-time seller never has an advance (PRD FR-15.4), and a payable account has no
-        // matching at all.
-        Role::Seller if !is_pukhta => {
+        // A payable account has no matching at all.
+        Role::Seller => {
             matching::rematch_advances(tx, user_id, now, account_id)?;
         }
-        Role::Seller | Role::Payable => {}
+        Role::Payable => {}
     }
     Ok(())
 }
 
-/// The role of an account for matching, from its facts.
+/// The role of an account for matching, from its facts. The old closed account (the old shared
+/// seller account, PRD FR-13.9) has no matching: `None`.
 ///
 /// # Errors
 /// `ServiceError::Db`.
 pub(crate) fn role_of_account(
     conn: &Connection,
     account_id: i64,
-) -> Result<Option<(Role, bool)>, ServiceError> {
+) -> Result<Option<Role>, ServiceError> {
     let Some(facts) = account_repo::facts(conn, account_id)? else {
         return Ok(None);
     };
+    if facts.is_chukta_khata && facts.control_code == SELLER_CONTROL {
+        return Ok(None);
+    }
     let role = match facts.control_code.as_str() {
         BUYER_CONTROL => Some(Role::Buyer),
         SELLER_CONTROL => Some(Role::Seller),
         PAYABLE_CONTROL => Some(Role::Payable),
         _ => None,
     };
-    Ok(role.map(|r| (r, facts.is_pukhta_khata)))
+    Ok(role)
 }

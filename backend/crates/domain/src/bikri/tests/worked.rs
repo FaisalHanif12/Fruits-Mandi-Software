@@ -1,7 +1,7 @@
 //! The worked numbers of PRD 4.4, 4.5 and E2E-16, through `calc_posting` from the typed text.
 
 use mandi_core::bikri::{
-    ChargeSource, LineChargeInput, LineChargeMethod, PaymentType, PukhtaInput, StoredMethod,
+    ChargeSource, ChuktaInput, LineChargeInput, LineChargeMethod, PaymentType, StoredMethod,
 };
 use mandi_core::error::ErrorCode;
 use mandi_core::money::Paisa;
@@ -111,8 +111,8 @@ fn event_2_one_time_buyer_pays_cash() {
     let mut karim = lot(KARIM, APPLE, "10");
     karim.freight = Some("1,000".into());
     karim.cash_paid = None;
-    let mut shahid = sale(PUKHTA_BUYER, "10", "1,200");
-    shahid.pukhta = Some(PukhtaInput {
+    let mut shahid = sale(CHUKTA_BUYER, "10", "1,200");
+    shahid.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -130,11 +130,7 @@ fn event_2_one_time_buyer_pays_cash() {
         ),
         (12_000, 720, 720, 80, 12_800)
     );
-    assert_eq!(
-        l.payment_type,
-        PaymentType::Cash,
-        "a one-time buyer pays cash"
-    );
+    assert_eq!(l.payment_type, PaymentType::Cash, "a چکتا buyer pays cash");
     let t = single_lot_totals(&calc);
     assert_eq!(r(t.deductions), 1_840);
     assert_eq!(r(t.net), 10_160);

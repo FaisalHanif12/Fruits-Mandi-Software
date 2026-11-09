@@ -22,7 +22,6 @@ async (page) => {
     'R6',
     'R7',
     'R8',
-    'R9',
     'R20',
     'R21',
     'R22',
@@ -32,8 +31,8 @@ async (page) => {
     'R28',
     'R30',
   ];
-  // Set to a list to take a few only, for example ['R9'] or sizes [[1024, 600]].
-  const ONLY = { reports: ['R2', 'R9'], sizes: [[1024, 600]] };
+  // Set to a list to take a few only, for example ['R20'] or sizes [[1024, 600]].
+  const ONLY = { reports: ['R2', 'R20'], sizes: [[1024, 600]] };
   const SIZES = ONLY?.sizes ?? ALL_SIZES;
   const REPORTS = ONLY?.reports ?? ALL_REPORTS;
   const LANGS = ONLY?.langs ?? ['ur', 'en'];

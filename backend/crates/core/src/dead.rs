@@ -16,15 +16,14 @@
 //! | `masters_dead_undo` | [`DeadUndoInput`] | [`DeadUndone`] |
 //! | `reports_dead_amount` | [`DeadAmountInput`] | [`DeadAmountPage`] (R38) |
 //!
-//! Who can be moved (FR-10.10): a buyer; a seller whose ledger balance is بنام; a پختہ کھاتہ
-//! person, by his person key (FR-13.5), where nothing is made inactive and only the key is marked;
-//! a person with ادھار رقم (control 0103). Partners, الگ کھاتے, gardens and system accounts are
+//! Who can be moved (FR-10.10): a buyer; a seller whose ledger balance is بنام; a person with
+//! ادھار رقم (control 0103). A چکتا buyer has no ledger and is never moved (FR-13.6). Partners, الگ کھاتے, gardens and system accounts are
 //! never moved (`ERR_DEAD_NOT_ALLOWED`). The amount is his whole ledger balance: for a seller his
 //! open advance and open payables are netted into it (PRD A66).
 //!
 //! Money words (the money agent, Section 8):
 //!
-//! - **Owed** = Σ debit − Σ credit of his account (or of his person key). It must be above 0, else
+//! - **Owed** = Σ debit − Σ credit of his account. It must be above 0, else
 //!   `ERR_NOTHING_OWED`.
 //! - **Recovered** = what the credit lines of a وصولی or an ادھار رقم واپسی (and a seller's
 //!   وصولی, FR-15.12) put on him since the move, less the reversal of a recovery that was cancelled
@@ -41,7 +40,7 @@
 //! owed 14,684. The tiles: گاہکوں کے ذمے 2,880, بیوپاریوں کے ذمے 0, ڈوبی رقم 14,684, کل اگراہی
 //! 17,564.
 //!
-//! Field paths in errors: `account_id`, `pukhta_person_key`, `entry_date`, `reason`, `note`;
+//! Field paths in errors: `account_id`, `entry_date`, `reason`, `note`;
 //! `mark_id` and `reason` for an undo.
 
 use serde::{Deserialize, Serialize};
@@ -74,7 +73,7 @@ impl DeadReason {
     }
 }
 
-/// What kind of person a row of R38 is (PRD R38: گاہک, بیوپاری, پختہ کھاتہ, ادھار رقم).
+/// What kind of person a row of R38 is (PRD R38: گاہک, بیوپاری, ادھار رقم).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 pub enum DeadPartyType {
@@ -82,8 +81,6 @@ pub enum DeadPartyType {
     Buyer,
     /// بیوپاری, an account under 03011.
     Seller,
-    /// پختہ کھاتہ: one one-time person, by his person key. The account itself stays active.
-    Pukhta,
     /// ادھار رقم: a person under control 0103.
     MoneyLent,
 }
@@ -94,7 +91,6 @@ impl DeadPartyType {
         match self {
             DeadPartyType::Buyer => "buyer",
             DeadPartyType::Seller => "seller",
-            DeadPartyType::Pukhta => "pukhta",
             DeadPartyType::MoneyLent => "money_lent",
         }
     }
@@ -141,10 +137,6 @@ pub struct DeadPreviewInput {
     /// The account.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The person inside a پختہ کھاتہ account, as stored. Required for a پختہ کھاتہ account and
-    /// refused for any other.
-    #[serde(default)]
-    pub pukhta_person_key: Option<String>,
 }
 
 /// What moving a person would do.
@@ -155,8 +147,8 @@ pub struct DeadPreview {
     pub owed_paisa: Paisa,
     /// False when he cannot be moved. `reason_not_allowed` says why.
     pub allowed: bool,
-    /// The code that says why not: `ERR_NOTHING_OWED`, `ERR_DEAD_NOT_ALLOWED`, `ERR_ALREADY_DEAD`
-    /// or `ERR_PERSON_IN_DEAD_AMOUNT`. Null when he can be moved. A code, never text (the plan
+    /// The code that says why not: `ERR_NOTHING_OWED`, `ERR_DEAD_NOT_ALLOWED` or `ERR_ALREADY_DEAD`.
+    /// Null when he can be moved. A code, never text (the plan
     /// listed a string; a code lets the screen show it in the app language).
     pub reason_not_allowed: Option<ErrorCode>,
     /// The day of his last posting, `YYYY-MM-DD`, or null if none. The move may not be dated before
@@ -170,8 +162,7 @@ pub struct DeadPreview {
 ///
 /// Errors: `ERR_NOT_FOUND` (`account_id`); `ERR_NOTHING_OWED` (`account_id`); `ERR_DEAD_NOT_ALLOWED`
 /// (`account_id`: a partner, a الگ کھاتہ, a garden or a system account); `ERR_ALREADY_DEAD`
-/// (`account_id`); `ERR_PERSON_IN_DEAD_AMOUNT` (`pukhta_person_key`, when already marked);
-/// `ERR_PERSON_REQUIRED` (`pukhta_person_key`); `ERR_NOTE_REQUIRED` (`note`, when the reason is
+/// (`account_id`); `ERR_NOTE_REQUIRED` (`note`, when the reason is
 /// `other`); the open-day codes on `entry_date` (`ERR_DATE_CLOSED`, `ERR_DATE_IN_FUTURE`) and
 /// `ERR_DATE_BEFORE_LAST_POSTING` (value `last_posting_date`).
 #[derive(Debug, Clone, Deserialize, TS)]
@@ -179,9 +170,6 @@ pub struct DeadMarkInput {
     /// The account.
     #[ts(type = "number")]
     pub account_id: i64,
-    /// The person inside a پختہ کھاتہ account. Required for a پختہ کھاتہ account.
-    #[serde(default)]
-    pub pukhta_person_key: Option<String>,
     /// The day of the move, as typed (`DD-MM-YYYY` or a shortcut). An open date.
     pub entry_date: String,
     /// Why.
@@ -202,8 +190,7 @@ pub struct DeadMarked {
     pub owed_paisa: Paisa,
 }
 
-/// Makes a person active again ("دوبارہ فعال کریں", PRD FR-10.10): the move ends, the account (or
-/// the person key) is active, and his balance goes back into the normal tiles and lists.
+/// Makes a person active again ("دوبارہ فعال کریں", PRD FR-10.10): the move ends, the account is active, and his balance goes back into the normal tiles and lists.
 ///
 /// Errors: `ERR_NOT_FOUND` (`mark_id`, also for a move already undone); `ERR_REASON_REQUIRED`
 /// (`reason`).
@@ -279,7 +266,7 @@ pub struct DeadRow {
     /// The move, to undo it.
     #[ts(type = "number")]
     pub mark_id: i64,
-    /// The account. For a پختہ کھاتہ person it is the پختہ account.
+    /// The account.
     #[ts(type = "number")]
     pub account_id: i64,
     /// The full code.
@@ -292,12 +279,6 @@ pub struct DeadRow {
     pub tag: Option<String>,
     /// What kind of person.
     pub party_type: DeadPartyType,
-    /// The person key, for a پختہ کھاتہ person. Null for any other.
-    pub pukhta_person_key: Option<String>,
-    /// His Urdu name as saved on his lines, for a پختہ کھاتہ person. Null for any other.
-    pub pukhta_name_ur: Option<String>,
-    /// His English name, for a پختہ کھاتہ person. Null for any other.
-    pub pukhta_name_en: Option<String>,
     /// Why he was moved.
     pub reason: DeadReason,
     /// The note typed with the move.

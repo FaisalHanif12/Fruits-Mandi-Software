@@ -1,13 +1,12 @@
 // The top bar's search after plan 20, step F3 (PRD FR-5.4): besides accounts, بکری and vouchers it
-// finds the one-time (پختہ کھاتہ) people by name or phone, and the screens and reports of the app by
-// their name in Urdu or in English; Enter opens what was chosen. It runs inside the real app, in the
+// finds the screens and reports of the app by their name in Urdu or in English; Enter opens what
+// was chosen. It no longer finds people: a چکتا buyer is found in the buyer box of a sale line. It runs inside the real app, in the
 // Urdu and in the English app, against fakes of the search commands. The text is searched as typed
 // and never converted (Code Standards F41).
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as accountApi from '../../src/shared/accounts/api';
 import {
@@ -19,7 +18,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
-import { PEOPLE_SHAHID, fakeReports } from '../helpers/reports';
+import { fakeReports } from '../helpers/reports';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -40,7 +39,7 @@ afterEach(() => {
   leaveAppWindow();
 });
 
-describe.each(LANGUAGES)('the global search, people and screens (%s)', (language: Language) => {
+describe.each(LANGUAGES)('the global search, screens and reports (%s)', (language: Language) => {
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
@@ -57,34 +56,6 @@ describe.each(LANGUAGES)('the global search, people and screens (%s)', (language
     await user.type(box, text);
     return { ...view, user, box };
   }
-
-  it('lists a one-time person with his phone, found by the English letters as typed', async () => {
-    await searchFor('shahid');
-    await waitFor(() => {
-      expect(reportsApi.reportsFindPeople).toHaveBeenCalledWith({ text: 'shahid', limit: 10 });
-    }, SLOW_MS);
-    const option = await screen.findByRole(
-      'option',
-      { name: (name) => visible(name).includes('03000000000') },
-      SLOW_MS,
-    );
-    expect(visible(option.textContent)).toContain(language === 'ur' ? 'شاہد' : 'Shahid');
-    expect(visible(option.textContent)).toContain(m('report-search-person'));
-  });
-
-  it('opens his register (R9) with his key when Enter is pressed on him', async () => {
-    const { router, user } = await searchFor('shahid');
-    await screen.findByRole('option', { name: (name) => visible(name).includes('03000000000') });
-    await user.keyboard('{Enter}');
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/reports/R9');
-    }, SLOW_MS);
-    const search = router.state.location.search as Record<string, unknown>;
-    expect(search['person']).toMatchObject({
-      accountId: 9,
-      personKey: PEOPLE_SHAHID[0]?.person_key,
-    });
-  });
 
   it('finds a report by its name in this language, and by its name in the other', async () => {
     const { box, user } = await searchFor(language === 'ur' ? 'ذمے' : 'Dues');
@@ -128,6 +99,6 @@ describe.each(LANGUAGES)('the global search, people and screens (%s)', (language
   it('shows nothing extra, and asks the backend nothing, for an empty box', async () => {
     await renderApp('/');
     await screen.findByRole('combobox', { name: m('layout-search-label') });
-    expect(reportsApi.reportsFindPeople).not.toHaveBeenCalled();
+    expect(accountApi.searchGlobal).not.toHaveBeenCalled();
   });
 });

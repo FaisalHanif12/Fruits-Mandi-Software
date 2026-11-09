@@ -83,7 +83,6 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
             search: None,
             show_finished: true,
             account_id: None,
-            person_key: None,
             voucher_type: None,
             from: String::new(),
             to: String::new(),

@@ -181,7 +181,7 @@ pub enum AnalyticsFilterKind {
     Item,
     /// A seller.
     Seller,
-    /// A buyer, and for a پختہ کھاتہ account one person.
+    /// A buyer, and for a چکتا کھاتہ account one person.
     Buyer,
     /// The buyer's city.
     City,
@@ -250,7 +250,7 @@ pub struct AnalyticsFilters {
     /// A seller.
     #[ts(type = "number | null")]
     pub seller_id: Option<i64>,
-    /// A buyer, and for a پختہ کھاتہ account the person.
+    /// A buyer, and for a چکتا کھاتہ account the person.
     pub buyer: Option<PartyFilter>,
     /// The buyer's city.
     #[ts(type = "number | null")]
@@ -372,7 +372,7 @@ pub struct AnalyticsKey {
     /// One buyer account.
     #[ts(type = "number | null")]
     pub buyer_id: Option<i64>,
-    /// One person of a پختہ کھاتہ account.
+    /// One person of a چکتا کھاتہ account.
     pub person_key: Option<String>,
     /// First day, `YYYY-MM-DD`. The lines are also inside the period of the filters.
     pub from: Option<String>,

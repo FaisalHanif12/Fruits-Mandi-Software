@@ -8,8 +8,8 @@ use mandi_core::dates::BusinessDate;
 use mandi_core::error::{ErrorCode, FieldError};
 use mandi_db::rusqlite::{Connection, OptionalExtension};
 
-use super::common::{MasterTable, load_party, names_of, parse_day, pukhta_party};
-use super::grouped_sums::pukhta_names;
+use super::common::{MasterTable, chukta_party, load_party, names_of, parse_day};
+use super::grouped_sums::chukta_names;
 use super::model::{
     DateShortcut, FilterKind, GardenView, GroupBy, Names, PaidFilter, ReportFilters,
     ResolvedFilters, StockView, TripView,
@@ -45,7 +45,7 @@ pub(crate) struct Typed {
     pub(crate) as_of: Option<String>,
     /// The picked account.
     pub(crate) party_id: Option<i64>,
-    /// The person inside a پختہ کھاتہ account.
+    /// The person inside a چکتا کھاتہ account.
     pub(crate) person_key: Option<String>,
     /// The picked city.
     pub(crate) city_id: Option<i64>,
@@ -300,7 +300,15 @@ pub(crate) fn resolve(
                         .as_deref()
                         .map(str::trim)
                         .filter(|k| !k.is_empty());
-                    if key.is_some() && !is_pukhta(conn, party.account_id)? {
+                    let on_chukta = is_chukta_khata(conn, party.account_id)?;
+                    // The ledgers R13 and R14 are of one party: چکتا کھاتہ has no ledger (PRD FR-13.6).
+                    if takes.party_required && on_chukta {
+                        problems.push(FieldError::new(
+                            ErrorCode::ErrOutOfRange,
+                            "filters.party.account_id",
+                        ));
+                    }
+                    if key.is_some() && !on_chukta {
                         problems.push(FieldError::new(
                             ErrorCode::ErrOutOfRange,
                             "filters.party.person_key",
@@ -308,12 +316,12 @@ pub(crate) fn resolve(
                     }
                     typed.party_id = Some(party.account_id);
                     typed.person_key = key.map(str::to_owned);
-                    // A one-time person is named with his own names and phone, so the header of
-                    // his ledger says who it is (PRD FR-13.5).
+                    // A چکتا buyer is named with his own names and phone, so a register of his lines
+                    // says who it is (PRD FR-13.5).
                     if let Some(person_key) = &typed.person_key {
-                        let known = pukhta_names(conn, &[party.account_id])?;
+                        let known = chukta_names(conn, &[party.account_id])?;
                         let names = known.get(person_key);
-                        party = pukhta_party(
+                        party = chukta_party(
                             party,
                             Some(person_key.clone()),
                             names.map(|n| n.name_ur.as_str()),
@@ -322,12 +330,12 @@ pub(crate) fn resolve(
                     }
                     // The heading of the ledger says ڈوبی رقم when he is in it (PRD FR-7.38,
                     // FR-10.10).
-                    party.dead = mandi_db::dead::active_for(
-                        conn,
-                        party.account_id,
-                        typed.person_key.as_deref(),
-                    )?
-                    .map(|mark| mark.info());
+                    party.dead = if typed.person_key.is_none() {
+                        mandi_db::dead::active_for_account(conn, party.account_id)?
+                            .map(|mark| mark.info())
+                    } else {
+                        None
+                    };
                     typed.resolved.party = Some(party);
                 }
                 None => problems.push(FieldError::new(
@@ -572,10 +580,10 @@ fn picked_names(
     Ok(found)
 }
 
-/// True if the account is one of the two پختہ کھاتہ accounts (PRD FR-13.1).
-fn is_pukhta(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
+/// True if the account is چکتا کھاتہ (0030) or the old closed account 0031 (PRD FR-13.1, FR-13.9).
+fn is_chukta_khata(conn: &Connection, account_id: i64) -> Result<bool, ReportsError> {
     Ok(conn.query_row(
-        "SELECT is_pukhta_khata FROM accounts WHERE id = ?1",
+        "SELECT is_chukta_khata FROM accounts WHERE id = ?1",
         [account_id],
         |r| r.get::<_, i64>(0),
     )? == 1)

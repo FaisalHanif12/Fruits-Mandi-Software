@@ -55,10 +55,9 @@ struct Old {
     entry: ledger_repo::StoredEntry,
     /// The account the voucher is on. None for a voucher with no single account (جنرل).
     account_id: Option<i64>,
-    person_key: Option<String>,
     /// Its matching role, for a buyer or a seller. None for every other account: the خرچہ,
     /// ادھار رقم, سرمایہ and الگ کھاتہ kinds have no matching.
-    role: Option<(Role, bool)>,
+    role: Option<Role>,
     /// The columns only the vouchers of plan 17 use.
     extra: VoucherExtra,
 }
@@ -101,7 +100,6 @@ fn load(tx: &Connection, id: i64, version: i64) -> Result<Old, ServiceError> {
         )));
     }
     Ok(Old {
-        person_key: row.person.as_ref().map(|p| p.person_key.clone()),
         extra: repo::extras(tx, id)?,
         row,
         entry,
@@ -178,7 +176,6 @@ pub(crate) fn row_value(conn: &Connection, id: i64) -> Result<Value, ServiceErro
             for line in stored.iter().flat_map(|e| e.lines.iter()) {
                 lines.push(json!({
                     "account": names_of(conn, "accounts", line.account_id)?,
-                    "person_key": line.person_key,
                     "dr_paisa": line.dr_paisa,
                     "cr_paisa": line.cr_paisa,
                     "narration": line.narration,
@@ -197,7 +194,6 @@ fn row_json(row: &VoucherRow, extra: &VoucherExtra) -> Value {
         "number": row.number,
         "entry_date": row.entry_date,
         "account_id": row.account.as_ref().map(|a| a.id),
-        "person_key": row.person.as_ref().map(|p| p.person_key.as_str()),
         "amount_paisa": row.amount_paisa.as_paisa(),
         "mode": row.mode.as_str(),
         "bank_account_id": row.bank_account_id,
@@ -313,16 +309,8 @@ pub(crate) fn edit_in(
             old.entry.id,
             note.as_deref().unwrap_or(""),
         )?;
-        if let (Some(account_id), Some((role, is_pukhta))) = (old.account_id, old.role) {
-            rematch_party(
-                tx,
-                actor.user_id,
-                &now,
-                account_id,
-                old.person_key.as_deref(),
-                role,
-                is_pukhta,
-            )?;
+        if let (Some(account_id), Some(role)) = (old.account_id, old.role) {
+            rematch_party(tx, actor.user_id, &now, account_id, None, role)?;
         }
         rematch_buyers(tx, actor.user_id, &now, &old_general_lines(&old))?;
         // 2. Check the new version against the books without the old one.
@@ -367,7 +355,6 @@ pub(crate) fn edit_in(
             &EditedVoucher {
                 entry_date: row.entry_date.clone(),
                 account_id: row.account_id,
-                person_key: row.person_key.clone(),
                 amount_paisa: row.amount_paisa,
                 mode: row.mode,
                 bank_account_id: row.bank_account_id,
@@ -387,16 +374,8 @@ pub(crate) fn edit_in(
         // so the fast paths of a new posting do not hold. The full working decides, as for a
         // cancel (plan 16: a same-day seller return edited after a later same-day ticked بکری
         // stays allowed, and an edited پیشگی keeps its adjustment).
-        if let (Some(account), Some((role, is_pukhta))) = (planned.account(), planned.role()) {
-            rematch_party(
-                tx,
-                actor.user_id,
-                &now,
-                account.id,
-                planned.person_key(),
-                role,
-                is_pukhta,
-            )?;
+        if let (Some(account), Some(role)) = (planned.account(), planned.role()) {
+            rematch_party(tx, actor.user_id, &now, account.id, None, role)?;
         }
         rematch_buyers(tx, actor.user_id, &now, &planned.general_lines())?;
         // A take or a loan that was returned in part cannot be made smaller than its returns,
@@ -421,7 +400,7 @@ pub(crate) fn edit_in(
         }
         ctx.db.auditor().write(tx, &event.into_entry())?;
         let new_balance = match planned.account() {
-            Some(account) => ledger::balance_in(tx, account.id, planned.person_key(), None)?,
+            Some(account) => ledger::balance_in(tx, account.id, None, None)?,
             None => Balance::ZERO,
         };
         Ok(VoucherSaved {
@@ -463,16 +442,8 @@ pub fn cancel(
         let old_cash = stored_cash_change(tx, &old.entry)?;
         let old_floor = floor_before(tx, old.row.voucher_type, old.account_id)?;
         let reversal = ledger::reverse(ctx, tx, actor.user_id, old.entry.id, &reason)?;
-        if let (Some(account_id), Some((role, is_pukhta))) = (old.account_id, old.role) {
-            rematch_party(
-                tx,
-                actor.user_id,
-                &now,
-                account_id,
-                old.person_key.as_deref(),
-                role,
-                is_pukhta,
-            )?;
+        if let (Some(account_id), Some(role)) = (old.account_id, old.role) {
+            rematch_party(tx, actor.user_id, &now, account_id, None, role)?;
         }
         rematch_buyers(tx, actor.user_id, &now, &old_general_lines(&old))?;
         // A take or a loan that was returned in part cannot be cancelled: its returns would be
@@ -489,9 +460,7 @@ pub fn cancel(
                 .into_entry(),
         )?;
         let balance = match old.account_id {
-            Some(account_id) => {
-                ledger::balance_in(tx, account_id, old.person_key.as_deref(), None)?
-            }
+            Some(account_id) => ledger::balance_in(tx, account_id, None, None)?,
             None => Balance::ZERO,
         };
         Ok(VoucherCancelled {

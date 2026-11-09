@@ -47,7 +47,7 @@ pub struct PrintReportParty {
     pub name: String,
     /// The tag after the name. Null for none.
     pub tag: Option<String>,
-    /// The person inside a پختہ کھاتہ account, as stored. Null for any other line.
+    /// The person inside a چکتا کھاتہ account, as stored. Null for any other line.
     pub person_key: Option<String>,
     /// His phone in the dash form `03XX-XXXXXXX`. Missing when he has none or for any other line.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -360,7 +360,7 @@ impl Fmt {
             text.push(' ');
             text.push_str(tag);
         }
-        // A one-time person is told from another of the same name by his phone.
+        // A چکتا buyer is told from another of the same name by his phone.
         if let Some(phone) = &p.phone {
             text.push_str(" (");
             text.push_str(phone);
@@ -646,7 +646,7 @@ pub(crate) fn filter_facts(
     }
     // The statement says whether it is balances only or with its lines. The label is the whole
     // fact, so the value is empty.
-    // R9 says whether it lists only paid or only due lines; R28 how it groups. The label is the
+    // R38 says whether it lists only paid or only due lines; R28 how it groups. The label is the
     // whole fact, so the value is empty.
     if let Some(status) = filters.status {
         let label = match status {

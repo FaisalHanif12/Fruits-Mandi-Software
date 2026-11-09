@@ -44,13 +44,13 @@ pub struct AnswerRecord {
     pub tag: Option<String>,
 }
 
-/// A party filter: the account as a whole record and, for a پختہ کھاتہ account, the person
+/// A party filter: the account as a whole record and, for a چکتا کھاتہ account, the person
 /// (PRD FR-13.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct SourceParty {
     /// The account.
     pub record: AnswerRecord,
-    /// The person key inside a پختہ کھاتہ account. Null for the whole account.
+    /// The person key inside a چکتا کھاتہ account. Null for the whole account.
     pub person_key: Option<String>,
 }
 
@@ -111,7 +111,7 @@ pub struct SourceReportFilters {
     pub detail: bool,
     /// The income report by day or month (R28).
     pub group_by: Option<GroupBy>,
-    /// Paid or due lines only (R9).
+    /// Paid or due lines only (R38).
     pub status: Option<PaidFilter>,
     /// The partner of R31 or R29.
     pub partner: Option<AnswerRecord>,
@@ -198,7 +198,7 @@ pub struct SourceAnalyticsFilters {
     pub grade: Option<SaleGrade>,
     /// A seller.
     pub seller: Option<AnswerRecord>,
-    /// A buyer, and for a پختہ کھاتہ account the person.
+    /// A buyer, and for a چکتا کھاتہ account the person.
     pub buyer: Option<SourceParty>,
     /// The buyer's city.
     pub city: Option<AnswerRecord>,

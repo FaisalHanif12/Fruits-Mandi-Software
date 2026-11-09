@@ -39,9 +39,6 @@ export const LOT_FIELD_LABEL: Readonly<Record<string, string>> = {
   [LOT.labourMethod]: 'bikri-more-charge-method',
   [LOT.munshianaMethod]: 'bikri-more-charge-method',
   [LOT.phoneMethod]: 'bikri-more-charge-method',
-  [LOT.pukhtaUr]: 'bikri-pukhta-name-ur',
-  [LOT.pukhtaEn]: 'bikri-pukhta-name-en',
-  [LOT.pukhtaPhone]: 'bikri-pukhta-phone',
 };
 
 /** The label of a cell of a sale line. */
@@ -61,9 +58,6 @@ export const SALE_FIELD_LABEL: Readonly<Record<string, string>> = {
   [SALE.lagaValue]: 'glossary-laga',
   [SALE.lagaMethod]: 'bikri-more-charge-method',
   [SALE.note]: 'bikri-line-note',
-  [SALE.pukhtaUr]: 'bikri-pukhta-name-ur',
-  [SALE.pukhtaEn]: 'bikri-pukhta-name-en',
-  [SALE.pukhtaPhone]: 'bikri-pukhta-phone',
 };
 
 /** The word of a value that is one of a few fixed words, or null when it is shown as typed. */

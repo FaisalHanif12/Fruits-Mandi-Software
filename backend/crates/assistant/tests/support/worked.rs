@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use mandi_services::core::accounts::{AccountInput, AccountType, OpeningLineInput, OpeningsInput};
-use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, HeaderInput, PukhtaInput};
+use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, ChuktaInput, HeaderInput};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::expenses::{PersonalExpenseInput, ShopExpenseInput};
 use mandi_services::core::masters::{ExpenseHeadInput, MasterInput};
@@ -33,7 +33,6 @@ fn seller_rahim(env: &TestEnv, owner: &auth::Actor) -> i64 {
         id: None,
         version: None,
         account_type: AccountType::Seller,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: "رحیم".into(),
@@ -116,10 +115,10 @@ pub fn worked_day() -> world::World {
     world::finish_world(dir, env, owner, rahim, true)
 }
 
-/// Event 2 of PRD 4.5: کریم's 10 سیب sold to the one-time buyer شاہد for cash.
+/// Event 2 of PRD 4.5: کریم's 10 سیب sold to the چکتا buyer شاہد for cash.
 pub fn event2(w: &world::World) -> BikriDraft {
-    let mut line = world::sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = Some(PukhtaInput {
+    let mut line = world::sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = Some(ChuktaInput {
         name_ur: "شاہد".into(),
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
@@ -141,7 +140,6 @@ pub fn receipt(account: i64, amount: &str) -> ReceiptInput {
     ReceiptInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: RemovedPaymentFields::default(),
         collector_staff_id: None,
@@ -153,7 +151,6 @@ pub fn payment(account: i64, amount: &str) -> PaymentInput {
     PaymentInput {
         date: "10-10-2026".into(),
         account_id: account,
-        person_key: None,
         amount: amount.into(),
         removed: RemovedPaymentFields::default(),
         reason: String::new(),

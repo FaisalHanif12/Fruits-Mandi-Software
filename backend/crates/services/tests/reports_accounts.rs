@@ -1257,49 +1257,40 @@ fn r14_after_a_cancel_leaves_out_the_cancelled_bill_and_keeps_the_closing_balanc
 }
 
 #[test]
-fn r13_of_a_one_time_buyer_is_by_person() {
+fn a_chukta_buyer_has_no_ledger_and_no_statement() {
+    // PRD FR-13.6: the account چکتا کھاتہ and a person of it are refused in R13 and R14.
     let w = full_day();
     let key: String = raw(&w.dir)
         .query_row(
-            "SELECT pukhta_person_key FROM journal_lines
-             WHERE account_id = ?1 AND pukhta_person_key IS NOT NULL LIMIT 1",
-            [w.pukhta_buyer],
+            "SELECT chukta_person_key FROM journal_lines
+             WHERE account_id = ?1 AND chukta_person_key IS NOT NULL LIMIT 1",
+            [w.chukta_khata],
             |r| r.get(0),
         )
         .unwrap();
-    let person = ReportFilters {
-        party: Some(PartyFilter {
-            account_id: w.pukhta_buyer,
-            person_key: Some(key.clone()),
-        }),
-        ..ReportFilters::default()
-    };
-    let page = report(&w, ReportId::R13, person, 0, 0);
-    // Shahid bought for 12,800 and paid it on the spot (the cash part): balance 0.
-    assert_eq!(page.total_count, 2);
-    assert_eq!(page.totals.get(4).map(money), Some(12_800));
-    assert_eq!(page.totals.get(5).map(money), Some(12_800));
-    assert_eq!(
-        page.totals.get(6).map(balance),
-        Some((BalanceSide::Zero, 0))
-    );
-    match page.rows.first().and_then(|r| r.cells.get(2)) {
-        Some(Cell::Detail { parts }) => match parts.first() {
-            Some(DetailPart::Sale { item, qty, .. }) => {
-                assert_eq!((item.en.as_str(), *qty), ("Apple", 10));
-            }
-            other => panic!("{other:?}"),
-        },
-        other => panic!("{other:?}"),
-    }
-    // The whole account shows the person on each line.
-    let whole = report(&w, ReportId::R13, party(w.pukhta_buyer), 0, 0);
-    assert_eq!(whole.total_count, 2);
-    match whole.rows.first().and_then(|r| r.cells.get(2)) {
-        Some(Cell::Detail { parts }) => {
-            assert_eq!(parts.first(), Some(&DetailPart::Text { text: key }));
+    for id in [ReportId::R13, ReportId::R14] {
+        for person_key in [None, Some(key.clone())] {
+            assert_eq!(
+                rejected(
+                    &w,
+                    id,
+                    ReportFilters {
+                        party: Some(PartyFilter {
+                            account_id: w.chukta_khata,
+                            person_key,
+                        }),
+                        ..ReportFilters::default()
+                    },
+                    0,
+                    0
+                ),
+                vec![(
+                    ErrorCode::ErrOutOfRange,
+                    "filters.party.account_id".to_owned()
+                )],
+                "{id:?}"
+            );
         }
-        other => panic!("{other:?}"),
     }
 }
 
@@ -1311,7 +1302,10 @@ fn every_account_ledger_closes_on_the_book_balance() {
     let w = full_day();
     let ids: Vec<i64> = {
         let conn = raw(&w.dir);
-        let mut statement = conn.prepare("SELECT id FROM accounts ORDER BY id").unwrap();
+        // چکتا کھاتہ has no ledger (PRD FR-13.6): R13 refuses it, so it is left out here.
+        let mut statement = conn
+            .prepare("SELECT id FROM accounts WHERE is_chukta_khata = 0 ORDER BY id")
+            .unwrap();
         statement
             .query_map([], |r| r.get(0))
             .unwrap()

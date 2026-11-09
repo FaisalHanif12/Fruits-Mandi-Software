@@ -1,6 +1,6 @@
 //! R24 ادائیگی باقی (seller payables) (PRD 19.2, FR-7.59, FR-15.9, FR-19.10).
 //!
-//! One row for each seller (and each one-time person inside the پختہ کھاتہ seller account): what
+//! One row for each seller (and each چکتا buyer inside the چکتا کھاتہ seller account): what
 //! is still payable to him, his open advances, what he owes the firm beyond his advances, his
 //! ledger balance and the date of his last بکری. The three amounts are the read-time working of
 //! PRD FR-7.59 (`workings::payable_totals_from` over sums of his live lines, the same
@@ -28,10 +28,10 @@ use mandi_db::rusqlite::{Connection, params};
 use mandi_db::vouchers::advance_totals;
 
 use super::super::PageSpec;
-use super::grouped::{SellerSums, payable_sums, pukhta_names};
+use super::grouped::{SellerSums, payable_sums};
 use crate::error::ReportsError;
 use crate::reports::common::{
-    add, amount_or_empty, balance_cell, col, count_of, date_cell, load_parties, paisa, pukhta_party,
+    add, amount_or_empty, balance_cell, col, count_of, date_cell, load_parties, paisa,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
@@ -43,25 +43,19 @@ use crate::reports::workings::payable_totals_from;
 /// The seller accounts. Parameter: account.
 fn sellers_sql() -> String {
     format!(
-        "SELECT a.id, a.is_pukhta_khata
+        "SELECT a.id
     FROM accounts a JOIN account_controls k ON k.id = a.control_id
-    WHERE k.code = '03011' AND (?1 IS NULL OR a.id = ?1)
+    -- The old closed account (the old shared seller account) has no payables (PRD FR-13.9).
+    WHERE k.code = '03011' AND a.is_chukta_khata = 0 AND (?1 IS NULL OR a.id = ?1)
     ORDER BY {}",
         mandi_db::codes::order_by_code("a.code")
     )
 }
 
-/// The posted totals of each person of a پختہ کھاتہ account. Parameters: account, as-of day.
-const PERSONS_SQL: &str = "SELECT l.pukhta_person_key, COALESCE(SUM(l.dr_paisa), 0),
-        COALESCE(SUM(l.cr_paisa), 0)
-    FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
-    WHERE l.account_id = ?1 AND e.status = 'posted' AND (?2 IS NULL OR e.entry_date <= ?2)
-    GROUP BY l.pukhta_person_key ORDER BY l.pukhta_person_key";
-
 /// The date of the last saved بکری of each seller key.
-const LAST_DATE_SQL: &str = "SELECT l.seller_account_id, l.pukhta_person_key, MAX(b.entry_date)
+const LAST_DATE_SQL: &str = "SELECT l.seller_account_id, l.chukta_person_key, MAX(b.entry_date)
     FROM bikri_lots l JOIN bikri_entries b ON b.id = l.bikri_id
-    WHERE b.status = 'saved' GROUP BY l.seller_account_id, l.pukhta_person_key";
+    WHERE b.status = 'saved' GROUP BY l.seller_account_id, l.chukta_person_key";
 
 /// What the working gives for one seller key.
 #[derive(Debug, Clone, Copy)]
@@ -74,7 +68,7 @@ pub(crate) struct Working {
     pub(crate) owes_firm: Paisa,
 }
 
-/// One seller key (an account, or a person inside a پختہ کھاتہ account).
+/// One seller (an account).
 pub(crate) struct Seller {
     pub(crate) party: PartyRef,
     pub(crate) balance: Balance,
@@ -100,26 +94,18 @@ pub(crate) fn candidates(
     let accounts = {
         let mut statement = conn.prepare(&sellers_sql())?;
         statement
-            .query_map(params![typed.party_id], |r| {
-                Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)? == 1))
-            })?
+            .query_map(params![typed.party_id], |r| r.get::<_, i64>(0))?
             .collect::<Result<Vec<_>, _>>()?
     };
-    let ids: Vec<i64> = accounts.iter().map(|(id, _)| *id).collect();
+    let ids: Vec<i64> = accounts.clone();
     let parties = load_parties(conn, &ids)?;
-    // The payable sums of every seller key and the names of the one-time people, each from a few
-    // grouped queries and not one set of queries for each seller (Code Standards B22).
+    // The payable sums of every seller, from a few grouped queries and not one set of queries for
+    // each seller (Code Standards B22).
     let sums = if current {
         Some(payable_sums(conn, typed.party_id)?)
     } else {
         None
     };
-    let pukhta_ids: Vec<i64> = accounts
-        .iter()
-        .filter(|(_, pukhta)| *pukhta)
-        .map(|(id, _)| *id)
-        .collect();
-    let names = pukhta_names(conn, &pukhta_ids)?;
     // The sellers only (plan 48 P48-S3): a third of the journal, not all of it.
     let totals: HashMap<i64, Totals> = if typed.party_id.is_some() {
         HashMap::new()
@@ -152,81 +138,37 @@ pub(crate) fn candidates(
     // is in R38 and the tile ڈوبی رقم (PRD FR-10.10, A66).
     let dead = mandi_db::dead::dead_set(conn, as_of)?;
     let mut found = Vec::new();
-    for (id, pukhta) in accounts {
+    for id in accounts {
         let party = parties
             .get(&id)
             .cloned()
             .ok_or_else(|| ReportsError::Data(format!("seller account {id} is missing")))?;
-        if pukhta {
-            let mut statement = conn.prepare(PERSONS_SQL)?;
-            let persons = statement
-                .query_map(params![id, as_of], |r| {
-                    Ok((
-                        r.get::<_, Option<String>>(0)?,
-                        r.get::<_, i64>(1)?,
-                        r.get::<_, i64>(2)?,
-                    ))
-                })?
-                .collect::<Result<Vec<_>, _>>()?;
-            for (key, dr, cr) in persons {
-                if typed.person_key.is_some() && typed.person_key != key {
-                    continue;
-                }
-                if dead.has(id, key.as_deref()) {
-                    continue;
-                }
-                let balance = Balance::from_totals(paisa(dr)?, paisa(cr)?)?;
-                let (name_ur, name_en) = match key.as_deref().and_then(|k| names.get(k)) {
-                    Some(p) => (Some(p.name_ur.clone()), Some(p.name_en.clone())),
-                    None => (None, None),
-                };
-                let working = sums
-                    .as_ref()
-                    .map(|s| working_of(s, id, key.as_deref()))
-                    .transpose()?;
-                if !worth_a_row(balance, working) {
-                    continue;
-                }
-                found.push(Seller {
-                    party: pukhta_party(
-                        party.clone(),
-                        key.clone(),
-                        name_ur.as_deref(),
-                        name_en.as_deref(),
-                    ),
-                    balance,
-                    working,
-                    last_date: last_dates.get(&(id, key)).cloned(),
-                });
-            }
-        } else {
-            if dead.has_account(id) {
-                continue;
-            }
-            let own = if typed.party_id.is_some() {
-                totals_of(conn, id, None, as_of)?
-            } else {
-                totals.get(&id).copied().unwrap_or(Totals {
-                    dr_paisa: 0,
-                    cr_paisa: 0,
-                })
-            };
-            let balance = Balance::from_totals(paisa(own.dr_paisa)?, paisa(own.cr_paisa)?)?;
-            let has_advance = with_advance.contains(&id);
-            if balance.side == BalanceSide::Zero && !has_advance {
-                continue;
-            }
-            let working = sums.as_ref().map(|s| working_of(s, id, None)).transpose()?;
-            if !worth_a_row(balance, working) {
-                continue;
-            }
-            found.push(Seller {
-                party,
-                balance,
-                working,
-                last_date: last_dates.get(&(id, None)).cloned(),
-            });
+        if dead.has_account(id) {
+            continue;
         }
+        let own = if typed.party_id.is_some() {
+            totals_of(conn, id, None, as_of)?
+        } else {
+            totals.get(&id).copied().unwrap_or(Totals {
+                dr_paisa: 0,
+                cr_paisa: 0,
+            })
+        };
+        let balance = Balance::from_totals(paisa(own.dr_paisa)?, paisa(own.cr_paisa)?)?;
+        let has_advance = with_advance.contains(&id);
+        if balance.side == BalanceSide::Zero && !has_advance {
+            continue;
+        }
+        let working = sums.as_ref().map(|s| working_of(s, id, None)).transpose()?;
+        if !worth_a_row(balance, working) {
+            continue;
+        }
+        found.push(Seller {
+            party,
+            balance,
+            working,
+            last_date: last_dates.get(&(id, None)).cloned(),
+        });
     }
     Ok((found, sums))
 }

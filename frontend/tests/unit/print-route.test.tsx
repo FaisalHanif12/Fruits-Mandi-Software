@@ -200,9 +200,9 @@ describe('the print route', () => {
 
 describe('the address of the print window', () => {
   it('reads a good address', () => {
-    expect(parsePrintParams('?bikri=41&doc=pukhta_slip&language=ur&job=a_b-1')).toEqual({
+    expect(parsePrintParams('?bikri=41&doc=buyer_slips&language=ur&job=a_b-1')).toEqual({
       job: 'a_b-1',
-      input: { bikri_id: 41, doc: 'pukhta_slip', language: 'ur', only_buyer_id: null },
+      input: { bikri_id: 41, doc: 'buyer_slips', language: 'ur', only_buyer_id: null },
     });
     expect(parsePrintParams(`?${GOOD}&buyer=7`)?.input.only_buyer_id).toBe(7);
   });

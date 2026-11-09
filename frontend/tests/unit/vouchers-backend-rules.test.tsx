@@ -1,16 +1,12 @@
 // What the real backend does that the screen must follow (plan 15, T4): an inactive account is
-// refused at the account field and the screen says what to do about it, making a one-time person a
-// regular account reads every list it changes again, and the paths of the errors of a batch.
+// refused at the account field and the screen says what to do about it, and the paths of the errors
+// of a batch.
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { rowPathOf } from '../../src/features/vouchers/collection';
 import * as vouchersApi from '../../src/features/vouchers/api';
-import * as pukhtaApi from '../../src/features/pukhta_khata/api';
-import { useMakeRegular } from '../../src/features/vouchers/hooks';
 import * as reportsApi from '../../src/features/reports/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -25,14 +21,13 @@ import {
 } from '../helpers/app';
 import { fakeMasters } from '../helpers/masters';
 import { message, visible } from '../helpers/render';
-import { AKRAM, ARSHAD, KARIM, PUKHTA_BUYER, RAHIM, fakeVouchers } from '../helpers/vouchers';
+import { AKRAM, ARSHAD, KARIM, CHUKTA_KHATA, RAHIM, fakeVouchers } from '../helpers/vouchers';
 import { EMPTY_PAIRS } from '../helpers/paged';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/vouchers/api');
-vi.mock('../../src/features/pukhta_khata/api');
 vi.mock('../../src/features/reports/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/features/masters/api');
@@ -46,9 +41,8 @@ beforeEach(() => {
   healthyBackend();
   vi.mocked(urduApi.translitSuggest).mockResolvedValue({ items: [] });
   vi.mocked(urduApi.translitPairsList).mockResolvedValue(EMPTY_PAIRS);
-  vi.mocked(pukhtaApi.searchPukhtaPeople).mockResolvedValue([]);
   vi.mocked(reportsApi.reportsListPrinters).mockResolvedValue([]);
-  const rows = [AKRAM, ARSHAD, PUKHTA_BUYER, RAHIM, KARIM];
+  const rows = [AKRAM, ARSHAD, CHUKTA_KHATA, RAHIM, KARIM];
   fakeAccounts(rows);
   fakeAccountSearch(rows);
   fakeMasters({});
@@ -199,40 +193,6 @@ describe.each(LANGUAGES)(
     });
   },
 );
-
-describe('making a one-time person a regular account reads the lists again', () => {
-  it('every list that shows accounts, balances, bills or the one-time people is invalidated', async () => {
-    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-    const spy = vi.spyOn(client, 'invalidateQueries');
-    vi.mocked(pukhtaApi.pukhtaMakeRegular).mockResolvedValue({
-      account: { id: 24, code: '0022', name_ur: 'شاہد', name_en: 'Shahid' },
-      moved: { amount_paisa: 0 as never, side: 'zero' },
-      entry_id: null,
-    });
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    );
-    const { result } = renderHook(() => useMakeRegular(), { wrapper });
-    await act(async () => {
-      await result.current.mutateAsync({
-        person_key: 'shahid|03000000000',
-        side: 'buyer',
-        // The backend refuses any opening here; the form sends none.
-        account_input: {
-          opening_dr: '',
-          opening_cr: '',
-          opening_is_advance: false,
-        } as never,
-      });
-    });
-    await waitFor(() => {
-      const keys = spy.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey));
-      for (const key of ['vouchers', 'accounts', 'coa', 'search', 'pukhta', 'bikri']) {
-        expect(keys).toContain(JSON.stringify([key]));
-      }
-    });
-  });
-});
 
 describe('the paths of the errors of a batch of receipts', () => {
   it('reads rows[i].field and rows[i] alone', () => {

@@ -159,10 +159,11 @@ pub enum ChargeSource {
     None,
 }
 
-/// A one-time person of the پختہ کھاتہ accounts (PRD FR-13.2). Both names are required (PRD
-/// FR-7.24); the phone is required for a credit buyer and for a seller.
+/// A چکتا buyer on a sale line (PRD FR-13.2, FR-13.5). Both names are required (PRD FR-7.24); the
+/// phone is optional. A person already in the list is picked by his exact names and phone, so his
+/// lines keep one person key.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
-pub struct PukhtaInput {
+pub struct ChuktaInput {
     /// Urdu name.
     #[serde(default)]
     pub name_ur: String,
@@ -246,14 +247,15 @@ pub struct SaleInput {
     #[serde(default)]
     #[ts(type = "number | null", optional)]
     pub sale_id: Option<i64>,
-    /// The buyer. The پختہ کھاتہ (خریدار) account for a one-time buyer, the نقدی منڈی account for
-    /// a nameless cash buyer.
+    /// The buyer. The چکتا کھاتہ account (0030) for a چکتا buyer, the نقدی منڈی account for a
+    /// nameless cash buyer.
     #[serde(default)]
     #[ts(type = "number | null")]
     pub buyer_account_id: Option<i64>,
-    /// The one-time buyer, for the پختہ کھاتہ (خریدار) account.
+    /// The چکتا buyer, for the چکتا کھاتہ account. Required (both names) when `buyer_account_id` is
+    /// that account, and refused for any other account (PRD FR-12.5).
     #[serde(default)]
-    pub pukhta: Option<PukhtaInput>,
+    pub chukta: Option<ChuktaInput>,
     /// Quantity in نگ. A simple sum such as `20+25` is taken (PRD FR-7.48).
     #[serde(default)]
     pub qty: String,
@@ -304,8 +306,8 @@ pub struct LotInput {
     #[serde(default)]
     #[ts(type = "number | null", optional)]
     pub lot_id: Option<i64>,
-    /// The seller. The پختہ کھاتہ (بیوپاری) account for a one-time seller, and the اپنا مال account
-    /// (030119998) for a lot of the firm's own goods (PRD FR-12.26).
+    /// The seller. The اپنا مال account (030119998) is for a lot of the firm's own goods (PRD
+    /// FR-12.26).
     #[serde(default)]
     #[ts(type = "number | null")]
     pub seller_account_id: Option<i64>,
@@ -331,9 +333,6 @@ pub struct LotInput {
     #[serde(default)]
     #[ts(type = "number | null", optional)]
     pub arrival_id: Option<i64>,
-    /// The one-time seller, for the پختہ کھاتہ (بیوپاری) account.
-    #[serde(default)]
-    pub pukhta: Option<PukhtaInput>,
     /// The item.
     #[serde(default)]
     #[ts(type = "number | null")]

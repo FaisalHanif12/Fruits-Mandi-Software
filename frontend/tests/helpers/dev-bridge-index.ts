@@ -50,8 +50,8 @@ const flag = (name: string): boolean =>
   new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 
 export const indexHandlers: Record<string, Handler> = {
-  // A پختہ party's code is the next of the پختہ series, from 0032 (plan 47).
-  accounts_next_code: (input) => (input['is_pukhta_party'] === true ? '0032' : '00262'),
+  // The next free code of the account's type, for the add form (PRD FR-10.3).
+  accounts_next_code: () => '00262',
   // Plan 44 (PRD FR-10.11): `&closedopen` is a closed day with today open, `&closednight` a closed day
   // with today closed too. An opening amount on it is refused; an account without one is saved.
   accounts_save: (input) => {

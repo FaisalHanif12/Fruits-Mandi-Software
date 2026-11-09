@@ -126,7 +126,6 @@ fn account(
         id: None,
         version: None,
         account_type: kind,
-        is_pukhta_party: false,
         control_id: None,
         code: String::new(),
         name_ur: ur.into(),
@@ -191,6 +190,7 @@ fn account_page(
             text: text.into(),
             limit,
             offset,
+            with_chukta: None,
         },
     )
     .unwrap()
@@ -329,11 +329,11 @@ fn empty_text_gives_every_active_record_recent_first_then_by_code() {
         ));
     }
     // By code in running-number order: 0020 ... 0029, 00210, 00211, then the other codes of the
-    // box (the پختہ کھاتہ buyer is also a code of the scheme; نقدی منڈی keeps its old code).
+    // box (چکتا کھاتہ is no account a field offers; نقدی منڈی keeps its old code).
     let all = account_page(&env, &owner, AccountScope::Buyer, "", 0, 50);
     let want: Vec<String> = (0..12)
         .map(|n| format!("002{n}"))
-        .chain(["0030".to_owned(), "03040000".to_owned()])
+        .chain(["03040000".to_owned()])
         .collect();
     assert_eq!(all, want);
     // Choosing one puts it first next time, then the one before it, then the rest by code.
@@ -351,7 +351,7 @@ fn empty_text_gives_every_active_record_recent_first_then_by_code() {
     }
     let all = account_page(&env, &owner, AccountScope::Buyer, "", 0, 50);
     assert_eq!(&all[..4], ["0022", "0025", "0020", "0021"]);
-    assert_eq!(all.len(), 14);
+    assert_eq!(all.len(), 13);
     // Whitespace is empty text.
     assert_eq!(
         account_page(&env, &owner, AccountScope::Buyer, "   ", 0, 50),
@@ -364,28 +364,28 @@ fn empty_text_gives_every_active_record_recent_first_then_by_code() {
         if page < 2 {
             assert_eq!(part.len(), 5);
         } else {
-            assert_eq!(part.len(), 4);
+            assert_eq!(part.len(), 3);
         }
         joined.extend(part);
     }
     assert_eq!(joined, all);
-    assert!(account_page(&env, &owner, AccountScope::Buyer, "", 14, 5).is_empty());
+    assert!(account_page(&env, &owner, AccountScope::Buyer, "", 13, 5).is_empty());
     // An inactive account is not offered.
     accounts::set_active(&env.ctx, &owner, buyers[0].id, false).unwrap();
     assert!(
         !account_page(&env, &owner, AccountScope::Buyer, "", 0, 50).contains(&"0020".to_owned())
     );
-    // The seller box has its own list, with the پختہ کھاتہ seller (0031) after the sellers.
+    // The seller box has its own list: the sellers only. The old closed account 0031 is never offered.
     let rahim = account(&env, &owner, AccountType::Seller, "رحیم", "Rahim");
     assert_eq!(
         account_page(&env, &owner, AccountScope::Seller, "", 0, 50),
-        [rahim.code.as_str(), "0031"]
+        [rahim.code.as_str()]
     );
-    // The seller field of a lot has the sellers and the پختہ کھاتہ seller. اپنا مال is only ever in
+    // The seller field of a lot has the sellers. اپنا مال is only ever in
     // that field, and only while an open trip has goods left to sell (PRD 12.3, FR-12.26); this
     // world has no trip, so it is not in the list (the cases with a trip are in lot_seller_list.rs).
     let lot = account_page(&env, &owner, AccountScope::LotSeller, "", 0, 50);
-    assert_eq!(lot, [rahim.code.as_str(), "0031"]);
+    assert_eq!(lot, [rahim.code.as_str()]);
     assert!(!lot.contains(&"030119998".to_owned()));
     assert!(
         !account_page(&env, &owner, AccountScope::Seller, "", 0, 50)

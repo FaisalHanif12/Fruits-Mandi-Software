@@ -16,7 +16,9 @@ use crate::error::UiError;
 
 /// The card next to an account field: names, father or firm, city, phone, balance with its
 /// side, last entry date, a buyer's credit limit and use, a seller's open advance, and warnings
-/// (PRD FR-7.38). Balances are read from the journal. Errors: `ERR_NOT_FOUND` on `account_id`.
+/// (PRD FR-7.38). Balances are read from the journal. With `chukta_id` the card is that چکتا
+/// buyer's own: his name and phone and no balance (`is_chukta`, PRD FR-13.6). Errors:
+/// `ERR_NOT_FOUND` on `account_id` or `chukta_id`.
 #[tauri::command]
 pub async fn assist_party_card<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -24,7 +26,10 @@ pub async fn assist_party_card<R: tauri::Runtime>(
 ) -> Result<PartyCard, UiError> {
     run(app, "assist_party_card", move |ctx| {
         auth::require(ctx)?;
-        assist::party_card(ctx, input.account_id)
+        match input.chukta_id {
+            Some(chukta_id) => assist::chukta_card(ctx, chukta_id),
+            None => assist::party_card(ctx, input.account_id),
+        }
     })
     .await
 }
@@ -88,7 +93,7 @@ pub async fn assist_last_rate<R: tauri::Runtime>(
 }
 
 /// A buyer's open bills, oldest first, with their age, the total, the credit that no bill has
-/// used and his balance (PRD FR-7.58). For the پختہ کھاتہ buyer account the person is named by
+/// used and his balance (PRD FR-7.58). For the چکتا کھاتہ buyer account the person is named by
 /// `person_key`. The "پورا بقایا" and "پرانا بل" buttons fill the amount from this answer. Read
 /// only. Errors: `ERR_NOT_FOUND` (`account_id`), `ERR_NOT_A_BUYER`, `ERR_PERSON_REQUIRED`.
 #[tauri::command]

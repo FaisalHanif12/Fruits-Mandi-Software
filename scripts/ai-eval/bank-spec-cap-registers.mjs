@@ -4,7 +4,7 @@
 // The same rulings as part 2: one question per cell, languages rotating, about a quarter misspelled;
 // three wordings for the cells a mandi owner is likely to ask (the figure of a main report).
 //
-// Notes on the year world: R9 (the one-time register) has no line in it, so it has no figure to ask.
+// Notes on the year world:
 // Item and seller days of views B and C are the party's-day questions of facet `day`.
 
 const r = (text) => ['roman', text];

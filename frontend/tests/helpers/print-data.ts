@@ -31,6 +31,8 @@ export interface CannedOptions {
    * an account with a tag (PRD 10.2): `party.tag` or `line.name_tag`.
    */
   tagged?: boolean;
+  /** The buyer slip of Shahid, a چکتا buyer of بکری 2: his name and phone, no code (PRD FR-12.12). */
+  chukta?: boolean;
 }
 
 interface Words {
@@ -205,8 +207,8 @@ function slipPage(language: Language, spec: SlipSpec, serial = '1'): PrintPage {
     party: {
       role_id: spec.role,
       code: spec.code,
-      // A seller or buyer has a short code (PRD FR-7.39); a one-time person has no code at all.
-      // The short code is the running number of the code (plan 32, R5): a پختہ کھاتہ account has none.
+      // A seller or buyer has a short code (PRD FR-7.39); a چکتا buyer has none (PRD FR-13.6).
+      // The short code is the running number of the code (plan 32, R5).
       ...(spec.code === null || !/^00[12]\d/.test(spec.code)
         ? {}
         : { short_code: String(Number(spec.code.slice(3))) }),
@@ -279,11 +281,12 @@ function slipPages(language: Language): PrintPage[] {
   ];
 }
 
-function pukhtaPages(language: Language): PrintPage[] {
+/** Shahid's slip (PRD 4.5): a چکتا buyer has a slip of his own, with his name and phone and no code (plan 64). */
+function chuktaSlipPages(language: Language): PrintPage[] {
   const n = NAMES[language];
   return [
     slipPage(language, {
-      role: 'print-party-onetime-buyer',
+      role: 'print-party-buyer',
       code: null,
       name: n.shahid,
       phone: '0300-0000000',
@@ -303,7 +306,6 @@ function pukhtaPages(language: Language): PrintPage[] {
 const TITLES: Record<PrintDoc, string> = {
   seller_bill: 'print-seller-bill-title',
   buyer_slips: 'print-buyer-slip-title',
-  pukhta_slip: 'print-pukhta-slip-title',
   receipt_slip: 'print-receipt-slip-title',
   collection_list: 'print-collection-list-title',
 };
@@ -312,7 +314,6 @@ const TITLES: Record<PrintDoc, string> = {
 export const DEFAULT_PAPER: Record<PrintDoc, Paper> = {
   seller_bill: 'a4',
   buyer_slips: 'a5',
-  pukhta_slip: 'a5',
   receipt_slip: 'a5',
   collection_list: 'a4',
 };
@@ -330,23 +331,23 @@ const FACTS_BIKRI_2: PrintFact[] = [
   { label_id: 'print-fact-truck', value: 'LHR-0077' },
 ];
 
-/** The print data of one document of بکری 1 (or of بکری 2 for the پختہ slip). */
+/** The print data of one document of بکری 1 (or, with `chukta`, Shahid's buyer slip of بکری 2). */
 export function printDataFor(doc: PrintDoc, options: CannedOptions = {}): PrintData {
   const language = options.language ?? 'ur';
   const pages =
     doc === 'seller_bill'
       ? [sellerPage(language)]
-      : doc === 'buyer_slips'
-        ? slipPages(language)
-        : pukhtaPages(language);
+      : options.chukta === true
+        ? chuktaSlipPages(language)
+        : slipPages(language);
   const data: PrintData = {
     revised_on: options.revisedOn ?? null,
     doc,
     language,
     dir: language === 'ur' ? 'rtl' : 'ltr',
     paper: options.paper ?? DEFAULT_PAPER[doc],
-    ...frameOf(language, TITLES[doc], doc === 'pukhta_slip' ? FACTS_BIKRI_2 : FACTS, options),
-    number: doc === 'pukhta_slip' ? '2' : '1',
+    ...frameOf(language, TITLES[doc], options.chukta === true ? FACTS_BIKRI_2 : FACTS, options),
+    number: options.chukta === true ? '2' : '1',
     cancelled: options.cancelled === true,
     pages: options.tagged === true ? withTag(pages, doc) : pages,
   };

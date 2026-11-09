@@ -5,24 +5,21 @@
       "amount": "1,000",
       "collector_staff_id": null,
       "date": "10-10-2026",
-      "narration": "",
-      "person_key": null
+      "narration": ""
     },
     {
       "account_id": 20,
       "amount": "",
       "collector_staff_id": null,
       "date": "10-10-2026",
-      "narration": "",
-      "person_key": null
+      "narration": ""
     },
     {
       "account_id": 18,
       "amount": "1,000",
       "collector_staff_id": null,
       "date": "10-10-2026",
-      "narration": "",
-      "person_key": null
+      "narration": ""
     }
   ]
 }

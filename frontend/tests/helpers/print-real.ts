@@ -19,8 +19,6 @@ export const REAL_SNAPSHOTS = [
   { doc: 'seller_bill', event: 'event2', language: 'en' },
   { doc: 'buyer_slips', event: 'event1', language: 'ur' },
   { doc: 'buyer_slips', event: 'event1', language: 'en' },
-  { doc: 'pukhta_slip', event: 'event2', language: 'ur' },
-  { doc: 'pukhta_slip', event: 'event2', language: 'en' },
 ] as const satisfies readonly { doc: PrintDoc; event: string; language: Language }[];
 
 export type RealSnapshot = (typeof REAL_SNAPSHOTS)[number];

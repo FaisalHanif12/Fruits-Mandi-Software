@@ -61,7 +61,6 @@ pub(crate) const COL_TOTAL_COMM: &str = "report-col-total-comm";
 pub(crate) const COL_ADDA: &str = "report-col-adda";
 pub(crate) const COL_TRUCKS: &str = "report-col-trucks";
 pub(crate) const COL_LOTS: &str = "report-col-lots";
-pub(crate) const COL_SIDE: &str = "report-col-side";
 pub(crate) const COL_PERSON: &str = "report-col-person";
 pub(crate) const COL_PHONE: &str = "report-col-phone";
 pub(crate) const COL_OLDEST_DATE: &str = "report-col-oldest-date";
@@ -263,14 +262,10 @@ pub(crate) const SECTION_PARTNER_MONEY: &str = "report-section-partner-money";
 
 pub(crate) const COL_STATUS: &str = "report-col-status";
 
-// The state of a line of R9.
-pub(crate) const STATUS_PAID: &str = "report-status-paid";
-pub(crate) const STATUS_DUE: &str = "report-status-due";
+// The state of a line.
 pub(crate) const STATUS_CANCELLED: &str = "report-status-cancelled";
 
-// Labels of the lines of R9 and the sections of R24.
-pub(crate) const SIDE_BUYER: &str = "report-side-buyer";
-pub(crate) const SIDE_SELLER: &str = "report-side-seller";
+// The sections of R24.
 pub(crate) const SECTION_PAYABLE: &str = "report-section-payable";
 pub(crate) const SECTION_OWES_FIRM: &str = "report-section-owes-firm";
 
@@ -402,7 +397,6 @@ pub(crate) const COL_LAST_RECOVERY: &str = "dead-col-last-recovery";
 pub(crate) const COL_DEAD_STATUS: &str = "dead-col-status";
 pub(crate) const R38_TYPE_BUYER: &str = "dead-type-buyer";
 pub(crate) const R38_TYPE_SELLER: &str = "dead-type-seller";
-pub(crate) const R38_TYPE_PUKHTA: &str = "dead-type-pukhta";
 pub(crate) const R38_TYPE_MONEY_LENT: &str = "dead-type-money_lent";
 pub(crate) const R38_REASON_DIED: &str = "dead-reason-died";
 pub(crate) const R38_REASON_LEFT: &str = "dead-reason-left";

@@ -1,5 +1,5 @@
 // The fields of one voucher (PRD 15.1 to 15.4): the date, who it is with (a buyer, a seller or any
-// account) with his party card, the one-time person for a پختہ کھاتہ account, the amount with the
+// account) with his party card, the amount with the
 // buttons that fill it from the backend's figures, how the money moves, and what only some types
 // have (the collector of a receipt, the reason of cash lent, the expected goods of an advance).
 // Everything is text in the screen's state, so a language switch loses nothing (F39). The screen
@@ -10,17 +10,12 @@
 // on save.
 
 import { Localized, useLocalization } from '@fluent/react';
-import { useState } from 'react';
-import type { PukhtaPerson } from '../../../bindings/PukhtaPerson';
 import type { UiError } from '../../../bindings/UiError';
 import { pickedOf } from '../../../shared/accounts';
 import type { EntryMarks } from '../../../shared/edit';
 import { formatPaisa, useGrouping } from '../../../shared/format';
-import { displayName, useLanguage } from '../../../shared/i18n';
 import {
   AccountPicker,
-  Button,
-  Code,
   DateInput,
   Field,
   FreeTextInput,
@@ -35,18 +30,8 @@ import {
   FormGrid,
   FormSpan,
 } from '../../../shared/ui';
-import { MakeRegularDialog, PukhtaPersonPicker } from '../../pukhta_khata';
-import type { MadeRegular } from '../../../bindings/MadeRegular';
-import {
-  accountPath,
-  accountScope,
-  helperTarget,
-  isCashLent,
-  needsPerson,
-  personSide,
-  pickerValueOf,
-} from '../draft';
-import { useMakeRegular, useOpenBills, useOpenPayables } from '../hooks';
+import { accountPath, accountScope, helperTarget, isCashLent, pickerValueOf } from '../draft';
+import { useOpenBills, useOpenPayables } from '../hooks';
 import type { FromSide, VoucherDraft } from '../types';
 
 interface VoucherFormProps {
@@ -58,8 +43,6 @@ interface VoucherFormProps {
   editing: boolean;
   editReason: string;
   onEditReason: (reason: string) => void;
-  /** The one-time person got a regular account: the account comes back into the form. */
-  onMadeRegular: (made: MadeRegular) => void;
   /** The marks of the edits this voucher went through ("Before 600", plan 44); none when new. */
   marks?: EntryMarks | undefined;
 }
@@ -84,43 +67,20 @@ export function VoucherForm({
   editing,
   editReason,
   onEditReason,
-  onMadeRegular,
   marks,
 }: VoucherFormProps) {
   const { l10n } = useLocalization();
-  const language = useLanguage();
   const grouping = useGrouping();
-  const [regularOpen, setRegularOpen] = useState(false);
   const target = helperTarget(draft);
   // The same reads the panels make (one request, shared by the cache): the amounts of the buttons.
-  const makeRegular = useMakeRegular();
   const bills = useOpenBills(
     target.kind === 'bills' && draft.type === 'receipt' ? target.accountId : null,
-    target.kind === 'bills' ? target.personKey : null,
   );
-  const payables = useOpenPayables(
-    target.kind === 'payables' ? target.accountId : null,
-    target.kind === 'payables' ? target.personKey : null,
-  );
+  const payables = useOpenPayables(target.kind === 'payables' ? target.accountId : null);
   const fillFull = bills.data?.open_paisa ?? payables.data?.open_paisa ?? null;
   const oldest = bills.data?.bills[0]?.open_paisa ?? null;
   const fill = (amount: NonNullable<typeof fillFull>) => {
     onChange({ amount: formatPaisa(amount, { grouping }) });
-  };
-
-  // The one-time person picked who is in the dead amount: he cannot be made a regular account.
-  const [deadKey, setDeadKey] = useState<string | null>(null);
-  const personPicked = (person: PukhtaPerson) => {
-    setDeadKey(person.is_dead ? person.person_key : null);
-    onChange({
-      person: {
-        name_ur: person.name_ur,
-        name_en: person.name_en,
-        phone: person.phone,
-        person_key: person.person_key,
-      },
-      personText: displayName(person, language),
-    });
   };
 
   return (
@@ -147,14 +107,12 @@ export function VoucherForm({
                 disabled={editing}
                 onChange={(from) => {
                   if (from === draft.from) return;
-                  // The other side is another kind of account: the account, the person and the
-                  // reason of this side mean nothing to it.
+                  // The other side is another kind of account: the account and the collector of
+                  // this side mean nothing to it.
                   onChange({
                     from,
                     account: null,
                     accountType: null,
-                    person: null,
-                    personText: '',
                     collector: null,
                   });
                 }}
@@ -183,8 +141,6 @@ export function VoucherForm({
                 onChange({
                   account: hit === null ? null : pickerValueOf(hit),
                   accountType: hit?.account_type ?? null,
-                  person: null,
-                  personText: '',
                   reason: '',
                 });
               }}
@@ -192,61 +148,6 @@ export function VoucherForm({
           )}
         </Field>
       </div>
-      {needsPerson(draft) ? (
-        <FormSpan>
-          <div className="flex flex-col gap-2">
-            <Field
-              label={<Localized id="vouchers-field-person" />}
-              info={
-                <Localized id="vouchers-person-hint">
-                  <p />
-                </Localized>
-              }
-              error={fieldError(error, 'person_key')}
-            >
-              {(props) => (
-                <PukhtaPersonPicker
-                  {...props}
-                  side={personSide(draft)}
-                  // A one-time person in the dead amount can still pay: a receipt lists him, tagged
-                  // "ڈوبی" (PRD FR-10.10). No other entry does.
-                  includeDead={draft.type === 'receipt'}
-                  text={draft.personText}
-                  onTextChange={(personText) => {
-                    onChange({ personText, person: null });
-                  }}
-                  onPick={personPicked}
-                />
-              )}
-            </Field>
-            {draft.person === null ? null : (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2 border border-border bg-surface-sunken p-3">
-                <span className="flex flex-wrap items-baseline gap-x-3">
-                  <span className="type-field">{displayName(draft.person, language)}</span>
-                  {draft.person.phone === '' ? null : <Code>{draft.person.phone}</Code>}
-                </span>
-                {draft.person.person_key === deadKey ? null : (
-                  <Button
-                    onClick={() => {
-                      setRegularOpen(true);
-                    }}
-                  >
-                    <Localized id="vouchers-make-regular" />
-                  </Button>
-                )}
-                <MakeRegularDialog
-                  open={regularOpen}
-                  onOpenChange={setRegularOpen}
-                  person={draft.person}
-                  side={personSide(draft)}
-                  onMake={makeRegular.mutateAsync}
-                  onDone={onMadeRegular}
-                />
-              </div>
-            )}
-          </div>
-        </FormSpan>
-      ) : null}
       <div className="flex flex-col gap-1">
         <Field
           label={<Localized id="vouchers-field-amount" />}

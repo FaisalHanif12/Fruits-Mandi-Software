@@ -245,7 +245,7 @@ pub(crate) struct Move {
 }
 
 /// The balances of the buyer accounts (control 0304) before `from`, and their movements from
-/// `from` to `to`, each by account and person (a پختہ کھاتہ account person by person, like R20).
+/// `from` to `to`, each by account and person (a چکتا کھاتہ account person by person, like R20).
 /// The balances before `from` are read by `mandi_db::party_reads::totals_before` (plan 48 P48-S3).
 fn buyer_moves(
     conn: &Connection,
@@ -293,12 +293,12 @@ pub(crate) fn moves_during(
          JOIN account_controls k ON k.id = a.control_id"
     };
     let mut statement = conn.prepare(&format!(
-        "SELECT e.entry_date, l.account_id, COALESCE(l.pukhta_person_key, ''),
+        "SELECT e.entry_date, l.account_id, COALESCE(l.chukta_person_key, ''),
                 COALESCE(SUM(l.dr_paisa), 0), COALESCE(SUM(l.cr_paisa), 0)
          {tables}
          WHERE e.status = 'posted' AND k.code = '0304'
            AND e.entry_date >= ?1 AND e.entry_date <= ?2
-         GROUP BY e.entry_date, l.account_id, l.pukhta_person_key ORDER BY e.entry_date"
+         GROUP BY e.entry_date, l.account_id, l.chukta_person_key ORDER BY e.entry_date"
     ))?;
     let moves = statement
         .query_map(params_from_iter(values(from, to).iter()), |r| {
@@ -379,7 +379,7 @@ fn dead_on(
         if !alive_then {
             continue;
         }
-        let t = totals_of(conn, mark.account_id, mark.person_key.as_deref(), Some(day))?;
+        let t = totals_of(conn, mark.account_id, None, Some(day))?;
         let owed = owing(paisa(t.dr_paisa)?, paisa(t.cr_paisa)?)?;
         if owed == Paisa::ZERO {
             continue;

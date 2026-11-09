@@ -21,13 +21,12 @@ import {
 import { useLayoutStep } from '../../../shared/hooks';
 import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
-import { isGardenLot, isOwnLot, isPukhtaSeller } from '../draft';
+import { isGardenLot, isOwnLot } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
 import { LOT, SALE } from '../types';
 import { LotMoreToggle } from './LotMore';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
-import { focusPukhtaFieldsSoon } from './PukhtaFields';
 
 /**
  * The last cell of a lot row that Enter stops at. An own goods lot and a garden's lot have no نقد
@@ -107,13 +106,7 @@ export function LotsSection({
     () => ({
       // Enter on the last cell of a lot goes on to its sale lines (PRD FR-12.1).
       onEnter: (cell) => {
-        // A one-time seller: Enter goes on to his name and phone first (PRD FR-13.2).
         const row = stores.lots.getState().rows.find((candidate) => candidate.rowId === cell.rowId);
-        if (cell.field === LOT.seller && row !== undefined && isPukhtaSeller(row)) {
-          stores.view.getState().select(cell.rowId);
-          focusPukhtaFieldsSoon(cell.rowId);
-          return true;
-        }
         // An own goods lot: Enter goes on to the choice of its purchase until it has one (FR-12.26).
         if (
           cell.field === LOT.seller &&

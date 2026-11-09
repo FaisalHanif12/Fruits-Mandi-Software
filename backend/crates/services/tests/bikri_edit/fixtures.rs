@@ -68,7 +68,7 @@ fn typed<T: serde::de::DeserializeOwned>(request: &Value) -> T {
 
 /// The JSON of one sale row as the screen sends it.
 fn row(key: &str, buyer: i64, qty: &str, rate: &str) -> Value {
-    json!({ "key": key, "sale_id": null, "buyer_account_id": buyer, "pukhta": null, "qty": qty,
+    json!({ "key": key, "sale_id": null, "buyer_account_id": buyer, "chukta": null, "qty": qty,
         "weight": null, "seller_rate": rate, "rate_differs": false, "buyer_rate": null,
         "payment_type": null, "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
@@ -182,10 +182,10 @@ fn the_real_answers_of_the_plan_16_commands_are_the_fixtures() {
     pair("bikri_undo_event1", &request, &undo);
 }
 
-/// Event 2 of PRD 4.5 as a draft: کریم's 10 سیب sold to the one-time buyer شاہد for cash.
+/// Event 2 of PRD 4.5 as a draft: کریم's 10 سیب sold to the چکتا buyer شاہد for cash.
 fn line_for_event2(w: &World) -> Option<mandi_services::core::bikri::BikriDraft> {
-    let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
-    line.pukhta = person("شاہد", "Shahid", "0300-0000000");
+    let mut line = sale("s-1", w.chukta_khata, "10", "1200");
+    line.chukta = person("شاہد", "Shahid", "0300-0000000");
     let mut l = lot(w, "lot-1", w.karim, w.apple, "10");
     l.freight = Some("1,000".into());
     l.cash_paid = None;

@@ -5,8 +5,6 @@
 // that a plain number is not. The ids in the requests are those of the worked day in a fresh test
 // database (اکرم is account 20).
 
-import type { FindPeopleInput } from '../../src/bindings/FindPeopleInput';
-import type { PukhtaPersonHit } from '../../src/bindings/PukhtaPersonHit';
 import type { ReportCatalogEntry } from '../../src/bindings/ReportCatalogEntry';
 import type { ReportPage } from '../../src/bindings/ReportPage';
 import type { ReportPrintData } from '../../src/bindings/ReportPrintData';
@@ -62,10 +60,6 @@ import r7Items from '../fixtures/reports_run_r7_items.json';
 import r7ItemsRequest from '../fixtures/reports_run_r7_items_request.json';
 import r8Adda from '../fixtures/reports_run_r8_adda.json';
 import r8AddaRequest from '../fixtures/reports_run_r8_adda_request.json';
-import r9All from '../fixtures/reports_run_r9_all.json';
-import r9AllRequest from '../fixtures/reports_run_r9_all_request.json';
-import r9Due from '../fixtures/reports_run_r9_due.json';
-import r9DueRequest from '../fixtures/reports_run_r9_due_request.json';
 import r27Series from '../fixtures/reports_run_r27_series.json';
 import r27SeriesRequest from '../fixtures/reports_run_r27_series_request.json';
 import r20Dues from '../fixtures/reports_run_r20_dues.json';
@@ -86,8 +80,6 @@ import r28ByMonth from '../fixtures/reports_run_r28_by_month.json';
 import r28ByMonthRequest from '../fixtures/reports_run_r28_by_month_request.json';
 import r30Profit from '../fixtures/reports_run_r30_profit.json';
 import r30ProfitRequest from '../fixtures/reports_run_r30_profit_request.json';
-import r9NotAOneTimeAccount from '../fixtures/reports_run_r9_not_a_one_time_account.json';
-import r9NotAOneTimeAccountRequest from '../fixtures/reports_run_r9_not_a_one_time_account_request.json';
 import r2UnknownSeller from '../fixtures/reports_run_r2_unknown_seller.json';
 import r2UnknownSellerRequest from '../fixtures/reports_run_r2_unknown_seller_request.json';
 import printR7En from '../fixtures/reports_print_data_r7_en.json';
@@ -96,14 +88,6 @@ import printR20Ur from '../fixtures/reports_print_data_r20_ur.json';
 import printR20UrRequest from '../fixtures/reports_print_data_r20_ur_request.json';
 import printR28MonthEn from '../fixtures/reports_print_data_r28_month_en.json';
 import printR28MonthEnRequest from '../fixtures/reports_print_data_r28_month_en_request.json';
-import printR9DueEn from '../fixtures/reports_print_data_r9_due_en.json';
-import printR9DueEnRequest from '../fixtures/reports_print_data_r9_due_en_request.json';
-import peopleShahid from '../fixtures/reports_find_people_shahid.json';
-import peopleShahidRequest from '../fixtures/reports_find_people_shahid_request.json';
-import peopleNone from '../fixtures/reports_find_people_none.json';
-import peopleNoneRequest from '../fixtures/reports_find_people_none_request.json';
-import peopleLimitTooBig from '../fixtures/reports_find_people_limit_too_big.json';
-import peopleLimitTooBigRequest from '../fixtures/reports_find_people_limit_too_big_request.json';
 
 function readCatalog(value: unknown): ReportCatalogEntry[] {
   return value as ReportCatalogEntry[];
@@ -122,12 +106,6 @@ function readPrintInput(value: unknown): ReportPrintInput {
 }
 function readRefusal(value: unknown): UiError {
   return value as UiError;
-}
-function readPeople(value: unknown): PukhtaPersonHit[] {
-  return value as PukhtaPersonHit[];
-}
-function readFindInput(value: unknown): FindPeopleInput {
-  return value as FindPeopleInput;
 }
 
 /**
@@ -192,7 +170,7 @@ export const R18_FULL: ReportPage = {
   limit: 0,
 };
 
-// ---- Round 4 (step F3): the Sales, Collections and Business reports, and the people search. ----
+// ---- Round 4 (step F3): the Sales, Collections and Business reports. ----
 export const R2_ALL = readPage(r2All);
 export const R2_ALL_REQUEST = readRunInput(r2AllRequest);
 export const R2_PAGE2 = readPage(r2Page2);
@@ -209,10 +187,6 @@ export const R7_ITEMS = readPage(r7Items);
 export const R7_ITEMS_REQUEST = readRunInput(r7ItemsRequest);
 export const R8_ADDA = readPage(r8Adda);
 export const R8_ADDA_REQUEST = readRunInput(r8AddaRequest);
-export const R9_ALL = readPage(r9All);
-export const R9_ALL_REQUEST = readRunInput(r9AllRequest);
-export const R9_DUE = readPage(r9Due);
-export const R9_DUE_REQUEST = readRunInput(r9DueRequest);
 export const R27_SERIES = readPage(r27Series);
 export const R27_SERIES_REQUEST = readRunInput(r27SeriesRequest);
 export const R20_DUES = readPage(r20Dues);
@@ -233,8 +207,6 @@ export const R28_BY_MONTH = readPage(r28ByMonth);
 export const R28_BY_MONTH_REQUEST = readRunInput(r28ByMonthRequest);
 export const R30_PROFIT = readPage(r30Profit);
 export const R30_PROFIT_REQUEST = readRunInput(r30ProfitRequest);
-export const R9_NOT_A_ONE_TIME_ACCOUNT = readRefusal(r9NotAOneTimeAccount);
-export const R9_NOT_A_ONE_TIME_ACCOUNT_REQUEST = readRunInput(r9NotAOneTimeAccountRequest);
 export const R2_UNKNOWN_SELLER = readRefusal(r2UnknownSeller);
 export const R2_UNKNOWN_SELLER_REQUEST = readRunInput(r2UnknownSellerRequest);
 export const PRINT_R7_EN = readPrint(printR7En);
@@ -243,11 +215,3 @@ export const PRINT_R20_UR = readPrint(printR20Ur);
 export const PRINT_R20_UR_REQUEST = readPrintInput(printR20UrRequest);
 export const PRINT_R28_MONTH_EN = readPrint(printR28MonthEn);
 export const PRINT_R28_MONTH_EN_REQUEST = readPrintInput(printR28MonthEnRequest);
-export const PRINT_R9_DUE_EN = readPrint(printR9DueEn);
-export const PRINT_R9_DUE_EN_REQUEST = readPrintInput(printR9DueEnRequest);
-export const PEOPLE_SHAHID = readPeople(peopleShahid);
-export const PEOPLE_SHAHID_REQUEST = readFindInput(peopleShahidRequest);
-export const PEOPLE_NONE = readPeople(peopleNone);
-export const PEOPLE_NONE_REQUEST = readFindInput(peopleNoneRequest);
-export const PEOPLE_LIMIT_TOO_BIG = readRefusal(peopleLimitTooBig);
-export const PEOPLE_LIMIT_TOO_BIG_REQUEST = readFindInput(peopleLimitTooBigRequest);

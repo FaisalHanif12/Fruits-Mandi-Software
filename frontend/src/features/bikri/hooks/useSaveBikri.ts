@@ -24,7 +24,6 @@ const READ_AGAIN: readonly (readonly string[])[] = [
   ['coa'],
   ['partners'],
   ['search'],
-  ['pukhta'],
   ['day_status'],
   // A lot of trip goods takes its quantity off the purchase (PRD FR-12.26, FR-12.39).
   ['purchases'],
