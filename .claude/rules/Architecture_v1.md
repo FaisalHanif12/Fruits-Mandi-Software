@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.19 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026 and 03-11-2026, and his answers of 15-10-2026) |
-| Date | 1 November 2026 |
+| Version | 1.20 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026 and 09-11-2026, and his answers of 15-10-2026) |
+| Date | 9 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.21 (the master), NFR v1.13, Tech Stack v1.8, Code Standards v1.17 |
+| Derived from | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9, Code Standards v1.21 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -192,7 +192,7 @@ flowchart TB
     TopBar: search, attention bell, language switch"]
     APPSHELL --> FEAT["features/
     one folder per module:
-    auth, dashboard, masters, rules, bikri, pukhta_khata,
+    auth, dashboard, masters, rules, bikri, party_ledgers,
     vouchers, cashbook, fruit, gardens, trips, purchases,
     partners, analytics, reports, backup, settings, audit"]
     FEAT --> SHARED["shared/
@@ -232,7 +232,7 @@ flowchart RL
     search, توجہ طلب bell, اردو | English"]
 
     IDX --> IDX1["Chart of accounts: Head, Control, Tree"]
-    IDX --> IDX2["Accounts - sellers 0010, buyers 0020, pukhta 0030"]
+    IDX --> IDX2["Accounts - sellers 0010, buyers 0020, chukta 0030"]
     IDX --> IDX3["Items, Packing, City, اڈا, مارکہ, Store, Narration, Expense heads, Staff"]
     IDX --> IDX4["کمیشن اصول - rules"]
 
@@ -240,8 +240,8 @@ flowchart RL
     BIK --> B3["وصولی / اگراہی"]
     BIK --> B4["ادائیگی"]
     BIK --> B5["پیشگی کھاتہ"]
-    BIK --> B6["پختہ کھاتہ"]
-    BIK --> B7["آج کی بکری"]
+    BIK --> B6["آج کی بکری"]
+    BIK --> B7["پارٹی کھاتے - party ledgers"]
     BIK --> B8["باقی مال"]
     GRD --> G1["Gardens list; one garden: installments, costs,
     sales in another shop, running balance, closing"]
@@ -295,15 +295,14 @@ flowchart LR
     STOCK[("Stock moves")]
     FACTS[("Analytics facts - sales")]
     MATCH[("Bill and advance matching")]
-    PUKHTA[("پختہ کھاتہ register")]
     AUD[("Audit log")]
     DAYS[("Closed-up-to date")]
     BACKUP[("Cloud backup job")]
     DASHV["Dashboard, اگراہی list,
     payables, advances, analytics, reports"]
 
-    SAVE_BIKRI --> JRN & SPLIT & STOCK & FACTS & MATCH & PUKHTA & AUD
-    EDIT --> JRN & SPLIT & STOCK & FACTS & MATCH & PUKHTA & AUD
+    SAVE_BIKRI --> JRN & SPLIT & STOCK & FACTS & MATCH & AUD
+    EDIT --> JRN & SPLIT & STOCK & FACTS & MATCH & AUD
     SAVE_REC --> JRN & MATCH & AUD
     SAVE_PAY --> JRN & MATCH & AUD
     SAVE_ADV --> JRN & MATCH & AUD
@@ -412,7 +411,7 @@ Tie rule: two rules at the same level overlapping in dates, the newer one wins (
 flowchart TD
     IN(["Calculated posting: lines, lots, totals"]) --> L1["Sale part - for each sale line"]
     L1 --> DRB["Line's buyer account بنام buyer_total
-    own account, نقدی منڈی, or پختہ کھاتہ with person key"]
+    own account, نقدی منڈی, or چکتا کھاتہ with person key"]
     IN --> L2["Sale part - for each lot"]
     L2 --> CRS["Seller جمع seller credit C8; a garden lot: the garden's account
     a trip's own lot: each trip partner's 0604 جمع his % (C25)
@@ -422,7 +421,7 @@ flowchart TD
     lot charges only in the first posting"]
     IN --> L3["Cash part"]
     L3 --> CSH["Each lot with نقد: seller بنام, روکڑ جمع"]
-    L3 --> CSB["Each نقدی line: روکڑ بنام, same buyer account جمع"]
+    L3 --> CSB["Each line with paid above 0: روکڑ بنام paid, same buyer account جمع paid"]
     DRB & CRS & INC & CSH & CSB --> CHK{"Σ بنام = Σ جمع ?"}
     CHK -- yes --> OK(["Write entry as draft, lines, then mark posted"])
     CHK -- no --> ERR(["ERR_JOURNAL_UNBALANCED - nothing saved"])
@@ -477,7 +476,7 @@ sequenceDiagram
     U->>FE: picks buyer اکرم, amount 10,000
     FE->>SVC: vouchers_save_receipt
     SVC->>DB: BEGIN
-    SVC->>DB: read open bills for the key (account, or account + پختہ person), oldest first
+    SVC->>DB: read open bills for the account, oldest first
     Note over SVC,DB: bills = debit journal lines on the account: sale lines, openings, cash lent, جنرل debits
     SVC->>DOM: match_bills(10,000, open bills)
     DOM-->>SVC: bill 1: 10,000 of 12,880, remaining 2,880
@@ -488,7 +487,7 @@ sequenceDiagram
     SVC-->>FE: new balance 2,880, aging updated
 ```
 
-If the amount is more than all open bills, the extra stays as the buyer's credit and is matched to his next bill (FR-15.5). Advances to sellers use the same flow with `match_advances` (FR-15.8).
+Money paid on the spot does not come through this flow: the بکری save pins its credit line to that line's own bill (PRD FR-12.44). What is left of the bill is a normal open bill. If the amount is more than all open bills, the extra stays as the buyer's credit and is matched to his next bill (FR-15.5). Advances to sellers use the same flow with `match_advances` (FR-15.8).
 
 ---
 
@@ -693,6 +692,7 @@ erDiagram
 - Money columns are `INTEGER` paisa, end in `_paisa`, and are always a multiple of 100 (`CHECK (x_paisa % 100 = 0)`).
 - Rates end in `_bps` (`INTEGER`, 1% = 100). Weights end in `_grams` (`INTEGER`). Dates end in `_date` (`TEXT YYYY-MM-DD`). Times end in `_at` (`TEXT`, UTC).
 - Every named record has `name_ur` and `name_en`, both `NOT NULL` (PRD FR-7.24, Code Standards 4.2), plus three indexed search columns built only by `core::text`: `search_ur` (normalised Urdu), `search_en` (lower-case English) and `search_phonetic`. Below, "+ search columns" means these three.
+- Migration 0020 (v1.20, PRD FR-13.9): renames every `pukhta_*` column to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata`, renames the account 0030, makes 0031 inactive and renames it to say it is an old closed account, fills `chukta_buyers` from the distinct people of old lines on 0030, and renames `is_pukhta_party` to `was_one_time_party` (a column of the old mark, never read again), so those accounts stay as plain sellers or buyers. Migrations 0001 to 0019 are never edited, so the old word stays in them. No posted entry, amount or chain hash changes.
 - Append-only tables (Code Standards B17): `journal_lines`, `audit_log`, `partner_share_rows`, `stock_moves`, `analytics_facts`. `journal_entries` allows only `draft` to `posted`.
 
 ### 15.3 Security, settings, operations
@@ -719,7 +719,7 @@ erDiagram
 |---|---|
 | `account_heads` | `code` (unique), `name_ur`, `name_en`, `nature` (asset, payable, party, income, expense, capital) |
 | `account_controls` | `head_id`, `code` (unique), `name_ur`, `name_en`, `party_type` (seller, buyer, separate, garden, other; separate = a الگ کھاتہ under control 0305, PRD 16.6; garden = a garden's account under control 0306, PRD 12.11) |
-| `accounts` | `control_id`, `code` (unique; for sellers, buyers and the two پختہ کھاتہ accounts the type number + `serial` with no padding, for example 0010, PRD 10.2, v1.8), `serial` (for those, the running number from 0; else the 4-digit serial), `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday` (kept from migration 0001, not used from v1.17: there is no collection day, PRD FR-15.6), `is_system`, `is_pukhta_khata` (the shared 0030 and 0031, person typed on the line), `is_pukhta_party` (migration 0013: a پختہ party's own account, seller or buyer, PRD FR-13.11; never with `is_pukhta_khata` or `is_system`; fixed after insert), `is_active`, `note` |
+| `accounts` | `control_id`, `code` (unique; for sellers, buyers and the accounts 0030 and 0031 the type number + `serial` with no padding, for example 0010, PRD 10.2, v1.8), `serial` (for those, the running number from 0; else the 4-digit serial), `party_type`, `name_ur`, `name_en`, `tag` (null; 1 to 4 English capital letters and dots, shown after the name, PRD 10.2, v1.7), + search columns (the tag is in the search keys), `father_or_firm_ur`, `father_or_firm_en`, `city_id`, `adda_id`, `phone1`, `phone2`, `address`, `linked_account_id`, `opening_date`, `opening_dr_paisa`, `opening_cr_paisa`, `opening_is_advance`, `opening_entry_id`, `credit_allowed`, `credit_limit_paisa`, `default_marka_id`, `collector_staff_id`, `collection_weekday` (kept from migration 0001, not used from v1.17: there is no collection day, PRD FR-15.6), `is_system`, `is_chukta_khata` (0030, and the old closed 0031), `is_active`, `note` |
 | `cities` | `code`, `name_ur`, `name_en`, + search columns, `is_active` |
 | `items` | `code`, `name_ur`, `name_en`, + search columns, `item_group` (fruit, vegetable), `default_packing_id`, `sold_by` (unit, weight), `is_active` |
 | `packings` | `code`, `name_ur`, `name_en`, + search columns, `approx_grams`, `is_active` |
@@ -730,7 +730,8 @@ erDiagram
 | `expense_heads` | `code`, `name_ur`, `name_en`, + search columns, `account_id`, `is_active` |
 | `staff` | `code` (unique; type number 006 + running number, PRD 10.2, v1.8), `name_ur`, `name_en`, + search columns, `role` (munshi, collector, labour; the job, not a login role), `phone`, `account_id` (null; his ادھار رقم account under control 0103, made the first time he is lent money), `is_active` |
 | `bank_accounts` | `bank_name`, `title`, `number` (all as typed, one script), `account_id`, `is_active`. Kept from migration 0001; not used from v1.6 (PRD FR-10.4: all money is روکڑ). |
-| `dead_marks` | A person moved to the dead amount (PRD FR-10.10, v1.10). `account_id`, `pukhta_person_key` (null; a پختہ کھاتہ person), `entry_date`, `reason` (died, left, other), `note`, `owed_paisa` (what he owed on that date, shown only), `is_active` (0 when undone), `undone_at`, `undone_by`, `undo_reason`, `after_entry_id` (the last posted entry when he was moved; later entries count as recoveries or corrections), `undone_after_entry_id` and `undone_date` (freeze the figures of an undone move). Nothing posts: what he still owes is his balance, read from `journal_lines`. At most one active mark per account or person key. |
+| `chukta_buyers` | The list of چکتا buyers (PRD Section 13, migration 0020, v1.20). `person_key` (unique), `name_ur`, `name_en`, + search columns, `phone` (null), `is_active`. A sale line to one of them is on the account 0030 and carries his names, phone and key. |
+| `dead_marks` | A person moved to the dead amount (PRD FR-10.10, v1.10). `account_id`, `chukta_person_key` (null; old rows only, no new mark has one, v1.20), `entry_date`, `reason` (died, left, other), `note`, `owed_paisa` (what he owed on that date, shown only), `is_active` (0 when undone), `undone_at`, `undone_by`, `undo_reason`, `after_entry_id` (the last posted entry when he was moved; later entries count as recoveries or corrections), `undone_after_entry_id` and `undone_date` (freeze the figures of an undone move). Nothing posts: what he still owes is his balance, read from `journal_lines`. At most one active mark per account or person key. |
 
 ### 15.5 Rules and partners
 
@@ -751,32 +752,32 @@ erDiagram
 | Table | Columns |
 |---|---|
 | `bikri_entries` | `number` (unique, given at first save), `book`, `entry_date`, `bill_date`, `truck_no`, `zamindar_account_id`, `adda_id`, `driver_name`, `driver_phone`, `total_freight_paisa`, `store_id`, `note`, `status` (saved, cancelled), `cancel_reason`, `cancelled_by`, `cancelled_at`, `print_count` |
-| `bikri_lots` | `bikri_id`, `lot_no`, `seller_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `purchase_id` (null; set when the seller is اپنا مال, PRD FR-12.26), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `qty_taken` (fruit taken, PRD FR-16.11, v1.6), `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
-| `bikri_sales` | `bikri_id`, `lot_id`, `line_no`, `journal_entry_id` (the posting it belongs to), `entry_date`, `buyer_account_id`, `pukhta_name_ur`, `pukhta_name_en`, `pukhta_phone`, `pukhta_person_key`, `qty`, `weight_grams` (null), `seller_rate_paisa`, `seller_amount_paisa`, `seller_comm_method`, `seller_comm_value_bps`, `seller_comm_value_paisa`, `seller_comm_rule_id`, `seller_comm_paisa`, `buyer_rate_paisa`, `buyer_value_paisa`, `buyer_comm_method`, `buyer_comm_value_bps`, `buyer_comm_value_paisa`, `buyer_comm_rule_id`, `buyer_comm_paisa`, `laga_method`, `laga_value_bps`, `laga_value_paisa`, `laga_rule_id`, `laga_paisa`, `buyer_total_paisa`, `rate_diff_paisa`, `cost_paisa` (0, or the cost of trip goods sold on this line, C21, stored and never posted), `payment_type` (credit, cash), `grade` (null, or first, second, third; PRD FR-12.42, migration 0019), `is_active` (0 when replaced by an edit or cancelled), `replaced_by_sale_id`, `note` |
+| `bikri_lots` | `bikri_id`, `lot_no`, `seller_account_id`, `chukta_name_ur`, `chukta_name_en`, `chukta_phone`, `chukta_person_key` (all four null on a new lot; old rows only, v1.20), `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `purchase_id` (null; set when the seller is اپنا مال, PRD FR-12.26), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `qty_taken` (fruit taken, PRD FR-16.11, v1.6), `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
+| `bikri_sales` | `bikri_id`, `lot_id`, `line_no`, `journal_entry_id` (the posting it belongs to), `entry_date`, `buyer_account_id`, `chukta_name_ur`, `chukta_name_en`, `chukta_phone`, `chukta_person_key` (a line on 0030), `qty`, `weight_grams` (null), `seller_rate_paisa`, `seller_amount_paisa`, `seller_comm_method`, `seller_comm_value_bps`, `seller_comm_value_paisa`, `seller_comm_rule_id`, `seller_comm_paisa`, `buyer_rate_paisa`, `buyer_value_paisa`, `buyer_comm_method`, `buyer_comm_value_bps`, `buyer_comm_value_paisa`, `buyer_comm_rule_id`, `buyer_comm_paisa`, `laga_method`, `laga_value_bps`, `laga_value_paisa`, `laga_rule_id`, `laga_paisa`, `buyer_total_paisa`, `rate_diff_paisa`, `cost_paisa` (0, or the cost of trip goods sold on this line, C21, stored and never posted), `paid_paisa` (a new numbered migration, v1.20, PRD FR-12.44; not null, default 0, a multiple of 100, at least 0, not above `buyer_total_paisa`; the migration sets it to `buyer_total_paisa` on cash lines and 0 on credit lines, then freezes it in `bikri_sales_snapshot_is_final`), `payment_type` (credit, cash; still written: cash when paid = buyer total, else credit; nothing decides money from it, v1.20), `grade` (null, or first, second, third; PRD FR-12.42, migration 0019), `is_active` (0 when replaced by an edit or cancelled), `replaced_by_sale_id`, `note` |
 | `purchases` | `number` (unique, given at save), `venture_id` (its trip), `entry_date`, `supplier_text` (null; as typed), `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `freight_paisa`, `labour_paisa`, `other_cost_paisa`, `paid_now_paisa` (value + freight + labour + other cost), `trip_cost_paisa` (its part of the trip costs, C24), `total_cost_paisa` (paid now + trip cost part), `journal_entry_id` (null when every part is from a pocket), `status` (saved, cancelled), `cancel_reason`, `note`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `cost_released_paisa` (cost already taken by sales and write-offs, C21). PRD 12.10. No supplier account, no credit and no bank (v1.6). |
 | `stock_moves` | `lot_id` (null for a purchase move), `purchase_id` (null), `journal_entry_id` (null for write-offs), `move_date`, `kind` (received, sold, written_off, taken, reversal; taken = fruit taken from a lot, PRD FR-16.11), `qty` (signed), `reason` |
-| `fruit_takes` | `number` (unique, given at save), `entry_date`, `partner_id` (null = for the shop's guests, PRD FR-16.10), `source` (shop, other_shop), `lot_id` (null), `credit_account_id` (the lot's seller, or the other agent's account), `pukhta_person_key` (null), `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `note`, `journal_entry_id`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
-| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `pukhta_person_key`, `city_id`, `adda_id`, `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `purchase_id` (null; trip goods), `venture_id` (null; the garden or trip whose goods were sold, for the analytics filters), `cost_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
+| `fruit_takes` | `number` (unique, given at save), `entry_date`, `partner_id` (null = for the shop's guests, PRD FR-16.10), `source` (shop, other_shop), `lot_id` (null), `credit_account_id` (the lot's seller, or the other agent's account), `chukta_person_key` (null; old rows only, v1.20), `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `note`, `journal_entry_id`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
+| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `chukta_person_key`, `city_id`, `adda_id`, `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `purchase_id` (null; trip goods), `venture_id` (null; the garden or trip whose goods were sold, for the analytics filters), `cost_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
 
 ### 15.7 Vouchers, journal and matching
 
 | Table | Columns |
 |---|---|
-| `vouchers` | `type` (receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, capital_in, capital_out, khata_out, khata_in, general), `number` (unique per type, given at save), `entry_date`, `account_id`, `pukhta_person_key`, `amount_paisa`, `mode` (cash or salary from v1.6; salary only for money_lent_return; bank and cheque stay in the column check from migration 0001 but are never written), `bank_account_id`, `cheque_no`, `cheque_date` (never written from v1.6), `collector_staff_id`, `partner_id`, `expense_head_id`, `expected_goods`, `reason` (required for personal_expense, money_lent, and a payment to a buyer), `return_by_date` (null), `taken_by` (null), `narration`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
+| `vouchers` | `type` (receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, capital_in, capital_out, khata_out, khata_in, general), `number` (unique per type, given at save), `entry_date`, `account_id`, `chukta_person_key` (null; old rows only, v1.20), `amount_paisa`, `mode` (cash or salary from v1.6; salary only for money_lent_return; bank and cheque stay in the column check from migration 0001 but are never written), `bank_account_id`, `cheque_no`, `cheque_date` (never written from v1.6), `collector_staff_id`, `partner_id`, `expense_head_id`, `expected_goods`, `reason` (required for personal_expense, money_lent, and a payment to a buyer), `return_by_date` (null), `taken_by` (null), `narration`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
 | `journal_entries` | `entry_date`, `posting_type` (bikri_first, bikri_later, reversal, receipt, payment, advance, shop_expense, personal_expense, personal_return, money_lent, money_lent_return, capital_in, capital_out, khata_out, khata_in, purchase, trip_cost, garden_payment, venture_receipt, garden_close, fruit_taken, general, opening, month_close; own_write_off is not used from v1.6), `source_type` (bikri, voucher, purchase, venture, fruit, account, month_close), `source_id`, `reverses_entry_id` (null), `narration`, `status` (draft, posted), `total_paisa`, `chain_hash` |
-| `journal_lines` | `entry_id`, `line_no`, `account_id`, `pukhta_person_key` (null), `dr_paisa`, `cr_paisa`, `is_advance` (seller debit that counts as an advance), `narration`. CHECK: both ≥ 0, exactly one of them > 0. |
-| `bill_allocations` | `bill_line_id` (a debit line on a buyer account), `payment_line_id` (a credit line on the same account), `account_id`, `pukhta_person_key`, `amount_paisa`, `is_active`, `undone_at`, `undone_by` |
+| `journal_lines` | `entry_id`, `line_no`, `account_id`, `chukta_person_key` (null), `dr_paisa`, `cr_paisa`, `is_advance` (seller debit that counts as an advance), `narration`. CHECK: both ≥ 0, exactly one of them > 0. |
+| `bill_allocations` | `bill_line_id` (a debit line on a buyer account), `payment_line_id` (a credit line on the same account), `account_id`, `chukta_person_key`, `amount_paisa`, `is_active`, `undone_at`, `undone_by` |
 | (no table) seller payable working | Paid and still open per seller credit are worked out at read time, oldest first, from `journal_lines` and `advance_allocations` (PRD FR-7.59). Nothing is stored. |
 | (who owns an entry) | A trip purchase has one `purchases` row and one `venture_entries` row (kind purchase, `purchase_id` set) that holds its partner parts. The journal entry belongs to the purchase (source type purchase, source id the purchase); both rows carry the same `journal_entry_id`. Trip costs, sales in another shop, garden payments and a garden's closing belong to their venture entry (source type venture). Fruit taken belongs to its `fruit_takes` row (source type fruit). |
 | (no table) garden and trip working | A garden's running balance, a trip's result per purchase, day and trip, and each partner's money in and money back are worked out at read time from `venture_entries`, `venture_entry_parts`, `purchases` and `bikri_sales.cost_paisa` (PRD FR-12.27, FR-12.37). Nothing extra is stored. |
 | (no table) money lent and partner money working | Returned and still open per loan (PRD FR-16.5) and per partner take (PRD FR-16.2) are worked out at read time, oldest first, from `journal_lines` and `vouchers` (`return_by_date`). Nothing is stored. |
-| `advance_allocations` | `advance_line_id` (a seller debit line with `is_advance`), `credit_line_id` (a seller credit line from a بکری posting whose lot has `adjust_advance = 1`, or from a seller's receipt, PRD FR-15.12), `account_id`, `pukhta_person_key`, `amount_paisa`, `is_active`, `undone_at`, `undone_by` |
+| `advance_allocations` | `advance_line_id` (a seller debit line with `is_advance`), `credit_line_id` (a seller credit line from a بکری posting whose lot has `adjust_advance = 1`, or from a seller's receipt, PRD FR-15.12), `account_id`, `chukta_person_key`, `amount_paisa`, `is_active`, `undone_at`, `undone_by` |
 
 ### 15.8 Key indexes
 
 | Table | Index on |
 |---|---|
-| `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `pukhta_person_key`); migration 0002: `idx_journal_lines_account_amounts` (`account_id`, `entry_id`, `dr_paisa`, `cr_paisa`) for balances, and `idx_journal_lines_advance` (`account_id`, `entry_id`) where `is_advance = 1` |
+| `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `chukta_person_key`); migration 0002: `idx_journal_lines_account_amounts` (`account_id`, `entry_id`, `dr_paisa`, `cr_paisa`) for balances, and `idx_journal_lines_advance` (`account_id`, `entry_id`) where `is_advance = 1` |
 | `journal_entries` | (`entry_date`), (`source_type`, `source_id`); migration 0002: `idx_journal_entries_unposted` (`id`) where `status <> 'posted'`; migration 0016: `idx_journal_entries_opening` (`id`) where `posting_type = 'opening'` |
 | `bikri_sales` | (`lot_id`), (`buyer_account_id`, `entry_date`), (`journal_entry_id`) |
 | `bikri_lots` | (`bikri_id`), (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
@@ -787,14 +788,14 @@ erDiagram
 | `fruit_takes` | (`entry_date`), (`partner_id`, `entry_date`), (`lot_id`) |
 | `analytics_facts` | (`entry_date`), (`item_id`, `entry_date`), (`seller_account_id`, `entry_date`), (`buyer_account_id`, `entry_date`) |
 | `partner_share_rows` | (`partner_id`, `entry_date`) |
-| `bill_allocations`, `advance_allocations` | (`account_id`, `pukhta_person_key`, `is_active`); migration 0016: `idx_bill_allocations_open_sum` (`bill_line_id`, `amount_paisa`) where `is_active = 1` |
+| `bill_allocations`, `advance_allocations` | (`account_id`, `chukta_person_key`, `is_active`); migration 0016: `idx_bill_allocations_open_sum` (`bill_line_id`, `amount_paisa`) where `is_active = 1` |
 | `bikri_entries` | (`truck_no`, `entry_date`) for truck memory and the same-truck check |
 | Every table with search columns | (`search_ur`), (`search_en`), (`search_phonetic`), (`code`) where it has one |
 | `accounts` | (`party_type`, `serial`) for short codes. Lists sorted by code use type number, then length, then code, so 0019 comes before 00110 (v1.8) |
 | `staff` | unique (`code`) (`idx_staff_code`, migration 0007) |
 | `user_prefs` | unique (`user_id`, `key`) |
 | `translit_pairs` | unique (`roman`, `urdu`) |
-| `dead_marks` | unique (`account_id`, `COALESCE(pukhta_person_key, '')`) where `is_active = 1` (SQLite treats two NULLs as different, so the plain pair would allow two active marks on one account) |
+| `dead_marks` | unique (`account_id`, `COALESCE(chukta_person_key, '')`) where `is_active = 1` (SQLite treats two NULLs as different, so the plain pair would allow two active marks on one account) |
 | `charge_rules` | (`side`, `charge_type`, `account_id`, `item_id`, `item_group`, `from_date`) |
 
 ---
@@ -1035,3 +1036,4 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.17 | 03-11-2026 | PRD v1.22, approved by Umar: `accounts.collection_weekday` is kept but not used (15.4). A new account's opening entry may be dated on a closed day (PRD FR-10.11). No table, posting type or index changed. |
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
+| 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |

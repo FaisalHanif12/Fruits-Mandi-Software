@@ -1,6 +1,6 @@
 ---
 name: print-and-export
-description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, پختہ کھاتہ slip, receipt slip, reports R1 to R37, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
+description: Builds or changes any printed document, PDF or Excel export in the Mandi Software (seller bill, buyer slips, receipt slip, reports R1 to R37, the daily backup pack) with Urdu or English print language, A4, A5 or 80 mm paper, amounts in words, and numbers that never flip. Use whenever something must be printed, saved as PDF or exported to Excel.
 ---
 
 # Print, PDF and Excel export
@@ -52,7 +52,7 @@ Backend: WebView2 Print (printer) or PrintToPdf (PDF), through with_webview + we
    - the amount in words from `core::urdu_words` or `core::english_words`, chosen by print language and number grouping (FR-19.7);
    - the language, the direction and the paper size.
 2. **Names and words in the print language.** Use `name_ur` or `name_en` through `displayName(record, printLanguage)`, not the app language (F38). The template resolves every title, label and month name from Fluent in the print language.
-3. **Digits.** English digits by default. Urdu prints use Urdu digits only if the Printing setting is on (NFR-URD-14). The backend number formatter does this, not the template. The font stack for numbers includes Noto Naskh Arabic, which has the Urdu digits (Tech Stack 4.1).
+3. **Digits.** Digits 0 to 9 with grouping on every print and PDF, in both languages: 2024, 10,000 (NFR-URD-14, FR-19.6). There is no Urdu digits setting, and ۰ to ۹ are never printed. The backend number formatter does this, not the template.
 4. **Template.**
    - Use the shared print layout: header, body table, totals, words, and a footer with "Page x of y" and the print time.
    - `dir` and `lang` come from the print language.

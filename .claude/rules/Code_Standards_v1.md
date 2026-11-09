@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.20 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026 and 06-11-2026) |
-| Date | 5 November 2026 |
+| Version | 1.21 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
+| Date | 9 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.18 (the master), NFR v1.13, Tech Stack v1.8 |
+| Depends on | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -95,12 +95,13 @@ Rule V0: the backend MUST treat everything from the frontend as untrusted, even 
 | Field type | Accepted input | Rejected | Stored as |
 |---|---|---|---|
 | Money | Whole rupees: digits with optional commas. Urdu digits (۰-۹) accepted and converted. Max 10,00,00,00,000 (1,000 crore) per value | Letters, any decimal point, negative, empty when required | `INTEGER` paisa (multiple of 100), column `*_paisa` |
+| Paid on the spot (موقع پر جمع) | Same as money. Empty means 0. From 0 up to the line's buyer total (PRD FR-12.44). A buyer who must pay in full is set by the backend, never typed | More than the line's buyer total (`ERR_PAID_EXCEEDS_TOTAL`, with `max`, at `lots[i].sales[j].paid`), negative, decimals | `INTEGER` `paid_paisa`, multiple of 100, not above `buyer_total_paisa` |
 | Rate (money per نگ or per kg) | Same as money, must be more than 0 | 0, negative, decimals | `INTEGER` paisa |
 | Percent | Digits with up to 2 decimals, 0 to 100 | More than 100, more than 2 decimals | `INTEGER` bps |
 | Quantity (نگ) | Whole number, 1 to 1,000,000. A simple sum such as `20+25` (PRD FR-7.48) is evaluated by the backend parser `core::validate::parse_sum`, then checked like a typed number. The same applies to money. | 0, negative, decimals, `×` or `÷`, a sum below 0 | `INTEGER` |
 | Weight | Up to 3 decimals, more than 0 | | `INTEGER` grams |
 | Date | `DD-MM-YYYY`, or shortcuts (PRD FR-7.19) | Impossible dates; for postings, dates on or before the "closed up to" date or after today (PRD FR-6.6) | `TEXT` `YYYY-MM-DD` |
-| Account code | Digits only. Sellers, buyers, پختہ کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings, except a وصولی or ادھار رقم واپسی on an account in the dead amount (PRD FR-10.10). | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
+| Account code | Digits only. Sellers, buyers, چکتا کھاتہ, items, packings and staff: the 3-digit type number + a running number from 0 with no padding (0010, 00110; PRD FR-10.2). Other accounts: control code + 4-digit serial. The running number alone is a short code (PRD FR-7.39), resolved by the backend on `Enter` or leaving the field: in a seller, buyer, item, packing or staff field, to the full code of that type; in a field that takes any account, to a list of the seller and the buyer with that running number, each with its type. Must exist and be active for new postings, except a وصولی or ادھار رقم واپسی on an account in the dead amount (PRD FR-10.10). | Inactive accounts in new postings; a code already used; a code of another type | `TEXT` |
 | Name (Urdu) | 1 to 100 characters: Urdu letters, digits, spaces and `. - ' ( ) / &`; at least one Urdu letter (PRD FR-7.28) | Empty, only spaces, any Latin letter, control characters | `TEXT` `name_ur` (original) + `search_ur` (normalised) |
 | Name (English) | 1 to 100 characters: Latin letters, digits, spaces and `. - ' ( ) / &`; at least one Latin letter | Empty, only spaces, any Urdu letter, control characters | `TEXT` `name_en` (original) + `search_en` (lower case) + `search_phonetic` |
 | Tag (نشان) | Empty, or 1 to 4 characters: English capital letters A to Z and `.`, at least one letter; lower-case letters are made capital (PRD 10.2) | Urdu letters, digits, spaces, any other sign | `TEXT` `tag` (null), added to `search_en` and `search_phonetic` |
@@ -287,7 +288,7 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 
 | # | Rule |
 |---|---|
-| F27 | Keyboard behaviour follows PRD Sections 7.2 and 7.3 exactly. Forms, pickers and menus get it from `shared/keyboard`. Grids get it from `shared/grid`, which configures AG Grid (cell navigation, Enter skipping read-only calculated cells but stopping on editable cells the app filled, F2 not starting edit, Esc order) to match. Screens only declare their fields, order and which cells are editable; they MUST NOT write their own navigation key handlers. |
+| F27 | Keyboard behaviour follows PRD Sections 7.2 and 7.3 exactly. `Backspace` and `Delete` only delete and never leave a screen (PRD FR-7.91). Forms, pickers and menus get it from `shared/keyboard`. Grids get it from `shared/grid`, which configures AG Grid (cell navigation, Enter skipping read-only calculated cells but stopping on editable cells the app filled, F2 not starting edit, Esc order) to match. Screens only declare their fields, order and which cells are editable; they MUST NOT write their own navigation key handlers. |
 | F28 | Every interactive element is reachable by keyboard and has a visible focus outline |
 | F29 | Every shortcut is registered in one place (`shared/keyboard/shortcuts.ts`) and shown on its button |
 | F30 | Each screen has a test that completes its main task with the keyboard only |
@@ -316,7 +317,7 @@ The model is the brain, but a stranger to our rules. It may call our tools and w
 | F38 | Names are shown only through `displayName(record, language)`, which picks `name_ur` or `name_en` and adds the tag after it ("عاشق ظفر K"). MUST NOT read `name_ur` or `name_en` directly in a component. Prints pass the print language. |
 | F39 | Unsaved entry data lives in the screen's store or form state, never only inside a grid, so a language switch (which re-creates grids) loses nothing. Each entry screen has a test that switches language in the middle of an entry. |
 | F40 | Every account field uses `AccountPicker`, which shows `PartyCard`. MUST NOT build a screen's own party lookup. |
-| F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The پختہ کھاتہ name field shows one merged list (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
+| F41 | Every Urdu text field uses `RomanUrduInput`; pickers and search boxes never do (they search raw text, PRD FR-7.22). The buyer picker of a بکری line lists چکتا buyers beside ordinary buyers, each marked (PRD FR-7.29). Every pair of name fields uses `NamePair`, which fills the other script and stops filling once the user edits it (PRD FR-7.24). |
 | F42 | Every calculated amount on screen has `CalcInfo`, which shows the backend's `working` (B30). The frontend never builds a working itself. |
 | F43 | A value the app fills is put into the visible field like a typed value, never into a hidden field (NFR-USE-27). Rate fields are never filled from history or hints: the last rate is shown only as placeholder text (PRD FR-7.53). Copying the seller rate to the buyer rate, `Ctrl+D`, restoring a draft, undo and opening an edit are not hints and are allowed. |
 | F44 | Entries that do the same kind of job share one screen with a type list at the top (PRD FR-7.67), for example the خرچہ screen for دکان خرچہ and ذاتی خرچہ. Changing the type keeps the shared fields (date, amount, narration) in form state and clears the rest. MUST NOT build a second screen for a type that belongs on an existing one. Each type still calls its own service function and posting (B3), and its preview comes from the backend (B5, PRD FR-16.8). |
@@ -380,6 +381,8 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
 | E2E-47 to E2E-63 (ask the app: figures, the check from two places, which one, change refused, privacy, limit, offline, wrong tool calls, follow-up, estimates, references, the calculator, the same question in other words, advice), with recorded model transcripts and no network | `backend/crates/assistant/tests/golden_questions.rs` | Every commit |
 | The prompt files: size, catalogue, glossary, words, the 15 examples, schemas, word for word (`D6-system-prompt.md` P1 to P7) | `backend/crates/assistant/tests/prompt.rs` | Every commit |
+| E2E-64 to E2E-68 (D8: the sale line figures of image 1, paid on the spot, old data, party ledgers, a change of buyer) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-69 (no Urdu digits in the Urdu PDFs of R1, R5 and R35) | Mac phase: the PDFs of plan 63, with their text extracted | Before every release |
 | E2E-59 and E2E-61 numbers (the estimator and the calculator) | `backend/crates/domain/tests/figures_forecast.rs` | Every commit |
 | NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
@@ -478,3 +481,4 @@ A change is done only when every box is ticked:
 | 1.18 | 05-11-2026 | Approved by Umar (PRD v1.26): a balance estimate in M14. |
 | 1.19 | 06-11-2026 | Approved by Umar (NFR v1.15): `MAX_PREFIX_TOKENS` is 11,500 (Q9). |
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
+| 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |

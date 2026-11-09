@@ -34,7 +34,7 @@ All requirements live in `docs/`. These six files are final for build.
 |---|---|
 | Any money: commission, charges, rounding, splits, journal, matching | The money-calculations agent, PRD 22 and 6, Code Standards 3 |
 | بکری screen or service | PRD 12, 11 and 4.4 to 4.5; Architecture 7, 9 and 12 |
-| وصولی, ادائیگی, پیشگی, پختہ کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
+| وصولی, ادائیگی, پیشگی, چکتا کھاتہ | PRD 15 and 13; Architecture 11; agent Section 8 |
 | Partners and the income split | PRD 17; Architecture 10 |
 | Expenses (one خرچہ screen), partner money taken and returned, ادھار رقم, الگ کھاتہ | PRD 16.2, 16.3, 16.5 and 16.6; FR-7.67; agent Section 8.2b |
 | Market trips (خریداری), gardens, fruit taken and partner capital | PRD 12.10, 12.11, 16.7 and 17.4; agent Sections 5.4 and 5.5 |
@@ -126,7 +126,7 @@ Build order for the MVP (each step ends green before the next starts):
 3. Database: first migration from Architecture Section 15. Seed accounts from PRD FR-10.4.
 4. Masters, accounts, search index, party card, short codes, names in two scripts.
 5. Commission rules, بکری preview and save, journal, partner split. Golden tests E2E-1 to E2E-5 pass.
-6. Vouchers and matching, پختہ کھاتہ, later sales, edit and cancel. All golden tests pass.
+6. Vouchers and matching, چکتا کھاتہ, later sales, edit and cancel. All golden tests pass.
 7. Dashboard, reports, analytics, day close.
 8. Backup and restore.
 9. Language switch and smart assistance polish. Windows end-to-end tests E2E-17 and E2E-22 to E2E-27.

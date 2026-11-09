@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.16 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026 and 06-11-2026) |
-| Date | 1 November 2026 |
+| Version | 1.17 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026 and 09-11-2026) |
+| Date | 9 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.16, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.32, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -75,7 +75,7 @@ So 10 years at today's pace is about 30 × 3,650 ≈ 110,000 sale lines. We plan
 |---|---|---|
 | NFR-SCL-1 | Data volume handled with no change in speed targets | 1,200,000 sale lines, 3,500,000 journal lines, 20,000 accounts (codes by type have no upper limit, PRD FR-10.3), 500 items, 20 years of dates |
 | NFR-SCL-2 | Daily volume handled | 500 بکری and 5,000 sale lines in one day |
-| NFR-SCL-3 | Lines in one بکری | Up to 50 lots and 500 sale lines, with no visible lag while typing |
+| NFR-SCL-3 | Lines in one بکری | Up to 50 lots and 1,000 sale lines, with no visible lag while typing (v1.17). NFR-SPD-4 and NFR-SPD-7 hold at that size |
 | NFR-SCL-4 | Database size at NFR-SCL-1 | Under 2 GB on disk; compressed backup under 500 MB |
 | NFR-SCL-5 | Partners | Up to 10 partners, any share split |
 | NFR-SCL-6 | Commission rules | Up to 10,000 rules; finding the winning rule for a line under 1 ms |
@@ -223,7 +223,7 @@ The client's main complaint was poor user experience. These targets make "easy t
 
 | ID | Requirement | Target |
 |---|---|---|
-| NFR-USE-6 | Keystrokes | A sale line (buyer code, qty, rate) takes at most 3 fields to type and 3 `Enter`s. Everything else fills itself. |
+| NFR-USE-6 | Keystrokes | A sale line (buyer code, qty, rate, paid on the spot) takes at most 4 fields to type and 4 `Enter`s when the line may take credit. For a buyer who must pay in full the paid cell cannot be typed in, so 3 fields and 3 `Enter`s (v1.17). Everything else fills itself. |
 | NFR-USE-7 | Mouse not needed | Every task in the PRD can be done with keyboard only (arrows, Enter, Esc, F-keys) |
 | NFR-USE-8 | Mouse also fine | Every task can also be done with mouse only. Keys are never the only way. |
 | NFR-USE-9 | Clicks to common tasks | New بکری, وصولی, ادائیگی, پیشگی, خرچہ: 1 click or 1 key from anywhere (PRD Section 7.3: `Alt+B`, `Alt+V`, `Alt+A`, `Alt+P`, `Alt+K`) |
@@ -292,7 +292,7 @@ Everyday example of what we avoid: Google may translate "Save and New" as "مح�
 | NFR-URD-11 | Line height for Nastaliq at least 1.8, so tall letters are not cut off in grid rows and printed tables |
 | NFR-URD-12 | In Urdu the whole app is right-to-left: menus, grids, forms, dialogs, charts, prints. In English all of them are left-to-right (PRD FR-7.31). |
 | NFR-URD-13 | Mixed text never jumbles: numbers, codes, truck numbers, phone numbers and Latin names inside Urdu text keep their order. Example: "(کیلا 16 @ 900)" always reads correctly, unlike the old report's "(575 . 1 کیلا)". |
-| NFR-URD-14 | Digits: English digits (0-9) by default. Urdu digits (۰-۹) available as a setting for prints. |
+| NFR-URD-14 | Digits: 0 to 9 only, on every screen, print and PDF, in both languages, with grouping: 2024, 10,000, 06-11-2026. Urdu digits (۰ to ۹) are never used, and no setting offers them (v1.17). |
 | NFR-URD-15 | Amounts in words are grammatically correct Urdu, for every whole-rupee amount from 0 up to the largest allowed amount, 10,00,00,00,000 (دس ارب). Example: 19,316 = "انیس ہزار تین سو سولہ روپے"; 1,00,000 = "ایک لاکھ روپے". |
 | NFR-URD-16 | Dates print as DD-MM-YYYY. Month names in the print language (جنوری، فروری ... or January, February ...). |
 
@@ -411,3 +411,4 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.14 | 04-11-2026 | PRD v1.24, approved by Umar: the first-run screen offers to bring back the data from a copy (NFR-INS-2); a move to a new computer restores from that screen and passes the backup and tamper checks (NFR-INS-6); the chain key travels inside the encrypted copy (NFR-SEC-6); restore on a new computer is one of the commands allowed before sign-in, only while no Owner exists (NFR-SEC-4). |
 | 1.15 | 06-11-2026 | Approved by Umar: the fixed part of an assistant request may be 11,500 tokens (NFR-AI-5), measured 11,494 with D6 prompt v1.5. |
 | 1.16 | 06-11-2026 | Approved by Umar (PRD v1.29): the fixed part of an assistant request may be 11,600 tokens (NFR-AI-5), for the item group filter. |
+| 1.17 | 09-11-2026 | PRD v1.32, approved by Umar through D8 (his demo feedback of 08-11-2026): 1,000 sale lines in one بکری (NFR-SCL-3); 4 fields and 4 `Enter`s when a line may take credit (NFR-USE-6); digits 0 to 9 only (NFR-URD-14). |

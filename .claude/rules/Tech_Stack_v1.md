@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.8 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026 and 01-11-2026) |
-| Date | 1 November 2026 |
+| Version | 1.9 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 01-11-2026 and 09-11-2026) |
+| Date | 9 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.16 (the master), NFR v1.8 |
+| Depends on | PRD v1.32 (the master), NFR v1.17 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -137,7 +137,7 @@ Professional Urdu, a complete English app, and typing names in two scripts need 
 | Labels, headings, menus, printed bills | **Gulzar** (Nastaliq) | SIL Open Font License | Modern, readable Nastaliq, designed for screens |
 | Fallback Nastaliq | Noto Nastaliq Urdu | SIL Open Font License | Very complete character coverage |
 | Dense grids (optional, user setting) | Noto Naskh Arabic | SIL Open Font License | Shorter line height, more rows fit on screen |
-| Numbers, Latin text and the whole English app | Inter, with tabular figures | SIL Open Font License | Digits all the same width, so money columns line up. When the optional Urdu digits (۰-۹) are used on prints, Noto Naskh Arabic supplies them. |
+| Numbers, Latin text and the whole English app | Inter, with tabular figures | SIL Open Font License | Digits all the same width, so money columns line up. |
 
 Fonts are loaded from the app's own files with `font-display: block`, so text never flashes in a wrong font.
 
@@ -202,7 +202,7 @@ Candidates from the three sources are merged in that order (learned pairs first)
 - Amount in Urdu words: our own Rust module `urdu_words` in the `core` crate, using Pakistani grouping (ہزار، لاکھ، کروڑ، ارب). Covers every whole-rupee amount from 0 to the largest allowed amount, 10,00,00,00,000 (دس ارب), tested with known samples and boundaries. Example: 1,316,040 → "تیرہ لاکھ سولہ ہزار چالیس روپے".
 - Amount in English words: our own module `english_words` in the `core` crate, with two groupings (thousand, million, billion; or thousand, lakh, crore), chosen by the number grouping setting (PRD FR-19.7). Same range and the same kind of tests. Example: 19,316 → "Nineteen thousand three hundred sixteen rupees only".
 - Dates: stored as `YYYY-MM-DD`, shown as `DD-MM-YYYY` in both languages. Month names come from Fluent in the current or print language.
-- Digits are English digits (0-9) in both languages. Optional Urdu digits (۰-۹) for Urdu prints only, by setting.
+- Digits are 0 to 9 in both languages, on screens and on every print and PDF. Urdu digits (۰ to ۹) are never used (PRD v1.32).
 
 ### 4.6 Machine translation (drafts only)
 
@@ -280,7 +280,7 @@ Each business module has **one name**, used unchanged in the frontend folder, th
 | masters | 10 | `features/masters` | `domain/src/masters`, `services/src/masters`, `db/src/masters` | `masters_` | `masters.ftl` |
 | rules | 11 | `features/rules` | `domain/src/rules`, ... | `rules_` | `rules.ftl` |
 | bikri | 12 | `features/bikri` | `domain/src/bikri`, ... | `bikri_` | `bikri.ftl` |
-| pukhta_khata | 13 | `features/pukhta_khata` | ... | `pukhta_khata_` | `pukhta_khata.ftl` |
+| party_ledgers | 12.12 | `features/party_ledgers` | `services/src/party_ledgers`, `db/src/party_ledgers` | `party_ledgers_` | `party_ledgers.ftl` |
 | vouchers | 15, 16 | `features/vouchers` | ... | `vouchers_` | `vouchers.ftl` |
 | cashbook | 16 | `features/cashbook` | ... | `cashbook_` | `cashbook.ftl` |
 | partners | 17 | `features/partners` | ... | `partners_` | `partners.ftl` |
@@ -418,7 +418,7 @@ Dependency direction (never the other way): `app` → `services` → `domain` + 
 
 | Thing | Convention | Example |
 |---|---|---|
-| Module names | lower snake_case, English transliteration, same everywhere | `bikri`, `pukhta_khata` |
+| Module names | lower snake_case, English transliteration, same everywhere | `bikri`, `party_ledgers` |
 | Rust files and modules | snake_case | `partner_split.rs` |
 | Rust types, enums, traits | PascalCase | `BikriLot`, `ChargeMethod` |
 | Rust functions and variables | snake_case, verb first for functions | `calculate_lot_net()`, `seller_comm` |
@@ -439,7 +439,7 @@ Dependency direction (never the other way): `app` → `services` → `domain` + 
 | Git branches | `feature/<module>-<short>`, `fix/<module>-<short>` | `feature/bikri-lots-grid` |
 | Commits | Conventional Commits | `feat(bikri): add live summary` |
 
-Urdu words in code: we use simple English transliteration for business terms that have no exact English word (`bikri`, `laga`, `munshiana`, `pukhta_khata`, `peshgi`), and English for general terms (`seller`, `buyer`, `commission`, `freight`). A table of these lives in `docs/` and the glossary.
+Urdu words in code: we use simple English transliteration for business terms that have no exact English word (`bikri`, `laga`, `munshiana`, `chukta`, `peshgi`), and English for general terms (`seller`, `buyer`, `commission`, `freight`). A table of these lives in `docs/` and the glossary.
 
 ---
 
@@ -447,7 +447,7 @@ Urdu words in code: we use simple English transliteration for business terms tha
 
 | Topic | Choice |
 |---|---|
-| Developer machine | Umar's Mac works for writing code and running the app. Important: on a Mac, Tauri uses Apple's WebKit, not Windows' WebView2, so Urdu rendering and printing must be checked on Windows. Use a Windows PC or a Windows virtual machine for UI checks. |
+| Developer machine | Umar's Mac works for writing code and running the app. Important: on a Mac, Tauri uses Apple's WebKit, not Windows' WebView2, so Urdu rendering and printing must be checked on Windows. Use a Windows PC or a Windows virtual machine for UI checks. In the Mac phase, Print and PDF go through the native print dialog of the web view, with the same templates (PRD FR-19.3). |
 | Windows builds | GitHub Actions on a Windows runner builds the installer (MSI and NSIS). Building a Windows installer directly on a Mac is not reliable. |
 | Tests in CI | Every push: Rust format, clippy, all Rust tests (including golden money tests), frontend lint, type check, component tests. Before release: Windows end-to-end tests and speed tests. |
 | WebView2 settings | On start, through `with_webview`: browser accelerator keys off (`AreBrowserAcceleratorKeysEnabled = false`), browser zoom off (`IsZoomControlEnabled = false`), default context menu off. Our own keys from PRD Section 7.3 replace them. |
@@ -473,3 +473,4 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.6 | 27-10-2026 | Approved by Umar (PRD v1.8): codes by type, short code = running number, empty-text search for a click (4.7). |
 | 1.7 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers centred under their column heading (4.3). |
 | 1.8 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (4.8), the `reqwest` client for its one OpenRouter call (2), the module and crate `assistant` (5.2, 5.4). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint of the model, with no fallback (4.8). Further amended 02-11-2026 (Umar): the instructions, tools and answer schema are four fixed files copied from `D6-system-prompt.md`, measured at 7,584 tokens; advice; `where` and sort on reports and views; typed result values; the partner pause (4.8). |
+| 1.9 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the module `pukhta_khata` is out and `party_ledgers` is in (5.2, 6); digits 0 to 9 only (4.1, 4.5); the Mac print path (7). |

@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.9, 3 November 2026 (what-if estimates scale the same-pace month by a factor in basis points with one `apply_bps`, and an estimate to the end of the year adds the books' months so far to the months left, Section 9.1; PRD v1.20 FR-7.86. Earlier, version 1.8, 2 November 2026: the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.10, 9 November 2026 (PRD v1.32, approved by Umar through D8: money paid on the spot in the cash part and in matching, Sections 7 and 8.1; چکتا کھاتہ in place of the old one-time accounts). Earlier, version 1.9, 3 November 2026 (what-if estimates scale the same-pace month by a factor in basis points with one `apply_bps`, and an estimate to the end of the year adds the books' months so far to the months left, Section 9.1; PRD v1.20 FR-7.86. Earlier, version 1.8, 2 November 2026: the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -16,7 +16,7 @@ Work slowly and carefully. Prove every number. When in doubt, stop and ask rathe
 
 Source documents (read the relevant parts before you start; the PRD is the master and wins any conflict):
 
-- `docs/PRD_Mandi_Software_v1.md` (v1.16): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 7.7 (the question panel's calculator and estimates: FR-7.75, FR-7.86), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 13 (پختہ کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
+- `docs/PRD_Mandi_Software_v1.md` (v1.32): Sections 4 (worked day), 6 (posting events and connections), 7.6 (smart assistance that touches money: FR-7.43 working, FR-7.48 simple sums, FR-7.53 rate hint, FR-7.58 and FR-7.59 full-balance buttons), 7.7 (the question panel's calculator and estimates: FR-7.75, FR-7.86), 11 (rules and allowed charges), 12.5 to 12.9 (بکری maths, posting, later sales, edits), 12.10 and 12.11 (market trips and gardens), 12.12 (party ledgers), 13 (چکتا کھاتہ), 15 (vouchers and matching), 16.7 (fruit taken), 17 (partners), 18 (analytics), 19.7 (amounts in words), 22 (formulas C1 to C27), 23 (edge cases), 27 (end-to-end tests)
 - `docs/Code_Standards_v1.md`: Section 3 (money rules M1 to M14), Section 4 (validation), Section 5.3 (database), Section 5.5 (B29 hints, B30 working records), Section 9 (tests)
 - `docs/Architecture_v1.md`: Diagrams 7 to 12 and the data dictionary in Section 15
 
@@ -284,7 +284,7 @@ These amounts belong to some partners only. They never go through `partner_share
 | Garden closing | `split_by_bps(garden balance, garden shares)` (C26); a بنام balance is split as positive and negated (C11) | Garden account بنام, each partner's 0604 جمع (the reverse for a بنام balance). The garden account ends at 0. |
 | Fruit for one partner | none | His 0604 بنام value |
 | Fruit for the shop's guests | `split_by_qty(value, [1 for each active partner])` (C27), partners in creation order, so the leftover goes to the first created | Each partner's 0604 بنام his part |
-| Fruit source | none | The lot's seller (or پختہ person, or garden), or the other agent, جمع value. No commission. A payable posting; never adjusts an advance. |
+| Fruit source | none | The lot's seller (or garden), or the other agent, جمع value. No commission. A payable posting; never adjusts an advance. |
 
 Rules:
 
@@ -370,7 +370,7 @@ PRD 4.4 (بکری 1):
 | Shared income | 1,764 + 1,764 + 400 + 20 | 3,948 |
 | Split | Section 5.1 | 1,580 / 1,184 / 1,184 |
 
-PRD 4.5 (پختہ کھاتہ buyer, charged like any buyer): value 12,000; seller comm 720; buyer comm 12,000 × 6% = 720; لاگا 10 × 8 = 80; buyer total 12,800; deductions 1,000 + 720 + 50 + 50 + 0 + 0 + 20 = 1,840; net 10,160; shared income 720 + 720 + 80 + 20 = 1,540; split 616 / 462 / 462.
+PRD 4.5 (چکتا buyer, charged like any buyer, pays all of it on the spot): value 12,000; seller comm 720; buyer comm 12,000 × 6% = 720; لاگا 10 × 8 = 80; buyer total 12,800; deductions 1,000 + 720 + 50 + 50 + 0 + 0 + 20 = 1,840; net 10,160; shared income 720 + 720 + 80 + 20 = 1,540; split 616 / 462 / 462.
 
 PRD E2E-13 (edit اکرم's rate to 610): line 12,200; buyer comm 12,200 × 6% = 732; buyer total 12,200 + 732 + 160 = 13,092; seller comm 732 + 1,044 = 1,776; deductions 10,096; net 19,504; shared income 1,776 + 1,776 + 400 + 20 = 3,972; split 1,590 / 1,191 / 1,191.
 
@@ -382,9 +382,10 @@ PRD E2E-16 and 16b (partial sale, then later sale): first posting 45 sold, خا�
 
 ## 7. Journal (PRD FR-12.9, FR-6.2, FR-6.3)
 
-- One posting = one journal entry. A بکری posting has a sale part and a cash part (نقد lines; settlement lines for نقدی sale lines). Build the whole entry in `domain::ledger`.
+- One posting = one journal entry. A بکری posting has a sale part and a cash part (نقد lines; settlement lines for money paid on the spot). Build the whole entry in `domain::ledger`.
 - Each line has `dr` or `cr`, never both, never negative. A negative amount is written on the opposite side.
-- A نقدی sale line debits the line's own buyer account (named buyer, نقدی منڈی, or پختہ کھاتہ with the person key), then the cash part debits روکڑ and credits that same account.
+- Every sale line debits its own buyer account for its buyer total (named buyer, نقدی منڈی, or چکتا کھاتہ with the person key). For each line with paid above 0, the cash part debits روکڑ and credits that same account for paid (PRD FR-12.44). A line paid in full posts exactly what a نقدی line posted before v1.32; a line paid 0 posts exactly what an ادھاری line posted.
+- Paid is whole rupees, from 0 to the buyer total; above it is `ERR_PAID_EXCEEDS_TOTAL`. A buyer who may not take credit, نقدی منڈی and a چکتا buyer always pay in full: the backend sets paid = buyer total. Left on account = buyer total − paid, worked out by the backend only. The credit limit check uses what is left. Example: 48,100, paid 10,000: روکڑ بنام 10,000, انس جمع 10,000, left 38,100.
 - Check Σ dr == Σ cr before returning. If not, return `LedgerError::Unbalanced { dr, cr }`. This is a bug signal: log it with full detail.
 - Writing: insert the entry as `draft`, insert its lines, then set it to `posted`; the database trigger checks the balance on that update.
 - Never edit or delete posted lines. An edit = reversal entry (same date, every line's sides swapped) + new entry. A cancel = reversal entries only.
@@ -398,7 +399,7 @@ PRD E2E-16 and 16b (partial sale, then later sale): first posting 45 sold, خا�
 ### 8.1 Bills and receipts (oldest first)
 
 ```
-key = account_id, plus pukhta_person_key when the account is a پختہ کھاتہ
+key = account_id, plus chukta_person_key on the account 0030
 bills    = debit journal lines on that key (sale line totals, opening debits, جنرل debits, cash lent by ادائیگی, PRD FR-15.11), oldest first by (entry_date, entry id, line no)
 credits  = credit journal lines on that key (receipts, جنرل credits, reversal credits)
 for each credit, oldest first:
@@ -408,6 +409,8 @@ for each credit, oldest first:
     any remaining = unmatched credit on that key, used first against the next bill
 assert Σ allocations of a credit + its unmatched part == credit amount
 ```
+
+Money paid on the spot (PRD FR-12.44, v1.32): the paid credit line settles that line's own bill first, written as a `bill_allocation` at save, as a نقدی line was pinned before v1.32. What is left of the bill is a normal open bill, matched oldest first against the buyer's unmatched credits. Example: ہارون has 10,000 جمع and buys 125,060 paying 0: his credit settles 10,000 of the new bill, and 115,060 stays open.
 
 Example: bills 12,880 (09-10) and 5,000 (10-10); receipt 15,000 → 12,880 to the first, 2,120 to the second; second still open 2,880.
 
@@ -497,7 +500,7 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 4. Entry + reversal = 0 for every account.
 5. `parse_rupees(format_paisa(x)) == x` for all valid whole-rupee `x` (with grouping commas).
 6. Percent charge ≤ base for bps ≤ 10,000; the charge never decreases when the base grows.
-7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one پختہ person never pays another's bill).
+7. Matching: Σ allocations + unmatched == credit; no bill allocated beyond its open amount; keys never mix (one چکتا person never pays another's bill).
 8. For any random sequence of postings (sales, later sales, edits, cancels, expenses, جنرل on income accounts): Σ partner share rows = income − expenses (head 05).
 9. Every stored money value is a multiple of 100 paisa.
 10. Ventures (v1.6): for any garden or trip and any sequence of its entries, Σ parts of each payment = its amount; Σ shop parts = its روکڑ جمع; a closed garden's account is 0; once a garden or a trip is closed, Σ over its partners of (money credited to 0604 − shop parts − pocket parts) = its result. Guest fruit parts (C27) add up to the value.
@@ -508,7 +511,7 @@ Every row in the tables of Sections 3, 4, 5 and 6.5 is a unit test.
 
 ### 11.4 Edge cases
 
-Decimals rejected; zero quantities rejected; largest allowed values do not overflow; overflow beyond returns an error; half-rupee cases round up; per-lot charges appear once and never in a later sale; lot net negative is allowed and flagged; shares not totalling 100% blocked; rule changed after save does not change stored values, including unchanged lines in an edit; two پختہ persons never mix.
+Decimals rejected; zero quantities rejected; largest allowed values do not overflow; overflow beyond returns an error; half-rupee cases round up; per-lot charges appear once and never in a later sale; lot net negative is allowed and flagged; shares not totalling 100% blocked; rule changed after save does not change stored values, including unchanged lines in an edit; two چکتا persons never mix.
 
 ---
 
@@ -549,7 +552,7 @@ rg -n "unwrap\(\)|expect\(" backend/crates/core/src backend/crates/domain/src
 - [ ] Preview and save share the same function
 - [ ] Snapshot of method, value, rule ID and amount stored; unchanged lines keep it in edits
 - [ ] Partner share rows written for every posting touching income or shop expense accounts
-- [ ] Matching keyed by account and پختہ person; undo by `is_active`, never delete
+- [ ] Matching keyed by account and چکتا person; undo by `is_active`, never delete
 - [ ] Reports and analytics read stored values only
 - [ ] Unit, property and golden tests added or still passing
 - [ ] Forbidden-pattern search clean

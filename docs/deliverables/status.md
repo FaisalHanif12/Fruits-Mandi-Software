@@ -4,6 +4,7 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Current
 
+- **D8 (client demo feedback) is BUILDING (09-11-2026).** Branch `feature/d8-demo-feedback`. Plans 60 to 70.
 - **D7 (real-time accuracy and speed of the assistant) is PART-BUILT and PAUSED (08-11-2026). Waiting for Umar's "continue".** Branch `feature/assistant-realtime`. Plan `docs/plans/59-assistant-realtime-accuracy.md`; the hand-over is its Section 12. All agents are stopped.
   - Built and committed: F1, F1b and F2 (wrong figures, dropped filters, same-name asking, the own-number check), the D7 bank of 455 questions, and the offline runner. Money review 15: PASS WITH MINOR.
   - Offline: right with no model call 90 of 455 (19.8%, target 60%); right with no call or one at most 51.6% (target 85%); 1 left (D331, a missing button, not a wrong figure).
