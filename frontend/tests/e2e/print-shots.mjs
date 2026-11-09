@@ -63,7 +63,6 @@ for (const language of ['ur', 'en']) {
     '2',
   ]);
 }
-CASES.push(['seller-bill-ur-a4-urdu-digits', 'doc=seller_bill&language=ur&digits']);
 CASES.push(['seller-bill-en-a4-cancelled', 'doc=seller_bill&language=en&cancelled']);
 CASES.push(['fifteen-sheets-ur-a5', 'doc=buyer_slips&language=ur&long=15']);
 

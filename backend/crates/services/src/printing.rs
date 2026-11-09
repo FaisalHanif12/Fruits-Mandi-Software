@@ -68,7 +68,7 @@ pub fn get_settings(ctx: &Context, actor: &Actor) -> Result<PrintingSettings, Se
     ctx.db.read(|conn| load(conn, actor.user_id))
 }
 
-/// Saves the Printing settings. The paper, printer, copies and Urdu digits belong to this
+/// Saves the Printing settings. The paper, printer and copies belong to this
 /// computer; the list "print after save" belongs to the user (PRD FR-7.57). A change writes an
 /// audit row with the old and the new value in the same transaction (Code Standards S7); asking
 /// for the values it already has writes nothing.
@@ -95,7 +95,6 @@ pub fn set_settings(
         paper_collection_list: input.paper_collection_list,
         printer,
         copies,
-        urdu_digits: input.urdu_digits,
         print_after_save: printing::unique_docs(&input.print_after_save),
     };
     ctx.db.write(|tx| {

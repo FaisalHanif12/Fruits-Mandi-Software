@@ -48,6 +48,5 @@
     "amount": "0",
     "label_id": "print-collection-total",
     "role": "total"
-  },
-  "urdu_digits": false
+  }
 }

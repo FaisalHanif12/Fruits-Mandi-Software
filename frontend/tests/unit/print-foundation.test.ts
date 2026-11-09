@@ -31,34 +31,34 @@ describe('the page footer text', () => {
   const pop = String.fromCodePoint(0x2069);
 
   it('is the print time, then "Page" and the two counters', () => {
-    expect(footerContent(words, '10-10-2026 17:40', false)).toBe(
+    expect(footerContent(words, '10-10-2026 17:40')).toBe(
       `"Printed ${isolate}10-10-2026 17:40${pop} · Page " counter(page) " of " counter(pages)`,
     );
   });
 
   it('keeps the print time left to right inside an Urdu line, where a margin box has no <bdi>', () => {
     const urdu = { printed: 'پرنٹ کا وقت', page: 'صفحہ', of: 'از' };
-    const text = footerContent(urdu, '10-10-2026 17:40', false);
+    const text = footerContent(urdu, '10-10-2026 17:40');
     expect(text).toContain(`${isolate}10-10-2026 17:40${pop}`);
     expect(text).toContain('"پرنٹ کا وقت');
     expect(text).toContain('صفحہ ');
   });
 
-  it('uses the Urdu digit style for the page counters when the Urdu digits setting is on', () => {
-    expect(footerContent(words, '۱۰-۱۰-۲۰۲۶', true)).toContain(
-      'counter(page, persian) " of " counter(pages, persian)',
-    );
+  it('always counts the pages with the digits 0-9: no Urdu digit style exists (Umar 09-11-2026)', () => {
+    const text = footerContent(words, '10-10-2026 17:40');
+    expect(text).toContain('counter(page) " of " counter(pages)');
+    expect(text).not.toContain('persian');
   });
 
   it('is only the print time on the 80 mm roll, which is one tall page', () => {
-    expect(footerContent(words, '10-10-2026 17:40', false, false)).toBe(
+    expect(footerContent(words, '10-10-2026 17:40', false)).toBe(
       `"Printed ${isolate}10-10-2026 17:40${pop}"`,
     );
   });
 
   it('drops the isolation marks Fluent puts round words, and writes a string safe for CSS', () => {
     const marked = `${isolate}Page${pop}`;
-    expect(footerContent({ ...words, page: marked }, '10-10-2026 17:40', false)).not.toContain(
+    expect(footerContent({ ...words, page: marked }, '10-10-2026 17:40')).not.toContain(
       `${isolate}Page`,
     );
     expect(cssString('say "hi"\\now')).toBe('"say \\"hi\\"\\\\now"');
@@ -142,7 +142,8 @@ describe('the print stylesheet', () => {
     expect(PRINT_CSS.match(/font-family: var\(--font-digits\), var\(--font-text\)/g)).toHaveLength(
       4,
     );
-    expect(PRINT_CSS).toContain('var(--font-urdu-digits)');
+    // No Urdu digit font and no Urdu digit style: every number is 0-9 (PRD FR-7.32, Umar 09-11-2026).
+    expect(PRINT_CSS).not.toMatch(/font-urdu-digits|data-digits/);
   });
 
   it('has a font face of the ten digits only, made from Inter, so a digit never takes an Urdu shape', () => {

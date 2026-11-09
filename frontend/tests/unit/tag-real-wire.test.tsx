@@ -162,7 +162,6 @@ describe("the report print wrappers send the backend's requests and read its ans
       expect(frame.header.contacts).toHaveLength(answer.header.contacts.length);
       expect(frame.header.contacts.length).toBeGreaterThan(1);
       expect(frame.header.trade_mark).toBe('RH');
-      expect(frame.urdu_digits).toBe(false);
       expect(frame.language).toBe(request.language);
     }
   });
@@ -177,7 +176,6 @@ describe("the report print wrappers send the backend's requests and read its ans
       const data = await reportsCollectionPrintData(request);
       expect(call).toHaveBeenLastCalledWith('reports_collection_print_data', { input: request });
       expect(data.doc).toBe('collection_list');
-      expect(data.urdu_digits).toBe(false);
     }
     expect(real.COLLECTION_EMPTY.groups).toEqual([]);
     expect(real.COLLECTION_EMPTY.total.amount).toBe('0');

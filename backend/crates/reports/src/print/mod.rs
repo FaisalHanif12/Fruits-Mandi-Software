@@ -245,9 +245,6 @@ pub struct PrintData {
     pub dir: TextDir,
     /// The paper class, from the Printing settings. The template uses the matching `@page`.
     pub paper: Paper,
-    /// True when Urdu digits are used on this print (an Urdu print with the setting on), so the
-    /// template puts the Naskh font first for numbers (Tech Stack 4.1).
-    pub urdu_digits: bool,
     /// The header: the firm, its contacts and trade mark, the title and the facts (number, date,
     /// bill date when it differs, truck). Plan 17e moved these here from the top level
     /// (`firm`, `title_id`, `facts`).

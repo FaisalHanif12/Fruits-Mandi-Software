@@ -67,16 +67,15 @@ export function shapeOf(value: unknown): unknown {
  * The real print data of the collection list (plan 17e): the backend's own `insta` snapshots of
  * `mandi-reports` (`collection_print__snapshot_*.snap`), copied here, never edited. `golden` is the
  * PRD worked day (Akram 2,880 and Arshad 18,684, total 21,564), `grouped_with_contacts_...` has two
- * collectors and cities, the contacts, the trade mark and the filters in the header facts, and
- * `golden_urdu_with_urdu_digits` is the ONE real answer with the Urdu digits setting on.
+ * collectors and cities, the contacts, the trade mark and the filters in the header facts. (The real
+ * answer made with the removed Urdu digits setting on was deleted with the setting, plan 63.)
  */
 export const REAL_COLLECTION_SNAPSHOTS = [
-  { name: 'golden_urdu', language: 'ur', urduDigits: false },
-  { name: 'golden_english', language: 'en', urduDigits: false },
-  { name: 'grouped_english', language: 'en', urduDigits: false },
-  { name: 'grouped_with_contacts_trade_mark_and_filters_urdu', language: 'ur', urduDigits: false },
-  { name: 'golden_urdu_with_urdu_digits', language: 'ur', urduDigits: true },
-] as const satisfies readonly { name: string; language: Language; urduDigits: boolean }[];
+  { name: 'golden_urdu', language: 'ur' },
+  { name: 'golden_english', language: 'en' },
+  { name: 'grouped_english', language: 'en' },
+  { name: 'grouped_with_contacts_trade_mark_and_filters_urdu', language: 'ur' },
+] as const satisfies readonly { name: string; language: Language }[];
 
 export type RealCollectionSnapshot = (typeof REAL_COLLECTION_SNAPSHOTS)[number];
 

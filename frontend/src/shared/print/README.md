@@ -16,7 +16,7 @@ summing in this folder or in `features/bikri/print/`.
 | File                                                         | What it is                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `print.css`                                                  | All print styles. ONE literal `@page` rule per paper class (`a4`, `a5`, `r80`), with the paper size, the margins and the page footer. Table header repeats, rows never split, numbers on the physical right edge, a new sheet for each party                            |
-| `PrintRoot.tsx`                                              | The root of EVERY print (plan 17e): print language (`lang`, `dir`), paper class, digit style, the footer in the hidden window. Gives the children a Fluent bundle of the PRINT language. Given the frame the backend built (`language`, `dir`, `urdu_digits`, `footer`) |
+| `PrintRoot.tsx`                                              | The root of EVERY print (plan 17e): print language (`lang`, `dir`), paper class, the footer in the hidden window. Gives the children a Fluent bundle of the PRINT language. Given the frame the backend built (`language`, `dir`, `footer`) |
 | `PrintDocument.tsx`                                          | The sheets of a بکری or a voucher inside a `PrintRoot`                                                                                                                                                                                                                  |
 | `PrintProvider.tsx`                                          | A Fluent bundle of the print language that leaves the app language alone (PRD FR-7.36)                                                                                                                                                                                  |
 | `PrintSheet.tsx`                                             | One party: header, who it is for, goods, amounts, how he pays, amount in words                                                                                                                                                                                          |
@@ -57,8 +57,8 @@ summing in this folder or in `features/bikri/print/`.
 `pnpm --filter frontend dev`, then `node frontend/tests/e2e/print-shots.mjs`. It writes the PDF and
 the PNG of every document in both languages on A4, A5 and the roll to
 `tests/e2e/output/screenshots/plan14/`, and tells the page counts. The page `#/dev/print?doc=
-seller_bill&language=ur&paper=a4` (dev only) shows one document in the browser; `&digits`,
-`&cancelled`, `&long=15` and `&lines=60` show the other cases.
+seller_bill&language=ur&paper=a4` (dev only) shows one document in the browser; `&cancelled`,
+`&long=15` and `&lines=60` show the other cases.
 
 ## The receipt slip (plan 15)
 
@@ -93,12 +93,13 @@ Printing tab. The data is `reports_voucher_print_data`; the layout still calcula
 
 ## The digits of a print (plan 17e, PRD FR-7.32, NFR-URD-14)
 
-Every number of a print is written with the digits 0-9 in both languages. The Urdu digits (۰-۹) come
-only from the Printing setting, which is OFF by default; the backend then converts amounts, dates,
-serials and counts, but never a phone, a code or a short code. Inside the page the ten ASCII digits are
-Inter first (`--font-digits`, the `Mandi Digits` face of `fonts.css`), so a digit that is not in `<Num>`
-or `<Code>` never takes an Urdu digit shape. `tests/unit/print-digits.test.tsx` walks every template and
-the backend's real answers; it is the ONE place that turns the setting on.
+Every number of a print is written with the digits 0-9 in both languages, grouped (2026, 10,000). There
+is no Urdu digit setting and no Urdu digit style: Umar's decision of 09-11-2026 (plan 60 D1, plan 63)
+removed it. Inside the page the ten ASCII digits are Inter first (`--font-digits`, the `Mandi Digits`
+face of `fonts.css`), so a digit that is not in `<Num>` or `<Code>` never takes an Urdu digit shape.
+`tests/unit/print-digits.test.tsx` walks every template and the backend's real answers, and
+`tests/unit/print-ascii-digits.test.tsx` checks the seller bill, R5 and an R35 slip in Urdu, also when
+an old answer still carries the flag of the removed setting. Amounts in words stay Urdu words.
 
 ## The people of the header (plan 42, PRD Section 21, FR-19.13, v1.12)
 

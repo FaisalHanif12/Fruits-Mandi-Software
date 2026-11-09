@@ -98,8 +98,6 @@ pub struct CollectionPrintData {
     pub dir: TextDir,
     /// The paper class, from the Printing settings (starts as A4).
     pub paper: Paper,
-    /// True when Urdu digits are used on this print.
-    pub urdu_digits: bool,
     /// The shared header (PRD FR-19.13). Its facts are the day, and the collector and the city
     /// when the list is filtered by them.
     pub header: PrintHeader,
@@ -207,7 +205,7 @@ pub fn build_collection(
     }
 
     let language = options.language;
-    let style = NumberStyle::new(language, options.grouping, options.setup.urdu_digits);
+    let style = NumberStyle::new(options.grouping);
     let mut serial: i64 = 0;
     let mut groups = Vec::with_capacity(list.groups.len());
     for group in &list.groups {
@@ -266,7 +264,6 @@ pub fn build_collection(
         language,
         dir: TextDir::of(language),
         paper: options.setup.paper_of(PrintDoc::CollectionList),
-        urdu_digits: style.urdu_digits(),
         header: header(language, &options.firm, TITLE_COLLECTION_LIST, facts),
         footer: footer(style.printed_at(options.now_utc)),
         groups,

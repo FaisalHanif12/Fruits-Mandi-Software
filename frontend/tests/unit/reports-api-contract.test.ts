@@ -396,7 +396,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'title_id',
         'totals',
         'totals_label_id',
-        'urdu_digits',
         'words',
       ]);
       // The firm, its contacts, the trade mark and the print time are not in the print data: the shared

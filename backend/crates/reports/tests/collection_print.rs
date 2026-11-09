@@ -176,13 +176,6 @@ fn snapshot_golden_english() {
 }
 
 #[test]
-fn snapshot_golden_urdu_with_urdu_digits() {
-    let mut set = options(Language::Ur);
-    set.setup.urdu_digits = true;
-    insta::assert_json_snapshot!(build_collection(&golden_list(), &set).unwrap());
-}
-
-#[test]
 fn snapshot_grouped_with_contacts_trade_mark_and_filters_urdu() {
     let mut set = options(Language::Ur);
     set.firm.contacts = vec![
@@ -348,37 +341,22 @@ fn has_urdu_digit(value: &serde_json::Value) -> bool {
 }
 
 #[test]
-fn a_default_urdu_collection_print_has_only_plain_digits_everywhere() {
-    // Amounts, dates, phones, short codes, serials and counts: 0-9 (PRD FR-7.32, NFR-URD-14).
+fn a_collection_print_has_only_plain_digits_everywhere() {
+    // Amounts, dates, phones, short codes, serials and counts: 0-9 in both languages (PRD FR-7.32,
+    // NFR-URD-14). The Urdu digits setting is gone (plan 63), so there is no other case.
     for list in [golden_list(), grouped_list()] {
         for language in [Language::Ur, Language::En] {
             let data = print(&list, language);
-            assert!(!data.urdu_digits);
             let value = serde_json::to_value(&data).unwrap();
             assert!(!has_urdu_digit(&value), "{language:?}: {value}");
         }
     }
-    // The setting on is the one case: then the numbers are Urdu digits, the phones and codes not
-    // (a phone is plain digits and the dash of `03XX-XXXXXXX`).
-    let mut set = options(Language::Ur);
-    set.setup.urdu_digits = true;
-    let on = serde_json::to_value(build_collection(&golden_list(), &set).unwrap()).unwrap();
-    assert!(has_urdu_digit(&on));
-    assert_eq!(on["groups"][0]["rows"][0]["phone"], "0300-1234567");
-    assert_eq!(on["groups"][0]["rows"][0]["code"], "0");
-}
-
-#[test]
-fn urdu_digits_only_on_an_urdu_print_with_the_setting_on() {
-    let mut set = options(Language::Ur);
-    set.setup.urdu_digits = true;
-    let ur = build_collection(&golden_list(), &set).unwrap();
-    assert!(ur.urdu_digits);
-    assert_eq!(ur.total.amount, "۲۱,۵۶۴");
-    set.language = Language::En;
-    let en = build_collection(&golden_list(), &set).unwrap();
-    assert!(!en.urdu_digits);
-    assert_eq!(en.total.amount, "21,564");
+    let ur = print(&golden_list(), Language::Ur);
+    assert_eq!(ur.total.amount, "21,564");
+    let value = serde_json::to_value(&ur).unwrap();
+    assert_eq!(value["groups"][0]["rows"][0]["phone"], "0300-1234567");
+    assert_eq!(value["groups"][0]["rows"][0]["code"], "0");
+    assert!(value.get("urdu_digits").is_none());
 }
 
 // ---- A list that does not add up is not printed (money agent, plan 17e) ----

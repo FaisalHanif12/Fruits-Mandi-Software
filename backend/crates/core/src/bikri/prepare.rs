@@ -4,7 +4,7 @@
 use super::grade::SaleGrade;
 use super::input::*;
 use super::prepared::*;
-use super::{MAX_LOTS, MAX_SALE_LINES};
+use super::{MAX_BLANK_ROWS, MAX_LOTS, MAX_SALE_LINES};
 use crate::dates::BusinessDate;
 use crate::error::{ErrorCode, ErrorValue, FieldError};
 use crate::money::{Paisa, Qty};
@@ -164,6 +164,16 @@ fn typed_line_charge(
     (value, ok)
 }
 
+/// A row with no buyer and no seller rate is a blank row (PRD FR-7.52). Its quantity may be the
+/// quantity the screen filled in, so nothing else in it is read.
+fn is_blank_sale(input: &SaleInput) -> bool {
+    input.buyer_account_id.is_none()
+        && input.pukhta.as_ref().is_none_or(|p| {
+            p.name_ur.trim().is_empty() && p.name_en.trim().is_empty() && p.phone.trim().is_empty()
+        })
+        && is_blank(&input.seller_rate)
+}
+
 fn prepare_sale(
     issues: &mut Vec<FieldError>,
     lot: usize,
@@ -171,10 +181,7 @@ fn prepare_sale(
     input: &SaleInput,
 ) -> PreparedSale {
     let pukhta = pukhta_of(input.pukhta.as_ref());
-    // A row with no buyer and no seller rate is a blank row (PRD FR-7.52). Its quantity may be
-    // the quantity the screen filled in, so nothing else in it is read.
-    let is_blank_row =
-        input.buyer_account_id.is_none() && pukhta.is_empty() && is_blank(&input.seller_rate);
+    let is_blank_row = is_blank_sale(input);
     let mut sale = PreparedSale {
         key: input.key.clone(),
         sale_id: input.sale_id,
@@ -256,11 +263,19 @@ fn prepare_sale(
     sale
 }
 
+/// How many more rows of each kind a draft may take (see [`MAX_SALE_LINES`], [`MAX_BLANK_ROWS`]).
+struct RowBudget {
+    /// Lines that stand: a row with a buyer or a rate.
+    lines: usize,
+    /// Blank rows.
+    blanks: usize,
+}
+
 fn prepare_lot(
     issues: &mut Vec<FieldError>,
     index: usize,
     input: &LotInput,
-    lines_left: &mut usize,
+    budget: &mut RowBudget,
 ) -> PreparedLot {
     let mut ok = true;
     let qty_received = take(
@@ -311,16 +326,26 @@ fn prepare_lot(
 
     let mut sales = Vec::new();
     for (sale_index, sale) in input.sales.iter().enumerate() {
-        if *lines_left == 0 {
+        // The limit counts the lines that stand. A blank row (the empty row the screen keeps at
+        // the end) is not a line, so 1,000 lines and that row are not refused (NFR-SCL-3). Blank
+        // rows have their own small limit, so a draft cannot be filled with empty rows.
+        let (spent, max) = if is_blank_sale(sale) {
+            (&mut budget.blanks, MAX_BLANK_ROWS)
+        } else {
+            (&mut budget.lines, MAX_SALE_LINES)
+        };
+        if *spent == 0 {
+            // The message names the limit that ran out, so too many empty rows does not say
+            // "at most 1,000 lines".
             issues.push(
                 FieldError::new(ErrorCode::ErrOutOfRange, &lot_field(index, "sales")).with(
                     "max",
-                    ErrorValue::Number(i64::try_from(MAX_SALE_LINES).unwrap_or(i64::MAX)),
+                    ErrorValue::Number(i64::try_from(max).unwrap_or(i64::MAX)),
                 ),
             );
             break;
         }
-        *lines_left = lines_left.saturating_sub(1);
+        *spent = spent.saturating_sub(1);
         sales.push(prepare_sale(issues, index, sale_index, sale));
     }
     PreparedLot {
@@ -409,7 +434,7 @@ fn prepare_header(
 
 /// Reads a typed draft (Code Standards 4.1 layer 2). Every value that cannot be read is left
 /// `None` and its mistake goes to `issues` with its field, so the user fixes them all at once.
-/// More than 50 lots or 500 lines is cut off with `ERR_OUT_OF_RANGE` (NFR-SCL-3).
+/// More than 50 lots or 1,000 lines is cut off with `ERR_OUT_OF_RANGE` (NFR-SCL-3).
 ///
 /// Example: a line with qty `20+5` and rate `600` is read as qty 25 and rate 600 rupees; a line
 /// with qty `abc` has no qty and an `ERR_NOT_A_NUMBER` on `lots[0].sales[0].qty`.
@@ -426,13 +451,16 @@ pub fn prepare_draft(
             ErrorValue::Number(i64::try_from(MAX_LOTS).unwrap_or(i64::MAX)),
         ));
     }
-    let mut lines_left = MAX_SALE_LINES;
+    let mut budget = RowBudget {
+        lines: MAX_SALE_LINES,
+        blanks: MAX_BLANK_ROWS,
+    };
     let lots = draft
         .lots
         .iter()
         .take(MAX_LOTS)
         .enumerate()
-        .map(|(index, lot)| prepare_lot(&mut issues, index, lot, &mut lines_left))
+        .map(|(index, lot)| prepare_lot(&mut issues, index, lot, &mut budget))
         .collect();
     PreparedDraft {
         header,

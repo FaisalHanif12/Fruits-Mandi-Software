@@ -273,12 +273,6 @@ print-settings-copies = کاپیاں
 print-settings-copies-hint = 1 سے 99 تک کی تعداد۔
 
 # review: pending
-print-settings-urdu-digits = اردو پرنٹ میں اردو ہندسے
-
-# review: pending
-print-settings-urdu-digits-hint = بند ہو تو اردو پرنٹ میں بھی انگریزی ہندسے (0 سے 9) چھپتے ہیں۔
-
-# review: pending
 print-settings-after-save = محفوظ کرنے کے بعد پرنٹ
 
 # $key is the key that saves and prints, for example Ctrl+Enter.

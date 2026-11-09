@@ -9,7 +9,7 @@ use ts_rs::TS;
 
 use super::format::NumberStyle;
 use super::header::{PrintFooter, PrintHeader, footer, header};
-use super::load::{load_firm, load_grouping, load_setup};
+use super::load::{load_firm, load_grouping};
 use super::{PrintFact, TextDir};
 use crate::error::ReportsError;
 
@@ -37,8 +37,6 @@ pub struct PrintFrame {
     pub language: Language,
     /// The writing direction, from the language.
     pub dir: TextDir,
-    /// True when Urdu digits are used on this print (an Urdu print with the setting on).
-    pub urdu_digits: bool,
     /// The header (PRD FR-19.13).
     pub header: PrintHeader,
     /// The footer (PRD FR-19.13).
@@ -53,14 +51,12 @@ pub struct PrintFrame {
 /// # Errors
 /// A database or data error.
 pub fn print_frame(db: &Db, input: &PrintFrameInput) -> Result<PrintFrame, ReportsError> {
-    let (firm, grouping, setup) = db.read(|conn| {
-        Ok::<_, ReportsError>((load_firm(conn)?, load_grouping(conn)?, load_setup(conn)?))
-    })?;
-    let style = NumberStyle::new(input.language, grouping, setup.urdu_digits);
+    let (firm, grouping) =
+        db.read(|conn| Ok::<_, ReportsError>((load_firm(conn)?, load_grouping(conn)?)))?;
+    let style = NumberStyle::new(grouping);
     Ok(PrintFrame {
         language: input.language,
         dir: TextDir::of(input.language),
-        urdu_digits: style.urdu_digits(),
         header: header(input.language, &firm, &input.title_id, input.facts.clone()),
         footer: footer(style.printed_at(db.clock().now_utc())),
     })

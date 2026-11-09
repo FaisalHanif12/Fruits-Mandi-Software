@@ -273,12 +273,6 @@ print-settings-copies = Copies
 print-settings-copies-hint = A number from 1 to 99.
 
 # review: pending
-print-settings-urdu-digits = Urdu digits on Urdu prints
-
-# review: pending
-print-settings-urdu-digits-hint = When off, Urdu prints also use English digits (0 to 9).
-
-# review: pending
 print-settings-after-save = Print after save
 
 # $key is the key that saves and prints, for example Ctrl+Enter.

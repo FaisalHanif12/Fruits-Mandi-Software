@@ -1,8 +1,8 @@
-// The digits of every print (PRD FR-7.32, NFR-URD-14, Tech Stack 4.1, Umar 26-10-2026): in BOTH
-// languages every number of a print (amounts, dates, phones, short codes, serials, counts, the page
-// counters) is written with the English digits 0-9, never with Urdu or Arabic-Indic digits. The
-// Urdu digits setting exists for Urdu prints and is OFF by default. This file is the ONE place that
-// turns it on; no fixture, helper, screenshot or development page has it on by default.
+// The digits of every print (PRD FR-7.32, NFR-URD-14, Tech Stack 4.1, Umar 26-10-2026 and 09-11-2026):
+// in BOTH languages every number of a print (amounts, dates, phones, short codes, serials, counts, the
+// page counters) is written with the English digits 0-9, never with Urdu or Arabic-Indic digits. The
+// Urdu digits setting that once existed is removed (plan 60 D1, plan 63), so there is nothing to turn
+// on. See also print-ascii-digits.test.tsx, which draws the Urdu seller bill, R5 and R35.
 //
 // Every template is drawn here: the seller bill, the buyer slips, the پختہ slip, the receipt slip
 // (receipt, payment, advance), the collection list, with the shared header (contacts and phones
@@ -41,13 +41,7 @@ const PAPERS: readonly Paper[] = ['a4', 'a5', 'mm80'];
 function oddDigits(text: string): string[] {
   return (text.match(/\p{Nd}/gu) ?? []).filter((char) => !/[0-9]/.test(char));
 }
-const URDU_DIGIT = /[۰-۹]/;
 const ASCII_DIGIT = /[0-9]/;
-/** The shapes of an amount or a count ("2,880", "۲,۸۸۰", "20") and of a date ("10-10-2026"). */
-const AMOUNT_OR_DATE = /^[0-9۰-۹]{1,3}(,[0-9۰-۹]{3})*$|^[0-9۰-۹]{2}-[0-9۰-۹]{2}-[0-9۰-۹]{4}$/;
-const DATE = /^[0-9۰-۹]{2}-[0-9۰-۹]{2}-[0-9۰-۹]{4}$/;
-/** A phone number ("0300-4058860"): never converted. */
-const PHONE = /^0[0-9۰-۹]{3}-[0-9۰-۹]{6,7}$/;
 
 interface Template {
   name: string;
@@ -99,7 +93,7 @@ afterEach(() => {
 describe.each(TEMPLATES)('the $name print', ({ draw }) => {
   describe.each(LANGUAGES)('in %s', (language: Language) => {
     it.each(PAPERS)(
-      'by default writes every number with the digits 0-9 only, on %s (text and footer)',
+      'writes every number with the digits 0-9 only, on %s (text and footer)',
       (paper) => {
         const { container } = render(draw({ language, paper }));
         const root = theSheet(container);
@@ -107,7 +101,7 @@ describe.each(TEMPLATES)('the $name print', ({ draw }) => {
         // There are numbers on the sheet, and none of them has an Urdu or Arabic-Indic digit.
         expect(text).toMatch(ASCII_DIGIT);
         expect(oddDigits(text)).toEqual([]);
-        expect(root.dataset['digits']).toBe('latin');
+        expect(root.dataset['digits']).toBeUndefined();
         // The footer (print time and page counters) too: no Urdu digit style for the counters.
         expect(footerOf()).toMatch(ASCII_DIGIT);
         expect(oddDigits(footerOf())).toEqual([]);
@@ -120,35 +114,6 @@ describe.each(TEMPLATES)('the $name print', ({ draw }) => {
       },
     );
   });
-
-  it('with the Urdu digits setting on, an Urdu print writes its numbers with ۰-۹, in the number cells and the footer', () => {
-    for (const paper of PAPERS) {
-      const { container, unmount } = render(draw({ language: 'ur', paper, urduDigits: true }));
-      const root = theSheet(container);
-      expect(root.dataset['digits']).toBe('urdu');
-      expect(visible(root.textContent)).toMatch(URDU_DIGIT);
-      const cells = [...root.querySelectorAll('.type-number')];
-      const numbers = cells.map((item) => item.textContent);
-      expect(numbers.length).toBeGreaterThan(0);
-      // An amount, a count and a date have Urdu digits only: no 0-9 is left in them. A code (the
-      // `Code` component marks it) is never converted, even with the setting on, unless it is a
-      // date in the facts of the header.
-      const figures = cells
-        .filter((item) => item.getAttribute('data-kind') !== 'code' || DATE.test(item.textContent))
-        .map((item) => item.textContent)
-        .filter((text) => AMOUNT_OR_DATE.test(text));
-      expect(figures.length).toBeGreaterThan(0);
-      for (const text of figures) expect(text).not.toMatch(ASCII_DIGIT);
-      // A phone is never converted, even with the setting on (backend, 26-10-2026).
-      for (const text of numbers.filter((value) => PHONE.test(value))) {
-        expect(oddDigits(text)).toEqual([]);
-      }
-      expect(footerOf()).toMatch(URDU_DIGIT);
-      if (paper !== 'mm80') expect(footerOf()).toContain('persian');
-      unmount();
-      document.documentElement.removeAttribute('style');
-    }
-  });
 });
 
 describe("the backend's real answers are written with the digits 0-9 only", () => {
@@ -158,7 +123,6 @@ describe("the backend's real answers are written with the digits 0-9 only", () =
     '$doc of $event in $language',
     (snapshot: (typeof REAL_SNAPSHOTS)[number]) => {
       const data = realPrintData(snapshot);
-      expect(data.urdu_digits).toBe(false);
       const { container } = render(draw(data));
       const text = visible(theSheet(container).textContent);
       expect(text).toMatch(ASCII_DIGIT);
@@ -173,7 +137,6 @@ describe("the backend's real answers are written with the digits 0-9 only", () =
     ['a payment in English', realVouchers.SLIP_PAYMENT_EN],
     ['an advance in Urdu', realVouchers.SLIP_ADVANCE_UR],
   ] as const)('%s', (_name, data) => {
-    expect(data.urdu_digits).toBe(false);
     const { container } = render(<ReceiptSlipTemplate data={data} applyRoot />);
     const text = visible(theSheet(container).textContent);
     expect(text).toMatch(ASCII_DIGIT);
@@ -187,38 +150,24 @@ describe('the real collection lists of the backend', () => {
     '$name',
     (snapshot: (typeof REAL_COLLECTION_SNAPSHOTS)[number]) => {
       const data = realCollectionData(snapshot);
-      expect(data.urdu_digits).toBe(snapshot.urduDigits);
       const { container } = render(<CollectionListTemplate data={data} applyRoot />);
       const root = theSheet(container);
       const text = visible(root.textContent);
-      if (!snapshot.urduDigits) {
-        // The default: 0-9 only, in the sheet and in the footer.
-        expect(text).toMatch(ASCII_DIGIT);
-        expect(oddDigits(text)).toEqual([]);
-        expect(oddDigits(footerOf())).toEqual([]);
-        expect(root.dataset['digits']).toBe('latin');
-        return;
-      }
-      // The one real answer with the setting on: amounts, dates and serials have ۰-۹, a phone and a
-      // code stay 0-9 (backend, 26-10-2026).
-      expect(root.dataset['digits']).toBe('urdu');
-      expect(text).toMatch(URDU_DIGIT);
-      expect(text).toContain('۲۱,۵۶۴');
-      expect(text).toContain('0300-1234567');
-      expect(footerOf()).toContain('persian');
-      const codes = [...root.querySelectorAll('.print-col-code .type-number')];
-      // The short codes of the backend's test world (the buyers 0 and 1), as the real answer has them.
-      expect(codes.map((item) => item.textContent)).toEqual(['0', '1']);
+      // 0-9 only, in the sheet and in the footer.
+      expect(text).toMatch(ASCII_DIGIT);
+      expect(oddDigits(text)).toEqual([]);
+      expect(oddDigits(footerOf())).toEqual([]);
+      expect(root.dataset['digits']).toBeUndefined();
     },
   );
 });
 
-describe('the default of the canned data is the English digits', () => {
-  it('no canned print, in either language, has the Urdu digits setting on unless a test asks for it', () => {
+describe('the canned data of the tests', () => {
+  it('has no Urdu digit flag: a print has only one kind of digit', () => {
     for (const language of LANGUAGES) {
-      expect(printDataFor('seller_bill', { language }).urdu_digits).toBe(false);
-      expect(voucherPrintData('receipt', { language }).urdu_digits).toBe(false);
-      expect(collectionPrintData({ language }).urdu_digits).toBe(false);
+      expect(Object.keys(printDataFor('seller_bill', { language }))).not.toContain('urdu_digits');
+      expect(Object.keys(voucherPrintData('receipt', { language }))).not.toContain('urdu_digits');
+      expect(Object.keys(collectionPrintData({ language }))).not.toContain('urdu_digits');
     }
   });
 });

@@ -47,7 +47,7 @@ use mandi_db::Db;
 use mandi_db::rusqlite::Connection;
 
 use crate::error::ReportsError;
-use crate::print::load::{load_firm, load_grouping, load_setup};
+use crate::print::load::{load_firm, load_grouping};
 use crate::reports::common::today;
 use crate::reports::print_data::PrintOptions;
 use crate::reports::{PageSpec, page_spec};
@@ -400,7 +400,7 @@ pub fn print_data(
         offset: 0,
         limit: None,
     };
-    let (page, grouping, setup) = db.read(|conn| {
+    let (page, grouping) = db.read(|conn| {
         let (typed, table) = table_for(
             conn,
             db,
@@ -412,7 +412,6 @@ pub fn print_data(
         Ok::<_, ReportsError>((
             page_of(input.view, &typed, table, all),
             load_grouping(conn)?,
-            load_setup(conn)?,
         ))
     })?;
     print::build(
@@ -420,7 +419,6 @@ pub fn print_data(
         &PrintOptions {
             language: input.language,
             grouping,
-            urdu_digits_setting: setup.urdu_digits,
             paper: input.paper.unwrap_or(Paper::A4),
         },
     )

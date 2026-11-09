@@ -199,7 +199,7 @@ export function useReportPrintBundle(input: ReportPrintInput | null) {
         title_id: data.title_id,
         facts: data.filters,
       });
-      return { language: frame.language, urdu_digits: frame.urdu_digits, data, frame };
+      return { language: frame.language, data, frame };
     },
     enabled: input !== null,
     staleTime: Infinity,
@@ -219,7 +219,7 @@ export function useSlipsPrintBundle(input: ReportPrintInput | null) {
         title_id: data.title_id,
         facts: data.filters,
       });
-      return { language: frame.language, urdu_digits: frame.urdu_digits, data, frame };
+      return { language: frame.language, data, frame };
     },
     enabled: input !== null,
     staleTime: Infinity,

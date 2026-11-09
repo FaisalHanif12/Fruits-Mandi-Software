@@ -7,7 +7,6 @@ expression: "print(EVENT2, PrintDoc::PukhtaSlip, Language::En)"
   "language": "en",
   "dir": "ltr",
   "paper": "a5",
-  "urdu_digits": false,
   "header": {
     "firm": {
       "name": "Maher Adnan and Brothers",

@@ -1,5 +1,6 @@
-// Printing (PRD Section 21, A21): the paper of each document, the printer, how many copies, the
-// Urdu digits on Urdu prints, and the documents that Ctrl+Enter prints after a save (PRD FR-7.57).
+// Printing (PRD Section 21, A21): the paper of each document, the printer, how many copies, and the
+// documents that Ctrl+Enter prints after a save (PRD FR-7.57). There is no Urdu digits setting: every
+// print is written with 0-9 (PRD FR-7.32, Umar 09-11-2026).
 // Copies are typed text: the backend checks 1 to 99 and names the field `copies` when it is wrong.
 // The four states: the settings load, they fail with a retry, the printer list is empty (it is
 // only known on Windows, and the default printer is then used) or failed, and the data.
@@ -43,7 +44,6 @@ interface FormValues {
   paper_collection_list: Paper;
   printer: string;
   copies: string;
-  urdu_digits: boolean;
   print_after_save: PrintDoc[];
 }
 
@@ -56,7 +56,6 @@ function valuesOf(saved: PrintingSettings): FormValues {
     paper_collection_list: saved.paper_collection_list,
     printer: saved.printer,
     copies: String(saved.copies),
-    urdu_digits: saved.urdu_digits,
     print_after_save: saved.print_after_save,
   };
 }
@@ -70,7 +69,6 @@ function sameValues(a: FormValues, b: FormValues): boolean {
     a.paper_collection_list === b.paper_collection_list &&
     a.printer === b.printer &&
     a.copies === b.copies &&
-    a.urdu_digits === b.urdu_digits &&
     a.print_after_save.join() === b.print_after_save.join()
   );
 }
@@ -218,17 +216,6 @@ function PrintingForm({ saved }: { saved: PrintingSettings }) {
             <QtyInput {...control} value={values.copies} onChange={setField('copies')} />
           )}
         </Field>
-      </section>
-
-      <section className="flex flex-col gap-1">
-        <Checkbox
-          checked={values.urdu_digits}
-          onChange={setField('urdu_digits')}
-          label={<Localized id="print-settings-urdu-digits" />}
-        />
-        <Localized id="print-settings-urdu-digits-hint">
-          <p className="type-body text-ink-muted" />
-        </Localized>
       </section>
 
       <section className="flex flex-col gap-1" aria-labelledby="print-after-save-heading">

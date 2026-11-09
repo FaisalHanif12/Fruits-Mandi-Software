@@ -12,11 +12,10 @@
 
 import type { PrintFrame } from './types';
 
-/** The fonts a print needs: Inter for numbers and English, Gulzar for Urdu, Naskh for Urdu digits. */
-export function fontFamiliesOf(data: Pick<PrintFrame, 'language' | 'urdu_digits'>): string[] {
+/** The fonts a print needs: Inter for numbers and English, Gulzar for Urdu words. */
+export function fontFamiliesOf(data: Pick<PrintFrame, 'language'>): string[] {
   const families = ['Inter'];
   if (data.language === 'ur') families.push('Gulzar');
-  if (data.urdu_digits) families.push('Noto Naskh Arabic');
   return families;
 }
 

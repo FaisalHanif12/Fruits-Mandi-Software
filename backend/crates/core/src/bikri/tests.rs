@@ -185,11 +185,67 @@ fn too_many_lots_and_lines_are_cut_off() {
     };
     let prepared = prepare_draft(&draft, today(), None);
     assert_eq!(prepared.lots[0].sales.len(), MAX_SALE_LINES);
+    let issue = prepared
+        .issues
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+        .unwrap();
+    assert_eq!(
+        issue.values.get("max"),
+        Some(&crate::error::ErrorValue::Number(
+            i64::try_from(MAX_SALE_LINES).unwrap()
+        ))
+    );
+}
+
+#[test]
+fn the_empty_row_the_screen_keeps_is_not_a_line_of_the_limit() {
+    // Plan 61 T4 (money review): the screen sends every row, with an empty one at the end, so
+    // exactly MAX_SALE_LINES lines and that row must not be refused (NFR-SCL-3).
+    let mut rows: Vec<SaleInput> = (0..MAX_SALE_LINES)
+        .map(|_| sale(Some(7), "1", "600"))
+        .collect();
+    rows.push(sale(None, "0", ""));
+    let draft = BikriDraft {
+        header: header(),
+        lots: vec![lot(rows)],
+    };
+    let prepared = prepare_draft(&draft, today(), None);
     assert!(
         prepared
             .issues
             .iter()
-            .any(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+            .all(|e| e.code != ErrorCode::ErrOutOfRange),
+        "{:?}",
+        prepared.issues
+    );
+    assert_eq!(prepared.lots[0].sales.len(), MAX_SALE_LINES + 1);
+    assert!(prepared.lots[0].sales.last().is_some_and(|s| s.is_blank));
+}
+
+#[test]
+fn a_draft_filled_with_blank_rows_is_cut_off() {
+    // Blank rows have their own small limit, so a draft cannot be filled with empty rows.
+    let rows: Vec<SaleInput> = (0..MAX_BLANK_ROWS + 5)
+        .map(|_| sale(None, "0", ""))
+        .collect();
+    let draft = BikriDraft {
+        header: header(),
+        lots: vec![lot(rows)],
+    };
+    let prepared = prepare_draft(&draft, today(), None);
+    assert_eq!(prepared.lots[0].sales.len(), MAX_BLANK_ROWS);
+    let issue = prepared
+        .issues
+        .iter()
+        .find(|e| e.code == ErrorCode::ErrOutOfRange && e.field == "lots[0].sales")
+        .unwrap();
+    // The limit named is the one of blank rows, not the one of lines.
+    assert_eq!(
+        issue.values.get("max"),
+        Some(&crate::error::ErrorValue::Number(
+            i64::try_from(MAX_BLANK_ROWS).unwrap()
+        ))
     );
 }
 

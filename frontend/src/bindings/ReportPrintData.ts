@@ -32,10 +32,6 @@ export type ReportPrintData = {
    */
   paper: Paper;
   /**
-   * True when Urdu digits are used on this print.
-   */
-  urdu_digits: boolean;
-  /**
    * Fluent message ID of the title.
    */
   title_id: string;

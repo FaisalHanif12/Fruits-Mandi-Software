@@ -361,10 +361,6 @@
      digit is ever drawn with the digit shapes of an Urdu font (PRD FR-7.32, NFR-URD-14). */
   --font-digits: 'Mandi Digits';
 
-  /* Numbers on an Urdu print with the Urdu digits setting on: Naskh first, because it has the
-     digits ۰ to ۹ (Tech Stack 4.1, NFR-URD-14). Inter follows for the signs it has. */
-  --font-urdu-digits: 'Noto Naskh Arabic', 'Inter', sans-serif;
-
   --radius-1: 4px;
   --radius-2: 8px;
   --radius-3: 12px;

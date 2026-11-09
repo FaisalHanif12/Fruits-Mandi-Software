@@ -293,8 +293,6 @@ pub struct ReportPrintData {
     pub dir: TextDir,
     /// The paper class.
     pub paper: Paper,
-    /// True when Urdu digits are used on this print.
-    pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
     /// The filters of the run, the facts under the title: dates and party (FR-19.10). They go to
@@ -326,8 +324,6 @@ pub struct PrintOptions {
     pub language: Language,
     /// The number grouping setting (PRD FR-19.7).
     pub grouping: Grouping,
-    /// The Urdu digits switch of the Printing settings.
-    pub urdu_digits_setting: bool,
     /// The paper class.
     pub paper: Paper,
 }
@@ -346,11 +342,7 @@ impl Fmt {
         Self {
             language: options.language,
             grouping: options.grouping,
-            style: NumberStyle::new(
-                options.language,
-                options.grouping,
-                options.urdu_digits_setting,
-            ),
+            style: NumberStyle::new(options.grouping),
         }
     }
 
@@ -769,7 +761,6 @@ pub fn build_print(
         language,
         dir: TextDir::of(language),
         paper: options.paper,
-        urdu_digits: fmt.style.urdu_digits(),
         title_id: page.title_id.clone(),
         filters: filter_facts(&fmt, page.id, &page.filters)?,
         columns: page

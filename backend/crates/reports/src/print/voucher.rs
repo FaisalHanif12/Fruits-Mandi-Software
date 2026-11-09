@@ -55,7 +55,7 @@ pub fn voucher_print_data(
         };
         Ok::<_, ReportsError>((loaded, revised))
     })?;
-    let style = NumberStyle::new(input.language, loaded.grouping, loaded.setup.urdu_digits);
+    let style = NumberStyle::new(loaded.grouping);
     let mut data = build_slip(&loaded, input.language, db.clock().now_utc())?;
     data.revised_on = revised.map(|day| style.date(&day)).transpose()?;
     Ok(data)
@@ -99,7 +99,7 @@ fn build_slip(
     now_utc: DateTime<Utc>,
 ) -> Result<PrintData, ReportsError> {
     let row = &loaded.row;
-    let style = NumberStyle::new(language, loaded.grouping, loaded.setup.urdu_digits);
+    let style = NumberStyle::new(loaded.grouping);
     let (title_id, amount_label) = match row.voucher_type {
         VoucherType::Receipt => (TITLE_RECEIPT_SLIP, SLIP_AMOUNT_RECEIVED),
         VoucherType::Payment => (TITLE_PAYMENT_SLIP, SLIP_AMOUNT_PAID),
@@ -206,7 +206,6 @@ fn build_slip(
         language,
         dir: TextDir::of(language),
         paper: loaded.setup.paper_of(PrintDoc::ReceiptSlip),
-        urdu_digits: style.urdu_digits(),
         header: header(language, &loaded.firm, title_id, facts),
         footer: footer(style.printed_at(now_utc)),
         number: style.count(row.number),

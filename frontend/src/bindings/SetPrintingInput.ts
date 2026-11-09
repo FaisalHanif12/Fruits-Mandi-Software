@@ -36,10 +36,6 @@ export type SetPrintingInput = {
    */
   copies: string;
   /**
-   * Urdu digits on Urdu prints.
-   */
-  urdu_digits: boolean;
-  /**
    * The documents ticked in "print after save". A repeated document counts once.
    */
   print_after_save: Array<PrintDoc>;

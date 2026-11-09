@@ -12,7 +12,6 @@ export function printingSettings(overrides: Partial<PrintingSettings> = {}): Pri
     paper_collection_list: 'a4',
     printer: '',
     copies: 1,
-    urdu_digits: false,
     print_after_save: ['seller_bill', 'buyer_slips', 'pukhta_slip'],
     ...overrides,
   };

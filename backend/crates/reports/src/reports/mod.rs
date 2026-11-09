@@ -118,7 +118,7 @@ pub(crate) use accounts::PageSpec;
 use filters::{LineSort, Takes, Typed, resolve};
 
 use crate::error::ReportsError;
-use crate::print::load::{load_firm, load_grouping, load_setup};
+use crate::print::load::{load_firm, load_grouping};
 
 /// Today in Pakistan as `YYYY-MM-DD`, from the database clock (the date a PDF name carries).
 ///
@@ -895,14 +895,12 @@ pub fn print_data_for_page(
     build_print(page, &print_options(db, input)?)
 }
 
-/// What a print needs besides its rows: the number grouping and the print setup.
+/// What a print needs besides its rows: the number grouping and the paper.
 fn print_options(db: &Db, input: &ReportPrintInput) -> Result<PrintOptions, ReportsError> {
-    let (grouping, setup) =
-        db.read(|conn| Ok::<_, ReportsError>((load_grouping(conn)?, load_setup(conn)?)))?;
+    let grouping = db.read(load_grouping)?;
     Ok(PrintOptions {
         language: input.language,
         grouping,
-        urdu_digits_setting: setup.urdu_digits,
         paper: input.paper.unwrap_or(Paper::A4),
     })
 }

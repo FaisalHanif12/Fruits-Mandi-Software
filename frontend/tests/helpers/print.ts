@@ -56,7 +56,6 @@ export function fakePrinting(options: FakePrintingOptions = {}): FakePrinting {
       paper_collection_list: input.paper_collection_list,
       printer: input.printer,
       copies: Number(input.copies),
-      urdu_digits: input.urdu_digits,
       print_after_save: input.print_after_save,
     };
     return Promise.resolve(current);

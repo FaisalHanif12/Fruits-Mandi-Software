@@ -18,10 +18,6 @@ export type PrintFrame = {
    */
   dir: TextDir;
   /**
-   * True when Urdu digits are used on this print (an Urdu print with the setting on).
-   */
-  urdu_digits: boolean;
-  /**
    * The header (PRD FR-19.13).
    */
   header: PrintHeader;

@@ -149,10 +149,10 @@ fn has_urdu_digit(value: &serde_json::Value) -> bool {
 }
 
 #[test]
-fn a_default_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone_typed_in_urdu_digits()
- {
-    // Umar, 26-10-2026: the digits of every print are 0-9; the Urdu digits are an option, off by
-    // default. A one-time buyer's phone typed with Urdu digits is saved, and printed, as 0-9.
+fn an_urdu_print_of_the_real_world_has_only_plain_digits_even_for_a_phone_typed_in_urdu_digits() {
+    // Umar, 26-10-2026 and 09-11-2026 (plan 63): the digits of every print are 0-9; there is no
+    // Urdu digits option. A one-time buyer's phone typed with Urdu digits is saved, and printed,
+    // as 0-9.
     let w = world();
     let id1 = save_event1(&w);
     let mut line = sale("s-1", w.pukhta_buyer, "10", "1200");
@@ -502,7 +502,6 @@ fn set_input() -> SetPrintingInput {
         paper_collection_list: Paper::A4,
         printer: "  Office Laser  ".into(),
         copies: "2".into(),
-        urdu_digits: true,
         print_after_save: vec![
             PrintDoc::SellerBill,
             PrintDoc::SellerBill,
@@ -529,7 +528,6 @@ fn printing_settings_start_with_a21_and_are_saved_with_an_audit_row() {
     assert_eq!(start.paper_buyer_slips, Paper::A5);
     assert_eq!(start.paper_pukhta_slip, Paper::A5);
     assert_eq!(start.copies, 1);
-    assert!(!start.urdu_digits);
     assert!(start.printer.is_empty());
     assert_eq!(start.paper_receipt_slip, Paper::A5);
     assert_eq!(start.paper_collection_list, Paper::A4);
@@ -611,7 +609,7 @@ fn bad_printing_settings_are_refused_with_codes_at_their_fields() {
 }
 
 #[test]
-fn the_print_data_uses_the_paper_and_digits_of_the_settings() {
+fn the_print_data_uses_the_paper_of_the_settings_and_always_the_digits_0_to_9() {
     let w = world();
     let id = save_event1(&w);
     assert_eq!(
@@ -621,14 +619,13 @@ fn the_print_data_uses_the_paper_and_digits_of_the_settings() {
     printing::set_settings(&w.env.ctx, &w.owner, &set_input()).unwrap();
     let slips = data(&w, id, PrintDoc::BuyerSlips, Language::Ur);
     assert_eq!(slips.paper, Paper::Mm80);
-    assert!(slips.urdu_digits);
+    // Plan 63: the digits are 0-9 in an Urdu print too, whatever the settings hold.
     assert_eq!(
         slips.pages.first().unwrap().amounts.last().unwrap().amount,
-        "۱۲,۸۸۰"
+        "12,880"
     );
-    // The Urdu digits switch does nothing on an English print.
+    assert!(!has_urdu_digit(&serde_json::to_value(&slips).unwrap()));
     let en = data(&w, id, PrintDoc::BuyerSlips, Language::En);
-    assert!(!en.urdu_digits);
     assert_eq!(
         en.pages.first().unwrap().amounts.last().unwrap().amount,
         "12,880"

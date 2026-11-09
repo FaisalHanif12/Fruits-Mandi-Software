@@ -32,7 +32,6 @@ function detailOf(data: ReportPrintData): string {
   const frame = {
     ...printFrameFor({ language: data.language, title_id: data.title_id, facts: data.filters }),
     dir: data.dir,
-    urdu_digits: data.urdu_digits,
   };
   const { container } = render(<ReportPrintDocument data={data} frame={frame} applyRoot={false} />);
   return visible(container.querySelector('tbody tr .print-lines')?.textContent);

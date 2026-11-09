@@ -20,7 +20,7 @@ import type { PrintData, PrintFrame } from './types';
 import { fontFamiliesOf, waitForPrintReady, type PrintReady } from './wait-ready';
 
 /** What every printed document gives: the frame the backend built, whatever its body is. */
-type PrintedFrame = Pick<PrintFrame, 'language' | 'urdu_digits'>;
+type PrintedFrame = Pick<PrintFrame, 'language'>;
 
 /** What the view needs to know of a document that its own type says: is it empty, and some text to load the fonts for. */
 export interface PrintDescription {

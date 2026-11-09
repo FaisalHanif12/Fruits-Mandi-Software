@@ -1107,7 +1107,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "settings_set_printing",
             json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "1", "urdu_digits": false, "print_after_save": ["seller_bill"] } }),
+                "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
             true,
         ),
         // Run B, plan 18 (append-only block).

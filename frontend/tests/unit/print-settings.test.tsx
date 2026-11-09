@@ -1,7 +1,8 @@
 // The Printing tab of Settings (plan 14, PRD Section 21, A21), in the Urdu and the English app, by
 // keyboard, against a fake backend: the paper of each document, the printer list, the copies (text,
-// checked 1 to 99 by the backend, field `copies`), the Urdu digits, and the documents of "print
-// after save". The four states: loading, error with a retry, an empty printer list, and the data.
+// checked 1 to 99 by the backend, field `copies`), and the documents of "print after save". There is
+// no Urdu digits setting (plan 63, Umar 09-11-2026). The four states: loading, error with a retry,
+// an empty printer list, and the data.
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +11,7 @@ import * as authApi from '../../src/features/auth/api';
 import * as reportsApi from '../../src/features/reports/api';
 import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
+import { AFTER_SAVE_DOCS } from '../../src/shared/print';
 import * as urduApi from '../../src/shared/urdu/api';
 import {
   fail,
@@ -82,9 +84,9 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
       message(language, 'print-paper-a5'),
     );
     expect(copiesField()).toHaveValue('1');
-    expect(
-      screen.getByRole('checkbox', { name: named(language, 'print-settings-urdu-digits') }),
-    ).not.toBeChecked();
+    // The only ticks are the documents of "print after save": there is no Urdu digits setting.
+    expect(screen.getAllByRole('checkbox')).toHaveLength(AFTER_SAVE_DOCS.length);
+    expect(visible(document.body.textContent)).not.toMatch(/Urdu digits|اردو ہندسے/);
     expect(saveButton()).toBeDisabled();
   });
 
@@ -152,9 +154,6 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
     await user.click(await screen.findByRole('option', { name: 'HP LaserJet' }));
     await user.clear(copiesField());
     await user.type(copiesField(), '2');
-    await user.click(
-      screen.getByRole('checkbox', { name: named(language, 'print-settings-urdu-digits') }),
-    );
     // "Print after save": the پختہ slip is not wanted.
     const after = screen.getByRole('region', {
       name: named(language, 'print-settings-after-save'),
@@ -175,7 +174,6 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
       paper_collection_list: 'a4',
       printer: 'HP LaserJet',
       copies: '2',
-      urdu_digits: true,
       print_after_save: ['seller_bill', 'buyer_slips'],
     });
     await waitFor(() => {
@@ -283,14 +281,14 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
   it('can be done with the keyboard only', async () => {
     const printing = fakePrinting();
     const { user } = await open();
-    await user.click(
-      await screen.findByRole('checkbox', { name: named(language, 'print-settings-urdu-digits') }),
-    );
+    await screen.findByRole('combobox', { name: named(language, 'print-doc-seller-bill') });
+    await user.clear(copiesField());
+    await user.type(copiesField(), '3');
     await user.keyboard('{Control>}s{/Control}');
     await waitFor(() => {
       expect(printing.saves).toHaveLength(1);
     });
-    expect(printing.saves[0]?.urdu_digits).toBe(true);
+    expect(printing.saves[0]?.copies).toBe('3');
   });
 
   it('shows a plain error with a retry when the settings do not load, and the data after it', async () => {
@@ -321,7 +319,6 @@ describe.each(LANGUAGES)('the Printing tab (%s)', (language) => {
               paper_collection_list: 'a4',
               printer: '',
               copies: 1,
-              urdu_digits: false,
               print_after_save: [],
             });
           };

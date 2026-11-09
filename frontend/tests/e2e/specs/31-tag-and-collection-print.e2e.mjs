@@ -216,7 +216,7 @@ describe('the tag, the firm contacts and the collection list on paper (Urdu app)
       const sheet = await $(`${BOX}//div[contains(@class, "print-doc")]`);
       expect(await sheet.getAttribute('lang')).toBe(language);
       expect(await sheet.getAttribute('dir')).toBe(language === 'ur' ? 'rtl' : 'ltr');
-      expect(await sheet.getAttribute('data-digits')).toBe('latin');
+      expect(await sheet.getAttribute('data-digits')).toBeNull();
       const text = (await sheet.getText()).replace(/[⁨⁩]/g, '');
       const buyer = language === 'ur' ? BUYER.urdu : BUYER.english;
       expect(text).toContain(`${buyer} ${BUYER.capital}`);

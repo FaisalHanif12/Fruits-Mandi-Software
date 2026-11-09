@@ -478,15 +478,11 @@ fn has_urdu_digit(value: &serde_json::Value) -> bool {
 }
 
 #[test]
-fn a_default_urdu_print_has_only_plain_digits_everywhere() {
-    // Umar, 26-10-2026: amounts, dates, phones, short codes, serials and counts print with 0-9 in
-    // both languages. The Urdu digits are off by default, in the setting and in the print data.
-    assert!(!PrintSetup::default().urdu_digits);
-    assert!(
-        !serde_json::from_str::<PrintSetup>("{}")
-            .unwrap()
-            .urdu_digits
-    );
+fn an_urdu_print_has_only_plain_digits_everywhere() {
+    // Umar, 26-10-2026 and 09-11-2026 (plan 63): amounts, dates, phones, short codes, serials and
+    // counts print with 0-9 in both languages. There is no Urdu digits setting any more.
+    let setup = serde_json::to_value(PrintSetup::default()).unwrap();
+    assert!(setup.get("urdu_digits").is_none());
     for (json, doc) in [
         (EVENT1, PrintDoc::SellerBill),
         (EVENT1, PrintDoc::BuyerSlips),
@@ -494,36 +490,37 @@ fn a_default_urdu_print_has_only_plain_digits_everywhere() {
     ] {
         for language in [Language::Ur, Language::En] {
             let data = print(json, doc, language);
-            assert!(!data.urdu_digits, "{doc:?} {language:?}");
             let value = serde_json::to_value(&data).unwrap();
             assert!(!has_urdu_digit(&value), "{doc:?} {language:?}: {value}");
+            assert!(value.get("urdu_digits").is_none(), "{doc:?} {language:?}");
         }
     }
-    // The check itself works: the same Urdu print with the setting on does have Urdu digits.
-    let mut opts = options(PrintDoc::SellerBill, Language::Ur);
-    opts.setup.urdu_digits = true;
-    let on = build(&detail(EVENT1), &opts).unwrap();
-    assert!(has_urdu_digit(&serde_json::to_value(&on).unwrap()));
+    // The seller bill in Urdu holds the numbers of Event 1 as 0-9, with grouping.
+    let ur = print(EVENT1, PrintDoc::SellerBill, Language::Ur);
+    assert_eq!(ur.number, "1");
+    assert_eq!(ur.footer.printed_at, "10-10-2026 14:00");
+    let page = ur.pages.first().unwrap();
+    assert_eq!(amounts(page).first().unwrap().1, "29,400");
+    assert_eq!(page.lines.first().unwrap().qty, "20");
+    // The truck number and the code stay as typed.
+    assert_eq!(ur.header.facts.last().unwrap().value, "LES-1234");
+    assert_eq!(page.party.code.as_deref(), Some("0010"));
+    // The same numbers in English.
+    let en = print(EVENT1, PrintDoc::SellerBill, Language::En);
+    assert_eq!(
+        amounts(en.pages.first().unwrap()).first().unwrap().1,
+        "29,400"
+    );
 }
 
 #[test]
-fn every_print_type_has_one_case_with_the_urdu_digits_on_and_the_phones_stay_plain() {
+fn a_phone_and_a_code_are_plain_digits_on_every_print_type() {
     for (json, doc) in [
         (EVENT1, PrintDoc::BuyerSlips),
         (EVENT2, PrintDoc::PukhtaSlip),
     ] {
-        let mut opts = options(doc, Language::Ur);
-        opts.setup.urdu_digits = true;
-        let data = build(&detail(json), &opts).unwrap();
-        assert!(data.urdu_digits, "{doc:?}");
+        let data = print(json, doc, Language::Ur);
         let page = data.pages.first().unwrap();
-        assert!(
-            page.serial
-                .chars()
-                .all(|c| ('\u{06F0}'..='\u{06F9}').contains(&c))
-        );
-        assert!(page.amounts.iter().any(|a| a.amount.contains('۱')));
-        // A phone and a code are text as typed: the setting never touches them (PRD FR-7.21).
         if let Some(phone) = &page.party.phone {
             assert!(
                 phone.chars().all(|c| c.is_ascii_digit() || c == '-'),
@@ -534,30 +531,6 @@ fn every_print_type_has_one_case_with_the_urdu_digits_on_and_the_phones_stay_pla
             assert!(code.chars().all(|c| c.is_ascii_digit()), "{code}");
         }
     }
-}
-
-#[test]
-fn urdu_digits_only_on_an_urdu_print_with_the_setting_on() {
-    let mut opts = options(PrintDoc::SellerBill, Language::Ur);
-    opts.setup.urdu_digits = true;
-    let ur = build(&detail(EVENT1), &opts).unwrap();
-    assert!(ur.urdu_digits);
-    assert_eq!(ur.number, "۱");
-    assert_eq!(ur.footer.printed_at, "۱۰-۱۰-۲۰۲۶ ۱۴:۰۰");
-    let page = ur.pages.first().unwrap();
-    assert_eq!(amounts(page).first().unwrap().1, "۲۹,۴۰۰");
-    assert_eq!(page.lines.first().unwrap().qty, "۲۰");
-    // The truck number and the code stay as typed.
-    assert_eq!(ur.header.facts.last().unwrap().value, "LES-1234");
-    assert_eq!(page.party.code.as_deref(), Some("0010"));
-    // The setting does nothing on an English print.
-    opts.language = Language::En;
-    let en = build(&detail(EVENT1), &opts).unwrap();
-    assert!(!en.urdu_digits);
-    assert_eq!(
-        amounts(en.pages.first().unwrap()).first().unwrap().1,
-        "29,400"
-    );
 }
 
 #[test]

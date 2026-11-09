@@ -40,5 +40,8 @@ pub use saved::*;
 
 /// The most lots in one بکری (NFR-SCL-3).
 pub const MAX_LOTS: usize = 50;
-/// The most sale lines in one بکری, over all its lots (NFR-SCL-3).
-pub const MAX_SALE_LINES: usize = 500;
+/// The most sale lines in one بکری, over all its lots (NFR-SCL-3 v1.17: 1,000, plan 61 T4).
+pub const MAX_SALE_LINES: usize = 1_000;
+/// The most blank rows (no buyer, no rate) a draft may carry besides its lines. The screen keeps
+/// one at the end of each lot; the rest is room for rows left empty on the way (PRD FR-7.52).
+pub const MAX_BLANK_ROWS: usize = 100;

@@ -321,6 +321,11 @@ pub struct NewSale<'a> {
 
 /// Adds a sale line and returns its id.
 ///
+/// The statement is prepared once and kept (`prepare_cached`): a بکری of 1,000 lines inserts it
+/// 1,000 times. Measured on one lot of 1,000 lines (release build), the three inserts of a line
+/// (this one, the stock move and the fact) took 218 µs with `execute`, which parses and plans the
+/// SQL and its triggers each time, and 110 µs with a kept statement (plan 61 T4).
+///
 /// # Errors
 /// Any SQLite error (the CHECKs of `bikri_sales`).
 pub fn insert_sale(
@@ -329,7 +334,7 @@ pub fn insert_sale(
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<i64> {
-    conn.execute(
+    conn.prepare_cached(
         "INSERT INTO bikri_sales (created_at, created_by, updated_at, updated_by, bikri_id, lot_id, line_no,
              journal_entry_id, entry_date, buyer_account_id, pukhta_name_ur, pukhta_name_en, pukhta_phone,
              pukhta_person_key, qty, weight_grams, seller_rate_paisa, seller_amount_paisa,
@@ -340,7 +345,8 @@ pub fn insert_sale(
              buyer_total_paisa, rate_diff_paisa, payment_type, note, cost_paisa, grade)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
              ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
-        params![
+    )?
+    .execute(params![
             now,
             user_id,
             sale.bikri_id,
@@ -380,8 +386,7 @@ pub fn insert_sale(
             sale.note,
             sale.cost_paisa,
             sale.grade,
-        ],
-    )?;
+    ])?;
     Ok(conn.last_insert_rowid())
 }
 
@@ -433,11 +438,12 @@ pub fn insert_stock_move(
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<()> {
-    conn.execute(
+    conn.prepare_cached(
         "INSERT INTO stock_moves (created_at, created_by, updated_at, updated_by, lot_id, journal_entry_id, move_date,
              kind, qty, purchase_id, arrival_id)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![
+    )?
+    .execute(params![
             now,
             user_id,
             stock_move.lot_id,
@@ -447,8 +453,7 @@ pub fn insert_stock_move(
             stock_move.qty,
             stock_move.purchase_id,
             stock_move.arrival_id
-        ],
-    )?;
+    ])?;
     Ok(())
 }
 
@@ -514,14 +519,15 @@ pub fn insert_fact(
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<()> {
-    conn.execute(
+    conn.prepare_cached(
         "INSERT INTO analytics_facts (created_at, created_by, updated_at, updated_by, journal_entry_id, entry_date,
              year, month, bikri_id, lot_id, sale_id, item_id, seller_account_id, buyer_account_id,
              pukhta_person_key, city_id, adda_id, qty, seller_amount_paisa, seller_comm_paisa, buyer_value_paisa,
              buyer_comm_paisa, laga_paisa, sign, purchase_id, venture_id, cost_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
              ?21, ?22, ?23, ?24, ?25)",
-        params![
+    )?
+    .execute(params![
             now,
             user_id,
             fact.journal_entry_id,
@@ -547,8 +553,7 @@ pub fn insert_fact(
             fact.purchase_id,
             fact.venture_id,
             fact.cost_paisa,
-        ],
-    )?;
+    ])?;
     Ok(())
 }
 

@@ -70,7 +70,6 @@ describe('the canned data has the real shape: prints', () => {
       expect(same(answer.header, canned.header)).toBeNull();
       expect(same(answer.footer, canned.footer)).toBeNull();
       expect(answer.language).toBe(language);
-      expect(answer.urdu_digits).toBe(false);
     }
   });
 
@@ -95,7 +94,7 @@ describe('the canned data has the real shape: prints', () => {
     expect(same(real.COLLECTION_EMPTY, collectionPrintData({ language: 'ur' }))).toBeNull();
   });
 
-  it('the real snapshots of the collection list, with the contacts and filters and with Urdu digits', () => {
+  it('the real snapshots of the collection list, with the contacts and filters', () => {
     for (const snapshot of REAL_COLLECTION_SNAPSHOTS) {
       const answer = realCollectionData(snapshot);
       const canned = collectionPrintData({
@@ -104,7 +103,6 @@ describe('the canned data has the real shape: prints', () => {
         tradeMark: 'RH',
       });
       expect(same(answer, canned), snapshot.name).toBeNull();
-      expect(answer.urdu_digits).toBe(snapshot.urduDigits);
     }
   });
 

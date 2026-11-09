@@ -1211,7 +1211,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "settings_set_printing",
             json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "1", "urdu_digits": false, "print_after_save": ["seller_bill"] } }),
+                "printer": "", "copies": "1", "print_after_save": ["seller_bill"] } }),
             true,
         ),
         // Run B, plan 18 (append-only block).
@@ -2818,14 +2818,13 @@ fn the_bikri_commands_work_through_the_ipc() {
         printing,
         json!({ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
             "paper_receipt_slip": "a5", "paper_collection_list": "a4", "printer": "", "copies": 1,
-            "urdu_digits": false,
             "print_after_save": ["seller_bill", "buyer_slips", "pukhta_slip"] })
     );
     let bad = h
         .call(
             "settings_set_printing",
             json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
-                "printer": "", "copies": "0", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
+                "printer": "", "copies": "0", "print_after_save": ["seller_bill"] } }),
         )
         .unwrap_err();
     assert_eq!(bad["errors"][0]["code"], "ERR_OUT_OF_RANGE");
@@ -2836,7 +2835,10 @@ fn the_bikri_commands_work_through_the_ipc() {
         json!({ "input": { "paper_seller_bill": "a4", "paper_buyer_slips": "mm80", "paper_pukhta_slip": "a5",
             "printer": "Office Laser", "copies": "2", "urdu_digits": true, "print_after_save": ["seller_bill"] } }),
     );
+    // An old screen may still send the field of the gone Urdu digits setting: it is ignored, and
+    // the settings never hold it (plan 63).
     assert_eq!(saved_printing["copies"], 2);
+    assert!(saved_printing.get("urdu_digits").is_none());
     assert_eq!(h.ok("settings_get_printing", json!({})), saved_printing);
     assert_eq!(print_data("buyer_slips", "ur")["paper"], "mm80");
     // A print: the checks come first, then the platform. Printing needs Windows, so on any

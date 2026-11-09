@@ -7,8 +7,8 @@
 //!   data carries a header of its own.
 //! * A tagged account (عاشق ظفر K) shows its tag in every report, analytics view, filter fact and
 //!   dashboard list; the same name without a tag shows none.
-//! * In both languages every number of a default print is English digits; the Urdu digits setting
-//!   turns them on for an Urdu print only.
+//! * In both languages every number of a print is English digits (0 to 9). The Urdu digits setting
+//!   is gone (plan 63); an old stored value of it is ignored.
 #![cfg(test)]
 
 mod common;
@@ -29,8 +29,6 @@ use mandi_reports::reports::{
 };
 use mandi_services::core::accounts::AccountType;
 use mandi_services::core::auth::Language;
-use mandi_services::core::printing::{Paper, PrintDoc, SetPrintingInput};
-use mandi_services::printing;
 use reports_world::*;
 use support::World;
 
@@ -370,7 +368,6 @@ fn every_report_and_analytics_print_gets_its_header_and_footer_from_the_one_comm
             assert_eq!(frame.header.facts, data.filters, "{:?}", entry.id);
             assert_eq!(frame.language, language);
             assert_eq!(frame.dir, data.dir);
-            assert_eq!(frame.urdu_digits, data.urdu_digits);
             assert_eq!(
                 frame.header.firm.name,
                 match language {
@@ -443,7 +440,7 @@ fn has_urdu_digit(text: &str) -> bool {
 }
 
 #[test]
-fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_urdu_digits_on() {
+fn a_print_has_english_digits_in_both_languages_and_an_old_urdu_digits_setting_changes_nothing() {
     let (w, _, _, _) = tagged_world();
     let report_json = |w: &World, id: ReportId, language: Language| -> String {
         let entry = catalog().into_iter().find(|e| e.id == id).unwrap();
@@ -509,34 +506,18 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
         assert!(!has_urdu_digit(&serde_json::to_string(&slips).unwrap()));
     }
 
-    // One dedicated case for each print type with the setting on: an Urdu print uses Urdu digits,
-    // an English print does not.
-    printing::set_settings(
-        &w.env.ctx,
-        &w.owner,
-        &SetPrintingInput {
-            paper_seller_bill: Paper::A4,
-            paper_buyer_slips: Paper::A5,
-            paper_pukhta_slip: Paper::A5,
-            paper_receipt_slip: Paper::A5,
-            paper_collection_list: Paper::A4,
-            printer: String::new(),
-            copies: "1".into(),
-            urdu_digits: true,
-            print_after_save: vec![PrintDoc::SellerBill],
-        },
-    )
-    .unwrap();
-    assert!(has_urdu_digit(&report_json(
-        &w,
-        ReportId::R18,
-        Language::Ur
-    )));
-    assert!(!has_urdu_digit(&report_json(
-        &w,
-        ReportId::R18,
-        Language::En
-    )));
+    // Plan 63: the Urdu digits setting is gone. A computer that still holds the old stored value
+    // `urdu_digits: true` prints exactly as before: 0 to 9, in both languages, for each print type.
+    common::raw(&w.dir)
+        .execute(
+            "INSERT INTO settings (key, value_json) VALUES ('printing', ?1)
+             ON CONFLICT (key) DO UPDATE SET value_json = excluded.value_json",
+            [r#"{"copies":1,"paper_seller_bill":"a4","urdu_digits":true}"#],
+        )
+        .unwrap();
+    for language in [Language::Ur, Language::En] {
+        assert!(!has_urdu_digit(&report_json(&w, ReportId::R18, language)));
+    }
     let analytics = |language| {
         serde_json::to_string(
             &a_print(
@@ -553,7 +534,7 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
         )
         .unwrap()
     };
-    assert!(has_urdu_digit(&analytics(Language::Ur)));
+    assert!(!has_urdu_digit(&analytics(Language::Ur)));
     assert!(!has_urdu_digit(&analytics(Language::En)));
     let slips = |language| {
         serde_json::to_string(
@@ -572,7 +553,7 @@ fn a_default_print_has_english_digits_in_both_languages_and_the_setting_turns_ur
         )
         .unwrap()
     };
-    assert!(has_urdu_digit(&slips(Language::Ur)));
+    assert!(!has_urdu_digit(&slips(Language::Ur)));
     assert!(!has_urdu_digit(&slips(Language::En)));
 }
 

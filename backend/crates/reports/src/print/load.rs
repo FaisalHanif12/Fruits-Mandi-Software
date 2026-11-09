@@ -59,7 +59,7 @@ pub fn bikri_print_data(db: &Db, input: &BikriPrintDataInput) -> Result<PrintDat
             last_edit_day(conn, "bikri", input.bikri_id)?,
         ))
     })?;
-    let style = NumberStyle::new(input.language, grouping, setup.urdu_digits);
+    let style = NumberStyle::new(grouping);
     let options = BuildOptions {
         doc: input.doc,
         language: input.language,

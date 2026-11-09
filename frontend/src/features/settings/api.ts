@@ -51,7 +51,7 @@ export function settingsSetOverrides(input: OverridesSettings): Promise<Override
   return callCommand<OverridesSettings>('settings_set_overrides', { input });
 }
 
-/** The Printing settings: paper per document, printer, copies, Urdu digits, print after save. */
+/** The Printing settings: paper per document, printer, copies, print after save. */
 export function settingsGetPrinting(): Promise<PrintingSettings> {
   return callCommand<PrintingSettings>('settings_get_printing');
 }

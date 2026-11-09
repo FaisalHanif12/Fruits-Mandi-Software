@@ -465,7 +465,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
         'title_id',
         'totals',
         'totals_label_id',
-        'urdu_digits',
         'view',
       ]);
       for (const column of data.columns) {

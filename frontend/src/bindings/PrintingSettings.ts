@@ -4,7 +4,8 @@ import type { PrintDoc } from './PrintDoc';
 
 /**
  * The Printing settings the Settings screen shows (PRD Section 21): paper per document, the
- * printer, copies, Urdu digits, and the per-user list "print after save" (FR-7.57).
+ * printer, copies, and the per-user list "print after save" (FR-7.57). There is no setting for
+ * the digits: every print uses 0 to 9 (PRD FR-7.32, NFR-URD-14, plan 63).
  */
 export type PrintingSettings = {
   /**
@@ -35,10 +36,6 @@ export type PrintingSettings = {
    * Copies of one print, 1 to 99 (starts at 1).
    */
   copies: number;
-  /**
-   * Urdu digits on Urdu prints (starts off).
-   */
-  urdu_digits: boolean;
   /**
    * The documents ticked in "print after save", remembered per user.
    */

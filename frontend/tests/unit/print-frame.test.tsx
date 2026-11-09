@@ -193,13 +193,13 @@ describe.each(LANGUAGES)(
 );
 
 describe('the root of a print', () => {
-  it('takes the print language, direction, paper and digit style, whatever the app language is', () => {
+  it('takes the print language, direction and paper, whatever the app language is, and has no digit style', () => {
     useLanguageStore.setState({ language: 'en' });
     const { root } = show(printDataFor('seller_bill', { language: 'ur', paper: 'a5' }));
     expect(root.lang).toBe('ur');
     expect(root.dir).toBe('rtl');
     expect(root.dataset['paper']).toBe('a5');
-    expect(root.dataset['digits']).toBe('latin');
+    expect(root.dataset['digits']).toBeUndefined();
     // Words are the print language's, not the app's.
     expect(textOf(root)).toContain(message('ur', 'print-seller-bill-title'));
   });

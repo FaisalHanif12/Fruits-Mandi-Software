@@ -1487,3 +1487,8 @@ mod dead_amount;
 // Plan 44: reopen, fix and close again (E2E-45).
 #[path = "golden_day/fix.rs"]
 mod fix;
+
+// Plan 61 (D8 Bug 1): the sale lines of the client's screenshot, 200 of 200 sold in three lines,
+// the rate of line 3 equal to the hint (E2E-64).
+#[path = "golden_day/sale_line_figures.rs"]
+mod sale_line_figures;

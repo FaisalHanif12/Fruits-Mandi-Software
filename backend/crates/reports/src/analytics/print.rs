@@ -169,7 +169,6 @@ pub(crate) fn build(
         language,
         dir: TextDir::of(language),
         paper: options.paper,
-        urdu_digits: fmt.style.urdu_digits(),
         title_id: page.title_id.clone(),
         filters: filter_facts(&fmt, &page.filters)?,
         columns,

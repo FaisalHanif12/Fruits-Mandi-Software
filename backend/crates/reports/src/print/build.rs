@@ -57,11 +57,7 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
     let ctx = Ctx {
         language: options.language,
         grouping: options.grouping,
-        style: NumberStyle::new(
-            options.language,
-            options.grouping,
-            options.setup.urdu_digits,
-        ),
+        style: NumberStyle::new(options.grouping),
         grade_words: if graded {
             Some(grade_words(options.language)?)
         } else {
@@ -90,7 +86,6 @@ pub fn build(detail: &BikriDetail, options: &BuildOptions) -> Result<PrintData, 
         language,
         dir: TextDir::of(language),
         paper: options.setup.paper_of(options.doc),
-        urdu_digits: ctx.style.urdu_digits(),
         header: header(language, &options.firm, title_id, facts(&ctx, detail)?),
         footer: footer(ctx.style.printed_at(options.now_utc)),
         number: ctx.style.count(detail.number),

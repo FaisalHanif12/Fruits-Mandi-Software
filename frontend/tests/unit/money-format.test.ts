@@ -7,7 +7,6 @@ import {
   groupDigits,
   type Grouping,
 } from '../../src/shared/format/money';
-import { printDigits, toUrduDigits } from '../../src/shared/format/digits';
 import { paisaForTest } from '../helpers/paisa';
 
 const cases: readonly (readonly [paisa: number, international: string, lakh: string])[] = [
@@ -75,19 +74,6 @@ describe('groupDigits', () => {
     expect(groupDigits('1000', 'lakh')).toBe('1,000');
     expect(groupDigits('99999', 'lakh')).toBe('99,999');
     expect(groupDigits('999999999', 'lakh')).toBe('99,99,99,999');
-  });
-});
-
-describe('print digits (NFR-URD-14)', () => {
-  it('turns English digits into Urdu digits and keeps the separators', () => {
-    expect(toUrduDigits('13,16,040')).toBe('۱۳,۱۶,۰۴۰');
-    expect(toUrduDigits('0123456789')).toBe('۰۱۲۳۴۵۶۷۸۹');
-  });
-
-  it('is off by default', () => {
-    expect(printDigits('12,000')).toBe('12,000');
-    expect(printDigits('12,000', 'latin')).toBe('12,000');
-    expect(printDigits('12,000', 'urdu')).toBe('۱۲,۰۰۰');
   });
 });
 

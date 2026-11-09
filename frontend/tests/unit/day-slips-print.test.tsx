@@ -36,7 +36,7 @@ function frameOf(data: ReportPrintData) {
     title_id: data.title_id,
     facts: data.filters,
   });
-  return { ...frame, dir: data.dir, urdu_digits: data.urdu_digits };
+  return { ...frame, dir: data.dir };
 }
 
 function show(data: ReportPrintData) {

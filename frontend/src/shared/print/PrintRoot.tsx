@@ -1,9 +1,9 @@
 // The root of every printed document (PRD FR-19.13, FR-7.36): the print language's Fluent bundle,
-// `lang`, `dir`, the paper class and the digit style as attributes, and, in the hidden print
+// `lang`, `dir` and the paper class as attributes, and, in the hidden print
 // window, the footer of the page margin boxes. The documents of a بکری or a voucher
 // (`PrintDocument`), the collection list and the reports of D5 all sit inside it, so every print
 // of the app gets its language, direction and footer in one place. It is given the frame the
-// backend built (`language`, `dir`, `urdu_digits`, `footer`) and the paper, and draws its children.
+// backend built (`language`, `dir`, `footer`) and the paper, and draws its children.
 //
 // `applyRoot` is true only in the hidden print window: the page margin boxes inherit from the
 // document element, which then takes the print language, direction and footer. The in-app preview
@@ -16,7 +16,7 @@ import { PrintProvider } from './PrintProvider';
 import type { Paper, PrintFrame } from './types';
 
 export interface PrintRootProps {
-  frame: Pick<PrintFrame, 'language' | 'dir' | 'urdu_digits' | 'footer'>;
+  frame: Pick<PrintFrame, 'language' | 'dir' | 'footer'>;
   paper: Paper;
   applyRoot?: boolean;
   ref?: Ref<HTMLDivElement>;
@@ -31,7 +31,7 @@ function PrintRootBody({ frame, paper, applyRoot = false, ref, children }: Print
     page: l10n.getString(frame.footer.page_label_id),
     of: l10n.getString(frame.footer.of_label_id),
   };
-  const footer = footerContent(words, frame.footer.printed_at, frame.urdu_digits, paper !== 'mm80');
+  const footer = footerContent(words, frame.footer.printed_at, paper !== 'mm80');
   useEffect(() => {
     if (!applyRoot) return undefined;
     return applyPrintRoot({ language: frame.language, dir: frame.dir, footer });
@@ -43,7 +43,6 @@ function PrintRootBody({ frame, paper, applyRoot = false, ref, children }: Print
       lang={frame.language}
       dir={frame.dir}
       data-paper={paper}
-      data-digits={frame.urdu_digits ? 'urdu' : 'latin'}
       data-window={applyRoot ? 'true' : undefined}
     >
       {children}

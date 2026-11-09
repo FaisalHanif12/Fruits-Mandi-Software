@@ -20,8 +20,6 @@ import type { PrintPage } from '../../src/bindings/PrintPage';
 export interface CannedOptions {
   language?: Language;
   paper?: Paper;
-  /** Urdu digits on an Urdu print: every digit of every value is the Urdu one. */
-  urduDigits?: boolean;
   /** The day of the last edit of the entry, DD-MM-YYYY (plan 44): the header says it was revised. */
   revisedOn?: string;
   cancelled?: boolean;
@@ -33,11 +31,6 @@ export interface CannedOptions {
    * an account with a tag (PRD 10.2): `party.tag` or `line.name_tag`.
    */
   tagged?: boolean;
-}
-
-/** `0` to `9` as the Urdu digits `۰` to `۹` (what the backend's number formatter does). */
-export function toUrduDigits(text: string): string {
-  return text.replace(/\d/g, (digit) => String.fromCodePoint(0x06f0 + Number(digit)));
 }
 
 interface Words {
@@ -352,13 +345,12 @@ export function printDataFor(doc: PrintDoc, options: CannedOptions = {}): PrintD
     language,
     dir: language === 'ur' ? 'rtl' : 'ltr',
     paper: options.paper ?? DEFAULT_PAPER[doc],
-    urdu_digits: options.urduDigits === true,
     ...frameOf(language, TITLES[doc], doc === 'pukhta_slip' ? FACTS_BIKRI_2 : FACTS, options),
     number: doc === 'pukhta_slip' ? '2' : '1',
     cancelled: options.cancelled === true,
     pages: options.tagged === true ? withTag(pages, doc) : pages,
   };
-  return options.urduDigits === true ? withUrduDigits(data) : data;
+  return data;
 }
 
 /** The first buyer of the buyer slips, or the first line's buyer of the seller bill, has the tag K. */
@@ -374,39 +366,6 @@ function withTag(pages: PrintPage[], doc: PrintDoc): PrintPage[] {
     }
     return page;
   });
-}
-
-/**
- * The numbers of a print in Urdu digits, the way the backend writes them with the setting on
- * (NFR-URD-14): amounts, dates, serials, counts and rates. A phone, a code and a short code are never
- * converted (backend, 26-10-2026), and neither is a truck number, which is text as typed (PRD FR-7.25).
- */
-function withUrduDigits(data: PrintData): PrintData {
-  const d = toUrduDigits;
-  return {
-    ...data,
-    number: d(data.number),
-    header: {
-      ...data.header,
-      facts: data.header.facts.map((fact) =>
-        fact.label_id === 'print-fact-truck' ? fact : { ...fact, value: d(fact.value) },
-      ),
-    },
-    footer: { ...data.footer, printed_at: d(data.footer.printed_at) },
-    pages: data.pages.map((page) => ({
-      ...page,
-      serial: d(page.serial),
-      lines: page.lines.map((line) => ({
-        ...line,
-        date: d(line.date),
-        qty: d(line.qty),
-        rate: d(line.rate),
-        amount: d(line.amount),
-        detail: d(line.detail),
-      })),
-      amounts: page.amounts.map((item) => ({ ...item, amount: d(item.amount) })),
-    })),
-  };
 }
 
 /**
@@ -532,13 +491,12 @@ export function voucherPrintData(kind: SlipKind, options: SlipOptions = {}): Pri
     language,
     dir: language === 'ur' ? 'rtl' : 'ltr',
     paper: options.paper ?? 'a5',
-    urdu_digits: options.urduDigits === true,
     ...frameOf(language, SLIP_TITLE[kind], facts, options),
     number,
     cancelled: options.cancelled === true,
     pages: [page],
   };
-  return options.urduDigits === true ? withUrduDigits(data) : data;
+  return data;
 }
 
 /**
@@ -574,7 +532,6 @@ export function collectionPrintData(options: CannedOptions = {}): CollectionPrin
     language,
     dir: ur ? 'rtl' : 'ltr',
     paper: options.paper ?? DEFAULT_PAPER.collection_list,
-    urdu_digits: options.urduDigits === true,
     ...frameOf(
       language,
       'print-collection-list-title',
@@ -613,31 +570,5 @@ export function collectionPrintData(options: CannedOptions = {}): CollectionPrin
     total: { label_id: 'print-collection-total', amount: '23,564', role: 'total' },
     buyer_count: '3',
   };
-  return options.urduDigits === true ? collectionWithUrduDigits(data) : data;
-}
-
-function collectionWithUrduDigits(data: CollectionPrintData): CollectionPrintData {
-  const d = toUrduDigits;
-  return {
-    ...data,
-    header: {
-      ...data.header,
-      // A phone and a code are never converted, even with the setting on (backend, 26-10-2026).
-      facts: data.header.facts.map((fact) => ({ ...fact, value: d(fact.value) })),
-    },
-    footer: { ...data.footer, printed_at: d(data.footer.printed_at) },
-    groups: data.groups.map((group) => ({
-      ...group,
-      total: d(group.total),
-      rows: group.rows.map((item) => ({
-        ...item,
-        serial: d(item.serial),
-        dues: d(item.dues),
-        oldest_bill_date: item.oldest_bill_date === null ? null : d(item.oldest_bill_date),
-        oldest_days: item.oldest_days === null ? null : d(item.oldest_days),
-      })),
-    })),
-    total: { ...data.total, amount: d(data.total.amount) },
-    buyer_count: d(data.buyer_count),
-  };
+  return data;
 }

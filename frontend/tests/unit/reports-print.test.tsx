@@ -36,7 +36,7 @@ function frameOf(data: ReportPrintData) {
     title_id: data.title_id,
     facts: data.filters,
   });
-  return { ...frame, dir: data.dir, urdu_digits: data.urdu_digits };
+  return { ...frame, dir: data.dir };
 }
 
 function show(data: ReportPrintData, applyRoot = false) {
@@ -66,7 +66,7 @@ describe('the trial balance in English (R18)', () => {
     expect(root.getAttribute('lang')).toBe('en');
     expect(root.getAttribute('dir')).toBe('ltr');
     expect(root.getAttribute('data-paper')).toBe('a4');
-    expect(root.getAttribute('data-digits')).toBe('latin');
+    expect(root.getAttribute('data-digits')).toBeNull();
   });
 
   it('has the firm and the title in the header', () => {

@@ -65,8 +65,6 @@ pub struct BuyerBillsPrintData {
     pub dir: TextDir,
     /// The paper class.
     pub paper: Paper,
-    /// True when Urdu digits are used on this print.
-    pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
     /// The filters of the run, the facts under the title: dates, buyer, seller and so on
@@ -174,7 +172,6 @@ pub(crate) fn build(
         language: options.language,
         dir: TextDir::of(options.language),
         paper: options.paper,
-        urdu_digits: fmt.style.urdu_digits(),
         title_id: ids::title_id("R5"),
         filters: filter_facts(&fmt, ReportId::R5, filters)?,
         columns: columns(),

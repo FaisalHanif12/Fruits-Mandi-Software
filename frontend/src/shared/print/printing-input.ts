@@ -19,7 +19,6 @@ export function printingInputOf(
     paper_collection_list: saved.paper_collection_list,
     printer: saved.printer,
     copies: String(saved.copies),
-    urdu_digits: saved.urdu_digits,
     print_after_save: [...printAfterSave],
   };
 }

@@ -2,7 +2,7 @@
 // PRD worked day, so they can be opened in a plain browser tab and photographed in both languages
 // on A4, A5 and the 80 mm roll, with the print style on (browser "emulate print media"). The flags in
 // the hash choose the document: `?doc=seller_bill|buyer_slips|pukhta_slip|collection_list&language=
-// ur|en&paper=a4|a5|mm80&window&digits&cancelled&long=15&lines=60&contacts&mark=RH&grade`. `grade`
+// ur|en&paper=a4|a5|mm80&window&cancelled&long=15&lines=60&contacts&mark=RH&grade`. `grade`
 // puts a quality on the lines, First, Second, Third in turn (plan 58). `contacts` and
 // `mark` set the firm's contact persons and trade mark in the header. Never shipped: the route
 // exists only when import.meta.env.DEV is true (app/router.tsx).
@@ -31,7 +31,6 @@ export function PrintPage() {
   const mark = search.get('mark');
   const options = {
     language,
-    urduDigits: search.has('digits'),
     cancelled: search.has('cancelled'),
     contacts: search.has('contacts'),
     ...(mark === null || mark === '' ? {} : { tradeMark: mark }),

@@ -7,7 +7,6 @@ expression: "print(EVENT1, PrintDoc::BuyerSlips, Language::Ur)"
   "language": "ur",
   "dir": "rtl",
   "paper": "a5",
-  "urdu_digits": false,
   "header": {
     "firm": {
       "name": "ماہر عدنان اینڈ برادرز",

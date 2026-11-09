@@ -29,10 +29,6 @@ export type CollectionPrintData = {
    */
   paper: Paper;
   /**
-   * True when Urdu digits are used on this print.
-   */
-  urdu_digits: boolean;
-  /**
    * The shared header (PRD FR-19.13). Its facts are the day, and the collector and the city
    * when the list is filtered by them.
    */

@@ -121,7 +121,6 @@ pub(crate) fn fmt_of(language: Language, grouping: Grouping) -> Fmt {
     Fmt::new(&PrintOptions {
         language,
         grouping,
-        urdu_digits_setting: false,
         paper: Paper::A4,
     })
 }

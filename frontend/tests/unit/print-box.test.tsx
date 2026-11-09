@@ -202,7 +202,6 @@ describe.each(LANGUAGES)('the print box (%s)', (language) => {
         paper_collection_list: 'a4',
         printer: '',
         copies: '1',
-        urdu_digits: false,
         print_after_save: ['seller_bill', 'pukhta_slip'],
       },
     ]);

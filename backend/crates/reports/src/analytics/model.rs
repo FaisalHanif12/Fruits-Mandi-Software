@@ -703,8 +703,6 @@ pub struct AnalyticsPrintData {
     pub dir: TextDir,
     /// The paper class.
     pub paper: Paper,
-    /// True when Urdu digits are used on this print.
-    pub urdu_digits: bool,
     /// Fluent message ID of the title.
     pub title_id: String,
     /// The filters of the run, the facts under the title. They go to `reports_print_header` with

@@ -163,12 +163,10 @@ pub struct PrintSetup {
     pub printer: String,
     /// Copies of one print.
     pub copies: u32,
-    /// Urdu digits (۰-۹) on Urdu prints (NFR-URD-14).
-    pub urdu_digits: bool,
 }
 
 impl Default for PrintSetup {
-    /// A21: bill A4, slips A5, one copy, English digits, the default printer.
+    /// A21: bill A4, slips A5, one copy, the default printer.
     fn default() -> Self {
         Self {
             paper_seller_bill: Paper::A4,
@@ -178,7 +176,6 @@ impl Default for PrintSetup {
             paper_collection_list: Paper::A4,
             printer: String::new(),
             copies: MIN_COPIES,
-            urdu_digits: false,
         }
     }
 }
@@ -203,7 +200,8 @@ pub fn default_print_after_save() -> Vec<PrintDoc> {
 }
 
 /// The Printing settings the Settings screen shows (PRD Section 21): paper per document, the
-/// printer, copies, Urdu digits, and the per-user list "print after save" (FR-7.57).
+/// printer, copies, and the per-user list "print after save" (FR-7.57). There is no setting for
+/// the digits: every print uses 0 to 9 (PRD FR-7.32, NFR-URD-14, plan 63).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 pub struct PrintingSettings {
     /// Paper of the seller bill (starts as A4).
@@ -221,8 +219,6 @@ pub struct PrintingSettings {
     /// Copies of one print, 1 to 99 (starts at 1).
     #[ts(type = "number")]
     pub copies: u32,
-    /// Urdu digits on Urdu prints (starts off).
-    pub urdu_digits: bool,
     /// The documents ticked in "print after save", remembered per user.
     pub print_after_save: Vec<PrintDoc>,
 }
@@ -238,7 +234,6 @@ impl PrintingSettings {
             paper_collection_list: setup.paper_collection_list,
             printer: setup.printer,
             copies: setup.copies,
-            urdu_digits: setup.urdu_digits,
             print_after_save,
         }
     }
@@ -253,7 +248,6 @@ impl PrintingSettings {
             paper_collection_list: self.paper_collection_list,
             printer: self.printer.clone(),
             copies: self.copies,
-            urdu_digits: self.urdu_digits,
         }
     }
 }
@@ -278,8 +272,6 @@ pub struct SetPrintingInput {
     pub printer: String,
     /// Copies as typed, whole number 1 to 99.
     pub copies: String,
-    /// Urdu digits on Urdu prints.
-    pub urdu_digits: bool,
     /// The documents ticked in "print after save". A repeated document counts once.
     pub print_after_save: Vec<PrintDoc>,
 }
@@ -446,8 +438,24 @@ mod tests {
         // Plan 17e: the collection list is a list of rows, so it starts on A4.
         assert_eq!(setup.paper_of(PrintDoc::CollectionList), Paper::A4);
         assert_eq!(setup.copies, 1);
-        assert!(!setup.urdu_digits);
         assert!(setup.printer.is_empty());
+    }
+
+    #[test]
+    fn an_old_stored_urdu_digits_field_is_ignored() {
+        // Plan 63: the setting of Urdu digits is gone. A computer that stored `urdu_digits: true`
+        // still reads its other values, and no struct carries the old one.
+        let setup: PrintSetup =
+            serde_json::from_str(r#"{ "copies": 2, "urdu_digits": true }"#).unwrap();
+        assert_eq!(setup.copies, 2);
+        let input: SetPrintingInput = serde_json::from_str(
+            r#"{ "paper_seller_bill": "a4", "paper_buyer_slips": "a5", "paper_pukhta_slip": "a5",
+                 "printer": "", "copies": "1", "urdu_digits": true, "print_after_save": [] }"#,
+        )
+        .unwrap();
+        assert_eq!(input.copies, "1");
+        let value = serde_json::to_value(&setup).unwrap();
+        assert!(value.get("urdu_digits").is_none(), "{value}");
     }
 
     #[test]

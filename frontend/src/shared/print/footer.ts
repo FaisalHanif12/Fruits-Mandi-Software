@@ -45,16 +45,11 @@ export interface FooterWords {
 /**
  * The CSS `content` value of the footer:
  * `"Printed 10-10-2026 17:40 · Page " counter(page) " of " counter(pages)`.
- * With Urdu digits on, the counters use the Urdu digit style, like every other number. Without
- * pages (the roll) it is only `"Printed 10-10-2026 17:40"`.
+ * The counters are plain `decimal` (0-9) in every language: a print never uses Urdu digits (PRD
+ * FR-7.32, NFR-URD-14, Umar 09-11-2026). Without pages (the roll) it is only
+ * `"Printed 10-10-2026 17:40"`.
  */
-export function footerContent(
-  words: FooterWords,
-  printedAt: string,
-  urduDigits: boolean,
-  withPages = true,
-): string {
-  const style = urduDigits ? ', persian' : '';
+export function footerContent(words: FooterWords, printedAt: string, withPages = true): string {
   // The 80 mm roll is one tall page, so "Page 1 of 1" would say nothing: only the print time.
   if (!withPages) {
     return cssString(`${stripIsolates(words.printed)} ${LTR_ISOLATE}${printedAt}${POP_ISOLATE}`);
@@ -65,9 +60,9 @@ export function footerContent(
     cssString(
       `${stripIsolates(words.printed)} ${LTR_ISOLATE}${printedAt}${POP_ISOLATE} · ${stripIsolates(words.page)} `,
     ),
-    `counter(page${style})`,
+    'counter(page)',
     cssString(` ${stripIsolates(words.of)} `),
-    `counter(pages${style})`,
+    'counter(pages)',
   ].join(' ');
 }
 
