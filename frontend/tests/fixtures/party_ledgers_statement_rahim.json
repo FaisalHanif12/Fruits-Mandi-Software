@@ -1,0 +1,38 @@
+{
+  "head": {
+    "account_id": 18,
+    "code": "0010",
+    "name_ur": "رحیم",
+    "name_en": "Rahim",
+    "kind": "seller",
+    "is_active": true,
+    "is_dead": false
+  },
+  "rows": [
+    {
+      "date": "2026-10-10",
+      "previous_paisa": 1500000,
+      "previous_side": "dr",
+      "charged_paisa": 2431600,
+      "paid_paisa": 931600,
+      "balance_paisa": 0,
+      "balance_side": "zero"
+    },
+    {
+      "date": "2026-09-01",
+      "previous_paisa": 0,
+      "previous_side": "zero",
+      "charged_paisa": 0,
+      "paid_paisa": 1500000,
+      "balance_paisa": 1500000,
+      "balance_side": "dr"
+    }
+  ],
+  "count": 2,
+  "charged_total_paisa": 2431600,
+  "paid_total_paisa": 2431600,
+  "opening_paisa": 0,
+  "opening_side": "zero",
+  "closing_paisa": 0,
+  "closing_side": "zero"
+}

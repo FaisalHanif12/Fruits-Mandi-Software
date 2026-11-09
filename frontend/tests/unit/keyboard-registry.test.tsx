@@ -24,6 +24,8 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['find', 'F3'],
   ['addAccount', 'F4'],
   ['print', 'F9'],
+  // The second print button of the sale book, ادھاری تفصیل (R5), PRD FR-12.12 (v1.32, plan 68).
+  ['printAdhari', 'Shift+F9'],
   ['save', 'F10'],
   ['saveAndNext', 'Ctrl+Enter'],
   ['removeRow', 'Ctrl+Delete'],

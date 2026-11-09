@@ -15,7 +15,7 @@
 
 use mandi_services::bikri;
 use mandi_services::core::bikri::{
-    BikriDraft, LaterSaleSaveInput, LineChargeMethod, PaymentType, StockListInput, WriteOffInput,
+    BikriDraft, LaterSaleSaveInput, LineChargeMethod, StockListInput, WriteOffInput,
 };
 use mandi_services::core::rules::{ChargeMethod, ChargeSide, ChargeType, RuleInput, RuleSaved};
 use mandi_services::core::vouchers::OpenPayablesInput;
@@ -88,7 +88,8 @@ fn random_save(w: &World, rng: &mut Rng, step: usize) -> BikriDraft {
             line.chukta = person(ur, en, phone);
         }
         if which < 2 && rng.below(3) == 0 {
-            line.payment_type = Some(PaymentType::Cash);
+            // Part of the bill paid on the spot (PRD FR-12.44): 50 is below every total here.
+            line.paid = Some("50".into());
         }
         sales.push(line);
     }
@@ -198,11 +199,8 @@ fn random_edit(w: &World, rng: &mut Rng) -> bool {
             }
         }
         _ => {
-            lot.sales[si].payment_type = Some(if rng.below(2) == 0 {
-                PaymentType::Cash
-            } else {
-                PaymentType::Credit
-            });
+            // A change of the paid amount alone (PRD FR-12.44, plan 60 P11).
+            lot.sales[si].paid = (rng.below(2) == 0).then(|| "50".to_owned());
         }
     }
     let preview = tools::preview(w, &opened, &d);

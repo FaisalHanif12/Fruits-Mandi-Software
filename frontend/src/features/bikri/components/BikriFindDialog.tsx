@@ -1,5 +1,6 @@
-// Find a saved بکری by number, truck, seller, day or item (PRD FR-12.13). A small dialog on the
-// sale book: the five filters, and under them the بکری that match, newest first (at most 50).
+// Find a saved بکری by number, truck, seller, buyer, day or item (PRD FR-12.13, plan 67). A small dialog
+// on the sale book: the six filters (the buyer is one account from the picker, or the name of a
+// walk-in چکتا buyer typed as text, because he has no account of his own), and under them the بکری that match, newest first (at most 50).
 // ↓ from the last filter goes into the results, ↑ ↓ move between them, Enter opens the one chosen.
 // Every filter that is given must match (`bikri_find`); a truck number matches by its start, in any
 // letter case. The words that tell the user nothing was asked, nothing matched or something failed
@@ -85,12 +86,17 @@ export function BikriFindDialog({ open, onOpenChange, onOpen }: BikriFindDialogP
   const [seller, setSeller] = useState<PickerValue | null>(null);
   const [date, setDate] = useState('');
   const [item, setItem] = useState<PickerValue | null>(null);
+  // The buyer: an account from the picker (a regular buyer), or the name of a walk-in chukta buyer.
+  const [buyer, setBuyer] = useState<PickerValue | null>(null);
+  const [walkIn, setWalkIn] = useState('');
   const input: BikriFindInput = {
     number: numberOf(number),
     truck_no: truck.trim() === '' ? null : truck.trim(),
     seller_id: seller?.id ?? null,
     date: date.trim() === '' ? null : date.trim(),
     item_id: item?.id ?? null,
+    buyer_account_id: buyer?.id ?? null,
+    buyer_text: walkIn.trim() === '' ? null : walkIn.trim(),
   };
   const asked = hasFindFilter(input);
   const found = useBikriFind(input, open);
@@ -167,6 +173,21 @@ export function BikriFindDialog({ open, onOpenChange, onOpen }: BikriFindDialogP
                 onChange={setSeller}
               />
             )}
+          </Field>
+          <Field label={<Localized id="glossary-gahak" />}>
+            {(control) => (
+              <AccountPicker
+                {...control}
+                canAdd={false}
+                scope="buyer"
+                showCard={false}
+                value={buyer}
+                onChange={setBuyer}
+              />
+            )}
+          </Field>
+          <Field label={<Localized id="bikri-find-walk-in" />}>
+            {(control) => <TextInput {...control} value={walkIn} onChange={setWalkIn} />}
           </Field>
           <Field label={<Localized id="bikri-header-date" />}>
             {(control) => <DateInput {...control} value={date} onChange={setDate} />}

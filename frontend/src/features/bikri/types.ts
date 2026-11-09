@@ -9,7 +9,6 @@ import type { FreightPart } from '../../bindings/FreightPart';
 import type { LineCalc } from '../../bindings/LineCalc';
 import type { LinePreview } from '../../bindings/LinePreview';
 import type { LotPreview } from '../../bindings/LotPreview';
-import type { PaymentType } from '../../bindings/PaymentType';
 import type { RateHint } from '../../bindings/RateHint';
 import type { SellerMemory } from '../../bindings/SellerMemory';
 import type { SummaryTotals } from '../../bindings/SummaryTotals';
@@ -23,7 +22,6 @@ export type {
   LineCalc,
   LinePreview,
   LotPreview,
-  PaymentType,
   RateHint,
   SellerMemory,
   SummaryTotals,
@@ -82,7 +80,14 @@ export const SALE = {
   buyerComm: 'buyerComm',
   laga: 'laga',
   buyerTotal: 'buyerTotal',
-  payment: 'payment',
+  // The last money cell of the line: what the buyer paid on the spot (موقع پر جمع, PRD FR-12.44).
+  // Typed as text and sent as typed; for a buyer who must pay in full the backend sets it.
+  paid: 'paid',
+  // Set only in the preview's cells (never typed): the amount the backend decided for a buyer who
+  // must pay in full. While it is there the paid cell shows it and cannot be typed in.
+  paidFixed: 'paidFixed',
+  // What is left on the buyer's account (کھاتے میں باقی): a figure of the preview, never typed.
+  leftOnAccount: 'leftOnAccount',
   // The details of the line.
   weight: 'weight',
   differs: 'differs',

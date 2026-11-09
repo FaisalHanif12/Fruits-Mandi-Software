@@ -558,7 +558,7 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
       expect(focusedIn(salesGrid(next))).toBe('0:rate');
     });
     // And the entry goes on: the rate, then the second line.
-    await user.keyboard('600{Enter}1{Enter}');
+    await user.keyboard('600{Enter}{Enter}1{Enter}');
     await waitFor(() => {
       expect(backend.lastDraft().lots[0]?.sales.slice(0, 2)).toMatchObject([
         { buyer_account_id: IDS.akram, qty: '20', seller_rate: '600' },

@@ -70,7 +70,7 @@ fn typed<T: serde::de::DeserializeOwned>(request: &Value) -> T {
 fn row(key: &str, buyer: i64, qty: &str, rate: &str) -> Value {
     json!({ "key": key, "sale_id": null, "buyer_account_id": buyer, "chukta": null, "qty": qty,
         "weight": null, "seller_rate": rate, "rate_differs": false, "buyer_rate": null,
-        "payment_type": null, "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
+        "paid": null, "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
 
 #[test]

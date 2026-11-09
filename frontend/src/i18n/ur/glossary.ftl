@@ -150,6 +150,14 @@
 # review: pending
 -naqdi = نقدی
 
+# Money a buyer pays at the time of the sale, typed at the end of his sale line (PRD FR-12.44)
+# review: pending
+-mauqa-par-jama = موقع پر جمع
+
+# What is left of a buyer's bill after the money paid on the spot; it stays on his account (PRD FR-12.44)
+# review: pending
+-khate-mein-baqi = کھاتے میں باقی
+
 # Cash book
 # review: pending
 -rokar = روکڑ
@@ -438,6 +446,8 @@ glossary-naqdi-mandi = { -naqdi-mandi }
 glossary-rate-farq = { -rate-farq }
 glossary-udhari = { -udhari }
 glossary-naqdi = { -naqdi }
+glossary-mauqa-par-jama = { -mauqa-par-jama }
+glossary-khate-mein-baqi = { -khate-mein-baqi }
 glossary-rokar = { -rokar }
 glossary-wasooli = { -wasooli }
 glossary-agrahi = { -agrahi }

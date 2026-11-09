@@ -11,8 +11,10 @@
 //! | 04010005 ریٹ فرق | جمع (بنام if negative) | Σ rate difference |
 //! | 02010001 / 02010002 / 02010003 / 02010004 | جمع | Σ مزدوری / کرایہ (paid by the firm) / کرایہ سٹور / منشیانہ |
 //!
-//! Cash part: each lot with نقد: seller بنام, روکڑ جمع. Each نقدی line: روکڑ بنام, the same buyer
-//! account جمع.
+//! Cash part: each lot with نقد: seller بنام, روکڑ جمع. Each line with money paid on the spot (موقع پر
+//! جمع, PRD FR-12.44): روکڑ بنام paid, the same buyer account جمع paid. A line paid in full posts
+//! what a نقدی line posted before v1.32, and a line paid 0 posts nothing in this part, as an ادھاری
+//! line did.
 //!
 //! No line is zero and none is negative: a negative amount goes on the other side (money agent
 //! Section 7). The entry is checked by [`build_entry`], so one that does not balance is refused
@@ -22,7 +24,6 @@
 //! 1,764 + 400 + 20 + 250 + 3,000 + 50 = 31,564 on the credit side; the cash part adds 5,000 to
 //! each side, so the whole entry is 36,564.
 
-use mandi_core::bikri::PaymentType;
 use mandi_core::ids::AccountId;
 use mandi_core::money::{MoneyError, Paisa};
 
@@ -37,8 +38,9 @@ pub struct JournalSale {
     pub person_key: Option<String>,
     /// What the buyer pays: value + commission + لاگا.
     pub buyer_total: Paisa,
-    /// Credit lines stay on the buyer's account; cash lines are settled at once.
-    pub payment_type: PaymentType,
+    /// Money the buyer paid on the spot (PRD FR-12.44): from 0 up to `buyer_total`. What is left
+    /// stays on the buyer's account; this part is settled at once in the cash part.
+    pub paid: Paisa,
     /// The seller commission of the line.
     pub seller_comm: Paisa,
     /// The buyer commission of the line.
@@ -156,7 +158,8 @@ fn push_signed(
 pub struct SaleLayout {
     /// The buyer's debit line: the bill of this line.
     pub buyer_debit: Option<usize>,
-    /// The buyer's credit line of the cash part: the cash that settles a نقدی line at once.
+    /// The buyer's credit line of the cash part: the money he paid on the spot, which settles that
+    /// much of the line at once (PRD FR-12.44). `None` when he paid nothing.
     pub cash_credit: Option<usize>,
 }
 
@@ -284,7 +287,8 @@ pub fn build_bikri_entry_with_layout(
     ] {
         push_signed(&mut lines, account, None, Side::Cr, amount)?;
     }
-    // The cash part (PRD FR-12.9): نقد given to a seller, and the settlement of each cash line.
+    // The cash part (PRD FR-12.9, FR-12.44): نقد given to a seller, and the money each buyer paid on
+    // the spot on each line.
     layout.cash_part_start = lines.len();
     for (lot_index, lot) in source.lots.iter().enumerate() {
         if lot.cash_paid > Paisa::ZERO {
@@ -301,14 +305,14 @@ pub fn build_bikri_entry_with_layout(
             push_signed(&mut lines, accounts.cash, None, Side::Cr, lot.cash_paid)?;
         }
         for (sale_index, sale) in lot.sales.iter().enumerate() {
-            if sale.payment_type == PaymentType::Cash {
-                push_signed(&mut lines, accounts.cash, None, Side::Dr, sale.buyer_total)?;
+            if sale.paid > Paisa::ZERO {
+                push_signed(&mut lines, accounts.cash, None, Side::Dr, sale.paid)?;
                 let at = push_signed(
                     &mut lines,
                     sale.buyer_account_id,
                     sale.person_key.as_deref(),
                     Side::Cr,
-                    sale.buyer_total,
+                    sale.paid,
                 )?;
                 if let Some(slot) = layout
                     .lots

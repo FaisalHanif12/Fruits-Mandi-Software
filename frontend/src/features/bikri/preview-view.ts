@@ -80,7 +80,19 @@ export function lineView(line: LinePreview | undefined, grouping: Grouping, say:
     workings[SALE.laga] = done.laga.working;
     calc[SALE.buyerTotal] = money(done.buyer_total);
     workings[SALE.buyerTotal] = done.workings.buyer_total;
-    calc[SALE.payment] = done.payment_type;
+    // What stays on the buyer's account (PRD FR-12.44): shown in the details of the line. The backend
+    // worked it out; nothing is subtracted here.
+    calc[SALE.leftOnAccount] = money(done.left_paisa);
+    workings[SALE.leftOnAccount] = done.workings.left;
+    // A buyer who must pay in full: the backend decided the amount, so the paid cell shows it and is
+    // closed (PRD FR-12.44, P3). Its working is the ⓘ of the cell. An amount typed above the buyer total
+    // keeps its working too, so the cell says why it counts as 0 (the refusal itself is on the cell).
+    if (done.paid_fixed) {
+      calc[SALE.paidFixed] = money(done.paid_paisa);
+      workings[SALE.paid] = done.workings.paid;
+    } else if (done.workings.paid.message_id === 'working-paid-over') {
+      workings[SALE.paid] = done.workings.paid;
+    }
   }
   return { calc, workings };
 }

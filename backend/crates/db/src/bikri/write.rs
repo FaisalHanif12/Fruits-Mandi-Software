@@ -303,8 +303,11 @@ pub struct NewSale<'a> {
     pub buyer_total_paisa: i64,
     /// C19, paisa.
     pub rate_diff_paisa: i64,
-    /// `credit` or `cash`.
+    /// `credit` or `cash`: `cash` only when the whole buyer total was paid. Still written; nothing
+    /// decides money from it any more (PRD FR-12.44, plan 60 P10).
     pub payment_type: &'a str,
+    /// Money the buyer paid on the spot, paisa (PRD FR-12.44): from 0 up to `buyer_total_paisa`.
+    pub paid_paisa: i64,
     /// A note.
     pub note: Option<&'a str>,
     /// C21: the cost of the trip goods this line sold, paisa. 0 on a line of any other lot.
@@ -336,9 +339,9 @@ pub fn insert_sale(
              buyer_rate_paisa, buyer_value_paisa,
              buyer_comm_method, buyer_comm_value_bps, buyer_comm_value_paisa, buyer_comm_rule_id, buyer_comm_paisa,
              laga_method, laga_value_bps, laga_value_paisa, laga_rule_id, laga_paisa,
-             buyer_total_paisa, rate_diff_paisa, payment_type, note, cost_paisa, grade)
+             buyer_total_paisa, rate_diff_paisa, payment_type, note, cost_paisa, grade, paid_paisa)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
-             ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39)",
+             ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36, ?37, ?38, ?39, ?40)",
     )?
     .execute(params![
             now,
@@ -380,6 +383,7 @@ pub fn insert_sale(
             sale.note,
             sale.cost_paisa,
             sale.grade,
+            sale.paid_paisa,
     ])?;
     Ok(conn.last_insert_rowid())
 }

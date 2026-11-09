@@ -177,20 +177,22 @@ fn a_sale_line_to_a_new_person_puts_him_in_the_list_and_leaves_no_balance_on_003
 }
 
 #[test]
-fn a_chukta_line_cannot_take_credit() {
+fn a_chukta_line_always_pays_the_whole_bill_whatever_is_typed() {
+    // PRD FR-13.5, FR-12.44: the backend sets paid = buyer total for a چکتا buyer and ignores what
+    // is typed in the paid field. 12,800 is on the cash credit line of the entry.
     let w = world();
-    let mut draft = event2(&w);
-    draft.lots[0].sales[0].payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
-    let refused = save(&w, &draft).unwrap_err();
-    let ServiceError::Rejected(items) = refused else {
-        panic!("not a refusal");
-    };
-    assert!(
-        items
+    for typed in [None, Some("1"), Some("0"), Some("5,000")] {
+        let mut draft = event2(&w);
+        draft.lots[0].key = format!("lot-{}", typed.unwrap_or("none"));
+        draft.header.truck_no = Some(format!("T-{}", typed.unwrap_or("none")));
+        draft.lots[0].sales[0].paid = typed.map(str::to_owned);
+        let saved = save_ok(&w, &draft);
+        let cash_credit = entry_lines(&w, saved.entry_id)
             .iter()
-            .any(|i| i.code == ErrorCode::ErrCreditNotAllowed),
-        "a چکتا buyer always pays in full (PRD FR-13.5)"
-    );
+            .filter(|l| l.2 == 12_800 && l.3.is_some())
+            .count();
+        assert_eq!(cash_credit, 1, "typed {typed:?}: the whole 12,800 is paid");
+    }
 }
 
 #[test]
@@ -212,7 +214,6 @@ fn a_line_on_0030_needs_a_name_and_a_stray_name_on_an_ordinary_buyer_is_ignored(
     // saved as the ordinary buyer he is, and no person key is written.
     let mut draft = event2(&w);
     draft.lots[0].sales[0].buyer_account_id = Some(w.akram);
-    draft.lots[0].sales[0].payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
     let saved = save_ok(&w, &draft);
     assert!(
         entry_lines(&w, saved.entry_id)

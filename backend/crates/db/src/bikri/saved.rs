@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     BikriDetail, BikriHit, BikriListRow, BikriMatch, BikriStatus, FreightPaidBy, LotChargeMethod,
-    NavigateTo, PaymentType, SaleGrade, SaleState, SavedCharge, SavedChukta, SavedCredit, SavedLot,
+    NavigateTo, SaleGrade, SaleState, SavedCharge, SavedChukta, SavedCredit, SavedLot,
     SavedLotCharge, SavedOwnLot, SavedPosting, SavedPurchaseRef, SavedSale, SavedSplit,
     SavedTotals, StoredMethod,
 };
@@ -166,7 +166,7 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
     let buyer_total = c.paisa()?;
     let rate_diff = c.paisa()?;
     let at = c.at;
-    let payment: String = c.get()?;
+    let paid = c.paisa()?;
     let is_active: bool = c.get()?;
     let ended_at = c.at;
     let ended: Option<String> = c.get()?;
@@ -195,7 +195,18 @@ fn read_sale(c: &mut Cols<'_>) -> rusqlite::Result<(i64, SavedSale)> {
             buyer_total,
             rate_diff,
             cost_paisa,
-            payment_type: PaymentType::parse(&payment).ok_or_else(|| bad(at, "a payment type"))?,
+            paid_paisa: paid,
+            left_paisa: {
+                // A stored paid is never above its total (the CHECK of migration 21), so a negative
+                // left is a bug signal and is refused, not shown.
+                let left = buyer_total
+                    .checked_sub(paid)
+                    .map_err(|_| bad(at, "a paid amount that does not fit"))?;
+                if left.is_negative() {
+                    return Err(bad(at, "a paid amount above the buyer total"));
+                }
+                left
+            },
             is_active,
             state: SaleState::parse(ended.as_deref())
                 .ok_or_else(|| bad(ended_at, "a sale line state"))?,
@@ -216,7 +227,7 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
     s.buyer_rate_paisa, s.buyer_value_paisa,
     s.buyer_comm_method, s.buyer_comm_value_bps, s.buyer_comm_value_paisa, s.buyer_comm_rule_id, s.buyer_comm_paisa,
     s.laga_method, s.laga_value_bps, s.laga_value_paisa, s.laga_rule_id, s.laga_paisa,
-    s.buyer_total_paisa, s.rate_diff_paisa, s.payment_type, s.is_active, s.ended, s.note, s.cost_paisa,
+    s.buyer_total_paisa, s.rate_diff_paisa, s.paid_paisa, s.is_active, s.ended, s.note, s.cost_paisa,
     s.grade";
 
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {

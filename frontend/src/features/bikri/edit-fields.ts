@@ -47,7 +47,7 @@ export const SALE_FIELD_LABEL: Readonly<Record<string, string>> = {
   [SALE.qty]: 'bikri-col-qty',
   [SALE.rate]: 'bikri-col-rate',
   [SALE.grade]: 'glossary-darja',
-  [SALE.payment]: 'bikri-col-payment',
+  [SALE.paid]: 'bikri-col-paid-on-spot',
   [SALE.weight]: 'bikri-line-weight',
   [SALE.differs]: 'bikri-line-differs',
   [SALE.buyerRate]: 'bikri-line-buyer-rate',
@@ -62,10 +62,6 @@ export const SALE_FIELD_LABEL: Readonly<Record<string, string>> = {
 
 /** The word of a value that is one of a few fixed words, or null when it is shown as typed. */
 export function fixedWord(scope: 'lot' | 'line' | 'header', field: string, value: string) {
-  if (scope === 'line' && field === SALE.payment) {
-    if (value === 'credit') return 'glossary-udhari';
-    if (value === 'cash') return 'glossary-naqdi';
-  }
   if (scope === 'line' && field === SALE.grade) {
     if (value === 'first') return 'glossary-darja-awwal';
     if (value === 'second') return 'glossary-darja-doyam';

@@ -35,31 +35,36 @@ impl FreightPaidBy {
     }
 }
 
-/// How a buyer pays for a line (PRD 12.4 "ادھاری / نقدی").
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
-#[serde(rename_all = "snake_case")]
+/// The word stored in `bikri_sales.payment_type` (PRD v1.32, D8 decision P10). The column stays in
+/// the table and is still written, but nothing decides money from it any more: the amount paid on
+/// the spot is `bikri_sales.paid_paisa` (PRD FR-12.44). It is not part of the contract with the
+/// screens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PaymentType {
-    /// ادھاری: the buyer owes it.
+    /// Something is left on the buyer's account.
     Credit,
-    /// نقدی: paid at once.
+    /// The buyer paid the whole bill on the spot.
     Cash,
 }
 
 impl PaymentType {
+    /// The word for a line: `cash` only when the buyer paid exactly the whole buyer total, else
+    /// `credit` (PRD v1.32, D8 P10).
+    ///
+    /// Example: total 21,360 paid 21,360 is `cash`; total 48,100 paid 10,000 is `credit`.
+    pub fn of(paid: Paisa, buyer_total: Paisa) -> Self {
+        if paid == buyer_total {
+            PaymentType::Cash
+        } else {
+            PaymentType::Credit
+        }
+    }
+
     /// The stored form (`bikri_sales.payment_type`).
     pub const fn as_str(self) -> &'static str {
         match self {
             PaymentType::Credit => "credit",
             PaymentType::Cash => "cash",
-        }
-    }
-
-    /// Reads the stored form.
-    pub fn parse(text: &str) -> Option<Self> {
-        match text {
-            "credit" => Some(PaymentType::Credit),
-            "cash" => Some(PaymentType::Cash),
-            _ => None,
         }
     }
 }
@@ -242,7 +247,7 @@ pub struct SaleInput {
     pub key: String,
     /// The saved line this row is, when the draft is an edit of a posting (plan 16). `null` for a
     /// new line. A line sent with its `sale_id` is "unchanged" when its buyer, person, quantity,
-    /// weight, rates, payment type and typed charges equal the stored ones, and then keeps its
+    /// weight, rates and typed charges equal the stored ones (the amount paid is not part of the test), and then keeps its
     /// stored charges exactly (PRD FR-12.20, FR-11.6).
     #[serde(default)]
     #[ts(type = "number | null", optional)]
@@ -271,9 +276,15 @@ pub struct SaleInput {
     /// The buyer's rate. Used only when `rate_differs` is true.
     #[serde(default)]
     pub buyer_rate: Option<String>,
-    /// How the buyer pays. Empty means the default of the buyer (PRD 12.4).
+    /// Money the buyer paid on the spot (موقع پر جمع, PRD FR-12.44): whole rupees, from 0 up to the
+    /// line's buyer total. Empty means 0. A buyer who must pay in full (نقدی منڈی, a چکتا buyer, a
+    /// buyer whose "ادھار کی اجازت" is off) always pays the whole buyer total: the backend sets it
+    /// and ignores what is sent here (it is kept as stored when the line is an unchanged line of
+    /// an edit, plan 65 point 10a). More than the buyer total is `ERR_PAID_EXCEEDS_TOTAL` on
+    /// `lots[i].sales[j].paid`, with `max` (rupees). A sum such as `5000+5000` is taken (PRD
+    /// FR-7.48).
     #[serde(default)]
-    pub payment_type: Option<PaymentType>,
+    pub paid: Option<String>,
     /// A seller commission typed on the line.
     #[serde(default)]
     pub seller_comm: Option<LineChargeInput>,

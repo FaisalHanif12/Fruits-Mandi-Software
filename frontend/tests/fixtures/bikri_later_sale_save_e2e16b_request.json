@@ -11,7 +11,7 @@
       "key": "later-1",
       "laga": null,
       "note": null,
-      "payment_type": null,
+      "paid": null,
       "qty": "5",
       "rate_differs": false,
       "sale_id": null,

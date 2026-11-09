@@ -308,7 +308,15 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
 
   // The same-truck notice's "open" button: find the saved بکری by its number, then open it.
   const openByNumber = (number: number) => {
-    void bikriFind({ number, truck_no: null, seller_id: null, date: null, item_id: null })
+    void bikriFind({
+      number,
+      truck_no: null,
+      seller_id: null,
+      date: null,
+      item_id: null,
+      buyer_account_id: null,
+      buyer_text: null,
+    })
       .then((rows) => {
         const row = rows[0];
         if (row === undefined) throw new Error('not found');

@@ -133,8 +133,21 @@ bikri-col-buyer-comm = Buyer commission
 # review: pending
 bikri-col-buyer-total = Buyer total
 
+# The last money cell of a sale line (PRD FR-12.44): what the buyer paid right there.
 # review: pending
-bikri-col-payment = { -udhari } / { -naqdi }
+bikri-col-paid-on-spot = { -mauqa-par-jama }
+
+# What is left of the line on the buyer's account, shown in the details of the line (PRD FR-12.44).
+# review: pending
+bikri-line-left = { -khate-mein-baqi }
+
+# An unchanged line of an edit keeps the amount it was saved with (PRD FR-12.44, plan 65 point 10a).
+# review: pending
+bikri-paid-kept-note = This line is kept as it was saved, so { -mauqa-par-jama } cannot be changed here.
+
+# The cell of a buyer who must pay in full shows the amount the backend set (PRD FR-12.44).
+# review: pending
+bikri-paid-fixed-note = This buyer always pays the whole bill, so the amount is filled in.
 
 # The grey hint of the rate cell (PRD FR-7.53). It is never typed into the cell.
 # review: pending
@@ -409,7 +422,10 @@ bikri-find-open = Find
 bikri-find-title = Find a { -bikri }
 
 # review: pending
-bikri-find-help = Type whatever you know: number, truck, { -beopari }, date or { -qism-maal }.
+bikri-find-help = Type whatever you know: number, truck, { -beopari }, { -gahak }, date or { -qism-maal }.
+
+# review: pending
+bikri-find-walk-in = { -chukta-khata } buyer's name
 
 # review: pending
 bikri-find-number = { -bikri } number

@@ -1,0 +1,213 @@
+{
+  "id": "R13",
+  "title_id": "report-r13-title",
+  "filters": {
+    "shortcut": null,
+    "from": null,
+    "to": null,
+    "as_of": null,
+    "party": {
+      "account_id": 33,
+      "code": "0023",
+      "short_code": "3",
+      "name_ur": "انس",
+      "name_en": "Anas",
+      "tag": null,
+      "person_key": null
+    },
+    "seller": null,
+    "zamindar": null,
+    "item": null,
+    "city": null,
+    "adda": null,
+    "partner": null,
+    "detail": false
+  },
+  "columns": [
+    {
+      "key": "date",
+      "title_id": "report-col-date",
+      "kind": "date"
+    },
+    {
+      "key": "doc",
+      "title_id": "report-col-doc",
+      "kind": "doc"
+    },
+    {
+      "key": "detail",
+      "title_id": "report-col-detail",
+      "kind": "detail"
+    },
+    {
+      "key": "narration",
+      "title_id": "report-col-narration",
+      "kind": "text"
+    },
+    {
+      "key": "debit",
+      "title_id": "report-col-debit",
+      "kind": "money"
+    },
+    {
+      "key": "credit",
+      "title_id": "report-col-credit",
+      "kind": "money"
+    },
+    {
+      "key": "balance",
+      "title_id": "report-col-balance",
+      "kind": "balance"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": 1,
+              "item": {
+                "ur": "آم",
+                "en": "Mango"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "qty": 50,
+              "rate_paisa": 90000,
+              "value_paisa": 4500000,
+              "commission_paisa": 270000,
+              "laga_paisa": 40000
+            }
+          ]
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 4810000
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "balance",
+          "paisa": 4810000,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "date",
+          "iso": "2026-10-10"
+        },
+        {
+          "type": "doc",
+          "type_id": "report-doc-bikri-first",
+          "number": 1
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "paid_on_spot",
+              "bikri_number": 1
+            }
+          ]
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "paisa": 1000000
+        },
+        {
+          "type": "balance",
+          "paisa": 3810000,
+          "side": "dr"
+        }
+      ],
+      "source": {
+        "kind": "bikri",
+        "id": 1
+      },
+      "kind": "normal"
+    }
+  ],
+  "offset": 0,
+  "limit": 100,
+  "total_count": 2,
+  "totals_label_id": "report-total",
+  "totals": [
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "empty"
+    },
+    {
+      "type": "money",
+      "paisa": 4810000
+    },
+    {
+      "type": "money",
+      "paisa": 1000000
+    },
+    {
+      "type": "balance",
+      "paisa": 3810000,
+      "side": "dr"
+    }
+  ],
+  "summary": [
+    {
+      "label_id": "report-opening-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 0,
+        "side": "zero"
+      }
+    },
+    {
+      "label_id": "report-closing-balance",
+      "cell": {
+        "type": "balance",
+        "paisa": 3810000,
+        "side": "dr"
+      }
+    }
+  ],
+  "tables": [],
+  "group_above": null
+}

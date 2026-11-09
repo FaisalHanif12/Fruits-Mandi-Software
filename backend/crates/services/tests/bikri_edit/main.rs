@@ -5,6 +5,7 @@
 //! - `edit`: what an edit writes and refuses: no posted row changes, closed days, versions, lots
 //!   and lines that are not the posting's, cash, an old one-time seller.
 //! - `per_lot`: the per-lot seller commission moves when its line is removed (PRD FR-11.9).
+//! - `paid`: money paid on the spot in an edit: a paid-only change keeps every stored rule (PRD FR-12.44).
 //! - `matching`: bills and advances after an edit, a cancel and a later sale.
 //! - `cancel`: cancel, undo and the later sale of a cancelled or part-sold بکری.
 //! - `stock`: the list of goods left, write-off and its undo.
@@ -27,6 +28,7 @@ mod grade;
 #[path = "../bikri_save/helpers.rs"]
 mod helpers;
 mod matching;
+mod paid;
 mod per_lot;
 mod properties;
 mod same_day;

@@ -98,6 +98,13 @@ print-payment-cash = { -naqdi } sale: paid
 # review: pending
 print-payment-credit = { -udhari } sale: payment due
 
+# The two lines of a buyer slip when he paid part of the bill on the spot (PRD FR-12.44).
+# review: pending
+print-paid-on-spot = { -mauqa-par-jama }
+
+# review: pending
+print-left-on-account = { -khate-mein-baqi }
+
 ## Column heads of the goods table
 
 # review: pending
@@ -228,6 +235,24 @@ print-toast-printed = Sent to the printer
 # Shown after Ctrl+Enter on a Mac, where the system print window opens instead (plan 69).
 # review: pending
 print-toast-dialog = The print window is open
+
+## The second print button of the sale book: ادھاری تفصیل (R5, plan 68)
+
+# review: pending
+print-adhari-title = Print { report-r5-title }
+
+# review: pending
+print-adhari-help = One slip for each buyer: his goods, the amount after commission and { -laga }, { -mauqa-par-jama } and { -khate-mein-baqi }.
+
+# review: pending
+print-adhari-scope = What to print
+
+# $date is the day of the { -bikri } on screen.
+# review: pending
+print-adhari-whole-day = Whole day (<num>{ $date }</num>)
+
+# review: pending
+print-adhari-this-bikri = This { -bikri } only (<num>{ $number }</num>)
 
 ## The preview
 

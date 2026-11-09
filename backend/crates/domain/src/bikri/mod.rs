@@ -14,9 +14,9 @@
 //! | seller / buyer missing, wrong kind, inactive | `ERR_SELLER_REQUIRED`, `ERR_BUYER_REQUIRED`, `ERR_NOT_A_SELLER`, `ERR_NOT_A_BUYER`, `ERR_ACCOUNT_INACTIVE` | the account field |
 //! | sold more than received | `ERR_QTY_EXCEEDS_LOT` (`available`) | `lots[i].sales[j].qty` |
 //! | چکتا buyer | `ERR_CHUKTA_NAME_REQUIRED` | `...chukta.*` |
-//! | credit on a cash-only buyer | `ERR_CREDIT_NOT_ALLOWED` | `...payment_type` |
+//! | money paid on the spot above the buyer total | `ERR_PAID_EXCEEDS_TOTAL` (`max`) | `...paid` |
 //! | typed commission or لاگا while off | `ERR_OVERRIDE_NOT_ALLOWED` | `...seller_comm` etc. |
-//! | credit limit | `ERR_CREDIT_LIMIT_EXCEEDED` (warning, or error when blocking) | `...buyer_account_id` |
+//! | credit limit (on what is left after the paid amount) | `ERR_CREDIT_LIMIT_EXCEEDED` (warning, or error when blocking) | `...buyer_account_id` |
 //! | rate far from the average | `ERR_RATE_FAR_FROM_AVERAGE` (warning) | `...seller_rate` |
 //! | lot not fully sold / net below 0 | `ERR_QTY_LEFT_UNSOLD`, `ERR_LOT_NET_NEGATIVE` (warnings) | `lots[i].qty_received`, `lots[i].seller_account_id` |
 //!

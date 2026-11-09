@@ -557,3 +557,80 @@ fn of_two_lines_the_one_that_crosses_the_lot_is_refused_and_the_totals_hold_the_
     );
     assert_eq!((p.lots[0].sold_qty, p.lots[0].balance_qty), (30, Some(20)));
 }
+
+// ---- A lot with nothing to post (plan 61 Section 6, plan 65 T2) ----
+
+#[test]
+fn a_lot_with_only_blank_rows_and_no_charges_gives_a_preview_with_no_sale_lines() {
+    // `books_of` used to refuse this whole draft as ERR_JOURNAL_UNBALANCED (a bug signal): the lot
+    // is complete but it has no complete line and no charge, so its journal has no line at all
+    // (`LedgerError::Empty`). It is the user's mistake, not a bug: the preview comes back with
+    // `ERR_NO_SALE_LINES` on `lots`, and the save is refused with the same code.
+    let w = world();
+    let d = draft(vec![with_sales(
+        bare_lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![blank_sale("s-1", "50")],
+    )]);
+    let p = bikri::preview(&w.env.ctx, &d).expect("a preview, not a refusal");
+    assert!(
+        has(&p.errors, ErrorCode::ErrNoSaleLines, "lots"),
+        "{:?}",
+        p.errors
+    );
+    assert!(
+        !p.errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrJournalUnbalanced),
+        "{:?}",
+        p.errors
+    );
+    let refused = bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: false,
+        },
+    )
+    .unwrap_err();
+    let ServiceError::Rejected(items) = refused else {
+        panic!("not a refusal");
+    };
+    assert!(items.iter().any(|i| i.code == ErrorCode::ErrNoSaleLines));
+    assert!(
+        !items
+            .iter()
+            .any(|i| i.code == ErrorCode::ErrJournalUnbalanced)
+    );
+}
+
+#[test]
+fn a_lot_whose_only_line_is_incomplete_keeps_the_error_of_that_line() {
+    // A buyer typed but no rate: the row is not blank, so it has its own error. The journal of the
+    // lot is empty again, and the preview still comes back, with that error and no made-up
+    // `ERR_NO_SALE_LINES` over it.
+    let w = world();
+    let mut row = sale("s-1", w.akram, "20", "600");
+    row.seller_rate = String::new();
+    let d = draft(vec![with_sales(
+        bare_lot(&w, "lot-1", w.rahim, w.banana, "50"),
+        vec![row],
+    )]);
+    let p = bikri::preview(&w.env.ctx, &d).expect("a preview, not a refusal");
+    assert!(
+        has(
+            &p.errors,
+            ErrorCode::ErrRequired,
+            "lots[0].sales[0].seller_rate"
+        ),
+        "{:?}",
+        p.errors
+    );
+    assert!(
+        !p.errors
+            .iter()
+            .any(|e| e.code == ErrorCode::ErrJournalUnbalanced),
+        "{:?}",
+        p.errors
+    );
+}

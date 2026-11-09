@@ -14,10 +14,13 @@
 //!    reversal. A reversed entry and its reversal cancel each other, so neither is a bill or a
 //!    credit (cancel a بکری while an older bill is open: the older bill stays open and keeps its
 //!    age).
-//! 2. A **pinned** row pairs the bill of a نقدی sale line with its own cash credit of the same
-//!    بکری posting (PRD FR-12.9). It is written by the save ([`pin_cash_sale`]) and a re-match
-//!    never changes it; only the reversal of its entry switches it off. Its amounts come out of
-//!    both pools first, so the cash of today's sale never pays an older bill.
+//! 2. A **pinned** row pairs the bill of a sale line with its own cash credit of the same
+//!    بکری posting, for the money paid on the spot (PRD FR-12.9, FR-12.44). It is written by the
+//!    save ([`pin_cash_sale`]) and a re-match never changes it; only the reversal of its entry
+//!    switches it off. Its amounts come out of both pools first, so the cash of today's sale never
+//!    pays an older bill. What is left of the bill (the buyer total less what was paid) is a
+//!    normal open bill and goes through step 3. A line paid in full pins its whole bill; a line
+//!    paid 0 has no cash credit and no pinned row.
 //! 3. What is left goes through `match_bills`: each credit, oldest first, settles the oldest
 //!    open bills; a credit that is more than all open bills stays unmatched and settles his next
 //!    bills (PRD FR-15.5).
@@ -79,7 +82,7 @@ pub struct Rematched {
     pub added: usize,
 }
 
-/// The bill of a نقدی sale line and its own cash credit.
+/// The bill of a sale line and its own cash credit, for the money paid on the spot (PRD FR-12.44).
 #[derive(Debug, Clone, Copy)]
 pub struct CashSalePair<'a> {
     /// The buyer account.
@@ -90,13 +93,14 @@ pub struct CashSalePair<'a> {
     pub bill_line_id: i64,
     /// The buyer's credit line of the cash part.
     pub payment_line_id: i64,
-    /// The buyer total of the line.
+    /// The amount paid on the spot (PRD FR-12.44): the whole buyer total for a line paid in full,
+    /// less for a line paid in part.
     pub amount: Paisa,
 }
 
-/// Writes the pinned pair of a نقدی sale line: its bill and its own cash credit, for the whole
-/// buyer total (PRD FR-12.9, FR-15.4). Called by the save, once for each cash line, before
-/// [`rematch`].
+/// Writes the pinned pair of a sale line paid on the spot: its bill and its own cash credit, for
+/// the amount paid (PRD FR-12.9, FR-12.44, FR-15.4). Called by the save, once for each line with
+/// paid above 0, before [`rematch`].
 ///
 /// # Errors
 /// `ServiceError::Db`: the triggers refuse lines of the wrong direction, account or person key

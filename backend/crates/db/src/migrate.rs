@@ -133,6 +133,13 @@ pub const SALE_GRADE_SQL: &str = include_str!("../migrations/0019_sale_grade.sql
 /// then names the accounts and fills the list. No journal line, amount, id or chain hash changes.
 pub const CHUKTA_KHATA_SQL: &str = include_str!("../migrations/0020_chukta_khata.sql");
 
+/// The twenty-first migration (plan 65, PRD v1.32 FR-12.44, Architecture 15.6): money paid on the
+/// spot. One column, `bikri_sales.paid_paisa` (whole rupees, from 0 up to the buyer total). An old
+/// line saved as cash is paid in full, an old line saved as credit is paid 0, so no saved number
+/// changes, and the column is frozen in `bikri_sales_snapshot_is_final`. No journal line, allocation,
+/// amount, id or chain hash changes.
+pub const PAID_ON_THE_SPOT_SQL: &str = include_str!("../migrations/0021_paid_on_the_spot.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -165,6 +172,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(ASSISTANT_TIME_LIMIT_SQL),
         M::up(SALE_GRADE_SQL),
         M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook),
+        M::up(PAID_ON_THE_SPOT_SQL),
     ])
 }
 

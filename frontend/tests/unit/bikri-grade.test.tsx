@@ -84,9 +84,10 @@ describe.each(LANGUAGES)('the quality of a sale line (%s)', (language) => {
     expect(heads).not.toContain('payment');
   });
 
-  it('takes no Enter stop: buyer, qty, rate, then the next line, three stops for each line', async () => {
+  it('takes no Enter stop: buyer, qty, rate, paid, then the next line, four stops for each line', async () => {
     await twoLines();
-    // typeTwoLines used only Enter: both lines are full and the cursor is on the next line's buyer.
+    // typeTwoLines used only Enter, four for each line: both lines are full and the cursor is on the
+    // next line's buyer. The quality is between the rate and the paid cell and is not a stop.
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('2:buyer');
     }, SLOW_MS);

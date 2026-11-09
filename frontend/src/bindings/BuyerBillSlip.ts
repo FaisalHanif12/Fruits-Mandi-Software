@@ -16,7 +16,7 @@ export type BuyerBillSlip = {
    */
   party: PrintReportParty;
   /**
-   * His lines, one cell for each column of the print: serial, detail, value, total.
+   * His lines, one cell for each column of the print: serial, detail, value, total, paid, left.
    */
   rows: Array<PrintReportRow>;
   /**
@@ -28,7 +28,7 @@ export type BuyerBillSlip = {
    */
   qty: string;
   /**
-   * His sums, one cell for each column: nothing, nothing, the value, the total.
+   * His sums, one cell for each column: nothing, nothing, the value, the total, paid, left.
    */
   totals: Array<ReportPrintCell>;
 };

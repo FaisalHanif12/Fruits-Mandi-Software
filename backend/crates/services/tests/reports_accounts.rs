@@ -1647,6 +1647,46 @@ mod fixtures {
             "reports_buyer_bills_print_data_ur",
             json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026" })), "language": "ur", "paper": "a4" }),
         );
+        // Plan 65: the R5 slips of one بکری only (the button of D8 Feature 8), and the D8 example of money
+        // paid on the spot: مانی paid all, انس paid 10,000 of 48,100, ہارون paid nothing.
+        slips_pair(
+            &w,
+            "reports_buyer_bills_print_data_bikri_ur",
+            json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026", "bikri_id": first })), "language": "ur", "paper": "a4" }),
+        );
+        let (d8, d8_bikri) = d8_paid_world();
+        for (name, language) in [
+            ("reports_buyer_bills_print_data_paid_en", "en"),
+            ("reports_buyer_bills_print_data_paid_ur", "ur"),
+        ] {
+            slips_pair(
+                &d8,
+                name,
+                json!({ "id": "R5", "filters": filters(json!({ "from": "10-10-2026", "to": "10-10-2026", "bikri_id": d8_bikri })), "language": language, "paper": "a4" }),
+            );
+        }
+        // انس paid 10,000 of his 48,100 on the spot: his ledger shows the sale line and then the money paid on
+        // the spot, marked (FR-19.8, the detail part `paid_on_spot`), in the page and in the print.
+        let anas: i64 = d8
+            .env
+            .ctx
+            .db()
+            .read(|conn| {
+                conn.query_row("SELECT id FROM accounts WHERE name_en = 'Anas'", [], |r| {
+                    r.get(0)
+                })
+            })
+            .unwrap();
+        run_pair(
+            &d8,
+            "reports_run_r13_anas_paid_on_spot",
+            json!({ "id": "R13", "filters": filters(json!({ "party": party(anas) })), "offset": 0, "limit": 0 }),
+        );
+        print_pair(
+            &d8,
+            "reports_print_data_r13_anas_paid_on_spot_en",
+            json!({ "id": "R13", "filters": filters(json!({ "party": party(anas) })), "language": "en", "paper": null }),
+        );
         refusal_pair(
             &w,
             "reports_run_r1_needs_a_bikri",

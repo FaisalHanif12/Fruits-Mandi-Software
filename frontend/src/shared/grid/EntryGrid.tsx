@@ -39,7 +39,7 @@ import { FigureCell } from '../ui/FigureCell';
 import { displayText } from '../ui/NumberTextInput';
 import './agGridSetup';
 import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
-import { isEditable } from './enterOrder';
+import { isEditable, nextEnterStop } from './enterOrder';
 import type { EntryStore } from './entryStore';
 import { syncEditedText } from './editEnd';
 import { createGridKeyHandler } from './gridKeys';
@@ -221,6 +221,12 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
   // The grey hint of an empty cell: written in the column, or sent by the backend (the last rate).
   const hintOf = (row: EntryRow): string | undefined =>
     column.hintFromCalc === true ? calcOf(row) || undefined : column.placeholder?.(row);
+  // The amount the backend decided for a cell it closed (PRD FR-12.44): shown instead of what was typed.
+  const fixedOf = (row: EntryRow | undefined): string | undefined => {
+    if (row === undefined || column.fixedFromCalc === undefined) return undefined;
+    const text = live().calc?.[row.rowId]?.[column.fixedFromCalc];
+    return text === undefined || text === '' ? undefined : text;
+  };
   const sizes = fit
     ? {
         flex: FIT_WEIGHTS[column.type],
@@ -262,7 +268,7 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
         errorOf(params.data) === undefined && warningOf(params.data) !== undefined,
       'cell-changed': (params) => changedOf(params.data) !== undefined,
       'cell-marked': (params) => markOf(params.data) !== undefined,
-      'cell-calc': () => readOnly,
+      'cell-calc': (params) => readOnly || fixedOf(params.data) !== undefined,
       'cell-hint': (params) =>
         params.data !== undefined &&
         (params.value === '' || params.value === undefined) &&
@@ -382,13 +388,15 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
   }
 
   // A calculated cell, or an editable cell that shows a calculated value while it is empty.
-  const explainable = column.explain === true && (readOnly || column.showsCalc === true);
+  const explainable =
+    column.explain === true &&
+    (readOnly || column.showsCalc === true || column.fixedFromCalc !== undefined);
   return {
     ...base,
     valueGetter: (params: ValueGetterParams<EntryRow>) => {
       if (params.data === undefined) return '';
       if (readOnly) return calcOf(params.data);
-      return params.data.typed[column.field] ?? '';
+      return fixedOf(params.data) ?? params.data.typed[column.field] ?? '';
     },
     // The text goes to the store. Returning false tells the grid the value did not change in
     // its own data, so the row is redrawn from the store (the one source of truth).
@@ -398,6 +406,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     },
     valueFormatter: (params: ValueFormatterParams<EntryRow>) => {
       const value = typeof params.value === 'string' ? params.value : '';
+      // A cell the backend closed shows its amount as the screen wrote it (already grouped).
+      const fixed = fixedOf(params.data);
+      if (fixed !== undefined) return fixed;
       if (value === '' && params.data !== undefined) {
         if (column.showsCalc === true) return calcOf(params.data);
         return hintOf(params.data) ?? '';
@@ -612,6 +623,51 @@ function GridInner({
   useLayoutEffect(() => {
     apiRef.current?.refreshCells({ force: true });
   }, [calc, workings, cellErrors, cellWarnings, cellChanged, cellMarks]);
+
+  // A cell the backend closes while the cursor is on it (the paid amount of a buyer who must pay in full,
+  // PRD FR-12.44): the answer for a line comes a moment after its rate was typed, when Enter has already
+  // taken the cursor onto the paid cell. The cursor then goes on as an Enter would, so such a line takes
+  // three Enters (NFR-USE-6). Only the answer that closes the cell does this: a closed cell that the user
+  // reaches with an arrow or a click keeps the cursor, and a new grid (a language switch) never moves it.
+  const closedBefore = useRef<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    const now = new Set<string>();
+    for (const column of columns) {
+      const key = column.fixedFromCalc;
+      if (key === undefined) continue;
+      for (const [rowId, cells] of Object.entries(calc ?? {})) {
+        if ((cells[key] ?? '') !== '') now.add(`${rowId}|${column.field}`);
+      }
+    }
+    const before = closedBefore.current;
+    closedBefore.current = now;
+    const api = apiRef.current;
+    const focus = store.getState().focus;
+    if (before === null || api === null || focus === null) return;
+    const id = `${focus.rowId}|${focus.field}`;
+    if (!now.has(id) || before.has(id)) return;
+    const rows = store.getState().rows;
+    const rowIndex = rows.findIndex((row) => row.rowId === focus.rowId);
+    const focused = api.getFocusedCell();
+    if (
+      rowIndex < 0 ||
+      focused?.rowIndex !== rowIndex ||
+      focused.column.getColId() !== focus.field
+    ) {
+      return;
+    }
+    // Text being typed in the cell is dropped: the amount is the backend's.
+    api.stopEditing(true);
+    const step = nextEnterStop(columns, rows, { rowIndex, field: focus.field });
+    if (step === null) return;
+    if (step.kind === 'cell') {
+      api.setFocusedCell(step.rowIndex, step.field);
+      api.ensureIndexVisible(step.rowIndex);
+    } else if (fixedRows !== true) {
+      store.getState().addRow();
+      store.getState().setPendingFocus({ rowIndex: 'last', field: step.field });
+    }
+  }, [calc, columns, store, fixedRows]);
 
   // The marks of earlier edits come from the history, which can answer before the grid is ready:
   // the cells then read them once, when the grid has become ready.

@@ -146,7 +146,7 @@ pub(super) fn stored_posting(
                     weight_grams: sale.weight_grams,
                     seller_rate: sale.seller_rate,
                     buyer_rate: sale.buyer_rate,
-                    payment_type: sale.payment_type,
+                    paid: sale.paid_paisa,
                     seller_comm,
                     buyer_comm: stored_charge(conn, &sale.buyer_comm)?,
                     laga: stored_charge(conn, &sale.laga)?,
@@ -254,7 +254,8 @@ fn sale_input(sale: &SavedSale, keep_ids: bool) -> SaleInput {
         seller_rate: rupees(sale.seller_rate),
         rate_differs: differs,
         buyer_rate: differs.then(|| rupees(sale.buyer_rate)),
-        payment_type: Some(sale.payment_type),
+        // What was paid on the spot, as text (PRD FR-12.44, plan 65 point 5). Empty is 0.
+        paid: (sale.paid_paisa > Paisa::ZERO).then(|| rupees(sale.paid_paisa)),
         seller_comm: typed_line_charge(&sale.seller_comm),
         buyer_comm: typed_line_charge(&sale.buyer_comm),
         laga: typed_line_charge(&sale.laga),

@@ -13,6 +13,7 @@
 use mandi_services::core::auth::Language;
 
 use super::compose_change::compose_change;
+use super::compose_future::compose_future;
 use super::compose_help::{compose_help, compose_navigate};
 use super::compose_missing::compose_missing;
 use super::compose_outside::compose_outside;
@@ -40,6 +41,7 @@ pub fn compose(
         Intent::Navigate => compose_navigate(u, language, read_at),
         Intent::NotInApp => compose_outside(u, language, words, read_at),
         Intent::ChangeRequest => compose_change(u),
+        Intent::Forecast => compose_future(u, language, words, read_at),
         _ => None,
     }
 }

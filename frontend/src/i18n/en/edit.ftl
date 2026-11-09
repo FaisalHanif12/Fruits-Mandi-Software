@@ -336,7 +336,7 @@ edit-field-store-rent = { -kiraya-store }
 edit-field-adjust-advance = Deduct from advance
 
 # review: pending
-edit-field-payment-type = Credit / Cash
+edit-field-paid = { -mauqa-par-jama }
 
 # review: pending
 edit-field-amount = Amount

@@ -157,7 +157,11 @@ fn terms(file: &str) -> Vec<(String, String)> {
 /// things they name through the tools, and the answer shows the app's own words). Each has its
 /// reason. The test fails if a term leaves this list without being added to the prompt, or if
 /// another term goes missing.
-const GLOSSARY_GAPS: [(&str, &str); 11] = [
+const GLOSSARY_GAPS: [(&str, &str); 12] = [
+    (
+        "-khate-mein-baqi",
+        "the prompt names the columns paid and left; no room in the prefix (11,599 of 11,600)",
+    ),
     (
         "-tijarati-nuqsan",
         "the trip's profit or loss is read from R33 and the trip results, never typed by the model",

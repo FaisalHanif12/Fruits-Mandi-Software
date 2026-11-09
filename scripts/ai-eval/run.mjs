@@ -42,6 +42,20 @@
 //                       model (with the model calls it would need), or asked or refused. Results go to
 //                       backend/target/ai-eval-<bank>-offline/ (ai-eval-offline for the team bank). Never builds
 //                       the real OpenRouter client and never opens the key store.
+//   --budget USD        (live runs only; default 0.50, the budget of D8) the money guard of plan 70 T3. The
+//                       questions are asked in batches. Before each batch the money already spent plus the
+//                       WORST the batch could still cost must stay inside the budget; after each batch the real
+//                       cost of every call (from its usage block: prompt, cached and completion tokens, at the
+//                       price of the model, with OpenRouter's 5.5% fee) goes to a ledger in the run folder,
+//                       budget-ledger.json. The ledger lives across runs: several small runs together stay
+//                       under the budget. A run that would pass it stops, says which questions were not asked,
+//                       and exits 4. `--budget off` turns the guard off (a full bank run). Other options:
+//                       --ledger FILE (another ledger file), --reserve USD (the amount kept free for each
+//                       question of a batch; default the worst case of one question as the app's limits give
+//                       it), --batch N (most questions in one batch, default 40), --price-in, --price-cached,
+//                       --price-out (dollars a million tokens, for a model that is not in the price table
+//                       of scripts/ai-eval/budget.mjs). `node scripts/ai-eval/budget.mjs --self-test` checks
+//                       the guard with a fake usage stream: no model, no key, no cargo.
 //   --key-limit         what is left on the saved key, BEFORE a live run (a 403 "Key limit exceeded" is the limit,
 //                       not a bug). One call of GET https://openrouter.ai/api/v1/key with the key of the app's own
 //                       store. It prints ONLY limit, usage, limit_remaining and is_free_tier, never the key, a
@@ -62,18 +76,31 @@
 // build-bank.mjs; `--check` fails if questions.tsv is not what they build.
 //
 // Exit codes: 0 every category that ran meets plan 52 Section 2; 1 one does not; 2 the bank or the
-// run is broken; 3 waiting for the key.
+// run is broken; 3 waiting for the key; 4 the budget stopped the run before every question was asked.
 //
 // The project folder has spaces in its name. Every path here is built with node:path and every
 // process is started without a shell, so nothing is split.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { WAITING } from './bank-spec.mjs';
+import {
+  DEFAULT_BUDGET_USD,
+  DEFAULT_MAX_BATCH,
+  FALLBACK_LIMITS,
+  budgetSelfTest,
+  ledgerReport,
+  priceOf,
+  readLedger,
+  runBudgeted,
+  toNano,
+  usd,
+  worstCasePerQuestion,
+} from './budget.mjs';
 import { buildText } from './build-bank.mjs';
 import { CAPABILITY_FILE, matrix } from './build-capability.mjs';
 
@@ -2727,7 +2754,7 @@ function selectIds(list, { only, category, world, facet, every, mix }) {
 }
 
 /** Runs the ignored live test through cargo. The key is not passed: the app reads its own store. */
-function runLive(ids, model, threads, outFile = RESULTS, soft = false) {
+function runLive(ids, model, threads, outFile = RESULTS, soft = false, capture = false) {
   mkdirSync(OUT_DIR, { recursive: true });
   const env = { ...process.env, MANDI_EVAL_QUESTIONS: QUESTIONS, MANDI_EVAL_OUT: outFile };
   if (ids.length) env.MANDI_EVAL_ONLY = ids.join(',');
@@ -2751,17 +2778,170 @@ function runLive(ids, model, threads, outFile = RESULTS, soft = false) {
   console.log(
     `ai-eval: cargo ${cmd.join(' ')} in ${BACKEND}${OFFLINE ? '   (OFFLINE: no key, no network)' : ''}`,
   );
+  // `capture` (the budget guard): cargo's own messages are read to tell whether the test itself started, and are
+  // then shown. Without it they go straight to the screen.
   const res = spawnSync('cargo', cmd, {
     cwd: BACKEND,
     env,
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'inherit', capture ? 'pipe' : 'inherit'],
+    ...(capture ? { maxBuffer: 256 * 1024 * 1024, encoding: 'utf8' } : {}),
   });
   if (res.error) throw new Error(`cannot start cargo: ${res.error.message}`);
+  if (capture) {
+    process.stderr.write(res.stderr ?? '');
+    return { status: res.status, stderr: res.stderr ?? '' };
+  }
   // `soft` (an offline run that resumes): the caller reads what was written and asks again what is missing.
   if (soft) return res.status;
   if (res.status !== 0)
     throw new Error(`the ${OFFLINE ? 'offline' : 'live'} test failed with exit code ${res.status}`);
   return res.status;
+}
+
+/** A constant of the app's Rust source (`NAME: type = value`), or the fallback when the file cannot be read. */
+function rustConst(file, name, fallback) {
+  try {
+    const text = readFileSync(join(BACKEND, 'crates', 'assistant', 'src', file), 'utf8');
+    const found = text.match(new RegExp(`${name}\\s*:\\s*[^=]+=\\s*"?([^";]+)"?;`));
+    if (found) return found[1].replaceAll('_', '').trim();
+  } catch {
+    // The file is not there (a copy of the scripts alone): the fallback.
+  }
+  return fallback;
+}
+
+/** The limits of one question, read from the app (`limits.rs`), never copied. */
+function appLimits() {
+  const limits = { ...FALLBACK_LIMITS };
+  for (const name of Object.keys(limits)) {
+    const found = Number(rustConst('limits.rs', name, limits[name]));
+    if (Number.isFinite(found) && found > 0) limits[name] = found;
+  }
+  return limits;
+}
+
+/**
+ * The budget guard of a live run (plan 70 T3, see budget.mjs): the settings from the command line, or
+ * `null` when it is off (`--budget off`). Stops the program (exit 2) on a budget that is not a number or a
+ * model whose price is not known.
+ */
+function budgetSettings(model) {
+  const given = option('--budget');
+  if (given === 'off') return null;
+  const dollars = given === undefined ? DEFAULT_BUDGET_USD : Number(given);
+  if (!Number.isFinite(dollars) || dollars <= 0) {
+    console.error(`ai-eval: --budget wants a number of dollars above 0 (or "off"), not "${given}"`);
+    process.exit(2);
+  }
+  const named = option('--price-in') !== undefined;
+  const override = named
+    ? {
+        in: Number(option('--price-in')),
+        cached: Number(option('--price-cached') ?? option('--price-in')),
+        out: Number(option('--price-out')),
+      }
+    : null;
+  const name = model ?? rustConst('settings.rs', 'DEFAULT_MODEL', 'openai/gpt-6-luna');
+  const price = priceOf(name, override);
+  if (!price || [price.in, price.cached, price.out].some((v) => !Number.isFinite(v) || v < 0)) {
+    console.error(
+      `ai-eval: the price of the model ${name} is not known, so the budget cannot be counted. Add it to MODEL_PRICES in scripts/ai-eval/budget.mjs, or give --price-in, --price-cached and --price-out (dollars a million tokens), or turn the guard off with --budget off.`,
+    );
+    process.exit(2);
+  }
+  const limits = appLimits();
+  const reserveGiven = option('--reserve');
+  const reserve =
+    reserveGiven === undefined ? worstCasePerQuestion(price, limits) : toNano(Number(reserveGiven));
+  if (!Number.isFinite(reserve) || reserve <= 0) {
+    console.error(`ai-eval: --reserve wants a number of dollars above 0, not "${reserveGiven}"`);
+    process.exit(2);
+  }
+  const maxBatch = Number(option('--batch') ?? DEFAULT_MAX_BATCH);
+  if (!Number.isInteger(maxBatch) || maxBatch < 1) {
+    console.error(`ai-eval: --batch wants a whole number above 0, not "${option('--batch')}"`);
+    process.exit(2);
+  }
+  return {
+    budget: toNano(dollars),
+    price,
+    limits,
+    reserve,
+    maxBatch,
+    model: name,
+    ledgerPath: option('--ledger')
+      ? resolve(option('--ledger'))
+      : join(OUT_DIR, 'budget-ledger.json'),
+  };
+}
+
+/**
+ * A live run inside the budget: the questions are asked in batches (budget.mjs), the cost of each batch goes
+ * to the ledger before the next one starts. Writes the rows of every batch together to `outFile`, like a run
+ * with no guard. Returns what the guard did: which questions were asked, which were not, and why it stopped.
+ */
+function runLiveBudgeted(settings, ids, list, model, threads, outFile) {
+  const ledger = readLedger(settings.ledgerPath);
+  const spent = ledger.entries.reduce((sum, e) => sum + (Number.isFinite(e.nano) ? e.nano : 0), 0);
+  console.log(
+    `ai-eval: BUDGET ${usd(settings.budget)} for model ${settings.model}: already spent ${usd(spent)} (ledger ${settings.ledgerPath}), left ${usd(Math.max(0, settings.budget - spent))}; reserve ${usd(settings.reserve)} for each question of a batch`,
+  );
+  const afterOf = (id) => list.find((q) => q.id === id)?.after ?? '';
+  const part = join(OUT_DIR, 'results.budget-batch.json');
+  const runBatch = (batch) => {
+    rmSync(part, { force: true });
+    const { status, stderr } = runLive(batch, model, threads, part, true, true);
+    let data = null;
+    try {
+      data = JSON.parse(readFileSync(part, 'utf8'));
+    } catch {
+      // No results file: the test did not get as far as writing it.
+    }
+    // The test started if cargo got to run its binary (it says so on stderr) or if it wrote a file.
+    const started = data !== null || /Running\s+.*robustness_live/.test(stderr);
+    return { status, started, data };
+  };
+  const outcome = runBudgeted({
+    ids,
+    afterOf,
+    runBatch,
+    ledgerPath: settings.ledgerPath,
+    budget: settings.budget,
+    reserve: settings.reserve,
+    price: settings.price,
+    limits: settings.limits,
+    model: settings.model,
+    maxBatch: settings.maxBatch,
+    say: (line) => console.log(`ai-eval: ${line}`),
+  });
+  if (outcome.waitingForKey) {
+    writeFileSync(outFile, JSON.stringify({ waiting_for_key: true }));
+  } else if (outcome.rows.length > 0) {
+    writeFileSync(
+      outFile,
+      JSON.stringify({
+        meta: { ...outcome.meta, questions: outcome.rows.length, budget: usd(settings.budget) },
+        oracle: outcome.oracle,
+        results: outcome.rows,
+      }),
+    );
+  } else {
+    writeFileSync(
+      outFile,
+      JSON.stringify({
+        meta: outcome.meta ?? { model: settings.model },
+        oracle: outcome.oracle ?? {},
+        results: [],
+      }),
+    );
+  }
+  console.log(ledgerReport(readLedger(settings.ledgerPath), settings.budget));
+  if (outcome.stopped) {
+    console.log(
+      `BUDGET STOP: ${outcome.stopped}. Asked ${outcome.asked.length} of ${ids.length}; NOT ASKED (${outcome.notAsked.length}): ${outcome.notAsked.join(',')}`,
+    );
+  }
+  return outcome;
 }
 
 /**
@@ -5316,6 +5496,13 @@ function selfTest() {
       `the scored text lost its date or name: ${scored.text}`,
     );
   }
+  {
+    // The budget guard (plan 70 T3): the arithmetic of the cost, the stop before the budget and the running
+    // total across runs, on a fake usage stream.
+    const dir = mkdtempSync(join(tmpdir(), 'ai-eval-budget-'));
+    const failed = budgetSelfTest(dir);
+    expect(failed.length === 0, `the budget guard: ${failed.join('; ')}`);
+  }
   console.log(
     `self-test ok: the bank has ${list.length} questions in 5 categories and the scorer reads right, wrong, optional, zero, strict-name, general-advice, network, offline and date cases`,
   );
@@ -5887,6 +6074,7 @@ function main() {
   // whole results file, so the score is always of the whole bank.
   const asksAgain = flag('--misses');
   const merging = flag('--merge') || asksAgain;
+  let budgetStopped = false;
   if (!file) {
     try {
       if (asksAgain) {
@@ -5901,7 +6089,29 @@ function main() {
         );
       } else {
         const part = merging ? join(OUT_DIR, 'results.part.json') : RESULTS;
-        runLive(ids, option('--model'), option('--threads') ?? THREADS_DEFAULT, part);
+        const guard = budgetSettings(option('--model'));
+        if (guard) {
+          const wanted = ids.length ? ids : list.map((q) => q.id);
+          const outcome = runLiveBudgeted(
+            guard,
+            wanted,
+            list,
+            option('--model'),
+            option('--threads') ?? THREADS_DEFAULT,
+            part,
+          );
+          // Only the questions that were asked are scored; the others are named in the BUDGET STOP line.
+          if (outcome.notAsked.length > 0 && !outcome.waitingForKey) {
+            ids = outcome.asked;
+            budgetStopped = true;
+            if (ids.length === 0) {
+              console.log('ai-eval: nothing was asked, so there is nothing to score.');
+              process.exit(4);
+            }
+          }
+        } else {
+          runLive(ids, option('--model'), option('--threads') ?? THREADS_DEFAULT, part);
+        }
         if (merging) {
           const rows = JSON.parse(readFileSync(part, 'utf8'));
           if (!rows.waiting_for_key) mergeResults(rows);
@@ -6034,7 +6244,8 @@ function main() {
     'utf8',
   );
   console.log(`DETAIL of every miss: ${DETAIL}`);
-  process.exit(meets ? 0 : 1);
+  // 4: the budget stopped the run before every question was asked (the BUDGET STOP line says which).
+  process.exit(budgetStopped ? 4 : meets ? 0 : 1);
 }
 
 main();

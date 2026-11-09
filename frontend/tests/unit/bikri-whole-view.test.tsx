@@ -228,7 +228,8 @@ describe.each(LANGUAGES)('the whole-sale view of the lines (%s)', (language) => 
     await waitFor(() => {
       expect(sales.querySelectorAll('.ag-row')).toHaveLength(4);
     });
-    await user.click(cellOf(sales, 2, 'rate'));
+    // The last stop of a line is its paid cell (PRD FR-12.44).
+    await user.click(cellOf(sales, 2, 'paid'));
     await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('3:buyer');

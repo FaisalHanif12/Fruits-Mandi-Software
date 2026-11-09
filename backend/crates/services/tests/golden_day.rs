@@ -1075,7 +1075,6 @@ fn fr_15_5_a_receipt_above_the_bill_stays_as_credit_for_the_next_bill() {
     line.buyer_comm = support::typed(mandi_services::core::bikri::LineChargeMethod::Percent, "0");
     line.seller_comm = support::typed(mandi_services::core::bikri::LineChargeMethod::Percent, "0");
     line.laga = support::typed(mandi_services::core::bikri::LineChargeMethod::PerUnit, "0");
-    line.payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
     let mut lot = support::bare_lot(&w, "lot-9", w.karim, w.apple, "5");
     lot.sales = vec![line];
     let draft = support::draft(vec![lot]);
@@ -1517,3 +1516,7 @@ mod fix;
 // the rate of line 3 equal to the hint (E2E-64).
 #[path = "golden_day/sale_line_figures.rs"]
 mod sale_line_figures;
+
+// Plan 65 (D8 Feature 4): money paid on the spot (E2E-65).
+#[path = "golden_day/paid_on_the_spot.rs"]
+mod paid_on_the_spot;

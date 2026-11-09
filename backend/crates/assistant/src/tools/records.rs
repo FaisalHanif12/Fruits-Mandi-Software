@@ -92,6 +92,64 @@ pub fn named(
     Ok((rec.id, whole))
 }
 
+/// The word that stands for every walk-in buyer together in a `buyer` filter: the shared account چکتا
+/// کھاتہ (code `0030`), with no person (PRD Section 13, D8 H3). The walk-in buyers have no account of
+/// their own and cannot be found as one, so the filter is named by this word, and it is the same
+/// filter the analytics screen takes: the buyer is the account 0030 and the person is left open.
+pub const CHUKTA_ALL: &str = "chukta";
+
+/// The account چکتا کھاتہ as a whole record, with its id: what the word [`CHUKTA_ALL`] stands for.
+///
+/// # Errors
+/// `ERR_INTERNAL` when the account cannot be read (it is a system account and always there).
+pub fn chukta_account(env: &Env<'_>) -> Result<(i64, AnswerRecord), ToolError> {
+    let code = mandi_services::core::codes::CHUKTA_KHATA_CODE;
+    let list = mandi_services::accounts::list(
+        env.ctx,
+        &mandi_services::core::accounts::AccountsListInput {
+            filter: mandi_services::core::accounts::AccountFilter {
+                kind: mandi_services::core::accounts::AccountListKind::Every,
+                text: code.to_owned(),
+                include_inactive: true,
+                has_opening: None,
+            },
+            offset: 0,
+            // 0 is the most: the text "0030" is also inside other codes (00110030), so a short page could
+            // leave the account out.
+            limit: 0,
+            sort: None,
+        },
+    )
+    .map_err(|_| {
+        ToolError::new(
+            "ERR_INTERNAL",
+            "buyer",
+            "the walk-in account could not be read",
+        )
+    })?;
+    let row = list
+        .rows
+        .into_iter()
+        .find(|r| r.code == code)
+        .ok_or_else(|| {
+            ToolError::new(
+                "ERR_INTERNAL",
+                "buyer",
+                "the walk-in account is not in the books",
+            )
+        })?;
+    Ok((
+        row.id,
+        AnswerRecord {
+            id: row.id,
+            code: Some(row.code),
+            name_ur: row.name_ur,
+            name_en: row.name_en,
+            tag: row.tag,
+        },
+    ))
+}
+
 /// A date as `YYYY-MM-DD` text, for the filters of a source.
 pub fn iso(date: BusinessDate) -> String {
     date.to_iso()

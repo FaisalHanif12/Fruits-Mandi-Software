@@ -281,6 +281,8 @@ assistant-outside-prices = یہ ایپ آپ کی دکان سے باہر کی ق�
 # review: pending
 assistant-outside-other = یہ ایپ یہ چیز نہیں رکھتی۔ یہ آپ کی دکان کے کھاتے رکھتی ہے: { -bikri }، پارٹیاں، { -rokar }، { -kharcha } اور { -shirakat-dar }۔
 # review: pending
+assistant-outside-future = وہ مہینہ ابھی نہیں آیا، اس لیے کھاتوں میں اس کا کچھ درج نہیں۔ اندازہ زیادہ سے زیادہ 12 مہینے آگے تک کا بتایا جا سکتا ہے۔
+# review: pending
 assistant-change-refused = میں صرف بتا سکتا ہوں، کچھ لکھ نہیں سکتا
 # review: pending
 assistant-change-refused-help = نیچے کے بٹن سے اندراج کی اسکرین کھلتی ہے۔ رقم خالی رہتی ہے، آپ خود لکھتے ہیں۔

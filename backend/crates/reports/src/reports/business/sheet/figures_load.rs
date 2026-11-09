@@ -241,7 +241,8 @@ pub(super) struct BuyerLine {
     pub(super) commission: Paisa,
     pub(super) laga: Paisa,
     pub(super) total: Paisa,
-    pub(super) cash: bool,
+    /// Money the buyer paid on the spot on this line (PRD FR-12.44): from 0 up to `total`.
+    pub(super) paid: Paisa,
 }
 
 /// One sale line as the seller of its lot was credited for it, as stored.
@@ -279,7 +280,7 @@ pub(super) fn buyer_lines(
         "SELECT e.entry_date, s.buyer_account_id, COALESCE(s.chukta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa,
-                s.laga_paisa, s.buyer_total_paisa, s.payment_type = 'cash', s.weight_grams, s.grade
+                s.laga_paisa, s.buyer_total_paisa, s.paid_paisa, s.weight_grams, s.grade
          FROM bikri_sales s
          JOIN bikri_lots l ON l.id = s.lot_id
          JOIN items i ON i.id = l.item_id
@@ -312,14 +313,14 @@ pub(super) fn buyer_lines(
                     r.get::<_, i64>(14)?,
                     r.get::<_, i64>(15)?,
                 ],
-                r.get::<_, bool>(16)?,
+                r.get::<_, i64>(16)?,
                 r.get::<_, Option<i64>>(17)?,
                 r.get::<_, Option<String>>(18)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (text, n, cash, weight_grams, grade) in rows {
+    for (text, n, paid, weight_grams, grade) in rows {
         let [day, person, item_ur, item_en, packing_ur, packing_en] = text;
         let [
             account_id,
@@ -352,7 +353,7 @@ pub(super) fn buyer_lines(
             commission: paisa(commission)?,
             laga: paisa(laga)?,
             total: paisa(total)?,
-            cash,
+            paid: paisa(paid)?,
         });
     }
     Ok(out)

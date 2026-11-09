@@ -34,6 +34,16 @@
       "key": "buyer_total",
       "title_id": "report-col-buyer-total",
       "kind": "money"
+    },
+    {
+      "key": "paid",
+      "title_id": "report-col-paid-on-spot",
+      "kind": "money"
+    },
+    {
+      "key": "left",
+      "title_id": "report-col-left-on-account",
+      "kind": "money"
     }
   ],
   "slips": [
@@ -76,6 +86,14 @@
             {
               "type": "money",
               "text": "18,684"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "money",
+              "text": "18,684"
             }
           ],
           "kind": "normal"
@@ -93,6 +111,14 @@
         {
           "type": "money",
           "text": "17,400"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "money",
+          "text": "0"
         },
         {
           "type": "money",
@@ -139,6 +165,14 @@
             {
               "type": "money",
               "text": "12,880"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            },
+            {
+              "type": "money",
+              "text": "12,880"
             }
           ],
           "kind": "normal"
@@ -160,12 +194,100 @@
         {
           "type": "money",
           "text": "12,880"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        }
+      ]
+    },
+    {
+      "serial": "3",
+      "party": {
+        "short_code": null,
+        "code": "0030",
+        "name": "شاہد",
+        "tag": null,
+        "person_key": "شاہد|03000000000",
+        "phone": "0300-0000000"
+      },
+      "rows": [
+        {
+          "cells": [
+            {
+              "type": "number",
+              "text": "1"
+            },
+            {
+              "type": "detail",
+              "parts": [
+                {
+                  "kind": "sale",
+                  "bikri_number": "2",
+                  "item": "سیب",
+                  "packing": "پیٹی",
+                  "qty": "10",
+                  "rate": "1200",
+                  "value": "12,000",
+                  "commission": "720",
+                  "laga": "80"
+                }
+              ]
+            },
+            {
+              "type": "money",
+              "text": "12,000"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "money",
+              "text": "12,800"
+            },
+            {
+              "type": "money",
+              "text": "0"
+            }
+          ],
+          "kind": "normal"
+        }
+      ],
+      "row_count": "1",
+      "qty": "10",
+      "totals": [
+        {
+          "type": "empty"
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "0"
         }
       ]
     }
   ],
-  "slip_count": "2",
-  "qty": "50",
+  "slip_count": "3",
+  "qty": "60",
   "totals_label_id": "report-total",
   "totals": [
     {
@@ -176,7 +298,15 @@
     },
     {
       "type": "money",
-      "text": "29,400"
+      "text": "41,400"
+    },
+    {
+      "type": "money",
+      "text": "44,364"
+    },
+    {
+      "type": "money",
+      "text": "12,800"
     },
     {
       "type": "money",

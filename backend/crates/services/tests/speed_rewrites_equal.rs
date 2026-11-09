@@ -31,7 +31,7 @@ use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 use mandi_reports::reports::{Cell, ReportFilters, ReportId, day_query_forms};
 use mandi_services::core::accounts::AccountType;
-use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod, PaymentType};
+use mandi_services::core::bikri::{ChuktaInput, LineChargeMethod};
 use mandi_services::{bikri, vouchers};
 use reports_world::*;
 use support::World;
@@ -1184,8 +1184,7 @@ fn a_random_book_over_several_days() {
                                 name_en: en.into(),
                                 phone: phone.into(),
                             });
-                            // A چکتا buyer pays in full on the spot (PRD FR-13.5).
-                            line.payment_type = Some(PaymentType::Cash);
+                            // A چکتا buyer pays in full on the spot; the backend sets it (PRD FR-13.5).
                         }
                         line
                     })

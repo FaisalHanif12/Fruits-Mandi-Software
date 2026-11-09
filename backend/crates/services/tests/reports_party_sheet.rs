@@ -1358,7 +1358,6 @@ fn weighed_world() -> World {
     lot.weight_received = Some("12.345".into());
     let mut sale = support::sale("s-1", w.akram, "2", "100");
     sale.weight = Some("12.345".into());
-    sale.payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
     lot.sales = vec![sale];
     save(&w, &support::draft(vec![lot]));
     w

@@ -1,9 +1,9 @@
 //! The checks of a بکری draft that need the world outside it (PRD FR-12.4 to FR-12.7, FR-13.2,
-//! FR-7.55): accounts, چکتا buyers, payment type, credit limit and the rate check.
+//! FR-7.55): accounts, چکتا buyers, who must pay in full, credit limit and the rate check.
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{PaymentType, PreparedChukta};
+use mandi_core::bikri::PreparedChukta;
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::money::{MoneyError, Paisa, Qty, avg_rate};
 use mandi_core::validate;
@@ -151,51 +151,31 @@ pub(super) fn chukta(issues: &mut Issues, prefix: &str, person: &PreparedChukta)
     ok
 }
 
-/// How the buyer of a line pays (PRD 12.4, FR-13.4). Typed credit is refused for the نقدی منڈی
-/// account (always cash) and for a buyer whose "ادھار کی اجازت" is off (PRD 10.2: cash only).
-/// With nothing chosen: credit if the buyer may have credit, else cash. A چکتا buyer always pays in
-/// full, so he is cash only like نقدی منڈی (PRD FR-13.5; plan 65 replaces this with the paid amount).
-pub(super) fn payment_type(
-    issues: &mut Issues,
-    buyer: &AccountFacts,
-    chosen: Option<PaymentType>,
-    field: &str,
-) -> Option<PaymentType> {
-    let paid = resolve_payment(buyer, chosen);
-    if paid.is_none() {
-        issues.error(ErrorCode::ErrCreditNotAllowed, field);
-    }
-    paid
-}
-
-/// The payment type of [`payment_type`] without the error: `None` when credit was chosen for a
-/// buyer who may only pay cash.
-pub(super) fn resolve_payment(
-    buyer: &AccountFacts,
-    chosen: Option<PaymentType>,
-) -> Option<PaymentType> {
-    let may_credit = !buyer.is_naqdi_mandi && !buyer.is_chukta && buyer.credit_allowed;
-    match chosen {
-        Some(PaymentType::Credit) if !may_credit => None,
-        Some(kind) => Some(kind),
-        None if !may_credit => Some(PaymentType::Cash),
-        None => Some(PaymentType::Credit),
-    }
-}
-
-/// The credit limit check (PRD FR-12.4, FR-7.56). `owed` is a running map: the buyer's signed
-/// balance now plus the buyer totals of his credit rows in this draft, in the order of the
-/// draft (lot order, then line order). Only a named buyer with a limit is checked, and only when
-/// what he would owe is MORE than the limit (exactly at the limit is fine).
+/// True for a buyer who always pays the whole buyer total on the spot (PRD FR-12.44, plan 60 P3):
+/// the نقدی منڈی account, a چکتا buyer, or a buyer whose "ادھار کی اجازت" is off (PRD 10.2). The
+/// backend sets his paid amount; the screen shows it and cannot type in it.
 ///
-/// Example: balance 0 and limit 12,879: the first credit row of 12,880 takes him to 12,880,
-/// which is above the limit, so it warns (or is an error when the setting is block).
+/// Example: a چکتا buyer with a buyer total of 12,800 pays 12,800.
+pub(super) fn must_pay_in_full(buyer: &AccountFacts) -> bool {
+    buyer.is_naqdi_mandi || buyer.is_chukta || !buyer.credit_allowed
+}
+
+/// The credit limit check (PRD FR-12.4, FR-7.56, FR-12.44). `owed` is a running map: the buyer's
+/// signed balance now plus what is left on his account from the rows of this draft (the buyer
+/// total less what he paid on the spot), in the order of the draft (lot order, then line order).
+/// A row that leaves nothing on his account is not checked and adds nothing. Only a named buyer
+/// with a limit is checked, and only when what he would owe is MORE than the limit (exactly at the
+/// limit is fine).
+///
+/// Example: balance 0 and limit 12,879: the first row, with 12,880 left on his account, takes him
+/// to 12,880, which is above the limit, so it warns (or is an error when the setting is block).
+/// With 3,000 of it paid on the spot only 9,880 is left, and it does not warn.
 pub(super) fn credit_limit(
     issues: &mut Issues,
     owed: &mut HashMap<i64, Paisa>,
     buyer_id: i64,
     buyer: &AccountFacts,
-    buyer_total: Paisa,
+    left: Paisa,
     blocks: bool,
     field: &str,
 ) -> Result<(), MoneyError> {
@@ -206,7 +186,7 @@ pub(super) fn credit_limit(
         return Ok(());
     }
     let before = *owed.entry(buyer_id).or_insert(buyer.balance);
-    let would_owe = before.checked_add(buyer_total)?;
+    let would_owe = before.checked_add(left)?;
     owed.insert(buyer_id, would_owe);
     if would_owe > limit {
         let values = [

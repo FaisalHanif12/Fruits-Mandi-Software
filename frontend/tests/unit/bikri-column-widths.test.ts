@@ -69,3 +69,24 @@ describe('the quality column (درجہ) is right after the rate and never an Ent
     expect(allLinesColumns(step).some((column) => column.field === 'grade')).toBe(kept);
   });
 });
+
+describe('the paid on the spot cell (موقع پر جمع, PRD FR-12.44) is the last cell of the line, in every window', () => {
+  it.each(STEPS)('%s: after the buyer total, an Enter stop the backend can close', (step) => {
+    const columns = saleColumns(step);
+    expect(columns.at(-1)?.field).toBe('paid');
+    expect(columns.at(-2)?.field).toBe('buyerTotal');
+    expect(columns.at(-1)?.type).toBe('money');
+    // A stop (default), unless the backend closes it: the buyer who must pay in full.
+    expect(columns.at(-1)?.enterStop).toBeUndefined();
+    expect(columns.at(-1)?.fixedFromCalc).toBe('paidFixed');
+    // The Enter stops of a line are buyer, qty, rate and paid (the quality is not one).
+    const stops = columns.filter(
+      (column) => column.enterStop !== false && column.type !== 'calc' && column.type !== 'label',
+    );
+    expect(stops.map((column) => column.field)).toEqual(['buyer', 'qty', 'rate', 'paid']);
+  });
+
+  it.each(STEPS)('%s: the whole-sale view ends with it too', (step) => {
+    expect(allLinesColumns(step).at(-1)?.field).toBe('paid');
+  });
+});

@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import * as authApi from '../../src/features/auth/api';
+import * as ledgersApi from '../../src/features/party_ledgers/api';
 import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import { useLanguageStore } from '../../src/shared/i18n';
@@ -26,17 +27,20 @@ import {
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 import { fakeDashboard } from '../helpers/dashboard';
+import { LEDGER_BUYERS } from '../helpers/party-ledgers-real';
 import { at } from '../helpers/sample';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/dashboard/api');
+vi.mock('../../src/features/party_ledgers/api');
 vi.mock('../../src/features/settings/api');
 
 beforeEach(() => {
   vi.clearAllMocks();
   healthyBackend();
   fakeDashboard();
+  vi.mocked(ledgersApi.partyLedgersList).mockResolvedValue(LEDGER_BUYERS);
 });
 
 afterEach(() => {
@@ -148,7 +152,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       name: (name) => visible(name) === message(language, 'layout-module-label'),
     });
     const items = within(side).getAllByRole('button');
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(7);
     expect(items[0]).toHaveAttribute('aria-current', 'page');
     // The advance item is a real screen now (plan 10).
     await user.click(at(items, 3));
@@ -190,9 +194,22 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
       }),
     ).toBeInTheDocument();
     expect(within(side).getAllByRole('button')[2]).toHaveAttribute('aria-current', 'page');
+    // پارٹی کھاتے (plan 66, PRD FR-12.43) sits above the goods left, and opens the list of buyers.
+    await user.click(at(items, 5));
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          level: 1,
+          name: (name) => visible(name) === message(language, 'layout-module-party-ledgers'),
+        },
+        { timeout: 8_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(within(side).getAllByRole('button')[5]).toHaveAttribute('aria-current', 'page');
     // The goods left (باقی مال) is a real screen since plan 16; a later sale starts from it. Every
     // item of the area is built now (own goods, خریداری, joins in plan 16b).
-    await user.click(at(items, 5));
+    await user.click(at(items, 6));
     expect(
       await screen.findByRole(
         'heading',
@@ -203,7 +220,7 @@ describe.each(LANGUAGES)('the shell (%s)', (language) => {
         { timeout: 8_000 },
       ),
     ).toBeInTheDocument();
-    expect(within(side).getAllByRole('button')[5]).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getAllByRole('button')[6]).toHaveAttribute('aria-current', 'page');
     // A main item built later (تجزیات, plan 21) opens its own screen, never a made-up page.
     const nav = screen.getByRole('navigation', { name: message(language, 'layout-nav-label') });
     await user.click(

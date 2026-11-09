@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{LotChargeMethod, PaymentType, StoredMethod, TypedLotCharge};
+use mandi_core::bikri::{LotChargeMethod, StoredMethod, TypedLotCharge};
 use mandi_core::money::Paisa;
 use mandi_core::rules::{ChargeMethod, ChargeValue, RuleLevel};
 
@@ -142,8 +142,10 @@ pub struct StoredSale {
     pub seller_rate: Paisa,
     /// The buyer's rate (the seller's when the rates did not differ).
     pub buyer_rate: Paisa,
-    /// How the buyer paid.
-    pub payment_type: PaymentType,
+    /// Money the buyer paid on the spot, as stored (PRD FR-12.44). A line of an edit that the user
+    /// did not change keeps it for a buyer who must pay in full (plan 65 point 10a); for any other
+    /// buyer the typed value decides, and a change of it alone keeps the stored charges (FR-12.20).
+    pub paid: Paisa,
     /// The seller's commission.
     pub seller_comm: StoredCharge,
     /// The buyer's commission.

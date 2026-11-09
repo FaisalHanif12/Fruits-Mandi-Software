@@ -419,7 +419,7 @@ pub fn sale(key: &str, buyer: i64, qty: &str, rate: &str) -> SaleInput {
         seller_rate: rate.into(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,

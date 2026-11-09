@@ -16,6 +16,7 @@ import { CommandError } from '../../src/shared/api';
 import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
+import { ensurePaid } from './paid-fields';
 import { bikriListOf } from './paged';
 
 export const RAHIM = account(IDS.rahim, 'seller', '0010', 'رحیم', 'Rahim', {
@@ -98,7 +99,7 @@ export function fakeBikri(
   });
   vi.mocked(bikriApi.bikriPreview).mockImplementation((draft) => {
     store.previews.push(draft);
-    return Promise.resolve(answer(draft));
+    return Promise.resolve(answer(draft)).then(ensurePaid);
   });
   vi.mocked(bikriApi.assistTruckMemory).mockImplementation((truckNo) =>
     Promise.resolve(
@@ -113,23 +114,25 @@ export function fakeBikri(
   // not mocked is left alone (its calls fail, and the screen copes, as it must).
   if (vi.isMockFunction(bikriApi.bikriSave)) {
     vi.mocked(bikriApi.bikriSave).mockImplementation((draft, confirm) =>
-      Promise.resolve(answer(draft)).then((preview) => {
-        // Like the real backend: an entry that takes cash below zero is refused until the user
-        // has said yes (PRD FR-6.7). Nothing is saved then.
-        if (preview.cash.needs_confirm && !confirm) {
-          throw new CommandError(
-            refusal([
-              {
-                code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
-                field: null,
-                values: { cash_after_paisa: -500_000 },
-              },
-            ]),
-          );
-        }
-        store.saves.push({ draft, confirm });
-        return { bikri_id: 41, number: 1, entry_id: 7, preview };
-      }),
+      Promise.resolve(answer(draft))
+        .then(ensurePaid)
+        .then((preview) => {
+          // Like the real backend: an entry that takes cash below zero is refused until the user
+          // has said yes (PRD FR-6.7). Nothing is saved then.
+          if (preview.cash.needs_confirm && !confirm) {
+            throw new CommandError(
+              refusal([
+                {
+                  code: 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED',
+                  field: null,
+                  values: { cash_after_paisa: -500_000 },
+                },
+              ]),
+            );
+          }
+          store.saves.push({ draft, confirm });
+          return { bikri_id: 41, number: 1, entry_id: 7, preview };
+        }),
     );
     vi.mocked(bikriApi.bikriGet).mockResolvedValue(savedEvent1());
     vi.mocked(bikriApi.bikriList).mockImplementation((input) =>

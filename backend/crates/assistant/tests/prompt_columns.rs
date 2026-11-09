@@ -419,10 +419,9 @@ pub fn check(tools_text: &str) {
     assert_eq!(enum_of(schema), want, "the sort enum of analytics");
 }
 
-// Waiting for plan 65: D6 v1.8 lists the columns `paid` and `left` of R3, R4 and R5, which the engine
-// gets with the money paid on the spot (PRD FR-12.44). Plan 64 only moves the prompt files to v1.8.
+// D6 v1.8 lists the columns `paid` and `left` of R3, R4 and R5, which the engine has since plan 65
+// (money paid on the spot, PRD FR-12.44): this test was waiting for them.
 #[test]
-#[ignore = "waiting for plan 65: columns paid and left of R3, R4 and R5"]
 fn p8_the_columns_of_tools_json_are_the_columns_of_the_engine() {
     check(TOOLS_JSON);
 }

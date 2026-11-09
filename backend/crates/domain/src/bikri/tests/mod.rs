@@ -253,7 +253,7 @@ pub fn sale(buyer: i64, qty: &str, rate: &str) -> SaleInput {
         seller_rate: rate.into(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
@@ -395,6 +395,9 @@ pub fn assert_every_working_matches(calc: &PostingCalc) {
             assert_result(&n("buyer_value"), c.buyer_value, &c.workings.buyer_value);
             assert_result(&n("buyer_total"), c.buyer_total, &c.workings.buyer_total);
             assert_result(&n("rate_diff"), c.rate_diff, &c.workings.rate_diff);
+            // PRD FR-12.44: what was paid on the spot and what is left.
+            assert_result(&n("paid"), c.paid_paisa, &c.workings.paid);
+            assert_result(&n("left"), c.left_paisa, &c.workings.left);
             for (what, charge) in [
                 ("seller_comm", &c.seller_comm),
                 ("buyer_comm", &c.buyer_comm),

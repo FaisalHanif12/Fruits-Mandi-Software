@@ -105,6 +105,21 @@ working-weight-value = <num>{ $grams }</num> گرام × <num>{ $rate }</num> ف
 # C5: what the buyer pays for a line.
 # review: pending
 working-buyer-total = قیمت <num>{ $value }</num> + { -commission } <num>{ $comm }</num> + { -laga } <num>{ $laga }</num> = <num>{ $result }</num>
+# PRD FR-12.44: the money a buyer paid on the spot, as typed (or none).
+# review: pending
+working-paid-typed = { -mauqa-par-jama } (جو لکھی گئی): <num>{ $result }</num>
+# PRD FR-12.44: a buyer who must pay in full pays the whole buyer total.
+# review: pending
+working-paid-full = یہ { -gahak } پوری رقم دیتا ہے: رقم { -gahak } <num>{ $total }</num>، اس لیے { -mauqa-par-jama } <num>{ $result }</num>
+# PRD FR-12.44, plan 65 point 10a: an unchanged line of an edit keeps what it was saved with.
+# review: pending
+working-paid-kept = { -mauqa-par-jama } جیسی محفوظ ہوئی تھی ویسی ہی رہی: <num>{ $result }</num>
+# PRD FR-12.44: what was typed is more than the buyer total, so it is counted as 0 until it is fixed.
+# review: pending
+working-paid-over = لکھی گئی رقم <num>{ $typed }</num> لائن کی رقم <num>{ $total }</num> سے زیادہ ہے، اس لیے { -mauqa-par-jama } <num>{ $result }</num> گنی گئی ہے
+# PRD FR-12.44: what stays on the buyer's account.
+# review: pending
+working-left = رقم { -gahak } <num>{ $total }</num> − { -mauqa-par-jama } <num>{ $paid }</num> = <num>{ $result }</num>
 # C19: the rate difference of a line.
 # review: pending
 working-rate-diff = { -gahak } کی قیمت <num>{ $buyer_value }</num> − { -beopari } کی رقم <num>{ $seller_amount }</num> = <num>{ $result }</num>

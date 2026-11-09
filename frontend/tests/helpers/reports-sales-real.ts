@@ -17,6 +17,11 @@ import billsEn from '../fixtures/reports_buyer_bills_print_data_en.json';
 import billsEnRequest from '../fixtures/reports_buyer_bills_print_data_en_request.json';
 import billsUr from '../fixtures/reports_buyer_bills_print_data_ur.json';
 import billsUrRequest from '../fixtures/reports_buyer_bills_print_data_ur_request.json';
+import billsPaidEn from '../fixtures/reports_buyer_bills_print_data_paid_en.json';
+import billsPaidUr from '../fixtures/reports_buyer_bills_print_data_paid_ur.json';
+import billsPaidUrRequest from '../fixtures/reports_buyer_bills_print_data_paid_ur_request.json';
+import billsBikriUr from '../fixtures/reports_buyer_bills_print_data_bikri_ur.json';
+import billsBikriUrRequest from '../fixtures/reports_buyer_bills_print_data_bikri_ur_request.json';
 import r1Bikri1 from '../fixtures/reports_run_r1_bikri_1.json';
 import r1Bikri1Request from '../fixtures/reports_run_r1_bikri_1_request.json';
 import r1NeedsABikri from '../fixtures/reports_run_r1_needs_a_bikri.json';
@@ -60,3 +65,13 @@ export const BUYER_BILLS_EN = readBills(billsEn);
 export const BUYER_BILLS_EN_REQUEST = readPrintInput(billsEnRequest);
 export const BUYER_BILLS_UR = readBills(billsUr);
 export const BUYER_BILLS_UR_REQUEST = readPrintInput(billsUrRequest);
+/**
+ * The D8 example world (plan 65, plan 68): one بکری, three buyers who paid all, a part and nothing on
+ * the spot. انس (آم 50 . 900) is 45,000, 48,100 after commission and لاگا, paid 10,000, left 38,100.
+ */
+export const BUYER_BILLS_PAID_UR = readBills(billsPaidUr);
+export const BUYER_BILLS_PAID_EN = readBills(billsPaidEn);
+export const BUYER_BILLS_PAID_UR_REQUEST = readPrintInput(billsPaidUrRequest);
+/** The worked day's slips of بکری 1 only: the filter the sale book's second print button sends (plan 68). */
+export const BUYER_BILLS_BIKRI_UR = readBills(billsBikriUr);
+export const BUYER_BILLS_BIKRI_UR_REQUEST = readPrintInput(billsBikriUrRequest);

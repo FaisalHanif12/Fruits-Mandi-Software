@@ -131,7 +131,8 @@
           "buyer_total": 1280000,
           "rate_diff": 0,
           "cost_paisa": 0,
-          "payment_type": "cash",
+          "paid_paisa": 1280000,
+          "left_paisa": 0,
           "is_active": true,
           "state": "in_force",
           "note": null

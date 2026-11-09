@@ -121,6 +121,9 @@ function detailPartText(part: ReportDetailPart, context: ListContext, shortSale:
       });
     case 'cash_lent':
       return text('report-detail-cash-lent', { reason: part.reason });
+    case 'paid_on_spot':
+      // The mark on the credit line of money paid on the spot (PRD FR-12.44, FR-19.8).
+      return text('report-detail-paid-on-spot', { number: String(part.bikri_number) });
     case 'text':
       return part.text;
   }

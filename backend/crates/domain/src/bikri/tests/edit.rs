@@ -4,9 +4,7 @@
 
 use std::collections::HashMap;
 
-use mandi_core::bikri::{
-    LineChargeInput, LineChargeMethod, PaymentType, StoredMethod, prepare_draft,
-};
+use mandi_core::bikri::{LineChargeInput, LineChargeMethod, StoredMethod, prepare_draft};
 use mandi_core::error::ErrorCode;
 use mandi_core::rules::RuleLevel;
 
@@ -64,7 +62,7 @@ pub(super) fn stored_sale(
         weight_grams: None,
         seller_rate: p(rate),
         buyer_rate: p(rate),
-        payment_type: PaymentType::Credit,
+        paid: Paisa::ZERO,
         seller_comm: seller,
         buyer_comm,
         laga,
@@ -216,6 +214,107 @@ fn a_quality_only_change_leaves_the_line_unchanged_and_keeps_its_stored_rules() 
         "lots[0].sales[0].grade"
     ));
     assert!(calc.lots[0].lines[0].calc.is_none());
+}
+
+#[test]
+fn a_paid_only_change_keeps_the_stored_rules_and_amounts() {
+    // PRD FR-12.44, FR-12.20, plan 60 P11 (E2E-13b style): the default buyer commission is now 7%.
+    // Only ارشد's paid on the spot changes, so his line keeps its stored 6% and every stored amount;
+    // only the cash part moves.
+    let mut d = event1_with_ids();
+    d.lots[0].sales[1].paid = Some("10,000".into());
+    let calc = edit_with(&d, rules_with_buyer_7(), &stored_event1());
+    assert_no_errors(&calc);
+    let l = line(&calc, 0, 1);
+    assert_eq!((r(l.buyer_comm.amount), r(l.buyer_total)), (1_044, 18_684));
+    assert_eq!((r(l.paid_paisa), r(l.left_paisa)), (10_000, 8_684));
+    assert_eq!(r(line(&calc, 0, 0).buyer_total), 12_880);
+    // The shared income and the lot totals are those of event 1.
+    let t = single_lot_totals(&calc);
+    assert_eq!(r(t.shared_income), 3_948);
+    assert_eq!((r(t.buyer_cash), r(t.buyer_credit)), (10_000, 21_564));
+    // A paid above the stored total is refused, and the line keeps its figures.
+    let mut over = event1_with_ids();
+    over.lots[0].sales[1].paid = Some("18,685".into());
+    let calc = edit_with(&over, rules_with_buyer_7(), &stored_event1());
+    assert!(has(
+        &calc.errors,
+        ErrorCode::ErrPaidExceedsTotal,
+        "lots[0].sales[1].paid"
+    ));
+    assert_eq!(r(line(&calc, 0, 1).buyer_total), 18_684);
+}
+
+/// A posting whose one line is for a buyer who must pay in full (credit off), saved with `paid`.
+fn stored_must_pay_line(paid: i64) -> StoredPosting {
+    let mut stored = stored_event1();
+    let mut s = stored_sale(
+        CASH_ONLY_BUYER,
+        20,
+        600,
+        percent(720, 600, 1),
+        percent(720, 600, 2),
+        per_unit_charge(160, 8),
+    );
+    s.paid = p(paid);
+    stored.sales = HashMap::from([(1, s)]);
+    stored
+}
+
+#[test]
+fn an_unchanged_line_of_a_must_pay_buyer_keeps_the_paid_it_was_saved_with() {
+    // Plan 65 point 10a: the line was saved as credit (paid 0) when the buyer could take credit,
+    // and he has since lost it. An edit that leaves the line alone must not turn it into cash.
+    let draft_of = |rate: &str, id: Option<i64>| {
+        let mut row = sale(CASH_ONLY_BUYER, "20", rate);
+        row.sale_id = id;
+        let mut d = draft(vec![with(lot(RAHIM, BANANA, "50"), vec![row])]);
+        d.lots[0].lot_id = Some(1);
+        d
+    };
+    let calc = edit_with(
+        &draft_of("600", Some(1)),
+        default_rules(),
+        &stored_must_pay_line(0),
+    );
+    assert_no_errors(&calc);
+    let l = line(&calc, 0, 0);
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (0, 12_880, true)
+    );
+    assert_every_working_matches(&calc);
+    // Saved paid in full: it stays paid in full.
+    let calc = edit_with(
+        &draft_of("600", Some(1)),
+        default_rules(),
+        &stored_must_pay_line(12_880),
+    );
+    assert_eq!(
+        (
+            r(line(&calc, 0, 0).paid_paisa),
+            r(line(&calc, 0, 0).left_paisa)
+        ),
+        (12_880, 0)
+    );
+    // A changed line (the rate) follows the rule of a buyer who must pay in full: paid = total.
+    let calc = edit_with(
+        &draft_of("610", Some(1)),
+        default_rules(),
+        &stored_must_pay_line(0),
+    );
+    assert_eq!(
+        r(line(&calc, 0, 0).paid_paisa),
+        r(line(&calc, 0, 0).buyer_total)
+    );
+    assert_eq!(r(line(&calc, 0, 0).left_paisa), 0);
+    // A new line (no stored id) also pays in full.
+    let calc = edit_with(
+        &draft_of("600", None),
+        default_rules(),
+        &stored_must_pay_line(0),
+    );
+    assert_eq!(r(line(&calc, 0, 0).paid_paisa), 12_880);
 }
 
 #[test]

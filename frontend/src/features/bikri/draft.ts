@@ -10,7 +10,6 @@ import type { LineChargeInput } from '../../bindings/LineChargeInput';
 import type { LineChargeMethod } from '../../bindings/LineChargeMethod';
 import type { LotChargeMethod } from '../../bindings/LotChargeMethod';
 import type { LotInput } from '../../bindings/LotInput';
-import type { PaymentType } from '../../bindings/PaymentType';
 import type { SaleGrade } from '../../bindings/SaleGrade';
 import type { SaleInput } from '../../bindings/SaleInput';
 import { isChuktaPick, isGardenAccount } from '../../shared/accounts';
@@ -111,11 +110,6 @@ function gradeOf(row: EntryRow): SaleGrade | null {
   return typed === 'first' || typed === 'second' || typed === 'third' ? typed : null;
 }
 
-function paymentOf(row: EntryRow): PaymentType | null {
-  const typed = row.typed[SALE.payment];
-  return typed === 'credit' || typed === 'cash' ? typed : null;
-}
-
 /** The id of a saved row kept in a hidden cell, or nothing for a row that is new. */
 function savedId(text: string | undefined): number | null {
   const id = Number(text ?? '');
@@ -136,7 +130,9 @@ export function saleInput(row: EntryRow): SaleInput {
     seller_rate: (row.typed[SALE.rate] ?? '').trim(),
     rate_differs: row.typed[SALE.differs] === ON,
     buyer_rate: textOrNull(row.typed[SALE.buyerRate]),
-    payment_type: paymentOf(row),
+    // The money paid on the spot, as typed (PRD FR-12.44). Empty is sent as nothing, which the backend
+    // takes as 0; for a buyer who must pay in full it sets the amount itself and ignores this.
+    paid: textOrNull(row.typed[SALE.paid]),
     // Left out when there is none, so a line with no quality is sent exactly as before (FR-12.42).
     ...(gradeOf(row) === null ? {} : { grade: gradeOf(row) }),
     seller_comm: lineChargeInput(

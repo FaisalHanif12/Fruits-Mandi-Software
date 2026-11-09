@@ -313,7 +313,10 @@ function inputOf(args: unknown): Input {
 }
 
 /** Puts the stand-in where Tauri's `invoke` looks for the bridge. */
-export function installReportsDevBridge(): void {
+export function installReportsDevBridge(
+  /** More commands for a page of another module that borrows this stand-in (the party ledgers, plan 66). */
+  extra: Readonly<Record<string, (input: Input) => unknown>> = {},
+): void {
   Object.defineProperty(window, '__TAURI_INTERNALS__', {
     configurable: true,
     value: {
@@ -326,7 +329,7 @@ export function installReportsDevBridge(): void {
               resolve(plugin.value);
               return;
             }
-            const handler = handlers[command];
+            const handler = extra[command] ?? handlers[command];
             if (handler === undefined) {
               reject(refusal('ERR_NOT_IMPLEMENTED'));
               return;

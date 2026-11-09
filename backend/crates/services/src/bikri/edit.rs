@@ -420,7 +420,7 @@ fn posting_json(detail: &BikriDetail, entry_id: i64, kind: PostingKind) -> Value
                         "laga": charge_json(&s.laga),
                         "buyer_total_paisa": s.buyer_total.as_paisa(),
                         "rate_diff_paisa": s.rate_diff.as_paisa(),
-                        "payment_type": s.payment_type.as_str(),
+                        "paid_paisa": s.paid_paisa.as_paisa(),
                         "note": s.note,
                     });
                     // The quality of the line (PRD FR-12.42): a quality-only edit shows in the

@@ -176,22 +176,23 @@ fn the_sales_register_has_the_quality_column_only_when_a_line_has_one() {
     let w = graded_world();
     for id in [ReportId::R2, ReportId::R4] {
         let page = report(&w, id, ReportFilters::default(), 0, 0);
-        assert_eq!(
-            keys(&page),
-            [
-                "date",
-                "doc",
-                "buyer",
-                "city",
-                "item",
-                "grade",
-                "qty",
-                "rate",
-                "value",
-                "buyer_total"
-            ],
-            "{id:?}"
-        );
+        let mut expected = vec![
+            "date",
+            "doc",
+            "buyer",
+            "city",
+            "item",
+            "grade",
+            "qty",
+            "rate",
+            "value",
+            "buyer_total",
+        ];
+        // R3 and R4 have the paid on the spot and left columns after the buyer total (PRD FR-12.44).
+        if id == ReportId::R4 {
+            expected.extend(["paid", "left"]);
+        }
+        assert_eq!(keys(&page), expected, "{id:?}");
         let words: Vec<&Cell> = page.rows.iter().map(|r| &r.cells[5]).collect();
         assert_eq!(
             words,

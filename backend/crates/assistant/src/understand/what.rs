@@ -98,6 +98,8 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         how_much_twice: false,
         value_asked: false,
         total_dues: false,
+        chukta_group: false,
+        beyond_estimate: false,
         sure: false,
         doubts: vec![doubt],
     }
@@ -1414,7 +1416,7 @@ pub(super) fn assemble(
         doubts.push(Doubt::Cut);
     }
     // A request to write that also asks to read: the refusal would drop the question.
-    if intent.value == Intent::ChangeRequest && change::asks_to_read(scan) {
+    if intent.value == Intent::ChangeRequest && change::asks_to_read(scan, signs.amount) {
         doubts.push(Doubt::MixedIntent);
     }
     let figure_confidence = if kinds.is_empty() {
@@ -1527,6 +1529,11 @@ pub(super) fn assemble(
     let names_have_garden = roles_found
         .iter()
         .any(|r| matches!(r, PartyRole::Garden | PartyRole::Trip));
+    let beyond = reader
+        .today_date()
+        .is_some_and(|today| beyond_estimate(&periods, today));
+    let chukta_group =
+        scan.has_exact(Cue::Chukta) && names.parties.is_empty() && names.items.is_empty();
     let mut understanding = Understanding {
         intent,
         parties: names.parties,
@@ -1623,6 +1630,8 @@ pub(super) fn assemble(
         total_dues: kinds_for_happened.contains(&FigureKind::Dues)
             && (dead_amount_included(scan) || total_dues_asked(scan))
             && !scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]),
+        chukta_group,
+        beyond_estimate: beyond,
         sure: false,
         doubts,
     };
@@ -2002,4 +2011,30 @@ fn is_sure(u: &Understanding) -> bool {
         Intent::Forecast | Intent::WhatIf => !party_locked,
         Intent::Advice | Intent::ChangeRequest | Intent::NotInApp => true,
     }
+}
+
+/// True when the question names ONE month that is after every month an estimate can reach: the
+/// estimator goes at most `MAX_MONTHS_AHEAD` months ahead and the current month is the first of them,
+/// so a month that many or more months after this one is out of reach (D8 H9).
+///
+/// Example: today 10-10-2026, "december 2027" is 14 months after October 2026: true. "december 2026"
+/// is 2 months after: false (the model sets up an estimate).
+fn beyond_estimate(periods: &[PeriodRef], today: NaiveDate) -> bool {
+    use chrono::Datelike;
+    let [only] = periods else {
+        return false;
+    };
+    let super::PeriodKind::Month { year, month } = only.kind else {
+        return false;
+    };
+    // Whole months since year 0, with checked maths (this crate does no plain arithmetic).
+    let months = |y: i32, m: u32| i64::from(y).checked_mul(12)?.checked_add(i64::from(m));
+    let (Some(target), Some(now)) = (months(year, month), months(today.year(), today.month()))
+    else {
+        return false;
+    };
+    only.future
+        && target
+            .checked_sub(now)
+            .is_some_and(|ahead| ahead >= i64::from(crate::limits::MAX_MONTHS_AHEAD))
 }

@@ -398,12 +398,14 @@ describe.each(LANGUAGES)('moving between بکری and find (%s)', (language) => 
       return { ...view, dialog, user: userEvent.setup() };
     };
 
-    it('F3 opens it with the five filters and a hint, and nothing is asked yet', async () => {
+    it('F3 opens it with the six filters and a hint, and nothing is asked yet', async () => {
       const { dialog } = await openFind();
       for (const id of [
         'bikri-find-number',
         'bikri-header-truck',
         'glossary-beopari',
+        'glossary-gahak',
+        'bikri-find-walk-in',
         'bikri-header-date',
         'glossary-qism-maal',
       ]) {
@@ -443,6 +445,8 @@ describe.each(LANGUAGES)('moving between بکری and find (%s)', (language) => 
           seller_id: null,
           date: null,
           item_id: null,
+          buyer_account_id: null,
+          buyer_text: null,
         });
       });
       const result = await within(dialog).findByRole('button', {

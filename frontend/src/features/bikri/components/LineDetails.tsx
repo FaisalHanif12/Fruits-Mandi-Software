@@ -237,23 +237,48 @@ export function LineDetails({
             </Field>
           ) : null}
         </div>
-        {/* ادھاری / نقدی: the backend says first (the buyer's credit setting) and a choice here is sent as typed. */}
+        {/* The seller amount of the line: in the grid from the middle window up, here in every window. */}
+        <Field label={<Localized id="bikri-col-seller-amount" />} readOnly>
+          {(control) => (
+            <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">
+              {calc === null ? null : (
+                <>
+                  <Num paisa={calc.seller_amount} />
+                  <CalcInfo working={calc.workings.seller_amount} />
+                </>
+              )}
+            </output>
+          )}
+        </Field>
+        {/* What is left on the buyer's account (PRD FR-12.44): the backend worked it out. A buyer who must
+            pay in full has his paid cell closed, and the note says why. A refusal of the paid amount shows here
+            too, as it does on the cell. */}
         <Field
-          label={<Localized id="bikri-col-payment" />}
-          error={fieldError(error, path('payment_type'))}
+          label={<Localized id="bikri-line-left" />}
+          readOnly
+          hint={
+            calc?.paid_fixed === true ? (
+              // The backend's working says why: the buyer pays in full, or the saved line is kept.
+              <Localized
+                id={
+                  calc.workings.paid.message_id === 'working-paid-kept'
+                    ? 'bikri-paid-kept-note'
+                    : 'bikri-paid-fixed-note'
+                }
+              />
+            ) : undefined
+          }
+          error={fieldError(error, path('paid'))}
         >
-          {() => (
-            <SegmentedControl<string>
-              groupLabel={l10n.getString('bikri-col-payment')}
-              value={typed(SALE.payment) || (calc?.payment_type ?? '')}
-              onChange={(next) => {
-                setTyped(SALE.payment, next);
-              }}
-              options={[
-                { value: 'credit', label: l10n.getString('glossary-udhari') },
-                { value: 'cash', label: l10n.getString('glossary-naqdi') },
-              ]}
-            />
+          {(control) => (
+            <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">
+              {calc === null ? null : (
+                <>
+                  <Num paisa={calc.left_paisa} />
+                  <CalcInfo working={calc.workings.left} />
+                </>
+              )}
+            </output>
           )}
         </Field>
         {usesWeight ? (

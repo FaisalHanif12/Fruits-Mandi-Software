@@ -73,6 +73,13 @@ export type ReportPrintDetailPart =
       deductions: string;
     }
   | {
+      kind: 'paid_on_spot';
+      /**
+       * The بکری number.
+       */
+      bikri_number: string;
+    }
+  | {
       kind: 'cash_lent';
       /**
        * The reason as typed.

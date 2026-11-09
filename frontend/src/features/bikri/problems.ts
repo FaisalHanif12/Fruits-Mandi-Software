@@ -122,6 +122,8 @@ export const LINE_GRID_FIELD: Readonly<Record<string, string>> = {
   'chukta.phone': 'buyer',
   qty: 'qty',
   seller_rate: 'rate',
-  // The quality is a grid cell too (PRD FR-12.42); the payment type is in the details of the line.
+  // The quality is a grid cell too (PRD FR-12.42), and so is the money paid on the spot (FR-12.44): a
+  // refusal of it (more than the buyer total) shows on that cell.
   grade: 'grade',
+  paid: 'paid',
 };

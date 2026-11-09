@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::grade::SaleGrade;
-use super::input::{BikriDraft, FreightPaidBy, LotChargeMethod, PaymentType, StoredMethod};
+use super::input::{BikriDraft, FreightPaidBy, LotChargeMethod, StoredMethod};
 use super::preview::BikriPreview;
 use crate::accounts::RecordRef;
 use crate::money::{MoneyError, Paisa};
@@ -216,8 +216,13 @@ pub struct SavedSale {
     #[serde(default)]
     #[ts(type = "Paisa")]
     pub cost_paisa: Paisa,
-    /// How the buyer pays.
-    pub payment_type: PaymentType,
+    /// موقع پر جمع: what the buyer paid on the spot, stored with the line (PRD FR-12.44). An old line
+    /// saved as cash holds its buyer total, an old credit line 0 (migration 21).
+    #[ts(type = "Paisa")]
+    pub paid_paisa: Paisa,
+    /// کھاتے میں باقی: `buyer_total - paid_paisa`, worked out when the line is read.
+    #[ts(type = "Paisa")]
+    pub left_paisa: Paisa,
     /// False once an edit or a cancel ended this line (plan 16). `state` says how.
     pub is_active: bool,
     /// In force, replaced or removed by an edit, or cancelled with its بکری. A cancelled بکری
@@ -282,10 +287,11 @@ pub struct SavedTotals {
     /// ریٹ فرق. Can be negative.
     #[ts(type = "Paisa")]
     pub rate_diff: Paisa,
-    /// ادھاری: buyer bills of credit lines in force.
+    /// ادھاری: what is left on the buyers' accounts from the lines in force (the sum of `left_paisa`,
+    /// PRD FR-12.44).
     #[ts(type = "Paisa")]
     pub buyer_credit: Paisa,
-    /// نقدی: buyer bills of cash lines in force.
+    /// نقدی: what the buyers paid on the spot on the lines in force (the sum of `paid_paisa`).
     #[ts(type = "Paisa")]
     pub buyer_cash: Paisa,
     /// All buyer bills together.
@@ -321,10 +327,9 @@ impl SavedTotals {
             buyer_comm = buyer_comm.checked_add(sale.buyer_comm.amount)?;
             laga = laga.checked_add(sale.laga.amount)?;
             rate_diff = rate_diff.checked_add(sale.rate_diff)?;
-            match sale.payment_type {
-                PaymentType::Credit => buyer_credit = buyer_credit.checked_add(sale.buyer_total)?,
-                PaymentType::Cash => buyer_cash = buyer_cash.checked_add(sale.buyer_total)?,
-            }
+            // PRD FR-12.44: ادھاری is what is left on the account, نقدی what was paid on the spot.
+            buyer_credit = buyer_credit.checked_add(sale.left_paisa)?;
+            buyer_cash = buyer_cash.checked_add(sale.paid_paisa)?;
         }
         let (labour, munshiana, phone) =
             (lot.labour.amount, lot.munshiana.amount, lot.phone.amount);

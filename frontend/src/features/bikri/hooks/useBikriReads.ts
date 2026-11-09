@@ -45,7 +45,9 @@ export function hasFindFilter(input: BikriFindInput): boolean {
     (input.truck_no ?? '').trim() !== '' ||
     input.seller_id !== null ||
     (input.date ?? '').trim() !== '' ||
-    input.item_id !== null
+    input.item_id !== null ||
+    input.buyer_account_id !== null ||
+    (input.buyer_text ?? '').trim() !== ''
   );
 }
 

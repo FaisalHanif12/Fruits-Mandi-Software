@@ -119,7 +119,7 @@ pub fn draft(env: &TestEnv, lots: usize, lines: usize) -> BikriDraft {
                 seller_rate: "600".to_owned(),
                 rate_differs: false,
                 buyer_rate: None,
-                payment_type: None,
+                paid: None,
                 seller_comm: None,
                 buyer_comm: None,
                 laga: None,

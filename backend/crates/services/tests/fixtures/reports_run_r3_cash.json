@@ -60,6 +60,16 @@
       "key": "buyer_total",
       "title_id": "report-col-buyer-total",
       "kind": "money"
+    },
+    {
+      "key": "paid",
+      "title_id": "report-col-paid-on-spot",
+      "kind": "money"
+    },
+    {
+      "key": "left",
+      "title_id": "report-col-left-on-account",
+      "kind": "money"
     }
   ],
   "rows": [
@@ -112,6 +122,14 @@
         {
           "type": "money",
           "paisa": 1280000
+        },
+        {
+          "type": "money",
+          "paisa": 1280000
+        },
+        {
+          "type": "money",
+          "paisa": 0
         }
       ],
       "source": {
@@ -155,6 +173,14 @@
     {
       "type": "money",
       "paisa": 1280000
+    },
+    {
+      "type": "money",
+      "paisa": 1280000
+    },
+    {
+      "type": "money",
+      "paisa": 0
     }
   ],
   "summary": [],

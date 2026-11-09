@@ -122,7 +122,8 @@ export async function typeTwoLines(user: User, language: Language) {
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('0:qty');
   });
-  await user.keyboard('20{Enter}600{Enter}');
+  // Buyer, qty, rate and the paid cell: four Enters, then the next line (PRD FR-12.44, NFR-USE-6).
+  await user.keyboard('20{Enter}600{Enter}{Enter}');
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:buyer');
   });
@@ -130,7 +131,7 @@ export async function typeTwoLines(user: User, language: Language) {
   await waitFor(() => {
     expect(focusedIn(sales)).toBe('1:qty');
   });
-  await user.keyboard('{Enter}580{Enter}');
+  await user.keyboard('{Enter}580{Enter}{Enter}');
 }
 
 /** Types a picker field and takes the first match: waits for the list, so Enter finds it. */

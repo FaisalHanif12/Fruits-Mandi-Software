@@ -28,7 +28,7 @@ use serde::Deserialize;
 use serde_json::Value as Json;
 
 use super::cells::{cell_node, compare_cells, is_left_out};
-use super::records::{named, require_type};
+use super::records::{CHUKTA_ALL, chukta_account, named, require_type};
 use super::report::{DEFAULT_ROWS, MAX_ROWS, OrderWord, SortKey, reports_stop};
 use super::teach::{column_words, views_with};
 use super::{Draft, Env, PartnerRule, State, Stop, ToolError, date_arg, input, view_rule};
@@ -190,7 +190,20 @@ fn build_filters(
         filters.seller_id = Some(id);
         source.seller = Some(record);
     }
-    if let Some((id, record)) = one("buyer", &parsed.buyer, "a")? {
+    if parsed.buyer.as_deref() == Some(CHUKTA_ALL) {
+        // Every walk-in buyer together: the account چکتا کھاتہ, no person (D8 H3). The same filter the
+        // analytics screen takes, so the figures are the screen's.
+        takes_or(takes, K::Buyer, "buyer")?;
+        let (id, record) = chukta_account(env)?;
+        filters.buyer = Some(PartyFilter {
+            account_id: id,
+            person_key: None,
+        });
+        source.buyer = Some(SourceParty {
+            record,
+            person_key: None,
+        });
+    } else if let Some((id, record)) = one("buyer", &parsed.buyer, "a")? {
         takes_or(takes, K::Buyer, "buyer")?;
         require_type(env, id, "buyer", AccountType::Buyer)?;
         filters.buyer = Some(PartyFilter {

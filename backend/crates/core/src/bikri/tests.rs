@@ -20,7 +20,7 @@ fn sale(buyer: Option<i64>, qty: &str, rate: &str) -> SaleInput {
         seller_rate: rate.to_owned(),
         rate_differs: false,
         buyer_rate: None,
-        payment_type: None,
+        paid: None,
         seller_comm: None,
         buyer_comm: None,
         laga: None,

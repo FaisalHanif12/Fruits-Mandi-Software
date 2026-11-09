@@ -7,6 +7,7 @@
 //
 //   node scripts/print/pdf-from-route.mjs [--out docs/reviews/d8-evidence] [--base http://localhost:5173]
 //                                         [--only r1,r5,r35] [--chrome <path>] [--port 9444]
+//                                         [--fixtures <folder>]
 //
 // How it works, for each document:
 //   1. Chrome opens the real route. A stand-in for Tauri's `invoke` is put on the page BEFORE the app
@@ -34,7 +35,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const FIXTURES = path.join(ROOT, 'frontend', 'tests', 'fixtures');
+const DEFAULT_FIXTURES = path.join(ROOT, 'frontend', 'tests', 'fixtures');
 const SWIFT_SOURCE = path.join(ROOT, 'scripts', 'print', 'pdf-text.swift');
 
 const args = process.argv.slice(2);
@@ -51,6 +52,8 @@ function option(name, fallback) {
 }
 
 const BASE = option('base', 'http://localhost:5173');
+// Where the print data is read from. The default is the contract fixtures of the repository.
+const FIXTURES = path.resolve(option('fixtures', DEFAULT_FIXTURES));
 const OUT = path.resolve(ROOT, option('out', path.join('docs', 'reviews', 'd8-evidence')));
 const CHROME = option(
   'chrome',
@@ -141,6 +144,37 @@ const CASES = [
     must: ['10,000', '12,880', '10-10-2026'],
   },
 ];
+
+// ادھاری تفصیل (R5) with موقع پر جمع and کھاتے میں باقی (D8 Feature 4 and 8, plans 65 and 68): the D8
+// example world, where one buyer paid all, one a part and one nothing, and the same slips for one بکری
+// only. They are added when the backend has written their fixtures.
+for (const extra of [
+  {
+    name: 'r5-adhari-paid-left-ur',
+    label: 'R5 ادھاری تفصیل with paid and left (the D8 example)',
+    file: 'reports_buyer_bills_print_data_paid_ur',
+    must: ['45,000', '48,100', '10,000', '38,100'],
+  },
+  {
+    name: 'r5-this-bikri-ur',
+    label: 'R5 ادھاری تفصیل, this بکری only',
+    file: 'reports_buyer_bills_print_data_bikri_ur',
+    must: ['12,880', '18,684'],
+  },
+]) {
+  if (!fs.existsSync(path.join(FIXTURES, `${extra.file}.json`))) continue;
+  CASES.push({
+    name: extra.name,
+    label: extra.label,
+    address: reportAddress(
+      `${extra.file}_request.json`,
+      `pdf${extra.name.replace(/\W/g, '')}`,
+      true,
+    ),
+    answers: { reports_buyer_bills_print_data: fixture(`${extra.file}.json`) },
+    must: extra.must,
+  });
+}
 
 /** The shared header and footer of every report print (`reports_print_header`). */
 const HEADER_BASE = fixture('reports_print_header_ur.json');

@@ -231,6 +231,10 @@ pub(crate) const COL_TODAY_TOTAL: &str = "report-col-today-total";
 pub(crate) const COL_NET_SALE: &str = "report-col-net-sale";
 pub(crate) const COL_OTHER_ENTRIES: &str = "report-col-other-entries";
 pub(crate) const COL_PAID_TODAY: &str = "report-col-paid-today";
+/// موقع پر جمع (PRD FR-12.44): R3, R4, R5 and their print.
+pub(crate) const COL_PAID_ON_SPOT: &str = "report-col-paid-on-spot";
+/// کھاتے میں باقی (PRD FR-12.44): R3, R4, R5 and their print.
+pub(crate) const COL_LEFT_ON_ACCOUNT: &str = "report-col-left-on-account";
 pub(crate) const COL_NEW_BALANCE: &str = "report-col-new-balance";
 pub(crate) const R34_COMMISSION: &str = "report-r34-commission";
 pub(crate) const R34_CASH_OPENING: &str = "report-r34-cash-opening";

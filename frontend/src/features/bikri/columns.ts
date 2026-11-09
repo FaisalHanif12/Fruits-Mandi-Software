@@ -1,13 +1,17 @@
-// The columns of the two grids (PRD 12.3, 12.4; plan 12). Enter stops are the cells of the PRD 7.2
-// example: a sale line takes buyer, qty and rate, three fields and three Enters (NFR-USE-6, D3-Q1).
-// The payment type (ادھاری / نقدی) is in the details of the line under the grid, so the table has the
-// same columns at every size (plan 58, option C).
+// The columns of the two grids (PRD 12.3, 12.4; plan 12). Enter stops of a sale line are buyer, qty,
+// rate and paid on the spot: four fields and four Enters when the buyer may take credit, three when he
+// must pay in full and the backend closes the paid cell (NFR-USE-6, D8 Q2, PRD FR-12.44, plan 65).
+// The money paid on the spot (موقع پر جمع) is the last money cell of the line, after the buyer total.
+// What is left on the buyer's account is in the details of the line under the grid.
 //
 // The windows are narrow: with the main menu and the side menu open, a 1024 px window leaves about
 // 680 px for the screen (NFR-USE-15). So the grids hold the cells typed on most lots and lines,
 // and the amounts the user checks; the rest sits in the "more" panel of the lot and in the details
 // of the line (PRD FR-12.2, Code Standards F22). Wider windows add amounts: the net and the balance
-// to the lots, the two commissions to the lines from 1366 px, and the لاگا from 1920 px.
+// to the lots; to the lines the seller amount and the seller commission from 1366 px, and the buyer
+// commission from 1920 px. The paid cell is one more column, so in every window the seller amount, the
+// commissions and the لاگا that do not fit are in the details of the line instead (plan 65, plan 58
+// option C). bikri-column-widths.test.ts keeps the sums inside the room of each window.
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
@@ -111,24 +115,38 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
         { value: 'third', labelId: 'glossary-darja-soyam' },
       ],
     },
-    { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
+    // The amounts the user checks, by room (plan 65): the paid cell is one more column, so the least used
+    // amounts moved to the details of the line, where every amount of the line stands with its working.
+    // The seller amount and the seller commission come from 1366 px, the buyer commission from 1920 px;
+    // the لاگا is in the details in every window.
     ...(isFromStep(step, 'normal')
       ? ([
+          { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
           {
             field: SALE.sellerComm,
             type: 'calc',
             headerId: 'bikri-col-seller-comm',
             explain: true,
           },
-          { field: SALE.buyerComm, type: 'calc', headerId: 'bikri-col-buyer-comm', explain: true },
         ] satisfies readonly EntryColumn[])
       : []),
     ...(isFromStep(step, 'wide')
       ? ([
-          { field: SALE.laga, type: 'calc', headerId: 'glossary-laga', explain: true },
+          { field: SALE.buyerComm, type: 'calc', headerId: 'bikri-col-buyer-comm', explain: true },
         ] satisfies readonly EntryColumn[])
       : []),
     { field: SALE.buyerTotal, type: 'calc', headerId: 'bikri-col-buyer-total', explain: true },
+    {
+      field: SALE.paid,
+      type: 'money',
+      headerId: 'bikri-col-paid-on-spot',
+      // The backend decides the amount of a buyer who must pay in full: the cell then shows it, with
+      // its working, and is closed (PRD FR-12.44). The screen closes it with `editable`.
+      fixedFromCalc: SALE.paidFixed,
+      explain: true,
+      // The heading is two words ("موقع پر جمع"); it wraps to a second line.
+      minWidth: FIT_MIN.longHeading,
+    },
   ];
 }
 
@@ -137,9 +155,9 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
  * of the grid of one lot that fit beside it. The grid has the width of the grid of one lot, so the
  * lot column takes the room of the columns of the next step up (the commissions, the لاگا) and, in the
  * narrowest window, of the quality column: nothing
- * may scroll sideways, not even inside the grid (NFR-USE-15). The commissions and the payment type
- * of the line that has focus are in the line details under the grid, and every figure is in the
- * summary. A seller's name is cut in the lot column and read in full in the tooltip.
+ * may scroll sideways, not even inside the grid (NFR-USE-15). The commissions and what is left on the
+ * account of the line that has focus are in the line details under the grid, and every figure is in
+ * the summary. A seller's name is cut in the lot column and read in full in the tooltip.
  */
 export function allLinesColumns(step: LayoutStep): readonly EntryColumn[] {
   const lot: EntryColumn = {

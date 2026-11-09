@@ -15,6 +15,7 @@ import type { BikriDraft } from '../../src/bindings/BikriDraft';
 import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { LinePreview } from '../../src/bindings/LinePreview';
 import type { LotPreview } from '../../src/bindings/LotPreview';
+import type { Working } from '../../src/bindings/Working';
 import type { BikriDraftStores } from '../../src/features/bikri/draft-store';
 import { LOT, ON } from '../../src/features/bikri/types';
 import { paisaForTest } from './paisa';
@@ -102,8 +103,47 @@ const TOTALS: Readonly<Record<number, Totals>> = {
 
 type Sale = BikriDraft['lots'][number]['sales'][number];
 
+/** The money of a line paid on the spot, in rupees (PRD FR-12.44): what the backend decides for it. */
+interface PaidFigures {
+  paid: number;
+  left: number;
+  /** The buyer must pay in full: the backend sets the amount and the cell is closed. */
+  fixed: boolean;
+  /** What was typed is more than the buyer total: counted as 0 and refused. */
+  over: boolean;
+}
+
+/**
+ * What the backend says about the paid amount of a line (plan 65): a چکتا buyer pays in full and the
+ * cell is closed; any other buyer pays what was typed, empty is 0, and more than the buyer total is
+ * counted as 0 and refused. The numbers are the PRD's D8 figures, copied (Code Standards M12).
+ */
+function paidFigures(sale: Sale, total: number): PaidFigures {
+  if (sale.chukta !== null) return { paid: total, left: 0, fixed: true, over: false };
+  const typed = Number((sale.paid ?? '').replaceAll(',', '').trim() || '0');
+  if (typed > total) return { paid: 0, left: total, fixed: false, over: true };
+  return { paid: typed, left: total - typed, fixed: false, over: false };
+}
+
+/** A working with money arguments, as the backend sends it (`working-paid-*`, `working-left`). */
+function workingOf(messageId: string, args: Record<string, number>): Working {
+  return {
+    message_id: messageId,
+    args: Object.entries(args).map(([name, amount]) => ({
+      name,
+      value: { kind: 'money', paisa: rupees(amount) },
+    })),
+    rule_id: null,
+  };
+}
+
 /** Event 1's finished line, with the figures of this case put in. Only the numbers are changed. */
-function doneLine(sale: Sale, index: number, remaining: number, figures: Figures): LinePreview {
+function doneLine(
+  sale: Sale,
+  index: number,
+  remaining: number,
+  figures: Figures,
+): { line: LinePreview; paid: PaidFigures } {
   const template = EVENT1.lots[0]?.lines[0];
   if (template?.calc == null) throw new Error('Event 1 has no finished line');
   const line = structuredClone(template);
@@ -119,7 +159,25 @@ function doneLine(sale: Sale, index: number, remaining: number, figures: Figures
   calc.buyer_comm.amount = rupees(figures.buyerComm);
   calc.laga.amount = rupees(figures.laga);
   calc.buyer_total = rupees(figures.total);
-  return line;
+  const paid = paidFigures(sale, figures.total);
+  calc.paid_paisa = rupees(paid.paid);
+  calc.left_paisa = rupees(paid.left);
+  calc.paid_fixed = paid.fixed;
+  calc.workings.paid = paid.over
+    ? workingOf('working-paid-over', {
+        total: figures.total,
+        typed: Number((sale.paid ?? '').replaceAll(',', '')),
+        result: paid.paid,
+      })
+    : paid.fixed
+      ? workingOf('working-paid-full', { total: figures.total, result: paid.paid })
+      : workingOf('working-paid-typed', { result: paid.paid });
+  calc.workings.left = workingOf('working-left', {
+    total: figures.total,
+    paid: paid.paid,
+    result: paid.left,
+  });
+  return { line, paid };
 }
 
 /**
@@ -136,6 +194,9 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
   const lines: LinePreview[] = [];
   let sold = 0;
   let stand = 0;
+  // What the buyers paid on the spot and what stays on their accounts (PRD FR-12.44).
+  let paidSum = 0;
+  let leftSum = 0;
   let lastRate: { rate: number; date: string } | null = null;
   lot.sales.forEach((sale, index) => {
     const remaining = Math.max(LOT_QTY - sold, 0);
@@ -196,7 +257,18 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
     }
     const figures = LINE_FIGURES[`${sale.qty}@${sale.seller_rate}`];
     if (figures === undefined) throw new Error(`no figures for ${sale.qty}@${sale.seller_rate}`);
-    lines.push({ ...doneLine(sale, index, remaining, figures), rate_hint: hint });
+    const done = doneLine(sale, index, remaining, figures);
+    lines.push({ ...done.line, rate_hint: hint });
+    // More than the buyer total is refused on the paid cell, with the most allowed (PRD FR-12.44).
+    if (done.paid.over) {
+      errors.push({
+        code: 'ERR_PAID_EXCEEDS_TOTAL',
+        field: path('paid'),
+        values: { max: figures.total },
+      });
+    }
+    paidSum += done.paid.paid;
+    leftSum += done.paid.left;
     stand += 1;
     lastRate = { rate: Number(sale.seller_rate), date: draft.header.entry_date };
   });
@@ -220,7 +292,8 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
     target.deductions = rupees(totals.deductions);
     target.net = rupees(totals.net);
     target.buyer_total = rupees(totals.buyerTotal);
-    target.buyer_credit = rupees(totals.buyerTotal);
+    target.buyer_credit = rupees(leftSum);
+    target.buyer_cash = rupees(paidSum);
     target.shared_income = rupees(totals.shared);
   }
   const split = structuredClone(EVENT1.split);

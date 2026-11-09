@@ -35,6 +35,8 @@ export const SHORTCUTS = {
   addAccount: { code: 'F4', label: 'F4', scope: 'picker' },
   /** Print. */
   print: { code: 'F9', label: 'F9', scope: 'anywhere' },
+  /** On the sale book: print ادھاری تفصیل (R5), the second print button (PRD FR-12.12). */
+  printAdhari: { code: 'F9', shift: true, label: 'Shift+F9', scope: 'anywhere' },
   /** Save on entry screens. Ctrl+S does the same. */
   save: { code: 'F10', label: 'F10', scope: 'entry', also: [{ code: 'KeyS', ctrl: true }] },
   /** Save, print the ticked documents and start a new entry (FR-7.57). */

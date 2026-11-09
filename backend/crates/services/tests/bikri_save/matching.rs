@@ -2,7 +2,7 @@
 //! the canonical re-match that edit and cancel will use (plan 16).
 
 use mandi_services::core::accounts::BalanceSide;
-use mandi_services::core::bikri::{BikriDraft, PaymentType};
+use mandi_services::core::bikri::BikriDraft;
 use mandi_services::core::money::Paisa;
 use mandi_services::db::matching as repo;
 use mandi_services::domain::ledger::{LedgerLine, PostingType, Side, SourceType, build_entry};
@@ -128,7 +128,8 @@ fn the_cash_of_a_cash_sale_never_pays_an_older_bill() {
     let w = world();
     open_account(&w, w.akram, "2,880", "");
     let mut line = sale("s-1", w.akram, "10", "1200");
-    line.payment_type = Some(PaymentType::Cash);
+    // Paid on the spot: the whole 12,800 (PRD FR-12.44).
+    line.paid = Some("12,800".into());
     let d = draft(vec![with_sales(
         bare_lot(&w, "lot-1", w.karim, w.apple, "10"),
         vec![line],
@@ -157,6 +158,95 @@ fn the_cash_of_a_cash_sale_never_pays_an_older_bill() {
         })
         .unwrap();
     assert_eq!((changed.switched_off, changed.added), (0, 0));
+}
+
+/// One sale of 50 × 900 to a buyer: 45,000 + 2,700 + 400 = 48,100 (the second line of the D8 example),
+/// with `paid` typed as money paid on the spot (empty is nothing).
+fn sale_of_48_100(w: &World, buyer: i64, paid: &str) -> BikriDraft {
+    let mut line = sale("s-1", buyer, "50", "900");
+    line.paid = (!paid.is_empty()).then(|| paid.to_owned());
+    draft(vec![with_sales(
+        bare_lot(w, "lot-1", w.rahim, w.banana, "50"),
+        vec![line],
+    )])
+}
+
+#[test]
+fn part_paid_cash_never_pays_an_older_bill_and_what_is_left_is_a_normal_open_bill() {
+    // Plan 65 point 3 (PRD FR-12.44, FR-15.4): an old open bill of 5,000 and a new bill of 48,100 on
+    // which 10,000 is paid on the spot. The 10,000 credit is pinned to the new bill; the old 5,000
+    // stays open and keeps its age; 38,100 of the new bill is a normal open bill. His balance is
+    // 5,000 + 38,100 = 43,100 and no credit waits unmatched.
+    let w = world();
+    open_account(&w, w.akram, "5,000", "");
+    let saved = save_ok(&w, &sale_of_48_100(&w, w.akram, "10,000"));
+    let bill = line_id(&w, saved.entry_id, w.akram, "dr");
+    let paid = line_id(&w, saved.entry_id, w.akram, "cr");
+    assert_eq!(rows(&w, "bill_allocations"), [(bill, paid, 10_000)]);
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 43_100));
+    let old = line_id(&w, opening_entry(&w, w.akram), w.akram, "dr");
+    assert!(rows(&w, "bill_allocations").iter().all(|r| r.0 != old));
+    assert_eq!(key_state(&w, w.akram, None), (4_310_000, 0, 4_310_000));
+    // The canonical working agrees: nothing to change.
+    let changed = w
+        .env
+        .ctx
+        .db()
+        .write(|tx| {
+            matching::rematch(
+                tx,
+                w.owner.user_id,
+                "2026-10-10T09:00:00.000Z",
+                w.akram,
+                None,
+            )
+        })
+        .unwrap();
+    assert_eq!((changed.switched_off, changed.added), (0, 0));
+}
+
+#[test]
+fn a_receipt_on_the_left_part_and_then_a_cancel_re_match_to_the_canonical_rows() {
+    // A bill of 48,100 with 10,000 paid on the spot, then a receipt of 20,000: the receipt pays the
+    // left part (38,100 - 20,000 = 18,100 still open). Cancel the بکری by reversal: the pinned row
+    // and the receipt's row end, and the receipt is a credit of 20,000 that no bill uses.
+    let w = world();
+    let saved = save_ok(&w, &sale_of_48_100(&w, w.akram, "10,000"));
+    let bill = line_id(&w, saved.entry_id, w.akram, "dr");
+    let paid = line_id(&w, saved.entry_id, w.akram, "cr");
+    let r_entry = receipt(&w, w.akram, None, "20,000");
+    let r = line_id(&w, r_entry, w.akram, "cr");
+    assert_eq!(
+        rows(&w, "bill_allocations"),
+        [(bill, paid, 10_000), (bill, r, 20_000)]
+    );
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 18_100));
+    w.env
+        .ctx
+        .db()
+        .write(|tx| {
+            ledger::reverse(&w.env.ctx, tx, w.owner.user_id, saved.entry_id, "cancel")?;
+            matching::rematch(
+                tx,
+                w.owner.user_id,
+                "2026-10-10T09:00:00.000Z",
+                w.akram,
+                None,
+            )
+        })
+        .unwrap();
+    assert!(rows(&w, "bill_allocations").is_empty());
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Cr, 20_000));
+    // The reversed بکری and its reversal are not live lines any more: only the receipt is, and no bill
+    // uses it (the gross sums of `key_state` would still count the reversal pair).
+    let live = w
+        .env
+        .ctx
+        .db()
+        .read(|c| repo::live_key_lines(c, w.akram, None))
+        .unwrap();
+    let ids: Vec<i64> = live.iter().map(|l| l.line_id).collect();
+    assert_eq!(ids, [r]);
 }
 
 #[test]
@@ -319,7 +409,8 @@ fn after_any_sequence_of_sales_and_receipts_the_rows_are_the_canonical_ones() {
                 let mut sales = Vec::new();
                 for j in 0..lines {
                     let which = rng.below(4);
-                    let rate = (100 + rng.below(900)).to_string();
+                    let rate_value = 100 + rng.below(900);
+                    let rate = rate_value.to_string();
                     let mut line = sale(
                         &format!("s-{j}"),
                         [w.akram, w.arshad, w.chukta_khata, w.chukta_khata]
@@ -335,12 +426,15 @@ fn after_any_sequence_of_sales_and_receipts_the_rows_are_the_canonical_ones() {
                         };
                         line.chukta = person(ur, en, phone);
                     }
-                    // A چکتا buyer always pays in full (PRD FR-13.5).
-                    line.payment_type = Some(if which >= 2 || rng.below(2) == 0 {
-                        PaymentType::Cash
-                    } else {
-                        PaymentType::Credit
-                    });
+                    // A چکتا buyer always pays in full (PRD FR-13.5, the backend sets it). A regular buyer
+                    // pays nothing, a quarter, a half, three quarters or all of his bill on the spot
+                    // (PRD FR-12.44): the total of a banana line is value + 6% + 8 for each نگ.
+                    if which < 2 {
+                        let value = qty_each * rate_value;
+                        let total = value + (value * 6 + 50) / 100 + 8 * qty_each;
+                        let paid = total * rng.below(5) / 4;
+                        line.paid = (paid > 0).then(|| paid.to_string());
+                    }
                     sales.push(line);
                 }
                 let total = (lines * qty_each).to_string();

@@ -103,7 +103,7 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('0:qty');
     }, SLOW_MS);
-    await view.user.keyboard('20{Enter}1000{Enter}');
+    await view.user.keyboard('20{Enter}1000{Enter}{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:buyer');
     }, SLOW_MS);
@@ -111,7 +111,7 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('1:qty');
     }, SLOW_MS);
-    await view.user.keyboard('50{Enter}900{Enter}');
+    await view.user.keyboard('50{Enter}900{Enter}{Enter}');
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:buyer');
     }, SLOW_MS);
@@ -438,7 +438,8 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(focusedIn(sales)).toBe('2:qty');
     }, SLOW_MS);
-    await user.keyboard('{Enter}900{Enter}');
+    // Rate, then the paid cell (this buyer may take credit), then the next line.
+    await user.keyboard('{Enter}900{Enter}{Enter}');
     await waitFor(() => {
       expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');
       expect(focusedIn(sales)).toBe('3:buyer');

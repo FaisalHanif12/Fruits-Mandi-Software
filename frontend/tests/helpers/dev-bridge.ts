@@ -25,6 +25,7 @@ import { fillThousandLines, thousandAnswer } from './bikri-thousand';
 import { fillUmarsLot, umarAnswer } from './bikri-umar-data';
 import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { account as accountRow } from './accounts';
+import { ensurePaid } from './paid-fields';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
 import { printDataFor, voucherPrintData } from './print-data';
@@ -37,6 +38,9 @@ import {
   costEntry,
 } from './trips-data';
 import { printingSettings } from './print-settings';
+import { printFrameFor } from './print-frame-real';
+import { BUYER_BILLS_EN, BUYER_BILLS_UR } from './reports-sales-real';
+import type { PrintFrameInput } from '../../src/bindings/PrintFrameInput';
 import { editHandlers } from './dev-bridge-edit';
 import { AUDIT_EDIT_STAMP_BIKRI } from './edit-real';
 import { gardensHandlers, isGardensPage } from './dev-bridge-gardens';
@@ -629,14 +633,14 @@ const handlers: Record<string, Handler> = {
   translit_pairs_list: () => EMPTY_PAIRS,
   bikri_preview: (input) => {
     // `?own` is the lot of trip goods of E2E-34, the backend's real answer.
-    if (devFlag('own')) return fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input));
+    if (devFlag('own')) return ensurePaid(fitOwnPreview(ownReal.OWN_PREVIEW_E34, draftOf(input)));
     // `#/dev/bikri?offer&over` is Umar's case (plan 57): 50 in the lot and 70 typed on the line.
-    if (devFlag('over')) return previewWithOverLine(draftOf(input));
+    if (devFlag('over')) return ensurePaid(previewWithOverLine(draftOf(input)));
     // `#/dev/bikri?offer&umar` is Umar's case of D8 (plan 61): 200 in the lot and three lines.
     if (devFlag('umar')) return umarAnswer(draftOf(input));
     // `#/dev/bikri?thousand` is 1,000 sale lines in one lot (D8 plan 61, NFR-SCL-3).
     if (devFlag('thousand')) return thousandAnswer(draftOf(input));
-    const preview = previewFor(draftOf(input));
+    const preview = ensurePaid(previewFor(draftOf(input)));
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
   },
@@ -737,6 +741,18 @@ const handlers: Record<string, Handler> = {
     copies: Number(input['copies']),
   }),
   reports_list_printers: () => (devFlag('noprinters') ? [] : ['HP LaserJet Pro', 'Epson TM-T20']),
+  // Plan 68: the print of ادھاری تفصیل (R5), opened by the second print button, with the backend's own
+  // slips and shared header. `windows` lets Print and Save PDF answer like a computer that prints.
+  reports_buyer_bills_print_data: (input) =>
+    input['language'] === 'en' ? BUYER_BILLS_EN : BUYER_BILLS_UR,
+  reports_print_header: (input) => printFrameFor(input as unknown as PrintFrameInput),
+  reports_print_report: (input) => {
+    if (!devFlag('windows')) throw windowsOnly();
+    return {
+      printed: ['buyer_slips'],
+      pdf_paths: input['to'] === 'pdf' ? ['prints/report-r5-slips.pdf'] : null,
+    };
+  },
   reports_bikri_print_data: (input) =>
     printDataFor(input['doc'] as 'seller_bill', {
       language: input['language'] === 'en' ? 'en' : 'ur',

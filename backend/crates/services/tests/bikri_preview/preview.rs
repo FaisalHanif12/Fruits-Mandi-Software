@@ -5,7 +5,7 @@ use std::path::Path;
 
 use mandi_services::bikri;
 use mandi_services::core::bikri::{
-    ChargeSource, ChuktaInput, LineChargeMethod, PaymentType, RateHintSource, StoredMethod,
+    ChargeSource, ChuktaInput, LineChargeMethod, RateHintSource, StoredMethod,
 };
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::rules::{CreditLimitMode, OverridesSettings, WorkingValue};
@@ -168,7 +168,10 @@ fn event_2_chukta_buyer_pays_in_full_on_the_spot() {
         (r(l.buyer_comm.amount), r(l.laga.amount), r(l.buyer_total)),
         (720, 80, 12_800)
     );
-    assert_eq!(l.payment_type, PaymentType::Cash);
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (12_800, 0, true)
+    );
     let t = p.lots[0].totals.as_ref().unwrap();
     assert_eq!(
         (r(t.deductions), r(t.net), r(t.shared_income)),
@@ -365,7 +368,7 @@ fn a_draft_with_no_lot_says_so_and_returns_zero_totals() {
 /// The JSON of one sale row as the screen sends it.
 fn row_json(key: &str, buyer: Option<i64>, qty: &str, rate: &str) -> serde_json::Value {
     json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
-        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
+        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "paid": null,
         "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
 
@@ -533,25 +536,71 @@ fn a_vegetable_has_no_laga_and_says_so() {
 }
 
 #[test]
-fn the_cash_buyer_pays_cash_and_credit_is_refused_for_him() {
+fn the_cash_buyer_pays_the_whole_bill_whatever_is_typed() {
+    // PRD FR-12.44, plan 60 P3: the نقدی منڈی account always pays the buyer total, and a typed
+    // paid amount is ignored. There is no refusal any more.
     let w = world();
-    let d = |payment| {
+    let d = |paid: Option<&str>| {
         let mut row = sale("s-1", w.naqdi, "20", "600");
-        row.payment_type = payment;
+        row.paid = paid.map(str::to_owned);
         draft(vec![with_sales(
             lot(&w, "lot-1", w.rahim, w.banana, "50"),
             vec![row],
         )])
     };
-    let p = preview(&w, &d(None));
+    for paid in [None, Some("1"), Some("5,000")] {
+        let p = preview(&w, &d(paid));
+        assert!(p.errors.is_empty(), "{:?}", p.errors);
+        let l = calc(&p.lots[0], 0);
+        assert_eq!(
+            (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+            (12_880, 0, true),
+            "typed {paid:?}"
+        );
+        // His 12,880 comes in at once: cash change +12,880 - 5,000.
+        assert_eq!(r(p.cash.change_paisa), 7_880);
+    }
+}
+
+#[test]
+fn money_paid_on_the_spot_comes_into_cash_and_the_rest_stays_on_the_account() {
+    // PRD FR-12.44 (D8): اکرم's bill is 12,880; he pays 3,000 on the spot. 3,000 comes into روکڑ
+    // (3,000 - 5,000 نقد = -2,000) and 9,880 stays on his account.
+    let w = world();
+    let mut row = sale("s-1", w.akram, "20", "600");
+    row.paid = Some("3,000".into());
+    let p = preview(
+        &w,
+        &draft(vec![with_sales(
+            lot(&w, "lot-1", w.rahim, w.banana, "50"),
+            vec![row],
+        )]),
+    );
     assert!(p.errors.is_empty(), "{:?}", p.errors);
-    assert_eq!(calc(&p.lots[0], 0).payment_type, PaymentType::Cash);
-    // His 12,880 comes in at once: cash change +12,880 - 5,000.
-    assert_eq!(r(p.cash.change_paisa), 7_880);
-    let p = preview(&w, &d(Some(PaymentType::Credit)));
+    let l = calc(&p.lots[0], 0);
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (3_000, 9_880, false)
+    );
+    assert_eq!(r(p.cash.change_paisa), -2_000);
+    let t = p.lots[0].totals.as_ref().unwrap();
+    assert_eq!(
+        (r(t.buyer_cash), r(t.buyer_credit), r(t.buyer_total)),
+        (3_000, 9_880, 12_880)
+    );
+    // One rupee over the buyer total is refused at the paid field, with the most allowed.
+    let mut over = sale("s-1", w.akram, "20", "600");
+    over.paid = Some("12,881".into());
+    let p = preview(
+        &w,
+        &draft(vec![with_sales(
+            lot(&w, "lot-1", w.rahim, w.banana, "50"),
+            vec![over],
+        )]),
+    );
     assert!(has(
         &p.errors,
-        ErrorCode::ErrCreditNotAllowed,
-        "lots[0].sales[0].payment_type"
+        ErrorCode::ErrPaidExceedsTotal,
+        "lots[0].sales[0].paid"
     ));
 }

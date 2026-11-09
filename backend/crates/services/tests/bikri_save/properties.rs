@@ -4,7 +4,7 @@
 //! adds up, and every stored amount is a whole rupee.
 
 use mandi_services::bikri;
-use mandi_services::core::bikri::{BikriDraft, LotInput, PaymentType, SaleInput};
+use mandi_services::core::bikri::{BikriDraft, LotInput, SaleInput};
 use mandi_services::ledger;
 use proptest::prelude::*;
 use proptest::test_runner::{Config, TestRunner};
@@ -117,7 +117,8 @@ fn build(w: &World, specs: &[LotSpec]) -> BikriDraft {
                 line.chukta = person(people[j % 2].0, people[j % 2].1, people[j % 2].2);
             }
             if s.buyer < 2 && s.cash {
-                line.payment_type = Some(PaymentType::Cash);
+                // Part of the bill paid on the spot (PRD FR-12.44): 50 is below every total here.
+                line.paid = Some("50".into());
             }
             if let Some(rate) = s.buyer_rate {
                 line.rate_differs = true;

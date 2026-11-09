@@ -76,6 +76,13 @@ export type ReportDetailPart =
       deductions_paisa: Paisa;
     }
   | {
+      kind: 'paid_on_spot';
+      /**
+       * The بکری number.
+       */
+      bikri_number: number;
+    }
+  | {
       kind: 'cash_lent';
       /**
        * The reason as typed.

@@ -278,6 +278,10 @@ report-detail-lot = { -bikri } { $number }: { $item } { $qty } { $packing }، { 
 # review: pending
 report-detail-cash-lent = { -naqd-udhar }: { $reason }
 
+# The mark on the credit line of money a buyer paid on the spot (PRD FR-12.44, FR-19.8).
+# review: pending
+report-detail-paid-on-spot = { -bikri } { $number }: { -mauqa-par-jama }
+
 # review: pending
 report-doc-number = { $kind } { $number }
 
@@ -409,13 +413,13 @@ report-r2-help = چنے ہوئے دنوں کی ہر بکری، { -gahak } کی �
 report-r3-title = { -naqdi }
 
 # review: pending
-report-r3-help = چنے ہوئے دنوں کی صرف { -naqdi } بکری۔
+report-r3-help = چنے ہوئے دنوں کی وہ لائنیں جن میں { -mauqa-par-jama } رقم آئی۔ ساتھ میں { -khate-mein-baqi } بھی ہے۔
 
 # review: pending
 report-r4-title = { -udhari }
 
 # review: pending
-report-r4-help = چنے ہوئے دنوں کی صرف { -udhari } بکری۔
+report-r4-help = چنے ہوئے دنوں کی وہ لائنیں جن میں کچھ { -khate-mein-baqi } ہے۔ ساتھ میں { -mauqa-par-jama } بھی ہے۔
 
 # review: pending
 report-r6-title = { -bikri } تفصیل
@@ -514,6 +518,13 @@ report-col-value = قیمت
 
 # review: pending
 report-col-buyer-total = رقم گاہک
+
+# The last two columns of R3, R4 and R5 (PRD FR-12.44, FR-19.2).
+# review: pending
+report-col-paid-on-spot = { -mauqa-par-jama }
+
+# review: pending
+report-col-left-on-account = { -khate-mein-baqi }
 
 # review: pending
 report-col-gross = { -kham-bikri }
@@ -1229,7 +1240,7 @@ report-r1-help = ایک { -bikri } کے لاٹ: کیا آیا، کیا بکا، 
 report-r5-title = { -udhari } تفصیل
 
 # review: pending
-report-r5-help = ہر { -udhari } گاہک کا مال، اس کی رقم اور { -commission } اور { -laga } کے ساتھ اس کے ذمے رقم۔
+report-r5-help = دن کے ہر گاہک کا مال، اس کی رقم اور { -commission } اور { -laga } کے ساتھ اس کے ذمے رقم، { -mauqa-par-jama } اور { -khate-mein-baqi }۔
 
 # review: pending
 report-col-serial = نمبر شمار

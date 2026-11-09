@@ -154,7 +154,7 @@ fn line_fields(s: &SavedSale) -> Fields {
         ("laga", money(s.laga.amount)),
         ("buyer_total", money(s.buyer_total)),
         ("rate_diff", money(s.rate_diff)),
-        ("payment_type", word(&s.payment_type)),
+        ("paid", money(s.paid_paisa)),
         ("note", text(s.note.as_ref())),
     ]
 }

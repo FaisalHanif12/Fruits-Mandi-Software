@@ -141,9 +141,10 @@ struct Spec {
     party_required: bool,
 }
 
-/// The filters of the sales registers R2 to R5: dates, the buyer, and the seller, زمیندار, item,
-/// the buyer's city and اڈا (PRD FR-19.1).
-const REGISTER_FILTERS: &[FilterKind] = &[
+/// The filters of R5: dates, the buyer, the seller, زمیندار, item, the buyer's city and اڈا (PRD
+/// FR-19.1), and one بکری (PRD FR-12.12, D8 Feature 8: the button
+/// next to the seller-bill print prints ادھاری تفصیل for "this بکری only"). Only R5 takes it.
+const BUYER_BILLS_FILTERS: &[FilterKind] = &[
     FilterKind::DateRange,
     FilterKind::Party,
     FilterKind::Seller,
@@ -151,6 +152,7 @@ const REGISTER_FILTERS: &[FilterKind] = &[
     FilterKind::Item,
     FilterKind::City,
     FilterKind::Adda,
+    FilterKind::Bikri,
 ];
 
 /// The filters of R2, R3 and R4: those of the registers, and the item group (PRD v1.29).
@@ -232,7 +234,7 @@ const SPECS: &[Spec] = &[
         REGISTER_GROUP_FILTERS,
         false,
     ),
-    spec(ReportId::R5, ReportGroup::Sales, REGISTER_FILTERS, false),
+    spec(ReportId::R5, ReportGroup::Sales, BUYER_BILLS_FILTERS, false),
     spec(ReportId::R6, ReportGroup::Sales, SELLER_SIDE_FILTERS, false),
     spec(
         ReportId::R7,

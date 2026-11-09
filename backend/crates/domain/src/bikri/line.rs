@@ -4,8 +4,7 @@
 use std::collections::HashMap;
 
 use mandi_core::bikri::{
-    ChargeSource, LineCalc, LineCharge, LineWorkings, PaymentType, PreparedSale, RuleLabel,
-    StoredMethod,
+    ChargeSource, LineCalc, LineCharge, LineWorkings, PreparedSale, RuleLabel, StoredMethod,
 };
 use mandi_core::error::ErrorCode;
 use mandi_core::money::{Grams, Paisa, Qty, line_value, weight_value};
@@ -51,7 +50,6 @@ pub(super) struct LineArgs<'a> {
     pub row: &'a PreparedSale,
     pub buyer_id: i64,
     pub buyer: &'a AccountFacts,
-    pub payment: PaymentType,
     /// The stored line, when the row is an edited line that the user did not change (PRD
     /// FR-12.20): its commissions and لاگا are kept exactly.
     pub stored: Option<&'a StoredSale>,
@@ -64,8 +62,10 @@ pub(super) struct LineArgs<'a> {
 }
 
 /// The stored line of a row, if the user did not change it (PRD FR-12.20): the buyer, the
-/// چکتا buyer, the quantity, the weight, both rates, how the buyer pays and the commissions
-/// and لاگا typed on the line are all what was stored. A row with no `sale_id`, or whose
+/// چکتا buyer, the quantity, the weight, both rates and the commissions and لاگا typed on the
+/// line are all what was stored. The money paid on the spot is not part of the test (PRD
+/// FR-12.44, plan 60 P11): a line whose only change is its paid amount, or its quality, keeps its
+/// stored rules and amounts. A row with no `sale_id`, or whose
 /// `sale_id` is not stored in this posting, is a new line.
 pub(super) fn unchanged_stored<'a>(
     env: &Env<'a>,
@@ -81,9 +81,6 @@ pub(super) fn unchanged_stored<'a>(
         return None;
     }
     let buyer = env.lookups.accounts.get(&buyer_id)?;
-    if checks::resolve_payment(buyer, row.payment_type)? != stored.payment_type {
-        return None;
-    }
     let person_key = if buyer.is_chukta {
         Some(clean_person(&row.chukta)?.key)
     } else {
@@ -325,8 +322,8 @@ fn line_charge_of(
     })
 }
 
-/// Works out one line: the amounts C1, the three charges, C5 and C19, and the payment type. The
-/// caller has checked the buyer, the payment type and the چکتا buyer. Returns `None` (with
+/// Works out one line: the amounts C1, the three charges, C5 and C19, and the money paid on the
+/// spot and what is left (PRD FR-12.44). The caller has checked the buyer and the چکتا buyer. Returns `None` (with
 /// the error pushed) when a number cannot be worked out.
 ///
 /// Example (PRD 4.4): 20 × 600 for Akram gives value 12,000, seller commission 720, buyer
@@ -487,6 +484,9 @@ pub(super) fn calc_line(
         );
         return Ok(None);
     }
+    // موقع پر جمع (PRD FR-12.44) and what is left on the buyer's account.
+    let money = paid_money(&args, issues, prefix, buyer_total)?;
+    let left = buyer_total.checked_sub(money.paid)?;
     let (cost_of_goods, cost_working) = args
         .cost
         .clone()
@@ -497,16 +497,19 @@ pub(super) fn calc_line(
         buyer_total: working::buyer_total(buyer_value, buyer_comm.amount, laga.amount, buyer_total),
         rate_diff: working::rate_diff(buyer_value, seller_amount, rate_diff),
         cost_of_goods: cost_working,
+        paid: money.working.clone(),
+        left: working::left(buyer_total, money.paid, left),
     };
 
-    // The checks that need the numbers: credit limit (PRD FR-12.4) and rate check (FR-7.55).
-    if args.payment == PaymentType::Credit {
+    // The checks that need the numbers: credit limit (PRD FR-12.4, FR-12.44: only what is left on
+    // the account counts) and rate check (FR-7.55).
+    if left > Paisa::ZERO {
         checks::credit_limit(
             issues,
             args.owed,
             buyer_id,
             args.buyer,
-            buyer_total,
+            left,
             args.env.switches.credit_limit_blocks,
             &format!("{prefix}.buyer_account_id"),
         )?;
@@ -526,9 +529,85 @@ pub(super) fn calc_line(
         buyer_total,
         rate_diff,
         cost_of_goods,
-        payment_type: args.payment,
+        paid_paisa: money.paid,
+        left_paisa: left,
+        paid_fixed: money.fixed,
         workings,
     }))
+}
+
+/// What the buyer paid on the spot, and whether the backend decided it.
+struct PaidMoney {
+    paid: Paisa,
+    fixed: bool,
+    working: mandi_core::rules::Working,
+}
+
+/// موقع پر جمع of one line (PRD FR-12.44, plan 60 P2 to P4, plan 65 point 10a). One function for the
+/// preview and the save (Code Standards B5).
+///
+/// - A buyer who must pay in full (نقدی منڈی, a چکتا buyer, no credit allowed) pays the whole buyer
+///   total, and anything typed is ignored. The one exception is an unchanged line of an edit: it
+///   keeps what it was saved with, so an old credit line whose buyer has since lost credit does
+///   not turn into cash by itself. A line of a lot whose seller or item the edit changed counts as
+///   a changed line (`unchanged_stored` gives nothing): its charges are looked up again, so its
+///   paid follows the rule of a buyer who must pay in full.
+/// - Any other buyer pays what was typed; empty is 0.
+/// - More than the buyer total is `ERR_PAID_EXCEEDS_TOTAL` at `.paid` with `max` in rupees. The
+///   line keeps its figures and counts as paid 0, so no cash is posted twice.
+///
+/// Example (D8): buyer total 48,100 and 10,000 typed gives paid 10,000 and 38,100 left. A چکتا
+/// buyer with 12,800 pays 12,800.
+fn paid_money(
+    args: &LineArgs<'_>,
+    issues: &mut Issues,
+    prefix: &str,
+    buyer_total: Paisa,
+) -> Result<PaidMoney, CalcError> {
+    if checks::must_pay_in_full(args.buyer) {
+        if let Some(stored) = args.stored {
+            if stored.paid > buyer_total {
+                return Err(CalcError::Inconsistent(
+                    "a stored line was paid more than its buyer total",
+                ));
+            }
+            // Nothing was typed: the line keeps what it was saved with. In full, it is the total of a
+            // buyer who must pay in full; less than that, it is the old amount, kept.
+            let working = if stored.paid == buyer_total {
+                working::paid_full(buyer_total, stored.paid)
+            } else {
+                working::paid_kept(stored.paid)
+            };
+            return Ok(PaidMoney {
+                paid: stored.paid,
+                fixed: true,
+                working,
+            });
+        }
+        return Ok(PaidMoney {
+            paid: buyer_total,
+            fixed: true,
+            working: working::paid_full(buyer_total, buyer_total),
+        });
+    }
+    let typed = args.row.paid;
+    if typed > buyer_total {
+        issues.error_with(
+            ErrorCode::ErrPaidExceedsTotal,
+            &format!("{prefix}.paid"),
+            &[("max", buyer_total.as_paisa().checked_div(100).unwrap_or(0))],
+        );
+        return Ok(PaidMoney {
+            paid: Paisa::ZERO,
+            fixed: false,
+            working: working::paid_over(buyer_total, typed, Paisa::ZERO),
+        });
+    }
+    Ok(PaidMoney {
+        paid: typed,
+        fixed: false,
+        working: working::paid_typed(typed),
+    })
 }
 
 /// Warns when the seller rate, or the buyer rate if it differs, is far from the item's average

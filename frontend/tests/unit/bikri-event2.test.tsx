@@ -148,7 +148,8 @@ describe.each(LANGUAGES)('Event 2 by keyboard (%s)', (language) => {
       seller_rate: '1200',
       chukta: { name_ur: 'شاہد', name_en: 'Shahid', phone: '03000000000' },
     });
-    expect(sale?.payment_type).toBeNull();
+    // Nothing typed in the paid cell: sent as nothing, and the backend makes it the whole bill (FR-12.44).
+    expect(sale?.paid).toBeNull();
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain(
         message(language, 'bikri-saved-toast', { number: 1 }),

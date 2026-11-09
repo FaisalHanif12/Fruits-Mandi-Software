@@ -166,7 +166,8 @@
           "buyer_total": 966000,
           "rate_diff": 0,
           "cost_paisa": 780000,
-          "payment_type": "credit",
+          "paid_paisa": 0,
+          "left_paisa": 966000,
           "is_active": true,
           "state": "in_force",
           "note": null

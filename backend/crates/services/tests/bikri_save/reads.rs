@@ -143,8 +143,7 @@ fn the_list_shows_the_columns_of_the_day_list_and_filters() {
 fn the_list_and_find_match_each_filter() {
     let w = world();
     save_ok(&w, &event1_truck(&w, "LES-1234"));
-    let mut line = sale("s-1", w.akram, "10", "1200");
-    line.payment_type = None;
+    let line = sale("s-1", w.akram, "10", "1200");
     let mut l = lot(&w, "lot-1", w.karim, w.apple, "10");
     l.cash_paid = None;
     l.sales = vec![line];

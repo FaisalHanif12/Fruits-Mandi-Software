@@ -127,6 +127,15 @@ export interface EntryColumn {
    * cell (NFR-USE-27, Code Standards F43). Nothing is sent for the shown value.
    */
   readonly showsCalc?: boolean;
+  /**
+   * The backend can close this cell on a row and decide its amount (the paid amount of a buyer who must
+   * pay in full, PRD FR-12.44). This names the `calc` field that holds the amount as text; while it is
+   * not empty the cell shows it as a calculated cell, whatever is typed in it. The screen closes the cell
+   * with `editable` from the same answer, so Enter skips it. If the answer closes the cell while the
+   * cursor is on it, the cursor goes on as an Enter would, so a line takes the same Enters as the
+   * answer says (NFR-USE-6). The grid only shows what the backend said; it works out nothing.
+   */
+  readonly fixedFromCalc?: string;
   /** For a `picker` column: which records it offers. */
   readonly picker?: PickerSpec;
   /**

@@ -99,6 +99,11 @@ pub enum PrintDetailPart {
         /// The deductions.
         deductions: String,
     },
+    /// Money a buyer paid on the spot (PRD FR-12.44, FR-19.8).
+    PaidOnSpot {
+        /// The بکری number.
+        bikri_number: String,
+    },
     /// Cash lent to a buyer.
     CashLent {
         /// The reason as typed.
@@ -334,6 +339,9 @@ pub(crate) struct Fmt {
     pub(crate) language: Language,
     grouping: Grouping,
     pub(crate) style: NumberStyle,
+    /// True for the print of R5: the quantity and the rate of a sale line are written plain, with no
+    /// grouping, as the client's own print does: "(سیب 10 . 1200)" (PRD 19.2 R5).
+    plain_sale: bool,
 }
 
 impl Fmt {
@@ -343,7 +351,14 @@ impl Fmt {
             language: options.language,
             grouping: options.grouping,
             style: NumberStyle::new(options.grouping),
+            plain_sale: false,
         }
+    }
+
+    /// The formatting of R5, which writes the quantity and the rate of a sale line plain.
+    pub(crate) fn plain_sale(mut self) -> Self {
+        self.plain_sale = true;
+        self
     }
 
     /// An account for a header fact: short code (or code), name and tag.
@@ -422,8 +437,16 @@ impl Fmt {
                 item: self.names(item),
                 packing: self.names(packing),
                 grade: *grade,
-                qty: self.style.count(*qty),
-                rate: self.style.money(*rate_paisa)?,
+                qty: if self.plain_sale {
+                    self.style.plain(*qty)
+                } else {
+                    self.style.count(*qty)
+                },
+                rate: if self.plain_sale {
+                    self.style.plain_money(*rate_paisa)
+                } else {
+                    self.style.money(*rate_paisa)?
+                },
                 value: self.style.money(*value_paisa)?,
                 commission: self.style.money(*commission_paisa)?,
                 laga: self.style.money(*laga_paisa)?,
@@ -442,6 +465,9 @@ impl Fmt {
                 qty: self.style.count(*qty),
                 gross: self.style.money(*gross_paisa)?,
                 deductions: self.style.money(*deductions_paisa)?,
+            },
+            DetailPart::PaidOnSpot { bikri_number } => PrintDetailPart::PaidOnSpot {
+                bikri_number: self.style.count(*bikri_number),
             },
             DetailPart::CashLent { reason } => PrintDetailPart::CashLent {
                 reason: reason.clone(),
@@ -724,7 +750,11 @@ pub fn build_print(
     page: &ReportPage,
     options: &PrintOptions,
 ) -> Result<ReportPrintData, ReportsError> {
-    let fmt = Fmt::new(options);
+    let fmt = if page.id == ReportId::R5 {
+        Fmt::new(options).plain_sale()
+    } else {
+        Fmt::new(options)
+    };
     let language = options.language;
 
     // A ledger or a statement is signed off with its closing balance in words (FR-19.7).

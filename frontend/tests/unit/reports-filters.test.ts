@@ -605,9 +605,16 @@ describe('round 12: the بکری of the sale book report (R1) becomes the reques
 
   it('sends none to a report that takes no بکری, even if one is left in the boxes', () => {
     const state: ReportFilterState = { ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } };
-    for (const id of ['R5', 'R11', 'R36'] as const) {
+    // R4 is a sales register like R5, but only R5 takes the بکری (plan 68), so R4 sends none.
+    for (const id of ['R4', 'R11', 'R36'] as const) {
       expect(filtersToWire(state, entryOf(id).filters).bikri_id).toBeNull();
     }
+  });
+
+  it('sends the بکری to R5, which takes it so that the sale book can print ادھاری تفصیل for one بکری (plan 68)', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, bikri: { id: 1, number: 1 } };
+    expect(entryOf('R5').filters).toContain('bikri');
+    expect(filtersToWire(state, entryOf('R5').filters).bikri_id).toBe(1);
   });
 
   it('a بکری is a filter, so “clear the filters” is offered', () => {

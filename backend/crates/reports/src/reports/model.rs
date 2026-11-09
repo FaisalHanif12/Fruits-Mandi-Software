@@ -673,6 +673,14 @@ pub enum DetailPart {
         #[ts(type = "Paisa")]
         deductions_paisa: Paisa,
     },
+    /// Money a buyer paid on the spot at the sale (PRD FR-12.44, FR-19.8): the credit line that
+    /// follows its sale line, marked "موقع پر جمع". Only the بکری number is a value; the screen
+    /// and the print put the words around it from Fluent.
+    PaidOnSpot {
+        /// The بکری number.
+        #[ts(type = "number")]
+        bikri_number: i64,
+    },
     /// Cash lent to a buyer (PRD FR-15.11): "نقد ادھار" and its reason.
     CashLent {
         /// The reason as typed.

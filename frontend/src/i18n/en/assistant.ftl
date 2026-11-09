@@ -284,6 +284,8 @@ assistant-outside-prices = This app does not keep prices outside your shop, such
 # review: pending
 assistant-outside-other = This app does not keep this. It keeps your shop's books: sales, parties, cash, expenses and partners.
 # review: pending
+assistant-outside-future = That month has not come yet, so the books hold nothing for it. An estimate goes at most 12 months ahead.
+# review: pending
 assistant-change-refused = I can only tell, not write
 # review: pending
 assistant-change-refused-help = The button below opens the entry screen. The amount stays empty; you write it yourself.

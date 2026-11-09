@@ -735,7 +735,9 @@
               "buyer_total": 1280000,
               "rate_diff": 0,
               "cost_of_goods": 0,
-              "payment_type": "cash",
+              "paid_paisa": 1280000,
+              "left_paisa": 0,
+              "paid_fixed": true,
               "workings": {
                 "seller_amount": {
                   "message_id": "working-line-value",
@@ -855,6 +857,53 @@
                 "cost_of_goods": {
                   "message_id": "working-none-line",
                   "args": [
+                    {
+                      "name": "result",
+                      "value": {
+                        "kind": "money",
+                        "paisa": 0
+                      }
+                    }
+                  ],
+                  "rule_id": null
+                },
+                "paid": {
+                  "message_id": "working-paid-full",
+                  "args": [
+                    {
+                      "name": "total",
+                      "value": {
+                        "kind": "money",
+                        "paisa": 1280000
+                      }
+                    },
+                    {
+                      "name": "result",
+                      "value": {
+                        "kind": "money",
+                        "paisa": 1280000
+                      }
+                    }
+                  ],
+                  "rule_id": null
+                },
+                "left": {
+                  "message_id": "working-left",
+                  "args": [
+                    {
+                      "name": "total",
+                      "value": {
+                        "kind": "money",
+                        "paisa": 1280000
+                      }
+                    },
+                    {
+                      "name": "paid",
+                      "value": {
+                        "kind": "money",
+                        "paisa": 1280000
+                      }
+                    },
                     {
                       "name": "result",
                       "value": {

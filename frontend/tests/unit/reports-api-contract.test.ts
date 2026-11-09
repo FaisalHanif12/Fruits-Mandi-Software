@@ -802,7 +802,7 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
   const entryOf = (id: string) => CATALOG.find((candidate) => candidate.id === id);
   const keys = (page: { columns: { key: string }[] }) => page.columns.map((column) => column.key);
 
-  it('R1 takes one box, the بکری, which it cannot run without; R5 takes the boxes of R4', () => {
+  it('R1 takes one box, the بکری, which it cannot run without; R5 takes the boxes of R4 and the بکری', () => {
     expect(entryOf('R1')).toMatchObject({
       group: 'sales',
       title_id: 'report-r1-title',
@@ -812,7 +812,8 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
     expect(entryOf('R5')).toMatchObject({
       group: 'sales',
       title_id: 'report-r5-title',
-      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda'],
+      // The بکری box is R5's own (plan 68): the sale book's second print button prints this بکری only.
+      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda', 'bikri'],
       party_required: false,
     });
     // The two reports of the sales group that were missing now come before and after R2 to R4.
@@ -833,18 +834,27 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
   });
 
   it('reads the slips as the backend wrote them: one sheet for each buyer, in the Urdu order, with his totals and the totals of all', () => {
+    // Every buyer of the day is on a slip, also Shahid, who paid in full (PRD FR-12.44, plan 65).
     expect(BUYER_BILLS_EN.slips.map((slip) => slip.party.name)).toEqual([
       'Arshad Multani',
       'Akram Toll Tax',
+      'Shahid',
     ]);
-    expect(BUYER_BILLS_EN.slips.map((slip) => slip.qty)).toEqual(['30', '20']);
-    expect(BUYER_BILLS_EN.slip_count).toBe('2');
-    expect(BUYER_BILLS_EN.qty).toBe('50');
+    expect(BUYER_BILLS_EN.slips.map((slip) => slip.qty)).toEqual(['30', '20', '10']);
+    expect(BUYER_BILLS_EN.slip_count).toBe('3');
+    expect(BUYER_BILLS_EN.qty).toBe('60');
+    // The slip ends with what was paid on the spot and what is left (PRD FR-12.44).
     expect(BUYER_BILLS_EN.columns.map((column) => column.key)).toEqual([
       'serial',
       'detail',
       'value',
       'buyer_total',
+      'paid',
+      'left',
+    ]);
+    expect(BUYER_BILLS_EN.columns.slice(4).map((column) => column.title_id)).toEqual([
+      'report-col-paid-on-spot',
+      'report-col-left-on-account',
     ]);
     // Each slip's totals row has a cell for each column; the totals of all are the R5 totals row.
     for (const slip of BUYER_BILLS_EN.slips) {
@@ -895,11 +905,20 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
     expect(R1_BIKRI_1.rows[0]?.source).toEqual({ kind: 'bikri', id: 1 });
   });
 
-  it('R5 has a serial, the buyer, his sale lines, the value and the total, and the totals of the whole filter', () => {
-    expect(keys(R5_CREDIT_BUYERS)).toEqual(['serial', 'buyer', 'detail', 'value', 'buyer_total']);
+  it('R5 has a serial, the buyer, his sale lines, the value and the total, what was paid on the spot and what is left, and the totals of the whole filter', () => {
+    expect(keys(R5_CREDIT_BUYERS)).toEqual([
+      'serial',
+      'buyer',
+      'detail',
+      'value',
+      'buyer_total',
+      'paid',
+      'left',
+    ]);
     expect(R5_CREDIT_BUYERS.rows.map((row) => row.cells[0])).toEqual([
       { type: 'number', value: 1 },
       { type: 'number', value: 2 },
+      { type: 'number', value: 3 },
     ]);
     for (const row of R5_CREDIT_BUYERS.rows) {
       const detail = row.cells[2];

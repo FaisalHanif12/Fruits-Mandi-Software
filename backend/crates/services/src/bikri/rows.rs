@@ -518,7 +518,8 @@ fn insert_sale(
             laga: sale_charge_columns(&calc.laga),
             buyer_total_paisa: calc.buyer_total.as_paisa(),
             rate_diff_paisa: calc.rate_diff.as_paisa(),
-            payment_type: calc.payment_type.as_str(),
+            payment_type: PaymentType::of(calc.paid_paisa, calc.buyer_total).as_str(),
+            paid_paisa: calc.paid_paisa.as_paisa(),
             note: shaped.row.note.as_deref(),
             cost_paisa: calc.cost_of_goods.as_paisa(),
             grade: shaped.row.grade.map(SaleGrade::as_str),
@@ -551,8 +552,9 @@ fn line_id(line_ids: &[i64], position: Option<usize>) -> Result<i64, ServiceErro
         .ok_or_else(|| data("a journal line of the posting is missing"))
 }
 
-/// The pinned pair of each نقدی line: its bill and its own cash credit (PRD FR-12.9). Written
-/// before any matching of the buyer, so the cash of today's sale never pays an older bill.
+/// The pinned pair of each line with money paid on the spot: its bill and its own cash credit (PRD
+/// FR-12.9, FR-12.44), for the amount paid. Written before any matching of the buyer, so the cash
+/// of today's sale never pays an older bill, and what is left of the bill is a normal open bill.
 pub(super) fn pin_cash_sales(
     tx: &Connection,
     posting: &Posting<'_>,
@@ -562,7 +564,7 @@ pub(super) fn pin_cash_sales(
 ) -> Result<(), ServiceError> {
     for (shaped, laid) in lots.iter().zip(&layout.lots) {
         for (row, row_layout) in shaped.rows.iter().zip(&laid.sales) {
-            if row.calc.payment_type == PaymentType::Cash {
+            if row.calc.paid_paisa > Paisa::ZERO {
                 matching::pin_cash_sale(
                     tx,
                     posting.user_id,
@@ -572,7 +574,7 @@ pub(super) fn pin_cash_sales(
                         person_key: row.journal.person_key.as_deref(),
                         bill_line_id: line_id(line_ids, row_layout.buyer_debit)?,
                         payment_line_id: line_id(line_ids, row_layout.cash_credit)?,
-                        amount: row.calc.buyer_total,
+                        amount: row.calc.paid_paisa,
                     },
                 )?;
             }
@@ -581,8 +583,9 @@ pub(super) fn pin_cash_sales(
     Ok(())
 }
 
-/// Matching after the posting of a NEW posting (PRD FR-15.4, FR-15.8, FR-12.23): the pinned pair
-/// of each نقدی line, the matching of the new bills of each buyer key to his unmatched credits,
+/// Matching after the posting of a NEW posting (PRD FR-15.4, FR-15.8, FR-12.23, FR-12.44): the pinned
+/// pair of each line paid on the spot, the matching of what is left of the new bills of each buyer
+/// key to his unmatched credits,
 /// and the advance adjustment of each lot whose tick is on. Only for a posting that is the newest
 /// line of its keys; an edit works the keys out from the start instead.
 pub(super) fn match_posting(
@@ -597,7 +600,7 @@ pub(super) fn match_posting(
     let mut credit_bills: BTreeMap<(i64, Option<String>), Vec<NewLine>> = BTreeMap::new();
     for (shaped, laid) in lots.iter().zip(&layout.lots) {
         for (row, row_layout) in shaped.rows.iter().zip(&laid.sales) {
-            if row.calc.payment_type == PaymentType::Credit {
+            if row.calc.left_paisa > Paisa::ZERO {
                 credit_bills
                     .entry((
                         row.journal.buyer_account_id.get(),
@@ -606,12 +609,12 @@ pub(super) fn match_posting(
                     .or_default()
                     .push(NewLine {
                         line_id: line_id(line_ids, row_layout.buyer_debit)?,
-                        amount: row.calc.buyer_total,
+                        amount: row.calc.left_paisa,
                     });
             }
         }
     }
-    // A credit sale is a new bill: an unmatched credit of the buyer (a prepayment) settles it.
+    // What is left of a sale is a new bill: an unmatched credit of the buyer (a prepayment) settles it.
     for ((account_id, key), bills) in &credit_bills {
         matching::match_new_bills(
             tx,

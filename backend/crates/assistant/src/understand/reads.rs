@@ -1351,8 +1351,9 @@ fn pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
     let mut dated = false;
     // One named person, garden, trip, khata or partner: the report that holds its figures (a day sheet, a
     // garden's or a trip's report, a khata's ledger, a partner's row of view F).
-    if let Some(extra) =
-        pre_reads_of_one_record(u, period).or_else(|| pre_reads_of_sales(u, period))
+    if let Some(extra) = pre_reads_of_one_record(u, period)
+        .or_else(|| pre_reads_of_sales(u, period))
+        .or_else(|| pre_reads_of_chukta(u, period))
     {
         dated = extra.dated;
         finds = extra.finds;
@@ -1420,6 +1421,38 @@ fn pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 
 /// The most figures of one question the pre-reads are made for.
 const MAX_PRE_FIGURES: usize = 4;
+
+/// The reads of a question about the walk-in buyers together (D8 H3), for the model's first call only, both with
+/// the buyer filter `chukta` (the account چکتا کھاتہ, no person), from the same facts as the screens:
+/// - view A (by item): the commission (seller, buyer, لاگا and the total) and the quantity;
+/// - view C (by buyer): what each walk-in buyer BOUGHT, `purchase_value`, which is the buyer's value (qty x the
+///   buyer's rate). View A's `gross` is the seller's amount, the same only while a line has one rate (FR-12.3),
+///   so "kitne ka maal liya" is read from view C (money review of plan 70).
+///
+/// The app gives no instant line from them: "kitne ka maal liya" and "commission kitna bana" are two figures and
+/// the model writes the answer.
+///
+/// Example: "aaj chukta gahakon ne kitne ka maal liya aur commission kitna bana": views A and C, today, `chukta`.
+fn pre_reads_of_chukta(u: &Understanding, period: Option<&PeriodRef>) -> Option<Plan> {
+    if !u.chukta_group {
+        return None;
+    }
+    let (from, to) = dates(period);
+    let mut plan = Plan::default();
+    for view in ["A", "C"] {
+        plan.read(analytics(
+            view,
+            An {
+                from: from.clone(),
+                to: to.clone(),
+                buyer: Some(crate::tools::records::CHUKTA_ALL.to_owned()),
+                ..An::default()
+            },
+        ));
+    }
+    plan.dated = period.is_some();
+    Some(plan)
+}
 
 /// The reads of a question about one بکری by its number (R1 of it) or about the sales of one payment type
 /// (the cash sales R3, the credit sales R4) with an item or a group, for the model's first call only.

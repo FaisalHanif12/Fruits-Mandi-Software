@@ -139,21 +139,21 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
     expect(pageText()).not.toContain(message(language, 'err-no-sale-lines'));
   });
 
-  it('credit that is not allowed says why under the payment choice of the line', async () => {
+  it('money paid above the buyer total says why on the line, with the most allowed', async () => {
     const { user } = await openBook(language, (draft) => ({
       ...previewFor(draft),
       errors: [
         {
-          code: 'ERR_CREDIT_NOT_ALLOWED',
-          field: 'lots[0].sales[0].payment_type',
-          values: {},
+          code: 'ERR_PAID_EXCEEDS_TOTAL',
+          field: 'lots[0].sales[0].paid',
+          values: { max: 12_880 },
         },
       ],
     }));
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'err-credit-not-allowed'));
+      expect(pageText()).toContain(message(language, 'err-paid-exceeds-total', { max: '12,880' }));
     });
     expect(pageText()).not.toContain('ERR_');
   });

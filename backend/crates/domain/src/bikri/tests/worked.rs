@@ -1,7 +1,7 @@
 //! The worked numbers of PRD 4.4, 4.5 and E2E-16, through `calc_posting` from the typed text.
 
 use mandi_core::bikri::{
-    ChargeSource, ChuktaInput, LineChargeInput, LineChargeMethod, PaymentType, StoredMethod,
+    ChargeSource, ChuktaInput, LineChargeInput, LineChargeMethod, StoredMethod,
 };
 use mandi_core::error::ErrorCode;
 use mandi_core::money::Paisa;
@@ -45,7 +45,11 @@ fn event_1_lines_lot_summary_and_entry() {
     assert_eq!(a.seller_comm.value_bps, Some(600));
     assert_eq!(a.laga.method, StoredMethod::PerUnit);
     assert_eq!(a.laga.value_paisa, Some(p(8)));
-    assert_eq!(a.payment_type, PaymentType::Credit);
+    // Event 1: nothing was paid on the spot, so the whole bill stays on his account.
+    assert_eq!(
+        (r(a.paid_paisa), r(a.left_paisa), a.paid_fixed),
+        (0, 12_880, false)
+    );
     // E2E-26: the working of line 1 seller commission is 12,000 x 6 / 100 = 720.
     assert_eq!(a.seller_comm.working.message_id, "working-percent");
 
@@ -130,7 +134,11 @@ fn event_2_one_time_buyer_pays_cash() {
         ),
         (12_000, 720, 720, 80, 12_800)
     );
-    assert_eq!(l.payment_type, PaymentType::Cash, "a چکتا buyer pays cash");
+    // A چکتا buyer pays the whole bill on the spot, and the backend sets it (PRD FR-12.44).
+    assert_eq!(
+        (r(l.paid_paisa), r(l.left_paisa), l.paid_fixed),
+        (12_800, 0, true)
+    );
     let t = single_lot_totals(&calc);
     assert_eq!(r(t.deductions), 1_840);
     assert_eq!(r(t.net), 10_160);

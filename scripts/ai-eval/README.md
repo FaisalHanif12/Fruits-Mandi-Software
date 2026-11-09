@@ -22,11 +22,25 @@ or writes the key.
 | `oracle-keys.txt`                                                                                   | The facts the oracle gives (the `@key` of a question). Checked by a Rust test.                                                                                                                                                       |
 | `urdu-review.tsv`                                                                                   | The sheet for the Urdu reviewer, written by every run.                                                                                                                                                                               |
 | `check-modes.mjs`                                                                                   | A scripted check of `--bank`, `--threads` and `--offline` (no model, no key, no cargo).                                                                                                                                              |
+| `budget.mjs`                                                                                        | The money guard of a live run (plan 70 T3): the cost of every call from its usage block, the stop before the budget, the ledger that keeps the running total across runs. `node scripts/ai-eval/budget.mjs --self-test` checks it with a fake usage stream. See "The budget" below. |
 | `bank-spec-d7.mjs`, `build-bank-d7.mjs`, `realtime-d7.tsv`, `realtime-d7-coverage.md`               | The D7 bank (plan 59 B1): 455 real-time figure questions, picky on purpose, with the list of every kind of record and figure the app keeps and the question ids that cover it. See "The D7 bank" below.                              |
 | `realtime-d7-gaps.md`, `../../backend/crates/assistant/tests/robustness_gap.rs` | The gap list of the D7 bank (plan 59 R2): which wordings still go to the model, ranked by cause, with the instant plan each needs. The test dumps what `understand` and `plan_reads` made of every question of a bank. See "The gap dump" below. |
 
 The oracle itself is Rust: `backend/crates/assistant/tests/robustness_year/` (`seed.rs` builds the books
 through the app's own save functions, `oracle.rs` asks the app's own reports and analytics).
+
+## The budget (plan 70 T3, D8: at most $0.50 for all of D8)
+
+A live run is guarded. `run.mjs` asks the questions in batches (at most 40 at a time, `--batch`), and before each batch it checks that the money already spent plus the WORST the batch could still cost stays inside `--budget` (default 0.50 dollars). The worst case of one question is read from the app's own limits (`limits.rs`): 90,000 input tokens and 4,000 output tokens, every call sent twice (the hedge copy), and a request with no usage block for every call that could fail; about $0.037 for the default model. After each batch the real cost of every call goes to `budget-ledger.json` in the run folder (`--ledger FILE` for another place):
+
+| What | How it is counted |
+| --- | --- |
+| A reply with a usage block | prompt, cached and completion tokens at the price of the model (`budget.mjs`, `MODEL_PRICES`: $0.10 input, $0.01 cached, $0.50 output a million for `openai/gpt-6-luna`), plus OpenRouter's 5.5% fee, rounded up, in whole nano-dollars |
+| A request with no usage block (a timeout, the copy that lost a hedge) | an ESTIMATE at the ceiling of one call: the fixed prompt and the largest answer of one call |
+| A follow-up | it asks its base question again and those calls are not in its row: an ESTIMATE, the same cost once more |
+| A batch that started and left no results | its whole reserve; a batch that never started (a build error) costs nothing |
+
+The ledger is summed from its entries, never trusted as a stored total, and a ledger that cannot be read stops the run. Several small runs in the same folder add up: a run starts from what the ledger holds. A run that cannot ask the next question inside the budget stops, prints `BUDGET STOP` with the questions not asked, and exits 4. `--budget off` turns the guard off (a full bank run). A model that is not in the price table needs its price (`--price-in`, `--price-cached`, `--price-out`, dollars a million tokens) or the run refuses. The true figure for the key is always `run.mjs --key-limit`.
 
 ## The bank
 

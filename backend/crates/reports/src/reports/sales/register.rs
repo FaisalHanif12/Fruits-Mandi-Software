@@ -1,9 +1,11 @@
 //! R2 مکمل بکری (full sales register), R3 نقدی (cash sales) and R4 ادھاری (credit sales)
-//! (PRD 19.2, FR-19.10, FR-19.11).
+//! (PRD 19.2, FR-19.10, FR-19.11, FR-12.44).
 //!
 //! One row for each sale line in force (`is_active = 1`; a line replaced by an edit or ended by a
 //! cancel is not in force). The three reports are one query with one more condition: R3 keeps
-//! the cash lines, R4 the credit lines. Every figure is a stored value of the line; nothing is
+//! the lines with money paid on the spot (paid above 0), R4 the lines with something left on the
+//! account (paid below the buyer total). A part-paid line is on both (plan 60 P12). R3 and R4 have
+//! two more columns at the end, `paid` and `left`; R2 is as it was. Every figure is a stored value of the line; nothing is
 //! worked out again from a rule (Code Standards B20). The totals are `SUM()` of the stored
 //! `INTEGER` columns over the whole filter, from one query (Code Standards B31).
 //!
@@ -11,12 +13,14 @@
 //! is the date of the posting the line belongs to (PRD 12.4).
 //!
 //! Example (the worked day, 10-10-26, R2): three lines, 60 نگ, value 12,000 + 17,400 + 12,000 =
-//! 41,400, buyer totals 12,880 + 18,684 + 12,800 = 44,364.
+//! 41,400, buyer totals 12,880 + 18,684 + 12,800 = 44,364. R3 has شاہد's line only (paid 12,800,
+//! left 0). R4 has اکرم's and ارشد's lines (paid 0, left 12,880 and 18,684).
 
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use super::super::PageSpec;
+use super::buyer_bills::left_of;
 use crate::error::ReportsError;
 use crate::reports::common::{
     Conds, chukta_party, col, grade_of, load_parties, names_cell, paisa, party_of_line,
@@ -26,24 +30,27 @@ use crate::reports::ids;
 use crate::reports::model::{
     Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
+use mandi_core::money::Paisa;
 
 /// Which lines a register keeps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Kind {
     /// R2: every line.
     All,
-    /// R3: cash lines (نقدی).
+    /// R3: lines with money paid on the spot (نقدی).
     Cash,
-    /// R4: credit lines (ادھاری).
+    /// R4: lines with something left on the account (ادھاری).
     Credit,
 }
 
 impl Kind {
-    fn payment_type(self) -> Option<&'static str> {
+    /// The condition of the kind, a fixed fragment (PRD FR-12.44). Nothing is worked out in SQL:
+    /// both sides are stored columns.
+    fn condition(self) -> Option<&'static str> {
         match self {
             Kind::All => None,
-            Kind::Cash => Some("cash"),
-            Kind::Credit => Some("credit"),
+            Kind::Cash => Some("s.paid_paisa > 0"),
+            Kind::Credit => Some("s.paid_paisa < s.buyer_total_paisa"),
         }
     }
 
@@ -59,19 +66,23 @@ impl Kind {
 /// The conditions shared by the page and the totals, so the two queries can never differ. Only
 /// the filters that are set are in the clause, so a date range is found through the date index
 /// of the journal entry (Code Standards B18).
-pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
+pub(super) fn conds(typed: &Typed, condition: Option<&'static str>) -> Conds {
     let mut c = Conds::new();
     c.always("s.is_active = 1")
         .always("je.status = 'posted'")
         .text("je.entry_date >= ?", typed.from.as_deref())
-        .text("je.entry_date <= ?", typed.to.as_deref())
-        .text("s.payment_type = ?", payment)
-        // The quality of the line (PRD FR-12.42): only the lines of one quality.
-        .text("s.grade = ?", typed.grade.map(|g| g.as_str()))
+        .text("je.entry_date <= ?", typed.to.as_deref());
+    if let Some(condition) = condition {
+        c.always(condition);
+    }
+    // The quality of the line (PRD FR-12.42): only the lines of one quality.
+    c.text("s.grade = ?", typed.grade.map(|g| g.as_str()))
         .id("s.buyer_account_id = ?", typed.party_id)
         .text("s.chukta_person_key = ?", typed.person_key.as_deref())
         .id("l.seller_account_id = ?", typed.seller_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
+        // One بکری (R5 only: no other register takes the filter, so it is never set for them).
+        .id("b.id = ?", typed.bikri_id)
         .id("l.item_id = ?", typed.item_id)
         // All the items of a group (PRD v1.29); never together with one item.
         .item_group("l.item_id", typed.item_group)
@@ -84,11 +95,11 @@ pub(super) fn conds(typed: &Typed, payment: Option<&'static str>) -> Conds {
 /// it through `reports::plans`, Code Standards B18).
 pub(crate) fn page_query(
     typed: &Typed,
-    payment: Option<&'static str>,
+    condition: Option<&'static str>,
     limit: i64,
     offset: i64,
 ) -> (String, Vec<Value>) {
-    let c = conds(typed, payment);
+    let c = conds(typed, condition);
     // The order of the register, and its exact reverse for "newest first": the line's own posting date,
     // then the بکری number, then the lot and the line number. So the first row of the newest-first page is
     // the LAST line of the newest بکری of the newest day, and a later sale counts on its own date. The
@@ -107,7 +118,7 @@ pub(crate) fn page_query(
            s.buyer_account_id, s.chukta_person_key, s.chukta_name_ur, s.chukta_name_en,
            ci.name_ur, ci.name_en, i.name_ur, i.name_en,
            s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade,
-           s.seller_rate_paisa, pk.name_ur, pk.name_en
+           s.seller_rate_paisa, pk.name_ur, pk.name_en, s.paid_paisa
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -125,13 +136,13 @@ pub(crate) fn page_query(
 }
 
 /// The count and the totals of the whole filter, from one query.
-pub(crate) fn totals_query(typed: &Typed, payment: Option<&'static str>) -> (String, Vec<Value>) {
-    let c = conds(typed, payment);
+pub(crate) fn totals_query(typed: &Typed, condition: Option<&'static str>) -> (String, Vec<Value>) {
+    let c = conds(typed, condition);
     let sql = format!(
         "SELECT COUNT(*), COALESCE(SUM(s.qty), 0), COALESCE(SUM(s.buyer_value_paisa), 0),
                 COALESCE(SUM(s.buyer_total_paisa), 0), COALESCE(MAX(s.grade IS NOT NULL), 0),
                 COALESCE(MAX(s.seller_rate_paisa <> s.buyer_rate_paisa), 0),
-                COUNT(DISTINCT l.packing_id) > 1
+                COUNT(DISTINCT l.packing_id) > 1, COALESCE(SUM(s.paid_paisa), 0)
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -141,6 +152,13 @@ pub(crate) fn totals_query(typed: &Typed, payment: Option<&'static str>) -> (Str
         c.sql()
     );
     (sql, c.args().to_vec())
+}
+
+/// What was paid on the spot and what is left of a buyer total (PRD FR-12.44), from the stored
+/// columns: `left = total - paid` by one checked subtraction, shared with R5.
+fn paid_and_left(paid: i64, total: i64) -> Result<(Paisa, Paisa), ReportsError> {
+    let (paid, total) = (paisa(paid)?, paisa(total)?);
+    Ok((paid, left_of(total, paid)?))
 }
 
 struct Line {
@@ -167,6 +185,8 @@ struct Line {
     seller_rate: i64,
     packing_ur: String,
     packing_en: String,
+    /// Money paid on the spot (PRD FR-12.44).
+    paid: i64,
 }
 
 /// Builds R2, R3 or R4.
@@ -180,8 +200,8 @@ pub(crate) fn run(
     spec: PageSpec,
     kind: Kind,
 ) -> Result<ReportPage, ReportsError> {
-    let payment = kind.payment_type();
-    let (totals_sql, totals_args) = totals_query(typed, payment);
+    let condition = kind.condition();
+    let (totals_sql, totals_args) = totals_query(typed, condition);
     // `with_grade` is true when some line of the whole filter has a quality (PRD FR-12.42): then
     // every page of the register has the quality column after the item, so the columns do not
     // change from page to page. With no quality anywhere the register is exactly as it was.
@@ -192,7 +212,7 @@ pub(crate) fn run(
     // `with_packing` is true when the lines of the whole filter were sold in more than one packing: then
     // every page names the packing after the item, because the rate of an item in a peti is not the rate
     // of the same item in a crate (PRD FR-7.53, which keeps the last rate per item and packing).
-    let (count, qty, value, total, with_grade, with_rate_diff, with_packing): (
+    let (count, qty, value, total, with_grade, with_rate_diff, with_packing, paid_total): (
         i64,
         i64,
         i64,
@@ -200,6 +220,7 @@ pub(crate) fn run(
         bool,
         bool,
         bool,
+        i64,
     ) = conn.query_row(&totals_sql, params_from_iter(totals_args.iter()), |r| {
         Ok((
             r.get(0)?,
@@ -209,10 +230,11 @@ pub(crate) fn run(
             r.get(4)?,
             r.get(5)?,
             r.get(6)?,
+            r.get(7)?,
         ))
     })?;
 
-    let (page_sql, page_args) = page_query(typed, payment, spec.sql_limit(), spec.offset);
+    let (page_sql, page_args) = page_query(typed, condition, spec.sql_limit(), spec.offset);
     let mut statement = conn.prepare(&page_sql)?;
     let lines = statement
         .query_map(params_from_iter(page_args.iter()), |r| {
@@ -237,10 +259,12 @@ pub(crate) fn run(
                 seller_rate: r.get(17)?,
                 packing_ur: r.get(18)?,
                 packing_en: r.get(19)?,
+                paid: r.get(20)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
+    let with_paid = kind != Kind::All;
     let buyer_ids: Vec<i64> = lines.iter().map(|l| l.buyer_id).collect();
     let parties = load_parties(conn, &buyer_ids)?;
     let mut rows = Vec::with_capacity(lines.len());
@@ -295,6 +319,11 @@ pub(crate) fn run(
                 paisa: paisa(line.total)?,
             },
         ]);
+        // R3 and R4: what was paid on the spot and what is left on the account (PRD FR-12.44).
+        if with_paid {
+            let (paid, left) = paid_and_left(line.paid, line.total)?;
+            cells.extend([Cell::Money { paisa: paid }, Cell::Money { paisa: left }]);
+        }
         rows.push(Row {
             cells,
             source: Some(RowSource {
@@ -353,6 +382,19 @@ pub(crate) fn run(
             paisa: paisa(total)?,
         },
     ]);
+    if with_paid {
+        columns.extend([
+            col("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
+            col("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
+        ]);
+        // The sums of the whole filter: the stored columns added in SQL, the difference made once,
+        // here, by a checked subtraction (Code Standards M7).
+        let (paid_sum, left_sum) = paid_and_left(paid_total, total)?;
+        totals_cells.extend([
+            Cell::Money { paisa: paid_sum },
+            Cell::Money { paisa: left_sum },
+        ]);
+    }
 
     let id = kind.id();
     Ok(ReportPage {

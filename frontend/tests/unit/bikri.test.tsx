@@ -2,7 +2,7 @@
 // keyboard, against a fake backend that answers with the numbers of Event 1 (PRD 4.4). The screen
 // works out no money: every number on it is a number the fake backend sent.
 
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
@@ -177,7 +177,6 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
       expect(textOf(sales, 0, 'amount')).toBe('12,000');
       expect(textOf(sales, 0, 'sellerComm')).toBe('720');
       expect(textOf(sales, 1, 'amount')).toBe('17,400');
-      expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
       expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
       expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
       const summary = screen
@@ -240,7 +239,7 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
     });
-    for (const field of ['amount', 'sellerComm', 'buyerComm', 'buyerTotal']) {
+    for (const field of ['amount', 'sellerComm', 'buyerTotal']) {
       expect(
         within(cellOf(sales, 0, field)).getByRole('button', {
           name: message(language, 'calc-info-label'),
@@ -277,7 +276,7 @@ describe.each(LANGUAGES)(
       const { user } = await openBook(language);
       await typeHeaderAndLot(user, language);
       const sales = salesGrid(language);
-      await user.keyboard('0{Enter}20{Enter}600{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
       await waitFor(() => {
         expect(focusedIn(sales)).toBe('1:buyer');
       });
@@ -312,7 +311,7 @@ describe.each(LANGUAGES)(
     it('never fills the rate by itself: without a typed rate the draft has an empty rate', async () => {
       const { backend, user } = await openBook(language);
       await typeHeaderAndLot(user, language);
-      await user.keyboard('0{Enter}20{Enter}600{Enter}1{Enter}{Enter}');
+      await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}1{Enter}{Enter}');
       await waitFor(() => {
         expect(backend.lastDraft().lots[0]?.sales[1]).toMatchObject({
           buyer_account_id: IDS.arshad,
@@ -367,43 +366,35 @@ describe.each(LANGUAGES)('keys of the grids (%s)', (language) => {
     });
   });
 
-  it('the payment type is chosen in the details of the line: a click or Space changes ادھاری to نقدی and back, and the backend is told each time', async () => {
+  it('the paid cell is the last cell of the line: what is typed goes to the backend as typed, and what is left shows in the details', async () => {
     const { backend, user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await typeTwoLines(user, language);
-    // The details of the line (plan 58): the table has the same columns at every size, and the
-    // payment type is a choice under it. The backend says first: the buyer has credit.
-    const details = () => {
-      const section = document.querySelector<HTMLElement>(
-        'section[aria-labelledby^="line-details-"]',
-      );
-      if (section === null) throw new Error('no details of the line');
-      return section;
-    };
-    // The details are those of the line that has the focus: the first line.
+    // The grid has the paid column after the buyer total, and no payment column (PRD FR-12.44).
+    const ids = Array.from(
+      salesGrid(language).querySelectorAll('.ag-header-cell'),
+      (cell) => cell.getAttribute('col-id') ?? '',
+    );
+    expect(ids.at(-2)).toBe('paid');
+    expect(ids).not.toContain('payment');
+    // Nothing typed: the line is sent with no paid amount (the backend takes it as 0).
+    await waitFor(() => {
+      expect(backend.lastDraft().lots[0]?.sales[0]?.paid).toBeNull();
+    });
+    expect('payment_type' in (backend.lastDraft().lots[0]?.sales[0] ?? {})).toBe(false);
+    // Typing in the paid cell: the text is sent as typed.
+    await user.click(cellOf(salesGrid(language), 0, 'paid'));
+    await user.keyboard('5000{Enter}');
+    await waitFor(() => {
+      expect(backend.lastDraft().lots[0]?.sales[0]?.paid).toBe('5000');
+    });
+    // The details of the line show what is left on the account: the backend's number, with its working.
     await user.click(cellOf(salesGrid(language), 0, 'rate'));
-    const word = (id: string) => message(language, id);
-    const choice = (id: string) =>
-      within(details()).getByRole('button', { name: (name) => visible(name) === word(id) });
-    await waitFor(() => {
-      expect(choice('glossary-udhari')).toHaveAttribute('aria-pressed', 'true');
-    });
-    // The grid has no payment column any more.
-    expect(salesGrid(language).querySelector('.ag-header-cell[col-id="payment"]')).toBeNull();
-    await user.click(choice('glossary-naqdi'));
-    await waitFor(() => {
-      expect(choice('glossary-naqdi')).toHaveAttribute('aria-pressed', 'true');
-      expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('cash');
-    });
-    // The keyboard does the same: the other word has the focus and Space presses it.
-    act(() => {
-      choice('glossary-udhari').focus();
-    });
-    await user.keyboard(' ');
-    await waitFor(() => {
-      expect(choice('glossary-udhari')).toHaveAttribute('aria-pressed', 'true');
-      expect(backend.lastDraft().lots[0]?.sales[0]?.payment_type).toBe('credit');
-    });
+    const details = document.querySelector<HTMLElement>(
+      'section[aria-labelledby^="line-details-"]',
+    );
+    if (details === null) throw new Error('no details of the line');
+    expect(within(details).getByText(message(language, 'bikri-line-left'))).toBeInTheDocument();
   });
 });
 

@@ -5,20 +5,22 @@
 import { useLocalization } from '@fluent/react';
 import { useFocusRegion, useRovingKeys } from '../../shared/keyboard';
 
-export type ModuleMenuId = 'bikri-book' | 'receipt' | 'payment' | 'advance' | 'today' | 'stock';
+export type ModuleMenuId =
+  'bikri-book' | 'receipt' | 'payment' | 'advance' | 'today' | 'party-ledgers' | 'stock';
 
 interface ModuleEntry {
   id: ModuleMenuId;
   labelId: string;
 }
 
-/** PRD FR-5.3, in this order. */
+/** PRD FR-5.3, in this order. پارٹی کھاتے sits above باقی مال (PRD FR-12.43). */
 export const BIKRI_MENU: readonly ModuleEntry[] = [
   { id: 'bikri-book', labelId: 'layout-module-bikri-book' },
   { id: 'receipt', labelId: 'layout-module-receipt' },
   { id: 'payment', labelId: 'layout-module-payment' },
   { id: 'advance', labelId: 'layout-module-advance' },
   { id: 'today', labelId: 'layout-module-today' },
+  { id: 'party-ledgers', labelId: 'layout-module-party-ledgers' },
   { id: 'stock', labelId: 'layout-module-stock' },
 ];
 

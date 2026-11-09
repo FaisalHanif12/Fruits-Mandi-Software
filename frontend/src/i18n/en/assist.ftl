@@ -105,6 +105,21 @@ working-weight-value = <num>{ $grams }</num> g × <num>{ $rate }</num> per kg ÷
 # C5: what the buyer pays for a line.
 # review: pending
 working-buyer-total = Value <num>{ $value }</num> + { -commission } <num>{ $comm }</num> + { -laga } <num>{ $laga }</num> = <num>{ $result }</num>
+# PRD FR-12.44: the money a buyer paid on the spot, as typed (or none).
+# review: pending
+working-paid-typed = { -mauqa-par-jama } (as typed): <num>{ $result }</num>
+# PRD FR-12.44: a buyer who must pay in full pays the whole buyer total.
+# review: pending
+working-paid-full = This buyer pays the whole bill: buyer total <num>{ $total }</num>, so { -mauqa-par-jama } is <num>{ $result }</num>
+# PRD FR-12.44, plan 65 point 10a: an unchanged line of an edit keeps what it was saved with.
+# review: pending
+working-paid-kept = { -mauqa-par-jama } is kept as it was saved: <num>{ $result }</num>
+# PRD FR-12.44: what was typed is more than the buyer total, so it is counted as 0 until it is fixed.
+# review: pending
+working-paid-over = The amount typed, <num>{ $typed }</num>, is more than the buyer total <num>{ $total }</num>, so { -mauqa-par-jama } is counted as <num>{ $result }</num>
+# PRD FR-12.44: what stays on the buyer's account.
+# review: pending
+working-left = Buyer total <num>{ $total }</num> − { -mauqa-par-jama } <num>{ $paid }</num> = <num>{ $result }</num>
 # C19: the rate difference of a line.
 # review: pending
 working-rate-diff = Buyer value <num>{ $buyer_value }</num> − seller amount <num>{ $seller_amount }</num> = <num>{ $result }</num>

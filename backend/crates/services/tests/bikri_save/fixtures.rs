@@ -64,7 +64,7 @@ fn pair<A: Serialize>(name: &str, request: &Value, answer: &A) {
 /// The JSON of one sale row as the screen sends it.
 fn row(key: &str, buyer: i64, qty: &str, rate: &str) -> Value {
     json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
-        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
+        "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "paid": null,
         "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
 }
 

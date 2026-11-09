@@ -289,7 +289,6 @@ const EXPECTED_FILES: &[&str] = &[
     "ChargeInput.ts",
     "LineChargeInput.ts",
     "FreightPaidBy.ts",
-    "PaymentType.ts",
     "LotChargeMethod.ts",
     "LineChargeMethod.ts",
     "StoredMethod.ts",

@@ -731,7 +731,9 @@
             "buyer_total": 1288000,
             "rate_diff": 0,
             "cost_of_goods": 0,
-            "payment_type": "credit",
+            "paid_paisa": 0,
+            "left_paisa": 1288000,
+            "paid_fixed": false,
             "workings": {
               "seller_amount": {
                 "message_id": "working-line-value",
@@ -856,6 +858,46 @@
                     "value": {
                       "kind": "money",
                       "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "paid": {
+                "message_id": "working-paid-typed",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "left": {
+                "message_id": "working-left",
+                "args": [
+                  {
+                    "name": "total",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1288000
+                    }
+                  },
+                  {
+                    "name": "paid",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1288000
                     }
                   }
                 ],

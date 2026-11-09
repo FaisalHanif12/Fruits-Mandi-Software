@@ -2140,11 +2140,11 @@ fn d7_richer_cases(y: &mut Year) {
     .unwrap_or_else(|e| panic!("a khata entry: {e:?}"));
     out("27-10-2026", "3,000", "خاندان کا خرچ");
 
-    // 3. The drafts. A line to a cash buyer is cash by itself; a credit line says so.
-    let line = |key: &str, buyer: i64, qty: &str, rate: &str, pay: PaymentType| {
-        let mut s = world::sale(key, buyer, qty, rate);
-        s.payment_type = Some(pay);
-        s
+    // 3. The drafts. A line to a cash buyer or a چکتا buyer is paid in full by itself (the backend sets
+    // it, PRD FR-12.44); a credit line has nothing paid on the spot (`paid` empty), so `pay` only says
+    // what the line is for the reader.
+    let line = |key: &str, buyer: i64, qty: &str, rate: &str, _pay: PaymentType| {
+        world::sale(key, buyer, qty, rate)
     };
     let lot = |w: &world::World,
                key: &str,
@@ -2273,7 +2273,6 @@ fn d7_richer_cases(y: &mut Year) {
         .expect("the mosambi of the older بکری are left to sell");
     let mut later = world::sale("later", rafique, "20", "2400");
     later.sale_id = None;
-    later.payment_type = Some(PaymentType::Credit);
     bikri::later_sale_save(
         &y.w.env.ctx,
         &y.w.owner,

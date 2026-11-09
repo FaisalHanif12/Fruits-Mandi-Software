@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use mandi_core::accounts::RecordRef;
 use mandi_core::bikri::{
     ArrivalLotPreview, FreightPaidBy, LinePreview, LotCharge, LotPreview, OwnLotPreview,
-    PaymentType, PreparedLot, PreparedSale, RateHint, RateHintSource, SummaryTotals,
+    PreparedLot, PreparedSale, RateHint, RateHintSource, SummaryTotals,
 };
 use mandi_core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_core::ids::AccountId;
@@ -375,14 +375,14 @@ struct Rows {
     any_refused: bool,
 }
 
-/// The buyer of a row, how he pays, and whether his چکتا buyer is in order (PRD 12.4,
-/// FR-13.2). `None` if the row cannot be worked out.
+/// The buyer of a row, and whether his چکتا buyer is in order (PRD 12.4, FR-13.2). `None` if the row
+/// cannot be worked out. How much he paid on the spot is worked out with the line (PRD FR-12.44).
 fn row_parties<'a>(
     ctx: &LotCtx<'a>,
     issues: &mut Issues,
     row: &PreparedSale,
     line_prefix: &str,
-) -> Option<(&'a AccountFacts, i64, PaymentType)> {
+) -> Option<(&'a AccountFacts, i64)> {
     let buyer = checks::account(
         issues,
         ctx.lookups,
@@ -391,20 +391,12 @@ fn row_parties<'a>(
         &format!("{line_prefix}.buyer_account_id"),
         Some(ErrorCode::ErrBuyerRequired),
     );
-    let payment = buyer.and_then(|b| {
-        checks::payment_type(
-            issues,
-            b,
-            row.payment_type,
-            &format!("{line_prefix}.payment_type"),
-        )
-    });
     let person_ok = match buyer {
         Some(b) if b.is_chukta => checks::chukta(issues, line_prefix, &row.chukta),
         _ => true,
     };
-    match (buyer, row.buyer_account_id, payment, person_ok) {
-        (Some(buyer), Some(id), Some(payment), true) => Some((buyer, id, payment)),
+    match (buyer, row.buyer_account_id, person_ok) {
+        (Some(buyer), Some(id), true) => Some((buyer, id)),
         _ => None,
     }
 }
@@ -436,7 +428,7 @@ fn journal_sale(
         buyer_account_id: AccountId::new(buyer_id),
         person_key: person.map(|p| p.key.clone()),
         buyer_total: calc.buyer_total,
-        payment_type: calc.payment_type,
+        paid: calc.paid_paisa,
         seller_comm: calc.seller_comm.amount,
         buyer_comm: calc.buyer_comm.amount,
         laga: calc.laga.amount,
@@ -628,11 +620,11 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                 run.own.put_back(purchase_id, stored.qty, stored.cost)?;
             }
         }
-        // The buyer and the payment are checked on a refused row too, so every mistake of the row
+        // The buyer is checked on a refused row too, so every mistake of the row
         // shows at once (Code Standards 4.3).
         let parties = row_parties(ctx, issues, row, &line_prefix);
         if !refused
-            && let (Some(env), Some(lot_ref), Some((buyer, buyer_id, payment)), false) =
+            && let (Some(env), Some(lot_ref), Some((buyer, buyer_id)), false) =
                 (ctx.env, ctx.lot_ref.as_ref(), parties, row.has_errors)
         {
             let own = match own_line_cost(ctx, run, issues, env, row, &line_prefix)? {
@@ -656,7 +648,6 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                         row,
                         buyer_id,
                         buyer,
-                        payment,
                         stored: unchanged_stored(env, lot_ref, row),
                         pending_move: &mut pending_move,
                         cost,
@@ -673,7 +664,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                 }
             }
         }
-        if let (Some(calc), Some((buyer, buyer_id, _))) = (&preview.calc, parties) {
+        if let (Some(calc), Some((buyer, buyer_id))) = (&preview.calc, parties) {
             rows.acc.add_line(calc)?;
             let person = person_of(buyer, &row.chukta)?;
             rows.sales

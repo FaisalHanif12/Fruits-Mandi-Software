@@ -1,0 +1,2155 @@
+{
+  "lots": [
+    {
+      "key": "lot-1",
+      "lot_no": 1,
+      "freight": 1000000,
+      "freight_paid_by": "firm",
+      "sold_by_weight": false,
+      "is_own": false,
+      "own": null,
+      "arrival": null,
+      "labour": {
+        "method": "manual",
+        "value_paisa": 100000,
+        "amount": 100000,
+        "rule_id": null,
+        "rule_label": null,
+        "source": "typed",
+        "working": {
+          "message_id": "working-manual",
+          "args": [
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 100000
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      },
+      "munshiana": {
+        "method": "manual",
+        "value_paisa": 0,
+        "amount": 0,
+        "rule_id": null,
+        "rule_label": null,
+        "source": "none",
+        "working": {
+          "message_id": "working-none",
+          "args": [
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      },
+      "phone": {
+        "method": "manual",
+        "value_paisa": 0,
+        "amount": 0,
+        "rule_id": null,
+        "rule_label": null,
+        "source": "none",
+        "working": {
+          "message_id": "working-none",
+          "args": [
+            {
+              "name": "result",
+              "value": {
+                "kind": "money",
+                "paisa": 0
+              }
+            }
+          ],
+          "rule_id": null
+        }
+      },
+      "sold_qty": 200,
+      "balance_qty": 0,
+      "net_is_negative": false,
+      "totals": {
+        "gross": 18200000,
+        "freight": 1000000,
+        "seller_comm": 1092000,
+        "labour": 100000,
+        "munshiana": 0,
+        "cash_paid": 0,
+        "store_rent": 0,
+        "phone": 0,
+        "deductions": 2192000,
+        "net": 16008000,
+        "seller_credit": 16008000,
+        "buyer_comm": 1092000,
+        "laga": 160000,
+        "rate_diff": 0,
+        "buyer_credit": 16316000,
+        "buyer_cash": 3136000,
+        "buyer_total": 19452000,
+        "shared_income": 2344000,
+        "workings": {
+          "gross": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 18200000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "freight": {
+            "message_id": "working-manual",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1000000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "seller_comm": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "labour": {
+            "message_id": "working-manual",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 100000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "munshiana": {
+            "message_id": "working-none",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "cash_paid": {
+            "message_id": "working-manual",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "store_rent": {
+            "message_id": "working-manual",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "phone": {
+            "message_id": "working-none",
+            "args": [
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "deductions": {
+            "message_id": "working-deductions",
+            "args": [
+              {
+                "name": "freight",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1000000
+                }
+              },
+              {
+                "name": "comm",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              },
+              {
+                "name": "labour",
+                "value": {
+                  "kind": "money",
+                  "paisa": 100000
+                }
+              },
+              {
+                "name": "munshiana",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "cash",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "store_rent",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "phone",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2192000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "net": {
+            "message_id": "working-net",
+            "args": [
+              {
+                "name": "gross",
+                "value": {
+                  "kind": "money",
+                  "paisa": 18200000
+                }
+              },
+              {
+                "name": "deductions",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2192000
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 16008000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "seller_credit": {
+            "message_id": "working-seller-credit",
+            "args": [
+              {
+                "name": "gross",
+                "value": {
+                  "kind": "money",
+                  "paisa": 18200000
+                }
+              },
+              {
+                "name": "comm",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              },
+              {
+                "name": "freight",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1000000
+                }
+              },
+              {
+                "name": "labour",
+                "value": {
+                  "kind": "money",
+                  "paisa": 100000
+                }
+              },
+              {
+                "name": "munshiana",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "store_rent",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "phone",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 16008000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "buyer_comm": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "laga": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 160000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "rate_diff": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "buyer_credit": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 16316000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "buyer_cash": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 3136000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "buyer_total": {
+            "message_id": "working-sum",
+            "args": [
+              {
+                "name": "count",
+                "value": {
+                  "kind": "count",
+                  "value": 3
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 19452000
+                }
+              }
+            ],
+            "rule_id": null
+          },
+          "shared_income": {
+            "message_id": "working-shared-income",
+            "args": [
+              {
+                "name": "seller_comm",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              },
+              {
+                "name": "buyer_comm",
+                "value": {
+                  "kind": "money",
+                  "paisa": 1092000
+                }
+              },
+              {
+                "name": "laga",
+                "value": {
+                  "kind": "money",
+                  "paisa": 160000
+                }
+              },
+              {
+                "name": "phone",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "rate_diff",
+                "value": {
+                  "kind": "money",
+                  "paisa": 0
+                }
+              },
+              {
+                "name": "result",
+                "value": {
+                  "kind": "money",
+                  "paisa": 2344000
+                }
+              }
+            ],
+            "rule_id": null
+          }
+        }
+      },
+      "lines": [
+        {
+          "key": "line-1",
+          "line_no": 1,
+          "is_blank": false,
+          "remaining_qty": 200,
+          "rate_hint": null,
+          "calc": {
+            "qty": 20,
+            "weight_grams": null,
+            "seller_rate": 100000,
+            "buyer_rate": 100000,
+            "seller_amount": 2000000,
+            "buyer_value": 2000000,
+            "seller_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 120000,
+              "rule_id": 1,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 1
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 120000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 1
+              }
+            },
+            "buyer_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 120000,
+              "rule_id": 2,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 2
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 120000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 2
+              }
+            },
+            "laga": {
+              "method": "per_unit",
+              "value_bps": null,
+              "value_paisa": 800,
+              "amount": 16000,
+              "rule_id": 3,
+              "rule_label": {
+                "level": "item_group",
+                "rule_id": 3
+              },
+              "source": "rule",
+              "working": {
+                "message_id": "working-per-unit",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 20
+                    }
+                  },
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 800
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 16000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "item_group"
+                    }
+                  }
+                ],
+                "rule_id": 3
+              }
+            },
+            "buyer_total": 2136000,
+            "rate_diff": 0,
+            "cost_of_goods": 0,
+            "paid_paisa": 2136000,
+            "left_paisa": 0,
+            "paid_fixed": false,
+            "workings": {
+              "seller_amount": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 20
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 100000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_value": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 20
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 100000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_total": {
+                "message_id": "working-buyer-total",
+                "args": [
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  },
+                  {
+                    "name": "comm",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 120000
+                    }
+                  },
+                  {
+                    "name": "laga",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 16000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2136000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "rate_diff": {
+                "message_id": "working-rate-diff",
+                "args": [
+                  {
+                    "name": "buyer_value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  },
+                  {
+                    "name": "seller_amount",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2000000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "cost_of_goods": {
+                "message_id": "working-none-line",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "paid": {
+                "message_id": "working-paid-typed",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2136000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "left": {
+                "message_id": "working-left",
+                "args": [
+                  {
+                    "name": "total",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2136000
+                    }
+                  },
+                  {
+                    "name": "paid",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 2136000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              }
+            }
+          },
+          "warnings": []
+        },
+        {
+          "key": "line-2",
+          "line_no": 2,
+          "is_blank": false,
+          "remaining_qty": 180,
+          "rate_hint": {
+            "rate_paisa": 100000,
+            "source": "this_bikri",
+            "date": "2026-10-10"
+          },
+          "calc": {
+            "qty": 50,
+            "weight_grams": null,
+            "seller_rate": 90000,
+            "buyer_rate": 90000,
+            "seller_amount": 4500000,
+            "buyer_value": 4500000,
+            "seller_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 270000,
+              "rule_id": 1,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 1
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 270000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 1
+              }
+            },
+            "buyer_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 270000,
+              "rule_id": 2,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 2
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 270000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 2
+              }
+            },
+            "laga": {
+              "method": "per_unit",
+              "value_bps": null,
+              "value_paisa": 800,
+              "amount": 40000,
+              "rule_id": 3,
+              "rule_label": {
+                "level": "item_group",
+                "rule_id": 3
+              },
+              "source": "rule",
+              "working": {
+                "message_id": "working-per-unit",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 50
+                    }
+                  },
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 800
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 40000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "item_group"
+                    }
+                  }
+                ],
+                "rule_id": 3
+              }
+            },
+            "buyer_total": 4810000,
+            "rate_diff": 0,
+            "cost_of_goods": 0,
+            "paid_paisa": 1000000,
+            "left_paisa": 3810000,
+            "paid_fixed": false,
+            "workings": {
+              "seller_amount": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 50
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 90000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_value": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 50
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 90000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_total": {
+                "message_id": "working-buyer-total",
+                "args": [
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  },
+                  {
+                    "name": "comm",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 270000
+                    }
+                  },
+                  {
+                    "name": "laga",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 40000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4810000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "rate_diff": {
+                "message_id": "working-rate-diff",
+                "args": [
+                  {
+                    "name": "buyer_value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  },
+                  {
+                    "name": "seller_amount",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4500000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "cost_of_goods": {
+                "message_id": "working-none-line",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "paid": {
+                "message_id": "working-paid-typed",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1000000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "left": {
+                "message_id": "working-left",
+                "args": [
+                  {
+                    "name": "total",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 4810000
+                    }
+                  },
+                  {
+                    "name": "paid",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 1000000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 3810000
+                    }
+                  }
+                ],
+                "rule_id": null
+              }
+            }
+          },
+          "warnings": []
+        },
+        {
+          "key": "line-3",
+          "line_no": 3,
+          "is_blank": false,
+          "remaining_qty": 130,
+          "rate_hint": {
+            "rate_paisa": 90000,
+            "source": "this_bikri",
+            "date": "2026-10-10"
+          },
+          "calc": {
+            "qty": 130,
+            "weight_grams": null,
+            "seller_rate": 90000,
+            "buyer_rate": 90000,
+            "seller_amount": 11700000,
+            "buyer_value": 11700000,
+            "seller_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 702000,
+              "rule_id": 1,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 1
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 702000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 1
+              }
+            },
+            "buyer_comm": {
+              "method": "percent",
+              "value_bps": 600,
+              "value_paisa": null,
+              "amount": 702000,
+              "rule_id": 2,
+              "rule_label": {
+                "level": "default",
+                "rule_id": 2
+              },
+              "source": "default",
+              "working": {
+                "message_id": "working-percent",
+                "args": [
+                  {
+                    "name": "base",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  },
+                  {
+                    "name": "bps",
+                    "value": {
+                      "kind": "percent",
+                      "bps": 600
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 702000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "default"
+                    }
+                  }
+                ],
+                "rule_id": 2
+              }
+            },
+            "laga": {
+              "method": "per_unit",
+              "value_bps": null,
+              "value_paisa": 800,
+              "amount": 104000,
+              "rule_id": 3,
+              "rule_label": {
+                "level": "item_group",
+                "rule_id": 3
+              },
+              "source": "rule",
+              "working": {
+                "message_id": "working-per-unit",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 130
+                    }
+                  },
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 800
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 104000
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "value": {
+                      "kind": "level",
+                      "level": "item_group"
+                    }
+                  }
+                ],
+                "rule_id": 3
+              }
+            },
+            "buyer_total": 12506000,
+            "rate_diff": 0,
+            "cost_of_goods": 0,
+            "paid_paisa": 0,
+            "left_paisa": 12506000,
+            "paid_fixed": false,
+            "workings": {
+              "seller_amount": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 130
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 90000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_value": {
+                "message_id": "working-line-value",
+                "args": [
+                  {
+                    "name": "qty",
+                    "value": {
+                      "kind": "count",
+                      "value": 130
+                    }
+                  },
+                  {
+                    "name": "rate",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 90000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "buyer_total": {
+                "message_id": "working-buyer-total",
+                "args": [
+                  {
+                    "name": "value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  },
+                  {
+                    "name": "comm",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 702000
+                    }
+                  },
+                  {
+                    "name": "laga",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 104000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 12506000
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "rate_diff": {
+                "message_id": "working-rate-diff",
+                "args": [
+                  {
+                    "name": "buyer_value",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  },
+                  {
+                    "name": "seller_amount",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 11700000
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "cost_of_goods": {
+                "message_id": "working-none-line",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "paid": {
+                "message_id": "working-paid-typed",
+                "args": [
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  }
+                ],
+                "rule_id": null
+              },
+              "left": {
+                "message_id": "working-left",
+                "args": [
+                  {
+                    "name": "total",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 12506000
+                    }
+                  },
+                  {
+                    "name": "paid",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 0
+                    }
+                  },
+                  {
+                    "name": "result",
+                    "value": {
+                      "kind": "money",
+                      "paisa": 12506000
+                    }
+                  }
+                ],
+                "rule_id": null
+              }
+            }
+          },
+          "warnings": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "gross": 18200000,
+    "freight": 1000000,
+    "seller_comm": 1092000,
+    "labour": 100000,
+    "munshiana": 0,
+    "cash_paid": 0,
+    "store_rent": 0,
+    "phone": 0,
+    "deductions": 2192000,
+    "net": 16008000,
+    "seller_credit": 16008000,
+    "buyer_comm": 1092000,
+    "laga": 160000,
+    "rate_diff": 0,
+    "buyer_credit": 16316000,
+    "buyer_cash": 3136000,
+    "buyer_total": 19452000,
+    "shared_income": 2344000,
+    "workings": {
+      "gross": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 18200000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "freight": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1000000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "seller_comm": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "labour": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 100000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "munshiana": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "cash_paid": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "store_rent": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "phone": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "deductions": {
+        "message_id": "working-deductions",
+        "args": [
+          {
+            "name": "freight",
+            "value": {
+              "kind": "money",
+              "paisa": 1000000
+            }
+          },
+          {
+            "name": "comm",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          },
+          {
+            "name": "labour",
+            "value": {
+              "kind": "money",
+              "paisa": 100000
+            }
+          },
+          {
+            "name": "munshiana",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "cash",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "store_rent",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 2192000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "net": {
+        "message_id": "working-net",
+        "args": [
+          {
+            "name": "gross",
+            "value": {
+              "kind": "money",
+              "paisa": 18200000
+            }
+          },
+          {
+            "name": "deductions",
+            "value": {
+              "kind": "money",
+              "paisa": 2192000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 16008000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "seller_credit": {
+        "message_id": "working-seller-credit",
+        "args": [
+          {
+            "name": "gross",
+            "value": {
+              "kind": "money",
+              "paisa": 18200000
+            }
+          },
+          {
+            "name": "comm",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          },
+          {
+            "name": "freight",
+            "value": {
+              "kind": "money",
+              "paisa": 1000000
+            }
+          },
+          {
+            "name": "labour",
+            "value": {
+              "kind": "money",
+              "paisa": 100000
+            }
+          },
+          {
+            "name": "munshiana",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "store_rent",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 16008000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_comm": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "laga": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 160000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "rate_diff": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_credit": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 16316000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_cash": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 3136000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "buyer_total": {
+        "message_id": "working-sum",
+        "args": [
+          {
+            "name": "count",
+            "value": {
+              "kind": "count",
+              "value": 1
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 19452000
+            }
+          }
+        ],
+        "rule_id": null
+      },
+      "shared_income": {
+        "message_id": "working-shared-income",
+        "args": [
+          {
+            "name": "seller_comm",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          },
+          {
+            "name": "buyer_comm",
+            "value": {
+              "kind": "money",
+              "paisa": 1092000
+            }
+          },
+          {
+            "name": "laga",
+            "value": {
+              "kind": "money",
+              "paisa": 160000
+            }
+          },
+          {
+            "name": "phone",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "rate_diff",
+            "value": {
+              "kind": "money",
+              "paisa": 0
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 2344000
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  },
+  "split": [
+    {
+      "partner_id": 1,
+      "name_ur": "الف",
+      "name_en": "Partner A",
+      "share_bps": 4000,
+      "income_paisa": 937600,
+      "working": {
+        "message_id": "working-partner-share",
+        "args": [
+          {
+            "name": "base",
+            "value": {
+              "kind": "money",
+              "paisa": 2344000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 4000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 937600
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner_id": 2,
+      "name_ur": "ب",
+      "name_en": "Partner B",
+      "share_bps": 3000,
+      "income_paisa": 703200,
+      "working": {
+        "message_id": "working-partner-share",
+        "args": [
+          {
+            "name": "base",
+            "value": {
+              "kind": "money",
+              "paisa": 2344000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 703200
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    },
+    {
+      "partner_id": 3,
+      "name_ur": "ج",
+      "name_en": "Partner C",
+      "share_bps": 3000,
+      "income_paisa": 703200,
+      "working": {
+        "message_id": "working-partner-share",
+        "args": [
+          {
+            "name": "base",
+            "value": {
+              "kind": "money",
+              "paisa": 2344000
+            }
+          },
+          {
+            "name": "bps",
+            "value": {
+              "kind": "percent",
+              "bps": 3000
+            }
+          },
+          {
+            "name": "result",
+            "value": {
+              "kind": "money",
+              "paisa": 703200
+            }
+          }
+        ],
+        "rule_id": null
+      }
+    }
+  ],
+  "cash": {
+    "cash_before_paisa": 5000000,
+    "change_paisa": 3136000,
+    "cash_after_paisa": 8136000,
+    "below_zero": false,
+    "lowers_cash": false,
+    "needs_confirm": false
+  },
+  "allow_line_override": true,
+  "errors": [],
+  "warnings": []
+}

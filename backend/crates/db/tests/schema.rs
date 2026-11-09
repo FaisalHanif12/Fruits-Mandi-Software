@@ -351,6 +351,8 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
                 "cost_paisa",
                 // Migration 0019 (plan 58, PRD FR-12.42): the quality of the line.
                 "grade",
+                // Migration 0021 (plan 65, PRD FR-12.44): money paid on the spot.
+                "paid_paisa",
             ],
         ),
         (
@@ -821,8 +823,9 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // journal_entries 1, journal_lines 2, bill_allocations 1, advance_allocations 1; and of
     // migration 6: purchases 9, bikri_sales 1, analytics_facts 1, stock_moves 1, ventures 1,
     // venture_entries 2, venture_entry_parts 1, purchase_cost_parts 1, lot_credit_parts 1 and
-    // fruit_takes 2 more; and of migration 11: dead_marks 1.
-    assert_eq!(found, 64);
+    // fruit_takes 2 more; of migration 11: dead_marks 1; and of migration 21: bikri_sales 1
+    // (`paid_paisa`, written as three column CHECKs, one of them the whole rupee check).
+    assert_eq!(found, 65);
 }
 
 /// Every `*_date` column checks for a real date.

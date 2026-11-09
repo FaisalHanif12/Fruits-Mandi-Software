@@ -16,6 +16,7 @@ use mandi_db::migrate::{
     MigrationOutcome, ONE_TIME_PARTY_MARK_SQL, PARTS_ARE_SOFT_STATE_SQL, SALE_GRADE_SQL,
     SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL, STABLE_POSTING_ORDER_SQL,
     SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    chukta_hook,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -23,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 20;
+const LATEST: usize = 21;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -337,6 +338,17 @@ fn released_version_19() -> Migrations<'static> {
     Migrations::new(all)
 }
 
+/// The file as released with migration 20 (چکتا کھاتہ).
+fn released_version_20() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    Migrations::new(all)
+}
+
 /// The ledger code of today names the person column `chukta_person_key` (migration 20). A file of an
 /// older version still calls it `pukhta_person_key`. This runs `work` with the column under its new
 /// name and puts the old name back after, so the released schema is what the test goes on to compare
@@ -647,10 +659,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 21).unwrap();
+    conn.pragma_update(None, "user_version", 22).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 21);
+    assert_eq!(user_version(&conn), 22);
     assert!(!backups.exists());
 }
 
@@ -3855,7 +3867,9 @@ fn migration_20_makes_chukta_khata_and_touches_no_number_row_or_hash() {
     let marks_before = count(&conn, "SELECT COUNT(*) FROM dead_marks");
     let tables_before = schema(&conn, "table").len();
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    // Only migration 20 is applied here: the file of the next release is in its own test.
+    let outcome =
+        migrate::migrate_with(&released_version_20(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (19, 20));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 20);
@@ -4052,4 +4066,175 @@ fn migration_20_makes_chukta_khata_and_touches_no_number_row_or_hash() {
     assert_eq!(CHUKTA_KHATA_SQL.matches("DELETE FROM").count(), 0);
     assert_eq!(CHUKTA_KHATA_SQL.matches("UPDATE accounts").count(), 1);
     assert_eq!(CHUKTA_KHATA_SQL.matches("UPDATE dead_marks").count(), 1);
+}
+
+#[test]
+fn migration_21_gives_old_lines_the_paid_amount_they_had_and_touches_no_number_row_or_hash() {
+    // Plan 65 (PRD FR-12.44, E2E-66, D8 Feature 4, decision P9): a file at version 20 holds sale lines
+    // saved as `cash` and as `credit`, one of each replaced by an edit. It is upgraded: a copy is taken
+    // first, a cash line is paid in full (its buyer total), a credit line is paid 0 (replaced lines
+    // too), the new column is frozen, and not one amount, row value or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_20(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 20);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM pragma_table_info('bikri_sales') WHERE name = 'paid_paisa'"
+        ),
+        0,
+        "the column is new in migration 21"
+    );
+    let f = common::fixture(&conn);
+    let akram = common::account_id(&conn, "0020");
+    // The fixture's line is a credit line of 12,880 in its draft entry; post that entry and add a
+    // cash line (12,800), a second credit line (2,000) and a replaced cash line (5,000) and a
+    // replaced credit line (3,000), each in a posted entry of its own.
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "0020",
+        "04010001",
+        12_880,
+    );
+    let mut totals_by_line = vec![(f.sale, 1_288_000_i64, "credit")];
+    for (line_no, day, total, payment, active) in [
+        (2, "2026-10-10", 1_280_000_i64, "cash", 1),
+        (3, "2026-10-11", 200_000, "credit", 1),
+        (4, "2026-10-11", 500_000, "cash", 0),
+        (5, "2026-10-12", 300_000, "credit", 0),
+    ] {
+        let entry = legacy_post(&conn, None, day, "0020", "04010001", total / 100);
+        conn.execute(
+            "INSERT INTO bikri_sales (bikri_id, lot_id, line_no, journal_entry_id, entry_date, buyer_account_id, qty,
+                seller_rate_paisa, seller_amount_paisa, seller_comm_method, seller_comm_value_bps, seller_comm_paisa,
+                buyer_rate_paisa, buyer_value_paisa, buyer_comm_method, buyer_comm_value_bps, buyer_comm_paisa,
+                laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, payment_type, is_active, ended)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?7, 'percent', 0, 0, ?7, ?7, 'percent', 0, 0,
+                'per_unit', 0, 0, ?7, ?8, ?9, CASE WHEN ?9 = 1 THEN NULL ELSE 'replaced' END)",
+            mandi_db::rusqlite::params![f.bikri, f.lot, line_no, entry, day, akram, total, payment, active],
+        )
+        .unwrap();
+        totals_by_line.push((conn.last_insert_rowid(), total, payment));
+    }
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    verify_chain(&conn).unwrap();
+    let before_hashes = hashes(&conn);
+    assert_eq!(before_hashes.len(), 5);
+    // Every row of every table but `bikri_sales`, which gains a column, and every balance.
+    let untouched = |conn: &Connection| -> Vec<(String, String)> {
+        all_rows(conn)
+            .into_iter()
+            .filter(|(table, _)| table != "bikri_sales")
+            .collect()
+    };
+    let balances = |conn: &Connection| -> Vec<(i64, i64, i64)> {
+        conn.prepare(
+            "SELECT account_id, COALESCE(SUM(dr_paisa), 0), COALESCE(SUM(cr_paisa), 0)
+             FROM journal_lines GROUP BY account_id ORDER BY account_id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let sales_before = conn
+        .prepare("SELECT id, buyer_total_paisa, payment_type, is_active, version, updated_at FROM bikri_sales ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?, r.get::<_, String>(5)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    let rows_before = untouched(&conn);
+    let balances_before = balances(&conn);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (20, 21));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 21);
+
+    // No number, row value or chain hash moved, and the chain still verifies.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    assert_eq!(
+        untouched(&conn),
+        rows_before,
+        "every other row is as it was"
+    );
+    assert_eq!(
+        balances(&conn),
+        balances_before,
+        "every balance is as it was"
+    );
+    // The lines keep their stored total, word, state, version and update time; only `paid_paisa` is new.
+    let sales_after = conn
+        .prepare("SELECT id, buyer_total_paisa, payment_type, is_active, version, updated_at FROM bikri_sales ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?, r.get::<_, String>(5)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(sales_after, sales_before);
+    // E2E-66: a cash line is paid in full, a credit line is paid 0, and a replaced line says the same.
+    let cash_line = totals_by_line[1].0;
+    for (id, total, payment) in totals_by_line {
+        let paid: i64 = conn
+            .query_row(
+                "SELECT paid_paisa FROM bikri_sales WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            paid,
+            if payment == "cash" { total } else { 0 },
+            "line {id} ({payment})"
+        );
+    }
+    assert_eq!(
+        count(&conn, "SELECT SUM(paid_paisa) FROM bikri_sales"),
+        1_280_000 + 500_000,
+        "128 and 50 rupees of cash lines: 12,800 + 5,000"
+    );
+
+    // The new column is frozen like the rest of the line, and its CHECKs hold for a new line.
+    let error = conn
+        .execute(
+            "UPDATE bikri_sales SET paid_paisa = 0 WHERE id = ?1",
+            [cash_line],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    let error = conn
+        .execute(
+            "INSERT INTO bikri_sales (bikri_id, lot_id, line_no, journal_entry_id, entry_date, buyer_account_id, qty,
+                seller_rate_paisa, seller_amount_paisa, seller_comm_method, seller_comm_value_bps, seller_comm_paisa,
+                buyer_rate_paisa, buyer_value_paisa, buyer_comm_method, buyer_comm_value_bps, buyer_comm_paisa,
+                laga_method, laga_value_paisa, laga_paisa, buyer_total_paisa, payment_type, paid_paisa)
+             VALUES (?1, ?2, 9, ?3, '2026-10-10', ?4, 1, 100000, 100000, 'percent', 0, 0, 100000, 100000, 'percent', 0, 0,
+                'per_unit', 0, 0, 100000, 'credit', 110000)",
+            mandi_db::rusqlite::params![f.bikri, f.lot, f.entry, akram],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("CHECK constraint failed"),
+        "{error}"
+    );
 }

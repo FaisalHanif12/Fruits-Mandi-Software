@@ -19,24 +19,30 @@ use super::what::screen_of as screen_of_topic;
 use super::who::Names;
 use super::{PartyHit, PartyRole};
 
-/// Cues of a question that also asks to read something ("akram ka balance batao aur 5000 jama
-/// karo"). The refusal would drop the question, so it goes to the model path, which answers the
-/// question and carries the route too.
-const ASKS_TO_READ: [Cue; 14] = [
-    Cue::Balance,
-    Cue::Pending,
+/// Cues of a question that asks to read something with a verb or a counting word ("akram ka balance
+/// batao aur 5000 jama karo"). The refusal would drop the question, so it goes to the model path,
+/// which answers the question and carries the route too.
+const ASKS_TO_READ: [Cue; 7] = [
     Cue::Show,
-    Cue::Ledger,
-    Cue::Statement,
-    Cue::DaySummary,
-    Cue::DayBook,
-    Cue::TrialBalance,
     Cue::Many,
     Cue::Most,
     Cue::Least,
     Cue::Decision,
     Cue::Forecast,
     Cue::Print,
+];
+
+/// Nouns of things that are read. A noun alone does not ask to read: "haroon ka balance 50,000 likh
+/// do" names the balance as the thing to be written, so it is a plain request to write (D8 H8), not
+/// a read.
+const READ_NOUNS: [Cue; 7] = [
+    Cue::Balance,
+    Cue::Pending,
+    Cue::Ledger,
+    Cue::Statement,
+    Cue::DaySummary,
+    Cue::DayBook,
+    Cue::TrialBalance,
 ];
 
 /// Screens that only show things. A request to write never opens them.
@@ -158,9 +164,48 @@ const GIVE_PHRASES: [&str; 6] = [
     " دیجیے ",
 ];
 
+/// Words that tell or ask: they make a read of the question, even where an instruction to write stands
+/// beside them ("akram ka balance batao aur 5000 jama karo"). Roman Urdu and Urdu letters, in the
+/// normalised form of `Scan`.
+const TELL_WORDS: [&str; 22] = [
+    "batao",
+    "bata",
+    "bataye",
+    "bataiye",
+    "btao",
+    "bta",
+    "batana",
+    "tell",
+    "kya",
+    "kab",
+    "kaun",
+    "kon",
+    "kyun",
+    "check",
+    "dekho",
+    "dekh",
+    "dekhna",
+    "بتاؤ",
+    "بتا",
+    "بتائیں",
+    "بتائیے",
+    "دیکھو",
+];
+
 /// True when the question asks to read something besides the instruction to write.
-pub(super) fn asks_to_read(scan: &Scan) -> bool {
-    scan.has_any(&ASKS_TO_READ)
+///
+/// A verb or a counting word asks to read. A noun of a thing that is read (a balance, a ledger) asks
+/// to read too, unless the question tells an amount to an instruction to write ("likh do", "kar do")
+/// and has no word that tells or asks ("haroon ka balance 50,000 likh do"): then the noun is what is
+/// to be written, not what is to be read.
+pub(super) fn asks_to_read(scan: &Scan, amount_told: bool) -> bool {
+    if scan.has_any(&ASKS_TO_READ) {
+        return true;
+    }
+    let writes_it = amount_told
+        && (scan.has_exact(Cue::WriteStrong) || scan.has_exact(Cue::WriteWeak))
+        && !says_any(scan, &TELL_WORDS);
+    scan.has_any(&READ_NOUNS) && !writes_it
 }
 
 /// The accounts the question names, found for sure, with their roles: the only ones a route can

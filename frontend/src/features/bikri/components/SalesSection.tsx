@@ -120,18 +120,27 @@ export function SalesSection({
       },
     [holdsNow, store],
   );
+  // The amounts the backend decided for cells it closed (the paid amount of a buyer who must pay in full,
+  // PRD FR-12.44), read from the newest answer when a cell is asked to be typed in or Enter looks for the
+  // next stop.
+  const calcNow = useLatest(view.calc);
   // On a line the backend refused for its quantity only the quantity takes input until it is fixed: the
-  // other cells of the line do not start typing (D8 Bug 1, B2). Read from the newest answer when asked.
+  // other cells of the line do not start typing (D8 Bug 1, B2). A cell the backend closed does not take
+  // input and Enter skips it (plan 65). Read from the newest answer when asked.
   const columns = useMemo(
     () =>
       baseColumns.map((column) => ({
         ...column,
         editable: (row: EntryRow) => {
           const held = heldFieldOf(row.rowId);
-          return (held === null || held === column.field) && (column.editable?.(row) ?? true);
+          const closedBy = column.fixedFromCalc;
+          const closed = closedBy !== undefined && (calcNow()[row.rowId]?.[closedBy] ?? '') !== '';
+          return (
+            !closed && (held === null || held === column.field) && (column.editable?.(row) ?? true)
+          );
         },
       })),
-    [baseColumns, heldFieldOf],
+    [baseColumns, heldFieldOf, calcNow],
   );
 
   // What the backend refused, read when Enter is pressed, so a new answer never rebuilds the keys.

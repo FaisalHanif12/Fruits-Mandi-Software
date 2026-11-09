@@ -2,12 +2,16 @@
 //!
 //! A buyer's debit line of a بکری shows the sale line it came from: item, packing, quantity and
 //! rate, then the stored commission and لاگا. A seller's credit line shows its lot: item,
-//! quantity, خام بکری and the deductions. Cash lent to a buyer shows its reason (FR-15.11).
+//! quantity, خام بکری and the deductions. Money a buyer paid on the spot shows after its sale line as
+//! his credit line, marked "موقع پر جمع" (FR-12.44, FR-19.8). Cash lent to a buyer shows its reason
+//! (FR-15.11).
 //!
 //! The journal line does not store which sale line it was built from. The entry builder writes
 //! one buyer debit for each sale line, in the order of `(lot, line)`, and one seller credit for
 //! each lot (`domain::ledger::bikri`). So the n-th debit line of an account in the entry is the
-//! n-th sale line of that buyer. The pairing is checked against the stored amount: a line whose
+//! n-th sale line of that buyer. The cash part writes one buyer credit for each sale line with money
+//! paid on the spot, in the same order, so the n-th credit of a buyer is the n-th paid line of his.
+//! The pairing is checked against the stored amount: a line whose
 //! stored buyer total or lot counts do not match is shown without items, never with wrong ones.
 //! A reversal mirrors line for line, so a reversal line is paired through the line of the entry
 //! it reverses.
@@ -58,6 +62,8 @@ struct SaleRow {
     bikri_number: i64,
     /// The stored quality of the line, as text (PRD FR-12.42).
     grade: Option<String>,
+    /// Money paid on the spot, paisa (PRD FR-12.44).
+    paid: i64,
 }
 
 /// The items of the lines asked for, by `(entry id, line no)`. A line with nothing to show has
@@ -162,7 +168,7 @@ fn load_sales(
                     s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa, s.laga_paisa,
                     s.buyer_total_paisa, s.seller_amount_paisa, l.seller_account_id,
                     l.chukta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number,
-                    s.grade
+                    s.grade, s.paid_paisa
              FROM bikri_sales s
              JOIN bikri_lots l ON l.id = s.lot_id
              JOIN items i ON i.id = l.item_id
@@ -199,6 +205,7 @@ fn load_sales(
                     },
                     bikri_number: r.get(17)?,
                     grade: r.get(18)?,
+                    paid: r.get(19)?,
                 },
             ))
         })?;
@@ -249,6 +256,28 @@ fn detail_of_line(
             commission_paisa: paisa(sale.buyer_comm)?,
             laga_paisa: paisa(sale.laga)?,
         }));
+    }
+    // A buyer's credit in a بکری entry is the money he paid on the spot: the n-th credit of this
+    // buyer is the credit of his n-th sale line with something paid (PRD FR-12.44, FR-19.8). It
+    // counts only when every credit of the buyer has such a line and the amount is the stored one.
+    let paid_sales: Vec<&SaleRow> = sales
+        .iter()
+        .filter(|s| {
+            s.buyer_account_id == line.account_id && s.person_key == line.person_key && s.paid > 0
+        })
+        .collect();
+    if !paid_sales.is_empty() {
+        let credits = lines.iter().filter(|l| l.cr > 0 && same_party(l));
+        let n = credits.clone().filter(|l| l.line_no < line.line_no).count();
+        if credits.count() != paid_sales.len() {
+            return Ok(None);
+        }
+        return Ok(paid_sales
+            .get(n)
+            .filter(|sale| sale.paid == line.cr)
+            .map(|sale| DetailPart::PaidOnSpot {
+                bikri_number: sale.bikri_number,
+            }));
     }
     // A credit: the n-th credit of this seller is the credit of his n-th lot, if every credit
     // of the seller has a lot.

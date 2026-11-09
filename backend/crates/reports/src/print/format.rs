@@ -28,6 +28,12 @@ impl NumberStyle {
         Ok(format_paisa(amount, self.grouping)?)
     }
 
+    /// Whole rupees with no grouping commas (`1200`), for a line written the way the client's own
+    /// print writes it: "(سیب 8 . 2600)" (PRD 19.2 R5, FR-19.12).
+    pub(crate) fn plain_money(self, amount: Paisa) -> String {
+        amount.rupees().to_string()
+    }
+
     /// A weight in grams as kilos with up to 3 decimals and no trailing zeros (`12.345`).
     pub(crate) fn weight(self, grams: i64) -> Result<String, ReportsError> {
         let text = mandi_core::masters::format_kg(grams)

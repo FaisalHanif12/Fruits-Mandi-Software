@@ -125,11 +125,11 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     return { ...view, fake, user: userEvent.setup() };
   }
 
-  it('is in the catalogue in the sales group with the boxes of R4', () => {
+  it('is in the catalogue in the sales group with the boxes of R4 and the بکری box (plan 68)', () => {
     expect(CATALOG.find((entry) => entry.id === 'R5')).toMatchObject({
       group: 'sales',
       title_id: 'report-r5-title',
-      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda'],
+      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda', 'bikri'],
       party_required: false,
     });
   });
@@ -137,7 +137,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
   it('asks with no بکری and no garden, and draws a row for each credit buyer with the backend’s figures', async () => {
     await openCredit();
     await waitFor(() => {
-      expect(drawnRows()).toEqual(['0', '1']);
+      expect(drawnRows()).toEqual(['0', '1', '2']);
     }, SLOW_MS);
     expect(lastRun()).toMatchObject({
       id: 'R5',
@@ -145,25 +145,47 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
       offset: 0,
       limit: PAGE_ROWS,
     });
-    expect(drawnColumns()).toEqual(['serial', 'buyer', 'detail', 'value', 'buyer_total']);
+    // The window of a test is at the normal step, so every column is drawn, the two that end the row
+    // among them: what was paid on the spot and what is left (PRD FR-12.44).
+    expect(drawnColumns()).toEqual([
+      'serial',
+      'buyer',
+      'detail',
+      'value',
+      'buyer_total',
+      'paid',
+      'left',
+    ]);
     expect(cell('0', 'serial')).toBe('1');
     expect(cell('0', 'buyer')).toBe(`0021 ${names('ارشد ملتانی', 'Arshad Multani')}`);
     expect(cell('0', 'value')).toBe('17,400');
     expect(cell('0', 'buyer_total')).toBe('18,684');
+    expect(cell('0', 'paid')).toBe('0');
+    expect(cell('0', 'left')).toBe('18,684');
     expect(cell('1', 'serial')).toBe('2');
     expect(cell('1', 'buyer_total')).toBe('12,880');
+    expect(cell('1', 'left')).toBe('12,880');
+    // Every buyer of the day is a row, also Shahid, who paid all of his bill on the spot.
+    expect(cell('2', 'serial')).toBe('3');
+    expect(cell('2', 'buyer')).toContain(names('شاہد', 'Shahid'));
+    expect(cell('2', 'buyer_total')).toBe('12,800');
+    expect(cell('2', 'paid')).toBe('12,800');
+    expect(cell('2', 'left')).toBe('0');
     // The totals are the backend's, the same as the credit sales report R4.
-    expect(totalsCell('value')).toBe('29,400');
-    expect(totalsCell('buyer_total')).toBe('31,564');
+    expect(totalsCell('value')).toBe('41,400');
+    expect(totalsCell('buyer_total')).toBe('44,364');
+    expect(totalsCell('paid')).toBe('12,800');
+    expect(totalsCell('left')).toBe('31,564');
   });
 
   it('writes each sale line the way the client’s own print does: (item qty . rate)', async () => {
     await openCredit();
     await waitFor(() => {
-      expect(drawnRows()).toHaveLength(2);
+      expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
     expect(cell('0', 'detail')).toBe(`(${names('کیلا', 'Banana')} 30 . 580)`);
     expect(cell('1', 'detail')).toBe(`(${names('کیلا', 'Banana')} 20 . 600)`);
+    expect(cell('2', 'detail')).toBe(`(${names('سیب', 'Apple')} 10 . 1200)`);
   });
 
   it('writes the rate plain, 2600, while the value columns keep the app’s grouping', async () => {
@@ -201,7 +223,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
   it('prints the same lines, with the backend’s figures and the totals row', async () => {
     const { user } = await openCredit({ print: PRINT_R5_EN });
     await waitFor(() => {
-      expect(drawnRows()).toHaveLength(2);
+      expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
     await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
     await screen.findByText(printFirmName(language), undefined, SLOW_MS);
@@ -213,7 +235,9 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     const body = visible(document.querySelector('.print-report tbody')?.textContent);
     expect(body).toContain('(Banana 30 . 580)');
     expect(body).toContain('18,684');
-    expect(visible(document.querySelector('.print-report tfoot')?.textContent)).toContain('31,564');
+    const footer = visible(document.querySelector('.print-report tfoot')?.textContent);
+    // The totals row of the print holds the value, the total, what was paid and what is left.
+    for (const figure of ['41,400', '44,364', '12,800', '31,564']) expect(footer).toContain(figure);
   });
 
   describe('Print all slips: one sheet for each credit buyer (PRD 19.2 R5)', () => {
@@ -224,7 +248,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     async function openSlips(options: Parameters<typeof fakeReports>[0] = {}) {
       const opened = await openCredit(options);
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(2);
+        expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
       await opened.user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
       await screen.findAllByText(printFirmName(language), undefined, SLOW_MS);
@@ -247,18 +271,25 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     it('draws one sheet for each buyer, in the backend’s order, each with his own lines and totals', async () => {
       await openSlips();
       const sheets = Array.from(document.querySelectorAll('.print-report .print-sheet'));
-      expect(sheets).toHaveLength(2);
+      expect(sheets).toHaveLength(3);
       const first = visible(sheets[0]?.textContent);
       const second = visible(sheets[1]?.textContent);
+      const third = visible(sheets[2]?.textContent);
       // ارشد first, as the backend orders the names; each sheet holds only his line.
       expect(first).toContain(names('ارشد ملتانی', 'Arshad Multani'));
       expect(first).toContain(`(${banana} 30 . 580)`);
       expect(first).not.toContain(`(${banana} 20 . 600)`);
       expect(second).toContain(names('اکرم ٹول ٹیکس', 'Akram Toll Tax'));
       expect(second).toContain(`(${banana} 20 . 600)`);
-      // His totals row is the backend's, never added up here.
+      // Shahid paid all of his bill on the spot and still has his slip, with nothing left.
+      expect(third).toContain(names('شاہد', 'Shahid'));
+      // The rate is written plain, "1200", as the client's own print does (PRD 19.2 R5).
+      expect(third).toContain(`(${names('سیب', 'Apple')} 10 . 1200)`);
+      // His totals row is the backend's, never added up here: the total, what was paid and what is left.
       expect(visible(sheets[0]?.querySelector('tfoot')?.textContent)).toContain('18,684');
       expect(visible(sheets[1]?.querySelector('tfoot')?.textContent)).toContain('12,880');
+      const shahid = visible(sheets[2]?.querySelector('tfoot')?.textContent);
+      for (const figure of ['12,800', '0']) expect(shahid).toContain(figure);
       // His total نگ, with the backend's own message and figure.
       expect(first).toContain(message(language, bills.qty_label_id));
     });
@@ -266,10 +297,10 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     it('shows what all the slips come to in the preview only, from the backend’s totals', async () => {
       await openSlips();
       const total = visible(document.querySelector('[data-slips-total]')?.textContent);
-      expect(total).toContain('2');
-      expect(total).toContain('50');
-      expect(total).toContain('29,400');
-      expect(total).toContain('31,564');
+      expect(total).toContain('3');
+      expect(total).toContain('60');
+      for (const figure of ['41,400', '44,364', '12,800', '31,564'])
+        expect(total).toContain(figure);
       // It is not inside a slip, so it is not on a buyer's paper.
       expect(document.querySelector('.print-sheet [data-slips-total]')).toBeNull();
     });
@@ -293,13 +324,13 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
       const { user } = await openSlips();
       await user.click(screen.getByRole('button', { name: named(m('common-back')) }));
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(2);
+        expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
       await screen.findAllByText(printFirmName(language), undefined, SLOW_MS);
       await user.keyboard('{Escape}');
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(2);
+        expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
     });
 
@@ -308,7 +339,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
         slips: { ...bills, slips: [], slip_count: '0', qty: '0' },
       });
       await waitFor(() => {
-        expect(drawnRows()).toHaveLength(2);
+        expect(drawnRows()).toHaveLength(3);
       }, SLOW_MS);
       await opened.user.click(screen.getByRole('button', { name: named(m('report-print-all')) }));
       await screen.findByText(named(m('report-print-empty')), undefined, SLOW_MS);
@@ -325,7 +356,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
   it('Enter on a buyer does nothing here (the lines have no record of their own) and nothing breaks', async () => {
     const { user } = await openCredit();
     await waitFor(() => {
-      expect(drawnRows()).toHaveLength(2);
+      expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
     const target = document.querySelector('.ag-row[row-id="0"] [col-id="buyer"]');
     if (target === null) throw new Error('no buyer cell');
@@ -358,7 +389,7 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
   it('keeps the lines across a language switch, writing the item in the other language', async () => {
     await openCredit();
     await waitFor(() => {
-      expect(drawnRows()).toHaveLength(2);
+      expect(drawnRows()).toHaveLength(3);
     }, SLOW_MS);
     const before = runCount();
     act(() => {
@@ -430,6 +461,8 @@ describe.each(LANGUAGES)('R1, the sale book (%s)', (language: Language) => {
       seller_id: null,
       date: null,
       item_id: null,
+      buyer_account_id: null,
+      buyer_text: null,
     });
     await waitFor(() => {
       expect(drawnRows()).toEqual(['0']);

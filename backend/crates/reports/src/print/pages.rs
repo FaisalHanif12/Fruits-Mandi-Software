@@ -3,7 +3,7 @@
 //! a stored value or a checked sum of stored values.
 
 use mandi_core::accounts::short_code_of;
-use mandi_core::bikri::{BikriDetail, PaymentType, SavedChukta, SavedLot, SavedSale, SavedTotals};
+use mandi_core::bikri::{BikriDetail, SavedChukta, SavedLot, SavedSale, SavedTotals};
 use mandi_core::money::Paisa;
 use mandi_core::text;
 
@@ -262,7 +262,8 @@ fn slip_page(
     let (mut value, mut comm, mut laga, mut total) =
         (Paisa::ZERO, Paisa::ZERO, Paisa::ZERO, Paisa::ZERO);
     let mut lines = Vec::with_capacity(sales.len());
-    let (mut any_cash, mut any_credit) = (false, false);
+    // What the buyer paid on the spot and what stays on his account, over the lines (PRD FR-12.44).
+    let (mut paid, mut left) = (Paisa::ZERO, Paisa::ZERO);
     for (lot, sale) in sales {
         // C5, as a check: what the buyer pays is his value, commission and لاگا.
         if sale
@@ -279,24 +280,28 @@ fn slip_page(
         comm = comm.checked_add(sale.buyer_comm.amount)?;
         laga = laga.checked_add(sale.laga.amount)?;
         total = total.checked_add(sale.buyer_total)?;
-        match sale.payment_type {
-            PaymentType::Cash => any_cash = true,
-            PaymentType::Credit => any_credit = true,
-        }
+        paid = paid.checked_add(sale.paid_paisa)?;
+        left = left.checked_add(sale.left_paisa)?;
         lines.push(line(ctx, lot, sale, false)?);
     }
-    // One mark only when every line is paid the same way; a mixed slip has none.
-    let payment_id = match (any_cash, any_credit) {
+    // One mark only when the whole slip is paid the same way: all of it paid on the spot, or none of
+    // it. A slip paid in part has no mark; it shows the two amounts instead (PRD FR-12.44).
+    let part_paid = paid > Paisa::ZERO && left > Paisa::ZERO;
+    let payment_id = match (paid > Paisa::ZERO, left > Paisa::ZERO) {
         (true, false) => Some(PAYMENT_CASH.to_owned()),
         (false, true) => Some(PAYMENT_CREDIT.to_owned()),
         _ => None,
     };
-    let amounts = vec![
+    let mut amounts = vec![
         ctx.amount(ITEMS_VALUE, value, AmountRole::Subtotal)?,
         ctx.amount(BUYER_COMMISSION, comm, AmountRole::Line)?,
         ctx.amount(LAGA, laga, AmountRole::Line)?,
         ctx.amount(BUYER_PAYS, total, AmountRole::Total)?,
     ];
+    if part_paid {
+        amounts.push(ctx.amount(PAID_ON_SPOT, paid, AmountRole::Line)?);
+        amounts.push(ctx.amount(LEFT_ON_ACCOUNT, left, AmountRole::Line)?);
+    }
     Ok(PrintPage {
         serial,
         party,

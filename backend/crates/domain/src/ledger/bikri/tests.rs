@@ -53,7 +53,7 @@ fn side_sum(entry: &BalancedEntry, account: i64, side: Side) -> i64 {
 fn sale(
     buyer: i64,
     total: i64,
-    payment: PaymentType,
+    paid: i64,
     seller_comm: i64,
     buyer_comm: i64,
     laga: i64,
@@ -63,7 +63,7 @@ fn sale(
         buyer_account_id: AccountId::new(buyer),
         person_key: None,
         buyer_total: p(total),
-        payment_type: payment,
+        paid: p(paid),
         seller_comm: p(seller_comm),
         buyer_comm: p(buyer_comm),
         laga: p(laga),
@@ -83,8 +83,8 @@ fn event1_lot() -> JournalLot {
         store_rent: Paisa::ZERO,
         phone: p(20),
         sales: vec![
-            sale(AKRAM, 12_880, PaymentType::Credit, 720, 720, 160, 0),
-            sale(ARSHAD, 18_684, PaymentType::Credit, 1_044, 1_044, 240, 0),
+            sale(AKRAM, 12_880, 0, 720, 720, 160, 0),
+            sale(ARSHAD, 18_684, 0, 1_044, 1_044, 240, 0),
         ],
     }
 }
@@ -132,15 +132,7 @@ fn event_2_cash_line_of_a_chukta_buyer_is_25_600() {
         munshiana: p(50),
         store_rent: Paisa::ZERO,
         phone: p(20),
-        sales: vec![sale(
-            CHUKTA_BUYER,
-            12_800,
-            PaymentType::Cash,
-            720,
-            720,
-            80,
-            0,
-        )],
+        sales: vec![sale(CHUKTA_BUYER, 12_800, 12_800, 720, 720, 80, 0)],
     };
     let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
     assert_eq!(entry.total(), p(25_600));
@@ -183,7 +175,7 @@ fn a_negative_seller_credit_is_a_debit_on_the_seller() {
         munshiana: Paisa::ZERO,
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
-        sales: vec![sale(AKRAM, 644, PaymentType::Credit, 36, 36, 8, 0)],
+        sales: vec![sale(AKRAM, 644, 0, 36, 36, 8, 0)],
     };
     let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
     // Sale part 3,080 = 3,080 (644 + 2,436 | 36 + 36 + 8 + 3,000), whole entry 8,080.
@@ -206,7 +198,7 @@ fn a_seller_credit_of_exactly_zero_makes_no_seller_line() {
         munshiana: Paisa::ZERO,
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
-        sales: vec![sale(AKRAM, 1_068, PaymentType::Credit, 60, 60, 8, 0)],
+        sales: vec![sale(AKRAM, 1_068, 0, 60, 60, 8, 0)],
     };
     let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
     assert_eq!(entry.total(), p(1_068));
@@ -234,8 +226,8 @@ fn a_negative_rate_difference_is_a_debit_on_rate_diff() {
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
         sales: vec![
-            sale(AKRAM, 12_668, PaymentType::Credit, 720, 708, 160, -200),
-            sale(ARSHAD, 18_684, PaymentType::Credit, 1_044, 1_044, 240, 0),
+            sale(AKRAM, 12_668, 0, 720, 708, 160, -200),
+            sale(ARSHAD, 18_684, 0, 1_044, 1_044, 240, 0),
         ],
     };
     let entry = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap();
@@ -285,7 +277,7 @@ fn nothing_to_post_is_an_error_and_a_huge_entry_is_too_large() {
         munshiana: Paisa::ZERO,
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
-        sales: vec![sale(AKRAM, huge, PaymentType::Credit, 0, 0, 0, 0)],
+        sales: vec![sale(AKRAM, huge, 0, 0, 0, 0, 0)],
     };
     assert_eq!(
         build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap_err(),
@@ -346,7 +338,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         phone: p(20),
         sales: vec![JournalSale {
             person_key: Some("شاہد|03000000000".into()),
-            ..sale(CHUKTA_BUYER, 12_800, PaymentType::Cash, 720, 720, 80, 0)
+            ..sale(CHUKTA_BUYER, 12_800, 12_800, 720, 720, 80, 0)
         }],
     };
     let (entry, layout) =
@@ -376,7 +368,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
         munshiana: Paisa::ZERO,
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
-        sales: vec![sale(AKRAM, 644, PaymentType::Credit, 36, 36, 8, 0)],
+        sales: vec![sale(AKRAM, 644, 0, 36, 36, 8, 0)],
     };
     let (entry, layout) = build_bikri_entry_with_layout(
         &JournalSource {
@@ -401,7 +393,7 @@ fn the_layout_of_a_cash_line_and_of_a_negative_credit() {
                 munshiana: Paisa::ZERO,
                 store_rent: Paisa::ZERO,
                 phone: Paisa::ZERO,
-                sales: vec![sale(AKRAM, 644, PaymentType::Credit, 36, 36, 8, 0)],
+                sales: vec![sale(AKRAM, 644, 0, 36, 36, 8, 0)],
             }],
         },
         &accounts(),
@@ -434,7 +426,7 @@ fn trip_lot(credit: i64, parts: [i64; 3], total: i64, comm: i64, laga: i64) -> J
         munshiana: Paisa::ZERO,
         store_rent: Paisa::ZERO,
         phone: Paisa::ZERO,
-        sales: vec![sale(AKRAM, total, PaymentType::Credit, comm, comm, laga, 0)],
+        sales: vec![sale(AKRAM, total, 0, comm, comm, laga, 0)],
     }
 }
 
@@ -477,4 +469,113 @@ fn parts_that_do_not_add_up_to_the_credit_do_not_balance_and_nothing_is_built() 
     let lot = trip_lot(8_460, [3_384, 2_538, 2_537], 9_660, 540, 120);
     let error = build_bikri_entry(&JournalSource { lots: vec![lot] }, &accounts()).unwrap_err();
     assert!(matches!(error, LedgerError::Unbalanced { .. }), "{error:?}");
+}
+
+// ---- Money paid on the spot (PRD FR-12.44, D8 Feature 4, plan 65) ----
+
+/// One lot of the D8 example: three buyers with buyer totals 21,360 / 48,100 / 125,060 and the
+/// lot charges of E2E-64 (seller credit 160,080, لاگا 1,600, مزدوری 1,000, کرایہ 10,000).
+fn d8_lot(paid: [i64; 3]) -> JournalLot {
+    JournalLot {
+        seller_account_id: AccountId::new(RAHIM),
+        partner_credits: Vec::new(),
+        seller_credit: p(160_080),
+        cash_paid: Paisa::ZERO,
+        freight_deducted: p(10_000),
+        labour: p(1_000),
+        munshiana: Paisa::ZERO,
+        store_rent: Paisa::ZERO,
+        phone: Paisa::ZERO,
+        sales: vec![
+            sale(AKRAM, 21_360, paid[0], 3_640, 3_640, 720, 0),
+            sale(ARSHAD, 48_100, paid[1], 3_640, 3_640, 640, 0),
+            sale(CHUKTA_BUYER, 125_060, paid[2], 3_640, 3_640, 240, 0),
+        ],
+    }
+}
+
+#[test]
+fn d8_example_paid_21_360_10_000_and_0_posts_a_cash_part_of_31_360() {
+    // The sale part holds the buyer totals: 21,360 + 48,100 + 125,060 = 194,520. The cash part
+    // is 21,360 + 10,000 on each side, and the whole entry is 194,520 + 31,360 = 225,880.
+    let (entry, layout) = build_bikri_entry_with_layout(
+        &JournalSource {
+            lots: vec![d8_lot([21_360, 10_000, 0])],
+        },
+        &accounts(),
+    )
+    .unwrap();
+    assert_eq!(entry.total(), p(225_880));
+    assert_eq!(side_sum(&entry, CASH, Dr), 31_360);
+    assert_eq!(side_sum(&entry, AKRAM, Dr), 21_360);
+    assert_eq!(side_sum(&entry, AKRAM, Cr), 21_360);
+    assert_eq!(side_sum(&entry, ARSHAD, Dr), 48_100);
+    assert_eq!(side_sum(&entry, ARSHAD, Cr), 10_000);
+    // The third buyer paid nothing: no credit line and no cash line for him.
+    assert_eq!(side_sum(&entry, CHUKTA_BUYER, Dr), 125_060);
+    assert_eq!(side_sum(&entry, CHUKTA_BUYER, Cr), 0);
+    let rows = &layout.lots[0].sales;
+    assert!(rows[0].cash_credit.is_some() && rows[1].cash_credit.is_some());
+    assert_eq!(rows[2].cash_credit, None);
+    // `cash_credit` points at the buyer's own credit line, for the amount paid.
+    let line = |at: Option<usize>| entry.lines()[at.unwrap()].clone();
+    let first = line(rows[0].cash_credit);
+    assert_eq!(
+        (first.account_id, first.side, first.amount),
+        (AccountId::new(AKRAM), Cr, p(21_360))
+    );
+    let second = line(rows[1].cash_credit);
+    assert_eq!(
+        (second.account_id, second.side, second.amount),
+        (AccountId::new(ARSHAD), Cr, p(10_000))
+    );
+}
+
+#[test]
+fn a_line_paid_in_full_and_a_line_paid_nothing_build_what_cash_and_credit_lines_built() {
+    // Before v1.32 a نقدی line posted روکڑ Dr total and the buyer Cr total; an ادھاری line posted
+    // nothing in the cash part. Paid = total and paid = 0 are exactly those two (plan 60 P6).
+    let build = |paid: i64| {
+        build_bikri_entry_with_layout(
+            &JournalSource {
+                lots: vec![d8_lot([paid, 0, 0])],
+            },
+            &accounts(),
+        )
+        .unwrap()
+    };
+    let (credit, credit_layout) = build(0);
+    let (cash, cash_layout) = build(21_360);
+    assert_eq!(credit_layout.lots[0].sales[0].cash_credit, None);
+    assert_eq!(credit.lines().len() + 2, cash.lines().len());
+    let extra = &cash.lines()[cash.lines().len() - 2..];
+    assert_eq!(
+        (extra[0].account_id, extra[0].side, extra[0].amount),
+        (AccountId::new(CASH), Dr, p(21_360))
+    );
+    assert_eq!(
+        (extra[1].account_id, extra[1].side, extra[1].amount),
+        (AccountId::new(AKRAM), Cr, p(21_360))
+    );
+    assert_eq!(
+        cash_layout.lots[0].sales[0].cash_credit,
+        Some(cash.lines().len() - 1)
+    );
+}
+
+#[test]
+fn every_amount_of_paid_between_zero_and_the_total_gives_a_balanced_entry() {
+    // Whole rupees from 0 up to the total, in steps: the entry balances every time, and the cash
+    // part is exactly what was paid (Code Standards M10).
+    for paid in (0..=21_360).step_by(1_000).chain([21_360]) {
+        let entry = build_bikri_entry(
+            &JournalSource {
+                lots: vec![d8_lot([paid, 0, 0])],
+            },
+            &accounts(),
+        )
+        .unwrap();
+        assert_eq!(side_sum(&entry, AKRAM, Cr), paid, "paid {paid}");
+        assert_eq!(side_sum(&entry, CASH, Dr), paid, "paid {paid}");
+    }
 }

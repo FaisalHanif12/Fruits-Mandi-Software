@@ -639,6 +639,16 @@ fn books_of(
             return Ok((Vec::new(), Paisa::ZERO, None));
         }
         Err(LedgerError::Overflow) => return Err(ServiceError::reject(ErrorCode::ErrOverflow)),
+        // A complete lot with no complete line and no charge has no journal line at all. That is the
+        // user's mistake, not a bug: the preview comes back with `ERR_NO_SALE_LINES` (unless a line
+        // already has its own error), and the save is refused with the same code (plan 61 Section
+        // 6, plan 65 T2, PRD FR-12.8 check 1).
+        Err(LedgerError::Empty) => {
+            if errors.is_empty() {
+                errors.push(FieldError::new(ErrorCode::ErrNoSaleLines, "lots"));
+            }
+            return Ok((Vec::new(), Paisa::ZERO, None));
+        }
         Err(other) => {
             // The calculation built rows that do not balance: a bug signal (Code Standards B16).
             tracing::error!(error = %other, "the journal of a بکری does not balance");

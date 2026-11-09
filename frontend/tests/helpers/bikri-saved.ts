@@ -75,7 +75,9 @@ export const AKRAM_LINE: SavedSale = {
   buyer_total: money(12_880),
   rate_diff: money(0),
   cost_paisa: money(0),
-  payment_type: 'credit',
+  // Paid 0 on the spot: the whole bill stays on his account (PRD FR-12.44).
+  paid_paisa: money(0),
+  left_paisa: money(12_880),
   is_active: true,
   state: 'in_force',
   note: null,
@@ -96,6 +98,7 @@ export const ARSHAD_LINE: SavedSale = {
   buyer_comm: percent(600, 1_044),
   laga: perUnit(8, 240),
   buyer_total: money(18_684),
+  left_paisa: money(18_684),
 };
 
 /** The stored sums of Event 1: one lot, so the lot and the whole بکری have the same ones. */

@@ -1,7 +1,7 @@
 //! Property tests (Code Standards 9.3, money agent case 18): random drafts keep the books
 //! balanced and every total equals the sum of its parts.
 
-use mandi_core::bikri::{ChuktaInput, LotInput, PaymentType, SaleInput};
+use mandi_core::bikri::{ChuktaInput, LotInput, SaleInput};
 use mandi_core::ids::AccountId;
 use mandi_core::money::Paisa;
 use proptest::prelude::*;
@@ -23,20 +23,18 @@ fn arb_sale() -> impl Strategy<Value = SaleInput> {
         1u32..=5_000,
         any::<bool>(),
         1u32..=5_000,
-        prop_oneof![
-            Just(None),
-            Just(Some(PaymentType::Credit)),
-            Just(Some(PaymentType::Cash))
-        ],
+        // Money paid on the spot as typed, in whole rupees: often more than the line's total, which
+        // is then refused, and sometimes a part of it (PRD FR-12.44).
+        prop::option::of(0u32..=3_000),
         prop::option::of(0u32..=100),
         prop::option::of(0u32..=50),
     )
         .prop_map(
-            |(buyer, qty, rate, differs, buyer_rate, payment, percent, laga)| {
+            |(buyer, qty, rate, differs, buyer_rate, paid, percent, laga)| {
                 let mut s = sale(buyer, &qty.to_string(), &rate.to_string());
                 s.rate_differs = differs;
                 s.buyer_rate = differs.then(|| buyer_rate.to_string());
-                s.payment_type = payment;
+                s.paid = paid.map(|v| v.to_string());
                 if buyer == CHUKTA_BUYER {
                     s.chukta = Some(ChuktaInput {
                         name_ur: "شاہد".into(),
@@ -111,6 +109,11 @@ proptest! {
             for amount in [l.seller_amount, l.buyer_value, l.seller_comm.amount, l.buyer_comm.amount, l.laga.amount, l.buyer_total, l.rate_diff] {
                 prop_assert_eq!(amount.as_paisa() % 100, 0);
             }
+            // PRD FR-12.44: paid + left = the buyer total, line by line, and paid is never more
+            // than the total.
+            prop_assert_eq!(l.paid_paisa.checked_add(l.left_paisa).unwrap(), l.buyer_total);
+            prop_assert!(l.paid_paisa <= l.buyer_total);
+            prop_assert_eq!(l.paid_paisa.as_paisa() % 100, 0);
             // C5 and C19 hold line by line.
             prop_assert_eq!(l.buyer_total, l.buyer_value.checked_add(l.buyer_comm.amount).unwrap().checked_add(l.laga.amount).unwrap());
             prop_assert_eq!(l.rate_diff, l.buyer_value.checked_sub(l.seller_amount).unwrap());
@@ -152,6 +155,12 @@ proptest! {
                 if (sys.seller_commission.get()..=sys.rate_diff.get()).contains(&id.get()) { Nature::Income } else { Nature::Other }
             }).unwrap();
             prop_assert_eq!(bases.income, calc.summary.shared_income);
+            // The money paid on the spot and what is left are the sums of the lines (PRD FR-12.44).
+            let paid = all_lines.iter().fold(Paisa::ZERO, |s, l| s.checked_add(l.paid_paisa).unwrap());
+            let left = all_lines.iter().fold(Paisa::ZERO, |s, l| s.checked_add(l.left_paisa).unwrap());
+            prop_assert_eq!(calc.summary.buyer_cash, paid);
+            prop_assert_eq!(calc.summary.buyer_credit, left);
+            prop_assert_eq!(paid.checked_add(left).unwrap(), calc.summary.buyer_total);
             // The cash change of the entry equals the cash lines minus نقد.
             let change = crate::cash::net_change(&entry, sys.cash).unwrap();
             prop_assert_eq!(change, calc.summary.buyer_cash.checked_sub(calc.summary.cash_paid).unwrap());

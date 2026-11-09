@@ -264,9 +264,10 @@ err-weight-required = وزن کلو میں لکھیں۔ یہ مال وزن کے 
 err-cash-below-zero-not-confirmed = اس اندراج کے بعد موجود { -rokar } { $cash_after } ہو جائے گی۔ محفوظ کرنے کے لیے اندراج کی تصدیق کریں۔
 # review: pending
 err-not-a-buyer = یہ { -gahak } کا کھاتہ نہیں۔ کوئی { -gahak } چنیں۔
-# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# PRD FR-12.44. The money paid on the spot is more than the line's buyer total. $max is the most
+# allowed, in rupees.
 # review: pending
-err-credit-not-allowed = اس { -gahak } کے لیے ادھار کی اجازت نہیں۔ لائن کو { -naqdi } کر دیں۔
+err-paid-exceeds-total = { -mauqa-par-jama } اس لائن کی { -gahak } کی رقم سے زیادہ نہیں ہو سکتی۔ زیادہ سے زیادہ { $max } روپے۔
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } باقی ہیں۔ یہ { -baqi-maal } میں رہیں گے۔

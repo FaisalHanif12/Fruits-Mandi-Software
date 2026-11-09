@@ -137,6 +137,10 @@ fn detail_part(part: &DetailPart) -> Node {
             ("gross", money(*gross_paisa)),
             ("deductions", money(*deductions_paisa)),
         ]),
+        DetailPart::PaidOnSpot { bikri_number } => Node::obj(vec![
+            ("kind", Node::Str("paid_on_spot".to_owned())),
+            ("bikri", count(*bikri_number)),
+        ]),
         // A reason is typed by hand: the model learns only that cash was lent (PRD FR-7.83).
         DetailPart::CashLent { .. } => Node::obj(vec![("kind", Node::Str("cash_lent".to_owned()))]),
         DetailPart::Text { .. } => Node::obj(vec![("kind", Node::Str("text".to_owned()))]),

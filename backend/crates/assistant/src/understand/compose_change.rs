@@ -12,6 +12,7 @@
 //!
 //! Example: "akram ki 5000 wasooli likh do" -> `ChangeRefused`, the wasooli screen, Akram. "wasooli
 //! likh do" -> the same screen with no party. "5000 jama karo" -> `None`: no screen is plain.
+//! "haroon ka balance 50,000 likh do" -> `ChangeRefused` with no screen: no screen writes a balance.
 
 use super::compose_common::{Composed, entry_screen, record_of};
 use super::{Intent, PartyHit, PartyRole, Understanding};
@@ -26,7 +27,20 @@ pub fn compose_change(u: &Understanding) -> Option<Composed> {
     if !u.sure || u.intent.value != Intent::ChangeRequest {
         return None;
     }
-    let screen = entry_screen(u.screen?)?;
+    let Some(name) = u.screen else {
+        // A figure told to be written ("haroon ka balance 50,000 likh do"): no entry screen writes a
+        // balance, so there is no button, only the refusal (D8 H8). Without an amount or a figure the
+        // question does not say what is to be written ("5000 jama karo": a receipt, capital or a
+        // journal line), and the model decides.
+        return (u.amount_named && !u.figures.value.is_empty()).then_some(Composed {
+            outcome: AskOutcome::ChangeRefused,
+            answer: None,
+            asked_role: None,
+            found_as: None,
+            entry_route: None,
+        });
+    };
+    let screen = entry_screen(name)?;
     Some(Composed {
         outcome: AskOutcome::ChangeRefused,
         answer: None,

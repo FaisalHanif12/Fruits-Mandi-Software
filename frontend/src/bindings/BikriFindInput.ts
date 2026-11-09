@@ -25,4 +25,14 @@ export type BikriFindInput = {
    * An item of one of its lots.
    */
   item_id: number | null;
+  /**
+   * A buyer (an account) on one of its live sale lines (PRD FR-12.13, plan 67, decision E1).
+   */
+  buyer_account_id: number | null;
+  /**
+   * A چکتا buyer (a walk-in, who has no account) on one of its live sale lines, found by any part
+   * of his Urdu or English name, spelling variants of Urdu letters ignored (PRD FR-12.13). Not
+   * the name of an account: an account is found with `buyer_account_id`.
+   */
+  buyer_text: string | null;
 };

@@ -14,6 +14,7 @@ import {
 import { parseAnalyticsSearch } from '../features/analytics/search';
 import { parseReportSearch } from '../features/reports/search';
 import { parseMonthSearch } from '../features/month';
+import { parseLedgerSearch } from '../features/party_ledgers';
 import {
   parseExpenseSearch,
   parseKhataSearch,
@@ -186,6 +187,18 @@ const stockRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/stock',
   component: lazyRouteComponent(() => import('../features/bikri/pages/StockPage'), 'StockPage'),
+});
+
+// پارٹی کھاتے (PRD FR-12.43): the party ledgers in three levels. `?side=buyer|seller` is the list,
+// `?party=20` one party's statement, `?party=20&date=2026-10-10` that day's slip.
+const partyLedgersRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/bikri/party-ledgers',
+  validateSearch: (search: Record<string, unknown>) => parseLedgerSearch(search),
+  component: lazyRouteComponent(
+    () => import('../features/party_ledgers/pages/PartyLedgersPage'),
+    'PartyLedgersPage',
+  ),
 });
 
 // باغات (PRD 12.11, FR-5.2): the gardens list, the form of a new garden (shares first, FR-12.29),
@@ -564,6 +577,7 @@ const appRoutes = [
   collectionRoute,
   dayRoute,
   todayRoute,
+  partyLedgersRoute,
   stockRoute,
   laterSaleRoute,
   rokarRoute,
@@ -692,6 +706,22 @@ const reportsDevRoutes = import.meta.env.DEV
   : [];
 // ---- end of Run B block ----
 
+// ---- Plan 66: the development page of the party ledgers (dev only, like the others). ----
+const partyLedgersDevRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/party-ledgers',
+        validateSearch: (search: Record<string, unknown>) => parseLedgerSearch(search),
+        component: lazyRouteComponent(
+          () => import('./dev/PartyLedgersDevPage'),
+          'PartyLedgersDevPage',
+        ),
+      }),
+    ]
+  : [];
+// ---- end of plan 66 block ----
+
 // ---- Run B, plan 21: the development pages of the analytics screens (dev only, like the others). ----
 const analyticsDevRoutes = import.meta.env.DEV
   ? [
@@ -776,6 +806,7 @@ const routeTree = rootRoute.addChildren([
   ...backupDevRoutes,
   ...restoreDevRoutes,
   ...reportsDevRoutes,
+  ...partyLedgersDevRoutes,
   ...analyticsDevRoutes,
   ...settingsDevRoutes,
   ...monthDevRoutes,

@@ -31,7 +31,7 @@ const SALE_PATHS: Readonly<Record<string, readonly string[]>> = {
   [SALE.qty]: ['qty'],
   [SALE.rate]: ['seller_rate_paisa'],
   [SALE.grade]: ['grade'],
-  [SALE.payment]: ['payment_type'],
+  [SALE.paid]: ['paid_paisa'],
 };
 
 function cellsOf(

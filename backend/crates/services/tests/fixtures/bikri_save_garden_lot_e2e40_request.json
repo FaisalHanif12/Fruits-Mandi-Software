@@ -40,7 +40,7 @@
             "key": "s-1",
             "laga": null,
             "note": null,
-            "payment_type": null,
+            "paid": null,
             "qty": "100",
             "rate_differs": false,
             "sale_id": null,

@@ -40,6 +40,16 @@
       "key": "buyer_total",
       "title_id": "report-col-buyer-total",
       "kind": "money"
+    },
+    {
+      "key": "paid",
+      "title_id": "report-col-paid-on-spot",
+      "kind": "money"
+    },
+    {
+      "key": "left",
+      "title_id": "report-col-left-on-account",
+      "kind": "money"
     }
   ],
   "rows": [
@@ -86,6 +96,14 @@
         {
           "type": "money",
           "paisa": 1740000
+        },
+        {
+          "type": "money",
+          "paisa": 1868400
+        },
+        {
+          "type": "money",
+          "paisa": 0
         },
         {
           "type": "money",
@@ -142,6 +160,75 @@
         {
           "type": "money",
           "paisa": 1288000
+        },
+        {
+          "type": "money",
+          "paisa": 0
+        },
+        {
+          "type": "money",
+          "paisa": 1288000
+        }
+      ],
+      "source": null,
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "value": 3
+        },
+        {
+          "type": "party",
+          "party": {
+            "account_id": 9,
+            "code": "0030",
+            "short_code": null,
+            "name_ur": "شاہد",
+            "name_en": "Shahid",
+            "tag": null,
+            "person_key": "شاہد|03000000000",
+            "phone": "0300-0000000"
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": 2,
+              "item": {
+                "ur": "سیب",
+                "en": "Apple"
+              },
+              "packing": {
+                "ur": "پیٹی",
+                "en": "Box"
+              },
+              "qty": 10,
+              "rate_paisa": 120000,
+              "value_paisa": 1200000,
+              "commission_paisa": 72000,
+              "laga_paisa": 8000
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "paisa": 1200000
+        },
+        {
+          "type": "money",
+          "paisa": 1280000
+        },
+        {
+          "type": "money",
+          "paisa": 1280000
+        },
+        {
+          "type": "money",
+          "paisa": 0
         }
       ],
       "source": null,
@@ -150,7 +237,7 @@
   ],
   "offset": 0,
   "limit": 100,
-  "total_count": 2,
+  "total_count": 3,
   "totals_label_id": "report-total",
   "totals": [
     {
@@ -164,7 +251,15 @@
     },
     {
       "type": "money",
-      "paisa": 2940000
+      "paisa": 4140000
+    },
+    {
+      "type": "money",
+      "paisa": 4436400
+    },
+    {
+      "type": "money",
+      "paisa": 1280000
     },
     {
       "type": "money",

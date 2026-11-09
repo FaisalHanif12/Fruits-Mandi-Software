@@ -26,6 +26,14 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
   a blank row says nothing (D8 Bug 1).
   A چکتا buyer pays the whole bill on the spot: his line carries the account چکتا کھاتہ and his own names and
   phone (`SaleInput.chukta`), chosen in the buyer box, with no cell and no Enter stop of its own.
+- **Money paid on the spot (موقع پر جمع, plan 65, PRD FR-12.44).** The last money cell of a line (`SALE.paid`,
+  after the buyer total) is typed as text and sent as `SaleInput.paid` (empty is sent as nothing). A line takes
+  four Enters: buyer, qty, rate, paid. For a buyer who must pay in full the backend sets the amount
+  (`LineCalc.paid_fixed`): the preview puts it in `calc[SALE.paidFixed]`, the cell shows it as a calculated
+  cell and cannot be typed in, Enter skips it (three Enters), and if the answer closes it while the cursor is on
+  it the cursor goes on by itself (`fixedFromCalc` of the shared grid). What is left on the account is shown in
+  the details of the line and in the summary (ادھاری is the sum of what is left, نقدی the sum of what was paid).
+  The refusal `ERR_PAID_EXCEEDS_TOTAL` is on the cell. Tests: `bikri-paid.test.tsx`.
 - **The whole-sale view has no second copy.** The switch on the lines area (the same as the
   summary's) shows the lines of all lots in one grid with a lot column. `stores.all`
   (`union-store.ts`) lists the rows of the lots' stores and hands each change to the lot that owns
@@ -78,7 +86,7 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
 | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `pages/BikriBookPage.tsx`                                                             | The screen: four states, layout at the three window sizes, which party the card shows                                               |
 | `components/`                                                                         | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
-| `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate)                                             |
+| `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate, paid)                                       |
 | `draft-store.ts`, `draft.ts`, `union-store.ts`                                        | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it        |
 | `preview-view.ts`, `grid-views.ts`, `problems.ts`                                     | What the answer shows in each cell, and where each problem goes                                                                     |
 | `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight`                                                             |
@@ -108,7 +116,7 @@ the columns.
 files for Event 1 and E2E-26, and the screen shows the backend's answer),
 `bikri-whole-view.test.tsx` and `bikri-union-store.test.ts` (the whole-sale view and its store),
 `bikri-strip.test.tsx` (the numbers strip), `bikri-backend-cases.test.tsx` (shares not 100%, weight items, no sale
-lines, credit not allowed), `bikri.test.tsx` (Event 1 by keyboard, the numbers, ⓘ, E2E-26),
+lines, money paid above the total), `bikri.test.tsx` (Event 1 by keyboard, the numbers, ⓘ, E2E-26),
 `bikri-save.test.tsx` (the save flow, cash box both ways, refusals, the leave guard, Event 1 to F10),
 `bikri-event2.test.tsx` (Event 2 by keyboard to F10), `bikri-autosave.test.tsx` and
 `bikri-draft-snapshot.test.ts` and `bikri-draft-offer.test.tsx` (the draft), `bikri-saved.test.tsx`

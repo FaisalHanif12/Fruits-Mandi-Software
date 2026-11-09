@@ -265,6 +265,53 @@ fn sale_values_follow_the_prd_formulas_c1_and_c3() {
 }
 
 #[test]
+fn money_paid_on_the_spot_is_whole_rupees_never_negative_and_never_above_the_buyer_total() {
+    // PRD FR-12.44, plan 65 migration 21: `paid_paisa` has three CHECKs. A saved line is frozen
+    // (the test below), so the trigger is dropped in this scratch database to reach the CHECKs.
+    let (_dir, conn) = setup();
+    let f = fixture(&conn);
+    insert_sale(&conn, &f, 1, &Sale::prd()).unwrap();
+    let total: i64 = conn
+        .query_row(
+            "SELECT buyer_total_paisa FROM bikri_sales WHERE id = ?1",
+            [f.sale],
+            |r| r.get(0),
+        )
+        .unwrap();
+    // A new line has paid 0 until the writer says otherwise.
+    let paid_of = |id: i64| -> i64 {
+        conn.query_row(
+            "SELECT paid_paisa FROM bikri_sales WHERE id = ?1",
+            [id],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(paid_of(f.sale), 0);
+    conn.execute_batch("DROP TRIGGER bikri_sales_snapshot_is_final")
+        .unwrap();
+    let set = |paid: i64| {
+        conn.execute(
+            "UPDATE bikri_sales SET paid_paisa = ?2 WHERE id = ?1",
+            params![f.sale, paid],
+        )
+    };
+    assert!(set(total).is_ok(), "paid in full is allowed");
+    assert!(set(0).is_ok());
+    assert!(set(total - 10_000).is_ok(), "part paid is allowed");
+    for (paid, check) in [
+        (total + 10_000, "paid_paisa <= buyer_total_paisa"),
+        (-10_000, "paid_paisa >= 0"),
+        (150, "paid_paisa % 100 = 0"),
+    ] {
+        assert!(
+            check_failed(set(paid).unwrap_err(), check),
+            "{paid} must fail {check}"
+        );
+    }
+}
+
+#[test]
 fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
     let (_dir, conn) = setup();
     let f = fixture(&conn);
@@ -297,9 +344,10 @@ fn a_saved_sale_line_is_frozen_except_for_being_replaced() {
         .filter(|c| !allowed.contains(&c.as_str()))
         .collect();
     // 34 business columns of Architecture 15.6 (the 37 listed minus is_active,
-    // replaced_by_sale_id and note), the id, `cost_paisa` of migration 6 (plan 16b) and `grade` of
-    // migration 19 (plan 58): the quality of a saved line is frozen like the rest of it.
-    assert_eq!(frozen.len(), 37, "{frozen:?}");
+    // replaced_by_sale_id and note), the id, `cost_paisa` of migration 6 (plan 16b), `grade` of
+    // migration 19 (plan 58) and `paid_paisa` of migration 21 (plan 65): the quality of a saved line
+    // and the money paid on the spot are frozen like the rest of it.
+    assert_eq!(frozen.len(), 38, "{frozen:?}");
     for column in frozen {
         // Any change is refused by the trigger, which runs before the checks.
         // A different value for every column (the id gets a free number: it cannot be NULL).

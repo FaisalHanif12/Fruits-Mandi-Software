@@ -126,7 +126,8 @@
           "buyer_total": 1288000,
           "rate_diff": 0,
           "cost_paisa": 0,
-          "payment_type": "credit",
+          "paid_paisa": 0,
+          "left_paisa": 1288000,
           "is_active": true,
           "state": "in_force",
           "note": null
@@ -173,7 +174,8 @@
           "buyer_total": 1868400,
           "rate_diff": 0,
           "cost_paisa": 0,
-          "payment_type": "credit",
+          "paid_paisa": 0,
+          "left_paisa": 1868400,
           "is_active": true,
           "state": "in_force",
           "note": null

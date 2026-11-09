@@ -528,6 +528,8 @@ describe.each(LANGUAGES)('leaving a بکری with typed work (%s, PRD FR-7.9)', 
         seller_id: null,
         date: null,
         item_id: null,
+        buyer_account_id: null,
+        buyer_text: null,
       });
     });
     // He had typed a truck number, so the saved بکری opens after the prompt.

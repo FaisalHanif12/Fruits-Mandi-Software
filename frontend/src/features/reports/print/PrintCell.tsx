@@ -87,6 +87,16 @@ function DetailLine({ part, shortSale }: { part: ReportPrintDetailPart; shortSal
           <NumberRuns text={l10n.getString('report-detail-cash-lent', { reason: part.reason })} />
         </p>
       );
+    case 'paid_on_spot':
+      // The mark on the credit line of money paid on the spot (PRD FR-12.44, FR-19.8). The number is
+      // the بکری number, already written by the backend.
+      return (
+        <p>
+          <NumberRuns
+            text={l10n.getString('report-detail-paid-on-spot', { number: part.bikri_number })}
+          />
+        </p>
+      );
     case 'text':
       return (
         <p>

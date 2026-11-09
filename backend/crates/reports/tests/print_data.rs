@@ -429,19 +429,31 @@ fn a_seller_who_owes_the_firm_is_printed_without_a_minus() {
 
 #[test]
 fn mixed_payment_types_give_no_single_mark() {
+    // A second line of the same buyer, paid in full on the spot: part of his slip is paid, part is not.
     let mut d = detail(EVENT1);
     let sale = d.lots.first_mut().unwrap().sales.first_mut().unwrap();
     let buyer = sale.buyer.id;
-    // A second line of the same buyer, paid in cash.
     let mut cash = sale.clone();
     cash.id = 99;
-    cash.payment_type = mandi_core::bikri::PaymentType::Cash;
+    cash.paid_paisa = cash.buyer_total;
+    cash.left_paisa = mandi_core::money::Paisa::ZERO;
     d.lots.first_mut().unwrap().sales.push(cash);
     let mut opts = options(PrintDoc::BuyerSlips, Language::En);
     opts.only_buyer_id = Some(buyer);
     let page = build(&d, &opts).unwrap().pages.into_iter().next().unwrap();
     assert_eq!(page.lines.len(), 2);
     assert_eq!(page.payment_id, None);
+    // A slip paid in part shows what was paid and what is left (PRD FR-12.44): Akram's two lines are
+    // 12,880 + 12,880, and 12,880 of it was paid on the spot.
+    let labels: Vec<(&str, &str)> = amounts(&page).iter().map(|a| (a.0, a.1)).collect();
+    assert!(
+        labels.contains(&("print-paid-on-spot", "12,880")),
+        "{labels:?}"
+    );
+    assert!(
+        labels.contains(&("print-left-on-account", "12,880")),
+        "{labels:?}"
+    );
 }
 
 #[test]

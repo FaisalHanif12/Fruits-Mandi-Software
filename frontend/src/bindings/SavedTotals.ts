@@ -67,11 +67,12 @@ export type SavedTotals = {
    */
   rate_diff: Paisa;
   /**
-   * ادھاری: buyer bills of credit lines in force.
+   * ادھاری: what is left on the buyers' accounts from the lines in force (the sum of `left_paisa`,
+   * PRD FR-12.44).
    */
   buyer_credit: Paisa;
   /**
-   * نقدی: buyer bills of cash lines in force.
+   * نقدی: what the buyers paid on the spot on the lines in force (the sum of `paid_paisa`).
    */
   buyer_cash: Paisa;
   /**

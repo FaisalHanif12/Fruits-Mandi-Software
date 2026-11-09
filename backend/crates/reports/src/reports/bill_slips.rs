@@ -1,11 +1,12 @@
-//! The print data of R5 "Print All": one slip for each credit buyer (PRD 19.2 R5, FR-19.10,
-//! FR-19.11, FR-19.13; E2E-36).
+//! The print data of R5 "Print All": one slip for each buyer of the filter (PRD 19.2 R5, FR-19.10,
+//! FR-19.11, FR-19.13, FR-12.44; E2E-36).
 //!
 //! The client's print of 18-10-26 (ادھاری تفصیل) has one row for each buyer; "Print All" gives each
-//! buyer his own slip, with a page break between buyers. A slip holds the buyer, his credit lines
-//! of the filter (the serial inside the slip, the line written "(item qty . rate)", its value and
-//! its value after commission and لاگا, C5) and his sums. A چکتا buyer (چکتا کھاتہ, FR-13.5)
-//! has a slip of his own. A buyer who paid cash on the spot has no slip: his lines are نقدی.
+//! buyer his own slip, with a page break between buyers. A slip holds the buyer, his sale lines
+//! of the filter (the serial inside the slip, the line written "(item qty . rate)", its value, its
+//! value after commission and لاگا, C5, what he paid on the spot and what is left on his account,
+//! PRD FR-12.44) and his sums. A چکتا buyer (چکتا کھاتہ, FR-13.5) has a slip of his own, and so has a
+//! buyer who paid in full (his left is 0; D8 question Q1).
 //!
 //! Every figure is a value stored on the line when the بکری was saved (Code Standards B20). This
 //! file only lays them out: it formats with the same [`Fmt`] as every report print and calculates
@@ -15,9 +16,9 @@
 //! header is the one of the other report prints.
 //!
 //! Example (10-10-26, English): slip 1 is "0020 Akram Toll Tax" with one row, serial 1,
-//! "(Banana 20 . 600)", 12,000 and 12,880, total Nag 20. Slip 2 is "0021 Arshad Multani",
-//! "(Banana 30 . 580)", 17,400 and 18,684. Shahid has no slip. The totals row reads 29,400 and
-//! 31,564.
+//! "(Banana 20 . 600)", 12,000, 12,880, paid 0, left 12,880, total Nag 20. Slip 2 is "0021 Arshad
+//! Multani", "(Banana 30 . 580)", 17,400, 18,684, paid 0, left 18,684. Slip 3 is Shahid, 12,000,
+//! 12,800, paid 12,800, left 0. The totals row reads 41,400, 44,364, 12,800 and 31,564.
 
 use mandi_core::auth::Language;
 use mandi_core::error::{ErrorCode, FieldError};
@@ -33,7 +34,7 @@ use super::model::{
 use super::print_data::{
     Fmt, PrintCell, PrintOptions, PrintReportColumn, PrintReportParty, PrintReportRow, filter_facts,
 };
-use super::sales::Slips;
+use super::sales::{Slips, left_of};
 use crate::error::ReportsError;
 use crate::print::{PrintFact, TextDir};
 
@@ -44,13 +45,13 @@ pub struct BuyerBillSlip {
     pub serial: String,
     /// The buyer: short code, name with tag. A چکتا buyer has his person key.
     pub party: PrintReportParty,
-    /// His lines, one cell for each column of the print: serial, detail, value, total.
+    /// His lines, one cell for each column of the print: serial, detail, value, total, paid, left.
     pub rows: Vec<PrintReportRow>,
     /// How many lines there are, as printed.
     pub row_count: String,
     /// The quantity of all his lines (نگ), as printed.
     pub qty: String,
-    /// His sums, one cell for each column: nothing, nothing, the value, the total.
+    /// His sums, one cell for each column: nothing, nothing, the value, the total, paid, left.
     pub totals: Vec<PrintCell>,
 }
 
@@ -93,6 +94,8 @@ fn columns() -> Vec<PrintReportColumn> {
         ("detail", ids::COL_DETAIL, ColumnKind::Detail),
         ("value", ids::COL_VALUE, ColumnKind::Money),
         ("buyer_total", ids::COL_BUYER_TOTAL, ColumnKind::Money),
+        ("paid", ids::COL_PAID_ON_SPOT, ColumnKind::Money),
+        ("left", ids::COL_LEFT_ON_ACCOUNT, ColumnKind::Money),
     ]
     .into_iter()
     .map(|(key, title_id, kind)| PrintReportColumn {
@@ -104,12 +107,20 @@ fn columns() -> Vec<PrintReportColumn> {
 }
 
 /// A row of sums: nothing under the serial and the detail.
-fn sums(fmt: &Fmt, value: Paisa, total: Paisa) -> Result<Vec<PrintCell>, ReportsError> {
+fn sums(
+    fmt: &Fmt,
+    value: Paisa,
+    total: Paisa,
+    paid: Paisa,
+    left: Paisa,
+) -> Result<Vec<PrintCell>, ReportsError> {
     fmt.cells(&[
         Cell::Empty,
         Cell::Empty,
         Cell::Money { paisa: value },
         Cell::Money { paisa: total },
+        Cell::Money { paisa: paid },
+        Cell::Money { paisa: left },
     ])
 }
 
@@ -123,7 +134,8 @@ pub(crate) fn build(
     filters: &ResolvedFilters,
     options: &PrintOptions,
 ) -> Result<BuyerBillsPrintData, ReportsError> {
-    let fmt = Fmt::new(options);
+    // The line of a slip is written plain, "(Apple 10 . 1200)", as in the client's print (PRD 19.2 R5).
+    let fmt = Fmt::new(options).plain_sale();
     let mut out = Vec::with_capacity(slips.slips.len());
     for (index, slip) in slips.slips.iter().enumerate() {
         let mut rows = Vec::with_capacity(slip.lines.len());
@@ -148,6 +160,10 @@ pub(crate) fn build(
                     },
                     Cell::Money { paisa: value },
                     Cell::Money { paisa: line.total },
+                    Cell::Money { paisa: line.paid },
+                    Cell::Money {
+                        paisa: left_of(line.total, line.paid)?,
+                    },
                 ])?,
                 kind: RowKind::Normal,
             });
@@ -164,7 +180,7 @@ pub(crate) fn build(
                 .count(i64::try_from(rows.len()).unwrap_or(i64::MAX)),
             rows,
             qty: fmt.style.count(slip.qty),
-            totals: sums(&fmt, slip.value, slip.total)?,
+            totals: sums(&fmt, slip.value, slip.total, slip.paid, slip.left)?,
         });
     }
     Ok(BuyerBillsPrintData {
@@ -181,7 +197,7 @@ pub(crate) fn build(
         slips: out,
         qty: fmt.style.count(slips.qty),
         totals_label_id: ids::TOTAL.to_owned(),
-        totals: sums(&fmt, slips.value, slips.total)?,
+        totals: sums(&fmt, slips.value, slips.total, slips.paid, slips.left)?,
         qty_label_id: ids::R35_TOTAL_QTY.to_owned(),
     })
 }

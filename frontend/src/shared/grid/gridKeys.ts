@@ -111,7 +111,11 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const above = rows[rowIndex - 1];
     const here = rows[rowIndex];
     if (above === undefined || here === undefined) return;
-    if (columns.find((column) => column.field === field)?.type === 'picker') {
+    // A cell that cannot be typed in on this row (the paid cell the backend closed, PRD FR-12.44) is not
+    // written to: what it shows is the backend's.
+    const target = columns.find((column) => column.field === field);
+    if (target !== undefined && !isEditable(target, here)) return;
+    if (target?.type === 'picker') {
       // A picker cell holds a record: the line above's record is chosen again.
       patchRow(here.rowId, { picked: { [field]: above.picked?.[field] ?? null } });
       return;

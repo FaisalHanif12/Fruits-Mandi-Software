@@ -203,9 +203,9 @@ pub enum ErrorCode {
     /// The account is not a buyer (a sale line goes to a buyer, the نقدی منڈی or the
     /// چکتا کھاتہ account). Field `lots[i].sales[j].buyer_account_id`.
     ErrNotABuyer,
-    /// A credit sale to a buyer who may only pay cash: the نقدی منڈی account, or a buyer whose
-    /// "ادھار کی اجازت" is off (PRD 12.4, 10.2). Field `lots[i].sales[j].payment_type`.
-    ErrCreditNotAllowed,
+    /// Money paid on the spot is more than the line's buyer total (PRD FR-12.44, v1.32). Field
+    /// `lots[i].sales[j].paid`. Values: `max` (whole rupees, the buyer total).
+    ErrPaidExceedsTotal,
     /// Warning only: a lot is not fully sold (PRD FR-12.8 check 4). Values: `left` (نگ). Field
     /// `lots[i].qty_received`.
     ErrQtyLeftUnsold,
@@ -532,7 +532,7 @@ impl ErrorCode {
         ErrorCode::ErrWeightRequired,
         ErrorCode::ErrCashBelowZeroNotConfirmed,
         ErrorCode::ErrNotABuyer,
-        ErrorCode::ErrCreditNotAllowed,
+        ErrorCode::ErrPaidExceedsTotal,
         ErrorCode::ErrQtyLeftUnsold,
         ErrorCode::ErrLotNetNegative,
         ErrorCode::ErrRateFarFromAverage,

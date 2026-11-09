@@ -1012,25 +1012,29 @@ fn r1_needs_a_bikri_and_refuses_an_unknown_one() {
 }
 
 #[test]
-fn r5_is_one_row_for_each_credit_buyer_with_his_lines_and_the_totals_of_r4() {
+fn r5_is_one_row_for_each_buyer_with_his_lines_paid_and_left_and_the_totals_of_r2() {
     let w = full_day();
     let page = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
-    // اکرم and ارشد bought on credit; شاہد paid on the spot (نقدی), so he is not here. Urdu
-    // order: ارشد before اکرم.
-    assert_eq!(page.rows.len(), 2);
+    // Every buyer of the day is a row since v1.32 (D8 question Q1), also شاہد who paid it all on the
+    // spot, with 0 left. Urdu order: ارشد, اکرم, شاہد.
+    assert_eq!(page.rows.len(), 3);
     let name = |i: usize| match &page.rows[i].cells[1] {
         Cell::Party { party } => party.name_en.clone(),
         other => panic!("not a party: {other:?}"),
     };
     assert_eq!(
-        (name(0), name(1)),
-        ("Arshad Multani".to_owned(), "Akram Toll Tax".to_owned())
+        (name(0), name(1), name(2)),
+        (
+            "Arshad Multani".to_owned(),
+            "Akram Toll Tax".to_owned(),
+            "Shahid".to_owned()
+        )
     );
     let serial = |i: usize| match &page.rows[i].cells[0] {
         Cell::Number { value } => *value,
         other => panic!("not a number: {other:?}"),
     };
-    assert_eq!((serial(0), serial(1)), (1, 2));
+    assert_eq!((serial(0), serial(1), serial(2)), (1, 2, 3));
     // اکرم: one line, 20 پیٹی کیلا at 600, value 12,000, after commission 720 and لاگا 160: 12,880.
     match &page.rows[1].cells[2] {
         Cell::Detail { parts } => {
@@ -1070,13 +1074,29 @@ fn r5_is_one_row_for_each_credit_buyer_with_his_lines_and_the_totals_of_r4() {
         (money(&page.rows[0].cells[3]), money(&page.rows[0].cells[4])),
         (17_400, 18_684)
     );
-    // The totals are those of R4 (the credit register): 29,400 and 31,564.
-    let r4 = report(&w, ReportId::R4, ReportFilters::default(), 0, 0);
-    assert_eq!(money(&page.totals[3]), money(&r4.totals[7]));
-    assert_eq!(money(&page.totals[4]), money(&r4.totals[8]));
+    // شاہد: 10 پیٹی سیب at 1,200 = 12,000, after commission and لاگا 12,800; he paid all of it.
     assert_eq!(
-        (money(&page.totals[3]), money(&page.totals[4])),
-        (29_400, 31_564)
+        (money(&page.rows[2].cells[3]), money(&page.rows[2].cells[4])),
+        (12_000, 12_800)
+    );
+    // The paid on the spot and left columns of every row: ارشد and اکرم paid nothing, شاہد paid it all.
+    let paid_left = |i: usize| (money(&page.rows[i].cells[5]), money(&page.rows[i].cells[6]));
+    assert_eq!(
+        (paid_left(0), paid_left(1), paid_left(2)),
+        ((0, 18_684), (0, 12_880), (12_800, 0))
+    );
+    // The totals are those of R2 (every line): 41,400 and 44,364; paid 12,800 and left 31,564.
+    let r2 = report(&w, ReportId::R2, ReportFilters::default(), 0, 0);
+    assert_eq!(money(&page.totals[3]), money(&r2.totals[7]));
+    assert_eq!(money(&page.totals[4]), money(&r2.totals[8]));
+    assert_eq!(
+        (
+            money(&page.totals[3]),
+            money(&page.totals[4]),
+            money(&page.totals[5]),
+            money(&page.totals[6])
+        ),
+        (41_400, 44_364, 12_800, 31_564)
     );
 }
 
@@ -1122,14 +1142,14 @@ fn r5_pages_with_the_totals_of_the_whole_filter_and_a_cancelled_bill_is_not_in_i
     let all = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
     let second = report(&w, ReportId::R5, ReportFilters::default(), 1, 1);
     assert_eq!(second.rows.len(), 1);
-    assert_eq!(second.total_count, 2);
+    assert_eq!(second.total_count, 3);
     assert_eq!(second.totals, all.totals);
     // The serial continues on the second page.
     assert!(matches!(
         &second.rows[0].cells[0],
         Cell::Number { value: 2 }
     ));
-    // Cancelling بکری 1 takes both credit buyers out.
+    // Cancelling بکری 1 takes اکرم and ارشد out; شاہد's line is in بکری 2.
     let detail = bikri::get(&w.env.ctx, first_bikri_id(&w)).unwrap();
     bikri::cancel(
         &w.env.ctx,
@@ -1143,7 +1163,7 @@ fn r5_pages_with_the_totals_of_the_whole_filter_and_a_cancelled_bill_is_not_in_i
     )
     .unwrap();
     let after = report(&w, ReportId::R5, ReportFilters::default(), 0, 0);
-    assert_eq!(after.rows.len(), 0);
+    assert_eq!(after.rows.len(), 1);
 }
 
 #[test]

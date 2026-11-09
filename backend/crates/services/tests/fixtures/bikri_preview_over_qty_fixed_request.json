@@ -45,7 +45,7 @@
             "key": "line-1",
             "laga": null,
             "note": null,
-            "payment_type": null,
+            "paid": null,
             "qty": "50",
             "rate_differs": false,
             "seller_comm": null,

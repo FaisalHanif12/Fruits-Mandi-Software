@@ -115,6 +115,9 @@ impl CellContext<'_> {
                     ("deductions", &deductions),
                 ],
             ),
+            P::PaidOnSpot { bikri_number } => self
+                .l10n
+                .text_with("report-detail-paid-on-spot", &[("number", &bikri_number)]),
             P::CashLent { reason } => self
                 .l10n
                 .text_with("report-detail-cash-lent", &[("reason", &reason)]),

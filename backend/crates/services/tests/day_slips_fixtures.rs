@@ -139,7 +139,6 @@ fn the_slip_of_a_weighed_line_fixture_is_the_real_answer() {
     lot.weight_received = Some("12.345".into());
     let mut sale = support::sale("s-1", w.akram, "2", "100");
     sale.weight = Some("12.345".into());
-    sale.payment_type = Some(mandi_services::core::bikri::PaymentType::Credit);
     lot.sales = vec![sale];
     save(&w, &support::draft(vec![lot]));
     report_files(

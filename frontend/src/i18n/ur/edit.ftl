@@ -338,7 +338,7 @@ edit-field-store-rent = { -kiraya-store }
 edit-field-adjust-advance = پیشگی سے کاٹیں
 
 # review: pending
-edit-field-payment-type = ادھاری / نقدی
+edit-field-paid = { -mauqa-par-jama }
 
 # review: pending
 edit-field-amount = رقم

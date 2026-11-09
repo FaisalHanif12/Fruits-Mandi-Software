@@ -194,7 +194,7 @@ fn prepare_sale(
         seller_rate: None,
         buyer_rate: None,
         rate_differs: input.rate_differs,
-        payment_type: input.payment_type,
+        paid: Paisa::ZERO,
         seller_comm: None,
         buyer_comm: None,
         laga: None,
@@ -244,6 +244,11 @@ fn prepare_sale(
     sale.buyer_comm = buyer_comm;
     sale.laga = laga;
     ok &= ok_a && ok_b && ok_c;
+    // Money paid on the spot (PRD FR-12.44): whole rupees, empty is 0, a sum is taken like any
+    // money field (PRD FR-7.48). A row with only this typed is still a blank row (PRD FR-7.52).
+    let paid = optional_money(issues, &sale_field(lot, index, "paid"), input.paid.as_ref());
+    ok &= paid.is_some();
+    sale.paid = paid.unwrap_or(Paisa::ZERO);
     // The quality is not used by the maths either (PRD FR-12.42). Only the three words count.
     ok &= optional_grade(
         issues,

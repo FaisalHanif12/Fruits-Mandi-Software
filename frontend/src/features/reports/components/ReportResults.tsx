@@ -39,7 +39,20 @@ interface ReportResultsProps {
   onOpen: (view: ReportRowView) => void;
   focusRowId: string | null;
   onFocusRow: (rowId: string) => void;
+  /**
+   * From which layout step a party's slip puts its goods and its lines side by side (the default:
+   * the normal step). A screen with a side menu of its own (the party ledgers, plan 66) leaves less
+   * room at the normal step than the report screen does, and asks for the wide step, so the amount
+   * column of the goods is never cut off.
+   */
+  slipBesideFrom?: 'normal' | 'wide' | undefined;
 }
+
+/** The classes that lay a slip's goods and lines side by side from a step; below it they stack. */
+const SLIP_BESIDE = {
+  normal: { row: 'normal:flex-row normal:items-start', goods: 'normal:flex-1' },
+  wide: { row: 'wide:flex-row wide:items-start', goods: 'wide:flex-1' },
+} as const;
 
 export function ReportResults({
   takes,
@@ -51,6 +64,7 @@ export function ReportResults({
   onOpen,
   focusRowId,
   onFocusRow,
+  slipBesideFrom = 'normal',
 }: ReportResultsProps) {
   const data = query.data ?? kept ?? undefined;
   const pages = data?.pages;
@@ -159,9 +173,9 @@ export function ReportResults({
       <>
         {extras ? (
           <div
-            className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${slip ? 'normal:flex-row normal:items-start' : ''}`}
+            className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto ${slip ? SLIP_BESIDE[slipBesideFrom].row : ''}`}
           >
-            <div className="min-w-0 normal:flex-1">{grid}</div>
+            <div className={`min-w-0 ${SLIP_BESIDE[slipBesideFrom].goods}`}>{grid}</div>
             {/* The short buyers' and sellers' tables of each day of the day total sheet (R34). */}
             {last.tables.length > 0 ? <DayTables tables={last.tables} /> : null}
             {/* The slip's lines sit with its goods, like the paper slip (PRD FR-19.12). */}

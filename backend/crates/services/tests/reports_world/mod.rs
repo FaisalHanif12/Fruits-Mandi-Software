@@ -92,6 +92,61 @@ pub fn save(w: &support::World, draft: &BikriDraft) -> mandi_services::core::bik
     .unwrap()
 }
 
+/// The D8 example of money paid on the spot (E2E-65, PRD FR-12.44) on the worked day's opening
+/// position: 200 آم from احسان, کرایہ 10,000 and مزدوری 1,000, sold to مانی (21,360, paid all),
+/// انس (48,100, paid 10,000, 38,100 left) and ہارون (125,060, paid nothing). ہارون held 10,000 جمع
+/// before the sale. Returns the world and the id of the بکری.
+pub fn d8_paid_world() -> (support::World, i64) {
+    use mandi_services::core::accounts::AccountType;
+    let w = worked_day();
+    let seller = support::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Seller,
+        "احسان",
+        "Ehsan",
+        true,
+        "",
+    );
+    let buyer = |ur: &str, en: &str| {
+        support::add_account(&w.env, &w.owner, AccountType::Buyer, ur, en, true, "")
+    };
+    let (mani, anas, haroon) = (
+        buyer("مانی", "Mani"),
+        buyer("انس", "Anas"),
+        buyer("ہارون", "Haroon"),
+    );
+    let mango = support::add_item(&w.env, &w.owner, "آم", "Mango", "fruit", "unit");
+    accounts::openings_save(
+        &w.env.ctx,
+        &w.owner,
+        &OpeningsInput {
+            lines: vec![OpeningLineInput {
+                account_id: haroon,
+                version: accounts::get(&w.env.ctx, haroon).unwrap().version,
+                opening_date: "10-10-2026".into(),
+                opening_dr: String::new(),
+                opening_cr: "10,000".into(),
+                opening_is_advance: false,
+            }],
+        },
+    )
+    .unwrap();
+    let mut lot = support::bare_lot(&w, "lot-1", seller, mango, "200");
+    lot.freight = Some("10,000".into());
+    lot.labour = support::manual("1,000");
+    let mut rows = vec![
+        support::sale("line-1", mani, "20", "1000"),
+        support::sale("line-2", anas, "50", "900"),
+        support::sale("line-3", haroon, "130", "900"),
+    ];
+    rows[0].paid = Some("21,360".into());
+    rows[1].paid = Some("10,000".into());
+    lot.sales = rows;
+    let saved = save(&w, &support::draft(vec![lot]));
+    (w, saved.bikri_id)
+}
+
 pub fn event2(w: &support::World) -> BikriDraft {
     let mut line = support::sale("s-1", w.chukta_khata, "10", "1200");
     line.chukta = Some(ChuktaInput {

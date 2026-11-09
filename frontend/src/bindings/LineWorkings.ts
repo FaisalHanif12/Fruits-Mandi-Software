@@ -25,4 +25,17 @@ export type LineWorkings = {
    * C21: the cost of the trip goods this line sells. A plain line has 0 and a "none" working.
    */
   cost_of_goods: Working;
+  /**
+   * موقع پر جمع (PRD FR-12.44): what the buyer paid on the spot. Message `working-paid-typed` (typed
+   * or empty: arg `result`), `working-paid-full` (a buyer who must pay in full: args `total`,
+   * `result`), `working-paid-kept` (an unchanged line of an edit keeps what it was saved with:
+   * arg `result`) or `working-paid-over` (typed above the buyer total, counted as 0: args
+   * `total`, `typed`, `result`).
+   */
+  paid: Working;
+  /**
+   * کھاتے میں باقی (PRD FR-12.44): the buyer total less what was paid. Message `working-left`
+   * (args `total`, `paid`, `result`).
+   */
+  left: Working;
 };

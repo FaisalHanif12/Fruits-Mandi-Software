@@ -1,10 +1,11 @@
-//! R5 "Print All": one slip for each credit buyer (PRD 19.2 R5, FR-19.10, FR-19.11, FR-13.5,
-//! E2E-36; plan d5-late, round 12).
+//! R5 "Print All": one slip for each buyer of the filter (PRD 19.2 R5, FR-19.10, FR-19.11, FR-13.5,
+//! FR-12.44, E2E-36; plan d5-late, round 12, plan 65).
 //!
 //! The data is made the way `golden_day.rs` makes it (the real services; `reports_world`). The
 //! expected numbers are worked by hand from the PRD and the money agent's review: every slip line
-//! is a stored line value, the slips add up to the totals of R5 and of R4, and a cash line (نقدی)
-//! is never on a slip.
+//! is a stored line value, the slips add up to the totals of R5 and of R2, and what was paid on the
+//! spot and what is left add up to the paid total of R3 and the left total of R4. Since v1.32 a
+//! buyer who paid in full is on a slip too, with 0 left (D8 question Q1).
 #![cfg(test)]
 
 mod common;
@@ -22,7 +23,7 @@ use mandi_reports::reports::{
 use mandi_services::bikri;
 use mandi_services::core::auth::Language;
 use mandi_services::core::bikri::{
-    CancelInput, EditOpenInput, EditSaveInput, LaterSaleSaveInput, PaymentType, StockListInput,
+    CancelInput, EditOpenInput, EditSaveInput, LaterSaleSaveInput, StockListInput,
 };
 use mandi_services::core::error::ErrorCode;
 
@@ -78,34 +79,60 @@ fn row(name: &str, value: &str, total: &str, qty: &str) -> (String, String, Stri
     (name.into(), value.into(), total.into(), qty.into())
 }
 
-/// The sums of the slips against R5 and R4 of the same filter (the money agent's rule: grand
-/// totals equal the R5 totals row and the R4 totals).
+/// The sums of the slips against R5, R2, R3 and R4 of the same filter (the money agent's rule: grand
+/// totals equal the R5 totals row, the value and buyer total of R2, the paid total of R3 and the left
+/// total of R4).
 fn assert_adds_up(w: &support::World, filters: &ReportFilters, data: &BuyerBillsPrintData) {
     let r5 = report(w, ReportId::R5, filters.clone(), 0, 0);
+    let r2 = report(w, ReportId::R2, filters.clone(), 0, 0);
+    let r3 = report(w, ReportId::R3, filters.clone(), 0, 0);
     let r4 = report(w, ReportId::R4, filters.clone(), 0, 0);
-    assert_eq!(text(&data.totals[2]), format_rupees(money(&r5.totals[3])));
-    assert_eq!(text(&data.totals[3]), format_rupees(money(&r5.totals[4])));
-    // The quantity of all slips is the quantity total of R4, which sums `qty` in SQL. The columns of R4
+    // The totals of the slips are the totals row of R5: value, total, paid, left.
+    for (slip_cell, r5_cell) in [(2, 3), (3, 4), (4, 5), (5, 6)] {
+        assert_eq!(
+            text(&data.totals[slip_cell]),
+            format_rupees(money(&r5.totals[r5_cell])),
+            "totals column {slip_cell}"
+        );
+    }
+    // The quantity of all slips is the quantity total of R2, which sums `qty` in SQL. The columns of R2
     // are found by their key: a register gains a `seller_rate` column (and a `grade` or `packing` one)
     // only when the filter has a line that needs it (D7, plan 59), which moves the ones after it.
-    let at = |key: &str| r4.columns.iter().position(|c| c.key == key).unwrap();
-    assert_eq!(data.qty, number(&r4.totals[at("qty")]).to_string());
-    assert_eq!(money(&r4.totals[at("value")]), money(&r5.totals[3]));
-    assert_eq!(money(&r4.totals[at("buyer_total")]), money(&r5.totals[4]));
+    let at = |page: &mandi_reports::reports::ReportPage, key: &str| {
+        page.columns.iter().position(|c| c.key == key).unwrap()
+    };
+    assert_eq!(data.qty, number(&r2.totals[at(&r2, "qty")]).to_string());
+    assert_eq!(money(&r2.totals[at(&r2, "value")]), money(&r5.totals[3]));
+    assert_eq!(
+        money(&r2.totals[at(&r2, "buyer_total")]),
+        money(&r5.totals[4])
+    );
+    // Paid on the spot adds up to R3, what is left to R4 (a part-paid line is on both).
+    assert_eq!(money(&r3.totals[at(&r3, "paid")]), money(&r5.totals[5]));
+    assert_eq!(money(&r4.totals[at(&r4, "left")]), money(&r5.totals[6]));
     assert_eq!(data.slip_count, data.slips.len().to_string());
     // One slip for each row of R5, each with the sums of that row.
     assert_eq!(i64::try_from(data.slips.len()).unwrap(), r5.total_count);
-    // A slip's rows add up to its totals: the serial inside the slip, the value, the total.
+    // A slip's rows add up to its totals: the serial inside the slip, the value, the total, paid, left.
     for slip in &data.slips {
-        let (mut value, mut total) = (0_i64, 0_i64);
+        let (mut value, mut total, mut paid, mut left) = (0_i64, 0_i64, 0_i64, 0_i64);
         for (i, r) in slip.rows.iter().enumerate() {
             assert_eq!(text(&r.cells[0]), (i + 1).to_string());
             value += parse(&text(&r.cells[2]));
             total += parse(&text(&r.cells[3]));
+            paid += parse(&text(&r.cells[4]));
+            left += parse(&text(&r.cells[5]));
+            // paid + left = the line's total.
+            assert_eq!(
+                parse(&text(&r.cells[4])) + parse(&text(&r.cells[5])),
+                parse(&text(&r.cells[3]))
+            );
         }
         assert_eq!(slip.row_count, slip.rows.len().to_string());
         assert_eq!(value, parse(&text(&slip.totals[2])), "{}", slip.party.name);
         assert_eq!(total, parse(&text(&slip.totals[3])), "{}", slip.party.name);
+        assert_eq!(paid, parse(&text(&slip.totals[4])), "{}", slip.party.name);
+        assert_eq!(left, parse(&text(&slip.totals[5])), "{}", slip.party.name);
     }
 }
 
@@ -162,30 +189,56 @@ fn parts(cell: &PrintCell) -> &Vec<PrintDetailPart> {
 // ---- The worked day (E2E-36) ------------------------------------------------------------------
 
 #[test]
-fn the_worked_day_has_a_slip_for_akram_and_one_for_arshad_and_none_for_shahid() {
+fn the_worked_day_has_a_slip_for_arshad_akram_and_shahid_with_paid_and_left() {
     let w = full_day();
     let filters = day("10-10-2026", "10-10-2026");
     let data = slips_of(&w, filters.clone());
     assert_eq!(data.report, ReportId::R5);
     assert_eq!(data.title_id, "report-r5-title");
     assert_eq!(data.language, Language::En);
-    assert_eq!(data.slip_count, "2");
-    // Urdu order of the names, as R5: ارشد before اکرم. Shahid paid cash on the spot, so he has no
-    // slip.
+    assert_eq!(data.slip_count, "3");
+    // Urdu order of the names, as R5: ارشد, اکرم, شاہد. Shahid is a چکتا buyer who paid it all on the
+    // spot (12,800): since v1.32 he has a slip too, with 0 left.
     assert_eq!(
         overview(&data),
         vec![
             row("Arshad Multani", "17,400", "18,684", "30"),
             row("Akram Toll Tax", "12,000", "12,880", "20"),
+            row("Shahid", "12,000", "12,800", "10"),
         ]
     );
     assert_eq!(data.slips[0].serial, "1");
     assert_eq!(data.slips[1].serial, "2");
+    assert_eq!(data.slips[2].serial, "3");
+    assert!(data.slips[0].party.person_key.is_none() && data.slips[1].party.person_key.is_none());
     assert!(
-        data.slips
-            .iter()
-            .all(|s| !s.party.name.contains("Shahid") && s.party.person_key.is_none())
+        data.slips[2].party.person_key.is_some(),
+        "a چکتا buyer has his person key"
     );
+    // The line of a slip is written plain, as the client's own print writes it: "(Apple 10 . 1200)",
+    // with the rate and the quantity ungrouped (PRD 19.2 R5). Only the value, which is not in that
+    // short line, is grouped.
+    let shahid = parts(&data.slips[2].rows[0].cells[1]);
+    assert_eq!(
+        sale_detail(&shahid[0]),
+        (
+            "Apple".to_owned(),
+            "10".to_owned(),
+            "1200".to_owned(),
+            "12,000".to_owned(),
+            "720".to_owned()
+        )
+    );
+    // Paid on the spot and left, in the totals of each slip: nothing paid by the two regular buyers.
+    let paid_left = |i: usize| {
+        (
+            text(&data.slips[i].totals[4]),
+            text(&data.slips[i].totals[5]),
+        )
+    };
+    assert_eq!(paid_left(0), ("0".to_owned(), "18,684".to_owned()));
+    assert_eq!(paid_left(1), ("0".to_owned(), "12,880".to_owned()));
+    assert_eq!(paid_left(2), ("12,800".to_owned(), "0".to_owned()));
     // Akram's slip: the one line, serial 1, "(Banana 20 . 600)", 12,000 and 12,880.
     let akram = &data.slips[1];
     assert_eq!(akram.party.code, "0020");
@@ -206,16 +259,31 @@ fn the_worked_day_has_a_slip_for_akram_and_one_for_arshad_and_none_for_shahid() 
     );
     assert_eq!(text(&akram.rows[0].cells[2]), "12,000");
     assert_eq!(text(&akram.rows[0].cells[3]), "12,880");
-    // The sums of all slips: 50 نگ, 29,400 and 31,564, the totals of R5 and of R4.
-    assert_eq!(data.qty, "50");
+    // The sums of all slips: 60 نگ, 41,400 and 44,364 (the totals of R5 and of R2), 12,800 paid on the
+    // spot and 31,564 left.
+    assert_eq!(data.qty, "60");
     assert_eq!(
-        (text(&data.totals[2]), text(&data.totals[3])),
-        ("29,400".into(), "31,564".into())
+        (
+            text(&data.totals[2]),
+            text(&data.totals[3]),
+            text(&data.totals[4]),
+            text(&data.totals[5])
+        ),
+        (
+            "41,400".into(),
+            "44,364".into(),
+            "12,800".into(),
+            "31,564".into()
+        )
     );
     assert_adds_up(&w, &filters, &data);
-    // The columns are the R5 columns without the buyer: serial, detail, value, total after لاگا.
+    // The columns are the R5 columns without the buyer: serial, detail, value, total after لاگا, paid
+    // on the spot and left.
     let keys: Vec<&str> = data.columns.iter().map(|c| c.key.as_str()).collect();
-    assert_eq!(keys, ["serial", "detail", "value", "buyer_total"]);
+    assert_eq!(
+        keys,
+        ["serial", "detail", "value", "buyer_total", "paid", "left"]
+    );
     // The header: the dates of the filter, in the print language.
     let labels: Vec<(&str, &str)> = data
         .filters
@@ -244,7 +312,7 @@ fn the_urdu_print_has_urdu_names_and_the_right_to_left_direction() {
             .iter()
             .map(|s| s.party.name.as_str())
             .collect::<Vec<_>>(),
-        ["ارشد ملتانی", "اکرم ٹول ٹیکس"]
+        ["ارشد ملتانی", "اکرم ٹول ٹیکس", "شاہد"]
     );
     let json = serde_json::to_value(&data).unwrap();
     assert_eq!(json["dir"], "rtl");
@@ -314,14 +382,14 @@ fn only_r5_has_slips_and_the_input_is_checked_like_a_report() {
 // ---- Cash and credit on the same day ----------------------------------------------------------
 
 #[test]
-fn a_cash_line_of_a_credit_buyer_is_not_on_his_slip_and_not_in_his_totals() {
-    // Akram buys 20 at 600 on credit (12,000 + 720 + 160 = 12,880) and 5 at 600 for cash
-    // (3,000 + 180 + 40 = 3,220) in the same lot.
+fn a_cash_line_of_a_credit_buyer_is_on_his_slip_with_what_he_paid_and_what_is_left() {
+    // Akram buys 20 at 600 on credit (12,000 + 720 + 160 = 12,880) and 5 at 600 and pays all of it
+    // on the spot (3,000 + 180 + 40 = 3,220), in the same lot. Since v1.32 both lines are on his
+    // slip (PRD FR-12.44, D8 question Q1): paid 3,220, left 12,880.
     let w = worked_day();
     let mut cash = support::sale("s-2", w.akram, "5", "600");
-    cash.payment_type = Some(PaymentType::Cash);
-    let mut credit = support::sale("s-1", w.akram, "20", "600");
-    credit.payment_type = Some(PaymentType::Credit);
+    cash.paid = Some("3,220".into());
+    let credit = support::sale("s-1", w.akram, "20", "600");
     let lot = support::with_sales(
         support::bare_lot(&w, "lot-1", w.rahim, w.banana, "25"),
         vec![credit, cash],
@@ -331,13 +399,31 @@ fn a_cash_line_of_a_credit_buyer_is_not_on_his_slip_and_not_in_his_totals() {
     let data = slips_of(&w, filters.clone());
     assert_eq!(
         overview(&data),
-        vec![row("Akram Toll Tax", "12,000", "12,880", "20")]
+        vec![row("Akram Toll Tax", "15,000", "16,100", "25")]
     );
-    assert_eq!(data.slips[0].rows.len(), 1);
+    assert_eq!(data.slips[0].rows.len(), 2);
+    // The columns after the total: paid on the spot and left on the account, line by line.
+    let paid_left =
+        |r: &mandi_reports::reports::PrintReportRow| (text(&r.cells[4]), text(&r.cells[5]));
+    assert_eq!(
+        paid_left(&data.slips[0].rows[0]),
+        ("0".into(), "12,880".into())
+    );
+    assert_eq!(
+        paid_left(&data.slips[0].rows[1]),
+        ("3,220".into(), "0".into())
+    );
+    assert_eq!(
+        (
+            text(&data.slips[0].totals[4]),
+            text(&data.slips[0].totals[5])
+        ),
+        ("3,220".into(), "12,880".into())
+    );
     assert_adds_up(&w, &filters, &data);
-    // The cash line is in R3 only.
+    // The money paid on the spot is on R3 (paid 3,220) and what is left on R4 (left 12,880).
     let r3 = report(&w, ReportId::R3, filters, 0, 0);
-    assert_eq!(money(&r3.totals[8]), 3_220);
+    assert_eq!(money(&r3.totals[r3.totals.len() - 2]), 3_220);
 }
 
 // ---- Edit and cancel --------------------------------------------------------------------------
@@ -412,7 +498,7 @@ fn an_edit_shows_the_new_rate_once_and_leaves_an_unchanged_line_exactly_once_e2e
 }
 
 #[test]
-fn a_cancelled_bikri_has_no_slips() {
+fn a_cancelled_bikri_has_no_slips_and_a_standing_one_keeps_its_own() {
     let w = full_day();
     let id: i64 = w
         .env
@@ -436,12 +522,16 @@ fn a_cancelled_bikri_has_no_slips() {
         },
     )
     .unwrap();
-    // بکری 2's line is cash, so it never was on a slip: nothing is left.
+    // بکری 1 is cancelled, so اکرم and ارشد have no slip. شاہد's line is in بکری 2, which stands: he
+    // paid it all on the spot, and his slip says so.
     let data = slips_of(&w, ReportFilters::default());
-    assert!(data.slips.is_empty());
+    assert_eq!(
+        overview(&data),
+        vec![row("Shahid", "12,000", "12,800", "10")]
+    );
     assert_eq!(
         (text(&data.totals[2]), text(&data.totals[3])),
-        ("0".into(), "0".into())
+        ("12,000".into(), "12,800".into())
     );
     assert_adds_up(&w, &ReportFilters::default(), &data);
 }
@@ -530,11 +620,7 @@ fn more_buyers_than_one_chunk_each_have_their_slip_with_every_line_once() {
         lot.sales = ids
             .iter()
             .enumerate()
-            .map(|(i, b)| {
-                let mut s = support::sale(&format!("s-{part}-{i}"), *b, "1", "100");
-                s.payment_type = Some(PaymentType::Credit);
-                s
-            })
+            .map(|(i, b)| support::sale(&format!("s-{part}-{i}"), *b, "1", "100"))
             .collect();
         save(&w, &support::draft(vec![lot]));
     }
@@ -572,7 +658,6 @@ fn a_weight_line_prints_the_stored_value_not_qty_times_rate() {
     lot.weight_received = Some("12.345".into());
     let mut s = support::sale("s-1", w.akram, "2", "100");
     s.weight = Some("12.345".into());
-    s.payment_type = Some(PaymentType::Credit);
     lot.sales = vec![s];
     save(&w, &support::draft(vec![lot]));
     let filters = ReportFilters::default();
@@ -616,7 +701,6 @@ fn a_line_with_a_different_buyer_rate_prints_the_buyer_rate_and_buyer_value() {
     let mut s = support::sale("s-1", w.akram, "20", "600");
     s.rate_differs = true;
     s.buyer_rate = Some("610".into());
-    s.payment_type = Some(PaymentType::Credit);
     lot.sales = vec![s];
     save(&w, &support::draft(vec![lot]));
     let filters = ReportFilters::default();

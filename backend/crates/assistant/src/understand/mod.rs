@@ -37,6 +37,7 @@ use mandi_services::core::dates::BusinessDate;
 mod change;
 mod compose_change;
 mod compose_common;
+mod compose_future;
 mod compose_help;
 mod compose_missing;
 mod compose_outside;
@@ -55,6 +56,7 @@ mod who;
 
 pub use compose_change::compose_change;
 pub use compose_common::Composed;
+pub use compose_future::{FUTURE_MESSAGE, compose_future};
 pub use compose_help::{compose_help, compose_navigate};
 pub use compose_missing::compose_missing;
 pub use compose_outside::{compose_outside, outside_message};
@@ -853,6 +855,16 @@ pub struct Understanding {
     /// True when the dues asked are the total dues ("kul ugrahi", "total dues": the tile کل اگراہی,
     /// buyers' dues plus sellers' dues plus the dead amount), not the buyers' dues alone.
     pub total_dues: bool,
+    /// True when the question asks about the walk-in buyers together ("aaj chukta gahakon ne kitne ka
+    /// maal liya") and names no party or item: their totals are view A with the buyer filter `chukta`
+    /// (the account چکتا کھاتہ, no person). The app reads it ahead for the model; it gives no instant
+    /// line from it (D8 H3).
+    pub chukta_group: bool,
+    /// True when the question names ONE month that lies after the months an estimate can reach (the
+    /// estimator goes at most [`crate::limits::MAX_MONTHS_AHEAD`] months ahead, the current month
+    /// counted as the first): "december 2027 ka commission" in October 2026. The books hold nothing for
+    /// such a month and no estimate is possible, so the app answers by itself with no figure (D8 H9).
+    pub beyond_estimate: bool,
     /// True when the app understood the whole question. The caller routes by intent.
     pub sure: bool,
     /// Why the app is not fully sure, or what it noted.

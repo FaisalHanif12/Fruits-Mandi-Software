@@ -2575,7 +2575,7 @@ fn the_bikri_commands_work_through_the_ipc() {
 
     let sale = |key: &str, buyer: i64, qty: &str, rate: &str| {
         json!({ "key": key, "buyer_account_id": buyer, "chukta": null, "qty": qty, "weight": null,
-            "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "payment_type": null,
+            "seller_rate": rate, "rate_differs": false, "buyer_rate": null, "paid": null,
             "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
     };
     let event1 = json!({ "input": { "draft": {

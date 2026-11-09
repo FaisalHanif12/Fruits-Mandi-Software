@@ -66,6 +66,50 @@ pub(super) fn buyer_total(value: Paisa, comm: Paisa, laga: Paisa, result: Paisa)
     )
 }
 
+/// موقع پر جمع typed by hand (or empty, which is 0), PRD FR-12.44.
+pub(super) fn paid_typed(result: Paisa) -> Working {
+    working("working-paid-typed", vec![money("result", result)])
+}
+
+/// موقع پر جمع of a buyer who must pay in full (PRD FR-12.44): the whole buyer total.
+pub(super) fn paid_full(total: Paisa, result: Paisa) -> Working {
+    working(
+        "working-paid-full",
+        vec![money("total", total), money("result", result)],
+    )
+}
+
+/// موقع پر جمع of an unchanged line of an edit, kept as it was saved (PRD FR-12.44, plan 65 point
+/// 10a): nothing was typed, and a buyer who must pay in full keeps what his line was saved with.
+pub(super) fn paid_kept(result: Paisa) -> Working {
+    working("working-paid-kept", vec![money("result", result)])
+}
+
+/// موقع پر جمع typed above the buyer total: refused, and counted as 0 so no cash is posted
+/// (PRD FR-12.44, `ERR_PAID_EXCEEDS_TOTAL`).
+pub(super) fn paid_over(total: Paisa, typed: Paisa, result: Paisa) -> Working {
+    working(
+        "working-paid-over",
+        vec![
+            money("total", total),
+            money("typed", typed),
+            money("result", result),
+        ],
+    )
+}
+
+/// کھاتے میں باقی (PRD FR-12.44): the buyer total less what was paid on the spot.
+pub(super) fn left(total: Paisa, paid: Paisa, result: Paisa) -> Working {
+    working(
+        "working-left",
+        vec![
+            money("total", total),
+            money("paid", paid),
+            money("result", result),
+        ],
+    )
+}
+
 /// C19.
 pub(super) fn rate_diff(buyer_value: Paisa, seller_amount: Paisa, result: Paisa) -> Working {
     working(

@@ -1565,7 +1565,7 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
     // open 10,160, and "پورا بقایا" gives 10,160. رحیم has his posting of بکری 1 beside it
     // (PRD FR-7.59, money agent 8.2a).
     use bikri_support::*;
-    use mandi_services::core::bikri::{ChuktaInput, PaymentType};
+    use mandi_services::core::bikri::ChuktaInput;
     use mandi_services::core::vouchers::{LineSource, OpenPayablesInput, PaymentInput};
     let w = world();
     mandi_services::bikri::save(
@@ -1583,7 +1583,6 @@ fn e2e_27_after_event_2_the_payables_of_karim_are_his_net_of_bikri_2() {
         name_en: "Shahid".into(),
         phone: "0300-0000000".into(),
     });
-    line.payment_type = Some(PaymentType::Cash);
     let mut lot2 = lot(&w, "lot-2", w.karim, w.apple, "10");
     lot2.freight = Some("1,000".into());
     lot2.cash_paid = None;

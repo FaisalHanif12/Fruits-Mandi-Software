@@ -175,7 +175,8 @@ function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
   put(typed, SALE.rate, sale.seller_rate);
   if (sale.rate_differs) typed[SALE.differs] = ON;
   put(typed, SALE.buyerRate, sale.buyer_rate);
-  put(typed, SALE.payment, sale.payment_type);
+  // What was paid on the spot, as text. Nothing for a line paid 0 (PRD FR-12.44, plan 65 point 5).
+  put(typed, SALE.paid, sale.paid);
   put(typed, SALE.grade, sale.grade);
   put(typed, SALE.note, sale.note);
   const charges: [string, string, SaleInput['seller_comm']][] = [

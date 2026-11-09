@@ -1,7 +1,7 @@
 //! A typed draft after it has been read into numbers (Code Standards 4.1 layer 2).
 
 use super::grade::SaleGrade;
-use super::input::{FreightPaidBy, LotChargeMethod, PaymentType};
+use super::input::{FreightPaidBy, LotChargeMethod};
 use crate::dates::BusinessDate;
 use crate::error::FieldError;
 use crate::money::{Grams, Paisa, Qty};
@@ -88,8 +88,9 @@ pub struct PreparedSale {
     pub buyer_rate: Option<Paisa>,
     /// True if the buyer rate differs.
     pub rate_differs: bool,
-    /// How the buyer pays, if chosen.
-    pub payment_type: Option<PaymentType>,
+    /// Money paid on the spot as typed (PRD FR-12.44). Empty is 0. A buyer who must pay in full
+    /// ignores it (the domain sets paid to the buyer total).
+    pub paid: Paisa,
     /// A seller commission typed on the line.
     pub seller_comm: Option<ChargeValue>,
     /// A buyer commission typed on the line.

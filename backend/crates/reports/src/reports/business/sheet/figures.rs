@@ -8,7 +8,7 @@
 //! A buyer's day, from the stored sale lines and the journal by kind of posting:
 //!
 //! * today's total = Σ (value + commission + لاگا) of his active sale lines (C5), each line checked;
-//! * paid today = the cash part of his نقدی lines + his receipts;
+//! * paid today = the money he paid on the spot on his lines (PRD FR-12.44) + his receipts;
 //! * other entries = what the journal holds on him that day besides the sale and its cash part and
 //!   the receipts (cash lent, a جنرل line, an opening), debits less credits;
 //! * today's left = today's total + other − paid; new balance = previous + today's left.
@@ -22,7 +22,7 @@
 //! * other entries as for a buyer; today's left = sale + other + paid (a payment is a debit).
 //!
 //! Before anything is returned, the sale lines are matched to the journal (the debits of the
-//! بکری postings on a buyer must be his total, the cash part his نقدی lines; on a seller the
+//! بکری postings on a buyer must be his total, the cash part what he paid on the spot; on a seller the
 //! بکری postings must give `net sale − نقد`), the other entries must not be negative on either
 //! side, and the new balance must be the ledger balance at the end of the day. A mismatch is an
 //! error, never a printed wrong slip (plan 42, agent rule 3).
@@ -343,9 +343,14 @@ fn buyer_day(
         add(&mut commission, line.commission)?;
         add(&mut laga, line.laga)?;
         add(&mut total, line.total)?;
-        if line.cash {
-            add(&mut on_spot, line.total)?;
+        // PRD FR-12.44: what was paid on the spot is stored with the line and is never more than
+        // the line's total. The guard below proves the sum against the journal.
+        if line.paid > line.total {
+            return Err(data_error(
+                "a sale line was paid on the spot more than its total",
+            ));
         }
+        add(&mut on_spot, line.paid)?;
         qty = count_add(qty, line.qty)?;
     }
     // The sale lines must be what the بکری postings put on the buyer.
@@ -514,13 +519,19 @@ mod tests {
         }
     }
 
-    /// (value, commission, laga, cash) of a buyer's line, in whole rupees.
-    type Line = (i64, i64, i64, bool);
+    /// (value, commission, laga, paid quarters) of a buyer's line, in whole rupees. The line was
+    /// paid `quarters / 4` of its total on the spot (0 to 4), so the paid amount is never above it.
+    type Line = (i64, i64, i64, i64);
+
+    /// What a line was paid on the spot, in whole rupees: its total times quarters over 4, rounded down.
+    fn paid_of(line: &Line) -> i64 {
+        (line.0 + line.1 + line.2) * line.3 / 4
+    }
 
     fn buyer_lines_of(lines: &[Line]) -> Vec<BuyerLine> {
         lines
             .iter()
-            .map(|&(value, commission, laga, cash)| BuyerLine {
+            .map(|&(value, commission, laga, quarters)| BuyerLine {
                 day: "2026-10-10".to_owned(),
                 account_id: 1,
                 person: String::new(),
@@ -534,7 +545,7 @@ mod tests {
                 commission: rupees(commission),
                 laga: rupees(laga),
                 total: rupees(value + commission + laga),
-                cash,
+                paid: rupees((value + commission + laga) * quarters / 4),
             })
             .collect()
     }
@@ -548,7 +559,7 @@ mod tests {
         #[test]
         fn a_buyers_day_that_the_books_explain_adds_up(
             lines in proptest::collection::vec(
-                (1_i64..=1_000_000, 0_i64..=60_000, 0_i64..=20_000, any::<bool>()), 0..12),
+                (1_i64..=1_000_000, 0_i64..=60_000, 0_i64..=20_000, 0_i64..=4), 0..12),
             receipts in 0_i64..=2_000_000,
             other_dr in 0_i64..=500_000,
             other_cr in 0_i64..=500_000,
@@ -556,7 +567,7 @@ mod tests {
         ) {
             let built = buyer_lines_of(&lines);
             let total: i64 = lines.iter().map(|l| l.0 + l.1 + l.2).sum();
-            let on_spot: i64 = lines.iter().filter(|l| l.3).map(|l| l.0 + l.1 + l.2).sum();
+            let on_spot: i64 = lines.iter().map(paid_of).sum();
             let dr = total + other_dr;
             let cr = on_spot + receipts + other_cr;
             let mut today = row(rupees(dr), rupees(cr));
@@ -662,7 +673,7 @@ mod tests {
 
     #[test]
     fn a_line_whose_total_is_not_its_parts_is_refused() {
-        let mut lines = buyer_lines_of(&[(12_000, 720, 160, false)]);
+        let mut lines = buyer_lines_of(&[(12_000, 720, 160, 0)]);
         lines[0].total = rupees(12_000);
         let mut today = row(rupees(12_000), Paisa::ZERO);
         today.bikri_dr = rupees(12_000);

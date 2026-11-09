@@ -641,6 +641,7 @@ All keys are shortcuts; every action also has a button. The app turns off the bu
 | `F3` | Any entry screen | Find |
 | `F4` | In a picker | Add a new account without leaving the screen |
 | `F9` | Any screen | Print |
+| `Shift+F9` | The sale book | Print ادھاری تفصیل (R5), the second print button (FR-12.12) |
 | `F10` or `Ctrl+S` | Entry screens | Save |
 | `Ctrl+Enter` | Entry screens | Save, print the ticked documents and start a new one (FR-7.57) |
 | `Ctrl+Delete` | In a grid, before save | Remove the current row |

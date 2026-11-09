@@ -3863,8 +3863,8 @@ fn d7_facts(o: &mut Oracle, y: &Year) {
                 c.query_row(
                     "SELECT COUNT(*), COALESCE(SUM(buyer_value_paisa),0), COALESCE(SUM(buyer_comm_paisa),0), \
                      COALESCE(SUM(laga_paisa),0), COALESCE(SUM(buyer_total_paisa),0), \
-                     COALESCE(SUM(CASE WHEN payment_type = 'cash' THEN buyer_total_paisa ELSE 0 END),0), \
-                     COALESCE(SUM(CASE WHEN payment_type = 'credit' THEN buyer_total_paisa ELSE 0 END),0) \
+                     COALESCE(SUM(paid_paisa),0), \
+                     COALESCE(SUM(buyer_total_paisa - paid_paisa),0) \
                      FROM bikri_sales WHERE is_active = 1 AND buyer_account_id = ?1 AND entry_date = ?2",
                     params![id, date_text],
                     |r| {
@@ -3974,7 +3974,8 @@ fn d7_facts(o: &mut Oracle, y: &Year) {
         let filter = "s.is_active = 1 AND s.entry_date >= ?1 AND s.entry_date <= ?2 \
                       AND (?3 IS NULL OR s.buyer_account_id = ?3) AND (?4 IS NULL OR l.seller_account_id = ?4) \
                       AND (?5 IS NULL OR l.item_id = ?5) AND (?6 IS NULL OR i.item_group = ?6) \
-                      AND (?7 IS NULL OR s.payment_type = ?7) AND (?8 IS NULL OR s.grade = ?8)";
+                      AND (?7 IS NULL OR (?7 = 'cash' AND s.paid_paisa > 0) \
+                           OR (?7 = 'credit' AND s.paid_paisa < s.buyer_total_paisa)) AND (?8 IS NULL OR s.grade = ?8)";
         let sql = format!(
             "SELECT COUNT(*), COALESCE(SUM(s.qty),0), COALESCE(SUM(s.buyer_value_paisa),0), \
              COALESCE(SUM(s.seller_amount_paisa),0), COALESCE(SUM(s.seller_comm_paisa),0), \

@@ -29,6 +29,10 @@ pub(super) const BUYER_PAYS: &str = "print-buyer-pays";
 pub(super) const IN_WORDS: &str = "print-in-words";
 pub(super) const PAYMENT_CASH: &str = "print-payment-cash";
 pub(super) const PAYMENT_CREDIT: &str = "print-payment-credit";
+/// موقع پر جمع and کھاتے میں باقی on a slip of a buyer who paid part of his bill on the spot (PRD
+/// FR-12.44).
+pub(super) const PAID_ON_SPOT: &str = "print-paid-on-spot";
+pub(super) const LEFT_ON_ACCOUNT: &str = "print-left-on-account";
 
 // The slip of a voucher (plan 15, PRD FR-15.2).
 pub(super) const TITLE_RECEIPT_SLIP: &str = "print-receipt-slip-title";

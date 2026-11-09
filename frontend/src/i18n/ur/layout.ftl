@@ -41,6 +41,8 @@ layout-module-advance = { -peshgi-khata }
 # review: pending
 layout-module-today = آج کی { -bikri }
 # review: pending
+layout-module-party-ledgers = { party-ledgers-title }
+# review: pending
 layout-module-stock = { -baqi-maal }
 
 ## Top bar (PRD FR-5.6).

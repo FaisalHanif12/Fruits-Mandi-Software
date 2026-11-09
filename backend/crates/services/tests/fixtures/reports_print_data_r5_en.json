@@ -39,6 +39,16 @@
       "key": "buyer_total",
       "title_id": "report-col-buyer-total",
       "kind": "money"
+    },
+    {
+      "key": "paid",
+      "title_id": "report-col-paid-on-spot",
+      "kind": "money"
+    },
+    {
+      "key": "left",
+      "title_id": "report-col-left-on-account",
+      "kind": "money"
     }
   ],
   "summary": [],
@@ -78,6 +88,14 @@
         {
           "type": "money",
           "text": "17,400"
+        },
+        {
+          "type": "money",
+          "text": "18,684"
+        },
+        {
+          "type": "money",
+          "text": "0"
         },
         {
           "type": "money",
@@ -125,13 +143,73 @@
         {
           "type": "money",
           "text": "12,880"
+        },
+        {
+          "type": "money",
+          "text": "0"
+        },
+        {
+          "type": "money",
+          "text": "12,880"
+        }
+      ],
+      "kind": "normal"
+    },
+    {
+      "cells": [
+        {
+          "type": "number",
+          "text": "3"
+        },
+        {
+          "type": "party",
+          "party": {
+            "short_code": null,
+            "code": "0030",
+            "name": "Shahid",
+            "tag": null,
+            "person_key": "شاہد|03000000000",
+            "phone": "0300-0000000"
+          }
+        },
+        {
+          "type": "detail",
+          "parts": [
+            {
+              "kind": "sale",
+              "bikri_number": "2",
+              "item": "Apple",
+              "packing": "Box",
+              "qty": "10",
+              "rate": "1200",
+              "value": "12,000",
+              "commission": "720",
+              "laga": "80"
+            }
+          ]
+        },
+        {
+          "type": "money",
+          "text": "12,000"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "12,800"
+        },
+        {
+          "type": "money",
+          "text": "0"
         }
       ],
       "kind": "normal"
     }
   ],
   "tables": [],
-  "row_count": "2",
+  "row_count": "3",
   "totals_label_id": "report-total",
   "totals": [
     {
@@ -145,7 +223,15 @@
     },
     {
       "type": "money",
-      "text": "29,400"
+      "text": "41,400"
+    },
+    {
+      "type": "money",
+      "text": "44,364"
+    },
+    {
+      "type": "money",
+      "text": "12,800"
     },
     {
       "type": "money",

@@ -40,6 +40,8 @@ export function ReportBikriBox({
     seller_id: null,
     date: null,
     item_id: null,
+    buyer_account_id: null,
+    buyer_text: null,
   };
   const hits = useBikriFind(find, typed.trim() !== '').data ?? [];
   const rows = typed.trim() === '' ? [] : hits;

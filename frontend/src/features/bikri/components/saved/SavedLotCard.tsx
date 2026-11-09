@@ -65,15 +65,15 @@ function lineColumns(
       size: 'money',
       cell: (sale) => <Num paisa={sale.seller_rate} />,
     },
-    {
-      id: 'amount',
-      header: say('bikri-col-seller-amount'),
-      kind: 'number',
-      size: 'money',
-      cell: (sale) => <Num paisa={sale.seller_amount} />,
-    },
     ...(isFromStep(step, 'normal')
       ? ([
+          {
+            id: 'amount',
+            header: say('bikri-col-seller-amount'),
+            kind: 'number',
+            size: 'money',
+            cell: (sale) => <Num paisa={sale.seller_amount} />,
+          },
           {
             id: 'seller-comm',
             header: say('bikri-col-seller-comm'),
@@ -119,13 +119,21 @@ function lineColumns(
           },
         ] satisfies readonly TableColumn<SavedSale>[])
       : []),
+    // The money the buyer paid on the spot and what stayed on his account, as stored with the line
+    // (PRD FR-12.44). Both are the backend's numbers; nothing is worked out here.
     {
-      id: 'payment',
-      header: say('bikri-col-payment'),
-      // A short choice (credit or cash): a small column, centred with its heading (plan 39 R3).
-      kind: 'centre',
-      size: 'status',
-      cell: (sale) => say(sale.payment_type === 'cash' ? 'glossary-naqdi' : 'glossary-udhari'),
+      id: 'paid',
+      header: say('bikri-col-paid-on-spot'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.paid_paisa} />,
+    },
+    {
+      id: 'left',
+      header: say('bikri-line-left'),
+      kind: 'number',
+      size: 'money',
+      cell: (sale) => <Num paisa={sale.left_paisa} />,
     },
   ];
 }

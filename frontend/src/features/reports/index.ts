@@ -38,6 +38,8 @@ export { emptyNameMessageId, messageText, percentText } from './cells';
 // The print of a report with the filters an answer read it with (plan 49).
 export { reportsPrintReport } from './api';
 export { ReportPartnerSelect } from './components/ReportPartnerSelect';
+// Plan 68: the print of ادھاری تفصیل (R5), opened from the sale book's second print button.
+export { BuyerBillsPreview } from './components/BuyerBillsPreview';
 export { PrintPreviewFrame } from './components/PrintPreviewFrame';
 export { usePrintJob } from './components/usePrintJob';
 export { LANGUAGE_VALUES, isReportAddress, paperOf, readJsonObject, sortOf } from './print/params';
@@ -54,3 +56,7 @@ export {
   type RowLike,
   type SignMode,
 } from './columns';
+
+// ---- Plan 66 (party ledgers): level 3 is the R35 slip of one party and one date, with its print. ----
+export { PartyDayPreview, PartyDaySlip } from './components/PartyDaySlip';
+export { partyDayFilters } from './party-day';

@@ -116,8 +116,12 @@ function leastWidth(column: ReportColumn, index: number): number {
  * room of a step minus the columns that always show is shared out in the order above, so any mix of
  * the optional columns fits: nothing is hard-coded for one mix.
  */
-function registerSteps(columns: readonly ReportColumn[]): Record<string, StepRange> {
-  const waiting = REGISTER_WAITING.flatMap((key) => {
+function registerSteps(id: ReportId, columns: readonly ReportColumn[]): Record<string, StepRange> {
+  // R3 and R4 end with the money paid on the spot and what is left on the account (PRD FR-12.44). The
+  // column a report is about comes first in the room of a step, ahead of the optional columns, so the
+  // compact step shows the paid column of R3 and the left column of R4; the other comes with the room.
+  const lead = id === 'R3' ? ['paid', 'left'] : id === 'R4' ? ['left', 'paid'] : [];
+  const waiting = [...lead, ...REGISTER_WAITING].flatMap((key) => {
     const index = columns.findIndex((column) => column.key === key);
     const column = columns[index];
     return column === undefined ? [] : [{ key, width: leastWidth(column, index) }];
@@ -149,7 +153,7 @@ function stepsOf(
   id: ReportId,
   columns: readonly ReportColumn[],
 ): Readonly<Record<string, StepRange>> | undefined {
-  if (id === 'R2' || id === 'R3' || id === 'R4') return registerSteps(columns);
+  if (id === 'R2' || id === 'R3' || id === 'R4') return registerSteps(id, columns);
   // A party's day slip (R35) has its table beside the summary box at the normal step. Its quality
   // column (a column only when a line of the slip has one) takes the room of the packing word, which
   // the item line already carries; the print still has the packing.
@@ -199,6 +203,10 @@ const COLUMN_STEPS: Partial<Record<ReportId, Readonly<Record<string, StepRange>>
     phone_charge: { from: 'wide' },
   },
   R7: { avg_rate: { from: 'normal' } },
+  // The buyers' list (R5): the number, the buyer, the goods, the buyer's total, what was paid on the spot
+  // and what is left always; the value of the goods before commission and لاگا comes at the normal step
+  // (PRD FR-12.44). The print holds every column.
+  R5: { value: { from: 'normal' } },
   R20: {
     age_0_7: { from: 'normal' },
     age_8_30: { from: 'normal' },

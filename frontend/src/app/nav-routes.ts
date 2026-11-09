@@ -26,6 +26,7 @@ export const MODULE_ROUTES = {
   payment: '/bikri/payment',
   advance: '/bikri/advance',
   today: '/bikri/today',
+  'party-ledgers': '/bikri/party-ledgers',
   stock: '/bikri/stock',
 } as const satisfies Record<ModuleMenuId, string>;
 

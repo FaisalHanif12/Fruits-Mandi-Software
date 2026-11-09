@@ -278,6 +278,10 @@ report-detail-lot = { -bikri } { $number }: { $item } { $qty } { $packing }, { -
 # review: pending
 report-detail-cash-lent = { -naqd-udhar }: { $reason }
 
+# The mark on the credit line of money a buyer paid on the spot (PRD FR-12.44, FR-19.8).
+# review: pending
+report-detail-paid-on-spot = { -bikri } { $number }: { -mauqa-par-jama }
+
 # review: pending
 report-doc-number = { $kind } { $number }
 
@@ -409,13 +413,13 @@ report-r2-help = Every sale of the days you choose, one row for each { -gahak } 
 report-r3-title = { -naqdi } Sales
 
 # review: pending
-report-r3-help = Only the { -naqdi } sales of the days you choose.
+report-r3-help = The lines of the days you choose that had money { -mauqa-par-jama }, with what was { -khate-mein-baqi }.
 
 # review: pending
 report-r4-title = { -udhari } Sales
 
 # review: pending
-report-r4-help = Only the { -udhari } sales of the days you choose.
+report-r4-help = The lines of the days you choose that have something { -khate-mein-baqi }, with what was { -mauqa-par-jama }.
 
 # review: pending
 report-r6-title = { -bikri } Details
@@ -514,6 +518,13 @@ report-col-value = Value
 
 # review: pending
 report-col-buyer-total = Buyer total
+
+# The last two columns of R3, R4 and R5 (PRD FR-12.44, FR-19.2).
+# review: pending
+report-col-paid-on-spot = { -mauqa-par-jama }
+
+# review: pending
+report-col-left-on-account = { -khate-mein-baqi }
 
 # review: pending
 report-col-gross = { -kham-bikri }
@@ -1228,7 +1239,7 @@ report-r1-help = The lots of one { -bikri }: what came, what was sold, the charg
 report-r5-title = { -udhari } Details
 
 # review: pending
-report-r5-help = Each { -udhari } buyer with his goods, what they come to and what he owes with the { -commission } and { -laga }.
+report-r5-help = Every buyer of the day with his goods, what they come to with the { -commission } and { -laga }, what was { -mauqa-par-jama } and what is { -khate-mein-baqi }.
 
 # review: pending
 report-col-serial = No.

@@ -1,11 +1,11 @@
 //! One lot (PRD 12.3, 12.5, money agent 6.2 and 6.3): its charges, and the totals of C6 to C9
 //! for a lot or for the whole بکری.
 
+use mandi_core::bikri::LineCalc;
 use mandi_core::bikri::{
     ChargeSource, LotCharge, LotChargeMethod, RuleLabel, SummaryTotals, SummaryWorkings,
     TypedLotCharge,
 };
-use mandi_core::bikri::{LineCalc, PaymentType};
 use mandi_core::money::{MoneyError, Paisa, Qty};
 use mandi_core::rules::{ChargeSide, ChargeType, ChargeValue, RuleLevel, Working};
 
@@ -322,14 +322,9 @@ impl Acc {
         self.buyer_comm = self.buyer_comm.checked_add(line.buyer_comm.amount)?;
         self.laga = self.laga.checked_add(line.laga.amount)?;
         self.rate_diff = self.rate_diff.checked_add(line.rate_diff)?;
-        match line.payment_type {
-            PaymentType::Credit => {
-                self.buyer_credit = self.buyer_credit.checked_add(line.buyer_total)?;
-            }
-            PaymentType::Cash => {
-                self.buyer_cash = self.buyer_cash.checked_add(line.buyer_total)?;
-            }
-        }
+        // PRD FR-12.44: ادھاری is what is left on the accounts, نقدی what was paid on the spot.
+        self.buyer_credit = self.buyer_credit.checked_add(line.left_paisa)?;
+        self.buyer_cash = self.buyer_cash.checked_add(line.paid_paisa)?;
         self.buyer_total = self.buyer_total.checked_add(line.buyer_total)?;
         self.cost = self.cost.checked_add(line.cost_of_goods)?;
         Ok(())

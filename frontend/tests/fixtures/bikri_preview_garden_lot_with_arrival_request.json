@@ -39,7 +39,7 @@
             "key": "sale-1",
             "laga": null,
             "note": null,
-            "payment_type": null,
+            "paid": null,
             "qty": "60",
             "rate_differs": false,
             "sale_id": null,

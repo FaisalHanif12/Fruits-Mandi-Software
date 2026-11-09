@@ -269,9 +269,10 @@ err-weight-required = Enter the weight in kilograms. This item is sold by weight
 err-cash-below-zero-not-confirmed = After this entry cash in hand would be { $cash_after }. Confirm the entry to save it.
 # review: pending
 err-not-a-buyer = This is not a { -gahak } account. Choose a buyer.
-# PRD 12.4, 10.2. The buyer's credit is off, or he is the nameless cash buyer.
+# PRD FR-12.44. The money paid on the spot is more than the line's buyer total. $max is the most
+# allowed, in rupees.
 # review: pending
-err-credit-not-allowed = Credit is not allowed for this buyer. Change the line to cash.
+err-paid-exceeds-total = { -mauqa-par-jama } cannot be more than the buyer total of the line. The most you can enter is Rs { $max }.
 # A warning (PRD FR-12.8): the rest goes to باقی مال.
 # review: pending
 err-qty-left-unsold = { $left } { -nag } are left. They will stay in { -baqi-maal }.
