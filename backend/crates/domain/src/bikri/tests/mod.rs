@@ -94,6 +94,7 @@ fn account(kind: PartyKind) -> AccountFacts {
         is_own_goods: false,
         garden_closed: false,
         is_active: true,
+        in_edited_posting: false,
         credit_allowed: true,
         credit_limit: None,
         balance: Paisa::ZERO,

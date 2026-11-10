@@ -20,7 +20,7 @@ Run the demo on the Windows computer with the installed app. On the Mac, use thi
 | 2 | Open شراکت دار and کمیشن اصول. Use "اصول آزمائیں". | Shares 40 / 30 / 30 total 100%. Test: 20 × 600 for a 6% seller gives 720 and names the rule. |
 | 3 | Make a new seller and a new buyer with the arrow keys and `Enter` only. Type the name in English letters. | Urdu name appears with the English name filled. Codes 030110003 and 03040003. |
 | 4 | بکری 1 with short codes `1` and `2`. Show the party card, remaining qty, rate hint, the live summary, the partner split and the ⓘ on a commission. Switch to English with `Alt+L` halfway and back. Save with `Ctrl+Enter`. | خام 29,400. کل اخراجات 10,084. صافی 19,316. اکرم pays 12,880, ارشد 18,684. Shared income 3,948, split 1,580 / 1,184 / 1,184. ⓘ on اکرم's commission: "12,000 × 6 ÷ 100 = 720". After the switch nothing typed is lost. |
-| 5 | بکری 2 with a one-time buyer through پختہ کھاتہ (شاہد, 10 پیٹی سیب at 1,200, نقدی). Enter the same truck again to show the warning. | Buyer pays 12,800. Seller صافی 10,160. Shared income 1,540, split 616 / 462 / 462. The register shows شاہد as paid. |
+| 5 | بکری 2 with a چکتا buyer (شاہد, 10 پیٹی سیب at 1,200; موقع پر جمع fills with the whole bill). Enter the same truck again to show the warning. | Buyer pays 12,800 on the spot, nothing left on account. Seller صافی 10,160. Shared income 1,540, split 616 / 462 / 462. The day's sale book shows شاہد as paid. |
 | 6 | On the voucher screen: وصولی 10,000 from اکرم (use "پورا بقایا" first to show it), then ادائیگی 4,316 to رحیم. On the خرچہ screen: بجلی 3,000 as دکان خرچہ (show the split before save), then 2,000 for الف as ذاتی خرچہ. | اکرم owes 2,880. رحیم 0 and his advance fully adjusted. Electricity split 1,200 / 900 / 900. الف's کل رقم goes 996 → −1,004. |
 | 6a | Show the attention bell and آج کے کام. Print a buyer slip in Urdu and in English. | Bell lists what needs action. The slip shows the firm header, contacts, trade mark, the party with its tag and "Page 1 of 1". |
 | 6b | Show a market trip, a garden, the partner statement with its dated lines, and الف's پھل. Print the party day sheet (R35) for all buyers. | See Section 2 below. R35 total remaining 21,564. |
@@ -62,7 +62,7 @@ Ask each, write the answer next to it, and tell `tech-lead`. The default in brac
 18. A42: are the کیلا lines with no rate sold by weight, or is a lump amount typed (by weight, rate per kg).
 19. Should the buyer side also be 0 for the family khata's own goods (no, buyer side is charged).
 20. Should a partner's name in "ادا کیا" block a دکان خرچہ (it only suggests ذاتی خرچہ).
-21. Buyer slips and R5 (team decision of 25-10-2026): slips show a named buyer's cash lines, R5 ادھاری تفصیل lists credit buyers only. Is this right.
+21. Buyer slips and R5 (team decision of 25-10-2026): slips show a named buyer's cash lines, R5 ادھاری تفصیل lists every buyer of the day, with what he paid on the spot and what is left. Is this right.
 22. Print All order: slips follow the Urdu name order, so Arshad comes before Akram. Is that right.
 23. On a weight line, should R5 show the weight in the detail.
 

@@ -5,7 +5,7 @@ description: Builds or changes a spreadsheet-style entry grid in the Mandi Softw
 
 # Entry grids
 
-Entry grids are where the munshi spends his day. A sale line must take **3 fields and 3 `Enter`s** (NFR-USE-6). The grid must feel like a spreadsheet, never lose what was typed, and never calculate money itself.
+Entry grids are where the munshi spends his day. A sale line takes **4 fields and 4 `Enter`s** (buyer, qty, rate, paid on the spot), or 3 of each when the buyer must pay in full, because then the paid cell cannot be typed in (FR-12.44, NFR-USE-6). The grid must feel like a spreadsheet, never lose what was typed, and never calculate money itself.
 
 All entry grids are built from the shared setup in `frontend/src/shared/grid/`. A screen only declares its columns and its row store. **A screen never writes its own key handlers** (Code Standards F27). If the shared setup is missing something, add it there for every grid.
 
@@ -82,8 +82,8 @@ While a picker's list is open, `↑` `↓` move through the list and `Enter` pic
 ## Build steps
 
 1. List the columns in the plan's contract order, each with a shared type, an `editable` rule (a function of the row and settings where needed) and an `enterStop` flag.
-   - **Enter stops** are the cells the PRD's own example walks through. For a sale line that is buyer, qty and rate (FR-7.14, NFR-USE-6).
-   - Cells such as the payment-type toggle and the line note stay editable (by arrows, click or their own key), but are not Enter stops.
+   - **Enter stops** are the cells the PRD's own example walks through. For a sale line that is buyer, qty, rate and paid on the spot (FR-7.14, FR-12.44, NFR-USE-6). The paid cell is not a stop for a buyer who must pay in full.
+   - Cells such as the quality (درجہ) and the line note stay editable (by arrows, click or their own key), but are not Enter stops.
    - This reading of FR-7.14 is recorded as an open question for Umar. Do not change the stop set without his answer.
 2. Create the row store with `addRow`, `updateTyped(rowId, field, text)`, `removeRow` and `blankRowCheck`.
 3. Use `<EntryGrid columns rows onCommit />` from `shared/grid`. Mount it with `key={language}`, so a language switch rebuilds it, and restore focus from the store afterwards.
@@ -92,8 +92,8 @@ While a picker's list is open, `↑` `↓` move through the list and `Enter` pic
 
 ## Tests
 
-- **Keyboard-only test** for the screen (Code Standards F30). Enter one بکری 1 line from PRD 4.4 using only the keys: buyer `1` `Enter`, qty `20` `Enter`, rate `600` `Enter`. Check that the cursor is on the next row's buyer cell. Take the Enter stops from the plan's column list, not from this example, so the test follows any later decision.
-- **Per-row editability:** with "ریٹ مختلف" off, Enter skips the buyer rate; with it on, the buyer rate is a stop.
+- **Keyboard-only test** for the screen (Code Standards F30). Enter one بکری 1 line from PRD 4.4 using only the keys: buyer `1` `Enter`, qty `20` `Enter`, rate `600` `Enter`, paid `0` `Enter`. Check that the cursor is on the next row's buyer cell. Take the Enter stops from the plan's column list, not from this example, so the test follows any later decision.
+- **Per-row editability:** with "ریٹ مختلف" off, Enter skips the buyer rate; with it on, the buyer rate is a stop. For a buyer who must pay in full, Enter skips the paid cell.
 - **One test per row** of the keyboard table above, in Urdu **and** English layouts (arrow direction flips).
 - **Language switch mid-entry** (Code Standards F39): type two lines, switch, check every typed value and the focused cell are the same.
 - **Remaining qty and blank row:** 50 received, 20 sold, the new line shows 30. A trailing blank row does not block save.
@@ -105,6 +105,6 @@ While a picker's list is open, `↑` `↓` move through the list and `Enter` pic
 - [ ] Typed values live in the store. Rebuilding the grid loses nothing.
 - [ ] No money is calculated in the grid. Rates are never pre-filled.
 - [ ] Every row of the keyboard table works in both layouts.
-- [ ] A sale line takes 3 fields and 3 `Enter`s (buyer, qty, rate).
+- [ ] A sale line takes 4 fields and 4 `Enter`s (buyer, qty, rate, paid on the spot), or 3 when the buyer must pay in full.
 - [ ] Editability is decided per cell; Enter skips cells that are closed on that row.
 - [ ] Errors show on the right cell with a message from `errors.ftl`.

@@ -75,11 +75,11 @@ pub(crate) struct Typed {
     pub(crate) garden_id: Option<i64>,
     /// The layout of R36. By garden when the screen sent nothing.
     pub(crate) garden_view: GardenView,
-    /// The picked بکری (R1).
+    /// The picked بکری (R1, R5).
     pub(crate) bikri_id: Option<i64>,
     /// How R28 groups its lines. Month when the screen sent nothing.
     pub(crate) group_by: GroupBy,
-    /// The paid or due filter of R9.
+    /// The still-owed or all filter of R38 (`due` keeps the people who still owe).
     pub(crate) status: Option<PaidFilter>,
     /// The statement with its detail lines.
     pub(crate) detail: bool,

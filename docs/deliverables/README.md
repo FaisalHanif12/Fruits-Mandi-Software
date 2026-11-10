@@ -8,7 +8,7 @@ The whole Mandi Software is built in **five deliverables**, plus one refresh del
 |---|---|---|---|
 | D1 | `D1-foundation.md` | Install the app, run the first-run wizard, log in, move around the empty app in Urdu and English | 01 to 04 |
 | D2 | `D2-accounts-names-rules.md` | Add sellers, buyers and all masters with names in two scripts, set commission rules, post the opening position (opening balances, the first پیشگی, day close and reopen) | 05 to 10 |
-| D3 | `D3-bikri.md` | Enter, save and print a full بکری with the live summary, journal, پختہ کھاتہ and partner split | 11 to 14 |
+| D3 | `D3-bikri.md` | Enter, save and print a full بکری with the live summary, journal, چکتا کھاتہ and partner split | 11 to 14 |
 | D4 | `D4-money-in-out.md` | Run a full day: وصولی, ادائیگی, later sales, edit and cancel, market trips and their goods, partner capital, expenses, جنرل, cash book, full day close | 15, 16, 16b, 17 |
 | D4R | `D4R-refresh-v1.6.md` | One cash account and lists page by page on every built screen; gardens; fruit taken; the tag after a name and clear prints on the built prints | 17b, 17c, 17d, 17e |
 | D5 | `D5-reports-backup-golive.md` | Back up and restore, see the dashboard, every report and analytics view, and hand over version 1.0 | 18 to 23 |

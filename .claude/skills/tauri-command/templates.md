@@ -18,7 +18,6 @@ use ts_rs::TS;
 pub struct ReceiptInput {
     pub entry_date: String,          // "10-10-2026", parsed by core::validate::parse_date
     pub account_id: AccountId,       // picked from AccountPicker
-    pub pukhta_person_key: Option<String>,
     pub amount: String,              // "10,000", parsed by core::money::parse_sum
     pub collector_staff_id: Option<StaffId>,
     pub narration: Option<String>,

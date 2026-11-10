@@ -10,6 +10,12 @@
 //! Example (PRD E2E-13b): Event 1 is saved with 6% buyer commission, the Owner changes the
 //! default to 7%, then edits اکرم's rate. His line is changed, so it looks the rules up again and
 //! gets 7%. ارشد's line is not changed, so it keeps its stored 6% and 1,044.
+//!
+//! An edit that changes only the buyer of a line reads the buyer side again (buyer commission and
+//! لاگا) and keeps the seller commission as stored. An edit that changes only the seller of a lot
+//! reads the seller side again and keeps the buyer side and the paid amount as stored, for every
+//! line of the lot (PRD FR-12.20, Umar 10-11-2026). Example: the seller default goes to 7% after
+//! the save and only the buyer is corrected: the seller commission of that line stays 720.
 
 use std::collections::HashMap;
 
@@ -210,9 +216,12 @@ pub struct StoredCarrier {
     pub charge: StoredCharge,
 }
 
-/// Who the lot belongs to and what it holds, as stored: the seller and the item. When an edit
-/// changes any of them, the lot is worked out as new:
-/// nothing stored for the old seller or item is kept (money agent review of plan 16).
+/// Who the lot belongs to and what it holds, as stored: the seller, the item, and the purchase or
+/// arrival it takes its goods from. When an edit changes the item, the purchase or the arrival, the
+/// lot is worked out as new: nothing stored for the old goods is kept (money agent review of plan
+/// 16). When it changes only the seller, the seller side is read from the rules again (the seller
+/// commission of every line, and the lot's charges) and the buyer side and the money paid on the
+/// spot of every line are kept as stored (PRD FR-12.20, Umar 10-11-2026).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredIdentity {
     /// The seller account.

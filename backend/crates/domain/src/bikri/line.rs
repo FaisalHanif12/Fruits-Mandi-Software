@@ -31,9 +31,55 @@ pub(super) struct LotRef {
     pub item_id: i64,
     /// The item's facts.
     pub item: ItemFacts,
-    /// True if an edit changed the seller, the item or the old one-time seller of this lot: nothing
-    /// stored for the old lot is kept (money agent review of plan 16).
-    pub identity_changed: bool,
+    /// True if an edit changed the seller of this lot: the seller side of every line (the seller
+    /// commission) is read from the rules again, and the buyer side is kept as stored (PRD
+    /// FR-12.20, Umar 10-11-2026).
+    pub seller_changed: bool,
+    /// True if an edit changed the item, the purchase or the arrival of this lot: nothing stored
+    /// for the old lot is kept, on either side (money agent review of plan 16).
+    pub goods_changed: bool,
+}
+
+impl LotRef {
+    /// True if an edit changed anything that says what the lot is: the seller, the item, the
+    /// purchase or the arrival.
+    pub(super) fn any_changed(&self) -> bool {
+        self.seller_changed || self.goods_changed
+    }
+}
+
+/// How much of a stored line an edit keeps (PRD FR-12.20, Umar 10-11-2026).
+///
+/// A line the user did not change keeps both sides. A line whose only change is its buyer keeps the
+/// seller side (the seller commission) and reads the buyer side (buyer commission and لاگا) from
+/// the rules again. A line whose only change is the seller of its lot keeps the buyer side and its
+/// money paid on the spot, and reads the seller commission again. A line with any other change, or
+/// both identities changed, keeps nothing.
+///
+/// Example: the buyer default goes to 7% after the save and only the seller is corrected: the
+/// buyer's bill stays 12,880. The seller default goes to 7% and only the buyer is corrected: the
+/// seller commission of the line stays 720.
+#[derive(Clone, Copy)]
+pub(super) struct Kept<'a> {
+    /// The stored line.
+    pub sale: &'a StoredSale,
+    /// The seller commission is kept as stored (the lot's seller did not change).
+    pub seller_side: bool,
+    /// The buyer commission, لاگا and, for a buyer who must pay in full, the paid amount are kept as
+    /// stored (the buyer of the line did not change).
+    pub buyer_side: bool,
+}
+
+impl<'a> Kept<'a> {
+    /// The stored line when its seller side is kept.
+    pub(super) fn seller(&self) -> Option<&'a StoredSale> {
+        self.seller_side.then_some(self.sale)
+    }
+
+    /// The stored line when its buyer side is kept.
+    pub(super) fn buyer(&self) -> Option<&'a StoredSale> {
+        self.buyer_side.then_some(self.sale)
+    }
 }
 
 /// Everything one line needs.
@@ -50,9 +96,9 @@ pub(super) struct LineArgs<'a> {
     pub row: &'a PreparedSale,
     pub buyer_id: i64,
     pub buyer: &'a AccountFacts,
-    /// The stored line, when the row is an edited line that the user did not change (PRD
-    /// FR-12.20): its commissions and لاگا are kept exactly.
-    pub stored: Option<&'a StoredSale>,
+    /// The stored line and the sides of it that an edit keeps (PRD FR-12.20): the commissions and
+    /// لاگا of a kept side are exactly what was stored.
+    pub kept: Option<Kept<'a>>,
     /// The per-lot seller commission of a line that an edit removed, waiting for the first line
     /// that takes it (PRD FR-11.9).
     pub pending_move: &'a mut Option<StoredCharge>,
@@ -61,32 +107,33 @@ pub(super) struct LineArgs<'a> {
     pub cost: Option<(Paisa, mandi_core::rules::Working)>,
 }
 
-/// The stored line of a row, if the user did not change it (PRD FR-12.20): the buyer, the
-/// چکتا buyer, the quantity, the weight, both rates and the commissions and لاگا typed on the
-/// line are all what was stored. The money paid on the spot is not part of the test (PRD
-/// FR-12.44, plan 60 P11): a line whose only change is its paid amount, or its quality, keeps its
-/// stored rules and amounts. A row with no `sale_id`, or whose
-/// `sale_id` is not stored in this posting, is a new line.
-pub(super) fn unchanged_stored<'a>(
-    env: &Env<'a>,
-    lot: &LotRef,
-    row: &PreparedSale,
-) -> Option<&'a StoredSale> {
+/// The sides of the stored line of a row that an edit keeps (PRD FR-12.20).
+///
+/// The quantity, the weight, both rates and the commissions and لاگا typed on the line must be what
+/// was stored, or the line is a changed line and keeps nothing. The money paid on the spot is not
+/// part of the test (PRD FR-12.44, plan 60 P11): a line whose only change is its paid amount, or
+/// its quality, keeps its stored rules and amounts.
+///
+/// Given that, the identities decide (Umar, 10-11-2026): the same buyer and the same seller keep
+/// both sides; only the buyer changed keeps the seller side; only the seller changed keeps the
+/// buyer side; both changed keeps nothing. A change of the item, the purchase or the arrival of the
+/// lot keeps nothing. A row with no `sale_id`, or whose `sale_id` is not stored in this posting, is a
+/// new line.
+pub(super) fn kept_stored<'a>(env: &Env<'a>, lot: &LotRef, row: &PreparedSale) -> Option<Kept<'a>> {
     let stored = env.stored.sales.get(&row.sale_id?)?;
-    if lot.identity_changed || lot.lot_id != Some(stored.lot_id) {
+    if lot.goods_changed || lot.lot_id != Some(stored.lot_id) {
         return None;
     }
     let buyer_id = row.buyer_account_id?;
-    if buyer_id != stored.buyer_account_id {
-        return None;
-    }
     let buyer = env.lookups.accounts.get(&buyer_id)?;
     let person_key = if buyer.is_chukta {
         Some(clean_person(&row.chukta)?.key)
     } else {
         None
     };
-    if person_key != stored.person_key {
+    let buyer_same = buyer_id == stored.buyer_account_id && person_key == stored.person_key;
+    let seller_same = !lot.seller_changed;
+    if !buyer_same && !seller_same {
         return None;
     }
     let qty = row.qty?;
@@ -109,7 +156,11 @@ pub(super) fn unchanged_stored<'a>(
         && row.seller_comm == stored.seller_comm.typed()
         && row.buyer_comm == stored.buyer_comm.typed()
         && row.laga == stored.laga.typed();
-    same.then_some(stored)
+    same.then_some(Kept {
+        sale: stored,
+        seller_side: seller_same,
+        buyer_side: buyer_same,
+    })
 }
 
 fn too_large(amount: Paisa) -> bool {
@@ -389,10 +440,10 @@ pub(super) fn calc_line(
     // line whose own stored commission is a percent or a per-نگ amount: that amount would be
     // thrown away (money agent review of plan 16, finding 1). A changed or new line looks its rules
     // up again. Nothing takes the charge twice: once any line carries it, it is spent.
+    let kept_seller = args.kept.as_ref().and_then(Kept::seller);
+    let kept_buyer = args.kept.as_ref().and_then(Kept::buyer);
     let takes_move = !*args.per_lot_charged
-        && args
-            .stored
-            .is_some_and(|s| s.seller_comm.method == StoredMethod::PerLot);
+        && kept_seller.is_some_and(|s| s.seller_comm.method == StoredMethod::PerLot);
     let moved = if row.seller_comm.is_none() && args.env.kind == PostingKind::First && takes_move {
         args.pending_move.take()
     } else {
@@ -400,8 +451,8 @@ pub(super) fn calc_line(
     };
     let seller_comm = if let Some(moved) = &moved {
         moved_charge(&mut args, moved, seller_amount, qty)?
-    } else if let Some(stored) = args.stored {
-        // A line the user did not change keeps what it had (PRD FR-12.20).
+    } else if let Some(stored) = kept_seller {
+        // A line whose seller side is kept keeps what it had (PRD FR-12.20).
         stored_charge(
             &mut args,
             ChargeSide::Seller,
@@ -423,7 +474,7 @@ pub(super) fn calc_line(
             issues,
         )?
     };
-    let (buyer_comm, laga) = if let Some(stored) = args.stored {
+    let (buyer_comm, laga) = if let Some(stored) = kept_buyer {
         (
             stored_charge(
                 &mut args,
@@ -485,7 +536,7 @@ pub(super) fn calc_line(
         return Ok(None);
     }
     // موقع پر جمع (PRD FR-12.44) and what is left on the buyer's account.
-    let money = paid_money(&args, issues, prefix, buyer_total)?;
+    let money = paid_money(&args, kept_buyer, issues, prefix, buyer_total)?;
     let left = buyer_total.checked_sub(money.paid)?;
     let (cost_of_goods, cost_working) = args
         .cost
@@ -549,9 +600,10 @@ struct PaidMoney {
 /// - A buyer who must pay in full (نقدی منڈی, a چکتا buyer, no credit allowed) pays the whole buyer
 ///   total, and anything typed is ignored. The one exception is an unchanged line of an edit: it
 ///   keeps what it was saved with, so an old credit line whose buyer has since lost credit does
-///   not turn into cash by itself. A line of a lot whose seller or item the edit changed counts as
-///   a changed line (`unchanged_stored` gives nothing): its charges are looked up again, so its
-///   paid follows the rule of a buyer who must pay in full.
+///   not turn into cash by itself. That holds when the buyer side of the line is kept (the buyer
+///   did not change; a correction of the lot's seller alone keeps it, Umar 10-11-2026). A line
+///   whose buyer changed, whose item changed, or that has any other change, follows the rule of a
+///   buyer who must pay in full.
 /// - Any other buyer pays what was typed; empty is 0.
 /// - More than the buyer total is `ERR_PAID_EXCEEDS_TOTAL` at `.paid` with `max` in rupees. The
 ///   line keeps its figures and counts as paid 0, so no cash is posted twice.
@@ -560,12 +612,13 @@ struct PaidMoney {
 /// buyer with 12,800 pays 12,800.
 fn paid_money(
     args: &LineArgs<'_>,
+    kept_buyer: Option<&StoredSale>,
     issues: &mut Issues,
     prefix: &str,
     buyer_total: Paisa,
 ) -> Result<PaidMoney, CalcError> {
     if checks::must_pay_in_full(args.buyer) {
-        if let Some(stored) = args.stored {
+        if let Some(stored) = kept_buyer {
             if stored.paid > buyer_total {
                 return Err(CalcError::Inconsistent(
                     "a stored line was paid more than its buyer total",

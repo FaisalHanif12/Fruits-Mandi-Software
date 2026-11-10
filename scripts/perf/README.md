@@ -381,7 +381,7 @@ Run 1 and run 2 differ because the Mac was shared. Other builds and test runs we
 
 What the NFR says: NFR-SPD-21 (party card under 100 ms with 10 years of data), NFR-SPD-3 (a screen opens under 300 ms), NFR-SPD-9 (a voucher saves under 150 ms), NFR-SPD-13 (trial balance under 2 s). NFR-SPD-2 (login to dashboard under 1 s) is not measured yet, but the dashboard's cash tile reads the balance of the cash account, which costs 360 ms to 530 ms here.
 
-A way to fix it, for `backend` to decide: keep a running balance per account (and per پختہ کھاتہ person) in a table that the posting writes in the same transaction (Code Standards B20), so a balance, a card, a list page, the tree and the trial balance read one row each. The books stay the source of truth: the daily check (NFR-REL-8) compares the table with the sum of the lines.
+A way to fix it, for `backend` to decide: keep a running balance per account in a table that the posting writes in the same transaction (Code Standards B20), so a balance, a card, a list page, the tree and the trial balance read one row each. The books stay the source of truth: the daily check (NFR-REL-8) compares the table with the sum of the lines.
 
 ## 9. The assistant benchmarks (D6, plan 50 R4)
 

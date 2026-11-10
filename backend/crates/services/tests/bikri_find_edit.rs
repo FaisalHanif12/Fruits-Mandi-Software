@@ -22,9 +22,14 @@ use common::*;
 use mandi_services::core::accounts::{AccountType, BalanceSide};
 use mandi_services::core::bikri::{
     BikriDraft, BikriEdited, BikriFindInput, BikriSaved, EditOpenInput, EditPreviewInput,
-    EditSaveInput, EditableBikri,
+    EditSaveInput, EditableBikri, SaleState,
 };
-use mandi_services::{assist, bikri, day, edit, ledger, vouchers};
+use mandi_services::core::dead::{DeadMarkInput, DeadReason};
+use mandi_services::core::edit::ChangeValue;
+use mandi_services::core::error::ErrorCode;
+use mandi_services::core::rules::{ChargesInput, DefaultChargeInput};
+use mandi_services::core::vouchers::AdvanceInput;
+use mandi_services::{assist, bikri, day, dead, edit, ledger, rules, vouchers};
 use reports_world::*;
 use support::World;
 
@@ -313,8 +318,9 @@ fn e2e_68_a_line_moves_to_another_buyer_and_back() {
     // Commission and the partner split are the same (the line is the same, only its buyer changed).
     assert_eq!(edited.preview.summary.shared_income.rupees(), 3_948);
     assert_eq!(shares(&w, edited.entry_id), [1_580, 1_184, 1_184]);
-    // The books: 85,048 + the 10,000 that اکرم's credit is (his credit grew by 12,880 and طارق's
-    // debit by 12,880, in the reversal and the new posting both) = 95,048 on each side.
+    // The books: the debit side is 85,048 − 2,880 (اکرم no longer owes) + 12,880 (طارق owes) =
+    // 95,048. The credit side is 85,048 + 10,000 (اکرم's receipt is no longer netted against his
+    // bill, so it stands as his credit) = 95,048.
     assert_eq!(trial(&w), (95_048, 95_048));
     // The find follows: the old buyer lost the بکری, the new one has it.
     assert_eq!(
@@ -506,7 +512,6 @@ fn the_review_of_a_buyer_change_lists_the_change_and_both_buyers_balances() {
         .iter()
         .map(|c| (c.field.clone(), c.place.line_no))
         .collect();
-    eprintln!("REVIEW changes: {changes:?}");
     assert!(
         changes
             .iter()
@@ -682,10 +687,413 @@ fn the_buyer_filter_is_one_search_on_the_buyer_index() {
             .map(Result::unwrap)
             .collect();
         let text = plan.join(" | ");
-        eprintln!("PLAN {text}");
         // The inner search uses the buyer index; no full scan of `bikri_sales` is in the plan. (The
         // list of چکتا buyers is read whole: its names are searched with LIKE '%..%'.)
         assert!(!text.contains("SCAN s2"), "{text}");
         assert!(!text.contains("SCAN bikri_sales"), "{text}");
     }
+}
+
+// ---- Plan 67 review: which side of a line an edit reads again (PRD FR-12.20, 10-11-2026) -------
+
+/// The seller commission, the buyer commission and the buyer total of each line in force, in
+/// rupees, in line order.
+fn live(w: &World, bikri_id: i64) -> Vec<(i64, i64, i64)> {
+    bikri::get(&w.env.ctx, bikri_id)
+        .unwrap()
+        .lots
+        .iter()
+        .flat_map(|lot| lot.sales.iter())
+        .filter(|s| s.state == SaleState::InForce)
+        .map(|s| {
+            (
+                s.seller_comm.amount.rupees(),
+                s.buyer_comm.amount.rupees(),
+                s.buyer_total.rupees(),
+            )
+        })
+        .collect()
+}
+
+/// The Owner changes the default seller and buyer commission, from today.
+fn set_defaults(w: &World, seller: &str, buyer: &str) {
+    let c = rules::charges(&w.env.ctx).unwrap();
+    let keep = |d: &mandi_services::core::rules::DefaultCharge, value: &str| DefaultChargeInput {
+        version: d.version,
+        method: d.method,
+        value: value.into(),
+    };
+    rules::set_charges(
+        &w.env.ctx,
+        &w.owner,
+        &ChargesInput {
+            seller_commission: keep(&c.seller_commission, seller),
+            buyer_commission: keep(&c.buyer_commission, buyer),
+            laga_fruit: keep(&c.laga_fruit, &c.laga_fruit.value_text),
+        },
+    )
+    .unwrap();
+}
+
+fn tariq(w: &World) -> i64 {
+    support::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Buyer,
+        "طارق",
+        "Tariq",
+        true,
+        "",
+    )
+}
+
+#[test]
+fn a_seller_only_correction_keeps_the_buyers_bill_after_the_rules_changed() {
+    // Umar, 10-11-2026: the defaults are 7% after the save and only the seller of the lot is
+    // corrected (رحیم to کریم). Every buyer keeps his stored bill: اکرم stays 12,880. The seller
+    // commission follows the rules: 12,000 × 7% = 840 and 17,400 × 7% = 1,218.
+    let (w, one, _) = day();
+    set_defaults(&w, "7", "7");
+    let opened = open(&w, &one);
+    let mut draft = opened.draft.clone();
+    draft.lots[0].seller_account_id = Some(w.karim);
+    let edited = edit(&w, &opened, draft);
+    assert_eq!(
+        live(&w, one.bikri_id),
+        [(840, 720, 12_880), (1_218, 1_044, 18_684)]
+    );
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 2_880));
+    assert_eq!(balance(&w, w.arshad), (BalanceSide::Dr, 18_684));
+    // کریم: his own 10,160, the seller credit 29,400 − 2,058 − 3,000 − 250 − 50 − 20 = 24,022, less
+    // the 5,000 cash he was given.
+    assert_eq!(balance(&w, w.karim), (BalanceSide::Cr, 29_182));
+    // Shared income 2,058 + 1,764 + 400 + 20 = 4,242: 1,696 / 1,272 / 1,272 and the 2 left over to
+    // the largest share.
+    assert_eq!(edited.preview.summary.shared_income.rupees(), 4_242);
+    assert_eq!(shares(&w, edited.entry_id), [1_698, 1_272, 1_272]);
+    let (dr, cr) = trial(&w);
+    assert_eq!(dr, cr);
+    ledger::verify_journal_chain(&w.env.ctx).unwrap();
+}
+
+#[test]
+fn a_buyer_only_correction_keeps_the_seller_commission_after_the_rules_changed() {
+    // Umar, 10-11-2026: the defaults are 7% after the save and only the buyer of line 1 is
+    // corrected (اکرم to طارق). The seller commission of that line stays 720 (رحیم's stored 6%);
+    // the buyer side follows the rules: 12,000 × 7% = 840, so طارق pays 12,000 + 840 + 160.
+    let (w, one, _) = day();
+    let tariq = tariq(&w);
+    set_defaults(&w, "7", "7");
+    let opened = open(&w, &one);
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].buyer_account_id = Some(tariq);
+    let edited = edit(&w, &opened, draft);
+    assert_eq!(
+        live(&w, one.bikri_id),
+        [(720, 840, 13_000), (1_044, 1_044, 18_684)]
+    );
+    assert_eq!(balance(&w, tariq), (BalanceSide::Dr, 13_000));
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Cr, 10_000));
+    assert_eq!(balance(&w, w.arshad), (BalanceSide::Dr, 18_684));
+    // The seller credit is as saved, so رحیم's ledger does not move: 0 after his payment (E2E-7).
+    assert_eq!(balance(&w, w.rahim), (BalanceSide::Zero, 0));
+    // Shared income 1,764 + 1,884 + 400 + 20 = 4,068: 1,627 / 1,220 / 1,220 and 1 left over.
+    assert_eq!(edited.preview.summary.shared_income.rupees(), 4_068);
+    assert_eq!(shares(&w, edited.entry_id), [1_628, 1_220, 1_220]);
+    let (dr, cr) = trial(&w);
+    assert_eq!(dr, cr);
+    ledger::verify_journal_chain(&w.env.ctx).unwrap();
+}
+
+/// What a saved line was paid on the spot, in rupees.
+fn paid_of(w: &World, bikri_id: i64, line: usize) -> i64 {
+    bikri::get(&w.env.ctx, bikri_id)
+        .unwrap()
+        .lots
+        .iter()
+        .flat_map(|lot| lot.sales.iter())
+        .filter(|s| s.state == SaleState::InForce)
+        .nth(line)
+        .map(|s| s.paid_paisa.rupees())
+        .unwrap()
+}
+
+#[test]
+fn a_line_paid_on_the_spot_moves_with_its_paid_or_pays_in_full_for_a_must_pay_buyer() {
+    // PRD FR-12.44, FR-12.20: اکرم paid 5,000 of his 12,880 on the spot, so 7,880 is left.
+    let w = worked_day();
+    let cash = support::id_of(&w.env, "01010001");
+    let mut first = support::event1(&w);
+    first.lots[0].sales[0].paid = Some("5,000".into());
+    let one = save(&w, &first);
+    // Cash: 50,000 − 5,000 given to the seller + 5,000 paid on the spot.
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 50_000));
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 7_880));
+    let tariq = tariq(&w);
+
+    // Only the seller is corrected: the line keeps its buyer, his bill and the 5,000.
+    let opened = open(&w, &one);
+    let mut draft = opened.draft.clone();
+    draft.lots[0].seller_account_id = Some(w.karim);
+    let after_seller = edit(&w, &opened, draft);
+    assert_eq!(paid_of(&w, one.bikri_id, 0), 5_000);
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Dr, 7_880));
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 50_000));
+
+    // Only the buyer is corrected, to a buyer who may take credit: the paid goes with the line.
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one.bikri_id,
+            entry_id: after_seller.entry_id,
+        },
+    )
+    .unwrap();
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].buyer_account_id = Some(tariq);
+    let to_tariq = edit(&w, &opened, draft);
+    assert_eq!(paid_of(&w, one.bikri_id, 0), 5_000);
+    assert_eq!(balance(&w, w.akram), (BalanceSide::Zero, 0));
+    assert_eq!(balance(&w, tariq), (BalanceSide::Dr, 7_880));
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 50_000));
+
+    // Then to نقدی منڈی, who always pays in full: paid = the whole 12,880, whatever was typed.
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one.bikri_id,
+            entry_id: to_tariq.entry_id,
+        },
+    )
+    .unwrap();
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].buyer_account_id = Some(w.naqdi);
+    edit(&w, &opened, draft);
+    assert_eq!(paid_of(&w, one.bikri_id, 0), 12_880);
+    assert_eq!(balance(&w, tariq), (BalanceSide::Zero, 0));
+    assert_eq!(balance(&w, w.naqdi), (BalanceSide::Zero, 0));
+    // The cash part follows: 50,000 + the 7,880 more that was paid on the spot.
+    assert_eq!(balance(&w, cash), (BalanceSide::Dr, 57_880));
+    let (dr, cr) = trial(&w);
+    assert_eq!(dr, cr);
+}
+
+/// The open advance of a seller, in rupees.
+fn open_advance(w: &World, seller: i64) -> i64 {
+    assist::advances(&w.env.ctx, seller)
+        .unwrap()
+        .open_paisa
+        .rupees()
+}
+
+#[test]
+fn a_new_seller_with_an_open_advance_has_it_adjusted_when_the_tick_is_on() {
+    // PRD FR-12.23, FR-15.8: کریم took 5,000 in advance. The lot's tick is on, so when he becomes
+    // the seller his advance is adjusted by the seller credit, and رحیم's 15,000 opens again.
+    let w = worked_day();
+    vouchers::save_advance(
+        &w.env.ctx,
+        &w.owner,
+        &AdvanceInput {
+            confirm_cash_below_zero: false,
+            date: "10-10-2026".into(),
+            seller_account_id: w.karim,
+            amount: "5,000".into(),
+            removed: Default::default(),
+            expected_goods: String::new(),
+            narration: String::new(),
+        },
+    )
+    .unwrap();
+    let one = save(&w, &support::event1(&w));
+    assert_eq!(
+        (open_advance(&w, w.rahim), open_advance(&w, w.karim)),
+        (0, 5_000)
+    );
+    let opened = open(&w, &one);
+    let mut draft = opened.draft.clone();
+    assert!(draft.lots[0].adjust_advance);
+    draft.lots[0].seller_account_id = Some(w.karim);
+    let edited = edit(&w, &opened, draft);
+    assert_eq!(
+        (open_advance(&w, w.rahim), open_advance(&w, w.karim)),
+        (15_000, 0)
+    );
+    // And back to رحیم: his advance is adjusted again and کریم's opens again.
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one.bikri_id,
+            entry_id: edited.entry_id,
+        },
+    )
+    .unwrap();
+    let mut draft = opened.draft.clone();
+    draft.lots[0].seller_account_id = Some(w.rahim);
+    edit(&w, &opened, draft);
+    assert_eq!(
+        (open_advance(&w, w.rahim), open_advance(&w, w.karim)),
+        (0, 5_000)
+    );
+    let (dr, cr) = trial(&w);
+    assert_eq!(dr, cr);
+}
+
+#[test]
+fn a_person_in_the_dead_amount_keeps_his_own_lines_but_no_line_moves_onto_him() {
+    // PRD FR-10.10, A67: ارشد died after بکری 1. His own line may still be edited while the day is
+    // open. A line that was اکرم's cannot be moved onto him, and a new line cannot be added for him.
+    let (w, one, _) = day();
+    dead::mark(
+        &w.env.ctx,
+        &w.owner,
+        &DeadMarkInput {
+            account_id: w.arshad,
+            entry_date: "10-10-2026".into(),
+            reason: DeadReason::Died,
+            note: String::new(),
+        },
+    )
+    .unwrap();
+    let opened = open(&w, &one);
+    let preview_of = |draft: BikriDraft| {
+        bikri::edit_preview(
+            &w.env.ctx,
+            &EditPreviewInput {
+                entry_id: opened.entry_id,
+                draft,
+            },
+        )
+        .unwrap()
+    };
+    let buyer_field = |line: usize| format!("lots[0].sales[{line}].buyer_account_id");
+
+    // Line 1 moved onto the dead buyer: refused at that line's buyer, and the save is refused too.
+    let mut moved = opened.draft.clone();
+    moved.lots[0].sales[0].buyer_account_id = Some(w.arshad);
+    let preview = preview_of(moved.clone());
+    assert!(
+        support::has(
+            &preview.errors,
+            ErrorCode::ErrAccountInactive,
+            &buyer_field(0)
+        ),
+        "{:?}",
+        preview.errors
+    );
+    assert!(!support::has(
+        &preview.errors,
+        ErrorCode::ErrAccountInactive,
+        &buyer_field(1)
+    ));
+    let refused = bikri::edit_save(
+        &w.env.ctx,
+        &w.owner,
+        &EditSaveInput {
+            entry_id: opened.entry_id,
+            version: opened.version,
+            draft: moved,
+            reason: Some("غلط گاہک".into()),
+            confirm_cash_below_zero: false,
+        },
+    );
+    assert!(refused.is_err());
+
+    // A new line for him: refused. (Line 2 is cut to 25 so the lot has 5 left.)
+    let mut added = opened.draft.clone();
+    added.lots[0].sales[1].qty = "25".into();
+    added.lots[0]
+        .sales
+        .push(support::sale("n1", w.arshad, "5", "580"));
+    let preview = preview_of(added);
+    assert!(
+        support::has(
+            &preview.errors,
+            ErrorCode::ErrAccountInactive,
+            &buyer_field(2)
+        ),
+        "{:?}",
+        preview.errors
+    );
+    assert!(!support::has(
+        &preview.errors,
+        ErrorCode::ErrAccountInactive,
+        &buyer_field(1)
+    ));
+
+    // His own line, with its rate corrected, and a correction of the seller alone: both allowed.
+    let mut own = opened.draft.clone();
+    own.lots[0].sales[1].seller_rate = "590".into();
+    let preview = preview_of(own);
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+    let mut seller_only = opened.draft.clone();
+    seller_only.lots[0].seller_account_id = Some(w.karim);
+    let preview = preview_of(seller_only);
+    assert!(preview.errors.is_empty(), "{:?}", preview.errors);
+}
+
+#[test]
+fn the_review_tells_two_people_of_the_same_name_apart() {
+    // PRD FR-7.70, 10.2: اسلم and اسلم BA are two people. Moving a line from one to the other is a
+    // change, and the list shows the tag so the two do not read the same.
+    let (w, one, _) = day();
+    let plain = support::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Buyer,
+        "اسلم",
+        "Aslam",
+        true,
+        "",
+    );
+    let tagged = support::add_account_tagged(
+        &w.env,
+        &w.owner,
+        AccountType::Buyer,
+        ("اسلم", "Aslam"),
+        (true, ""),
+        "BA",
+    );
+    let opened = open(&w, &one);
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].buyer_account_id = Some(plain);
+    let moved = edit(&w, &opened, draft);
+    let opened = bikri::open_for_edit(
+        &w.env.ctx,
+        &EditOpenInput {
+            bikri_id: one.bikri_id,
+            entry_id: moved.entry_id,
+        },
+    )
+    .unwrap();
+    let mut draft = opened.draft.clone();
+    draft.lots[0].sales[0].buyer_account_id = Some(tagged);
+    let preview = edit::bikri_review(
+        &w.env.ctx,
+        &EditPreviewInput {
+            entry_id: opened.entry_id,
+            draft,
+        },
+    )
+    .unwrap();
+    let change = preview
+        .review
+        .changes
+        .iter()
+        .find(|c| c.field == "buyer" && c.place.line_no == Some(1))
+        .expect("moving the line from اسلم to اسلم BA is not in the list");
+    assert_eq!(
+        change.before,
+        ChangeValue::Names {
+            ur: "اسلم".into(),
+            en: "Aslam".into()
+        }
+    );
+    assert_eq!(
+        change.after,
+        ChangeValue::Names {
+            ur: "اسلم BA".into(),
+            en: "Aslam BA".into()
+        }
+    );
 }

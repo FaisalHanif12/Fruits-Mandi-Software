@@ -35,7 +35,7 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 
 ## Round 4 (plan 20, step F3): the other early reports, search and the party card
 
-- The Sales (R2, R3, R4, R6, R7, R8, R9), Collections (R20, R21, R22, R24, R26, R27) and Business
+- The Sales (R2, R3, R4, R6, R7, R8), Collections (R20, R21, R22, R24, R26, R27) and Business
   (R28, R30) reports use the same one screen. Nothing was added to `ReportPage`: the catalogue lists
   them and the filters come from it.
 - `columns.ts` holds `COLUMN_STEPS`: a report has more columns than a 1024 px window holds, and a
@@ -228,10 +228,11 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
   which asks for the print data and the frame itself, applies the print's language and direction to
   the page root, and fires the ready event the backend waits for (or the failure event with the
   error). The preview and the hidden window draw the same `ReportPrintDocument`, so what is seen is
-  what is printed. Off Windows the backend answers `ERR_PRINT_WINDOWS_ONLY`, shown in words.
+  what is printed. On a system that is neither Windows nor a Mac the backend answers
+  `ERR_PRINT_WINDOWS_ONLY`, shown in words.
 - Tests: `report-print-job.test.tsx` (the buttons and what they send), `report-print-window.test.tsx`
-  (the hidden window, ready and failed). The printing itself and the PDF are the Windows check
-  (LOCAL-ONLY in the Mac phase).
+  (the hidden window, ready and failed). The real print dialog and the PDF are a hand check:
+  Windows is LOCAL-ONLY in the Mac phase, and a native Mac dialog cannot be clicked by a test.
 
 ## Not built yet
 
@@ -242,9 +243,12 @@ The print commands of plan 14 (`reports_bikri_print_data`, `reports_voucher_prin
 - `api.ts` is the only file that knows the command shapes. Every command takes one `{ input }`.
 - `hooks.ts`: `useBikriPrintData` (one document, never read again by itself), `usePrinters` (an
   empty list is an answer, not an error: only Windows knows its printers), `usePrintDocs`.
-- Printing works on Windows only. Elsewhere `reports_print` answers `ERR_PRINT_WINDOWS_ONLY` and the
-  print box offers the in-app preview (`features/bikri/print/PrintPreview.tsx`), which draws the
-  same documents.
+- Printing works on Windows and on a Mac (plan 69). On Windows the printer, the copies and the paper
+  are chosen in the app. On a Mac Print and Save as PDF both open the system print window, from the
+  same templates, and its PDF button saves a PDF; the printer choice is hidden there (a Mac has no
+  printer list) and a short hint under the print choices says how to make a PDF. On any other
+  system `reports_print` answers `ERR_PRINT_WINDOWS_ONLY` and the print box offers the in-app
+  preview (`features/bikri/print/PrintPreview.tsx`), which draws the same documents.
 - The hidden print window may call `reports_bikri_print_data` only (its capability allows no other
   command, NFR-SEC-10). `features/bikri/print/BikriPrintPage.tsx` is that window's route.
 

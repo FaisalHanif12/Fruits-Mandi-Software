@@ -15,7 +15,7 @@ use mandi_core::rules::ChargeType;
 use mandi_core::ventures::ShareAmount;
 
 use super::checks::{self, Issues, Wanted};
-use super::line::{LineArgs, LotRef, calc_line, unchanged_stored};
+use super::line::{Kept, LineArgs, LotRef, calc_line, kept_stored};
 use super::lookups::{
     AccountFacts, ArrivalCarried, EntryLot, ItemFacts, Lookups, PartyKind, PurchaseFacts,
 };
@@ -132,6 +132,8 @@ struct LotFacts<'a> {
     arrival_preview: Option<ArrivalLotPreview>,
 }
 
+/// `stored_seller` is the seller the lot has in the posting being edited, if it has one: a person in
+/// the dead amount may stay the seller of the lot he already has (PRD FR-10.10).
 fn lot_facts<'a>(
     issues: &mut Issues,
     lookups: &'a Lookups,
@@ -139,6 +141,7 @@ fn lot_facts<'a>(
     prefix: &str,
     date_iso: &str,
     lot: &PreparedLot,
+    stored_seller: Option<i64>,
 ) -> LotFacts<'a> {
     let mut complete = env_present && !lot.has_errors && lot.qty_received.is_some();
     let seller = checks::account(
@@ -146,6 +149,7 @@ fn lot_facts<'a>(
         lookups,
         lot.seller_account_id,
         Wanted::LotSeller,
+        stored_seller.is_some() && stored_seller == lot.seller_account_id,
         &format!("{prefix}.seller_account_id"),
         Some(ErrorCode::ErrSellerRequired),
     );
@@ -383,11 +387,21 @@ fn row_parties<'a>(
     row: &PreparedSale,
     line_prefix: &str,
 ) -> Option<(&'a AccountFacts, i64)> {
+    // A person in the dead amount may keep the line he already has in this posting (an edit of his
+    // own line); a new line, or a line moved onto him, is refused (PRD FR-10.10).
+    let stored_buyer = ctx.env.zip(row.sale_id).and_then(|(env, id)| {
+        env.stored
+            .sales
+            .get(&id)
+            .filter(|s| Some(s.lot_id) == ctx.lot.lot_id)
+            .map(|s| s.buyer_account_id)
+    });
     let buyer = checks::account(
         issues,
         ctx.lookups,
         row.buyer_account_id,
         Wanted::Buyer,
+        stored_buyer.is_some() && stored_buyer == row.buyer_account_id,
         &format!("{line_prefix}.buyer_account_id"),
         Some(ErrorCode::ErrBuyerRequired),
     );
@@ -544,7 +558,9 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
             lot.sales.iter().any(|row| {
                 !row.is_blank
                     && !row.has_errors
-                    && unchanged_stored(env, lot_ref, row)
+                    && kept_stored(env, lot_ref, row)
+                        .as_ref()
+                        .and_then(Kept::seller)
                         .is_some_and(|s| s.seller_comm.carries_per_lot())
             })
         }
@@ -555,7 +571,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
     // the per-lot method and 0, and no line carries it) stays spared: it is not given the charge
     // by an edit of one line, the next NEW lot carries it.
     let spared_before = match (ctx.env, ctx.lot_ref.as_ref(), ctx.entry) {
-        (Some(env), Some(lot_ref), Some(_)) if !lot_ref.identity_changed => {
+        (Some(env), Some(lot_ref), Some(_)) if !lot_ref.any_changed() => {
             ctx.stored_lot.is_some_and(|s| s.carrier.is_none())
                 && lot.sales.iter().any(|row| {
                     row.sale_id
@@ -648,7 +664,7 @@ fn process_rows(ctx: &LotCtx<'_>, run: &mut Run, issues: &mut Issues) -> Result<
                         row,
                         buyer_id,
                         buyer,
-                        stored: unchanged_stored(env, lot_ref, row),
+                        kept: kept_stored(env, lot_ref, row),
                         pending_move: &mut pending_move,
                         cost,
                     },
@@ -967,7 +983,19 @@ pub(super) fn process_lot(
     issues: &mut Issues,
 ) -> Result<LotOutcome, CalcError> {
     let prefix = format!("lots[{index}]");
-    let mut facts = lot_facts(issues, lookups, env.is_some(), &prefix, date_iso, lot);
+    let found = lot
+        .lot_id
+        .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
+    let stored_identity = found.and_then(|s| s.identity.as_ref());
+    let mut facts = lot_facts(
+        issues,
+        lookups,
+        env.is_some(),
+        &prefix,
+        date_iso,
+        lot,
+        stored_identity.map(|i| i.seller_account_id),
+    );
     let (arrival, arrival_preview) =
         arrival_checks(issues, lookups, run, &prefix, date_iso, lot, facts.seller);
     // A lot that names an arrival it cannot take from is not worked out (as an own lot with a
@@ -975,19 +1003,19 @@ pub(super) fn process_lot(
     facts.complete &= lot.arrival_id.is_none() || arrival.is_some();
     facts.arrival = arrival;
     facts.arrival_preview = arrival_preview;
-    let found = lot
-        .lot_id
-        .and_then(|id| env.and_then(|e| e.stored.lots.get(&id)));
     // A lot whose seller or item was changed is worked out as new: the rules of
-    // the old seller or item must not stay on it. Only the quantity taken elsewhere is kept.
-    let identity_changed = found
-        .and_then(|s| s.identity.as_ref())
-        .is_some_and(|stored| {
-            Some(stored.seller_account_id) != lot.seller_account_id
-                || Some(stored.item_id) != lot.item_id
-                || stored.purchase_id != lot.purchase_id
-                || stored.arrival_id != lot.arrival_id
-        });
+    // the old seller or item must not stay on it. Only the quantity taken elsewhere is kept. A
+    // change of the seller alone still keeps the buyer side of every line, and a change of the buyer
+    // of a line alone keeps its seller side: `kept_stored` decides that per line (PRD FR-12.20,
+    // Umar 10-11-2026).
+    let seller_changed = stored_identity
+        .is_some_and(|stored| Some(stored.seller_account_id) != lot.seller_account_id);
+    let goods_changed = stored_identity.is_some_and(|stored| {
+        Some(stored.item_id) != lot.item_id
+            || stored.purchase_id != lot.purchase_id
+            || stored.arrival_id != lot.arrival_id
+    });
+    let identity_changed = seller_changed || goods_changed;
     let stripped = found.map(|s| StoredLot {
         elsewhere_qty: s.elsewhere_qty,
         ..StoredLot::default()
@@ -1009,7 +1037,8 @@ pub(super) fn process_lot(
                 .is_some_and(|s| s.kind == super::lookups::PartyKind::Khata),
             item_id,
             item: *item,
-            identity_changed,
+            seller_changed,
+            goods_changed,
         }),
         _ => None,
     };

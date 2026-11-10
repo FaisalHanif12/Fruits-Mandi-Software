@@ -3,8 +3,8 @@
 
 | | |
 |---|---|
-| Version | 1.21 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
-| Date | 9 November 2026 |
+| Version | 1.22 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
+| Date | 10 November 2026 |
 | Status | Final for build |
 | Depends on | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9 |
 | Applies to | Every line of code, written by people or by Claude Code |
@@ -381,7 +381,10 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | E2E-46 (partner code) | `backend/crates/services/tests/partner_code.rs` | Every commit |
 | E2E-47 to E2E-63 (ask the app: figures, the check from two places, which one, change refused, privacy, limit, offline, wrong tool calls, follow-up, estimates, references, the calculator, the same question in other words, advice), with recorded model transcripts and no network | `backend/crates/assistant/tests/golden_questions.rs` | Every commit |
 | The prompt files: size, catalogue, glossary, words, the 15 examples, schemas, word for word (`D6-system-prompt.md` P1 to P7) | `backend/crates/assistant/tests/prompt.rs` | Every commit |
-| E2E-64 to E2E-68 (D8: the sale line figures of image 1, paid on the spot, old data, party ledgers, a change of buyer) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-64 and E2E-65 (D8: the sale line figures of image 1, paid on the spot) | `backend/crates/services/tests/golden_day.rs` | Every commit |
+| E2E-66 (D8: old data keeps its numbers) | `backend/crates/db/tests/migration.rs` | Every commit |
+| E2E-67 (D8: party ledgers) | `backend/crates/services/tests/party_ledgers.rs` | Every commit |
+| E2E-68 (D8: a change of buyer, and back) | `backend/crates/services/tests/bikri_find_edit.rs` | Every commit |
 | E2E-69 (no Urdu digits in the Urdu PDFs of R1, R5 and R35) | Mac phase: the PDFs of plan 63, with their text extracted | Before every release |
 | E2E-59 and E2E-61 numbers (the estimator and the calculator) | `backend/crates/domain/tests/figures_forecast.rs` | Every commit |
 | NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
@@ -482,3 +485,4 @@ A change is done only when every box is ticked:
 | 1.19 | 06-11-2026 | Approved by Umar (NFR v1.15): `MAX_PREFIX_TOKENS` is 11,500 (Q9). |
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
 | 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
+| 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |

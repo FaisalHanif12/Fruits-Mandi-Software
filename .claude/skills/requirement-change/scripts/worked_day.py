@@ -85,8 +85,8 @@ def run(a):
     b1["journal_whole"] = b1["buyer_pays"] + b1["naqd"]
     r["bikri1"] = b1
 
-    # Section 4.5: بکری 2 (one-time buyer, نقدی)
-    b2 = lot([("Shahid (pukhta)", 10, 1200)], a, freight=1000, naqd=0,
+    # Section 4.5: بکری 2 (چکتا buyer, paid in full on the spot)
+    b2 = lot([("Shahid (chukta)", 10, 1200)], a, freight=1000, naqd=0,
              labour_per_nag=a.labour_per_nag, munshiana=a.munshiana, phone=a.phone, received=10)
     b2["journal_whole"] = 2 * b2["buyer_pays"]  # sale part + cash part
     r["bikri2"] = b2
@@ -132,7 +132,7 @@ def run(a):
     r["trial_balance_rows"] = {
         "Dr cash": cash, "Dr Akram": akram - receipt, "Dr Arshad": arshad,
         "Dr shop expense (electricity)": shop_expense, "Dr partner A drawings": drawing,
-        "Cr Rahim": 0, "Cr Karim": b2["seller_credit"], "Cr pukhta khata (buyer)": 0, "Cr opening difference": 0,
+        "Cr Rahim": 0, "Cr Karim": b2["seller_credit"], "Cr chukta khata": 0, "Cr opening difference": 0,
         "Cr seller commission income": seller_comm_inc, "Cr buyer commission income": buyer_comm_inc,
         "Cr laga income": laga_inc, "Cr phone income": b1["phone"] + b2["phone"],
         "Cr labour payable": b1["labour"] + b2["labour"], "Cr freight payable": b1["freight"] + b2["freight"],
@@ -388,7 +388,7 @@ def run(a):
     # remaining = previous + bought (or sold, for a seller) - paid on the spot - paid that day.
     r["e2e_43"] = {"akram": [0, akram, 0, receipt, akram - receipt],
                    "arshad": [0, arshad, 0, 0, arshad],
-                   "shahid_pukhta": [0, b2["buyer_pays"], b2["buyer_pays"], 0, 0],
+                   "shahid_chukta": [0, b2["buyer_pays"], b2["buyer_pays"], 0, 0],
                    "buyers_remaining_total": (akram - receipt) + arshad,
                    "rahim_seller": [-rahim_advance, b1["seller_credit"], b1["naqd"], rahim_payable,
                                     -rahim_advance + b1["seller_credit"] - b1["naqd"] - rahim_payable],

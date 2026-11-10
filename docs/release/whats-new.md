@@ -1,5 +1,12 @@
 ## نیا کیا ہے
 
+- پختہ کھاتہ ختم کر دیا گیا۔ اس کی جگہ چکتا کھاتہ ہے: جو گاہک پورا بل موقع پر دے کر چلا جاتا ہے، اس کا نام بکری کی لائن سے ہی شامل کریں۔ اس پر کمیشن اور لاگا عام گاہک جیسا لگتا ہے، اور اس کا کوئی کھاتہ یا بقایا نہیں بنتا۔
+- ادھاری / نقدی کی جگہ اب ہر گاہک کی لائن کے آخر میں موقع پر جمع کا خانہ ہے۔ گاہک نے جتنی رقم ابھی دی وہ لکھیں، باقی اس کے کھاتے میں رہتی ہے۔ مثال: بل 10,000، جمع 3,000، تو 7,000 اس کے کھاتے میں۔
+- بکری کے مینو میں نیا پارٹی کھاتے: ہر گاہک اور بیوپاری کا بقایا، تاریخ وار حساب، اور کسی بھی دن کی پوری تفصیل، پرنٹ کے ساتھ۔
+- محفوظ بکری اب گاہک کے نام سے بھی ڈھونڈیں، اور غلط گاہک یا بیوپاری درست کریں۔ سارا حساب خود ساتھ بدل جاتا ہے۔
+- بکری کے صفحے پر دوسرا پرنٹ بٹن: ادھاری تفصیل، دن کے سب گاہک، ہر ایک کی موقع پر جمع اور باقی رقم کے ساتھ۔
+- Backspace یا Delete سے اب صرف لکھا ہوا مٹتا ہے۔ اسکرین نہیں چھوٹتی اور "محفوظ کریں؟" کا خانہ نہیں کھلتا۔
+- ہر پرنٹ اور PDF میں ہندسے 0 سے 9 میں، جیسے 2024 اور 10,000۔ رقم لفظوں میں اردو ہی میں رہتی ہے۔
 - پہلی بار چلانے پر مالک کا کھاتہ، پاس ورڈ اور بحالی کوڈ بنتا ہے۔ لاگ ان، خودکار تالا اور پاس ورڈ کی تبدیلی۔
 - اردو بنیادی زبان ہے۔ Alt+L دبا کر پوری ایپ، نام سمیت، انگریزی میں بدل جاتی ہے۔
 - انڈکس: کھاتوں کا چارٹ تین درجوں میں، بیوپاری اور گاہک کے کوڈ، ابتدائی بقایا، اور شہر، قسم مال، پیکنگ، اڈا، مارکہ، سٹور، تفصیل، خرچہ مد اور عملہ کی فہرستیں۔
@@ -8,13 +15,12 @@
 - نام کے بعد نشان (جیسے K): ایک ہی نام کے دو لوگوں میں فرق۔ ہر اسکرین، پرنٹ اور تلاش میں نام کے ساتھ آتا ہے۔
 - کمیشن اصول: بیوپاری اور گاہک کا کمیشن اور لاگا، اور "اصول آزمائیں"۔
 - بکری بک: ٹرک، لاٹ اور خریداروں کی لائنیں ایک ہی اسکرین پر۔ کمیشن، لاگا اور صافی بکری ساتھ ساتھ بنتے ہیں، اور ہر شراکت دار کا حصہ اسی وقت نظر آتا ہے۔ بعد میں فروخت، ترمیم، منسوخی اور باقی مال کی فہرست۔
-- پختہ کھاتہ: کبھی کبھار آنے والے گاہک یا بیوپاری کا نام اور فون لکھ کر حساب، ہر شخص کا الگ۔
 - وصولی / اگراہی، ادائیگی اور پیشگی ایک ہی واؤچر اسکرین پر۔ پرانے بل پہلے نمٹتے ہیں۔ ساری رقم روکڑ ہے، بینک یا چیک نہیں۔
 - روکڑ بک، خرچہ (دکان خرچہ، ذاتی خرچہ اور اس کی واپسی)، ادھار رقم، الگ کھاتہ اور جنرل۔ روکڑ صفر سے کم ہونے لگے تو محفوظ کرنے سے پہلے پوچھا جاتا ہے۔
 - شراکت دار: ہر بکری پر آمدن کی تقسیم اسی وقت، سرمایہ جمع اور واپسی، اور ہر شراکت دار کی کل رقم کا تاریخ وار کھاتہ۔
 - مارکیٹ سفر اور باغات: خریداری، خرچ، فروخت، نفع نقصان اور باغ بند کرنا۔ نفع نقصان صرف انہی شراکت داروں کا جو اس میں ہیں۔
 - پھل: شراکت دار گھر لے جائیں یا مہمانوں کے لیے، قسم مال اور تعداد کے ساتھ۔
-- پرنٹ: بکری کا بل، گاہک کی پرچی، پختہ کھاتہ کی پرچی، رسید اور اگراہی فہرست۔ ہر پرنٹ کے اوپر فرم کا نام، رابطے کے تین نام اور فون، ٹریڈ مارک، اور نیچے "صفحہ x از y"۔ پرنٹ میں ہندسے انگریزی (0-9) میں۔
+- پرنٹ: بکری کا بل، گاہک کی پرچی، رسید اور اگراہی فہرست۔ ہر پرنٹ کے اوپر فرم کا نام، رابطے کے تین نام اور فون، ٹریڈ مارک، اور نیچے "صفحہ x از y"۔
 - رپورٹیں: بکری، کھاتے، اگراہی، ادائیگی، کاروبار، سفر، باغ اور پھل؛ ایک دن یا کسی بھی مدت اور کسی بھی پارٹی کے لیے۔ پرنٹ، PDF اور ایکسل۔
 - تجزیات: قسم مال، بیوپاری، گاہک، شراکت دار، باغ، سفر اور پھل کے حساب سے، دن، مہینہ یا سال۔ ہر رقم کے پیچھے کی لائنیں کھل جاتی ہیں۔
 - ڈیش بورڈ، توجہ طلب فہرست (گھنٹی)، دن بند کرنا، مہینہ بند کرنا اور وجہ لکھ کر دوبارہ کھولنا۔
@@ -25,6 +31,13 @@
 
 ## What's new
 
+- Pukhta Khata is gone. Chukta Khata takes its place: for a walk-in buyer who pays the whole bill on the spot and leaves. Add his name from the sale line. He is charged Commission and Laga like any buyer, and he has no ledger or balance.
+- The Credit / Cash toggle is replaced by a Paid on the Spot box at the end of each buyer's line. Type what the buyer paid now; the rest stays on his account. Example: bill 10,000, paid 3,000, so 7,000 stays on his account.
+- A new Party Ledgers item in the Sale menu: each buyer's and seller's balance, day by day, and the full detail of any day, with a print.
+- Find a saved sale by buyer too, and correct a wrong buyer or seller. All the figures follow by themselves.
+- A second print button on the Sale page: Credit Details, with the day's buyers and each one's Paid on the Spot and what is left.
+- Backspace and Delete now only delete. They no longer leave the screen or open the "Save?" box.
+- Every print and PDF shows digits 0 to 9, like 2024 and 10,000. Amounts in words stay in Urdu on Urdu prints.
 - On first run, the Owner's account, password and recovery code are made. Sign in, automatic lock and change password.
 - Urdu is the main language. Press Alt+L to switch the whole app, names included, to English.
 - Index: the chart of accounts in three levels, seller and buyer codes, opening balances, and the lists of cities, items, packings, addas, marks, stores, narrations, expense heads and staff.
@@ -33,13 +46,12 @@
 - A tag after a name (for example K): tells two people with the same name apart. It shows with the name on every screen, print and search.
 - Commission rules: seller and buyer commission and Laga, and "Test a rule".
 - Sale Book: the truck, the lots and the buyers' lines on one screen. Commission, Laga and Net Sale work out as you type, and each partner's share shows at once. Later sales, edits, cancel and the Unsold Stock list.
-- Pukhta Khata: a one-time buyer or seller, with his name and phone, kept as a separate account for each person.
 - Receipt / Collection, Payment and Advance on one voucher screen. The oldest bills are settled first. All money is Cash: no bank, no cheque.
 - Cash book, Expense (shop expense, personal drawing and its return), Money Lent, Separate Khata and Journal. If an entry takes cash below zero, the app asks before it saves.
 - Partners: the income is split on every sale at once, capital in and out, and a dated statement of each partner's total.
 - Market trips and gardens: purchases, costs, sales, profit or loss and closing a garden. The profit or loss goes only to the partners in that trip or garden.
 - Fruit taken: partners taking fruit home or for guests, by item and quantity.
-- Prints: the seller bill, buyer slips, Pukhta Khata slip, receipt slip and the collection list. Every print carries the firm name, up to three contact persons with phones, the trade mark, and "Page x of y". Numbers in prints use English digits (0-9).
+- Prints: the seller bill, buyer slips, receipt slip and the collection list. Every print carries the firm name, up to three contact persons with phones, the trade mark, and "Page x of y".
 - Reports: sales, accounts, collection, payments, business, trips, gardens and fruit; for one day or any period and any party. Print, PDF and Excel.
 - Analytics: by item, seller, buyer, partner, garden, trip and fruit, by day, month or year. Every figure opens the lines behind it.
 - Dashboard, the attention list (bell), closing a day, closing a month and reopening with a reason.

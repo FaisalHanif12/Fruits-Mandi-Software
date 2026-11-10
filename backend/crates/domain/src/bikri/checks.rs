@@ -51,12 +51,16 @@ pub(super) enum Wanted {
 }
 
 /// Looks an account up for a field and checks that it is the right kind and active (PRD FR-10.2).
-/// `required` is the code for an empty field.
+/// `required` is the code for an empty field. `stored_here` is true when the caller says the
+/// account is the one a stored line or lot already has in the posting an edit replaces: a person in
+/// the dead amount (inactive) who still has money in that posting then counts as active, for that
+/// line or lot only (PRD A67, FR-10.10). A new line, or a line moved onto him, is refused.
 pub(super) fn account<'a>(
     issues: &mut Issues,
     lookups: &'a Lookups,
     id: Option<i64>,
     wanted: Wanted,
+    stored_here: bool,
     field: &str,
     required: Option<ErrorCode>,
 ) -> Option<&'a AccountFacts> {
@@ -97,7 +101,7 @@ pub(super) fn account<'a>(
         issues.error(ErrorCode::ErrGardenClosed, field);
         return None;
     }
-    if !facts.is_active {
+    if !facts.is_active && !(stored_here && facts.in_edited_posting) {
         issues.error(ErrorCode::ErrAccountInactive, field);
         return None;
     }

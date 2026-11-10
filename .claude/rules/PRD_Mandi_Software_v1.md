@@ -23,7 +23,7 @@ This is the **functional** document: what the software must do, screen by screen
 | 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.32 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.17 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.9 |
-| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.21 |
+| 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.22 |
 | 5 | `Architecture_v1.md` | Diagrams and the full data dictionary | v1.20 |
 | 6 | `.claude/agents/money-calculations.md` | Claude Code agent for every piece of money code | v1.10 |
 
@@ -1501,7 +1501,7 @@ FR-12.17 [A] A later sale adds new sale lines to an existing lot. Its date is th
 
 FR-12.18 [A] Any one posting of a بکری can be edited while that posting's date is open. Editing a posting in a closed day needs the day reopened first; the Edit button does it in one step (FR-21.4). The posting's date never changes (FR-7.70).
 FR-12.19 [A] An edit is saved as a reversal of that posting (same date) plus a new posting (same date), in one action.
-FR-12.20 [A] In an edit, a line or lot charge the user did not change keeps its stored method, value and amount exactly (FR-11.6). The only exception is a per-lot commission moved from a removed line (FR-11.9). Only changed or new lines look up the rules again (by the posting date). When only a lot's received qty is corrected, its per نگ lot charges keep their stored method and value and their amount is worked out again (C3); a typed amount stays as typed. A line whose only change is its quality or its paid on the spot keeps its stored rules and amounts (v1.32).
+FR-12.20 [A] In an edit, a line or lot charge the user did not change keeps its stored method, value and amount exactly (FR-11.6). [C] Umar (10-11-2026): an edit that changes only the buyer of a line looks up the buyer-side rules again (buyer commission and لاگا) and keeps the seller side as stored; an edit that changes only the seller of a lot looks up the seller-side rules again and keeps the buyer side and the money paid on the spot as stored, on every line of that lot. Example: the buyer default goes to 7% after the save and only the seller is corrected: اکرم stays 12,880. The only exception is a per-lot commission moved from a removed line (FR-11.9). Only changed or new lines look up the rules again (by the posting date). When only a lot's received qty is corrected, its per نگ lot charges keep their stored method and value and their amount is worked out again (C3); a typed amount stays as typed. A line whose only change is its quality or its paid on the spot keeps its stored rules and amounts (v1.32).
 FR-12.21 [A] The partner split of the edited posting is recalculated from the new shared income, with the shares of the posting date.
 
 **Cancel:**

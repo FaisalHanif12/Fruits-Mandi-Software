@@ -341,6 +341,43 @@ fn e2e_15_cancel_bikri_2_reverses_everything_and_keeps_the_books_balanced() {
     )
     .unwrap();
     assert_eq!(list.len(), 1);
+    // The day's list shows بکری 2 as cancelled, and leaves it out unless cancelled ones are asked
+    // for (PRD FR-12.7, FR-12.22). Numbers 1 and 2 only, so no figure moves.
+    let day = |show_finished: bool| {
+        bikri::list(
+            &w.env.ctx,
+            &mandi_services::core::bikri::BikriListInput {
+                show_finished,
+                ..Default::default()
+            },
+        )
+        .unwrap()
+    };
+    let with_cancelled = day(true);
+    let status_of = |number: i64| {
+        with_cancelled
+            .rows
+            .iter()
+            .find(|row| row.number == number)
+            .map(|row| row.status)
+    };
+    assert_eq!(
+        status_of(2),
+        Some(mandi_services::core::bikri::BikriStatus::Cancelled)
+    );
+    assert_eq!(
+        status_of(1),
+        Some(mandi_services::core::bikri::BikriStatus::Saved)
+    );
+    let live_only = day(false);
+    assert_eq!(
+        live_only
+            .rows
+            .iter()
+            .map(|row| row.number)
+            .collect::<Vec<_>>(),
+        [1]
+    );
     // The سیب facts net to zero (and Event 1's stay): analytics excludes it.
     let apple = scalar(
         &w,

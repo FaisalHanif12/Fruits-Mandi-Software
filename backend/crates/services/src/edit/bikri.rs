@@ -10,12 +10,62 @@
 
 use std::collections::HashMap;
 
+use mandi_domain::core::accounts::RecordRef;
 use mandi_domain::core::bikri::{BikriDetail, SaleState, SavedLot, SavedSale};
 use mandi_domain::core::edit::{ChangeValue, EditChange, EditPlace, EditPlaceKind};
 use mandi_domain::core::money::Paisa;
 use serde::Serialize;
 
-type Fields = Vec<(&'static str, ChangeValue)>;
+/// One field of a place, as it is compared. A party also carries his record, so two people of the
+/// same name are told apart by their account and not only by the name shown (PRD FR-7.70).
+struct Field<'a> {
+    name: &'static str,
+    value: ChangeValue,
+    party: Option<&'a RecordRef>,
+}
+
+type Fields<'a> = Vec<Field<'a>>;
+
+/// A field that is not a party.
+fn plain(name: &'static str, value: ChangeValue) -> Field<'static> {
+    Field {
+        name,
+        value,
+        party: None,
+    }
+}
+
+/// A field that holds a party: shown with his tag after the name, as `displayName` shows him
+/// (PRD 10.2), and compared by his account.
+fn party<'a>(name: &'static str, record: &'a RecordRef) -> Field<'a> {
+    Field {
+        name,
+        value: tagged(record, false),
+        party: Some(record),
+    }
+}
+
+/// A party in both scripts. The tag follows the name, so اسلم and اسلم BA read as two people. With
+/// `code`, his code follows too, for the rare case of two accounts with the same name and tag.
+fn tagged(record: &RecordRef, code: bool) -> ChangeValue {
+    let show = |name: &str| {
+        let mut text = name.to_owned();
+        if let Some(tag) = record.tag.as_deref().filter(|t| !t.is_empty()) {
+            text.push(' ');
+            text.push_str(tag);
+        }
+        if code && !record.code.is_empty() {
+            text.push_str(" (");
+            text.push_str(&record.code);
+            text.push(')');
+        }
+        text
+    };
+    ChangeValue::Names {
+        ur: show(&record.name_ur),
+        en: show(&record.name_en),
+    }
+}
 
 /// A saved بکری with the rows that replaced its lines, as the rehearsal reads it.
 pub(crate) struct Snapshot {
@@ -57,7 +107,7 @@ fn text(value: Option<&String>) -> ChangeValue {
     }
 }
 
-fn names(record: &mandi_domain::core::accounts::RecordRef) -> ChangeValue {
+fn names(record: &RecordRef) -> ChangeValue {
     ChangeValue::Names {
         ur: record.name_ur.clone(),
         en: record.name_en.clone(),
@@ -72,65 +122,65 @@ fn word<T: Serialize>(value: &T) -> ChangeValue {
     }
 }
 
-fn header_fields(d: &BikriDetail) -> Fields {
+fn header_fields(d: &BikriDetail) -> Fields<'_> {
     vec![
-        ("book", text(d.book.as_ref())),
-        (
+        plain("book", text(d.book.as_ref())),
+        plain(
             "bill_date",
             ChangeValue::Date {
                 iso: d.bill_date.clone(),
             },
         ),
-        ("truck_no", text(d.truck_no.as_ref())),
-        (
-            "zamindar",
-            d.zamindar.as_ref().map_or(ChangeValue::Empty, names),
+        plain("truck_no", text(d.truck_no.as_ref())),
+        d.zamindar.as_ref().map_or_else(
+            || plain("zamindar", ChangeValue::Empty),
+            |zamindar| party("zamindar", zamindar),
         ),
-        ("driver_name", text(d.driver_name.as_ref())),
-        ("driver_phone", text(d.driver_phone.as_ref())),
-        ("total_freight", opt_money(d.total_freight)),
-        ("note", text(d.note.as_ref())),
+        plain("driver_name", text(d.driver_name.as_ref())),
+        plain("driver_phone", text(d.driver_phone.as_ref())),
+        plain("total_freight", opt_money(d.total_freight)),
+        plain("note", text(d.note.as_ref())),
     ]
 }
 
-fn lot_fields(l: &SavedLot) -> Fields {
+fn lot_fields(l: &SavedLot) -> Fields<'_> {
     vec![
-        ("seller", names(&l.seller)),
-        ("item", names(&l.item)),
-        ("packing", names(&l.packing)),
-        ("marka", text(l.marka_text.as_ref())),
-        ("qty_received", number(l.qty_received)),
-        (
+        party("seller", &l.seller),
+        plain("item", names(&l.item)),
+        plain("packing", names(&l.packing)),
+        plain("marka", text(l.marka_text.as_ref())),
+        plain("qty_received", number(l.qty_received)),
+        plain(
             "weight_received",
             l.weight_received_grams
                 .map_or(ChangeValue::Empty, |grams| ChangeValue::Weight { grams }),
         ),
-        ("freight", money(l.freight)),
-        ("freight_paid_by", word(&l.freight_paid_by)),
-        ("labour", money(l.labour.amount)),
-        ("labour_method", word(&l.labour.method)),
-        ("munshiana", money(l.munshiana.amount)),
-        ("munshiana_method", word(&l.munshiana.method)),
-        ("phone", money(l.phone.amount)),
-        ("phone_method", word(&l.phone.method)),
-        ("cash_paid", money(l.cash_paid)),
-        ("store_rent", money(l.store_rent)),
-        (
+        plain("freight", money(l.freight)),
+        plain("freight_paid_by", word(&l.freight_paid_by)),
+        plain("labour", money(l.labour.amount)),
+        plain("labour_method", word(&l.labour.method)),
+        plain("munshiana", money(l.munshiana.amount)),
+        plain("munshiana_method", word(&l.munshiana.method)),
+        plain("phone", money(l.phone.amount)),
+        plain("phone_method", word(&l.phone.method)),
+        plain("cash_paid", money(l.cash_paid)),
+        plain("store_rent", money(l.store_rent)),
+        plain(
             "adjust_advance",
             ChangeValue::Flag {
                 on: l.adjust_advance,
             },
         ),
-        ("seller_comm", money(l.seller_comm)),
-        ("gross", money(l.gross)),
-        ("net", money(l.net)),
+        plain("seller_comm", money(l.seller_comm)),
+        plain("gross", money(l.gross)),
+        plain("net", money(l.net)),
     ]
 }
 
-fn line_fields(s: &SavedSale) -> Fields {
+fn line_fields(s: &SavedSale) -> Fields<'_> {
     vec![
-        ("buyer", names(&s.buyer)),
-        (
+        party("buyer", &s.buyer),
+        plain(
             "chukta",
             s.chukta
                 .as_ref()
@@ -139,52 +189,59 @@ fn line_fields(s: &SavedSale) -> Fields {
                     en: p.name_en.clone(),
                 }),
         ),
-        ("qty", number(s.qty)),
-        (
+        plain("qty", number(s.qty)),
+        plain(
             "weight",
             s.weight_grams
                 .map_or(ChangeValue::Empty, |grams| ChangeValue::Weight { grams }),
         ),
-        ("seller_rate", money(s.seller_rate)),
-        ("seller_amount", money(s.seller_amount)),
-        ("seller_comm", money(s.seller_comm.amount)),
-        ("buyer_rate", money(s.buyer_rate)),
-        ("buyer_value", money(s.buyer_value)),
-        ("buyer_comm", money(s.buyer_comm.amount)),
-        ("laga", money(s.laga.amount)),
-        ("buyer_total", money(s.buyer_total)),
-        ("rate_diff", money(s.rate_diff)),
-        ("paid", money(s.paid_paisa)),
-        ("note", text(s.note.as_ref())),
+        plain("seller_rate", money(s.seller_rate)),
+        plain("seller_amount", money(s.seller_amount)),
+        plain("seller_comm", money(s.seller_comm.amount)),
+        plain("buyer_rate", money(s.buyer_rate)),
+        plain("buyer_value", money(s.buyer_value)),
+        plain("buyer_comm", money(s.buyer_comm.amount)),
+        plain("laga", money(s.laga.amount)),
+        plain("buyer_total", money(s.buyer_total)),
+        plain("rate_diff", money(s.rate_diff)),
+        plain("paid", money(s.paid_paisa)),
+        plain("note", text(s.note.as_ref())),
     ]
 }
 
-/// The changes between two sets of fields of one place. A side that is not there is empty.
+/// The changes between two sets of fields of one place. A side that is not there is empty. A party
+/// changed when his account changed, even if the name shown is the same; then the code is shown too.
 fn compare(
     place: &EditPlace,
-    before: Option<Fields>,
-    after: Option<Fields>,
+    before: Option<Fields<'_>>,
+    after: Option<Fields<'_>>,
     out: &mut Vec<EditChange>,
 ) {
     let template = after.as_ref().or(before.as_ref());
     let Some(template) = template else {
         return;
     };
-    for (index, (field, _)) in template.iter().enumerate() {
-        let b = before
-            .as_ref()
-            .and_then(|f| f.get(index))
-            .map_or(ChangeValue::Empty, |(_, v)| v.clone());
-        let a = after
-            .as_ref()
-            .and_then(|f| f.get(index))
-            .map_or(ChangeValue::Empty, |(_, v)| v.clone());
-        if b != a {
+    for (index, field) in template.iter().enumerate() {
+        let b = before.as_ref().and_then(|f| f.get(index));
+        let a = after.as_ref().and_then(|f| f.get(index));
+        let mut before_value = b.map_or(ChangeValue::Empty, |f| f.value.clone());
+        let mut after_value = a.map_or(ChangeValue::Empty, |f| f.value.clone());
+        let other_account = match (b.and_then(|f| f.party), a.and_then(|f| f.party)) {
+            (Some(x), Some(y)) if x.id != y.id => Some((x, y)),
+            _ => None,
+        };
+        if let Some((x, y)) = other_account
+            && before_value == after_value
+        {
+            before_value = tagged(x, true);
+            after_value = tagged(y, true);
+        }
+        if before_value != after_value {
             out.push(EditChange {
                 place: place.clone(),
-                field: (*field).to_owned(),
-                before: b,
-                after: a,
+                field: field.name.to_owned(),
+                before: before_value,
+                after: after_value,
             });
         }
     }

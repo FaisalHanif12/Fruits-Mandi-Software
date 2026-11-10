@@ -47,6 +47,10 @@ pub struct AccountFacts {
     pub garden_closed: bool,
     /// False when hidden from pickers: a new posting cannot use it (PRD FR-10.2).
     pub is_active: bool,
+    /// True for an inactive account of a person in the dead amount who already has money in the
+    /// posting an edit replaces (PRD A67, FR-10.10). Only the lines and the lot he already has in
+    /// that posting may stay on him; a new line or a line moved onto him is refused.
+    pub in_edited_posting: bool,
     /// False means cash only (PRD 10.2 "ادھار کی اجازت").
     pub credit_allowed: bool,
     /// The credit limit, if one is set.

@@ -154,6 +154,10 @@ fn header_checks(issues: &mut Issues, draft: &PreparedDraft, lookups: &Lookups) 
         lookups,
         h.zamindar_account_id,
         Wanted::Seller,
+        // The header's zamindar only names the default seller of new lots; no money is on him. A
+        // dead one who is in the posting being edited may stay there. A lot with him as its seller
+        // is checked on its own, and only the lot he already has may stay (FR-10.10).
+        true,
         "header.zamindar_account_id",
         None,
     );
@@ -171,7 +175,10 @@ fn header_checks(issues: &mut Issues, draft: &PreparedDraft, lookups: &Lookups) 
 ///   keeps its stored charges exactly (PRD FR-12.20); a lot charge the user did not change keeps
 ///   its stored method and value. When the edited line carrying a per-lot seller commission is
 ///   removed, the charge moves, with its stored method and value, to the first remaining line of
-///   the lot that follows the rule (PRD FR-11.9).
+///   the lot that follows the rule (PRD FR-11.9). A line whose only change is its buyer keeps its
+///   seller commission and reads the buyer commission and لاگا again; a lot whose only change is
+///   its seller keeps the buyer side and the paid amount of every line and reads the seller
+///   commission and the lot charges again (PRD FR-12.20, Umar 10-11-2026).
 ///
 /// # Errors
 /// [`CalcError`] only for overflow or broken data; every mistake of the user comes back in
