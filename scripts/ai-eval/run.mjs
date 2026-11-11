@@ -162,7 +162,7 @@ const PREFIX_O200K = (() => {
 const MODEL_COUNTS_MORE = 1.034;
 // What the model counts for the same text: a little more than o200k, rounded up to a hundred.
 const PREFIX_MODEL = Math.ceil((PREFIX_O200K * MODEL_COUNTS_MORE) / 100) * 100;
-const WORLDS = new Set(['day', 'late', 'e59', 'e42', 'e34', 'year', 'thin']);
+const WORLDS = new Set(['day', 'late', 'e59', 'e42', 'e34', 'd8', 'year', 'thin']);
 const OUTCOMES = new Set([
   'answered',
   'estimate',

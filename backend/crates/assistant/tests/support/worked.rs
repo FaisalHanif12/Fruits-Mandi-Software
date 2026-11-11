@@ -4,7 +4,9 @@
 #![allow(dead_code)]
 
 use mandi_services::core::accounts::{AccountInput, AccountType, OpeningLineInput, OpeningsInput};
-use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, ChuktaInput, HeaderInput};
+use mandi_services::core::bikri::{
+    BikriDraft, BikriSaveInput, ChuktaInput, HeaderInput, SaleInput,
+};
 use mandi_services::core::error::{ErrorCode, ErrorValue};
 use mandi_services::core::expenses::{PersonalExpenseInput, ShopExpenseInput};
 use mandi_services::core::masters::{ExpenseHeadInput, MasterInput};
@@ -332,4 +334,190 @@ pub fn part_sold_world() -> world::World {
     save(&w, &draft);
     set_today(&w.env, 2026, 10, 13);
     w
+}
+
+/// The books of the client's demo (D8 Feature 4 and 10), today 08-11-2026. Every figure below is worked by
+/// hand from these lines: value = qty x rate, buyer commission 6% of it, لاگا 8 a نگ.
+///
+/// | Date | Seller, item | Buyer, qty at rate | Buyer total | Paid | Left |
+/// |---|---|---|---|---|---|
+/// | 20-11-25 | Rahim, banana | Haroon 10 at 500 | 5,380 | 0 | 5,380 |
+/// | 15-12-25 | Rahim, apple | Haroon 20 at 800 | 17,120 | 6,000 | 11,120 |
+/// | 15-03-26 | Rahim, banana | Haroon 30 at 600 | 19,320 | 19,320 | 0 |
+/// | 12-09-26 | Rahim, apple | Anas 5 at 1,000 | 5,340 | 0 | 5,340 |
+/// | 01-11-26 | Rahim, banana | Akram 10 at 500 | 5,380 | 5,380 | 0 |
+/// | 03-11-26 | Ehsan, mango 200 | Mani 20 at 1,000 | 21,360 | 21,360 | 0 |
+/// |  |  | Anas 50 at 900 | 48,100 | 10,000 | 38,100 |
+/// |  |  | Haroon 130 at 900 | 125,060 | 0 | 125,060 |
+/// | 04-11-26 | Rahim, banana | Anas 10 at 500 | 5,380 | 5,380 | 0 |
+/// | 05-11-26 | Rahim, apple | Akram 10 at 1,000 | 10,680 | 3,000 | 7,680 |
+/// | 06-11-26 | Rahim, banana | Akram 5 at 500 | 2,690 | 0 | 2,690 |
+/// | 08-11-26 | Karim, apple | Shahid (walk-in) 10 at 1,200 | 12,800 | 12,800 | 0 |
+pub struct D8 {
+    pub w: world::World,
+    pub ehsan: i64,
+    pub anas: i64,
+    pub haroon: i64,
+    pub mango: i64,
+}
+
+fn paid(mut s: SaleInput, amount: &str) -> SaleInput {
+    s.paid = Some(amount.into());
+    s
+}
+
+pub fn d8() -> D8 {
+    let (dir, env) = crate::common::env();
+    crate::common::set_up(&env);
+    crate::common::login_owner(&env);
+    let owner = mandi_services::auth::require(&env.ctx).unwrap();
+    let rahim = world::add_account(&env, &owner, AccountType::Seller, "رحیم", "Rahim", true, "");
+    crate::common::set_today(&env, 2025, 11, 1);
+    let w = world::finish_world(dir, env, owner, rahim, false);
+    mandi_services::partners::set_shares(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::partners::PartnersSetSharesInput {
+            effective_from: "01-11-2025".into(),
+            shares: [
+                (w.partners[0], "40"),
+                (w.partners[1], "30"),
+                (w.partners[2], "30"),
+            ]
+            .iter()
+            .map(
+                |&(partner_id, share)| mandi_services::core::partners::ShareInput {
+                    partner_id,
+                    share: share.to_owned(),
+                },
+            )
+            .collect(),
+        },
+    )
+    .unwrap();
+    let ehsan = world::add_account(
+        &w.env,
+        &w.owner,
+        AccountType::Seller,
+        "احسان",
+        "Ehsan",
+        true,
+        "",
+    );
+    let buyer = |ur: &str, en: &str| {
+        world::add_account(&w.env, &w.owner, AccountType::Buyer, ur, en, true, "")
+    };
+    let (mani, anas, haroon) = (
+        buyer("مانی", "Mani"),
+        buyer("انس", "Anas"),
+        buyer("ہارون", "Haroon"),
+    );
+    let mango = world::add_item(&w.env, &w.owner, "آم", "Mango", "fruit", "unit");
+    let d = D8 {
+        w,
+        ehsan,
+        anas,
+        haroon,
+        mango,
+    };
+    let save = |date: (i32, u32, u32), seller: i64, item: i64, qty: &str, lines: Vec<SaleInput>| {
+        crate::common::set_today(&d.w.env, date.0, date.1, date.2);
+        let mut lot = world::bare_lot(&d.w, "lot-1", seller, item, qty);
+        lot.sales = lines;
+        mandi_services::bikri::save(
+            &d.w.env.ctx,
+            &d.w.owner,
+            &BikriSaveInput {
+                draft: BikriDraft {
+                    header: HeaderInput {
+                        entry_date: format!("{:02}-{:02}-{}", date.2, date.1, date.0),
+                        ..world::header()
+                    },
+                    lots: vec![lot],
+                },
+                confirm_cash_below_zero: true,
+            },
+        )
+        .unwrap();
+    };
+    let (rahim, banana, apple) = (d.w.rahim, d.w.banana, d.w.apple);
+    save(
+        (2025, 11, 20),
+        rahim,
+        banana,
+        "10",
+        vec![world::sale("s", haroon, "10", "500")],
+    );
+    save(
+        (2025, 12, 15),
+        rahim,
+        apple,
+        "20",
+        vec![paid(world::sale("s", haroon, "20", "800"), "6,000")],
+    );
+    save(
+        (2026, 3, 15),
+        rahim,
+        banana,
+        "30",
+        vec![paid(world::sale("s", haroon, "30", "600"), "19,320")],
+    );
+    save(
+        (2026, 9, 12),
+        rahim,
+        apple,
+        "5",
+        vec![world::sale("s", anas, "5", "1,000")],
+    );
+    save(
+        (2026, 11, 1),
+        rahim,
+        banana,
+        "10",
+        vec![paid(world::sale("s", d.w.akram, "10", "500"), "5,380")],
+    );
+    save(
+        (2026, 11, 3),
+        ehsan,
+        mango,
+        "200",
+        vec![
+            paid(world::sale("l1", mani, "20", "1,000"), "21,360"),
+            paid(world::sale("l2", anas, "50", "900"), "10,000"),
+            world::sale("l3", haroon, "130", "900"),
+        ],
+    );
+    save(
+        (2026, 11, 4),
+        rahim,
+        banana,
+        "10",
+        vec![paid(world::sale("s", anas, "10", "500"), "5,380")],
+    );
+    save(
+        (2026, 11, 5),
+        rahim,
+        apple,
+        "10",
+        vec![paid(world::sale("s", d.w.akram, "10", "1,000"), "3,000")],
+    );
+    save(
+        (2026, 11, 6),
+        rahim,
+        banana,
+        "5",
+        vec![world::sale("s", d.w.akram, "5", "500")],
+    );
+    // Today: a walk-in buyer pays the whole bill at once (PRD Section 13): Shahid, 10 at 1,200 = 12,000,
+    // commission 720 + 720 and لاگا 80, 12,800 in all, paid 12,800.
+    let mut shahid = world::sale("s", d.w.chukta_khata, "10", "1,200");
+    shahid.chukta = Some(ChuktaInput {
+        name_ur: "شاہد".into(),
+        name_en: "Shahid".into(),
+        phone: String::new(),
+    });
+    let karim = d.w.karim;
+    save((2026, 11, 8), karim, apple, "10", vec![shahid]);
+    crate::common::set_today(&d.w.env, 2026, 11, 8);
+    d
 }

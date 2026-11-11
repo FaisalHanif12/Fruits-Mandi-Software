@@ -51,8 +51,10 @@
 //! banana as an item (by its own name, not by the words typed), and view A with `item` the key and
 //! 2026-09-01 to 2026-09-30.
 
+mod paid;
 mod totals;
 
+pub(super) use paid::{paid_ask, pre_reads as paid_pre_reads};
 pub(super) use totals::{pay_asked, pay_kind, qty_asked, value_asked};
 
 use mandi_reports::analytics::{AnalyticsCompare, compare_window};
@@ -1309,7 +1311,9 @@ pub fn plan_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
 /// few milliseconds and never a wrong figure. The model then writes the answer in ONE call instead of
 /// choosing the tools first (D7, plan 59 D).
 pub fn plan_pre_reads(u: &Understanding) -> Option<Vec<PlannedRead>> {
-    plan_reads(u).or_else(|| pre_reads(u))
+    plan_reads(u)
+        .or_else(|| paid::pre_reads(u))
+        .or_else(|| pre_reads(u))
 }
 
 /// The union of the reads of each figure of the question; see [`plan_pre_reads`].
@@ -1588,6 +1592,12 @@ fn pre_reads_of_one_record(u: &Understanding, period: Option<&PeriodRef>) -> Opt
 
 /// The reads of a question and the figures an instant answer gives from them.
 pub(super) fn plan(u: &Understanding) -> Option<Planned> {
+    // What a buyer paid on the spot or left on account is in no line an instant answer writes: his plain
+    // balance or the cash in hand would be a real number for the wrong thing. The model answers, from the
+    // register the pre-reads give it (D8 Feature 10, `paid.rs`).
+    if u.paid_ask {
+        return None;
+    }
     // A بکری number named ("kal bikri number 5 ka commission kitna tha"): no read of a figure has a filter
     // for it, so the plain figure would be the whole shop's for the day. Only its own audit is read here
     // (`Ask`); anything else is the model's, which reads R1 for that بکری (D7, plan 59 R3).

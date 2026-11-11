@@ -2,11 +2,13 @@
 //! `mandi_core::rules` and `mandi_services::rules`, and the choosing of the winning rule is in
 //! `mandi_domain::rules`. A rule is never deleted; it is made inactive (Code Standards D3).
 
+use std::collections::HashMap;
+
 use mandi_core::accounts::RecordRef;
 use mandi_core::money::{Bps, Paisa};
 use mandi_core::rules::{
-    ChargeMethod, ChargeSide, ChargeType, ItemGroup, RuleOverlap, RuleRow, RulesFilter, level_of,
-    percent_text,
+    ChargeMethod, ChargeSide, ChargeType, ItemGroup, RuleLevel, RuleOverlap, RuleRow, RulesFilter,
+    level_of, percent_text,
 };
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter};
@@ -130,6 +132,42 @@ pub fn saved_lines_using(conn: &Connection, id: i64) -> rusqlite::Result<i64> {
 pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<RuleRow>> {
     conn.query_row(&format!("{ROW_SELECT} WHERE r.id = ?1"), [id], row_from)
         .optional()
+}
+
+/// The level of each of these rules, in one query (Code Standards B22). A rule that does not exist
+/// is left out. It reads only the three columns that make the level, never the "used" test of
+/// `get`, which looks into the saved lines.
+///
+/// Example: the ids of the rules a saved بکری took its charges from give each rule's level (party
+/// and item, party, item, group or default) for the lines of an edit.
+///
+/// # Errors
+/// Any SQLite error, or a row with a group and a party together.
+pub fn levels_of(conn: &Connection, ids: &[i64]) -> rusqlite::Result<HashMap<i64, RuleLevel>> {
+    // A saved بکری uses a few rules, so this is one short query; the chunks only keep a
+    // very long list under SQLite's limit on bound values.
+    const CHUNK: usize = 500;
+    let mut levels = HashMap::with_capacity(ids.len());
+    for chunk in ids.chunks(CHUNK) {
+        let marks = vec!["?"; chunk.len()].join(", ");
+        let mut statement = conn.prepare(&format!(
+            "SELECT id, account_id, item_id, item_group FROM charge_rules WHERE id IN ({marks})"
+        ))?;
+        let rows = statement.query_map(params_from_iter(chunk.iter()), |r| {
+            let item_group = match r.get::<_, Option<String>>(3)? {
+                Some(text) => Some(ItemGroup::parse(&text).ok_or_else(|| bad(3, "item_group"))?),
+                None => None,
+            };
+            let level = level_of(r.get(1)?, r.get(2)?, item_group)
+                .ok_or_else(|| bad(3, "a group together with a party"))?;
+            Ok((r.get::<_, i64>(0)?, level))
+        })?;
+        for row in rows {
+            let (id, level) = row?;
+            levels.insert(id, level);
+        }
+    }
+    Ok(levels)
 }
 
 /// The rules that match a filter: by side, charge, level (most specific first), then newest

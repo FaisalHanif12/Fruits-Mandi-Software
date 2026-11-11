@@ -99,6 +99,7 @@ pub(super) fn nothing(doubt: Doubt) -> Understanding {
         value_asked: false,
         total_dues: false,
         chukta_group: false,
+        paid_ask: false,
         beyond_estimate: false,
         sure: false,
         doubts: vec![doubt],
@@ -1631,6 +1632,7 @@ pub(super) fn assemble(
             && (dead_amount_included(scan) || total_dues_asked(scan))
             && !scan.has_any(&[Cue::ManyBuyers, Cue::RoleBuyer]),
         chukta_group,
+        paid_ask: super::reads::paid_ask(scan) || cash_and_credit_sales(&kinds_for_happened),
         beyond_estimate: beyond,
         sure: false,
         doubts,
@@ -1729,6 +1731,16 @@ pub(super) fn assemble(
     // are not a doubt when every period can be read: the app plans the reads, and the run starts only
     // from a sure understanding (live run 2, H348 and H371 read nothing).
     if !understanding.sure && super::reads::periods_are_planned(&understanding) {
+        understanding.sure = true;
+    }
+    // What a buyer paid on the spot or left on account ("is mahine anas ne mauqe par kitna jama karaya"): the
+    // words say the figure, no plan line writes it, and the register R5 is read ahead for the model. A
+    // comparison of cash and credit sales and a figure the lexicon has no word for are no doubt here (D8
+    // H2, H6). The question still gets no instant answer: `plan` has no lines for it.
+    if !understanding.sure
+        && understanding.paid_ask
+        && super::reads::paid_pre_reads(&understanding).is_some()
+    {
         understanding.sure = true;
     }
     // A question that is not sure never carries a button: a wrong, wider date on a button is worse
@@ -2037,4 +2049,17 @@ fn beyond_estimate(periods: &[PeriodRef], today: NaiveDate) -> bool {
         && target
             .checked_sub(now)
             .is_some_and(|ahead| ahead >= i64::from(crate::limits::MAX_MONTHS_AHEAD))
+}
+
+/// True when the figures name the cash sales and the credit sales together ("cash sales and credit sales
+/// from 2 november to 5 november, what is the difference"): the registers R3 and R4, or the word cash and
+/// one of them. The lexicon reads such phrases as figures, not as payment words (D8 H6).
+fn cash_and_credit_sales(kinds: &[FigureKind]) -> bool {
+    let has = |k: &FigureKind| kinds.contains(k);
+    let (cash_register, credit_register) = (
+        has(&FigureKind::Report("R3")),
+        has(&FigureKind::Report("R4")),
+    );
+    (cash_register && credit_register)
+        || (has(&FigureKind::Cash) && (cash_register || credit_register))
 }

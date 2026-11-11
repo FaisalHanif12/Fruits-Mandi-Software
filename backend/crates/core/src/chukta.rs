@@ -129,11 +129,27 @@ fn name_part(
     }
 }
 
+/// The fewest digits that look for a phone: with 1 or 2 digits nearly every phone matches.
+const MIN_PHONE_DIGITS: usize = 3;
+
+/// The digits of a typed text that is a phone number or the start of one, or `None` (PRD FR-7.29).
+/// The text must be only digits and the usual signs of a phone (`-`, `+`, spaces, brackets), with at
+/// least [`MIN_PHONE_DIGITS`] digits. A name with a digit in it ("Ali 3") is a name, not a phone.
+fn phone_digits(typed: &str) -> Option<String> {
+    let phone_like = typed
+        .chars()
+        .all(|c| c.is_ascii_digit() || matches!(c, '-' | '+' | ' ' | '(' | ')'));
+    let digits: String = typed.chars().filter(char::is_ascii_digit).collect();
+    (phone_like && digits.len() >= MIN_PHONE_DIGITS).then_some(digits)
+}
+
 /// True if the typed text is part of the buyer's names or phone (PRD FR-7.40 style: both scripts,
 /// letter variants unified, close English spellings by the phonetic key). Empty text matches
-/// everybody.
+/// everybody. A phone matches only when the whole text is a phone number of at least 3 digits that
+/// is a run of the phone.
 ///
-/// Example: `shahid` and `شاہ` both find شاہد / Shahid; `0300` finds a phone that has it.
+/// Example: `shahid` and `شاہ` both find شاہد / Shahid; `0300` finds a phone that has it; `3` or
+/// `Ali 3` finds no phone.
 pub fn matches(typed: &str, name_ur: &str, name_en: &str, phone: Option<&str>) -> bool {
     let typed = typed.trim();
     if typed.is_empty() {
@@ -151,8 +167,7 @@ pub fn matches(typed: &str, name_ur: &str, name_en: &str, phone: Option<&str>) -
     if !phonetic.is_empty() && text::search_phonetic(name_en).contains(&phonetic) {
         return true;
     }
-    let digits: String = typed.chars().filter(char::is_ascii_digit).collect();
-    !digits.is_empty() && phone.is_some_and(|p| p.contains(&digits))
+    phone_digits(typed).is_some_and(|digits| phone.is_some_and(|p| p.contains(&digits)))
 }
 
 #[cfg(test)]
@@ -211,5 +226,30 @@ mod tests {
         assert!(matches("0300", "شاہد", "Shahid", Some("03000000000")));
         assert!(matches("", "شاہد", "Shahid", None));
         assert!(!matches("nasir", "شاہد", "Shahid", Some("03000000000")));
+    }
+
+    #[test]
+    fn a_phone_is_found_only_by_three_or_more_digits_that_are_a_run_of_it() {
+        let phone = Some("03000000000");
+        let found = |typed: &str| matches(typed, "شاہد", "Shahid", phone);
+        // One or two digits are too few: they are in almost every phone.
+        assert!(!found("3"));
+        assert!(!found("03"));
+        assert!(found("030"));
+        // The middle of the phone, the usual sign, and the whole phone.
+        assert!(found("3000"));
+        assert!(found("0300-000"));
+        assert!(found("0300 0000000"));
+        assert!(found("03000000000"));
+        // Digits that are not a run of it.
+        assert!(!found("0399"));
+        assert!(!found("030000000001"));
+        // A name with a digit is not a phone, and digits taken from separate parts are not a run.
+        assert!(!found("Ali 3"));
+        assert!(!found("Ali 030"));
+        assert!(!found("a0300"));
+        assert!(!found("0-3-0-0-a-0"));
+        // A buyer with no phone is never found by digits.
+        assert!(!matches("0300", "شاہد", "Shahid", None));
     }
 }

@@ -855,6 +855,11 @@ pub struct Understanding {
     /// True when the dues asked are the total dues ("kul ugrahi", "total dues": the tile کل اگراہی,
     /// buyers' dues plus sellers' dues plus the dead amount), not the buyers' dues alone.
     pub total_dues: bool,
+    /// True when the question asks what a buyer paid on the spot or left on account (موقع پر جمع, کھاتے میں
+    /// باقی; "mauqe par kitna jama karaya", "kitna baqi chhora"), or the cash and the credit sales together.
+    /// No instant answer is given for it; the app reads the register R2 ahead for the model (D8 H1, H2, H5,
+    /// H6).
+    pub paid_ask: bool,
     /// True when the question asks about the walk-in buyers together ("aaj chukta gahakon ne kitne ka
     /// maal liya") and names no party or item: their totals are view A with the buyer filter `chukta`
     /// (the account چکتا کھاتہ, no person). The app reads it ahead for the model; it gives no instant

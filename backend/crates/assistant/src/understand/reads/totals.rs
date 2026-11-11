@@ -92,6 +92,11 @@ pub(in crate::understand) fn pay_kind(scan: &Scan) -> Option<PayKind> {
     }
 }
 
+/// True when the question names credit AND cash sales together ("naqd aur udhar bikri mein farq").
+pub(in crate::understand) fn both_pay_kinds(scan: &Scan) -> bool {
+    pay_flags(scan) == (true, true)
+}
+
 /// True when a payment-type word stands in the question, whether it names one kind or both.
 pub(in crate::understand) fn pay_asked(scan: &Scan) -> bool {
     let (credit, cash) = pay_flags(scan);

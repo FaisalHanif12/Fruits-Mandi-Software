@@ -51,9 +51,9 @@ const NAQDI = account(8, 'buyer', '03040000', 'نقدی منڈی', 'Naqdi Mandi'
 const MANI = account(26, 'buyer', '0020', 'مانی', 'Mani');
 const HAROON = account(27, 'buyer', '0021', 'ہارون', 'Haroon');
 const ANAS = account(28, 'buyer', '0022', 'انس', 'Anas');
-const PUKHTA = account(9, 'buyer', '0030', 'پختہ کھاتہ (خریدار)', 'Pukhta Khata (Buyer)');
+const CHUKTA = account(9, 'buyer', '0030', 'چکتا کھاتہ', 'Chukta Khata');
 /** The list with nothing typed: recent first, as the backend gave it to Umar. */
-const EMPTY_TEXT_ORDER = [PUKHTA, ANAS, MANI, NAQDI, HAROON];
+const EMPTY_TEXT_ORDER = [CHUKTA, ANAS, MANI, NAQDI, HAROON];
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {

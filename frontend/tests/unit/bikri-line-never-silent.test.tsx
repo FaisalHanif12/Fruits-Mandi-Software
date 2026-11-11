@@ -48,8 +48,8 @@ const SLOW_MS = { timeout: 8_000 };
 const SHARED = {
   id: 9,
   code: '0030',
-  name_ur: 'پختہ کھاتہ (خریدار)',
-  name_en: 'Pukhta Khata (Buyer)',
+  name_ur: 'چکتا کھاتہ',
+  name_en: 'Chukta Khata',
 };
 
 beforeEach(() => {

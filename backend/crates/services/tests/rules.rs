@@ -477,6 +477,57 @@ fn the_levels_of_prd_11_3_through_the_real_commands() {
 }
 
 #[test]
+fn the_levels_of_many_rules_are_read_in_one_query() {
+    // Code Standards B22: an edit of 1,000 lines reads the level of each rule its charges came from
+    // in one query, not once for every charge. Each level is the one the rule's own row gives.
+    let f = fixture();
+    let rule_id = |input: &RuleInput| save(&f, input).row.id;
+    let party_item = rule_id(&seller_commission(&f, Some(f.rahim), Some(f.banana), "5"));
+    let party = rule_id(&seller_commission(&f, Some(f.rahim), None, "4"));
+    let item = rule_id(&seller_commission(&f, None, Some(f.japani), "3"));
+    let group = rule_id(&RuleInput {
+        item_group: Some(ItemGroup::Vegetable),
+        ..form(
+            ChargeSide::Buyer,
+            ChargeType::Laga,
+            ChargeMethod::PerUnit,
+            "3",
+        )
+    });
+    let default = count(
+        &f.dir,
+        "SELECT id FROM charge_rules WHERE side = 'seller' AND charge_type = 'commission'
+           AND account_id IS NULL AND item_id IS NULL AND item_group IS NULL",
+    );
+    let read = |ids: &[i64]| {
+        f.env
+            .ctx
+            .db()
+            .read(|c| mandi_services::db::rules::levels_of(c, ids))
+            .unwrap()
+    };
+    let levels = read(&[party_item, party, item, group, default, 999_999]);
+    assert_eq!(levels.len(), 5, "a rule that does not exist is left out");
+    assert_eq!(levels.get(&party_item), Some(&RuleLevel::PartyItem));
+    assert_eq!(levels.get(&party), Some(&RuleLevel::Party));
+    assert_eq!(levels.get(&item), Some(&RuleLevel::Item));
+    assert_eq!(levels.get(&group), Some(&RuleLevel::ItemGroup));
+    assert_eq!(levels.get(&default), Some(&RuleLevel::Default));
+    assert!(read(&[]).is_empty());
+    // A list longer than one chunk of bound values still gives every level once.
+    let many: Vec<i64> = (0..1_200)
+        .map(|i| [party_item, party, item, group, default][i % 5])
+        .collect();
+    assert_eq!(
+        read(&many),
+        levels
+            .into_iter()
+            .filter(|(id, _)| *id != 999_999)
+            .collect()
+    );
+}
+
+#[test]
 fn a_changed_rule_is_used_at_once_and_an_inactive_rule_is_not() {
     let f = fixture();
     let saved = save(&f, &seller_commission(&f, Some(f.rahim), None, "4"));

@@ -148,6 +148,9 @@ fn build(world_name: &str, masters: Option<&Masters>) -> world::World {
             w
         }
         "e59" => worked::history_world(&HISTORY),
+        // The client's demo books of D8 (plan 70): Ehsan's 200 mango sold to Mani, Anas and Haroon with money
+        // paid on the spot, a year of Haroon's lines, and a walk-in buyer today (08-11-2026).
+        "d8" => worked::d8().w,
         "e42" => {
             // E2E-16 (45 of 50 sold), then الف takes 2 کیلا home and the guests have 3 سیب.
             let w = worked::part_sold_world();

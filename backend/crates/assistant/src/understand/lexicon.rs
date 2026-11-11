@@ -99,6 +99,15 @@ pub(super) enum Cue {
     PayCredit,
     /// naqdi: a sale paid on the spot ("naqdi bikri"). "naqdi mandi" is a buyer's name, not this.
     PayCash,
+    /// mauqe par, naqd jama karwai, naqd diya: the money a buyer paid at the time of his sale (موقع پر
+    /// جمع, PRD FR-12.44). It names no record.
+    PaidSpot,
+    /// jama karwai, jama karaya: a verb of paying in. It says the money was paid, not what for; it counts as
+    /// paid on the spot only beside a word for cash ("naqdi kitni jama karwai").
+    PaidVerb,
+    /// baqi chhora, udhar rakha: what a buyer left on account at his sale (کھاتے میں باقی). It names no
+    /// record.
+    LeftOn,
     /// khareeda, bought: the one named is a buyer.
     Bought,
     // ---- which figure ----------------------------------------------------------------------
@@ -578,6 +587,34 @@ const ROLES: &[Entry] = &[
         &["udhari", "udhaari", "udhri", "credit", "on credit", "ادھاری"],
     ),
     (Cue::PayCash, &["naqdi", "nakdi", "نقدی"]),
+    (
+        Cue::PaidSpot,
+        &[
+            "mauqe par", "mauqay par", "moqe par", "mouqe par", "mauke par", "maukay par",
+            "موقع پر", "on the spot", "paid on the spot", "naqdi jama", "naqd jama", "naqdi diya",
+            "naqd diya", "naqdi diye", "naqd diye", "naqdi di", "naqd di", "naqdi diyay",
+            "paid cash", "cash paid", "paid in cash", "cash diya", "نقدی جمع", "نقد جمع", "نقد دیا",
+            "نقدی دی",
+        ],
+    ),
+    (
+        Cue::PaidVerb,
+        &[
+            "jama karwai", "jama karwayi", "jama karaya", "jama karwaya", "jama karwaye",
+            "jama karaye", "jama karwa di", "jama kiya", "jama kiye", "جمع کروائی", "جمع کرایا",
+            "جمع کروایا",
+        ],
+    ),
+    (
+        Cue::LeftOn,
+        &[
+            "baqi chhora", "baqi chora", "baqi chhoda", "baqi chhorda", "baqi rakha",
+            "baqi rakhwaya", "baqi reh gaya", "baqi reh gayi", "baqi raha", "baqi bacha",
+            "udhar chhora", "udhar chora", "udhar rakha", "udhaar chhora", "left on account",
+            "left unpaid", "left as credit", "باقی چھوڑا", "باقی چھوڑ دیا", "باقی رکھا",
+            "ادھار چھوڑا", "ادھار رکھا",
+        ],
+    ),
     (
         Cue::Bought,
         &[

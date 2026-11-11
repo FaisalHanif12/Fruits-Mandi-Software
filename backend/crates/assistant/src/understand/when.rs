@@ -369,6 +369,69 @@ fn day_to_now(
     ))
 }
 
+/// "pichle saal december se aaj tak", "december se ab tak": a month, "se", and "so far". One range from the
+/// first day of that month to today. With "pichle saal" (last year) straight before the month, the month is
+/// that of last year, whatever month it is today. `out` and `used` are the periods read so far and the words
+/// each took; `at` and `end` are the words of the "so far" phrase. Returns the range, how many periods it
+/// replaces, and the first word of the whole phrase (D8 H1).
+///
+/// Example: today 08-11-2026, "pichle saal december se aaj tak" is 01-12-2025 to 08-11-2026.
+fn month_to_now(
+    out: &[PeriodRef],
+    used: &[(usize, usize)],
+    at: usize,
+    end: usize,
+    scan: &Scan,
+    today: NaiveDate,
+) -> Option<(PeriodRef, usize, usize)> {
+    // The word before the phrase is "se".
+    let se = at.checked_sub(1)?;
+    if !matches!(scan.word(se)?, "se" | "سے" | "say") {
+        return None;
+    }
+    let month = out.last()?;
+    let PeriodKind::Month {
+        year,
+        month: number,
+    } = month.kind
+    else {
+        return None;
+    };
+    let (month_start, month_end) = *used.last()?;
+    if month_end != se {
+        return None;
+    }
+    // "pichle saal" straight before the month: last year's month.
+    let last_year = out
+        .len()
+        .checked_sub(2)
+        .and_then(|i| out.get(i).zip(used.get(i)));
+    let (year, replaced, start) = match last_year {
+        Some((period, (first, last)))
+            if period.kind == PeriodKind::LastYear && *last == month_start =>
+        {
+            (period.from?.year(), 2, *first)
+        }
+        _ => (year, 1, month_start),
+    };
+    let from = NaiveDate::from_ymd_opt(year, number, 1)?;
+    if from > today {
+        return None;
+    }
+    Some((
+        period(
+            PeriodKind::Range,
+            Some(from),
+            today,
+            Confidence::High,
+            scan.phrase(start, end),
+            today,
+        ),
+        replaced,
+        start,
+    ))
+}
+
 /// True when a day number (1 to 31) stands before a date particle ("se", "ko", "tak", "tarikh") and no
 /// period took it: "اس مہینے کی 1 کو بکری" is the first of this month, which the app does not read, so it is
 /// not sure of the time and the model answers (a wrong period is a wrong figure).
@@ -1754,6 +1817,24 @@ pub(super) fn read_periods(scan: &Scan, today: NaiveDate) -> PeriodsRead {
                     && belongs_to_year_end(scan, at, end)
                 {
                     used.push((at, end));
+                    at = end;
+                    continue;
+                }
+                if found.kind == PeriodKind::UpToNow
+                    && out.len() == used.len()
+                    && out.len() == bare.len()
+                    && let Some((range, replaced, start)) =
+                        month_to_now(&out, &used, at, end, scan, today)
+                {
+                    // "pichle saal december se aaj tak": one range, not three periods (D8 H1).
+                    for _ in 0..replaced {
+                        out.pop();
+                        bare.pop();
+                        used.pop();
+                    }
+                    out.push(range);
+                    bare.push(None);
+                    used.push((start, end));
                     at = end;
                     continue;
                 }

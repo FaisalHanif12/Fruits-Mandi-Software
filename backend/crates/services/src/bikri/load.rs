@@ -70,39 +70,65 @@ pub(super) fn posting_lots(
         .collect()
 }
 
-/// The level of a rule, read from its row. `None` for a charge no rule decided.
-fn level_of_rule(
+/// The level of each rule the lines and lots of a posting took a charge from, read in one query
+/// before the loops (Code Standards B22): 1,000 lines have three charges each, and reading the
+/// rule of every charge one by one was thousands of queries.
+type Levels = HashMap<i64, RuleLevel>;
+
+fn levels_of_posting(
     conn: &Connection,
-    rule_id: Option<i64>,
-) -> Result<Option<RuleLevel>, ServiceError> {
-    match rule_id {
-        None => Ok(None),
-        Some(id) => Ok(rules_repo::get(conn, id)?.map(|row| row.level)),
+    detail: &BikriDetail,
+    entry_id: i64,
+) -> Result<Levels, ServiceError> {
+    let mut ids: Vec<i64> = Vec::new();
+    for lot in &detail.lots {
+        ids.extend(
+            [
+                &lot.labour.rule_id,
+                &lot.munshiana.rule_id,
+                &lot.phone.rule_id,
+            ]
+            .into_iter()
+            .flatten()
+            .copied(),
+        );
+        for sale in lines_of(lot, entry_id) {
+            ids.extend(
+                [&sale.seller_comm, &sale.buyer_comm, &sale.laga]
+                    .into_iter()
+                    .filter_map(|c| c.rule_id),
+            );
+        }
     }
+    ids.sort_unstable();
+    ids.dedup();
+    Ok(rules_repo::levels_of(conn, &ids)?)
 }
 
-fn stored_charge(conn: &Connection, c: &SavedCharge) -> Result<StoredCharge, ServiceError> {
-    Ok(StoredCharge {
+/// The level of a rule, from the levels read for the posting. `None` for a charge no rule decided.
+fn level_of_rule(levels: &Levels, rule_id: Option<i64>) -> Option<RuleLevel> {
+    rule_id.and_then(|id| levels.get(&id).copied())
+}
+
+fn stored_charge(levels: &Levels, c: &SavedCharge) -> StoredCharge {
+    StoredCharge {
         method: c.method,
         value_bps: c.value_bps,
         value_paisa: c.value_paisa,
         amount: c.amount,
         rule_id: c.rule_id,
-        level: level_of_rule(conn, c.rule_id)?,
-    })
+        level: level_of_rule(levels, c.rule_id),
+    }
 }
 
-fn stored_lot_charge(
-    conn: &Connection,
-    c: &SavedLotCharge,
-) -> Result<StoredLotCharge, ServiceError> {
-    Ok(StoredLotCharge {
+fn stored_lot_charge(levels: &Levels, c: &SavedLotCharge) -> StoredLotCharge {
+    StoredLotCharge {
         method: c.method,
         value: c.value_paisa,
         amount: c.amount,
         rule_id: c.rule_id,
-        level: level_of_rule(conn, c.rule_id)?,
-    })
+        level: level_of_rule(levels, c.rule_id),
+    }
 }
 
 /// What the domain needs to know about a posting being edited: its lines and, for each lot, what
@@ -116,6 +142,7 @@ pub(super) fn stored_posting(
     entry_id: i64,
     kind: PostingKind,
 ) -> Result<StoredPosting, ServiceError> {
+    let levels = levels_of_posting(conn, detail, entry_id)?;
     let mut lots = HashMap::new();
     let mut sales = HashMap::new();
     for lot in &detail.lots {
@@ -129,7 +156,7 @@ pub(super) fn stored_posting(
             .ok_or_else(|| data("the quantity of a lot does not fit"))?;
         let mut carrier = None;
         for sale in lines_of(lot, entry_id) {
-            let seller_comm = stored_charge(conn, &sale.seller_comm)?;
+            let seller_comm = stored_charge(&levels, &sale.seller_comm);
             if kind == PostingKind::First && carrier.is_none() && seller_comm.carries_per_lot() {
                 carrier = Some(StoredCarrier {
                     sale_id: sale.id,
@@ -148,8 +175,8 @@ pub(super) fn stored_posting(
                     buyer_rate: sale.buyer_rate,
                     paid: sale.paid_paisa,
                     seller_comm,
-                    buyer_comm: stored_charge(conn, &sale.buyer_comm)?,
-                    laga: stored_charge(conn, &sale.laga)?,
+                    buyer_comm: stored_charge(&levels, &sale.buyer_comm),
+                    laga: stored_charge(&levels, &sale.laga),
                     cost: sale.cost_paisa,
                 },
             );
@@ -166,15 +193,9 @@ pub(super) fn stored_posting(
                 }),
                 carrier,
                 elsewhere_qty: elsewhere,
-                labour: charges
-                    .then(|| stored_lot_charge(conn, &lot.labour))
-                    .transpose()?,
-                munshiana: charges
-                    .then(|| stored_lot_charge(conn, &lot.munshiana))
-                    .transpose()?,
-                phone: charges
-                    .then(|| stored_lot_charge(conn, &lot.phone))
-                    .transpose()?,
+                labour: charges.then(|| stored_lot_charge(&levels, &lot.labour)),
+                munshiana: charges.then(|| stored_lot_charge(&levels, &lot.munshiana)),
+                phone: charges.then(|| stored_lot_charge(&levels, &lot.phone)),
             },
         );
     }

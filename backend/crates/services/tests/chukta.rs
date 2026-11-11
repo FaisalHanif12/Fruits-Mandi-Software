@@ -79,6 +79,11 @@ fn a_buyer_is_added_with_both_names_and_found_by_either_script_and_by_phone() {
     assert_eq!(find(&w, "شاہ"), ["Shahid"]);
     assert_eq!(find(&w, "shahd"), ["Shahid"]);
     assert_eq!(find(&w, "0300"), ["Shahid"]);
+    assert_eq!(find(&w, "0300-000"), ["Shahid"]);
+    // A digit or two, or a name with a digit, does not find every phone that has the digit.
+    assert!(find(&w, "3").is_empty());
+    assert!(find(&w, "03").is_empty());
+    assert!(find(&w, "Ali 3").is_empty());
     assert!(find(&w, "tariq").is_empty());
     // Empty text lists both, newest first; at most 10.
     assert_eq!(find(&w, ""), ["Nasir", "Shahid"]);
