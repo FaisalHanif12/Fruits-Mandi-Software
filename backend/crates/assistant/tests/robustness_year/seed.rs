@@ -2157,6 +2157,11 @@ fn d7_richer_cases(y: &mut Year) {
         lot.sales = lines;
         lot
     };
+    // Naveed Traders pays his banana line in full on the spot (PRD FR-12.44): 10 × 1,900 = 19,000 + 6%
+    // buyer commission 1,140 + لاگا 80 = 20,220. He may take credit, so the backend does not fill it:
+    // it is typed, as the munshi would. His apple line stays on credit, so he has BOTH on this day.
+    let mut naveed_cash = line("c0", naveed, "10", "1900", PaymentType::Cash);
+    naveed_cash.paid = Some("20,220".into());
     let day14 = BikriDraft {
         header: header(date((2026, 10, 14)), "LES-7101"),
         lots: vec![
@@ -2167,7 +2172,7 @@ fn d7_richer_cases(y: &mut Year) {
                 banana,
                 "30",
                 vec![
-                    line("c0", naveed, "10", "1900", PaymentType::Cash),
+                    naveed_cash,
                     line("c1", rafique, "20", "1900", PaymentType::Credit),
                 ],
             ),
