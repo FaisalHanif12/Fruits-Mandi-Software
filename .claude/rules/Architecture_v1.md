@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.20 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026 and 09-11-2026, and his answers of 15-10-2026) |
+| Version | 1.21 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026 and 09-11-2026, and his answers of 15-10-2026) |
 | Date | 9 November 2026 |
 | Status | Final for build |
 | Derived from | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9, Code Standards v1.22 |
@@ -507,7 +507,9 @@ flowchart TD
     K -- cancel --> C["Mark بکری منسوخ"]
     K -- edit --> N["Post the new version, same date.
     Unchanged lines keep their stored values.
-    Changed or new lines look up rules again."]
+    Changed or new lines look up rules again;
+    a change of only the buyer or only the seller
+    looks up that side's rules only (FR-12.20)."]
     C & N --> RM["Re-run matching for each affected party, oldest first"]
     RM --> A["Audit entry with old and new values and reason"]
     A --> Z(["Commit - all or nothing"])
@@ -1037,3 +1039,4 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
 | 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |
+| 1.21 | 10-11-2026 | PRD v1.33, Umar: in an edit, a change of only the buyer or only the seller looks up that side's rules only (diagram 12). No table changed. |
