@@ -483,6 +483,12 @@ fn run_one(
         }
         client.calls.lock().expect("notes").clear();
     }
+    // The first read of the key store in a process is slow on a Mac (the keychain checks the unsigned test
+    // binary: 4.7 s to 24.7 s measured on 12-11-2026, then 1 to 9 ms for every later read, from any thread).
+    // It is the computer's, not the question's, so it is paid here, before the clock, and a row's time never
+    // holds it (plan 70: three questions showed the same 11.8 s before the app's own timer began). The key is
+    // not kept. The row's `millis` less its `total_millis` is what happened outside the app's own timer.
+    let _ = runtime.keys().get();
     // The clock starts here: the time of a question is the question's, not the world's.
     let started = Instant::now();
     *client.clock.lock().expect("the clock") = Some(started);
@@ -665,6 +671,29 @@ fn cells_in(value: &Value, out: &mut std::collections::BTreeSet<String>) {
                         }
                     }
                     _ => {}
+                }
+            }
+            // The goods of a ledger or register line are a `detail` part, tagged with `kind` and not `type`:
+            // "کیلا 20 پیٹی @ 600 = 12,000، کمیشن 720، لاگا 160". The screen shows its quantity and its
+            // money, so a button that holds them holds those figures (plan 70, H5: 50, 20 and 130 نگ were
+            // on the R5 screen and the check did not see them).
+            if let Some(Value::String(kind)) = map.get("kind")
+                && matches!(kind.as_str(), "sale" | "lot")
+            {
+                if let Some(qty) = map.get("qty").and_then(Value::as_i64) {
+                    out.insert(qty.abs().to_string());
+                }
+                for key in [
+                    "rate_paisa",
+                    "value_paisa",
+                    "commission_paisa",
+                    "laga_paisa",
+                    "gross_paisa",
+                    "deductions_paisa",
+                ] {
+                    if let Some(paisa) = map.get(key).and_then(Value::as_i64) {
+                        out.insert((paisa / 100).abs().to_string());
+                    }
                 }
             }
             for v in map.values() {
@@ -2434,6 +2463,37 @@ fn people_and_things(path: &std::path::Path) -> Value {
              FROM purchases p JOIN ventures v ON v.id = p.venture_id \
              JOIN items i ON i.id = p.item_id ORDER BY v.number, p.number"),
     })
+}
+
+#[test]
+fn a_register_button_holds_the_quantities_and_the_money_of_its_detail_text() {
+    // Plan 70, H5 (live run of 11-11-2026): R5 shows "آم 50 پیٹی @ 1,068 = ..." in its detail text. The
+    // quantity and the line's money are in a `detail` part tagged `kind`, not `type`, so the button check
+    // did not see 50, 20 and 130 on the R5 screen and refused an answer that gave them. On the D8 world, the
+    // lot of Ehsan (200 peti) went 50 to Mani, 20 to Anas and 130 to Haroon.
+    use mandi_reports::reports::{self, ReportFilters, ReportId, ReportRunInput};
+    let w = build("d8", None);
+    let page = reports::run(
+        w.env.ctx.db(),
+        &ReportRunInput {
+            id: ReportId::R5,
+            filters: ReportFilters {
+                from: "01-11-2026".into(),
+                to: "08-11-2026".into(),
+                ..ReportFilters::default()
+            },
+            offset: 0,
+            limit: 1_000,
+            sort: None,
+            group_by_month: false,
+        },
+    )
+    .unwrap();
+    let mut numbers = std::collections::BTreeSet::new();
+    cells_in(&serde_json::to_value(&page).unwrap(), &mut numbers);
+    for want in ["50", "20", "130", "21360", "10000", "125060"] {
+        assert!(numbers.contains(want), "{want} not in {numbers:?}");
+    }
 }
 
 #[test]

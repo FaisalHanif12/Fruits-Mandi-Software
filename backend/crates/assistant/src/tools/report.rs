@@ -1214,6 +1214,16 @@ fn assemble(
         ));
     }
     let mut notes = built.notes.clone();
+    // A line paid in part is in R3 and in R4: the note is for the model that adds or subtracts them.
+    if matches!(id, ReportId::R3 | ReportId::R4) {
+        notes.push(
+            "a line paid in part is in both R3 and R4, so no figure of R3 may be added to or taken \
+             from a figure of R4, except the paid of R3 with the left of R4 read for the same \
+             dates; paid on the spot is the paid total (R3) and left on account is the left \
+             total (R4), and both are on R5 (buyer bills) totals"
+                .to_owned(),
+        );
+    }
     if !headings.is_empty() {
         notes.push(
             "the heading and total lines are given apart in `headings`: each holds the sums of \

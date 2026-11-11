@@ -342,6 +342,13 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
     ];
     if let Some((year, month)) = range.month {
         fields.push(("label", Node::Val(Val::Month { year, month })));
+    } else {
+        // Only one month has a `label`. The model wrote `{{r1.label}}` for "December se aaj tak", the
+        // reference failed the checks and a rewrite call of 8 seconds followed (plan 70, H1): it reads
+        // this note with the result, before it writes, and cites the dates.
+        let hint = "this period has no `label` (only one month has): cite its `from` and `to` \
+                    dates, as references to this result's fields";
+        note = Some(note.map_or_else(|| hint.to_owned(), |old| format!("{old}; {hint}")));
     }
     if let Some(note) = note {
         fields.push(("note", Node::Str(note)));

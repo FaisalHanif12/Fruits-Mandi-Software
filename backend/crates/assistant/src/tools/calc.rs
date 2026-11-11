@@ -606,6 +606,72 @@ fn adds_both_sides_of_a_balanced_report(state: &State, paths: &[String]) -> bool
     })
 }
 
+/// Why two registers' figures cannot be taken together (see [`mixes_the_cash_and_credit_registers`]).
+enum RegisterMix {
+    /// A figure of R3 with a figure of R4 that is not the pair that never shares a line's money.
+    Overlap,
+    /// The right pair, read for different dates, party, item or group.
+    OtherFilters,
+}
+
+/// R3 holds every sale line with money paid on the spot and R4 every line with money left on
+/// account, so a line paid in part is in both (PRD FR-12.44, A97): the value or the buyer total of
+/// R3 less the same of R4 counts that line twice, and "cash against credit" read this way gave
+/// 172,000 against 80,000 for a true 39,740 against 170,840 (live run of plan 70, H6). What is
+/// paid is the `paid` of R3 and what is left is the `left` of R4: those two never share a line's
+/// money, when both are read with the same filters (money review of plan 70: R3 paid for 2 to 5
+/// November less R4 left for 1 to 5 November is no difference of one thing).
+///
+/// Gives the reason when the inputs hold a figure of R3 and a figure of R4 that is not that pair,
+/// or that pair read with different filters. R3 and R4 are given here by their own report ids.
+///
+/// Example: with `a` a read of R4 and `b` a read of R3, `["a.totals.value", "b.totals.value"]` is
+/// refused as an overlap; `["b.totals.paid", "a.totals.left"]` is allowed when both were read
+/// with the same dates.
+fn mixes_the_cash_and_credit_registers(state: &State, paths: &[String]) -> Option<RegisterMix> {
+    struct Read {
+        id: &'static str,
+        measure: String,
+        filters: Option<crate::source::SourceReportFilters>,
+    }
+    let register = |path: &String| -> Option<Read> {
+        let (root, _) = path.split_once('.')?;
+        let measure = path.rsplit('.').next().unwrap_or("").to_owned();
+        let result = state.find(root)?;
+        if result.tool != "report" {
+            return None;
+        }
+        let id = match result.input.get("id").and_then(Json::as_str) {
+            Some("R3") => "R3",
+            Some("R4") => "R4",
+            _ => return None,
+        };
+        let filters = match result.source.as_ref() {
+            Some(crate::answer::AnswerSource::Report { filters, .. }) => Some(filters.clone()),
+            _ => None,
+        };
+        Some(Read {
+            id,
+            measure,
+            filters,
+        })
+    };
+    let reads: Vec<Read> = paths.iter().filter_map(register).collect();
+    if !reads.iter().any(|r| r.id == "R3") || !reads.iter().any(|r| r.id == "R4") {
+        return None;
+    }
+    let the_pair =
+        |r: &Read| (r.id == "R3" && r.measure == "paid") || (r.id == "R4" && r.measure == "left");
+    if !reads.iter().all(the_pair) {
+        return Some(RegisterMix::Overlap);
+    }
+    let first = reads.first().and_then(|r| r.filters.as_ref());
+    if first.is_none() || reads.iter().any(|r| r.filters.as_ref() != first) {
+        return Some(RegisterMix::OtherFilters);
+    }
+    None
+}
+
 /// The tool `calculate`.
 pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft, Stop> {
     let parsed: CalcInput = input(args)?;
@@ -625,6 +691,32 @@ pub fn run_calculate(env: &Env<'_>, state: &State, args: &Json) -> Result<Draft,
              its credit total; cite totals.debit on its own and do not add the two",
         )
         .into());
+    }
+    // A line paid in part is in R3 and in R4: only the paid of R3 and the left of R4 are apart.
+    match mixes_the_cash_and_credit_registers(state, &parsed.inputs) {
+        Some(RegisterMix::Overlap) => {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "inputs",
+                "R3 and R4 hold a line paid in part in both, so the same figure of both (value, buyer \
+                 total, quantity, count, paid or left) counts that line twice; what was paid on the \
+                 spot is the paid total, and what was left on account is the left total, both on the \
+                 buyer bills report R5 (cite totals.paid and totals.left of one read of R5), or the \
+                 paid of R3 with the left of R4 read for the same dates",
+            )
+            .into());
+        }
+        Some(RegisterMix::OtherFilters) => {
+            return Err(bad(
+                "ERR_OUT_OF_RANGE",
+                "inputs",
+                "the paid of R3 and the left of R4 are one thing only when both are read with the \
+                 same dates, party, item and group; read both again with the same filters, or cite \
+                 totals.paid and totals.left of one read of R5",
+            )
+            .into());
+        }
+        None => {}
     }
     let mut pending = Vec::new();
     for path in &parsed.inputs {

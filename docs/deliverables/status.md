@@ -4,7 +4,14 @@ Kept by `tech-lead`. Updated on each feature branch before its pull request.
 
 ## Current
 
-- **D8 (client demo feedback) is BUILT SO FAR (10-11-2026).** Branch `feature/d8-demo-feedback`. Plans 60 to 69 are committed. Still to run: the live part of plan 70, and the end gate (`reviewer` and `robustness`).
+- **D8 (client demo feedback) is BUILT; END GATE CLOSING (11-11-2026).** Branch `feature/d8-demo-feedback`, plans 60 to 70, PRD v1.33.
+  - Built and committed: all 3 bugs and features 4 to 9; plan 70 offline (H1 to H9) and the $0.50 budget guard.
+  - Reviewer: PASS WITH MINOR on everything except D8-A13. Robustness: PASS WITH MINOR after the edit preview fix. Record: `docs/reviews/60-70-d8-demo-feedback.md`.
+  - Live assistant run 1: 7 of 9 right, 0 typed figures, $0.0036 spent of $0.50 (ledger `backend/target/ai-eval-hard-d8/budget-ledger.json`). H5, H6 and H1's speed are being fixed, then only those re-run.
+  - Final checks: frontend 9,337 passed and 10 failing in 5 files (being triaged); the Rust workspace run is in progress.
+  - Waiting for Windows (LOCAL-ONLY): Urdu shaping of the new headings in WebView2, the keyboard run of the 4-Enter line, the Windows print path. Hand checks for Umar: one real Mac print dialog (Print, then Save as PDF); a cancelled Mac dialog still counts as printed.
+  - For Umar: H5 is not pinned to one lot; on R5 a part-paid line is in both R3 and R4; level 2 of party ledgers shows debit and credit; the later party-ledger page margin is 256 of 300 ms at full volume; the Urdu reviewer must check the new messages marked `review: pending`.
+
 - **D7 (real-time accuracy and speed of the assistant) is PART-BUILT and PAUSED (08-11-2026). Waiting for Umar's "continue".** Branch `feature/assistant-realtime`. Plan `docs/plans/59-assistant-realtime-accuracy.md`; the hand-over is its Section 12. All agents are stopped.
   - Built and committed: F1, F1b and F2 (wrong figures, dropped filters, same-name asking, the own-number check), the D7 bank of 455 questions, and the offline runner. Money review 15: PASS WITH MINOR.
   - Offline: right with no model call 90 of 455 (19.8%, target 60%); right with no call or one at most 51.6% (target 85%); 1 left (D331, a missing button, not a wrong figure).

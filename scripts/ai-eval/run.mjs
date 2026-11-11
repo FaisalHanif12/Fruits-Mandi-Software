@@ -2593,13 +2593,21 @@ function report(list, data) {
   const plain = firstCalls
     .filter((r) => readAhead(r) === 0)
     .map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+  // A bank in which every question has a read-ahead (plan 70, hard-d8.tsv) has no plain first call. The
+  // read-ahead (a period, a find, a report: 600 to 1,400 tokens) is not the fixed part, so the fixed part is
+  // then the provider's cached prefix (the tokens it reused from an earlier call: the same system, tools and
+  // answer schema, and nothing of the question or the reads). The first call of the run has none cached.
+  const cachedPrefix = firstCalls.map((r) => r.calls[0].cached ?? 0).filter((n) => n > 0);
+  const fixedFromCache = !plain.length && cachedPrefix.length > 0;
   const fixed = plain.length
     ? plain
-    : firstCalls.map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
+    : fixedFromCache
+      ? cachedPrefix
+      : firstCalls.map((r) => r.calls[0].prompt - (r.user_tokens ?? 0));
   const fixedMax = fixed.length ? Math.max(...fixed) : 0;
   const fixedO200k = Math.round(fixedMax / MODEL_COUNTS_MORE);
   say(
-    `  FIXED PART (system, tools, answer schema), first call of ${fixed.length} fresh questions with nothing read ahead, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K})`,
+    `  FIXED PART (system, tools, answer schema), ${fixedFromCache ? `the cached prefix of ${fixed.length} first calls (every question of this run had a read-ahead, which is not fixed)` : `first call of ${fixed.length} fresh questions with nothing read ahead`}, as the model counts it: min ${fixed.length ? Math.min(...fixed) : 0}, p50 ${percentile(fixed, 0.5)}, max ${fixedMax} ${fixedMax <= PREFIX_MODEL ? 'OK' : 'OVER'} (limit about ${PREFIX_MODEL}); about ${fixedO200k} by o200k ${fixedO200k <= PREFIX_O200K ? 'OK' : 'OVER'} (D6-A19, NFR v1.13: at most ${PREFIX_O200K})`,
   );
   const base = percentile(fixed, 0.5);
   const extra = firstCalls
