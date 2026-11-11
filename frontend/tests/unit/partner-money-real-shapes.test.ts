@@ -261,7 +261,6 @@ describe('the canned الگ کھاتہ data has the real shape', () => {
 describe('the canned جنرل data has the real shape', () => {
   const line = (account_id: number, dr: string, cr: string, narration: string | null) => ({
     account_id,
-    person_key: null,
     dr,
     cr,
     narration,

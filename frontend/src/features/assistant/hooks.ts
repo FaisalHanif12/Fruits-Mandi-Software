@@ -68,10 +68,14 @@ export function useStepLines() {
     let gone = false;
     void listenSteps((step) => {
       useAssistantStore.getState().addStep(step);
-    }).then((off) => {
-      if (gone) off();
-      else stop = off;
-    });
+    })
+      .then((off) => {
+        if (gone) off();
+        else stop = off;
+      })
+      // The step lines are only words of progress (PRD FR-7.73). If the backend's event channel cannot
+      // be listened to, the question still runs and its answer still comes; there are just no step lines.
+      .catch(() => undefined);
     return () => {
       gone = true;
       stop?.();

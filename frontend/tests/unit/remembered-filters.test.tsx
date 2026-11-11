@@ -89,7 +89,7 @@ describe('what a report keeps of its filters', () => {
     expect(rememberedFilters(EMPTY_FILTERS)).toBeNull();
   });
 
-  it('keeps what was chosen, and reads it back the same, never the one-time person or money', () => {
+  it('keeps what was chosen, and reads it back the same, never money', () => {
     const state = {
       ...EMPTY_FILTERS,
       period: 'this_month' as const,
@@ -98,7 +98,6 @@ describe('what a report keeps of its filters', () => {
       voucherType: 'payment' as const,
       tripView: 'partner' as const,
       partner: 2,
-      personText: 'shah',
     };
     const kept = rememberedFilters(state);
     expect(kept).toEqual({
@@ -109,7 +108,8 @@ describe('what a report keeps of its filters', () => {
       tripView: 'partner',
       partner: 2,
     });
-    expect(JSON.stringify(kept)).not.toContain('personText');
+    // The one-time person is gone from the reports (plan 64): nothing about a person is kept.
+    expect(JSON.stringify(kept)).not.toMatch(/person/);
     expect(filtersFromRemembered(JSON.parse(JSON.stringify(kept)))).toMatchObject({
       period: 'this_month',
       party: AKRAM,
@@ -117,8 +117,6 @@ describe('what a report keeps of its filters', () => {
       voucherType: 'payment',
       tripView: 'partner',
       partner: 2,
-      person: null,
-      personText: '',
     });
   });
 
@@ -152,7 +150,6 @@ describe('what analytics keeps', () => {
       item: { id: 1, name_ur: 'کیلا', name_en: 'Banana' },
       side: 'seller' as const,
       compare: 'previous' as const,
-      personText: 'x',
     };
     const kept = rememberedAnalytics(state);
     expect(kept).toEqual({

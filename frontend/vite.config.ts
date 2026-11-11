@@ -9,18 +9,30 @@ const DEV_PORT = 5173;
 const TEST_TIMEOUT_MS = 30_000;
 const HOOK_TIMEOUT_MS = 30_000;
 
-// Four files type into pickers, one picker after another, with the backend's real answers. On a
-// machine that is also running the other test files they take several times longer, and a click on a
-// list that is drawn again at that moment is lost. They run alone, one file at a time, after the other
-// files, with more room per test (`pnpm test` runs the project `main` and then `sensitive`). The
-// fruit helper also tries a lost pick again (tests/unit/fruit-real-answers.test.tsx).
+// These files type into pickers, one picker after another, with the backend's real answers, or draw a
+// long list. On a machine that is also running the other test files they take several times longer,
+// and a click on a list that is drawn again at that moment is lost. They run alone, one file at a time,
+// after the other files, with more room per test (`pnpm test` runs the project `main` and then
+// `sensitive`; a plain `vitest run` also puts `sensitive` after `main`, see `sequence.groupOrder`).
+// The fruit helper also tries a lost pick again (tests/unit/fruit-real-answers.test.tsx).
 // The trip file is here because its first test, a purchase of three lines typed with the keyboard
 // only, passes alone and as a whole file (57 of 57) and fails only when the whole suite runs at once.
+// The six files after it (D8 end gate) failed the same way and only that way: in a full run on a
+// machine with a load average above 100 their tests ended with "Test timed out in 30000ms" or a
+// default one-second wait, and every one of them passed when its file ran alone at that same load.
+// Any other failure in these files, a wrong value or a missing element after the wait, is still a
+// failure: the room is only for a wait that is slow.
 const LOAD_SENSITIVE_TESTS = [
   'tests/unit/fruit-real-answers.test.tsx',
   'tests/unit/bikri-edit-rules.test.tsx',
   'tests/unit/bikri-later-sale.test.tsx',
   'tests/unit/trips-trip.test.tsx',
+  'tests/unit/bikri-save.test.tsx',
+  'tests/unit/bikri-edit-cancel.test.tsx',
+  'tests/unit/bikri-states.test.tsx',
+  'tests/unit/bikri-strip.test.tsx',
+  'tests/unit/bikri-whole-view.test.tsx',
+  'tests/unit/reports-screens-round8.test.tsx',
 ];
 const SENSITIVE_TEST_TIMEOUT_MS = 90_000;
 
@@ -71,6 +83,8 @@ export default defineConfig({
           include: LOAD_SENSITIVE_TESTS,
           fileParallelism: false,
           testTimeout: SENSITIVE_TEST_TIMEOUT_MS,
+          // After the project `main`, so a plain `vitest run` does not run them beside the other files.
+          sequence: { groupOrder: 1 },
         },
       },
     ],

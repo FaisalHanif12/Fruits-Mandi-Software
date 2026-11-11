@@ -94,7 +94,10 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:qty');
     });
-    await user.keyboard('{Enter}560{Enter}');
+    // Quantity (the app filled it), rate 560, then the paid on the spot cell, left empty: four Enters
+    // for a buyer who may take credit, and the cursor is on the next line's buyer (PRD FR-12.44,
+    // NFR-USE-6).
+    await user.keyboard('{Enter}560{Enter}{Enter}');
   };
 
   it('asks the backend for the one lot by its id, never for the pages of the stock list before it', async () => {
@@ -148,7 +151,7 @@ describe.each(LANGUAGES)('a later sale (%s)', (language) => {
     const plan = fakePlan16();
     const { router, user } = await open();
     await typeLine(user);
-    // Three Enters on the new line, then the cursor is on the next line's buyer.
+    // Four Enters on the new line, then the cursor is on the next line's buyer.
     await waitFor(() => {
       expect(plan.laterPreviews.at(-1)?.sales).toEqual([
         expect.objectContaining({ buyer_account_id: IDS.akram, qty: '5', seller_rate: '560' }),
