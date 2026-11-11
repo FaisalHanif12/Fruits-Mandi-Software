@@ -156,11 +156,11 @@ type Search = typeof accountApi.searchAccounts;
 async function answerFor(quick: Search, text: string) {
   return quick({
     scope: 'buyer',
-    control_id: null,
+    controlId: null,
     text,
     limit: 50,
     offset: 0,
-    with_chukta: true,
+    withChukta: true,
   });
 }
 
