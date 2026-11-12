@@ -384,11 +384,12 @@ fn the_partner_code_is_the_contract() {
         },
     );
 
-    // E2E-46: a wrong try says how many are left; after five the wait comes instead.
+    // E2E-46: a wrong try says how many are left (9 after the first); after ten the wait comes
+    // instead (Umar, 12-11-2026).
     let wrong = ServiceError::Rejected(vec![mandi_services::Rejection {
         code: ErrorCode::ErrPartnerCodeWrong,
         field: Some("code".to_owned()),
-        values: [("tries_left".to_owned(), ErrorValue::Number(4))]
+        values: [("tries_left".to_owned(), ErrorValue::Number(9))]
             .into_iter()
             .collect(),
     }]);

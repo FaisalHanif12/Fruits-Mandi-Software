@@ -4,7 +4,7 @@
       "code": "ERR_PARTNER_CODE_WRONG",
       "field": "code",
       "values": {
-        "tries_left": 4
+        "tries_left": 9
       }
     }
   ],

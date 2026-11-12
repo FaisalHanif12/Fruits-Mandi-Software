@@ -7,9 +7,10 @@
 //! - **Open in memory only.** Like the sign-in, the unlock is kept in the running app. It is lost
 //!   when the user leaves the section (`lock`), on the idle lock, on a logout, after a restore and
 //!   when the app closes.
-//! - **Waits as sign-in** (PRD FR-8.2): after 5 wrong codes 1 minute, after 10 five minutes, then 15
-//!   minutes each time. The wait is kept in memory by a monotonic clock and on disk by the wall
-//!   clock (NFR-REL-11). Every wrong try is in the audit log, without the code.
+//! - **Waits as sign-in** (PRD FR-8.2): after 10 wrong codes 1 minute, after 10 more five minutes,
+//!   then 15 minutes each time (the table of `mandi_domain::auth::lockout`). The wait is kept in
+//!   memory by a monotonic clock and on disk by the wall clock (NFR-REL-11). Every wrong try is in
+//!   the audit log, without the code.
 //! - **Setting needs the Owner's password**, changing needs the old code or the password, and a
 //!   forgotten code is reset with the password or the recovery code (which is not spent).
 //! - **No code set** means the section is open: the first visit asks the Owner to set one, and the
@@ -348,7 +349,7 @@ pub fn change(
 /// # Errors
 /// `ERR_PARTNER_CODE_NOT_SET`; `ERR_PARTNER_CODE_INVALID` (`code`, not 4 digits);
 /// `ERR_PARTNER_CODE_WRONG` (`code`, value `tries_left`); `ERR_LOCKED_WAIT` (value `seconds`) after
-/// 5 wrong tries (as PRD FR-8.2).
+/// 10 wrong tries (as PRD FR-8.2).
 pub fn unlock(
     ctx: &Context,
     actor: &Actor,

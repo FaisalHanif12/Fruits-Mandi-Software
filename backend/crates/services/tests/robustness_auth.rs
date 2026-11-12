@@ -135,20 +135,21 @@ fn a_thousand_wrong_passwords_follow_the_lockout_table_and_the_right_one_still_w
             Ok(_) => panic!("a wrong password signed in"),
         }
     }
-    // PRD FR-8.2: 5 tries then 1 minute; 5 more then 5 minutes; then 15 minutes each time.
+    // PRD FR-8.2: 10 tries then 1 minute; 10 more then 5 minutes; then 15 minutes each time
+    // (Umar, 12-11-2026: 10 in a step, it was 5).
     for (n, seconds) in &locks {
         let want = match n {
-            5 => 60,
-            10 => 300,
+            10 => 60,
+            20 => 300,
             _ => 900,
         };
         assert_eq!(*seconds, want, "after try {n}");
     }
-    // A lock after every 5th wrong try: 200 of them in 1,000 tries.
-    assert_eq!(locks.len(), 200, "{locks:?}");
+    // A lock after every 10th wrong try: 100 of them in 1,000 tries.
+    assert_eq!(locks.len(), 100, "{locks:?}");
     assert_eq!(
         locks.iter().map(|l| l.0).collect::<Vec<_>>(),
-        (1..=200).map(|n| n * 5).collect::<Vec<_>>()
+        (1..=100).map(|n| n * 10).collect::<Vec<_>>()
     );
     // Every wrong try was written down once; the refused tries during locks wrote their own rows.
     let wrong_rows = raw(&dir)
@@ -170,7 +171,7 @@ fn hammering_a_locked_name_is_cheap_does_not_escalate_and_is_logged_in_a_bounded
     let (dir, env) = env();
     set_up(&env);
     let wrong = Secret::new("not-the-password");
-    for _ in 0..5 {
+    for _ in 0..10 {
         let _ = auth::login(&env.ctx, "owner", &wrong);
     }
     let rows_before = audit_total(&dir);
@@ -198,10 +199,10 @@ fn hammering_a_locked_name_is_cheap_does_not_escalate_and_is_logged_in_a_bounded
         .query_row("SELECT failed_attempts FROM users", [], |r| r.get(0))
         .unwrap();
     assert_eq!(
-        attempts, 5,
+        attempts, 10,
         "tries during a lock must not count and escalate the lock"
     );
-    // After the lock, one more wrong try is the 6th, not the 3000th.
+    // After the lock, one more wrong try is the 11th, not the 3000th.
     env.mono.advance_seconds(61);
     let error = auth::login(&env.ctx, "owner", &wrong).unwrap_err();
     assert!(error.has_code(ErrorCode::ErrWrongPassword), "{error:?}");
@@ -346,8 +347,8 @@ fn the_same_password_typed_in_a_different_but_equal_unicode_form() {
 
 #[test]
 fn a_restart_or_a_clock_change_never_makes_a_lock_longer_than_its_step() {
-    // NFR-REL-11. Steps: 5 tries = 60 s, 10 tries = 300 s, 15 tries = 900 s.
-    for (tries, step) in [(5_u32, 60_i64), (10, 300), (15, 900), (25, 900)] {
+    // NFR-REL-11. Steps: 10 tries = 60 s, 20 tries = 300 s, 30 tries = 900 s.
+    for (tries, step) in [(10_u32, 60_i64), (20, 300), (30, 900), (50, 900)] {
         for (label, new_clock) in [
             (
                 "a year back",
@@ -412,7 +413,7 @@ fn a_restart_or_a_clock_change_never_makes_a_lock_longer_than_its_step() {
     // stored end time means), and a right password then signs in.
     let (dir, env) = env();
     set_up(&env);
-    for _ in 0..5 {
+    for _ in 0..10 {
         let _ = auth::login(&env.ctx, "owner", &Secret::new("not-the-password"));
     }
     drop(env);
@@ -629,7 +630,7 @@ fn wrong_recovery_codes_follow_the_lockout_and_the_right_code_works_once_only() 
     let code = set_up(&env);
     let hash_before = password_hash(&dir);
     // Wrong codes of every shape: none may open the account, all count as wrong tries.
-    let guesses = [
+    let mut guesses = vec![
         "AAAA-BBBB-CCCC-DDDD".to_owned(),
         "0000-0000-0000-0000".to_owned(),
         " ".to_owned(),
@@ -645,6 +646,9 @@ fn wrong_recovery_codes_follow_the_lockout_and_the_right_code_works_once_only() 
             changed
         },
     ];
+    // The lock starts after 10 wrong tries (PRD FR-8.2 and NFR-SEC-2 of v1.35 and v1.18; 5 before), so
+    // there are 8 shapes above and more wrong codes after them.
+    guesses.extend((0..6).map(|n| format!("WRONG-CODE-{n:04}")));
     let mut locked = false;
     for guess in &guesses {
         match auth::recover(&env.ctx, &recover_input(guess, "newsecret1")) {
@@ -822,13 +826,13 @@ fn sign_in_lock_unlock_and_sign_out_refuse_every_wrong_order() {
     );
     assert_eq!(audit_count(&dir, "lock"), 1, "a second lock wrote a row");
     assert!(auth::login(&env.ctx, "owner", &right).is_err());
-    // Wrong unlock tries follow the same table as sign-in: 5 wrong then a wait.
+    // Wrong unlock tries follow the same table as sign-in: 10 wrong then a wait.
     let mut waited = false;
-    for _ in 0..6 {
+    for _ in 0..11 {
         let error = auth::unlock(&env.ctx, &Secret::new("not-the-password")).unwrap_err();
         waited |= locked_seconds(&error).is_some();
     }
-    assert!(waited, "six wrong unlock tries never started a wait");
+    assert!(waited, "eleven wrong unlock tries never started a wait");
     assert!(
         auth::unlock(&env.ctx, &right).is_err(),
         "the right password got through a wait"
@@ -904,16 +908,16 @@ fn a_password_change_needs_the_current_password_and_wrong_ones_count_towards_the
     };
     assert_eq!(attempts(&dir), 0, "a refused shape counted as a wrong try");
     assert_eq!(password_hash(&dir), hash_before);
-    // A wrong current password is a wrong try, with the same table as sign-in: the 5th locks.
+    // A wrong current password is a wrong try, with the same table as sign-in: the 10th locks.
     let mut waited = None;
-    for n in 1..=5 {
+    for n in 1..=10 {
         let error = auth::change_password(
             &env.ctx,
             &owner,
             &change_input("wrong-one", "newsecret1", "newsecret1"),
         )
         .unwrap_err();
-        if n < 5 {
+        if n < 10 {
             assert!(
                 error.has_code(ErrorCode::ErrWrongPassword),
                 "try {n}: {error:?}"
@@ -925,7 +929,7 @@ fn a_password_change_needs_the_current_password_and_wrong_ones_count_towards_the
     assert_eq!(
         waited,
         Some(60),
-        "the 5th wrong try must start the 1 minute wait"
+        "the 10th wrong try must start the 1 minute wait"
     );
     // During the wait even the right current password is refused and nothing changes.
     let error = auth::change_password(

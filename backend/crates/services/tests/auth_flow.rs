@@ -174,6 +174,14 @@ fn empty_fields_are_required_and_not_counted() {
     assert_eq!(failed_attempts(&dir), 0);
 }
 
+/// Wrong tries in each step before a lock (PRD FR-8.2, NFR-SEC-2; Umar, 12-11-2026: 10, it was 5).
+const TRIES: i64 = 10;
+
+/// The tries left after each wrong try of a step: 9, 8 ... 1.
+fn tries_left() -> impl Iterator<Item = i64> {
+    (1..TRIES).rev()
+}
+
 /// The worked table of plan 04 Section 3, step by step, with the audit rows.
 #[test]
 fn the_lockout_table() {
@@ -187,19 +195,19 @@ fn the_lockout_table() {
             (ErrorCode::ErrWrongPassword, Some(left))
         );
     };
-    // Tries 1 to 4.
-    for left in [4, 3, 2, 1] {
+    // Tries 1 to 9: 9, 8 ... 1 tries left.
+    for left in tries_left() {
         expect_wrong(&env, left);
         rows += 1;
     }
-    // Try 5: locked for 60 seconds.
+    // Try 10: locked for 60 seconds.
     let error = wrong_try(&env, "owner");
     assert_eq!(
         code_and_value(&error, "seconds"),
         (ErrorCode::ErrLockedWait, Some(60))
     );
     rows += 1;
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
     // While locked, even the right password is refused, the wait runs down, and nothing is counted.
     env.mono.advance_seconds(20);
     let error = auth::login(&env.ctx, "owner", &owner_secret()).unwrap_err();
@@ -208,14 +216,14 @@ fn the_lockout_table() {
         (ErrorCode::ErrLockedWait, Some(40))
     );
     rows += 1; // a blocked try is written down too
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
     env.mono.advance_seconds(40);
-    // Tries 6 to 9: wrong password again, 4, 3, 2, 1 tries left.
-    for left in [4, 3, 2, 1] {
+    // Tries 11 to 19: wrong password again, 9, 8 ... 1 tries left.
+    for left in tries_left() {
         expect_wrong(&env, left);
         rows += 1;
     }
-    // Try 10: locked 300 seconds.
+    // Try 20: locked 300 seconds.
     let error = wrong_try(&env, "owner");
     assert_eq!(
         code_and_value(&error, "seconds"),
@@ -229,9 +237,9 @@ fn the_lockout_table() {
     );
     rows += 1;
     env.mono.advance_seconds(1);
-    // Tries 11 to 14, then 15 is locked 900 seconds, and so are 20 and 25.
+    // Tries 21 to 29, then 30 is locked 900 seconds, and so are 40 and 50.
     for step in 0..3 {
-        for left in [4, 3, 2, 1] {
+        for left in tries_left() {
             expect_wrong(&env, left);
             rows += 1;
         }
@@ -244,7 +252,7 @@ fn the_lockout_table() {
         rows += 1;
         env.mono.advance_seconds(900);
     }
-    assert_eq!(failed_attempts(&dir), 25);
+    assert_eq!(failed_attempts(&dir), 50);
     // The right password after the wait signs in and sets the count back to 0.
     login_owner(&env);
     assert_eq!(failed_attempts(&dir), 0);
@@ -253,7 +261,7 @@ fn the_lockout_table() {
         .unwrap();
     assert_eq!(stored_lock, None);
     auth::logout(&env.ctx).unwrap();
-    expect_wrong(&env, 4);
+    expect_wrong(&env, TRIES - 1);
     rows += 1;
     // Every try wrote one audit row.
     assert_eq!(audit_count(&dir, "login_failed"), rows);
@@ -264,7 +272,7 @@ fn the_lockout_table() {
 fn an_unknown_name_behaves_exactly_like_a_wrong_password() {
     let (dir, env) = env();
     set_up(&env);
-    for left in [4, 3, 2, 1] {
+    for left in tries_left() {
         let error = wrong_try(&env, "nobody");
         assert_eq!(
             code_and_value(&error, "tries_left"),
@@ -287,7 +295,7 @@ fn an_unknown_name_behaves_exactly_like_a_wrong_password() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 5);
+    assert_eq!(rows.len(), 10);
     assert!(
         rows.iter()
             .all(|(user, json)| user.is_none() && json.contains("\"username\":\"nobody\""))
@@ -300,13 +308,13 @@ fn an_unknown_name_behaves_exactly_like_a_wrong_password() {
 fn different_names_have_their_own_counters() {
     let (_dir, env) = env();
     set_up(&env);
-    for _ in 0..4 {
+    for _ in 0..TRIES - 1 {
         wrong_try(&env, "owner");
     }
-    // Another name starts at 4 tries left.
+    // Another name starts at 9 tries left.
     assert_eq!(
         code_and_value(&wrong_try(&env, "someone"), "tries_left"),
-        (ErrorCode::ErrWrongPassword, Some(4))
+        (ErrorCode::ErrWrongPassword, Some(TRIES - 1))
     );
 }
 
@@ -314,7 +322,7 @@ fn different_names_have_their_own_counters() {
 fn moving_the_clock_during_a_lock_changes_nothing_while_the_app_runs() {
     let (_dir, env) = env();
     set_up(&env);
-    for _ in 0..5 {
+    for _ in 0..TRIES {
         wrong_try(&env, "owner");
     }
     // The wall clock goes back a day: the lock is not longer than its step.
@@ -342,7 +350,7 @@ fn moving_the_clock_during_a_lock_changes_nothing_while_the_app_runs() {
 fn a_lock_that_ended_cannot_come_back_when_the_clock_moves_back() {
     let (_dir, env) = env();
     set_up(&env);
-    for _ in 0..5 {
+    for _ in 0..TRIES {
         wrong_try(&env, "owner");
     }
     env.mono.advance_seconds(61);
@@ -350,7 +358,7 @@ fn a_lock_that_ended_cannot_come_back_when_the_clock_moves_back() {
     env.clock.advance_seconds(-3 * 3600);
     assert_eq!(
         code_and_value(&wrong_try(&env, "owner"), "tries_left"),
-        (ErrorCode::ErrWrongPassword, Some(4))
+        (ErrorCode::ErrWrongPassword, Some(TRIES - 1))
     );
     assert!(auth::login(&env.ctx, "owner", &owner_secret()).is_ok());
 }
@@ -359,7 +367,7 @@ fn a_lock_that_ended_cannot_come_back_when_the_clock_moves_back() {
 fn a_restart_keeps_the_lock_but_never_for_longer_than_its_step() {
     let (_dir, env) = env();
     set_up(&env);
-    for _ in 0..5 {
+    for _ in 0..TRIES {
         wrong_try(&env, "owner");
     }
     // A new run of the app: a new context on the same file, with no memory of the lock.
@@ -405,7 +413,7 @@ fn an_inactive_user_with_the_right_password_is_refused() {
     // A wrong password for him is still a wrong password, and counts.
     assert_eq!(
         code_and_value(&wrong_try(&env, "owner"), "tries_left"),
-        (ErrorCode::ErrWrongPassword, Some(4))
+        (ErrorCode::ErrWrongPassword, Some(TRIES - 1))
     );
     assert!(audit_count(&dir, "login_failed") >= 2);
 }
@@ -460,7 +468,7 @@ fn idle_lock_keeps_the_session_and_unlock_needs_the_password() {
     let error = auth::unlock(&env.ctx, &Secret::new("wrong-wrong")).unwrap_err();
     assert_eq!(
         code_and_value(&error, "tries_left"),
-        (ErrorCode::ErrWrongPassword, Some(4))
+        (ErrorCode::ErrWrongPassword, Some(TRIES - 1))
     );
     assert!(auth::status(&env.ctx).unwrap().locked);
     auth::unlock(&env.ctx, &owner_secret()).unwrap();
@@ -479,7 +487,7 @@ fn unlock_uses_the_same_lockout_counter() {
     set_up(&env);
     login_owner(&env);
     auth::lock(&env.ctx).unwrap();
-    for _ in 0..4 {
+    for _ in 0..TRIES - 1 {
         auth::unlock(&env.ctx, &Secret::new("nope-nope")).unwrap_err();
     }
     let error = auth::unlock(&env.ctx, &Secret::new("nope-nope")).unwrap_err();
@@ -487,7 +495,7 @@ fn unlock_uses_the_same_lockout_counter() {
         code_and_value(&error, "seconds"),
         (ErrorCode::ErrLockedWait, Some(60))
     );
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
     // Even the right password waits.
     assert_eq!(
         auth::unlock(&env.ctx, &owner_secret()).unwrap_err().code(),
@@ -513,7 +521,7 @@ fn recovery_resets_the_owner_password_and_spends_the_code() {
         )
     };
     // Locked out first: the recovery path is how he gets back in.
-    for _ in 0..5 {
+    for _ in 0..TRIES {
         wrong_try(&env, "owner");
     }
     env.mono.advance_seconds(61);
@@ -554,7 +562,7 @@ fn wrong_recovery_codes_count_as_wrong_tries_and_lock() {
         )
         .unwrap_err()
     };
-    for left in [4, 3, 2, 1] {
+    for left in tries_left() {
         let error = recover("owner", "ABCD-EFGH-JKMN-PQRS");
         assert_eq!(
             code_and_value(&error, "tries_left"),
@@ -568,13 +576,13 @@ fn wrong_recovery_codes_count_as_wrong_tries_and_lock() {
     );
     // The right code is refused while locked, and the password was not changed.
     assert_eq!(recover("owner", &code).code(), ErrorCode::ErrLockedWait);
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
     env.mono.advance_seconds(60);
     assert!(auth::login(&env.ctx, "owner", &owner_secret()).is_ok());
     // An unknown name gets the same answer as a known one.
     assert_eq!(
         code_and_value(&recover("nobody", &code), "tries_left"),
-        (ErrorCode::ErrRecoveryCodeWrong, Some(4))
+        (ErrorCode::ErrRecoveryCodeWrong, Some(TRIES - 1))
     );
 }
 
@@ -676,7 +684,7 @@ fn a_huge_password_is_a_wrong_password_and_is_not_hashed() {
     let error = auth::login(&env.ctx, "owner", &huge).unwrap_err();
     assert_eq!(
         code_and_value(&error, "tries_left"),
-        (ErrorCode::ErrWrongPassword, Some(4))
+        (ErrorCode::ErrWrongPassword, Some(TRIES - 1))
     );
     assert!(
         started.elapsed().as_millis() < 1000,

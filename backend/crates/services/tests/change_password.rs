@@ -155,8 +155,8 @@ fn a_wrong_current_password_counts_towards_the_sign_in_lockout() {
     let (dir, env, owner) = ready();
     let hash = stored_hash(&dir);
     let wrong = change("not-the-password", "brand-new-9", "brand-new-9");
-    // Tries 1 to 4: wrong password on `current`, with the tries left.
-    for left in [4, 3, 2, 1] {
+    // Tries 1 to 9: wrong password on `current`, with the tries left (10 in a step, Umar 12-11-2026).
+    for left in (1..10).rev() {
         let error = auth::change_password(&env.ctx, &owner, &wrong).unwrap_err();
         assert_eq!(
             code_and_value(&error, "tries_left"),
@@ -167,13 +167,13 @@ fn a_wrong_current_password_counts_towards_the_sign_in_lockout() {
         };
         assert_eq!(items[0].field.as_deref(), Some("current"));
     }
-    // Try 5: locked for 60 seconds, the same step as sign-in (PRD FR-8.2).
+    // Try 10: locked for 60 seconds, the same step as sign-in (PRD FR-8.2).
     let error = auth::change_password(&env.ctx, &owner, &wrong).unwrap_err();
     assert_eq!(
         code_and_value(&error, "seconds"),
         (ErrorCode::ErrLockedWait, Some(60))
     );
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
     assert_eq!(stored_hash(&dir), hash, "the password did not change");
     // While locked, the right password changes nothing either.
     let right = change(OWNER_PASSWORD, "brand-new-9", "brand-new-9");
@@ -189,9 +189,9 @@ fn a_wrong_current_password_counts_towards_the_sign_in_lockout() {
 #[test]
 fn the_tries_of_both_doors_are_one_count() {
     let (dir, env, owner) = ready();
-    // Three wrong tries at the menu, then two at the sign-in door: the 5th locks.
+    // Eight wrong tries at the menu, then two at the sign-in door: the 10th locks.
     let wrong = change("not-the-password", "brand-new-9", "brand-new-9");
-    for _ in 0..3 {
+    for _ in 0..8 {
         auth::change_password(&env.ctx, &owner, &wrong).unwrap_err();
     }
     auth::logout(&env.ctx).unwrap();
@@ -205,7 +205,7 @@ fn the_tries_of_both_doors_are_one_count() {
         code_and_value(&error, "seconds"),
         (ErrorCode::ErrLockedWait, Some(60))
     );
-    assert_eq!(failed_attempts(&dir), 5);
+    assert_eq!(failed_attempts(&dir), 10);
 }
 
 #[test]

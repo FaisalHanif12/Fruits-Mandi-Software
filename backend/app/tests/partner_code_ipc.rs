@@ -290,7 +290,7 @@ fn every_partner_command_and_report_is_refused_while_locked() {
         )
         .unwrap_err();
     assert_eq!(wrong["errors"][0]["code"], "ERR_PARTNER_CODE_WRONG");
-    assert_eq!(wrong["errors"][0]["values"]["tries_left"], json!(4));
+    assert_eq!(wrong["errors"][0]["values"]["tries_left"], json!(9));
     h.ok("partners_code_unlock", json!({ "input": { "code": CODE } }));
     let overview = h.ok("partners_overview", json!({}));
     assert_eq!(overview.as_array().unwrap().len(), named);

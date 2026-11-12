@@ -144,7 +144,7 @@ fn e2e_46_the_partner_section_opens_only_with_the_code() {
     let wrong = refusal(partner_code::unlock(ctx, &w.owner, &unlock_input("1111")).unwrap_err());
     assert_eq!(wrong.code, ErrorCode::ErrPartnerCodeWrong);
     assert_eq!(wrong.field.as_deref(), Some("code"));
-    assert_eq!(number(&wrong, "tries_left"), Some(4));
+    assert_eq!(number(&wrong, "tries_left"), Some(9));
     assert!(partner_code::is_locked(ctx).unwrap());
     assert_eq!(failed_tries(&w.dir), 1);
 
@@ -173,7 +173,7 @@ fn e2e_46_the_partner_section_opens_only_with_the_code() {
     // A right code ends the run of wrong tries.
     let wrong_again =
         refusal(partner_code::unlock(ctx, &w.owner, &unlock_input("2222")).unwrap_err());
-    assert_eq!(number(&wrong_again, "tries_left"), Some(4));
+    assert_eq!(number(&wrong_again, "tries_left"), Some(9));
 
     // Leaving the section locks it again.
     partner_code::lock(ctx).unwrap();
@@ -254,8 +254,8 @@ fn a_wrong_code_waits_as_the_sign_in_does_and_the_wait_is_remembered() {
     partner_code::set(ctx, &owner, &set_input("4826", "4826")).unwrap();
     partner_code::lock(ctx).unwrap();
 
-    // Tries 1 to 4 count down; the 5th starts a wait of 1 minute.
-    for left in [4, 3, 2, 1] {
+    // Tries 1 to 9 count down; the 10th starts a wait of 1 minute (10 in a step, Umar 12-11-2026).
+    for left in (1..10).rev() {
         let e = refusal(partner_code::unlock(ctx, &owner, &unlock_input("1111")).unwrap_err());
         assert_eq!(number(&e, "tries_left"), Some(left));
     }
@@ -270,9 +270,9 @@ fn a_wrong_code_waits_as_the_sign_in_does_and_the_wait_is_remembered() {
     assert_eq!(number(&during, "seconds"), Some(40));
     assert!(partner_code::is_locked(ctx).unwrap());
 
-    // After the wait the count goes on from 5: four more tries, then 5 minutes.
+    // After the wait the count goes on from 10: nine more tries, then 5 minutes.
     env.mono.advance_seconds(41);
-    for left in [4, 3, 2, 1] {
+    for left in (1..10).rev() {
         let e = refusal(partner_code::unlock(ctx, &owner, &unlock_input("1111")).unwrap_err());
         assert_eq!(number(&e, "tries_left"), Some(left));
     }
@@ -293,9 +293,9 @@ fn a_wrong_code_waits_as_the_sign_in_does_and_the_wait_is_remembered() {
     assert!(!partner_code::is_locked(ctx).unwrap());
     partner_code::lock(ctx).unwrap();
     let fresh = refusal(partner_code::unlock(ctx, &owner, &unlock_input("1111")).unwrap_err());
-    assert_eq!(number(&fresh, "tries_left"), Some(4));
-    // Every wrong try and every refused try in the wait is in the audit log: 10 + 1 + 1.
-    assert_eq!(failed_tries(&dir), 10 + 1 + 1);
+    assert_eq!(number(&fresh, "tries_left"), Some(9));
+    // Every wrong try and every refused try in the wait is in the audit log: 20 + 1 + 1.
+    assert_eq!(failed_tries(&dir), 20 + 1 + 1);
 }
 
 #[test]
@@ -401,7 +401,7 @@ fn setting_changing_and_resetting_the_code_need_a_proof() {
         (wrong_old.code, wrong_old.field.as_deref()),
         (ErrorCode::ErrPartnerCodeWrong, Some("old_code_or_password"))
     );
-    assert_eq!(number(&wrong_old, "tries_left"), Some(4));
+    assert_eq!(number(&wrong_old, "tries_left"), Some(9));
     assert_eq!(change("4826", "7391").unwrap(), status(true, true, 0));
     // The old code no longer opens it; the new one does.
     partner_code::lock(ctx).unwrap();
@@ -463,7 +463,7 @@ fn a_reset_with_the_recovery_code_does_not_spend_it_and_ends_the_wait() {
     let ctx = &env.ctx;
     partner_code::set(ctx, &owner, &set_input("4826", "4826")).unwrap();
     partner_code::lock(ctx).unwrap();
-    for _ in 0..5 {
+    for _ in 0..10 {
         let _ = partner_code::unlock(ctx, &owner, &unlock_input("1111"));
     }
     assert_eq!(partner_code::status(ctx).unwrap().wait_seconds, 60);
