@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.23 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026 and 12-11-2026, and his answers of 15-10-2026) |
+| Version | 1.24 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026 and 12-11-2026, and his answers of 15-10-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.34 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
+| Derived from | PRD v1.35 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -240,7 +240,7 @@ flowchart RL
     BIK --> B3["وصولی / اگراہی"]
     BIK --> B4["ادائیگی"]
     BIK --> B5["پیشگی کھاتہ"]
-    BIK --> B6["آج کی بکری"]
+    BIK --> B6["پچھلی بکری - past sales"]
     BIK --> B7["پارٹی کھاتے - party ledgers"]
     BIK --> B8["باقی مال"]
     GRD --> G1["Gardens list; one garden: installments, costs,
@@ -1040,6 +1040,7 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
 | 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |
+| 1.24 | 12-11-2026 | PRD v1.35, approved by Umar (plan 72): diagram 5 names the screen پچھلی بکری (Past Sales). No table or amount changed. |
 | 1.23 | 12-11-2026 | Plan 71: table `lot_counters` from migration 0022, the biggest counter given per seller and item, so a lot number is never reused (15.6, PRD FR-12.45). It changes no amount or chain hash. |
 | 1.22 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): `bikri_lots.lot_counter` and its unique index in migration 0022 (15.6, 15.8); a new بکری writes only its number and dates (15.6); `analytics_facts.adda_id` is null for a new بکری; the truck index is kept for old rows (15.8); diagram 7. It changes no amount or chain hash. |
 | 1.21 | 10-11-2026 | PRD v1.33, Umar: in an edit, a change of only the buyer or only the seller looks up that side's rules only (diagram 12). No table changed. |
