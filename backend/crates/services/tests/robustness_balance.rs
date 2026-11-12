@@ -386,6 +386,19 @@ fn fingerprint(dir: &TempDir, skip: &[&str]) -> u64 {
 /// columns are hashed: what a later migration adds (a table, a column) is not a changed row. This
 /// keeps the migration tests true for every migration after the old file's version, with no list to
 /// extend (the lists of 0005, 0006 and 0009 are still used without a shape).
+/// The name a column had before migration 0020 (plan 64) renamed every `pukhta_*` column to
+/// `chukta_*`, `is_pukhta_khata` to `is_chukta_khata` and `is_pukhta_party` to `was_one_time_party`.
+/// Any other name is its own.
+fn name_before_0020(column: &str) -> String {
+    match column {
+        "is_chukta_khata" => "is_pukhta_khata".to_owned(),
+        "was_one_time_party" => "is_pukhta_party".to_owned(),
+        other => other
+            .strip_prefix("chukta_")
+            .map_or_else(|| other.to_owned(), |rest| format!("pukhta_{rest}")),
+    }
+}
+
 fn fingerprint_in(dir: &TempDir, skip: &[&str], shape: Option<&Shape>) -> u64 {
     let now = shape_of(dir);
     let mut hasher = DefaultHasher::new();
@@ -403,9 +416,11 @@ fn fingerprint_in(dir: &TempDir, skip: &[&str], shape: Option<&Shape>) -> u64 {
         let names: Vec<String> = all_columns
             .iter()
             .filter(|c| match shape {
-                Some(old) => old
-                    .iter()
-                    .any(|(name, cols)| name == table && cols.contains(c)),
+                // A column that migration 0020 renamed is the same column: its old name is in the
+                // old file (plan 64). Its values are read from the new name, in the same place.
+                Some(old) => old.iter().any(|(name, cols)| {
+                    name == table && (cols.contains(c) || cols.contains(&name_before_0020(c)))
+                }),
                 None => {
                     !COLUMNS_OF_0005.contains(&(table.as_str(), c.as_str()))
                         && !COLUMNS_OF_0006.contains(&(table.as_str(), c.as_str()))
@@ -1407,8 +1422,22 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
             row.code
         );
 
-        // Asking for the state it already has changes nothing and writes nothing.
-        accounts::set_active(&w.env.ctx, &w.owner, row.id, true).unwrap();
+        // Asking for the state it already has changes nothing and writes nothing. The old closed
+        // account 0031 is inactive, so asking to make it active is a change the app refuses: it
+        // stays closed (PRD FR-13.9), and the refusal writes nothing either.
+        let asked = accounts::set_active(&w.env.ctx, &w.owner, row.id, true);
+        if row.code == "0031" {
+            assert!(
+                matches!(
+                    &asked,
+                    Err(ServiceError::Rejected(items))
+                        if items.first().is_some_and(|i| i.code == ErrorCode::ErrSystemAccount)
+                ),
+                "0031 must stay closed: {asked:?}"
+            );
+        } else {
+            asked.unwrap();
+        }
         assert_eq!(
             fingerprint(&w.dir, &[]),
             before,
@@ -1478,14 +1507,16 @@ fn a_system_account_cannot_be_made_inactive_and_a_refusal_writes_nothing() {
         refused.to_string().contains("ERR_SYSTEM_ACCOUNT"),
         "wrong message: {refused}"
     );
-    let still_inactive: i64 = raw_conn
-        .query_row(
-            "SELECT COUNT(*) FROM accounts WHERE is_system = 1 AND is_active = 0",
-            [],
-            |r| r.get(0),
-        )
-        .unwrap();
-    assert_eq!(still_inactive, 0, "a system account was made inactive");
+    // The only inactive system account is the old closed 0031 (migration 0020, PRD FR-13.9); the
+    // refused update made no other one inactive.
+    let inactive: Vec<String> = raw_conn
+        .prepare("SELECT code FROM accounts WHERE is_system = 1 AND is_active = 0 ORDER BY code")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(inactive, ["0031"], "a system account was made inactive");
     drop(raw_conn);
     assert_eq!(
         fingerprint(&w.dir, &[]),
