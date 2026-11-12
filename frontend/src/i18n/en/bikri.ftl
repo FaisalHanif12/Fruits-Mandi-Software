@@ -388,33 +388,6 @@ bikri-last-saved = Last saved { -bikri }: number { $number }
 bikri-open-failed = The { -bikri } could not be opened. Please try again.
 
 # review: pending
-bikri-nav-label = Move between sales
-
-# review: pending
-bikri-nav-first = First { -bikri }
-
-# review: pending
-bikri-nav-previous = Previous { -bikri }
-
-# review: pending
-bikri-nav-next = Next { -bikri }
-
-# review: pending
-bikri-nav-last = Last { -bikri }
-
-# review: pending
-bikri-nav-none = No { -bikri } is saved yet.
-
-# review: pending
-bikri-nav-no-previous = There is no { -bikri } before this one.
-
-# review: pending
-bikri-nav-no-next = There is no { -bikri } after this one.
-
-# review: pending
-bikri-find-open = Find
-
-# review: pending
 bikri-find-title = Find a { -bikri }
 
 # review: pending

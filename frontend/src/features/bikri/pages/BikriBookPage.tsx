@@ -538,19 +538,22 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     <LotCountersProvider value={lotCounters}>
       <div ref={rootRef} className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
         {/* The screen scrolls in this area. The numbers strip is docked under it, never over it, so it
-          cannot cover a grid (plan 38, sale book). */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2">
+          cannot cover a grid (plan 38, sale book). The bottom padding is part of the scrolled
+          content, so the last row and the empty state's button scroll clear of the edge of the area
+          (Umar, 12-11-2026); the shell keeps its own band under the area for the round assistant
+          button. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 pb-4 short:gap-2">
           {edit === null ? (
             <BikriToolbar
               title={
                 // The side menu already says where we are, so the name gives its room to the grids
                 // in the smallest window (design system 8, plan 12). Screen readers still hear it.
                 // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
-                <div className="flex items-center gap-1">
+                <div className="contents wide:flex wide:items-center wide:gap-1">
                   <Localized id="glossary-bikri-book">
-                    <h1 className="sr-only normal:not-sr-only normal:type-section" />
+                    <h1 className="sr-only wide:not-sr-only wide:type-section" />
                   </Localized>
-                  <div className="hidden normal:block">
+                  <div className="hidden wide:block">
                     <InfoHint>
                       <Localized id="bikri-help">
                         <p />
@@ -569,7 +572,6 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
                   <HeadFields error={formError} number={null} onDone={goToLots} />
                 </div>
               }
-              currentId={null}
               onOpen={onOpenSaved}
               findOpen={findOpen}
               onFindOpenChange={setFindOpen}
@@ -997,12 +999,7 @@ function SavedBikri({ id }: { id: number }) {
   }
   return (
     <div className="flex flex-col gap-3">
-      <BikriToolbar
-        currentId={id}
-        onOpen={openSaved}
-        findOpen={findOpen}
-        onFindOpenChange={setFindOpen}
-      >
+      <BikriToolbar onOpen={openSaved} findOpen={findOpen} onFindOpenChange={setFindOpen}>
         <PrintAction
           target={detail.data === undefined ? null : { id, number: detail.data.number }}
           enabled={!dialogOpen}

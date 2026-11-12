@@ -381,78 +381,45 @@ describe.each(LANGUAGES)('Alt+B from a saved بکری (%s)', (language) => {
   });
 });
 
-describe.each(LANGUAGES)('moving between بکری and find (%s)', (language) => {
+describe.each(LANGUAGES)('find, with no arrows and no find button (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
     fakeBikri();
   });
 
-  const arrow = (id: string) => screen.findByRole('button', { name: named(message(language, id)) });
-
-  it('previous goes by number from the one on screen and opens the one the backend names', async () => {
-    vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(40);
-    const { router } = await renderApp('/bikri/book?id=41');
-    const user = userEvent.setup();
-    await user.click(await arrow('bikri-nav-previous'));
-    expect(bikriApi.bikriNavigate).toHaveBeenCalledWith(41, 'previous');
-    await waitFor(() => {
-      expect(router.state.location.search).toMatchObject({ id: 40 });
+  /** The saved بکری is on screen when its New button is there. */
+  const savedIsOn = () =>
+    screen.findByRole('button', {
+      name: (label) => visible(label).startsWith(visible(message(language, 'bikri-new'))),
     });
-  });
 
-  it('first, next and last ask the backend too', async () => {
-    vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(7);
+  it('the toolbar has no find button and no arrows (Umar, 12-11-2026): F3 is the way to the find box', async () => {
     await renderApp('/bikri/book?id=41');
-    const user = userEvent.setup();
-    await user.click(await arrow('bikri-nav-first'));
-    await user.click(await arrow('bikri-nav-next'));
-    await user.click(await arrow('bikri-nav-last'));
-    expect(vi.mocked(bikriApi.bikriNavigate).mock.calls.map((call) => call[1])).toEqual([
-      'first',
-      'next',
-      'last',
-    ]);
+    await savedIsOn();
+    // The old find button showed its key, F3; the four arrows were icon buttons beside it.
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.filter((button) => button.textContent.includes('F3'))).toEqual([]);
+    expect(bikriApi.bikriNavigate).not.toHaveBeenCalled();
+    // The key is still there.
+    press('F3');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
-  it('at the end of the list a short note says so and the screen stays', async () => {
-    vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(null);
-    const { router } = await renderApp('/bikri/book?id=41');
-    const user = userEvent.setup();
-    await user.click(await arrow('bikri-nav-next'));
-    await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-nav-no-next'));
-    });
-    expect(router.state.location.search).toMatchObject({ id: 41 });
-  });
-
-  it('from the new بکری, previous starts from nothing', async () => {
-    vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(41);
-    const { router } = await renderApp('/bikri/book');
-    const user = userEvent.setup();
-    await user.click(await arrow('bikri-nav-previous'));
-    expect(bikriApi.bikriNavigate).toHaveBeenCalledWith(null, 'previous');
-    await waitFor(() => {
-      expect(router.state.location.search).toMatchObject({ id: 41 });
-    });
-  });
-
-  it('a failure is told in words', async () => {
-    vi.mocked(bikriApi.bikriNavigate).mockRejectedValue(
-      fail({ code: 'ERR_NOT_FOUND', field: 'current_id', values: {} }),
-    );
-    await renderApp('/bikri/book?id=41');
-    const user = userEvent.setup();
-    await user.click(await arrow('bikri-nav-next'));
-    await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'err-not-found'));
-    });
+  it('the new بکری has neither the arrows nor a find button, and F3 still opens the box', async () => {
+    await renderApp('/bikri/book');
+    await screen.findByRole('textbox', { name: named(message(language, 'bikri-header-date')) });
+    expect(
+      screen.getAllByRole('button').filter((button) => button.textContent.includes('F3')),
+    ).toEqual([]);
+    press('F3');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
   describe('find (F3)', () => {
     const openFind = async () => {
       const view = await renderApp('/bikri/book?id=41');
-      await arrow('bikri-nav-next');
+      await savedIsOn();
       press('F3');
       const dialog = await screen.findByRole('dialog');
       return { ...view, dialog, user: userEvent.setup() };
@@ -488,7 +455,7 @@ describe.each(LANGUAGES)('moving between بکری and find (%s)', (language) => 
 
     it('a saved بکری in the address is not asked to open its find box: ?id=41&find=true has no box', async () => {
       await renderApp('/bikri/book?id=41&find=true');
-      await arrow('bikri-nav-next');
+      await savedIsOn();
       expect(screen.queryByRole('dialog')).toBeNull();
     });
 

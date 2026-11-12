@@ -77,8 +77,11 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
   date and saved-at (and the old header values, each only when there), a card for each lot with its lines, the summary (one lot or the whole, from the
   stored sums `SavedTotals`), the partners' share and the entries made in the books. It shows only
   stored values and never calls the preview. A cancelled بکری says so in words, in red.
-- **The toolbar** (`BikriToolbar`) is the same on the new and the saved بکری: first / previous /
-  next / last (`bikri_navigate`, by number), find (`F3`, `bikri_find`), and at the end Save or New.
+- **The toolbar** (`BikriToolbar`) is the same on the new and the saved بکری: the name of the screen
+  (from the wide step), the date and the number, and at the end Print, Credit Details and Save (or New
+  on a saved one), in one row that wraps only in the smallest window. It has no find button and no
+  arrows (Umar, 12-11-2026): `F3` opens the find box (`bikri_find`, by number, truck, seller, buyer, day
+  or item).
 - **The list** (`pages/TodayBikriPage.tsx`, `list-columns.ts`): filters day, seller, item, status;
   the columns come with the wider layout steps. The نگ column of FR-12.7 (sold / received) does not fit
   beside the other nine at any step (200 px side menu: 1332 px at 1920 px), so the "More columns"
@@ -99,7 +102,7 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
 | `api.ts`                                                                              | The only file that knows the command shapes                                                                                         |
 | `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts`                               | The draft as text, the start-up offer, the printing hook                                                                            |
 | `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads                                                        |
-| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/`             | The arrows and find, and the saved view                                                                                             |
+| `components/BikriToolbar.tsx`, `BikriFindDialog.tsx`, `components/saved/`             | The top row, the find box, and the saved view                                                                                       |
 | `pages/TodayBikriPage.tsx`, `list-columns.ts`                                         | The list of بکری                                                                                                                    |
 
 ## Prints (plan 14)

@@ -387,33 +387,6 @@ bikri-last-saved = آخری محفوظ { -bikri }: نمبر { $number }
 bikri-open-failed = { -bikri } کھل نہیں سکی۔ دوبارہ کوشش کریں۔
 
 # review: pending
-bikri-nav-label = { -bikri } کے درمیان جائیں
-
-# review: pending
-bikri-nav-first = پہلی { -bikri }
-
-# review: pending
-bikri-nav-previous = پچھلی { -bikri }
-
-# review: pending
-bikri-nav-next = اگلی { -bikri }
-
-# review: pending
-bikri-nav-last = آخری { -bikri }
-
-# review: pending
-bikri-nav-none = ابھی کوئی { -bikri } محفوظ نہیں۔
-
-# review: pending
-bikri-nav-no-previous = اس سے پچھلی کوئی { -bikri } نہیں۔
-
-# review: pending
-bikri-nav-no-next = اس کے بعد کوئی { -bikri } نہیں۔
-
-# review: pending
-bikri-find-open = تلاش
-
-# review: pending
 bikri-find-title = { -bikri } تلاش کریں
 
 # review: pending

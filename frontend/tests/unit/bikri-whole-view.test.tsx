@@ -53,13 +53,15 @@ afterEach(() => {
 });
 
 /**
- * What names a lot (PRD FR-12.6): its seller and its item. Lot 1 is Event 1's, Rahim's bananas, and
- * a lot added after it starts with the same seller and item.
+ * What names a lot (PRD FR-12.6, FR-12.45): its seller, its item and the counter the backend gives it.
+ * Lot 1 is Event 1's, Rahim's bananas, and a lot added after it starts with the same seller and item.
+ * The stand-in backend of these tests answers every lot with the counter 1 (the real one counts up).
  */
 const lotWho = (language: Language) =>
-  message(language, 'bikri-lot-who', {
+  message(language, 'bikri-lot-name', {
     seller: names(language).rahim,
     item: names(language).banana,
+    counter: '1',
   });
 
 /** The values of the label of a lot: with its name, or (an untouched lot, nothing chosen) without. */
