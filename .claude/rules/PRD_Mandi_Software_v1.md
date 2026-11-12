@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.36 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plan 73), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.37 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73 and 74), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 12 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.36 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.37 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.18 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.10 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.23 |
@@ -1662,6 +1662,17 @@ FR-12.43 [C] **Party ledgers.** (Added in v1.32.) Umar (D8 Feature 6): a new ite
 
 Example (E2E-67, after the worked day): buyers list: اکرم ٹول ٹیکس 2,880 بنام; ارشد ملتانی 18,684 بنام. اکرم's statement: 10-10-26: previous 0, charged 12,880, paid 10,000, balance 2,880. اکرم's day detail: کیلا, پیٹی, 20 @ 600 = 12,000; commission 720; لاگا 160; day's total 12,880; paid 10,000; new balance 2,880.
 
+FR-12.47 [C] **One party's statement: 30 days at a time, a day opened in place, and a statement print.** (Added in v1.37.) Umar (13-11-2026, plan 74): a party's statement grows every day, so level 2 of FR-12.43 must stay fast and easy to read.
+- **30-day window.** Level 2 shows one row per date with an entry (تاریخ, سابقہ رقم, بنام اس دن کا, اس دن ادا, بقایا نیا) for 30 days at a time, newest first. The first window ends today [A]. Under the table, "پچھلے 30 دن" and "اگلے 30 دن" move it, with the window between them, for example "14-10-2026 تا 12-11-2026", in the style of FR-12.46. The next button stops at today. Page Up and Page Down do the same, and the arrows follow the reading direction.
+- **Window totals.** The میزان row is for the window: the balance at its start, the total charged, the total paid and the balance at its end, from the backend. The balance at the end of the newest window equals the party card and the closing balance of R13.
+- **از and تا** stay. A range shows every entry date in it, page by page, with its own opening and closing balance.
+- **تاریخ پر جائیں** takes a day, month and year, with the shortcuts of FR-7.19. A date with an entry shows that row, opened and highlighted, inside its 30-day window. A date with none shows "اس تاریخ کو کوئی اندراج نہیں" (No entry on this date) and the window around it. A date after today is refused.
+- **A day opened in place.** A click or `Enter` on a date row opens level 3 under that row, on the same page; a second click closes it. Several days can be open; moving the window closes them. It shows the figures of the R35 day slip (FR-19.12), from the same backend function, and keeps its own print button.
+- **Statement print (اسٹیٹمنٹ پرنٹ).** A button at the top opens a box: the period (آخری 10 دن, آخری 30 دن by default, آخری 6 مہینے, or اپنی تاریخیں), the print language, and preview, print and PDF. The statement, oldest first [A], holds: the header of FR-19.13 with the party, period and print date; the opening balance with its side; one tight block per date with an entry (one line per item, such as "آم 20 × 1,000 = 20,000", commission and لاگا on one line, the day's bill, paid on the spot, each وصولی or ادائیگی of that day, the balance at the end of the day with its side) [A: items shown]; and the period's totals (bought or sold, commission and لاگا, paid, received, closing balance, with the amount in words, FR-19.7). It is compact: small readable type, no empty rows, no day without an entry, numbers centred in their columns (NFR-USE-19), a block not split across pages where it can be helped, "Page x of y", digits 0 to 9.
+- **One calculation path.** Every figure comes from the backend functions of R13, R14 and R35. The window, a range and a go-to-date load as one indexed query per page with the totals and the opening balance from the backend (FR-19.11); opening a day loads only that day; the statement print reads every row of its period in the backend.
+
+Example: a buyer, statement 01-11-2026 to 06-11-2026. Opening 0. On 05-11-2026 he bought 30,000 and paid 0: balance 30,000 بنام. On 06-11-2026 he bought 21,360 and paid 21,360 on the spot: balance still 30,000 بنام. Totals: bought 51,360; paid 21,360; closing 30,000 بنام.
+
 ## 13. Module: چکتا کھاتہ (walk-in buyers) [C]
 
 Umar (demo feedback of 08-11-2026, D8 Feature 5; decided 09-11-2026): the old one-time accounts are removed completely, and چکتا کھاتہ takes their place. A چکتا buyer is a walk-in buyer who pays the whole bill on the spot and leaves.
@@ -2749,3 +2760,4 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.34 | 12-11-2026 | Umar's decisions of 12-11-2026 (plan 71), approved by Umar. Lot names with a counter per seller and item (FR-12.45, 12.3, FR-12.6, FR-12.14, R2, R6, R10, R27); a seller's lots printed sorted on R1 and R35 (FR-12.12, FR-19.12); the assistant asks which lot, or answers a named lot (FR-7.77). The بکری header keeps only the date and the بکری number (FR-12.2, 12.2); the other header fields are retired and kept read-only for old data; bill date is the entry date. Retired: truck memory and the same-truck warning (FR-7.49, FR-7.50, E22, E39), the header freight split (C17, FR-14.1), the header زمیندار as the first lot's seller (FR-7.51), the header store default, and R8. E2E-25 keeps only its seller memory part, with the lot name; new E2E-70, A100. No golden number changed. No money rule changed. |
 | 1.35 | 12-11-2026 | Umar's decision of 12-11-2026 (plan 72), approved by Umar: the screen آج کی بکری becomes پچھلی بکری (Past Sales), with today's بکری, then a 7-day window of earlier days grouped by day, moved by the arrow keys and Page Up and Page Down, a date to jump to, and a switch that shows every بکری of the window (12.7 rewritten, new FR-12.46; FR-5.3, FR-7.70, FR-19.10). The truck column and the truck search come back on this screen for old بکری (12.2). آج کی بکری stays the name of its first section and of the dashboard tile. Also Umar's change of 12-11-2026: the wrong-try limit of the password and the partner code goes from 5 to 10 (FR-8.2, FR-17.11). No golden number changed. No money rule changed. |
 | 1.36 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 73): reopening a closed day to fix an entry asks for the Owner's sign (دستخط) as well as the reason; only his sign, "adnan" by default, opens the day; the sign is kept in the audit log and shown in the edit stamp and history (FR-21.4, FR-7.71, Section 21). No golden number changed. No money rule changed. |
+| 1.37 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 74): one party's statement on پارٹی کھاتے shows 30 days at a time with arrows, a go-to-date, a day opened in place under its row, and a compact statement print for any period (new FR-12.47). No golden number changed. No money rule changed. |
