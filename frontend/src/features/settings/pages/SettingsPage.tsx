@@ -56,12 +56,15 @@ export function SettingsPage() {
     );
   }
   const data = settings.data;
-  // A panel of fields scrolls inside its own area; the audit log fills the room itself (plan 38).
+  // A panel of fields scrolls inside its own area; the audit log fills the room itself (plan 38). The
+  // screen runs down to the status bar through the band kept for the round assistant button
+  // (`fill-to-corner`), so a panel is not cut off above empty space; the band is the panel's bottom
+  // padding, so its last row scrolls clear of the button (Umar, 12-11-2026).
   const scrolls = (content: ReactNode) => (
-    <div className="min-h-0 flex-1 overflow-auto">{content}</div>
+    <div className="min-h-0 flex-1 overflow-auto pb-corner">{content}</div>
   );
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="fill-to-corner flex min-h-0 flex-col gap-3">
       <Localized id="settings-title">
         <h1 className="type-title" />
       </Localized>

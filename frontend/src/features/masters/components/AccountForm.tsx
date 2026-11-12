@@ -380,7 +380,7 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
 
   return (
     <div
-      className={`flex max-w-form flex-col gap-3 ${embedded === undefined ? 'h-full min-h-0' : ''}`}
+      className={`flex max-w-form flex-col gap-3 ${embedded === undefined ? 'fill-to-corner min-h-0' : ''}`}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-3">
         {embedded === undefined ? heading : null}
@@ -834,6 +834,9 @@ export function AccountForm({ account, today, embedded }: AccountFormProps) {
           </Button>
         </div>
       </ActionBar>
+      {/* The screen runs down through the band of the round assistant button (`fill-to-corner`), so the bar
+          of buttons keeps its place above it. */}
+      {embedded === undefined ? <div aria-hidden="true" className="h-corner shrink-0" /> : null}
       {spelling.dialog}
       {embedded === undefined ? null : (
         <SaveChangesPrompt

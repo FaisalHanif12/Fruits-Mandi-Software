@@ -134,6 +134,9 @@ function AuditLogBody() {
           }}
         />
       )}
+      {/* The band of the round assistant button: the Settings tab that holds this log runs down through it
+          (`fill-to-corner`), so the page buttons end above it (Umar, 12-11-2026). */}
+      <div aria-hidden="true" className="h-corner shrink-0" />
     </div>
   );
 }

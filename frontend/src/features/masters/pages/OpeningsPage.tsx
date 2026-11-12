@@ -474,7 +474,7 @@ function OpeningsScreen({ today }: { today: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
+    <div className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
       <LeaveGuard dirty={changed.length > 0} onSave={submit} />
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
@@ -596,6 +596,8 @@ function OpeningsScreen({ today }: { today: string }) {
         </section>
       )}
       {body}
+      {/* The band of the round assistant button, as on every list (ListPage): the page buttons end above it. */}
+      <div aria-hidden="true" className="h-corner shrink-0" />
     </div>
   );
 }
