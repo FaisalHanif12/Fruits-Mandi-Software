@@ -3,11 +3,11 @@
 
 | | |
 |---|---|
-| Version | 1.17 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026 and 09-11-2026) |
-| Date | 9 November 2026 |
+| Version | 1.18 (Umar's changes of 11-10-2026, 15-10-2026, 18-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 04-11-2026, 06-11-2026, 09-11-2026 and 12-11-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
-| Depends on | `PRD_Mandi_Software_v1.md` (v1.32, the master) |
+| Depends on | `PRD_Mandi_Software_v1.md` (v1.35, the master) |
 | Next documents | Tech Stack, Code Standards, Architecture, Money Calculations agent profile |
 
 ---
@@ -188,7 +188,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | ID | Requirement | Target |
 |---|---|---|
 | NFR-SEC-1 | Passwords | Stored only as a strong one-way hash (Argon2id). Minimum 6 characters. Never shown, never logged. |
-| NFR-SEC-2 | Login lockout | As PRD FR-8.2: after 5 wrong tries wait 1 minute, after 5 more wait 5 minutes, then 15 minutes each time |
+| NFR-SEC-2 | Login lockout | As PRD FR-8.2: after 10 wrong tries wait 1 minute, after 10 more wait 5 minutes, then 15 minutes each time (v1.18; 5 before) |
 | NFR-SEC-3 | Idle lock | Locks after 15 minutes idle (setting). Unsaved work stays. |
 | NFR-SEC-4 | Sign-in enforced in the backend | There is one user, the Owner, and no roles (PRD Section 2). Every command except first run, restore on a new computer (only while no Owner exists, PRD FR-20.11), sign-in, recovery, app info and data status is refused by the backend unless the Owner is signed in and the app is not locked. Hiding a button is not enough. |
 | NFR-SEC-5 | Audit trail | Every change to money, rules, shares, the password and settings is logged with who, when, old value, new value, reason. The log cannot be edited or deleted from the app. |
@@ -200,7 +200,7 @@ The data is commercially sensitive: who owes how much, each partner's share, eac
 | NFR-SEC-11 | Signed updates | Updates are digitally signed. The app refuses an update that is not signed by us. |
 | NFR-SEC-12 | Recovery | Owner recovery code printed at setup. No "master password" exists anywhere. |
 | NFR-SEC-13 | Exports | Excel and PDF exports need the signed-in Owner, like every other command (NFR-SEC-4) |
-| NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. Wrong codes wait as NFR-SEC-2 and are written to the audit log. |
+| NFR-SEC-14 | Partner code | The 4-digit partner code (PRD FR-17.11) is stored only as an Argon2id hash, never shown or logged. The backend refuses every partner command and partner report while the section is locked, whatever the screen shows. Wrong codes wait as NFR-SEC-2 (10 wrong codes, then 10 more, v1.18) and are written to the audit log. |
 | NFR-SEC-15 | The assistant's key | The OpenRouter key is kept only in Windows Credential Manager (NFR-SEC-7). It is never in the database, a backup, a log, the support file (NFR-OBS-4) or any answer to the screens, which see only that a key is saved and its last 4 characters. Saving, replacing and removing it need the Owner's password and write an audit entry without the key (PRD FR-7.85). |
 
 ---
@@ -412,3 +412,4 @@ Umar (01-11-2026 and 02-11-2026): the model is the brain of the question panel o
 | 1.15 | 06-11-2026 | Approved by Umar: the fixed part of an assistant request may be 11,500 tokens (NFR-AI-5), measured 11,494 with D6 prompt v1.5. |
 | 1.16 | 06-11-2026 | Approved by Umar (PRD v1.29): the fixed part of an assistant request may be 11,600 tokens (NFR-AI-5), for the item group filter. |
 | 1.17 | 09-11-2026 | PRD v1.32, approved by Umar through D8 (his demo feedback of 08-11-2026): 1,000 sale lines in one بکری (NFR-SCL-3); 4 fields and 4 `Enter`s when a line may take credit (NFR-USE-6); digits 0 to 9 only (NFR-URD-14). |
+| 1.18 | 12-11-2026 | PRD v1.35, approved by Umar (12-11-2026): the wrong-try limit of the password and the partner code goes from 5 to 10 (NFR-SEC-2, NFR-SEC-14). |
