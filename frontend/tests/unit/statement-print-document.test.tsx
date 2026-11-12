@@ -68,6 +68,16 @@ describe.each(LANGUAGES)(
       const mango = language === 'ur' ? 'آم' : 'Mango';
       const apple = language === 'ur' ? 'سیب' : 'Apple';
       expect(lines[0]).toBe(`${mango} 20 × 1,000 = 20,000`);
+      // The × and the = are written in the number style (Inter, the size of the digits), not in the font of the
+      // words: Gulzar draws them tiny. Each is its own isolated number element, like the figures.
+      const firstLine = first?.querySelector('.print-statement-line');
+      expect(Array.from(firstLine?.querySelectorAll('bdi.number-run') ?? []).map(text)).toEqual([
+        '20',
+        '×',
+        '1,000',
+        '=',
+        '20,000',
+      ]);
       expect(lines[1]).toBe(`${apple} 20 × 400 = 8,000`);
       // One line for the two charges: each label with its amount.
       expect(lines[2]).toBe(
@@ -240,6 +250,12 @@ describe.each(LANGUAGES)(
       const { container } = draw(changed);
       const line = text(container.querySelector('.print-statement-line'));
       expect(line).toContain('12.5');
+      expect(
+        Array.from(
+          container.querySelector('.print-statement-line')?.querySelectorAll('bdi.number-run') ??
+            [],
+        ).map(text),
+      ).toEqual(['12.5', '×', '100', '=', '1,235']);
       expect(line).toContain(message(language, 'glossary-darja-awwal'));
       expect(line).toContain('1,235');
       const entry = text(

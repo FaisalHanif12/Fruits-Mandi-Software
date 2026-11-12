@@ -28,11 +28,11 @@ print-statement-day-end = دن کے آخر میں { -baqaya }
 
 # One line of goods: "آم 20 × 1,000 = 20,000". The numbers are drawn by the template as numbers.
 # review: pending
-print-statement-item = <item>{ $item }</item> <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $amount }</num>
+print-statement-item = <item>{ $item }</item> <num>{ $qty }</num> <num>×</num> <num>{ $rate }</num> <num>=</num> <num>{ $amount }</num>
 
 # An item sold by weight: its kilograms and its rate for each kilo.
 # review: pending
-print-statement-item-weight = <item>{ $item }</item> <num>{ $weight }</num> کلو × <num>{ $rate }</num> = <num>{ $amount }</num>
+print-statement-item-weight = <item>{ $item }</item> <num>{ $weight }</num> کلو <num>×</num> <num>{ $rate }</num> <num>=</num> <num>{ $amount }</num>
 
 # review: pending
 print-statement-paid-on-spot = { -mauqa-par-jama }

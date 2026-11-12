@@ -28,11 +28,11 @@ print-statement-day-end = Balance at the end of the day
 
 # One line of goods: "Mango 20 × 1,000 = 20,000". The numbers are drawn by the template as numbers.
 # review: pending
-print-statement-item = <item>{ $item }</item> <num>{ $qty }</num> × <num>{ $rate }</num> = <num>{ $amount }</num>
+print-statement-item = <item>{ $item }</item> <num>{ $qty }</num> <num>×</num> <num>{ $rate }</num> <num>=</num> <num>{ $amount }</num>
 
 # An item sold by weight: its kilograms and its rate for each kilo.
 # review: pending
-print-statement-item-weight = <item>{ $item }</item> <num>{ $weight }</num> kg × <num>{ $rate }</num> = <num>{ $amount }</num>
+print-statement-item-weight = <item>{ $item }</item> <num>{ $weight }</num> kg <num>×</num> <num>{ $rate }</num> <num>=</num> <num>{ $amount }</num>
 
 # review: pending
 print-statement-paid-on-spot = { -mauqa-par-jama }
