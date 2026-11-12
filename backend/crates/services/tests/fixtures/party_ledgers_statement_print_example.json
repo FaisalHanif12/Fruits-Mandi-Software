@@ -1,0 +1,106 @@
+{
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "print-statement-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "01-11-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "06-11-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 Akram Toll Tax"
+    }
+  ],
+  "kind": "buyer",
+  "party": {
+    "role_id": "print-party-buyer",
+    "code": "0020",
+    "short_code": "0",
+    "name": "Akram Toll Tax",
+    "phone": null
+  },
+  "period_from": "01-11-2026",
+  "period_to": "06-11-2026",
+  "opening": {
+    "amount": "0",
+    "side": "none"
+  },
+  "days": [
+    {
+      "date": "05-11-2026",
+      "items": [
+        {
+          "name": "Banana",
+          "grade": null,
+          "qty": "30",
+          "weight_kg": null,
+          "rate": "1,000",
+          "amount": "30,000"
+        }
+      ],
+      "charges": [],
+      "bill": {
+        "label_id": "print-statement-bill-buyer",
+        "amount": "30,000",
+        "role": "total"
+      },
+      "paid_on_spot": null,
+      "entries": [],
+      "closing": {
+        "amount": "30,000",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "06-11-2026",
+      "items": [
+        {
+          "name": "Banana",
+          "grade": null,
+          "qty": "20",
+          "weight_kg": null,
+          "rate": "1,068",
+          "amount": "21,360"
+        }
+      ],
+      "charges": [],
+      "bill": {
+        "label_id": "print-statement-bill-buyer",
+        "amount": "21,360",
+        "role": "total"
+      },
+      "paid_on_spot": "21,360",
+      "entries": [],
+      "closing": {
+        "amount": "30,000",
+        "side": "debit"
+      }
+    }
+  ],
+  "totals": [
+    {
+      "label_id": "print-statement-total-bought",
+      "amount": "51,360",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-paid-on-spot",
+      "amount": "21,360",
+      "role": "line"
+    }
+  ],
+  "closing": {
+    "amount": "30,000",
+    "side": "debit"
+  },
+  "words": {
+    "label_id": "print-in-words",
+    "text": "Thirty thousand rupees only"
+  }
+}

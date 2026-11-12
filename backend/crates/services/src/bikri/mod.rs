@@ -25,7 +25,7 @@ mod stock;
 pub use cancel::{cancel, preview as cancel_preview, undo};
 pub use edit::{edit_preview, edit_save, open_for_edit};
 pub use later::{preview as later_sale_preview, save as later_sale_save};
-pub use read::{find, find_lots, get, list, navigate};
+pub use read::{find, find_lots, get, list, list_whole, list_whole_paged, navigate};
 pub use save::save;
 pub use stock::{list as stock_list, ready_goods, write_off, write_off_undo};
 

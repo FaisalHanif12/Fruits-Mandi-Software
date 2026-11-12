@@ -449,3 +449,31 @@ print-slip-weight-line = { $weight } kg @ { $rate }
 
 # review: pending
 print-slip-weight-kg = { $weight } kg
+
+# The print and the Excel of پچھلی بکری (plan 72 P8, PRD 12.7). The ids are the ones the backend sends
+# (`bikri_list_print_data`, `bikri_list_export_excel`): the title, the facts of the header, the column
+# of the time, the status of an edited بکری, and the heading of today's section and of each day.
+# review: pending
+bikri-list-print-title = Past Sales
+
+# review: pending
+bikri-list-print-all = Every { -bikri } shown
+
+# review: pending
+bikri-list-print-search = Search
+
+# review: pending
+bikri-list-col-time = Time
+
+# The status of a بکری that was edited: its status, then the mark (PRD FR-7.71). `$status` is a message.
+# review: pending
+bikri-list-status-edited = { $status } · { edit-mark }
+
+# review: pending
+bikri-list-today-heading = Today's { -bikri }s, { $date }: { $count }
+
+# review: pending
+bikri-list-day-heading = { $date }: { -bikri }s { $count }
+
+# review: pending
+bikri-list-day-heading-empty = { $date }: No { -bikri }s

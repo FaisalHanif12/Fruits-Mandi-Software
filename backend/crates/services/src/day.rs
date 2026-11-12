@@ -11,7 +11,7 @@ use mandi_domain::core::dates::{self, BusinessDate};
 use mandi_domain::core::edit::{
     DayFixCloseInput, DayFixClosed, DayFixOpenInput, DayFixOpened, DayFixStayedOpen,
 };
-use mandi_domain::core::error::{ErrorCode, ErrorValue};
+use mandi_domain::core::error::{ErrorCode, ErrorValue, FieldError};
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::validate;
 use mandi_domain::core::vouchers::{
@@ -574,6 +574,17 @@ pub fn reopen(
     actor: &Actor,
     input: &DayReopenInput,
 ) -> Result<DayStatusInfo, ServiceError> {
+    reopen_signed(ctx, actor, input, None)
+}
+
+/// [`reopen`] that also saves the Owner's sign (PRD FR-21.4, plan 73) in the audit entry and in the
+/// day-close row, beside the reason. The sign has been checked by the caller.
+fn reopen_signed(
+    ctx: &Context,
+    actor: &Actor,
+    input: &DayReopenInput,
+    sign: Option<&str>,
+) -> Result<DayStatusInfo, ServiceError> {
     let (_, today) = window(ctx)?;
     let mut errors = validate::FieldErrors::default();
     let date = errors.take(validate::date("date", &input.date, today));
@@ -613,11 +624,14 @@ pub fn reopen(
         let now = ctx.now_text();
         let new_iso = new_closed.map(BusinessDate::to_iso);
         repo::set_closed_up_to(tx, new_iso.as_deref(), actor.user_id, &now)?;
-        let numbers = json!({
+        let mut numbers = json!({
             "reopened_from": date.to_iso(),
             "closed_up_to_before": closed_day.to_iso(),
             "closed_up_to_after": new_iso,
         });
+        if let (Some(sign), Some(object)) = (sign, numbers.as_object_mut()) {
+            object.insert("sign".to_owned(), json!(sign));
+        }
         repo::insert_day_close(
             tx,
             &date.to_iso(),
@@ -632,6 +646,7 @@ pub fn reopen(
             &Event::new(Some(actor.user_id), "day_reopen", "day")
                 .old(json!({ "closed_up_to": closed_day.to_iso() }))
                 .new_value(json!({ "closed_up_to": new_iso }))
+                .sign(sign)
                 .reason(&reason)
                 .into_entry(),
         )?;
@@ -640,14 +655,17 @@ pub fn reopen(
     status(ctx)
 }
 
-/// The setting that remembers a fix in progress: `{ "token", "first", "last" }` (PRD FR-21.4).
+/// The setting that remembers a fix in progress: `{ "token", "first", "last", "sign" }` (PRD
+/// FR-21.4, plan 73).
 const KEY_FIX_PENDING: &str = "day_fix_pending";
 
-/// The fix in progress, if any: the token and the first and last day it reopened.
+/// The fix in progress, if any: the token, the first and last day it reopened and the Owner's sign
+/// that opened it.
 struct Pending {
     token: String,
     first: BusinessDate,
     last: BusinessDate,
+    sign: Option<String>,
 }
 
 fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
@@ -664,10 +682,40 @@ fn pending_of(conn: &Connection) -> Result<Option<Pending>, ServiceError> {
         .get("token")
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned);
+    let sign = value
+        .get("sign")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
     Ok(match (token, day("first"), day("last")) {
-        (Some(token), Some(first), Some(last)) => Some(Pending { token, first, last }),
+        (Some(token), Some(first), Some(last)) => Some(Pending {
+            token,
+            first,
+            last,
+            sign,
+        }),
         _ => None,
     })
+}
+
+/// The Owner's sign of the fix in progress when the day of an entry was reopened by it (PRD FR-21.4,
+/// plan 73): the edit service saves it beside the reason in the audit entry of the edit, so the
+/// stamp and the history show it. `None` when no fix is in progress, when the record is stale (the
+/// closed-up-to day is no longer the day before its first), or when the entry's day is not one the fix
+/// reopened: an edit of an open day has no sign.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub(crate) fn fix_sign(conn: &Connection, date_iso: &str) -> Result<Option<String>, ServiceError> {
+    let Some(pending) = pending_of(conn)? else {
+        return Ok(None);
+    };
+    let (Some(sign), Some(date)) = (pending.sign, BusinessDate::parse_iso(date_iso)) else {
+        return Ok(None);
+    };
+    if closed_in(conn)? != pending.first.previous_day() {
+        return Ok(None);
+    }
+    Ok((pending.first <= date && date <= pending.last).then_some(sign))
 }
 
 fn clear_pending(tx: &Connection, user_id: i64) -> Result<(), ServiceError> {
@@ -703,14 +751,19 @@ fn days_between(first: BusinessDate, last: BusinessDate) -> Vec<BusinessDate> {
 /// month-close check, the audit row) and it remembers the days, so [`fix_close`] can close exactly
 /// them. A fix already in progress is widened: its days stay in the token.
 ///
+/// Only the Owner's sign opens the day (plan 73): it is checked first, a wrong sign opens nothing
+/// and writes an audit entry without the typed text, and the sign is saved with the reason in the
+/// audit entry of the reopen and, through the fix record, of every edit saved in this fix.
+///
 /// # Errors
-/// `ERR_REASON_REQUIRED` on `reason`; the date codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`;
-/// `ERR_MONTH_CLOSED` on `date`.
+/// `ERR_REASON_REQUIRED` on `reason`; `ERR_SIGN_REQUIRED` and `ERR_SIGN_WRONG` on `sign`; the date
+/// codes on `date`; `ERR_DAY_NOT_CLOSED` on `date`; `ERR_MONTH_CLOSED` on `date`.
 pub fn fix_open(
     ctx: &Context,
     actor: &Actor,
     input: &DayFixOpenInput,
 ) -> Result<DayFixOpened, ServiceError> {
+    let sign = check_fix_sign(ctx, actor, input)?;
     let (closed_before, _) = window(ctx)?;
     // A record of a fix that no longer fits the closed-up-to day is stale (a day was closed or
     // reopened some other way since): it is ignored, so its old last day is not closed again.
@@ -718,13 +771,14 @@ pub fn fix_open(
         .db
         .read(pending_of)?
         .filter(|p| closed_before == p.first.previous_day());
-    let status = reopen(
+    let status = reopen_signed(
         ctx,
         actor,
         &DayReopenInput {
             date: input.date.clone(),
             reason: input.reason.clone(),
         },
+        Some(&sign),
     )?;
     let (_, today) = window(ctx)?;
     let first = validate::date("date", &input.date, today).map_err(ServiceError::from)?;
@@ -741,13 +795,19 @@ pub fn fix_open(
         crate::store::set_setting(
             tx,
             KEY_FIX_PENDING,
-            &json!({ "token": token, "first": first.to_iso(), "last": last.to_iso() }),
+            &json!({
+                "token": token,
+                "first": first.to_iso(),
+                "last": last.to_iso(),
+                "sign": sign,
+            }),
             Some(actor.user_id),
         )?;
         ctx.db.auditor().write(
             tx,
             &Event::new(Some(actor.user_id), "day_fix_open", "day")
                 .new_value(json!({ "days": days }))
+                .sign(Some(&sign))
                 .reason(input.reason.trim())
                 .into_entry(),
         )?;
@@ -758,6 +818,41 @@ pub fn fix_open(
         days,
         closed_up_to: status.closed_up_to,
     })
+}
+
+/// Checks the reason and the sign of a reopen to fix (PRD FR-21.4, plan 73) and gives the sign to
+/// save: the Owner's own spelling of it, not the typed text. A missing reason or sign is refused
+/// first, both together. A wrong sign writes one audit entry (`day_fix_sign_wrong`) that holds no
+/// typed text, and refuses with `ERR_SIGN_WRONG`: nothing opens.
+fn check_fix_sign(
+    ctx: &Context,
+    actor: &Actor,
+    input: &DayFixOpenInput,
+) -> Result<String, ServiceError> {
+    let mut errors = validate::FieldErrors::default();
+    if input.reason.trim().is_empty() {
+        errors.push(FieldError::new(ErrorCode::ErrReasonRequired, "reason"));
+    }
+    if input.sign.trim().is_empty() {
+        errors.push(FieldError::new(ErrorCode::ErrSignRequired, "sign"));
+    }
+    errors.finish()?;
+    let configured = ctx.db.read(crate::owner_sign::configured)?;
+    if let Some(sign) = crate::owner_sign::accepted(&input.sign, configured.as_deref()) {
+        return Ok(sign);
+    }
+    ctx.db.write(|tx| {
+        ctx.db.auditor().write(
+            tx,
+            &Event::new(Some(actor.user_id), "day_fix_sign_wrong", "day")
+                .new_value(
+                    json!({ "date": input.date.trim().chars().take(10).collect::<String>() }),
+                )
+                .into_entry(),
+        )?;
+        Ok::<(), ServiceError>(())
+    })?;
+    Err(ServiceError::reject_field(ErrorCode::ErrSignWrong, "sign"))
 }
 
 /// Closes the days that `fix_open` reopened, oldest first, each with the checks of PRD FR-21.1. A

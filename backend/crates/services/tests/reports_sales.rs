@@ -131,7 +131,9 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             FilterKind::City,
             FilterKind::Adda,
             // PRD FR-12.42: the quality of the line.
-            FilterKind::Grade
+            FilterKind::Grade,
+            // PRD FR-12.45: one lot, for the assistant's answer after "کون سا؟".
+            FilterKind::Lot
         ]
     );
     assert_eq!(r2.group_title_id, "report-group-sales");
@@ -169,7 +171,8 @@ fn r2_lists_every_sale_line_and_its_totals_are_the_bills_of_the_day() {
     // Event 1: اکرم 20 at 600 = 12,000 and he pays 12,880 (E2E-2); ارشد 30 at 580 = 17,400, 18,684.
     let first = &page.rows.first().unwrap().cells;
     assert_eq!(code_of(first.get(2).unwrap()), "0020");
-    assert_eq!(names_en(first.get(4).unwrap()), "Banana");
+    // The item is written with the lot's counter (PRD FR-12.45, plan 71 L8).
+    assert_eq!(names_en(first.get(4).unwrap()), "Banana-1");
     assert_eq!(first.get(3), Some(&Cell::Empty));
     assert_eq!(
         (number(first.get(5).unwrap()), money(first.get(6).unwrap())),
@@ -480,9 +483,9 @@ fn r27_is_the_bill_series_in_number_order() {
     let w = full_day();
     let page = report(&w, ReportId::R27, ReportFilters::default(), 0, 0);
     assert_eq!(page.total_count, 2);
-    // doc, date, bill_date, seller, gross, deductions, net.
-    assert_eq!(moneys(&page, 0, &[4, 5, 6]), vec![29_400, 10_084, 19_316]);
-    assert_eq!(moneys(&page, 1, &[4, 5, 6]), vec![12_000, 1_840, 10_160]);
+    // doc, date, bill_date, seller, lots (PRD FR-12.45, plan 71 L8), gross, deductions, net.
+    assert_eq!(moneys(&page, 0, &[5, 6, 7]), vec![29_400, 10_084, 19_316]);
+    assert_eq!(moneys(&page, 1, &[5, 6, 7]), vec![12_000, 1_840, 10_160]);
     assert_eq!(
         page.rows.first().unwrap().cells.first(),
         Some(&Cell::Doc {
@@ -498,14 +501,14 @@ fn r27_is_the_bill_series_in_number_order() {
         })
     );
     assert_eq!(
-        moneys_of_totals(&page, &[4, 5, 6]),
+        moneys_of_totals(&page, &[5, 6, 7]),
         vec![41_400, 11_924, 29_476]
     );
     // It is R6 with the lots of one بکری and seller together: the same three totals.
     let r6 = report(&w, ReportId::R6, ReportFilters::default(), 0, 0);
     assert_eq!(
         moneys_of_totals(&r6, &[5, 13, 14]),
-        moneys_of_totals(&page, &[4, 5, 6])
+        moneys_of_totals(&page, &[5, 6, 7])
     );
     // A page of one row keeps the totals.
     let one = report(&w, ReportId::R27, ReportFilters::default(), 1, 1);

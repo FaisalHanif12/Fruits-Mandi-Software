@@ -18,6 +18,7 @@ import { LanguageTab } from '../components/LanguageTab';
 import { ChangeCodeCard } from '../../partners';
 import { LockTab } from '../components/LockTab';
 import { OverridesTab } from '../components/OverridesTab';
+import { OwnerSignCard } from '../components/OwnerSignCard';
 import { PrintingTab } from '../components/PrintingTab';
 import { useSettings } from '../hooks';
 
@@ -109,10 +110,11 @@ export function SettingsPage() {
             id: 'lock',
             label: <Localized id="settings-tab-lock" />,
             content: scrolls(
-              <>
+              <div className="flex max-w-reading flex-col gap-6">
                 <LockTab minutes={data.idle_lock_minutes} />
                 <ChangeCodeCard />
-              </>,
+                <OwnerSignCard />
+              </div>,
             ),
           },
           {

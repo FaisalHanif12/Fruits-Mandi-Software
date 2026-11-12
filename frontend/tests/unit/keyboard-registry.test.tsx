@@ -50,6 +50,9 @@ const PRD_KEYS: readonly (readonly [keyof typeof SHORTCUTS, string])[] = [
   ['confirm', 'Enter'],
   ['back', 'Esc'],
   ['openList', 'Alt+↓'],
+  // The window of earlier days of پچھلی بکری moves by 7 days (PRD 12.7, plan 72 P5).
+  ['pastEarlier', 'Page Up'],
+  ['pastLater', 'Page Down'],
   ['dateNextDay', '+'],
   ['datePreviousDay', '−'],
 ];

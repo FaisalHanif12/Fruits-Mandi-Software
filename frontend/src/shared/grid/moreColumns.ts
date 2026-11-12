@@ -15,6 +15,11 @@ export interface MoreColumnsPlan<T> {
   readonly added: readonly { readonly column: ListColumn<T>; readonly after: string }[];
   /** The columns that step aside while the tick is on, at the steps listed (and no other). */
   readonly makesRoom: Readonly<Partial<Record<LayoutStep, readonly string[]>>>;
+  /**
+   * Base columns that wait for a wider step and come at the steps listed while the tick is on (plan 72:
+   * the truck of the list of بکری, shown from the wide step, is offered at the normal step too).
+   */
+  readonly promote?: Readonly<Partial<Record<LayoutStep, readonly string[]>>>;
 }
 
 /**
@@ -30,8 +35,9 @@ export function columnsWithMore<T>(
 ): readonly ListColumn<T>[] {
   if (!more) return base;
   const out: ListColumn<T>[] = [];
+  const promoted = new Set(plan.promote?.[step] ?? []);
   for (const column of base) {
-    out.push(column);
+    out.push(promoted.has(column.field) ? { ...column, from: 'compact' } : column);
     for (const item of plan.added) {
       if (item.after === column.field) out.push({ ...item.column, from: 'compact' });
     }

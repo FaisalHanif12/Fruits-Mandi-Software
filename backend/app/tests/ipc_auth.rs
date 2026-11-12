@@ -88,6 +88,17 @@ impl Harness {
         )
     }
 
+    /// Runs one statement on the data file, to write what only OLD data has (a truck number: a new
+    /// بکری has none, PRD v1.34, plan 71 H1 to H3).
+    fn exec(&self, statement: &str) {
+        mandi_services::db::rusqlite::Connection::open(
+            self.dir.path().join("data").join("mandi.db"),
+        )
+        .unwrap()
+        .execute(statement, mandi_services::db::rusqlite::params![])
+        .unwrap();
+    }
+
     fn sql<T: rusqlite_free::FromSqlText>(&self, query: &str) -> T {
         let conn = mandi_services::db::rusqlite::Connection::open(
             self.dir.path().join("data").join("mandi.db"),
@@ -289,10 +300,10 @@ fn errors_arrive_as_ui_errors_with_codes_fields_values_and_a_reference() {
     let error = h.login("owner", "nope-nope").unwrap_err();
     assert_eq!(
         error["errors"],
-        json!([{ "code": "ERR_WRONG_PASSWORD", "field": "password", "values": { "tries_left": 4 } }])
+        json!([{ "code": "ERR_WRONG_PASSWORD", "field": "password", "values": { "tries_left": 9 } }])
     );
-    // The fifth wrong try is the lock.
-    for _ in 0..3 {
+    // The tenth wrong try is the lock (10 in a step, Umar 12-11-2026).
+    for _ in 0..8 {
         h.login("owner", "nope-nope").unwrap_err();
     }
     let error = h.login("owner", "nope-nope").unwrap_err();
@@ -1109,6 +1120,21 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "party_ledgers_go_to_date",
+            json!({ "input": { "account_id": 1, "date": "10-10-2026" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print_data",
+            json!({ "input": { "account_id": 1, "from": "01-10-2026", "to": "10-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print",
+            json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "10-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
             "drafts_save",
             json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
             true,
@@ -1306,6 +1332,11 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "settings_set_owner_sign",
+            json!({ "input": { "password": "x", "sign": "sana" } }),
+            true,
+        ),
+        (
             "audit_list",
             json!({ "input": { "filters": {}, "offset": 0, "limit": 10 } }),
             true,
@@ -1327,6 +1358,21 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         (
             "reports_export_excel",
             json!({ "input": { "job_id": "j1", "id": "R18", "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
+            true,
+        ),
+        (
+            "bikri_list_print_data",
+            json!({ "input": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "bikri_list_print",
+            json!({ "input": { "list": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "bikri_list_export_excel",
+            json!({ "input": { "job_id": "j1", "from": "01-10-2026", "to": "09-10-2026", "language": "en", "path": "/no-such-folder/mandi-ipc-auth.xlsx" } }),
             true,
         ),
         (
@@ -1470,7 +1516,7 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "day_fix_open",
-            json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
+            json!({ "input": { "date": "10-10-2026", "reason": "x", "sign": "adnan" } }),
             true,
         ),
         ("day_fix_close", json!({ "input": { "token": "x" } }), true),
@@ -2085,7 +2131,7 @@ fn change_password_works_through_the_ipc_and_counts_wrong_tries() {
         .unwrap_err();
     assert_eq!(
         error["errors"],
-        json!([{ "code": "ERR_WRONG_PASSWORD", "field": "current", "values": { "tries_left": 4 } }])
+        json!([{ "code": "ERR_WRONG_PASSWORD", "field": "current", "values": { "tries_left": 9 } }])
     );
     // A right one: null, and the new password signs in.
     assert_eq!(
@@ -2568,9 +2614,7 @@ fn the_bikri_commands_work_through_the_ipc() {
             "seller_comm": null, "buyer_comm": null, "laga": null, "note": null })
     };
     let event1 = json!({ "input": { "draft": {
-        "header": { "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
-            "zamindar_account_id": rahim, "adda_id": null, "driver_name": null, "driver_phone": null,
-            "total_freight": null, "store_id": null, "note": null },
+        "header": { "entry_date": "10-10-2026" },
         "lots": [{ "key": "lot-1", "seller_account_id": rahim, "item_id": banana,
             "packing_id": packing, "marka_id": null, "store_id": null, "qty_received": "50",
             "weight_received": null, "freight": "3,000", "freight_paid_by": "firm",
@@ -2615,6 +2659,26 @@ fn the_bikri_commands_work_through_the_ipc() {
     // No cash was put in this database, so Event 1 takes cash below zero and asks.
     assert_eq!(p["cash"]["cash_after_paisa"], -500_000);
     assert_eq!(p["cash"]["needs_confirm"], true);
+
+    // Plan 72 P13: the same draft with a commission and لاگا typed on line 1, as the screen sends
+    // them. Seller 4% = 480, buyer 4% = 480, لاگا 10 per نگ = 200: the buyer pays
+    // 12,000 + 480 + 200 = 12,680. Each is manual and typed.
+    let mut typed_event1 = event1.clone();
+    let row = &mut typed_event1["input"]["draft"]["lots"][0]["sales"][0];
+    row["seller_comm"] = json!({ "method": "percent", "value": "4" });
+    row["buyer_comm"] = json!({ "method": "percent", "value": "4" });
+    row["laga"] = json!({ "method": "per_unit", "value": "10" });
+    let t = h.ok("bikri_preview", typed_event1);
+    assert_eq!(t["errors"], json!([]), "{t}");
+    let typed_calc = &t["lots"][0]["lines"][0]["calc"];
+    assert_eq!(typed_calc["seller_comm"]["amount"], 48_000);
+    assert_eq!(typed_calc["buyer_comm"]["amount"], 48_000);
+    assert_eq!(typed_calc["laga"]["amount"], 20_000);
+    assert_eq!(typed_calc["buyer_total"], 1_268_000);
+    for charge in ["seller_comm", "buyer_comm", "laga"] {
+        assert_eq!(typed_calc[charge]["method"], "manual", "{charge}");
+        assert_eq!(typed_calc[charge]["source"], "typed", "{charge}");
+    }
 
     // The memories read nothing yet.
     let seller = h.ok(
@@ -2688,6 +2752,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(listed["rows"][0]["buyer_total"], 3_156_400);
     assert_eq!(listed["total_count"], 1);
     assert_eq!(listed["totals"]["buyer_total"], 3_156_400);
+    h.exec("UPDATE bikri_entries SET truck_no = 'LES-1234' WHERE number = 1");
     let found = h.ok("bikri_find", json!({ "input": { "truck_no": "les" } }));
     assert_eq!(found[0]["id"], 1);
     assert_eq!(

@@ -218,6 +218,12 @@ err-system-account = This is a system account. The books use it, so it cannot be
 # PRD FR-21.2.
 # review: pending
 err-reason-required = A reason is required.
+# PRD FR-21.4 (plan 73). Nothing was opened.
+# review: pending
+err-sign-required = The { -dastakhat } is required.
+# PRD FR-21.4 (plan 73). Only the Owner's sign opens a closed day. Nothing was opened.
+# review: pending
+err-sign-wrong = The { -dastakhat } is not correct.
 # NFR-REL-8. Nothing was closed.
 # review: pending
 err-trial-not-balanced = The { -trial-balance } has a difference, so the day cannot be closed. Check the { -trial-balance } and fix the difference first.

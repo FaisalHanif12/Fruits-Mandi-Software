@@ -305,6 +305,28 @@ describe.each(LANGUAGES)('the chat window (%s)', (language) => {
   });
 
   describe('the header and the empty window', () => {
+    it("is headed with the assistant's own name, while the status bar button keeps its words (Umar)", () => {
+      renderIn(language, shell());
+      press('F1');
+      const header = within(panelOf(language)).getByRole('banner');
+      const title = within(header).getByRole('heading', { level: 2 });
+      // The name is the same words as the message, and exactly these words in each language.
+      expect(visible(title.textContent)).toBe(message(language, 'assistant-dock-title'));
+      expect(visible(title.textContent)).toBe(
+        language === 'ur' ? 'عدنان اسسٹنٹ' : 'Adnan Assistant',
+      );
+      // The old words stay on the status bar button, the question box and the window's own label.
+      expect(message(language, 'assistant-button')).toBe(
+        language === 'ur' ? 'سوال پوچھیں' : 'Ask the app',
+      );
+      expect(
+        within(screen.getByRole('contentinfo')).getByRole('button', {
+          name: new RegExp(message(language, 'assistant-button')),
+        }),
+      ).toBeInTheDocument();
+      expect(visible(title.textContent)).not.toBe(message(language, 'assistant-button'));
+    });
+
     it("says ready, with today's count, once the status is known", async () => {
       renderIn(language, shell());
       press('F1');

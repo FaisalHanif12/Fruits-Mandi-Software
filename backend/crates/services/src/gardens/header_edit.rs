@@ -224,6 +224,7 @@ pub(crate) fn edit_in(
     if let Some(reason) = &reason {
         event = event.reason(reason);
     }
+    event = event.sign(crate::day::fix_sign(tx, &garden.entry_date)?.as_deref());
     ctx.db.auditor().write(tx, &event.into_entry())?;
     let version = repo::get(tx, garden.id)?
         .map(|g| g.version)

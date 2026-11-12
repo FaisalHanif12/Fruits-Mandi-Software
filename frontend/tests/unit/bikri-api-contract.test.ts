@@ -96,6 +96,8 @@ describe('each wrapper sends the command and the input of the backend’s file',
       search: null,
       sort: null,
       group_by_month: false,
+      group_by_day: false,
+      all: false,
     });
     expect(call).toHaveBeenCalledTimes(1);
     expect(call.mock.calls[0]?.[0]).toBe('bikri_list');
@@ -225,7 +227,13 @@ describe('the canned data of the component tests has the real shape', () => {
   it('a list row', () => {
     expect(firstDifference(shapeOf(LIST_DAY.rows[0]), shapeOf(listRow()))).toBeNull();
     // A page: the rows, the count of the whole filter, and the totals over all of it.
-    expect(Object.keys(LIST_DAY).sort()).toEqual(['months', 'rows', 'total_count', 'totals']);
+    expect(Object.keys(LIST_DAY).sort()).toEqual([
+      'days',
+      'months',
+      'rows',
+      'total_count',
+      'totals',
+    ]);
     expect(Object.keys(LIST_DAY.totals).sort()).toEqual([
       'buyer_total',
       'gross',

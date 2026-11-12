@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SuppressKeyboardEventParams } from 'ag-grid-community';
 import { LANGUAGES } from '../../src/i18n';
 import { createEntryStore, type EntryRow } from '../../src/shared/grid';
-import { createGridKeyHandler } from '../../src/shared/grid/gridKeys';
+import { createGridKeyHandler, type GridKeyEnv } from '../../src/shared/grid/gridKeys';
 import { useLanguageStore } from '../../src/shared/i18n';
 import { renderGrid, type GridRig } from '../helpers/entry-grid';
 import { message, visible } from '../helpers/render';
@@ -220,16 +220,20 @@ describe.each(LANGUAGES)('the remove button of an entry grid (%s)', (language) =
 
 // The cell of the remove button is reached with Tab (AG Grid focuses the cell that holds the button), and
 // the keys on it are the keys of the button: Enter and Space press it, and so does Ctrl+Delete (plan 43
-// R5). Nothing else on it does anything, so the arrows move on as in any cell.
+// R5). The arrows on it are the grid's own (grid-trash-keys.test.tsx): the one that reads on does nothing,
+// the other goes back to the last cell of the row, ↑ and ↓ go to the trash cell of the next row, and ↓ on the
+// last row's goes to the "+" button. Any letter, and Ctrl+Enter, are left to the grid.
 describe('the keys on the cell of the remove button', () => {
-  function press(key: string, init: KeyboardEventInit = {}) {
+  function press(key: string, init: KeyboardEventInit = {}, extra: Partial<GridKeyEnv> = {}) {
     const store = createEntryStore([{ buyer: '1' }, { buyer: '2' }]);
     const requestRemove = vi.fn();
+    const setFocusedCell = vi.fn();
     const handler = createGridKeyHandler({
       store,
       columns: [{ field: 'buyer', type: 'text', headerId: 'glossary-bikri' }],
       direction: 'rtl',
       requestRemove,
+      ...extra,
     });
     const event = new KeyboardEvent('keydown', { key, cancelable: true, ...init });
     const ignored = handler({
@@ -237,9 +241,16 @@ describe('the keys on the cell of the remove button', () => {
       node: { rowIndex: 1 },
       column: { getColId: () => '__remove' },
       editing: false,
-      api: {},
+      api: { setFocusedCell, ensureIndexVisible: vi.fn() },
     } as unknown as SuppressKeyboardEventParams<EntryRow>);
-    return { ignored, event, requestRemove, rowId: store.getState().rows[1]?.rowId };
+    return {
+      ignored,
+      event,
+      requestRemove,
+      setFocusedCell,
+      store,
+      rowId: store.getState().rows[1]?.rowId,
+    };
   }
 
   it('Enter and Space press the button of that row, and the grid does nothing else with them', () => {
@@ -257,15 +268,35 @@ describe('the keys on the cell of the remove button', () => {
     expect(requestRemove).toHaveBeenCalledWith(rowId);
   });
 
-  it('a letter, an arrow and Ctrl+Enter are left to the grid', () => {
+  it('a letter and Ctrl+Enter are left to the grid', () => {
     for (const [key, init] of [
       ['a', {}],
-      ['ArrowLeft', {}],
       ['Enter', { ctrlKey: true }],
     ] as const) {
       const { ignored, requestRemove } = press(key, init);
       expect(ignored).toBe(false);
       expect(requestRemove).not.toHaveBeenCalled();
     }
+  });
+
+  it('the arrow that reads on (← in a right-to-left grid) does nothing, the other goes back to the last cell', () => {
+    const toEnd = press('ArrowLeft');
+    expect(toEnd.ignored).toBe(true);
+    expect(toEnd.event.defaultPrevented).toBe(true);
+    expect(toEnd.setFocusedCell).not.toHaveBeenCalled();
+    const toStart = press('ArrowRight');
+    expect(toStart.ignored).toBe(true);
+    expect(toStart.setFocusedCell).toHaveBeenCalledWith(1, 'buyer');
+  });
+
+  it('↑ goes to the trash cell of the row above, and ↓ on the last row asks the "+" button for the focus', () => {
+    const up = press('ArrowUp');
+    expect(up.setFocusedCell).toHaveBeenCalledWith(0, '__remove');
+    const focusAdd = vi.fn(() => true);
+    const down = press('ArrowDown', {}, { focusAdd });
+    expect(down.ignored).toBe(true);
+    expect(focusAdd).toHaveBeenCalledTimes(1);
+    expect(down.setFocusedCell).not.toHaveBeenCalled();
+    expect(down.store.getState().rows).toHaveLength(2);
   });
 });

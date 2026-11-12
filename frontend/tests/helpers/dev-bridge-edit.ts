@@ -56,6 +56,10 @@ function devFlag(name: string): boolean {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
 }
 
+/** The Owner's sign as it is at the start (PRD FR-21.4, v1.36), in English and in Urdu letters. */
+const OWNER_SIGN = 'adnan';
+const OWNER_SIGN_UR = 'عدنان';
+
 /** A refusal the way a backend command fails (development only). */
 function refused(codeName: string, field: string, values: Record<string, string | number> = {}) {
   return Object.assign(new Error(codeName), {
@@ -91,6 +95,8 @@ const EXPENSE_HISTORY: EditHistory = {
         },
       ],
       changes_truncated: false,
+      // An edit of an open day has no sign (PRD FR-7.71).
+      sign: null,
     },
   ],
 };
@@ -165,9 +171,36 @@ export const editHandlers: Record<string, Handler> = {
   gardens_arrival_edit_preview: () => GARDENS_ARRIVAL_EDIT_PREVIEW_120,
   gardens_header_edit_preview: () => GARDENS_HEADER_EDIT_PREVIEW_RENT_60000,
   fruit_edit_preview: () => FRUIT_EDIT_PREVIEW_HOME_3,
-  day_fix_open: () => DAY_FIX_OPEN_E2E_45,
+  // Only the Owner's sign opens the day (plan 73): "adnan" in English letters (case and spaces at the ends do
+  // not matter) or عدنان. Anything else is refused on `sign`, as the backend refuses it.
+  day_fix_open: (input) => {
+    const typed = input['sign'];
+    const sign = typeof typed === 'string' ? typed.trim() : '';
+    if (sign === '') throw refused('ERR_SIGN_REQUIRED', 'sign');
+    if (sign.toLowerCase() !== OWNER_SIGN && sign !== OWNER_SIGN_UR) {
+      throw refused('ERR_SIGN_WRONG', 'sign');
+    }
+    return DAY_FIX_OPEN_E2E_45;
+  },
   day_fix_close: () => DAY_FIX_CLOSE_E2E_45,
-  audit_edit_stamp: () => AUDIT_EDIT_STAMP_BIKRI,
+  // `?signed`: the edits carry the sign given when the day was reopened, as they do after plan 73.
+  audit_edit_stamp: () =>
+    devFlag('signed')
+      ? AUDIT_EDIT_STAMP_BIKRI.map((row) => ({
+          ...row,
+          stamp: row.stamp === null ? null : { ...row.stamp, sign: OWNER_SIGN },
+        }))
+      : AUDIT_EDIT_STAMP_BIKRI,
   audit_edit_history: (input) =>
-    input['entity'] === 'voucher' ? EXPENSE_HISTORY : AUDIT_EDIT_HISTORY_BIKRI,
+    input['entity'] === 'voucher'
+      ? EXPENSE_HISTORY
+      : devFlag('signed')
+        ? {
+            ...AUDIT_EDIT_HISTORY_BIKRI,
+            versions: AUDIT_EDIT_HISTORY_BIKRI.versions.map((version) => ({
+              ...version,
+              sign: OWNER_SIGN,
+            })),
+          }
+        : AUDIT_EDIT_HISTORY_BIKRI,
 };

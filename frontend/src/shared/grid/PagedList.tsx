@@ -14,6 +14,7 @@ import {
   ListGrid,
   type ListColumn,
   type ListContext,
+  type ListGroups,
   type ListMonths,
   type ListSort,
 } from './ListGrid';
@@ -46,6 +47,17 @@ interface PagedListProps<T> {
    * when no other sort is chosen.
    */
   months?: ListMonths<T> | undefined;
+  /**
+   * A heading above each group of rows, also for a group with no rows (plan 72: the days of the
+   * past sales). The screen builds the rows and headings of the page on screen; keep `groups` and
+   * its parts the same objects between renders.
+   */
+  groups?: ListGroups<T> | undefined;
+  /**
+   * What Page Up and Page Down do in this list instead of turning the page (plan 72: the window of
+   * days moves). The page buttons under the list still turn the page.
+   */
+  onPageKey?: ((direction: 'previous' | 'next') => void) | undefined;
   /** Shown when the filter has no rows: why, and what to do next. */
   empty: ReactNode;
   isInactive?: ((row: T) => boolean) | undefined;
@@ -73,6 +85,8 @@ export function PagedList<T>({
   pager,
   sort,
   months,
+  groups,
+  onPageKey,
   empty,
   isInactive,
   onOpen,
@@ -82,7 +96,9 @@ export function PagedList<T>({
 }: PagedListProps<T>) {
   // The row that has focus, kept here so a language switch (which rebuilds the grid) keeps it.
   const [ownFocusId, setOwnFocusId] = useState<string | null>(null);
-  const paging = useListPaging(pager);
+  const turning = useListPaging(pager);
+  // A screen that gives the keys another job keeps the focus rule of the page turn, and the keys are its own.
+  const paging = onPageKey === undefined ? turning : { ...turning, onPage: onPageKey };
   const focusId = focusRowId === undefined ? ownFocusId : focusRowId;
   if (rows === undefined) {
     return error === null ? (
@@ -116,6 +132,7 @@ export function PagedList<T>({
           paging={paging}
           sort={sort}
           months={months}
+          groups={groups}
         />
       </ListRegion>
       <div className="shrink-0">

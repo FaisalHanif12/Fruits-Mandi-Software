@@ -25,6 +25,7 @@ import { AgGridReact } from 'ag-grid-react';
 import type { MonthSubtotal } from '../../bindings/MonthSubtotal';
 import type { SortInput } from '../../bindings/SortInput';
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { tokenPx } from '../hooks/tokenPx';
 import type { Language } from '../../i18n';
 import { formatPaisa, formatPaisaValue, groupDigits, useGrouping, type Paisa } from '../format';
 import { isFromStep, useLayoutStep, type LayoutStep } from '../hooks/useLayoutStep';
@@ -37,6 +38,9 @@ import {
   isListNumberLike,
   type ListColumnType,
 } from './columnTypes';
+
+/** The height of a quiet group heading when the design token is not there (tests have no CSS). */
+const QUIET_HEADING_ROW_PX = 32;
 
 /** How many frames the grid waits for a new page's first row before it stops asking for focus. */
 const FOCUS_RETRIES = 30;
@@ -179,6 +183,68 @@ function isMonthHeading(row: unknown): row is MonthHeading {
   return typeof row === 'object' && row !== null && 'monthHeading' in row;
 }
 
+/**
+ * A heading drawn across the whole row above a group of rows (plan 72: a day of the past sales). The
+ * screen says what it shows; the grid only puts it in place. It is never a record.
+ */
+export interface ListHeading {
+  /** The group the heading heads. It is also the heading's row id, so it must be one of a kind. */
+  readonly key: string;
+  /**
+   * A heading with nothing under it (a day with no بکری): one quiet line on the page ground, so the
+   * groups that hold rows stand out.
+   */
+  readonly quiet?: boolean;
+  /** The words and figures of the heading. Figures are the backend's, never worked out here. */
+  readonly render: (context: ListContext) => ReactNode;
+}
+
+/**
+ * Rows in groups, each group under its heading, in the order of `headings`. A heading with no rows
+ * (a day with no بکری) is still drawn. `groupOf` gives the key of the group a row belongs to.
+ */
+export interface ListGroups<T> {
+  readonly headings: readonly ListHeading[];
+  readonly groupOf: (row: T) => string;
+}
+
+interface GroupHeading {
+  readonly groupHeading: ListHeading;
+}
+
+function isGroupHeading(row: unknown): row is GroupHeading {
+  return typeof row === 'object' && row !== null && 'groupHeading' in row;
+}
+
+/** A heading of either kind: the rows no key opens and no focus restore lands on. */
+function isHeadingRow(row: unknown): boolean {
+  return isMonthHeading(row) || isGroupHeading(row);
+}
+
+/** The rows with each heading before its own rows. Rows of a group with no heading follow the last. */
+function withGroupHeadings<T>(
+  rows: readonly T[],
+  groups: ListGroups<T> | undefined,
+): (T | MonthHeading | GroupHeading)[] {
+  if (groups === undefined || groups.headings.length === 0) return [...rows];
+  const byKey = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = groups.groupOf(row);
+    const bucket = byKey.get(key);
+    if (bucket === undefined) byKey.set(key, [row]);
+    else bucket.push(row);
+  }
+  const made: (T | GroupHeading)[] = [];
+  for (const heading of groups.headings) {
+    made.push({ groupHeading: heading });
+    const bucket = byKey.get(heading.key);
+    if (bucket !== undefined) made.push(...bucket);
+    byKey.delete(heading.key);
+  }
+  for (const rest of byKey.values()) made.push(...rest);
+  return made;
+}
+
 /** The rows with a heading before the first row of each month the backend sent a subtotal for. */
 function withMonthHeadings<T>(
   rows: readonly T[],
@@ -251,6 +317,11 @@ interface ListGridProps<T> {
   sort?: ListSort | undefined;
   /** A heading row above each month, for a list in date order (plan 38 R4). */
   months?: ListMonths<T> | undefined;
+  /**
+   * A heading above each group of rows, in the order given, also for a group with no rows (plan 72:
+   * the days of the past sales). Keep `headings` and `groupOf` the same objects between renders.
+   */
+  groups?: ListGroups<T> | undefined;
   /**
    * A total row pinned under the last row, with each figure under its column (Code Standards F19).
    * It gives the column that holds the word and the text of the columns that have a total. The
@@ -404,11 +475,26 @@ interface MonthHeadingText {
   figures: readonly { key: string; label: string; value: string }[];
 }
 
-/** The heading row of a month across the whole row (plan 38 R4): stronger, on the sunken ground. */
+/**
+ * The heading row of a month (plan 38 R4) or of a group of rows (plan 72) across the whole row:
+ * stronger, on the sunken ground.
+ */
 function MonthHeadingCell(
-  props: ICellRendererParams & { describe: (heading: MonthSubtotal) => MonthHeadingText },
+  props: ICellRendererParams & {
+    describe: (heading: MonthSubtotal) => MonthHeadingText;
+    // Not `context`: AG Grid's own params have a field of that name.
+    listContext: ListContext;
+  },
 ) {
   const data: unknown = props.data;
+  if (isGroupHeading(data)) {
+    const quiet = data.groupHeading.quiet === true;
+    return (
+      <div className={`month-heading month-heading-group${quiet ? ' month-heading-quiet' : ''}`}>
+        {data.groupHeading.render(props.listContext)}
+      </div>
+    );
+  }
   if (!isMonthHeading(data)) return null;
   const text = props.describe(data.monthHeading);
   return (
@@ -447,6 +533,7 @@ function GridInner<T>({
   paging,
   sort,
   months,
+  groups,
   totals,
 }: ListGridProps<T>) {
   const { l10n } = useLocalization();
@@ -474,9 +561,14 @@ function GridInner<T>({
   const monthSubtotals = months?.months;
   const monthOf = months?.monthOf;
   const monthColumnOf = months?.columnOf;
+  const groupHeadings = groups?.headings;
+  const groupOf = groups?.groupOf;
   const displayRows = useMemo(
-    () => withMonthHeadings(rows, monthSubtotals, monthOf),
-    [rows, monthSubtotals, monthOf],
+    () =>
+      groupHeadings !== undefined && groupOf !== undefined
+        ? withGroupHeadings(rows, { headings: groupHeadings, groupOf })
+        : withMonthHeadings(rows, monthSubtotals, monthOf),
+    [rows, monthSubtotals, monthOf, groupHeadings, groupOf],
   );
   /** The words of a month heading: the month, its count and the subtotals under their column names. */
   const describeMonth = useCallback(
@@ -569,7 +661,7 @@ function GridInner<T>({
       const api = apiRef.current;
       if (api === null) return 0;
       for (let index = 0; index < api.getDisplayedRowCount(); index += 1) {
-        if (!isMonthHeading(api.getDisplayedRowAtIndex(index)?.data)) return index;
+        if (!isHeadingRow(api.getDisplayedRowAtIndex(index)?.data)) return index;
       }
       return 0;
     };
@@ -629,10 +721,13 @@ function GridInner<T>({
   }, []);
   const defaultColDef = useMemo(() => ({ suppressKeyboardEvent }), [suppressKeyboardEvent]);
   const isFullWidthRow = useCallback(
-    (params: IsFullWidthRowParams<T>) => isMonthHeading(params.rowNode.data),
+    (params: IsFullWidthRowParams<T>) => isHeadingRow(params.rowNode.data),
     [],
   );
-  const fullWidthParams = useMemo(() => ({ describe: describeMonth }), [describeMonth]);
+  const fullWidthParams = useMemo(
+    () => ({ describe: describeMonth, listContext: context }),
+    [describeMonth, context],
+  );
 
   const onGridReady = (event: GridReadyEvent<T>) => {
     apiRef.current = event.api;
@@ -641,7 +736,7 @@ function GridInner<T>({
     if (wanted === null || wanted === undefined || first === undefined) return;
     let index = -1;
     event.api.forEachNode((node, position) => {
-      if (node.data !== undefined && !isMonthHeading(node.data) && getRowId(node.data) === wanted) {
+      if (node.data !== undefined && !isHeadingRow(node.data) && getRowId(node.data) === wanted) {
         index = position;
       }
     });
@@ -676,14 +771,14 @@ function GridInner<T>({
       const control = columns.find(
         (candidate) => candidate.field === event.column.getColId(),
       )?.control;
-      if (control === undefined || isMonthHeading(event.data) || event.node.isRowPinned()) return;
+      if (control === undefined || isHeadingRow(event.data) || event.node.isRowPinned()) return;
       key.preventDefault();
       control.onSpace(event.data);
       return;
     }
     if (key.key !== 'Enter') return;
-    // A month heading opens nothing.
-    if (isMonthHeading(event.data)) return;
+    // A heading (a month, a day) opens nothing.
+    if (isHeadingRow(event.data)) return;
     key.preventDefault();
     const column = event.column.getColId();
     // The totals row is pinned and has no record behind it: it opens only what the screen offers.
@@ -708,7 +803,7 @@ function GridInner<T>({
         tooltipShowDelay={TOOLTIP_DELAY_MS}
         // A heading row is not a record: it is drawn across the whole row by the renderer below.
         rowData={displayRows as T[]}
-        {...(months === undefined
+        {...(months === undefined && groups === undefined
           ? {}
           : {
               isFullWidthRow,
@@ -718,10 +813,16 @@ function GridInner<T>({
         pinnedBottomRowData={total === undefined ? [] : [{} as T]}
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
-        getRowId={(params) =>
-          isMonthHeading(params.data)
-            ? `month:${params.data.monthHeading.month}`
-            : getRowId(params.data)
+        getRowId={(params) => {
+          if (isMonthHeading(params.data)) return `month:${params.data.monthHeading.month}`;
+          if (isGroupHeading(params.data)) return `group:${params.data.groupHeading.key}`;
+          return getRowId(params.data);
+        }}
+        // A group heading with nothing under it is one compact line; every other row keeps the list's row.
+        getRowHeight={(params) =>
+          isGroupHeading(params.data) && params.data.groupHeading.quiet === true
+            ? tokenPx('--list-quiet-h', QUIET_HEADING_ROW_PX)
+            : undefined
         }
         domLayout={heightMode === 'auto' ? 'autoHeight' : 'normal'}
         suppressColumnVirtualisation
@@ -735,19 +836,19 @@ function GridInner<T>({
           // The totals row is a pinned row with no record behind it: no class rule reads it.
           'row-inactive': (params) =>
             params.data !== undefined &&
-            !isMonthHeading(params.data) &&
+            !isHeadingRow(params.data) &&
             !params.node.isRowPinned() &&
             isInactive?.(params.data) === true,
           'row-group': (params) =>
             params.data !== undefined &&
-            (isMonthHeading(params.data) ||
+            (isHeadingRow(params.data) ||
               (!params.node.isRowPinned() && isGroup?.(params.data) === true)),
         }}
         onGridReady={onGridReady}
         onSortChanged={onSortChanged}
         onCellKeyDown={onCellKeyDown}
         onCellDoubleClicked={(event) => {
-          if (event.data === undefined || isMonthHeading(event.data)) return;
+          if (event.data === undefined || isHeadingRow(event.data)) return;
           // Two quick presses of a control are not a double click on the row.
           if (fromCellControl(event.event)) return;
           const column = event.column.getColId();
@@ -760,7 +861,7 @@ function GridInner<T>({
         onCellFocused={(event) => {
           if (event.rowIndex === null || onFocusRow === undefined) return;
           const row = apiRef.current?.getDisplayedRowAtIndex(event.rowIndex)?.data;
-          if (row !== undefined && !isMonthHeading(row)) onFocusRow(getRowId(row));
+          if (row !== undefined && !isHeadingRow(row)) onFocusRow(getRowId(row));
         }}
       />
     </div>

@@ -30,6 +30,21 @@ interface ButtonProps {
   iconOnly?: boolean;
   /** Fully rounded (a pill, or a circle with `iconOnly`), the look of the chat window (plan 51). */
   round?: boolean;
+  /**
+   * The smallest size a target may have (32 px, NFR-USE-23) instead of the 44 px of a button, for an icon
+   * button that stands beside a grid, such as the "+" under it. Its tall sibling is `iconOnly`: with
+   * both it is a 32 px circle.
+   */
+  small?: boolean;
+  /**
+   * A second, smaller line under the label (the days the week button goes to, plan 72). The button
+   * grows to hold two lines; it is still at least as tall as every other button.
+   */
+  detail?: ReactNode;
+  /** The id of text that explains the button, for example why it is off (read after its name). */
+  describedBy?: string;
+  /** The tip that shows when the button is pointed at; it is the same words as its accessible name. */
+  title?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -51,8 +66,16 @@ export function Button({
   accessibleName,
   iconOnly = false,
   round = false,
+  small = false,
+  detail,
+  describedBy,
+  title,
   ref,
 }: ButtonProps) {
+  const chip =
+    shortcut === undefined ? null : (
+      <KeyChip shortcut={shortcut} tone={variant === 'primary' ? 'on-primary' : 'on-light'} />
+    );
   return (
     <button
       ref={ref}
@@ -61,11 +84,23 @@ export function Button({
       disabled={disabled || busy}
       aria-busy={busy}
       aria-label={accessibleName}
-      className={`inline-flex h-control shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? 'w-control justify-center px-0' : 'px-4'} ${VARIANT_CLASSES[variant]}`}
+      aria-describedby={describedBy}
+      title={title}
+      className={`inline-flex ${detail === undefined ? (small ? 'h-target' : 'h-control') : 'min-h-control py-2'} shrink-0 items-center gap-2 ${round ? 'rounded-full' : 'rounded-2'} border type-control transition-calm disabled:cursor-not-allowed disabled:opacity-60 ${iconOnly ? `${small ? 'w-target' : 'w-control'} justify-center px-0` : 'px-4'} ${VARIANT_CLASSES[variant]}`}
     >
-      {children}
-      {shortcut === undefined ? null : (
-        <KeyChip shortcut={shortcut} tone={variant === 'primary' ? 'on-primary' : 'on-light'} />
+      {detail === undefined ? (
+        <>
+          {children}
+          {chip}
+        </>
+      ) : (
+        <span className="flex flex-col items-start gap-1 text-start">
+          <span className="inline-flex items-center gap-2">
+            {children}
+            {chip}
+          </span>
+          <span className="type-chip font-normal text-ink-muted">{detail}</span>
+        </span>
       )}
     </button>
   );

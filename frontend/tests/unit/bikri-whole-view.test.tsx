@@ -110,7 +110,7 @@ async function twoLots(user: User, language: Language) {
     expect(textOf(salesGrid(language), 1, 'buyerTotal')).toBe('18,684');
   });
   await user.click(
-    screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+    screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
   );
   await waitFor(() => {
     expect(textOf(lotsGrid(language), 1, 'seller')).toBe(names(language).rahim);

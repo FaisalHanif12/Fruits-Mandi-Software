@@ -1,4 +1,4 @@
-// The columns of the list of بکری (PRD FR-12.7): number, day and time, sellers, items, نگ,
+// The columns of the list of بکری (PRD FR-12.7): number, day and time, truck, sellers, items, نگ,
 // خام, صافی, buyer total and status. All amounts are the stored sums the backend sends, shown with
 // `money` and never worked out. Less used columns come with the wider layout steps, so no list
 // scrolls sideways (NFR-USE-15, Code Standards F22). The room is the content area minus the 200 px
@@ -69,6 +69,16 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     value: (row) => `${isoToDisplayDate(row.entry_date)} ${utcToLocalTime(row.created_at)}`,
   },
   {
+    field: 'truck',
+    type: 'code',
+    headerId: 'bikri-list-col-truck',
+    sortKey: 'truck_no',
+    from: 'wide',
+    // A new بکری has no truck (PRD 12.2, v1.34), so its cell is empty; an old one shows its truck
+    // (plan 72 P3). The truck is also found through the search box.
+    value: (row) => row.truck_no ?? '',
+  },
+  {
     field: 'sellers',
     type: 'name',
     headerId: 'bikri-list-col-sellers',
@@ -133,13 +143,17 @@ const QTY_COLUMN: ListColumn<BikriListRow> = {
 };
 
 /**
- * What "More columns" does: adds نگ after the items. Where the room is short, the least needed
+ * What "More columns" does: adds نگ after the items (and the truck at the normal step). Where the room is short, the least needed
  * column steps aside: خام at the compact step (صافی stays), the day and time at the others (the
  * day is a filter of the screen already).
  */
 export const BIKRI_LIST_MORE: MoreColumnsPlan<BikriListRow> = {
   added: [{ column: QTY_COLUMN, after: 'items' }],
-  makesRoom: { compact: ['gross'], normal: ['when'], wide: ['when'] },
+  // The truck is a base column from the wide step (PRD 12.7, plan 72 P3). The tick offers it at the
+  // normal step too, with the نگ, by letting the day and time and the خام بکری step aside (صافی بکری
+  // stays). At the compact step there is no room for both columns, so only the نگ comes, as before.
+  promote: { normal: ['truck'] },
+  makesRoom: { compact: ['gross'], normal: ['when', 'gross'], wide: ['when'] },
 };
 
 /** The columns for the layout step and the "More columns" tick. */

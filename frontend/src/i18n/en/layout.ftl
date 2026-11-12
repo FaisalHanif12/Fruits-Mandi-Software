@@ -39,7 +39,7 @@ layout-module-payment = { -adaigi }
 # review: pending
 layout-module-advance = { -peshgi-khata }
 # review: pending
-layout-module-today = Today's { -bikri }
+layout-module-today = Past Sales
 # review: pending
 layout-module-party-ledgers = { party-ledgers-title }
 # review: pending

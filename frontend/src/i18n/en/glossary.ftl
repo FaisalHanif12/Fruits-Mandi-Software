@@ -369,6 +369,10 @@
 # review: pending
 -darja-soyam = Third
 
+# The Owner's sign: what he writes to reopen a closed day (PRD FR-21.4, v1.36)
+# review: pending
+-dastakhat = Sign
+
 glossary-arhti = { -arhti }
 glossary-index = { -index }
 glossary-beopari = { -beopari }
@@ -458,6 +462,7 @@ glossary-mehman = { -mehman }
 glossary-nishan = { -nishan }
 glossary-trade-mark = { -trade-mark }
 glossary-darja = { -darja }
+glossary-dastakhat = { -dastakhat }
 glossary-darja-awwal = { -darja-awwal }
 glossary-darja-doyam = { -darja-doyam }
 glossary-darja-soyam = { -darja-soyam }

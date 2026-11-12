@@ -1,7 +1,7 @@
 // "Reopen the day and fix" as one piece a screen can use (plan 44, PRD FR-21.4): `start` opens the
 // box that asks for the reason; on confirm the days reopen and `then` runs (open the entry for
 // editing). The box is `dialog`; the screen puts it anywhere in its tree. A refusal (a month that is
-// month-closed, for example) stays inside the box, with what was typed.
+// month-closed, or a sign that is not the Owner's, for example) stays inside the box, with what was typed.
 
 import { useState, type ReactNode } from 'react';
 import type { UiError } from '../../bindings/UiError';
@@ -36,11 +36,11 @@ export function useFixDayFlow(): {
       date={pending?.date ?? ''}
       error={error}
       busy={fix.busy}
-      onConfirm={(reason) => {
+      onConfirm={(reason, sign) => {
         if (pending === null) return;
         const request = pending;
         fix
-          .open(request.date, reason, request.ownerHref)
+          .open(request.date, reason, sign, request.ownerHref)
           .then(() => {
             setPending(null);
             request.then();

@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "code": "ERR_DATE_IN_FUTURE",
+      "field": "to",
+      "values": {
+        "today": "12-11-2026"
+      }
+    }
+  ],
+  "ok": false,
+  "ref": "E-20261112-0001"
+}

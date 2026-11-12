@@ -10,6 +10,7 @@ import type { PairRow } from '../../src/bindings/PairRow';
 import type { PairsList } from '../../src/bindings/PairsList';
 import type { RuleRow } from '../../src/bindings/RuleRow';
 import type { RulesList } from '../../src/bindings/RulesList';
+import type { BikriDay } from '../../src/bindings/BikriDay';
 import type { MasterPage, MasterRecord } from '../../src/features/masters/types';
 import { paisaForTest } from './paisa';
 
@@ -37,6 +38,7 @@ export function bikriListOf(
   offset = 0,
   limit = 0,
   totals: Partial<BikriList['totals']> = {},
+  days: BikriDay[] = [],
 ): BikriList {
   // Cancelled postings are left out of the sums and kept in the count (backend, plan 17b T1).
   const live = all.filter((row) => row.status !== 'cancelled');
@@ -52,6 +54,7 @@ export function bikriListOf(
       ...totals,
     },
     months: [],
+    days,
   };
 }
 

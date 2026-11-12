@@ -8,7 +8,7 @@
 party-ledgers-title = Party Ledgers
 
 # review: pending
-party-ledgers-help = First choose Buyer or Seller and press Enter on a party: his ledger opens with one row for each date on which he has an entry. Then press Enter on a date: the full slip of that day opens, and you can print it. Esc goes back one step.
+party-ledgers-help = First choose Buyer or Seller and press Enter on a party: his ledger shows one row for each date on which he has an entry, 30 days at a time. Press Enter on a date: that day's slip opens right under its row, and you can print it there. Use the buttons under the table, or Page Up and Page Down, to move 30 days back or forward. Esc goes back to the list.
 
 # review: pending
 party-ledgers-side-label = Kind of party
@@ -102,12 +102,6 @@ party-ledgers-col-seller-paid = Paid to him
 party-ledgers-col-balance = New { -baqaya }
 
 # review: pending
-party-ledgers-statement-empty = No entries yet
-
-# review: pending
-party-ledgers-statement-empty-help = This party has no entries yet. A row for each date will appear here as soon as he has one.
-
-# review: pending
 party-ledgers-statement-no-match = No entries in this period
 
 # review: pending
@@ -115,6 +109,50 @@ party-ledgers-statement-no-match-help = Try other first and last dates.
 
 # review: pending
 party-ledgers-clear-dates = Clear the dates
+
+## Level 2: 30 days at a time and a day opened in place (PRD FR-12.47, plan 74)
+
+# review: pending
+party-ledgers-nav-label = Move 30 days back or forward
+
+# review: pending
+party-ledgers-back-days = Earlier <num>{ $days }</num> days
+
+# review: pending
+party-ledgers-forward-days = Later <num>{ $days }</num> days
+
+# review: pending
+party-ledgers-range = <num>{ $from }</num> to <num>{ $to }</num>
+
+# review: pending
+party-ledgers-nav-latest = Already the latest days
+
+# review: pending
+party-ledgers-nav-latest-button = Back to the days up to today
+
+# review: pending
+party-ledgers-goto = Go to date
+
+# review: pending
+party-ledgers-goto-hint = Type a day, for example 05-11-2026. The entry of that day opens. A short form works too: 5 is the 5th of this month.
+
+# review: pending
+party-ledgers-goto-placeholder = DD-MM-YYYY
+
+# review: pending
+party-ledgers-goto-none = No entry on this date: <num>{ $date }</num>. The days around it are below.
+
+# review: pending
+party-ledgers-window-empty = No entries in these days
+
+# review: pending
+party-ledgers-window-empty-help = Press the earlier button below, or go to a date.
+
+# review: pending
+party-ledgers-day-heading = Slip of <num>{ $date }</num>
+
+# review: pending
+party-ledgers-day-print-name = Print preview of the slip of { $date }
 
 ## Level 3: the day slip
 

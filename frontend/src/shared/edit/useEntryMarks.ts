@@ -21,6 +21,7 @@ import {
   nameRequestsOf,
   type EntryMark,
 } from './marks';
+import { whenWhoMessage } from './sign';
 import { auditValueText } from './value-text';
 
 /** One mark in words: the short chip, and the whole sentence for the tip. */
@@ -96,11 +97,12 @@ export function useEntryMarks(
     for (const [path, mark] of marks) {
       const before = words(path, mark, 'before');
       const after = words(path, mark, 'after');
-      const when = l10n.getString('edit-history-version', {
+      const said = whenWhoMessage('edit-history-version', mark.version, {
         date: isoToDisplayDate(mark.version.local_date),
         time: stampTimeText(mark.version.local_time, l10n),
         by: mark.version.by,
       });
+      const when = l10n.getString(said.id, said.vars);
       const change = l10n.getString('edit-field-mark', { before, after });
       texts.set(path, {
         before,

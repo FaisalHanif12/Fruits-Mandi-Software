@@ -151,6 +151,7 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
         &DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: " ".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap_err();
@@ -161,12 +162,13 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
         &DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: "اکرم کا ریٹ غلط تھا".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();
     pair(
         "day_fix_open_e2e_45",
-        &serde_json::json!({ "date": "10-10-2026", "reason": "اکرم کا ریٹ غلط تھا" }),
+        &serde_json::json!({ "date": "10-10-2026", "reason": "اکرم کا ریٹ غلط تھا", "sign": "adnan" }),
         &fix,
     );
     assert_eq!(fix.days, ["2026-10-10"]);
@@ -178,6 +180,7 @@ fn e2e_45_an_entry_of_a_closed_day_is_fixed_through_reopen_and_fix() {
         &DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: "x".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap_err();
@@ -377,6 +380,7 @@ fn a_fix_that_is_widened_or_overtaken_by_another_close_is_handled() {
         &DayFixOpenInput {
             date: "11-10-2026".into(),
             reason: "x".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();
@@ -387,6 +391,7 @@ fn a_fix_that_is_widened_or_overtaken_by_another_close_is_handled() {
         &DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: "y".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();

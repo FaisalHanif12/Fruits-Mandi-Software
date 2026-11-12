@@ -52,6 +52,7 @@ mod activity;
 mod day_tables;
 mod figures;
 mod figures_load;
+mod party_statement;
 mod slip;
 mod table;
 
@@ -121,6 +122,11 @@ pub(crate) fn run(
 }
 
 pub(super) use day_tables::{DaySheet, load_days};
+pub use party_statement::{
+    StatementBalance, StatementDay, StatementEntry, StatementItem, StatementKind,
+    StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
+    party_statement_print_data,
+};
 
 /// The rows of one of the day queries read in both forms, as text, entries first and lines first.
 /// Only for the test that holds the two forms to the same rows (plan 48 P48-S3).

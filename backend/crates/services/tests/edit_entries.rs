@@ -1340,6 +1340,7 @@ fn a_purchase_of_a_closed_day_is_fixed_through_reopen_and_fix() {
         &DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: "ریٹ غلط تھا".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();

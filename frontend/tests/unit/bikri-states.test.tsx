@@ -377,7 +377,7 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
     const { user } = await openBook(language);
     await typeHeaderAndLot(user, language);
     await user.click(
-      screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
     );
     const lots = lotsGrid(language);
     await waitFor(() => {
@@ -425,7 +425,7 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
       await typeHeaderAndLot(user, language);
       await typeTwoLines(user, language);
       await user.click(
-        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
       );
       const lots = lotsGrid(language);
       await waitFor(() => {
@@ -478,7 +478,7 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
       const { user } = await openBook(language);
       await typeHeaderAndLot(user, language);
       await user.click(
-        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add')) }),
+        screen.getByRole('button', { name: named(message(language, 'bikri-lots-add-row')) }),
       );
       const lots = lotsGrid(language);
       await waitFor(() => {

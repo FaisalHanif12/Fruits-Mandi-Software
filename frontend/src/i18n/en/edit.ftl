@@ -148,10 +148,17 @@ edit-fix-title = Reopen the day and fix?
 
 # $date: the day of the entry, DD-MM-YYYY. The days after it open too.
 # review: pending
-edit-fix-text = The day { $date } and every closed day after it will reopen. You fix the entry, and after you save, the days close again in the same order. Write the reason.
+edit-fix-text = The day { $date } and every closed day after it will reopen. You fix the entry, and after you save, the days close again in the same order. Write the reason and the Owner's { -dastakhat }.
 
 # review: pending
 edit-fix-label = Reason for reopening
+
+# The Owner's sign, below the reason (PRD FR-21.4, plan 73).
+# review: pending
+edit-fix-sign-label = { -dastakhat }
+
+# review: pending
+edit-fix-sign-hint = Only the Owner's { -dastakhat } opens a closed day.
 
 # review: pending
 edit-fix-confirm = Reopen the days
@@ -177,6 +184,10 @@ edit-fix-failed = The days could not be closed
 # review: pending
 edit-stamp = Edited: { $date } { $time }, { $by }
 
+# The same, when the edit was made through a reopened day: $sign is the sign given then (PRD FR-7.71, v1.36).
+# review: pending
+edit-stamp-signed = Edited: { $date } { $time }, { $by }, { -dastakhat }: { $sign }
+
 # review: pending
 edit-stamp-reason = Reason: { $reason }
 
@@ -189,6 +200,9 @@ edit-mark = Edited
 
 # review: pending
 edit-mark-tip = Edited: { $date } { $time }, { $by }
+
+# review: pending
+edit-mark-tip-signed = Edited: { $date } { $time }, { $by }, { -dastakhat }: { $sign }
 
 # The time of day. $hour and $minute are the clock, $meridian is am or pm.
 # review: pending
@@ -216,6 +230,10 @@ edit-history-failed = The edit history could not be opened.
 
 # review: pending
 edit-history-version = { $date } { $time }, { $by }
+
+# A version made through a reopened day: its sign follows the name (PRD FR-7.71, v1.36).
+# review: pending
+edit-history-version-signed = { $date } { $time }, { $by }, { -dastakhat }: { $sign }
 
 # review: pending
 edit-history-field = Field

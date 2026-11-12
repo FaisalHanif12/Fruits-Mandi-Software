@@ -20,6 +20,7 @@ A party's statement grows every day. The page shows 30 days at a time, opens a d
 | W3 | The میزان row is the window's: opening, charged, paid, closing, all from the backend. The newest window's closing equals the party card and R13's closing. |
 | W4 | از and تا stay. A range lists every entry date in it, page by page, with its own opening and closing. |
 | W5 | "تاریخ پر جائیں" (FR-7.19 shortcuts). With an entry: that row is open and highlighted inside its 30-day window. With none: "اس تاریخ کو کوئی اندراج نہیں" and the window around it. A date after today is refused. |
+| W5a | Lead, 13-11-2026: the go-to-date window is the 30 days ending on min(date + 15 days, today), so the asked date sits near the middle and the nearest entries on both sides are in view. The arrows then step 30 days from that end. |
 | W6 | A date row opens under itself on click or Enter (accordion); a second click closes it. Several can be open; a window move closes them. The day is the R35 day slip data from the same backend function, with its own print button. |
 | P1 | "اسٹیٹمنٹ پرنٹ" at the top: period (آخری 10 دن, آخری 30 دن default, آخری 6 مہینے, اپنی تاریخیں), print language, preview, print, PDF. |
 | P2 | Q2 default: oldest first. Q3 default: each day's items, compact. Contents and layout as PRD FR-12.47. |
@@ -32,6 +33,17 @@ A party's statement grows every day. The page shows 30 days at a time, opens a d
 - Go to date: `account_id`, `date`. Answers the 30-day window that holds it (`from`, `to`), whether the date has an entry, and the page and row to show.
 - The day detail is the existing R35 day read (unchanged).
 - Statement print: `party_ledgers_statement_print_data { account_id, from, to, language }`, a print job and PDF the same way as the other report prints, and its row data built from the R13 and R35 functions.
+
+Recorded 13-11-2026 (backend-lots, accepted by the lead):
+
+- Statement: `party_ledgers_statement { account_id, from, to, offset, limit }` unchanged in name and shape: `rows` (newest first), `count`, `charged_total_paisa`, `paid_total_paisa`, `opening_paisa/side` (before `from`), `closing_paisa/side` (end of `to`; no `to` = now = party card = R13). The screen works out the arrows (±30 days, next stops at today); the first window is today − 29 to today.
+- Go to date: `party_ledgers_go_to_date { account_id, date }` → `PartyLedgerGoTo { from, to, has_entry, row: number | null, statement }` (window rule W5a). Errors: `ERR_DATE_IN_FUTURE`, `ERR_DATE_INVALID` on `date`; `ERR_NOT_FOUND` on `account_id`.
+- Day detail: the R35 day read, unchanged.
+- Print: `party_ledgers_statement_print_data { account_id, from, to, language, paper? }` → `PartyLedgerStatementPrintData` (title id `print-statement-title`, filters, party, from, to, opening, `days: StatementPrintDay[]` oldest first, `totals: StatementPrintTotals` with the amount in words). All text in the print language; the template sums nothing. A day's balance from the statement and from the R35 figures must agree, or the print is an error. Anything else posted that day (cash lent, جنرل) is one `other` amount, as on R35.
+- Print job and PDF: `party_ledgers_statement_print` (like `bikri_list_print`), PDF name `party-statement-<code>-<YYYYMMDD>-<language>.pdf`. No Excel.
+- Types: `PartyLedgerGoToInput`, `PartyLedgerGoTo`, `PartyLedgerStatementPrintInput`, `PartyLedgerStatementPrintData`, `StatementPrintDay`, `StatementPrintTotals`, `PrintPartyLedgerStatementInput`.
+
+Final names, as built (backend-lots HANDOFF, 13-11-2026), these replace the proposal above: `party_ledgers_statement_print_data` takes `StatementPrintDataInput { account_id, from, to, language, paper? }` and answers `StatementPrintData` (days `StatementDay` with `StatementItem`, `StatementEntry`, `StatementBalance`, `StatementSide`, `StatementKind`); `party_ledgers_statement_print` takes `PrintStatementInput { statement, to, copies }`. `StatementDay.bill` is `PrintAmount | null` (no sale line that day). `StatementEntry` has no side field; the side is in its label (receipt credit; payment, advance and other-debit debit; other-credit credit). Every day is checked against the screen statement and the R35 slip, and opening + totals = closing, before anything is returned. A `to` after today is accepted by the statement and the print; go-to-date refuses a date after today. Money agent: PASS.
 
 ## 4. Tasks
 

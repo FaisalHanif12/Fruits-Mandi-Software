@@ -2766,7 +2766,16 @@ fn attack_08_no_report_view_or_tile_the_model_can_reach_gives_private_text() {
                 .to_owned()
         })
         .collect();
-    assert!(ids.len() >= 37, "{} reports", ids.len());
+    // Every live report is in the scan: R1 to R38 less the retired R8 (plan 71) and R9 (plan 64, D8), 36 in all.
+    // The floor is checked by name, so a report that goes missing is named in the failure.
+    let retired = ["R8", "R9"];
+    for n in 1..=38 {
+        let id = format!("R{n}");
+        if !retired.contains(&id.as_str()) {
+            assert!(ids.contains(&id), "{id} is not in the report catalogue");
+        }
+    }
+    assert!(ids.len() >= 36, "{} reports", ids.len());
     let range = json!({"from": "2016-01-01", "to": "2026-10-10", "as_of": null});
     let mut requests: Vec<Value> = Vec::new();
     let mut worked_ok = 0;

@@ -15,6 +15,7 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useRef, useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
+import { useSingleFlight } from '../../../shared/hooks';
 import { formatPaisa, isoToDisplayDate, useGrouping } from '../../../shared/format';
 import { CashConfirmDialog, Code, Num, ReasonDialog, showToast } from '../../../shared/ui';
 import { useCancelPreview } from '../hooks/useBikriReads';
@@ -59,24 +60,19 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
     onClose();
   };
 
+  // One cancel at a time (NFR-REL-1): Enter pressed twice at once, or a double click, would send `bikri_cancel`
+  // twice before the box has drawn "sending". The guard is a ref, so it holds in the same instant; the second
+  // press finds a cancel on its way and does nothing (the backend has no request number to tell them apart).
+  const flight = useSingleFlight();
   const send = (reason: string, confirm: boolean) => {
     if (target === null || info === undefined) return;
-    setError(null);
-    setTypedReason(reason);
-    setStep('sending');
-    cancel
-      .mutateAsync({ id: target.id, version: info.version, reason, confirm })
-      .then(() => {
-        showToast(
-          'success',
-          <Localized id="bikri-cancelled-toast" vars={{ number: String(target.number) }}>
-            <span />
-          </Localized>,
-        );
-        reset();
-        onCancelled();
-      })
-      .catch((failure: unknown) => {
+    void flight.run(async () => {
+      setError(null);
+      setTypedReason(reason);
+      setStep('sending');
+      try {
+        await cancel.mutateAsync({ id: target.id, version: info.version, reason, confirm });
+      } catch (failure: unknown) {
         const refused = uiErrorOf(failure);
         if (refused.errors.some((item) => item.code === 'ERR_CASH_BELOW_ZERO_NOT_CONFIRMED')) {
           // The cash changed since the box opened: ask again with the numbers as they are now.
@@ -86,7 +82,17 @@ export function CancelBikriFlow({ target, onClose, onCancelled }: CancelBikriFlo
         }
         setError(refused);
         setStep('reason');
-      });
+        return;
+      }
+      showToast(
+        'success',
+        <Localized id="bikri-cancelled-toast" vars={{ number: String(target.number) }}>
+          <span />
+        </Localized>,
+      );
+      reset();
+      onCancelled();
+    }, undefined);
   };
 
   const onReason = (reason: string) => {

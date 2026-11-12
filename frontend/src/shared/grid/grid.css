@@ -286,6 +286,24 @@
   color: var(--color-ink);
 }
 
+/* The heading of a group of rows (a day of the past sales, plan 72): a thin rule above it sets the group
+   a little apart from the rows of the group before. */
+.entry-grid .month-heading-group {
+  border-block-start: var(--border-w) solid var(--color-border);
+}
+
+/* A group with no rows (a day with no بکری): one quiet line on the page ground, so the days that hold
+   sales stand out. Its words are still there, so nothing is told by shade alone. */
+.entry-grid .month-heading-quiet {
+  background-color: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+.entry-grid .month-heading-quiet .month-heading-title {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-ink-muted);
+}
+
 .entry-grid .month-heading-count,
 .entry-grid .month-heading-label {
   color: var(--color-ink-muted);

@@ -189,8 +189,9 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
         within(dialog).getByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
         'wrong rate{Enter}',
       );
+      await user.keyboard('adnan{Enter}');
       await waitFor(() => {
-        expect(editApi.dayFixOpen).toHaveBeenCalledWith('2026-10-10', 'wrong rate');
+        expect(editApi.dayFixOpen).toHaveBeenCalledWith('10-10-2026', 'wrong rate', 'adnan');
       });
       await waitFor(() => {
         expect(router.state.location.search).toMatchObject({ id: 41, edit: 7 });

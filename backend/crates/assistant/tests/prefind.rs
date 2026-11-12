@@ -269,13 +269,18 @@ fn a_seller_and_an_item_with_several_lots_ask_which_lot_with_no_model_call() {
             "{question}: {reply:#?}"
         );
         assert!(requests.is_empty(), "no model call");
-        assert_eq!(reply.options.len(), 2, "{reply:#?}");
+        // Two lots and the last button, "all lots" (key `l*`), which the screen labels itself.
+        assert_eq!(reply.options.len(), 3, "{reply:#?}");
         let names: Vec<&str> = reply
             .options
             .iter()
+            .take(2)
             .map(|o| o.name.name_en.as_str())
             .collect();
         assert_eq!(names, ["Rahim, Banana-2", "Rahim, Banana-1"]);
+        let all = reply.options.last().unwrap();
+        assert_eq!(all.key, "l*");
+        assert_eq!((all.date.as_deref(), all.qty), (None, None));
         assert!(reply.options[0].key.starts_with('l'));
         assert_eq!(reply.options[0].date.as_deref(), Some("2026-10-10"));
         assert_eq!(reply.options[0].qty, Some(10));
@@ -327,9 +332,11 @@ fn a_figure_question_of_a_seller_and_an_item_with_several_lots_asks_which_lot() 
         let names: Vec<&str> = reply
             .options
             .iter()
+            .take(2)
             .map(|o| o.name.name_en.as_str())
             .collect();
         assert_eq!(names, ["Rahim, Banana-2", "Rahim, Banana-1"], "{question}");
+        assert_eq!(reply.options.last().unwrap().key, "l*", "{question}");
         assert_eq!(reply.options[0].qty, Some(10));
         assert_eq!(reply.options[1].qty, Some(50));
         assert_eq!(reply.count_today, 0);
@@ -406,6 +413,93 @@ fn the_lot_the_owner_picked_narrows_the_report_of_its_seller_and_item() {
         rows[0]
             .tool_calls_json
             .contains(&format!("\"lot\":\"{lot_key}\"")),
+        "{}",
+        rows[0].tool_calls_json
+    );
+    h.scan_requests();
+}
+
+#[test]
+fn a_total_word_or_a_period_word_means_all_lots_and_nothing_is_asked() {
+    // The lead's rule (plan 71 L9): when the question itself asks for all of them, a total word (kul,
+    // sab, total, mila kar) or a period (is mahine, aaj), no lot is asked: the read is by seller and
+    // item over the period, as before. Two lots of رحیم fit, yet the Owner is not asked.
+    for question in [
+        "rahim ke banana ki kul bikri kitni hui",
+        "rahim ke banana ka total kitna hai",
+        "rahim ke sab banana mila kar kitne bike",
+        "rahim ke banana is mahine kitne bike",
+        "rahim ke banana aaj kitne bike",
+        "رحیم کے کیلا کل کتنے بکے",
+    ] {
+        let h = harness();
+        with_a_second_lot(&h);
+        let (reply, requests) = h.ask(question, None, vec![final_reply("ٹھیک")]);
+        assert_ne!(
+            reply.outcome,
+            AskOutcome::WhichOne,
+            "{question}: {reply:#?}"
+        );
+        assert!(requests.len() <= 1, "{question}");
+        // Nothing narrows a read: no lot is set on the question.
+        let (rows, _, _) =
+            mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+        assert!(
+            !rows[0].tool_calls_json.contains("\"lot\":\"l"),
+            "{question}"
+        );
+    }
+    // A named counter is a lot, whatever else the question says: "banana-2" is one lot.
+    let h = harness();
+    with_a_second_lot(&h);
+    let (reply, _) = h.ask(
+        "rahim banana-2 ka total",
+        None,
+        vec![final_reply("{{r1.matches.0.name}}")],
+    );
+    assert_ne!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+}
+
+#[test]
+fn the_all_lots_button_reads_the_seller_and_item_with_no_narrowing() {
+    let h = harness();
+    with_a_second_lot(&h);
+    let (asked, _) = h.ask(
+        "rahim ke 200 peti banana kis kis ne liye aur kis ne kitna naqd diya",
+        None,
+        Vec::new(),
+    );
+    assert_eq!(asked.outcome, AskOutcome::WhichOne, "{asked:#?}");
+    let all = asked.options.last().unwrap();
+    assert_eq!(all.key, "l*");
+    // The fallback name is the seller and the item, with no counter.
+    assert_eq!(all.name.name_en, "Rahim, Banana");
+    let w = &h.world;
+    let (picked, requests) = h.pick(
+        asked.question_id,
+        PickChoice::Match {
+            key: "l*".to_owned(),
+        },
+        vec![
+            tool_reply(&[(
+                "report",
+                json!({"id": "R5", "seller": format!("a{}", w.rahim), "item": format!("i{}", w.banana)}),
+            )]),
+            final_reply("{{r1.matches.0.name}}"),
+        ],
+    );
+    assert_eq!(requests.len(), 2, "{picked:#?}");
+    let first = requests[0].to_string();
+    assert!(first.contains("chose ALL lots"), "{first}");
+    assert!(!first.contains("the Owner chose this lot"), "{first}");
+    let second = requests[1].to_string();
+    // Both lots are read: ارشد bought only from کیلا-1, اکرم from both.
+    assert!(second.contains("Akram Toll Tax"), "{second}");
+    assert!(second.contains("Arshad Multani"), "{second}");
+    assert!(!second.contains("only the lot the Owner chose"), "{second}");
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    assert!(
+        !rows[0].tool_calls_json.contains("\"lot\":\"l"),
         "{}",
         rows[0].tool_calls_json
     );

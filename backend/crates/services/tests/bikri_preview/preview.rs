@@ -376,11 +376,7 @@ fn row_json(key: &str, buyer: Option<i64>, qty: &str, rate: &str) -> serde_json:
 fn request_json(w: &World, rows: Vec<serde_json::Value>) -> serde_json::Value {
     json!({
         "draft": {
-            "header": {
-                "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
-                "zamindar_account_id": w.rahim, "adda_id": null, "driver_name": null,
-                "driver_phone": null, "total_freight": null, "store_id": null, "note": null
-            },
+            "header": { "entry_date": "10-10-2026" },
             "lots": [{
                 "key": "lot-1", "seller_account_id": w.rahim, "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "50", "weight_received": null, "freight": "3,000",

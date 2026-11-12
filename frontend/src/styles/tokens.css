@@ -68,6 +68,9 @@
   /* A row of a read-only list: tight enough for 25 rows to fit a window with the page buttons. */
   --list-row-h: 40px;
 
+  /* A heading with nothing under it (a day with no بکری, plan 72): one compact line, not a full row. */
+  --list-quiet-h: 32px;
+
   /* One width for each kind of column, in every grid, table and print (plan 39 R5, Code Standards
      F18): a money column, a quantity column, a date column and a code column are the same width in
      today's sales, the ledger and the cash book. The grids read the same numbers from
@@ -409,6 +412,9 @@
   --font-text: var(--font-latin);
   --leading-text: var(--leading-latin);
   --weight-strong: var(--font-weight-semibold);
+
+  /* Inter's own space is wide enough around a number inside words. */
+  --number-gap: 0px;
 }
 
 :lang(ur) {
@@ -432,6 +438,10 @@
 
   /* Gulzar has one weight. */
   --weight-strong: var(--font-weight-normal);
+
+  /* Gulzar's space is almost nothing next to the wide digits of Inter, so "03-10-2026 تا 09-10-2026"
+     read as one run. A number inside words keeps this much room on each side. */
+  --number-gap: var(--space-1);
 }
 
 /* Run B, plan 21 (analytics): the chart above each table. One height (`--chart-h`, in the first :root

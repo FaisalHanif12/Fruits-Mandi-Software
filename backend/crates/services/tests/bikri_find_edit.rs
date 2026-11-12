@@ -591,6 +591,7 @@ fn a_closed_day_is_fixed_through_reopen_and_fix_with_a_buyer_change() {
         &mandi_services::core::edit::DayFixOpenInput {
             date: "10-10-2026".into(),
             reason: "غلط گاہک".into(),
+            sign: "adnan".into(),
         },
     )
     .unwrap();

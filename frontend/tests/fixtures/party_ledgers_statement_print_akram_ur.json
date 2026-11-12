@@ -1,0 +1,172 @@
+{
+  "language": "ur",
+  "dir": "rtl",
+  "paper": "a4",
+  "title_id": "print-statement-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "01-10-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "05-12-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 اکرم ٹول ٹیکس"
+    }
+  ],
+  "kind": "buyer",
+  "party": {
+    "role_id": "print-party-buyer",
+    "code": "0020",
+    "short_code": "0",
+    "name": "اکرم ٹول ٹیکس",
+    "phone": null
+  },
+  "period_from": "01-10-2026",
+  "period_to": "05-12-2026",
+  "opening": {
+    "amount": "0",
+    "side": "none"
+  },
+  "days": [
+    {
+      "date": "10-10-2026",
+      "items": [
+        {
+          "name": "کیلا",
+          "grade": null,
+          "qty": "20",
+          "weight_kg": null,
+          "rate": "600",
+          "amount": "12,000"
+        }
+      ],
+      "charges": [
+        {
+          "label_id": "print-buyer-commission",
+          "amount": "720",
+          "role": "line"
+        },
+        {
+          "label_id": "print-laga",
+          "amount": "160",
+          "role": "line"
+        }
+      ],
+      "bill": {
+        "label_id": "print-statement-bill-buyer",
+        "amount": "12,880",
+        "role": "total"
+      },
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-receipt",
+          "amount": "10,000",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "2,880",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "11-10-2026",
+      "items": [],
+      "charges": [],
+      "bill": null,
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-receipt",
+          "amount": "1,000",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "1,880",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "12-10-2026",
+      "items": [],
+      "charges": [],
+      "bill": null,
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-receipt",
+          "amount": "500",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "1,380",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "15-11-2026",
+      "items": [],
+      "charges": [],
+      "bill": null,
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-receipt",
+          "amount": "380",
+          "note": "پرانا حساب"
+        }
+      ],
+      "closing": {
+        "amount": "1,000",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "02-12-2026",
+      "items": [],
+      "charges": [],
+      "bill": null,
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-receipt",
+          "amount": "1,000",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "0",
+        "side": "none"
+      }
+    }
+  ],
+  "totals": [
+    {
+      "label_id": "print-statement-total-bought",
+      "amount": "12,880",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-charges",
+      "amount": "880",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-received",
+      "amount": "12,880",
+      "role": "line"
+    }
+  ],
+  "closing": {
+    "amount": "0",
+    "side": "none"
+  },
+  "words": null
+}

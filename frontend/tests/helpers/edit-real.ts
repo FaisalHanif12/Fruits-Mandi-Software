@@ -21,6 +21,11 @@ import dayFixCloseE2e45 from '../fixtures/day_fix_close_e2e_45.json';
 import dayFixCloseStayedOpen from '../fixtures/day_fix_close_stayed_open.json';
 import dayFixCloseTokenInvalid from '../fixtures/day_fix_close_token_invalid.json';
 import dayFixOpenE2e45 from '../fixtures/day_fix_open_e2e_45.json';
+import dayFixOpenE2e45Request from '../fixtures/day_fix_open_e2e_45_request.json';
+import dayFixOpenSignRequired from '../fixtures/day_fix_open_sign_required.json';
+import dayFixOpenSignRequiredRequest from '../fixtures/day_fix_open_sign_required_request.json';
+import dayFixOpenSignWrong from '../fixtures/day_fix_open_sign_wrong.json';
+import dayFixOpenSignWrongRequest from '../fixtures/day_fix_open_sign_wrong_request.json';
 import entryFlagsExamples from '../fixtures/entry_flags_examples.json';
 import fruitEditPreviewHome3 from '../fixtures/fruit_edit_preview_home_3.json';
 import gardensArrivalEditPreview120 from '../fixtures/gardens_arrival_edit_preview_120.json';
@@ -64,6 +69,12 @@ export const AUDIT_EDIT_HISTORY_BIKRI = auditEditHistoryBikri as unknown as Edit
 
 /** E2E-45: 10-10, 11-10 and 12-10 reopen; then they close again. */
 export const DAY_FIX_OPEN_E2E_45 = dayFixOpenE2e45 as unknown as DayFixOpened;
+/** What the screen sends to reopen with the right sign, and the two refusals of plan 73 with what was sent. */
+export const DAY_FIX_OPEN_E2E_45_REQUEST = dayFixOpenE2e45Request;
+export const DAY_FIX_OPEN_SIGN_WRONG = dayFixOpenSignWrong as unknown as UiError;
+export const DAY_FIX_OPEN_SIGN_WRONG_REQUEST = dayFixOpenSignWrongRequest;
+export const DAY_FIX_OPEN_SIGN_REQUIRED = dayFixOpenSignRequired as unknown as UiError;
+export const DAY_FIX_OPEN_SIGN_REQUIRED_REQUEST = dayFixOpenSignRequiredRequest;
 export const DAY_FIX_CLOSE_E2E_45 = dayFixCloseE2e45 as unknown as DayFixClosed;
 export const DAY_FIX_CLOSE_STAYED_OPEN = dayFixCloseStayedOpen as unknown as DayFixClosed;
 export const DAY_FIX_CLOSE_TOKEN_INVALID = dayFixCloseTokenInvalid as unknown as UiError;

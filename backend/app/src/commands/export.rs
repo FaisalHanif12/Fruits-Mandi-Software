@@ -13,13 +13,13 @@
 //! `reading`, `writing` (0 of 17), `writing` (17 of 17) and `done`.
 
 use mandi_reports::export::{
-    AnalyticsExportInput, ExcelExported, ExportProgress, ExportStage, ReportExportInput,
-    export_analytics, export_report, export_report_page,
+    AnalyticsExportInput, BikriListExportInput, ExcelExported, ExportProgress, ExportStage,
+    ReportExportInput, export_analytics, export_bikri_list, export_report, export_report_page,
 };
 use mandi_reports::reports::ReportId;
 use mandi_services::ServiceError;
-use mandi_services::auth;
 use mandi_services::core::error::ErrorCode;
+use mandi_services::{auth, bikri};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use ts_rs::TS;
@@ -55,6 +55,17 @@ pub struct AnalyticsExportRequest {
     #[serde(flatten)]
     #[ts(flatten)]
     pub export: AnalyticsExportInput,
+}
+
+/// The input of `bikri_list_export_excel`: the export plus the screen's job id.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct BikriListExportRequest {
+    /// An id the screen picks (letters, digits, `-` and `_`, at most 64) to match the events.
+    pub job_id: String,
+    /// The window, the filters, the language and the path.
+    #[serde(flatten)]
+    #[ts(flatten)]
+    pub export: BikriListExportInput,
 }
 
 /// The payload of the event `export-progress`.
@@ -124,6 +135,28 @@ pub async fn reports_export_excel<R: tauri::Runtime>(
         }
         export_report(ctx.db(), &input.export, &mut |p| emit(&handle, &job, p))
             .map_err(engine_error)
+    })
+    .await
+}
+
+/// Saves پچھلی بکری as an `.xlsx` file with every row of today's section and of the window, a bold
+/// heading for each day and the totals row (PRD FR-12.46, FR-19.3, plan 72 P8). Follows the screen's
+/// filters or the switch "show every بکری".
+#[tauri::command]
+pub async fn bikri_list_export_excel<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: BikriListExportRequest,
+) -> Result<ExcelExported, UiError> {
+    let handle = app.clone();
+    run(app, "bikri_list_export_excel", move |ctx| {
+        auth::require(ctx)?;
+        check_job_id(&input.job_id)?;
+        let job = input.job_id.clone();
+        let whole = bikri::list_whole(ctx, &input.export.list)?;
+        export_bikri_list(ctx.db(), &whole, &input.export, &mut |p| {
+            emit(&handle, &job, p);
+        })
+        .map_err(engine_error)
     })
     .await
 }

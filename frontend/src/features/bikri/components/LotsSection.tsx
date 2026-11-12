@@ -3,27 +3,31 @@
 // freight, labour, munshiana, نقد. The rest of the lot is behind "مزید" (LotMore).
 //
 // - Enter on the last cell goes on to the sale lines of that lot (PRD FR-12.1); ↓ on the last lot
-//   adds a lot; "لاٹ شامل کریں" does the same with the mouse. Ctrl+Delete, or the button at the end
+//   adds a lot; the round "+" under the grid does the same (it is reached by ↓ from the last row's trash
+//   cell, and stops at 50 lots, NFR-SCL-3). Ctrl+Delete, or the button at the end
 //   of its row, removes a lot, after asking when it has sale lines (plan 43).
 // - The lot that has focus is the selected lot: its sale lines are below.
 // - The seller of a new lot, and the item, packing and مارکہ of a seller, are filled by the app
 //   and are Enter stops like the rest (useDraftFills).
 
 import { Localized } from '@fluent/react';
-import { Plus } from 'lucide-react';
 import { useEffect, useMemo, type ReactNode } from 'react';
+import { groupDigits, useGrouping } from '../../../shared/format';
 import {
+  AddRowButton,
   EntryGrid,
+  addRowAndFocus,
+  useAddRowLink,
   type EntryRow,
   type GridInterceptors,
   type RemoveQuestion,
 } from '../../../shared/grid';
 import { useLayoutStep } from '../../../shared/hooks';
-import { Button } from '../../../shared/ui';
 import { lotColumns } from '../columns';
 import { isGardenLot, isOwnLot } from '../draft';
 import { useBikriDraft } from '../draft-store';
 import type { GridView } from '../grid-views';
+import { MAX_LOTS } from '../limits';
 import { LOT, SALE } from '../types';
 import { LotMoreToggle } from './LotMore';
 import { focusOwnPurchaseSoon } from './OwnLotPanel';
@@ -62,6 +66,8 @@ export function LotsSection({
 }: LotsSectionProps) {
   const stores = useBikriDraft();
   const step = useLayoutStep();
+  // The arrows reach the trash cell of each lot, and from the last one the "+" under the grid.
+  const addLink = useAddRowLink();
   const columns = useMemo(() => lotColumns(step), [step]);
   const rows = stores.lots((state) => state.rows);
   const focus = stores.lots((state) => state.focus);
@@ -128,10 +134,19 @@ export function LotsSection({
     [stores],
   );
 
+  // A new lot goes through the grid's one new-row path, the same as ↓ on the last lot (PRD FR-7.17).
   const addLot = () => {
-    stores.lots.getState().addRow();
-    stores.lots.getState().setPendingFocus({ rowIndex: 'last', field: LOT.seller });
+    addRowAndFocus(stores.lots, LOT.seller);
   };
+  // At the limit of lots in one بکری (NFR-SCL-3) no lot is offered, and the words say why.
+  const grouping = useGrouping();
+  const lotsFull = rows.length >= MAX_LOTS;
+  const limit = lotsFull
+    ? {
+        messageId: 'bikri-lots-limit',
+        vars: { max: groupDigits(String(MAX_LOTS), grouping) },
+      }
+    : undefined;
 
   return (
     <section aria-labelledby="bikri-lots-heading" className="flex flex-col gap-2">
@@ -140,10 +155,6 @@ export function LotsSection({
           <h2 id="bikri-lots-heading" className="type-section text-ink" />
         </Localized>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={addLot}>
-            <Plus aria-hidden="true" className="size-icon-md" />
-            <Localized id="bikri-lots-add" />
-          </Button>
           <LotMoreToggle
             lotIndex={Math.max(
               rows.findIndex((row) => row.rowId === selected),
@@ -154,23 +165,27 @@ export function LotsSection({
         </div>
       </div>
       {note}
-      <EntryGrid
-        columns={columns}
-        store={stores.lots}
-        labelId="bikri-lots-label"
-        calc={view.calc}
-        workings={view.workings}
-        cellErrors={view.errors}
-        cellWarnings={view.warnings}
-        {...(cellChanged === undefined ? {} : { cellChanged })}
-        {...(cellMarks === undefined ? {} : { cellMarks })}
-        {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
-        removeQuestion={removeQuestion}
-        interceptors={interceptors}
-        onCardAccount={onCardAccount}
-        fit
-        heightMode="auto"
-      />
+      <div className="flex flex-col gap-1">
+        <EntryGrid
+          columns={columns}
+          store={stores.lots}
+          labelId="bikri-lots-label"
+          calc={view.calc}
+          workings={view.workings}
+          cellErrors={view.errors}
+          cellWarnings={view.warnings}
+          {...(cellChanged === undefined ? {} : { cellChanged })}
+          {...(cellMarks === undefined ? {} : { cellMarks })}
+          {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+          removeQuestion={removeQuestion}
+          interceptors={interceptors}
+          onCardAccount={onCardAccount}
+          addLink={addLink}
+          fit
+          heightMode="auto"
+        />
+        <AddRowButton labelId="bikri-lots-add-row" onAdd={addLot} limit={limit} link={addLink} />
+      </div>
     </section>
   );
 }

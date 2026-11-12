@@ -638,6 +638,48 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     expect(visible(buttons[1]?.textContent)).toContain('150');
   });
 
+  // The backend ends a list of lots with one more option, the key `l*`: every lot. Its label is ours, in
+  // the language of the app, never the name the backend sends with it; a click picks the key `l*`.
+  it('which one for a lot: the last button says "all lots" in the app language, ignoring its name', async () => {
+    await renderShellRouted();
+    const lots = real.REPLY_WHICH_ONE.options.map((option, index) => ({
+      ...option,
+      balance: null,
+      date: index === 0 ? '2026-10-10' : '2026-10-12',
+      qty: index === 0 ? 200 : 150,
+    }));
+    const base = real.REPLY_WHICH_ONE.options[0];
+    if (base === undefined) throw new Error('no option');
+    const all = {
+      ...base,
+      key: 'l*',
+      name: { ...base.name, name_ur: 'NAME FROM THE BACKEND', name_en: 'NAME FROM THE BACKEND' },
+    };
+    const user = await ask(
+      language,
+      { ...real.REPLY_WHICH_ONE, options: [...lots, all] },
+      'ehsan ke aam',
+    );
+    const panel = panelOf(language);
+    const label = message(language, 'assistant-option-all-lots');
+    const button = within(panel).getByRole('button', { name: (name) => visible(name) === label });
+    expect(button).toBeInTheDocument();
+    // It stands last, after the lots, and shows nothing of the backend's name.
+    const all2 = within(panel)
+      .getAllByRole('button')
+      .filter((candidate) => candidate.closest('ul') === button.closest('ul'));
+    expect(all2.at(-1)).toBe(button);
+    expect(visible(panel.textContent)).not.toContain('NAME FROM THE BACKEND');
+    vi.mocked(assistantApi.assistantPick).mockResolvedValue(real.PICK_MATCH);
+    await user.click(button);
+    await waitFor(() => {
+      expect(assistantApi.assistantPick).toHaveBeenCalledWith({
+        question_id: real.REPLY_WHICH_ONE.question_id,
+        choice: { type: 'match', key: 'l*' },
+      });
+    });
+  });
+
   it.each(['seller', 'buyer', 'item', 'partner', 'garden', 'trip', 'any'] as const)(
     'not found as a %s: says that no such record has that name, in the role asked, with no list when there are no near names',
     async (role) => {

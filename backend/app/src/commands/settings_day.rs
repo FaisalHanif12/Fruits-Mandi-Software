@@ -9,6 +9,8 @@
 use mandi_backup::day_settings::{self, DaySettings};
 use mandi_services::auth;
 use mandi_services::core::money::Grouping;
+use mandi_services::owner_sign;
+use mandi_services::secret::Secret;
 use serde::Deserialize;
 use ts_rs::TS;
 
@@ -60,6 +62,36 @@ pub async fn settings_set_number_grouping<R: tauri::Runtime>(
     run(app, "settings_set_number_grouping", move |ctx| {
         let actor = auth::require(ctx)?;
         mandi_services::settings_ext::set_number_grouping(ctx, &actor, input.grouping)
+    })
+    .await
+}
+
+/// The input of `settings_set_owner_sign`.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct SetOwnerSignInput {
+    /// The Owner's password, to prove it is he who changes his sign.
+    pub password: String,
+    /// The new sign (دستخط): 1 to 40 characters, trimmed.
+    pub sign: String,
+}
+
+/// Changes the Owner's sign that opens a closed day to fix an entry (PRD FR-21.4, plan 73), proved by
+/// his password. The change is in the audit log; the sign is not. Errors: `ERR_REQUIRED`,
+/// `ERR_TEXT_TOO_LONG` (value `max`) and `ERR_CONTROL_CHARS` on `sign`; `ERR_REQUIRED` or
+/// `ERR_WRONG_PASSWORD` (value `tries_left`) on `password`; `ERR_LOCKED_WAIT` (value `seconds`).
+#[tauri::command]
+pub async fn settings_set_owner_sign<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: SetOwnerSignInput,
+) -> Result<(), UiError> {
+    run(app, "settings_set_owner_sign", move |ctx| {
+        let actor = auth::require(ctx)?;
+        owner_sign::set_owner_sign(
+            ctx,
+            &actor,
+            &Secret::new(input.password.as_str()),
+            &input.sign,
+        )
     })
     .await
 }

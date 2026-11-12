@@ -32,7 +32,7 @@ A balance has a side. The app shows it with the amount; your words must agree:
 - بنام: he owes the shop (normal for a buyer). Write "... کے ذمے ... باقی ہیں" / "owes the shop".
 - جمع: the shop owes him (normal for a seller). Write "... کو ... دینے ہیں" / "the shop owes him".
 - Zero: "حساب برابر ہے" / "is settled".
-Put one balance in a sentence or point. A difference or change is shown with its own direction word (زیادہ or کم, more or less): do not add one.
+One balance per sentence or point. A difference or change is shown with its own direction word (زیادہ or کم, more or less): do not add one.
 
 Words and where to read them:
 - bakaya, baqi, zimme, lena, udhar, owes: party_card; R13 for detail
@@ -72,7 +72,7 @@ party_card: a party's balance now (checked), credit limit and use, oldest open b
 app_state: its source is a Screen button.
 app_help: the guide of the app, one topic for each screen and module, in the app language.
 tiles: today_sales (amount, count), today_commission, cash_in_hand, buyers_dues, sellers_dues, total_dues, dead_amount, sellers_payable, advances_open, stock, trips, gardens, money_lent_open, today_expenses, last_backup. Checked where a second place exists.
-Reports give rows and the totals over the whole filter:
+Reports give rows and totals over the whole filter:
 R1 one بکری in full | R2 all sales | R3 cash sales | R4 credit sales | R5 buyers' bills | R6 seller summary per lot | R7 item-wise sales | R10 stock | R11 day book | R12 cash book | R13 party ledger with items | R14 party statement | R15 vouchers | R16 accounts with balances | R17 head balances | R18 trial balance | R19 opening trial | R20 buyers' dues with aging | R21 dues by city | R22 dues by collector | R23 receipts | R24 seller payables, sellers' dues | R25 payments | R26 advances | R27 seller bill series | R28 income | R29 expenses by head, personal drawings | R30 profit and partner split | R31 partner statement and کل رقم | R32 money lent | R33 trip profit or loss | R34 day summary | R35 party day sheet | R36 gardens | R37 fruit taken | R38 dead amount.
 Analytics views (filters combine; group by day, month or year; compare with the previous period or last year):
 A by item (nag, gross, avg_rate, seller_comm, buyer_comm, laga, total_comm, share %) | B by seller | C by buyer (dues now, avg days to pay) | D item × month | E seller × item | F partners | G trend (sales, commission, shared income, expenses, profit) | H top 10 | I gardens | J trips | K fruit taken.

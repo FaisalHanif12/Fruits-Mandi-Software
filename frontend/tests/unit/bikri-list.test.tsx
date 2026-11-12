@@ -1,6 +1,7 @@
-// آج کی بکری, the list of بکری (plan 13, PRD FR-12.7, FR-7.46), in the Urdu and the English app,
-// against a fake backend: the columns, the filters, the four states, and opening a row by keyboard.
-// All amounts are the stored sums the backend sends.
+// The list of بکری of پچھلی بکری (plan 13, plan 72, PRD 12.7, FR-7.46), in the Urdu and the English
+// app, against a fake backend: the columns, the filters, the four states of today's section, and
+// opening a row by keyboard. All amounts are the stored sums the backend sends. The window of earlier
+// days, the divider, the date jump and the tick are in past-sales.test.tsx.
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -58,7 +59,7 @@ function cell(rowId: number, colId: string): string {
   return visible(row?.querySelector(`[col-id="${colId}"]`)?.textContent);
 }
 
-describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
+describe.each(LANGUAGES)('today’s section of پچھلی بکری (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
     signedIn(sessionUser({ language }));
@@ -90,6 +91,8 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
         search: null,
         sort: null,
         group_by_month: false,
+        group_by_day: false,
+        all: false,
       });
     });
   });
@@ -149,9 +152,8 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     vi.mocked(bikriApi.bikriList).mockResolvedValue(bikriListOf([]));
     const { router } = await open();
     await waitFor(() => {
-      expect(pageText()).toContain(message(language, 'bikri-list-empty'));
+      expect(pageText()).toContain(message(language, 'bikri-past-today-empty', { key: 'Alt+B' }));
     });
-    expect(pageText()).toContain(message(language, 'bikri-list-empty-help', { key: 'Alt+B' }));
     const user = userEvent.setup();
     const button = screen.getByRole('button', {
       name: (name) => visible(name).startsWith(message(language, 'bikri-new')),
@@ -163,19 +165,22 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     });
   });
 
-  it('another day sends the day as typed; nothing found offers to clear the filters', async () => {
+  it('a filter that finds nothing says so, and the button in the window clears the filters', async () => {
     vi.mocked(bikriApi.bikriList).mockResolvedValue(bikriListOf([]));
     await open();
     const user = userEvent.setup();
-    const day = await screen.findByRole('textbox', {
-      name: named(message(language, 'bikri-header-date')),
+    const search = await screen.findByRole('textbox', {
+      name: named(message(language, 'common-search-label')),
     });
-    await user.clear(day);
-    await user.type(day, '09-10-2026');
+    await user.type(search, 'ZZZ');
     await waitFor(() => {
       expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
-        expect.objectContaining({ date: '09-10-2026' }),
+        expect.objectContaining({ search: 'ZZZ' }),
       );
+    });
+    // Today says it in one line; the window, which has the room, says it with the button.
+    await waitFor(() => {
+      expect(pageText()).toContain(message(language, 'bikri-past-today-no-match'));
     });
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'bikri-list-no-match'));
@@ -185,9 +190,10 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     );
     await waitFor(() => {
       expect(bikriApi.bikriList).toHaveBeenLastCalledWith(
-        expect.objectContaining({ date: '10-10-2026' }),
+        expect.objectContaining({ search: null }),
       );
     });
+    expect(search).toHaveValue('');
   });
 
   it('the status filter, behind "More filters", sends cancelled', async () => {
@@ -293,22 +299,29 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
       listRow({ id: 1000 + index, number: index + 1 }),
     );
     vi.mocked(bikriApi.bikriList).mockImplementation((input) =>
-      Promise.resolve({
-        ...bikriListOf(all, input.offset, input.limit),
-        // The totals of the whole filter, not the sum of the rows on screen.
-        totals: {
-          qty_received: 7_500,
-          qty_sold: 7_400,
-          gross: money(4_410_000),
-          net: money(2_897_400),
-          buyer_total: money(4_734_600),
-        },
-      }),
+      Promise.resolve(
+        // The window of earlier days is empty here, so the screen has one pager only.
+        input.date === null
+          ? bikriListOf([], input.offset, input.limit)
+          : {
+              ...bikriListOf(all, input.offset, input.limit),
+              // The totals of the whole filter, not the sum of the rows on screen.
+              totals: {
+                qty_received: 7_500,
+                qty_sold: 7_400,
+                gross: money(4_410_000),
+                net: money(2_897_400),
+                buyer_total: money(4_734_600),
+              },
+            },
+      ),
     );
     await open();
     // The day is known a moment after the screen opens, and then the list asks for that day.
     await waitFor(() => {
-      expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0].date).toBe('10-10-2026');
+      expect(
+        vi.mocked(bikriApi.bikriList).mock.calls.some(([input]) => input.date === '10-10-2026'),
+      ).toBe(true);
     });
     await waitFor(() => {
       expect(pageText()).toContain(rangeText(language, 1, 25, 150));
@@ -324,11 +337,13 @@ describe.each(LANGUAGES)('آج کی بکری (%s)', (language) => {
     await waitFor(() => {
       expect(pageText()).toContain(rangeText(language, 26, 50, 150));
     });
-    expect(vi.mocked(bikriApi.bikriList).mock.calls.at(-1)?.[0]).toMatchObject({
-      date: '10-10-2026',
-      offset: PAGE_ROWS,
-      limit: PAGE_ROWS,
-    });
+    expect(
+      vi
+        .mocked(bikriApi.bikriList)
+        .mock.calls.map(([input]) => input)
+        .filter((input) => input.date === '10-10-2026')
+        .at(-1),
+    ).toMatchObject({ date: '10-10-2026', offset: PAGE_ROWS, limit: PAGE_ROWS });
     // The totals are over the whole filter on every page.
     expect(pinned('gross')).toBe('4,410,000');
   });

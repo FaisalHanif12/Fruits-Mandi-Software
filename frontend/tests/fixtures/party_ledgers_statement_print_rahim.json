@@ -1,0 +1,151 @@
+{
+  "language": "en",
+  "dir": "ltr",
+  "paper": "a4",
+  "title_id": "print-statement-title",
+  "filters": [
+    {
+      "label_id": "report-filter-from",
+      "value": "01-09-2026"
+    },
+    {
+      "label_id": "report-filter-to",
+      "value": "05-12-2026"
+    },
+    {
+      "label_id": "report-filter-party",
+      "value": "0 Rahim"
+    }
+  ],
+  "kind": "seller",
+  "party": {
+    "role_id": "print-party-seller",
+    "code": "0010",
+    "short_code": "0",
+    "name": "Rahim",
+    "phone": null
+  },
+  "period_from": "01-09-2026",
+  "period_to": "05-12-2026",
+  "opening": {
+    "amount": "0",
+    "side": "none"
+  },
+  "days": [
+    {
+      "date": "01-09-2026",
+      "items": [],
+      "charges": [],
+      "bill": null,
+      "paid_on_spot": null,
+      "entries": [
+        {
+          "label_id": "print-statement-entry-advance",
+          "amount": "15,000",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "15,000",
+        "side": "debit"
+      }
+    },
+    {
+      "date": "10-10-2026",
+      "items": [
+        {
+          "name": "Banana",
+          "grade": null,
+          "qty": "20",
+          "weight_kg": null,
+          "rate": "600",
+          "amount": "12,000"
+        },
+        {
+          "name": "Banana",
+          "grade": null,
+          "qty": "30",
+          "weight_kg": null,
+          "rate": "580",
+          "amount": "17,400"
+        }
+      ],
+      "charges": [
+        {
+          "label_id": "print-commission",
+          "amount": "1,764",
+          "role": "line"
+        },
+        {
+          "label_id": "print-freight",
+          "amount": "3,000",
+          "role": "line"
+        },
+        {
+          "label_id": "print-labour",
+          "amount": "250",
+          "role": "line"
+        },
+        {
+          "label_id": "print-munshiana",
+          "amount": "50",
+          "role": "line"
+        },
+        {
+          "label_id": "print-phone-charge",
+          "amount": "20",
+          "role": "line"
+        }
+      ],
+      "bill": {
+        "label_id": "print-statement-bill-seller",
+        "amount": "24,316",
+        "role": "total"
+      },
+      "paid_on_spot": "5,000",
+      "entries": [
+        {
+          "label_id": "print-statement-entry-payment",
+          "amount": "4,316",
+          "note": null
+        }
+      ],
+      "closing": {
+        "amount": "0",
+        "side": "none"
+      }
+    }
+  ],
+  "totals": [
+    {
+      "label_id": "print-statement-total-sold",
+      "amount": "29,400",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-deductions",
+      "amount": "5,084",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-cash",
+      "amount": "5,000",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-paid",
+      "amount": "4,316",
+      "role": "line"
+    },
+    {
+      "label_id": "print-statement-total-advanced",
+      "amount": "15,000",
+      "role": "line"
+    }
+  ],
+  "closing": {
+    "amount": "0",
+    "side": "none"
+  },
+  "words": null
+}

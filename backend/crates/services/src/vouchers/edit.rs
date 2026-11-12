@@ -398,6 +398,7 @@ pub(crate) fn edit_in(
         if let Some(note) = &note {
             event = event.reason(note);
         }
+        event = event.sign(crate::day::fix_sign(tx, &old.row.entry_date)?.as_deref());
         ctx.db.auditor().write(tx, &event.into_entry())?;
         let new_balance = match planned.account() {
             Some(account) => ledger::balance_in(tx, account.id, None, None)?,

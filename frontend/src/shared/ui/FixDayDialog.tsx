@@ -14,7 +14,7 @@ interface FixDayDialogProps {
   date: string;
   error: UiError | null;
   busy: boolean;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reason: string, sign: string) => void;
 }
 
 export function FixDayDialog({
@@ -36,11 +36,16 @@ export function FixDayDialog({
         </Localized>
       }
       reasonLabel={<Localized id="edit-fix-label" />}
+      // Only the Owner's sign opens the day (PRD FR-21.4, plan 73): a second, required field below the reason.
+      signLabel={<Localized id="edit-fix-sign-label" />}
+      signHint={<Localized id="edit-fix-sign-hint" />}
       confirmLabel={<Localized id="edit-fix-confirm" />}
       confirmVariant="primary"
       error={error}
       busy={busy}
-      onConfirm={onConfirm}
+      onConfirm={(reason, sign) => {
+        onConfirm(reason, sign ?? '');
+      }}
     />
   );
 }

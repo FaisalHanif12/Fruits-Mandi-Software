@@ -3,6 +3,8 @@
 // Owner (NFR-SEC-4). Level 3, the day slip, is not here: it is the R35 report of the `reports`
 // module for one party and one date.
 
+import type { PartyLedgerGoTo } from '../../bindings/PartyLedgerGoTo';
+import type { PartyLedgerGoToInput } from '../../bindings/PartyLedgerGoToInput';
 import type { PartyLedgersList } from '../../bindings/PartyLedgersList';
 import type { PartyLedgersListInput } from '../../bindings/PartyLedgersListInput';
 import type { PartyLedgerStatement } from '../../bindings/PartyLedgerStatement';
@@ -26,4 +28,14 @@ export function partyLedgersStatement(
   input: PartyLedgerStatementInput,
 ): Promise<PartyLedgerStatement> {
   return callCommand<PartyLedgerStatement>('party_ledgers_statement', { input });
+}
+
+/**
+ * Go to a date of the statement (PRD FR-12.47, plan 74 W5): `date` is `DD-MM-YYYY` or a shortcut. The
+ * answer is the 30-day window that holds it (it ends on the earlier of the day plus 15 days and
+ * today), that window's own statement page and totals, whether the party has an entry on the date,
+ * and the place of that date among the rows. Read only. A day after today is refused.
+ */
+export function partyLedgersGoToDate(input: PartyLedgerGoToInput): Promise<PartyLedgerGoTo> {
+  return callCommand<PartyLedgerGoTo>('party_ledgers_go_to_date', { input });
 }

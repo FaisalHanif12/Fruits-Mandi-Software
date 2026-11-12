@@ -2,7 +2,7 @@
 //! Code Standards S7).
 
 use mandi_db::audit::AuditEntry;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// One thing that happened. Never put a password, a hash or a recovery code in it.
 pub(crate) struct Event(AuditEntry);
@@ -42,6 +42,25 @@ impl Event {
     /// Why it was done (a reopened day, a cancel).
     pub fn reason(mut self, reason: &str) -> Self {
         self.0.reason = Some(reason.to_owned());
+        self
+    }
+
+    /// The Owner's sign given when the day was reopened to fix an entry (PRD FR-21.4, plan 73): saved
+    /// beside the reason, as the key `sign` of the new value. Nothing is added when there is none.
+    pub fn sign(mut self, sign: Option<&str>) -> Self {
+        if let Some(sign) = sign {
+            match self.0.new_json.as_mut() {
+                Some(Value::Object(object)) => {
+                    object.insert("sign".to_owned(), Value::String(sign.to_owned()));
+                }
+                Some(_) => {}
+                None => {
+                    let mut object = Map::new();
+                    object.insert("sign".to_owned(), Value::String(sign.to_owned()));
+                    self.0.new_json = Some(Value::Object(object));
+                }
+            }
+        }
         self
     }
 

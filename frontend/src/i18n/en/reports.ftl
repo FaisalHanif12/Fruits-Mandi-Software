@@ -173,6 +173,9 @@ report-filter-adda = { -adda }
 report-filter-collector = Collector
 
 # review: pending
+report-filter-lot = { -lot }
+
+# review: pending
 report-filter-detail = With detail
 
 # review: pending

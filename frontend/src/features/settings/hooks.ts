@@ -18,6 +18,7 @@ import {
   settingsSetDefaultLanguage,
   settingsSetFirm,
   settingsSetOverrides,
+  settingsSetOwnerSign,
   settingsSetPrinting,
   settingsSetSecurity,
 } from './api';
@@ -43,6 +44,13 @@ export function useSetSecurity() {
   return useMutation({
     mutationFn: (input: SetSecurityInput) => settingsSetSecurity(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: SETTINGS_KEY }),
+  });
+}
+
+/** Changes the Owner's sign (PRD FR-21.4, plan 73). Nothing in the settings read changes, so nothing is read again. */
+export function useSetOwnerSign() {
+  return useMutation({
+    mutationFn: (input: { password: string; sign: string }) => settingsSetOwnerSign(input),
   });
 }
 

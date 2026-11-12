@@ -21,6 +21,7 @@
 mod edit;
 mod grade;
 mod input;
+mod list_whole;
 mod lot_name;
 mod prepare;
 mod prepared;
@@ -33,6 +34,7 @@ mod tests;
 pub use edit::*;
 pub use grade::SaleGrade;
 pub use input::*;
+pub use list_whole::{BikriListWhole, BikriListWholeInput};
 pub use lot_name::{LotOrderKey, lot_label, sort_lots};
 pub use prepare::prepare_draft;
 pub use prepared::*;

@@ -28,23 +28,31 @@ interface ExcelExportButtonProps {
   language: Language;
   /** The report cannot run yet (a party is still to be chosen). */
   disabled?: boolean;
+  /**
+   * Only the icon is drawn, for a narrow window (plan 72, 1024 px wide): the words are the name of the
+   * button for a screen reader and for the pointer's hint, so nothing is lost but the room.
+   */
+  compact?: boolean;
 }
 
 export function ExcelExportButton({
   exporter,
   language,
   disabled = false,
+  compact = false,
 }: ExcelExportButtonProps) {
+  const { l10n } = useLocalization();
   return (
     <Button
       busy={exporter.busy}
       disabled={disabled}
+      {...(compact ? { iconOnly: true, accessibleName: l10n.getString('export-excel') } : {})}
       onClick={() => {
         exporter.start(language);
       }}
     >
       <FileSpreadsheet aria-hidden="true" className="size-icon-md" />
-      <Localized id="export-excel" />
+      {compact ? null : <Localized id="export-excel" />}
     </Button>
   );
 }

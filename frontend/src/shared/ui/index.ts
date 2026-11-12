@@ -26,6 +26,8 @@ export { SellDateDialog } from './SellDateDialog';
 export { SplitDialog } from './SplitDialog';
 export { DataCheckFailedState } from './DataCheckFailedState';
 export { DateInput } from './DateInput';
+export { GoToDate } from './GoToDate';
+export { WindowNav } from './WindowNav';
 export { EmptyState } from './EmptyState';
 export { EntryPartsCard, EntryPartsList } from './EntryPartsCard';
 export { EntrySources, sourceOf } from './EntrySources';

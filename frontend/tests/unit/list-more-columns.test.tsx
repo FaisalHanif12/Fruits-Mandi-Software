@@ -103,6 +103,8 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
   it('has no نگ column until the tick is on; then it shows sold and received', async () => {
     await open('normal');
     expect(hasColumn('qty')).toBe(false);
+    // The truck waits for the wide step, or for the tick.
+    expect(hasColumn('truck')).toBe(false);
     const tick = tickOf(language);
     expect(tick).not.toBeChecked();
     await userEvent.setup().click(tick);
@@ -110,9 +112,11 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
       expect(hasColumn('qty')).toBe(true);
     });
     expect(cell('41', 'qty')).toBe(message(language, 'bikri-list-qty', { sold: 45, received: 50 }));
-    // The day and time step aside at the normal step; the amounts and the status stay.
+    // The truck is offered with it (plan 72, PRD 12.7). To make room the day and time and the خام بکری
+    // step aside at the normal step; صافی بکری and the status stay.
+    expect(hasColumn('truck')).toBe(true);
     expect(hasColumn('when')).toBe(false);
-    expect(hasColumn('gross')).toBe(true);
+    expect(hasColumn('gross')).toBe(false);
     expect(hasColumn('net')).toBe(true);
     expect(hasColumn('status')).toBe(true);
   });
@@ -137,8 +141,8 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
     for (const field of ['items', 'buyer_total', 'gross', 'net', 'status']) {
       expect(hasColumn(field), field).toBe(true);
     }
-    // The truck column is gone (plan 71 H2), and no column is there for it to come back as.
-    expect(hasColumn('truck')).toBe(false);
+    // The truck column is back from the wide step (plan 72 P3); the day and time give up their place.
+    expect(hasColumn('truck')).toBe(true);
     expect(hasColumn('when')).toBe(false);
   });
 

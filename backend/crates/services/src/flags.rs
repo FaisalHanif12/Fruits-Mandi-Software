@@ -61,7 +61,8 @@ impl Marker {
                 )
                 .ok_or_else(|| {
                     ServiceError::Data(format!("an audit time is not a time: {}", last.at))
-                })?;
+                })?
+                .with_sign(last.sign);
                 stamps.insert(id, stamp);
             }
         }

@@ -26,4 +26,9 @@ pub(super) use income::{page_query as r28_page_query, run as run_r28};
 pub(super) use lent::run as run_r32;
 pub(super) use profit::run as run_r30;
 pub(super) use sheet::run as run_r35;
+pub use sheet::{
+    StatementBalance, StatementDay, StatementEntry, StatementItem, StatementKind,
+    StatementPrintData, StatementPrintDataInput, StatementSide, entry_lines_sql,
+    party_statement_print_data,
+};
 pub(super) use trips::run as run_r33;

@@ -29,7 +29,6 @@ import {
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
-import { withDateOnlyHeader } from '../helpers/bikri-old-draft';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -73,8 +72,7 @@ function withoutCommas(value: unknown): unknown {
 }
 
 /** The draft of the backend's file, in the same form. */
-const wanted = (request: typeof EVENT1_REQUEST): unknown =>
-  withoutCommas(withDateOnlyHeader(request.draft));
+const wanted = (request: typeof EVENT1_REQUEST): unknown => withoutCommas(request.draft);
 
 describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (language) => {
   beforeEach(() => {

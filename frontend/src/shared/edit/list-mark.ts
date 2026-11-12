@@ -5,6 +5,7 @@
 import type { EditStamp } from '../../bindings/EditStamp';
 import type { ListContext } from '../grid/ListGrid';
 import { isoToDisplayDate } from '../format';
+import { whenWhoMessage } from './sign';
 import { clockPartsOf } from './time';
 
 /** The words of a status, with "Edited" after them when the entry was edited. */
@@ -29,9 +30,10 @@ export function editedTip(edited: EditStamp | null, context: ListContext): strin
           part: clock.part,
           meridian: clock.meridian,
         });
-  return context.text('edit-mark-tip', {
+  const tip = whenWhoMessage('edit-mark-tip', edited, {
     date: isoToDisplayDate(edited.local_date),
     time,
     by: edited.by,
   });
+  return context.text(tip.id, tip.vars);
 }

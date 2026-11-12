@@ -336,6 +336,39 @@ const LOT_FILLER: &[&str] = &[
     "لاٹ", "پیٹی",
 ];
 
+/// Words that say "all of them": a total, or everything.
+const TOTAL_WORDS: &[&str] = &[
+    "kul", "sab", "sabhi", "total", "tamam", "کل", "سب", "تمام", "ٹوٹل",
+];
+
+/// Phrases that say "all of them" in two words: "mila kar", "مل کر".
+const TOTAL_PHRASES: &[&str] = &["mil kar", "mila kar", "milkar", "milakar", "مل کر", "ملا کر"];
+
+/// True when the question itself asks for all of them: a total word (kul, sab, total, mila kar) or a
+/// period (is mahine, aaj, pichle saal). Then the Owner is not asked which lot: the read is by seller
+/// and item over that period, as before (plan 71 L9, PRD FR-7.77). A quantity or a counter is no such
+/// word ("200 peti", "aam-2").
+///
+/// Example: "ehsan ke aam ki kul bikri" and "ehsan ke aam is mahine" are; "ehsan ke 200 peti aam kis
+/// kis ne liye" is not.
+pub fn wants_all(question: &str) -> bool {
+    if cues::period_kind(question).is_some() {
+        return true;
+    }
+    let normal = |f: &str| text::search_ur(&text::search_en(f));
+    let ws = words(question);
+    if ws
+        .iter()
+        .any(|w| TOTAL_WORDS.iter().any(|t| normal(t) == *w))
+    {
+        return true;
+    }
+    let joined = format!(" {} ", ws.join(" "));
+    TOTAL_PHRASES
+        .iter()
+        .any(|p| joined.contains(&format!(" {} ", normal(p))))
+}
+
 /// True when the question may be nothing but a lot's name (plan 71 L9, PRD FR-12.45, FR-7.77): the
 /// words of a seller and an item (two to five words that may be names), the counter or a quantity,
 /// and the small words of the sentence, and no cue word of another question (a figure, a period, a
@@ -363,7 +396,9 @@ pub fn lot_name_only(question: &str) -> bool {
         let cue = NOT_A_NAME
             .iter()
             .any(|n| text::search_ur(&text::search_en(n)) == w);
-        if cue || w.chars().count() < 3 {
+        // A Roman word of one or two letters is not a name; an Urdu name may have two (آم, mango).
+        let shortest = if w.is_ascii() { 3 } else { 2 };
+        if cue || w.chars().count() < shortest {
             return false;
         }
         candidates = candidates.saturating_add(1);
@@ -501,6 +536,29 @@ mod tests {
         assert_eq!(name_words("akram akram ka khata dikhao"), ["akram"]);
         assert!(name_words("kitna cash hai aaj").is_empty());
         assert!(name_words("akram 123").iter().all(|w| w == "akram"));
+    }
+
+    #[test]
+    fn a_total_word_or_a_period_asks_for_all_of_them() {
+        for yes in [
+            "ehsan ke aam ki kul bikri",
+            "ehsan ke sab aam",
+            "ehsan ke aam ka total",
+            "ehsan ke aam mila kar",
+            "ehsan ke aam milakar kitne",
+            "احسان کے آم کل کتنے",
+            "احسان کے آم مل کر",
+            "ehsan ke aam is mahine",
+        ] {
+            assert!(wants_all(yes), "{yes}");
+        }
+        for no in [
+            "ehsan ke 200 peti aam kis kis ne liye aur kis ne kitna naqd diya",
+            "ehsan ke aam ki bikri kitni hui",
+            "ehsan aam-2",
+        ] {
+            assert!(!wants_all(no), "{no}");
+        }
     }
 
     #[test]

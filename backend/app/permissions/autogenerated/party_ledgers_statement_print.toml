@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-party-ledgers-statement-print"
+description = "Enables the party_ledgers_statement_print command without any pre-configured scope."
+commands.allow = ["party_ledgers_statement_print"]
+
+[[permission]]
+identifier = "deny-party-ledgers-statement-print"
+description = "Denies the party_ledgers_statement_print command without any pre-configured scope."
+commands.deny = ["party_ledgers_statement_print"]

@@ -19,12 +19,14 @@ interface PartyDayProps {
   accountId: number;
   /** The date of the slip, `YYYY-MM-DD`. */
   date: string;
+  /** The slip is drawn inside a day opened under its row (plan 74): no page buttons while it is one page. */
+  inPlace?: boolean;
 }
 
 const NO_FOCUS = null;
 
 /** The slip as the report screen draws it, with its four states (loading, error, nothing, rows). */
-export function PartyDaySlip({ accountId, date }: PartyDayProps) {
+export function PartyDaySlip({ accountId, date, inPlace = false }: PartyDayProps) {
   const language = useLanguage();
   const filters = useMemo(
     () => partyDayFilters(accountId, date, language),
@@ -49,6 +51,7 @@ export function PartyDaySlip({ accountId, date }: PartyDayProps) {
       onFocusRow={() => undefined}
       // The screen has its side menu: the goods and the lines sit side by side only when there is room.
       slipBesideFrom="wide"
+      hideSinglePagePager={inPlace}
     />
   );
 }

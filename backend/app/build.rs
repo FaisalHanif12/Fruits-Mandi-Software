@@ -48,6 +48,9 @@ const APP_COMMANDS: &[&str] = &[
     "chukta_add",
     "party_ledgers_list",
     "party_ledgers_statement",
+    "party_ledgers_go_to_date",
+    "party_ledgers_statement_print_data",
+    "party_ledgers_statement_print",
     "search_global",
     "search_accounts_recent",
     "search_accounts_touch",
@@ -235,6 +238,7 @@ const APP_COMMANDS: &[&str] = &[
     "settings_day_get",
     "settings_day_set",
     "settings_set_number_grouping",
+    "settings_set_owner_sign",
     "audit_list",
     "audit_options",
     "health_run",
@@ -258,6 +262,10 @@ const APP_COMMANDS: &[&str] = &[
     // Run B, D5 round 14 (append-only block).
     "reports_print_report",
     "analytics_print_view",
+    // Plan 72 (append-only block).
+    "bikri_list_print_data",
+    "bikri_list_export_excel",
+    "bikri_list_print",
     "bikri_edit_review",
     "vouchers_edit_preview",
     "fruit_edit_preview",

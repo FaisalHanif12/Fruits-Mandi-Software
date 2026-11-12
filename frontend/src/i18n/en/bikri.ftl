@@ -75,8 +75,20 @@ bikri-lots-title = Lots
 # review: pending
 bikri-lots-label = Lots of this sale
 
+# The "+" button under a grid: its name, and the tip that shows when it is pointed at (PRD NFR-SCL-3).
 # review: pending
-bikri-lots-add = Add a lot
+bikri-lots-add-row = New lot
+
+# review: pending
+bikri-sales-add-row = New line
+
+# $max: the most lots in one sale.
+# review: pending
+bikri-lots-limit = One sale can hold at most <num>{ $max }</num> lots.
+
+# $max: the most lines in one sale.
+# review: pending
+bikri-sales-limit = One sale can hold at most <num>{ $max }</num> lines.
 
 # A lot named by its seller and item, for the labels of a lot (PRD FR-12.6): "Ehsan, Apple". Only the
 # two names are joined here; while only one of them is chosen, the label shows that name alone.
@@ -512,7 +524,7 @@ bikri-posting-other = Entry
 bikri-list-label = List of sales
 
 # review: pending
-bikri-list-help = Filter by day, { -beopari } and { -qism-maal }. Press Enter to open one.
+bikri-list-help = Today's sales and the days before. Go to a date, or filter by { -beopari } and { -qism-maal }. Press Enter to open one.
 
 # review: pending
 bikri-list-failed = The list could not be opened
@@ -544,6 +556,10 @@ bikri-list-col-number = Number
 
 # review: pending
 bikri-list-col-when = Date and time
+
+# The truck of an old sale; a new one has none (plan 72 P3).
+# review: pending
+bikri-list-col-truck = Truck
 
 # review: pending
 bikri-list-col-sellers = { -beopari }
@@ -1030,3 +1046,111 @@ bikri-lot-remove-question = { $count ->
 # The title of that question.
 # review: pending
 bikri-lot-remove-title = Remove the lot?
+
+## Past Sales: today's sales and the days before them (PRD 12.7, plan 72).
+
+# The heading of the first part: today's sales.
+# review: pending
+bikri-past-today-title = Today's { -bikri }
+
+# The heading of the part under the divider: the days before today.
+# review: pending
+bikri-past-earlier-title = Earlier days
+
+# The days the window shows, for example "05-11-2026 to 11-11-2026".
+# review: pending
+bikri-past-range = <num>{ $from }</num> to <num>{ $to }</num>
+
+# The two buttons that move the window by { $days } days.
+# review: pending
+bikri-past-back = Earlier <num>{ $days }</num> days
+
+# review: pending
+bikri-past-forward = Later <num>{ $days }</num> days
+
+# The date box above the filters: type a day and the window of 7 days that ends on it opens.
+# review: pending
+bikri-past-goto = Go to date
+
+# review: pending
+bikri-past-goto-hint = Type a day, for example 05-11-2026. The 7 days that end on it open. A short form works too: 5 is the 5th of this month.
+
+# The tick that shows every { -bikri } of today and of the window, with the filters set aside.
+# review: pending
+bikri-past-show-all = Show every { -bikri }
+
+# review: pending
+bikri-past-show-all-note = The filters are set aside while this is ticked.
+
+# The count of { -bikri } in the heading of a day (a figure follows it).
+# review: pending
+bikri-past-day-sales = { -bikri }s
+
+# A day of the window with no { -bikri }.
+# review: pending
+bikri-past-day-empty = No { -bikri }s
+
+# The whole window has no { -bikri } (plan 72 P12).
+# review: pending
+bikri-past-window-empty = No { -bikri }s in this week
+
+# review: pending
+bikri-past-window-empty-help = Press the buttons above to see other days, or type a date to go to it.
+
+# Today has no { -bikri } and no filter is set: one line, because the window of earlier days is below it.
+# review: pending
+bikri-past-today-empty = No { -bikri }s today. Press { $key } for a new { -bikri }.
+
+# Today has no { -bikri } for the filters that are set.
+# review: pending
+bikri-past-today-no-match = No { -bikri } of today matches the filters.
+
+# The list of the window could not be opened.
+# review: pending
+bikri-past-failed = The list of earlier days could not be opened
+
+# The name of the window list, read by screen readers.
+# review: pending
+bikri-past-label = Sales of the earlier days
+
+## Past Sales: the divider, the headings of the two parts and the buttons that move the window (plan 72, Umar 12-11-2026).
+
+# The heading of the table of the window: the earlier { $days } days.
+# review: pending
+bikri-past-window-title = { -bikri }s of the earlier <num>{ $days }</num> days
+
+# The words in the pill of the divider between today and the earlier days.
+# review: pending
+bikri-past-divider-title = Earlier <num>{ $days }</num> days
+
+# The name of the divider, read by screen readers.
+# review: pending
+bikri-past-divider-label = Earlier days: { $from } to { $to }
+
+# The name of the two buttons that move the window, read by screen readers.
+# review: pending
+bikri-past-nav-label = Move between weeks
+
+# Under the later button when the window already ends yesterday: why it is off.
+# review: pending
+bikri-past-nav-latest = Already the latest week
+
+# The button that jumps back to the window that ends yesterday.
+# review: pending
+bikri-past-nav-latest-button = Back to the latest week
+
+# The grey hint inside the date box "Go to date" (plan 72 P6): the order of the day, month and year.
+# review: pending
+bikri-past-goto-placeholder = DD-MM-YYYY
+
+# The line beside Edit and Cancel above a list of Past Sales when no row has focus (plan 72, FR-7.70).
+# review: pending
+bikri-past-row-none = Select a { -bikri } in the list to edit or cancel it
+
+# The same line when a row has focus: the number of the { -bikri } the two buttons work on.
+# review: pending
+bikri-past-row-for = { -bikri } <num>{ $number }</num>:
+
+# The button on the sale book that goes back to the list the { -bikri } was opened from, at the same window and row.
+# review: pending
+bikri-past-back-to-list = Back to Past Sales

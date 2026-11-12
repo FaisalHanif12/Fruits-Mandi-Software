@@ -934,6 +934,7 @@ fn header(day: NaiveDate, truck: &str) -> HeaderInput {
 }
 
 fn save_bikri(y: &mut Year, draft: BikriDraft) -> BikriSaved {
+    let truck = draft.header.truck_no.clone();
     let saved = bikri::save(
         &y.w.env.ctx,
         &y.w.owner,
@@ -943,6 +944,22 @@ fn save_bikri(y: &mut Year, draft: BikriDraft) -> BikriSaved {
         },
     )
     .unwrap_or_else(|e| panic!("a بکری of the year: {e:?}"));
+    // A new بکری stores no truck (plan 71 took it off the header). The year stands for a shop with old data
+    // (plan 72 P3: an old بکری keeps its truck), so the truck is put on the saved row by SQL, as the old
+    // rows hold it. The trucks of the oracle facts and of the question bank follow.
+    if let Some(truck) = truck {
+        y.w.env
+            .ctx
+            .db()
+            .write(|tx| -> Result<(), mandi_services::ServiceError> {
+                tx.execute(
+                    "UPDATE bikri_entries SET truck_no = ?1 WHERE id = ?2",
+                    mandi_services::db::rusqlite::params![truck, saved.bikri_id],
+                )?;
+                Ok(())
+            })
+            .unwrap_or_else(|e| panic!("the truck of an old بکری: {e:?}"));
+    }
     y.bikri_count += 1;
     saved
 }

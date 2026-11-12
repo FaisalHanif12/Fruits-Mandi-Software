@@ -46,6 +46,11 @@ interface ReportResultsProps {
    * column of the goods is never cut off.
    */
   slipBesideFrom?: 'normal' | 'wide' | undefined;
+  /**
+   * The page buttons under the rows are left out while the whole answer is one page: "1 to 1 of 1" means
+   * nothing inside a day opened under its row in a party's statement (plan 74).
+   */
+  hideSinglePagePager?: boolean | undefined;
 }
 
 /** The classes that lay a slip's goods and lines side by side from a step; below it they stack. */
@@ -65,6 +70,7 @@ export function ReportResults({
   focusRowId,
   onFocusRow,
   slipBesideFrom = 'normal',
+  hideSinglePagePager = false,
 }: ReportResultsProps) {
   const data = query.data ?? kept ?? undefined;
   const pages = data?.pages;
@@ -187,9 +193,11 @@ export function ReportResults({
             {sheet ? <ReportSummary lines={last.summary} card /> : null}
           </>
         )}
-        <div className="shrink-0">
-          <Pager pager={query.pager} />
-        </div>
+        {hideSinglePagePager && query.pager.pageCount <= 1 ? null : (
+          <div className="shrink-0">
+            <Pager pager={query.pager} />
+          </div>
+        )}
       </>
     );
   }

@@ -28,4 +28,9 @@ export type EditStamp = {
    * The reason typed with the last edit. Null when none was given (a today's edit).
    */
   reason: string | null;
+  /**
+   * The Owner's sign given when the day of the entry was reopened to fix it (PRD FR-21.4, FR-7.71,
+   * plan 73). Null for an edit of an open day.
+   */
+  sign: string | null;
 };

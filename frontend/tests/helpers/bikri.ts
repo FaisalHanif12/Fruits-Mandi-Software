@@ -17,7 +17,7 @@ import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { refusal } from './ui-error';
 import { fakeMasters, record } from './masters';
 import { ensurePaid } from './paid-fields';
-import { bikriListOf } from './paged';
+import { pastAnswer } from './past';
 
 export const RAHIM = account(IDS.rahim, 'seller', '0010', 'رحیم', 'Rahim', {
   balance: balance(4316, 'cr'),
@@ -127,9 +127,8 @@ export function fakeBikri(
         }),
     );
     vi.mocked(bikriApi.bikriGet).mockResolvedValue(savedEvent1());
-    vi.mocked(bikriApi.bikriList).mockImplementation((input) =>
-      Promise.resolve(bikriListOf([listRow()], input.offset, input.limit)),
-    );
+    // Today's section has Event 1; the window of earlier days has nothing (plan 72).
+    vi.mocked(bikriApi.bikriList).mockImplementation((input) => Promise.resolve(pastAnswer(input)));
     vi.mocked(bikriApi.bikriFind).mockResolvedValue([listRow()]);
     vi.mocked(bikriApi.bikriNavigate).mockResolvedValue(null);
   }

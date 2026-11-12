@@ -1005,6 +1005,36 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
+            "party_ledgers_go_to_date",
+            json!({ "input": { "account_id": 1, "date": "05-10-2026" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print_data",
+            json!({ "input": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "party_ledgers_statement_print",
+            json!({ "input": { "statement": { "account_id": 1, "from": "01-10-2026", "to": "09-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "bikri_list_print_data",
+            json!({ "input": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" } }),
+            true,
+        ),
+        (
+            "bikri_list_print",
+            json!({ "input": { "list": { "from": "01-10-2026", "to": "09-10-2026", "language": "en" }, "to": "pdf" } }),
+            true,
+        ),
+        (
+            "bikri_list_export_excel",
+            json!({ "input": { "job_id": "j1", "from": "01-10-2026", "to": "09-10-2026", "language": "en", "path": "/no-such-folder/mandi-robustness.xlsx" } }),
+            true,
+        ),
+        (
             "drafts_save",
             json!({ "input": { "screen": "bikri", "payload_json": "{}" } }),
             true,
@@ -1366,7 +1396,12 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
         ),
         (
             "day_fix_open",
-            json!({ "input": { "date": "10-10-2026", "reason": "x" } }),
+            json!({ "input": { "date": "10-10-2026", "reason": "x", "sign": "adnan" } }),
+            true,
+        ),
+        (
+            "settings_set_owner_sign",
+            json!({ "input": { "password": "x", "sign": "sana" } }),
             true,
         ),
         ("day_fix_close", json!({ "input": { "token": "x" } }), true),
@@ -2201,7 +2236,8 @@ fn wrong_current_passwords_through_the_command_count_towards_the_lockout() {
         .unwrap();
     let typed = "not-the-right-one-77";
     let mut codes = Vec::new();
-    for _ in 0..5 {
+    // The tenth wrong try starts the wait (PRD FR-8.2 and NFR-SEC-2 of v1.35 and v1.18; the fifth before).
+    for _ in 0..10 {
         let result = h.call(
             "auth_change_password",
             change(typed, "brand-new-pass-9", "brand-new-pass-9"),
@@ -2222,16 +2258,9 @@ fn wrong_current_passwords_through_the_command_count_towards_the_lockout() {
                 .to_owned(),
         );
     }
-    assert_eq!(
-        codes,
-        [
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_WRONG_PASSWORD",
-            "ERR_LOCKED_WAIT"
-        ]
-    );
+    let mut expected = vec!["ERR_WRONG_PASSWORD"; 9];
+    expected.push("ERR_LOCKED_WAIT");
+    assert_eq!(codes, expected);
     // During the wait the right current password is refused too, and so is the sign-in.
     assert_eq!(
         h.code(

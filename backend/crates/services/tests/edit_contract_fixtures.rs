@@ -181,6 +181,7 @@ fn stamp(count: i64, reason: Option<&str>) -> EditStamp {
         by: "Maher Adnan".to_owned(),
         count,
         reason: reason.map(str::to_owned),
+        sign: None,
     }
 }
 
@@ -265,7 +266,8 @@ fn reopen_and_fix_is_the_contract() {
     // `day_fix_open_e2e_45` and `day_fix_close_e2e_45`. Here are the answers it cannot make.
     let request = json!({ "token": "fix-20261012-0001" });
     let _ = typed::<DayFixCloseInput>(&request);
-    let _ = typed::<DayFixOpenInput>(&json!({ "date": "10-10-2026", "reason": "x" }));
+    let _ =
+        typed::<DayFixOpenInput>(&json!({ "date": "10-10-2026", "reason": "x", "sign": "adnan" }));
 
     // A day whose checks fail stays open, and so does every day after it.
     let stayed = DayFixClosed {
@@ -290,6 +292,25 @@ fn reopen_and_fix_is_the_contract() {
         &json!({ "token": "wrong" }),
         &refused,
         ErrorCode::ErrFixTokenInvalid,
+    );
+
+    // The Owner's sign (PRD FR-21.4, plan 73). A wrong sign opens nothing; an empty one is asked for.
+    // Both name the field `sign`, so the box shows the message under that field.
+    let wrong = json!({ "date": "10-10-2026", "reason": "ریٹ غلط تھا", "sign": "munshi" });
+    let _ = typed::<DayFixOpenInput>(&wrong);
+    refusal(
+        "day_fix_open_sign_wrong",
+        &wrong,
+        &ServiceError::reject_field(ErrorCode::ErrSignWrong, "sign"),
+        ErrorCode::ErrSignWrong,
+    );
+    let missing = json!({ "date": "10-10-2026", "reason": "ریٹ غلط تھا", "sign": "" });
+    let _ = typed::<DayFixOpenInput>(&missing);
+    refusal(
+        "day_fix_open_sign_required",
+        &missing,
+        &ServiceError::reject_field(ErrorCode::ErrSignRequired, "sign"),
+        ErrorCode::ErrSignRequired,
     );
 }
 

@@ -883,6 +883,15 @@ fn stock_by_item(o: &mut Oracle, y: &Year) {
         ) else {
             continue;
         };
+        // Since plan 71 the item cell of R10 is the lot's name, the item with its counter ("Banana-13").
+        // The facts are by item, so the counter is taken off (an item name that ends in `-` and digits
+        // would be cut too; none of the seed's items does).
+        let item = match item.rsplit_once('-') {
+            Some((head, tail)) if !tail.is_empty() && tail.chars().all(|c| c.is_ascii_digit()) => {
+                head.to_owned()
+            }
+            _ => item,
+        };
         *by_item.entry(slug(&item)).or_default() += value;
         *lots_by_item.entry(slug(&item)).or_default() += 1;
     }

@@ -173,6 +173,9 @@ report-filter-adda = { -adda }
 report-filter-collector = { -agrahi } والا
 
 # review: pending
+report-filter-lot = { -lot }
+
+# review: pending
 report-filter-detail = تفصیل کے ساتھ
 
 # review: pending

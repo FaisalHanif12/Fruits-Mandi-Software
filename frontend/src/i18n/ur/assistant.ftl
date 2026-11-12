@@ -12,7 +12,7 @@ assistant-button-count = آج <num>{ $used }</num> / <num>{ $limit }</num>
 # review: pending
 assistant-dock-label = سوال پوچھیں
 # review: pending
-assistant-dock-title = سوال پوچھیں
+assistant-dock-title = عدنان اسسٹنٹ
 # review: pending
 assistant-close = چیٹ کھڑکی بند کریں
 # review: pending
@@ -867,3 +867,7 @@ assistant-instant-trial-total = { $kind ->
 }
 # review: pending
 assistant-instant-city-dues = { $name } کے گاہکوں کے ذمے: { $figure }
+
+# The last button of a list of lots: every lot of that seller and item (key `l*`).
+# review: pending
+assistant-option-all-lots = سب { -lot }

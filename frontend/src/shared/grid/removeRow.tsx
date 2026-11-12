@@ -11,7 +11,9 @@
 //   when it was the last (R4). The store is the one source of truth, so the live summary refreshes and
 //   a language switch keeps the rest (Code Standards F39).
 // - The column is not a stop of Enter: `EntryGrid` never gives it to the Enter order (FR-7.14). The
-//   button is reached with Tab, and works with Enter and Space like any button (R5).
+//   button is reached with Tab, and works with Enter and Space like any button (R5). It is reached by the
+//   arrows too: the one that reads on from the last cell of the row lands on it, the other goes back, ↑ and
+//   ↓ move between the trash cells, and ↓ on the last row's goes to the "+" under the grid (gridKeys.ts).
 
 import { Localized, useLocalization } from '@fluent/react';
 import type { ColDef, GridApi } from 'ag-grid-community';
@@ -28,7 +30,7 @@ import type { EntryColumn, EntryRow } from './types';
 export const REMOVE_COLUMN_ID = '__remove';
 
 /** The width of the remove column: a click target of 32 px and its room (NFR-USE-23). */
-const REMOVE_COLUMN_WIDTH = 44;
+export const REMOVE_COLUMN_WIDTH = 44;
 
 /** What the screen says is under a row that is about to go: one Fluent sentence with its numbers. */
 export interface RemoveQuestion {

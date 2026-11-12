@@ -21,7 +21,7 @@
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
-import { FileText } from 'lucide-react';
+import { ChevronLeft, FileText } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
@@ -74,6 +74,9 @@ import { useEditDiff } from '../hooks/useEditDiff';
 import { useEditReason, type EditReason } from '../hooks/useEditReason';
 import { useEditorCard } from '../hooks/useEditorCard';
 import { useEditSession } from '../hooks/useEditSession';
+import { keepPastReturn, usePastReturn } from '../hooks/usePastReturn';
+import { firstEditablePosting } from '../edit-target';
+import { pastAddress } from '../past-window';
 import { useSaveFlow, type SaveMutation } from '../hooks/useSaveFlow';
 import { useSaveBikri, useSaveEdit } from '../hooks/useSaveBikri';
 import { UNDO_WINDOW_MS, requestUndo } from '../undo';
@@ -162,6 +165,8 @@ export interface EditMode {
   onSaved: (edited: BikriEdited) => void;
   /** The user leaves without saving (Esc, Back). */
   onBack: () => void;
+  /** The words of the Back button, when it goes to a list and not to the saved بکری (plan 72). */
+  backLabelId?: string;
   /** True once saved, so the leave guard does not ask. */
   done: boolean;
 }
@@ -613,7 +618,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
-                <Localized id="bikri-edit-back" />
+                <Localized id={edit.backLabelId ?? 'bikri-edit-back'} />
               </Button>
               <div data-bikri-head="">
                 <HeadFields
@@ -932,6 +937,9 @@ function NewBikri({ today, initialDraft }: { today: string } & BikriBookProps) {
 /** A saved بکری opened read-only, with the same toolbar as the new one, and edit and cancel. */
 function SavedBikri({ id }: { id: number }) {
   const navigate = useNavigate();
+  // Opened from پچھلی بکری: the way back is kept on every address and shown as a button (plan 72 P10).
+  const back = usePastReturn();
+  const keep = keepPastReturn(back);
   const detail = useBikriDetail(id);
   const [findOpen, setFindOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -944,24 +952,27 @@ function SavedBikri({ id }: { id: number }) {
     { enabled: !dialogOpen },
   );
   const openSaved = (next: number) => {
-    void navigate({ to: '/bikri/book', search: { id: next } });
+    void navigate({ to: '/bikri/book', search: { id: next, ...keep } });
   };
   const openNew = () => {
     void navigate({ to: '/bikri/book', search: {} });
   };
   const openEdit = (entryId: number) => {
-    void navigate({ to: '/bikri/book', search: { id, edit: entryId } });
+    void navigate({ to: '/bikri/book', search: { id, edit: entryId, ...keep } });
   };
+  const backToList = () => {
+    if (back !== undefined) void navigate({ to: '/bikri/today', search: pastAddress(back, id) });
+  };
+  // Esc goes back to the list the بکری was opened from, at the same window and row, like the button and like
+  // Esc in the edit (plan 72, decided 13-11-2026). Without `past` it leaves as before. A box over the screen
+  // (find, cancel) takes its own Esc first.
+  useEscape('leave', backToList, back !== undefined && !dialogOpen);
 
   const saved = detail.data?.status === 'saved';
   const needsReopen = detail.data?.needs_reopen === true;
   // The posting the Edit button opens: the first that can be edited, else (a closed day) the first
-  // that is still standing. The list of entries offers the others.
-  const firstEditable =
-    detail.data?.postings.find((posting) => posting.editable) ??
-    detail.data?.postings.find(
-      (posting) => !posting.reversed && posting.posting_type !== 'reversal',
-    );
+  // that is still standing. The list of entries offers the others. The rows of پچھلی بکری use the same.
+  const firstEditable = detail.data === undefined ? undefined : firstEditablePosting(detail.data);
 
   // Edit on a closed day: the box asks for the reason, the days reopen, and the entry opens for
   // editing. The days close again after the save or when the user leaves (plan 44, PRD FR-21.4).
@@ -975,7 +986,10 @@ function SavedBikri({ id }: { id: number }) {
     const posting = detail.data.postings.find((candidate) => candidate.entry_id === entryId);
     fixFlow.start({
       date: posting?.entry_date ?? detail.data.entry_date,
-      ownerHref: router.buildLocation({ to: '/bikri/book', search: { id, edit: entryId } }).href,
+      ownerHref: router.buildLocation({
+        to: '/bikri/book',
+        search: { id, edit: entryId, ...keep },
+      }).href,
       then: () => {
         openEdit(entryId);
       },
@@ -1007,6 +1021,12 @@ function SavedBikri({ id }: { id: number }) {
   return (
     <div className="flex flex-col gap-3">
       <BikriToolbar onOpen={openSaved} findOpen={findOpen} onFindOpenChange={setFindOpen}>
+        {back === undefined ? null : (
+          <Button onClick={backToList}>
+            <ChevronLeft aria-hidden="true" className="size-icon-md rtl:rotate-180" />
+            <Localized id="bikri-past-back-to-list" />
+          </Button>
+        )}
         <PrintAction
           target={detail.data === undefined ? null : { id, number: detail.data.number }}
           enabled={!dialogOpen}
@@ -1062,12 +1082,26 @@ function EditBikri({ bikriId, entryId }: { bikriId: number; entryId: number }) {
     const text = reason.get().trim();
     return text === '' ? null : text;
   });
-  // After a save the screen goes back to the saved بکری. The guard is told first, so it does not ask.
+  // After a save the screen goes back to the saved بکری, or, when the Owner came from پچھلی بکری, to
+  // that list at the same window and row (plan 72 P10). The guard is told first, so it does not ask.
+  const pastBack = usePastReturn();
+  const keep = keepPastReturn(pastBack);
   useEffect(() => {
-    if (done) void navigate({ to: '/bikri/book', search: { id: bikriId } });
-  }, [done, navigate, bikriId]);
+    if (!done) return;
+    if (pastBack === undefined) {
+      void navigate({ to: '/bikri/book', search: { id: bikriId } });
+    } else {
+      void navigate({ to: '/bikri/today', search: pastAddress(pastBack, bikriId) });
+    }
+  }, [done, navigate, bikriId, pastBack]);
+  // Back (and Esc) without a save: to the list the Owner came from, at the same window and row; else to
+  // the saved بکری (plan 72 P10).
   const back = () => {
-    void navigate({ to: '/bikri/book', search: { id: bikriId } });
+    if (pastBack === undefined) {
+      void navigate({ to: '/bikri/book', search: { id: bikriId } });
+    } else {
+      void navigate({ to: '/bikri/today', search: pastAddress(pastBack, bikriId) });
+    }
   };
 
   if (session.isError || day.isError) {
@@ -1108,7 +1142,7 @@ function EditBikri({ bikriId, entryId }: { bikriId: number; entryId: number }) {
     <BikriDraftProvider value={stores}>
       <Editor
         onOpenSaved={(next) => {
-          void navigate({ to: '/bikri/book', search: { id: next } });
+          void navigate({ to: '/bikri/book', search: { id: next, ...keep } });
         }}
         mode={{
           kind: 'edit',
@@ -1124,6 +1158,7 @@ function EditBikri({ bikriId, entryId }: { bikriId: number; entryId: number }) {
             setDone(true);
           },
           onBack: back,
+          ...(pastBack === undefined ? {} : { backLabelId: 'bikri-past-back-to-list' }),
         }}
       />
     </BikriDraftProvider>

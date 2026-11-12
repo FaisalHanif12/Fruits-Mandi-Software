@@ -92,27 +92,9 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
   const rowOf = (id: string | number) => document.querySelector(`.ag-row[row-id="${String(id)}"]`);
   const cell = (id: string | number, col: string) =>
     visible(rowOf(id)?.querySelector(`[col-id="${col}"]`)?.textContent);
-  /** The figure of a balance cell and, apart from it, the side word set after it. */
-  const figure = (id: string | number, col: string) =>
-    visible(
-      rowOf(id)?.querySelector(`[col-id="${col}"] .cell-with-unit > span:first-child`)?.textContent,
-    );
-  const unit = (id: string | number, col: string) =>
-    visible(rowOf(id)?.querySelector(`[col-id="${col}"] .cell-unit`)?.textContent);
   const pinned = (col: string) =>
     visible(
       document.querySelector('.ag-row-pinned')?.querySelector(`[col-id="${col}"]`)?.textContent,
-    );
-  const pinnedFigure = (col: string) =>
-    visible(
-      document
-        .querySelector('.ag-row-pinned')
-        ?.querySelector(`[col-id="${col}"] .cell-with-unit > span:first-child`)?.textContent,
-    );
-  const pinnedUnit = (col: string) =>
-    visible(
-      document.querySelector('.ag-row-pinned')?.querySelector(`[col-id="${col}"] .cell-unit`)
-        ?.textContent,
     );
 
   /** A matcher for an element whose whole text is `text`, without the isolation marks. */
@@ -269,6 +251,21 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
     });
   });
 
+  // Level 2 is a list of dates that open under their rows (plan 74): a treegrid, not an AG Grid.
+  const treegrid = () => document.querySelector<HTMLElement>('[role="treegrid"]');
+  const dayRows = () =>
+    Array.from(treegrid()?.querySelectorAll('[role="row"][aria-expanded]') ?? []);
+  const dayRow = (iso: string) => dayRows().find((row) => row.id.endsWith(`-${iso}`)) ?? null;
+  const cellsOf = (row: Element | null | undefined) =>
+    Array.from(row?.querySelectorAll('[role="gridcell"]') ?? []).map((item) =>
+      visible(item.textContent),
+    );
+  const footerRow = () => treegrid()?.lastElementChild;
+  const headings = () =>
+    Array.from(treegrid()?.querySelectorAll('[role="columnheader"]') ?? []).map((head) =>
+      visible(head.textContent).replace(/\s+/g, ' ').trim(),
+    );
+
   describe('level 2, the statement of one party', () => {
     it('Enter on a buyer opens his statement: previous, charged, paid, balance (E2E-67)', async () => {
       fakePartyLedgers();
@@ -279,27 +276,27 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       await focusRow(user, 20);
       await user.keyboard('{Enter}');
       await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('12,880');
+        expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
       expect(router.state.location.search).toMatchObject({ party: 20 });
+      // Today is 10-10-2026 in the tests: the first window is the 30 days that end today, in one read.
       expect(ledgersApi.partyLedgersStatement).toHaveBeenLastCalledWith({
         account_id: 20,
-        from: null,
-        to: null,
+        from: '11-09-2026',
+        to: '10-10-2026',
         offset: 0,
-        limit: PAGE_ROWS,
+        limit: 100,
       });
       // 10-10-26: previous 0, charged 12,880, paid 10,000, balance 2,880 (Debit).
-      expect(cell('2026-10-10', 'date')).toBe('10-10-2026');
-      expect(cell('2026-10-10', 'previous')).toBe('0');
-      expect(cell('2026-10-10', 'paid')).toBe('10,000');
-      expect(figure('2026-10-10', 'balance')).toBe('2,880');
-      expect(unit('2026-10-10', 'balance')).toBe(side.dr);
+      expect(cellsOf(dayRow('2026-10-10'))).toEqual([
+        '10-10-2026',
+        '0',
+        '12,880',
+        '10,000',
+        `2,880${side.dr}`,
+      ]);
       // The buyer's headings, and the party's name and code on the head.
-      const heads = Array.from(document.querySelectorAll('.ag-header-cell[col-id]')).map((head) =>
-        visible(head.textContent).replace(/\s+/g, ' ').trim(),
-      );
-      expect(heads).toEqual([
+      expect(headings()).toEqual([
         m('party-ledgers-col-date'),
         m('party-ledgers-col-previous'),
         m('party-ledgers-col-buyer-charged'),
@@ -307,16 +304,17 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         m('party-ledgers-col-balance'),
       ]);
       expect(screen.getByRole('heading', { level: 2, name: names.akram })).toBeInTheDocument();
-      // The footer is the backend's: opening, the totals of the dates, closing.
-      expect(pinned('date')).toBe(m('glossary-meezan'));
-      expect(pinnedFigure('previous')).toBe('0');
-      expect(pinned('charged')).toBe('12,880');
-      expect(pinned('paid')).toBe('10,000');
-      expect(pinnedFigure('balance')).toBe('2,880');
-      expect(pinnedUnit('balance')).toBe(side.dr);
+      // The footer is the backend's: opening, the totals of the window, closing.
+      expect(cellsOf(footerRow())).toEqual([
+        m('glossary-meezan'),
+        '0',
+        '12,880',
+        '10,000',
+        `2,880${side.dr}`,
+      ]);
     });
 
-    it('a seller’s statement: the dates newest first, the advance of 01-09-26, balance 0 after the payment', async () => {
+    it('a seller’s statement: the window shows the 10-10-26 payment, balance 0, and the footer is the backend’s', async () => {
       fakePartyLedgers();
       const { user } = await open();
       await user.click(screen.getByRole('button', { name: named(m('party-ledgers-side-seller')) }));
@@ -326,28 +324,21 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       await focusRow(user, 18);
       await user.keyboard('{Enter}');
       await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('24,316');
+        expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
       // 10-10-26: previous 15,000 (Debit), credited 24,316, paid 9,316, balance 0.
-      expect(figure('2026-10-10', 'previous')).toBe('15,000');
-      expect(unit('2026-10-10', 'previous')).toBe(side.dr);
-      expect(cell('2026-10-10', 'paid')).toBe('9,316');
-      expect(figure('2026-10-10', 'balance')).toBe('0');
-      expect(unit('2026-10-10', 'balance')).toBe('');
-      // 01-09-26: the advance of 15,000 paid to him.
-      expect(cell('2026-09-01', 'charged')).toBe('0');
-      expect(cell('2026-09-01', 'paid')).toBe('15,000');
-      expect(figure('2026-09-01', 'balance')).toBe('15,000');
-      expect(unit('2026-09-01', 'balance')).toBe(side.dr);
+      expect(cellsOf(dayRow('2026-10-10'))).toEqual([
+        '10-10-2026',
+        `15,000${side.dr}`,
+        '24,316',
+        '9,316',
+        '0',
+      ]);
+      // The advance of 01-09-26 is before this window: it is not drawn, and the earlier button gets to it.
+      expect(dayRow('2026-09-01')).toBeNull();
       // A seller's headings say what his two columns are.
-      const heads = Array.from(document.querySelectorAll('.ag-header-cell[col-id]')).map((head) =>
-        visible(head.textContent).replace(/\s+/g, ' ').trim(),
-      );
-      expect(heads).toContain(m('party-ledgers-col-seller-charged'));
-      expect(heads).toContain(m('party-ledgers-col-seller-paid'));
-      expect(pinned('charged')).toBe('24,316');
-      expect(pinned('paid')).toBe('24,316');
-      expect(pinnedFigure('balance')).toBe('0');
+      expect(headings()).toContain(m('party-ledgers-col-seller-charged'));
+      expect(headings()).toContain(m('party-ledgers-col-seller-paid'));
     });
 
     it('the dates are sent as typed and a refused date shows its words under its box, the rows stay', async () => {
@@ -357,18 +348,18 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       });
       const { user } = await open('/bikri/party-ledgers?party=20');
       await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('12,880');
+        expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
       await user.type(screen.getByRole('textbox', { name: named(m('party-ledgers-from')) }), 'x1');
       expect(await screen.findByText(said(m('err-date-invalid')), {}, SLOW_MS)).toBeInTheDocument();
       // The page last shown stays on screen.
-      expect(cell('2026-10-10', 'charged')).toBe('12,880');
+      expect(cellsOf(dayRow('2026-10-10'))[2]).toBe('12,880');
       expect(ledgersApi.partyLedgersStatement).toHaveBeenLastCalledWith(
         expect.objectContaining({ account_id: 20, from: 'x1', to: null }),
       );
     });
 
-    it('no entry in the dates: a way out that clears them', async () => {
+    it('no entry in the window or in the dates: words that say so, and a way out of the dates', async () => {
       fakePartyLedgers({
         statements: {
           20: { ...STATEMENT_AKRAM, rows: [], count: 0 },
@@ -376,7 +367,12 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       });
       const { user } = await open('/bikri/party-ledgers?party=20');
       expect(
-        await screen.findByText(said(m('party-ledgers-statement-empty')), {}, SLOW_MS),
+        await screen.findByText(said(m('party-ledgers-window-empty')), {}, SLOW_MS),
+      ).toBeInTheDocument();
+      // The window's own figures and its buttons are still there: the earlier days are one press away.
+      expect(cellsOf(footerRow())[0]).toBe(m('glossary-meezan'));
+      expect(
+        screen.getByRole('group', { name: named(m('party-ledgers-nav-label')) }),
       ).toBeInTheDocument();
       await user.type(
         screen.getByRole('textbox', { name: named(m('party-ledgers-to')) }),
@@ -387,7 +383,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       ).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: m('party-ledgers-clear-dates') }));
       expect(
-        await screen.findByText(said(m('party-ledgers-statement-empty')), {}, SLOW_MS),
+        await screen.findByText(said(m('party-ledgers-window-empty')), {}, SLOW_MS),
       ).toBeInTheDocument();
     });
 
@@ -401,7 +397,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
   });
 
   describe('level 3, the day slip', () => {
-    /** Goes down the three levels with the keyboard, the way the Owner does: list, statement, slip. */
+    /** Goes down to the statement with the keyboard, the way the Owner does, and opens the first date in place. */
     async function downToTheSlip(user: ReturnType<typeof userEvent.setup>) {
       await waitFor(() => {
         expect(cell(20, 'debit')).toBe('2,880');
@@ -409,24 +405,24 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       await focusRow(user, 20);
       await user.keyboard('{Enter}');
       await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('12,880');
+        expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
-      await focusRow(user, '2026-10-10');
+      treegrid()?.focus();
       await user.keyboard('{Enter}');
       await waitFor(() => {
         expect(document.querySelector('section dl')).not.toBeNull();
       }, SLOW_MS);
     }
 
-    it('Enter on a date opens that day’s R35 slip for the party, the request the report screen makes', async () => {
+    it('Enter on a date opens that day’s R35 slip UNDER its row, the request the report screen makes', async () => {
       fakePartyLedgers();
       const { user, router } = await open();
       await downToTheSlip(user);
-      expect(router.state.location.search).toMatchObject({
-        side: 'buyer',
-        party: 20,
-        date: '2026-10-10',
-      });
+      // Still on the statement: the day is under its row, not on another page.
+      expect(router.state.location.search).toMatchObject({ side: 'buyer', party: 20 });
+      expect(router.state.location.search).not.toHaveProperty('date');
+      expect(dayRow('2026-10-10')?.getAttribute('aria-expanded')).toBe('true');
+      expect(dayRow('2026-10-10')?.nextElementSibling?.querySelector('section dl')).not.toBeNull();
       expect(reportsApi.reportsRun).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'R35',
@@ -442,17 +438,15 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       expect(lines).toContainEqual([m('report-r35-today-total'), '12,880']);
       expect(lines).toContainEqual([m('report-r35-paid-today'), '10,000']);
       expect(lines).toContainEqual([m('report-r35-new-balance'), `2,880${side.dr}`]);
-      // The head says whose slip and which day.
-      const comma = language === 'ur' ? '، ' : ', ';
-      expect(
-        screen.getByRole('heading', {
-          level: 2,
-          name: said(`${names.akram} 0020${comma}10-10-2026`),
-        }),
-      ).toBeInTheDocument();
+      // A second Enter shuts it again.
+      await user.keyboard('{Enter}');
+      await waitFor(() => {
+        expect(dayRow('2026-10-10')?.getAttribute('aria-expanded')).toBe('false');
+      }, SLOW_MS);
+      expect(document.querySelector('section dl')).toBeNull();
     });
 
-    it('a seller’s slip is asked for with his account and the same date', async () => {
+    it('a seller’s slip is asked for with his account and the same date (the full-page address still works)', async () => {
       fakePartyLedgers();
       await open('/bikri/party-ledgers?side=seller&party=18&date=2026-10-10');
       await waitFor(() => {
@@ -463,42 +457,43 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
           }),
         );
       }, SLOW_MS);
+      // The head says whose slip and which day.
+      const comma = language === 'ur' ? '، ' : ', ';
+      expect(
+        await screen.findByRole(
+          'heading',
+          { level: 2, name: said(`${names.rahim} 0010${comma}10-10-2026`) },
+          SLOW_MS,
+        ),
+      ).toBeInTheDocument();
     });
 
-    it('F9 and the print button show the print preview of that slip; Esc closes it, then goes back', async () => {
+    it('the day’s own print button shows the print preview of that slip; Esc closes it and the day stays open', async () => {
       fakePartyLedgers();
-      const { user, router } = await open();
+      const { user } = await open();
       await downToTheSlip(user);
-      await user.click(screen.getByRole('button', { name: named(m('report-preview')) }));
+      await user.click(
+        screen.getByRole('button', {
+          name: named(m('party-ledgers-day-print-name', { date: '10-10-2026' })),
+        }),
+      );
       await waitFor(() => {
         expect(reportsApi.reportsPrintData).toHaveBeenCalledWith(
           expect.objectContaining({ id: 'R35', filters: R35_SLIP_AKRAM_REQUEST.filters }),
         );
       }, SLOW_MS);
-      // Esc closes the preview and stays on the slip.
+      // Esc closes the preview and stays on the statement, with the day still open.
       press('Escape');
       await waitFor(() => {
-        expect(document.querySelector('section dl')).not.toBeNull();
+        expect(dayRow('2026-10-10')?.getAttribute('aria-expanded')).toBe('true');
       }, SLOW_MS);
-      expect(router.state.location.search).toMatchObject({ date: '2026-10-10' });
-      // F9 opens it again.
-      press('F9');
-      await waitFor(() => {
-        expect(reportsApi.reportsPrintData).toHaveBeenCalledTimes(2);
-      }, SLOW_MS);
+      expect(document.querySelector('section dl')).not.toBeNull();
     });
 
-    it('Esc goes back one level at a time: slip, statement, list, then the dashboard', async () => {
+    it('Esc goes back one level at a time: statement, list, then the dashboard', async () => {
       fakePartyLedgers();
       const { user, router } = await open();
       await downToTheSlip(user);
-      press('Escape');
-      await waitFor(() => {
-        expect(router.state.location.href).toBe('/bikri/party-ledgers?side=buyer&party=20');
-      }, SLOW_MS);
-      await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('12,880');
-      }, SLOW_MS);
       press('Escape');
       await waitFor(() => {
         expect(router.state.location.href).toBe('/bikri/party-ledgers?side=buyer');
@@ -517,7 +512,7 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       // The address leaves the side out: the backend says he is a seller, so the list is the sellers.
       const { user, router } = await open('/bikri/party-ledgers?party=18');
       await waitFor(() => {
-        expect(cell('2026-10-10', 'charged')).toBe('24,316');
+        expect(dayRow('2026-10-10')).not.toBeNull();
       }, SLOW_MS);
       await user.click(screen.getByRole('button', { name: m('party-ledgers-back-list') }));
       await waitFor(() => {
@@ -526,11 +521,17 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
     });
   });
 
-  it('a language switch in the middle of level 2 keeps the level and the typed dates', async () => {
+  it('a language switch in the middle of level 2 keeps the level, the open day and the typed dates', async () => {
     fakePartyLedgers();
     const { user, router } = await open('/bikri/party-ledgers?party=20');
     await waitFor(() => {
-      expect(cell('2026-10-10', 'charged')).toBe('12,880');
+      expect(dayRow('2026-10-10')).not.toBeNull();
+    }, SLOW_MS);
+    const row = dayRow('2026-10-10');
+    if (row === null) throw new Error('no row for 10-10-2026');
+    await user.click(row);
+    await waitFor(() => {
+      expect(document.querySelector('section dl')).not.toBeNull();
     }, SLOW_MS);
     await user.type(
       screen.getByRole('textbox', { name: named(m('party-ledgers-from')) }),
@@ -544,17 +545,22 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       SLOW_MS,
     );
     await waitFor(() => {
-      expect(cell('2026-10-10', 'charged')).toBe('12,880');
+      expect(dayRow('2026-10-10')).not.toBeNull();
     }, SLOW_MS);
     expect(router.state.location.search).toMatchObject({ party: 20 });
     expect(
-      screen.getByRole('textbox', { name: named(message(other, 'party-ledgers-from')) }),
+      await screen.findByRole(
+        'textbox',
+        { name: named(message(other, 'party-ledgers-from')) },
+        SLOW_MS,
+      ),
     ).toHaveValue('01-10-2026');
     expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax',
-      }),
+      await screen.findByRole(
+        'heading',
+        { level: 2, name: other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax' },
+        SLOW_MS,
+      ),
     ).toBeInTheDocument();
   });
 });

@@ -34,6 +34,11 @@ export type EditVersion = {
    */
   reason: string | null;
   /**
+   * The Owner's sign given when the day was reopened to fix the entry (PRD FR-21.4, FR-7.71).
+   * Null for an edit of an open day.
+   */
+  sign: string | null;
+  /**
    * The fields that changed, at most 200 (the audit flatten code).
    */
   changes: Array<AuditChange>;

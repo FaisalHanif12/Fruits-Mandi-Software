@@ -237,6 +237,7 @@ pub(crate) fn edit_in(
     if let Some(reason) = &reason {
         event = event.reason(reason);
     }
+    event = event.sign(crate::day::fix_sign(tx, &entry.entry_date)?.as_deref());
     ctx.db.auditor().write(tx, &event.into_entry())?;
     let version = repo::get_entry(tx, entry.id)?
         .map(|e| e.version)

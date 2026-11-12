@@ -251,10 +251,12 @@ describe.each(LANGUAGES)('the opening date of a closed day (%s)', (language) => 
       within(dialog).getByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
       'opening balance{Enter}',
     );
+    await user.keyboard('adnan{Enter}');
     await waitFor(() => {
       expect(editApi.dayFixOpen).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(editApi.dayFixOpen).mock.calls[0]?.[1]).toBe('opening balance');
+    expect(vi.mocked(editApi.dayFixOpen).mock.calls[0]?.[2]).toBe('adnan');
     // The opening date is typed as DD-MM-YYYY, which is what `day_fix_open` reads (Umar, 13-11-2026).
     expect(vi.mocked(editApi.dayFixOpen).mock.calls[0]?.[0]).toMatch(/^\d{2}-\d{2}-\d{4}$/);
   });

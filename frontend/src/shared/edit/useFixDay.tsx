@@ -59,13 +59,18 @@ export function useFixDay() {
    * as the backend sent it, `YYYY-MM-DD`, but `day_fix_open` reads the date as typed, `DD-MM-YYYY`
    * (DayFixOpenInput), and refuses the other with ERR_DATE_INVALID: so the day is written as typed here,
    * once, for every screen (Umar, 13-11-2026). A day already as typed (an account form's opening date)
-   * goes as it is.
+   * goes as it is. The Owner's sign goes as typed; only his sign opens the day (plan 73).
    */
   const open = useCallback(
-    async (date: string, reason: string, ownerHref: string): Promise<DayFixOpened> => {
+    async (
+      date: string,
+      reason: string,
+      sign: string,
+      ownerHref: string,
+    ): Promise<DayFixOpened> => {
       setBusy(true);
       try {
-        const opened = await dayFixOpen(isoToDisplayDate(date), reason);
+        const opened = await dayFixOpen(isoToDisplayDate(date), reason, sign);
         begin({ token: opened.token, days: opened.days, reason, ownerHref });
         return opened;
       } finally {

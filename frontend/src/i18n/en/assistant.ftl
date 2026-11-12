@@ -12,7 +12,7 @@ assistant-button-count = Today <num>{ $used }</num> / <num>{ $limit }</num>
 # review: pending
 assistant-dock-label = Ask the app
 # review: pending
-assistant-dock-title = Ask the app
+assistant-dock-title = Adnan Assistant
 # review: pending
 assistant-close = Close the chat window
 # review: pending
@@ -904,3 +904,7 @@ assistant-instant-trial-total = { $kind ->
 }
 # review: pending
 assistant-instant-city-dues = Buyers' dues of { $name }: { $figure }
+
+# The last button of a list of lots: every lot of that seller and item (key `l*`).
+# review: pending
+assistant-option-all-lots = All { -lot }s

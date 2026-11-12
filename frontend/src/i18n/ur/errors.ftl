@@ -213,6 +213,12 @@ err-system-account = یہ نظام کا کھاتہ ہے۔ حساب کتاب می
 # PRD FR-21.2.
 # review: pending
 err-reason-required = وجہ لکھنا ضروری ہے۔
+# PRD FR-21.4 (plan 73). Nothing was opened.
+# review: pending
+err-sign-required = { -dastakhat } لکھنا ضروری ہے۔
+# PRD FR-21.4 (plan 73). Only the Owner's sign opens a closed day. Nothing was opened.
+# review: pending
+err-sign-wrong = { -dastakhat } درست نہیں۔
 # NFR-REL-8. Nothing was closed.
 # review: pending
 err-trial-not-balanced = { -trial-balance } میں فرق ہے، اس لیے دن بند نہیں ہو سکتا۔ پہلے { -trial-balance } دیکھ کر فرق ٹھیک کریں۔

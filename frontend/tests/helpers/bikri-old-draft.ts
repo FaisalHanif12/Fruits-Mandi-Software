@@ -36,14 +36,3 @@ export function withOldHeader(snapshotText: string, fields: OldHeaderFields): st
   };
   return JSON.stringify(snapshot);
 }
-
-/**
- * A draft of the backend's test files with the header the screen sends: the date alone (plan 71 H1).
- * The backend's own request files may still carry the retired header fields, which its input reads and
- * ignores; the screen never sends them, so the contract tests compare against the date alone.
- */
-export function withDateOnlyHeader<T extends { header: { entry_date: string } }>(
-  draft: T,
-): Omit<T, 'header'> & { header: { entry_date: string } } {
-  return { ...draft, header: { entry_date: draft.header.entry_date } };
-}

@@ -169,6 +169,9 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-chukta-add",
             "allow-party-ledgers-list",
             "allow-party-ledgers-statement",
+            "allow-party-ledgers-go-to-date",
+            "allow-party-ledgers-statement-print-data",
+            "allow-party-ledgers-statement-print",
             "allow-search-global",
             "allow-search-accounts-recent",
             "allow-search-accounts-touch",
@@ -300,6 +303,8 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-bikri-save",
             "allow-bikri-get",
             "allow-bikri-list",
+            "allow-bikri-list-print-data",
+            "allow-bikri-list-print",
             "allow-bikri-find",
             "allow-bikri-navigate",
             "allow-bikri-stock-list",
@@ -356,6 +361,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-settings-day-get",
             "allow-settings-day-set",
             "allow-settings-set-number-grouping",
+            "allow-settings-set-owner-sign",
             "allow-audit-list",
             "allow-audit-options",
             "allow-health-run",
@@ -365,6 +371,7 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-updates-install",
             "allow-reports-export-excel",
             "allow-analytics-export-excel",
+            "allow-bikri-list-export-excel",
             "allow-month-list",
             "allow-month-close-preview",
             "allow-month-close-save",
@@ -450,6 +457,8 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-reports-print-data",
             "allow-reports-buyer-bills-print-data",
             "allow-analytics-print-data",
+            "allow-bikri-list-print-data",
+            "allow-party-ledgers-statement-print-data",
             "allow-reports-print-header",
             "core:event:default"
         ])
@@ -473,7 +482,9 @@ fn print_capability_is_small_and_only_for_print_windows() {
             "allow-reports-voucher-print-data",
             "allow-reports-print-data",
             "allow-reports-buyer-bills-print-data",
-            "allow-analytics-print-data"
+            "allow-analytics-print-data",
+            "allow-bikri-list-print-data",
+            "allow-party-ledgers-statement-print-data"
         ]
     );
     let others: Vec<&str> = cap["permissions"]

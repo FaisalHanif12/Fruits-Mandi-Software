@@ -33,7 +33,6 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
-import { withDateOnlyHeader } from '../helpers/bikri-old-draft';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -148,7 +147,14 @@ describe.each(LANGUAGES)('the list from the backend’s answers (%s)', (language
     );
 
   it('today’s list is newest first, with the stored gross and net of both events', async () => {
-    vi.mocked(bikriApi.bikriList).mockResolvedValue(LIST_DAY);
+    // The backend's file of today's section; the window of earlier days is empty (plan 72).
+    vi.mocked(bikriApi.bikriList).mockImplementation((input) =>
+      Promise.resolve(
+        input.date === null
+          ? { ...LIST_DAY, rows: [], total_count: 0, days: [] }
+          : { ...LIST_DAY, days: [] },
+      ),
+    );
     await renderApp('/bikri/today');
     await waitFor(() => {
       expect(cell('1', 'number')).toBe('1');
@@ -192,7 +198,7 @@ describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (
     const [sent, confirm] = vi.mocked(bikriApi.bikriSave).mock.calls[0] ?? [];
     if (sent === undefined) throw new Error('the save was not asked for');
     expect(confirm).toBe(false);
-    const wanted = withoutCommas(withDateOnlyHeader(SAVE_EVENT1_REQUEST.draft)) as BikriDraft;
+    const wanted = withoutCommas(SAVE_EVENT1_REQUEST.draft) as BikriDraft;
     const got = normalized(sent) as BikriDraft;
     expect(got.header).toEqual(wanted.header);
     const { sales: gotSales, ...gotLot } = got.lots[0] ?? { sales: [] };

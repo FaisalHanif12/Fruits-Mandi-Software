@@ -16,7 +16,15 @@ import { Localized, useLocalization } from '@fluent/react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import type { CardChukta } from '../../../shared/accounts';
-import { EntryGrid, type EntryRow, type GridInterceptors } from '../../../shared/grid';
+import { groupDigits, useGrouping } from '../../../shared/format';
+import {
+  AddRowButton,
+  EntryGrid,
+  addRowAndFocus,
+  useAddRowLink,
+  type EntryRow,
+  type GridInterceptors,
+} from '../../../shared/grid';
 import { useLatest, useLayoutStep } from '../../../shared/hooks';
 import { SegmentedControl } from '../../../shared/ui';
 import { useOverrideSettings } from '../../settings';
@@ -25,6 +33,7 @@ import { useBikriDraft } from '../draft-store';
 import { useKeepCardInView } from '../hooks/useKeepCardInView';
 import { lotLabelVars, useLotWho } from '../lot-name';
 import type { GridView } from '../grid-views';
+import { MAX_SALE_LINES, saleRowCount } from '../limits';
 import { LOT, SALE, type BikriPreview } from '../types';
 import { LineDetails } from './LineDetails';
 import { MissingNotes, QtyNotes } from './QtyNotes';
@@ -69,6 +78,8 @@ export function SalesSection({
   const { l10n } = useLocalization();
   const stores = useBikriDraft();
   const step = useLayoutStep();
+  // The arrows reach the trash cell of each line, and from the last one the "+" under the grid.
+  const addLink = useAddRowLink();
   const lotWho = useLotWho();
   // The lot is named by its seller and item, not by its number alone (PRD FR-12.6).
   const lotRow = stores.lots((state) => state.rows).find((row) => row.rowId === lotKey);
@@ -84,6 +95,41 @@ export function SalesSection({
   // The lines of the selected lot, or the lines of every lot (shown from the stores of the lots).
   const store = whole ? stores.all : stores.salesFor(lotKey);
   const rows = store((state) => state.rows);
+
+  // A new line goes through the grid's one new-row path, the same as ↓ on the last line. In the view of
+  // one lot it is a line of that lot; in the whole view it is a line of the lot of the line that had the
+  // cursor last, or of the first lot (the lines of all lots are one list there).
+  const addLine = () => {
+    if (!whole) {
+      addRowAndFocus(store, SALE.buyer);
+      return;
+    }
+    const focused = stores.all.getState().focus?.rowId;
+    const lots = stores.lots.getState().rows;
+    const owner =
+      focused === undefined
+        ? undefined
+        : lots.find((lot) =>
+            stores
+              .salesFor(lot.rowId)
+              .getState()
+              .rows.some((row) => row.rowId === focused),
+          );
+    const target = (owner ?? lots[0])?.rowId;
+    if (target === undefined) return;
+    stores.salesFor(target).getState().addRow();
+    stores.focusSaleLine(target, 'last', SALE.buyer);
+  };
+  // At the limit of lines in one بکری (NFR-SCL-3) no line is offered. The count is read again whenever
+  // anything typed changes (the version), and the screen re-draws only when it passes the limit.
+  const grouping = useGrouping();
+  const linesFull = stores.version(() => saleRowCount(stores) >= MAX_SALE_LINES);
+  const limit = linesFull
+    ? {
+        messageId: 'bikri-sales-limit',
+        vars: { max: groupDigits(String(MAX_SALE_LINES), grouping) },
+      }
+    : undefined;
 
   /** Changes the view and keeps the cursor on the same cell of the same line. */
   const switchView = (next: boolean) => {
@@ -237,26 +283,30 @@ export function SalesSection({
           />
         )}
       </div>
-      <div className={rows.length > SHORT_GRID_ROWS ? 'h-tree-view' : undefined}>
-        <EntryGrid
-          key={whole ? 'whole' : lotKey}
-          columns={columns}
-          store={store}
-          labelId="bikri-sales-label"
-          calc={view.calc}
-          workings={view.workings}
-          cellManual={view.manual}
-          cellErrors={view.errors}
-          cellWarnings={view.warnings}
-          {...(cellChanged === undefined ? {} : { cellChanged })}
-          {...(cellMarks === undefined ? {} : { cellMarks })}
-          {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
-          interceptors={interceptors}
-          onCardAccount={onCardAccount}
-          copyAbove
-          fit
-          heightMode={rows.length > SHORT_GRID_ROWS ? 'fill' : 'auto'}
-        />
+      <div className="flex flex-col gap-1">
+        <div className={rows.length > SHORT_GRID_ROWS ? 'h-tree-view' : undefined}>
+          <EntryGrid
+            key={whole ? 'whole' : lotKey}
+            columns={columns}
+            store={store}
+            labelId="bikri-sales-label"
+            calc={view.calc}
+            workings={view.workings}
+            cellManual={view.manual}
+            cellErrors={view.errors}
+            cellWarnings={view.warnings}
+            {...(cellChanged === undefined ? {} : { cellChanged })}
+            {...(cellMarks === undefined ? {} : { cellMarks })}
+            {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
+            interceptors={interceptors}
+            onCardAccount={onCardAccount}
+            addLink={addLink}
+            copyAbove
+            fit
+            heightMode={rows.length > SHORT_GRID_ROWS ? 'fill' : 'auto'}
+          />
+        </div>
+        <AddRowButton labelId="bikri-sales-add-row" onAdd={addLine} limit={limit} link={addLink} />
       </div>
       <QtyNotes notes={view.qtyNotes} whole={whole} />
       <MissingNotes notes={view.missingNotes} whole={whole} />

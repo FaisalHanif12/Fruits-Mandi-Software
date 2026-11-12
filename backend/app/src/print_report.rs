@@ -26,7 +26,9 @@ use std::path::PathBuf;
 
 use mandi_reports::analytics::{AnalyticsPrintInput, print_data as analytics_print_data};
 use mandi_reports::reports::{
-    ReportId, ReportPrintInput, buyer_bills_print_data, print_data, print_data_for_page, today_iso,
+    BikriListPrintInput, ReportId, ReportPrintInput, StatementPrintDataInput,
+    bikri_list_print_data, buyer_bills_print_data, party_statement_print_data, print_data,
+    print_data_for_page, today_iso,
 };
 use mandi_services::auth::{self, Actor};
 use mandi_services::core::auth::Language;
@@ -34,7 +36,7 @@ use mandi_services::core::error::ErrorCode;
 use mandi_services::core::paging::SortInput;
 use mandi_services::core::printing::{Paper, PrintOutcome, PrintTo, parse_copies};
 use mandi_services::db::audit::AuditEntry;
-use mandi_services::{Context, ServiceError, printing};
+use mandi_services::{Context, ServiceError, bikri, party_ledgers, printing};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use ts_rs::TS;
@@ -71,6 +73,34 @@ pub struct PrintReportInput {
 pub struct PrintAnalyticsViewInput {
     /// The view, its filters, the print language and the paper (A4 when left out).
     pub view: AnalyticsPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `bikri_list_print`: پچھلی بکری (today's section and a window of days) to the printer or
+/// to a PDF (PRD FR-12.46, plan 72 P8).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintBikriListInput {
+    /// The window, the filters or the switch "show every بکری", the print language and the paper
+    /// (A4 when left out): the input of `bikri_list_print_data`.
+    pub list: BikriListPrintInput,
+    /// The printer of the Printing settings, or a PDF.
+    pub to: PrintTo,
+    /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
+    #[serde(default)]
+    pub copies: Option<String>,
+}
+
+/// Input of `party_ledgers_statement_print`: one party's statement for a period to the printer or to a
+/// PDF (PRD FR-12.47, plan 74 T1).
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PrintStatementInput {
+    /// The party, the period as typed, the print language and the paper (A4 when left out): the input
+    /// of `party_ledgers_statement_print_data`.
+    pub statement: StatementPrintDataInput,
     /// The printer of the Printing settings, or a PDF.
     pub to: PrintTo,
     /// Copies, 1 to 99, typed. Missing means the copies of the Printing settings.
@@ -157,6 +187,35 @@ fn analytics_query(input: &PrintAnalyticsViewInput, paper: Paper) -> Result<Stri
     ))
 }
 
+/// The route query of a print of پچھلی بکری:
+/// `bikrilist=1&language=ur&paper=a4&list=<json of the window and the filters>`. The print window
+/// asks `bikri_list_print_data` for the data with that JSON, the language and the paper.
+fn bikri_list_query(input: &PrintBikriListInput, paper: Paper) -> Result<String, UiError> {
+    let list = serde_json::to_string(&input.list.list).map_err(UiError::internal)?;
+    Ok(format!(
+        "bikrilist=1&language={}&paper={}&list={}",
+        input.list.language.as_str(),
+        paper_text(paper),
+        encode_query(&list)
+    ))
+}
+
+/// The route query of a print of one party's statement:
+/// `statement=<account id>&from=<DD-MM-YYYY>&to=<DD-MM-YYYY>&language=ur&paper=a4`. The dates go as
+/// typed: the print window asks `party_ledgers_statement_print_data` with them and the backend
+/// checks them again.
+fn statement_query(input: &PrintStatementInput, paper: Paper) -> String {
+    let statement = &input.statement;
+    format!(
+        "statement={}&from={}&to={}&language={}&paper={}",
+        statement.account_id,
+        encode_query(&statement.from),
+        encode_query(&statement.to),
+        statement.language.as_str(),
+        paper_text(paper)
+    )
+}
+
 /// `YYYY-MM-DD` as `YYYYMMDD`.
 fn compact_date(iso: &str) -> String {
     iso.replace('-', "")
@@ -181,6 +240,28 @@ pub fn analytics_pdf_name(view_code: &str, date_iso: &str, language: Language) -
     format!(
         "analytics-{}-{}-{}.pdf",
         view_code.to_lowercase(),
+        compact_date(date_iso),
+        language.as_str()
+    )
+}
+
+/// The PDF name of پچھلی بکری: `bikri-list-<YYYYMMDD>-<lang>.pdf`.
+#[must_use]
+pub fn bikri_list_pdf_name(date_iso: &str, language: Language) -> String {
+    format!(
+        "bikri-list-{}-{}.pdf",
+        compact_date(date_iso),
+        language.as_str()
+    )
+}
+
+/// The PDF name of one party's statement: `party-statement-<code>-<YYYYMMDD>-<lang>.pdf`. The code is
+/// the digits of the account code, so the name is safe for a file.
+#[must_use]
+pub fn statement_pdf_name(code: &str, date_iso: &str, language: Language) -> String {
+    format!(
+        "party-statement-{}-{}-{}.pdf",
+        code,
         compact_date(date_iso),
         language.as_str()
     )
@@ -315,6 +396,84 @@ fn prepare_analytics(
     })
 }
 
+/// Checks a print request of پچھلی بکری and makes its one job. The whole list is read and laid out
+/// once here, so a bad window stops before any paper is used.
+fn prepare_bikri_list(
+    state: &AppState,
+    input: &PrintBikriListInput,
+    pdf_dir: tauri::Result<PathBuf>,
+) -> Result<Prepared, UiError> {
+    let ctx = state.context()?;
+    let actor = auth::require(&ctx)?;
+    let (printer, copies) = printer_and_copies(&ctx, &actor, input.copies.as_deref())?;
+    let whole = bikri::list_whole(&ctx, &input.list.list)?;
+    bikri_list_print_data(ctx.db(), &whole, &input.list)
+        .map(drop)
+        .map_err(engine_error)?;
+    let paper = input.list.paper.unwrap_or(Paper::A4);
+    let today = today_iso(ctx.db()).map_err(engine_error)?;
+    let name = bikri_list_pdf_name(&today, input.list.language);
+    let job = Job {
+        doc: None,
+        paper,
+        query: bikri_list_query(input, paper)?,
+        target: job_target(input.to, printer, copies, pdf_dir, name)?,
+    };
+    let audit = json!({
+        "list": input.list.list,
+        "language": input.list.language.as_str(),
+        "to": input.to,
+        "copies": copies,
+    });
+    Ok(Prepared {
+        actor,
+        job,
+        entity: "bikri_list",
+        audit,
+    })
+}
+
+/// Checks a print request of one party's statement and makes its one job. The whole statement is read
+/// and laid out once here, so a bad period or a party with no ledger stops before any paper is used.
+fn prepare_statement(
+    state: &AppState,
+    input: &PrintStatementInput,
+    pdf_dir: tauri::Result<PathBuf>,
+) -> Result<Prepared, UiError> {
+    let ctx = state.context()?;
+    let actor = auth::require(&ctx)?;
+    let (printer, copies) = printer_and_copies(&ctx, &actor, input.copies.as_deref())?;
+    let statement = &input.statement;
+    let whole =
+        party_ledgers::statement_whole(&ctx, statement.account_id, &statement.from, &statement.to)?;
+    party_statement_print_data(ctx.db(), &whole, statement)
+        .map(drop)
+        .map_err(engine_error)?;
+    let paper = statement.paper.unwrap_or(Paper::A4);
+    let today = today_iso(ctx.db()).map_err(engine_error)?;
+    let name = statement_pdf_name(&whole.statement.head.code, &today, statement.language);
+    let job = Job {
+        doc: None,
+        paper,
+        query: statement_query(input, paper),
+        target: job_target(input.to, printer, copies, pdf_dir, name)?,
+    };
+    let audit = json!({
+        "account_id": statement.account_id,
+        "period_from": whole.from,
+        "period_to": whole.to,
+        "language": statement.language.as_str(),
+        "to": input.to,
+        "copies": copies,
+    });
+    Ok(Prepared {
+        actor,
+        job,
+        entity: "party_statement",
+        audit,
+    })
+}
+
 /// Prints or saves the one job. On a system without WebView2 printing it never gets here: the
 /// caller has already answered `ERR_PRINT_WINDOWS_ONLY`.
 #[cfg(windows)]
@@ -427,9 +586,101 @@ pub async fn run_analytics<R: tauri::Runtime>(
     run_prepared(&app, state, "analytics_print_view", prepared).await
 }
 
+/// Runs the print of پچھلی بکری. See the module docs.
+///
+/// # Errors
+/// As `bikri_list_print_data` on the window and the filters, the copies codes on `copies`,
+/// `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_bikri_list<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintBikriListInput,
+) -> Result<PrintOutcome, UiError> {
+    let state = AppState::of(&app)?;
+    let data_dir = crate::profile::app_data_dir(&app);
+    let prepared = {
+        let state = state.clone();
+        run_blocking("bikri_list_print", move || {
+            prepare_bikri_list(&state, &input, data_dir.map(|dir| dir.join(PDF_FOLDER)))
+        })
+        .await?
+    };
+    run_prepared(&app, state, "bikri_list_print", prepared).await
+}
+
+/// Runs the print of one party's statement. See the module docs.
+///
+/// # Errors
+/// As `party_ledgers_statement_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND` and `ERR_PRINT_FAILED`.
+pub async fn run_statement<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintStatementInput,
+) -> Result<PrintOutcome, UiError> {
+    let state = AppState::of(&app)?;
+    let data_dir = crate::profile::app_data_dir(&app);
+    let prepared = {
+        let state = state.clone();
+        run_blocking("party_ledgers_statement_print", move || {
+            prepare_statement(&state, &input, data_dir.map(|dir| dir.join(PDF_FOLDER)))
+        })
+        .await?
+    };
+    run_prepared(&app, state, "party_ledgers_statement_print", prepared).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_route_query_of_the_past_sales_print_carries_the_window_and_the_pdf_has_a_name() {
+        let input: PrintBikriListInput = serde_json::from_value(json!({
+            "list": { "from": "05-11-2026", "to": "11-11-2026", "all": true,
+                      "language": "ur", "paper": "a5" },
+            "to": "pdf"
+        }))
+        .unwrap();
+        let query = bikri_list_query(&input, Paper::A5).unwrap();
+        assert!(
+            query.starts_with("bikrilist=1&language=ur&paper=a5&list=%7B"),
+            "{query}"
+        );
+        assert!(!query.contains(' ') && !query.contains('{'), "{query}");
+        // The window is in the JSON, and today's section is on unless it was turned off.
+        assert!(query.contains("%2205-11-2026%22") && query.contains("%22with_today%22%3Atrue"));
+        assert_eq!(
+            bikri_list_pdf_name("2026-11-12", Language::En),
+            "bikri-list-20261112-en.pdf"
+        );
+    }
+
+    #[test]
+    fn the_route_query_of_a_statement_print_names_the_party_the_period_and_the_pdf_has_a_name() {
+        let input: PrintStatementInput = serde_json::from_value(json!({
+            "statement": { "account_id": 20, "from": "01-10-2026", "to": "05-12-2026",
+                           "language": "ur", "paper": "a5" },
+            "to": "pdf"
+        }))
+        .unwrap();
+        assert_eq!(
+            statement_query(&input, Paper::A5),
+            "statement=20&from=01-10-2026&to=05-12-2026&language=ur&paper=a5"
+        );
+        // A date typed as a shortcut still survives the URL.
+        let typed: PrintStatementInput = serde_json::from_value(json!({
+            "statement": { "account_id": 7, "from": "1 0", "to": "x&y", "language": "en" },
+            "to": "printer"
+        }))
+        .unwrap();
+        assert_eq!(
+            statement_query(&typed, Paper::A4),
+            "statement=7&from=1%200&to=x%26y&language=en&paper=a4"
+        );
+        assert_eq!(
+            statement_pdf_name("0020", "2026-12-05", Language::Ur),
+            "party-statement-0020-20261205-ur.pdf"
+        );
+    }
 
     #[test]
     fn a_query_value_is_percent_encoded_and_a_json_filter_survives_the_url() {

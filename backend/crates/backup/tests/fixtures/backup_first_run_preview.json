@@ -1,5 +1,5 @@
 {
-  "app_schema_version": 21,
+  "app_schema_version": 22,
   "checks": [
     {
       "name": "opens",
@@ -32,7 +32,7 @@
   },
   "created_at": "2026-10-10T09:00:00.000Z",
   "needs_upgrade": false,
-  "schema_version": 21,
+  "schema_version": 22,
   "size_bytes": 0,
   "totals": {
     "accounts": 17,

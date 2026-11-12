@@ -89,6 +89,31 @@ screen writes no code for it.
 - The column is not one of the grid's own columns (`REMOVE_COLUMN_ID`), so Enter never stops on it and
   the store never keeps it as the focused cell. Tab reaches its cell; Enter, Space and `Ctrl+Delete` on
   that cell press the button (`gridKeys.ts`).
+- The arrows reach it too (Umar, plan 71 follow-up), in the reading direction of the grid: the arrow that
+  reads on from the last cell of a row (← in Urdu, → in English) lands on the trash cell of that row, when
+  the row has a button (`canRemoveRow`, not a grid with `fixedRows`); the other arrow goes back to the last
+  cell; ↑ and ↓ go to the trash cell of the row above or below. ↓ on the trash cell of the LAST row goes to
+  the "+" button under the grid (`addLink`, below); without a "+" it adds a row as ↓ does on any cell. ↓ from
+  any other cell of the last row still adds a row (PRD FR-7.14), and Enter never stops on the trash cell.
+
+A screen that has a "+" under its grid makes one link with `useAddRowLink()` and gives it to both:
+`<EntryGrid addLink={link} />` and `<AddRowButton link={link} />` (`addLink.ts`). The grid puts the focus on
+the button (a dimmed button, at the limit of rows, takes none), and the button's ↑ comes back to the last
+row's trash cell.
+
+## The "+" under a grid (plan 71 follow-up, Umar; PRD FR-7.3, NFR-USE-8, NFR-SCL-3)
+
+`AddRowButton` is a round button on a row of its own under an entry grid, at the end side (left in Urdu,
+right in English, with no physical side written). A screen gives it a Fluent message that is its name and
+its tip (`labelId`, for example "New lot"), the `onAdd` that adds the row, and, at a limit, a `limit`
+(`{ messageId, vars }`): the button is then dimmed and the words stand beside it, linked to it.
+
+- `onAdd` must add through `addRowAndFocus(store, field)`, the one new-row path: `↓` on the last row,
+  `Enter` on the last cell and the button all call it, so the rows, the cursor and the keyboard rules are
+  the same. The sale book's lots go to the new lot's seller, its lines to the new line's buyer; in the
+  whole-sale view the line goes to the lot of the line that had the cursor, else to the first lot.
+- The limits are the screen's: 50 lots and 1,000 lines in a بکری (`features/bikri/limits.ts`, the same
+  numbers as the backend). The button takes no room from the grid's rows and adds no width.
 
 ## The select cell (plan 58, PRD FR-12.42)
 

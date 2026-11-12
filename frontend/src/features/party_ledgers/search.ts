@@ -5,6 +5,7 @@
 // is left out, so a bad address shows level 1.
 
 import type { LedgerSide } from '../../bindings/LedgerSide';
+import { isIsoDay } from '../../shared/format';
 
 export interface LedgerSearch {
   side?: LedgerSide;
@@ -12,6 +13,11 @@ export interface LedgerSearch {
   party?: number;
   /** The date of the slip that is open, `YYYY-MM-DD`; only with a party. */
   date?: string;
+  /**
+   * The last day of the 30 days the statement shows, `YYYY-MM-DD`; only with a party and no `date`
+   * (PRD FR-12.47). Nothing: the window ends today.
+   */
+  end?: string;
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -32,9 +38,12 @@ export function parseLedgerSearch(raw: Record<string, unknown>): LedgerSearch {
     party !== undefined && typeof raw['date'] === 'string' && ISO_DATE.test(raw['date'])
       ? raw['date']
       : undefined;
+  const end =
+    party !== undefined && isIsoDay(raw['end']) && date === undefined ? raw['end'] : undefined;
   return {
     ...(side === undefined ? {} : { side }),
     ...(party === undefined ? {} : { party }),
     ...(date === undefined ? {} : { date }),
+    ...(end === undefined ? {} : { end }),
   };
 }

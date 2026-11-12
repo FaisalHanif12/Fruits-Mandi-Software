@@ -1,5 +1,5 @@
 // Facet CAP, part 3 (plan 55 Section 11): one question for a cell of the capability matrix on the
-// registers and lists that the oracle did not dump before the run of 05-11-2026: R2 to R8, R11, R13
+// registers and lists that the oracle did not dump before the run of 05-11-2026: R2 to R7, R11, R13
 // to R19, R21, R22, R27, R28, R34 and R35, with the figure from the oracle (the app's own report).
 // The same rulings as part 2: one question per cell, languages rotating, about a quarter misspelled;
 // three wordings for the cells a mandi owner is likely to ask (the figure of a main report).
@@ -184,7 +184,7 @@ const REGISTERS = [
     { tools: 'report:R5', n: 1 },
   ),
 
-  // ---- seller details (R6), item-wise sales (R7), truck stands (R8) -----------------------------
+  // ---- seller details (R6), item-wise sales (R7) (R8 was retired in plan 71) -----------------------------
   cell(
     'R6',
     'figure',
@@ -236,28 +236,6 @@ const REGISTERS = [
       e('item-wise sales total and commission this year'),
     ],
     { tools: 'report:R7' },
-  ),
-  cell(
-    'R8',
-    'figure',
-    'period',
-    'view=R8;period=this year',
-    'trucks=@r8.year.total.trucks;gross=@r8.year.total.gross',
-    [
-      r('is saal kitne truck aaye aur kitni bikri hui'),
-      u('اس سال کتنے ٹرک آئے اور کتنی بکری ہوئی'),
-      e('how many trucks came this year and how much was sold'),
-    ],
-    { tools: 'report:R8' },
-  ),
-  cell(
-    'R8',
-    'day',
-    'day',
-    'view=R8;period=yesterday',
-    'trucks=@r8.yesterday.total.trucks;gross=@r8.yesterday.total.gross',
-    [rm('kal kitne trak aaye'), u('کل کتنے ٹرک آئے'), e('how many trucks came yesterday')],
-    { tools: 'report:R8', n: 1 },
   ),
 
   // ---- accounts: day book (R11), ledgers (R13, R14), vouchers (R15), index (R16) ----------------

@@ -12,6 +12,9 @@ import { named } from './bikri-screen';
 import { DAY_FIX_OPEN_E2E_45 } from './edit-real';
 import { message } from './render';
 
+/** The Owner's sign as it is at the start (PRD FR-21.4, v1.36). */
+export const OWNER_SIGN = 'adnan';
+
 /** A date as the backend reads a typed one: DD-MM-YYYY. */
 export const TYPED_DATE = /^\d{2}-\d{2}-\d{4}$/;
 
@@ -34,6 +37,8 @@ export async function confirmFixDay(
     within(dialog).getByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
     'wrong amount{Enter}',
   );
+  // Enter in the reason goes on to the sign, the second field of the box (plan 73): only the Owner's opens the day.
+  await user.keyboard(`${OWNER_SIGN}{Enter}`);
   await waitFor(() => {
     expect(editApi.dayFixOpen).toHaveBeenCalledTimes(1);
   });
@@ -42,5 +47,6 @@ export async function confirmFixDay(
   expect(date).toMatch(TYPED_DATE);
   if (expected !== undefined) expect(date).toBe(expected);
   expect(call?.[1]).toBe('wrong amount');
+  expect(call?.[2]).toBe(OWNER_SIGN);
   return date;
 }

@@ -20,6 +20,20 @@ import { isFromStep, type LayoutStep } from '../../shared/hooks';
 import { isArrivalLot, isGardenLot, isOwnLot } from './draft';
 import { LOT, SALE } from './types';
 
+/**
+ * The least widths of the lots grid. Its eight cells and the remove column (44 px) must fit the 631 px a
+ * 1024 px window leaves with a Windows scrollbar (675 less 44), so each cell asks for what its heading or its
+ * figures need and no more. A heading that is one word cannot wrap, so a least width below the word cuts it
+ * ("Munshian a"): the munshiana keeps `longHeading`. Found by the core sweep of plan 72, which measured the
+ * lots grid 14 to 16 px over its room at 1366 and 1024 px (bikri-column-widths.test.ts keeps the sums).
+ */
+const LOT_MIN = {
+  /** A seller's name, cut at the end when it is long; the grid gives it more when there is room. */
+  seller: 92,
+  /** "Received" in English, one word. */
+  qty: 80,
+} as const;
+
 export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
   return [
     {
@@ -29,7 +43,7 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       // `lot_seller` is `seller` plus that account, and the backend decides what is offered.
       picker: { kind: 'account', scope: 'lot_seller' },
       headerId: 'bikri-col-seller',
-      minWidth: FIT_MIN.name,
+      minWidth: LOT_MIN.seller,
     },
     // The item and packing of an own goods lot come from its purchase and follow it (PRD FR-12.26),
     // so on that lot they are shown and not typed.
@@ -38,6 +52,8 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       type: 'picker',
       picker: { kind: 'master', scope: 'item' },
       headerId: 'glossary-qism-maal',
+      // A short name (Banana, کیلا): the least width keeps the lots grid inside its room with the remove column.
+      minWidth: FIT_MIN.figure,
       editable: (row) => !isOwnLot(row) && !isArrivalLot(row),
     },
     {
@@ -45,9 +61,10 @@ export function lotColumns(step: LayoutStep): readonly EntryColumn[] {
       type: 'picker',
       picker: { kind: 'master', scope: 'packing' },
       headerId: 'glossary-packing',
+      minWidth: FIT_MIN.figure,
       editable: (row) => !isOwnLot(row) && !isArrivalLot(row),
     },
-    { field: LOT.qty, type: 'qty', headerId: 'bikri-col-qty-received', minWidth: FIT_MIN.heading },
+    { field: LOT.qty, type: 'qty', headerId: 'bikri-col-qty-received', minWidth: LOT_MIN.qty },
     { field: LOT.freight, type: 'money', headerId: 'glossary-kiraya' },
     { field: LOT.labour, type: 'money', headerId: 'glossary-mazdoori', showsCalc: true },
     {
@@ -98,6 +115,8 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.rate,
       type: 'rate',
       headerId: 'bikri-col-rate',
+      // A rate is a few digits, and the hint "Last 900" is short: the least width as a plain figure.
+      minWidth: FIT_MIN.figure,
       // The last rate is grey, italic words ("Last 900"), laid out as text and not as a figure, so it
       // is never taken for a typed rate. It is never typed into the cell (PRD FR-7.53, D8 Bug 1).
       hintFromCalc: true,
@@ -107,6 +126,8 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       field: SALE.grade,
       type: 'select',
       headerId: 'glossary-darja',
+      // One short word (اول, First) and the arrow.
+      minWidth: FIT_MIN.figure,
       // Optional and never an Enter stop: a line stays buyer, qty, rate (PRD FR-12.42, NFR-USE-6). It is
       // reached with the arrow keys or a click, and Space or Alt+↓ opens its list.
       enterStop: false,
@@ -147,8 +168,8 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
       // its working, and is closed (PRD FR-12.44). The screen closes it with `editable`.
       fixedFromCalc: SALE.paidFixed,
       explain: true,
-      // The heading is two words ("موقع پر جمع"); it wraps to a second line.
-      minWidth: FIT_MIN.longHeading,
+      // The heading is two or three words ("موقع پر جمع", "Paid on the Spot"); it wraps to a second line.
+      minWidth: FIT_MIN.heading,
     },
   ];
 }

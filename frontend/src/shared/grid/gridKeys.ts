@@ -7,7 +7,11 @@
 //   ↑ ↓         move up or down; finish the typing first; ↓ on the last row adds a row
 //               (not in a grid with fixed rows)
 //   ← →         move to the neighbouring cell as the user sees it; while typing, move the text
-//               cursor, and at the edge of the text finish and move (PRD FR-7.14)
+//               cursor, and at the edge of the text finish and move (PRD FR-7.14). From the last cell of a
+//               row the arrow that reads on goes to the remove (trash) cell of the row, when the row has
+//               one; from the trash cell the other arrow goes back. Both follow the reading direction.
+//   ↑ ↓ on the trash cell  to the trash cell of the row above or below; ↓ on the last row's trash cell
+//               goes to the "+" button under the grid (addLink.ts), and ↑ on the button comes back
 //   F2          never starts editing (F2 is "New", PRD 7.3)
 //   Esc         while typing, left to the Esc order (escape.ts); the grid does not cancel itself
 //   Ctrl+Delete remove the current row (the same way as the remove button, removeRow.tsx)
@@ -28,12 +32,13 @@ import {
   arrowSide,
   elementDirection,
   matchesShortcut,
+  readingStep,
   shouldLeaveField,
   type Side,
 } from '../keyboard';
 import { isNumberLike } from './columnTypes';
 import { isEditable, nextEnterStop } from './enterOrder';
-import type { EntryStore } from './entryStore';
+import { addRowAndFocus, type EntryStore } from './entryStore';
 import { REMOVE_COLUMN_ID } from './removeRow';
 import type { CellRef, EntryColumn, EntryRow, GridInterceptors } from './types';
 
@@ -62,6 +67,11 @@ export interface GridKeyEnv {
   interceptors?: GridInterceptors;
   /** Space or a click on a choice cell: move to the next word. */
   cycleChoice?: (cell: CellRef) => void;
+  /**
+   * Puts the focus on the "+" button under this grid (addLink.ts) and says whether it did. Not given:
+   * the grid has no such button, and `↓` on the last row's trash cell adds a row like `↓` on any cell.
+   */
+  focusAdd?: () => boolean;
 }
 
 type KeyParams = SuppressKeyboardEventParams<EntryRow>;
@@ -90,6 +100,14 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     params.api.ensureIndexVisible(rowIndex);
   };
 
+  /** Has this row a trash cell with a button in it? The same rule as the button and Ctrl+Delete. */
+  const hasTrash = (row: EntryRow | undefined): boolean =>
+    row !== undefined &&
+    env.fixedRows !== true &&
+    (env.canRemoveRow === undefined || env.canRemoveRow(row));
+  /** The last cell of a row in reading order: where the arrow back from the trash cell lands. */
+  const lastField = columns[columns.length - 1]?.field;
+
   const moveVertically = (params: KeyParams, rowIndex: number, field: string, step: 1 | -1) => {
     const target = rowIndex + step;
     if (target < 0) {
@@ -99,8 +117,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     }
     if (target >= store.getState().rows.length) {
       if (env.fixedRows === true) return;
-      store.getState().addRow();
-      store.getState().setPendingFocus({ rowIndex: 'last', field });
+      addRowAndFocus(store, field);
       return;
     }
     focusCell(params, target, field);
@@ -135,8 +152,40 @@ export function createGridKeyHandler(env: GridKeyEnv) {
     const field = params.column.getColId();
     // The cell of the remove button (plan 43): Enter or Space on it is a press of the button, and Tab
     // reaches it like any cell. It is not one of the grid's columns, so the Enter order never stops there.
+    // The arrows reach it too: the one that reads on from the last cell of the row lands here, and from
+    // here the other one goes back; ↑ and ↓ go to the trash cell of the row above or below, and ↓ on the
+    // last row's goes to the "+" button under the grid (Umar, plan 71 follow-up).
     if (field === REMOVE_COLUMN_ID && rowIndex !== null) {
-      const removable = store.getState().rows[rowIndex];
+      const rows = store.getState().rows;
+      const removable = rows[rowIndex];
+      if (NO_MODIFIER(event) && removable !== undefined) {
+        const step = readingStep(event.key, direction);
+        if (step !== null) {
+          event.preventDefault();
+          if (step === 'toStart' && lastField !== undefined) focusCell(params, rowIndex, lastField);
+          return true;
+        }
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          const target = rowIndex + (event.key === 'ArrowDown' ? 1 : -1);
+          if (target < 0) {
+            if (lastField !== undefined) {
+              env.interceptors?.onAboveFirst?.({ rowId: removable.rowId, field: lastField });
+            }
+          } else if (target >= rows.length) {
+            // Under the last row: the "+" button. Without one, a row is added as ↓ does on any cell.
+            if (env.focusAdd !== undefined) env.focusAdd();
+            else if (env.fixedRows !== true && lastField !== undefined) {
+              addRowAndFocus(store, lastField);
+            }
+          } else if (hasTrash(rows[target])) {
+            focusCell(params, target, REMOVE_COLUMN_ID);
+          } else if (lastField !== undefined) {
+            focusCell(params, target, lastField);
+          }
+          return true;
+        }
+      }
       const pressed = (event.key === 'Enter' || event.key === ' ') && NO_MODIFIER(event);
       if (removable === undefined || !(pressed || matchesShortcut(event, SHORTCUTS.removeRow))) {
         return false;
@@ -222,8 +271,7 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       if (step.kind === 'cell') {
         focusCell(params, step.rowIndex, step.field);
       } else if (env.fixedRows !== true) {
-        store.getState().addRow();
-        store.getState().setPendingFocus({ rowIndex: 'last', field: step.field });
+        addRowAndFocus(store, step.field);
       }
       return true;
     }
@@ -308,7 +356,14 @@ export function createGridKeyHandler(env: GridKeyEnv) {
       }
       const neighbour = neighbourField(columns, field, side, direction);
       event.preventDefault();
-      if (neighbour === undefined) return true;
+      if (neighbour === undefined) {
+        // Past the last cell, in the way the text reads on: the trash cell of the row, if it has one.
+        if (readingStep(event.key, direction) === 'toEnd' && hasTrash(row)) {
+          params.api.stopEditing();
+          focusCell(params, rowIndex, REMOVE_COLUMN_ID);
+        }
+        return true;
+      }
       params.api.stopEditing();
       focusCell(params, rowIndex, neighbour);
       return true;

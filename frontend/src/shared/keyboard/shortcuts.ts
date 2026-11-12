@@ -100,6 +100,10 @@ export const SHORTCUTS = {
   back: { code: 'Escape', label: 'Esc', scope: 'anywhere' },
   /** In a picker: open the full list without typing (FR-7.16). */
   openList: { code: 'ArrowDown', alt: true, label: 'Alt+↓', scope: 'picker' },
+  /** In the window of earlier days of پچھلی بکری: go back 7 days (PRD 12.7, plan 72 P5). */
+  pastEarlier: { code: 'PageUp', label: 'Page Up', scope: 'grid' },
+  /** In the window of earlier days of پچھلی بکری: come 7 days nearer (PRD 12.7, plan 72 P5). */
+  pastLater: { code: 'PageDown', label: 'Page Down', scope: 'grid' },
   /** In a date field: next day (FR-7.19). */
   dateNextDay: {
     code: 'Equal',

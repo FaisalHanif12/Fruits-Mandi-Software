@@ -448,11 +448,15 @@ pub enum ErrorCode {
     /// to the model by the tool `estimate` as a "too short" result; never shown to the Owner as an
     /// error. Value `months`.
     ErrTooLittleHistory,
+    /// The reopen box was sent with no sign (PRD FR-21.4, plan 73). Field `sign`.
+    ErrSignRequired,
+    /// The sign is not the Owner's: nothing was opened (PRD FR-21.4, plan 73). Field `sign`.
+    ErrSignWrong,
 }
 
 impl ErrorCode {
     /// Every code, in the order above. Tests use it to check the exported list.
-    pub const ALL: [ErrorCode; 157] = [
+    pub const ALL: [ErrorCode; 159] = [
         ErrorCode::ErrNotImplemented,
         ErrorCode::ErrInternal,
         ErrorCode::ErrDiskFull,
@@ -610,6 +614,8 @@ impl ErrorCode {
         ErrorCode::ErrAssistantNotWaiting,
         ErrorCode::ErrNoBase,
         ErrorCode::ErrTooLittleHistory,
+        ErrorCode::ErrSignRequired,
+        ErrorCode::ErrSignWrong,
     ];
 }
 

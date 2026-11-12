@@ -590,7 +590,7 @@ impl Fmt {
         })
     }
 
-    fn words(&self, amount: Paisa) -> Result<PrintWords, ReportsError> {
+    pub(crate) fn words(&self, amount: Paisa) -> Result<PrintWords, ReportsError> {
         let text = match self.language {
             Language::Ur => urdu_words(amount)?,
             Language::En => english_words(amount, self.grouping)?,

@@ -139,3 +139,15 @@ export function createEntryStore(initial: readonly Record<string, string>[] = []
 }
 
 export type EntryStore = ReturnType<typeof createEntryStore>;
+
+/**
+ * Adds a row at the end and puts the cursor on its `field`, once it is drawn. This is the one way a
+ * grid gets a new row: `↓` on the last row, `Enter` on the last cell, and the "+" button under the
+ * grid all come here, so the rows, the cursor and the keyboard rules are the same whichever was used.
+ * Returns the ID of the new row.
+ */
+export function addRowAndFocus(store: EntryStore, field: string): string {
+  const rowId = store.getState().addRow();
+  store.getState().setPendingFocus({ rowIndex: 'last', field });
+  return rowId;
+}

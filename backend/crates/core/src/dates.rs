@@ -36,6 +36,22 @@ impl BusinessDate {
         self.0.succ_opt().map(BusinessDate)
     }
 
+    /// The date `days` days after this one (before it when `days` is negative), or `None` past the
+    /// ends of the calendar. Used for the 30-day windows of a party's statement (PRD FR-12.47).
+    ///
+    /// ```
+    /// use mandi_core::dates::BusinessDate;
+    /// let day = BusinessDate::from_ymd(2026, 10, 11).unwrap();
+    /// assert_eq!(day.plus_days(15), BusinessDate::from_ymd(2026, 10, 26));
+    /// assert_eq!(day.plus_days(-14), BusinessDate::from_ymd(2026, 9, 27));
+    /// ```
+    pub fn plus_days(self, days: i64) -> Option<BusinessDate> {
+        chrono::Duration::try_days(days)
+            .and_then(|d| self.0.checked_add_signed(d))
+            .filter(|d| (1000..=9999).contains(&d.year()))
+            .map(BusinessDate)
+    }
+
     /// The storage form `YYYY-MM-DD`.
     pub fn to_iso(self) -> String {
         self.0.format("%Y-%m-%d").to_string()

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-list-export-excel"
+description = "Enables the bikri_list_export_excel command without any pre-configured scope."
+commands.allow = ["bikri_list_export_excel"]
+
+[[permission]]
+identifier = "deny-bikri-list-export-excel"
+description = "Denies the bikri_list_export_excel command without any pre-configured scope."
+commands.deny = ["bikri_list_export_excel"]

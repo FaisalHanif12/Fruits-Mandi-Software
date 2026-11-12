@@ -28,7 +28,7 @@ pub const MAX_STAMP_IDS: usize = 500;
 /// Top-level keys of an edit's audit entry that are for the audit viewer and not edits the user
 /// made: the numbers of the postings an edit wrote (every edit writes new ones), the totals of the
 /// new posting and the cash question. The history shows the fields the user changed.
-const AUDIT_ONLY: [&str; 12] = [
+const AUDIT_ONLY: [&str; 13] = [
     "entry_id",
     "journal_entry_id",
     "current_entry_id",
@@ -41,6 +41,8 @@ const AUDIT_ONLY: [&str; 12] = [
     "net_paisa",
     "buyer_total_paisa",
     "shared_income_paisa",
+    // The Owner's sign of the fix the edit was made in (plan 73): shown as the version's `sign`.
+    "sign",
 ];
 
 /// The input of `audit_edit_stamp`.
@@ -91,6 +93,9 @@ pub struct EditVersion {
     pub action: String,
     /// The reason typed. Null when none was given.
     pub reason: Option<String>,
+    /// The Owner's sign given when the day was reopened to fix the entry (PRD FR-21.4, FR-7.71).
+    /// Null for an edit of an open day.
+    pub sign: Option<String>,
     /// The fields that changed, at most 200 (the audit flatten code).
     pub changes: Vec<AuditChange>,
     /// True when there were more changed fields than `changes` holds.
@@ -137,6 +142,7 @@ pub fn edit_stamps(db: &Db, input: &EditStampInput) -> Result<Vec<EditStampRow>,
                             last.count,
                             last.reason.clone(),
                         )
+                        .map(|stamp| stamp.with_sign(last.sign.clone()))
                         .ok_or_else(|| {
                             ReportsError::Data(format!("an audit time is not a time: {}", last.at))
                         })
@@ -180,6 +186,12 @@ pub fn edit_history(db: &Db, input: &EditHistoryInput) -> Result<EditHistory, Re
             let new = parse_json(new_json)?;
             let (mut changes, changes_truncated) = flatten::changes(old.as_ref(), new.as_ref());
             changes.retain(|c| !AUDIT_ONLY.contains(&c.path.as_str()));
+            let sign = new
+                .as_ref()
+                .and_then(|value| value.get("sign"))
+                .and_then(serde_json::Value::as_str)
+                .filter(|sign| !sign.is_empty())
+                .map(str::to_owned);
             versions.push(EditVersion {
                 audit_id,
                 at,
@@ -188,6 +200,7 @@ pub fn edit_history(db: &Db, input: &EditHistoryInput) -> Result<EditHistory, Re
                 by: by.unwrap_or_default(),
                 action,
                 reason: reason.filter(|r| !r.is_empty()),
+                sign,
                 changes,
                 changes_truncated,
             });

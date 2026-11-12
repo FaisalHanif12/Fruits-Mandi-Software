@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { allLinesColumns, lotColumns, saleColumns } from '../../src/features/bikri/columns';
-import { FIT_MIN_WIDTHS, type EntryColumn } from '../../src/shared/grid';
+import { FIT_MIN_WIDTHS, REMOVE_COLUMN_WIDTH, type EntryColumn } from '../../src/shared/grid';
 import type { LayoutStep } from '../../src/shared/hooks';
 
 const SCROLLBAR = 17;
@@ -15,8 +15,16 @@ const BORDER = 2;
 /** The width of the grid in the smallest window of each step, without a scrollbar. */
 const ROOM: Record<LayoutStep, number> = { compact: 694, normal: 876, wide: 948 };
 
+/**
+ * The least width of a grid: its columns and the remove column every entry grid has after them (plan 43).
+ * The remove column was left out of this sum at first, so the lots grid scrolled sideways by 14 to 16 px at
+ * 1366 and 1024 px while the test passed (the core sweep of plan 72 measured it in a browser).
+ */
 function leastWidth(columns: readonly EntryColumn[]): number {
-  return columns.reduce((sum, column) => sum + (column.minWidth ?? FIT_MIN_WIDTHS[column.type]), 0);
+  return (
+    REMOVE_COLUMN_WIDTH +
+    columns.reduce((sum, column) => sum + (column.minWidth ?? FIT_MIN_WIDTHS[column.type]), 0)
+  );
 }
 
 const STEPS: readonly LayoutStep[] = ['compact', 'normal', 'wide'];
@@ -112,11 +120,5 @@ describe('the figure columns of a sale line, by window (plan 72 P13: what is typ
   it.each(STEPS)('%s: the لاگا is never a column; it is in the details of the line', (step) => {
     expect(saleColumns(step).some((column) => column.field === 'laga')).toBe(false);
     expect(allLinesColumns(step).some((column) => column.field === 'laga')).toBe(false);
-  });
-
-  it.each(STEPS)('%s: the sum of the least widths, for the record', (step) => {
-    // compact 578 (of 675), normal 794 (of 857), wide 902 (of 929); the lot column is added in the whole-sale view.
-    const sums: Record<LayoutStep, number> = { compact: 578, normal: 794, wide: 902 };
-    expect(leastWidth(saleColumns(step))).toBe(sums[step]);
   });
 });

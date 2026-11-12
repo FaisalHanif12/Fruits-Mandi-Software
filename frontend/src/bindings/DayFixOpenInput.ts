@@ -13,4 +13,9 @@ export type DayFixOpenInput = {
    * Why. Required (as FR-21.2).
    */
   reason: string;
+  /**
+   * The Owner's sign (دستخط): only his sign opens the day (PRD FR-21.4, plan 73). Required;
+   * compared after trimming, ignoring case. Left out of a request, it is empty and refused.
+   */
+  sign: string;
 };

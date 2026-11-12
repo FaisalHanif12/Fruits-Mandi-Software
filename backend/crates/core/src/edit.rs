@@ -56,6 +56,10 @@ pub struct EditStamp {
     pub count: i64,
     /// The reason typed with the last edit. Null when none was given (a today's edit).
     pub reason: Option<String>,
+    /// The Owner's sign given when the day of the entry was reopened to fix it (PRD FR-21.4, FR-7.71,
+    /// plan 73). Null for an edit of an open day.
+    #[serde(default)]
+    pub sign: Option<String>,
 }
 
 /// Pakistan time is UTC plus five hours all year (no daylight saving).
@@ -79,7 +83,17 @@ impl EditStamp {
             by,
             count,
             reason,
+            sign: None,
         })
+    }
+}
+
+impl EditStamp {
+    /// The same stamp with the sign of the fix it was made in (PRD FR-21.4, plan 73).
+    #[must_use]
+    pub fn with_sign(mut self, sign: Option<String>) -> Self {
+        self.sign = sign;
+        self
     }
 }
 
@@ -574,6 +588,10 @@ pub struct DayFixOpenInput {
     pub date: String,
     /// Why. Required (as FR-21.2).
     pub reason: String,
+    /// The Owner's sign (دستخط): only his sign opens the day (PRD FR-21.4, plan 73). Required;
+    /// compared after trimming, ignoring case. Left out of a request, it is empty and refused.
+    #[serde(default)]
+    pub sign: String,
 }
 
 /// The answer of `day_fix_open`.

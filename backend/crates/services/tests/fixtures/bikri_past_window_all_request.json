@@ -1,0 +1,9 @@
+{
+  "all": true,
+  "from": "05-11-2026",
+  "group_by_day": true,
+  "limit": 25,
+  "offset": 0,
+  "seller_id": 19,
+  "to": "11-11-2026"
+}

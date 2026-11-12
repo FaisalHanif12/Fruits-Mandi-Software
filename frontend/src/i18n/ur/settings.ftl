@@ -131,6 +131,26 @@ settings-lock-hint = اتنے منٹ کوئی کلید نہ دبانے پر ای
 # review: pending
 settings-tab-printing = پرنٹنگ
 
+## Plan 73: the Owner's sign, in the Security tab (PRD FR-21.4, Section 21, v1.36).
+
+# review: pending
+settings-sign-title = مالک کا { -dastakhat }
+
+# review: pending
+settings-sign-hint = بند دن کھول کر اندراج درست کرنے کے لیے صرف مالک کا { -dastakhat } چلتا ہے۔ اپنا پاس ورڈ اور نیا { -dastakhat } لکھیں۔ یہ دوبارہ نہیں دکھایا جاتا۔
+
+# review: pending
+settings-sign-password = آپ کا پاس ورڈ
+
+# review: pending
+settings-sign-new = نیا { -dastakhat }
+
+# review: pending
+settings-sign-button = { -dastakhat } تبدیل کریں
+
+# review: pending
+settings-sign-saved = { -dastakhat } تبدیل ہو گیا۔
+
 ## Plan 22 (D5 early track): the Day group, number grouping, the books check, updates and the support file (PRD 21, FR-21.3, NFR-INS-3, NFR-OBS-4, NFR-OBS-5).
 
 # review: pending

@@ -8,6 +8,7 @@ import { History } from 'lucide-react';
 import { useState } from 'react';
 import type { EditEntity } from '../../bindings/EditEntity';
 import type { EditStamp } from '../../bindings/EditStamp';
+import { whenWhoMessage } from '../edit/sign';
 import { clockPartsOf } from '../edit/time';
 import { isoToDisplayDate } from '../format';
 import { Button } from './Button';
@@ -28,11 +29,12 @@ export function stampTimeText(localTime: string, l10n: ReactLocalization): strin
 
 /** The words of a stamp for a tooltip or a list mark: "Edited: 31-10-2026 4:35 pm, Owner". */
 export function stampTipText(stamp: EditStamp, l10n: ReactLocalization): string {
-  return l10n.getString('edit-mark-tip', {
+  const tip = whenWhoMessage('edit-mark-tip', stamp, {
     date: isoToDisplayDate(stamp.local_date),
     time: stampTimeText(stamp.local_time, l10n),
     by: stamp.by,
   });
+  return l10n.getString(tip.id, tip.vars);
 }
 
 interface EditStampLineProps {
@@ -44,19 +46,18 @@ interface EditStampLineProps {
 export function EditStampLine({ stamp, history }: EditStampLineProps) {
   const { l10n } = useLocalization();
   const [open, setOpen] = useState(false);
+  // The sign given when the day was reopened follows the name (PRD FR-7.71, v1.36).
+  const when = whenWhoMessage('edit-stamp', stamp, {
+    date: isoToDisplayDate(stamp.local_date),
+    time: stampTimeText(stamp.local_time, l10n),
+    by: stamp.by,
+  });
   return (
     <div
       className="flex flex-wrap items-center gap-x-3 gap-y-1 type-body text-ink"
       data-edit-stamp=""
     >
-      <Localized
-        id="edit-stamp"
-        vars={{
-          date: isoToDisplayDate(stamp.local_date),
-          time: stampTimeText(stamp.local_time, l10n),
-          by: stamp.by,
-        }}
-      >
+      <Localized id={when.id} vars={when.vars}>
         <span className="font-semibold" />
       </Localized>
       {stamp.count > 1 ? (

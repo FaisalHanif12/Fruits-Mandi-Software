@@ -25,7 +25,14 @@ const EVENT2: &str = include_str!("../../services/tests/fixtures/bikri_get_event
 fn detail(json: &str) -> BikriDetail {
     let mut d: BikriDetail = serde_json::from_str(json).unwrap();
     if d.truck_no.is_none() {
-        d.truck_no = Some(if d.number == 1 { "LES-1234" } else { "LHR-0077" }.to_owned());
+        d.truck_no = Some(
+            if d.number == 1 {
+                "LES-1234"
+            } else {
+                "LHR-0077"
+            }
+            .to_owned(),
+        );
     }
     d
 }

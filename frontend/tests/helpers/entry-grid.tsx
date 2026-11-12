@@ -5,8 +5,11 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useMemo } from 'react';
 import {
+  AddRowButton,
   EntryGrid,
+  addRowAndFocus,
   createEntryStore,
+  useAddRowLink,
   type EntryColumn,
   type EntryRow,
   type EntryStore,
@@ -76,7 +79,10 @@ function Harness({
   withSelect,
   canRemoveRow,
   removeQuestion,
+  withAddButton,
 }: {
+  /** A "+" button under the grid, linked to it, as the sale book has (the arrows come and go). */
+  withAddButton?: boolean;
   withLabel?: boolean;
   withSelect?: boolean;
   canRemoveRow?: (row: EntryRow) => boolean;
@@ -88,6 +94,7 @@ function Harness({
   cellErrors?: Record<string, Record<string, string>>;
 }) {
   useEscapeDispatcher();
+  const addLink = useAddRowLink();
   const rows = store((state) => state.rows);
   const calc = useMemo(
     () =>
@@ -99,7 +106,7 @@ function Harness({
       ),
     [rows],
   );
-  return (
+  const grid = (
     <EntryGrid
       columns={(() => {
         const base = withLabel === true ? [...COLUMNS, LABEL_COLUMN] : COLUMNS;
@@ -114,8 +121,22 @@ function Harness({
       {...(cellErrors === undefined ? {} : { cellErrors })}
       {...(canRemoveRow === undefined ? {} : { canRemoveRow })}
       {...(removeQuestion === undefined ? {} : { removeQuestion })}
+      {...(withAddButton === true ? { addLink } : {})}
       heightMode="auto"
     />
+  );
+  if (withAddButton !== true) return grid;
+  return (
+    <div>
+      {grid}
+      <AddRowButton
+        labelId="bikri-sales-add-row"
+        onAdd={() => {
+          addRowAndFocus(store, 'buyer');
+        }}
+        link={addLink}
+      />
+    </div>
   );
 }
 
@@ -148,6 +169,8 @@ export async function renderGrid(
     canRemoveRow?: (row: EntryRow) => boolean;
     /** What is under a row about to go: the sentence the user is asked before it goes (plan 43). */
     removeQuestion?: (row: EntryRow) => RemoveQuestion | null;
+    /** A "+" button under the grid, linked to it. */
+    withAddButton?: boolean;
   } = {},
 ): Promise<GridRig> {
   act(() => {
@@ -165,6 +188,7 @@ export async function renderGrid(
       {...(cellErrors === undefined ? {} : { cellErrors })}
       {...(options.canRemoveRow === undefined ? {} : { canRemoveRow: options.canRemoveRow })}
       {...(options.removeQuestion === undefined ? {} : { removeQuestion: options.removeQuestion })}
+      {...(options.withAddButton === undefined ? {} : { withAddButton: options.withAddButton })}
       {...(options.copyAbove === undefined ? {} : { copyAbove: options.copyAbove })}
       {...(options.onExplain === undefined ? {} : { onExplain: options.onExplain })}
     />,

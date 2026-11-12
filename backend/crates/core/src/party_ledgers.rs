@@ -193,3 +193,48 @@ pub struct PartyLedgerStatement {
     /// The side of the closing balance.
     pub closing_side: BalanceSide,
 }
+
+/// Input of `party_ledgers_go_to_date` (PRD FR-12.47, plan 74): the party and the day to go to.
+#[derive(Debug, Clone, Deserialize, TS)]
+pub struct PartyLedgerGoToInput {
+    /// The party.
+    #[ts(type = "number")]
+    pub account_id: i64,
+    /// The day, `DD-MM-YYYY` or a date shortcut (PRD FR-7.19). A day after today is refused.
+    pub date: String,
+}
+
+/// The 30-day window that holds a day, and the day's row in it (PRD FR-12.47, plan 74 W5a).
+///
+/// The window is the 30 days ending on the earlier of the day plus 15 days and today, so the asked
+/// day sits near the middle and the nearest entries on both sides are in view. The screen then steps
+/// 30 days from either end.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct PartyLedgerGoTo {
+    /// The first day of the window, `YYYY-MM-DD`.
+    pub from: String,
+    /// The last day of the window, `YYYY-MM-DD`: 29 days after `from`.
+    pub to: String,
+    /// True when the party has an entry on the asked day.
+    pub has_entry: bool,
+    /// The place of the asked day among `statement.rows` (newest first, 0 is the first row). Null
+    /// when the day has no entry.
+    #[ts(type = "number | null")]
+    pub row: Option<u32>,
+    /// The window's page of dates with its totals: the same answer as `party_ledgers_statement` for
+    /// `from` and `to`, so the screen needs no second call.
+    pub statement: PartyLedgerStatement,
+}
+
+/// One party's statement over a whole period, every date of it, for the print (PRD FR-12.47, plan 74
+/// T1): the dates the period was resolved to, and the statement with no page limit. Newest date
+/// first, like the page the screen reads. Not sent to the screens; `reports` lays it out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartyLedgerStatementWhole {
+    /// The first day of the period, `YYYY-MM-DD`.
+    pub from: String,
+    /// The last day of the period, `YYYY-MM-DD`.
+    pub to: String,
+    /// Every date of the period with an entry, and the totals of the period.
+    pub statement: PartyLedgerStatement,
+}

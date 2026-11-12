@@ -2,6 +2,9 @@
 //! preview only reads (Code Standards B29). `bikri_save` is the one action
 //! that writes: one transaction (Code Standards B3). The reads of saved بکری only read.
 
+use mandi_reports::reports::{
+    BikriListPrintData, BikriListPrintInput, bikri_list_print_data as list_print_data,
+};
 use mandi_services::core::bikri::{
     BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriList,
     BikriListInput, BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput,
@@ -12,6 +15,7 @@ use mandi_services::core::bikri::{
 };
 use mandi_services::{auth, bikri};
 
+use super::reports_engine::engine_error;
 use super::run;
 use crate::error::UiError;
 
@@ -67,9 +71,12 @@ pub async fn bikri_get<R: tauri::Runtime>(
     .await
 }
 
-/// One page of the list of بکری of a day or a range, with its filters and the totals over the
-/// whole filter (PRD FR-12.7, FR-19.11, آج کی بکری). Read only.
-/// Errors: the date codes on `date`, `from`, `to`.
+/// One page of the list of بکری of a day or a window of days, with its filters and the totals over
+/// the whole filter (PRD 12.7 پچھلی بکری, FR-12.46, FR-19.11). With `group_by_day` it also returns
+/// one heading for each day of the window, empty days included; with `all` the filters are set
+/// aside (plan 72). Read only.
+/// Errors: the date codes on `date`, `from`, `to`; `ERR_DATE_IN_FUTURE` for a date after today;
+/// with `group_by_day`: `ERR_REQUIRED`, `ERR_DATE_RANGE` and `ERR_OUT_OF_RANGE` on the window.
 #[tauri::command]
 pub async fn bikri_list<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
@@ -78,6 +85,26 @@ pub async fn bikri_list<R: tauri::Runtime>(
     run(app, "bikri_list", move |ctx| {
         auth::require(ctx)?;
         bikri::list(ctx, &input)
+    })
+    .await
+}
+
+/// The print data of پچھلی بکری with every row (PRD FR-12.46, FR-19.10, plan 72 P8): the window of
+/// days and today's section as the screen shows them, with the same filters or the switch "show
+/// every بکری", grouped by day with a heading for each (date, count, خام بکری), the totals of the
+/// window, every figure formatted for the print language. The shared header and footer come from
+/// `reports_print_header` with `title_id` and `filters`. Read only.
+/// Errors: as `bikri_list` for the window; `ERR_DATE_RANGE` on `to` when it is not before today
+/// while `with_today` is on.
+#[tauri::command]
+pub async fn bikri_list_print_data<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: BikriListPrintInput,
+) -> Result<BikriListPrintData, UiError> {
+    run(app, "bikri_list_print_data", move |ctx| {
+        auth::require(ctx)?;
+        let whole = bikri::list_whole(ctx, &input.list)?;
+        list_print_data(ctx.db(), &whole, &input).map_err(engine_error)
     })
     .await
 }

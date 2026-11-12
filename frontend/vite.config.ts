@@ -20,6 +20,8 @@ const HOOK_TIMEOUT_MS = 30_000;
 // The six files after it (D8 end gate) failed the same way and only that way: in a full run on a
 // machine with a load average above 100 their tests ended with "Test timed out in 30000ms" or a
 // default one-second wait, and every one of them passed when its file ran alone at that same load.
+// The way back from the sale book to پچھلی بکری (plan 72 P10) is the last: it types in the edit grid with the
+// keyboard only, like the edit file above, and failed only under that load.
 // Any other failure in these files, a wrong value or a missing element after the wait, is still a
 // failure: the room is only for a wait that is slow.
 const LOAD_SENSITIVE_TESTS = [
@@ -32,6 +34,8 @@ const LOAD_SENSITIVE_TESTS = [
   'tests/unit/bikri-states.test.tsx',
   'tests/unit/bikri-strip.test.tsx',
   'tests/unit/bikri-whole-view.test.tsx',
+  'tests/unit/bikri-past-return.test.tsx',
+  'tests/unit/bikri-add-row.test.tsx',
   'tests/unit/reports-screens-round8.test.tsx',
 ];
 const SENSITIVE_TEST_TIMEOUT_MS = 90_000;

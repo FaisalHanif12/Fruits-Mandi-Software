@@ -60,6 +60,8 @@ interface PrintPreviewFrameProps {
   canPrint: boolean;
   /** The page is a slip (a party's day slip): the 80 mm roll is offered with A4 and A5. */
   roll?: boolean;
+  /** The heading of the preview. Left out, it is the words of a report print (`report-print-title`). */
+  title?: ReactNode;
   /** The page, or its loading, error or empty state. */
   children: ReactNode;
 }
@@ -74,15 +76,20 @@ export function PrintPreviewFrame({
   job,
   canPrint,
   roll = false,
+  title,
   children,
 }: PrintPreviewFrameProps) {
   const { l10n } = useLocalization();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <Localized id="report-print-title">
-          <h2 className="type-section" />
-        </Localized>
+        {title === undefined ? (
+          <Localized id="report-print-title">
+            <h2 className="type-section" />
+          </Localized>
+        ) : (
+          <h2 className="type-section">{title}</h2>
+        )}
         <div className="flex flex-wrap items-end gap-4">
           <Field label={<Localized id="print-box-language" />}>
             {() => (

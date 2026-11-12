@@ -8,7 +8,7 @@
 party-ledgers-title = پارٹی کھاتے
 
 # review: pending
-party-ledgers-help = پہلے گاہک یا بیوپاری چنیں اور کسی پارٹی پر Enter دبائیں: اس کے کھاتے میں ہر اس تاریخ کی ایک سطر آئے گی جس دن اس کا کوئی اندراج ہوا۔ پھر کسی تاریخ پر Enter دبائیں: اس دن کی پوری پرچی کھلے گی، جسے پرنٹ بھی کر سکتے ہیں۔ Esc سے ایک قدم پیچھے جاتے ہیں۔
+party-ledgers-help = پہلے گاہک یا بیوپاری چنیں اور کسی پارٹی پر Enter دبائیں: اس کے کھاتے میں ہر اس تاریخ کی ایک سطر آئے گی جس دن اس کا کوئی اندراج ہوا، ایک وقت میں 30 دن۔ کسی تاریخ پر Enter دبائیں: اس دن کی پرچی اسی سطر کے نیچے کھل جائے گی اور وہیں سے پرنٹ بھی ہو سکتی ہے۔ نیچے کے بٹنوں یا Page Up اور Page Down سے 30 دن آگے پیچھے کریں۔ Esc سے فہرست پر واپس جاتے ہیں۔
 
 # review: pending
 party-ledgers-side-label = پارٹی کی قسم
@@ -102,12 +102,6 @@ party-ledgers-col-seller-paid = اس دن اسے ادا
 party-ledgers-col-balance = نیا { -baqaya }
 
 # review: pending
-party-ledgers-statement-empty = ابھی کوئی اندراج نہیں
-
-# review: pending
-party-ledgers-statement-empty-help = اس پارٹی کا ابھی کوئی اندراج نہیں ہوا۔ اندراج ہوتے ہی ہر تاریخ کی سطر یہاں آ جائے گی۔
-
-# review: pending
 party-ledgers-statement-no-match = اس مدت میں کوئی اندراج نہیں
 
 # review: pending
@@ -115,6 +109,50 @@ party-ledgers-statement-no-match-help = پہلی اور آخری تاریخ بد
 
 # review: pending
 party-ledgers-clear-dates = تاریخیں ہٹائیں
+
+## Level 2: 30 days at a time and a day opened in place (PRD FR-12.47, plan 74)
+
+# review: pending
+party-ledgers-nav-label = 30 دن آگے پیچھے کریں
+
+# review: pending
+party-ledgers-back-days = پچھلے <num>{ $days }</num> دن
+
+# review: pending
+party-ledgers-forward-days = اگلے <num>{ $days }</num> دن
+
+# review: pending
+party-ledgers-range = <num>{ $from }</num> تا <num>{ $to }</num>
+
+# review: pending
+party-ledgers-nav-latest = پہلے ہی تازہ ترین دن
+
+# review: pending
+party-ledgers-nav-latest-button = آج تک کے دنوں پر واپس
+
+# review: pending
+party-ledgers-goto = تاریخ پر جائیں
+
+# review: pending
+party-ledgers-goto-hint = دن لکھیں، جیسے 05-11-2026۔ اس دن کا اندراج کھل جائے گا۔ مختصر شکل بھی چلتی ہے: 5 یعنی اس مہینے کی 5 تاریخ۔
+
+# review: pending
+party-ledgers-goto-placeholder = دن-مہینہ-سال
+
+# review: pending
+party-ledgers-goto-none = اس تاریخ کو کوئی اندراج نہیں: <num>{ $date }</num>۔ اس کے آس پاس کے دن نیچے ہیں۔
+
+# review: pending
+party-ledgers-window-empty = ان دنوں میں کوئی اندراج نہیں
+
+# review: pending
+party-ledgers-window-empty-help = نیچے پچھلے دنوں کا بٹن دبائیں، یا کسی تاریخ پر جائیں۔
+
+# review: pending
+party-ledgers-day-heading = <num>{ $date }</num> کی پرچی
+
+# review: pending
+party-ledgers-day-print-name = { $date } کی پرچی کا پرنٹ پیش نظارہ
 
 ## Level 3: the day slip
 

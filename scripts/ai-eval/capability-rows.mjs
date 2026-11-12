@@ -137,7 +137,6 @@ const PLANNED = new Set([
   'R33',
   'R37',
   'R21',
-  'R8',
   // Plan 55 ruling 1, built by backend2 (tests/understand_reports.rs): every report but R1.
   'R3',
   'R4',
@@ -223,7 +222,15 @@ const REPORTS = [
     forecast: forecastOf('sales', ' item=X'),
     print: A('local plan R7 (button + steps)'),
   }),
+  // R8 was retired in v1.34 (plan 71): a new بکری has no truck stand. Only the not-found cell is kept.
   report('R8', 'Truck stand report', 'from,to,adda', {
+    figure: X('report R8 retired in v1.34'),
+    list: X('report R8 retired in v1.34'),
+    top: X('report R8 retired in v1.34'),
+    compare: X('report R8 retired in v1.34'),
+    day: X('report R8 retired in v1.34'),
+    print: X('report R8 retired in v1.34'),
+    advice: X('report R8 retired in v1.34'),
     forecast: N('the app has no forecast per adda'),
     nosuch: A('find adda: not_found'),
   }),
@@ -799,11 +806,11 @@ const RECORDS = [
     advice: A('R21 read'),
   }),
   record('adda', 'A truck stand (اڈا)', 'find.rs Role::Adda', {
-    figure: A('report R8 adda=X; analytics A adda=X'),
-    list: A('report R8 rows'),
-    top: A('report R8 sort'),
+    figure: X('report R8 retired in v1.34'),
+    list: X('report R8 retired in v1.34'),
+    top: X('report R8 retired in v1.34'),
     compare: A('analytics A adda=X compare'),
-    print: A('local plan R8'),
+    print: X('report R8 retired in v1.34'),
   }),
   record('collector', 'A collector (اگراہی والا)', 'find.rs Role::Collector', {
     figure: A('report R22 collector=<staff> (the collector filter, backend)'),

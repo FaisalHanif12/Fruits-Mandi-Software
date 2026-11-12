@@ -157,26 +157,31 @@ export function SummaryPanel({
           <p className="type-body text-ink-muted" />
         </Localized>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          <div className="flex flex-col gap-1">
-            <Localized id="bikri-summary-seller-side">
-              <h3 className="type-label text-ink-muted" />
-            </Localized>
-            <Rows lines={sellerLines(totals)} negativeNet={netIsNegative} />
-            {netIsNegative ? (
-              <p className="flex items-center gap-2 type-body text-due">
-                <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
-                <Localized id="bikri-summary-net-negative">
-                  <span />
-                </Localized>
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1">
-            <Localized id="bikri-summary-buyer-side">
-              <h3 className="type-label text-ink-muted" />
-            </Localized>
-            <Rows lines={buyerLines(totals, hasRateDiff)} negativeNet={false} />
+        // The two sides stand side by side only when the panel itself is wide enough for a label, a figure
+        // and its ⓘ on one line in each (the panel is a narrow third column at the wide step); else one
+        // under the other. It follows the panel's own width, not the window's (container query).
+        <div className="@container min-w-0">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3 @form3:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Localized id="bikri-summary-seller-side">
+                <h3 className="type-label text-ink-muted" />
+              </Localized>
+              <Rows lines={sellerLines(totals)} negativeNet={netIsNegative} />
+              {netIsNegative ? (
+                <p className="flex items-center gap-2 type-body text-due">
+                  <TriangleAlert aria-hidden="true" className="size-icon-sm shrink-0" />
+                  <Localized id="bikri-summary-net-negative">
+                    <span />
+                  </Localized>
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Localized id="bikri-summary-buyer-side">
+                <h3 className="type-label text-ink-muted" />
+              </Localized>
+              <Rows lines={buyerLines(totals, hasRateDiff)} negativeNet={false} />
+            </div>
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@
       "by": "Maher Adnan",
       "action": "edit",
       "reason": "اکرم کا ریٹ غلط تھا",
+      "sign": "adnan",
       "changes": [
         {
           "path": "lots[0].sales[0].buyer_comm.amount_paisa",

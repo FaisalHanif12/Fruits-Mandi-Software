@@ -25,7 +25,14 @@ export {
   useEscapeDispatcher,
   type EscapeLevel,
 } from './escape';
-export { arrowSide, elementDirection, intoScreenSide, menuSide, type Side } from './direction';
+export {
+  arrowSide,
+  elementDirection,
+  intoScreenSide,
+  menuSide,
+  readingStep,
+  type Side,
+} from './direction';
 export { focusRegion, registerFocusRegion, useFocusRegion, type FocusRegion } from './focusRegions';
 export { tabbableIn, trapTab } from './focusTrap';
 export { pickNeighbour, shouldLeaveField, type Box, type Move } from './fieldNavigation';

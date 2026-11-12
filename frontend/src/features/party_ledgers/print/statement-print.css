@@ -1,0 +1,123 @@
+/*
+ * The statement of one party on paper (plan 74 T3, PRD FR-12.47). One table with four columns: the date,
+ * the details, the amount and the balance. Compact by design: the small print size, tight cells, no empty
+ * rows. A date is one block (`tbody`) that is kept on one page where it can be, and the heading row repeats
+ * on every page. The figures are centred under their headings (NFR-USE-19, Code Standards F17); the words
+ * stand at the start. Sizes, colours and lengths are tokens (Code Standards F9); logical properties only.
+ */
+
+.print-statement {
+  table-layout: auto;
+}
+
+.print-statement th,
+.print-statement td {
+  --print-num-size: var(--print-latin-1);
+
+  padding-block: calc(var(--print-gap-1) / 2);
+  padding-inline: var(--print-gap-1) var(--print-gap-2);
+  font-size: var(--print-text-1);
+  border-block-end: 0;
+}
+
+.print-statement th {
+  padding-block: var(--print-gap-1);
+}
+
+.print-statement .print-statement-col-date {
+  inline-size: 22mm;
+}
+
+.print-statement .print-statement-col-amount {
+  inline-size: 24mm;
+}
+
+.print-statement .print-statement-col-balance {
+  inline-size: 34mm;
+}
+
+/* One date is one block: never cut in two when it fits on a page. */
+.print-statement tbody {
+  break-inside: avoid;
+}
+
+.print-statement-day {
+  border-block-end: var(--print-rule) solid var(--color-ink-muted);
+}
+
+.print-statement-day .print-statement-date {
+  vertical-align: top;
+  font-weight: var(--weight-strong);
+}
+
+/* The lines of goods and the commission line are words with numbers in them: they begin at the start. */
+.print-statement-line {
+  text-align: start;
+  overflow-wrap: break-word;
+}
+
+.print-statement-charges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--print-gap-4);
+  color: var(--color-ink-muted);
+}
+
+.print-statement-note {
+  color: var(--color-ink-muted);
+}
+
+.print-statement-bill td {
+  font-weight: var(--weight-strong);
+}
+
+/* The opening balance, and the closing balance bold under the totals (the rules of the totals follow). */
+.print-statement-opening td {
+  font-weight: var(--weight-strong);
+  border-block-end: var(--print-rule) solid var(--color-ink-muted);
+}
+
+.print-statement-closing td {
+  border-block-start: var(--print-rule) solid var(--color-ink);
+  font-weight: var(--weight-strong);
+  font-size: var(--print-text-2);
+  --print-num-size: var(--print-latin-2);
+}
+
+/* The balance at the end of the day closes the block, with a thin rule above it. */
+.print-statement-end td {
+  border-block-start: var(--print-rule) solid var(--color-border);
+  font-weight: var(--weight-strong);
+}
+
+.print-statement-end td:first-child,
+.print-statement-end td:nth-child(2) {
+  color: var(--color-ink-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+.print-statement .print-balance-side {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-ink-muted);
+}
+
+.print-statement-totals {
+  border-block-start: var(--print-rule-strong) solid var(--color-ink);
+}
+
+.print-statement-totals tr:first-child td {
+  border-block-start: var(--print-rule-strong) solid var(--color-ink);
+}
+
+/* A5 has less room: the columns are narrower. */
+.print-doc[data-paper='a5'] .print-statement .print-statement-col-date {
+  inline-size: 20mm;
+}
+
+.print-doc[data-paper='a5'] .print-statement .print-statement-col-amount {
+  inline-size: 20mm;
+}
+
+.print-doc[data-paper='a5'] .print-statement .print-statement-col-balance {
+  inline-size: 28mm;
+}

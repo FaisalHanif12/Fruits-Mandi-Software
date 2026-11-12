@@ -705,6 +705,17 @@ pub struct BikriListInput {
     /// come only when the list is in date order (no sort, or a sort by `entry_date`).
     #[serde(default)]
     pub group_by_month: bool,
+    /// "پوری بکری دکھائیں" (PRD 12.7, plan 72 P8): set aside `seller_id`, `item_id`, `status`, `search`
+    /// and `show_finished`, and show every بکری of the dates asked for, cancelled ones too. The
+    /// dates (`date`, `from`, `to`) still decide which days are shown. The count, the totals and
+    /// the days follow the same choice.
+    #[serde(default)]
+    pub all: bool,
+    /// Send `days` too: one entry for each date from `from` to `to`, a day with no بکری included
+    /// (PRD 12.7, plan 72 P4, P7). Needs both `from` and `to` (or `date`), at most 366 days
+    /// apart, and `to` not before `from`.
+    #[serde(default)]
+    pub group_by_day: bool,
     /// How many rows to skip. 0 for the first page (PRD FR-19.11).
     #[serde(default)]
     pub offset: u32,
@@ -727,6 +738,35 @@ pub struct BikriList {
     /// `buyer_total`), oldest month first or newest first as the list is. Empty unless
     /// `group_by_month` was sent and the list is in date order.
     pub months: Vec<MonthSubtotal>,
+    /// One entry for each date from `from` to `to`, a day with no بکری included, over the whole
+    /// filter, not the page (PRD 12.7, plan 72 P4, P7). Newest day first, or oldest first when
+    /// the list is sorted by `entry_date` ascending. Empty unless `group_by_day` was sent. The
+    /// `count`s add up to `total_count` and the `gross_paisa`s to `totals.gross`.
+    pub days: Vec<BikriDay>,
+}
+
+/// One day of the window of the list of بکری (PRD 12.7, plan 72 P4): the heading of the day.
+///
+/// A بکری belongs to the day of its first posting (`entry_date`), and its خام بکری is the stored
+/// total of its lots over all its postings, later sales included. So a heading is the sum of the
+/// rows under it, except for a cancelled بکری that is shown: it counts in `count` and its row shows
+/// its own خام بکری, but the heading leaves that money out, like `totals.gross`. It is not the "sales posted on that day" of the dashboard tile or of R2: a later
+/// sale made on 11-11 of a lot first sold on 05-11 counts under 05-11 here, and under 11-11 there.
+///
+/// Example: a day with two saved بکری of 29,400 and 12,000 خام بکری has `count` 2 and
+/// `gross_paisa` 4,140,000. A day with none has `count` 0 and `gross_paisa` 0.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+pub struct BikriDay {
+    /// The day, `YYYY-MM-DD`.
+    pub date: String,
+    /// How many بکری of this day match the filter, cancelled ones too when the filter shows them
+    /// (the same rule as `total_count`).
+    #[ts(type = "number")]
+    pub count: i64,
+    /// Σ خام بکری of the saved بکری of this day that match the filter, a stored sum (the same rule
+    /// as `totals.gross`).
+    #[ts(type = "Paisa")]
+    pub gross_paisa: Paisa,
 }
 
 /// The totals of the list of بکری: sums of stored values, cancelled بکری left out.

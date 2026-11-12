@@ -1,10 +1,11 @@
-// پارٹی کھاتے (route /bikri/party-ledgers; PRD FR-12.43, plan 66): each buyer's and each seller's own
-// ledger in three levels. Level 1 is the list of parties of one kind with their balances; Enter on a
-// party opens level 2, his statement, one row for each date with an entry; Enter on a date opens
-// level 3, that day's full slip, which prints. The level is in the address (`?side=`, `?party=`,
-// `?date=`), so Esc and the back buttons are plain steps back, a language switch keeps the level,
-// and another screen can open a party's ledger. The screen only reads: it changes nothing and works
-// out no figure (CLAUDE.md rule 1).
+// پارٹی کھاتے (route /bikri/party-ledgers; PRD FR-12.43, FR-12.47, plans 66 and 74): each buyer's and each
+// seller's own ledger. Level 1 is the list of parties of one kind with their balances; Enter on a party
+// opens level 2, his statement: one row for each date with an entry, 30 days at a time, and Enter or a
+// click on a date opens that day (level 3, the R35 slip) under its own row. The full-page slip of a date
+// (`?date=`) is still a valid address, so another screen can link to it. The level is in the address
+// (`?side=`, `?party=`, `?end=` for the day the 30 days end on, `?date=`), so Esc and the back buttons
+// are plain steps back, a language switch keeps the level, and another screen can open a party's
+// ledger. The screen only reads: it changes nothing and works out no figure (CLAUDE.md rule 1).
 
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback } from 'react';
@@ -46,11 +47,17 @@ export function PartyLedgersPage() {
       <PartyStatement
         key={party}
         accountId={party}
+        end={search.end}
         onBack={(kind) => {
           go({ side: kind ?? side });
         }}
-        onOpenDay={(date) => {
-          go({ side, party, date });
+        onWindow={(end) => {
+          // A window is not a step back: Esc goes to the list, and the address only remembers where it is.
+          void navigate({
+            to: '.',
+            search: { side, party, ...(end === null ? {} : { end }) },
+            replace: true,
+          });
         }}
       />
     );

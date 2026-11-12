@@ -333,6 +333,12 @@ const EXPECTED_FILES: &[&str] = &[
     "LotName.ts",
     "BikriList.ts",
     "BikriListTotals.ts",
+    "BikriDay.ts",
+    "BikriListPrintInput.ts",
+    "BikriListPrintData.ts",
+    "BikriListPrintDay.ts",
+    "BikriListExportRequest.ts",
+    "PrintBikriListInput.ts",
     "BikriFindInput.ts",
     "NavigateTo.ts",
     "BikriNavigateInput.ts",
@@ -706,6 +712,7 @@ const EXPECTED_FILES: &[&str] = &[
     "BackupHealth.ts",
     "DailyHealth.ts",
     "SetNumberGroupingInput.ts",
+    "SetOwnerSignInput.ts",
     "SupportInfoInput.ts",
     "SupportInfoSaved.ts",
     "UpdateCheck.ts",
@@ -825,6 +832,18 @@ const EXPECTED_FILES: &[&str] = &[
     "SourceBikri.ts",
     "SourceReportFilters.ts",
     "SourceAnalyticsFilters.ts",
+    // Plan 74 (append-only block): one party's statement, 30 days at a time, and its print.
+    "PartyLedgerGoToInput.ts",
+    "PartyLedgerGoTo.ts",
+    "StatementPrintDataInput.ts",
+    "StatementPrintData.ts",
+    "StatementDay.ts",
+    "StatementItem.ts",
+    "StatementEntry.ts",
+    "StatementBalance.ts",
+    "StatementSide.ts",
+    "StatementKind.ts",
+    "PrintStatementInput.ts",
 ];
 
 fn export_dir() -> PathBuf {
@@ -1069,6 +1088,12 @@ fn export_bindings() {
     bikri::LotName::export_all(&cfg).unwrap();
     bikri::BikriList::export_all(&cfg).unwrap();
     bikri::BikriListTotals::export_all(&cfg).unwrap();
+    bikri::BikriDay::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::BikriListPrintDay::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::export::BikriListExportRequest::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintBikriListInput::export_all(&cfg).unwrap();
     bikri::BikriFindInput::export_all(&cfg).unwrap();
     bikri::BikriNavigateInput::export_all(&cfg).unwrap();
     bikri::BikriHit::export_all(&cfg).unwrap();
@@ -1333,6 +1358,7 @@ fn export_bindings() {
     mandi_reports::audit::AuditOptions::export_all(&cfg).unwrap();
     mandi_app_lib::commands::health::DailyHealth::export_all(&cfg).unwrap();
     mandi_app_lib::commands::settings_day::SetNumberGroupingInput::export_all(&cfg).unwrap();
+    mandi_app_lib::commands::settings_day::SetOwnerSignInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::support::SupportInfoInput::export_all(&cfg).unwrap();
     mandi_app_lib::commands::support::SupportInfoSaved::export_all(&cfg).unwrap();
     mandi_app_lib::updates::UpdateCheck::export_all(&cfg).unwrap();
@@ -1402,6 +1428,18 @@ fn export_bindings() {
     mandi_assistant::log::AssistantLogListInput::export_all(&cfg).unwrap();
     mandi_assistant::log::AssistantLogPage::export_all(&cfg).unwrap();
     mandi_assistant::step::AssistantStep::export_all(&cfg).unwrap();
+    // Plan 74 (append-only block).
+    party_ledgers::PartyLedgerGoToInput::export_all(&cfg).unwrap();
+    party_ledgers::PartyLedgerGoTo::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementPrintDataInput::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementPrintData::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementDay::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementItem::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementEntry::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementBalance::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementSide::export_all(&cfg).unwrap();
+    mandi_reports::reports::StatementKind::export_all(&cfg).unwrap();
+    mandi_app_lib::print_report::PrintStatementInput::export_all(&cfg).unwrap();
 
     for file in EXPECTED_FILES {
         assert!(

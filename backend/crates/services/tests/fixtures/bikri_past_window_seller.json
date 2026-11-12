@@ -1,0 +1,206 @@
+{
+  "rows": [
+    {
+      "id": 7,
+      "number": 7,
+      "entry_date": "2026-11-09",
+      "created_at": "2026-11-12T09:00:00.000Z",
+      "truck_no": null,
+      "sellers": [
+        {
+          "id": 18,
+          "code": "0010",
+          "name_ur": "رحیم",
+          "name_en": "Rahim"
+        }
+      ],
+      "items": [
+        {
+          "id": 2,
+          "code": "0041",
+          "name_ur": "سیب",
+          "name_en": "Apple"
+        }
+      ],
+      "lots": [
+        {
+          "lot_id": 7,
+          "seller": {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          },
+          "item": {
+            "id": 2,
+            "code": "0041",
+            "name_ur": "سیب",
+            "name_en": "Apple"
+          },
+          "counter": 2
+        }
+      ],
+      "qty_received": 10,
+      "qty_sold": 4,
+      "gross": 242800,
+      "net": 228200,
+      "buyer_total": 260600,
+      "status": "saved",
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
+    },
+    {
+      "id": 5,
+      "number": 5,
+      "entry_date": "2026-11-06",
+      "created_at": "2026-11-12T09:00:00.000Z",
+      "truck_no": null,
+      "sellers": [
+        {
+          "id": 18,
+          "code": "0010",
+          "name_ur": "رحیم",
+          "name_en": "Rahim"
+        }
+      ],
+      "items": [
+        {
+          "id": 1,
+          "code": "0040",
+          "name_ur": "کیلا",
+          "name_en": "Banana"
+        }
+      ],
+      "lots": [
+        {
+          "lot_id": 5,
+          "seller": {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          },
+          "item": {
+            "id": 1,
+            "code": "0040",
+            "name_ur": "کیلا",
+            "name_en": "Banana"
+          },
+          "counter": 2
+        }
+      ],
+      "qty_received": 10,
+      "qty_sold": 4,
+      "gross": 242000,
+      "net": 227500,
+      "buyer_total": 259700,
+      "status": "saved",
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
+    },
+    {
+      "id": 3,
+      "number": 3,
+      "entry_date": "2026-11-05",
+      "created_at": "2026-11-12T09:00:00.000Z",
+      "truck_no": null,
+      "sellers": [
+        {
+          "id": 18,
+          "code": "0010",
+          "name_ur": "رحیم",
+          "name_en": "Rahim"
+        }
+      ],
+      "items": [
+        {
+          "id": 2,
+          "code": "0041",
+          "name_ur": "سیب",
+          "name_en": "Apple"
+        }
+      ],
+      "lots": [
+        {
+          "lot_id": 3,
+          "seller": {
+            "id": 18,
+            "code": "0010",
+            "name_ur": "رحیم",
+            "name_en": "Rahim"
+          },
+          "item": {
+            "id": 2,
+            "code": "0041",
+            "name_ur": "سیب",
+            "name_en": "Apple"
+          },
+          "counter": 1
+        }
+      ],
+      "qty_received": 10,
+      "qty_sold": 4,
+      "gross": 241200,
+      "net": 226700,
+      "buyer_total": 258900,
+      "status": "saved",
+      "can_edit": true,
+      "can_cancel": true,
+      "locked_reason": null,
+      "needs_reopen": false,
+      "edited": null
+    }
+  ],
+  "total_count": 3,
+  "totals": {
+    "qty_received": 30,
+    "qty_sold": 12,
+    "gross": 726000,
+    "net": 682400,
+    "buyer_total": 779200
+  },
+  "months": [],
+  "days": [
+    {
+      "date": "2026-11-11",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-11-10",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-11-09",
+      "count": 1,
+      "gross_paisa": 242800
+    },
+    {
+      "date": "2026-11-08",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-11-07",
+      "count": 0,
+      "gross_paisa": 0
+    },
+    {
+      "date": "2026-11-06",
+      "count": 1,
+      "gross_paisa": 242000
+    },
+    {
+      "date": "2026-11-05",
+      "count": 1,
+      "gross_paisa": 241200
+    }
+  ]
+}

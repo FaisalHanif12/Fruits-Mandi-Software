@@ -179,11 +179,20 @@ describe.each(LANGUAGES)('entry grid (%s)', (language) => {
       expect(rig.focused()).toBe('0:buyer');
     });
 
-    it('does nothing at the first and last column', async () => {
+    it('does nothing before the first column; past the last it reaches the trash cell, and no further', async () => {
       const rig = await renderGrid(language, { rows: [{}] });
       await rig.focusCell(0, 'buyer');
       await rig.user.keyboard(backward(language));
       expect(rig.focused()).toBe('0:buyer');
+      await rig.focusCell(0, 'line');
+      await rig.user.keyboard(forward(language));
+      expect(rig.focused()).toBe('0:__remove');
+      await rig.user.keyboard(forward(language));
+      expect(rig.focused()).toBe('0:__remove');
+    });
+
+    it('does nothing past the last column of a grid with no trash cell (fixed rows)', async () => {
+      const rig = await renderGrid(language, { rows: [{}], fixedRows: true });
       await rig.focusCell(0, 'line');
       await rig.user.keyboard(forward(language));
       expect(rig.focused()).toBe('0:line');

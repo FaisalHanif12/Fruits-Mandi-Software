@@ -132,6 +132,26 @@ settings-lock-hint = The app locks after this many minutes with no key pressed. 
 # review: pending
 settings-tab-printing = Printing
 
+## Plan 73: the Owner's sign, in the Security tab (PRD FR-21.4, Section 21, v1.36).
+
+# review: pending
+settings-sign-title = The Owner's { -dastakhat }
+
+# review: pending
+settings-sign-hint = Only the Owner's { -dastakhat } opens a closed day to fix an entry. Write your password and the new { -dastakhat }. It is never shown again.
+
+# review: pending
+settings-sign-password = Your password
+
+# review: pending
+settings-sign-new = New { -dastakhat }
+
+# review: pending
+settings-sign-button = Change the { -dastakhat }
+
+# review: pending
+settings-sign-saved = The { -dastakhat } was changed.
+
 ## Plan 22 (D5 early track): the Day group, number grouping, the books check, updates and the support file (PRD 21, FR-21.3, NFR-INS-3, NFR-OBS-4, NFR-OBS-5).
 
 # review: pending

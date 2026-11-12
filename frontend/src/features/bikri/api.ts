@@ -7,8 +7,6 @@ import type { BikriDetail } from '../../bindings/BikriDetail';
 import type { BikriEdited } from '../../bindings/BikriEdited';
 import type { BikriFindInput } from '../../bindings/BikriFindInput';
 import type { BikriGetInput } from '../../bindings/BikriGetInput';
-import type { BikriList } from '../../bindings/BikriList';
-import type { BikriListInput } from '../../bindings/BikriListInput';
 import type { BikriListRow } from '../../bindings/BikriListRow';
 import type { BikriNavigateInput } from '../../bindings/BikriNavigateInput';
 import type { BikriPreviewInput } from '../../bindings/BikriPreviewInput';
@@ -38,6 +36,8 @@ import type { WriteOffUndone } from '../../bindings/WriteOffUndone';
 import type { NavigateTo } from '../../bindings/NavigateTo';
 import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
 import { callCommand } from '../../shared/api';
+import type { BikriList } from '../../bindings/BikriList';
+import type { BikriListInput } from '../../bindings/BikriListInput';
 import type { BikriDraft, BikriPreview, SellerMemory } from './types';
 
 /**

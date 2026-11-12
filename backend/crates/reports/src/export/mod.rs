@@ -17,6 +17,7 @@
 //! holds the numbers 85048 and 85048.
 
 pub(crate) mod analytics;
+pub(crate) mod bikri_list;
 pub(crate) mod cells;
 pub mod l10n;
 pub mod model;
@@ -40,6 +41,7 @@ use crate::print::load::FirmNames;
 use crate::reports::print_data::{Fmt, PrintOptions};
 use crate::reports::{ReportFilters, ReportId};
 
+pub use bikri_list::{BikriListExportInput, export_bikri_list};
 pub use model::{
     ColumnShape, ExportColumn, ExportProgress, ExportRow, ExportSheet, ExportStage, XCell,
 };

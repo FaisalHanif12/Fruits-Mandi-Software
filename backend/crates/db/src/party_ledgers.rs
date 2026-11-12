@@ -28,43 +28,55 @@ const SAME_DAY_PAIR: &str = "(e.reverses_entry_id IS NOT NULL AND EXISTS (
         WHERE r.reverses_entry_id = e.id AND r.status = 'posted' AND r.entry_date = e.entry_date)";
 
 /// The daily sums of one party: `?1` is the account. Every posted line, by the date of its entry.
-fn days_cte() -> String {
+///
+/// The same-day test (`SAME_DAY_PAIR`) is made ONCE for each line, as the second key of the first
+/// grouping (`by_live`: a date and whether the line is live), and the sums of a date are then made from
+/// at most two groups. Written as three `CASE WHEN SAME_DAY_PAIR` sums over the lines, the test was
+/// made again for each sum, and each test is index lookups. `days` is MATERIALIZED: the page and the
+/// totals both read it, and it is made once for the whole statement (D8 robustness MINOR 2: the
+/// busiest buyer has about 55,000 lines, and every page reads all of them for the running balance).
+fn days_ctes() -> String {
     format!(
-        "WITH days AS (
+        "WITH by_live AS (
            SELECT e.entry_date AS d,
-                  SUM(l.dr_paisa) AS all_dr, SUM(l.cr_paisa) AS all_cr,
-                  SUM(CASE WHEN {SAME_DAY_PAIR} THEN 0 ELSE l.dr_paisa END) AS live_dr,
-                  SUM(CASE WHEN {SAME_DAY_PAIR} THEN 0 ELSE l.cr_paisa END) AS live_cr,
-                  SUM(CASE WHEN {SAME_DAY_PAIR} THEN 0 ELSE 1 END) AS live_n
+                  CASE WHEN {SAME_DAY_PAIR} THEN 0 ELSE 1 END AS live,
+                  SUM(l.dr_paisa) AS dr, SUM(l.cr_paisa) AS cr, COUNT(*) AS n
            FROM journal_lines l JOIN journal_entries e ON e.id = l.entry_id
            WHERE l.account_id = ?1 AND e.status = 'posted'
-           GROUP BY e.entry_date)"
+           GROUP BY e.entry_date, 2),
+         days AS MATERIALIZED (
+           SELECT d, SUM(dr) AS all_dr, SUM(cr) AS all_cr,
+                  SUM(CASE WHEN live = 1 THEN dr ELSE 0 END) AS live_dr,
+                  SUM(CASE WHEN live = 1 THEN cr ELSE 0 END) AS live_cr,
+                  SUM(CASE WHEN live = 1 THEN n ELSE 0 END) AS live_n
+           FROM by_live GROUP BY d)"
     )
 }
 
-/// The page query of [`statement_days`]: `?1` the account, `?2` the first date or NULL, `?3` the
-/// last date or NULL, `?4` the limit, `?5` the offset. Public so a test can read its plan (B18).
-pub fn statement_days_sql() -> String {
+/// The one query of a statement page: its dates and its totals, from ONE reading of the party's lines.
+/// `?1` the account, `?2` the first date or NULL, `?3` the last date or NULL, `?4` the limit, `?5` the
+/// offset. Public so a test can read its plan (B18).
+///
+/// The result has 9 columns. A row of kind 0 is a date of the page: `d`, then `all_dr`, `all_cr`,
+/// `live_dr`, `live_cr`, `prev_dr`, `prev_cr` and a NULL. The one row of kind 1 is the totals: NULL,
+/// then the count, `live_dr`, `live_cr`, the opening debits and credits (every posted line before the
+/// first date) and the closing debits and credits (every posted line up to the last date).
+pub fn statement_page_sql() -> String {
     format!(
-        "{cte}
-         SELECT d, all_dr, all_cr, live_dr, live_cr, prev_dr, prev_cr FROM (
-           SELECT d, all_dr, all_cr, live_dr, live_cr, live_n,
-                  COALESCE(SUM(all_dr) OVER w, 0) AS prev_dr,
-                  COALESCE(SUM(all_cr) OVER w, 0) AS prev_cr
-           FROM days
-           WINDOW w AS (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING))
-         WHERE live_n > 0 AND (?2 IS NULL OR d >= ?2) AND (?3 IS NULL OR d <= ?3)
-         ORDER BY d DESC LIMIT ?4 OFFSET ?5",
-        cte = days_cte()
-    )
-}
-
-/// The totals query of [`statement_totals`]: `?1` the account, `?2` the first date or NULL, `?3` the
-/// last date or NULL. Public so a test can read its plan (B18).
-pub fn statement_totals_sql() -> String {
-    format!(
-        "{cte}
-         SELECT COUNT(CASE WHEN live_n > 0 AND (?2 IS NULL OR d >= ?2) AND (?3 IS NULL OR d <= ?3)
+        "{ctes},
+         page AS (
+           SELECT d, all_dr, all_cr, live_dr, live_cr, prev_dr, prev_cr FROM (
+             SELECT d, all_dr, all_cr, live_dr, live_cr, live_n,
+                    COALESCE(SUM(all_dr) OVER w, 0) AS prev_dr,
+                    COALESCE(SUM(all_cr) OVER w, 0) AS prev_cr
+             FROM days
+             WINDOW w AS (ORDER BY d ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING))
+           WHERE live_n > 0 AND (?2 IS NULL OR d >= ?2) AND (?3 IS NULL OR d <= ?3)
+           ORDER BY d DESC LIMIT ?4 OFFSET ?5)
+         SELECT 0 AS kind, d, all_dr, all_cr, live_dr, live_cr, prev_dr, prev_cr, NULL FROM page
+         UNION ALL
+         SELECT 1, NULL,
+                COUNT(CASE WHEN live_n > 0 AND (?2 IS NULL OR d >= ?2) AND (?3 IS NULL OR d <= ?3)
                            THEN 1 END),
                 COALESCE(SUM(CASE WHEN live_n > 0 AND (?2 IS NULL OR d >= ?2) AND (?3 IS NULL OR d <= ?3)
                                   THEN live_dr END), 0),
@@ -74,8 +86,9 @@ pub fn statement_totals_sql() -> String {
                 COALESCE(SUM(CASE WHEN ?2 IS NOT NULL AND d < ?2 THEN all_cr END), 0),
                 COALESCE(SUM(CASE WHEN ?3 IS NULL OR d <= ?3 THEN all_dr END), 0),
                 COALESCE(SUM(CASE WHEN ?3 IS NULL OR d <= ?3 THEN all_cr END), 0)
-         FROM days",
-        cte = days_cte()
+         FROM days
+         ORDER BY 1, 2 DESC",
+        ctes = days_ctes()
     )
 }
 
@@ -98,33 +111,6 @@ pub struct DayRow {
     pub prev_cr: i64,
 }
 
-/// A page of the dates of one party, newest first. `from` and `to` are `YYYY-MM-DD` or `None`.
-///
-/// # Errors
-/// Any SQLite error (a `SUM` that overflows is an error, never a float).
-pub fn statement_days(
-    conn: &Connection,
-    account_id: i64,
-    from: Option<&str>,
-    to: Option<&str>,
-    limit: i64,
-    offset: i64,
-) -> rusqlite::Result<Vec<DayRow>> {
-    let mut statement = conn.prepare_cached(&statement_days_sql())?;
-    let rows = statement.query_map(params![account_id, from, to, limit, offset], |r| {
-        Ok(DayRow {
-            date: r.get(0)?,
-            all_dr: r.get(1)?,
-            all_cr: r.get(2)?,
-            live_dr: r.get(3)?,
-            live_cr: r.get(4)?,
-            prev_dr: r.get(5)?,
-            prev_cr: r.get(6)?,
-        })
-    })?;
-    rows.collect()
-}
-
 /// The totals of a statement over every date the filter matches, not only a page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StatementTotals {
@@ -144,28 +130,48 @@ pub struct StatementTotals {
     pub closing_cr: i64,
 }
 
-/// The count, the live sums, and the opening and closing sums of a statement, in one query.
+/// A page of the dates of one party, newest first, with the totals over every date the filter
+/// matches, from one reading of the party's lines (`from` and `to` are `YYYY-MM-DD` or `None`).
 ///
 /// # Errors
-/// Any SQLite error.
-pub fn statement_totals(
+/// Any SQLite error (a `SUM` that overflows is an error, never a float).
+pub fn statement_page(
     conn: &Connection,
     account_id: i64,
     from: Option<&str>,
     to: Option<&str>,
-) -> rusqlite::Result<StatementTotals> {
-    conn.prepare_cached(&statement_totals_sql())?
-        .query_row(params![account_id, from, to], |r| {
-            Ok(StatementTotals {
-                count: r.get(0)?,
-                live_dr: r.get(1)?,
-                live_cr: r.get(2)?,
-                opening_dr: r.get(3)?,
-                opening_cr: r.get(4)?,
-                closing_dr: r.get(5)?,
-                closing_cr: r.get(6)?,
-            })
-        })
+    limit: i64,
+    offset: i64,
+) -> rusqlite::Result<(Vec<DayRow>, StatementTotals)> {
+    let mut statement = conn.prepare_cached(&statement_page_sql())?;
+    let mut rows = statement.query(params![account_id, from, to, limit, offset])?;
+    let mut days = Vec::new();
+    let mut totals = None;
+    while let Some(r) = rows.next()? {
+        if r.get::<_, i64>(0)? == 0 {
+            days.push(DayRow {
+                date: r.get(1)?,
+                all_dr: r.get(2)?,
+                all_cr: r.get(3)?,
+                live_dr: r.get(4)?,
+                live_cr: r.get(5)?,
+                prev_dr: r.get(6)?,
+                prev_cr: r.get(7)?,
+            });
+        } else {
+            totals = Some(StatementTotals {
+                count: r.get(2)?,
+                live_dr: r.get(3)?,
+                live_cr: r.get(4)?,
+                opening_dr: r.get(5)?,
+                opening_cr: r.get(6)?,
+                closing_dr: r.get(7)?,
+                closing_cr: r.get(8)?,
+            });
+        }
+    }
+    let totals = totals.ok_or(rusqlite::Error::QueryReturnedNoRows)?;
+    Ok((days, totals))
 }
 
 /// The condition that picks the parties of one control (`?1`) by the typed text (`?2` the Urdu key,

@@ -93,6 +93,8 @@ const HISTORY: EditHistory = {
         },
       ],
       changes_truncated: false,
+      // An edit of an open day has no sign (PRD FR-7.71).
+      sign: null,
     },
   ],
 };

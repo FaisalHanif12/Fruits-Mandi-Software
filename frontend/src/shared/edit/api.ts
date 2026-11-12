@@ -22,9 +22,13 @@ export function auditEditHistory(entity: EditEntity, id: number): Promise<EditHi
   return callCommand<EditHistory>('audit_edit_history', { input: { entity, id } });
 }
 
-/** Reopens a closed date and every later closed date, with the reason (PRD FR-21.4). */
-export function dayFixOpen(date: string, reason: string): Promise<DayFixOpened> {
-  return callCommand<DayFixOpened>('day_fix_open', { input: { date, reason } });
+/**
+ * Reopens a closed date and every later closed date, with the reason and the Owner's sign (PRD FR-21.4,
+ * plan 73). The date is as typed, `DD-MM-YYYY`; the sign is sent as typed (the backend trims it, ignores
+ * case and decides: ERR_SIGN_REQUIRED and ERR_SIGN_WRONG on `sign`).
+ */
+export function dayFixOpen(date: string, reason: string, sign: string): Promise<DayFixOpened> {
+  return callCommand<DayFixOpened>('day_fix_open', { input: { date, reason, sign } });
 }
 
 /** Closes the days of a fix again, in order. Answers which closed and which stayed open. */

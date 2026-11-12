@@ -8,7 +8,11 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { partyLedgersList, partyLedgersStatement } from '../../src/features/party_ledgers/api';
+import {
+  partyLedgersGoToDate,
+  partyLedgersList,
+  partyLedgersStatement,
+} from '../../src/features/party_ledgers/api';
 import { parseLedgerSearch } from '../../src/features/party_ledgers/search';
 import { partyDayFilters } from '../../src/features/reports/party-day';
 import * as invoke from '../../src/shared/api/invoke';
@@ -32,10 +36,15 @@ beforeEach(() => {
 const COMMANDS = path.resolve(__dirname, '../../../backend/app/src/commands');
 
 describe('the commands of the party ledgers are the ones the backend declares', () => {
-  it('both commands are in commands/party_ledgers.rs', () => {
+  it('all four commands are in commands/party_ledgers.rs', () => {
     const text = readFileSync(path.join(COMMANDS, 'party_ledgers.rs'), 'utf8');
     const names = [...text.matchAll(/pub async fn (\w+)</g)].map((match) => match[1] ?? '');
-    expect(names).toEqual(['party_ledgers_list', 'party_ledgers_statement']);
+    expect(names).toEqual([
+      'party_ledgers_list',
+      'party_ledgers_statement',
+      'party_ledgers_go_to_date',
+      'party_ledgers_statement_print_data',
+    ]);
   });
 });
 
@@ -73,6 +82,15 @@ describe('the wrappers send what the backend reads', () => {
     await partyLedgersStatement(STATEMENT_RAHIM_REQUEST);
     expect(call).toHaveBeenLastCalledWith('party_ledgers_statement', {
       input: STATEMENT_RAHIM_REQUEST,
+    });
+  });
+});
+
+describe('go to a date (plan 74 W5)', () => {
+  it('sends the account and the date as it is typed, and nothing else', async () => {
+    await partyLedgersGoToDate({ account_id: 20, date: '20-09-2026' });
+    expect(call).toHaveBeenCalledWith('party_ledgers_go_to_date', {
+      input: { account_id: 20, date: '20-09-2026' },
     });
   });
 });

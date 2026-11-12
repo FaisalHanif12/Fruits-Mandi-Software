@@ -1925,7 +1925,16 @@ impl<'a> Run<'a> {
             return LotPre::Nothing;
         } else {
             match tools::find_lots::named_in(&env, &question) {
-                Ok(Some(text)) => text,
+                // A total word or a period says "all of them": nothing is asked, unless the
+                // question names one lot by its counter ("aam-2").
+                Ok(Some(text)) => {
+                    let counted = tools::find_lots::has_counter(&text);
+                    if !counted && (prefind::wants_all(&question) || self.names_a_period(&question))
+                    {
+                        return LotPre::Nothing;
+                    }
+                    text
+                }
                 _ => return LotPre::Nothing,
             }
         };
@@ -1960,6 +1969,21 @@ impl<'a> Run<'a> {
         } else {
             LotPre::Asked(Box::new(self.ask_which_one(conv, &find_id)))
         }
+    }
+
+    /// True when the question names a period the app reads: a day, a month, "is mahine", "aaj", a
+    /// range (the planner's own reading of periods, so there is one list of them).
+    fn names_a_period(&self, question: &str) -> bool {
+        let reader = crate::understand::Reader {
+            ctx: &self.snap,
+            actor: self.d.actor,
+            language: self.language,
+            today: self.today,
+            partner_locked: self.partner_locked,
+        };
+        !crate::understand::understand(&reader, question)
+            .periods
+            .is_empty()
     }
 
     /// Reads one topic of the guide for the app itself (the model asked for none). The read is in
@@ -2928,6 +2952,30 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
         return Err(not_waiting());
     };
     let outcome = match (&waiting.wait, &input.choice) {
+        // "All lots" (plan 71 L9): the model reads the seller and the item together, with no lot
+        // narrowing. Only a list of lots has this button.
+        (Wait::Which { find_id }, PickChoice::Match { key }) if key == fill::ALL_LOTS_KEY => {
+            let state = State {
+                results: conv.results.clone(),
+                turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+            };
+            if fill::is_lot_find(&state, find_id) {
+                turn.lot = None;
+                turn.messages.push(json!({
+                    "role": "user",
+                    "content": json!({
+                        "picked": format!("{find_id}.matches.0"),
+                        "note": "the Owner chose ALL lots of this seller and item: read the \
+                                 reports of its seller and item (the seller and item keys of the \
+                                 match) with every lot, not one"
+                    })
+                    .to_string(),
+                }));
+                Ok(Vec::new())
+            } else {
+                Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "key"))
+            }
+        }
         (Wait::Which { find_id }, PickChoice::Match { key }) => {
             if match_position(&conv.results, find_id, key).is_none() {
                 Err(ServiceError::reject_field(ErrorCode::ErrNotFound, "key"))

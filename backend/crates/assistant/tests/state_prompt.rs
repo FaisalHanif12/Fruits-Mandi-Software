@@ -152,7 +152,9 @@ fn the_new_enum_words_of_report_are_the_words_the_code_takes() {
 fn the_instructions_name_where_to_look() {
     // Only what the instructions must say: the properties of `report` explain themselves in
     // `tools.json` (checked above), so the instructions may be short about them.
-    for word in ["app_state", "guests", "role staff", "role truck"] {
+    // The instructions no longer teach the truck find (a new بکری has no truck; PRD v1.34, plan 71 H2,
+    // D6 v1.9): the role stays in the tool for old data.
+    for word in ["app_state", "guests", "role staff"] {
         assert!(SYSTEM.contains(word), "{word}");
     }
 }

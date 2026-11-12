@@ -18,6 +18,7 @@ import { fillThousandLines, thousandAnswer } from './bikri-thousand';
 import { fillUmarsLot, umarAnswer } from './bikri-umar-data';
 import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { account as accountRow } from './accounts';
+import { answerWithTyped } from './bikri-typed';
 import { ensurePaid } from './paid-fields';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
@@ -45,7 +46,8 @@ import { suggestionsFor } from './translit';
 import { isRokarPage, rokarHandlers } from './dev-bridge-rokar';
 import * as ownReal from './bikri-own-real';
 import * as tripsReal from './trips-real';
-import { EMPTY_PAIRS, bikriListOf } from './paged';
+import { EMPTY_PAIRS } from './paged';
+import { devPastList } from './past-dev';
 import type { OtherSaleInput } from '../../src/bindings/OtherSaleInput';
 import type { ReadyGoods } from '../../src/bindings/ReadyGoods';
 import type { PurchaseEntryInput } from '../../src/bindings/PurchaseEntryInput';
@@ -276,6 +278,12 @@ function partyMatches(party: Party, scope: string, text: string): boolean {
 /** The flags in the hash of the development page, for example `#/dev/bikri?cash`. */
 export function devFlag(name: string): boolean {
   return new URLSearchParams(window.location.hash.split('?')[1] ?? '').has(name);
+}
+
+/** The stamp of an edited بکری; with `?signed` it carries the sign given when the day was reopened (plan 73). */
+function editedStampOf<T extends object>(stamp: T | null): (T & { sign?: string }) | null {
+  if (stamp === null) return null;
+  return devFlag('signed') ? { ...stamp, sign: 'adnan' } : stamp;
 }
 
 /** The value of a flag in the hash, for example `type` in `#/dev/vouchers?type=payment`. */
@@ -635,7 +643,11 @@ const handlers: Record<string, Handler> = {
     if (devFlag('thousand')) return thousandAnswer(draftOf(input));
     // The stand-in gives each lot the counter of its name (PRD FR-12.45), as the backend does: the
     // first lot of a seller and an item is 1.
-    const answered = ensurePaid(previewFor(draftOf(input)));
+    // `#/dev/bikri?typed` answers like the real backend for a percent typed on the seller commission
+    // of the first line (plan 72 P13).
+    const answered = ensurePaid(
+      devFlag('typed') ? answerWithTyped(draftOf(input)) : previewFor(draftOf(input)),
+    );
     const preview = {
       ...answered,
       lots: answered.lots.map((lot, index) => ({
@@ -667,24 +679,14 @@ const handlers: Record<string, Handler> = {
           // Plan 44: the story of the edit kit. A closed day asks to be reopened first; an edited
           // entry shows its stamp.
           ...(devFlag('closedday') ? { needs_reopen: true } : {}),
-          ...(devFlag('edited') ? { edited: AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null } : {}),
+          ...(devFlag('edited')
+            ? {
+                edited: editedStampOf(AUDIT_EDIT_STAMP_BIKRI[0]?.stamp ?? null),
+              }
+            : {}),
         }),
-  bikri_list: () =>
-    bikriListOf(
-      devFlag('empty') ? [] : [listRow(), listRow({ id: 42, number: 2, status: 'cancelled' })],
-      0,
-      0,
-      // The sums of the saved one: the cancelled posting is left out of them (PRD 12.9).
-      devFlag('empty')
-        ? {}
-        : {
-            qty_received: 50,
-            qty_sold: 50,
-            gross: paisaForTest(2_940_000),
-            net: paisaForTest(1_931_600),
-            buyer_total: paisaForTest(3_156_400),
-          },
-    ),
+  // Plan 72: today's section and the window of earlier days, with a heading for each day.
+  bikri_list: (input) => devPastList(input, devFlag('empty'), devFlag('many')),
   bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
   bikri_navigate: () => 41,
   // `#/dev/bikri?offer` shows the start-up offer of an unfinished بکری (PRD FR-12.10).

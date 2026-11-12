@@ -148,10 +148,17 @@ edit-fix-title = دن کھولیں اور درست کریں؟
 
 # $date: the day of the entry, DD-MM-YYYY. The days after it open too.
 # review: pending
-edit-fix-text = { $date } اور اس کے بعد کے سب بند دن دوبارہ کھل جائیں گے۔ آپ اندراج درست کریں گے، اور محفوظ کرنے کے بعد یہ دن اسی ترتیب سے دوبارہ بند ہو جائیں گے۔ وجہ لکھیں۔
+edit-fix-text = { $date } اور اس کے بعد کے سب بند دن دوبارہ کھل جائیں گے۔ آپ اندراج درست کریں گے، اور محفوظ کرنے کے بعد یہ دن اسی ترتیب سے دوبارہ بند ہو جائیں گے۔ وجہ اور مالک کا { -dastakhat } لکھیں۔
 
 # review: pending
 edit-fix-label = دن کھولنے کی وجہ
+
+# The Owner's sign, below the reason (PRD FR-21.4, plan 73).
+# review: pending
+edit-fix-sign-label = { -dastakhat }
+
+# review: pending
+edit-fix-sign-hint = بند دن صرف مالک کے { -dastakhat } سے کھلتا ہے۔
 
 # review: pending
 edit-fix-confirm = دن کھولیں
@@ -177,6 +184,10 @@ edit-fix-failed = دن بند نہیں ہو سکے
 # review: pending
 edit-stamp = تبدیل شدہ: { $date } { $time }، { $by }
 
+# The same, when the edit was made through a reopened day: $sign is the sign given then (PRD FR-7.71, v1.36).
+# review: pending
+edit-stamp-signed = تبدیل شدہ: { $date } { $time }، { $by }، { -dastakhat }: { $sign }
+
 # review: pending
 edit-stamp-reason = وجہ: { $reason }
 
@@ -189,6 +200,9 @@ edit-mark = تبدیل شدہ
 
 # review: pending
 edit-mark-tip = تبدیل شدہ: { $date } { $time }، { $by }
+
+# review: pending
+edit-mark-tip-signed = تبدیل شدہ: { $date } { $time }، { $by }، { -dastakhat }: { $sign }
 
 # The time of day. $hour and $minute are the clock, $part tells the part of the day.
 # review: pending
@@ -218,6 +232,10 @@ edit-history-failed = تبدیلیوں کی تاریخ نہیں کھل سکی۔
 
 # review: pending
 edit-history-version = { $date } { $time }، { $by }
+
+# A version made through a reopened day: its sign follows the name (PRD FR-7.71, v1.36).
+# review: pending
+edit-history-version-signed = { $date } { $time }، { $by }، { -dastakhat }: { $sign }
 
 # review: pending
 edit-history-field = خانہ

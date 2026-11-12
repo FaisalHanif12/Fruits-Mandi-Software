@@ -828,6 +828,7 @@ fn write_edit(
     if let Some(reason) = reason {
         event = event.reason(reason);
     }
+    event = event.sign(crate::day::fix_sign(tx, &old_posting.entry_date)?.as_deref());
     ctx.db.auditor().write(tx, &event.into_entry())?;
 
     let version = edit_repo::entry_state(tx, detail.id)?

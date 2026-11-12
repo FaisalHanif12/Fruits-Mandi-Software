@@ -52,6 +52,19 @@ export type BikriListInput = {
    */
   group_by_month: boolean;
   /**
+   * "پوری بکری دکھائیں" (PRD 12.7, plan 72 P8): set aside `seller_id`, `item_id`, `status`, `search`
+   * and `show_finished`, and show every بکری of the dates asked for, cancelled ones too. The
+   * dates (`date`, `from`, `to`) still decide which days are shown. The count, the totals and
+   * the days follow the same choice.
+   */
+  all: boolean;
+  /**
+   * Send `days` too: one entry for each date from `from` to `to`, a day with no بکری included
+   * (PRD 12.7, plan 72 P4, P7). Needs both `from` and `to` (or `date`), at most 366 days
+   * apart, and `to` not before `from`.
+   */
+  group_by_day: boolean;
+  /**
    * How many rows to skip. 0 for the first page (PRD FR-19.11).
    */
   offset: number;

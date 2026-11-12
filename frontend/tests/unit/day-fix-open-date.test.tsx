@@ -62,6 +62,7 @@ async function confirmWithReason(language: Language, user: ReturnType<typeof use
     within(dialog).getByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
     'wrong rate{Enter}',
   );
+  await user.keyboard('adnan{Enter}');
 }
 
 describe.each(LANGUAGES)('the date of the reopen and fix (%s)', (language) => {
@@ -70,7 +71,7 @@ describe.each(LANGUAGES)('the date of the reopen and fix (%s)', (language) => {
     renderIn(language, <Caller date="2026-10-10" then={then} />);
     await confirmWithReason(language, userEvent.setup());
     await waitFor(() => {
-      expect(editApi.dayFixOpen).toHaveBeenCalledWith('10-10-2026', 'wrong rate');
+      expect(editApi.dayFixOpen).toHaveBeenCalledWith('10-10-2026', 'wrong rate', 'adnan');
     });
     // The days are open, so the screen goes on to open the entry for editing.
     await waitFor(() => {
@@ -82,7 +83,7 @@ describe.each(LANGUAGES)('the date of the reopen and fix (%s)', (language) => {
     renderIn(language, <Caller date="10-10-2026" then={vi.fn()} />);
     await confirmWithReason(language, userEvent.setup());
     await waitFor(() => {
-      expect(editApi.dayFixOpen).toHaveBeenCalledWith('10-10-2026', 'wrong rate');
+      expect(editApi.dayFixOpen).toHaveBeenCalledWith('10-10-2026', 'wrong rate', 'adnan');
     });
   });
 
@@ -102,7 +103,8 @@ describe('the wire of day_fix_open', () => {
       '../../src/shared/edit/api',
     );
     vi.mocked(invoke.callCommand).mockResolvedValue(DAY_FIX_OPEN_E2E_45);
-    await real.dayFixOpen(request.date, request.reason);
+    await real.dayFixOpen(request.date, request.reason, request.sign);
+    // The backend's request file: the date as typed, the reason and the Owner's sign (plan 73).
     expect(invoke.callCommand).toHaveBeenCalledWith('day_fix_open', { input: request });
   });
 });

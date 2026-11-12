@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bikri-list-print-data"
+description = "Enables the bikri_list_print_data command without any pre-configured scope."
+commands.allow = ["bikri_list_print_data"]
+
+[[permission]]
+identifier = "deny-bikri-list-print-data"
+description = "Denies the bikri_list_print_data command without any pre-configured scope."
+commands.deny = ["bikri_list_print_data"]

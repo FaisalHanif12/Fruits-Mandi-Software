@@ -39,8 +39,9 @@ import { FigureCell } from '../ui/FigureCell';
 import { displayText } from '../ui/NumberTextInput';
 import './agGridSetup';
 import { COLUMN_WIDTHS, FIT_MIN_WIDTHS, FIT_WEIGHTS, isNumberLike } from './columnTypes';
+import type { AddRowLink } from './addLink';
 import { isEditable, nextEnterStop } from './enterOrder';
-import type { EntryStore } from './entryStore';
+import { addRowAndFocus, type EntryStore } from './entryStore';
 import { syncEditedText } from './editEnd';
 import { createGridKeyHandler } from './gridKeys';
 import { PickerCellEditor } from './PickerCellEditor';
@@ -128,6 +129,12 @@ interface EntryGridProps {
   workings?: PerRow<Working>;
   /** What the screen adds to Enter and ↑ (moving between grids and panels). */
   interceptors?: GridInterceptors;
+  /**
+   * The link to the "+" button under this grid (`useAddRowLink`, the same one the `AddRowButton` gets): `↓` on
+   * the trash cell of the last row goes to the button, and the button's `↑` comes back to that cell
+   * (addLink.ts). A grid with no such button leaves it out.
+   */
+  addLink?: AddRowLink;
   /**
    * The account the screen's party card would show now, while a picker cell is open; for a چکتا
    * buyer also who he is (his names and phone, PRD FR-13.6).
@@ -490,6 +497,7 @@ function GridInner({
   workings,
   interceptors,
   onCardAccount,
+  addLink,
 }: EntryGridProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
@@ -567,6 +575,34 @@ function GridInner({
   });
   const { request: requestRemove, canRemove } = removing;
 
+  // The link to the "+" button under the grid (addLink.ts): the grid puts the focus on the button, and gives
+  // the button a way back to the trash cell of the last row (or the last cell, when that row has no trash).
+  const focusAdd = useCallback((): boolean => {
+    const button = addLink?.buttonRef.current ?? null;
+    // A button that is off (the limit of rows) takes no focus: the cursor stays where it is.
+    if (button === null || button.disabled) return false;
+    button.focus();
+    return true;
+  }, [addLink]);
+  useEffect(() => {
+    if (addLink === undefined) return undefined;
+    addLink.setFocusLastRemove(() => {
+      const api = apiRef.current;
+      if (api === null || api.isDestroyed()) return false;
+      const all = store.getState().rows;
+      const last = all[all.length - 1];
+      if (last === undefined) return false;
+      const field = canRemove(last) ? REMOVE_COLUMN_ID : columns[columns.length - 1]?.field;
+      if (field === undefined) return false;
+      api.setFocusedCell(all.length - 1, field);
+      api.ensureIndexVisible(all.length - 1);
+      return true;
+    });
+    return () => {
+      addLink.setFocusLastRemove(null);
+    };
+  }, [addLink, store, columns, canRemove]);
+
   const keyHandler = useMemo(
     () =>
       createGridKeyHandler({
@@ -580,6 +616,7 @@ function GridInner({
         onExplain: explain,
         cycleChoice: cycle,
         ...(interceptors === undefined ? {} : { interceptors }),
+        ...(addLink === undefined ? {} : { focusAdd }),
       }),
     [
       store,
@@ -592,6 +629,8 @@ function GridInner({
       requestRemove,
       cycle,
       interceptors,
+      addLink,
+      focusAdd,
     ],
   );
   const getKeyHandler = useLatest(keyHandler);
@@ -690,8 +729,7 @@ function GridInner({
       api.setFocusedCell(step.rowIndex, step.field);
       api.ensureIndexVisible(step.rowIndex);
     } else if (fixedRows !== true) {
-      store.getState().addRow();
-      store.getState().setPendingFocus({ rowIndex: 'last', field: step.field });
+      addRowAndFocus(store, step.field);
     }
   }, [calc, columns, store, fixedRows]);
 

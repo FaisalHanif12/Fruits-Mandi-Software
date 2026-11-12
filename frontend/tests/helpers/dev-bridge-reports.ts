@@ -199,7 +199,8 @@ function catalog(): ReportCatalogEntry[] {
   return CATALOG;
 }
 
-function page(input: Input): ReportPage {
+/** What the stand-in answers to `reports_run` (also used by the party ledgers stand-in for the days it knows). */
+export function page(input: Input): ReportPage {
   const id = input['id'] as ReportId;
   const filters = (input['filters'] ?? {}) as Record<string, unknown>;
   const party = filters['party'] as { account_id?: number } | null;

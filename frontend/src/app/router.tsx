@@ -21,6 +21,7 @@ import {
   parseLentSearch,
 } from '../features/cashbook/screen-type';
 import { parseFruitSearch } from '../features/fruit/screen-search';
+import { parsePastReturn, parsePastSearch, type PastReturn } from '../features/bikri/past-window';
 import { parseGardenSearch } from '../features/gardens/screen-type';
 import { parseTripSearch } from '../features/trips/screen-type';
 import { parseGeneralSearch } from '../features/cashbook/screen-type';
@@ -149,13 +150,15 @@ function positiveId(value: unknown): number | undefined {
 // `/bikri/book` is a new بکری; `/bikri/book?id=12` opens a saved one read-only (plan 13);
 // `/bikri/book?id=12&edit=57` opens posting 57 of it for edit (plan 16); `/bikri/book?find=true` is a new
 // بکری with the find box (F3) already open, the way an answer sends the Owner to a بکری to edit or cancel
-// (plan 55 Section 11.1).
+// (plan 55 Section 11.1). `past=2026-11-11` (and `pastAll=true`) say the Owner came from پچھلی بکری with
+// the window ending that day: after an edit is saved he goes back to the same window and row (plan 72
+// P10).
 const bikriBookRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/book',
   validateSearch: (
     search: Record<string, unknown>,
-  ): { id?: number; edit?: number; find?: true } => {
+  ): { id?: number; edit?: number; find?: true } & Partial<PastReturn> => {
     const id = positiveId(search['id']);
     const edit = positiveId(search['edit']);
     const find = search['find'] === true || search['find'] === 'true';
@@ -163,6 +166,7 @@ const bikriBookRoute = createRoute({
       ...(id === undefined ? {} : { id }),
       ...(id !== undefined && edit !== undefined ? { edit } : {}),
       ...(id === undefined && find ? { find: true as const } : {}),
+      ...(id === undefined ? {} : parsePastReturn(search)),
     };
   },
   component: lazyRouteComponent(
@@ -171,10 +175,13 @@ const bikriBookRoute = createRoute({
   ),
 });
 
-// آج کی بکری: the list of بکری (PRD FR-12.7).
+// پچھلی بکری (the route keeps its old name): today's بکری and the window of earlier days (PRD 12.7).
+// `?end=2026-11-05` is the last day of the window, `row=41` the بکری to focus, `all=true` the tick
+// "show every بکری" (plan 72).
 const todayRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/bikri/today',
+  validateSearch: (search: Record<string, unknown>) => parsePastSearch(search),
   component: lazyRouteComponent(
     () => import('../features/bikri/pages/TodayBikriPage'),
     'TodayBikriPage',
@@ -709,6 +716,14 @@ const reportsDevRoutes = import.meta.env.DEV
 // ---- Plan 66: the development page of the party ledgers (dev only, like the others). ----
 const partyLedgersDevRoutes = import.meta.env.DEV
   ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/statement-print',
+        component: lazyRouteComponent(
+          () => import('./dev/StatementPrintDevPage'),
+          'StatementPrintDevPage',
+        ),
+      }),
       createRoute({
         getParentRoute: () => rootRoute,
         path: '/dev/party-ledgers',

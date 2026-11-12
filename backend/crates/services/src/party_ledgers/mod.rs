@@ -22,12 +22,13 @@ use mandi_db::ledger as ledger_repo;
 use mandi_db::party_ledgers as repo;
 use mandi_db::rusqlite::Connection;
 use mandi_domain::core::accounts::{BUYER_CONTROL, Balance, BalanceSide, SELLER_CONTROL};
-use mandi_domain::core::dates::BusinessDate;
+use mandi_domain::core::dates::{BusinessDate, format_ddmmyyyy};
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
 use mandi_domain::core::party_ledgers::{
-    LedgerSide, PartyLedgerDay, PartyLedgerHead, PartyLedgerRow, PartyLedgerStatement,
-    PartyLedgerStatementInput, PartyLedgersList, PartyLedgersListInput,
+    LedgerSide, PartyLedgerDay, PartyLedgerGoTo, PartyLedgerGoToInput, PartyLedgerHead,
+    PartyLedgerRow, PartyLedgerStatement, PartyLedgerStatementInput, PartyLedgerStatementWhole,
+    PartyLedgersList, PartyLedgersListInput,
 };
 use mandi_domain::core::text;
 use mandi_domain::core::validate::{self, FieldErrors};
@@ -40,6 +41,11 @@ use crate::page::DEFAULT_PAGE;
 
 /// The most rows of a page (Code Standards B31).
 const MAX_PAGE: u32 = 100;
+/// The days of a statement window (PRD FR-12.47).
+const WINDOW_DAYS: i64 = 30;
+/// How far past the asked day a go-to-date window ends: the asked day sits near its middle
+/// (plan 74 W5a).
+const WINDOW_AHEAD_DAYS: i64 = 15;
 /// Up to this many parties the balances are read for those accounts only; above it the whole
 /// control is read in one grouped query, which is cheaper than a very long list of ids.
 const NAMED_BALANCES_UP_TO: usize = 500;
@@ -216,8 +222,27 @@ pub fn statement(
             return Err(ServiceError::reject_field(ErrorCode::ErrDateRange, "to"));
         }
     }
-    let limit = page_size(input.limit);
-    let account_id = input.account_id;
+    read_statement(
+        ctx,
+        input.account_id,
+        from.as_deref(),
+        to.as_deref(),
+        i64::from(page_size(input.limit)),
+        i64::from(input.offset),
+    )
+}
+
+/// One party's statement for the ISO dates `from` and `to` (a missing one is no limit): `limit` rows
+/// from `offset`, and a negative `limit` for every row (the print, Code Standards B31). The page and
+/// the totals come from one reading of his lines.
+fn read_statement(
+    ctx: &Context,
+    account_id: i64,
+    from: Option<&str>,
+    to: Option<&str>,
+    limit: i64,
+    offset: i64,
+) -> Result<PartyLedgerStatement, ServiceError> {
     ctx.db.read(|conn| {
         let not_found = || ServiceError::reject_field(ErrorCode::ErrNotFound, "account_id");
         let head = repo::head(conn, account_id)?
@@ -228,15 +253,8 @@ pub fn statement(
             SELLER_CONTROL => LedgerSide::Seller,
             _ => return Err(not_found()),
         };
-        let days = repo::statement_days(
-            conn,
-            account_id,
-            from.as_deref(),
-            to.as_deref(),
-            i64::from(limit),
-            i64::from(input.offset),
-        )?;
-        let totals = repo::statement_totals(conn, account_id, from.as_deref(), to.as_deref())?;
+        // The page and the totals come from one reading of his lines (B31, NFR-SPD-24).
+        let (days, totals) = repo::statement_page(conn, account_id, from, to, limit, offset)?;
         let is_dead = dead::dead_set(conn, None)?.has_account(account_id);
 
         let mut rows = Vec::with_capacity(days.len());
@@ -298,5 +316,97 @@ pub fn statement(
             closing_paisa: closing.amount_paisa,
             closing_side: closing.side,
         })
+    })
+}
+
+/// One party's statement for a whole period, every date of it with no page limit, for the print (PRD
+/// FR-12.47, plan 74 T1, Code Standards B31). `from` and `to` are typed like any date (`DD-MM-YYYY` or
+/// a shortcut) and both are required. The rows are newest first, as [`statement`] gives them; the
+/// print lays them out oldest first. Read only.
+///
+/// # Errors
+/// `ERR_REQUIRED` and `ERR_DATE_*` on `from` or `to`; `ERR_DATE_RANGE` on `to` when it is before
+/// `from`; `ERR_NOT_FOUND` on `account_id` for an account that is not a buyer or a seller.
+pub fn statement_whole(
+    ctx: &Context,
+    account_id: i64,
+    from: &str,
+    to: &str,
+) -> Result<PartyLedgerStatementWhole, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let mut errors = FieldErrors::default();
+    let first = errors.take(validate::date("from", from, today));
+    let last = errors.take(validate::date("to", to, today));
+    errors.finish()?;
+    let invalid = |field: &str| ServiceError::reject_field(ErrorCode::ErrDateInvalid, field);
+    let first = first.ok_or_else(|| invalid("from"))?;
+    let last = last.ok_or_else(|| invalid("to"))?;
+    if first > last {
+        return Err(ServiceError::reject_field(ErrorCode::ErrDateRange, "to"));
+    }
+    let (from_iso, to_iso) = (first.to_iso(), last.to_iso());
+    let statement = read_statement(ctx, account_id, Some(&from_iso), Some(&to_iso), -1, 0)?;
+    Ok(PartyLedgerStatementWhole {
+        from: from_iso,
+        to: to_iso,
+        statement,
+    })
+}
+
+/// Go to a date on one party's statement (PRD FR-12.47, plan 74 W5a): the 30-day window that ends on
+/// the earlier of the day plus 15 days and today, with its page of dates and totals (the same answer
+/// as [`statement`] for that `from` and `to`, from the same query), and whether the day has an entry
+/// and where its row is.
+///
+/// Example: today 05-12-2026 and the day 11-10-2026: the window is 27-09-2026 to 26-10-2026. The day
+/// 02-12-2026 would end on 17-12-2026, which is after today, so its window ends on 05-12-2026.
+///
+/// # Errors
+/// `ERR_REQUIRED` and `ERR_DATE_INVALID` on `date`; `ERR_DATE_IN_FUTURE` on `date` for a day after
+/// today; `ERR_NOT_FOUND` on `account_id` for an account that is not a buyer or a seller.
+pub fn go_to_date(
+    ctx: &Context,
+    input: &PartyLedgerGoToInput,
+) -> Result<PartyLedgerGoTo, ServiceError> {
+    let (_, today) = day::window(ctx)?;
+    let mut errors = FieldErrors::default();
+    let asked = errors.take(validate::date("date", &input.date, today));
+    errors.finish()?;
+    let invalid = || ServiceError::reject_field(ErrorCode::ErrDateInvalid, "date");
+    let asked = asked.ok_or_else(invalid)?;
+    if asked > today {
+        return Err(ServiceError::reject_field(
+            ErrorCode::ErrDateInFuture,
+            "date",
+        ));
+    }
+    let end = asked
+        .plus_days(WINDOW_AHEAD_DAYS)
+        .map_or(today, |day| day.min(today));
+    let start = end
+        .plus_days(1_i64.saturating_sub(WINDOW_DAYS))
+        .ok_or_else(invalid)?;
+    let statement = statement(
+        ctx,
+        &PartyLedgerStatementInput {
+            account_id: input.account_id,
+            from: Some(format_ddmmyyyy(start)),
+            to: Some(format_ddmmyyyy(end)),
+            offset: 0,
+            limit: MAX_PAGE,
+        },
+    )?;
+    let iso = asked.to_iso();
+    let row = statement
+        .rows
+        .iter()
+        .position(|r| r.date == iso)
+        .and_then(|at| u32::try_from(at).ok());
+    Ok(PartyLedgerGoTo {
+        from: start.to_iso(),
+        to: end.to_iso(),
+        has_entry: row.is_some(),
+        row,
+        statement,
     })
 }

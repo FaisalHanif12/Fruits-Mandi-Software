@@ -75,6 +75,8 @@ const HISTORY: EditHistory = {
         },
       ],
       changes_truncated: false,
+      // An edit of an open day has no sign (PRD FR-7.71).
+      sign: null,
     },
   ],
 };
@@ -135,6 +137,24 @@ describe.each(LANGUAGES)('the marks of an edited پھل entry (%s)', (language) 
       }),
     );
     await confirmFixDay(language, user, '05-10-2026');
+  });
+
+  it('a field changed through a reopened day carries the sign in its tip, after the name (PRD FR-7.71, v1.36)', async () => {
+    const [first] = HISTORY.versions;
+    if (first === undefined) throw new Error('the history has a version');
+    vi.mocked(editApi.auditEditHistory).mockResolvedValue({
+      ...HISTORY,
+      versions: [{ ...first, sign: 'adnan' }],
+    });
+    await openForEdit();
+    await waitFor(() => {
+      expect(marks()).toHaveLength(2);
+    });
+    for (const mark of marks()) {
+      expect(visible(mark.getAttribute('title'))).toContain(
+        `${message(language, 'glossary-dastakhat')}: adnan`,
+      );
+    }
   });
 
   it('the quantity and the rate carry what they held before; the other fields have no mark', async () => {

@@ -135,10 +135,10 @@
         "title": "Sale Book",
         "summary": "The Sale Book is where one truck's goods are sold. You enter the date, each seller's lot and each buyer's sale line, and every amount is worked out as you type.",
         "steps": [
-          "Open Sale, then Sale Book, or press Alt+B. The date and the sale number sit in the top row.",
-          "Add a lot for each seller and item: seller, item, packing and quantity received. Each lot is named by seller, item and a counter, like Ehsan, Mango-2. Freight, labour and the like are under More.",
+          "Open Sale, then Sale Book, or press Alt+B. The date and sale number are at the top.",
+          "Add a lot for each seller and item: seller, item, packing and quantity received. Its name is seller, item and counter: Ehsan, Mango-2. Freight, labour and the like are under More.",
           "On each sale line type the buyer code, the quantity, the rate and what he paid on the spot, pressing Enter after each. Commission and Laga fill by the rules.",
-          "Check the summary and the partners' share on the screen, then save."
+          "Check the summary and the partners' share, then save."
         ],
         "keys": "F10 or Ctrl+S saves. Ctrl+Enter saves, prints the ticked slips and opens a new sale. Ctrl+Delete removes a row.",
         "example": "Rahim's 50 boxes of banana, lot Rahim, Banana-1. Akram takes 20 at 600 and Arshad 30 at 580. Rahim's net sale is 19,316."
@@ -940,7 +940,7 @@
         "summary": "The app has one user, the Owner. You sign in with the user name and password. The app locks by itself after a time without use, and your unsaved work stays.",
         "steps": [
           "Type the user name and password and press Enter. The language switch is on the sign-in screen too.",
-          "After 5 wrong tries wait 1 minute, then longer. If you forget the password, use the recovery code printed at setup.",
+          "After 10 wrong tries wait 1 minute, then longer. If you forget the password, use the recovery code printed at setup.",
           "The app locks after 15 minutes idle; type the password to unlock. Lock it yourself from the user menu.",
           "Change the password in the user menu at the top."
         ],
@@ -952,7 +952,7 @@
         "summary": "ایپ کا ایک ہی صارف ہے، مالک۔ آپ صارف کے نام اور پاس ورڈ سے لاگ ان ہوتے ہیں۔ استعمال کے بغیر کچھ دیر بعد ایپ خود لاک ہو جاتی ہے اور آپ کا غیر محفوظ کام رہتا ہے۔",
         "steps": [
           "صارف کا نام اور پاس ورڈ لکھیں اور Enter دبائیں۔ زبان کا سوئچ لاگ ان کی اسکرین پر بھی ہے۔",
-          "5 غلط کوششوں کے بعد 1 منٹ رکیں، پھر زیادہ۔ پاس ورڈ بھول جائیں تو سیٹ اپ پر چھپا ہوا ریکوری کوڈ استعمال کریں۔",
+          "10 غلط کوششوں کے بعد 1 منٹ رکیں، پھر زیادہ۔ پاس ورڈ بھول جائیں تو سیٹ اپ پر چھپا ہوا ریکوری کوڈ استعمال کریں۔",
           "15 منٹ بے کار رہنے پر ایپ لاک ہو جاتی ہے؛ کھولنے کے لیے پاس ورڈ لکھیں۔ صارف مینو سے خود بھی لاک کر سکتے ہیں۔",
           "پاس ورڈ اوپر کے صارف مینو میں بدلیں۔"
         ],
@@ -962,28 +962,28 @@
     },
     "today_sales": {
       "en": {
-        "title": "Today's Sale",
-        "summary": "Today's Sale lists the sales of a day, so you can find one, check it or open it to edit or cancel.",
+        "title": "Past Sales",
+        "summary": "Past Sales shows today's sales on top and, below them, earlier days seven at a time, so you can find any sale, check it or open it to edit or cancel.",
         "steps": [
-          "Open Sale, then Today's Sale.",
-          "Filter by day, seller or item. The row shows the sale number, truck, sellers, gross sale, net sale and status.",
-          "Press Enter on a row, or click it, to open that sale.",
-          "To find an older sale by number, truck, seller or date, use Find in the Sale Book."
+          "Open Sale, then Past Sales. Today's sales come first; below the divider are the last 7 days, grouped by day.",
+          "Use the arrow keys, or Page Up and Page Down, to move 7 days back or nearer. Type a date in Go to date to jump to the week that ends on it.",
+          "Filter by seller, item or status, or tick Show every sale to set the filters aside.",
+          "Press Enter on a row, or click it, to open that sale. Edit it there; after the save you come back to the same week and row."
         ],
-        "keys": "Alt+B starts a new sale. F3 finds a sale. Enter opens the selected row.",
-        "example": "On the worked day the list shows two sales, with a gross sale of 29,400 and 12,000."
+        "keys": "Page Up goes back 7 days, Page Down comes 7 days nearer. Enter opens the selected row.",
+        "example": "On 12-11-2026 the week below today is 05-11-2026 to 11-11-2026; one step back shows 29-10-2026 to 04-11-2026."
       },
       "ur": {
-        "title": "آج کی بکری",
-        "summary": "آج کی بکری میں ایک دن کی بکریاں ہیں، تاکہ آپ کوئی بکری ڈھونڈ سکیں، دیکھ سکیں یا کھول کر تبدیل یا منسوخ کر سکیں۔",
+        "title": "پچھلی بکری",
+        "summary": "پچھلی بکری میں اوپر آج کی بکریاں ہیں اور ان کے نیچے پچھلے دن، سات سات دن کر کے، تاکہ آپ کوئی بھی بکری ڈھونڈ سکیں، دیکھ سکیں یا کھول کر تبدیل یا منسوخ کر سکیں۔",
         "steps": [
-          "بکری میں آج کی بکری کھولیں۔",
-          "دن، بیوپاری یا قسم مال سے چھانٹیں۔ قطار میں بکری نمبر، ٹرک، بیوپاری، خام بکری، صافی بکری اور حالت ہے۔",
-          "کسی قطار پر Enter دبائیں، یا اس پر کلک کریں، وہ بکری کھل جاتی ہے۔",
-          "پرانی بکری نمبر، ٹرک، بیوپاری یا تاریخ سے ڈھونڈنے کے لیے بکری بک میں تلاش استعمال کریں۔"
+          "بکری میں پچھلی بکری کھولیں۔ پہلے آج کی بکریاں ہیں؛ لکیر کے نیچے پچھلے 7 دن، دن وار۔",
+          "تیر کے بٹنوں، یا Page Up اور Page Down سے 7 دن پیچھے یا آگے جائیں۔ تاریخ پر جائیں میں تاریخ لکھیں تو اسی تاریخ پر ختم ہونے والا ہفتہ آ جاتا ہے۔",
+          "بیوپاری، قسم مال یا حالت سے چھانٹیں، یا پوری بکری دکھائیں پر نشان لگا کر چھانٹیاں ایک طرف کر دیں۔",
+          "کسی قطار پر Enter دبائیں، یا اس پر کلک کریں، وہ بکری کھل جاتی ہے۔ وہیں تبدیل کریں؛ محفوظ کرنے کے بعد آپ اسی ہفتے اور اسی قطار پر واپس آتے ہیں۔"
         ],
-        "keys": "Alt+B نئی بکری شروع کرتا ہے۔ F3 بکری ڈھونڈتا ہے۔ Enter چنی ہوئی قطار کھولتا ہے۔",
-        "example": "مثال کے دن فہرست میں دو بکریاں ہیں، خام بکری 29,400 اور 12,000۔"
+        "keys": "Page Up سے 7 دن پیچھے، Page Down سے 7 دن آگے۔ Enter چنی ہوئی قطار کھولتا ہے۔",
+        "example": "12-11-2026 کو آج کے نیچے کا ہفتہ 05-11-2026 تا 11-11-2026 ہے؛ ایک قدم پیچھے 29-10-2026 تا 04-11-2026۔"
       }
     },
     "unsold_stock": {

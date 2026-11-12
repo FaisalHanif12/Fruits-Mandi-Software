@@ -5,7 +5,10 @@
 use mandi_services::core::printing::PrintOutcome;
 
 use crate::error::UiError;
-use crate::print_report::{PrintAnalyticsViewInput, PrintReportInput, run_analytics, run_report};
+use crate::print_report::{
+    PrintAnalyticsViewInput, PrintBikriListInput, PrintReportInput, PrintStatementInput,
+    run_analytics, run_bikri_list, run_report, run_statement,
+};
 
 /// Prints a report on the printer of Settings, or saves it as a PDF named
 /// `report-<id>-<YYYYMMDD>-<language>.pdf` (`report-r5-slips-...` for the slips of R5). With
@@ -33,4 +36,31 @@ pub async fn analytics_print_view<R: tauri::Runtime>(
     input: PrintAnalyticsViewInput,
 ) -> Result<PrintOutcome, UiError> {
     run_analytics(app, input).await
+}
+
+/// Prints پچھلی بکری (today's section and a window of days, with the filters or the switch "show
+/// every بکری") on the printer of Settings, or saves it as a PDF named
+/// `bikri-list-<YYYYMMDD>-<language>.pdf` (PRD FR-12.46, plan 72 P8). Like `analytics_print_view`.
+/// The data is `bikri_list_print_data`, the header and footer `reports_print_header`. Errors: as
+/// `bikri_list_print_data`, the copies codes on `copies`, `ERR_PRINT_WINDOWS_ONLY`,
+/// `ERR_PRINTER_NOT_FOUND`, `ERR_PRINT_FAILED`.
+#[tauri::command]
+pub async fn bikri_list_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintBikriListInput,
+) -> Result<PrintOutcome, UiError> {
+    run_bikri_list(app, input).await
+}
+
+/// Prints one party's statement for a period on the printer of Settings, or saves it as a PDF named
+/// `party-statement-<code>-<YYYYMMDD>-<language>.pdf` (PRD FR-12.47, plan 74 T1). Like
+/// `bikri_list_print`. The data is `party_ledgers_statement_print_data`, the header and footer
+/// `reports_print_header`. Errors: as `party_ledgers_statement_print_data`, the copies codes on
+/// `copies`, `ERR_PRINT_WINDOWS_ONLY`, `ERR_PRINTER_NOT_FOUND`, `ERR_PRINT_FAILED`.
+#[tauri::command]
+pub async fn party_ledgers_statement_print<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    input: PrintStatementInput,
+) -> Result<PrintOutcome, UiError> {
+    run_statement(app, input).await
 }

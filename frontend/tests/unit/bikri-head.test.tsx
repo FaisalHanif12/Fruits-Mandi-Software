@@ -197,7 +197,7 @@ describe.each(LANGUAGES)('a draft kept before the header lost its fields (%s)', 
     });
     await user.click(
       screen.getByRole('button', {
-        name: (label) => visible(label).startsWith(visible(message(language, 'bikri-lots-add'))),
+        name: (label) => visible(label) === visible(message(language, 'bikri-lots-add-row')),
       }),
     );
     await waitFor(() => {

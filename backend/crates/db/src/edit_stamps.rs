@@ -22,6 +22,8 @@ pub struct LastEdit {
     pub reason: Option<String>,
     /// The display name of the user who made it (the user name when there is no display name).
     pub by: Option<String>,
+    /// The Owner's sign saved with it, when it was made in a reopened day (PRD FR-21.4, plan 73).
+    pub sign: Option<String>,
 }
 
 /// The last edit of each entry in `ids` that was ever edited, by id. `entity` is the `entity` text
@@ -55,12 +57,14 @@ pub fn last_edits(
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         for (id, count, last) in rows {
-            let (at, reason, by): (String, Option<String>, Option<String>) = conn.query_row(
-                "SELECT a.at, a.reason, COALESCE(NULLIF(u.display_name, ''), u.username)
-                 FROM audit_log a LEFT JOIN users u ON u.id = a.user_id WHERE a.id = ?1",
-                [last],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-            )?;
+            let (at, reason, by, sign): (String, Option<String>, Option<String>, Option<String>) =
+                conn.query_row(
+                    "SELECT a.at, a.reason, COALESCE(NULLIF(u.display_name, ''), u.username),
+                            json_extract(a.new_json, '$.sign')
+                     FROM audit_log a LEFT JOIN users u ON u.id = a.user_id WHERE a.id = ?1",
+                    [last],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                )?;
             found.insert(
                 id,
                 LastEdit {
@@ -68,6 +72,7 @@ pub fn last_edits(
                     at,
                     reason: reason.filter(|r| !r.is_empty()),
                     by,
+                    sign: sign.filter(|s| !s.is_empty()),
                 },
             );
         }

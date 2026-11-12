@@ -1,13 +1,13 @@
-// The reads of the بکری screens as hooks (Code Standards F6): one saved بکری, the list of today's
-// بکری, and the answer of "find". Nothing is kept for long: a save, an edit or a cancel changes
+// The reads of the بکری screens as hooks (Code Standards F6): one saved بکری, the lists of پچھلی بکری (today
+// and the window of earlier days), and the answer of "find". Nothing is kept for long: a save, an edit or a cancel changes
 // them all, and a save invalidates the `['bikri']` queries (useSaveBikri).
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebouncedValue, usePagedQuery } from '../../../shared/hooks';
 import { bikriCancelPreview, bikriFind, bikriGet, bikriList, bikriStockList } from '../api';
 import type { BikriFindInput } from '../../../bindings/BikriFindInput';
-import type { BikriListInput } from '../../../bindings/BikriListInput';
 import type { StockListInput } from '../../../bindings/StockListInput';
+import type { BikriListInput } from '../../../bindings/BikriListInput';
 
 /** A pause so a burst of key presses in a filter asks once. */
 const FILTER_DELAY_MS = 150;
@@ -22,16 +22,61 @@ export function useBikriDetail(id: number | null) {
   });
 }
 
+/** The filter of a list as the screen builds it, without the page and the order. */
+type ListFilter = Omit<BikriListInput, 'offset' | 'limit' | 'sort'>;
+
 /**
- * The list of بکری for the filters, page by page, with the count and the totals of the whole filter
- * (PRD FR-12.7, FR-19.11). The last answer stays while the next comes.
+ * The filter a list asks with. A burst of key presses in a filter asks once (the pause of
+ * `FILTER_DELAY_MS`); but before the list knows any day (the backend's today is on its way) there is
+ * nothing to wait for and nothing to ask: the settled filter then holds no day, and asking with it
+ * would be a call with no day at all (every بکری of every day, or a window the backend refuses). So a
+ * list is asked only with a filter that has its days, and the first one is taken at once, with no
+ * pause (plan 72: found on the development page, where such a call hung the stand-in).
  */
-export function useBikriList(filter: Omit<BikriListInput, 'offset' | 'limit' | 'sort'>) {
+function askedFilter(
+  live: ListFilter,
+  settled: ListFilter,
+  hasDays: (filter: ListFilter) => boolean,
+) {
+  const asked = hasDays(settled) ? settled : live;
+  return { asked, enabled: hasDays(asked) };
+}
+
+const hasDay = (filter: ListFilter) => filter.date !== null;
+const hasWindow = (filter: ListFilter) => filter.from !== null && filter.to !== null;
+
+/**
+ * Today's section of پچھلی بکری: the list of بکری of one day, page by page, with the count and the totals
+ * of the whole filter (PRD 12.7, FR-19.11). The last answer stays while the next comes.
+ */
+export function useBikriList(filter: ListFilter) {
   const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
+  const { asked, enabled } = askedFilter(filter, settled, hasDay);
   return usePagedQuery({
     screen: 'bikri.today',
-    queryKey: ['bikri', 'list', settled],
-    fetchPage: (offset, limit, sort) => bikriList({ ...settled, offset, limit, sort }),
+    queryKey: ['bikri', 'list', asked],
+    enabled,
+    fetchPage: (offset, limit, sort) => bikriList({ ...asked, offset, limit, sort }),
+    rowsIn: (page) => page.rows.length,
+    totalOf: (page) => page.total_count,
+    keepPrevious: true,
+  });
+}
+
+/**
+ * The window of earlier days of پچھلی بکری, page by page (PRD 12.7, plan 72 P4, P11): the rows of the
+ * seven days, with the count and totals of the whole filter and a count and خام بکری for each day.
+ * It has its own rows per page and its own page, apart from today's list. A save or an edit
+ * invalidates the `['bikri']` queries, so a way back from an edit asks again (P10).
+ */
+export function useBikriWindow(filter: ListFilter) {
+  const settled = useDebouncedValue(filter, FILTER_DELAY_MS);
+  const { asked, enabled } = askedFilter(filter, settled, hasWindow);
+  return usePagedQuery({
+    screen: 'bikri.past',
+    queryKey: ['bikri', 'list', 'window', asked],
+    enabled,
+    fetchPage: (offset, limit, sort) => bikriList({ ...asked, offset, limit, sort }),
     rowsIn: (page) => page.rows.length,
     totalOf: (page) => page.total_count,
     keepPrevious: true,

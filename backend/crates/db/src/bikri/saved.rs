@@ -943,6 +943,79 @@ pub fn list_months(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<V
     Ok(months.into_values().collect())
 }
 
+/// One day of a window: the بکری of the day under the filter and their خام بکری (plan 72 P4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DayRec {
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    /// How many بکری the day has under the filter, cancelled ones too.
+    pub count: i64,
+    /// `SUM(gross_paisa)` of the saved ones.
+    pub gross_paisa: i64,
+}
+
+/// The two grouped queries of [`list_days`] (the count and the lot sums), each with the values it
+/// binds, so a test can read their plans (Code Standards B18). Both group on the indexed day.
+pub fn list_days_queries(filter: &ListFilter) -> [(String, Vec<Value>); 2] {
+    let (condition, binds) = list_where(filter);
+    let and = condition.replacen(" WHERE ", " AND ", 1);
+    [
+        (
+            format!(
+                "SELECT e.entry_date, COUNT(*) FROM bikri_entries e{condition}
+                 GROUP BY e.entry_date ORDER BY e.entry_date"
+            ),
+            binds.clone(),
+        ),
+        (
+            format!(
+                "SELECT e.entry_date, COALESCE(SUM(l.gross_paisa), 0)
+                 FROM bikri_entries e JOIN bikri_lots l ON l.bikri_id = e.id
+                 WHERE e.status = 'saved'{and}
+                 GROUP BY e.entry_date ORDER BY e.entry_date"
+            ),
+            binds,
+        ),
+    ]
+}
+
+/// The days of a filter that have at least one بکری, oldest first, with their count and خام بکری:
+/// two grouped queries on the indexed day (plan 72 P11). Only `SUM()` on an INTEGER column. A day
+/// with no بکری is not in the answer; the service adds it.
+///
+/// # Errors
+/// Any SQLite error.
+pub fn list_days(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<DayRec>> {
+    let [(count_sql, count_binds), (gross_sql, gross_binds)] = list_days_queries(filter);
+    let mut days: std::collections::BTreeMap<String, DayRec> = std::collections::BTreeMap::new();
+    let mut statement = conn.prepare(&count_sql)?;
+    let rows = statement.query_map(params_from_iter(count_binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (date, count) = row?;
+        days.insert(
+            date.clone(),
+            DayRec {
+                date,
+                count,
+                gross_paisa: 0,
+            },
+        );
+    }
+    let mut statement = conn.prepare(&gross_sql)?;
+    let rows = statement.query_map(params_from_iter(gross_binds.iter()), |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+    })?;
+    for row in rows {
+        let (date, gross_paisa) = row?;
+        if let Some(day) = days.get_mut(&date) {
+            day.gross_paisa = gross_paisa;
+        }
+    }
+    Ok(days.into_values().collect())
+}
+
 /// Adds the sellers (each once, in lot order) and the items of each row, from one statement.
 fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusqlite::Result<()> {
     if rows.is_empty() {

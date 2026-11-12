@@ -248,6 +248,12 @@ pub(super) fn lots(env: &Env<'_>, query: &str) -> Result<Node, Stop> {
     Ok(node)
 }
 
+/// True when the text of a lot find ends with a counter ("ehsan aam-2").
+pub fn has_counter(text: &str) -> bool {
+    text.rsplit_once('-')
+        .is_some_and(|(_, n)| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
 /// The seller and the item a question names inside a sentence, as the text of a lot find ("ehsan
 /// aam", or "ehsan aam-2" when it names the counter), or `None` when it does not name both (plan 71
 /// L9, PRD FR-7.77). A word counts only when it is a whole word of a seller's or an item's name, so

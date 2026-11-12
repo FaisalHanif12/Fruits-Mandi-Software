@@ -12,6 +12,7 @@ export {
   type Grouping,
   type Paisa,
 } from './money';
+export { addDays, dayOfText, isIsoDay } from './dayMath';
 export { formatBps } from './percent';
 export { GRADE_CHOICES, GRADE_WORD_ID, gradedItem, type GradeChoice } from './grade';
 export { formatGrams } from './weight';

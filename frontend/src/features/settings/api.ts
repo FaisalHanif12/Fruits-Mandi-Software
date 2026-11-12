@@ -24,6 +24,16 @@ export function settingsSetSecurity(input: SetSecurityInput): Promise<null> {
   return callCommand<null>('settings_set_security', { input });
 }
 
+/**
+ * Changes the Owner's sign, the word that opens a closed day to fix an entry (PRD FR-21.4, plan 73), with
+ * the Owner's password. Both go as typed. A wrong password is refused with the existing code on `password`;
+ * a sign that is empty or longer than 40 characters on `sign`. Nothing is answered back: the sign is never
+ * shown again, only checked by the backend when a day is reopened.
+ */
+export function settingsSetOwnerSign(input: { password: string; sign: string }): Promise<null> {
+  return callCommand<null>('settings_set_owner_sign', { input });
+}
+
 export function settingsSetDefaultLanguage(input: SetDefaultLanguageInput): Promise<null> {
   return callCommand<null>('settings_set_default_language', { input });
 }

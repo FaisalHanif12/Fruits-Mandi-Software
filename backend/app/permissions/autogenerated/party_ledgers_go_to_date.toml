@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-party-ledgers-go-to-date"
+description = "Enables the party_ledgers_go_to_date command without any pre-configured scope."
+commands.allow = ["party_ledgers_go_to_date"]
+
+[[permission]]
+identifier = "deny-party-ledgers-go-to-date"
+description = "Denies the party_ledgers_go_to_date command without any pre-configured scope."
+commands.deny = ["party_ledgers_go_to_date"]

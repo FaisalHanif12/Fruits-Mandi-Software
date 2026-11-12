@@ -15,7 +15,6 @@ import { SALE } from '../../src/features/bikri/types';
 import { cardChuktaOf, pickedOf } from '../../src/shared/accounts';
 import { LINE_GRID_FIELD, saysEmpty } from '../../src/features/bikri/problems';
 import { SAVE_EVENT2_REQUEST } from '../helpers/bikri-real';
-import { withDateOnlyHeader } from '../helpers/bikri-old-draft';
 
 /** Every id of the draft found as a record named after its id. */
 const RECORDS: DraftRecords = {
@@ -44,7 +43,7 @@ const SHAHID_LINE = SAVE_EVENT2_REQUEST.draft.lots[0]?.sales[0];
 
 describe('a sale line to a چکتا buyer', () => {
   it('the real Event 2 request goes in and builds back the same draft', () => {
-    expect(buildDraft(loaded())).toEqual(withDateOnlyHeader(SAVE_EVENT2_REQUEST.draft));
+    expect(buildDraft(loaded())).toEqual(SAVE_EVENT2_REQUEST.draft);
   });
 
   it('is the account چکتا کھاتہ with his names and phone, as the backend wrote it', () => {

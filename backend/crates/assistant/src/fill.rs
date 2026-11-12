@@ -724,7 +724,45 @@ pub fn differ_answer(env: &Env<'_>, state: &State, paths: &[String], read_at: &s
     }
 }
 
-/// The matches of a `find` result as the buttons of "کون سا؟".
+/// The key of the last button of a list of lots, "all lots" (plan 71 L9, PRD FR-7.77): the Owner
+/// wants the seller's and the item's lots together. The screen writes its own label for it, so the
+/// words are not in the code (rule 7); the option's name is only the seller and the item.
+pub const ALL_LOTS_KEY: &str = "l*";
+
+/// True when `find_id` is a find of lots.
+pub fn is_lot_find(state: &State, find_id: &str) -> bool {
+    state
+        .find(find_id)
+        .is_some_and(|r| matches!(r.node.get(&["role"]), Some(Node::Str(role)) if role == "lot"))
+}
+
+/// The last button of a list of lots: all of them, named by the seller and the item of the first lot.
+fn all_lots_option(first: &Node) -> Option<AnswerOption> {
+    let (Some(Node::Val(Val::Name(seller))), Some(Node::Val(Val::Name(item)))) =
+        (first.get(&["seller", "name"]), first.get(&["item", "name"]))
+    else {
+        return None;
+    };
+    let name = NameVal {
+        name_ur: format!("{}، {}", seller.name_ur, item.name_ur),
+        name_en: format!("{}, {}", seller.name_en, item.name_en),
+        tag: seller.tag.clone(),
+        code: None,
+    };
+    Some(AnswerOption {
+        key: ALL_LOTS_KEY.to_owned(),
+        name: name.answer_name(),
+        city: None,
+        balance: None,
+        checked: false,
+        dead: false,
+        date: None,
+        qty: None,
+    })
+}
+
+/// The matches of a `find` result as the buttons of "کون سا؟". A find of several lots ends with the
+/// button "all lots" (`ALL_LOTS_KEY`).
 pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
     let Some(result) = state.find(find_id) else {
         return Vec::new();
@@ -732,6 +770,17 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
     let Some(Node::List(matches)) = result.node.get(&["matches"]) else {
         return Vec::new();
     };
+    let mut options = options_of_matches(matches);
+    if is_lot_find(state, find_id)
+        && options.len() >= 2
+        && let Some(all) = matches.first().and_then(all_lots_option)
+    {
+        options.push(all);
+    }
+    options
+}
+
+fn options_of_matches(matches: &[Node]) -> Vec<AnswerOption> {
     matches
         .iter()
         .filter_map(|m| {

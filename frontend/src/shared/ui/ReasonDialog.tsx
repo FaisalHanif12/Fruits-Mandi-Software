@@ -10,6 +10,9 @@
 //   whatever the user typed stays.
 // - `note` is for a line the backend asked the screen to show, such as the cash after a cancel
 //   that takes cash below zero (PRD FR-6.7): the next press of the action then confirms it.
+// - `signLabel` adds a second required field below the reason: the Owner's sign (PRD FR-21.4, plan 73).
+//   It is raw text, never converted from Roman letters to Urdu (the sign is compared as typed), and Enter
+//   in the reason goes on to it. A sign the backend refuses is told under it and nothing opens.
 
 import { Localized } from '@fluent/react';
 import { AlertDialog } from 'radix-ui';
@@ -23,6 +26,7 @@ import { Field } from './Field';
 import { FreeTextInput } from './FreeTextInput';
 import { fieldError } from './field-error';
 import { Notice } from './Notice';
+import { TextInput } from './TextInput';
 
 interface ReasonDialogProps {
   open: boolean;
@@ -39,8 +43,16 @@ interface ReasonDialogProps {
   busy: boolean;
   /** Something the user must read before the action, for example the cash after it. */
   note?: ReactNode;
-  /** The action was asked for, with the reason typed (trimmed, never empty). */
-  onConfirm: (reason: string) => void;
+  /**
+   * The action was asked for, with the reason typed (trimmed, never empty) and, when the box has a sign
+   * field, the sign as typed (trimmed, never empty) as the second argument. A box without a sign field calls
+   * it with the reason alone.
+   */
+  onConfirm: (reason: string, sign?: string) => void;
+  /** The label of the sign field. Only a box that asks for the Owner's sign has one. */
+  signLabel?: ReactNode;
+  /** A line under the sign field: who can sign. */
+  signHint?: ReactNode;
   /** Fields the action needs besides the reason, shown above it (for example the quantity). */
   extra?: ReactNode;
   /** The field paths `extra` shows its own problems for, so they are not told twice. */
@@ -56,6 +68,8 @@ interface ReasonDialogProps {
 function ReasonForm({
   description,
   reasonLabel,
+  signLabel,
+  signHint,
   confirmLabel,
   error,
   busy,
@@ -69,17 +83,22 @@ function ReasonForm({
   onClose,
 }: Omit<ReasonDialogProps, 'open' | 'onOpenChange' | 'title'> & { onClose: () => void }) {
   const [reason, setReason] = useState(initialReason);
+  const [sign, setSign] = useState('');
   const [tried, setTried] = useState(false);
+  const asksSign = signLabel !== undefined;
   const submit = () => {
     const trimmed = reason.trim();
-    if (trimmed === '') {
+    const signed = sign.trim();
+    if (trimmed === '' || (asksSign && signed === '')) {
       setTried(true);
       return;
     }
-    onConfirm(trimmed);
+    if (asksSign) onConfirm(trimmed, signed);
+    else onConfirm(trimmed);
   };
   const navigation = useFormNavigation(submit);
   const missing = tried && reason.trim() === '';
+  const signMissing = tried && asksSign && sign.trim() === '';
   return (
     <form
       {...navigation}
@@ -92,7 +111,10 @@ function ReasonForm({
         {description}
       </AlertDialog.Description>
       {error === null ? null : (
-        <ErrorNotice error={error} fieldsShown={['reason', ...extraFields]} />
+        <ErrorNotice
+          error={error}
+          fieldsShown={['reason', ...(asksSign ? ['sign'] : []), ...extraFields]}
+        />
       )}
       {note === undefined ? null : <Notice tone="warn">{note}</Notice>}
       {extra}
@@ -119,6 +141,32 @@ function ReasonForm({
           />
         )}
       </Field>
+      {asksSign ? (
+        <Field
+          label={signLabel}
+          hint={signHint}
+          error={
+            signMissing ? (
+              <Localized id="err-required">
+                <span className="block" />
+              </Localized>
+            ) : (
+              fieldError(error, 'sign')
+            )
+          }
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={sign}
+              onChange={(text) => {
+                setSign(text);
+                setTried(false);
+              }}
+            />
+          )}
+        </Field>
+      ) : null}
       <div className="mt-2 flex flex-wrap justify-end gap-2">
         <Button shortcut={SHORTCUTS.back} onClick={onClose}>
           <Localized id="common-back" />

@@ -10,6 +10,7 @@ import { useLanguage } from '../i18n';
 import type { EditEntity } from '../../bindings/EditEntity';
 import type { EditVersion } from '../../bindings/EditVersion';
 import { useEditHistory } from '../edit/hooks';
+import { whenWhoMessage } from '../edit/sign';
 import { auditValueText } from '../edit/value-text';
 import { uiErrorOf } from '../api';
 import { Button } from './Button';
@@ -39,6 +40,12 @@ function Version({ version }: { version: EditVersion }) {
   const language = useLanguage();
   const grouping = useGrouping();
   const ctx = { l10n, language, grouping };
+  // The sign given when the day was reopened follows the name (PRD FR-7.71, v1.36).
+  const when = whenWhoMessage('edit-history-version', version, {
+    date: isoToDisplayDate(version.local_date),
+    time: stampTimeText(version.local_time, l10n),
+    by: version.by,
+  });
   const columns: readonly TableColumn<EditVersion['changes'][number]>[] = [
     {
       id: 'field',
@@ -59,14 +66,7 @@ function Version({ version }: { version: EditVersion }) {
   return (
     <section className="flex flex-col gap-2" data-edit-version="">
       <h3 className="type-body font-semibold text-ink">
-        <Localized
-          id="edit-history-version"
-          vars={{
-            date: isoToDisplayDate(version.local_date),
-            time: stampTimeText(version.local_time, l10n),
-            by: version.by,
-          }}
-        >
+        <Localized id={when.id} vars={when.vars}>
           <span />
         </Localized>{' '}
         <Localized id={actionId(version.action)}>

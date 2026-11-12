@@ -75,8 +75,20 @@ bikri-lots-title = { -lot }
 # review: pending
 bikri-lots-label = اس { -bikri } کے { -lot }
 
+# نیچے "+" کا بٹن: اس کا نام اور اس پر ماؤس رکھنے سے آنے والی عبارت (PRD NFR-SCL-3)۔
 # review: pending
-bikri-lots-add = { -lot } شامل کریں
+bikri-lots-add-row = نئی { -lot }
+
+# review: pending
+bikri-sales-add-row = نئی لائن
+
+# $max: ایک { -bikri } میں { -lot } کی زیادہ سے زیادہ تعداد۔
+# review: pending
+bikri-lots-limit = ایک { -bikri } میں { -lot } کی تعداد <num>{ $max }</num> سے زیادہ نہیں ہو سکتی۔
+
+# $max: ایک { -bikri } میں لائنوں کی زیادہ سے زیادہ تعداد۔
+# review: pending
+bikri-sales-limit = ایک { -bikri } میں لائنوں کی تعداد <num>{ $max }</num> سے زیادہ نہیں ہو سکتی۔
 
 # { -lot } کا نام اس کے بیوپاری اور مال سے، { -lot } کے ہر عنوان کے لیے (PRD FR-12.6): "احسان، سیب"۔
 # یہاں صرف دونوں نام جوڑے جاتے ہیں؛ جب تک ایک ہی چنا ہو، عنوان میں وہی نام اکیلا آتا ہے۔
@@ -511,7 +523,7 @@ bikri-posting-other = اندراج
 bikri-list-label = { -bikri } کی فہرست
 
 # review: pending
-bikri-list-help = دن، { -beopari } اور { -qism-maal } سے چھانٹیں۔ کھولنے کے لیے Enter دبائیں۔
+bikri-list-help = آج کی { -bikri } اور اس سے پچھلے دن۔ تاریخ پر جائیں یا { -beopari } اور { -qism-maal } سے چھانٹیں۔ کھولنے کے لیے Enter دبائیں۔
 
 # review: pending
 bikri-list-failed = فہرست کھل نہیں سکی
@@ -543,6 +555,10 @@ bikri-list-col-number = نمبر
 
 # review: pending
 bikri-list-col-when = تاریخ اور وقت
+
+# The truck of an old بکری; a new one has none (plan 72 P3).
+# review: pending
+bikri-list-col-truck = ٹرک
 
 # review: pending
 bikri-list-col-sellers = { -beopari }
@@ -1025,3 +1041,111 @@ bikri-lot-remove-question = اس { -lot } کے ساتھ اس کی { $count } ل�
 # The title of that question.
 # review: pending
 bikri-lot-remove-title = لاٹ ہٹائیں؟
+
+## پچھلی { -bikri }: آج کی { -bikri } اور اس سے پچھلے دنوں کی (PRD 12.7، پلان 72)۔
+
+# The heading of the first part: today's sales.
+# review: pending
+bikri-past-today-title = آج کی { -bikri }
+
+# The heading of the part under the divider: the days before today.
+# review: pending
+bikri-past-earlier-title = پچھلے دن
+
+# The days the window shows, for example "05-11-2026 تا 11-11-2026".
+# review: pending
+bikri-past-range = <num>{ $from }</num> تا <num>{ $to }</num>
+
+# The two buttons that move the window by { $days } days.
+# review: pending
+bikri-past-back = پچھلے <num>{ $days }</num> دن
+
+# review: pending
+bikri-past-forward = اگلے <num>{ $days }</num> دن
+
+# The date box above the filters: type a day and the window of 7 days that ends on it opens.
+# review: pending
+bikri-past-goto = تاریخ پر جائیں
+
+# review: pending
+bikri-past-goto-hint = دن لکھیں، جیسے 05-11-2026۔ اس دن پر ختم ہونے والے 7 دن کھل جائیں گے۔ مختصر شکل بھی چلتی ہے: 5 یعنی اس مہینے کی 5 تاریخ۔
+
+# The tick that shows every { -bikri } of today and of the window, with the filters set aside.
+# review: pending
+bikri-past-show-all = پوری { -bikri } دکھائیں
+
+# review: pending
+bikri-past-show-all-note = جب تک یہ نشان لگا ہے، چھانٹیاں الگ رکھی ہیں۔
+
+# The count of { -bikri } in the heading of a day (a figure follows it).
+# review: pending
+bikri-past-day-sales = { -bikri }
+
+# A day of the window with no { -bikri }.
+# review: pending
+bikri-past-day-empty = کوئی { -bikri } نہیں
+
+# The whole window has no { -bikri } (plan 72 P12).
+# review: pending
+bikri-past-window-empty = اس ہفتے کوئی { -bikri } نہیں
+
+# review: pending
+bikri-past-window-empty-help = دوسرے دن دیکھنے کے لیے اوپر کے بٹن دبائیں، یا تاریخ لکھ کر وہاں جائیں۔
+
+# Today has no { -bikri } and no filter is set: one line, because the window of earlier days is below it.
+# review: pending
+bikri-past-today-empty = آج کوئی { -bikri } نہیں۔ نئی { -bikri } کے لیے { $key } دبائیں۔
+
+# Today has no { -bikri } for the filters that are set.
+# review: pending
+bikri-past-today-no-match = آج کی کوئی { -bikri } ان چھانٹیوں سے نہیں ملی۔
+
+# The list of the window could not be opened.
+# review: pending
+bikri-past-failed = پچھلے دنوں کی فہرست کھل نہیں سکی
+
+# The name of the window list, read by screen readers.
+# review: pending
+bikri-past-label = پچھلے دنوں کی { -bikri }
+
+## Past Sales: the divider, the headings of the two parts and the buttons that move the window (plan 72, Umar 12-11-2026).
+
+# The heading of the table of the window: the earlier { $days } days.
+# review: pending
+bikri-past-window-title = پچھلے <num>{ $days }</num> دن کی { -bikri }
+
+# The words in the pill of the divider between today and the earlier days.
+# review: pending
+bikri-past-divider-title = پچھلے <num>{ $days }</num> دن
+
+# The name of the divider, read by screen readers.
+# review: pending
+bikri-past-divider-label = پچھلے دن: { $from } تا { $to }
+
+# The name of the two buttons that move the window, read by screen readers.
+# review: pending
+bikri-past-nav-label = ہفتوں کے درمیان جائیں
+
+# Under the later button when the window already ends yesterday: why it is off.
+# review: pending
+bikri-past-nav-latest = پہلے ہی تازہ ہفتہ
+
+# The button that jumps back to the window that ends yesterday.
+# review: pending
+bikri-past-nav-latest-button = تازہ ہفتے پر واپس
+
+# The grey hint inside the date box "تاریخ پر جائیں" (plan 72 P6): the order of the day, month and year.
+# review: pending
+bikri-past-goto-placeholder = دن-مہینہ-سال
+
+# The line beside تبدیل کریں and منسوخ کریں above a list of پچھلی بکری when no row has focus (plan 72, FR-7.70).
+# review: pending
+bikri-past-row-none = تبدیل یا منسوخ کرنے کے لیے فہرست میں { -bikri } چنیں
+
+# The same line when a row has focus: the number of the { -bikri } the two buttons work on.
+# review: pending
+bikri-past-row-for = { -bikri } <num>{ $number }</num>:
+
+# The button on the sale book that goes back to the list the { -bikri } was opened from, at the same window and row.
+# review: pending
+bikri-past-back-to-list = پچھلی { -bikri } پر واپس
