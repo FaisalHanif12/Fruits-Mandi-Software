@@ -16,6 +16,10 @@ export type StockRow = {
    */
   lot_no: number;
   /**
+   * The counter of the lot's name: seller, item and this number (PRD FR-12.45).
+   */
+  lot_counter: number;
+  /**
    * Its بکری.
    */
   bikri_id: number;

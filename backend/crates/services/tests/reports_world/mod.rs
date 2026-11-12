@@ -9,11 +9,11 @@ use mandi_reports::reports::{
     Cell, PartyFilter, ReportFilters, ReportId, ReportPage, ReportRunInput, run,
 };
 use mandi_services::core::accounts::{BalanceSide, OpeningLineInput, OpeningsInput};
-use mandi_services::core::bikri::{BikriDraft, BikriSaveInput, ChuktaInput, HeaderInput};
+use mandi_services::core::bikri::{BikriDraft, ChuktaInput, HeaderInput};
 use mandi_services::core::error::ErrorCode;
 use mandi_services::core::money::Paisa;
 use mandi_services::core::vouchers::{AdvanceInput, DayCloseInput, PaymentInput, ReceiptInput};
-use mandi_services::{accounts, bikri, day, ledger, vouchers};
+use mandi_services::{accounts, day, ledger, vouchers};
 
 pub fn rupees(value: i64) -> Paisa {
     Paisa::from_rupees(value).unwrap()
@@ -81,15 +81,8 @@ pub fn worked_day() -> support::World {
 }
 
 pub fn save(w: &support::World, draft: &BikriDraft) -> mandi_services::core::bikri::BikriSaved {
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft: draft.clone(),
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap()
+    // A draft that names a truck (event 2) has it written as old data: a new بکری has none (v1.34).
+    support::save_old(w, draft, false)
 }
 
 /// The D8 example of money paid on the spot (E2E-65, PRD FR-12.44) on the worked day's opening

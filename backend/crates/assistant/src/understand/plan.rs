@@ -13,7 +13,7 @@
 //! (`as_of`); stock R10 (`from`, `to`: from the first day of the books to the day); the day book R11
 //! (`from` = `to` = the day); gardens R36 (`garden`, `from`, `to`); trips R33 (`from`, `to`: the trip's
 //! days, with the trip layout); fruit taken R37 (`from`, `to`, and `partner` when named); dues by
-//! city R21 (`city`, `as_of`); the truck stand report R8 (`adda`, `from`, `to`).
+//! city R21 (`city`, `as_of`). The truck stand report R8 is retired (PRD v1.34).
 //!
 //! The screens of R33 and R29 have no one-trip and no expense-head filter (lead ruling of
 //! 04-11-2026), so a named trip or head is carried here only to say, in the steps, which row to
@@ -57,8 +57,6 @@ pub struct PlanFilters {
     pub trip: Option<PartyHit>,
     /// The city (R21).
     pub city: Option<RecordHit>,
-    /// The اڈا (R8).
-    pub adda: Option<RecordHit>,
     /// The expense head (R29). Named in the steps only: the report has no expense-head filter.
     pub head: Option<RecordHit>,
     /// The item (R2 to R4, R7, R10, R27 and the analytics views A, D, E, G).
@@ -95,11 +93,7 @@ impl PlanFilters {
                 out.push((name, h.id.to_string()));
             }
         }
-        for (name, hit) in [
-            ("city", &self.city),
-            ("adda", &self.adda),
-            ("head", &self.head),
-        ] {
+        for (name, hit) in [("city", &self.city), ("head", &self.head)] {
             if let Some(h) = hit {
                 out.push((name, h.id.to_string()));
             }
@@ -241,9 +235,7 @@ pub(super) fn is_view(id: &str) -> bool {
 /// How a report named by its title takes its filters (the specs of the report engine, PRD 19.2).
 fn report_shape(id: &'static str) -> Option<Shape> {
     Some(match id {
-        "R3" | "R4" | "R7" | "R8" | "R15" | "R23" | "R25" | "R27" | "R28" | "R30" => {
-            Shape::Range(id)
-        }
+        "R3" | "R4" | "R7" | "R15" | "R23" | "R25" | "R27" | "R28" | "R30" => Shape::Range(id),
         "R16" | "R17" | "R22" | "R26" | "R32" => Shape::AsOf(id),
         "R19" | "R38" => Shape::NoFilters(id),
         _ if is_view(id) => Shape::View(id),
@@ -710,16 +702,7 @@ pub(super) fn build(input: &Input<'_>) -> Planned {
                     FigureKind::Dues | FigureKind::Receipts | FigureKind::Balance
                 )
             });
-            let report = if let Some(adda) = record(RecordKind::Adda) {
-                dated(
-                    "R8",
-                    PlanFilters {
-                        adda: Some(adda),
-                        ..PlanFilters::default()
-                    },
-                    false,
-                )
-            } else if let Some(city) = record(RecordKind::City) {
+            let report = if let Some(city) = record(RecordKind::City) {
                 if !dues_only {
                     return none(Doubt::NoReport);
                 }

@@ -7,6 +7,9 @@
         "place": {
           "kind": "lot",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": null,
           "label_ur": "رحیم",
           "label_en": "Rahim"
@@ -25,6 +28,9 @@
         "place": {
           "kind": "lot",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": null,
           "label_ur": "رحیم",
           "label_en": "Rahim"
@@ -43,6 +49,9 @@
         "place": {
           "kind": "lot",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": null,
           "label_ur": "رحیم",
           "label_en": "Rahim"
@@ -61,6 +70,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -79,6 +91,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -97,6 +112,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -115,6 +133,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -133,6 +154,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -151,6 +175,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"
@@ -169,6 +196,9 @@
         "place": {
           "kind": "line",
           "lot_no": 1,
+          "lot_counter": 1,
+          "item_ur": "کیلا",
+          "item_en": "Banana",
           "line_no": 1,
           "label_ur": "اکرم ٹول ٹیکس",
           "label_en": "Akram Toll Tax"

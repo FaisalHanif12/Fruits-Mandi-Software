@@ -37,6 +37,11 @@
       "kind": "party"
     },
     {
+      "key": "lots",
+      "title_id": "report-col-lots",
+      "kind": "names"
+    },
+    {
       "key": "gross",
       "title_id": "report-col-gross",
       "kind": "money"
@@ -78,6 +83,13 @@
             "name_en": "Rahim",
             "tag": null,
             "person_key": null
+          }
+        },
+        {
+          "type": "names",
+          "names": {
+            "ur": "کیلا-1",
+            "en": "Banana-1"
           }
         },
         {
@@ -127,6 +139,13 @@
           }
         },
         {
+          "type": "names",
+          "names": {
+            "ur": "سیب-1",
+            "en": "Apple-1"
+          }
+        },
+        {
           "type": "money",
           "paisa": 1200000
         },
@@ -151,6 +170,9 @@
   "total_count": 2,
   "totals_label_id": "report-total",
   "totals": [
+    {
+      "type": "empty"
+    },
     {
       "type": "empty"
     },

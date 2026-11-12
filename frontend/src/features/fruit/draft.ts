@@ -8,6 +8,7 @@ import { pickedOf } from '../../shared/accounts';
 import { formatGrams, formatPaisa, isoToDisplayDate, type Grouping } from '../../shared/format';
 import type { PickerValue } from '../../shared/ui';
 import { textOrNull } from '../purchases';
+import { lotGoodsName } from './lot-source';
 import {
   FOR_GUESTS,
   type ChosenLot,
@@ -48,8 +49,8 @@ export function chosenLotOf(row: FruitLotRow): ChosenLot {
     value: {
       id: row.lot_id,
       code: `${String(row.bikri_number)}-${String(row.lot_no)}`,
-      name_ur: `${row.item.name_ur} ${row.packing.name_ur}`,
-      name_en: `${row.item.name_en} ${row.packing.name_en}`,
+      name_ur: lotGoodsName(row.item.name_ur, row.lot_counter, row.packing.name_ur),
+      name_en: lotGoodsName(row.item.name_en, row.lot_counter, row.packing.name_en),
     },
     row,
   };
@@ -109,8 +110,8 @@ export function draftFromRow(row: FruitRow, grouping: Grouping): FruitDraft {
           value: {
             id: row.lot.lot_id,
             code: `${String(row.lot.bikri_number)}-${String(row.lot.lot_no)}`,
-            name_ur: `${row.item.name_ur} ${row.packing.name_ur}`,
-            name_en: `${row.item.name_en} ${row.packing.name_en}`,
+            name_ur: lotGoodsName(row.item.name_ur, row.lot.lot_counter, row.packing.name_ur),
+            name_en: lotGoodsName(row.item.name_en, row.lot.lot_counter, row.packing.name_en),
           },
           row: null,
         };

@@ -6,7 +6,7 @@
 import { Localized } from '@fluent/react';
 import type { ReactNode } from 'react';
 import type { StockRow } from '../../../../bindings/StockRow';
-import { displayName, useLanguage } from '../../../../shared/i18n';
+import { displayName, useLanguage, useLotNames } from '../../../../shared/i18n';
 import { InfoHint, Num } from '../../../../shared/ui';
 import { stockSellerName } from '../../stock-columns';
 import { LotFacts } from './StockLotCard';
@@ -22,6 +22,7 @@ function Pair({ label, children }: { label: ReactNode; children: ReactNode }) {
 
 export function LotStrip({ row }: { row: StockRow }) {
   const language = useLanguage();
+  const { lotItem } = useLotNames();
   return (
     <section className="flex flex-wrap items-baseline gap-x-6 gap-y-1 rounded-3 border border-border bg-surface px-3 py-2">
       <Localized id="bikri-later-lot-title">
@@ -29,7 +30,7 @@ export function LotStrip({ row }: { row: StockRow }) {
       </Localized>
       <Pair label={<Localized id="glossary-beopari" />}>{stockSellerName(row, language)}</Pair>
       <Pair label={<Localized id="glossary-qism-maal" />}>
-        {displayName(row.item, language)} {displayName(row.packing, language)}
+        {lotItem(row.item, row.lot_counter)} {displayName(row.packing, language)}
       </Pair>
       <Pair label={<Localized id="bikri-col-qty-received" />}>
         <Num>{row.qty_received}</Num>

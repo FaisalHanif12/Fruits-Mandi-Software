@@ -86,14 +86,6 @@ export function TodayBikriList({ rows, count }: TodayBikriListProps) {
       ),
     },
     {
-      id: 'truck',
-      header: <Localized id="dashboard-bikri-col-truck" />,
-      // A truck number is a code: centred with its heading (plan 39 R1).
-      kind: 'number',
-      size: 'code',
-      cell: (row) => (row.truck_no === null ? null : <Code>{row.truck_no}</Code>),
-    },
-    {
       id: 'seller',
       header: <Localized id="dashboard-bikri-col-seller" />,
       cell: (row) => {

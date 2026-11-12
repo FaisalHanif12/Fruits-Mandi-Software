@@ -1,14 +1,14 @@
 //! The بکری screen (PRD 12, plans 12 and 13). Every command needs the signed-in Owner. The
-//! preview and the freight split only read (Code Standards B29). `bikri_save` is the one action
+//! preview only reads (Code Standards B29). `bikri_save` is the one action
 //! that writes: one transaction (Code Standards B3). The reads of saved بکری only read.
 
 use mandi_services::core::bikri::{
     BikriCancelled, BikriDetail, BikriEdited, BikriFindInput, BikriGetInput, BikriList,
     BikriListInput, BikriListRow, BikriNavigateInput, BikriPreview, BikriPreviewInput,
     BikriSaveInput, BikriSaved, CancelInput, CancelPreview, CancelPreviewInput, EditOpenInput,
-    EditPreviewInput, EditSaveInput, EditableBikri, FreightPart, LaterSaleInput,
-    LaterSaleSaveInput, LaterSaleSaved, SplitFreightInput, StockList, StockListInput, UndoInput,
-    UndoResult, WriteOffDone, WriteOffInput, WriteOffUndoInput, WriteOffUndone, split_freight,
+    EditPreviewInput, EditSaveInput, EditableBikri, LaterSaleInput, LaterSaleSaveInput,
+    LaterSaleSaved, StockList, StockListInput, UndoInput, UndoResult, WriteOffDone, WriteOffInput,
+    WriteOffUndoInput, WriteOffUndone,
 };
 use mandi_services::{auth, bikri};
 
@@ -27,21 +27,6 @@ pub async fn bikri_preview<R: tauri::Runtime>(
     run(app, "bikri_preview", move |ctx| {
         auth::require(ctx)?;
         bikri::preview(ctx, &input.draft)
-    })
-    .await
-}
-
-/// Splits the header's total freight over the lots by نگ received (PRD C17). Read only.
-/// Errors: the money and quantity codes on `total_freight` and `lots[i].qty_received`,
-/// `ERR_NO_LOTS` (`lots`).
-#[tauri::command]
-pub async fn bikri_split_freight<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    input: SplitFreightInput,
-) -> Result<Vec<FreightPart>, UiError> {
-    run(app, "bikri_split_freight", move |ctx| {
-        auth::require(ctx)?;
-        Ok(split_freight(&input)?)
     })
     .await
 }

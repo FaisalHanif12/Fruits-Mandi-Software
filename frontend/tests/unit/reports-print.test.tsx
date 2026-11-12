@@ -250,13 +250,6 @@ describe('the reports of round 4 in print (R7, R9, R20, R28)', () => {
     expect(textOf(city.root.querySelector('tbody tr td'))).toBe(
       message('ur', 'report-group-no-city'),
     );
-    city.unmount();
-    const adda = show({
-      ...group,
-      report: 'R8' as const,
-      rows: [{ ...empty, kind: 'normal' as const }],
-    });
-    expect(textOf(adda.root.querySelector('tbody tr td'))).toBe(message('ur', 'report-adda-none'));
   });
 });
 

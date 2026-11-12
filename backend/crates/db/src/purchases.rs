@@ -895,6 +895,8 @@ pub struct LotOfPurchase {
     pub lot_id: i64,
     /// The lot number.
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    pub lot_counter: i64,
     /// The day of the sale (the first posting), `YYYY-MM-DD`.
     pub entry_date: String,
     /// نگ sold on the lines in force.
@@ -914,7 +916,8 @@ pub fn lots_of(conn: &Connection, purchase_id: i64) -> rusqlite::Result<Vec<LotO
         "SELECT e.id, e.number, l.id, l.lot_no, e.entry_date,
                 COALESCE((SELECT SUM(s.qty) FROM bikri_sales s WHERE s.lot_id = l.id AND s.is_active = 1), 0),
                 COALESCE((SELECT SUM(s.cost_paisa) FROM bikri_sales s WHERE s.lot_id = l.id AND s.is_active = 1), 0),
-                COALESCE((SELECT SUM(c.amount_paisa) FROM lot_credit_parts c WHERE c.lot_id = l.id), 0)
+                COALESCE((SELECT SUM(c.amount_paisa) FROM lot_credit_parts c WHERE c.lot_id = l.id), 0),
+                l.lot_counter
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
          WHERE l.purchase_id = ?1 AND e.status = 'saved' ORDER BY e.entry_date, e.number, l.lot_no",
     )?;
@@ -924,6 +927,7 @@ pub fn lots_of(conn: &Connection, purchase_id: i64) -> rusqlite::Result<Vec<LotO
             bikri_number: r.get(1)?,
             lot_id: r.get(2)?,
             lot_no: r.get(3)?,
+            lot_counter: r.get(8)?,
             entry_date: r.get(4)?,
             qty_sold: r.get(5)?,
             cost_paisa: r.get(6)?,

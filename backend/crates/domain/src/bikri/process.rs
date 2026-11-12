@@ -1136,6 +1136,8 @@ pub(super) fn process_lot(
             lot_no: i64::try_from(ctx.index)
                 .unwrap_or(i64::MAX)
                 .saturating_add(1),
+            // Set by `calc_pass` from `counter::assign` (PRD FR-12.45).
+            lot_counter: None,
             freight: lot.freight,
             freight_paid_by: lot.freight_paid_by,
             sold_by_weight: ctx.facts.item.is_some_and(|item| item.by_weight),

@@ -38,6 +38,9 @@ fn day() -> (World, BikriSaved, BikriSaved) {
     let w = worked_day();
     let one = save(&w, &support::event1(&w));
     let two = save(&w, &event2(&w));
+    // A new بکری has no truck (PRD v1.34): these two are old بکری that have one.
+    support::give_truck(&w, one.number, "LES-1234");
+    support::give_truck(&w, two.number, "LHR-0077");
     vouchers::save_receipt(&w.env.ctx, &w.owner, &receipt(w.akram, "10,000")).unwrap();
     vouchers::save_payment(&w.env.ctx, &w.owner, &payment(w.rahim, "4,316")).unwrap();
     event5(&w);

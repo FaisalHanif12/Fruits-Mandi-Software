@@ -20,8 +20,7 @@ mod support;
 use std::path::{Path, PathBuf};
 
 use mandi_services::core::bikri::{
-    BikriDraft, BikriListInput, BikriSaveInput, BikriSaved, BikriStatus, CancelInput,
-    StockListInput,
+    BikriDraft, BikriListInput, BikriSaved, BikriStatus, CancelInput, StockListInput,
 };
 use mandi_services::core::masters::{MasterKind, MastersListInput};
 use mandi_services::core::money::Paisa;
@@ -132,15 +131,8 @@ fn small_bikri(w: &World, n: i64) -> BikriDraft {
 }
 
 fn save_bikri(w: &World, draft: BikriDraft) -> BikriSaved {
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft,
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap()
+    // The truck of the draft is written as old data: a new بکری has none (PRD v1.34).
+    support::save_old(w, &draft, false)
 }
 
 /// Five بکری with 6 نگ left in each lot; the third is cancelled.

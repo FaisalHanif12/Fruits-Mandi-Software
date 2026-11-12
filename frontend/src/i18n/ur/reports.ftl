@@ -191,6 +191,9 @@ report-range-to = <num>{ $to }</num> تک
 report-range-all = تمام تاریخیں
 
 # review: pending
+report-lot-shown = { -lot }: { $name }
+
+# review: pending
 report-as-of-shown = <num>{ $date }</num> تک کا بقایا
 
 # review: pending
@@ -432,12 +435,6 @@ report-r7-title = قسم مال وار { -bikri }
 
 # review: pending
 report-r7-help = قسم مال کے حساب سے بکری: تعداد، { -kham-bikri }، اوسط ریٹ اور دونوں طرف کا { -commission }۔
-
-# review: pending
-report-r8-title = { -adda } رپورٹ
-
-# review: pending
-report-r8-help = ہر { -adda } کے ٹرک، لاٹ، تعداد اور { -kham-bikri }۔
 
 # review: pending
 report-r20-title = گاہکوں کے ذمے
@@ -807,9 +804,6 @@ report-group-no-city = شہر کے بغیر
 
 # review: pending
 report-group-no-collector = اگراہی والے کے بغیر
-
-# review: pending
-report-adda-none = اڈا کے بغیر
 
 ## The cash book, the expense report, the partner statement and money lent (round 7, R12, R29, R31, R32).
 

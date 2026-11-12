@@ -25,15 +25,17 @@
 use mandi_reports::reports::{
     FilterKind, GardenView, PaidFilter, ReportFilters, StockView, TripView,
 };
+use mandi_services::bikri;
 use mandi_services::core::accounts::AccountType;
-use mandi_services::core::bikri::SaleGrade;
+use mandi_services::core::bikri::{LotFindInput, SaleGrade, lot_label};
+use mandi_services::core::error::ErrorCode;
 use mandi_services::core::rules::ItemGroup;
 use mandi_services::core::vouchers::VoucherType;
 
 use super::records::{named, require_type};
 use super::report::not_taken;
 use super::{Env, State, ToolError};
-use crate::source::SourceReportFilters;
+use crate::source::{AnswerRecord, SourceReportFilters};
 
 /// The word of `partner` that means the shop's guests, not a partner (R37).
 pub const GUESTS_WORD: &str = "guests";
@@ -55,6 +57,8 @@ pub(super) struct Extra<'a> {
     pub item_group: Option<&'a str>,
     /// `first`, `second` or `third`: only the sale lines of that quality.
     pub grade: Option<&'a str>,
+    /// A lot key (`l7`) set by the app for the lot the Owner picked.
+    pub lot: Option<&'a str>,
 }
 
 /// The stored words of the voucher kinds, for the refusal of a wrong one.
@@ -214,6 +218,62 @@ pub(super) fn apply(
         let group = parse_group(word, filters.item_id.is_some())?;
         filters.item_group = Some(group);
         source.item_group = Some(group);
+    }
+    if let Some(key) = extra.lot {
+        narrow_to_lot(env, key, takes, filters, source)?;
+    }
+    Ok(())
+}
+
+/// Narrows a report of one seller and one item to the lot the Owner picked (plan 71 L9, PRD
+/// FR-12.45, FR-7.77). It is a help of the app, never a refusal: a report that has no lot filter, a
+/// report that is not of exactly that seller and item, or a lot that is not theirs is left as it
+/// was asked.
+///
+/// Example: R5 for Ehsan and Mango with the key of Mango-2 reads only the lines of that lot.
+fn narrow_to_lot(
+    env: &Env<'_>,
+    key: &str,
+    takes: &[FilterKind],
+    filters: &mut ReportFilters,
+    source: &mut SourceReportFilters,
+) -> Result<(), ToolError> {
+    let lot_id = key.strip_prefix('l').and_then(|n| n.parse::<i64>().ok());
+    let (Some(lot_id), Some(seller), Some(item)) = (lot_id, filters.seller_id, filters.item_id)
+    else {
+        return Ok(());
+    };
+    if !takes.contains(&FilterKind::Lot) {
+        return Ok(());
+    }
+    let (found, _) = bikri::find_lots(
+        env.ctx,
+        &LotFindInput {
+            seller_ids: vec![seller],
+            item_ids: vec![item],
+            lot_id: Some(lot_id),
+            limit: 1,
+            ..LotFindInput::default()
+        },
+    )
+    .map_err(|_| ToolError::from_code(ErrorCode::ErrInternal, None))?;
+    if let Some(lot) = found.into_iter().next() {
+        filters.lot_id = Some(lot_id);
+        source.lot = Some(Box::new(AnswerRecord {
+            id: lot_id,
+            code: None,
+            name_ur: format!(
+                "{}، {}",
+                lot.name.seller.name_ur,
+                lot_label(&lot.name.item.name_ur, lot.name.counter)
+            ),
+            name_en: format!(
+                "{}, {}",
+                lot.name.seller.name_en,
+                lot_label(&lot.name.item.name_en, lot.name.counter)
+            ),
+            tag: lot.name.seller.tag.clone(),
+        }));
     }
     Ok(())
 }

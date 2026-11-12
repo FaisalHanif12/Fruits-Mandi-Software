@@ -468,6 +468,9 @@ pub struct PurchaseLotRef {
     /// The lot number, from 1.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name: اپنا مال, the purchase's item and this number (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// The day of the sale, `YYYY-MM-DD`.
     pub entry_date: String,
     /// نگ sold on the lines in force.

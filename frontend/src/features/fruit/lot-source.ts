@@ -17,13 +17,21 @@ export function lotCode(row: Pick<FruitLotRow, 'bikri_number' | 'lot_no'>): stri
   return `${String(row.bikri_number)}-${String(row.lot_no)}`;
 }
 
+/**
+ * The goods of a lot named for a picker row, in one script: the item with the counter of the lot and
+ * the packing, "Banana-2 Box" (PRD FR-12.45). The seller is the row's second line.
+ */
+export function lotGoodsName(item: string, counter: number, packing: string): string {
+  return `${item}-${String(counter)} ${packing}`;
+}
+
 function hitOf(row: FruitLotRow): LotHit {
   const seller = row.seller;
   return {
     id: row.lot_id,
     code: lotCode(row),
-    name_ur: `${row.item.name_ur} ${row.packing.name_ur}`,
-    name_en: `${row.item.name_en} ${row.packing.name_en}`,
+    name_ur: lotGoodsName(row.item.name_ur, row.lot_counter, row.packing.name_ur),
+    name_en: lotGoodsName(row.item.name_en, row.lot_counter, row.packing.name_en),
     extra_ur: seller.name_ur,
     extra_en: seller.name_en,
     is_active: true,

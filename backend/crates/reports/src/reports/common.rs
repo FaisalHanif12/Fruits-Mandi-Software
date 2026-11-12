@@ -276,6 +276,15 @@ pub(crate) fn names_cell(ur: Option<String>, en: Option<String>) -> Cell {
     }
 }
 
+/// The cell of a lot's item with its counter (PRD FR-12.45): the names of the item in both scripts,
+/// each with the counter, "آم-2" and "Mango-2". Next to the seller column it reads as the lot's name.
+pub(crate) fn lot_names(item_ur: &str, item_en: &str, counter: i64) -> Names {
+    Names {
+        ur: mandi_core::bikri::lot_label(item_ur, counter),
+        en: mandi_core::bikri::lot_label(item_en, counter),
+    }
+}
+
 /// A text cell, or an empty cell for a blank text.
 pub(crate) fn text_cell(text: Option<String>) -> Cell {
     match text.map(|t| t.trim().to_owned()).filter(|t| !t.is_empty()) {

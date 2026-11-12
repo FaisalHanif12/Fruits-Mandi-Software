@@ -71,6 +71,8 @@ pub(crate) struct Typed {
     pub(crate) stock_view: StockView,
     /// The quality picked (R2, R3, R4).
     pub(crate) grade: Option<mandi_core::bikri::SaleGrade>,
+    /// The picked lot (R2 to R6, R10, R27): the row id of the lot.
+    pub(crate) lot_id: Option<i64>,
     /// The picked garden (R36).
     pub(crate) garden_id: Option<i64>,
     /// The layout of R36. By garden when the screen sent nothing.
@@ -90,6 +92,9 @@ pub(crate) struct Typed {
     pub(crate) line_sort: Option<LineSort>,
     /// The partner section is locked: leave out the partner parts of the report (PRD FR-17.11).
     pub(crate) hide_partners: bool,
+    /// The language that orders the lots of a seller's day slip (R35, PRD FR-12.12). Urdu when the
+    /// screen sent nothing.
+    pub(crate) order_language: Option<mandi_core::auth::Language>,
     /// What goes back to the screen.
     pub(crate) resolved: ResolvedFilters,
 }
@@ -154,6 +159,7 @@ pub(crate) fn resolve(
     let mut typed = Typed {
         today: Some(today),
         hide_partners: input.hide_partners,
+        order_language: input.order_language,
         ..Typed::default()
     };
 
@@ -218,6 +224,7 @@ pub(crate) fn resolve(
         "filters.stock_view",
     );
     refuse_unless(FilterKind::Grade, input.grade.is_some(), "filters.grade");
+    refuse_unless(FilterKind::Lot, input.lot_id.is_some(), "filters.lot_id");
     refuse_unless(
         FilterKind::Bikri,
         input.bikri_id.is_some(),
@@ -459,6 +466,38 @@ pub(crate) fn resolve(
     if takes.has(FilterKind::Grade) {
         typed.grade = input.grade;
         typed.resolved.grade = input.grade;
+    }
+    if takes.has(FilterKind::Lot)
+        && let Some(id) = input.lot_id
+    {
+        // PRD FR-12.45: the lot is named by its seller, its item and its counter.
+        let found: Option<(String, String, String, String, i64)> = conn
+            .query_row(
+                "SELECT a.name_ur, a.name_en, i.name_ur, i.name_en, l.lot_counter
+                 FROM bikri_lots l
+                 JOIN accounts a ON a.id = l.seller_account_id
+                 JOIN items i ON i.id = l.item_id
+                 WHERE l.id = ?1",
+                [id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            )
+            .optional()?;
+        match found {
+            Some((seller_ur, seller_en, item_ur, item_en, counter)) => {
+                typed.lot_id = Some(id);
+                typed.resolved.lot = Some(Names {
+                    ur: format!(
+                        "{seller_ur}، {}",
+                        mandi_core::bikri::lot_label(&item_ur, counter)
+                    ),
+                    en: format!(
+                        "{seller_en}, {}",
+                        mandi_core::bikri::lot_label(&item_en, counter)
+                    ),
+                });
+            }
+            None => problems.push(FieldError::new(ErrorCode::ErrNotFound, "filters.lot_id")),
+        }
     }
     if takes.has(FilterKind::StockView) {
         typed.stock_view = input.stock_view.unwrap_or_default();

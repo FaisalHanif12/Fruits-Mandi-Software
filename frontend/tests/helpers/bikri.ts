@@ -11,7 +11,7 @@ import type { BikriPreview } from '../../src/bindings/BikriPreview';
 import type { MasterKind } from '../../src/features/masters/types';
 import * as searchApi from '../../src/shared/search/api';
 import { account, balance, fakeAccountSearch, fakeAccounts, ref } from './accounts';
-import { IDS, SELLER_MEMORY, TRUCK_MEMORY, previewFor } from './bikri-data';
+import { IDS, SELLER_MEMORY, previewFor } from './bikri-data';
 import { CommandError } from '../../src/shared/api';
 import { NASIR, SHAHID, listRow, savedEvent1 } from './bikri-saved';
 import { refusal } from './ui-error';
@@ -101,15 +101,7 @@ export function fakeBikri(
     store.previews.push(draft);
     return Promise.resolve(answer(draft)).then(ensurePaid);
   });
-  vi.mocked(bikriApi.assistTruckMemory).mockImplementation((truckNo) =>
-    Promise.resolve(
-      truckNo.toUpperCase().startsWith('LES')
-        ? TRUCK_MEMORY
-        : { last: null, same_day: null, suggestions: [] },
-    ),
-  );
   vi.mocked(bikriApi.assistSellerMemory).mockResolvedValue(SELLER_MEMORY);
-  vi.mocked(bikriApi.bikriSplitFreight).mockResolvedValue([]);
   // The commands of plan 13. A test file mocks the modules it uses with vi.mock; a module that is
   // not mocked is left alone (its calls fail, and the screen copes, as it must).
   if (vi.isMockFunction(bikriApi.bikriSave)) {

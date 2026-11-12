@@ -597,4 +597,13 @@ pub struct AnswerOption {
     pub checked: bool,
     /// True for a person in the dead amount (PRD FR-10.10).
     pub dead: bool,
+    /// For a lot (plan 71 L9, PRD FR-12.45): the day it came, `YYYY-MM-DD`. Missing for any other
+    /// record. The name of a lot option is the lot's name, "احسان، آم-2".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub date: Option<String>,
+    /// For a lot: the quantity received, in نگ. Missing for any other record.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number", optional)]
+    pub qty: Option<i64>,
 }

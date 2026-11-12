@@ -23,33 +23,15 @@ pub fn next_number(conn: &Connection) -> rusqlite::Result<i64> {
     Ok(last.saturating_add(1))
 }
 
-/// The header columns of a new بکری.
+/// The header columns of a new بکری. From v1.34 (plan 71 H1 to H3) a new بکری has only its number and
+/// its day; its bill day is its day. The other header columns of the table (book, truck, زمیندار,
+/// اڈا, driver, total freight, store, note) stay in the table for old بکری and are left empty here.
 #[derive(Debug, Clone)]
 pub struct NewEntry<'a> {
     /// The number, from [`next_number`].
     pub number: i64,
-    /// The second number.
-    pub book: Option<&'a str>,
-    /// The day of the first posting, `YYYY-MM-DD`.
+    /// The day of the first posting, `YYYY-MM-DD`. It is also the bill day.
     pub entry_date: &'a str,
-    /// The bill day, `YYYY-MM-DD`.
-    pub bill_date: &'a str,
-    /// The truck number.
-    pub truck_no: Option<&'a str>,
-    /// The زمیندار.
-    pub zamindar_account_id: Option<i64>,
-    /// The truck stand.
-    pub adda_id: Option<i64>,
-    /// The driver's name.
-    pub driver_name: Option<&'a str>,
-    /// The driver's phone, 11 digits.
-    pub driver_phone: Option<&'a str>,
-    /// The header's total freight, paisa.
-    pub total_freight_paisa: Option<i64>,
-    /// The default store.
-    pub store_id: Option<i64>,
-    /// A note.
-    pub note: Option<&'a str>,
 }
 
 /// Adds a بکری and returns its id.
@@ -63,26 +45,10 @@ pub fn insert_entry(
     now: &str,
 ) -> rusqlite::Result<i64> {
     conn.execute(
-        "INSERT INTO bikri_entries (created_at, created_by, updated_at, updated_by, number, book, entry_date,
-             bill_date, truck_no, zamindar_account_id, adda_id, driver_name, driver_phone, total_freight_paisa,
-             store_id, note, status)
-         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 'saved')",
-        params![
-            now,
-            user_id,
-            entry.number,
-            entry.book,
-            entry.entry_date,
-            entry.bill_date,
-            entry.truck_no,
-            entry.zamindar_account_id,
-            entry.adda_id,
-            entry.driver_name,
-            entry.driver_phone,
-            entry.total_freight_paisa,
-            entry.store_id,
-            entry.note,
-        ],
+        "INSERT INTO bikri_entries (created_at, created_by, updated_at, updated_by, number, entry_date,
+             bill_date, status)
+         VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?4, 'saved')",
+        params![now, user_id, entry.number, entry.entry_date],
     )?;
     Ok(conn.last_insert_rowid())
 }
@@ -122,6 +88,10 @@ pub struct NewLot<'a> {
     pub bikri_id: i64,
     /// The lot number, from 1.
     pub lot_no: i64,
+    /// The counter of the lot's name, one for each seller and item (PRD FR-12.45), as the preview
+    /// showed it. The table refuses a number that is not above every number ever given to this
+    /// seller and item.
+    pub lot_counter: i64,
     /// The seller account.
     pub seller_account_id: i64,
     /// The purchase an own lot takes its goods from (PRD FR-12.26).
@@ -186,9 +156,9 @@ pub fn insert_lot(
              munshiana_paisa, munshiana_method, munshiana_value_paisa, munshiana_rule_id,
              phone_paisa, phone_method, phone_value_paisa, phone_rule_id,
              cash_paid_paisa, store_rent_paisa, adjust_advance, qty_sold, gross_paisa, seller_comm_paisa,
-             deductions_paisa, net_paisa, purchase_id, arrival_id)
+             deductions_paisa, net_paisa, purchase_id, arrival_id, lot_counter)
          VALUES (?1, ?2, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-             ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35)",
+             ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30, ?31, ?32, ?33, ?34, ?35, ?36)",
         params![
             now,
             user_id,
@@ -225,6 +195,7 @@ pub fn insert_lot(
             lot.net_paisa,
             lot.purchase_id,
             lot.arrival_id,
+            lot.lot_counter,
         ],
     )?;
     Ok(conn.last_insert_rowid())

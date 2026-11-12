@@ -6,17 +6,7 @@
   ],
   "draft": {
     "header": {
-      "entry_date": "10-10-2026",
-      "bill_date": "10-10-2026",
-      "book": null,
-      "truck_no": "LES-1234",
-      "zamindar_account_id": null,
-      "adda_id": null,
-      "driver_name": null,
-      "driver_phone": null,
-      "total_freight": null,
-      "store_id": null,
-      "note": null
+      "entry_date": "10-10-2026"
     },
     "lots": [
       {

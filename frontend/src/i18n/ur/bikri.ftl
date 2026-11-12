@@ -4,7 +4,7 @@
 ## The screen (PRD 12.1, plan 12).
 
 # review: pending
-bikri-help = ٹرک، { -lot } اور { -bikri } کی لائنیں لکھیں۔ ہر رقم لکھتے ہی خود بنتی ہے۔
+bikri-help = { -lot } اور { -bikri } کی لائنیں لکھیں۔ ہر رقم لکھتے ہی خود بنتی ہے۔
 
 # review: pending
 bikri-load-failed = { -bikri-book } کھل نہیں سکی
@@ -16,12 +16,21 @@ bikri-preview-failed = حساب نہیں بن سکا
 bikri-empty-title = ابھی کچھ نہیں لکھا
 
 # review: pending
-bikri-empty-help = ٹرک نمبر یا { -beopari } سے شروع کریں۔ ہر رقم لکھتے ہی یہاں نظر آئے گی۔
+bikri-empty-help = پہلے { -lot } کے { -beopari } سے شروع کریں۔ ہر رقم لکھتے ہی یہاں نظر آئے گی۔
 
 # review: pending
-bikri-empty-action = ٹرک نمبر لکھیں
+bikri-empty-action = { -beopari } لکھیں
 
-## The header (PRD 12.2).
+## The head: the date and the number, in the top row (PRD 12.2, plan 71 H1, H4).
+
+# review: pending
+bikri-head-number = { -bikri } نمبر
+
+# نئی { -bikri } کا نمبر محفوظ ہونے تک نہیں ہوتا (PRD FR-12.2)۔
+# review: pending
+bikri-head-number-new = نئی
+
+## The old header fields. A { -bikri } saved before v1.34 keeps them and shows them read only.
 
 # review: pending
 bikri-header-date = تاریخ
@@ -34,9 +43,6 @@ bikri-header-truck = ٹرک نمبر
 
 # review: pending
 bikri-header-total-freight = کل { -kiraya }
-
-# review: pending
-bikri-header-split-freight = تقسیم
 
 # review: pending
 bikri-header-book = بک
@@ -53,28 +59,9 @@ bikri-header-driver-phone = ڈرائیور فون
 # review: pending
 bikri-header-note = نوٹ
 
+# "{ -bikri } محفوظ ہو گئی" کے ساتھ وہ لنک جو ابھی محفوظ ہونے والی { -bikri } کھولتا ہے۔
 # review: pending
-bikri-header-more = مزید
-
-# review: pending
-bikri-header-less = کم
-
-# Shown after a known truck number fills the empty fields (PRD FR-7.49).
-# review: pending
-bikri-header-filled-from = { -adda }، { -zamindar } اور ڈرائیور اس ٹرک کی { -bikri } نمبر { $number } ({ $date }) سے بھرے گئے ہیں۔ آپ انہیں بدل سکتے ہیں۔
-
-# review: pending
-bikri-truck-last = آخری { -bikri } نمبر { $number }، { $date }
-
-# PRD FR-7.50.
-# review: pending
-bikri-truck-same-day = اس ٹرک کی { $date } کی { -bikri } نمبر { $number } پہلے سے موجود ہے۔
-
-# review: pending
-bikri-truck-open = کھولیں
-
-# review: pending
-bikri-truck-continue = نئی { -bikri } جاری رکھیں
+bikri-last-saved-open = کھولیں
 
 ## The lots (PRD 12.3) and the sale lines (PRD 12.4).
 
@@ -95,6 +82,14 @@ bikri-lots-add = { -lot } شامل کریں
 # یہاں صرف دونوں نام جوڑے جاتے ہیں؛ جب تک ایک ہی چنا ہو، عنوان میں وہی نام اکیلا آتا ہے۔
 # review: pending
 bikri-lot-who = { $seller }، { $item }
+
+# { -lot } کا پورا نام (plan 71 L1، PRD FR-12.45): بیوپاری، مال اور وہ گنتی جو اسی بیوپاری اور مال کی ساری زندگی چلتی ہے: "احسان، آم-2"۔
+# review: pending
+bikri-lot-name = { $seller }، { $item }-{ $counter }
+
+# { -lot } کا مال اس کی گنتی کے ساتھ، اس فہرست کے لیے جس میں بیوپاری کا اپنا خانہ ہو: "آم-2"۔
+# review: pending
+bikri-lot-item = { $item }-{ $counter }
 
 # $lot: { -lot } نمبر۔ $who: { -lot } کا نام (bikri-lot-who)۔ $named: جب نام ہو تو yes۔
 # review: pending
@@ -577,9 +572,6 @@ bikri-list-col-number = نمبر
 bikri-list-col-when = تاریخ اور وقت
 
 # review: pending
-bikri-list-col-truck = ٹرک
-
-# review: pending
 bikri-list-col-sellers = { -beopari }
 
 # review: pending
@@ -653,9 +645,9 @@ bikri-stock-col-taken = { -phal }
 # review: pending
 bikri-stock-col-days = انتظار کے دن
 
-# $number: { -bikri } نمبر۔ $lot: اس کے اندر { -lot } نمبر۔
+# $number: { -bikri } نمبر۔ $lot: اس کے اندر { -lot } نمبر۔ $who: { -lot } کا نام (bikri-lot-name)۔
 # review: pending
-bikri-stock-lot-title = { -bikri } { $number }، { -lot } { $lot }
+bikri-stock-lot-title = { -bikri } { $number }، { -lot } { $lot }: { $who }
 
 # review: pending
 bikri-stock-sell = بچا ہوا مال بیچیں

@@ -380,6 +380,9 @@ pub struct FruitLotRef {
     /// Its number inside the بکری.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name: its seller, its item and this number (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// The بکری.
     #[ts(type = "number")]
     pub bikri_id: i64,
@@ -567,6 +570,9 @@ pub struct FruitLotRow {
     /// Its number inside the بکری.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name: the seller, the item and this number (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// The بکری.
     #[ts(type = "number")]
     pub bikri_id: i64,

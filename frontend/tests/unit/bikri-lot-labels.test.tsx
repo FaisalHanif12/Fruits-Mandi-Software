@@ -7,6 +7,9 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
+import type { BikriDraft } from '../../src/bindings/BikriDraft';
+import type { BikriPreview } from '../../src/bindings/BikriPreview';
+import { previewFor } from '../helpers/bikri-data';
 import { seedBikriDraft } from '../helpers/bikri-seed';
 import { named, openBook } from '../helpers/bikri-screen';
 import {
@@ -51,9 +54,16 @@ const NAMES = {
   apple: { ur: 'سیب', en: 'Apple' },
 };
 
-/** The words that name a lot: "Rahim, Banana" / "رحیم، کیلا", or the seller alone while no item is chosen. */
+/**
+ * The words that name a lot, "Rahim, Banana-1" / "رحیم، کیلا-1": the backend's answers carry the counter of
+ * the lot's name (PRD FR-12.45), 1 for these first lots. The seller alone while no item is chosen.
+ */
 const who = (language: Language, seller: string, item: string | null) =>
-  item === null ? seller : message(language, 'bikri-lot-who', { seller, item });
+  item === null ? seller : message(language, 'bikri-lot-name', { seller, item, counter: '1' });
+
+/** The names alone, for a lot the backend gave no counter (a preview that says null). */
+const whoWithoutCounter = (language: Language, seller: string, item: string) =>
+  message(language, 'bikri-lot-who', { seller, item });
 
 /** The values of a label that names its lot. */
 const label = (_language: Language, text: string) => ({ lot: 1, who: text, named: 'yes' });
@@ -125,5 +135,79 @@ describe.each(LANGUAGES)('the labels of a lot (%s)', (language) => {
     const next: Language = language === 'ur' ? 'en' : 'ur';
     await user.keyboard('{Alt>}l{/Alt}');
     await namedSoon(next, who(next, NAMES.rahim[next], NAMES.banana[next]));
+  });
+});
+
+// Plan 71 L1 to L4, L8 (PRD FR-12.45): the name of a lot is its seller, its item and the counter the
+// backend gives, "Rahim, Banana-2". A new lot shows the number it will get when it is saved, which the
+// backend works out and sends in the preview (`lot_counter`, null while the seller or the item is not
+// chosen). The screen only draws it.
+describe.each(LANGUAGES)('the name of a lot with its counter (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+  });
+
+  /** The answer of the preview with the counter 2 on the first lot, as the backend works it out. */
+  const withCounter =
+    (counter: number | null) =>
+    (draft: BikriDraft): BikriPreview => {
+      const answer = previewFor(draft);
+      return {
+        ...answer,
+        lots: answer.lots.map((lot, index) => ({
+          ...lot,
+          lot_counter: index === 0 ? counter : null,
+        })),
+      };
+    };
+
+  const withCounterText = (counter: number) =>
+    message(language, 'bikri-lot-name', {
+      seller: NAMES.rahim[language],
+      item: NAMES.banana[language],
+      counter: String(counter),
+    });
+
+  it('shows the seller, the item and the counter in all four places', async () => {
+    seedBikriDraft({ lot: 'rahim' });
+    await openBook(language, withCounter(2));
+    await namedSoon(language, withCounterText(2));
+  });
+
+  it('does not show a counter the backend has not given: the names alone', async () => {
+    seedBikriDraft({ lot: 'rahim' });
+    await openBook(language, withCounter(null));
+    await namedSoon(
+      language,
+      whoWithoutCounter(language, NAMES.rahim[language], NAMES.banana[language]),
+    );
+  });
+
+  it('keeps the counter and changes the words with the language', async () => {
+    seedBikriDraft({ lot: 'rahim' });
+    const { user } = await openBook(language, withCounter(3));
+    await namedSoon(language, withCounterText(3));
+    const next: Language = language === 'ur' ? 'en' : 'ur';
+    await user.keyboard('{Alt>}l{/Alt}');
+    await namedSoon(
+      next,
+      message(next, 'bikri-lot-name', {
+        seller: NAMES.rahim[next],
+        item: NAMES.banana[next],
+        counter: '3',
+      }),
+    );
+  });
+
+  it('keeps the counter in the same isolate as the names, so a right-to-left reader sees it after the item', async () => {
+    seedBikriDraft({ lot: 'rahim' });
+    await openBook(language, withCounter(2));
+    await namedSoon(language, withCounterText(2));
+    const heading = screen.getByRole('heading', {
+      name: named(message(language, 'bikri-sales-title', label(language, withCounterText(2)))),
+    });
+    // One isolate holds the whole name, with the counter inside it and no isolation marks of its own.
+    expect(heading.textContent).toContain(`\u2068${visible(withCounterText(2))}\u2069`);
   });
 });

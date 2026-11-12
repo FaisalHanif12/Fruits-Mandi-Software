@@ -7,7 +7,7 @@ import { Localized } from '@fluent/react';
 import { Ban, RotateCcw, ShoppingCart } from 'lucide-react';
 import type { StockRow } from '../../../../bindings/StockRow';
 import { isoToDisplayDate } from '../../../../shared/format';
-import { displayName, useLanguage } from '../../../../shared/i18n';
+import { displayName, useLanguage, useLotNames } from '../../../../shared/i18n';
 import { Button, Card, Code, Fact, Num } from '../../../../shared/ui';
 import { stockSellerName } from '../../stock-columns';
 
@@ -21,10 +21,13 @@ interface StockLotCardProps {
 /** Every figure of a lot (PRD FR-12.14), shared by the stock list and the later sale. */
 export function LotFacts({ row }: { row: StockRow }) {
   const language = useLanguage();
+  const { lotItem } = useLotNames();
   return (
     <dl className="grid grid-cols-3 gap-x-4 gap-y-3 normal:grid-cols-5">
       <Fact label={<Localized id="glossary-beopari" />}>{stockSellerName(row, language)}</Fact>
-      <Fact label={<Localized id="glossary-qism-maal" />}>{displayName(row.item, language)}</Fact>
+      <Fact label={<Localized id="glossary-qism-maal" />}>
+        {lotItem(row.item, row.lot_counter)}
+      </Fact>
       <Fact label={<Localized id="glossary-packing" />}>{displayName(row.packing, language)}</Fact>
       <Fact label={<Localized id="bikri-stock-col-received-date" />}>
         <Code>{isoToDisplayDate(row.received_date)}</Code>
@@ -52,13 +55,18 @@ export function LotFacts({ row }: { row: StockRow }) {
 }
 
 export function StockLotCard({ row, onSell, onWriteOff, onUndoWriteOff }: StockLotCardProps) {
+  const { lotName } = useLotNames();
   return (
     <Card
       compact
       title={
         <Localized
           id="bikri-stock-lot-title"
-          vars={{ number: String(row.bikri_number), lot: String(row.lot_no) }}
+          vars={{
+            number: String(row.bikri_number),
+            lot: String(row.lot_no),
+            who: lotName(row.seller, row.item, row.lot_counter),
+          }}
         >
           <span />
         </Localized>

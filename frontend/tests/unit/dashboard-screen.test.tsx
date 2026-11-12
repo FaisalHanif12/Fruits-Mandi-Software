@@ -167,7 +167,8 @@ describe.each(LANGUAGES)('the dashboard (%s)', (language) => {
     expect(visible(rows[2]?.textContent)).toContain('12,000');
     expect(visible(rows[2]?.textContent)).toContain('10,160');
     expect(visible(rows[1]?.textContent)).toContain(language === 'ur' ? 'رحیم' : 'Rahim');
-    expect(visible(rows[1]?.textContent)).toContain('LES-1234');
+    // The sale has no truck number any more (plan 71 H1): the row has its number, seller and figures.
+    expect(visible(rows[1]?.textContent)).not.toContain('LES-1234');
     expect(
       screen.getByText(
         (_, element) =>

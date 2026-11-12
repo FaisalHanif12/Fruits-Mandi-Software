@@ -10,6 +10,7 @@ import {
   serialiseDraft,
 } from '../../src/features/bikri/draft-snapshot';
 import { LOT, SALE } from '../../src/features/bikri/types';
+import { withOldHeader } from '../helpers/bikri-old-draft';
 
 const RAHIM = { id: 17, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
 const AKRAM = { id: 19, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_en: 'Akram Toll Tax' };
@@ -17,7 +18,6 @@ const AKRAM = { id: 19, code: '0020', name_ur: 'اکرم ٹول ٹیکس', name_
 /** A draft with a header, one lot and one sale line, typed the way the munshi does. */
 function typedDraft() {
   const stores = createBikriDraft('10-10-2026');
-  stores.header.getState().patch({ truckNo: 'LES-1234', zamindar: RAHIM, totalFreight: '3000' });
   const lot = stores.lots.getState().rows[0];
   if (lot === undefined) throw new Error('no lot row');
   stores.lots.getState().patchRow(lot.rowId, {
@@ -45,12 +45,8 @@ describe('the draft snapshot', () => {
     if (snapshot === null) return;
     const restored = createBikriDraft('11-10-2026');
     applySnapshot(restored, snapshot);
-    expect(restored.header.getState()).toMatchObject({
-      entryDate: '10-10-2026',
-      truckNo: 'LES-1234',
-      totalFreight: '3000',
-      zamindar: RAHIM,
-    });
+    // The header is the date alone now (plan 71 H1).
+    expect(restored.header.getState().entryDate).toBe('10-10-2026');
     const lot = restored.lots.getState().rows[0];
     expect(lot?.rowId).toBe(lotKey);
     expect(lot?.typed).toMatchObject({ [LOT.qty]: '50', [LOT.freight]: '3000' });
@@ -130,9 +126,6 @@ describe('the size of a snapshot', () => {
       name_ur: 'اکرم ٹول ٹیکس',
       name_en: 'Akram Toll Tax',
     };
-    stores.header
-      .getState()
-      .patch({ truckNo: 'LES-1234', zamindar: record, note: 'ن'.repeat(500) });
     const lotKeys = Object.values(LOT);
     const saleKeys = Object.values(SALE);
     const pickedLot = Object.fromEntries(
@@ -171,5 +164,47 @@ describe('the size of a snapshot', () => {
     expect(parseSnapshot(text)).not.toBeNull();
     // About 537,000 bytes with every field full, which no real بکری is: inside the limit with room.
     expect(bytes).toBeLessThan(MAX_DRAFT_BYTES * 0.75);
+  });
+
+  it('a draft kept before v1.34 loads without error: the old header fields are left out, the store goes to its lots', () => {
+    const stores = createBikriDraft('10-10-2026');
+    const SWAT = { id: 31, code: '0001', name_ur: 'سوات اڈا', name_en: 'Swat Adda' };
+    const STORE = { id: 41, code: '0001', name_ur: 'سٹور', name_en: 'Store' };
+    const lot = stores.lots.getState().rows[0];
+    if (lot === undefined) throw new Error('no lot row');
+    stores.lots.getState().patchRow(lot.rowId, { picked: { [LOT.seller]: RAHIM } });
+    stores.lots.getState().addRow({}, { [LOT.seller]: RAHIM, [LOT.store]: SWAT });
+    const old = withOldHeader(serialiseDraft(stores), {
+      truckNo: 'LES-1234',
+      zamindar: RAHIM,
+      adda: SWAT,
+      driverName: 'Aslam',
+      driverPhone: '03001234567',
+      totalFreight: '3000',
+      store: STORE,
+      book: 'B1',
+      billDate: '11-10-2026',
+      note: 'ن',
+    });
+    const snapshot = parseSnapshot(old);
+    expect(snapshot).not.toBeNull();
+    if (snapshot === null) return;
+    // The header of the snapshot is the date alone, and a draft saved again holds nothing of the old fields.
+    expect(snapshot.header).toEqual({ entryDate: '10-10-2026' });
+    const restored = createBikriDraft('12-10-2026');
+    applySnapshot(restored, snapshot);
+    expect(restored.header.getState().entryDate).toBe('10-10-2026');
+    const again = JSON.parse(serialiseDraft(restored)) as { header: unknown };
+    expect(again.header).toEqual({ entryDate: '10-10-2026' });
+    const [first, second] = restored.lots.getState().rows;
+    // The lot that had no store of its own takes the header's; the lot that had one keeps it.
+    expect(first?.picked?.[LOT.store]).toEqual(STORE);
+    expect(second?.picked?.[LOT.store]).toEqual(SWAT);
+  });
+
+  it('a snapshot whose header has only the date, the form of today, is read', () => {
+    const { stores } = typedDraft();
+    const snapshot = parseSnapshot(serialiseDraft(stores));
+    expect(snapshot?.header).toEqual({ entryDate: '10-10-2026' });
   });
 });

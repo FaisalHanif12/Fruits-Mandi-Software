@@ -32,10 +32,6 @@
       {
         "label_id": "print-fact-date",
         "value": "10-10-2026"
-      },
-      {
-        "label_id": "print-fact-truck",
-        "value": "LES-1234"
       }
     ]
   },

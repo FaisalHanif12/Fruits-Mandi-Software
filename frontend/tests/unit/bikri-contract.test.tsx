@@ -7,7 +7,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import * as bikriApi from '../../src/features/bikri/api';
 import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { E2E26_REQUEST, EVENT1_REQUEST } from '../helpers/bikri-data';
@@ -30,6 +29,7 @@ import {
 } from '../helpers/app';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { withDateOnlyHeader } from '../helpers/bikri-old-draft';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -73,7 +73,8 @@ function withoutCommas(value: unknown): unknown {
 }
 
 /** The draft of the backend's file, in the same form. */
-const wanted = (request: typeof EVENT1_REQUEST): unknown => withoutCommas(request.draft);
+const wanted = (request: typeof EVENT1_REQUEST): unknown =>
+  withoutCommas(withDateOnlyHeader(request.draft));
 
 describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (language) => {
   beforeEach(() => {
@@ -83,12 +84,6 @@ describe.each(LANGUAGES)('the draft the screen sends is the backend’s (%s)', (
 
   async function open() {
     const book = await openBook(language);
-    // No truck memory: the backend's files have no اڈا and no filled fields.
-    vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-      last: null,
-      same_day: null,
-      suggestions: [],
-    });
     return book;
   }
 
@@ -141,11 +136,6 @@ describe.each(LANGUAGES)('E2E-26 on the screen, from the backend’s answer (%s)
 
   it('line 2 starts at 30, the rate is empty with 600 as grey text, Ctrl+D copies 600, ⓘ shows 12,000 × 6 ÷ 100 = 720', async () => {
     const { user } = await openBook(language);
-    vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-      last: null,
-      same_day: null,
-      suggestions: [],
-    });
     await typeEvent1Lot(user, language);
     await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
     const sales = salesGrid(language);

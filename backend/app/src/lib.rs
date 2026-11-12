@@ -265,8 +265,6 @@ pub fn handler<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + 
         commands::general::general_preview,
         commands::general::general_save,
         commands::bikri::bikri_preview,
-        commands::bikri::bikri_split_freight,
-        commands::assist::assist_truck_memory,
         commands::assist::assist_seller_memory,
         commands::assist::assist_last_rate,
         commands::bikri::bikri_save,

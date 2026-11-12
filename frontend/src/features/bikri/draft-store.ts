@@ -8,22 +8,15 @@
 
 import { createContext, useContext } from 'react';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
-import { createEntryStore, type EntryStore, type PickedRecord } from '../../shared/grid';
+import { createEntryStore, type EntryStore } from '../../shared/grid';
 import { createLinesUnion } from './union-store';
 
-/** The header of PRD 12.2 as typed. The pickers hold the record chosen. */
+/**
+ * The header of PRD 12.2 as typed. From v1.34 (plan 71 H1) it is the date alone: the truck, the
+ * زمیندار, the اڈا and the fields behind "More" are gone, and the backend takes only the date.
+ */
 export interface HeaderState {
   entryDate: string;
-  billDate: string;
-  book: string;
-  truckNo: string;
-  zamindar: PickedRecord | null;
-  adda: PickedRecord | null;
-  driverName: string;
-  driverPhone: string;
-  totalFreight: string;
-  store: PickedRecord | null;
-  note: string;
 }
 
 interface HeaderStore extends HeaderState {
@@ -85,16 +78,6 @@ export function createBikriDraft(today: string): BikriDraftStores {
   };
   const header = create<HeaderStore>()((set) => ({
     entryDate: today,
-    billDate: '',
-    book: '',
-    truckNo: '',
-    zamindar: null,
-    adda: null,
-    driverName: '',
-    driverPhone: '',
-    totalFreight: '',
-    store: null,
-    note: '',
     patch: (patch) => {
       set(patch);
     },

@@ -323,7 +323,8 @@ fn r13_with_a_first_day_starts_from_the_balance_before_it() {
                 deductions_paisa,
                 ..
             }) => {
-                assert_eq!((*bikri_number, item.en.as_str(), *qty), (1, "Banana", 50));
+                // L8: the item is written with the lot's counter.
+                assert_eq!((*bikri_number, item.en.as_str(), *qty), (1, "Banana-1", 50));
                 assert_eq!(gross_paisa.rupees(), 29_400);
                 assert_eq!(deductions_paisa.rupees(), 5_084);
             }

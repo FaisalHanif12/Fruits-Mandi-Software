@@ -298,7 +298,7 @@ fn a_print_gives_the_button_and_the_steps_with_the_real_values() {
 #[test]
 fn the_rows_of_ruling_one_have_a_button_and_steps_that_agree() {
     let w = books();
-    let cases: [(&str, ReportId, &[&str]); 11] = [
+    let cases: [(&str, ReportId, &[&str]); 10] = [
         (
             "alif ka statement print karo",
             ReportId::R31,
@@ -388,16 +388,6 @@ fn the_rows_of_ruling_one_have_a_button_and_steps_that_agree() {
             &[
                 "assistant-how-open-report",
                 "assistant-how-set-day",
-                "assistant-how-press-print",
-            ],
-        ),
-        (
-            "swat adda ki bikri ka print pichle mahine ka",
-            ReportId::R8,
-            &[
-                "assistant-how-open-report",
-                "assistant-how-set-party",
-                "assistant-how-set-dates",
                 "assistant-how-press-print",
             ],
         ),

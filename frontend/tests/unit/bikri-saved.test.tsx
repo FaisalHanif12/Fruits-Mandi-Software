@@ -60,9 +60,11 @@ function savedLotNamed(language: Language, number: number) {
   if (lot === undefined) throw new Error('no such lot');
   return {
     lot: number,
-    who: message(language, 'bikri-lot-who', {
+    // The seller, the item and the counter the backend gave the lot (PRD FR-12.45): "Rahim, Banana-1".
+    who: message(language, 'bikri-lot-name', {
       seller: displayName(lot.seller, language),
       item: displayName(lot.item, language),
+      counter: String(lot.lot_counter),
     }),
     named: 'yes',
   };
@@ -76,6 +78,62 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
   });
 
   const open = () => renderApp('/bikri/book?id=41');
+
+  // Plan 71 H3: a بکری saved after v1.34 has none of the old header values, so its saved view shows the
+  // date and when it was saved, and no empty truck, اڈا or زمیندار; the bill date shows only when it
+  // is not the entry date.
+  it('a بکری with none of the old header values shows only its date and when it was saved', async () => {
+    vi.mocked(bikriApi.bikriGet).mockResolvedValue(
+      savedEvent1({
+        truck_no: null,
+        zamindar: null,
+        adda_id: null,
+        driver_name: null,
+        driver_phone: null,
+        total_freight: null,
+        store_id: null,
+        book: null,
+        note: null,
+      }),
+    );
+    await open();
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'bikri-saved-title', { number: 1 })),
+    });
+    const text = pageText();
+    for (const id of ['bikri-header-date', 'bikri-saved-at']) {
+      expect(text).toContain(visible(message(language, id)));
+    }
+    for (const id of [
+      'bikri-header-bill-date',
+      'bikri-header-truck',
+      'glossary-zamindar',
+      'glossary-adda',
+      'bikri-header-total-freight',
+      'bikri-header-driver',
+      'bikri-header-driver-phone',
+    ]) {
+      expect(text, id).not.toContain(visible(message(language, id)));
+    }
+  });
+
+  it('an old بکری shows its old header values, each only when it is there, and its bill date when it differs', async () => {
+    vi.mocked(bikriApi.bikriGet).mockResolvedValue(
+      savedEvent1({ bill_date: '2026-10-11', book: 'B-7', note: null }),
+    );
+    await open();
+    await screen.findByRole('heading', {
+      level: 1,
+      name: named(message(language, 'bikri-saved-title', { number: 1 })),
+    });
+    const text = pageText();
+    expect(text).toContain('LES-1234');
+    expect(text).toContain('B-7');
+    expect(text).toContain('11-10-2026');
+    expect(text).toContain(visible(message(language, 'bikri-header-bill-date')));
+    expect(text).not.toContain(visible(message(language, 'bikri-header-note')));
+  });
 
   it('shows the values stored when it was saved, and the preview is never asked', async () => {
     await open();
@@ -292,8 +350,9 @@ describe.each(LANGUAGES)('a saved بکری (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.search).not.toHaveProperty('id');
     });
+    // The new sale book: its first field is the date.
     expect(
-      await screen.findByRole('combobox', { name: named(message(language, 'bikri-header-truck')) }),
+      await screen.findByRole('textbox', { name: named(message(language, 'bikri-header-date')) }),
     ).toBeInTheDocument();
   });
 });
@@ -315,8 +374,9 @@ describe.each(LANGUAGES)('Alt+B from a saved بکری (%s)', (language) => {
     await waitFor(() => {
       expect(router.state.location.search).not.toHaveProperty('id');
     });
+    // The new sale book: its first field is the date.
     expect(
-      await screen.findByRole('combobox', { name: named(message(language, 'bikri-header-truck')) }),
+      await screen.findByRole('textbox', { name: named(message(language, 'bikri-header-date')) }),
     ).toBeInTheDocument();
   });
 });

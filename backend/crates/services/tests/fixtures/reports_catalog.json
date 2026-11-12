@@ -23,7 +23,8 @@
       "item_group",
       "city",
       "adda",
-      "grade"
+      "grade",
+      "lot"
     ],
     "party_required": false
   },
@@ -41,7 +42,8 @@
       "item_group",
       "city",
       "adda",
-      "grade"
+      "grade",
+      "lot"
     ],
     "party_required": false
   },
@@ -59,7 +61,8 @@
       "item_group",
       "city",
       "adda",
-      "grade"
+      "grade",
+      "lot"
     ],
     "party_required": false
   },
@@ -76,7 +79,8 @@
       "item",
       "city",
       "adda",
-      "bikri"
+      "bikri",
+      "lot"
     ],
     "party_required": false
   },
@@ -90,7 +94,8 @@
       "seller",
       "zamindar",
       "item",
-      "adda"
+      "adda",
+      "lot"
     ],
     "party_required": false
   },
@@ -111,17 +116,6 @@
     "party_required": false
   },
   {
-    "id": "R8",
-    "group": "sales",
-    "group_title_id": "report-group-sales",
-    "title_id": "report-r8-title",
-    "filters": [
-      "date_range",
-      "adda"
-    ],
-    "party_required": false
-  },
-  {
     "id": "R10",
     "group": "sales",
     "group_title_id": "report-group-sales",
@@ -131,7 +125,8 @@
       "seller",
       "item",
       "item_group",
-      "stock_view"
+      "stock_view",
+      "lot"
     ],
     "party_required": false
   },
@@ -323,7 +318,8 @@
       "zamindar",
       "item",
       "item_group",
-      "adda"
+      "adda",
+      "lot"
     ],
     "party_required": false
   },

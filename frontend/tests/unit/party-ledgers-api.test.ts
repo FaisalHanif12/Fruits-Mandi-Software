@@ -82,6 +82,14 @@ describe('level 3 is the R35 slip of one party and one date', () => {
     expect(partyDayFilters(20, '2026-10-10')).toEqual(R35_SLIP_AKRAM_REQUEST.filters);
     expect(partyDayFilters(18, '2026-10-10')).toEqual(R35_SLIP_RAHIM_REQUEST.filters);
   });
+
+  it('the slip on the screen adds the language that sorts a seller’s lots, and nothing else (plan 71 L7)', () => {
+    expect(partyDayFilters(18, '2026-10-10', 'ur')).toEqual({
+      ...R35_SLIP_RAHIM_REQUEST.filters,
+      order_language: 'ur',
+    });
+    expect(partyDayFilters(18, '2026-10-10', 'en')).toMatchObject({ order_language: 'en' });
+  });
 });
 
 describe('the address of the screen', () => {

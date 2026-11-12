@@ -7,6 +7,7 @@
       {
         "key": "lot-1",
         "lot_no": 1,
+        "lot_counter": 1,
         "freight": 300000,
         "freight_paid_by": "firm",
         "sold_by_weight": false,

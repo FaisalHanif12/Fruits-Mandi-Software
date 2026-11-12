@@ -11,7 +11,7 @@
 import type { StockRow } from '../../bindings/StockRow';
 import { isoToDisplayDate } from '../../shared/format';
 import type { ListColumn } from '../../shared/grid';
-import { displayName } from '../../shared/i18n';
+import { displayName, lotItemWith, type Say } from '../../shared/i18n';
 
 /** The seller of a lot, by his name and tag (Code Standards F38). */
 export function stockSellerName(
@@ -19,6 +19,15 @@ export function stockSellerName(
   language: Parameters<typeof displayName>[1],
 ): string {
   return displayName(row.seller, language);
+}
+
+/** The item of a lot with its counter, "Mango-2" (the counter is the backend's, PRD FR-12.45). */
+export function stockItemName(
+  row: StockRow,
+  language: Parameters<typeof displayName>[1],
+  text: Say,
+): string {
+  return lotItemWith(text, language, row.item, row.lot_counter);
 }
 
 export const STOCK_COLUMNS: readonly ListColumn<StockRow>[] = [
@@ -50,9 +59,11 @@ export const STOCK_COLUMNS: readonly ListColumn<StockRow>[] = [
     type: 'text',
     headerId: 'bikri-stock-col-item',
     sortKey: 'item',
+    // The item with the counter of the lot, "Mango-2 (Box)": the seller is in the column before, so
+    // the two columns together are the lot's name (PRD FR-12.45, plan 71 L8).
     value: (row, { language, text }) =>
       text('bikri-stock-item-packing', {
-        item: displayName(row.item, language),
+        item: stockItemName(row, language, text),
         packing: displayName(row.packing, language),
       }),
   },

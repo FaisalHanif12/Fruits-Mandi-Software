@@ -16,7 +16,7 @@ use mandi_services::testing::TestEnv;
 use mandi_services::{ServiceError, accounts, masters, partners};
 use tempfile::TempDir;
 
-use crate::common::{env, login_owner, set_up};
+use crate::common::{env, login_owner, raw, set_up};
 
 /// The worked day's world: parties, items, partners 40 / 30 / 30 and today 10-10-2026.
 pub struct World {
@@ -343,7 +343,7 @@ pub fn header() -> HeaderInput {
         entry_date: "10-10-2026".into(),
         bill_date: String::new(),
         book: None,
-        truck_no: Some("LES-1234".into()),
+        truck_no: None,
         zamindar_account_id: None,
         adda_id: None,
         driver_name: None,
@@ -352,6 +352,42 @@ pub fn header() -> HeaderInput {
         store_id: None,
         note: None,
     }
+}
+
+/// Saves a draft through the real save and, when the draft still carries a truck number in its retired
+/// header field, writes that number on the saved بکری as OLD data (a new بکری has none, PRD v1.34).
+/// For the tests that read, list, sort or print an old بکری that has a truck.
+#[allow(dead_code)]
+pub fn save_old(
+    w: &World,
+    draft: &BikriDraft,
+    confirm: bool,
+) -> mandi_services::core::bikri::BikriSaved {
+    let saved = bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: draft.clone(),
+            confirm_cash_below_zero: confirm,
+        },
+    )
+    .unwrap();
+    if let Some(truck) = &draft.header.truck_no {
+        give_truck(w, saved.number, truck);
+    }
+    saved
+}
+
+/// Gives a saved بکری the truck number an OLD بکری has. A new بکری has none: the header holds only the
+/// day (PRD v1.34, plan 71 H1 to H3), so the tests that read an old truck write it as old data.
+#[allow(dead_code)]
+pub fn give_truck(w: &World, number: i64, truck: &str) {
+    raw(&w.dir)
+        .execute(
+            "UPDATE bikri_entries SET truck_no = ?1 WHERE number = ?2",
+            mandi_services::db::rusqlite::params![truck, number],
+        )
+        .unwrap();
 }
 
 pub fn manual(value: &str) -> Option<ChargeInput> {

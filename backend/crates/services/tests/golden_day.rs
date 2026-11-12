@@ -396,15 +396,8 @@ fn scalar(w: &support::World, sql: &str) -> i64 {
 }
 
 fn save_ok(w: &support::World, draft: &BikriDraft, confirm: bool) -> BikriSaved {
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &mandi_services::core::bikri::BikriSaveInput {
-            draft: draft.clone(),
-            confirm_cash_below_zero: confirm,
-        },
-    )
-    .unwrap()
+    // Event 2 still names its truck in the retired header field: it is written as old data (v1.34).
+    support::save_old(w, draft, confirm)
 }
 
 /// Rupees of a partner's share rows of one entry, in partner order.

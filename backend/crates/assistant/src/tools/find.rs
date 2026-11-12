@@ -62,8 +62,10 @@ pub enum Role {
     Staff,
     /// An expense head, or all of them, with a count (plan 55 R5).
     ExpenseHead,
-    /// The بکری of a truck number (plan 55 R6).
+    /// The بکری of a truck number (plan 55 R6). Old بکری only (PRD v1.34).
     Truck,
+    /// A lot by its name, "ehsan aam-2", "ehsan ke aam" (plan 71 L9, PRD FR-12.45).
+    Lot,
     /// The packings, with a count (plan 55 gap Q5).
     Packing,
     /// The marks, with a count: code and owner, never the mark text (plan 55 gap Q5).
@@ -93,6 +95,7 @@ impl Role {
             Role::Staff => "staff",
             Role::ExpenseHead => "expense_head",
             Role::Truck => "truck",
+            Role::Lot => "lot",
             Role::Packing => "packing",
             Role::Marka => "marka",
             Role::Store => "store",
@@ -337,13 +340,13 @@ fn holds_the_typed_text(matches: &[Node], exact: &Exact) -> bool {
 ///
 /// Example: "Tomato" and "tomato" are exact for the item Tomato, not for Potato; "Akram Toll Tax"
 /// holds "akram" without being exact; "tmatar" is exact for nothing, so its close spellings stay.
-struct Exact {
+pub(super) struct Exact {
     en: String,
     ur: String,
 }
 
 impl Exact {
-    fn of(query: &str) -> Self {
+    pub(super) fn of(query: &str) -> Self {
         Self {
             en: text::search_en(query),
             ur: text::search_ur(query),
@@ -373,10 +376,19 @@ impl Exact {
 
     /// True when the typed words start this name or are whole words of it ("akram" in "akram toll
     /// tax"): a name the Owner may mean, unlike a close spelling ("potato" for "tomato").
-    fn holds(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> bool {
+    pub(super) fn holds(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> bool {
         self.keys(name_ur, name_en, tag).iter().any(|(typed, key)| {
             key.starts_with(typed.as_str()) || format!(" {key} ").contains(&format!(" {typed} "))
         })
+    }
+
+    /// True when the typed text is a whole word, or a run of whole words, of this name: "ehsan" in
+    /// "ehsan ali", never "aur" in "aurangzeb". A question has many words besides names, so a lot
+    /// that is named inside a sentence is read by whole words only (plan 71 L9).
+    pub(super) fn whole_word(&self, name_ur: &str, name_en: &str, tag: Option<&str>) -> bool {
+        self.keys(name_ur, name_en, tag)
+            .iter()
+            .any(|(typed, key)| format!(" {key} ").contains(&format!(" {typed} ")))
     }
 
     /// When any hit is exact, the exact hits and those that hold the typed text, all of them (two
@@ -493,6 +505,7 @@ fn matches_for(env: &Env<'_>, role: Role, query: &str) -> Result<(Vec<Node>, boo
         Role::Staff
         | Role::ExpenseHead
         | Role::Truck
+        | Role::Lot
         | Role::Packing
         | Role::Marka
         | Role::Store
@@ -568,16 +581,16 @@ fn urdu_matches(
 
 /// What one search of one role found: the matches, whether there are more, and how a word typed in
 /// English letters was found as an Urdu spelling or an item alias.
-struct Found {
-    matches: Vec<Node>,
-    more: bool,
-    via: Option<(&'static str, String)>,
+pub(super) struct Found {
+    pub(super) matches: Vec<Node>,
+    pub(super) more: bool,
+    pub(super) via: Option<(&'static str, String)>,
 }
 
 /// The matches of a word in one role: as typed, then, for an empty answer, as the Urdu spelling of
 /// a Roman Urdu word (the same word list and learned pairs as the typing help), then, for an item,
 /// by the assistant's own aliases.
-fn search_role(env: &Env<'_>, role: Role, query: &str) -> Result<Found, Stop> {
+pub(super) fn search_role(env: &Env<'_>, role: Role, query: &str) -> Result<Found, Stop> {
     let (mut matches, mut more) = matches_for(env, role, query)?;
     // Nothing found for a word in English letters: a Roman Urdu spelling of an Urdu name ("kela",
     // "saib", "alif") is tried in Urdu letters, by the same word list and learned pairs as the

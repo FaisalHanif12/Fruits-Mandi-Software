@@ -237,6 +237,8 @@ pub struct StoredIdentity {
 /// A stored lot, as an edit or a later sale needs to know it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StoredLot {
+    /// The counter of the lot's name as stored (PRD FR-12.45). `None` when the caller does not say.
+    pub lot_counter: Option<i64>,
     /// Who the lot belongs to. `None` when the caller does not say (a later sale), which counts as
     /// unchanged.
     pub identity: Option<StoredIdentity>,

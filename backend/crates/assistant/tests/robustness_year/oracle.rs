@@ -788,7 +788,6 @@ fn capability_reports(o: &mut Oracle, y: &Year) {
             (ReportId::R5, "r5"),
             (ReportId::R6, "r6"),
             (ReportId::R7, "r7"),
-            (ReportId::R8, "r8"),
             (ReportId::R11, "r11"),
             (ReportId::R15, "r15"),
             (ReportId::R27, "r27"),

@@ -6,6 +6,7 @@
 
 import { useMemo } from 'react';
 import { ExcelExportNotices, exportFileName, useExcelExport } from '../../../shared/export';
+import { useLanguage } from '../../../shared/i18n';
 import { reportsExportExcel } from '../api';
 import { useReportPages } from '../hooks';
 import { PARTY_DAY_TAKES, partyDayFilters } from '../party-day';
@@ -24,7 +25,11 @@ const NO_FOCUS = null;
 
 /** The slip as the report screen draws it, with its four states (loading, error, nothing, rows). */
 export function PartyDaySlip({ accountId, date }: PartyDayProps) {
-  const filters = useMemo(() => partyDayFilters(accountId, date), [accountId, date]);
+  const language = useLanguage();
+  const filters = useMemo(
+    () => partyDayFilters(accountId, date, language),
+    [accountId, date, language],
+  );
   const query = useReportPages('R35', filters, false);
   const openSource = useOpenRowSource();
   // Enter on a line of goods opens the بکری it came from, as it does on the report screen (FR-19.4).

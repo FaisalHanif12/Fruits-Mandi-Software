@@ -1019,13 +1019,12 @@ pub(super) const NAMEISH: &[&str] = &[
 /// uses for it (PRD 19.2). The words are in the table as [`Cue::ReportName`]; [`report_named`] gives
 /// the report of the words of one hit.
 ///
-/// Example: "udhari bikri ka print" is R4; "adda report" is R8.
+/// Example: "udhari bikri ka print" is R4.
 #[rustfmt::skip]
 pub(super) const REPORT_NAMES: &[(&str, &[&str])] = &[
     ("R3", &["naqdi bikri", "naqdi sales", "naqdi sale", "cash sales", "cash sale", "نقدی بکری"]),
     ("R4", &["udhari bikri", "udhari sales", "udhari sale", "udhaari bikri", "credit sales", "credit sale", "ادھاری بکری"]),
     ("R7", &["item wise bikri", "item wise sale", "item wise sales", "itemwise bikri", "qisam war bikri", "qisam wise bikri", "item wise", "قسم وار بکری", "قسم وار"]),
-    ("R8", &["adda report", "adda rapat", "adda wise", "truck stand report", "truck adda report", "اڈا رپورٹ", "اڈا وار"]),
     ("R15", &["voucher list", "vouchers list", "voucher register", "vouchers register", "ووچر لسٹ", "واؤچر لسٹ", "واؤچر رجسٹر"]),
     ("R16", &["account index", "accounts index", "index report", "index print", "accounts list", "list of accounts", "khaton ki list", "کھاتوں کی فہرست", "انڈکس رپورٹ"]),
     ("R17", &["head balances", "head balance", "heads balance", "madon ka balance", "mad wise balance", "مدوں بیلنس", "مدوں کا بیلنس"]),

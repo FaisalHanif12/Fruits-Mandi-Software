@@ -76,7 +76,6 @@ import {
   R4_CREDIT,
   R6_LOTS,
   R7_ITEMS,
-  R8_ADDA,
   PRINT_R20_UR,
   PRINT_R28_MONTH_EN,
   PRINT_R7_EN,
@@ -249,7 +248,6 @@ describe('the answers carry exactly the fields of the generated types', () => {
       R4_CREDIT,
       R6_LOTS,
       R7_ITEMS,
-      R8_ADDA,
       R20_DUES,
       R21_BY_CITY,
       R22_BY_COLLECTOR,
@@ -370,8 +368,8 @@ describe('the answers carry exactly the fields of the generated types', () => {
 describe('round 7: the cash book, the expense report, the partner statement and money lent', () => {
   const entryOf = (id: string) => CATALOG.find((entry) => entry.id === id);
 
-  it('the catalogue lists 37 reports (R9 is retired), with the boxes the backend says for the newer ones', () => {
-    expect(CATALOG).toHaveLength(37);
+  it('the catalogue lists 36 reports (R8 and R9 are retired), with the boxes the backend says for the newer ones', () => {
+    expect(CATALOG).toHaveLength(36);
     // The dead amount (plan 40): in the business group, with the one status box (still owing or all).
     expect(entryOf('R38')).toMatchObject({
       group: 'business',
@@ -433,7 +431,7 @@ describe('round 8: stock, vouchers, registers, trip profit or loss and the day s
     // The item group (fruit or vegetables) came with plan 55: R2, R3, R4, R7, R10 and R27 list it.
     expect(entryOf('R10')).toMatchObject({
       group: 'sales',
-      filters: ['date_range', 'seller', 'item', 'item_group', 'stock_view'],
+      filters: ['date_range', 'seller', 'item', 'item_group', 'stock_view', 'lot'],
     });
     expect(entryOf('R15')).toMatchObject({
       group: 'accounts',
@@ -813,7 +811,17 @@ describe('round 12: R1, the sale book, and R5, the credit buyers’ details', ()
       group: 'sales',
       title_id: 'report-r5-title',
       // The بکری box is R5's own (plan 68): the sale book's second print button prints this بکری only.
-      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda', 'bikri'],
+      filters: [
+        'date_range',
+        'party',
+        'seller',
+        'zamindar',
+        'item',
+        'city',
+        'adda',
+        'bikri',
+        'lot',
+      ],
       party_required: false,
     });
     // The two reports of the sales group that were missing now come before and after R2 to R4.

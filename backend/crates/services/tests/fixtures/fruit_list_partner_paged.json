@@ -15,6 +15,7 @@
       "lot": {
         "lot_id": 1,
         "lot_no": 1,
+        "lot_counter": 1,
         "bikri_id": 1,
         "bikri_number": 1
       },

@@ -11,6 +11,9 @@
         "place": {
           "kind": "entry",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": null,
           "label_ur": null,
           "label_en": null
@@ -29,6 +32,9 @@
         "place": {
           "kind": "part",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": 1,
           "label_ur": "الف",
           "label_en": "Partner A"
@@ -47,6 +53,9 @@
         "place": {
           "kind": "part",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": 2,
           "label_ur": "ب",
           "label_en": "Partner B"
@@ -65,6 +74,9 @@
         "place": {
           "kind": "part",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": 3,
           "label_ur": "ج",
           "label_en": "Partner C"
@@ -83,6 +95,9 @@
         "place": {
           "kind": "part",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": 1,
           "label_ur": "کیلا",
           "label_en": "Banana"

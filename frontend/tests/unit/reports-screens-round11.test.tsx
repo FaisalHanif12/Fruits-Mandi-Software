@@ -545,7 +545,7 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
   });
 
   describe('a language switch in the middle of a slip', () => {
-    it('keeps the day and the party, writes the lines again in the other language, and asks nothing new', async () => {
+    it('keeps the day and the party, writes the lines again in the other language, and asks once more for the order of that language', async () => {
       const { user } = await openSheet();
       await user.type(screen.getByLabelText(m('report-filter-day')), '10-10-2026');
       await openSlip(user, '2');
@@ -564,7 +564,12 @@ describe.each(LANGUAGES)('the party day sheet R35 (%s)', (language: Language) =>
         other === 'ur' ? 'اکرم ٹول ٹیکس' : 'Akram Toll Tax',
       );
       expect(slipLines()[7]).toContain('2,880');
-      expect(runCount()).toBe(before);
+      // A seller's lots are sorted by the backend in the order of the app language (PRD FR-12.12, plan
+      // 71 L7), so the switch asks once more, with the new language, and the screen draws what comes.
+      await waitFor(() => {
+        expect(lastRun()?.filters.order_language).toBe(other);
+      }, SLOW_MS);
+      expect(runCount()).toBe(before + 1);
     });
   });
 

@@ -233,6 +233,7 @@ const SALE_COLUMNS: &str = "s.lot_id, s.id, s.line_no, s.journal_entry_id, s.ent
 fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     let id: i64 = c.get()?;
     let lot_no: i64 = c.get()?;
+    let lot_counter: i64 = c.get()?;
     let seller = c.account()?;
     let item = c.record()?;
     let packing = c.record()?;
@@ -269,6 +270,7 @@ fn read_lot(c: &mut Cols<'_>) -> rusqlite::Result<SavedLot> {
     Ok(SavedLot {
         id,
         lot_no,
+        lot_counter,
         seller,
         purchase: match (purchase_id, purchase_number, trip_id, trip_number) {
             (Some(id), Some(number), Some(trip_id), Some(trip_number)) => Some(SavedPurchaseRef {
@@ -432,7 +434,7 @@ pub fn get(conn: &Connection, id: i64) -> rusqlite::Result<Option<BikriDetail>> 
     };
 
     let mut statement = conn.prepare(
-        "SELECT l.id, l.lot_no, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
+        "SELECT l.id, l.lot_no, l.lot_counter, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 l.marka_id, mk.mark_text, l.store_id, l.qty_received, l.qty_sold, l.qty_written_off,
                 l.qty_taken, l.weight_received_grams, l.freight_paisa, l.freight_paid_by,
@@ -750,6 +752,7 @@ pub fn list(conn: &Connection, filter: &ListFilter) -> rusqlite::Result<Vec<Bikr
             buyer_total: c.paisa()?,
             sellers: Vec::new(),
             items: Vec::new(),
+            lots: Vec::new(),
             // Set by the service, which knows the closed-up-to day and the audit stamp.
             flags: EntryFlags::unmarked(),
         })
@@ -949,24 +952,34 @@ fn fill_sellers_and_items(conn: &Connection, rows: &mut [BikriListRow]) -> rusql
     let marks = vec!["?"; ids.len()].join(", ");
     let mut statement = conn.prepare(&format!(
         "SELECT l.bikri_id, sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
-                it.id, it.code, it.name_ur, it.name_en
+                it.id, it.code, it.name_ur, it.name_en, l.id, l.lot_counter
          FROM bikri_lots l JOIN accounts sa ON sa.id = l.seller_account_id JOIN items it ON it.id = l.item_id
          WHERE l.bikri_id IN ({marks}) ORDER BY l.bikri_id, l.lot_no"
     ))?;
     let lots = statement.query_map(rusqlite::params_from_iter(&ids), |row| {
         let mut c = Cols::new(row);
         let bikri_id: i64 = c.get()?;
-        Ok((bikri_id, c.account()?, c.record()?))
+        let seller = c.account()?;
+        let item = c.record()?;
+        let lot_id: i64 = c.get()?;
+        let counter: i64 = c.get()?;
+        Ok((bikri_id, seller, item, lot_id, counter))
     })?;
     let mut by_id: HashMap<i64, usize> = HashMap::with_capacity(rows.len());
     for (index, row) in rows.iter().enumerate() {
         by_id.insert(row.id, index);
     }
     for lot in lots {
-        let (bikri_id, seller, item) = lot?;
+        let (bikri_id, seller, item, lot_id, counter) = lot?;
         let Some(row) = by_id.get(&bikri_id).and_then(|i| rows.get_mut(*i)) else {
             continue;
         };
+        row.lots.push(mandi_core::bikri::LotName {
+            lot_id,
+            seller: seller.clone(),
+            item: item.clone(),
+            counter,
+        });
         if !row.sellers.iter().any(|s| s.id == seller.id) {
             row.sellers.push(seller);
         }

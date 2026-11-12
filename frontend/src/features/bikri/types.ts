@@ -5,27 +5,23 @@
 import type { BikriDraft } from '../../bindings/BikriDraft';
 import type { BikriPreview } from '../../bindings/BikriPreview';
 import type { FieldError } from '../../bindings/FieldError';
-import type { FreightPart } from '../../bindings/FreightPart';
 import type { LineCalc } from '../../bindings/LineCalc';
 import type { LinePreview } from '../../bindings/LinePreview';
 import type { LotPreview } from '../../bindings/LotPreview';
 import type { RateHint } from '../../bindings/RateHint';
 import type { SellerMemory } from '../../bindings/SellerMemory';
 import type { SummaryTotals } from '../../bindings/SummaryTotals';
-import type { TruckMemory } from '../../bindings/TruckMemory';
 
 export type {
   BikriDraft,
   BikriPreview,
   FieldError,
-  FreightPart,
   LineCalc,
   LinePreview,
   LotPreview,
   RateHint,
   SellerMemory,
   SummaryTotals,
-  TruckMemory,
 };
 
 /**

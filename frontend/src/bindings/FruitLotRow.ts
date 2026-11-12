@@ -14,6 +14,10 @@ export type FruitLotRow = {
    */
   lot_no: number;
   /**
+   * The counter of the lot's name: the seller, the item and this number (PRD FR-12.45).
+   */
+  lot_counter: number;
+  /**
    * The بکری.
    */
   bikri_id: number;

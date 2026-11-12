@@ -140,6 +140,14 @@ pub const CHUKTA_KHATA_SQL: &str = include_str!("../migrations/0020_chukta_khata
 /// amount, id or chain hash changes.
 pub const PAID_ON_THE_SPOT_SQL: &str = include_str!("../migrations/0021_paid_on_the_spot.sql");
 
+/// The twenty-second migration (plan 71, PRD v1.34 FR-12.45, Architecture 15.6 v1.22): lot names.
+/// `bikri_lots.lot_counter` numbers the lots of one seller and item for his whole life; old lots are
+/// numbered by first posting day, then row id. The new table `lot_counters` keeps the biggest number
+/// ever given to each seller and item (it only goes up), so a number is never reused, not even after
+/// an edit moves a lot away. Triggers keep a counter final except in an edit that moves the lot. No
+/// journal line, allocation, amount, id or chain hash changes.
+pub const LOT_COUNTER_SQL: &str = include_str!("../migrations/0022_lot_counter.sql");
+
 /// Pages copied in one step of the backup. The pause is zero: the copy is short.
 const BACKUP_PAGES_PER_STEP: i32 = 512;
 
@@ -173,6 +181,7 @@ pub fn migrations() -> Migrations<'static> {
         M::up(SALE_GRADE_SQL),
         M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook),
         M::up(PAID_ON_THE_SPOT_SQL),
+        M::up(LOT_COUNTER_SQL),
     ])
 }
 

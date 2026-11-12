@@ -11,8 +11,10 @@ use super::activity::net_cell;
 use super::figures::{BuyerDay, SellerDay, Who, load};
 use super::figures_load::Goods;
 use super::*;
+use crate::reports::common::lot_names;
 use crate::reports::model::{ArgValue, Column, MessageArg};
-use mandi_core::bikri::SaleGrade;
+use mandi_core::auth::Language;
+use mandi_core::bikri::{LotOrderKey, SaleGrade, sort_lots};
 
 /// The columns of a goods table: item, packing, qty, rate and amount, and after them, only when
 /// some line is of an item sold by weight, the weight in kilos (plan 42, PRD A73), and only when
@@ -82,18 +84,23 @@ fn goods_rows(
             .iter()
             .filter(|l| l.goods.item_id == item_id)
             .collect();
-        let mut packings: Vec<i64> = Vec::new();
+        // Inside an item the lines of one packing stay together; for a seller's slip the lots come
+        // first, so a lot is never split by another lot's packing (PRD FR-12.12, FR-12.45).
+        let mut packings: Vec<(i64, i64)> = Vec::new();
         for line in &of_item {
-            if !packings.contains(&line.goods.packing_id) {
-                packings.push(line.goods.packing_id);
+            let key = (line.goods.lot_counter.unwrap_or(0), line.goods.packing_id);
+            if !packings.contains(&key) {
+                packings.push(key);
             }
         }
         let (mut qty, mut amount) = (0_i64, Paisa::ZERO);
         let mut grams: Option<i64> = None;
         let mut count = 0_usize;
         let mut item_names: Option<Names> = None;
-        for packing_id in packings {
-            for line in of_item.iter().filter(|l| l.goods.packing_id == packing_id) {
+        for (counter, packing_id) in packings {
+            for line in of_item.iter().filter(|l| {
+                l.goods.packing_id == packing_id && l.goods.lot_counter.unwrap_or(0) == counter
+            }) {
                 qty = qty
                     .checked_add(line.qty)
                     .ok_or_else(|| ReportsError::Data("the quantities do not fit".to_owned()))?;
@@ -108,7 +115,13 @@ fn goods_rows(
                 item_names.get_or_insert_with(|| line.goods.item.clone());
                 let mut cells = vec![
                     Cell::Names {
-                        names: line.goods.item.clone(),
+                        // A seller's line names its lot, item and counter: "آم-2" (PRD FR-12.45).
+                        names: match line.goods.lot_counter {
+                            Some(counter) => {
+                                lot_names(&line.goods.item.ur, &line.goods.item.en, counter)
+                            }
+                            None => line.goods.item.clone(),
+                        },
                     },
                     Cell::Names {
                         names: line.goods.packing.clone(),
@@ -371,7 +384,7 @@ pub(super) fn slip(
         (goods_rows(&lines, weighed, graded)?, buyer_summary(d)?)
     } else {
         let d = figures.sellers.get(&map_key).ok_or_else(lacking)?;
-        let lines: Vec<GoodsLine<'_>> = d
+        let mut lines: Vec<GoodsLine<'_>> = d
             .lines
             .iter()
             .map(|l| GoodsLine {
@@ -384,6 +397,18 @@ pub(super) fn slip(
                 amount: l.amount,
             })
             .collect();
+        // A seller's lots are sorted whatever order they were typed in: by item in the order of
+        // the print language, then by the lot counter (PRD FR-12.12, plan 71 L7). The sort is
+        // stable, so the lines of one lot keep their saved order.
+        sort_lots(
+            &mut lines,
+            typed.order_language.unwrap_or(Language::Ur),
+            |l| LotOrderKey {
+                item_ur: &l.goods.item.ur,
+                item_en: &l.goods.item.en,
+                counter: l.goods.lot_counter.unwrap_or(0),
+            },
+        );
         (goods_rows(&lines, weighed, graded)?, seller_summary(d)?)
     };
 
@@ -424,6 +449,7 @@ mod tests {
                 ur: packing.to_owned(),
                 en: packing.to_owned(),
             },
+            lot_counter: None,
         }
     }
 

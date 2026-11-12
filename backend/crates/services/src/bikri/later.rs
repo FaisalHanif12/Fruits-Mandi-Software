@@ -147,6 +147,8 @@ fn plan_later(
         lots: std::iter::once((
             lot_id,
             StoredLot {
+                // The lot keeps its name: a later sale does not say who it belongs to (FR-12.45).
+                lot_counter: Some(state.lot_counter),
                 elsewhere_qty: taken,
                 ..StoredLot::default()
             },

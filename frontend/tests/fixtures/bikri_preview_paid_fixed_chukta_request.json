@@ -1,17 +1,7 @@
 {
   "draft": {
     "header": {
-      "adda_id": null,
-      "bill_date": "",
-      "book": null,
-      "driver_name": null,
-      "driver_phone": null,
-      "entry_date": "10-10-2026",
-      "note": null,
-      "store_id": null,
-      "total_freight": null,
-      "truck_no": "LHR-0077",
-      "zamindar_account_id": null
+      "entry_date": "10-10-2026"
     },
     "lots": [
       {

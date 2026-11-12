@@ -59,6 +59,7 @@ export function reportSearchFromFilters(filters: SourceReportFilters): ReportSea
     ...(filters.city === null ? {} : { city: picked(filters.city) }),
     ...(filters.adda === null ? {} : { adda: picked(filters.adda) }),
     ...(filters.collector == null ? {} : { collector: picked(filters.collector) }),
+    ...(filters.lot == null ? {} : { lot: picked(filters.lot) }),
     ...(filters.partner === null ? {} : { partner: filters.partner.id }),
     ...(filters.garden === null ? {} : { garden: filters.garden.id }),
     ...(filters.bikri === null ? {} : { bikri: filters.bikri }),
@@ -130,6 +131,8 @@ export function reportFiltersOf(filters: SourceReportFilters): ReportFilters {
     ...(filters.garden_view === null ? {} : { garden_view: filters.garden_view }),
     ...(filters.guests_only ? { guests_only: true } : {}),
     ...(filters.collector == null ? {} : { collector_id: filters.collector.id }),
+    // One lot, named by the assistant's find (PRD FR-7.77): the report opens on that one lot.
+    ...(filters.lot == null ? {} : { lot_id: filters.lot.id }),
     ...(filters.item_group == null ? {} : { item_group: filters.item_group }),
     ...(filters.grade == null ? {} : { grade: filters.grade }),
   };

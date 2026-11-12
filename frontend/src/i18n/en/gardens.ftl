@@ -461,6 +461,10 @@ gardens-arrival-lots = Sales of these goods
 # review: pending
 gardens-arrival-lot-bikri = { -bikri }
 
+# The name of a lot of the goods that arrived, with its counter: "Mango-2" (PRD FR-12.45).
+# review: pending
+gardens-arrival-lot-name = { -lot }
+
 # review: pending
 gardens-arrival-cancel = Cancel { -maal-aaya }
 

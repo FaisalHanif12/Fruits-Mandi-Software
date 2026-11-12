@@ -12,6 +12,7 @@ import type { ReportPaidFilter } from '../../bindings/ReportPaidFilter';
 import type { ReportStockView } from '../../bindings/ReportStockView';
 import type { ReportTripView } from '../../bindings/ReportTripView';
 import type { VoucherType } from '../../bindings/VoucherType';
+import type { Language } from '../../i18n';
 import { GRADE_CHOICES, type GradeChoice } from '../../shared/format';
 import type { ItemGroupChoice, PickerValue } from '../../shared/ui';
 
@@ -128,6 +129,12 @@ export interface ReportFilterState {
   adda: PickerValue | null;
   /** One collector, a staff member (R22, R23, R35); null is every collector. */
   collector: PickerValue | null;
+  /**
+   * One lot (R2 to R6, R10, R27; PRD FR-12.45, FR-7.77, plan 71 L9). It has no box: it is set only by
+   * the address the assistant's "open the full report" button builds, so the report opens on that one
+   * lot. Its name shows in the line under the filters, and it is let go with "clear filters".
+   */
+  lot: PickerValue | null;
   detail: boolean;
   /** Paid or due lines only (R38). */
   paid: PaidChoice;
@@ -170,6 +177,7 @@ export const EMPTY_FILTERS: ReportFilterState = {
   city: null,
   adda: null,
   collector: null,
+  lot: null,
   detail: false,
   paid: 'all',
   groupBy: 'month',
@@ -235,6 +243,8 @@ export function filtersToWire(
     ...(has('stock_view') && state.stockView !== 'lot' ? { stock_view: state.stockView } : {}),
     // One collector is sent only when he is picked (the backend reads a missing key as every collector).
     ...(has('collector') && state.collector !== null ? { collector_id: state.collector.id } : {}),
+    // One lot is sent only when the address named it (the backend reads a missing key as every lot).
+    ...(has('lot') && state.lot !== null ? { lot_id: state.lot.id } : {}),
     // The guests choice of the fruit register is sent only when it is set (the backend reads a
     // missing key as every line) and never with a partner, which it refuses.
     ...(has('guests') && state.guestsOnly && state.partner === null ? { guests_only: true } : {}),
@@ -244,6 +254,20 @@ export function filtersToWire(
       : {}),
     ...(has('group_by') && state.groupBy !== 'month' ? { group_by: state.groupBy } : {}),
   };
+}
+
+/**
+ * The language whose alphabet sorts the lots of a seller's day slip (R35; PRD FR-12.12, plan 71 L7).
+ * The backend sorts by item in that language's order and then by the lot counter, so the screen draws
+ * the rows in the order it is given. It is not a filter: only the day sheet reads it, and a print sets
+ * its own language, so no other report is sent it.
+ */
+export function withOrderLanguage(
+  wire: ReportFilters,
+  id: string,
+  language: Language,
+): ReportFilters {
+  return id === 'R35' ? { ...wire, order_language: language } : wire;
 }
 
 /** True when no box that the report takes is filled: nothing to clear. */
@@ -264,6 +288,7 @@ export function isUnfiltered(
     wire.city_id === null &&
     wire.adda_id === null &&
     wire.collector_id === undefined &&
+    wire.lot_id === undefined &&
     wire.partner_id === null &&
     wire.garden_id === null &&
     wire.bikri_id === null &&

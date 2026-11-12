@@ -33,6 +33,7 @@ import {
 import { fakePartners } from '../helpers/partners';
 import { message, visible } from '../helpers/render';
 import { EMPTY_PAIRS } from '../helpers/paged';
+import { withDateOnlyHeader } from '../helpers/bikri-old-draft';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -128,7 +129,8 @@ describe.each(LANGUAGES)('a saved بکری from the backend’s answers (%s)', (
       expect(text, figure).toContain(figure);
     }
     expect(text).toContain(language === 'ur' ? 'شاہد' : 'Shahid');
-    expect(text).toContain('LHR-0077');
+    // A بکری saved after v1.34 has no truck number (plan 71 H1), so its saved view has none.
+    expect(text).not.toContain('LHR-0077');
   });
 });
 
@@ -172,11 +174,6 @@ describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (
 
   it('the draft F10 sends is the draft of bikri_save_event1_request.json, and the result opens a new sale', async () => {
     const { backend, user } = await openBook(language);
-    vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-      last: null,
-      same_day: null,
-      suggestions: [],
-    });
     await typeEvent1Lot(user, language);
     await user.keyboard('0{Enter}20{Enter}600{Enter}{Enter}');
     await waitFor(() => {
@@ -195,7 +192,7 @@ describe.each(LANGUAGES)('saving Event 1 as the backend’s file has it (%s)', (
     const [sent, confirm] = vi.mocked(bikriApi.bikriSave).mock.calls[0] ?? [];
     if (sent === undefined) throw new Error('the save was not asked for');
     expect(confirm).toBe(false);
-    const wanted = withoutCommas(SAVE_EVENT1_REQUEST.draft) as BikriDraft;
+    const wanted = withoutCommas(withDateOnlyHeader(SAVE_EVENT1_REQUEST.draft)) as BikriDraft;
     const got = normalized(sent) as BikriDraft;
     expect(got.header).toEqual(wanted.header);
     const { sales: gotSales, ...gotLot } = got.lots[0] ?? { sales: [] };

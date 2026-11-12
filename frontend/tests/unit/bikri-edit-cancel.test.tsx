@@ -25,6 +25,7 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -347,11 +348,7 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
     it('keyboard only: Enter walks through the loaded cells, a new rate is typed, F10 saves', async () => {
       const plan = fakePlan16();
       const { user } = await openEdit();
-      // The cursor starts on the truck. Three Enters leave the header (truck, زمیندار, اڈا).
-      await waitFor(() => {
-        expect(document.activeElement?.getAttribute('role')).toBe('combobox');
-      });
-      await user.keyboard('{Enter}{Enter}{Enter}');
+      // The day of the entry is kept, so the cursor starts on the first lot (plan 71 H1).
       await waitFor(() => {
         expect(focusedIn(lotsGrid(language))).toBe('0:seller');
       });
@@ -373,8 +370,24 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
         expect(plan.editSaves).toHaveLength(1);
       });
       expect(plan.editSaves[0]?.draft.lots[0]?.sales[0]).toMatchObject({ seller_rate: '610' });
-      // The header was not filled from the truck's last sale: nothing else changed.
-      expect(plan.editSaves[0]?.draft.header).toMatchObject({ adda_id: null });
+      // The edit sends the date alone (plan 71 H1). An old بکری keeps its truck number and the rest in the
+      // database, and the backend's edit never overwrites them, so no value of the old entry is lost.
+      expect(plan.editSaves[0]?.draft.header).toEqual({ entry_date: '10-10-2026' });
+    });
+
+    it('an old entry shows no truck, زمیندار or اڈا field, and its date is kept', async () => {
+      fakePlan16();
+      await openEdit();
+      expect(
+        screen.queryByRole('textbox', { name: named(message(language, 'bikri-header-truck')) }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: named(message(language, 'glossary-adda')) }),
+      ).not.toBeInTheDocument();
+      // The date and the number are in the top row, with the number of the entry.
+      expect(
+        screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) }),
+      ).toHaveAttribute('readonly');
     });
 
     it('an entry of an earlier day asks for a reason before it saves', async () => {
@@ -959,16 +972,18 @@ describe.each(LANGUAGES)('edit and cancel of a saved بکری (%s)', (language) 
 
     it('another entry already started is never replaced: he is told, nothing is undone', async () => {
       const { plan, user } = await saveEvent1();
-      const truck = await screen.findByRole('combobox', {
-        name: named(message(language, 'bikri-header-truck')),
+      // The first typed work of the next sale: the seller of its first lot.
+      await user.keyboard('{Enter}');
+      await typeCodeAndEnter(user, '0');
+      await waitFor(() => {
+        expect(textOf(lotsGrid(language), 0, 'seller')).toBe(names.rahim);
       });
-      await user.type(truck, 'LHR-77');
       press('KeyZ', { altKey: true });
       expect(
         await screen.findByText(said(message(language, 'bikri-undo-busy'))),
       ).toBeInTheDocument();
       expect(plan.undos).toEqual([]);
-      expect(truck).toHaveValue('LHR-77');
+      expect(textOf(lotsGrid(language), 0, 'seller')).toBe(names.rahim);
     });
   });
 });

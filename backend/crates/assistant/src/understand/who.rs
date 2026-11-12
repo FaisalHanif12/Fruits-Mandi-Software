@@ -838,14 +838,15 @@ fn not_found_confidence(scan: &Scan, span: (usize, usize)) -> Option<Confidence>
 }
 
 /// The master lists a name can belong to besides parties and items. The first three are resolved
-/// (an expense head to R29, a city to R21, an اڈا to R8); the others are only detected.
+/// (an expense head to R29, a city to R21); the others are only detected, an اڈا too (R8 is retired in
+/// v1.34).
 const OTHER_LISTS: [(SearchScope, Option<(RecordKind, &str)>); 6] = [
     (
         SearchScope::ExpenseHead,
         Some((RecordKind::ExpenseHead, "eh")),
     ),
     (SearchScope::City, Some((RecordKind::City, "ct"))),
-    (SearchScope::Adda, Some((RecordKind::Adda, "ad"))),
+    (SearchScope::Adda, None),
     (SearchScope::Packing, None),
     (SearchScope::Marka, None),
     (SearchScope::Store, None),

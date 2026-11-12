@@ -42,9 +42,6 @@ const CASES: &[(&str, &str, &str, &str, &str)] = &[
     ("item wise bikri ka print is mahine ka", "R7", "2026-10-01", "2026-10-10", ""),
     ("print item wise sales for this month", "R7", "2026-10-01", "2026-10-10", ""),
     ("قسم وار بکری کا پرنٹ اس مہینے کا", "R7", "2026-10-01", "2026-10-10", ""),
-    // R8 the truck stand report (named by its title; an adda named is a filter).
-    ("adda report ka print is mahine ka", "R8", "2026-10-01", "2026-10-10", ""),
-    ("اڈا رپورٹ کا اس مہینے کا پرنٹ نکالنا ہے", "R8", "2026-10-01", "2026-10-10", ""),
     // R15 the list of vouchers.
     ("voucher list ka print aaj ka", "R15", "2026-10-10", "2026-10-10", ""),
     ("print the voucher list for this month", "R15", "2026-10-01", "2026-10-10", ""),

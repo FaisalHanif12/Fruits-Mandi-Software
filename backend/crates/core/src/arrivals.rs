@@ -224,6 +224,10 @@ pub struct ArrivalLotRef {
     /// The lot number inside its بکری, from 1.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name: the garden's account, the arrival's item and this number
+    /// (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// The day of the بکری, `YYYY-MM-DD`.
     pub entry_date: String,
     /// نگ sold by this lot, over the postings in force.

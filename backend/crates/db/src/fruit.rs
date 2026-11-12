@@ -26,8 +26,8 @@ pub struct FruitRec {
     pub partner: Option<RecordRef>,
     /// `shop` or `other_shop`.
     pub source: String,
-    /// The lot: id, number inside its بکری, بکری id, بکری number.
-    pub lot: Option<(i64, i64, i64, i64)>,
+    /// The lot: id, number inside its بکری, بکری id, بکری number, counter of its name (PRD FR-12.45).
+    pub lot: Option<(i64, i64, i64, i64, i64)>,
     /// The account credited.
     pub credit: RecordRef,
     /// The item.
@@ -60,7 +60,7 @@ const SELECT: &str = "SELECT f.id, f.version, f.number, f.entry_date,
         ca.id, ca.code, ca.name_ur, ca.name_en,
         it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
         f.qty, f.weight_grams, f.rate_paisa, f.value_paisa, f.note, f.journal_entry_id,
-        f.status, f.cancel_reason, f.current_entry_id, ca.tag
+        f.status, f.cancel_reason, f.current_entry_id, ca.tag, l.lot_counter
     FROM fruit_takes f
     LEFT JOIN partners pa ON pa.id = f.partner_id
     LEFT JOIN bikri_lots l ON l.id = f.lot_id
@@ -83,7 +83,7 @@ fn read(r: &Row<'_>) -> rusqlite::Result<FruitRec> {
     };
     let lot_id: Option<i64> = r.get(8)?;
     let lot = match lot_id {
-        Some(id) => Some((id, r.get(9)?, r.get(10)?, r.get(11)?)),
+        Some(id) => Some((id, r.get(9)?, r.get(10)?, r.get(11)?, r.get(34)?)),
         None => None,
     };
     Ok(FruitRec {
@@ -534,6 +534,7 @@ fn read_lot(r: &Row<'_>) -> rusqlite::Result<LotRec> {
     Ok(LotRec {
         lot_id: r.get(0)?,
         lot_no: r.get(1)?,
+        lot_counter: r.get(20)?,
         bikri_id: r.get(2)?,
         bikri_number: r.get(3)?,
         received_date: r.get(4)?,
@@ -570,6 +571,8 @@ pub struct LotRec {
     pub lot_id: i64,
     /// Its number inside the بکری.
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    pub lot_counter: i64,
     /// The بکری.
     pub bikri_id: i64,
     /// Its number.
@@ -624,7 +627,7 @@ pub fn lots(
                 sa.id, sa.code, sa.name_ur, sa.name_en,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                 it.sold_by = 'weight',
-                l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
+                l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag, l.lot_counter
          {LOT_FROM} {LOT_WHERE}
          ORDER BY e.entry_date, e.number, l.lot_no LIMIT ?2 OFFSET ?3"
     ))?;
@@ -643,7 +646,7 @@ pub fn lot_one(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotRec
                     sa.id, sa.code, sa.name_ur, sa.name_en,
                     it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
                     it.sold_by = 'weight',
-                    l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag
+                    l.qty_received - l.qty_sold - l.qty_written_off - l.qty_taken, sa.tag, l.lot_counter
              {LOT_FROM} WHERE l.id = ?1"
         ),
         [lot_id],

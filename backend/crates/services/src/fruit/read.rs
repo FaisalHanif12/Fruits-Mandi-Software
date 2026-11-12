@@ -65,14 +65,15 @@ pub(super) fn row_of(conn: &Connection, rec: &FruitRec) -> Result<FruitRow, Serv
         entry_date: rec.entry_date.clone(),
         partner: rec.partner.clone(),
         source,
-        lot: rec
-            .lot
-            .map(|(lot_id, lot_no, bikri_id, bikri_number)| FruitLotRef {
+        lot: rec.lot.map(
+            |(lot_id, lot_no, bikri_id, bikri_number, lot_counter)| FruitLotRef {
                 lot_id,
                 lot_no,
+                lot_counter,
                 bikri_id,
                 bikri_number,
-            }),
+            },
+        ),
         credit_account: rec.credit.clone(),
         item: rec.item.clone(),
         packing: rec.packing.clone(),
@@ -228,6 +229,7 @@ pub(super) fn lots(ctx: &Context, input: &FruitLotsInput) -> Result<FruitLots, S
                 .map(|rec| FruitLotRow {
                     lot_id: rec.lot_id,
                     lot_no: rec.lot_no,
+                    lot_counter: rec.lot_counter,
                     bikri_id: rec.bikri_id,
                     bikri_number: rec.bikri_number,
                     received_date: rec.received_date,

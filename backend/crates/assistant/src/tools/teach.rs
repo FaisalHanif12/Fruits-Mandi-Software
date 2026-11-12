@@ -138,6 +138,8 @@ pub fn report_fields(filters: &[FilterKind]) -> Vec<String> {
             FilterKind::Partner => out.push("partner"),
             FilterKind::Garden => out.push("garden"),
             FilterKind::Bikri => out.push("bikri"),
+            // Set by the app for the lot the Owner picked; the schema the model reads has no field.
+            FilterKind::Lot => {}
         }
     }
     out.dedup();

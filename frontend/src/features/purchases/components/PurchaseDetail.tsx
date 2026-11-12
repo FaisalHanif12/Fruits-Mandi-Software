@@ -19,7 +19,7 @@ import { useState } from 'react';
 import type { UiError } from '../../../bindings/UiError';
 import { uiErrorOf } from '../../../shared/api';
 import { isNegativePaisa, isoToDisplayDate } from '../../../shared/format';
-import { displayName, useLanguage } from '../../../shared/i18n';
+import { displayName, useLanguage, useLotNames } from '../../../shared/i18n';
 import {
   Button,
   CalcInfo,
@@ -56,6 +56,7 @@ export function PurchaseDetail({
 }: PurchaseDetailProps) {
   const { l10n } = useLocalization();
   const language = useLanguage();
+  const { lotItem } = useLotNames();
   const navigate = useNavigate();
   const say = (id: string, vars?: Record<string, string>) => l10n.getString(id, vars);
   const setSellDate = useSetPurchaseSellDate();
@@ -93,7 +94,12 @@ export function PurchaseDetail({
         >
           <Localized
             id="purchases-lot-open"
-            vars={{ number: String(lot.bikri_number), lot: String(lot.lot_no) }}
+            vars={{
+              number: String(lot.bikri_number),
+              lot: String(lot.lot_no),
+              // The lot's name is the goods and its counter: the seller is always اپنا مال (PRD FR-12.45).
+              name: lotItem(row.item, lot.lot_counter),
+            }}
           />
         </LinkButton>
       ),

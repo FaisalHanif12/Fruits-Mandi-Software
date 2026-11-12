@@ -4,7 +4,7 @@
 ## The screen (PRD 12.1, plan 12).
 
 # review: pending
-bikri-help = Enter the truck, the lots and the sale lines. Every amount is worked out as you type.
+bikri-help = Enter the lots and the sale lines. Every amount is worked out as you type.
 
 # review: pending
 bikri-load-failed = The sale book could not open
@@ -16,12 +16,21 @@ bikri-preview-failed = The numbers could not be worked out
 bikri-empty-title = Nothing entered yet
 
 # review: pending
-bikri-empty-help = Start with the truck number or the seller. Every amount shows here as you type.
+bikri-empty-help = Start with the { -beopari } of the first lot. Every amount shows here as you type.
 
 # review: pending
-bikri-empty-action = Enter the truck number
+bikri-empty-action = Enter the { -beopari }
 
-## The header (PRD 12.2).
+## The head: the date and the number, in the top row (PRD 12.2, plan 71 H1, H4).
+
+# review: pending
+bikri-head-number = { -bikri } number
+
+# A new { -bikri } has no number until it is saved (PRD FR-12.2).
+# review: pending
+bikri-head-number-new = New
+
+## The old header fields. A { -bikri } saved before v1.34 keeps them and shows them read only.
 
 # review: pending
 bikri-header-date = Date
@@ -34,9 +43,6 @@ bikri-header-truck = Truck number
 
 # review: pending
 bikri-header-total-freight = Total { -kiraya }
-
-# review: pending
-bikri-header-split-freight = Split
 
 # review: pending
 bikri-header-book = Book
@@ -53,28 +59,9 @@ bikri-header-driver-phone = Driver phone
 # review: pending
 bikri-header-note = Note
 
+# The link beside "Sale 5 saved" that opens the sale just saved.
 # review: pending
-bikri-header-more = More
-
-# review: pending
-bikri-header-less = Less
-
-# Shown after a known truck number fills the empty fields (PRD FR-7.49).
-# review: pending
-bikri-header-filled-from = The { -adda }, { -zamindar } and driver were filled from sale number { $number } of this truck ({ $date }). You can change them.
-
-# review: pending
-bikri-truck-last = Last sale: number { $number }, { $date }
-
-# PRD FR-7.50.
-# review: pending
-bikri-truck-same-day = This truck already has sale number { $number } on { $date }.
-
-# review: pending
-bikri-truck-open = Open
-
-# review: pending
-bikri-truck-continue = Continue with this new sale
+bikri-last-saved-open = Open
 
 ## The lots (PRD 12.3) and the sale lines (PRD 12.4).
 
@@ -95,6 +82,15 @@ bikri-lots-add = Add a lot
 # two names are joined here; while only one of them is chosen, the label shows that name alone.
 # review: pending
 bikri-lot-who = { $seller }, { $item }
+
+# The full name of a lot (plan 71 L1, PRD FR-12.45): the seller, the item and the counter that belongs to
+# that seller and item for his whole life: "Ehsan, Mango-2".
+# review: pending
+bikri-lot-name = { $seller }, { $item }-{ $counter }
+
+# The item of a lot with its counter, for a list that shows the seller in a column of its own: "Mango-2".
+# review: pending
+bikri-lot-item = { $item }-{ $counter }
 
 # $lot: the lot number. $who: the lot's name (bikri-lot-who). $named: yes when it has one.
 # review: pending
@@ -577,9 +573,6 @@ bikri-list-col-number = Number
 bikri-list-col-when = Date and time
 
 # review: pending
-bikri-list-col-truck = Truck
-
-# review: pending
 bikri-list-col-sellers = { -beopari }
 
 # review: pending
@@ -651,9 +644,9 @@ bikri-stock-col-taken = { -phal }
 # review: pending
 bikri-stock-col-days = Days waiting
 
-# $number: the { -bikri } number. $lot: the lot number inside it.
+# $number: the { -bikri } number. $lot: the lot number inside it. $who: the lot's name (bikri-lot-name).
 # review: pending
-bikri-stock-lot-title = { -bikri } { $number }, { -lot } { $lot }
+bikri-stock-lot-title = { -bikri } { $number }, { -lot } { $lot }: { $who }
 
 # review: pending
 bikri-stock-sell = Sell what is left

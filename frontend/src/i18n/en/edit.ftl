@@ -82,8 +82,9 @@ edit-review-change = { $where }{ $field } was { $before }, now { $after }
 # review: pending
 edit-review-where-header = Header:
 
+# $name: the lot's name in brackets, for example " (Ehsan, Mango-2)", or nothing.
 # review: pending
-edit-review-where-lot = { -lot } { $lot }:
+edit-review-where-lot = { -lot } { $lot }{ $name }:
 
 # review: pending
 edit-review-where-line = { -lot } { $lot }, line { $line }{ $label }:

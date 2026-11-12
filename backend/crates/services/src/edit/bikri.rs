@@ -251,6 +251,9 @@ fn lot_place(lot: &SavedLot) -> EditPlace {
     EditPlace {
         kind: EditPlaceKind::Lot,
         lot_no: Some(lot.lot_no),
+        lot_counter: Some(lot.lot_counter),
+        item_ur: Some(lot.item.name_ur.clone()),
+        item_en: Some(lot.item.name_en.clone()),
         line_no: None,
         label_ur: Some(lot.seller.name_ur.clone()),
         label_en: Some(lot.seller.name_en.clone()),
@@ -263,6 +266,9 @@ fn line_place(lot: &SavedLot, sale: &SavedSale, ordinal: usize) -> EditPlace {
     EditPlace {
         kind: EditPlaceKind::Line,
         lot_no: Some(lot.lot_no),
+        lot_counter: Some(lot.lot_counter),
+        item_ur: Some(lot.item.name_ur.clone()),
+        item_en: Some(lot.item.name_en.clone()),
         line_no: i64::try_from(ordinal.saturating_add(1)).ok(),
         label_ur: Some(sale.buyer.name_ur.clone()),
         label_en: Some(sale.buyer.name_en.clone()),
@@ -284,6 +290,9 @@ pub(crate) fn changes(before: &Snapshot, after_snapshot: &Snapshot) -> Vec<EditC
     let header = EditPlace {
         kind: EditPlaceKind::Header,
         lot_no: None,
+        lot_counter: None,
+        item_ur: None,
+        item_en: None,
         line_no: None,
         label_ur: None,
         label_en: None,

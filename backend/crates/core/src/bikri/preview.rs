@@ -364,6 +364,13 @@ pub struct LotPreview {
     /// The lot number, from 1, in the order sent.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name, with its seller and item: "احسان، آم-2" (PRD FR-12.45). For
+    /// a saved lot of an edit or a later sale it is the number it has; for a new lot it is the
+    /// number the lot will get when it is saved, worked out from the saved lots of its seller and
+    /// item and the lots above it in this draft. Null while the seller or the item is not
+    /// picked. The number shown here is the number the save writes.
+    #[ts(type = "number | null")]
+    pub lot_counter: Option<i64>,
     /// The freight typed on the lot, even if the seller paid it.
     #[ts(type = "Paisa")]
     pub freight: Paisa,
@@ -444,54 +451,6 @@ pub struct BikriPreview {
     pub errors: Vec<FieldError>,
     /// What only warns. A save is allowed.
     pub warnings: Vec<FieldError>,
-}
-
-/// The truck's earlier بکری (PRD FR-7.49).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckLast {
-    /// Its بکری number.
-    #[ts(type = "number")]
-    pub bikri_number: i64,
-    /// Its day, `YYYY-MM-DD`.
-    pub date: String,
-    /// The truck stand.
-    #[ts(type = "number | null")]
-    pub adda_id: Option<i64>,
-    /// The زمیندار.
-    #[ts(type = "number | null")]
-    pub zamindar_account_id: Option<i64>,
-    /// The driver's name.
-    pub driver_name: Option<String>,
-    /// The driver's phone.
-    pub driver_phone: Option<String>,
-}
-
-/// A بکری of this truck on the posting day (PRD FR-7.50).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckSameDay {
-    /// Its بکری number.
-    #[ts(type = "number")]
-    pub bikri_number: i64,
-}
-
-/// A truck number used before, for the list under the field.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckSuggestion {
-    /// The truck number as saved.
-    pub truck_no: String,
-    /// The day of its last بکری, `YYYY-MM-DD`.
-    pub date: String,
-}
-
-/// What the app remembers about a truck (PRD FR-7.49, FR-7.50). Read from saved بکری.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct TruckMemory {
-    /// The last بکری of exactly this truck number (ignoring letter case), if any.
-    pub last: Option<TruckLast>,
-    /// A saved, not cancelled بکری of this truck on the posting day, if any.
-    pub same_day: Option<TruckSameDay>,
-    /// Truck numbers that start with the typed text, newest first, at most 8.
-    pub suggestions: Vec<TruckSuggestion>,
 }
 
 /// What the app remembers about a seller (PRD FR-7.51). Every value is put into the visible

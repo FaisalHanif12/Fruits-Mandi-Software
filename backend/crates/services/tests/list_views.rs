@@ -20,8 +20,7 @@ use mandi_services::core::arrivals::{
     ArrivalCancelInput, ArrivalInput, ArrivalStateFilter, ArrivalsList, ArrivalsListInput,
 };
 use mandi_services::core::bikri::{
-    BikriDraft, BikriListInput, BikriListRow, BikriSaveInput, BikriSaved, BikriStatus, CancelInput,
-    StockListInput,
+    BikriDraft, BikriListInput, BikriListRow, BikriSaved, BikriStatus, CancelInput, StockListInput,
 };
 use mandi_services::core::capital::{CapitalHistoryInput, CapitalInput};
 use mandi_services::core::cashbook::{Cashbook, CashbookInput};
@@ -95,15 +94,7 @@ fn bikri_on(w: &World, n: i64, date: &str) -> BikriSaved {
     let mut draft: BikriDraft = support::draft(vec![lot]);
     draft.header.entry_date = date.into();
     draft.header.truck_no = Some(format!("TRK-{n}"));
-    bikri::save(
-        &w.env.ctx,
-        &w.owner,
-        &BikriSaveInput {
-            draft,
-            confirm_cash_below_zero: false,
-        },
-    )
-    .unwrap()
+    support::save_old(w, &draft, false)
 }
 
 fn cancel(w: &World, saved: &BikriSaved) {
@@ -2692,15 +2683,7 @@ fn the_stock_list_searches_and_sorts_each_kind_and_the_totals_follow_the_search(
         );
         let mut draft: BikriDraft = support::draft(vec![lot]);
         draft.header.truck_no = Some(format!("STK-{n}"));
-        bikri::save(
-            &w.env.ctx,
-            &w.owner,
-            &BikriSaveInput {
-                draft,
-                confirm_cash_below_zero: false,
-            },
-        )
-        .unwrap();
+        support::save_old(&w, &draft, false);
     }
     let read = |search: Option<&str>, sort_input: Option<SortInput>| {
         bikri::stock_list(

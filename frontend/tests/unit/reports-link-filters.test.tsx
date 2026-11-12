@@ -2,8 +2,8 @@
 // PRD FR-7.65, FR-7.74): the Owner presses F9 and nothing else. Each report of the print questions
 // (R35 the party's day slip, R5 the buyer bills, R13 the khata, R14 the statement, R6 the seller's lots,
 // R34 the day summary, R2 the sales register), the thirteen reports that follow them (R31, R12, R29,
-// R20, R24, R10, R11, R18, R36, R33, R37, R21, R8) and the reports of plan 55 Section 11.1 (R3, R4, R7,
-// R9, R15, R16, R17, R19, R22, R23, R25, R26, R27, R28, R30, R32, R38, and R8, R33, R36, R37 in their
+// R20, R24, R10, R11, R18, R36, R33, R37, R21) and the reports of plan 55 Section 11.1 (R3, R4, R7,
+// R9, R15, R16, R17, R19, R22, R23, R25, R26, R27, R28, R30, R32, R38, and R33, R36, R37 in their
 // other forms) are opened here from an address that carries their
 // party and dates, and the request the screen sends must hold exactly those, in Urdu and in English. The
 // boxes must show them too, so what the Owner sees is what the print will have. R31 sits behind the
@@ -206,12 +206,6 @@ const LINKS: readonly {
     search: `city=7&as_of=${DAY}`,
     filters: { city_id: 7, as_of: DAY },
   },
-  {
-    id: 'R8',
-    asked: "one adda's trucks for a month",
-    search: `adda=9&from=${MONTH.from}&to=${MONTH.to}`,
-    filters: { adda_id: 9, ...MONTH },
-  },
   // Plan 55 Section 11.1: the assistant opens every report of the catalogue with what the question named.
   // A period, and a buyer or a seller named (R3, R4, R7, R15, R23, R25, R28 take `party`).
   ...(['R3', 'R4', 'R7', 'R15', 'R23', 'R25', 'R28'] as const).flatMap((id) => [
@@ -304,12 +298,6 @@ const LINKS: readonly {
     search: `from=${MONTH.from}&to=${MONTH.to}`,
     filters: { ...MONTH },
   },
-  {
-    id: 'R8',
-    asked: 'the trucks of the month (no adda named)',
-    search: `from=${MONTH.from}&to=${MONTH.to}`,
-    filters: { ...MONTH },
-  },
 ];
 
 describe('the address of a report reads every filter the print questions need', () => {
@@ -343,7 +331,15 @@ describe('the address of a report reads every filter the print questions need', 
     expect(boxes('R20')).toEqual(['as_of', 'party', 'city']);
     expect(boxes('R24')).toEqual(['as_of', 'party']);
     // R10 is the stock over a period: it has no as-of box.
-    expect(boxes('R10')).toEqual(['date_range', 'seller', 'item', 'item_group', 'stock_view']);
+    // `lot` is the box of one lot, by its name (PRD FR-12.45, plan 71 L8).
+    expect(boxes('R10')).toEqual([
+      'date_range',
+      'seller',
+      'item',
+      'item_group',
+      'stock_view',
+      'lot',
+    ]);
     expect(boxes('R11')).toEqual(['date_range', 'party']);
     expect(boxes('R18')).toEqual(['as_of']);
     expect(boxes('R36')).toContain('garden');
@@ -351,7 +347,6 @@ describe('the address of a report reads every filter the print questions need', 
     expect(boxes('R33')).toEqual(['date_range', 'item', 'trip_view']);
     expect(boxes('R37')).toEqual(expect.arrayContaining(['date_range', 'partner', 'guests']));
     expect(boxes('R21')).toEqual(['as_of', 'party', 'city']);
-    expect(boxes('R8')).toEqual(['date_range', 'adda']);
   });
 
   it('knows the boxes of the reports of plan 55 Section 11.1: each takes what its link carries', () => {
@@ -373,7 +368,8 @@ describe('the address of a report reads every filter the print questions need', 
     expect(boxes('R33')).toEqual(expect.arrayContaining(['date_range', 'trip_view']));
     expect(boxes('R36')).toContain('date_range');
     expect(boxes('R37')).toEqual(expect.arrayContaining(['date_range', 'partner']));
-    expect(boxes('R8')).toContain('adda');
+    // R8, the اڈا report, is retired (PRD v1.34).
+    expect(CATALOG.some((entry) => (entry.id as string) === 'R8')).toBe(false);
     // The group of the items (fruit or vegetables) on the sales reports.
     for (const id of ['R2', 'R3', 'R4', 'R7', 'R10', 'R27'] as const) {
       expect(boxes(id), id).toContain('item_group');

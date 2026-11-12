@@ -69,6 +69,12 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     banana: language === 'ur' ? 'کیلا' : 'Banana',
     box: language === 'ur' ? 'پیٹی' : 'Box',
   };
+  /** The name of lot 1 of بکری 1: its seller, its item and its counter (PRD FR-12.45). */
+  const lotWho = message(language, 'bikri-lot-name', {
+    seller: names.rahim,
+    item: names.banana,
+    counter: '1',
+  });
 
   const open = async () => {
     const view = await renderApp('/bikri/stock');
@@ -113,7 +119,11 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     });
     expect(cell(40, 'seller')).toBe(names.rahim);
     expect(cell(40, 'item')).toBe(
-      message(language, 'bikri-stock-item-packing', { item: names.banana, packing: names.box }),
+      // The item has the counter of the lot, "Banana-1" (PRD FR-12.45, plan 71 L8); the seller is the column before.
+      message(language, 'bikri-stock-item-packing', {
+        item: message(language, 'bikri-lot-item', { item: names.banana, counter: '1' }),
+        packing: names.box,
+      }),
     );
     expect(cell(40, 'balance')).toBe('5');
     // The total row is the backend's figure under the balance column.
@@ -142,7 +152,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     fakePlan16();
     await open();
     const card = await screen.findByRole('heading', {
-      name: named(message(language, 'bikri-stock-lot-title', { number: 1, lot: 1 })),
+      name: named(message(language, 'bikri-stock-lot-title', { number: 1, lot: 1, who: lotWho })),
     });
     const text = visible(card.closest('section')?.textContent);
     expect(text).toContain('09-10-2026');
@@ -162,7 +172,7 @@ describe.each(LANGUAGES)('باقی مال (%s)', (language) => {
     // The column of the taken fruit comes with the wide layout step; the card shows it at every size.
     expect(cell(40, 'balance')).toBe('3');
     const card = await screen.findByRole('heading', {
-      name: named(message(language, 'bikri-stock-lot-title', { number: 1, lot: 1 })),
+      name: named(message(language, 'bikri-stock-lot-title', { number: 1, lot: 1, who: lotWho })),
     });
     const facts = card.closest('section')?.querySelectorAll('dl > div');
     const taken = Array.from(facts ?? []).find((fact) =>

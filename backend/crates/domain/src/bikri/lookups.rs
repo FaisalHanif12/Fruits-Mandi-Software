@@ -223,8 +223,6 @@ pub struct Lookups {
     pub markas: HashSet<i64>,
     /// The stores that exist.
     pub stores: HashSet<i64>,
-    /// The truck stands that exist.
-    pub addas: HashSet<i64>,
     /// The saved rate hint of each (item, packing) the draft uses: today's, else the last day.
     pub saved_hints: HashMap<(i64, i64), RateHint>,
     /// The saved sales of each item the draft uses, for the rate check.
@@ -233,4 +231,7 @@ pub struct Lookups {
     pub purchases: HashMap<i64, PurchaseFacts>,
     /// The garden arrivals the lots of the draft name (PRD FR-12.40).
     pub arrivals: HashMap<i64, ArrivalFacts>,
+    /// The biggest lot counter ever given to each (seller, item) the draft's lots use, from
+    /// `lot_counters` (PRD FR-12.45). A pair that never had a lot is missing, which counts as 0.
+    pub lot_counters: HashMap<(i64, i64), i64>,
 }

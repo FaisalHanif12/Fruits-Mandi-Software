@@ -22,6 +22,11 @@ export type SavedLot = {
    */
   lot_no: number;
   /**
+   * The counter of the lot's name (PRD FR-12.45): the seller, the item and this number, for
+   * example "احسان، آم-2". It belongs to the seller and the item and never repeats.
+   */
+  lot_counter: number;
+  /**
    * The seller account. For an own lot it is the اپنا مال account (030119998).
    */
   seller: RecordRef;

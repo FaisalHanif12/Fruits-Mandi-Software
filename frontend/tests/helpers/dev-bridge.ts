@@ -5,14 +5,7 @@
 // any other command is refused with ERR_NOT_IMPLEMENTED, like a stub. Never part of a build: only
 // the development route imports it.
 
-import {
-  EVENT1,
-  IDS,
-  SELLER_MEMORY,
-  TRUCK_MEMORY,
-  previewFor,
-  previewWithOverLine,
-} from './bikri-data';
+import { IDS, SELLER_MEMORY, previewFor, previewWithOverLine } from './bikri-data';
 import {
   cancelPreview,
   editable,
@@ -640,21 +633,19 @@ const handlers: Record<string, Handler> = {
     if (devFlag('umar')) return umarAnswer(draftOf(input));
     // `#/dev/bikri?thousand` is 1,000 sale lines in one lot (D8 plan 61, NFR-SCL-3).
     if (devFlag('thousand')) return thousandAnswer(draftOf(input));
-    const preview = ensurePaid(previewFor(draftOf(input)));
+    // The stand-in gives each lot the counter of its name (PRD FR-12.45), as the backend does: the
+    // first lot of a seller and an item is 1.
+    const answered = ensurePaid(previewFor(draftOf(input)));
+    const preview = {
+      ...answered,
+      lots: answered.lots.map((lot, index) => ({
+        ...lot,
+        lot_counter: lot.lot_counter ?? index + 1,
+      })),
+    };
     // `#/dev/bikri?cash` shows the cash note: the entry takes cash in hand to -5,000 (PRD FR-6.7).
     return devFlag('cash') ? { ...preview, cash: CASH_BELOW_ZERO } : preview;
   },
-  bikri_split_freight: (input) => {
-    const lots = Array.isArray(input['lots']) ? input['lots'] : [];
-    const first: unknown = lots[0];
-    const key =
-      typeof first === 'object' && first !== null && 'key' in first ? asText(first.key) : '';
-    return [{ key, freight_paisa: EVENT1.lots[0]?.freight ?? 0 }];
-  },
-  assist_truck_memory: (input) =>
-    asText(input['truck_no']).toUpperCase().startsWith('LES')
-      ? TRUCK_MEMORY
-      : { last: null, same_day: null, suggestions: [] },
   assist_seller_memory: () => SELLER_MEMORY,
   // Plan 13: the saved بکری, the lists, drafts and the one-time people.
   bikri_save: (input) => ({
@@ -1077,14 +1068,8 @@ export function installDevBridge(): void {
 
 /** The draft of Event 1 (PRD 4.4) typed into the stores, for the sample page. */
 export function seedEvent1(stores: BikriDraftStores): void {
-  const { header, lots } = stores;
+  const { lots } = stores;
   const rahim = { id: IDS.rahim, code: '0010', name_ur: 'رحیم', name_en: 'Rahim' };
-  header.getState().patch({
-    truckNo: 'LES-1234',
-    zamindar: rahim,
-    adda: { id: IDS.swat, code: '0001', name_ur: 'سوات اڈا', name_en: 'Swat Adda' },
-    totalFreight: '3000',
-  });
   const lot = lots.getState().rows[0];
   if (lot === undefined) return;
   lots.getState().patchRow(lot.rowId, {
@@ -1143,8 +1128,7 @@ export function seedOver(stores: BikriDraftStores): void {
 
 /** The own lot of E2E-34 typed into the stores, for the sample page `#/dev/bikri?own`. */
 export function seedOwn(stores: BikriDraftStores): void {
-  const { header, lots } = stores;
-  header.getState().patch({ truckNo: 'OWN-1' });
+  const { lots } = stores;
   const lot = lots.getState().rows[0];
   if (lot === undefined) return;
   lots.getState().patchRow(lot.rowId, {

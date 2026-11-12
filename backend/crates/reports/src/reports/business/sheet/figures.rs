@@ -506,6 +506,7 @@ mod tests {
                 ur: "پیٹی".to_owned(),
                 en: "Box".to_owned(),
             },
+            lot_counter: None,
         }
     }
 

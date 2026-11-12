@@ -16,6 +16,7 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -150,7 +151,9 @@ describe.each(LANGUAGES)('the numbers strip (%s)', (language) => {
       screen.queryByRole('region', { name: named(message(language, 'bikri-strip-label')) }),
     ).not.toBeInTheDocument();
     // Error: the numbers could not be worked out. The screen says so; the strip shows none.
-    await user.keyboard('LES-1234');
+    // The first typed work is the seller of the first lot (the date alone is not typed work).
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     expect(
       await screen.findByText(
         (text) => visible(text) === message(language, 'bikri-preview-failed'),

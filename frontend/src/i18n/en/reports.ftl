@@ -191,6 +191,9 @@ report-range-to = Up to <num>{ $to }</num>
 report-range-all = All dates
 
 # review: pending
+report-lot-shown = { -lot }: { $name }
+
+# review: pending
 report-as-of-shown = Balances as of <num>{ $date }</num>
 
 # review: pending
@@ -432,12 +435,6 @@ report-r7-title = Item-wise Sales
 
 # review: pending
 report-r7-help = Sales by item: quantity, { -kham-bikri }, average rate and the { -commission } of both sides.
-
-# review: pending
-report-r8-title = { -adda } Report
-
-# review: pending
-report-r8-help = Trucks, lots, quantity and { -kham-bikri } for each { -adda }.
 
 # review: pending
 report-r20-title = { -gahak } Dues
@@ -806,9 +803,6 @@ report-group-no-city = No city
 
 # review: pending
 report-group-no-collector = No collector
-
-# review: pending
-report-adda-none = No Adda
 
 ## The cash book, the expense report, the partner statement and money lent (round 7, R12, R29, R31, R32).
 

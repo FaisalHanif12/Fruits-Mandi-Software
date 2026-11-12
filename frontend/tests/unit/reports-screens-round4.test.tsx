@@ -1,5 +1,5 @@
 // The Sales, Collections and Business reports on the ONE report screen (plan 20, step F3, PRD 19.2,
-// FR-19.1 to FR-19.5, FR-19.11, FR-19.13): R2, R3, R4, R6, R7, R8, R20, R21, R22, R24,
+// FR-19.1 to FR-19.5, FR-19.11, FR-19.13): R2, R3, R4, R6, R7, R20, R21, R22, R24,
 // R26, R27, R28 and R30, in the Urdu and in the English app, against a fake backend that answers
 // with the backend's own fixtures. Each report asks for exactly what the filters hold and shows the
 // backend's totals; the headings of R21, R22 and R24, the month names of R28, the minus sign of
@@ -46,7 +46,6 @@ import {
   R4_CREDIT_REQUEST,
   R6_LOTS_REQUEST,
   R7_ITEMS_REQUEST,
-  R8_ADDA_REQUEST,
   fakeReports,
 } from '../helpers/reports';
 import { PAGE_ROWS } from '../helpers/pager';
@@ -166,7 +165,6 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       ['R4', R4_CREDIT_REQUEST, 'buyer_total', '31,564'],
       ['R6', R6_LOTS_REQUEST, 'net', '29,476'],
       ['R7', R7_ITEMS_REQUEST, 'total_comm', '5,448'],
-      ['R8', R8_ADDA_REQUEST, 'gross', '41,400'],
       ['R20', R20_DUES_REQUEST, 'balance', '21,564'],
       ['R21', R21_BY_CITY_REQUEST, 'balance', '21,564'],
       ['R22', R22_BY_COLLECTOR_REQUEST, 'balance', '21,564'],
@@ -212,7 +210,8 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         expect(drawnRows()).toEqual(['0', '1']);
       }, SLOW_MS);
       expect(cell('0', 'buyer')).toBe(`0020 ${names('اکرم ٹول ٹیکس', 'Akram Toll Tax')}`);
-      expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
+      // The lot's name has its counter (PRD FR-12.45): the first banana lot of Rahim is 1.
+      expect(cell('0', 'item')).toBe(names('کیلا-1', 'Banana-1'));
       expect(cell('0', 'qty')).toBe('20');
       expect(cell('0', 'rate')).toBe('600');
       expect(cell('0', 'value')).toBe('12,000');
@@ -305,16 +304,6 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
         'deductions',
         'net',
       ]);
-    });
-  });
-
-  describe('R8 the اڈا report', () => {
-    it('names the sales that have no اڈا', async () => {
-      await openReport('R8');
-      await waitFor(() => {
-        expect(cell('1', 'adda')).toBe(m('report-adda-none'));
-      }, SLOW_MS);
-      expect(cell('0', 'adda')).toBe(names('سوات اڈا', 'Swat Adda'));
     });
   });
 
@@ -545,12 +534,12 @@ describe.each(LANGUAGES)('the round 4 reports (%s)', (language: Language) => {
       const { router } = await renderApp('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
       const user = userEvent.setup();
-      // The ten Sales reports (R1 to R10, R1 has focus) and R11 to R19 are in front of R20: nineteen
-      // steps down.
+      // The nine Sales reports (R1 to R7 and R10, R8 and R9 are retired, R1 has focus) and R11 to R19 are
+      // in front of R20: eighteen steps down.
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(18)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(17)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R20');
       }, SLOW_MS);

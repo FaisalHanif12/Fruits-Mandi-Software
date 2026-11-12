@@ -31,7 +31,7 @@ import {
   type PickerValue,
 } from '../../../shared/ui';
 import { hasFindFilter, useBikriFind } from '../hooks/useBikriReads';
-import { sellerNames } from '../list-columns';
+import { lotNamesOf } from '../list-columns';
 
 interface BikriFindDialogProps {
   open: boolean;
@@ -71,7 +71,7 @@ function Result({ row, onOpen }: { row: BikriListRow; onOpen: () => void }) {
       </span>
       <span className="flex flex-wrap items-baseline gap-x-3 type-body text-ink-muted">
         {row.truck_no === null ? null : <Code>{row.truck_no}</Code>}
-        <span>{sellerNames(row, language, l10n.getString('bikri-list-separator'))}</span>
+        <span>{lotNamesOf(row, language, (id, vars) => l10n.getString(id, vars))}</span>
         <Num>{formatPaisa(row.gross, { grouping })}</Num>
       </span>
     </button>

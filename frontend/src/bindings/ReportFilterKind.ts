@@ -25,4 +25,5 @@ export type ReportFilterKind =
   | 'collector'
   | 'item_group'
   | 'stock_view'
-  | 'grade';
+  | 'grade'
+  | 'lot';

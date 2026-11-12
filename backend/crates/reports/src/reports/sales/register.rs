@@ -23,7 +23,7 @@ use super::super::PageSpec;
 use super::buyer_bills::left_of;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    Conds, chukta_party, col, grade_of, load_parties, names_cell, paisa, party_of_line,
+    Conds, chukta_party, col, grade_of, load_parties, lot_names, names_cell, paisa, party_of_line,
 };
 use crate::reports::filters::{LineSort, Typed};
 use crate::reports::ids;
@@ -84,6 +84,8 @@ pub(super) fn conds(typed: &Typed, condition: Option<&'static str>) -> Conds {
         // One بکری (R5 only: no other register takes the filter, so it is never set for them).
         .id("b.id = ?", typed.bikri_id)
         .id("l.item_id = ?", typed.item_id)
+        // One lot (PRD FR-12.45): the lot the Owner picked in the assistant.
+        .id("l.id = ?", typed.lot_id)
         // All the items of a group (PRD v1.29); never together with one item.
         .item_group("l.item_id", typed.item_group)
         .id("ba.city_id = ?", typed.city_id)
@@ -118,7 +120,7 @@ pub(crate) fn page_query(
            s.buyer_account_id, s.chukta_person_key, s.chukta_name_ur, s.chukta_name_en,
            ci.name_ur, ci.name_en, i.name_ur, i.name_en,
            s.qty, s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_total_paisa, s.grade,
-           s.seller_rate_paisa, pk.name_ur, pk.name_en, s.paid_paisa
+           s.seller_rate_paisa, pk.name_ur, pk.name_en, s.paid_paisa, l.lot_counter
          FROM journal_entries je
          JOIN bikri_sales s ON s.journal_entry_id = je.id
          JOIN bikri_lots l ON l.id = s.lot_id
@@ -174,6 +176,8 @@ struct Line {
     city_en: Option<String>,
     item_ur: String,
     item_en: String,
+    /// The counter of the lot's name (PRD FR-12.45).
+    lot_counter: i64,
     qty: i64,
     rate: i64,
     value: i64,
@@ -260,6 +264,7 @@ pub(crate) fn run(
                 packing_ur: r.get(18)?,
                 packing_en: r.get(19)?,
                 paid: r.get(20)?,
+                lot_counter: r.get(21)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -292,7 +297,10 @@ pub(crate) fn run(
             },
             Cell::Party { party },
             names_cell(line.city_ur, line.city_en),
-            names_cell(Some(line.item_ur), Some(line.item_en)),
+            // The item with the lot's counter: the lot the line sold from (PRD FR-12.45).
+            Cell::Names {
+                names: lot_names(&line.item_ur, &line.item_en, line.lot_counter),
+            },
         ];
         if with_packing {
             cells.push(names_cell(Some(line.packing_ur), Some(line.packing_en)));

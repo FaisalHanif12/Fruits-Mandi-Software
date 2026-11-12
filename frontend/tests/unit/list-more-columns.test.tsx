@@ -128,15 +128,17 @@ describe.each(LANGUAGES)('the list of بکری, More columns (%s)', (language) =
     expect(hasColumn('status')).toBe(true);
   });
 
-  it('at the wide step it fits beside the truck, items and buyer total', async () => {
+  it('at the wide step it fits beside the items and buyer total', async () => {
     await open('wide');
     await userEvent.setup().click(tickOf(language));
     await waitFor(() => {
       expect(hasColumn('qty')).toBe(true);
     });
-    for (const field of ['truck', 'items', 'buyer_total', 'gross', 'net', 'status']) {
+    for (const field of ['items', 'buyer_total', 'gross', 'net', 'status']) {
       expect(hasColumn(field), field).toBe(true);
     }
+    // The truck column is gone (plan 71 H2), and no column is there for it to come back as.
+    expect(hasColumn('truck')).toBe(false);
     expect(hasColumn('when')).toBe(false);
   });
 

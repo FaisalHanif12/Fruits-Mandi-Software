@@ -26,7 +26,6 @@
 
 use mandi_db::bikri::write::{self as repo, NewEntry};
 use mandi_domain::core::bikri::{BikriSaveInput, BikriSaved, prepare_draft};
-use mandi_domain::core::money::Paisa;
 use mandi_domain::ledger::{PostingType, SourceType};
 use serde_json::json;
 
@@ -82,7 +81,6 @@ pub fn save(
             .entry_date
             .ok_or_else(|| data("a بکری without errors has no date"))?;
         let date_iso = date.to_iso();
-        let bill_iso = header.bill_date.unwrap_or(date).to_iso();
 
         // 2. The بکری.
         let number = repo::next_number(tx)?;
@@ -90,17 +88,7 @@ pub fn save(
             tx,
             &NewEntry {
                 number,
-                book: header.book.as_deref(),
                 entry_date: &date_iso,
-                bill_date: &bill_iso,
-                truck_no: header.truck_no.as_deref(),
-                zamindar_account_id: header.zamindar_account_id,
-                adda_id: header.adda_id,
-                driver_name: header.driver_name.as_deref(),
-                driver_phone: header.driver_phone.as_deref(),
-                total_freight_paisa: header.total_freight.map(Paisa::as_paisa),
-                store_id: header.store_id,
-                note: header.note.as_deref(),
             },
             actor.user_id,
             &now,
@@ -148,7 +136,8 @@ pub fn save(
             date_iso: &date_iso,
             year: date.year(),
             month: date.month(),
-            adda_id: header.adda_id,
+            // A new بکری has no اڈا (PRD v1.34).
+            adda_id: None,
         };
         let lines_saved: usize = insert_sales_and_facts(tx, &posting, &lots, &lot_ids, true)?
             .iter()

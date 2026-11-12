@@ -263,6 +263,11 @@ assistant-found-as-ask = { $found ->
 }
 # review: pending
 assistant-option-balance-label = Balance
+# The day a lot came and how many { -nag } it had, on the button of a lot that "which one?" offers (PRD FR-12.45, plan 71 L9).
+# review: pending
+assistant-option-lot-day = Came <date>{ $date }</date>
+# review: pending
+assistant-option-lot-qty = Received <num>{ $qty }</num> { -nag }
 # review: pending
 assistant-need-dates = The period is not clear. Ask again with the first and last date, for example from 01-10-2026 to 15-10-2026.
 # review: pending

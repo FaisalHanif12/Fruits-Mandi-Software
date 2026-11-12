@@ -270,18 +270,48 @@ describe.each(LANGUAGES)('the edit kit (%s)', (language: Language) => {
     it('a place starts the sentence: the header, a lot, a line with its buyer', () => {
       expect(
         placeText(
-          { kind: 'entry', lot_no: null, line_no: null, label_ur: null, label_en: null },
+          {
+            kind: 'entry',
+            lot_no: null,
+            lot_counter: null,
+            item_ur: null,
+            item_en: null,
+            line_no: null,
+            label_ur: null,
+            label_en: null,
+          },
           ctx,
         ),
       ).toBe('');
       expect(
         visible(
-          placeText({ kind: 'lot', lot_no: 2, line_no: null, label_ur: null, label_en: null }, ctx),
+          placeText(
+            {
+              kind: 'lot',
+              lot_no: 2,
+              lot_counter: null,
+              item_ur: null,
+              item_en: null,
+              line_no: null,
+              label_ur: null,
+              label_en: null,
+            },
+            ctx,
+          ),
         ),
-      ).toContain(message(language, 'edit-review-where-lot', { lot: 2 }));
+      ).toContain(message(language, 'edit-review-where-lot', { lot: 2, name: '' }));
       expect(
         placeText(
-          { kind: 'header', lot_no: null, line_no: null, label_ur: null, label_en: null },
+          {
+            kind: 'header',
+            lot_no: null,
+            lot_counter: null,
+            item_ur: null,
+            item_en: null,
+            line_no: null,
+            label_ur: null,
+            label_en: null,
+          },
           ctx,
         ),
       ).toContain(message(language, 'edit-review-where-header'));

@@ -7,16 +7,6 @@ import { LOT, SALE } from './types';
 /** The label of a header field. */
 export const HEADER_FIELD_LABEL: Readonly<Record<string, string>> = {
   entryDate: 'bikri-header-date',
-  billDate: 'bikri-header-bill-date',
-  book: 'bikri-header-book',
-  truckNo: 'bikri-header-truck',
-  zamindar: 'glossary-zamindar',
-  adda: 'glossary-adda',
-  driverName: 'bikri-header-driver',
-  driverPhone: 'bikri-header-driver-phone',
-  totalFreight: 'bikri-header-total-freight',
-  store: 'bikri-header-store',
-  note: 'bikri-header-note',
 };
 
 /** The label of a cell of a lot row. */

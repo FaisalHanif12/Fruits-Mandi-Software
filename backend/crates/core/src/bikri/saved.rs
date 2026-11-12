@@ -482,6 +482,10 @@ pub struct SavedLot {
     /// The lot number, from 1.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45): the seller, the item and this number, for
+    /// example "احسان، آم-2". It belongs to the seller and the item and never repeats.
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// The seller account. For an own lot it is the اپنا مال account (030119998).
     pub seller: RecordRef,
     /// The purchase an own lot took its goods from (PRD FR-12.26). `null` for any other lot.
@@ -745,6 +749,23 @@ pub struct BikriListTotals {
     pub buyer_total: Paisa,
 }
 
+/// The name of a lot (PRD FR-12.45): its seller, its item and its counter, written "احسان، آم-2"
+/// (English "Ehsan, Mango-2") by the screen through `displayName`. The counter belongs to the seller
+/// and the item and never repeats.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub struct LotName {
+    /// The lot.
+    #[ts(type = "number")]
+    pub lot_id: i64,
+    /// The seller account (with its tag).
+    pub seller: RecordRef,
+    /// The item.
+    pub item: RecordRef,
+    /// The counter, from 1.
+    #[ts(type = "number")]
+    pub counter: i64,
+}
+
 /// One row of the list of بکری (PRD FR-12.7: number, time, truck, sellers, items, نگ, خام, صافی,
 /// buyer total, status). All sums are of stored values.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
@@ -765,6 +786,8 @@ pub struct BikriListRow {
     pub sellers: Vec<RecordRef>,
     /// The items of its lots, each once.
     pub items: Vec<RecordRef>,
+    /// The names of its lots (PRD FR-12.45), in lot order: each lot's seller, item and counter.
+    pub lots: Vec<LotName>,
     /// نگ received over all its lots.
     #[ts(type = "number")]
     pub qty_received: i64,
@@ -876,4 +899,33 @@ pub struct BikriHit {
     pub status: BikriStatus,
     /// Why it matched.
     pub matched: BikriMatch,
+}
+
+/// What the assistant asks of the lots by name (PRD FR-12.45, FR-7.77, plan 71 L9). Backend only: it
+/// is not sent to the screens. A list that is empty is not a filter.
+#[derive(Debug, Clone, Default)]
+pub struct LotFindInput {
+    /// Lots of any of these sellers.
+    pub seller_ids: Vec<i64>,
+    /// Lots of any of these items.
+    pub item_ids: Vec<i64>,
+    /// Only the lot with this counter ("aam-2").
+    pub counter: Option<i64>,
+    /// Only the lot with this row id (the lot the Owner picked).
+    pub lot_id: Option<i64>,
+    /// At most this many lots (the newest first).
+    pub limit: i64,
+}
+
+/// A lot found by name: its name, the day it came, how many نگ were received, and its بکری.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LotFound {
+    /// Its name: seller, item and counter.
+    pub name: LotName,
+    /// The day of its first posting, `YYYY-MM-DD`.
+    pub entry_date: String,
+    /// نگ received.
+    pub qty_received: i64,
+    /// The number of its بکری.
+    pub bikri_number: i64,
 }

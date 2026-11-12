@@ -15,6 +15,7 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -134,7 +135,9 @@ describe.each(LANGUAGES)('the backend’s cases (%s)', (language) => {
       ...previewFor(draft),
       errors: [{ code: 'ERR_NO_SALE_LINES', field: 'lots', values: {} }],
     }));
-    await user.keyboard('LES-1234');
+    // The first typed work is the seller of the first lot (the date alone is not typed work).
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     await screen.findByRole('heading', { name: named(message(language, 'bikri-summary-title')) });
     expect(pageText()).not.toContain(message(language, 'err-no-sale-lines'));
   });

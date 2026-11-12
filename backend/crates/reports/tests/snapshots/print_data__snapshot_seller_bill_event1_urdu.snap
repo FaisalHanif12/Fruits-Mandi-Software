@@ -55,7 +55,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
         {
           "date": "10-10-2026",
           "name": "اکرم ٹول ٹیکس",
-          "item": "کیلا",
+          "item": "کیلا-1",
           "packing": "پیٹی",
           "qty": "20",
           "weight_kg": null,
@@ -67,7 +67,7 @@ expression: "print(EVENT1, PrintDoc::SellerBill, Language::Ur)"
         {
           "date": "10-10-2026",
           "name": "ارشد ملتانی",
-          "item": "کیلا",
+          "item": "کیلا-1",
           "packing": "پیٹی",
           "qty": "30",
           "weight_kg": null,

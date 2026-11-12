@@ -171,9 +171,6 @@ dashboard-bikri-title = Today's { -bikri }
 dashboard-bikri-col-number = { -bikri }
 
 # review: pending
-dashboard-bikri-col-truck = Truck
-
-# review: pending
 dashboard-bikri-col-seller = { -beopari }
 
 # review: pending

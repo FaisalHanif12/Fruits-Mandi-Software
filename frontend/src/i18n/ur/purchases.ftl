@@ -166,9 +166,9 @@ purchases-lots-title = ان { -bikri } میں بکا
 # review: pending
 purchases-lot-bikri = { -bikri }
 
-# $number: the number of the { -bikri }; $lot: the number of the lot.
+# $number: { -bikri } کا نمبر؛ $lot: { -lot } کا نمبر؛ $name: مال اور { -lot } کی گنتی، "مالٹا-2"۔
 # review: pending
-purchases-lot-open = { -bikri } { $number }، { -lot } { $lot }
+purchases-lot-open = { -bikri } { $number }، { -lot } { $lot }: { $name }
 
 # review: pending
 purchases-lot-qty-sold = بکے

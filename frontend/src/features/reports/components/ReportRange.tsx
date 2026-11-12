@@ -6,6 +6,7 @@ import { Localized } from '@fluent/react';
 import type { ReportFilterKind } from '../../../bindings/ReportFilterKind';
 import type { ReportResolvedFilters } from '../../../bindings/ReportResolvedFilters';
 import { isoToDisplayDate } from '../../../shared/format';
+import { displayName, useLanguage } from '../../../shared/i18n';
 import { RUNNING_NUMBER } from '../../../shared/ui';
 
 interface ReportRangeProps {
@@ -16,6 +17,7 @@ interface ReportRangeProps {
 }
 
 export function ReportRange({ filters, takes, day = false }: ReportRangeProps) {
+  const language = useLanguage();
   let line;
   if (takes.includes('as_of') && day) {
     line =
@@ -70,5 +72,20 @@ export function ReportRange({ filters, takes, day = false }: ReportRangeProps) {
   } else {
     return null;
   }
-  return <p className="type-body text-ink-muted">{line}</p>;
+  // One lot picked by the assistant's button (PRD FR-7.77, plan 71 L9): its name, from the backend's
+  // echo, so the report says plainly that it shows that lot alone.
+  const lot = filters.lot;
+  return (
+    <>
+      <p className="type-body text-ink-muted">{line}</p>
+      {lot === undefined ? null : (
+        <Localized
+          id="report-lot-shown"
+          vars={{ name: displayName({ name_ur: lot.ur, name_en: lot.en }, language) }}
+        >
+          <p className="type-body text-ink-muted" />
+        </Localized>
+      )}
+    </>
+  );
 }

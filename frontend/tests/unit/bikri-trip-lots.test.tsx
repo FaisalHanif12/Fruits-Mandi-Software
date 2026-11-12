@@ -406,18 +406,12 @@ describe.each(LANGUAGES)("today's trip goods in a new بکری (%s)", (language:
     await waitFor(() => {
       expect(textOf(lotsGrid(language), 0, 'seller')).toBe(ownName);
     });
-    // The truck fills the اڈا and the زمیندار; Enter goes through them and lands on the first buyer.
-    await user.keyboard('LES-1234{Enter}');
-    await waitFor(() => {
-      expect(
-        screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-      ).toHaveValue(language === 'ur' ? 'رحیم' : 'Rahim');
-    });
-    await user.keyboard('{Enter}{Enter}');
+    // The date has the cursor; Enter goes straight to the buyer of the first lot, which is ready.
+    await user.keyboard('{Enter}');
     await waitFor(() => {
       expect(focusedIn(salesGrid(language))).toBe('0:buyer');
     });
-    // The زمیندار did not take the trip lot: it is still اپنا مال and still has its goods.
+    // The lot is still اپنا مال and still has its goods.
     expect(textOf(lotsGrid(language), 0, 'seller')).toBe(ownName);
     expect(textOf(lotsGrid(language), 0, 'qty')).toBe('2');
     // Akram by his short code; the line starts with the goods left; the rate is typed.

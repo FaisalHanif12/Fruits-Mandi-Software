@@ -231,6 +231,10 @@ pub struct Turn {
     /// True when the question also asks a Laga (with a commission side): the total of both sides and
     /// Laga is never rewritten to one side's figure.
     pub commission_laga: bool,
+    /// The lot the question is about (plan 71 L9, PRD FR-7.77), as its key (`l7`): the only lot the
+    /// app found for a seller and an item the question names, or the one the Owner picked. The
+    /// model's own `report` calls of that seller and item are narrowed to it.
+    pub lot: Option<String>,
 }
 
 /// What a waiting question waits for.

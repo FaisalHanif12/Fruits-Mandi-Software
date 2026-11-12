@@ -197,9 +197,10 @@ describe.each(LANGUAGES)('Enter in a buyer cell of the sale lines (%s)', (langua
   });
 });
 
-// The same rule in the pickers of a form (the زمیندار of the header): the list closed with Esc
-// still leaves the text in the field, and Enter on it must resolve that text, not leave it behind.
-describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)', (language) => {
+// The same rule in the pickers of a form (the seller of the find box of the sale book, which the
+// header's زمیندار picker was before plan 71 took it away): the list closed with Esc still leaves
+// the text in the field, and Enter on it must resolve that text, not leave it behind.
+describe.each(LANGUAGES)('Enter in the seller picker of a form (%s)', (language) => {
   const KARIM = account(30, 'seller', '0011', 'کریم', 'Karim');
   const SELLERS = [KARIM, EHSAN];
 
@@ -208,7 +209,7 @@ describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)'
     signedIn(sessionUser({ language }));
   });
 
-  async function openHeader() {
+  async function openForm() {
     fakeBikri(umarAnswer);
     fakeAccounts([...SELLERS, ...EMPTY_TEXT_ORDER]);
     fakeAccountSearch([...SELLERS, ...EMPTY_TEXT_ORDER]);
@@ -222,13 +223,11 @@ describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)'
       await wait(ANSWER_MS);
       return quick(input);
     });
-    await renderApp('/bikri/book');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: message(language, 'glossary-bikri-book'),
-    });
+    await renderApp('/bikri/book?find=true');
     const user = userEvent.setup();
-    const zamindar = await combo(language, 'glossary-zamindar');
+    // The find box (F3, here asked for by the address) has a seller picker like the header's.
+    await screen.findByRole('dialog');
+    const zamindar = await combo(language, 'glossary-beopari');
     await user.click(zamindar);
     await waitFor(() => {
       expect(screen.queryAllByRole('option').length).toBe(SELLERS.length);
@@ -239,7 +238,7 @@ describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)'
   const EHSAN_NAME = language === 'ur' ? 'احسان' : 'Ehsan';
 
   it('text typed, the list closed with Esc, then Enter: the text is answered and picked, not dropped', async () => {
-    const { user, zamindar } = await openHeader();
+    const { user, zamindar } = await openForm();
     await user.keyboard('ehsan{Escape}');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
     await user.keyboard('{Enter}');
@@ -249,7 +248,7 @@ describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)'
   });
 
   it('text typed and Enter before the answer lands picks the match of that text, not the first row of the full list', async () => {
-    const { user, zamindar } = await openHeader();
+    const { user, zamindar } = await openForm();
     await user.keyboard('ehsan{Enter}');
     await waitFor(() => {
       expect(zamindar).toHaveValue(EHSAN_NAME);
@@ -257,7 +256,7 @@ describe.each(LANGUAGES)('Enter in the زمیندار picker of the header (%s)'
   });
 
   it('a letter typed and deleted, then Enter, picks nothing', async () => {
-    const { user, zamindar } = await openHeader();
+    const { user, zamindar } = await openForm();
     await user.keyboard('e{Backspace}{Enter}');
     expect(zamindar).toHaveValue('');
   });

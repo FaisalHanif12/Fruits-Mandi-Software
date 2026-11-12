@@ -308,14 +308,6 @@ const EXPECTED_FILES: &[&str] = &[
     "RuleLabel.ts",
     "RateHint.ts",
     "RateHintSource.ts",
-    "SplitFreightInput.ts",
-    "FreightLotInput.ts",
-    "FreightPart.ts",
-    "TruckMemoryInput.ts",
-    "TruckMemory.ts",
-    "TruckLast.ts",
-    "TruckSameDay.ts",
-    "TruckSuggestion.ts",
     "SellerMemoryInput.ts",
     "SellerMemory.ts",
     "LastRateInput.ts",
@@ -338,6 +330,7 @@ const EXPECTED_FILES: &[&str] = &[
     "MonthFigure.ts",
     "MonthSubtotal.ts",
     "BikriListRow.ts",
+    "LotName.ts",
     "BikriList.ts",
     "BikriListTotals.ts",
     "BikriFindInput.ts",
@@ -1059,10 +1052,6 @@ fn export_bindings() {
     vouchers::DayCloseSummary::export_all(&cfg).unwrap();
     bikri::BikriPreviewInput::export_all(&cfg).unwrap();
     bikri::BikriPreview::export_all(&cfg).unwrap();
-    bikri::SplitFreightInput::export_all(&cfg).unwrap();
-    bikri::FreightPart::export_all(&cfg).unwrap();
-    bikri::TruckMemoryInput::export_all(&cfg).unwrap();
-    bikri::TruckMemory::export_all(&cfg).unwrap();
     bikri::SellerMemoryInput::export_all(&cfg).unwrap();
     bikri::SellerMemory::export_all(&cfg).unwrap();
     bikri::LastRateInput::export_all(&cfg).unwrap();
@@ -1077,6 +1066,7 @@ fn export_bindings() {
     paging::MonthSubtotal::export_all(&cfg).unwrap();
     bikri::BikriListInput::export_all(&cfg).unwrap();
     bikri::BikriListRow::export_all(&cfg).unwrap();
+    bikri::LotName::export_all(&cfg).unwrap();
     bikri::BikriList::export_all(&cfg).unwrap();
     bikri::BikriListTotals::export_all(&cfg).unwrap();
     bikri::BikriFindInput::export_all(&cfg).unwrap();

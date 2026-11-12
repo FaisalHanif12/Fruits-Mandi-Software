@@ -124,7 +124,7 @@ describe('the sale lines of all lots as one list', () => {
   it('does not redraw for a change that is not in a line (a key in the header)', () => {
     const { stores } = twoLots();
     const before = stores.all.getState().rows;
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    stores.header.getState().patch({ entryDate: '11-10-2026' });
     expect(stores.all.getState().rows).toBe(before);
   });
 });

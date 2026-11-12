@@ -20,6 +20,14 @@ export type LotPreview = {
    */
   lot_no: number;
   /**
+   * The counter of the lot's name, with its seller and item: "احسان، آم-2" (PRD FR-12.45). For
+   * a saved lot of an edit or a later sale it is the number it has; for a new lot it is the
+   * number the lot will get when it is saved, worked out from the saved lots of its seller and
+   * item and the lots above it in this draft. Null while the seller or the item is not
+   * picked. The number shown here is the number the save writes.
+   */
+  lot_counter: number | null;
+  /**
    * The freight typed on the lot, even if the seller paid it.
    */
   freight: Paisa;

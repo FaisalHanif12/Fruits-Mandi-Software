@@ -21,6 +21,7 @@
 mod edit;
 mod grade;
 mod input;
+mod lot_name;
 mod prepare;
 mod prepared;
 mod preview;
@@ -32,7 +33,8 @@ mod tests;
 pub use edit::*;
 pub use grade::SaleGrade;
 pub use input::*;
-pub use prepare::{prepare_draft, split_freight};
+pub use lot_name::{LotOrderKey, lot_label, sort_lots};
+pub use prepare::prepare_draft;
 pub use prepared::*;
 pub use preview::*;
 pub use ready::*;

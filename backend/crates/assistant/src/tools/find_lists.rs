@@ -121,6 +121,7 @@ pub(super) fn run(
         Role::Staff => staff(env, query)?,
         Role::ExpenseHead => heads(env, query)?,
         Role::Truck => trucks(env, query)?,
+        Role::Lot => super::find_lots::lots(env, query)?,
         Role::Packing | Role::Marka | Role::Store | Role::Narration => {
             super::find_masters::list(env, role, query)?
         }

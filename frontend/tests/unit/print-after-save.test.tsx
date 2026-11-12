@@ -9,7 +9,7 @@ import { LANGUAGES } from '../../src/i18n';
 import * as draftsApi from '../../src/shared/drafts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import {
-  combo,
+  expectNewEmptyBook,
   openBook,
   salesGrid,
   textOf,
@@ -95,7 +95,7 @@ describe.each(LANGUAGES)('Ctrl+Enter prints after the save (%s)', (language) => 
     await waitFor(() => {
       expect(pageText()).toContain(message(language, 'print-toast-printed'));
     });
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('');
+    await expectNewEmptyBook(language);
   });
 
   it('on a Mac the message says the print window is open, not that it was sent to the printer (plan 69)', async () => {
@@ -159,7 +159,7 @@ describe.each(LANGUAGES)('Ctrl+Enter prints after the save (%s)', (language) => 
     expect(pageText()).toContain(message(language, 'bikri-saved-toast', { number: 1 }));
     expect(printing.prints).toHaveLength(0);
     // A new, empty بکری is ready, as after any save.
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('');
+    await expectNewEmptyBook(language);
   });
 
   it('F10 saves and does not print', async () => {

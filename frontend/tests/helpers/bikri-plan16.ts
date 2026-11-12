@@ -47,6 +47,9 @@ export function fakeEditReview(baseline: EditableBikri, draft: BikriDraft): Edit
       const place = {
         kind: 'line' as const,
         lot_no: lotIndex + 1,
+        lot_counter: null,
+        item_ur: null,
+        item_en: null,
         line_no: lineIndex + 1,
         label_ur: null,
         label_en: null,

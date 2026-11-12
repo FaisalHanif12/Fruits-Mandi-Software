@@ -13,7 +13,6 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { previewFor } from '../helpers/bikri-data';
 import { cellOf, lotsGrid, openBook, typeEvent1Lot } from '../helpers/bikri-screen';
-import * as bikriApi from '../../src/features/bikri/api';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -44,15 +43,6 @@ afterEach(() => {
   leaveAppWindow();
 });
 
-/** The backend's files have no اڈا and no filled fields: the truck has no memory. */
-function noTruckMemory() {
-  vi.mocked(bikriApi.assistTruckMemory).mockResolvedValue({
-    last: null,
-    same_day: null,
-    suggestions: [],
-  });
-}
-
 /** The preview of Event 1 with one more warning from the backend. */
 function withWarning(warning: FieldError) {
   return (draft: BikriDraft): BikriPreview => {
@@ -76,7 +66,6 @@ describe.each(LANGUAGES)('a charge already taken by an earlier lot (%s)', (langu
         values: { lot_no: 1, bikri_number: 0, entry: 3 },
       }),
     );
-    noTruckMemory();
     await typeEvent1Lot(user, language);
     await waitFor(() => {
       expect(cellOf(lotsGrid(language), 0, 'labour')).toHaveClass('cell-warn');
@@ -103,7 +92,6 @@ describe.each(LANGUAGES)('a charge already taken by an earlier lot (%s)', (langu
         values: { lot_no: 2, bikri_number: 12, entry: 3 },
       }),
     );
-    noTruckMemory();
     await typeEvent1Lot(user, language);
     await waitFor(() => {
       expect(cellOf(lotsGrid(language), 0, 'munshiana')).toHaveClass('cell-warn');

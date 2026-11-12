@@ -58,6 +58,8 @@ export interface ReportSearch {
   adda?: PickerValue;
   /** One collector, a staff member (R22, R23, R35). */
   collector?: PickerValue;
+  /** One lot (R2 to R6, R10, R27): the assistant's button opens a report on it (PRD FR-7.77, plan 71 L9). */
+  lot?: PickerValue;
   /** One kind of voucher (R15); `all` is the same as leaving it out. */
   voucher_type?: VoucherChoice;
   /** The group of the items, fruit or vegetables; `all` is the same as leaving it out. */
@@ -133,6 +135,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
   const city = readPicked(search['city']);
   const adda = readPicked(search['adda']);
   const collector = readPicked(search['collector']);
+  const lot = readPicked(search['lot']);
   // `all` is the same as leaving the kind out, so it is not carried.
   const voucherType = oneOf(VOUCHER_CHOICES, search['voucher_type']);
   const itemGroup = oneOf(ITEM_GROUP_CHOICES, search['item_group']);
@@ -160,6 +163,7 @@ export function parseReportSearch(search: Record<string, unknown>): ReportSearch
     ...(city === undefined ? {} : { city }),
     ...(adda === undefined ? {} : { adda }),
     ...(collector === undefined ? {} : { collector }),
+    ...(lot === undefined ? {} : { lot }),
     ...(voucherType === undefined || voucherType === 'all' ? {} : { voucher_type: voucherType }),
     ...(itemGroup === undefined || itemGroup === 'all' ? {} : { item_group: itemGroup }),
     ...(grade === undefined || grade === 'all' ? {} : { grade }),
@@ -196,6 +200,7 @@ export function stateFromSearch(search: ReportSearch): ReportFilterState {
     city: search.city ?? null,
     adda: search.adda ?? null,
     collector: search.collector ?? null,
+    lot: search.lot ?? null,
     voucherType: search.voucher_type ?? 'all',
     itemGroup: search.item_group ?? 'all',
     grade: search.grade ?? 'all',

@@ -1,5 +1,5 @@
 //! The Sales group of the report engine on the PRD worked day (plan 20 step B3, PRD 19.2,
-//! FR-13.6, FR-19.10, FR-19.11): R2, R3, R4, R6, R7, R8 and R27.
+//! FR-13.6, FR-19.10, FR-19.11): R2, R3, R4, R6, R7 and R27 (R8 is retired in v1.34).
 //!
 //! The data is made the way `golden_day.rs` makes it (Events 1 to 5 of PRD Section 4, through the
 //! real services; `reports_world`). The expected numbers are the PRD's: the three registers add
@@ -84,7 +84,6 @@ fn the_catalogue_lists_the_sales_and_the_other_groups_with_their_filters() {
             ReportId::R5,
             ReportId::R6,
             ReportId::R7,
-            ReportId::R8,
             ReportId::R10
         ]
     );
@@ -595,79 +594,6 @@ fn net_credit(w: &support::World, code: &str) -> i64 {
     b.amount_paisa.rupees()
 }
 
-// --- R8 ------------------------------------------------------------------------------------------
-
-#[test]
-fn r8_counts_the_trucks_lots_and_goods_of_each_adda() {
-    let w = full_day();
-    // The worked day has no اڈا on its headers: one row without a name, last.
-    let none = report(&w, ReportId::R8, ReportFilters::default(), 0, 0);
-    assert_eq!(none.total_count, 1);
-    assert_eq!(none.rows.first().unwrap().cells.first(), Some(&Cell::Empty));
-    // Give بکری 1 an اڈا (a plain update of the test data) and look again.
-    let conn = raw(&w.dir);
-    conn.execute(
-        "INSERT INTO addas (code, name_ur, name_en, search_ur, search_en, search_phonetic)
-         VALUES ('1', 'سوات اڈا', 'Swat Adda', 'swat', 'swat adda', 'swt')",
-        [],
-    )
-    .unwrap();
-    let adda = conn.last_insert_rowid();
-    conn.execute(
-        "UPDATE bikri_entries SET adda_id = ?1 WHERE number = 1",
-        [adda],
-    )
-    .unwrap();
-    drop(conn);
-    let page = report(&w, ReportId::R8, ReportFilters::default(), 0, 0);
-    assert_eq!(page.total_count, 2);
-    // adda, trucks, lots, qty, gross.
-    let swat = &page.rows.first().unwrap().cells;
-    assert_eq!(names_en(swat.first().unwrap()), "Swat Adda");
-    assert_eq!(
-        (
-            number(&swat[1]),
-            number(&swat[2]),
-            number(&swat[3]),
-            money(&swat[4])
-        ),
-        (1, 1, 50, 29_400)
-    );
-    let rest = &page.rows.get(1).unwrap().cells;
-    assert_eq!(rest.first(), Some(&Cell::Empty));
-    assert_eq!(
-        (
-            number(&rest[1]),
-            number(&rest[2]),
-            number(&rest[3]),
-            money(&rest[4])
-        ),
-        (1, 1, 10, 12_000)
-    );
-    assert_eq!(
-        (
-            number(page.totals.get(1).unwrap()),
-            number(page.totals.get(2).unwrap()),
-            number(page.totals.get(3).unwrap()),
-            money(page.totals.get(4).unwrap())
-        ),
-        (2, 2, 60, 41_400)
-    );
-    // The filter keeps one اڈا.
-    let only = report(
-        &w,
-        ReportId::R8,
-        ReportFilters {
-            adda_id: Some(adda),
-            ..ReportFilters::default()
-        },
-        0,
-        0,
-    );
-    assert_eq!(only.total_count, 1);
-    assert_eq!(only.totals.get(4).map(money), Some(29_400));
-}
-
 // --- Page, query plans and writes ----------------------------------------------------------------
 
 #[test]
@@ -736,7 +662,6 @@ fn a_sales_report_writes_nothing() {
         ReportId::R4,
         ReportId::R6,
         ReportId::R7,
-        ReportId::R8,
         ReportId::R27,
     ] {
         report(&w, id, ReportFilters::default(), 0, 0);
@@ -755,7 +680,6 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
         ReportId::R4,
         ReportId::R6,
         ReportId::R7,
-        ReportId::R8,
         ReportId::R27,
     ] {
         let page = report(&w, id, ReportFilters::default(), 0, 0);
@@ -866,10 +790,10 @@ fn every_sales_report_prints_every_row_in_both_languages_with_the_same_totals() 
 #[test]
 fn the_filters_a_sales_report_does_not_take_are_refused_together() {
     let w = full_day();
-    // R8 takes dates and اڈا only.
+    // R11 takes dates and a party only.
     let got = rejected(
         &w,
-        ReportId::R8,
+        ReportId::R11,
         ReportFilters {
             seller_id: Some(w.rahim),
             item_id: Some(w.banana),

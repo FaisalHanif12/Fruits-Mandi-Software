@@ -202,10 +202,9 @@ fn keys(w: &world::World, today: BusinessDate) -> HashMap<&'static str, String> 
             .unwrap_or_else(|| panic!("{name} is not in the books"));
         out.insert(name, hit.key.clone());
     }
-    for (name, question) in [
-        ("lahore", "lahore ki ugrahi"),
-        ("swat", "swat adda ki bikri pichle mahine"),
-    ] {
+    // An اڈا is not looked up any more (PRD v1.34, plan 71 H2): only the city is a record here.
+    let (name, question) = ("lahore", "lahore ki ugrahi");
+    {
         let u = understand(&r, question);
         let hit = u
             .records
@@ -430,7 +429,8 @@ const WORKED_DAY: &[(&str, &str)] = &[
     ("partner b ne sarmaya wapas liya tha ab kitna reh gaya", "NONE"),
     ("partner b ne kitna sarmaya lagaya", "NONE"),
     ("lahore ki ugrahi", "find{role:city,text:Lahore} | report{city:$lahore,id:R21}"),
-    ("swat adda ki bikri pichle mahine", "period{kind:last_month} | find{role:adda,text:Swat Adda} | report{adda:$swat,from:2026-09-01,id:R8,to:2026-09-30}"),
+    // R8 is retired in v1.34 (a new بکری has no اڈا): an اڈا is a name the app only detects.
+    ("swat adda ki bikri pichle mahine", "NONE"),
     // ---- lists and top N
     ("top 5 buyers", "period{kind:this_year} | analytics{from:2026-01-01,to:2026-10-10,view:H}"),
     ("top 3 sellers pichle mahine", "period{kind:last_month} | analytics{from:2026-09-01,to:2026-09-30,view:H}"),

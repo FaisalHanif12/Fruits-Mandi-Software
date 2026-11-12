@@ -618,6 +618,26 @@ describe.each(LANGUAGES)('the states that are not an answer (%s)', (language) =>
     expect(useAssistantStore.getState().entries).toHaveLength(1);
   });
 
+  // Plan 71 L9 (PRD FR-12.45): two lots of one seller and one item are told apart by the day each came and
+  // how many نگ it had, beside the lot's name, which is the option's name.
+  it('which one for a lot: the button shows the day it came and the نگ received', async () => {
+    await renderShellRouted();
+    const lots = real.REPLY_WHICH_ONE.options.map((option, index) => ({
+      ...option,
+      balance: null,
+      date: index === 0 ? '2026-10-10' : '2026-10-12',
+      qty: index === 0 ? 200 : 150,
+    }));
+    await ask(language, { ...real.REPLY_WHICH_ONE, options: lots }, 'ehsan ke 200 peti aam');
+    const panel = panelOf(language);
+    const buttons = within(panel).getAllByRole('button', { name: /0022|0020/ });
+    expect(buttons).toHaveLength(2);
+    expect(visible(buttons[0]?.textContent)).toContain('10-10-2026');
+    expect(visible(buttons[0]?.textContent)).toContain('200');
+    expect(visible(buttons[1]?.textContent)).toContain('12-10-2026');
+    expect(visible(buttons[1]?.textContent)).toContain('150');
+  });
+
   it.each(['seller', 'buyer', 'item', 'partner', 'garden', 'trip', 'any'] as const)(
     'not found as a %s: says that no such record has that name, in the role asked, with no list when there are no near names',
     async (role) => {

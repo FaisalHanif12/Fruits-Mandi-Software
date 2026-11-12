@@ -1165,17 +1165,7 @@ fn refusals_of_an_own_lot() {
         ErrorCode::ErrOwnLotFreightInCost,
         "lots[0].freight"
     ));
-    // As the زمیندار of the header, اپنا مال is refused.
-    let mut header = support::draft(vec![support::with_sales(
-        own_lot(&w, "own-1", purchase, "1"),
-        vec![support::sale("s-1", w.akram, "1", "600")],
-    )]);
-    header.header.zamindar_account_id = Some(support::id_of(&w.env, "030119998"));
-    assert!(support::has(
-        &support::preview(&w, &header).errors,
-        ErrorCode::ErrOwnGoodsAccountRestricted,
-        "header.zamindar_account_id"
-    ));
+    // (The header has no زمیندار from v1.34: a draft that still carries one has it ignored.)
     // As a buyer.
     let d = support::draft(vec![support::with_sales(
         own_lot(&w, "own-1", purchase, "1"),

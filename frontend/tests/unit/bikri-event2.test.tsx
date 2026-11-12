@@ -15,7 +15,14 @@ import * as accountApi from '../../src/shared/accounts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { IDS } from '../helpers/bikri-data';
 import { seedBikriDraft } from '../helpers/bikri-seed';
-import { cellOf, combo, focusedIn, named, openBook, salesGrid } from '../helpers/bikri-screen';
+import {
+  cellOf,
+  expectNewEmptyBook,
+  focusedIn,
+  named,
+  openBook,
+  salesGrid,
+} from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -155,7 +162,7 @@ describe.each(LANGUAGES)('Event 2 by keyboard (%s)', (language) => {
         message(language, 'bikri-saved-toast', { number: 1 }),
       );
     });
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('');
+    await expectNewEmptyBook(language);
   });
 
   it('adds a new چکتا buyer with the second add row: the short form saves him and the line takes him', async () => {

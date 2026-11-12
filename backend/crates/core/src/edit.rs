@@ -183,6 +183,17 @@ pub struct EditPlace {
     /// The lot number, for a lot, a charge or a line.
     #[ts(type = "number | null")]
     pub lot_no: Option<i64>,
+    /// The counter of the lot's name (PRD FR-12.45), for a lot, a charge or a line. With
+    /// `label_ur` and `label_en` (the seller) and `item_ur` and `item_en` it writes "احسان، آم-2".
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub lot_counter: Option<i64>,
+    /// The item of the lot, Urdu, for the lot name. Null when there is no lot.
+    #[serde(default)]
+    pub item_ur: Option<String>,
+    /// The item of the lot, English.
+    #[serde(default)]
+    pub item_en: Option<String>,
     /// The line number inside the posting, for a line.
     #[ts(type = "number | null")]
     pub line_no: Option<i64>,

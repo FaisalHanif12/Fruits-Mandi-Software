@@ -8,7 +8,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appApi from '../../src/app/api';
 import type { BikriDraft } from '../../src/bindings/BikriDraft';
-import * as bikriApi from '../../src/features/bikri/api';
 import * as settingsApi from '../../src/features/settings/api';
 import { LANGUAGES, type Language } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
@@ -23,6 +22,7 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -102,7 +102,9 @@ describe.each(LANGUAGES)('the four states (%s)', (language) => {
     const { user } = await openBook(language, (draft) =>
       failing ? Promise.reject(fail({ code: 'ERR_NOT_IMPLEMENTED' })) : previewFor(draft),
     );
-    await user.keyboard('LES-1234');
+    // Typing begins with the seller of the first lot: the date alone is not typed work.
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     expect(
       // The preview waits 50 ms after the last key and the full suite loads the machine, so this
       // waits longer than the default for the real condition: the words on screen.
@@ -489,32 +491,6 @@ describe.each(LANGUAGES)('lots, the one-time buyer and the freight split (%s)', 
       });
     });
   });
-
-  it('"split" puts the backend’s part of the total freight into the freight cell of the lot', async () => {
-    const { user } = await openBook(language);
-    vi.mocked(bikriApi.bikriSplitFreight).mockImplementation((_total, lots) =>
-      Promise.resolve(lots.map((lot) => ({ key: lot.key, freight_paisa: money(4000) }))),
-    );
-    await typeHeaderAndLot(user, language);
-    // The total freight is behind "More" in the header (plan 38, sale book).
-    await user.click(
-      screen.getByRole('button', { name: named(message(language, 'bikri-header-more')) }),
-    );
-    const total = await screen.findByRole('textbox', {
-      name: named(message(language, 'bikri-header-total-freight')),
-    });
-    await user.click(total);
-    await user.keyboard('4000');
-    await user.click(
-      screen.getByRole('button', { name: named(message(language, 'bikri-header-split-freight')) }),
-    );
-    await waitFor(() => {
-      expect(bikriApi.bikriSplitFreight).toHaveBeenCalledWith('4000', expect.any(Array));
-    });
-    await waitFor(() => {
-      expect(textOf(lotsGrid(language), 0, 'freight')).toMatch(/^4,?000$/);
-    });
-  });
 });
 
 describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (language) => {
@@ -546,9 +522,6 @@ describe.each(LANGUAGES)('a language switch in the middle of an entry (%s)', (la
     });
     expect(textOf(salesGrid(next), 0, 'buyer')).toBe(names(next).akram);
     expect(textOf(lotsGrid(next), 0, 'item')).toBe(names(next).banana);
-    expect(
-      screen.getByRole('combobox', { name: named(message(next, 'glossary-zamindar')) }),
-    ).toHaveValue(names(next).rahim);
     // Nothing typed was lost, and the numbers are the same.
     expect(textOf(lotsGrid(next), 0, 'qty')).toBe('50');
     expect(textOf(salesGrid(next), 0, 'qty')).toBe('20');

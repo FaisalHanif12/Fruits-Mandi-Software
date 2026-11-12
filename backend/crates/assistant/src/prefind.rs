@@ -327,6 +327,50 @@ pub fn plain_lookup(question: &str, numbers_empty: bool) -> bool {
         && !cues::tile_question(question)
 }
 
+/// Words a lot's name may be written with besides the seller's and the item's words: the small words
+/// of the sentence, the packing word and the word for a lot (plan 71 L9). A number is also allowed
+/// (a quantity, or the counter of the lot).
+const LOT_FILLER: &[&str] = &[
+    "ke", "ka", "ki", "ko", "se", "ne", "me", "men", "mein", "of", "the", "lot", "lots", "peti",
+    "petiyan", "nag", "box", "boxes", "wala", "wale", "wali", "کے", "کا", "کی", "کو", "سے", "میں",
+    "لاٹ", "پیٹی",
+];
+
+/// True when the question may be nothing but a lot's name (plan 71 L9, PRD FR-12.45, FR-7.77): the
+/// words of a seller and an item (two to five words that may be names), the counter or a quantity,
+/// and the small words of the sentence, and no cue word of another question (a figure, a period, a
+/// tile, a how-to). "ehsan ke aam", "ehsan ke 200 peti aam" and "ehsan aam-2" are; "ehsan ke aam ki
+/// bikri kitni hui" is not (it names a seller and an item among other words, which
+/// `tools::find_lots::named_in` reads, so it asks which lot just the same).
+///
+/// Example: "ehsan-2 ke aam" is a lot's name; "akram ka khata" is not.
+pub fn lot_name_only(question: &str) -> bool {
+    if help_guard::is_how_to(question, &[])
+        || cues::period_kind(question).is_some()
+        || cues::tile_question(question)
+    {
+        return false;
+    }
+    let mut candidates = 0_usize;
+    for w in words(question) {
+        let numeric = w.chars().all(char::is_numeric);
+        let filler = LOT_FILLER
+            .iter()
+            .any(|f| text::search_ur(&text::search_en(f)) == w);
+        if numeric || filler {
+            continue;
+        }
+        let cue = NOT_A_NAME
+            .iter()
+            .any(|n| text::search_ur(&text::search_en(n)) == w);
+        if cue || w.chars().count() < 3 {
+            return false;
+        }
+        candidates = candidates.saturating_add(1);
+    }
+    (2..=MAX_WORDS).contains(&candidates)
+}
+
 /// The results the model's answer cites: the first part of every reference in its text, and the
 /// results it asks to show. `{{r2.balance}}` cites `r2`.
 ///
@@ -457,6 +501,32 @@ mod tests {
         assert_eq!(name_words("akram akram ka khata dikhao"), ["akram"]);
         assert!(name_words("kitna cash hai aaj").is_empty());
         assert!(name_words("akram 123").iter().all(|w| w == "akram"));
+    }
+
+    #[test]
+    fn a_lot_name_is_a_seller_and_an_item_with_a_counter_or_a_quantity_and_nothing_else() {
+        for yes in [
+            "ehsan ke aam",
+            "ehsan ke 200 peti aam",
+            "ehsan aam-2",
+            "ehsan-2 ke aam",
+            "احسان کے آم",
+        ] {
+            assert!(lot_name_only(yes), "{yes}");
+        }
+        for no in [
+            // One name: a party, not a lot.
+            "ehsan",
+            // A figure, a period, a tile and a how-to are other questions.
+            "ehsan ke aam ki bikri kitni hui",
+            "ehsan ke aam is mahine",
+            "ehsan ke aam kaise likhun",
+            "akram ka khata",
+            // Too many words.
+            "ehsan ke aam kele seb angoor anar",
+        ] {
+            assert!(!lot_name_only(no), "{no}");
+        }
     }
 
     #[test]

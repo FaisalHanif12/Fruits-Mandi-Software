@@ -13,10 +13,10 @@ use mandi_db::migrate::{
     self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIME_LIMIT_SQL, ASSISTANT_TIMING_SQL,
     BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, CHUKTA_KHATA_SQL,
     DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
-    MigrationOutcome, ONE_TIME_PARTY_MARK_SQL, PARTS_ARE_SOFT_STATE_SQL, SALE_GRADE_SQL,
-    SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL, STABLE_POSTING_ORDER_SQL,
-    SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
-    chukta_hook,
+    MigrationOutcome, ONE_TIME_PARTY_MARK_SQL, PAID_ON_THE_SPOT_SQL, PARTS_ARE_SOFT_STATE_SQL,
+    SALE_GRADE_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL,
+    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
+    TRIPS_GARDENS_FRUIT_KHATA_SQL, chukta_hook,
 };
 use mandi_db::rusqlite::Connection;
 use mandi_db::{DbError, seed};
@@ -24,7 +24,7 @@ use rusqlite_migration::{HookError, M, Migrations};
 use tempfile::tempdir;
 
 /// The schema version of the newest migration (`migrate::migrations()`).
-const LATEST: usize = 21;
+const LATEST: usize = 22;
 
 fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
@@ -349,6 +349,18 @@ fn released_version_20() -> Migrations<'static> {
     Migrations::new(all)
 }
 
+/// The file as released with migration 21 (money paid on the spot).
+fn released_version_21() -> Migrations<'static> {
+    let mut all = version_15_list();
+    all.push(M::up(SPEED_INDEXES_SQL));
+    all.push(M::up(ASSISTANT_TIMING_SQL));
+    all.push(M::up(ASSISTANT_TIME_LIMIT_SQL));
+    all.push(M::up(SALE_GRADE_SQL));
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    all.push(M::up(PAID_ON_THE_SPOT_SQL));
+    Migrations::new(all)
+}
+
 /// The ledger code of today names the person column `chukta_person_key` (migration 20). A file of an
 /// older version still calls it `pukhta_person_key`. This runs `work` with the column under its new
 /// name and puts the old name back after, so the released schema is what the test goes on to compare
@@ -659,10 +671,10 @@ fn a_file_from_a_newer_app_is_refused_untouched() {
     let backups = dir.path().join("backups");
     let mut conn = connection(&dir.path().join("mandi.db"));
     migrate::migrate(&mut conn, &backups, &clock()).unwrap();
-    conn.pragma_update(None, "user_version", 22).unwrap();
+    conn.pragma_update(None, "user_version", 23).unwrap();
     let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
     assert_eq!(error.code(), ErrorCode::ErrMigrationFailed);
-    assert_eq!(user_version(&conn), 22);
+    assert_eq!(user_version(&conn), 23);
     assert!(!backups.exists());
 }
 
@@ -4161,7 +4173,8 @@ fn migration_21_gives_old_lines_the_paid_amount_they_had_and_touches_no_number_r
     let rows_before = untouched(&conn);
     let balances_before = balances(&conn);
 
-    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (20, 21));
     assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
     assert_eq!(user_version(&conn), 21);
@@ -4237,4 +4250,256 @@ fn migration_21_gives_old_lines_the_paid_amount_they_had_and_touches_no_number_r
         error.to_string().contains("CHECK constraint failed"),
         "{error}"
     );
+}
+
+#[test]
+fn migration_22_numbers_old_lots_by_seller_item_first_posting_day_then_id_and_touches_nothing_else()
+{
+    // Plan 71 (PRD FR-12.45, E2E-70, L2, L5, L6). A file at version 21 holds lots of one seller and one
+    // item on several days, in one بکری that was cancelled, and lots of another item and another
+    // seller. It is upgraded: a copy is taken first, each lot gets its counter in the order of the day
+    // of its بکری and then its id, `lot_counters` holds the biggest number of each seller and item, and
+    // not one amount, row value or chain hash moves.
+    let dir = tempdir().unwrap();
+    let backups = dir.path().join("backups");
+    let mut conn = connection(&dir.path().join("mandi.db"));
+    migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap();
+    assert_eq!(user_version(&conn), 21);
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM pragma_table_info('bikri_lots') WHERE name = 'lot_counter'"
+        ),
+        0,
+        "the column is new in migration 22"
+    );
+    let f = common::fixture(&conn);
+    let one = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+    let packing = one("SELECT id FROM packings LIMIT 1");
+    conn.execute_batch(
+        "INSERT INTO items (code, name_ur, name_en, search_ur, search_en, search_phonetic, item_group)
+         VALUES ('2', 'آم', 'Mango', 'آم', 'mango', 'mn', 'fruit')",
+    )
+    .unwrap();
+    let mango = one("SELECT id FROM items WHERE code = '2'");
+    conn.execute(
+        "INSERT INTO accounts (control_id, code, serial, party_type, name_ur, name_en, search_ur, search_en, search_phonetic)
+         VALUES ((SELECT id FROM account_controls WHERE code = '03011'), '0011', 2, 'seller', 'کریم', 'Karim', 'کریم', 'karim', 'krm')",
+        [],
+    )
+    .unwrap();
+    let karim = one("SELECT id FROM accounts WHERE code = '0011'");
+    // (number, day, status): بکری 1 is the fixture's (2026-10-10).
+    for (number, day, status) in [
+        (2_i64, "2026-10-09", "saved"),
+        (3, "2026-10-10", "saved"),
+        (4, "2026-10-12", "cancelled"),
+    ] {
+        conn.execute(
+            "INSERT INTO bikri_entries (number, entry_date, bill_date, status, cancel_reason)
+             VALUES (?1, ?2, ?2, ?3, CASE WHEN ?3 = 'cancelled' THEN 'wrong' END)",
+            mandi_db::rusqlite::params![number, day, status],
+        )
+        .unwrap();
+    }
+    let entry_of = |number: i64| -> i64 {
+        conn.query_row(
+            "SELECT id FROM bikri_entries WHERE number = ?1",
+            [number],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    let add_lot = |number: i64, seller: i64, item: i64| -> i64 {
+        conn.execute(
+            "INSERT INTO bikri_lots (bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received)
+             VALUES (?1, (SELECT COALESCE(MAX(lot_no), 0) + 1 FROM bikri_lots WHERE bikri_id = ?1), ?2, ?3, ?4, 10)",
+            mandi_db::rusqlite::params![entry_of(number), seller, item, packing],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    };
+    // Inserted out of day order on purpose: ids do not follow the days.
+    let later_same_day = add_lot(3, f.seller, f.item); // 2026-10-10, after the fixture's lot (same day)
+    let earlier_day = add_lot(2, f.seller, f.item); // 2026-10-09: the first mango... banana of Rahim
+    let cancelled_one = add_lot(4, f.seller, f.item); // a cancelled بکری: still numbered, never freed
+    let rahim_mango = add_lot(3, f.seller, mango);
+    let karim_banana = add_lot(2, karim, f.item);
+    let entry3 = entry_of(3);
+    // The chain, the balances and every row, before.
+    legacy_post(
+        &conn,
+        Some(f.entry),
+        "2026-10-10",
+        "0020",
+        "04010001",
+        12_880,
+    );
+    verify_chain(&conn).unwrap();
+    let hashes = |conn: &Connection| -> Vec<(i64, String)> {
+        conn.prepare(
+            "SELECT id, chain_hash FROM journal_entries WHERE status = 'posted' ORDER BY id",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+    };
+    let before_hashes = hashes(&conn);
+    let rows_before = all_rows(&conn);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (21, 22));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), 22);
+
+    // E2E-70: Rahim's banana lots in the order of the day of their بکری, then id.
+    let counter = |lot: i64| -> i64 {
+        conn.query_row(
+            "SELECT lot_counter FROM bikri_lots WHERE id = ?1",
+            [lot],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(counter(earlier_day), 1, "10-10-09 is the first");
+    assert_eq!(
+        counter(f.lot),
+        2,
+        "the fixture's lot, 10-10-10, the smaller id"
+    );
+    assert_eq!(counter(later_same_day), 3, "the same day, the bigger id");
+    assert_eq!(
+        counter(cancelled_one),
+        4,
+        "a cancelled بکری's lot is numbered too"
+    );
+    assert_eq!(counter(rahim_mango), 1, "another item starts at 1");
+    assert_eq!(counter(karim_banana), 1, "another seller starts at 1");
+    // The biggest number ever given to each seller and item.
+    let counters: Vec<(i64, i64, i64)> = conn
+        .prepare("SELECT seller_account_id, item_id, last_counter FROM lot_counters ORDER BY seller_account_id, item_id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    assert_eq!(
+        counters,
+        vec![
+            (f.seller, f.item, 4),
+            (f.seller, mango, 1),
+            (karim, f.item, 1)
+        ]
+    );
+
+    // No number, row value or chain hash moved. `bikri_lots` gained a column and the new table is new.
+    assert_eq!(
+        hashes(&conn),
+        before_hashes,
+        "every chain hash is as it was"
+    );
+    verify_chain(&conn).unwrap();
+    let skip = [("bikri_lots", "lot_counter")];
+    let after: Vec<(String, String)> = all_rows_without(&conn, &skip)
+        .into_iter()
+        .filter(|(table, _)| table != "lot_counters")
+        .collect();
+    assert_eq!(
+        after, rows_before,
+        "every other row and column is as it was"
+    );
+
+    // The triggers (L2, L5). A new lot carries a number above every number ever given.
+    let insert = |counter: i64| {
+        conn.execute(
+            "INSERT INTO bikri_lots (bikri_id, lot_no, seller_account_id, item_id, packing_id, qty_received, lot_counter)
+             VALUES (?1, (SELECT COALESCE(MAX(lot_no), 0) + 1 FROM bikri_lots WHERE bikri_id = ?1), ?2, ?3, ?4, 10, ?5)",
+            mandi_db::rusqlite::params![entry3, f.seller, f.item, packing, counter],
+        )
+    };
+    let error = insert(4).unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    let error = insert(2).unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    insert(5).unwrap();
+    let fifth = conn.last_insert_rowid();
+    // An insert that forgets the number gets the next one by itself.
+    insert(0).unwrap();
+    let sixth = conn.last_insert_rowid();
+    assert_eq!(counter(sixth), 6);
+    assert_eq!(
+        count(
+            &conn,
+            &format!(
+                "SELECT last_counter FROM lot_counters WHERE seller_account_id = {} AND item_id = {}",
+                f.seller, f.item
+            )
+        ),
+        6
+    );
+    // The counter of a saved lot is final while its seller and item stay.
+    let error = conn
+        .execute(
+            "UPDATE bikri_lots SET lot_counter = 9 WHERE id = ?1",
+            [fifth],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    // A move to another seller takes a number above every number ever given to the new seller and
+    // item (Karim's banana lot has 1) ...
+    let error = conn
+        .execute(
+            "UPDATE bikri_lots SET seller_account_id = ?2, lot_counter = 1 WHERE id = ?1",
+            [fifth, karim],
+        )
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("ERR_LOT_COUNTER_USED"),
+        "{error}"
+    );
+    // ... and then it takes it. The old number stays unused: Rahim's banana count still says 6.
+    conn.execute(
+        "UPDATE bikri_lots SET seller_account_id = ?2, lot_counter = 2 WHERE id = ?1",
+        [fifth, karim],
+    )
+    .unwrap();
+    assert_eq!(counter(fifth), 2);
+    let after_move = |seller: i64, item: i64| -> i64 {
+        conn.query_row(
+            "SELECT last_counter FROM lot_counters WHERE seller_account_id = ?1 AND item_id = ?2",
+            [seller, item],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(
+        after_move(f.seller, f.item),
+        6,
+        "Rahim's numbers are never given back"
+    );
+    assert_eq!(after_move(karim, f.item), 2);
+    insert(0).unwrap();
+    assert_eq!(
+        counter(conn.last_insert_rowid()),
+        7,
+        "number 5 is not used again"
+    );
+    // lot_counters itself only goes up and is never deleted from.
+    let error = conn.execute("DELETE FROM lot_counters", []).unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
+    let error = conn
+        .execute(
+            "UPDATE lot_counters SET last_counter = 1 WHERE last_counter > 1",
+            [],
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("ERR_APPEND_ONLY"), "{error}");
 }

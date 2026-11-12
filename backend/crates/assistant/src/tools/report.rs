@@ -144,6 +144,12 @@ pub struct Input {
     /// A زمیندار (R2 to R5, R6, R27).
     #[serde(default)]
     pub zamindar: Option<String>,
+    /// A lot of the seller and the item named, as its key (`l7`). Only the app sets it, for the lot
+    /// the Owner picked (plan 71 L9, PRD FR-12.45, FR-7.77); the schema the model reads has no such
+    /// field. It narrows the report to that lot, and is left out when the report is not of that
+    /// seller and item.
+    #[serde(default)]
+    pub lot: Option<String>,
     /// `paid` or `due` (R38).
     #[serde(default)]
     pub status: Option<String>,
@@ -346,6 +352,7 @@ fn build_filters(
             layout: input.layout.as_deref(),
             item_group: input.item_group.as_deref(),
             grade: input.grade.as_deref(),
+            lot: input.lot.as_deref(),
         },
         takes,
         &mut filters,
@@ -361,11 +368,18 @@ fn build_filters(
         filters.group_by = Some(group);
         source.group_by = Some(group);
     }
+    // The lot the Owner picked narrowed this report (plan 71 L9): the model is told, so it says
+    // the figures are of that lot.
+    let notes = source
+        .lot
+        .iter()
+        .map(|lot| format!("only the lot the Owner chose is read: {}", lot.name_en))
+        .collect();
     Ok(Built {
         filters,
         source,
         party: party_record,
-        notes: Vec::new(),
+        notes,
         ranked: false,
     })
 }

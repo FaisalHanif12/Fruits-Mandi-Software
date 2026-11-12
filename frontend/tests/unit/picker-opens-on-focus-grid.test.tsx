@@ -21,15 +21,15 @@ import {
   cellOf,
   focusedIn,
   lotsGrid,
-  named,
   names,
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
 } from '../helpers/bikri-screen';
 import { EMPTY_PAIRS } from '../helpers/paged';
-import { message, visible } from '../helpers/render';
+import { visible } from '../helpers/render';
 
 vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
@@ -72,18 +72,25 @@ describe.each(LANGUAGES)('picker cells of the lots and sale lines (%s)', (langua
 
   it('Enter onto the lot seller opens its list, with his name highlighted; Enter keeps him and the item list opens next', async () => {
     const { user } = await openBook(language);
-    await user.keyboard('LES-1234{Enter}');
-    await waitFor(() => {
-      expect(
-        screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-      ).toHaveValue(names(language).rahim);
-    });
-    await user.keyboard('{Enter}{Enter}');
+    // The date has the cursor; Enter goes to the seller of the first lot, whose list opens at once.
+    await user.keyboard('{Enter}');
     const lots = lotsGrid(language);
     await waitFor(() => {
       expect(focusedIn(lots)).toBe('0:seller');
     });
-    // The list is open at once, and the seller the lot already has is the highlighted row.
+    await waitFor(() => {
+      expect(options().length).toBeGreaterThan(0);
+    });
+    // The seller is typed as his short code, and the cursor goes on to the item.
+    await typeCodeAndEnter(user, '0');
+    await waitFor(() => {
+      expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
+    });
+    // Back on the seller, the list is open at once, and the seller the lot has is the highlighted row.
+    await user.click(cellOf(lots, 0, 'seller'));
+    await waitFor(() => {
+      expect(focusedIn(lots)).toBe('0:seller');
+    });
     await waitFor(() => {
       expect(options().length).toBeGreaterThan(0);
     });

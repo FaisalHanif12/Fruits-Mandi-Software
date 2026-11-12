@@ -8,7 +8,7 @@ import type { ChangeValue } from '../../bindings/ChangeValue';
 import type { EditPlace } from '../../bindings/EditPlace';
 import { formatBps, formatGrams, formatPaisa, isoToDisplayDate, type Grouping } from '../format';
 import type { Language } from '../../i18n';
-import { displayName } from '../i18n';
+import { displayName, lotNameText } from '../i18n';
 
 /** What the words of a value need: the messages, the language and the number grouping. */
 export interface ValueContext {
@@ -74,6 +74,19 @@ export function auditValueText(value: AuditValue, ctx: ValueContext): string {
   }
 }
 
+/** The name of the lot of a place: the seller (its label), the item and the counter, or ''. */
+function lotNameOfPlace(place: EditPlace, ctx: ValueContext): string {
+  if (place.lot_counter === null || place.item_ur === null || place.item_en === null) return '';
+  if (place.label_ur === null || place.label_en === null) return '';
+  return lotNameText(
+    ctx.l10n,
+    ctx.language,
+    { name_ur: place.label_ur, name_en: place.label_en },
+    { name_ur: place.item_ur, name_en: place.item_en },
+    place.lot_counter,
+  );
+}
+
 /** The place of a change as the start of a sentence: "Lot 1, line 2 (Akram Toll Tax):" or ''. */
 export function placeText(place: EditPlace, ctx: ValueContext): string {
   const named =
@@ -87,8 +100,12 @@ export function placeText(place: EditPlace, ctx: ValueContext): string {
       return '';
     case 'header':
       return `${ctx.l10n.getString('edit-review-where-header')} `;
-    case 'lot':
-      return `${ctx.l10n.getString('edit-review-where-lot', { lot })} `;
+    case 'lot': {
+      // The lot's name with its counter, "Ehsan, Mango-2" (PRD FR-12.45), when the backend gave the
+      // seller, the item and the counter; else the number alone.
+      const name = lotNameOfPlace(place, ctx);
+      return `${ctx.l10n.getString('edit-review-where-lot', { lot, name: name === '' ? '' : ` (${name})` })} `;
+    }
     case 'line':
       return `${ctx.l10n.getString('edit-review-where-line', {
         lot,

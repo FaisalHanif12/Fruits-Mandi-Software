@@ -111,4 +111,8 @@ export type ReportResolvedFilters = {
    * The quality picked (R2, R3, R4).
    */
   grade?: SaleGrade;
+  /**
+   * The lot picked (R2 to R6, R10, R27): its name, seller and item with its counter.
+   */
+  lot?: ReportNames;
 };

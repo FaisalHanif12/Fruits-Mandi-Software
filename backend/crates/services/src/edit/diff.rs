@@ -89,6 +89,9 @@ fn entry_place() -> EditPlace {
     EditPlace {
         kind: EditPlaceKind::Entry,
         lot_no: None,
+        lot_counter: None,
+        item_ur: None,
+        item_en: None,
         line_no: None,
         label_ur: None,
         label_en: None,
@@ -141,6 +144,9 @@ fn diff_into(
                     let part = EditPlace {
                         kind: EditPlaceKind::Part,
                         lot_no: None,
+                        lot_counter: None,
+                        item_ur: None,
+                        item_en: None,
                         line_no: i64::try_from(i + 1).ok(),
                         label_ur: ur,
                         label_en: en,

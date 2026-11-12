@@ -2,9 +2,7 @@
 //! (Code Standards B29).
 
 use mandi_services::core::accounts::{PartyCard, PartyCardInput};
-use mandi_services::core::bikri::{
-    LastRateInput, RateHint, SellerMemory, SellerMemoryInput, TruckMemory, TruckMemoryInput,
-};
+use mandi_services::core::bikri::{LastRateInput, RateHint, SellerMemory, SellerMemoryInput};
 use mandi_services::core::vouchers::{
     AdvancesInfo, AssistAdvancesInput, CollectionList, CollectionListInput, OpenBills,
     OpenBillsInput, OpenPayables, OpenPayablesInput,
@@ -44,21 +42,6 @@ pub async fn assist_advances<R: tauri::Runtime>(
     run(app, "assist_advances", move |ctx| {
         auth::require(ctx)?;
         assist::advances(ctx, input.seller_id)
-    })
-    .await
-}
-
-/// What the app remembers about a truck number: its last بکری (to fill اڈا, زمیندار and driver),
-/// a بکری of it on the posting day (the same-truck notice), and truck numbers that start with the
-/// typed text (PRD FR-7.49, FR-7.50). Read only. Errors: the date codes on `date`.
-#[tauri::command]
-pub async fn assist_truck_memory<R: tauri::Runtime>(
-    app: tauri::AppHandle<R>,
-    input: TruckMemoryInput,
-) -> Result<TruckMemory, UiError> {
-    run(app, "assist_truck_memory", move |ctx| {
-        auth::require(ctx)?;
-        assist::truck_memory(ctx, &input)
     })
     .await
 }

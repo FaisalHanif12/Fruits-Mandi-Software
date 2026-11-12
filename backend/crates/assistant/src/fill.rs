@@ -759,6 +759,15 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
                 _ => (None, false),
             };
             let dead = matches!(m.get(&["dead"]), Some(Node::Bool(true)));
+            // A lot (plan 71 L9): the day it came and the quantity received.
+            let date = match m.get(&["date"]) {
+                Some(Node::Val(Val::Date(d))) => Some(d.clone()),
+                _ => None,
+            };
+            let qty = match m.get(&["qty_received"]) {
+                Some(Node::Val(Val::Count(n))) => Some(*n),
+                _ => None,
+            };
             Some(AnswerOption {
                 key,
                 name,
@@ -766,6 +775,8 @@ pub fn options_of(state: &State, find_id: &str) -> Vec<AnswerOption> {
                 balance,
                 checked,
                 dead,
+                date,
+                qty,
             })
         })
         .collect()

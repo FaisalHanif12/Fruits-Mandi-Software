@@ -13,18 +13,20 @@
 //! Example (E2E-1): رحیم's lot of بکری 1 reads خام 29,400, کرایہ 3,000, کمیشن 1,764, مزدوری 250,
 //! منشیانہ 50, نقد 5,000, فون 20, کل اخراجات 10,084, صافی 19,316.
 
+use mandi_core::auth::Language;
+use mandi_core::bikri::{LotOrderKey, lot_label, sort_lots};
 use mandi_db::rusqlite::types::Value;
 use mandi_db::rusqlite::{Connection, params_from_iter};
 
 use super::super::PageSpec;
 use crate::error::ReportsError;
 use crate::reports::common::{
-    Conds, chukta_party, col, load_parties, names_cell, paisa, party_of_line,
+    Conds, chukta_party, col, load_parties, lot_names, names_cell, paisa, party_of_line,
 };
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
-    Cell, ColumnKind, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
+    Cell, ColumnKind, Names, ReportId, ReportPage, Row, RowKind, RowSource, SourceKind,
 };
 
 /// The conditions of R6 and R27, with only the filters that are set (Code Standards B18).
@@ -37,6 +39,8 @@ fn conds(typed: &Typed) -> Conds {
         .id("b.id = ?", typed.bikri_id)
         .id("b.zamindar_account_id = ?", typed.zamindar_id)
         .id("l.item_id = ?", typed.item_id)
+        // One lot (PRD FR-12.45).
+        .id("l.id = ?", typed.lot_id)
         // All the items of a group (PRD v1.29; R27 only: R6 never has one).
         .item_group("l.item_id", typed.item_group)
         .id("b.adda_id = ?", typed.adda_id);
@@ -51,7 +55,7 @@ pub(crate) fn r6_page_query(typed: &Typed, limit: i64, offset: i64) -> (String, 
             l.chukta_name_ur, l.chukta_name_en, i.name_ur, i.name_en, l.qty_sold, l.gross_paisa,
             CASE WHEN l.freight_paid_by = 'firm' THEN l.freight_paisa ELSE 0 END,
             l.seller_comm_paisa, l.labour_paisa, l.munshiana_paisa, l.cash_paid_paisa,
-            l.store_rent_paisa, l.phone_paisa, l.deductions_paisa, l.net_paisa
+            l.store_rent_paisa, l.phone_paisa, l.deductions_paisa, l.net_paisa, l.lot_counter
          FROM bikri_entries b
          JOIN bikri_lots l ON l.bikri_id = b.id
          JOIN items i ON i.id = l.item_id
@@ -138,6 +142,8 @@ struct LotRow {
     item_en: String,
     qty_sold: i64,
     amounts: [i64; 10],
+    /// The counter of the lot's name (PRD FR-12.45).
+    lot_counter: i64,
 }
 
 /// Builds R6, one row for each lot.
@@ -202,6 +208,7 @@ fn run_lots(
                 item_en: r.get(8)?,
                 qty_sold: r.get(9)?,
                 amounts,
+                lot_counter: r.get(20)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -225,7 +232,10 @@ fn run_lots(
                 number: Some(lot.number),
             },
             Cell::Party { party },
-            names_cell(Some(lot.item_ur), Some(lot.item_en)),
+            // The item with the lot's counter: next to the seller it is the lot's name (PRD FR-12.45).
+            Cell::Names {
+                names: lot_names(&lot.item_ur, &lot.item_en, lot.lot_counter),
+            },
             Cell::Number {
                 value: lot.qty_sold,
             },
@@ -290,6 +300,75 @@ fn run_lots(
     })
 }
 
+/// The names of the lots of each seller bill on a page of R27 (PRD FR-12.45): for each (بکری,
+/// seller, person) the lots with the filter's own conditions (so under a Group filter only that
+/// group's lots, PRD v1.31), sorted by item in Urdu order and then by counter (PRD FR-12.12), as one
+/// text in each script.
+fn r27_lot_names(
+    conn: &Connection,
+    typed: &Typed,
+    bills: &[BillRow],
+) -> Result<std::collections::HashMap<(i64, i64, String), Names>, ReportsError> {
+    let mut out = std::collections::HashMap::new();
+    if bills.is_empty() {
+        return Ok(out);
+    }
+    let mut ids: Vec<i64> = bills.iter().map(|b| b.bikri_id).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut c = conds(typed);
+    c.in_list("b.id", &ids);
+    let sql = format!(
+        "SELECT b.id, l.seller_account_id, COALESCE(l.chukta_person_key, ''), i.name_ur, i.name_en,
+                l.lot_counter
+         FROM bikri_entries b
+         JOIN bikri_lots l ON l.bikri_id = b.id
+         JOIN items i ON i.id = l.item_id
+         WHERE {}",
+        c.sql()
+    );
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement
+        .query_map(params_from_iter(c.args().iter()), |r| {
+            Ok((
+                (
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, String>(2)?,
+                ),
+                (
+                    r.get::<_, String>(3)?,
+                    r.get::<_, String>(4)?,
+                    r.get::<_, i64>(5)?,
+                ),
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    // The lots of each bill: (item in Urdu, item in English, counter).
+    type BillLots = Vec<(String, String, i64)>;
+    let mut grouped: std::collections::HashMap<(i64, i64, String), BillLots> =
+        std::collections::HashMap::new();
+    for (key, lot) in rows {
+        grouped.entry(key).or_default().push(lot);
+    }
+    for (key, mut lots) in grouped {
+        sort_lots(&mut lots, Language::Ur, |l| LotOrderKey {
+            item_ur: &l.0,
+            item_en: &l.1,
+            counter: l.2,
+        });
+        let join = |names: Vec<String>, sep: &str| names.join(sep);
+        out.insert(
+            key,
+            Names {
+                ur: join(lots.iter().map(|l| lot_label(&l.0, l.2)).collect(), "، "),
+                en: join(lots.iter().map(|l| lot_label(&l.1, l.2)).collect(), ", "),
+            },
+        );
+    }
+    Ok(out)
+}
+
 struct BillRow {
     bikri_id: i64,
     number: i64,
@@ -343,6 +422,7 @@ pub(crate) fn run_r27(
         .collect::<Result<Vec<_>, _>>()?;
     let seller_ids: Vec<i64> = bills.iter().map(|b| b.seller_id).collect();
     let parties = load_parties(conn, &seller_ids)?;
+    let lot_names_of = r27_lot_names(conn, typed, &bills)?;
     let mut rows = Vec::with_capacity(bills.len());
     for bill in bills {
         let party = chukta_party(
@@ -351,6 +431,14 @@ pub(crate) fn run_r27(
             bill.person_ur.as_deref(),
             bill.person_en.as_deref(),
         );
+        let lots = lot_names_of
+            .get(&(
+                bill.bikri_id,
+                bill.seller_id,
+                bill.person_key.clone().unwrap_or_default(),
+            ))
+            .cloned()
+            .unwrap_or_default();
         rows.push(Row {
             cells: vec![
                 Cell::Doc {
@@ -364,6 +452,8 @@ pub(crate) fn run_r27(
                     iso: bill.bill_date,
                 },
                 Cell::Party { party },
+                // The names of the bill's lots, "آم-1، آم-2، کیلا-1" (PRD FR-12.45).
+                names_cell(Some(lots.ur), Some(lots.en)),
                 Cell::Money {
                     paisa: paisa(bill.gross)?,
                 },
@@ -392,6 +482,7 @@ pub(crate) fn run_r27(
             col("date", ids::COL_DATE, ColumnKind::Date),
             col("bill_date", ids::COL_BILL_DATE, ColumnKind::Date),
             col("seller", ids::COL_SELLER, ColumnKind::Party),
+            col("lots", ids::COL_LOTS, ColumnKind::Names),
             col("gross", ids::COL_GROSS, ColumnKind::Money),
             col("deductions", ids::COL_DEDUCTIONS, ColumnKind::Money),
             col("net", ids::COL_NET, ColumnKind::Money),
@@ -402,6 +493,7 @@ pub(crate) fn run_r27(
         total_count: count,
         totals_label_id: ids::TOTAL.to_owned(),
         totals: vec![
+            Cell::Empty,
             Cell::Empty,
             Cell::Empty,
             Cell::Empty,

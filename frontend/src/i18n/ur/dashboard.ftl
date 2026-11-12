@@ -165,9 +165,6 @@ dashboard-bikri-title = آج کی { -bikri }
 dashboard-bikri-col-number = { -bikri }
 
 # review: pending
-dashboard-bikri-col-truck = ٹرک
-
-# review: pending
 dashboard-bikri-col-seller = { -beopari }
 
 # review: pending

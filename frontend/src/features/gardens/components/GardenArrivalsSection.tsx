@@ -17,7 +17,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useFixDayFlow } from '../../../shared/edit';
 import { isoToDisplayDate } from '../../../shared/format';
 import { ListGrid, Pager, useListPaging, type ListContext } from '../../../shared/grid';
-import { displayName, useLanguage } from '../../../shared/i18n';
+import { displayName, useLanguage, useLotNames } from '../../../shared/i18n';
 import {
   Button,
   CalcInfo,
@@ -56,6 +56,7 @@ interface GardenArrivalsSectionProps {
 
 export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionProps) {
   const { l10n } = useLocalization();
+  const { lotItem } = useLotNames();
   const router = useRouter();
   const fix = useFixDayFlow();
   const language = useLanguage();
@@ -103,6 +104,12 @@ export function GardenArrivalsSection({ garden, onEdit }: GardenArrivalsSectionP
       kind: 'number',
       size: 'qty',
       cell: (lot) => <Num>{String(lot.bikri_number)}</Num>,
+    },
+    {
+      // The name of the lot: the goods of this arrival with the counter the lot got (PRD FR-12.45).
+      id: 'lot',
+      header: l10n.getString('gardens-arrival-lot-name'),
+      cell: (lot) => (selected === null ? '' : lotItem(selected.item, lot.lot_counter)),
     },
     {
       id: 'date',

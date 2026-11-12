@@ -1,6 +1,6 @@
 # bikri (plans 12 and 13)
 
-The sale book, `/bikri/book` (PRD 12.1 to 12.6, E2E-26): the truck details, the lots, the sale
+The sale book, `/bikri/book` (PRD 12.1 to 12.6, E2E-26): the date and number in the top row, the lots, the sale
 lines of the selected lot, the live summary (per lot and for the whole sale), the live partner
 split, the cash note and the party card of the party the cursor is on. Plan 13 adds saving (F10),
 the draft, the saved بکری opened read-only (`/bikri/book?id=12`), the list "آج کی بکری"
@@ -16,9 +16,15 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
 - **The preview is the only path.** `useBikriPreview` keeps each answer under the draft it was
   asked for, so an answer for older text never replaces the answer for newer text (F35). While the
   next answer is on its way the last one stays on screen.
-- **A fill is a visible value.** The seller of a lot, the item, packing and مارکہ from his last lot,
-  the اڈا, زمیندار and driver from the truck, and the quantity of a new line are put in the cell
-  like typed text and are Enter stops (`useDraftFills`, `HeaderCard`). The quantity of a new line
+- **The header is the date and the number (plan 71, PRD v1.34).** `HeadFields` sits in the top row of the
+  page beside the name of the screen and its buttons (`BikriToolbar` `head`). Truck, زمیندار, اڈا and the
+  fields behind "More" are gone, with truck memory, the same-truck notice, the freight split and the header
+  seller and store defaults. `HeaderState` still has the old fields: an old draft loads without error and
+  `applySnapshot` leaves them out of a new بکری (the store moves to each lot); an old saved بکری keeps them
+  and its edit sends them back as they came, unseen; the saved view shows each only when it is there.
+- **A fill is a visible value.** The seller of a lot (the lot before it), the item, packing and مارکہ from
+  his last lot, and the quantity of a new line are put in the cell like typed text and are Enter stops
+  (`useDraftFills`). The quantity of a new line
   is filled at once, before the buyer: a line with no buyer and no rate is blank and ignored. The
   rate is never filled: the last rate is grey italic words ("Last 900") in the empty cell, never a bare
   figure, and `Ctrl+D` copies the rate of the line above. A line with something typed on it that is
@@ -55,7 +61,7 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
   problem at its cell by field path and in the problem list, keeps everything typed, and goes away
   when the text typed changes (not when the cursor moves or the language switches).
 - **After a save** a message "بکری 5 محفوظ ہو گئی", then a new empty بکری opens with the cursor on
-  the truck number (the editor is remade with a new key). The id of the بکری saved last is kept in
+  the date (the editor is remade with a new key). The id of the بکری saved last is kept in
   the page state (`lastSaved`): it is the way back to it ("last saved ... open") and the hook that
   edit (plan 16) opens with. `after-save.ts` is the hook for printing: plan 14 calls
   `registerPrintAfterSave`.
@@ -68,7 +74,7 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
 - **Leaving with typed work** asks first (`LeaveGuard`: save, leave without saving, back), also
   for the shell menu, the "Partner setup" link and the arrows. "Leave" throws the draft away.
 - **The saved view** (`components/saved/`) is the layout of the sale book without grids: the
-  header facts, a card for each lot with its lines, the summary (one lot or the whole, from the
+  date and saved-at (and the old header values, each only when there), a card for each lot with its lines, the summary (one lot or the whole, from the
   stored sums `SavedTotals`), the partners' share and the entries made in the books. It shows only
   stored values and never calls the preview. A cancelled بکری says so in words, in red.
 - **The toolbar** (`BikriToolbar`) is the same on the new and the saved بکری: first / previous /
@@ -85,11 +91,11 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
 | File                                                                                  | What it holds                                                                                                                       |
 | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `pages/BikriBookPage.tsx`                                                             | The screen: four states, layout at the three window sizes, which party the card shows                                               |
-| `components/`                                                                         | `HeaderCard`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
+| `components/`                                                                         | `HeadFields`, `LotsSection`, `LotMore`, `SalesSection` (+ `ActiveLine`), `LineDetails`, `SummaryPanel`, `SplitPanel`, `ProblemList` |
 | `columns.ts`                                                                          | The columns of the two grids and the Enter stops (lot: 8 cells; line: buyer, qty, rate, paid)                                       |
 | `draft-store.ts`, `draft.ts`, `union-store.ts`                                        | The stores, the lines of all lots as one list for the whole-sale view, and the draft built from them as the backend takes it        |
 | `preview-view.ts`, `grid-views.ts`, `problems.ts`                                     | What the answer shows in each cell, and where each problem goes                                                                     |
-| `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`, `useTruckMemory`, `useSplitFreight`                                                             |
+| `hooks/`                                                                              | `useBikriPreview`, `useDraftFills`                                                                                                  |
 | `api.ts`                                                                              | The only file that knows the command shapes                                                                                         |
 | `draft-snapshot.ts`, `draft-offer.tsx`, `after-save.ts`                               | The draft as text, the start-up offer, the printing hook                                                                            |
 | `hooks/useSaveFlow.tsx`, `useSaveBikri.ts`, `useDraftAutosave.ts`, `useBikriReads.ts` | The save flow, the call and what it refreshes, the 5 second draft, the reads                                                        |

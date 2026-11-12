@@ -5,8 +5,8 @@
 use mandi_services::bikri;
 use mandi_services::core::accounts::BalanceSide;
 use mandi_services::core::bikri::{
-    BikriDraft, BikriSaveInput, FreightLotInput, FreightPaidBy, HeaderInput, LineChargeMethod,
-    LotChargeMethod, SplitFreightInput, StoredMethod, split_freight,
+    BikriDraft, BikriSaveInput, FreightPaidBy, HeaderInput, LineChargeMethod, LotChargeMethod,
+    StoredMethod,
 };
 use mandi_services::core::error::ErrorCode;
 use mandi_services::{assist, ledger};
@@ -375,50 +375,6 @@ fn freight_paid_by_the_seller_is_kept_but_not_deducted_or_posted() {
 }
 
 #[test]
-fn the_header_freight_split_posts_one_credit_to_the_freight_account() {
-    // PRD C17: 1,000 over 30 and 20 نگ is 600 and 400; both post to کرایہ کھاتہ.
-    let w = world();
-    let parts = split_freight(&SplitFreightInput {
-        total_freight: "1,000".into(),
-        lots: vec![
-            FreightLotInput {
-                key: "lot-1".into(),
-                qty_received: "30".into(),
-            },
-            FreightLotInput {
-                key: "lot-2".into(),
-                qty_received: "20".into(),
-            },
-        ],
-    })
-    .unwrap();
-    let parts: Vec<i64> = parts.iter().map(|p| p.freight_paisa.as_paisa()).collect();
-    assert_eq!(parts, [60_000, 40_000]);
-    let mut one = with_sales(
-        bare_lot(&w, "lot-1", w.rahim, w.banana, "30"),
-        vec![sale("s-1", w.akram, "30", "600")],
-    );
-    one.freight = Some("600".into());
-    let mut two = with_sales(
-        bare_lot(&w, "lot-2", w.karim, w.apple, "20"),
-        vec![sale("s-2", w.arshad, "20", "600")],
-    );
-    two.freight = Some("400".into());
-    let mut d = draft(vec![one, two]);
-    d.header.total_freight = Some("1,000".into());
-    let saved = save_ok(&w, &d);
-    let lines = entry_lines(&w, saved.entry_id);
-    let freight: i64 = lines
-        .iter()
-        .filter(|l| l.0 == "02010002")
-        .map(|l| l.2)
-        .sum();
-    assert_eq!(freight, 1_000);
-    let detail = bikri::get(&w.env.ctx, saved.bikri_id).unwrap();
-    assert_eq!(detail.total_freight.map(|f| f.rupees()), Some(1_000));
-}
-
-#[test]
 fn lot_charges_keep_their_method_and_value() {
     // Typed manual labour 250 is kept as manual / 0 / 250; per نگ 5 on 50 as per_unit / 5 / 250.
     let w = world();
@@ -575,16 +531,19 @@ fn a_chukta_buyer_needs_a_name_and_his_phone_is_optional() {
 // ---- The saved header, the audit row ----
 
 #[test]
-fn the_header_is_kept_and_a_save_writes_one_audit_row() {
+fn the_header_has_only_the_day_and_a_save_writes_one_audit_row() {
+    // PRD v1.34 (plan 71 H1 to H3): a new بکری has only its day and its number. A draft that still
+    // carries the retired fields (an old saved draft) is read without a refusal and they are ignored:
+    // nothing of them is saved, and the bill day is the day.
     let w = world();
     let mut d = event1(&w);
     d.header = HeaderInput {
         book: Some("A-7".into()),
         driver_name: Some("Bashir".into()),
-        driver_phone: Some("0301-2345678".into()),
+        driver_phone: Some("not a phone".into()),
         total_freight: Some("3,000".into()),
         note: Some("first truck".into()),
-        bill_date: "10-10-2026".into(),
+        bill_date: "99-99-9999".into(),
         zamindar_account_id: Some(w.rahim),
         ..d.header
     };
@@ -598,16 +557,20 @@ fn the_header_is_kept_and_a_save_writes_one_audit_row() {
             detail.driver_phone.as_deref(),
             detail.note.as_deref(),
             detail.entry_date.as_str(),
-            detail.zamindar.as_ref().map(|z| z.id)
+            detail.bill_date.as_str(),
+            detail.zamindar.as_ref().map(|z| z.id),
+            detail.total_freight,
         ),
         (
-            Some("A-7"),
-            Some("LES-1234"),
-            Some("Bashir"),
-            Some("03012345678"),
-            Some("first truck"),
+            None,
+            None,
+            None,
+            None,
+            None,
             "2026-10-10",
-            Some(w.rahim)
+            "2026-10-10",
+            None,
+            None
         )
     );
     assert_eq!(detail.postings.len(), 1);

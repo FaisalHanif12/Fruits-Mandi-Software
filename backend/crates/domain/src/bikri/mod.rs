@@ -54,6 +54,7 @@
 //! ```
 
 mod checks;
+mod counter;
 mod line;
 mod lookups;
 mod lot;
@@ -72,7 +73,7 @@ use mandi_core::money::MoneyError;
 use mandi_core::rules::{ChargeSide, ChargeType};
 use thiserror::Error;
 
-use self::checks::{Issues, Wanted};
+use self::checks::Issues;
 use self::lot::{Acc, Scope};
 use self::own::OwnRun;
 use self::process::{Run, process_lot};
@@ -145,24 +146,6 @@ pub struct PostingCalc {
     pub warnings: Vec<FieldError>,
     /// The journal of the rows that were worked out (see `ledger::bikri::build_bikri_entry`).
     pub journal: JournalSource,
-}
-
-fn header_checks(issues: &mut Issues, draft: &PreparedDraft, lookups: &Lookups) {
-    let h = &draft.header;
-    checks::account(
-        issues,
-        lookups,
-        h.zamindar_account_id,
-        Wanted::Seller,
-        // The header's zamindar only names the default seller of new lots; no money is on him. A
-        // dead one who is in the posting being edited may stay there. A lot with him as its seller
-        // is checked on its own, and only the lot he already has may stay (FR-10.10).
-        true,
-        "header.zamindar_account_id",
-        None,
-    );
-    checks::master_exists(issues, &lookups.addas, h.adda_id, "header.adda_id");
-    checks::master_exists(issues, &lookups.stores, h.store_id, "header.store_id");
 }
 
 /// Works out a draft: the one function of the preview and the save of a new بکری, a later sale
@@ -270,7 +253,7 @@ fn calc_pass(
     let kind = target.kind(stored);
     let mut issues = Issues::default();
     issues.errors.extend(draft.issues.iter().cloned());
-    header_checks(&mut issues, draft, lookups);
+    // The header has only the day (PRD v1.34): nothing else in it is checked.
     if draft.lots.is_empty() {
         issues.error(ErrorCode::ErrNoLots, "lots");
     } else if draft
@@ -314,8 +297,10 @@ fn calc_pass(
     let mut whole = Acc::default();
     let mut previews = Vec::with_capacity(draft.lots.len());
     let mut journal = JournalSource::default();
+    // The counter of each lot's name: the one function of the preview and the save (PRD FR-12.45).
+    let counters = counter::assign(draft, lookups, stored);
     for (index, lot) in draft.lots.iter().enumerate() {
-        let done = process_lot(
+        let mut done = process_lot(
             env.as_ref(),
             lookups,
             &mut run,
@@ -324,6 +309,7 @@ fn calc_pass(
             lot,
             &mut issues,
         )?;
+        done.preview.lot_counter = counters.get(index).copied().flatten();
         if let Some(acc) = &done.acc {
             whole.merge(acc)?;
         }

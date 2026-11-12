@@ -68,7 +68,7 @@
     {
       "bikri_id": 1,
       "number": 1,
-      "truck_no": "LES-1234",
+      "truck_no": null,
       "seller": {
         "ur": "شاہ پور باغ",
         "en": "Shahpur Garden"

@@ -150,7 +150,7 @@
       "id": 1,
       "number": 1,
       "entry_date": "2026-10-10",
-      "truck_no": "LES-1234",
+      "truck_no": null,
       "status": "saved",
       "matched": "number"
     }

@@ -1,7 +1,8 @@
 // A form field: label above, the control, then a hint or an error below (design system 6,
 // Code Standards F16, PRD FR-7.1 and FR-7.6). The label sits at the start edge (the right edge
 // in Urdu). An error replaces the hint, in red, with an icon and plain words, so colour is
-// never the only signal (NFR-USE-12).
+// never the only signal (NFR-USE-12). An `inline` field has its label before the control, on one
+// line, for a field that sits in a row of buttons (the date of the sale book, plan 71 H4).
 //
 // The control is given as a function, so the field can pass it the id and the aria links:
 //   <Field label={...} hint={...}>{(control) => <MoneyInput {...control} value={v} onChange={set} />}</Field>
@@ -41,6 +42,8 @@ interface FieldProps {
    * heading is its label (the share of each partner). Every field still has a label (F28).
    */
   hideLabel?: boolean;
+  /** The label stands before the control on one line, so the field is as high as a button. */
+  inline?: boolean;
   children: (control: FieldControlProps) => ReactNode;
 }
 
@@ -52,6 +55,7 @@ export function Field({
   mark,
   readOnly = false,
   hideLabel = false,
+  inline = false,
   children,
 }: FieldProps) {
   const id = useId();
@@ -60,27 +64,39 @@ export function Field({
   const hasHint = hint !== undefined && hint !== null && hint !== false;
   const note = hasError || hasHint;
   const hasMark = mark !== undefined && mark !== null && mark !== false;
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      {info === undefined && !hasMark ? (
+  const head =
+    info === undefined && !hasMark ? (
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
+        {label}
+      </label>
+    ) : (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
           {label}
         </label>
-      ) : (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <label htmlFor={id} className={hideLabel ? 'sr-only' : 'type-label text-ink'}>
-            {label}
-          </label>
-          {info === undefined ? null : <InfoHint>{info}</InfoHint>}
-          {mark}
+        {info === undefined ? null : <InfoHint>{info}</InfoHint>}
+        {mark}
+      </div>
+    );
+  const control = children({
+    id,
+    'aria-describedby': note ? noteId : undefined,
+    invalid: hasError,
+    readOnly,
+  });
+  return (
+    <div className={inline ? 'flex min-w-0 flex-col gap-1' : 'flex min-w-0 flex-col gap-2'}>
+      {inline ? (
+        <div className="flex min-w-0 items-center gap-2">
+          {head}
+          {control}
         </div>
+      ) : (
+        <>
+          {head}
+          {control}
+        </>
       )}
-      {children({
-        id,
-        'aria-describedby': note ? noteId : undefined,
-        invalid: hasError,
-        readOnly,
-      })}
       {hasError ? (
         <p id={noteId} className="flex items-center gap-2 type-body text-due">
           <CircleAlert aria-hidden="true" className="size-icon-sm shrink-0" />

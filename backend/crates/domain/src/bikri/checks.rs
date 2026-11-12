@@ -42,8 +42,6 @@ fn with_values(code: ErrorCode, field: &str, values: &[(&str, i64)]) -> FieldErr
 /// What kind of party a field wants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Wanted {
-    /// A seller. The اپنا مال account is refused (`ERR_OWN_GOODS_ACCOUNT_RESTRICTED`).
-    Seller,
     /// The seller of a lot: a seller, or the اپنا مال account for a lot of own goods.
     LotSeller,
     /// A buyer.
@@ -80,7 +78,6 @@ pub(super) fn account<'a>(
         return None;
     }
     let kind_ok = match wanted {
-        Wanted::Seller => facts.kind == PartyKind::Seller,
         // A separate khata can sell its goods through a lot (PRD FR-16.7).
         // A garden sells its goods through a lot too (PRD FR-12.36).
         Wanted::LotSeller => matches!(
@@ -91,7 +88,7 @@ pub(super) fn account<'a>(
     };
     if !kind_ok {
         let code = match wanted {
-            Wanted::Seller | Wanted::LotSeller => ErrorCode::ErrNotASeller,
+            Wanted::LotSeller => ErrorCode::ErrNotASeller,
             Wanted::Buyer => ErrorCode::ErrNotABuyer,
         };
         issues.error(code, field);

@@ -13,6 +13,7 @@ import {
   filtersToWire,
   gardenViewMessageId,
   isUnfiltered,
+  withOrderLanguage,
   periodMessageId,
   tripViewMessageId,
   voucherMessageId,
@@ -535,7 +536,6 @@ describe('the words and figures of a cell that is not money (round 4)', () => {
   it('has words for a name left empty on purpose, in the reports that leave one', () => {
     expect(emptyNameMessageId('R21', 'group')).toBe('report-group-no-city');
     expect(emptyNameMessageId('R22', 'group')).toBe('report-group-no-collector');
-    expect(emptyNameMessageId('R8', 'normal')).toBe('report-adda-none');
     // A buyer under a heading has an empty first cell by design, and says nothing.
     expect(emptyNameMessageId('R21', 'normal')).toBeNull();
     expect(emptyNameMessageId('R20', 'normal')).toBeNull();
@@ -580,6 +580,40 @@ describe('the garden slice: the boxes of R36 become the request the backend wrot
   it('the layout has a message for each choice', () => {
     expect(gardenViewMessageId('garden')).toBe('report-filter-garden-by-garden');
     expect(gardenViewMessageId('partner')).toBe('report-filter-garden-by-partner');
+  });
+});
+
+describe("plan 71 L9: one lot, set only by the assistant's button (PRD FR-7.77)", () => {
+  const LOT = { id: 41, name_ur: 'احسان، آم-2', name_en: 'Ehsan, Mango-2', code: undefined };
+  const lotReports = ['R2', 'R3', 'R4', 'R5', 'R6', 'R10', 'R27'] as const;
+
+  it('the reports that take a lot send its id; the others send none', () => {
+    const state: ReportFilterState = { ...EMPTY_FILTERS, lot: LOT };
+    for (const id of lotReports) {
+      expect(entryOf(id).filters, id).toContain('lot');
+      expect(filtersToWire(state, entryOf(id).filters).lot_id, id).toBe(41);
+    }
+    for (const id of ['R11', 'R18', 'R33'] as const) {
+      expect(filtersToWire(state, entryOf(id).filters), id).not.toHaveProperty('lot_id');
+    }
+    // No lot, nothing sent: the backend reads a missing key as every lot.
+    expect(filtersToWire(EMPTY_FILTERS, entryOf('R2').filters)).not.toHaveProperty('lot_id');
+  });
+
+  it('a lot is a filter, so “clear the filters” is offered', () => {
+    expect(isUnfiltered({ ...EMPTY_FILTERS, lot: LOT }, entryOf('R2').filters)).toBe(false);
+    expect(isUnfiltered(EMPTY_FILTERS, entryOf('R2').filters)).toBe(true);
+  });
+});
+
+describe('plan 71 L7: the order language of the day sheet (R35)', () => {
+  it('is added for R35 only, with the app language, and no other report is sent it', () => {
+    const wire = filtersToWire(EMPTY_FILTERS, entryOf('R35').filters);
+    expect(withOrderLanguage(wire, 'R35', 'en')).toEqual({ ...wire, order_language: 'en' });
+    expect(withOrderLanguage(wire, 'R35', 'ur')).toMatchObject({ order_language: 'ur' });
+    for (const id of ['R2', 'R6', 'R13', 'R34'] as const) {
+      expect(withOrderLanguage(wire, id, 'en'), id).not.toHaveProperty('order_language');
+    }
   });
 });
 

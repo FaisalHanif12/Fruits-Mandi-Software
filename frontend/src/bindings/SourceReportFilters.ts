@@ -106,6 +106,11 @@ export type SourceReportFilters = {
    */
   guests_only: boolean;
   /**
+   * One lot (R2 to R6, R10, R27; PRD FR-12.45): its name is the seller, the item and the counter,
+   * for example احسان، آم-2. Left out of the wire form when none.
+   */
+  lot?: AnswerRecord;
+  /**
    * One collector, a staff member (R22, R23, R35). Left out of the wire form when none.
    */
   collector?: AnswerRecord;

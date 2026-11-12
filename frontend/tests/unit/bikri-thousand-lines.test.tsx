@@ -156,12 +156,7 @@ describe.each(LANGUAGES)('a lot of 1,000 sale lines on the screen (%s)', (langua
     await waitFor(() => {
       expect(visible(document.body.textContent)).toContain('10,000');
     }, SLOW_MS);
-    // Leaving the truck number fills the adda and the driver from the truck's memory: the draft changes
-    // by itself once, and its answer comes before the keys of the test.
     await user.click(cellOf(salesGrid(language), 0, 'qty'));
-    await waitFor(() => {
-      expect(backend.lastDraft().header.driver_name).toBe('Aslam');
-    }, SLOW_MS);
     await new Promise((done) => setTimeout(done, 500));
     const asked = backend.previews.length;
     // Moving the cursor asks nothing.

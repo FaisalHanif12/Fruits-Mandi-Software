@@ -32,11 +32,12 @@ use chrono::{TimeZone, Utc};
 use mandi_db::clock::FixedClock;
 use mandi_db::migrate::{
     self, ASSISTANT_QUESTIONS_SQL, ASSISTANT_TIME_LIMIT_SQL, ASSISTANT_TIMING_SQL,
-    BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL,
-    DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL, ONE_TIME_PARTY_MARK_SQL, PARTS_ARE_SOFT_STATE_SQL,
-    SALE_GRADE_SQL, SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL,
-    STABLE_POSTING_ORDER_SQL, SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL,
-    TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    BALANCE_INDEXES_SQL, BIKRI_RECORDS_ARE_NEVER_DELETED_SQL, CHUKTA_KHATA_SQL,
+    DATE_TO_SELL_AND_GARDEN_ARRIVALS_SQL, DEAD_MARKS_SQL, EDIT_WINDOWS_SQL, INIT_SQL,
+    ONE_TIME_PARTY_MARK_SQL, PAID_ON_THE_SPOT_SQL, PARTS_ARE_SOFT_STATE_SQL, SALE_GRADE_SQL,
+    SHOP_SPLIT_SQL, SIMPLE_PARTY_CODES_SQL, SPEED_INDEXES_SQL, STABLE_POSTING_ORDER_SQL,
+    SYSTEM_ACCOUNTS_STAY_ACTIVE_SQL, TRIP_AND_GARDEN_CODES_SQL, TRIPS_GARDENS_FRUIT_KHATA_SQL,
+    chukta_hook,
 };
 use mandi_db::rusqlite::{Connection, params};
 use mandi_db::{DbError, seed};
@@ -47,9 +48,9 @@ fn clock() -> FixedClock {
     FixedClock(Utc.with_ymd_and_hms(2026, 10, 10, 7, 30, 12).unwrap())
 }
 
-/// The file as released with migration 19 (the quality of a sale line).
-fn released_version_19() -> Migrations<'static> {
-    Migrations::new(vec![
+/// The migrations of the file as released with migration 19 (the quality of a sale line).
+fn list_19() -> Vec<M<'static>> {
+    vec![
         M::up_with_hook(INIT_SQL, |tx| {
             seed::system_accounts(tx)
                 .map(|_| ())
@@ -73,8 +74,25 @@ fn released_version_19() -> Migrations<'static> {
         M::up(ASSISTANT_TIMING_SQL),
         M::up(ASSISTANT_TIME_LIMIT_SQL),
         M::up(SALE_GRADE_SQL),
-    ])
+    ]
 }
+
+/// The file as released with migration 19 (the quality of a sale line).
+fn released_version_19() -> Migrations<'static> {
+    Migrations::new(list_19())
+}
+
+/// The file as released with migration 21 (money paid on the spot): the newest the D8 checks upgrade to.
+/// The real upgrade to the latest version is in its own test, so these checks keep proving the same.
+fn released_version_21() -> Migrations<'static> {
+    let mut all = list_19();
+    all.push(M::up_with_hook(CHUKTA_KHATA_SQL, chukta_hook));
+    all.push(M::up(PAID_ON_THE_SPOT_SQL));
+    Migrations::new(all)
+}
+
+/// The schema version of the newest migration (`migrate::migrations()`).
+const LATEST: i64 = 22;
 
 fn connection(path: &Path) -> Connection {
     let conn = Connection::open(path).unwrap();
@@ -587,7 +605,8 @@ fn assert_upgrade(path: &Path, backups: &Path, old: &Old) {
     );
     super_verify_chain(&conn);
 
-    let outcome = migrate::migrate(&mut conn, backups, &clock()).unwrap();
+    let outcome =
+        migrate::migrate_with(&released_version_21(), &mut conn, backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (19, 21));
     let copy = outcome.copy.expect("a copy is taken before an upgrade");
     assert!(copy.exists());
@@ -698,7 +717,8 @@ fn assert_upgrade(path: &Path, backups: &Path, old: &Old) {
     }
 
     // Running again is a no-op and takes no copy.
-    let again = migrate::migrate(&mut conn, backups, &clock()).unwrap();
+    let again =
+        migrate::migrate_with(&released_version_21(), &mut conn, backups, &clock()).unwrap();
     assert_eq!((again.from, again.to), (21, 21));
     assert!(again.copy.is_none());
 }
@@ -741,7 +761,8 @@ fn a_failure_in_the_last_step_puts_the_whole_file_back_and_a_rerun_then_works() 
     let rows_before = all_rows(&conn, &[]);
     let schema_before = schema(&conn);
     let hashes_before = hashes(&conn);
-    let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
+    let error =
+        migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap_err();
     assert!(matches!(error, DbError::MigrationFailed(_)), "{error:?}");
     assert_eq!(
         user_version(&conn),
@@ -790,7 +811,7 @@ fn a_failure_in_the_last_step_puts_the_whole_file_back_and_a_rerun_then_works() 
 }
 
 fn assert_upgrade_after_failure(conn: &mut Connection, backups: &Path, old: &Old) {
-    let outcome = migrate::migrate(conn, backups, &clock()).unwrap();
+    let outcome = migrate::migrate_with(&released_version_21(), conn, backups, &clock()).unwrap();
     assert_eq!((outcome.from, outcome.to), (19, 21));
     assert_eq!(user_version(conn), 21);
     mandi_db::ledger::verify_journal_chain(conn, &common::test_key()).unwrap();
@@ -827,7 +848,8 @@ fn a_failure_in_the_first_step_puts_the_file_back() {
         .unwrap();
     let rows_before = all_rows(&conn, &[]);
     let schema_before = schema(&conn);
-    let error = migrate::migrate(&mut conn, &backups, &clock()).unwrap_err();
+    let error =
+        migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock()).unwrap_err();
     assert!(matches!(error, DbError::MigrationFailed(_)), "{error:?}");
     assert_eq!(user_version(&conn), 19);
     assert_eq!(schema(&conn), schema_before);
@@ -854,7 +876,7 @@ fn child_process_for_the_migration_kill_test() {
     out.flush().unwrap();
     drop(out);
     let mut conn = connection(&path);
-    let result = migrate::migrate(&mut conn, &backups, &clock());
+    let result = migrate::migrate_with(&released_version_21(), &mut conn, &backups, &clock());
     let mut out = std::io::stdout().lock();
     match result {
         Ok(_) => writeln!(out, "\n@@DONE").unwrap(),
@@ -879,7 +901,13 @@ fn killing_the_process_during_the_upgrade_40_times_never_leaves_a_half_upgraded_
     let started = Instant::now();
     {
         let mut conn = connection(&ref_path);
-        migrate::migrate(&mut conn, &ref_dir.path().join("backups"), &clock()).unwrap();
+        migrate::migrate_with(
+            &released_version_21(),
+            &mut conn,
+            &ref_dir.path().join("backups"),
+            &clock(),
+        )
+        .unwrap();
     }
     let t_total = started.elapsed();
     let reference_rows = {
@@ -891,6 +919,37 @@ fn killing_the_process_during_the_upgrade_40_times_never_leaves_a_half_upgraded_
         )
     };
     println!("a clean upgrade takes {t_total:?}");
+    // A pilot: one child run to the end, so the kills land inside the time this process really needs on a
+    // busy machine (the in-process time above can be far off when the load changes).
+    let pilot_micros = {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("mandi.db");
+        std::fs::write(&path, &template).unwrap();
+        let started = Instant::now();
+        let mut process = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "child_process_for_the_migration_kill_test",
+                "--exact",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(CHILD_PATH, &path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        process.wait().unwrap();
+        let took = started.elapsed();
+        assert_eq!(
+            user_version(&connection(&path)),
+            21,
+            "the pilot did not upgrade"
+        );
+        println!("a child upgrade takes {took:?}");
+        u64::try_from(took.as_micros())
+            .unwrap_or(500_000)
+            .max(50_000)
+    };
     let mut stages = std::collections::BTreeMap::<String, u32>::new();
     let mut state = 0xD8_0021_u64;
     let mut next = move || {
@@ -926,9 +985,8 @@ fn killing_the_process_during_the_upgrade_40_times_never_leaves_a_half_upgraded_
                 }
             }
         });
-        // From the start of the process to a little after the end of a whole upgrade.
-        let span = u64::try_from(t_total.as_micros()).unwrap_or(100_000) + 60_000;
-        std::thread::sleep(Duration::from_micros(next() % (span * 2)));
+        // From the start of the process to a little after the end of a whole upgrade (the pilot's time).
+        std::thread::sleep(Duration::from_micros(next() % (pilot_micros * 13 / 10)));
         let _ = process.kill();
         let _ = process.wait();
         let mut last = "NOTHING_YET".to_owned();
@@ -969,7 +1027,13 @@ fn killing_the_process_during_the_upgrade_40_times_never_leaves_a_half_upgraded_
             );
         }
         // Run the upgrade again (as the next start of the app does): it ends at 21 with the same result.
-        let outcome = migrate::migrate(&mut conn, &dir.path().join("backups2"), &clock()).unwrap();
+        let outcome = migrate::migrate_with(
+            &released_version_21(),
+            &mut conn,
+            &dir.path().join("backups2"),
+            &clock(),
+        )
+        .unwrap();
         assert_eq!(outcome.to, 21);
         assert_eq!(user_version(&conn), 21);
         mandi_db::ledger::verify_journal_chain(&conn, &common::test_key())
@@ -1018,7 +1082,13 @@ fn a_real_backup_copy_migrates_without_moving_a_number() {
         hashes_before.len(),
         lines_before.len()
     );
-    let outcome = migrate::migrate(&mut conn, &dir.path().join("backups"), &clock()).unwrap();
+    let outcome = migrate::migrate_with(
+        &released_version_21(),
+        &mut conn,
+        &dir.path().join("backups"),
+        &clock(),
+    )
+    .unwrap();
     println!("real copy: migrated {} -> {}", outcome.from, outcome.to);
     assert_eq!(user_version(&conn), 21);
     assert_eq!(hashes(&conn), hashes_before, "a chain hash moved");
@@ -1046,4 +1116,127 @@ fn a_real_backup_copy_migrates_without_moving_a_number() {
         count(&conn, "SELECT COUNT(*) FROM pragma_foreign_key_check"),
         0
     );
+    // And on to the latest version with the real list: nothing moves either.
+    let hashes_21 = hashes(&conn);
+    let balances_21 = balances(&conn);
+    let outcome = migrate::migrate(&mut conn, &dir.path().join("backups"), &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (21, LATEST as usize));
+    assert_eq!(user_version(&conn), LATEST);
+    assert_eq!(
+        hashes(&conn),
+        hashes_21,
+        "a chain hash moved in the last step"
+    );
+    assert_eq!(
+        balances(&conn),
+        balances_21,
+        "a balance moved in the last step"
+    );
+}
+
+/// The lots of the file by the columns that exist at version 21 (migration 22 adds `lot_counter`).
+fn lots_without_counter(conn: &Connection) -> Vec<String> {
+    let columns: Vec<String> = conn
+        .prepare("SELECT name FROM pragma_table_info('bikri_lots') WHERE name <> 'lot_counter' ORDER BY cid")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+    let joined = columns
+        .iter()
+        .map(|c| format!("quote(\"{c}\")"))
+        .collect::<Vec<_>>()
+        .join(" || '|' || ");
+    conn.prepare(&format!("SELECT {joined} FROM bikri_lots ORDER BY id"))
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
+}
+
+/// The real upgrade of the hostile file of version 19 runs through every migration to the latest one
+/// (22, lot counters, plan 71) in one go. Not one chain hash, journal row, balance, sale line or lot value
+/// moves; the new column and table are the only change, every lot has a counter, and a second run is a
+/// no-op.
+#[test]
+fn the_real_upgrade_ends_at_the_latest_version_with_every_number_unchanged() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("mandi.db");
+    let backups = dir.path().join("backups");
+    let old = build_v19(&path, &backups);
+    let mut conn = connection(&path);
+    // Migration 22 adds a column to `bikri_lots` and makes `lot_counters`; the other changes are those of 20 and 21.
+    let skip: Vec<&str> = CHANGES_ON_PURPOSE
+        .iter()
+        .copied()
+        .chain(["bikri_lots", "lot_counters"])
+        .collect();
+    let rows_before = all_rows(&conn, &skip);
+    let hashes_before = hashes(&conn);
+    let balances_before = balances(&conn);
+    let lots_before = lots_without_counter(&conn);
+    let lots = count(&conn, "SELECT COUNT(*) FROM bikri_lots");
+    assert!(lots >= 1);
+
+    let outcome = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((outcome.from, outcome.to), (19, 22));
+    assert!(outcome.copy.is_some(), "a copy is taken before an upgrade");
+    assert_eq!(user_version(&conn), LATEST);
+
+    assert_eq!(hashes(&conn), hashes_before, "a chain hash moved");
+    mandi_db::ledger::verify_journal_chain(&conn, &common::test_key()).unwrap();
+    assert_eq!(all_rows(&conn, &skip), rows_before, "a row moved");
+    assert_eq!(balances(&conn), balances_before, "a balance moved");
+    assert_eq!(
+        lots_without_counter(&conn),
+        lots_before,
+        "a lot value moved"
+    );
+    // Every lot has a counter of its own seller and item, and the table holds the biggest of each pair.
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM bikri_lots WHERE lot_counter < 1"
+        ),
+        0
+    );
+    assert_eq!(
+        count(
+            &conn,
+            "SELECT COUNT(*) FROM (SELECT seller_account_id, item_id FROM bikri_lots GROUP BY seller_account_id, item_id)"
+        ),
+        count(&conn, "SELECT COUNT(*) FROM lot_counters")
+    );
+    // The D8 results of the same file: paid, the list of چکتا buyers, the old accounts.
+    for (id, total, payment) in &old.lines {
+        let paid: i64 = conn
+            .query_row(
+                "SELECT paid_paisa FROM bikri_sales WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            paid,
+            if *payment == "cash" { *total } else { 0 },
+            "line {id}"
+        );
+    }
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM chukta_buyers"),
+        old.people.len() as i64
+    );
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+    assert_eq!(
+        count(&conn, "SELECT COUNT(*) FROM pragma_foreign_key_check"),
+        0
+    );
+    let again = migrate::migrate(&mut conn, &backups, &clock()).unwrap();
+    assert_eq!((again.from, again.to), (22, 22));
+    assert!(again.copy.is_none());
 }

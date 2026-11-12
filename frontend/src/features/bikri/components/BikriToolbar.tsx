@@ -37,6 +37,8 @@ interface BikriToolbarProps {
   lastSaved?: ReactNode;
   /** The name of the screen, at the start of the row (it replaces a line of its own above). */
   title?: ReactNode;
+  /** The date and the number of the بکری, right after the name (plan 71 H4). */
+  head?: ReactNode;
 }
 
 const STEPS: readonly {
@@ -64,6 +66,7 @@ export function BikriToolbar({
   children,
   lastSaved,
   title,
+  head,
 }: BikriToolbarProps) {
   const { l10n } = useLocalization();
   const [noteId, setNoteId] = useState<string | null>(null);
@@ -99,6 +102,7 @@ export function BikriToolbar({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         {title}
+        {head}
         <div role="group" aria-label={l10n.getString('bikri-nav-label')} className="flex gap-2">
           {STEPS.map(({ to, labelId, noneId, icon: Icon }) => (
             <Button

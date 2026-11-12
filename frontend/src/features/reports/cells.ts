@@ -38,13 +38,12 @@ export function monthText(text: (id: string) => string, year: number, month: num
 
 /**
  * The words for a name the backend left empty on purpose (PRD 19.2): the heading of the buyers with
- * no city (R21) or no collector (R22), and the sales with no اڈا (R8). Shown as an empty name, they
- * would look like a mistake. Null for any other empty cell.
+ * no city (R21) or no collector (R22). Shown as an empty name, they would look like a mistake. Null
+ * for any other empty cell. (R8, the اڈا report, is retired in v1.34: no sale has an اڈا any more.)
  */
 export function emptyNameMessageId(id: ReportId, rowKind: ReportRowKind): string | null {
   if (id === 'R21' && rowKind === 'group') return 'report-group-no-city';
   if (id === 'R22' && rowKind === 'group') return 'report-group-no-collector';
-  if (id === 'R8') return 'report-adda-none';
   return null;
 }
 

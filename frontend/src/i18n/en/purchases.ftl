@@ -166,9 +166,9 @@ purchases-lots-title = Sold in these sales
 # review: pending
 purchases-lot-bikri = Sale
 
-# $number: the number of the { -bikri }; $lot: the number of the lot.
+# $number: the number of the { -bikri }; $lot: the number of the lot; $name: the item with the counter of the lot, "Orange-2".
 # review: pending
-purchases-lot-open = { -bikri } { $number }, { -lot } { $lot }
+purchases-lot-open = { -bikri } { $number }, { -lot } { $lot }: { $name }
 
 # review: pending
 purchases-lot-qty-sold = Sold

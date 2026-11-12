@@ -107,7 +107,6 @@ import {
   R4_CREDIT,
   R6_LOTS,
   R7_ITEMS,
-  R8_ADDA,
 } from './reports-real';
 
 type Input = Record<string, unknown>;
@@ -128,7 +127,6 @@ const PAGES: Partial<Record<ReportId, ReportPage>> = {
   R4: R4_CREDIT,
   R6: R6_LOTS,
   R7: R7_ITEMS,
-  R8: R8_ADDA,
   R20: R20_DUES,
   R21: R21_BY_CITY,
   R22: R22_BY_COLLECTOR,

@@ -290,3 +290,26 @@ pub fn navigate(ctx: &Context, input: &BikriNavigateInput) -> Result<Option<i64>
         Ok(repo::neighbour(conn, current_number, input.to)?)
     })
 }
+
+/// The lots of saved بکری of these sellers and items, with this counter if given, newest day first, and
+/// how many lots fit in all (PRD FR-12.45, FR-7.77, plan 71 L9). The assistant finds "ehsan aam-2" and
+/// "ehsan ke aam" with it. Read only; at most `limit` lots, 100 at most.
+///
+/// # Errors
+/// `ServiceError::Db`.
+pub fn find_lots(
+    ctx: &Context,
+    input: &mandi_domain::core::bikri::LotFindInput,
+) -> Result<(Vec<mandi_domain::core::bikri::LotFound>, i64), ServiceError> {
+    let limit = input.limit.clamp(1, 100);
+    ctx.db.read(|conn| {
+        Ok(mandi_db::bikri::lots_named(
+            conn,
+            &input.seller_ids,
+            &input.item_ids,
+            input.counter,
+            input.lot_id,
+            limit,
+        )?)
+    })
+}

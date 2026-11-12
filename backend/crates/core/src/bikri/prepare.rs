@@ -7,7 +7,7 @@ use super::prepared::*;
 use super::{MAX_BLANK_ROWS, MAX_LOTS, MAX_SALE_LINES};
 use crate::dates::BusinessDate;
 use crate::error::{ErrorCode, ErrorValue, FieldError};
-use crate::money::{Paisa, Qty};
+use crate::money::Paisa;
 use crate::rules::ChargeValue;
 use crate::validate;
 
@@ -37,19 +37,6 @@ fn take<T>(issues: &mut Vec<FieldError>, result: Result<T, FieldError>) -> Optio
 /// True if the text is empty once spaces are removed.
 fn is_blank(text: &str) -> bool {
     text.trim().is_empty()
-}
-
-/// Optional text: trimmed, `None` if empty, checked like a note.
-fn optional_text(
-    issues: &mut Vec<FieldError>,
-    field: &str,
-    text: Option<&String>,
-) -> Option<String> {
-    let text = text?;
-    if is_blank(text) {
-        return None;
-    }
-    take(issues, validate::free_text(field, text)).filter(|t| !t.is_empty())
 }
 
 /// An optional whole-rupee amount. Empty is 0. A bad value is `None` and an error.
@@ -392,46 +379,12 @@ fn prepare_header(
             today,
         ),
     );
-    let bill_date = if is_blank(&input.bill_date) {
-        entry_date
-    } else {
-        take(
-            issues,
-            validate::date(&header_field("bill_date"), &input.bill_date, today),
-        )
-    };
-    // These fields are checked now and kept by the save (plan 13).
-    let book = optional_text(issues, &header_field("book"), input.book.as_ref());
-    let truck_no = optional_text(issues, &header_field("truck_no"), input.truck_no.as_ref());
-    let driver_name = optional_text(
-        issues,
-        &header_field("driver_name"),
-        input.driver_name.as_ref(),
-    );
-    let driver_phone = match input.driver_phone.as_ref().filter(|p| !is_blank(p)) {
-        Some(phone) => take(
-            issues,
-            validate::phone(&header_field("driver_phone"), phone),
-        ),
-        None => None,
-    };
-    let note = optional_text(issues, &header_field("note"), input.note.as_ref());
-    let total_freight = match input.total_freight.as_ref().filter(|t| !is_blank(t)) {
-        Some(t) => take(issues, validate::money(&header_field("total_freight"), t)),
-        None => None,
-    };
+    // The other header fields are retired (PRD v1.34, plan 71 H1 to H3): whatever an old draft still
+    // holds in them is ignored, never refused. A new بکری's bill day is its entry day.
+    let bill_date = entry_date;
     PreparedHeader {
         entry_date,
         bill_date,
-        book,
-        truck_no,
-        driver_name,
-        driver_phone,
-        note,
-        zamindar_account_id: input.zamindar_account_id,
-        adda_id: input.adda_id,
-        store_id: input.store_id,
-        total_freight,
     }
 }
 
@@ -470,53 +423,4 @@ pub fn prepare_draft(
         lots,
         issues,
     }
-}
-
-/// Splits a header freight total over lots (PRD C17), reading the text first.
-///
-/// Example (C17): 1,000 over lots of 30 and 20 نگ gives 600 and 400.
-///
-/// # Errors
-/// The money and quantity codes on `total_freight` and `lots[i].qty_received`, all together.
-pub fn split_freight(input: &SplitFreightInput) -> Result<Vec<FreightPart>, Vec<FieldError>> {
-    let mut issues = Vec::new();
-    let total = take(
-        &mut issues,
-        validate::money("total_freight", &input.total_freight),
-    );
-    let mut parts: Vec<(usize, Qty)> = Vec::with_capacity(input.lots.len());
-    if input.lots.len() > MAX_LOTS {
-        issues.push(FieldError::new(ErrorCode::ErrOutOfRange, "lots").with(
-            "max",
-            ErrorValue::Number(i64::try_from(MAX_LOTS).unwrap_or(i64::MAX)),
-        ));
-    }
-    if input.lots.is_empty() {
-        issues.push(FieldError::new(ErrorCode::ErrNoLots, "lots"));
-    }
-    for (index, lot) in input.lots.iter().enumerate() {
-        let field = format!("lots[{index}].qty_received");
-        if let Some(qty) = take(&mut issues, validate::qty(&field, &lot.qty_received)) {
-            parts.push((index, qty));
-        }
-    }
-    let Some(total) = total else {
-        return Err(issues);
-    };
-    if !issues.is_empty() {
-        return Err(issues);
-    }
-    // The lot number is the position, so on a tie in نگ the first lot takes the leftover.
-    let split = crate::money::split_by_qty(total, &parts)
-        .map_err(|e| vec![FieldError::new(e.code(), "total_freight")])?;
-    let mut out = Vec::with_capacity(split.len());
-    for (index, freight_paisa) in split {
-        let key = input
-            .lots
-            .get(index)
-            .map(|lot| lot.key.clone())
-            .unwrap_or_default();
-        out.push(FreightPart { key, freight_paisa });
-    }
-    Ok(out)
 }

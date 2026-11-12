@@ -82,8 +82,9 @@ edit-review-change = { $where }{ $field } پہلے { $before } تھا، اب { $
 # review: pending
 edit-review-where-header = اوپر کی معلومات:
 
+# $name: { -lot } کا نام قوسین میں، مثلاً " (احسان، آم-2)"، یا کچھ نہیں۔
 # review: pending
-edit-review-where-lot = { -lot } { $lot }:
+edit-review-where-lot = { -lot } { $lot }{ $name }:
 
 # review: pending
 edit-review-where-line = { -lot } { $lot }، لائن { $line }{ $label }:

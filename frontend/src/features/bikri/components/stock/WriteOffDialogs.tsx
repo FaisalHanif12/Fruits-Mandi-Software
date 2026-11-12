@@ -13,7 +13,7 @@ import { isoToDisplayDate } from '../../../../shared/format';
 import { Field, QtyInput, ReasonDialog, Select, showToast } from '../../../../shared/ui';
 import { useWriteOff, useWriteOffUndo } from '../../hooks/useStockActions';
 import { stockSellerName } from '../../stock-columns';
-import { displayName, useLanguage } from '../../../../shared/i18n';
+import { useLanguage, useLotNames } from '../../../../shared/i18n';
 import { fieldError } from '../../../../shared/ui/field-error';
 
 /** The fields whose problems the boxes show under the field itself. */
@@ -29,6 +29,7 @@ interface DialogProps {
 /** "Write off" (PRD FR-12.16): how many نگ, and why. */
 export function WriteOffDialog({ row, onClose }: DialogProps) {
   const language = useLanguage();
+  const { lotItem } = useLotNames();
   const writeOff = useWriteOff();
   const [qty, setQty] = useState('');
   const [error, setError] = useState<UiError | null>(null);
@@ -51,7 +52,7 @@ export function WriteOffDialog({ row, onClose }: DialogProps) {
             vars={{
               number: String(row.bikri_number),
               seller: stockSellerName(row, language),
-              item: displayName(row.item, language),
+              item: lotItem(row.item, row.lot_counter),
               balance: String(row.balance),
             }}
           >

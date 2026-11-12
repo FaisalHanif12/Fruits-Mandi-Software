@@ -3,7 +3,9 @@
 //! a stored value or a checked sum of stored values.
 
 use mandi_core::accounts::short_code_of;
-use mandi_core::bikri::{BikriDetail, SavedChukta, SavedLot, SavedSale, SavedTotals};
+use mandi_core::bikri::{
+    BikriDetail, LotOrderKey, SavedChukta, SavedLot, SavedSale, SavedTotals, lot_label, sort_lots,
+};
 use mandi_core::money::Paisa;
 use mandi_core::text;
 
@@ -56,6 +58,13 @@ fn line(
         (sale.buyer_rate, sale.buyer_value)
     };
     let item = ctx.name(&lot.item.name_ur, &lot.item.name_en);
+    // On the seller bill the item column holds the lot's name, item and counter, "آم-2" (PRD
+    // FR-12.45); the buyer's lines name the item only, because the buyer does not see the lots.
+    let item_shown = if seller_side {
+        lot_label(&item, lot.lot_counter)
+    } else {
+        item.clone()
+    };
     let qty = ctx.style.count(sale.qty);
     let rate_text = ctx.money(rate)?;
     Ok(PrintLine {
@@ -73,7 +82,7 @@ fn line(
             &qty,
             &rate_text,
         ),
-        item,
+        item: item_shown,
         packing: ctx.name(&lot.packing.name_ur, &lot.packing.name_en),
         grade: sale.grade,
         qty,
@@ -106,7 +115,16 @@ pub(super) fn seller_pages(
     groups
         .into_iter()
         .enumerate()
-        .map(|(index, (_, lots))| seller_page(ctx, serial(ctx, index), &lots))
+        .map(|(index, (_, mut lots))| {
+            // A seller's lots print sorted whatever order they were typed in: by item in the order
+            // of the print language, then by counter (PRD FR-12.12, plan 71 L7).
+            sort_lots(&mut lots, ctx.language, |l| LotOrderKey {
+                item_ur: &l.item.name_ur,
+                item_en: &l.item.name_en,
+                counter: l.lot_counter,
+            });
+            seller_page(ctx, serial(ctx, index), &lots)
+        })
         .collect()
 }
 

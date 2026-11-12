@@ -14,7 +14,8 @@ import { LANGUAGES } from '../../src/i18n';
 import * as draftsApi from '../../src/shared/drafts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri, RAHIM } from '../helpers/bikri';
-import { combo, lotsGrid, named, salesGrid, textOf } from '../helpers/bikri-screen';
+import { withOldHeader } from '../helpers/bikri-old-draft';
+import { lotsGrid, named, names, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -38,10 +39,12 @@ vi.mock('../../src/features/masters/api');
 vi.mock('../../src/shared/search/api');
 vi.mock('../../src/shared/urdu/api');
 
-/** The text of a draft the screen kept: a truck, a lot of 50 نگ from Rahim, one line for Akram. */
+/**
+ * The text of a draft the screen kept: a lot of 50 نگ from Rahim, one line for Akram. It also holds a
+ * truck number, as a draft kept before the header lost its truck (plan 71 H1): it must still load.
+ */
 function keptDraft(): string {
   const stores = createBikriDraft('10-10-2026');
-  stores.header.getState().patch({ truckNo: 'LES-1234' });
   const lot = stores.lots.getState().rows[0];
   if (lot === undefined) throw new Error('no lot row');
   stores.lots.getState().patchRow(lot.rowId, {
@@ -56,7 +59,7 @@ function keptDraft(): string {
     .patchRow(line.rowId, {
       typed: { [SALE.qty]: '20', [SALE.rate]: '600' },
     });
-  return serialiseDraft(stores);
+  return withOldHeader(serialiseDraft(stores), { truckNo: 'LES-1234' });
 }
 
 beforeEach(() => {
@@ -119,10 +122,10 @@ describe.each(LANGUAGES)('the unfinished بکری at start-up (%s)', (language) 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/bikri/book');
     });
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('LES-1234');
     await waitFor(() => {
       expect(textOf(lotsGrid(language), 0, 'qty')).toBe('50');
     });
+    expect(textOf(lotsGrid(language), 0, 'seller')).toBe(names(language).rahim);
     expect(textOf(salesGrid(language), 0, 'qty')).toBe('20');
     expect(textOf(salesGrid(language), 0, 'rate')).toBe('600');
     // The restored work is unsaved work: nothing was thrown away.

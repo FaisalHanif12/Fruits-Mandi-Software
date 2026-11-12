@@ -64,6 +64,8 @@ struct SaleRow {
     grade: Option<String>,
     /// Money paid on the spot, paisa (PRD FR-12.44).
     paid: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    lot_counter: i64,
 }
 
 /// The items of the lines asked for, by `(entry id, line no)`. A line with nothing to show has
@@ -168,7 +170,7 @@ fn load_sales(
                     s.buyer_rate_paisa, s.buyer_value_paisa, s.buyer_comm_paisa, s.laga_paisa,
                     s.buyer_total_paisa, s.seller_amount_paisa, l.seller_account_id,
                     l.chukta_person_key, i.name_ur, i.name_en, p.name_ur, p.name_en, b.number,
-                    s.grade, s.paid_paisa
+                    s.grade, s.paid_paisa, l.lot_counter
              FROM bikri_sales s
              JOIN bikri_lots l ON l.id = s.lot_id
              JOIN items i ON i.id = l.item_id
@@ -206,6 +208,7 @@ fn load_sales(
                     bikri_number: r.get(17)?,
                     grade: r.get(18)?,
                     paid: r.get(19)?,
+                    lot_counter: r.get(20)?,
                 },
             ))
         })?;
@@ -317,7 +320,11 @@ fn detail_of_line(
     }
     Ok(Some(DetailPart::Lot {
         bikri_number: first.bikri_number,
-        item: first.item.clone(),
+        // The lot's name on the seller's ledger: its item with the counter (PRD FR-12.45).
+        item: Names {
+            ur: mandi_core::bikri::lot_label(&first.item.ur, first.lot_counter),
+            en: mandi_core::bikri::lot_label(&first.item.en, first.lot_counter),
+        },
         packing: first.packing.clone(),
         qty,
         gross_paisa: gross,

@@ -201,42 +201,56 @@ pub struct LineChargeInput {
 }
 
 /// The header of a بکری (PRD 12.2). Everything is text; the backend checks every value.
+///
+/// From v1.34 (plan 71 H1 to H3) a new بکری has only the date and the بکری number. The other fields
+/// of the old header are retired: they are not in the generated TypeScript type, an old saved draft
+/// that still holds them is read without a refusal, and the backend ignores them. They are never sent
+/// back (`skip_serializing`), so a draft opened for an edit has only the day. An old saved بکری keeps
+/// its truck number, اڈا and the rest in the database and its edit never overwrites them.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct HeaderInput {
-    /// The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6).
+    /// The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6). A new
+    /// بکری's bill day is this day (PRD A13, v1.34).
     pub entry_date: String,
-    /// The seller's bill day. Empty means the same as `entry_date`.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub bill_date: String,
-    /// The optional second number (PRD 12.2 "بک").
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub book: Option<String>,
-    /// The truck number.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub truck_no: Option<String>,
-    /// The زمیندار, the default seller of new lots.
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub zamindar_account_id: Option<i64>,
-    /// The truck stand (اڈا).
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub adda_id: Option<i64>,
-    /// The driver's name.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub driver_name: Option<String>,
-    /// The driver's phone.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub driver_phone: Option<String>,
-    /// The total truck freight in whole rupees. `bikri_split_freight` splits it over the lots.
-    #[serde(default)]
+    /// Retired (PRD v1.34, C17). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub total_freight: Option<String>,
-    /// The default store.
-    #[serde(default)]
-    #[ts(type = "number | null")]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub store_id: Option<i64>,
-    /// A note.
-    #[serde(default)]
+    /// Retired (PRD v1.34). Ignored.
+    #[serde(default, skip_serializing)]
+    #[ts(skip)]
     pub note: Option<String>,
 }
 
@@ -408,44 +422,6 @@ pub struct BikriDraft {
 pub struct BikriPreviewInput {
     /// The draft to work out. Nothing is saved.
     pub draft: BikriDraft,
-}
-
-/// One lot for the freight split.
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct FreightLotInput {
-    /// The screen's key for the lot. Echoed back.
-    pub key: String,
-    /// Quantity received, in نگ.
-    pub qty_received: String,
-}
-
-/// Input of `bikri_split_freight` (PRD C17).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct SplitFreightInput {
-    /// The header's total freight, whole rupees.
-    pub total_freight: String,
-    /// The lots, in lot order. The lot with the most نگ gets the leftover rupees; on a tie, the
-    /// first lot.
-    pub lots: Vec<FreightLotInput>,
-}
-
-/// One lot's part of the freight.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
-pub struct FreightPart {
-    /// The key sent with the lot.
-    pub key: String,
-    /// The lot's freight.
-    #[ts(type = "Paisa")]
-    pub freight_paisa: Paisa,
-}
-
-/// Input of `assist_truck_memory` (PRD FR-7.49, FR-7.50).
-#[derive(Debug, Clone, Deserialize, TS)]
-pub struct TruckMemoryInput {
-    /// The truck number as typed so far.
-    pub truck_no: String,
-    /// The posting day of the new بکری, `DD-MM-YYYY`. The same-day notice looks at this day.
-    pub date: String,
 }
 
 /// Input of `assist_seller_memory` (PRD FR-7.51).

@@ -146,6 +146,9 @@ fn entry_place() -> EditPlace {
     EditPlace {
         kind: EditPlaceKind::Entry,
         lot_no: None,
+        lot_counter: None,
+        item_ur: None,
+        item_en: None,
         line_no: None,
         label_ur: None,
         label_en: None,

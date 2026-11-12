@@ -649,7 +649,38 @@ fn write_edit(
         .ok_or_else(|| data("too many lots"))?;
     for shaped in &lots {
         match shaped.lot.lot_id {
-            Some(id) => lot_ids.push(id),
+            Some(id) => {
+                lot_ids.push(id);
+                // An edit that moves a saved lot to another seller or item gives it the next number
+                // of the new pair now, in the order of the draft, so that it and the new lots are
+                // written in the order of their numbers (PRD FR-12.45, plan 71 L5).
+                if first {
+                    let saved = detail
+                        .lots
+                        .iter()
+                        .find(|l| l.id == id)
+                        .ok_or_else(|| data("a lot of an edit is not in its بکری"))?;
+                    let counter = shaped
+                        .preview
+                        .lot_counter
+                        .ok_or_else(|| data("a lot without errors has no counter"))?;
+                    let item_id = shaped
+                        .lot
+                        .item_id
+                        .ok_or_else(|| data("a lot without errors has no item"))?;
+                    let seller_id = shaped.journal.seller_account_id.get();
+                    // The number of the new seller and item may be the same figure as the old one
+                    // (1 of one seller and item is not 1 of another): the pair decides.
+                    if counter != saved.lot_counter
+                        || seller_id != saved.seller.id
+                        || item_id != saved.item.id
+                    {
+                        edit_repo::move_lot_counter(
+                            tx, id, seller_id, item_id, counter, user, &now,
+                        )?;
+                    }
+                }
+            }
             None => {
                 let running = lot_running_totals(
                     &LotCharges::of_totals(shaped.totals),
@@ -672,12 +703,8 @@ fn write_edit(
         date_iso: &old_posting.entry_date,
         year: date.year(),
         month: date.month(),
-        // A later posting carries the truck stand of the بکری.
-        adda_id: worked
-            .prepared
-            .header
-            .adda_id
-            .or(detail.adda_id.filter(|_| !first)),
+        // The facts carry the truck stand of an old بکری; a new one has none (PRD v1.34 H3).
+        adda_id: detail.adda_id,
     };
     let new_ids = insert_sales_and_facts(tx, &post, &lots, &lot_ids, first)?;
 
@@ -727,31 +754,9 @@ fn write_edit(
         }
     }
 
-    // 6. The header, and the version.
-    if first {
-        let header = &worked.prepared.header;
-        let bill_iso = header.bill_date.unwrap_or(date).to_iso();
-        edit_repo::update_entry(
-            tx,
-            detail.id,
-            &edit_repo::EntryUpdate {
-                book: header.book.as_deref(),
-                bill_date: &bill_iso,
-                truck_no: header.truck_no.as_deref(),
-                zamindar_account_id: header.zamindar_account_id,
-                adda_id: header.adda_id,
-                driver_name: header.driver_name.as_deref(),
-                driver_phone: header.driver_phone.as_deref(),
-                total_freight_paisa: header.total_freight.map(Paisa::as_paisa),
-                store_id: header.store_id,
-                note: header.note.as_deref(),
-            },
-            user,
-            &now,
-        )?;
-    } else {
-        edit_repo::bump_version(tx, detail.id, user, &now)?;
-    }
+    // 6. The version. The header is never rewritten: the day never changes, and an old بکری keeps its
+    // truck number and the rest as they were (PRD v1.34 H3).
+    edit_repo::bump_version(tx, detail.id, user, &now)?;
 
     // 7. Matching, from the start for every key the two postings touch (Architecture 12).
     pin_cash_sales(tx, &post, &lots, layout, &line_ids)?;

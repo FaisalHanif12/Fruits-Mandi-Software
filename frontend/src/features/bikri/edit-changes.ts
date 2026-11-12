@@ -53,22 +53,9 @@ export function captureBaseline(stores: BikriDraftStores): Baseline {
   return { lots, sales, header: headerText(stores) };
 }
 
-/** The text of the header fields, to compare. The records are compared by id. */
+/** The text of the header fields, to compare: the date alone (plan 71 H1). */
 function headerText(stores: BikriDraftStores): Record<string, string> {
-  const header = stores.header.getState();
-  return {
-    entryDate: header.entryDate,
-    billDate: header.billDate,
-    book: header.book,
-    truckNo: header.truckNo,
-    zamindar: String(header.zamindar?.id ?? ''),
-    adda: String(header.adda?.id ?? ''),
-    driverName: header.driverName,
-    driverPhone: header.driverPhone,
-    totalFreight: header.totalFreight,
-    store: String(header.store?.id ?? ''),
-    note: header.note,
-  };
+  return { entryDate: stores.header.getState().entryDate };
 }
 
 /** One change, for the list. `before` and `after` are text, or a record for a picker cell. */

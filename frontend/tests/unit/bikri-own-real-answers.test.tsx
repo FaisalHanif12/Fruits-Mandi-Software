@@ -185,7 +185,7 @@ describe.each(LANGUAGES)('the panel of a lot of trip goods, real answer (%s)', (
     const row = rows[0];
     if (row === undefined) throw new Error('no row');
     // The seller, the purchase and the quantity of the file, typed the way the panel types them.
-    const sent = lotInput(row, [], stores.header.getState());
+    const sent = lotInput(row, []);
     expect(sent.purchase_id).toBe(request.purchase_id);
     expect(sent.qty_received).toBe(request.qty_received);
     expect(sent.seller_account_id).toBe(OWN_ACCOUNT.id);

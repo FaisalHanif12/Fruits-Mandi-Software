@@ -304,6 +304,8 @@ pub struct LotState {
     pub bikri_id: i64,
     /// The lot number, from 1.
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    pub lot_counter: i64,
     /// `saved` or `cancelled`.
     pub bikri_status: String,
     /// The بکری number.
@@ -367,7 +369,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 l.qty_written_off, l.adjust_advance, l.first_entry_id, l.freight_paisa,
                 l.freight_paid_by = 'firm', l.labour_paisa, l.munshiana_paisa, l.phone_paisa,
                 l.cash_paid_paisa, l.store_rent_paisa, l.weight_received_grams, e.adda_id, l.purchase_id,
-                l.qty_taken, l.arrival_id
+                l.qty_taken, l.arrival_id, l.lot_counter
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
          WHERE l.id = ?1",
         [lot_id],
@@ -401,6 +403,7 @@ pub fn lot_state(conn: &Connection, lot_id: i64) -> rusqlite::Result<Option<LotS
                 purchase_id: r.get(25)?,
                 qty_taken: r.get(26)?,
                 arrival_id: r.get(27)?,
+                lot_counter: r.get(28)?,
             })
         },
     )
@@ -474,7 +477,7 @@ pub fn update_lot(
              phone_method = ?20, phone_value_paisa = ?21, phone_rule_id = ?22, cash_paid_paisa = ?23,
              store_rent_paisa = ?24, adjust_advance = ?25, qty_sold = ?26, gross_paisa = ?27,
              seller_comm_paisa = ?28, deductions_paisa = ?29, net_paisa = ?30, updated_at = ?31,
-             updated_by = ?32, version = version + 1
+             updated_by = ?32, lot_counter = ?33, version = version + 1
          WHERE id = ?1",
         params![
             lot_id,
@@ -508,66 +511,40 @@ pub fn update_lot(
             lot.deductions_paisa,
             lot.net_paisa,
             now,
-            user_id
+            user_id,
+            lot.lot_counter
         ],
     )?;
     Ok(())
 }
 
-/// The header columns an edit of the first posting writes back. The number and the day of the first
-/// posting never change.
-#[derive(Debug, Clone)]
-pub struct EntryUpdate<'a> {
-    /// The second number.
-    pub book: Option<&'a str>,
-    /// The bill day, `YYYY-MM-DD`.
-    pub bill_date: &'a str,
-    /// The truck number.
-    pub truck_no: Option<&'a str>,
-    /// The زمیندار.
-    pub zamindar_account_id: Option<i64>,
-    /// The truck stand.
-    pub adda_id: Option<i64>,
-    /// The driver's name.
-    pub driver_name: Option<&'a str>,
-    /// The driver's phone.
-    pub driver_phone: Option<&'a str>,
-    /// The header's total freight, paisa.
-    pub total_freight_paisa: Option<i64>,
-    /// The default store.
-    pub store_id: Option<i64>,
-    /// A note.
-    pub note: Option<&'a str>,
-}
-
-/// Rewrites the header of a بکری and raises its version.
+/// Gives a saved lot its new seller, item and counter in ONE update, before the lots that come
+/// after it are written (PRD FR-12.45, plan 71 L5). An edit that moves a lot to another seller or
+/// item gives it the next number of the new seller and item; the table accepts the new number only
+/// when it is above every number ever given to that seller and item, so the moves and the new
+/// lots of one edit are written in the order of their numbers.
 ///
 /// # Errors
-/// Any SQLite error.
-pub fn update_entry(
+/// Any SQLite error (`ERR_LOT_COUNTER_USED` if the number is not new, `ERR_APPEND_ONLY` if it is
+/// not a move).
+pub fn move_lot_counter(
     conn: &Connection,
-    bikri_id: i64,
-    entry: &EntryUpdate<'_>,
+    lot_id: i64,
+    seller_account_id: i64,
+    item_id: i64,
+    lot_counter: i64,
     user_id: i64,
     now: &str,
 ) -> rusqlite::Result<()> {
     conn.execute(
-        "UPDATE bikri_entries SET book = ?2, bill_date = ?3, truck_no = ?4, zamindar_account_id = ?5,
-             adda_id = ?6, driver_name = ?7, driver_phone = ?8, total_freight_paisa = ?9,
-             store_id = ?10, note = ?11, updated_at = ?12, updated_by = ?13, version = version + 1
+        "UPDATE bikri_lots SET seller_account_id = ?2, item_id = ?3, lot_counter = ?4,
+             updated_at = ?5, updated_by = ?6, version = version + 1
          WHERE id = ?1",
         params![
-            bikri_id,
-            entry.book,
-            entry.bill_date,
-            entry.truck_no,
-            entry.zamindar_account_id,
-            entry.adda_id,
-            entry.driver_name,
-            entry.driver_phone,
-            entry.total_freight_paisa,
-            entry.store_id,
-            entry.note,
+            lot_id,
+            seller_account_id,
+            item_id,
+            lot_counter,
             now,
             user_id
         ],
@@ -575,7 +552,9 @@ pub fn update_entry(
     Ok(())
 }
 
-/// Raises the version of a بکری (an edit of a later posting, a later sale).
+/// Raises the version of a بکری (an edit, a later sale). An edit never rewrites the header: the day and
+/// the number never change, and the retired header columns of an old بکری stay as they were (PRD
+/// v1.34 H3).
 ///
 /// # Errors
 /// Any SQLite error.
@@ -936,6 +915,8 @@ pub struct StockLot {
     pub lot_id: i64,
     /// The lot number.
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    pub lot_counter: i64,
     /// The بکری.
     pub bikri_id: i64,
     /// Its number.
@@ -966,7 +947,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
     let mut statement = conn.prepare(
         "SELECT l.id, l.lot_no, e.id, e.number, e.entry_date, sa.id, sa.code, sa.name_ur, sa.name_en,
                 it.id, it.code, it.name_ur, it.name_en, pk.id, pk.code, pk.name_ur, pk.name_en,
-                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag
+                l.qty_received, l.qty_sold, l.qty_written_off, l.qty_taken, sa.tag, l.lot_counter
          FROM bikri_lots l
          JOIN bikri_entries e ON e.id = l.bikri_id
          JOIN accounts sa ON sa.id = l.seller_account_id
@@ -1005,6 +986,7 @@ pub fn stock_lots(conn: &Connection, filter: &StockFilter) -> rusqlite::Result<V
             Ok(StockLot {
                 lot_id: r.get(0)?,
                 lot_no: r.get(1)?,
+                lot_counter: r.get(22)?,
                 bikri_id: r.get(2)?,
                 bikri_number: r.get(3)?,
                 received_date: r.get(4)?,

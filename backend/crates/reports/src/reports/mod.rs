@@ -14,7 +14,7 @@
 //!
 //! Built so far (plan 20): the Accounts group R11 روزنامچہ, R13 کھاتہ, R14 فرد حساب, R16 انڈکس,
 //! R17 مدوں بیلنس, R18 ٹرائل بیلنس and R19 اوپن ٹرائل; the Sales group R2 مکمل بکری, R3 نقدی, R4
-//! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری, R8 اڈا رپورٹ; the Collections
+//! ادھاری, R6 بکری تفصیل, R7 قسم مال وار بکری (R8, اڈا رپورٹ, is retired in v1.34); the Collections
 //! group R20 وصولی / اگراہی, R21 بحساب شہر, R22 بحساب اگراہی والا, R24 ادائیگی باقی, R26 پیشگی کھاتہ
 //! and R27 بیجک سیریز; the Business group R28 آمدن رپورٹ, R29 خرچہ رپورٹ, R30 منافع و تقسیم, R31
 //! شراکت دار کھاتہ and R32 ادھار رقم رپورٹ; the Accounts group also has R12 روکڑ. R31 is built from the
@@ -153,6 +153,7 @@ const BUYER_BILLS_FILTERS: &[FilterKind] = &[
     FilterKind::City,
     FilterKind::Adda,
     FilterKind::Bikri,
+    FilterKind::Lot,
 ];
 
 /// The filters of R2, R3 and R4: those of the registers, and the item group (PRD v1.29).
@@ -166,6 +167,7 @@ const REGISTER_GROUP_FILTERS: &[FilterKind] = &[
     FilterKind::City,
     FilterKind::Adda,
     FilterKind::Grade,
+    FilterKind::Lot,
 ];
 
 /// The filters of the seller side reports R6 and R27.
@@ -175,6 +177,7 @@ const SELLER_SIDE_FILTERS: &[FilterKind] = &[
     FilterKind::Zamindar,
     FilterKind::Item,
     FilterKind::Adda,
+    FilterKind::Lot,
 ];
 
 /// The filters of R27: those of R6, and the item group (PRD v1.29).
@@ -185,6 +188,7 @@ const SELLER_SIDE_GROUP_FILTERS: &[FilterKind] = &[
     FilterKind::Item,
     FilterKind::ItemGroup,
     FilterKind::Adda,
+    FilterKind::Lot,
 ];
 
 /// The filters of the buyer dues reports R20 to R22.
@@ -251,12 +255,6 @@ const SPECS: &[Spec] = &[
         false,
     ),
     spec(
-        ReportId::R8,
-        ReportGroup::Sales,
-        &[FilterKind::DateRange, FilterKind::Adda],
-        false,
-    ),
-    spec(
         ReportId::R10,
         ReportGroup::Sales,
         &[
@@ -265,6 +263,7 @@ const SPECS: &[Spec] = &[
             FilterKind::Item,
             FilterKind::ItemGroup,
             FilterKind::StockView,
+            FilterKind::Lot,
         ],
         false,
     ),
@@ -609,7 +608,6 @@ fn build_in_with(
         ReportId::R5 => sales::run_r5(conn, &typed, spec),
         ReportId::R6 => sales::run_r6(conn, &typed, spec),
         ReportId::R7 => sales::run_r7(conn, &typed, spec),
-        ReportId::R8 => sales::run_r8(conn, &typed, spec),
         ReportId::R20 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::Flat),
         ReportId::R21 => collections::run_dues(conn, &typed, spec, collections::DuesLayout::ByCity),
         ReportId::R22 => {
@@ -864,7 +862,10 @@ pub fn print_data(db: &Db, input: &ReportPrintInput) -> Result<ReportPrintData, 
         offset: 0,
         limit: None,
     };
-    let mut page = db.read(|conn| build(conn, db, input.id, &input.filters, all))?;
+    // A seller's lots print in the order of the print language (PRD FR-12.12, plan 71 L7).
+    let mut filters = input.filters.clone();
+    filters.order_language.get_or_insert(input.language);
+    let mut page = db.read(|conn| build(conn, db, input.id, &filters, all))?;
     // The print follows the screen: its sort and its month headings, with every row.
     view::shape(
         &mut page,

@@ -35,31 +35,14 @@ pub struct TypedLotCharge {
     pub value: Paisa,
 }
 
-/// The header, read.
+/// The header, read. From v1.34 it holds only the posting day (PRD plan 71 H1): a new بکری's bill
+/// day is its posting day.
 #[derive(Debug, Clone, Default)]
 pub struct PreparedHeader {
     /// The posting day, if it was valid.
     pub entry_date: Option<BusinessDate>,
-    /// The bill day (the posting day when empty).
+    /// The bill day: the posting day.
     pub bill_date: Option<BusinessDate>,
-    /// The second number of the بکری (PRD 12.2 "بک"), trimmed. None if empty.
-    pub book: Option<String>,
-    /// The truck number, trimmed. None if empty.
-    pub truck_no: Option<String>,
-    /// The driver's name, trimmed. None if empty.
-    pub driver_name: Option<String>,
-    /// The driver's phone as 11 digits. None if empty.
-    pub driver_phone: Option<String>,
-    /// A note, trimmed. None if empty.
-    pub note: Option<String>,
-    /// The زمیندار.
-    pub zamindar_account_id: Option<i64>,
-    /// The truck stand.
-    pub adda_id: Option<i64>,
-    /// The default store.
-    pub store_id: Option<i64>,
-    /// The total freight, if typed.
-    pub total_freight: Option<Paisa>,
 }
 
 /// A sale line, read. A field that could not be read is `None` and its error is in

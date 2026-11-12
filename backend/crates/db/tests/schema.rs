@@ -262,6 +262,7 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
                 "bikri_id",
                 "lot_no",
+                "lot_counter",
                 "seller_account_id",
                 "chukta_name_ur",
                 "chukta_name_en",
@@ -499,6 +500,10 @@ fn expected() -> Vec<(&'static str, Vec<&'static str>)> {
             ],
         ),
         (
+            "lot_counters",
+            vec!["seller_account_id", "item_id", "last_counter"],
+        ),
+        (
             "lot_credit_parts",
             vec![
                 "lot_id",
@@ -732,8 +737,8 @@ fn table_list_equals_architecture_15() {
     let conn = common::raw(dir.path());
     let want: BTreeSet<String> = expected().iter().map(|(t, _)| (*t).to_owned()).collect();
     // 46 tables of migrations 1 to 10, `dead_marks` of migration 11, `edit_windows` of 12,
-    // `assistant_questions` of 15 and `chukta_buyers` of 20.
-    assert_eq!(want.len(), 50);
+    // `assistant_questions` of 15, `chukta_buyers` of 20 and `lot_counters` of 22.
+    assert_eq!(want.len(), 51);
     assert_eq!(tables(&conn), want);
 }
 
@@ -766,7 +771,7 @@ fn every_table_is_strict_with_system_columns_typed() {
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    assert_eq!(rows.len(), 50);
+    assert_eq!(rows.len(), 51);
     for (name, strict) in rows {
         assert_eq!(strict, 1, "{name} is not STRICT");
         let version: (String, i64, Option<String>) = conn
@@ -825,6 +830,7 @@ fn every_paisa_column_has_the_whole_rupee_check() {
     // venture_entries 2, venture_entry_parts 1, purchase_cost_parts 1, lot_credit_parts 1 and
     // fruit_takes 2 more; of migration 11: dead_marks 1; and of migration 21: bikri_sales 1
     // (`paid_paisa`, written as three column CHECKs, one of them the whole rupee check).
+    // Migration 22 adds none: `lot_counter` and `last_counter` are counters, not money.
     assert_eq!(found, 65);
 }
 
@@ -869,6 +875,10 @@ fn listed_indexes() -> Vec<(&'static str, Vec<&'static str>)> {
         ("bikri_sales", vec!["buyer_account_id", "entry_date"]),
         ("bikri_sales", vec!["journal_entry_id"]),
         ("bikri_lots", vec!["bikri_id"]),
+        (
+            "bikri_lots",
+            vec!["seller_account_id", "item_id", "lot_counter"],
+        ),
         ("bikri_lots", vec!["seller_account_id", "id"]),
         ("bikri_lots", vec!["item_id", "packing_id"]),
         (

@@ -3,7 +3,8 @@
 // is an Enter stop. A fill happens once: the row remembers it, so a cell the user empties is not
 // filled again.
 //
-// - A new lot's seller is the previous lot's seller, or the header زمیندار for the first lot.
+// - A new lot's seller is the previous lot's seller. The first lot has none: the header has no
+//   زمیندار any more (plan 71 H2), so the first seller is typed.
 // - Choosing a seller fills the item, packing and مارکہ of his last lot, into empty cells.
 // - A new sale line's quantity is what the lot has left, from the backend (`remaining_qty`), filled
 //   at once, before the buyer is chosen: the line is still blank (no buyer, no rate) until he
@@ -64,13 +65,12 @@ export function useDraftFills(
   stale: boolean,
 ): void {
   const lotRows = stores.lots((state) => state.rows);
-  const zamindar = stores.header((state) => state.zamindar);
 
-  // A lot with no seller yet gets the previous lot's seller, or the زمیندار for the first lot.
+  // A lot with no seller yet gets the previous lot's seller.
   useEffect(() => {
     lotRows.forEach((row, index) => {
       if (row.picked?.[LOT.seller] !== undefined || row.typed[LOT.sellerFilled] === ON) return;
-      const candidate = index === 0 ? zamindar : lotRows[index - 1]?.picked?.[LOT.seller];
+      const candidate = index === 0 ? null : lotRows[index - 1]?.picked?.[LOT.seller];
       // The firm's own goods are sold lot by lot from a purchase, never carried to the next lot.
       if (candidate === null || candidate === undefined || isOwnGoods(candidate)) return;
       stores.lots.getState().patchRow(row.rowId, {
@@ -78,7 +78,7 @@ export function useDraftFills(
         typed: { [LOT.sellerFilled]: ON },
       });
     });
-  }, [lotRows, zamindar, stores]);
+  }, [lotRows, stores]);
 
   // A seller was chosen: ask what he sent last time, once for each seller on a row.
   useEffect(() => {

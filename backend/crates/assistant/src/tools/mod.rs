@@ -32,6 +32,7 @@ pub mod cells;
 pub mod cues;
 pub mod find;
 pub mod find_lists;
+pub mod find_lots;
 pub mod find_masters;
 pub mod help;
 pub mod party;

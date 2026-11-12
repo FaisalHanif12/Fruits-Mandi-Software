@@ -45,6 +45,7 @@ import {
   EMPTY_FILTERS,
   canRun,
   filtersToWire,
+  withOrderLanguage,
   isUnfiltered,
   type ReportFilterState,
 } from '../filters';
@@ -166,14 +167,19 @@ function ReportBody({
   const [view, setView] = useState<'table' | 'preview' | 'slips'>('table');
   const [focusRowId, setFocusRowId] = useState<string | null>(null);
   const settled = useDebouncedValue(state, FILTER_SETTLE_MS);
+  const language = useLanguage();
+  // The day sheet (R35) sorts a seller's lots in the order of the app language (PRD FR-12.12, plan 71
+  // L7), so a language switch asks the backend again.
   const wire = useMemo(
-    () => (canRun(settled, entry) ? filtersToWire(settled, entry.filters) : null),
-    [settled, entry],
+    () =>
+      canRun(settled, entry)
+        ? withOrderLanguage(filtersToWire(settled, entry.filters), entry.id, language)
+        : null,
+    [settled, entry, language],
   );
   const monthsOn = MONTH_REPORTS.has(entry.id);
   const query = useReportPages(entry.id, wire, monthsOn);
   const openSource = useOpenSource(catalog, entry.id);
-  const language = useLanguage();
   // Excel (D5-Q1): every row of the filters as they are in the boxes NOW, not the settled ones.
   const exporter = useExcelExport({
     defaultName: () => exportFileName(entry.id, new Date()),

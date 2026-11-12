@@ -995,17 +995,6 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
-            "bikri_split_freight",
-            json!({ "input": { "total_freight": "1,000",
-                "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
-            true,
-        ),
-        (
-            "assist_truck_memory",
-            json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
-            true,
-        ),
-        (
             "assist_seller_memory",
             json!({ "input": { "seller_account_id": 1 } }),
             true,
@@ -2627,34 +2616,7 @@ fn the_bikri_commands_work_through_the_ipc() {
     assert_eq!(p["cash"]["cash_after_paisa"], -500_000);
     assert_eq!(p["cash"]["needs_confirm"], true);
 
-    // The freight split (C17) and its error shape.
-    let parts = h.ok(
-        "bikri_split_freight",
-        json!({ "input": { "total_freight": "1,000",
-            "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
-    );
-    assert_eq!(
-        parts,
-        json!([{ "key": "a", "freight_paisa": 60_000 }, { "key": "b", "freight_paisa": 40_000 }])
-    );
-    let bad = h
-        .call(
-            "bikri_split_freight",
-            json!({ "input": { "total_freight": "10.5", "lots": [{ "key": "a", "qty_received": "30" }] } }),
-        )
-        .unwrap_err();
-    assert_eq!(bad["errors"][0]["code"], "ERR_DECIMALS_NOT_ALLOWED");
-    assert_eq!(bad["errors"][0]["field"], "total_freight");
-
     // The memories read nothing yet.
-    let truck = h.ok(
-        "assist_truck_memory",
-        json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
-    );
-    assert_eq!(
-        truck,
-        json!({ "last": null, "same_day": null, "suggestions": [] })
-    );
     let seller = h.ok(
         "assist_seller_memory",
         json!({ "input": { "seller_account_id": rahim } }),

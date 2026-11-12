@@ -199,6 +199,17 @@ fn day() -> world::World {
     w
 }
 
+/// Writes a truck number on every بکری that has none, as OLD data has them: a new بکری has no truck
+/// (PRD v1.34, plan 71 H1 to H3), and `find` with the role `truck` stays for the old ones.
+fn old_trucks(w: &world::World) {
+    common::raw(&w.dir)
+        .execute(
+            "UPDATE bikri_entries SET truck_no = 'LES-' || (1000 + number) WHERE truck_no IS NULL",
+            mandi_services::db::rusqlite::params![],
+        )
+        .unwrap();
+}
+
 /// Calls `f` with the spellings confirmed so far and confirms the ones the engine is unsure of, as
 /// the screen asks the user.
 fn confirmed<T>(mut f: impl FnMut(&[String]) -> Result<T, ServiceError>) -> T {
@@ -935,6 +946,8 @@ fn find_lists_and_counts_the_expense_heads() {
 #[test]
 fn find_finds_the_bikri_of_a_truck_number() {
     let w = day();
+    world::give_truck(&w, 1, "LES-1234");
+    world::give_truck(&w, 2, "LHR-0077");
     let mut s = Session::new(&w);
     let les = s.find("LES-1234", "truck");
     let j = s.json(&les);
@@ -1794,6 +1807,7 @@ fn figures(parts: &[AnswerPart]) -> Vec<&mandi_reports::reports::Cell> {
 fn the_new_results_can_be_cited_and_a_typed_figure_or_name_is_still_refused() {
     use mandi_reports::reports::Cell;
     let w = day();
+    world::give_truck(&w, 1, "LES-1234");
     add_staff(&w, "اسلم", "Aslam", "munshi");
     let mut s = Session::new(&w);
     let rules_id = s.ok("app_state", state_input("rules", json!({})));
@@ -1859,6 +1873,7 @@ fn the_new_results_can_be_cited_and_a_typed_figure_or_name_is_still_refused() {
 fn on_the_rich_year_every_read_agrees_with_the_screens() {
     let y = seed::build();
     let w = &y.w;
+    old_trucks(w);
     let today = mandi_services::day::status(&w.env.ctx).unwrap().today;
     let mut s = Session::new(w).on(&today);
 

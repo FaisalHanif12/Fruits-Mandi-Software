@@ -30,7 +30,7 @@ use mandi_db::rusqlite::Connection;
 
 use super::super::PageSpec;
 use crate::error::ReportsError;
-use crate::reports::common::{col, count_of, load_parties, names_cell};
+use crate::reports::common::{col, count_of, load_parties, lot_names, names_cell};
 use crate::reports::filters::Typed;
 use crate::reports::ids;
 use crate::reports::model::{
@@ -173,44 +173,50 @@ pub(crate) fn run(
             to: typed.to.clone(),
             seller_id: typed.seller_id,
             item_id: typed.item_id,
-            lot_id: None,
+            lot_id: typed.lot_id,
             include_written_off: false,
         },
     )?;
     lots.retain(|lot| in_group(lot.item.id));
     // The purchases of trips with goods left. A seller filter keeps them only if it picks the
     // own-goods account itself.
-    let mut purchases = if typed.seller_id.is_none_or(|id| id == own_account) {
-        mandi_db::purchases::list(
-            conn,
-            &ListFilter {
-                hide_cancelled: false,
-                order_by: None,
-                search: None,
-                trip_id: None,
-                from: typed.from.clone(),
-                to: typed.to.clone(),
-                item_id: typed.item_id,
-                state: Some(StateFilter::InStock),
-            },
-            0,
-            -1,
-        )?
-    } else {
-        Vec::new()
-    };
+    // One lot (PRD FR-12.45) is a lot of بکری: no purchase of a trip and no garden arrival is it.
+    let mut purchases =
+        if typed.lot_id.is_none() && typed.seller_id.is_none_or(|id| id == own_account) {
+            mandi_db::purchases::list(
+                conn,
+                &ListFilter {
+                    hide_cancelled: false,
+                    order_by: None,
+                    search: None,
+                    trip_id: None,
+                    from: typed.from.clone(),
+                    to: typed.to.clone(),
+                    item_id: typed.item_id,
+                    state: Some(StateFilter::InStock),
+                },
+                0,
+                -1,
+            )?
+        } else {
+            Vec::new()
+        };
 
     purchases.retain(|purchase| in_group(purchase.item.id));
 
     // The garden arrivals with goods left. A seller filter keeps the arrivals whose garden account
     // is that seller.
-    let mut arrivals = mandi_db::arrivals::with_stock(
-        conn,
-        typed.from.as_deref(),
-        typed.to.as_deref(),
-        typed.item_id,
-        typed.seller_id,
-    )?;
+    let mut arrivals = if typed.lot_id.is_none() {
+        mandi_db::arrivals::with_stock(
+            conn,
+            typed.from.as_deref(),
+            typed.to.as_deref(),
+            typed.item_id,
+            typed.seller_id,
+        )?
+    } else {
+        Vec::new()
+    };
     arrivals.retain(|arrival| in_group(arrival.item.id));
 
     let mut ids_to_load: Vec<i64> = lots.iter().map(|l| l.seller.id).collect();
@@ -286,7 +292,10 @@ pub(crate) fn run(
                     number: Some(lot.bikri_number),
                 },
                 Cell::Party { party: seller },
-                names_cell(Some(lot.item.name_ur), Some(lot.item.name_en)),
+                // The item with the lot's counter, next to the seller: the lot's name (PRD FR-12.45).
+                Cell::Names {
+                    names: lot_names(&lot.item.name_ur, &lot.item.name_en, lot.lot_counter),
+                },
                 names_cell(Some(lot.packing.name_ur), Some(lot.packing.name_en)),
                 Cell::Number {
                     value: lot.qty_received,

@@ -1384,114 +1384,46 @@ fn e2e_26_a_new_row_starts_at_the_remaining_qty_with_the_last_rate_as_a_hint() {
 
 // ---- Plan 13: E2E-25 and E2E-26 on saved data ----
 
-/// A saved بکری 1 with the truck LES-1234 from سوات اڈا (Event 1), saved through the real save.
-fn saved_event_1_with_adda() -> (bikri_support::World, i64) {
+/// A saved بکری 1 (Event 1), saved through the real save.
+fn saved_event_1() -> bikri_support::World {
     use bikri_support::*;
-    use mandi_services::core::masters::{AddaInput, MasterInput};
     let w = world();
-    let adda = mandi_services::masters::save(
-        &w.env.ctx,
-        &w.owner,
-        &MasterInput::Adda(AddaInput {
-            id: None,
-            version: None,
-            code: String::new(),
-            name_ur: "سوات اڈا".into(),
-            name_en: "Swat Adda".into(),
-            city_id: None,
-            confirmed_rules_words: vec!["سوات".into()],
-        }),
-    )
-    .map(|row| row.id());
-    // The spelling check may ask for the words of the name; confirm them like the screen does.
-    let adda = match adda {
-        Ok(id) => id,
-        Err(ServiceError::Rejected(items)) => {
-            let words: Vec<String> = items
-                .iter()
-                .filter_map(|i| match i.values.get("words") {
-                    Some(mandi_services::core::error::ErrorValue::Text(t)) => Some(t.clone()),
-                    _ => None,
-                })
-                .flat_map(|t| t.split(' ').map(str::to_owned).collect::<Vec<_>>())
-                .collect();
-            mandi_services::masters::save(
-                &w.env.ctx,
-                &w.owner,
-                &MasterInput::Adda(AddaInput {
-                    id: None,
-                    version: None,
-                    code: String::new(),
-                    name_ur: "سوات اڈا".into(),
-                    name_en: "Swat Adda".into(),
-                    city_id: None,
-                    confirmed_rules_words: words,
-                }),
-            )
-            .unwrap()
-            .id()
-        }
-        Err(other) => panic!("{other:?}"),
-    };
-    let mut d = event1(&w);
-    d.header.adda_id = Some(adda);
-    d.header.zamindar_account_id = Some(w.rahim);
-    d.header.driver_name = Some("Aslam".into());
     mandi_services::bikri::save(
         &w.env.ctx,
         &w.owner,
         &mandi_services::core::bikri::BikriSaveInput {
-            draft: d,
+            draft: event1(&w),
             confirm_cash_below_zero: true,
         },
     )
     .unwrap();
-    (w, adda)
+    w
 }
 
 #[test]
-fn e2e_25_after_a_saved_bikri_the_same_truck_is_noticed_and_the_seller_is_remembered() {
-    // PRD E2E-25 (backend part): بکری 1 is saved. A new بکری with the truck LES-1234 gets the
-    // same-truck notice naming بکری 1; continuing fills the اڈا, the زمیندار and the driver; the
-    // lot of رحیم fills کیلا and پیٹی.
-    use mandi_services::core::bikri::TruckMemoryInput;
-    let (w, adda) = saved_event_1_with_adda();
-    let truck = assist::truck_memory(
-        &w.env.ctx,
-        &TruckMemoryInput {
-            truck_no: "LES-1234".into(),
-            date: "10-10-2026".into(),
-        },
-    )
-    .unwrap();
-    assert_eq!(truck.same_day.map(|d| d.bikri_number), Some(1));
-    let last = truck.last.expect("the last بکری of the truck");
-    assert_eq!(
-        (
-            last.bikri_number,
-            last.adda_id,
-            last.zamindar_account_id,
-            last.driver_name.as_deref()
-        ),
-        (1, Some(adda), Some(w.rahim), Some("Aslam"))
-    );
+fn e2e_25_after_a_saved_bikri_the_seller_is_remembered_and_the_new_lot_has_its_name() {
+    // PRD E2E-25 (backend part, v1.34): بکری 1 is saved, with رحیم's lot کیلا-1. A new بکری's lot of
+    // رحیم fills کیلا and پیٹی from his last lot, and its name before the save is رحیم، کیلا-2 (FR-12.45).
+    // The truck parts of this test are retired with the truck memory (plan 71 H2).
+    use bikri_support::*;
+    let w = saved_event_1();
     // A short code `1` in a seller field is رحیم; his lot fills the item and the packing.
     let memory = assist::seller_memory(&w.env.ctx, w.rahim).unwrap();
     assert_eq!(
         (memory.item_id, memory.packing_id, memory.from_last_lot),
         (Some(w.banana), Some(w.box_), true)
     );
-    // Another day: no notice, the memory stays.
-    let tomorrow = assist::truck_memory(
-        &w.env.ctx,
-        &TruckMemoryInput {
-            truck_no: "LES-1234".into(),
-            date: "09-10-2026".into(),
-        },
-    )
-    .unwrap();
-    assert!(tomorrow.same_day.is_none() && tomorrow.last.is_some());
-    // The notice's "کھولیں" finds بکری 1 by its number.
+    // His new lot, before it is saved: the number it will get, the next one of رحیم and کیلا.
+    let d = draft(vec![with_sales(
+        lot(&w, "lot-new", w.rahim, w.banana, "10"),
+        vec![sale("s-new", w.akram, "10", "600")],
+    )]);
+    let preview = mandi_services::bikri::preview(&w.env.ctx, &d).unwrap();
+    assert_eq!(preview.lots[0].lot_counter, Some(2));
+    // The saved lot of بکری 1 is کیلا-1.
+    let detail = mandi_services::bikri::get(&w.env.ctx, 1).unwrap();
+    assert_eq!(detail.lots[0].lot_counter, 1);
+    // The بکری is found by its number.
     let found = mandi_services::bikri::find(
         &w.env.ctx,
         &mandi_services::core::bikri::BikriFindInput {
@@ -1501,6 +1433,8 @@ fn e2e_25_after_a_saved_bikri_the_same_truck_is_noticed_and_the_seller_is_rememb
     )
     .unwrap();
     assert_eq!(found.len(), 1);
+    assert_eq!(found[0].lots.len(), 1);
+    assert_eq!(found[0].lots[0].counter, 1);
 }
 
 #[test]

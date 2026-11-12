@@ -6,6 +6,7 @@
 //! - `properties`: random drafts keep the books balanced.
 
 mod cases;
+mod counter;
 mod edit;
 mod own;
 mod properties;

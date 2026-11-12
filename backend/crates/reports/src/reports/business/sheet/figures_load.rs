@@ -221,6 +221,9 @@ pub(super) struct Goods {
     pub(super) packing_id: i64,
     pub(super) item: Names,
     pub(super) packing: Names,
+    /// The counter of the lot's name, for a seller's line (PRD FR-12.45); `None` on a buyer's line,
+    /// because the buyer does not see the lots.
+    pub(super) lot_counter: Option<i64>,
 }
 
 /// One sale line as a buyer was charged for it (PRD C5), as stored.
@@ -344,6 +347,7 @@ pub(super) fn buyer_lines(
                 packing_id,
                 item: names(item_ur, item_en),
                 packing: names(packing_ur, packing_en),
+                lot_counter: None,
             },
             qty,
             weight_grams,
@@ -401,7 +405,7 @@ pub(super) fn seller_lines_in(
         "SELECT e.entry_date, l.seller_account_id, COALESCE(l.chukta_person_key, ''), s.bikri_id,
                 l.item_id, l.packing_id, i.name_ur, i.name_en, pk.name_ur, pk.name_en,
                 s.qty, s.seller_rate_paisa, s.seller_amount_paisa, s.seller_comm_paisa,
-                s.weight_grams, s.grade
+                s.weight_grams, s.grade, l.lot_counter
          {from_sales}
          JOIN items i ON i.id = l.item_id
          JOIN packings pk ON pk.id = l.packing_id
@@ -435,11 +439,12 @@ pub(super) fn seller_lines_in(
                 ],
                 r.get::<_, Option<i64>>(14)?,
                 r.get::<_, Option<String>>(15)?,
+                r.get::<_, i64>(16)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     let mut out = Vec::with_capacity(rows.len());
-    for (text, n, weight_grams, grade) in rows {
+    for (text, n, weight_grams, grade, lot_counter) in rows {
         let [day, person, item_ur, item_en, packing_ur, packing_en] = text;
         let [
             account_id,
@@ -461,6 +466,7 @@ pub(super) fn seller_lines_in(
                 packing_id,
                 item: names(item_ur, item_en),
                 packing: names(packing_ur, packing_en),
+                lot_counter: Some(lot_counter),
             },
             qty,
             weight_grams,

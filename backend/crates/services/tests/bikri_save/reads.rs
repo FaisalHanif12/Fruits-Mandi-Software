@@ -13,11 +13,12 @@ use mandi_services::search;
 use crate::helpers::*;
 use crate::support::*;
 
-/// Event 1 with a truck number, so the list and the find have something to tell.
-fn event1_truck(w: &World, truck: &str) -> mandi_services::core::bikri::BikriDraft {
-    let mut d = event1(w);
-    d.header.truck_no = Some(truck.into());
-    d
+/// Event 1 saved as an OLD بکری that has a truck number (a new بکری has none, PRD v1.34), so the
+/// list and the find have something to tell.
+fn save_event1_truck(w: &World, truck: &str) -> mandi_services::core::bikri::BikriSaved {
+    let saved = save_ok(w, &event1(w));
+    give_truck(w, saved.number, truck);
+    saved
 }
 
 fn list(w: &World, input: BikriListInput) -> Vec<mandi_services::core::bikri::BikriListRow> {
@@ -34,12 +35,12 @@ fn a_saved_bikri_that_does_not_exist_is_not_found() {
 #[test]
 fn the_list_shows_the_columns_of_the_day_list_and_filters() {
     let w = world();
-    save_ok(&w, &event1_truck(&w, "LES-1234"));
+    save_event1_truck(&w, "LES-1234");
     let mut other = event1(&w);
-    other.header.truck_no = Some("LHR-0077".into());
     other.lots[0].seller_account_id = Some(w.karim);
     other.lots[0].item_id = Some(w.apple);
-    save_ok(&w, &other);
+    let second = save_ok(&w, &other);
+    give_truck(&w, second.number, "LHR-0077");
 
     let all = list(
         &w,
@@ -142,14 +143,14 @@ fn the_list_shows_the_columns_of_the_day_list_and_filters() {
 #[test]
 fn the_list_and_find_match_each_filter() {
     let w = world();
-    save_ok(&w, &event1_truck(&w, "LES-1234"));
+    save_event1_truck(&w, "LES-1234");
     let line = sale("s-1", w.akram, "10", "1200");
     let mut l = lot(&w, "lot-1", w.karim, w.apple, "10");
     l.cash_paid = None;
     l.sales = vec![line];
-    let mut d = draft(vec![l]);
-    d.header.truck_no = Some("les-9999".into());
-    save_ok(&w, &d);
+    let d = draft(vec![l]);
+    let second = save_ok(&w, &d);
+    give_truck(&w, second.number, "les-9999");
 
     let rows = list(&w, BikriListInput::default());
     let second = rows.iter().find(|r| r.number == 2).unwrap();
@@ -270,8 +271,8 @@ fn first_previous_next_and_last_go_by_number() {
 fn global_search_finds_a_bikri_by_number_and_by_truck() {
     // PRD FR-5.4: after the accounts, the بکری of this number, then the newest of this truck.
     let w = world();
-    save_ok(&w, &event1_truck(&w, "LES-1234"));
-    save_ok(&w, &event1_truck(&w, "LES-5555"));
+    save_event1_truck(&w, "LES-1234");
+    save_event1_truck(&w, "LES-5555");
     let ask = |text: &str, limit: u32| {
         search::global(
             &w.env.ctx,

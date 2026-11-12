@@ -317,7 +317,6 @@ export function umarAnswer(draft: BikriDraft): BikriPreview {
 export function fillUmarsLot(stores: BikriDraftStores): void {
   const lot = stores.lots.getState().rows[0];
   if (lot === undefined) throw new Error('no lot row');
-  stores.header.getState().patch({ truckNo: 'LES-1234', zamindar: EHSAN_PICKED });
   stores.lots.getState().patchRow(lot.rowId, {
     typed: {
       [LOT.qty]: String(LOT_QTY),

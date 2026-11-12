@@ -76,6 +76,7 @@ export function lotRow(over: Partial<FruitLotRow> = {}): FruitLotRow {
   return {
     lot_id: 40,
     lot_no: 1,
+    lot_counter: 1,
     bikri_id: 41,
     bikri_number: 1,
     received_date: '2026-10-09',
@@ -248,6 +249,7 @@ export function createFruitBooks(options: FruitOptions = {}) {
           : {
               lot_id: lot.lot_id,
               lot_no: lot.lot_no,
+              lot_counter: lot.lot_counter,
               bikri_id: lot.bikri_id,
               bikri_number: lot.bikri_number,
             },

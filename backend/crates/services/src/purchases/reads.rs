@@ -413,6 +413,7 @@ pub(super) fn get(ctx: &Context, input: &PurchaseGetInput) -> Result<PurchaseRow
                     bikri_number: l.bikri_number,
                     lot_id: l.lot_id,
                     lot_no: l.lot_no,
+                    lot_counter: l.lot_counter,
                     entry_date: l.entry_date,
                     qty_sold: l.qty_sold,
                     cost_paisa: paisa(l.cost_paisa)?,

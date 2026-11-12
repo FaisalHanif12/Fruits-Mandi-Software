@@ -40,9 +40,6 @@ pub enum ReportId {
     /// Item-wise sales, قسم مال وار بکری.
     #[serde(rename = "R7")]
     R7,
-    /// Truck stand report, اڈا رپورٹ.
-    #[serde(rename = "R8")]
-    R8,
     /// Stock, مکمل سٹاک / باقی مال.
     #[serde(rename = "R10")]
     R10,
@@ -143,7 +140,6 @@ impl ReportId {
             ReportId::R5 => "R5",
             ReportId::R6 => "R6",
             ReportId::R7 => "R7",
-            ReportId::R8 => "R8",
             ReportId::R10 => "R10",
             ReportId::R11 => "R11",
             ReportId::R12 => "R12",
@@ -246,6 +242,10 @@ pub enum FilterKind {
     StockView,
     /// The quality of the sale lines (اول، دوم، سوم) of R2, R3 and R4 (PRD FR-12.42).
     Grade,
+    /// One lot (R2 to R6, R10, R27; PRD FR-12.45, FR-7.77): the lot the Owner picked when his
+    /// question named a seller and an item with more than one lot. The report screens draw no box
+    /// for it; the assistant's "open the full report" button sets it.
+    Lot,
 }
 
 /// One report in the catalogue.
@@ -444,6 +444,18 @@ pub struct ReportFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub grade: Option<mandi_core::bikri::SaleGrade>,
+    /// One lot (R2 to R6, R10, R27; PRD FR-12.45, FR-7.77). Missing means every lot of the other
+    /// filters. It is the lot's row id, as in the answer of the assistant's `find` for a lot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(type = "number | null", optional)]
+    pub lot_id: Option<i64>,
+    /// The language whose alphabetical order sorts the lots of a seller's day slip (R35, PRD
+    /// FR-12.12, plan 71 L7): by item name in that language's order, then by the lot counter.
+    /// Missing means Urdu. A print sets it to its own language. It is not a filter: no report
+    /// refuses it and it is not echoed back.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub order_language: Option<Language>,
     /// Set by the app, never by the screen: the partner section is locked, so the partner parts of
     /// this report are left out (PRD FR-17.11). It is not read from JSON and not sent.
     #[serde(skip)]
@@ -452,7 +464,7 @@ pub struct ReportFilters {
 }
 
 /// A name in both scripts. The screen picks one with `displayName`; a print picks by language.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, TS)]
 #[ts(rename = "ReportNames")]
 pub struct Names {
     /// Urdu name.
@@ -569,6 +581,10 @@ pub struct ResolvedFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub grade: Option<mandi_core::bikri::SaleGrade>,
+    /// The lot picked (R2 to R6, R10, R27): its name, seller and item with its counter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub lot: Option<Names>,
 }
 
 /// What kind of value a column holds. The screen picks the grid column type from it.

@@ -34,7 +34,7 @@ async function openSession(bikriId: number, entryId: number): Promise<EditSessio
     bikriGet(bikriId),
   ]);
   // The lots of the saved بکری carry the names of the sellers, buyers, items and packings.
-  const saved = recordsOfSaved([...detail.lots, ...editable.stored], detail.zamindar);
+  const saved = recordsOfSaved([...detail.lots, ...editable.stored]);
   const records = await resolveDraftRecords(editable.draft, {
     accounts: saved.accounts,
     masters: saved.masters,

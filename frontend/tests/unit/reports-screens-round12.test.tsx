@@ -129,7 +129,17 @@ describe.each(LANGUAGES)('R5, the credit buyers’ details (%s)', (language: Lan
     expect(CATALOG.find((entry) => entry.id === 'R5')).toMatchObject({
       group: 'sales',
       title_id: 'report-r5-title',
-      filters: ['date_range', 'party', 'seller', 'zamindar', 'item', 'city', 'adda', 'bikri'],
+      filters: [
+        'date_range',
+        'party',
+        'seller',
+        'zamindar',
+        'item',
+        'city',
+        'adda',
+        'bikri',
+        'lot',
+      ],
       party_required: false,
     });
   });

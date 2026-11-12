@@ -891,17 +891,6 @@ fn command_table() -> Vec<(&'static str, Value, bool)> {
             true,
         ),
         (
-            "bikri_split_freight",
-            json!({ "input": { "total_freight": "1,000",
-                "lots": [{ "key": "a", "qty_received": "30" }, { "key": "b", "qty_received": "20" }] } }),
-            true,
-        ),
-        (
-            "assist_truck_memory",
-            json!({ "input": { "truck_no": "LES", "date": "10-10-2026" } }),
-            true,
-        ),
-        (
             "assist_seller_memory",
             json!({ "input": { "seller_account_id": 1 } }),
             true,

@@ -8,6 +8,7 @@
 
 import type { EntryRow, PickedRecord } from '../../shared/grid';
 import type { BikriDraftStores, HeaderState } from './draft-store';
+import { LOT } from './types';
 
 /** Raised when the format of the snapshot changes, so an old one is never read wrongly. */
 const SNAPSHOT_VERSION = 1;
@@ -30,8 +31,8 @@ export function serialiseDraft(stores: BikriDraftStores): string {
   const lots = stores.lots.getState().rows;
   const sales: Record<string, EntryRow[]> = {};
   for (const lot of lots) sales[lot.rowId] = stores.salesFor(lot.rowId).getState().rows;
-  // The header store also holds its `patch` function; JSON leaves a function out.
-  const header: HeaderState = stores.header.getState();
+  // The header store also holds its `patch` function: only the date goes in the snapshot.
+  const header: HeaderState = { entryDate: stores.header.getState().entryDate };
   const view = stores.view.getState();
   const snapshot: DraftSnapshot = {
     v: SNAPSHOT_VERSION,
@@ -62,10 +63,6 @@ function isPicked(value: unknown): value is PickedRecord {
   );
 }
 
-function isPickedOrNull(value: unknown): value is PickedRecord | null {
-  return value === null || isPicked(value);
-}
-
 function isRow(value: unknown): value is EntryRow {
   if (!isRecord(value) || !isText(value['rowId']) || !isRecord(value['typed'])) return false;
   if (!Object.values(value['typed']).every(isText)) return false;
@@ -77,22 +74,24 @@ function isRows(value: unknown): value is EntryRow[] {
   return Array.isArray(value) && value.length > 0 && value.every(isRow);
 }
 
-function isHeader(value: unknown): value is HeaderState {
-  return (
-    isRecord(value) &&
-    [
-      'entryDate',
-      'billDate',
-      'book',
-      'truckNo',
-      'driverName',
-      'driverPhone',
-      'totalFreight',
-      'note',
-    ].every((key) => isText(value[key])) &&
-    isPickedOrNull(value['zamindar']) &&
-    isPickedOrNull(value['adda']) &&
-    isPickedOrNull(value['store'])
+function isHeader(value: unknown): value is { entryDate: string } {
+  return isRecord(value) && isText(value['entryDate']);
+}
+
+/**
+ * The lots of a draft kept before v1.34, where the header held a store that the lots without a store of
+ * their own used (plan 71 H2: the store stays on the lot). The store of such a header moves to each of
+ * those lots, so no lot loses it. The other old header fields (truck, زمیندار, اڈا, driver, freight,
+ * bill date, book, note) are read past without error and left out: a new بکری has none of them, and
+ * nobody could see them (NFR-USE-27).
+ */
+function lotsWithOldHeaderStore(lots: EntryRow[], header: Record<string, unknown>): EntryRow[] {
+  const store = header['store'];
+  if (!isPicked(store)) return lots;
+  return lots.map((lot) =>
+    lot.picked?.[LOT.store] === undefined
+      ? { ...lot, picked: { ...lot.picked, [LOT.store]: store } }
+      : lot,
   );
 }
 
@@ -115,7 +114,14 @@ export function parseSnapshot(text: string): DraftSnapshot | null {
   }
   if (selectedLot !== null && !isText(selectedLot)) return null;
   if (typeof wholeView !== 'boolean') return null;
-  return { v: SNAPSHOT_VERSION, header, lots, sales: salesByLot, selectedLot, wholeView };
+  return {
+    v: SNAPSHOT_VERSION,
+    header: { entryDate: header.entryDate },
+    lots: lotsWithOldHeaderStore(lots, header),
+    sales: salesByLot,
+    selectedLot,
+    wholeView,
+  };
 }
 
 /** Puts a snapshot into new stores, so the screen opens exactly where the user stopped. */

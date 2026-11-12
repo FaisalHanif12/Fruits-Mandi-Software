@@ -50,7 +50,7 @@ layout-module-stock = { -baqi-maal }
 # review: pending
 layout-search-label = Search
 # review: pending
-layout-search-placeholder = Search by code, name, { -bikri } number or truck
+layout-search-placeholder = Search by code, name or { -bikri } number
 # review: pending
 layout-user-menu = User menu
 

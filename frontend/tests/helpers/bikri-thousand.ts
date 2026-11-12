@@ -26,7 +26,6 @@ const BOX = { id: IDS.box, code: '0001', name_ur: 'پیٹی', name_en: 'Box' };
 
 /** One lot of Rahim's bananas, 10,000 received, and `count` lines of 10 at 600 to Akram. */
 export function fillThousandLines(stores: BikriDraftStores, count: number = THOUSAND): void {
-  stores.header.getState().patch({ truckNo: 'LES-1234', zamindar: RAHIM });
   const lot = stores.lots.getState().rows[0];
   if (lot === undefined) return;
   stores.lots.getState().patchRow(lot.rowId, {

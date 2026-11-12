@@ -149,6 +149,7 @@ export function savedEvent1(overrides: Partial<BikriDetail> = {}): BikriDetail {
       {
         id: 51,
         lot_no: 1,
+        lot_counter: 1,
         seller: RAHIM,
         purchase: null,
         arrival: null,
@@ -226,6 +227,7 @@ export function listRow(overrides: Partial<BikriListRow> = {}): BikriListRow {
     truck_no: 'LES-1234',
     sellers: [RAHIM],
     items: [BANANA],
+    lots: [{ lot_id: 51, seller: RAHIM, item: BANANA, counter: 1 }],
     qty_received: 50,
     qty_sold: 50,
     gross: money(29_400),

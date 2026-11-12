@@ -24,21 +24,13 @@ function textOrNull(text: string | undefined): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-/** The header of PRD 12.2. An empty bill date means the same as the entry date (contract 8). */
+/**
+ * The header of PRD 12.2: the date alone (plan 71 H1). The bill date is the entry date, and the
+ * other old fields are not sent: the backend does not take them any more, and an old بکری keeps its
+ * own in the database when it is edited.
+ */
 export function headerInput(header: HeaderState): HeaderInput {
-  return {
-    entry_date: header.entryDate.trim(),
-    bill_date: header.billDate.trim(),
-    book: textOrNull(header.book),
-    truck_no: textOrNull(header.truckNo),
-    zamindar_account_id: header.zamindar?.id ?? null,
-    adda_id: header.adda?.id ?? null,
-    driver_name: textOrNull(header.driverName),
-    driver_phone: textOrNull(header.driverPhone),
-    total_freight: textOrNull(header.totalFreight),
-    store_id: header.store?.id ?? null,
-    note: textOrNull(header.note),
-  };
+  return { entry_date: header.entryDate.trim() };
 }
 
 /** Is this a lot of the firm's own goods: the seller is the اپنا مال account (PRD FR-12.26)? */
@@ -150,7 +142,7 @@ export function saleInput(row: EntryRow): SaleInput {
   };
 }
 
-export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: HeaderState): LotInput {
+export function lotInput(row: EntryRow, sales: readonly EntryRow[]): LotInput {
   const typed = row.typed;
   const lotId = savedId(typed[LOT.lotId]);
   // A lot of own goods takes its goods from one purchase (PRD FR-12.26). There is no cash for the
@@ -187,7 +179,7 @@ export function lotInput(row: EntryRow, sales: readonly EntryRow[], header: Head
     item_id: row.picked?.[LOT.item]?.id ?? null,
     packing_id: row.picked?.[LOT.packing]?.id ?? null,
     marka_id: row.picked?.[LOT.marka]?.id ?? null,
-    store_id: row.picked?.[LOT.store]?.id ?? header.store?.id ?? null,
+    store_id: row.picked?.[LOT.store]?.id ?? null,
     qty_received: (typed[LOT.qty] ?? '').trim(),
     weight_received: textOrNull(typed[LOT.weight]),
     freight: textOrNull(typed[LOT.freight]),
@@ -219,22 +211,6 @@ export function draftKey(draft: BikriDraft): string {
   });
 }
 
-/** Has anything been typed in the header? */
-function headerFilled(header: BikriDraft['header']): boolean {
-  return (
-    [
-      header.truck_no,
-      header.driver_name,
-      header.driver_phone,
-      header.total_freight,
-      header.note,
-    ].some((text) => text !== null) ||
-    header.zamindar_account_id !== null ||
-    header.adda_id !== null ||
-    header.book !== null
-  );
-}
-
 /** Has anything been typed on this lot or its lines? */
 function lotFilled(lot: BikriDraft['lots'][number]): boolean {
   return (
@@ -252,7 +228,8 @@ function lotFilled(lot: BikriDraft['lots'][number]): boolean {
 
 /** Has anything been typed yet? An untouched screen asks the backend nothing. */
 export function isFilled(draft: BikriDraft): boolean {
-  return headerFilled(draft.header) || draft.lots.some(lotFilled);
+  // The date alone is not typed work: the header has nothing else (plan 71 H1).
+  return draft.lots.some(lotFilled);
 }
 
 /**
@@ -268,19 +245,16 @@ export function isFilledByUser(stores: BikriDraftStores, draft: BikriDraft): boo
   const cameByItself = (lot: BikriDraft['lots'][number]) =>
     lot.key in readyLots &&
     lot.sales.every((sale) => sale.buyer_account_id === null && sale.seller_rate === '');
-  return (
-    headerFilled(draft.header) || draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot))
-  );
+  return draft.lots.some((lot) => !cameByItself(lot) && lotFilled(lot));
 }
 
 /** The draft of the screen as the backend takes it. Reads the stores as they are now. */
 export function buildDraft(stores: BikriDraftStores): BikriDraft {
-  const header = stores.header.getState();
   return {
-    header: headerInput(header),
+    header: headerInput(stores.header.getState()),
     lots: stores.lots
       .getState()
-      .rows.map((row) => lotInput(row, stores.salesFor(row.rowId).getState().rows, header)),
+      .rows.map((row) => lotInput(row, stores.salesFor(row.rowId).getState().rows)),
   };
 }
 

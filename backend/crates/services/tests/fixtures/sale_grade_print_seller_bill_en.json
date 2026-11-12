@@ -21,10 +21,6 @@
       {
         "label_id": "print-fact-date",
         "value": "10-10-2026"
-      },
-      {
-        "label_id": "print-fact-truck",
-        "value": "LES-1234"
       }
     ]
   },
@@ -51,7 +47,7 @@
         {
           "date": "10-10-2026",
           "name": "Akram Toll Tax",
-          "item": "Apple",
+          "item": "Apple-1",
           "packing": "Box",
           "grade": "first",
           "qty": "10",
@@ -64,7 +60,7 @@
         {
           "date": "10-10-2026",
           "name": "Akram Toll Tax",
-          "item": "Apple",
+          "item": "Apple-1",
           "packing": "Box",
           "grade": "second",
           "qty": "6",
@@ -77,7 +73,7 @@
         {
           "date": "10-10-2026",
           "name": "Arshad Multani",
-          "item": "Apple",
+          "item": "Apple-1",
           "packing": "Box",
           "grade": "third",
           "qty": "4",

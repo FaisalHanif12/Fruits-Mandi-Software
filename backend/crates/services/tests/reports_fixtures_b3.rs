@@ -197,7 +197,6 @@ fn fixtures_are_the_real_answers() {
         "reports_run_r7_items",
         all("R7", json!({ "from": "10-10-2026", "to": "10-10-2026" })),
     );
-    run_pair(&w, "reports_run_r8_adda", all("R8", json!({})));
     run_pair(&w, "reports_run_r27_series", all("R27", json!({})));
     refusal_pair(
         &w,

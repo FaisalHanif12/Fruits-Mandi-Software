@@ -46,6 +46,7 @@ export function stockRow(overrides: Partial<StockRow> = {}): StockRow {
   return {
     lot_id: 40,
     lot_no: 1,
+    lot_counter: 1,
     bikri_id: 41,
     bikri_number: 1,
     received_date: '2026-10-09',
@@ -79,7 +80,7 @@ export function stockList(rows: StockRow[] = [stockRow()]): StockList {
 /** A copy of a draft the way `bikri_open_for_edit` sends it: ids on the lots and the lines. */
 export function withIds(draft: BikriDraft): BikriDraft {
   const copy = structuredClone(draft);
-  copy.header.entry_date = '10-10-2026';
+  copy.header = { entry_date: '10-10-2026' };
   copy.lots = copy.lots.map((lot) => ({
     ...lot,
     key: 'lot:40',
@@ -153,7 +154,7 @@ export function cancelPreview(overrides: Partial<CancelPreview> = {}): CancelPre
 /** The values of an undone save: the Event 1 draft with no ids (PRD FR-7.47). */
 export function undoResult(): UndoResult {
   const draft = structuredClone(EVENT1_REQUEST.draft);
-  draft.header.entry_date = '10-10-2026';
+  draft.header = { entry_date: '10-10-2026' };
   draft.lots = draft.lots.map((lot) => ({
     ...lot,
     key: 'lot-1',

@@ -97,9 +97,6 @@ describe.each(LANGUAGES)('adding from the cells of the بکری screen (%s)', (l
     expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
     expect(textOf(lots, 0, 'qty')).toBe('50');
-    expect(
-      screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-    ).toHaveValue(names(language).rahim);
     expect(textOf(salesGrid(language), 0, 'qty')).toBe('20');
     expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
   }

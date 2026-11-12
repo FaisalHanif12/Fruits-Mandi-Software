@@ -428,7 +428,10 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
         date: '2026-10-10',
       });
       expect(reportsApi.reportsRun).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'R35', filters: R35_SLIP_AKRAM_REQUEST.filters }),
+        expect.objectContaining({
+          id: 'R35',
+          filters: { ...R35_SLIP_AKRAM_REQUEST.filters, order_language: language },
+        }),
       );
       // The lines of the slip: the day's total 12,880, paid 10,000, the new balance 2,880 (Debit).
       const card = document.querySelector('section dl');
@@ -454,7 +457,10 @@ describe.each(LANGUAGES)('party ledgers (%s)', (language: Language) => {
       await open('/bikri/party-ledgers?side=seller&party=18&date=2026-10-10');
       await waitFor(() => {
         expect(reportsApi.reportsRun).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'R35', filters: R35_SLIP_RAHIM_REQUEST.filters }),
+          expect.objectContaining({
+            id: 'R35',
+            filters: { ...R35_SLIP_RAHIM_REQUEST.filters, order_language: language },
+          }),
         );
       }, SLOW_MS);
     });

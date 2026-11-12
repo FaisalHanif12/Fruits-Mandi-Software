@@ -7,6 +7,9 @@
         "place": {
           "kind": "entry",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": null,
           "label_ur": null,
           "label_en": null
@@ -24,6 +27,9 @@
         "place": {
           "kind": "entry",
           "lot_no": null,
+          "lot_counter": null,
+          "item_ur": null,
+          "item_en": null,
           "line_no": null,
           "label_ur": null,
           "label_en": null

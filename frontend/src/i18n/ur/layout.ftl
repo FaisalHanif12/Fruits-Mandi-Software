@@ -50,7 +50,7 @@ layout-module-stock = { -baqi-maal }
 # review: pending
 layout-search-label = تلاش
 # review: pending
-layout-search-placeholder = کوڈ، نام، { -bikri } نمبر یا ٹرک تلاش کریں
+layout-search-placeholder = کوڈ، نام، { -bikri } نمبر تلاش کریں
 # review: pending
 layout-user-menu = صارف کا مینو
 

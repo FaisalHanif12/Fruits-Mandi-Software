@@ -160,6 +160,32 @@ impl Finished {
     }
 }
 
+/// The arguments of a `report` call with the lot's key added, when the model did not name a lot.
+/// Text that is not a JSON object is returned as it was (the tool refuses it as before).
+///
+/// Example: `{"id":"R5","seller":"a20","item":"i4"}` with `l7` gains `"lot":"l7"`.
+fn with_lot(arguments: &str, key: &str) -> String {
+    match serde_json::from_str::<Value>(arguments) {
+        Ok(Value::Object(mut map)) => {
+            if map.get("lot").is_none_or(Value::is_null) {
+                map.insert("lot".to_owned(), json!(key));
+            }
+            Value::Object(map).to_string()
+        }
+        _ => arguments.to_owned(),
+    }
+}
+
+/// What the app did ahead of the model for a question that is a lot's name (`Run::prefind_lot`).
+enum LotPre {
+    /// No lot was named: the question goes on as any other.
+    Nothing,
+    /// One lot was found and read (r1): the model's first call answers about it.
+    Read,
+    /// Several lots fit: the question ends with "کون سا؟" and a button for each lot.
+    Asked(Box<Finished>),
+}
+
 /// The kind of row written to the log.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Source {
@@ -471,7 +497,13 @@ impl<'a> Run<'a> {
             let outcome = match resolved {
                 Ok(r) => {
                     notes = r.notes;
-                    tools::call(&env, &state, &call.name, &r.arguments)
+                    // The lot the Owner picked narrows the reports of its seller and item
+                    // (plan 71 L9); the model's own words are left as they are.
+                    let arguments = match (&turn.lot, call.name.as_str()) {
+                        (Some(key), "report") => with_lot(&r.arguments, key),
+                        _ => r.arguments.clone(),
+                    };
+                    tools::call(&env, &state, &call.name, &arguments)
                 }
                 Err(stop) => Err(stop),
             };
@@ -1869,6 +1901,67 @@ impl<'a> Run<'a> {
         conv.results = state.results;
     }
 
+    /// Finds the lot a question that is nothing but a lot's name names (plan 71 L9, PRD FR-12.45,
+    /// FR-7.77): "ehsan ke aam", "ehsan ke 200 peti aam", "ehsan aam-2". The app calls `find` with
+    /// the role `lot` itself, as it does for a party. One lot found: the find is read as r1 and the
+    /// model's first call answers about it. Several: the question ends at once with "کون سا؟" and a
+    /// button for each lot (its name, day and quantity received), with no model call, so it is not
+    /// counted. None: nothing is read and the question goes on as before.
+    fn prefind_lot(&self, conv: &mut Conversation, turn: &mut Turn) -> LotPre {
+        if !conv.turns.is_empty() {
+            return LotPre::Nothing;
+        }
+        let numbers = figures::question_numbers(&turn.question);
+        let question = turn.question.clone();
+        let env = self.env(&numbers, &question);
+        // The whole question is a lot's name, or it names a seller and an item among other words
+        // about what he wants to know ("ehsan ke 200 peti aam kis kis ne liye aur kis ne kitna
+        // naqd diya"): the read would be of that seller and item, so the Owner is asked which lot.
+        let text = if prefind::lot_name_only(&question) {
+            question.trim().to_owned()
+        } else if help_guard::is_how_to(&question, &[])
+            || help_guard::general_advice_asked(&question, &numbers)
+        {
+            return LotPre::Nothing;
+        } else {
+            match tools::find_lots::named_in(&env, &question) {
+                Ok(Some(text)) => text,
+                _ => return LotPre::Nothing,
+            }
+        };
+        let scratch = State {
+            results: Vec::new(),
+            turn: u32::try_from(conv.turns.len()).unwrap_or(u32::MAX),
+        };
+        let arguments = json!({"text": text, "role": "lot"}).to_string();
+        let Ok(draft) = tools::call(&env, &scratch, "find", &arguments) else {
+            return LotPre::Nothing;
+        };
+        let matches = match draft.node.get(&["matches"]) {
+            Some(Node::List(matches)) => matches.as_slice(),
+            _ => &[],
+        };
+        let found = matches.len();
+        if found == 0 {
+            return LotPre::Nothing;
+        }
+        let only = match matches.first().and_then(|m| m.get(&["key"])) {
+            Some(Node::Str(key)) => Some(key.clone()),
+            _ => None,
+        };
+        let Some(find_id) = self.preread_tool(conv, turn, "find", &arguments) else {
+            return LotPre::Nothing;
+        };
+        if found == 1 {
+            // The only lot: the reports of its seller and item are of it (the lot may be the
+            // one the Owner named, "aam-2").
+            turn.lot = only;
+            LotPre::Read
+        } else {
+            LotPre::Asked(Box::new(self.ask_which_one(conv, &find_id)))
+        }
+    }
+
     /// Reads one topic of the guide for the app itself (the model asked for none). The read is in
     /// the question's log. It counts as no tool call of the model.
     fn read_help(&self, conv: &mut Conversation, turn: &mut Turn, topic: &str) -> Option<String> {
@@ -2748,9 +2841,21 @@ pub fn ask(d: &Deps<'_>, input: &AssistantAskInput) -> Result<AskReply, ServiceE
             None,
         );
     }
+    // A question that is only a lot's name: the app finds the lot (plan 71 L9). Several lots end the
+    // question here, with no model call.
+    let lot_pre = if d.runtime.prefind() {
+        run.prefind_lot(&mut conv, &mut turn)
+    } else {
+        LotPre::Nothing
+    };
+    if let LotPre::Asked(finished) = lot_pre {
+        return run.conclude(conv, turn, *finished, Source::Model, None);
+    }
     // A how-to question about one screen: the guide of that topic is read for the model before
     // its first call, so help takes one call (plan 52 item 7).
-    if help_guard::general_advice_asked(text, &numbers) && conv.turns.is_empty() {
+    if matches!(lot_pre, LotPre::Read) {
+        // The lot is found and read: the first call answers about it.
+    } else if help_guard::general_advice_asked(text, &numbers) && conv.turns.is_empty() {
         // How to do better at something the shop does: no tool, one call (PRD FR-7.88).
         turn.general_advice = true;
     } else if let Some(topic) = help_guard::topic_of_question(text, &numbers) {
@@ -2850,6 +2955,25 @@ pub fn pick(d: &Deps<'_>, input: &AssistantPickInput) -> Result<AskReply, Servic
                 let at = match_position(&conv.results, &use_id, key).unwrap_or(0);
                 run.guards_for_pick(&mut turn, key);
                 let mut picked = json!({"picked": format!("{use_id}.matches.{at}")});
+                // A lot the Owner picked (plan 71 L9): the reports of its seller and item are
+                // narrowed to it, and the model is told so.
+                let is_lot = conv.results.iter().any(|r| {
+                    r.id == use_id
+                        && matches!(r.node.get(&["role"]), Some(Node::Str(role)) if role == "lot")
+                });
+                if is_lot {
+                    turn.lot = Some(key.clone());
+                    if let Some(map) = picked.as_object_mut() {
+                        map.insert(
+                            "note".to_owned(),
+                            json!(
+                                "the Owner chose this lot: read the reports of its seller and \
+                                 item (the seller and item keys of the match); they are narrowed \
+                                 to this lot"
+                            ),
+                        );
+                    }
+                }
                 if let (Some(word), Some(map)) = (as_role, picked.as_object_mut()) {
                     map.insert("as".to_owned(), json!(word));
                     map.insert(

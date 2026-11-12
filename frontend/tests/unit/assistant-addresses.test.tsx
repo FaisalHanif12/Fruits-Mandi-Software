@@ -351,6 +351,38 @@ describe('the filters of an answer’s source', () => {
     expect(parseReportSearch({ collector: { id: 12, name_en: 'Rasheed' } }).collector?.id).toBe(12);
   });
 
+  it('a lot (R2 to R6, R10, R27): the address carries it, the print sends its id, and none sends nothing (PRD FR-7.77, plan 71 L9)', () => {
+    const lot = {
+      id: 41,
+      code: null,
+      name_ur: 'احسان، آم-2',
+      name_en: 'Ehsan, Mango-2',
+      tag: null,
+    };
+    const source = reportSource({ lot, from: '2026-10-01', to: '2026-10-10' });
+    expect(reportSearchFromFilters(source)).toEqual({
+      from: '01-10-2026',
+      to: '10-10-2026',
+      lot: {
+        id: 41,
+        name_ur: 'احسان، آم-2',
+        name_en: 'Ehsan, Mango-2',
+        tag: null,
+        code: undefined,
+      },
+    });
+    expect(reportFiltersOf(source)).toMatchObject({ lot_id: 41 });
+    // The backend leaves the key out when there is none, and so does the address and the print.
+    expect(reportSearchFromFilters(reportSource())).not.toHaveProperty('lot');
+    expect(reportFiltersOf(reportSource())).not.toHaveProperty('lot_id');
+    // The address, read again, keeps the lot with its names, so the report can say which lot it shows.
+    const back = parseReportSearch({
+      lot: { id: 41, name_ur: 'احسان، آم-2', name_en: 'Ehsan, Mango-2' },
+    });
+    expect(back.lot?.id).toBe(41);
+    expect(stateFromSearch(back).lot?.name_en).toBe('Ehsan, Mango-2');
+  });
+
   it('a print of a source asks for its dates the way the boxes show them', () => {
     const asked = reportFiltersOf(
       reportSource({ from: '2026-10-01', to: '2026-10-10', as_of: '2026-10-10' }),

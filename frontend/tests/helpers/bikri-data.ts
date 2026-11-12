@@ -15,7 +15,6 @@ import type { LinePreview } from '../../src/bindings/LinePreview';
 import type { LotPreview } from '../../src/bindings/LotPreview';
 import type { SaleInput } from '../../src/bindings/SaleInput';
 import type { SellerMemory } from '../../src/bindings/SellerMemory';
-import type { TruckMemory } from '../../src/bindings/TruckMemory';
 import { OVER_FIXED_PREVIEW, OVER_PREVIEW, withKeysOf } from './bikri-over-qty-real';
 
 /** The fixture files are the backend's own JSON; their text is read as the generated types. */
@@ -118,20 +117,6 @@ export function previewWithOverLine(draft: BikriDraft): BikriPreview {
   }
   return previewFor(draft);
 }
-
-/** What the backend remembers about the truck LES-1234 (PRD FR-7.49, FR-7.50). */
-export const TRUCK_MEMORY: TruckMemory = {
-  last: {
-    bikri_number: 1,
-    date: '2026-10-09',
-    adda_id: IDS.swat,
-    zamindar_account_id: IDS.rahim,
-    driver_name: 'Aslam',
-    driver_phone: '03001234567',
-  },
-  same_day: { bikri_number: 1 },
-  suggestions: [{ truck_no: 'LES-1234', date: '2026-10-09' }],
-};
 
 /** What the backend remembers about Rahim's last lot (PRD FR-7.51). */
 export const SELLER_MEMORY: SellerMemory = {

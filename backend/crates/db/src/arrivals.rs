@@ -679,6 +679,8 @@ pub struct LotOfArrival {
     pub lot_id: i64,
     /// The lot number inside its بکری.
     pub lot_no: i64,
+    /// The counter of the lot's name (PRD FR-12.45).
+    pub lot_counter: i64,
     /// The day of the بکری, `YYYY-MM-DD`.
     pub entry_date: String,
     /// نگ sold on the lines in force.
@@ -692,7 +694,8 @@ pub struct LotOfArrival {
 pub fn lots_of(conn: &Connection, arrival_id: i64) -> rusqlite::Result<Vec<LotOfArrival>> {
     let mut statement = conn.prepare(
         "SELECT e.id, e.number, l.id, l.lot_no, e.entry_date,
-                COALESCE((SELECT SUM(s.qty) FROM bikri_sales s WHERE s.lot_id = l.id AND s.is_active = 1), 0)
+                COALESCE((SELECT SUM(s.qty) FROM bikri_sales s WHERE s.lot_id = l.id AND s.is_active = 1), 0),
+                l.lot_counter
          FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id
          WHERE l.arrival_id = ?1 AND e.status = 'saved' ORDER BY e.entry_date, e.number, l.lot_no",
     )?;
@@ -702,6 +705,7 @@ pub fn lots_of(conn: &Connection, arrival_id: i64) -> rusqlite::Result<Vec<LotOf
             bikri_number: r.get(1)?,
             lot_id: r.get(2)?,
             lot_no: r.get(3)?,
+            lot_counter: r.get(6)?,
             entry_date: r.get(4)?,
             qty_sold: r.get(5)?,
         })

@@ -2,50 +2,17 @@
 
 /**
  * The header of a بکری (PRD 12.2). Everything is text; the backend checks every value.
+ *
+ * From v1.34 (plan 71 H1 to H3) a new بکری has only the date and the بکری number. The other fields
+ * of the old header are retired: they are not in the generated TypeScript type, an old saved draft
+ * that still holds them is read without a refusal, and the backend ignores them. They are never sent
+ * back (`skip_serializing`), so a draft opened for an edit has only the day. An old saved بکری keeps
+ * its truck number, اڈا and the rest in the database and its edit never overwrites them.
  */
 export type HeaderInput = {
   /**
-   * The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6).
+   * The posting day, `DD-MM-YYYY` or a shortcut. Must be an open day (PRD FR-6.6). A new
+   * بکری's bill day is this day (PRD A13, v1.34).
    */
   entry_date: string;
-  /**
-   * The seller's bill day. Empty means the same as `entry_date`.
-   */
-  bill_date: string;
-  /**
-   * The optional second number (PRD 12.2 "بک").
-   */
-  book: string | null;
-  /**
-   * The truck number.
-   */
-  truck_no: string | null;
-  /**
-   * The زمیندار, the default seller of new lots.
-   */
-  zamindar_account_id: number | null;
-  /**
-   * The truck stand (اڈا).
-   */
-  adda_id: number | null;
-  /**
-   * The driver's name.
-   */
-  driver_name: string | null;
-  /**
-   * The driver's phone.
-   */
-  driver_phone: string | null;
-  /**
-   * The total truck freight in whole rupees. `bikri_split_freight` splits it over the lots.
-   */
-  total_freight: string | null;
-  /**
-   * The default store.
-   */
-  store_id: number | null;
-  /**
-   * A note.
-   */
-  note: string | null;
 };

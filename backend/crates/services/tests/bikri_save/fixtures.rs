@@ -72,11 +72,7 @@ fn row(key: &str, buyer: i64, qty: &str, rate: &str) -> Value {
 fn event1_request(w: &World) -> Value {
     json!({
         "draft": {
-            "header": {
-                "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LES-1234",
-                "zamindar_account_id": w.rahim, "adda_id": null, "driver_name": null,
-                "driver_phone": null, "total_freight": null, "store_id": null, "note": null
-            },
+            "header": { "entry_date": "10-10-2026" },
             "lots": [{
                 "key": "lot-1", "seller_account_id": w.rahim, "item_id": w.banana, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "50", "weight_received": null, "freight": "3,000",
@@ -101,11 +97,7 @@ fn event2_request(w: &World) -> Value {
     line["chukta"] = json!({ "name_ur": "شاہد", "name_en": "Shahid", "phone": "0300-0000000" });
     json!({
         "draft": {
-            "header": {
-                "entry_date": "10-10-2026", "bill_date": "", "book": null, "truck_no": "LHR-0077",
-                "zamindar_account_id": w.karim, "adda_id": null, "driver_name": null,
-                "driver_phone": null, "total_freight": null, "store_id": null, "note": null
-            },
+            "header": { "entry_date": "10-10-2026" },
             "lots": [{
                 "key": "lot-1", "seller_account_id": w.karim, "item_id": w.apple, "packing_id": w.box_, "marka_id": null, "store_id": null,
                 "qty_received": "10", "weight_received": null, "freight": "1,000",
@@ -223,7 +215,9 @@ fn the_real_answers_of_the_plan_13_commands_are_the_fixtures() {
         .unwrap();
     pair("drafts_get_bikri", &get_request, &draft);
 
-    // search_global: a بکری found by its number, and by the start of its truck number.
+    // search_global: a بکری found by its number, and by the start of its truck number. A new بکری has
+    // no truck (PRD v1.34), so the truck is written on the first one as an OLD بکری has it.
+    give_truck(&w, saved1.number, "LES-1234");
     for (name, text) in [
         ("search_global_bikri_number", "1"),
         ("search_global_bikri_truck", "LES-1234"),

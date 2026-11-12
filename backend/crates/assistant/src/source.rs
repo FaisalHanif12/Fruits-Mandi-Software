@@ -127,6 +127,11 @@ pub struct SourceReportFilters {
     pub bikri: Option<SourceBikri>,
     /// Only the fruit taken for the shop's guests (R37).
     pub guests_only: bool,
+    /// One lot (R2 to R6, R10, R27; PRD FR-12.45): its name is the seller, the item and the counter,
+    /// for example احسان، آم-2. Left out of the wire form when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub lot: Option<Box<AnswerRecord>>,
     /// One collector, a staff member (R22, R23, R35). Left out of the wire form when none.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
@@ -155,6 +160,7 @@ impl SourceReportFilters {
             item_id: id_of(&self.item),
             item_group: self.item_group,
             grade: self.grade,
+            lot_id: self.lot.as_ref().map(|r| r.id),
             city_id: id_of(&self.city),
             adda_id: id_of(&self.adda),
             detail: self.detail,

@@ -133,27 +133,27 @@
     "bikri_book": {
       "en": {
         "title": "Sale Book",
-        "summary": "The Sale Book is where one truck's goods are sold. You enter the truck, each seller's lot and each buyer's sale line, and every amount is worked out as you type.",
+        "summary": "The Sale Book is where one truck's goods are sold. You enter the date, each seller's lot and each buyer's sale line, and every amount is worked out as you type.",
         "steps": [
-          "Open Sale, then Sale Book, or press Alt+B. Type the truck number: the Adda, seller and driver fill from its last sale.",
-          "Add a lot for each seller and item: seller, item, packing and quantity received. Freight, labour and the like are under More.",
+          "Open Sale, then Sale Book, or press Alt+B. The date and the sale number sit in the top row.",
+          "Add a lot for each seller and item: seller, item, packing and quantity received. Each lot is named by seller, item and a counter, like Ehsan, Mango-2. Freight, labour and the like are under More.",
           "On each sale line type the buyer code, the quantity, the rate and what he paid on the spot, pressing Enter after each. Commission and Laga fill by the rules.",
           "Check the summary and the partners' share on the screen, then save."
         ],
         "keys": "F10 or Ctrl+S saves. Ctrl+Enter saves, prints the ticked slips and opens a new sale. Ctrl+Delete removes a row.",
-        "example": "Truck LES-1234: Rahim's 50 boxes of banana. Akram takes 20 at 600 and Arshad 30 at 580. Rahim's net sale is 19,316."
+        "example": "Rahim's 50 boxes of banana, lot Rahim, Banana-1. Akram takes 20 at 600 and Arshad 30 at 580. Rahim's net sale is 19,316."
       },
       "ur": {
         "title": "بکری بک",
-        "summary": "بکری بک میں ایک ٹرک کا مال بیچا جاتا ہے۔ آپ ٹرک، ہر بیوپاری کا لاٹ اور ہر گاہک کی لائن لکھتے ہیں، اور ہر رقم لکھتے ہی خود نکل آتی ہے۔",
+        "summary": "بکری بک میں ایک ٹرک کا مال بیچا جاتا ہے۔ آپ تاریخ، ہر بیوپاری کا لاٹ اور ہر گاہک کی لائن لکھتے ہیں، اور ہر رقم لکھتے ہی خود نکل آتی ہے۔",
         "steps": [
-          "بکری میں بکری بک کھولیں، یا Alt+B دبائیں۔ ٹرک نمبر لکھیں: اڈا، زمیندار اور ڈرائیور اس کی پچھلی بکری سے بھر جاتے ہیں۔",
-          "ہر بیوپاری اور قسم مال کا لاٹ بنائیں: بیوپاری، قسم مال، پیکنگ اور آنے والی تعداد۔ کرایہ، مزدوری وغیرہ مزید کے نیچے ہیں۔",
+          "بکری میں بکری بک کھولیں، یا Alt+B دبائیں۔ تاریخ اور بکری نمبر اوپر کی قطار میں ہیں۔",
+          "ہر بیوپاری اور قسم مال کا لاٹ بنائیں: بیوپاری، قسم مال، پیکنگ اور آنے والی تعداد۔ ہر لاٹ کا نام بیوپاری، قسم مال اور گنتی سے بنتا ہے، جیسے احسان، آم-2۔ کرایہ، مزدوری وغیرہ مزید کے نیچے ہیں۔",
           "ہر بکری لائن میں گاہک کا کوڈ، تعداد، ریٹ اور موقع پر جمع لکھیں، ہر ایک کے بعد Enter دبائیں۔ کمیشن اور لاگا اصولوں سے خود بھر جاتے ہیں۔",
           "خلاصہ اور شراکت داروں کا حصہ دیکھیں، پھر محفوظ کریں۔"
         ],
         "keys": "F10 یا Ctrl+S محفوظ کرتا ہے۔ Ctrl+Enter محفوظ کر کے نشان زدہ پرچیاں چھاپتا ہے اور نئی بکری کھولتا ہے۔ Ctrl+Delete لائن ہٹاتا ہے۔",
-        "example": "ٹرک LES-1234: رحیم کی کیلے کی 50 پیٹیاں۔ اکرم 20 پیٹی 600 پر اور ارشد 30 پیٹی 580 پر لیتے ہیں۔ رحیم کی صافی بکری 19,316 بنتی ہے۔"
+        "example": "رحیم کی کیلے کی 50 پیٹیاں، لاٹ رحیم، کیلا-1۔ اکرم 20 پیٹی 600 پر اور ارشد 30 پیٹی 580 پر لیتے ہیں۔ رحیم کی صافی بکری 19,316 بنتی ہے۔"
       }
     },
     "cash_book": {
@@ -427,7 +427,7 @@
           "Anywhere: Ctrl+K search, Alt+L language, F1 ask the app, Alt+Z undo a save, Ctrl+I how an amount was worked out, Ctrl plus or minus text size."
         ],
         "keys": "In a date field, plus is the next day and minus the previous one. Ctrl+D copies the cell above in a sale line.",
-        "example": "Press Alt+B, type the truck number, Enter, and carry on without the mouse."
+        "example": "Press Alt+B, type the lot's seller, Enter, and carry on without the mouse."
       },
       "ur": {
         "title": "کی بورڈ کی چابیاں",
@@ -439,7 +439,7 @@
           "کہیں بھی: Ctrl+K تلاش، Alt+L زبان، F1 سوال پوچھیں، Alt+Z محفوظ کرنا واپس، Ctrl+I رقم کیسے نکلی، Ctrl کے ساتھ جمع یا منفی متن کا سائز۔"
         ],
         "keys": "تاریخ کے خانے میں جمع اگلا دن اور منفی پچھلا دن ہے۔ بکری لائن میں Ctrl+D اوپر کے خلیے کی قدر نقل کرتا ہے۔",
-        "example": "Alt+B دبائیں، ٹرک نمبر لکھیں، Enter دبائیں، اور ماؤس کے بغیر آگے چلیں۔"
+        "example": "Alt+B دبائیں، لاٹ کا بیوپاری لکھیں، Enter دبائیں، اور ماؤس کے بغیر آگے چلیں۔"
       }
     },
     "language_switch": {

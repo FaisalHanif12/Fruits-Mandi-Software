@@ -21,6 +21,11 @@ export type ArrivalLotRef = {
    */
   lot_no: number;
   /**
+   * The counter of the lot's name: the garden's account, the arrival's item and this number
+   * (PRD FR-12.45).
+   */
+  lot_counter: number;
+  /**
    * The day of the بکری, `YYYY-MM-DD`.
    */
   entry_date: string;

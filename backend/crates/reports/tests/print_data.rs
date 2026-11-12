@@ -20,8 +20,14 @@ use mandi_reports::print::{
 const EVENT1: &str = include_str!("../../services/tests/fixtures/bikri_get_event1.json");
 const EVENT2: &str = include_str!("../../services/tests/fixtures/bikri_get_event2.json");
 
+/// The fixtures are NEW بکری, which have no truck number (PRD v1.34, plan 71 H1 to H3). The print of an
+/// OLD بکری shows its truck when it has one, so the trucks of the worked day are put back here.
 fn detail(json: &str) -> BikriDetail {
-    serde_json::from_str(json).unwrap()
+    let mut d: BikriDetail = serde_json::from_str(json).unwrap();
+    if d.truck_no.is_none() {
+        d.truck_no = Some(if d.number == 1 { "LES-1234" } else { "LHR-0077" }.to_owned());
+    }
+    d
 }
 
 fn firm() -> FirmNames {
@@ -169,7 +175,8 @@ fn seller_bill_names_follow_the_print_language() {
         en_page.lines.first().unwrap().name.as_deref(),
         Some("Akram Toll Tax")
     );
-    assert_eq!(en_page.lines.first().unwrap().item, "Banana");
+    // The seller bill names the lot: item and counter (PRD FR-12.45, plan 71 L8).
+    assert_eq!(en_page.lines.first().unwrap().item, "Banana-1");
     assert_eq!(en_page.lines.first().unwrap().packing, "Box");
     assert_eq!(ur.header.firm.name, "ماہر عدنان اینڈ برادرز");
     assert_eq!(en.header.firm.name, "Maher Adnan and Brothers");

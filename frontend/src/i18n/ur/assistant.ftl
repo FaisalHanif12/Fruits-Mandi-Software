@@ -260,6 +260,11 @@ assistant-found-as-ask = { $found ->
 }
 # review: pending
 assistant-option-balance-label = بقایا
+# { -lot } کب آیا اور اس میں کتنے { -nag } تھے، "کون سا؟" کی { -lot } والی بٹن پر (PRD FR-12.45، plan 71 L9)۔
+# review: pending
+assistant-option-lot-day = آنے کی تاریخ <date>{ $date }</date>
+# review: pending
+assistant-option-lot-qty = <num>{ $qty }</num> { -nag } آئے
 # review: pending
 assistant-need-dates = مدت واضح نہیں۔ شروع اور آخری تاریخ لکھ کر دوبارہ پوچھیں، مثلاً 01-10-2026 سے 15-10-2026 تک۔
 # review: pending

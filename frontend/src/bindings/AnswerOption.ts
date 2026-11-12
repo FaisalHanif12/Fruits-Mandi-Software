@@ -31,4 +31,13 @@ export type AnswerOption = {
    * True for a person in the dead amount (PRD FR-10.10).
    */
   dead: boolean;
+  /**
+   * For a lot (plan 71 L9, PRD FR-12.45): the day it came, `YYYY-MM-DD`. Missing for any other
+   * record. The name of a lot option is the lot's name, "احسان، آم-2".
+   */
+  date?: string;
+  /**
+   * For a lot: the quantity received, in نگ. Missing for any other record.
+   */
+  qty?: number;
 };

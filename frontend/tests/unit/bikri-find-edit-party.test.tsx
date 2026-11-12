@@ -210,7 +210,16 @@ describe.each(LANGUAGES)('find and edit by party (%s)', (language) => {
         entry_date: '2026-10-10',
         changes: [
           {
-            place: { kind: 'line', lot_no: 1, line_no: 1, label_ur: null, label_en: null },
+            place: {
+              kind: 'line',
+              lot_no: 1,
+              lot_counter: null,
+              item_ur: null,
+              item_en: null,
+              line_no: 1,
+              label_ur: null,
+              label_en: null,
+            },
             field: 'buyer',
             before: { type: 'names', ur: AKRAM.name_ur, en: AKRAM.name_en },
             after: { type: 'names', ur: TARIQ.name_ur, en: TARIQ.name_en },
@@ -324,7 +333,16 @@ describe.each(LANGUAGES)('find and edit by party (%s)', (language) => {
           entry_date: '2026-10-10',
           changes: [
             {
-              place: { kind: 'lot', lot_no: 1, line_no: null, label_ur: null, label_en: null },
+              place: {
+                kind: 'lot',
+                lot_no: 1,
+                lot_counter: null,
+                item_ur: null,
+                item_en: null,
+                line_no: null,
+                label_ur: null,
+                label_en: null,
+              },
               field: 'seller',
               before: { type: 'names', ur: RAHIM.name_ur, en: RAHIM.name_en },
               after: { type: 'names', ur: KARIM.name_ur, en: KARIM.name_en },

@@ -88,30 +88,41 @@ export async function openBook(
 }
 
 /**
- * Types the header and the lot of Event 1 with the keys only: the truck (which fills the اڈا, the
- * زمیندار and the driver), then Enter through the filled fields to the lots, then the lot's cells.
- * Ends with focus on the buyer of the first sale line.
+ * Types the lot of Event 1 with the keys only. The header is only the date (plan 71 H1): it has the
+ * cursor when the screen opens, and Enter goes on to the first lot's seller. The seller is typed as
+ * his short code (`0` is Rahim, 0010); his item and packing come from his last lot. Then the lot's
+ * cells. Ends with focus on the buyer of the first sale line.
  */
 export async function typeHeaderAndLot(user: User, language: Language) {
-  await user.keyboard('LES-1234{Enter}');
-  await waitFor(() => {
-    expect(
-      screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-    ).toHaveValue(names(language).rahim);
-  });
-  // The زمیندار, then the اڈا: the rest of the header (bill date, freight, store, driver) is behind
-  // "More", so Enter on the اڈا goes on to the lots.
-  await user.keyboard('{Enter}{Enter}');
+  await user.keyboard('{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');
   });
+  await typeCodeAndEnter(user, '0');
+  await waitFor(() => {
+    expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
+  });
   await waitFor(() => {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
-  await user.keyboard('{Enter}{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  // Picking the seller moved on to the item: the item and the packing, then the quantity.
+  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
+  });
+}
+
+/**
+ * A new, empty بکری is open (as after a save): the cursor is on the date, the first field, and the
+ * first lot has no seller. Waits, because the screen is made again a moment after the save.
+ */
+export async function expectNewEmptyBook(language: Language) {
+  await waitFor(() => {
+    expect(
+      screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) }),
+    ).toHaveFocus();
+    expect(textOf(lotsGrid(language), 0, 'seller')).toBe('');
   });
 }
 
@@ -142,25 +153,26 @@ export async function typeAndPick(user: User, text: string) {
 }
 
 /**
- * Types Event 1 the way the backend's request files have it, with no truck memory: the truck, the
- * زمیندار picked by name, the lot (50 نگ, freight 3,000, labour 5 for each نگ, munshiana 50,
- * phone charge 20, نقد 5,000). The method of the labour and the phone charge are in the "more"
- * panel of the lot. Ends with the cursor on the buyer of the first sale line.
+ * Types Event 1 the way the backend's request files have it: the seller by his short code, the lot
+ * (50 نگ, freight 3,000, labour 5 for each نگ, munshiana 50, phone charge 20, نقد 5,000). The method
+ * of the labour and the phone charge are in the "more" panel of the lot. Ends with the cursor on the
+ * buyer of the first sale line.
  */
 export async function typeEvent1Lot(user: User, language: Language) {
-  await user.keyboard('LES-1234{Enter}');
-  await typeAndPick(user, 'rahim');
-  // The adda stays empty; the total freight is behind "More" and the freight is typed on the lot.
   await user.keyboard('{Enter}');
   const lots = lotsGrid(language);
   await waitFor(() => {
     expect(focusedIn(lots)).toBe('0:seller');
   });
-  // The seller is the زمیندار, and his item and packing come from his last lot.
+  await typeCodeAndEnter(user, '0');
+  // His item and packing come from his last lot.
+  await waitFor(() => {
+    expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
+  });
   await waitFor(() => {
     expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
   });
-  await user.keyboard('{Enter}{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
+  await user.keyboard('{Enter}{Enter}50{Enter}3000{Enter}5{Enter}50{Enter}5000{Enter}');
   await waitFor(() => {
     expect(focusedIn(salesGrid(language))).toBe('0:buyer');
   });
@@ -202,7 +214,7 @@ export async function typeCodeAndEnter(user: User, code: string) {
     },
     { timeout: 8_000 },
   );
-  await user.keyboard(code.slice(1));
+  if (code.length > 1) await user.keyboard(code.slice(1));
   await screen.findAllByRole('option', undefined, { timeout: 8_000 });
   await user.keyboard('{Enter}');
 }

@@ -9,10 +9,7 @@ use mandi_domain::core::accounts::{
     AccountRow, AccountType, Balance, BalanceSide, CardWarning, CardWarningKind, PartyCard,
     SELLER_CONTROL,
 };
-use mandi_domain::core::bikri::{
-    LastRateInput, RateHint, RateHintSource, SellerMemory, TruckLast, TruckMemory,
-    TruckMemoryInput, TruckSameDay, TruckSuggestion,
-};
+use mandi_domain::core::bikri::{LastRateInput, RateHint, RateHintSource, SellerMemory};
 use mandi_domain::core::dates::BusinessDate;
 use mandi_domain::core::error::ErrorCode;
 use mandi_domain::core::money::Paisa;
@@ -266,57 +263,6 @@ pub fn advances(ctx: &Context, seller_id: i64) -> Result<AdvancesInfo, ServiceEr
             open,
             open_paisa: total,
             last: voucher_repo::last_advance(conn, seller_id)?,
-        })
-    })
-}
-
-/// Truck numbers offered under the truck field at most (PRD FR-7.49).
-const TRUCK_SUGGESTIONS: i64 = 8;
-
-/// What the app remembers about a truck number: its last بکری, a بکری of it on the posting day,
-/// and the truck numbers that start with the typed text (PRD FR-7.49, FR-7.50). Only reads.
-///
-/// Example: `LES-1234` was used in بکری 1 on 10-10-2026 for زمیندار رحیم. Typing `les-1234` for a
-/// new بکری of 10-10-2026 gives `last` (بکری 1, with its اڈا, زمیندار and driver) and `same_day`
-/// (بکری 1), so the screen shows "اس ٹرک کی آج بکری نمبر 1 پہلے سے موجود ہے".
-///
-/// # Errors
-/// The date codes on `date`; `ERR_CONTROL_CHARS` or `ERR_TEXT_TOO_LONG` on `truck_no`;
-/// `ServiceError::Db`.
-pub fn truck_memory(ctx: &Context, input: &TruckMemoryInput) -> Result<TruckMemory, ServiceError> {
-    let (_, today) = crate::day::window(ctx)?;
-    let date = validate::date("date", &input.date, today)?;
-    let truck_no = validate::free_text("truck_no", &input.truck_no)?;
-    if truck_no.is_empty() {
-        return Ok(TruckMemory {
-            last: None,
-            same_day: None,
-            suggestions: Vec::new(),
-        });
-    }
-    ctx.db.read(|conn| {
-        let last = bikri_repo::truck_last(conn, &truck_no)?.map(|b| TruckLast {
-            bikri_number: b.number,
-            date: b.entry_date,
-            adda_id: b.adda_id,
-            zamindar_account_id: b.zamindar_account_id,
-            driver_name: b.driver_name,
-            driver_phone: b.driver_phone,
-        });
-        let same_day = bikri_repo::truck_same_day(conn, &truck_no, &date.to_iso())?
-            .map(|bikri_number| TruckSameDay { bikri_number });
-        let suggestions =
-            bikri_repo::truck_numbers_starting_with(conn, &truck_no, TRUCK_SUGGESTIONS)?
-                .into_iter()
-                .map(|t| TruckSuggestion {
-                    truck_no: t.truck_no,
-                    date: t.last_date,
-                })
-                .collect();
-        Ok(TruckMemory {
-            last,
-            same_day,
-            suggestions,
         })
     })
 }

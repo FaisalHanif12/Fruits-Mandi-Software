@@ -185,6 +185,7 @@ pub(super) fn stored_posting(
         lots.insert(
             lot.id,
             StoredLot {
+                lot_counter: Some(lot.lot_counter),
                 identity: Some(StoredIdentity {
                     seller_account_id: lot.seller.id,
                     item_id: lot.item.id,

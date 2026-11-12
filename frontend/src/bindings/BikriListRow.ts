@@ -3,6 +3,7 @@ import type { Paisa } from '../shared/format/money';
 import type { BikriStatus } from './BikriStatus';
 import type { EditStamp } from './EditStamp';
 import type { LockedReason } from './LockedReason';
+import type { LotName } from './LotName';
 import type { RecordRef } from './RecordRef';
 
 /**
@@ -38,6 +39,10 @@ export type BikriListRow = {
    * The items of its lots, each once.
    */
   items: Array<RecordRef>;
+  /**
+   * The names of its lots (PRD FR-12.45), in lot order: each lot's seller, item and counter.
+   */
+  lots: Array<LotName>;
   /**
    * نگ received over all its lots.
    */

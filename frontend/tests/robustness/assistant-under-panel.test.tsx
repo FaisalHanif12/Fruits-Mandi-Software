@@ -3,8 +3,8 @@
 //
 // The Owner has a بکری open with 30 unsaved sale lines. He presses F1, asks a question, switches
 // the language, follows a button of the answer (it opens a report, so the leave prompt shows),
-// chooses "back", and is where he was. Nothing he typed is lost at any step: the lines, the truck,
-// the answer in the panel and the half-typed next question.
+// chooses "back", and is where he was. Nothing he typed is lost at any step: the lot (its seller,
+// quantity and freight), the answer in the panel and the half-typed next question.
 //
 // The backend is a fake: the order of the lines is what the draft holds, the answer is the real
 // answer of the backend (a copy of its own test fixture), and no number is worked out here.
@@ -22,7 +22,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import * as draftsApi from '../../src/shared/drafts/api';
 import * as urduApi from '../../src/shared/urdu/api';
 import { fakeBikri, RAHIM } from '../helpers/bikri';
-import { combo, salesGrid } from '../helpers/bikri-screen';
+import { lotsGrid, names, salesGrid, textOf } from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -62,14 +62,23 @@ function linesOnScreen(language: Language): string[] {
     });
 }
 
-/** A draft of a truck, Rahim's lot of 60 نگ and 30 lines of 2 نگ each at their own rate. */
+/** What the lot row shows now: its seller (in the language of the screen), quantity and typed freight. */
+function lotOnScreen(language: Language): string {
+  const grid = lotsGrid(language);
+  const freight = textOf(grid, 0, 'freight').replace(/,/g, '');
+  return `${textOf(grid, 0, 'seller')}|${textOf(grid, 0, 'qty')}|${freight}`;
+}
+
+/** The lot of the draft below, as the screen shows it in a language. */
+const expectedLot = (language: Language): string => `${names(language).rahim}|60|3000`;
+
+/** A draft of Rahim's lot of 60 نگ with a typed freight of 3,000 and 30 lines of 2 نگ each at their own rate. */
 function thirtyLines(): void {
   const stores = createBikriDraft('10-10-2026');
-  stores.header.getState().patch({ truckNo: 'LES-1234' });
   const lot = stores.lots.getState().rows[0];
   if (lot === undefined) throw new Error('no lot row');
   stores.lots.getState().patchRow(lot.rowId, {
-    typed: { [LOT.qty]: '60', [LOT.sellerFilled]: ON },
+    typed: { [LOT.qty]: '60', [LOT.freight]: '3000', [LOT.sellerFilled]: ON },
     picked: { [LOT.seller]: { id: RAHIM.id, code: RAHIM.code, name_ur: 'رحیم', name_en: 'Rahim' } },
   });
   const sales = stores.salesFor(lot.rowId).getState();
@@ -117,10 +126,10 @@ describe.each(LANGUAGES)('the panel over a بکری with 30 unsaved lines (%s)',
   it('ask, switch the language, follow a button (the leave prompt shows), come back: nothing is lost', async () => {
     const { router } = await renderApp('/bikri/book');
     const user = userEvent.setup();
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('LES-1234');
     await waitFor(() => {
       expect(linesOnScreen(language).length).toBeGreaterThan(0);
     });
+    expect(lotOnScreen(language)).toBe(expectedLot(language));
     const before = linesOnScreen(language);
     expect(before[0]).toBe('0:2@601');
 
@@ -134,13 +143,13 @@ describe.each(LANGUAGES)('the panel over a بکری with 30 unsaved lines (%s)',
     expect(assistantApi.assistantAsk).toHaveBeenCalledTimes(1);
     await user.type(boxOf(language), 'half typed');
 
-    // The language is switched in the middle: the lines, the truck, the answer and the half-typed
+    // The language is switched in the middle: the lines, the lot, the answer and the half-typed
     // next question are all still there, now in the other language.
     setLanguage(other);
     await waitFor(() => {
       expect(linesOnScreen(other)).toEqual(before);
     });
-    expect(await combo(other, 'bikri-header-truck')).toHaveValue('LES-1234');
+    expect(lotOnScreen(other)).toBe(expectedLot(other));
     expect(boxOf(other)).toHaveValue('half typed');
     const answer = within(panelOf(other)).getByLabelText(message(other, 'assistant-answer-label'));
     expect(visible(answer.textContent)).toContain(
@@ -167,7 +176,7 @@ describe.each(LANGUAGES)('the panel over a بکری with 30 unsaved lines (%s)',
     });
     expect(router.state.location.pathname).toBe('/bikri/book');
     expect(linesOnScreen(other)).toEqual(before);
-    expect(await combo(other, 'bikri-header-truck')).toHaveValue('LES-1234');
+    expect(lotOnScreen(other)).toBe(expectedLot(other));
     expect(boxOf(other)).toHaveValue('half typed');
     expect(
       within(panelOf(other)).getByLabelText(message(other, 'assistant-answer-label')),

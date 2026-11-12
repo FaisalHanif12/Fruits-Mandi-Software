@@ -14,13 +14,16 @@ import * as urduApi from '../../src/shared/urdu/api';
 import { money } from '../helpers/accounts';
 import { previewFor } from '../helpers/bikri-data';
 import {
-  combo,
+  cellOf,
+  expectNewEmptyBook,
   focusedIn,
   lotsGrid,
   named,
+  names,
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
   waitForLineFill,
@@ -120,12 +123,7 @@ describe.each(LANGUAGES)('saving a بکری (%s)', (language) => {
     ]);
     // The message, with the number the backend gave, and then a new empty بکری is ready.
     await savedToast(language);
-    const truck = await combo(language, 'bikri-header-truck');
-    await waitFor(() => {
-      expect(truck).toHaveFocus();
-    });
-    expect(truck).toHaveValue('');
-    expect(textOf(lotsGrid(language), 0, 'seller')).toBe('');
+    await expectNewEmptyBook(language);
     // The saved id is kept: the way back to it is on the screen.
     expect(pageText()).toContain(message(language, 'bikri-last-saved', { number: 1 }));
     // The draft the backend removed is thrown away once more, in case one was on its way.
@@ -171,7 +169,7 @@ describe.each(LANGUAGES)('saving a بکری (%s)', (language) => {
       expect(printed).toHaveBeenCalledTimes(1);
     });
     expect(printed.mock.calls[0]?.[0]).toMatchObject({ bikri_id: 41, number: 1 });
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('');
+    await expectNewEmptyBook(language);
     unregister();
   });
 
@@ -330,8 +328,8 @@ describe.each(LANGUAGES)('a refused save (%s)', (language) => {
     expect(textOf(salesGrid(language), 1, 'qty')).toBe('30');
     expect(pageText()).not.toContain(message(language, 'bikri-saved-toast', { number: 1 }));
     // Typing something changes the draft: the refusal belongs to the old text and goes.
-    await user.click(await combo(language, 'bikri-header-truck'));
-    await user.keyboard('X');
+    await user.click(cellOf(salesGrid(language), 1, 'rate'));
+    await user.keyboard('9{Enter}');
     await waitFor(() => {
       expect(pageText()).not.toContain(words);
     });
@@ -379,7 +377,9 @@ describe.each(LANGUAGES)('a refused save (%s)', (language) => {
 
   it('a sale with no lines says so only when he tries to save (PRD FR-12.8)', async () => {
     const { backend, user } = await openBook(language);
-    await user.keyboard('LES-1234');
+    // The first typed work is the seller of the first lot (the date alone is not typed work).
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     // Nothing is said while he types: a missing line is not an error yet.
     expect(pageText()).not.toContain(message(language, 'err-no-sale-lines'));
     // The screen fills the blank line's qty from the lot (PRD FR-7.52) a moment after the preview.
@@ -436,18 +436,19 @@ describe.each(LANGUAGES)('leaving a بکری with typed work (%s, PRD FR-7.9)', 
 
   it('typed work asks with three buttons: back stays, leave goes and throws the draft away', async () => {
     const { router, user } = await openBook(language);
-    await user.keyboard('LES-1234');
+    await user.keyboard('{Enter}');
+    await typeCodeAndEnter(user, '0');
     await user.click(
       screen.getByRole('button', { name: named(message(language, 'layout-nav-dashboard')) }),
     );
     const box = await prompt();
     expect(router.state.location.pathname).toBe('/bikri/book');
-    // Back: still on the screen, with the truck number.
+    // Back: still on the screen, with the seller he typed.
     await user.click(buttonOf(box, 'common-back'));
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     });
-    expect(await combo(language, 'bikri-header-truck')).toHaveValue('LES-1234');
+    expect(textOf(lotsGrid(language), 0, 'seller')).toBe(names(language).rahim);
     // Leave: goes, and the draft on the backend is thrown away.
     await user.click(
       screen.getByRole('button', { name: named(message(language, 'layout-nav-dashboard')) }),
@@ -505,38 +506,5 @@ describe.each(LANGUAGES)('leaving a بکری with typed work (%s, PRD FR-7.9)', 
     });
     expect(router.state.location.pathname).toBe('/bikri/book');
     expect(backend.saves).toHaveLength(0);
-  });
-
-  it('the same-truck notice’s open button asks which بکری it is, then leaving asks first', async () => {
-    const { user, router } = await openBook(language);
-    await user.keyboard('LES-1234');
-    const sentence = message(language, 'bikri-truck-same-day', { number: 1, date: '10-10-2026' });
-    const box = await waitFor(async () => {
-      const found = (await screen.findAllByRole('status')).find((candidate) =>
-        visible(candidate.textContent).includes(sentence),
-      );
-      if (found === undefined) throw new Error('no notice');
-      return found;
-    });
-    await user.click(
-      within(box).getByRole('button', { name: named(message(language, 'bikri-truck-open')) }),
-    );
-    await waitFor(() => {
-      expect(bikriApi.bikriFind).toHaveBeenCalledWith({
-        number: 1,
-        truck_no: null,
-        seller_id: null,
-        date: null,
-        item_id: null,
-        buyer_account_id: null,
-        buyer_text: null,
-      });
-    });
-    // He had typed a truck number, so the saved بکری opens after the prompt.
-    await user.click(buttonOf(await prompt(), 'layout-save-leave'));
-    await waitFor(() => {
-      expect(router.state.location.search).toMatchObject({ id: 41 });
-    });
-    expect(draftsApi.draftsDiscard).toHaveBeenCalled();
   });
 });

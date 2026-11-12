@@ -115,19 +115,19 @@ struct Named {
     packings: BTreeSet<i64>,
     markas: BTreeSet<i64>,
     stores: BTreeSet<i64>,
-    addas: BTreeSet<i64>,
     /// (item, packing) pairs, for the saved rate hint.
     pairs: BTreeSet<(i64, i64)>,
+    /// (seller, item) pairs, for the counter of each lot's name (PRD FR-12.45).
+    lot_pairs: BTreeSet<(i64, i64)>,
 }
 
 fn named(prepared: &PreparedDraft) -> Named {
     let mut n = Named::default();
-    let h = &prepared.header;
-    n.accounts.extend(h.zamindar_account_id);
-    n.addas.extend(h.adda_id);
-    n.stores.extend(h.store_id);
     for lot in &prepared.lots {
         n.accounts.extend(lot.seller_account_id);
+        if let Some(pair) = lot.seller_account_id.zip(lot.item_id) {
+            n.lot_pairs.insert(pair);
+        }
         n.items.extend(lot.item_id);
         n.packings.extend(lot.packing_id);
         n.markas.extend(lot.marka_id);
@@ -465,7 +465,12 @@ fn load_lookups(
         packings: existing(conn, repo::MasterTable::Packings, &n.packings)?,
         markas: existing(conn, repo::MasterTable::Markas, &n.markas)?,
         stores: existing(conn, repo::MasterTable::Stores, &n.stores)?,
-        addas: existing(conn, repo::MasterTable::Addas, &n.addas)?,
+        // The biggest counter ever given to each seller and item of the lots, for the name of each
+        // lot (PRD FR-12.45). Cancelled lots and lots an edit moved away still count.
+        lot_counters: {
+            let pairs: Vec<(i64, i64)> = n.lot_pairs.iter().copied().collect();
+            repo::lot_counters_of(conn, &pairs)?
+        },
         ..Lookups::default()
     };
     // The saved rates need the posting day (PRD FR-7.53, FR-7.55). Without a valid day the

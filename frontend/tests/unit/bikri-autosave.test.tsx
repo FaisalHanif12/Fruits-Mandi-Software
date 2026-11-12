@@ -28,6 +28,13 @@ function Harness({ stores }: { stores: BikriDraftStores }) {
 
 const SAVED = { saved_at: '2026-10-10T07:30:00Z' };
 
+/** The first typed work of a بکری: a freight on the first lot (the date alone is not typed work). */
+function touch(stores: BikriDraftStores, freight: string): void {
+  const lot = stores.lots.getState().rows[0];
+  if (lot === undefined) throw new Error('no lot');
+  stores.lots.getState().updateTyped(lot.rowId, LOT.freight, freight);
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
@@ -54,14 +61,14 @@ describe('the draft auto-save', () => {
   it('sends the draft after 5 seconds, not before, and once for one change', async () => {
     const stores = createBikriDraft('10-10-2026');
     render(<Harness stores={stores} />);
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     await vi.advanceTimersByTimeAsync(4_900);
     expect(draftsApi.draftsSave).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(200);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
     const [screen, payload] = vi.mocked(draftsApi.draftsSave).mock.calls[0] ?? [];
     expect(screen).toBe('bikri');
-    expect(parseSnapshot(payload ?? '')?.header.truckNo).toBe('LES-1234');
+    expect(parseSnapshot(payload ?? '')?.lots[0]?.typed[LOT.freight]).toBe('3000');
     // Nothing changed since: the next ticks send nothing.
     await vi.advanceTimersByTimeAsync(15_000);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
@@ -76,7 +83,7 @@ describe('the draft auto-save', () => {
   it('sends nothing when only the cursor moved: the text is the same as the last one sent', async () => {
     const stores = createBikriDraft('10-10-2026');
     render(<Harness stores={stores} />);
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
     // A cursor move is a change of the lots store (its focus), not of what was typed.
@@ -90,10 +97,10 @@ describe('the draft auto-save', () => {
   it('throws the draft away when the user empties the screen by hand', async () => {
     const stores = createBikriDraft('10-10-2026');
     render(<Harness stores={stores} />);
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
-    stores.header.getState().patch({ truckNo: '' });
+    touch(stores, '');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(draftsApi.draftsDiscard).toHaveBeenCalledWith('bikri');
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
@@ -102,7 +109,7 @@ describe('the draft auto-save', () => {
   it('is cancelled by a save: nothing more is sent', async () => {
     const stores = createBikriDraft('10-10-2026');
     render(<Harness stores={stores} />);
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     handle.stop();
     await vi.advanceTimersByTimeAsync(20_000);
     expect(draftsApi.draftsSave).not.toHaveBeenCalled();
@@ -120,7 +127,7 @@ describe('the draft auto-save', () => {
           };
         }),
     );
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(1);
     // The save of the بکری happens now, while the draft is still travelling.
@@ -134,7 +141,7 @@ describe('the draft auto-save', () => {
     const stores = createBikriDraft('10-10-2026');
     render(<Harness stores={stores} />);
     vi.mocked(draftsApi.draftsSave).mockRejectedValueOnce(new Error('busy'));
-    stores.header.getState().patch({ truckNo: 'LES-1234' });
+    touch(stores, '3000');
     await vi.advanceTimersByTimeAsync(5_000);
     await vi.advanceTimersByTimeAsync(5_000);
     expect(draftsApi.draftsSave).toHaveBeenCalledTimes(2);

@@ -170,54 +170,54 @@ export function SavedBikriView({ detail, onEdit, needsReopen = false }: SavedBik
           )}
         </div>
       ) : null}
-      <Card compact>
-        <div className="@container min-w-0">
-          <dl className="grid grid-cols-3 gap-x-4 gap-y-3 @form3:grid-cols-4">
-            <Fact label={<Localized id="bikri-header-date" />}>
-              <Code>{isoToDisplayDate(detail.entry_date)}</Code>
-            </Fact>
-            <Fact label={<Localized id="bikri-header-bill-date" />}>
-              <Code>{isoToDisplayDate(detail.bill_date)}</Code>
-            </Fact>
-            {detail.truck_no === null ? null : (
-              <Fact label={<Localized id="bikri-header-truck" />}>
-                <Code>{detail.truck_no}</Code>
-              </Fact>
-            )}
-            {detail.zamindar === null ? null : (
-              <Fact label={<Localized id="glossary-zamindar" />}>
-                {displayName(detail.zamindar, language)}
-              </Fact>
-            )}
-            {adda === null ? null : <Fact label={<Localized id="glossary-adda" />}>{adda}</Fact>}
-            {detail.total_freight === null ? null : (
-              <Fact label={<Localized id="bikri-header-total-freight" />}>
-                <Num paisa={detail.total_freight} />
-              </Fact>
-            )}
-            {store === null ? null : (
-              <Fact label={<Localized id="bikri-header-store" />}>{store}</Fact>
-            )}
-            {detail.book === null ? null : (
-              <Fact label={<Localized id="bikri-header-book" />}>{detail.book}</Fact>
-            )}
-            {detail.driver_name === null ? null : (
-              <Fact label={<Localized id="bikri-header-driver" />}>{detail.driver_name}</Fact>
-            )}
-            {detail.driver_phone === null ? null : (
-              <Fact label={<Localized id="bikri-header-driver-phone" />}>
-                <Code>{detail.driver_phone}</Code>
-              </Fact>
-            )}
-            {detail.note === null ? null : (
-              <Fact label={<Localized id="bikri-header-note" />}>{detail.note}</Fact>
-            )}
-            <Fact label={<Localized id="bikri-saved-at" />}>
-              <Code>{utcToLocalDisplay(detail.created_at)}</Code>
-            </Fact>
-          </dl>
-        </div>
-      </Card>
+      {/* The date and when it was saved are one line, not a card (plan 71 H4). The old header values of
+          a بکری saved before v1.34 (truck, زمیندار, اڈا, bill date, freight, store, book, driver, note)
+          stay in the database and show here read only, each only when it is there (H3). New بکری
+          have none of them, and their bill date is their entry date. */}
+      <dl className="flex flex-wrap gap-x-6 gap-y-2">
+        <Fact label={<Localized id="bikri-header-date" />}>
+          <Code>{isoToDisplayDate(detail.entry_date)}</Code>
+        </Fact>
+        {detail.bill_date === detail.entry_date ? null : (
+          <Fact label={<Localized id="bikri-header-bill-date" />}>
+            <Code>{isoToDisplayDate(detail.bill_date)}</Code>
+          </Fact>
+        )}
+        {detail.truck_no === null ? null : (
+          <Fact label={<Localized id="bikri-header-truck" />}>
+            <Code>{detail.truck_no}</Code>
+          </Fact>
+        )}
+        {detail.zamindar === null ? null : (
+          <Fact label={<Localized id="glossary-zamindar" />}>
+            {displayName(detail.zamindar, language)}
+          </Fact>
+        )}
+        {adda === null ? null : <Fact label={<Localized id="glossary-adda" />}>{adda}</Fact>}
+        {detail.total_freight === null ? null : (
+          <Fact label={<Localized id="bikri-header-total-freight" />}>
+            <Num paisa={detail.total_freight} />
+          </Fact>
+        )}
+        {store === null ? null : <Fact label={<Localized id="bikri-header-store" />}>{store}</Fact>}
+        {detail.book === null ? null : (
+          <Fact label={<Localized id="bikri-header-book" />}>{detail.book}</Fact>
+        )}
+        {detail.driver_name === null ? null : (
+          <Fact label={<Localized id="bikri-header-driver" />}>{detail.driver_name}</Fact>
+        )}
+        {detail.driver_phone === null ? null : (
+          <Fact label={<Localized id="bikri-header-driver-phone" />}>
+            <Code>{detail.driver_phone}</Code>
+          </Fact>
+        )}
+        {detail.note === null ? null : (
+          <Fact label={<Localized id="bikri-header-note" />}>{detail.note}</Fact>
+        )}
+        <Fact label={<Localized id="bikri-saved-at" />}>
+          <Code>{utcToLocalDisplay(detail.created_at)}</Code>
+        </Fact>
+      </dl>
       {detail.lots.map((lot) => (
         <SavedLotCard key={lot.id} lot={lot} />
       ))}

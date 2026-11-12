@@ -164,11 +164,11 @@ describe('what the user changed against the loaded text', () => {
   it('the header and the lot are compared too', () => {
     const stores = loaded();
     const baseline = captureBaseline(stores);
-    stores.header.getState().patch({ truckNo: 'LHR-77' });
+    stores.header.getState().patch({ entryDate: '11-10-2026' });
     stores.lots.getState().updateTyped('lot:40', LOT.freight, '3,500');
     const items = diffEdit(stores, baseline).items;
     expect(items.map((item) => `${item.scope}:${item.field ?? ''}`)).toEqual([
-      'header:truckNo',
+      'header:entryDate',
       `lot:${LOT.freight}`,
     ]);
   });

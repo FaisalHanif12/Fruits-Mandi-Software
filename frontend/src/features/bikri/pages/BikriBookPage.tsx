@@ -1,5 +1,6 @@
-// بکری بک (route /bikri/book; PRD 12.1 to 12.6, plans 12 and 13): the munshi types the whole بکری
-// and sees every number live. One screen: the header, the lots, the sale lines of the selected lot,
+// بکری بک (route /bikri/book; PRD 12.1 to 12.6, plans 12, 13 and 71): the munshi types the whole
+// بکری and sees every number live. One screen: the date and number in the top row with the buttons
+// (the header card is gone, plan 71 H1, H4), the lots, the sale lines of the selected lot,
 // the summary (per lot and for the whole بکری), the live partner split, the cash note, and the
 // party card of the party he is on. F10 saves it as one action (useSaveFlow), then a new empty
 // بکری is ready. `/bikri/book?id=12` opens a saved بکری read-only, in the same layout.
@@ -13,15 +14,15 @@
 //   the save are the same function in the backend, so what is on screen is what will be saved.
 // - Everything typed is in the draft stores above the grids, so a language switch re-creates the
 //   grids and loses nothing (F39).
-// - Keys: the grids and forms get theirs from shared/grid and shared/keyboard (F27). Enter on the
-//   last header field goes to the lots; Enter on the last cell of a lot goes to its sale lines.
+// - Keys: the grids and forms get theirs from shared/grid and shared/keyboard (F27). The date is the
+//   first field; Enter on it goes to the lots; Enter on the last cell of a lot goes to its sale lines.
 // - Four states: loading while today arrives, an error with a retry, the empty summary with its
 //   button before anything is typed, and the data.
 
 import { Localized, useLocalization } from '@fluent/react';
 import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
 import { FileText } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeaveGuard } from '../../../app/LeaveGuard';
 import { useDayStatus } from '../../../app/use-day-status';
 import type { BikriEdited } from '../../../bindings/BikriEdited';
@@ -60,7 +61,7 @@ import {
   useErrorText,
 } from '../../../shared/ui';
 import { useEditReview, useEntryMarks, useFixDayFlow, useFixStore } from '../../../shared/edit';
-import { bikriEditReview, bikriFind } from '../api';
+import { bikriEditReview } from '../api';
 import { BikriToolbar } from '../components/BikriToolbar';
 import { SavedBikriView } from '../components/saved/SavedBikriView';
 import { PrintAction } from '../print/PrintAction';
@@ -85,7 +86,7 @@ import type { Baseline } from '../edit-changes';
 import { lotMarkCells, saleMarkCells } from '../edit-marks';
 import { changedCellWords } from '../edit-view';
 import { editSource } from '../preview-source';
-import { HeaderCard } from '../components/HeaderCard';
+import { HeadFields } from '../components/HeadFields';
 import { LotMore } from '../components/LotMore';
 import { ArrivalLotPanel } from '../components/ArrivalLotPanel';
 import { OwnLotPanel } from '../components/OwnLotPanel';
@@ -103,7 +104,7 @@ import {
 } from '../draft-store';
 import { buildDraft, isArrivalLot, isFilledByUser, isOwnLot } from '../draft';
 import { useGridViews } from '../hooks/useGridViews';
-import { useLotWho } from '../lot-name';
+import { LotCountersProvider, useLotCounters, useLotWho } from '../lot-name';
 import { useBikriPreview } from '../hooks/useBikriPreview';
 import { useDraftFills } from '../hooks/useDraftFills';
 import { useReadyLots } from '../hooks/useReadyLots';
@@ -111,7 +112,7 @@ import { LOT_GRID_FIELD, LOT_OWN_FIELD, problemsOf, type Problem } from '../prob
 import { LOT, SALE } from '../types';
 
 /** The parts of the screen the keyboard or the mouse can be in, for the party card. */
-type Region = 'header' | 'lots' | 'sales';
+type Region = 'lots' | 'sales';
 
 /** A refusal made of the problems that are errors, so each field can show the words of its own. */
 function errorOf(problems: readonly Problem[]): UiError | null {
@@ -306,36 +307,9 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     setAskReason(true);
   }
 
-  // The same-truck notice's "open" button: find the saved بکری by its number, then open it.
-  const openByNumber = (number: number) => {
-    void bikriFind({
-      number,
-      truck_no: null,
-      seller_id: null,
-      date: null,
-      item_id: null,
-      buyer_account_id: null,
-      buyer_text: null,
-    })
-      .then((rows) => {
-        const row = rows[0];
-        if (row === undefined) throw new Error('not found');
-        onOpenSaved(row.id);
-      })
-      .catch(() => {
-        showToast(
-          'error',
-          <Localized id="bikri-open-failed">
-            <span />
-          </Localized>,
-        );
-      });
-  };
-
   const lotRows = stores.lots((state) => state.rows);
   const selected = stores.view((state) => state.selectedLot);
   const whole = stores.view((state) => state.wholeView);
-  const zamindar = stores.header((state) => state.zamindar);
   const lotKey = selected ?? lotRows[0]?.rowId ?? '';
   const lotIndex = Math.max(
     lotRows.findIndex((row) => row.rowId === lotKey),
@@ -381,8 +355,11 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     [l10n],
   );
   // The lot of a line in the whole-sale view, and the name every label of a lot shows: its number
-  // and its seller and item (PRD FR-12.1, FR-12.6).
-  const lotWho = useLotWho();
+  // and its name, the seller, the item and the counter the backend gave it (PRD FR-12.1, FR-12.6,
+  // FR-12.45). The labels below the page read the same counters through the provider.
+  const getLotRows = useCallback(() => stores.lots.getState().rows, [stores]);
+  const lotCounters = useLotCounters(preview, getLotRows);
+  const lotWho = useLotWho(lotCounters);
   // What the grids show from the answer, and the keys of the lines of every lot. Worked out again only
   // when the answer, the problems, the lines or the language change, not on every move of the cursor.
   const { views, lineKeysByLot } = useGridViews({
@@ -452,18 +429,30 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
       ? (focusedSales?.picked?.[SALE.buyer]?.id ?? null)
       : region === 'lots'
         ? (focusedLot?.picked?.[LOT.seller]?.id ?? null)
-        : region === 'header'
-          ? (zamindar?.id ?? null)
-          : null);
+        : null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   // A refusal above the grid he is typing in is brought into view (never left unseen).
   useRefusalIntoView(rootRef, refused);
-  const focusTruck = () => {
-    rootRef.current?.querySelector<HTMLInputElement>('input[role="combobox"]')?.focus();
-  };
-  // The user starts on the truck number, the first thing he types (PRD FR-12.2).
-  useEffect(focusTruck, []);
+  /** The next thing to type after the date: the buyer of the first ready lot, else the first seller. */
+  const goToLots = useCallback(() => {
+    const first = stores.lots.getState().rows[0];
+    if (first !== undefined && first.rowId in stores.view.getState().readyLots) {
+      stores.focusSaleLine(first.rowId, 0, SALE.buyer);
+      return;
+    }
+    stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
+  }, [stores]);
+  // The user starts on the date, the first field (plan 71 H1). A posting open for edit keeps its
+  // day, so the cursor starts on the lots.
+  const editing = edit !== null;
+  useEffect(() => {
+    if (!editing) {
+      rootRef.current?.querySelector<HTMLInputElement>('[data-bikri-head] input')?.focus();
+    } else {
+      goToLots();
+    }
+  }, [editing, goToLots]);
 
   // A sale whose every typed line is refused has nothing to total: its figures wait for the
   // quantity, as the lot's do (`totals` is null then, PRD FR-12.6). It is a check that a line is
@@ -529,7 +518,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           title={<Localized id="bikri-empty-title" />}
           help={<Localized id="bikri-empty-help" />}
           action={
-            <Button onClick={focusTruck}>
+            <Button onClick={goToLots}>
               <Localized id="bikri-empty-action" />
             </Button>
           }
@@ -546,292 +535,295 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
     edit === null ? isFilledByUser(stores, draft) : !edit.done && !(diff?.unchanged ?? true);
 
   return (
-    <div ref={rootRef} className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
-      {/* The screen scrolls in this area. The numbers strip is docked under it, never over it, so it
+    <LotCountersProvider value={lotCounters}>
+      <div ref={rootRef} className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
+        {/* The screen scrolls in this area. The numbers strip is docked under it, never over it, so it
           cannot cover a grid (plan 38, sale book). */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto short:gap-2">
-        {edit === null ? (
-          <BikriToolbar
-            title={
-              // The side menu already says where we are, so the name gives its room to the grids
-              // in the smallest window (design system 8, plan 12). Screen readers still hear it.
-              // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
-              <div className="flex items-center gap-1">
-                <Localized id="glossary-bikri-book">
-                  <h1 className="sr-only normal:not-sr-only normal:type-section" />
-                </Localized>
-                <div className="hidden normal:block">
-                  <InfoHint>
-                    <Localized id="bikri-help">
-                      <p />
-                    </Localized>
-                  </InfoHint>
-                </div>
-              </div>
-            }
-            currentId={null}
-            onOpen={onOpenSaved}
-            findOpen={findOpen}
-            onFindOpenChange={setFindOpen}
-            lastSaved={
-              lastSaved === null ? null : (
-                <span className="flex items-center gap-2 type-body text-ink-muted">
-                  <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
-                    <span />
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2">
+          {edit === null ? (
+            <BikriToolbar
+              title={
+                // The side menu already says where we are, so the name gives its room to the grids
+                // in the smallest window (design system 8, plan 12). Screen readers still hear it.
+                // The line of help is behind an ⓘ, so the name and the buttons are one row (plan 38).
+                <div className="flex items-center gap-1">
+                  <Localized id="glossary-bikri-book">
+                    <h1 className="sr-only normal:not-sr-only normal:type-section" />
                   </Localized>
-                  <LinkButton
-                    onClick={() => {
-                      onOpenSaved(lastSaved.id);
-                    }}
-                  >
-                    <Localized id="bikri-truck-open" />
-                  </LinkButton>
-                </span>
-              )
-            }
-          >
-            <PrintAction target={lastSaved} enabled={!dialogOpen} />
-            <Button
-              variant="primary"
-              shortcut={SHORTCUTS.save}
-              busy={flow.busy}
-              onClick={() => {
-                trySave(false);
-              }}
+                  <div className="hidden normal:block">
+                    <InfoHint>
+                      <Localized id="bikri-help">
+                        <p />
+                      </Localized>
+                    </InfoHint>
+                  </div>
+                </div>
+              }
+              head={
+                <div
+                  data-bikri-head=""
+                  onFocusCapture={() => {
+                    setRegion(null);
+                  }}
+                >
+                  <HeadFields error={formError} number={null} onDone={goToLots} />
+                </div>
+              }
+              currentId={null}
+              onOpen={onOpenSaved}
+              findOpen={findOpen}
+              onFindOpenChange={setFindOpen}
+              lastSaved={
+                lastSaved === null ? null : (
+                  <span className="flex items-center gap-2 type-body text-ink-muted">
+                    <Localized id="bikri-last-saved" vars={{ number: String(lastSaved.number) }}>
+                      <span />
+                    </Localized>
+                    <LinkButton
+                      onClick={() => {
+                        onOpenSaved(lastSaved.id);
+                      }}
+                    >
+                      <Localized id="bikri-last-saved-open" />
+                    </LinkButton>
+                  </span>
+                )
+              }
             >
-              <Localized id="bikri-save" />
-            </Button>
-          </BikriToolbar>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
-              <Localized id="bikri-edit-back" />
-            </Button>
-            <div className="ms-auto flex flex-wrap items-center gap-2">
+              <PrintAction target={lastSaved} enabled={!dialogOpen} />
               <Button
                 variant="primary"
                 shortcut={SHORTCUTS.save}
                 busy={flow.busy}
-                disabled={!edit.editable.editable}
                 onClick={() => {
                   trySave(false);
                 }}
               >
-                <Localized id="bikri-edit-save" />
+                <Localized id="bikri-save" />
               </Button>
+            </BikriToolbar>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button shortcut={SHORTCUTS.back} onClick={edit.onBack}>
+                <Localized id="bikri-edit-back" />
+              </Button>
+              <div data-bikri-head="">
+                <HeadFields
+                  error={formError}
+                  number={edit.editable.number}
+                  editing
+                  onDone={goToLots}
+                />
+              </div>
+              <div className="ms-auto flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  shortcut={SHORTCUTS.save}
+                  busy={flow.busy}
+                  disabled={!edit.editable.editable}
+                  onClick={() => {
+                    trySave(false);
+                  }}
+                >
+                  <Localized id="bikri-edit-save" />
+                </Button>
+              </div>
             </div>
+          )}
+          {edit !== null && !edit.editable.editable ? (
+            <ClosedDayNotice date={edit.editable.entry_date} />
+          ) : null}
+          {refused === null ? null : (
+            <ErrorNotice
+              error={refused}
+              fieldsShown={refusalErrors(refused).map((item) => item.field)}
+            />
+          )}
+          {edit === null ? null : (
+            <>
+              <Localized id="bikri-edit-title" vars={{ number: String(edit.editable.number) }}>
+                <h1 className="type-title" />
+              </Localized>
+              <EditBand
+                kind="bikri"
+                number={String(edit.editable.number)}
+                date={edit.editable.entry_date}
+                reopenedDays={reopened?.days ?? []}
+              />
+            </>
+          )}
+          <ProblemList
+            problems={problems}
+            selectedLot={lotIndex}
+            activeLine={activeLine}
+            whole={whole}
+          />
+          <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
+            <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
+              <div
+                className="flex flex-col gap-2"
+                onFocusCapture={() => {
+                  setRegion('lots');
+                }}
+              >
+                <LotsSection
+                  view={views.lots}
+                  note={
+                    readyLotCount === 0 ? null : (
+                      <Notice tone="info">
+                        <Localized
+                          id="bikri-ready-lots-note"
+                          elems={{ num: <Num /> }}
+                          vars={{ count: readyLotCount }}
+                        >
+                          <span />
+                        </Localized>{' '}
+                        <Localized
+                          id="bikri-ready-lots-note-hint"
+                          elems={{ key: <Code /> }}
+                          vars={{ key: SHORTCUTS.removeRow.label }}
+                        >
+                          <span />
+                        </Localized>
+                      </Notice>
+                    )
+                  }
+                  onCardAccount={setEditorCard}
+                  moreForced={lotMoreForced}
+                  cellChanged={lotChanged}
+                  cellMarks={lotMarks}
+                  canRemoveRow={edit === null ? undefined : isNewLot}
+                />
+                {lotRow === undefined || !isOwnLot(lotRow) ? null : (
+                  <OwnLotPanel
+                    row={lotRow}
+                    lotIndex={lotIndex}
+                    error={formError}
+                    lot={lotPreview}
+                  />
+                )}
+                {lotRow === undefined || !isArrivalLot(lotRow) ? null : (
+                  <ArrivalLotPanel
+                    row={lotRow}
+                    lotIndex={lotIndex}
+                    error={formError}
+                    lot={lotPreview}
+                  />
+                )}
+                {lotRow === undefined ? null : (
+                  <LotMore
+                    row={lotRow}
+                    lotIndex={lotIndex}
+                    lot={lotPreview}
+                    error={formError}
+                    hasProblem={lotProblems.length > 0}
+                  />
+                )}
+              </div>
+              <div
+                onFocusCapture={() => {
+                  setRegion('sales');
+                }}
+              >
+                <SalesSection
+                  lotKey={lotKey}
+                  lotIndex={lotIndex}
+                  whole={whole}
+                  view={views.sales}
+                  onCardAccount={setEditorCard}
+                  card={wide ? null : card}
+                  cellChanged={saleChanged}
+                  cellMarks={saleMarks}
+                />
+              </div>
+              {wide ? null : numbers}
+              <ActiveLine
+                lotKey={lotKey}
+                lotIndex={lotIndex}
+                preview={preview}
+                error={formError}
+                usesWeight={usesWeight}
+              />
+              {diff === null ? null : (
+                <>
+                  <EditReviewCard
+                    review={editReview.review}
+                    pending={editReview.pending}
+                    error={editReview.error}
+                  />
+                  <EditChangesCard before={beforeTotals} after={lotPreview?.totals ?? null} />
+                </>
+              )}
+            </div>
+            {wide ? (
+              <div className="flex min-w-0 flex-col gap-3">
+                {card}
+                {numbers}
+              </div>
+            ) : null}
           </div>
+        </div>
+        {/* The key numbers stay in view under the grids where the summary is far below (F22). */}
+        {wide || preview === undefined ? null : (
+          <NumbersStrip
+            lotNumber={lotIndex + 1}
+            lotWho={lotWho(lotRow)}
+            lotCount={preview.lots.length}
+            showWhole={whole}
+            lot={{
+              totals: lotPreview?.totals ?? null,
+              netIsNegative: lotPreview?.net_is_negative ?? false,
+              leftOut: leftOutLot,
+            }}
+            whole={{
+              totals: wholeTotals,
+              netIsNegative: preview.lots.some((lot) => lot.net_is_negative),
+              leftOut: leftOutWhole,
+            }}
+            cash={preview.cash}
+          />
         )}
-        {edit !== null && !edit.editable.editable ? (
-          <ClosedDayNotice date={edit.editable.entry_date} />
-        ) : null}
-        {refused === null ? null : (
-          <ErrorNotice
-            error={refused}
-            fieldsShown={refusalErrors(refused).map((item) => item.field)}
+        {flow.cashAfter === null ? null : (
+          <CashConfirmDialog
+            open={flow.ask !== null}
+            onOpenChange={flow.onCashOpenChange}
+            cashAfter={flow.cashAfter}
+            onConfirm={flow.confirmCash}
+            onCloseFocus={flow.onCashCloseFocus}
           />
         )}
         {edit === null ? null : (
-          <>
-            <Localized id="bikri-edit-title" vars={{ number: String(edit.editable.number) }}>
-              <h1 className="type-title" />
-            </Localized>
-            <EditBand
-              kind="bikri"
-              number={String(edit.editable.number)}
-              date={edit.editable.entry_date}
-              reopenedDays={reopened?.days ?? []}
-            />
-          </>
-        )}
-        <div
-          onFocusCapture={() => {
-            setRegion('header');
-          }}
-        >
-          <HeaderCard
-            folded={region === 'lots' || region === 'sales'}
-            error={formError}
-            onOpenBikri={openByNumber}
-            editing={edit !== null}
-            marks={entryMarks}
-            onDone={() => {
-              // The ready lots are there: the next thing to type is the buyer of the first one.
-              const first = stores.lots.getState().rows[0];
-              if (first !== undefined && first.rowId in stores.view.getState().readyLots) {
-                stores.focusSaleLine(first.rowId, 0, SALE.buyer);
-                return;
-              }
-              stores.lots.getState().setPendingFocus({ rowIndex: 0, field: LOT.seller });
+          <EditReasonDialog
+            open={askReason}
+            onOpenChange={setAskReason}
+            date={edit.editable.entry_date}
+            initialReason={reopened?.reason ?? ''}
+            error={null}
+            busy={flow.busy}
+            onConfirm={(reason) => {
+              edit.reason.set(reason);
+              setAskReason(false);
+              void flow.save(false);
             }}
           />
-        </div>
-        <ProblemList
-          problems={problems}
-          selectedLot={lotIndex}
-          activeLine={activeLine}
-          whole={whole}
-        />
-        <div className="grid grid-cols-1 gap-3 wide:grid-cols-3">
-          <div className="flex min-w-0 flex-col gap-3 wide:col-span-2">
-            <div
-              className="flex flex-col gap-2"
-              onFocusCapture={() => {
-                setRegion('lots');
-              }}
-            >
-              <LotsSection
-                view={views.lots}
-                note={
-                  readyLotCount === 0 ? null : (
-                    <Notice tone="info">
-                      <Localized
-                        id="bikri-ready-lots-note"
-                        elems={{ num: <Num /> }}
-                        vars={{ count: readyLotCount }}
-                      >
-                        <span />
-                      </Localized>{' '}
-                      <Localized
-                        id="bikri-ready-lots-note-hint"
-                        elems={{ key: <Code /> }}
-                        vars={{ key: SHORTCUTS.removeRow.label }}
-                      >
-                        <span />
-                      </Localized>
-                    </Notice>
-                  )
-                }
-                onCardAccount={setEditorCard}
-                moreForced={lotMoreForced}
-                cellChanged={lotChanged}
-                cellMarks={lotMarks}
-                canRemoveRow={edit === null ? undefined : isNewLot}
-              />
-              {lotRow === undefined || !isOwnLot(lotRow) ? null : (
-                <OwnLotPanel row={lotRow} lotIndex={lotIndex} error={formError} lot={lotPreview} />
-              )}
-              {lotRow === undefined || !isArrivalLot(lotRow) ? null : (
-                <ArrivalLotPanel
-                  row={lotRow}
-                  lotIndex={lotIndex}
-                  error={formError}
-                  lot={lotPreview}
-                />
-              )}
-              {lotRow === undefined ? null : (
-                <LotMore
-                  row={lotRow}
-                  lotIndex={lotIndex}
-                  lot={lotPreview}
-                  error={formError}
-                  hasProblem={lotProblems.length > 0}
-                />
-              )}
-            </div>
-            <div
-              onFocusCapture={() => {
-                setRegion('sales');
-              }}
-            >
-              <SalesSection
-                lotKey={lotKey}
-                lotIndex={lotIndex}
-                whole={whole}
-                view={views.sales}
-                onCardAccount={setEditorCard}
-                card={wide ? null : card}
-                cellChanged={saleChanged}
-                cellMarks={saleMarks}
-              />
-            </div>
-            {wide ? null : numbers}
-            <ActiveLine
-              lotKey={lotKey}
-              lotIndex={lotIndex}
-              preview={preview}
-              error={formError}
-              usesWeight={usesWeight}
-            />
-            {diff === null ? null : (
-              <>
-                <EditReviewCard
-                  review={editReview.review}
-                  pending={editReview.pending}
-                  error={editReview.error}
-                />
-                <EditChangesCard before={beforeTotals} after={lotPreview?.totals ?? null} />
-              </>
-            )}
-          </div>
-          {wide ? (
-            <div className="flex min-w-0 flex-col gap-3">
-              {card}
-              {numbers}
-            </div>
-          ) : null}
-        </div>
-      </div>
-      {/* The key numbers stay in view under the grids where the summary is far below (F22). */}
-      {wide || preview === undefined ? null : (
-        <NumbersStrip
-          lotNumber={lotIndex + 1}
-          lotWho={lotWho(lotRow)}
-          lotCount={preview.lots.length}
-          showWhole={whole}
-          lot={{
-            totals: lotPreview?.totals ?? null,
-            netIsNegative: lotPreview?.net_is_negative ?? false,
-            leftOut: leftOutLot,
-          }}
-          whole={{
-            totals: wholeTotals,
-            netIsNegative: preview.lots.some((lot) => lot.net_is_negative),
-            leftOut: leftOutWhole,
-          }}
-          cash={preview.cash}
-        />
-      )}
-      {flow.cashAfter === null ? null : (
-        <CashConfirmDialog
-          open={flow.ask !== null}
-          onOpenChange={flow.onCashOpenChange}
-          cashAfter={flow.cashAfter}
-          onConfirm={flow.confirmCash}
-          onCloseFocus={flow.onCashCloseFocus}
-        />
-      )}
-      {edit === null ? null : (
-        <EditReasonDialog
-          open={askReason}
-          onOpenChange={setAskReason}
-          date={edit.editable.entry_date}
-          initialReason={reopened?.reason ?? ''}
-          error={null}
-          busy={flow.busy}
-          onConfirm={(reason) => {
-            edit.reason.set(reason);
-            setAskReason(false);
-            void flow.save(false);
-          }}
-        />
-      )}
-      {/* Leaving with typed work asks first (PRD FR-7.9). "Leave" throws the draft of a new
+        )}
+        {/* Leaving with typed work asks first (PRD FR-7.9). "Leave" throws the draft of a new
           بکری away too; an edit has no draft, and leaving it never touches the one of a new
           بکری (plan 16). */}
-      <LeaveGuard
-        dirty={dirty}
-        onSave={() => flow.save(false)}
-        {...(edit === null
-          ? {
-              onLeave: () => {
-                autosave.stop();
-                void draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
-              },
-            }
-          : {})}
-      />
-    </div>
+        <LeaveGuard
+          dirty={dirty}
+          onSave={() => flow.save(false)}
+          {...(edit === null
+            ? {
+                onLeave: () => {
+                  autosave.stop();
+                  void draftsDiscard(BIKRI_DRAFT_SCREEN).catch(() => null);
+                },
+              }
+            : {})}
+        />
+      </div>
+    </LotCountersProvider>
   );
 }
 

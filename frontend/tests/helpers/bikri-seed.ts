@@ -39,10 +39,6 @@ export function seedBikriDraft(seed: Seed = {}): void {
   if (lot === undefined) throw new Error('no lot row');
   const kind = seed.lot ?? 'rahim';
   const seller = kind === 'rahim' ? RAHIM : KARIM;
-  stores.header.getState().patch({
-    truckNo: kind === 'rahim' ? 'LES-1234' : 'LHR-0077',
-    zamindar: seller,
-  });
   stores.lots.getState().patchRow(lot.rowId, {
     typed: {
       [LOT.qty]: kind === 'rahim' ? '50' : '10',

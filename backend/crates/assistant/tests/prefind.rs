@@ -17,7 +17,7 @@ mod world;
 
 use harness::{Harness, answer_of, balance, figures};
 use mandi_assistant::answer::AnswerPart;
-use mandi_assistant::ask::AskOutcome;
+use mandi_assistant::ask::{AskOutcome, PickChoice};
 use mandi_services::core::accounts::BalanceSide;
 use serde_json::{Value, json};
 
@@ -234,4 +234,180 @@ fn a_party_found_by_the_app_who_is_not_the_one_asked_about_is_not_named_in_anoth
         })
         .collect();
     assert_eq!(names, ["Arshad Multani"], "{parts:?}");
+}
+
+/// A third بکری that gives رحیم a second کیلا lot (his کیلا-1 is بکری 1's lot).
+fn with_a_second_lot(h: &Harness) {
+    let w = &h.world;
+    let d = world::draft(vec![world::with_sales(
+        world::lot(w, "lot-9", w.rahim, w.banana, "10"),
+        vec![world::sale("s-9", w.akram, "10", "600")],
+    )]);
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn a_seller_and_an_item_with_several_lots_ask_which_lot_with_no_model_call() {
+    // Plan 71 L9, PRD FR-7.77: "rahim ke banana" and "rahim ke 200 peti banana" fit two lots of رحیم,
+    // کیلا-2 and کیلا-1. The app finds them itself and asks "کون سا؟" with a button for each lot: its
+    // name, its day and the quantity received. No model call, so nothing is counted.
+    for question in ["rahim ke banana", "rahim ke 200 peti banana"] {
+        let h = harness();
+        with_a_second_lot(&h);
+        let (reply, requests) = h.ask(question, None, Vec::new());
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::WhichOne,
+            "{question}: {reply:#?}"
+        );
+        assert!(requests.is_empty(), "no model call");
+        assert_eq!(reply.options.len(), 2, "{reply:#?}");
+        let names: Vec<&str> = reply
+            .options
+            .iter()
+            .map(|o| o.name.name_en.as_str())
+            .collect();
+        assert_eq!(names, ["Rahim, Banana-2", "Rahim, Banana-1"]);
+        assert!(reply.options[0].key.starts_with('l'));
+        assert_eq!(reply.options[0].date.as_deref(), Some("2026-10-10"));
+        assert_eq!(reply.options[0].qty, Some(10));
+        assert_eq!(reply.options[1].qty, Some(50));
+        assert_eq!(
+            reply.count_today, 0,
+            "a question with no model call is not counted"
+        );
+    }
+}
+
+#[test]
+fn a_named_lot_is_found_and_read_before_the_first_call() {
+    // "rahim banana-2" and "rahim-2 ke banana" name ONE lot: its find is r1 before the model is called,
+    // and the first call answers.
+    for question in ["rahim banana-2", "rahim-2 ke banana"] {
+        let h = harness();
+        with_a_second_lot(&h);
+        let (reply, requests) = h.ask(question, None, vec![final_reply("{{r1.matches.0.name}}")]);
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::Answered,
+            "{question}: {reply:#?}"
+        );
+        assert_eq!(requests.len(), 1, "one model call");
+        assert_eq!(result_ids(&requests[0]), ["r1"]);
+        h.scan_requests();
+    }
+}
+
+#[test]
+fn a_figure_question_of_a_seller_and_an_item_with_several_lots_asks_which_lot() {
+    // Plan 71 L9, the H5 shape: the question names a seller and an item among other words about what
+    // he wants to know. The read would be of that seller and item, so the Owner is asked which lot,
+    // with no model call. Both lots of رحیم fit: کیلا-2 and کیلا-1.
+    for question in [
+        "rahim ke 200 peti banana kis kis ne liye aur kis ne kitna naqd diya",
+        "rahim ke banana ki bikri kitni hui",
+    ] {
+        let h = harness();
+        with_a_second_lot(&h);
+        let (reply, requests) = h.ask(question, None, Vec::new());
+        assert_eq!(
+            reply.outcome,
+            AskOutcome::WhichOne,
+            "{question}: {reply:#?}"
+        );
+        assert!(requests.is_empty(), "no model call: {question}");
+        let names: Vec<&str> = reply
+            .options
+            .iter()
+            .map(|o| o.name.name_en.as_str())
+            .collect();
+        assert_eq!(names, ["Rahim, Banana-2", "Rahim, Banana-1"], "{question}");
+        assert_eq!(reply.options[0].qty, Some(10));
+        assert_eq!(reply.options[1].qty, Some(50));
+        assert_eq!(reply.count_today, 0);
+    }
+}
+
+#[test]
+fn one_lot_is_not_asked_and_other_words_do_not_name_a_seller() {
+    // With ONE lot of the seller and item no question is asked: the model's first call answers, and
+    // the lot is read as r1. A question that names an item and no seller is not a lot ask.
+    let h = harness();
+    let (reply, requests) = h.ask(
+        "rahim ke banana kis kis ne liye aur kis ne kitna naqd diya",
+        None,
+        vec![final_reply("ٹھیک")],
+    );
+    assert_ne!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+    assert_eq!(requests.len(), 1, "one model call, no asking");
+    assert_eq!(
+        result_ids(&requests[0]).first().map(String::as_str),
+        Some("r1")
+    );
+    let h = harness();
+    with_a_second_lot(&h);
+    let (reply, _) = h.ask("banana ki bikri kitni hui", None, vec![final_reply("ٹھیک")]);
+    assert_ne!(reply.outcome, AskOutcome::WhichOne, "{reply:#?}");
+}
+
+#[test]
+fn the_lot_the_owner_picked_narrows_the_report_of_its_seller_and_item() {
+    // After the pick the model reads R5 for رحیم and کیلا as it always does. The app narrows it to
+    // the lot: کیلا-2 sold 10 to اکرم, and ارشد bought only from کیلا-1, so he is not in the result.
+    let h = harness();
+    with_a_second_lot(&h);
+    let (asked, _) = h.ask(
+        "rahim ke 200 peti banana kis kis ne liye aur kis ne kitna naqd diya",
+        None,
+        Vec::new(),
+    );
+    assert_eq!(asked.outcome, AskOutcome::WhichOne, "{asked:#?}");
+    let lot_key = asked.options[0].key.clone();
+    assert_eq!(asked.options[0].name.name_en, "Rahim, Banana-2");
+    let w = &h.world;
+    let (picked, requests) = h.pick(
+        asked.question_id,
+        PickChoice::Match {
+            key: lot_key.clone(),
+        },
+        vec![
+            tool_reply(&[(
+                "report",
+                json!({"id": "R5", "seller": format!("a{}", w.rahim), "item": format!("i{}", w.banana)}),
+            )]),
+            final_reply("{{r1.matches.0.name}}"),
+        ],
+    );
+    assert_eq!(requests.len(), 2, "{picked:#?}");
+    // The first call has the pick and its note; the second has the report, narrowed.
+    let first = requests[0].to_string();
+    assert!(first.contains("the Owner chose this lot"), "{first}");
+    let second = requests[1].to_string();
+    assert!(
+        second.contains("only the lot the Owner chose is read"),
+        "{second}"
+    );
+    assert!(second.contains("Akram Toll Tax"), "{second}");
+    assert!(
+        !second.contains("Arshad Multani"),
+        "the other lot's buyer is not read: {second}"
+    );
+    // The log keeps the narrowed input, so the answer can be read again.
+    let (rows, _, _) = mandi_services::assistant::list_questions(&h.world.env.ctx, 0, 10).unwrap();
+    assert!(
+        rows[0]
+            .tool_calls_json
+            .contains(&format!("\"lot\":\"{lot_key}\"")),
+        "{}",
+        rows[0].tool_calls_json
+    );
+    h.scan_requests();
 }

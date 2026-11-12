@@ -204,7 +204,7 @@ pub(super) fn source_of(plan: &ReportPlan) -> Option<AnswerSource> {
         partner: f.partner.as_ref().map(record_of),
         garden: f.garden.as_ref().map(record_of),
         city: f.city.as_ref().map(record_of_other),
-        adda: f.adda.as_ref().map(record_of_other),
+        adda: None,
         item: f.item.as_ref().map(record_of_item),
         item_group: f.item_group.map(item_group_of),
         guests_only: f.guests,
@@ -395,7 +395,7 @@ pub(super) fn steps_of(plan: &ReportPlan, press_print: bool) -> Vec<HowStep> {
             vec![text_arg("number", &number.to_string())],
         ));
     }
-    for hit in [&f.city, &f.adda].into_iter().flatten() {
+    for hit in [&f.city].into_iter().flatten() {
         steps.push(other_step(hit));
     }
     let day = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
@@ -564,8 +564,8 @@ mod tests {
     fn every_report_the_plans_use_is_in_the_catalogue() {
         let catalogue = mandi_reports::reports::catalog();
         for code in [
-            "R2", "R5", "R6", "R8", "R10", "R11", "R12", "R13", "R14", "R18", "R20", "R21", "R24",
-            "R29", "R31", "R33", "R34", "R35", "R36", "R37",
+            "R2", "R5", "R6", "R10", "R11", "R12", "R13", "R14", "R18", "R20", "R21", "R24", "R29",
+            "R31", "R33", "R34", "R35", "R36", "R37",
         ] {
             let id = report_id(code).unwrap_or_else(|| panic!("{code} is not a report"));
             assert!(catalogue.iter().any(|e| e.id == id), "{code}");

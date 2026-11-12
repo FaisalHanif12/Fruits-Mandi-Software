@@ -26,7 +26,7 @@ import type { BikriDraftStores, HeaderState } from './draft-store';
 import { LOT, ON, SALE } from './types';
 
 /** The master lists a draft points at by id. */
-type MasterScope = Extract<SearchScope, 'item' | 'packing' | 'marka' | 'adda' | 'store'>;
+type MasterScope = Extract<SearchScope, 'item' | 'packing' | 'marka' | 'store'>;
 
 /** The records of a draft, found by id. */
 export interface DraftRecords {
@@ -41,11 +41,11 @@ function stub(id: number): PickedRecord {
 }
 
 /** The accounts and items a saved بکری already carries by name, so they need no asking. */
-export function recordsOfSaved(
-  lots: readonly SavedLot[],
-  zamindar: RecordRef | null,
-): { accounts: RecordRef[]; masters: Map<string, RecordRef> } {
-  const accounts: RecordRef[] = zamindar === null ? [] : [zamindar];
+export function recordsOfSaved(lots: readonly SavedLot[]): {
+  accounts: RecordRef[];
+  masters: Map<string, RecordRef>;
+} {
+  const accounts: RecordRef[] = [];
   const masters = new Map<string, RecordRef>();
   for (const lot of lots) {
     accounts.push(lot.seller);
@@ -78,9 +78,6 @@ function wantedBy(draft: BikriDraft): Wanted {
   const master = (scope: MasterScope, id: number | null) => {
     if (id !== null) masters.set(`${scope}:${String(id)}`, { scope, id });
   };
-  account(draft.header.zamindar_account_id);
-  master('adda', draft.header.adda_id);
-  master('store', draft.header.store_id);
   for (const lot of draft.lots) {
     account(lot.seller_account_id);
     master('item', lot.item_id);
@@ -146,21 +143,8 @@ function dateText(value: string): string {
   return isoToDisplayDate(value.trim());
 }
 
-function headerState(draft: BikriDraft, records: DraftRecords): HeaderState {
-  const header = draft.header;
-  return {
-    entryDate: dateText(header.entry_date),
-    billDate: dateText(header.bill_date),
-    book: text(header.book),
-    truckNo: text(header.truck_no),
-    zamindar: records.account(header.zamindar_account_id),
-    adda: records.master('adda', header.adda_id),
-    driverName: text(header.driver_name),
-    driverPhone: text(header.driver_phone),
-    totalFreight: text(header.total_freight),
-    store: records.master('store', header.store_id),
-    note: text(header.note),
-  };
+function headerState(draft: BikriDraft): HeaderState {
+  return { entryDate: dateText(draft.header.entry_date) };
 }
 
 function put(into: Record<string, string>, field: string, value: string | null | undefined) {
@@ -211,7 +195,7 @@ function saleRow(sale: SaleInput, records: DraftRecords): EntryRow {
     : { rowId: sale.key, typed, picked: { [SALE.buyer]: buyer } };
 }
 
-function lotRow(lot: LotInput, header: HeaderState, records: DraftRecords): EntryRow {
+function lotRow(lot: LotInput, records: DraftRecords): EntryRow {
   const typed: Record<string, string> = {};
   put(typed, LOT.qty, lot.qty_received);
   put(typed, LOT.weight, lot.weight_received);
@@ -255,8 +239,8 @@ function lotRow(lot: LotInput, header: HeaderState, records: DraftRecords): Entr
   if (packing !== null) picked[LOT.packing] = packing;
   const marka = records.master('marka', lot.marka_id);
   if (marka !== null) picked[LOT.marka] = marka;
-  // The lot store is the header store unless it was chosen separately.
-  if (lot.store_id !== null && lot.store_id !== header.store?.id) {
+  // The store of the lot (it is a field of the lot, not of a header any more).
+  if (lot.store_id !== null) {
     const store = records.master('store', lot.store_id);
     if (store !== null) picked[LOT.store] = store;
   }
@@ -268,11 +252,11 @@ export function rowsOfDraft(
   draft: BikriDraft,
   records: DraftRecords,
 ): { header: HeaderState; lots: EntryRow[]; sales: Record<string, EntryRow[]> } {
-  const header = headerState(draft, records);
+  const header = headerState(draft);
   const sales: Record<string, EntryRow[]> = {};
   const lots = draft.lots.map((lot) => {
     sales[lot.key] = lot.sales.map((sale) => saleRow(sale, records));
-    return lotRow(lot, header, records);
+    return lotRow(lot, records);
   });
   return { header, lots, sales };
 }

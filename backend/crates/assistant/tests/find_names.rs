@@ -192,3 +192,62 @@ fn an_item_alias_finds_mosambi_without_the_typing_word_list() {
     // The alias is for items only: a seller named so finds nothing.
     assert!(names(&s.find("seller", "mausami")).is_empty());
 }
+
+#[test]
+fn a_lot_is_found_by_its_name_or_the_owner_is_asked_which_one() {
+    // Plan 71 L9, PRD FR-12.45, FR-7.77. رحیم has کیلا-1 (بکری 1). A third بکری gives him کیلا-2.
+    let w = day();
+    let d = world::draft(vec![world::with_sales(
+        world::lot(&w, "lot-9", w.rahim, w.banana, "10"),
+        vec![world::sale("s-9", w.akram, "10", "600")],
+    )]);
+    mandi_services::bikri::save(
+        &w.env.ctx,
+        &w.owner,
+        &mandi_services::core::bikri::BikriSaveInput {
+            draft: d,
+            confirm_cash_below_zero: true,
+        },
+    )
+    .unwrap();
+    let mut s = Session::new(&w);
+    // The name is typed whole: "rahim banana-2" answers at once.
+    let one = s.find("lot", "rahim banana-2");
+    assert_eq!(names(&one), ["Rahim, Banana-2"], "{one}");
+    assert!(one["matches"][0]["key"].as_str().unwrap().starts_with('l'));
+    // The counter may follow either word, and a word in Roman Urdu is found as its item.
+    assert_eq!(
+        names(&s.find("lot", "rahim-1 ke banana")),
+        ["Rahim, Banana-1"]
+    );
+    assert_eq!(names(&s.find("lot", "rahim kela-2")), ["Rahim, Banana-2"]);
+    // No counter: both lots, newest first, so the Owner is asked which one. A quantity and the word
+    // for the packing are only filler.
+    let both = s.find("lot", "rahim ke 200 peti banana");
+    assert_eq!(
+        names(&both),
+        ["Rahim, Banana-2", "Rahim, Banana-1"],
+        "{both}"
+    );
+    // Each match carries its day and the quantity received for the button.
+    let first = &both["matches"][0];
+    assert_eq!(
+        first["date"]["date"].as_str(),
+        Some("2026-10-10"),
+        "{first}"
+    );
+    assert_eq!(first["qty_received"]["n"].as_i64(), Some(10), "{first}");
+    // And the keys of its seller and item, which a report call takes.
+    assert!(
+        first["seller"]["key"].as_str().unwrap().starts_with('a'),
+        "{first}"
+    );
+    assert!(
+        first["item"]["key"].as_str().unwrap().starts_with('i'),
+        "{first}"
+    );
+    // Another seller's item, a lot that does not exist, and a word that names nothing: no lot.
+    assert!(names(&s.find("lot", "karim banana")).is_empty());
+    assert!(names(&s.find("lot", "rahim banana-9")).is_empty());
+    assert!(names(&s.find("lot", "zzzfruit")).is_empty());
+}

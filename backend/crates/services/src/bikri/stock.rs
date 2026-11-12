@@ -91,6 +91,7 @@ pub fn list(ctx: &Context, input: &StockListInput) -> Result<StockList, ServiceE
             rows.push(StockRow {
                 lot_id: lot.lot_id,
                 lot_no: lot.lot_no,
+                lot_counter: lot.lot_counter,
                 bikri_id: lot.bikri_id,
                 bikri_number: lot.bikri_number,
                 received_date: lot.received_date,

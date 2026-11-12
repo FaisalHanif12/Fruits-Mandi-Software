@@ -1157,6 +1157,8 @@ fn which_one() -> AskReply {
             balance: Some(dr(2_880)),
             checked: true,
             dead: false,
+            date: None,
+            qty: None,
         },
         AnswerOption {
             key: "a22".to_owned(),
@@ -1168,6 +1170,8 @@ fn which_one() -> AskReply {
             }),
             checked: true,
             dead: false,
+            date: None,
+            qty: None,
         },
     ];
     r
@@ -1185,6 +1189,8 @@ fn not_found() -> AskReply {
             balance: Some(dr(2_880)),
             checked: true,
             dead: false,
+            date: None,
+            qty: None,
         },
         AnswerOption {
             key: "a22".to_owned(),
@@ -1193,6 +1199,8 @@ fn not_found() -> AskReply {
             balance: None,
             checked: false,
             dead: false,
+            date: None,
+            qty: None,
         },
     ];
     r
@@ -1216,6 +1224,8 @@ fn not_found_other_role() -> AskReply {
         balance: Some(dr(2_880)),
         checked: true,
         dead: false,
+        date: None,
+        qty: None,
     }];
     r
 }

@@ -243,112 +243,39 @@ pub fn item_sales_between_except(
     )
 }
 
-/// The last saved بکری of a truck.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TruckBikri {
-    /// The بکری number.
-    pub number: i64,
-    /// Its day, `YYYY-MM-DD`.
-    pub entry_date: String,
-    /// The truck stand.
-    pub adda_id: Option<i64>,
-    /// The زمیندار.
-    pub zamindar_account_id: Option<i64>,
-    /// The driver's name.
-    pub driver_name: Option<String>,
-    /// The driver's phone.
-    pub driver_phone: Option<String>,
-}
-
-/// The newest saved بکری of exactly this truck number, ignoring letter case (PRD FR-7.49).
-/// A cancelled بکری does not count.
+/// The biggest lot counter ever given to each of these (seller, item) pairs (PRD FR-12.45), from
+/// `lot_counters`. A pair that never had a lot is missing from the answer, which counts as 0. One
+/// statement for all the pairs (Code Standards B22).
 ///
 /// # Errors
 /// Any SQLite error.
-pub fn truck_last(conn: &Connection, truck_no: &str) -> rusqlite::Result<Option<TruckBikri>> {
-    conn.query_row(
-        "SELECT number, entry_date, adda_id, zamindar_account_id, driver_name, driver_phone
-         FROM bikri_entries
-         WHERE truck_no = ?1 COLLATE NOCASE AND status = 'saved'
-         ORDER BY entry_date DESC, id DESC
-         LIMIT 1",
-        [truck_no],
-        |r| {
-            Ok(TruckBikri {
-                number: r.get(0)?,
-                entry_date: r.get(1)?,
-                adda_id: r.get(2)?,
-                zamindar_account_id: r.get(3)?,
-                driver_name: r.get(4)?,
-                driver_phone: r.get(5)?,
-            })
-        },
-    )
-    .optional()
-}
-
-/// The number of a saved, not cancelled بکری of this truck on this day, if any (PRD FR-7.50).
-/// If there are several, the first one.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn truck_same_day(
+pub fn lot_counters_of(
     conn: &Connection,
-    truck_no: &str,
-    entry_date: &str,
-) -> rusqlite::Result<Option<i64>> {
-    conn.query_row(
-        "SELECT number FROM bikri_entries
-         WHERE truck_no = ?1 COLLATE NOCASE AND entry_date = ?2 AND status = 'saved'
-         ORDER BY id LIMIT 1",
-        rusqlite::params![truck_no, entry_date],
-        |r| r.get(0),
-    )
-    .optional()
-}
-
-/// A truck number used before, with the day of its last بکری.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TruckName {
-    /// The truck number as saved.
-    pub truck_no: String,
-    /// The day of its last بکری, `YYYY-MM-DD`.
-    pub last_date: String,
-}
-
-/// Truck numbers that start with the typed text, newest first (PRD FR-7.49). `%`, `_` and `\` in
-/// the text are taken as plain characters. A cancelled بکری does not count.
-///
-/// # Errors
-/// Any SQLite error.
-pub fn truck_numbers_starting_with(
-    conn: &Connection,
-    prefix: &str,
-    limit: i64,
-) -> rusqlite::Result<Vec<TruckName>> {
-    let mut escaped = String::with_capacity(prefix.len().saturating_add(1));
-    for c in prefix.chars() {
-        if matches!(c, '%' | '_' | '\\') {
-            escaped.push('\\');
-        }
-        escaped.push(c);
+    pairs: &[(i64, i64)],
+) -> rusqlite::Result<std::collections::HashMap<(i64, i64), i64>> {
+    let mut out = std::collections::HashMap::with_capacity(pairs.len());
+    if pairs.is_empty() {
+        return Ok(out);
     }
-    escaped.push('%');
-    let mut statement = conn.prepare(
-        "SELECT truck_no, MAX(entry_date) AS last_date
-         FROM bikri_entries
-         WHERE truck_no LIKE ?1 ESCAPE '\\' AND status = 'saved'
-         GROUP BY truck_no COLLATE NOCASE
-         ORDER BY last_date DESC, truck_no
-         LIMIT ?2",
-    )?;
-    let rows = statement.query_map(rusqlite::params![escaped, limit], |r| {
-        Ok(TruckName {
-            truck_no: r.get(0)?,
-            last_date: r.get(1)?,
-        })
+    let sellers: std::collections::BTreeSet<i64> = pairs.iter().map(|p| p.0).collect();
+    let marks = vec!["?"; sellers.len()].join(", ");
+    let mut statement = conn.prepare(&format!(
+        "SELECT seller_account_id, item_id, last_counter FROM lot_counters
+         WHERE seller_account_id IN ({marks})"
+    ))?;
+    let rows = statement.query_map(params_from_iter(sellers.iter()), |r| {
+        Ok((
+            (r.get::<_, i64>(0)?, r.get::<_, i64>(1)?),
+            r.get::<_, i64>(2)?,
+        ))
     })?;
-    rows.collect()
+    for row in rows {
+        let (pair, last) = row?;
+        if pairs.contains(&pair) {
+            out.insert(pair, last);
+        }
+    }
+    Ok(out)
 }
 
 /// What a seller's last lot holds (PRD FR-7.51).
@@ -417,4 +344,88 @@ pub fn ids_by_codes(
     ))?;
     let rows = statement.query_map(params_from_iter(codes), |r| Ok((r.get(0)?, r.get(1)?)))?;
     rows.collect()
+}
+
+/// The lots of saved (not cancelled) بکری of these sellers and items, with this counter if given,
+/// newest day first, at most `limit` and how many there are in all (PRD FR-12.45, FR-7.77). An empty
+/// list of sellers or items is not a filter. Reads only; one statement for the page and one for the
+/// count (Code Standards B22).
+///
+/// # Errors
+/// Any SQLite error.
+pub fn lots_named(
+    conn: &Connection,
+    seller_ids: &[i64],
+    item_ids: &[i64],
+    counter: Option<i64>,
+    lot_id: Option<i64>,
+    limit: i64,
+) -> rusqlite::Result<(Vec<mandi_core::bikri::LotFound>, i64)> {
+    use mandi_core::accounts::RecordRef;
+    let mut conditions = vec!["e.status = 'saved'".to_owned()];
+    let mut args: Vec<rusqlite::types::Value> = Vec::new();
+    let mut add_list = |column: &str, ids: &[i64], conditions: &mut Vec<String>| {
+        if !ids.is_empty() {
+            conditions.push(format!("{column} IN ({})", vec!["?"; ids.len()].join(", ")));
+            args.extend(ids.iter().map(|id| rusqlite::types::Value::Integer(*id)));
+        }
+    };
+    add_list("l.seller_account_id", seller_ids, &mut conditions);
+    add_list("l.item_id", item_ids, &mut conditions);
+    if let Some(counter) = counter {
+        conditions.push("l.lot_counter = ?".to_owned());
+        args.push(rusqlite::types::Value::Integer(counter));
+    }
+    if let Some(lot_id) = lot_id {
+        conditions.push("l.id = ?".to_owned());
+        args.push(rusqlite::types::Value::Integer(lot_id));
+    }
+    let filter = conditions.join(" AND ");
+    let total: i64 = conn.query_row(
+        &format!(
+            "SELECT COUNT(*) FROM bikri_lots l JOIN bikri_entries e ON e.id = l.bikri_id WHERE {filter}"
+        ),
+        params_from_iter(args.iter()),
+        |r| r.get(0),
+    )?;
+    let mut page_args = args.clone();
+    page_args.push(rusqlite::types::Value::Integer(limit));
+    let mut statement = conn.prepare(&format!(
+        "SELECT l.id, l.lot_counter, e.entry_date, e.number, l.qty_received,
+                sa.id, sa.code, sa.name_ur, sa.name_en, sa.tag,
+                it.id, it.code, it.name_ur, it.name_en
+         FROM bikri_lots l
+         JOIN bikri_entries e ON e.id = l.bikri_id
+         JOIN accounts sa ON sa.id = l.seller_account_id
+         JOIN items it ON it.id = l.item_id
+         WHERE {filter}
+         ORDER BY e.entry_date DESC, e.number DESC, l.lot_no
+         LIMIT ?"
+    ))?;
+    let rows = statement.query_map(params_from_iter(page_args.iter()), |r| {
+        Ok(mandi_core::bikri::LotFound {
+            name: mandi_core::bikri::LotName {
+                lot_id: r.get(0)?,
+                counter: r.get(1)?,
+                seller: RecordRef {
+                    id: r.get(5)?,
+                    code: r.get(6)?,
+                    name_ur: r.get(7)?,
+                    name_en: r.get(8)?,
+                    tag: r.get(9)?,
+                },
+                item: RecordRef {
+                    id: r.get(10)?,
+                    code: r.get(11)?,
+                    name_ur: r.get(12)?,
+                    name_en: r.get(13)?,
+                    tag: None,
+                },
+            },
+            entry_date: r.get(2)?,
+            bikri_number: r.get(3)?,
+            qty_received: r.get(4)?,
+        })
+    })?;
+    Ok((rows.collect::<rusqlite::Result<Vec<_>>>()?, total))
 }

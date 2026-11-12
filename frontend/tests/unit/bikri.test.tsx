@@ -10,7 +10,6 @@ import * as urduApi from '../../src/shared/urdu/api';
 import { IDS } from '../helpers/bikri-data';
 import {
   cellOf,
-  combo,
   focusedIn,
   lotsGrid,
   named,
@@ -18,6 +17,7 @@ import {
   openBook,
   salesGrid,
   textOf,
+  typeCodeAndEnter,
   typeHeaderAndLot,
   typeTwoLines,
 } from '../helpers/bikri-screen';
@@ -67,77 +67,91 @@ describe.each(LANGUAGES)('the sale book screen (%s)', (language) => {
     signedIn(sessionUser({ language }));
   });
 
-  it('opens with the truck number ready to type and nothing asked of the backend', async () => {
+  const dateBox = () =>
+    screen.getByRole('textbox', { name: named(message(language, 'bikri-header-date')) });
+
+  it('opens with the date ready to type and nothing asked of the backend', async () => {
     const { backend } = await openBook(language);
-    expect(await combo(language, 'bikri-header-truck')).toHaveFocus();
+    expect(dateBox()).toHaveFocus();
     expect(backend.previews).toHaveLength(0);
     expect(bikriApi.bikriPreview).not.toHaveBeenCalled();
     // The empty state says what to do, with a button.
     expect(await screen.findByText(message(language, 'bikri-empty-title'))).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: message(language, 'bikri-empty-action') }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-empty-action')) }),
     ).toBeInTheDocument();
   });
 
-  it('a known truck number fills the adda, the zamindar and the driver, and the lot starts from them', async () => {
-    const { backend, user } = await openBook(language);
-    await user.keyboard('LES-1234{Enter}');
-    await waitFor(() => {
-      expect(
-        screen.getByRole('combobox', { name: named(message(language, 'glossary-adda')) }),
-      ).toHaveValue(names(language).swat);
-    });
+  // Plan 71 H1, H4: the header card is gone. The date and the number are in the top row with the
+  // buttons; the truck, the زمیندار, the اڈا and everything behind "More" are not on the screen.
+  it('has only the date and the number in the top row, and none of the old header fields', async () => {
+    await openBook(language);
+    const row = dateBox().closest('form')?.parentElement?.parentElement;
+    if (row == null) throw new Error('no top row');
+    // The date, the number ("New" until saved) and the buttons of the row are one row.
+    const inRow = (id: string) =>
+      within(row).getByText((text) => visible(text) === visible(message(language, id)));
+    expect(inRow('bikri-head-number')).toBeInTheDocument();
+    expect(inRow('bikri-head-number-new')).toBeInTheDocument();
     expect(
-      screen.getByRole('combobox', { name: named(message(language, 'glossary-zamindar')) }),
-    ).toHaveValue(names(language).rahim);
-    // The note says where the values came from, so nothing is filled without being seen.
-    await waitFor(() => {
-      expect(pageText()).toContain(
-        message(language, 'bikri-header-filled-from', { number: 1, date: '09-10-2026' }),
-      );
-    });
-    // The زمیندار and the اڈا are the last stops of the header (the rest is behind "More"); then his
-    // item and packing, and the seller of the lot, are in the cells as Enter stops.
-    await user.keyboard('{Enter}{Enter}');
+      within(row).getByRole('button', {
+        name: (label) => visible(label).startsWith(visible(message(language, 'bikri-save'))),
+      }),
+    ).toBeInTheDocument();
+    // The store is a field of each lot and the note a field of each line, so they are not in this list.
+    for (const id of [
+      'bikri-header-truck',
+      'bikri-header-bill-date',
+      'bikri-header-total-freight',
+      'bikri-header-book',
+      'bikri-header-driver',
+      'bikri-header-driver-phone',
+    ]) {
+      expect(
+        screen.queryByRole('textbox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+    }
+    for (const id of ['glossary-zamindar', 'glossary-adda']) {
+      expect(
+        screen.queryByRole('combobox', { name: named(message(language, id)) }),
+        id,
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('Enter on the date goes to the first lot, whose seller is empty: nothing is filled from a header', async () => {
+    const { backend, user } = await openBook(language);
+    await user.keyboard('{Enter}');
     const lots = lotsGrid(language);
+    await waitFor(() => {
+      expect(focusedIn(lots)).toBe('0:seller');
+    });
+    expect(textOf(lots, 0, 'seller')).toBe('');
+    // Rahim's code is the first thing typed; his item and packing come from his last lot.
+    await typeCodeAndEnter(user, '0');
     await waitFor(() => {
       expect(textOf(lots, 0, 'seller')).toBe(names(language).rahim);
       expect(textOf(lots, 0, 'item')).toBe(names(language).banana);
       expect(textOf(lots, 0, 'packing')).toBe(names(language).box);
     });
+    // The header sent is the date alone: the backend takes nothing else (plan 71 H1).
     await waitFor(() => {
-      expect(backend.lastDraft().header).toMatchObject({
-        truck_no: 'LES-1234',
-        zamindar_account_id: IDS.rahim,
-        adda_id: IDS.swat,
-      });
+      expect(backend.lastDraft().header).toEqual({ entry_date: '10-10-2026' });
     });
   });
 
-  it('a truck with a sale on this day shows the notice with its two buttons; "continue" takes it away', async () => {
+  it('the empty state button puts the cursor on the seller of the first lot', async () => {
     const { user } = await openBook(language);
-    await user.keyboard('LES-1234');
-    const sentence = message(language, 'bikri-truck-same-day', { number: 1, date: '10-10-2026' });
-    const notice = async () =>
-      screen
-        .findAllByRole('status')
-        .then((all) => all.find((box) => visible(box.textContent).includes(sentence)));
-    await waitFor(async () => {
-      expect(await notice()).toBeDefined();
-    });
-    const box = await notice();
-    if (box === undefined) throw new Error('no notice');
-    // Opening the saved sale works since plan 13 (bikri-save.test.tsx follows it to the end).
-    expect(
-      within(box).getByRole('button', { name: named(message(language, 'bikri-truck-open')) }),
-    ).toBeEnabled();
     await user.click(
-      within(box).getByRole('button', {
-        name: named(message(language, 'bikri-truck-continue')),
-      }),
+      screen.getByRole('button', { name: named(message(language, 'bikri-empty-action')) }),
     );
     await waitFor(() => {
-      expect(pageText()).not.toContain(sentence);
+      expect(focusedIn(lotsGrid(language))).toBe('0:seller');
     });
   });
 });

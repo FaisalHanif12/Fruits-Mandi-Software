@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as bikriApi from '../../src/features/bikri/api';
 import { createBikriDraft } from '../../src/features/bikri/draft-store';
+import { LOT } from '../../src/features/bikri/types';
 import { PREVIEW_DELAY_MS, useBikriPreview } from '../../src/features/bikri/hooks/useBikriPreview';
 import { EVENT1 } from '../helpers/bikri-data';
 
@@ -19,9 +20,11 @@ function setup() {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
   const hook = renderHook(() => useBikriPreview(stores), { wrapper });
-  const type = (truckNo: string) => {
+  // Typing is a freight on the first lot (the date alone is not typed work).
+  const type = (freight: string) => {
     act(() => {
-      stores.header.getState().patch({ truckNo });
+      const lot = stores.lots.getState().rows[0];
+      if (lot !== undefined) stores.lots.getState().updateTyped(lot.rowId, LOT.freight, freight);
     });
   };
   return { stores, hook, type };
@@ -70,6 +73,6 @@ describe('the live preview timing', () => {
     expect(bikriApi.bikriPreview).not.toHaveBeenCalled();
     await wait(1);
     expect(bikriApi.bikriPreview).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(bikriApi.bikriPreview).mock.calls[0]?.[0].header.truck_no).toBe('LES');
+    expect(vi.mocked(bikriApi.bikriPreview).mock.calls[0]?.[0].lots[0]?.freight).toBe('LES');
   });
 });

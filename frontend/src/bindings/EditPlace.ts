@@ -14,6 +14,19 @@ export type EditPlace = {
    */
   lot_no: number | null;
   /**
+   * The counter of the lot's name (PRD FR-12.45), for a lot, a charge or a line. With
+   * `label_ur` and `label_en` (the seller) and `item_ur` and `item_en` it writes "احسان، آم-2".
+   */
+  lot_counter: number | null;
+  /**
+   * The item of the lot, Urdu, for the lot name. Null when there is no lot.
+   */
+  item_ur: string | null;
+  /**
+   * The item of the lot, English.
+   */
+  item_en: string | null;
+  /**
    * The line number inside the posting, for a line.
    */
   line_no: number | null;

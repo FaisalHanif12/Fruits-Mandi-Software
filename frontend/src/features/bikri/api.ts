@@ -36,13 +36,9 @@ import type { WriteOffInput } from '../../bindings/WriteOffInput';
 import type { WriteOffUndoInput } from '../../bindings/WriteOffUndoInput';
 import type { WriteOffUndone } from '../../bindings/WriteOffUndone';
 import type { NavigateTo } from '../../bindings/NavigateTo';
-import type { FreightLotInput } from '../../bindings/FreightLotInput';
-import type { FreightPart } from '../../bindings/FreightPart';
 import type { SellerMemoryInput } from '../../bindings/SellerMemoryInput';
-import type { SplitFreightInput } from '../../bindings/SplitFreightInput';
-import type { TruckMemoryInput } from '../../bindings/TruckMemoryInput';
 import { callCommand } from '../../shared/api';
-import type { BikriDraft, BikriPreview, SellerMemory, TruckMemory } from './types';
+import type { BikriDraft, BikriPreview, SellerMemory } from './types';
 
 /**
  * Works out the whole بکری as typed and says every number, the live partner split, the cash after
@@ -52,21 +48,6 @@ import type { BikriDraft, BikriPreview, SellerMemory, TruckMemory } from './type
 export function bikriPreview(draft: BikriDraft): Promise<BikriPreview> {
   const input: BikriPreviewInput = { draft };
   return callCommand<BikriPreview>('bikri_preview', { input });
-}
-
-/** Splits the header's total freight over the lots by their نگ (PRD C17). Read only. */
-export function bikriSplitFreight(
-  totalFreight: string,
-  lots: readonly FreightLotInput[],
-): Promise<FreightPart[]> {
-  const input: SplitFreightInput = { total_freight: totalFreight, lots: [...lots] };
-  return callCommand<FreightPart[]>('bikri_split_freight', { input });
-}
-
-/** What the app remembers about a truck number and the same-day notice (PRD FR-7.49, FR-7.50). */
-export function assistTruckMemory(truckNo: string, date: string): Promise<TruckMemory> {
-  const input: TruckMemoryInput = { truck_no: truckNo, date };
-  return callCommand<TruckMemory>('assist_truck_memory', { input });
 }
 
 /** What the app remembers about a seller: item, packing and مارکہ of his last lot (FR-7.51). */

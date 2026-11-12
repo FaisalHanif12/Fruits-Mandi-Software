@@ -119,6 +119,9 @@ pub struct StockRow {
     /// The lot number inside its بکری, from 1.
     #[ts(type = "number")]
     pub lot_no: i64,
+    /// The counter of the lot's name: seller, item and this number (PRD FR-12.45).
+    #[ts(type = "number")]
+    pub lot_counter: i64,
     /// Its بکری.
     #[ts(type = "number")]
     pub bikri_id: i64,

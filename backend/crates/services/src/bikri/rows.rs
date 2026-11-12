@@ -266,6 +266,11 @@ pub(super) fn lot_columns<'a>(
     Ok(NewLot {
         bikri_id,
         lot_no,
+        // The number the preview showed (PRD FR-12.45): the same function worked it out.
+        lot_counter: shaped
+            .preview
+            .lot_counter
+            .ok_or_else(|| data("a lot without errors has no counter"))?,
         seller_account_id: shaped.journal.seller_account_id.get(),
         // A trip lot names its purchase (PRD FR-12.26).
         purchase_id: lot.purchase_id,

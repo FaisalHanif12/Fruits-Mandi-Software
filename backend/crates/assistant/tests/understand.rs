@@ -85,7 +85,6 @@ struct R {
     garden: Option<&'static str>,
     trip_name: Option<&'static str>,
     city: Option<&'static str>,
-    adda: Option<&'static str>,
     head: Option<&'static str>,
 }
 
@@ -201,9 +200,6 @@ fn head(name: &'static str) -> Rc {
 fn city(name: &'static str) -> Rc {
     Rc::Found(RecordKind::City, name)
 }
-fn adda(name: &'static str) -> Rc {
-    Rc::Found(RecordKind::Adda, name)
-}
 
 fn buyer(name: &'static str) -> P {
     P::Found(PartyRole::Buyer, name)
@@ -235,10 +231,6 @@ impl R {
     }
     fn city(mut self, n: &'static str) -> Self {
         self.city = Some(n);
-        self
-    }
-    fn adda(mut self, n: &'static str) -> Self {
-        self.adda = Some(n);
         self
     }
     fn head(mut self, n: &'static str) -> Self {
@@ -415,7 +407,6 @@ fn check(u: &Understanding, e: &E) -> Vec<String> {
                 let garden = got.filters.garden.as_ref().map(|p| p.name_en.as_str());
                 let trip = got.filters.trip.as_ref().map(|p| p.name_en.as_str());
                 let city = got.filters.city.as_ref().map(|p| p.name_en.as_str());
-                let adda = got.filters.adda.as_ref().map(|p| p.name_en.as_str());
                 let head = got.filters.head.as_ref().map(|p| p.name_en.as_str());
                 let iso =
                     |d: Option<chrono::NaiveDate>| d.map(|d| d.format("%Y-%m-%d").to_string());
@@ -426,7 +417,6 @@ fn check(u: &Understanding, e: &E) -> Vec<String> {
                     && garden == want.garden
                     && trip == want.trip_name
                     && city == want.city
-                    && adda == want.adda
                     && head == want.head
                     && iso(got.filters.from).as_deref() == want.from
                     && iso(got.filters.to).as_deref() == want.to
@@ -1716,17 +1706,18 @@ fn the_worked_day_figures_periods_and_names() {
                 "2026-10-10",
             ),
         ),
+        // An اڈا is a name the app only detects since v1.34 (a new بکری has no اڈا, plan 71 H2): the
+        // question goes to the model, which finds the اڈا itself.
         (
             "swat adda ki bikri kitni hai is mahine",
-            fig().sure().fig(&[F::Sale]).rec(adda("Swat Adda")).pd(
-                K::ThisMonth,
-                "2026-10-01",
-                "2026-10-10",
-            ),
+            fig()
+                .unsure()
+                .doubt(Doubt::OtherRecord)
+                .pd(K::ThisMonth, "2026-10-01", "2026-10-10"),
         ),
         (
             "lahore adda ki bikri kitni hai",
-            fig().sure().fig(&[F::Sale]).rec(adda("Lahore Adda")),
+            fig().unsure().doubt(Doubt::OtherRecord),
         ),
         (
             "lahore ki ugrahi kitni hai",
@@ -2191,20 +2182,6 @@ fn the_worked_day_prints_and_reports() {
                 .fig(&[F::FruitTaken])
                 .pd(K::ThisMonth, "2026-10-01", "2026-10-10")
                 .rep(r("R37").from("2026-10-01").to("2026-10-10")),
-        ),
-        (
-            "swat adda ki bikri ka print pichle mahine ka",
-            print()
-                .sure()
-                .fig(&[F::Sale])
-                .rec(adda("Swat Adda"))
-                .pd(K::LastMonth, "2026-09-01", "2026-09-30")
-                .rep(
-                    r("R8")
-                        .adda("Swat Adda")
-                        .from("2026-09-01")
-                        .to("2026-09-30"),
-                ),
         ),
         (
             "lahore ki ugrahi ka print",

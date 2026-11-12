@@ -461,6 +461,10 @@ gardens-arrival-lots = اس مال کی فروخت
 # review: pending
 gardens-arrival-lot-bikri = { -bikri }
 
+# آنے والے مال کے { -lot } کا نام اس کی گنتی کے ساتھ: "آم-2" (PRD FR-12.45)۔
+# review: pending
+gardens-arrival-lot-name = { -lot }
+
 # review: pending
 gardens-arrival-cancel = { -maal-aaya } منسوخ کریں
 

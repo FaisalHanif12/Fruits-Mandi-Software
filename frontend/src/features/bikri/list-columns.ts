@@ -1,4 +1,4 @@
-// The columns of the list of بکری (PRD FR-12.7): number, day and time, truck, sellers, items, نگ,
+// The columns of the list of بکری (PRD FR-12.7): number, day and time, sellers, items, نگ,
 // خام, صافی, buyer total and status. All amounts are the stored sums the backend sends, shown with
 // `money` and never worked out. Less used columns come with the wider layout steps, so no list
 // scrolls sideways (NFR-USE-15, Code Standards F22). The room is the content area minus the 200 px
@@ -11,7 +11,7 @@ import { editedTip, statusWithEdited } from '../../shared/edit';
 import { isoToDisplayDate, utcToLocalTime } from '../../shared/format';
 import { columnsWithMore, type ListColumn, type MoreColumnsPlan } from '../../shared/grid';
 import type { LayoutStep } from '../../shared/hooks';
-import { displayName } from '../../shared/i18n';
+import { displayName, lotItemWith, lotNameWith, type Say } from '../../shared/i18n';
 import type { BikriListRow } from '../../bindings/BikriListRow';
 
 /** The sellers of a بکری in lot order. */
@@ -21,6 +21,34 @@ export function sellerNames(
   separator: string,
 ): string {
   return row.sellers.map((seller) => displayName(seller, language)).join(separator);
+}
+
+/**
+ * The items of a بکری, one for each lot with its counter, in lot order: "Mango-2, Banana-1, Mango-3"
+ * (PRD FR-12.45). The seller of each is in the column before it.
+ */
+export function lotItemNames(
+  row: BikriListRow,
+  language: Parameters<typeof displayName>[1],
+  text: Say,
+): string {
+  return row.lots
+    .map((lot) => lotItemWith(text, language, lot.item, lot.counter))
+    .join(text('bikri-list-separator'));
+}
+
+/**
+ * The names of the lots of a بکری, "Ehsan, Mango-2; Ali, Banana-1", in lot order: the seller, the item
+ * and the counter of each (PRD FR-12.45). Used where the seller and the item share one line.
+ */
+export function lotNamesOf(
+  row: BikriListRow,
+  language: Parameters<typeof displayName>[1],
+  text: Say,
+): string {
+  return row.lots
+    .map((lot) => lotNameWith(text, language, lot.seller, lot.item, lot.counter))
+    .join(text('bikri-list-separator'));
 }
 
 export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
@@ -41,14 +69,6 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     value: (row) => `${isoToDisplayDate(row.entry_date)} ${utcToLocalTime(row.created_at)}`,
   },
   {
-    field: 'truck',
-    type: 'code',
-    headerId: 'bikri-list-col-truck',
-    sortKey: 'truck_no',
-    from: 'wide',
-    value: (row) => row.truck_no ?? '',
-  },
-  {
     field: 'sellers',
     type: 'name',
     headerId: 'bikri-list-col-sellers',
@@ -60,8 +80,7 @@ export const BIKRI_LIST_COLUMNS: readonly ListColumn<BikriListRow>[] = [
     type: 'text',
     headerId: 'bikri-list-col-items',
     from: 'wide',
-    value: (row, { language, text }) =>
-      row.items.map((item) => displayName(item, language)).join(text('bikri-list-separator')),
+    value: (row, { language, text }) => lotItemNames(row, language, text),
   },
   {
     field: 'gross',

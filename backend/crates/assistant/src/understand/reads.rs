@@ -3734,19 +3734,6 @@ fn record_figure(
             ));
             plan.line(Who::City(hit.key.clone()), What::CityDues);
         }
-        (RecordKind::Adda, FigureKind::Sale | FigureKind::SaleCount) => {
-            plan.find(text, "adda");
-            plan.read(report(
-                "R8",
-                Rep {
-                    adda: Some(hit.key.clone()),
-                    from,
-                    to,
-                    ..Rep::default()
-                },
-            ));
-            plan.dated = period.is_some();
-        }
         // What a collector collected: the receipts register for him (R23 has the collector filter).
         (RecordKind::Staff, FigureKind::Receipts) if period.is_some() => {
             plan.find(text, "collector");
