@@ -238,8 +238,14 @@ fn passwords_of_every_kind_work_or_are_refused_clearly() {
     ] {
         let started = Instant::now();
         let (dir, env, result) = setup_with(&password);
+        // 5 s in a release build; a debug build runs Argon2id several times slower and under load longer still.
+        let bound = if cfg!(debug_assertions) {
+            Duration::from_secs(30)
+        } else {
+            Duration::from_secs(5)
+        };
         assert!(
-            started.elapsed() < Duration::from_secs(5),
+            started.elapsed() < bound,
             "{label}: took {:?}",
             started.elapsed()
         );
