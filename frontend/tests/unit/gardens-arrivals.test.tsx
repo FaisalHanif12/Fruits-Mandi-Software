@@ -27,6 +27,7 @@ import {
   sessionUser,
   signedIn,
 } from '../helpers/app';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { fakeGardens } from '../helpers/gardens';
 import { lineCell, lineCellText, linesSection, typeArrivalLine } from '../helpers/goods-lines';
 import { EMPTY_PAIRS } from '../helpers/paged';
@@ -40,6 +41,7 @@ vi.mock('../../src/app/api');
 vi.mock('../../src/features/auth/api');
 vi.mock('../../src/features/settings/api');
 vi.mock('../../src/features/gardens/api');
+vi.mock('../../src/shared/edit/api');
 vi.mock('../../src/features/partners/api');
 vi.mock('../../src/shared/accounts/api');
 vi.mock('../../src/shared/drafts/api');
@@ -736,6 +738,24 @@ describe.each(LANGUAGES)('goods arrived on the garden screen (%s)', (language) =
         reason: 'Wrong',
       });
     });
+  });
+
+  it('goods arrived on a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    fakeGardens();
+    const first = arrivals.ARRIVALS_IN_STOCK.rows[0];
+    if (first === undefined) throw new Error('the backend file has no arrival');
+    vi.mocked(gardensApi.gardensArrivalsList).mockResolvedValue({
+      ...arrivals.ARRIVALS_IN_STOCK,
+      rows: [{ ...first, entry_date: '2026-10-05', needs_reopen: true, can_edit: true }],
+    });
+    backendReopens();
+    const { user } = await open();
+    await user.click(
+      await screen.findByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
   });
 
   it('an entry that was sold in part cannot be cancelled: the button is dimmed', async () => {

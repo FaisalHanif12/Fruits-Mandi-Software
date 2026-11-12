@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { noChangeReview } from '../helpers/edit-real';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
 import { EMPTY_PAIRS } from '../helpers/paged';
 import { fakePartners, THREE_PARTNERS } from '../helpers/partners';
@@ -293,6 +294,17 @@ describe.each(LANGUAGES)('a trip entry open for edit (%s)', (language) => {
     expect(
       await screen.findByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
     ).toBeInTheDocument();
+  });
+
+  it('a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    fakeTrips({ entries: [costEntry({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' })] });
+    backendReopens();
+    const { user } = await open();
+    await selectRow(user, 'cost-12');
+    await user.click(
+      screen.getByRole('button', { name: startsWith(message(language, 'edit-action-fix-day')) }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
   });
 
   it('a locked entry says why in words and Edit is off', async () => {

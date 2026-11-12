@@ -20,6 +20,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { named } from '../helpers/bikri-screen';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { fakeFruit, fakeFruitPickers } from '../helpers/fruit';
 import * as real from '../helpers/fruit-real';
 import { EMPTY_PAIRS } from '../helpers/paged';
@@ -106,6 +107,35 @@ describe.each(LANGUAGES)('the marks of an edited پھل entry (%s)', (language) 
     await user.click(within(card).getByRole('button', { name: exact('edit-action-edit') }));
     await screen.findByLabelText(named(message(language, 'fruit-field-qty')));
   }
+
+  it('an entry of a closed day: the box reopens its day as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    const fake = fakeFruit();
+    fake.rows.push({
+      ...real.FRUIT_GET_HOME_EDITED,
+      entry_date: '2026-10-05',
+      needs_reopen: true,
+      can_edit: true,
+    });
+    backendReopens();
+    await renderApp('/rokar/fruit?entry=1');
+    const user = userEvent.setup();
+    const card = (
+      await screen.findByText(
+        (content) =>
+          visible(content) ===
+          message(language, 'fruit-entry-title', {
+            number: message(language, 'fruit-number', { number: 1 }),
+          }),
+      )
+    ).closest('section');
+    if (card === null) throw new Error('no entry card');
+    await user.click(
+      within(card).getByRole('button', {
+        name: (name) => visible(name).startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
+  });
 
   it('the quantity and the rate carry what they held before; the other fields have no mark', async () => {
     vi.mocked(editApi.auditEditHistory).mockResolvedValue(HISTORY);

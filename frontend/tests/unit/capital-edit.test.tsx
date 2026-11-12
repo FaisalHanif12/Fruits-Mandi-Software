@@ -11,6 +11,7 @@ import { LANGUAGES, type Language } from '../../src/i18n';
 import { dropdown, labelled, named, startsWith } from '../helpers/cashbook-screen';
 import { leaveAppWindow, press, renderApp } from '../helpers/app';
 import { noChangeReview } from '../helpers/edit-real';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
 import { paisaForTest } from '../helpers/paisa';
 import { preparePartnerMoney } from '../helpers/partner-money';
@@ -140,6 +141,21 @@ describe.each(LANGUAGES)('a capital entry open for edit (%s)', (language) => {
       }),
     ).toBeEnabled();
     expect(screen.queryByLabelText(named(message(language, 'cashbook-field-amount')))).toBeNull();
+  });
+
+  it('a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(
+      capitalIn({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' }),
+    );
+    backendReopens();
+    await renderApp('/partners/capital?id=95');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', {
+        name: startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
   });
 
   it('an expense opened on the capital address moves to its own screen', async () => {

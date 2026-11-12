@@ -255,6 +255,8 @@ describe.each(LANGUAGES)('the opening date of a closed day (%s)', (language) => 
       expect(editApi.dayFixOpen).toHaveBeenCalledTimes(1);
     });
     expect(vi.mocked(editApi.dayFixOpen).mock.calls[0]?.[1]).toBe('opening balance');
+    // The opening date is typed as DD-MM-YYYY, which is what `day_fix_open` reads (Umar, 13-11-2026).
+    expect(vi.mocked(editApi.dayFixOpen).mock.calls[0]?.[0]).toMatch(/^\d{2}-\d{2}-\d{4}$/);
   });
 
   it('an account that was changed shows when and by whom (PRD FR-7.71)', async () => {

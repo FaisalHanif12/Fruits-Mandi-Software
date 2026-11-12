@@ -14,6 +14,7 @@ import { HEADS } from '../helpers/cashbook-books';
 import { labelled, named, prepareCashbook, startsWith } from '../helpers/cashbook-screen';
 import { leaveAppWindow, press, renderApp } from '../helpers/app';
 import { noChangeReview } from '../helpers/edit-real';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { message, visible } from '../helpers/render';
 import { paisaForTest } from '../helpers/paisa';
 import { voucherRow } from '../helpers/voucher-books';
@@ -404,6 +405,21 @@ describe.each(LANGUAGES)('an entry that cannot be edited yet (%s)', (language) =
     expect(visible(document.body.textContent)).toContain(message(language, 'vouchers-view-closed'));
   });
 
+  it('a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(
+      moneyLent({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' }),
+    );
+    backendReopens();
+    await renderApp('/rokar/lent?id=88');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', {
+        name: startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
+  });
+
   it('a locked entry says why in words and its Edit button is off', async () => {
     vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(
       khataOut({ ...lockedEntry('goods_moved') }),
@@ -449,6 +465,30 @@ describe.each(LANGUAGES)('opening an entry from the lists under the forms (%s)',
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ type: 'shop_expense', id: 77 });
     });
+  });
+
+  it('the day’s shop expenses: a row of a closed day, the box reopens its day as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    const closed = shopExpense({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' }).row;
+    vi.mocked(vouchersApi.vouchersList).mockResolvedValue({
+      rows: [closed],
+      total_count: 1,
+      totals: { cancelled_count: 0, total_paisa: paisaForTest(300_000) },
+      months: [],
+    });
+    backendReopens();
+    await renderApp('/rokar/expense?type=shop_expense');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByText(
+        named(message(language, 'vouchers-number-shop-expense', { number: 3 })),
+      ),
+    );
+    await user.click(
+      await screen.findByRole('button', {
+        name: startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
   });
 
   it('a person’s loans: Enter or a double click on a loan opens it', async () => {

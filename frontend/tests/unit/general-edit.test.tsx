@@ -13,6 +13,7 @@ import { cellOf, gridOf, textOf } from '../helpers/bikri-screen';
 import { named, startsWith } from '../helpers/cashbook-screen';
 import { leaveAppWindow, press, renderApp } from '../helpers/app';
 import { AUDIT_EDIT_STAMP_BIKRI, noChangeReview } from '../helpers/edit-real';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
 import { paisaForTest } from '../helpers/paisa';
 import { preparePartnerMoney } from '../helpers/partner-money';
@@ -260,6 +261,21 @@ describe.each(LANGUAGES)('a journal entry open for edit (%s)', (language) => {
       screen.queryByLabelText(named(message(language, 'cashbook-field-narration'))),
     ).toBeNull();
   });
+
+  it('a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    vi.mocked(vouchersApi.vouchersOpenForEdit).mockResolvedValue(
+      journal({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' }),
+    );
+    backendReopens();
+    await renderApp('/rokar/general?id=120');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', {
+        name: startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
+  });
 });
 
 describe.each(LANGUAGES)('the list of saved journal entries (%s)', (language) => {
@@ -317,6 +333,20 @@ describe.each(LANGUAGES)('the list of saved journal entries (%s)', (language) =>
         name: startsWith(message(language, 'edit-action-fix-day')),
       }),
     ).toBeEnabled();
+  });
+
+  it('a row of a closed day: the box reopens its day as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    listWith(journal({ ...CLOSED_DAY_ENTRY, entry_date: '2026-10-05' }).row);
+    backendReopens();
+    await renderApp('/rokar/general');
+    const user = userEvent.setup();
+    await user.click(await screen.findByText(named(numberText(7))));
+    await user.click(
+      await screen.findByRole('button', {
+        name: startsWith(message(language, 'edit-action-fix-day')),
+      }),
+    );
+    await confirmFixDay(language, user, '05-10-2026');
   });
 
   it('an empty list says so and what to do', async () => {

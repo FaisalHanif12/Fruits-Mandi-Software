@@ -54,12 +54,18 @@ export function useFixDay() {
   const { l10n } = useLocalization();
   const [busy, setBusy] = useState(false);
 
-  /** Reopens the date and every later closed date. Throws what the backend refused. */
+  /**
+   * Reopens the date and every later closed date. Throws what the backend refused. The screens hold a day
+   * as the backend sent it, `YYYY-MM-DD`, but `day_fix_open` reads the date as typed, `DD-MM-YYYY`
+   * (DayFixOpenInput), and refuses the other with ERR_DATE_INVALID: so the day is written as typed here,
+   * once, for every screen (Umar, 13-11-2026). A day already as typed (an account form's opening date)
+   * goes as it is.
+   */
   const open = useCallback(
     async (date: string, reason: string, ownerHref: string): Promise<DayFixOpened> => {
       setBusy(true);
       try {
-        const opened = await dayFixOpen(date, reason);
+        const opened = await dayFixOpen(isoToDisplayDate(date), reason);
         begin({ token: opened.token, days: opened.days, reason, ownerHref });
         return opened;
       } finally {

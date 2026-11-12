@@ -23,6 +23,7 @@ import {
   signedIn,
 } from '../helpers/app';
 import { noChangeReview } from '../helpers/edit-real';
+import { backendReopens, confirmFixDay } from '../helpers/fix-day';
 import { CLOSED_DAY_ENTRY } from '../helpers/entry-flags';
 import { e40Garden, e40History, fakeGardens } from '../helpers/gardens';
 import { EMPTY_PAIRS } from '../helpers/paged';
@@ -218,6 +219,24 @@ describe.each(LANGUAGES)('a garden entry open for edit (%s)', (language) => {
     expect(
       await screen.findByRole('combobox', { name: named(message(language, 'edit-fix-label')) }),
     ).toBeInTheDocument();
+  });
+
+  it('a closed day: the box reopens the day of the entry as typed, DD-MM-YYYY (Umar, 13-11-2026)', async () => {
+    const history = e40History().map((row) =>
+      row.entry_id === 11 ? { ...row, ...CLOSED_DAY_ENTRY } : row,
+    );
+    fakeGardens({ history });
+    backendReopens();
+    const { user } = await open();
+    await selectRow(user, 'e11');
+    await user.click(
+      firstOf(
+        screen.getAllByRole('button', {
+          name: startsWith(message(language, 'edit-action-fix-day')),
+        }),
+      ),
+    );
+    await confirmFixDay(language, user);
   });
 
   it('a sale or fruit row is not an entry of the garden: Edit stays off', async () => {
