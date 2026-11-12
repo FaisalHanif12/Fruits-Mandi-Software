@@ -67,6 +67,11 @@
   text-align: start;
 }
 
+/* In a dense table the words of a cell are one step smaller, the side word of a balance too. */
+.print-report .print-table-dense .print-balance-side {
+  font-size: var(--print-text-1);
+}
+
 /* In the short tables of a day the side word of a balance has a narrower slot. */
 .print-report .print-day-table .print-balance {
   grid-template-columns: var(--print-unit-slot-narrow) auto var(--print-unit-slot-narrow);

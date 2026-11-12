@@ -82,7 +82,15 @@ export function PrintHeader({ header }: { header: PrintHeaderData }) {
             <div key={fact.label_id} className="print-fact">
               <dt>{l10n.getString(fact.label_id)}</dt>
               <dd>
-                <Code>{fact.value}</Code>
+                {/* A fact with Urdu letters in it is a party's name with his code or a note: its words are in the
+                    text font (Gulzar, not the Inter of a code, which has no Urdu letters) and every number
+                    in it is a number (`PrintText`). Any other fact is a date, a number, a phone, a truck
+                    number or an English name: one code, written left to right (Urdu check of the prints). */}
+                {/\p{Script=Arabic}/u.test(fact.value) ? (
+                  <PrintText text={fact.value} />
+                ) : (
+                  <Code>{fact.value}</Code>
+                )}
               </dd>
             </div>
           ))}

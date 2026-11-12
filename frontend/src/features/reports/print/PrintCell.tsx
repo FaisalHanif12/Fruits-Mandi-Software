@@ -144,8 +144,9 @@ export function Cell({ cell, shortSale = false, nameOnly = false }: CellProps) {
     case 'empty':
       return null;
     case 'text':
+      // One word with no space (a truck number, a code) is never broken at its hyphen: "LES-1234".
       return (
-        <bdi dir="auto">
+        <bdi dir="auto" className={/\s/.test(cell.text) ? undefined : 'print-nobreak'}>
           <NumberRuns text={cell.text} />
         </bdi>
       );

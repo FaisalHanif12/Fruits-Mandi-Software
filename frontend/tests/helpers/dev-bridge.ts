@@ -23,6 +23,8 @@ import { ensurePaid } from './paid-fields';
 import { paisaForTest } from './paisa';
 import { PARTIES as BOOK_PARTIES, collectionList, createBooks, voucherRow } from './voucher-books';
 import { printDataFor, voucherPrintData } from './print-data';
+import { pastPrintDataFor } from './past-print';
+import type { BikriListPrintInput } from '../../src/bindings/BikriListPrintInput';
 import {
   createTripBooks,
   e34Trip,
@@ -687,6 +689,8 @@ const handlers: Record<string, Handler> = {
         }),
   // Plan 72: today's section and the window of earlier days, with a heading for each day.
   bikri_list: (input) => devPastList(input, devFlag('empty'), devFlag('many')),
+  // Plan 72 P8: the print data of پچھلی بکری, from the same double the tests use (tests/helpers/past-print.ts).
+  bikri_list_print_data: (input) => pastPrintDataFor(input as unknown as BikriListPrintInput),
   bikri_find: () => [listRow(), listRow({ id: 42, number: 2, truck_no: 'LHR-0077' })],
   bikri_navigate: () => 41,
   // `#/dev/bikri?offer` shows the start-up offer of an unfinished بکری (PRD FR-12.10).

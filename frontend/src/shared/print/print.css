@@ -104,6 +104,22 @@ html:has(.print-doc[data-paper='mm80']) {
   font-variant-numeric: tabular-nums;
 }
 
+/* A code, a phone or a truck number is one unit: it is never broken at its hyphen ("0300-0000000",
+   "LES-1234"), so a figure never ends up half on one line and half on the next. */
+.print-doc [data-kind='code'],
+.print-doc .print-nobreak {
+  white-space: nowrap;
+}
+
+/* The side word of a balance (بنام, جمع) is a WORD standing in a number cell: it is set in the text
+   font and size of the print, not in the Inter of the cell around it, which has no Urdu letters and
+   would hand the word to whatever font the computer has (Urdu check in Chromium, plan 71 follow-up). */
+.print-doc .print-balance-side {
+  font-family: var(--font-text);
+  font-size: var(--print-text-3);
+  line-height: var(--leading-text);
+}
+
 /* One sheet is one party: a seller, a buyer or a one-time buyer. */
 .print-sheet {
   position: relative;

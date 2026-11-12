@@ -14,6 +14,7 @@ import type { Paper } from '../../../bindings/Paper';
 import type { PrintFact } from '../../../bindings/PrintFact';
 import type { ReportColumnKind } from '../../../bindings/ReportColumnKind';
 import type { ReportId } from '../../../bindings/ReportId';
+import type { PrintReportRow } from '../../../bindings/PrintReportRow';
 import type { PrintReportTable } from '../../../bindings/PrintReportTable';
 import type { ReportPrintSummaryLine } from '../../../bindings/ReportPrintSummaryLine';
 import type { ReportRowKind } from '../../../bindings/ReportRowKind';
@@ -244,6 +245,9 @@ function TableBlock({ data, block, showHead = true, dense = false, ref }: TableB
         {block.rows.map((row, index) => (
           <tr key={index} data-row={row.kind}>
             {row.cells.map((cell, position) => {
+              const span = groupSpanAt(row, position);
+              // The empty cells a heading's words spread over are not drawn (see `groupSpanAt`).
+              if (span === 0) return null;
               // A name left empty on purpose (no city, no collector, no اڈا) is said in words.
               const none =
                 position === 0 && cell.type === 'empty' && data.report !== undefined
@@ -252,6 +256,7 @@ function TableBlock({ data, block, showHead = true, dense = false, ref }: TableB
               return (
                 <td
                   key={position}
+                  {...(span > 1 ? { colSpan: span } : {})}
                   data-align={alignOf(block.columns[position]?.kind ?? 'text')}
                   className={classOf(position)}
                 >
@@ -459,4 +464,30 @@ export function ReportPrintDocument({
       <ReportPrintBody data={data} frame={frame} />
     </PrintRoot>
   );
+}
+
+/**
+ * How many columns the cell at `position` spreads over, or 0 when an earlier cell spreads over it. Only a
+ * heading row (`group`) with a sentence in it does this: the sentence takes the empty cells after it, up to
+ * the next cell with something in it, so "آج کی بکری، 10-10-2026: 1" is on one line and is not broken in a
+ * narrow column (plan 72 P8, the Urdu check of the print). Every other row is one cell for each column.
+ */
+function groupSpanAt(row: PrintReportRow, position: number): number {
+  if (row.kind !== 'group') return 1;
+  const cells = row.cells;
+  // A cell that an earlier sentence spreads over.
+  for (let before = position - 1; before >= 0; before -= 1) {
+    const earlier = cells[before];
+    if (earlier === undefined) break;
+    if (earlier.type === 'empty') continue;
+    if (earlier.type !== 'message') break;
+    // Everything between that sentence and this cell is empty (the loop went over it), so it spreads here.
+    if (cells[position]?.type === 'empty') return 0;
+    break;
+  }
+  const own = cells[position];
+  if (own?.type !== 'message') return 1;
+  let span = 1;
+  while (cells[position + span]?.type === 'empty') span += 1;
+  return span;
 }
