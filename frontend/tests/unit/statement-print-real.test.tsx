@@ -8,7 +8,13 @@
 import { describe, expect, it } from 'vitest';
 import { StatementPrintDocument } from '../../src/features/party_ledgers/print/StatementPrintDocument';
 import type { StatementPrintData } from '../../src/bindings/StatementPrintData';
-import { STATEMENT_REAL, statementFrame } from '../helpers/statement-print';
+import { hasNothingToPrint } from '../../src/features/party_ledgers/print/statement-empty';
+import {
+  STATEMENT_REAL,
+  statementBalanceOnly,
+  statementEmpty,
+  statementFrame,
+} from '../helpers/statement-print';
 import { message, renderIn, visible } from '../helpers/render';
 
 const text = (element: Element | null | undefined) => visible(element?.textContent).trim();
@@ -146,12 +152,45 @@ describe('a seller: an advance, two lots with deductions, cash and a payment', (
   });
 });
 
-describe('a period with no entry', () => {
-  it('is days: [] with the balance carried through it, and nothing to draw (the box and the window say so)', () => {
-    const { data } = STATEMENT_REAL.empty;
-    expect(data.days).toEqual([]);
+describe('a period with no entry, with a balance carried through it (Umar, 13-11-2026)', () => {
+  const real = STATEMENT_REAL.empty.data;
+
+  it('the backend answers days: [] with the balance as it was, and it is something to print', () => {
+    expect(real.days).toEqual([]);
     // He still owes what he owed before the period: the opening and the closing are the same.
-    expect(data.opening).toEqual(data.closing);
-    expect(data.closing).toEqual({ amount: '1,000', side: 'debit' });
+    expect(real.opening).toEqual(real.closing);
+    expect(real.closing).toEqual({ amount: '1,000', side: 'debit' });
+    expect(hasNothingToPrint(real)).toBe(false);
+  });
+
+  it.each([
+    ['en', statementBalanceOnly('en')],
+    ['ur', statementBalanceOnly('ur')],
+  ] as const)(
+    '(%s) draws one line: the opening balance with its side, the closing equal to it, its amount in words',
+    (language, data) => {
+      const { container } = draw(data);
+      expect(blocks(container)).toHaveLength(0);
+      // No totals of the period (they would all be 0): only the opening, the closing and the words.
+      expect(
+        container.querySelector('tbody.print-statement-totals')?.querySelectorAll('tr'),
+      ).toHaveLength(1);
+      const opening = text(container.querySelector('tbody.print-statement-opening'));
+      expect(opening).toContain(message(language, 'print-statement-opening'));
+      expect(opening).toContain('1,000');
+      expect(opening).toContain(message(language, 'glossary-banaam'));
+      const closing = text(container.querySelector('.print-statement-closing'));
+      expect(closing).toContain(message(language, 'print-statement-total-closing'));
+      expect(closing).toContain('1,000');
+      expect(closing).toContain(message(language, 'glossary-banaam'));
+      expect(text(container.querySelector('.print-words'))).toContain(data.words?.text ?? 'x');
+      expect(text(container)).not.toMatch(RAW_ID);
+      expect(text(container)).not.toMatch(/[٠-٩۰-۹]/);
+    },
+  );
+
+  it('with no entry and no balance there is nothing to print', () => {
+    expect(hasNothingToPrint(statementEmpty('en'))).toBe(true);
+    expect(hasNothingToPrint(statementEmpty('ur'))).toBe(true);
   });
 });

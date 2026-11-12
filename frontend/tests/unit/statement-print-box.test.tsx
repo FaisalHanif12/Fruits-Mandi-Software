@@ -208,6 +208,36 @@ describe.each(LANGUAGES)('the statement print box (%s)', (language: Language) =>
     expect(within(box).getByRole('button', { name: named(m('report-print-pdf')) })).toBeDisabled();
   });
 
+  it('a period with no entry but a balance prints as a one-line statement: the page is drawn and Print is enabled', async () => {
+    const { user, box } = await open();
+    await user.click(period(box, 'statement-print-custom'));
+    const from = within(box).getByRole('textbox', { name: named(m('statement-print-from')) });
+    await user.clear(from);
+    await user.type(from, '20-11-2026');
+    const to = within(box).getByRole('textbox', { name: named(m('statement-print-to')) });
+    await user.clear(to);
+    await user.type(to, '30-11-2026');
+    const page = await waitFor(() => must(box.querySelector<HTMLElement>('.print-doc')));
+    // The opening balance and the closing equal to it, no day blocks and no totals of the period.
+    expect(visible(page.textContent)).toContain(m('print-statement-opening'));
+    expect(visible(page.textContent)).toContain(m('print-statement-total-closing'));
+    expect(visible(page.textContent)).toContain('1,000');
+    expect(box.querySelector('tbody.print-statement-day')).toBeNull();
+    expect(visible(page.textContent)).not.toContain(m('print-statement-total-bought'));
+    expect(page.querySelector('.print-words')).not.toBeNull();
+    expect(within(box).queryByText(m('report-print-empty'))).toBeNull();
+    const print = within(box).getByRole('button', { name: named(m('report-print-print')) });
+    expect(print).toBeEnabled();
+    await user.click(print);
+    await waitFor(() => {
+      expect(statementApi.partyLedgersStatementPrint).toHaveBeenCalledTimes(1);
+    });
+    expect(vi.mocked(statementApi.partyLedgersStatementPrint).mock.calls[0]?.[0]).toMatchObject({
+      statement: { account_id: 20, from: '20-11-2026', to: '30-11-2026', language },
+      to: 'printer',
+    });
+  });
+
   it('the page is loading while the answer has not come', async () => {
     vi.mocked(statementApi.partyLedgersStatementPrintData).mockReturnValue(
       new Promise(() => undefined),

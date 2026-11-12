@@ -260,7 +260,8 @@ function StatementBody({ data, frame }: { data: StatementPrintData; frame: Print
             <DayBlock key={day.date} day={day} kind={data.kind} />
           ))}
           <tbody className="print-statement-totals">
-            {data.totals.map((total) => (
+            {/* A period with no entry has no totals to show: only the balance carried through it. */}
+            {(data.days.length === 0 ? [] : data.totals).map((total) => (
               <Fragment key={total.label_id}>
                 <tr>
                   <td colSpan={2}>{l10n.getString(total.label_id)}</td>

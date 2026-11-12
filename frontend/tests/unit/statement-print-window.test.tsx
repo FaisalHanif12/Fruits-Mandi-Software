@@ -177,6 +177,20 @@ describe('the print route for the statement', () => {
     expect(document.querySelector('table.print-statement')).toBeNull();
   });
 
+  it('a period with no entry but a balance carried through it is drawn as a one-line statement and says print-ready', async () => {
+    bridge(backend);
+    await renderApp('/print?statement=20&from=20-11-2026&to=30-11-2026&language=en&job=job-4');
+    await waitFor(() => {
+      expect(events()).toHaveLength(1);
+    });
+    expect(events()[0]?.name).toBe('print-ready-job-4');
+    const text = visible(document.body.textContent);
+    expect(text).toContain(message('en', 'print-statement-opening'));
+    expect(text).toContain('One thousand rupees only');
+    expect(document.querySelector('tbody.print-statement-day')).toBeNull();
+    expect(document.querySelector('.print-doc')).not.toBeNull();
+  });
+
   it('says print-error and calls nothing for an address that is not a statement address', async () => {
     bridge(backend);
     await renderApp('/print?statement=abc&from=01-11-2026&to=06-11-2026&language=en&job=job-9');

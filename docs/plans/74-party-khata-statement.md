@@ -25,6 +25,7 @@ A party's statement grows every day. The page shows 30 days at a time, opens a d
 | P1 | "اسٹیٹمنٹ پرنٹ" at the top: period (آخری 10 دن, آخری 30 دن default, آخری 6 مہینے, اپنی تاریخیں), print language, preview, print, PDF. |
 | P2 | Q2 default: oldest first. Q3 default: each day's items, compact. Contents and layout as PRD FR-12.47. |
 | P3 | One calculation path: the R13, R14 and R35 functions. No new money maths. |
+| P4 | Umar, 13-11-2026: a period with no entries but a carried balance prints a one-line statement: the opening balance with its side, no day blocks, the closing equal to it with the amount in words. |
 | S1 | Speed, 10 years for one party: open under 1 s; a window move and a day opening under 300 ms; a 6-month statement preview under 2 s. EXPLAIN QUERY PLAN checked; an index in a new numbered migration only if missing. |
 
 ## 3. Contract (backend proposes exact names; the lead records them here)

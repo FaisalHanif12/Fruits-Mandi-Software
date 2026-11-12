@@ -3,6 +3,7 @@
 // shared `PrintView`'s: loading, an error with a retry, nothing to print, and the document.
 
 import { PrintView, type PrintDescription, type PrintReady } from '../../../shared/print';
+import { hasNothingToPrint } from './statement-empty';
 import { useStatementPrintBundle } from './statement-hooks';
 import { StatementPrintDocument } from './StatementPrintDocument';
 import type { StatementPrintInput } from './statement-params';
@@ -21,7 +22,7 @@ export function StatementPrintView({ input, onReady, onFailed }: StatementPrintV
     <PrintView
       query={query}
       describe={({ data, frame }): PrintDescription => ({
-        empty: data.days.length === 0,
+        empty: hasNothingToPrint(data),
         // What the print window loads the fonts for: the firm of the header and the party.
         sample: `${frame.header.firm.name} ${frame.header.firm.mandi} ${data.party.name}`,
       })}

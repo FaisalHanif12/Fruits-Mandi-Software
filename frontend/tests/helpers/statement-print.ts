@@ -139,6 +139,30 @@ export const STATEMENT_REAL = {
   empty: { request: emptyRealRequest, data: emptyReal as unknown as StatementPrintData },
 } as const;
 
+/**
+ * A period with no entry through which a balance of 1,000 بنام is carried: the backend's real answer in English,
+ * and the same shape in Urdu (no real Urdu one was written). Opening and closing are the same, there is no day.
+ */
+export function statementBalanceOnly(language: Language): StatementPrintData {
+  if (language === 'en') return STATEMENT_REAL.empty.data;
+  return {
+    ...statementEmpty('ur'),
+    opening: { amount: '1,000', side: 'debit' },
+    closing: { amount: '1,000', side: 'debit' },
+    words: { label_id: 'print-in-words', text: 'ایک ہزار روپے' },
+    period_from: '20-11-2026',
+    period_to: '30-11-2026',
+    // The facts under the title follow the period, as the backend writes them.
+    filters: statementEmpty('ur').filters.map((fact) =>
+      fact.label_id === 'report-filter-from'
+        ? { ...fact, value: '20-11-2026' }
+        : fact.label_id === 'report-filter-to'
+          ? { ...fact, value: '30-11-2026' }
+          : fact,
+    ),
+  };
+}
+
 /** The real answer to this request, when the backend wrote one for it. */
 function realAnswer(input: StatementPrintDataInput): StatementPrintData | null {
   for (const { request, data } of Object.values(STATEMENT_REAL)) {
@@ -158,6 +182,14 @@ function realAnswer(input: StatementPrintDataInput): StatementPrintData | null {
 export function statementAnswer(input: StatementPrintDataInput): StatementPrintData {
   const real = realAnswer(input);
   if (real !== null) return real;
+  // The period of the real `empty` answer, asked in Urdu: the same balance carried through it.
+  if (input.from === '20-11-2026' && input.to === '30-11-2026') {
+    return {
+      ...statementBalanceOnly(input.language),
+      period_from: input.from,
+      period_to: input.to,
+    };
+  }
   const data =
     input.from === '01-11-2026' && input.to === '06-11-2026'
       ? statementExample(input.language)

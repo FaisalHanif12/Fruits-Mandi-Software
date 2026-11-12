@@ -2,7 +2,7 @@
 // that is printed, drawn in the print language, which can differ from the app language. It holds every date of
 // the period, not one page of it. The language and the paper are chosen in the shared frame; Print and Save as
 // PDF go through the backend's print job with the language and the paper chosen there. Four states: loading,
-// an error with a retry, nothing in the period (Print stays dimmed), and the page.
+// an error with a retry, nothing to print (no entry and no balance: Print stays dimmed), and the page.
 
 import { Localized } from '@fluent/react';
 import { FileX } from 'lucide-react';
@@ -13,6 +13,7 @@ import { uiErrorOf } from '../../../shared/api';
 import { useLanguage } from '../../../shared/i18n';
 import { EmptyState, ErrorState, LoadingState } from '../../../shared/ui';
 import { PrintPreviewFrame, usePrintJob } from '../../reports';
+import { hasNothingToPrint } from './statement-empty';
 import { usePrintStatement, useStatementPrintBundle } from './statement-hooks';
 import { StatementPrintDocument } from './StatementPrintDocument';
 import type { StatementPrintDataInput } from '../../../bindings/StatementPrintDataInput';
@@ -53,7 +54,7 @@ export function StatementPreview({ accountId, from, to, onBack }: StatementPrevi
     );
   } else if (query.data === undefined) {
     body = <LoadingState rows={8} />;
-  } else if (query.data.data.days.length === 0) {
+  } else if (hasNothingToPrint(query.data.data)) {
     body = (
       <EmptyState
         icon={FileX}
@@ -66,7 +67,7 @@ export function StatementPreview({ accountId, from, to, onBack }: StatementPrevi
     body = <StatementPrintDocument data={{ ...query.data.data, paper }} frame={query.data.frame} />;
   }
   // There is something to send once the page is drawn: not while it loads, fails or is empty.
-  const isPrintable = query.data !== undefined && query.data.data.days.length > 0;
+  const isPrintable = query.data !== undefined && !hasNothingToPrint(query.data.data);
 
   return (
     <PrintPreviewFrame
