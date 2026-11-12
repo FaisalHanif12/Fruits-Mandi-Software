@@ -4,7 +4,7 @@ H2	GH2	party	roman	0	d8		is mahine anas ne mauqe par kitna jama karaya aur kitna
 H3	GH3	chukta	roman	0	d8		aaj chukta gahakon ne kitne ka maal liya aur commission kitna bana	answered			purchase=12000;comm=1520	D8-H3	A	buyer
 H4	GH4	party	roman	0	d8		haroon pehle hamein 10,000 dene wala tha, ab kitna lena hai	answered		party=Haroon	balance=141560 Dr	D8-H4	A	buyer
 H5	GH5	lot	roman	0	d8		ehsan ke 200 peti aam kis kis ne liye aur kis ne kitna naqd diya	answered		party=Ehsan	mani_paid=21360;anas_paid=10000;anas_left?=38100;haroon_left?=125060	D8-H5	A	seller
-H6	GH6	range	roman	0	d8		2 november se 5 november tak naqd aur udhar bikri mein kitna farq hai	answered			cash=39740;credit=170840;farq=131100	D8-H6	A	period
+H6	GH6	range	roman	0	d8		2 november se 5 november tak naqd aur udhar bikri mein kitna farq hai	answered			cash?=39740;credit?=170840;farq=131100	D8-H6	A	period
 H7	GH7	party	roman	1	d8		haroooon ka khata	answered		party=Haroon	balance=141560 Dr	D8-H7	A	buyer
 H8	GH8	change	roman	0	d8		haroon ka balance 50,000 likh do	change_refused		party=Haroon		D8-H8	E	buyer
 H9	GH9	future	roman	0	d8		december 2027 ka commission kitna hai	outside_books				D8-H9	E	month

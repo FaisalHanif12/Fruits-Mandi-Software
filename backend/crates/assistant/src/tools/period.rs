@@ -346,8 +346,28 @@ pub fn run(env: &Env<'_>, _state: &super::State, args: &Value) -> Result<Draft, 
         // Only one month has a `label`. The model wrote `{{r1.label}}` for "December se aaj tak", the
         // reference failed the checks and a rewrite call of 8 seconds followed (plan 70, H1): it reads
         // this note with the result, before it writes, and cites the dates.
+        // The month of each end is held as a value, so a month the model names ("2 November se 5
+        // November") is put back as a reference by the app instead of being lost to a rewrite that
+        // leaves it out (plan 70, H6).
+        if let Some(from) = range.from {
+            fields.push((
+                "from_month",
+                Node::Val(Val::Month {
+                    year: from.year(),
+                    month: from.month(),
+                }),
+            ));
+        }
+        fields.push((
+            "to_month",
+            Node::Val(Val::Month {
+                year: range.to.year(),
+                month: range.to.month(),
+            }),
+        ));
         let hint = "this period has no `label` (only one month has): cite its `from` and `to` \
-                    dates, as references to this result's fields";
+                    dates, or `from_month` and `to_month` for the name of a month, as references \
+                    to this result's fields";
         note = Some(note.map_or_else(|| hint.to_owned(), |old| format!("{old}; {hint}")));
     }
     if let Some(note) = note {

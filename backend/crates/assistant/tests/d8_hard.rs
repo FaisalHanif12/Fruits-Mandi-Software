@@ -788,3 +788,47 @@ fn a_receipt_wording_is_not_a_question_about_the_sale_line() {
         }
     }
 }
+
+#[test]
+fn h6_the_month_a_range_is_named_with_stays_in_the_answer() {
+    // Live re-run of plan 70: the model wrote "۲ نومبر سے ۵ نومبر تک". The range has no `label`, so the month
+    // could not be put back, a rewrite call dropped it and the answer read "2 سے 5 تک". The range holds the month
+    // of each end, so the app puts the name back as a reference, with no rewrite call, and the answer keeps it.
+    let d = d8();
+    let h = production(d.w);
+    let text = "{{q.n1}} نومبر سے {{q.n2}} نومبر تک ادھاری {{r2.totals.left}} اور نقدی {{r2.totals.paid}} رہی۔";
+    let reply_json = json!({
+        "model": "openai/gpt-6-luna",
+        "choices": [{"finish_reason": "stop", "message": {"role": "assistant", "content": json!({
+            "kind": "answer", "text": text, "show": [], "next": [],
+            "choose": null, "entry": null, "nearest": null
+        }).to_string()}}],
+        "usage": {"prompt_tokens": 7200, "completion_tokens": 60,
+            "prompt_tokens_details": {"cached_tokens": 7000},
+            "completion_tokens_details": {"reasoning_tokens": 0}},
+    });
+    let (reply, requests) = h.ask(
+        "2 november se 5 november tak naqd aur udhar bikri mein kitna farq hai",
+        None,
+        vec![reply_json],
+    );
+    h.scan_requests();
+    assert_eq!(requests.len(), 1, "one model call, no rewrite");
+    assert_eq!(reply.outcome, AskOutcome::Answered);
+    let answer = answer_of(&reply);
+    // The month is a part of the answer of its own (filled from the reference), twice: 2 November to 5 November.
+    let months = answer
+        .parts
+        .iter()
+        .filter(|p| format!("{p:?}").contains("Month"))
+        .count();
+    assert_eq!(months, 2, "the month was lost: {:?}", answer.parts);
+    let shown: Vec<i64> = figures(answer)
+        .iter()
+        .filter_map(|(cell, _)| match cell {
+            mandi_reports::reports::Cell::Money { paisa } => Some(paisa.rupees()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(shown, [170_840, 39_740], "left and paid, from R5");
+}

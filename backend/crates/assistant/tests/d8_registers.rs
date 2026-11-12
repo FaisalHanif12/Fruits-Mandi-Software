@@ -275,3 +275,39 @@ fn the_pair_that_is_apart_is_refused_when_the_two_reads_have_other_dates() {
     );
     assert_eq!(s.json(&ok)["result"]["rs"], 131_100);
 }
+
+#[test]
+fn a_month_named_in_a_range_is_put_back_as_the_month_of_the_range() {
+    // Plan 70, H6 (live re-run): "2 november se 5 november tak". The model wrote the month by name, outside a
+    // reference, and the range has no `label`, so the app could not put it back: a rewrite call dropped the
+    // month and the answer read "2 سے 5 تک". The range now holds the month of each end, so the app puts the
+    // name back as a reference and the answer keeps it.
+    let d = worked::d8();
+    let mut s = Session::new(&d.w);
+    let period = s.ok(
+        "period",
+        json!({"kind": "range", "month": null, "day": null, "from": "2026-11-02", "to": "2026-11-05",
+               "n": null}),
+    );
+    let v = s.json(&period);
+    assert_eq!(v["from_month"]["month"], "2026-11");
+    assert_eq!(v["to_month"]["month"], "2026-11");
+    let fixed = mandi_assistant::echo::put_months_back(
+        "{{q.n1}} نومبر سے {{q.n2}} نومبر تک فرق {{c1.result}} رہا۔",
+        &s.state,
+    )
+    .expect("the month is put back");
+    assert!(!fixed.contains("نومبر"), "{fixed}");
+    assert_eq!(fixed.matches("{{r1.from_month}}").count(), 2, "{fixed}");
+    // A month the range does not hold is left alone.
+    assert!(mandi_assistant::echo::put_months_back("{{q.n1}} دسمبر تک", &s.state).is_none());
+    // A range from one year into the next holds both months, each with its own year.
+    let long = s.ok(
+        "period",
+        json!({"kind": "range", "month": null, "day": null, "from": "2025-12-01", "to": "2026-11-08",
+               "n": null}),
+    );
+    let v = s.json(&long);
+    assert_eq!(v["from_month"]["month"], "2025-12");
+    assert_eq!(v["to_month"]["month"], "2026-11");
+}
