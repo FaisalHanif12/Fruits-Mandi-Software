@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.21 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026 and 09-11-2026, and his answers of 15-10-2026) |
-| Date | 9 November 2026 |
+| Version | 1.22 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026 and 12-11-2026, and his answers of 15-10-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9, Code Standards v1.22 |
+| Derived from | PRD v1.34 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -354,7 +354,7 @@ sequenceDiagram
     SVC->>DOM: calc_posting(...) - same function as preview
     SVC->>DOM: build_bikri_entry(...) - sale part + cash part
     DOM-->>SVC: balanced entry or error
-    SVC->>DB: assign بکری number, insert bikri_entries, lots, sales with snapshots
+    SVC->>DB: assign بکری number and lot counters, insert bikri_entries, lots, sales with snapshots
     SVC->>DB: insert journal entry (draft) and its lines
     SVC->>DB: update entry to posted - trigger checks balance
     SVC->>DB: insert partner share rows, stock moves, analytics facts
@@ -753,13 +753,13 @@ erDiagram
 
 | Table | Columns |
 |---|---|
-| `bikri_entries` | `number` (unique, given at first save), `book`, `entry_date`, `bill_date`, `truck_no`, `zamindar_account_id`, `adda_id`, `driver_name`, `driver_phone`, `total_freight_paisa`, `store_id`, `note`, `status` (saved, cancelled), `cancel_reason`, `cancelled_by`, `cancelled_at`, `print_count` |
-| `bikri_lots` | `bikri_id`, `lot_no`, `seller_account_id`, `chukta_name_ur`, `chukta_name_en`, `chukta_phone`, `chukta_person_key` (all four null on a new lot; old rows only, v1.20), `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `purchase_id` (null; set when the seller is اپنا مال, PRD FR-12.26), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `qty_taken` (fruit taken, PRD FR-16.11, v1.6), `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
+| `bikri_entries` | From v1.22 (PRD v1.34, 12.2) a new بکری writes only `number`, `entry_date` and `bill_date` (= `entry_date`); the other header columns stay for old rows and are read only. `number` (unique, given at first save), `book`, `entry_date`, `bill_date`, `truck_no`, `zamindar_account_id`, `adda_id`, `driver_name`, `driver_phone`, `total_freight_paisa`, `store_id`, `note`, `status` (saved, cancelled), `cancel_reason`, `cancelled_by`, `cancelled_at`, `print_count` |
+| `bikri_lots` | `bikri_id`, `lot_no`, `lot_counter` (migration 0022, v1.22, PRD FR-12.45: not null after the migration; given at the lot's first save; unique per seller and item among lots ever saved and never reused; an edit that changes the seller or item takes the next number; the migration numbers old lots per seller and item by first posting date, then lot id, and changes no amount, entry or chain hash), `seller_account_id`, `chukta_name_ur`, `chukta_name_en`, `chukta_phone`, `chukta_person_key` (all four null on a new lot; old rows only, v1.20), `item_id`, `packing_id`, `marka_id`, `store_id`, `qty_received`, `weight_received_grams`, `freight_paisa`, `freight_paid_by` (firm, seller), `labour_method`, `labour_value_paisa`, `labour_paisa`, `labour_rule_id`, `munshiana_method`, `munshiana_value_paisa`, `munshiana_paisa`, `munshiana_rule_id`, `phone_method`, `phone_value_paisa`, `phone_paisa`, `phone_rule_id` (method per_unit, per_lot or manual; PRD FR-12.20), `cash_paid_paisa`, `store_rent_paisa`, `adjust_advance` (0 or 1, default 1; PRD FR-12.23), `purchase_id` (null; set when the seller is اپنا مال, PRD FR-12.26), `first_entry_id`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `qty_taken` (fruit taken, PRD FR-16.11, v1.6), `gross_paisa`, `seller_comm_paisa`, `deductions_paisa`, `net_paisa` |
 | `bikri_sales` | `bikri_id`, `lot_id`, `line_no`, `journal_entry_id` (the posting it belongs to), `entry_date`, `buyer_account_id`, `chukta_name_ur`, `chukta_name_en`, `chukta_phone`, `chukta_person_key` (a line on 0030), `qty`, `weight_grams` (null), `seller_rate_paisa`, `seller_amount_paisa`, `seller_comm_method`, `seller_comm_value_bps`, `seller_comm_value_paisa`, `seller_comm_rule_id`, `seller_comm_paisa`, `buyer_rate_paisa`, `buyer_value_paisa`, `buyer_comm_method`, `buyer_comm_value_bps`, `buyer_comm_value_paisa`, `buyer_comm_rule_id`, `buyer_comm_paisa`, `laga_method`, `laga_value_bps`, `laga_value_paisa`, `laga_rule_id`, `laga_paisa`, `buyer_total_paisa`, `rate_diff_paisa`, `cost_paisa` (0, or the cost of trip goods sold on this line, C21, stored and never posted), `paid_paisa` (a new numbered migration, v1.20, PRD FR-12.44; not null, default 0, a multiple of 100, at least 0, not above `buyer_total_paisa`; the migration sets it to `buyer_total_paisa` on cash lines and 0 on credit lines, then freezes it in `bikri_sales_snapshot_is_final`), `payment_type` (credit, cash; still written: cash when paid = buyer total, else credit; nothing decides money from it, v1.20), `grade` (null, or first, second, third; PRD FR-12.42, migration 0019), `is_active` (0 when replaced by an edit or cancelled), `replaced_by_sale_id`, `note` |
 | `purchases` | `number` (unique, given at save), `venture_id` (its trip), `entry_date`, `supplier_text` (null; as typed), `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `freight_paisa`, `labour_paisa`, `other_cost_paisa`, `paid_now_paisa` (value + freight + labour + other cost), `trip_cost_paisa` (its part of the trip costs, C24), `total_cost_paisa` (paid now + trip cost part), `journal_entry_id` (null when every part is from a pocket), `status` (saved, cancelled), `cancel_reason`, `note`, and kept up to date in the same save: `qty_sold`, `qty_written_off`, `cost_released_paisa` (cost already taken by sales and write-offs, C21). PRD 12.10. No supplier account, no credit and no bank (v1.6). |
 | `stock_moves` | `lot_id` (null for a purchase move), `purchase_id` (null), `journal_entry_id` (null for write-offs), `move_date`, `kind` (received, sold, written_off, taken, reversal; taken = fruit taken from a lot, PRD FR-16.11), `qty` (signed), `reason` |
 | `fruit_takes` | `number` (unique, given at save), `entry_date`, `partner_id` (null = for the shop's guests, PRD FR-16.10), `source` (shop, other_shop), `lot_id` (null), `credit_account_id` (the lot's seller, or the other agent's account), `chukta_person_key` (null; old rows only, v1.20), `item_id`, `packing_id`, `qty`, `weight_grams` (null), `rate_paisa`, `value_paisa`, `note`, `journal_entry_id`, `status` (saved, cancelled), `cancel_reason`, `current_entry_id` |
-| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `chukta_person_key`, `city_id`, `adda_id`, `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `purchase_id` (null; trip goods), `venture_id` (null; the garden or trip whose goods were sold, for the analytics filters), `cost_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
+| `analytics_facts` | `journal_entry_id`, `entry_date`, `year`, `month`, `bikri_id`, `lot_id`, `sale_id`, `item_id`, `seller_account_id`, `buyer_account_id`, `chukta_person_key`, `city_id`, `adda_id` (null for a new بکری from v1.22), `qty`, `seller_amount_paisa`, `seller_comm_paisa`, `buyer_value_paisa`, `buyer_comm_paisa`, `laga_paisa`, `purchase_id` (null; trip goods), `venture_id` (null; the garden or trip whose goods were sold, for the analytics filters), `cost_paisa`, `sign` (+1, or −1 for reversal rows). Totals are `SUM(sign × value)`. |
 
 ### 15.7 Vouchers, journal and matching
 
@@ -782,7 +782,7 @@ erDiagram
 | `journal_lines` | (`account_id`, `entry_id`), (`account_id`, `chukta_person_key`); migration 0002: `idx_journal_lines_account_amounts` (`account_id`, `entry_id`, `dr_paisa`, `cr_paisa`) for balances, and `idx_journal_lines_advance` (`account_id`, `entry_id`) where `is_advance = 1` |
 | `journal_entries` | (`entry_date`), (`source_type`, `source_id`); migration 0002: `idx_journal_entries_unposted` (`id`) where `status <> 'posted'`; migration 0016: `idx_journal_entries_opening` (`id`) where `posting_type = 'opening'` |
 | `bikri_sales` | (`lot_id`), (`buyer_account_id`, `entry_date`), (`journal_entry_id`) |
-| `bikri_lots` | (`bikri_id`), (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
+| `bikri_lots` | (`bikri_id`), unique (`seller_account_id`, `item_id`, `lot_counter`) from migration 0022, (`seller_account_id`, `id`) for seller memory, (`item_id`, `packing_id`) for the rate hint, (`qty_received`, `qty_sold`, `qty_written_off`) for باقی مال |
 | `purchases` | (`entry_date`), (`venture_id`), (`item_id`), (`qty`, `qty_sold`, `qty_written_off`) for stock left |
 | `ventures` | (`kind`, `status`), (`account_id`) |
 | `venture_entries` | (`venture_id`, `entry_date`), (`journal_entry_id`) |
@@ -791,7 +791,7 @@ erDiagram
 | `analytics_facts` | (`entry_date`), (`item_id`, `entry_date`), (`seller_account_id`, `entry_date`), (`buyer_account_id`, `entry_date`) |
 | `partner_share_rows` | (`partner_id`, `entry_date`) |
 | `bill_allocations`, `advance_allocations` | (`account_id`, `chukta_person_key`, `is_active`); migration 0016: `idx_bill_allocations_open_sum` (`bill_line_id`, `amount_paisa`) where `is_active = 1` |
-| `bikri_entries` | (`truck_no`, `entry_date`) for truck memory and the same-truck check |
+| `bikri_entries` | (`truck_no`, `entry_date`), kept for old rows; truck memory and the same-truck check are retired from v1.22 |
 | Every table with search columns | (`search_ur`), (`search_en`), (`search_phonetic`), (`code`) where it has one |
 | `accounts` | (`party_type`, `serial`) for short codes. Lists sorted by code use type number, then length, then code, so 0019 comes before 00110 (v1.8) |
 | `staff` | unique (`code`) (`idx_staff_code`, migration 0007) |
@@ -1039,4 +1039,5 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
 | 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |
+| 1.22 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): `bikri_lots.lot_counter` and its unique index in migration 0022 (15.6, 15.8); a new بکری writes only its number and dates (15.6); `analytics_facts.adda_id` is null for a new بکری; the truck index is kept for old rows (15.8); diagram 7. It changes no amount or chain hash. |
 | 1.21 | 10-11-2026 | PRD v1.33, Umar: in an edit, a change of only the buyer or only the seller looks up that side's rules only (diagram 12). No table changed. |

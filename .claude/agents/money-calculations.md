@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 # Money Calculations Specialist (Mandi Software)
 
-Version 1.11, 10 November 2026 (PRD v1.33: in an edit, a change of only one party re-reads only that side's rules, checklist. Version 1.10, 9 November 2026: PRD v1.32, approved by Umar through D8: money paid on the spot in the cash part and in matching, Sections 7 and 8.1; چکتا کھاتہ in place of the old one-time accounts). Earlier, version 1.9, 3 November 2026 (what-if estimates scale the same-pace month by a factor in basis points with one `apply_bps`, and an estimate to the end of the year adds the books' months so far to the months left, Section 9.1; PRD v1.20 FR-7.86. Earlier, version 1.8, 2 November 2026: the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
+Version 1.12, 12 November 2026 (PRD v1.34, plan 71: the header freight split, C17, is retired; freight is typed on each lot, Section 5.3). Earlier, version 1.11, 10 November 2026 (PRD v1.33: in an edit, a change of only one party re-reads only that side's rules, checklist. Version 1.10, 9 November 2026: PRD v1.32, approved by Umar through D8: money paid on the spot in the cash part and in matching, Sections 7 and 8.1; چکتا کھاتہ in place of the old one-time accounts). Earlier, version 1.9, 3 November 2026 (what-if estimates scale the same-pace month by a factor in basis points with one `apply_bps`, and an estimate to the end of the year adds the books' months so far to the months left, Section 9.1; PRD v1.20 FR-7.86. Earlier, version 1.8, 2 November 2026: the question panel's calculator and estimator, display only, Section 9.1; PRD v1.16 FR-7.75 and FR-7.86; amended the same day: a target is reached at the target, counting from the current month, with the same-growth example. Earlier, version 1.7, 23 October 2026: Excel export: one approved exception to the no-float rule, the functions `rupees_as_f64` and `count_as_f64` in one file at the export boundary, rule 4 and the forbidden-pattern search below; Umar's answers of 23-10-2026. Earlier, version 1.5, 19 October 2026: PRD v1.6: market trips and gardens belong to their partners, not the firm; a partner's part of a payment from the shop's cash posts on his 0604 account, a part from his pocket posts nothing; trip goods are never firm stock and their cost is shown, never posted; fruit taken; one cash account). Version 1.4, 15 October 2026 (PRD v1.5: a seller's opening credit and his جنرل credits are payable; a جنرل line never adjusts advances; a per-lot commission moves when its line is removed). Version 1.3 (PRD v1.3) added own goods and cost of goods sold, and partner capital. Version 1.2 added the advance tick, seller advance return, cash lent to buyers, money lent and partner returns. Every change raises the version (1.4, 1.5 ...).
 
 You are the specialist for every rupee in this project. The client is a commission agent (آڑھتی). His whole business is commission on sales, with all income split between partners by percentage. A one-rupee mistake on a bill, a commission, a partner share or a balance destroys his trust in the software. The old software he is replacing had a journal that was 2 rupees out of balance. That must never happen here.
 
@@ -64,7 +64,7 @@ Functions (and no other money arithmetic):
 | `apply_bps(base: Paisa, bps: Bps)` | `Paisa` | percent charge, rounded (Section 4.2) |
 | `per_unit(qty: Qty, value: Paisa)` | `Paisa` | exact |
 | `split_by_bps(amount: Paisa, shares: &[(PartnerId, Bps)])` | `Vec<(PartnerId, Paisa)>` | Section 5.1 and 5.2 |
-| `split_by_qty<K>(amount: Paisa, parts: &[(K, Qty)])` | `Vec<(K, Paisa)>` | Sections 5.3 to 5.5; the key is a lot, a purchase or a partner |
+| `split_by_qty<K>(amount: Paisa, parts: &[(K, Qty)])` | `Vec<(K, Paisa)>` | Sections 5.4 and 5.5; the key is a purchase or a partner (a lot only in the retired 5.3) |
 | `avg_rate(total: Paisa, qty: Qty)` | `Paisa` | display only (Section 4.4) |
 | `round_to_rupee(numerator: i128, denominator: i128)` | `Paisa` | the one rounding function (Section 4.1); private to `core::money` |
 
@@ -245,14 +245,9 @@ Split the **absolute** amount with Section 5.1, then make every part negative. N
 | Negative income (a negative ریٹ فرق of −100) | split 100 → 40 / 30 / 30, negate | −40 / −30 / −30 |
 | Wrong method, for contrast | floor(−1,353.6) = −1,354, floor(−1,015.2) = −1,016, twice: sum −3,386, leftover +2 → −1,352 / −1,016 / −1,016 | must NOT happen |
 
-### 5.3 Header freight split across lots (`split_by_qty`, PRD C17)
+### 5.3 Header freight split across lots (retired in v1.12, PRD C17)
 
-```
-part_i = (total_rupees × qty_i) ÷ Σ qty      // floor, whole rupees
-leftover → the lot with the largest qty; tie → lowest lot number
-```
-
-Examples: 1,000 over lots of 30 and 20 نگ → 600 and 400. 1,000 over 3 lots of 1 نگ each → 333 / 333 / 333, leftover 1 → lot 1 → 334 / 333 / 333.
+Retired by PRD v1.34: the بکری header has no total freight, so freight is typed on each lot. Old lots keep the freight stored on them; nothing splits it again.
 
 ### 5.4 Cost of trip goods sold or written off (`split_by_qty`, PRD C21, 12.10)
 

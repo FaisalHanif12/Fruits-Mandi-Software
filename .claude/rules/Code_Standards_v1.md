@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.22 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
-| Date | 10 November 2026 |
+| Version | 1.23 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 23-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 05-11-2026, 06-11-2026 and 09-11-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.32 (the master), NFR v1.17, Tech Stack v1.9 |
+| Depends on | PRD v1.34 (the master), NFR v1.17, Tech Stack v1.10 |
 | Applies to | Every line of code, written by people or by Claude Code |
 
 ---
@@ -390,7 +390,7 @@ The PRD worked day (Section 4) and its end-to-end tests (Section 27) are automat
 | NFR-AI-2 (the 100-question list against the real model, and the Urdu review of its answers) | `scripts/ai-eval/` | Before every release and before a new model name is used at the shop |
 | E2E-18 (backup and restore) | `backend/crates/backup/tests/round_trip.rs` | Every commit |
 | E2E-17 (draft after closing the app), E2E-39 (the خرچہ screen) and a full keyboard run of Section 4 | Windows end-to-end suite (WebdriverIO + `tauri-driver`) | Before every release |
-| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, memories in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
+| E2E-22 to E2E-27, backend parts (conversion and new code in E2E-23, party card and short codes in E2E-24, seller memory and the lot name in E2E-25, remaining qty, rate hint and working in E2E-26, open payables in E2E-27) | `backend/crates/services/tests/assist.rs` | Every commit |
 | E2E-22 to E2E-27, full screen runs (including the language switch of E2E-22) | Windows end-to-end suite | Before every release |
 
 They MUST pass. Their expected numbers MUST NOT be changed without a PRD change.
@@ -486,3 +486,4 @@ A change is done only when every box is ticked:
 | 1.20 | 06-11-2026 | Approved by Umar (NFR v1.16): `MAX_PREFIX_TOKENS` is 11,600 (Q9). |
 | 1.21 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the field rule for paid on the spot (4.2); چکتا کھاتہ in the account code rule (4.2) and F41; `Backspace` and `Delete` (F27); golden tests E2E-64 to E2E-69 (9.2), and E2E-21 replaced. |
 | 1.22 | 10-11-2026 | Correction from the D8 end gate: the files of golden tests E2E-64 to E2E-68 in 9.2. No rule changed. |
+| 1.23 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): E2E-25 tests the seller memory and the lot name; truck memory is retired (9.2). |

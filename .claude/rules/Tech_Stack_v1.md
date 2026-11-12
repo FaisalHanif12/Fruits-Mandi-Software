@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.9 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 01-11-2026 and 09-11-2026) |
-| Date | 9 November 2026 |
+| Version | 1.10 (Umar's changes of 11-10-2026, 15-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 01-11-2026, 09-11-2026 and 12-11-2026) |
+| Date | 12 November 2026 |
 | Status | Final for build |
-| Depends on | PRD v1.32 (the master), NFR v1.17 |
+| Depends on | PRD v1.34 (the master), NFR v1.17 |
 | Used by | Claude Code during the build; Code Standards; Architecture |
 
 ---
@@ -144,7 +144,7 @@ Fonts are loaded from the app's own files with `font-display: block`, so text ne
 ### 4.2 Translation system
 
 - Project Fluent `.ftl` files: `frontend/src/i18n/ur/*.ftl` and `en/*.ftl`, one file per module (`bikri.ftl`, `vouchers.ftl` ...).
-- Message IDs are English, kebab-case, prefixed with the module: `bikri-header-truck-no = ٹرک نمبر`.
+- Message IDs are English, kebab-case, prefixed with the module: `bikri-header-date = تاریخ`.
 - Grammar is handled inside the message, not in code. Example:
 
 ```ftl
@@ -216,7 +216,7 @@ If long help text is needed, IndicTrans2 (MIT licence, supports Urdu) can produc
 | Short codes and smart search | Command `search_accounts(text, scope)`; component `shared/ui/AccountPicker` | Rust index in memory: code, serial, three name keys (the tag included), father or firm, city, phone. Order: exact code, exact running number (the short code, PRD FR-7.39; in a seller or buyer field, that type only; in an any-account field, the seller and the buyer with that running number), code starts-with, name starts-with, recent and frequent (from `user_prefs`), then close matches by `strsim` Damerau-Levenshtein (at most 1 mistake up to 5 letters, 2 above). Target NFR-SPD-6. With empty text (a click on the picker, PRD FR-7.10) it returns every record of the field's type, recent first, then by code, a page at a time. |
 | How was this worked out | Every preview result from the backend carries a `working` object for each calculated amount (formula, inputs, rule ID); component `shared/ui/CalcInfo` | The frontend never rebuilds the working; it only shows what the backend sent |
 | Attention list | Command `assist_attention()`; components `AttentionBell` (top bar) and the dashboard list | Counts from indexed queries, refreshed after each save event |
-| Memories and hints | Commands `assist_truck_memory`, `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. The rate hint for a lot is returned by `bikri_preview`, which sees the unsaved lines of the screen, and falls back to `assist_last_rate` for saved data (PRD FR-7.53). Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
+| Memories and hints | Commands `assist_seller_memory`, `assist_last_rate`, `assist_open_bills`, `assist_open_payables` | Read-only queries; nothing is saved by them. `assist_truck_memory` is retired in v1.10 (PRD v1.34: the بکری header has no truck number). The rate hint for a lot is returned by `bikri_preview`, which sees the unsaved lines of the screen, and falls back to `assist_last_rate` for saved data (PRD FR-7.53). Open payables use the read-time oldest-first working of PRD FR-7.59 (Money agent 8.2). |
 | User preferences | Table `user_prefs`; commands `settings_get_prefs`, `settings_set_pref` | Language, text size, last screen, filters, print-after-save list, recent records |
 
 ### 4.8 Ask the app (PRD Section 7.7)
@@ -474,3 +474,4 @@ Urdu words in code: we use simple English transliteration for business terms tha
 | 1.7 | 30-10-2026 | Approved by Umar (PRD v1.9): numbers centred under their column heading (4.3). |
 | 1.8 | 01-11-2026 | Approved by Umar (PRD v1.16): ask the app (4.8), the `reqwest` client for its one OpenRouter call (2), the module and crate `assistant` (5.2, 5.4). Amended 02-11-2026 before release (Umar): every request goes only to the zero-retention Azure endpoint of the model, with no fallback (4.8). Further amended 02-11-2026 (Umar): the instructions, tools and answer schema are four fixed files copied from `D6-system-prompt.md`, measured at 7,584 tokens; advice; `where` and sort on reports and views; typed result values; the partner pause (4.8). |
 | 1.9 | 09-11-2026 | PRD v1.32, approved by Umar through D8: the module `pukhta_khata` is out and `party_ledgers` is in (5.2, 6); digits 0 to 9 only (4.1, 4.5); the Mac print path (7). |
+| 1.10 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): `assist_truck_memory` retired (4.7); the example message ID of 4.2. |
