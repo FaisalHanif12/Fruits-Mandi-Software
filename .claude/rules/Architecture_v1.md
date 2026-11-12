@@ -3,10 +3,10 @@
 
 | | |
 |---|---|
-| Version | 1.24 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026 and 12-11-2026, and his answers of 15-10-2026) |
+| Version | 1.25 (Umar's changes of 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026, 30-10-2026, 31-10-2026, 01-11-2026, 02-11-2026, 03-11-2026, 09-11-2026, 12-11-2026 and 13-11-2026, and his answers of 15-10-2026) |
 | Date | 12 November 2026 |
 | Status | Final for build |
-| Derived from | PRD v1.35 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
+| Derived from | PRD v1.36 (the master), NFR v1.17, Tech Stack v1.10, Code Standards v1.23 |
 | Diagram format | Mermaid (renders on GitHub, in VS Code, and is readable by Claude Code as text) |
 
 ---
@@ -704,7 +704,7 @@ erDiagram
 | `users` | One row only, the Owner (PRD Section 2). `username` (unique), `password_hash`, `display_name`, `role` (kept from migration 0001, always owner; no check reads it), `partner_id` (always null, not used), `is_active`, `failed_attempts`, `locked_until_at`, `last_login_at` |
 | `settings` | `key` (unique), `value_json`. Includes `firm_contacts` (up to 6: name_ur, name_en, role (owner, munshi), phone (optional); v1.10) and `trade_mark` (text), printed in every print header (PRD 21, FR-19.13, v1.7), `default_language` (the backup pack language, PRD 21) and the computer-level `login_language` (last language used on this computer, PRD FR-7.30). |
 | `audit_log` | `at`, `user_id`, `action`, `entity`, `entity_id`, `old_json`, `new_json`, `reason`, `chain_hash` |
-| (settings keys, v1.11) | `partner_code` (Argon2id hash of the 4-digit partner code, PRD FR-17.11) and `partner_code_tries` (wrong tries and the wait until). The unlock lives in the app state only, like the sign-in, and is lost on leaving the section, idle lock, logout or exit. The edit stamp and history (PRD FR-7.71) are read from `audit_log` by entity and entity id; no new table. |
+| (settings keys, v1.11) | `partner_code` (Argon2id hash of the 4-digit partner code, PRD FR-17.11) and `partner_code_tries` (wrong tries and the wait until). The unlock lives in the app state only, like the sign-in, and is lost on leaving the section, idle lock, logout or exit. The edit stamp and history (PRD FR-7.71) are read from `audit_log` by entity and entity id; no new table. From v1.25 (PRD v1.36): the settings key `owner_sign` (the Owner's sign for reopening a day, PRD FR-21.4, default "adnan"); the audit entries of a reopen and of the edits saved in that fix carry the sign beside the reason in `new_json`. |
 | `day_state` | single row: `closed_up_to_date` |
 | `day_closes` | `entry_date`, `action` (close, reopen), `by_user_id`, `at`, `reason`, `summary_json` |
 | `month_closes` | `month` (YYYY-MM), `journal_entry_id`, `is_active`, `reversed_entry_id` (null) |
@@ -1040,6 +1040,7 @@ The model never touches the database and no tool writes (Code Standards Q2). Eve
 | 1.18 | 04-11-2026 | Plan 54, approved by Umar (the hard time limit of plan 55): migration 0018 lets the question log keep the outcome `time_limit` (15.3). It changes no book, amount or chain hash. |
 | 1.19 | 06-11-2026 | PRD v1.30, Umar: migration 0019 adds `bikri_sales.grade` (null or first, second, third), the quality of a sale line (15.6). It changes no amount or chain hash. |
 | 1.20 | 09-11-2026 | PRD v1.32, approved by Umar through D8: `bikri_sales.paid_paisa` (15.6); table `chukta_buyers` (15.4); migration 0020 renames `pukhta_*` columns to `chukta_*` and `is_pukhta_khata` to `is_chukta_khata` (15.2 to 15.8); diagrams 4, 5, 6, 9 and 11. Old migrations are unchanged. It changes no amount or chain hash. |
+| 1.25 | 13-11-2026 | PRD v1.36, approved by Umar (plan 73): the settings key `owner_sign`; the sign is kept in the audit entries of a reopen and its edits (15.3). No table or amount changed. |
 | 1.24 | 12-11-2026 | PRD v1.35, approved by Umar (plan 72): diagram 5 names the screen پچھلی بکری (Past Sales). No table or amount changed. |
 | 1.23 | 12-11-2026 | Plan 71: table `lot_counters` from migration 0022, the biggest counter given per seller and item, so a lot number is never reused (15.6, PRD FR-12.45). It changes no amount or chain hash. |
 | 1.22 | 12-11-2026 | PRD v1.34, approved by Umar (plan 71): `bikri_lots.lot_counter` and its unique index in migration 0022 (15.6, 15.8); a new بکری writes only its number and dates (15.6); `analytics_facts.adda_id` is null for a new بکری; the truck index is kept for old rows (15.8); diagram 7. It changes no amount or chain hash. |
