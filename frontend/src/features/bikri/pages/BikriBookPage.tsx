@@ -472,6 +472,8 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
 
   const step = useLayoutStep();
   const wide = isFromStep(step, 'wide');
+  // The key numbers are docked under the grids where the summary is far below (F22).
+  const stripShown = !wide && preview !== undefined;
   const lotMoreForced = lotProblems.length > 0;
   // A چکتا buyer's card is his own: his names and phone, no balance (PRD FR-13.6).
   const cardChukta =
@@ -536,13 +538,17 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
 
   return (
     <LotCountersProvider value={lotCounters}>
-      <div ref={rootRef} className="flex h-full min-h-0 flex-col gap-3 short:gap-2">
-        {/* The screen scrolls in this area. The numbers strip is docked under it, never over it, so it
-          cannot cover a grid (plan 38, sale book). The bottom padding is part of the scrolled
-          content, so the last row and the empty state's button scroll clear of the edge of the area
-          (Umar, 12-11-2026); the shell keeps its own band under the area for the round assistant
-          button. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 pb-4 short:gap-2">
+      <div ref={rootRef} className="fill-to-corner flex min-h-0 flex-col gap-3 short:gap-2">
+        {/* The screen scrolls in this area, and it runs down to the status bar through the band the shell
+          keeps under every screen for the round assistant button (`fill-to-corner`), so nothing is cut
+          off above empty space (Umar, 12-11-2026). Its last row scrolls clear of the button: with no
+          numbers strip the area ends with that band as padding, and with the strip docked under it
+          (never over it, so it cannot cover a grid, plan 38) the band is a spacer under the strip. */}
+        <div
+          className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto pt-1 short:gap-2 ${
+            stripShown ? 'pb-4' : 'pb-corner'
+          }`}
+        >
           {edit === null ? (
             <BikriToolbar
               title={
@@ -766,7 +772,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
           </div>
         </div>
         {/* The key numbers stay in view under the grids where the summary is far below (F22). */}
-        {wide || preview === undefined ? null : (
+        {!stripShown ? null : (
           <NumbersStrip
             lotNumber={lotIndex + 1}
             lotWho={lotWho(lotRow)}
@@ -785,6 +791,7 @@ function Editor({ onOpenSaved, mode }: EditorProps) {
             cash={preview.cash}
           />
         )}
+        {stripShown ? <div aria-hidden="true" className="h-corner shrink-0" /> : null}
         {flow.cashAfter === null ? null : (
           <CashConfirmDialog
             open={flow.ask !== null}

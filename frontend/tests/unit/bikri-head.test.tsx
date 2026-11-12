@@ -105,6 +105,27 @@ describe.each(LANGUAGES)('a language switch in the head (%s)', (language) => {
   });
 });
 
+describe.each(LANGUAGES)('the bottom of the page (%s)', (language) => {
+  beforeEach(() => {
+    resetClientState(language);
+    signedIn(sessionUser({ language }));
+  });
+
+  // jsdom has no layout, so this holds the two classes that make the area run down to the status bar
+  // (checked in a real WebKit window at 1366x768 in Urdu: the empty state's help line and button are
+  // whole, with no empty band under them). The area is the one that scrolls.
+  it("the empty state sits in a scroll area that runs down through the shell's band, with that band as its own bottom padding", async () => {
+    await openBook(language);
+    const title = await screen.findByText(
+      (text) => visible(text) === visible(message(language, 'bikri-empty-title')),
+    );
+    const area = title.closest('.overflow-auto');
+    expect(area).not.toBeNull();
+    expect(area?.className).toContain('pb-corner');
+    expect(area?.parentElement?.className).toContain('fill-to-corner');
+  });
+});
+
 describe.each(LANGUAGES)('a draft kept before the header lost its fields (%s)', (language) => {
   beforeEach(() => {
     resetClientState(language);
