@@ -20,9 +20,19 @@ type Workings = Record<string, Working>;
 export interface RowView {
   calc: Cells;
   workings: Workings;
+  /**
+   * The cells whose figure rests on a charge the user typed by hand, with the word for it ("Manual"). A
+   * mark only; the backend said which charges are typed (plan 72 P13).
+   */
+  manual: Cells;
 }
 
-const NOTHING: RowView = { calc: {}, workings: {} };
+const NOTHING: RowView = { calc: {}, workings: {}, manual: {} };
+
+/** A charge the user typed on the line: the backend says so with its source or its method (FR-11.10). */
+export function isTypedCharge(charge: LineCharge): boolean {
+  return charge.source === 'typed' || charge.method === 'manual';
+}
 
 /**
  * The calculated cells of a lot row. The charges (مزدوری, منشیانہ) show the value the rules
@@ -40,7 +50,7 @@ export function lotView(lot: LotPreview | undefined, grouping: Grouping): RowVie
     workings[LOT.net] = lot.totals.workings.net;
   }
   if (lot.balance_qty !== null) calc[LOT.balance] = String(lot.balance_qty);
-  return { calc, workings };
+  return { calc, workings, manual: {} };
 }
 
 /** The words of a rate hint: where the rate came from (PRD FR-7.53). */
@@ -59,6 +69,7 @@ export function lineView(line: LinePreview | undefined, grouping: Grouping, say:
   if (line === undefined) return NOTHING;
   const calc: Cells = {};
   const workings: Workings = {};
+  const manual: Cells = {};
   if (line.rate_hint !== null) {
     // The cell says "Last 900", not a bare 900, so it is never taken for a rate that was typed
     // (D8 Bug 1, PRD FR-7.53). The tooltip tells where the rate came from.
@@ -84,6 +95,15 @@ export function lineView(line: LinePreview | undefined, grouping: Grouping, say:
     // worked it out; nothing is subtracted here.
     calc[SALE.leftOnAccount] = money(done.left_paisa);
     workings[SALE.leftOnAccount] = done.workings.left;
+    // A charge typed on the line (PRD FR-11.10): the commission cell of that side says so, and the buyer
+    // total, the one figure every window shows, says so when any charge of the line is typed (the لاگا has
+    // no column). The word is "Manual", as in the details of the line. The backend said which are typed.
+    const sellerTyped = isTypedCharge(done.seller_comm);
+    const buyerTyped = isTypedCharge(done.buyer_comm);
+    const word = say('bikri-tag-manual');
+    if (sellerTyped) manual[SALE.sellerComm] = word;
+    if (buyerTyped) manual[SALE.buyerComm] = word;
+    if (sellerTyped || buyerTyped || isTypedCharge(done.laga)) manual[SALE.buyerTotal] = word;
     // A buyer who must pay in full: the backend decided the amount, so the paid cell shows it and is
     // closed (PRD FR-12.44, P3). Its working is the ⓘ of the cell. An amount typed above the buyer total
     // keeps its working too, so the cell says why it counts as 0 (the refusal itself is on the cell).
@@ -94,7 +114,7 @@ export function lineView(line: LinePreview | undefined, grouping: Grouping, say:
       workings[SALE.paid] = done.workings.paid;
     }
   }
-  return { calc, workings };
+  return { calc, workings, manual };
 }
 
 /** The number of a line charge as a person types it: "6" for 6%, "8" for 8 for each نگ. */
@@ -125,7 +145,7 @@ export function ruleTag(
   say: Say,
 ): string {
   const value = chargeValueText(charge, grouping, say);
-  if (charge.source === 'typed' || charge.method === 'manual') {
+  if (isTypedCharge(charge)) {
     return [say('bikri-tag-manual'), value].filter((part) => part !== '').join(' ');
   }
   const level = charge.rule_label?.level ?? 'default';

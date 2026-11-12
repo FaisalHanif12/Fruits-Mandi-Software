@@ -188,9 +188,11 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     // line alone arrives earlier, so nothing is read until the answer for both lines is on screen.
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
-      expect(textOf(sales, 0, 'amount')).toBe('12,000');
+      // From 1366 px the grid has the seller and the buyer commission of each line (plan 72 P13).
       expect(textOf(sales, 0, 'sellerComm')).toBe('720');
-      expect(textOf(sales, 1, 'amount')).toBe('17,400');
+      expect(textOf(sales, 0, 'buyerComm')).toBe('720');
+      expect(textOf(sales, 1, 'sellerComm')).toBe('1,044');
+      expect(textOf(sales, 1, 'buyerComm')).toBe('1,044');
       expect(textOf(sales, 1, 'buyerTotal')).toBe('18,684');
       expect(textOf(lotsGrid(language), 0, 'net')).toBe('19,316');
       const summary = screen
@@ -253,7 +255,7 @@ describe.each(LANGUAGES)('Event 1 by keyboard (%s)', (language) => {
     await waitFor(() => {
       expect(textOf(sales, 0, 'buyerTotal')).toBe('12,880');
     });
-    for (const field of ['amount', 'sellerComm', 'buyerTotal']) {
+    for (const field of ['sellerComm', 'buyerComm', 'buyerTotal']) {
       expect(
         within(cellOf(sales, 0, field)).getByRole('button', {
           name: message(language, 'calc-info-label'),

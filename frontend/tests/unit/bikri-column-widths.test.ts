@@ -90,3 +90,33 @@ describe('the paid on the spot cell (موقع پر جمع, PRD FR-12.44) is the 
     expect(allLinesColumns(step).at(-1)?.field).toBe('paid');
   });
 });
+
+describe('the figure columns of a sale line, by window (plan 72 P13: what is typed in the details moves a figure the user sees)', () => {
+  const figures = (step: LayoutStep) =>
+    saleColumns(step)
+      .filter((column) => column.type === 'calc')
+      .map((column) => column.field);
+
+  it('compact: the buyer total only (the amounts are in the details of the line)', () => {
+    expect(figures('compact')).toEqual(['buyerTotal']);
+  });
+
+  it('normal (1366 px): the seller commission and the buyer commission, then the buyer total', () => {
+    expect(figures('normal')).toEqual(['sellerComm', 'buyerComm', 'buyerTotal']);
+  });
+
+  it('wide (1920 px): the seller amount as well', () => {
+    expect(figures('wide')).toEqual(['amount', 'sellerComm', 'buyerComm', 'buyerTotal']);
+  });
+
+  it.each(STEPS)('%s: the لاگا is never a column; it is in the details of the line', (step) => {
+    expect(saleColumns(step).some((column) => column.field === 'laga')).toBe(false);
+    expect(allLinesColumns(step).some((column) => column.field === 'laga')).toBe(false);
+  });
+
+  it.each(STEPS)('%s: the sum of the least widths, for the record', (step) => {
+    // compact 578 (of 675), normal 794 (of 857), wide 902 (of 929); the lot column is added in the whole-sale view.
+    const sums: Record<LayoutStep, number> = { compact: 578, normal: 794, wide: 902 };
+    expect(leastWidth(saleColumns(step))).toBe(sums[step]);
+  });
+});

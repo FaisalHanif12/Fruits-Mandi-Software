@@ -8,10 +8,12 @@
 // 680 px for the screen (NFR-USE-15). So the grids hold the cells typed on most lots and lines,
 // and the amounts the user checks; the rest sits in the "more" panel of the lot and in the details
 // of the line (PRD FR-12.2, Code Standards F22). Wider windows add amounts: the net and the balance
-// to the lots; to the lines the seller amount and the seller commission from 1366 px, and the buyer
-// commission from 1920 px. The paid cell is one more column, so in every window the seller amount, the
-// commissions and the لاگا that do not fit are in the details of the line instead (plan 65, plan 58
-// option C). bikri-column-widths.test.ts keeps the sums inside the room of each window.
+// to the lots; to the lines the seller commission and the buyer commission from 1366 px (the two
+// rates the user types in the details of the line, FR-11.10, so what he types moves a figure he sees,
+// plan 72 P13), and the seller amount as well from 1920 px. The paid cell is one more column, so in
+// every window the seller amount (below 1920 px) and the لاگا are in the details of the line instead,
+// where every amount of the line stands with its working (NFR-USE-27). bikri-column-widths.test.ts
+// keeps the sums inside the room of each window.
 
 import { FIT_MIN, type EntryColumn } from '../../shared/grid';
 import { isFromStep, type LayoutStep } from '../../shared/hooks';
@@ -115,23 +117,24 @@ export function saleColumns(step: LayoutStep): readonly EntryColumn[] {
         { value: 'third', labelId: 'glossary-darja-soyam' },
       ],
     },
-    // The amounts the user checks, by room (plan 65): the paid cell is one more column, so the least used
-    // amounts moved to the details of the line, where every amount of the line stands with its working.
-    // The seller amount and the seller commission come from 1366 px, the buyer commission from 1920 px;
-    // the لاگا is in the details in every window.
-    ...(isFromStep(step, 'normal')
+    // The amounts the user checks, by room (plan 65, plan 72 P13): the paid cell is one more column, so
+    // the least used amounts are in the details of the line, where every amount of the line stands with
+    // its working. The seller commission and the buyer commission come from 1366 px, the seller amount
+    // as well from 1920 px; the لاگا is in the details in every window. The commission rates are typed
+    // in those details, so their amounts are in the grid from 1366 px, where the user sees them move.
+    ...(isFromStep(step, 'wide')
       ? ([
           { field: SALE.amount, type: 'calc', headerId: 'bikri-col-seller-amount', explain: true },
+        ] satisfies readonly EntryColumn[])
+      : []),
+    ...(isFromStep(step, 'normal')
+      ? ([
           {
             field: SALE.sellerComm,
             type: 'calc',
             headerId: 'bikri-col-seller-comm',
             explain: true,
           },
-        ] satisfies readonly EntryColumn[])
-      : []),
-    ...(isFromStep(step, 'wide')
-      ? ([
           { field: SALE.buyerComm, type: 'calc', headerId: 'bikri-col-buyer-comm', explain: true },
         ] satisfies readonly EntryColumn[])
       : []),

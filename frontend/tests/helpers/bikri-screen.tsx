@@ -37,6 +37,16 @@ export function cellOf(grid: HTMLElement, rowIndex: number, field: string): HTML
   return found;
 }
 
+/**
+ * The details of a sale line, the section under the grid that holds its charges, its seller amount and what
+ * is left on the buyer's account, by the line's number from 1. The seller amount is in the grid only from
+ * 1920 px, and here in every window (plan 72 P13, NFR-USE-27).
+ */
+export const lineDetails = (language: Language, line: number) =>
+  screen.findByRole('region', {
+    name: named(message(language, 'bikri-line-title', { line: String(line) })),
+  });
+
 export const textOf = (grid: HTMLElement, rowIndex: number, field: string) =>
   visible(cellOf(grid, rowIndex, field).textContent).trim();
 

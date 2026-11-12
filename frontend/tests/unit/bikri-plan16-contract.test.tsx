@@ -41,6 +41,7 @@ import {
 import { blankLine } from '../helpers/bikri-data';
 import {
   cellOf,
+  lineDetails,
   lotsGrid,
   named,
   openBook,
@@ -273,9 +274,10 @@ describe('a later sale against the backend files (E2E-16b)', () => {
     await screen.findAllByRole('option');
     await user.keyboard('{Enter}{Enter}560{Enter}');
     await waitFor(() => {
-      expect(textOf(salesGrid(language), 0, 'amount')).toBe('2,800');
+      expect(textOf(salesGrid(language), 0, 'buyerTotal')).toBe('3,008');
     });
-    expect(textOf(salesGrid(language), 0, 'buyerTotal')).toBe('3,008');
+    // The seller amount is in the details of the line (the grid has it from 1920 px only).
+    expect(visible((await lineDetails(language, 1)).textContent)).toContain('2,800');
     // The request has the lot, the day and the line of the backend's own file.
     const sent = vi.mocked(bikriApi.bikriLaterSalePreview).mock.calls.at(-1);
     expect(sent?.[0]).toBe(LATER_PREVIEW_REQUEST.lot_id);

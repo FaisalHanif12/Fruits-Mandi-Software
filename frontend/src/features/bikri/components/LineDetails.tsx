@@ -237,7 +237,7 @@ export function LineDetails({
             </Field>
           ) : null}
         </div>
-        {/* The seller amount of the line: in the grid from the middle window up, here in every window. */}
+        {/* The seller amount of the line: in the grid from the wide window up (1920 px), here in every window. */}
         <Field label={<Localized id="bikri-col-seller-amount" />} readOnly>
           {(control) => (
             <output id={control.id} className="inline-flex items-center gap-1 type-body text-ink">

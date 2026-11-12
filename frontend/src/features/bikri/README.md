@@ -40,6 +40,14 @@ Section 13). Later sales, edit, cancel and undo are plan 16 (see the section bel
   it the cursor goes on by itself (`fixedFromCalc` of the shared grid). What is left on the account is shown in
   the details of the line and in the summary (ادھاری is the sum of what is left, نقدی the sum of what was paid).
   The refusal `ERR_PAID_EXCEEDS_TOTAL` is on the cell. Tests: `bikri-paid.test.tsx`.
+- **Figures of a line by window, and the "Manual" mark (plan 72 P13, PRD FR-11.10).** The grid of a line has the
+  buyer total in every window, the seller commission and the buyer commission from 1366 px, and the seller
+  amount as well from 1920 px (`columns.ts`; the sums are kept in `bikri-column-widths.test.ts`). The seller amount
+  (below 1920 px) and the لاگا are in the details of the line. A cell whose figure rests on a charge typed by hand
+  carries a small pencil named "Manual" (`RowView.manual`, `GridView.manual`, `cellManual` of the shared grid): the
+  commission cell of that side, and the buyer total when any charge of the line is typed. The backend says which
+  charges are typed (`source: typed`, method `manual`); the screen adds nothing. Tests:
+  `bikri-typed-commission-grid.test.tsx` (1024, 1366 and 1920 px, both languages).
 - **The whole-sale view has no second copy.** The switch on the lines area (the same as the
   summary's) shows the lines of all lots in one grid with a lot column. `stores.all`
   (`union-store.ts`) lists the rows of the lots' stores and hands each change to the lot that owns

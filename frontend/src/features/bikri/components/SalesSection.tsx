@@ -245,6 +245,7 @@ export function SalesSection({
           labelId="bikri-sales-label"
           calc={view.calc}
           workings={view.workings}
+          cellManual={view.manual}
           cellErrors={view.errors}
           cellWarnings={view.warnings}
           {...(cellChanged === undefined ? {} : { cellChanged })}

@@ -11,7 +11,14 @@ import { LANGUAGES } from '../../src/i18n';
 import * as urduApi from '../../src/shared/urdu/api';
 import { realAnswer } from '../helpers/bikri-d8-real';
 import { openUmarsBook, seedUmarsLot, umarAnswer } from '../helpers/bikri-umar';
-import { cellOf, focusedIn, salesGrid, textOf, type User } from '../helpers/bikri-screen';
+import {
+  cellOf,
+  focusedIn,
+  lineDetails,
+  salesGrid,
+  textOf,
+  type User,
+} from '../helpers/bikri-screen';
 import {
   healthyBackend,
   leaveAppWindow,
@@ -146,7 +153,8 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
       expect(cellOf(sales, 2, 'rate')).not.toHaveClass('cell-hint');
       expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');
     }, SLOW_MS);
-    expect(textOf(sales, 2, 'amount')).toBe('117,000');
+    // The seller amount is in the grid from 1920 px only, and in the details of the line in every window.
+    expect(visible((await lineDetails(language, 3)).textContent)).toContain('117,000');
     // The summary counts all three lines: 182,000 gross, 21,920 deductions, 160,080 net.
     await waitFor(() => {
       const text = visible(document.body.textContent);
@@ -424,7 +432,8 @@ describe.each(LANGUAGES)('Umar’s three lines on a lot of 200 (%s)', (language)
     await waitFor(() => {
       expect(textOf(sales, 2, 'buyerTotal')).toBe('125,060');
     }, SLOW_MS);
-    expect(textOf(sales, 2, 'amount')).toBe('117,000');
+    // The seller amount is in the grid from 1920 px only, and in the details of the line in every window.
+    expect(visible((await lineDetails(language, 3)).textContent)).toContain('117,000');
     const text = visible(document.body.textContent);
     for (const figure of ['182,000', '21,920', '160,080', '194,520', '9,376', '7,032']) {
       expect(text).toContain(figure);

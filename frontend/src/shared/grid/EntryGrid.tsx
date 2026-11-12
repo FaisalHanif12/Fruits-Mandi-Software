@@ -27,7 +27,7 @@ import type {
   ValueSetterParams,
 } from 'ag-grid-community';
 import { AgGridReact, type CustomCellRendererProps } from 'ag-grid-react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CardChukta } from '../accounts';
 import { useGrouping, type Grouping } from '../format';
@@ -91,6 +91,14 @@ interface EntryGridProps {
    */
   cellMarks?: PerRow<string>;
   /**
+   * The calculated cells whose figure depends on a value the user typed by hand instead of the rule's
+   * (a commission or لاگا rate typed on a sale line, PRD FR-11.10), by row and field, with the word for it
+   * ("Manual"). The cell gets a small pencil before its figure, and the word as its tooltip and for a
+   * screen reader. It is a mark only: it holds no figure, and the screen says which cells from what the
+   * backend sent (`source: typed`), never from its own sums (plan 72 P13).
+   */
+  cellManual?: PerRow<string>;
+  /**
    * Can the row be removed, by Ctrl+Delete or by its remove button? Default: yes. A saved lot of an edit
    * cannot be removed, and has no button.
    */
@@ -135,6 +143,7 @@ interface Live {
   cellWarnings: PerRow<string> | undefined;
   cellChanged: PerRow<string> | undefined;
   cellMarks: PerRow<string> | undefined;
+  cellManual: PerRow<string> | undefined;
 }
 
 /** What a select cell shows: its word, and a small arrow so the cell looks like a list (PRD FR-12.42). */
@@ -218,6 +227,8 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
     row === undefined ? undefined : live().cellChanged?.[row.rowId]?.[column.field];
   const markOf = (row: EntryRow | undefined): string | undefined =>
     row === undefined ? undefined : live().cellMarks?.[row.rowId]?.[column.field];
+  const manualOf = (row: EntryRow | undefined): string | undefined =>
+    row === undefined ? undefined : live().cellManual?.[row.rowId]?.[column.field];
   // The grey hint of an empty cell: written in the column, or sent by the backend (the last rate).
   const hintOf = (row: EntryRow): string | undefined =>
     column.hintFromCalc === true ? calcOf(row) || undefined : column.placeholder?.(row);
@@ -255,6 +266,9 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
       if (row === undefined) return undefined;
       const error = errorOf(row) ?? warningOf(row) ?? changedOf(row) ?? markOf(row);
       if (error !== undefined) return error;
+      // A figure that rests on a value typed by hand says so (plan 72 P13).
+      const manual = manualOf(row);
+      if (manual !== undefined) return manual;
       if ((row.typed[column.field] ?? '') === '' && column.hintTooltipField !== undefined) {
         return live().calc?.[row.rowId]?.[column.hintTooltipField];
       }
@@ -268,6 +282,7 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
         errorOf(params.data) === undefined && warningOf(params.data) !== undefined,
       'cell-changed': (params) => changedOf(params.data) !== undefined,
       'cell-marked': (params) => markOf(params.data) !== undefined,
+      'cell-manual': (params) => manualOf(params.data) !== undefined,
       'cell-calc': (params) => readOnly || fixedOf(params.data) !== undefined,
       'cell-hint': (params) =>
         params.data !== undefined &&
@@ -422,9 +437,18 @@ function toColDef(column: EntryColumn, env: ColumnEnv): ColDef<EntryRow> {
             const working =
               row === undefined ? undefined : live().workings?.[row.rowId]?.[column.field];
             const text = params.valueFormatted ?? String(params.value ?? '');
-            // The figure stands in the middle of the column; the ⓘ hangs after it (plan 39 R1).
+            const manual = manualOf(row);
+            // The figure stands in the middle of the column; the ⓘ hangs after it and the pencil of a
+            // value typed by hand before it (plan 39 R1, plan 72 P13). The pencil is a shape, and its
+            // word is its name for a screen reader (not text of the cell, so the figure reads clean) and
+            // the tooltip, so colour is never the only signal.
             return (
               <FigureCell
+                lead={
+                  manual === undefined ? undefined : (
+                    <Pencil role="img" aria-label={manual} className="size-icon-sm shrink-0" />
+                  )
+                }
                 extra={working === undefined ? undefined : <CalcInfo working={working} inCell />}
               >
                 {text}
@@ -457,6 +481,7 @@ function GridInner({
   cellWarnings,
   cellChanged,
   cellMarks,
+  cellManual,
   canRemoveRow,
   removeQuestion,
   heightMode = 'fill',
@@ -485,6 +510,7 @@ function GridInner({
     cellWarnings,
     cellChanged,
     cellMarks,
+    cellManual,
   });
 
   // Esc while typing in a cell cancels the typing and keeps the old value (PRD FR-7.18).
@@ -622,7 +648,7 @@ function GridInner({
   // A new answer from the backend: the cells read it again. Editing is not interrupted.
   useLayoutEffect(() => {
     apiRef.current?.refreshCells({ force: true });
-  }, [calc, workings, cellErrors, cellWarnings, cellChanged, cellMarks]);
+  }, [calc, workings, cellErrors, cellWarnings, cellChanged, cellMarks, cellManual]);
 
   // A cell the backend closes while the cursor is on it (the paid amount of a buyer who must pay in full,
   // PRD FR-12.44): the answer for a line comes a moment after its rate was typed, when Enter has already

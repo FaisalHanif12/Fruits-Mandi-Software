@@ -50,6 +50,8 @@ export interface MissingNote {
 export interface GridView {
   calc: PerRow<string>;
   workings: PerRow<Working>;
+  /** The cells whose figure rests on a charge typed by hand, with the word for it (plan 72 P13). */
+  manual: PerRow<string>;
   errors: PerRow<string>;
   warnings: PerRow<string>;
   /** The quantity problems of the lines this grid shows, in line order. */
@@ -69,6 +71,7 @@ function emptyView(): GridView {
   return {
     calc: {},
     workings: {},
+    manual: {},
     errors: {},
     warnings: {},
     qtyNotes: [],
@@ -123,6 +126,7 @@ export function buildGridViews(input: GridViewInput): { lots: GridView; sales: G
       const lineCells = lineView(line, grouping, say);
       sales.calc[line.key] = lineCells.calc;
       sales.workings[line.key] = lineCells.workings;
+      sales.manual[line.key] = lineCells.manual;
     }
   }
   if (showAll) {

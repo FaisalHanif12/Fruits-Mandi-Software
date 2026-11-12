@@ -22,12 +22,14 @@ const WORD = {
 } as const;
 
 describe('the seller bill with a quality on each line (English, the backend answer)', () => {
-  it('writes each item with its quality word after it, in the order of the lines', () => {
+  it('writes each lot name with its quality word after it, in the order of the lines', () => {
     const { container } = render(<BikriPrintDocument data={GRADE_SELLER_BILL_EN} />);
     const text = visible(container.textContent);
     for (const grade of ['first', 'second', 'third'] as const) {
       const word = message('en', WORD[grade]);
-      expect(text).toContain(message('en', 'common-item-grade', { item: 'Apple', grade: word }));
+      // The seller bill's item column holds the lot's name, item and counter, "Apple-1" (PRD FR-12.45, plan 71
+      // L8; the backend writes it, `item` of each line of the fixture). The buyer's lines name the item only.
+      expect(text).toContain(message('en', 'common-item-grade', { item: 'Apple-1', grade: word }));
     }
   });
 });
