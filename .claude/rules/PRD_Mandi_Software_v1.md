@@ -3,7 +3,7 @@
 
 | | |
 |---|---|
-| Version | 1.39 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73, 74 and 75, two changes in 75), and his answers of 15-10-2026 and 30-10-2026) |
+| Version | 1.40 (functional requirements; Umar's changes of 11-10-2026, 14-10-2026, 15-10-2026, 18-10-2026, 19-10-2026, 22-10-2026, 27-10-2026 and 30-10-2026, 31-10-2026, 01-11-2026 (three), 03-11-2026 (two), 04-11-2026 and 05-11-2026 (two) and 06-11-2026, his demo feedback of 08-11-2026 (D8, decided 09-11-2026), his decisions of 12-11-2026 (plans 71 and 72) and 13-11-2026 (plans 73, 74 and 75, two changes in 75), and his answers of 15-10-2026 and 30-10-2026) |
 | Date | 12 November 2026 |
 | Status | Approved for build. Will be revised after the client demo. |
 | Client | Maher Adnan and Brothers, New Sabzi Mandi, Kot Radha Kishan |
@@ -20,7 +20,7 @@ This is the **functional** document: what the software must do, screen by screen
 
 | # | Document | Covers | Status |
 |---|---|---|---|
-| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.39 |
+| 1 | `PRD_Mandi_Software_v1.md` (this file) | Functional requirements | v1.40 |
 | 2 | `NFR_Mandi_Software_v1.md` | Speed, scalability, reliability, backup quality, security, usability, Urdu and English quality, the assistant | v1.18 |
 | 3 | `Tech_Stack_v1.md` | Technologies, Urdu and English stack, repository structure, naming | v1.10 |
 | 4 | `Code_Standards_v1.md` | How the code is written, validated and tested | v1.23 |
@@ -694,7 +694,7 @@ FR-7.24 [C] **Every name has an Urdu and an English name.** This covers accounts
 - Typed in Urdu letters: the English name is suggested from the Urdu. ارشد ملتانی → "Arshad Multani".
 - In the English app the order is reversed: the user types the English name and the Urdu name is suggested from it.
 
-The filled name stays editable. Once the user edits it, it is never overwritten again.
+The filled name stays editable. Once the user edits it, it is never overwritten again. [C] (Umar, 14-11-2026, v1.40) When a saved record is edited, the same applies within that edit: changing one name fills the other from it again, shown on screen before saving and checked by FR-7.66, unless the user has also edited the other name in this edit. Example: the firm's English name changed to "Maher Adnan and Maher Usman Brothers" fills the Urdu name with its Urdu spelling, and both are saved; the Urdu name then shows on every Urdu screen and print header.
 
 FR-7.25 [A] **What is not translated.** Codes, amounts, dates, phone numbers, truck numbers, tags (نشان), مارکہ text, the market, supplier and other shop typed on a trip, garden or پھل entry, and free text (notes, hand-typed narrations, reasons) are stored once, exactly as typed, and look the same in both languages.
 
@@ -2767,5 +2767,6 @@ None of these has a live partner split or a commission rule system by item, sell
 | 1.35 | 12-11-2026 | Umar's decision of 12-11-2026 (plan 72), approved by Umar: the screen آج کی بکری becomes پچھلی بکری (Past Sales), with today's بکری, then a 7-day window of earlier days grouped by day, moved by the arrow keys and Page Up and Page Down, a date to jump to, and a switch that shows every بکری of the window (12.7 rewritten, new FR-12.46; FR-5.3, FR-7.70, FR-19.10). The truck column and the truck search come back on this screen for old بکری (12.2). آج کی بکری stays the name of its first section and of the dashboard tile. Also Umar's change of 12-11-2026: the wrong-try limit of the password and the partner code goes from 5 to 10 (FR-8.2, FR-17.11). No golden number changed. No money rule changed. |
 | 1.36 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 73): reopening a closed day to fix an entry asks for the Owner's sign (دستخط) as well as the reason; only his sign, "adnan" by default, opens the day; the sign is kept in the audit log and shown in the edit stamp and history (FR-21.4, FR-7.71, Section 21). No golden number changed. No money rule changed. |
 | 1.37 | 13-11-2026 | Umar's decision of 13-11-2026 (plan 74): one party's statement on پارٹی کھاتے shows 30 days at a time with arrows, a go-to-date, a day opened in place under its row, and a compact statement print for any period (new FR-12.47). No golden number changed. No money rule changed. |
+| 1.40 | 14-11-2026 | Umar's request of 14-11-2026 (plan 75): editing one name of a saved record fills the other again, unless the other was edited too (FR-7.24). No golden number changed. No money rule changed. |
 | 1.39 | 13-11-2026 | Umar's request of 13-11-2026 (plan 75): on پچھلی بکری each earlier day shows as one closed line with its date, بکری count and خام بکری, opened by its arrow (FR-12.46). No golden number changed. No money rule changed. |
 | 1.38 | 13-11-2026 | Umar's request of 13-11-2026 (plan 75): log out moves from the user menu to the bottom of the main navigation bar (FR-5.2, FR-5.6); a guide card on every report shows its contents, columns, filters and prints on hover or keyboard focus (new FR-19.14). No golden number changed. No money rule changed. |

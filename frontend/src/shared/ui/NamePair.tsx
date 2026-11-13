@@ -5,8 +5,11 @@
 //   English name is exactly what was typed with capital first letters: "tariq mehmood" gives
 //   "Tariq Mehmood". Urdu typed with a keyboard gets an English suggestion from the backend.
 // - Typing the English name gives an Urdu suggestion.
-// - A field the user has typed in is never overwritten again. A pair that arrives already filled
-//   (an existing record) is never overwritten at all.
+// - A field the user has typed in is never overwritten again.
+// - A pair that arrives already filled (a saved record) is edited the same way (PRD FR-7.24 v1.40, plan 75
+//   7.9): changing one name fills the other from it, in view before the save, with the spelling check
+//   of the words the rules alone made, unless the user has also changed the other name in this edit. A name
+//   the app filled is still his to change, and a new change of the first name fills it again until he does.
 // - In the English app the English name comes first and is the one to type; in the Urdu app the
 //   Urdu name comes first. The fields themselves work the same.
 //
@@ -132,7 +135,14 @@ export function NamePair({
   // The Urdu word -> the English letters it was typed with, for this pair.
   const known = useRef(new Map<string, string>());
   // A field the user has typed in is never filled by the app again.
-  const typedBy = useRef({ urdu: value.urdu !== '', english: value.english !== '' });
+  // A pair that arrives with both names is a saved record: neither name is "typed" yet, so the one he does not
+  // change follows the one he does (FR-7.24 v1.40). A pair with one name only keeps that one as typed. A known
+  // record taken from a list sets both as typed (below), and a pair filled on open is a new record.
+  const typedBy = useRef({
+    urdu: value.urdu !== '' && !(value.english !== '' && !fillOnOpen && knownRecords === undefined),
+    english:
+      value.english !== '' && !(value.urdu !== '' && !fillOnOpen && knownRecords === undefined),
+  });
   const latest = useRef(value);
   const request = useRef(0);
   const onChangeRef = useRef(onChange);

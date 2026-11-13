@@ -153,6 +153,54 @@ describe.each(LANGUAGES)('settings (%s)', (language) => {
       expect(await screen.findByText(message(language, 'settings-saved'))).toBeInTheDocument();
     });
 
+    it('changing only the English firm name makes the Urdu name follow, and the save sends both; the sign-in data is read again (PRD FR-7.24 v1.40)', async () => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            {
+              toUrdu: {
+                maher: ['ماہر'],
+                adnan: ['عدنان'],
+                and: ['اینڈ'],
+                usman: ['عثمان'],
+                brothers: ['برادرز'],
+              },
+              toEnglish: {},
+            },
+            text,
+            direction,
+          ),
+        ),
+      );
+      vi.mocked(settingsApi.settingsSetFirm).mockImplementation((input) => Promise.resolve(input));
+      const { user } = await open();
+      const english = field(language, 'settings-firm-name-en');
+      const urdu = field(language, 'settings-firm-name-ur');
+      const before = urdu.value;
+      await user.clear(english);
+      await user.type(english, 'Maher Adnan and Maher Usman Brothers');
+      // The Urdu name follows, in view, before the save.
+      await waitFor(() => {
+        expect(urdu.value).toBe('ماہر عدنان اینڈ ماہر عثمان برادرز');
+      });
+      expect(urdu.value).not.toBe(before);
+      const statusReads = vi.mocked(authApi.authStatus).mock.calls.length;
+      press('F10');
+      await waitFor(() => {
+        expect(settingsApi.settingsSetFirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name_en: 'Maher Adnan and Maher Usman Brothers',
+            name_ur: 'ماہر عدنان اینڈ ماہر عثمان برادرز',
+          }),
+        );
+      });
+      // The sign-in screen takes the firm from the sign-in status: it is read again after the save, so the
+      // new names are on the sign-in panel in both languages as soon as it is shown.
+      await waitFor(() => {
+        expect(vi.mocked(authApi.authStatus).mock.calls.length).toBeGreaterThan(statusReads);
+      });
+    });
+
     it('a firm name word made by the spelling rules alone is checked before the save (FR-7.66)', async () => {
       vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
         Promise.resolve(

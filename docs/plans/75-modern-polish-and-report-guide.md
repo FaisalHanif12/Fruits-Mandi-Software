@@ -209,6 +209,14 @@ Fix (owner `backend`, Fluent text by `frontend`):
 3. Dev builds keep one stable code signature, so "Always Allow" stays valid across rebuilds: a cargo runner signs the debug binary with a local "Mandi Dev" identity when it exists (plain run when it does not), and a one-time script `scripts/dev/make-dev-signing-identity.sh` makes that identity (Umar runs it once, with his Mac password).
 4. Test: a key store that refuses gives `ERR_KEYSTORE_DENIED`, and a second sign-in in the same run reads no key from the store.
 
+## 7.9 Both names follow each other in an edit; the firm name everywhere (Umar, 14-11-2026, PRD FR-7.24 v1.40)
+
+Umar changed the firm's English name and the Urdu name stayed old, so the Urdu sign-in panel showed the old name. His rule: when one name changes, the other must change too, and the new name must show in the app and on every print header.
+
+- `frontend` (shared NamePair, all named records): in an edit of a saved record, changing one name fills the other from it (the same suggestion as for a new record), visible before save, with the FR-7.66 spelling check, unless the user also edited the other name in this edit. Replaces the "note and button" idea of earlier today.
+- `frontend`: after the firm is saved, every place in the app that shows the firm name (sign-in panel and any other) shows the new name at once in both languages.
+- `backend`: every print header reads the firm names from the settings at print time (no copy kept); a test changes the firm name and checks the next print header in both languages.
+
 ## 8. Acceptance checklist
 
 - [ ] T1: `column_title_ids` on every catalogue entry; each ID found in both Fluent files (test); `cargo test -p mandi-reports` green; bindings regenerated, not hand-edited.

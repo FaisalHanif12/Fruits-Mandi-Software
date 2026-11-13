@@ -177,16 +177,94 @@ describe.each(LANGUAGES)('NamePair (%s)', (language) => {
     expect(urdu.value).toBe('ارشد ملتانی ا');
   });
 
-  it('a name that arrives filled (a saved record) is never overwritten', async () => {
-    const { english, urdu, user } = render(language, {
-      initial: { urdu: 'ارشد', english: 'Arshad' },
+  describe('a saved record, edited (PRD FR-7.24 v1.40, plan 75 7.9)', () => {
+    const SAVED: NamePairValue = { urdu: 'ارشد ملتانی', english: 'Arshad Multani' };
+    const saved = () => {
+      const onValue = vi.fn<(value: NamePairValue) => void>();
+      return { onValue, ...render(language, { initial: SAVED, onValue }) };
+    };
+
+    it('shows both names as they are saved, and nothing changes until he types', async () => {
+      const { urdu, english } = saved();
+      expect(urdu.value).toBe('ارشد ملتانی');
+      expect(english.value).toBe('Arshad Multani');
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(urduApi.translitSuggest).not.toHaveBeenCalled();
     });
-    await user.click(urdu);
-    await user.keyboard('{End} ملتانی');
-    expect(english.value).toBe('Arshad');
-    await user.click(english);
-    await user.keyboard('{End}x');
-    expect(urdu.value).toBe('ارشد ملتانی');
+
+    it('changing the English name only makes the Urdu name follow, in view, and the save sends both', async () => {
+      const { onValue, urdu, english, user } = saved();
+      await user.clear(english);
+      await user.type(english, 'Tariq Mehmood');
+      await waitFor(() => {
+        expect(urdu.value).toBe('طارق محمود');
+      });
+      expect(english.value).toBe('Tariq Mehmood');
+      // Both names are in the value the screen saves.
+      expect(onValue.mock.calls.at(-1)?.[0]).toMatchObject({
+        urdu: 'طارق محمود',
+        english: 'Tariq Mehmood',
+      });
+    });
+
+    it('changing the Urdu name only makes the English name follow', async () => {
+      const { english, urdu, user } = render(language, {
+        initial: { urdu: 'ارشد', english: 'Arshad' },
+      });
+      await user.click(urdu);
+      await user.keyboard('{End} ملتانی');
+      await waitFor(() => {
+        expect(english.value).toBe('Arshad Multani');
+      });
+      expect(urdu.value).toBe('ارشد ملتانی');
+    });
+
+    it('the words the rules alone made are marked, so the save asks him to check them (FR-7.66)', async () => {
+      vi.mocked(urduApi.translitSuggest).mockImplementation(({ text, direction }) =>
+        Promise.resolve(
+          suggestionsFor(
+            { toUrdu: TO_URDU, toEnglish: TO_ENGLISH, rulesOnly: ['tariq', 'mehmood'] },
+            text,
+            direction,
+          ),
+        ),
+      );
+      const onValue = vi.fn<(value: NamePairValue) => void>();
+      const { english, urdu, user } = render(language, { initial: SAVED, onValue });
+      await user.clear(english);
+      await user.type(english, 'Tariq Mehmood');
+      await waitFor(() => {
+        expect(urdu.value).toBe('طارق محمود');
+      });
+      expect(
+        await screen.findAllByText(message(language, 'translit-spelling-check')),
+      ).not.toHaveLength(0);
+      expect(onValue.mock.calls.at(-1)?.[0].spelling?.urdu).toEqual(['طارق', 'محمود']);
+    });
+
+    it('once he has also changed the other name, neither overwrites the other', async () => {
+      const { english, urdu, user } = saved();
+      // English first: the Urdu follows. Then he changes the Urdu himself.
+      await user.clear(english);
+      await user.type(english, 'Arshad');
+      await waitFor(() => {
+        expect(urdu.value).toBe('ارشد');
+      });
+      await user.click(urdu);
+      await user.keyboard('{End} ملتانی');
+      expect(urdu.value).toBe('ارشد ملتانی');
+      // A new change of the English name does not touch the Urdu he edited.
+      await user.click(english);
+      await user.keyboard('{End} Multani');
+      expect(english.value).toBe('Arshad Multani');
+      expect(urdu.value).toBe('ارشد ملتانی');
+      // And a change of the Urdu name does not touch the English he typed.
+      await user.click(urdu);
+      await user.keyboard('{End}ی');
+      expect(english.value).toBe('Arshad Multani');
+    });
   });
 
   it('a spelling that cannot be worked out leaves the other name as it is, with no message', async () => {

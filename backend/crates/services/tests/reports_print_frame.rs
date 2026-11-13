@@ -631,3 +631,58 @@ fn a_chukta_buyer_shows_his_phone_in_the_dash_form_in_his_party_cell_and_in_the_
     assert!(json.contains("0300-0000000") && json.contains("0301-2222222"));
     assert!(!has_urdu_digit(&json));
 }
+
+/// Plan 75 Section 7.9: the print header reads the firm from the settings at each print. After the
+/// Owner changes the firm name, the very next header carries the new names in both languages, and
+/// the mandi name changes with it. No copy of the firm is kept in the app, a cache or the build.
+#[test]
+fn the_next_print_header_shows_the_firm_the_owner_saved_last() {
+    let w = worked_day();
+    let header_firm = |language: Language| {
+        print_frame(
+            w.env.ctx.db(),
+            &PrintFrameInput {
+                language,
+                title_id: "report-r11-title".to_owned(),
+                facts: Vec::new(),
+            },
+        )
+        .unwrap()
+        .header
+        .firm
+    };
+    // The firm of the worked day, as the wizard saved it.
+    let before = (header_firm(Language::Ur), header_firm(Language::En));
+    assert_eq!(before.0.name, "ماہر عدنان اینڈ برادرز");
+    assert_eq!(before.1.name, "Maher Adnan and Brothers");
+
+    let mut firm = mandi_services::settings::get(&w.env.ctx).unwrap().firm;
+    firm.name_ur = "ماہر عدنان اینڈ سنز".to_owned();
+    firm.name_en = "Maher Adnan and Sons".to_owned();
+    firm.mandi_ur = "نئی سبزی منڈی لاہور".to_owned();
+    firm.mandi_en = "New Sabzi Mandi Lahore".to_owned();
+    // Words that come only from the spelling rules are confirmed, as the Settings screen does
+    // (PRD FR-7.66).
+    let confirmed: Vec<String> = ["سنز", "Sons", "لاہور", "Lahore"]
+        .iter()
+        .map(|w| (*w).to_owned())
+        .collect();
+    mandi_services::settings::set_firm_confirmed(&w.env.ctx, &w.owner, &firm, &confirmed).unwrap();
+
+    let (ur, en) = (header_firm(Language::Ur), header_firm(Language::En));
+    assert_eq!(ur.name, "ماہر عدنان اینڈ سنز");
+    assert_eq!(en.name, "Maher Adnan and Sons");
+    assert_eq!(ur.mandi, "نئی سبزی منڈی لاہور");
+    assert_eq!(en.mandi, "New Sabzi Mandi Lahore");
+
+    // And again: a second change shows at once too.
+    firm.name_en = "Maher Adnan Traders".to_owned();
+    firm.name_ur = "ماہر عدنان ٹریڈرز".to_owned();
+    let confirmed: Vec<String> = ["ٹریڈرز", "Traders"]
+        .iter()
+        .map(|w| (*w).to_owned())
+        .collect();
+    mandi_services::settings::set_firm_confirmed(&w.env.ctx, &w.owner, &firm, &confirmed).unwrap();
+    assert_eq!(header_firm(Language::En).name, "Maher Adnan Traders");
+    assert_eq!(header_firm(Language::Ur).name, "ماہر عدنان ٹریڈرز");
+}
