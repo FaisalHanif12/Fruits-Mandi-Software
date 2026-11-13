@@ -295,6 +295,9 @@ Opening the 10-10-26 card: بکری 1 his 30% of 3,948 = 1,184; بکری 2 his 3
 | A13 | 5, 10 | If the money check finds a linked khata or loan cannot be built without changing an existing posting or golden number, that point is parked for Umar and the rest is built (Umar, 14-11-2026) |
 | A14 | 6 | [A] Lead: the print header uses physical left (picture) and right (owners and munshis) as Umar asked; an approved exception to logical properties, in the header only |
 | A15 | 4 | [A] Lead: the chart is always shown beside or above the table at 1366 × 768 and larger; at 1024 × 600 a toggle |
+| A17 | 5 | A link mirrors every line on a linked khata (out, in, its goods sold, fruit, جنرل), not only out and in (Umar, 14-11-2026, U1) |
+| A18 | 10 | The link belongs to the person, fixed while he owes; a partner-linked loan is returned in cash only, a salary deduction refused (Umar, 14-11-2026, U2, U3) |
+| A19 | 5, 10 | Lead: partner parts post to a new per-partner account 0605 with a contra 03070001 (head 03, outside equity); a shop link splits by the shares of each movement's own date; the new tile counts garden owner, trip person and other (not staff) |
 | A16 | 9 | [A] Lead: "date his balance last changed" = the date of the last posted line on his account |
 
 ## 13. Tasks
@@ -310,13 +313,16 @@ Opening the 10-10-26 card: بکری 1 his 30% of 3,948 = 1,184; بکری 2 his 3
 
 ## 14. Design notes (filled by the team before code)
 
-- Point 1 design:
-- Point 5 posting:
-- Point 10 posting:
-- Point 7 read:
-- Point 11 read:
-- Point 8 audit table:
-- Contracts (command names and types):
+Recorded 14-11-2026 from backend's phase A report (money agent: PASS on 7, PASS WITH CHANGES on 1, 5, 10, 11, changes taken in).
+
+- **Point 1 design:** new `bikri_mixed_preview`, `bikri_mixed_save`, `bikri_mixed_undo`, one transaction. Separate entries, each by today's code: one `bikri_later` entry per carried lot on its OLD بکری (no lot charges), then ONE `bikri_first` entry on a NEW بکری number for the new lots; no entry mixes both. No new lots = no new number; a carried lot with no lines writes nothing. Matching after all entries. Undo reverses each later entry and cancels the new بکری. Trip and garden ready lots are new lots. Screen: "+ باقی مال سے" (A11); `/bikri/later` redirects. Check (E2E-16 state, 11-10-26): entry A 3,008 = 3,008, shares 152/112/112 (E2E-16b); entry B 25,600 = 25,600, shares 616/462/462; screen shared income 1,916, partners 768/574/574 (sum of the two, never a combined split); cash 45,000 + 12,800 = 57,800.
+- **Point 5 posting:** out X on a linked khata: Dr khata X, Cr cash X (as today), Dr 0605(partner_i) x_i, Cr 03070001 X. In X: Dr cash X, Cr khata X, Dr 03070001 X, Cr 0605(partner_i) x_i. Shop: x_i = split_by_bps(X, shares on the date); partner: one part. Every line on a linked khata (lot credit, fruit, جنرل) gets the same mirror pair, built once in domain::ledger (A17). Unlinked: exactly today. Check: shop 40/30/30, out 10,000 → 4,000/3,000/3,000 (20,000 = 20,000); in 4,000 → 1,600/1,200/1,200; khata −6,000, partners −2,400/−1,800/−1,800, FR-17.9 holds.
+- **Point 10 posting:** person_type staff, garden_owner, trip_person, other (old rows: staff if a staff record, else other). Partner link: lent Dr person X, Cr cash X, Dr 0605 X, Cr 03070001 X; cash return the mirror. Shop link: today's posting plus a note line (no amount) in each partner statement, split_by_bps on the loan date. Check: نواز 20,000 linked to الف: 40,000 = 40,000, الف −20,000; return 5,000: open 15,000, الف −15,000. E2E-30 unchanged.
+- **Point 7 read:** per day from analytics_facts SUM(sign × value) (seller, buyer, لاگا, total = tile = view A), shared income and partner shares from partner_share_rows kind income; month totals by checked sums of the days; days that net 0 left out; partner columns null while locked. Check 10-10-26: 2,484 / 2,484 / 480 / 5,448 / 5,488 / 2,196 / 1,646 / 1,646.
+- **Point 11 read:** from the existing statement events (events_of, which add up to total_of). Opening = running total before the month; columns commission, expense, gardens_trips (0604), fruit, taken_returned (0603 + 0605), capital (0602), day_net, running; closing = total_of at month end = next opening. Check: ب Oct 746 then 50,746 (E2E-37); الف E2E-34 −296, trip note 8,460 / 7,800 / 660 / 264.
+- **Point 8 audit table:** every list command is already paged with totals (B31); the gap is the default range. 7-day: R2, R3, R4, R6, R11, R12 and روکڑ بک, R15 and the voucher list, R23, R25, R27, audit log. 1-month: expenses and R29, fruit and R37, ادھار رقم and R32 detail, الگ کھاتہ, capital, جنرل list, partner takes, R31 and the partner statement, the commission page, analytics drill lines. Already fine: R1, R5, R35, aggregates and as-of balances (R7, R10, R16 to R22, R24, R26, R30, R33, R36, R38), analytics A to K tables, stock, masters, rules, trips, gardens, party ledgers (30-day), پچھلی بکری (7-day). Backend gaps to fix: translit_pairs_list, assist_open_bills / payables / advances, bikri_find (page them). New `windows_bounds { source }` and `DayStatus.first_entry_date`. The backend keeps today's empty from/to behaviour; the screens send the window.
+- **Contracts:** P1 above. P2 `reports_collection_sheet` and its print data (code, party, detail, previous_due, bill, paid, total_due; totals; dead rows apart). P3 `reports_buyer_parchi_print_data`, `reports_sale_print_data { scope: bikri | day }`, from the R35 slip builders. P5 `khata_create` and `khata_set_link` with `Link { kind: none | shop | partner, partner_id? }`; errors ERR_LINK_PARTNER_REQUIRED, ERR_PARTNER_INACTIVE, ERR_LINK_LOCKED, ERR_SHARES_NOT_100. P7 `dashboard_commission_month`, `dashboard_commission_day`, print data. P9 `dashboard_buyer_dues` and print data. P10 `lent_person_create` with person_type and link; `lent_list` with person_types, link, month; `dashboard_get` gains others_dues_paisa and others_people_count; errors ERR_LINK_FIXED_WHILE_OWED, ERR_SALARY_NOT_ALLOWED_FOR_LINKED. P11 `partners_statement_month`, `partners_statement_day`, print data, `partners_open_ventures`, overview counts. Excel kinds commission_month, buyer_dues, partner_statement_month. Migration 0023_linked_money.sql (link and person_type columns, control 0307 with 03070001, control 0605 with one account per partner, partners.linked_account_id).
+- **P1 point 6 and 4:** picture is a line-art version of our own BrandMark in shared/print/PrintHeader (A14); backend adds charts for F (behind the code) and K and compare values per point.
 
 ## 15. Done when
 
