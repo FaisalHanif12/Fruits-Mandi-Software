@@ -217,7 +217,9 @@ describe.each(LANGUAGES)('GlobalSearch (%s)', (language) => {
   it('finds a بکری by its number and by the start of its truck number, and opens it by its id (FR-5.4)', async () => {
     const { box, user, onOpenAccount, onOpenBikri } = setup(language);
     await user.click(box);
-    await user.keyboard('les');
+    // "les-" and not "les": the English name of the screen Past Sales has "les" in it (plan 72), and a screen is
+    // found by its name too (FR-5.4), which would be a third result here.
+    await user.keyboard('les-');
     await waitFor(() => {
       expect(options()).toHaveLength(2);
     });

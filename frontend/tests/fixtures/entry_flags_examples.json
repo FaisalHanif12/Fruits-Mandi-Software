@@ -15,7 +15,8 @@
       "count": 2,
       "local_date": "2026-10-11",
       "local_time": "16:35",
-      "reason": "ریٹ غلط تھا"
+      "reason": "ریٹ غلط تھا",
+      "sign": null
     },
     "locked_reason": null,
     "needs_reopen": false

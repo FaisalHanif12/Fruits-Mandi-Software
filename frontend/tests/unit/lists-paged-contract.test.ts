@@ -102,7 +102,9 @@ describe('each paged wrapper sends exactly the request the backend’s own test 
 describe('the real answers are pages: rows, the count and the totals of the whole filter', () => {
   it('the list of بکری and the stock list have the keys of a page', () => {
     // `months`: the subtotals of each month, empty unless the list asked for them (plan 38 R4).
+    // `days`: the day headings of Past Sales, empty unless the list asked for them (plan 72).
     expect(Object.keys(bikriReal.LIST_DAY).sort()).toEqual([
+      'days',
       'months',
       'rows',
       'total_count',

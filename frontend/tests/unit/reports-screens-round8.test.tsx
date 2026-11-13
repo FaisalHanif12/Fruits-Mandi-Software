@@ -193,7 +193,8 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       }, SLOW_MS);
       expect(lastRun()).toMatchObject({ id: 'R10', offset: 0, limit: PAGE_ROWS });
       expect(cell('0', 'seller')).toContain('0010');
-      expect(cell('0', 'item')).toBe(names('کیلا', 'Banana'));
+      // The item cell carries the lot's counter, "Banana-1" (PRD FR-12.45).
+      expect(cell('0', 'item')).toBe(names('کیلا-1', 'Banana-1'));
       expect(cell('0', 'received')).toBe('50');
       expect(cell('0', 'sold')).toBe('20');
       // No fruit was taken from this lot (the fruit lot of E2E-42 is another test).
@@ -912,12 +913,12 @@ describe.each(LANGUAGES)('the round 8 reports (%s)', (language: Language) => {
       const { router } = await renderApp('/reports');
       await screen.findByRole('heading', { level: 1, name: named(m('reports-title')) });
       const user = userEvent.setup();
-      // 10 Sales reports (R1 has focus), 9 Accounts, 8 Collections and R28 to R32 are in front of R33:
-      // thirty-two steps down.
+      // The backend's catalogue has 8 Sales reports (R1 has focus; R8 and R9 are retired), 9 Accounts,
+      // 8 Collections and R28 to R32 in front of R33: thirty steps down.
       await waitFor(() => {
         expect(document.activeElement?.getAttribute('href')).toMatch(/R1$/);
       }, SLOW_MS);
-      await user.keyboard(`${'{ArrowDown}'.repeat(31)}{Enter}`);
+      await user.keyboard(`${'{ArrowDown}'.repeat(30)}{Enter}`);
       await waitFor(() => {
         expect(router.state.location.pathname).toBe('/reports/R33');
       }, SLOW_MS);

@@ -296,8 +296,6 @@ fn capability_allows_only_our_command_and_shell_plugins() {
             "allow-general-preview",
             "allow-general-save",
             "allow-bikri-preview",
-            "allow-bikri-split-freight",
-            "allow-assist-truck-memory",
             "allow-assist-seller-memory",
             "allow-assist-last-rate",
             "allow-bikri-save",

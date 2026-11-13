@@ -128,7 +128,7 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     await user.type(box, 'rahim');
     await user.click(await screen.findByRole('option'));
     await waitFor(() => {
-      expect(box).toHaveValue(language === 'ur' ? 'کیلا پیٹی' : 'Banana Box');
+      expect(box).toHaveValue(language === 'ur' ? 'کیلا-1 پیٹی' : 'Banana-1 Box');
     });
   };
   /**
@@ -420,7 +420,9 @@ describe.each(LANGUAGES)('the fruit screen with the backend’s real answers (%s
     expect(fruitApi.fruitGet).toHaveBeenCalledWith({ id: 1 });
     expect(field('fruit-field-qty')).toHaveValue('2');
     expect(field('fruit-field-rate')).toHaveValue('580');
-    expect(field('fruit-field-lot')).toHaveValue(language === 'ur' ? 'کیلا پیٹی' : 'Banana Box');
+    expect(field('fruit-field-lot')).toHaveValue(
+      language === 'ur' ? 'کیلا-1 پیٹی' : 'Banana-1 Box',
+    );
     await user.clear(field('fruit-field-qty'));
     await user.type(field('fruit-field-qty'), '3');
     await waitFor(() => {

@@ -240,3 +240,4 @@ None blocking. Lead decisions (written here, easy to change):
 12. Empty states with a soft icon on the master lists, and a HoverDetails guide on the masters add row.
 13. Titled-card grouping of the rules form and the setup wizard.
 14. Use the new optional props (Card, ListPage and Fact `icon`, SegmentedControl `details`, Balance `inherit`) on the روکڑ, voucher and report screens.
+15. The fixture copy script covers only the services fixtures; extend it to backend/crates/backup/tests/fixtures and backend/app/tests/fixtures.
